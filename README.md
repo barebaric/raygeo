@@ -1,8 +1,13 @@
 # raygeo
 
+[![PyPI](https://img.shields.io/pypi/v/raygeo.svg)](https://pypi.org/project/raygeo/)
+[![CI](https://github.com/barebaric/raygeo/actions/workflows/ci.yml/badge.svg)](https://github.com/barebaric/raygeo/actions/workflows/ci.yml)
+
 A high-performance 2D/3D geometry library for Python, built in Rust with PyO3.
 
-raygeo provides vector path construction, polygon boolean operations, curve fitting, path transformations, and geometric queries — all backed by a native Rust extension.
+raygeo provides vector path construction, polygon boolean operations, curve
+fitting, path transformations, and geometric queries — all backed by a native
+Rust extension.
 
 ## Installation
 
@@ -10,13 +15,16 @@ raygeo provides vector path construction, polygon boolean operations, curve fitt
 pip install raygeo
 ```
 
-Requires Python 3.10+ and a compatible platform (Linux, Windows, macOS Intel, or macOS Apple Silicon). Pre-compiled wheels are available on PyPI.
+Requires Python 3.10+ and a compatible platform (Linux, Windows, macOS Intel,
+or macOS Apple Silicon). Pre-compiled wheels are available on
+[PyPI](https://pypi.org/project/raygeo/).
 
 ## Quick Start
 
 ### Building Paths
 
-The `Geometry` class is the core abstraction. It stores a vector path as a sequence of move, line, arc, and cubic Bezier commands:
+The `Geometry` class is the core abstraction. It stores a vector path as a
+sequence of move, line, arc, and cubic Bezier commands:
 
 ```python
 from raygeo import Geometry
@@ -42,7 +50,8 @@ triangle = Geometry.from_points([(0, 0), (10, 0), (5, 8.66)])
 
 ### Accessing Raw Data
 
-Internally, geometry data is stored as an `(N, 8)` NumPy float64 array. Each row represents one command:
+Internally, geometry data is stored as an `(N, 8)` NumPy float64 array.
+Each row represents one command:
 
 ```python
 import numpy as np
@@ -54,16 +63,16 @@ print(data[:, COL_X])  # all x coordinates
 
 The 8 columns are:
 
-| Column    | Index | Description                      |
-|-----------|-------|----------------------------------|
-| `COL_TYPE`| 0     | Command type (move/line/arc/bezier) |
-| `COL_X`   | 1     | X coordinate                     |
-| `COL_Y`   | 2     | Y coordinate                     |
-| `COL_Z`   | 3     | Z coordinate                     |
-| `COL_I` / `COL_C1X` | 4 | Arc center offset X / Bezier control 1 X |
-| `COL_J` / `COL_C1Y` | 5 | Arc center offset Y / Bezier control 1 Y |
-| `COL_CW` / `COL_C2X`| 6 | Arc clockwise flag / Bezier control 2 X |
-| — / `COL_C2Y`| 7 | (unused for arcs) / Bezier control 2 Y |
+| Column               | Index | Description                              |
+| -------------------- | ----- | ---------------------------------------- |
+| `COL_TYPE`           | 0     | Command type (move/line/arc/bezier)      |
+| `COL_X`              | 1     | X coordinate                             |
+| `COL_Y`              | 2     | Y coordinate                             |
+| `COL_Z`              | 3     | Z coordinate                             |
+| `COL_I` / `COL_C1X`  | 4     | Arc center offset X / Bezier control 1 X |
+| `COL_J` / `COL_C1Y`  | 5     | Arc center offset Y / Bezier control 1 Y |
+| `COL_CW` / `COL_C2X` | 6     | Arc clockwise flag / Bezier control 2 X  |
+| — / `COL_C2Y`        | 7     | (unused for arcs) / Bezier control 2 Y   |
 
 ### Arcs and Bezier Curves
 
@@ -230,24 +239,17 @@ import pickle
 g3 = pickle.loads(pickle.dumps(g))
 ```
 
-## Submodule Reference
+## Documentation
 
-| Module | Description |
-|--------|-------------|
-| `raygeo` | Top-level module: `Geometry` class, constants, type aliases, utility functions |
-| `raygeo.path` | Path-level operations: splitting, contours, winding orders, intersection, fitting |
-| `raygeo.shape.arc` | Arc operations: bounds, direction, linearization, intersection tests |
-| `raygeo.shape.bezier` | Bezier operations: evaluation, splitting, bounds, linearization, flatness |
-| `raygeo.shape.circle` | Circle operations: intersections, containment tests |
-| `raygeo.shape.line` | Line/segment operations: intersections, closest point, distance |
-| `raygeo.shape.polygon` | Polygon operations: area, bounds, boolean ops, offset, transforms (Clipper2) |
-| `raygeo.shape.point` | Point utilities: midpoint |
-| `raygeo.shape.rect` | Rectangle operations: containment, intersection |
-| `raygeo.algo.clipping` | Line clipping against rectangles and polygons |
-| `raygeo.algo.fitting` | Curve fitting: circle fitting, arc conversion, primitive fitting |
-| `raygeo.algo.minkowski` | Minkowski sums, no-fit polygons, inner-fit polygons |
-| `raygeo.algo.simplify` | Ramer-Douglas-Peucker polyline simplification |
-| `raygeo.algo.smooth` | Gaussian smoothing and polyline resampling |
+Full API documentation is available in the [`docs/`](docs/) directory:
+
+| Document                               | Description                                        |
+| -------------------------------------- | -------------------------------------------------- |
+| [`docs/raygeo.md`](docs/raygeo.md)     | Top-level: Geometry, constants, types, utils       |
+| [`docs/geometry.md`](docs/geometry.md) | Geometry class — commands, properties, transforms  |
+| [`docs/path.md`](docs/path.md)         | Path ops: splitting, contours, winding, fitting    |
+| [`docs/shape.md`](docs/shape.md)       | Shape primitives: arcs, beziers, circles, polygons |
+| [`docs/algo.md`](docs/algo.md)         | Algorithms: clipping, fitting, Minkowski, smooth   |
 
 ## Development
 
