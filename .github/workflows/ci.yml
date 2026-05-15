@@ -13,9 +13,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Run cargo test
-        uses: actions-rust-lang/setup-rust-toolchain@v1
-      - run: cargo test --manifest-path crates/rayforge-geo/Cargo.toml
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+
+      - run: cargo test
 
   python-tests:
     name: Python tests (${{ matrix.os }})
@@ -27,13 +27,20 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Build and install
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Build wheel
         uses: PyO3/maturin-action@v1
         with:
-          command: develop
+          command: build
+          args: --release --out dist
           manylinux: auto
 
+      - name: Install wheel and test dependencies
+        run: pip install dist/*.whl pytest pytest-mock
+        shell: bash
+
       - name: Run pytest
-        run: |
-          pip install pytest pytest-mock
-          pytest tests/ -v
+        run: pytest tests/ -v
