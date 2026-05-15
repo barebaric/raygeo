@@ -30,6 +30,7 @@ test = [
 [tool.maturin]
 module-name = "raygeo"
 features = ["pyo3/extension-module"]
+include = ["raygeo-stubs/**/*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
