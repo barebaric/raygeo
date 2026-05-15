@@ -1,0 +1,39 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  rust-tests:
+    name: Rust tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run cargo test
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+      - run: cargo test --manifest-path crates/rayforge-geo/Cargo.toml
+
+  python-tests:
+    name: Python tests (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-13, macos-14]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build and install
+        uses: PyO3/maturin-action@v1
+        with:
+          command: develop
+          manylinux: auto
+
+      - name: Run pytest
+        run: |
+          pip install pytest pytest-mock
+          pytest tests/ -v
