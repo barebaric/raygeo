@@ -36,7 +36,6 @@ jobs:
         with:
           command: build
           args: --release --out dist
-          manylinux: auto
 
       - name: Install wheel and test dependencies
         run: pip install dist/*.whl pytest pytest-mock
