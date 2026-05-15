@@ -20,13 +20,19 @@ jobs:
         with:
           python-version: "3.13"
 
-      - name: Build wheels
-        uses: PyO3/maturin-action@v1
-        with:
-          command: build
-          args: --release --out dist
-          manylinux: auto
-          interpreter: python3.13
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+
+      - name: Install maturin
+        run: pip install maturin
+
+      - name: Build wheel
+        run: maturin build --release --out dist
+
+      - name: Repair wheel (Linux only)
+        if: runner.os == 'Linux'
+        run: |
+          pip install auditwheel
+          auditwheel repair dist/*.whl --wheel-dir dist
 
       - name: Upload wheels as artifacts
         uses: actions/upload-artifact@v4
@@ -40,11 +46,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Build sdist
-        uses: PyO3/maturin-action@v1
+      - uses: actions/setup-python@v5
         with:
-          command: sdist
-          args: --out dist
+          python-version: "3.13"
+
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+
+      - name: Install maturin
+        run: pip install maturin
+
+      - name: Build sdist
+        run: maturin sdist --out dist
 
       - name: Upload sdist as artifact
         uses: actions/upload-artifact@v4
