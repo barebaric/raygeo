@@ -18,7 +18,7 @@ jobs:
 
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.x"
+          python-version: "3.13"
 
       - name: Build wheels
         uses: PyO3/maturin-action@v1
@@ -26,6 +26,7 @@ jobs:
           command: build
           args: --release --out dist
           manylinux: auto
+          interpreter: python3.13
 
       - name: Upload wheels as artifacts
         uses: actions/upload-artifact@v4
