@@ -5,7 +5,7 @@ edition = "2021"
 description = "PyO3 bindings for RayGeo geometry engine"
 
 [dependencies]
-pyo3 = { version = "0.28", features = ["extension-module"] }
+pyo3 = { version = "0.28", features = ["extension-module", "abi3", "abi3-py311"] }
 raygeo-core = { path = "crates/raygeo" }
 numpy = "0.28"
 
