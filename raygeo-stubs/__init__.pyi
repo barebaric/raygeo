@@ -327,6 +327,9 @@ class PyCommand:
             ...
     """
 
+    end: Point3D
+    """Target position ``(x, y, z)``."""
+
     class Move:
         """A move-to command (start a new sub-path)."""
         end: Point3D
@@ -1084,7 +1087,7 @@ class Geometry:
         """
         ...
 
-def to_dict(self) -> dict:
+    def to_dict(self) -> dict:
         """Serialise the geometry to a plain dict.
 
         The dict contains ``"last_move_to"``, ``"uniform_scalable"``,
