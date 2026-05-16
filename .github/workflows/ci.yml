@@ -29,18 +29,15 @@ jobs:
 
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.x"
+          python-version: "3.13"
 
-      - name: Build wheel
-        uses: PyO3/maturin-action@v1
-        with:
-          command: build
-          args: --release --out dist -i python3.13
-          manylinux: manylinux2014
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
 
-      - name: Install wheel and test dependencies
-        run: pip install dist/*.whl pytest pytest-mock
-        shell: bash
+      - name: Install maturin
+        run: pip install maturin
+
+      - name: Build and install
+        run: maturin develop
 
       - name: Run pytest
         run: pytest tests/ -v
