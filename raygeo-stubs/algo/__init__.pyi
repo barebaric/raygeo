@@ -5,8 +5,8 @@ Re-exports everything from the child modules:
 and :mod:`fitting`.
 """
 
-from raygeo.algo.clipping import *
-from raygeo.algo.minkowski import *
-from raygeo.algo.simplify import *
-from raygeo.algo.smooth import *
-from raygeo.algo.fitting import *
+from .clipping import *
+from .minkowski import *
+from .simplify import *
+from .smooth import *
+from .fitting import *

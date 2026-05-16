@@ -12,7 +12,7 @@ from typing import Optional, Tuple, List, Union, TypeAlias
 from numpy.typing import NDArray
 import numpy as np
 
-from raygeo.path import PyCommand
+from .path import PyCommand
 
 Point: TypeAlias = Tuple[float, float]
 Point3D: TypeAlias = Tuple[float, float, float]

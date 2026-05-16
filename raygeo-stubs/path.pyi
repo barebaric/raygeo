@@ -11,7 +11,7 @@ from numpy.typing import NDArray
 import numpy as np
 
 from raygeo import Point, Point3D
-from raygeo.geometry import Geometry
+from .geometry import Geometry
 
 _ArrayLike: TypeAlias = Union[List[List[float]], NDArray[np.float64]]
 

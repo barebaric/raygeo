@@ -22,8 +22,8 @@ from collections import namedtuple
 
 from numpy.typing import NDArray
 import numpy as np
-from raygeo.geometry import Geometry, _Point2DOr3D
-from raygeo.path import PyCommand
+from .geometry import Geometry, _Point2DOr3D
+from .path import PyCommand
 
 Point: TypeAlias = Tuple[float, float]
 """A 2D point represented as ``(x, y)``."""
