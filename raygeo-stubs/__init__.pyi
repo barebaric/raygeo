@@ -17,55 +17,36 @@ Type Aliases:
     Point2DOr3D: A point that is either :data:`Point` or :data:`Point3D`.
 """
 
-from typing import Tuple, List, Union, Optional, TypeAlias
+from typing import Tuple, List, Union, Optional, Sequence, TypeAlias
 from collections import namedtuple
 
 from numpy.typing import NDArray
 import numpy as np
-from .geometry import Geometry, _Point2DOr3D
-from .path import PyCommand
 
 Point: TypeAlias = Tuple[float, float]
-"""A 2D point represented as ``(x, y)``."""
-
 Point3D: TypeAlias = Tuple[float, float, float]
-"""A 3D point represented as ``(x, y, z)``."""
-
 Rect: TypeAlias = Tuple[float, float, float, float]
-"""An axis-aligned bounding box as ``(x_min, y_min, x_max, y_max)``."""
-
 Polygon: TypeAlias = List[Tuple[float, float]]
-"""A 2D polygon as an ordered list of :data:`Point` vertices."""
-
 Polygon3D: TypeAlias = List[Tuple[float, float, float]]
-"""A 3D polygon as an ordered list of :data:`Point3D` vertices."""
-
 IntPoint: TypeAlias = Tuple[int, int]
-"""An integer 2D point as ``(x, y)`` for grid-based operations."""
-
 IntPolygon: TypeAlias = List[Tuple[int, int]]
-"""An integer polygon as a list of :data:`IntPoint`."""
-
 Edge: TypeAlias = Tuple[Tuple[float, float], Tuple[float, float]]
-"""A line segment as a pair of :data:`Point` endpoints ``(start, end)``."""
-
 CubicBezier: TypeAlias = Tuple[
     Tuple[float, float],
     Tuple[float, float],
     Tuple[float, float],
     Tuple[float, float],
 ]
-"""A cubic Bezier curve as four :data:`Point` control points ``(p0, c1, c2, p1)``."""
-
 Point2DOr3D: TypeAlias = Union[Tuple[float, float], Tuple[float, float, float]]
-"""A point that accepts either 2D ``(x, y)`` or 3D ``(x, y, z)``."""
 
 _PolygonsInput: TypeAlias = Union[
     List[Polygon],
     List[NDArray[np.float64]],
 ]
-"""A list of polygons — each polygon may be a list of ``(x, y)`` tuples
-or an ``(N, 2)`` NumPy float64 array."""
+
+_Point2DOr3D: TypeAlias = Tuple[float, ...]
+_CommandRow = Tuple[float, float, float, float, float, float, float, float]
+_ArrayLike: TypeAlias = Union[List[List[float]], NDArray[np.float64]]
 
 
 class Rect3D(
@@ -73,96 +54,29 @@ class Rect3D(
         "Rect3D", ["x_min", "x_max", "y_min", "y_max", "z_min", "z_max"]
     )
 ):
-    """A 3D axis-aligned bounding box with separate min/max for each axis.
-
-    Attributes:
-        x_min: Minimum x coordinate (left face).
-        x_max: Maximum x coordinate (right face).
-        y_min: Minimum y coordinate (bottom face).
-        y_max: Maximum y coordinate (top face).
-        z_min: Minimum z coordinate (front face).
-        z_max: Maximum z coordinate (back face).
-    """
+    """A 3D axis-aligned bounding box with separate min/max for each axis."""
 
 
 CMD_TYPE_MOVE: int
-"""Command type constant for a move-to operation."""
-
 CMD_TYPE_LINE: int
-"""Command type constant for a line-to operation."""
-
 CMD_TYPE_ARC: int
-"""Command type constant for an arc-to operation."""
-
 CMD_TYPE_BEZIER: int
-"""Command type constant for a cubic Bezier curve operation."""
-
 COL_TYPE: int
-"""Column index for the command type in the geometry data array."""
-
 COL_X: int
-"""Column index for the x coordinate."""
-
 COL_Y: int
-"""Column index for the y coordinate."""
-
 COL_Z: int
-"""Column index for the z coordinate."""
-
 COL_I: int
-"""Column index for the arc center x offset (i)."""
-
 COL_J: int
-"""Column index for the arc center y offset (j)."""
-
 COL_CW: int
-"""Column index for the arc clockwise flag."""
-
 COL_C1X: int
-"""Column index for the first Bezier control point x."""
-
 COL_C1Y: int
-"""Column index for the first Bezier control point y."""
-
 COL_C2X: int
-"""Column index for the second Bezier control point x."""
-
 COL_C2Y: int
-"""Column index for the second Bezier control point y."""
-
 GEO_ARRAY_COLS: int
-"""Total number of columns in the geometry data array."""
-
 CLIPPER_SCALE: int
-"""Default scale factor (10_000_000) for converting float polygons to
-integer Clipper format."""
 
 
 class constants:
-    """Namespace holding geometry command and column-index constants.
-
-    All attributes are integer values used for indexing into the
-    :attr:`Geometry.data` NumPy array.
-
-    Attributes:
-        CMD_TYPE_MOVE: Command type for move-to.
-        CMD_TYPE_LINE: Command type for line-to.
-        CMD_TYPE_ARC: Command type for arc-to.
-        CMD_TYPE_BEZIER: Command type for Bezier curve.
-        COL_TYPE: Column index for command type.
-        COL_X: Column index for x.
-        COL_Y: Column index for y.
-        COL_Z: Column index for z.
-        COL_I: Column index for arc i offset.
-        COL_J: Column index for arc j offset.
-        COL_CW: Column index for arc clockwise flag.
-        COL_C1X: Column index for Bezier control point 1 x.
-        COL_C1Y: Column index for Bezier control point 1 y.
-        COL_C2X: Column index for Bezier control point 2 x.
-        COL_C2Y: Column index for Bezier control point 2 y.
-        GEO_ARRAY_COLS: Number of columns in the data array.
-    """
-
     CMD_TYPE_MOVE: int
     CMD_TYPE_LINE: int
     CMD_TYPE_ARC: int
@@ -181,27 +95,182 @@ class constants:
     GEO_ARRAY_COLS: int
 
 
+class PyCommand:
+    """Typed view over a single geometry command row."""
+
+    end: Point3D
+
+    class Move:
+        end: Point3D
+
+    class Line:
+        end: Point3D
+
+    class Arc:
+        end: Point3D
+        center_offset: Point
+        clockwise: bool
+
+    class Bezier:
+        end: Point3D
+        control1: Point
+        control2: Point
+
+
+class Geometry:
+    COL_TYPE: int
+    COL_X: int
+    COL_Y: int
+    COL_Z: int
+    COL_I: int
+    COL_J: int
+    COL_CW: int
+    COL_C1X: int
+    COL_C1Y: int
+    COL_C2X: int
+    COL_C2Y: int
+    CMD_TYPE_MOVE: float
+    CMD_TYPE_LINE: float
+    CMD_TYPE_ARC: float
+    CMD_TYPE_BEZIER: float
+
+    def __init__(self) -> None: ...
+    def move_to(self, x: float, y: float, z: float = ...) -> None: ...
+    def line_to(self, x: float, y: float, z: float = ...) -> None: ...
+    def close_path(self) -> None: ...
+    def arc_to(
+        self,
+        x: float,
+        y: float,
+        i: float = ...,
+        j: float = ...,
+        clockwise: bool = ...,
+        z: float = ...,
+    ) -> None: ...
+    def bezier_to(
+        self,
+        x: float,
+        y: float,
+        c1x: float,
+        c1y: float,
+        c2x: float,
+        c2y: float,
+        z: float = ...,
+    ) -> None: ...
+    def arc_to_as_bezier(
+        self,
+        x: float,
+        y: float,
+        i: float,
+        j: float,
+        clockwise: bool = ...,
+        z: float = ...,
+    ) -> None: ...
+    def sync_to_data(self) -> None: ...
+    def _sync_to_numpy(self) -> None: ...
+    def __len__(self) -> int: ...
+    def __hash__(self) -> int: ...
+    def __eq__(self, other: object) -> bool: ...
+    def __repr__(self) -> str: ...
+    def __add__(self, other: "Geometry") -> "Geometry": ...
+
+    @property
+    def data(self) -> Optional[NDArray[np.float64]]: ...
+    @data.setter
+    def data(self, value: Optional[NDArray[np.float64]]) -> None: ...
+    @property
+    def last_move_to(self) -> Point3D: ...
+    @last_move_to.setter
+    def last_move_to(self, value: Point3D) -> None: ...
+    @property
+    def uniform_scalable(self) -> bool: ...
+    @uniform_scalable.setter
+    def uniform_scalable(self, value: bool) -> None: ...
+    @property
+    def _pending_data(self) -> List[List[float]]: ...
+    def _get_last_point(self) -> Point3D: ...
+
+    def is_empty(self) -> bool: ...
+    def rect(self) -> Tuple[float, float, float, float]: ...
+    def distance(self) -> float: ...
+    def area(self) -> float: ...
+    def is_closed(self, tolerance: float = ...) -> bool: ...
+    def segments(self) -> List[List[Point3D]]: ...
+    def get_command_at(self, index: int) -> Optional[_CommandRow]: ...
+    def iter_commands(self) -> List[_CommandRow]: ...
+    def iter_typed_commands(self) -> List[PyCommand]: ...
+    def get_typed_command_at(self, index: int) -> Optional[PyCommand]: ...
+    def find_closest_point(
+        self, x: float, y: float,
+    ) -> Optional[Tuple[int, float, Point]]: ...
+    def get_point_and_tangent_at(
+        self, segment_index: int, t: float,
+    ) -> Optional[Tuple[Point, Point]]: ...
+    def get_outward_normal_at(
+        self, segment_index: int, t: float,
+    ) -> Optional[Point]: ...
+    def has_self_intersections(self, fail_on_t_junction: bool = ...) -> bool: ...
+    def intersects_with(self, other: Geometry) -> bool: ...
+    def encloses(self, other: Geometry) -> bool: ...
+
+    def clear(self) -> None: ...
+    def copy(self) -> "Geometry": ...
+    def transform(
+        self, matrix: Union[List[List[float]], NDArray[np.float64]]
+    ) -> "Geometry": ...
+    def extend(self, other: "Geometry") -> None: ...
+    def simplify(self, tolerance: float) -> "Geometry": ...
+    def linearize(self, tolerance: float) -> "Geometry": ...
+    def fit_curves(
+        self,
+        tolerance: float,
+        beziers: bool,
+        arcs: bool,
+        on_progress: Optional[object] = ...,
+    ) -> "Geometry": ...
+    def fit_arcs(self, tolerance: float) -> "Geometry": ...
+    def upgrade_to_scalable(self) -> "Geometry": ...
+    def close_gaps(self, tolerance: float = ...) -> "Geometry": ...
+    def cleanup(self, tolerance: float) -> "Geometry": ...
+    def append_data(self, rows: Optional[NDArray[np.float64]] = ...) -> None: ...
+    def flip_x(self) -> "Geometry": ...
+    def flip_y(self) -> "Geometry": ...
+    def grow(self, amount: float) -> "Geometry": ...
+    def remove_inner_edges(self) -> "Geometry": ...
+    def split_inner_and_outer_contours(
+        self,
+    ) -> Tuple[List["Geometry"], List["Geometry"]]: ...
+    def map_to_frame(
+        self,
+        origin: Point,
+        p_width: Tuple[float, float],
+        p_height: Tuple[float, float],
+        anchor_y: Optional[float] = ...,
+        stable_src_height: Optional[float] = ...,
+        anchor_x: Optional[float] = ...,
+        stable_src_width: Optional[float] = ...,
+    ) -> "Geometry": ...
+    def split_into_contours(self) -> List["Geometry"]: ...
+    def split_into_components(self) -> List["Geometry"]: ...
+    def to_polygons(self, tolerance: float = ...) -> List[Polygon]: ...
+
+    def dump(self) -> dict: ...
+    def to_dict(self) -> dict: ...
+    @classmethod
+    def load(cls, data: dict) -> "Geometry": ...
+    @classmethod
+    def from_dict(cls, data: dict) -> "Geometry": ...
+    @classmethod
+    def from_points(
+        cls, points: Sequence[_Point2DOr3D], close: bool = ...,
+    ) -> "Geometry": ...
+
+
 def clip_line_segment_with_polygons(
     p1: Point3D,
     p2: Point3D,
     regions: _PolygonsInput,
-) -> List[Tuple[Point3D, Point3D]]:
-    """Clip a 3D line segment against a set of 2D polygon regions.
-
-    Returns only the portions of the segment that fall inside at least one
-    of the given polygons.  The z coordinate of the endpoints is
-    interpolated linearly along the original segment.
-
-    Args:
-        p1: Start point of the line segment as ``(x, y, z)``.
-        p2: End point of the line segment as ``(x, y, z)``.
-        regions: List of polygons, each a list of ``(x, y)`` vertices
-            or an ``(N, 2)`` NumPy array defining a clipping region.
-
-    Returns:
-        A list of :data:`Segment3D` tuples ``(start, end)`` representing
-        the visible portions of the original segment.
-    """
+) -> List[Tuple[Point3D, Point3D]]: ...
 
 
 def is_arc_inside_polygons(
@@ -210,20 +279,7 @@ def is_arc_inside_polygons(
     arc_center: Point,
     clockwise: bool,
     polygons: _PolygonsInput,
-) -> bool:
-    """Check whether an arc lies entirely inside a set of polygons.
-
-    Args:
-        arc_start: Start point of the arc as ``(x, y)``.
-        arc_end: End point of the arc as ``(x, y)``.
-        arc_center: Center point of the arc as ``(x, y)``.
-        clockwise: Whether the arc runs clockwise.
-        polygons: List of polygons, each a list of ``(x, y)`` vertices
-            or an ``(N, 2)`` NumPy array.
-
-    Returns:
-        ``True`` if every point on the arc is inside at least one polygon.
-    """
+) -> bool: ...
 
 
 def is_bezier_inside_polygons(
@@ -232,82 +288,22 @@ def is_bezier_inside_polygons(
     p2: Point,
     p3: Point,
     polygons: _PolygonsInput,
-) -> bool:
-    """Check whether a cubic Bezier curve lies entirely inside a set of
-    polygons.
-
-    Args:
-        p0: Start point of the curve as ``(x, y)``.
-        p1: First control point as ``(x, y)``.
-        p2: Second control point as ``(x, y)``.
-        p3: End point of the curve as ``(x, y)``.
-        polygons: List of polygons, each a list of ``(x, y)`` vertices
-            or an ``(N, 2)`` NumPy array.
-
-    Returns:
-        ``True`` if every point on the Bezier is inside at least one
-        polygon.
-    """
+) -> bool: ...
 
 
 def fit_points_with_primitives(
     points: List[Point3D],
     tolerance: float,
-) -> List[List[float]]:
-    """Fit a sequence of 3D points to geometric primitives.
-
-    Attempts to fit lines, arcs, and cubic Bezier curves to segments of
-    the point sequence that best approximate the original path within the
-    given tolerance.
-
-    Args:
-        points: Ordered list of 3D points to fit.
-        tolerance: Maximum allowed deviation from the original points.
-
-    Returns:
-        A list of command rows, each an 8-element list of floats
-        ``[type, x, y, z, aux1, aux2, aux3, aux4]``.
-    """
+) -> List[List[float]]: ...
 
 
 def to_clipper(
     polygon: Union[Polygon, NDArray[np.float64]],
     scale: Optional[int] = ...,
-) -> List[Tuple[int, int]]:
-    """Convert a float polygon to integer Clipper format by scaling.
-
-    Each vertex ``(x, y)`` is multiplied by *scale* and cast to ``int``.
-    Accepts either a list of ``(x, y)`` tuples or an ``(N, 2)`` NumPy
-    array.
-
-    Args:
-        polygon: A list of ``(x, y)`` float vertices or an ``(N, 2)``
-            NumPy array.
-        scale: Scale factor.  Defaults to :data:`CLIPPER_SCALE`
-            (10_000_000).
-
-    Returns:
-        A list of ``(x, y)`` integer vertices.
-
-    Raises:
-        TypeError: If *polygon* is neither a list of tuples nor a NumPy
-            array.
-    """
+) -> List[Tuple[int, int]]: ...
 
 
 def from_clipper(
     polygon: List[Tuple[int, int]],
     scale: Optional[int] = ...,
-) -> Polygon:
-    """Convert an integer Clipper polygon back to float format.
-
-    Each vertex ``(x, y)`` is divided by *scale*.
-
-    Args:
-        polygon: A list of ``(x, y)`` integer vertices.
-        scale: Scale factor.  Defaults to :data:`CLIPPER_SCALE`
-            (10_000_000).
-
-    Returns:
-        A list of ``(x, y)`` float vertices.
-    """
+) -> Polygon: ...

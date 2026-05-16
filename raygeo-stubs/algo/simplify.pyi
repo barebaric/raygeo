@@ -13,7 +13,7 @@ _ArrayLike: TypeAlias = Union[List[List[float]], NDArray[np.float64]]
 def simplify_polyline(
     points: Sequence[Tuple[float, ...]],
     tolerance: float,
-) -> List[Tuple[float, ...]]:
+) -> List[Tuple[float, float]]:
     """Simplify a 2D polyline using Douglas-Peucker.
 
     Points are projected to ``z=0`` for the computation.

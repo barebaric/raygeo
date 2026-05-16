@@ -813,7 +813,7 @@ def get_outward_normal_at_from_array(
 
 
 def get_point_tangent_at_py(
-    data: List[List[float]],
+    data: Union[List[List[float]], NDArray[np.float64]],
     row_index: int,
     t: float,
 ) -> Optional[Tuple[Point, Point]]:
