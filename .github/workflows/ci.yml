@@ -35,7 +35,7 @@ jobs:
         uses: PyO3/maturin-action@v1
         with:
           command: build
-          args: --release --out dist
+          args: --release --out dist -i python
           manylinux: manylinux2014
 
       - name: Install wheel and test dependencies
