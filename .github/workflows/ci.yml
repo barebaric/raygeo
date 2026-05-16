@@ -36,6 +36,7 @@ jobs:
         with:
           command: build
           args: --release --out dist
+          manylinux: manylinux2014
 
       - name: Install wheel and test dependencies
         run: pip install dist/*.whl pytest pytest-mock
