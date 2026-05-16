@@ -37,7 +37,7 @@ jobs:
         run: pip install maturin
 
       - name: Build and install
-        run: maturin build --release --out dist && pip install dist/*.whl pytest pytest-mock
+        run: maturin build --release --out dist && pip install dist/ pytest pytest-mock
 
       - name: Run pytest
         run: pytest tests/ -v
