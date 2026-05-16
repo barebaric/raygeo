@@ -1,27 +1,27 @@
 use pyo3::prelude::*;
 use crate::flex_point::{PyPoint2D, PyPoint3D, poly_to_points, extract_polygons};
-use rayforge_geo::algo::clipping::{
+use raygeo_core::algo::clipping::{
     clip_line_segment_with_polygons, clip_line_segment_with_rect,
     subtract_polygons_from_line_segment,
 };
-use rayforge_geo::algo::minkowski::{
+use raygeo_core::algo::minkowski::{
     calculate_input_scale, convolve_point_sequences, convolve_two_segments,
     get_inner_fit_polygon, get_no_fit_polygon,
     get_polygon_minkowski_sum_convex,
 };
-use rayforge_geo::algo::simplify::simplify_polyline;
-use rayforge_geo::algo::fitting::{
+use raygeo_core::algo::simplify::simplify_polyline;
+use raygeo_core::algo::fitting::{
     are_points_collinear, convert_arc_to_beziers_from_array, create_arc_cmd,
     create_line_cmd, fit_circle_to_3_points, fit_circle_to_points,
     fit_points_recursive, fit_points_with_primitives, flatten_to_points,
     get_polyline_arc_deviation, get_polyline_line_deviation,
     linearize_geometry, project_circle_center_to_bisector,
 };
-use rayforge_geo::algo::smooth::{
+use raygeo_core::algo::smooth::{
     compute_gaussian_kernel, resample_polyline, smooth_circularly,
     smooth_polyline, smooth_sub_segment,
 };
-use rayforge_geo::Segment3D;
+use raygeo_core::Segment3D;
 
 pub fn build_algo_module(py: Python, parent: &Bound<'_, PyModule>) -> PyResult<()> {
     let algo_mod = PyModule::new(py, "algo")?;
@@ -299,7 +299,7 @@ fn convolve_point_sequences_py(
 #[pyfunction(name = "simplify_polyline")]
 fn simplify_polyline_py(points: Vec<PyPoint2D>, tolerance: f64) -> Vec<Point> {
     let pts = poly_to_points(points);
-    let points_3d: Vec<rayforge_geo::Point3D> = pts.iter().map(|p| (p.0, p.1, 0.0)).collect();
+    let points_3d: Vec<raygeo_core::Point3D> = pts.iter().map(|p| (p.0, p.1, 0.0)).collect();
     let result = simplify_polyline(&points_3d, tolerance);
     result.iter().map(|p| (p.0, p.1)).collect()
 }
@@ -307,7 +307,7 @@ fn simplify_polyline_py(points: Vec<PyPoint2D>, tolerance: f64) -> Vec<Point> {
 #[pyfunction(name = "simplify_polyline_to_array")]
 fn simplify_polyline_to_array_py(data: Vec<Vec<f64>>, tolerance: f64) -> Vec<Vec<f64>> {
     let num_cols = data.first().map(|r| r.len()).unwrap_or(2);
-    let points: Vec<rayforge_geo::Point3D> = data.iter().map(|r| (r[0], r[1], r.get(2).copied().unwrap_or(0.0))).collect();
+    let points: Vec<raygeo_core::Point3D> = data.iter().map(|r| (r[0], r[1], r.get(2).copied().unwrap_or(0.0))).collect();
     let result = simplify_polyline(&points, tolerance);
     result.iter().map(|p| {
         let mut row = Vec::with_capacity(num_cols);

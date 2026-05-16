@@ -1,0 +1,11 @@
+[package]
+name = "raygeo-core"
+version = "0.0.0"
+edition = "2021"
+description = "Pure Rust high-performance geometry engine"
+
+[dependencies]
+clipper2 = "0.6"
+
+[dev-dependencies]
+approx = "0.5"

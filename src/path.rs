@@ -4,21 +4,21 @@ use numpy::PyArray2;
 use pyo3::prelude::*;
 use pyo3::types::{PyDict, PyList, PyTuple};
 
-use rayforge_geo::algo::fitting::{
+use raygeo_core::algo::fitting::{
     convert_arc_to_beziers_from_array, create_arc_cmd, create_line_cmd,
     flatten_to_points, linearize_geometry,
 };
-use rayforge_geo::path::analysis::{
+use raygeo_core::path::analysis::{
     get_point_and_tangent_at_from_array, get_subpath_area_from_array,
     get_subpath_vertices_from_array, partial_segment_from_row,
     segment_length_from_row_flat,
 };
-use rayforge_geo::path::cleanup::{are_points_equal, get_segment_key};
-use rayforge_geo::path::split::get_valid_contours_data;
-use rayforge_geo::path::transform::{
+use raygeo_core::path::cleanup::{are_points_equal, get_segment_key};
+use raygeo_core::path::split::get_valid_contours_data;
+use raygeo_core::path::transform::{
     apply_affine_transform_to_array, map_geometry_to_frame,
 };
-use rayforge_geo::{
+use raygeo_core::{
     check_intersection_from_array, check_self_intersection_from_array,
     close_all_contours, close_geometry_gaps_from_array, does_enclose,
     filter_to_external_contours, fit_curves, grow_geometry,
@@ -72,13 +72,13 @@ fn split_into_components_py(geometry: &Geometry) -> Vec<Geometry> {
 #[pyfunction]
 fn get_bounding_rect_from_array(data: Vec<Vec<f64>>) -> (f64, f64, f64, f64) {
     let arr = to_data_array(data);
-    rayforge_geo::get_bounding_rect_from_array(&arr)
+    raygeo_core::get_bounding_rect_from_array(&arr)
 }
 
 #[pyfunction]
 fn get_total_distance_from_array(data: Vec<Vec<f64>>) -> f64 {
     let arr = to_data_array(data);
-    rayforge_geo::get_total_distance_from_array(&arr)
+    raygeo_core::get_total_distance_from_array(&arr)
 }
 
 #[pyfunction]
@@ -89,7 +89,7 @@ fn extract_overcut_rows(
 ) -> Option<Bound<'_, pyo3::types::PyAny>> {
     let data = data?;
     let arr = to_data_array(data);
-    rayforge_geo::extract_overcut_rows(&arr, max_length).map(|rows| {
+    raygeo_core::extract_overcut_rows(&arr, max_length).map(|rows| {
         let vecs: Vec<Vec<f64>> =
             rows.into_iter().map(|r| r.to_vec()).collect();
         PyArray2::<f64>::from_vec2(py, &vecs)
@@ -120,7 +120,7 @@ fn get_subpath_area_from_array_py(
 #[pyfunction]
 fn get_area_from_array(data: Vec<Vec<f64>>) -> f64 {
     let arr = to_data_array(data);
-    rayforge_geo::get_area_from_array(&arr)
+    raygeo_core::get_area_from_array(&arr)
 }
 
 #[pyfunction]
@@ -129,7 +129,7 @@ fn get_path_winding_order_from_array(
     start_cmd_index: usize,
 ) -> String {
     let arr = to_data_array(data);
-    rayforge_geo::analysis::get_path_winding_order_from_array(
+    raygeo_core::analysis::get_path_winding_order_from_array(
         &arr,
         start_cmd_index,
     )
@@ -160,7 +160,7 @@ fn optimize_path_from_array(
         return PyArray2::<f64>::zeros(py, [0, 0], false).as_any().clone();
     }
     let arr = to_data_array(data);
-    let result = rayforge_geo::algo::fitting::optimize_path_from_array(
+    let result = raygeo_core::algo::fitting::optimize_path_from_array(
         &arr, tolerance, fit_arcs,
     );
     let vecs: Vec<Vec<f64>> = result.into_iter().map(|r| r.to_vec()).collect();
@@ -191,7 +191,7 @@ fn fit_arcs(
     match data {
         Some(rows) => {
             let arr = to_data_array(rows);
-            let result = rayforge_geo::fit_arcs(&arr, tolerance);
+            let result = raygeo_core::fit_arcs(&arr, tolerance);
             if let Some(ref cb) = progress_callback {
                 let _ = cb.call1((1.0f64,));
             }
@@ -729,25 +729,25 @@ fn get_angle_at_vertex_py(
     p1: (f64, f64),
     p2: (f64, f64),
 ) -> f64 {
-    rayforge_geo::path::analysis::get_angle_at_vertex(p0, p1, p2)
+    raygeo_core::path::analysis::get_angle_at_vertex(p0, p1, p2)
 }
 
 #[pyfunction(name = "remove_duplicates")]
 fn remove_duplicates_py(points: Vec<(f64, f64)>) -> Vec<(f64, f64)> {
-    rayforge_geo::path::analysis::remove_duplicates(&points)
+    raygeo_core::path::analysis::remove_duplicates(&points)
 }
 
 #[pyfunction(name = "is_clockwise")]
 fn is_clockwise_py(points: Vec<PyPoint2D>) -> bool {
     let pts: Vec<(f64, f64)> = points.iter().map(|p| (p.0, p.1)).collect();
-    rayforge_geo::path::analysis::is_clockwise(&pts)
+    raygeo_core::path::analysis::is_clockwise(&pts)
 }
 
 #[pyfunction(name = "is_closed")]
 #[pyo3(signature = (commands, tolerance=1e-6))]
 fn is_closed_py(commands: Vec<Vec<f64>>, tolerance: f64) -> bool {
     let arr = to_data_array(commands);
-    rayforge_geo::path::analysis::is_closed(&arr, tolerance)
+    raygeo_core::path::analysis::is_closed(&arr, tolerance)
 }
 
 #[pyfunction(name = "get_outward_normal_at_from_array")]
@@ -757,7 +757,7 @@ fn get_outward_normal_at_from_array_py(
     t: f64,
 ) -> Option<(f64, f64)> {
     let arr = to_data_array(data);
-    rayforge_geo::path::analysis::get_outward_normal_at_from_array(
+    raygeo_core::path::analysis::get_outward_normal_at_from_array(
         &arr, row_index, t,
     )
 }

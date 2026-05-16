@@ -1,12 +1,12 @@
 [package]
-name = "rayforge-geo-py"
-version = "0.1.3"
+name = "raygeo-py"
+version = "0.0.0"
 edition = "2021"
 description = "PyO3 bindings for RayGeo geometry engine"
 
 [dependencies]
 pyo3 = { version = "0.28", features = ["extension-module"] }
-rayforge-geo = { path = "crates/rayforge-geo" }
+raygeo-core = { path = "crates/raygeo" }
 numpy = "0.28"
 
 [lib]

@@ -1,7 +1,7 @@
 use numpy::{PyArray2, PyArrayMethods};
 use pyo3::prelude::*;
 
-use rayforge_geo::Point;
+use raygeo_core::Point;
 
 /// A 2D point that accepts tuples `(x, y)`, `(x, y, z)`,
 /// or lists `[x, y]`, `[x, y, z]`, discarding the z coordinate.

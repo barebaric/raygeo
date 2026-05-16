@@ -14,7 +14,7 @@
 //! ## Usage
 //!
 //! ```rust
-//! use rayforge_geo::{Geometry, Point};
+//! use raygeo_core::{Geometry, Point};
 //!
 //! let mut geo = Geometry::new();
 //! geo.move_to(0.0, 0.0, 0.0);

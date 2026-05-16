@@ -3,10 +3,10 @@ use numpy::{IntoPyArray, PyArray2, PyArrayMethods};
 use pyo3::prelude::*;
 use pyo3::types::{PyDict, PyList, PyType};
 
-use rayforge_geo::algo::fitting::convert_arc_to_beziers_from_array;
-use rayforge_geo::path::analysis::get_point_and_tangent_at_from_array;
-use rayforge_geo::path::transform::map_geometry_to_frame;
-use rayforge_geo::{
+use raygeo_core::algo::fitting::convert_arc_to_beziers_from_array;
+use raygeo_core::path::analysis::get_point_and_tangent_at_from_array;
+use raygeo_core::path::transform::map_geometry_to_frame;
+use raygeo_core::{
     check_intersection_from_array, check_self_intersection_from_array,
     close_geometry_gaps_from_array, convert_arcs_to_beziers,
     find_closest_point_on_path_from_array,
@@ -103,49 +103,49 @@ pub struct Geometry {
 #[pymethods]
 impl Geometry {
     #[classattr]
-    const COL_TYPE: usize = rayforge_geo::COL_TYPE;
+    const COL_TYPE: usize = raygeo_core::COL_TYPE;
 
     #[classattr]
-    const COL_X: usize = rayforge_geo::COL_X;
+    const COL_X: usize = raygeo_core::COL_X;
 
     #[classattr]
-    const COL_Y: usize = rayforge_geo::COL_Y;
+    const COL_Y: usize = raygeo_core::COL_Y;
 
     #[classattr]
-    const COL_Z: usize = rayforge_geo::COL_Z;
+    const COL_Z: usize = raygeo_core::COL_Z;
 
     #[classattr]
-    const COL_I: usize = rayforge_geo::COL_I;
+    const COL_I: usize = raygeo_core::COL_I;
 
     #[classattr]
-    const COL_J: usize = rayforge_geo::COL_J;
+    const COL_J: usize = raygeo_core::COL_J;
 
     #[classattr]
-    const COL_CW: usize = rayforge_geo::COL_CW;
+    const COL_CW: usize = raygeo_core::COL_CW;
 
     #[classattr]
-    const COL_C1X: usize = rayforge_geo::COL_C1X;
+    const COL_C1X: usize = raygeo_core::COL_C1X;
 
     #[classattr]
-    const COL_C1Y: usize = rayforge_geo::COL_C1Y;
+    const COL_C1Y: usize = raygeo_core::COL_C1Y;
 
     #[classattr]
-    const COL_C2X: usize = rayforge_geo::COL_C2X;
+    const COL_C2X: usize = raygeo_core::COL_C2X;
 
     #[classattr]
-    const COL_C2Y: usize = rayforge_geo::COL_C2Y;
+    const COL_C2Y: usize = raygeo_core::COL_C2Y;
 
     #[classattr]
-    const CMD_TYPE_MOVE: f64 = rayforge_geo::CMD_TYPE_MOVE as f64;
+    const CMD_TYPE_MOVE: f64 = raygeo_core::CMD_TYPE_MOVE as f64;
 
     #[classattr]
-    const CMD_TYPE_LINE: f64 = rayforge_geo::CMD_TYPE_LINE as f64;
+    const CMD_TYPE_LINE: f64 = raygeo_core::CMD_TYPE_LINE as f64;
 
     #[classattr]
-    const CMD_TYPE_ARC: f64 = rayforge_geo::CMD_TYPE_ARC as f64;
+    const CMD_TYPE_ARC: f64 = raygeo_core::CMD_TYPE_ARC as f64;
 
     #[classattr]
-    const CMD_TYPE_BEZIER: f64 = rayforge_geo::CMD_TYPE_BEZIER as f64;
+    const CMD_TYPE_BEZIER: f64 = raygeo_core::CMD_TYPE_BEZIER as f64;
 
     #[new]
     fn new() -> Self {
@@ -797,7 +797,7 @@ impl Geometry {
             let mut geo = slf.borrow_mut();
             let data = geo.inner.synced_data();
             if !data.is_empty() {
-                let cleaned = rayforge_geo::remove_duplicate_segments(
+                let cleaned = raygeo_core::remove_duplicate_segments(
                     data,
                     tolerance,
                 );
@@ -945,7 +945,7 @@ impl Geometry {
     fn encloses(&mut self, other: &mut Geometry) -> PyResult<bool> {
         self.inner.sync_to_data();
         other.inner.sync_to_data();
-        Ok(rayforge_geo::does_enclose(&self.inner, &other.inner))
+        Ok(raygeo_core::does_enclose(&self.inner, &other.inner))
     }
 
     fn remove_inner_edges(&mut self) -> PyResult<Geometry> {
@@ -1033,7 +1033,7 @@ impl Geometry {
             }
             let poly: Vec<Point> = seg.iter().map(|p| (p.0, p.1)).collect();
             if let Some(cleaned) =
-                rayforge_geo::clean_polygon(&poly, 0.01 * tolerance)
+                raygeo_core::clean_polygon(&poly, 0.01 * tolerance)
             {
                 result.push(cleaned);
             } else if poly.len() >= 3 {

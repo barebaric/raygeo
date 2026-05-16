@@ -7,12 +7,12 @@ mod path;
 mod shape;
 use crate::flex_point::{PyIntPoint2D, int_poly_to_points, extract_polygon, extract_polygons};
 use crate::geometry::Geometry;
-use rayforge_geo::algo::clipping::clip_line_segment_with_polygons;
-use rayforge_geo::algo::fitting::fit_points_with_primitives;
-use rayforge_geo::shape::arc::is_arc_inside_polygons;
-use rayforge_geo::shape::bezier::is_bezier_inside_polygons;
-use rayforge_geo::Segment3D;
-use rayforge_geo::{
+use raygeo_core::algo::clipping::clip_line_segment_with_polygons;
+use raygeo_core::algo::fitting::fit_points_with_primitives;
+use raygeo_core::shape::arc::is_arc_inside_polygons;
+use raygeo_core::shape::bezier::is_bezier_inside_polygons;
+use raygeo_core::Segment3D;
+use raygeo_core::{
     CMD_TYPE_ARC, CMD_TYPE_BEZIER, CMD_TYPE_LINE, CMD_TYPE_MOVE, COL_C1X,
     COL_C1Y, COL_C2X, COL_C2Y, COL_CW, COL_I, COL_J, COL_TYPE, COL_X,
     COL_Y, COL_Z, GEO_ARRAY_COLS, Point, Point3D,
@@ -73,7 +73,7 @@ fn add_submodules(m: &Bound<'_, PyModule>) -> PyResult<()> {
     let types_mod = py.import("types")?;
     let constants = types_mod.call_method0("SimpleNamespace")?;
     {
-        use rayforge_geo::{
+        use raygeo_core::{
             CMD_TYPE_ARC, CMD_TYPE_BEZIER, CMD_TYPE_LINE, CMD_TYPE_MOVE,
             COL_C1X, COL_C1Y, COL_C2X, COL_C2Y, COL_CW, COL_I, COL_J, COL_TYPE,
             COL_X, COL_Y, COL_Z, GEO_ARRAY_COLS,

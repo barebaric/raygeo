@@ -2,35 +2,35 @@ use pyo3::prelude::*;
 use pyo3::types::PyList;
 use crate::flex_point::{PyPoint2D, PyPoint3D, poly_to_points, extract_polygons};
 use numpy::{PyArray2, PyArrayMethods, PyUntypedArrayMethods};
-use rayforge_geo::path::analysis::is_arc_clockwise;
-use rayforge_geo::{BezierSplit, Point, Segment3D, CMD_TYPE_ARC};
-use rayforge_geo::shape::arc::{
+use raygeo_core::path::analysis::is_arc_clockwise;
+use raygeo_core::{BezierSplit, Point, Segment3D, CMD_TYPE_ARC};
+use raygeo_core::shape::arc::{
     _linearize_arc_from_array, does_arc_intersect_circle,
     does_arc_intersect_rect, get_arc_angles, get_arc_bounds,
     get_arc_closest_point, get_arc_direction, get_arc_midpoint,
     is_angle_between, is_arc_inside_polygons, linearize_arc, normalize_angle,
 };
-use rayforge_geo::shape::bezier::{
+use raygeo_core::shape::bezier::{
     bezier_flatness_sq, clip_bezier_with_rect, convert_cubic_bezier_to_quadratic,
     flatten_bezier, get_bezier_bounds, get_bezier_point_at,
     get_bezier_rect_intersections, is_bezier_inside_polygons, linearize_bezier,
     linearize_bezier_adaptive, linearize_bezier_from_array, linearize_bezier_segment,
     perp_dist_sq, split_bezier,
 };
-use rayforge_geo::shape::circle::{
+use raygeo_core::shape::circle::{
     does_circle_intersect_rect, get_circle_circle_intersections,
     is_circle_inside_rect, line_segment_intersects_circle,
     project_point_onto_circle,
 };
-use rayforge_geo::shape::line::{
+use raygeo_core::shape::line::{
     does_line_segment_intersect_circle, does_line_segment_intersect_rect,
     does_rect_contain_rect, get_line_closest_point, get_line_line_intersection,
     get_line_segment_closest_point, get_line_segment_intersection,
     get_line_segment_polygon_intersections, get_point_line_distance,
     is_point_inside_rect, is_point_on_segment,
 };
-use rayforge_geo::shape::point::midpoint;
-use rayforge_geo::shape::polygon::{
+use raygeo_core::shape::point::midpoint;
+use raygeo_core::shape::polygon::{
     clean_polygon, flip_polygon, flip_polygons, get_polygon_bounds,
     get_polygon_centroid, get_polygon_convex_hull, get_polygon_edges,
     get_polygon_group_bounds, get_polygon_perimeter, get_polygon_signed_area,
@@ -1268,7 +1268,7 @@ fn does_rect_intersect_rect_py(
     r1: (f64, f64, f64, f64),
     r2: (f64, f64, f64, f64),
 ) -> bool {
-    use rayforge_geo::shape::line::does_rect_intersect_rect;
+    use raygeo_core::shape::line::does_rect_intersect_rect;
     does_rect_intersect_rect(r1, r2)
 }
 
