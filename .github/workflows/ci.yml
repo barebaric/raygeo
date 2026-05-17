@@ -37,6 +37,7 @@ jobs:
         run: pip install maturin
 
       - name: Build and install
+        shell: bash
         run: |
           maturin build --release --out dist
           pip install dist/raygeo-*.whl pytest pytest-mock
