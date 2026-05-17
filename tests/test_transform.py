@@ -503,6 +503,76 @@ def test_grow_nested_islands_preserved():
     assert grown.area() == pytest.approx(7524.0)
 
 
+def test_grow_shape_with_multiple_holes():
+    """Tests growing a solid containing multiple holes."""
+    outer = Geometry.from_points([(0, 0), (100, 0), (100, 100), (0, 100)])
+    hole1 = Geometry.from_points([(10, 10), (10, 30), (30, 30), (30, 10)])
+    hole2 = Geometry.from_points([(70, 70), (70, 90), (90, 90), (90, 70)])
+    hole3 = Geometry.from_points([(40, 40), (40, 60), (60, 60), (60, 40)])
+
+    geo = Geometry()
+    geo.extend(outer)
+    geo.extend(hole1)
+    geo.extend(hole2)
+    geo.extend(hole3)
+
+    assert geo.area() == pytest.approx(
+        10000.0 - 3 * 400.0
+    )
+
+    contours = geo.split_into_contours()
+    assert len(contours) == 4
+
+    grown = grow_geometry(geo, 1.0)
+
+    grown_contours = grown.split_into_contours()
+    assert len(grown_contours) == 4, (
+        f"Expected 4 contours, got {len(grown_contours)}"
+    )
+
+    nonzero = [g for g in grown_contours if g.area() > 1.0]
+    assert len(nonzero) == 4
+
+    outer_grown = max(nonzero, key=lambda g: g.area())
+    assert outer_grown.area() == pytest.approx(
+        102 * 102, rel=0.01
+    )
+
+    grown_holes = sorted(
+        [g for g in nonzero if g is not outer_grown],
+        key=lambda g: g.area(),
+    )
+    for hole in grown_holes:
+        assert hole.area() == pytest.approx(18 * 18, rel=0.05)
+
+
+def test_grow_multiple_holes_no_micro_contours():
+    """Growing a shape with multiple holes must not produce zero-area
+    degenerate contours."""
+    outer = Geometry.from_points([(0, 0), (60, 0), (60, 60), (0, 60)])
+    holes = [
+        Geometry.from_points([
+            (x, y), (x, y + 8), (x + 8, y + 8), (x + 8, y)
+        ])
+        for x in (5, 25, 45)
+        for y in (5, 25, 45)
+    ]
+
+    geo = Geometry()
+    geo.extend(outer)
+    for h in holes:
+        geo.extend(h)
+
+    grown = grow_geometry(geo, 0.5)
+    contours = grown.split_into_contours()
+
+    micro = [c for c in contours if c.area() < 1.0]
+    assert len(micro) == 0, (
+        f"Found {len(micro)} micro-contours (area < 1.0), "
+        f"total contours: {len(contours)}"
+    )
+
+
 def test_grow_overlapping_solids_with_holes():
     """
     Tests that two overlapping solids, each containing their own hole,

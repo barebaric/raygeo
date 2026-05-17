@@ -156,7 +156,7 @@ fn group_solids_and_holes(
 
 fn offset_contour_group(
     solid_path: &[(i64, i64)],
-    hole_paths: &[(i64, i64)],
+    hole_paths: &[Vec<(i64, i64)>],
     offset: f64,
 ) -> Vec<Polygon> {
     let scale = CLIPPER_SCALE as f64;
@@ -170,33 +170,16 @@ fn offset_contour_group(
     if hole_paths.is_empty() {
         return offset_polygon(&solid_poly, offset);
     }
-    let mut hole_polys: Vec<Polygon> = Vec::new();
-    let mut current_hole: Vec<Point> = Vec::new();
-    let mut expected_len = 0usize;
-    for &(x, y) in hole_paths {
-        let px = x as f64 / scale;
-        let py = y as f64 / scale;
-        if current_hole.len() == expected_len {
-            current_hole.push((px, py));
-        } else {
-            if (current_hole[0].0 - px).abs() < 1e-9
-                && (current_hole[0].1 - py).abs() < 1e-9
-            {
-                current_hole.pop();
-                if current_hole.len() >= 3 {
-                    hole_polys.push(current_hole.clone());
-                }
-                current_hole.clear();
-                expected_len = 0;
-            } else {
-                current_hole.push((px, py));
-            }
-        }
-        expected_len += 1;
-    }
-    if !current_hole.is_empty() && current_hole.len() >= 3 {
-        hole_polys.push(current_hole);
-    }
+    let hole_polys: Vec<Polygon> = hole_paths
+        .iter()
+        .filter_map(|path| {
+            let poly: Polygon = path
+                .iter()
+                .map(|(x, y)| (*x as f64 / scale, *y as f64 / scale))
+                .collect();
+            if poly.len() >= 3 { Some(poly) } else { None }
+        })
+        .collect();
     if hole_polys.is_empty() {
         return offset_polygon(&solid_poly, offset);
     }
@@ -247,9 +230,9 @@ pub fn grow_geometry(geometry: &Geometry, offset: f64) -> Geometry {
     let mut new_geo = Geometry::new();
     for (solid_idx, hole_indices) in solid_groups.iter() {
         let solid_item = &closed_items[*solid_idx];
-        let hole_paths: Vec<(i64, i64)> = hole_indices
+        let hole_paths: Vec<Vec<(i64, i64)>> = hole_indices
             .iter()
-            .flat_map(|&h_idx| closed_items[h_idx].path.clone())
+            .map(|&h_idx| closed_items[h_idx].path.clone())
             .collect();
         let offset_contours =
             offset_contour_group(&solid_item.path, &hole_paths, offset);
