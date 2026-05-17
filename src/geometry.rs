@@ -15,7 +15,8 @@ use raygeo_core::{
     simplify_data, split_inner_and_outer_contours,
     split_into_components, split_into_contours,
     CMD_TYPE_ARC, CMD_TYPE_BEZIER, CMD_TYPE_LINE, CMD_TYPE_MOVE,
-    COL_X, COL_Y, COL_Z, Command as CoreCommand, CommandRow,
+    COL_C1X, COL_C1Y, COL_C2X, COL_C2Y, COL_CW, COL_I, COL_J, COL_TYPE, COL_X,
+    COL_Y, COL_Z, Command as CoreCommand, CommandRow,
     Geometry as CoreGeometry, Point,
 };
 
@@ -833,7 +834,15 @@ impl Geometry {
         {
             let mut geo = slf.borrow_mut();
             for row in geo.inner.synced_data_mut().iter_mut() {
-                row[1] = -row[1];
+                row[COL_X] = -row[COL_X];
+                let cmd_type = row[COL_TYPE] as i32;
+                if cmd_type == CMD_TYPE_BEZIER as i32 {
+                    row[COL_C1X] = -row[COL_C1X];
+                    row[COL_C2X] = -row[COL_C2X];
+                } else if cmd_type == CMD_TYPE_ARC as i32 {
+                    row[COL_I] = -row[COL_I];
+                    row[COL_CW] = if row[COL_CW] != 0.0 { 0.0 } else { 1.0 };
+                }
             }
         }
         slf
@@ -843,7 +852,15 @@ impl Geometry {
         {
             let mut geo = slf.borrow_mut();
             for row in geo.inner.synced_data_mut().iter_mut() {
-                row[2] = -row[2];
+                row[COL_Y] = -row[COL_Y];
+                let cmd_type = row[COL_TYPE] as i32;
+                if cmd_type == CMD_TYPE_BEZIER as i32 {
+                    row[COL_C1Y] = -row[COL_C1Y];
+                    row[COL_C2Y] = -row[COL_C2Y];
+                } else if cmd_type == CMD_TYPE_ARC as i32 {
+                    row[COL_J] = -row[COL_J];
+                    row[COL_CW] = if row[COL_CW] != 0.0 { 0.0 } else { 1.0 };
+                }
             }
         }
         slf

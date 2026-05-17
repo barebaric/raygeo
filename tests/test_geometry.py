@@ -21,6 +21,10 @@ from raygeo import (
     COL_I,
     COL_J,
     COL_CW,
+    COL_C1X,
+    COL_C1Y,
+    COL_C2X,
+    COL_C2Y,
     GEO_ARRAY_COLS,
 )
 
@@ -538,13 +542,17 @@ def test_flip_x():
     assert math.isclose(geo.data[1, COL_X], -10.0)
     assert math.isclose(geo.data[1, COL_Y], 10.0)
 
-    # ArcTo: (20, 5) -> (-20, 5)
+    # ArcTo: (20, 5) -> (-20, 5), I=5 -> -5, CW toggled
     assert math.isclose(geo.data[2, COL_X], -20.0)
     assert math.isclose(geo.data[2, COL_Y], 5.0)
+    assert math.isclose(geo.data[2, COL_I], -5.0)
+    assert math.isclose(geo.data[2, COL_CW], 1.0)
 
-    # BezierTo: (30, 10) -> (-30, 10)
+    # BezierTo: (30, 10) -> (-30, 10), C1X=22 -> -22, C2X=28 -> -28
     assert math.isclose(geo.data[3, COL_X], -30.0)
     assert math.isclose(geo.data[3, COL_Y], 10.0)
+    assert math.isclose(geo.data[3, COL_C1X], -22.0)
+    assert math.isclose(geo.data[3, COL_C2X], -28.0)
 
     # Flipping twice should return to original
     geo.flip_x()
@@ -578,13 +586,17 @@ def test_flip_y():
     assert math.isclose(geo.data[1, COL_X], 10.0)
     assert math.isclose(geo.data[1, COL_Y], -10.0)
 
-    # ArcTo: (20, 5) -> (20, -5)
+    # ArcTo: (20, 5) -> (20, -5), J=-5 -> 5, CW toggled
     assert math.isclose(geo.data[2, COL_X], 20.0)
     assert math.isclose(geo.data[2, COL_Y], -5.0)
+    assert math.isclose(geo.data[2, COL_J], 5.0)
+    assert math.isclose(geo.data[2, COL_CW], 1.0)
 
-    # BezierTo: (30, 10) -> (30, -10)
+    # BezierTo: (30, 10) -> (30, -10), C1Y=2 -> -2, C2Y=8 -> -8
     assert math.isclose(geo.data[3, COL_X], 30.0)
     assert math.isclose(geo.data[3, COL_Y], -10.0)
+    assert math.isclose(geo.data[3, COL_C1Y], -2.0)
+    assert math.isclose(geo.data[3, COL_C2Y], -8.0)
 
     # Flipping twice should return to original
     geo.flip_y()
