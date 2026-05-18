@@ -933,6 +933,7 @@ impl Geometry {
         for row in bezier_rows {
             pending.push(row);
         }
+        self.inner.sync_to_data();
     }
 
     #[pyo3(signature = (fail_on_t_junction=false))]

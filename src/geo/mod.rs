@@ -1,6 +1,6 @@
 mod algo;
 mod flex_point;
-mod geometry;
+pub(crate) mod geometry;
 mod path;
 mod shape;
 

@@ -26,6 +26,65 @@ pub enum CommandType {
     OpsSectionEnd = 107,
 }
 
+impl CommandType {
+    pub fn from_name(s: &str) -> Option<CommandType> {
+        match s {
+            "MOVE_TO" => Some(CommandType::MoveTo),
+            "LINE_TO" => Some(CommandType::LineTo),
+            "ARC_TO" => Some(CommandType::ArcTo),
+            "SCAN_LINE" => Some(CommandType::ScanLine),
+            "DWELL" => Some(CommandType::Dwell),
+            "BEZIER_TO" => Some(CommandType::BezierTo),
+            "QUADRATIC_BEZIER_TO" => Some(CommandType::QuadraticBezierTo),
+            "SET_POWER" => Some(CommandType::SetPower),
+            "SET_CUT_SPEED" => Some(CommandType::SetCutSpeed),
+            "SET_TRAVEL_SPEED" => Some(CommandType::SetTravelSpeed),
+            "ENABLE_AIR_ASSIST" => Some(CommandType::EnableAirAssist),
+            "DISABLE_AIR_ASSIST" => Some(CommandType::DisableAirAssist),
+            "SET_LASER" => Some(CommandType::SetLaser),
+            "SET_FREQUENCY" => Some(CommandType::SetFrequency),
+            "SET_PULSE_WIDTH" => Some(CommandType::SetPulseWidth),
+            "JOB_START" => Some(CommandType::JobStart),
+            "JOB_END" => Some(CommandType::JobEnd),
+            "LAYER_START" => Some(CommandType::LayerStart),
+            "LAYER_END" => Some(CommandType::LayerEnd),
+            "WORKPIECE_START" => Some(CommandType::WorkpieceStart),
+            "WORKPIECE_END" => Some(CommandType::WorkpieceEnd),
+            "OPS_SECTION_START" => Some(CommandType::OpsSectionStart),
+            "OPS_SECTION_END" => Some(CommandType::OpsSectionEnd),
+            _ => None,
+        }
+    }
+
+    pub fn name(&self) -> &'static str {
+        match self {
+            CommandType::MoveTo => "MOVE_TO",
+            CommandType::LineTo => "LINE_TO",
+            CommandType::ArcTo => "ARC_TO",
+            CommandType::ScanLine => "SCAN_LINE",
+            CommandType::Dwell => "DWELL",
+            CommandType::BezierTo => "BEZIER_TO",
+            CommandType::QuadraticBezierTo => "QUADRATIC_BEZIER_TO",
+            CommandType::SetPower => "SET_POWER",
+            CommandType::SetCutSpeed => "SET_CUT_SPEED",
+            CommandType::SetTravelSpeed => "SET_TRAVEL_SPEED",
+            CommandType::EnableAirAssist => "ENABLE_AIR_ASSIST",
+            CommandType::DisableAirAssist => "DISABLE_AIR_ASSIST",
+            CommandType::SetLaser => "SET_LASER",
+            CommandType::SetFrequency => "SET_FREQUENCY",
+            CommandType::SetPulseWidth => "SET_PULSE_WIDTH",
+            CommandType::JobStart => "JOB_START",
+            CommandType::JobEnd => "JOB_END",
+            CommandType::LayerStart => "LAYER_START",
+            CommandType::LayerEnd => "LAYER_END",
+            CommandType::WorkpieceStart => "WORKPIECE_START",
+            CommandType::WorkpieceEnd => "WORKPIECE_END",
+            CommandType::OpsSectionStart => "OPS_SECTION_START",
+            CommandType::OpsSectionEnd => "OPS_SECTION_END",
+        }
+    }
+}
+
 impl TryFrom<u8> for CommandType {
     type Error = String;
 
@@ -70,6 +129,23 @@ pub enum CommandCategory {
 pub enum SectionType {
     VectorOutline,
     RasterFill,
+}
+
+impl SectionType {
+    pub fn name(&self) -> &'static str {
+        match self {
+            SectionType::VectorOutline => "VECTOR_OUTLINE",
+            SectionType::RasterFill => "RASTER_FILL",
+        }
+    }
+
+    pub fn from_name(s: &str) -> Option<SectionType> {
+        match s {
+            "VECTOR_OUTLINE" => Some(SectionType::VectorOutline),
+            "RASTER_FILL" => Some(SectionType::RasterFill),
+            _ => None,
+        }
+    }
 }
 
 pub fn category(ct: CommandType) -> CommandCategory {

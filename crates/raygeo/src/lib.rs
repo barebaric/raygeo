@@ -34,5 +34,10 @@ pub mod types;
 
 pub use constants::*;
 pub use geo::*;
-pub use ops::*;
+pub use ops::axis::Axis;
+pub use ops::container::*;
+pub use ops::enums::*;
+pub use ops::group::*;
+pub use ops::soa::*;
+pub use ops::state::*;
 pub use types::*;

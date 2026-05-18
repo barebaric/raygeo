@@ -43,6 +43,14 @@ impl PyAxis {
         PyAxis(!self.0)
     }
 
+    fn __eq__(&self, other: &Self) -> bool {
+        self.0 == other.0
+    }
+
+    fn __ne__(&self, other: &Self) -> bool {
+        self.0 != other.0
+    }
+
     fn __repr__(&self) -> String {
         format!("Axis.{}", self.label())
     }
@@ -65,8 +73,8 @@ impl PyAxis {
     }
 
     fn assert_single_axis(&self) -> PyResult<()> {
-        self.0.assert_single_axis().map_err(|e| {
-            pyo3::exceptions::PyValueError::new_err(e)
-        })
+        self.0
+            .assert_single_axis()
+            .map_err(|e| pyo3::exceptions::PyValueError::new_err(e))
     }
 }

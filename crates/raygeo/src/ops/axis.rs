@@ -36,6 +36,32 @@ impl Axis {
             _ => Err(format!("{:?} is not a single axis", self)),
         }
     }
+
+    pub fn name(self) -> Result<&'static str, String> {
+        match self {
+            Axis::X => Ok("X"),
+            Axis::Y => Ok("Y"),
+            Axis::Z => Ok("Z"),
+            Axis::A => Ok("A"),
+            Axis::B => Ok("B"),
+            Axis::C => Ok("C"),
+            Axis::U => Ok("U"),
+            _ => Err(format!("{:?} is not a single axis", self)),
+        }
+    }
+
+    pub fn from_str_name(s: &str) -> Option<Axis> {
+        match s {
+            "X" => Some(Axis::X),
+            "Y" => Some(Axis::Y),
+            "Z" => Some(Axis::Z),
+            "A" => Some(Axis::A),
+            "B" => Some(Axis::B),
+            "C" => Some(Axis::C),
+            "U" => Some(Axis::U),
+            _ => None,
+        }
+    }
 }
 
 #[cfg(test)]
