@@ -29,8 +29,10 @@
 
 pub mod constants;
 pub mod geo;
+pub mod ops;
 pub mod types;
 
 pub use constants::*;
 pub use geo::*;
+pub use ops::*;
 pub use types::*;
