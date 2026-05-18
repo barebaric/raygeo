@@ -34,7 +34,7 @@ pub fn get_circle_circle_intersections(
     let y2 = c1.1 + a * dy / d;
 
     if h < 1e-9 {
-        return vec![(x2, y2)];
+        return vec![(x2, y2), (x2, y2)];
     }
 
     let x3_1 = x2 + h * dy / d;
@@ -132,11 +132,13 @@ mod tests {
     }
 
     #[test]
-    fn test_get_circle_circle_intersections_one_point() {
-        let result =
-            get_circle_circle_intersections((0.0, 0.0), 1.0, (2.0, 0.0), 1.0);
-        assert_eq!(result.len(), 1);
-    }
+fn test_get_circle_circle_intersections_one_point() {
+    let result =
+        get_circle_circle_intersections((0.0, 0.0), 1.0, (2.0, 0.0), 1.0);
+    assert_eq!(result.len(), 2);
+    assert!((result[0].0 - result[1].0).abs() < 1e-9);
+    assert!((result[0].1 - result[1].1).abs() < 1e-9);
+}
 
     #[test]
     fn test_get_circle_circle_intersections_two_points() {
