@@ -1,21 +1,21 @@
-use crate::flex_point::{PyPoint2D, PyPoint3D};
-use crate::geometry::{Geometry, PyCommand};
+use crate::geo::flex_point::{PyPoint2D, PyPoint3D};
+use crate::geo::geometry::{Geometry, PyCommand};
 use numpy::PyArray2;
 use pyo3::prelude::*;
 use pyo3::types::{PyDict, PyList, PyTuple};
 
-use raygeo_core::algo::fitting::{
+use raygeo_core::geo::algo::fitting::{
     convert_arc_to_beziers_from_array, create_arc_cmd, create_line_cmd,
     flatten_to_points, linearize_geometry,
 };
-use raygeo_core::path::analysis::{
+use raygeo_core::geo::analysis::{
     get_point_and_tangent_at_from_array, get_subpath_area_from_array,
     get_subpath_vertices_from_array, partial_segment_from_row,
     segment_length_from_row_flat,
 };
-use raygeo_core::path::cleanup::{are_points_equal, get_segment_key};
-use raygeo_core::path::split::get_valid_contours_data;
-use raygeo_core::path::transform::{
+use raygeo_core::geo::cleanup::{are_points_equal, get_segment_key};
+use raygeo_core::geo::split::get_valid_contours_data;
+use raygeo_core::geo::transform::{
     apply_affine_transform_to_array, map_geometry_to_frame,
 };
 use raygeo_core::{
@@ -129,7 +129,7 @@ fn get_path_winding_order_from_array(
     start_cmd_index: usize,
 ) -> String {
     let arr = to_data_array(data);
-    raygeo_core::analysis::get_path_winding_order_from_array(
+    raygeo_core::geo::analysis::get_path_winding_order_from_array(
         &arr,
         start_cmd_index,
     )
@@ -160,7 +160,7 @@ fn optimize_path_from_array(
         return PyArray2::<f64>::zeros(py, [0, 0], false).as_any().clone();
     }
     let arr = to_data_array(data);
-    let result = raygeo_core::algo::fitting::optimize_path_from_array(
+    let result = raygeo_core::geo::algo::fitting::optimize_path_from_array(
         &arr, tolerance, fit_arcs,
     );
     let vecs: Vec<Vec<f64>> = result.into_iter().map(|r| r.to_vec()).collect();
@@ -729,25 +729,25 @@ fn get_angle_at_vertex_py(
     p1: (f64, f64),
     p2: (f64, f64),
 ) -> f64 {
-    raygeo_core::path::analysis::get_angle_at_vertex(p0, p1, p2)
+    raygeo_core::geo::analysis::get_angle_at_vertex(p0, p1, p2)
 }
 
 #[pyfunction(name = "remove_duplicates")]
 fn remove_duplicates_py(points: Vec<(f64, f64)>) -> Vec<(f64, f64)> {
-    raygeo_core::path::analysis::remove_duplicates(&points)
+    raygeo_core::geo::analysis::remove_duplicates(&points)
 }
 
 #[pyfunction(name = "is_clockwise")]
 fn is_clockwise_py(points: Vec<PyPoint2D>) -> bool {
     let pts: Vec<(f64, f64)> = points.iter().map(|p| (p.0, p.1)).collect();
-    raygeo_core::path::analysis::is_clockwise(&pts)
+    raygeo_core::geo::analysis::is_clockwise(&pts)
 }
 
 #[pyfunction(name = "is_closed")]
 #[pyo3(signature = (commands, tolerance=1e-6))]
 fn is_closed_py(commands: Vec<Vec<f64>>, tolerance: f64) -> bool {
     let arr = to_data_array(commands);
-    raygeo_core::path::analysis::is_closed(&arr, tolerance)
+    raygeo_core::geo::analysis::is_closed(&arr, tolerance)
 }
 
 #[pyfunction(name = "get_outward_normal_at_from_array")]
@@ -757,15 +757,13 @@ fn get_outward_normal_at_from_array_py(
     t: f64,
 ) -> Option<(f64, f64)> {
     let arr = to_data_array(data);
-    raygeo_core::path::analysis::get_outward_normal_at_from_array(
+    raygeo_core::geo::analysis::get_outward_normal_at_from_array(
         &arr, row_index, t,
     )
 }
 
-pub fn build_path_module(
-    py: Python,
-    parent: &Bound<'_, PyModule>,
-) -> PyResult<()> {
+pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
+    let py = m.py();
     let path_mod = PyModule::new(py, "path")?;
 
     path_mod.add_class::<Geometry>()?;
@@ -933,9 +931,10 @@ pub fn build_path_module(
         path_mod.clone()
     )?)?;
 
-    parent.add_submodule(&path_mod)?;
+    m.add_submodule(&path_mod)?;
 
     let sys_modules = py.import("sys")?.getattr("modules")?;
+    sys_modules.set_item("raygeo.geo.path", &path_mod)?;
     sys_modules.set_item("raygeo.path", &path_mod)?;
 
     Ok(())

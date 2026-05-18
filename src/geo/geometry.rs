@@ -3,9 +3,9 @@ use numpy::{IntoPyArray, PyArray2, PyArrayMethods};
 use pyo3::prelude::*;
 use pyo3::types::{PyDict, PyList, PyType};
 
-use raygeo_core::algo::fitting::convert_arc_to_beziers_from_array;
-use raygeo_core::path::analysis::get_point_and_tangent_at_from_array;
-use raygeo_core::path::transform::map_geometry_to_frame;
+use raygeo_core::geo::algo::fitting::convert_arc_to_beziers_from_array;
+use raygeo_core::geo::analysis::get_point_and_tangent_at_from_array;
+use raygeo_core::geo::transform::map_geometry_to_frame;
 use raygeo_core::{
     check_intersection_from_array, check_self_intersection_from_array,
     close_geometry_gaps_from_array, convert_arcs_to_beziers,

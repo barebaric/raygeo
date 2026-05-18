@@ -1,29 +1,30 @@
 use pyo3::prelude::*;
-use crate::flex_point::{PyPoint2D, PyPoint3D, poly_to_points, extract_polygons};
-use raygeo_core::algo::clipping::{
+use crate::geo::flex_point::{PyPoint2D, PyPoint3D, poly_to_points, extract_polygons};
+use raygeo_core::geo::algo::clipping::{
     clip_line_segment_with_polygons, clip_line_segment_with_rect,
     subtract_polygons_from_line_segment,
 };
-use raygeo_core::algo::minkowski::{
+use raygeo_core::geo::algo::minkowski::{
     calculate_input_scale, convolve_point_sequences, convolve_two_segments,
     get_inner_fit_polygon, get_no_fit_polygon,
     get_polygon_minkowski_sum_convex,
 };
-use raygeo_core::algo::simplify::simplify_polyline;
-use raygeo_core::algo::fitting::{
+use raygeo_core::geo::algo::simplify::simplify_polyline;
+use raygeo_core::geo::algo::fitting::{
     are_points_collinear, convert_arc_to_beziers_from_array, create_arc_cmd,
     create_line_cmd, fit_circle_to_3_points, fit_circle_to_points,
     fit_points_recursive, fit_points_with_primitives, flatten_to_points,
     get_polyline_arc_deviation, get_polyline_line_deviation,
     linearize_geometry, project_circle_center_to_bisector,
 };
-use raygeo_core::algo::smooth::{
+use raygeo_core::geo::algo::smooth::{
     compute_gaussian_kernel, resample_polyline, smooth_circularly,
     smooth_polyline, smooth_sub_segment,
 };
 use raygeo_core::Segment3D;
 
-pub fn build_algo_module(py: Python, parent: &Bound<'_, PyModule>) -> PyResult<()> {
+pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
+    let py = m.py();
     let algo_mod = PyModule::new(py, "algo")?;
 
     let minkowski_mod = PyModule::new(py, "minkowski")?;
@@ -72,9 +73,15 @@ pub fn build_algo_module(py: Python, parent: &Bound<'_, PyModule>) -> PyResult<(
     algo_mod.add_submodule(&smooth_mod)?;
     algo_mod.add_submodule(&fitting_mod)?;
 
-    parent.add_submodule(&algo_mod)?;
+    m.add_submodule(&algo_mod)?;
 
     let sys_modules = py.import("sys")?.getattr("modules")?;
+    sys_modules.set_item("raygeo.geo.algo", &algo_mod)?;
+    sys_modules.set_item("raygeo.geo.algo.minkowski", &minkowski_mod)?;
+    sys_modules.set_item("raygeo.geo.algo.simplify", &simplify_mod)?;
+    sys_modules.set_item("raygeo.geo.algo.clipping", &clipping_mod)?;
+    sys_modules.set_item("raygeo.geo.algo.smooth", &smooth_mod)?;
+    sys_modules.set_item("raygeo.geo.algo.fitting", &fitting_mod)?;
     sys_modules.set_item("raygeo.algo", &algo_mod)?;
     sys_modules.set_item("raygeo.algo.minkowski", &minkowski_mod)?;
     sys_modules.set_item("raygeo.algo.simplify", &simplify_mod)?;

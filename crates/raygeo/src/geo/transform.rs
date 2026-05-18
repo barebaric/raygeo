@@ -4,12 +4,12 @@
 //! and applying affine transformations. The offsetting uses polygon boolean
 //! operations to handle holes correctly.
 
-use crate::path::geometry::Geometry;
-use crate::path::intersect::check_intersection_from_array;
-use crate::path::split::{get_valid_contours_data, split_into_contours};
-use crate::shape::arc::linearize_arc;
-use crate::shape::polygon::is_point_inside_polygon;
-use crate::shape::polygon::{get_polygons_difference, offset_polygon};
+use crate::geo::geometry::Geometry;
+use crate::geo::intersect::check_intersection_from_array;
+use crate::geo::split::{get_valid_contours_data, split_into_contours};
+use crate::geo::shape::arc::linearize_arc;
+use crate::geo::shape::polygon::is_point_inside_polygon;
+use crate::geo::shape::polygon::{get_polygons_difference, offset_polygon};
 use crate::types::{Command, Point, Point3D, Polygon, Rect};
 
 const CLIPPER_SCALE: i64 = 10_000_000;

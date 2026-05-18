@@ -9,11 +9,11 @@
 
 use std::f64::consts::PI;
 
-use crate::shape::arc::{get_arc_bounds, get_arc_closest_point};
-use crate::shape::bezier::{
+use crate::geo::shape::arc::{get_arc_bounds, get_arc_closest_point};
+use crate::geo::shape::bezier::{
     get_bezier_closest_point, linearize_bezier_from_array,
 };
-use crate::shape::line::get_line_segment_closest_point;
+use crate::geo::shape::line::get_line_segment_closest_point;
 use crate::types::{Command, Point, Point3D, Rect};
 
 /// Internal helper: computes min/max bounds for a 1D cubic Bezier curve.

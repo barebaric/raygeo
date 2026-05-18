@@ -6,9 +6,9 @@
 //! Also provides contour analysis functions like reverse_contour,
 //! normalize_winding_orders, filter_to_external_contours, etc.
 
-use crate::path::analysis::{get_subpath_area_from_array, is_closed};
-use crate::path::geometry::Geometry;
-use crate::shape::polygon::is_point_inside_polygon;
+use crate::geo::analysis::{get_subpath_area_from_array, is_closed};
+use crate::geo::geometry::Geometry;
+use crate::geo::shape::polygon::is_point_inside_polygon;
 use crate::types::{Command, Point, Rect};
 
 /// Split a Geometry into individual contour geometries.

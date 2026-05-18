@@ -4,7 +4,7 @@
 //! of polygons, which are used in packing and nesting algorithms for computing
 //! No-Fit Polygons (NFP) and Inner-Fit Polygons (IFP).
 
-use crate::shape::polygon::{get_polygon_bounds, get_polygon_convex_hull};
+use crate::geo::shape::polygon::{get_polygon_bounds, get_polygon_convex_hull};
 use crate::types::{IntPolygon, Point, Polygon};
 
 const CLIPPER_SCALE: i64 = 10_000_000;

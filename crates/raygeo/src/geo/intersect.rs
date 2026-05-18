@@ -5,9 +5,9 @@
 //! line segments for testing, and bounding box culling is used for performance.
 
 use crate::constants::*;
-use crate::shape::arc::linearize_arc;
-use crate::shape::bezier::linearize_bezier_from_array;
-use crate::shape::line::get_line_segment_intersection;
+use crate::geo::shape::arc::linearize_arc;
+use crate::geo::shape::bezier::linearize_bezier_from_array;
+use crate::geo::shape::line::get_line_segment_intersection;
 use crate::types::Point3D;
 
 /// Returns a list of linearized line segments for a given row in a data array.

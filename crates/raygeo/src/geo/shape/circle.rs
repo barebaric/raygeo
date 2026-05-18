@@ -6,7 +6,7 @@
 //! - Circle-rectangle containment and intersection
 //! - Line segment intersection with circles
 
-use crate::shape::line::get_line_segment_closest_point;
+use crate::geo::shape::line::get_line_segment_closest_point;
 use crate::types::{Point, Rect};
 
 /// Computes the intersection points between two circles.
@@ -32,6 +32,10 @@ pub fn get_circle_circle_intersections(
 
     let x2 = c1.0 + a * dx / d;
     let y2 = c1.1 + a * dy / d;
+
+    if h < 1e-9 {
+        return vec![(x2, y2)];
+    }
 
     let x3_1 = x2 + h * dy / d;
     let y3_1 = y2 - h * dx / d;

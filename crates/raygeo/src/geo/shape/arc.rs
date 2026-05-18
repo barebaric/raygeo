@@ -10,10 +10,10 @@
 use std::f64::consts::PI;
 
 use crate::constants::*;
-use crate::shape::line::{
+use crate::geo::shape::line::{
     does_line_segment_intersect_rect, get_line_segment_closest_point,
 };
-use crate::shape::polygon::is_point_inside_polygon;
+use crate::geo::shape::polygon::is_point_inside_polygon;
 use crate::types::{Point, Point3D, Polygon, Rect};
 
 /// Normalizes an angle to the range [0, 2*PI).
@@ -426,7 +426,7 @@ pub fn does_arc_intersect_circle(
     circle_center: Point,
     circle_radius: f64,
 ) -> bool {
-    use crate::shape::circle::get_circle_circle_intersections;
+    use crate::geo::shape::circle::get_circle_circle_intersections;
 
     let radius = (start_pos.0 - center.0).hypot(start_pos.1 - center.1);
     if radius < 1e-9 {

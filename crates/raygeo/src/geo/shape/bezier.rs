@@ -12,9 +12,9 @@
 use std::f64::consts::PI;
 
 use crate::constants::*;
-use crate::shape::line::get_line_segment_closest_point;
-use crate::shape::point::midpoint;
-use crate::shape::polygon::is_point_inside_polygon;
+use crate::geo::shape::line::get_line_segment_closest_point;
+use crate::geo::shape::point::midpoint;
+use crate::geo::shape::polygon::is_point_inside_polygon;
 use crate::types::{CubicBezier, Point, Point3D, Polygon, Polygon3D, Rect};
 
 /// Evaluates a cubic Bezier curve at parameter t [0, 1] using the Bernstein polynomial.

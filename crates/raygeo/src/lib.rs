@@ -27,14 +27,10 @@
 //! let rect = geo.rect();
 //! ```
 
-pub mod algo;
 pub mod constants;
-pub mod path;
-pub mod shape;
+pub mod geo;
 pub mod types;
 
-pub use algo::*;
 pub use constants::*;
-pub use path::*;
-pub use shape::*;
+pub use geo::*;
 pub use types::*;

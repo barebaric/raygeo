@@ -1,36 +1,36 @@
 use pyo3::prelude::*;
 use pyo3::types::PyList;
-use crate::flex_point::{PyPoint2D, PyPoint3D, poly_to_points, extract_polygons};
+use crate::geo::flex_point::{PyPoint2D, PyPoint3D, poly_to_points, extract_polygons};
 use numpy::{PyArray2, PyArrayMethods, PyUntypedArrayMethods};
-use raygeo_core::path::analysis::is_arc_clockwise;
+use raygeo_core::geo::analysis::is_arc_clockwise;
 use raygeo_core::{BezierSplit, Point, Segment3D, CMD_TYPE_ARC};
-use raygeo_core::shape::arc::{
+use raygeo_core::geo::shape::arc::{
     _linearize_arc_from_array, does_arc_intersect_circle,
     does_arc_intersect_rect, get_arc_angles, get_arc_bounds,
     get_arc_closest_point, get_arc_direction, get_arc_midpoint,
     is_angle_between, is_arc_inside_polygons, linearize_arc, normalize_angle,
 };
-use raygeo_core::shape::bezier::{
+use raygeo_core::geo::shape::bezier::{
     bezier_flatness_sq, clip_bezier_with_rect, convert_cubic_bezier_to_quadratic,
     flatten_bezier, get_bezier_bounds, get_bezier_point_at,
     get_bezier_rect_intersections, is_bezier_inside_polygons, linearize_bezier,
     linearize_bezier_adaptive, linearize_bezier_from_array, linearize_bezier_segment,
     perp_dist_sq, split_bezier,
 };
-use raygeo_core::shape::circle::{
+use raygeo_core::geo::shape::circle::{
     does_circle_intersect_rect, get_circle_circle_intersections,
     is_circle_inside_rect, line_segment_intersects_circle,
     project_point_onto_circle,
 };
-use raygeo_core::shape::line::{
+use raygeo_core::geo::shape::line::{
     does_line_segment_intersect_circle, does_line_segment_intersect_rect,
     does_rect_contain_rect, get_line_closest_point, get_line_line_intersection,
     get_line_segment_closest_point, get_line_segment_intersection,
     get_line_segment_polygon_intersections, get_point_line_distance,
     is_point_inside_rect, is_point_on_segment,
 };
-use raygeo_core::shape::point::midpoint;
-use raygeo_core::shape::polygon::{
+use raygeo_core::geo::shape::point::midpoint;
+use raygeo_core::geo::shape::polygon::{
     clean_polygon, flip_polygon, flip_polygons, get_polygon_bounds,
     get_polygon_centroid, get_polygon_convex_hull, get_polygon_edges,
     get_polygon_group_bounds, get_polygon_perimeter, get_polygon_signed_area,
@@ -66,10 +66,8 @@ fn _arc_row_from_any(arc_cmd: &Bound<'_, PyAny>) -> PyResult<[f64; 8]> {
     ))
 }
 
-pub fn build_shape_module(
-    py: Python,
-    parent: &Bound<'_, PyModule>,
-) -> PyResult<()> {
+pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
+    let py = m.py();
     let shape_mod = PyModule::new(py, "shape")?;
 
     let arc_mod = PyModule::new(py, "arc")?;
@@ -425,17 +423,25 @@ pub fn build_shape_module(
         .add_function(wrap_pyfunction!(midpoint_py, point_mod.clone())?)?;
     shape_mod.add_submodule(&point_mod)?;
 
-    parent.add_submodule(&shape_mod)?;
+    m.add_submodule(&shape_mod)?;
 
     let sys_modules = py.import("sys")?.getattr("modules")?;
-    sys_modules.set_item("raygeo.shape", shape_mod)?;
-    sys_modules.set_item("raygeo.shape.arc", arc_mod)?;
-    sys_modules.set_item("raygeo.shape.bezier", bezier_mod)?;
-    sys_modules.set_item("raygeo.shape.circle", circle_mod)?;
-    sys_modules.set_item("raygeo.shape.polygon", polygon_mod)?;
-    sys_modules.set_item("raygeo.shape.line", line_mod)?;
-    sys_modules.set_item("raygeo.shape.rect", rect_mod)?;
-    sys_modules.set_item("raygeo.shape.point", point_mod)?;
+    sys_modules.set_item("raygeo.geo.shape", &shape_mod)?;
+    sys_modules.set_item("raygeo.geo.shape.arc", &arc_mod)?;
+    sys_modules.set_item("raygeo.geo.shape.bezier", &bezier_mod)?;
+    sys_modules.set_item("raygeo.geo.shape.circle", &circle_mod)?;
+    sys_modules.set_item("raygeo.geo.shape.polygon", &polygon_mod)?;
+    sys_modules.set_item("raygeo.geo.shape.line", &line_mod)?;
+    sys_modules.set_item("raygeo.geo.shape.rect", &rect_mod)?;
+    sys_modules.set_item("raygeo.geo.shape.point", &point_mod)?;
+    sys_modules.set_item("raygeo.shape", &shape_mod)?;
+    sys_modules.set_item("raygeo.shape.arc", &arc_mod)?;
+    sys_modules.set_item("raygeo.shape.bezier", &bezier_mod)?;
+    sys_modules.set_item("raygeo.shape.circle", &circle_mod)?;
+    sys_modules.set_item("raygeo.shape.polygon", &polygon_mod)?;
+    sys_modules.set_item("raygeo.shape.line", &line_mod)?;
+    sys_modules.set_item("raygeo.shape.rect", &rect_mod)?;
+    sys_modules.set_item("raygeo.shape.point", &point_mod)?;
 
     Ok(())
 }
@@ -1268,7 +1274,7 @@ fn does_rect_intersect_rect_py(
     r1: (f64, f64, f64, f64),
     r2: (f64, f64, f64, f64),
 ) -> bool {
-    use raygeo_core::shape::line::does_rect_intersect_rect;
+    use raygeo_core::geo::shape::line::does_rect_intersect_rect;
     does_rect_intersect_rect(r1, r2)
 }
 

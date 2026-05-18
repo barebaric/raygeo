@@ -9,11 +9,11 @@
 
 use std::f64::consts::PI;
 
-use crate::path::geometry::Geometry;
-use crate::path::split::{get_valid_contours_data, split_into_contours};
-use crate::shape::arc::linearize_arc;
-use crate::shape::bezier::linearize_bezier_from_array;
-use crate::shape::polygon::is_point_inside_polygon;
+use crate::geo::geometry::Geometry;
+use crate::geo::split::{get_valid_contours_data, split_into_contours};
+use crate::geo::shape::arc::linearize_arc;
+use crate::geo::shape::bezier::linearize_bezier_from_array;
+use crate::geo::shape::polygon::is_point_inside_polygon;
 use crate::types::{Command, Point, Point3D, Polygon};
 
 /// Checks if a path forms a closed loop within the given tolerance.

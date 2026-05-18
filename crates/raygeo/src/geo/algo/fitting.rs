@@ -1,10 +1,10 @@
 use std::f64::consts::PI;
 
-use crate::algo::simplify::simplify_polyline;
+use crate::geo::algo::simplify::simplify_polyline;
 use crate::constants::*;
-use crate::path::analysis::is_arc_clockwise;
-use crate::shape::arc::{get_arc_angles, linearize_arc};
-use crate::shape::bezier::linearize_bezier_from_array;
+use crate::geo::analysis::is_arc_clockwise;
+use crate::geo::shape::arc::{get_arc_angles, linearize_arc};
+use crate::geo::shape::bezier::linearize_bezier_from_array;
 use crate::types::{Command, Point, Point3D};
 
 /// Converts all arc commands in a geometry data array into cubic bezier approximations.
