@@ -160,11 +160,11 @@ outer_only = g.remove_inner_edges()
 
 ### Polygon Operations
 
-The `shape.polygon` submodule provides polygon-specific operations powered by Clipper2:
+The `geo.shape.polygon` submodule provides polygon-specific operations powered by Clipper2:
 
 ```python
 from raygeo import Geometry
-from raygeo.shape.polygon import (
+from raygeo.geo.shape.polygon import (
     get_polygon_area,
     get_polygon_bounds,
     offset_polygon,
@@ -241,15 +241,8 @@ g3 = pickle.loads(pickle.dumps(g))
 
 ## Documentation
 
-Full API documentation is available in the [`docs/`](docs/) directory:
-
-| Document                               | Description                                        |
-| -------------------------------------- | -------------------------------------------------- |
-| [`docs/raygeo.md`](docs/raygeo.md)     | Top-level: Geometry, constants, types, utils       |
-| [`docs/geometry.md`](docs/geometry.md) | Geometry class — commands, properties, transforms  |
-| [`docs/path.md`](docs/path.md)         | Path ops: splitting, contours, winding, fitting    |
-| [`docs/shape.md`](docs/shape.md)       | Shape primitives: arcs, beziers, circles, polygons |
-| [`docs/algo.md`](docs/algo.md)         | Algorithms: clipping, fitting, Minkowski, smooth   |
+Full API documentation is generated from the source type stubs and published
+with the [RayForge Developer Docs](https://rayforge.org/docs/developer/raygeo-api/raygeo).
 
 ## Development
 
