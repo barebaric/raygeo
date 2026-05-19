@@ -8,7 +8,12 @@ description = "PyO3 bindings for RayGeo geometry engine"
 pyo3 = { version = "0.28", features = ["extension-module", "abi3", "abi3-py311"] }
 raygeo-core = { path = "crates/raygeo" }
 numpy = "0.28"
+pyo3-stub-gen = "0.22.3"
 
 [lib]
 name = "raygeo"
 crate-type = ["cdylib"]
+
+[[bin]]
+name = "stub_gen"
+path = "src/bin/stub_gen.rs"

@@ -1,4 +1,5 @@
 use pyo3::prelude::*;
+use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 use raygeo_core::ops::axis::Axis;
 
 pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
@@ -6,26 +7,28 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     Ok(())
 }
 
-#[pyclass(frozen, skip_from_py_object, name = "Axis")]
+#[gen_stub_pyclass]
+#[pyclass(frozen, skip_from_py_object, module = "raygeo.ops", name = "Axis")]
 #[derive(Clone)]
 pub struct PyAxis(pub Axis);
 
+#[gen_stub_pymethods]
 #[pymethods]
 impl PyAxis {
     #[classattr]
-    pub const X: Self = PyAxis(Axis::X);
+    pub const X: PyAxis = PyAxis(Axis::X);
     #[classattr]
-    pub const Y: Self = PyAxis(Axis::Y);
+    pub const Y: PyAxis = PyAxis(Axis::Y);
     #[classattr]
-    pub const Z: Self = PyAxis(Axis::Z);
+    pub const Z: PyAxis = PyAxis(Axis::Z);
     #[classattr]
-    pub const A: Self = PyAxis(Axis::A);
+    pub const A: PyAxis = PyAxis(Axis::A);
     #[classattr]
-    pub const B: Self = PyAxis(Axis::B);
+    pub const B: PyAxis = PyAxis(Axis::B);
     #[classattr]
-    pub const C: Self = PyAxis(Axis::C);
+    pub const C: PyAxis = PyAxis(Axis::C);
     #[classattr]
-    pub const U: Self = PyAxis(Axis::U);
+    pub const U: PyAxis = PyAxis(Axis::U);
 
     fn __or__(&self, other: &Self) -> Self {
         PyAxis(self.0 | other.0)

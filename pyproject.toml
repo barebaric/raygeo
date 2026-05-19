@@ -32,5 +32,8 @@ module-name = "raygeo"
 features = ["pyo3/extension-module"]
 include = ["raygeo-stubs/**/*"]
 
+[tool.pyo3-stub-gen]
+module-name = "raygeo"
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]

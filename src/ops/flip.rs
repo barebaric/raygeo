@@ -1,5 +1,5 @@
 use pyo3::prelude::*;
-
+use pyo3_stub_gen::derive::gen_stub_pyfunction;
 use super::container::PyOps;
 
 pub fn register(parent: &Bound<'_, PyModule>) -> PyResult<()> {
@@ -13,6 +13,10 @@ pub fn register(parent: &Bound<'_, PyModule>) -> PyResult<()> {
     Ok(())
 }
 
+#[gen_stub_pyfunction(python = r#"
+    def flip_ops(ops: Ops) -> Ops:
+        """Flip the ops."""
+"#, module = "raygeo.ops")]
 #[pyfunction]
 fn py_flip_ops(ops: &PyOps) -> PyOps {
     PyOps {

@@ -1,6 +1,7 @@
 use pyo3::prelude::*;
 use pyo3::types::{PyBytes, PyDict, PyList, PyType};
 use pyo3::{Bound, Py, PyAny, PyResult};
+use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 
 use raygeo_core::ops::{Axis, CommandCategory, CommandType};
 
@@ -33,6 +34,7 @@ fn axis_map_to_py<'a>(
     super::serialize::axis_map_to_py_helper(py, axes)
 }
 
+#[gen_stub_pyclass]
 #[pyclass(module = "raygeo.ops", name = "CommandInfo")]
 pub struct PyCommandInfo {
     #[pyo3(get)]
@@ -75,6 +77,7 @@ pub struct PyCommandInfo {
     pub section_type: Option<String>,
 }
 
+#[gen_stub_pymethods]
 #[pymethods]
 impl PyCommandInfo {
     fn __eq__(
@@ -172,12 +175,14 @@ fn py_pyany_eq<T: pyo3::PyTypeInfo>(
     }
 }
 
+#[gen_stub_pyclass]
 #[pyclass(module = "raygeo.ops", name = "Ops", skip_from_py_object)]
 #[derive(Clone, Debug)]
 pub struct PyOps {
     pub inner: raygeo_core::ops::Ops,
 }
 
+#[gen_stub_pymethods]
 #[pymethods]
 impl PyOps {
     #[new]
@@ -343,6 +348,7 @@ impl PyOps {
         Ok(*self.inner.quad_params(idx))
     }
 
+    #[gen_stub(skip)]
     fn scanline_data<'py>(
         &self,
         py: Python<'py>,
@@ -503,6 +509,7 @@ impl PyOps {
         }
     }
 
+    #[gen_stub(skip)]
     fn extra_axes<'py>(
         &self,
         py: Python<'py>,
@@ -785,6 +792,7 @@ impl PyOps {
     }
 
     #[classmethod]
+    #[gen_stub(skip)]
     fn from_geometry(_cls: &Bound<'_, PyType>, geometry: &PyGeometry) -> Self {
         PyOps {
             inner: raygeo_core::ops::Ops::from_geometry(&geometry.inner),
@@ -1242,6 +1250,7 @@ impl PyOps {
     }
 
     #[classmethod]
+    #[gen_stub(skip)]
     fn from_dict(
         _cls: &Bound<'_, PyType>,
         data: &Bound<'_, PyDict>,
@@ -1255,6 +1264,7 @@ impl PyOps {
     }
 
     #[classmethod]
+    #[gen_stub(skip)]
     fn from_numpy_arrays(
         _cls: &Bound<'_, PyType>,
         arrays: &Bound<'_, PyDict>,
@@ -1263,18 +1273,21 @@ impl PyOps {
         Ok(PyOps { inner })
     }
 
+    #[gen_stub(skip)]
     #[getter]
     #[allow(non_snake_case)]
     fn get__time_dirty(&self) -> bool {
         self.inner.time_dirty
     }
 
+    #[gen_stub(skip)]
     #[getter]
     #[allow(non_snake_case)]
     fn get__cached_time(&self) -> f64 {
         self.inner.cached_time
     }
 
+    #[gen_stub(skip)]
     #[getter]
     #[allow(non_snake_case)]
     fn get__time_params(&self) -> Option<(f64, f64, f64)> {

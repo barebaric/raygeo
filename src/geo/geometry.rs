@@ -2,6 +2,8 @@ use numpy::ndarray;
 use numpy::{IntoPyArray, PyArray2, PyArrayMethods};
 use pyo3::prelude::*;
 use pyo3::types::{PyDict, PyList, PyType};
+use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
+use pyo3_stub_gen::{PyStubType, TypeInfo};
 
 use raygeo_core::geo::algo::fitting::convert_arc_to_beziers_from_array;
 use raygeo_core::geo::analysis::get_point_and_tangent_at_from_array;
@@ -20,7 +22,7 @@ use raygeo_core::{
     Geometry as CoreGeometry, Point,
 };
 
-#[pyclass(module = "geo.path", frozen, eq, skip_from_py_object)]
+#[pyclass(module = "raygeo.geo.path", frozen, eq, skip_from_py_object)]
 #[derive(Clone, Debug, PartialEq)]
 pub enum PyCommand {
     Move { end: (f64, f64, f64) },
@@ -35,6 +37,21 @@ pub enum PyCommand {
         control1: (f64, f64),
         control2: (f64, f64),
     },
+}
+
+impl PyStubType for PyCommand {
+    fn type_output() -> TypeInfo {
+        TypeInfo::with_module("raygeo.PyCommand", "raygeo.geo.path".into())
+    }
+}
+
+impl PyStubType for &mut Geometry {
+    fn type_input() -> TypeInfo {
+        Geometry::type_input()
+    }
+    fn type_output() -> TypeInfo {
+        Geometry::type_output()
+    }
 }
 
 impl From<CoreCommand> for PyCommand {
@@ -95,12 +112,14 @@ impl<'a, 'py> FromPyObject<'a, 'py> for FlexPoint {
     }
 }
 
-#[pyclass(module = "geo.path", skip_from_py_object)]
+#[gen_stub_pyclass]
+#[pyclass(module = "raygeo", skip_from_py_object)]
 #[derive(Clone)]
 pub struct Geometry {
     pub(crate) inner: CoreGeometry,
 }
 
+#[gen_stub_pymethods]
 #[pymethods]
 impl Geometry {
     #[classattr]
@@ -148,6 +167,7 @@ impl Geometry {
     #[classattr]
     const CMD_TYPE_BEZIER: f64 = raygeo_core::CMD_TYPE_BEZIER as f64;
 
+    /// Create a new empty Geometry.
     #[new]
     fn new() -> Self {
         Geometry {
@@ -155,6 +175,7 @@ impl Geometry {
         }
     }
 
+    #[gen_stub(skip)]
     fn __reduce_ex__<'py>(
         slf: &Bound<'py, Self>,
         protocol: i32,
@@ -170,23 +191,42 @@ impl Geometry {
         )
     }
 
+    /// Move the pen to the given coordinates.
+    ///
+    /// :param x: X coordinate.
+    /// :param y: Y coordinate.
+    /// :param z: Z coordinate (default 0.0).
     #[pyo3(signature = (x, y, z=0.0))]
     fn move_to(&mut self, x: f64, y: f64, z: f64) {
         self.inner.move_to(x, y, z);
         self.inner.sync_to_data();
     }
 
+    /// Draw a line to the given coordinates.
+    ///
+    /// :param x: X coordinate.
+    /// :param y: Y coordinate.
+    /// :param z: Z coordinate (default 0.0).
     #[pyo3(signature = (x, y, z=0.0))]
     fn line_to(&mut self, x: f64, y: f64, z: f64) {
         self.inner.line_to(x, y, z);
         self.inner.sync_to_data();
     }
 
+    /// Close the current sub-path.
     fn close_path(&mut self) {
         self.inner.close_path();
         self.inner.sync_to_data();
     }
 
+    /// Draw an arc to the given coordinates.
+    ///
+    /// :param x: X coordinate.
+    /// :param y: Y coordinate.
+    /// :param i: I offset from current point to center.
+    /// :param j: J offset from current point to center.
+    /// :param clockwise: Whether the arc is clockwise.
+    /// :param z: Z coordinate (default 0.0).
     #[pyo3(signature = (x, y, i=0.0, j=0.0, clockwise=true, z=0.0))]
     fn arc_to(
         &mut self,
@@ -201,6 +241,15 @@ impl Geometry {
         self.inner.sync_to_data();
     }
 
+    /// Draw a cubic bezier curve.
+    ///
+    /// :param x: End X coordinate.
+    /// :param y: End Y coordinate.
+    /// :param c1x: First control point X.
+    /// :param c1y: First control point Y.
+    /// :param c2x: Second control point X.
+    /// :param c2y: Second control point Y.
+    /// :param z: End Z coordinate (default 0.0).
     #[pyo3(signature = (x, y, c1x, c1y, c2x, c2y, z=0.0))]
     fn bezier_to(
         &mut self,
@@ -216,15 +265,18 @@ impl Geometry {
         self.inner.sync_to_data();
     }
 
+    /// Synchronize internal data structures.
     fn sync_to_data(&mut self) {
         self.inner.sync_to_data();
     }
 
+    /// Return the number of commands.
     fn __len__(&mut self) -> usize {
         self.inner.sync_to_data();
         self.inner.len()
     }
 
+    /// Return a hash of the geometry data.
     fn __hash__(&self) -> u64 {
         use std::collections::hash_map::DefaultHasher;
         use std::hash::{Hash, Hasher};
@@ -243,14 +295,17 @@ impl Geometry {
         hasher.finish()
     }
 
+    /// Check if the geometry has no commands.
     fn is_empty(&self) -> bool {
         self.inner.is_empty()
     }
 
+    /// Remove all commands from the geometry.
     fn clear(&mut self) {
         self.inner.clear();
     }
 
+    /// The coordinates of the last move-to command.
     #[getter]
     fn last_move_to(&self) -> (f64, f64, f64) {
         self.inner.last_move_to
@@ -261,6 +316,7 @@ impl Geometry {
         self.inner.last_move_to = value;
     }
 
+    /// Whether the geometry uses uniform scalable arcs.
     #[getter]
     fn uniform_scalable(&self) -> bool {
         self.inner.uniform_scalable
@@ -271,12 +327,15 @@ impl Geometry {
         self.inner.uniform_scalable = value;
     }
 
+    /// Return a deep copy of this geometry.
     fn copy(&self) -> Self {
         Geometry {
             inner: self.inner.copy(),
         }
     }
 
+    /// Internal: get the last point in the geometry.
+    #[gen_stub(skip)]
     fn _get_last_point(&self) -> (f64, f64, f64) {
         let pending = self.inner.pending_data();
         if let Some(last) = pending.last() {
@@ -285,6 +344,9 @@ impl Geometry {
         (0.0, 0.0, 0.0)
     }
 
+    /// Apply a 4x4 affine transformation matrix.
+    ///
+    /// :param matrix: A 4x4 transformation matrix as list of lists.
     fn transform(slf: Bound<'_, Self>, matrix: Vec<Vec<f64>>) -> Bound<'_, Self> {
         {
             let mut geo = slf.borrow_mut();
@@ -299,37 +361,48 @@ impl Geometry {
         slf
     }
 
+    /// Append another geometry's commands to this one.
+    ///
+    /// :param other: The geometry to append.
     fn extend(&mut self, other: &Geometry) {
         self.inner.extend(&other.inner);
     }
 
+    /// Return the bounding rectangle (x_min, x_max, y_min, y_max).
     fn rect(&mut self) -> (f64, f64, f64, f64) {
         self.inner.sync_to_data();
         self.inner.rect()
     }
 
+    /// Return the total path distance.
     fn distance(&mut self) -> f64 {
         self.inner.sync_to_data();
         self.inner.distance()
     }
 
+    /// Return the signed area of the geometry.
     fn area(&mut self) -> f64 {
         self.inner.sync_to_data();
         self.inner.area()
     }
 
+    /// Check if the geometry forms a closed path.
+    ///
+    /// :param tolerance: Max gap between start and end point.
     #[pyo3(signature = (tolerance=1e-6))]
     fn is_closed(&mut self, tolerance: f64) -> bool {
         self.inner.sync_to_data();
         self.inner.is_closed(tolerance)
     }
 
+    /// Return the geometry split into segments of connected commands.
     fn segments(&mut self) -> Vec<Vec<(f64, f64, f64)>> {
         self.inner.sync_to_data();
         self.inner.segments()
     }
 
     #[getter]
+    #[gen_stub(skip)]
     fn data<'py>(
         &mut self,
         py: Python<'py>,
@@ -349,6 +422,7 @@ impl Geometry {
     }
 
     #[setter(data)]
+    #[gen_stub(skip)]
     fn set_data<'py>(
         &mut self,
         _py: Python<'py>,
@@ -371,15 +445,20 @@ impl Geometry {
         Ok(())
     }
 
+    #[gen_stub(skip)]
     #[getter]
     fn _pending_data(&self) -> Vec<Vec<f64>> {
         self.inner.pending_data().iter().map(|r| r.to_vec()).collect()
     }
 
+    #[gen_stub(skip)]
     fn _sync_to_numpy(&mut self) {
         self.inner.sync_to_data();
     }
 
+    /// Get the command at the given index as a raw tuple.
+    ///
+    /// :param index: Command index (negative returns None).
     fn get_command_at(&mut self, index: isize) -> Option<CommandRow> {
         if index < 0 {
             return None;
@@ -389,6 +468,7 @@ impl Geometry {
             .map(|r| (r[0], r[1], r[2], r[3], r[4], r[5], r[6], r[7]))
     }
 
+    /// Iterate over all commands as raw tuples.
     fn iter_commands(&mut self) -> Vec<CommandRow> {
         let data = self.inner.synced_data();
         data.iter()
@@ -396,6 +476,7 @@ impl Geometry {
             .collect()
     }
 
+    /// Iterate over all commands as typed PyCommand objects.
     fn iter_typed_commands(&mut self) -> PyResult<Vec<PyCommand>> {
         let data = self.inner.synced_data();
         data.iter()
@@ -409,6 +490,9 @@ impl Geometry {
             .collect()
     }
 
+    /// Get the typed command at the given index.
+    ///
+    /// :param index: Command index.
     fn get_typed_command_at(
         &mut self,
         index: isize,
@@ -429,6 +513,7 @@ impl Geometry {
         }
     }
 
+    #[gen_stub(skip)]
     fn dump<'py>(&mut self, py: Python<'py>) -> PyResult<Bound<'py, PyDict>> {
         let last_move_to = self.inner.last_move_to;
         let uniform_scalable = self.inner.uniform_scalable;
@@ -477,11 +562,13 @@ impl Geometry {
         Ok(dict)
     }
 
+    #[gen_stub(skip)]
     fn to_dict<'py>(&mut self, py: Python<'py>) -> PyResult<Bound<'py, PyDict>> {
         self.dump(py)
     }
 
     #[classmethod]
+    #[gen_stub(skip)]
     fn load<'py>(
         _cls: &Bound<'py, PyType>,
         data: &Bound<'py, PyDict>,
@@ -689,6 +776,7 @@ impl Geometry {
     }
 
     #[classmethod]
+    #[gen_stub(skip)]
     fn from_dict<'py>(
         _cls: &Bound<'py, PyType>,
         data: &Bound<'py, PyDict>,
@@ -698,6 +786,7 @@ impl Geometry {
 
     #[classmethod]
     #[pyo3(signature = (points, close=true))]
+    #[gen_stub(skip)]
     fn from_points<'py>(
         _cls: &Bound<'py, PyType>,
         points: &Bound<'py, PyAny>,
@@ -723,10 +812,14 @@ impl Geometry {
         Ok(geo)
     }
 
+    /// Check equality with another Geometry.
     fn __eq__(&self, other: &Geometry) -> bool {
         self.inner == other.inner
     }
 
+    /// Simplify the geometry using Ramer-Douglas-Peucker.
+    ///
+    /// :param tolerance: Maximum deviation from original.
     fn simplify(&mut self, tolerance: f64) -> Self {
         let data = self.inner.synced_data();
         if data.len() > 2 {
@@ -736,6 +829,9 @@ impl Geometry {
         self.clone()
     }
 
+    /// Convert all curves to line segments.
+    ///
+    /// :param tolerance: Maximum deviation from curves.
     fn linearize(&mut self, tolerance: f64) -> Self {
         let data = self.inner.synced_data();
         if !data.is_empty() {
@@ -745,6 +841,12 @@ impl Geometry {
         self.clone()
     }
 
+    /// Fit curves (beziers and arcs) to the linearized geometry.
+    ///
+    /// :param tolerance: Maximum deviation.
+    /// :param beziers: Whether to fit bezier curves.
+    /// :param arcs: Whether to fit arcs.
+    /// :param on_progress: Optional progress callback.
     #[pyo3(signature = (tolerance, beziers=true, arcs=true, on_progress=None))]
     fn fit_curves(
         &mut self,
@@ -762,10 +864,14 @@ impl Geometry {
         self.clone()
     }
 
+    /// Fit arcs only to the linearized geometry.
+    ///
+    /// :param tolerance: Maximum deviation.
     fn fit_arcs(&mut self, tolerance: f64) -> Self {
         self.fit_curves(tolerance, false, true, None)
     }
 
+    /// Convert all arcs to bezier curves for uniform scaling.
     fn upgrade_to_scalable(slf: Bound<'_, Self>) -> Bound<'_, Self> {
         {
             let mut geo = slf.borrow_mut();
@@ -779,6 +885,9 @@ impl Geometry {
         slf
     }
 
+    /// Close gaps between sub-paths.
+    ///
+    /// :param tolerance: Max gap to close.
     #[pyo3(signature = (tolerance=None))]
     fn close_gaps(slf: Bound<'_, Self>, tolerance: Option<f64>) -> Bound<'_, Self> {
         {
@@ -793,6 +902,9 @@ impl Geometry {
         slf
     }
 
+    /// Remove duplicate segments from the geometry.
+    ///
+    /// :param tolerance: Maximum deviation for equality.
     fn cleanup(slf: Bound<'_, Self>, tolerance: f64) -> Bound<'_, Self> {
         {
             let mut geo = slf.borrow_mut();
@@ -808,6 +920,7 @@ impl Geometry {
         slf
     }
 
+    #[gen_stub(skip)]
     fn append_data<'py>(
         &mut self,
         py: Python<'py>,
@@ -830,6 +943,7 @@ impl Geometry {
         Ok(())
     }
 
+    /// Mirror the geometry along the X axis.
     fn flip_x(slf: Bound<'_, Self>) -> Bound<'_, Self> {
         {
             let mut geo = slf.borrow_mut();
@@ -848,6 +962,7 @@ impl Geometry {
         slf
     }
 
+    /// Mirror the geometry along the Y axis.
     fn flip_y(slf: Bound<'_, Self>) -> Bound<'_, Self> {
         {
             let mut geo = slf.borrow_mut();
@@ -866,6 +981,11 @@ impl Geometry {
         slf
     }
 
+    /// Find the closest point on the path to (x, y).
+    ///
+    /// :param x: X coordinate.
+    /// :param y: Y coordinate.
+    /// :returns: Tuple of (segment_index, t, point) or None.
     fn find_closest_point(
         &mut self,
         x: f64,
@@ -878,6 +998,11 @@ impl Geometry {
         find_closest_point_on_path_from_array(data, x, y)
     }
 
+    /// Get the point and tangent vector at parameter t on a segment.
+    ///
+    /// :param segment_index: Index of the segment.
+    /// :param t: Parameter in [0, 1].
+    /// :returns: Tuple of (point, tangent) or None.
     fn get_point_and_tangent_at(
         &mut self,
         segment_index: usize,
@@ -890,6 +1015,11 @@ impl Geometry {
             get_point_and_tangent_at_from_array(data, segment_index, t)
     }
 
+    /// Get the outward normal at parameter t on a segment.
+    ///
+    /// :param segment_index: Index of the segment.
+    /// :param t: Parameter in [0, 1].
+    /// :returns: Normal vector or None.
     fn get_outward_normal_at(
         &mut self,
         segment_index: usize,
@@ -902,6 +1032,14 @@ impl Geometry {
         get_outward_normal_at_from_array(data, segment_index, t)
     }
 
+    /// Draw an arc, converting it to bezier curves.
+    ///
+    /// :param x: End X coordinate.
+    /// :param y: End Y coordinate.
+    /// :param i: I offset to center.
+    /// :param j: J offset to center.
+    /// :param clockwise: Arc direction.
+    /// :param z: End Z coordinate.
     #[pyo3(signature = (x, y, i, j, clockwise=true, z=0.0))]
     fn arc_to_as_bezier(
         &mut self,
@@ -936,6 +1074,9 @@ impl Geometry {
         self.inner.sync_to_data();
     }
 
+    /// Check if the geometry has self-intersections.
+    ///
+    /// :param fail_on_t_junction: Whether to fail on T-junctions.
     #[pyo3(signature = (fail_on_t_junction=false))]
     fn has_self_intersections(&mut self, fail_on_t_junction: bool) -> bool {
         let data = self.inner.synced_data();
@@ -945,6 +1086,9 @@ impl Geometry {
         check_self_intersection_from_array(data, fail_on_t_junction)
     }
 
+    /// Check if this geometry intersects with another.
+    ///
+    /// :param other: The other geometry.
     fn intersects_with(&mut self, other: &mut Geometry) -> bool {
         let data = self.inner.synced_data();
         let other_data = other.inner.synced_data();
@@ -954,18 +1098,25 @@ impl Geometry {
         check_intersection_from_array(data, other_data, false)
     }
 
+    /// Offset (grow/shrink) the geometry by the given amount.
+    ///
+    /// :param amount: Positive to grow, negative to shrink.
     #[pyo3(signature = (amount))]
     fn grow(&self, amount: f64) -> Self {
         let result = grow_geometry(&self.inner, amount);
         Geometry { inner: result }
     }
 
+    /// Check if this geometry encloses another.
+    ///
+    /// :param other: The potentially enclosed geometry.
     fn encloses(&mut self, other: &mut Geometry) -> PyResult<bool> {
         self.inner.sync_to_data();
         other.inner.sync_to_data();
         Ok(raygeo_core::does_enclose(&self.inner, &other.inner))
     }
 
+    /// Remove inner edges (shared between contours).
     fn remove_inner_edges(&mut self) -> PyResult<Geometry> {
         self.inner.sync_to_data();
         Ok(Geometry {
@@ -973,6 +1124,7 @@ impl Geometry {
         })
     }
 
+    /// Split contours into inner and outer groups.
     fn split_inner_and_outer_contours(
         &mut self,
     ) -> PyResult<(Vec<Geometry>, Vec<Geometry>)> {
@@ -995,6 +1147,15 @@ impl Geometry {
         Ok((inner, outer))
     }
 
+    /// Map the geometry into a rectangular frame.
+    ///
+    /// :param origin: Frame origin (x, y).
+    /// :param p_width: Frame width vector.
+    /// :param p_height: Frame height vector.
+    /// :param anchor_y: Y anchor position.
+    /// :param stable_src_height: Stable source height for anchoring.
+    /// :param anchor_x: X anchor position.
+    /// :param stable_src_width: Stable source width for anchoring.
     #[pyo3(signature = (origin, p_width, p_height, anchor_y=None, stable_src_height=None, anchor_x=None, stable_src_width=None))]
     fn map_to_frame(
         &self,
@@ -1019,6 +1180,7 @@ impl Geometry {
         Geometry { inner: result }
     }
 
+    /// Split the geometry into individual contours.
     fn split_into_contours(&mut self) -> Vec<Geometry> {
         self.inner.sync_to_data();
         split_into_contours(&self.inner)
@@ -1027,6 +1189,7 @@ impl Geometry {
             .collect()
     }
 
+    /// Split the geometry into connected components.
     fn split_into_components(&mut self) -> Vec<Geometry> {
         self.inner.sync_to_data();
         split_into_components(&self.inner)
@@ -1035,6 +1198,9 @@ impl Geometry {
             .collect()
     }
 
+    /// Convert the geometry to a list of polygons.
+    ///
+    /// :param tolerance: Max deviation for linearization.
     #[pyo3(signature = (tolerance=0.01))]
     fn to_polygons(&self, tolerance: f64) -> Vec<Vec<Point>> {
         let mut linearized = self.inner.copy();
@@ -1061,6 +1227,7 @@ impl Geometry {
         result
     }
 
+    /// Return a string representation of the geometry.
     fn __repr__(&mut self) -> String {
         self.inner.sync_to_data();
         let len = self.inner.len();

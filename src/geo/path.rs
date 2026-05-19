@@ -3,6 +3,7 @@ use crate::geo::geometry::{Geometry, PyCommand};
 use numpy::PyArray2;
 use pyo3::prelude::*;
 use pyo3::types::{PyDict, PyList, PyTuple};
+use pyo3_stub_gen::derive::gen_stub_pyfunction;
 
 use raygeo_core::geo::algo::fitting::{
     convert_arc_to_beziers_from_array, create_arc_cmd, create_line_cmd,
@@ -41,6 +42,10 @@ fn to_data_array(data: Vec<Vec<f64>>) -> Vec<[f64; 8]> {
         .collect()
 }
 
+#[gen_stub_pyfunction(python = r#"
+    def grow_geometry(geometry: Geometry, offset: float) -> Geometry:
+        """Grow (offset) a geometry by a given amount."""
+"#, module = "raygeo.geo.path")]
 #[pyfunction(name = "grow_geometry")]
 fn grow_geometry_py(geometry: &Geometry, offset: f64) -> Geometry {
     let mut inner = geometry.inner.clone();
@@ -49,6 +54,10 @@ fn grow_geometry_py(geometry: &Geometry, offset: f64) -> Geometry {
     Geometry { inner: result }
 }
 
+#[gen_stub_pyfunction(python = r#"
+    def split_into_contours(geometry: Geometry) -> list[Geometry]:
+        """Split a geometry into individual contours."""
+"#, module = "raygeo.geo.path")]
 #[pyfunction(name = "split_into_contours")]
 fn split_into_contours_py(geometry: &Geometry) -> Vec<Geometry> {
     let mut inner = geometry.inner.clone();
@@ -59,6 +68,10 @@ fn split_into_contours_py(geometry: &Geometry) -> Vec<Geometry> {
         .collect()
 }
 
+#[gen_stub_pyfunction(python = r#"
+    def split_into_components(geometry: Geometry) -> list[Geometry]:
+        """Split a geometry into connected components."""
+"#, module = "raygeo.geo.path")]
 #[pyfunction(name = "split_into_components")]
 fn split_into_components_py(geometry: &Geometry) -> Vec<Geometry> {
     let mut inner = geometry.inner.clone();
@@ -69,18 +82,37 @@ fn split_into_components_py(geometry: &Geometry) -> Vec<Geometry> {
         .collect()
 }
 
+#[gen_stub_pyfunction(python = r#"
+    def get_bounding_rect_from_array(
+        data: Sequence[Sequence[float]],
+    ) -> tuple[float, float, float, float]:
+        """Compute the bounding rectangle of path data."""
+"#, module = "raygeo.geo.path")]
 #[pyfunction]
 fn get_bounding_rect_from_array(data: Vec<Vec<f64>>) -> (f64, f64, f64, f64) {
     let arr = to_data_array(data);
     raygeo_core::get_bounding_rect_from_array(&arr)
 }
 
+#[gen_stub_pyfunction(python = r#"
+    def get_total_distance_from_array(
+        data: Sequence[Sequence[float]],
+    ) -> float:
+        """Compute the total distance of a path."""
+"#, module = "raygeo.geo.path")]
 #[pyfunction]
 fn get_total_distance_from_array(data: Vec<Vec<f64>>) -> f64 {
     let arr = to_data_array(data);
     raygeo_core::get_total_distance_from_array(&arr)
 }
 
+#[gen_stub_pyfunction(python = r#"
+    def extract_overcut_rows(
+        data: Optional[Sequence[Sequence[float]]],
+        max_length: float,
+    ) -> Optional[Any]:
+        """Extract rows that exceed a maximum length."""
+"#, module = "raygeo.geo.path")]
 #[pyfunction]
 fn extract_overcut_rows(
     py: Python<'_>,
@@ -99,6 +131,13 @@ fn extract_overcut_rows(
     })
 }
 
+#[gen_stub_pyfunction(python = r#"
+    def get_subpath_vertices_from_array(
+        data: Sequence[Sequence[float]],
+        subpath_index: int,
+    ) -> list[tuple[float, float]]:
+        """Get the vertices of a subpath."""
+"#, module = "raygeo.geo.path")]
 #[pyfunction(name = "get_subpath_vertices_from_array")]
 fn get_subpath_vertices_from_array_py(
     data: Vec<Vec<f64>>,
@@ -108,6 +147,13 @@ fn get_subpath_vertices_from_array_py(
     get_subpath_vertices_from_array(&arr, subpath_index)
 }
 
+#[gen_stub_pyfunction(python = r#"
+    def get_subpath_area_from_array(
+        data: Sequence[Sequence[float]],
+        subpath_index: int,
+    ) -> float:
+        """Get the signed area of a subpath."""
+"#, module = "raygeo.geo.path")]
 #[pyfunction(name = "get_subpath_area_from_array")]
 fn get_subpath_area_from_array_py(
     data: Vec<Vec<f64>>,
@@ -117,12 +163,23 @@ fn get_subpath_area_from_array_py(
     get_subpath_area_from_array(&arr, subpath_index)
 }
 
+#[gen_stub_pyfunction(python = r#"
+    def get_area_from_array(data: Sequence[Sequence[float]]) -> float:
+        """Compute the total area of path data."""
+"#, module = "raygeo.geo.path")]
 #[pyfunction]
 fn get_area_from_array(data: Vec<Vec<f64>>) -> f64 {
     let arr = to_data_array(data);
     raygeo_core::get_area_from_array(&arr)
 }
 
+#[gen_stub_pyfunction(python = r#"
+    def get_path_winding_order_from_array(
+        data: Sequence[Sequence[float]],
+        start_cmd_index: int,
+    ) -> str:
+        """Get the winding order (CW/CCW) of a path."""
+"#, module = "raygeo.geo.path")]
 #[pyfunction]
 fn get_path_winding_order_from_array(
     data: Vec<Vec<f64>>,
@@ -136,6 +193,14 @@ fn get_path_winding_order_from_array(
     .to_string()
 }
 
+#[gen_stub_pyfunction(python = r#"
+    def get_point_and_tangent_at(
+        data: Sequence[Sequence[float]],
+        row_index: int,
+        t: float,
+    ) -> Optional[tuple[tuple[float, float], tuple[float, float]]]:
+        """Get the point and tangent at a parameter t on a segment."""
+"#, module = "raygeo.geo.path")]
 #[pyfunction]
 fn get_point_tangent_at_py(
     data: Vec<Vec<f64>>,
@@ -146,6 +211,14 @@ fn get_point_tangent_at_py(
     get_point_and_tangent_at_from_array(&arr, row_index, t)
 }
 
+#[gen_stub_pyfunction(python = r#"
+    def optimize_path_from_array(
+        data: Optional[Sequence[Sequence[float]]],
+        tolerance: float,
+        fit_arcs: bool,
+    ) -> Any:
+        """Optimize a path by fitting arcs."""
+"#, module = "raygeo.geo.path")]
 #[pyfunction]
 fn optimize_path_from_array(
     py: Python<'_>,
@@ -172,6 +245,10 @@ fn optimize_path_from_array(
     np_arr.as_any().clone()
 }
 
+#[gen_stub_pyfunction(python = r#"
+    def does_enclose(container: Geometry, content: Geometry) -> bool:
+        """Check if one geometry encloses another."""
+"#, module = "raygeo.geo.path")]
 #[pyfunction(name = "does_enclose")]
 fn does_enclose_py(container: &Geometry, content: &Geometry) -> PyResult<bool> {
     let mut c = container.inner.clone();
@@ -181,6 +258,13 @@ fn does_enclose_py(container: &Geometry, content: &Geometry) -> PyResult<bool> {
     Ok(does_enclose(&c, &ct))
 }
 
+#[gen_stub_pyfunction(python = r#"
+    def fit_arcs(
+        data: Optional[Sequence[Sequence[float]]],
+        tolerance: float,
+    ) -> Optional[list[list[float]]]:
+        """Fit arcs to a path."""
+"#, module = "raygeo.geo.path")]
 #[pyfunction]
 #[pyo3(signature = (data, tolerance, progress_callback=None))]
 fn fit_arcs(
@@ -201,6 +285,10 @@ fn fit_arcs(
     }
 }
 
+#[gen_stub_pyfunction(python = r#"
+    def reverse_contour(contour: Geometry) -> Geometry:
+        """Reverse the direction of a contour."""
+"#, module = "raygeo.geo.path")]
 #[pyfunction(name = "reverse_contour")]
 fn reverse_contour_py(contour: &Geometry) -> PyResult<Geometry> {
     let mut c = contour.inner.clone();
@@ -210,6 +298,12 @@ fn reverse_contour_py(contour: &Geometry) -> PyResult<Geometry> {
     })
 }
 
+#[gen_stub_pyfunction(python = r#"
+    def split_inner_and_outer_contours(
+        contours: list[Geometry],
+    ) -> tuple[list[Geometry], list[Geometry]]:
+        """Split contours into inner and outer groups."""
+"#, module = "raygeo.geo.path")]
 #[pyfunction(name = "split_inner_and_outer_contours")]
 fn split_inner_and_outer_contours_py(
     py: Python<'_>,
@@ -240,6 +334,10 @@ fn split_inner_and_outer_contours_py(
     Ok((inner, outer))
 }
 
+#[gen_stub_pyfunction(python = r#"
+    def close_all_contours(geometry: Geometry) -> Geometry:
+        """Close all open contours in a geometry."""
+"#, module = "raygeo.geo.path")]
 #[pyfunction(name = "close_all_contours")]
 fn close_all_contours_py(geometry: &Geometry) -> PyResult<Geometry> {
     let mut g = geometry.inner.clone();
@@ -249,6 +347,12 @@ fn close_all_contours_py(geometry: &Geometry) -> PyResult<Geometry> {
     })
 }
 
+#[gen_stub_pyfunction(python = r#"
+    def normalize_winding_orders(
+        contours: list[Geometry],
+    ) -> list[Geometry]:
+        """Normalize winding orders of contours (outer CCW, inner CW)."""
+"#, module = "raygeo.geo.path")]
 #[pyfunction(name = "normalize_winding_orders")]
 fn normalize_winding_orders_py(
     contours: Bound<'_, PyList>,
@@ -264,6 +368,12 @@ fn normalize_winding_orders_py(
     Ok(result.into_iter().map(|g| Geometry { inner: g }).collect())
 }
 
+#[gen_stub_pyfunction(python = r#"
+    def filter_to_external_contours(
+        contours: list[Geometry],
+    ) -> list[Geometry]:
+        """Filter to only external (outer) contours."""
+"#, module = "raygeo.geo.path")]
 #[pyfunction(name = "filter_to_external_contours")]
 fn filter_to_external_contours_py(
     py: Python<'_>,
@@ -304,6 +414,10 @@ fn filter_to_external_contours_py(
     Ok(output)
 }
 
+#[gen_stub_pyfunction(python = r#"
+    def remove_inner_edges(geometry: Geometry) -> Geometry:
+        """Remove inner edges from a geometry."""
+"#, module = "raygeo.geo.path")]
 #[pyfunction(name = "remove_inner_edges")]
 fn remove_inner_edges_py(geometry: &Geometry) -> PyResult<Geometry> {
     let mut g = geometry.inner.clone();
@@ -347,6 +461,13 @@ fn get_valid_contours_data_py<'py>(
     PyList::new(py, out)
 }
 
+#[gen_stub_pyfunction(python = r#"
+    def close_geometry_gaps(
+        geometry: Geometry,
+        tolerance: float,
+    ) -> Geometry:
+        """Close gaps in a geometry."""
+"#, module = "raygeo.geo.path")]
 #[pyfunction]
 fn close_geometry_gaps(
     geometry: &Geometry,
@@ -361,6 +482,13 @@ fn close_geometry_gaps(
     Ok(Geometry { inner: g })
 }
 
+#[gen_stub_pyfunction(python = r#"
+    def check_self_intersection(
+        data: Optional[Sequence[Sequence[float]]],
+        fail_on_t_junction: bool,
+    ) -> bool:
+        """Check if a path has self-intersections."""
+"#, module = "raygeo.geo.path")]
 #[pyfunction]
 fn check_self_intersection(
     data: Option<Vec<Vec<f64>>>,
@@ -375,6 +503,14 @@ fn check_self_intersection(
     }
 }
 
+#[gen_stub_pyfunction(python = r#"
+    def check_intersection(
+        data1: Optional[Sequence[Sequence[float]]],
+        data2: Optional[Sequence[Sequence[float]]],
+        fail_on_t_junction: bool,
+    ) -> bool:
+        """Check if two paths intersect."""
+"#, module = "raygeo.geo.path")]
 #[pyfunction]
 fn check_intersection(
     data1: Option<Vec<Vec<f64>>>,
@@ -395,6 +531,13 @@ fn check_intersection(
     }
 }
 
+#[gen_stub_pyfunction(python = r#"
+    def check_self_intersection_from_array(
+        data: Sequence[Sequence[float]],
+        fail_on_t_junction: bool,
+    ) -> bool:
+        """Check self-intersection from array data."""
+"#, module = "raygeo.geo.path")]
 #[pyfunction]
 fn check_self_intersection_from_array_py(
     data: Vec<Vec<f64>>,
@@ -404,6 +547,14 @@ fn check_self_intersection_from_array_py(
     check_self_intersection_from_array(&arr, fail_on_t_junction)
 }
 
+#[gen_stub_pyfunction(python = r#"
+    def check_intersection_from_array(
+        data1: Sequence[Sequence[float]],
+        data2: Sequence[Sequence[float]],
+        fail_on_t_junction: bool,
+    ) -> bool:
+        """Check intersection between two arrays."""
+"#, module = "raygeo.geo.path")]
 #[pyfunction(name = "check_intersection_from_array")]
 fn check_intersection_from_array_py(
     data1: Vec<Vec<f64>>,
@@ -434,6 +585,13 @@ fn _segment_length_from_row(
     segment_length_from_row_flat(&arr[0], start_point)
 }
 
+#[gen_stub_pyfunction(python = r#"
+    def apply_affine_transform_to_array(
+        data: Sequence[Sequence[float]],
+        matrix: Sequence[Sequence[float]],
+    ) -> Any:
+        """Apply an affine transform to path data."""
+"#, module = "raygeo.geo.path")]
 #[pyfunction(name = "apply_affine_transform_to_array")]
 fn apply_affine_transform_to_array_py(
     py: Python<'_>,
@@ -458,6 +616,19 @@ fn apply_affine_transform_to_array_py(
         .clone()
 }
 
+#[gen_stub_pyfunction(python = r#"
+    def map_geometry_to_frame(
+        geometry: Geometry,
+        origin: tuple[float, float],
+        p_width: tuple[float, float],
+        p_height: tuple[float, float],
+        anchor_y: Optional[float] = None,
+        stable_src_height: Optional[float] = None,
+        anchor_x: Optional[float] = None,
+        stable_src_width: Optional[float] = None,
+    ) -> Geometry:
+        """Map a geometry into a rectangular frame."""
+"#, module = "raygeo.geo.path")]
 #[pyfunction(name = "map_geometry_to_frame")]
 #[pyo3(signature = (geometry, origin, p_width, p_height, anchor_y=None, stable_src_height=None, anchor_x=None, stable_src_width=None))]
 fn map_geometry_to_frame_py(
@@ -483,6 +654,13 @@ fn map_geometry_to_frame_py(
     Geometry { inner: result }
 }
 
+#[gen_stub_pyfunction(python = r#"
+    def remove_duplicate_segments(
+        data: Optional[Sequence[Sequence[float]]],
+        tolerance: float = 1e-6,
+    ) -> Any:
+        """Remove duplicate segments from path data."""
+"#, module = "raygeo.geo.path")]
 #[pyfunction(name = "remove_duplicate_segments")]
 #[pyo3(signature = (data, tolerance=1e-6))]
 fn remove_duplicate_segments_py(
@@ -507,6 +685,13 @@ fn remove_duplicate_segments_py(
     np_arr.as_any().clone().unbind()
 }
 
+#[gen_stub_pyfunction(python = r#"
+    def flatten_to_points(
+        data: Optional[Sequence[Sequence[float]]],
+        tolerance: float,
+    ) -> list[list[tuple[float, float, float]]]:
+        """Flatten curves into linear segments."""
+"#, module = "raygeo.geo.path")]
 #[pyfunction(name = "flatten_to_points")]
 #[pyo3(signature = (data, tolerance))]
 fn flatten_to_points_py(
@@ -522,6 +707,13 @@ fn flatten_to_points_py(
     }
 }
 
+#[gen_stub_pyfunction(python = r#"
+    def linearize_geometry(
+        data: Optional[Sequence[Sequence[float]]],
+        tolerance: float,
+    ) -> Any:
+        """Linearize geometry data into line segments."""
+"#, module = "raygeo.geo.path")]
 #[pyfunction(name = "linearize_geometry")]
 #[pyo3(signature = (data, tolerance))]
 fn linearize_geometry_py(
@@ -543,11 +735,25 @@ fn linearize_geometry_py(
     np_arr.as_any().clone()
 }
 
+#[gen_stub_pyfunction(python = r#"
+    def create_line_cmd(
+        end_point: tuple[float, float, float],
+    ) -> list[float]:
+        """Create a line command array from an end point."""
+"#, module = "raygeo.geo.path")]
 #[pyfunction(name = "create_line_cmd")]
 fn create_line_cmd_py(end_point: PyPoint3D) -> Vec<f64> {
     create_line_cmd((end_point.0, end_point.1, end_point.2)).to_vec()
 }
 
+#[gen_stub_pyfunction(python = r#"
+    def create_arc_cmd(
+        end: tuple[float, float, float],
+        center: tuple[float, float],
+        start: tuple[float, float, float],
+    ) -> list[float]:
+        """Create an arc command array."""
+"#, module = "raygeo.geo.path")]
 #[pyfunction(name = "create_arc_cmd")]
 fn create_arc_cmd_py(
     end: (f64, f64, f64),
@@ -557,6 +763,15 @@ fn create_arc_cmd_py(
     create_arc_cmd(end, center, start).to_vec()
 }
 
+#[gen_stub_pyfunction(python = r#"
+    def convert_arc_to_beziers_from_array(
+        start: tuple[float, float, float],
+        end: tuple[float, float, float],
+        center_offset: tuple[float, float],
+        clockwise: bool,
+    ) -> list[list[float]]:
+        """Convert an arc to bezier curves."""
+"#, module = "raygeo.geo.path")]
 #[pyfunction(name = "convert_arc_to_beziers_from_array")]
 fn convert_arc_to_beziers_from_array_py(
     start: (f64, f64, f64),
@@ -570,6 +785,15 @@ fn convert_arc_to_beziers_from_array_py(
         .collect()
 }
 
+#[gen_stub_pyfunction(python = r#"
+    def fit_curves(
+        data: Optional[Sequence[Sequence[float]]],
+        tolerance: float,
+        preserve_beziers: bool,
+        preserve_arcs: bool,
+    ) -> Any:
+        """Fit curves (lines, arcs, beziers) to path data."""
+"#, module = "raygeo.geo.path")]
 #[pyfunction(name = "fit_curves")]
 fn fit_curves_py(
     py: Python<'_>,
@@ -723,6 +947,14 @@ fn _are_segments_equal(
     }
 }
 
+#[gen_stub_pyfunction(python = r#"
+    def get_angle_at_vertex(
+        p0: tuple[float, float],
+        p1: tuple[float, float],
+        p2: tuple[float, float],
+    ) -> float:
+        """Get the angle at a vertex between three points."""
+"#, module = "raygeo.geo.path")]
 #[pyfunction(name = "get_angle_at_vertex")]
 fn get_angle_at_vertex_py(
     p0: (f64, f64),
@@ -732,17 +964,34 @@ fn get_angle_at_vertex_py(
     raygeo_core::geo::analysis::get_angle_at_vertex(p0, p1, p2)
 }
 
+#[gen_stub_pyfunction(python = r#"
+    def remove_duplicates(
+        points: Sequence[tuple[float, float]],
+    ) -> list[tuple[float, float]]:
+        """Remove duplicate points from a sequence."""
+"#, module = "raygeo.geo.path")]
 #[pyfunction(name = "remove_duplicates")]
 fn remove_duplicates_py(points: Vec<(f64, f64)>) -> Vec<(f64, f64)> {
     raygeo_core::geo::analysis::remove_duplicates(&points)
 }
 
+#[gen_stub_pyfunction(python = r#"
+    def is_clockwise(points: Sequence[tuple[float, float]]) -> bool:
+        """Check if a polygon has clockwise winding order."""
+"#, module = "raygeo.geo.path")]
 #[pyfunction(name = "is_clockwise")]
 fn is_clockwise_py(points: Vec<PyPoint2D>) -> bool {
     let pts: Vec<(f64, f64)> = points.iter().map(|p| (p.0, p.1)).collect();
     raygeo_core::geo::analysis::is_clockwise(&pts)
 }
 
+#[gen_stub_pyfunction(python = r#"
+    def is_closed(
+        commands: Sequence[Sequence[float]],
+        tolerance: float = 1e-6,
+    ) -> bool:
+        """Check if a path is closed."""
+"#, module = "raygeo.geo.path")]
 #[pyfunction(name = "is_closed")]
 #[pyo3(signature = (commands, tolerance=1e-6))]
 fn is_closed_py(commands: Vec<Vec<f64>>, tolerance: f64) -> bool {
@@ -750,6 +999,14 @@ fn is_closed_py(commands: Vec<Vec<f64>>, tolerance: f64) -> bool {
     raygeo_core::geo::analysis::is_closed(&arr, tolerance)
 }
 
+#[gen_stub_pyfunction(python = r#"
+    def get_outward_normal_at_from_array(
+        data: Sequence[Sequence[float]],
+        row_index: int,
+        t: float,
+    ) -> Optional[tuple[float, float]]:
+        """Get the outward normal at a point on a segment."""
+"#, module = "raygeo.geo.path")]
 #[pyfunction(name = "get_outward_normal_at_from_array")]
 fn get_outward_normal_at_from_array_py(
     data: Vec<Vec<f64>>,

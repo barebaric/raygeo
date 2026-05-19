@@ -1,5 +1,6 @@
 use numpy::{PyArray2, PyArrayMethods};
 use pyo3::prelude::*;
+use pyo3_stub_gen::{PyStubType, TypeInfo};
 
 use raygeo_core::Point;
 
@@ -140,6 +141,24 @@ pub fn extract_polygons(ob: &Bound<'_, PyAny>) -> PyResult<Vec<Vec<Point>>> {
         result.push(extract_polygon(&item)?);
     }
     Ok(result)
+}
+
+impl PyStubType for PyPoint2D {
+    fn type_output() -> TypeInfo {
+        TypeInfo::with_module("tuple[float, float]", "builtins".into())
+    }
+}
+
+impl PyStubType for PyPoint3D {
+    fn type_output() -> TypeInfo {
+        TypeInfo::with_module("tuple[float, float, float]", "builtins".into())
+    }
+}
+
+impl PyStubType for PyIntPoint2D {
+    fn type_output() -> TypeInfo {
+        TypeInfo::with_module("tuple[int, int]", "builtins".into())
+    }
 }
 
 /// Zero-copy-friendly extraction of a polygon from a numpy (N, 2) array.
