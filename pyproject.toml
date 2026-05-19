@@ -35,5 +35,10 @@ include = ["raygeo-stubs/**/*"]
 [tool.pyo3-stub-gen]
 module-name = "raygeo"
 
+[tool.pyright]
+stubPath = "."
+reportMissingModuleSource = false
+include = ["tests"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]

@@ -1,5 +1,5 @@
 import numpy as np
-from raygeo.algo.simplify import (
+from raygeo.geo.algo.simplify import (
     simplify_polyline,
     simplify_polyline_to_array,
 )

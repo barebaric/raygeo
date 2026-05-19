@@ -1,12 +1,6 @@
 import numpy as np
 
 from raygeo import Geometry
-from raygeo import (
-    CMD_TYPE_MOVE,
-    CMD_TYPE_LINE,
-    CMD_TYPE_ARC,
-    COL_TYPE,
-)
 from raygeo.geo.path import (
     flatten_to_points,
     linearize_geometry,
@@ -53,10 +47,10 @@ def test_linearize_geometry():
     result = linearize_geometry(data, tolerance=0.1)
 
     # Should contain only MOVE and LINE commands
-    cmd_types = result[:, COL_TYPE]
-    assert CMD_TYPE_ARC not in cmd_types
-    assert CMD_TYPE_MOVE in cmd_types
-    assert CMD_TYPE_LINE in cmd_types
+    cmd_types = result[:, Geometry.COL_TYPE]
+    assert Geometry.CMD_TYPE_ARC not in cmd_types
+    assert Geometry.CMD_TYPE_MOVE in cmd_types
+    assert Geometry.CMD_TYPE_LINE in cmd_types
 
     # The end point should still be (10, 10)
     end_point = result[-1, 1:4]

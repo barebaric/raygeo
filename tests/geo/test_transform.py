@@ -1,27 +1,7 @@
 import pytest
 import math
 import numpy as np
-from raygeo import (
-    CMD_TYPE_MOVE,
-    CMD_TYPE_LINE,
-    CMD_TYPE_ARC,
-    CMD_TYPE_BEZIER,
-    COL_TYPE,
-    COL_X,
-    COL_Y,
-    COL_Z,
-    COL_I,
-    COL_J,
-    COL_CW,
-    COL_C1X,
-    COL_C1Y,
-    COL_C2X,
-    COL_C2Y,
-)
-from raygeo import (
-    Geometry,
-)
-
+from raygeo import Geometry
 from raygeo.geo.path import (
     grow_geometry,
     apply_affine_transform_to_array,
@@ -104,8 +84,12 @@ def test_transform_translate():
     # Check bezier
     assert np.allclose(geo.data[2, 1:4], (80, 75, 65))
     # Translation SHOULD affect bezier control points (absolute coords)
-    assert np.allclose(geo.data[2, COL_C1X : COL_C1Y + 1], (65, 60))
-    assert np.allclose(geo.data[2, COL_C2X : COL_C2Y + 1], (75, 70))
+    assert np.allclose(
+        geo.data[2, Geometry.COL_C1X : Geometry.COL_C1Y + 1], (65, 60)
+    )
+    assert np.allclose(
+        geo.data[2, Geometry.COL_C2X : Geometry.COL_C2Y + 1], (75, 70)
+    )
 
 
 def test_transform_scale_non_uniform_preserves_beziers():
@@ -125,22 +109,22 @@ def test_transform_scale_non_uniform_preserves_beziers():
     assert np.allclose(geo.data[0, 1:4], (20, 60, 20))
 
     # 2. Check that all subsequent commands are still Beziers
-    assert np.all(geo.data[1:, COL_TYPE] == CMD_TYPE_BEZIER)
+    assert np.all(geo.data[1:, Geometry.COL_TYPE] == Geometry.CMD_TYPE_BEZIER)
 
     # 3. Check the final state of the explicit bezier_to command.
     # It's the last row.
     final_bezier_row = geo.data[-1]
 
     # Check end point: (30*2, 30*3, -20*4) -> (60, 90, -80)
-    final_point = final_bezier_row[COL_X : COL_Z + 1]
+    final_point = final_bezier_row[Geometry.COL_X : Geometry.COL_Z + 1]
     assert np.allclose(final_point, (60.0, 90.0, -80.0))
 
     # Check C1: (24*2, 24*3) -> (48, 72)
-    final_c1 = final_bezier_row[COL_C1X : COL_C1Y + 1]
+    final_c1 = final_bezier_row[Geometry.COL_C1X : Geometry.COL_C1Y + 1]
     assert np.allclose(final_c1, (48.0, 72.0))
 
     # Check C2: (28*2, 28*3) -> (56, 84)
-    final_c2 = final_bezier_row[COL_C2X : COL_C2Y + 1]
+    final_c2 = final_bezier_row[Geometry.COL_C2X : Geometry.COL_C2Y + 1]
     assert np.allclose(final_c2, (56.0, 84.0))
 
     # 4. Check the final state of the arc_to_as_bezier command.
@@ -148,7 +132,7 @@ def test_transform_scale_non_uniform_preserves_beziers():
     arc_end_row = geo.data[-2]
 
     # Check end point: (22*2, 22*3, -10*4) -> (44, 66, -40)
-    arc_final_point = arc_end_row[COL_X : COL_Z + 1]
+    arc_final_point = arc_end_row[Geometry.COL_X : Geometry.COL_Z + 1]
     assert np.allclose(arc_final_point, (44.0, 66.0, -40.0))
 
 
@@ -181,18 +165,22 @@ def test_transform_uniform_scale_preserves_curves():
 
     # Check arc
     arc_row = geo.data[1]
-    assert arc_row[COL_TYPE] == CMD_TYPE_ARC
+    assert arc_row[Geometry.COL_TYPE] == Geometry.CMD_TYPE_ARC
     assert np.allclose(arc_row[1:4], (20, 0, 0))
     # Offset should also scale
     assert np.allclose(arc_row[4:6], (10, 0))
 
     # Check bezier
     bezier_row = geo.data[2]
-    assert bezier_row[COL_TYPE] == CMD_TYPE_BEZIER
+    assert bezier_row[Geometry.COL_TYPE] == Geometry.CMD_TYPE_BEZIER
     assert np.allclose(bezier_row[1:4], (40, 0, 0))
     # Control points should also scale
-    assert np.allclose(bezier_row[COL_C1X : COL_C1Y + 1], (24, 4))
-    assert np.allclose(bezier_row[COL_C2X : COL_C2Y + 1], (36, -4))
+    assert np.allclose(
+        bezier_row[Geometry.COL_C1X : Geometry.COL_C1Y + 1], (24, 4)
+    )
+    assert np.allclose(
+        bezier_row[Geometry.COL_C2X : Geometry.COL_C2Y + 1], (36, -4)
+    )
 
 
 # --- Raw Array Transform Tests (formerly test_transform_numpy.py) ---
@@ -201,8 +189,8 @@ def test_transform_uniform_scale_preserves_curves():
 def test_transform_array_uniform_translation():
     data = np.array(
         [
-            [CMD_TYPE_MOVE, 10.0, 20.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-            [CMD_TYPE_LINE, 30.0, 40.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            [Geometry.CMD_TYPE_MOVE, 10.0, 20.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            [Geometry.CMD_TYPE_LINE, 30.0, 40.0, 0.0, 0.0, 0.0, 0.0, 0.0],
         ]
     )
 
@@ -214,18 +202,20 @@ def test_transform_array_uniform_translation():
     transformed = apply_affine_transform_to_array(data, matrix)
 
     # Check move
-    assert transformed[0, COL_X] == 15.0
-    assert transformed[0, COL_Y] == 25.0
+    assert transformed[0, Geometry.COL_X] == 15.0
+    assert transformed[0, Geometry.COL_Y] == 25.0
 
     # Check line
-    assert transformed[1, COL_X] == 35.0
-    assert transformed[1, COL_Y] == 45.0
+    assert transformed[1, Geometry.COL_X] == 35.0
+    assert transformed[1, Geometry.COL_Y] == 45.0
 
 
 def test_transform_array_uniform_rotation_arc():
     # Arc from (10,0) to (0,10), center at (0,0) -> Offset from start (-10, 0)
     data = np.array(
-        [[CMD_TYPE_ARC, 0.0, 10.0, 0.0, -10.0, 0.0, 0.0, 0.0]]  # CCW 0.0
+        [
+            [Geometry.CMD_TYPE_ARC, 0.0, 10.0, 0.0, -10.0, 0.0, 0.0, 0.0]
+        ]  # CCW 0.0
     )
 
     # Manual 90 deg rotation matrix (CCW)
@@ -238,19 +228,21 @@ def test_transform_array_uniform_rotation_arc():
     transformed = apply_affine_transform_to_array(data, matrix)
 
     # Check end point (0,10) -> (-10, 0)
-    assert np.isclose(transformed[0, COL_X], -10.0)
-    assert np.isclose(transformed[0, COL_Y], 0.0)
+    assert np.isclose(transformed[0, Geometry.COL_X], -10.0)
+    assert np.isclose(transformed[0, Geometry.COL_Y], 0.0)
 
     # Check offset (-10, 0) -> (0, -10)
     # Rotation of vector (-10, 0) by 90 deg is (0, -10)
-    assert np.isclose(transformed[0, COL_I], 0.0)
-    assert np.isclose(transformed[0, COL_J], -10.0)
+    assert np.isclose(transformed[0, Geometry.COL_I], 0.0)
+    assert np.isclose(transformed[0, Geometry.COL_J], -10.0)
 
 
 def test_transform_array_flip():
     # Arc
     data = np.array(
-        [[CMD_TYPE_ARC, 10.0, 10.0, 0.0, 5.0, 0.0, 0.0, 0.0]]  # CW=0 (CCW)
+        [
+            [Geometry.CMD_TYPE_ARC, 10.0, 10.0, 0.0, 5.0, 0.0, 0.0, 0.0]
+        ]  # CW=0 (CCW)
     )
 
     # Flip X: Scale(-1, 1)
@@ -259,9 +251,9 @@ def test_transform_array_flip():
 
     transformed = apply_affine_transform_to_array(data, matrix)
 
-    assert transformed[0, COL_X] == -10.0
-    assert transformed[0, COL_I] == -5.0
-    assert transformed[0, COL_CW] == 1.0  # Flipped to CW
+    assert transformed[0, Geometry.COL_X] == -10.0
+    assert transformed[0, Geometry.COL_I] == -5.0
+    assert transformed[0, Geometry.COL_CW] == 1.0  # Flipped to CW
 
 
 def test_transform_array_non_uniform():
@@ -270,9 +262,9 @@ def test_transform_array_non_uniform():
     # Bezier: Start (-10,0), End (0,10), C1(-10, 5), C2(-5, 10)
     data = np.array(
         [
-            [CMD_TYPE_MOVE, 10.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-            [CMD_TYPE_ARC, -10.0, 0.0, 0.0, -10.0, 0.0, 0.0, 0.0],
-            [CMD_TYPE_BEZIER, 0.0, 10.0, 0.0, -10.0, 5.0, -5.0, 10.0],
+            [Geometry.CMD_TYPE_MOVE, 10.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            [Geometry.CMD_TYPE_ARC, -10.0, 0.0, 0.0, -10.0, 0.0, 0.0, 0.0],
+            [Geometry.CMD_TYPE_BEZIER, 0.0, 10.0, 0.0, -10.0, 5.0, -5.0, 10.0],
         ]
     )
 
@@ -283,28 +275,28 @@ def test_transform_array_non_uniform():
     transformed = apply_affine_transform_to_array(data, matrix)
 
     # 1. Check Move
-    assert transformed[0, COL_TYPE] == CMD_TYPE_MOVE
-    assert transformed[0, COL_X] == 10.0
-    assert transformed[0, COL_Y] == 0.0
+    assert transformed[0, Geometry.COL_TYPE] == Geometry.CMD_TYPE_MOVE
+    assert transformed[0, Geometry.COL_X] == 10.0
+    assert transformed[0, Geometry.COL_Y] == 0.0
 
     # 2. Check Arc -> Lines
     # The middle section should be lines
-    assert transformed[1, COL_TYPE] == CMD_TYPE_LINE
+    assert transformed[1, Geometry.COL_TYPE] == Geometry.CMD_TYPE_LINE
 
     # 3. Check Bezier -> Bezier (Last element)
     last_row = transformed[-1]
-    assert last_row[COL_TYPE] == CMD_TYPE_BEZIER
+    assert last_row[Geometry.COL_TYPE] == Geometry.CMD_TYPE_BEZIER
 
     # Check Bezier Points transformation
     # End: (0, 10) -> (0, 5)
-    assert np.isclose(last_row[COL_X], 0.0)
-    assert np.isclose(last_row[COL_Y], 5.0)
+    assert np.isclose(last_row[Geometry.COL_X], 0.0)
+    assert np.isclose(last_row[Geometry.COL_Y], 5.0)
     # C1: (-10, 5) -> (-10, 2.5)
-    assert np.isclose(last_row[COL_C1X], -10.0)
-    assert np.isclose(last_row[COL_C1Y], 2.5)
+    assert np.isclose(last_row[Geometry.COL_C1X], -10.0)
+    assert np.isclose(last_row[Geometry.COL_C1Y], 2.5)
     # C2: (-5, 10) -> (-5, 5)
-    assert np.isclose(last_row[COL_C2X], -5.0)
-    assert np.isclose(last_row[COL_C2Y], 5.0)
+    assert np.isclose(last_row[Geometry.COL_C2X], -5.0)
+    assert np.isclose(last_row[Geometry.COL_C2Y], 5.0)
 
 
 # --- Grow/Offset Tests ---
@@ -516,9 +508,7 @@ def test_grow_shape_with_multiple_holes():
     geo.extend(hole2)
     geo.extend(hole3)
 
-    assert geo.area() == pytest.approx(
-        10000.0 - 3 * 400.0
-    )
+    assert geo.area() == pytest.approx(10000.0 - 3 * 400.0)
 
     contours = geo.split_into_contours()
     assert len(contours) == 4
@@ -534,9 +524,7 @@ def test_grow_shape_with_multiple_holes():
     assert len(nonzero) == 4
 
     outer_grown = max(nonzero, key=lambda g: g.area())
-    assert outer_grown.area() == pytest.approx(
-        102 * 102, rel=0.01
-    )
+    assert outer_grown.area() == pytest.approx(102 * 102, rel=0.01)
 
     grown_holes = sorted(
         [g for g in nonzero if g is not outer_grown],
@@ -551,9 +539,7 @@ def test_grow_multiple_holes_no_micro_contours():
     degenerate contours."""
     outer = Geometry.from_points([(0, 0), (60, 0), (60, 60), (0, 60)])
     holes = [
-        Geometry.from_points([
-            (x, y), (x, y + 8), (x + 8, y + 8), (x + 8, y)
-        ])
+        Geometry.from_points([(x, y), (x, y + 8), (x + 8, y + 8), (x + 8, y)])
         for x in (5, 25, 45)
         for y in (5, 25, 45)
     ]
@@ -653,9 +639,7 @@ def test_map_geometry_to_frame_translate_scale():
 
 def test_map_geometry_to_frame_non_uniform_scale():
     """Tests mapping (stretching) a geometry non-uniformly."""
-    source = Geometry.from_points(
-        [(0, 0), (10, 0), (10, 5), (0, 5)]
-    )
+    source = Geometry.from_points([(0, 0), (10, 0), (10, 5), (0, 5)])
 
     origin = (0, 0)
     p_width = (50, 0)

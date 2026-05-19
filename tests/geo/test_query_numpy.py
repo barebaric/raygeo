@@ -1,9 +1,5 @@
 import numpy as np
-from raygeo import (
-    CMD_TYPE_MOVE,
-    CMD_TYPE_LINE,
-    CMD_TYPE_ARC,
-)
+from raygeo import Geometry
 from raygeo.geo.path import get_bounding_rect_from_array
 
 
@@ -17,11 +13,11 @@ def test_rect_lines():
     # Square 0,0 to 10,10
     data = np.array(
         [
-            [CMD_TYPE_MOVE, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-            [CMD_TYPE_LINE, 10.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-            [CMD_TYPE_LINE, 10.0, 10.0, 0.0, 0.0, 0.0, 0.0],
-            [CMD_TYPE_LINE, 0.0, 10.0, 0.0, 0.0, 0.0, 0.0],
-            [CMD_TYPE_LINE, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            [Geometry.CMD_TYPE_MOVE, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            [Geometry.CMD_TYPE_LINE, 10.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            [Geometry.CMD_TYPE_LINE, 10.0, 10.0, 0.0, 0.0, 0.0, 0.0],
+            [Geometry.CMD_TYPE_LINE, 0.0, 10.0, 0.0, 0.0, 0.0, 0.0],
+            [Geometry.CMD_TYPE_LINE, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
         ]
     )
 
@@ -45,9 +41,9 @@ def test_rect_arc_bulge():
 
     data = np.array(
         [
-            [CMD_TYPE_MOVE, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            [Geometry.CMD_TYPE_MOVE, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
             # End(10,0), Offset(5,0), CW=1
-            [CMD_TYPE_ARC, 10.0, 0.0, 0.0, 5.0, 0.0, 1.0],
+            [Geometry.CMD_TYPE_ARC, 10.0, 0.0, 0.0, 5.0, 0.0, 1.0],
         ]
     )
 
@@ -69,9 +65,9 @@ def test_rect_arc_bulge_negative():
 
     data = np.array(
         [
-            [CMD_TYPE_MOVE, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            [Geometry.CMD_TYPE_MOVE, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
             # End(10,0), Offset(5,0), CW=0
-            [CMD_TYPE_ARC, 10.0, 0.0, 0.0, 5.0, 0.0, 0.0],
+            [Geometry.CMD_TYPE_ARC, 10.0, 0.0, 0.0, 5.0, 0.0, 0.0],
         ]
     )
 

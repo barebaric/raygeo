@@ -231,8 +231,8 @@ fn get_path_winding_order_from_array(
 "#,
     module = "raygeo.geo.path"
 )]
-#[pyfunction]
-fn get_point_tangent_at_py(
+#[pyfunction(name = "get_point_and_tangent_at")]
+fn get_point_and_tangent_at_py(
     data: Vec<Vec<f64>>,
     row_index: usize,
     t: f64,
@@ -297,6 +297,7 @@ fn does_enclose_py(container: &Geometry, content: &Geometry) -> PyResult<bool> {
     def fit_arcs(
         data: Optional[Sequence[Sequence[float]]],
         tolerance: float,
+        progress_callback: Optional[Callable[[float], None]] = None,
     ) -> Optional[list[list[float]]]:
         """Fit arcs to a path."""
 "#,
@@ -477,6 +478,15 @@ fn remove_inner_edges_py(geometry: &Geometry) -> PyResult<Geometry> {
     })
 }
 
+#[gen_stub_pyfunction(
+    python = r#"
+    def get_valid_contours_data(
+        contour_geometries: list[Geometry],
+    ) -> list[dict]:
+        """Get valid contour data from a list of contour geometries."""
+"#,
+    module = "raygeo.geo.path"
+)]
 #[pyfunction(name = "get_valid_contours_data")]
 fn get_valid_contours_data_py<'py>(
     py: Python<'py>,
@@ -816,7 +826,7 @@ fn linearize_geometry_py(
 #[gen_stub_pyfunction(
     python = r#"
     def create_line_cmd(
-        end_point: tuple[float, float, float],
+        end_point: tuple[float, float] | tuple[float, float, float],
     ) -> list[float]:
         """Create a line command array from an end point."""
 "#,
@@ -906,8 +916,24 @@ fn fit_curves_py(
     np_arr.as_any().clone()
 }
 
-#[pyfunction]
-fn _are_points_equal(
+#[gen_stub_pyfunction(
+    python = r#"
+    def are_points_equal(
+        p1: tuple[float, float, float],
+        p2: tuple[float, float, float],
+        tolerance: float,
+    ) -> bool:
+        """Check if two 3D points are equal within tolerance.
+
+        :param p1: First point (x, y, z).
+        :param p2: Second point (x, y, z).
+        :param tolerance: Maximum allowed difference.
+        """
+"#,
+    module = "raygeo.geo.path"
+)]
+#[pyfunction(name = "are_points_equal")]
+fn are_points_equal_py(
     p1: (f64, f64, f64),
     p2: (f64, f64, f64),
     tolerance: f64,
@@ -917,8 +943,25 @@ fn _are_points_equal(
     are_points_equal(&arr1, &arr2, tolerance)
 }
 
-#[pyfunction]
-fn _get_segment_key(
+#[gen_stub_pyfunction(
+    python = r#"
+    def get_segment_key(
+        data: Sequence[Sequence[float]],
+        index: int,
+        tolerance: float,
+    ) -> Optional[Any]:
+        """Get a segment key for comparison.
+
+        :param data: Array of command data.
+        :param index: Row index.
+        :param tolerance: Tolerance for comparison.
+        :returns: Tuple key or None.
+        """
+"#,
+    module = "raygeo.geo.path"
+)]
+#[pyfunction(name = "get_segment_key")]
+fn get_segment_key_py(
     py: Python<'_>,
     data: Vec<Vec<f64>>,
     index: usize,
@@ -970,8 +1013,24 @@ fn _extract_point2(key: &Bound<'_, PyAny>, idx: usize) -> PyResult<(f64, f64)> {
     Ok(p)
 }
 
-#[pyfunction]
-fn _are_segments_equal(
+#[gen_stub_pyfunction(
+    python = r#"
+    def are_segments_equal(
+        key1: Any,
+        key2: Any,
+        tolerance: float,
+    ) -> bool:
+        """Check if two segment keys are equal within tolerance.
+
+        :param key1: First segment key tuple.
+        :param key2: Second segment key tuple.
+        :param tolerance: Maximum allowed difference.
+        """
+"#,
+    module = "raygeo.geo.path"
+)]
+#[pyfunction(name = "are_segments_equal")]
+fn are_segments_equal_py(
     key1: &Bound<'_, PyAny>,
     key2: &Bound<'_, PyAny>,
     tolerance: f64,
@@ -1155,12 +1214,14 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     )?)?;
     path_mod
         .add_function(wrap_pyfunction!(fit_curves_py, path_mod.clone())?)?;
-    path_mod
-        .add_function(wrap_pyfunction!(_are_points_equal, path_mod.clone())?)?;
-    path_mod
-        .add_function(wrap_pyfunction!(_get_segment_key, path_mod.clone())?)?;
     path_mod.add_function(wrap_pyfunction!(
-        _are_segments_equal,
+        are_points_equal_py,
+        path_mod.clone()
+    )?)?;
+    path_mod
+        .add_function(wrap_pyfunction!(get_segment_key_py, path_mod.clone())?)?;
+    path_mod.add_function(wrap_pyfunction!(
+        are_segments_equal_py,
         path_mod.clone()
     )?)?;
 
@@ -1203,7 +1264,7 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
         path_mod.clone()
     )?)?;
     path_mod.add_function(wrap_pyfunction!(
-        get_point_tangent_at_py,
+        get_point_and_tangent_at_py,
         path_mod.clone()
     )?)?;
     path_mod.add_function(wrap_pyfunction!(

@@ -1,6 +1,6 @@
 import pytest
 
-from raygeo.shape.line import (
+from raygeo.geo.shape.line import (
     get_line_closest_point,
     get_line_segment_closest_point,
     get_line_line_intersection,
@@ -9,12 +9,12 @@ from raygeo.shape.line import (
     is_point_on_line_segment,
     get_line_segment_polygon_intersections,
 )
-from raygeo.shape.polygon import is_point_inside_polygon
-from raygeo.shape.rect import (
+from raygeo.geo.shape.polygon import is_point_inside_polygon
+from raygeo.geo.shape.rect import (
     is_point_inside_rect,
     does_rect_contain_rect,
 )
-from raygeo.shape.point import midpoint
+from raygeo.geo.shape.point import midpoint
 
 
 @pytest.fixture

@@ -2,31 +2,7 @@ import pytest
 import math
 import numpy as np
 from raygeo import Geometry
-from raygeo.geo.path import (
-    get_total_distance_from_array,
-    extract_overcut_rows,
-    _segment_length_from_row,
-    _partial_segment_from_row,
-)
-
-from raygeo import (
-    CMD_TYPE_MOVE,
-    CMD_TYPE_LINE,
-    CMD_TYPE_ARC,
-    CMD_TYPE_BEZIER,
-    COL_TYPE,
-    COL_X,
-    COL_Y,
-    COL_Z,
-    COL_I,
-    COL_J,
-    COL_CW,
-    COL_C1X,
-    COL_C1Y,
-    COL_C2X,
-    COL_C2Y,
-    GEO_ARRAY_COLS,
-)
+from raygeo.geo.path import get_total_distance_from_array, extract_overcut_rows
 
 
 @pytest.fixture
@@ -55,8 +31,8 @@ def test_add_commands(empty_geometry):
     empty_geometry.line_to(10, 10)
     assert len(empty_geometry) == 2
     assert empty_geometry.data is not None
-    assert empty_geometry.data[0, COL_TYPE] == CMD_TYPE_MOVE
-    assert empty_geometry.data[1, COL_TYPE] == CMD_TYPE_LINE
+    assert empty_geometry.data[0, Geometry.COL_TYPE] == Geometry.CMD_TYPE_MOVE
+    assert empty_geometry.data[1, Geometry.COL_TYPE] == Geometry.CMD_TYPE_LINE
 
 
 def test_simplify_wrapper(sample_geometry):
@@ -75,16 +51,20 @@ def test_move_to(sample_geometry):
     sample_geometry.move_to(15, 15)
     assert sample_geometry.data is not None
     last_row = sample_geometry.data[-1]
-    assert last_row[COL_TYPE] == CMD_TYPE_MOVE
-    assert (last_row[COL_X : COL_Z + 1] == (15.0, 15.0, 0.0)).all()
+    assert last_row[Geometry.COL_TYPE] == Geometry.CMD_TYPE_MOVE
+    assert (
+        last_row[Geometry.COL_X : Geometry.COL_Z + 1] == (15.0, 15.0, 0.0)
+    ).all()
 
 
 def test_line_to(sample_geometry):
     sample_geometry.line_to(20, 20)
     assert sample_geometry.data is not None
     last_row = sample_geometry.data[-1]
-    assert last_row[COL_TYPE] == CMD_TYPE_LINE
-    assert (last_row[COL_X : COL_Z + 1] == (20.0, 20.0, 0.0)).all()
+    assert last_row[Geometry.COL_TYPE] == Geometry.CMD_TYPE_LINE
+    assert (
+        last_row[Geometry.COL_X : Geometry.COL_Z + 1] == (20.0, 20.0, 0.0)
+    ).all()
 
 
 def test_close_path(sample_geometry):
@@ -92,9 +72,14 @@ def test_close_path(sample_geometry):
     sample_geometry.close_path()
     assert sample_geometry.data is not None
     last_row = sample_geometry.data[-1]
-    assert last_row[COL_TYPE] == CMD_TYPE_LINE
-    assert (last_row[COL_X : COL_Z + 1] == sample_geometry.last_move_to).all()
-    assert (last_row[COL_X : COL_Z + 1] == (5.0, 5.0, -1.0)).all()
+    assert last_row[Geometry.COL_TYPE] == Geometry.CMD_TYPE_LINE
+    assert (
+        last_row[Geometry.COL_X : Geometry.COL_Z + 1]
+        == sample_geometry.last_move_to
+    ).all()
+    assert (
+        last_row[Geometry.COL_X : Geometry.COL_Z + 1] == (5.0, 5.0, -1.0)
+    ).all()
 
 
 def test_arc_to():
@@ -105,8 +90,10 @@ def test_arc_to():
     geo.arc_to(5, 5, 2, 3, clockwise=False)
     assert geo.data is not None
     last_row = geo.data[-1]
-    assert last_row[COL_TYPE] == CMD_TYPE_ARC
-    assert (last_row[COL_X : COL_Z + 1] == (5.0, 5.0, 0.0)).all()
+    assert last_row[Geometry.COL_TYPE] == Geometry.CMD_TYPE_ARC
+    assert (
+        last_row[Geometry.COL_X : Geometry.COL_Z + 1] == (5.0, 5.0, 0.0)
+    ).all()
     assert last_row[6] == 0.0  # Clockwise is False
 
 
@@ -114,7 +101,7 @@ def test_bezier_to(empty_geometry):
     empty_geometry.bezier_to(10, 10, c1x=2, c1y=2, c2x=8, c2y=8)
     assert empty_geometry.data is not None
     last_row = empty_geometry.data[-1]
-    assert last_row[COL_TYPE] == CMD_TYPE_BEZIER
+    assert last_row[Geometry.COL_TYPE] == Geometry.CMD_TYPE_BEZIER
     assert (last_row[1:4] == (10.0, 10.0, 0.0)).all()
     assert (last_row[4:8] == (2.0, 2.0, 8.0, 8.0)).all()
 
@@ -259,7 +246,7 @@ def test_from_points():
     geo_single = Geometry.from_points([(10, 20)])
     assert len(geo_single) == 1
     assert geo_single.data is not None
-    assert geo_single.data[0, COL_TYPE] == CMD_TYPE_MOVE
+    assert geo_single.data[0, Geometry.COL_TYPE] == Geometry.CMD_TYPE_MOVE
     assert (geo_single.data[0, 1:4] == (10, 20, 0)).all()
     assert geo_single.last_move_to == (10, 20, 0)
 
@@ -268,9 +255,9 @@ def test_from_points():
     geo_triangle = Geometry.from_points(points)
     assert len(geo_triangle) == 4
     assert geo_triangle.data is not None
-    assert geo_triangle.data[0, COL_TYPE] == CMD_TYPE_MOVE
+    assert geo_triangle.data[0, Geometry.COL_TYPE] == Geometry.CMD_TYPE_MOVE
     assert (geo_triangle.data[0, 1:4] == (0, 0, 0)).all()
-    assert geo_triangle.data[3, COL_TYPE] == CMD_TYPE_LINE
+    assert geo_triangle.data[3, Geometry.COL_TYPE] == Geometry.CMD_TYPE_LINE
     assert (geo_triangle.data[3, 1:4] == (0, 0, 0)).all()
 
     # Test case 4: Triangle (open)
@@ -358,16 +345,16 @@ def test_arc_to_as_bezier():
     assert data is not None
 
     assert len(data) > 1
-    assert data[0, COL_TYPE] == CMD_TYPE_MOVE
+    assert data[0, Geometry.COL_TYPE] == Geometry.CMD_TYPE_MOVE
 
     # Check that subsequent commands are BEZIER, not ARC
     for i in range(1, len(data)):
-        assert data[i, COL_TYPE] == CMD_TYPE_BEZIER
+        assert data[i, Geometry.COL_TYPE] == Geometry.CMD_TYPE_BEZIER
 
     # Check endpoints of the last segment match the requested arc end
     last_row = data[-1]
-    assert math.isclose(last_row[COL_X], 10.0)
-    assert math.isclose(last_row[COL_Y], 10.0)
+    assert math.isclose(last_row[Geometry.COL_X], 10.0)
+    assert math.isclose(last_row[Geometry.COL_Y], 10.0)
 
 
 def test_extend_preserves_uniform_scalable():
@@ -387,8 +374,8 @@ def test_extend_preserves_uniform_scalable():
     assert data is not None
 
     # Should contain Moves and Arcs
-    assert np.any(data[:, COL_TYPE] == CMD_TYPE_MOVE)
-    assert np.any(data[:, COL_TYPE] == CMD_TYPE_ARC)
+    assert np.any(data[:, Geometry.COL_TYPE] == Geometry.CMD_TYPE_MOVE)
+    assert np.any(data[:, Geometry.COL_TYPE] == Geometry.CMD_TYPE_ARC)
     assert not dest.uniform_scalable
 
 
@@ -405,14 +392,14 @@ def test_load_preserves_uniform_scalable(sample_geometry):
     data = loaded.data
     assert data is not None
 
-    assert np.any(data[:, COL_TYPE] == CMD_TYPE_ARC)
+    assert np.any(data[:, Geometry.COL_TYPE] == Geometry.CMD_TYPE_ARC)
     assert not loaded.uniform_scalable
 
     # Check that endpoint is preserved
     last_row = data[-1]
     # sample_geometry ends at (20, 0)
-    assert math.isclose(last_row[COL_X], 20.0)
-    assert math.isclose(last_row[COL_Y], 0.0)
+    assert math.isclose(last_row[Geometry.COL_X], 20.0)
+    assert math.isclose(last_row[Geometry.COL_Y], 0.0)
 
 
 # --- Wrapper Method Tests ---
@@ -519,24 +506,24 @@ def test_flip_x():
 
     # Check that X coordinates are inverted
     # MoveTo: (0, 0) -> (0, 0)
-    assert math.isclose(geo.data[0, COL_X], 0.0)
-    assert math.isclose(geo.data[0, COL_Y], 0.0)
+    assert math.isclose(geo.data[0, Geometry.COL_X], 0.0)
+    assert math.isclose(geo.data[0, Geometry.COL_Y], 0.0)
 
     # LineTo: (10, 10) -> (-10, 10)
-    assert math.isclose(geo.data[1, COL_X], -10.0)
-    assert math.isclose(geo.data[1, COL_Y], 10.0)
+    assert math.isclose(geo.data[1, Geometry.COL_X], -10.0)
+    assert math.isclose(geo.data[1, Geometry.COL_Y], 10.0)
 
     # ArcTo: (20, 5) -> (-20, 5), I=5 -> -5, CW toggled
-    assert math.isclose(geo.data[2, COL_X], -20.0)
-    assert math.isclose(geo.data[2, COL_Y], 5.0)
-    assert math.isclose(geo.data[2, COL_I], -5.0)
-    assert math.isclose(geo.data[2, COL_CW], 1.0)
+    assert math.isclose(geo.data[2, Geometry.COL_X], -20.0)
+    assert math.isclose(geo.data[2, Geometry.COL_Y], 5.0)
+    assert math.isclose(geo.data[2, Geometry.COL_I], -5.0)
+    assert math.isclose(geo.data[2, Geometry.COL_CW], 1.0)
 
     # BezierTo: (30, 10) -> (-30, 10), C1X=22 -> -22, C2X=28 -> -28
-    assert math.isclose(geo.data[3, COL_X], -30.0)
-    assert math.isclose(geo.data[3, COL_Y], 10.0)
-    assert math.isclose(geo.data[3, COL_C1X], -22.0)
-    assert math.isclose(geo.data[3, COL_C2X], -28.0)
+    assert math.isclose(geo.data[3, Geometry.COL_X], -30.0)
+    assert math.isclose(geo.data[3, Geometry.COL_Y], 10.0)
+    assert math.isclose(geo.data[3, Geometry.COL_C1X], -22.0)
+    assert math.isclose(geo.data[3, Geometry.COL_C2X], -28.0)
 
     # Flipping twice should return to original
     geo.flip_x()
@@ -562,24 +549,24 @@ def test_flip_y():
 
     # Check that Y coordinates are inverted
     # MoveTo: (0, 0) -> (0, 0)
-    assert math.isclose(geo.data[0, COL_X], 0.0)
-    assert math.isclose(geo.data[0, COL_Y], 0.0)
+    assert math.isclose(geo.data[0, Geometry.COL_X], 0.0)
+    assert math.isclose(geo.data[0, Geometry.COL_Y], 0.0)
 
     # LineTo: (10, 10) -> (10, -10)
-    assert math.isclose(geo.data[1, COL_X], 10.0)
-    assert math.isclose(geo.data[1, COL_Y], -10.0)
+    assert math.isclose(geo.data[1, Geometry.COL_X], 10.0)
+    assert math.isclose(geo.data[1, Geometry.COL_Y], -10.0)
 
     # ArcTo: (20, 5) -> (20, -5), J=-5 -> 5, CW toggled
-    assert math.isclose(geo.data[2, COL_X], 20.0)
-    assert math.isclose(geo.data[2, COL_Y], -5.0)
-    assert math.isclose(geo.data[2, COL_J], 5.0)
-    assert math.isclose(geo.data[2, COL_CW], 1.0)
+    assert math.isclose(geo.data[2, Geometry.COL_X], 20.0)
+    assert math.isclose(geo.data[2, Geometry.COL_Y], -5.0)
+    assert math.isclose(geo.data[2, Geometry.COL_J], 5.0)
+    assert math.isclose(geo.data[2, Geometry.COL_CW], 1.0)
 
     # BezierTo: (30, 10) -> (30, -10), C1Y=2 -> -2, C2Y=8 -> -8
-    assert math.isclose(geo.data[3, COL_X], 30.0)
-    assert math.isclose(geo.data[3, COL_Y], -10.0)
-    assert math.isclose(geo.data[3, COL_C1Y], -2.0)
-    assert math.isclose(geo.data[3, COL_C2Y], -8.0)
+    assert math.isclose(geo.data[3, Geometry.COL_X], 30.0)
+    assert math.isclose(geo.data[3, Geometry.COL_Y], -10.0)
+    assert math.isclose(geo.data[3, Geometry.COL_C1Y], -2.0)
+    assert math.isclose(geo.data[3, Geometry.COL_C2Y], -8.0)
 
     # Flipping twice should return to original
     geo.flip_y()
@@ -595,16 +582,43 @@ def test_get_command_at_valid_index():
     geo.bezier_to(30, 10, c1x=22, c1y=2, c2x=28, c2y=8, z=4)
 
     cmd0 = geo.get_command_at(0)
-    assert cmd0 == (CMD_TYPE_MOVE, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0)
+    assert cmd0 == (Geometry.CMD_TYPE_MOVE, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0)
 
     cmd1 = geo.get_command_at(1)
-    assert cmd1 == (CMD_TYPE_LINE, 10.0, 10.0, 2.0, 0.0, 0.0, 0.0, 0.0)
+    assert cmd1 == (
+        Geometry.CMD_TYPE_LINE,
+        10.0,
+        10.0,
+        2.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+    )
 
     cmd2 = geo.get_command_at(2)
-    assert cmd2 == (CMD_TYPE_ARC, 20.0, 0.0, 3.0, 5.0, -10.0, 0.0, 0.0)
+    assert cmd2 == (
+        Geometry.CMD_TYPE_ARC,
+        20.0,
+        0.0,
+        3.0,
+        5.0,
+        -10.0,
+        0.0,
+        0.0,
+    )
 
     cmd3 = geo.get_command_at(3)
-    assert cmd3 == (CMD_TYPE_BEZIER, 30.0, 10.0, 4.0, 22.0, 2.0, 28.0, 8.0)
+    assert cmd3 == (
+        Geometry.CMD_TYPE_BEZIER,
+        30.0,
+        10.0,
+        4.0,
+        22.0,
+        2.0,
+        28.0,
+        8.0,
+    )
 
 
 def test_get_command_at_negative_index():
@@ -640,11 +654,38 @@ def test_iter_commands():
     commands = list(geo.iter_commands())
 
     assert len(commands) == 4
-    assert commands[0] == (CMD_TYPE_MOVE, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0)
-    assert commands[1] == (CMD_TYPE_LINE, 10.0, 10.0, 2.0, 0.0, 0.0, 0.0, 0.0)
-    assert commands[2] == (CMD_TYPE_ARC, 20.0, 0.0, 3.0, 5.0, -10.0, 0.0, 0.0)
+    assert commands[0] == (
+        Geometry.CMD_TYPE_MOVE,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+    )
+    assert commands[1] == (
+        Geometry.CMD_TYPE_LINE,
+        10.0,
+        10.0,
+        2.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+    )
+    assert commands[2] == (
+        Geometry.CMD_TYPE_ARC,
+        20.0,
+        0.0,
+        3.0,
+        5.0,
+        -10.0,
+        0.0,
+        0.0,
+    )
     assert commands[3] == (
-        CMD_TYPE_BEZIER,
+        Geometry.CMD_TYPE_BEZIER,
         30.0,
         10.0,
         4.0,
@@ -662,19 +703,6 @@ def test_iter_commands_empty_geometry():
     assert commands == []
 
 
-def test_iter_commands():
-    """Tests iter_commands() syncs pending data before iteration."""
-    geo = Geometry()
-    geo.move_to(5, 5, 1)
-    geo.line_to(15, 15, 2)
-
-    commands = list(geo.iter_commands())
-
-    assert len(commands) == 2
-    assert commands[0] == (CMD_TYPE_MOVE, 5.0, 5.0, 1.0, 0.0, 0.0, 0.0, 0.0)
-    assert commands[1] == (CMD_TYPE_LINE, 15.0, 15.0, 2.0, 0.0, 0.0, 0.0, 0.0)
-
-
 def test_iter_commands_clockwise_arc():
     """Tests iter_commands() with clockwise arc."""
     geo = Geometry()
@@ -684,8 +712,26 @@ def test_iter_commands_clockwise_arc():
     commands = list(geo.iter_commands())
 
     assert len(commands) == 2
-    assert commands[0] == (CMD_TYPE_MOVE, 10.0, 10.0, 0.0, 0.0, 0.0, 0.0, 0.0)
-    assert commands[1] == (CMD_TYPE_ARC, 15.0, 10.0, 0.0, 0.0, -5.0, 1.0, 0.0)
+    assert commands[0] == (
+        Geometry.CMD_TYPE_MOVE,
+        10.0,
+        10.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+    )
+    assert commands[1] == (
+        Geometry.CMD_TYPE_ARC,
+        15.0,
+        10.0,
+        0.0,
+        0.0,
+        -5.0,
+        1.0,
+        0.0,
+    )
 
 
 def test_upgrade_to_scalable_on_scalable_geo():
@@ -740,15 +786,15 @@ def test_upgrade_to_scalable_converts_arcs():
     assert geo.data is not None
 
     # Check command types
-    command_types = geo.data[:, COL_TYPE]
-    assert CMD_TYPE_ARC not in command_types
-    assert CMD_TYPE_BEZIER in command_types
-    assert CMD_TYPE_LINE in command_types
-    assert CMD_TYPE_MOVE in command_types
+    command_types = geo.data[:, Geometry.COL_TYPE]
+    assert Geometry.CMD_TYPE_ARC not in command_types
+    assert Geometry.CMD_TYPE_BEZIER in command_types
+    assert Geometry.CMD_TYPE_LINE in command_types
+    assert Geometry.CMD_TYPE_MOVE in command_types
 
     # Check path integrity
     # The last bezier should end where the arc ended.
-    final_point = geo.data[-1, COL_X : COL_Z + 1]
+    final_point = geo.data[-1, Geometry.COL_X : Geometry.COL_Z + 1]
     np.testing.assert_allclose(final_point, [20.0, 0.0, 0.0], atol=1e-9)
 
 
@@ -767,10 +813,10 @@ def test_upgrade_to_scalable_multiple_arcs():
 
     assert geo.uniform_scalable is True
     assert geo.data is not None
-    assert CMD_TYPE_ARC not in geo.data[:, COL_TYPE]
+    assert Geometry.CMD_TYPE_ARC not in geo.data[:, Geometry.COL_TYPE]
 
     # Verify that the final endpoint of the entire path is preserved
-    final_point_after = geo.data[-1, COL_X : COL_Z + 1]
+    final_point_after = geo.data[-1, Geometry.COL_X : Geometry.COL_Z + 1]
     np.testing.assert_allclose(final_point_after, final_end_point, atol=1e-9)
 
 
@@ -787,7 +833,10 @@ def test_upgrade_to_scalable_is_idempotent():
     assert geo.data is not None
     data_after_first_call = geo.data.copy()
     assert geo.uniform_scalable is True
-    assert CMD_TYPE_ARC not in data_after_first_call[:, COL_TYPE]
+    assert (
+        Geometry.CMD_TYPE_ARC
+        not in data_after_first_call[:, Geometry.COL_TYPE]
+    )
 
     # Second call
     geo.upgrade_to_scalable()
@@ -812,15 +861,15 @@ def test_linearize_approximation():
     geo.linearize(tolerance=0.1)
 
     assert geo.data is not None
-    cmd_types = geo.data[:, COL_TYPE]
+    cmd_types = geo.data[:, Geometry.COL_TYPE]
 
     # Should contain no Arcs
-    assert CMD_TYPE_ARC not in cmd_types
+    assert Geometry.CMD_TYPE_ARC not in cmd_types
     # Should contain Lines
-    assert CMD_TYPE_LINE in cmd_types
+    assert Geometry.CMD_TYPE_LINE in cmd_types
 
     # The end point should still be (10, 10)
-    end_point = geo.data[-1, COL_X : COL_Z + 1]
+    end_point = geo.data[-1, Geometry.COL_X : Geometry.COL_Z + 1]
     np.testing.assert_allclose(end_point, (10.0, 10.0, 0.0), atol=1e-6)
 
 
@@ -842,15 +891,15 @@ def test_fit_arcs_approximation():
 
     # Before fitting, it should be all Lines
     assert geo.data is not None
-    assert np.all(geo.data[1:, COL_TYPE] == CMD_TYPE_LINE)
+    assert np.all(geo.data[1:, Geometry.COL_TYPE] == Geometry.CMD_TYPE_LINE)
 
     # Fit arcs with a reasonable tolerance
     geo.fit_arcs(tolerance=0.1)
 
     # After fitting, it should contain Arcs
     assert geo.data is not None
-    cmd_types = geo.data[:, COL_TYPE]
-    assert CMD_TYPE_ARC in cmd_types
+    cmd_types = geo.data[:, Geometry.COL_TYPE]
+    assert Geometry.CMD_TYPE_ARC in cmd_types
 
     # Should have significantly fewer commands than 100 lines
     assert len(geo.data) < 10
@@ -878,14 +927,14 @@ def test_fit_arcs_mixed_geometry():
 
     # 1. Verify the endpoints are preserved
     # The last point should still be (20, 10, 0)
-    final_end_point = geo.data[-1, COL_X : COL_Z + 1]
-    original_end_point = original_data[-1, COL_X : COL_Z + 1]
+    final_end_point = geo.data[-1, Geometry.COL_X : Geometry.COL_Z + 1]
+    original_end_point = original_data[-1, Geometry.COL_X : Geometry.COL_Z + 1]
     np.testing.assert_allclose(final_end_point, original_end_point, atol=1e-6)
 
     # 2. Verify we still have Arcs and Lines
-    cmd_types = geo.data[:, COL_TYPE]
-    assert CMD_TYPE_ARC in cmd_types
-    assert CMD_TYPE_LINE in cmd_types
+    cmd_types = geo.data[:, Geometry.COL_TYPE]
+    assert Geometry.CMD_TYPE_ARC in cmd_types
+    assert Geometry.CMD_TYPE_LINE in cmd_types
 
     # 3. Verify the number of commands didn't explode (it shouldn't degrade
     # to polylines). Original was 3 commands (Move, Line, Arc).
@@ -902,8 +951,8 @@ def test_fit_curves_preserves_beziers():
     geo.fit_curves(tolerance=0.1, beziers=True, arcs=True)
 
     assert geo.data is not None
-    cmd_types = geo.data[:, COL_TYPE]
-    assert CMD_TYPE_BEZIER in cmd_types
+    cmd_types = geo.data[:, Geometry.COL_TYPE]
+    assert Geometry.CMD_TYPE_BEZIER in cmd_types
 
 
 def test_fit_curves_delegates_to_fit_arcs():
@@ -916,8 +965,8 @@ def test_fit_curves_delegates_to_fit_arcs():
     geo.fit_arcs(tolerance=0.1)
 
     assert geo.data is not None
-    cmd_types = geo.data[:, COL_TYPE]
-    assert CMD_TYPE_ARC in cmd_types
+    cmd_types = geo.data[:, Geometry.COL_TYPE]
+    assert Geometry.CMD_TYPE_ARC in cmd_types
 
 
 class TestToPolygons:
@@ -1025,7 +1074,9 @@ class TestAppendData:
         assert geo.data is not None
         original_len = len(geo.data)
 
-        extra = np.array([[CMD_TYPE_LINE, 10.0, 10.0, 0.0, 0, 0, 0, 0]])
+        extra = np.array(
+            [[Geometry.CMD_TYPE_LINE, 10.0, 10.0, 0.0, 0, 0, 0, 0]]
+        )
         geo.append_data(extra)
 
         assert geo.data is not None
@@ -1039,9 +1090,9 @@ class TestAppendData:
 
         rows = np.array(
             [
-                [CMD_TYPE_LINE, 5.0, 0.0, 0.0, 0, 0, 0, 0],
-                [CMD_TYPE_LINE, 5.0, 5.0, 0.0, 0, 0, 0, 0],
-                [CMD_TYPE_LINE, 0.0, 5.0, 0.0, 0, 0, 0, 0],
+                [Geometry.CMD_TYPE_LINE, 5.0, 0.0, 0.0, 0, 0, 0, 0],
+                [Geometry.CMD_TYPE_LINE, 5.0, 5.0, 0.0, 0, 0, 0, 0],
+                [Geometry.CMD_TYPE_LINE, 0.0, 5.0, 0.0, 0, 0, 0, 0],
             ]
         )
         geo.append_data(rows)
@@ -1051,7 +1102,7 @@ class TestAppendData:
 
     def test_sets_data_when_empty(self):
         geo = Geometry()
-        rows = np.array([[CMD_TYPE_LINE, 1.0, 2.0, 0.0, 0, 0, 0, 0]])
+        rows = np.array([[Geometry.CMD_TYPE_LINE, 1.0, 2.0, 0.0, 0, 0, 0, 0]])
         geo.append_data(rows)
 
         assert geo.data is not None
@@ -1075,7 +1126,7 @@ class TestAppendData:
         assert geo.data is not None
         original = geo.data.copy()
 
-        geo.append_data(np.empty((0, GEO_ARRAY_COLS)))
+        geo.append_data(np.empty((0, Geometry.GEO_ARRAY_COLS)))
 
         assert geo.data is not None
         np.testing.assert_array_equal(geo.data, original)
@@ -1084,198 +1135,11 @@ class TestAppendData:
         geo = Geometry()
         geo.move_to(0, 0)
 
-        rows = np.array([[CMD_TYPE_LINE, 5.0, 5.0, 0.0, 0, 0, 0, 0]])
+        rows = np.array([[Geometry.CMD_TYPE_LINE, 5.0, 5.0, 0.0, 0, 0, 0, 0]])
         original_rows = rows.copy()
         geo.append_data(rows)
 
         np.testing.assert_array_equal(rows, original_rows)
-
-
-# --- _segment_length_from_row Tests ---
-
-
-class TestSegmentLengthFromRow:
-    def test_move_length_is_euclidean(self):
-        row = np.array([CMD_TYPE_MOVE, 3.0, 4.0, 0.0, 0, 0, 0, 0])
-        length = _segment_length_from_row(row, (0.0, 0.0, 0.0))
-        assert length == pytest.approx(5.0)
-
-    def test_line_length(self):
-        row = np.array([CMD_TYPE_LINE, 3.0, 4.0, 0.0, 0, 0, 0, 0])
-        length = _segment_length_from_row(row, (0.0, 0.0, 0.0))
-        assert length == pytest.approx(5.0)
-
-    def test_arc_ccw_quarter_circle(self):
-        # Center at (0,0), start at (10,0), end at (0,10), CCW
-        row = np.array([CMD_TYPE_ARC, 0.0, 10.0, 0.0, -10.0, 0.0, 0.0, 0.0])
-        length = _segment_length_from_row(row, (10.0, 0.0, 0.0))
-        assert length == pytest.approx(math.pi * 10 / 2)
-
-    def test_arc_cw_quarter_circle(self):
-        # Center at (0,0), start at (0,10), end at (10,0), CW
-        row = np.array([CMD_TYPE_ARC, 10.0, 0.0, 0.0, 0.0, -10.0, 1.0, 0.0])
-        length = _segment_length_from_row(row, (0.0, 10.0, 0.0))
-        assert length == pytest.approx(math.pi * 10 / 2)
-
-    def test_arc_full_circle_ccw(self):
-        # Start and end at same point → full circle
-        row = np.array([CMD_TYPE_ARC, 10.0, 0.0, 0.0, -10.0, 0.0, 0.0, 0.0])
-        length = _segment_length_from_row(row, (10.0, 0.0, 0.0))
-        assert length == pytest.approx(2 * math.pi * 10)
-
-    def test_arc_full_circle_cw(self):
-        row = np.array([CMD_TYPE_ARC, 10.0, 0.0, 0.0, -10.0, 0.0, 1.0, 0.0])
-        length = _segment_length_from_row(row, (10.0, 0.0, 0.0))
-        assert length == pytest.approx(2 * math.pi * 10)
-
-    def test_arc_zero_radius_returns_zero(self):
-        row = np.array([CMD_TYPE_ARC, 5.0, 5.0, 0.0, 0.0, 0.0, 0.0, 0.0])
-        length = _segment_length_from_row(row, (5.0, 5.0, 0.0))
-        assert length == 0.0
-
-    def test_bezier_length_approximates_true_length(self):
-        # Quadratic-like bezier: (0,0)→(10,0) with control points
-        row = np.array(
-            [
-                CMD_TYPE_BEZIER,
-                10.0,
-                0.0,
-                0.0,
-                5.0,
-                3.0,
-                5.0,
-                -3.0,
-            ]
-        )
-        length = _segment_length_from_row(row, (0.0, 0.0, 0.0))
-        assert length > 10.0
-        assert length < 20.0
-
-    def test_bezier_colinear_is_line_length(self):
-        # Control points on the line from (0,0) to (10,0)
-        row = np.array(
-            [
-                CMD_TYPE_BEZIER,
-                10.0,
-                0.0,
-                0.0,
-                3.0,
-                0.0,
-                7.0,
-                0.0,
-            ]
-        )
-        length = _segment_length_from_row(row, (0.0, 0.0, 0.0))
-        assert length == pytest.approx(10.0, abs=0.01)
-
-
-# --- _partial_segment_from_row Tests ---
-
-
-class TestPartialSegmentFromRow:
-    def test_line_at_halfway(self):
-        row = np.array([CMD_TYPE_LINE, 10.0, 10.0, 2.0, 0, 0, 0, 0])
-        result = _partial_segment_from_row(row, (0.0, 0.0, 0.0), 0.5)
-        assert result is not None
-        assert result[COL_TYPE] == CMD_TYPE_LINE
-        assert result[COL_X] == pytest.approx(5.0)
-        assert result[COL_Y] == pytest.approx(5.0)
-        assert result[COL_Z] == pytest.approx(1.0)
-
-    def test_line_at_zero(self):
-        row = np.array([CMD_TYPE_LINE, 10.0, 0.0, 0.0, 0, 0, 0, 0])
-        result = _partial_segment_from_row(row, (0.0, 0.0, 0.0), 0.0)
-        assert result is not None
-        assert result[COL_X] == pytest.approx(0.0)
-        assert result[COL_Y] == pytest.approx(0.0)
-
-    def test_line_at_one(self):
-        row = np.array([CMD_TYPE_LINE, 10.0, 20.0, 3.0, 0, 0, 0, 0])
-        result = _partial_segment_from_row(row, (0.0, 0.0, 0.0), 1.0)
-        assert result is not None
-        assert result[COL_X] == pytest.approx(10.0)
-        assert result[COL_Y] == pytest.approx(20.0)
-        assert result[COL_Z] == pytest.approx(3.0)
-
-    def test_arc_partial_ccw(self):
-        # Quarter circle CCW from (10,0) to (0,10), center (0,0)
-        row = np.array([CMD_TYPE_ARC, 0.0, 10.0, 0.0, -10.0, 0.0, 0.0, 0.0])
-        result = _partial_segment_from_row(row, (10.0, 0.0, 0.0), 0.5)
-        assert result is not None
-        assert result[COL_TYPE] == CMD_TYPE_ARC
-        assert result[COL_X] == pytest.approx(
-            10 * math.cos(math.pi / 4), abs=1e-6
-        )
-        assert result[COL_Y] == pytest.approx(
-            10 * math.sin(math.pi / 4), abs=1e-6
-        )
-
-    def test_arc_partial_cw(self):
-        # Quarter circle CW from (0,10) to (10,0), center (0,0)
-        row = np.array([CMD_TYPE_ARC, 10.0, 0.0, 0.0, 0.0, -10.0, 1.0, 0.0])
-        result = _partial_segment_from_row(row, (0.0, 10.0, 0.0), 0.5)
-        assert result is not None
-        cx, cy = 0.0, 0.0
-        start_angle = math.pi / 2
-        end_angle = 0.0
-        angle_span = end_angle - start_angle
-        mid_angle = start_angle + 0.5 * angle_span
-        assert result[COL_X] == pytest.approx(
-            cx + 10 * math.cos(mid_angle), abs=1e-6
-        )
-        assert result[COL_Y] == pytest.approx(
-            cy + 10 * math.sin(mid_angle), abs=1e-6
-        )
-
-    def test_arc_preserves_ij_and_cw(self):
-        row = np.array([CMD_TYPE_ARC, 0.0, 10.0, 0.0, -10.0, 0.0, 0.0, 0.0])
-        result = _partial_segment_from_row(row, (10.0, 0.0, 0.0), 0.3)
-        assert result is not None
-        assert result[COL_I] == pytest.approx(-10.0)
-        assert result[COL_J] == pytest.approx(0.0)
-        assert result[COL_CW] == pytest.approx(0.0)
-
-    def test_bezier_partial_midpoint(self):
-        # Simple bezier from (0,0) to (10,0) with symmetric controls
-        row = np.array(
-            [
-                CMD_TYPE_BEZIER,
-                10.0,
-                0.0,
-                0.0,
-                3.0,
-                3.0,
-                7.0,
-                3.0,
-            ]
-        )
-        result = _partial_segment_from_row(row, (0.0, 0.0, 0.0), 0.5)
-        assert result is not None
-        assert result[COL_TYPE] == CMD_TYPE_BEZIER
-        assert result[COL_X] == pytest.approx(5.0)
-        assert result[COL_Y] == pytest.approx(2.25)
-
-    def test_bezier_partial_z_interpolation(self):
-        row = np.array(
-            [
-                CMD_TYPE_BEZIER,
-                10.0,
-                0.0,
-                4.0,
-                3.0,
-                3.0,
-                7.0,
-                3.0,
-            ]
-        )
-        result = _partial_segment_from_row(row, (0.0, 0.0, 0.0), 0.5)
-        assert result is not None
-        assert result[COL_Z] == pytest.approx(2.0)
-
-    def test_move_returns_none(self):
-        row = np.array([CMD_TYPE_MOVE, 5.0, 5.0, 0.0, 0, 0, 0, 0])
-        result = _partial_segment_from_row(row, (0.0, 0.0, 0.0), 0.5)
-        assert result is None
 
 
 # --- extract_overcut_rows Tests ---
@@ -1286,11 +1150,11 @@ class TestExtractOvercutRows:
     def _make_square(size=10.0):
         return np.array(
             [
-                [CMD_TYPE_MOVE, 0.0, 0.0, 0.0, 0, 0, 0, 0],
-                [CMD_TYPE_LINE, size, 0.0, 0.0, 0, 0, 0, 0],
-                [CMD_TYPE_LINE, size, size, 0.0, 0, 0, 0, 0],
-                [CMD_TYPE_LINE, 0.0, size, 0.0, 0, 0, 0, 0],
-                [CMD_TYPE_LINE, 0.0, 0.0, 0.0, 0, 0, 0, 0],
+                [Geometry.CMD_TYPE_MOVE, 0.0, 0.0, 0.0, 0, 0, 0, 0],
+                [Geometry.CMD_TYPE_LINE, size, 0.0, 0.0, 0, 0, 0, 0],
+                [Geometry.CMD_TYPE_LINE, size, size, 0.0, 0, 0, 0, 0],
+                [Geometry.CMD_TYPE_LINE, 0.0, size, 0.0, 0, 0, 0, 0],
+                [Geometry.CMD_TYPE_LINE, 0.0, 0.0, 0.0, 0, 0, 0, 0],
             ]
         )
 
@@ -1298,7 +1162,7 @@ class TestExtractOvercutRows:
         assert extract_overcut_rows(None, 5.0) is None
 
     def test_returns_none_for_short_data(self):
-        data = np.array([[CMD_TYPE_MOVE, 0.0, 0.0, 0.0, 0, 0, 0, 0]])
+        data = np.array([[Geometry.CMD_TYPE_MOVE, 0.0, 0.0, 0.0, 0, 0, 0, 0]])
         assert extract_overcut_rows(data, 5.0) is None
 
     def test_returns_none_for_zero_length(self):
@@ -1330,18 +1194,18 @@ class TestExtractOvercutRows:
         assert result is not None
         assert len(result) == 2
         np.testing.assert_array_equal(result[0], data[1])
-        assert result[1][COL_TYPE] == CMD_TYPE_LINE
-        assert result[1][COL_X] == pytest.approx(10.0)
-        assert result[1][COL_Y] == pytest.approx(5.0)
+        assert result[1][Geometry.COL_TYPE] == Geometry.CMD_TYPE_LINE
+        assert result[1][Geometry.COL_X] == pytest.approx(10.0)
+        assert result[1][Geometry.COL_Y] == pytest.approx(5.0)
 
     def test_with_arc_segment(self):
         # MoveTo(10,0), ArcTo CCW to (-10,0) via center (0,0), i=-10
         # That's a semicircle of radius 10, length π·10 ≈ 31.4
         data = np.array(
             [
-                [CMD_TYPE_MOVE, 10.0, 0.0, 0.0, 0, 0, 0, 0],
+                [Geometry.CMD_TYPE_MOVE, 10.0, 0.0, 0.0, 0, 0, 0, 0],
                 [
-                    CMD_TYPE_ARC,
+                    Geometry.CMD_TYPE_ARC,
                     -10.0,
                     0.0,
                     0.0,
@@ -1355,23 +1219,23 @@ class TestExtractOvercutRows:
         result = extract_overcut_rows(data, math.pi * 5)
         assert result is not None
         assert len(result) == 1
-        assert result[0][COL_TYPE] == CMD_TYPE_ARC
-        assert result[0][COL_X] == pytest.approx(0.0, abs=1e-6)
-        assert result[0][COL_Y] == pytest.approx(10.0, abs=1e-6)
+        assert result[0][Geometry.COL_TYPE] == Geometry.CMD_TYPE_ARC
+        assert result[0][Geometry.COL_X] == pytest.approx(0.0, abs=1e-6)
+        assert result[0][Geometry.COL_Y] == pytest.approx(10.0, abs=1e-6)
 
     def test_skips_zero_length_segments(self):
         # Line to same point has zero length and should be skipped
         data = np.array(
             [
-                [CMD_TYPE_MOVE, 0.0, 0.0, 0.0, 0, 0, 0, 0],
-                [CMD_TYPE_LINE, 0.0, 0.0, 0.0, 0, 0, 0, 0],
-                [CMD_TYPE_LINE, 5.0, 0.0, 0.0, 0, 0, 0, 0],
+                [Geometry.CMD_TYPE_MOVE, 0.0, 0.0, 0.0, 0, 0, 0, 0],
+                [Geometry.CMD_TYPE_LINE, 0.0, 0.0, 0.0, 0, 0, 0, 0],
+                [Geometry.CMD_TYPE_LINE, 5.0, 0.0, 0.0, 0, 0, 0, 0],
             ]
         )
         result = extract_overcut_rows(data, 3.0)
         assert result is not None
         assert len(result) == 1
-        assert result[0][COL_X] == pytest.approx(3.0)
+        assert result[0][Geometry.COL_X] == pytest.approx(3.0)
 
     def test_length_exceeds_perimeter(self):
         data = self._make_square(10.0)
@@ -1383,9 +1247,9 @@ class TestExtractOvercutRows:
         # Bezier from (0,0) to (10,0) with controls on the line
         data = np.array(
             [
-                [CMD_TYPE_MOVE, 0.0, 0.0, 0.0, 0, 0, 0, 0],
+                [Geometry.CMD_TYPE_MOVE, 0.0, 0.0, 0.0, 0, 0, 0, 0],
                 [
-                    CMD_TYPE_BEZIER,
+                    Geometry.CMD_TYPE_BEZIER,
                     10.0,
                     0.0,
                     0.0,
@@ -1399,13 +1263,13 @@ class TestExtractOvercutRows:
         result = extract_overcut_rows(data, 5.0)
         assert result is not None
         assert len(result) == 1
-        assert result[0][COL_TYPE] == CMD_TYPE_BEZIER
-        assert result[0][COL_X] == pytest.approx(5.0, abs=0.1)
-        assert result[0][COL_Y] == pytest.approx(0.0, abs=0.1)
+        assert result[0][Geometry.COL_TYPE] == Geometry.CMD_TYPE_BEZIER
+        assert result[0][Geometry.COL_X] == pytest.approx(5.0, abs=0.1)
+        assert result[0][Geometry.COL_Y] == pytest.approx(0.0, abs=0.1)
 
     def test_returns_stacked_array(self):
         data = self._make_square(10.0)
         result = extract_overcut_rows(data, 25.0)
         assert result is not None
-        assert result.shape[1] == GEO_ARRAY_COLS
+        assert result.shape[1] == Geometry.GEO_ARRAY_COLS
         assert result.ndim == 2

@@ -1,0 +1,32 @@
+[workspace]
+name = "raygeo"
+channels = ["conda-forge"]
+platforms = ["linux-64"]
+
+[dependencies]
+python = ">=3.11"
+rust = "*"
+patchelf = "*"
+maturin = "*"
+pytest = "*"
+numpy = "*"
+pyright = ">=1.1.409,<2"
+
+[pypi-dependencies]
+pytest-mock = "*"
+flake8 = "*"
+pyflakes = "*"
+ruff = "*"
+
+[tasks]
+format = "ruff format tests"
+flake = "flake8 --ignore=E127,E128,E121,E123,E126,E203,E226,E24,E704,W503,W504 --builtins=_ tests"
+pyflakes = { env = { PYFLAKES_BUILTINS = "_" }, cmd = "pyflakes tests" }
+pyright = "pyright"
+lint = { depends-on = ["flake", "pyflakes", "pyright"] }
+build = "rm -rf target/maturin/ && maturin develop --release"
+build-wheel = "mkdir -p dist && maturin build --release --out dist"
+check = "cargo check"
+test = { cmd = "cargo test --manifest-path crates/raygeo/Cargo.toml && pytest -v", depends-on = ["build"] }
+clean-stubs = "rm -rf raygeo-stubs"
+gen-stubs = { cmd = "mkdir -p raygeo-stubs && python3 -c 'import raygeo; raygeo.generate_stubs(\"raygeo-stubs\")'", depends-on = ["clean-stubs", "build"] }

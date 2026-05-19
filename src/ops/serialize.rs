@@ -5,6 +5,12 @@ use raygeo_core::ops::{category, Axis, CommandCategory, CommandType};
 
 use super::axis::PyAxis;
 
+/// Convert a Python dictionary of axis-value pairs into a Rust vector.
+///
+/// Keys may be :class:`Axis` objects or strings (``"X"``, ``"Y"``, ``"Z"``, etc.).
+///
+/// :param dict: Python dict mapping axes to float values.
+/// :returns: Vector of ``(Axis, f64)`` tuples.
 pub fn py_to_axis_map_helper(
     dict: &Bound<'_, PyDict>,
 ) -> PyResult<Vec<(Axis, f64)>> {
@@ -28,6 +34,11 @@ pub fn py_to_axis_map_helper(
     Ok(result)
 }
 
+/// Convert a Rust vector of axis-value pairs into a Python dictionary.
+///
+/// :param py: Python GIL token.
+/// :param axes: Slice of ``(Axis, f64)`` tuples.
+/// :returns: Python dict mapping Axis objects to float values.
 pub fn axis_map_to_py_helper<'a>(
     py: Python<'a>,
     axes: &[(Axis, f64)],
@@ -40,6 +51,12 @@ pub fn axis_map_to_py_helper<'a>(
     Ok(dict)
 }
 
+/// Serialize a single command at index *idx* to a Python dictionary.
+///
+/// :param py: Python GIL token.
+/// :param ops: The ops container.
+/// :param idx: Command index.
+/// :returns: Dict with keys like ``type``, ``end``, ``power``, etc.
 fn cmd_to_dict<'a>(
     py: Python<'a>,
     ops: &raygeo_core::ops::Ops,
@@ -122,6 +139,10 @@ fn cmd_to_dict<'a>(
     Ok(d)
 }
 
+/// Deserialize a command from a Python dictionary and append it to *ops*.
+///
+/// :param cmd_data: Dict with command data.
+/// :param ops: The ops container to mutate.
 fn create_and_append_command(
     cmd_data: &Bound<'_, PyDict>,
     ops: &mut raygeo_core::ops::Ops,
@@ -367,6 +388,13 @@ fn create_and_append_command(
     Ok(())
 }
 
+/// Serialize the full ``Ops`` sequence to a Python dictionary.
+///
+/// The result contains a ``"commands"`` list and ``"last_move_to"``.
+///
+/// :param py: Python GIL token.
+/// :param ops: The ops to serialize.
+/// :returns: Python dict suitable for :func:`ops_from_dict`.
 pub fn ops_to_dict(
     py: Python<'_>,
     ops: &raygeo_core::ops::Ops,
@@ -382,6 +410,12 @@ pub fn ops_to_dict(
     Ok(result.unbind())
 }
 
+/// Deserialize an ``Ops`` sequence from a Python dictionary.
+///
+/// The dict should have the same structure as produced by :func:`ops_to_dict`.
+///
+/// :param data: Dict with ``"commands"`` and optionally ``"last_move_to"``.
+/// :returns: A new Ops instance.
 pub fn ops_from_dict(
     data: &Bound<'_, PyDict>,
 ) -> PyResult<raygeo_core::ops::Ops> {

@@ -1,11 +1,11 @@
 import math
-from raygeo.algo.smooth import (
+from raygeo.geo import Point3D
+from raygeo.geo.algo.smooth import (
     compute_gaussian_kernel,
     smooth_circularly,
     smooth_polyline,
     smooth_sub_segment,
 )
-from raygeo import Point3D
 
 
 class TestComputeGaussianKernel:

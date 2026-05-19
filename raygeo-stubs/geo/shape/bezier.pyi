@@ -18,7 +18,7 @@ __all__ = [
     "split_bezier",
 ]
 
-def bezier_flatness_sq(a: tuple[float, float], b: tuple[float, float], c: tuple[float, float], d: tuple[float, float]) -> float:
+def bezier_flatness_sq(a: tuple[float, float, float], b: tuple[float, float, float], c: tuple[float, float, float], d: tuple[float, float, float]) -> float:
     r"""
     Compute the flatness squared of a cubic bezier.
     """
@@ -83,7 +83,7 @@ def perp_dist_sq(pt: tuple[float, float, float], origin: tuple[float, float, flo
     Compute the perpendicular distance squared.
     """
 
-def split_bezier(p0: tuple[float, float], p1: tuple[float, float], p2: tuple[float, float], p3: tuple[float, float], t: float) -> tuple[tuple[float, float], tuple[float, float], tuple[float, float], tuple[float, float], tuple[float, float], tuple[float, float], tuple[float, float]]:
+def split_bezier(p0: tuple[float, float], p1: tuple[float, float], p2: tuple[float, float], p3: tuple[float, float], t: float) -> tuple[tuple[tuple[float, float], tuple[float, float], tuple[float, float], tuple[float, float]], tuple[tuple[float, float], tuple[float, float], tuple[float, float], tuple[float, float]]]:
     r"""
     Split a cubic bezier at parameter t.
     """

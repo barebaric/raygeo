@@ -37,7 +37,7 @@ def create_line_cmd(end_point: tuple[float, float, float]) -> list[float]:
     Create a line command array from an end point.
     """
 
-def fit_circle_to_3_points(p1: tuple[float, float, float], p2: tuple[float, float, float], p3: tuple[float, float, float]) -> Optional[tuple[tuple[float, float], float]]:
+def fit_circle_to_3_points(p1: tuple[float, float] | tuple[float, float, float], p2: tuple[float, float] | tuple[float, float, float], p3: tuple[float, float] | tuple[float, float, float]) -> Optional[tuple[tuple[float, float], float]]:
     r"""
     Fit a circle to three points.
     """
@@ -77,7 +77,7 @@ def linearize_geometry(data: Sequence[Sequence[float]], tolerance: float) -> lis
     Linearize geometry data into line segments.
     """
 
-def project_circle_center_to_bisector(p1: tuple[float, float, float], p2: tuple[float, float, float], center: tuple[float, float]) -> tuple[float, float]:
+def project_circle_center_to_bisector(p1: tuple[float, float] | tuple[float, float, float], p2: tuple[float, float] | tuple[float, float, float], center: tuple[float, float]) -> tuple[float, float]:
     r"""
     Project a circle center onto the perpendicular bisector of two points.
     """

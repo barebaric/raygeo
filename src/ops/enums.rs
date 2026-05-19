@@ -2,6 +2,8 @@ use pyo3::prelude::*;
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods, gen_stub_pyfunction};
 use raygeo_core::ops::enums::{category, CommandCategory, CommandType, SectionType};
 
+/// Register the CommandType, CommandCategory, SectionType enums
+/// and the category() function with the Python module.
 pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyCommandType>()?;
     m.add_class::<PyCommandCategory>()?;
@@ -10,6 +12,10 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     Ok(())
 }
 
+/// Enumeration of all command types in an Ops sequence.
+///
+/// Each constant represents a specific operation command such as
+/// ``MOVE_TO``, ``LINE_TO``, ``ARC_TO``, ``SET_POWER``, etc.
 #[gen_stub_pyclass]
 #[pyclass(frozen, eq, skip_from_py_object, module = "raygeo.ops", name = "CommandType")]
 #[derive(Clone, PartialEq)]
@@ -65,15 +71,18 @@ impl PyCommandType {
     #[classattr]
     pub const OPS_SECTION_END: PyCommandType = PyCommandType(CommandType::OpsSectionEnd);
 
+    /// String representation like ``CommandType.MOVE_TO``.
     fn __repr__(&self) -> String {
         format!("CommandType.{}", self.name())
     }
 
+    /// The raw integer value of this command type.
     #[getter]
     fn value(&self) -> u8 {
         self.0 as u8
     }
 
+    /// The uppercase name of this command type (e.g. ``"MOVE_TO"``, ``"LINE_TO"``).
     #[getter]
     fn name(&self) -> String {
         match self.0 {
@@ -104,6 +113,11 @@ impl PyCommandType {
     }
 }
 
+/// Represents the category of a command: ``MOVING``, ``STATE``, or ``MARKER``.
+///
+/// - **MOVING**: Commands that change the tool position (MoveTo, LineTo, ArcTo, etc.)
+/// - **STATE**: Commands that change machine state (SetPower, SetCutSpeed, etc.)
+/// - **MARKER**: Structural markers (JobStart/End, LayerStart/End, etc.)
 #[gen_stub_pyclass]
 #[pyclass(frozen, eq, skip_from_py_object, module = "raygeo.ops", name = "CommandCategory")]
 #[derive(Clone, PartialEq)]
@@ -119,15 +133,18 @@ impl PyCommandCategory {
     #[classattr]
     pub const MARKER: PyCommandCategory = PyCommandCategory(CommandCategory::Marker);
 
+    /// String representation like ``CommandCategory.MOVING``.
     fn __repr__(&self) -> String {
         format!("CommandCategory.{}", self.name())
     }
 
+    /// The raw integer value of this category.
     #[getter]
     fn value(&self) -> u8 {
         self.0 as u8
     }
 
+    /// The uppercase name of this category (``"MOVING"``, ``"STATE"``, or ``"MARKER"``).
     #[getter]
     fn name(&self) -> String {
         match self.0 {
@@ -138,6 +155,9 @@ impl PyCommandCategory {
     }
 }
 
+/// The type of an operations section: ``VECTOR_OUTLINE`` or ``RASTER_FILL``.
+///
+/// Sections divide an Ops sequence into vector and raster portions.
 #[gen_stub_pyclass]
 #[pyclass(frozen, eq, skip_from_py_object, module = "raygeo.ops", name = "SectionType")]
 #[derive(Clone, PartialEq)]
@@ -151,15 +171,18 @@ impl PySectionType {
     #[classattr]
     pub const RASTER_FILL: PySectionType = PySectionType(SectionType::RasterFill);
 
+    /// String representation like ``SectionType.VECTOR_OUTLINE``.
     fn __repr__(&self) -> String {
         format!("SectionType.{}", self.name())
     }
 
+    /// The raw integer value of this section type.
     #[getter]
     fn value(&self) -> u8 {
         self.0 as u8
     }
 
+    /// The uppercase name (``"VECTOR_OUTLINE"`` or ``"RASTER_FILL"``).
     #[getter]
     fn name(&self) -> String {
         match self.0 {

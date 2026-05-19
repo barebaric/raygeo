@@ -2,6 +2,8 @@
 # ruff: noqa: E501, F401, F403, F405
 
 import builtins
+import numpy
+import numpy.typing
 from raygeo.geo import path
 import typing
 from . import geo
@@ -31,6 +33,7 @@ class Geometry:
     COL_C1Y: builtins.int = 5
     COL_C2X: builtins.int = 6
     COL_C2Y: builtins.int = 7
+    GEO_ARRAY_COLS: builtins.int = 8
     CMD_TYPE_MOVE: builtins.float = 1.0
     CMD_TYPE_LINE: builtins.float = 2.0
     CMD_TYPE_ARC: builtins.float = 3.0
@@ -49,6 +52,16 @@ class Geometry:
         """
     @uniform_scalable.setter
     def uniform_scalable(self, value: builtins.bool) -> None: ...
+    @property
+    def data(self) -> typing.Optional[numpy.typing.NDArray[numpy.float64]]:
+        r"""
+        The command data as a numpy array of shape
+        (N, 8), or None if empty.
+        """
+    def transform(self, matrix: geo.TransformMatrix) -> Geometry:
+        r"""
+        Apply a 4x4 affine transformation matrix.
+        """
     def __new__(cls) -> Geometry:
         r"""
         Create a new empty Geometry.
@@ -116,12 +129,6 @@ class Geometry:
         r"""
         Return a deep copy of this geometry.
         """
-    def transform(self, matrix: typing.Sequence[typing.Sequence[builtins.float]]) -> Geometry:
-        r"""
-        Apply a 4x4 affine transformation matrix.
-        
-        :param matrix: A 4x4 transformation matrix as list of lists.
-        """
     def extend(self, other: Geometry) -> None:
         r"""
         Append another geometry's commands to this one.
@@ -170,6 +177,39 @@ class Geometry:
         
         :param index: Command index.
         """
+    def dump(self) -> dict:
+        r"""
+        Serialize the geometry to a dictionary.
+        """
+    def to_dict(self) -> dict:
+        r"""
+        Serialize the geometry to a dictionary.
+        """
+    @classmethod
+    def load(cls, data: dict) -> Geometry:
+        r"""
+        Load a geometry from a dictionary.
+        
+        :param data: A dictionary as produced by
+            :meth:`to_dict`.
+        """
+    @classmethod
+    def from_dict(cls, data: dict) -> Geometry:
+        r"""
+        Create a Geometry from a dictionary.
+        
+        :param data: A dictionary as produced by
+            :meth:`to_dict`.
+        """
+    @classmethod
+    def from_points(cls, points: typing.Any, close: builtins.bool = True) -> Geometry:
+        r"""
+        Create a Geometry from a sequence of points.
+        
+        :param points: A sequence of (x, y) or
+            (x, y, z) coordinate tuples.
+        :param close: Whether to close the path.
+        """
     def __eq__(self, other: Geometry) -> builtins.bool:
         r"""
         Check equality with another Geometry.
@@ -216,6 +256,13 @@ class Geometry:
         Remove duplicate segments from the geometry.
         
         :param tolerance: Maximum deviation for equality.
+        """
+    def append_data(self, rows: typing.Optional[numpy.typing.NDArray[numpy.float64]]) -> None:
+        r"""
+        Append rows of command data to the geometry.
+        
+        :param rows: A numpy array of shape (N, 8)
+            containing command rows, or None.
         """
     def flip_x(self) -> Geometry:
         r"""

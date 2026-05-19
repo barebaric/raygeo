@@ -2,7 +2,8 @@ use numpy::ndarray;
 use numpy::{IntoPyArray, PyArray2, PyArrayMethods};
 use pyo3::prelude::*;
 use pyo3::types::{PyDict, PyList, PyType};
-use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
+use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods, gen_methods_from_python};
+use pyo3_stub_gen::inventory::submit;
 use pyo3_stub_gen::{PyStubType, TypeInfo};
 
 use raygeo_core::geo::algo::fitting::convert_arc_to_beziers_from_array;
@@ -121,6 +122,17 @@ pub struct Geometry {
     pub(crate) inner: CoreGeometry,
 }
 
+submit! {
+    gen_methods_from_python! {
+        r#"
+        class Geometry:
+            def transform(self, matrix: geo.TransformMatrix) -> Geometry:
+                """Apply a 4x4 affine transformation matrix."""
+                ...
+        "#
+    }
+}
+
 #[gen_stub_pymethods]
 #[pymethods]
 impl Geometry {
@@ -156,6 +168,9 @@ impl Geometry {
 
     #[classattr]
     const COL_C2Y: usize = raygeo_core::COL_C2Y;
+
+    #[classattr]
+    const GEO_ARRAY_COLS: usize = raygeo_core::GEO_ARRAY_COLS;
 
     #[classattr]
     const CMD_TYPE_MOVE: f64 = raygeo_core::CMD_TYPE_MOVE as f64;
@@ -341,6 +356,7 @@ impl Geometry {
     /// Apply a 4x4 affine transformation matrix.
     ///
     /// :param matrix: A 4x4 transformation matrix as list of lists.
+    #[gen_stub(skip)]
     fn transform(
         slf: Bound<'_, Self>,
         matrix: Vec<Vec<f64>>,
@@ -393,8 +409,9 @@ impl Geometry {
         self.inner.segments()
     }
 
+    /// The command data as a numpy array of shape
+    /// (N, 8), or None if empty.
     #[getter]
-    #[gen_stub(skip)]
     fn data<'py>(
         &mut self,
         py: Python<'py>,
@@ -490,7 +507,7 @@ impl Geometry {
         }
     }
 
-    #[gen_stub(skip)]
+    /// Serialize the geometry to a dictionary.
     fn dump<'py>(&mut self, py: Python<'py>) -> PyResult<Bound<'py, PyDict>> {
         let last_move_to = self.inner.last_move_to;
         let uniform_scalable = self.inner.uniform_scalable;
@@ -539,7 +556,7 @@ impl Geometry {
         Ok(dict)
     }
 
-    #[gen_stub(skip)]
+    /// Serialize the geometry to a dictionary.
     fn to_dict<'py>(
         &mut self,
         py: Python<'py>,
@@ -547,8 +564,11 @@ impl Geometry {
         self.dump(py)
     }
 
+    /// Load a geometry from a dictionary.
+    ///
+    /// :param data: A dictionary as produced by
+    ///     :meth:`to_dict`.
     #[classmethod]
-    #[gen_stub(skip)]
     fn load<'py>(
         _cls: &Bound<'py, PyType>,
         data: &Bound<'py, PyDict>,
@@ -747,8 +767,11 @@ impl Geometry {
         Ok(geo)
     }
 
+    /// Create a Geometry from a dictionary.
+    ///
+    /// :param data: A dictionary as produced by
+    ///     :meth:`to_dict`.
     #[classmethod]
-    #[gen_stub(skip)]
     fn from_dict<'py>(
         _cls: &Bound<'py, PyType>,
         data: &Bound<'py, PyDict>,
@@ -756,9 +779,13 @@ impl Geometry {
         Self::load(_cls, data)
     }
 
+    /// Create a Geometry from a sequence of points.
+    ///
+    /// :param points: A sequence of (x, y) or
+    ///     (x, y, z) coordinate tuples.
+    /// :param close: Whether to close the path.
     #[classmethod]
     #[pyo3(signature = (points, close=true))]
-    #[gen_stub(skip)]
     fn from_points<'py>(
         _cls: &Bound<'py, PyType>,
         points: &Bound<'py, PyAny>,
@@ -894,7 +921,10 @@ impl Geometry {
         slf
     }
 
-    #[gen_stub(skip)]
+    /// Append rows of command data to the geometry.
+    ///
+    /// :param rows: A numpy array of shape (N, 8)
+    ///     containing command rows, or None.
     fn append_data<'py>(
         &mut self,
         py: Python<'py>,

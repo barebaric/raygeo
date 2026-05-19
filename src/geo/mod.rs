@@ -5,7 +5,7 @@ mod path;
 mod shape;
 
 use pyo3::prelude::*;
-use pyo3_stub_gen::derive::gen_stub_pyfunction;
+use pyo3_stub_gen::derive::{gen_stub_pyfunction, gen_type_alias_from_python};
 
 use crate::geo::flex_point::{
     extract_polygon, extract_polygons, int_poly_to_points, PyIntPoint2D,
@@ -21,6 +21,27 @@ use raygeo_core::{
     CMD_TYPE_MOVE, COL_C1X, COL_C1Y, COL_C2X, COL_C2Y, COL_CW, COL_I, COL_J,
     COL_TYPE, COL_X, COL_Y, COL_Z, GEO_ARRAY_COLS,
 };
+
+gen_type_alias_from_python!(
+    "raygeo.geo",
+    r#"
+    type Point3D = tuple[float, float] | tuple[float, float, float]
+    "#
+);
+
+gen_type_alias_from_python!(
+    "raygeo.geo",
+    r#"
+    type Polygon = list[Point3D]
+    "#
+);
+
+gen_type_alias_from_python!(
+    "raygeo.geo",
+    r#"
+    type TransformMatrix = list[list[float]] | numpy.ndarray[tuple[int, int], float]
+    "#
+);
 
 const CLIPPER_SCALE: i64 = 10_000_000;
 

@@ -3,6 +3,8 @@
 
 __all__ = [
     "apply_affine_transform_to_array",
+    "are_points_equal",
+    "are_segments_equal",
     "check_intersection",
     "check_intersection_from_array",
     "check_self_intersection",
@@ -24,9 +26,11 @@ __all__ = [
     "get_outward_normal_at_from_array",
     "get_path_winding_order_from_array",
     "get_point_and_tangent_at",
+    "get_segment_key",
     "get_subpath_area_from_array",
     "get_subpath_vertices_from_array",
     "get_total_distance_from_array",
+    "get_valid_contours_data",
     "grow_geometry",
     "is_clockwise",
     "is_closed",
@@ -46,6 +50,24 @@ __all__ = [
 def apply_affine_transform_to_array(data: Sequence[Sequence[float]], matrix: Sequence[Sequence[float]]) -> Any:
     r"""
     Apply an affine transform to path data.
+    """
+
+def are_points_equal(p1: tuple[float, float, float], p2: tuple[float, float, float], tolerance: float) -> bool:
+    r"""
+    Check if two 3D points are equal within tolerance.
+    
+    :param p1: First point (x, y, z).
+    :param p2: Second point (x, y, z).
+    :param tolerance: Maximum allowed difference.
+    """
+
+def are_segments_equal(key1: Any, key2: Any, tolerance: float) -> bool:
+    r"""
+    Check if two segment keys are equal within tolerance.
+    
+    :param key1: First segment key tuple.
+    :param key2: Second segment key tuple.
+    :param tolerance: Maximum allowed difference.
     """
 
 def check_intersection(data1: Optional[Sequence[Sequence[float]]], data2: Optional[Sequence[Sequence[float]]], fail_on_t_junction: bool) -> bool:
@@ -88,7 +110,7 @@ def create_arc_cmd(end: tuple[float, float, float], center: tuple[float, float],
     Create an arc command array.
     """
 
-def create_line_cmd(end_point: tuple[float, float, float]) -> list[float]:
+def create_line_cmd(end_point: tuple[float, float] | tuple[float, float, float]) -> list[float]:
     r"""
     Create a line command array from an end point.
     """
@@ -108,7 +130,7 @@ def filter_to_external_contours(contours: list[Geometry]) -> list[Geometry]:
     Filter to only external (outer) contours.
     """
 
-def fit_arcs(data: Optional[Sequence[Sequence[float]]], tolerance: float) -> Optional[list[list[float]]]:
+def fit_arcs(data: Optional[Sequence[Sequence[float]]], tolerance: float, progress_callback: Optional[Callable[[float], None]] = None) -> Optional[list[list[float]]]:
     r"""
     Fit arcs to a path.
     """
@@ -153,6 +175,16 @@ def get_point_and_tangent_at(data: Sequence[Sequence[float]], row_index: int, t:
     Get the point and tangent at a parameter t on a segment.
     """
 
+def get_segment_key(data: Sequence[Sequence[float]], index: int, tolerance: float) -> Optional[Any]:
+    r"""
+    Get a segment key for comparison.
+    
+    :param data: Array of command data.
+    :param index: Row index.
+    :param tolerance: Tolerance for comparison.
+    :returns: Tuple key or None.
+    """
+
 def get_subpath_area_from_array(data: Sequence[Sequence[float]], subpath_index: int) -> float:
     r"""
     Get the signed area of a subpath.
@@ -166,6 +198,11 @@ def get_subpath_vertices_from_array(data: Sequence[Sequence[float]], subpath_ind
 def get_total_distance_from_array(data: Sequence[Sequence[float]]) -> float:
     r"""
     Compute the total distance of a path.
+    """
+
+def get_valid_contours_data(contour_geometries: list[Geometry]) -> list[dict]:
+    r"""
+    Get valid contour data from a list of contour geometries.
     """
 
 def grow_geometry(geometry: Geometry, offset: float) -> Geometry:

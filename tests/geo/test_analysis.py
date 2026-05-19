@@ -4,7 +4,7 @@ import numpy as np
 from raygeo import Geometry
 from raygeo.geo.path import (
     get_path_winding_order_from_array,
-    get_point_tangent_at_py,
+    get_point_and_tangent_at,
     get_subpath_area_from_array,
     does_enclose,
     get_outward_normal_at_from_array,
@@ -13,7 +13,7 @@ from raygeo.geo.path import (
     is_clockwise,
     is_closed,
 )
-from raygeo.shape.arc import is_arc_clockwise
+from raygeo.geo.shape.arc import is_arc_clockwise
 
 
 @pytest.fixture
@@ -91,7 +91,7 @@ def test_get_point_and_tangent_at():
     assert geo.data is not None
 
     # Test horizontal line
-    result = get_point_tangent_at_py(geo.data, 1, 0.5)
+    result = get_point_and_tangent_at(geo.data, 1, 0.5)
     assert result is not None
     pt, tan = result
     assert pt == pytest.approx((5, 0))
@@ -100,7 +100,7 @@ def test_get_point_and_tangent_at():
     geo.line_to(10, 10)  # row 2
     assert geo.data is not None
     # Test vertical line
-    result = get_point_tangent_at_py(geo.data, 2, 0.25)
+    result = get_point_and_tangent_at(geo.data, 2, 0.25)
     assert result is not None
     pt, tan = result
     assert pt == pytest.approx((10, 2.5))
@@ -111,14 +111,14 @@ def test_get_point_and_tangent_at():
     geo.arc_to(0, 10, i=-10, j=0, clockwise=False)  # row 3
     assert geo.data is not None
     # Start of arc
-    result = get_point_tangent_at_py(geo.data, 3, 0.0)
+    result = get_point_and_tangent_at(geo.data, 3, 0.0)
     assert result is not None
     pt, tan = result
     assert pt == pytest.approx((10, 10))
     assert tan == pytest.approx((0, 1))  # Tangent is vertical up
 
     # Midpoint of arc
-    result = get_point_tangent_at_py(geo.data, 3, 0.5)
+    result = get_point_and_tangent_at(geo.data, 3, 0.5)
     assert result is not None
     pt, tan = result
     # This arc is a spiral from (10,10) to its center (0,10), because the

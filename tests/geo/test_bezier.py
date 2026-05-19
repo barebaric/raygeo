@@ -1,7 +1,7 @@
 import math
 import pytest
 
-from raygeo.shape.bezier import (
+from raygeo.geo.shape.bezier import (
     clip_bezier_with_rect,
     convert_cubic_bezier_to_quadratic,
     flatten_bezier,

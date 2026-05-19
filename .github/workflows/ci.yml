@@ -7,18 +7,34 @@ on:
     branches: [main]
 
 jobs:
-  rust-tests:
-    name: Rust tests
+  lint-and-typecheck:
+    name: Lint and typecheck
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions-rust-lang/setup-rust-toolchain@v1
+      - name: Install Pixi
+        uses: prefix-dev/setup-pixi@v0.9.4
+        with:
+          pixi-version: v0.68.1
 
-      - run: cargo test --manifest-path crates/raygeo/Cargo.toml
+      - name: Setup environment
+        run: pixi install
 
-  python-tests:
-    name: Python tests (${{ matrix.os }})
+      - name: Run lint
+        run: pixi run lint
+
+      - name: Build wheel
+        run: pixi run build
+
+      - name: Generate stubs
+        run: pixi run gen-stubs
+
+      - name: Run pyright
+        run: pixi run pyright
+
+  test:
+    name: Tests (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -27,20 +43,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v5
+      - name: Install Pixi
+        uses: prefix-dev/setup-pixi@v0.9.4
         with:
-          python-version: "3.11"
+          pixi-version: v0.68.1
 
-      - uses: actions-rust-lang/setup-rust-toolchain@v1
+      - name: Setup environment
+        run: pixi install
 
-      - name: Install maturin
-        run: pip install maturin
-
-      - name: Build and install
-        shell: bash
-        run: |
-          maturin build --release --out dist
-          pip install dist/raygeo-*.whl pytest pytest-mock
-
-      - name: Run pytest
-        run: pytest tests/ -v
+      - name: Run tests
+        run: pixi run test

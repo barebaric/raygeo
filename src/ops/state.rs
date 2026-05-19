@@ -2,12 +2,17 @@ use pyo3::prelude::*;
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 use raygeo_core::ops::state::{MachineState, State};
 
+/// Register the State and MachineState classes with the Python module.
 pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyState>()?;
     m.add_class::<PyMachineState>()?;
     Ok(())
 }
 
+/// The current state of a laser cutting job.
+///
+/// Tracks power level, air assist, cut/travel speeds,
+/// active laser UID, frequency, and pulse width.
 #[gen_stub_pyclass]
 #[pyclass(skip_from_py_object, module = "raygeo.ops", name = "State")]
 #[derive(Clone)]
@@ -38,14 +43,21 @@ impl PyState {
         })
     }
 
+    /// String representation like ``State(power=..., air_assist=...)``.
     fn __repr__(&self) -> String {
         format!("State(power={}, air_assist={})", self.0.power, self.0.air_assist)
     }
 
+    /// Check whether the machine can transition from the current
+    /// state to the *target* state without a ``SetPower`` command.
+    ///
+    /// :param target: The target state to compare against.
+    /// :returns: True if the change is a rapid (non-power) change.
     fn allow_rapid_change(&self, target: &PyState) -> bool {
         self.0.allow_rapid_change(&target.0)
     }
 
+    /// Laser power level (0.0 – 1.0 typically).
     #[getter]
     fn power(&self) -> f64 {
         self.0.power
@@ -56,6 +68,7 @@ impl PyState {
         self.0.power = value;
     }
 
+    /// Whether air assist is enabled.
     #[getter]
     fn air_assist(&self) -> bool {
         self.0.air_assist
@@ -66,6 +79,7 @@ impl PyState {
         self.0.air_assist = value;
     }
 
+    /// Cutting speed in mm/s (if set).
     #[getter]
     fn cut_speed(&self) -> Option<i32> {
         self.0.cut_speed
@@ -76,6 +90,7 @@ impl PyState {
         self.0.cut_speed = value;
     }
 
+    /// Travel (rapid) speed in mm/s (if set).
     #[getter]
     fn travel_speed(&self) -> Option<i32> {
         self.0.travel_speed
@@ -86,6 +101,7 @@ impl PyState {
         self.0.travel_speed = value;
     }
 
+    /// UID of the active laser source (if set).
     #[getter]
     fn active_laser_uid(&self) -> Option<&str> {
         self.0.active_laser_uid.as_deref()
@@ -96,6 +112,7 @@ impl PyState {
         self.0.active_laser_uid = value;
     }
 
+    /// Laser pulse frequency in Hz (if set).
     #[getter]
     fn frequency(&self) -> Option<i32> {
         self.0.frequency
@@ -106,6 +123,7 @@ impl PyState {
         self.0.frequency = value;
     }
 
+    /// Laser pulse width in microseconds (if set).
     #[getter]
     fn pulse_width(&self) -> Option<f64> {
         self.0.pulse_width
@@ -117,6 +135,10 @@ impl PyState {
     }
 }
 
+/// Immutable snapshot of the machine state at a point in time.
+///
+/// Unlike :class:`State`, this represents the actual machine state
+/// at a specific command index and is typically read-only.
 #[gen_stub_pyclass]
 #[pyclass(skip_from_py_object, module = "raygeo.ops", name = "MachineState")]
 #[derive(Clone)]
@@ -147,10 +169,12 @@ impl PyMachineState {
         })
     }
 
+    /// String representation like ``MachineState(power=..., air_assist=...)``.
     fn __repr__(&self) -> String {
         format!("MachineState(power={}, air_assist={})", self.0.power, self.0.air_assist)
     }
 
+    /// Laser power level at this state.
     #[getter]
     fn power(&self) -> f64 {
         self.0.power
@@ -161,6 +185,7 @@ impl PyMachineState {
         self.0.power = value;
     }
 
+    /// Whether air assist was enabled at this state.
     #[getter]
     fn air_assist(&self) -> bool {
         self.0.air_assist
@@ -171,6 +196,7 @@ impl PyMachineState {
         self.0.air_assist = value;
     }
 
+    /// Cutting speed at this state (mm/s).
     #[getter]
     fn cut_speed(&self) -> Option<i32> {
         self.0.cut_speed
@@ -181,6 +207,7 @@ impl PyMachineState {
         self.0.cut_speed = value;
     }
 
+    /// Travel speed at this state (mm/s).
     #[getter]
     fn travel_speed(&self) -> Option<i32> {
         self.0.travel_speed
@@ -191,6 +218,7 @@ impl PyMachineState {
         self.0.travel_speed = value;
     }
 
+    /// Active laser UID at this state.
     #[getter]
     fn active_laser_uid(&self) -> Option<&str> {
         self.0.active_laser_uid.as_deref()
@@ -201,6 +229,7 @@ impl PyMachineState {
         self.0.active_laser_uid = value;
     }
 
+    /// Laser pulse frequency at this state (Hz).
     #[getter]
     fn frequency(&self) -> Option<i32> {
         self.0.frequency
@@ -211,6 +240,7 @@ impl PyMachineState {
         self.0.frequency = value;
     }
 
+    /// Laser pulse width at this state (microseconds).
     #[getter]
     fn pulse_width(&self) -> Option<f64> {
         self.0.pulse_width

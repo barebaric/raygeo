@@ -721,7 +721,10 @@ fn get_bezier_point_at_py(
         p2: tuple[float, float],
         p3: tuple[float, float],
         t: float,
-    ) -> tuple[tuple[float, float], tuple[float, float], tuple[float, float], tuple[float, float], tuple[float, float], tuple[float, float], tuple[float, float]]:
+    ) -> tuple[
+        tuple[tuple[float, float], tuple[float, float], tuple[float, float], tuple[float, float]],
+        tuple[tuple[float, float], tuple[float, float], tuple[float, float], tuple[float, float]],
+    ]:
         """Split a cubic bezier at parameter t."""
 "#, module = "raygeo.geo.shape.bezier")]
 #[pyfunction(name = "split_bezier")]
@@ -978,25 +981,21 @@ fn flatten_bezier_py(
 
 #[gen_stub_pyfunction(python = r#"
     def bezier_flatness_sq(
-        a: tuple[float, float],
-        b: tuple[float, float],
-        c: tuple[float, float],
-        d: tuple[float, float],
+        a: tuple[float, float, float],
+        b: tuple[float, float, float],
+        c: tuple[float, float, float],
+        d: tuple[float, float, float],
     ) -> float:
         """Compute the flatness squared of a cubic bezier."""
 "#, module = "raygeo.geo.shape.bezier")]
 #[pyfunction(name = "bezier_flatness_sq")]
 fn bezier_flatness_sq_py(
-    a: PyPoint2D,
-    b: PyPoint2D,
-    c: PyPoint2D,
-    d: PyPoint2D,
+    a: PyPoint3D,
+    b: PyPoint3D,
+    c: PyPoint3D,
+    d: PyPoint3D,
 ) -> f64 {
-    let a3 = (a.0, a.1, 0.0);
-    let b3 = (b.0, b.1, 0.0);
-    let c3 = (c.0, c.1, 0.0);
-    let d3 = (d.0, d.1, 0.0);
-    bezier_flatness_sq(a3, b3, c3, d3)
+    bezier_flatness_sq((a.0, a.1, a.2), (b.0, b.1, b.2), (c.0, c.1, c.2), (d.0, d.1, d.2))
 }
 
 #[gen_stub_pyfunction(python = r#"

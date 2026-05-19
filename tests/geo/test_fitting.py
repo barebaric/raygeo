@@ -3,24 +3,7 @@ import pytest
 import numpy as np
 
 from raygeo import Geometry
-from raygeo import (
-    CMD_TYPE_BEZIER,
-    CMD_TYPE_LINE,
-    CMD_TYPE_ARC,
-    CMD_TYPE_MOVE,
-    COL_X,
-    COL_Y,
-    COL_Z,
-    COL_C1X,
-    COL_C1Y,
-    COL_C2X,
-    COL_C2Y,
-    COL_TYPE,
-    COL_I,
-    COL_J,
-    COL_CW,
-)
-from raygeo.algo.fitting import (
+from raygeo.geo.algo.fitting import (
     are_points_collinear,
     fit_circle_to_3_points,
     fit_circle_to_points,
@@ -377,18 +360,20 @@ def test_convert_arc_90_degree_ccw():
     b = beziers[0]
 
     # Check command type and endpoint
-    assert b[COL_TYPE] == CMD_TYPE_BEZIER
-    np.testing.assert_allclose(b[COL_X : COL_Z + 1], end, atol=1e-9)
+    assert b[Geometry.COL_TYPE] == Geometry.CMD_TYPE_BEZIER
+    np.testing.assert_allclose(
+        b[Geometry.COL_X : Geometry.COL_Z + 1], end, atol=1e-9
+    )
 
     # Check control points
     # kappa for 90 deg = 4/3 * tan(pi/8) approx 0.5522847
     expected_c1 = (10.0, 5.522847)
     expected_c2 = (5.522847, 10.0)
     np.testing.assert_allclose(
-        (b[COL_C1X], b[COL_C1Y]), expected_c1, rtol=1e-6
+        (b[Geometry.COL_C1X], b[Geometry.COL_C1Y]), expected_c1, rtol=1e-6
     )
     np.testing.assert_allclose(
-        (b[COL_C2X], b[COL_C2Y]), expected_c2, rtol=1e-6
+        (b[Geometry.COL_C2X], b[Geometry.COL_C2Y]), expected_c2, rtol=1e-6
     )
 
 
@@ -408,13 +393,17 @@ def test_convert_arc_180_degree_cw():
     # Check first segment (10,0) -> (0,-10) CW
     b1 = beziers[0]
     midpoint = (0.0, -10.0, 5.0)
-    assert b1[COL_TYPE] == CMD_TYPE_BEZIER
-    np.testing.assert_allclose(b1[COL_X : COL_Z + 1], midpoint, atol=1e-9)
+    assert b1[Geometry.COL_TYPE] == Geometry.CMD_TYPE_BEZIER
+    np.testing.assert_allclose(
+        b1[Geometry.COL_X : Geometry.COL_Z + 1], midpoint, atol=1e-9
+    )
 
     # Check second segment (0,-10) -> (-10,0) CW
     b2 = beziers[1]
-    assert b2[COL_TYPE] == CMD_TYPE_BEZIER
-    np.testing.assert_allclose(b2[COL_X : COL_Z + 1], end, atol=1e-9)
+    assert b2[Geometry.COL_TYPE] == Geometry.CMD_TYPE_BEZIER
+    np.testing.assert_allclose(
+        b2[Geometry.COL_X : Geometry.COL_Z + 1], end, atol=1e-9
+    )
 
     # Check a control point on the second segment
     # Start of seg2 is (0, -10), end is (-10, 0)
@@ -422,7 +411,9 @@ def test_convert_arc_180_degree_cw():
     # C1 should be (0,-10) + 10 * kappa * (-1, 0) = (-5.522847, -10)
     expected_c1_seg2 = (-5.522847, -10.0)
     np.testing.assert_allclose(
-        (b2[COL_C1X], b2[COL_C1Y]), expected_c1_seg2, rtol=1e-6
+        (b2[Geometry.COL_C1X], b2[Geometry.COL_C1Y]),
+        expected_c1_seg2,
+        rtol=1e-6,
     )
 
 
@@ -445,11 +436,19 @@ def test_convert_arc_full_circle_ccw():
     ep2 = (-5.0, 0.0, 2.0)
     ep3 = (0.0, -5.0, 2.0)
 
-    np.testing.assert_allclose(beziers[0][COL_X : COL_Z + 1], ep1, atol=1e-6)
-    np.testing.assert_allclose(beziers[1][COL_X : COL_Z + 1], ep2, atol=1e-6)
-    np.testing.assert_allclose(beziers[2][COL_X : COL_Z + 1], ep3, atol=1e-6)
+    np.testing.assert_allclose(
+        beziers[0][Geometry.COL_X : Geometry.COL_Z + 1], ep1, atol=1e-6
+    )
+    np.testing.assert_allclose(
+        beziers[1][Geometry.COL_X : Geometry.COL_Z + 1], ep2, atol=1e-6
+    )
+    np.testing.assert_allclose(
+        beziers[2][Geometry.COL_X : Geometry.COL_Z + 1], ep3, atol=1e-6
+    )
     # Final endpoint should match original end point
-    np.testing.assert_allclose(beziers[3][COL_X : COL_Z + 1], end, atol=1e-6)
+    np.testing.assert_allclose(
+        beziers[3][Geometry.COL_X : Geometry.COL_Z + 1], end, atol=1e-6
+    )
 
 
 def test_convert_arc_zero_length():
@@ -487,8 +486,10 @@ def test_convert_arc_spiral_graceful_handling():
     assert len(beziers) == 1
     b = beziers[0]
 
-    assert b[COL_TYPE] == CMD_TYPE_BEZIER
-    np.testing.assert_allclose(b[COL_X : COL_Z + 1], end, atol=1e-9)
+    assert b[Geometry.COL_TYPE] == Geometry.CMD_TYPE_BEZIER
+    np.testing.assert_allclose(
+        b[Geometry.COL_X : Geometry.COL_Z + 1], end, atol=1e-9
+    )
 
     # kappa for 90 deg ~ 0.5522847
     # C1 is based on start radius (10.0)
@@ -497,10 +498,10 @@ def test_convert_arc_spiral_graceful_handling():
     expected_c2 = (5.0 * 0.5522847, 5.0)
 
     np.testing.assert_allclose(
-        (b[COL_C1X], b[COL_C1Y]), expected_c1, rtol=1e-6
+        (b[Geometry.COL_C1X], b[Geometry.COL_C1Y]), expected_c1, rtol=1e-6
     )
     np.testing.assert_allclose(
-        (b[COL_C2X], b[COL_C2Y]), expected_c2, rtol=1e-6
+        (b[Geometry.COL_C2X], b[Geometry.COL_C2Y]), expected_c2, rtol=1e-6
     )
 
 
@@ -512,8 +513,8 @@ def test_fit_points_with_primitives_single_line():
 
     assert len(cmds) == 1
     cmd = cmds[0]
-    assert cmd[COL_TYPE] == CMD_TYPE_LINE
-    assert np.allclose((cmd[COL_X], cmd[COL_Y]), (10.0, 0.0))
+    assert cmd[Geometry.COL_TYPE] == Geometry.CMD_TYPE_LINE
+    assert np.allclose((cmd[Geometry.COL_X], cmd[Geometry.COL_Y]), (10.0, 0.0))
 
 
 def test_fit_points_with_primitives_single_arc():
@@ -535,12 +536,14 @@ def test_fit_points_with_primitives_single_arc():
 
     assert len(cmds) == 1
     cmd = cmds[0]
-    assert cmd[COL_TYPE] == CMD_TYPE_ARC
-    assert np.allclose((cmd[COL_X], cmd[COL_Y]), (0.0, 10.0))
+    assert cmd[Geometry.COL_TYPE] == Geometry.CMD_TYPE_ARC
+    assert np.allclose((cmd[Geometry.COL_X], cmd[Geometry.COL_Y]), (0.0, 10.0))
     # Center offset from start point (10, 0) is (-10, 0)
-    assert np.allclose((cmd[COL_I], cmd[COL_J]), (-10.0, 0.0))
+    assert np.allclose(
+        (cmd[Geometry.COL_I], cmd[Geometry.COL_J]), (-10.0, 0.0)
+    )
     # CCW
-    assert cmd[COL_CW] == 0.0
+    assert cmd[Geometry.COL_CW] == 0.0
 
 
 def test_fit_points_with_primitives_corner_split():
@@ -555,10 +558,14 @@ def test_fit_points_with_primitives_corner_split():
     cmds = fit_points_with_primitives(points, tolerance)
 
     assert len(cmds) == 2
-    assert cmds[0][COL_TYPE] == CMD_TYPE_LINE
-    assert np.allclose((cmds[0][COL_X], cmds[0][COL_Y]), (10.0, 0.0))
-    assert cmds[1][COL_TYPE] == CMD_TYPE_LINE
-    assert np.allclose((cmds[1][COL_X], cmds[1][COL_Y]), (10.0, 10.0))
+    assert cmds[0][Geometry.COL_TYPE] == Geometry.CMD_TYPE_LINE
+    assert np.allclose(
+        (cmds[0][Geometry.COL_X], cmds[0][Geometry.COL_Y]), (10.0, 0.0)
+    )
+    assert cmds[1][Geometry.COL_TYPE] == Geometry.CMD_TYPE_LINE
+    assert np.allclose(
+        (cmds[1][Geometry.COL_X], cmds[1][Geometry.COL_Y]), (10.0, 10.0)
+    )
 
 
 def test_fit_points_with_primitives_line_arc_mixed():
@@ -581,8 +588,8 @@ def test_fit_points_with_primitives_line_arc_mixed():
     # Depending on resolution and tolerance, it might be perfect or
     # slightly split, but we expect basic types.
     assert len(cmds) >= 2
-    assert cmds[0][COL_TYPE] == CMD_TYPE_LINE
-    assert cmds[-1][COL_TYPE] == CMD_TYPE_ARC
+    assert cmds[0][Geometry.COL_TYPE] == Geometry.CMD_TYPE_LINE
+    assert cmds[-1][Geometry.COL_TYPE] == Geometry.CMD_TYPE_ARC
 
 
 def test_get_polyline_line_deviation_collinear():
@@ -613,20 +620,20 @@ def test_create_line_cmd_2d():
     """Test creating a line command from 2D point."""
     end_point = (10.0, 20.0)
     cmd = create_line_cmd(end_point)
-    assert cmd[COL_TYPE] == CMD_TYPE_LINE
-    assert cmd[COL_X] == 10.0
-    assert cmd[COL_Y] == 20.0
-    assert cmd[COL_Z] == 0.0
+    assert cmd[Geometry.COL_TYPE] == Geometry.CMD_TYPE_LINE
+    assert cmd[Geometry.COL_X] == 10.0
+    assert cmd[Geometry.COL_Y] == 20.0
+    assert cmd[Geometry.COL_Z] == 0.0
 
 
 def test_create_line_cmd_3d():
     """Test creating a line command from 3D point."""
     end_point = (10.0, 20.0, 5.0)
     cmd = create_line_cmd(end_point)
-    assert cmd[COL_TYPE] == CMD_TYPE_LINE
-    assert cmd[COL_X] == 10.0
-    assert cmd[COL_Y] == 20.0
-    assert cmd[COL_Z] == 5.0
+    assert cmd[Geometry.COL_TYPE] == Geometry.CMD_TYPE_LINE
+    assert cmd[Geometry.COL_X] == 10.0
+    assert cmd[Geometry.COL_Y] == 20.0
+    assert cmd[Geometry.COL_Z] == 5.0
 
 
 def test_create_arc_cmd_ccw():
@@ -635,13 +642,13 @@ def test_create_arc_cmd_ccw():
     end = (0.0, 10.0, 0.0)
     center = (0.0, 0.0)
     cmd = create_arc_cmd(end, center, start)
-    assert cmd[COL_TYPE] == CMD_TYPE_ARC
-    assert cmd[COL_X] == 0.0
-    assert cmd[COL_Y] == 10.0
-    assert cmd[COL_Z] == 0.0
-    assert cmd[COL_I] == -10.0
-    assert cmd[COL_J] == 0.0
-    assert cmd[COL_CW] == 0.0
+    assert cmd[Geometry.COL_TYPE] == Geometry.CMD_TYPE_ARC
+    assert cmd[Geometry.COL_X] == 0.0
+    assert cmd[Geometry.COL_Y] == 10.0
+    assert cmd[Geometry.COL_Z] == 0.0
+    assert cmd[Geometry.COL_I] == -10.0
+    assert cmd[Geometry.COL_J] == 0.0
+    assert cmd[Geometry.COL_CW] == 0.0
 
 
 def test_create_arc_cmd_cw():
@@ -650,13 +657,13 @@ def test_create_arc_cmd_cw():
     end = (10.0, 0.0, 0.0)
     center = (0.0, 0.0)
     cmd = create_arc_cmd(end, center, start)
-    assert cmd[COL_TYPE] == CMD_TYPE_ARC
-    assert cmd[COL_X] == 10.0
-    assert cmd[COL_Y] == 0.0
-    assert cmd[COL_Z] == 0.0
-    assert cmd[COL_I] == 0.0
-    assert cmd[COL_J] == -10.0
-    assert cmd[COL_CW] == 1.0
+    assert cmd[Geometry.COL_TYPE] == Geometry.CMD_TYPE_ARC
+    assert cmd[Geometry.COL_X] == 10.0
+    assert cmd[Geometry.COL_Y] == 0.0
+    assert cmd[Geometry.COL_Z] == 0.0
+    assert cmd[Geometry.COL_I] == 0.0
+    assert cmd[Geometry.COL_J] == -10.0
+    assert cmd[Geometry.COL_CW] == 1.0
 
 
 def test_fit_points_recursive_line():
@@ -664,7 +671,7 @@ def test_fit_points_recursive_line():
     points = [(0.0, 0.0, 0.0), (5.0, 0.0, 0.0), (10.0, 0.0, 0.0)]
     cmds = fit_points_recursive(points, 0.1, 0, 2)
     assert len(cmds) == 1
-    assert cmds[0][COL_TYPE] == CMD_TYPE_LINE
+    assert cmds[0][Geometry.COL_TYPE] == Geometry.CMD_TYPE_LINE
 
 
 def test_fit_points_recursive_arc():
@@ -678,7 +685,7 @@ def test_fit_points_recursive_arc():
     ]
     cmds = fit_points_recursive(points, 0.1, 0, len(points) - 1)
     assert len(cmds) == 1
-    assert cmds[0][COL_TYPE] == CMD_TYPE_ARC
+    assert cmds[0][Geometry.COL_TYPE] == Geometry.CMD_TYPE_ARC
 
 
 def test_fit_points_recursive_split():
@@ -686,8 +693,8 @@ def test_fit_points_recursive_split():
     points = [(0.0, 0.0, 0.0), (10.0, 0.0, 0.0), (10.0, 10.0, 0.0)]
     cmds = fit_points_recursive(points, 0.1, 0, 2)
     assert len(cmds) == 2
-    assert cmds[0][COL_TYPE] == CMD_TYPE_LINE
-    assert cmds[1][COL_TYPE] == CMD_TYPE_LINE
+    assert cmds[0][Geometry.COL_TYPE] == Geometry.CMD_TYPE_LINE
+    assert cmds[1][Geometry.COL_TYPE] == Geometry.CMD_TYPE_LINE
 
 
 def test_fit_points_recursive_empty():
@@ -702,7 +709,7 @@ def test_fit_points_recursive_single_point():
     points = [(0.0, 0.0, 0.0), (10.0, 0.0, 0.0)]
     cmds = fit_points_recursive(points, 0.1, 0, 1)
     assert len(cmds) == 1
-    assert cmds[0][COL_TYPE] == CMD_TYPE_LINE
+    assert cmds[0][Geometry.COL_TYPE] == Geometry.CMD_TYPE_LINE
 
 
 def test_fit_arcs_simple_line():
@@ -718,8 +725,8 @@ def test_fit_arcs_simple_line():
     # Should preserve move and line commands
     assert result is not None
     assert len(result) == 2
-    assert result[0][COL_TYPE] == CMD_TYPE_MOVE
-    assert result[1][COL_TYPE] == CMD_TYPE_LINE
+    assert result[0][Geometry.COL_TYPE] == Geometry.CMD_TYPE_MOVE
+    assert result[1][Geometry.COL_TYPE] == Geometry.CMD_TYPE_LINE
 
 
 def test_fit_arcs_with_bezier():
@@ -735,9 +742,12 @@ def test_fit_arcs_with_bezier():
     # Should convert bezier to lines/arcs
     assert result is not None
     assert len(result) >= 1
-    assert result[0][COL_TYPE] == CMD_TYPE_MOVE
+    assert result[0][Geometry.COL_TYPE] == Geometry.CMD_TYPE_MOVE
     # The bezier should be simplified and fitted
-    assert result[1][COL_TYPE] in (CMD_TYPE_LINE, CMD_TYPE_ARC)
+    assert result[1][Geometry.COL_TYPE] in (
+        Geometry.CMD_TYPE_LINE,
+        Geometry.CMD_TYPE_ARC,
+    )
 
 
 def test_fit_arcs_empty():
@@ -774,11 +784,11 @@ def test_optimize_path_from_array_rdp_simplification():
     """Tests RDP simplification (fit_arcs=False)."""
     data = np.array(
         [
-            [CMD_TYPE_MOVE, 0.0, 0.0, 0.0, 0, 0, 0, 0],
-            [CMD_TYPE_LINE, 1.0, 1.0, 0.0, 0, 0, 0, 0],
-            [CMD_TYPE_LINE, 2.0, 2.0, 0.0, 0, 0, 0, 0],
-            [CMD_TYPE_LINE, 3.0, 3.0, 0.0, 0, 0, 0, 0],
-            [CMD_TYPE_LINE, 10.0, 10.0, 0.0, 0, 0, 0, 0],
+            [Geometry.CMD_TYPE_MOVE, 0.0, 0.0, 0.0, 0, 0, 0, 0],
+            [Geometry.CMD_TYPE_LINE, 1.0, 1.0, 0.0, 0, 0, 0, 0],
+            [Geometry.CMD_TYPE_LINE, 2.0, 2.0, 0.0, 0, 0, 0, 0],
+            [Geometry.CMD_TYPE_LINE, 3.0, 3.0, 0.0, 0, 0, 0, 0],
+            [Geometry.CMD_TYPE_LINE, 10.0, 10.0, 0.0, 0, 0, 0, 0],
         ],
         dtype=np.float64,
     )
@@ -787,9 +797,9 @@ def test_optimize_path_from_array_rdp_simplification():
 
     assert result is not None
     assert len(result) == 2
-    assert result[0, COL_TYPE] == CMD_TYPE_MOVE
+    assert result[0, Geometry.COL_TYPE] == Geometry.CMD_TYPE_MOVE
     assert np.allclose(result[0, 1:4], (0, 0, 0))
-    assert result[1, COL_TYPE] == CMD_TYPE_LINE
+    assert result[1, Geometry.COL_TYPE] == Geometry.CMD_TYPE_LINE
     assert np.allclose(result[1, 1:4], (10, 10, 0))
 
 
@@ -797,12 +807,12 @@ def test_optimize_path_from_array_arc_fitting():
     """Tests arc fitting (fit_arcs=True)."""
     data = np.array(
         [
-            [CMD_TYPE_MOVE, 0.0, 0.0, 0.0, 0, 0, 0, 0],
-            [CMD_TYPE_LINE, 1.0, 0.0, 0.0, 0, 0, 0, 0],
-            [CMD_TYPE_LINE, 2.0, 0.0, 0.0, 0, 0, 0, 0],
-            [CMD_TYPE_LINE, 3.0, 0.0, 0.0, 0, 0, 0, 0],
-            [CMD_TYPE_LINE, 4.0, 0.0, 0.0, 0, 0, 0, 0],
-            [CMD_TYPE_LINE, 5.0, 0.0, 0.0, 0, 0, 0, 0],
+            [Geometry.CMD_TYPE_MOVE, 0.0, 0.0, 0.0, 0, 0, 0, 0],
+            [Geometry.CMD_TYPE_LINE, 1.0, 0.0, 0.0, 0, 0, 0, 0],
+            [Geometry.CMD_TYPE_LINE, 2.0, 0.0, 0.0, 0, 0, 0, 0],
+            [Geometry.CMD_TYPE_LINE, 3.0, 0.0, 0.0, 0, 0, 0, 0],
+            [Geometry.CMD_TYPE_LINE, 4.0, 0.0, 0.0, 0, 0, 0, 0],
+            [Geometry.CMD_TYPE_LINE, 5.0, 0.0, 0.0, 0, 0, 0, 0],
         ],
         dtype=np.float64,
     )
@@ -811,20 +821,20 @@ def test_optimize_path_from_array_arc_fitting():
 
     assert result is not None
     assert len(result) == 2
-    assert result[0, COL_TYPE] == CMD_TYPE_MOVE
-    assert result[1, COL_TYPE] == CMD_TYPE_LINE
+    assert result[0, Geometry.COL_TYPE] == Geometry.CMD_TYPE_MOVE
+    assert result[1, Geometry.COL_TYPE] == Geometry.CMD_TYPE_LINE
 
 
 def test_optimize_path_from_array_preserves_arcs():
     """Tests that arcs are preserved."""
     data = np.array(
         [
-            [CMD_TYPE_MOVE, 0.0, 0.0, 0.0, 0, 0, 0, 0],
-            [CMD_TYPE_LINE, 1.0, 0.0, 0.0, 0, 0, 0, 0],
-            [CMD_TYPE_LINE, 2.0, 0.0, 0.0, 0, 0, 0, 0],
-            [CMD_TYPE_ARC, 4.0, 0.0, 0.0, 1.0, 0.0, 0, 0],
-            [CMD_TYPE_LINE, 5.0, 0.0, 0.0, 0, 0, 0, 0],
-            [CMD_TYPE_LINE, 6.0, 0.0, 0.0, 0, 0, 0, 0],
+            [Geometry.CMD_TYPE_MOVE, 0.0, 0.0, 0.0, 0, 0, 0, 0],
+            [Geometry.CMD_TYPE_LINE, 1.0, 0.0, 0.0, 0, 0, 0, 0],
+            [Geometry.CMD_TYPE_LINE, 2.0, 0.0, 0.0, 0, 0, 0, 0],
+            [Geometry.CMD_TYPE_ARC, 4.0, 0.0, 0.0, 1.0, 0.0, 0, 0],
+            [Geometry.CMD_TYPE_LINE, 5.0, 0.0, 0.0, 0, 0, 0, 0],
+            [Geometry.CMD_TYPE_LINE, 6.0, 0.0, 0.0, 0, 0, 0, 0],
         ],
         dtype=np.float64,
     )
@@ -833,10 +843,10 @@ def test_optimize_path_from_array_preserves_arcs():
 
     assert result is not None
     assert len(result) == 4
-    assert result[0, COL_TYPE] == CMD_TYPE_MOVE
-    assert result[1, COL_TYPE] == CMD_TYPE_LINE
-    assert result[2, COL_TYPE] == CMD_TYPE_ARC
-    assert result[3, COL_TYPE] == CMD_TYPE_LINE
+    assert result[0, Geometry.COL_TYPE] == Geometry.CMD_TYPE_MOVE
+    assert result[1, Geometry.COL_TYPE] == Geometry.CMD_TYPE_LINE
+    assert result[2, Geometry.COL_TYPE] == Geometry.CMD_TYPE_ARC
+    assert result[3, Geometry.COL_TYPE] == Geometry.CMD_TYPE_LINE
 
 
 def test_optimize_path_from_array_empty():
@@ -858,12 +868,12 @@ def test_optimize_path_from_array_moveto_breaks_chain():
     """Tests that MoveTo breaks the simplification chain."""
     data = np.array(
         [
-            [CMD_TYPE_MOVE, 0.0, 0.0, 0.0, 0, 0, 0, 0],
-            [CMD_TYPE_LINE, 5.0, 0.0, 0.0, 0, 0, 0, 0],
-            [CMD_TYPE_LINE, 10.0, 0.0, 0.0, 0, 0, 0, 0],
-            [CMD_TYPE_MOVE, 20.0, 0.0, 0.0, 0, 0, 0, 0],
-            [CMD_TYPE_LINE, 25.0, 0.0, 0.0, 0, 0, 0, 0],
-            [CMD_TYPE_LINE, 30.0, 0.0, 0.0, 0, 0, 0, 0],
+            [Geometry.CMD_TYPE_MOVE, 0.0, 0.0, 0.0, 0, 0, 0, 0],
+            [Geometry.CMD_TYPE_LINE, 5.0, 0.0, 0.0, 0, 0, 0, 0],
+            [Geometry.CMD_TYPE_LINE, 10.0, 0.0, 0.0, 0, 0, 0, 0],
+            [Geometry.CMD_TYPE_MOVE, 20.0, 0.0, 0.0, 0, 0, 0, 0],
+            [Geometry.CMD_TYPE_LINE, 25.0, 0.0, 0.0, 0, 0, 0, 0],
+            [Geometry.CMD_TYPE_LINE, 30.0, 0.0, 0.0, 0, 0, 0, 0],
         ],
         dtype=np.float64,
     )
@@ -872,19 +882,19 @@ def test_optimize_path_from_array_moveto_breaks_chain():
 
     assert result is not None
     assert len(result) == 4
-    assert result[0, COL_TYPE] == CMD_TYPE_MOVE
-    assert result[1, COL_TYPE] == CMD_TYPE_LINE
-    assert result[2, COL_TYPE] == CMD_TYPE_MOVE
-    assert result[3, COL_TYPE] == CMD_TYPE_LINE
+    assert result[0, Geometry.COL_TYPE] == Geometry.CMD_TYPE_MOVE
+    assert result[1, Geometry.COL_TYPE] == Geometry.CMD_TYPE_LINE
+    assert result[2, Geometry.COL_TYPE] == Geometry.CMD_TYPE_MOVE
+    assert result[3, Geometry.COL_TYPE] == Geometry.CMD_TYPE_LINE
 
 
 def test_optimize_path_from_array_z_axis_preservation():
     """Tests that Z coordinates are preserved."""
     data = np.array(
         [
-            [CMD_TYPE_MOVE, 0.0, 0.0, 1.0, 0, 0, 0, 0],
-            [CMD_TYPE_LINE, 5.0, 0.0, 2.0, 0, 0, 0, 0],
-            [CMD_TYPE_LINE, 10.0, 0.0, 3.0, 0, 0, 0, 0],
+            [Geometry.CMD_TYPE_MOVE, 0.0, 0.0, 1.0, 0, 0, 0, 0],
+            [Geometry.CMD_TYPE_LINE, 5.0, 0.0, 2.0, 0, 0, 0, 0],
+            [Geometry.CMD_TYPE_LINE, 10.0, 0.0, 3.0, 0, 0, 0, 0],
         ],
         dtype=np.float64,
     )
@@ -909,8 +919,8 @@ class TestFitCurves:
 
         assert result is not None
         assert len(result) == 2
-        assert result[0][COL_TYPE] == CMD_TYPE_MOVE
-        assert result[1][COL_TYPE] == CMD_TYPE_BEZIER
+        assert result[0][Geometry.COL_TYPE] == Geometry.CMD_TYPE_MOVE
+        assert result[1][Geometry.COL_TYPE] == Geometry.CMD_TYPE_BEZIER
 
     def test_linearize_bezier(self):
         geo = Geometry()
@@ -923,9 +933,12 @@ class TestFitCurves:
 
         assert result is not None
         assert len(result) >= 2
-        assert result[0][COL_TYPE] == CMD_TYPE_MOVE
+        assert result[0][Geometry.COL_TYPE] == Geometry.CMD_TYPE_MOVE
         for row in result[1:]:
-            assert row[COL_TYPE] in (CMD_TYPE_LINE, CMD_TYPE_ARC)
+            assert row[Geometry.COL_TYPE] in (
+                Geometry.CMD_TYPE_LINE,
+                Geometry.CMD_TYPE_ARC,
+            )
 
     def test_preserve_arc(self):
         geo = Geometry()
@@ -938,8 +951,8 @@ class TestFitCurves:
 
         assert result is not None
         assert len(result) == 2
-        assert result[0][COL_TYPE] == CMD_TYPE_MOVE
-        assert result[1][COL_TYPE] == CMD_TYPE_ARC
+        assert result[0][Geometry.COL_TYPE] == Geometry.CMD_TYPE_MOVE
+        assert result[1][Geometry.COL_TYPE] == Geometry.CMD_TYPE_ARC
 
     def test_linearize_arc(self):
         geo = Geometry()
@@ -951,9 +964,12 @@ class TestFitCurves:
         )
 
         assert result is not None
-        assert result[0][COL_TYPE] == CMD_TYPE_MOVE
+        assert result[0][Geometry.COL_TYPE] == Geometry.CMD_TYPE_MOVE
         for row in result[1:]:
-            assert row[COL_TYPE] in (CMD_TYPE_LINE, CMD_TYPE_ARC)
+            assert row[Geometry.COL_TYPE] in (
+                Geometry.CMD_TYPE_LINE,
+                Geometry.CMD_TYPE_ARC,
+            )
 
     def test_mixed_lines_beziers_arcs(self):
         geo = Geometry()
@@ -967,9 +983,9 @@ class TestFitCurves:
         )
 
         assert result is not None
-        types = [r[COL_TYPE] for r in result]
-        assert CMD_TYPE_BEZIER in types
-        assert CMD_TYPE_ARC in types
+        types = [r[Geometry.COL_TYPE] for r in result]
+        assert Geometry.CMD_TYPE_BEZIER in types
+        assert Geometry.CMD_TYPE_ARC in types
 
     def test_fit_curves_backwards_compat(self):
         geo = Geometry()

@@ -3,7 +3,7 @@ Tests for raygeo.minkowski module.
 """
 
 import pytest
-from raygeo.algo.minkowski import (
+from raygeo.geo.algo.minkowski import (
     get_inner_fit_polygon,
     calculate_input_scale,
     get_no_fit_polygon,

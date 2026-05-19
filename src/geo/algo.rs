@@ -121,9 +121,9 @@ fn are_points_collinear_py(points: Vec<(f64, f64, f64)>, tolerance: f64) -> bool
 
 #[gen_stub_pyfunction(python = r#"
     def fit_circle_to_3_points(
-        p1: tuple[float, float, float],
-        p2: tuple[float, float, float],
-        p3: tuple[float, float, float],
+        p1: tuple[float, float] | tuple[float, float, float],
+        p2: tuple[float, float] | tuple[float, float, float],
+        p3: tuple[float, float] | tuple[float, float, float],
     ) -> Optional[tuple[tuple[float, float], float]]:
         """Fit a circle to three points."""
 "#, module = "raygeo.geo.algo.fitting")]
@@ -149,8 +149,8 @@ fn fit_circle_to_points_py(points: Vec<(f64, f64, f64)>) -> Option<((f64, f64), 
 
 #[gen_stub_pyfunction(python = r#"
     def project_circle_center_to_bisector(
-        p1: tuple[float, float, float],
-        p2: tuple[float, float, float],
+        p1: tuple[float, float] | tuple[float, float, float],
+        p2: tuple[float, float] | tuple[float, float, float],
         center: tuple[float, float],
     ) -> tuple[float, float]:
         """Project a circle center onto the perpendicular bisector of two points."""
