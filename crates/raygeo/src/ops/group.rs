@@ -1,6 +1,5 @@
 use super::container::Ops;
 use super::enums::{CommandCategory, CommandType, SectionType};
-use super::soa::SoA;
 
 #[derive(Clone, Debug)]
 pub struct OpsSection {
@@ -150,8 +149,7 @@ pub fn without_state(ops: &Ops) -> Ops {
     let mut result = Ops::new();
     for i in 0..ops.soa.len() {
         if ops.soa.category(i) != CommandCategory::State {
-            let args = ops.soa.deep_copy_entry(i);
-            SoA::append_from_args(&mut result.soa, &args);
+            result.soa.push(ops.soa.commands[i].clone());
         }
     }
     result.invalidate_time_cache();
@@ -204,8 +202,7 @@ pub fn group_by_state_continuity(ops: &Ops) -> Vec<Ops> {
     for seg in &seg_indices {
         let mut seg_ops = Ops::new();
         for &idx in seg {
-            let args = ops.soa.deep_copy_entry(idx);
-            SoA::append_from_args(&mut seg_ops.soa, &args);
+            seg_ops.soa.push(ops.soa.commands[idx].clone());
         }
         seg_ops.invalidate_time_cache();
         result.push(seg_ops);

@@ -39,7 +39,12 @@ fn linearize_scanline(
                     start_point.1 + t * line_vec.1,
                     start_point.2 + t * line_vec.2,
                 );
-                result.line_to(seg_end.0, seg_end.1, seg_end.2, extra_owned.clone());
+                result.line_to(
+                    seg_end.0,
+                    seg_end.1,
+                    seg_end.2,
+                    extra_owned.clone(),
+                );
                 cur_start_power = cur_power;
                 result.set_power(cur_start_power as f64 / 255.0);
             }
@@ -68,7 +73,8 @@ fn linearize_arc(
         if cw { 1.0 } else { 0.0 },
         0.0,
     ];
-    let segments = crate::geo::shape::arc::linearize_arc(&arc_row, start_point, 0.1);
+    let segments =
+        crate::geo::shape::arc::linearize_arc(&arc_row, start_point, 0.1);
     if segments.is_empty() {
         return None;
     }
@@ -156,14 +162,14 @@ impl Ops {
         for i in 0..self.soa.len() {
             if category(self.soa.command_type(i)) == CommandCategory::Moving {
                 let linearized = self.linearize(i, last_point);
-                for j in 0..linearized.len() {
-                    let args = linearized.soa.deep_copy_entry(j);
-                    SoA::append_from_args(&mut new_soa, &args);
-                    last_point = linearized.soa.endpoint(j);
+                for cmd in &linearized.soa.commands {
+                    new_soa.push(cmd.clone());
+                    if category(cmd.ct) == CommandCategory::Moving {
+                        last_point = cmd.end;
+                    }
                 }
             } else {
-                let args = self.soa.deep_copy_entry(i);
-                SoA::append_from_args(&mut new_soa, &args);
+                new_soa.push(self.soa.commands[i].clone());
             }
         }
 
@@ -180,17 +186,20 @@ impl Ops {
             if ct == CommandType::MoveTo {
                 last_point = self.soa.endpoint(i);
             }
-            if ct == CommandType::BezierTo || ct == CommandType::QuadraticBezierTo {
+            if ct == CommandType::BezierTo
+                || ct == CommandType::QuadraticBezierTo
+            {
                 let linearized = self.linearize(i, last_point);
-                for j in 0..linearized.len() {
-                    let args = linearized.soa.deep_copy_entry(j);
-                    SoA::append_from_args(&mut new_soa, &args);
-                    last_point = linearized.soa.endpoint(j);
+                for cmd in &linearized.soa.commands {
+                    new_soa.push(cmd.clone());
+                    if category(cmd.ct) == CommandCategory::Moving {
+                        last_point = cmd.end;
+                    }
                 }
             } else {
-                let args = self.soa.deep_copy_entry(i);
-                SoA::append_from_args(&mut new_soa, &args);
-                if category(self.soa.command_type(i)) == CommandCategory::Moving {
+                new_soa.push(self.soa.commands[i].clone());
+                if category(self.soa.command_type(i)) == CommandCategory::Moving
+                {
                     last_point = self.soa.endpoint(i);
                 }
             }
@@ -211,15 +220,16 @@ impl Ops {
             }
             if ct == CommandType::ArcTo {
                 let linearized = self.linearize(i, last_point);
-                for j in 0..linearized.len() {
-                    let args = linearized.soa.deep_copy_entry(j);
-                    SoA::append_from_args(&mut new_soa, &args);
-                    last_point = linearized.soa.endpoint(j);
+                for cmd in &linearized.soa.commands {
+                    new_soa.push(cmd.clone());
+                    if category(cmd.ct) == CommandCategory::Moving {
+                        last_point = cmd.end;
+                    }
                 }
             } else {
-                let args = self.soa.deep_copy_entry(i);
-                SoA::append_from_args(&mut new_soa, &args);
-                if category(self.soa.command_type(i)) == CommandCategory::Moving {
+                new_soa.push(self.soa.commands[i].clone());
+                if category(self.soa.command_type(i)) == CommandCategory::Moving
+                {
                     last_point = self.soa.endpoint(i);
                 }
             }

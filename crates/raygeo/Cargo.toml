@@ -7,6 +7,9 @@ description = "Pure Rust high-performance geometry engine"
 [dependencies]
 bitflags = "2"
 clipper2 = "0.6"
+num_enum = "0.7"
+strum = { version = "0.27", features = ["derive"] }
+thiserror = "2"
 
 [dev-dependencies]
 approx = "0.5"

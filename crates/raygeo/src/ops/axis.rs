@@ -1,3 +1,5 @@
+use crate::error::{AxisRepr, RaygeoError};
+
 use bitflags::bitflags;
 
 bitflags! {
@@ -14,17 +16,14 @@ bitflags! {
 }
 
 impl Axis {
-    pub fn assert_single_axis(self) -> Result<(), String> {
+    pub fn assert_single_axis(self) -> Result<(), RaygeoError> {
         if self.bits().count_ones() != 1 {
-            return Err(format!(
-                "{:?} combines multiple axes, expected a single axis",
-                self
-            ));
+            return Err(RaygeoError::MultiAxis(AxisRepr(self.bits())));
         }
         Ok(())
     }
 
-    pub fn label(self) -> Result<&'static str, String> {
+    pub fn label(self) -> Result<&'static str, RaygeoError> {
         match self {
             Axis::X => Ok("x"),
             Axis::Y => Ok("y"),
@@ -33,11 +32,11 @@ impl Axis {
             Axis::B => Ok("b"),
             Axis::C => Ok("c"),
             Axis::U => Ok("u"),
-            _ => Err(format!("{:?} is not a single axis", self)),
+            _ => Err(RaygeoError::NotSingleAxis(AxisRepr(self.bits()))),
         }
     }
 
-    pub fn name(self) -> Result<&'static str, String> {
+    pub fn name(self) -> Result<&'static str, RaygeoError> {
         match self {
             Axis::X => Ok("X"),
             Axis::Y => Ok("Y"),
@@ -46,7 +45,7 @@ impl Axis {
             Axis::B => Ok("B"),
             Axis::C => Ok("C"),
             Axis::U => Ok("U"),
-            _ => Err(format!("{:?} is not a single axis", self)),
+            _ => Err(RaygeoError::NotSingleAxis(AxisRepr(self.bits()))),
         }
     }
 

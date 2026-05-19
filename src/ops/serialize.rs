@@ -704,8 +704,9 @@ pub fn ops_from_numpy_arrays(
         }
 
         let cmd_type_val = types_arr[i];
-        let ct = CommandType::try_from(cmd_type_val as u8)
-            .map_err(|e| pyo3::exceptions::PyValueError::new_err(e))?;
+        let ct = CommandType::try_from(cmd_type_val as u8).map_err(|e| {
+            pyo3::exceptions::PyValueError::new_err(format!("{e}"))
+        })?;
         let cat = category(ct);
 
         if cat != CommandCategory::Moving {

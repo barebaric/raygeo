@@ -1,6 +1,8 @@
+use std::sync::Arc;
+
 use super::container::Ops;
 use super::enums::{category, CommandCategory, CommandType};
-use super::soa::{AppendArgs, SoA};
+use super::soa::{OpCommand, OpMetadata};
 
 pub fn flip_ops(ops: &Ops) -> Ops {
     let moving_indices: Vec<usize> = (0..ops.soa.len())
@@ -12,8 +14,7 @@ pub fn flip_ops(ops: &Ops) -> Ops {
     if moving_indices.len() <= 1 {
         let mut result = Ops::new();
         for &i in &moving_indices {
-            let args = ops.soa.deep_copy_entry(i);
-            SoA::append_from_args(&mut result.soa, &args);
+            result.soa.push(ops.soa.commands[i].clone());
         }
         result.invalidate_time_cache();
         return result;
@@ -24,10 +25,10 @@ pub fn flip_ops(ops: &Ops) -> Ops {
     let first_state = ops.soa.state(moving_indices[0]).cloned();
 
     let mut result = Ops::new();
-    let mut args = AppendArgs::new(CommandType::MoveTo);
-    args.end = Some(last_moving_end);
-    args.state = first_state;
-    SoA::append_from_args(&mut result.soa, &args);
+    let mut first_cmd = OpCommand::new(CommandType::MoveTo);
+    first_cmd.end = last_moving_end;
+    first_cmd.state = first_state;
+    result.soa.push(first_cmd);
 
     for k in (0..moving_indices.len() - 1).rev() {
         let orig_k_idx = moving_indices[k + 1];
@@ -40,20 +41,20 @@ pub fn flip_ops(ops: &Ops) -> Ops {
         if ct == CommandType::ScanLine {
             let pv = ops.soa.scanline_data(orig_k_idx);
             let reversed: Vec<u8> = pv.iter().rev().copied().collect();
-            let mut args = AppendArgs::new(ct);
-            args.end = Some(new_end);
-            args.scanline = Some(reversed);
-            args.extra_axes = orig_ea;
-            args.state = orig_state;
-            SoA::append_from_args(&mut result.soa, &args);
+            let mut cmd = OpCommand::new(ct);
+            cmd.end = new_end;
+            cmd.metadata = OpMetadata::ScanLine(Arc::from(reversed));
+            cmd.extra_axes = orig_ea;
+            cmd.state = orig_state;
+            result.soa.push(cmd);
         } else if ct == CommandType::BezierTo {
             let (c1, c2) = ops.soa.bezier_params(orig_k_idx);
-            let mut args = AppendArgs::new(ct);
-            args.end = Some(new_end);
-            args.bezier_params = Some((*c2, *c1));
-            args.extra_axes = orig_ea;
-            args.state = orig_state;
-            SoA::append_from_args(&mut result.soa, &args);
+            let mut cmd = OpCommand::new(ct);
+            cmd.end = new_end;
+            cmd.metadata = OpMetadata::Bezier((*c2, *c1));
+            cmd.extra_axes = orig_ea;
+            cmd.state = orig_state;
+            result.soa.push(cmd);
         } else if ct == CommandType::ArcTo {
             let original_start = ops.soa.endpoint(orig_prev_idx);
             let original_end = ops.soa.endpoint(orig_k_idx);
@@ -62,18 +63,18 @@ pub fn flip_ops(ops: &Ops) -> Ops {
             let center_y = original_start.1 + cj;
             let new_i = center_x - original_end.0;
             let new_j = center_y - original_end.1;
-            let mut args = AppendArgs::new(ct);
-            args.end = Some(new_end);
-            args.arc_params = Some((new_i, new_j, !cw));
-            args.extra_axes = orig_ea;
-            args.state = orig_state;
-            SoA::append_from_args(&mut result.soa, &args);
+            let mut cmd = OpCommand::new(ct);
+            cmd.end = new_end;
+            cmd.metadata = OpMetadata::Arc((new_i, new_j, !cw));
+            cmd.extra_axes = orig_ea;
+            cmd.state = orig_state;
+            result.soa.push(cmd);
         } else {
-            let mut args = AppendArgs::new(ct);
-            args.end = Some(new_end);
-            args.extra_axes = orig_ea;
-            args.state = orig_state;
-            SoA::append_from_args(&mut result.soa, &args);
+            let mut cmd = OpCommand::new(ct);
+            cmd.end = new_end;
+            cmd.extra_axes = orig_ea;
+            cmd.state = orig_state;
+            result.soa.push(cmd);
         }
     }
 

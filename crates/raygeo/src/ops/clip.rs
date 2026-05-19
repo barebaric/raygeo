@@ -3,9 +3,8 @@ use super::enums::{CommandCategory, CommandType};
 use super::soa::SoA;
 use super::state::State;
 use crate::constants::{
-    CMD_TYPE_ARC, CMD_TYPE_BEZIER, CMD_TYPE_LINE, COL_C1X, COL_C1Y,
-    COL_C2X, COL_C2Y, COL_CW, COL_I, COL_J, COL_TYPE, COL_X, COL_Y,
-    COL_Z,
+    CMD_TYPE_ARC, CMD_TYPE_BEZIER, CMD_TYPE_LINE, COL_C1X, COL_C1Y, COL_C2X,
+    COL_C2Y, COL_CW, COL_I, COL_J, COL_TYPE, COL_X, COL_Y, COL_Z,
 };
 use crate::geo::algo::clipping::{
     clip_line_segment_with_polygons, clip_line_segment_with_rect,
@@ -55,8 +54,8 @@ impl Ops {
             let cat = self.soa.category(i);
 
             if cat == CommandCategory::State || cat == CommandCategory::Marker {
-                let args = self.soa.deep_copy_entry(i);
-                SoA::append_from_args(&mut new_ops.soa, &args);
+                let cmd = self.soa.commands[i].clone();
+                new_ops.soa.push(cmd);
                 continue;
             }
 
@@ -66,7 +65,8 @@ impl Ops {
 
             if ct == CommandType::ScanLine {
                 let end = self.soa.endpoint(i);
-                let clipped = clip_line_segment_with_rect(last_point, end, rect);
+                let clipped =
+                    clip_line_segment_with_rect(last_point, end, rect);
                 if let Some((new_start, new_end)) = clipped {
                     let dx = end.0 - last_point.0;
                     let dy = end.1 - last_point.1;
@@ -103,9 +103,20 @@ impl Ops {
                             None => true,
                         };
                         if needs_move {
-                            new_ops.move_to(new_start.0, new_start.1, new_start.2, None);
+                            new_ops.move_to(
+                                new_start.0,
+                                new_start.1,
+                                new_start.2,
+                                None,
+                            );
                         }
-                        new_ops.scan_to(new_end.0, new_end.1, new_end.2, Some(new_pv), None);
+                        new_ops.scan_to(
+                            new_end.0,
+                            new_end.1,
+                            new_end.2,
+                            Some(new_pv),
+                            None,
+                        );
                         clipped_pen_pos = Some(new_end);
                     }
                 }
@@ -124,8 +135,13 @@ impl Ops {
             let mut p_seg_start = last_point;
             for j in 0..linearized.len() {
                 let p_seg_end = linearized.endpoint(j);
-                let clipped = clip_line_segment_with_rect(p_seg_start, p_seg_end, rect);
-                add_clipped_segment(&mut new_ops, clipped, &mut clipped_pen_pos);
+                let clipped =
+                    clip_line_segment_with_rect(p_seg_start, p_seg_end, rect);
+                add_clipped_segment(
+                    &mut new_ops,
+                    clipped,
+                    &mut clipped_pen_pos,
+                );
                 p_seg_start = p_seg_end;
             }
             last_point = self.soa.endpoint(i);
@@ -148,8 +164,8 @@ impl Ops {
             .unwrap_or(self.soa.len());
 
         for i in 0..first_move_idx {
-            let args = self.soa.deep_copy_entry(i);
-            SoA::append_from_args(&mut new_ops.soa, &args);
+            let cmd = self.soa.commands[i].clone();
+            new_ops.soa.push(cmd);
         }
 
         for i in 0..self.soa.len() {
@@ -157,8 +173,8 @@ impl Ops {
             let cat = self.soa.category(i);
 
             if cat != CommandCategory::Moving {
-                let args = self.soa.deep_copy_entry(i);
-                SoA::append_from_args(&mut new_ops.soa, &args);
+                let cmd = self.soa.commands[i].clone();
+                new_ops.soa.push(cmd);
                 continue;
             }
 
@@ -171,7 +187,9 @@ impl Ops {
             }
 
             if ct == CommandType::ScanLine {
-                let kept = subtract_polygons_from_line_segment(last_point, end, regions);
+                let kept = subtract_polygons_from_line_segment(
+                    last_point, end, regions,
+                );
                 let pv = self.soa.scanline_data(i);
                 let num_values = pv.len();
                 let dx = end.0 - last_point.0;
@@ -208,9 +226,20 @@ impl Ops {
                             None => true,
                         };
                         if needs_move {
-                            new_ops.move_to(new_start.0, new_start.1, new_start.2, None);
+                            new_ops.move_to(
+                                new_start.0,
+                                new_start.1,
+                                new_start.2,
+                                None,
+                            );
                         }
-                        new_ops.scan_to(new_end.0, new_end.1, new_end.2, Some(new_pv), None);
+                        new_ops.scan_to(
+                            new_end.0,
+                            new_end.1,
+                            new_end.2,
+                            Some(new_pv),
+                            None,
+                        );
                         pen_pos = Some(new_end);
                     }
                 }
@@ -222,7 +251,11 @@ impl Ops {
             let mut p_seg_start = last_point;
             for j in 0..linearized.len() {
                 let p_seg_end = linearized.endpoint(j);
-                let kept = subtract_polygons_from_line_segment(p_seg_start, p_seg_end, regions);
+                let kept = subtract_polygons_from_line_segment(
+                    p_seg_start,
+                    p_seg_end,
+                    regions,
+                );
                 for (sub_p1, sub_p2) in kept {
                     let needs_move = match pen_pos {
                         Some(prev) => {
@@ -256,8 +289,13 @@ impl Ops {
         self
     }
 
-    pub fn clip_to_regions(&mut self, regions: &[Polygon], _tolerance: f64) -> &mut Self {
-        let valid_regions: Vec<Polygon> = regions.iter().filter(|r| r.len() >= 3).cloned().collect();
+    pub fn clip_to_regions(
+        &mut self,
+        regions: &[Polygon],
+        _tolerance: f64,
+    ) -> &mut Self {
+        let valid_regions: Vec<Polygon> =
+            regions.iter().filter(|r| r.len() >= 3).cloned().collect();
         if valid_regions.is_empty() || self.soa.is_empty() {
             return self;
         }
@@ -271,8 +309,8 @@ impl Ops {
             .unwrap_or(self.soa.len());
 
         for i in 0..first_move_idx {
-            let args = self.soa.deep_copy_entry(i);
-            SoA::append_from_args(&mut new_ops.soa, &args);
+            let cmd = self.soa.commands[i].clone();
+            new_ops.soa.push(cmd);
         }
 
         for i in first_move_idx..self.soa.len() {
@@ -280,8 +318,8 @@ impl Ops {
             let cat = self.soa.category(i);
 
             if cat != CommandCategory::Moving {
-                let args = self.soa.deep_copy_entry(i);
-                SoA::append_from_args(&mut new_ops.soa, &args);
+                let cmd = self.soa.commands[i].clone();
+                new_ops.soa.push(cmd);
                 continue;
             }
 
@@ -294,7 +332,11 @@ impl Ops {
             }
 
             if ct == CommandType::ScanLine {
-                let kept = clip_line_segment_with_polygons(last_point, end, &valid_regions);
+                let kept = clip_line_segment_with_polygons(
+                    last_point,
+                    end,
+                    &valid_regions,
+                );
                 let pv = self.soa.scanline_data(i);
                 let num_values = pv.len();
                 let dx = end.0 - last_point.0;
@@ -331,9 +373,20 @@ impl Ops {
                             None => true,
                         };
                         if needs_move {
-                            new_ops.move_to(new_start.0, new_start.1, new_start.2, None);
+                            new_ops.move_to(
+                                new_start.0,
+                                new_start.1,
+                                new_start.2,
+                                None,
+                            );
                         }
-                        new_ops.scan_to(new_end.0, new_end.1, new_end.2, Some(new_pv), None);
+                        new_ops.scan_to(
+                            new_end.0,
+                            new_end.1,
+                            new_end.2,
+                            Some(new_pv),
+                            None,
+                        );
                         pen_pos = Some(new_end);
                     }
                 }
@@ -345,7 +398,11 @@ impl Ops {
             let mut p_seg_start = last_point;
             for j in 0..linearized.len() {
                 let p_seg_end = linearized.endpoint(j);
-                let kept = clip_line_segment_with_polygons(p_seg_start, p_seg_end, &valid_regions);
+                let kept = clip_line_segment_with_polygons(
+                    p_seg_start,
+                    p_seg_end,
+                    &valid_regions,
+                );
                 for (sub_p1, sub_p2) in kept {
                     let needs_move = match pen_pos {
                         Some(prev) => {
@@ -460,9 +517,12 @@ impl Ops {
         }
 
         let linear_temp_geo = temp_ops.to_geometry();
-        let linear_closest = crate::geo::query::find_closest_point_on_path_from_array(
-            &linear_temp_geo.data, x, y,
-        );
+        let linear_closest =
+            crate::geo::query::find_closest_point_on_path_from_array(
+                &linear_temp_geo.data,
+                x,
+                y,
+            );
         let (linear_segment_idx, linear_t2, _) = match linear_closest {
             Some(v) => v,
             None => return false,
@@ -474,20 +534,14 @@ impl Ops {
         for idx_i in 1..linear_segment_idx {
             let j = linear_geo_cmds[idx_i];
             let end_pt = temp_ops.endpoint(j);
-            let dp = (
-                end_pt.0 - last_pos.0,
-                end_pt.1 - last_pos.1,
-            );
+            let dp = (end_pt.0 - last_pos.0, end_pt.1 - last_pos.1);
             hit_dist += (dp.0 * dp.0 + dp.1 * dp.1).sqrt();
             last_pos = end_pt;
         }
 
         let hit_segment_j = linear_geo_cmds[linear_segment_idx];
         let hit_end = temp_ops.endpoint(hit_segment_j);
-        let dp = (
-            hit_end.0 - last_pos.0,
-            hit_end.1 - last_pos.1,
-        );
+        let dp = (hit_end.0 - last_pos.0, hit_end.1 - last_pos.1);
         let dist = (dp.0 * dp.0 + dp.1 * dp.1).sqrt();
         hit_dist += linear_t2 * dist;
 
@@ -495,8 +549,7 @@ impl Ops {
         let gap_end_dist = hit_dist + width / 2.0;
 
         let mut new_subpath = Ops::new();
-        let args = temp_ops.soa.deep_copy_entry(0);
-        SoA::append_from_args(&mut new_subpath.soa, &args);
+        new_subpath.soa.push(temp_ops.soa.commands[0].clone());
 
         let mut accum_dist = 0.0;
         let mut last_pos2 = temp_ops.endpoint(0);
@@ -521,7 +574,10 @@ impl Ops {
 
                 let mut kept: Vec<(f64, f64)> = Vec::new();
                 if seg_start_dist < gap_start_dist {
-                    kept.push((seg_start_dist, seg_end_dist.min(gap_start_dist)));
+                    kept.push((
+                        seg_start_dist,
+                        seg_end_dist.min(gap_start_dist),
+                    ));
                 }
                 if seg_end_dist > gap_end_dist {
                     kept.push((seg_start_dist.max(gap_end_dist), seg_end_dist));
@@ -556,19 +612,20 @@ impl Ops {
 
                     let mut last_kept_pos: Option<Point3D> = None;
                     for ri in (0..new_subpath.len()).rev() {
-                        if new_subpath.soa.category(ri) == CommandCategory::Moving {
+                        if new_subpath.soa.category(ri)
+                            == CommandCategory::Moving
+                        {
                             last_kept_pos = Some(new_subpath.soa.endpoint(ri));
                             break;
                         }
                     }
 
                     if let Some(lkp) = last_kept_pos {
-                        let d = (
-                            lkp.0 - start_pt.0,
-                            lkp.1 - start_pt.1,
-                        );
+                        let d = (lkp.0 - start_pt.0, lkp.1 - start_pt.1);
                         if (d.0 * d.0 + d.1 * d.1).sqrt() > 1e-6 {
-                            new_subpath.move_to(start_pt.0, start_pt.1, start_pt.2, None);
+                            new_subpath.move_to(
+                                start_pt.0, start_pt.1, start_pt.2, None,
+                            );
                         }
                     }
 
@@ -579,13 +636,14 @@ impl Ops {
                 accum_dist += seg_len;
             } else {
                 if !(gap_start_dist < accum_dist && accum_dist < gap_end_dist) {
-                    let args = temp_ops.soa.deep_copy_entry(j);
-                    SoA::append_from_args(&mut new_subpath.soa, &args);
+                    let cmd = temp_ops.soa.commands[j].clone();
+                    new_subpath.soa.push(cmd);
                 }
             }
         }
 
-        let original_endpoint = self.soa.endpoint(if end_idx > 0 { end_idx - 1 } else { 0 });
+        let original_endpoint =
+            self.soa.endpoint(if end_idx > 0 { end_idx - 1 } else { 0 });
         let mut new_endpoint: Option<Point3D> = None;
         if new_subpath.len() > 0 {
             for ri in (0..new_subpath.len()).rev() {
@@ -598,28 +656,34 @@ impl Ops {
 
         let endpoint_match = match new_endpoint {
             Some(ne) => {
-                let d = (original_endpoint.0 - ne.0, original_endpoint.1 - ne.1);
+                let d =
+                    (original_endpoint.0 - ne.0, original_endpoint.1 - ne.1);
                 (d.0 * d.0 + d.1 * d.1).sqrt() <= 1e-6
             }
             None => false,
         };
 
         if !endpoint_match {
-            new_subpath.move_to(original_endpoint.0, original_endpoint.1, original_endpoint.2, None);
+            new_subpath.move_to(
+                original_endpoint.0,
+                original_endpoint.1,
+                original_endpoint.2,
+                None,
+            );
         }
 
         let mut new_soa = SoA::new();
         for j in 0..start_idx {
-            let args = self.soa.deep_copy_entry(j);
-            SoA::append_from_args(&mut new_soa, &args);
+            let cmd = self.soa.commands[j].clone();
+            new_soa.push(cmd);
         }
         for j in 0..new_subpath.len() {
-            let args = new_subpath.soa.deep_copy_entry(j);
-            SoA::append_from_args(&mut new_soa, &args);
+            let cmd = new_subpath.soa.commands[j].clone();
+            new_soa.push(cmd);
         }
         for j in end_idx..self.soa.len() {
-            let args = self.soa.deep_copy_entry(j);
-            SoA::append_from_args(&mut new_soa, &args);
+            let cmd = self.soa.commands[j].clone();
+            new_soa.push(cmd);
         }
 
         self.soa = new_soa;
@@ -647,8 +711,8 @@ impl Ops {
             .unwrap_or(self.soa.len());
 
         for i in 0..first_move_idx {
-            let args = self.soa.deep_copy_entry(i);
-            SoA::append_from_args(&mut new_ops.soa, &args);
+            let cmd = self.soa.commands[i].clone();
+            new_ops.soa.push(cmd);
         }
 
         for i in first_move_idx..self.soa.len() {
@@ -656,8 +720,8 @@ impl Ops {
             let cat = self.soa.category(i);
 
             if cat != CommandCategory::Moving {
-                let args = self.soa.deep_copy_entry(i);
-                SoA::append_from_args(&mut new_ops.soa, &args);
+                let cmd = self.soa.commands[i].clone();
+                new_ops.soa.push(cmd);
                 continue;
             }
 
@@ -694,11 +758,14 @@ impl Ops {
                     let needs_move = needs_move_to(pen_pos, last_point);
                     if needs_move {
                         new_ops.move_to(
-                            last_point.0, last_point.1, last_point.2, None,
+                            last_point.0,
+                            last_point.1,
+                            last_point.2,
+                            None,
                         );
                     }
-                    let args = self.soa.deep_copy_entry(i);
-                    SoA::append_from_args(&mut new_ops.soa, &args);
+                    let cmd = self.soa.commands[i].clone();
+                    new_ops.soa.push(cmd);
                     pen_pos = Some(end);
                     last_point = end;
                     continue;
@@ -724,16 +791,23 @@ impl Ops {
                 let c1_2d = (c1.0, c1.1);
                 let c2_2d = (c2.0, c2.1);
                 if is_bezier_inside_polygons(
-                    start_2d, c1_2d, c2_2d, end_2d, &valid_regions,
+                    start_2d,
+                    c1_2d,
+                    c2_2d,
+                    end_2d,
+                    &valid_regions,
                 ) {
                     let needs_move = needs_move_to(pen_pos, last_point);
                     if needs_move {
                         new_ops.move_to(
-                            last_point.0, last_point.1, last_point.2, None,
+                            last_point.0,
+                            last_point.1,
+                            last_point.2,
+                            None,
                         );
                     }
-                    let args = self.soa.deep_copy_entry(i);
-                    SoA::append_from_args(&mut new_ops.soa, &args);
+                    let cmd = self.soa.commands[i].clone();
+                    new_ops.soa.push(cmd);
                     pen_pos = Some(end);
                     last_point = end;
                     continue;
@@ -764,8 +838,7 @@ impl Ops {
                 for (sub_p1, sub_p2) in kept_segments {
                     let needs_move = needs_move_to(pen_pos, sub_p1);
                     if needs_move {
-                        new_ops
-                            .move_to(sub_p1.0, sub_p1.1, sub_p1.2, None);
+                        new_ops.move_to(sub_p1.0, sub_p1.1, sub_p1.2, None);
                     }
                     new_ops.line_to(sub_p2.0, sub_p2.1, sub_p2.2, None);
                     pen_pos = Some(sub_p2);
@@ -935,11 +1008,7 @@ fn clip_and_refit_arc(
         }
         for prim_row in &primitives {
             let ct_val = prim_row[COL_TYPE];
-            let end = (
-                prim_row[COL_X],
-                prim_row[COL_Y],
-                prim_row[COL_Z],
-            );
+            let end = (prim_row[COL_X], prim_row[COL_Y], prim_row[COL_Z]);
             if (ct_val - CMD_TYPE_LINE).abs() < 0.5 {
                 new_ops.line_to(end.0, end.1, end.2, None);
             } else if (ct_val - CMD_TYPE_ARC).abs() < 0.5 {
@@ -1007,11 +1076,7 @@ fn clip_and_refit_bezier(
         }
         for prim_row in &primitives {
             let ct_val = prim_row[COL_TYPE];
-            let end = (
-                prim_row[COL_X],
-                prim_row[COL_Y],
-                prim_row[COL_Z],
-            );
+            let end = (prim_row[COL_X], prim_row[COL_Y], prim_row[COL_Z]);
             if (ct_val - CMD_TYPE_LINE).abs() < 0.5 {
                 new_ops.line_to(end.0, end.1, end.2, None);
             } else if (ct_val - CMD_TYPE_ARC).abs() < 0.5 {

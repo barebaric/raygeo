@@ -1,4 +1,5 @@
 use crate::constants::*;
+use crate::error::RaygeoError;
 
 /// A 2D point represented as (x, y) coordinates.
 pub type Point = (f64, f64);
@@ -65,7 +66,7 @@ pub enum Command {
 }
 
 impl Command {
-    pub fn from_row(row: &[f64; 8]) -> Result<Command, String> {
+    pub fn from_row(row: &[f64; 8]) -> Result<Command, RaygeoError> {
         let cmd_type = row[COL_TYPE] as i32;
         let end = (row[COL_X], row[COL_Y], row[COL_Z]);
         match cmd_type {
@@ -81,7 +82,7 @@ impl Command {
                 control1: (row[COL_C1X], row[COL_C1Y]),
                 control2: (row[COL_C2X], row[COL_C2Y]),
             }),
-            _ => Err(format!("unknown command type: {}", cmd_type)),
+            _ => Err(RaygeoError::UnknownCommandType(cmd_type)),
         }
     }
 
@@ -138,7 +139,7 @@ pub trait CommandSlice {
     fn iter_commands(&self) -> impl Iterator<Item = Command> + '_;
     fn try_iter_commands(
         &self,
-    ) -> impl Iterator<Item = Result<Command, String>> + '_;
+    ) -> impl Iterator<Item = Result<Command, RaygeoError>> + '_;
 }
 
 impl CommandSlice for [[f64; 8]] {
@@ -149,7 +150,7 @@ impl CommandSlice for [[f64; 8]] {
 
     fn try_iter_commands(
         &self,
-    ) -> impl Iterator<Item = Result<Command, String>> + '_ {
+    ) -> impl Iterator<Item = Result<Command, RaygeoError>> + '_ {
         self.iter().map(Command::from_row)
     }
 }

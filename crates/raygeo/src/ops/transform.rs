@@ -1,13 +1,22 @@
 use super::container::Ops;
 use super::enums::{CommandCategory, CommandType};
-use super::soa::{AppendArgs, SoA};
+use super::soa::{OpCommand, OpMetadata, SoA};
 use crate::types::Point3D;
 
 fn transform_point(matrix: &[[f64; 4]; 4], p: Point3D) -> Point3D {
     (
-        matrix[0][0] * p.0 + matrix[0][1] * p.1 + matrix[0][2] * p.2 + matrix[0][3],
-        matrix[1][0] * p.0 + matrix[1][1] * p.1 + matrix[1][2] * p.2 + matrix[1][3],
-        matrix[2][0] * p.0 + matrix[2][1] * p.1 + matrix[2][2] * p.2 + matrix[2][3],
+        matrix[0][0] * p.0
+            + matrix[0][1] * p.1
+            + matrix[0][2] * p.2
+            + matrix[0][3],
+        matrix[1][0] * p.0
+            + matrix[1][1] * p.1
+            + matrix[1][2] * p.2
+            + matrix[1][3],
+        matrix[2][0] * p.0
+            + matrix[2][1] * p.1
+            + matrix[2][2] * p.2
+            + matrix[2][3],
     )
 }
 
@@ -48,7 +57,8 @@ impl Ops {
             };
 
             if ct == CommandType::ArcTo && is_non_uniform {
-                let start_point = last_point_untransformed.unwrap_or((0.0, 0.0, 0.0));
+                let start_point =
+                    last_point_untransformed.unwrap_or((0.0, 0.0, 0.0));
                 let end = self.soa.endpoint(i);
                 let &(ci, cj, cw) = self.soa.arc_params(i);
                 let arc_row: [f64; 8] = [
@@ -61,21 +71,24 @@ impl Ops {
                     if cw { 1.0 } else { 0.0 },
                     0.0,
                 ];
-                let segments =
-                    crate::geo::shape::arc::linearize_arc(&arc_row, start_point, 0.1);
+                let segments = crate::geo::shape::arc::linearize_arc(
+                    &arc_row,
+                    start_point,
+                    0.1,
+                );
                 let st = self.soa.state(i);
                 let ea = self.soa.extra_axes(i);
                 for (_, p2) in &segments {
                     let tv = transform_point(matrix, *p2);
-                    let mut args = AppendArgs::new(CommandType::LineTo);
-                    args.end = Some(tv);
+                    let mut cmd = OpCommand::new(CommandType::LineTo);
+                    cmd.end = tv;
                     if let Some(ea) = ea {
-                        args.extra_axes = Some(ea.to_vec());
+                        cmd.extra_axes = Some(ea.to_vec());
                     }
                     if let Some(st) = st {
-                        args.state = Some(st.clone());
+                        cmd.state = Some(st.clone());
                     }
-                    SoA::append_from_args(&mut new_soa, &args);
+                    new_soa.push(cmd);
                 }
             } else if cat == CommandCategory::Moving {
                 let end = self.soa.endpoint(i);
@@ -83,36 +96,35 @@ impl Ops {
                 let st = self.soa.state(i);
                 let ea = self.soa.extra_axes(i);
 
-                let mut args = AppendArgs::new(ct);
-                args.end = Some(new_end);
+                let mut cmd = OpCommand::new(ct);
+                cmd.end = new_end;
 
                 if ct == CommandType::ArcTo {
                     let &(ci, cj, cw) = self.soa.arc_params(i);
                     let new_ci = matrix[0][0] * ci + matrix[0][1] * cj;
                     let new_cj = matrix[1][0] * ci + matrix[1][1] * cj;
                     let new_cw = if flip_cw { !cw } else { cw };
-                    args.arc_params = Some((new_ci, new_cj, new_cw));
+                    cmd.metadata = OpMetadata::Arc((new_ci, new_cj, new_cw));
                 } else if ct == CommandType::BezierTo {
                     let &(c1, c2) = self.soa.bezier_params(i);
                     let t_c1 = transform_point(matrix, c1);
                     let t_c2 = transform_point(matrix, c2);
-                    args.bezier_params = Some((t_c1, t_c2));
+                    cmd.metadata = OpMetadata::Bezier((t_c1, t_c2));
                 } else if ct == CommandType::QuadraticBezierTo {
                     let c = self.soa.quad_params(i);
                     let t_c = transform_point(matrix, *c);
-                    args.quad_params = Some(t_c);
+                    cmd.metadata = OpMetadata::QuadraticBezier(t_c);
                 }
 
                 if let Some(ea) = ea {
-                    args.extra_axes = Some(ea.to_vec());
+                    cmd.extra_axes = Some(ea.to_vec());
                 }
                 if let Some(st) = st {
-                    args.state = Some(st.clone());
+                    cmd.state = Some(st.clone());
                 }
-                SoA::append_from_args(&mut new_soa, &args);
+                new_soa.push(cmd);
             } else {
-                let args = self.soa.deep_copy_entry(i);
-                SoA::append_from_args(&mut new_soa, &args);
+                new_soa.push(self.soa.commands[i].clone());
             }
 
             if let Some(original_end) = original_cmd_end {

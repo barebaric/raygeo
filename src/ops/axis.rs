@@ -78,6 +78,6 @@ impl PyAxis {
     fn assert_single_axis(&self) -> PyResult<()> {
         self.0
             .assert_single_axis()
-            .map_err(|e| pyo3::exceptions::PyValueError::new_err(e))
+            .map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))
     }
 }

@@ -28,11 +28,13 @@
 //! ```
 
 pub mod constants;
+pub mod error;
 pub mod geo;
 pub mod ops;
 pub mod types;
 
 pub use constants::*;
+pub use error::*;
 pub use geo::*;
 pub use ops::axis::Axis;
 pub use ops::container::*;

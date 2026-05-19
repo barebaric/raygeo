@@ -1056,16 +1056,13 @@ impl PyOps {
 
             let mut new_soa = SoA::new();
             for j in 0..layer_start {
-                let args = self.inner.soa.deep_copy_entry(j);
-                SoA::append_from_args(&mut new_soa, &args);
+                new_soa.push(self.inner.soa.commands[j].clone());
             }
             for j in 0..layer_ops.len() {
-                let args = layer_ops.soa.deep_copy_entry(j);
-                SoA::append_from_args(&mut new_soa, &args);
+                new_soa.push(layer_ops.soa.commands[j].clone());
             }
             for j in layer_end..self.inner.len() {
-                let args = self.inner.soa.deep_copy_entry(j);
-                SoA::append_from_args(&mut new_soa, &args);
+                new_soa.push(self.inner.soa.commands[j].clone());
             }
             self.inner.soa = new_soa;
             i = layer_start + layer_ops.len();

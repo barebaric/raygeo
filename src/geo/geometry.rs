@@ -11,22 +11,24 @@ use raygeo_core::geo::transform::map_geometry_to_frame;
 use raygeo_core::{
     check_intersection_from_array, check_self_intersection_from_array,
     close_geometry_gaps_from_array, convert_arcs_to_beziers,
-    find_closest_point_on_path_from_array,
-    fit_curves, get_outward_normal_at_from_array, grow_geometry, linearize_data,
-    remove_inner_edges,
-    simplify_data, split_inner_and_outer_contours,
-    split_into_components, split_into_contours,
-    CMD_TYPE_ARC, CMD_TYPE_BEZIER, CMD_TYPE_LINE, CMD_TYPE_MOVE,
-    COL_C1X, COL_C1Y, COL_C2X, COL_C2Y, COL_CW, COL_I, COL_J, COL_TYPE, COL_X,
-    COL_Y, COL_Z, Command as CoreCommand, CommandRow,
-    Geometry as CoreGeometry, Point,
+    find_closest_point_on_path_from_array, fit_curves,
+    get_outward_normal_at_from_array, grow_geometry, linearize_data,
+    remove_inner_edges, simplify_data, split_inner_and_outer_contours,
+    split_into_components, split_into_contours, Command as CoreCommand,
+    CommandRow, Geometry as CoreGeometry, Point, CMD_TYPE_ARC, CMD_TYPE_BEZIER,
+    CMD_TYPE_LINE, CMD_TYPE_MOVE, COL_C1X, COL_C1Y, COL_C2X, COL_C2Y, COL_CW,
+    COL_I, COL_J, COL_TYPE, COL_X, COL_Y, COL_Z,
 };
 
 #[pyclass(module = "raygeo.geo.path", frozen, eq, skip_from_py_object)]
 #[derive(Clone, Debug, PartialEq)]
 pub enum PyCommand {
-    Move { end: (f64, f64, f64) },
-    Line { end: (f64, f64, f64) },
+    Move {
+        end: (f64, f64, f64),
+    },
+    Line {
+        end: (f64, f64, f64),
+    },
     Arc {
         end: (f64, f64, f64),
         center_offset: (f64, f64),
@@ -187,7 +189,10 @@ impl Geometry {
         let from_dict = slf.get_type().getattr("from_dict")?;
         pyo3::types::PyTuple::new(
             py,
-            [from_dict.as_any(), pyo3::types::PyTuple::new(py, [data.as_any()])?.as_any()],
+            [
+                from_dict.as_any(),
+                pyo3::types::PyTuple::new(py, [data.as_any()])?.as_any(),
+            ],
         )
     }
 
@@ -347,7 +352,10 @@ impl Geometry {
     /// Apply a 4x4 affine transformation matrix.
     ///
     /// :param matrix: A 4x4 transformation matrix as list of lists.
-    fn transform(slf: Bound<'_, Self>, matrix: Vec<Vec<f64>>) -> Bound<'_, Self> {
+    fn transform(
+        slf: Bound<'_, Self>,
+        matrix: Vec<Vec<f64>>,
+    ) -> Bound<'_, Self> {
         {
             let mut geo = slf.borrow_mut();
             let mat: [[f64; 4]; 4] = [
@@ -448,7 +456,11 @@ impl Geometry {
     #[gen_stub(skip)]
     #[getter]
     fn _pending_data(&self) -> Vec<Vec<f64>> {
-        self.inner.pending_data().iter().map(|r| r.to_vec()).collect()
+        self.inner
+            .pending_data()
+            .iter()
+            .map(|r| r.to_vec())
+            .collect()
     }
 
     #[gen_stub(skip)]
@@ -481,11 +493,9 @@ impl Geometry {
         let data = self.inner.synced_data();
         data.iter()
             .map(|r| {
-                CoreCommand::from_row(r)
-                    .map(PyCommand::from)
-                    .map_err(|e| {
-                        pyo3::exceptions::PyValueError::new_err(e)
-                    })
+                CoreCommand::from_row(r).map(PyCommand::from).map_err(|e| {
+                    pyo3::exceptions::PyValueError::new_err(e.to_string())
+                })
             })
             .collect()
     }
@@ -503,11 +513,9 @@ impl Geometry {
         let data = self.inner.synced_data();
         match data.get(index as usize) {
             Some(row) => Ok(Some(
-                CoreCommand::from_row(row)
-                    .map(PyCommand::from)
-                    .map_err(|e| {
-                        pyo3::exceptions::PyValueError::new_err(e)
-                    })?,
+                CoreCommand::from_row(row).map(PyCommand::from).map_err(
+                    |e| pyo3::exceptions::PyValueError::new_err(e.to_string()),
+                )?,
             )),
             None => Ok(None),
         }
@@ -563,7 +571,10 @@ impl Geometry {
     }
 
     #[gen_stub(skip)]
-    fn to_dict<'py>(&mut self, py: Python<'py>) -> PyResult<Bound<'py, PyDict>> {
+    fn to_dict<'py>(
+        &mut self,
+        py: Python<'py>,
+    ) -> PyResult<Bound<'py, PyDict>> {
         self.dump(py)
     }
 
@@ -681,9 +692,7 @@ impl Geometry {
                             _ => {}
                         }
                     } else if let Ok(cmd_dict) = item.cast::<PyDict>() {
-                        let cmd_type: String = match cmd_dict
-                            .get_item("type")
-                        {
+                        let cmd_type: String = match cmd_dict.get_item("type") {
                             Ok(Some(val)) => match val.extract::<String>() {
                                 Ok(s) => s,
                                 Err(_) => continue,
@@ -731,37 +740,32 @@ impl Geometry {
                                 }
                             }
                             "ArcToCommand" => {
-                                let i_val: Option<(f64, f64)> =
-                                    match cmd_dict.get_item("center") {
+                                let i_val: Option<(f64, f64)> = match cmd_dict
+                                    .get_item("center")
+                                {
+                                    Ok(Some(val)) => {
+                                        val.extract::<(f64, f64)>().ok()
+                                    }
+                                    _ => None,
+                                }
+                                .or_else(|| {
+                                    match cmd_dict.get_item("center_offset") {
                                         Ok(Some(val)) => {
                                             val.extract::<(f64, f64)>().ok()
                                         }
                                         _ => None,
                                     }
-                                    .or_else(|| {
-                                        match cmd_dict
-                                            .get_item("center_offset")
-                                        {
-                                            Ok(Some(val)) => {
-                                                val.extract::<(f64, f64)>().ok()
-                                            }
-                                            _ => None,
-                                        }
-                                    });
+                                });
                                 let cw_val: Option<bool> = match cmd_dict
                                     .get_item("clockwise")
                                 {
-                                    Ok(Some(val)) => {
-                                        val.extract::<bool>().ok()
-                                    }
+                                    Ok(Some(val)) => val.extract::<bool>().ok(),
                                     _ => None,
                                 };
                                 if let (Some((ci, cj)), Some(cw)) =
                                     (i_val, cw_val)
                                 {
-                                    geo.inner.arc_to(
-                                        x, y, ci, cj, cw, z,
-                                    );
+                                    geo.inner.arc_to(x, y, ci, cj, cw, z);
                                 }
                             }
                             "ClosePathCommand" => geo.inner.close_path(),
@@ -889,13 +893,18 @@ impl Geometry {
     ///
     /// :param tolerance: Max gap to close.
     #[pyo3(signature = (tolerance=None))]
-    fn close_gaps(slf: Bound<'_, Self>, tolerance: Option<f64>) -> Bound<'_, Self> {
+    fn close_gaps(
+        slf: Bound<'_, Self>,
+        tolerance: Option<f64>,
+    ) -> Bound<'_, Self> {
         {
             let mut geo = slf.borrow_mut();
             let data = geo.inner.synced_data();
             if !data.is_empty() {
-                let closed =
-                    close_geometry_gaps_from_array(data, tolerance.unwrap_or(0.5));
+                let closed = close_geometry_gaps_from_array(
+                    data,
+                    tolerance.unwrap_or(0.5),
+                );
                 *geo.inner.synced_data_mut() = closed;
             }
         }
@@ -910,10 +919,8 @@ impl Geometry {
             let mut geo = slf.borrow_mut();
             let data = geo.inner.synced_data();
             if !data.is_empty() {
-                let cleaned = raygeo_core::remove_duplicate_segments(
-                    data,
-                    tolerance,
-                );
+                let cleaned =
+                    raygeo_core::remove_duplicate_segments(data, tolerance);
                 *geo.inner.synced_data_mut() = cleaned;
             }
         }
@@ -1012,7 +1019,7 @@ impl Geometry {
         if data.is_empty() {
             return None;
         }
-            get_point_and_tangent_at_from_array(data, segment_index, t)
+        get_point_and_tangent_at_from_array(data, segment_index, t)
     }
 
     /// Get the outward normal at parameter t on a segment.
@@ -1050,9 +1057,7 @@ impl Geometry {
         clockwise: bool,
         z: f64,
     ) {
-        let start_point = if let Some(last) =
-            self.inner.pending_data().last()
-        {
+        let start_point = if let Some(last) = self.inner.pending_data().last() {
             (last[COL_X], last[COL_Y], last[COL_Z])
         } else if let Some(last) = self.inner.synced_data().last() {
             (last[COL_X], last[COL_Y], last[COL_Z])
@@ -1234,5 +1239,4 @@ impl Geometry {
         let closed = self.inner.is_closed(1e-6);
         format!("<Geometry commands={} closed={}>", len, closed)
     }
-
 }

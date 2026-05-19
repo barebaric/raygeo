@@ -1,61 +1,58 @@
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+use num_enum::TryFromPrimitive;
+use strum::{Display, EnumString};
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, TryFromPrimitive, EnumString, Display)]
 #[repr(u8)]
+#[strum(serialize_all = "SCREAMING_SNAKE_CASE")]
 pub enum CommandType {
+    #[strum(serialize = "MOVE_TO")]
     MoveTo = 1,
+    #[strum(serialize = "LINE_TO")]
     LineTo = 2,
+    #[strum(serialize = "ARC_TO")]
     ArcTo = 3,
+    #[strum(serialize = "SCAN_LINE")]
     ScanLine = 4,
     Dwell = 5,
+    #[strum(serialize = "BEZIER_TO")]
     BezierTo = 6,
+    #[strum(serialize = "QUADRATIC_BEZIER_TO")]
     QuadraticBezierTo = 7,
+    #[strum(serialize = "SET_POWER")]
     SetPower = 10,
+    #[strum(serialize = "SET_CUT_SPEED")]
     SetCutSpeed = 11,
+    #[strum(serialize = "SET_TRAVEL_SPEED")]
     SetTravelSpeed = 12,
+    #[strum(serialize = "ENABLE_AIR_ASSIST")]
     EnableAirAssist = 13,
+    #[strum(serialize = "DISABLE_AIR_ASSIST")]
     DisableAirAssist = 14,
+    #[strum(serialize = "SET_LASER")]
     SetLaser = 15,
+    #[strum(serialize = "SET_FREQUENCY")]
     SetFrequency = 16,
+    #[strum(serialize = "SET_PULSE_WIDTH")]
     SetPulseWidth = 17,
+    #[strum(serialize = "JOB_START")]
     JobStart = 100,
+    #[strum(serialize = "JOB_END")]
     JobEnd = 101,
+    #[strum(serialize = "LAYER_START")]
     LayerStart = 102,
+    #[strum(serialize = "LAYER_END")]
     LayerEnd = 103,
+    #[strum(serialize = "WORKPIECE_START")]
     WorkpieceStart = 104,
+    #[strum(serialize = "WORKPIECE_END")]
     WorkpieceEnd = 105,
+    #[strum(serialize = "OPS_SECTION_START")]
     OpsSectionStart = 106,
+    #[strum(serialize = "OPS_SECTION_END")]
     OpsSectionEnd = 107,
 }
 
 impl CommandType {
-    pub fn from_name(s: &str) -> Option<CommandType> {
-        match s {
-            "MOVE_TO" => Some(CommandType::MoveTo),
-            "LINE_TO" => Some(CommandType::LineTo),
-            "ARC_TO" => Some(CommandType::ArcTo),
-            "SCAN_LINE" => Some(CommandType::ScanLine),
-            "DWELL" => Some(CommandType::Dwell),
-            "BEZIER_TO" => Some(CommandType::BezierTo),
-            "QUADRATIC_BEZIER_TO" => Some(CommandType::QuadraticBezierTo),
-            "SET_POWER" => Some(CommandType::SetPower),
-            "SET_CUT_SPEED" => Some(CommandType::SetCutSpeed),
-            "SET_TRAVEL_SPEED" => Some(CommandType::SetTravelSpeed),
-            "ENABLE_AIR_ASSIST" => Some(CommandType::EnableAirAssist),
-            "DISABLE_AIR_ASSIST" => Some(CommandType::DisableAirAssist),
-            "SET_LASER" => Some(CommandType::SetLaser),
-            "SET_FREQUENCY" => Some(CommandType::SetFrequency),
-            "SET_PULSE_WIDTH" => Some(CommandType::SetPulseWidth),
-            "JOB_START" => Some(CommandType::JobStart),
-            "JOB_END" => Some(CommandType::JobEnd),
-            "LAYER_START" => Some(CommandType::LayerStart),
-            "LAYER_END" => Some(CommandType::LayerEnd),
-            "WORKPIECE_START" => Some(CommandType::WorkpieceStart),
-            "WORKPIECE_END" => Some(CommandType::WorkpieceEnd),
-            "OPS_SECTION_START" => Some(CommandType::OpsSectionStart),
-            "OPS_SECTION_END" => Some(CommandType::OpsSectionEnd),
-            _ => None,
-        }
-    }
-
     pub fn name(&self) -> &'static str {
         match self {
             CommandType::MoveTo => "MOVE_TO",
@@ -83,38 +80,9 @@ impl CommandType {
             CommandType::OpsSectionEnd => "OPS_SECTION_END",
         }
     }
-}
 
-impl TryFrom<u8> for CommandType {
-    type Error = String;
-
-    fn try_from(value: u8) -> Result<Self, Self::Error> {
-        match value {
-            1 => Ok(CommandType::MoveTo),
-            2 => Ok(CommandType::LineTo),
-            3 => Ok(CommandType::ArcTo),
-            4 => Ok(CommandType::ScanLine),
-            5 => Ok(CommandType::Dwell),
-            6 => Ok(CommandType::BezierTo),
-            7 => Ok(CommandType::QuadraticBezierTo),
-            10 => Ok(CommandType::SetPower),
-            11 => Ok(CommandType::SetCutSpeed),
-            12 => Ok(CommandType::SetTravelSpeed),
-            13 => Ok(CommandType::EnableAirAssist),
-            14 => Ok(CommandType::DisableAirAssist),
-            15 => Ok(CommandType::SetLaser),
-            16 => Ok(CommandType::SetFrequency),
-            17 => Ok(CommandType::SetPulseWidth),
-            100 => Ok(CommandType::JobStart),
-            101 => Ok(CommandType::JobEnd),
-            102 => Ok(CommandType::LayerStart),
-            103 => Ok(CommandType::LayerEnd),
-            104 => Ok(CommandType::WorkpieceStart),
-            105 => Ok(CommandType::WorkpieceEnd),
-            106 => Ok(CommandType::OpsSectionStart),
-            107 => Ok(CommandType::OpsSectionEnd),
-            _ => Err(format!("unknown command type: {}", value)),
-        }
+    pub fn from_name(s: &str) -> Option<CommandType> {
+        s.parse().ok()
     }
 }
 
@@ -125,7 +93,18 @@ pub enum CommandCategory {
     Marker,
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+impl CommandCategory {
+    pub fn name(&self) -> &'static str {
+        match self {
+            CommandCategory::Moving => "MOVING",
+            CommandCategory::State => "STATE",
+            CommandCategory::Marker => "MARKER",
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, EnumString, Display)]
+#[strum(serialize_all = "SCREAMING_SNAKE_CASE")]
 pub enum SectionType {
     VectorOutline,
     RasterFill,
@@ -140,11 +119,7 @@ impl SectionType {
     }
 
     pub fn from_name(s: &str) -> Option<SectionType> {
-        match s {
-            "VECTOR_OUTLINE" => Some(SectionType::VectorOutline),
-            "RASTER_FILL" => Some(SectionType::RasterFill),
-            _ => None,
-        }
+        s.parse().ok()
     }
 }
 
@@ -256,8 +231,14 @@ mod tests {
 
     #[test]
     fn test_try_from_valid() {
-        assert_eq!(CommandType::try_from(1), Ok(CommandType::MoveTo));
-        assert_eq!(CommandType::try_from(107), Ok(CommandType::OpsSectionEnd));
+        assert_eq!(
+            CommandType::try_from(1),
+            Ok(CommandType::MoveTo)
+        );
+        assert_eq!(
+            CommandType::try_from(107),
+            Ok(CommandType::OpsSectionEnd)
+        );
     }
 
     #[test]
@@ -266,5 +247,34 @@ mod tests {
         assert!(CommandType::try_from(8).is_err());
         assert!(CommandType::try_from(99).is_err());
         assert!(CommandType::try_from(200).is_err());
+    }
+
+    #[test]
+    fn test_from_name_roundtrip() {
+        assert_eq!(CommandType::from_name("MOVE_TO"), Some(CommandType::MoveTo));
+        assert_eq!(CommandType::from_name("LINE_TO"), Some(CommandType::LineTo));
+        assert_eq!(CommandType::from_name("ARC_TO"), Some(CommandType::ArcTo));
+        assert_eq!(CommandType::from_name("SCAN_LINE"), Some(CommandType::ScanLine));
+        assert_eq!(CommandType::from_name("BEZIER_TO"), Some(CommandType::BezierTo));
+        assert_eq!(CommandType::from_name("SET_POWER"), Some(CommandType::SetPower));
+        assert_eq!(CommandType::from_name("JOB_START"), Some(CommandType::JobStart));
+        assert_eq!(CommandType::from_name("OPS_SECTION_END"), Some(CommandType::OpsSectionEnd));
+        assert_eq!(CommandType::from_name("INVALID"), None);
+    }
+
+    #[test]
+    fn test_section_type_from_name() {
+        assert_eq!(SectionType::from_name("VECTOR_OUTLINE"), Some(SectionType::VectorOutline));
+        assert_eq!(SectionType::from_name("RASTER_FILL"), Some(SectionType::RasterFill));
+        assert_eq!(SectionType::from_name("INVALID"), None);
+    }
+
+    #[test]
+    fn test_name_method() {
+        assert_eq!(CommandType::MoveTo.name(), "MOVE_TO");
+        assert_eq!(CommandType::ArcTo.name(), "ARC_TO");
+        assert_eq!(CommandType::ScanLine.name(), "SCAN_LINE");
+        assert_eq!(SectionType::VectorOutline.name(), "VECTOR_OUTLINE");
+        assert_eq!(SectionType::RasterFill.name(), "RASTER_FILL");
     }
 }
