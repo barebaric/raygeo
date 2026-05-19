@@ -4,7 +4,7 @@ from raygeo import (
     CMD_TYPE_LINE,
     CMD_TYPE_ARC,
 )
-from raygeo.path import get_bounding_rect_from_array
+from raygeo.geo.path import get_bounding_rect_from_array
 
 
 def test_rect_empty():

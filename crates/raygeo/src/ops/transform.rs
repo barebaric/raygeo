@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use super::container::Ops;
 use super::enums::{CommandCategory, CommandType};
 use super::soa::{OpCommand, OpMetadata, SoA};
@@ -83,7 +85,7 @@ impl Ops {
                     let mut cmd = OpCommand::new(CommandType::LineTo);
                     cmd.end = tv;
                     if let Some(ea) = ea {
-                        cmd.extra_axes = Some(ea.to_vec());
+                        cmd.extra_axes = Some(Arc::from(ea));
                     }
                     if let Some(st) = st {
                         cmd.state = Some(st.clone());
@@ -117,7 +119,7 @@ impl Ops {
                 }
 
                 if let Some(ea) = ea {
-                    cmd.extra_axes = Some(ea.to_vec());
+                    cmd.extra_axes = Some(Arc::from(ea));
                 }
                 if let Some(st) = st {
                     cmd.state = Some(st.clone());

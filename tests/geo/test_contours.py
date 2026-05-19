@@ -1,6 +1,6 @@
 import pytest
 from raygeo import Geometry
-from raygeo.path import (
+from raygeo.geo.path import (
     get_subpath_area_from_array,
     get_valid_contours_data,
     filter_to_external_contours,

@@ -30,7 +30,7 @@ from raygeo.algo.fitting import (
     get_polyline_arc_deviation,
     project_circle_center_to_bisector,
 )
-from raygeo.path import (
+from raygeo.geo.path import (
     convert_arc_to_beziers_from_array,
     create_arc_cmd,
     create_line_cmd,
@@ -711,7 +711,6 @@ def test_fit_arcs_simple_line():
     geo.move_to(0, 0)
     geo.line_to(10, 0)
 
-    geo._sync_to_numpy()
     data = geo.data
 
     result = fit_arcs(data, 0.1)
@@ -729,7 +728,6 @@ def test_fit_arcs_with_bezier():
     geo.move_to(0, 0)
     geo.bezier_to(10, 10, c1x=2, c1y=5, c2x=8, c2y=5)
 
-    geo._sync_to_numpy()
     data = geo.data
 
     result = fit_arcs(data, 0.1)
@@ -756,7 +754,6 @@ def test_fit_arcs_with_progress():
         geo.move_to(i, 0)
         geo.line_to(i + 1, 0)
 
-    geo._sync_to_numpy()
     data = geo.data
 
     progress_values = []
@@ -905,7 +902,6 @@ class TestFitCurves:
         geo = Geometry()
         geo.move_to(0, 0)
         geo.bezier_to(10, 10, c1x=2, c1y=5, c2x=8, c2y=5)
-        geo._sync_to_numpy()
 
         result = fit_curves(
             geo.data, 0.1, preserve_beziers=True, preserve_arcs=True
@@ -920,7 +916,6 @@ class TestFitCurves:
         geo = Geometry()
         geo.move_to(0, 0)
         geo.bezier_to(10, 10, c1x=2, c1y=5, c2x=8, c2y=5)
-        geo._sync_to_numpy()
 
         result = fit_curves(
             geo.data, 0.1, preserve_beziers=False, preserve_arcs=True
@@ -936,7 +931,6 @@ class TestFitCurves:
         geo = Geometry()
         geo.move_to(0, 0)
         geo.arc_to(10, 0, 5, 0, clockwise=True)
-        geo._sync_to_numpy()
 
         result = fit_curves(
             geo.data, 0.1, preserve_beziers=True, preserve_arcs=True
@@ -951,7 +945,6 @@ class TestFitCurves:
         geo = Geometry()
         geo.move_to(0, 0)
         geo.arc_to(10, 0, 5, 0, clockwise=True)
-        geo._sync_to_numpy()
 
         result = fit_curves(
             geo.data, 0.1, preserve_beziers=False, preserve_arcs=False
@@ -968,7 +961,6 @@ class TestFitCurves:
         geo.line_to(5, 0)
         geo.bezier_to(15, 5, c1x=7, c1y=3, c2x=13, c2y=3)
         geo.arc_to(25, 0, 5, 0, clockwise=True)
-        geo._sync_to_numpy()
 
         result = fit_curves(
             geo.data, 0.1, preserve_beziers=True, preserve_arcs=True
@@ -983,7 +975,6 @@ class TestFitCurves:
         geo = Geometry()
         geo.move_to(0, 0)
         geo.bezier_to(10, 10, c1x=2, c1y=5, c2x=8, c2y=5)
-        geo._sync_to_numpy()
 
         result_old = fit_arcs(geo.data, 0.1)
         result_new = fit_curves(

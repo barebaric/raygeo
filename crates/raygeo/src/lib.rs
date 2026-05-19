@@ -21,7 +21,6 @@
 //! geo.line_to(10.0, 0.0, 0.0);
 //! geo.line_to(10.0, 10.0, 0.0);
 //! geo.close_path();
-//! geo.sync_to_data();
 //!
 //! let area = geo.area();
 //! let rect = geo.rect();

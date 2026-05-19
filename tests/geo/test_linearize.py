@@ -7,7 +7,7 @@ from raygeo import (
     CMD_TYPE_ARC,
     COL_TYPE,
 )
-from raygeo.path import (
+from raygeo.geo.path import (
     flatten_to_points,
     linearize_geometry,
 )
@@ -21,7 +21,6 @@ def test_flatten_to_points():
     geo.arc_to(10, 10, i=5, j=-5, clockwise=False)
     geo.bezier_to(5, 15, c1x=2, c1y=5, c2x=8, c2y=10)
 
-    geo._sync_to_numpy()
     data = geo.data
 
     result = flatten_to_points(data, 0.1)
@@ -49,7 +48,6 @@ def test_linearize_geometry():
     geo.move_to(0, 0)
     geo.arc_to(10, 10, i=10, j=0, clockwise=False)
 
-    geo._sync_to_numpy()
     data = geo.data
 
     result = linearize_geometry(data, tolerance=0.1)

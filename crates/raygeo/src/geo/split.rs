@@ -424,7 +424,6 @@ pub fn close_all_contours(geometry: &Geometry) -> Geometry {
     for mut contour in contours {
         if !contour.is_closed(1e-6) {
             contour.close_path();
-            contour.sync_to_data();
         }
         result.extend(&contour);
     }
@@ -449,7 +448,7 @@ pub fn normalize_winding_orders(contours: &[Geometry]) -> Vec<Geometry> {
             contour_data.push(None);
             continue;
         }
-        if c.data.is_empty() && c.pending_data.is_empty() {
+        if c.data.is_empty() {
             contour_data.push(None);
             continue;
         }
@@ -596,7 +595,6 @@ mod tests {
         geo.move_to(0.0, 0.0, 0.0);
         geo.line_to(10.0, 0.0, 0.0);
         geo.line_to(10.0, 10.0, 0.0);
-        geo.sync_to_data();
         let result = split_into_contours(&geo);
         assert_eq!(result.len(), 1);
     }
@@ -608,7 +606,6 @@ mod tests {
         geo.line_to(10.0, 0.0, 0.0);
         geo.move_to(20.0, 20.0, 0.0);
         geo.line_to(30.0, 20.0, 0.0);
-        geo.sync_to_data();
         let result = split_into_contours(&geo);
         assert_eq!(result.len(), 2);
     }

@@ -2,13 +2,15 @@
 //!
 //! Provides functions for checking self-intersection and cross-intersection
 //! of geometry command arrays. Arcs and Bezier curves are linearized into
-//! line segments for testing, and bounding box culling is used for performance.
+//! line segments for testing, and an R-tree spatial index is used for
+//! O(N log M) bounding-box lookups instead of brute-force O(N × M) scans.
 
 use crate::constants::*;
 use crate::geo::shape::arc::linearize_arc;
 use crate::geo::shape::bezier::linearize_bezier_from_array;
 use crate::geo::shape::line::get_line_segment_intersection;
 use crate::types::Point3D;
+use rstar::{PointDistance, RTree, RTreeObject, AABB};
 
 /// Returns a list of linearized line segments for a given row in a data array.
 /// Arcs and Beziers are converted to approximating line segments.
@@ -43,6 +45,31 @@ struct RowSegments {
     index: usize,
     segments: Vec<(Point3D, Point3D)>,
     bbox: (f64, f64, f64, f64),
+}
+
+impl RowSegments {
+    fn aabb(&self) -> AABB<[f64; 2]> {
+        AABB::from_corners(
+            [self.bbox.0, self.bbox.1],
+            [self.bbox.2, self.bbox.3],
+        )
+    }
+}
+
+impl RTreeObject for RowSegments {
+    type Envelope = AABB<[f64; 2]>;
+
+    fn envelope(&self) -> Self::Envelope {
+        self.aabb()
+    }
+}
+
+impl PointDistance for RowSegments {
+    fn distance_2(&self, point: &[f64; 2]) -> f64 {
+        let dx = point[0].clamp(self.bbox.0, self.bbox.2) - point[0];
+        let dy = point[1].clamp(self.bbox.1, self.bbox.3) - point[1];
+        dx * dx + dy * dy
+    }
 }
 
 /// Pre-compute linearized segments and bounding boxes for all draw commands.
@@ -94,6 +121,9 @@ fn precompute_row_segments(data: &[[f64; 8]]) -> Vec<RowSegments> {
 /// For self-intersection checks (`is_self_check=true`), adjacent segments
 /// sharing a vertex are not counted as intersecting (they share an endpoint
 /// by construction).
+///
+/// Uses an R-tree on `data2`'s bounding boxes for O(N log M) lookup
+/// instead of brute-force O(N × M) comparison.
 fn data_intersect(
     data1: &[[f64; 8]],
     data2: &[[f64; 8]],
@@ -103,18 +133,13 @@ fn data_intersect(
     let rows1 = precompute_row_segments(data1);
     let rows2 = precompute_row_segments(data2);
 
+    let tree = RTree::bulk_load(rows2);
+
     for ri1 in &rows1 {
-        for ri2 in &rows2 {
+        let query = ri1.aabb();
+        for ri2 in tree.locate_in_envelope_intersecting(&query) {
             // Skip self-comparisons for self-intersection and adjacent rows
             if is_self_check && ri2.index <= ri1.index {
-                continue;
-            }
-
-            // Bounding box culling
-            if ri1.bbox.2 < ri2.bbox.0 || ri1.bbox.0 > ri2.bbox.2 {
-                continue;
-            }
-            if ri1.bbox.3 < ri2.bbox.1 || ri1.bbox.1 > ri2.bbox.3 {
                 continue;
             }
 

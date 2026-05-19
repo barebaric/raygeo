@@ -204,7 +204,6 @@ impl Geometry {
     #[pyo3(signature = (x, y, z=0.0))]
     fn move_to(&mut self, x: f64, y: f64, z: f64) {
         self.inner.move_to(x, y, z);
-        self.inner.sync_to_data();
     }
 
     /// Draw a line to the given coordinates.
@@ -215,13 +214,11 @@ impl Geometry {
     #[pyo3(signature = (x, y, z=0.0))]
     fn line_to(&mut self, x: f64, y: f64, z: f64) {
         self.inner.line_to(x, y, z);
-        self.inner.sync_to_data();
     }
 
     /// Close the current sub-path.
     fn close_path(&mut self) {
         self.inner.close_path();
-        self.inner.sync_to_data();
     }
 
     /// Draw an arc to the given coordinates.
@@ -243,7 +240,6 @@ impl Geometry {
         z: f64,
     ) {
         self.inner.arc_to(x, y, i, j, clockwise, z);
-        self.inner.sync_to_data();
     }
 
     /// Draw a cubic bezier curve.
@@ -267,17 +263,10 @@ impl Geometry {
         z: f64,
     ) {
         self.inner.bezier_to(((c1x, c1y), (c2x, c2y), (x, y)), z);
-        self.inner.sync_to_data();
-    }
-
-    /// Synchronize internal data structures.
-    fn sync_to_data(&mut self) {
-        self.inner.sync_to_data();
     }
 
     /// Return the number of commands.
     fn __len__(&mut self) -> usize {
-        self.inner.sync_to_data();
         self.inner.len()
     }
 
@@ -342,8 +331,8 @@ impl Geometry {
     /// Internal: get the last point in the geometry.
     #[gen_stub(skip)]
     fn _get_last_point(&self) -> (f64, f64, f64) {
-        let pending = self.inner.pending_data();
-        if let Some(last) = pending.last() {
+        let data = self.inner.data();
+        if let Some(last) = data.last() {
             return (last[COL_X], last[COL_Y], last[COL_Z]);
         }
         (0.0, 0.0, 0.0)
@@ -378,19 +367,16 @@ impl Geometry {
 
     /// Return the bounding rectangle (x_min, x_max, y_min, y_max).
     fn rect(&mut self) -> (f64, f64, f64, f64) {
-        self.inner.sync_to_data();
         self.inner.rect()
     }
 
     /// Return the total path distance.
     fn distance(&mut self) -> f64 {
-        self.inner.sync_to_data();
         self.inner.distance()
     }
 
     /// Return the signed area of the geometry.
     fn area(&mut self) -> f64 {
-        self.inner.sync_to_data();
         self.inner.area()
     }
 
@@ -399,13 +385,11 @@ impl Geometry {
     /// :param tolerance: Max gap between start and end point.
     #[pyo3(signature = (tolerance=1e-6))]
     fn is_closed(&mut self, tolerance: f64) -> bool {
-        self.inner.sync_to_data();
         self.inner.is_closed(tolerance)
     }
 
     /// Return the geometry split into segments of connected commands.
     fn segments(&mut self) -> Vec<Vec<(f64, f64, f64)>> {
-        self.inner.sync_to_data();
         self.inner.segments()
     }
 
@@ -451,21 +435,6 @@ impl Geometry {
             data.push(chunk);
         }
         Ok(())
-    }
-
-    #[gen_stub(skip)]
-    #[getter]
-    fn _pending_data(&self) -> Vec<Vec<f64>> {
-        self.inner
-            .pending_data()
-            .iter()
-            .map(|r| r.to_vec())
-            .collect()
-    }
-
-    #[gen_stub(skip)]
-    fn _sync_to_numpy(&mut self) {
-        self.inner.sync_to_data();
     }
 
     /// Get the command at the given index as a raw tuple.
@@ -775,7 +744,6 @@ impl Geometry {
                 }
             }
         }
-        geo.inner.sync_to_data();
         Ok(geo)
     }
 
@@ -812,7 +780,6 @@ impl Geometry {
         if close && points_vec.len() > 2 {
             geo.close_path();
         }
-        geo.inner.sync_to_data();
         Ok(geo)
     }
 
@@ -1057,9 +1024,7 @@ impl Geometry {
         clockwise: bool,
         z: f64,
     ) {
-        let start_point = if let Some(last) = self.inner.pending_data().last() {
-            (last[COL_X], last[COL_Y], last[COL_Z])
-        } else if let Some(last) = self.inner.synced_data().last() {
+        let start_point = if let Some(last) = self.inner.data().last() {
             (last[COL_X], last[COL_Y], last[COL_Z])
         } else {
             self.inner.last_move_to
@@ -1072,11 +1037,10 @@ impl Geometry {
             center_offset,
             clockwise,
         );
-        let pending = self.inner.pending_data_mut();
+        let data = self.inner.synced_data_mut();
         for row in bezier_rows {
-            pending.push(row);
+            data.push(row);
         }
-        self.inner.sync_to_data();
     }
 
     /// Check if the geometry has self-intersections.
@@ -1116,14 +1080,11 @@ impl Geometry {
     ///
     /// :param other: The potentially enclosed geometry.
     fn encloses(&mut self, other: &mut Geometry) -> PyResult<bool> {
-        self.inner.sync_to_data();
-        other.inner.sync_to_data();
         Ok(raygeo_core::does_enclose(&self.inner, &other.inner))
     }
 
     /// Remove inner edges (shared between contours).
     fn remove_inner_edges(&mut self) -> PyResult<Geometry> {
-        self.inner.sync_to_data();
         Ok(Geometry {
             inner: remove_inner_edges(&self.inner),
         })
@@ -1133,7 +1094,6 @@ impl Geometry {
     fn split_inner_and_outer_contours(
         &mut self,
     ) -> PyResult<(Vec<Geometry>, Vec<Geometry>)> {
-        self.inner.sync_to_data();
         let contours = split_into_contours(&self.inner);
         let (inner_indices, outer_indices) =
             split_inner_and_outer_contours(&contours);
@@ -1187,7 +1147,6 @@ impl Geometry {
 
     /// Split the geometry into individual contours.
     fn split_into_contours(&mut self) -> Vec<Geometry> {
-        self.inner.sync_to_data();
         split_into_contours(&self.inner)
             .into_iter()
             .map(|g| Geometry { inner: g })
@@ -1196,7 +1155,6 @@ impl Geometry {
 
     /// Split the geometry into connected components.
     fn split_into_components(&mut self) -> Vec<Geometry> {
-        self.inner.sync_to_data();
         split_into_components(&self.inner)
             .into_iter()
             .map(|g| Geometry { inner: g })
@@ -1209,8 +1167,7 @@ impl Geometry {
     #[pyo3(signature = (tolerance=0.01))]
     fn to_polygons(&self, tolerance: f64) -> Vec<Vec<Point>> {
         let mut linearized = self.inner.copy();
-        linearized.sync_to_data();
-        if !linearized.synced_data().is_empty() {
+        if !linearized.data().is_empty() {
             let lin = linearize_data(linearized.synced_data(), tolerance);
             *linearized.synced_data_mut() = lin;
         }
@@ -1234,7 +1191,6 @@ impl Geometry {
 
     /// Return a string representation of the geometry.
     fn __repr__(&mut self) -> String {
-        self.inner.sync_to_data();
         let len = self.inner.len();
         let closed = self.inner.is_closed(1e-6);
         format!("<Geometry commands={} closed={}>", len, closed)

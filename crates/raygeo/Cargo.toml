@@ -8,6 +8,7 @@ description = "Pure Rust high-performance geometry engine"
 bitflags = "2"
 clipper2 = "0.6"
 num_enum = "0.7"
+rstar = "0.12"
 strum = { version = "0.27", features = ["derive"] }
 thiserror = "2"
 

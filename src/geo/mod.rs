@@ -8,7 +8,7 @@ use pyo3::prelude::*;
 use pyo3_stub_gen::derive::gen_stub_pyfunction;
 
 use crate::geo::flex_point::{
-    PyIntPoint2D, int_poly_to_points, extract_polygon, extract_polygons,
+    extract_polygon, extract_polygons, int_poly_to_points, PyIntPoint2D,
 };
 use crate::geo::geometry::Geometry;
 use raygeo_core::geo::algo::clipping::clip_line_segment_with_polygons;
@@ -17,15 +17,18 @@ use raygeo_core::geo::shape::arc::is_arc_inside_polygons;
 use raygeo_core::geo::shape::bezier::is_bezier_inside_polygons;
 use raygeo_core::Segment3D;
 use raygeo_core::{
-    CMD_TYPE_ARC, CMD_TYPE_BEZIER, CMD_TYPE_LINE, CMD_TYPE_MOVE, COL_C1X,
-    COL_C1Y, COL_C2X, COL_C2Y, COL_CW, COL_I, COL_J, COL_TYPE, COL_X,
-    COL_Y, COL_Z, GEO_ARRAY_COLS, Point, Point3D,
+    Point, Point3D, CMD_TYPE_ARC, CMD_TYPE_BEZIER, CMD_TYPE_LINE,
+    CMD_TYPE_MOVE, COL_C1X, COL_C1Y, COL_C2X, COL_C2Y, COL_CW, COL_I, COL_J,
+    COL_TYPE, COL_X, COL_Y, COL_Z, GEO_ARRAY_COLS,
 };
 
 const CLIPPER_SCALE: i64 = 10_000_000;
 
 pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
-    m.add(
+    let py = m.py();
+    let geo_mod = PyModule::new(py, "geo")?;
+
+    geo_mod.add(
         "__all__",
         vec![
             "Geometry",
@@ -60,9 +63,19 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
         ],
     )?;
 
+    add_functions(&geo_mod)?;
+    add_type_aliases(&geo_mod)?;
+    add_submodules(&geo_mod)?;
+
+    m.add_submodule(&geo_mod)?;
+    let sys_modules = py.import("sys")?.getattr("modules")?;
+    sys_modules.set_item("raygeo.geo", &geo_mod)?;
+
+    // Backward compat: also expose everything at root
     add_functions(m)?;
     add_type_aliases(m)?;
     add_submodules(m)?;
+
     Ok(())
 }
 
@@ -193,14 +206,17 @@ fn add_functions(m: &Bound<'_, PyModule>) -> PyResult<()> {
     Ok(())
 }
 
-#[gen_stub_pyfunction(python = r#"
+#[gen_stub_pyfunction(
+    python = r#"
     def clip_line_segment_with_polygons(
         p1: tuple[float, float, float],
         p2: tuple[float, float, float],
         regions: Any,
     ) -> list[tuple[tuple[float, float, float], tuple[float, float, float]]]:
         """Clip line segments that fall within a set of polygon regions."""
-"#, module = "raygeo")]
+"#,
+    module = "raygeo"
+)]
 #[pyfunction(name = "clip_line_segment_with_polygons")]
 fn clip_line_segment_with_polygons_top(
     p1: Point3D,
@@ -211,7 +227,8 @@ fn clip_line_segment_with_polygons_top(
     Ok(clip_line_segment_with_polygons(p1, p2, &regions))
 }
 
-#[gen_stub_pyfunction(python = r#"
+#[gen_stub_pyfunction(
+    python = r#"
     def is_arc_inside_polygons(
         arc_start: tuple[float, float],
         arc_end: tuple[float, float],
@@ -220,7 +237,9 @@ fn clip_line_segment_with_polygons_top(
         polygons: Any,
     ) -> bool:
         """Check if an arc is inside a set of polygon regions."""
-"#, module = "raygeo")]
+"#,
+    module = "raygeo"
+)]
 #[pyfunction(name = "is_arc_inside_polygons")]
 fn is_arc_inside_polygons_top(
     arc_start: Point,
@@ -230,10 +249,17 @@ fn is_arc_inside_polygons_top(
     polygons: &Bound<'_, PyAny>,
 ) -> PyResult<bool> {
     let polygons_2d = extract_polygons(polygons)?;
-    Ok(is_arc_inside_polygons(arc_start, arc_end, arc_center, clockwise, &polygons_2d))
+    Ok(is_arc_inside_polygons(
+        arc_start,
+        arc_end,
+        arc_center,
+        clockwise,
+        &polygons_2d,
+    ))
 }
 
-#[gen_stub_pyfunction(python = r#"
+#[gen_stub_pyfunction(
+    python = r#"
     def is_bezier_inside_polygons(
         p0: tuple[float, float],
         p1: tuple[float, float],
@@ -242,7 +268,9 @@ fn is_arc_inside_polygons_top(
         polygons: Any,
     ) -> bool:
         """Check if a bezier curve is inside a set of polygon regions."""
-"#, module = "raygeo")]
+"#,
+    module = "raygeo"
+)]
 #[pyfunction(name = "is_bezier_inside_polygons")]
 fn is_bezier_inside_polygons_top(
     p0: Point,
@@ -255,13 +283,16 @@ fn is_bezier_inside_polygons_top(
     Ok(is_bezier_inside_polygons(p0, p1, p2, p3, &polygons_2d))
 }
 
-#[gen_stub_pyfunction(python = r#"
+#[gen_stub_pyfunction(
+    python = r#"
     def fit_points_with_primitives(
         points: Sequence[tuple[float, float, float]],
         tolerance: float,
     ) -> list[list[float]]:
         """Fit a polyline of points with arc and line primitives."""
-"#, module = "raygeo")]
+"#,
+    module = "raygeo"
+)]
 #[pyfunction(name = "fit_points_with_primitives")]
 fn fit_points_with_primitives_top(
     points: Vec<Point3D>,
@@ -273,15 +304,21 @@ fn fit_points_with_primitives_top(
         .collect()
 }
 
-#[gen_stub_pyfunction(python = r#"
+#[gen_stub_pyfunction(
+    python = r#"
     def to_clipper(
         polygon: Polygon,
         scale: int = 10000000,
     ) -> list[tuple[int, int]]:
         """Convert a polygon to Clipper coordinates."""
-"#, module = "raygeo")]
+"#,
+    module = "raygeo"
+)]
 #[pyfunction]
-fn to_clipper(polygon: &Bound<'_, PyAny>, scale: Option<i64>) -> PyResult<Vec<(i64, i64)>> {
+fn to_clipper(
+    polygon: &Bound<'_, PyAny>,
+    scale: Option<i64>,
+) -> PyResult<Vec<(i64, i64)>> {
     let scale = scale.unwrap_or(CLIPPER_SCALE);
     let poly = extract_polygon(polygon)?;
     Ok(poly
@@ -290,19 +327,21 @@ fn to_clipper(polygon: &Bound<'_, PyAny>, scale: Option<i64>) -> PyResult<Vec<(i
         .collect())
 }
 
-#[gen_stub_pyfunction(python = r#"
+#[gen_stub_pyfunction(
+    python = r#"
     def from_clipper(
         polygon: IntPolygon,
         scale: int = 10000000,
     ) -> Polygon:
         """Convert a polygon from Clipper coordinates."""
-"#, module = "raygeo")]
+"#,
+    module = "raygeo"
+)]
 #[pyfunction]
 fn from_clipper(polygon: Vec<PyIntPoint2D>, scale: Option<i64>) -> Vec<Point> {
     let scale = scale.unwrap_or(CLIPPER_SCALE) as f64;
     let poly = int_poly_to_points(polygon);
-    poly
-        .iter()
+    poly.iter()
         .map(|(x, y)| (*x as f64 / scale, *y as f64 / scale))
         .collect()
 }

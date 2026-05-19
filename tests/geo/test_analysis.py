@@ -2,7 +2,7 @@ import pytest
 import math
 import numpy as np
 from raygeo import Geometry
-from raygeo.path import (
+from raygeo.geo.path import (
     get_path_winding_order_from_array,
     get_point_tangent_at_py,
     get_subpath_area_from_array,

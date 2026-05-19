@@ -35,7 +35,7 @@ pub struct OpCommand {
     pub end: Point3D,
     pub metadata: OpMetadata,
     pub state: Option<State>,
-    pub extra_axes: Option<Vec<(Axis, f64)>>,
+    pub extra_axes: Option<Arc<[(Axis, f64)]>>,
 }
 
 impl OpCommand {
@@ -60,7 +60,7 @@ impl OpCommand {
             end: (x, y, z),
             metadata: OpMetadata::None,
             state: None,
-            extra_axes: extra,
+            extra_axes: extra.map(|v| Arc::from(v)),
         }
     }
 
@@ -75,7 +75,7 @@ impl OpCommand {
             end: (x, y, z),
             metadata: OpMetadata::None,
             state: None,
-            extra_axes: extra,
+            extra_axes: extra.map(|v| Arc::from(v)),
         }
     }
 
@@ -103,7 +103,7 @@ impl OpCommand {
             end: (x, y, z),
             metadata: OpMetadata::Arc((i, j, clockwise)),
             state: None,
-            extra_axes: extra,
+            extra_axes: extra.map(|v| Arc::from(v)),
         }
     }
 
@@ -118,7 +118,7 @@ impl OpCommand {
             end,
             metadata: OpMetadata::Bezier((c1, c2)),
             state: None,
-            extra_axes: extra,
+            extra_axes: extra.map(|v| Arc::from(v)),
         }
     }
 
@@ -132,7 +132,7 @@ impl OpCommand {
             end,
             metadata: OpMetadata::QuadraticBezier(control),
             state: None,
-            extra_axes: extra,
+            extra_axes: extra.map(|v| Arc::from(v)),
         }
     }
 
@@ -149,7 +149,7 @@ impl OpCommand {
             end: (x, y, z),
             metadata: OpMetadata::ScanLine(Arc::from(pv)),
             state: None,
-            extra_axes: extra,
+            extra_axes: extra.map(|v| Arc::from(v)),
         }
     }
 
@@ -496,7 +496,7 @@ impl SoA {
     }
 
     pub fn set_extra_axes(&mut self, idx: usize, ea: Vec<(Axis, f64)>) {
-        self.commands[idx].extra_axes = Some(ea);
+        self.commands[idx].extra_axes = Some(Arc::from(ea));
     }
 
     pub fn state(&self, idx: usize) -> Option<&State> {

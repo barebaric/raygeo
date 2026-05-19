@@ -1,6 +1,6 @@
 import numpy as np
 from raygeo import Geometry
-from raygeo.path import split_into_contours, split_into_components
+from raygeo.geo.path import split_into_contours, split_into_components
 
 
 def test_split_into_contours_empty():

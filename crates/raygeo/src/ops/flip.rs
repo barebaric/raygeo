@@ -36,7 +36,7 @@ pub fn flip_ops(ops: &Ops) -> Ops {
         let ct = ops.soa.command_type(orig_k_idx);
         let new_end = ops.soa.endpoint(orig_prev_idx);
         let orig_state = ops.soa.state(orig_k_idx).cloned();
-        let orig_ea = ops.soa.extra_axes(orig_k_idx).map(|ea| ea.to_vec());
+        let orig_ea = ops.soa.extra_axes(orig_k_idx).map(|ea| Arc::from(ea));
 
         if ct == CommandType::ScanLine {
             let pv = ops.soa.scanline_data(orig_k_idx);

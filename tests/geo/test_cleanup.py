@@ -7,7 +7,7 @@ from raygeo import (
     CMD_TYPE_BEZIER,
     COL_TYPE,
 )
-from raygeo.path import (
+from raygeo.geo.path import (
     remove_duplicate_segments,
     close_geometry_gaps,
     _are_points_equal,

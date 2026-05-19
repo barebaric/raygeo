@@ -22,7 +22,7 @@ from raygeo import (
     Geometry,
 )
 
-from raygeo.path import (
+from raygeo.geo.path import (
     grow_geometry,
     apply_affine_transform_to_array,
     map_geometry_to_frame,

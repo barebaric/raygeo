@@ -2,7 +2,7 @@ import pytest
 import math
 import numpy as np
 from raygeo import Geometry
-from raygeo.path import (
+from raygeo.geo.path import (
     get_total_distance_from_array,
     extract_overcut_rows,
     _segment_length_from_row,
@@ -54,7 +54,6 @@ def test_add_commands(empty_geometry):
     assert len(empty_geometry) == 1
     empty_geometry.line_to(10, 10)
     assert len(empty_geometry) == 2
-    empty_geometry._sync_to_numpy()
     assert empty_geometry.data is not None
     assert empty_geometry.data[0, COL_TYPE] == CMD_TYPE_MOVE
     assert empty_geometry.data[1, COL_TYPE] == CMD_TYPE_LINE
@@ -62,7 +61,6 @@ def test_add_commands(empty_geometry):
 
 def test_simplify_wrapper(sample_geometry):
     """Tests that simplify returns a valid Geometry."""
-    sample_geometry._sync_to_numpy()
     result = sample_geometry.simplify(tolerance=0.5)
     assert isinstance(result, Geometry)
 
@@ -75,7 +73,6 @@ def test_clear_commands(sample_geometry):
 
 def test_move_to(sample_geometry):
     sample_geometry.move_to(15, 15)
-    sample_geometry._sync_to_numpy()
     assert sample_geometry.data is not None
     last_row = sample_geometry.data[-1]
     assert last_row[COL_TYPE] == CMD_TYPE_MOVE
@@ -84,7 +81,6 @@ def test_move_to(sample_geometry):
 
 def test_line_to(sample_geometry):
     sample_geometry.line_to(20, 20)
-    sample_geometry._sync_to_numpy()
     assert sample_geometry.data is not None
     last_row = sample_geometry.data[-1]
     assert last_row[COL_TYPE] == CMD_TYPE_LINE
@@ -94,7 +90,6 @@ def test_line_to(sample_geometry):
 def test_close_path(sample_geometry):
     sample_geometry.move_to(5, 5, -1.0)
     sample_geometry.close_path()
-    sample_geometry._sync_to_numpy()
     assert sample_geometry.data is not None
     last_row = sample_geometry.data[-1]
     assert last_row[COL_TYPE] == CMD_TYPE_LINE
@@ -108,7 +103,6 @@ def test_arc_to():
     geo.line_to(10, 10)
     geo.arc_to(20, 0, i=5, j=-10)
     geo.arc_to(5, 5, 2, 3, clockwise=False)
-    geo._sync_to_numpy()
     assert geo.data is not None
     last_row = geo.data[-1]
     assert last_row[COL_TYPE] == CMD_TYPE_ARC
@@ -118,7 +112,6 @@ def test_arc_to():
 
 def test_bezier_to(empty_geometry):
     empty_geometry.bezier_to(10, 10, c1x=2, c1y=2, c2x=8, c2y=8)
-    empty_geometry._sync_to_numpy()
     assert empty_geometry.data is not None
     last_row = empty_geometry.data[-1]
     assert last_row[COL_TYPE] == CMD_TYPE_BEZIER
@@ -265,7 +258,6 @@ def test_from_points():
     # Test case 2: Single point
     geo_single = Geometry.from_points([(10, 20)])
     assert len(geo_single) == 1
-    geo_single._sync_to_numpy()
     assert geo_single.data is not None
     assert geo_single.data[0, COL_TYPE] == CMD_TYPE_MOVE
     assert (geo_single.data[0, 1:4] == (10, 20, 0)).all()
@@ -275,7 +267,6 @@ def test_from_points():
     points = [(0, 0), (10, 0), (5, 10)]
     geo_triangle = Geometry.from_points(points)
     assert len(geo_triangle) == 4
-    geo_triangle._sync_to_numpy()
     assert geo_triangle.data is not None
     assert geo_triangle.data[0, COL_TYPE] == CMD_TYPE_MOVE
     assert (geo_triangle.data[0, 1:4] == (0, 0, 0)).all()
@@ -285,7 +276,6 @@ def test_from_points():
     # Test case 4: Triangle (open)
     geo_triangle_open = Geometry.from_points(points, close=False)
     assert len(geo_triangle_open) == 3
-    geo_triangle_open._sync_to_numpy()
     assert geo_triangle_open.data is not None
     assert (
         geo_triangle_open.data[-1, 1:4] != geo_triangle_open.data[0, 1:4]
@@ -295,7 +285,6 @@ def test_from_points():
     points_3d = [(0, 0, 1), (10, 0, 2), (5, 10, 3)]
     geo_3d = Geometry.from_points(points_3d)
     assert len(geo_3d) == 4
-    geo_3d._sync_to_numpy()
     assert geo_3d.data is not None
     assert (geo_3d.data[0, 1:4] == (0, 0, 1)).all()
     assert (geo_3d.data[3, 1:4] == (0, 0, 1)).all()
@@ -365,7 +354,6 @@ def test_arc_to_as_bezier():
     geo.arc_to_as_bezier(10, 10, i=10, j=0, clockwise=False)
 
     # Force sync
-    geo._sync_to_numpy()
     data = geo.data
     assert data is not None
 
@@ -395,7 +383,6 @@ def test_extend_preserves_uniform_scalable():
     dest = Geometry()
     dest.extend(source)
 
-    dest._sync_to_numpy()
     data = dest.data
     assert data is not None
 
@@ -415,7 +402,6 @@ def test_load_preserves_uniform_scalable(sample_geometry):
     # Load
     loaded = Geometry.load(dumped)
 
-    loaded._sync_to_numpy()
     data = loaded.data
     assert data is not None
 
@@ -509,7 +495,6 @@ def test_transform_wrapper(sample_geometry):
     Tests that Geometry.transform() correctly transforms geometry data.
     """
     matrix = np.identity(4)
-    sample_geometry._sync_to_numpy()
     sample_geometry.transform(matrix)
     # Identity matrix should leave geometry unchanged
     assert sample_geometry.data is not None
@@ -524,7 +509,6 @@ def test_flip_x():
     geo.bezier_to(30, 10, c1x=22, c1y=2, c2x=28, c2y=8)
 
     # Sync to get original data
-    geo._sync_to_numpy()
     assert geo.data is not None
     original_data = geo.data.copy()
 
@@ -568,7 +552,6 @@ def test_flip_y():
     geo.bezier_to(30, 10, c1x=22, c1y=2, c2x=28, c2y=8)
 
     # Sync to get original data
-    geo._sync_to_numpy()
     assert geo.data is not None
     original_data = geo.data.copy()
 
@@ -679,7 +662,7 @@ def test_iter_commands_empty_geometry():
     assert commands == []
 
 
-def test_iter_commands_with_pending_data():
+def test_iter_commands():
     """Tests iter_commands() syncs pending data before iteration."""
     geo = Geometry()
     geo.move_to(5, 5, 1)
@@ -1039,7 +1022,6 @@ class TestAppendData:
         geo = Geometry()
         geo.move_to(0, 0)
         geo.line_to(10, 0)
-        geo._sync_to_numpy()
         assert geo.data is not None
         original_len = len(geo.data)
 
@@ -1053,7 +1035,6 @@ class TestAppendData:
     def test_appends_multiple_rows(self):
         geo = Geometry()
         geo.move_to(0, 0)
-        geo._sync_to_numpy()
         assert geo.data is not None
 
         rows = np.array(
@@ -1080,7 +1061,6 @@ class TestAppendData:
     def test_none_is_noop(self):
         geo = Geometry()
         geo.move_to(1, 1)
-        geo._sync_to_numpy()
         assert geo.data is not None
         original = geo.data.copy()
 
@@ -1092,7 +1072,6 @@ class TestAppendData:
     def test_empty_array_is_noop(self):
         geo = Geometry()
         geo.move_to(1, 1)
-        geo._sync_to_numpy()
         assert geo.data is not None
         original = geo.data.copy()
 
@@ -1104,7 +1083,6 @@ class TestAppendData:
     def test_does_not_mutate_input(self):
         geo = Geometry()
         geo.move_to(0, 0)
-        geo._sync_to_numpy()
 
         rows = np.array([[CMD_TYPE_LINE, 5.0, 5.0, 0.0, 0, 0, 0, 0]])
         original_rows = rows.copy()

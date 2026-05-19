@@ -2,24 +2,19 @@
 //!
 //! This module provides the main `Geometry` struct for building and manipulating
 //! geometric paths. Paths are constructed using command-based operations like
-//! `move_to`, `line_to`, `arc_to`, and `bezier_to`. Commands are stored in a
-//! flat array format and can be queried for various properties.
+//! `move_to`, `line_to`, `arc_to`, and `bezier_to`. Commands are appended
+//! directly to the data array on construction and can be queried for various
+//! properties.
 
 use crate::types::{BezierControls, Command, Point3D, Rect};
 
 /// A geometric path consisting of move, line, arc, and bezier commands.
 ///
-/// The Geometry struct maintains two data stores:
-/// - `pending_data`: Commands added since the last sync
-/// - `data`: Committed commands that have been synchronized
-///
-/// This allows for batched command submission via `sync_to_data()`.
+/// Commands are appended directly to the `data` array on construction.
 #[derive(Clone, Debug)]
 pub struct Geometry {
-    /// Committed command data array, each row is [type, x, y, z, aux1, aux2, aux3, aux4].
+    /// Command data array, each row is [type, x, y, z, aux1, aux2, aux3, aux4].
     pub(crate) data: Vec<[f64; 8]>,
-    /// Pending command data awaiting synchronization.
-    pub(crate) pending_data: Vec<[f64; 8]>,
     /// The position where the last MOVE command was issued.
     pub last_move_to: Point3D,
     /// Whether the geometry can be uniformly scaled without distortion (false if arcs present).
@@ -45,7 +40,6 @@ impl Geometry {
     pub fn new() -> Self {
         Geometry {
             data: Vec::new(),
-            pending_data: Vec::new(),
             last_move_to: (0.0, 0.0, 0.0),
             uniform_scalable: true,
         }
@@ -55,14 +49,12 @@ impl Geometry {
     /// Starts a new subpath; subsequent commands will continue from this point.
     pub fn move_to(&mut self, x: f64, y: f64, z: f64) {
         self.last_move_to = (x, y, z);
-        self.pending_data
-            .push(Command::Move { end: (x, y, z) }.to_row());
+        self.data.push(Command::Move { end: (x, y, z) }.to_row());
     }
 
     /// Draws a straight line from the current position to the specified point.
     pub fn line_to(&mut self, x: f64, y: f64, z: f64) {
-        self.pending_data
-            .push(Command::Line { end: (x, y, z) }.to_row());
+        self.data.push(Command::Line { end: (x, y, z) }.to_row());
     }
 
     /// Closes the current subpath by drawing a line back to the starting point.
@@ -91,7 +83,7 @@ impl Geometry {
         z: f64,
     ) {
         self.uniform_scalable = false;
-        self.pending_data.push(
+        self.data.push(
             Command::Arc {
                 end: (x, y, z),
                 center_offset: (i, j),
@@ -109,7 +101,7 @@ impl Geometry {
     /// - `p1`: End point (the start point is the current position)
     pub fn bezier_to(&mut self, controls: BezierControls, z: f64) {
         let (c1, c2, p1) = controls;
-        self.pending_data.push(
+        self.data.push(
             Command::Bezier {
                 end: (p1.0, p1.1, z),
                 control1: c1,
@@ -119,44 +111,19 @@ impl Geometry {
         );
     }
 
-    /// Commits all pending commands to the data array.
-    /// After calling this, pending_data will be empty.
-    pub fn sync_to_data(&mut self) {
-        if self.pending_data.is_empty() {
-            return;
-        }
-        self.data.append(&mut self.pending_data);
-    }
-
-    /// Returns a reference to the committed data, flushing any pending
-    /// commands first.  Use this instead of accessing `.data` directly
-    /// to guarantee the sync has happened.
+    /// Returns a reference to the data array.
     pub fn synced_data(&mut self) -> &Vec<[f64; 8]> {
-        self.sync_to_data();
         &self.data
     }
 
-    /// Returns a mutable reference to the committed data, flushing any
-    /// pending commands first.
+    /// Returns a mutable reference to the data array.
     pub fn synced_data_mut(&mut self) -> &mut Vec<[f64; 8]> {
-        self.sync_to_data();
         &mut self.data
     }
 
-    /// Returns a shared reference to the pending (unsynced) commands.
-    pub fn pending_data(&self) -> &Vec<[f64; 8]> {
-        &self.pending_data
-    }
-
-    /// Returns a shared reference to the committed data without syncing.
-    /// Only use when you know the data is already synced.
+    /// Returns a shared reference to the data array.
     pub fn data(&self) -> &Vec<[f64; 8]> {
         &self.data
-    }
-
-    /// Returns a mutable reference to the pending (unsynced) commands.
-    pub fn pending_data_mut(&mut self) -> &mut Vec<[f64; 8]> {
-        &mut self.pending_data
     }
 
     /// Creates a new geometry from a list of 3D points connected by line segments.
@@ -172,23 +139,21 @@ impl Geometry {
         if close && points.len() > 1 {
             geo.close_path();
         }
-        geo.sync_to_data();
         geo
     }
 
-    /// Returns the total number of commands (both pending and committed).
+    /// Returns the total number of commands.
     pub fn len(&self) -> usize {
-        self.data.len() + self.pending_data.len()
+        self.data.len()
     }
 
-    /// Returns true if there are no commands (both pending and committed).
+    /// Returns true if there are no commands.
     pub fn is_empty(&self) -> bool {
-        self.data.is_empty() && self.pending_data.is_empty()
+        self.data.is_empty()
     }
 
-    /// Clears all data (both pending and committed) and resets the geometry.
+    /// Clears all data and resets the geometry.
     pub fn clear(&mut self) {
-        self.pending_data.clear();
         self.data.clear();
         self.uniform_scalable = true;
     }
@@ -246,7 +211,6 @@ impl Geometry {
         new_geo.last_move_to = self.last_move_to;
         new_geo.uniform_scalable = self.uniform_scalable;
         new_geo.data = self.data.clone();
-        new_geo.pending_data = self.pending_data.clone();
         new_geo
     }
 
@@ -282,14 +246,9 @@ impl Geometry {
     }
 
     /// Extends this geometry by appending all commands from another geometry.
-    /// Both committed data and pending data are appended.
     pub fn extend(&mut self, other: &Geometry) {
         if !other.data.is_empty() {
-            self.sync_to_data();
             self.data.extend(other.data.clone());
-        }
-        if !other.pending_data.is_empty() {
-            self.pending_data.extend(other.pending_data.clone());
         }
         self.uniform_scalable = self.uniform_scalable && other.uniform_scalable;
     }
@@ -336,7 +295,6 @@ impl Geometry {
     }
 
     /// Returns the command at the given index, if it exists.
-    /// Only returns committed data (not pending).
     pub fn get_command_at(&self, index: usize) -> Option<[f64; 8]> {
         if index < self.data.len() {
             Some(self.data[index])
@@ -345,7 +303,7 @@ impl Geometry {
         }
     }
 
-    /// Returns an iterator over all committed commands.
+    /// Returns an iterator over all commands.
     pub fn iter_commands(&self) -> impl Iterator<Item = [f64; 8]> + '_ {
         self.data.iter().copied()
     }
@@ -397,14 +355,10 @@ mod tests {
     }
 
     #[test]
-    fn test_sync_to_data() {
+    fn test_commands_committed_immediately() {
         let mut geo = Geometry::new();
         geo.move_to(1.0, 2.0, 0.0);
         geo.line_to(3.0, 4.0, 0.0);
-        assert_eq!(geo.pending_data.len(), 2);
-        assert!(geo.data.is_empty());
-        geo.sync_to_data();
-        assert!(geo.pending_data.is_empty());
         assert_eq!(geo.data.len(), 2);
     }
 
@@ -414,7 +368,6 @@ mod tests {
         geo.move_to(0.0, 0.0, 0.0);
         geo.line_to(10.0, 0.0, 0.0);
         geo.line_to(10.0, 5.0, 0.0);
-        geo.sync_to_data();
         let rect = geo.rect();
         assert_eq!(rect, (0.0, 0.0, 10.0, 5.0));
     }
@@ -426,7 +379,6 @@ mod tests {
         geo.line_to(10.0, 0.0, 0.0);
         geo.line_to(10.0, 10.0, 0.0);
         geo.close_path();
-        geo.sync_to_data();
         assert!(geo.is_closed(1e-6));
     }
 
@@ -437,7 +389,6 @@ mod tests {
         geo.line_to(10.0, 0.0, 0.0);
         geo.line_to(10.0, 10.0, 0.0);
         geo.close_path();
-        geo.sync_to_data();
         let area = geo.area();
         assert!((area - 50.0).abs() < 1e-6);
     }
@@ -460,7 +411,6 @@ mod tests {
         geo.line_to(1.0, 0.0, 0.0);
         geo.move_to(2.0, 0.0, 0.0);
         geo.line_to(3.0, 0.0, 0.0);
-        geo.sync_to_data();
         let segments = geo.segments();
         assert_eq!(segments.len(), 2);
         assert_eq!(segments[0].len(), 2);

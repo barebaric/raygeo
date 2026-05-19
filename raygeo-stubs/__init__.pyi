@@ -96,10 +96,6 @@ class Geometry:
         :param c2y: Second control point Y.
         :param z: End Z coordinate (default 0.0).
         """
-    def sync_to_data(self) -> None:
-        r"""
-        Synchronize internal data structures.
-        """
     def __len__(self) -> builtins.int:
         r"""
         Return the number of commands.

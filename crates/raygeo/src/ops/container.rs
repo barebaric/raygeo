@@ -253,9 +253,8 @@ impl Ops {
         z: f64,
         extra: Option<Vec<(Axis, f64)>>,
     ) {
-        self.soa.push(OpCommand::arc_to(
-            x, y, i, j, clockwise, z, extra,
-        ));
+        self.soa
+            .push(OpCommand::arc_to(x, y, i, j, clockwise, z, extra));
         self.invalidate_time_cache();
     }
 
@@ -458,8 +457,7 @@ impl Ops {
         let mut current: Vec<usize> = Vec::new();
         let mut has_move_to = false;
         for i in 0..self.soa.len() {
-            let is_move =
-                self.soa.command_type(i) == CommandType::MoveTo;
+            let is_move = self.soa.command_type(i) == CommandType::MoveTo;
             if is_move && has_move_to {
                 subpaths.push(current);
                 current = Vec::new();
@@ -532,17 +530,14 @@ impl Ops {
     ) {
         match ct {
             CommandType::SetPower => state.power = ops.power(idx),
-            CommandType::SetCutSpeed => {
-                state.cut_speed = Some(ops.speed(idx))
-            }
+            CommandType::SetCutSpeed => state.cut_speed = Some(ops.speed(idx)),
             CommandType::SetTravelSpeed => {
                 state.travel_speed = Some(ops.speed(idx))
             }
             CommandType::EnableAirAssist => state.air_assist = true,
             CommandType::DisableAirAssist => state.air_assist = false,
             CommandType::SetLaser => {
-                state.active_laser_uid =
-                    Some(ops.laser_uid(idx).to_string())
+                state.active_laser_uid = Some(ops.laser_uid(idx).to_string())
             }
             CommandType::SetFrequency => {
                 state.frequency = Some(ops.frequency(idx))
@@ -690,8 +685,7 @@ impl Ops {
 
         let mut xs: Vec<f64> = Vec::new();
         let mut ys: Vec<f64> = Vec::new();
-        let mut arcs: Vec<(f64, f64, f64, f64, f64, f64, bool)> =
-            Vec::new();
+        let mut arcs: Vec<(f64, f64, f64, f64, f64, f64, bool)> = Vec::new();
 
         for i in 0..self.soa.len() {
             if self.category(i) != CommandCategory::Moving {
@@ -754,9 +748,7 @@ impl Ops {
 
         for (ax, ay, bx, by, i, j, cw) in arcs {
             let radius = (i * i + j * j).sqrt();
-            if (ax - bx).abs() < 1e-9
-                && (ay - by).abs() < 1e-9
-                && radius > 1e-9
+            if (ax - bx).abs() < 1e-9 && (ay - by).abs() < 1e-9 && radius > 1e-9
             {
                 let cx = ax + i;
                 let cy = ay + j;
@@ -854,12 +846,7 @@ impl Ops {
                         control2.1,
                         z0 * 1.0 / 3.0 + z1 * 2.0 / 3.0,
                     );
-                    ops.bezier_to(
-                        c1_3d,
-                        c2_3d,
-                        (end.0, end.1, end.2),
-                        None,
-                    );
+                    ops.bezier_to(c1_3d, c2_3d, (end.0, end.1, end.2), None);
                 }
             }
             last_pos = cmd.end_point();
@@ -897,7 +884,6 @@ impl Ops {
                 _ => {}
             }
         }
-        geo.sync_to_data();
         geo
     }
 }
@@ -950,8 +936,7 @@ fn estimate_time_core(
 
         let move_time = if acceleration > 0.0 {
             let accel_time = speed_mm_per_sec / acceleration;
-            let accel_distance =
-                0.5 * acceleration * accel_time * accel_time;
+            let accel_distance = 0.5 * acceleration * accel_time * accel_time;
             if distance < 2.0 * accel_distance {
                 2.0 * (distance / acceleration).sqrt()
             } else {
