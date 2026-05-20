@@ -84,6 +84,34 @@ impl CommandType {
     pub fn from_name(s: &str) -> Option<CommandType> {
         s.parse().ok()
     }
+
+    pub fn category(&self) -> CommandCategory {
+        match self {
+            CommandType::MoveTo
+            | CommandType::LineTo
+            | CommandType::ArcTo
+            | CommandType::BezierTo
+            | CommandType::QuadraticBezierTo
+            | CommandType::ScanLine => CommandCategory::Moving,
+            CommandType::Dwell
+            | CommandType::SetPower
+            | CommandType::SetCutSpeed
+            | CommandType::SetTravelSpeed
+            | CommandType::SetFrequency
+            | CommandType::SetPulseWidth
+            | CommandType::EnableAirAssist
+            | CommandType::DisableAirAssist
+            | CommandType::SetLaser => CommandCategory::State,
+            CommandType::JobStart
+            | CommandType::JobEnd
+            | CommandType::LayerStart
+            | CommandType::LayerEnd
+            | CommandType::WorkpieceStart
+            | CommandType::WorkpieceEnd
+            | CommandType::OpsSectionStart
+            | CommandType::OpsSectionEnd => CommandCategory::Marker,
+        }
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -120,34 +148,6 @@ impl SectionType {
 
     pub fn from_name(s: &str) -> Option<SectionType> {
         s.parse().ok()
-    }
-}
-
-pub fn category(ct: CommandType) -> CommandCategory {
-    match ct {
-        CommandType::MoveTo
-        | CommandType::LineTo
-        | CommandType::ArcTo
-        | CommandType::BezierTo
-        | CommandType::QuadraticBezierTo
-        | CommandType::ScanLine => CommandCategory::Moving,
-        CommandType::Dwell
-        | CommandType::SetPower
-        | CommandType::SetCutSpeed
-        | CommandType::SetTravelSpeed
-        | CommandType::SetFrequency
-        | CommandType::SetPulseWidth
-        | CommandType::EnableAirAssist
-        | CommandType::DisableAirAssist
-        | CommandType::SetLaser => CommandCategory::State,
-        CommandType::JobStart
-        | CommandType::JobEnd
-        | CommandType::LayerStart
-        | CommandType::LayerEnd
-        | CommandType::WorkpieceStart
-        | CommandType::WorkpieceEnd
-        | CommandType::OpsSectionStart
-        | CommandType::OpsSectionEnd => CommandCategory::Marker,
     }
 }
 
@@ -192,7 +192,7 @@ mod tests {
             CommandType::QuadraticBezierTo,
             CommandType::ScanLine,
         ] {
-            assert_eq!(category(*ct), CommandCategory::Moving);
+            assert_eq!(ct.category(), CommandCategory::Moving);
         }
     }
 
@@ -209,7 +209,7 @@ mod tests {
             CommandType::DisableAirAssist,
             CommandType::SetLaser,
         ] {
-            assert_eq!(category(*ct), CommandCategory::State);
+            assert_eq!(ct.category(), CommandCategory::State);
         }
     }
 
@@ -225,7 +225,7 @@ mod tests {
             CommandType::OpsSectionStart,
             CommandType::OpsSectionEnd,
         ] {
-            assert_eq!(category(*ct), CommandCategory::Marker);
+            assert_eq!(ct.category(), CommandCategory::Marker);
         }
     }
 

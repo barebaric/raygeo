@@ -39,6 +39,6 @@ pub use ops::axis::Axis;
 pub use ops::container::*;
 pub use ops::enums::*;
 pub use ops::group::*;
-pub use ops::soa::*;
+pub use ops::types::*;
 pub use ops::state::*;
 pub use types::*;

@@ -1,7 +1,7 @@
 use pyo3::prelude::*;
 use pyo3::types::{PyBytes, PyDict, PyList, PySlice, PyString};
 
-use raygeo_core::ops::{category, Axis, CommandCategory, CommandType};
+use raygeo_core::ops::{Axis, CommandCategory, CommandType};
 
 use super::axis::PyAxis;
 
@@ -66,7 +66,7 @@ fn cmd_to_dict<'a>(
     let ct = ops.command_type(idx);
     let ct_name = ct.name();
     d.set_item("type", ct_name)?;
-    let cat = category(ct);
+    let cat = ct.category();
 
     if cat == CommandCategory::Moving {
         let end = ops.endpoint(idx);
@@ -158,7 +158,7 @@ fn create_and_append_command(
             ct_str
         ))
     })?;
-    let cat = category(ct);
+    let cat = ct.category();
 
     let ea_raw: Option<Bound<'_, PyDict>> = cmd_data
         .get_item("extra_axes")?
@@ -741,7 +741,7 @@ pub fn ops_from_numpy_arrays(
         let ct = CommandType::try_from(cmd_type_val as u8).map_err(|e| {
             pyo3::exceptions::PyValueError::new_err(format!("{e}"))
         })?;
-        let cat = category(ct);
+        let cat = ct.category();
 
         if cat != CommandCategory::Moving {
             continue;
@@ -855,7 +855,7 @@ pub fn ops_from_numpy_arrays(
             let ea_dict = ea_item.cast::<PyDict>()?;
             let ea_vec = py_to_axis_map_helper(&ea_dict)?;
             let last_idx = ops.len() - 1;
-            ops.soa.set_extra_axes(last_idx, ea_vec);
+            ops.set_extra_axes(last_idx, ea_vec);
         }
     }
 

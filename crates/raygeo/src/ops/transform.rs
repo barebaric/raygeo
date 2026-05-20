@@ -4,7 +4,7 @@ use crate::constants::EPSILON_COLLINEAR;
 
 use super::container::Ops;
 use super::enums::{CommandCategory, CommandType};
-use super::soa::{OpCommand, OpMetadata, SoA};
+use super::types::{OpCommand, OpMetadata};
 use crate::types::Point3D;
 
 fn transform_point(matrix: &[[f64; 4]; 4], p: Point3D) -> Point3D {
@@ -48,14 +48,14 @@ impl Ops {
         let det = matrix[0][0] * matrix[1][1] - matrix[0][1] * matrix[1][0];
         let flip_cw = det < 0.0;
 
-        let mut new_soa = SoA::new();
+        let mut new_cmds = Vec::new();
         let mut last_point_untransformed: Option<Point3D> = None;
 
-        for i in 0..self.soa.len() {
-            let ct = self.soa.command_type(i);
-            let cat = self.soa.category(i);
+        for i in 0..self.len() {
+            let ct = self.command_type(i);
+            let cat = self.category(i);
             let original_cmd_end = if cat == CommandCategory::Moving {
-                Some(self.soa.endpoint(i))
+                Some(self.endpoint(i))
             } else {
                 None
             };
@@ -63,8 +63,8 @@ impl Ops {
             if ct == CommandType::ArcTo && is_non_uniform {
                 let start_point =
                     last_point_untransformed.unwrap_or((0.0, 0.0, 0.0));
-                let end = self.soa.endpoint(i);
-                let &(ci, cj, cw) = self.soa.arc_params(i);
+                let end = self.endpoint(i);
+                let &(ci, cj, cw) = self.arc_params(i);
                 let arc_row: [f64; 8] = [
                     crate::constants::CMD_TYPE_ARC,
                     end.0,
@@ -80,8 +80,8 @@ impl Ops {
                     start_point,
                     0.1,
                 );
-                let st = self.soa.state(i);
-                let ea = self.soa.extra_axes(i);
+                let st = self.state(i);
+                let ea = self.extra_axes(i);
                 for (_, p2) in &segments {
                     let tv = transform_point(matrix, *p2);
                     let mut cmd = OpCommand::new(CommandType::LineTo);
@@ -92,30 +92,30 @@ impl Ops {
                     if let Some(st) = st {
                         cmd.state = Some(st.clone());
                     }
-                    new_soa.push(cmd);
+                    new_cmds.push(cmd);
                 }
             } else if cat == CommandCategory::Moving {
-                let end = self.soa.endpoint(i);
+                let end = self.endpoint(i);
                 let new_end = transform_point(matrix, end);
-                let st = self.soa.state(i);
-                let ea = self.soa.extra_axes(i);
+                let st = self.state(i);
+                let ea = self.extra_axes(i);
 
                 let mut cmd = OpCommand::new(ct);
                 cmd.end = new_end;
 
                 if ct == CommandType::ArcTo {
-                    let &(ci, cj, cw) = self.soa.arc_params(i);
+                    let &(ci, cj, cw) = self.arc_params(i);
                     let new_ci = matrix[0][0] * ci + matrix[0][1] * cj;
                     let new_cj = matrix[1][0] * ci + matrix[1][1] * cj;
                     let new_cw = if flip_cw { !cw } else { cw };
                     cmd.metadata = OpMetadata::Arc((new_ci, new_cj, new_cw));
                 } else if ct == CommandType::BezierTo {
-                    let &(c1, c2) = self.soa.bezier_params(i);
+                    let &(c1, c2) = self.bezier_params(i);
                     let t_c1 = transform_point(matrix, c1);
                     let t_c2 = transform_point(matrix, c2);
                     cmd.metadata = OpMetadata::Bezier((t_c1, t_c2));
                 } else if ct == CommandType::QuadraticBezierTo {
-                    let c = self.soa.quad_params(i);
+                    let c = self.quad_params(i);
                     let t_c = transform_point(matrix, *c);
                     cmd.metadata = OpMetadata::QuadraticBezier(t_c);
                 }
@@ -126,9 +126,9 @@ impl Ops {
                 if let Some(st) = st {
                     cmd.state = Some(st.clone());
                 }
-                new_soa.push(cmd);
+                new_cmds.push(cmd);
             } else {
-                new_soa.push(self.soa.commands[i].clone());
+                new_cmds.push(self.commands[i].clone());
             }
 
             if let Some(original_end) = original_cmd_end {
@@ -136,7 +136,7 @@ impl Ops {
             }
         }
 
-        self.soa = new_soa;
+        self.commands = new_cmds;
         self.invalidate_time_cache();
         self.last_move_to = transform_point(matrix, self.last_move_to);
         self

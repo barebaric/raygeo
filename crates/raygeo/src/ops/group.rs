@@ -30,8 +30,8 @@ pub fn iter_sections(ops: &Ops) -> Vec<OpsSection> {
     let mut marker_indices: Vec<usize> = Vec::new();
     let mut content_indices: Vec<usize> = Vec::new();
 
-    for i in 0..ops.soa.len() {
-        let ct = ops.soa.command_type(i);
+    for i in 0..ops.len() {
+        let ct = ops.command_type(i);
         if ct == CommandType::OpsSectionStart {
             if !content_indices.is_empty() || !marker_indices.is_empty() {
                 sections.push(OpsSection {
@@ -40,7 +40,7 @@ pub fn iter_sections(ops: &Ops) -> Vec<OpsSection> {
                     content_indices: std::mem::take(&mut content_indices),
                 });
             }
-            active_type = Some(ops.soa.section_type(i));
+            active_type = Some(ops.section_type(i));
             marker_indices = vec![i];
         } else if ct == CommandType::OpsSectionEnd {
             marker_indices.push(i);
@@ -74,8 +74,8 @@ pub fn iter_section_ranges(ops: &Ops) -> Vec<OpsSectionRange> {
     let mut marker_indices: Vec<usize> = Vec::new();
     let mut content_indices: Vec<usize> = Vec::new();
 
-    for i in 0..ops.soa.len() {
-        let ct = ops.soa.command_type(i);
+    for i in 0..ops.len() {
+        let ct = ops.command_type(i);
         if ct == CommandType::OpsSectionStart {
             if !content_indices.is_empty() || !marker_indices.is_empty() {
                 ranges.push(OpsSectionRange {
@@ -84,7 +84,7 @@ pub fn iter_section_ranges(ops: &Ops) -> Vec<OpsSectionRange> {
                     content_indices: std::mem::take(&mut content_indices),
                 });
             }
-            active_type = Some(ops.soa.section_type(i));
+            active_type = Some(ops.section_type(i));
             marker_indices = vec![i];
         } else if ct == CommandType::OpsSectionEnd {
             marker_indices.push(i);
@@ -116,7 +116,7 @@ pub fn segment_indices(ops: &Ops) -> Vec<Vec<usize>> {
     let mut result: Vec<Vec<usize>> = Vec::new();
     let mut segment: Vec<usize> = Vec::new();
 
-    for i in 0..ops.soa.len() {
+    for i in 0..ops.len() {
         if segment.is_empty() {
             segment.push(i);
             continue;
@@ -147,9 +147,9 @@ pub fn segments(ops: &Ops) -> Vec<Vec<usize>> {
 
 pub fn without_state(ops: &Ops) -> Ops {
     let mut result = Ops::new();
-    for i in 0..ops.soa.len() {
-        if ops.soa.category(i) != CommandCategory::State {
-            result.soa.push(ops.soa.commands[i].clone());
+    for i in 0..ops.len() {
+        if ops.category(i) != CommandCategory::State {
+            result.commands.push(ops.commands[i].clone());
         }
     }
     result.invalidate_time_cache();
@@ -157,14 +157,14 @@ pub fn without_state(ops: &Ops) -> Ops {
 }
 
 pub fn group_by_state_continuity(ops: &Ops) -> Vec<Ops> {
-    if ops.soa.is_empty() {
+    if ops.is_empty() {
         return Vec::new();
     }
 
     let mut seg_indices: Vec<Vec<usize>> = Vec::new();
     let mut current: Vec<usize> = Vec::new();
 
-    for i in 0..ops.soa.len() {
+    for i in 0..ops.len() {
         if ops.is_marker(i) {
             if !current.is_empty() {
                 seg_indices.push(current);
@@ -179,8 +179,8 @@ pub fn group_by_state_continuity(ops: &Ops) -> Vec<Ops> {
             continue;
         }
 
-        let last_state = ops.soa.state(current[current.len() - 1]);
-        let op_state = ops.soa.state(i);
+        let last_state = ops.state(current[current.len() - 1]);
+        let op_state = ops.state(i);
         if let (Some(ls), Some(os)) = (last_state, op_state) {
             if ls.air_assist == os.air_assist {
                 current.push(i);
@@ -202,7 +202,7 @@ pub fn group_by_state_continuity(ops: &Ops) -> Vec<Ops> {
     for seg in &seg_indices {
         let mut seg_ops = Ops::new();
         for &idx in seg {
-            seg_ops.soa.push(ops.soa.commands[idx].clone());
+            seg_ops.commands.push(ops.commands[idx].clone());
         }
         seg_ops.invalidate_time_cache();
         result.push(seg_ops);

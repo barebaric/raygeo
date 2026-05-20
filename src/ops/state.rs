@@ -1,6 +1,6 @@
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
-use raygeo_core::ops::state::{MachineState, State};
+use raygeo_core::ops::state::State;
 
 /// Register the State and MachineState classes with the Python module.
 pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
@@ -142,7 +142,7 @@ impl PyState {
 #[gen_stub_pyclass]
 #[pyclass(skip_from_py_object, module = "raygeo.ops", name = "MachineState")]
 #[derive(Clone)]
-pub struct PyMachineState(pub MachineState);
+pub struct PyMachineState(pub State);
 
 #[gen_stub_pymethods]
 #[pymethods]
@@ -158,7 +158,7 @@ impl PyMachineState {
         frequency: Option<i32>,
         pulse_width: Option<f64>,
     ) -> Self {
-        PyMachineState(MachineState {
+        PyMachineState(State {
             power,
             air_assist,
             cut_speed,

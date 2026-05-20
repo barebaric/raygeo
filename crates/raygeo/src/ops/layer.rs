@@ -10,11 +10,11 @@ impl Ops {
         let mut active_offset = default_offset;
         let mut in_named_layer = false;
 
-        for i in 0..self.soa.len() {
-            let ct = self.soa.command_type(i);
+        for i in 0..self.len() {
+            let ct = self.command_type(i);
             if ct == CommandType::LayerStart {
                 if let Some(offsets) = layer_offsets {
-                    let uid = self.soa.layer_uid(i);
+                    let uid = self.layer_uid(i);
                     let mut found = false;
                     for (key, offset) in offsets {
                         if key.as_str() == uid {
@@ -43,12 +43,11 @@ impl Ops {
                 active_offset = default_offset;
             }
 
-            if self.soa.category(i) == CommandCategory::Moving {
-                let end = self.soa.endpoint(i);
+            if self.category(i) == CommandCategory::Moving {
+                let end = self.endpoint(i);
                 let (ox, oy, oz) = active_offset;
                 if ox != 0.0 || oy != 0.0 || oz != 0.0 {
-                    self.soa
-                        .set_endpoint(i, (end.0 - ox, end.1 - oy, end.2 - oz));
+                    self.set_endpoint(i, (end.0 - ox, end.1 - oy, end.2 - oz));
                 }
             }
         }

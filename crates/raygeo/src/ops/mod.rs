@@ -11,7 +11,7 @@ pub mod flip;
 pub mod group;
 pub(crate) mod layer;
 pub mod linearize;
-pub mod soa;
+pub mod types;
 pub mod state;
 pub(crate) mod transform;
 
@@ -19,5 +19,5 @@ pub use axis::Axis;
 pub use container::*;
 pub use enums::*;
 pub use group::*;
-pub use soa::*;
+pub use types::*;
 pub use state::*;

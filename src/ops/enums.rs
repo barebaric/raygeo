@@ -1,6 +1,6 @@
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods, gen_stub_pyfunction};
-use raygeo_core::ops::enums::{category, CommandCategory, CommandType, SectionType};
+use raygeo_core::ops::enums::{CommandCategory, CommandType, SectionType};
 
 /// Register the CommandType, CommandCategory, SectionType enums
 /// and the category() function with the Python module.
@@ -198,5 +198,5 @@ impl PySectionType {
 "#, module = "raygeo.ops")]
 #[pyfunction(name = "category")]
 fn py_category(ct: &PyCommandType) -> PyCommandCategory {
-    PyCommandCategory(category(ct.0))
+    PyCommandCategory(ct.0.category())
 }

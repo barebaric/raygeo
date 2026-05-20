@@ -3,14 +3,14 @@ use std::fmt::Write;
 use crate::constants::EPSILON_COLLINEAR;
 
 use super::axis::Axis;
-use super::enums::{category, CommandCategory, CommandType, SectionType};
-use super::soa::{ArcParams, BezierParams, OpCommand, SoA};
+use super::enums::{CommandCategory, CommandType, SectionType};
+use super::types::{ArcParams, BezierParams, OpCommand, OpMetadata};
 use super::state::State;
 use crate::types::Point3D;
 
 #[derive(Clone, Debug)]
 pub struct Ops {
-    pub soa: SoA,
+    pub commands: Vec<OpCommand>,
     pub last_move_to: Point3D,
     pub time_dirty: bool,
     pub cached_time: f64,
@@ -20,7 +20,7 @@ pub struct Ops {
 impl Ops {
     pub fn new() -> Self {
         Ops {
-            soa: SoA::new(),
+            commands: Vec::new(),
             last_move_to: (0.0, 0.0, 0.0),
             time_dirty: true,
             cached_time: 0.0,
@@ -29,45 +29,44 @@ impl Ops {
     }
 
     pub fn len(&self) -> usize {
-        self.soa.len()
+        self.commands.len()
     }
 
     pub fn is_empty(&self) -> bool {
-        self.soa.is_empty()
+        self.commands.is_empty()
     }
 
     pub fn command_type(&self, idx: usize) -> CommandType {
-        self.soa.command_type(idx)
+        self.commands[idx].ct
     }
 
     pub fn category(&self, idx: usize) -> CommandCategory {
-        self.soa.category(idx)
+        self.commands[idx].ct.category()
     }
 
     pub fn is_travel(&self, idx: usize) -> bool {
-        self.soa.command_type(idx) == CommandType::MoveTo
+        self.commands[idx].ct == CommandType::MoveTo
     }
 
     pub fn is_cutting(&self, idx: usize) -> bool {
-        let ct = self.soa.command_type(idx);
-        category(ct) == CommandCategory::Moving && ct != CommandType::MoveTo
+        let ct = self.commands[idx].ct;
+        ct.category() == CommandCategory::Moving && ct != CommandType::MoveTo
     }
 
     pub fn is_state(&self, idx: usize) -> bool {
-        self.soa.category(idx) == CommandCategory::State
+        self.commands[idx].ct.category() == CommandCategory::State
     }
 
     pub fn is_marker(&self, idx: usize) -> bool {
-        self.soa.category(idx) == CommandCategory::Marker
+        self.commands[idx].ct.category() == CommandCategory::Marker
     }
 
     pub fn is_scanline(&self, idx: usize) -> bool {
-        self.soa.command_type(idx) == CommandType::ScanLine
+        self.commands[idx].ct == CommandType::ScanLine
     }
 
     pub fn indices_of(&self, ct: CommandType) -> Vec<usize> {
-        self.soa
-            .commands
+        self.commands
             .iter()
             .enumerate()
             .filter(|(_, cmd)| cmd.ct == ct)
@@ -76,93 +75,170 @@ impl Ops {
     }
 
     pub fn endpoint(&self, idx: usize) -> Point3D {
-        self.soa.endpoint(idx)
+        self.commands[idx].end
+    }
+
+    pub fn set_endpoint(&mut self, idx: usize, end: Point3D) {
+        self.commands[idx].end = end;
+    }
+
+    pub fn set_arc_params(
+        &mut self,
+        idx: usize,
+        center_offset: Option<(f64, f64)>,
+        clockwise: Option<bool>,
+    ) {
+        if let OpMetadata::Arc(ref old) = self.commands[idx].metadata {
+            let co = center_offset.unwrap_or((old.0, old.1));
+            let cw = clockwise.unwrap_or(old.2);
+            self.commands[idx].metadata = OpMetadata::Arc((co.0, co.1, cw));
+        }
     }
 
     pub fn arc_params(&self, idx: usize) -> &ArcParams {
-        self.soa.arc_params(idx)
+        match &self.commands[idx].metadata {
+            OpMetadata::Arc(params) => params,
+            _ => panic!("arc_params called on non-arc command"),
+        }
+    }
+
+    pub fn set_bezier_params(&mut self, idx: usize, c1: Point3D, c2: Point3D) {
+        self.commands[idx].metadata = OpMetadata::Bezier((c1, c2));
     }
 
     pub fn bezier_params(&self, idx: usize) -> &BezierParams {
-        self.soa.bezier_params(idx)
+        match &self.commands[idx].metadata {
+            OpMetadata::Bezier(params) => params,
+            _ => panic!("bezier_params called on non-bezier command"),
+        }
     }
 
     pub fn quad_params(&self, idx: usize) -> &Point3D {
-        self.soa.quad_params(idx)
+        match &self.commands[idx].metadata {
+            OpMetadata::QuadraticBezier(control) => control,
+            _ => panic!("quad_params called on non-quadratic-bezier command"),
+        }
+    }
+
+    pub fn set_quad_params(&mut self, idx: usize, control: Point3D) {
+        self.commands[idx].metadata = OpMetadata::QuadraticBezier(control);
     }
 
     pub fn scanline_data(&self, idx: usize) -> &[u8] {
-        self.soa.scanline_data(idx)
+        match &self.commands[idx].metadata {
+            OpMetadata::ScanLine(data) => data,
+            _ => panic!("scanline_data called on non-scanline command"),
+        }
     }
 
     pub fn dwell_duration(&self, idx: usize) -> f64 {
-        self.soa.dwell_duration(idx)
+        match self.commands[idx].metadata {
+            OpMetadata::Dwell(d) => d,
+            _ => panic!("dwell_duration called on non-dwell command"),
+        }
     }
 
     pub fn power(&self, idx: usize) -> f64 {
-        self.soa.power(idx)
+        match self.commands[idx].metadata {
+            OpMetadata::SetPower(p) => p,
+            _ => panic!("power called on non-set-power command"),
+        }
     }
 
     pub fn speed(&self, idx: usize) -> i32 {
-        self.soa.speed(idx)
+        match self.commands[idx].metadata {
+            OpMetadata::SetSpeed(s) => s,
+            _ => panic!("speed called on non-set-speed command"),
+        }
     }
 
     pub fn frequency(&self, idx: usize) -> i32 {
-        self.soa.frequency(idx)
+        match self.commands[idx].metadata {
+            OpMetadata::SetFrequency(f) => f,
+            _ => panic!("frequency called on non-set-frequency command"),
+        }
     }
 
     pub fn pulse_width(&self, idx: usize) -> f64 {
-        self.soa.pulse_width(idx)
+        match self.commands[idx].metadata {
+            OpMetadata::SetPulseWidth(pw) => pw,
+            _ => panic!("pulse_width called on non-set-pulse-width command"),
+        }
     }
 
     pub fn laser_uid(&self, idx: usize) -> &str {
-        self.soa.laser_uid(idx)
+        match &self.commands[idx].metadata {
+            OpMetadata::SetLaser(uid) => uid,
+            _ => panic!("laser_uid called on non-set-laser command"),
+        }
     }
 
     pub fn layer_uid(&self, idx: usize) -> &str {
-        self.soa.layer_uid(idx)
+        match &self.commands[idx].metadata {
+            OpMetadata::LayerMarker(uid) => uid,
+            _ => panic!("layer_uid called on non-layer command"),
+        }
     }
 
     pub fn workpiece_uid(&self, idx: usize) -> &str {
-        self.soa.workpiece_uid(idx)
+        match &self.commands[idx].metadata {
+            OpMetadata::WorkpieceMarker(uid) => uid,
+            _ => panic!("workpiece_uid called on non-workpiece command"),
+        }
     }
 
     pub fn section_type(&self, idx: usize) -> SectionType {
-        self.soa.section_type(idx)
+        match &self.commands[idx].metadata {
+            OpMetadata::SectionMarker { section_type, .. } => *section_type,
+            _ => panic!("section_type called on non-section command"),
+        }
     }
 
     pub fn section_workpiece_uid(&self, idx: usize) -> Option<&str> {
-        self.soa.section_workpiece_uid(idx)
+        match &self.commands[idx].metadata {
+            OpMetadata::SectionMarker { workpiece_uid, .. } => {
+                workpiece_uid.as_deref()
+            }
+            _ => panic!("section_workpiece_uid called on non-section command"),
+        }
     }
 
     pub fn extra_axes(&self, idx: usize) -> Option<&[(Axis, f64)]> {
-        self.soa.extra_axes(idx)
+        self.commands[idx].extra_axes.as_deref()
+    }
+
+    pub fn set_extra_axes(&mut self, idx: usize, ea: Vec<(Axis, f64)>) {
+        self.commands[idx].extra_axes = Some(std::sync::Arc::from(ea));
+    }
+
+    pub fn state(&self, idx: usize) -> Option<&State> {
+        self.commands[idx].state.as_ref()
     }
 
     pub fn preloaded_state(&self, idx: usize) -> Option<&State> {
-        self.soa.state(idx)
+        self.commands[idx].state.as_ref()
     }
 
     pub fn set_state_on_moving(&mut self, state: &State) {
-        for i in 0..self.soa.len() {
-            if self.soa.category(i) == CommandCategory::Moving {
-                self.soa.set_state(i, state.clone());
+        for i in 0..self.commands.len() {
+            if self.commands[i].ct.category() == CommandCategory::Moving {
+                self.commands[i].state = Some(state.clone());
             }
         }
     }
 
     pub fn set_state_at(&mut self, idx: usize, state: &State) {
-        self.soa.set_state(idx, state.clone());
+        self.commands[idx].state = Some(state.clone());
     }
 
     pub fn distance_at(&self, idx: usize, last_point: Option<Point3D>) -> f64 {
-        if self.soa.category(idx) != CommandCategory::Moving {
+        if self.commands[idx].ct.category() != CommandCategory::Moving {
             return 0.0;
         }
         match last_point {
             None => 0.0,
             Some(lp) => {
-                let end = self.soa.endpoint(idx);
+                let end = self.commands[idx].end;
                 let dx = end.0 - lp.0;
                 let dy = end.1 - lp.1;
                 (dx * dx + dy * dy).sqrt()
@@ -173,9 +249,9 @@ impl Ops {
     pub fn distance(&self) -> f64 {
         let mut total = 0.0;
         let mut last: Option<Point3D> = None;
-        for i in 0..self.soa.len() {
-            if self.soa.category(i) == CommandCategory::Moving {
-                let end = self.soa.endpoint(i);
+        for i in 0..self.commands.len() {
+            if self.commands[i].ct.category() == CommandCategory::Moving {
+                let end = self.commands[i].end;
                 if let Some(lp) = last {
                     let dx = end.0 - lp.0;
                     let dy = end.1 - lp.1;
@@ -190,10 +266,10 @@ impl Ops {
     pub fn cut_distance(&self) -> f64 {
         let mut total = 0.0;
         let mut last: Option<Point3D> = None;
-        for i in 0..self.soa.len() {
-            let ct = self.soa.command_type(i);
-            if category(ct) == CommandCategory::Moving {
-                let end = self.soa.endpoint(i);
+        for i in 0..self.commands.len() {
+            let ct = self.commands[i].ct;
+            if ct.category() == CommandCategory::Moving {
+                let end = self.commands[i].end;
                 if let Some(lp) = last {
                     if ct != CommandType::MoveTo {
                         let dx = end.0 - lp.0;
@@ -221,7 +297,7 @@ impl Ops {
         extra: Option<Vec<(Axis, f64)>>,
     ) {
         self.last_move_to = (x, y, z);
-        self.soa.push(OpCommand::move_to(x, y, z, extra));
+        self.commands.push(OpCommand::move_to(x, y, z, extra));
         self.invalidate_time_cache();
     }
 
@@ -232,7 +308,7 @@ impl Ops {
         z: f64,
         extra: Option<Vec<(Axis, f64)>>,
     ) {
-        self.soa.push(OpCommand::line_to(x, y, z, extra));
+        self.commands.push(OpCommand::line_to(x, y, z, extra));
         self.invalidate_time_cache();
     }
 
@@ -255,8 +331,7 @@ impl Ops {
         z: f64,
         extra: Option<Vec<(Axis, f64)>>,
     ) {
-        self.soa
-            .push(OpCommand::arc_to(x, y, i, j, clockwise, z, extra));
+        self.commands.push(OpCommand::arc_to(x, y, i, j, clockwise, z, extra));
         self.invalidate_time_cache();
     }
 
@@ -267,10 +342,10 @@ impl Ops {
         end: Point3D,
         extra: Option<Vec<(Axis, f64)>>,
     ) {
-        if self.soa.len() == 0 {
+        if self.commands.len() == 0 {
             return;
         }
-        self.soa.push(OpCommand::bezier_to(c1, c2, end, extra));
+        self.commands.push(OpCommand::bezier_to(c1, c2, end, extra));
         self.invalidate_time_cache();
     }
 
@@ -280,8 +355,7 @@ impl Ops {
         end: Point3D,
         extra: Option<Vec<(Axis, f64)>>,
     ) {
-        self.soa
-            .push(OpCommand::quadratic_bezier_to(control, end, extra));
+        self.commands.push(OpCommand::quadratic_bezier_to(control, end, extra));
         self.invalidate_time_cache();
     }
 
@@ -293,82 +367,81 @@ impl Ops {
         power_values: Option<Vec<u8>>,
         extra: Option<Vec<(Axis, f64)>>,
     ) {
-        self.soa
-            .push(OpCommand::scan_to(x, y, z, power_values, extra));
+        self.commands.push(OpCommand::scan_to(x, y, z, power_values, extra));
         self.invalidate_time_cache();
     }
 
     pub fn set_power(&mut self, power: f64) {
-        self.soa.push(OpCommand::set_power(power));
+        self.commands.push(OpCommand::set_power(power));
     }
 
     pub fn set_cut_speed(&mut self, speed: i32) {
-        self.soa.push(OpCommand::set_cut_speed(speed));
+        self.commands.push(OpCommand::set_cut_speed(speed));
         self.invalidate_time_cache();
     }
 
     pub fn set_travel_speed(&mut self, speed: i32) {
-        self.soa.push(OpCommand::set_travel_speed(speed));
+        self.commands.push(OpCommand::set_travel_speed(speed));
         self.invalidate_time_cache();
     }
 
     pub fn dwell(&mut self, duration_ms: f64) {
-        self.soa.push(OpCommand::dwell(duration_ms));
+        self.commands.push(OpCommand::dwell(duration_ms));
         self.invalidate_time_cache();
     }
 
     pub fn enable_air_assist(&mut self) {
-        self.soa.push(OpCommand::enable_air_assist());
+        self.commands.push(OpCommand::enable_air_assist());
         self.invalidate_time_cache();
     }
 
     pub fn disable_air_assist(&mut self) {
-        self.soa.push(OpCommand::disable_air_assist());
+        self.commands.push(OpCommand::disable_air_assist());
         self.invalidate_time_cache();
     }
 
     pub fn set_laser(&mut self, laser_uid: &str) {
-        self.soa.push(OpCommand::set_laser(laser_uid));
+        self.commands.push(OpCommand::set_laser(laser_uid));
         self.invalidate_time_cache();
     }
 
     pub fn set_frequency(&mut self, frequency: i32) {
-        self.soa.push(OpCommand::set_frequency(frequency));
+        self.commands.push(OpCommand::set_frequency(frequency));
         self.invalidate_time_cache();
     }
 
     pub fn set_pulse_width(&mut self, pulse_width: f64) {
-        self.soa.push(OpCommand::set_pulse_width(pulse_width));
+        self.commands.push(OpCommand::set_pulse_width(pulse_width));
         self.invalidate_time_cache();
     }
 
     pub fn job_start(&mut self) {
-        self.soa.push(OpCommand::job_start());
+        self.commands.push(OpCommand::job_start());
         self.invalidate_time_cache();
     }
 
     pub fn job_end(&mut self) {
-        self.soa.push(OpCommand::job_end());
+        self.commands.push(OpCommand::job_end());
         self.invalidate_time_cache();
     }
 
     pub fn layer_start(&mut self, layer_uid: &str) {
-        self.soa.push(OpCommand::layer_start(layer_uid));
+        self.commands.push(OpCommand::layer_start(layer_uid));
         self.invalidate_time_cache();
     }
 
     pub fn layer_end(&mut self, layer_uid: &str) {
-        self.soa.push(OpCommand::layer_end(layer_uid));
+        self.commands.push(OpCommand::layer_end(layer_uid));
         self.invalidate_time_cache();
     }
 
     pub fn workpiece_start(&mut self, workpiece_uid: &str) {
-        self.soa.push(OpCommand::workpiece_start(workpiece_uid));
+        self.commands.push(OpCommand::workpiece_start(workpiece_uid));
         self.invalidate_time_cache();
     }
 
     pub fn workpiece_end(&mut self, workpiece_uid: &str) {
-        self.soa.push(OpCommand::workpiece_end(workpiece_uid));
+        self.commands.push(OpCommand::workpiece_end(workpiece_uid));
         self.invalidate_time_cache();
     }
 
@@ -377,13 +450,12 @@ impl Ops {
         section_type: SectionType,
         workpiece_uid: &str,
     ) {
-        self.soa
-            .push(OpCommand::ops_section_start(section_type, workpiece_uid));
+        self.commands.push(OpCommand::ops_section_start(section_type, workpiece_uid));
         self.invalidate_time_cache();
     }
 
     pub fn ops_section_end(&mut self, section_type: SectionType) {
-        self.soa.push(OpCommand::ops_section_end(section_type));
+        self.commands.push(OpCommand::ops_section_end(section_type));
         self.invalidate_time_cache();
     }
 
@@ -391,8 +463,8 @@ impl Ops {
 
     pub fn copy(&self) -> Self {
         let mut new_ops = Ops::new();
-        for cmd in &self.soa.commands {
-            new_ops.soa.push(cmd.clone());
+        for cmd in &self.commands {
+            new_ops.commands.push(cmd.clone());
         }
         new_ops.last_move_to = self.last_move_to;
         new_ops.time_dirty = self.time_dirty;
@@ -402,21 +474,21 @@ impl Ops {
     }
 
     pub fn copy_command_from(&mut self, source: &Ops, idx: usize) {
-        let cmd = source.soa.commands[idx].clone();
-        self.soa.push(cmd);
+        let cmd = source.commands[idx].clone();
+        self.commands.push(cmd);
         self.invalidate_time_cache();
     }
 
     pub fn transfer_command_from(&mut self, source: &Ops, idx: usize) {
-        let cmd = source.soa.commands[idx].clone();
-        self.soa.push(cmd);
+        let cmd = source.commands[idx].clone();
+        self.commands.push(cmd);
         self.invalidate_time_cache();
     }
 
     pub fn extend(&mut self, other: &Ops) {
-        if !other.soa.is_empty() {
-            for cmd in &other.soa.commands {
-                self.soa.push(cmd.clone());
+        if !other.is_empty() {
+            for cmd in &other.commands {
+                self.commands.push(cmd.clone());
             }
             self.invalidate_time_cache();
         }
@@ -425,32 +497,32 @@ impl Ops {
     pub fn sub_ops(&self, indices: &[usize]) -> Self {
         let mut result = Ops::new();
         for &i in indices {
-            let cmd = self.soa.commands[i].clone();
-            result.soa.push(cmd);
+            let cmd = self.commands[i].clone();
+            result.commands.push(cmd);
         }
         result.invalidate_time_cache();
         result
     }
 
     pub fn replace_all(&mut self, source: &Ops) {
-        self.soa.commands.clear();
-        for cmd in &source.soa.commands {
-            self.soa.push(cmd.clone());
+        self.commands.clear();
+        for cmd in &source.commands {
+            self.commands.push(cmd.clone());
         }
         self.invalidate_time_cache();
     }
 
     pub fn replace_with(&mut self, source: &Ops) {
-        self.soa.commands.clear();
-        for cmd in &source.soa.commands {
-            self.soa.push(cmd.clone());
+        self.commands.clear();
+        for cmd in &source.commands {
+            self.commands.push(cmd.clone());
         }
         self.last_move_to = source.last_move_to;
         self.invalidate_time_cache();
     }
 
     pub fn clear(&mut self) {
-        self.soa.commands.clear();
+        self.commands.clear();
         self.invalidate_time_cache();
     }
 
@@ -458,8 +530,8 @@ impl Ops {
         let mut subpaths: Vec<Vec<usize>> = Vec::new();
         let mut current: Vec<usize> = Vec::new();
         let mut has_move_to = false;
-        for i in 0..self.soa.len() {
-            let is_move = self.soa.command_type(i) == CommandType::MoveTo;
+        for i in 0..self.commands.len() {
+            let is_move = self.commands[i].ct == CommandType::MoveTo;
             if is_move && has_move_to {
                 subpaths.push(current);
                 current = Vec::new();
@@ -494,10 +566,10 @@ impl Ops {
     pub fn state_at(&self, idx: usize) -> State {
         let mut state = State::default();
         for i in 0..=idx {
-            if self.soa.category(i) == CommandCategory::State {
+            if self.category(i) == CommandCategory::State {
                 Self::apply_state_at(
                     &mut state,
-                    self.soa.command_type(i),
+                    self.commands[i].ct,
                     self,
                     i,
                 );
@@ -510,16 +582,16 @@ impl Ops {
 
     pub fn preload_state(&mut self) {
         let mut state = State::default();
-        for i in 0..self.soa.len() {
-            if self.soa.category(i) == CommandCategory::State {
+        for i in 0..self.commands.len() {
+            if self.category(i) == CommandCategory::State {
                 Self::apply_state_at(
                     &mut state,
-                    self.soa.command_type(i),
+                    self.commands[i].ct,
                     self,
                     i,
                 );
-            } else if self.soa.category(i) == CommandCategory::Moving {
-                self.soa.set_state(i, state.clone());
+            } else if self.category(i) == CommandCategory::Moving {
+                self.commands[i].state = Some(state.clone());
             }
         }
     }
@@ -555,11 +627,11 @@ impl Ops {
 
     pub fn ops_add(&self, other: &Ops) -> Self {
         let mut result = Ops::new();
-        for cmd in &self.soa.commands {
-            result.soa.push(cmd.clone());
+        for cmd in &self.commands {
+            result.commands.push(cmd.clone());
         }
-        for cmd in &other.soa.commands {
-            result.soa.push(cmd.clone());
+        for cmd in &other.commands {
+            result.commands.push(cmd.clone());
         }
         result
     }
@@ -567,8 +639,8 @@ impl Ops {
     pub fn ops_mul(&self, count: usize) -> Self {
         let mut result = Ops::new();
         for _ in 0..count {
-            for cmd in &self.soa.commands {
-                result.soa.push(cmd.clone());
+            for cmd in &self.commands {
+                result.commands.push(cmd.clone());
             }
         }
         result
@@ -581,19 +653,19 @@ impl Ops {
     }
 
     pub fn format_dump(&self) -> String {
-        let mut out = format!("Ops {{ len: {} }}\n", self.soa.len());
-        for i in 0..self.soa.len() {
-            let cmd = &self.soa.commands[i];
+        let mut out = format!("Ops {{ len: {} }}\n", self.commands.len());
+        for i in 0..self.commands.len() {
+            let cmd = &self.commands[i];
             let ct = cmd.ct;
             let _ = write!(out, "  [{}] {}", i, ct.name());
-            if self.soa.category(i) == CommandCategory::Moving {
+            if self.category(i) == CommandCategory::Moving {
                 let _ = write!(
                     out,
                     " end=({:.3},{:.3},{:.3})",
                     cmd.end.0, cmd.end.1, cmd.end.2
                 );
                 if ct == CommandType::ArcTo {
-                    let ap = self.soa.arc_params(i);
+                    let ap = self.arc_params(i);
                     let _ = write!(
                         out,
                         " arc=(i={:.3},j={:.3},cw={})",
@@ -601,7 +673,7 @@ impl Ops {
                     );
                 }
                 if ct == CommandType::BezierTo {
-                    let bp = self.soa.bezier_params(i);
+                    let bp = self.bezier_params(i);
                     let _ = write!(
                         out,
                         " bezier=(c1=({:.3},{:.3}),c2=({:.3},{:.3}))",
@@ -624,7 +696,7 @@ impl Ops {
         default_travel_speed: f64,
         acceleration: f64,
     ) -> f64 {
-        if self.soa.len() == 0 {
+        if self.commands.len() == 0 {
             return 0.0;
         }
         let params = (default_cut_speed, default_travel_speed, acceleration);
@@ -689,7 +761,7 @@ impl Ops {
         let mut ys: Vec<f64> = Vec::new();
         let mut arcs: Vec<(f64, f64, f64, f64, f64, f64, bool)> = Vec::new();
 
-        for i in 0..self.soa.len() {
+        for i in 0..self.commands.len() {
             if self.category(i) != CommandCategory::Moving {
                 continue;
             }
@@ -717,7 +789,7 @@ impl Ops {
             has_content = true;
 
             if ct == CommandType::ArcTo {
-                let &(ci, cj, cw) = self.soa.arc_params(i);
+                let &(ci, cj, cw) = self.arc_params(i);
                 arcs.push((curr_x, curr_y, end_x, end_y, ci, cj, cw));
             }
 
@@ -861,12 +933,12 @@ impl Ops {
 
     pub fn to_geometry(&self) -> crate::Geometry {
         let mut geo = crate::Geometry::new();
-        for i in 0..self.soa.len() {
-            let ct = self.soa.command_type(i);
-            if category(ct) != CommandCategory::Moving {
+        for i in 0..self.commands.len() {
+            let ct = self.commands[i].ct;
+            if ct.category() != CommandCategory::Moving {
                 continue;
             }
-            let end = self.soa.endpoint(i);
+            let end = self.commands[i].end;
             match ct {
                 CommandType::MoveTo => {
                     geo.move_to(end.0, end.1, end.2);
@@ -875,11 +947,17 @@ impl Ops {
                     geo.line_to(end.0, end.1, end.2);
                 }
                 CommandType::ArcTo => {
-                    let &(i, j, cw) = self.soa.arc_params(i);
-                    geo.arc_to(end.0, end.1, i, j, cw, end.2);
+                    let (ci, cj, cw) = match &self.commands[i].metadata {
+                        OpMetadata::Arc(a) => *a,
+                        _ => panic!("expected arc"),
+                    };
+                    geo.arc_to(end.0, end.1, ci, cj, cw, end.2);
                 }
                 CommandType::BezierTo => {
-                    let &(c1, c2) = self.soa.bezier_params(i);
+                    let (c1, c2) = match &self.commands[i].metadata {
+                        OpMetadata::Bezier(b) => *b,
+                        _ => panic!("expected bezier"),
+                    };
                     geo.bezier_to(
                         ((c1.0, c1.1), (c2.0, c2.1), (end.0, end.1)),
                         end.2,

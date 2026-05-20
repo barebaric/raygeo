@@ -1,17 +1,20 @@
 use super::axis::Axis;
 use super::container::Ops;
-use super::enums::{category, CommandCategory, CommandType};
-use super::soa::SoA;
+use super::enums::{CommandCategory, CommandType};
+use super::types::{OpCommand, OpMetadata};
 use crate::types::Point3D;
 
 fn linearize_scanline(
-    soa: &SoA,
+    commands: &[OpCommand],
     scanline_idx: usize,
     start_point: Point3D,
     end: Point3D,
     extra: Option<&[(Axis, f64)]>,
 ) -> Option<Ops> {
-    let pv = soa.scanline_data(scanline_idx);
+    let pv = match &commands[scanline_idx].metadata {
+        OpMetadata::ScanLine(data) => data,
+        _ => return None,
+    };
     let num_steps = pv.len();
     if num_steps == 0 {
         return None;
@@ -56,13 +59,16 @@ fn linearize_scanline(
 }
 
 fn linearize_arc(
-    soa: &SoA,
+    commands: &[OpCommand],
     arc_idx: usize,
     start_point: Point3D,
     end: Point3D,
     extra: Option<&[(Axis, f64)]>,
 ) -> Option<Ops> {
-    let &(ci, cj, cw) = soa.arc_params(arc_idx);
+    let (ci, cj, cw) = match &commands[arc_idx].metadata {
+        OpMetadata::Arc(a) => *a,
+        _ => return None,
+    };
     let arc_row: [f64; 8] = [
         crate::constants::CMD_TYPE_ARC,
         end.0,
@@ -90,13 +96,16 @@ fn linearize_arc(
 }
 
 fn linearize_bezier(
-    soa: &SoA,
+    commands: &[OpCommand],
     bezier_idx: usize,
     start_point: Point3D,
     end: Point3D,
     extra: Option<&[(Axis, f64)]>,
 ) -> Option<Ops> {
-    let &(c1, c2) = soa.bezier_params(bezier_idx);
+    let (c1, c2) = match &commands[bezier_idx].metadata {
+        OpMetadata::Bezier(b) => *b,
+        _ => return None,
+    };
     let polyline = crate::geo::shape::bezier::linearize_bezier_segment(
         start_point,
         c1,
@@ -117,21 +126,21 @@ fn linearize_bezier(
 
 impl Ops {
     pub fn linearize(&self, idx: usize, start_point: Point3D) -> Ops {
-        let ct = self.soa.command_type(idx);
-        let end = self.soa.endpoint(idx);
-        let extra = self.soa.extra_axes(idx);
+        let ct = self.command_type(idx);
+        let end = self.endpoint(idx);
+        let extra = self.extra_axes(idx);
 
         match ct {
             CommandType::ScanLine => {
-                linearize_scanline(&self.soa, idx, start_point, end, extra)
+                linearize_scanline(&self.commands, idx, start_point, end, extra)
                     .unwrap_or_else(Ops::new)
             }
             CommandType::ArcTo => {
-                linearize_arc(&self.soa, idx, start_point, end, extra)
+                linearize_arc(&self.commands, idx, start_point, end, extra)
                     .unwrap_or_else(Ops::new)
             }
             CommandType::BezierTo | CommandType::QuadraticBezierTo => {
-                linearize_bezier(&self.soa, idx, start_point, end, extra)
+                linearize_bezier(&self.commands, idx, start_point, end, extra)
                     .unwrap_or_else(Ops::new)
             }
             CommandType::MoveTo | CommandType::LineTo => {
@@ -149,93 +158,93 @@ impl Ops {
     }
 
     pub fn linearize_all(&mut self) {
-        let mut new_soa = SoA::new();
+        let mut new_cmds = Vec::new();
         let mut last_point: Point3D = (0.0, 0.0, 0.0);
 
-        for i in 0..self.soa.len() {
-            if self.soa.command_type(i) == CommandType::MoveTo {
-                last_point = self.soa.endpoint(i);
+        for i in 0..self.len() {
+            if self.command_type(i) == CommandType::MoveTo {
+                last_point = self.endpoint(i);
                 break;
             }
         }
 
-        for i in 0..self.soa.len() {
-            if category(self.soa.command_type(i)) == CommandCategory::Moving {
+        for i in 0..self.len() {
+            if self.command_type(i).category() == CommandCategory::Moving {
                 let linearized = self.linearize(i, last_point);
-                for cmd in &linearized.soa.commands {
-                    new_soa.push(cmd.clone());
-                    if category(cmd.ct) == CommandCategory::Moving {
+                for cmd in &linearized.commands {
+                    new_cmds.push(cmd.clone());
+                    if cmd.ct.category() == CommandCategory::Moving {
                         last_point = cmd.end;
                     }
                 }
             } else {
-                new_soa.push(self.soa.commands[i].clone());
+                new_cmds.push(self.commands[i].clone());
             }
         }
 
-        self.soa = new_soa;
+        self.commands = new_cmds;
         self.invalidate_time_cache();
     }
 
     pub fn linearize_curves(&mut self) {
-        let mut new_soa = SoA::new();
+        let mut new_cmds = Vec::new();
         let mut last_point: Point3D = (0.0, 0.0, 0.0);
 
-        for i in 0..self.soa.len() {
-            let ct = self.soa.command_type(i);
+        for i in 0..self.len() {
+            let ct = self.command_type(i);
             if ct == CommandType::MoveTo {
-                last_point = self.soa.endpoint(i);
+                last_point = self.endpoint(i);
             }
             if ct == CommandType::BezierTo
                 || ct == CommandType::QuadraticBezierTo
             {
                 let linearized = self.linearize(i, last_point);
-                for cmd in &linearized.soa.commands {
-                    new_soa.push(cmd.clone());
-                    if category(cmd.ct) == CommandCategory::Moving {
+                for cmd in &linearized.commands {
+                    new_cmds.push(cmd.clone());
+                    if cmd.ct.category() == CommandCategory::Moving {
                         last_point = cmd.end;
                     }
                 }
             } else {
-                new_soa.push(self.soa.commands[i].clone());
-                if category(self.soa.command_type(i)) == CommandCategory::Moving
+                new_cmds.push(self.commands[i].clone());
+                if self.command_type(i).category() == CommandCategory::Moving
                 {
-                    last_point = self.soa.endpoint(i);
+                    last_point = self.endpoint(i);
                 }
             }
         }
 
-        self.soa = new_soa;
+        self.commands = new_cmds;
         self.invalidate_time_cache();
     }
 
     pub fn linearize_arcs(&mut self) {
-        let mut new_soa = SoA::new();
+        let mut new_cmds = Vec::new();
         let mut last_point: Point3D = (0.0, 0.0, 0.0);
 
-        for i in 0..self.soa.len() {
-            let ct = self.soa.command_type(i);
+        for i in 0..self.len() {
+            let ct = self.command_type(i);
             if ct == CommandType::MoveTo {
-                last_point = self.soa.endpoint(i);
+                last_point = self.endpoint(i);
             }
             if ct == CommandType::ArcTo {
                 let linearized = self.linearize(i, last_point);
-                for cmd in &linearized.soa.commands {
-                    new_soa.push(cmd.clone());
-                    if category(cmd.ct) == CommandCategory::Moving {
+                for cmd in &linearized.commands {
+                    new_cmds.push(cmd.clone());
+                    if cmd.ct.category() == CommandCategory::Moving {
                         last_point = cmd.end;
                     }
                 }
             } else {
-                new_soa.push(self.soa.commands[i].clone());
-                if category(self.soa.command_type(i)) == CommandCategory::Moving
+                new_cmds.push(self.commands[i].clone());
+                if self.command_type(i).category() == CommandCategory::Moving
                 {
-                    last_point = self.soa.endpoint(i);
+                    last_point = self.endpoint(i);
                 }
             }
         }
 
-        self.soa = new_soa;
+        self.commands = new_cmds;
         self.invalidate_time_cache();
     }
 }

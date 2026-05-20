@@ -1,6 +1,5 @@
 use super::container::Ops;
 use super::enums::{CommandCategory, CommandType};
-use super::soa::SoA;
 use super::state::State;
 use crate::constants::{
     CMD_TYPE_ARC, CMD_TYPE_BEZIER, CMD_TYPE_LINE, COL_C1X, COL_C1Y, COL_C2X,
@@ -48,20 +47,20 @@ impl Ops {
     /// - Returns: A new `Ops` containing only the portions of commands inside `rect`.
     pub fn clip_rect(&self, rect: Rect) -> Self {
         let mut new_ops = Ops::new();
-        if self.soa.is_empty() {
+        if self.is_empty() {
             return new_ops;
         }
 
         let mut last_point: Point3D = (0.0, 0.0, 0.0);
         let mut clipped_pen_pos: Option<Point3D> = None;
 
-        for i in 0..self.soa.len() {
-            let ct = self.soa.command_type(i);
-            let cat = self.soa.category(i);
+        for i in 0..self.len() {
+            let ct = self.command_type(i);
+            let cat = self.category(i);
 
             if cat == CommandCategory::State || cat == CommandCategory::Marker {
-                let cmd = self.soa.commands[i].clone();
-                new_ops.soa.push(cmd);
+                let cmd = self.commands[i].clone();
+                new_ops.commands.push(cmd);
                 continue;
             }
 
@@ -70,7 +69,7 @@ impl Ops {
             }
 
             if ct == CommandType::ScanLine {
-                let end = self.soa.endpoint(i);
+                let end = self.endpoint(i);
                 let clipped =
                     clip_line_segment_with_rect(last_point, end, rect);
                 let kept: Vec<(Point3D, Point3D)> =
@@ -79,7 +78,7 @@ impl Ops {
                     &mut new_ops,
                     last_point,
                     end,
-                    &self.soa.scanline_data(i),
+                    &self.scanline_data(i),
                     &kept,
                     clipped_pen_pos,
                 );
@@ -88,7 +87,7 @@ impl Ops {
             }
 
             if ct == CommandType::MoveTo {
-                let end = self.soa.endpoint(i);
+                let end = self.endpoint(i);
                 last_point = end;
                 clipped_pen_pos = None;
                 continue;
@@ -107,7 +106,7 @@ impl Ops {
                 );
                 p_seg_start = p_seg_end;
             }
-            last_point = self.soa.endpoint(i);
+            last_point = self.endpoint(i);
         }
 
         new_ops
@@ -118,7 +117,7 @@ impl Ops {
     /// - `regions`: Polygons whose interiors should be removed.
     /// - Returns: `self` for method chaining.
     pub fn subtract_regions(&mut self, regions: &[Polygon]) -> &mut Self {
-        if regions.is_empty() || self.soa.is_empty() {
+        if regions.is_empty() || self.is_empty() {
             return self;
         }
 
@@ -126,26 +125,26 @@ impl Ops {
         let mut last_point: Point3D = (0.0, 0.0, 0.0);
         let mut pen_pos: Option<Point3D> = None;
 
-        let first_move_idx = (0..self.soa.len())
-            .find(|&i| self.soa.category(i) == CommandCategory::Moving)
-            .unwrap_or(self.soa.len());
+        let first_move_idx = (0..self.len())
+            .find(|&i| self.category(i) == CommandCategory::Moving)
+            .unwrap_or(self.len());
 
         for i in 0..first_move_idx {
-            let cmd = self.soa.commands[i].clone();
-            new_ops.soa.push(cmd);
+            let cmd = self.commands[i].clone();
+            new_ops.commands.push(cmd);
         }
 
-        for i in 0..self.soa.len() {
-            let ct = self.soa.command_type(i);
-            let cat = self.soa.category(i);
+        for i in 0..self.len() {
+            let ct = self.command_type(i);
+            let cat = self.category(i);
 
             if cat != CommandCategory::Moving {
-                let cmd = self.soa.commands[i].clone();
-                new_ops.soa.push(cmd);
+                let cmd = self.commands[i].clone();
+                new_ops.commands.push(cmd);
                 continue;
             }
 
-            let end = self.soa.endpoint(i);
+            let end = self.endpoint(i);
 
             if ct == CommandType::MoveTo {
                 last_point = end;
@@ -161,7 +160,7 @@ impl Ops {
                     &mut new_ops,
                     last_point,
                     end,
-                    &self.soa.scanline_data(i),
+                    &self.scanline_data(i),
                     &kept,
                     pen_pos,
                 );
@@ -172,7 +171,7 @@ impl Ops {
             let linearized = self.linearize(i, last_point);
             let mut p_seg_start = last_point;
             for j in 0..linearized.len() {
-                let p_seg_end = linearized.soa.endpoint(j);
+                let p_seg_end = linearized.endpoint(j);
                 let kept = subtract_polygons_from_line_segment(
                     p_seg_start,
                     p_seg_end,
@@ -190,12 +189,12 @@ impl Ops {
             last_point = end;
         }
 
-        self.soa = new_ops.soa;
+        self.commands = new_ops.commands;
         self.invalidate_time_cache();
-        if self.soa.len() > 0 {
-            for j in (0..self.soa.len()).rev() {
-                if self.soa.command_type(j) == CommandType::MoveTo {
-                    self.last_move_to = self.soa.endpoint(j);
+        if self.len() > 0 {
+            for j in (0..self.len()).rev() {
+                if self.command_type(j) == CommandType::MoveTo {
+                    self.last_move_to = self.endpoint(j);
                     break;
                 }
             }
@@ -218,7 +217,7 @@ impl Ops {
     ) -> &mut Self {
         let valid_regions: Vec<Polygon> =
             regions.iter().filter(|r| r.len() >= 3).cloned().collect();
-        if valid_regions.is_empty() || self.soa.is_empty() {
+        if valid_regions.is_empty() || self.is_empty() {
             return self;
         }
 
@@ -226,26 +225,26 @@ impl Ops {
         let mut last_point: Point3D = (0.0, 0.0, 0.0);
         let mut pen_pos: Option<Point3D> = None;
 
-        let first_move_idx = (0..self.soa.len())
-            .find(|&i| self.soa.category(i) == CommandCategory::Moving)
-            .unwrap_or(self.soa.len());
+        let first_move_idx = (0..self.len())
+            .find(|&i| self.category(i) == CommandCategory::Moving)
+            .unwrap_or(self.len());
 
         for i in 0..first_move_idx {
-            let cmd = self.soa.commands[i].clone();
-            new_ops.soa.push(cmd);
+            let cmd = self.commands[i].clone();
+            new_ops.commands.push(cmd);
         }
 
-        for i in first_move_idx..self.soa.len() {
-            let ct = self.soa.command_type(i);
-            let cat = self.soa.category(i);
+        for i in first_move_idx..self.len() {
+            let ct = self.command_type(i);
+            let cat = self.category(i);
 
             if cat != CommandCategory::Moving {
-                let cmd = self.soa.commands[i].clone();
-                new_ops.soa.push(cmd);
+                let cmd = self.commands[i].clone();
+                new_ops.commands.push(cmd);
                 continue;
             }
 
-            let end = self.soa.endpoint(i);
+            let end = self.endpoint(i);
 
             if ct == CommandType::MoveTo {
                 last_point = end;
@@ -263,7 +262,7 @@ impl Ops {
                     &mut new_ops,
                     last_point,
                     end,
-                    &self.soa.scanline_data(i),
+                    &self.scanline_data(i),
                     &kept,
                     pen_pos,
                 );
@@ -274,7 +273,7 @@ impl Ops {
             let linearized = self.linearize(i, last_point);
             let mut p_seg_start = last_point;
             for j in 0..linearized.len() {
-                let p_seg_end = linearized.soa.endpoint(j);
+                let p_seg_end = linearized.endpoint(j);
                 let kept = clip_line_segment_with_polygons(
                     p_seg_start,
                     p_seg_end,
@@ -292,12 +291,12 @@ impl Ops {
             last_point = end;
         }
 
-        self.soa = new_ops.soa;
+        self.commands = new_ops.commands;
         self.invalidate_time_cache();
-        if self.soa.len() > 0 {
-            for j in (0..self.soa.len()).rev() {
-                if self.soa.command_type(j) == CommandType::MoveTo {
-                    self.last_move_to = self.soa.endpoint(j);
+        if self.len() > 0 {
+            for j in (0..self.len()).rev() {
+                if self.command_type(j) == CommandType::MoveTo {
+                    self.last_move_to = self.endpoint(j);
                     break;
                 }
             }
@@ -323,10 +322,10 @@ impl Ops {
 
         let (start_idx, end_idx) = find_subpath_bounds(self, command_index);
 
-        if start_idx >= self.soa.len() {
+        if start_idx >= self.len() {
             return false;
         }
-        if self.soa.category(start_idx) != CommandCategory::Moving {
+        if self.category(start_idx) != CommandCategory::Moving {
             return false;
         }
 
@@ -376,12 +375,12 @@ impl Ops {
             build_clipped_subpath(&temp_ops, gap_start_dist, gap_end_dist);
 
         let original_endpoint =
-            self.soa.endpoint(if end_idx > 0 { end_idx - 1 } else { 0 });
+            self.endpoint(if end_idx > 0 { end_idx - 1 } else { 0 });
         let mut new_endpoint: Option<Point3D> = None;
         if new_subpath.len() > 0 {
             for ri in (0..new_subpath.len()).rev() {
-                if new_subpath.soa.category(ri) == CommandCategory::Moving {
-                    new_endpoint = Some(new_subpath.soa.endpoint(ri));
+                if new_subpath.category(ri) == CommandCategory::Moving {
+                    new_endpoint = Some(new_subpath.endpoint(ri));
                     break;
                 }
             }
@@ -405,21 +404,27 @@ impl Ops {
             );
         }
 
-        let mut new_soa = SoA::new();
+        let mut new_cmds = Vec::new();
+
+        // First pass: preserve state/marker commands before the first moving command
         for j in 0..start_idx {
-            let cmd = self.soa.commands[j].clone();
-            new_soa.push(cmd);
-        }
-        for j in 0..new_subpath.len() {
-            let cmd = new_subpath.soa.commands[j].clone();
-            new_soa.push(cmd);
-        }
-        for j in end_idx..self.soa.len() {
-            let cmd = self.soa.commands[j].clone();
-            new_soa.push(cmd);
+            let cmd = self.commands[j].clone();
+            new_cmds.push(cmd);
         }
 
-        self.soa = new_soa;
+        // Second pass: add the replacement subpath from the clipper output
+        for j in 0..new_subpath.commands.len() {
+            let cmd = new_subpath.commands[j].clone();
+            new_cmds.push(cmd);
+        }
+
+        // Third pass: preserve commands after the replaced segment
+        for j in end_idx..self.commands.len() {
+            let cmd = self.commands[j].clone();
+            new_cmds.push(cmd);
+        }
+
+        self.commands = new_cmds;
         self.invalidate_time_cache();
         true
     }
@@ -447,26 +452,26 @@ impl Ops {
         let mut last_point: Point3D = (0.0, 0.0, 0.0);
         let mut pen_pos: Option<Point3D> = None;
 
-        let first_move_idx = (0..self.soa.len())
-            .find(|&i| self.soa.category(i) == CommandCategory::Moving)
-            .unwrap_or(self.soa.len());
+        let first_move_idx = (0..self.len())
+            .find(|&i| self.category(i) == CommandCategory::Moving)
+            .unwrap_or(self.len());
 
         for i in 0..first_move_idx {
-            let cmd = self.soa.commands[i].clone();
-            new_ops.soa.push(cmd);
+            let cmd = self.commands[i].clone();
+            new_ops.commands.push(cmd);
         }
 
-        for i in first_move_idx..self.soa.len() {
-            let ct = self.soa.command_type(i);
-            let cat = self.soa.category(i);
+        for i in first_move_idx..self.len() {
+            let ct = self.command_type(i);
+            let cat = self.category(i);
 
             if cat != CommandCategory::Moving {
-                let cmd = self.soa.commands[i].clone();
-                new_ops.soa.push(cmd);
+                let cmd = self.commands[i].clone();
+                new_ops.commands.push(cmd);
                 continue;
             }
 
-            let end = self.soa.endpoint(i);
+            let end = self.endpoint(i);
 
             if ct == CommandType::MoveTo {
                 last_point = end;
@@ -488,7 +493,7 @@ impl Ops {
             }
 
             if ct == CommandType::ArcTo {
-                let (arc_i, arc_j, arc_cw) = *self.soa.arc_params(i);
+                let (arc_i, arc_j, arc_cw) = *self.arc_params(i);
                 if is_arc_inside_polygons(
                     (last_point.0, last_point.1),
                     (end.0, end.1),
@@ -505,8 +510,8 @@ impl Ops {
                             None,
                         );
                     }
-                    let cmd = self.soa.commands[i].clone();
-                    new_ops.soa.push(cmd);
+                    let cmd = self.commands[i].clone();
+                    new_ops.commands.push(cmd);
                     pen_pos = Some(end);
                     last_point = end;
                     continue;
@@ -526,7 +531,7 @@ impl Ops {
             }
 
             if ct == CommandType::BezierTo {
-                let (c1, c2) = self.soa.bezier_params(i);
+                let (c1, c2) = self.bezier_params(i);
                 let start_2d = (last_point.0, last_point.1);
                 let end_2d = (end.0, end.1);
                 let c1_2d = (c1.0, c1.1);
@@ -547,8 +552,8 @@ impl Ops {
                             None,
                         );
                     }
-                    let cmd = self.soa.commands[i].clone();
-                    new_ops.soa.push(cmd);
+                    let cmd = self.commands[i].clone();
+                    new_ops.commands.push(cmd);
                     pen_pos = Some(end);
                     last_point = end;
                     continue;
@@ -570,7 +575,7 @@ impl Ops {
             let linearized = self.linearize(i, last_point);
             let mut p_seg_start = last_point;
             for j in 0..linearized.len() {
-                let p_seg_end = linearized.soa.endpoint(j);
+                let p_seg_end = linearized.endpoint(j);
                 let kept_segments = clip_line_segment_with_polygons(
                     p_seg_start,
                     p_seg_end,
@@ -589,12 +594,12 @@ impl Ops {
             last_point = end;
         }
 
-        self.soa = new_ops.soa;
+        self.commands = new_ops.commands;
         self.invalidate_time_cache();
-        if self.soa.len() > 0 {
-            for j in (0..self.soa.len()).rev() {
-                if self.soa.command_type(j) == CommandType::MoveTo {
-                    self.last_move_to = self.soa.endpoint(j);
+        if self.len() > 0 {
+            for j in (0..self.len()).rev() {
+                if self.command_type(j) == CommandType::MoveTo {
+                    self.last_move_to = self.endpoint(j);
                     break;
                 }
             }
@@ -625,7 +630,7 @@ fn needs_move_to(pen_pos: Option<Point3D>, target: Point3D) -> bool {
 /// - `idx`: Index to start searching backwards from.
 /// - Returns: The combined `State` if any state commands were found, `None` otherwise.
 fn get_machine_state(ops: &Ops, idx: usize) -> Option<State> {
-    if let Some(s) = ops.soa.state(idx) {
+    if let Some(s) = ops.state(idx) {
         return Some(s.clone());
     }
 
@@ -634,13 +639,13 @@ fn get_machine_state(ops: &Ops, idx: usize) -> Option<State> {
     let mut found_any = false;
 
     for j in (0..idx).rev() {
-        if ops.soa.category(j) != CommandCategory::State {
+        if ops.category(j) != CommandCategory::State {
             continue;
         }
         found_any = true;
-        let ct = ops.soa.command_type(j);
+        let ct = ops.command_type(j);
         match ct {
-            CommandType::SetPower => power = ops.soa.power(j),
+            CommandType::SetPower => power = ops.power(j),
             CommandType::SetCutSpeed | CommandType::SetTravelSpeed => {}
             CommandType::EnableAirAssist => air_assist = true,
             CommandType::DisableAirAssist => air_assist = false,
@@ -719,8 +724,8 @@ fn clip_scanline(
     pen_pos: Option<Point3D>,
     valid_regions: &[Polygon],
 ) -> Option<Point3D> {
-    let end = ops.soa.endpoint(idx);
-    let scanline_data = ops.soa.scanline_data(idx);
+    let end = ops.endpoint(idx);
+    let scanline_data = ops.scanline_data(idx);
     let kept_segments =
         clip_line_segment_with_polygons(last_point, end, valid_regions);
     append_clipped_scanline(
@@ -762,8 +767,8 @@ fn find_hit_command(
     }
 
     let mut geo_idx = 0;
-    for cmd_idx in 0..ops.soa.len() {
-        if ops.soa.category(cmd_idx) == CommandCategory::Moving {
+    for cmd_idx in 0..ops.len() {
+        if ops.category(cmd_idx) == CommandCategory::Moving {
             if geo_idx == segment_index {
                 return Some((cmd_idx, point_on_path));
             }
@@ -784,15 +789,15 @@ fn find_hit_command(
 fn find_subpath_bounds(ops: &Ops, command_index: usize) -> (usize, usize) {
     let mut start_idx = 0;
     for i in (0..=command_index).rev() {
-        if ops.soa.command_type(i) == CommandType::MoveTo {
+        if ops.command_type(i) == CommandType::MoveTo {
             start_idx = i;
             break;
         }
     }
 
-    let mut end_idx = ops.soa.len();
-    for i in (start_idx + 1)..ops.soa.len() {
-        if ops.soa.command_type(i) == CommandType::MoveTo {
+    let mut end_idx = ops.len();
+    for i in (start_idx + 1)..ops.len() {
+        if ops.command_type(i) == CommandType::MoveTo {
             end_idx = i;
             break;
         }
@@ -846,7 +851,7 @@ fn build_clipped_subpath(
     gap_end_dist: f64,
 ) -> Ops {
     let mut new_subpath = Ops::new();
-    new_subpath.soa.push(temp_ops.soa.commands[0].clone());
+    new_subpath.commands.push(temp_ops.commands[0].clone());
 
     let mut accum_dist = 0.0;
     let mut last_pos = temp_ops.endpoint(0);
@@ -909,10 +914,10 @@ fn build_clipped_subpath(
 
                 let mut last_kept_pos: Option<Point3D> = None;
                 for ri in (0..new_subpath.len()).rev() {
-                    if new_subpath.soa.category(ri)
+                    if new_subpath.category(ri)
                         == CommandCategory::Moving
                     {
-                        last_kept_pos = Some(new_subpath.soa.endpoint(ri));
+                        last_kept_pos = Some(new_subpath.endpoint(ri));
                         break;
                     }
                 }
@@ -932,8 +937,8 @@ fn build_clipped_subpath(
             accum_dist += seg_len;
         } else {
             if !(gap_start_dist < accum_dist && accum_dist < gap_end_dist) {
-                let cmd = temp_ops.soa.commands[j].clone();
-                new_subpath.soa.push(cmd);
+                let cmd = temp_ops.commands[j].clone();
+                new_subpath.commands.push(cmd);
             }
         }
     }
@@ -966,7 +971,7 @@ fn clip_and_refit_arc(
     let mut kept_pairs: Vec<(Point3D, Point3D)> = Vec::new();
     let mut p_seg_start = last_point;
     for j in 0..linearized.len() {
-        let p_seg_end = linearized.soa.endpoint(j);
+        let p_seg_end = linearized.endpoint(j);
         let segs = clip_line_segment_with_polygons(
             p_seg_start,
             p_seg_end,
@@ -1044,7 +1049,7 @@ fn clip_and_refit_bezier(
     let mut kept_pairs: Vec<(Point3D, Point3D)> = Vec::new();
     let mut p_seg_start = last_point;
     for j in 0..linearized.len() {
-        let p_seg_end = linearized.soa.endpoint(j);
+        let p_seg_end = linearized.endpoint(j);
         let segs = clip_line_segment_with_polygons(
             p_seg_start,
             p_seg_end,

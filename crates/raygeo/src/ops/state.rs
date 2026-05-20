@@ -15,17 +15,6 @@ impl State {
     }
 }
 
-#[derive(Clone, Debug, Default)]
-pub struct MachineState {
-    pub power: f64,
-    pub air_assist: bool,
-    pub cut_speed: Option<i32>,
-    pub travel_speed: Option<i32>,
-    pub active_laser_uid: Option<String>,
-    pub frequency: Option<i32>,
-    pub pulse_width: Option<f64>,
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -67,13 +56,5 @@ mod tests {
             ..Default::default()
         };
         assert!(!a.allow_rapid_change(&b));
-    }
-
-    #[test]
-    fn test_machine_state_default() {
-        let ms = MachineState::default();
-        assert_eq!(ms.power, 0.0);
-        assert!(!ms.air_assist);
-        assert!(ms.cut_speed.is_none());
     }
 }

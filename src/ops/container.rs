@@ -1240,7 +1240,7 @@ impl PyOps {
                 }
                 info.extra_axes = Some(dict.unbind());
             }
-            if let Some(s) = inner.soa.state(idx) {
+            if let Some(s) = inner.state(idx) {
                 info.state = Some(Py::new(py, PyState(s.clone()))?);
             }
         }
@@ -1452,7 +1452,7 @@ impl PyOps {
         py: Python<'_>,
         callback: Py<PyAny>,
     ) -> PyResult<()> {
-        use raygeo_core::ops::SoA;
+        
         let mut i = 0;
         while i < self.inner.len() {
             if self.inner.command_type(i) != CommandType::LayerStart {
@@ -1478,17 +1478,17 @@ impl PyOps {
             let layer_ops_ref = py_layer_ops.borrow(py);
             let layer_ops = &layer_ops_ref.inner;
 
-            let mut new_soa = SoA::new();
+            let mut new_cmds = Vec::new();
             for j in 0..layer_start {
-                new_soa.push(self.inner.soa.commands[j].clone());
+                new_cmds.push(self.inner.commands[j].clone());
             }
             for j in 0..layer_ops.len() {
-                new_soa.push(layer_ops.soa.commands[j].clone());
+                new_cmds.push(layer_ops.commands[j].clone());
             }
             for j in layer_end..self.inner.len() {
-                new_soa.push(self.inner.soa.commands[j].clone());
+                new_cmds.push(self.inner.commands[j].clone());
             }
-            self.inner.soa = new_soa;
+            self.inner.commands = new_cmds;
             i = layer_start + layer_ops.len();
         }
         self.inner.invalidate_time_cache();
@@ -1530,13 +1530,11 @@ impl PyOps {
             on_endpoint.call1(py, (&end_py_list, &ea_arg))?;
 
             let new_end: Vec<f64> = end_py_list.extract()?;
-            self.inner
-                .soa
-                .set_endpoint(i, (new_end[0], new_end[1], new_end[2]));
+            self.inner.set_endpoint(i, (new_end[0], new_end[1], new_end[2]));
 
             if !ea_arg.is_empty() {
                 let ea_vec = py_to_axis_map(&ea_arg)?;
-                self.inner.soa.set_extra_axes(i, ea_vec);
+                self.inner.set_extra_axes(i, ea_vec);
             }
 
             if let Some(ref aux_cb) = on_aux_point {
@@ -1546,7 +1544,7 @@ impl PyOps {
                     let off_py_list = PyList::new(py, &off_list)?;
                     aux_cb.call1(py, (&off_py_list,))?;
                     let new_off: Vec<f64> = off_py_list.extract()?;
-                    self.inner.soa.set_arc_params(
+                    self.inner.set_arc_params(
                         i,
                         Some((new_off[0], new_off[1])),
                         Some(cw),
@@ -1560,14 +1558,14 @@ impl PyOps {
                         let new_cp: Vec<f64> = cp_py_list.extract()?;
                         if cp_idx == 0 {
                             let (_, c2) = *self.inner.bezier_params(i);
-                            self.inner.soa.set_bezier_params(
+                            self.inner.set_bezier_params(
                                 i,
                                 (new_cp[0], new_cp[1], new_cp[2]),
                                 c2,
                             );
                         } else {
                             let (c1, _) = *self.inner.bezier_params(i);
-                            self.inner.soa.set_bezier_params(
+                            self.inner.set_bezier_params(
                                 i,
                                 c1,
                                 (new_cp[0], new_cp[1], new_cp[2]),
@@ -1580,9 +1578,7 @@ impl PyOps {
                     let cp_py_list = PyList::new(py, &cp_list)?;
                     aux_cb.call1(py, (&cp_py_list,))?;
                     let new_cp: Vec<f64> = cp_py_list.extract()?;
-                    self.inner
-                        .soa
-                        .set_quad_params(i, (new_cp[0], new_cp[1], new_cp[2]));
+                    self.inner.set_quad_params(i, (new_cp[0], new_cp[1], new_cp[2]));
                 }
             }
         }
