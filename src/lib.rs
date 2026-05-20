@@ -137,7 +137,7 @@ For 2D transforms, set the Z components to identity:
             content = doc_block + &content;
         }
         // Inject documentation for TransformMatrix type alias
-        if module.name == "raygeo.geo" {
+        if module.name == "raygeo.geo.types" {
             let target = "TransformMatrix: TypeAlias = ";
             if let Some(pos) = content.find(target) {
                 let end_of_line = content[pos..].find('\n').unwrap_or(0);

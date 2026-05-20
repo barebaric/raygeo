@@ -88,11 +88,11 @@ class Geometry:
         The command data as a numpy array of shape
         (N, 8), or None if empty.
         """
-    def transform(self, matrix: geo.TransformMatrix) -> Geometry:
+    def transform(self, matrix: geo.types.TransformMatrix) -> Geometry:
         r"""
         Apply a 4x4 affine transformation matrix.
         
-        See ``raygeo.geo.TransformMatrix`` for the matrix layout.
+        See ``raygeo.geo.types.TransformMatrix`` for the matrix layout.
         
         :param matrix: A 4x4 affine transformation matrix.
         :returns: A new transformed Geometry.

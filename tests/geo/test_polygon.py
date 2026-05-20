@@ -7,7 +7,7 @@ from typing import cast, List
 import numpy as np
 import pytest
 
-from raygeo.geo import Polygon
+from raygeo.geo.algo.smooth import resample_polyline
 from raygeo.geo.shape.polygon import (
     clean_polygon,
     flip_polygon_numpy,
@@ -47,7 +47,7 @@ from raygeo.geo.shape.polygon import (
     translate_polygons,
     translate_polygons_numpy,
 )
-from raygeo.geo.algo.smooth import resample_polyline
+from raygeo.geo.types import Polygon
 
 
 def P(*points) -> Polygon:
