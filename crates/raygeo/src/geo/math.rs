@@ -118,19 +118,23 @@ fn transform_array_non_uniform(
                 };
                 result.push(bezier_cmd.to_row());
             }
-            _ => {
+            Command::Move { .. } => {
                 let (nx, ny, nz) = transform_point(
                     matrix,
                     original_end.0,
                     original_end.1,
                     original_end.2,
                 );
-                let transformed = match cmd {
-                    Command::Move { .. } => Command::Move { end: (nx, ny, nz) },
-                    Command::Line { .. } => Command::Line { end: (nx, ny, nz) },
-                    _ => unreachable!(),
-                };
-                result.push(transformed.to_row());
+                result.push(Command::Move { end: (nx, ny, nz) }.to_row());
+            }
+            Command::Line { .. } => {
+                let (nx, ny, nz) = transform_point(
+                    matrix,
+                    original_end.0,
+                    original_end.1,
+                    original_end.2,
+                );
+                result.push(Command::Line { end: (nx, ny, nz) }.to_row());
             }
         }
 

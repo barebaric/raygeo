@@ -182,8 +182,7 @@ impl Command {
                     (control1.0 - control2.0).hypot(control1.1 - control2.1);
                 let l23 = (control2.0 - ex).hypot(control2.1 - ey);
                 let estimated_len = l01 + l12 + l23;
-                let num_steps =
-                    (estimated_len / 0.1).ceil().max(2.0) as usize;
+                let num_steps = (estimated_len / 0.1).ceil().max(2.0) as usize;
                 let step_f = num_steps as f64;
                 let mut total = 0.0;
                 let mut prev = (sx, sy);
@@ -206,11 +205,7 @@ impl Command {
         }
     }
 
-    pub fn split_at_t(
-        &self,
-        start_point: Point3D,
-        t: f64,
-    ) -> Option<Command> {
+    pub fn split_at_t(&self, start_point: Point3D, t: f64) -> Option<Command> {
         let sx = start_point.0;
         let sy = start_point.1;
         let sz = start_point.2;
@@ -260,9 +255,7 @@ impl Command {
                 })
             }
             Command::Bezier {
-                control1,
-                control2,
-                ..
+                control1, control2, ..
             } => {
                 let c1x = control1.0;
                 let c1y = control1.1;
@@ -301,8 +294,7 @@ pub trait CommandSlice {
 
 impl CommandSlice for [[f64; 8]] {
     fn iter_commands(&self) -> impl Iterator<Item = Command> + '_ {
-        self.iter()
-            .map(|r| Command::from_row(r).expect("invalid command"))
+        self.iter().filter_map(|r| Command::from_row(r).ok())
     }
 
     fn try_iter_commands(

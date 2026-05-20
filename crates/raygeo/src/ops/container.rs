@@ -69,12 +69,12 @@ impl Ops {
         self.commands[idx].end_point()
     }
 
-    pub fn set_endpoint(&mut self, idx: usize, end: Point3D) {
-        if let OpCategory::Moving { end: ref mut e, .. } =
-            &mut self.commands[idx].category
-        {
-            *e = end;
-        }
+    pub fn set_endpoint(
+        &mut self,
+        idx: usize,
+        end: Point3D,
+    ) -> Option<Point3D> {
+        self.commands[idx].set_endpoint(end)
     }
 
     pub fn extra_axes(&self, idx: usize) -> Option<&[(Axis, f64)]> {
@@ -729,16 +729,18 @@ impl Ops {
         super::group::group_by_state_continuity(self)
     }
 
-    pub fn from_geometry(geometry: &crate::Geometry) -> Self {
+    pub fn from_geometry(
+        geometry: &crate::Geometry,
+    ) -> Result<Self, crate::RaygeoError> {
         let mut ops = Ops::new();
         if geometry.data.is_empty() {
             ops.last_move_to = geometry.last_move_to;
-            return ops;
+            return Ok(ops);
         }
 
         let mut last_pos = (0.0, 0.0, 0.0);
         for row in &geometry.data {
-            let cmd = crate::Command::from_row(row).expect("invalid command");
+            let cmd = crate::Command::from_row(row)?;
             match cmd {
                 crate::Command::Move { end } => {
                     ops.move_to(end.0, end.1, end.2, None);
@@ -784,7 +786,7 @@ impl Ops {
             last_pos = cmd.end_point();
         }
         ops.last_move_to = geometry.last_move_to;
-        ops
+        Ok(ops)
     }
 
     pub fn to_geometry(&self) -> crate::Geometry {

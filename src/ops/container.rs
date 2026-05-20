@@ -1246,10 +1246,18 @@ impl PyOps {
     ///
     /// :param geometry: The geometry to convert.
     #[classmethod]
-    fn from_geometry(_cls: &Bound<'_, PyType>, geometry: &PyGeometry) -> Self {
-        PyOps {
-            inner: raygeo_core::ops::Ops::from_geometry(&geometry.inner),
-        }
+    fn from_geometry(
+        _cls: &Bound<'_, PyType>,
+        geometry: &PyGeometry,
+    ) -> PyResult<Self> {
+        Ok(PyOps {
+            inner: raygeo_core::ops::Ops::from_geometry(&geometry.inner)
+                .map_err(|e| {
+                    PyErr::new::<pyo3::exceptions::PyValueError, _>(
+                        e.to_string(),
+                    )
+                })?,
+        })
     }
 
     /// Convert this Ops sequence back into a Geometry.

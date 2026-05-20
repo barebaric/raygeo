@@ -767,7 +767,10 @@ pub fn fit_curves(
                     }
                 }
             }
-            Command::Move { .. } => unreachable!(),
+            Command::Move { .. } => {
+                flush_chain(&mut point_chain, &mut new_rows);
+                new_rows.push(row);
+            }
         }
 
         last_pos = end_pos;

@@ -390,6 +390,40 @@ impl OpNode {
         }
     }
 
+    pub fn as_moving(&self) -> Option<(&Point3D, &MoveCmd)> {
+        if let OpCategory::Moving { end, cmd } = &self.category {
+            Some((end, cmd))
+        } else {
+            None
+        }
+    }
+
+    pub fn as_state(&self) -> Option<&StateCmd> {
+        if let OpCategory::State(cmd) = &self.category {
+            Some(cmd)
+        } else {
+            None
+        }
+    }
+
+    pub fn as_marker(&self) -> Option<&MarkerCmd> {
+        if let OpCategory::Marker(cmd) = &self.category {
+            Some(cmd)
+        } else {
+            None
+        }
+    }
+
+    pub fn set_endpoint(&mut self, end: Point3D) -> Option<Point3D> {
+        if let OpCategory::Moving { end: ref mut e, .. } = &mut self.category {
+            let old = *e;
+            *e = end;
+            Some(old)
+        } else {
+            None
+        }
+    }
+
     pub fn state(&self) -> Option<&State> {
         self.state.as_ref()
     }
