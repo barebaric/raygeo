@@ -10,6 +10,7 @@
 use std::f64::consts::PI;
 
 use crate::constants::EPSILON_COLLINEAR;
+use crate::geo::algo::interp::solve_quadratic;
 use crate::geo::shape::arc::{get_arc_bounds, get_arc_closest_point};
 use crate::geo::shape::bezier::{
     get_bezier_closest_point, linearize_bezier_from_array,
@@ -17,8 +18,32 @@ use crate::geo::shape::bezier::{
 use crate::geo::shape::line::get_line_segment_closest_point;
 use crate::types::{Command, Point, Point3D, Rect};
 
-/// Internal helper: computes min/max bounds for a 1D cubic Bezier curve.
-/// Uses analytical solution to find extrema by solving the derivative polynomial.
+/// Evaluate a cubic polynomial at parameter `t` using de Casteljau's formula.
+///
+/// - `p0`: Value at t=0.
+/// - `p1`: First control value.
+/// - `p2`: Second control value.
+/// - `p3`: Value at t=1.
+/// - `t`: Parameter in [0, 1].
+/// - Returns: The interpolated value.
+fn evaluate_cubic(p0: f64, p1: f64, p2: f64, p3: f64, t: f64) -> f64 {
+    let mt = 1.0 - t;
+    mt.powi(3) * p0
+        + 3.0 * mt.powi(2) * t * p1
+        + 3.0 * mt * t.powi(2) * p2
+        + t.powi(3) * p3
+}
+
+/// Compute the per-element axis-aligned bounds of a set of cubic Bezier curves.
+///
+/// Finds the min/max of each curve by evaluating at endpoints and at extrema
+/// where the derivative is zero.
+///
+/// - `p0`: Array of start values.
+/// - `p1`: Array of first control values.
+/// - `p2`: Array of second control values.
+/// - `p3`: Array of end values.
+/// - Returns: `(min_values, max_values)` per element.
 fn _compute_cubic_bezier_bounds_1d(
     p0: &[f64],
     p1: &[f64],
@@ -41,44 +66,19 @@ fn _compute_cubic_bezier_bounds_1d(
         let b_coeff = 6.0 * (p0i - 2.0 * p1i + p2i);
         let c_coeff = 3.0 * (p1i - p0i);
 
-        let discriminant = b_coeff * b_coeff - 4.0 * a_coeff * c_coeff;
+        let (t1, t2) = solve_quadratic(a_coeff, b_coeff, c_coeff);
 
-        if discriminant >= 0.0 && a_coeff.abs() > EPSILON_COLLINEAR {
-            let sqrt_disc = discriminant.sqrt();
-            let t1 = (-b_coeff - sqrt_disc) / (2.0 * a_coeff);
-            let t2 = (-b_coeff + sqrt_disc) / (2.0 * a_coeff);
-
-            if t1 > 0.0 && t1 < 1.0 {
-                let mt = 1.0 - t1;
-                let val = mt.powi(3) * p0i
-                    + 3.0 * mt.powi(2) * t1 * p1i
-                    + 3.0 * mt * t1.powi(2) * p2i
-                    + t1.powi(3) * p3i;
-                local_min[i] = local_min[i].min(val);
-                local_max[i] = local_max[i].max(val);
-            }
-
-            if t2 > 0.0 && t2 < 1.0 {
-                let mt = 1.0 - t2;
-                let val = mt.powi(3) * p0i
-                    + 3.0 * mt.powi(2) * t2 * p1i
-                    + 3.0 * mt * t2.powi(2) * p2i
-                    + t2.powi(3) * p3i;
+        if let Some(t) = t1 {
+            if t > 0.0 && t < 1.0 {
+                let val = evaluate_cubic(p0i, p1i, p2i, p3i, t);
                 local_min[i] = local_min[i].min(val);
                 local_max[i] = local_max[i].max(val);
             }
         }
 
-        if a_coeff.abs() <= EPSILON_COLLINEAR
-            && b_coeff.abs() > EPSILON_COLLINEAR
-        {
-            let t = -c_coeff / b_coeff;
+        if let Some(t) = t2 {
             if t > 0.0 && t < 1.0 {
-                let mt = 1.0 - t;
-                let val = mt.powi(3) * p0i
-                    + 3.0 * mt.powi(2) * t * p1i
-                    + 3.0 * mt * t.powi(2) * p2i
-                    + t.powi(3) * p3i;
+                let val = evaluate_cubic(p0i, p1i, p2i, p3i, t);
                 local_min[i] = local_min[i].min(val);
                 local_max[i] = local_max[i].max(val);
             }
@@ -88,8 +88,12 @@ fn _compute_cubic_bezier_bounds_1d(
     (local_min, local_max)
 }
 
-/// Computes the axis-aligned bounding rectangle for a geometry array.
+/// Compute the axis-aligned bounding rectangle for a geometry array.
+///
 /// Handles line, arc, and Bezier segments by computing their exact bounds.
+///
+/// - `data`: Array of geometry command rows (8 columns each).
+/// - Returns: `(min_x, min_y, max_x, max_y)` bounding rectangle.
 pub fn get_bounding_rect_from_array(data: &[[f64; 8]]) -> Rect {
     if data.is_empty() {
         return (0.0, 0.0, 0.0, 0.0);
@@ -186,8 +190,12 @@ pub fn get_bounding_rect_from_array(data: &[[f64; 8]]) -> Rect {
     (min_x, min_y, max_x, max_y)
 }
 
-/// Computes the total path length by summing segment lengths.
+/// Compute the total path length by summing segment lengths.
+///
 /// Handles lines (Euclidean distance), arcs (arc length), and Beziers (linearized).
+///
+/// - `data`: Array of geometry command rows (8 columns each).
+/// - Returns: The cumulative path distance.
 pub fn get_total_distance_from_array(data: &[[f64; 8]]) -> f64 {
     let mut total_dist = 0.0;
     let mut last_point: Point3D = (0.0, 0.0, 0.0);
@@ -249,11 +257,12 @@ pub fn get_total_distance_from_array(data: &[[f64; 8]]) -> f64 {
     total_dist
 }
 
-/// Finds the closest point on the path to a given (x, y) coordinate.
-/// Returns (command_index, t_parameter, closest_point).
-/// - command_index: Index of the command segment containing the closest point
-/// - t_parameter: Position along the segment [0, 1]
-/// - closest_point: The closest point on the path
+/// Find the closest point on the path to a given `(x, y)` coordinate.
+///
+/// - `data`: Array of geometry command rows (8 columns each).
+/// - `x`: Target X coordinate.
+/// - `y`: Target Y coordinate.
+/// - Returns: `(command_index, t_parameter, closest_point)` if the path is non-empty.
 pub fn find_closest_point_on_path_from_array(
     data: &[[f64; 8]],
     x: f64,
@@ -317,6 +326,13 @@ pub fn find_closest_point_on_path_from_array(
     closest_info
 }
 
+/// Compute the length of a single command segment from its data row.
+///
+/// Handles lines (Euclidean distance), arcs (arc angle × radius), and Beziers (linearized).
+///
+/// - `row`: The command data row.
+/// - `start_point`: The start point of the segment.
+/// - Returns: The segment length.
 fn _segment_length_from_row(row: &[f64; 8], start_point: Point3D) -> f64 {
     let cmd = Command::from_row(row).expect("invalid command");
     let sx = start_point.0;
@@ -370,6 +386,14 @@ fn _segment_length_from_row(row: &[f64; 8], start_point: Point3D) -> f64 {
     }
 }
 
+/// Compute a partial segment from the start to parameter `t` along the command.
+///
+/// For arcs and Beziers, this de Casteljau-subdivides to produce a proper sub-curve.
+///
+/// - `row`: The command data row.
+/// - `start_point`: The start point of the segment.
+/// - `t`: Parameter in [0, 1] indicating how far along the segment to go.
+/// - Returns: The data row for the partial command, or `None` for Move commands.
 fn _partial_segment_from_row(
     row: &[f64; 8],
     start_point: Point3D,
@@ -469,9 +493,14 @@ fn _partial_segment_from_row(
     }
 }
 
-/// Extracts path segments up to a maximum length for overcut operations.
-/// Returns the commands that fall within max_length, including a partial command
-/// at the boundary if needed. Used for tool path overcut calculations.
+/// Extract path segments up to a maximum length for overcut operations.
+///
+/// Returns the commands that fall within `max_length`, including a partial command
+/// at the boundary if needed.
+///
+/// - `data`: Array of geometry command rows (8 columns each).
+/// - `max_length`: Maximum path distance to extract.
+/// - Returns: Collected rows up to `max_length`, or `None` if nothing was collected.
 pub fn extract_overcut_rows(
     data: &[[f64; 8]],
     max_length: f64,
@@ -518,7 +547,11 @@ pub fn extract_overcut_rows(
     }
 }
 
-/// Tests if two axis-aligned bounding boxes intersect using the separating axis theorem.
+/// Test if two axis-aligned bounding boxes intersect.
+///
+/// - `bbox1`: First bounding rectangle `(min_x, min_y, max_x, max_y)`.
+/// - `bbox2`: Second bounding rectangle `(min_x, min_y, max_x, max_y)`.
+/// - Returns: `true` if the rectangles overlap.
 pub fn bboxes_intersect(bbox1: Rect, bbox2: Rect) -> bool {
     let (ax1, ay1, ax2, ay2) = bbox1;
     let (bx1, by1, bx2, by2) = bbox2;
