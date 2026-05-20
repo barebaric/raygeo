@@ -1,7 +1,7 @@
 import math
-import pytest
-import numpy as np
 
+import numpy as np
+import pytest
 from raygeo.geo import Geometry
 from raygeo.geo.algo.fitting import (
     are_points_collinear,
@@ -9,8 +9,8 @@ from raygeo.geo.algo.fitting import (
     fit_circle_to_points,
     fit_points_recursive,
     fit_points_with_primitives,
-    get_polyline_line_deviation,
     get_polyline_arc_deviation,
+    get_polyline_line_deviation,
     project_circle_center_to_bisector,
 )
 

@@ -4,11 +4,11 @@ Tests for raygeo.minkowski module.
 
 import pytest
 from raygeo.geo.algo.minkowski import (
-    get_inner_fit_polygon,
     calculate_input_scale,
-    get_no_fit_polygon,
-    convolve_two_segments,
     convolve_point_sequences,
+    convolve_two_segments,
+    get_inner_fit_polygon,
+    get_no_fit_polygon,
     get_polygon_minkowski_sum_convex,
 )
 

@@ -1,4 +1,5 @@
 import math
+
 from raygeo.geo.algo.smooth import (
     compute_gaussian_kernel,
     smooth_circularly,

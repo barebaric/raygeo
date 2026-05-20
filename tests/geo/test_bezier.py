@@ -1,7 +1,8 @@
 import math
-import pytest
 
+import pytest
 from raygeo.geo.shape.bezier import (
+    bezier_flatness_sq,
     clip_bezier_with_rect,
     convert_cubic_bezier_to_quadratic,
     flatten_bezier,
@@ -12,9 +13,8 @@ from raygeo.geo.shape.bezier import (
     linearize_bezier,
     linearize_bezier_adaptive,
     linearize_bezier_segment,
-    split_bezier,
-    bezier_flatness_sq,
     perp_dist_sq,
+    split_bezier,
 )
 
 

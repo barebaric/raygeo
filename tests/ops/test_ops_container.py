@@ -1,16 +1,17 @@
-import pytest
-import math
 import io
 import json
-import numpy as np
+import math
 from contextlib import redirect_stdout
+
+import numpy as np
+import pytest
 from raygeo.geo import Geometry
 from raygeo.ops import (
     Ops,
 )
-from raygeo.ops.types import CommandType, CommandCategory, SectionType
 from raygeo.ops.axis import Axis
 from raygeo.ops.state import State
+from raygeo.ops.types import CommandCategory, CommandType, SectionType
 
 
 @pytest.fixture

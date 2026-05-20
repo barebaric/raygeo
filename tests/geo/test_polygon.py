@@ -2,11 +2,10 @@
 Tests for raygeo.polygon module.
 """
 
-from typing import cast, List
+from typing import List, cast
 
 import numpy as np
 import pytest
-
 from raygeo.geo.algo.smooth import resample_polyline
 from raygeo.geo.shape.polygon import (
     clean_polygon,

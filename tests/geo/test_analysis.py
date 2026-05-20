@@ -1,5 +1,6 @@
-import pytest
 import math
+
+import pytest
 from raygeo.geo import Geometry
 from raygeo.geo.algo.analysis import remove_duplicates
 from raygeo.geo.shape.arc import is_arc_clockwise

@@ -1,18 +1,18 @@
-import pytest
 import math
 from collections import namedtuple
 
+import pytest
 from raygeo.geo import Geometry
 from raygeo.geo.shape.arc import (
     does_arc_intersect_circle,
     does_arc_intersect_rect,
-    get_arc_direction,
-    get_arc_closest_point,
-    get_arc_bounds,
     get_arc_angles,
+    get_arc_bounds,
+    get_arc_closest_point,
+    get_arc_direction,
     get_arc_midpoint,
-    is_arc_inside_polygons,
     is_angle_between,
+    is_arc_inside_polygons,
     linearize_arc,
     normalize_angle,
 )
