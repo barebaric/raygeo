@@ -1,5 +1,7 @@
 use std::fmt::Write;
 
+use crate::constants::EPSILON_COLLINEAR;
+
 use super::axis::Axis;
 use super::enums::{category, CommandCategory, CommandType, SectionType};
 use super::soa::{ArcParams, BezierParams, OpCommand, SoA};
@@ -748,7 +750,9 @@ impl Ops {
 
         for (ax, ay, bx, by, i, j, cw) in arcs {
             let radius = (i * i + j * j).sqrt();
-            if (ax - bx).abs() < 1e-9 && (ay - by).abs() < 1e-9 && radius > 1e-9
+            if (ax - bx).abs() < EPSILON_COLLINEAR
+                && (ay - by).abs() < EPSILON_COLLINEAR
+                && radius > EPSILON_COLLINEAR
             {
                 let cx = ax + i;
                 let cy = ay + j;
@@ -921,7 +925,7 @@ fn estimate_time_core(
         let dy = end.1 - last_point.1;
         let distance = (dx * dx + dy * dy).sqrt();
 
-        if distance < 1e-9 {
+        if distance < EPSILON_COLLINEAR {
             last_point = end;
             continue;
         }

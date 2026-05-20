@@ -1,5 +1,7 @@
 use std::sync::Arc;
 
+use crate::constants::EPSILON_COLLINEAR;
+
 use super::container::Ops;
 use super::enums::{CommandCategory, CommandType};
 use super::soa::{OpCommand, OpMetadata, SoA};
@@ -41,7 +43,7 @@ impl Ops {
         let vy = [matrix[0][1], matrix[1][1]];
         let len_x = (vx[0] * vx[0] + vx[1] * vx[1]).sqrt();
         let len_y = (vy[0] * vy[0] + vy[1] * vy[1]).sqrt();
-        let is_non_uniform = (len_x - len_y).abs() > 1e-9;
+        let is_non_uniform = (len_x - len_y).abs() > EPSILON_COLLINEAR;
 
         let det = matrix[0][0] * matrix[1][1] - matrix[0][1] * matrix[1][0];
         let flip_cw = det < 0.0;

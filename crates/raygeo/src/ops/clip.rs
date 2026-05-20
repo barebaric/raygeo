@@ -5,6 +5,7 @@ use super::state::State;
 use crate::constants::{
     CMD_TYPE_ARC, CMD_TYPE_BEZIER, CMD_TYPE_LINE, COL_C1X, COL_C1Y, COL_C2X,
     COL_C2Y, COL_CW, COL_I, COL_J, COL_TYPE, COL_X, COL_Y, COL_Z,
+    EPSILON_COLLINEAR, EPSILON_GAP_CLOSE,
 };
 use crate::geo::algo::clipping::{
     clip_line_segment_with_polygons, clip_line_segment_with_rect,
@@ -25,7 +26,7 @@ fn add_clipped_segment(
             Some(prev) => {
                 let dx = p1.0 - prev.0;
                 let dy = p1.1 - prev.1;
-                (dx * dx + dy * dy).sqrt() > 1e-6
+                (dx * dx + dy * dy).sqrt() > EPSILON_GAP_CLOSE
             }
             None => true,
         };
@@ -73,7 +74,7 @@ impl Ops {
                     let dz = end.2 - last_point.2;
                     let len_sq = dx * dx + dy * dy + dz * dz;
 
-                    let (t_start, t_end) = if len_sq > 1e-9 {
+                    let (t_start, t_end) = if len_sq > EPSILON_COLLINEAR {
                         let t_s = ((new_start.0 - last_point.0) * dx
                             + (new_start.1 - last_point.1) * dy
                             + (new_start.2 - last_point.2) * dz)
@@ -98,7 +99,7 @@ impl Ops {
                             Some(prev) => {
                                 let dx = new_start.0 - prev.0;
                                 let dy = new_start.1 - prev.1;
-                                (dx * dx + dy * dy).sqrt() > 1e-6
+                                (dx * dx + dy * dy).sqrt() > EPSILON_GAP_CLOSE
                             }
                             None => true,
                         };
@@ -198,7 +199,7 @@ impl Ops {
                 let len_sq = dx * dx + dy * dy + dz * dz;
 
                 for (new_start, new_end) in kept {
-                    let (t_start, t_end) = if len_sq > 1e-9 {
+                    let (t_start, t_end) = if len_sq > EPSILON_COLLINEAR {
                         let t_s = ((new_start.0 - last_point.0) * dx
                             + (new_start.1 - last_point.1) * dy
                             + (new_start.2 - last_point.2) * dz)
@@ -221,7 +222,7 @@ impl Ops {
                             Some(prev) => {
                                 let dx = new_start.0 - prev.0;
                                 let dy = new_start.1 - prev.1;
-                                (dx * dx + dy * dy).sqrt() > 1e-6
+                                (dx * dx + dy * dy).sqrt() > EPSILON_GAP_CLOSE
                             }
                             None => true,
                         };
@@ -261,7 +262,7 @@ impl Ops {
                         Some(prev) => {
                             let dx = sub_p1.0 - prev.0;
                             let dy = sub_p1.1 - prev.1;
-                            (dx * dx + dy * dy).sqrt() > 1e-6
+                            (dx * dx + dy * dy).sqrt() > EPSILON_GAP_CLOSE
                         }
                         None => true,
                     };
@@ -345,7 +346,7 @@ impl Ops {
                 let len_sq = dx * dx + dy * dy + dz * dz;
 
                 for (new_start, new_end) in kept {
-                    let (t_start, t_end) = if len_sq > 1e-9 {
+                    let (t_start, t_end) = if len_sq > EPSILON_COLLINEAR {
                         let t_s = ((new_start.0 - last_point.0) * dx
                             + (new_start.1 - last_point.1) * dy
                             + (new_start.2 - last_point.2) * dz)
@@ -368,7 +369,7 @@ impl Ops {
                             Some(prev) => {
                                 let dx = new_start.0 - prev.0;
                                 let dy = new_start.1 - prev.1;
-                                (dx * dx + dy * dy).sqrt() > 1e-6
+                                (dx * dx + dy * dy).sqrt() > EPSILON_GAP_CLOSE
                             }
                             None => true,
                         };
@@ -408,7 +409,7 @@ impl Ops {
                         Some(prev) => {
                             let dx = sub_p1.0 - prev.0;
                             let dy = sub_p1.1 - prev.1;
-                            (dx * dx + dy * dy).sqrt() > 1e-6
+                            (dx * dx + dy * dy).sqrt() > EPSILON_GAP_CLOSE
                         }
                         None => true,
                     };
@@ -437,7 +438,7 @@ impl Ops {
     }
 
     pub fn clip_at(&mut self, x: f64, y: f64, width: f64) -> bool {
-        if width <= 1e-6 {
+        if width <= EPSILON_GAP_CLOSE {
             return false;
         }
 
@@ -564,7 +565,7 @@ impl Ops {
                     (dp.0 * dp.0 + dp.1 * dp.1).sqrt()
                 };
 
-                if seg_len < 1e-9 {
+                if seg_len < EPSILON_COLLINEAR {
                     last_pos2 = p2;
                     continue;
                 }
@@ -622,7 +623,7 @@ impl Ops {
 
                     if let Some(lkp) = last_kept_pos {
                         let d = (lkp.0 - start_pt.0, lkp.1 - start_pt.1);
-                        if (d.0 * d.0 + d.1 * d.1).sqrt() > 1e-6 {
+                        if (d.0 * d.0 + d.1 * d.1).sqrt() > EPSILON_GAP_CLOSE {
                             new_subpath.move_to(
                                 start_pt.0, start_pt.1, start_pt.2, None,
                             );
@@ -658,7 +659,7 @@ impl Ops {
             Some(ne) => {
                 let d =
                     (original_endpoint.0 - ne.0, original_endpoint.1 - ne.1);
-                (d.0 * d.0 + d.1 * d.1).sqrt() <= 1e-6
+                (d.0 * d.0 + d.1 * d.1).sqrt() <= EPSILON_GAP_CLOSE
             }
             None => false,
         };
@@ -868,7 +869,7 @@ fn needs_move_to(pen_pos: Option<Point3D>, target: Point3D) -> bool {
         Some(prev) => {
             let dx = target.0 - prev.0;
             let dy = target.1 - prev.1;
-            (dx * dx + dy * dy).sqrt() > 1e-6
+            (dx * dx + dy * dy).sqrt() > EPSILON_GAP_CLOSE
         }
         None => true,
     }
@@ -1111,7 +1112,7 @@ fn build_chains(kept_pairs: &[(Point3D, Point3D)]) -> Vec<Vec<Point3D>> {
             let last = last_chain[last_chain.len() - 1];
             let dx = p1.0 - last.0;
             let dy = p1.1 - last.1;
-            if (dx * dx + dy * dy).sqrt() <= 1e-6 {
+            if (dx * dx + dy * dy).sqrt() <= EPSILON_GAP_CLOSE {
                 last_chain.push(*p2);
                 continue;
             }

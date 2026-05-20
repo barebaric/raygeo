@@ -9,6 +9,7 @@
 
 use std::f64::consts::PI;
 
+use crate::constants::EPSILON_COLLINEAR;
 use crate::geo::shape::arc::{get_arc_bounds, get_arc_closest_point};
 use crate::geo::shape::bezier::{
     get_bezier_closest_point, linearize_bezier_from_array,
@@ -42,7 +43,7 @@ fn _compute_cubic_bezier_bounds_1d(
 
         let discriminant = b_coeff * b_coeff - 4.0 * a_coeff * c_coeff;
 
-        if discriminant >= 0.0 && a_coeff.abs() > 1e-9 {
+        if discriminant >= 0.0 && a_coeff.abs() > EPSILON_COLLINEAR {
             let sqrt_disc = discriminant.sqrt();
             let t1 = (-b_coeff - sqrt_disc) / (2.0 * a_coeff);
             let t2 = (-b_coeff + sqrt_disc) / (2.0 * a_coeff);
@@ -68,7 +69,9 @@ fn _compute_cubic_bezier_bounds_1d(
             }
         }
 
-        if a_coeff.abs() <= 1e-9 && b_coeff.abs() > 1e-9 {
+        if a_coeff.abs() <= EPSILON_COLLINEAR
+            && b_coeff.abs() > EPSILON_COLLINEAR
+        {
             let t = -c_coeff / b_coeff;
             if t > 0.0 && t < 1.0 {
                 let mt = 1.0 - t;
@@ -209,7 +212,7 @@ pub fn get_total_distance_from_array(data: &[[f64; 8]]) -> f64 {
                 let center_y = last_point.1 + center_offset.1;
                 let radius = center_offset.0.hypot(center_offset.1);
 
-                if radius > 1e-9 {
+                if radius > EPSILON_COLLINEAR {
                     let start_angle = (last_point.1 - center_y)
                         .atan2(last_point.0 - center_x);
                     let end_angle =
@@ -218,11 +221,11 @@ pub fn get_total_distance_from_array(data: &[[f64; 8]]) -> f64 {
 
                     // Normalize to handle full circles
                     if *clockwise {
-                        if angle_span > 1e-9 {
+                        if angle_span > EPSILON_COLLINEAR {
                             angle_span -= 2.0 * PI;
                         }
                     } else {
-                        if angle_span < -1e-9 {
+                        if angle_span < -EPSILON_COLLINEAR {
                             angle_span += 2.0 * PI;
                         }
                     }
@@ -335,7 +338,7 @@ fn _segment_length_from_row(row: &[f64; 8], start_point: Point3D) -> f64 {
             let cy = sy + j_off;
             let radius = i_off.hypot(j_off);
 
-            if radius < 1e-9 {
+            if radius < EPSILON_COLLINEAR {
                 return 0.0;
             }
 
@@ -343,14 +346,14 @@ fn _segment_length_from_row(row: &[f64; 8], start_point: Point3D) -> f64 {
             let end_angle = (ey - cy).atan2(ex - cx);
             let mut angle_span = end_angle - start_angle;
 
-            if angle_span.abs() < 1e-9 {
+            if angle_span.abs() < EPSILON_COLLINEAR {
                 angle_span = if *clockwise { -2.0 * PI } else { 2.0 * PI };
             } else if *clockwise {
-                if angle_span > 1e-9 {
+                if angle_span > EPSILON_COLLINEAR {
                     angle_span -= 2.0 * PI;
                 }
             } else {
-                if angle_span < -1e-9 {
+                if angle_span < -EPSILON_COLLINEAR {
                     angle_span += 2.0 * PI;
                 }
             }
@@ -404,14 +407,14 @@ fn _partial_segment_from_row(
             let end_angle = (ey - cy).atan2(ex - cx);
             let mut angle_span = end_angle - start_angle;
 
-            if angle_span.abs() < 1e-9 {
+            if angle_span.abs() < EPSILON_COLLINEAR {
                 angle_span = if *clockwise { -2.0 * PI } else { 2.0 * PI };
             } else if *clockwise {
-                if angle_span > 1e-9 {
+                if angle_span > EPSILON_COLLINEAR {
                     angle_span -= 2.0 * PI;
                 }
             } else {
-                if angle_span < -1e-9 {
+                if angle_span < -EPSILON_COLLINEAR {
                     angle_span += 2.0 * PI;
                 }
             }
@@ -485,17 +488,17 @@ pub fn extract_overcut_rows(
     for row in data.iter().skip(1) {
         let cmd = Command::from_row(row).expect("invalid command");
         let seg_length = _segment_length_from_row(row, last_point);
-        if seg_length < 1e-9 {
+        if seg_length < EPSILON_COLLINEAR {
             last_point = cmd.end_point();
             continue;
         }
 
-        if accumulated + seg_length <= max_length + 1e-9 {
+        if accumulated + seg_length <= max_length + EPSILON_COLLINEAR {
             collected.push(*row);
             accumulated += seg_length;
         } else {
             let remaining = max_length - accumulated;
-            if remaining > 1e-9 {
+            if remaining > EPSILON_COLLINEAR {
                 let t = remaining / seg_length;
                 if let Some(partial) =
                     _partial_segment_from_row(row, last_point, t)

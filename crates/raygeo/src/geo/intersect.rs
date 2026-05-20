@@ -6,6 +6,7 @@
 //! O(N log M) bounding-box lookups instead of brute-force O(N × M) scans.
 
 use crate::constants::*;
+use crate::constants::EPSILON_INTERSECT;
 use crate::geo::shape::arc::linearize_arc;
 use crate::geo::shape::bezier::linearize_bezier_from_array;
 use crate::geo::shape::line::get_line_segment_intersection;
@@ -162,7 +163,7 @@ fn data_intersect(
                             ];
                             let dsq = (pt.0 - shared_vertex[0]).powi(2)
                                 + (pt.1 - shared_vertex[1]).powi(2);
-                            if dsq < 1e-12 {
+                            if dsq < EPSILON_INTERSECT {
                                 continue;
                             }
                             return true;
@@ -170,16 +171,16 @@ fn data_intersect(
 
                         let at_end1 = (pt.0 - seg1_p1.0).powi(2)
                             + (pt.1 - seg1_p1.1).powi(2)
-                            < 1e-12
+                            < EPSILON_INTERSECT
                             || (pt.0 - seg1_p2.0).powi(2)
                                 + (pt.1 - seg1_p2.1).powi(2)
-                                < 1e-12;
+                                < EPSILON_INTERSECT;
                         let at_end2 = (pt.0 - seg2_p1.0).powi(2)
                             + (pt.1 - seg2_p1.1).powi(2)
-                            < 1e-12
+                            < EPSILON_INTERSECT
                             || (pt.0 - seg2_p2.0).powi(2)
                                 + (pt.1 - seg2_p2.1).powi(2)
-                                < 1e-12;
+                                < EPSILON_INTERSECT;
 
                         if is_self_check
                             && (at_end1 || at_end2)
