@@ -2,11 +2,7 @@ import pytest
 import math
 import numpy as np
 from raygeo import Geometry
-from raygeo.geo.path import (
-    grow_geometry,
-    apply_affine_transform_to_array,
-    map_geometry_to_frame,
-)
+from raygeo.geo.path import apply_affine_transform_to_array
 
 
 def _create_translate_matrix(x, y, z):
@@ -307,7 +303,7 @@ def test_grow_simple_square():
     square = Geometry.from_points([(0, 0), (10, 0), (10, 10), (0, 10)])
 
     # Grow the square
-    grown_square = grow_geometry(square, 1.0)
+    grown_square = square.grow(1.0)
     assert grown_square.area() == pytest.approx(144.0)  # (10+2)^2
     # Check one of the new vertices
     grown_points = grown_square.segments()[0]
@@ -317,7 +313,7 @@ def test_grow_simple_square():
     )
 
     # Shrink the square
-    shrunk_square = grow_geometry(square, -1.0)
+    shrunk_square = square.grow(-1.0)
     assert shrunk_square.area() == pytest.approx(64.0)  # (10-2)^2
     shrunk_points = shrunk_square.segments()[0]
     assert any(np.allclose(p, (1.0, 1.0, 0.0)) for p in shrunk_points), (
@@ -331,11 +327,11 @@ def test_grow_clockwise_square():
     square_cw = Geometry.from_points([(0, 0), (0, 10), (10, 10), (10, 0)])
 
     # A positive offset on any shape should grow it
-    grown_square = grow_geometry(square_cw, 1.0)
+    grown_square = square_cw.grow(1.0)
     assert grown_square.area() == pytest.approx(144.0)
 
     # A negative offset on any shape should shrink it
-    shrunk_square = grow_geometry(square_cw, -1.0)
+    shrunk_square = square_cw.grow(-1.0)
     assert shrunk_square.area() == pytest.approx(64.0)
 
 
@@ -351,19 +347,19 @@ def test_grow_shape_with_hole():
 
     # Grow by 1. Outer becomes 22x22, inner becomes 8x8.
     # New area = 22*22 - 8*8 = 484 - 64 = 420.
-    grown_shape = grow_geometry(shape_with_hole, 1.0)
+    grown_shape = shape_with_hole.grow(1.0)
     assert grown_shape.area() == pytest.approx(420.0)
 
     # Shrink by 1. Outer becomes 18x18, inner becomes 12x12.
     # New area = 18*18 - 12*12 = 324 - 144 = 180.
-    shrunk_shape = grow_geometry(shape_with_hole, -1.0)
+    shrunk_shape = shape_with_hole.grow(-1.0)
     assert shrunk_shape.area() == pytest.approx(180.0)
 
 
 def test_grow_open_path_is_ignored():
     """Tests that open paths result in an empty geometry."""
     open_path = Geometry.from_points([(0, 0), (10, 10), (20, 0)], close=False)
-    result = grow_geometry(open_path, 1.0)
+    result = open_path.grow(1.0)
     assert result.is_empty()
 
 
@@ -383,13 +379,13 @@ def test_grow_circle():
 
     # Grow the circle
     offset = 2.0
-    grown_circle = grow_geometry(circle, offset)
+    grown_circle = circle.grow(offset)
     expected_grown_area = math.pi * (radius + offset) ** 2
     assert grown_circle.area() == pytest.approx(expected_grown_area, rel=1e-2)
 
     # Shrink the circle
     offset = -2.0
-    shrunk_circle = grow_geometry(circle, offset)
+    shrunk_circle = circle.grow(offset)
     expected_shrunk_area = math.pi * (radius + offset) ** 2
     assert shrunk_circle.area() == pytest.approx(
         expected_shrunk_area, rel=1e-2
@@ -401,11 +397,11 @@ def test_shrink_to_nothing():
     square = Geometry.from_points([(0, 0), (10, 0), (10, 10), (0, 10)])
 
     # Shrinking by half the width should result in a zero-area shape
-    shrunk_to_point = grow_geometry(square, -5.0)
+    shrunk_to_point = square.grow(-5.0)
     assert shrunk_to_point.area() == pytest.approx(0.0)
 
     # Shrinking by more than the half-width should also result in zero area
-    shrunk_past_zero = grow_geometry(square, -6.0)
+    shrunk_past_zero = square.grow(-6.0)
     # The algorithm might produce a small self-intersecting shape with non-zero
     # area in this case, but it should be very small. A robust offset algorithm
     # would clean this up, but for now we check that it's close to zero.
@@ -431,7 +427,7 @@ def test_grow_adjacent_contours_preserved():
     # Grow by 1 unit. If contours are processed together, pyclipper would
     # merge them into one 22x12 rectangle (area 264). But processing each
     # contour separately gives two 12x12 squares (area 288 total).
-    grown = grow_geometry(combined, 1.0)
+    grown = combined.grow(1.0)
     assert grown.area() == pytest.approx(288.0)
 
 
@@ -453,7 +449,7 @@ def test_grow_overlapping_contours_preserved():
     # Growing by 1: each 15x15 square becomes 17x17 = 289
     # If processed independently: 289 + 289 = 578
     # If merged as union: would be a single larger shape with different area
-    grown = grow_geometry(combined, 1.0)
+    grown = combined.grow(1.0)
     assert grown.area() == pytest.approx(578.0)
 
 
@@ -490,7 +486,7 @@ def test_grow_nested_islands_preserved():
     # Hole shrinks by 1 unit on all sides -> 58x58 = 3364
     # Island grows by 1 unit on all sides -> 22x22 = 484
     # Expected: 10404 - 3364 + 484 = 7524
-    grown = grow_geometry(geo, 1.0)
+    grown = geo.grow(1.0)
 
     assert grown.area() == pytest.approx(7524.0)
 
@@ -513,7 +509,7 @@ def test_grow_shape_with_multiple_holes():
     contours = geo.split_into_contours()
     assert len(contours) == 4
 
-    grown = grow_geometry(geo, 1.0)
+    grown = geo.grow(1.0)
 
     grown_contours = grown.split_into_contours()
     assert len(grown_contours) == 4, (
@@ -549,7 +545,7 @@ def test_grow_multiple_holes_no_micro_contours():
     for h in holes:
         geo.extend(h)
 
-    grown = grow_geometry(geo, 0.5)
+    grown = geo.grow(0.5)
     contours = grown.split_into_contours()
 
     micro = [c for c in contours if c.area() < 1.0]
@@ -594,7 +590,7 @@ def test_grow_overlapping_solids_with_holes():
     # Solid A -> 42x42 (1764). Hole A -> 8x8 (64). Net A = 1700.
     # Solid B -> 42x42 (1764). Hole B -> 8x8 (64). Net B = 1700.
     # Total = 3400.
-    grown = grow_geometry(geo, 1.0)
+    grown = geo.grow(1.0)
     assert grown.area() == pytest.approx(3400.0)
 
 
@@ -611,7 +607,7 @@ def test_map_geometry_to_frame_identity():
     p_width = (30, 20)
     p_height = (10, 50)
 
-    mapped_geo = map_geometry_to_frame(geo, origin, p_width, p_height)
+    mapped_geo = geo.map_to_frame(origin, p_width, p_height)
 
     # The result should be identical to the original
     assert mapped_geo == original_geo
@@ -627,7 +623,7 @@ def test_map_geometry_to_frame_translate_scale():
     p_width = (150, 200)  # 50 units wide
     p_height = (100, 220)  # 20 units high
 
-    mapped_geo = map_geometry_to_frame(unit_square, origin, p_width, p_height)
+    mapped_geo = unit_square.map_to_frame(origin, p_width, p_height)
 
     # Check the bounding box of the result
     min_x, min_y, max_x, max_y = mapped_geo.rect()
@@ -645,7 +641,7 @@ def test_map_geometry_to_frame_non_uniform_scale():
     p_width = (50, 0)
     p_height = (0, 100)
 
-    mapped_geo = map_geometry_to_frame(source, origin, p_width, p_height)
+    mapped_geo = source.map_to_frame(origin, p_width, p_height)
 
     min_x, min_y, max_x, max_y = mapped_geo.rect()
     assert min_x == pytest.approx(0)
@@ -663,7 +659,7 @@ def test_map_geometry_to_frame_rotate_and_shear():
     p_width = (20, 15)  # Vector U = (10, 5)
     p_height = (5, 20)  # Vector V = (-5, 10)
 
-    mapped_geo = map_geometry_to_frame(unit_square, origin, p_width, p_height)
+    mapped_geo = unit_square.map_to_frame(origin, p_width, p_height)
 
     # The four corners of the unit square should map to the four corners of
     # the parallelogram: P0, P_width, P_height, P_width+P_height-P0
@@ -686,7 +682,7 @@ def test_map_geometry_to_frame_rotate_and_shear():
 def test_map_geometry_to_frame_empty_geometry():
     """Tests that mapping an empty geometry results in an empty geometry."""
     empty_geo = Geometry()
-    mapped_geo = map_geometry_to_frame(empty_geo, (0, 0), (10, 0), (0, 10))
+    mapped_geo = empty_geo.map_to_frame((0, 0), (10, 0), (0, 10))
     assert mapped_geo.is_empty()
 
 
@@ -698,6 +694,6 @@ def test_map_geometry_to_frame_degenerate_source():
     line_geo = Geometry.from_points([(0, 0), (10, 0)], close=False)
     assert line_geo.rect()[3] - line_geo.rect()[1] == 0  # Zero height
 
-    mapped_geo = map_geometry_to_frame(line_geo, (0, 0), (10, 0), (0, 10))
+    mapped_geo = line_geo.map_to_frame((0, 0), (10, 0), (0, 10))
     # Should return an empty geometry as the scaling would be infinite
     assert mapped_geo.is_empty()

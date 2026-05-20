@@ -2,7 +2,6 @@ import numpy as np
 from raygeo import Geometry
 from raygeo.geo.path import (
     remove_duplicate_segments,
-    close_geometry_gaps,
     are_points_equal,
     get_segment_key,
     are_segments_equal,
@@ -568,12 +567,11 @@ def test_close_geometry_gaps_functional():
     original_intra_data = geo_intra.copy().data
     assert original_intra_data is not None
 
-    result_intra = close_geometry_gaps(geo_intra, tolerance=1e-5)
+    result_intra = geo_intra.close_gaps(tolerance=1e-5)
     assert result_intra.data is not None
-    assert result_intra is not geo_intra
+    assert result_intra is geo_intra  # close_gaps modifies in-place
     assert geo_intra.data is not None
-    assert not np.array_equal(result_intra.data, geo_intra.data)
-    assert np.all(geo_intra.data[-1, 1:4] == original_intra_data[-1, 1:4])
+    assert np.array_equal(result_intra.data, geo_intra.data)  # same object
     assert np.all(result_intra.data[0, 1:4] == (0, 0, 0))
     assert np.all(result_intra.data[-1, 1:4] == (0, 0, 0))
 
@@ -585,13 +583,11 @@ def test_close_geometry_gaps_functional():
     original_inter_data = geo_inter.copy().data
     assert original_inter_data is not None
 
-    result_inter = close_geometry_gaps(geo_inter, tolerance=1e-5)
+    result_inter = geo_inter.close_gaps(tolerance=1e-5)
     assert result_inter.data is not None
-    assert result_inter is not geo_inter
+    assert result_inter is geo_inter  # close_gaps modifies in-place
     assert geo_inter.data is not None
-    assert not np.array_equal(result_inter.data, geo_inter.data)
-    assert geo_inter.data[2, Geometry.COL_TYPE] == Geometry.CMD_TYPE_MOVE
-    assert np.all(geo_inter.data[2, 1:4] == original_inter_data[2, 1:4])
+    assert np.array_equal(result_inter.data, geo_inter.data)  # same object
     assert result_inter.data[2, Geometry.COL_TYPE] == Geometry.CMD_TYPE_LINE
     assert np.all(result_inter.data[2, 1:4] == (10, 10, 0))
 
@@ -604,12 +600,15 @@ def test_close_geometry_gaps_respects_tolerance():
     geo.move_to(10.1, 10.1)
     geo.line_to(20, 20)
 
-    result1 = close_geometry_gaps(geo, tolerance=0.1)
+    geo1 = geo.copy()
+    result1 = geo1.close_gaps(tolerance=0.1)
     assert result1.data is not None
     assert result1.data[2, Geometry.COL_TYPE] == Geometry.CMD_TYPE_MOVE
     assert np.all(result1.data[2, 1:4] == (10.1, 10.1, 0))
 
-    result2 = close_geometry_gaps(geo, tolerance=0.2)
+    geo2 = geo.copy()
+    result2 = geo2.close_gaps(tolerance=0.2)
     assert result2.data is not None
     assert result2.data[2, Geometry.COL_TYPE] == Geometry.CMD_TYPE_LINE
+    assert np.all(result2.data[2, 1:4] == (10, 10, 0))
     assert np.all(result2.data[2, 1:4] == (10, 10, 0))

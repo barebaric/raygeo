@@ -9,14 +9,10 @@ __all__ = [
     "check_intersection_from_array",
     "check_self_intersection",
     "check_self_intersection_from_array",
-    "close_all_contours",
-    "close_geometry_gaps",
     "convert_arc_to_beziers_from_array",
     "create_arc_cmd",
     "create_line_cmd",
-    "does_enclose",
     "extract_overcut_rows",
-    "filter_to_external_contours",
     "fit_arcs",
     "fit_curves",
     "flatten_to_points",
@@ -30,21 +26,12 @@ __all__ = [
     "get_subpath_area_from_array",
     "get_subpath_vertices_from_array",
     "get_total_distance_from_array",
-    "get_valid_contours_data",
-    "grow_geometry",
     "is_clockwise",
     "is_closed",
     "linearize_geometry",
-    "map_geometry_to_frame",
-    "normalize_winding_orders",
     "optimize_path_from_array",
     "remove_duplicate_segments",
     "remove_duplicates",
-    "remove_inner_edges",
-    "reverse_contour",
-    "split_inner_and_outer_contours",
-    "split_into_components",
-    "split_into_contours",
 ]
 
 def apply_affine_transform_to_array(data: Sequence[Sequence[float]], matrix: Sequence[Sequence[float]]) -> Any:
@@ -114,23 +101,6 @@ def check_self_intersection_from_array(data: Sequence[Sequence[float]], fail_on_
     :returns: True if self-intersections are found.
     """
 
-def close_all_contours(geometry: Geometry) -> Geometry:
-    r"""
-    Close all open contours in a geometry.
-    
-    :param geometry: Input geometry.
-    :returns: Geometry with all contours closed.
-    """
-
-def close_geometry_gaps(geometry: Geometry, tolerance: float) -> Geometry:
-    r"""
-    Close gaps in a geometry.
-    
-    :param geometry: Input geometry.
-    :param tolerance: Maximum gap distance to close.
-    :returns: Geometry with gaps closed.
-    """
-
 def convert_arc_to_beziers_from_array(start: tuple[float, float, float], end: tuple[float, float, float], center_offset: tuple[float, float], clockwise: bool) -> list[list[float]]:
     r"""
     Convert an arc to bezier curves.
@@ -160,15 +130,6 @@ def create_line_cmd(end_point: tuple[float, float] | tuple[float, float, float])
     :returns: Line command array (8 floats).
     """
 
-def does_enclose(container: Geometry, content: Geometry) -> bool:
-    r"""
-    Check if one geometry encloses another.
-    
-    :param container: The container geometry.
-    :param content: The content geometry to test.
-    :returns: True if container encloses content.
-    """
-
 def extract_overcut_rows(data: Optional[Sequence[Sequence[float]]], max_length: float) -> Optional[Any]:
     r"""
     Extract rows that exceed a maximum length.
@@ -176,14 +137,6 @@ def extract_overcut_rows(data: Optional[Sequence[Sequence[float]]], max_length: 
     :param data: Array of command data or None.
     :param max_length: Maximum allowed segment length.
     :returns: Numpy array of overcut rows, or None.
-    """
-
-def filter_to_external_contours(contours: list[Geometry]) -> list[Geometry]:
-    r"""
-    Filter to only external (outer) contours.
-    
-    :param contours: List of contour geometries.
-    :returns: List of external contour geometries.
     """
 
 def fit_arcs(data: Optional[Sequence[Sequence[float]]], tolerance: float, progress_callback: Optional[Callable[[float], None]] = None) -> Optional[list[list[float]]]:
@@ -307,23 +260,6 @@ def get_total_distance_from_array(data: Sequence[Sequence[float]]) -> float:
     :returns: Total path length.
     """
 
-def get_valid_contours_data(contour_geometries: list[Geometry]) -> list[dict]:
-    r"""
-    Get valid contour data from a list of contour geometries.
-    
-    :param contour_geometries: List of contour geometries.
-    :returns: List of dicts with keys "geo", "vertices", "is_closed", "original_index".
-    """
-
-def grow_geometry(geometry: Geometry, offset: float) -> Geometry:
-    r"""
-    Grow (offset) a geometry by a given amount.
-    
-    :param geometry: Input geometry to grow.
-    :param offset: Offset distance (positive to inflate, negative to deflate).
-    :returns: New grown geometry.
-    """
-
 def is_clockwise(points: Sequence[tuple[float, float]]) -> bool:
     r"""
     Check if a polygon has clockwise winding order.
@@ -348,29 +284,6 @@ def linearize_geometry(data: Optional[Sequence[Sequence[float]]], tolerance: flo
     :param data: Array of command data or None.
     :param tolerance: Linearization tolerance.
     :returns: Numpy array of linearized segments.
-    """
-
-def map_geometry_to_frame(geometry: Geometry, origin: tuple[float, float], p_width: tuple[float, float], p_height: tuple[float, float], anchor_y: Optional[float] = None, stable_src_height: Optional[float] = None, anchor_x: Optional[float] = None, stable_src_width: Optional[float] = None) -> Geometry:
-    r"""
-    Map a geometry into a rectangular frame.
-    
-    :param geometry: Input geometry to map.
-    :param origin: Frame origin (x, y).
-    :param p_width: Width parameters (src, dst).
-    :param p_height: Height parameters (src, dst).
-    :param anchor_y: Optional vertical anchor.
-    :param stable_src_height: Optional stable source height.
-    :param anchor_x: Optional horizontal anchor.
-    :param stable_src_width: Optional stable source width.
-    :returns: Mapped geometry.
-    """
-
-def normalize_winding_orders(contours: list[Geometry]) -> list[Geometry]:
-    r"""
-    Normalize winding orders of contours (outer CCW, inner CW).
-    
-    :param contours: List of contour geometries.
-    :returns: List of geometries with normalized winding.
     """
 
 def optimize_path_from_array(data: Optional[Sequence[Sequence[float]]], tolerance: float, fit_arcs: bool) -> Any:
@@ -398,45 +311,5 @@ def remove_duplicates(points: Sequence[tuple[float, float]]) -> list[tuple[float
     
     :param points: Sequence of (x, y) points.
     :returns: List of unique points.
-    """
-
-def remove_inner_edges(geometry: Geometry) -> Geometry:
-    r"""
-    Remove inner edges from a geometry.
-    
-    :param geometry: Input geometry.
-    :returns: Geometry with inner edges removed.
-    """
-
-def reverse_contour(contour: Geometry) -> Geometry:
-    r"""
-    Reverse the direction of a contour.
-    
-    :param contour: Contour geometry to reverse.
-    :returns: Reversed contour geometry.
-    """
-
-def split_inner_and_outer_contours(contours: list[Geometry]) -> tuple[list[Geometry], list[Geometry]]:
-    r"""
-    Split contours into inner and outer groups.
-    
-    :param contours: List of contour geometries.
-    :returns: Tuple of (inner_contours, outer_contours).
-    """
-
-def split_into_components(geometry: Geometry) -> list[Geometry]:
-    r"""
-    Split a geometry into connected components.
-    
-    :param geometry: Input geometry to split.
-    :returns: List of component geometries.
-    """
-
-def split_into_contours(geometry: Geometry) -> list[Geometry]:
-    r"""
-    Split a geometry into individual contours.
-    
-    :param geometry: Input geometry to split.
-    :returns: List of contour geometries.
     """
 

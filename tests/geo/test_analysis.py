@@ -6,7 +6,6 @@ from raygeo.geo.path import (
     get_path_winding_order_from_array,
     get_point_and_tangent_at,
     get_subpath_area_from_array,
-    does_enclose,
     get_outward_normal_at_from_array,
     get_angle_at_vertex,
     remove_duplicates,
@@ -334,7 +333,6 @@ def test_encloses_simple():
     outer = Geometry.from_points([(0, 0), (10, 0), (10, 10), (0, 10)])
     inner = Geometry.from_points([(2, 2), (8, 2), (8, 8), (2, 8)])
     assert outer.encloses(inner) is True
-    assert does_enclose(outer, inner) is True  # Also test direct function call
     assert inner.encloses(outer) is False
 
 

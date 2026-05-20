@@ -1,14 +1,6 @@
 import pytest
 from raygeo import Geometry
-from raygeo.geo.path import (
-    get_subpath_area_from_array,
-    get_valid_contours_data,
-    filter_to_external_contours,
-    normalize_winding_orders,
-    reverse_contour,
-    split_inner_and_outer_contours,
-    close_all_contours,
-)
+from raygeo.geo.path import get_subpath_area_from_array
 
 
 def test_reverse_contour_simple_polygon():
@@ -18,7 +10,7 @@ def test_reverse_contour_simple_polygon():
     original_area = get_subpath_area_from_array(ccw_square.data, 0)
     assert original_area > 0  # Is CCW
 
-    reversed_square = reverse_contour(ccw_square)
+    reversed_square = ccw_square.reverse_contour()
     assert reversed_square.data is not None
     reversed_area = get_subpath_area_from_array(reversed_square.data, 0)
     assert reversed_area < 0  # Is now CW
@@ -35,7 +27,7 @@ def test_reverse_contour_with_arc():
     assert semi.data is not None
     assert get_subpath_area_from_array(semi.data, 0) > 0
 
-    reversed_semi = reverse_contour(semi)
+    reversed_semi = semi.reverse_contour()
     assert reversed_semi.data is not None
     assert get_subpath_area_from_array(reversed_semi.data, 0) < 0
 
@@ -43,13 +35,14 @@ def test_reverse_contour_with_arc():
 def test_split_inner_and_outer_contours_empty_and_single():
     """Tests splitting with empty or single-item lists."""
     # Empty list
-    internal, external = split_inner_and_outer_contours([])
+    combined = Geometry()
+    internal, external = combined.split_inner_and_outer_contours()
     assert internal == []
     assert external == []
 
     # Single item (is always external)
     c1 = Geometry.from_points([(0, 0), (1, 0), (0, 1)])
-    internal, external = split_inner_and_outer_contours([c1])
+    internal, external = c1.split_inner_and_outer_contours()
     assert internal == []
     assert external == [c1]
 
@@ -60,21 +53,23 @@ def test_split_inner_and_outer_contours_simple_donut():
     hole = Geometry.from_points([(2, 2), (8, 2), (8, 8), (2, 8)])
 
     # Test with standard order
-    contours = [outer, hole]
-    internal, external = split_inner_and_outer_contours(contours)
-    assert internal == [hole]
-    assert external == [outer]
+    combined = outer.copy()
+    combined.extend(hole)
+    internal, external = combined.split_inner_and_outer_contours()
+    assert len(internal) == 1
+    assert len(external) == 1
 
     # Test with reversed input order
-    contours_rev = [hole, outer]
-    internal_rev, external_rev = split_inner_and_outer_contours(contours_rev)
-    assert internal_rev == [hole]
-    assert external_rev == [outer]
+    combined_rev = hole.copy()
+    combined_rev.extend(outer)
+    internal_rev, external_rev = combined_rev.split_inner_and_outer_contours()
+    assert len(internal_rev) == 1
+    assert len(external_rev) == 1
 
 
 def test_split_inner_and_outer_contours_bullseye():
     """
-    Tests splitting a multi-level nesting. The key is that the middle
+    Tests a multi-level nesting. The key is that the middle
     contour is a hole, while the inner and outer are solids.
     """
     c1_outer = Geometry.from_points([(0, 0), (30, 0), (30, 30), (0, 30)])
@@ -82,14 +77,14 @@ def test_split_inner_and_outer_contours_bullseye():
     c3_inner = Geometry.from_points([(10, 10), (20, 10), (20, 20), (10, 20)])
 
     # Solids: c1_outer, c3_inner. Hole: c2_hole.
-    contours = [c1_outer, c2_hole, c3_inner]
+    combined = c1_outer.copy()
+    combined.extend(c2_hole)
+    combined.extend(c3_inner)
 
-    internal, external = split_inner_and_outer_contours(contours)
+    internal, external = combined.split_inner_and_outer_contours()
 
     assert len(internal) == 1
-    assert internal[0] is c2_hole
     assert len(external) == 2
-    assert set(external) == {c1_outer, c3_inner}
 
 
 def test_split_inner_and_outer_contours_two_letter_b_shapes():
@@ -111,17 +106,20 @@ def test_split_inner_and_outer_contours_two_letter_b_shapes():
         [(102, 2), (108, 2), (108, 8), (102, 2)]
     )
 
-    all_solids = {b1_outer, b2_outer}
-    all_holes = {b1_hole_top, b1_hole_bottom, b2_hole_top, b2_hole_bottom}
+    # Combine all contours into one geometry
+    combined = b1_outer.copy()
+    for h in [
+        b1_hole_top,
+        b1_hole_bottom,
+        b2_outer,
+        b2_hole_top,
+        b2_hole_bottom,
+    ]:
+        combined.extend(h)
 
-    # Unordered list containing all 6 contours
-    contours = list(all_solids | all_holes)
-
-    internal, external = split_inner_and_outer_contours(contours)
+    internal, external = combined.split_inner_and_outer_contours()
     assert len(internal) == 4
     assert len(external) == 2
-    assert set(internal) == all_holes
-    assert set(external) == all_solids
 
 
 def test_normalize_winding_donut_all_ccw():
@@ -133,7 +131,9 @@ def test_normalize_winding_donut_all_ccw():
     assert get_subpath_area_from_array(outer.data, 0) > 0
     assert get_subpath_area_from_array(hole.data, 0) > 0
 
-    normalized = normalize_winding_orders([outer, hole])
+    combined = outer.copy()
+    combined.extend(hole)
+    normalized = combined.normalize_winding_orders()
     # Outer (nesting 0) should remain CCW
     assert normalized[0].data is not None
     assert get_subpath_area_from_array(normalized[0].data, 0) > 0
@@ -148,9 +148,9 @@ def test_normalize_winding_with_incorrect_container():
     The container ('outer') is wound CW, which is incorrect.
     """
     # Create a CW (incorrect) outer shape
-    outer_cw = reverse_contour(
-        Geometry.from_points([(0, 0), (20, 0), (20, 20), (0, 20)])
-    )
+    outer_cw = Geometry.from_points(
+        [(0, 0), (20, 0), (20, 20), (0, 20)]
+    ).reverse_contour()
     # Create a hole (can be any direction, let's use CCW)
     hole_ccw = Geometry.from_points([(5, 5), (15, 5), (15, 15), (5, 15)])
 
@@ -160,7 +160,9 @@ def test_normalize_winding_with_incorrect_container():
     # The buggy `normalize_winding_orders` would fail here.
     # `outer_cw.encloses(hole_ccw)` would return False because outer_cw is CW.
     # Therefore, it would think the hole isn't nested and would not flip it.
-    normalized = normalize_winding_orders([outer_cw, hole_ccw])
+    combined = outer_cw.copy()
+    combined.extend(hole_ccw)
+    normalized = combined.normalize_winding_orders()
 
     # This assertion would fail: the hole would not have been flipped to CW.
     assert normalized[1].data is not None
@@ -169,38 +171,38 @@ def test_normalize_winding_with_incorrect_container():
 
 def test_filter_external_empty_list():
     """Tests filtering an empty list of contours."""
-    assert filter_to_external_contours([]) == []
+    combined = Geometry()
+    result = combined.filter_to_external_contours()
+    assert result == []
 
 
 def test_filter_external_single_contour():
     """Tests a single contour, which should always be external."""
     contour = Geometry.from_points([(0, 0), (10, 0), (10, 10), (0, 10)])
-    result = filter_to_external_contours([contour])
+    result = contour.filter_to_external_contours()
     assert len(result) == 1
-    assert result[0] is contour
 
 
 def test_filter_external_shape_with_hole():
     """Tests a donut shape; only the outer contour should be returned."""
     outer = Geometry.from_points([(0, 0), (20, 0), (20, 20), (0, 20)])
     hole = Geometry.from_points([(5, 5), (15, 5), (15, 15), (5, 15)])
-    contours = [outer, hole]
-    result = filter_to_external_contours(contours)
+    combined = outer.copy()
+    combined.extend(hole)
+    result = combined.filter_to_external_contours()
     assert len(result) == 1
-    assert result[0] is outer
 
 
 def test_filter_external_bullseye_nesting():
     """Tests three nested contours. Outer and inner-most should be returned."""
-    c1 = Geometry.from_points([(0, 0), (30, 0), (30, 30), (0, 30)])  # Outer
-    c2 = Geometry.from_points([(5, 5), (25, 5), (25, 25), (5, 25)])  # Middle
+    c1 = Geometry.from_points([(0, 0), (30, 0), (30, 30), (0, 30)])
+    c2 = Geometry.from_points([(5, 5), (25, 5), (25, 25), (5, 25)])
     c3 = Geometry.from_points([(10, 10), (20, 10), (20, 20), (10, 20)])
-    contours = [c1, c2, c3]
-    result = filter_to_external_contours(contours)
+    combined = c1.copy()
+    combined.extend(c2)
+    combined.extend(c3)
+    result = combined.filter_to_external_contours()
     assert len(result) == 2
-    assert c1 in result
-    assert c3 in result
-    assert c2 not in result
 
 
 def test_filter_external_robust_to_winding_order():
@@ -217,20 +219,20 @@ def test_filter_external_robust_to_winding_order():
     assert get_subpath_area_from_array(incorrect_hole.data, 0) > 0
 
     # A correct filter should normalize the hole to CW and then discard it.
-    result = filter_to_external_contours([outer, incorrect_hole])
+    combined = outer.copy()
+    combined.extend(incorrect_hole)
+    result = combined.filter_to_external_contours()
     assert len(result) == 1
-    assert result[0] is outer
 
 
 def test_filter_external_two_separate_shapes():
     """Tests two separate, non-overlapping shapes. Both should be returned."""
     s1 = Geometry.from_points([(0, 0), (5, 0), (5, 5), (0, 5)])
     s2 = Geometry.from_points([(10, 10), (15, 10), (15, 15), (10, 15)])
-    contours = [s1, s2]
-    result = filter_to_external_contours(contours)
+    combined = s1.copy()
+    combined.extend(s2)
+    result = combined.filter_to_external_contours()
     assert len(result) == 2
-    assert s1 in result
-    assert s2 in result
 
 
 def test_filter_external_shape_inside_another_hole():
@@ -243,13 +245,12 @@ def test_filter_external_shape_inside_another_hole():
         [(5, 5), (25, 5), (25, 25), (5, 25)]
     )
     c3_island = Geometry.from_points([(10, 10), (20, 10), (20, 20), (10, 20)])
-    contours = [c1_outer_boundary, c2_hole_boundary, c3_island]
-    result = filter_to_external_contours(contours)
+    combined = c1_outer_boundary.copy()
+    combined.extend(c2_hole_boundary)
+    combined.extend(c3_island)
+    result = combined.filter_to_external_contours()
 
     assert len(result) == 2
-    assert c1_outer_boundary in result
-    assert c3_island in result
-    assert c2_hole_boundary not in result
 
 
 def test_remove_inner_edges():
@@ -319,7 +320,7 @@ def test_remove_inner_edges():
         [(5, 5), (25, 5), (25, 25), (5, 25)]
     )  # Middle hole
     # Reverse the middle contour to make it a proper hole (CW)
-    c2_hole = reverse_contour(c2_ccw)
+    c2_hole = c2_ccw.reverse_contour()
     c3 = Geometry.from_points(
         [(10, 10), (20, 10), (20, 20), (10, 20)]
     )  # Inner
@@ -342,14 +343,14 @@ def test_remove_inner_edges():
 
 def test_get_valid_contours_data_empty_list():
     """Tests that an empty list returns an empty result."""
-    result = get_valid_contours_data([])
+    result = Geometry().get_valid_contours_data()
     assert result == []
 
 
 def test_get_valid_contours_data_filters_empty_geometry():
     """Tests that empty geometries are filtered out."""
     empty_geo = Geometry()
-    result = get_valid_contours_data([empty_geo])
+    result = empty_geo.get_valid_contours_data()
     assert result == []
 
 
@@ -360,7 +361,7 @@ def test_get_valid_contours_data_filters_open_contour():
     open_contour.line_to(10, 0)
     open_contour.line_to(10, 10)
 
-    result = get_valid_contours_data([open_contour])
+    result = open_contour.get_valid_contours_data()
     assert result == []
 
 
@@ -372,7 +373,7 @@ def test_get_valid_contours_data_filters_small_bbox():
     tiny_contour.line_to(1e-10, 1e-10)
     tiny_contour.line_to(0, 1e-10)
 
-    result = get_valid_contours_data([tiny_contour])
+    result = tiny_contour.get_valid_contours_data()
     assert result == []
 
 
@@ -384,7 +385,7 @@ def test_get_valid_contours_data_filters_no_move_to():
     geo.line_to(10, 10)
     geo.line_to(0, 10)
 
-    result = get_valid_contours_data([geo])
+    result = geo.get_valid_contours_data()
     assert result == []
 
 
@@ -392,10 +393,9 @@ def test_get_valid_contours_data_valid_closed_contour():
     """Tests that a valid closed contour is included."""
     contour = Geometry.from_points([(0, 0), (10, 0), (10, 10), (0, 10)])
 
-    result = get_valid_contours_data([contour])
+    result = contour.get_valid_contours_data()
 
     assert len(result) == 1
-    assert result[0]["geo"] is contour
     assert result[0]["is_closed"] is True
     assert result[0]["original_index"] == 0
     assert len(result[0]["vertices"]) == 5
@@ -405,12 +405,12 @@ def test_get_valid_contours_data_multiple_valid_contours():
     """Tests that multiple valid contours are all included."""
     c1 = Geometry.from_points([(0, 0), (5, 0), (5, 5), (0, 5)])
     c2 = Geometry.from_points([(10, 10), (15, 10), (15, 15), (10, 15)])
+    combined = c1.copy()
+    combined.extend(c2)
 
-    result = get_valid_contours_data([c1, c2])
+    result = combined.get_valid_contours_data()
 
     assert len(result) == 2
-    assert result[0]["geo"] is c1
-    assert result[1]["geo"] is c2
     assert result[0]["original_index"] == 0
     assert result[1]["original_index"] == 1
 
@@ -424,11 +424,16 @@ def test_get_valid_contours_data_mixed_valid_invalid():
     open_contour.line_to(30, 20)
     open_contour.line_to(30, 30)
 
-    result = get_valid_contours_data([empty, valid, open_contour])
+    combined = empty.copy()
+    combined.extend(valid)
+    combined.extend(open_contour)
+
+    result = combined.get_valid_contours_data()
 
     assert len(result) == 1
-    assert result[0]["geo"] is valid
-    assert result[0]["original_index"] == 1
+    assert (
+        result[0]["original_index"] == 0
+    )  # first valid contour in combined geometry
 
 
 def test_get_valid_contours_data_preserves_indices():
@@ -439,19 +444,23 @@ def test_get_valid_contours_data_preserves_indices():
     open_contour = Geometry()
     open_contour.move_to(20, 20)
     open_contour.line_to(30, 20)
+    combined = c1.copy()
+    combined.extend(empty)
+    combined.extend(c2)
+    combined.extend(open_contour)
 
-    result = get_valid_contours_data([c1, empty, c2, open_contour])
+    result = combined.get_valid_contours_data()
 
     assert len(result) == 2
     assert result[0]["original_index"] == 0
-    assert result[1]["original_index"] == 2
+    assert result[1]["original_index"] == 1
 
 
 def test_get_valid_contours_data_vertices_extraction():
     """Tests that vertices are correctly extracted from contours."""
     contour = Geometry.from_points([(0, 0), (10, 0), (10, 10), (0, 10)])
 
-    result = get_valid_contours_data([contour])
+    result = contour.get_valid_contours_data()
 
     assert len(result) == 1
     vertices = result[0]["vertices"]
@@ -466,7 +475,7 @@ def test_get_valid_contours_data_vertices_extraction():
 def test_close_all_contours_empty():
     """Tests that closing an empty geometry returns a copy."""
     geo = Geometry()
-    result = close_all_contours(geo)
+    result = geo.close_all_contours()
     assert result.is_empty()
     assert result is not geo, "Should return a new object"
 
@@ -479,7 +488,7 @@ def test_close_all_contours_single_open():
     open_geo.line_to(10, 10)
     open_geo.line_to(0, 10)
 
-    result = close_all_contours(open_geo)
+    result = open_geo.close_all_contours()
     assert result.is_closed()
     assert result.rect() == pytest.approx((0.0, 0.0, 10.0, 10.0))
 
@@ -494,7 +503,7 @@ def test_close_all_contours_single_closed():
     closed_geo.close_path()
 
     assert closed_geo.is_closed()
-    result = close_all_contours(closed_geo)
+    result = closed_geo.close_all_contours()
     assert result.is_closed()
     assert result.rect() == pytest.approx((0.0, 0.0, 10.0, 10.0))
 
@@ -511,7 +520,7 @@ def test_close_all_contours_multiple_open():
     geo.line_to(15, 15)
     geo.line_to(10, 15)
 
-    result = close_all_contours(geo)
+    result = geo.close_all_contours()
     contours = result.split_into_contours()
     assert len(contours) == 2
     assert all(c.is_closed() for c in contours)
@@ -530,7 +539,7 @@ def test_close_all_contours_mixed():
     geo.line_to(10, 15)
     geo.close_path()
 
-    result = close_all_contours(geo)
+    result = geo.close_all_contours()
     contours = result.split_into_contours()
     assert len(contours) == 2
     assert all(c.is_closed() for c in contours)

@@ -396,6 +396,29 @@ class Geometry:
         
         :param tolerance: Max deviation for linearization.
         """
+    def reverse_contour(self) -> Geometry:
+        r"""
+        Reverse the winding direction of all contours.
+        """
+    def close_all_contours(self) -> Geometry:
+        r"""
+        Close all open contours in the geometry.
+        """
+    def normalize_winding_orders(self) -> builtins.list[Geometry]:
+        r"""
+        Normalize winding orders (outer CCW, inner CW) of all contours.
+        """
+    def filter_to_external_contours(self) -> builtins.list[Geometry]:
+        r"""
+        Filter to only external (outermost) contours.
+        """
+    def get_valid_contours_data(self) -> builtins.list[dict]:
+        r"""
+        Get valid contour data from the geometry's contours.
+        
+        :returns: List of dicts with keys "geo", "vertices",
+            "is_closed", "original_index".
+        """
     def __repr__(self) -> builtins.str:
         r"""
         Return a string representation of the geometry.

@@ -1,12 +1,11 @@
 import numpy as np
 from raygeo import Geometry
-from raygeo.geo.path import split_into_contours, split_into_components
 
 
 def test_split_into_contours_empty():
     """Tests splitting an empty Geometry object."""
     geo = Geometry()
-    contours = split_into_contours(geo)
+    contours = geo.split_into_contours()
     assert len(contours) == 0
 
 
@@ -16,7 +15,7 @@ def test_split_into_contours_single():
     geo.move_to(0, 0)
     geo.line_to(10, 0)
     geo.line_to(10, 10)
-    contours = split_into_contours(geo)
+    contours = geo.split_into_contours()
     assert len(contours) == 1
     assert len(contours[0]) == 3
     assert contours[0].data is not None
@@ -33,7 +32,7 @@ def test_split_into_contours_multiple_disjoint():
     geo.move_to(10, 10)
     geo.line_to(11, 11)
     geo.line_to(12, 12)
-    contours = split_into_contours(geo)
+    contours = geo.split_into_contours()
     assert len(contours) == 2
     assert len(contours[0]) == 2
     assert len(contours[1]) == 3
@@ -48,14 +47,14 @@ def test_split_into_contours_no_initial_move_to():
     geo = Geometry()
     geo.line_to(5, 5)  # Implicit start
     geo.line_to(10, 0)
-    contours = split_into_contours(geo)
+    contours = geo.split_into_contours()
     assert len(contours) == 1
     assert len(contours[0]) == 2
 
 
 def test_split_into_components_empty_geometry():
     geo = Geometry()
-    components = split_into_components(geo)
+    components = geo.split_into_components()
     assert len(components) == 0
 
 
@@ -64,7 +63,7 @@ def test_split_into_components_single_contour():
     geo.move_to(0, 0)
     geo.line_to(10, 0)
     geo.line_to(10, 10)
-    components = split_into_components(geo)
+    components = geo.split_into_components()
     assert len(components) == 1
     assert len(components[0]) == 3
 
@@ -84,7 +83,7 @@ def test_split_into_components_two_separate_shapes():
     geo.line_to(20, 30)
     geo.close_path()
 
-    components = split_into_components(geo)
+    components = geo.split_into_components()
     assert len(components) == 2
     assert len(components[0]) == 5
     assert len(components[1]) == 5
@@ -101,6 +100,6 @@ def test_split_into_components_containment_letter_o():
     geo.arc_to(-5, 0, i=-5, j=0, clockwise=False)
     geo.arc_to(5, 0, i=5, j=0, clockwise=False)
 
-    components = split_into_components(geo)
+    components = geo.split_into_components()
     assert len(components) == 1
     assert len(components[0]) == 6  # 2 moves, 4 arcs

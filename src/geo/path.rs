@@ -2,7 +2,7 @@ use crate::geo::flex_point::{PyPoint2D, PyPoint3D};
 use crate::geo::geometry::{Geometry, PyCommand};
 use numpy::PyArray2;
 use pyo3::prelude::*;
-use pyo3::types::{PyDict, PyList, PyTuple};
+use pyo3::types::PyTuple;
 use pyo3_stub_gen::derive::gen_stub_pyfunction;
 
 use raygeo_core::geo::algo::fitting::{
@@ -15,21 +15,12 @@ use raygeo_core::geo::analysis::{
     segment_length_from_row_flat,
 };
 use raygeo_core::geo::cleanup::{are_points_equal, get_segment_key};
-use raygeo_core::geo::split::get_valid_contours_data;
-use raygeo_core::geo::transform::{
-    apply_affine_transform_to_array, map_geometry_to_frame,
-};
+use raygeo_core::geo::transform::apply_affine_transform_to_array;
 use raygeo_core::{
     check_intersection_from_array, check_self_intersection_from_array,
-    close_all_contours, close_geometry_gaps_from_array, does_enclose,
-    filter_to_external_contours, fit_curves, grow_geometry,
-    normalize_winding_orders, remove_duplicate_segments, remove_inner_edges,
-    reverse_contour, split_inner_and_outer_contours, split_into_components,
-    split_into_contours, Geometry as CoreGeometry, Point, CMD_TYPE_ARC,
+    fit_curves, remove_duplicate_segments, Point, CMD_TYPE_ARC,
     CMD_TYPE_BEZIER, CMD_TYPE_LINE,
 };
-
-type GeometryVecPair = (Vec<Py<Geometry>>, Vec<Py<Geometry>>);
 
 fn to_data_array(data: Vec<Vec<f64>>) -> Vec<[f64; 8]> {
     data.into_iter()
@@ -39,65 +30,6 @@ fn to_data_array(data: Vec<Vec<f64>>) -> Vec<[f64; 8]> {
             a[..len].copy_from_slice(&r[..len]);
             a
         })
-        .collect()
-}
-
-#[gen_stub_pyfunction(
-    python = r#"
-    def grow_geometry(geometry: Geometry, offset: float) -> Geometry:
-        """Grow (offset) a geometry by a given amount.
-
-        :param geometry: Input geometry to grow.
-        :param offset: Offset distance (positive to inflate, negative to deflate).
-        :returns: New grown geometry.
-        """
-"#,
-    module = "raygeo.geo.path"
-)]
-#[pyfunction(name = "grow_geometry")]
-fn grow_geometry_py(geometry: &Geometry, offset: f64) -> Geometry {
-    let inner = geometry.inner.clone();
-    let result = grow_geometry(&inner, offset);
-    Geometry { inner: result }
-}
-
-#[gen_stub_pyfunction(
-    python = r#"
-    def split_into_contours(geometry: Geometry) -> list[Geometry]:
-        """Split a geometry into individual contours.
-
-        :param geometry: Input geometry to split.
-        :returns: List of contour geometries.
-        """
-"#,
-    module = "raygeo.geo.path"
-)]
-#[pyfunction(name = "split_into_contours")]
-fn split_into_contours_py(geometry: &Geometry) -> Vec<Geometry> {
-    let inner = geometry.inner.clone();
-    split_into_contours(&inner)
-        .into_iter()
-        .map(|g| Geometry { inner: g })
-        .collect()
-}
-
-#[gen_stub_pyfunction(
-    python = r#"
-    def split_into_components(geometry: Geometry) -> list[Geometry]:
-        """Split a geometry into connected components.
-
-        :param geometry: Input geometry to split.
-        :returns: List of component geometries.
-        """
-"#,
-    module = "raygeo.geo.path"
-)]
-#[pyfunction(name = "split_into_components")]
-fn split_into_components_py(geometry: &Geometry) -> Vec<Geometry> {
-    let inner = geometry.inner.clone();
-    split_into_components(&inner)
-        .into_iter()
-        .map(|g| Geometry { inner: g })
         .collect()
 }
 
@@ -337,25 +269,6 @@ fn optimize_path_from_array(
 
 #[gen_stub_pyfunction(
     python = r#"
-    def does_enclose(container: Geometry, content: Geometry) -> bool:
-        """Check if one geometry encloses another.
-
-        :param container: The container geometry.
-        :param content: The content geometry to test.
-        :returns: True if container encloses content.
-        """
-"#,
-    module = "raygeo.geo.path"
-)]
-#[pyfunction(name = "does_enclose")]
-fn does_enclose_py(container: &Geometry, content: &Geometry) -> PyResult<bool> {
-    let c = container.inner.clone();
-    let ct = content.inner.clone();
-    Ok(does_enclose(&c, &ct))
-}
-
-#[gen_stub_pyfunction(
-    python = r#"
     def fit_arcs(
         data: Optional[Sequence[Sequence[float]]],
         tolerance: float,
@@ -389,259 +302,6 @@ fn fit_arcs(
         }
         None => Ok(None),
     }
-}
-
-#[gen_stub_pyfunction(
-    python = r#"
-    def reverse_contour(contour: Geometry) -> Geometry:
-        """Reverse the direction of a contour.
-
-        :param contour: Contour geometry to reverse.
-        :returns: Reversed contour geometry.
-        """
-"#,
-    module = "raygeo.geo.path"
-)]
-#[pyfunction(name = "reverse_contour")]
-fn reverse_contour_py(contour: &Geometry) -> PyResult<Geometry> {
-    let c = contour.inner.clone();
-    Ok(Geometry {
-        inner: reverse_contour(&c),
-    })
-}
-
-#[gen_stub_pyfunction(
-    python = r#"
-    def split_inner_and_outer_contours(
-        contours: list[Geometry],
-    ) -> tuple[list[Geometry], list[Geometry]]:
-        """Split contours into inner and outer groups.
-
-        :param contours: List of contour geometries.
-        :returns: Tuple of (inner_contours, outer_contours).
-        """
-"#,
-    module = "raygeo.geo.path"
-)]
-#[pyfunction(name = "split_inner_and_outer_contours")]
-fn split_inner_and_outer_contours_py(
-    py: Python<'_>,
-    contours: Bound<'_, PyList>,
-) -> PyResult<GeometryVecPair> {
-    let mut original_geos: Vec<Py<Geometry>> = Vec::new();
-    let mut geos: Vec<CoreGeometry> = Vec::new();
-    for item in contours.iter() {
-        let py_geo: Py<Geometry> =
-            item.extract::<Py<Geometry>>().map_err(PyErr::from)?;
-        original_geos.push(py_geo.clone_ref(py));
-        let g = py_geo.borrow(py);
-        let inner = g.inner.clone();
-        geos.push(inner);
-    }
-    let (inner_indices, outer_indices) = split_inner_and_outer_contours(&geos);
-
-    let inner: Vec<Py<Geometry>> = inner_indices
-        .into_iter()
-        .map(|i| original_geos[i].clone_ref(py))
-        .collect();
-    let outer: Vec<Py<Geometry>> = outer_indices
-        .into_iter()
-        .map(|i| original_geos[i].clone_ref(py))
-        .collect();
-
-    Ok((inner, outer))
-}
-
-#[gen_stub_pyfunction(
-    python = r#"
-    def close_all_contours(geometry: Geometry) -> Geometry:
-        """Close all open contours in a geometry.
-
-        :param geometry: Input geometry.
-        :returns: Geometry with all contours closed.
-        """
-"#,
-    module = "raygeo.geo.path"
-)]
-#[pyfunction(name = "close_all_contours")]
-fn close_all_contours_py(geometry: &Geometry) -> PyResult<Geometry> {
-    let g = geometry.inner.clone();
-    Ok(Geometry {
-        inner: close_all_contours(&g),
-    })
-}
-
-#[gen_stub_pyfunction(
-    python = r#"
-    def normalize_winding_orders(
-        contours: list[Geometry],
-    ) -> list[Geometry]:
-        """Normalize winding orders of contours (outer CCW, inner CW).
-
-        :param contours: List of contour geometries.
-        :returns: List of geometries with normalized winding.
-        """
-"#,
-    module = "raygeo.geo.path"
-)]
-#[pyfunction(name = "normalize_winding_orders")]
-fn normalize_winding_orders_py(
-    contours: Bound<'_, PyList>,
-) -> PyResult<Vec<Geometry>> {
-    let mut geos: Vec<CoreGeometry> = Vec::new();
-    for item in contours.iter() {
-        let g: PyRef<Geometry> = item.extract()?;
-        let inner = g.inner.clone();
-        geos.push(inner);
-    }
-    let result = normalize_winding_orders(&geos);
-    Ok(result.into_iter().map(|g| Geometry { inner: g }).collect())
-}
-
-#[gen_stub_pyfunction(
-    python = r#"
-    def filter_to_external_contours(
-        contours: list[Geometry],
-    ) -> list[Geometry]:
-        """Filter to only external (outer) contours.
-
-        :param contours: List of contour geometries.
-        :returns: List of external contour geometries.
-        """
-"#,
-    module = "raygeo.geo.path"
-)]
-#[pyfunction(name = "filter_to_external_contours")]
-fn filter_to_external_contours_py(
-    py: Python<'_>,
-    contours: Bound<'_, PyList>,
-) -> PyResult<Vec<Py<Geometry>>> {
-    let mut original_geos: Vec<Py<Geometry>> = Vec::new();
-    let mut geos: Vec<CoreGeometry> = Vec::new();
-    for item in contours.iter() {
-        let py_geo: Py<Geometry> =
-            item.extract::<Py<Geometry>>().map_err(PyErr::from)?;
-        original_geos.push(py_geo.clone_ref(py));
-        let g = py_geo.borrow(py);
-        let inner = g.inner.clone();
-        geos.push(inner);
-    }
-    let result = filter_to_external_contours(&geos);
-
-    let synced_geos: Vec<_> = geos
-        .iter()
-        .map(|g| {
-            let gc = g.clone();
-            gc
-        })
-        .collect();
-
-    let output: Vec<Py<Geometry>> = result
-        .into_iter()
-        .map(|g| {
-            let match_idx =
-                synced_geos.iter().position(|sg| sg.data() == g.data());
-            match match_idx {
-                Some(i) => original_geos[i].clone_ref(py),
-                None => Py::new(py, Geometry { inner: g }).unwrap(),
-            }
-        })
-        .collect();
-
-    Ok(output)
-}
-
-#[gen_stub_pyfunction(
-    python = r#"
-    def remove_inner_edges(geometry: Geometry) -> Geometry:
-        """Remove inner edges from a geometry.
-
-        :param geometry: Input geometry.
-        :returns: Geometry with inner edges removed.
-        """
-"#,
-    module = "raygeo.geo.path"
-)]
-#[pyfunction(name = "remove_inner_edges")]
-fn remove_inner_edges_py(geometry: &Geometry) -> PyResult<Geometry> {
-    let g = geometry.inner.clone();
-    Ok(Geometry {
-        inner: remove_inner_edges(&g),
-    })
-}
-
-#[gen_stub_pyfunction(
-    python = r#"
-    def get_valid_contours_data(
-        contour_geometries: list[Geometry],
-    ) -> list[dict]:
-        """Get valid contour data from a list of contour geometries.
-
-        :param contour_geometries: List of contour geometries.
-        :returns: List of dicts with keys "geo", "vertices", "is_closed", "original_index".
-        """
-"#,
-    module = "raygeo.geo.path"
-)]
-#[pyfunction(name = "get_valid_contours_data")]
-fn get_valid_contours_data_py<'py>(
-    py: Python<'py>,
-    contour_geometries: Bound<'py, PyList>,
-) -> PyResult<Bound<'py, PyList>> {
-    let mut original_geos: Vec<Py<Geometry>> = Vec::new();
-    let mut geos: Vec<CoreGeometry> = Vec::new();
-    for item in contour_geometries.iter() {
-        let py_geo: Py<Geometry> =
-            item.extract::<Py<Geometry>>().map_err(PyErr::from)?;
-        original_geos.push(py_geo.clone_ref(py));
-        let g = py_geo.borrow(py);
-        let inner = g.inner.clone();
-        geos.push(inner);
-    }
-    let mut out: Vec<Bound<'py, pyo3::types::PyAny>> = Vec::new();
-    for (orig_idx, geo) in geos.iter().enumerate() {
-        let single_result = get_valid_contours_data(std::slice::from_ref(geo));
-        if single_result.is_empty() {
-            continue;
-        }
-        let (_, pts, closed) = single_result.into_iter().next().unwrap();
-        let dict = PyDict::new(py);
-        dict.set_item("geo", original_geos[orig_idx].clone_ref(py))?;
-        let py_pts: Vec<(f64, f64)> = pts;
-        dict.set_item("vertices", py_pts)?;
-        dict.set_item("is_closed", closed)?;
-        dict.set_item("original_index", orig_idx)?;
-        out.push(dict.into_any());
-    }
-    PyList::new(py, out)
-}
-
-#[gen_stub_pyfunction(
-    python = r#"
-    def close_geometry_gaps(
-        geometry: Geometry,
-        tolerance: float,
-    ) -> Geometry:
-        """Close gaps in a geometry.
-
-        :param geometry: Input geometry.
-        :param tolerance: Maximum gap distance to close.
-        :returns: Geometry with gaps closed.
-        """
-"#,
-    module = "raygeo.geo.path"
-)]
-#[pyfunction]
-fn close_geometry_gaps(
-    geometry: &Geometry,
-    tolerance: f64,
-) -> PyResult<Geometry> {
-    let mut g = geometry.inner.clone();
-    if !g.synced_data().is_empty() {
-        let closed = close_geometry_gaps_from_array(g.synced_data(), tolerance);
-        *g.synced_data_mut() = closed;
-    }
-    Ok(Geometry { inner: g })
 }
 
 #[gen_stub_pyfunction(
@@ -818,58 +478,6 @@ fn apply_affine_transform_to_array_py(
         .expect("failed to create numpy array")
         .as_any()
         .clone()
-}
-
-#[gen_stub_pyfunction(
-    python = r#"
-    def map_geometry_to_frame(
-        geometry: Geometry,
-        origin: tuple[float, float],
-        p_width: tuple[float, float],
-        p_height: tuple[float, float],
-        anchor_y: Optional[float] = None,
-        stable_src_height: Optional[float] = None,
-        anchor_x: Optional[float] = None,
-        stable_src_width: Optional[float] = None,
-    ) -> Geometry:
-        """Map a geometry into a rectangular frame.
-
-        :param geometry: Input geometry to map.
-        :param origin: Frame origin (x, y).
-        :param p_width: Width parameters (src, dst).
-        :param p_height: Height parameters (src, dst).
-        :param anchor_y: Optional vertical anchor.
-        :param stable_src_height: Optional stable source height.
-        :param anchor_x: Optional horizontal anchor.
-        :param stable_src_width: Optional stable source width.
-        :returns: Mapped geometry.
-        """
-"#,
-    module = "raygeo.geo.path"
-)]
-#[pyfunction(name = "map_geometry_to_frame")]
-#[pyo3(signature = (geometry, origin, p_width, p_height, anchor_y=None, stable_src_height=None, anchor_x=None, stable_src_width=None))]
-fn map_geometry_to_frame_py(
-    geometry: &Geometry,
-    origin: (f64, f64),
-    p_width: (f64, f64),
-    p_height: (f64, f64),
-    anchor_y: Option<f64>,
-    stable_src_height: Option<f64>,
-    anchor_x: Option<f64>,
-    stable_src_width: Option<f64>,
-) -> Geometry {
-    let result = map_geometry_to_frame(
-        &geometry.inner,
-        origin,
-        p_width,
-        p_height,
-        anchor_y,
-        stable_src_height,
-        anchor_x,
-        stable_src_width,
-    );
-    Geometry { inner: result }
 }
 
 #[gen_stub_pyfunction(
@@ -1423,21 +1031,12 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
         are_points_equal_py,
         path_mod.clone()
     )?)?;
-    path_mod
-        .add_function(wrap_pyfunction!(get_segment_key_py, path_mod.clone())?)?;
+    path_mod.add_function(wrap_pyfunction!(
+        get_segment_key_py,
+        path_mod.clone()
+    )?)?;
     path_mod.add_function(wrap_pyfunction!(
         are_segments_equal_py,
-        path_mod.clone()
-    )?)?;
-
-    path_mod
-        .add_function(wrap_pyfunction!(grow_geometry_py, path_mod.clone())?)?;
-    path_mod.add_function(wrap_pyfunction!(
-        split_into_contours_py,
-        path_mod.clone()
-    )?)?;
-    path_mod.add_function(wrap_pyfunction!(
-        split_into_components_py,
         path_mod.clone()
     )?)?;
     path_mod.add_function(wrap_pyfunction!(
@@ -1476,41 +1075,7 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
         optimize_path_from_array,
         path_mod.clone()
     )?)?;
-    path_mod
-        .add_function(wrap_pyfunction!(does_enclose_py, path_mod.clone())?)?;
     path_mod.add_function(wrap_pyfunction!(fit_arcs, path_mod.clone())?)?;
-    path_mod.add_function(wrap_pyfunction!(
-        reverse_contour_py,
-        path_mod.clone()
-    )?)?;
-    path_mod.add_function(wrap_pyfunction!(
-        split_inner_and_outer_contours_py,
-        path_mod.clone()
-    )?)?;
-    path_mod.add_function(wrap_pyfunction!(
-        close_all_contours_py,
-        path_mod.clone()
-    )?)?;
-    path_mod.add_function(wrap_pyfunction!(
-        normalize_winding_orders_py,
-        path_mod.clone()
-    )?)?;
-    path_mod.add_function(wrap_pyfunction!(
-        filter_to_external_contours_py,
-        path_mod.clone()
-    )?)?;
-    path_mod.add_function(wrap_pyfunction!(
-        remove_inner_edges_py,
-        path_mod.clone()
-    )?)?;
-    path_mod.add_function(wrap_pyfunction!(
-        get_valid_contours_data_py,
-        path_mod.clone()
-    )?)?;
-    path_mod.add_function(wrap_pyfunction!(
-        close_geometry_gaps,
-        path_mod.clone()
-    )?)?;
     path_mod.add_function(wrap_pyfunction!(
         check_self_intersection,
         path_mod.clone()
@@ -1537,10 +1102,6 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     )?)?;
     path_mod.add_function(wrap_pyfunction!(
         apply_affine_transform_to_array_py,
-        path_mod.clone()
-    )?)?;
-    path_mod.add_function(wrap_pyfunction!(
-        map_geometry_to_frame_py,
         path_mod.clone()
     )?)?;
     path_mod.add_function(wrap_pyfunction!(

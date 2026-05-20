@@ -2,21 +2,26 @@ use numpy::ndarray;
 use numpy::{IntoPyArray, PyArray2, PyArrayMethods};
 use pyo3::prelude::*;
 use pyo3::types::{PyDict, PyList, PyType};
-use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods, gen_methods_from_python};
+use pyo3_stub_gen::derive::{
+    gen_methods_from_python, gen_stub_pyclass, gen_stub_pymethods,
+};
 use pyo3_stub_gen::inventory::submit;
 use pyo3_stub_gen::{PyStubType, TypeInfo};
 
 use raygeo_core::geo::algo::fitting::convert_arc_to_beziers_from_array;
 use raygeo_core::geo::analysis::get_point_and_tangent_at_from_array;
+use raygeo_core::geo::split::get_valid_contours_data;
 use raygeo_core::geo::transform::map_geometry_to_frame;
 use raygeo_core::{
     check_intersection_from_array, check_self_intersection_from_array,
-    close_geometry_gaps_from_array, convert_arcs_to_beziers,
+    close_all_contours, close_geometry_gaps_from_array,
+    convert_arcs_to_beziers, filter_to_external_contours,
     find_closest_point_on_path_from_array, fit_curves,
     get_outward_normal_at_from_array, grow_geometry, linearize_data,
-    remove_inner_edges, simplify_data, split_inner_and_outer_contours,
-    split_into_components, split_into_contours, Command as CoreCommand,
-    CommandRow, Geometry as CoreGeometry, Point, CMD_TYPE_ARC, CMD_TYPE_BEZIER,
+    normalize_winding_orders, remove_inner_edges, reverse_contour,
+    simplify_data, split_inner_and_outer_contours, split_into_components,
+    split_into_contours, Command as CoreCommand, CommandRow,
+    Geometry as CoreGeometry, Point, CMD_TYPE_ARC, CMD_TYPE_BEZIER,
     CMD_TYPE_LINE, CMD_TYPE_MOVE, COL_C1X, COL_C1Y, COL_C2X, COL_C2Y, COL_CW,
     COL_I, COL_J, COL_TYPE, COL_X, COL_Y, COL_Z,
 };
@@ -1217,6 +1222,67 @@ impl Geometry {
             }
         }
         result
+    }
+
+    /// Reverse the winding direction of all contours.
+    fn reverse_contour(&self) -> Geometry {
+        Geometry {
+            inner: reverse_contour(&self.inner),
+        }
+    }
+
+    /// Close all open contours in the geometry.
+    fn close_all_contours(&self) -> Geometry {
+        Geometry {
+            inner: close_all_contours(&self.inner),
+        }
+    }
+
+    /// Normalize winding orders (outer CCW, inner CW) of all contours.
+    fn normalize_winding_orders(&self) -> Vec<Geometry> {
+        let contours = split_into_contours(&self.inner);
+        normalize_winding_orders(&contours)
+            .into_iter()
+            .map(|g| Geometry { inner: g })
+            .collect()
+    }
+
+    /// Filter to only external (outermost) contours.
+    fn filter_to_external_contours(&self) -> Vec<Geometry> {
+        let contours = split_into_contours(&self.inner);
+        filter_to_external_contours(&contours)
+            .into_iter()
+            .map(|g| Geometry { inner: g })
+            .collect()
+    }
+
+    /// Get valid contour data from the geometry's contours.
+    ///
+    /// :returns: List of dicts with keys "geo", "vertices",
+    ///     "is_closed", "original_index".
+    fn get_valid_contours_data<'py>(
+        &self,
+        py: Python<'py>,
+    ) -> PyResult<Vec<Bound<'py, PyDict>>> {
+        let contours = split_into_contours(&self.inner);
+        let mut out: Vec<Bound<'py, PyDict>> = Vec::new();
+        for (orig_idx, geo) in contours.iter().enumerate() {
+            let single_result =
+                get_valid_contours_data(std::slice::from_ref(geo));
+            if single_result.is_empty() {
+                continue;
+            }
+            let (_, pts, closed) = single_result.into_iter().next().unwrap();
+            let py_geo = Geometry { inner: geo.copy() };
+            let dict = PyDict::new(py);
+            dict.set_item("geo", py_geo)?;
+            let py_pts: Vec<(f64, f64)> = pts;
+            dict.set_item("vertices", py_pts)?;
+            dict.set_item("is_closed", closed)?;
+            dict.set_item("original_index", orig_idx)?;
+            out.push(dict);
+        }
+        Ok(out)
     }
 
     /// Return a string representation of the geometry.
