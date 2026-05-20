@@ -1,7 +1,6 @@
 import pytest
 import math
-import numpy as np
-from raygeo import Geometry
+from raygeo.geo import Geometry
 from raygeo.geo.algo.analysis import remove_duplicates
 from raygeo.geo.shape.arc import is_arc_clockwise
 from raygeo.geo.shape.line import get_angle_at_vertex

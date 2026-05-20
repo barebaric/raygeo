@@ -1,7 +1,7 @@
 import pytest
 import math
 import numpy as np
-from raygeo import Geometry
+from raygeo.geo import Geometry
 
 
 @pytest.fixture

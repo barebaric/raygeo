@@ -1,5 +1,5 @@
 import pytest
-from raygeo import Geometry
+from raygeo.geo import Geometry
 
 
 def test_reverse_contour_simple_polygon():

@@ -2,7 +2,7 @@ import pytest
 import math
 from collections import namedtuple
 
-from raygeo import Geometry
+from raygeo.geo import Geometry
 from raygeo.geo.shape.arc import (
     does_arc_intersect_circle,
     does_arc_intersect_rect,

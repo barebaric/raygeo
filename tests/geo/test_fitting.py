@@ -2,7 +2,7 @@ import math
 import pytest
 import numpy as np
 
-from raygeo import Geometry
+from raygeo.geo import Geometry
 from raygeo.geo.algo.fitting import (
     are_points_collinear,
     fit_circle_to_3_points,

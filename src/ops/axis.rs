@@ -2,8 +2,18 @@ use pyo3::prelude::*;
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 use raygeo_core::ops::axis::Axis;
 
+pub(crate) const MODULE_DOC: &str = "\
+Axis bitflag for multi-axis machines.
+
+Represents a single axis or combination of axes (X, Y, Z, A, B, C, U).
+Axis values can be combined using bitwise operators (|, &, ^, ~) to
+represent multiple axes at once, useful when specifying which axes
+participate in a coordinated move or transformation.
+";
+
 /// Register the Axis enum with the Python module.
 pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
+    m.setattr("__doc__", MODULE_DOC)?;
     m.add_class::<PyAxis>()?;
     Ok(())
 }

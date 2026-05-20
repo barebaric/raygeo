@@ -4,7 +4,7 @@ import io
 import json
 import numpy as np
 from contextlib import redirect_stdout
-from raygeo import Geometry
+from raygeo.geo import Geometry
 from raygeo.ops import (
     Ops,
 )

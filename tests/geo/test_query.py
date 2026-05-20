@@ -1,6 +1,6 @@
 import pytest
 import math
-from raygeo import Geometry
+from raygeo.geo import Geometry
 from raygeo.geo.shape.rect import does_rect_intersect_rect
 
 

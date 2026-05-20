@@ -1,6 +1,14 @@
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::gen_stub_pyfunction;
 
+pub(crate) const MODULE_DOC: &str = "\
+Matrix math utilities for geometric transformations.
+
+Provides matrix multiplication for 4x4 affine transformation matrices,
+which are used by Geometry.transform() and Ops.transform() to apply
+translation, rotation, scaling, and shearing to paths.
+";
+
 use raygeo_core::geo::math::mat4_mul;
 
 #[gen_stub_pyfunction(
@@ -42,6 +50,7 @@ fn mat4_mul_py(
 pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     let py = m.py();
     let math_mod = PyModule::new(py, "math")?;
+    math_mod.setattr("__doc__", MODULE_DOC)?;
 
     math_mod.add_function(wrap_pyfunction!(
         mat4_mul_py,

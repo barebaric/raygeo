@@ -1,5 +1,5 @@
 import numpy as np
-from raygeo import Geometry
+from raygeo.geo import Geometry
 
 
 def test_split_into_contours_empty():

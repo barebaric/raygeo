@@ -2,9 +2,23 @@ use pyo3::prelude::*;
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods, gen_stub_pyfunction};
 use raygeo_core::ops::enums::{CommandCategory, CommandType, SectionType};
 
+pub(crate) const MODULE_DOC: &str = "\
+Core enumerations for the Ops command system.
+
+CommandType — identifies each command in a sequence (MoveTo, LineTo,
+ArcTo, BezierTo, SetPower, SetSpeed, JobStart, etc.).
+
+CommandCategory — classifies commands as MOVING (changes tool position),
+STATE (changes machine parameters), or MARKER (structural job boundaries).
+
+SectionType — distinguishes between VECTOR_OUTLINE and RASTER_FILL sections
+when an Ops sequence is split into logical portions.
+";
+
 /// Register the CommandType, CommandCategory, SectionType enums
 /// and the category() function with the Python module.
 pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
+    m.setattr("__doc__", MODULE_DOC)?;
     m.add_class::<PyCommandType>()?;
     m.add_class::<PyCommandCategory>()?;
     m.add_class::<PySectionType>()?;

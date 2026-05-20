@@ -2,8 +2,19 @@ use pyo3::prelude::*;
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 use raygeo_core::ops::state::State;
 
+pub(crate) const MODULE_DOC: &str = "\
+Machine state tracking for laser cutting.
+
+Tracks the current or intended machine state at any point in a command
+sequence, including power level (0.0–1.0), air assist on/off, cut speed
+and travel speed, active laser source UID, pulse frequency, and pulse
+width. State objects are used by Ops to associate machine parameters
+with moving commands and to detect rapid (non-power) state changes.
+";
+
 /// Register the State class with the Python module.
 pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
+    m.setattr("__doc__", MODULE_DOC)?;
     m.add_class::<PyState>()?;
     Ok(())
 }

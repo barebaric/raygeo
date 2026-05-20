@@ -1,6 +1,6 @@
 import numpy as np
 
-from raygeo import Geometry
+from raygeo.geo import Geometry
 
 
 def test_flatten_to_points():

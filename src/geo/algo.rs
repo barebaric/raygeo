@@ -1,3 +1,73 @@
+pub(crate) const MODULE_DOC: &str = "\
+Geometric algorithms for path processing.
+
+This module provides algorithms that operate on geometry paths and point
+sequences. It covers several categories of geometric processing:
+
+Clipping — intersect and clip line segments against rectangles and
+polygon regions. Also includes coordinate conversion between floating
+point and Clipper's integer grid system for boolean-accuracy clipping.
+
+Fitting — reconstruct curves (arcs, lines, beziers) from unordered
+point sequences. Includes recursive primitive fitting, circle fitting,
+polyline linearization, and deviation analysis to evaluate fit quality.
+
+Minkowski sums — compute Minkowski sums, convolutions, and no-fit
+polygons for 2D toolpath generation, nesting, and packing algorithms.
+
+Simplification — reduce the number of points in a polyline while
+preserving shape within a tolerance (Ramer-Douglas-Peucker).
+
+Smoothing — apply Gaussian kernel smoothing to polylines with
+configurable corner-angle thresholds to preserve sharp features.
+";
+
+pub(crate) const MODULE_DOC_ANALYSIS: &str = "\
+Path analysis utilities for inspecting and cleaning geometry data.
+
+Provides functions for removing duplicate points from point sequences
+and extracting individual points from path data.
+";
+
+pub(crate) const MODULE_DOC_CLIPPING: &str = "\
+Line and polygon clipping operations.
+
+Provides functions for clipping line segments against rectangles and
+polygon regions, as well as converting between float and Clipper
+integer coordinate systems.
+";
+
+pub(crate) const MODULE_DOC_FITTING: &str = "\
+Curve and primitive fitting algorithms.
+
+Provides functions for fitting arcs, lines, circles, and beziers to
+point sequences. Includes recursive fitting with primitives, polyline
+linearization, and evaluating fitting quality (line and arc deviation).
+";
+
+pub(crate) const MODULE_DOC_MINKOWSKI: &str = "\
+Minkowski sum operations for 2D polygon toolpath generation.
+
+Provides convolution of point sequences and segments, Minkowski sums
+for convex polygons, and no-fit polygon / inner fit polygon calculations
+used in nesting and packing algorithms.
+";
+
+pub(crate) const MODULE_DOC_SIMPLIFY: &str = "\
+Polyline simplification using the Ramer-Douglas-Peucker algorithm.
+
+Reduces the number of points in a polyline while preserving the overall
+shape within a given tolerance.
+";
+
+pub(crate) const MODULE_DOC_SMOOTH: &str = "\
+Polyline smoothing using Gaussian kernels.
+
+Provides Gaussian kernel computation and circular/linear polyline
+smoothing with configurable corner angle thresholds to preserve
+sharp features.
+";
+
 use crate::geo::flex_point::{
     extract_polygon, extract_polygons, int_poly_to_points, poly_to_points,
     PyPoint2D, PyPoint3D,
@@ -32,11 +102,16 @@ const CLIPPER_SCALE: i64 = 10_000_000;
 pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     let py = m.py();
     let algo_mod = PyModule::new(py, "algo")?;
+    algo_mod.setattr("__doc__", MODULE_DOC)?;
 
     let minkowski_mod = PyModule::new(py, "minkowski")?;
+    minkowski_mod.setattr("__doc__", MODULE_DOC_MINKOWSKI)?;
     let simplify_mod = PyModule::new(py, "simplify")?;
+    simplify_mod.setattr("__doc__", MODULE_DOC_SIMPLIFY)?;
     let clipping_mod = PyModule::new(py, "clipping")?;
+    clipping_mod.setattr("__doc__", MODULE_DOC_CLIPPING)?;
     let smooth_mod = PyModule::new(py, "smooth")?;
+    smooth_mod.setattr("__doc__", MODULE_DOC_SMOOTH)?;
 
     clipping_mod.add_function(wrap_pyfunction!(
         clip_line_segment_py,
@@ -109,6 +184,7 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     )?)?;
 
     let fitting_mod = PyModule::new(py, "fitting")?;
+    fitting_mod.setattr("__doc__", MODULE_DOC_FITTING)?;
     fitting_mod.add_function(wrap_pyfunction!(
         are_points_collinear_py,
         fitting_mod.clone()
@@ -159,6 +235,7 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     )?)?;
 
     let analysis_mod = PyModule::new(py, "analysis")?;
+    analysis_mod.setattr("__doc__", MODULE_DOC_ANALYSIS)?;
     analysis_mod.add_function(wrap_pyfunction!(
         remove_duplicates_py,
         analysis_mod.clone()

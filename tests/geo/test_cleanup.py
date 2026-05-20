@@ -1,4 +1,4 @@
-from raygeo import Geometry
+from raygeo.geo import Geometry
 from raygeo.geo.shape.point import are_points_equal
 
 

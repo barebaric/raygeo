@@ -1,9 +1,25 @@
+pub(crate) const MODULE_DOC: &str = "\
+Command sequence (Ops) manipulation for laser cutter motion control.
+
+Ops is a container of ordered commands (move, line, arc, bezier, state
+changes like power/speed) that defines a complete laser engraving or
+cutting job. It supports building sequences programmatically (move_to,
+line_to, arc_to, etc.), transforming them (translate, rotate, scale,
+transform with 4x4 matrices), clipping to rectangles or regions,
+linearizing curves, estimating processing time, and serializing to
+dict or numpy arrays for persistence.
+
+The module also provides command-type enumerations (CommandType,
+CommandCategory, SectionType), machine State tracking (power, speed,
+air assist, frequency), and an Axis bitflag for multi-axis machines.
+";
+
 use pyo3::prelude::*;
-mod axis;
+pub(crate) mod axis;
 mod container;
 mod serialize;
-mod state;
-mod types;
+pub(crate) mod state;
+pub(crate) mod types;
 
 pub use container::{PyCommandInfo, PyOps, PyOpsSection, PyOpsSectionRange};
 
@@ -11,19 +27,7 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     let py = m.py();
     let ops_mod = PyModule::new(py, "ops")?;
 
-    ops_mod.setattr(
-        "__doc__",
-        "Command sequence (Ops) manipulation for laser cutter motion control.\n\
-        \n\
-        Provides Ops — a container of command primitives (move, line, arc, bezier,\n\
-        state changes) with methods for transformation, clipping, linearization,\n\
-        timing estimation, serialization, and more.\n\
-        \n\
-        Types:\n\
-        - Ops — the main command sequence container\n\
-        - CommandInfo — metadata about command positions in the sequence\n\
-        - OpsSection, OpsSectionRange — sub-sequence views",
-    )?;
+    ops_mod.setattr("__doc__", MODULE_DOC)?;
 
     // Child submodule: raygeo.ops.types
     let types_mod = PyModule::new(py, "types")?;

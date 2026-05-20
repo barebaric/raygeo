@@ -1,3 +1,74 @@
+pub(crate) const MODULE_DOC: &str = "\
+Primitive shape operations — arc, bezier, circle, line, point, polygon, rect.
+
+Provides functions for geometric queries on primitive shapes including
+bounding boxes, intersection tests, containment checks, linearization,
+and affine transformations.
+";
+
+pub(crate) const MODULE_DOC_ARC: &str = "\
+Arc geometry queries and conversions.
+
+Provides bounding rectangle computation, intersection tests (arc-rect,
+arc-circle, arc-polygons), arc linearization into line segments for
+rendering or further processing, angle utilities (normalize, direction,
+containment), and arc midpoint / closest-point lookups.
+";
+
+pub(crate) const MODULE_DOC_BEZIER: &str = "\
+Cubic bezier curve queries and conversions.
+
+Provides point evaluation at a parameter t, splitting into two halves,
+bounding rectangle computation, flattening to line segments (both
+fixed-step and adaptive subdivision), rectangle clipping, flatness
+testing, perpendicular distance measurement, and conversion from
+cubic to quadratic form.
+";
+
+pub(crate) const MODULE_DOC_CIRCLE: &str = "\
+Circle geometry queries.
+
+Provides circle-circle and circle-rectangle intersection detection,
+circle-rectangle full-containment checks, line-segment-vs-circle
+intersection, and point projection onto a circle's circumference.
+";
+
+pub(crate) const MODULE_DOC_LINE: &str = "\
+Line segment geometry queries.
+
+Provides line-line intersection (infinite lines), line-segment intersection,
+closest point on a line or segment to a given point, line-segment-vs-polygon
+intersections, point-on-segment tests, point-in-rectangle tests, rectangle
+containment checks, and angle-at-vertex computation.
+";
+
+pub(crate) const MODULE_DOC_POINT: &str = "\
+Individual point operations.
+
+Provides equality testing within a configurable tolerance, midpoint
+computation between two points, and applying a 4x4 affine transformation
+matrix to a single point.
+";
+
+pub(crate) const MODULE_DOC_POLYGON: &str = "\
+Polygon manipulation functions.
+
+Provides area (signed and unsigned), perimeter, bounding box, centroid,
+convex hull, point-in-polygon containment test, edge extraction,
+convexity testing, boolean operations (union, intersection, difference),
+offset (inflate or deflate), cleaning (removing near-duplicate vertices),
+normalisation (outer CCW / inner CW winding order), and transformations
+(translate, rotate, scale, flip). All functions accept list-of-tuples
+input; many also provide numpy array variants.
+";
+
+pub(crate) const MODULE_DOC_RECT: &str = "\
+Rectangle intersection and containment tests.
+
+Provides functions to test whether two axis-aligned rectangles intersect
+and whether one rectangle fully contains another.
+";
+
 use crate::geo::flex_point::{
     extract_polygons, poly_to_points, PyPoint2D, PyPoint3D,
 };
@@ -81,8 +152,10 @@ fn _arc_row_from_any(arc_cmd: &Bound<'_, PyAny>) -> PyResult<[f64; 8]> {
 pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     let py = m.py();
     let shape_mod = PyModule::new(py, "shape")?;
+    shape_mod.setattr("__doc__", MODULE_DOC)?;
 
     let arc_mod = PyModule::new(py, "arc")?;
+    arc_mod.setattr("__doc__", MODULE_DOC_ARC)?;
     arc_mod
         .add_function(wrap_pyfunction!(get_arc_bounds_py, arc_mod.clone())?)?;
     arc_mod.add_function(wrap_pyfunction!(
@@ -126,6 +199,7 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     shape_mod.add_submodule(&arc_mod)?;
 
     let bezier_mod = PyModule::new(py, "bezier")?;
+    bezier_mod.setattr("__doc__", MODULE_DOC_BEZIER)?;
     bezier_mod.add_function(wrap_pyfunction!(
         get_bezier_point_at_py,
         bezier_mod.clone()
@@ -177,6 +251,7 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     shape_mod.add_submodule(&bezier_mod)?;
 
     let circle_mod = PyModule::new(py, "circle")?;
+    circle_mod.setattr("__doc__", MODULE_DOC_CIRCLE)?;
     circle_mod.add_function(wrap_pyfunction!(
         get_circle_circle_intersections_py,
         circle_mod.clone()
@@ -200,6 +275,7 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     shape_mod.add_submodule(&circle_mod)?;
 
     let polygon_mod = PyModule::new(py, "polygon")?;
+    polygon_mod.setattr("__doc__", MODULE_DOC_POLYGON)?;
     polygon_mod.add_function(wrap_pyfunction!(
         clean_polygon_py,
         polygon_mod.clone()
@@ -371,6 +447,7 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     shape_mod.add_submodule(&polygon_mod)?;
 
     let line_mod = PyModule::new(py, "line")?;
+    line_mod.setattr("__doc__", MODULE_DOC_LINE)?;
     line_mod.add_function(wrap_pyfunction!(
         get_line_line_intersection_py,
         line_mod.clone()
@@ -414,6 +491,7 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     shape_mod.add_submodule(&line_mod)?;
 
     let rect_mod = PyModule::new(py, "rect")?;
+    rect_mod.setattr("__doc__", MODULE_DOC_RECT)?;
     rect_mod.add_function(wrap_pyfunction!(
         is_point_inside_rect_py,
         rect_mod.clone()
@@ -433,6 +511,7 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     shape_mod.add_submodule(&rect_mod)?;
 
     let point_mod = PyModule::new(py, "point")?;
+    point_mod.setattr("__doc__", MODULE_DOC_POINT)?;
     point_mod
         .add_function(wrap_pyfunction!(midpoint_py, point_mod.clone())?)?;
     point_mod.add_function(wrap_pyfunction!(
