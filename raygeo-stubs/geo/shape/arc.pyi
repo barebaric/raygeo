@@ -13,7 +13,6 @@ __all__ = [
     "is_arc_clockwise",
     "is_arc_inside_polygons",
     "linearize_arc",
-    "linearize_arc_from_array",
     "normalize_angle",
 ]
 
@@ -136,16 +135,6 @@ def linearize_arc(arc_cmd: Any, start_point: Point3D, resolution: float = 0.1) -
     :param start_point: Start point (x, y, z).
     :param resolution: Maximum segment length.
     :returns: List of (p1, p2) segment pairs.
-    """
-
-def linearize_arc_from_array(data: Sequence[float], start_point: Point3D, max_seg_length: float) -> list[list[float]]:
-    r"""
-    Linearize an arc from array data.
-    
-    :param data: Arc command row as a sequence of floats.
-    :param start_point: Start point (x, y, z).
-    :param max_seg_length: Maximum segment length.
-    :returns: List of segment rows.
     """
 
 def normalize_angle(angle: float) -> float:

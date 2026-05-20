@@ -7,9 +7,8 @@ use pyo3::types::PyList;
 use pyo3_stub_gen::derive::gen_stub_pyfunction;
 use raygeo_core::geo::shape::arc::is_arc_clockwise;
 use raygeo_core::geo::shape::arc::{
-    _linearize_arc_from_array, does_arc_intersect_circle,
-    does_arc_intersect_rect, get_arc_angles, get_arc_bounds,
-    get_arc_closest_point, get_arc_direction, get_arc_midpoint,
+    does_arc_intersect_circle, does_arc_intersect_rect, get_arc_angles,
+    get_arc_bounds, get_arc_closest_point, get_arc_direction, get_arc_midpoint,
     is_angle_between, is_arc_inside_polygons, linearize_arc, normalize_angle,
 };
 use raygeo_core::geo::shape::bezier::{
@@ -17,8 +16,7 @@ use raygeo_core::geo::shape::bezier::{
     convert_cubic_bezier_to_quadratic, flatten_bezier, get_bezier_bounds,
     get_bezier_point_at, get_bezier_rect_intersections,
     is_bezier_inside_polygons, linearize_bezier, linearize_bezier_adaptive,
-    linearize_bezier_from_array, linearize_bezier_segment, perp_dist_sq,
-    split_bezier,
+    linearize_bezier_segment, perp_dist_sq, split_bezier,
 };
 use raygeo_core::geo::shape::circle::{
     does_circle_intersect_rect, get_circle_circle_intersections,
@@ -34,8 +32,8 @@ use raygeo_core::geo::shape::line::{
     is_point_inside_rect, is_point_on_segment,
 };
 use raygeo_core::geo::shape::point::are_points_equal;
-use raygeo_core::geo::shape::point::transform_point;
 use raygeo_core::geo::shape::point::midpoint;
+use raygeo_core::geo::shape::point::transform_point;
 use raygeo_core::geo::shape::polygon::is_polygon_clockwise;
 use raygeo_core::geo::shape::polygon::{
     clean_polygon, flip_polygon, flip_polygons, get_polygon_bounds,
@@ -125,10 +123,6 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
         .add_function(wrap_pyfunction!(normalize_angle_py, arc_mod.clone())?)?;
     arc_mod
         .add_function(wrap_pyfunction!(linearize_arc_py, arc_mod.clone())?)?;
-    arc_mod.add_function(wrap_pyfunction!(
-        linearize_arc_from_array_py,
-        arc_mod.clone()
-    )?)?;
     shape_mod.add_submodule(&arc_mod)?;
 
     let bezier_mod = PyModule::new(py, "bezier")?;
@@ -164,10 +158,6 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     )?)?;
     bezier_mod.add_function(wrap_pyfunction!(
         linearize_bezier_adaptive_py,
-        bezier_mod.clone()
-    )?)?;
-    bezier_mod.add_function(wrap_pyfunction!(
-        linearize_bezier_from_array_py,
         bezier_mod.clone()
     )?)?;
     bezier_mod.add_function(wrap_pyfunction!(
@@ -834,39 +824,6 @@ fn linearize_arc_py(
 
 #[gen_stub_pyfunction(
     python = r#"
-    def linearize_arc_from_array(
-        data: Sequence[float],
-        start_point: Point3D,
-        max_seg_length: float,
-    ) -> list[list[float]]:
-        """Linearize an arc from array data.
-
-        :param data: Arc command row as a sequence of floats.
-        :param start_point: Start point (x, y, z).
-        :param max_seg_length: Maximum segment length.
-        :returns: List of segment rows.
-        """
-"#,
-    module = "raygeo.geo.shape.arc"
-)]
-#[pyfunction(name = "linearize_arc_from_array")]
-fn linearize_arc_from_array_py(
-    data: Vec<f64>,
-    start_point: (f64, f64, f64),
-    max_seg_length: f64,
-) -> Vec<Vec<f64>> {
-    let mut arr = [0.0; 8];
-    let len = data.len().min(8);
-    arr[..len].copy_from_slice(&data[..len]);
-    let result = _linearize_arc_from_array(&arr, start_point, max_seg_length);
-    result
-        .into_iter()
-        .map(|(p1, p2)| vec![p1.0, p1.1, p1.2, p2.0, p2.1, p2.2])
-        .collect()
-}
-
-#[gen_stub_pyfunction(
-    python = r#"
     def get_bezier_point_at(
         p0: Point,
         p1: Point,
@@ -1196,39 +1153,6 @@ fn linearize_bezier_adaptive_py(
         tolerance_sq,
         max_subdivisions,
     )
-}
-
-#[gen_stub_pyfunction(
-    python = r#"
-    def linearize_bezier_from_array(
-        bezier_row: Sequence[float],
-        start_point: Point3D,
-        max_seg_length: float,
-    ) -> list[list[float]]:
-        """Linearize a bezier from array data.
-
-        :param bezier_row: Bezier command row.
-        :param start_point: Start point (x, y, z).
-        :param max_seg_length: Maximum segment length.
-        :returns: List of segment rows.
-        """
-"#,
-    module = "raygeo.geo.shape.bezier"
-)]
-#[pyfunction(name = "linearize_bezier_from_array")]
-fn linearize_bezier_from_array_py(
-    bezier_row: Vec<f64>,
-    start_point: (f64, f64, f64),
-    max_seg_length: f64,
-) -> Vec<Vec<f64>> {
-    let mut arr = [0.0; 8];
-    let len = bezier_row.len().min(8);
-    arr[..len].copy_from_slice(&bezier_row[..len]);
-    let result = linearize_bezier_from_array(&arr, start_point, max_seg_length);
-    result
-        .into_iter()
-        .map(|(p1, p2)| vec![p1.0, p1.1, p1.2, p2.0, p2.1, p2.2])
-        .collect()
 }
 
 #[gen_stub_pyfunction(

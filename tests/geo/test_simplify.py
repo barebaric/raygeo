@@ -1,8 +1,4 @@
-import numpy as np
-from raygeo.geo.algo.simplify import (
-    simplify_polyline,
-    simplify_polyline_to_array,
-)
+from raygeo.geo.algo.simplify import simplify_polyline
 
 
 def test_simplify_straight_line():
@@ -13,16 +9,6 @@ def test_simplify_straight_line():
     assert len(result) == 2
     assert result[0] == (0, 0)
     assert result[1] == (10, 10)
-
-
-def test_simplify_straight_line_array():
-    """Tests array-based simplification on a straight line."""
-    points = np.array([(0, 0), (1, 1), (2, 2), (3, 3), (10, 10)])
-
-    result = simplify_polyline_to_array(points, tolerance=0.001)
-    assert len(result) == 2
-    np.testing.assert_array_equal(result[0], (0, 0))
-    np.testing.assert_array_equal(result[1], (10, 10))
 
 
 def test_simplify_significant_corner():
@@ -83,16 +69,6 @@ def test_simplify_single_segment():
     assert result[1] == (10, 10)
 
 
-def test_simplify_two_points_array():
-    """Tests array-based simplification with only 2 points."""
-    points = np.array([(0, 0), (10, 10)])
-
-    result = simplify_polyline_to_array(points, tolerance=100.0)
-    assert len(result) == 2
-    np.testing.assert_array_equal(result[0], (0, 0))
-    np.testing.assert_array_equal(result[1], (10, 10))
-
-
 def test_simplify_three_points_all_kept():
     """Tests that all 3 points are kept when deviation > tolerance."""
     points = [(0, 0), (5, 5), (10, 0)]
@@ -136,16 +112,6 @@ def test_simplify_complex_shape():
     assert result[3] == (6, 5.1)
     assert result[4] == (7, 4.9)
     assert result[5] == (10, 0)
-
-
-def test_simplify_array_with_z_axis():
-    """Tests that Z coordinates are preserved when using array input."""
-    points = np.array([(0, 0, 1), (5, 0, 2), (10, 0, 3)])
-
-    result = simplify_polyline_to_array(points, tolerance=0.1)
-    assert len(result) == 2
-    np.testing.assert_array_equal(result[0], (0, 0, 1))
-    np.testing.assert_array_equal(result[1], (10, 0, 3))
 
 
 def test_simplify_zero_tolerance():

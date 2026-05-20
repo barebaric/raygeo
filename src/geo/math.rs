@@ -1,57 +1,42 @@
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::gen_stub_pyfunction;
-use numpy::PyArray2;
 
-use raygeo_core::geo::math::apply_affine_transform_to_array;
-
-fn to_data_array(data: Vec<Vec<f64>>) -> Vec<[f64; 8]> {
-    data.into_iter()
-        .map(|r| {
-            let mut a = [0.0; 8];
-            let len = r.len().min(8);
-            a[..len].copy_from_slice(&r[..len]);
-            a
-        })
-        .collect()
-}
+use raygeo_core::geo::math::mat4_mul;
 
 #[gen_stub_pyfunction(
     python = r#"
-    def apply_affine_transform_to_array(
-        data: Sequence[Sequence[float]],
-        matrix: Sequence[Sequence[float]],
-    ) -> Any:
-        """Apply an affine transform to path data.
+    def mat4_mul(
+        a: Sequence[Sequence[float]],
+        b: Sequence[Sequence[float]],
+    ) -> list[list[float]]:
+        """Multiply two 4x4 matrices.
 
-        :param data: Array of command data.
-        :param matrix: 4x4 affine transformation matrix.
-        :returns: Numpy array of transformed data.
+        :param a: First 4x4 matrix.
+        :param b: Second 4x4 matrix.
+        :returns: Resulting 4x4 matrix.
         """
 "#,
     module = "raygeo.geo.math"
 )]
-#[pyfunction(name = "apply_affine_transform_to_array")]
-fn apply_affine_transform_to_array_py(
-    py: Python<'_>,
-    data: Vec<Vec<f64>>,
-    matrix: Vec<Vec<f64>>,
-) -> Bound<'_, pyo3::types::PyAny> {
-    let arr = to_data_array(data);
-    let mat: [[f64; 4]; 4] = [
-        [matrix[0][0], matrix[0][1], matrix[0][2], matrix[0][3]],
-        [matrix[1][0], matrix[1][1], matrix[1][2], matrix[1][3]],
-        [matrix[2][0], matrix[2][1], matrix[2][2], matrix[2][3]],
-        [matrix[3][0], matrix[3][1], matrix[3][2], matrix[3][3]],
+#[pyfunction(name = "mat4_mul")]
+fn mat4_mul_py(
+    a: Vec<Vec<f64>>,
+    b: Vec<Vec<f64>>,
+) -> Vec<Vec<f64>> {
+    let mat_a: [[f64; 4]; 4] = [
+        [a[0][0], a[0][1], a[0][2], a[0][3]],
+        [a[1][0], a[1][1], a[1][2], a[1][3]],
+        [a[2][0], a[2][1], a[2][2], a[2][3]],
+        [a[3][0], a[3][1], a[3][2], a[3][3]],
     ];
-    let result = apply_affine_transform_to_array(&arr, &mat);
-    let vecs: Vec<Vec<f64>> = result.into_iter().map(|r| r.to_vec()).collect();
-    if vecs.is_empty() {
-        return PyArray2::<f64>::zeros(py, [0, 8], false).as_any().clone();
-    }
-    PyArray2::<f64>::from_vec2(py, &vecs)
-        .expect("failed to create numpy array")
-        .as_any()
-        .clone()
+    let mat_b: [[f64; 4]; 4] = [
+        [b[0][0], b[0][1], b[0][2], b[0][3]],
+        [b[1][0], b[1][1], b[1][2], b[1][3]],
+        [b[2][0], b[2][1], b[2][2], b[2][3]],
+        [b[3][0], b[3][1], b[3][2], b[3][3]],
+    ];
+    let result = mat4_mul(&mat_a, &mat_b);
+    result.iter().map(|row| row.to_vec()).collect()
 }
 
 pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
@@ -59,7 +44,7 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     let math_mod = PyModule::new(py, "math")?;
 
     math_mod.add_function(wrap_pyfunction!(
-        apply_affine_transform_to_array_py,
+        mat4_mul_py,
         math_mod.clone()
     )?)?;
 

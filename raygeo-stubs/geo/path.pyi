@@ -5,25 +5,15 @@ __all__ = [
     "are_segments_equal",
     "check_intersection",
     "check_self_intersection",
-    "convert_arc_to_beziers_from_array",
     "create_arc_cmd",
     "create_line_cmd",
-    "extract_overcut_rows",
     "fit_arcs",
     "fit_curves",
     "flatten_to_points",
-    "get_area_from_array",
-    "get_bounding_rect_from_array",
-    "get_outward_normal_at_from_array",
-    "get_path_winding_order_from_array",
     "get_point_and_tangent_at",
     "get_segment_key",
-    "get_subpath_area_from_array",
-    "get_subpath_vertices_from_array",
-    "get_total_distance_from_array",
     "is_closed",
     "linearize_geometry",
-    "optimize_path_from_array",
     "remove_duplicate_segments",
     "remove_duplicates",
 ]
@@ -57,17 +47,6 @@ def check_self_intersection(data: Optional[Sequence[Sequence[float]]], fail_on_t
     :returns: True if self-intersections are found.
     """
 
-def convert_arc_to_beziers_from_array(start: Point3D, end: Point3D, center_offset: Point, clockwise: bool) -> list[list[float]]:
-    r"""
-    Convert an arc to bezier curves.
-    
-    :param start: Start point (x, y, z).
-    :param end: End point (x, y, z).
-    :param center_offset: Center offset (dx, dy).
-    :param clockwise: Whether the arc is clockwise.
-    :returns: List of bezier command rows.
-    """
-
 def create_arc_cmd(end: Point3D, center: Point, start: Point3D) -> list[float]:
     r"""
     Create an arc command array.
@@ -84,15 +63,6 @@ def create_line_cmd(end_point: Point2DOr3D) -> list[float]:
     
     :param end_point: End point (x, y) or (x, y, z).
     :returns: Line command array (8 floats).
-    """
-
-def extract_overcut_rows(data: Optional[Sequence[Sequence[float]]], max_length: float) -> Optional[Any]:
-    r"""
-    Extract rows that exceed a maximum length.
-    
-    :param data: Array of command data or None.
-    :param max_length: Maximum allowed segment length.
-    :returns: Numpy array of overcut rows, or None.
     """
 
 def fit_arcs(data: Optional[Sequence[Sequence[float]]], tolerance: float, progress_callback: Optional[Callable[[float], None]] = None) -> Optional[list[list[float]]]:
@@ -125,41 +95,6 @@ def flatten_to_points(data: Optional[Sequence[Sequence[float]]], tolerance: floa
     :returns: List of flattened point segments.
     """
 
-def get_area_from_array(data: Sequence[Sequence[float]]) -> float:
-    r"""
-    Compute the total area of path data.
-    
-    :param data: Array of command data.
-    :returns: Total signed area.
-    """
-
-def get_bounding_rect_from_array(data: Sequence[Sequence[float]]) -> Rect:
-    r"""
-    Compute the bounding rectangle of path data.
-    
-    :param data: Array of command data (rows of 8 floats).
-    :returns: Bounding rectangle as (x_min, y_min, x_max, y_max).
-    """
-
-def get_outward_normal_at_from_array(data: Sequence[Sequence[float]], row_index: int, t: float) -> Optional[Point]:
-    r"""
-    Get the outward normal at a point on a segment.
-    
-    :param data: Array of command data.
-    :param row_index: Row index of the segment.
-    :param t: Parameter value along the segment (0..1).
-    :returns: Outward normal vector (nx, ny) or None.
-    """
-
-def get_path_winding_order_from_array(data: Sequence[Sequence[float]], start_cmd_index: int) -> str:
-    r"""
-    Get the winding order (CW/CCW) of a path.
-    
-    :param data: Array of command data.
-    :param start_cmd_index: Index of the first command of the path.
-    :returns: Winding order as "CW" or "CCW".
-    """
-
 def get_point_and_tangent_at(data: Sequence[Sequence[float]], row_index: int, t: float) -> Optional[tuple[Point, Point]]:
     r"""
     Get the point and tangent at a parameter t on a segment.
@@ -180,32 +115,6 @@ def get_segment_key(data: Sequence[Sequence[float]], index: int, tolerance: floa
     :returns: Tuple key or None.
     """
 
-def get_subpath_area_from_array(data: Sequence[Sequence[float]], subpath_index: int) -> float:
-    r"""
-    Get the signed area of a subpath.
-    
-    :param data: Array of command data.
-    :param subpath_index: Index of the subpath.
-    :returns: Signed area of the subpath.
-    """
-
-def get_subpath_vertices_from_array(data: Sequence[Sequence[float]], subpath_index: int) -> Polygon:
-    r"""
-    Get the vertices of a subpath.
-    
-    :param data: Array of command data.
-    :param subpath_index: Index of the subpath.
-    :returns: List of vertex points (x, y).
-    """
-
-def get_total_distance_from_array(data: Sequence[Sequence[float]]) -> float:
-    r"""
-    Compute the total distance of a path.
-    
-    :param data: Array of command data.
-    :returns: Total path length.
-    """
-
 def is_closed(commands: Sequence[Sequence[float]], tolerance: float = 0.000001) -> bool:
     r"""
     Check if a path is closed.
@@ -222,16 +131,6 @@ def linearize_geometry(data: Optional[Sequence[Sequence[float]]], tolerance: flo
     :param data: Array of command data or None.
     :param tolerance: Linearization tolerance.
     :returns: Numpy array of linearized segments.
-    """
-
-def optimize_path_from_array(data: Optional[Sequence[Sequence[float]]], tolerance: float, fit_arcs: bool) -> Any:
-    r"""
-    Optimize a path by fitting arcs.
-    
-    :param data: Array of command data or None.
-    :param tolerance: Fitting tolerance.
-    :param fit_arcs: Whether to fit arcs (vs. only lines).
-    :returns: Numpy array of optimized path data.
     """
 
 def remove_duplicate_segments(data: Optional[Sequence[Sequence[float]]], tolerance: float = 0.000001) -> Any:

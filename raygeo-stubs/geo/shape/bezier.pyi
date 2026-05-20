@@ -12,7 +12,6 @@ __all__ = [
     "is_bezier_inside_polygons",
     "linearize_bezier",
     "linearize_bezier_adaptive",
-    "linearize_bezier_from_array",
     "linearize_bezier_segment",
     "perp_dist_sq",
     "split_bezier",
@@ -135,16 +134,6 @@ def linearize_bezier_adaptive(p0: Point, p1: Point, p2: Point, p3: Point, tolera
     :param tolerance_sq: Squared tolerance for subdivision.
     :param max_subdivisions: Maximum recursion depth.
     :returns: List of linearized points (x, y).
-    """
-
-def linearize_bezier_from_array(bezier_row: Sequence[float], start_point: Point3D, max_seg_length: float) -> list[list[float]]:
-    r"""
-    Linearize a bezier from array data.
-    
-    :param bezier_row: Bezier command row.
-    :param start_point: Start point (x, y, z).
-    :param max_seg_length: Maximum segment length.
-    :returns: List of segment rows.
     """
 
 def linearize_bezier_segment(p0: Point3D, p1: Point3D, p2: Point3D, p3: Point3D, tolerance: float = 0.1) -> list[Point3D]:

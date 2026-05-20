@@ -2,15 +2,15 @@
 # ruff: noqa: E501, F401, F403, F405
 
 __all__ = [
-    "apply_affine_transform_to_array",
+    "mat4_mul",
 ]
 
-def apply_affine_transform_to_array(data: Sequence[Sequence[float]], matrix: Sequence[Sequence[float]]) -> Any:
+def mat4_mul(a: Sequence[Sequence[float]], b: Sequence[Sequence[float]]) -> list[list[float]]:
     r"""
-    Apply an affine transform to path data.
+    Multiply two 4x4 matrices.
     
-    :param data: Array of command data.
-    :param matrix: 4x4 affine transformation matrix.
-    :returns: Numpy array of transformed data.
+    :param a: First 4x4 matrix.
+    :param b: Second 4x4 matrix.
+    :returns: Resulting 4x4 matrix.
     """
 

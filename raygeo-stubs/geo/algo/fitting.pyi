@@ -3,7 +3,6 @@
 
 __all__ = [
     "are_points_collinear",
-    "convert_arc_to_beziers_from_array",
     "create_arc_cmd",
     "create_line_cmd",
     "fit_circle_to_3_points",
@@ -24,17 +23,6 @@ def are_points_collinear(points: Sequence[Point3D], tolerance: float = 0.000001)
     :param points: Sequence of 3D points.
     :param tolerance: Collinearity tolerance.
     :returns: True if points are collinear.
-    """
-
-def convert_arc_to_beziers_from_array(start: Point3D, end: Point3D, center_offset: Point, clockwise: bool) -> list[list[float]]:
-    r"""
-    Convert an arc to bezier curves.
-    
-    :param start: Start point (x, y, z).
-    :param end: End point (x, y, z).
-    :param center_offset: Center offset (dx, dy).
-    :param clockwise: Whether the arc is clockwise.
-    :returns: List of bezier command rows.
     """
 
 def create_arc_cmd(end: Point3D, center: Point, start: Point3D) -> list[float]:

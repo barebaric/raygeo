@@ -2,7 +2,6 @@ import pytest
 import math
 import numpy as np
 from raygeo import Geometry
-from raygeo.geo.path import get_total_distance_from_array, extract_overcut_rows
 
 
 @pytest.fixture
@@ -156,10 +155,6 @@ def test_distance(sample_geometry):
     expected_dist = dist_line + dist_arc
 
     assert sample_geometry.distance() == pytest.approx(expected_dist)
-    # Also test the query function directly
-    assert get_total_distance_from_array(
-        sample_geometry.data
-    ) == pytest.approx(expected_dist)
 
 
 def test_area():
@@ -1140,136 +1135,3 @@ class TestAppendData:
         geo.append_data(rows)
 
         np.testing.assert_array_equal(rows, original_rows)
-
-
-# --- extract_overcut_rows Tests ---
-
-
-class TestExtractOvercutRows:
-    @staticmethod
-    def _make_square(size=10.0):
-        return np.array(
-            [
-                [Geometry.CMD_TYPE_MOVE, 0.0, 0.0, 0.0, 0, 0, 0, 0],
-                [Geometry.CMD_TYPE_LINE, size, 0.0, 0.0, 0, 0, 0, 0],
-                [Geometry.CMD_TYPE_LINE, size, size, 0.0, 0, 0, 0, 0],
-                [Geometry.CMD_TYPE_LINE, 0.0, size, 0.0, 0, 0, 0, 0],
-                [Geometry.CMD_TYPE_LINE, 0.0, 0.0, 0.0, 0, 0, 0, 0],
-            ]
-        )
-
-    def test_returns_none_for_none_data(self):
-        assert extract_overcut_rows(None, 5.0) is None
-
-    def test_returns_none_for_short_data(self):
-        data = np.array([[Geometry.CMD_TYPE_MOVE, 0.0, 0.0, 0.0, 0, 0, 0, 0]])
-        assert extract_overcut_rows(data, 5.0) is None
-
-    def test_returns_none_for_zero_length(self):
-        data = self._make_square()
-        assert extract_overcut_rows(data, 0.0) is None
-
-    def test_returns_none_for_negative_length(self):
-        data = self._make_square()
-        assert extract_overcut_rows(data, -1.0) is None
-
-    def test_exactly_one_side(self):
-        data = self._make_square(10.0)
-        result = extract_overcut_rows(data, 10.0)
-        assert result is not None
-        assert len(result) == 1
-        np.testing.assert_array_equal(result[0], data[1])
-
-    def test_two_full_sides(self):
-        data = self._make_square(10.0)
-        result = extract_overcut_rows(data, 20.0)
-        assert result is not None
-        assert len(result) == 2
-        np.testing.assert_array_equal(result[0], data[1])
-        np.testing.assert_array_equal(result[1], data[2])
-
-    def test_partial_second_side(self):
-        data = self._make_square(10.0)
-        result = extract_overcut_rows(data, 15.0)
-        assert result is not None
-        assert len(result) == 2
-        np.testing.assert_array_equal(result[0], data[1])
-        assert result[1][Geometry.COL_TYPE] == Geometry.CMD_TYPE_LINE
-        assert result[1][Geometry.COL_X] == pytest.approx(10.0)
-        assert result[1][Geometry.COL_Y] == pytest.approx(5.0)
-
-    def test_with_arc_segment(self):
-        # MoveTo(10,0), ArcTo CCW to (-10,0) via center (0,0), i=-10
-        # That's a semicircle of radius 10, length π·10 ≈ 31.4
-        data = np.array(
-            [
-                [Geometry.CMD_TYPE_MOVE, 10.0, 0.0, 0.0, 0, 0, 0, 0],
-                [
-                    Geometry.CMD_TYPE_ARC,
-                    -10.0,
-                    0.0,
-                    0.0,
-                    -10.0,
-                    0.0,
-                    0.0,
-                    0.0,
-                ],
-            ]
-        )
-        result = extract_overcut_rows(data, math.pi * 5)
-        assert result is not None
-        assert len(result) == 1
-        assert result[0][Geometry.COL_TYPE] == Geometry.CMD_TYPE_ARC
-        assert result[0][Geometry.COL_X] == pytest.approx(0.0, abs=1e-6)
-        assert result[0][Geometry.COL_Y] == pytest.approx(10.0, abs=1e-6)
-
-    def test_skips_zero_length_segments(self):
-        # Line to same point has zero length and should be skipped
-        data = np.array(
-            [
-                [Geometry.CMD_TYPE_MOVE, 0.0, 0.0, 0.0, 0, 0, 0, 0],
-                [Geometry.CMD_TYPE_LINE, 0.0, 0.0, 0.0, 0, 0, 0, 0],
-                [Geometry.CMD_TYPE_LINE, 5.0, 0.0, 0.0, 0, 0, 0, 0],
-            ]
-        )
-        result = extract_overcut_rows(data, 3.0)
-        assert result is not None
-        assert len(result) == 1
-        assert result[0][Geometry.COL_X] == pytest.approx(3.0)
-
-    def test_length_exceeds_perimeter(self):
-        data = self._make_square(10.0)
-        result = extract_overcut_rows(data, 999.0)
-        assert result is not None
-        assert len(result) == 4
-
-    def test_with_bezier_segment(self):
-        # Bezier from (0,0) to (10,0) with controls on the line
-        data = np.array(
-            [
-                [Geometry.CMD_TYPE_MOVE, 0.0, 0.0, 0.0, 0, 0, 0, 0],
-                [
-                    Geometry.CMD_TYPE_BEZIER,
-                    10.0,
-                    0.0,
-                    0.0,
-                    3.0,
-                    0.0,
-                    7.0,
-                    0.0,
-                ],
-            ]
-        )
-        result = extract_overcut_rows(data, 5.0)
-        assert result is not None
-        assert len(result) == 1
-        assert result[0][Geometry.COL_TYPE] == Geometry.CMD_TYPE_BEZIER
-        assert result[0][Geometry.COL_X] == pytest.approx(5.0, abs=0.1)
-        assert result[0][Geometry.COL_Y] == pytest.approx(0.0, abs=0.1)
-
-    def test_returns_stacked_array(self):
-        data = self._make_square(10.0)
-        result = extract_overcut_rows(data, 25.0)
-        assert result is not None
-        assert result.shape[1] == Geometry.GEO_ARRAY_COLS
-        assert result.ndim == 2

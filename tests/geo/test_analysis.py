@@ -3,10 +3,7 @@ import math
 import numpy as np
 from raygeo import Geometry
 from raygeo.geo.path import (
-    get_path_winding_order_from_array,
     get_point_and_tangent_at,
-    get_subpath_area_from_array,
-    get_outward_normal_at_from_array,
     remove_duplicates,
     is_closed,
 )
@@ -35,52 +32,6 @@ def cw_square_geometry():
     geo.line_to(10, 0)  # cmd 3: right
     geo.close_path()  # cmd 4: bottom (back to 0,0)
     return geo
-
-
-def test_get_subpath_area(ccw_square_geometry, cw_square_geometry):
-    # Test CCW (positive area)
-    # 10x10 square area = 100.0
-    assert ccw_square_geometry.data is not None
-    area_ccw = get_subpath_area_from_array(ccw_square_geometry.data, 0)
-    assert area_ccw == pytest.approx(100.0)
-
-    # Test CW (negative area)
-    assert cw_square_geometry.data is not None
-    area_cw = get_subpath_area_from_array(cw_square_geometry.data, 0)
-    assert area_cw == pytest.approx(-100.0)
-
-    # Test open path
-    open_geo = Geometry.from_points([(0, 0), (10, 10)], close=False)
-    assert open_geo.data is not None
-    area_open = get_subpath_area_from_array(open_geo.data, 0)
-    assert area_open == 0.0
-
-    # Test degenerate path (single point)
-    point_geo = Geometry.from_points([(5, 5)], close=False)
-    assert point_geo.data is not None
-    area_point = get_subpath_area_from_array(point_geo.data, 0)
-    assert area_point == 0.0
-
-
-def test_get_winding_order(ccw_square_geometry, cw_square_geometry):
-    # Test CCW
-    assert ccw_square_geometry.data is not None
-    assert (
-        get_path_winding_order_from_array(ccw_square_geometry.data, 0) == "ccw"
-    )
-
-    # Test CW
-    assert cw_square_geometry.data is not None
-    assert (
-        get_path_winding_order_from_array(cw_square_geometry.data, 0) == "cw"
-    )
-
-    # Test open path
-    open_geo = Geometry()
-    open_geo.move_to(0, 0)
-    open_geo.line_to(10, 10)
-    assert open_geo.data is not None
-    assert get_path_winding_order_from_array(open_geo.data, 0) == "unknown"
 
 
 def test_get_point_and_tangent_at():
@@ -128,38 +79,6 @@ def test_get_point_and_tangent_at():
     # Tangent for a spiral towards the center should be perpendicular to the
     # radius vector from the center. Radius vec is (5,0), so tangent is (0,5).
     assert tan == pytest.approx((0, 1))
-
-
-def test_get_outward_normal_at(ccw_square_geometry, cw_square_geometry):
-    assert ccw_square_geometry.data is not None
-    assert cw_square_geometry.data is not None
-    # Test CCW square
-    # Bottom edge, tangent (1,0) -> outward normal (0,-1)
-    normal = get_outward_normal_at_from_array(ccw_square_geometry.data, 1, 0.5)
-    assert normal is not None
-    assert normal == pytest.approx((0, -1))
-    # Right edge, tangent (0,1) -> outward normal (1,0)
-    normal = get_outward_normal_at_from_array(ccw_square_geometry.data, 2, 0.5)
-    assert normal is not None
-    assert normal == pytest.approx((1, 0))
-    # Top edge, tangent (-1,0) -> outward normal (0,1)
-    normal = get_outward_normal_at_from_array(ccw_square_geometry.data, 3, 0.5)
-    assert normal is not None
-    assert normal == pytest.approx((0, 1))
-    # Left edge, tangent (0,-1) -> outward normal (-1,0)
-    normal = get_outward_normal_at_from_array(ccw_square_geometry.data, 4, 0.5)
-    assert normal is not None
-    assert normal == pytest.approx((-1, 0))
-
-    # Test CW square
-    # Left edge, tangent (0,1) -> outward normal (-1,0)
-    normal = get_outward_normal_at_from_array(cw_square_geometry.data, 1, 0.5)
-    assert normal is not None
-    assert normal == pytest.approx((-1, 0))
-    # Bottom edge, tangent (-1,0) -> outward normal (0,-1)
-    normal = get_outward_normal_at_from_array(cw_square_geometry.data, 4, 0.5)
-    assert normal is not None
-    assert normal == pytest.approx((0, -1))
 
 
 def test_get_angle_at_vertex():

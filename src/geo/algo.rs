@@ -1,12 +1,19 @@
+use crate::geo::flex_point::{
+    extract_polygon, extract_polygons, int_poly_to_points, poly_to_points,
+    PyPoint2D, PyPoint3D,
+};
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::gen_stub_pyfunction;
-use crate::geo::flex_point::{
-    PyPoint2D, PyPoint3D, extract_polygon, extract_polygons, int_poly_to_points,
-    poly_to_points,
-};
 use raygeo_core::geo::algo::clipping::{
     clip_line_segment_with_polygons, clip_line_segment_with_rect,
     subtract_polygons_from_line_segment,
+};
+use raygeo_core::geo::algo::fitting::{
+    are_points_collinear, create_arc_cmd, create_line_cmd,
+    fit_circle_to_3_points, fit_circle_to_points, fit_points_recursive,
+    fit_points_with_primitives, flatten_to_points, get_polyline_arc_deviation,
+    get_polyline_line_deviation, linearize_geometry,
+    project_circle_center_to_bisector,
 };
 use raygeo_core::geo::algo::minkowski::{
     calculate_input_scale, convolve_point_sequences, convolve_two_segments,
@@ -14,13 +21,6 @@ use raygeo_core::geo::algo::minkowski::{
     get_polygon_minkowski_sum_convex,
 };
 use raygeo_core::geo::algo::simplify::simplify_polyline;
-use raygeo_core::geo::algo::fitting::{
-    are_points_collinear, convert_arc_to_beziers_from_array, create_arc_cmd,
-    create_line_cmd, fit_circle_to_3_points, fit_circle_to_points,
-    fit_points_recursive, fit_points_with_primitives, flatten_to_points,
-    get_polyline_arc_deviation, get_polyline_line_deviation,
-    linearize_geometry, project_circle_center_to_bisector,
-};
 use raygeo_core::geo::algo::smooth::{
     compute_gaussian_kernel, resample_polyline, smooth_circularly,
     smooth_polyline, smooth_sub_segment,
@@ -38,42 +38,125 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     let clipping_mod = PyModule::new(py, "clipping")?;
     let smooth_mod = PyModule::new(py, "smooth")?;
 
-    clipping_mod.add_function(wrap_pyfunction!(clip_line_segment_py, clipping_mod.clone())?)?;
-    clipping_mod.add_function(wrap_pyfunction!(clip_line_segment_to_regions_py, clipping_mod.clone())?)?;
-    clipping_mod.add_function(wrap_pyfunction!(subtract_polygons_from_line_segment_py, clipping_mod.clone())?)?;
-    clipping_mod.add_function(wrap_pyfunction!(to_clipper_py, clipping_mod.clone())?)?;
-    clipping_mod.add_function(wrap_pyfunction!(from_clipper_py, clipping_mod.clone())?)?;
+    clipping_mod.add_function(wrap_pyfunction!(
+        clip_line_segment_py,
+        clipping_mod.clone()
+    )?)?;
+    clipping_mod.add_function(wrap_pyfunction!(
+        clip_line_segment_to_regions_py,
+        clipping_mod.clone()
+    )?)?;
+    clipping_mod.add_function(wrap_pyfunction!(
+        subtract_polygons_from_line_segment_py,
+        clipping_mod.clone()
+    )?)?;
+    clipping_mod
+        .add_function(wrap_pyfunction!(to_clipper_py, clipping_mod.clone())?)?;
+    clipping_mod.add_function(wrap_pyfunction!(
+        from_clipper_py,
+        clipping_mod.clone()
+    )?)?;
 
-    minkowski_mod.add_function(wrap_pyfunction!(minkowski_sum_convex_py, minkowski_mod.clone())?)?;
-    minkowski_mod.add_function(wrap_pyfunction!(get_inner_fit_polygon_py, minkowski_mod.clone())?)?;
-    minkowski_mod.add_function(wrap_pyfunction!(get_no_fit_polygon_py, minkowski_mod.clone())?)?;
-    minkowski_mod.add_function(wrap_pyfunction!(calculate_input_scale_py, minkowski_mod.clone())?)?;
-    minkowski_mod.add_function(wrap_pyfunction!(convolve_two_segments_py, minkowski_mod.clone())?)?;
-    minkowski_mod.add_function(wrap_pyfunction!(convolve_point_sequences_py, minkowski_mod.clone())? )?;
+    minkowski_mod.add_function(wrap_pyfunction!(
+        minkowski_sum_convex_py,
+        minkowski_mod.clone()
+    )?)?;
+    minkowski_mod.add_function(wrap_pyfunction!(
+        get_inner_fit_polygon_py,
+        minkowski_mod.clone()
+    )?)?;
+    minkowski_mod.add_function(wrap_pyfunction!(
+        get_no_fit_polygon_py,
+        minkowski_mod.clone()
+    )?)?;
+    minkowski_mod.add_function(wrap_pyfunction!(
+        calculate_input_scale_py,
+        minkowski_mod.clone()
+    )?)?;
+    minkowski_mod.add_function(wrap_pyfunction!(
+        convolve_two_segments_py,
+        minkowski_mod.clone()
+    )?)?;
+    minkowski_mod.add_function(wrap_pyfunction!(
+        convolve_point_sequences_py,
+        minkowski_mod.clone()
+    )?)?;
 
-    simplify_mod.add_function(wrap_pyfunction!(simplify_polyline_py, simplify_mod.clone())?)?;
-    simplify_mod.add_function(wrap_pyfunction!(simplify_polyline_to_array_py, simplify_mod.clone())?)?;
+    simplify_mod.add_function(wrap_pyfunction!(
+        simplify_polyline_py,
+        simplify_mod.clone()
+    )?)?;
 
-    smooth_mod.add_function(wrap_pyfunction!(compute_gaussian_kernel_py, smooth_mod.clone())?)?;
-    smooth_mod.add_function(wrap_pyfunction!(smooth_circularly_py, smooth_mod.clone())?)?;
-    smooth_mod.add_function(wrap_pyfunction!(smooth_polyline_algo_py, smooth_mod.clone())?)?;
-    smooth_mod.add_function(wrap_pyfunction!(smooth_sub_segment_py, smooth_mod.clone())?)?;
-    smooth_mod.add_function(wrap_pyfunction!(resample_polyline_py, smooth_mod.clone())?)?;
+    smooth_mod.add_function(wrap_pyfunction!(
+        compute_gaussian_kernel_py,
+        smooth_mod.clone()
+    )?)?;
+    smooth_mod.add_function(wrap_pyfunction!(
+        smooth_circularly_py,
+        smooth_mod.clone()
+    )?)?;
+    smooth_mod.add_function(wrap_pyfunction!(
+        smooth_polyline_algo_py,
+        smooth_mod.clone()
+    )?)?;
+    smooth_mod.add_function(wrap_pyfunction!(
+        smooth_sub_segment_py,
+        smooth_mod.clone()
+    )?)?;
+    smooth_mod.add_function(wrap_pyfunction!(
+        resample_polyline_py,
+        smooth_mod.clone()
+    )?)?;
 
     let fitting_mod = PyModule::new(py, "fitting")?;
-    fitting_mod.add_function(wrap_pyfunction!(are_points_collinear_py, fitting_mod.clone())?)?;
-    fitting_mod.add_function(wrap_pyfunction!(fit_circle_to_3_points_py, fitting_mod.clone())?)?;
-    fitting_mod.add_function(wrap_pyfunction!(fit_circle_to_points_py, fitting_mod.clone())?)?;
-    fitting_mod.add_function(wrap_pyfunction!(project_circle_center_to_bisector_py, fitting_mod.clone())?)?;
-    fitting_mod.add_function(wrap_pyfunction!(flatten_to_points_py, fitting_mod.clone())?)?;
-    fitting_mod.add_function(wrap_pyfunction!(linearize_geometry_py, fitting_mod.clone())?)?;
-    fitting_mod.add_function(wrap_pyfunction!(create_line_cmd_py, fitting_mod.clone())?)?;
-    fitting_mod.add_function(wrap_pyfunction!(create_arc_cmd_py, fitting_mod.clone())?)?;
-    fitting_mod.add_function(wrap_pyfunction!(convert_arc_to_beziers_from_array_py, fitting_mod.clone())?)?;
-    fitting_mod.add_function(wrap_pyfunction!(fit_points_recursive_py, fitting_mod.clone())?)?;
-    fitting_mod.add_function(wrap_pyfunction!(fit_points_with_primitives_py, fitting_mod.clone())?)?;
-    fitting_mod.add_function(wrap_pyfunction!(get_polyline_line_deviation_py, fitting_mod.clone())?)?;
-    fitting_mod.add_function(wrap_pyfunction!(get_polyline_arc_deviation_py, fitting_mod.clone())?)?;
+    fitting_mod.add_function(wrap_pyfunction!(
+        are_points_collinear_py,
+        fitting_mod.clone()
+    )?)?;
+    fitting_mod.add_function(wrap_pyfunction!(
+        fit_circle_to_3_points_py,
+        fitting_mod.clone()
+    )?)?;
+    fitting_mod.add_function(wrap_pyfunction!(
+        fit_circle_to_points_py,
+        fitting_mod.clone()
+    )?)?;
+    fitting_mod.add_function(wrap_pyfunction!(
+        project_circle_center_to_bisector_py,
+        fitting_mod.clone()
+    )?)?;
+    fitting_mod.add_function(wrap_pyfunction!(
+        flatten_to_points_py,
+        fitting_mod.clone()
+    )?)?;
+    fitting_mod.add_function(wrap_pyfunction!(
+        linearize_geometry_py,
+        fitting_mod.clone()
+    )?)?;
+    fitting_mod.add_function(wrap_pyfunction!(
+        create_line_cmd_py,
+        fitting_mod.clone()
+    )?)?;
+    fitting_mod.add_function(wrap_pyfunction!(
+        create_arc_cmd_py,
+        fitting_mod.clone()
+    )?)?;
+    fitting_mod.add_function(wrap_pyfunction!(
+        fit_points_recursive_py,
+        fitting_mod.clone()
+    )?)?;
+    fitting_mod.add_function(wrap_pyfunction!(
+        fit_points_with_primitives_py,
+        fitting_mod.clone()
+    )?)?;
+    fitting_mod.add_function(wrap_pyfunction!(
+        get_polyline_line_deviation_py,
+        fitting_mod.clone()
+    )?)?;
+    fitting_mod.add_function(wrap_pyfunction!(
+        get_polyline_arc_deviation_py,
+        fitting_mod.clone()
+    )?)?;
 
     algo_mod.add_submodule(&minkowski_mod)?;
     algo_mod.add_submodule(&simplify_mod)?;
@@ -113,7 +196,8 @@ fn to_data_array(data: Vec<Vec<f64>>) -> Vec<[f64; 8]> {
         .collect()
 }
 
-#[gen_stub_pyfunction(python = r#"
+#[gen_stub_pyfunction(
+    python = r#"
     def are_points_collinear(
         points: Sequence[Point3D],
         tolerance: float = 1e-6,
@@ -124,14 +208,20 @@ fn to_data_array(data: Vec<Vec<f64>>) -> Vec<[f64; 8]> {
         :param tolerance: Collinearity tolerance.
         :returns: True if points are collinear.
         """
-"#, module = "raygeo.geo.algo.fitting")]
+"#,
+    module = "raygeo.geo.algo.fitting"
+)]
 #[pyfunction(name = "are_points_collinear")]
 #[pyo3(signature = (points, tolerance=1e-6))]
-fn are_points_collinear_py(points: Vec<(f64, f64, f64)>, tolerance: f64) -> bool {
+fn are_points_collinear_py(
+    points: Vec<(f64, f64, f64)>,
+    tolerance: f64,
+) -> bool {
     are_points_collinear(&points, tolerance)
 }
 
-#[gen_stub_pyfunction(python = r#"
+#[gen_stub_pyfunction(
+    python = r#"
     def fit_circle_to_3_points(
         p1: Point2DOr3D,
         p2: Point2DOr3D,
@@ -144,17 +234,24 @@ fn are_points_collinear_py(points: Vec<(f64, f64, f64)>, tolerance: f64) -> bool
         :param p3: Third point (x, y) or (x, y, z).
         :returns: Tuple of (center, radius) or None.
         """
-"#, module = "raygeo.geo.algo.fitting")]
+"#,
+    module = "raygeo.geo.algo.fitting"
+)]
 #[pyfunction(name = "fit_circle_to_3_points")]
 fn fit_circle_to_3_points_py(
     p1: PyPoint3D,
     p2: PyPoint3D,
     p3: PyPoint3D,
 ) -> Option<((f64, f64), f64)> {
-    fit_circle_to_3_points((p1.0, p1.1, p1.2), (p2.0, p2.1, p2.2), (p3.0, p3.1, p3.2))
+    fit_circle_to_3_points(
+        (p1.0, p1.1, p1.2),
+        (p2.0, p2.1, p2.2),
+        (p3.0, p3.1, p3.2),
+    )
 }
 
-#[gen_stub_pyfunction(python = r#"
+#[gen_stub_pyfunction(
+    python = r#"
     def fit_circle_to_points(
         points: Sequence[Point3D],
     ) -> Optional[tuple[Point, float, float]]:
@@ -163,13 +260,18 @@ fn fit_circle_to_3_points_py(
         :param points: Sequence of 3D points to fit.
         :returns: Tuple of (center, radius, error) or None.
         """
-"#, module = "raygeo.geo.algo.fitting")]
+"#,
+    module = "raygeo.geo.algo.fitting"
+)]
 #[pyfunction(name = "fit_circle_to_points")]
-fn fit_circle_to_points_py(points: Vec<(f64, f64, f64)>) -> Option<((f64, f64), f64, f64)> {
+fn fit_circle_to_points_py(
+    points: Vec<(f64, f64, f64)>,
+) -> Option<((f64, f64), f64, f64)> {
     fit_circle_to_points(&points)
 }
 
-#[gen_stub_pyfunction(python = r#"
+#[gen_stub_pyfunction(
+    python = r#"
     def project_circle_center_to_bisector(
         p1: Point2DOr3D,
         p2: Point2DOr3D,
@@ -182,17 +284,24 @@ fn fit_circle_to_points_py(points: Vec<(f64, f64, f64)>) -> Option<((f64, f64), 
         :param center: Circle center to project.
         :returns: Projected center point (x, y).
         """
-"#, module = "raygeo.geo.algo.fitting")]
+"#,
+    module = "raygeo.geo.algo.fitting"
+)]
 #[pyfunction(name = "project_circle_center_to_bisector")]
 fn project_circle_center_to_bisector_py(
     p1: PyPoint3D,
     p2: PyPoint3D,
     center: (f64, f64),
 ) -> (f64, f64) {
-    project_circle_center_to_bisector((p1.0, p1.1, p1.2), (p2.0, p2.1, p2.2), center)
+    project_circle_center_to_bisector(
+        (p1.0, p1.1, p1.2),
+        (p2.0, p2.1, p2.2),
+        center,
+    )
 }
 
-#[gen_stub_pyfunction(python = r#"
+#[gen_stub_pyfunction(
+    python = r#"
     def flatten_to_points(
         data: Sequence[Sequence[float]],
         tolerance: float,
@@ -203,14 +312,20 @@ fn project_circle_center_to_bisector_py(
         :param tolerance: Flattening tolerance.
         :returns: List of flattened point segments.
         """
-"#, module = "raygeo.geo.algo.fitting")]
+"#,
+    module = "raygeo.geo.algo.fitting"
+)]
 #[pyfunction(name = "flatten_to_points")]
-fn flatten_to_points_py(data: Vec<Vec<f64>>, tolerance: f64) -> Vec<Vec<(f64, f64, f64)>> {
+fn flatten_to_points_py(
+    data: Vec<Vec<f64>>,
+    tolerance: f64,
+) -> Vec<Vec<(f64, f64, f64)>> {
     let arr = to_data_array(data);
     flatten_to_points(&arr, tolerance)
 }
 
-#[gen_stub_pyfunction(python = r#"
+#[gen_stub_pyfunction(
+    python = r#"
     def linearize_geometry(
         data: Sequence[Sequence[float]],
         tolerance: float,
@@ -221,14 +336,20 @@ fn flatten_to_points_py(data: Vec<Vec<f64>>, tolerance: f64) -> Vec<Vec<(f64, f6
         :param tolerance: Linearization tolerance.
         :returns: List of linearized segment rows.
         """
-"#, module = "raygeo.geo.algo.fitting")]
+"#,
+    module = "raygeo.geo.algo.fitting"
+)]
 #[pyfunction(name = "linearize_geometry")]
 fn linearize_geometry_py(data: Vec<Vec<f64>>, tolerance: f64) -> Vec<Vec<f64>> {
     let arr = to_data_array(data);
-    linearize_geometry(&arr, tolerance).into_iter().map(|r| r.to_vec()).collect()
+    linearize_geometry(&arr, tolerance)
+        .into_iter()
+        .map(|r| r.to_vec())
+        .collect()
 }
 
-#[gen_stub_pyfunction(python = r#"
+#[gen_stub_pyfunction(
+    python = r#"
     def create_line_cmd(
         end_point: Point3D,
     ) -> list[float]:
@@ -237,13 +358,16 @@ fn linearize_geometry_py(data: Vec<Vec<f64>>, tolerance: f64) -> Vec<Vec<f64>> {
         :param end_point: End point (x, y, z).
         :returns: Line command array (8 floats).
         """
-"#, module = "raygeo.geo.algo.fitting")]
+"#,
+    module = "raygeo.geo.algo.fitting"
+)]
 #[pyfunction(name = "create_line_cmd")]
 fn create_line_cmd_py(end_point: PyPoint3D) -> Vec<f64> {
     create_line_cmd((end_point.0, end_point.1, end_point.2)).to_vec()
 }
 
-#[gen_stub_pyfunction(python = r#"
+#[gen_stub_pyfunction(
+    python = r#"
     def create_arc_cmd(
         end: Point3D,
         center: Point,
@@ -256,47 +380,21 @@ fn create_line_cmd_py(end_point: PyPoint3D) -> Vec<f64> {
         :param start: Start point (x, y, z).
         :returns: Arc command array (8 floats).
         """
-"#, module = "raygeo.geo.algo.fitting")]
+"#,
+    module = "raygeo.geo.algo.fitting"
+)]
 #[pyfunction(name = "create_arc_cmd")]
 fn create_arc_cmd_py(
     end: PyPoint3D,
     center: (f64, f64),
     start: PyPoint3D,
 ) -> Vec<f64> {
-    create_arc_cmd((end.0, end.1, end.2), center, (start.0, start.1, start.2)).to_vec()
+    create_arc_cmd((end.0, end.1, end.2), center, (start.0, start.1, start.2))
+        .to_vec()
 }
 
-#[gen_stub_pyfunction(python = r#"
-    def convert_arc_to_beziers_from_array(
-        start: Point3D,
-        end: Point3D,
-        center_offset: Point,
-        clockwise: bool,
-    ) -> list[list[float]]:
-        """Convert an arc to bezier curves.
-
-        :param start: Start point (x, y, z).
-        :param end: End point (x, y, z).
-        :param center_offset: Center offset (dx, dy).
-        :param clockwise: Whether the arc is clockwise.
-        :returns: List of bezier command rows.
-        """
-"#, module = "raygeo.geo.algo.fitting")]
-#[pyfunction(name = "convert_arc_to_beziers_from_array")]
-#[pyo3(signature = (start, end, center_offset, clockwise))]
-fn convert_arc_to_beziers_from_array_py(
-    start: (f64, f64, f64),
-    end: (f64, f64, f64),
-    center_offset: (f64, f64),
-    clockwise: bool,
-) -> Vec<Vec<f64>> {
-    convert_arc_to_beziers_from_array(start, end, center_offset, clockwise)
-        .into_iter()
-        .map(|r| r.to_vec())
-        .collect()
-}
-
-#[gen_stub_pyfunction(python = r#"
+#[gen_stub_pyfunction(
+    python = r#"
     def fit_points_recursive(
         points: Sequence[Point3D],
         tolerance: float,
@@ -311,7 +409,9 @@ fn convert_arc_to_beziers_from_array_py(
         :param end_idx: End index in the points array.
         :returns: List of fitted command rows.
         """
-"#, module = "raygeo.geo.algo.fitting")]
+"#,
+    module = "raygeo.geo.algo.fitting"
+)]
 #[pyfunction(name = "fit_points_recursive")]
 fn fit_points_recursive_py(
     points: Vec<(f64, f64, f64)>,
@@ -325,7 +425,8 @@ fn fit_points_recursive_py(
         .collect()
 }
 
-#[gen_stub_pyfunction(python = r#"
+#[gen_stub_pyfunction(
+    python = r#"
     def fit_points_with_primitives(
         points: Sequence[Point3D],
         tolerance: float,
@@ -336,7 +437,9 @@ fn fit_points_recursive_py(
         :param tolerance: Fitting tolerance.
         :returns: List of fitted command rows.
         """
-"#, module = "raygeo.geo.algo.fitting")]
+"#,
+    module = "raygeo.geo.algo.fitting"
+)]
 #[pyfunction(name = "fit_points_with_primitives")]
 fn fit_points_with_primitives_py(
     points: Vec<(f64, f64, f64)>,
@@ -348,7 +451,8 @@ fn fit_points_with_primitives_py(
         .collect()
 }
 
-#[gen_stub_pyfunction(python = r#"
+#[gen_stub_pyfunction(
+    python = r#"
     def get_polyline_line_deviation(
         points: Sequence[Point3D],
         start: int,
@@ -361,7 +465,9 @@ fn fit_points_with_primitives_py(
         :param end: End index.
         :returns: Tuple of (max_deviation, index_of_max).
         """
-"#, module = "raygeo.geo.algo.fitting")]
+"#,
+    module = "raygeo.geo.algo.fitting"
+)]
 #[pyfunction(name = "get_polyline_line_deviation")]
 fn get_polyline_line_deviation_py(
     points: Vec<(f64, f64, f64)>,
@@ -371,7 +477,8 @@ fn get_polyline_line_deviation_py(
     get_polyline_line_deviation(&points, start, end)
 }
 
-#[gen_stub_pyfunction(python = r#"
+#[gen_stub_pyfunction(
+    python = r#"
     def get_polyline_arc_deviation(
         points: Sequence[Point3D],
         center: Point,
@@ -384,7 +491,9 @@ fn get_polyline_line_deviation_py(
         :param radius: Arc radius.
         :returns: Maximum deviation from the arc.
         """
-"#, module = "raygeo.geo.algo.fitting")]
+"#,
+    module = "raygeo.geo.algo.fitting"
+)]
 #[pyfunction(name = "get_polyline_arc_deviation")]
 fn get_polyline_arc_deviation_py(
     points: Vec<(f64, f64, f64)>,
@@ -394,7 +503,8 @@ fn get_polyline_arc_deviation_py(
     get_polyline_arc_deviation(&points, center, radius)
 }
 
-#[gen_stub_pyfunction(python = r#"
+#[gen_stub_pyfunction(
+    python = r#"
     def resample_polyline(
         points: Sequence[Point3D],
         max_segment_length: float,
@@ -407,7 +517,9 @@ fn get_polyline_arc_deviation_py(
         :param is_closed: Whether the polyline is closed.
         :returns: Resampled points.
         """
-"#, module = "raygeo.geo.algo.smooth")]
+"#,
+    module = "raygeo.geo.algo.smooth"
+)]
 #[pyfunction(name = "resample_polyline")]
 fn resample_polyline_py(
     points: Vec<(f64, f64, f64)>,
@@ -417,7 +529,8 @@ fn resample_polyline_py(
     resample_polyline(&points, max_segment_length, is_closed)
 }
 
-#[gen_stub_pyfunction(python = r#"
+#[gen_stub_pyfunction(
+    python = r#"
     def clip_line_segment_with_rect(
         p1: Point3D,
         p2: Point3D,
@@ -430,7 +543,9 @@ fn resample_polyline_py(
         :param rect: Clipping rectangle (x_min, y_min, x_max, y_max).
         :returns: Clipped segment or None if fully outside.
         """
-"#, module = "raygeo.geo.algo.clipping")]
+"#,
+    module = "raygeo.geo.algo.clipping"
+)]
 #[pyfunction(name = "clip_line_segment_with_rect")]
 fn clip_line_segment_py(
     p1: (f64, f64, f64),
@@ -440,7 +555,8 @@ fn clip_line_segment_py(
     clip_line_segment_with_rect(p1, p2, rect)
 }
 
-#[gen_stub_pyfunction(python = r#"
+#[gen_stub_pyfunction(
+    python = r#"
     def subtract_polygons_from_line_segment(
         p1: Point3D,
         p2: Point3D,
@@ -453,7 +569,9 @@ fn clip_line_segment_py(
         :param regions: List of polygon regions to subtract.
         :returns: List of remaining segments after subtraction.
         """
-"#, module = "raygeo.geo.algo.clipping")]
+"#,
+    module = "raygeo.geo.algo.clipping"
+)]
 #[pyfunction(name = "subtract_polygons_from_line_segment")]
 fn subtract_polygons_from_line_segment_py(
     p1: (f64, f64, f64),
@@ -464,7 +582,8 @@ fn subtract_polygons_from_line_segment_py(
     Ok(subtract_polygons_from_line_segment(p1, p2, &regions))
 }
 
-#[gen_stub_pyfunction(python = r#"
+#[gen_stub_pyfunction(
+    python = r#"
     def clip_line_segment_with_polygons(
         p1: Point3D,
         p2: Point3D,
@@ -477,7 +596,9 @@ fn subtract_polygons_from_line_segment_py(
         :param regions: Polygon regions to clip against.
         :returns: List of clipped segments.
         """
-"#, module = "raygeo.geo.algo.clipping")]
+"#,
+    module = "raygeo.geo.algo.clipping"
+)]
 #[pyfunction(name = "clip_line_segment_with_polygons")]
 fn clip_line_segment_to_regions_py(
     p1: (f64, f64, f64),
@@ -488,7 +609,8 @@ fn clip_line_segment_to_regions_py(
     Ok(clip_line_segment_with_polygons(p1, p2, &regions))
 }
 
-#[gen_stub_pyfunction(python = r#"
+#[gen_stub_pyfunction(
+    python = r#"
     def to_clipper(
         polygon: Polygon,
         scale: int = 10000000,
@@ -499,7 +621,9 @@ fn clip_line_segment_to_regions_py(
         :param scale: Scale factor for integer conversion.
         :returns: Polygon with integer coordinates for Clipper.
         """
-"#, module = "raygeo.geo.algo.clipping")]
+"#,
+    module = "raygeo.geo.algo.clipping"
+)]
 #[pyfunction(name = "to_clipper")]
 fn to_clipper_py(
     polygon: &Bound<'_, PyAny>,
@@ -513,7 +637,8 @@ fn to_clipper_py(
         .collect())
 }
 
-#[gen_stub_pyfunction(python = r#"
+#[gen_stub_pyfunction(
+    python = r#"
     def from_clipper(
         polygon: IntPolygon,
         scale: int = 10000000,
@@ -524,7 +649,9 @@ fn to_clipper_py(
         :param scale: Scale factor used during conversion.
         :returns: Polygon with float coordinates.
         """
-"#, module = "raygeo.geo.algo.clipping")]
+"#,
+    module = "raygeo.geo.algo.clipping"
+)]
 #[pyfunction(name = "from_clipper")]
 fn from_clipper_py(
     polygon: Vec<crate::geo::flex_point::PyIntPoint2D>,
@@ -537,7 +664,8 @@ fn from_clipper_py(
         .collect()
 }
 
-#[gen_stub_pyfunction(python = r#"
+#[gen_stub_pyfunction(
+    python = r#"
     def get_polygon_minkowski_sum_convex(
         poly_a: Sequence[tuple[int, int]],
         poly_b: Sequence[tuple[int, int]],
@@ -548,7 +676,9 @@ fn from_clipper_py(
         :param poly_b: Second convex polygon as integer points.
         :returns: Minkowski sum as list of polygons.
         """
-"#, module = "raygeo.geo.algo.minkowski")]
+"#,
+    module = "raygeo.geo.algo.minkowski"
+)]
 #[pyfunction(name = "get_polygon_minkowski_sum_convex")]
 fn minkowski_sum_convex_py(
     poly_a: Vec<(i64, i64)>,
@@ -557,7 +687,8 @@ fn minkowski_sum_convex_py(
     get_polygon_minkowski_sum_convex(&poly_a, &poly_b)
 }
 
-#[gen_stub_pyfunction(python = r#"
+#[gen_stub_pyfunction(
+    python = r#"
     def get_inner_fit_polygon(
         outer: Sequence[Point],
         inner: Sequence[Point],
@@ -568,7 +699,9 @@ fn minkowski_sum_convex_py(
         :param inner: Inner polygon as (x, y) points.
         :returns: Inner fit polygon.
         """
-"#, module = "raygeo.geo.algo.minkowski")]
+"#,
+    module = "raygeo.geo.algo.minkowski"
+)]
 #[pyfunction(name = "get_inner_fit_polygon")]
 fn get_inner_fit_polygon_py(
     outer: Vec<PyPoint2D>,
@@ -577,7 +710,8 @@ fn get_inner_fit_polygon_py(
     get_inner_fit_polygon(&poly_to_points(outer), &poly_to_points(inner))
 }
 
-#[gen_stub_pyfunction(python = r#"
+#[gen_stub_pyfunction(
+    python = r#"
     def get_no_fit_polygon(
         subject: Sequence[Point],
         tool: Sequence[Point],
@@ -588,7 +722,9 @@ fn get_inner_fit_polygon_py(
         :param tool: Tool polygon as (x, y) points.
         :returns: No-fit polygon.
         """
-"#, module = "raygeo.geo.algo.minkowski")]
+"#,
+    module = "raygeo.geo.algo.minkowski"
+)]
 #[pyfunction(name = "get_no_fit_polygon")]
 fn get_no_fit_polygon_py(
     subject: Vec<PyPoint2D>,
@@ -597,7 +733,8 @@ fn get_no_fit_polygon_py(
     get_no_fit_polygon(&poly_to_points(subject), &poly_to_points(tool))
 }
 
-#[gen_stub_pyfunction(python = r#"
+#[gen_stub_pyfunction(
+    python = r#"
     def calculate_input_scale(
         polygons: Sequence[Sequence[Point]],
         max_int: int = 2147483647,
@@ -608,15 +745,21 @@ fn get_no_fit_polygon_py(
         :param max_int: Maximum integer value for Clipper.
         :returns: Optimal scale factor.
         """
-"#, module = "raygeo.geo.algo.minkowski")]
+"#,
+    module = "raygeo.geo.algo.minkowski"
+)]
 #[pyfunction(name = "calculate_input_scale")]
 #[pyo3(signature = (polygons, max_int=2147483647))]
-fn calculate_input_scale_py(polygons: &Bound<'_, PyAny>, max_int: i64) -> PyResult<f64> {
+fn calculate_input_scale_py(
+    polygons: &Bound<'_, PyAny>,
+    max_int: i64,
+) -> PyResult<f64> {
     let polys = extract_polygons(polygons)?;
     Ok(calculate_input_scale(&polys, max_int))
 }
 
-#[gen_stub_pyfunction(python = r#"
+#[gen_stub_pyfunction(
+    python = r#"
     def convolve_two_segments(
         a1: tuple[int, int],
         a2: tuple[int, int],
@@ -631,7 +774,9 @@ fn calculate_input_scale_py(polygons: &Bound<'_, PyAny>, max_int: i64) -> PyResu
         :param b2: End point of segment B.
         :returns: Convolved point sequence.
         """
-"#, module = "raygeo.geo.algo.minkowski")]
+"#,
+    module = "raygeo.geo.algo.minkowski"
+)]
 #[pyfunction(name = "convolve_two_segments")]
 fn convolve_two_segments_py(
     a1: (i64, i64),
@@ -642,7 +787,8 @@ fn convolve_two_segments_py(
     convolve_two_segments(a1, a2, b1, b2)
 }
 
-#[gen_stub_pyfunction(python = r#"
+#[gen_stub_pyfunction(
+    python = r#"
     def convolve_point_sequences(
         seq_a: Sequence[tuple[int, int]],
         seq_b: Sequence[tuple[int, int]],
@@ -653,7 +799,9 @@ fn convolve_two_segments_py(
         :param seq_b: Second sequence of integer points.
         :returns: Convolved point sequences.
         """
-"#, module = "raygeo.geo.algo.minkowski")]
+"#,
+    module = "raygeo.geo.algo.minkowski"
+)]
 #[pyfunction(name = "convolve_point_sequences")]
 fn convolve_point_sequences_py(
     seq_a: Vec<(i64, i64)>,
@@ -662,7 +810,8 @@ fn convolve_point_sequences_py(
     convolve_point_sequences(&seq_a, &seq_b)
 }
 
-#[gen_stub_pyfunction(python = r#"
+#[gen_stub_pyfunction(
+    python = r#"
     def simplify_polyline(
         points: Sequence[Point],
         tolerance: float,
@@ -673,44 +822,20 @@ fn convolve_point_sequences_py(
         :param tolerance: Simplification tolerance.
         :returns: Simplified point sequence.
         """
-"#, module = "raygeo.geo.algo.simplify")]
+"#,
+    module = "raygeo.geo.algo.simplify"
+)]
 #[pyfunction(name = "simplify_polyline")]
 fn simplify_polyline_py(points: Vec<PyPoint2D>, tolerance: f64) -> Vec<Point> {
     let pts = poly_to_points(points);
-    let points_3d: Vec<raygeo_core::Point3D> = pts.iter().map(|p| (p.0, p.1, 0.0)).collect();
+    let points_3d: Vec<raygeo_core::Point3D> =
+        pts.iter().map(|p| (p.0, p.1, 0.0)).collect();
     let result = simplify_polyline(&points_3d, tolerance);
     result.iter().map(|p| (p.0, p.1)).collect()
 }
 
-#[gen_stub_pyfunction(python = r#"
-    def simplify_polyline_to_array(
-        data: Sequence[Sequence[float]],
-        tolerance: float,
-    ) -> list[list[float]]:
-        """Simplify a polyline from an array.
-
-        :param data: Array of point rows.
-        :param tolerance: Simplification tolerance.
-        :returns: Simplified array rows.
-        """
-"#, module = "raygeo.geo.algo.simplify")]
-#[pyfunction(name = "simplify_polyline_to_array")]
-fn simplify_polyline_to_array_py(data: Vec<Vec<f64>>, tolerance: f64) -> Vec<Vec<f64>> {
-    let num_cols = data.first().map(|r| r.len()).unwrap_or(2);
-    let points: Vec<raygeo_core::Point3D> = data.iter().map(|r| (r[0], r[1], r.get(2).copied().unwrap_or(0.0))).collect();
-    let result = simplify_polyline(&points, tolerance);
-    result.iter().map(|p| {
-        let mut row = Vec::with_capacity(num_cols);
-        row.push(p.0);
-        row.push(p.1);
-        for _ in 2..num_cols {
-            row.push(p.2);
-        }
-        row
-    }).collect()
-}
-
-#[gen_stub_pyfunction(python = r#"
+#[gen_stub_pyfunction(
+    python = r#"
     def compute_gaussian_kernel(
         amount: int,
     ) -> tuple[list[float], float]:
@@ -719,13 +844,16 @@ fn simplify_polyline_to_array_py(data: Vec<Vec<f64>>, tolerance: f64) -> Vec<Vec
         :param amount: Kernel size.
         :returns: Tuple of (kernel_values, sigma).
         """
-"#, module = "raygeo.geo.algo.smooth")]
+"#,
+    module = "raygeo.geo.algo.smooth"
+)]
 #[pyfunction(name = "compute_gaussian_kernel")]
 fn compute_gaussian_kernel_py(amount: i32) -> (Vec<f64>, f64) {
     compute_gaussian_kernel(amount)
 }
 
-#[gen_stub_pyfunction(python = r#"
+#[gen_stub_pyfunction(
+    python = r#"
     def smooth_circularly(
         points: Sequence[Point3D],
         kernel: Sequence[float],
@@ -736,7 +864,9 @@ fn compute_gaussian_kernel_py(amount: i32) -> (Vec<f64>, f64) {
         :param kernel: Gaussian kernel values.
         :returns: Smoothed points.
         """
-"#, module = "raygeo.geo.algo.smooth")]
+"#,
+    module = "raygeo.geo.algo.smooth"
+)]
 #[pyfunction(name = "smooth_circularly")]
 fn smooth_circularly_py(
     points: Vec<(f64, f64, f64)>,
@@ -745,7 +875,8 @@ fn smooth_circularly_py(
     smooth_circularly(&points, &kernel)
 }
 
-#[gen_stub_pyfunction(python = r#"
+#[gen_stub_pyfunction(
+    python = r#"
     def smooth_polyline(
         points: Sequence[Point3D],
         amount: int,
@@ -760,7 +891,9 @@ fn smooth_circularly_py(
         :param is_closed: Whether the polyline is closed.
         :returns: Smoothed points.
         """
-"#, module = "raygeo.geo.algo.smooth")]
+"#,
+    module = "raygeo.geo.algo.smooth"
+)]
 #[pyfunction(name = "smooth_polyline")]
 #[pyo3(signature = (points, amount, corner_angle_threshold, is_closed=None))]
 fn smooth_polyline_algo_py(
@@ -772,7 +905,8 @@ fn smooth_polyline_algo_py(
     smooth_polyline(&points, amount, corner_angle_threshold, is_closed)
 }
 
-#[gen_stub_pyfunction(python = r#"
+#[gen_stub_pyfunction(
+    python = r#"
     def smooth_sub_segment(
         points: Sequence[Point3D],
         kernel: Sequence[float],
@@ -783,7 +917,9 @@ fn smooth_polyline_algo_py(
         :param kernel: Gaussian kernel values.
         :returns: Smoothed points.
         """
-"#, module = "raygeo.geo.algo.smooth")]
+"#,
+    module = "raygeo.geo.algo.smooth"
+)]
 #[pyfunction(name = "smooth_sub_segment")]
 fn smooth_sub_segment_py(
     points: Vec<(f64, f64, f64)>,

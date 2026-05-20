@@ -2,7 +2,6 @@ import pytest
 import math
 import numpy as np
 from raygeo import Geometry
-from raygeo.geo.math import apply_affine_transform_to_array
 
 
 def _create_translate_matrix(x, y, z):
@@ -177,122 +176,6 @@ def test_transform_uniform_scale_preserves_curves():
     assert np.allclose(
         bezier_row[Geometry.COL_C2X : Geometry.COL_C2Y + 1], (36, -4)
     )
-
-
-# --- Raw Array Transform Tests (formerly test_transform_numpy.py) ---
-
-
-def test_transform_array_uniform_translation():
-    data = np.array(
-        [
-            [Geometry.CMD_TYPE_MOVE, 10.0, 20.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-            [Geometry.CMD_TYPE_LINE, 30.0, 40.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-        ]
-    )
-
-    # Manual translation matrix
-    matrix = np.eye(4)
-    matrix[0, 3] = 5.0
-    matrix[1, 3] = 5.0
-
-    transformed = apply_affine_transform_to_array(data, matrix)
-
-    # Check move
-    assert transformed[0, Geometry.COL_X] == 15.0
-    assert transformed[0, Geometry.COL_Y] == 25.0
-
-    # Check line
-    assert transformed[1, Geometry.COL_X] == 35.0
-    assert transformed[1, Geometry.COL_Y] == 45.0
-
-
-def test_transform_array_uniform_rotation_arc():
-    # Arc from (10,0) to (0,10), center at (0,0) -> Offset from start (-10, 0)
-    data = np.array(
-        [
-            [Geometry.CMD_TYPE_ARC, 0.0, 10.0, 0.0, -10.0, 0.0, 0.0, 0.0]
-        ]  # CCW 0.0
-    )
-
-    # Manual 90 deg rotation matrix (CCW)
-    matrix = np.eye(4)
-    matrix[0, 0] = 0.0
-    matrix[0, 1] = -1.0
-    matrix[1, 0] = 1.0
-    matrix[1, 1] = 0.0
-
-    transformed = apply_affine_transform_to_array(data, matrix)
-
-    # Check end point (0,10) -> (-10, 0)
-    assert np.isclose(transformed[0, Geometry.COL_X], -10.0)
-    assert np.isclose(transformed[0, Geometry.COL_Y], 0.0)
-
-    # Check offset (-10, 0) -> (0, -10)
-    # Rotation of vector (-10, 0) by 90 deg is (0, -10)
-    assert np.isclose(transformed[0, Geometry.COL_I], 0.0)
-    assert np.isclose(transformed[0, Geometry.COL_J], -10.0)
-
-
-def test_transform_array_flip():
-    # Arc
-    data = np.array(
-        [
-            [Geometry.CMD_TYPE_ARC, 10.0, 10.0, 0.0, 5.0, 0.0, 0.0, 0.0]
-        ]  # CW=0 (CCW)
-    )
-
-    # Flip X: Scale(-1, 1)
-    matrix = np.eye(4)
-    matrix[0, 0] = -1.0
-
-    transformed = apply_affine_transform_to_array(data, matrix)
-
-    assert transformed[0, Geometry.COL_X] == -10.0
-    assert transformed[0, Geometry.COL_I] == -5.0
-    assert transformed[0, Geometry.COL_CW] == 1.0  # Flipped to CW
-
-
-def test_transform_array_non_uniform():
-    # Input: Move -> Arc -> Bezier
-    # Arc: Start (10,0), End (-10,0), Center (0,0) -> Offset (-10,0).
-    # Bezier: Start (-10,0), End (0,10), C1(-10, 5), C2(-5, 10)
-    data = np.array(
-        [
-            [Geometry.CMD_TYPE_MOVE, 10.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-            [Geometry.CMD_TYPE_ARC, -10.0, 0.0, 0.0, -10.0, 0.0, 0.0, 0.0],
-            [Geometry.CMD_TYPE_BEZIER, 0.0, 10.0, 0.0, -10.0, 5.0, -5.0, 10.0],
-        ]
-    )
-
-    # Scale Y by 0.5 -> Ellipse.
-    matrix = np.eye(4)
-    matrix[1, 1] = 0.5
-
-    transformed = apply_affine_transform_to_array(data, matrix)
-
-    # 1. Check Move
-    assert transformed[0, Geometry.COL_TYPE] == Geometry.CMD_TYPE_MOVE
-    assert transformed[0, Geometry.COL_X] == 10.0
-    assert transformed[0, Geometry.COL_Y] == 0.0
-
-    # 2. Check Arc -> Lines
-    # The middle section should be lines
-    assert transformed[1, Geometry.COL_TYPE] == Geometry.CMD_TYPE_LINE
-
-    # 3. Check Bezier -> Bezier (Last element)
-    last_row = transformed[-1]
-    assert last_row[Geometry.COL_TYPE] == Geometry.CMD_TYPE_BEZIER
-
-    # Check Bezier Points transformation
-    # End: (0, 10) -> (0, 5)
-    assert np.isclose(last_row[Geometry.COL_X], 0.0)
-    assert np.isclose(last_row[Geometry.COL_Y], 5.0)
-    # C1: (-10, 5) -> (-10, 2.5)
-    assert np.isclose(last_row[Geometry.COL_C1X], -10.0)
-    assert np.isclose(last_row[Geometry.COL_C1Y], 2.5)
-    # C2: (-5, 10) -> (-5, 5)
-    assert np.isclose(last_row[Geometry.COL_C2X], -5.0)
-    assert np.isclose(last_row[Geometry.COL_C2Y], 5.0)
 
 
 # --- Grow/Offset Tests ---

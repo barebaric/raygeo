@@ -5,16 +5,14 @@ use pyo3::prelude::*;
 use pyo3::types::PyTuple;
 use pyo3_stub_gen::derive::gen_stub_pyfunction;
 
+use raygeo_core::geo::algo::cleanup::get_segment_key;
 use raygeo_core::geo::algo::fitting::{
-    convert_arc_to_beziers_from_array, create_arc_cmd, create_line_cmd,
-    flatten_to_points, linearize_geometry,
+    create_arc_cmd, create_line_cmd, flatten_to_points, linearize_geometry,
 };
 use raygeo_core::geo::analysis::{
-    get_point_and_tangent_at_from_array, get_subpath_area_from_array,
-    get_subpath_vertices_from_array, partial_segment_from_row,
+    get_point_and_tangent_at_from_array, partial_segment_from_row,
     segment_length_from_row_flat,
 };
-use raygeo_core::geo::algo::cleanup::get_segment_key;
 use raygeo_core::geo::shape::point::are_points_equal;
 use raygeo_core::{
     check_intersection_from_array, check_self_intersection_from_array,
@@ -31,170 +29,6 @@ fn to_data_array(data: Vec<Vec<f64>>) -> Vec<[f64; 8]> {
             a
         })
         .collect()
-}
-
-#[gen_stub_pyfunction(
-    python = r#"
-    def get_bounding_rect_from_array(
-        data: Sequence[Sequence[float]],
-    ) -> Rect:
-        """Compute the bounding rectangle of path data.
-
-        :param data: Array of command data (rows of 8 floats).
-        :returns: Bounding rectangle as (x_min, y_min, x_max, y_max).
-        """
-"#,
-    module = "raygeo.geo.path"
-)]
-#[pyfunction]
-fn get_bounding_rect_from_array(data: Vec<Vec<f64>>) -> (f64, f64, f64, f64) {
-    let arr = to_data_array(data);
-    raygeo_core::get_bounding_rect_from_array(&arr)
-}
-
-#[gen_stub_pyfunction(
-    python = r#"
-    def get_total_distance_from_array(
-        data: Sequence[Sequence[float]],
-    ) -> float:
-        """Compute the total distance of a path.
-
-        :param data: Array of command data.
-        :returns: Total path length.
-        """
-"#,
-    module = "raygeo.geo.path"
-)]
-#[pyfunction]
-fn get_total_distance_from_array(data: Vec<Vec<f64>>) -> f64 {
-    let arr = to_data_array(data);
-    raygeo_core::get_total_distance_from_array(&arr)
-}
-
-#[gen_stub_pyfunction(
-    python = r#"
-    def extract_overcut_rows(
-        data: Optional[Sequence[Sequence[float]]],
-        max_length: float,
-    ) -> Optional[Any]:
-        """Extract rows that exceed a maximum length.
-
-        :param data: Array of command data or None.
-        :param max_length: Maximum allowed segment length.
-        :returns: Numpy array of overcut rows, or None.
-        """
-"#,
-    module = "raygeo.geo.path"
-)]
-#[pyfunction]
-fn extract_overcut_rows(
-    py: Python<'_>,
-    data: Option<Vec<Vec<f64>>>,
-    max_length: f64,
-) -> Option<Bound<'_, pyo3::types::PyAny>> {
-    let data = data?;
-    let arr = to_data_array(data);
-    raygeo_core::extract_overcut_rows(&arr, max_length).map(|rows| {
-        let vecs: Vec<Vec<f64>> =
-            rows.into_iter().map(|r| r.to_vec()).collect();
-        PyArray2::<f64>::from_vec2(py, &vecs)
-            .expect("failed to create numpy array")
-            .as_any()
-            .clone()
-    })
-}
-
-#[gen_stub_pyfunction(
-    python = r#"
-    def get_subpath_vertices_from_array(
-        data: Sequence[Sequence[float]],
-        subpath_index: int,
-    ) -> Polygon:
-        """Get the vertices of a subpath.
-
-        :param data: Array of command data.
-        :param subpath_index: Index of the subpath.
-        :returns: List of vertex points (x, y).
-        """
-"#,
-    module = "raygeo.geo.path"
-)]
-#[pyfunction(name = "get_subpath_vertices_from_array")]
-fn get_subpath_vertices_from_array_py(
-    data: Vec<Vec<f64>>,
-    subpath_index: usize,
-) -> Vec<Point> {
-    let arr = to_data_array(data);
-    get_subpath_vertices_from_array(&arr, subpath_index)
-}
-
-#[gen_stub_pyfunction(
-    python = r#"
-    def get_subpath_area_from_array(
-        data: Sequence[Sequence[float]],
-        subpath_index: int,
-    ) -> float:
-        """Get the signed area of a subpath.
-
-        :param data: Array of command data.
-        :param subpath_index: Index of the subpath.
-        :returns: Signed area of the subpath.
-        """
-"#,
-    module = "raygeo.geo.path"
-)]
-#[pyfunction(name = "get_subpath_area_from_array")]
-fn get_subpath_area_from_array_py(
-    data: Vec<Vec<f64>>,
-    subpath_index: usize,
-) -> f64 {
-    let arr = to_data_array(data);
-    get_subpath_area_from_array(&arr, subpath_index)
-}
-
-#[gen_stub_pyfunction(
-    python = r#"
-    def get_area_from_array(data: Sequence[Sequence[float]]) -> float:
-        """Compute the total area of path data.
-
-        :param data: Array of command data.
-        :returns: Total signed area.
-        """
-"#,
-    module = "raygeo.geo.path"
-)]
-#[pyfunction]
-fn get_area_from_array(data: Vec<Vec<f64>>) -> f64 {
-    let arr = to_data_array(data);
-    raygeo_core::get_area_from_array(&arr)
-}
-
-#[gen_stub_pyfunction(
-    python = r#"
-    def get_path_winding_order_from_array(
-        data: Sequence[Sequence[float]],
-        start_cmd_index: int,
-    ) -> str:
-        """Get the winding order (CW/CCW) of a path.
-
-        :param data: Array of command data.
-        :param start_cmd_index: Index of the first command of the path.
-        :returns: Winding order as "CW" or "CCW".
-        """
-"#,
-    module = "raygeo.geo.path"
-)]
-#[pyfunction]
-fn get_path_winding_order_from_array(
-    data: Vec<Vec<f64>>,
-    start_cmd_index: usize,
-) -> String {
-    let arr = to_data_array(data);
-    raygeo_core::geo::analysis::get_path_winding_order_from_array(
-        &arr,
-        start_cmd_index,
-    )
-    .to_string()
 }
 
 #[gen_stub_pyfunction(
@@ -222,49 +56,6 @@ fn get_point_and_tangent_at_py(
 ) -> Option<(Point, Point)> {
     let arr = to_data_array(data);
     get_point_and_tangent_at_from_array(&arr, row_index, t)
-}
-
-#[gen_stub_pyfunction(
-    python = r#"
-    def optimize_path_from_array(
-        data: Optional[Sequence[Sequence[float]]],
-        tolerance: float,
-        fit_arcs: bool,
-    ) -> Any:
-        """Optimize a path by fitting arcs.
-
-        :param data: Array of command data or None.
-        :param tolerance: Fitting tolerance.
-        :param fit_arcs: Whether to fit arcs (vs. only lines).
-        :returns: Numpy array of optimized path data.
-        """
-"#,
-    module = "raygeo.geo.path"
-)]
-#[pyfunction]
-fn optimize_path_from_array(
-    py: Python<'_>,
-    data: Option<Vec<Vec<f64>>>,
-    tolerance: f64,
-    fit_arcs: bool,
-) -> Bound<'_, pyo3::types::PyAny> {
-    let Some(data) = data else {
-        return PyArray2::<f64>::zeros(py, [0, 0], false).as_any().clone();
-    };
-    if data.is_empty() {
-        return PyArray2::<f64>::zeros(py, [0, 0], false).as_any().clone();
-    }
-    let arr = to_data_array(data);
-    let result = raygeo_core::geo::algo::fitting::optimize_path_from_array(
-        &arr, tolerance, fit_arcs,
-    );
-    let vecs: Vec<Vec<f64>> = result.into_iter().map(|r| r.to_vec()).collect();
-    if vecs.is_empty() {
-        return PyArray2::<f64>::zeros(py, [0, 0], false).as_any().clone();
-    }
-    let np_arr = PyArray2::<f64>::from_vec2(py, &vecs)
-        .expect("failed to create numpy array");
-    np_arr.as_any().clone()
 }
 
 #[gen_stub_pyfunction(
@@ -538,38 +329,6 @@ fn create_arc_cmd_py(
 
 #[gen_stub_pyfunction(
     python = r#"
-    def convert_arc_to_beziers_from_array(
-        start: Point3D,
-        end: Point3D,
-        center_offset: Point,
-        clockwise: bool,
-    ) -> list[list[float]]:
-        """Convert an arc to bezier curves.
-
-        :param start: Start point (x, y, z).
-        :param end: End point (x, y, z).
-        :param center_offset: Center offset (dx, dy).
-        :param clockwise: Whether the arc is clockwise.
-        :returns: List of bezier command rows.
-        """
-"#,
-    module = "raygeo.geo.path"
-)]
-#[pyfunction(name = "convert_arc_to_beziers_from_array")]
-fn convert_arc_to_beziers_from_array_py(
-    start: (f64, f64, f64),
-    end: (f64, f64, f64),
-    center_offset: (f64, f64),
-    clockwise: bool,
-) -> Vec<Vec<f64>> {
-    convert_arc_to_beziers_from_array(start, end, center_offset, clockwise)
-        .into_iter()
-        .map(|r| r.to_vec())
-        .collect()
-}
-
-#[gen_stub_pyfunction(
-    python = r#"
     def fit_curves(
         data: Optional[Sequence[Sequence[float]]],
         tolerance: float,
@@ -801,35 +560,6 @@ fn remove_duplicates_py(points: Vec<(f64, f64)>) -> Vec<(f64, f64)> {
     raygeo_core::geo::analysis::remove_duplicates(&points)
 }
 
-#[gen_stub_pyfunction(
-    python = r#"
-    def get_outward_normal_at_from_array(
-        data: Sequence[Sequence[float]],
-        row_index: int,
-        t: float,
-    ) -> Optional[Point]:
-        """Get the outward normal at a point on a segment.
-
-        :param data: Array of command data.
-        :param row_index: Row index of the segment.
-        :param t: Parameter value along the segment (0..1).
-        :returns: Outward normal vector (nx, ny) or None.
-        """
-"#,
-    module = "raygeo.geo.path"
-)]
-#[pyfunction(name = "get_outward_normal_at_from_array")]
-fn get_outward_normal_at_from_array_py(
-    data: Vec<Vec<f64>>,
-    row_index: usize,
-    t: f64,
-) -> Option<(f64, f64)> {
-    let arr = to_data_array(data);
-    raygeo_core::geo::analysis::get_outward_normal_at_from_array(
-        &arr, row_index, t,
-    )
-}
-
 pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     let py = m.py();
     let path_mod = PyModule::new(py, "path")?;
@@ -855,12 +585,20 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     )?)?;
     path_mod
         .add_function(wrap_pyfunction!(create_arc_cmd_py, path_mod.clone())?)?;
-    path_mod.add_function(wrap_pyfunction!(
-        convert_arc_to_beziers_from_array_py,
-        path_mod.clone()
-    )?)?;
     path_mod
         .add_function(wrap_pyfunction!(fit_curves_py, path_mod.clone())?)?;
+    path_mod.add_function(wrap_pyfunction!(
+        remove_duplicate_segments_py,
+        path_mod.clone()
+    )?)?;
+    path_mod.add_function(wrap_pyfunction!(
+        flatten_to_points_py,
+        path_mod.clone()
+    )?)?;
+    path_mod.add_function(wrap_pyfunction!(
+        linearize_geometry_py,
+        path_mod.clone()
+    )?)?;
     path_mod.add_function(wrap_pyfunction!(
         get_segment_key_py,
         path_mod.clone()
@@ -870,39 +608,7 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
         path_mod.clone()
     )?)?;
     path_mod.add_function(wrap_pyfunction!(
-        get_bounding_rect_from_array,
-        path_mod.clone()
-    )?)?;
-    path_mod.add_function(wrap_pyfunction!(
-        get_total_distance_from_array,
-        path_mod.clone()
-    )?)?;
-    path_mod.add_function(wrap_pyfunction!(
-        extract_overcut_rows,
-        path_mod.clone()
-    )?)?;
-    path_mod.add_function(wrap_pyfunction!(
-        get_subpath_vertices_from_array_py,
-        path_mod.clone()
-    )?)?;
-    path_mod.add_function(wrap_pyfunction!(
-        get_subpath_area_from_array_py,
-        path_mod.clone()
-    )?)?;
-    path_mod.add_function(wrap_pyfunction!(
-        get_area_from_array,
-        path_mod.clone()
-    )?)?;
-    path_mod.add_function(wrap_pyfunction!(
-        get_path_winding_order_from_array,
-        path_mod.clone()
-    )?)?;
-    path_mod.add_function(wrap_pyfunction!(
         get_point_and_tangent_at_py,
-        path_mod.clone()
-    )?)?;
-    path_mod.add_function(wrap_pyfunction!(
-        optimize_path_from_array,
         path_mod.clone()
     )?)?;
     path_mod.add_function(wrap_pyfunction!(fit_arcs, path_mod.clone())?)?;
@@ -915,22 +621,10 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
         path_mod.clone()
     )?)?;
     path_mod.add_function(wrap_pyfunction!(
-        _partial_segment_from_row,
-        path_mod.clone()
-    )?)?;
-    path_mod.add_function(wrap_pyfunction!(
-        _segment_length_from_row,
-        path_mod.clone()
-    )?)?;
-    path_mod.add_function(wrap_pyfunction!(
         remove_duplicates_py,
         path_mod.clone()
     )?)?;
     path_mod.add_function(wrap_pyfunction!(is_closed_py, path_mod.clone())?)?;
-    path_mod.add_function(wrap_pyfunction!(
-        get_outward_normal_at_from_array_py,
-        path_mod.clone()
-    )?)?;
 
     m.add_submodule(&path_mod)?;
 
