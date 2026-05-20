@@ -34,6 +34,7 @@ use raygeo_core::geo::shape::line::{
     is_point_inside_rect, is_point_on_segment,
 };
 use raygeo_core::geo::shape::point::are_points_equal;
+use raygeo_core::geo::shape::point::transform_point;
 use raygeo_core::geo::shape::point::midpoint;
 use raygeo_core::geo::shape::polygon::is_polygon_clockwise;
 use raygeo_core::geo::shape::polygon::{
@@ -446,6 +447,10 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
         .add_function(wrap_pyfunction!(midpoint_py, point_mod.clone())?)?;
     point_mod.add_function(wrap_pyfunction!(
         are_points_equal_py,
+        point_mod.clone()
+    )?)?;
+    point_mod.add_function(wrap_pyfunction!(
+        transform_point_py,
         point_mod.clone()
     )?)?;
     shape_mod.add_submodule(&point_mod)?;
@@ -2921,6 +2926,41 @@ fn are_points_equal_py(
     let arr1 = [p1.0, p1.1, p1.2];
     let arr2 = [p2.0, p2.1, p2.2];
     are_points_equal(&arr1, &arr2, tolerance)
+}
+
+#[gen_stub_pyfunction(
+    python = r#"
+    def transform_point(
+        matrix: Sequence[Sequence[float]],
+        x: float,
+        y: float,
+        z: float,
+    ) -> Point3D:
+        """Apply an affine transformation matrix to a 3D point.
+
+        :param matrix: 4x4 affine transformation matrix.
+        :param x: X coordinate.
+        :param y: Y coordinate.
+        :param z: Z coordinate.
+        :returns: Transformed point (x, y, z).
+        """
+"#,
+    module = "raygeo.geo.shape.point"
+)]
+#[pyfunction(name = "transform_point")]
+fn transform_point_py(
+    matrix: Vec<Vec<f64>>,
+    x: f64,
+    y: f64,
+    z: f64,
+) -> (f64, f64, f64) {
+    let mat: [[f64; 4]; 4] = [
+        [matrix[0][0], matrix[0][1], matrix[0][2], matrix[0][3]],
+        [matrix[1][0], matrix[1][1], matrix[1][2], matrix[1][3]],
+        [matrix[2][0], matrix[2][1], matrix[2][2], matrix[2][3]],
+        [matrix[3][0], matrix[3][1], matrix[3][2], matrix[3][3]],
+    ];
+    transform_point(&mat, x, y, z)
 }
 
 #[gen_stub_pyfunction(

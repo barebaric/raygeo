@@ -4,6 +4,7 @@
 __all__ = [
     "are_points_equal",
     "midpoint",
+    "transform_point",
 ]
 
 def are_points_equal(p1: Point3D, p2: Point3D, tolerance: float) -> bool:
@@ -23,5 +24,16 @@ def midpoint(p1: Point3D, p2: Point3D) -> Point3D:
     :param p1: First point (x, y, z).
     :param p2: Second point (x, y, z).
     :returns: Midpoint (x, y, z).
+    """
+
+def transform_point(matrix: Sequence[Sequence[float]], x: float, y: float, z: float) -> Point3D:
+    r"""
+    Apply an affine transformation matrix to a 3D point.
+    
+    :param matrix: 4x4 affine transformation matrix.
+    :param x: X coordinate.
+    :param y: Y coordinate.
+    :param z: Z coordinate.
+    :returns: Transformed point (x, y, z).
     """
 

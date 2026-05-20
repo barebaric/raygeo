@@ -2,7 +2,6 @@
 # ruff: noqa: E501, F401, F403, F405
 
 __all__ = [
-    "apply_affine_transform_to_array",
     "are_segments_equal",
     "check_intersection",
     "check_self_intersection",
@@ -28,15 +27,6 @@ __all__ = [
     "remove_duplicate_segments",
     "remove_duplicates",
 ]
-
-def apply_affine_transform_to_array(data: Sequence[Sequence[float]], matrix: Sequence[Sequence[float]]) -> Any:
-    r"""
-    Apply an affine transform to path data.
-    
-    :param data: Array of command data.
-    :param matrix: 4x4 affine transformation matrix.
-    :returns: Numpy array of transformed data.
-    """
 
 def are_segments_equal(key1: Any, key2: Any, tolerance: float) -> bool:
     r"""

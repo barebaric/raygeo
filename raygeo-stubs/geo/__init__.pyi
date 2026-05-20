@@ -10,6 +10,7 @@ and algorithm submodules (clipping, fitting, minkowski, simplify, smooth).
 
 from typing import TypeAlias
 from . import algo
+from . import math
 from . import path
 from . import shape
 __all__ = [
@@ -20,6 +21,7 @@ __all__ = [
     "Rect",
     "TransformMatrix",
     "algo",
+    "math",
     "path",
     "shape",
 ]

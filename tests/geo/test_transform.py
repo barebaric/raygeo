@@ -2,7 +2,7 @@ import pytest
 import math
 import numpy as np
 from raygeo import Geometry
-from raygeo.geo.path import apply_affine_transform_to_array
+from raygeo.geo.math import apply_affine_transform_to_array
 
 
 def _create_translate_matrix(x, y, z):

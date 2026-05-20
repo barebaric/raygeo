@@ -16,7 +16,6 @@ use raygeo_core::geo::analysis::{
 };
 use raygeo_core::geo::algo::cleanup::get_segment_key;
 use raygeo_core::geo::shape::point::are_points_equal;
-use raygeo_core::geo::math::apply_affine_transform_to_array;
 use raygeo_core::{
     check_intersection_from_array, check_self_intersection_from_array,
     fit_curves, remove_duplicate_segments, Point, CMD_TYPE_ARC,
@@ -388,45 +387,6 @@ fn _segment_length_from_row(
 ) -> f64 {
     let arr = to_data_array(vec![row]);
     segment_length_from_row_flat(&arr[0], start_point)
-}
-
-#[gen_stub_pyfunction(
-    python = r#"
-    def apply_affine_transform_to_array(
-        data: Sequence[Sequence[float]],
-        matrix: Sequence[Sequence[float]],
-    ) -> Any:
-        """Apply an affine transform to path data.
-
-        :param data: Array of command data.
-        :param matrix: 4x4 affine transformation matrix.
-        :returns: Numpy array of transformed data.
-        """
-"#,
-    module = "raygeo.geo.path"
-)]
-#[pyfunction(name = "apply_affine_transform_to_array")]
-fn apply_affine_transform_to_array_py(
-    py: Python<'_>,
-    data: Vec<Vec<f64>>,
-    matrix: Vec<Vec<f64>>,
-) -> Bound<'_, pyo3::types::PyAny> {
-    let arr = to_data_array(data);
-    let mat: [[f64; 4]; 4] = [
-        [matrix[0][0], matrix[0][1], matrix[0][2], matrix[0][3]],
-        [matrix[1][0], matrix[1][1], matrix[1][2], matrix[1][3]],
-        [matrix[2][0], matrix[2][1], matrix[2][2], matrix[2][3]],
-        [matrix[3][0], matrix[3][1], matrix[3][2], matrix[3][3]],
-    ];
-    let result = apply_affine_transform_to_array(&arr, &mat);
-    let vecs: Vec<Vec<f64>> = result.into_iter().map(|r| r.to_vec()).collect();
-    if vecs.is_empty() {
-        return PyArray2::<f64>::zeros(py, [0, 8], false).as_any().clone();
-    }
-    PyArray2::<f64>::from_vec2(py, &vecs)
-        .expect("failed to create numpy array")
-        .as_any()
-        .clone()
 }
 
 #[gen_stub_pyfunction(
@@ -960,10 +920,6 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     )?)?;
     path_mod.add_function(wrap_pyfunction!(
         _segment_length_from_row,
-        path_mod.clone()
-    )?)?;
-    path_mod.add_function(wrap_pyfunction!(
-        apply_affine_transform_to_array_py,
         path_mod.clone()
     )?)?;
     path_mod.add_function(wrap_pyfunction!(

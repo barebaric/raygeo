@@ -1,6 +1,7 @@
 mod algo;
 mod flex_point;
 pub(crate) mod geometry;
+mod math;
 mod path;
 mod shape;
 
@@ -126,6 +127,7 @@ fn add_submodules(m: &Bound<'_, PyModule>) -> PyResult<()> {
     shape::register(m)?;
     algo::register(m)?;
     path::register(m)?;
+    math::register(m)?;
 
     let py = m.py();
     let types_mod = py.import("types")?;
