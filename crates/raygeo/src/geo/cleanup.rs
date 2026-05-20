@@ -3,17 +3,8 @@
 //! Provides functions for cleaning geometry command arrays by removing
 //! duplicate segments and closing small gaps between connected paths.
 
+use crate::geo::shape::point::are_points_equal;
 use crate::types::Command;
-
-/// Check if two points (as 3-element arrays) are equal within a tolerance.
-pub fn are_points_equal(p1: &[f64; 3], p2: &[f64; 3], tolerance: f64) -> bool {
-    for i in 0..3 {
-        if (p1[i] - p2[i]).abs() > tolerance {
-            return false;
-        }
-    }
-    true
-}
 
 /// Extract a hashable key for a segment at the given index.
 /// Returns None for MOVE commands.

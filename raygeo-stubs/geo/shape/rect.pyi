@@ -2,10 +2,20 @@
 # ruff: noqa: E501, F401, F403, F405
 
 __all__ = [
+    "do_rects_intersect",
     "does_rect_contain_rect",
     "does_rect_intersect_rect",
     "is_point_inside_rect",
 ]
+
+def do_rects_intersect(r1: Rect, r2: Rect) -> bool:
+    r"""
+    Check if two rectangles intersect.
+    
+    :param r1: First rectangle (x_min, y_min, x_max, y_max).
+    :param r2: Second rectangle (x_min, y_min, x_max, y_max).
+    :returns: True if the rectangles intersect.
+    """
 
 def does_rect_contain_rect(outer: Rect, inner: Rect) -> bool:
     r"""

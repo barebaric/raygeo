@@ -2,6 +2,8 @@
 //!
 //! This module provides functions for working with lines and line segments.
 
+use std::f64::consts::PI;
+
 use crate::types::{Point, Polygon, Rect};
 
 /// Checks if a point lies on a line segment using dot product projection.
@@ -240,6 +242,28 @@ pub fn does_line_segment_intersect_circle(
     let (_, _, dist_sq) =
         get_line_segment_closest_point(p1, p2, center.0, center.1);
     dist_sq <= radius * radius
+}
+
+/// Computes the interior angle at a vertex formed by three points.
+/// Returns the angle in radians between 0 and PI.
+pub fn get_angle_at_vertex(p0: Point, p1: Point, p2: Point) -> f64 {
+    let v1x = p0.0 - p1.0;
+    let v1y = p0.1 - p1.1;
+    let v2x = p2.0 - p1.0;
+    let v2y = p2.1 - p1.1;
+
+    let mag_v1 = v1x.hypot(v1y);
+    let mag_v2 = v2x.hypot(v2y);
+    let mag_prod = mag_v1 * mag_v2;
+
+    if mag_prod < 1e-9 {
+        return PI;
+    }
+
+    let dot = v1x * v2x + v1y * v2y;
+    let cos_theta = (-1.0_f64).max(1.0_f64).min(dot / mag_prod);
+
+    cos_theta.acos()
 }
 
 #[cfg(test)]

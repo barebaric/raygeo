@@ -2,8 +2,19 @@
 # ruff: noqa: E501, F401, F403, F405
 
 __all__ = [
+    "are_points_equal",
     "midpoint",
 ]
+
+def are_points_equal(p1: Point3D, p2: Point3D, tolerance: float) -> bool:
+    r"""
+    Check if two 3D points are equal within tolerance.
+    
+    :param p1: First point (x, y, z).
+    :param p2: Second point (x, y, z).
+    :param tolerance: Maximum allowed difference.
+    :returns: True if points are equal within tolerance.
+    """
 
 def midpoint(p1: Point3D, p2: Point3D) -> Point3D:
     r"""

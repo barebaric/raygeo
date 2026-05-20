@@ -8,6 +8,7 @@ pub mod circle;
 pub mod line;
 pub mod point;
 pub mod polygon;
+pub mod rect;
 
 pub use arc::*;
 pub use bezier::*;
@@ -15,3 +16,4 @@ pub use circle::*;
 pub use line::*;
 pub use point::*;
 pub use polygon::*;
+pub use rect::*;

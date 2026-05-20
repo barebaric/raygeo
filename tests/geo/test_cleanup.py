@@ -2,10 +2,10 @@ import numpy as np
 from raygeo import Geometry
 from raygeo.geo.path import (
     remove_duplicate_segments,
-    are_points_equal,
     get_segment_key,
     are_segments_equal,
 )
+from raygeo.geo.shape.point import are_points_equal
 
 
 def test_are_points_equal_exact():

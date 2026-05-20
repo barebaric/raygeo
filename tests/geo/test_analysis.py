@@ -7,12 +7,12 @@ from raygeo.geo.path import (
     get_point_and_tangent_at,
     get_subpath_area_from_array,
     get_outward_normal_at_from_array,
-    get_angle_at_vertex,
     remove_duplicates,
-    is_clockwise,
     is_closed,
 )
 from raygeo.geo.shape.arc import is_arc_clockwise
+from raygeo.geo.shape.line import get_angle_at_vertex
+from raygeo.geo.shape.polygon import is_polygon_clockwise as is_clockwise
 
 
 @pytest.fixture

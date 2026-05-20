@@ -3,7 +3,6 @@
 
 __all__ = [
     "apply_affine_transform_to_array",
-    "are_points_equal",
     "are_segments_equal",
     "check_intersection",
     "check_intersection_from_array",
@@ -16,7 +15,6 @@ __all__ = [
     "fit_arcs",
     "fit_curves",
     "flatten_to_points",
-    "get_angle_at_vertex",
     "get_area_from_array",
     "get_bounding_rect_from_array",
     "get_outward_normal_at_from_array",
@@ -26,7 +24,6 @@ __all__ = [
     "get_subpath_area_from_array",
     "get_subpath_vertices_from_array",
     "get_total_distance_from_array",
-    "is_clockwise",
     "is_closed",
     "linearize_geometry",
     "optimize_path_from_array",
@@ -41,16 +38,6 @@ def apply_affine_transform_to_array(data: Sequence[Sequence[float]], matrix: Seq
     :param data: Array of command data.
     :param matrix: 4x4 affine transformation matrix.
     :returns: Numpy array of transformed data.
-    """
-
-def are_points_equal(p1: Point3D, p2: Point3D, tolerance: float) -> bool:
-    r"""
-    Check if two 3D points are equal within tolerance.
-    
-    :param p1: First point (x, y, z).
-    :param p2: Second point (x, y, z).
-    :param tolerance: Maximum allowed difference.
-    :returns: True if points are equal within tolerance.
     """
 
 def are_segments_equal(key1: Any, key2: Any, tolerance: float) -> bool:
@@ -169,16 +156,6 @@ def flatten_to_points(data: Optional[Sequence[Sequence[float]]], tolerance: floa
     :returns: List of flattened point segments.
     """
 
-def get_angle_at_vertex(p0: Point, p1: Point, p2: Point) -> float:
-    r"""
-    Get the angle at a vertex between three points.
-    
-    :param p0: First point.
-    :param p1: Vertex point.
-    :param p2: Third point.
-    :returns: Angle in radians.
-    """
-
 def get_area_from_array(data: Sequence[Sequence[float]]) -> float:
     r"""
     Compute the total area of path data.
@@ -258,14 +235,6 @@ def get_total_distance_from_array(data: Sequence[Sequence[float]]) -> float:
     
     :param data: Array of command data.
     :returns: Total path length.
-    """
-
-def is_clockwise(points: Sequence[Point]) -> bool:
-    r"""
-    Check if a polygon has clockwise winding order.
-    
-    :param points: Sequence of (x, y) points defining a polygon.
-    :returns: True if the winding is clockwise.
     """
 
 def is_closed(commands: Sequence[Sequence[float]], tolerance: float = 0.000001) -> bool:

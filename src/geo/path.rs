@@ -1,4 +1,4 @@
-use crate::geo::flex_point::{PyPoint2D, PyPoint3D};
+use crate::geo::flex_point::PyPoint3D;
 use crate::geo::geometry::{Geometry, PyCommand};
 use numpy::PyArray2;
 use pyo3::prelude::*;
@@ -14,7 +14,8 @@ use raygeo_core::geo::analysis::{
     get_subpath_vertices_from_array, partial_segment_from_row,
     segment_length_from_row_flat,
 };
-use raygeo_core::geo::cleanup::{are_points_equal, get_segment_key};
+use raygeo_core::geo::cleanup::get_segment_key;
+use raygeo_core::geo::shape::point::are_points_equal;
 use raygeo_core::geo::transform::apply_affine_transform_to_array;
 use raygeo_core::{
     check_intersection_from_array, check_self_intersection_from_array,
@@ -702,34 +703,6 @@ fn fit_curves_py(
 
 #[gen_stub_pyfunction(
     python = r#"
-    def are_points_equal(
-        p1: Point3D,
-        p2: Point3D,
-        tolerance: float,
-    ) -> bool:
-        """Check if two 3D points are equal within tolerance.
-
-        :param p1: First point (x, y, z).
-        :param p2: Second point (x, y, z).
-        :param tolerance: Maximum allowed difference.
-        :returns: True if points are equal within tolerance.
-        """
-"#,
-    module = "raygeo.geo.path"
-)]
-#[pyfunction(name = "are_points_equal")]
-fn are_points_equal_py(
-    p1: (f64, f64, f64),
-    p2: (f64, f64, f64),
-    tolerance: f64,
-) -> bool {
-    let arr1 = [p1.0, p1.1, p1.2];
-    let arr2 = [p2.0, p2.1, p2.2];
-    are_points_equal(&arr1, &arr2, tolerance)
-}
-
-#[gen_stub_pyfunction(
-    python = r#"
     def get_segment_key(
         data: Sequence[Sequence[float]],
         index: int,
@@ -884,65 +857,6 @@ fn are_segments_equal_py(
 
 #[gen_stub_pyfunction(
     python = r#"
-    def get_angle_at_vertex(
-        p0: Point,
-        p1: Point,
-        p2: Point,
-    ) -> float:
-        """Get the angle at a vertex between three points.
-
-        :param p0: First point.
-        :param p1: Vertex point.
-        :param p2: Third point.
-        :returns: Angle in radians.
-        """
-"#,
-    module = "raygeo.geo.path"
-)]
-#[pyfunction(name = "get_angle_at_vertex")]
-fn get_angle_at_vertex_py(
-    p0: (f64, f64),
-    p1: (f64, f64),
-    p2: (f64, f64),
-) -> f64 {
-    raygeo_core::geo::analysis::get_angle_at_vertex(p0, p1, p2)
-}
-
-#[gen_stub_pyfunction(
-    python = r#"
-    def remove_duplicates(points: Sequence[Point]) -> Polygon:
-        """Remove duplicate points from a sequence.
-
-        :param points: Sequence of (x, y) points.
-        :returns: List of unique points.
-        """
-"#,
-    module = "raygeo.geo.path"
-)]
-#[pyfunction(name = "remove_duplicates")]
-fn remove_duplicates_py(points: Vec<(f64, f64)>) -> Vec<(f64, f64)> {
-    raygeo_core::geo::analysis::remove_duplicates(&points)
-}
-
-#[gen_stub_pyfunction(
-    python = r#"
-    def is_clockwise(points: Sequence[Point]) -> bool:
-        """Check if a polygon has clockwise winding order.
-
-        :param points: Sequence of (x, y) points defining a polygon.
-        :returns: True if the winding is clockwise.
-        """
-"#,
-    module = "raygeo.geo.path"
-)]
-#[pyfunction(name = "is_clockwise")]
-fn is_clockwise_py(points: Vec<PyPoint2D>) -> bool {
-    let pts: Vec<(f64, f64)> = points.iter().map(|p| (p.0, p.1)).collect();
-    raygeo_core::geo::analysis::is_clockwise(&pts)
-}
-
-#[gen_stub_pyfunction(
-    python = r#"
     def is_closed(
         commands: Sequence[Sequence[float]],
         tolerance: float = 1e-6,
@@ -961,6 +875,22 @@ fn is_clockwise_py(points: Vec<PyPoint2D>) -> bool {
 fn is_closed_py(commands: Vec<Vec<f64>>, tolerance: f64) -> bool {
     let arr = to_data_array(commands);
     raygeo_core::geo::analysis::is_closed(&arr, tolerance)
+}
+
+#[gen_stub_pyfunction(
+    python = r#"
+    def remove_duplicates(points: Sequence[Point]) -> Polygon:
+        """Remove duplicate points from a sequence.
+
+        :param points: Sequence of (x, y) points.
+        :returns: List of unique points.
+        """
+"#,
+    module = "raygeo.geo.path"
+)]
+#[pyfunction(name = "remove_duplicates")]
+fn remove_duplicates_py(points: Vec<(f64, f64)>) -> Vec<(f64, f64)> {
+    raygeo_core::geo::analysis::remove_duplicates(&points)
 }
 
 #[gen_stub_pyfunction(
@@ -1023,10 +953,6 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     )?)?;
     path_mod
         .add_function(wrap_pyfunction!(fit_curves_py, path_mod.clone())?)?;
-    path_mod.add_function(wrap_pyfunction!(
-        are_points_equal_py,
-        path_mod.clone()
-    )?)?;
     path_mod.add_function(wrap_pyfunction!(
         get_segment_key_py,
         path_mod.clone()
@@ -1101,15 +1027,9 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
         path_mod.clone()
     )?)?;
     path_mod.add_function(wrap_pyfunction!(
-        get_angle_at_vertex_py,
-        path_mod.clone()
-    )?)?;
-    path_mod.add_function(wrap_pyfunction!(
         remove_duplicates_py,
         path_mod.clone()
     )?)?;
-    path_mod
-        .add_function(wrap_pyfunction!(is_clockwise_py, path_mod.clone())?)?;
     path_mod.add_function(wrap_pyfunction!(is_closed_py, path_mod.clone())?)?;
     path_mod.add_function(wrap_pyfunction!(
         get_outward_normal_at_from_array_py,

@@ -341,30 +341,6 @@ pub fn get_outward_normal_at_from_array(
     }
 }
 
-/// Computes the interior angle at a vertex formed by three points.
-/// Returns the angle in radians between 0 and PI.
-pub fn get_angle_at_vertex(p0: Point, p1: Point, p2: Point) -> f64 {
-    let v1x = p0.0 - p1.0;
-    let v1y = p0.1 - p1.1;
-    let v2x = p2.0 - p1.0;
-    let v2y = p2.1 - p1.1;
-
-    let mag_v1 = v1x.hypot(v1y);
-    let mag_v2 = v2x.hypot(v2y);
-    let mag_prod = mag_v1 * mag_v2;
-
-    // Degenerate case: collinear points
-    if mag_prod < 1e-9 {
-        return PI;
-    }
-
-    let dot = v1x * v2x + v1y * v2y;
-    // Clamp to handle numerical errors
-    let cos_theta = (-1.0_f64).max(1.0_f64).min(dot / mag_prod);
-
-    cos_theta.acos()
-}
-
 pub fn remove_duplicates<T: Clone + PartialEq>(points: &[T]) -> Vec<T> {
     let mut result: Vec<T> = Vec::new();
     for p in points {
@@ -373,44 +349,6 @@ pub fn remove_duplicates<T: Clone + PartialEq>(points: &[T]) -> Vec<T> {
         }
     }
     result
-}
-
-/// Determines if a polygon is wound in clockwise order using the cross product.
-/// Uses only the first three points to determine overall winding direction.
-pub fn is_clockwise(points: &[Point]) -> bool {
-    if points.len() < 3 {
-        return false;
-    }
-
-    let p1 = points[0];
-    let p2 = points[1];
-    let p3 = points[2];
-
-    // Cross product of first edge against second determines winding
-    let cross_product =
-        (p2.0 - p1.0) * (p3.1 - p2.1) - (p2.1 - p1.1) * (p3.0 - p2.0);
-    cross_product < 0.0
-}
-
-/// Determines if points along an arc traverse in clockwise direction relative to center.
-/// Uses cumulative cross product of successive radius vectors.
-pub fn is_arc_clockwise(points: &[Point], center: Point) -> bool {
-    let (xc, yc) = center;
-    let mut cross_product_sum = 0.0;
-
-    for i in 0..points.len() - 1 {
-        let (x0, y0) = points[i];
-        let (x1, y1) = points[i + 1];
-        // Vector from center to each point
-        let v0x = x0 - xc;
-        let v0y = y0 - yc;
-        let v1x = x1 - xc;
-        let v1y = y1 - yc;
-        // Accumulate cross products
-        cross_product_sum += v0x * v1y - v0y * v1x;
-    }
-
-    cross_product_sum < 0.0
 }
 
 /// Check if a container geometry fully encloses a content geometry.
@@ -743,28 +681,10 @@ mod tests {
     }
 
     #[test]
-    fn test_get_angle_at_vertex() {
-        let angle = get_angle_at_vertex((0.0, 0.0), (1.0, 0.0), (1.0, 1.0));
-        assert!((angle - PI / 2.0).abs() < 1e-9);
-    }
-
-    #[test]
     fn test_remove_duplicates() {
         let points = vec![1, 2, 2, 3, 3, 3, 4];
         let result = remove_duplicates(&points);
         assert_eq!(result, vec![1, 2, 3, 4]);
     }
 
-    #[test]
-    fn test_is_clockwise() {
-        let points: Vec<Point> = vec![(0.0, 0.0), (1.0, 0.0), (1.0, 1.0)];
-        assert!(!is_clockwise(&points));
-    }
-
-    #[test]
-    fn test_is_arc_clockwise() {
-        let points: Vec<Point> = vec![(1.0, 0.0), (0.0, 1.0), (-1.0, 0.0)];
-        let center: Point = (0.0, 0.0);
-        assert!(!is_arc_clockwise(&points, center));
-    }
 }

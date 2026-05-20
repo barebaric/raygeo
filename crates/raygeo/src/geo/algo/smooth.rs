@@ -3,7 +3,7 @@
 //! Provides functions for computing Gaussian kernels and applying them
 //! to open or closed polylines with optional corner preservation.
 
-use crate::geo::analysis::get_angle_at_vertex;
+use crate::geo::shape::line::get_angle_at_vertex;
 use crate::types::Point3D;
 
 /// Compute a normalized Gaussian kernel based on smoothing amount.

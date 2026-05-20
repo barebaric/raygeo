@@ -10,83 +10,13 @@
 use std::f64::consts::PI;
 
 use crate::constants::EPSILON_COLLINEAR;
-use crate::geo::algo::interp::solve_quadratic;
 use crate::geo::shape::arc::{get_arc_bounds, get_arc_closest_point};
 use crate::geo::shape::bezier::{
-    get_bezier_closest_point, linearize_bezier_from_array,
+    compute_cubic_bezier_bounds_1d, get_bezier_closest_point,
+    linearize_bezier_from_array,
 };
 use crate::geo::shape::line::get_line_segment_closest_point;
 use crate::types::{Command, Point, Point3D, Rect};
-
-/// Evaluate a cubic polynomial at parameter `t` using de Casteljau's formula.
-///
-/// - `p0`: Value at t=0.
-/// - `p1`: First control value.
-/// - `p2`: Second control value.
-/// - `p3`: Value at t=1.
-/// - `t`: Parameter in [0, 1].
-/// - Returns: The interpolated value.
-fn evaluate_cubic(p0: f64, p1: f64, p2: f64, p3: f64, t: f64) -> f64 {
-    let mt = 1.0 - t;
-    mt.powi(3) * p0
-        + 3.0 * mt.powi(2) * t * p1
-        + 3.0 * mt * t.powi(2) * p2
-        + t.powi(3) * p3
-}
-
-/// Compute the per-element axis-aligned bounds of a set of cubic Bezier curves.
-///
-/// Finds the min/max of each curve by evaluating at endpoints and at extrema
-/// where the derivative is zero.
-///
-/// - `p0`: Array of start values.
-/// - `p1`: Array of first control values.
-/// - `p2`: Array of second control values.
-/// - `p3`: Array of end values.
-/// - Returns: `(min_values, max_values)` per element.
-fn _compute_cubic_bezier_bounds_1d(
-    p0: &[f64],
-    p1: &[f64],
-    p2: &[f64],
-    p3: &[f64],
-) -> (Vec<f64>, Vec<f64>) {
-    let n = p0.len();
-    let mut local_min: Vec<f64> =
-        p0.iter().zip(p3.iter()).map(|(a, b)| a.min(*b)).collect();
-    let mut local_max: Vec<f64> =
-        p0.iter().zip(p3.iter()).map(|(a, b)| a.max(*b)).collect();
-
-    for i in 0..n {
-        let p0i = p0[i];
-        let p1i = p1[i];
-        let p2i = p2[i];
-        let p3i = p3[i];
-
-        let a_coeff = 3.0 * (-p0i + 3.0 * p1i - 3.0 * p2i + p3i);
-        let b_coeff = 6.0 * (p0i - 2.0 * p1i + p2i);
-        let c_coeff = 3.0 * (p1i - p0i);
-
-        let (t1, t2) = solve_quadratic(a_coeff, b_coeff, c_coeff);
-
-        if let Some(t) = t1 {
-            if t > 0.0 && t < 1.0 {
-                let val = evaluate_cubic(p0i, p1i, p2i, p3i, t);
-                local_min[i] = local_min[i].min(val);
-                local_max[i] = local_max[i].max(val);
-            }
-        }
-
-        if let Some(t) = t2 {
-            if t > 0.0 && t < 1.0 {
-                let val = evaluate_cubic(p0i, p1i, p2i, p3i, t);
-                local_min[i] = local_min[i].min(val);
-                local_max[i] = local_max[i].max(val);
-            }
-        }
-    }
-
-    (local_min, local_max)
-}
 
 /// Compute the axis-aligned bounding rectangle for a geometry array.
 ///
@@ -175,9 +105,9 @@ pub fn get_bounding_rect_from_array(data: &[[f64; 8]]) -> Rect {
             let p3_y = vec![end.1];
 
             let (bx_min, bx_max) =
-                _compute_cubic_bezier_bounds_1d(&p0_x, &p1_x, &p2_x, &p3_x);
+                compute_cubic_bezier_bounds_1d(&p0_x, &p1_x, &p2_x, &p3_x);
             let (by_min, by_max) =
-                _compute_cubic_bezier_bounds_1d(&p0_y, &p1_y, &p2_y, &p3_y);
+                compute_cubic_bezier_bounds_1d(&p0_y, &p1_y, &p2_y, &p3_y);
 
             min_x = min_x.min(bx_min[0]);
             max_x = max_x.max(bx_max[0]);
@@ -547,18 +477,6 @@ pub fn extract_overcut_rows(
     }
 }
 
-/// Test if two axis-aligned bounding boxes intersect.
-///
-/// - `bbox1`: First bounding rectangle `(min_x, min_y, max_x, max_y)`.
-/// - `bbox2`: Second bounding rectangle `(min_x, min_y, max_x, max_y)`.
-/// - Returns: `true` if the rectangles overlap.
-pub fn bboxes_intersect(bbox1: Rect, bbox2: Rect) -> bool {
-    let (ax1, ay1, ax2, ay2) = bbox1;
-    let (bx1, by1, bx2, by2) = bbox2;
-
-    !(ax2 < bx1 || ax1 > bx2 || ay2 < by1 || ay1 > by2)
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -614,13 +532,4 @@ mod tests {
         assert_eq!(rows.len(), 2);
     }
 
-    #[test]
-    fn test_bboxes_intersect() {
-        let bbox1: Rect = (0.0, 0.0, 5.0, 5.0);
-        let bbox2: Rect = (3.0, 3.0, 8.0, 8.0);
-        assert!(bboxes_intersect(bbox1, bbox2));
-
-        let bbox3: Rect = (10.0, 10.0, 15.0, 15.0);
-        assert!(!bboxes_intersect(bbox1, bbox3));
-    }
 }

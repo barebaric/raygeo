@@ -512,6 +512,22 @@ pub fn get_polygons_difference(
         .collect()
 }
 
+/// Determines if a polygon is wound in clockwise order using the cross product.
+/// Uses only the first three points to determine overall winding direction.
+pub fn is_polygon_clockwise(points: &[Point]) -> bool {
+    if points.len() < 3 {
+        return false;
+    }
+
+    let p1 = points[0];
+    let p2 = points[1];
+    let p3 = points[2];
+
+    let cross_product =
+        (p2.0 - p1.0) * (p3.1 - p2.1) - (p2.1 - p1.1) * (p3.0 - p2.0);
+    cross_product < 0.0
+}
+
 /// Tests if a point is inside a polygon using the ray casting algorithm.
 /// Uses a bounding box early-out for performance, and handles edge cases
 /// where the point lies exactly on a polygon edge.

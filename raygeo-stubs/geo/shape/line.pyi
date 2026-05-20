@@ -4,6 +4,7 @@
 __all__ = [
     "does_line_segment_intersect_circle",
     "does_line_segment_intersect_rect",
+    "get_angle_at_vertex",
     "get_line_closest_point",
     "get_line_line_intersection",
     "get_line_segment_closest_point",
@@ -32,6 +33,16 @@ def does_line_segment_intersect_rect(p1: Point, p2: Point, rect: Rect) -> bool:
     :param p2: End of the line segment.
     :param rect: Rectangle (x_min, y_min, x_max, y_max).
     :returns: True if the segment intersects the rectangle.
+    """
+
+def get_angle_at_vertex(p0: Point, p1: Point, p2: Point) -> float:
+    r"""
+    Get the angle at a vertex between three points.
+    
+    :param p0: First point.
+    :param p1: Vertex point.
+    :param p2: Third point.
+    :returns: Angle in radians.
     """
 
 def get_line_closest_point(line_p1: Point, line_p2: Point, x: float, y: float) -> Point:

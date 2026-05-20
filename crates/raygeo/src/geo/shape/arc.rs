@@ -142,6 +142,25 @@ pub fn get_arc_direction(center: Point, start: Point, mouse: Point) -> bool {
     det < 0.0
 }
 
+/// Determines if points along an arc traverse in clockwise direction relative to center.
+/// Uses cumulative cross product of successive radius vectors.
+pub fn is_arc_clockwise(points: &[Point], center: Point) -> bool {
+    let (xc, yc) = center;
+    let mut cross_product_sum = 0.0;
+
+    for i in 0..points.len() - 1 {
+        let (x0, y0) = points[i];
+        let (x1, y1) = points[i + 1];
+        let v0x = x0 - xc;
+        let v0y = y0 - yc;
+        let v1x = x1 - xc;
+        let v1y = y1 - yc;
+        cross_product_sum += v0x * v1y - v0y * v1x;
+    }
+
+    cross_product_sum < 0.0
+}
+
 /// Internal: Linearizes an arc into line segments for approximation.
 pub fn _linearize_arc_from_array(
     arc_row: &[f64; 8],

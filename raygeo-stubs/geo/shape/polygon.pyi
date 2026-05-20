@@ -20,6 +20,7 @@ __all__ = [
     "get_polygons_union",
     "is_almost_equal",
     "is_point_inside_polygon",
+    "is_polygon_clockwise",
     "is_polygon_convex",
     "normalize_polygons",
     "normalize_polygons_numpy",
@@ -201,6 +202,14 @@ def is_point_inside_polygon(point: Point, polygon: Sequence[Point]) -> bool:
     :param point: Point (x, y) to test.
     :param polygon: Polygon as (x, y) points.
     :returns: True if point is inside the polygon.
+    """
+
+def is_polygon_clockwise(points: Sequence[Point]) -> bool:
+    r"""
+    Check if a polygon has clockwise winding order.
+    
+    :param points: Sequence of (x, y) points defining a polygon.
+    :returns: True if the winding is clockwise.
     """
 
 def is_polygon_convex(polygon: Sequence[Point]) -> bool:
