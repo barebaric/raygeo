@@ -4,7 +4,7 @@ use pyo3::{Bound, Py, PyAny, PyResult};
 use pyo3_stub_gen::derive::{gen_stub_pymethods, gen_stub_pyclass, gen_methods_from_python};
 use pyo3_stub_gen::inventory::submit;
 
-use raygeo_core::ops::{Axis, CommandCategory, CommandType};
+use raygeo_core::ops::{Axis, CommandCategory, CommandType, OpsSection, OpsSectionRange};
 
 use super::axis::PyAxis;
 use super::enums::{PyCommandCategory, PyCommandType, PySectionType};
@@ -36,6 +36,82 @@ fn axis_map_to_py<'a>(
     axes: &[(Axis, f64)],
 ) -> PyResult<Bound<'a, PyDict>> {
     super::serialize::axis_map_to_py_helper(py, axes)
+}
+
+/// A section of operations parsed into marker and content index groups.
+///
+/// Produced by :meth:`Ops.sections` when splitting an Ops sequence
+/// into logical sections based on ``OpsSectionStart``/``OpsSectionEnd`` markers.
+#[gen_stub_pyclass]
+#[pyclass(module = "raygeo.ops", name = "OpsSection", skip_from_py_object)]
+#[derive(Clone)]
+pub struct PyOpsSection(pub OpsSection);
+
+#[gen_stub_pymethods]
+#[pymethods]
+impl PyOpsSection {
+    /// The type of this section (VectorOutline or RasterFill), if any.
+    #[getter]
+    fn section_type(&self) -> Option<PySectionType> {
+        self.0.section_type.map(PySectionType)
+    }
+
+    /// Indices of the section-marker commands (start/end) for this section.
+    #[getter]
+    fn marker_indices(&self) -> Vec<usize> {
+        self.0.marker_indices.clone()
+    }
+
+    /// Indices of the content commands belonging to this section.
+    #[getter]
+    fn content_indices(&self) -> Vec<usize> {
+        self.0.content_indices.clone()
+    }
+
+    fn __repr__(&self) -> String {
+        format!(
+            "OpsSection(section_type={:?}, marker_indices={:?}, content_indices={:?})",
+            self.0.section_type, self.0.marker_indices, self.0.content_indices
+        )
+    }
+}
+
+/// A contiguous range of indices that belong to a section.
+///
+/// Similar to :class:`OpsSection` but stores start/end index ranges
+/// instead of individual index lists. Produced by :meth:`Ops.section_ranges`.
+#[gen_stub_pyclass]
+#[pyclass(module = "raygeo.ops", name = "OpsSectionRange", skip_from_py_object)]
+#[derive(Clone)]
+pub struct PyOpsSectionRange(pub OpsSectionRange);
+
+#[gen_stub_pymethods]
+#[pymethods]
+impl PyOpsSectionRange {
+    /// The type of this section range (VectorOutline or RasterFill), if any.
+    #[getter]
+    fn section_type(&self) -> Option<PySectionType> {
+        self.0.section_type.map(PySectionType)
+    }
+
+    /// Indices of the section-marker commands that bracket this range.
+    #[getter]
+    fn marker_indices(&self) -> Vec<usize> {
+        self.0.marker_indices.clone()
+    }
+
+    /// Starting index of the content within this section range.
+    #[getter]
+    fn content_indices(&self) -> Vec<usize> {
+        self.0.content_indices.clone()
+    }
+
+    fn __repr__(&self) -> String {
+        format!(
+            "OpsSectionRange(section_type={:?}, marker_indices={:?}, content_indices={:?})",
+            self.0.section_type, self.0.marker_indices, self.0.content_indices
+        )
+    }
 }
 
 /// Detailed information about a single command in an Ops sequence.
@@ -1567,6 +1643,35 @@ impl PyOps {
             .group_by_state_continuity()
             .into_iter()
             .map(|o| PyOps { inner: o })
+            .collect()
+    }
+
+    /// Return the logical sections of the ops.
+    ///
+    /// Sections are delimited by ``OpsSectionStart``/``OpsSectionEnd``
+    /// markers and group commands into vector-outline and raster-fill
+    /// portions.
+    ///
+    /// :returns: List of OpsSection objects.
+    fn sections(&self) -> Vec<PyOpsSection> {
+        self.inner
+            .iter_sections()
+            .into_iter()
+            .map(PyOpsSection)
+            .collect()
+    }
+
+    /// Return the section ranges of the ops as index ranges.
+    ///
+    /// Similar to :meth:`sections` but returns contiguous
+    /// index ranges instead of individual index lists.
+    ///
+    /// :returns: List of OpsSectionRange objects.
+    fn section_ranges(&self) -> Vec<PyOpsSectionRange> {
+        self.inner
+            .iter_section_ranges()
+            .into_iter()
+            .map(PyOpsSectionRange)
             .collect()
     }
 

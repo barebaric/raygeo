@@ -4,7 +4,6 @@
 import builtins
 import raygeo
 import typing
-from . import group
 __all__ = [
     "Axis",
     "CommandCategory",
@@ -12,10 +11,11 @@ __all__ = [
     "CommandType",
     "MachineState",
     "Ops",
+    "OpsSection",
+    "OpsSectionRange",
     "SectionType",
     "State",
     "category",
-    "group",
 ]
 
 @typing.final
@@ -921,6 +921,25 @@ class Ops:
         
         :returns: A list of Ops sequences grouped by state continuity.
         """
+    def sections(self) -> builtins.list[OpsSection]:
+        r"""
+        Return the logical sections of the ops.
+        
+        Sections are delimited by ``OpsSectionStart``/``OpsSectionEnd``
+        markers and group commands into vector-outline and raster-fill
+        portions.
+        
+        :returns: List of OpsSection objects.
+        """
+    def section_ranges(self) -> builtins.list[OpsSectionRange]:
+        r"""
+        Return the section ranges of the ops as index ranges.
+        
+        Similar to :meth:`sections` but returns contiguous
+        index ranges instead of individual index lists.
+        
+        :returns: List of OpsSectionRange objects.
+        """
     def rect(self, include_travel: builtins.bool = False) -> tuple[builtins.float, builtins.float, builtins.float, builtins.float]:
         r"""
         Compute the bounding rectangle of all commands.
@@ -971,6 +990,56 @@ class Ops:
         
         :param arrays: Dictionary as produced by to_numpy_arrays.
         """
+
+@typing.final
+class OpsSection:
+    r"""
+    A section of operations parsed into marker and content index groups.
+    
+    Produced by :meth:`Ops.sections` when splitting an Ops sequence
+    into logical sections based on ``OpsSectionStart``/``OpsSectionEnd`` markers.
+    """
+    @property
+    def section_type(self) -> typing.Optional[SectionType]:
+        r"""
+        The type of this section (VectorOutline or RasterFill), if any.
+        """
+    @property
+    def marker_indices(self) -> builtins.list[builtins.int]:
+        r"""
+        Indices of the section-marker commands (start/end) for this section.
+        """
+    @property
+    def content_indices(self) -> builtins.list[builtins.int]:
+        r"""
+        Indices of the content commands belonging to this section.
+        """
+    def __repr__(self) -> builtins.str: ...
+
+@typing.final
+class OpsSectionRange:
+    r"""
+    A contiguous range of indices that belong to a section.
+    
+    Similar to :class:`OpsSection` but stores start/end index ranges
+    instead of individual index lists. Produced by :meth:`Ops.section_ranges`.
+    """
+    @property
+    def section_type(self) -> typing.Optional[SectionType]:
+        r"""
+        The type of this section range (VectorOutline or RasterFill), if any.
+        """
+    @property
+    def marker_indices(self) -> builtins.list[builtins.int]:
+        r"""
+        Indices of the section-marker commands that bracket this range.
+        """
+    @property
+    def content_indices(self) -> builtins.list[builtins.int]:
+        r"""
+        Starting index of the content within this section range.
+        """
+    def __repr__(self) -> builtins.str: ...
 
 @typing.final
 class SectionType:
