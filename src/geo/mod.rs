@@ -35,6 +35,7 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
         "__all__",
         vec![
             "Geometry",
+            "PyCommand",
             "CMD_TYPE_MOVE",
             "CMD_TYPE_LINE",
             "CMD_TYPE_ARC",
@@ -68,7 +69,7 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     sys_modules.set_item("raygeo.geo", &geo_mod)?;
     sys_modules.set_item("raygeo.geo.types", &types_mod)?;
 
-    add_functions(m)?;
+    add_constants(m)?;
     add_submodules(m)?;
 
     Ok(())
@@ -110,7 +111,7 @@ fn add_submodules(m: &Bound<'_, PyModule>) -> PyResult<()> {
     Ok(())
 }
 
-fn add_functions(m: &Bound<'_, PyModule>) -> PyResult<()> {
+fn add_constants(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add("CMD_TYPE_MOVE", CMD_TYPE_MOVE)?;
     m.add("CMD_TYPE_LINE", CMD_TYPE_LINE)?;
     m.add("CMD_TYPE_ARC", CMD_TYPE_ARC)?;
@@ -127,9 +128,12 @@ fn add_functions(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add("COL_C2X", COL_C2X)?;
     m.add("COL_C2Y", COL_C2Y)?;
     m.add("GEO_ARRAY_COLS", GEO_ARRAY_COLS)?;
+    Ok(())
+}
 
+fn add_functions(m: &Bound<'_, PyModule>) -> PyResult<()> {
+    add_constants(m)?;
     m.add_class::<Geometry>()?;
     m.add_class::<PyCommand>()?;
-
     Ok(())
 }

@@ -9,7 +9,7 @@ timing estimation, serialization, and more.
 # ruff: noqa: E501, F401, F403, F405
 
 import builtins
-import raygeo
+from raygeo import geo
 import typing
 from . import axis
 from . import state
@@ -569,13 +569,13 @@ class Ops:
         :param source: The source Ops sequence.
         """
     @classmethod
-    def from_geometry(cls, geometry: raygeo.Geometry) -> Ops:
+    def from_geometry(cls, geometry: geo.Geometry) -> Ops:
         r"""
         Create an Ops sequence from a Geometry.
         
         :param geometry: The geometry to convert.
         """
-    def to_geometry(self) -> raygeo.Geometry:
+    def to_geometry(self) -> geo.Geometry:
         r"""
         Convert this Ops sequence back into a Geometry.
         

@@ -124,7 +124,7 @@ impl<'a, 'py> FromPyObject<'a, 'py> for FlexPoint {
 }
 
 #[gen_stub_pyclass]
-#[pyclass(module = "raygeo", skip_from_py_object)]
+#[pyclass(module = "raygeo.geo", skip_from_py_object)]
 #[derive(Clone)]
 pub struct Geometry {
     pub(crate) inner: CoreGeometry,

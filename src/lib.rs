@@ -49,6 +49,9 @@ fn raygeo(m: &Bound<'_, PyModule>) -> PyResult<()> {
     )?;
     geo::register(m)?;
     ops::register(m)?;
+    // Backward-compat re-exports on root
+    m.add("Geometry", m.getattr("geo")?.getattr("Geometry")?)?;
+    m.add("Ops", m.getattr("ops")?.getattr("Ops")?)?;
     m.add_function(wrap_pyfunction!(generate_stubs, m)?)?;
     Ok(())
 }
@@ -148,6 +151,9 @@ For 2D transforms, set the Z components to identity:
         let parts: Vec<&str> = module.name.split('.').collect();
         if parts.len() == 1 {
             // Root module: raygeo -> __init__.pyi
+            // Backward-compat re-exports
+            content.push_str("from .geo import Geometry\n");
+            content.push_str("from .ops import Ops\n");
             std::fs::write(format!("{}/__init__.pyi", path), content)
                 .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
         } else {
