@@ -4,21 +4,56 @@
 __all__ = [
     "clip_line_segment_with_polygons",
     "clip_line_segment_with_rect",
+    "from_clipper",
     "subtract_polygons_from_line_segment",
+    "to_clipper",
 ]
 
 def clip_line_segment_with_polygons(p1: tuple[float, float, float], p2: tuple[float, float, float], regions: Sequence[Sequence[tuple[float, float]]]) -> list[tuple[tuple[float, float, float], tuple[float, float, float]]]:
     r"""
     Clip line segments that fall within polygon regions.
+    
+    :param p1: Start point of the line segment.
+    :param p2: End point of the line segment.
+    :param regions: Polygon regions to clip against.
+    :returns: List of clipped segments.
     """
 
 def clip_line_segment_with_rect(p1: tuple[float, float, float], p2: tuple[float, float, float], rect: tuple[float, float, float, float]) -> Optional[tuple[tuple[float, float, float], tuple[float, float, float]]]:
     r"""
     Clip a line segment with a rectangle.
+    
+    :param p1: Start point of the line segment.
+    :param p2: End point of the line segment.
+    :param rect: Clipping rectangle (x_min, y_min, x_max, y_max).
+    :returns: Clipped segment or None if fully outside.
+    """
+
+def from_clipper(polygon: IntPolygon, scale: int = 10000000) -> Polygon:
+    r"""
+    Convert a polygon from Clipper coordinates.
+    
+    :param polygon: Integer polygon from Clipper.
+    :param scale: Scale factor used during conversion.
+    :returns: Polygon with float coordinates.
     """
 
 def subtract_polygons_from_line_segment(p1: tuple[float, float, float], p2: tuple[float, float, float], regions: Sequence[Sequence[tuple[float, float]]]) -> list[tuple[tuple[float, float, float], tuple[float, float, float]]]:
     r"""
     Subtract polygon regions from a line segment.
+    
+    :param p1: Start point of the line segment.
+    :param p2: End point of the line segment.
+    :param regions: List of polygon regions to subtract.
+    :returns: List of remaining segments after subtraction.
+    """
+
+def to_clipper(polygon: Polygon, scale: int = 10000000) -> list[tuple[int, int]]:
+    r"""
+    Convert a polygon to Clipper coordinates.
+    
+    :param polygon: Input polygon as a list of (x, y) points.
+    :param scale: Scale factor for integer conversion.
+    :returns: Polygon with integer coordinates for Clipper.
     """
 

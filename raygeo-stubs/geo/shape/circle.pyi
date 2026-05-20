@@ -12,25 +12,52 @@ __all__ = [
 def does_circle_intersect_rect(center: tuple[float, float], radius: float, rect: tuple[float, float, float, float]) -> bool:
     r"""
     Check if a circle intersects a rectangle.
+    
+    :param center: Circle center (x, y).
+    :param radius: Circle radius.
+    :param rect: Rectangle (x_min, y_min, x_max, y_max).
+    :returns: True if the circle intersects the rectangle.
     """
 
 def get_circle_circle_intersections(c1: tuple[float, float], r1: float, c2: tuple[float, float], r2: float) -> list[tuple[float, float]]:
     r"""
     Get intersection points of two circles.
+    
+    :param c1: Center of first circle (x, y).
+    :param r1: Radius of first circle.
+    :param c2: Center of second circle (x, y).
+    :param r2: Radius of second circle.
+    :returns: List of intersection points (x, y).
     """
 
 def is_circle_inside_rect(center: tuple[float, float], radius: float, rect: tuple[float, float, float, float]) -> bool:
     r"""
     Check if a circle is inside a rectangle.
+    
+    :param center: Circle center (x, y).
+    :param radius: Circle radius.
+    :param rect: Rectangle (x_min, y_min, x_max, y_max).
+    :returns: True if the circle is fully inside the rectangle.
     """
 
 def line_segment_intersects_circle(p1: tuple[float, float], p2: tuple[float, float], circle_center: tuple[float, float], circle_radius: float) -> bool:
     r"""
     Check if a line segment intersects a circle.
+    
+    :param p1: Start point of the line segment (x, y).
+    :param p2: End point of the line segment (x, y).
+    :param circle_center: Circle center (x, y).
+    :param circle_radius: Circle radius.
+    :returns: True if the line segment intersects the circle.
     """
 
 def project_point_onto_circle(point: tuple[float, float], center: tuple[float, float], radius: float) -> Optional[tuple[float, float]]:
     r"""
     Project a point onto a circle.
+    
+    :param point: Point to project (x, y).
+    :param center: Circle center (x, y).
+    :param radius: Circle radius.
+    :returns: Projected point on the circle (x, y).
     """
 

@@ -13,30 +13,56 @@ __all__ = [
 def calculate_input_scale(polygons: Sequence[Sequence[tuple[float, float]]], max_int: int = 2147483647) -> float:
     r"""
     Calculate the optimal input scale for clipper operations.
+    
+    :param polygons: List of polygons to scale.
+    :param max_int: Maximum integer value for Clipper.
+    :returns: Optimal scale factor.
     """
 
 def convolve_point_sequences(seq_a: Sequence[tuple[int, int]], seq_b: Sequence[tuple[int, int]]) -> list[list[tuple[int, int]]]:
     r"""
     Convolve two sequences of points.
+    
+    :param seq_a: First sequence of integer points.
+    :param seq_b: Second sequence of integer points.
+    :returns: Convolved point sequences.
     """
 
 def convolve_two_segments(a1: tuple[int, int], a2: tuple[int, int], b1: tuple[int, int], b2: tuple[int, int]) -> list[tuple[int, int]]:
     r"""
     Convolve two line segments.
+    
+    :param a1: Start point of segment A.
+    :param a2: End point of segment A.
+    :param b1: Start point of segment B.
+    :param b2: End point of segment B.
+    :returns: Convolved point sequence.
     """
 
 def get_inner_fit_polygon(outer: Sequence[tuple[float, float]], inner: Sequence[tuple[float, float]]) -> list[list[tuple[float, float]]]:
     r"""
     Compute the inner fit polygon (no-fit polygon for nesting).
+    
+    :param outer: Outer polygon as (x, y) points.
+    :param inner: Inner polygon as (x, y) points.
+    :returns: Inner fit polygon.
     """
 
 def get_no_fit_polygon(subject: Sequence[tuple[float, float]], tool: Sequence[tuple[float, float]]) -> list[list[tuple[float, float]]]:
     r"""
     Compute the no-fit polygon for two 2D polygons.
+    
+    :param subject: Subject polygon as (x, y) points.
+    :param tool: Tool polygon as (x, y) points.
+    :returns: No-fit polygon.
     """
 
 def get_polygon_minkowski_sum_convex(poly_a: Sequence[tuple[int, int]], poly_b: Sequence[tuple[int, int]]) -> list[list[tuple[int, int]]]:
     r"""
     Compute the Minkowski sum of two convex polygons.
+    
+    :param poly_a: First convex polygon as integer points.
+    :param poly_b: Second convex polygon as integer points.
+    :returns: Minkowski sum as list of polygons.
     """
 

@@ -20,65 +20,124 @@ __all__ = [
 def are_points_collinear(points: Sequence[tuple[float, float, float]], tolerance: float = 0.000001) -> bool:
     r"""
     Check if three or more points are collinear within tolerance.
+    
+    :param points: Sequence of 3D points.
+    :param tolerance: Collinearity tolerance.
+    :returns: True if points are collinear.
     """
 
 def convert_arc_to_beziers_from_array(start: tuple[float, float, float], end: tuple[float, float, float], center_offset: tuple[float, float], clockwise: bool) -> list[list[float]]:
     r"""
     Convert an arc to bezier curves.
+    
+    :param start: Start point (x, y, z).
+    :param end: End point (x, y, z).
+    :param center_offset: Center offset (dx, dy).
+    :param clockwise: Whether the arc is clockwise.
+    :returns: List of bezier command rows.
     """
 
 def create_arc_cmd(end: tuple[float, float, float], center: tuple[float, float], start: tuple[float, float, float]) -> list[float]:
     r"""
     Create an arc command array.
+    
+    :param end: End point (x, y, z).
+    :param center: Center offset (dx, dy).
+    :param start: Start point (x, y, z).
+    :returns: Arc command array (8 floats).
     """
 
 def create_line_cmd(end_point: tuple[float, float, float]) -> list[float]:
     r"""
     Create a line command array from an end point.
+    
+    :param end_point: End point (x, y, z).
+    :returns: Line command array (8 floats).
     """
 
 def fit_circle_to_3_points(p1: tuple[float, float] | tuple[float, float, float], p2: tuple[float, float] | tuple[float, float, float], p3: tuple[float, float] | tuple[float, float, float]) -> Optional[tuple[tuple[float, float], float]]:
     r"""
     Fit a circle to three points.
+    
+    :param p1: First point (x, y) or (x, y, z).
+    :param p2: Second point (x, y) or (x, y, z).
+    :param p3: Third point (x, y) or (x, y, z).
+    :returns: Tuple of (center, radius) or None.
     """
 
 def fit_circle_to_points(points: Sequence[tuple[float, float, float]]) -> Optional[tuple[tuple[float, float], float, float]]:
     r"""
     Fit a circle to a set of points.
+    
+    :param points: Sequence of 3D points to fit.
+    :returns: Tuple of (center, radius, error) or None.
     """
 
 def fit_points_recursive(points: Sequence[tuple[float, float, float]], tolerance: float, start_idx: int, end_idx: int) -> list[list[float]]:
     r"""
     Recursively fit points with line and arc primitives.
+    
+    :param points: Sequence of 3D points to fit.
+    :param tolerance: Fitting tolerance.
+    :param start_idx: Start index in the points array.
+    :param end_idx: End index in the points array.
+    :returns: List of fitted command rows.
     """
 
 def fit_points_with_primitives(points: Sequence[tuple[float, float, float]], tolerance: float) -> list[list[float]]:
     r"""
     Fit a polyline of points with arc and line primitives.
+    
+    :param points: Sequence of 3D points to fit.
+    :param tolerance: Fitting tolerance.
+    :returns: List of fitted command rows.
     """
 
 def flatten_to_points(data: Sequence[Sequence[float]], tolerance: float) -> list[list[tuple[float, float, float]]]:
     r"""
     Flatten curves into linear segments.
+    
+    :param data: Array of command data.
+    :param tolerance: Flattening tolerance.
+    :returns: List of flattened point segments.
     """
 
 def get_polyline_arc_deviation(points: Sequence[tuple[float, float, float]], center: tuple[float, float], radius: float) -> float:
     r"""
     Get the maximum arc deviation for a set of points.
+    
+    :param points: Sequence of 3D points.
+    :param center: Arc center (x, y).
+    :param radius: Arc radius.
+    :returns: Maximum deviation from the arc.
     """
 
 def get_polyline_line_deviation(points: Sequence[tuple[float, float, float]], start: int, end: int) -> tuple[float, int]:
     r"""
     Get the maximum line deviation for a segment of a polyline.
+    
+    :param points: Sequence of 3D points.
+    :param start: Start index.
+    :param end: End index.
+    :returns: Tuple of (max_deviation, index_of_max).
     """
 
 def linearize_geometry(data: Sequence[Sequence[float]], tolerance: float) -> list[list[float]]:
     r"""
     Linearize geometry data into line segments.
+    
+    :param data: Array of command data.
+    :param tolerance: Linearization tolerance.
+    :returns: List of linearized segment rows.
     """
 
 def project_circle_center_to_bisector(p1: tuple[float, float] | tuple[float, float, float], p2: tuple[float, float] | tuple[float, float, float], center: tuple[float, float]) -> tuple[float, float]:
     r"""
     Project a circle center onto the perpendicular bisector of two points.
+    
+    :param p1: First point (x, y) or (x, y, z).
+    :param p2: Second point (x, y) or (x, y, z).
+    :param center: Circle center to project.
+    :returns: Projected center point (x, y).
     """
 

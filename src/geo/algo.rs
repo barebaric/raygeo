@@ -1,6 +1,9 @@
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::gen_stub_pyfunction;
-use crate::geo::flex_point::{PyPoint2D, PyPoint3D, poly_to_points, extract_polygons};
+use crate::geo::flex_point::{
+    PyPoint2D, PyPoint3D, extract_polygon, extract_polygons, int_poly_to_points,
+    poly_to_points,
+};
 use raygeo_core::geo::algo::clipping::{
     clip_line_segment_with_polygons, clip_line_segment_with_rect,
     subtract_polygons_from_line_segment,
@@ -24,6 +27,8 @@ use raygeo_core::geo::algo::smooth::{
 };
 use raygeo_core::Segment3D;
 
+const CLIPPER_SCALE: i64 = 10_000_000;
+
 pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     let py = m.py();
     let algo_mod = PyModule::new(py, "algo")?;
@@ -36,6 +41,8 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     clipping_mod.add_function(wrap_pyfunction!(clip_line_segment_py, clipping_mod.clone())?)?;
     clipping_mod.add_function(wrap_pyfunction!(clip_line_segment_to_regions_py, clipping_mod.clone())?)?;
     clipping_mod.add_function(wrap_pyfunction!(subtract_polygons_from_line_segment_py, clipping_mod.clone())?)?;
+    clipping_mod.add_function(wrap_pyfunction!(to_clipper_py, clipping_mod.clone())?)?;
+    clipping_mod.add_function(wrap_pyfunction!(from_clipper_py, clipping_mod.clone())?)?;
 
     minkowski_mod.add_function(wrap_pyfunction!(minkowski_sum_convex_py, minkowski_mod.clone())?)?;
     minkowski_mod.add_function(wrap_pyfunction!(get_inner_fit_polygon_py, minkowski_mod.clone())?)?;
@@ -111,7 +118,12 @@ fn to_data_array(data: Vec<Vec<f64>>) -> Vec<[f64; 8]> {
         points: Sequence[tuple[float, float, float]],
         tolerance: float = 1e-6,
     ) -> bool:
-        """Check if three or more points are collinear within tolerance."""
+        """Check if three or more points are collinear within tolerance.
+
+        :param points: Sequence of 3D points.
+        :param tolerance: Collinearity tolerance.
+        :returns: True if points are collinear.
+        """
 "#, module = "raygeo.geo.algo.fitting")]
 #[pyfunction(name = "are_points_collinear")]
 #[pyo3(signature = (points, tolerance=1e-6))]
@@ -125,7 +137,13 @@ fn are_points_collinear_py(points: Vec<(f64, f64, f64)>, tolerance: f64) -> bool
         p2: tuple[float, float] | tuple[float, float, float],
         p3: tuple[float, float] | tuple[float, float, float],
     ) -> Optional[tuple[tuple[float, float], float]]:
-        """Fit a circle to three points."""
+        """Fit a circle to three points.
+
+        :param p1: First point (x, y) or (x, y, z).
+        :param p2: Second point (x, y) or (x, y, z).
+        :param p3: Third point (x, y) or (x, y, z).
+        :returns: Tuple of (center, radius) or None.
+        """
 "#, module = "raygeo.geo.algo.fitting")]
 #[pyfunction(name = "fit_circle_to_3_points")]
 fn fit_circle_to_3_points_py(
@@ -140,7 +158,11 @@ fn fit_circle_to_3_points_py(
     def fit_circle_to_points(
         points: Sequence[tuple[float, float, float]],
     ) -> Optional[tuple[tuple[float, float], float, float]]:
-        """Fit a circle to a set of points."""
+        """Fit a circle to a set of points.
+
+        :param points: Sequence of 3D points to fit.
+        :returns: Tuple of (center, radius, error) or None.
+        """
 "#, module = "raygeo.geo.algo.fitting")]
 #[pyfunction(name = "fit_circle_to_points")]
 fn fit_circle_to_points_py(points: Vec<(f64, f64, f64)>) -> Option<((f64, f64), f64, f64)> {
@@ -153,7 +175,13 @@ fn fit_circle_to_points_py(points: Vec<(f64, f64, f64)>) -> Option<((f64, f64), 
         p2: tuple[float, float] | tuple[float, float, float],
         center: tuple[float, float],
     ) -> tuple[float, float]:
-        """Project a circle center onto the perpendicular bisector of two points."""
+        """Project a circle center onto the perpendicular bisector of two points.
+
+        :param p1: First point (x, y) or (x, y, z).
+        :param p2: Second point (x, y) or (x, y, z).
+        :param center: Circle center to project.
+        :returns: Projected center point (x, y).
+        """
 "#, module = "raygeo.geo.algo.fitting")]
 #[pyfunction(name = "project_circle_center_to_bisector")]
 fn project_circle_center_to_bisector_py(
@@ -169,7 +197,12 @@ fn project_circle_center_to_bisector_py(
         data: Sequence[Sequence[float]],
         tolerance: float,
     ) -> list[list[tuple[float, float, float]]]:
-        """Flatten curves into linear segments."""
+        """Flatten curves into linear segments.
+
+        :param data: Array of command data.
+        :param tolerance: Flattening tolerance.
+        :returns: List of flattened point segments.
+        """
 "#, module = "raygeo.geo.algo.fitting")]
 #[pyfunction(name = "flatten_to_points")]
 fn flatten_to_points_py(data: Vec<Vec<f64>>, tolerance: f64) -> Vec<Vec<(f64, f64, f64)>> {
@@ -182,7 +215,12 @@ fn flatten_to_points_py(data: Vec<Vec<f64>>, tolerance: f64) -> Vec<Vec<(f64, f6
         data: Sequence[Sequence[float]],
         tolerance: float,
     ) -> list[list[float]]:
-        """Linearize geometry data into line segments."""
+        """Linearize geometry data into line segments.
+
+        :param data: Array of command data.
+        :param tolerance: Linearization tolerance.
+        :returns: List of linearized segment rows.
+        """
 "#, module = "raygeo.geo.algo.fitting")]
 #[pyfunction(name = "linearize_geometry")]
 fn linearize_geometry_py(data: Vec<Vec<f64>>, tolerance: f64) -> Vec<Vec<f64>> {
@@ -194,7 +232,11 @@ fn linearize_geometry_py(data: Vec<Vec<f64>>, tolerance: f64) -> Vec<Vec<f64>> {
     def create_line_cmd(
         end_point: tuple[float, float, float],
     ) -> list[float]:
-        """Create a line command array from an end point."""
+        """Create a line command array from an end point.
+
+        :param end_point: End point (x, y, z).
+        :returns: Line command array (8 floats).
+        """
 "#, module = "raygeo.geo.algo.fitting")]
 #[pyfunction(name = "create_line_cmd")]
 fn create_line_cmd_py(end_point: PyPoint3D) -> Vec<f64> {
@@ -207,7 +249,13 @@ fn create_line_cmd_py(end_point: PyPoint3D) -> Vec<f64> {
         center: tuple[float, float],
         start: tuple[float, float, float],
     ) -> list[float]:
-        """Create an arc command array."""
+        """Create an arc command array.
+
+        :param end: End point (x, y, z).
+        :param center: Center offset (dx, dy).
+        :param start: Start point (x, y, z).
+        :returns: Arc command array (8 floats).
+        """
 "#, module = "raygeo.geo.algo.fitting")]
 #[pyfunction(name = "create_arc_cmd")]
 fn create_arc_cmd_py(
@@ -225,7 +273,14 @@ fn create_arc_cmd_py(
         center_offset: tuple[float, float],
         clockwise: bool,
     ) -> list[list[float]]:
-        """Convert an arc to bezier curves."""
+        """Convert an arc to bezier curves.
+
+        :param start: Start point (x, y, z).
+        :param end: End point (x, y, z).
+        :param center_offset: Center offset (dx, dy).
+        :param clockwise: Whether the arc is clockwise.
+        :returns: List of bezier command rows.
+        """
 "#, module = "raygeo.geo.algo.fitting")]
 #[pyfunction(name = "convert_arc_to_beziers_from_array")]
 #[pyo3(signature = (start, end, center_offset, clockwise))]
@@ -248,7 +303,14 @@ fn convert_arc_to_beziers_from_array_py(
         start_idx: int,
         end_idx: int,
     ) -> list[list[float]]:
-        """Recursively fit points with line and arc primitives."""
+        """Recursively fit points with line and arc primitives.
+
+        :param points: Sequence of 3D points to fit.
+        :param tolerance: Fitting tolerance.
+        :param start_idx: Start index in the points array.
+        :param end_idx: End index in the points array.
+        :returns: List of fitted command rows.
+        """
 "#, module = "raygeo.geo.algo.fitting")]
 #[pyfunction(name = "fit_points_recursive")]
 fn fit_points_recursive_py(
@@ -268,7 +330,12 @@ fn fit_points_recursive_py(
         points: Sequence[tuple[float, float, float]],
         tolerance: float,
     ) -> list[list[float]]:
-        """Fit a polyline of points with arc and line primitives."""
+        """Fit a polyline of points with arc and line primitives.
+
+        :param points: Sequence of 3D points to fit.
+        :param tolerance: Fitting tolerance.
+        :returns: List of fitted command rows.
+        """
 "#, module = "raygeo.geo.algo.fitting")]
 #[pyfunction(name = "fit_points_with_primitives")]
 fn fit_points_with_primitives_py(
@@ -287,7 +354,13 @@ fn fit_points_with_primitives_py(
         start: int,
         end: int,
     ) -> tuple[float, int]:
-        """Get the maximum line deviation for a segment of a polyline."""
+        """Get the maximum line deviation for a segment of a polyline.
+
+        :param points: Sequence of 3D points.
+        :param start: Start index.
+        :param end: End index.
+        :returns: Tuple of (max_deviation, index_of_max).
+        """
 "#, module = "raygeo.geo.algo.fitting")]
 #[pyfunction(name = "get_polyline_line_deviation")]
 fn get_polyline_line_deviation_py(
@@ -304,7 +377,13 @@ fn get_polyline_line_deviation_py(
         center: tuple[float, float],
         radius: float,
     ) -> float:
-        """Get the maximum arc deviation for a set of points."""
+        """Get the maximum arc deviation for a set of points.
+
+        :param points: Sequence of 3D points.
+        :param center: Arc center (x, y).
+        :param radius: Arc radius.
+        :returns: Maximum deviation from the arc.
+        """
 "#, module = "raygeo.geo.algo.fitting")]
 #[pyfunction(name = "get_polyline_arc_deviation")]
 fn get_polyline_arc_deviation_py(
@@ -321,7 +400,13 @@ fn get_polyline_arc_deviation_py(
         max_segment_length: float,
         is_closed: bool,
     ) -> list[tuple[float, float, float]]:
-        """Resample a polyline with a maximum segment length."""
+        """Resample a polyline with a maximum segment length.
+
+        :param points: Sequence of 3D points.
+        :param max_segment_length: Maximum allowed segment length.
+        :param is_closed: Whether the polyline is closed.
+        :returns: Resampled points.
+        """
 "#, module = "raygeo.geo.algo.smooth")]
 #[pyfunction(name = "resample_polyline")]
 fn resample_polyline_py(
@@ -338,7 +423,13 @@ fn resample_polyline_py(
         p2: tuple[float, float, float],
         rect: tuple[float, float, float, float],
     ) -> Optional[tuple[tuple[float, float, float], tuple[float, float, float]]]:
-        """Clip a line segment with a rectangle."""
+        """Clip a line segment with a rectangle.
+
+        :param p1: Start point of the line segment.
+        :param p2: End point of the line segment.
+        :param rect: Clipping rectangle (x_min, y_min, x_max, y_max).
+        :returns: Clipped segment or None if fully outside.
+        """
 "#, module = "raygeo.geo.algo.clipping")]
 #[pyfunction(name = "clip_line_segment_with_rect")]
 fn clip_line_segment_py(
@@ -355,7 +446,13 @@ fn clip_line_segment_py(
         p2: tuple[float, float, float],
         regions: Sequence[Sequence[tuple[float, float]]],
     ) -> list[tuple[tuple[float, float, float], tuple[float, float, float]]]:
-        """Subtract polygon regions from a line segment."""
+        """Subtract polygon regions from a line segment.
+
+        :param p1: Start point of the line segment.
+        :param p2: End point of the line segment.
+        :param regions: List of polygon regions to subtract.
+        :returns: List of remaining segments after subtraction.
+        """
 "#, module = "raygeo.geo.algo.clipping")]
 #[pyfunction(name = "subtract_polygons_from_line_segment")]
 fn subtract_polygons_from_line_segment_py(
@@ -373,7 +470,13 @@ fn subtract_polygons_from_line_segment_py(
         p2: tuple[float, float, float],
         regions: Sequence[Sequence[tuple[float, float]]],
     ) -> list[tuple[tuple[float, float, float], tuple[float, float, float]]]:
-        """Clip line segments that fall within polygon regions."""
+        """Clip line segments that fall within polygon regions.
+
+        :param p1: Start point of the line segment.
+        :param p2: End point of the line segment.
+        :param regions: Polygon regions to clip against.
+        :returns: List of clipped segments.
+        """
 "#, module = "raygeo.geo.algo.clipping")]
 #[pyfunction(name = "clip_line_segment_with_polygons")]
 fn clip_line_segment_to_regions_py(
@@ -386,11 +489,65 @@ fn clip_line_segment_to_regions_py(
 }
 
 #[gen_stub_pyfunction(python = r#"
+    def to_clipper(
+        polygon: Polygon,
+        scale: int = 10000000,
+    ) -> list[tuple[int, int]]:
+        """Convert a polygon to Clipper coordinates.
+
+        :param polygon: Input polygon as a list of (x, y) points.
+        :param scale: Scale factor for integer conversion.
+        :returns: Polygon with integer coordinates for Clipper.
+        """
+"#, module = "raygeo.geo.algo.clipping")]
+#[pyfunction(name = "to_clipper")]
+fn to_clipper_py(
+    polygon: &Bound<'_, PyAny>,
+    scale: Option<i64>,
+) -> PyResult<Vec<(i64, i64)>> {
+    let scale = scale.unwrap_or(CLIPPER_SCALE);
+    let poly = extract_polygon(polygon)?;
+    Ok(poly
+        .iter()
+        .map(|(x, y)| ((x * scale as f64) as i64, (y * scale as f64) as i64))
+        .collect())
+}
+
+#[gen_stub_pyfunction(python = r#"
+    def from_clipper(
+        polygon: IntPolygon,
+        scale: int = 10000000,
+    ) -> Polygon:
+        """Convert a polygon from Clipper coordinates.
+
+        :param polygon: Integer polygon from Clipper.
+        :param scale: Scale factor used during conversion.
+        :returns: Polygon with float coordinates.
+        """
+"#, module = "raygeo.geo.algo.clipping")]
+#[pyfunction(name = "from_clipper")]
+fn from_clipper_py(
+    polygon: Vec<crate::geo::flex_point::PyIntPoint2D>,
+    scale: Option<i64>,
+) -> Vec<Point> {
+    let scale = scale.unwrap_or(CLIPPER_SCALE) as f64;
+    let poly = int_poly_to_points(polygon);
+    poly.iter()
+        .map(|(x, y)| (*x as f64 / scale, *y as f64 / scale))
+        .collect()
+}
+
+#[gen_stub_pyfunction(python = r#"
     def get_polygon_minkowski_sum_convex(
         poly_a: Sequence[tuple[int, int]],
         poly_b: Sequence[tuple[int, int]],
     ) -> list[list[tuple[int, int]]]:
-        """Compute the Minkowski sum of two convex polygons."""
+        """Compute the Minkowski sum of two convex polygons.
+
+        :param poly_a: First convex polygon as integer points.
+        :param poly_b: Second convex polygon as integer points.
+        :returns: Minkowski sum as list of polygons.
+        """
 "#, module = "raygeo.geo.algo.minkowski")]
 #[pyfunction(name = "get_polygon_minkowski_sum_convex")]
 fn minkowski_sum_convex_py(
@@ -405,7 +562,12 @@ fn minkowski_sum_convex_py(
         outer: Sequence[tuple[float, float]],
         inner: Sequence[tuple[float, float]],
     ) -> list[list[tuple[float, float]]]:
-        """Compute the inner fit polygon (no-fit polygon for nesting)."""
+        """Compute the inner fit polygon (no-fit polygon for nesting).
+
+        :param outer: Outer polygon as (x, y) points.
+        :param inner: Inner polygon as (x, y) points.
+        :returns: Inner fit polygon.
+        """
 "#, module = "raygeo.geo.algo.minkowski")]
 #[pyfunction(name = "get_inner_fit_polygon")]
 fn get_inner_fit_polygon_py(
@@ -420,7 +582,12 @@ fn get_inner_fit_polygon_py(
         subject: Sequence[tuple[float, float]],
         tool: Sequence[tuple[float, float]],
     ) -> list[list[tuple[float, float]]]:
-        """Compute the no-fit polygon for two 2D polygons."""
+        """Compute the no-fit polygon for two 2D polygons.
+
+        :param subject: Subject polygon as (x, y) points.
+        :param tool: Tool polygon as (x, y) points.
+        :returns: No-fit polygon.
+        """
 "#, module = "raygeo.geo.algo.minkowski")]
 #[pyfunction(name = "get_no_fit_polygon")]
 fn get_no_fit_polygon_py(
@@ -435,7 +602,12 @@ fn get_no_fit_polygon_py(
         polygons: Sequence[Sequence[tuple[float, float]]],
         max_int: int = 2147483647,
     ) -> float:
-        """Calculate the optimal input scale for clipper operations."""
+        """Calculate the optimal input scale for clipper operations.
+
+        :param polygons: List of polygons to scale.
+        :param max_int: Maximum integer value for Clipper.
+        :returns: Optimal scale factor.
+        """
 "#, module = "raygeo.geo.algo.minkowski")]
 #[pyfunction(name = "calculate_input_scale")]
 #[pyo3(signature = (polygons, max_int=2147483647))]
@@ -451,7 +623,14 @@ fn calculate_input_scale_py(polygons: &Bound<'_, PyAny>, max_int: i64) -> PyResu
         b1: tuple[int, int],
         b2: tuple[int, int],
     ) -> list[tuple[int, int]]:
-        """Convolve two line segments."""
+        """Convolve two line segments.
+
+        :param a1: Start point of segment A.
+        :param a2: End point of segment A.
+        :param b1: Start point of segment B.
+        :param b2: End point of segment B.
+        :returns: Convolved point sequence.
+        """
 "#, module = "raygeo.geo.algo.minkowski")]
 #[pyfunction(name = "convolve_two_segments")]
 fn convolve_two_segments_py(
@@ -468,7 +647,12 @@ fn convolve_two_segments_py(
         seq_a: Sequence[tuple[int, int]],
         seq_b: Sequence[tuple[int, int]],
     ) -> list[list[tuple[int, int]]]:
-        """Convolve two sequences of points."""
+        """Convolve two sequences of points.
+
+        :param seq_a: First sequence of integer points.
+        :param seq_b: Second sequence of integer points.
+        :returns: Convolved point sequences.
+        """
 "#, module = "raygeo.geo.algo.minkowski")]
 #[pyfunction(name = "convolve_point_sequences")]
 fn convolve_point_sequences_py(
@@ -483,7 +667,12 @@ fn convolve_point_sequences_py(
         points: Sequence[tuple[float, float]],
         tolerance: float,
     ) -> list[tuple[float, float]]:
-        """Simplify a polyline using the Ramer-Douglas-Peucker algorithm."""
+        """Simplify a polyline using the Ramer-Douglas-Peucker algorithm.
+
+        :param points: Sequence of (x, y) points.
+        :param tolerance: Simplification tolerance.
+        :returns: Simplified point sequence.
+        """
 "#, module = "raygeo.geo.algo.simplify")]
 #[pyfunction(name = "simplify_polyline")]
 fn simplify_polyline_py(points: Vec<PyPoint2D>, tolerance: f64) -> Vec<Point> {
@@ -498,7 +687,12 @@ fn simplify_polyline_py(points: Vec<PyPoint2D>, tolerance: f64) -> Vec<Point> {
         data: Sequence[Sequence[float]],
         tolerance: float,
     ) -> list[list[float]]:
-        """Simplify a polyline from an array."""
+        """Simplify a polyline from an array.
+
+        :param data: Array of point rows.
+        :param tolerance: Simplification tolerance.
+        :returns: Simplified array rows.
+        """
 "#, module = "raygeo.geo.algo.simplify")]
 #[pyfunction(name = "simplify_polyline_to_array")]
 fn simplify_polyline_to_array_py(data: Vec<Vec<f64>>, tolerance: f64) -> Vec<Vec<f64>> {
@@ -520,7 +714,11 @@ fn simplify_polyline_to_array_py(data: Vec<Vec<f64>>, tolerance: f64) -> Vec<Vec
     def compute_gaussian_kernel(
         amount: int,
     ) -> tuple[list[float], float]:
-        """Compute a Gaussian kernel of the given size."""
+        """Compute a Gaussian kernel of the given size.
+
+        :param amount: Kernel size.
+        :returns: Tuple of (kernel_values, sigma).
+        """
 "#, module = "raygeo.geo.algo.smooth")]
 #[pyfunction(name = "compute_gaussian_kernel")]
 fn compute_gaussian_kernel_py(amount: i32) -> (Vec<f64>, f64) {
@@ -532,7 +730,12 @@ fn compute_gaussian_kernel_py(amount: i32) -> (Vec<f64>, f64) {
         points: Sequence[tuple[float, float, float]],
         kernel: Sequence[float],
     ) -> list[tuple[float, float, float]]:
-        """Smooth a closed polyline circularly."""
+        """Smooth a closed polyline circularly.
+
+        :param points: Sequence of 3D points to smooth.
+        :param kernel: Gaussian kernel values.
+        :returns: Smoothed points.
+        """
 "#, module = "raygeo.geo.algo.smooth")]
 #[pyfunction(name = "smooth_circularly")]
 fn smooth_circularly_py(
@@ -549,7 +752,14 @@ fn smooth_circularly_py(
         corner_angle_threshold: float,
         is_closed: Optional[bool] = None,
     ) -> list[tuple[float, float, float]]:
-        """Smooth a polyline using Gaussian smoothing."""
+        """Smooth a polyline using Gaussian smoothing.
+
+        :param points: Sequence of 3D points to smooth.
+        :param amount: Smoothing amount (kernel size).
+        :param corner_angle_threshold: Angle threshold for preserving corners.
+        :param is_closed: Whether the polyline is closed.
+        :returns: Smoothed points.
+        """
 "#, module = "raygeo.geo.algo.smooth")]
 #[pyfunction(name = "smooth_polyline")]
 #[pyo3(signature = (points, amount, corner_angle_threshold, is_closed=None))]
@@ -567,7 +777,12 @@ fn smooth_polyline_algo_py(
         points: Sequence[tuple[float, float, float]],
         kernel: Sequence[float],
     ) -> list[tuple[float, float, float]]:
-        """Smooth a sub-segment of a polyline."""
+        """Smooth a sub-segment of a polyline.
+
+        :param points: Sequence of 3D points to smooth.
+        :param kernel: Gaussian kernel values.
+        :returns: Smoothed points.
+        """
 "#, module = "raygeo.geo.algo.smooth")]
 #[pyfunction(name = "smooth_sub_segment")]
 fn smooth_sub_segment_py(

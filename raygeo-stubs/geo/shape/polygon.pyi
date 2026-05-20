@@ -48,205 +48,367 @@ __all__ = [
 def clean_polygon(polygon: Sequence[tuple[float, float]], tolerance: Optional[float] = None) -> Optional[list[tuple[float, float]]]:
     r"""
     Clean a polygon by removing near-duplicate points.
+    
+    :param polygon: Input polygon as (x, y) points.
+    :param tolerance: Distance tolerance for deduplication.
+    :returns: Cleaned polygon or None.
     """
 
 def flip_polygon(polygon: Sequence[tuple[float, float]], flip_h: bool, flip_v: bool) -> list[tuple[float, float]]:
     r"""
     Flip a polygon horizontally and/or vertically.
+    
+    :param polygon: Polygon as (x, y) points.
+    :param flip_h: Whether to flip horizontally.
+    :param flip_v: Whether to flip vertically.
+    :returns: Flipped polygon.
     """
 
 def flip_polygon_numpy(polygon: NDArray[f64], flip_h: bool, flip_v: bool) -> Any:
     r"""
     Flip a polygon from numpy array.
+    
+    :param polygon: Polygon as a 2D numpy array.
+    :param flip_h: Whether to flip horizontally.
+    :param flip_v: Whether to flip vertically.
+    :returns: Flipped polygon as numpy array.
     """
 
 def flip_polygons(polygons: Any, flip_h: bool, flip_v: bool) -> list[list[tuple[float, float]]]:
     r"""
     Flip multiple polygons.
+    
+    :param polygons: List of polygons to flip.
+    :param flip_h: Whether to flip horizontally.
+    :param flip_v: Whether to flip vertically.
+    :returns: Flipped polygons.
     """
 
 def flip_polygons_numpy(polygons: list, flip_h: bool, flip_v: bool) -> Any:
     r"""
     Flip polygons from numpy arrays.
+    
+    :param polygons: List of 2D numpy arrays.
+    :param flip_h: Whether to flip horizontally.
+    :param flip_v: Whether to flip vertically.
+    :returns: List of flipped numpy arrays.
     """
 
 def get_polygon_area(polygon: Sequence[tuple[float, float]]) -> float:
     r"""
     Get the unsigned area of a polygon.
+    
+    :param polygon: Polygon as (x, y) points.
+    :returns: Unsigned area.
     """
 
 def get_polygon_bounds(polygon: Sequence[tuple[float, float]]) -> tuple[float, float, float, float]:
     r"""
     Get the bounding rectangle of a polygon.
+    
+    :param polygon: Polygon as (x, y) points.
+    :returns: Bounding rectangle as (x_min, y_min, x_max, y_max).
     """
 
 def get_polygon_centroid(polygon: Sequence[tuple[float, float]]) -> tuple[float, float]:
     r"""
     Get the centroid of a polygon.
+    
+    :param polygon: Polygon as (x, y) points.
+    :returns: Centroid point (x, y).
     """
 
 def get_polygon_convex_hull(polygon: Sequence[tuple[float, float]]) -> list[tuple[float, float]]:
     r"""
     Get the convex hull of a polygon.
+    
+    :param polygon: Polygon as (x, y) points.
+    :returns: Convex hull as list of points.
     """
 
 def get_polygon_edges(polygon: Sequence[tuple[float, float]]) -> list[tuple[tuple[float, float], tuple[float, float]]]:
     r"""
     Get the edges of a polygon.
+    
+    :param polygon: Polygon as (x, y) points.
+    :returns: List of ((x1, y1), (x2, y2)) edges.
     """
 
 def get_polygon_group_bounds(polygons: Any) -> tuple[float, float, float, float]:
     r"""
     Get the bounding rectangle of a group of polygons.
+    
+    :param polygons: List of polygons.
+    :returns: Bounding rectangle as (x_min, y_min, x_max, y_max).
     """
 
 def get_polygon_perimeter(polygon: Sequence[tuple[float, float]]) -> float:
     r"""
     Get the perimeter of a polygon.
+    
+    :param polygon: Polygon as (x, y) points.
+    :returns: Perimeter length.
     """
 
 def get_polygon_signed_area(polygon: Sequence[tuple[float, float]]) -> float:
     r"""
     Get the signed area of a polygon.
+    
+    :param polygon: Polygon as (x, y) points.
+    :returns: Signed area (positive for CCW, negative for CW).
     """
 
 def get_polygons_difference(poly1: Sequence[tuple[float, float]], poly2: Sequence[tuple[float, float]]) -> list[list[tuple[float, float]]]:
     r"""
     Get the difference of two polygons.
+    
+    :param poly1: First polygon as (x, y) points.
+    :param poly2: Second polygon to subtract.
+    :returns: Difference polygon(s).
     """
 
 def get_polygons_intersection(poly1: Sequence[tuple[float, float]], poly2: Sequence[tuple[float, float]]) -> list[list[tuple[float, float]]]:
     r"""
     Get the intersection of two polygons.
+    
+    :param poly1: First polygon as (x, y) points.
+    :param poly2: Second polygon as (x, y) points.
+    :returns: Intersection polygon(s).
     """
 
 def get_polygons_union(polygons: Any) -> list[list[tuple[float, float]]]:
     r"""
     Get the union of multiple polygons.
+    
+    :param polygons: List of polygons to union.
+    :returns: Union polygon(s).
     """
 
 def is_almost_equal(a: float, b: float, tolerance: Optional[float] = None) -> bool:
     r"""
     Check if two floats are almost equal.
+    
+    :param a: First float.
+    :param b: Second float.
+    :param tolerance: Comparison tolerance.
+    :returns: True if |a - b| < tolerance.
     """
 
 def is_point_inside_polygon(point: tuple[float, float], polygon: Sequence[tuple[float, float]]) -> bool:
     r"""
     Check if a point is inside a polygon.
+    
+    :param point: Point (x, y) to test.
+    :param polygon: Polygon as (x, y) points.
+    :returns: True if point is inside the polygon.
     """
 
 def is_polygon_convex(polygon: Sequence[tuple[float, float]]) -> bool:
     r"""
     Check if a polygon is convex.
+    
+    :param polygon: Polygon as (x, y) points.
+    :returns: True if the polygon is convex.
     """
 
 def normalize_polygons(polygons: Any) -> tuple[list[list[tuple[float, float]]], float, float]:
     r"""
     Normalize polygons (outer CCW, inner CW).
+    
+    :param polygons: List of polygons to normalize.
+    :returns: Tuple of (normalized_polygons, min_x, min_y).
     """
 
-def normalize_polygons_numpy(polygons: Sequence[NDArray[f64]]) -> tuple[list[Any], float, float]:
+def normalize_polygons_numpy(polygons: Sequence[NDArray[f64]]) -> tuple[list[NDArray[f64]], float, float]:
     r"""
     Normalize polygons from numpy arrays.
+    
+    :param polygons: Sequence of 2D numpy arrays.
+    :returns: Tuple of (normalized_arrays, min_x, min_y).
     """
 
 def offset_polygon(polygon: Sequence[tuple[float, float]], offset: float) -> list[list[tuple[float, float]]]:
     r"""
     Offset (inflate/deflate) a polygon.
+    
+    :param polygon: Polygon as (x, y) points.
+    :param offset: Offset distance (positive to inflate, negative to deflate).
+    :returns: Offset polygon(s).
     """
 
 def point_in_polygon_numpy(point: tuple[float, float], polygon: NDArray[f64]) -> bool:
     r"""
     Check if point is in polygon from numpy array.
+    
+    :param point: Point (x, y) to test.
+    :param polygon: Polygon as a 2D numpy array.
+    :returns: True if point is inside the polygon.
     """
 
 def point_line_distance(point: tuple[float, float], line_start: tuple[float, float], line_end: tuple[float, float]) -> float:
     r"""
     Compute the distance from a point to a line.
+    
+    :param point: Point (x, y).
+    :param line_start: Line start point (x, y).
+    :param line_end: Line end point (x, y).
+    :returns: Perpendicular distance.
     """
 
 def polygon_area_numpy(polygon: NDArray[f64]) -> float:
     r"""
     Get the area of a polygon from numpy array.
+    
+    :param polygon: Polygon as a 2D numpy array.
+    :returns: Signed area.
     """
 
 def polygon_bounds_numpy(polygon: NDArray[f64]) -> tuple[float, float, float, float]:
     r"""
     Get bounds of a polygon from numpy array.
+    
+    :param polygon: Polygon as a 2D numpy array.
+    :returns: Bounding rectangle as (x_min, y_min, x_max, y_max).
     """
 
 def polygon_group_bounds_numpy(polygons: Sequence[NDArray[f64]]) -> tuple[float, float, float, float]:
     r"""
     Get bounds of polygon group from numpy arrays.
+    
+    :param polygons: Sequence of 2D numpy arrays.
+    :returns: Bounding rectangle as (x_min, y_min, x_max, y_max).
     """
 
 def polygon_perimeter_numpy(polygon: NDArray[f64]) -> float:
     r"""
     Get the perimeter of a polygon from numpy array.
+    
+    :param polygon: Polygon as a 2D numpy array.
+    :returns: Perimeter length.
     """
 
 def polygons_intersect(p1: Sequence[tuple[float, float]], p2: Sequence[tuple[float, float]], min_area: float = 0) -> bool:
     r"""
     Check if two polygons intersect.
+    
+    :param p1: First polygon as (x, y) points.
+    :param p2: Second polygon as (x, y) points.
+    :param min_area: Minimum intersection area threshold.
+    :returns: True if polygons intersect.
     """
 
 def polygons_intersect_numpy(poly1: NDArray[f64], poly2: NDArray[f64], min_area: float = 0) -> bool:
     r"""
     Check if polygons intersect from numpy arrays.
+    
+    :param poly1: First polygon as a 2D numpy array.
+    :param poly2: Second polygon as a 2D numpy array.
+    :param min_area: Minimum intersection area threshold.
+    :returns: True if polygons intersect.
     """
 
 def rotate_polygon(polygon: Sequence[tuple[float, float]], angle: float) -> list[tuple[float, float]]:
     r"""
     Rotate a polygon by an angle.
+    
+    :param polygon: Polygon as (x, y) points.
+    :param angle: Rotation angle in radians.
+    :returns: Rotated polygon.
     """
 
 def rotate_polygon_numpy(polygon: NDArray[f64], angle: float) -> Any:
     r"""
     Rotate a polygon from numpy array.
+    
+    :param polygon: Polygon as a 2D numpy array.
+    :param angle: Rotation angle in radians.
+    :returns: Rotated polygon as numpy array.
     """
 
 def rotate_polygons(polygons: Any, angle: float) -> list[list[tuple[float, float]]]:
     r"""
     Rotate multiple polygons by an angle.
+    
+    :param polygons: List of polygons to rotate.
+    :param angle: Rotation angle in radians.
+    :returns: Rotated polygons.
     """
 
 def rotate_polygons_numpy(polygons: Sequence[NDArray[f64]], angle: float) -> list[Any]:
     r"""
     Rotate polygons from numpy arrays.
+    
+    :param polygons: Sequence of 2D numpy arrays.
+    :param angle: Rotation angle in radians.
+    :returns: List of rotated numpy arrays.
     """
 
 def scale_polygon(polygon: Sequence[tuple[float, float]], scale: float, scale_y: Optional[float] = None) -> list[tuple[float, float]]:
     r"""
     Scale a polygon.
+    
+    :param polygon: Polygon as (x, y) points.
+    :param scale: X (and Y if scale_y is None) scale factor.
+    :param scale_y: Y scale factor (optional).
+    :returns: Scaled polygon.
     """
 
 def to_clipper_numpy(polygon: Any, scale: int = 10000000) -> list[tuple[int, int]]:
     r"""
     Convert a polygon to Clipper coordinates.
+    
+    :param polygon: Polygon as numpy array or list of tuples.
+    :param scale: Scale factor for integer conversion.
+    :returns: Polygon with integer coordinates for Clipper.
     """
 
 def translate_bounds(bounds: tuple[float, float, float, float], dx: float, dy: float) -> tuple[float, float, float, float]:
     r"""
     Translate a bounding rectangle.
+    
+    :param bounds: Bounding rectangle (x_min, y_min, x_max, y_max).
+    :param dx: X translation.
+    :param dy: Y translation.
+    :returns: Translated bounding rectangle.
     """
 
 def translate_polygon(polygon: Sequence[tuple[float, float]], dx: float, dy: float) -> list[tuple[float, float]]:
     r"""
     Translate a polygon.
+    
+    :param polygon: Polygon as (x, y) points.
+    :param dx: X translation.
+    :param dy: Y translation.
+    :returns: Translated polygon.
     """
 
 def translate_polygon_numpy(polygon: NDArray[f64], dx: float, dy: float) -> Any:
     r"""
     Translate a polygon from numpy array.
+    
+    :param polygon: Polygon as a 2D numpy array.
+    :param dx: X translation.
+    :param dy: Y translation.
+    :returns: Translated polygon as numpy array.
     """
 
 def translate_polygons(polygons: Any, dx: float, dy: float) -> list[list[tuple[float, float]]]:
     r"""
     Translate a list of polygons.
+    
+    :param polygons: List of polygons to translate.
+    :param dx: X translation.
+    :param dy: Y translation.
+    :returns: Translated polygons.
     """
 
 def translate_polygons_numpy(polygons: Sequence[NDArray[f64]], dx: float, dy: float) -> list[Any]:
     r"""
     Translate polygons from numpy arrays.
+    
+    :param polygons: Sequence of 2D numpy arrays.
+    :param dx: X translation.
+    :param dy: Y translation.
+    :returns: List of translated numpy arrays.
     """
 

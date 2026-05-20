@@ -50,6 +50,10 @@ __all__ = [
 def apply_affine_transform_to_array(data: Sequence[Sequence[float]], matrix: Sequence[Sequence[float]]) -> Any:
     r"""
     Apply an affine transform to path data.
+    
+    :param data: Array of command data.
+    :param matrix: 4x4 affine transformation matrix.
+    :returns: Numpy array of transformed data.
     """
 
 def are_points_equal(p1: tuple[float, float, float], p2: tuple[float, float, float], tolerance: float) -> bool:
@@ -59,6 +63,7 @@ def are_points_equal(p1: tuple[float, float, float], p2: tuple[float, float, flo
     :param p1: First point (x, y, z).
     :param p2: Second point (x, y, z).
     :param tolerance: Maximum allowed difference.
+    :returns: True if points are equal within tolerance.
     """
 
 def are_segments_equal(key1: Any, key2: Any, tolerance: float) -> bool:
@@ -68,111 +73,202 @@ def are_segments_equal(key1: Any, key2: Any, tolerance: float) -> bool:
     :param key1: First segment key tuple.
     :param key2: Second segment key tuple.
     :param tolerance: Maximum allowed difference.
+    :returns: True if segment keys are equal within tolerance.
     """
 
 def check_intersection(data1: Optional[Sequence[Sequence[float]]], data2: Optional[Sequence[Sequence[float]]], fail_on_t_junction: bool) -> bool:
     r"""
     Check if two paths intersect.
+    
+    :param data1: First array of command data or None.
+    :param data2: Second array of command data or None.
+    :param fail_on_t_junction: Whether T-junctions count as intersections.
+    :returns: True if intersections are found.
     """
 
 def check_intersection_from_array(data1: Sequence[Sequence[float]], data2: Sequence[Sequence[float]], fail_on_t_junction: bool) -> bool:
     r"""
     Check intersection between two arrays.
+    
+    :param data1: First array of command data.
+    :param data2: Second array of command data.
+    :param fail_on_t_junction: Whether T-junctions count as intersections.
+    :returns: True if intersections are found.
     """
 
 def check_self_intersection(data: Optional[Sequence[Sequence[float]]], fail_on_t_junction: bool) -> bool:
     r"""
     Check if a path has self-intersections.
+    
+    :param data: Array of command data or None.
+    :param fail_on_t_junction: Whether T-junctions count as intersections.
+    :returns: True if self-intersections are found.
     """
 
 def check_self_intersection_from_array(data: Sequence[Sequence[float]], fail_on_t_junction: bool) -> bool:
     r"""
     Check self-intersection from array data.
+    
+    :param data: Array of command data.
+    :param fail_on_t_junction: Whether T-junctions count as intersections.
+    :returns: True if self-intersections are found.
     """
 
 def close_all_contours(geometry: Geometry) -> Geometry:
     r"""
     Close all open contours in a geometry.
+    
+    :param geometry: Input geometry.
+    :returns: Geometry with all contours closed.
     """
 
 def close_geometry_gaps(geometry: Geometry, tolerance: float) -> Geometry:
     r"""
     Close gaps in a geometry.
+    
+    :param geometry: Input geometry.
+    :param tolerance: Maximum gap distance to close.
+    :returns: Geometry with gaps closed.
     """
 
 def convert_arc_to_beziers_from_array(start: tuple[float, float, float], end: tuple[float, float, float], center_offset: tuple[float, float], clockwise: bool) -> list[list[float]]:
     r"""
     Convert an arc to bezier curves.
+    
+    :param start: Start point (x, y, z).
+    :param end: End point (x, y, z).
+    :param center_offset: Center offset (dx, dy).
+    :param clockwise: Whether the arc is clockwise.
+    :returns: List of bezier command rows.
     """
 
 def create_arc_cmd(end: tuple[float, float, float], center: tuple[float, float], start: tuple[float, float, float]) -> list[float]:
     r"""
     Create an arc command array.
+    
+    :param end: End point (x, y, z).
+    :param center: Center offset (dx, dy).
+    :param start: Start point (x, y, z).
+    :returns: Arc command array (8 floats).
     """
 
 def create_line_cmd(end_point: tuple[float, float] | tuple[float, float, float]) -> list[float]:
     r"""
     Create a line command array from an end point.
+    
+    :param end_point: End point (x, y) or (x, y, z).
+    :returns: Line command array (8 floats).
     """
 
 def does_enclose(container: Geometry, content: Geometry) -> bool:
     r"""
     Check if one geometry encloses another.
+    
+    :param container: The container geometry.
+    :param content: The content geometry to test.
+    :returns: True if container encloses content.
     """
 
 def extract_overcut_rows(data: Optional[Sequence[Sequence[float]]], max_length: float) -> Optional[Any]:
     r"""
     Extract rows that exceed a maximum length.
+    
+    :param data: Array of command data or None.
+    :param max_length: Maximum allowed segment length.
+    :returns: Numpy array of overcut rows, or None.
     """
 
 def filter_to_external_contours(contours: list[Geometry]) -> list[Geometry]:
     r"""
     Filter to only external (outer) contours.
+    
+    :param contours: List of contour geometries.
+    :returns: List of external contour geometries.
     """
 
 def fit_arcs(data: Optional[Sequence[Sequence[float]]], tolerance: float, progress_callback: Optional[Callable[[float], None]] = None) -> Optional[list[list[float]]]:
     r"""
     Fit arcs to a path.
+    
+    :param data: Array of command data or None.
+    :param tolerance: Fitting tolerance.
+    :param progress_callback: Optional progress callback.
+    :returns: Fitted arc data or None.
     """
 
 def fit_curves(data: Optional[Sequence[Sequence[float]]], tolerance: float, preserve_beziers: bool, preserve_arcs: bool) -> Any:
     r"""
     Fit curves (lines, arcs, beziers) to path data.
+    
+    :param data: Array of command data or None.
+    :param tolerance: Fitting tolerance.
+    :param preserve_beziers: Whether to preserve existing beziers.
+    :param preserve_arcs: Whether to preserve existing arcs.
+    :returns: Numpy array of fitted curve data.
     """
 
 def flatten_to_points(data: Optional[Sequence[Sequence[float]]], tolerance: float) -> list[list[tuple[float, float, float]]]:
     r"""
     Flatten curves into linear segments.
+    
+    :param data: Array of command data or None.
+    :param tolerance: Flattening tolerance.
+    :returns: List of flattened point segments.
     """
 
 def get_angle_at_vertex(p0: tuple[float, float], p1: tuple[float, float], p2: tuple[float, float]) -> float:
     r"""
     Get the angle at a vertex between three points.
+    
+    :param p0: First point.
+    :param p1: Vertex point.
+    :param p2: Third point.
+    :returns: Angle in radians.
     """
 
 def get_area_from_array(data: Sequence[Sequence[float]]) -> float:
     r"""
     Compute the total area of path data.
+    
+    :param data: Array of command data.
+    :returns: Total signed area.
     """
 
 def get_bounding_rect_from_array(data: Sequence[Sequence[float]]) -> tuple[float, float, float, float]:
     r"""
     Compute the bounding rectangle of path data.
+    
+    :param data: Array of command data (rows of 8 floats).
+    :returns: Bounding rectangle as (x_min, y_min, x_max, y_max).
     """
 
 def get_outward_normal_at_from_array(data: Sequence[Sequence[float]], row_index: int, t: float) -> Optional[tuple[float, float]]:
     r"""
     Get the outward normal at a point on a segment.
+    
+    :param data: Array of command data.
+    :param row_index: Row index of the segment.
+    :param t: Parameter value along the segment (0..1).
+    :returns: Outward normal vector (nx, ny) or None.
     """
 
 def get_path_winding_order_from_array(data: Sequence[Sequence[float]], start_cmd_index: int) -> str:
     r"""
     Get the winding order (CW/CCW) of a path.
+    
+    :param data: Array of command data.
+    :param start_cmd_index: Index of the first command of the path.
+    :returns: Winding order as "CW" or "CCW".
     """
 
 def get_point_and_tangent_at(data: Sequence[Sequence[float]], row_index: int, t: float) -> Optional[tuple[tuple[float, float], tuple[float, float]]]:
     r"""
     Get the point and tangent at a parameter t on a segment.
+    
+    :param data: Array of command data.
+    :param row_index: Row index of the segment.
+    :param t: Parameter value along the segment (0..1).
+    :returns: Tuple of (point, tangent) or None.
     """
 
 def get_segment_key(data: Sequence[Sequence[float]], index: int, tolerance: float) -> Optional[Any]:
@@ -188,90 +284,159 @@ def get_segment_key(data: Sequence[Sequence[float]], index: int, tolerance: floa
 def get_subpath_area_from_array(data: Sequence[Sequence[float]], subpath_index: int) -> float:
     r"""
     Get the signed area of a subpath.
+    
+    :param data: Array of command data.
+    :param subpath_index: Index of the subpath.
+    :returns: Signed area of the subpath.
     """
 
 def get_subpath_vertices_from_array(data: Sequence[Sequence[float]], subpath_index: int) -> list[tuple[float, float]]:
     r"""
     Get the vertices of a subpath.
+    
+    :param data: Array of command data.
+    :param subpath_index: Index of the subpath.
+    :returns: List of vertex points (x, y).
     """
 
 def get_total_distance_from_array(data: Sequence[Sequence[float]]) -> float:
     r"""
     Compute the total distance of a path.
+    
+    :param data: Array of command data.
+    :returns: Total path length.
     """
 
 def get_valid_contours_data(contour_geometries: list[Geometry]) -> list[dict]:
     r"""
     Get valid contour data from a list of contour geometries.
+    
+    :param contour_geometries: List of contour geometries.
+    :returns: List of dicts with keys "geo", "vertices", "is_closed", "original_index".
     """
 
 def grow_geometry(geometry: Geometry, offset: float) -> Geometry:
     r"""
     Grow (offset) a geometry by a given amount.
+    
+    :param geometry: Input geometry to grow.
+    :param offset: Offset distance (positive to inflate, negative to deflate).
+    :returns: New grown geometry.
     """
 
 def is_clockwise(points: Sequence[tuple[float, float]]) -> bool:
     r"""
     Check if a polygon has clockwise winding order.
+    
+    :param points: Sequence of (x, y) points defining a polygon.
+    :returns: True if the winding is clockwise.
     """
 
 def is_closed(commands: Sequence[Sequence[float]], tolerance: float = 0.000001) -> bool:
     r"""
     Check if a path is closed.
+    
+    :param commands: Array of command data.
+    :param tolerance: Tolerance for end-to-start distance check.
+    :returns: True if the path is closed.
     """
 
 def linearize_geometry(data: Optional[Sequence[Sequence[float]]], tolerance: float) -> Any:
     r"""
     Linearize geometry data into line segments.
+    
+    :param data: Array of command data or None.
+    :param tolerance: Linearization tolerance.
+    :returns: Numpy array of linearized segments.
     """
 
 def map_geometry_to_frame(geometry: Geometry, origin: tuple[float, float], p_width: tuple[float, float], p_height: tuple[float, float], anchor_y: Optional[float] = None, stable_src_height: Optional[float] = None, anchor_x: Optional[float] = None, stable_src_width: Optional[float] = None) -> Geometry:
     r"""
     Map a geometry into a rectangular frame.
+    
+    :param geometry: Input geometry to map.
+    :param origin: Frame origin (x, y).
+    :param p_width: Width parameters (src, dst).
+    :param p_height: Height parameters (src, dst).
+    :param anchor_y: Optional vertical anchor.
+    :param stable_src_height: Optional stable source height.
+    :param anchor_x: Optional horizontal anchor.
+    :param stable_src_width: Optional stable source width.
+    :returns: Mapped geometry.
     """
 
 def normalize_winding_orders(contours: list[Geometry]) -> list[Geometry]:
     r"""
     Normalize winding orders of contours (outer CCW, inner CW).
+    
+    :param contours: List of contour geometries.
+    :returns: List of geometries with normalized winding.
     """
 
 def optimize_path_from_array(data: Optional[Sequence[Sequence[float]]], tolerance: float, fit_arcs: bool) -> Any:
     r"""
     Optimize a path by fitting arcs.
+    
+    :param data: Array of command data or None.
+    :param tolerance: Fitting tolerance.
+    :param fit_arcs: Whether to fit arcs (vs. only lines).
+    :returns: Numpy array of optimized path data.
     """
 
 def remove_duplicate_segments(data: Optional[Sequence[Sequence[float]]], tolerance: float = 0.000001) -> Any:
     r"""
     Remove duplicate segments from path data.
+    
+    :param data: Array of command data or None.
+    :param tolerance: Comparison tolerance.
+    :returns: Numpy array with duplicates removed.
     """
 
 def remove_duplicates(points: Sequence[tuple[float, float]]) -> list[tuple[float, float]]:
     r"""
     Remove duplicate points from a sequence.
+    
+    :param points: Sequence of (x, y) points.
+    :returns: List of unique points.
     """
 
 def remove_inner_edges(geometry: Geometry) -> Geometry:
     r"""
     Remove inner edges from a geometry.
+    
+    :param geometry: Input geometry.
+    :returns: Geometry with inner edges removed.
     """
 
 def reverse_contour(contour: Geometry) -> Geometry:
     r"""
     Reverse the direction of a contour.
+    
+    :param contour: Contour geometry to reverse.
+    :returns: Reversed contour geometry.
     """
 
 def split_inner_and_outer_contours(contours: list[Geometry]) -> tuple[list[Geometry], list[Geometry]]:
     r"""
     Split contours into inner and outer groups.
+    
+    :param contours: List of contour geometries.
+    :returns: Tuple of (inner_contours, outer_contours).
     """
 
 def split_into_components(geometry: Geometry) -> list[Geometry]:
     r"""
     Split a geometry into connected components.
+    
+    :param geometry: Input geometry to split.
+    :returns: List of component geometries.
     """
 
 def split_into_contours(geometry: Geometry) -> list[Geometry]:
     r"""
     Split a geometry into individual contours.
+    
+    :param geometry: Input geometry to split.
+    :returns: List of contour geometries.
     """
 

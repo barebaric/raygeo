@@ -16,45 +16,95 @@ __all__ = [
 def does_line_segment_intersect_circle(p1: tuple[float, float], p2: tuple[float, float], circle_center: tuple[float, float], circle_radius: float) -> bool:
     r"""
     Check if a line segment intersects a circle.
+    
+    :param p1: Start of the line segment.
+    :param p2: End of the line segment.
+    :param circle_center: Circle center (x, y).
+    :param circle_radius: Circle radius.
+    :returns: True if the segment intersects the circle.
     """
 
 def does_line_segment_intersect_rect(p1: tuple[float, float], p2: tuple[float, float], rect: tuple[float, float, float, float]) -> bool:
     r"""
     Check if a line segment intersects a rectangle.
+    
+    :param p1: Start of the line segment.
+    :param p2: End of the line segment.
+    :param rect: Rectangle (x_min, y_min, x_max, y_max).
+    :returns: True if the segment intersects the rectangle.
     """
 
 def get_line_closest_point(line_p1: tuple[float, float], line_p2: tuple[float, float], x: float, y: float) -> tuple[float, float]:
     r"""
     Get the closest point on a line to a given point.
+    
+    :param line_p1: First point on the line.
+    :param line_p2: Second point on the line.
+    :param x: X coordinate of target point.
+    :param y: Y coordinate of target point.
+    :returns: Closest point (x, y) on the line.
     """
 
 def get_line_line_intersection(p1: tuple[float, float], p2: tuple[float, float], p3: tuple[float, float], p4: tuple[float, float]) -> Optional[tuple[float, float]]:
     r"""
     Get the intersection of two infinite lines.
+    
+    :param p1: First point on line 1.
+    :param p2: Second point on line 1.
+    :param p3: First point on line 2.
+    :param p4: Second point on line 2.
+    :returns: Intersection point (x, y) or None.
     """
 
 def get_line_segment_closest_point(seg_p1: tuple[float, float], seg_p2: tuple[float, float], x: float, y: float) -> tuple[float, tuple[float, float], float]:
     r"""
     Get closest point on a line segment to a point.
+    
+    :param seg_p1: Start of the line segment.
+    :param seg_p2: End of the line segment.
+    :param x: X coordinate of target point.
+    :param y: Y coordinate of target point.
+    :returns: Tuple of (parameter, closest_point, distance).
     """
 
 def get_line_segment_intersection(p1: tuple[float, float], p2: tuple[float, float], p3: tuple[float, float], p4: tuple[float, float]) -> Optional[tuple[float, float]]:
     r"""
     Get the intersection of two line segments.
+    
+    :param p1: Start of segment 1.
+    :param p2: End of segment 1.
+    :param p3: Start of segment 2.
+    :param p4: End of segment 2.
+    :returns: Intersection point (x, y) or None.
     """
 
 def get_line_segment_polygon_intersections(p1: tuple[float, float], p2: tuple[float, float], polygon: list[list[tuple[float, float]]]) -> list[float]:
     r"""
     Get t-values of line segment-polygon intersections.
+    
+    :param p1: Start of the line segment.
+    :param p2: End of the line segment.
+    :param polygon: Polygon(s) to test against.
+    :returns: List of t-values where the segment intersects.
     """
 
 def get_point_line_distance(point: tuple[float, float], line_p1: tuple[float, float], line_p2: tuple[float, float]) -> float:
     r"""
     Get the distance from a point to a line.
+    
+    :param point: Point (x, y).
+    :param line_p1: First point on the line.
+    :param line_p2: Second point on the line.
+    :returns: Perpendicular distance.
     """
 
 def is_point_on_line_segment(point: tuple[float, float], seg_p1: tuple[float, float], seg_p2: tuple[float, float]) -> bool:
     r"""
     Check if a point is on a line segment.
+    
+    :param point: Point (x, y) to test.
+    :param seg_p1: Start of the line segment.
+    :param seg_p2: End of the line segment.
+    :returns: True if the point lies on the segment.
     """
 

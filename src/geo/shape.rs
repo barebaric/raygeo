@@ -454,7 +454,14 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
         center: tuple[float, float],
         clockwise: bool,
     ) -> tuple[float, float, float, float]:
-        """Get the bounding rectangle of an arc."""
+        """Get the bounding rectangle of an arc.
+
+        :param start: Arc start point (x, y).
+        :param end: Arc end point (x, y).
+        :param center: Arc center point (x, y).
+        :param clockwise: Whether the arc is clockwise.
+        :returns: Bounding rectangle as (x_min, y_min, x_max, y_max).
+        """
 "#, module = "raygeo.geo.shape.arc")]
 #[pyfunction(name = "get_arc_bounds")]
 #[pyo3(signature = (start, end, center, clockwise))]
@@ -473,7 +480,13 @@ fn get_arc_bounds_py(
         start: tuple[float, float],
         mouse: tuple[float, float],
     ) -> bool:
-        """Get the direction (CW/CCW) of an arc at a mouse point."""
+        """Get the direction (CW/CCW) of an arc at a mouse point.
+
+        :param center: Arc center (x, y).
+        :param start: Arc start point (x, y).
+        :param mouse: Mouse point (x, y).
+        :returns: True if clockwise, False if counter-clockwise.
+        """
 "#, module = "raygeo.geo.shape.arc")]
 #[pyfunction(name = "get_arc_direction")]
 fn get_arc_direction_py(center: Point, start: Point, mouse: Point) -> bool {
@@ -487,7 +500,14 @@ fn get_arc_direction_py(center: Point, start: Point, mouse: Point) -> bool {
         x: float,
         y: float,
     ) -> Optional[tuple[float, tuple[float, float], float]]:
-        """Get the closest point on an arc to a given point."""
+        """Get the closest point on an arc to a given point.
+
+        :param arc_cmd: Arc command row or MockArc-like object.
+        :param start_pos: Start position (x, y, z).
+        :param x: X coordinate of target point.
+        :param y: Y coordinate of target point.
+        :returns: Tuple of (parameter, closest_point, distance) or None.
+        """
 "#, module = "raygeo.geo.shape.arc")]
 #[pyfunction(name = "get_arc_closest_point")]
 fn get_arc_closest_point_py(
@@ -507,7 +527,14 @@ fn get_arc_closest_point_py(
         center: tuple[float, float],
         clockwise: bool,
     ) -> tuple[float, float]:
-        """Get the midpoint of an arc."""
+        """Get the midpoint of an arc.
+
+        :param start: Arc start point (x, y).
+        :param end: Arc end point (x, y).
+        :param center: Arc center point (x, y).
+        :param clockwise: Whether the arc is clockwise.
+        :returns: Midpoint (x, y).
+        """
 "#, module = "raygeo.geo.shape.arc")]
 #[pyfunction(name = "get_arc_midpoint")]
 #[pyo3(signature = (start, end, center, clockwise))]
@@ -527,7 +554,14 @@ fn get_arc_midpoint_py(
         center: tuple[float, float],
         clockwise: bool,
     ) -> tuple[float, float, float]:
-        """Get the start, end, and sweep angles of an arc."""
+        """Get the start, end, and sweep angles of an arc.
+
+        :param start: Arc start point (x, y).
+        :param end: Arc end point (x, y).
+        :param center: Arc center point (x, y).
+        :param clockwise: Whether the arc is clockwise.
+        :returns: Tuple of (start_angle, end_angle, sweep_angle) in radians.
+        """
 "#, module = "raygeo.geo.shape.arc")]
 #[pyfunction(name = "get_arc_angles")]
 #[pyo3(signature = (start, end, center, clockwise))]
@@ -548,7 +582,15 @@ fn get_arc_angles_py(
         clockwise: bool,
         rect: tuple[float, float, float, float],
     ) -> bool:
-        """Check if an arc intersects a rectangle."""
+        """Check if an arc intersects a rectangle.
+
+        :param arc_start: Arc start point (x, y).
+        :param arc_end: Arc end point (x, y).
+        :param arc_center: Arc center point (x, y).
+        :param clockwise: Whether the arc is clockwise.
+        :param rect: Rectangle (x_min, y_min, x_max, y_max).
+        :returns: True if the arc intersects the rectangle.
+        """
 "#, module = "raygeo.geo.shape.arc")]
 #[pyfunction(name = "does_arc_intersect_rect")]
 #[pyo3(signature = (arc_start, arc_end, arc_center, clockwise, rect))]
@@ -571,7 +613,16 @@ fn does_arc_intersect_rect_py(
         circle_center: tuple[float, float],
         circle_radius: float,
     ) -> bool:
-        """Check if an arc intersects a circle."""
+        """Check if an arc intersects a circle.
+
+        :param arc_start: Arc start point (x, y).
+        :param arc_end: Arc end point (x, y).
+        :param arc_center: Arc center point (x, y).
+        :param clockwise: Whether the arc is clockwise.
+        :param circle_center: Circle center (x, y).
+        :param circle_radius: Circle radius.
+        :returns: True if the arc intersects the circle.
+        """
 "#, module = "raygeo.geo.shape.arc")]
 #[pyfunction(name = "does_arc_intersect_circle")]
 #[pyo3(signature = (arc_start, arc_end, arc_center, clockwise, circle_center, circle_radius))]
@@ -598,7 +649,12 @@ fn does_arc_intersect_circle_py(
         points: Sequence[tuple[float, float]],
         center: tuple[float, float],
     ) -> bool:
-        """Check if an arc is clockwise."""
+        """Check if an arc is clockwise.
+
+        :param points: Sequence of (x, y) points on the arc.
+        :param center: Arc center (x, y).
+        :returns: True if the arc is clockwise.
+        """
 "#, module = "raygeo.geo.shape.arc")]
 #[pyfunction(name = "is_arc_clockwise")]
 fn is_arc_clockwise_py(points: Vec<PyPoint2D>, center: PyPoint2D) -> bool {
@@ -614,7 +670,15 @@ fn is_arc_clockwise_py(points: Vec<PyPoint2D>, center: PyPoint2D) -> bool {
         clockwise: bool,
         polygons: Any,
     ) -> bool:
-        """Check if an arc is inside a set of polygons."""
+        """Check if an arc is inside a set of polygons.
+
+        :param arc_start: Arc start point (x, y).
+        :param arc_end: Arc end point (x, y).
+        :param arc_center: Arc center point (x, y).
+        :param clockwise: Whether the arc is clockwise.
+        :param polygons: List of polygons to check against.
+        :returns: True if the arc is inside all polygons.
+        """
 "#, module = "raygeo.geo.shape.arc")]
 #[pyfunction(name = "is_arc_inside_polygons")]
 #[pyo3(signature = (arc_start, arc_end, arc_center, clockwise, polygons))]
@@ -636,7 +700,14 @@ fn is_arc_inside_polygons_py(
         end: float,
         clockwise: bool,
     ) -> bool:
-        """Check if an angle is between two other angles."""
+        """Check if an angle is between two other angles.
+
+        :param angle: Angle to test.
+        :param start: Start angle.
+        :param end: End angle.
+        :param clockwise: Whether the arc is clockwise.
+        :returns: True if angle is between start and end.
+        """
 "#, module = "raygeo.geo.shape.arc")]
 #[pyfunction(name = "is_angle_between")]
 #[pyo3(signature = (angle, start, end, clockwise))]
@@ -646,7 +717,11 @@ fn is_angle_between_py(angle: f64, start: f64, end: f64, clockwise: bool) -> boo
 
 #[gen_stub_pyfunction(python = r#"
     def normalize_angle(angle: float) -> float:
-        """Normalize an angle to the range [0, 2*pi)."""
+        """Normalize an angle to the range [0, 2*pi).
+
+        :param angle: Angle in radians.
+        :returns: Normalized angle in [0, 2*pi).
+        """
 "#, module = "raygeo.geo.shape.arc")]
 #[pyfunction(name = "normalize_angle")]
 fn normalize_angle_py(angle: f64) -> f64 {
@@ -659,7 +734,13 @@ fn normalize_angle_py(angle: f64) -> f64 {
         start_point: tuple[float, float, float],
         resolution: float = 0.1,
     ) -> list[tuple[tuple[float, float, float], tuple[float, float, float]]]:
-        """Linearize an arc into line segments."""
+        """Linearize an arc into line segments.
+
+        :param arc_cmd: Arc command row or MockArc-like object.
+        :param start_point: Start point (x, y, z).
+        :param resolution: Maximum segment length.
+        :returns: List of (p1, p2) segment pairs.
+        """
 "#, module = "raygeo.geo.shape.arc")]
 #[pyfunction(name = "linearize_arc")]
 #[pyo3(signature = (arc_cmd, start_point, resolution=0.1))]
@@ -678,7 +759,13 @@ fn linearize_arc_py(
         start_point: tuple[float, float, float],
         max_seg_length: float,
     ) -> list[list[float]]:
-        """Linearize an arc from array data."""
+        """Linearize an arc from array data.
+
+        :param data: Arc command row as a sequence of floats.
+        :param start_point: Start point (x, y, z).
+        :param max_seg_length: Maximum segment length.
+        :returns: List of segment rows.
+        """
 "#, module = "raygeo.geo.shape.arc")]
 #[pyfunction(name = "linearize_arc_from_array")]
 fn linearize_arc_from_array_py(
@@ -701,7 +788,15 @@ fn linearize_arc_from_array_py(
         p3: tuple[float, float],
         t: float,
     ) -> tuple[float, float]:
-        """Get a point on a cubic bezier at parameter t."""
+        """Get a point on a cubic bezier at parameter t.
+
+        :param p0: Start control point (x, y).
+        :param p1: First control point (x, y).
+        :param p2: Second control point (x, y).
+        :param p3: End control point (x, y).
+        :param t: Parameter value (0..1).
+        :returns: Point on the bezier curve (x, y).
+        """
 "#, module = "raygeo.geo.shape.bezier")]
 #[pyfunction(name = "get_bezier_point_at")]
 fn get_bezier_point_at_py(
@@ -725,7 +820,15 @@ fn get_bezier_point_at_py(
         tuple[tuple[float, float], tuple[float, float], tuple[float, float], tuple[float, float]],
         tuple[tuple[float, float], tuple[float, float], tuple[float, float], tuple[float, float]],
     ]:
-        """Split a cubic bezier at parameter t."""
+        """Split a cubic bezier at parameter t.
+
+        :param p0: Start control point (x, y).
+        :param p1: First control point (x, y).
+        :param p2: Second control point (x, y).
+        :param p3: End control point (x, y).
+        :param t: Split parameter (0..1).
+        :returns: Two bezier curves (left, right).
+        """
 "#, module = "raygeo.geo.shape.bezier")]
 #[pyfunction(name = "split_bezier")]
 fn split_bezier_py(
@@ -745,7 +848,14 @@ fn split_bezier_py(
         p2: tuple[float, float],
         p3: tuple[float, float],
     ) -> tuple[float, float, float, float]:
-        """Get the bounding rectangle of a cubic bezier."""
+        """Get the bounding rectangle of a cubic bezier.
+
+        :param p0: Start control point (x, y).
+        :param p1: First control point (x, y).
+        :param p2: Second control point (x, y).
+        :param p3: End control point (x, y).
+        :returns: Bounding rectangle as (x_min, y_min, x_max, y_max).
+        """
 "#, module = "raygeo.geo.shape.bezier")]
 #[pyfunction(name = "get_bezier_bounds")]
 fn get_bezier_bounds_py(
@@ -765,7 +875,15 @@ fn get_bezier_bounds_py(
         p3: tuple[float, float],
         rect: tuple[float, float, float, float],
     ) -> list[float]:
-        """Get intersection t-values of a bezier with a rectangle."""
+        """Get intersection t-values of a bezier with a rectangle.
+
+        :param p0: Start control point (x, y).
+        :param p1: First control point (x, y).
+        :param p2: Second control point (x, y).
+        :param p3: End control point (x, y).
+        :param rect: Rectangle (x_min, y_min, x_max, y_max).
+        :returns: List of t-values where the bezier intersects.
+        """
 "#, module = "raygeo.geo.shape.bezier")]
 #[pyfunction(name = "get_bezier_rect_intersections")]
 fn get_bezier_rect_intersections_py(
@@ -786,7 +904,15 @@ fn get_bezier_rect_intersections_py(
         p3: tuple[float, float],
         rect: tuple[float, float, float, float],
     ) -> list[tuple[tuple[float, float], tuple[float, float], tuple[float, float], tuple[float, float]]]:
-        """Clip a cubic bezier with a rectangle."""
+        """Clip a cubic bezier with a rectangle.
+
+        :param p0: Start control point (x, y).
+        :param p1: First control point (x, y).
+        :param p2: Second control point (x, y).
+        :param p3: End control point (x, y).
+        :param rect: Clipping rectangle (x_min, y_min, x_max, y_max).
+        :returns: List of bezier segments inside the rectangle.
+        """
 "#, module = "raygeo.geo.shape.bezier")]
 #[pyfunction(name = "clip_bezier_with_rect")]
 fn clip_bezier_with_rect_py(
@@ -806,7 +932,14 @@ fn clip_bezier_with_rect_py(
         p2: tuple[float, float],
         p3: tuple[float, float],
     ) -> tuple[tuple[float, float], tuple[float, float], tuple[float, float]]:
-        """Convert a cubic bezier to a quadratic bezier."""
+        """Convert a cubic bezier to a quadratic bezier.
+
+        :param p0: Start control point (x, y).
+        :param p1: First control point (x, y).
+        :param p2: Second control point (x, y).
+        :param p3: End control point (x, y).
+        :returns: Quadratic bezier (p0, p1, p2).
+        """
 "#, module = "raygeo.geo.shape.bezier")]
 #[pyfunction(name = "convert_cubic_bezier_to_quadratic")]
 fn convert_cubic_bezier_to_quadratic_py(
@@ -826,7 +959,15 @@ fn convert_cubic_bezier_to_quadratic_py(
         p3: tuple[float, float],
         polygons: Any,
     ) -> bool:
-        """Check if a bezier curve is inside a set of polygons."""
+        """Check if a bezier curve is inside a set of polygons.
+
+        :param p0: Start control point (x, y).
+        :param p1: First control point (x, y).
+        :param p2: Second control point (x, y).
+        :param p3: End control point (x, y).
+        :param polygons: List of polygons to check against.
+        :returns: True if the bezier is inside all polygons.
+        """
 "#, module = "raygeo.geo.shape.bezier")]
 #[pyfunction(name = "is_bezier_inside_polygons")]
 fn is_bezier_inside_polygons_py(
@@ -851,7 +992,15 @@ fn is_bezier_inside_polygons_py(
         p3: tuple[float, float, float],
         num_steps: int,
     ) -> list[tuple[tuple[float, float, float], tuple[float, float, float]]]:
-        """Linearize a bezier into line segments."""
+        """Linearize a bezier into line segments.
+
+        :param p0: Start control point (x, y, z).
+        :param p1: First control point (x, y, z).
+        :param p2: Second control point (x, y, z).
+        :param p3: End control point (x, y, z).
+        :param num_steps: Number of linearization steps.
+        :returns: List of (p1, p2) segment pairs.
+        """
 "#, module = "raygeo.geo.shape.bezier")]
 #[pyfunction(name = "linearize_bezier")]
 fn linearize_bezier_py(
@@ -874,7 +1023,16 @@ fn linearize_bezier_py(
         tolerance_sq: float,
         max_subdivisions: int = 20,
     ) -> list[tuple[float, float]]:
-        """Adaptively linearize a bezier curve."""
+        """Adaptively linearize a bezier curve.
+
+        :param p0: Start control point (x, y).
+        :param p1: First control point (x, y).
+        :param p2: Second control point (x, y).
+        :param p3: End control point (x, y).
+        :param tolerance_sq: Squared tolerance for subdivision.
+        :param max_subdivisions: Maximum recursion depth.
+        :returns: List of linearized points (x, y).
+        """
 "#, module = "raygeo.geo.shape.bezier")]
 #[pyfunction(name = "linearize_bezier_adaptive")]
 #[pyo3(signature = (p0, p1, p2, p3, tolerance_sq, max_subdivisions=20))]
@@ -895,7 +1053,13 @@ fn linearize_bezier_adaptive_py(
         start_point: tuple[float, float, float],
         max_seg_length: float,
     ) -> list[list[float]]:
-        """Linearize a bezier from array data."""
+        """Linearize a bezier from array data.
+
+        :param bezier_row: Bezier command row.
+        :param start_point: Start point (x, y, z).
+        :param max_seg_length: Maximum segment length.
+        :returns: List of segment rows.
+        """
 "#, module = "raygeo.geo.shape.bezier")]
 #[pyfunction(name = "linearize_bezier_from_array")]
 fn linearize_bezier_from_array_py(
@@ -918,7 +1082,15 @@ fn linearize_bezier_from_array_py(
         p3: tuple[float, float, float],
         tolerance: float = 0.1,
     ) -> list[tuple[float, float, float]]:
-        """Linearize a single bezier segment."""
+        """Linearize a single bezier segment.
+
+        :param p0: Start control point (x, y, z).
+        :param p1: First control point (x, y, z).
+        :param p2: Second control point (x, y, z).
+        :param p3: End control point (x, y, z).
+        :param tolerance: Linearization tolerance.
+        :returns: List of linearized points (x, y, z).
+        """
 "#, module = "raygeo.geo.shape.bezier")]
 #[pyfunction(name = "linearize_bezier_segment")]
 #[pyo3(signature = (p0, p1, p2, p3, tolerance=0.1))]
@@ -949,7 +1121,16 @@ fn linearize_bezier_segment_py(
         max_subdivisions: int,
         pts: list,
     ) -> None:
-        """Flatten a bezier curve into points."""
+        """Flatten a bezier curve into points.
+
+        :param p0: Start control point (x, y, z).
+        :param p1: First control point (x, y, z).
+        :param p2: Second control point (x, y, z).
+        :param p3: End control point (x, y, z).
+        :param tolerance: Flattening tolerance.
+        :param max_subdivisions: Maximum recursion depth.
+        :param pts: Output list to append points to.
+        """
 "#, module = "raygeo.geo.shape.bezier")]
 #[pyfunction(name = "flatten_bezier")]
 fn flatten_bezier_py(
@@ -986,7 +1167,14 @@ fn flatten_bezier_py(
         c: tuple[float, float, float],
         d: tuple[float, float, float],
     ) -> float:
-        """Compute the flatness squared of a cubic bezier."""
+        """Compute the flatness squared of a cubic bezier.
+
+        :param a: Start point (x, y, z).
+        :param b: First control point (x, y, z).
+        :param c: Second control point (x, y, z).
+        :param d: End point (x, y, z).
+        :returns: Flatness squared value.
+        """
 "#, module = "raygeo.geo.shape.bezier")]
 #[pyfunction(name = "bezier_flatness_sq")]
 fn bezier_flatness_sq_py(
@@ -1007,7 +1195,16 @@ fn bezier_flatness_sq_py(
         vz: float = 0.0,
         norm_sq: float = 0.0,
     ) -> float:
-        """Compute the perpendicular distance squared."""
+        """Compute the perpendicular distance squared.
+
+        :param pt: Point to measure from.
+        :param origin: Origin of the line.
+        :param vx: X component of line direction.
+        :param vy: Y component of line direction.
+        :param vz: Z component of line direction.
+        :param norm_sq: Precomputed squared norm (optional).
+        :returns: Perpendicular distance squared.
+        """
 "#, module = "raygeo.geo.shape.bezier")]
 #[pyfunction(name = "perp_dist_sq")]
 #[pyo3(signature = (pt, origin, vx, vy, vz=0.0, norm_sq=0.0))]
@@ -1029,7 +1226,14 @@ fn perp_dist_sq_py(
         c2: tuple[float, float],
         r2: float,
     ) -> list[tuple[float, float]]:
-        """Get intersection points of two circles."""
+        """Get intersection points of two circles.
+
+        :param c1: Center of first circle (x, y).
+        :param r1: Radius of first circle.
+        :param c2: Center of second circle (x, y).
+        :param r2: Radius of second circle.
+        :returns: List of intersection points (x, y).
+        """
 "#, module = "raygeo.geo.shape.circle")]
 #[pyfunction(name = "get_circle_circle_intersections")]
 fn get_circle_circle_intersections_py(
@@ -1047,7 +1251,13 @@ fn get_circle_circle_intersections_py(
         radius: float,
         rect: tuple[float, float, float, float],
     ) -> bool:
-        """Check if a circle is inside a rectangle."""
+        """Check if a circle is inside a rectangle.
+
+        :param center: Circle center (x, y).
+        :param radius: Circle radius.
+        :param rect: Rectangle (x_min, y_min, x_max, y_max).
+        :returns: True if the circle is fully inside the rectangle.
+        """
 "#, module = "raygeo.geo.shape.circle")]
 #[pyfunction(name = "is_circle_inside_rect")]
 fn is_circle_inside_rect_py(
@@ -1064,7 +1274,13 @@ fn is_circle_inside_rect_py(
         radius: float,
         rect: tuple[float, float, float, float],
     ) -> bool:
-        """Check if a circle intersects a rectangle."""
+        """Check if a circle intersects a rectangle.
+
+        :param center: Circle center (x, y).
+        :param radius: Circle radius.
+        :param rect: Rectangle (x_min, y_min, x_max, y_max).
+        :returns: True if the circle intersects the rectangle.
+        """
 "#, module = "raygeo.geo.shape.circle")]
 #[pyfunction(name = "does_circle_intersect_rect")]
 fn does_circle_intersect_rect_py(
@@ -1082,7 +1298,14 @@ fn does_circle_intersect_rect_py(
         circle_center: tuple[float, float],
         circle_radius: float,
     ) -> bool:
-        """Check if a line segment intersects a circle."""
+        """Check if a line segment intersects a circle.
+
+        :param p1: Start point of the line segment (x, y).
+        :param p2: End point of the line segment (x, y).
+        :param circle_center: Circle center (x, y).
+        :param circle_radius: Circle radius.
+        :returns: True if the line segment intersects the circle.
+        """
 "#, module = "raygeo.geo.shape.circle")]
 #[pyfunction(name = "line_segment_intersects_circle")]
 fn line_segment_intersects_circle_py(
@@ -1100,7 +1323,13 @@ fn line_segment_intersects_circle_py(
         center: tuple[float, float],
         radius: float,
     ) -> Optional[tuple[float, float]]:
-        """Project a point onto a circle."""
+        """Project a point onto a circle.
+
+        :param point: Point to project (x, y).
+        :param center: Circle center (x, y).
+        :param radius: Circle radius.
+        :returns: Projected point on the circle (x, y).
+        """
 "#, module = "raygeo.geo.shape.circle")]
 #[pyfunction(name = "project_point_onto_circle")]
 fn project_point_onto_circle_py(
@@ -1116,7 +1345,12 @@ fn project_point_onto_circle_py(
         polygon: Sequence[tuple[float, float]],
         tolerance: Optional[float] = None,
     ) -> Optional[list[tuple[float, float]]]:
-        """Clean a polygon by removing near-duplicate points."""
+        """Clean a polygon by removing near-duplicate points.
+
+        :param polygon: Input polygon as (x, y) points.
+        :param tolerance: Distance tolerance for deduplication.
+        :returns: Cleaned polygon or None.
+        """
 "#, module = "raygeo.geo.shape.polygon")]
 #[pyfunction(name = "clean_polygon")]
 #[pyo3(signature = (polygon, tolerance=None))]
@@ -1130,7 +1364,13 @@ fn clean_polygon_py(polygon: Vec<PyPoint2D>, tolerance: Option<f64>) -> Option<V
         b: float,
         tolerance: Optional[float] = None,
     ) -> bool:
-        """Check if two floats are almost equal."""
+        """Check if two floats are almost equal.
+
+        :param a: First float.
+        :param b: Second float.
+        :param tolerance: Comparison tolerance.
+        :returns: True if |a - b| < tolerance.
+        """
 "#, module = "raygeo.geo.shape.polygon")]
 #[pyfunction(name = "is_almost_equal")]
 #[pyo3(signature = (a, b, tolerance=None))]
@@ -1140,7 +1380,11 @@ fn is_almost_equal_py(a: f64, b: f64, tolerance: Option<f64>) -> bool {
 
 #[gen_stub_pyfunction(python = r#"
     def normalize_polygons(polygons: Any) -> tuple[list[list[tuple[float, float]]], float, float]:
-        """Normalize polygons (outer CCW, inner CW)."""
+        """Normalize polygons (outer CCW, inner CW).
+
+        :param polygons: List of polygons to normalize.
+        :returns: Tuple of (normalized_polygons, min_x, min_y).
+        """
 "#, module = "raygeo.geo.shape.polygon")]
 #[pyfunction(name = "normalize_polygons")]
 fn normalize_polygons_py(polygons: &Bound<'_, PyAny>) -> PyResult<(Vec<Vec<Point>>, f64, f64)> {
@@ -1154,7 +1398,13 @@ fn normalize_polygons_py(polygons: &Bound<'_, PyAny>) -> PyResult<(Vec<Vec<Point
         dx: float,
         dy: float,
     ) -> tuple[float, float, float, float]:
-        """Translate a bounding rectangle."""
+        """Translate a bounding rectangle.
+
+        :param bounds: Bounding rectangle (x_min, y_min, x_max, y_max).
+        :param dx: X translation.
+        :param dy: Y translation.
+        :returns: Translated bounding rectangle.
+        """
 "#, module = "raygeo.geo.shape.polygon")]
 #[pyfunction(name = "translate_bounds")]
 fn translate_bounds_py(bounds: (f64, f64, f64, f64), dx: f64, dy: f64) -> (f64, f64, f64, f64) {
@@ -1163,7 +1413,13 @@ fn translate_bounds_py(bounds: (f64, f64, f64, f64), dx: f64, dy: f64) -> (f64, 
 
 #[gen_stub_pyfunction(python = r#"
     def translate_polygons(polygons: Any, dx: float, dy: float) -> list[list[tuple[float, float]]]:
-        """Translate a list of polygons."""
+        """Translate a list of polygons.
+
+        :param polygons: List of polygons to translate.
+        :param dx: X translation.
+        :param dy: Y translation.
+        :returns: Translated polygons.
+        """
 "#, module = "raygeo.geo.shape.polygon")]
 #[pyfunction(name = "translate_polygons")]
 fn translate_polygons_py(polygons: &Bound<'_, PyAny>, dx: f64, dy: f64) -> PyResult<Vec<Vec<Point>>> {
@@ -1177,7 +1433,13 @@ fn translate_polygons_py(polygons: &Bound<'_, PyAny>, dx: f64, dy: f64) -> PyRes
         line_start: tuple[float, float],
         line_end: tuple[float, float],
     ) -> float:
-        """Compute the distance from a point to a line."""
+        """Compute the distance from a point to a line.
+
+        :param point: Point (x, y).
+        :param line_start: Line start point (x, y).
+        :param line_end: Line end point (x, y).
+        :returns: Perpendicular distance.
+        """
 "#, module = "raygeo.geo.shape.polygon")]
 #[pyfunction(name = "point_line_distance")]
 fn point_line_distance_py(point: Point, line_start: Point, line_end: Point) -> f64 {
@@ -1186,7 +1448,11 @@ fn point_line_distance_py(point: Point, line_start: Point, line_end: Point) -> f
 
 #[gen_stub_pyfunction(python = r#"
     def get_polygon_area(polygon: Sequence[tuple[float, float]]) -> float:
-        """Get the unsigned area of a polygon."""
+        """Get the unsigned area of a polygon.
+
+        :param polygon: Polygon as (x, y) points.
+        :returns: Unsigned area.
+        """
 "#, module = "raygeo.geo.shape.polygon")]
 #[pyfunction(name = "get_polygon_area")]
 fn get_polygon_area_py(polygon: Vec<PyPoint2D>) -> f64 {
@@ -1197,7 +1463,11 @@ fn get_polygon_area_py(polygon: Vec<PyPoint2D>) -> f64 {
     def get_polygon_signed_area(
         polygon: Sequence[tuple[float, float]],
     ) -> float:
-        """Get the signed area of a polygon."""
+        """Get the signed area of a polygon.
+
+        :param polygon: Polygon as (x, y) points.
+        :returns: Signed area (positive for CCW, negative for CW).
+        """
 "#, module = "raygeo.geo.shape.polygon")]
 #[pyfunction(name = "get_polygon_signed_area")]
 fn get_polygon_signed_area_py(polygon: Vec<PyPoint2D>) -> f64 {
@@ -1208,7 +1478,11 @@ fn get_polygon_signed_area_py(polygon: Vec<PyPoint2D>) -> f64 {
     def get_polygon_perimeter(
         polygon: Sequence[tuple[float, float]],
     ) -> float:
-        """Get the perimeter of a polygon."""
+        """Get the perimeter of a polygon.
+
+        :param polygon: Polygon as (x, y) points.
+        :returns: Perimeter length.
+        """
 "#, module = "raygeo.geo.shape.polygon")]
 #[pyfunction(name = "get_polygon_perimeter")]
 fn get_polygon_perimeter_py(polygon: Vec<PyPoint2D>) -> f64 {
@@ -1219,7 +1493,11 @@ fn get_polygon_perimeter_py(polygon: Vec<PyPoint2D>) -> f64 {
     def get_polygon_bounds(
         polygon: Sequence[tuple[float, float]],
     ) -> tuple[float, float, float, float]:
-        """Get the bounding rectangle of a polygon."""
+        """Get the bounding rectangle of a polygon.
+
+        :param polygon: Polygon as (x, y) points.
+        :returns: Bounding rectangle as (x_min, y_min, x_max, y_max).
+        """
 "#, module = "raygeo.geo.shape.polygon")]
 #[pyfunction(name = "get_polygon_bounds")]
 fn get_polygon_bounds_py(polygon: Vec<PyPoint2D>) -> (f64, f64, f64, f64) {
@@ -1230,7 +1508,11 @@ fn get_polygon_bounds_py(polygon: Vec<PyPoint2D>) -> (f64, f64, f64, f64) {
     def get_polygon_group_bounds(
         polygons: Any,
     ) -> tuple[float, float, float, float]:
-        """Get the bounding rectangle of a group of polygons."""
+        """Get the bounding rectangle of a group of polygons.
+
+        :param polygons: List of polygons.
+        :returns: Bounding rectangle as (x_min, y_min, x_max, y_max).
+        """
 "#, module = "raygeo.geo.shape.polygon")]
 #[pyfunction(name = "get_polygon_group_bounds")]
 fn get_polygon_group_bounds_py(
@@ -1244,7 +1526,11 @@ fn get_polygon_group_bounds_py(
     def get_polygon_centroid(
         polygon: Sequence[tuple[float, float]],
     ) -> tuple[float, float]:
-        """Get the centroid of a polygon."""
+        """Get the centroid of a polygon.
+
+        :param polygon: Polygon as (x, y) points.
+        :returns: Centroid point (x, y).
+        """
 "#, module = "raygeo.geo.shape.polygon")]
 #[pyfunction(name = "get_polygon_centroid")]
 fn get_polygon_centroid_py(polygon: Vec<PyPoint2D>) -> Point {
@@ -1255,7 +1541,11 @@ fn get_polygon_centroid_py(polygon: Vec<PyPoint2D>) -> Point {
     def is_polygon_convex(
         polygon: Sequence[tuple[float, float]],
     ) -> bool:
-        """Check if a polygon is convex."""
+        """Check if a polygon is convex.
+
+        :param polygon: Polygon as (x, y) points.
+        :returns: True if the polygon is convex.
+        """
 "#, module = "raygeo.geo.shape.polygon")]
 #[pyfunction(name = "is_polygon_convex")]
 fn is_polygon_convex_py(polygon: Vec<PyPoint2D>) -> bool {
@@ -1266,7 +1556,11 @@ fn is_polygon_convex_py(polygon: Vec<PyPoint2D>) -> bool {
     def get_polygon_convex_hull(
         polygon: Sequence[tuple[float, float]],
     ) -> list[tuple[float, float]]:
-        """Get the convex hull of a polygon."""
+        """Get the convex hull of a polygon.
+
+        :param polygon: Polygon as (x, y) points.
+        :returns: Convex hull as list of points.
+        """
 "#, module = "raygeo.geo.shape.polygon")]
 #[pyfunction(name = "get_polygon_convex_hull")]
 fn get_polygon_convex_hull_py(polygon: Vec<PyPoint2D>) -> Vec<Point> {
@@ -1277,7 +1571,11 @@ fn get_polygon_convex_hull_py(polygon: Vec<PyPoint2D>) -> Vec<Point> {
     def get_polygon_edges(
         polygon: Sequence[tuple[float, float]],
     ) -> list[tuple[tuple[float, float], tuple[float, float]]]:
-        """Get the edges of a polygon."""
+        """Get the edges of a polygon.
+
+        :param polygon: Polygon as (x, y) points.
+        :returns: List of ((x1, y1), (x2, y2)) edges.
+        """
 "#, module = "raygeo.geo.shape.polygon")]
 #[pyfunction(name = "get_polygon_edges")]
 fn get_polygon_edges_py(polygon: Vec<PyPoint2D>) -> Vec<(Point, Point)> {
@@ -1289,7 +1587,12 @@ fn get_polygon_edges_py(polygon: Vec<PyPoint2D>) -> Vec<(Point, Point)> {
         point: tuple[float, float],
         polygon: Sequence[tuple[float, float]],
     ) -> bool:
-        """Check if a point is inside a polygon."""
+        """Check if a point is inside a polygon.
+
+        :param point: Point (x, y) to test.
+        :param polygon: Polygon as (x, y) points.
+        :returns: True if point is inside the polygon.
+        """
 "#, module = "raygeo.geo.shape.polygon")]
 #[pyfunction(name = "is_point_inside_polygon")]
 fn is_point_inside_polygon_py(point: Point, polygon: Vec<PyPoint2D>) -> bool {
@@ -1301,7 +1604,12 @@ fn is_point_inside_polygon_py(point: Point, polygon: Vec<PyPoint2D>) -> bool {
         polygon: Sequence[tuple[float, float]],
         offset: float,
     ) -> list[list[tuple[float, float]]]:
-        """Offset (inflate/deflate) a polygon."""
+        """Offset (inflate/deflate) a polygon.
+
+        :param polygon: Polygon as (x, y) points.
+        :param offset: Offset distance (positive to inflate, negative to deflate).
+        :returns: Offset polygon(s).
+        """
 "#, module = "raygeo.geo.shape.polygon")]
 #[pyfunction(name = "offset_polygon")]
 fn offset_polygon_py(polygon: Vec<PyPoint2D>, offset: f64) -> Vec<Vec<Point>> {
@@ -1310,7 +1618,11 @@ fn offset_polygon_py(polygon: Vec<PyPoint2D>, offset: f64) -> Vec<Vec<Point>> {
 
 #[gen_stub_pyfunction(python = r#"
     def get_polygons_union(polygons: Any) -> list[list[tuple[float, float]]]:
-        """Get the union of multiple polygons."""
+        """Get the union of multiple polygons.
+
+        :param polygons: List of polygons to union.
+        :returns: Union polygon(s).
+        """
 "#, module = "raygeo.geo.shape.polygon")]
 #[pyfunction(name = "get_polygons_union")]
 fn get_polygons_union_py(polygons: &Bound<'_, PyAny>) -> PyResult<Vec<Vec<Point>>> {
@@ -1323,7 +1635,12 @@ fn get_polygons_union_py(polygons: &Bound<'_, PyAny>) -> PyResult<Vec<Vec<Point>
         poly1: Sequence[tuple[float, float]],
         poly2: Sequence[tuple[float, float]],
     ) -> list[list[tuple[float, float]]]:
-        """Get the intersection of two polygons."""
+        """Get the intersection of two polygons.
+
+        :param poly1: First polygon as (x, y) points.
+        :param poly2: Second polygon as (x, y) points.
+        :returns: Intersection polygon(s).
+        """
 "#, module = "raygeo.geo.shape.polygon")]
 #[pyfunction(name = "get_polygons_intersection")]
 fn get_polygons_intersection_py(
@@ -1338,7 +1655,12 @@ fn get_polygons_intersection_py(
         poly1: Sequence[tuple[float, float]],
         poly2: Sequence[tuple[float, float]],
     ) -> list[list[tuple[float, float]]]:
-        """Get the difference of two polygons."""
+        """Get the difference of two polygons.
+
+        :param poly1: First polygon as (x, y) points.
+        :param poly2: Second polygon to subtract.
+        :returns: Difference polygon(s).
+        """
 "#, module = "raygeo.geo.shape.polygon")]
 #[pyfunction(name = "get_polygons_difference")]
 fn get_polygons_difference_py(
@@ -1354,7 +1676,13 @@ fn get_polygons_difference_py(
         p2: Sequence[tuple[float, float]],
         min_area: float = 0.0,
     ) -> bool:
-        """Check if two polygons intersect."""
+        """Check if two polygons intersect.
+
+        :param p1: First polygon as (x, y) points.
+        :param p2: Second polygon as (x, y) points.
+        :param min_area: Minimum intersection area threshold.
+        :returns: True if polygons intersect.
+        """
 "#, module = "raygeo.geo.shape.polygon")]
 #[pyfunction(name = "polygons_intersect")]
 #[pyo3(signature = (p1, p2, min_area=0.0))]
@@ -1372,7 +1700,13 @@ fn polygons_intersect_py(
         flip_h: bool,
         flip_v: bool,
     ) -> list[tuple[float, float]]:
-        """Flip a polygon horizontally and/or vertically."""
+        """Flip a polygon horizontally and/or vertically.
+
+        :param polygon: Polygon as (x, y) points.
+        :param flip_h: Whether to flip horizontally.
+        :param flip_v: Whether to flip vertically.
+        :returns: Flipped polygon.
+        """
 "#, module = "raygeo.geo.shape.polygon")]
 #[pyfunction(name = "flip_polygon")]
 fn flip_polygon_py(
@@ -1389,7 +1723,13 @@ fn flip_polygon_py(
         flip_h: bool,
         flip_v: bool,
     ) -> list[list[tuple[float, float]]]:
-        """Flip multiple polygons."""
+        """Flip multiple polygons.
+
+        :param polygons: List of polygons to flip.
+        :param flip_h: Whether to flip horizontally.
+        :param flip_v: Whether to flip vertically.
+        :returns: Flipped polygons.
+        """
 "#, module = "raygeo.geo.shape.polygon")]
 #[pyfunction(name = "flip_polygons")]
 fn flip_polygons_py(
@@ -1406,7 +1746,12 @@ fn flip_polygons_py(
         polygon: Sequence[tuple[float, float]],
         angle: float,
     ) -> list[tuple[float, float]]:
-        """Rotate a polygon by an angle."""
+        """Rotate a polygon by an angle.
+
+        :param polygon: Polygon as (x, y) points.
+        :param angle: Rotation angle in radians.
+        :returns: Rotated polygon.
+        """
 "#, module = "raygeo.geo.shape.polygon")]
 #[pyfunction(name = "rotate_polygon")]
 fn rotate_polygon_py(polygon: Vec<PyPoint2D>, angle: f64) -> Vec<Point> {
@@ -1415,7 +1760,12 @@ fn rotate_polygon_py(polygon: Vec<PyPoint2D>, angle: f64) -> Vec<Point> {
 
 #[gen_stub_pyfunction(python = r#"
     def rotate_polygons(polygons: Any, angle: float) -> list[list[tuple[float, float]]]:
-        """Rotate multiple polygons by an angle."""
+        """Rotate multiple polygons by an angle.
+
+        :param polygons: List of polygons to rotate.
+        :param angle: Rotation angle in radians.
+        :returns: Rotated polygons.
+        """
 "#, module = "raygeo.geo.shape.polygon")]
 #[pyfunction(name = "rotate_polygons")]
 fn rotate_polygons_py(
@@ -1432,7 +1782,13 @@ fn rotate_polygons_py(
         scale: float,
         scale_y: Optional[float] = None,
     ) -> list[tuple[float, float]]:
-        """Scale a polygon."""
+        """Scale a polygon.
+
+        :param polygon: Polygon as (x, y) points.
+        :param scale: X (and Y if scale_y is None) scale factor.
+        :param scale_y: Y scale factor (optional).
+        :returns: Scaled polygon.
+        """
 "#, module = "raygeo.geo.shape.polygon")]
 #[pyfunction(name = "scale_polygon")]
 #[pyo3(signature = (polygon, scale, scale_y=None))]
@@ -1446,7 +1802,13 @@ fn scale_polygon_py(polygon: Vec<PyPoint2D>, scale: f64, scale_y: Option<f64>) -
         dx: float,
         dy: float,
     ) -> list[tuple[float, float]]:
-        """Translate a polygon."""
+        """Translate a polygon.
+
+        :param polygon: Polygon as (x, y) points.
+        :param dx: X translation.
+        :param dy: Y translation.
+        :returns: Translated polygon.
+        """
 "#, module = "raygeo.geo.shape.polygon")]
 #[pyfunction(name = "translate_polygon")]
 fn translate_polygon_py(polygon: Vec<PyPoint2D>, dx: f64, dy: f64) -> Vec<Point> {
@@ -1479,7 +1841,11 @@ fn _polygons_to_numpy_list(py: Python<'_>, polys: Vec<Vec<(f64, f64)>>) -> Vec<P
 
 #[gen_stub_pyfunction(python = r#"
     def polygon_area_numpy(polygon: NDArray[f64]) -> float:
-        """Get the area of a polygon from numpy array."""
+        """Get the area of a polygon from numpy array.
+
+        :param polygon: Polygon as a 2D numpy array.
+        :returns: Signed area.
+        """
 "#, module = "raygeo.geo.shape.polygon")]
 #[pyfunction(name = "polygon_area_numpy")]
 fn polygon_area_numpy_py(polygon: Bound<'_, PyArray2<f64>>) -> f64 {
@@ -1491,7 +1857,11 @@ fn polygon_area_numpy_py(polygon: Bound<'_, PyArray2<f64>>) -> f64 {
     def polygon_bounds_numpy(
         polygon: NDArray[f64],
     ) -> tuple[float, float, float, float]:
-        """Get bounds of a polygon from numpy array."""
+        """Get bounds of a polygon from numpy array.
+
+        :param polygon: Polygon as a 2D numpy array.
+        :returns: Bounding rectangle as (x_min, y_min, x_max, y_max).
+        """
 "#, module = "raygeo.geo.shape.polygon")]
 #[pyfunction(name = "polygon_bounds_numpy")]
 fn polygon_bounds_numpy_py(polygon: Bound<'_, PyArray2<f64>>) -> (f64, f64, f64, f64) {
@@ -1501,7 +1871,11 @@ fn polygon_bounds_numpy_py(polygon: Bound<'_, PyArray2<f64>>) -> (f64, f64, f64,
 
 #[gen_stub_pyfunction(python = r#"
     def polygon_perimeter_numpy(polygon: NDArray[f64]) -> float:
-        """Get the perimeter of a polygon from numpy array."""
+        """Get the perimeter of a polygon from numpy array.
+
+        :param polygon: Polygon as a 2D numpy array.
+        :returns: Perimeter length.
+        """
 "#, module = "raygeo.geo.shape.polygon")]
 #[pyfunction(name = "polygon_perimeter_numpy")]
 fn polygon_perimeter_numpy_py(polygon: Bound<'_, PyArray2<f64>>) -> f64 {
@@ -1513,7 +1887,11 @@ fn polygon_perimeter_numpy_py(polygon: Bound<'_, PyArray2<f64>>) -> f64 {
     def polygon_group_bounds_numpy(
         polygons: Sequence[NDArray[f64]],
     ) -> tuple[float, float, float, float]:
-        """Get bounds of polygon group from numpy arrays."""
+        """Get bounds of polygon group from numpy arrays.
+
+        :param polygons: Sequence of 2D numpy arrays.
+        :returns: Bounding rectangle as (x_min, y_min, x_max, y_max).
+        """
 "#, module = "raygeo.geo.shape.polygon")]
 #[pyfunction(name = "polygon_group_bounds_numpy")]
 fn polygon_group_bounds_numpy_py(
@@ -1529,7 +1907,13 @@ fn polygon_group_bounds_numpy_py(
         flip_h: bool,
         flip_v: bool,
     ) -> Any:
-        """Flip a polygon from numpy array."""
+        """Flip a polygon from numpy array.
+
+        :param polygon: Polygon as a 2D numpy array.
+        :param flip_h: Whether to flip horizontally.
+        :param flip_v: Whether to flip vertically.
+        :returns: Flipped polygon as numpy array.
+        """
 "#, module = "raygeo.geo.shape.polygon")]
 #[pyfunction(name = "flip_polygon_numpy")]
 fn flip_polygon_numpy_py(
@@ -1545,7 +1929,13 @@ fn flip_polygon_numpy_py(
 
 #[gen_stub_pyfunction(python = r#"
     def flip_polygons_numpy(polygons: list, flip_h: bool, flip_v: bool) -> Any:
-        """Flip polygons from numpy arrays."""
+        """Flip polygons from numpy arrays.
+
+        :param polygons: List of 2D numpy arrays.
+        :param flip_h: Whether to flip horizontally.
+        :param flip_v: Whether to flip vertically.
+        :returns: List of flipped numpy arrays.
+        """
 "#, module = "raygeo.geo.shape.polygon")]
 #[pyfunction(name = "flip_polygons_numpy")]
 fn flip_polygons_numpy_py<'py>(
@@ -1570,8 +1960,12 @@ fn flip_polygons_numpy_py<'py>(
 #[gen_stub_pyfunction(python = r#"
     def normalize_polygons_numpy(
         polygons: Sequence[NDArray[f64]],
-    ) -> tuple[list[Any], float, float]:
-        """Normalize polygons from numpy arrays."""
+    ) -> tuple[list[NDArray[f64]], float, float]:
+        """Normalize polygons from numpy arrays.
+
+        :param polygons: Sequence of 2D numpy arrays.
+        :returns: Tuple of (normalized_arrays, min_x, min_y).
+        """
 "#, module = "raygeo.geo.shape.polygon")]
 #[pyfunction(name = "normalize_polygons_numpy")]
 fn normalize_polygons_numpy_py(
@@ -1589,7 +1983,12 @@ fn normalize_polygons_numpy_py(
         point: tuple[float, float],
         polygon: NDArray[f64],
     ) -> bool:
-        """Check if point is in polygon from numpy array."""
+        """Check if point is in polygon from numpy array.
+
+        :param point: Point (x, y) to test.
+        :param polygon: Polygon as a 2D numpy array.
+        :returns: True if point is inside the polygon.
+        """
 "#, module = "raygeo.geo.shape.polygon")]
 #[pyfunction(name = "point_in_polygon_numpy")]
 fn point_in_polygon_numpy_py(
@@ -1606,7 +2005,13 @@ fn point_in_polygon_numpy_py(
         poly2: NDArray[f64],
         min_area: float = 0.0,
     ) -> bool:
-        """Check if polygons intersect from numpy arrays."""
+        """Check if polygons intersect from numpy arrays.
+
+        :param poly1: First polygon as a 2D numpy array.
+        :param poly2: Second polygon as a 2D numpy array.
+        :param min_area: Minimum intersection area threshold.
+        :returns: True if polygons intersect.
+        """
 "#, module = "raygeo.geo.shape.polygon")]
 #[pyfunction(name = "polygons_intersect_numpy")]
 #[pyo3(signature = (poly1, poly2, min_area=0.0))]
@@ -1625,7 +2030,12 @@ fn polygons_intersect_numpy_py(
         polygon: NDArray[f64],
         angle: float,
     ) -> Any:
-        """Rotate a polygon from numpy array."""
+        """Rotate a polygon from numpy array.
+
+        :param polygon: Polygon as a 2D numpy array.
+        :param angle: Rotation angle in radians.
+        :returns: Rotated polygon as numpy array.
+        """
 "#, module = "raygeo.geo.shape.polygon")]
 #[pyfunction(name = "rotate_polygon_numpy")]
 fn rotate_polygon_numpy_py(
@@ -1643,7 +2053,12 @@ fn rotate_polygon_numpy_py(
         polygons: Sequence[NDArray[f64]],
         angle: float,
     ) -> list[Any]:
-        """Rotate polygons from numpy arrays."""
+        """Rotate polygons from numpy arrays.
+
+        :param polygons: Sequence of 2D numpy arrays.
+        :param angle: Rotation angle in radians.
+        :returns: List of rotated numpy arrays.
+        """
 "#, module = "raygeo.geo.shape.polygon")]
 #[pyfunction(name = "rotate_polygons_numpy")]
 fn rotate_polygons_numpy_py(
@@ -1662,7 +2077,13 @@ fn rotate_polygons_numpy_py(
         dx: float,
         dy: float,
     ) -> Any:
-        """Translate a polygon from numpy array."""
+        """Translate a polygon from numpy array.
+
+        :param polygon: Polygon as a 2D numpy array.
+        :param dx: X translation.
+        :param dy: Y translation.
+        :returns: Translated polygon as numpy array.
+        """
 "#, module = "raygeo.geo.shape.polygon")]
 #[pyfunction(name = "translate_polygon_numpy")]
 fn translate_polygon_numpy_py(
@@ -1682,7 +2103,13 @@ fn translate_polygon_numpy_py(
         dx: float,
         dy: float,
     ) -> list[Any]:
-        """Translate polygons from numpy arrays."""
+        """Translate polygons from numpy arrays.
+
+        :param polygons: Sequence of 2D numpy arrays.
+        :param dx: X translation.
+        :param dy: Y translation.
+        :returns: List of translated numpy arrays.
+        """
 "#, module = "raygeo.geo.shape.polygon")]
 #[pyfunction(name = "translate_polygons_numpy")]
 fn translate_polygons_numpy_py(
@@ -1698,7 +2125,12 @@ fn translate_polygons_numpy_py(
 
 #[gen_stub_pyfunction(python = r#"
     def to_clipper_numpy(polygon: Any, scale: int = 10000000) -> list[tuple[int, int]]:
-        """Convert a polygon to Clipper coordinates."""
+        """Convert a polygon to Clipper coordinates.
+
+        :param polygon: Polygon as numpy array or list of tuples.
+        :param scale: Scale factor for integer conversion.
+        :returns: Polygon with integer coordinates for Clipper.
+        """
 "#, module = "raygeo.geo.shape.polygon")]
 #[pyfunction(name = "to_clipper_numpy")]
 #[pyo3(signature = (polygon, scale=10_000_000))]
@@ -1730,7 +2162,14 @@ fn to_clipper_numpy_py(
         p3: tuple[float, float],
         p4: tuple[float, float],
     ) -> Optional[tuple[float, float]]:
-        """Get the intersection of two infinite lines."""
+        """Get the intersection of two infinite lines.
+
+        :param p1: First point on line 1.
+        :param p2: Second point on line 1.
+        :param p3: First point on line 2.
+        :param p4: Second point on line 2.
+        :returns: Intersection point (x, y) or None.
+        """
 "#, module = "raygeo.geo.shape.line")]
 #[pyfunction(name = "get_line_line_intersection")]
 fn get_line_line_intersection_py(
@@ -1749,7 +2188,14 @@ fn get_line_line_intersection_py(
         p3: tuple[float, float],
         p4: tuple[float, float],
     ) -> Optional[tuple[float, float]]:
-        """Get the intersection of two line segments."""
+        """Get the intersection of two line segments.
+
+        :param p1: Start of segment 1.
+        :param p2: End of segment 1.
+        :param p3: Start of segment 2.
+        :param p4: End of segment 2.
+        :returns: Intersection point (x, y) or None.
+        """
 "#, module = "raygeo.geo.shape.line")]
 #[pyfunction(name = "get_line_segment_intersection")]
 fn get_line_segment_intersection_py(
@@ -1768,7 +2214,14 @@ fn get_line_segment_intersection_py(
         x: float,
         y: float,
     ) -> tuple[float, float]:
-        """Get the closest point on a line to a given point."""
+        """Get the closest point on a line to a given point.
+
+        :param line_p1: First point on the line.
+        :param line_p2: Second point on the line.
+        :param x: X coordinate of target point.
+        :param y: Y coordinate of target point.
+        :returns: Closest point (x, y) on the line.
+        """
 "#, module = "raygeo.geo.shape.line")]
 #[pyfunction(name = "get_line_closest_point")]
 fn get_line_closest_point_py(
@@ -1787,7 +2240,14 @@ fn get_line_closest_point_py(
         x: float,
         y: float,
     ) -> tuple[float, tuple[float, float], float]:
-        """Get closest point on a line segment to a point."""
+        """Get closest point on a line segment to a point.
+
+        :param seg_p1: Start of the line segment.
+        :param seg_p2: End of the line segment.
+        :param x: X coordinate of target point.
+        :param y: Y coordinate of target point.
+        :returns: Tuple of (parameter, closest_point, distance).
+        """
 "#, module = "raygeo.geo.shape.line")]
 #[pyfunction(name = "get_line_segment_closest_point")]
 fn get_line_segment_closest_point_py(
@@ -1805,7 +2265,13 @@ fn get_line_segment_closest_point_py(
         line_p1: tuple[float, float],
         line_p2: tuple[float, float],
     ) -> float:
-        """Get the distance from a point to a line."""
+        """Get the distance from a point to a line.
+
+        :param point: Point (x, y).
+        :param line_p1: First point on the line.
+        :param line_p2: Second point on the line.
+        :returns: Perpendicular distance.
+        """
 "#, module = "raygeo.geo.shape.line")]
 #[pyfunction(name = "get_point_line_distance")]
 fn get_point_line_distance_py(
@@ -1822,7 +2288,13 @@ fn get_point_line_distance_py(
         seg_p1: tuple[float, float],
         seg_p2: tuple[float, float],
     ) -> bool:
-        """Check if a point is on a line segment."""
+        """Check if a point is on a line segment.
+
+        :param point: Point (x, y) to test.
+        :param seg_p1: Start of the line segment.
+        :param seg_p2: End of the line segment.
+        :returns: True if the point lies on the segment.
+        """
 "#, module = "raygeo.geo.shape.line")]
 #[pyfunction(name = "is_point_on_line_segment")]
 fn is_point_on_line_segment_py(
@@ -1839,7 +2311,13 @@ fn is_point_on_line_segment_py(
         p2: tuple[float, float],
         rect: tuple[float, float, float, float],
     ) -> bool:
-        """Check if a line segment intersects a rectangle."""
+        """Check if a line segment intersects a rectangle.
+
+        :param p1: Start of the line segment.
+        :param p2: End of the line segment.
+        :param rect: Rectangle (x_min, y_min, x_max, y_max).
+        :returns: True if the segment intersects the rectangle.
+        """
 "#, module = "raygeo.geo.shape.line")]
 #[pyfunction(name = "does_line_segment_intersect_rect")]
 fn does_line_segment_intersect_rect_py(
@@ -1857,7 +2335,14 @@ fn does_line_segment_intersect_rect_py(
         circle_center: tuple[float, float],
         circle_radius: float,
     ) -> bool:
-        """Check if a line segment intersects a circle."""
+        """Check if a line segment intersects a circle.
+
+        :param p1: Start of the line segment.
+        :param p2: End of the line segment.
+        :param circle_center: Circle center (x, y).
+        :param circle_radius: Circle radius.
+        :returns: True if the segment intersects the circle.
+        """
 "#, module = "raygeo.geo.shape.line")]
 #[pyfunction(name = "does_line_segment_intersect_circle")]
 fn does_line_segment_intersect_circle_py(
@@ -1875,7 +2360,13 @@ fn does_line_segment_intersect_circle_py(
         p2: tuple[float, float],
         polygon: list[list[tuple[float, float]]],
     ) -> list[float]:
-        """Get t-values of line segment-polygon intersections."""
+        """Get t-values of line segment-polygon intersections.
+
+        :param p1: Start of the line segment.
+        :param p2: End of the line segment.
+        :param polygon: Polygon(s) to test against.
+        :returns: List of t-values where the segment intersects.
+        """
 "#, module = "raygeo.geo.shape.line")]
 #[pyfunction(name = "get_line_segment_polygon_intersections")]
 fn get_line_segment_polygon_intersections_py(
@@ -1891,7 +2382,12 @@ fn get_line_segment_polygon_intersections_py(
         point: tuple[float, float],
         rect: tuple[float, float, float, float],
     ) -> bool:
-        """Check if a point is inside a rectangle."""
+        """Check if a point is inside a rectangle.
+
+        :param point: Point (x, y) to test.
+        :param rect: Rectangle (x_min, y_min, x_max, y_max).
+        :returns: True if the point is inside the rectangle.
+        """
 "#, module = "raygeo.geo.shape.rect")]
 #[pyfunction(name = "is_point_inside_rect")]
 fn is_point_inside_rect_py(point: Point, rect: (f64, f64, f64, f64)) -> bool {
@@ -1903,7 +2399,12 @@ fn is_point_inside_rect_py(point: Point, rect: (f64, f64, f64, f64)) -> bool {
         outer: tuple[float, float, float, float],
         inner: tuple[float, float, float, float],
     ) -> bool:
-        """Check if one rectangle contains another."""
+        """Check if one rectangle contains another.
+
+        :param outer: Outer rectangle (x_min, y_min, x_max, y_max).
+        :param inner: Inner rectangle (x_min, y_min, x_max, y_max).
+        :returns: True if outer fully contains inner.
+        """
 "#, module = "raygeo.geo.shape.rect")]
 #[pyfunction(name = "does_rect_contain_rect")]
 fn does_rect_contain_rect_py(
@@ -1918,7 +2419,12 @@ fn does_rect_contain_rect_py(
         r1: tuple[float, float, float, float],
         r2: tuple[float, float, float, float],
     ) -> bool:
-        """Check if two rectangles intersect."""
+        """Check if two rectangles intersect.
+
+        :param r1: First rectangle (x_min, y_min, x_max, y_max).
+        :param r2: Second rectangle (x_min, y_min, x_max, y_max).
+        :returns: True if the rectangles intersect.
+        """
 "#, module = "raygeo.geo.shape.rect")]
 #[pyfunction(name = "does_rect_intersect_rect")]
 fn does_rect_intersect_rect_py(
@@ -1934,7 +2440,12 @@ fn does_rect_intersect_rect_py(
         p1: tuple[float, float, float],
         p2: tuple[float, float, float],
     ) -> tuple[float, float, float]:
-        """Get the midpoint between two 3D points."""
+        """Get the midpoint between two 3D points.
+
+        :param p1: First point (x, y, z).
+        :param p2: Second point (x, y, z).
+        :returns: Midpoint (x, y, z).
+        """
 "#, module = "raygeo.geo.shape.point")]
 #[pyfunction(name = "midpoint")]
 fn midpoint_py(p1: PyPoint3D, p2: PyPoint3D) -> (f64, f64, f64) {

@@ -12,25 +12,47 @@ __all__ = [
 def compute_gaussian_kernel(amount: int) -> tuple[list[float], float]:
     r"""
     Compute a Gaussian kernel of the given size.
+    
+    :param amount: Kernel size.
+    :returns: Tuple of (kernel_values, sigma).
     """
 
 def resample_polyline(points: Sequence[tuple[float, float, float]], max_segment_length: float, is_closed: bool) -> list[tuple[float, float, float]]:
     r"""
     Resample a polyline with a maximum segment length.
+    
+    :param points: Sequence of 3D points.
+    :param max_segment_length: Maximum allowed segment length.
+    :param is_closed: Whether the polyline is closed.
+    :returns: Resampled points.
     """
 
 def smooth_circularly(points: Sequence[tuple[float, float, float]], kernel: Sequence[float]) -> list[tuple[float, float, float]]:
     r"""
     Smooth a closed polyline circularly.
+    
+    :param points: Sequence of 3D points to smooth.
+    :param kernel: Gaussian kernel values.
+    :returns: Smoothed points.
     """
 
 def smooth_polyline(points: Sequence[tuple[float, float, float]], amount: int, corner_angle_threshold: float, is_closed: Optional[bool] = None) -> list[tuple[float, float, float]]:
     r"""
     Smooth a polyline using Gaussian smoothing.
+    
+    :param points: Sequence of 3D points to smooth.
+    :param amount: Smoothing amount (kernel size).
+    :param corner_angle_threshold: Angle threshold for preserving corners.
+    :param is_closed: Whether the polyline is closed.
+    :returns: Smoothed points.
     """
 
 def smooth_sub_segment(points: Sequence[tuple[float, float, float]], kernel: Sequence[float]) -> list[tuple[float, float, float]]:
     r"""
     Smooth a sub-segment of a polyline.
+    
+    :param points: Sequence of 3D points to smooth.
+    :param kernel: Gaussian kernel values.
+    :returns: Smoothed points.
     """
 

@@ -20,65 +20,139 @@ __all__ = [
 def does_arc_intersect_circle(arc_start: tuple[float, float], arc_end: tuple[float, float], arc_center: tuple[float, float], clockwise: bool, circle_center: tuple[float, float], circle_radius: float) -> bool:
     r"""
     Check if an arc intersects a circle.
+    
+    :param arc_start: Arc start point (x, y).
+    :param arc_end: Arc end point (x, y).
+    :param arc_center: Arc center point (x, y).
+    :param clockwise: Whether the arc is clockwise.
+    :param circle_center: Circle center (x, y).
+    :param circle_radius: Circle radius.
+    :returns: True if the arc intersects the circle.
     """
 
 def does_arc_intersect_rect(arc_start: tuple[float, float], arc_end: tuple[float, float], arc_center: tuple[float, float], clockwise: bool, rect: tuple[float, float, float, float]) -> bool:
     r"""
     Check if an arc intersects a rectangle.
+    
+    :param arc_start: Arc start point (x, y).
+    :param arc_end: Arc end point (x, y).
+    :param arc_center: Arc center point (x, y).
+    :param clockwise: Whether the arc is clockwise.
+    :param rect: Rectangle (x_min, y_min, x_max, y_max).
+    :returns: True if the arc intersects the rectangle.
     """
 
 def get_arc_angles(start: tuple[float, float], end: tuple[float, float], center: tuple[float, float], clockwise: bool) -> tuple[float, float, float]:
     r"""
     Get the start, end, and sweep angles of an arc.
+    
+    :param start: Arc start point (x, y).
+    :param end: Arc end point (x, y).
+    :param center: Arc center point (x, y).
+    :param clockwise: Whether the arc is clockwise.
+    :returns: Tuple of (start_angle, end_angle, sweep_angle) in radians.
     """
 
 def get_arc_bounds(start: tuple[float, float], end: tuple[float, float], center: tuple[float, float], clockwise: bool) -> tuple[float, float, float, float]:
     r"""
     Get the bounding rectangle of an arc.
+    
+    :param start: Arc start point (x, y).
+    :param end: Arc end point (x, y).
+    :param center: Arc center point (x, y).
+    :param clockwise: Whether the arc is clockwise.
+    :returns: Bounding rectangle as (x_min, y_min, x_max, y_max).
     """
 
 def get_arc_closest_point(arc_cmd: Any, start_pos: tuple[float, float, float], x: float, y: float) -> Optional[tuple[float, tuple[float, float], float]]:
     r"""
     Get the closest point on an arc to a given point.
+    
+    :param arc_cmd: Arc command row or MockArc-like object.
+    :param start_pos: Start position (x, y, z).
+    :param x: X coordinate of target point.
+    :param y: Y coordinate of target point.
+    :returns: Tuple of (parameter, closest_point, distance) or None.
     """
 
 def get_arc_direction(center: tuple[float, float], start: tuple[float, float], mouse: tuple[float, float]) -> bool:
     r"""
     Get the direction (CW/CCW) of an arc at a mouse point.
+    
+    :param center: Arc center (x, y).
+    :param start: Arc start point (x, y).
+    :param mouse: Mouse point (x, y).
+    :returns: True if clockwise, False if counter-clockwise.
     """
 
 def get_arc_midpoint(start: tuple[float, float], end: tuple[float, float], center: tuple[float, float], clockwise: bool) -> tuple[float, float]:
     r"""
     Get the midpoint of an arc.
+    
+    :param start: Arc start point (x, y).
+    :param end: Arc end point (x, y).
+    :param center: Arc center point (x, y).
+    :param clockwise: Whether the arc is clockwise.
+    :returns: Midpoint (x, y).
     """
 
 def is_angle_between(angle: float, start: float, end: float, clockwise: bool) -> bool:
     r"""
     Check if an angle is between two other angles.
+    
+    :param angle: Angle to test.
+    :param start: Start angle.
+    :param end: End angle.
+    :param clockwise: Whether the arc is clockwise.
+    :returns: True if angle is between start and end.
     """
 
 def is_arc_clockwise(points: Sequence[tuple[float, float]], center: tuple[float, float]) -> bool:
     r"""
     Check if an arc is clockwise.
+    
+    :param points: Sequence of (x, y) points on the arc.
+    :param center: Arc center (x, y).
+    :returns: True if the arc is clockwise.
     """
 
 def is_arc_inside_polygons(arc_start: tuple[float, float], arc_end: tuple[float, float], arc_center: tuple[float, float], clockwise: bool, polygons: Any) -> bool:
     r"""
     Check if an arc is inside a set of polygons.
+    
+    :param arc_start: Arc start point (x, y).
+    :param arc_end: Arc end point (x, y).
+    :param arc_center: Arc center point (x, y).
+    :param clockwise: Whether the arc is clockwise.
+    :param polygons: List of polygons to check against.
+    :returns: True if the arc is inside all polygons.
     """
 
 def linearize_arc(arc_cmd: Any, start_point: tuple[float, float, float], resolution: float = 0.1) -> list[tuple[tuple[float, float, float], tuple[float, float, float]]]:
     r"""
     Linearize an arc into line segments.
+    
+    :param arc_cmd: Arc command row or MockArc-like object.
+    :param start_point: Start point (x, y, z).
+    :param resolution: Maximum segment length.
+    :returns: List of (p1, p2) segment pairs.
     """
 
 def linearize_arc_from_array(data: Sequence[float], start_point: tuple[float, float, float], max_seg_length: float) -> list[list[float]]:
     r"""
     Linearize an arc from array data.
+    
+    :param data: Arc command row as a sequence of floats.
+    :param start_point: Start point (x, y, z).
+    :param max_seg_length: Maximum segment length.
+    :returns: List of segment rows.
     """
 
 def normalize_angle(angle: float) -> float:
     r"""
     Normalize an angle to the range [0, 2*pi).
+    
+    :param angle: Angle in radians.
+    :returns: Normalized angle in [0, 2*pi).
     """
 

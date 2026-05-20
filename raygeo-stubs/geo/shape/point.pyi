@@ -8,5 +8,9 @@ __all__ = [
 def midpoint(p1: tuple[float, float, float], p2: tuple[float, float, float]) -> tuple[float, float, float]:
     r"""
     Get the midpoint between two 3D points.
+    
+    :param p1: First point (x, y, z).
+    :param p2: Second point (x, y, z).
+    :returns: Midpoint (x, y, z).
     """
 

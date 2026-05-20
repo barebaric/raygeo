@@ -10,14 +10,8 @@ from . import geo
 from . import ops
 __all__ = [
     "Geometry",
-    "clip_line_segment_with_polygons",
-    "fit_points_with_primitives",
-    "from_clipper",
     "geo",
-    "is_arc_inside_polygons",
-    "is_bezier_inside_polygons",
     "ops",
-    "to_clipper",
 ]
 
 @typing.final
@@ -369,34 +363,4 @@ class Geometry:
         r"""
         Return a string representation of the geometry.
         """
-
-def clip_line_segment_with_polygons(p1: tuple[float, float, float], p2: tuple[float, float, float], regions: Any) -> list[tuple[tuple[float, float, float], tuple[float, float, float]]]:
-    r"""
-    Clip line segments that fall within a set of polygon regions.
-    """
-
-def fit_points_with_primitives(points: Sequence[tuple[float, float, float]], tolerance: float) -> list[list[float]]:
-    r"""
-    Fit a polyline of points with arc and line primitives.
-    """
-
-def from_clipper(polygon: IntPolygon, scale: int = 10000000) -> Polygon:
-    r"""
-    Convert a polygon from Clipper coordinates.
-    """
-
-def is_arc_inside_polygons(arc_start: tuple[float, float], arc_end: tuple[float, float], arc_center: tuple[float, float], clockwise: bool, polygons: Any) -> bool:
-    r"""
-    Check if an arc is inside a set of polygon regions.
-    """
-
-def is_bezier_inside_polygons(p0: tuple[float, float], p1: tuple[float, float], p2: tuple[float, float], p3: tuple[float, float], polygons: Any) -> bool:
-    r"""
-    Check if a bezier curve is inside a set of polygon regions.
-    """
-
-def to_clipper(polygon: Polygon, scale: int = 10000000) -> list[tuple[int, int]]:
-    r"""
-    Convert a polygon to Clipper coordinates.
-    """
 

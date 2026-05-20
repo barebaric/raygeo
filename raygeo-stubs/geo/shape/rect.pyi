@@ -10,15 +10,27 @@ __all__ = [
 def does_rect_contain_rect(outer: tuple[float, float, float, float], inner: tuple[float, float, float, float]) -> bool:
     r"""
     Check if one rectangle contains another.
+    
+    :param outer: Outer rectangle (x_min, y_min, x_max, y_max).
+    :param inner: Inner rectangle (x_min, y_min, x_max, y_max).
+    :returns: True if outer fully contains inner.
     """
 
 def does_rect_intersect_rect(r1: tuple[float, float, float, float], r2: tuple[float, float, float, float]) -> bool:
     r"""
     Check if two rectangles intersect.
+    
+    :param r1: First rectangle (x_min, y_min, x_max, y_max).
+    :param r2: Second rectangle (x_min, y_min, x_max, y_max).
+    :returns: True if the rectangles intersect.
     """
 
 def is_point_inside_rect(point: tuple[float, float], rect: tuple[float, float, float, float]) -> bool:
     r"""
     Check if a point is inside a rectangle.
+    
+    :param point: Point (x, y) to test.
+    :param rect: Rectangle (x_min, y_min, x_max, y_max).
+    :returns: True if the point is inside the rectangle.
     """
 

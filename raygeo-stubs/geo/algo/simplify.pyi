@@ -9,10 +9,18 @@ __all__ = [
 def simplify_polyline(points: Sequence[tuple[float, float]], tolerance: float) -> list[tuple[float, float]]:
     r"""
     Simplify a polyline using the Ramer-Douglas-Peucker algorithm.
+    
+    :param points: Sequence of (x, y) points.
+    :param tolerance: Simplification tolerance.
+    :returns: Simplified point sequence.
     """
 
 def simplify_polyline_to_array(data: Sequence[Sequence[float]], tolerance: float) -> list[list[float]]:
     r"""
     Simplify a polyline from an array.
+    
+    :param data: Array of point rows.
+    :param tolerance: Simplification tolerance.
+    :returns: Simplified array rows.
     """
 

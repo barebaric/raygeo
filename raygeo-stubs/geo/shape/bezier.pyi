@@ -21,70 +21,166 @@ __all__ = [
 def bezier_flatness_sq(a: tuple[float, float, float], b: tuple[float, float, float], c: tuple[float, float, float], d: tuple[float, float, float]) -> float:
     r"""
     Compute the flatness squared of a cubic bezier.
+    
+    :param a: Start point (x, y, z).
+    :param b: First control point (x, y, z).
+    :param c: Second control point (x, y, z).
+    :param d: End point (x, y, z).
+    :returns: Flatness squared value.
     """
 
 def clip_bezier_with_rect(p0: tuple[float, float], p1: tuple[float, float], p2: tuple[float, float], p3: tuple[float, float], rect: tuple[float, float, float, float]) -> list[tuple[tuple[float, float], tuple[float, float], tuple[float, float], tuple[float, float]]]:
     r"""
     Clip a cubic bezier with a rectangle.
+    
+    :param p0: Start control point (x, y).
+    :param p1: First control point (x, y).
+    :param p2: Second control point (x, y).
+    :param p3: End control point (x, y).
+    :param rect: Clipping rectangle (x_min, y_min, x_max, y_max).
+    :returns: List of bezier segments inside the rectangle.
     """
 
 def convert_cubic_bezier_to_quadratic(p0: tuple[float, float], p1: tuple[float, float], p2: tuple[float, float], p3: tuple[float, float]) -> tuple[tuple[float, float], tuple[float, float], tuple[float, float]]:
     r"""
     Convert a cubic bezier to a quadratic bezier.
+    
+    :param p0: Start control point (x, y).
+    :param p1: First control point (x, y).
+    :param p2: Second control point (x, y).
+    :param p3: End control point (x, y).
+    :returns: Quadratic bezier (p0, p1, p2).
     """
 
 def flatten_bezier(p0: tuple[float, float, float], p1: tuple[float, float, float], p2: tuple[float, float, float], p3: tuple[float, float, float], tolerance: float, max_subdivisions: int, pts: list) -> None:
     r"""
     Flatten a bezier curve into points.
+    
+    :param p0: Start control point (x, y, z).
+    :param p1: First control point (x, y, z).
+    :param p2: Second control point (x, y, z).
+    :param p3: End control point (x, y, z).
+    :param tolerance: Flattening tolerance.
+    :param max_subdivisions: Maximum recursion depth.
+    :param pts: Output list to append points to.
     """
 
 def get_bezier_bounds(p0: tuple[float, float], p1: tuple[float, float], p2: tuple[float, float], p3: tuple[float, float]) -> tuple[float, float, float, float]:
     r"""
     Get the bounding rectangle of a cubic bezier.
+    
+    :param p0: Start control point (x, y).
+    :param p1: First control point (x, y).
+    :param p2: Second control point (x, y).
+    :param p3: End control point (x, y).
+    :returns: Bounding rectangle as (x_min, y_min, x_max, y_max).
     """
 
 def get_bezier_point_at(p0: tuple[float, float], p1: tuple[float, float], p2: tuple[float, float], p3: tuple[float, float], t: float) -> tuple[float, float]:
     r"""
     Get a point on a cubic bezier at parameter t.
+    
+    :param p0: Start control point (x, y).
+    :param p1: First control point (x, y).
+    :param p2: Second control point (x, y).
+    :param p3: End control point (x, y).
+    :param t: Parameter value (0..1).
+    :returns: Point on the bezier curve (x, y).
     """
 
 def get_bezier_rect_intersections(p0: tuple[float, float], p1: tuple[float, float], p2: tuple[float, float], p3: tuple[float, float], rect: tuple[float, float, float, float]) -> list[float]:
     r"""
     Get intersection t-values of a bezier with a rectangle.
+    
+    :param p0: Start control point (x, y).
+    :param p1: First control point (x, y).
+    :param p2: Second control point (x, y).
+    :param p3: End control point (x, y).
+    :param rect: Rectangle (x_min, y_min, x_max, y_max).
+    :returns: List of t-values where the bezier intersects.
     """
 
 def is_bezier_inside_polygons(p0: tuple[float, float], p1: tuple[float, float], p2: tuple[float, float], p3: tuple[float, float], polygons: Any) -> bool:
     r"""
     Check if a bezier curve is inside a set of polygons.
+    
+    :param p0: Start control point (x, y).
+    :param p1: First control point (x, y).
+    :param p2: Second control point (x, y).
+    :param p3: End control point (x, y).
+    :param polygons: List of polygons to check against.
+    :returns: True if the bezier is inside all polygons.
     """
 
 def linearize_bezier(p0: tuple[float, float, float], p1: tuple[float, float, float], p2: tuple[float, float, float], p3: tuple[float, float, float], num_steps: int) -> list[tuple[tuple[float, float, float], tuple[float, float, float]]]:
     r"""
     Linearize a bezier into line segments.
+    
+    :param p0: Start control point (x, y, z).
+    :param p1: First control point (x, y, z).
+    :param p2: Second control point (x, y, z).
+    :param p3: End control point (x, y, z).
+    :param num_steps: Number of linearization steps.
+    :returns: List of (p1, p2) segment pairs.
     """
 
 def linearize_bezier_adaptive(p0: tuple[float, float], p1: tuple[float, float], p2: tuple[float, float], p3: tuple[float, float], tolerance_sq: float, max_subdivisions: int = 20) -> list[tuple[float, float]]:
     r"""
     Adaptively linearize a bezier curve.
+    
+    :param p0: Start control point (x, y).
+    :param p1: First control point (x, y).
+    :param p2: Second control point (x, y).
+    :param p3: End control point (x, y).
+    :param tolerance_sq: Squared tolerance for subdivision.
+    :param max_subdivisions: Maximum recursion depth.
+    :returns: List of linearized points (x, y).
     """
 
 def linearize_bezier_from_array(bezier_row: Sequence[float], start_point: tuple[float, float, float], max_seg_length: float) -> list[list[float]]:
     r"""
     Linearize a bezier from array data.
+    
+    :param bezier_row: Bezier command row.
+    :param start_point: Start point (x, y, z).
+    :param max_seg_length: Maximum segment length.
+    :returns: List of segment rows.
     """
 
 def linearize_bezier_segment(p0: tuple[float, float, float], p1: tuple[float, float, float], p2: tuple[float, float, float], p3: tuple[float, float, float], tolerance: float = 0.1) -> list[tuple[float, float, float]]:
     r"""
     Linearize a single bezier segment.
+    
+    :param p0: Start control point (x, y, z).
+    :param p1: First control point (x, y, z).
+    :param p2: Second control point (x, y, z).
+    :param p3: End control point (x, y, z).
+    :param tolerance: Linearization tolerance.
+    :returns: List of linearized points (x, y, z).
     """
 
 def perp_dist_sq(pt: tuple[float, float, float], origin: tuple[float, float, float], vx: float, vy: float, vz: float = 0, norm_sq: float = 0) -> float:
     r"""
     Compute the perpendicular distance squared.
+    
+    :param pt: Point to measure from.
+    :param origin: Origin of the line.
+    :param vx: X component of line direction.
+    :param vy: Y component of line direction.
+    :param vz: Z component of line direction.
+    :param norm_sq: Precomputed squared norm (optional).
+    :returns: Perpendicular distance squared.
     """
 
 def split_bezier(p0: tuple[float, float], p1: tuple[float, float], p2: tuple[float, float], p3: tuple[float, float], t: float) -> tuple[tuple[tuple[float, float], tuple[float, float], tuple[float, float], tuple[float, float]], tuple[tuple[float, float], tuple[float, float], tuple[float, float], tuple[float, float]]]:
     r"""
     Split a cubic bezier at parameter t.
+    
+    :param p0: Start control point (x, y).
+    :param p1: First control point (x, y).
+    :param p2: Second control point (x, y).
+    :param p3: End control point (x, y).
+    :param t: Split parameter (0..1).
+    :returns: Two bezier curves (left, right).
     """
 
