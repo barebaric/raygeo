@@ -46,7 +46,7 @@ impl Ops {
     /// - Returns: A new `Ops` containing only the portions of commands inside `rect`.
     pub fn clip_rect(&self, rect: Rect) -> Self {
         let mut new_ops = Ops::new();
-        if self.is_empty() {
+        if self.commands.is_empty() {
             return new_ops;
         }
 
@@ -110,7 +110,7 @@ impl Ops {
     /// - `regions`: Polygons whose interiors should be removed.
     /// - Returns: `self` for method chaining.
     pub fn subtract_regions(&mut self, regions: &[Polygon]) -> &mut Self {
-        if regions.is_empty() || self.is_empty() {
+        if regions.is_empty() || self.commands.is_empty() {
             return self;
         }
 
@@ -184,7 +184,7 @@ impl Ops {
 
         self.commands = new_ops.commands;
         self.invalidate_time_cache();
-        if !self.is_empty() {
+        if !self.commands.is_empty() {
             for node in self.commands.iter().rev() {
                 if let OpCategory::Moving {
                     end,
@@ -214,7 +214,7 @@ impl Ops {
     ) -> &mut Self {
         let valid_regions: Vec<Polygon> =
             regions.iter().filter(|r| r.len() >= 3).cloned().collect();
-        if valid_regions.is_empty() || self.is_empty() {
+        if valid_regions.is_empty() || self.commands.is_empty() {
             return self;
         }
 
@@ -290,7 +290,7 @@ impl Ops {
 
         self.commands = new_ops.commands;
         self.invalidate_time_cache();
-        if !self.is_empty() {
+        if !self.commands.is_empty() {
             for node in self.commands.iter().rev() {
                 if let OpCategory::Moving {
                     end,
@@ -383,8 +383,7 @@ impl Ops {
         let mut new_subpath =
             build_clipped_subpath(&temp_ops, gap_start_dist, gap_end_dist);
 
-        let original_endpoint =
-            self.endpoint(if end_idx > 0 { end_idx - 1 } else { 0 });
+        let original_endpoint = self.commands[if end_idx > 0 { end_idx - 1 } else { 0 }].end_point();
         let mut new_endpoint: Option<Point3D> = None;
         if new_subpath.len() > 0 {
             for node in new_subpath.commands.iter().rev() {
@@ -588,7 +587,7 @@ impl Ops {
 
         self.commands = new_ops.commands;
         self.invalidate_time_cache();
-        if !self.is_empty() {
+        if !self.commands.is_empty() {
             for node in self.commands.iter().rev() {
                 if let OpCategory::Moving {
                     end,
@@ -753,18 +752,18 @@ fn accumulate_distance_to_hit(
     linear_t: f64,
 ) -> f64 {
     let mut hit_dist = 0.0;
-    let mut last_pos = temp_ops.endpoint(linear_geo_cmds[0]);
+    let mut last_pos = temp_ops.commands[linear_geo_cmds[0]].end_point();
 
     for idx_i in 1..linear_segment_idx {
         let j = linear_geo_cmds[idx_i];
-        let end_pt = temp_ops.endpoint(j);
+        let end_pt = temp_ops.commands[j].end_point();
         let dp = (end_pt.0 - last_pos.0, end_pt.1 - last_pos.1);
         hit_dist += (dp.0 * dp.0 + dp.1 * dp.1).sqrt();
         last_pos = end_pt;
     }
 
     let hit_segment_j = linear_geo_cmds[linear_segment_idx];
-    let hit_end = temp_ops.endpoint(hit_segment_j);
+    let hit_end = temp_ops.commands[hit_segment_j].end_point();
     let dp = (hit_end.0 - last_pos.0, hit_end.1 - last_pos.1);
     let dist = (dp.0 * dp.0 + dp.1 * dp.1).sqrt();
     hit_dist += linear_t * dist;
@@ -937,11 +936,9 @@ fn clip_and_refit_arc(
             } else {
                 continue;
             }
-            if arc_state.is_some() {
-                new_ops.set_state_at(
-                    new_ops.len() - 1,
-                    arc_state.as_ref().unwrap(),
-                );
+            if let Some(ref s) = arc_state {
+                let last = new_ops.len() - 1;
+                new_ops.commands[last].set_state(s.clone());
             }
         }
         pen_pos = Some(chain[chain.len() - 1]);
@@ -1013,11 +1010,9 @@ fn clip_and_refit_bezier(
             } else {
                 continue;
             }
-            if bezier_state.is_some() {
-                new_ops.set_state_at(
-                    new_ops.len() - 1,
-                    bezier_state.as_ref().unwrap(),
-                );
+            if let Some(ref s) = bezier_state {
+                let last = new_ops.len() - 1;
+                new_ops.commands[last].set_state(s.clone());
             }
         }
         pen_pos = Some(chain[chain.len() - 1]);

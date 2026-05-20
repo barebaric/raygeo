@@ -7,8 +7,8 @@ use pyo3_stub_gen::derive::{
 use pyo3_stub_gen::inventory::submit;
 
 use raygeo_core::ops::{
-    Axis, CommandType, MarkerCmd, MoveCmd, OpCategory,
-    OpsSection, OpsSectionRange, StateCmd,
+    Axis, CommandType, MarkerCmd, MoveCmd, OpCategory, OpsSection,
+    OpsSectionRange, StateCmd,
 };
 
 use super::axis::PyAxis;
@@ -341,7 +341,7 @@ impl PyOps {
     /// :returns: The :class:`CommandType` of the command.
     fn command_type(&self, idx: isize) -> PyResult<PyCommandType> {
         let idx = normalize_index(idx, self.inner.len())?;
-        Ok(PyCommandType(self.inner.command_type(idx)))
+        Ok(PyCommandType(self.inner.commands[idx].command_type()))
     }
 
     /// Get the :class:`CommandCategory` at the given index.
@@ -350,7 +350,9 @@ impl PyOps {
     /// :returns: The category (MOVING, STATE, or MARKER).
     fn category(&self, idx: isize) -> PyResult<PyCommandCategory> {
         let idx = normalize_index(idx, self.inner.len())?;
-        Ok(PyCommandCategory(self.inner.category(idx)))
+        Ok(PyCommandCategory(
+            self.inner.commands[idx].command_type().category(),
+        ))
     }
 
     /// Check whether the command at *idx* is a travel (non-cutting) move.
@@ -363,7 +365,13 @@ impl PyOps {
                 "index out of range",
             ));
         }
-        Ok(self.inner.is_travel(idx))
+        Ok(matches!(
+            self.inner.commands[idx].category,
+            OpCategory::Moving {
+                cmd: MoveCmd::MoveTo,
+                ..
+            }
+        ))
     }
 
     /// Check whether the command at *idx* is a cutting move.
@@ -376,7 +384,17 @@ impl PyOps {
                 "index out of range",
             ));
         }
-        Ok(self.inner.is_cutting(idx))
+        Ok(matches!(
+            self.inner.commands[idx].category,
+            OpCategory::Moving {
+                cmd: MoveCmd::LineTo
+                    | MoveCmd::ArcTo { .. }
+                    | MoveCmd::BezierTo { .. }
+                    | MoveCmd::QuadraticBezierTo { .. }
+                    | MoveCmd::ScanLine { .. },
+                ..
+            }
+        ))
     }
 
     /// Check whether the command at *idx* is a state command.
@@ -389,7 +407,7 @@ impl PyOps {
                 "index out of range",
             ));
         }
-        Ok(self.inner.is_state(idx))
+        Ok(self.inner.commands[idx].is_state_cmd())
     }
 
     /// Check whether the command at *idx* is a marker command.
@@ -402,7 +420,7 @@ impl PyOps {
                 "index out of range",
             ));
         }
-        Ok(self.inner.is_marker(idx))
+        Ok(self.inner.commands[idx].is_marker())
     }
 
     /// Check whether the command at *idx* is a scanline command.
@@ -415,7 +433,7 @@ impl PyOps {
                 "index out of range",
             ));
         }
-        Ok(self.inner.is_scanline(idx))
+        Ok(self.inner.commands[idx].command_type() == CommandType::ScanLine)
     }
 
     /// Return all indices where the command type matches *ct*.
@@ -443,7 +461,20 @@ impl PyOps {
         idx: usize,
         last_point: Option<(f64, f64, f64)>,
     ) -> f64 {
-        self.inner.distance_at(idx, last_point)
+        if let OpCategory::Moving { end, .. } =
+            &self.inner.commands[idx].category
+        {
+            match last_point {
+                None => 0.0,
+                Some(lp) => {
+                    let dx = end.0 - lp.0;
+                    let dy = end.1 - lp.1;
+                    (dx * dx + dy * dy).sqrt()
+                }
+            }
+        } else {
+            0.0
+        }
     }
 
     /// Compute the total distance of all commands.
@@ -480,7 +511,7 @@ impl PyOps {
     /// :returns: ``(x, y, z)`` tuple.
     fn endpoint(&self, idx: isize) -> PyResult<(f64, f64, f64)> {
         let idx = normalize_index(idx, self.inner.len())?;
-        Ok(self.inner.endpoint(idx))
+        Ok(self.inner.commands[idx].end_point())
     }
 
     /// Get the arc parameters (center offset i, j, and clockwise flag).
@@ -805,7 +836,7 @@ impl PyOps {
                 "index out of range",
             ));
         }
-        match self.inner.extra_axes(idx) {
+        match self.inner.commands[idx].extra_axes() {
             Some(axes) => Ok(Some(axis_map_to_py(py, axes)?)),
             None => Ok(None),
         }
@@ -824,7 +855,7 @@ impl PyOps {
                 "index out of range",
             ));
         }
-        match self.inner.preloaded_state(idx) {
+        match self.inner.commands[idx].state() {
             Some(s) => Ok(Some(PyState(s.clone()))),
             None => Ok(None),
         }
@@ -1266,7 +1297,7 @@ impl PyOps {
     /// :returns: A CommandInfo object with type, endpoint, state, axes, etc.
     fn inspect(&self, py: Python<'_>, idx: usize) -> PyResult<PyCommandInfo> {
         let inner = &self.inner;
-        let ct = inner.command_type(idx);
+        let ct = inner.commands[idx].command_type();
 
         let mut info = PyCommandInfo {
             type_: PyCommandType(ct),
@@ -1291,8 +1322,8 @@ impl PyOps {
         };
 
         if inner.commands[idx].is_moving() {
-            info.end = Some(inner.endpoint(idx));
-            if let Some(ea) = inner.extra_axes(idx) {
+            info.end = Some(inner.commands[idx].end_point());
+            if let Some(ea) = inner.commands[idx].extra_axes() {
                 let dict = PyDict::new(py);
                 for &(axis, val) in ea {
                     let py_axis = Py::new(py, PyAxis(axis))?;
@@ -1300,7 +1331,7 @@ impl PyOps {
                 }
                 info.extra_axes = Some(dict.unbind());
             }
-            if let Some(s) = inner.state(idx) {
+            if let Some(s) = inner.commands[idx].state() {
                 info.state = Some(Py::new(py, PyState(s.clone()))?);
             }
         }
@@ -1585,11 +1616,11 @@ impl PyOps {
                 continue;
             }
 
-            let end = self.inner.endpoint(i);
+            let end = self.inner.commands[i].end_point();
             let end_list = vec![end.0, end.1, end.2];
             let end_py_list = PyList::new(py, &end_list)?;
 
-            let ea = self.inner.extra_axes(i);
+            let ea = self.inner.commands[i].extra_axes();
             let ea_arg = if let Some(axes) = ea {
                 axis_map_to_py(py, axes)?
             } else {
@@ -1599,12 +1630,16 @@ impl PyOps {
             on_endpoint.call1(py, (&end_py_list, &ea_arg))?;
 
             let new_end: Vec<f64> = end_py_list.extract()?;
-            self.inner
-                .set_endpoint(i, (new_end[0], new_end[1], new_end[2]));
+            if let OpCategory::Moving { end: ref mut e, .. } =
+                &mut self.inner.commands[i].category
+            {
+                *e = (new_end[0], new_end[1], new_end[2]);
+            }
 
             if !ea_arg.is_empty() {
                 let ea_vec = py_to_axis_map(&ea_arg)?;
-                self.inner.set_extra_axes(i, ea_vec);
+                self.inner.commands[i]
+                    .set_extra_axes(std::sync::Arc::from(ea_vec));
             }
 
             if let Some(ref aux_cb) = on_aux_point {
@@ -1655,7 +1690,7 @@ impl PyOps {
         idx: usize,
         start_point: (f64, f64, f64),
     ) -> PyResult<Self> {
-        let ct = self.inner.command_type(idx);
+        let ct = self.inner.commands[idx].command_type();
         match ct {
             CommandType::ScanLine
             | CommandType::ArcTo

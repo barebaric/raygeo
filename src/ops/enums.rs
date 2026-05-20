@@ -85,31 +85,7 @@ impl PyCommandType {
     /// The uppercase name of this command type (e.g. ``"MOVE_TO"``, ``"LINE_TO"``).
     #[getter]
     fn name(&self) -> String {
-        match self.0 {
-            CommandType::MoveTo => "MOVE_TO",
-            CommandType::LineTo => "LINE_TO",
-            CommandType::ArcTo => "ARC_TO",
-            CommandType::ScanLine => "SCAN_LINE",
-            CommandType::Dwell => "DWELL",
-            CommandType::BezierTo => "BEZIER_TO",
-            CommandType::QuadraticBezierTo => "QUADRATIC_BEZIER_TO",
-            CommandType::SetPower => "SET_POWER",
-            CommandType::SetCutSpeed => "SET_CUT_SPEED",
-            CommandType::SetTravelSpeed => "SET_TRAVEL_SPEED",
-            CommandType::EnableAirAssist => "ENABLE_AIR_ASSIST",
-            CommandType::DisableAirAssist => "DISABLE_AIR_ASSIST",
-            CommandType::SetLaser => "SET_LASER",
-            CommandType::SetFrequency => "SET_FREQUENCY",
-            CommandType::SetPulseWidth => "SET_PULSE_WIDTH",
-            CommandType::JobStart => "JOB_START",
-            CommandType::JobEnd => "JOB_END",
-            CommandType::LayerStart => "LAYER_START",
-            CommandType::LayerEnd => "LAYER_END",
-            CommandType::WorkpieceStart => "WORKPIECE_START",
-            CommandType::WorkpieceEnd => "WORKPIECE_END",
-            CommandType::OpsSectionStart => "OPS_SECTION_START",
-            CommandType::OpsSectionEnd => "OPS_SECTION_END",
-        }.to_string()
+        self.0.to_string()
     }
 }
 
@@ -185,10 +161,7 @@ impl PySectionType {
     /// The uppercase name (``"VECTOR_OUTLINE"`` or ``"RASTER_FILL"``).
     #[getter]
     fn name(&self) -> String {
-        match self.0 {
-            SectionType::VectorOutline => "VECTOR_OUTLINE",
-            SectionType::RasterFill => "RASTER_FILL",
-        }.to_string()
+        self.0.to_string()
     }
 }
 

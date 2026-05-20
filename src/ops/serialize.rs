@@ -471,12 +471,13 @@ pub fn ops_to_numpy_arrays(
     let num_cmds = ops.len();
 
     let num_arcs: usize = (0..num_cmds)
-        .filter(|&i| ops.command_type(i) == CommandType::ArcTo)
+        .filter(|&i| ops.commands[i].command_type() == CommandType::ArcTo)
         .count();
     let num_beziers: usize = (0..num_cmds)
         .filter(|&i| {
-            ops.command_type(i) == CommandType::BezierTo
-                || ops.command_type(i) == CommandType::QuadraticBezierTo
+            ops.commands[i].command_type() == CommandType::BezierTo
+                || ops.commands[i].command_type()
+                    == CommandType::QuadraticBezierTo
         })
         .count();
 
@@ -891,7 +892,7 @@ pub fn ops_from_numpy_arrays(
             let ea_dict = ea_item.cast::<PyDict>()?;
             let ea_vec = py_to_axis_map_helper(&ea_dict)?;
             let last_idx = ops.len() - 1;
-            ops.set_extra_axes(last_idx, ea_vec);
+            ops.commands[last_idx].set_extra_axes(std::sync::Arc::from(ea_vec));
         }
     }
 

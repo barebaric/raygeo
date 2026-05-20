@@ -13,8 +13,8 @@ pub fn flip_ops(ops: &Ops) -> Ops {
     let mut result = Ops::new();
 
     let last_moving_end =
-        ops.endpoint(moving_indices[moving_indices.len() - 1]);
-    let first_state = ops.state(moving_indices[0]).cloned();
+        ops.commands[moving_indices[moving_indices.len() - 1]].end_point();
+    let first_state = ops.commands[moving_indices[0]].state().cloned();
 
     let mut first_cmd = OpNode::move_to(
         last_moving_end.0,
@@ -30,7 +30,7 @@ pub fn flip_ops(ops: &Ops) -> Ops {
     for k in (0..moving_indices.len() - 1).rev() {
         let orig_k_idx = moving_indices[k + 1];
         let orig_prev_idx = moving_indices[k];
-        let new_end = ops.endpoint(orig_prev_idx);
+        let new_end = ops.commands[orig_prev_idx].end_point();
         let orig_node = &ops.commands[orig_k_idx];
         let extra = orig_node.extra_axes.as_deref().map(|ea| ea.to_vec());
 
@@ -51,8 +51,9 @@ pub fn flip_ops(ops: &Ops) -> Ops {
                     OpNode::bezier_to(*c2, *c1, new_end, extra)
                 }
                 MoveCmd::ArcTo { center, cw } => {
-                    let original_start = ops.endpoint(orig_prev_idx);
-                    let original_end = ops.endpoint(orig_k_idx);
+                    let original_start =
+                        ops.commands[orig_prev_idx].end_point();
+                    let original_end = ops.commands[orig_k_idx].end_point();
                     let center_x = original_start.0 + center.0;
                     let center_y = original_start.1 + center.1;
                     let new_i = center_x - original_end.0;
