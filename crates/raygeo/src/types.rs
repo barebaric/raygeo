@@ -1,3 +1,5 @@
+use std::f64::consts::PI;
+
 use crate::constants::*;
 use crate::error::RaygeoError;
 
@@ -131,6 +133,161 @@ impl Command {
             Command::Line { end } => *end,
             Command::Arc { end, .. } => *end,
             Command::Bezier { end, .. } => *end,
+        }
+    }
+
+    pub fn length(&self, start_point: Point3D) -> f64 {
+        match self {
+            Command::Move { .. } | Command::Line { .. } => {
+                let end = self.end_point();
+                (end.0 - start_point.0).hypot(end.1 - start_point.1)
+            }
+            Command::Arc {
+                end,
+                center_offset,
+                clockwise,
+            } => {
+                let cx = start_point.0 + center_offset.0;
+                let cy = start_point.1 + center_offset.1;
+                let radius = center_offset.0.hypot(center_offset.1);
+                if radius < EPSILON_COLLINEAR {
+                    return 0.0;
+                }
+                let start_angle =
+                    (start_point.1 - cy).atan2(start_point.0 - cx);
+                let end_angle = (end.1 - cy).atan2(end.0 - cx);
+                let mut angle_span = end_angle - start_angle;
+                if angle_span.abs() < EPSILON_COLLINEAR {
+                    angle_span = if *clockwise { -2.0 * PI } else { 2.0 * PI };
+                } else if *clockwise {
+                    if angle_span > EPSILON_COLLINEAR {
+                        angle_span -= 2.0 * PI;
+                    }
+                } else if angle_span < -EPSILON_COLLINEAR {
+                    angle_span += 2.0 * PI;
+                }
+                (angle_span * radius).abs()
+            }
+            Command::Bezier {
+                end,
+                control1,
+                control2,
+            } => {
+                let sx = start_point.0;
+                let sy = start_point.1;
+                let ex = end.0;
+                let ey = end.1;
+                let l01 = (sx - control1.0).hypot(sy - control1.1);
+                let l12 =
+                    (control1.0 - control2.0).hypot(control1.1 - control2.1);
+                let l23 = (control2.0 - ex).hypot(control2.1 - ey);
+                let estimated_len = l01 + l12 + l23;
+                let num_steps =
+                    (estimated_len / 0.1).ceil().max(2.0) as usize;
+                let step_f = num_steps as f64;
+                let mut total = 0.0;
+                let mut prev = (sx, sy);
+                for i in 1..=num_steps {
+                    let t = i as f64 / step_f;
+                    let omt = 1.0 - t;
+                    let px = omt.powi(3) * sx
+                        + 3.0 * omt.powi(2) * t * control1.0
+                        + 3.0 * omt * t.powi(2) * control2.0
+                        + t.powi(3) * ex;
+                    let py = omt.powi(3) * sy
+                        + 3.0 * omt.powi(2) * t * control1.1
+                        + 3.0 * omt * t.powi(2) * control2.1
+                        + t.powi(3) * ey;
+                    total += (px - prev.0).hypot(py - prev.1);
+                    prev = (px, py);
+                }
+                total
+            }
+        }
+    }
+
+    pub fn split_at_t(
+        &self,
+        start_point: Point3D,
+        t: f64,
+    ) -> Option<Command> {
+        let sx = start_point.0;
+        let sy = start_point.1;
+        let sz = start_point.2;
+        let end = self.end_point();
+        let ex = end.0;
+        let ey = end.1;
+        let ez = end.2;
+        match self {
+            Command::Line { .. } => {
+                let nx = sx + t * (ex - sx);
+                let ny = sy + t * (ey - sy);
+                let nz = sz + t * (ez - sz);
+                Some(Command::Line { end: (nx, ny, nz) })
+            }
+            Command::Arc {
+                center_offset,
+                clockwise,
+                ..
+            } => {
+                let i_off = center_offset.0;
+                let j_off = center_offset.1;
+                let cx = sx + i_off;
+                let cy = sy + j_off;
+                let radius_start = i_off.hypot(j_off);
+                let radius_end = (ex - cx).hypot(ey - cy);
+                let start_angle = (sy - cy).atan2(sx - cx);
+                let end_angle = (ey - cy).atan2(ex - cx);
+                let mut angle_span = end_angle - start_angle;
+                if angle_span.abs() < EPSILON_COLLINEAR {
+                    angle_span = if *clockwise { -2.0 * PI } else { 2.0 * PI };
+                } else if *clockwise {
+                    if angle_span > EPSILON_COLLINEAR {
+                        angle_span -= 2.0 * PI;
+                    }
+                } else if angle_span < -EPSILON_COLLINEAR {
+                    angle_span += 2.0 * PI;
+                }
+                let mid_angle = start_angle + t * angle_span;
+                let radius = radius_start + t * (radius_end - radius_start);
+                let nx = cx + radius * mid_angle.cos();
+                let ny = cy + radius * mid_angle.sin();
+                let nz = sz + t * (ez - sz);
+                Some(Command::Arc {
+                    end: (nx, ny, nz),
+                    center_offset: (i_off, j_off),
+                    clockwise: *clockwise,
+                })
+            }
+            Command::Bezier {
+                control1,
+                control2,
+                ..
+            } => {
+                let c1x = control1.0;
+                let c1y = control1.1;
+                let c2x = control2.0;
+                let c2y = control2.1;
+                let p01x = sx + t * (c1x - sx);
+                let p01y = sy + t * (c1y - sy);
+                let p12x = c1x + t * (c2x - c1x);
+                let p12y = c1y + t * (c2y - c1y);
+                let p23x = c2x + t * (ex - c2x);
+                let p23y = c2y + t * (ey - c2y);
+                let p012x = p01x + t * (p12x - p01x);
+                let p012y = p01y + t * (p12y - p01y);
+                let p123x = p12x + t * (p23x - p12x);
+                let p123y = p12y + t * (p23y - p12y);
+                let p0123x = p012x + t * (p123x - p012x);
+                let p0123y = p012y + t * (p123y - p012y);
+                let nz = sz + t * (ez - sz);
+                Some(Command::Bezier {
+                    end: (p0123x, p0123y, nz),
+                    control1: (p01x, p01y),
+                    control2: (p012x, p012y),
+                })
+            }
+            Command::Move { .. } => None,
         }
     }
 }

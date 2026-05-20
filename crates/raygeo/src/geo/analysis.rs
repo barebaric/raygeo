@@ -400,56 +400,7 @@ pub fn does_enclose(container: &Geometry, content: &Geometry) -> bool {
 
 pub fn segment_length_from_row(row: &[f64; 8], start_point: Point3D) -> f64 {
     let cmd = Command::from_row(row).expect("invalid command");
-    let sx = start_point.0;
-    let sy = start_point.1;
-    let (ex, ey, _) = cmd.end_point();
-
-    match &cmd {
-        Command::Move { .. } | Command::Line { .. } => {
-            ((ex - sx).powi(2) + (ey - sy).powi(2)).sqrt()
-        }
-        Command::Arc {
-            center_offset,
-            clockwise,
-            ..
-        } => {
-            let cx = sx + center_offset.0;
-            let cy = sy + center_offset.1;
-            let radius =
-                (center_offset.0.powi(2) + center_offset.1.powi(2)).sqrt();
-            if radius < 1e-9 {
-                return 0.0;
-            }
-            let start_angle = (sy - cy).atan2(sx - cx);
-            let end_angle = (ey - cy).atan2(ex - cx);
-            let mut angle_span = end_angle - start_angle;
-            if angle_span.abs() < 1e-9 {
-                angle_span = if *clockwise { -2.0 * PI } else { 2.0 * PI };
-            } else if *clockwise {
-                if angle_span > 1e-9 {
-                    angle_span -= 2.0 * PI;
-                }
-            } else {
-                if angle_span < -1e-9 {
-                    angle_span += 2.0 * PI;
-                }
-            }
-            angle_span.abs() * radius
-        }
-        Command::Bezier { .. } => {
-            let segments = crate::bezier::linearize_bezier_from_array(
-                row,
-                start_point,
-                0.1,
-            );
-            segments
-                .iter()
-                .map(|(p1, p2)| {
-                    ((p2.0 - p1.0).powi(2) + (p2.1 - p1.1).powi(2)).sqrt()
-                })
-                .sum()
-        }
-    }
+    cmd.length(start_point)
 }
 
 pub fn segment_length_from_row_flat(
@@ -457,13 +408,9 @@ pub fn segment_length_from_row_flat(
     start_point: Point3D,
 ) -> f64 {
     let cmd = Command::from_row(row).expect("invalid command");
-    let sx = start_point.0;
-    let sy = start_point.1;
-    let (ex, ey, _) = cmd.end_point();
-
     match &cmd {
         Command::Move { .. } | Command::Line { .. } => {
-            ((ex - sx).powi(2) + (ey - sy).powi(2)).sqrt()
+            cmd.length(start_point)
         }
         Command::Arc { .. } | Command::Bezier { .. } => {
             segment_length_from_row(row, start_point)
@@ -479,94 +426,7 @@ pub fn partial_segment_from_row(
     t: f64,
 ) -> Option<[f64; 8]> {
     let cmd = Command::from_row(row).expect("invalid command");
-    let sx = start_point.0;
-    let sy = start_point.1;
-    let sz = start_point.2;
-    let (ex, ey, ez) = cmd.end_point();
-
-    match &cmd {
-        Command::Line { .. } => {
-            let nx = sx + t * (ex - sx);
-            let ny = sy + t * (ey - sy);
-            let nz = sz + t * (ez - sz);
-            Some(Command::Line { end: (nx, ny, nz) }.to_row())
-        }
-        Command::Arc {
-            center_offset,
-            clockwise,
-            ..
-        } => {
-            let i_off = center_offset.0;
-            let j_off = center_offset.1;
-            let cw = *clockwise;
-            let cx = sx + i_off;
-            let cy = sy + j_off;
-            let radius_start = i_off.hypot(j_off);
-            let radius_end = (ex - cx).hypot(ey - cy);
-
-            let start_angle = (sy - cy).atan2(sx - cx);
-            let end_angle = (ey - cy).atan2(ex - cx);
-            let mut angle_span = end_angle - start_angle;
-
-            if angle_span.abs() < 1e-9 {
-                angle_span = if cw { -2.0 * PI } else { 2.0 * PI };
-            } else if cw {
-                if angle_span > 1e-9 {
-                    angle_span -= 2.0 * PI;
-                }
-            } else {
-                if angle_span < -1e-9 {
-                    angle_span += 2.0 * PI;
-                }
-            }
-
-            let mid_angle = start_angle + t * angle_span;
-            let radius = radius_start + t * (radius_end - radius_start);
-            let nx = cx + radius * mid_angle.cos();
-            let ny = cy + radius * mid_angle.sin();
-            let nz = sz + t * (ez - sz);
-            Some(
-                Command::Arc {
-                    end: (nx, ny, nz),
-                    center_offset: (i_off, j_off),
-                    clockwise: cw,
-                }
-                .to_row(),
-            )
-        }
-        Command::Bezier {
-            control1, control2, ..
-        } => {
-            let c1x = control1.0;
-            let c1y = control1.1;
-            let c2x = control2.0;
-            let c2y = control2.1;
-
-            let p01x = sx + t * (c1x - sx);
-            let p01y = sy + t * (c1y - sy);
-            let p12x = c1x + t * (c2x - c1x);
-            let p12y = c1y + t * (c2y - c1y);
-            let p23x = c2x + t * (ex - c2x);
-            let p23y = c2y + t * (ey - c2y);
-            let p012x = p01x + t * (p12x - p01x);
-            let p012y = p01y + t * (p12y - p01y);
-            let p123x = p12x + t * (p23x - p12x);
-            let p123y = p12y + t * (p23y - p12y);
-            let p0123x = p012x + t * (p123x - p012x);
-            let p0123y = p012y + t * (p123y - p012y);
-
-            let nz = sz + t * (ez - sz);
-            Some(
-                Command::Bezier {
-                    end: (p0123x, p0123y, nz),
-                    control1: (p01x, p01y),
-                    control2: (p012x, p012y),
-                }
-                .to_row(),
-            )
-        }
-        _ => None,
-    }
+    cmd.split_at_t(start_point, t).map(|c| c.to_row())
 }
 
 fn container_intersects_content(

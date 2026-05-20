@@ -18,6 +18,8 @@ use crate::geo::shape::bezier::{
 use crate::geo::shape::line::get_line_segment_closest_point;
 use crate::types::{Command, Point, Point3D, Rect};
 
+use super::analysis::segment_length_from_row;
+
 /// Compute the axis-aligned bounding rectangle for a geometry array.
 ///
 /// Handles line, arc, and Bezier segments by computing their exact bounds.
@@ -256,173 +258,6 @@ pub fn find_closest_point_on_path_from_array(
     closest_info
 }
 
-/// Compute the length of a single command segment from its data row.
-///
-/// Handles lines (Euclidean distance), arcs (arc angle × radius), and Beziers (linearized).
-///
-/// - `row`: The command data row.
-/// - `start_point`: The start point of the segment.
-/// - Returns: The segment length.
-fn _segment_length_from_row(row: &[f64; 8], start_point: Point3D) -> f64 {
-    let cmd = Command::from_row(row).expect("invalid command");
-    let sx = start_point.0;
-    let sy = start_point.1;
-    let end = cmd.end_point();
-    let ex = end.0;
-    let ey = end.1;
-
-    match &cmd {
-        Command::Move { .. } | Command::Line { .. } => (ex - sx).hypot(ey - sy),
-        Command::Arc {
-            center_offset,
-            clockwise,
-            ..
-        } => {
-            let i_off = center_offset.0;
-            let j_off = center_offset.1;
-            let cx = sx + i_off;
-            let cy = sy + j_off;
-            let radius = i_off.hypot(j_off);
-
-            if radius < EPSILON_COLLINEAR {
-                return 0.0;
-            }
-
-            let start_angle = (sy - cy).atan2(sx - cx);
-            let end_angle = (ey - cy).atan2(ex - cx);
-            let mut angle_span = end_angle - start_angle;
-
-            if angle_span.abs() < EPSILON_COLLINEAR {
-                angle_span = if *clockwise { -2.0 * PI } else { 2.0 * PI };
-            } else if *clockwise {
-                if angle_span > EPSILON_COLLINEAR {
-                    angle_span -= 2.0 * PI;
-                }
-            } else {
-                if angle_span < -EPSILON_COLLINEAR {
-                    angle_span += 2.0 * PI;
-                }
-            }
-
-            (angle_span * radius).abs()
-        }
-        Command::Bezier { .. } => {
-            let segments = linearize_bezier_from_array(row, start_point, 0.1);
-            segments
-                .iter()
-                .map(|(p1, p2)| (p2.0 - p1.0).hypot(p2.1 - p1.1))
-                .sum()
-        }
-    }
-}
-
-/// Compute a partial segment from the start to parameter `t` along the command.
-///
-/// For arcs and Beziers, this de Casteljau-subdivides to produce a proper sub-curve.
-///
-/// - `row`: The command data row.
-/// - `start_point`: The start point of the segment.
-/// - `t`: Parameter in [0, 1] indicating how far along the segment to go.
-/// - Returns: The data row for the partial command, or `None` for Move commands.
-fn _partial_segment_from_row(
-    row: &[f64; 8],
-    start_point: Point3D,
-    t: f64,
-) -> Option<[f64; 8]> {
-    let cmd = Command::from_row(row).expect("invalid command");
-    let sx = start_point.0;
-    let sy = start_point.1;
-    let sz = start_point.2;
-    let end = cmd.end_point();
-    let ex = end.0;
-    let ey = end.1;
-    let ez = end.2;
-
-    match &cmd {
-        Command::Line { .. } => {
-            let nx = sx + t * (ex - sx);
-            let ny = sy + t * (ey - sy);
-            let nz = sz + t * (ez - sz);
-            Some(Command::Line { end: (nx, ny, nz) }.to_row())
-        }
-        Command::Arc {
-            center_offset,
-            clockwise,
-            ..
-        } => {
-            let i_off = center_offset.0;
-            let j_off = center_offset.1;
-            let cx = sx + i_off;
-            let cy = sy + j_off;
-            let radius_start = i_off.hypot(j_off);
-            let radius_end = (ex - cx).hypot(ey - cy);
-
-            let start_angle = (sy - cy).atan2(sx - cx);
-            let end_angle = (ey - cy).atan2(ex - cx);
-            let mut angle_span = end_angle - start_angle;
-
-            if angle_span.abs() < EPSILON_COLLINEAR {
-                angle_span = if *clockwise { -2.0 * PI } else { 2.0 * PI };
-            } else if *clockwise {
-                if angle_span > EPSILON_COLLINEAR {
-                    angle_span -= 2.0 * PI;
-                }
-            } else {
-                if angle_span < -EPSILON_COLLINEAR {
-                    angle_span += 2.0 * PI;
-                }
-            }
-
-            let mid_angle = start_angle + t * angle_span;
-            let radius = radius_start + t * (radius_end - radius_start);
-            let nx = cx + radius * mid_angle.cos();
-            let ny = cy + radius * mid_angle.sin();
-            let nz = sz + t * (ez - sz);
-
-            Some(
-                Command::Arc {
-                    end: (nx, ny, nz),
-                    center_offset: *center_offset,
-                    clockwise: *clockwise,
-                }
-                .to_row(),
-            )
-        }
-        Command::Bezier {
-            control1, control2, ..
-        } => {
-            let c1x = control1.0;
-            let c1y = control1.1;
-            let c2x = control2.0;
-            let c2y = control2.1;
-
-            let p01x = sx + t * (c1x - sx);
-            let p01y = sy + t * (c1y - sy);
-            let p12x = c1x + t * (c2x - c1x);
-            let p12y = c1y + t * (c2y - c1y);
-            let p23x = c2x + t * (ex - c2x);
-            let p23y = c2y + t * (ey - c2y);
-            let p012x = p01x + t * (p12x - p01x);
-            let p012y = p01y + t * (p12y - p01y);
-            let p123x = p12x + t * (p23x - p12x);
-            let p123y = p12y + t * (p23y - p12y);
-            let p0123x = p012x + t * (p123x - p012x);
-            let p0123y = p012y + t * (p123y - p012y);
-            let nz = sz + t * (ez - sz);
-
-            Some(
-                Command::Bezier {
-                    end: (p0123x, p0123y, nz),
-                    control1: (p01x, p01y),
-                    control2: (p012x, p012y),
-                }
-                .to_row(),
-            )
-        }
-        Command::Move { .. } => None,
-    }
-}
-
 /// Extract path segments up to a maximum length for overcut operations.
 ///
 /// Returns the commands that fall within `max_length`, including a partial command
@@ -446,7 +281,7 @@ pub fn extract_overcut_rows(
 
     for row in data.iter().skip(1) {
         let cmd = Command::from_row(row).expect("invalid command");
-        let seg_length = _segment_length_from_row(row, last_point);
+        let seg_length = segment_length_from_row(row, last_point);
         if seg_length < EPSILON_COLLINEAR {
             last_point = cmd.end_point();
             continue;
@@ -460,7 +295,7 @@ pub fn extract_overcut_rows(
             if remaining > EPSILON_COLLINEAR {
                 let t = remaining / seg_length;
                 if let Some(partial) =
-                    _partial_segment_from_row(row, last_point, t)
+                    cmd.split_at_t(last_point, t).map(|c| c.to_row())
                 {
                     collected.push(partial);
                 }

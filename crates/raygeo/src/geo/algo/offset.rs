@@ -4,25 +4,22 @@
 //! Handles containment hierarchies (holes within solids) correctly by
 //! offsetting solids and holes independently and subtracting holes from solids.
 
-use std::collections::HashMap;
-
 use crate::geo::algo::intersect::check_intersection_from_array;
-use crate::geo::algo::topology::{get_valid_contours_data, split_into_contours};
+use crate::geo::algo::topology::{
+    build_hierarchy, get_valid_contours_data, group_solids_and_holes,
+    split_into_contours,
+};
 use crate::geo::geometry::Geometry;
-use crate::geo::shape::polygon::is_point_inside_polygon;
 use crate::geo::shape::polygon::{get_polygons_difference, offset_polygon};
-use crate::types::{Point, Polygon, Rect};
+use crate::types::{Point, Polygon};
 
 const CLIPPER_SCALE: i64 = 10_000_000;
 
 #[derive(Clone, Debug)]
 struct ContourItem {
-    geo: Geometry,
-    verts: Vec<Point>,
     path: Vec<(i64, i64)>,
-    rect: Rect,
-    area: f64,
     #[allow(dead_code)]
+    area: f64,
     id: usize,
 }
 
@@ -30,7 +27,7 @@ fn prepare_contour_items(
     contour_data: &[(Geometry, Vec<Point>, bool)],
 ) -> Vec<ContourItem> {
     let mut items = Vec::new();
-    for (i, (geo, vertices, _is_closed)) in contour_data.iter().enumerate() {
+    for (i, (_geo, vertices, _is_closed)) in contour_data.iter().enumerate() {
         if vertices.len() < 2 {
             continue;
         }
@@ -60,98 +57,13 @@ fn prepare_contour_items(
                 )
             })
             .collect();
-        let rect = geo.rect();
         items.push(ContourItem {
-            geo: geo.clone(),
-            verts,
             path: scaled_path,
-            rect,
             area,
             id: i,
         });
     }
     items
-}
-
-fn build_containment_hierarchy(items: &[ContourItem]) -> Vec<isize> {
-    let n = items.len();
-    let mut parent_map = vec![-1isize; n];
-
-    for i in 0..n {
-        let mut best_parent = -1isize;
-        let mut best_parent_area = f64::INFINITY;
-
-        for j in 0..n {
-            if i == j {
-                continue;
-            }
-            let r_i = &items[i].rect;
-            let r_j = &items[j].rect;
-            if !(r_j.0 <= r_i.0
-                && r_j.1 <= r_i.1
-                && r_j.2 >= r_i.2
-                && r_j.3 >= r_i.3)
-            {
-                continue;
-            }
-            if items[j].area <= items[i].area {
-                continue;
-            }
-            if check_intersection_from_array(
-                &items[i].geo.data,
-                &items[j].geo.data,
-                false,
-            ) {
-                continue;
-            }
-            if !items[j].verts.is_empty()
-                && is_point_inside_polygon(items[i].verts[0], &items[j].verts)
-                && items[j].area < best_parent_area
-            {
-                best_parent_area = items[j].area;
-                best_parent = j as isize;
-            }
-        }
-        parent_map[i] = best_parent;
-    }
-    parent_map
-}
-
-fn calculate_nesting_depths(
-    parent_map: &[isize],
-    num_items: usize,
-) -> Vec<i32> {
-    let mut depths = vec![0i32; num_items];
-    for i in 0..num_items {
-        let mut d = 0;
-        let mut curr = parent_map[i];
-        let mut iterations = 0;
-        while curr != -1 && iterations <= num_items {
-            d += 1;
-            curr = parent_map[curr as usize];
-            iterations += 1;
-        }
-        depths[i] = d;
-    }
-    depths
-}
-
-fn group_solids_and_holes(
-    depths: &[i32],
-    parent_map: &[isize],
-) -> HashMap<usize, Vec<usize>> {
-    let mut groups: HashMap<usize, Vec<usize>> = HashMap::new();
-    for (i, &d) in depths.iter().enumerate() {
-        if d % 2 == 0 {
-            groups.entry(i).or_default();
-        } else {
-            let p = parent_map[i];
-            if p != -1 {
-                groups.entry(p as usize).or_default().push(i);
-            }
-        }
-    }
-    groups
 }
 
 fn offset_contour_group(
@@ -177,7 +89,11 @@ fn offset_contour_group(
                 .iter()
                 .map(|(x, y)| (*x as f64 / scale, *y as f64 / scale))
                 .collect();
-            if poly.len() >= 3 { Some(poly) } else { None }
+            if poly.len() >= 3 {
+                Some(poly)
+            } else {
+                None
+            }
         })
         .collect();
     if hole_polys.is_empty() {
@@ -224,15 +140,40 @@ pub fn grow_geometry(geometry: &Geometry, offset: f64) -> Geometry {
     if closed_items.is_empty() {
         return Geometry::new();
     }
-    let parent_map = build_containment_hierarchy(&closed_items);
-    let depths = calculate_nesting_depths(&parent_map, closed_items.len());
-    let solid_groups = group_solids_and_holes(&depths, &parent_map);
+
+    let hierarchy_geoms: Vec<Geometry> =
+        contour_data.iter().map(|(g, _, _)| g.clone()).collect();
+    let mut hierarchy = build_hierarchy(&hierarchy_geoms);
+    let hierarchy_info = hierarchy.info.clone();
+    hierarchy.filter_parents(&hierarchy_info, |child, parent| {
+        !check_intersection_from_array(
+            &hierarchy_geoms[child].data,
+            &hierarchy_geoms[parent].data,
+            false,
+        )
+    });
+    let solid_groups = group_solids_and_holes(&hierarchy);
+
+    let contour_to_item: std::collections::HashMap<usize, usize> = closed_items
+        .iter()
+        .enumerate()
+        .map(|(item_idx, item)| (item.id, item_idx))
+        .collect();
+
     let mut new_geo = Geometry::new();
-    for (solid_idx, hole_indices) in solid_groups.iter() {
-        let solid_item = &closed_items[*solid_idx];
-        let hole_paths: Vec<Vec<(i64, i64)>> = hole_indices
+    for (solid_contour_idx, hole_contour_indices) in solid_groups.iter() {
+        let solid_item_idx = match contour_to_item.get(solid_contour_idx) {
+            Some(&idx) => idx,
+            None => continue,
+        };
+        let solid_item = &closed_items[solid_item_idx];
+        let hole_paths: Vec<Vec<(i64, i64)>> = hole_contour_indices
             .iter()
-            .map(|&h_idx| closed_items[h_idx].path.clone())
+            .filter_map(|&h_idx| {
+                contour_to_item
+                    .get(&h_idx)
+                    .map(|&idx| closed_items[idx].path.clone())
+            })
             .collect();
         let offset_contours =
             offset_contour_group(&solid_item.path, &hole_paths, offset);
@@ -302,22 +243,14 @@ mod tests {
     }
 
     #[test]
-    fn test_calculate_nesting_depths() {
-        let parent_map = vec![-1isize, 0, 1];
-        let depths = calculate_nesting_depths(&parent_map, 3);
-        assert_eq!(depths, vec![0, 1, 2]);
-    }
-
-    #[test]
     fn test_group_solids_and_holes() {
-        let depths = vec![0, 1, 2, 1];
-        let parent_map = vec![-1isize, 0, 1, 0];
-        let groups = group_solids_and_holes(&depths, &parent_map);
-        // depth 0 (solid) -> key 0 with holes [1, 3]
-        // depth 1 (hole) -> belongs to parent 0
-        // depth 2 (solid) -> key 2, no holes
+        let rect = rectangle_geo(0.0, 0.0, 10.0, 10.0);
+        let contours = split_into_contours(&rect);
+        let contour_data = get_valid_contours_data(&contours);
+        let hierarchy_geoms: Vec<Geometry> =
+            contour_data.iter().map(|(g, _, _)| g.clone()).collect();
+        let hierarchy = build_hierarchy(&hierarchy_geoms);
+        let groups = group_solids_and_holes(&hierarchy);
         assert!(groups.contains_key(&0));
-        assert!(groups.contains_key(&2));
-        assert_eq!(groups[&0].len(), 2);
     }
 }

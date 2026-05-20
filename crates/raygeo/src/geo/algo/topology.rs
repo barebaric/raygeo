@@ -11,6 +11,232 @@ use crate::geo::geometry::Geometry;
 use crate::geo::shape::polygon::is_point_inside_polygon;
 use crate::types::{Command, Point, Rect};
 
+/// Preprocessed contour data for hierarchy analysis.
+#[derive(Clone, Debug)]
+pub struct ContourInfo {
+    pub vertices: Vec<Point>,
+    pub rect: Rect,
+    pub test_point: Point,
+}
+
+/// Result of building a containment hierarchy over contours.
+#[derive(Clone, Debug)]
+pub struct ContourHierarchy {
+    /// Preprocessed contour info (None for contours that are open/empty/degenerate).
+    pub info: Vec<Option<ContourInfo>>,
+    /// Nesting depth for each contour (0 = outermost, -1 = not applicable).
+    pub nesting_depths: Vec<i32>,
+    /// Direct parent index for each contour (-1 = no parent / root).
+    pub parent_map: Vec<isize>,
+}
+
+impl ContourHierarchy {
+    /// Remove parent relationships that fail a validation check and
+    /// recompute nesting depths from the filtered parent chain.
+    ///
+    /// `should_keep(i, parent)` returns false if the parent relationship
+    /// between contour `i` and its parent `parent` should be removed.
+    /// After filtering, nesting depths are recomputed by walking the
+    /// (now potentially shorter) parent chain, and new best parents
+    /// are found for contours whose parent was removed.
+    pub fn filter_parents<F>(&mut self, info: &[Option<ContourInfo>], should_keep: F)
+    where
+        F: Fn(usize, usize) -> bool,
+    {
+        let n = self.parent_map.len();
+        for i in 0..n {
+            if self.parent_map[i] != -1 {
+                let parent = self.parent_map[i] as usize;
+                if !should_keep(i, parent) {
+                    self.parent_map[i] = -1;
+                    self.nesting_depths[i] -= 1;
+
+                    let current = match &info[i] {
+                        Some(ci) => ci,
+                        None => continue,
+                    };
+                    let (tx, ty) = current.test_point;
+                    let mut best_parent: isize = -1;
+                    let mut best_parent_area = f64::INFINITY;
+
+                    for (j, info_j) in info.iter().enumerate() {
+                        if i == j {
+                            continue;
+                        }
+                        let other = match info_j {
+                            Some(ci) => ci,
+                            None => continue,
+                        };
+                        if self.nesting_depths[j] < 0 {
+                            continue;
+                        }
+                        let (o_min_x, o_min_y, o_max_x, o_max_y) = other.rect;
+                        if tx < o_min_x || tx > o_max_x
+                            || ty < o_min_y || ty > o_max_y
+                        {
+                            continue;
+                        }
+                        if !is_point_inside_polygon(
+                            current.test_point,
+                            &other.vertices,
+                        ) {
+                            continue;
+                        }
+                        if !should_keep(i, j) {
+                            continue;
+                        }
+                        let other_bbox_area =
+                            (o_max_x - o_min_x) * (o_max_y - o_min_y);
+                        if other_bbox_area < best_parent_area {
+                            best_parent_area = other_bbox_area;
+                            best_parent = j as isize;
+                        }
+                    }
+                    self.parent_map[i] = best_parent;
+                }
+            }
+        }
+
+        for i in 0..n {
+            if self.nesting_depths[i] < 0 {
+                continue;
+            }
+            let mut d = 0i32;
+            let mut curr = self.parent_map[i];
+            let mut iterations = 0;
+            while curr != -1 && iterations <= n {
+                d += 1;
+                curr = self.parent_map[curr as usize];
+                iterations += 1;
+            }
+            self.nesting_depths[i] = d;
+        }
+    }
+}
+
+/// Build a containment hierarchy from a list of geometries.
+///
+/// For each contour, computes its nesting depth by counting how many
+/// other closed contours contain its test point (even-odd rule).
+/// Also computes a parent_map identifying each contour's direct parent
+/// (the smallest enclosing contour by bounding box area).
+pub fn build_hierarchy(contours: &[Geometry]) -> ContourHierarchy {
+    let count = contours.len();
+    let mut info: Vec<Option<ContourInfo>> = Vec::with_capacity(count);
+
+    for c in contours {
+        if c.is_empty() || c.data.is_empty() {
+            info.push(None);
+            continue;
+        }
+
+        let c_is_closed = is_closed(&c.data, 1e-6);
+        if !c_is_closed {
+            info.push(None);
+            continue;
+        }
+
+        let segments = c.segments();
+        if segments.is_empty() {
+            info.push(None);
+            continue;
+        }
+
+        let verts_3d = &segments[0];
+        let verts_2d: Vec<Point> =
+            verts_3d.iter().map(|p| (p.0, p.1)).collect();
+        let rect = c.rect();
+        let test_point = if verts_2d.is_empty() {
+            (0.0, 0.0)
+        } else {
+            verts_2d[0]
+        };
+
+        let area = get_subpath_area_from_array(&c.data, 0);
+        if area.abs() < 1e-9 {
+            info.push(None);
+            continue;
+        }
+
+        info.push(Some(ContourInfo {
+            vertices: verts_2d,
+            rect,
+            test_point,
+        }));
+    }
+
+    let mut nesting_depths = vec![-1i32; count];
+    let mut parent_map = vec![-1isize; count];
+
+    for (i, info_i) in info.iter().enumerate() {
+        let current = match info_i {
+            Some(ci) => ci,
+            None => continue,
+        };
+
+        let mut depth = 0i32;
+        let mut best_parent: isize = -1;
+        let mut best_parent_area = f64::INFINITY;
+        let (tx, ty) = current.test_point;
+
+        for (j, info_j) in info.iter().enumerate() {
+            if i == j {
+                continue;
+            }
+            let other = match info_j {
+                Some(ci) => ci,
+                None => continue,
+            };
+
+            let (o_min_x, o_min_y, o_max_x, o_max_y) = other.rect;
+            if tx < o_min_x || tx > o_max_x || ty < o_min_y || ty > o_max_y {
+                continue;
+            }
+
+            if is_point_inside_polygon(current.test_point, &other.vertices) {
+                depth += 1;
+                let other_bbox_area = (o_max_x - o_min_x) * (o_max_y - o_min_y);
+                if other_bbox_area < best_parent_area {
+                    best_parent_area = other_bbox_area;
+                    best_parent = j as isize;
+                }
+            }
+        }
+
+        nesting_depths[i] = depth;
+        parent_map[i] = best_parent;
+    }
+
+    ContourHierarchy {
+        info,
+        nesting_depths,
+        parent_map,
+    }
+}
+
+/// Group contours into solids (even nesting depth) and their associated holes
+/// (odd nesting depth). Returns a map from solid index to its hole indices.
+pub fn group_solids_and_holes(
+    hierarchy: &ContourHierarchy,
+) -> std::collections::HashMap<usize, Vec<usize>> {
+    let mut groups: std::collections::HashMap<usize, Vec<usize>> =
+        std::collections::HashMap::new();
+    for (i, &depth) in hierarchy.nesting_depths.iter().enumerate() {
+        if depth < 0 {
+            continue;
+        }
+        if depth % 2 == 0 {
+            groups.entry(i).or_default();
+        } else {
+            let p = hierarchy.parent_map[i];
+            if p != -1 {
+                groups.entry(p as usize).or_default().push(i);
+            }
+        }
+    }
+    groups
+}
+
 /// Split a Geometry into individual contour geometries.
 ///
 /// Each contour is a continuous subpath starting with a MOVE command.
@@ -309,97 +535,17 @@ pub fn split_inner_and_outer_contours(
         return (vec![], vec![]);
     }
 
-    let count = contours.len();
-
-    struct ContourInfo {
-        vertices: Vec<Point>,
-        rect: Rect,
-        test_point: Point,
-    }
-
-    let mut info_list: Vec<Option<ContourInfo>> = Vec::with_capacity(count);
-
-    for c in contours {
-        if c.is_empty() || c.data.is_empty() {
-            info_list.push(None);
-            continue;
-        }
-
-        let c_is_closed = is_closed(&c.data, 1e-6);
-        if !c_is_closed {
-            info_list.push(None);
-            continue;
-        }
-
-        let segments = c.segments();
-        if segments.is_empty() {
-            info_list.push(None);
-            continue;
-        }
-
-        let verts_3d = &segments[0];
-        let verts_2d: Vec<Point> =
-            verts_3d.iter().map(|p| (p.0, p.1)).collect();
-        let rect = c.rect();
-        let test_point = if verts_2d.is_empty() {
-            (0.0, 0.0)
-        } else {
-            verts_2d[0]
-        };
-
-        let area = get_subpath_area_from_array(&c.data, 0);
-        let area_ok = area.abs() > 1e-9;
-
-        if !area_ok {
-            info_list.push(None);
-            continue;
-        }
-
-        info_list.push(Some(ContourInfo {
-            vertices: verts_2d,
-            rect,
-            test_point,
-        }));
-    }
-
-    let mut is_external = vec![true; count];
-
-    for (i, info) in info_list.iter().enumerate() {
-        let current = match info {
-            Some(info) => info,
-            None => continue,
-        };
-
-        let mut nesting_level = 0u32;
-        let (tx, ty) = current.test_point;
-
-        for (j, other_info) in info_list.iter().enumerate() {
-            if i == j {
-                continue;
-            }
-            let other = match other_info {
-                Some(info) => info,
-                None => continue,
-            };
-
-            let (o_min_x, o_min_y, o_max_x, o_max_y) = other.rect;
-            if tx < o_min_x || tx > o_max_x || ty < o_min_y || ty > o_max_y {
-                continue;
-            }
-
-            if is_point_inside_polygon(current.test_point, &other.vertices) {
-                nesting_level += 1;
-            }
-        }
-
-        is_external[i] = nesting_level.is_multiple_of(2);
-    }
+    let hierarchy = build_hierarchy(contours);
 
     let mut internal_indices: Vec<usize> = Vec::new();
     let mut external_indices: Vec<usize> = Vec::new();
 
     for (i, _) in contours.iter().enumerate() {
-        if is_external[i] {
+        let depth = hierarchy.nesting_depths[i];
+        if depth < 0 {
+            continue;
+        }
+        if depth % 2 == 0 {
             external_indices.push(i);
         } else {
             internal_indices.push(i);
@@ -438,84 +584,26 @@ pub fn normalize_winding_orders(contours: &[Geometry]) -> Vec<Geometry> {
         return vec![];
     }
 
-    let count = contours.len();
-    type ContourEntry = (Geometry, Vec<Point>, Rect, Point, bool);
-    let mut contour_data: Vec<Option<ContourEntry>> = Vec::with_capacity(count);
+    let hierarchy = build_hierarchy(contours);
     let mut normalized_contours: Vec<Geometry> = Vec::new();
 
-    for c in contours {
-        if c.is_empty() {
-            contour_data.push(None);
-            continue;
-        }
-        if c.data.is_empty() {
-            contour_data.push(None);
-            continue;
-        }
-
-        let c_is_closed = is_closed(&c.data, 1e-6);
-
-        if !c_is_closed {
-            normalized_contours.push(c.copy());
-            contour_data.push(None);
-            continue;
-        }
-
-        let segments = c.segments();
-        if segments.is_empty() {
-            contour_data.push(None);
-            continue;
-        }
-
-        let verts_3d = &segments[0];
-        let verts_2d: Vec<Point> =
-            verts_3d.iter().map(|p| (p.0, p.1)).collect();
-        let rect = c.rect();
-        let test_point = if verts_2d.is_empty() {
-            (0.0, 0.0)
-        } else {
-            verts_2d[0]
-        };
-
-        contour_data.push(Some((c.copy(), verts_2d, rect, test_point, true)));
-    }
-
-    for (i, entry) in contour_data.iter().enumerate() {
-        let current = match entry {
-            Some(data) => data,
-            None => continue,
-        };
-
-        let mut nesting_level = 0;
-        let (tx, ty) = current.3;
-
-        for (j, other_entry) in contour_data.iter().enumerate() {
-            if i == j {
-                continue;
+    for (i, c) in contours.iter().enumerate() {
+        let depth = hierarchy.nesting_depths[i];
+        if depth < 0 {
+            if !c.is_empty() {
+                normalized_contours.push(c.copy());
             }
-            let other = match other_entry {
-                Some(data) => data,
-                None => continue,
-            };
-
-            let (o_min_x, o_min_y, o_max_x, o_max_y) = other.2;
-            if tx < o_min_x || tx > o_max_x || ty < o_min_y || ty > o_max_y {
-                continue;
-            }
-
-            if is_point_inside_polygon(current.3, &other.1) {
-                nesting_level += 1;
-            }
+            continue;
         }
 
-        let signed_area = get_subpath_area_from_array(&current.0.data, 0);
+        let signed_area = get_subpath_area_from_array(&c.data, 0);
         let is_ccw = signed_area > 0.0;
-        let is_nested_odd = nesting_level % 2 != 0;
+        let is_nested_odd = depth % 2 != 0;
 
         if (is_nested_odd && is_ccw) || (!is_nested_odd && !is_ccw) {
-            normalized_contours.push(reverse_contour(&current.0));
+            normalized_contours.push(reverse_contour(c));
         } else {
-            normalized_contours.push(current.0.copy());
+            normalized_contours.push(c.copy());
         }
     }
 
@@ -622,5 +710,33 @@ mod tests {
         let adj = vec![vec![], vec![], vec![]];
         let components = find_connected_components_bfs(3, &adj);
         assert_eq!(components.len(), 3);
+    }
+
+    #[test]
+    fn test_build_hierarchy_single() {
+        let mut geo = Geometry::new();
+        geo.move_to(0.0, 0.0, 0.0);
+        geo.line_to(10.0, 0.0, 0.0);
+        geo.line_to(10.0, 10.0, 0.0);
+        geo.line_to(0.0, 0.0, 0.0);
+        let contours = split_into_contours(&geo);
+        let hierarchy = build_hierarchy(&contours);
+        assert_eq!(hierarchy.nesting_depths.len(), 1);
+        assert_eq!(hierarchy.nesting_depths[0], 0);
+        assert_eq!(hierarchy.parent_map[0], -1);
+    }
+
+    #[test]
+    fn test_group_solids_and_holes_single() {
+        let mut geo = Geometry::new();
+        geo.move_to(0.0, 0.0, 0.0);
+        geo.line_to(10.0, 0.0, 0.0);
+        geo.line_to(10.0, 10.0, 0.0);
+        geo.line_to(0.0, 0.0, 0.0);
+        let contours = split_into_contours(&geo);
+        let hierarchy = build_hierarchy(&contours);
+        let groups = group_solids_and_holes(&hierarchy);
+        assert!(groups.contains_key(&0));
+        assert!(groups[&0].is_empty());
     }
 }
