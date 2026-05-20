@@ -4,13 +4,13 @@ use crate::constants::EPSILON_COLLINEAR;
 
 use super::axis::Axis;
 use super::enums::{CommandCategory, CommandType, SectionType};
-use super::types::{ArcParams, BezierParams, OpCommand, OpMetadata};
 use super::state::State;
+use super::types::{MoveCmd, OpCategory, OpNode, StateCmd};
 use crate::types::Point3D;
 
 #[derive(Clone, Debug)]
 pub struct Ops {
-    pub commands: Vec<OpCommand>,
+    pub commands: Vec<OpNode>,
     pub last_move_to: Point3D,
     pub time_dirty: bool,
     pub cached_time: f64,
@@ -37,227 +37,100 @@ impl Ops {
     }
 
     pub fn command_type(&self, idx: usize) -> CommandType {
-        self.commands[idx].ct
+        self.commands[idx].command_type()
     }
 
     pub fn category(&self, idx: usize) -> CommandCategory {
-        self.commands[idx].ct.category()
+        self.commands[idx].command_type().category()
     }
 
     pub fn is_travel(&self, idx: usize) -> bool {
-        self.commands[idx].ct == CommandType::MoveTo
+        self.commands[idx].command_type() == CommandType::MoveTo
     }
 
     pub fn is_cutting(&self, idx: usize) -> bool {
-        let ct = self.commands[idx].ct;
+        let ct = self.commands[idx].command_type();
         ct.category() == CommandCategory::Moving && ct != CommandType::MoveTo
     }
 
     pub fn is_state(&self, idx: usize) -> bool {
-        self.commands[idx].ct.category() == CommandCategory::State
+        self.commands[idx].is_state_cmd()
     }
 
     pub fn is_marker(&self, idx: usize) -> bool {
-        self.commands[idx].ct.category() == CommandCategory::Marker
+        self.commands[idx].is_marker()
     }
 
     pub fn is_scanline(&self, idx: usize) -> bool {
-        self.commands[idx].ct == CommandType::ScanLine
-    }
-
-    pub fn indices_of(&self, ct: CommandType) -> Vec<usize> {
-        self.commands
-            .iter()
-            .enumerate()
-            .filter(|(_, cmd)| cmd.ct == ct)
-            .map(|(i, _)| i)
-            .collect()
+        self.commands[idx].command_type() == CommandType::ScanLine
     }
 
     pub fn endpoint(&self, idx: usize) -> Point3D {
-        self.commands[idx].end
+        self.commands[idx].end_point()
     }
 
     pub fn set_endpoint(&mut self, idx: usize, end: Point3D) {
-        self.commands[idx].end = end;
-    }
-
-    pub fn set_arc_params(
-        &mut self,
-        idx: usize,
-        center_offset: Option<(f64, f64)>,
-        clockwise: Option<bool>,
-    ) {
-        if let OpMetadata::Arc(ref old) = self.commands[idx].metadata {
-            let co = center_offset.unwrap_or((old.0, old.1));
-            let cw = clockwise.unwrap_or(old.2);
-            self.commands[idx].metadata = OpMetadata::Arc((co.0, co.1, cw));
-        }
-    }
-
-    pub fn arc_params(&self, idx: usize) -> &ArcParams {
-        match &self.commands[idx].metadata {
-            OpMetadata::Arc(params) => params,
-            _ => panic!("arc_params called on non-arc command"),
-        }
-    }
-
-    pub fn set_bezier_params(&mut self, idx: usize, c1: Point3D, c2: Point3D) {
-        self.commands[idx].metadata = OpMetadata::Bezier((c1, c2));
-    }
-
-    pub fn bezier_params(&self, idx: usize) -> &BezierParams {
-        match &self.commands[idx].metadata {
-            OpMetadata::Bezier(params) => params,
-            _ => panic!("bezier_params called on non-bezier command"),
-        }
-    }
-
-    pub fn quad_params(&self, idx: usize) -> &Point3D {
-        match &self.commands[idx].metadata {
-            OpMetadata::QuadraticBezier(control) => control,
-            _ => panic!("quad_params called on non-quadratic-bezier command"),
-        }
-    }
-
-    pub fn set_quad_params(&mut self, idx: usize, control: Point3D) {
-        self.commands[idx].metadata = OpMetadata::QuadraticBezier(control);
-    }
-
-    pub fn scanline_data(&self, idx: usize) -> &[u8] {
-        match &self.commands[idx].metadata {
-            OpMetadata::ScanLine(data) => data,
-            _ => panic!("scanline_data called on non-scanline command"),
-        }
-    }
-
-    pub fn dwell_duration(&self, idx: usize) -> f64 {
-        match self.commands[idx].metadata {
-            OpMetadata::Dwell(d) => d,
-            _ => panic!("dwell_duration called on non-dwell command"),
-        }
-    }
-
-    pub fn power(&self, idx: usize) -> f64 {
-        match self.commands[idx].metadata {
-            OpMetadata::SetPower(p) => p,
-            _ => panic!("power called on non-set-power command"),
-        }
-    }
-
-    pub fn speed(&self, idx: usize) -> i32 {
-        match self.commands[idx].metadata {
-            OpMetadata::SetSpeed(s) => s,
-            _ => panic!("speed called on non-set-speed command"),
-        }
-    }
-
-    pub fn frequency(&self, idx: usize) -> i32 {
-        match self.commands[idx].metadata {
-            OpMetadata::SetFrequency(f) => f,
-            _ => panic!("frequency called on non-set-frequency command"),
-        }
-    }
-
-    pub fn pulse_width(&self, idx: usize) -> f64 {
-        match self.commands[idx].metadata {
-            OpMetadata::SetPulseWidth(pw) => pw,
-            _ => panic!("pulse_width called on non-set-pulse-width command"),
-        }
-    }
-
-    pub fn laser_uid(&self, idx: usize) -> &str {
-        match &self.commands[idx].metadata {
-            OpMetadata::SetLaser(uid) => uid,
-            _ => panic!("laser_uid called on non-set-laser command"),
-        }
-    }
-
-    pub fn layer_uid(&self, idx: usize) -> &str {
-        match &self.commands[idx].metadata {
-            OpMetadata::LayerMarker(uid) => uid,
-            _ => panic!("layer_uid called on non-layer command"),
-        }
-    }
-
-    pub fn workpiece_uid(&self, idx: usize) -> &str {
-        match &self.commands[idx].metadata {
-            OpMetadata::WorkpieceMarker(uid) => uid,
-            _ => panic!("workpiece_uid called on non-workpiece command"),
-        }
-    }
-
-    pub fn section_type(&self, idx: usize) -> SectionType {
-        match &self.commands[idx].metadata {
-            OpMetadata::SectionMarker { section_type, .. } => *section_type,
-            _ => panic!("section_type called on non-section command"),
-        }
-    }
-
-    pub fn section_workpiece_uid(&self, idx: usize) -> Option<&str> {
-        match &self.commands[idx].metadata {
-            OpMetadata::SectionMarker { workpiece_uid, .. } => {
-                workpiece_uid.as_deref()
-            }
-            _ => panic!("section_workpiece_uid called on non-section command"),
+        if let OpCategory::Moving { end: ref mut e, .. } =
+            &mut self.commands[idx].category
+        {
+            *e = end;
         }
     }
 
     pub fn extra_axes(&self, idx: usize) -> Option<&[(Axis, f64)]> {
-        self.commands[idx].extra_axes.as_deref()
+        self.commands[idx].extra_axes()
     }
 
     pub fn set_extra_axes(&mut self, idx: usize, ea: Vec<(Axis, f64)>) {
-        self.commands[idx].extra_axes = Some(std::sync::Arc::from(ea));
+        self.commands[idx].set_extra_axes(std::sync::Arc::from(ea));
     }
 
     pub fn state(&self, idx: usize) -> Option<&State> {
-        self.commands[idx].state.as_ref()
+        self.commands[idx].state()
     }
 
     pub fn preloaded_state(&self, idx: usize) -> Option<&State> {
-        self.commands[idx].state.as_ref()
+        self.commands[idx].state()
     }
 
     pub fn set_state_on_moving(&mut self, state: &State) {
-        for i in 0..self.commands.len() {
-            if self.commands[i].ct.category() == CommandCategory::Moving {
-                self.commands[i].state = Some(state.clone());
+        for node in &mut self.commands {
+            if node.is_moving() {
+                node.set_state(state.clone());
             }
         }
     }
 
     pub fn set_state_at(&mut self, idx: usize, state: &State) {
-        self.commands[idx].state = Some(state.clone());
+        self.commands[idx].set_state(state.clone());
     }
 
     pub fn distance_at(&self, idx: usize, last_point: Option<Point3D>) -> f64 {
-        if self.commands[idx].ct.category() != CommandCategory::Moving {
-            return 0.0;
-        }
-        match last_point {
-            None => 0.0,
-            Some(lp) => {
-                let end = self.commands[idx].end;
-                let dx = end.0 - lp.0;
-                let dy = end.1 - lp.1;
-                (dx * dx + dy * dy).sqrt()
+        if let OpCategory::Moving { end, .. } = &self.commands[idx].category {
+            match last_point {
+                None => 0.0,
+                Some(lp) => {
+                    let dx = end.0 - lp.0;
+                    let dy = end.1 - lp.1;
+                    (dx * dx + dy * dy).sqrt()
+                }
             }
+        } else {
+            0.0
         }
     }
 
     pub fn distance(&self) -> f64 {
         let mut total = 0.0;
         let mut last: Option<Point3D> = None;
-        for i in 0..self.commands.len() {
-            if self.commands[i].ct.category() == CommandCategory::Moving {
-                let end = self.commands[i].end;
+        for node in &self.commands {
+            if let OpCategory::Moving { end, .. } = &node.category {
                 if let Some(lp) = last {
                     let dx = end.0 - lp.0;
                     let dy = end.1 - lp.1;
                     total += (dx * dx + dy * dy).sqrt();
                 }
-                last = Some(end);
+                last = Some(*end);
             }
         }
         total
@@ -266,25 +139,19 @@ impl Ops {
     pub fn cut_distance(&self) -> f64 {
         let mut total = 0.0;
         let mut last: Option<Point3D> = None;
-        for i in 0..self.commands.len() {
-            let ct = self.commands[i].ct;
-            if ct.category() == CommandCategory::Moving {
-                let end = self.commands[i].end;
+        for node in &self.commands {
+            if let OpCategory::Moving { end, cmd } = &node.category {
                 if let Some(lp) = last {
-                    if ct != CommandType::MoveTo {
+                    if !matches!(cmd, MoveCmd::MoveTo) {
                         let dx = end.0 - lp.0;
                         let dy = end.1 - lp.1;
                         total += (dx * dx + dy * dy).sqrt();
                     }
                 }
-                last = Some(end);
+                last = Some(*end);
             }
         }
         total
-    }
-
-    pub fn scanline_count(&self) -> usize {
-        self.indices_of(CommandType::ScanLine).len()
     }
 
     // --- Builder methods ---
@@ -297,7 +164,7 @@ impl Ops {
         extra: Option<Vec<(Axis, f64)>>,
     ) {
         self.last_move_to = (x, y, z);
-        self.commands.push(OpCommand::move_to(x, y, z, extra));
+        self.commands.push(OpNode::move_to(x, y, z, extra));
         self.invalidate_time_cache();
     }
 
@@ -308,7 +175,7 @@ impl Ops {
         z: f64,
         extra: Option<Vec<(Axis, f64)>>,
     ) {
-        self.commands.push(OpCommand::line_to(x, y, z, extra));
+        self.commands.push(OpNode::line_to(x, y, z, extra));
         self.invalidate_time_cache();
     }
 
@@ -331,7 +198,8 @@ impl Ops {
         z: f64,
         extra: Option<Vec<(Axis, f64)>>,
     ) {
-        self.commands.push(OpCommand::arc_to(x, y, i, j, clockwise, z, extra));
+        self.commands
+            .push(OpNode::arc_to(x, y, i, j, clockwise, z, extra));
         self.invalidate_time_cache();
     }
 
@@ -342,10 +210,10 @@ impl Ops {
         end: Point3D,
         extra: Option<Vec<(Axis, f64)>>,
     ) {
-        if self.commands.len() == 0 {
+        if self.commands.is_empty() {
             return;
         }
-        self.commands.push(OpCommand::bezier_to(c1, c2, end, extra));
+        self.commands.push(OpNode::bezier_to(c1, c2, end, extra));
         self.invalidate_time_cache();
     }
 
@@ -355,7 +223,8 @@ impl Ops {
         end: Point3D,
         extra: Option<Vec<(Axis, f64)>>,
     ) {
-        self.commands.push(OpCommand::quadratic_bezier_to(control, end, extra));
+        self.commands
+            .push(OpNode::quadratic_bezier_to(control, end, extra));
         self.invalidate_time_cache();
     }
 
@@ -367,81 +236,82 @@ impl Ops {
         power_values: Option<Vec<u8>>,
         extra: Option<Vec<(Axis, f64)>>,
     ) {
-        self.commands.push(OpCommand::scan_to(x, y, z, power_values, extra));
+        self.commands
+            .push(OpNode::scan_to(x, y, z, power_values, extra));
         self.invalidate_time_cache();
     }
 
     pub fn set_power(&mut self, power: f64) {
-        self.commands.push(OpCommand::set_power(power));
+        self.commands.push(OpNode::set_power(power));
     }
 
     pub fn set_cut_speed(&mut self, speed: i32) {
-        self.commands.push(OpCommand::set_cut_speed(speed));
+        self.commands.push(OpNode::set_cut_speed(speed));
         self.invalidate_time_cache();
     }
 
     pub fn set_travel_speed(&mut self, speed: i32) {
-        self.commands.push(OpCommand::set_travel_speed(speed));
+        self.commands.push(OpNode::set_travel_speed(speed));
         self.invalidate_time_cache();
     }
 
     pub fn dwell(&mut self, duration_ms: f64) {
-        self.commands.push(OpCommand::dwell(duration_ms));
+        self.commands.push(OpNode::dwell(duration_ms));
         self.invalidate_time_cache();
     }
 
     pub fn enable_air_assist(&mut self) {
-        self.commands.push(OpCommand::enable_air_assist());
+        self.commands.push(OpNode::enable_air_assist());
         self.invalidate_time_cache();
     }
 
     pub fn disable_air_assist(&mut self) {
-        self.commands.push(OpCommand::disable_air_assist());
+        self.commands.push(OpNode::disable_air_assist());
         self.invalidate_time_cache();
     }
 
     pub fn set_laser(&mut self, laser_uid: &str) {
-        self.commands.push(OpCommand::set_laser(laser_uid));
+        self.commands.push(OpNode::set_laser(laser_uid));
         self.invalidate_time_cache();
     }
 
     pub fn set_frequency(&mut self, frequency: i32) {
-        self.commands.push(OpCommand::set_frequency(frequency));
+        self.commands.push(OpNode::set_frequency(frequency));
         self.invalidate_time_cache();
     }
 
     pub fn set_pulse_width(&mut self, pulse_width: f64) {
-        self.commands.push(OpCommand::set_pulse_width(pulse_width));
+        self.commands.push(OpNode::set_pulse_width(pulse_width));
         self.invalidate_time_cache();
     }
 
     pub fn job_start(&mut self) {
-        self.commands.push(OpCommand::job_start());
+        self.commands.push(OpNode::job_start());
         self.invalidate_time_cache();
     }
 
     pub fn job_end(&mut self) {
-        self.commands.push(OpCommand::job_end());
+        self.commands.push(OpNode::job_end());
         self.invalidate_time_cache();
     }
 
     pub fn layer_start(&mut self, layer_uid: &str) {
-        self.commands.push(OpCommand::layer_start(layer_uid));
+        self.commands.push(OpNode::layer_start(layer_uid));
         self.invalidate_time_cache();
     }
 
     pub fn layer_end(&mut self, layer_uid: &str) {
-        self.commands.push(OpCommand::layer_end(layer_uid));
+        self.commands.push(OpNode::layer_end(layer_uid));
         self.invalidate_time_cache();
     }
 
     pub fn workpiece_start(&mut self, workpiece_uid: &str) {
-        self.commands.push(OpCommand::workpiece_start(workpiece_uid));
+        self.commands.push(OpNode::workpiece_start(workpiece_uid));
         self.invalidate_time_cache();
     }
 
     pub fn workpiece_end(&mut self, workpiece_uid: &str) {
-        self.commands.push(OpCommand::workpiece_end(workpiece_uid));
+        self.commands.push(OpNode::workpiece_end(workpiece_uid));
         self.invalidate_time_cache();
     }
 
@@ -450,12 +320,13 @@ impl Ops {
         section_type: SectionType,
         workpiece_uid: &str,
     ) {
-        self.commands.push(OpCommand::ops_section_start(section_type, workpiece_uid));
+        self.commands
+            .push(OpNode::ops_section_start(section_type, workpiece_uid));
         self.invalidate_time_cache();
     }
 
     pub fn ops_section_end(&mut self, section_type: SectionType) {
-        self.commands.push(OpCommand::ops_section_end(section_type));
+        self.commands.push(OpNode::ops_section_end(section_type));
         self.invalidate_time_cache();
     }
 
@@ -530,8 +401,14 @@ impl Ops {
         let mut subpaths: Vec<Vec<usize>> = Vec::new();
         let mut current: Vec<usize> = Vec::new();
         let mut has_move_to = false;
-        for i in 0..self.commands.len() {
-            let is_move = self.commands[i].ct == CommandType::MoveTo;
+        for (i, node) in self.commands.iter().enumerate() {
+            let is_move = matches!(
+                node.category,
+                OpCategory::Moving {
+                    cmd: MoveCmd::MoveTo,
+                    ..
+                }
+            );
             if is_move && has_move_to {
                 subpaths.push(current);
                 current = Vec::new();
@@ -565,14 +442,9 @@ impl Ops {
 
     pub fn state_at(&self, idx: usize) -> State {
         let mut state = State::default();
-        for i in 0..=idx {
-            if self.category(i) == CommandCategory::State {
-                Self::apply_state_at(
-                    &mut state,
-                    self.commands[i].ct,
-                    self,
-                    i,
-                );
+        for node in &self.commands[..=idx] {
+            if let OpCategory::State(_) = node.category {
+                Self::apply_state_at(&mut state, node);
             }
         }
         state
@@ -582,44 +454,30 @@ impl Ops {
 
     pub fn preload_state(&mut self) {
         let mut state = State::default();
-        for i in 0..self.commands.len() {
-            if self.category(i) == CommandCategory::State {
-                Self::apply_state_at(
-                    &mut state,
-                    self.commands[i].ct,
-                    self,
-                    i,
-                );
-            } else if self.category(i) == CommandCategory::Moving {
-                self.commands[i].state = Some(state.clone());
+        for node in &mut self.commands {
+            if let OpCategory::State(_) = node.category {
+                Self::apply_state_at(&mut state, node);
+            } else if node.is_moving() {
+                node.set_state(state.clone());
             }
         }
     }
 
-    fn apply_state_at(
-        state: &mut State,
-        ct: CommandType,
-        ops: &Ops,
-        idx: usize,
-    ) {
-        match ct {
-            CommandType::SetPower => state.power = ops.power(idx),
-            CommandType::SetCutSpeed => state.cut_speed = Some(ops.speed(idx)),
-            CommandType::SetTravelSpeed => {
-                state.travel_speed = Some(ops.speed(idx))
+    fn apply_state_at(state: &mut State, node: &OpNode) {
+        if let OpCategory::State(cmd) = &node.category {
+            match cmd {
+                StateCmd::SetPower(p) => state.power = *p,
+                StateCmd::SetCutSpeed(s) => state.cut_speed = Some(*s),
+                StateCmd::SetTravelSpeed(s) => state.travel_speed = Some(*s),
+                StateCmd::EnableAirAssist => state.air_assist = true,
+                StateCmd::DisableAirAssist => state.air_assist = false,
+                StateCmd::SetLaser(uid) => {
+                    state.active_laser_uid = Some(uid.to_string())
+                }
+                StateCmd::SetFrequency(f) => state.frequency = Some(*f),
+                StateCmd::SetPulseWidth(pw) => state.pulse_width = Some(*pw),
+                _ => {}
             }
-            CommandType::EnableAirAssist => state.air_assist = true,
-            CommandType::DisableAirAssist => state.air_assist = false,
-            CommandType::SetLaser => {
-                state.active_laser_uid = Some(ops.laser_uid(idx).to_string())
-            }
-            CommandType::SetFrequency => {
-                state.frequency = Some(ops.frequency(idx))
-            }
-            CommandType::SetPulseWidth => {
-                state.pulse_width = Some(ops.pulse_width(idx))
-            }
-            _ => {}
         }
     }
 
@@ -654,31 +512,31 @@ impl Ops {
 
     pub fn format_dump(&self) -> String {
         let mut out = format!("Ops {{ len: {} }}\n", self.commands.len());
-        for i in 0..self.commands.len() {
-            let cmd = &self.commands[i];
-            let ct = cmd.ct;
+        for (i, node) in self.commands.iter().enumerate() {
+            let ct = node.command_type();
             let _ = write!(out, "  [{}] {}", i, ct.name());
-            if self.category(i) == CommandCategory::Moving {
+            if let OpCategory::Moving { end, cmd } = &node.category {
                 let _ = write!(
                     out,
                     " end=({:.3},{:.3},{:.3})",
-                    cmd.end.0, cmd.end.1, cmd.end.2
+                    end.0, end.1, end.2
                 );
-                if ct == CommandType::ArcTo {
-                    let ap = self.arc_params(i);
-                    let _ = write!(
-                        out,
-                        " arc=(i={:.3},j={:.3},cw={})",
-                        ap.0, ap.1, ap.2
-                    );
-                }
-                if ct == CommandType::BezierTo {
-                    let bp = self.bezier_params(i);
-                    let _ = write!(
-                        out,
-                        " bezier=(c1=({:.3},{:.3}),c2=({:.3},{:.3}))",
-                        bp.0 .0, bp.0 .1, bp.1 .0, bp.1 .1
-                    );
+                match cmd {
+                    MoveCmd::ArcTo { center, cw } => {
+                        let _ = write!(
+                            out,
+                            " arc=(i={:.3},j={:.3},cw={})",
+                            center.0, center.1, cw
+                        );
+                    }
+                    MoveCmd::BezierTo { c1, c2 } => {
+                        let _ = write!(
+                            out,
+                            " bezier=(c1=({:.3},{:.3}),c2=({:.3},{:.3}))",
+                            c1.0, c1.1, c2.0, c2.1
+                        );
+                    }
+                    _ => {}
                 }
             }
             let _ = writeln!(out);
@@ -696,7 +554,7 @@ impl Ops {
         default_travel_speed: f64,
         acceleration: f64,
     ) -> f64 {
-        if self.commands.len() == 0 {
+        if self.commands.is_empty() {
             return 0.0;
         }
         let params = (default_cut_speed, default_travel_speed, acceleration);
@@ -761,40 +619,38 @@ impl Ops {
         let mut ys: Vec<f64> = Vec::new();
         let mut arcs: Vec<(f64, f64, f64, f64, f64, f64, bool)> = Vec::new();
 
-        for i in 0..self.commands.len() {
-            if self.category(i) != CommandCategory::Moving {
-                continue;
-            }
-            let ct = self.command_type(i);
-            let end = self.endpoint(i);
-            let (end_x, end_y) = (end.0, end.1);
+        for node in &self.commands {
+            if let OpCategory::Moving { end, cmd } = &node.category {
+                let (end_x, end_y) = (end.0, end.1);
 
-            if ct == CommandType::MoveTo {
-                if include_travel {
-                    xs.push(curr_x);
-                    ys.push(curr_y);
-                    xs.push(end_x);
-                    ys.push(end_y);
-                    has_content = true;
+                if matches!(cmd, MoveCmd::MoveTo) {
+                    if include_travel {
+                        xs.push(curr_x);
+                        ys.push(curr_y);
+                        xs.push(end_x);
+                        ys.push(end_y);
+                        has_content = true;
+                    }
+                    curr_x = end_x;
+                    curr_y = end_y;
+                    continue;
                 }
+
+                xs.push(curr_x);
+                ys.push(curr_y);
+                xs.push(end_x);
+                ys.push(end_y);
+                has_content = true;
+
+                if let MoveCmd::ArcTo { center, cw } = cmd {
+                    arcs.push((
+                        curr_x, curr_y, end_x, end_y, center.0, center.1, *cw,
+                    ));
+                }
+
                 curr_x = end_x;
                 curr_y = end_y;
-                continue;
             }
-
-            xs.push(curr_x);
-            ys.push(curr_y);
-            xs.push(end_x);
-            ys.push(end_y);
-            has_content = true;
-
-            if ct == CommandType::ArcTo {
-                let &(ci, cj, cw) = self.arc_params(i);
-                arcs.push((curr_x, curr_y, end_x, end_y, ci, cj, cw));
-            }
-
-            curr_x = end_x;
-            curr_y = end_y;
         }
 
         if !has_content {
@@ -933,37 +789,20 @@ impl Ops {
 
     pub fn to_geometry(&self) -> crate::Geometry {
         let mut geo = crate::Geometry::new();
-        for i in 0..self.commands.len() {
-            let ct = self.commands[i].ct;
-            if ct.category() != CommandCategory::Moving {
-                continue;
-            }
-            let end = self.commands[i].end;
-            match ct {
-                CommandType::MoveTo => {
-                    geo.move_to(end.0, end.1, end.2);
-                }
-                CommandType::LineTo => {
-                    geo.line_to(end.0, end.1, end.2);
-                }
-                CommandType::ArcTo => {
-                    let (ci, cj, cw) = match &self.commands[i].metadata {
-                        OpMetadata::Arc(a) => *a,
-                        _ => panic!("expected arc"),
-                    };
-                    geo.arc_to(end.0, end.1, ci, cj, cw, end.2);
-                }
-                CommandType::BezierTo => {
-                    let (c1, c2) = match &self.commands[i].metadata {
-                        OpMetadata::Bezier(b) => *b,
-                        _ => panic!("expected bezier"),
-                    };
-                    geo.bezier_to(
+        for node in &self.commands {
+            if let OpCategory::Moving { end, cmd } = &node.category {
+                match cmd {
+                    MoveCmd::MoveTo => geo.move_to(end.0, end.1, end.2),
+                    MoveCmd::LineTo => geo.line_to(end.0, end.1, end.2),
+                    MoveCmd::ArcTo { center, cw } => {
+                        geo.arc_to(end.0, end.1, center.0, center.1, *cw, end.2)
+                    }
+                    MoveCmd::BezierTo { c1, c2 } => geo.bezier_to(
                         ((c1.0, c1.1), (c2.0, c2.1), (end.0, end.1)),
                         end.2,
-                    );
+                    ),
+                    _ => {}
                 }
-                _ => {}
             }
         }
         geo
@@ -981,57 +820,52 @@ fn estimate_time_core(
     let mut cut_speed = default_cut_speed;
     let mut travel_speed = default_travel_speed;
 
-    for i in 0..ops.len() {
-        if ops.is_state(i) {
-            match ops.command_type(i) {
-                CommandType::SetCutSpeed => {
-                    cut_speed = ops.speed(i) as f64;
-                }
-                CommandType::SetTravelSpeed => {
-                    travel_speed = ops.speed(i) as f64;
-                }
-                _ => {}
+    for node in &ops.commands {
+        match &node.category {
+            OpCategory::State(StateCmd::SetCutSpeed(s)) => {
+                cut_speed = *s as f64
             }
-            continue;
-        }
-        if ops.category(i) != CommandCategory::Moving {
-            continue;
-        }
-
-        let end = ops.endpoint(i);
-        let dx = end.0 - last_point.0;
-        let dy = end.1 - last_point.1;
-        let distance = (dx * dx + dy * dy).sqrt();
-
-        if distance < EPSILON_COLLINEAR {
-            last_point = end;
-            continue;
-        }
-
-        let speed = if ops.is_cutting(i) {
-            cut_speed
-        } else {
-            travel_speed
-        };
-
-        let speed_mm_per_sec = speed / 60.0;
-
-        let move_time = if acceleration > 0.0 {
-            let accel_time = speed_mm_per_sec / acceleration;
-            let accel_distance = 0.5 * acceleration * accel_time * accel_time;
-            if distance < 2.0 * accel_distance {
-                2.0 * (distance / acceleration).sqrt()
-            } else {
-                let cruise_distance = distance - 2.0 * accel_distance;
-                let cruise_time = cruise_distance / speed_mm_per_sec;
-                2.0 * accel_time + cruise_time
+            OpCategory::State(StateCmd::SetTravelSpeed(s)) => {
+                travel_speed = *s as f64
             }
-        } else {
-            distance / speed_mm_per_sec
-        };
+            OpCategory::Moving { end, cmd } => {
+                let dx = end.0 - last_point.0;
+                let dy = end.1 - last_point.1;
+                let distance = (dx * dx + dy * dy).sqrt();
 
-        total_time += move_time;
-        last_point = end;
+                if distance < EPSILON_COLLINEAR {
+                    last_point = *end;
+                    continue;
+                }
+
+                let speed = if matches!(cmd, MoveCmd::MoveTo) {
+                    travel_speed
+                } else {
+                    cut_speed
+                };
+
+                let speed_mm_per_sec = speed / 60.0;
+
+                let move_time = if acceleration > 0.0 {
+                    let accel_time = speed_mm_per_sec / acceleration;
+                    let accel_distance =
+                        0.5 * acceleration * accel_time * accel_time;
+                    if distance < 2.0 * accel_distance {
+                        2.0 * (distance / acceleration).sqrt()
+                    } else {
+                        let cruise_distance = distance - 2.0 * accel_distance;
+                        let cruise_time = cruise_distance / speed_mm_per_sec;
+                        2.0 * accel_time + cruise_time
+                    }
+                } else {
+                    distance / speed_mm_per_sec
+                };
+
+                total_time += move_time;
+                last_point = *end;
+            }
+            _ => {}
+        }
     }
 
     total_time

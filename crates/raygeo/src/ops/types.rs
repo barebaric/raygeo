@@ -5,62 +5,75 @@ use super::enums::{CommandType, SectionType};
 use super::state::State;
 use crate::types::Point3D;
 
-pub type ArcParams = (f64, f64, bool);
-pub type BezierParams = (Point3D, Point3D);
+#[derive(Clone, Debug)]
+pub enum MoveCmd {
+    MoveTo,
+    LineTo,
+    ArcTo { center: (f64, f64), cw: bool },
+    BezierTo { c1: Point3D, c2: Point3D },
+    QuadraticBezierTo { control: Point3D },
+    ScanLine { power_values: Arc<[u8]> },
+}
 
 #[derive(Clone, Debug)]
-pub enum OpMetadata {
-    None,
-    Arc(ArcParams),
-    Bezier(BezierParams),
-    QuadraticBezier(Point3D),
-    ScanLine(Arc<[u8]>),
-    Dwell(f64),
+pub enum StateCmd {
     SetPower(f64),
-    SetSpeed(i32),
+    SetCutSpeed(i32),
+    SetTravelSpeed(i32),
+    Dwell(f64),
+    EnableAirAssist,
+    DisableAirAssist,
+    SetLaser(Arc<str>),
     SetFrequency(i32),
     SetPulseWidth(f64),
-    SetLaser(Arc<str>),
-    LayerMarker(Arc<str>),
-    WorkpieceMarker(Arc<str>),
-    SectionMarker {
+}
+
+#[derive(Clone, Debug)]
+pub enum MarkerCmd {
+    JobStart,
+    JobEnd,
+    LayerStart(Arc<str>),
+    LayerEnd(Arc<str>),
+    WorkpieceStart(Arc<str>),
+    WorkpieceEnd(Arc<str>),
+    OpsSectionStart {
+        section_type: SectionType,
+        workpiece_uid: Option<Arc<str>>,
+    },
+    OpsSectionEnd {
         section_type: SectionType,
         workpiece_uid: Option<Arc<str>>,
     },
 }
 
 #[derive(Clone, Debug)]
-pub struct OpCommand {
-    pub ct: CommandType,
-    pub end: Point3D,
-    pub metadata: OpMetadata,
+pub enum OpCategory {
+    Moving { end: Point3D, cmd: MoveCmd },
+    State(StateCmd),
+    Marker(MarkerCmd),
+}
+
+#[derive(Clone, Debug)]
+pub struct OpNode {
+    pub category: OpCategory,
     pub state: Option<State>,
     pub extra_axes: Option<Arc<[(Axis, f64)]>>,
 }
 
-impl OpCommand {
-    pub fn new(ct: CommandType) -> Self {
-        OpCommand {
-            ct,
-            end: (0.0, 0.0, 0.0),
-            metadata: OpMetadata::None,
-            state: None,
-            extra_axes: None,
-        }
-    }
-
+impl OpNode {
     pub fn move_to(
         x: f64,
         y: f64,
         z: f64,
         extra: Option<Vec<(Axis, f64)>>,
     ) -> Self {
-        OpCommand {
-            ct: CommandType::MoveTo,
-            end: (x, y, z),
-            metadata: OpMetadata::None,
+        OpNode {
+            category: OpCategory::Moving {
+                end: (x, y, z),
+                cmd: MoveCmd::MoveTo,
+            },
             state: None,
-            extra_axes: extra.map(|v| Arc::from(v)),
+            extra_axes: extra.map(Arc::from),
         }
     }
 
@@ -70,20 +83,22 @@ impl OpCommand {
         z: f64,
         extra: Option<Vec<(Axis, f64)>>,
     ) -> Self {
-        OpCommand {
-            ct: CommandType::LineTo,
-            end: (x, y, z),
-            metadata: OpMetadata::None,
+        OpNode {
+            category: OpCategory::Moving {
+                end: (x, y, z),
+                cmd: MoveCmd::LineTo,
+            },
             state: None,
-            extra_axes: extra.map(|v| Arc::from(v)),
+            extra_axes: extra.map(Arc::from),
         }
     }
 
     pub fn close_path(end: Point3D) -> Self {
-        OpCommand {
-            ct: CommandType::LineTo,
-            end,
-            metadata: OpMetadata::None,
+        OpNode {
+            category: OpCategory::Moving {
+                end,
+                cmd: MoveCmd::LineTo,
+            },
             state: None,
             extra_axes: None,
         }
@@ -98,12 +113,16 @@ impl OpCommand {
         z: f64,
         extra: Option<Vec<(Axis, f64)>>,
     ) -> Self {
-        OpCommand {
-            ct: CommandType::ArcTo,
-            end: (x, y, z),
-            metadata: OpMetadata::Arc((i, j, clockwise)),
+        OpNode {
+            category: OpCategory::Moving {
+                end: (x, y, z),
+                cmd: MoveCmd::ArcTo {
+                    center: (i, j),
+                    cw: clockwise,
+                },
+            },
             state: None,
-            extra_axes: extra.map(|v| Arc::from(v)),
+            extra_axes: extra.map(Arc::from),
         }
     }
 
@@ -113,12 +132,13 @@ impl OpCommand {
         end: Point3D,
         extra: Option<Vec<(Axis, f64)>>,
     ) -> Self {
-        OpCommand {
-            ct: CommandType::BezierTo,
-            end,
-            metadata: OpMetadata::Bezier((c1, c2)),
+        OpNode {
+            category: OpCategory::Moving {
+                end,
+                cmd: MoveCmd::BezierTo { c1, c2 },
+            },
             state: None,
-            extra_axes: extra.map(|v| Arc::from(v)),
+            extra_axes: extra.map(Arc::from),
         }
     }
 
@@ -127,12 +147,13 @@ impl OpCommand {
         end: Point3D,
         extra: Option<Vec<(Axis, f64)>>,
     ) -> Self {
-        OpCommand {
-            ct: CommandType::QuadraticBezierTo,
-            end,
-            metadata: OpMetadata::QuadraticBezier(control),
+        OpNode {
+            category: OpCategory::Moving {
+                end,
+                cmd: MoveCmd::QuadraticBezierTo { control },
+            },
             state: None,
-            extra_axes: extra.map(|v| Arc::from(v)),
+            extra_axes: extra.map(Arc::from),
         }
     }
 
@@ -144,148 +165,143 @@ impl OpCommand {
         extra: Option<Vec<(Axis, f64)>>,
     ) -> Self {
         let pv = power_values.unwrap_or_else(|| vec![255]);
-        OpCommand {
-            ct: CommandType::ScanLine,
-            end: (x, y, z),
-            metadata: OpMetadata::ScanLine(Arc::from(pv)),
+        OpNode {
+            category: OpCategory::Moving {
+                end: (x, y, z),
+                cmd: MoveCmd::ScanLine {
+                    power_values: Arc::from(pv),
+                },
+            },
             state: None,
-            extra_axes: extra.map(|v| Arc::from(v)),
+            extra_axes: extra.map(Arc::from),
         }
     }
 
     pub fn set_power(power: f64) -> Self {
-        OpCommand {
-            ct: CommandType::SetPower,
-            end: (0.0, 0.0, 0.0),
-            metadata: OpMetadata::SetPower(power),
+        OpNode {
+            category: OpCategory::State(StateCmd::SetPower(power)),
             state: None,
             extra_axes: None,
         }
     }
 
     pub fn set_cut_speed(speed: i32) -> Self {
-        OpCommand {
-            ct: CommandType::SetCutSpeed,
-            end: (0.0, 0.0, 0.0),
-            metadata: OpMetadata::SetSpeed(speed),
+        OpNode {
+            category: OpCategory::State(StateCmd::SetCutSpeed(speed)),
             state: None,
             extra_axes: None,
         }
     }
 
     pub fn set_travel_speed(speed: i32) -> Self {
-        OpCommand {
-            ct: CommandType::SetTravelSpeed,
-            end: (0.0, 0.0, 0.0),
-            metadata: OpMetadata::SetSpeed(speed),
+        OpNode {
+            category: OpCategory::State(StateCmd::SetTravelSpeed(speed)),
             state: None,
             extra_axes: None,
         }
     }
 
     pub fn dwell(duration_ms: f64) -> Self {
-        OpCommand {
-            ct: CommandType::Dwell,
-            end: (0.0, 0.0, 0.0),
-            metadata: OpMetadata::Dwell(duration_ms),
+        OpNode {
+            category: OpCategory::State(StateCmd::Dwell(duration_ms)),
             state: None,
             extra_axes: None,
         }
     }
 
     pub fn enable_air_assist() -> Self {
-        OpCommand {
-            ct: CommandType::EnableAirAssist,
-            end: (0.0, 0.0, 0.0),
-            metadata: OpMetadata::None,
+        OpNode {
+            category: OpCategory::State(StateCmd::EnableAirAssist),
             state: None,
             extra_axes: None,
         }
     }
 
     pub fn disable_air_assist() -> Self {
-        OpCommand {
-            ct: CommandType::DisableAirAssist,
-            end: (0.0, 0.0, 0.0),
-            metadata: OpMetadata::None,
+        OpNode {
+            category: OpCategory::State(StateCmd::DisableAirAssist),
             state: None,
             extra_axes: None,
         }
     }
 
     pub fn set_laser(laser_uid: &str) -> Self {
-        OpCommand {
-            ct: CommandType::SetLaser,
-            end: (0.0, 0.0, 0.0),
-            metadata: OpMetadata::SetLaser(Arc::from(laser_uid)),
+        OpNode {
+            category: OpCategory::State(StateCmd::SetLaser(Arc::from(
+                laser_uid,
+            ))),
             state: None,
             extra_axes: None,
         }
     }
 
     pub fn set_frequency(frequency: i32) -> Self {
-        OpCommand {
-            ct: CommandType::SetFrequency,
-            end: (0.0, 0.0, 0.0),
-            metadata: OpMetadata::SetFrequency(frequency),
+        OpNode {
+            category: OpCategory::State(StateCmd::SetFrequency(frequency)),
             state: None,
             extra_axes: None,
         }
     }
 
     pub fn set_pulse_width(pulse_width: f64) -> Self {
-        OpCommand {
-            ct: CommandType::SetPulseWidth,
-            end: (0.0, 0.0, 0.0),
-            metadata: OpMetadata::SetPulseWidth(pulse_width),
+        OpNode {
+            category: OpCategory::State(StateCmd::SetPulseWidth(pulse_width)),
             state: None,
             extra_axes: None,
         }
     }
 
     pub fn job_start() -> Self {
-        OpCommand::new(CommandType::JobStart)
+        OpNode {
+            category: OpCategory::Marker(MarkerCmd::JobStart),
+            state: None,
+            extra_axes: None,
+        }
     }
 
     pub fn job_end() -> Self {
-        OpCommand::new(CommandType::JobEnd)
+        OpNode {
+            category: OpCategory::Marker(MarkerCmd::JobEnd),
+            state: None,
+            extra_axes: None,
+        }
     }
 
     pub fn layer_start(layer_uid: &str) -> Self {
-        OpCommand {
-            ct: CommandType::LayerStart,
-            end: (0.0, 0.0, 0.0),
-            metadata: OpMetadata::LayerMarker(Arc::from(layer_uid)),
+        OpNode {
+            category: OpCategory::Marker(MarkerCmd::LayerStart(Arc::from(
+                layer_uid,
+            ))),
             state: None,
             extra_axes: None,
         }
     }
 
     pub fn layer_end(layer_uid: &str) -> Self {
-        OpCommand {
-            ct: CommandType::LayerEnd,
-            end: (0.0, 0.0, 0.0),
-            metadata: OpMetadata::LayerMarker(Arc::from(layer_uid)),
+        OpNode {
+            category: OpCategory::Marker(MarkerCmd::LayerEnd(Arc::from(
+                layer_uid,
+            ))),
             state: None,
             extra_axes: None,
         }
     }
 
     pub fn workpiece_start(workpiece_uid: &str) -> Self {
-        OpCommand {
-            ct: CommandType::WorkpieceStart,
-            end: (0.0, 0.0, 0.0),
-            metadata: OpMetadata::WorkpieceMarker(Arc::from(workpiece_uid)),
+        OpNode {
+            category: OpCategory::Marker(MarkerCmd::WorkpieceStart(Arc::from(
+                workpiece_uid,
+            ))),
             state: None,
             extra_axes: None,
         }
     }
 
     pub fn workpiece_end(workpiece_uid: &str) -> Self {
-        OpCommand {
-            ct: CommandType::WorkpieceEnd,
-            end: (0.0, 0.0, 0.0),
-            metadata: OpMetadata::WorkpieceMarker(Arc::from(workpiece_uid)),
+        OpNode {
+            category: OpCategory::Marker(MarkerCmd::WorkpieceEnd(Arc::from(
+                workpiece_uid,
+            ))),
             state: None,
             extra_axes: None,
         }
@@ -295,28 +311,98 @@ impl OpCommand {
         section_type: SectionType,
         workpiece_uid: &str,
     ) -> Self {
-        OpCommand {
-            ct: CommandType::OpsSectionStart,
-            end: (0.0, 0.0, 0.0),
-            metadata: OpMetadata::SectionMarker {
+        OpNode {
+            category: OpCategory::Marker(MarkerCmd::OpsSectionStart {
                 section_type,
                 workpiece_uid: Some(Arc::from(workpiece_uid)),
-            },
+            }),
             state: None,
             extra_axes: None,
         }
     }
 
     pub fn ops_section_end(section_type: SectionType) -> Self {
-        OpCommand {
-            ct: CommandType::OpsSectionEnd,
-            end: (0.0, 0.0, 0.0),
-            metadata: OpMetadata::SectionMarker {
+        OpNode {
+            category: OpCategory::Marker(MarkerCmd::OpsSectionEnd {
                 section_type,
                 workpiece_uid: None,
-            },
+            }),
             state: None,
             extra_axes: None,
         }
+    }
+
+    pub fn command_type(&self) -> CommandType {
+        match &self.category {
+            OpCategory::Moving { cmd, .. } => match cmd {
+                MoveCmd::MoveTo => CommandType::MoveTo,
+                MoveCmd::LineTo => CommandType::LineTo,
+                MoveCmd::ArcTo { .. } => CommandType::ArcTo,
+                MoveCmd::BezierTo { .. } => CommandType::BezierTo,
+                MoveCmd::QuadraticBezierTo { .. } => {
+                    CommandType::QuadraticBezierTo
+                }
+                MoveCmd::ScanLine { .. } => CommandType::ScanLine,
+            },
+            OpCategory::State(cmd) => match cmd {
+                StateCmd::SetPower(_) => CommandType::SetPower,
+                StateCmd::SetCutSpeed(_) => CommandType::SetCutSpeed,
+                StateCmd::SetTravelSpeed(_) => CommandType::SetTravelSpeed,
+                StateCmd::Dwell(_) => CommandType::Dwell,
+                StateCmd::EnableAirAssist => CommandType::EnableAirAssist,
+                StateCmd::DisableAirAssist => CommandType::DisableAirAssist,
+                StateCmd::SetLaser(_) => CommandType::SetLaser,
+                StateCmd::SetFrequency(_) => CommandType::SetFrequency,
+                StateCmd::SetPulseWidth(_) => CommandType::SetPulseWidth,
+            },
+            OpCategory::Marker(cmd) => match cmd {
+                MarkerCmd::JobStart => CommandType::JobStart,
+                MarkerCmd::JobEnd => CommandType::JobEnd,
+                MarkerCmd::LayerStart(_) => CommandType::LayerStart,
+                MarkerCmd::LayerEnd(_) => CommandType::LayerEnd,
+                MarkerCmd::WorkpieceStart(_) => CommandType::WorkpieceStart,
+                MarkerCmd::WorkpieceEnd(_) => CommandType::WorkpieceEnd,
+                MarkerCmd::OpsSectionStart { .. } => {
+                    CommandType::OpsSectionStart
+                }
+                MarkerCmd::OpsSectionEnd { .. } => CommandType::OpsSectionEnd,
+            },
+        }
+    }
+
+    pub fn is_moving(&self) -> bool {
+        matches!(self.category, OpCategory::Moving { .. })
+    }
+
+    pub fn is_state_cmd(&self) -> bool {
+        matches!(self.category, OpCategory::State(_))
+    }
+
+    pub fn is_marker(&self) -> bool {
+        matches!(self.category, OpCategory::Marker(_))
+    }
+
+    pub fn end_point(&self) -> Point3D {
+        if let OpCategory::Moving { end, .. } = &self.category {
+            *end
+        } else {
+            (0.0, 0.0, 0.0)
+        }
+    }
+
+    pub fn state(&self) -> Option<&State> {
+        self.state.as_ref()
+    }
+
+    pub fn set_state(&mut self, st: State) {
+        self.state = Some(st);
+    }
+
+    pub fn extra_axes(&self) -> Option<&[(Axis, f64)]> {
+        self.extra_axes.as_deref()
+    }
+
+    pub fn set_extra_axes(&mut self, ea: Arc<[(Axis, f64)]>) {
+        self.extra_axes = Some(ea);
     }
 }

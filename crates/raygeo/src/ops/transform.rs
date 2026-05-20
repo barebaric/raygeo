@@ -1,10 +1,7 @@
-use std::sync::Arc;
-
 use crate::constants::EPSILON_COLLINEAR;
 
 use super::container::Ops;
-use super::enums::{CommandCategory, CommandType};
-use super::types::{OpCommand, OpMetadata};
+use super::types::{MoveCmd, OpCategory, OpNode};
 use crate::types::Point3D;
 
 fn transform_point(matrix: &[[f64; 4]; 4], p: Point3D) -> Point3D {
@@ -51,84 +48,90 @@ impl Ops {
         let mut new_cmds = Vec::new();
         let mut last_point_untransformed: Option<Point3D> = None;
 
-        for i in 0..self.len() {
-            let ct = self.command_type(i);
-            let cat = self.category(i);
-            let original_cmd_end = if cat == CommandCategory::Moving {
-                Some(self.endpoint(i))
-            } else {
-                None
-            };
+        for node in &self.commands {
+            let mut new_node = node.clone();
+            let mut original_cmd_end = None;
 
-            if ct == CommandType::ArcTo && is_non_uniform {
-                let start_point =
-                    last_point_untransformed.unwrap_or((0.0, 0.0, 0.0));
-                let end = self.endpoint(i);
-                let &(ci, cj, cw) = self.arc_params(i);
-                let arc_row: [f64; 8] = [
-                    crate::constants::CMD_TYPE_ARC,
-                    end.0,
-                    end.1,
-                    end.2,
-                    ci,
-                    cj,
-                    if cw { 1.0 } else { 0.0 },
-                    0.0,
-                ];
-                let segments = crate::geo::shape::arc::linearize_arc(
-                    &arc_row,
-                    start_point,
-                    0.1,
-                );
-                let st = self.state(i);
-                let ea = self.extra_axes(i);
-                for (_, p2) in &segments {
-                    let tv = transform_point(matrix, *p2);
-                    let mut cmd = OpCommand::new(CommandType::LineTo);
-                    cmd.end = tv;
-                    if let Some(ea) = ea {
-                        cmd.extra_axes = Some(Arc::from(ea));
-                    }
-                    if let Some(st) = st {
-                        cmd.state = Some(st.clone());
-                    }
-                    new_cmds.push(cmd);
-                }
-            } else if cat == CommandCategory::Moving {
-                let end = self.endpoint(i);
-                let new_end = transform_point(matrix, end);
-                let st = self.state(i);
-                let ea = self.extra_axes(i);
+            match &node.category {
+                OpCategory::Moving { end, cmd } => {
+                    original_cmd_end = Some(*end);
+                    let new_end = transform_point(matrix, *end);
 
-                let mut cmd = OpCommand::new(ct);
-                cmd.end = new_end;
+                    let new_cmd = match cmd {
+                        MoveCmd::ArcTo { center, cw } if is_non_uniform => {
+                            let start_point = last_point_untransformed
+                                .unwrap_or((0.0, 0.0, 0.0));
+                            let arc_row: [f64; 8] = [
+                                crate::constants::CMD_TYPE_ARC,
+                                end.0,
+                                end.1,
+                                end.2,
+                                center.0,
+                                center.1,
+                                if *cw { 1.0 } else { 0.0 },
+                                0.0,
+                            ];
+                            let segments =
+                                crate::geo::shape::arc::linearize_arc(
+                                    &arc_row,
+                                    start_point,
+                                    0.1,
+                                );
+                            let extra =
+                                node.extra_axes.as_deref().map(|e| e.to_vec());
+                            for (_, p2) in &segments {
+                                let tv = transform_point(matrix, *p2);
+                                let mut lcmd = OpNode::line_to(
+                                    tv.0,
+                                    tv.1,
+                                    tv.2,
+                                    extra.clone(),
+                                );
+                                if let Some(s) = &node.state {
+                                    lcmd.set_state(s.clone());
+                                }
+                                new_cmds.push(lcmd);
+                            }
+                            last_point_untransformed = original_cmd_end;
+                            continue; // We broke this into multiple lines, skip the single node push
+                        }
+                        MoveCmd::ArcTo { center, cw } => {
+                            let new_ci = matrix[0][0] * center.0
+                                + matrix[0][1] * center.1;
+                            let new_cj = matrix[1][0] * center.0
+                                + matrix[1][1] * center.1;
+                            MoveCmd::ArcTo {
+                                center: (new_ci, new_cj),
+                                cw: if flip_cw { !cw } else { *cw },
+                            }
+                        }
+                        MoveCmd::BezierTo { c1, c2 } => MoveCmd::BezierTo {
+                            c1: transform_point(matrix, *c1),
+                            c2: transform_point(matrix, *c2),
+                        },
+                        MoveCmd::QuadraticBezierTo { control } => {
+                            MoveCmd::QuadraticBezierTo {
+                                control: transform_point(matrix, *control),
+                            }
+                        }
+                        MoveCmd::MoveTo => MoveCmd::MoveTo,
+                        MoveCmd::LineTo => MoveCmd::LineTo,
+                        MoveCmd::ScanLine { power_values } => {
+                            MoveCmd::ScanLine {
+                                power_values: power_values.clone(),
+                            }
+                        }
+                    };
 
-                if ct == CommandType::ArcTo {
-                    let &(ci, cj, cw) = self.arc_params(i);
-                    let new_ci = matrix[0][0] * ci + matrix[0][1] * cj;
-                    let new_cj = matrix[1][0] * ci + matrix[1][1] * cj;
-                    let new_cw = if flip_cw { !cw } else { cw };
-                    cmd.metadata = OpMetadata::Arc((new_ci, new_cj, new_cw));
-                } else if ct == CommandType::BezierTo {
-                    let &(c1, c2) = self.bezier_params(i);
-                    let t_c1 = transform_point(matrix, c1);
-                    let t_c2 = transform_point(matrix, c2);
-                    cmd.metadata = OpMetadata::Bezier((t_c1, t_c2));
-                } else if ct == CommandType::QuadraticBezierTo {
-                    let c = self.quad_params(i);
-                    let t_c = transform_point(matrix, *c);
-                    cmd.metadata = OpMetadata::QuadraticBezier(t_c);
+                    new_node.category = OpCategory::Moving {
+                        end: new_end,
+                        cmd: new_cmd,
+                    };
+                    new_cmds.push(new_node);
                 }
-
-                if let Some(ea) = ea {
-                    cmd.extra_axes = Some(Arc::from(ea));
+                _ => {
+                    new_cmds.push(new_node);
                 }
-                if let Some(st) = st {
-                    cmd.state = Some(st.clone());
-                }
-                new_cmds.push(cmd);
-            } else {
-                new_cmds.push(self.commands[i].clone());
             }
 
             if let Some(original_end) = original_cmd_end {

@@ -1,10 +1,15 @@
 use pyo3::prelude::*;
 use pyo3::types::{PyBytes, PyDict, PyList, PyType};
 use pyo3::{Bound, Py, PyAny, PyResult};
-use pyo3_stub_gen::derive::{gen_stub_pymethods, gen_stub_pyclass, gen_methods_from_python};
+use pyo3_stub_gen::derive::{
+    gen_methods_from_python, gen_stub_pyclass, gen_stub_pymethods,
+};
 use pyo3_stub_gen::inventory::submit;
 
-use raygeo_core::ops::{Axis, CommandCategory, CommandType, OpsSection, OpsSectionRange};
+use raygeo_core::ops::{
+    Axis, CommandType, MarkerCmd, MoveCmd, OpCategory,
+    OpsSection, OpsSectionRange, StateCmd,
+};
 
 use super::axis::PyAxis;
 use super::enums::{PyCommandCategory, PyCommandType, PySectionType};
@@ -418,7 +423,13 @@ impl PyOps {
     /// :param ct: The :class:`CommandType` to search for.
     /// :returns: List of matching command indices.
     fn indices_of(&self, ct: &PyCommandType) -> Vec<usize> {
-        self.inner.indices_of(ct.0)
+        self.inner
+            .commands
+            .iter()
+            .enumerate()
+            .filter(|(_, node)| node.command_type() == ct.0)
+            .map(|(i, _)| i)
+            .collect()
     }
 
     /// Compute the distance traveled up to command *idx*.
@@ -448,7 +459,19 @@ impl PyOps {
     /// Return the number of scanline commands in the sequence.
     #[getter]
     fn scanline_count(&self) -> usize {
-        self.inner.scanline_count()
+        self.inner
+            .commands
+            .iter()
+            .filter(|node| {
+                matches!(
+                    node.category,
+                    OpCategory::Moving {
+                        cmd: MoveCmd::ScanLine { .. },
+                        ..
+                    }
+                )
+            })
+            .count()
     }
 
     /// Get the endpoint coordinates of a moving command.
@@ -471,12 +494,17 @@ impl PyOps {
                 "index out of range",
             ));
         }
-        if self.inner.command_type(idx) != CommandType::ArcTo {
-            return Err(PyErr::new::<pyo3::exceptions::PyTypeError, _>(
+        if let OpCategory::Moving {
+            cmd: MoveCmd::ArcTo { center, cw },
+            ..
+        } = &self.inner.commands[idx].category
+        {
+            Ok((center.0, center.1, *cw))
+        } else {
+            Err(PyErr::new::<pyo3::exceptions::PyTypeError, _>(
                 "Not an ArcToCommand",
-            ));
+            ))
         }
-        Ok(*self.inner.arc_params(idx))
     }
 
     /// Get the cubic bezier control points.
@@ -493,13 +521,17 @@ impl PyOps {
                 "index out of range",
             ));
         }
-        if self.inner.command_type(idx) != CommandType::BezierTo {
-            return Err(PyErr::new::<pyo3::exceptions::PyTypeError, _>(
+        if let OpCategory::Moving {
+            cmd: MoveCmd::BezierTo { c1, c2 },
+            ..
+        } = &self.inner.commands[idx].category
+        {
+            Ok((*c1, *c2))
+        } else {
+            Err(PyErr::new::<pyo3::exceptions::PyTypeError, _>(
                 "Not a BezierToCommand",
-            ));
+            ))
         }
-        let bp = self.inner.bezier_params(idx);
-        Ok((bp.0, bp.1))
     }
 
     /// Get the quadratic bezier control point.
@@ -513,12 +545,17 @@ impl PyOps {
                 "index out of range",
             ));
         }
-        if self.inner.command_type(idx) != CommandType::QuadraticBezierTo {
-            return Err(PyErr::new::<pyo3::exceptions::PyTypeError, _>(
+        if let OpCategory::Moving {
+            cmd: MoveCmd::QuadraticBezierTo { control },
+            ..
+        } = &self.inner.commands[idx].category
+        {
+            Ok(*control)
+        } else {
+            Err(PyErr::new::<pyo3::exceptions::PyTypeError, _>(
                 "Not a QuadraticBezierToCommand",
-            ));
+            ))
         }
-        Ok(*self.inner.quad_params(idx))
     }
 
     /// Get the raw scanline power data for a scanline command.
@@ -535,13 +572,17 @@ impl PyOps {
                 "index out of range",
             ));
         }
-        if self.inner.command_type(idx) != CommandType::ScanLine {
-            return Err(PyErr::new::<pyo3::exceptions::PyTypeError, _>(
+        if let OpCategory::Moving {
+            cmd: MoveCmd::ScanLine { power_values },
+            ..
+        } = &self.inner.commands[idx].category
+        {
+            Ok(PyBytes::new(py, power_values.as_ref()))
+        } else {
+            Err(PyErr::new::<pyo3::exceptions::PyTypeError, _>(
                 "Not a ScanLinePowerCommand",
-            ));
+            ))
         }
-        let data = self.inner.scanline_data(idx);
-        Ok(PyBytes::new(py, data))
     }
 
     /// Get the duration (milliseconds) of a Dwell command.
@@ -555,12 +596,15 @@ impl PyOps {
                 "index out of range",
             ));
         }
-        if self.inner.command_type(idx) != CommandType::Dwell {
-            return Err(PyErr::new::<pyo3::exceptions::PyTypeError, _>(
+        if let OpCategory::State(StateCmd::Dwell(d)) =
+            &self.inner.commands[idx].category
+        {
+            Ok(*d)
+        } else {
+            Err(PyErr::new::<pyo3::exceptions::PyTypeError, _>(
                 "Not a DwellCommand",
-            ));
+            ))
         }
-        Ok(self.inner.dwell_duration(idx))
     }
 
     /// Get the power level of a SetPower command.
@@ -574,12 +618,15 @@ impl PyOps {
                 "index out of range",
             ));
         }
-        if self.inner.command_type(idx) != CommandType::SetPower {
-            return Err(PyErr::new::<pyo3::exceptions::PyTypeError, _>(
+        if let OpCategory::State(StateCmd::SetPower(p)) =
+            &self.inner.commands[idx].category
+        {
+            Ok(*p)
+        } else {
+            Err(PyErr::new::<pyo3::exceptions::PyTypeError, _>(
                 "Not a SetPowerCommand",
-            ));
+            ))
         }
-        Ok(self.inner.power(idx))
     }
 
     /// Get the speed value from a SetCutSpeed or SetTravelSpeed command.
@@ -593,13 +640,13 @@ impl PyOps {
                 "index out of range",
             ));
         }
-        let ct = self.inner.command_type(idx);
-        if ct != CommandType::SetCutSpeed && ct != CommandType::SetTravelSpeed {
-            return Err(PyErr::new::<pyo3::exceptions::PyTypeError, _>(
+        match &self.inner.commands[idx].category {
+            OpCategory::State(StateCmd::SetCutSpeed(s))
+            | OpCategory::State(StateCmd::SetTravelSpeed(s)) => Ok(*s),
+            _ => Err(PyErr::new::<pyo3::exceptions::PyTypeError, _>(
                 "Not a speed command",
-            ));
+            )),
         }
-        Ok(self.inner.speed(idx))
     }
 
     /// Get the frequency of a SetFrequency command.
@@ -613,12 +660,15 @@ impl PyOps {
                 "index out of range",
             ));
         }
-        if self.inner.command_type(idx) != CommandType::SetFrequency {
-            return Err(PyErr::new::<pyo3::exceptions::PyTypeError, _>(
+        if let OpCategory::State(StateCmd::SetFrequency(f)) =
+            &self.inner.commands[idx].category
+        {
+            Ok(*f)
+        } else {
+            Err(PyErr::new::<pyo3::exceptions::PyTypeError, _>(
                 "Not a SetFrequencyCommand",
-            ));
+            ))
         }
-        Ok(self.inner.frequency(idx))
     }
 
     /// Get the pulse width of a SetPulseWidth command.
@@ -632,12 +682,15 @@ impl PyOps {
                 "index out of range",
             ));
         }
-        if self.inner.command_type(idx) != CommandType::SetPulseWidth {
-            return Err(PyErr::new::<pyo3::exceptions::PyTypeError, _>(
+        if let OpCategory::State(StateCmd::SetPulseWidth(pw)) =
+            &self.inner.commands[idx].category
+        {
+            Ok(*pw)
+        } else {
+            Err(PyErr::new::<pyo3::exceptions::PyTypeError, _>(
                 "Not a SetPulseWidthCommand",
-            ));
+            ))
         }
-        Ok(self.inner.pulse_width(idx))
     }
 
     /// Get the laser UID from a SetLaser command.
@@ -651,12 +704,15 @@ impl PyOps {
                 "index out of range",
             ));
         }
-        if self.inner.command_type(idx) != CommandType::SetLaser {
-            return Err(PyErr::new::<pyo3::exceptions::PyTypeError, _>(
+        if let OpCategory::State(StateCmd::SetLaser(uid)) =
+            &self.inner.commands[idx].category
+        {
+            Ok(uid.to_string())
+        } else {
+            Err(PyErr::new::<pyo3::exceptions::PyTypeError, _>(
                 "Not a SetLaserCommand",
-            ));
+            ))
         }
-        Ok(self.inner.laser_uid(idx).to_string())
     }
 
     /// Get the layer UID from a LayerStart or LayerEnd command.
@@ -670,13 +726,15 @@ impl PyOps {
                 "index out of range",
             ));
         }
-        let ct = self.inner.command_type(idx);
-        if ct != CommandType::LayerStart && ct != CommandType::LayerEnd {
-            return Err(PyErr::new::<pyo3::exceptions::PyTypeError, _>(
+        match &self.inner.commands[idx].category {
+            OpCategory::Marker(MarkerCmd::LayerStart(uid))
+            | OpCategory::Marker(MarkerCmd::LayerEnd(uid)) => {
+                Ok(uid.to_string())
+            }
+            _ => Err(PyErr::new::<pyo3::exceptions::PyTypeError, _>(
                 "Not a Layer command",
-            ));
+            )),
         }
-        Ok(self.inner.layer_uid(idx).to_string())
     }
 
     /// Get the workpiece UID from a WorkpieceStart or WorkpieceEnd command.
@@ -690,14 +748,15 @@ impl PyOps {
                 "index out of range",
             ));
         }
-        let ct = self.inner.command_type(idx);
-        if ct != CommandType::WorkpieceStart && ct != CommandType::WorkpieceEnd
-        {
-            return Err(PyErr::new::<pyo3::exceptions::PyTypeError, _>(
+        match &self.inner.commands[idx].category {
+            OpCategory::Marker(MarkerCmd::WorkpieceStart(uid))
+            | OpCategory::Marker(MarkerCmd::WorkpieceEnd(uid)) => {
+                Ok(uid.to_string())
+            }
+            _ => Err(PyErr::new::<pyo3::exceptions::PyTypeError, _>(
                 "Not a Workpiece command",
-            ));
+            )),
         }
-        Ok(self.inner.workpiece_uid(idx).to_string())
     }
 
     /// Get the section type and optional workpiece UID from an OpsSection command.
@@ -714,19 +773,21 @@ impl PyOps {
                 "index out of range",
             ));
         }
-        let ct = self.inner.command_type(idx);
-        if ct == CommandType::OpsSectionStart {
-            let st = PySectionType(self.inner.section_type(idx));
-            let wu =
-                self.inner.section_workpiece_uid(idx).map(|s| s.to_string());
-            Ok((st, wu))
-        } else if ct == CommandType::OpsSectionEnd {
-            let st = PySectionType(self.inner.section_type(idx));
-            Ok((st, None))
-        } else {
-            Err(PyErr::new::<pyo3::exceptions::PyTypeError, _>(
+        match &self.inner.commands[idx].category {
+            OpCategory::Marker(MarkerCmd::OpsSectionStart {
+                section_type,
+                workpiece_uid,
+            }) => Ok((
+                PySectionType(*section_type),
+                workpiece_uid.as_ref().map(|s| s.to_string()),
+            )),
+            OpCategory::Marker(MarkerCmd::OpsSectionEnd {
+                section_type,
+                ..
+            }) => Ok((PySectionType(*section_type), None)),
+            _ => Err(PyErr::new::<pyo3::exceptions::PyTypeError, _>(
                 "Not an OpsSection command",
-            ))
+            )),
         }
     }
 
@@ -1206,7 +1267,6 @@ impl PyOps {
     fn inspect(&self, py: Python<'_>, idx: usize) -> PyResult<PyCommandInfo> {
         let inner = &self.inner;
         let ct = inner.command_type(idx);
-        let cat = inner.category(idx);
 
         let mut info = PyCommandInfo {
             type_: PyCommandType(ct),
@@ -1230,7 +1290,7 @@ impl PyOps {
             section_type: None,
         };
 
-        if cat == CommandCategory::Moving {
+        if inner.commands[idx].is_moving() {
             info.end = Some(inner.endpoint(idx));
             if let Some(ea) = inner.extra_axes(idx) {
                 let dict = PyDict::new(py);
@@ -1245,56 +1305,60 @@ impl PyOps {
             }
         }
 
-        match ct {
-            CommandType::ArcTo => {
-                let &(i, j, cw) = inner.arc_params(idx);
-                info.center_offset = Some((i, j));
-                info.clockwise = Some(cw);
-            }
-            CommandType::BezierTo => {
-                let &(c1, c2) = inner.bezier_params(idx);
-                info.control1 = Some(c1);
-                info.control2 = Some(c2);
-            }
-            CommandType::QuadraticBezierTo => {
-                info.control = Some(*inner.quad_params(idx));
-            }
-            CommandType::ScanLine => {
-                info.power_values =
-                    Some(PyBytes::new(py, inner.scanline_data(idx)).unbind());
-            }
-            CommandType::SetPower => {
-                info.power = Some(inner.power(idx));
-            }
-            CommandType::SetCutSpeed | CommandType::SetTravelSpeed => {
-                info.speed = Some(inner.speed(idx));
-            }
-            CommandType::SetFrequency => {
-                info.frequency = Some(inner.frequency(idx));
-            }
-            CommandType::SetPulseWidth => {
-                info.pulse_width = Some(inner.pulse_width(idx));
-            }
-            CommandType::SetLaser => {
-                info.laser_uid = Some(inner.laser_uid(idx).to_string());
-            }
-            CommandType::Dwell => {
-                info.duration_ms = Some(inner.dwell_duration(idx));
-            }
-            CommandType::LayerStart | CommandType::LayerEnd => {
-                info.layer_uid = Some(inner.layer_uid(idx).to_string());
-            }
-            CommandType::WorkpieceStart | CommandType::WorkpieceEnd => {
-                info.workpiece_uid = Some(inner.workpiece_uid(idx).to_string());
-            }
-            CommandType::OpsSectionStart | CommandType::OpsSectionEnd => {
-                info.section_type =
-                    Some(format!("{:?}", inner.section_type(idx)));
-                if let Some(wp) = inner.section_workpiece_uid(idx) {
-                    info.workpiece_uid = Some(wp.to_string());
+        match &inner.commands[idx].category {
+            OpCategory::Moving { cmd, .. } => match cmd {
+                MoveCmd::ArcTo { center, cw } => {
+                    info.center_offset = Some(*center);
+                    info.clockwise = Some(*cw);
                 }
-            }
-            _ => {}
+                MoveCmd::BezierTo { c1, c2 } => {
+                    info.control1 = Some(*c1);
+                    info.control2 = Some(*c2);
+                }
+                MoveCmd::QuadraticBezierTo { control } => {
+                    info.control = Some(*control);
+                }
+                MoveCmd::ScanLine { power_values } => {
+                    info.power_values =
+                        Some(PyBytes::new(py, power_values.as_ref()).unbind());
+                }
+                _ => {}
+            },
+            OpCategory::State(cmd) => match cmd {
+                StateCmd::SetPower(p) => info.power = Some(*p),
+                StateCmd::SetCutSpeed(s) | StateCmd::SetTravelSpeed(s) => {
+                    info.speed = Some(*s)
+                }
+                StateCmd::SetFrequency(f) => info.frequency = Some(*f),
+                StateCmd::SetPulseWidth(pw) => info.pulse_width = Some(*pw),
+                StateCmd::SetLaser(uid) => {
+                    info.laser_uid = Some(uid.to_string())
+                }
+                StateCmd::Dwell(d) => info.duration_ms = Some(*d),
+                _ => {}
+            },
+            OpCategory::Marker(cmd) => match cmd {
+                MarkerCmd::LayerStart(uid) | MarkerCmd::LayerEnd(uid) => {
+                    info.layer_uid = Some(uid.to_string());
+                }
+                MarkerCmd::WorkpieceStart(uid)
+                | MarkerCmd::WorkpieceEnd(uid) => {
+                    info.workpiece_uid = Some(uid.to_string());
+                }
+                MarkerCmd::OpsSectionStart {
+                    section_type,
+                    workpiece_uid,
+                } => {
+                    info.section_type = Some(format!("{:?}", section_type));
+                    if let Some(wp) = workpiece_uid {
+                        info.workpiece_uid = Some(wp.to_string());
+                    }
+                }
+                MarkerCmd::OpsSectionEnd { section_type, .. } => {
+                    info.section_type = Some(format!("{:?}", section_type));
+                }
+                _ => {}
+            },
         }
 
         Ok(info)
@@ -1452,21 +1516,27 @@ impl PyOps {
         py: Python<'_>,
         callback: Py<PyAny>,
     ) -> PyResult<()> {
-        
         let mut i = 0;
         while i < self.inner.len() {
-            if self.inner.command_type(i) != CommandType::LayerStart {
-                i += 1;
-                continue;
-            }
+            let layer_uid =
+                if let OpCategory::Marker(MarkerCmd::LayerStart(uid)) =
+                    &self.inner.commands[i].category
+                {
+                    uid.to_string()
+                } else {
+                    i += 1;
+                    continue;
+                };
 
-            let layer_uid = self.inner.layer_uid(i).to_string();
             let layer_start = i;
             let mut collected_indices: Vec<usize> = Vec::new();
             while i < self.inner.len() {
                 collected_indices.push(i);
                 i += 1;
-                if self.inner.command_type(i - 1) == CommandType::LayerEnd {
+                if matches!(
+                    self.inner.commands[i - 1].category,
+                    OpCategory::Marker(MarkerCmd::LayerEnd(_))
+                ) {
                     break;
                 }
             }
@@ -1511,11 +1581,10 @@ impl PyOps {
         on_aux_point: Option<Py<PyAny>>,
     ) -> PyResult<()> {
         for i in 0..self.inner.len() {
-            if self.inner.category(i) != CommandCategory::Moving {
+            if !self.inner.commands[i].is_moving() {
                 continue;
             }
 
-            let ct = self.inner.command_type(i);
             let end = self.inner.endpoint(i);
             let end_list = vec![end.0, end.1, end.2];
             let end_py_list = PyList::new(py, &end_list)?;
@@ -1530,7 +1599,8 @@ impl PyOps {
             on_endpoint.call1(py, (&end_py_list, &ea_arg))?;
 
             let new_end: Vec<f64> = end_py_list.extract()?;
-            self.inner.set_endpoint(i, (new_end[0], new_end[1], new_end[2]));
+            self.inner
+                .set_endpoint(i, (new_end[0], new_end[1], new_end[2]));
 
             if !ea_arg.is_empty() {
                 let ea_vec = py_to_axis_map(&ea_arg)?;
@@ -1538,47 +1608,35 @@ impl PyOps {
             }
 
             if let Some(ref aux_cb) = on_aux_point {
-                if ct == CommandType::ArcTo {
-                    let (ci, cj, cw) = *self.inner.arc_params(i);
-                    let off_list = vec![ci, cj];
-                    let off_py_list = PyList::new(py, &off_list)?;
-                    aux_cb.call1(py, (&off_py_list,))?;
-                    let new_off: Vec<f64> = off_py_list.extract()?;
-                    self.inner.set_arc_params(
-                        i,
-                        Some((new_off[0], new_off[1])),
-                        Some(cw),
-                    );
-                } else if ct == CommandType::BezierTo {
-                    let &(c1, c2) = self.inner.bezier_params(i);
-                    for (cp_idx, cp) in [c1, c2].iter().enumerate() {
-                        let cp_list = vec![cp.0, cp.1, cp.2];
-                        let cp_py_list = PyList::new(py, &cp_list)?;
-                        aux_cb.call1(py, (&cp_py_list,))?;
-                        let new_cp: Vec<f64> = cp_py_list.extract()?;
-                        if cp_idx == 0 {
-                            let (_, c2) = *self.inner.bezier_params(i);
-                            self.inner.set_bezier_params(
-                                i,
-                                (new_cp[0], new_cp[1], new_cp[2]),
-                                c2,
-                            );
-                        } else {
-                            let (c1, _) = *self.inner.bezier_params(i);
-                            self.inner.set_bezier_params(
-                                i,
-                                c1,
-                                (new_cp[0], new_cp[1], new_cp[2]),
-                            );
+                if let OpCategory::Moving { cmd, .. } =
+                    &mut self.inner.commands[i].category
+                {
+                    match cmd {
+                        MoveCmd::ArcTo { center, .. } => {
+                            let off_list = vec![center.0, center.1];
+                            let off_py_list = PyList::new(py, &off_list)?;
+                            aux_cb.call1(py, (&off_py_list,))?;
+                            let new_off: Vec<f64> = off_py_list.extract()?;
+                            *center = (new_off[0], new_off[1]);
                         }
+                        MoveCmd::BezierTo { c1, c2, .. } => {
+                            for cp in [c1, c2].iter_mut() {
+                                let cp_list = vec![cp.0, cp.1, cp.2];
+                                let cp_py_list = PyList::new(py, &cp_list)?;
+                                aux_cb.call1(py, (&cp_py_list,))?;
+                                let new_cp: Vec<f64> = cp_py_list.extract()?;
+                                **cp = (new_cp[0], new_cp[1], new_cp[2]);
+                            }
+                        }
+                        MoveCmd::QuadraticBezierTo { control, .. } => {
+                            let cp_list = vec![control.0, control.1, control.2];
+                            let cp_py_list = PyList::new(py, &cp_list)?;
+                            aux_cb.call1(py, (&cp_py_list,))?;
+                            let new_cp: Vec<f64> = cp_py_list.extract()?;
+                            *control = (new_cp[0], new_cp[1], new_cp[2]);
+                        }
+                        _ => {}
                     }
-                } else if ct == CommandType::QuadraticBezierTo {
-                    let c = *self.inner.quad_params(i);
-                    let cp_list = vec![c.0, c.1, c.2];
-                    let cp_py_list = PyList::new(py, &cp_list)?;
-                    aux_cb.call1(py, (&cp_py_list,))?;
-                    let new_cp: Vec<f64> = cp_py_list.extract()?;
-                    self.inner.set_quad_params(i, (new_cp[0], new_cp[1], new_cp[2]));
                 }
             }
         }

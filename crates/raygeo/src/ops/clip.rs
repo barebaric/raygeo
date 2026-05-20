@@ -1,6 +1,5 @@
 use super::container::Ops;
-use super::enums::{CommandCategory, CommandType};
-use super::state::State;
+use super::types::{MoveCmd, OpCategory, OpNode};
 use crate::constants::{
     CMD_TYPE_ARC, CMD_TYPE_BEZIER, CMD_TYPE_LINE, COL_C1X, COL_C1Y, COL_C2X,
     COL_C2Y, COL_CW, COL_I, COL_J, COL_TYPE, COL_X, COL_Y, COL_Z,
@@ -54,59 +53,53 @@ impl Ops {
         let mut last_point: Point3D = (0.0, 0.0, 0.0);
         let mut clipped_pen_pos: Option<Point3D> = None;
 
-        for i in 0..self.len() {
-            let ct = self.command_type(i);
-            let cat = self.category(i);
-
-            if cat == CommandCategory::State || cat == CommandCategory::Marker {
-                let cmd = self.commands[i].clone();
-                new_ops.commands.push(cmd);
-                continue;
+        for node in &self.commands {
+            if let OpCategory::Moving { end, cmd } = &node.category {
+                match cmd {
+                    MoveCmd::ScanLine { power_values } => {
+                        let clipped =
+                            clip_line_segment_with_rect(last_point, *end, rect);
+                        let kept: Vec<(Point3D, Point3D)> =
+                            clipped.into_iter().collect();
+                        clipped_pen_pos = append_clipped_scanline(
+                            &mut new_ops,
+                            last_point,
+                            *end,
+                            power_values,
+                            &kept,
+                            clipped_pen_pos,
+                        );
+                        last_point = *end;
+                    }
+                    MoveCmd::MoveTo => {
+                        last_point = *end;
+                        clipped_pen_pos = None;
+                    }
+                    _ => {
+                        let linearized = crate::ops::linearize::linearize_node(
+                            node, last_point,
+                        );
+                        let mut p_seg_start = last_point;
+                        for lnode in &linearized.commands {
+                            let p_seg_end = lnode.end_point();
+                            let clipped = clip_line_segment_with_rect(
+                                p_seg_start,
+                                p_seg_end,
+                                rect,
+                            );
+                            add_clipped_segment(
+                                &mut new_ops,
+                                clipped,
+                                &mut clipped_pen_pos,
+                            );
+                            p_seg_start = p_seg_end;
+                        }
+                        last_point = *end;
+                    }
+                }
+            } else {
+                new_ops.commands.push(node.clone());
             }
-
-            if cat != CommandCategory::Moving {
-                continue;
-            }
-
-            if ct == CommandType::ScanLine {
-                let end = self.endpoint(i);
-                let clipped =
-                    clip_line_segment_with_rect(last_point, end, rect);
-                let kept: Vec<(Point3D, Point3D)> =
-                    clipped.into_iter().collect();
-                clipped_pen_pos = append_clipped_scanline(
-                    &mut new_ops,
-                    last_point,
-                    end,
-                    &self.scanline_data(i),
-                    &kept,
-                    clipped_pen_pos,
-                );
-                last_point = end;
-                continue;
-            }
-
-            if ct == CommandType::MoveTo {
-                let end = self.endpoint(i);
-                last_point = end;
-                clipped_pen_pos = None;
-                continue;
-            }
-
-            let linearized = self.linearize(i, last_point);
-            let mut p_seg_start = last_point;
-            for j in 0..linearized.len() {
-                let p_seg_end = linearized.endpoint(j);
-                let clipped =
-                    clip_line_segment_with_rect(p_seg_start, p_seg_end, rect);
-                add_clipped_segment(
-                    &mut new_ops,
-                    clipped,
-                    &mut clipped_pen_pos,
-                );
-                p_seg_start = p_seg_end;
-            }
-            last_point = self.endpoint(i);
         }
 
         new_ops
@@ -125,76 +118,80 @@ impl Ops {
         let mut last_point: Point3D = (0.0, 0.0, 0.0);
         let mut pen_pos: Option<Point3D> = None;
 
-        let first_move_idx = (0..self.len())
-            .find(|&i| self.category(i) == CommandCategory::Moving)
-            .unwrap_or(self.len());
+        let first_move_idx = self
+            .commands
+            .iter()
+            .position(|node| node.is_moving())
+            .unwrap_or(self.commands.len());
 
-        for i in 0..first_move_idx {
-            let cmd = self.commands[i].clone();
-            new_ops.commands.push(cmd);
+        for node in &self.commands[..first_move_idx] {
+            new_ops.commands.push(node.clone());
         }
 
-        for i in 0..self.len() {
-            let ct = self.command_type(i);
-            let cat = self.category(i);
-
-            if cat != CommandCategory::Moving {
-                let cmd = self.commands[i].clone();
-                new_ops.commands.push(cmd);
-                continue;
-            }
-
-            let end = self.endpoint(i);
-
-            if ct == CommandType::MoveTo {
-                last_point = end;
-                pen_pos = None;
-                continue;
-            }
-
-            if ct == CommandType::ScanLine {
-                let kept = subtract_polygons_from_line_segment(
-                    last_point, end, regions,
-                );
-                pen_pos = append_clipped_scanline(
-                    &mut new_ops,
-                    last_point,
-                    end,
-                    &self.scanline_data(i),
-                    &kept,
-                    pen_pos,
-                );
-                last_point = end;
-                continue;
-            }
-
-            let linearized = self.linearize(i, last_point);
-            let mut p_seg_start = last_point;
-            for j in 0..linearized.len() {
-                let p_seg_end = linearized.endpoint(j);
-                let kept = subtract_polygons_from_line_segment(
-                    p_seg_start,
-                    p_seg_end,
-                    regions,
-                );
-                for (sub_p1, sub_p2) in kept {
-                    if needs_move_to(pen_pos, sub_p1) {
-                        new_ops.move_to(sub_p1.0, sub_p1.1, sub_p1.2, None);
+        for node in &self.commands[first_move_idx..] {
+            if let OpCategory::Moving { end, cmd } = &node.category {
+                match cmd {
+                    MoveCmd::MoveTo => {
+                        last_point = *end;
+                        pen_pos = None;
                     }
-                    new_ops.line_to(sub_p2.0, sub_p2.1, sub_p2.2, None);
-                    pen_pos = Some(sub_p2);
+                    MoveCmd::ScanLine { power_values } => {
+                        let kept = subtract_polygons_from_line_segment(
+                            last_point, *end, regions,
+                        );
+                        pen_pos = append_clipped_scanline(
+                            &mut new_ops,
+                            last_point,
+                            *end,
+                            power_values,
+                            &kept,
+                            pen_pos,
+                        );
+                        last_point = *end;
+                    }
+                    _ => {
+                        let linearized = crate::ops::linearize::linearize_node(
+                            node, last_point,
+                        );
+                        let mut p_seg_start = last_point;
+                        for lnode in &linearized.commands {
+                            let p_seg_end = lnode.end_point();
+                            let kept = subtract_polygons_from_line_segment(
+                                p_seg_start,
+                                p_seg_end,
+                                regions,
+                            );
+                            for (sub_p1, sub_p2) in kept {
+                                if needs_move_to(pen_pos, sub_p1) {
+                                    new_ops.move_to(
+                                        sub_p1.0, sub_p1.1, sub_p1.2, None,
+                                    );
+                                }
+                                new_ops.line_to(
+                                    sub_p2.0, sub_p2.1, sub_p2.2, None,
+                                );
+                                pen_pos = Some(sub_p2);
+                            }
+                            p_seg_start = p_seg_end;
+                        }
+                        last_point = *end;
+                    }
                 }
-                p_seg_start = p_seg_end;
+            } else {
+                new_ops.commands.push(node.clone());
             }
-            last_point = end;
         }
 
         self.commands = new_ops.commands;
         self.invalidate_time_cache();
-        if self.len() > 0 {
-            for j in (0..self.len()).rev() {
-                if self.command_type(j) == CommandType::MoveTo {
-                    self.last_move_to = self.endpoint(j);
+        if !self.is_empty() {
+            for node in self.commands.iter().rev() {
+                if let OpCategory::Moving {
+                    end,
+                    cmd: MoveCmd::MoveTo,
+                } = &node.category
+                {
+                    self.last_move_to = *end;
                     break;
                 }
             }
@@ -225,78 +222,82 @@ impl Ops {
         let mut last_point: Point3D = (0.0, 0.0, 0.0);
         let mut pen_pos: Option<Point3D> = None;
 
-        let first_move_idx = (0..self.len())
-            .find(|&i| self.category(i) == CommandCategory::Moving)
-            .unwrap_or(self.len());
+        let first_move_idx = self
+            .commands
+            .iter()
+            .position(|node| node.is_moving())
+            .unwrap_or(self.commands.len());
 
-        for i in 0..first_move_idx {
-            let cmd = self.commands[i].clone();
-            new_ops.commands.push(cmd);
+        for node in &self.commands[..first_move_idx] {
+            new_ops.commands.push(node.clone());
         }
 
-        for i in first_move_idx..self.len() {
-            let ct = self.command_type(i);
-            let cat = self.category(i);
-
-            if cat != CommandCategory::Moving {
-                let cmd = self.commands[i].clone();
-                new_ops.commands.push(cmd);
-                continue;
-            }
-
-            let end = self.endpoint(i);
-
-            if ct == CommandType::MoveTo {
-                last_point = end;
-                pen_pos = None;
-                continue;
-            }
-
-            if ct == CommandType::ScanLine {
-                let kept = clip_line_segment_with_polygons(
-                    last_point,
-                    end,
-                    &valid_regions,
-                );
-                pen_pos = append_clipped_scanline(
-                    &mut new_ops,
-                    last_point,
-                    end,
-                    &self.scanline_data(i),
-                    &kept,
-                    pen_pos,
-                );
-                last_point = end;
-                continue;
-            }
-
-            let linearized = self.linearize(i, last_point);
-            let mut p_seg_start = last_point;
-            for j in 0..linearized.len() {
-                let p_seg_end = linearized.endpoint(j);
-                let kept = clip_line_segment_with_polygons(
-                    p_seg_start,
-                    p_seg_end,
-                    &valid_regions,
-                );
-                for (sub_p1, sub_p2) in kept {
-                    if needs_move_to(pen_pos, sub_p1) {
-                        new_ops.move_to(sub_p1.0, sub_p1.1, sub_p1.2, None);
+        for node in &self.commands[first_move_idx..] {
+            if let OpCategory::Moving { end, cmd } = &node.category {
+                match cmd {
+                    MoveCmd::MoveTo => {
+                        last_point = *end;
+                        pen_pos = None;
                     }
-                    new_ops.line_to(sub_p2.0, sub_p2.1, sub_p2.2, None);
-                    pen_pos = Some(sub_p2);
+                    MoveCmd::ScanLine { power_values } => {
+                        let kept = clip_line_segment_with_polygons(
+                            last_point,
+                            *end,
+                            &valid_regions,
+                        );
+                        pen_pos = append_clipped_scanline(
+                            &mut new_ops,
+                            last_point,
+                            *end,
+                            power_values,
+                            &kept,
+                            pen_pos,
+                        );
+                        last_point = *end;
+                    }
+                    _ => {
+                        let linearized = crate::ops::linearize::linearize_node(
+                            node, last_point,
+                        );
+                        let mut p_seg_start = last_point;
+                        for lnode in &linearized.commands {
+                            let p_seg_end = lnode.end_point();
+                            let kept = clip_line_segment_with_polygons(
+                                p_seg_start,
+                                p_seg_end,
+                                &valid_regions,
+                            );
+                            for (sub_p1, sub_p2) in kept {
+                                if needs_move_to(pen_pos, sub_p1) {
+                                    new_ops.move_to(
+                                        sub_p1.0, sub_p1.1, sub_p1.2, None,
+                                    );
+                                }
+                                new_ops.line_to(
+                                    sub_p2.0, sub_p2.1, sub_p2.2, None,
+                                );
+                                pen_pos = Some(sub_p2);
+                            }
+                            p_seg_start = p_seg_end;
+                        }
+                        last_point = *end;
+                    }
                 }
-                p_seg_start = p_seg_end;
+            } else {
+                new_ops.commands.push(node.clone());
             }
-            last_point = end;
         }
 
         self.commands = new_ops.commands;
         self.invalidate_time_cache();
-        if self.len() > 0 {
-            for j in (0..self.len()).rev() {
-                if self.command_type(j) == CommandType::MoveTo {
-                    self.last_move_to = self.endpoint(j);
+        if !self.is_empty() {
+            for node in self.commands.iter().rev() {
+                if let OpCategory::Moving {
+                    end,
+                    cmd: MoveCmd::MoveTo,
+                } = &node.category
+                {
+                    self.last_move_to = *end;
                     break;
                 }
             }
@@ -325,7 +326,7 @@ impl Ops {
         if start_idx >= self.len() {
             return false;
         }
-        if self.category(start_idx) != CommandCategory::Moving {
+        if !self.commands[start_idx].is_moving() {
             return false;
         }
 
@@ -340,8 +341,16 @@ impl Ops {
 
         let linear_geo_cmds: Vec<usize> = (0..temp_ops.len())
             .filter(|&j| {
-                let ct = temp_ops.command_type(j);
-                ct == CommandType::MoveTo || ct == CommandType::LineTo
+                matches!(
+                    temp_ops.commands[j].category,
+                    OpCategory::Moving {
+                        cmd: MoveCmd::MoveTo,
+                        ..
+                    } | OpCategory::Moving {
+                        cmd: MoveCmd::LineTo,
+                        ..
+                    }
+                )
             })
             .collect();
 
@@ -378,9 +387,9 @@ impl Ops {
             self.endpoint(if end_idx > 0 { end_idx - 1 } else { 0 });
         let mut new_endpoint: Option<Point3D> = None;
         if new_subpath.len() > 0 {
-            for ri in (0..new_subpath.len()).rev() {
-                if new_subpath.category(ri) == CommandCategory::Moving {
-                    new_endpoint = Some(new_subpath.endpoint(ri));
+            for node in new_subpath.commands.iter().rev() {
+                if node.is_moving() {
+                    new_endpoint = Some(node.end_point());
                     break;
                 }
             }
@@ -408,20 +417,17 @@ impl Ops {
 
         // First pass: preserve state/marker commands before the first moving command
         for j in 0..start_idx {
-            let cmd = self.commands[j].clone();
-            new_cmds.push(cmd);
+            new_cmds.push(self.commands[j].clone());
         }
 
         // Second pass: add the replacement subpath from the clipper output
         for j in 0..new_subpath.commands.len() {
-            let cmd = new_subpath.commands[j].clone();
-            new_cmds.push(cmd);
+            new_cmds.push(new_subpath.commands[j].clone());
         }
 
         // Third pass: preserve commands after the replaced segment
         for j in end_idx..self.commands.len() {
-            let cmd = self.commands[j].clone();
-            new_cmds.push(cmd);
+            new_cmds.push(self.commands[j].clone());
         }
 
         self.commands = new_cmds;
@@ -452,154 +458,144 @@ impl Ops {
         let mut last_point: Point3D = (0.0, 0.0, 0.0);
         let mut pen_pos: Option<Point3D> = None;
 
-        let first_move_idx = (0..self.len())
-            .find(|&i| self.category(i) == CommandCategory::Moving)
-            .unwrap_or(self.len());
+        let first_move_idx = self
+            .commands
+            .iter()
+            .position(|node| node.is_moving())
+            .unwrap_or(self.commands.len());
 
-        for i in 0..first_move_idx {
-            let cmd = self.commands[i].clone();
-            new_ops.commands.push(cmd);
+        for node in &self.commands[..first_move_idx] {
+            new_ops.commands.push(node.clone());
         }
 
-        for i in first_move_idx..self.len() {
-            let ct = self.command_type(i);
-            let cat = self.category(i);
-
-            if cat != CommandCategory::Moving {
-                let cmd = self.commands[i].clone();
-                new_ops.commands.push(cmd);
-                continue;
-            }
-
-            let end = self.endpoint(i);
-
-            if ct == CommandType::MoveTo {
-                last_point = end;
-                pen_pos = None;
-                continue;
-            }
-
-            if ct == CommandType::ScanLine {
-                pen_pos = clip_scanline(
-                    &mut new_ops,
-                    self,
-                    i,
-                    last_point,
-                    pen_pos,
-                    &valid_regions,
-                );
-                last_point = end;
-                continue;
-            }
-
-            if ct == CommandType::ArcTo {
-                let (arc_i, arc_j, arc_cw) = *self.arc_params(i);
-                if is_arc_inside_polygons(
-                    (last_point.0, last_point.1),
-                    (end.0, end.1),
-                    (arc_i, arc_j),
-                    arc_cw,
-                    &valid_regions,
-                ) {
-                    let needs_move = needs_move_to(pen_pos, last_point);
-                    if needs_move {
-                        new_ops.move_to(
-                            last_point.0,
-                            last_point.1,
-                            last_point.2,
-                            None,
+        for node in &self.commands[first_move_idx..] {
+            if let OpCategory::Moving { end, cmd } = &node.category {
+                match cmd {
+                    MoveCmd::MoveTo => {
+                        last_point = *end;
+                        pen_pos = None;
+                    }
+                    MoveCmd::ScanLine { power_values } => {
+                        let kept = clip_line_segment_with_polygons(
+                            last_point,
+                            *end,
+                            &valid_regions,
                         );
-                    }
-                    let cmd = self.commands[i].clone();
-                    new_ops.commands.push(cmd);
-                    pen_pos = Some(end);
-                    last_point = end;
-                    continue;
-                }
-
-                pen_pos = clip_and_refit_arc(
-                    &mut new_ops,
-                    self,
-                    i,
-                    last_point,
-                    pen_pos,
-                    &valid_regions,
-                    tolerance,
-                );
-                last_point = end;
-                continue;
-            }
-
-            if ct == CommandType::BezierTo {
-                let (c1, c2) = self.bezier_params(i);
-                let start_2d = (last_point.0, last_point.1);
-                let end_2d = (end.0, end.1);
-                let c1_2d = (c1.0, c1.1);
-                let c2_2d = (c2.0, c2.1);
-                if is_bezier_inside_polygons(
-                    start_2d,
-                    c1_2d,
-                    c2_2d,
-                    end_2d,
-                    &valid_regions,
-                ) {
-                    let needs_move = needs_move_to(pen_pos, last_point);
-                    if needs_move {
-                        new_ops.move_to(
-                            last_point.0,
-                            last_point.1,
-                            last_point.2,
-                            None,
+                        pen_pos = append_clipped_scanline(
+                            &mut new_ops,
+                            last_point,
+                            *end,
+                            power_values,
+                            &kept,
+                            pen_pos,
                         );
+                        last_point = *end;
                     }
-                    let cmd = self.commands[i].clone();
-                    new_ops.commands.push(cmd);
-                    pen_pos = Some(end);
-                    last_point = end;
-                    continue;
-                }
-
-                pen_pos = clip_and_refit_bezier(
-                    &mut new_ops,
-                    self,
-                    i,
-                    last_point,
-                    pen_pos,
-                    &valid_regions,
-                    tolerance,
-                );
-                last_point = end;
-                continue;
-            }
-
-            let linearized = self.linearize(i, last_point);
-            let mut p_seg_start = last_point;
-            for j in 0..linearized.len() {
-                let p_seg_end = linearized.endpoint(j);
-                let kept_segments = clip_line_segment_with_polygons(
-                    p_seg_start,
-                    p_seg_end,
-                    &valid_regions,
-                );
-                for (sub_p1, sub_p2) in kept_segments {
-                    if needs_move_to(pen_pos, sub_p1) {
-                        new_ops.move_to(sub_p1.0, sub_p1.1, sub_p1.2, None);
+                    MoveCmd::ArcTo { center, cw } => {
+                        if is_arc_inside_polygons(
+                            (last_point.0, last_point.1),
+                            (end.0, end.1),
+                            *center,
+                            *cw,
+                            &valid_regions,
+                        ) {
+                            if needs_move_to(pen_pos, last_point) {
+                                new_ops.move_to(
+                                    last_point.0,
+                                    last_point.1,
+                                    last_point.2,
+                                    None,
+                                );
+                            }
+                            new_ops.commands.push(node.clone());
+                            pen_pos = Some(*end);
+                            last_point = *end;
+                        } else {
+                            pen_pos = clip_and_refit_arc(
+                                &mut new_ops,
+                                node,
+                                last_point,
+                                pen_pos,
+                                &valid_regions,
+                                tolerance,
+                            );
+                            last_point = *end;
+                        }
                     }
-                    new_ops.line_to(sub_p2.0, sub_p2.1, sub_p2.2, None);
-                    pen_pos = Some(sub_p2);
+                    MoveCmd::BezierTo { c1, c2 } => {
+                        if is_bezier_inside_polygons(
+                            (last_point.0, last_point.1),
+                            (c1.0, c1.1),
+                            (c2.0, c2.1),
+                            (end.0, end.1),
+                            &valid_regions,
+                        ) {
+                            if needs_move_to(pen_pos, last_point) {
+                                new_ops.move_to(
+                                    last_point.0,
+                                    last_point.1,
+                                    last_point.2,
+                                    None,
+                                );
+                            }
+                            new_ops.commands.push(node.clone());
+                            pen_pos = Some(*end);
+                            last_point = *end;
+                        } else {
+                            pen_pos = clip_and_refit_bezier(
+                                &mut new_ops,
+                                node,
+                                last_point,
+                                pen_pos,
+                                &valid_regions,
+                                tolerance,
+                            );
+                            last_point = *end;
+                        }
+                    }
+                    _ => {
+                        let linearized = crate::ops::linearize::linearize_node(
+                            node, last_point,
+                        );
+                        let mut p_seg_start = last_point;
+                        for lnode in &linearized.commands {
+                            let p_seg_end = lnode.end_point();
+                            let kept_segments = clip_line_segment_with_polygons(
+                                p_seg_start,
+                                p_seg_end,
+                                &valid_regions,
+                            );
+                            for (sub_p1, sub_p2) in kept_segments {
+                                if needs_move_to(pen_pos, sub_p1) {
+                                    new_ops.move_to(
+                                        sub_p1.0, sub_p1.1, sub_p1.2, None,
+                                    );
+                                }
+                                new_ops.line_to(
+                                    sub_p2.0, sub_p2.1, sub_p2.2, None,
+                                );
+                                pen_pos = Some(sub_p2);
+                            }
+                            p_seg_start = p_seg_end;
+                        }
+                        last_point = *end;
+                    }
                 }
-                p_seg_start = p_seg_end;
+            } else {
+                new_ops.commands.push(node.clone());
             }
-
-            last_point = end;
         }
 
         self.commands = new_ops.commands;
         self.invalidate_time_cache();
-        if self.len() > 0 {
-            for j in (0..self.len()).rev() {
-                if self.command_type(j) == CommandType::MoveTo {
-                    self.last_move_to = self.endpoint(j);
+        if !self.is_empty() {
+            for node in self.commands.iter().rev() {
+                if let OpCategory::Moving {
+                    end,
+                    cmd: MoveCmd::MoveTo,
+                } = &node.category
+                {
+                    self.last_move_to = *end;
                     break;
                 }
             }
@@ -621,46 +617,6 @@ fn needs_move_to(pen_pos: Option<Point3D>, target: Point3D) -> bool {
             (dx * dx + dy * dy).sqrt() > EPSILON_GAP_CLOSE
         }
         None => true,
-    }
-}
-
-/// Walk backwards from `idx` to find the accumulated machine state (power, air assist).
-///
-/// - `ops`: The ops sequence.
-/// - `idx`: Index to start searching backwards from.
-/// - Returns: The combined `State` if any state commands were found, `None` otherwise.
-fn get_machine_state(ops: &Ops, idx: usize) -> Option<State> {
-    if let Some(s) = ops.state(idx) {
-        return Some(s.clone());
-    }
-
-    let mut power = 0.0f64;
-    let mut air_assist = false;
-    let mut found_any = false;
-
-    for j in (0..idx).rev() {
-        if ops.category(j) != CommandCategory::State {
-            continue;
-        }
-        found_any = true;
-        let ct = ops.command_type(j);
-        match ct {
-            CommandType::SetPower => power = ops.power(j),
-            CommandType::SetCutSpeed | CommandType::SetTravelSpeed => {}
-            CommandType::EnableAirAssist => air_assist = true,
-            CommandType::DisableAirAssist => air_assist = false,
-            _ => {}
-        }
-    }
-
-    if found_any {
-        Some(State {
-            power,
-            air_assist,
-            ..Default::default()
-        })
-    } else {
-        None
     }
 }
 
@@ -707,37 +663,6 @@ fn append_clipped_scanline(
     pen_pos
 }
 
-/// Clip a single scanline command against polygon regions.
-///
-/// - `new_ops`: Target ops sequence.
-/// - `ops`: The full ops sequence.
-/// - `idx`: Index of the scanline command.
-/// - `last_point`: Start point preceding the scanline.
-/// - `pen_pos`: Current pen position.
-/// - `valid_regions`: Polygons to clip against.
-/// - Returns: Updated pen position.
-fn clip_scanline(
-    new_ops: &mut Ops,
-    ops: &Ops,
-    idx: usize,
-    last_point: Point3D,
-    pen_pos: Option<Point3D>,
-    valid_regions: &[Polygon],
-) -> Option<Point3D> {
-    let end = ops.endpoint(idx);
-    let scanline_data = ops.scanline_data(idx);
-    let kept_segments =
-        clip_line_segment_with_polygons(last_point, end, valid_regions);
-    append_clipped_scanline(
-        new_ops,
-        last_point,
-        end,
-        &scanline_data,
-        &kept_segments,
-        pen_pos,
-    )
-}
-
 /// Find the command index and closest point for a hit test at `(x, y)`.
 ///
 /// - `ops`: The ops sequence.
@@ -767,8 +692,8 @@ fn find_hit_command(
     }
 
     let mut geo_idx = 0;
-    for cmd_idx in 0..ops.len() {
-        if ops.category(cmd_idx) == CommandCategory::Moving {
+    for (cmd_idx, node) in ops.commands.iter().enumerate() {
+        if node.is_moving() {
             if geo_idx == segment_index {
                 return Some((cmd_idx, point_on_path));
             }
@@ -789,7 +714,11 @@ fn find_hit_command(
 fn find_subpath_bounds(ops: &Ops, command_index: usize) -> (usize, usize) {
     let mut start_idx = 0;
     for i in (0..=command_index).rev() {
-        if ops.command_type(i) == CommandType::MoveTo {
+        if let OpCategory::Moving {
+            cmd: MoveCmd::MoveTo,
+            ..
+        } = &ops.commands[i].category
+        {
             start_idx = i;
             break;
         }
@@ -797,7 +726,11 @@ fn find_subpath_bounds(ops: &Ops, command_index: usize) -> (usize, usize) {
 
     let mut end_idx = ops.len();
     for i in (start_idx + 1)..ops.len() {
-        if ops.command_type(i) == CommandType::MoveTo {
+        if let OpCategory::Moving {
+            cmd: MoveCmd::MoveTo,
+            ..
+        } = &ops.commands[i].category
+        {
             end_idx = i;
             break;
         }
@@ -854,20 +787,22 @@ fn build_clipped_subpath(
     new_subpath.commands.push(temp_ops.commands[0].clone());
 
     let mut accum_dist = 0.0;
-    let mut last_pos = temp_ops.endpoint(0);
+    let mut last_pos = temp_ops.commands[0].end_point();
 
-    for j in 1..temp_ops.len() {
-        let ct_j = temp_ops.command_type(j);
-        if ct_j == CommandType::LineTo {
+    for node in temp_ops.commands.iter().skip(1) {
+        if let OpCategory::Moving {
+            end: p2,
+            cmd: MoveCmd::LineTo,
+        } = &node.category
+        {
             let p1 = last_pos;
-            let p2 = temp_ops.endpoint(j);
             let seg_len = {
                 let dp = (p2.0 - p1.0, p2.1 - p1.1);
                 (dp.0 * dp.0 + dp.1 * dp.1).sqrt()
             };
 
             if seg_len < EPSILON_COLLINEAR {
-                last_pos = p2;
+                last_pos = *p2;
                 continue;
             }
 
@@ -876,10 +811,7 @@ fn build_clipped_subpath(
 
             let mut kept: Vec<(f64, f64)> = Vec::new();
             if seg_start_dist < gap_start_dist {
-                kept.push((
-                    seg_start_dist,
-                    seg_end_dist.min(gap_start_dist),
-                ));
+                kept.push((seg_start_dist, seg_end_dist.min(gap_start_dist)));
             }
             if seg_end_dist > gap_end_dist {
                 kept.push((seg_start_dist.max(gap_end_dist), seg_end_dist));
@@ -913,32 +845,28 @@ fn build_clipped_subpath(
                 );
 
                 let mut last_kept_pos: Option<Point3D> = None;
-                for ri in (0..new_subpath.len()).rev() {
-                    if new_subpath.category(ri)
-                        == CommandCategory::Moving
-                    {
-                        last_kept_pos = Some(new_subpath.endpoint(ri));
+                for lnode in new_subpath.commands.iter().rev() {
+                    if lnode.is_moving() {
+                        last_kept_pos = Some(lnode.end_point());
                         break;
                     }
                 }
 
                 if let Some(lkp) = last_kept_pos {
                     if needs_move_to(Some(lkp), start_pt) {
-                        new_subpath.move_to(
-                            start_pt.0, start_pt.1, start_pt.2, None,
-                        );
+                        new_subpath
+                            .move_to(start_pt.0, start_pt.1, start_pt.2, None);
                     }
                 }
 
                 new_subpath.line_to(end_pt.0, end_pt.1, end_pt.2, None);
             }
 
-            last_pos = p2;
+            last_pos = *p2;
             accum_dist += seg_len;
         } else {
             if !(gap_start_dist < accum_dist && accum_dist < gap_end_dist) {
-                let cmd = temp_ops.commands[j].clone();
-                new_subpath.commands.push(cmd);
+                new_subpath.commands.push(node.clone());
             }
         }
     }
@@ -949,8 +877,7 @@ fn build_clipped_subpath(
 /// Clip an arc command against polygon regions and refit primitives to the kept chains.
 ///
 /// - `new_ops`: Target ops sequence.
-/// - `ops`: The full ops sequence.
-/// - `idx`: Index of the arc command.
+/// - `node`: The node containing the arc command.
 /// - `last_point`: Start point of the arc.
 /// - `pen_pos`: Current pen position.
 /// - `valid_regions`: Polygons to clip against.
@@ -958,20 +885,19 @@ fn build_clipped_subpath(
 /// - Returns: Updated pen position.
 fn clip_and_refit_arc(
     new_ops: &mut Ops,
-    ops: &Ops,
-    idx: usize,
+    node: &OpNode,
     last_point: Point3D,
     pen_pos: Option<Point3D>,
     valid_regions: &[Polygon],
     tolerance: f64,
 ) -> Option<Point3D> {
-    let arc_state = get_machine_state(ops, idx);
-    let linearized = ops.linearize(idx, last_point);
+    let arc_state = node.state.clone();
+    let linearized = crate::ops::linearize::linearize_node(node, last_point);
 
     let mut kept_pairs: Vec<(Point3D, Point3D)> = Vec::new();
     let mut p_seg_start = last_point;
-    for j in 0..linearized.len() {
-        let p_seg_end = linearized.endpoint(j);
+    for lnode in &linearized.commands {
+        let p_seg_end = lnode.end_point();
         let segs = clip_line_segment_with_polygons(
             p_seg_start,
             p_seg_end,
@@ -1027,8 +953,7 @@ fn clip_and_refit_arc(
 /// Clip a Bezier command against polygon regions and refit primitives to the kept chains.
 ///
 /// - `new_ops`: Target ops sequence.
-/// - `ops`: The full ops sequence.
-/// - `idx`: Index of the Bezier command.
+/// - `node`: The node containing the Bezier command.
 /// - `last_point`: Start point of the Bezier curve.
 /// - `pen_pos`: Current pen position.
 /// - `valid_regions`: Polygons to clip against.
@@ -1036,20 +961,19 @@ fn clip_and_refit_arc(
 /// - Returns: Updated pen position.
 fn clip_and_refit_bezier(
     new_ops: &mut Ops,
-    ops: &Ops,
-    idx: usize,
+    node: &OpNode,
     last_point: Point3D,
     pen_pos: Option<Point3D>,
     valid_regions: &[Polygon],
     tolerance: f64,
 ) -> Option<Point3D> {
-    let bezier_state = get_machine_state(ops, idx);
-    let linearized = ops.linearize(idx, last_point);
+    let bezier_state = node.state.clone();
+    let linearized = crate::ops::linearize::linearize_node(node, last_point);
 
     let mut kept_pairs: Vec<(Point3D, Point3D)> = Vec::new();
     let mut p_seg_start = last_point;
-    for j in 0..linearized.len() {
-        let p_seg_end = linearized.endpoint(j);
+    for lnode in &linearized.commands {
+        let p_seg_end = lnode.end_point();
         let segs = clip_line_segment_with_polygons(
             p_seg_start,
             p_seg_end,

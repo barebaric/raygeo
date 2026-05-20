@@ -1,7 +1,10 @@
 use pyo3::prelude::*;
 use pyo3::types::{PyBytes, PyDict, PyList, PySlice, PyString};
 
-use raygeo_core::ops::{Axis, CommandCategory, CommandType};
+use raygeo_core::ops::{
+    Axis, CommandCategory, CommandType, MarkerCmd, MoveCmd, OpCategory,
+    StateCmd,
+};
 
 use super::axis::PyAxis;
 
@@ -63,15 +66,14 @@ fn cmd_to_dict<'a>(
     idx: usize,
 ) -> PyResult<Bound<'a, PyDict>> {
     let d = PyDict::new(py);
-    let ct = ops.command_type(idx);
+    let node = &ops.commands[idx];
+    let ct = node.command_type();
     let ct_name = ct.name();
     d.set_item("type", ct_name)?;
-    let cat = ct.category();
 
-    if cat == CommandCategory::Moving {
-        let end = ops.endpoint(idx);
+    if let OpCategory::Moving { end, .. } = &node.category {
         d.set_item("end", (end.0, end.1, end.2))?;
-        if let Some(ea) = ops.extra_axes(idx) {
+        if let Some(ea) = node.extra_axes() {
             let ea_dict = PyDict::new(py);
             for &(axis, val) in ea {
                 let py_axis = Py::new(py, PyAxis(axis))?;
@@ -82,58 +84,70 @@ fn cmd_to_dict<'a>(
             d.set_item("extra_axes", ea_dict)?;
         }
     }
-    if ct == CommandType::ArcTo {
-        let (ci, cj, _cw) = ops.arc_params(idx);
-        d.set_item("center_offset", (*ci, *cj))?;
-        d.set_item("clockwise", _cw)?;
-    }
-    if ct == CommandType::BezierTo {
-        let (c1, c2) = ops.bezier_params(idx);
-        d.set_item("control1", *c1)?;
-        d.set_item("control2", *c2)?;
-    }
-    if ct == CommandType::QuadraticBezierTo {
-        let c = ops.quad_params(idx);
-        d.set_item("control", *c)?;
-    }
-    if ct == CommandType::ScanLine {
-        let data = ops.scanline_data(idx);
-        d.set_item("power_values", PyList::new(py, data.iter().copied())?)?;
-    }
-    if ct == CommandType::Dwell {
-        d.set_item("duration_ms", ops.dwell_duration(idx))?;
-    }
-    if ct == CommandType::SetPower {
-        d.set_item("power", ops.power(idx))?;
-    }
-    if ct == CommandType::SetCutSpeed || ct == CommandType::SetTravelSpeed {
-        d.set_item("speed", ops.speed(idx))?;
-    }
-    if ct == CommandType::SetFrequency {
-        d.set_item("frequency", ops.frequency(idx))?;
-    }
-    if ct == CommandType::SetPulseWidth {
-        d.set_item("pulse_width", ops.pulse_width(idx))?;
-    }
-    if ct == CommandType::SetLaser {
-        d.set_item("laser_uid", ops.laser_uid(idx).to_string())?;
-    }
-    if ct == CommandType::LayerStart || ct == CommandType::LayerEnd {
-        d.set_item("layer_uid", ops.layer_uid(idx).to_string())?;
-    }
-    if ct == CommandType::WorkpieceStart || ct == CommandType::WorkpieceEnd {
-        d.set_item("workpiece_uid", ops.workpiece_uid(idx).to_string())?;
-    }
-    if ct == CommandType::OpsSectionStart {
-        let st = ops.section_type(idx);
-        d.set_item("section_type", st.name())?;
-        if let Some(wp) = ops.section_workpiece_uid(idx) {
-            d.set_item("workpiece_uid", wp.to_string())?;
-        }
-    }
-    if ct == CommandType::OpsSectionEnd {
-        let st = ops.section_type(idx);
-        d.set_item("section_type", st.name())?;
+
+    match &node.category {
+        OpCategory::Moving { cmd, .. } => match cmd {
+            MoveCmd::ArcTo { center, cw, .. } => {
+                d.set_item("center_offset", (center.0, center.1))?;
+                d.set_item("clockwise", *cw)?;
+            }
+            MoveCmd::BezierTo { c1, c2, .. } => {
+                d.set_item("control1", *c1)?;
+                d.set_item("control2", *c2)?;
+            }
+            MoveCmd::QuadraticBezierTo { control, .. } => {
+                d.set_item("control", *control)?;
+            }
+            MoveCmd::ScanLine { power_values, .. } => {
+                d.set_item(
+                    "power_values",
+                    PyList::new(py, power_values.iter().copied())?,
+                )?;
+            }
+            _ => {}
+        },
+        OpCategory::State(cmd) => match cmd {
+            StateCmd::Dwell(dur) => {
+                d.set_item("duration_ms", *dur)?;
+            }
+            StateCmd::SetPower(p) => {
+                d.set_item("power", *p)?;
+            }
+            StateCmd::SetCutSpeed(s) | StateCmd::SetTravelSpeed(s) => {
+                d.set_item("speed", *s)?;
+            }
+            StateCmd::SetFrequency(f) => {
+                d.set_item("frequency", *f)?;
+            }
+            StateCmd::SetPulseWidth(pw) => {
+                d.set_item("pulse_width", *pw)?;
+            }
+            StateCmd::SetLaser(uid) => {
+                d.set_item("laser_uid", uid.to_string())?;
+            }
+            _ => {}
+        },
+        OpCategory::Marker(cmd) => match cmd {
+            MarkerCmd::LayerStart(uid) | MarkerCmd::LayerEnd(uid) => {
+                d.set_item("layer_uid", uid.to_string())?;
+            }
+            MarkerCmd::WorkpieceStart(uid) | MarkerCmd::WorkpieceEnd(uid) => {
+                d.set_item("workpiece_uid", uid.to_string())?;
+            }
+            MarkerCmd::OpsSectionStart {
+                section_type,
+                workpiece_uid,
+            } => {
+                d.set_item("section_type", section_type.name())?;
+                if let Some(wp) = workpiece_uid {
+                    d.set_item("workpiece_uid", wp.to_string())?;
+                }
+            }
+            MarkerCmd::OpsSectionEnd { section_type, .. } => {
+                d.set_item("section_type", section_type.name())?;
+            }
+            _ => {}
+        },
     }
 
     Ok(d)
@@ -207,7 +221,7 @@ fn create_and_append_command(
                     co.0,
                     co.1,
                     cw,
-                    0.0,
+                    end_tuple.2,
                     extra_axes,
                 );
             }
@@ -466,9 +480,20 @@ pub fn ops_to_numpy_arrays(
         })
         .count();
 
-    let scanline_lengths: Vec<usize> = (0..num_cmds)
-        .filter(|&i| ops.command_type(i) == CommandType::ScanLine)
-        .map(|i| ops.scanline_data(i).len())
+    let scanline_lengths: Vec<usize> = ops
+        .commands
+        .iter()
+        .filter_map(|node| {
+            if let OpCategory::Moving {
+                cmd: MoveCmd::ScanLine { power_values },
+                ..
+            } = &node.category
+            {
+                Some(power_values.len())
+            } else {
+                None
+            }
+        })
         .collect();
     let total_scanline_bytes: usize = scanline_lengths.iter().sum();
     let num_scanlines = scanline_lengths.len();
@@ -514,75 +539,83 @@ pub fn ops_to_numpy_arrays(
     let mut scanline_offset: usize = 0;
 
     for i in 0..num_cmds {
-        let ct = ops.command_type(i);
-        let cat = ops.category(i);
+        let node = &ops.commands[i];
+        let ct = node.command_type();
 
         types.call_method1("__setitem__", (i, ct as i32))?;
 
-        if ct == CommandType::BezierTo {
-            let (c1, c2) = ops.bezier_params(i);
-            let end = ops.endpoint(i);
+        if let OpCategory::Moving { end, cmd } = &node.category {
             endpoints
                 .call_method1("__setitem__", (i, vec![end.0, end.1, end.2]))?;
-            bezier_data.call_method1(
-                "__setitem__",
-                (bezier_idx, vec![c1.0, c1.1, c1.2, c2.0, c2.1, c2.2]),
-            )?;
-            bezier_map.call_method1("__setitem__", (i, bezier_idx as i32))?;
-            bezier_idx += 1;
-        } else if ct == CommandType::QuadraticBezierTo {
-            let c = ops.quad_params(i);
-            let end = ops.endpoint(i);
-            endpoints
-                .call_method1("__setitem__", (i, vec![end.0, end.1, end.2]))?;
-            bezier_data.call_method1(
-                "__setitem__",
-                (bezier_idx, vec![c.0, c.1, c.2, 0.0, 0.0, 0.0]),
-            )?;
-            bezier_map.call_method1("__setitem__", (i, bezier_idx as i32))?;
-            bezier_idx += 1;
-        } else if cat == CommandCategory::Moving {
-            let end = ops.endpoint(i);
-            endpoints
-                .call_method1("__setitem__", (i, vec![end.0, end.1, end.2]))?;
-        } else {
-            let d = cmd_to_dict(py, ops, i)?;
-            state_marker_cmds_data.push((i, d.into()));
-        }
 
-        if ct == CommandType::ArcTo {
-            let (ci, cj, cw) = *ops.arc_params(i);
-            arc_data.call_method1(
-                "__setitem__",
-                (arc_idx, vec![ci, cj, if cw { 1.0 } else { 0.0 }]),
-            )?;
-            arc_map.call_method1("__setitem__", (i, arc_idx as i32))?;
-            arc_idx += 1;
-        }
+            match cmd {
+                MoveCmd::BezierTo { c1, c2 } => {
+                    bezier_data.call_method1(
+                        "__setitem__",
+                        (bezier_idx, vec![c1.0, c1.1, c1.2, c2.0, c2.1, c2.2]),
+                    )?;
+                    bezier_map
+                        .call_method1("__setitem__", (i, bezier_idx as i32))?;
+                    bezier_idx += 1;
+                }
+                MoveCmd::QuadraticBezierTo { control } => {
+                    bezier_data.call_method1(
+                        "__setitem__",
+                        (
+                            bezier_idx,
+                            vec![
+                                control.0, control.1, control.2, 0.0, 0.0, 0.0,
+                            ],
+                        ),
+                    )?;
+                    bezier_map
+                        .call_method1("__setitem__", (i, bezier_idx as i32))?;
+                    bezier_idx += 1;
+                }
+                MoveCmd::ArcTo { center, cw } => {
+                    arc_data.call_method1(
+                        "__setitem__",
+                        (
+                            arc_idx,
+                            vec![
+                                center.0,
+                                center.1,
+                                if *cw { 1.0 } else { 0.0 },
+                            ],
+                        ),
+                    )?;
+                    arc_map.call_method1("__setitem__", (i, arc_idx as i32))?;
+                    arc_idx += 1;
+                }
+                MoveCmd::ScanLine { power_values } => {
+                    let length = power_values.len();
+                    let py_bytes = PyByteArray::new(py, power_values.as_ref());
+                    let slice = PySlice::new(
+                        py,
+                        scanline_offset as isize,
+                        (scanline_offset + length) as isize,
+                        1,
+                    );
+                    scanline_data_arr
+                        .call_method1("__setitem__", (slice, py_bytes))?;
+                    scanline_indices.call_method1(
+                        "__setitem__",
+                        (
+                            scanline_idx,
+                            (scanline_offset, scanline_offset + length),
+                        ),
+                    )?;
+                    scanline_map.call_method1(
+                        "__setitem__",
+                        (i, scanline_idx as i32),
+                    )?;
+                    scanline_offset += length;
+                    scanline_idx += 1;
+                }
+                _ => {}
+            }
 
-        if ct == CommandType::ScanLine {
-            let pv = ops.scanline_data(i);
-            let length = pv.len();
-            let py_bytes = PyByteArray::new(py, pv);
-            let slice = PySlice::new(
-                py,
-                scanline_offset as isize,
-                (scanline_offset + length) as isize,
-                1,
-            );
-            scanline_data_arr.call_method1("__setitem__", (slice, py_bytes))?;
-            scanline_indices.call_method1(
-                "__setitem__",
-                (scanline_idx, (scanline_offset, scanline_offset + length)),
-            )?;
-            scanline_map
-                .call_method1("__setitem__", (i, scanline_idx as i32))?;
-            scanline_offset += length;
-            scanline_idx += 1;
-        }
-
-        if cat == CommandCategory::Moving {
-            if let Some(ea) = ops.extra_axes(i) {
+            if let Some(ea) = node.extra_axes() {
                 let ea_dict = PyDict::new(py);
                 for &(axis, val) in ea {
                     let py_axis = Py::new(py, PyAxis(axis))?;
@@ -592,6 +625,9 @@ pub fn ops_to_numpy_arrays(
                 }
                 extra_axes_map.push((i, ea_dict.unbind()));
             }
+        } else {
+            let d = cmd_to_dict(py, ops, i)?;
+            state_marker_cmds_data.push((i, d.into()));
         }
     }
 

@@ -16,7 +16,6 @@ __all__ = [
     "CommandCategory",
     "CommandInfo",
     "CommandType",
-    "MachineState",
     "Ops",
     "OpsSection",
     "OpsSectionRange",
@@ -210,69 +209,6 @@ class CommandType:
     def __repr__(self) -> builtins.str:
         r"""
         String representation like ``CommandType.MOVE_TO``.
-        """
-
-@typing.final
-class MachineState:
-    r"""
-    Immutable snapshot of the machine state at a point in time.
-    
-    Unlike :class:`State`, this represents the actual machine state
-    at a specific command index and is typically read-only.
-    """
-    @property
-    def power(self) -> builtins.float:
-        r"""
-        Laser power level at this state.
-        """
-    @power.setter
-    def power(self, value: builtins.float) -> None: ...
-    @property
-    def air_assist(self) -> builtins.bool:
-        r"""
-        Whether air assist was enabled at this state.
-        """
-    @air_assist.setter
-    def air_assist(self, value: builtins.bool) -> None: ...
-    @property
-    def cut_speed(self) -> typing.Optional[builtins.int]:
-        r"""
-        Cutting speed at this state (mm/s).
-        """
-    @cut_speed.setter
-    def cut_speed(self, value: typing.Optional[builtins.int]) -> None: ...
-    @property
-    def travel_speed(self) -> typing.Optional[builtins.int]:
-        r"""
-        Travel speed at this state (mm/s).
-        """
-    @travel_speed.setter
-    def travel_speed(self, value: typing.Optional[builtins.int]) -> None: ...
-    @property
-    def active_laser_uid(self) -> typing.Optional[builtins.str]:
-        r"""
-        Active laser UID at this state.
-        """
-    @active_laser_uid.setter
-    def active_laser_uid(self, value: typing.Optional[builtins.str]) -> None: ...
-    @property
-    def frequency(self) -> typing.Optional[builtins.int]:
-        r"""
-        Laser pulse frequency at this state (Hz).
-        """
-    @frequency.setter
-    def frequency(self, value: typing.Optional[builtins.int]) -> None: ...
-    @property
-    def pulse_width(self) -> typing.Optional[builtins.float]:
-        r"""
-        Laser pulse width at this state (microseconds).
-        """
-    @pulse_width.setter
-    def pulse_width(self, value: typing.Optional[builtins.float]) -> None: ...
-    def __new__(cls, power: builtins.float = 0.0, air_assist: builtins.bool = False, cut_speed: typing.Optional[builtins.int] = None, travel_speed: typing.Optional[builtins.int] = None, active_laser_uid: typing.Optional[builtins.str] = None, frequency: typing.Optional[builtins.int] = None, pulse_width: typing.Optional[builtins.float] = None) -> MachineState: ...
-    def __repr__(self) -> builtins.str:
-        r"""
-        String representation like ``MachineState(power=..., air_assist=...)``.
         """
 
 @typing.final
