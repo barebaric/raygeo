@@ -4,7 +4,6 @@
 import builtins
 import raygeo
 import typing
-from . import flip
 from . import group
 __all__ = [
     "Axis",
@@ -16,7 +15,6 @@ __all__ = [
     "SectionType",
     "State",
     "category",
-    "flip",
     "group",
 ]
 
