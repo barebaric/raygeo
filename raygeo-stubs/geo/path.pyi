@@ -5,9 +5,7 @@ __all__ = [
     "apply_affine_transform_to_array",
     "are_segments_equal",
     "check_intersection",
-    "check_intersection_from_array",
     "check_self_intersection",
-    "check_self_intersection_from_array",
     "convert_arc_to_beziers_from_array",
     "create_arc_cmd",
     "create_line_cmd",
@@ -60,30 +58,11 @@ def check_intersection(data1: Optional[Sequence[Sequence[float]]], data2: Option
     :returns: True if intersections are found.
     """
 
-def check_intersection_from_array(data1: Sequence[Sequence[float]], data2: Sequence[Sequence[float]], fail_on_t_junction: bool) -> bool:
-    r"""
-    Check intersection between two arrays.
-    
-    :param data1: First array of command data.
-    :param data2: Second array of command data.
-    :param fail_on_t_junction: Whether T-junctions count as intersections.
-    :returns: True if intersections are found.
-    """
-
 def check_self_intersection(data: Optional[Sequence[Sequence[float]]], fail_on_t_junction: bool) -> bool:
     r"""
     Check if a path has self-intersections.
     
     :param data: Array of command data or None.
-    :param fail_on_t_junction: Whether T-junctions count as intersections.
-    :returns: True if self-intersections are found.
-    """
-
-def check_self_intersection_from_array(data: Sequence[Sequence[float]], fail_on_t_junction: bool) -> bool:
-    r"""
-    Check self-intersection from array data.
-    
-    :param data: Array of command data.
     :param fail_on_t_junction: Whether T-junctions count as intersections.
     :returns: True if self-intersections are found.
     """

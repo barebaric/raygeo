@@ -10,8 +10,8 @@ use pyo3_stub_gen::{PyStubType, TypeInfo};
 
 use raygeo_core::geo::algo::fitting::convert_arc_to_beziers_from_array;
 use raygeo_core::geo::analysis::get_point_and_tangent_at_from_array;
-use raygeo_core::geo::split::get_valid_contours_data;
-use raygeo_core::geo::transform::map_geometry_to_frame;
+use raygeo_core::geo::algo::topology::get_valid_contours_data;
+use raygeo_core::geo::math::map_geometry_to_frame;
 use raygeo_core::{
     check_intersection_from_array, check_self_intersection_from_array,
     close_all_contours, close_geometry_gaps_from_array,

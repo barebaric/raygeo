@@ -10,7 +10,7 @@
 use std::f64::consts::PI;
 
 use crate::geo::geometry::Geometry;
-use crate::geo::split::{get_valid_contours_data, split_into_contours};
+use crate::geo::algo::topology::{get_valid_contours_data, split_into_contours};
 use crate::geo::shape::arc::linearize_arc;
 use crate::geo::shape::bezier::linearize_bezier_from_array;
 use crate::geo::shape::polygon::is_point_inside_polygon;
@@ -573,7 +573,7 @@ fn container_intersects_content(
     container: &Geometry,
     content: &Geometry,
 ) -> bool {
-    crate::intersect::check_intersection_from_array(
+    crate::geo::algo::intersect::check_intersection_from_array(
         &container.data,
         &content.data,
         false,

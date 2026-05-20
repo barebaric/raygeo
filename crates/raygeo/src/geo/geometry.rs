@@ -220,7 +220,7 @@ impl Geometry {
         if self.data.is_empty() {
             return;
         }
-        self.data = crate::transform::apply_affine_transform_to_array(
+        self.data = crate::geo::math::apply_affine_transform_to_array(
             &self.data, matrix,
         );
         let last_move_vec = [

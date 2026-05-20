@@ -1,4 +1,4 @@
-//! Split: Contour and component splitting for geometry data.
+//! Topology: Contour and component splitting for geometry data.
 //!
 //! Provides functions for splitting a Geometry into individual contours
 //! (subpaths delimited by MOVE commands) and for separating logically

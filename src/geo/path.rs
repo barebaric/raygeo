@@ -14,9 +14,9 @@ use raygeo_core::geo::analysis::{
     get_subpath_vertices_from_array, partial_segment_from_row,
     segment_length_from_row_flat,
 };
-use raygeo_core::geo::cleanup::get_segment_key;
+use raygeo_core::geo::algo::cleanup::get_segment_key;
 use raygeo_core::geo::shape::point::are_points_equal;
-use raygeo_core::geo::transform::apply_affine_transform_to_array;
+use raygeo_core::geo::math::apply_affine_transform_to_array;
 use raygeo_core::{
     check_intersection_from_array, check_self_intersection_from_array,
     fit_curves, remove_duplicate_segments, Point, CMD_TYPE_ARC,
@@ -369,58 +369,6 @@ fn check_intersection(
         }
         _ => Ok(false),
     }
-}
-
-#[gen_stub_pyfunction(
-    python = r#"
-    def check_self_intersection_from_array(
-        data: Sequence[Sequence[float]],
-        fail_on_t_junction: bool,
-    ) -> bool:
-        """Check self-intersection from array data.
-
-        :param data: Array of command data.
-        :param fail_on_t_junction: Whether T-junctions count as intersections.
-        :returns: True if self-intersections are found.
-        """
-"#,
-    module = "raygeo.geo.path"
-)]
-#[pyfunction]
-fn check_self_intersection_from_array_py(
-    data: Vec<Vec<f64>>,
-    fail_on_t_junction: bool,
-) -> bool {
-    let arr = to_data_array(data);
-    check_self_intersection_from_array(&arr, fail_on_t_junction)
-}
-
-#[gen_stub_pyfunction(
-    python = r#"
-    def check_intersection_from_array(
-        data1: Sequence[Sequence[float]],
-        data2: Sequence[Sequence[float]],
-        fail_on_t_junction: bool,
-    ) -> bool:
-        """Check intersection between two arrays.
-
-        :param data1: First array of command data.
-        :param data2: Second array of command data.
-        :param fail_on_t_junction: Whether T-junctions count as intersections.
-        :returns: True if intersections are found.
-        """
-"#,
-    module = "raygeo.geo.path"
-)]
-#[pyfunction(name = "check_intersection_from_array")]
-fn check_intersection_from_array_py(
-    data1: Vec<Vec<f64>>,
-    data2: Vec<Vec<f64>>,
-    fail_on_t_junction: bool,
-) -> bool {
-    let arr1 = to_data_array(data1);
-    let arr2 = to_data_array(data2);
-    check_intersection_from_array(&arr1, &arr2, fail_on_t_junction)
 }
 
 #[pyfunction]
@@ -1004,14 +952,6 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     )?)?;
     path_mod.add_function(wrap_pyfunction!(
         check_intersection,
-        path_mod.clone()
-    )?)?;
-    path_mod.add_function(wrap_pyfunction!(
-        check_self_intersection_from_array_py,
-        path_mod.clone()
-    )?)?;
-    path_mod.add_function(wrap_pyfunction!(
-        check_intersection_from_array_py,
         path_mod.clone()
     )?)?;
     path_mod.add_function(wrap_pyfunction!(

@@ -5,20 +5,14 @@
 
 pub mod algo;
 pub mod analysis;
-pub mod cleanup;
 pub mod geometry;
-pub mod intersect;
+pub mod math;
 pub mod query;
 pub mod shape;
-pub mod split;
-pub mod transform;
 
 pub use algo::*;
 pub use analysis::*;
-pub use cleanup::*;
 pub use geometry::Geometry;
-pub use intersect::*;
+pub use math::*;
 pub use query::*;
 pub use shape::*;
-pub use split::*;
-pub use transform::*;
