@@ -39,6 +39,19 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     let py = m.py();
     let geo_mod = PyModule::new(py, "geo")?;
 
+    geo_mod.setattr(
+        "__doc__",
+        "Geometry types and operations for 2D/3D path data.\n\
+        \n\
+        Provides Geometry class, path submodules for analysis/cleanup/intersection,\n\
+        shape submodules (arc, bezier, circle, line, polygon, rect, point),\n\
+        and algorithm submodules (clipping, fitting, minkowski, simplify, smooth).\n\
+        \n\
+        Submodules:\n\
+        - raygeo.geo.path — array-level path utilities\n\
+        - raygeo.geo.shape — primitive shape operations\n\
+        - raygeo.geo.algo — geometric algorithms",
+    )?;
     geo_mod.add(
         "__all__",
         vec![
