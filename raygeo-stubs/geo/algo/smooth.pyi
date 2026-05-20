@@ -17,7 +17,7 @@ def compute_gaussian_kernel(amount: int) -> tuple[list[float], float]:
     :returns: Tuple of (kernel_values, sigma).
     """
 
-def resample_polyline(points: Sequence[tuple[float, float, float]], max_segment_length: float, is_closed: bool) -> list[tuple[float, float, float]]:
+def resample_polyline(points: Sequence[Point3D], max_segment_length: float, is_closed: bool) -> list[Point3D]:
     r"""
     Resample a polyline with a maximum segment length.
     
@@ -27,7 +27,7 @@ def resample_polyline(points: Sequence[tuple[float, float, float]], max_segment_
     :returns: Resampled points.
     """
 
-def smooth_circularly(points: Sequence[tuple[float, float, float]], kernel: Sequence[float]) -> list[tuple[float, float, float]]:
+def smooth_circularly(points: Sequence[Point3D], kernel: Sequence[float]) -> list[Point3D]:
     r"""
     Smooth a closed polyline circularly.
     
@@ -36,7 +36,7 @@ def smooth_circularly(points: Sequence[tuple[float, float, float]], kernel: Sequ
     :returns: Smoothed points.
     """
 
-def smooth_polyline(points: Sequence[tuple[float, float, float]], amount: int, corner_angle_threshold: float, is_closed: Optional[bool] = None) -> list[tuple[float, float, float]]:
+def smooth_polyline(points: Sequence[Point3D], amount: int, corner_angle_threshold: float, is_closed: Optional[bool] = None) -> list[Point3D]:
     r"""
     Smooth a polyline using Gaussian smoothing.
     
@@ -47,7 +47,7 @@ def smooth_polyline(points: Sequence[tuple[float, float, float]], amount: int, c
     :returns: Smoothed points.
     """
 
-def smooth_sub_segment(points: Sequence[tuple[float, float, float]], kernel: Sequence[float]) -> list[tuple[float, float, float]]:
+def smooth_sub_segment(points: Sequence[Point3D], kernel: Sequence[float]) -> list[Point3D]:
     r"""
     Smooth a sub-segment of a polyline.
     

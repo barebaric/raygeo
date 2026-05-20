@@ -17,14 +17,35 @@ use raygeo_core::{
 gen_type_alias_from_python!(
     "raygeo.geo",
     r#"
-    type Point3D = tuple[float, float] | tuple[float, float, float]
+    type Point = tuple[float, float]
     "#
 );
 
 gen_type_alias_from_python!(
     "raygeo.geo",
     r#"
-    type Polygon = list[Point3D]
+    type Point3D = tuple[float, float, float]
+    "#
+);
+
+gen_type_alias_from_python!(
+    "raygeo.geo",
+    r#"
+    type Point2DOr3D = Point | Point3D
+    "#
+);
+
+gen_type_alias_from_python!(
+    "raygeo.geo",
+    r#"
+    type Polygon = list[Point]
+    "#
+);
+
+gen_type_alias_from_python!(
+    "raygeo.geo",
+    r#"
+    type Rect = tuple[float, float, float, float]
     "#
 );
 

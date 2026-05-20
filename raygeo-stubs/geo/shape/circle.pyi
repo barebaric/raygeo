@@ -9,7 +9,7 @@ __all__ = [
     "project_point_onto_circle",
 ]
 
-def does_circle_intersect_rect(center: tuple[float, float], radius: float, rect: tuple[float, float, float, float]) -> bool:
+def does_circle_intersect_rect(center: Point, radius: float, rect: Rect) -> bool:
     r"""
     Check if a circle intersects a rectangle.
     
@@ -19,7 +19,7 @@ def does_circle_intersect_rect(center: tuple[float, float], radius: float, rect:
     :returns: True if the circle intersects the rectangle.
     """
 
-def get_circle_circle_intersections(c1: tuple[float, float], r1: float, c2: tuple[float, float], r2: float) -> list[tuple[float, float]]:
+def get_circle_circle_intersections(c1: Point, r1: float, c2: Point, r2: float) -> Polygon:
     r"""
     Get intersection points of two circles.
     
@@ -30,7 +30,7 @@ def get_circle_circle_intersections(c1: tuple[float, float], r1: float, c2: tupl
     :returns: List of intersection points (x, y).
     """
 
-def is_circle_inside_rect(center: tuple[float, float], radius: float, rect: tuple[float, float, float, float]) -> bool:
+def is_circle_inside_rect(center: Point, radius: float, rect: Rect) -> bool:
     r"""
     Check if a circle is inside a rectangle.
     
@@ -40,7 +40,7 @@ def is_circle_inside_rect(center: tuple[float, float], radius: float, rect: tupl
     :returns: True if the circle is fully inside the rectangle.
     """
 
-def line_segment_intersects_circle(p1: tuple[float, float], p2: tuple[float, float], circle_center: tuple[float, float], circle_radius: float) -> bool:
+def line_segment_intersects_circle(p1: Point, p2: Point, circle_center: Point, circle_radius: float) -> bool:
     r"""
     Check if a line segment intersects a circle.
     
@@ -51,7 +51,7 @@ def line_segment_intersects_circle(p1: tuple[float, float], p2: tuple[float, flo
     :returns: True if the line segment intersects the circle.
     """
 
-def project_point_onto_circle(point: tuple[float, float], center: tuple[float, float], radius: float) -> Optional[tuple[float, float]]:
+def project_point_onto_circle(point: Point, center: Point, radius: float) -> Optional[Point]:
     r"""
     Project a point onto a circle.
     

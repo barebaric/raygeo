@@ -10,7 +10,7 @@ __all__ = [
     "get_polygon_minkowski_sum_convex",
 ]
 
-def calculate_input_scale(polygons: Sequence[Sequence[tuple[float, float]]], max_int: int = 2147483647) -> float:
+def calculate_input_scale(polygons: Sequence[Sequence[Point]], max_int: int = 2147483647) -> float:
     r"""
     Calculate the optimal input scale for clipper operations.
     
@@ -39,7 +39,7 @@ def convolve_two_segments(a1: tuple[int, int], a2: tuple[int, int], b1: tuple[in
     :returns: Convolved point sequence.
     """
 
-def get_inner_fit_polygon(outer: Sequence[tuple[float, float]], inner: Sequence[tuple[float, float]]) -> list[list[tuple[float, float]]]:
+def get_inner_fit_polygon(outer: Sequence[Point], inner: Sequence[Point]) -> list[Polygon]:
     r"""
     Compute the inner fit polygon (no-fit polygon for nesting).
     
@@ -48,7 +48,7 @@ def get_inner_fit_polygon(outer: Sequence[tuple[float, float]], inner: Sequence[
     :returns: Inner fit polygon.
     """
 
-def get_no_fit_polygon(subject: Sequence[tuple[float, float]], tool: Sequence[tuple[float, float]]) -> list[list[tuple[float, float]]]:
+def get_no_fit_polygon(subject: Sequence[Point], tool: Sequence[Point]) -> list[Polygon]:
     r"""
     Compute the no-fit polygon for two 2D polygons.
     

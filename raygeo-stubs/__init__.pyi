@@ -92,6 +92,11 @@ class Geometry:
     def transform(self, matrix: geo.TransformMatrix) -> Geometry:
         r"""
         Apply a 4x4 affine transformation matrix.
+        
+        See ``raygeo.geo.TransformMatrix`` for the matrix layout.
+        
+        :param matrix: A 4x4 affine transformation matrix.
+        :returns: A new transformed Geometry.
         """
     def __new__(cls) -> Geometry:
         r"""

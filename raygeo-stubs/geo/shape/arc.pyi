@@ -17,7 +17,7 @@ __all__ = [
     "normalize_angle",
 ]
 
-def does_arc_intersect_circle(arc_start: tuple[float, float], arc_end: tuple[float, float], arc_center: tuple[float, float], clockwise: bool, circle_center: tuple[float, float], circle_radius: float) -> bool:
+def does_arc_intersect_circle(arc_start: Point, arc_end: Point, arc_center: Point, clockwise: bool, circle_center: Point, circle_radius: float) -> bool:
     r"""
     Check if an arc intersects a circle.
     
@@ -30,7 +30,7 @@ def does_arc_intersect_circle(arc_start: tuple[float, float], arc_end: tuple[flo
     :returns: True if the arc intersects the circle.
     """
 
-def does_arc_intersect_rect(arc_start: tuple[float, float], arc_end: tuple[float, float], arc_center: tuple[float, float], clockwise: bool, rect: tuple[float, float, float, float]) -> bool:
+def does_arc_intersect_rect(arc_start: Point, arc_end: Point, arc_center: Point, clockwise: bool, rect: Rect) -> bool:
     r"""
     Check if an arc intersects a rectangle.
     
@@ -42,7 +42,7 @@ def does_arc_intersect_rect(arc_start: tuple[float, float], arc_end: tuple[float
     :returns: True if the arc intersects the rectangle.
     """
 
-def get_arc_angles(start: tuple[float, float], end: tuple[float, float], center: tuple[float, float], clockwise: bool) -> tuple[float, float, float]:
+def get_arc_angles(start: Point, end: Point, center: Point, clockwise: bool) -> Point3D:
     r"""
     Get the start, end, and sweep angles of an arc.
     
@@ -53,7 +53,7 @@ def get_arc_angles(start: tuple[float, float], end: tuple[float, float], center:
     :returns: Tuple of (start_angle, end_angle, sweep_angle) in radians.
     """
 
-def get_arc_bounds(start: tuple[float, float], end: tuple[float, float], center: tuple[float, float], clockwise: bool) -> tuple[float, float, float, float]:
+def get_arc_bounds(start: Point, end: Point, center: Point, clockwise: bool) -> Rect:
     r"""
     Get the bounding rectangle of an arc.
     
@@ -64,7 +64,7 @@ def get_arc_bounds(start: tuple[float, float], end: tuple[float, float], center:
     :returns: Bounding rectangle as (x_min, y_min, x_max, y_max).
     """
 
-def get_arc_closest_point(arc_cmd: Any, start_pos: tuple[float, float, float], x: float, y: float) -> Optional[tuple[float, tuple[float, float], float]]:
+def get_arc_closest_point(arc_cmd: Any, start_pos: Point3D, x: float, y: float) -> Optional[tuple[float, Point, float]]:
     r"""
     Get the closest point on an arc to a given point.
     
@@ -75,7 +75,7 @@ def get_arc_closest_point(arc_cmd: Any, start_pos: tuple[float, float, float], x
     :returns: Tuple of (parameter, closest_point, distance) or None.
     """
 
-def get_arc_direction(center: tuple[float, float], start: tuple[float, float], mouse: tuple[float, float]) -> bool:
+def get_arc_direction(center: Point, start: Point, mouse: Point) -> bool:
     r"""
     Get the direction (CW/CCW) of an arc at a mouse point.
     
@@ -85,7 +85,7 @@ def get_arc_direction(center: tuple[float, float], start: tuple[float, float], m
     :returns: True if clockwise, False if counter-clockwise.
     """
 
-def get_arc_midpoint(start: tuple[float, float], end: tuple[float, float], center: tuple[float, float], clockwise: bool) -> tuple[float, float]:
+def get_arc_midpoint(start: Point, end: Point, center: Point, clockwise: bool) -> Point:
     r"""
     Get the midpoint of an arc.
     
@@ -107,7 +107,7 @@ def is_angle_between(angle: float, start: float, end: float, clockwise: bool) ->
     :returns: True if angle is between start and end.
     """
 
-def is_arc_clockwise(points: Sequence[tuple[float, float]], center: tuple[float, float]) -> bool:
+def is_arc_clockwise(points: Sequence[Point], center: Point) -> bool:
     r"""
     Check if an arc is clockwise.
     
@@ -116,7 +116,7 @@ def is_arc_clockwise(points: Sequence[tuple[float, float]], center: tuple[float,
     :returns: True if the arc is clockwise.
     """
 
-def is_arc_inside_polygons(arc_start: tuple[float, float], arc_end: tuple[float, float], arc_center: tuple[float, float], clockwise: bool, polygons: Any) -> bool:
+def is_arc_inside_polygons(arc_start: Point, arc_end: Point, arc_center: Point, clockwise: bool, polygons: Any) -> bool:
     r"""
     Check if an arc is inside a set of polygons.
     
@@ -128,7 +128,7 @@ def is_arc_inside_polygons(arc_start: tuple[float, float], arc_end: tuple[float,
     :returns: True if the arc is inside all polygons.
     """
 
-def linearize_arc(arc_cmd: Any, start_point: tuple[float, float, float], resolution: float = 0.1) -> list[tuple[tuple[float, float, float], tuple[float, float, float]]]:
+def linearize_arc(arc_cmd: Any, start_point: Point3D, resolution: float = 0.1) -> list[tuple[Point3D, Point3D]]:
     r"""
     Linearize an arc into line segments.
     
@@ -138,7 +138,7 @@ def linearize_arc(arc_cmd: Any, start_point: tuple[float, float, float], resolut
     :returns: List of (p1, p2) segment pairs.
     """
 
-def linearize_arc_from_array(data: Sequence[float], start_point: tuple[float, float, float], max_seg_length: float) -> list[list[float]]:
+def linearize_arc_from_array(data: Sequence[float], start_point: Point3D, max_seg_length: float) -> list[list[float]]:
     r"""
     Linearize an arc from array data.
     

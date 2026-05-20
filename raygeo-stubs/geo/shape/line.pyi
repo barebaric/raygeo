@@ -13,7 +13,7 @@ __all__ = [
     "is_point_on_line_segment",
 ]
 
-def does_line_segment_intersect_circle(p1: tuple[float, float], p2: tuple[float, float], circle_center: tuple[float, float], circle_radius: float) -> bool:
+def does_line_segment_intersect_circle(p1: Point, p2: Point, circle_center: Point, circle_radius: float) -> bool:
     r"""
     Check if a line segment intersects a circle.
     
@@ -24,7 +24,7 @@ def does_line_segment_intersect_circle(p1: tuple[float, float], p2: tuple[float,
     :returns: True if the segment intersects the circle.
     """
 
-def does_line_segment_intersect_rect(p1: tuple[float, float], p2: tuple[float, float], rect: tuple[float, float, float, float]) -> bool:
+def does_line_segment_intersect_rect(p1: Point, p2: Point, rect: Rect) -> bool:
     r"""
     Check if a line segment intersects a rectangle.
     
@@ -34,7 +34,7 @@ def does_line_segment_intersect_rect(p1: tuple[float, float], p2: tuple[float, f
     :returns: True if the segment intersects the rectangle.
     """
 
-def get_line_closest_point(line_p1: tuple[float, float], line_p2: tuple[float, float], x: float, y: float) -> tuple[float, float]:
+def get_line_closest_point(line_p1: Point, line_p2: Point, x: float, y: float) -> Point:
     r"""
     Get the closest point on a line to a given point.
     
@@ -45,7 +45,7 @@ def get_line_closest_point(line_p1: tuple[float, float], line_p2: tuple[float, f
     :returns: Closest point (x, y) on the line.
     """
 
-def get_line_line_intersection(p1: tuple[float, float], p2: tuple[float, float], p3: tuple[float, float], p4: tuple[float, float]) -> Optional[tuple[float, float]]:
+def get_line_line_intersection(p1: Point, p2: Point, p3: Point, p4: Point) -> Optional[Point]:
     r"""
     Get the intersection of two infinite lines.
     
@@ -56,7 +56,7 @@ def get_line_line_intersection(p1: tuple[float, float], p2: tuple[float, float],
     :returns: Intersection point (x, y) or None.
     """
 
-def get_line_segment_closest_point(seg_p1: tuple[float, float], seg_p2: tuple[float, float], x: float, y: float) -> tuple[float, tuple[float, float], float]:
+def get_line_segment_closest_point(seg_p1: Point, seg_p2: Point, x: float, y: float) -> tuple[float, Point, float]:
     r"""
     Get closest point on a line segment to a point.
     
@@ -67,7 +67,7 @@ def get_line_segment_closest_point(seg_p1: tuple[float, float], seg_p2: tuple[fl
     :returns: Tuple of (parameter, closest_point, distance).
     """
 
-def get_line_segment_intersection(p1: tuple[float, float], p2: tuple[float, float], p3: tuple[float, float], p4: tuple[float, float]) -> Optional[tuple[float, float]]:
+def get_line_segment_intersection(p1: Point, p2: Point, p3: Point, p4: Point) -> Optional[Point]:
     r"""
     Get the intersection of two line segments.
     
@@ -78,7 +78,7 @@ def get_line_segment_intersection(p1: tuple[float, float], p2: tuple[float, floa
     :returns: Intersection point (x, y) or None.
     """
 
-def get_line_segment_polygon_intersections(p1: tuple[float, float], p2: tuple[float, float], polygon: list[list[tuple[float, float]]]) -> list[float]:
+def get_line_segment_polygon_intersections(p1: Point, p2: Point, polygon: list[Polygon]) -> list[float]:
     r"""
     Get t-values of line segment-polygon intersections.
     
@@ -88,7 +88,7 @@ def get_line_segment_polygon_intersections(p1: tuple[float, float], p2: tuple[fl
     :returns: List of t-values where the segment intersects.
     """
 
-def get_point_line_distance(point: tuple[float, float], line_p1: tuple[float, float], line_p2: tuple[float, float]) -> float:
+def get_point_line_distance(point: Point, line_p1: Point, line_p2: Point) -> float:
     r"""
     Get the distance from a point to a line.
     
@@ -98,7 +98,7 @@ def get_point_line_distance(point: tuple[float, float], line_p1: tuple[float, fl
     :returns: Perpendicular distance.
     """
 
-def is_point_on_line_segment(point: tuple[float, float], seg_p1: tuple[float, float], seg_p2: tuple[float, float]) -> bool:
+def is_point_on_line_segment(point: Point, seg_p1: Point, seg_p2: Point) -> bool:
     r"""
     Check if a point is on a line segment.
     

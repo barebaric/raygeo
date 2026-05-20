@@ -37,7 +37,7 @@ fn to_data_array(data: Vec<Vec<f64>>) -> Vec<[f64; 8]> {
     python = r#"
     def get_bounding_rect_from_array(
         data: Sequence[Sequence[float]],
-    ) -> tuple[float, float, float, float]:
+    ) -> Rect:
         """Compute the bounding rectangle of path data.
 
         :param data: Array of command data (rows of 8 floats).
@@ -109,7 +109,7 @@ fn extract_overcut_rows(
     def get_subpath_vertices_from_array(
         data: Sequence[Sequence[float]],
         subpath_index: int,
-    ) -> list[tuple[float, float]]:
+    ) -> Polygon:
         """Get the vertices of a subpath.
 
         :param data: Array of command data.
@@ -203,7 +203,7 @@ fn get_path_winding_order_from_array(
         data: Sequence[Sequence[float]],
         row_index: int,
         t: float,
-    ) -> Optional[tuple[tuple[float, float], tuple[float, float]]]:
+    ) -> Optional[tuple[Point, Point]]:
         """Get the point and tangent at a parameter t on a segment.
 
         :param data: Array of command data.
@@ -524,7 +524,7 @@ fn remove_duplicate_segments_py(
     def flatten_to_points(
         data: Optional[Sequence[Sequence[float]]],
         tolerance: float,
-    ) -> list[list[tuple[float, float, float]]]:
+    ) -> list[list[Point3D]]:
         """Flatten curves into linear segments.
 
         :param data: Array of command data or None.
@@ -587,9 +587,7 @@ fn linearize_geometry_py(
 
 #[gen_stub_pyfunction(
     python = r#"
-    def create_line_cmd(
-        end_point: tuple[float, float] | tuple[float, float, float],
-    ) -> list[float]:
+    def create_line_cmd(end_point: Point2DOr3D) -> list[float]:
         """Create a line command array from an end point.
 
         :param end_point: End point (x, y) or (x, y, z).
@@ -606,9 +604,9 @@ fn create_line_cmd_py(end_point: PyPoint3D) -> Vec<f64> {
 #[gen_stub_pyfunction(
     python = r#"
     def create_arc_cmd(
-        end: tuple[float, float, float],
-        center: tuple[float, float],
-        start: tuple[float, float, float],
+        end: Point3D,
+        center: Point,
+        start: Point3D,
     ) -> list[float]:
         """Create an arc command array.
 
@@ -632,9 +630,9 @@ fn create_arc_cmd_py(
 #[gen_stub_pyfunction(
     python = r#"
     def convert_arc_to_beziers_from_array(
-        start: tuple[float, float, float],
-        end: tuple[float, float, float],
-        center_offset: tuple[float, float],
+        start: Point3D,
+        end: Point3D,
+        center_offset: Point,
         clockwise: bool,
     ) -> list[list[float]]:
         """Convert an arc to bezier curves.
@@ -705,8 +703,8 @@ fn fit_curves_py(
 #[gen_stub_pyfunction(
     python = r#"
     def are_points_equal(
-        p1: tuple[float, float, float],
-        p2: tuple[float, float, float],
+        p1: Point3D,
+        p2: Point3D,
         tolerance: float,
     ) -> bool:
         """Check if two 3D points are equal within tolerance.
@@ -887,9 +885,9 @@ fn are_segments_equal_py(
 #[gen_stub_pyfunction(
     python = r#"
     def get_angle_at_vertex(
-        p0: tuple[float, float],
-        p1: tuple[float, float],
-        p2: tuple[float, float],
+        p0: Point,
+        p1: Point,
+        p2: Point,
     ) -> float:
         """Get the angle at a vertex between three points.
 
@@ -912,9 +910,7 @@ fn get_angle_at_vertex_py(
 
 #[gen_stub_pyfunction(
     python = r#"
-    def remove_duplicates(
-        points: Sequence[tuple[float, float]],
-    ) -> list[tuple[float, float]]:
+    def remove_duplicates(points: Sequence[Point]) -> Polygon:
         """Remove duplicate points from a sequence.
 
         :param points: Sequence of (x, y) points.
@@ -930,7 +926,7 @@ fn remove_duplicates_py(points: Vec<(f64, f64)>) -> Vec<(f64, f64)> {
 
 #[gen_stub_pyfunction(
     python = r#"
-    def is_clockwise(points: Sequence[tuple[float, float]]) -> bool:
+    def is_clockwise(points: Sequence[Point]) -> bool:
         """Check if a polygon has clockwise winding order.
 
         :param points: Sequence of (x, y) points defining a polygon.
@@ -973,7 +969,7 @@ fn is_closed_py(commands: Vec<Vec<f64>>, tolerance: f64) -> bool {
         data: Sequence[Sequence[float]],
         row_index: int,
         t: float,
-    ) -> Optional[tuple[float, float]]:
+    ) -> Optional[Point]:
         """Get the outward normal at a point on a segment.
 
         :param data: Array of command data.

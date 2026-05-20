@@ -43,7 +43,7 @@ def apply_affine_transform_to_array(data: Sequence[Sequence[float]], matrix: Seq
     :returns: Numpy array of transformed data.
     """
 
-def are_points_equal(p1: tuple[float, float, float], p2: tuple[float, float, float], tolerance: float) -> bool:
+def are_points_equal(p1: Point3D, p2: Point3D, tolerance: float) -> bool:
     r"""
     Check if two 3D points are equal within tolerance.
     
@@ -101,7 +101,7 @@ def check_self_intersection_from_array(data: Sequence[Sequence[float]], fail_on_
     :returns: True if self-intersections are found.
     """
 
-def convert_arc_to_beziers_from_array(start: tuple[float, float, float], end: tuple[float, float, float], center_offset: tuple[float, float], clockwise: bool) -> list[list[float]]:
+def convert_arc_to_beziers_from_array(start: Point3D, end: Point3D, center_offset: Point, clockwise: bool) -> list[list[float]]:
     r"""
     Convert an arc to bezier curves.
     
@@ -112,7 +112,7 @@ def convert_arc_to_beziers_from_array(start: tuple[float, float, float], end: tu
     :returns: List of bezier command rows.
     """
 
-def create_arc_cmd(end: tuple[float, float, float], center: tuple[float, float], start: tuple[float, float, float]) -> list[float]:
+def create_arc_cmd(end: Point3D, center: Point, start: Point3D) -> list[float]:
     r"""
     Create an arc command array.
     
@@ -122,7 +122,7 @@ def create_arc_cmd(end: tuple[float, float, float], center: tuple[float, float],
     :returns: Arc command array (8 floats).
     """
 
-def create_line_cmd(end_point: tuple[float, float] | tuple[float, float, float]) -> list[float]:
+def create_line_cmd(end_point: Point2DOr3D) -> list[float]:
     r"""
     Create a line command array from an end point.
     
@@ -160,7 +160,7 @@ def fit_curves(data: Optional[Sequence[Sequence[float]]], tolerance: float, pres
     :returns: Numpy array of fitted curve data.
     """
 
-def flatten_to_points(data: Optional[Sequence[Sequence[float]]], tolerance: float) -> list[list[tuple[float, float, float]]]:
+def flatten_to_points(data: Optional[Sequence[Sequence[float]]], tolerance: float) -> list[list[Point3D]]:
     r"""
     Flatten curves into linear segments.
     
@@ -169,7 +169,7 @@ def flatten_to_points(data: Optional[Sequence[Sequence[float]]], tolerance: floa
     :returns: List of flattened point segments.
     """
 
-def get_angle_at_vertex(p0: tuple[float, float], p1: tuple[float, float], p2: tuple[float, float]) -> float:
+def get_angle_at_vertex(p0: Point, p1: Point, p2: Point) -> float:
     r"""
     Get the angle at a vertex between three points.
     
@@ -187,7 +187,7 @@ def get_area_from_array(data: Sequence[Sequence[float]]) -> float:
     :returns: Total signed area.
     """
 
-def get_bounding_rect_from_array(data: Sequence[Sequence[float]]) -> tuple[float, float, float, float]:
+def get_bounding_rect_from_array(data: Sequence[Sequence[float]]) -> Rect:
     r"""
     Compute the bounding rectangle of path data.
     
@@ -195,7 +195,7 @@ def get_bounding_rect_from_array(data: Sequence[Sequence[float]]) -> tuple[float
     :returns: Bounding rectangle as (x_min, y_min, x_max, y_max).
     """
 
-def get_outward_normal_at_from_array(data: Sequence[Sequence[float]], row_index: int, t: float) -> Optional[tuple[float, float]]:
+def get_outward_normal_at_from_array(data: Sequence[Sequence[float]], row_index: int, t: float) -> Optional[Point]:
     r"""
     Get the outward normal at a point on a segment.
     
@@ -214,7 +214,7 @@ def get_path_winding_order_from_array(data: Sequence[Sequence[float]], start_cmd
     :returns: Winding order as "CW" or "CCW".
     """
 
-def get_point_and_tangent_at(data: Sequence[Sequence[float]], row_index: int, t: float) -> Optional[tuple[tuple[float, float], tuple[float, float]]]:
+def get_point_and_tangent_at(data: Sequence[Sequence[float]], row_index: int, t: float) -> Optional[tuple[Point, Point]]:
     r"""
     Get the point and tangent at a parameter t on a segment.
     
@@ -243,7 +243,7 @@ def get_subpath_area_from_array(data: Sequence[Sequence[float]], subpath_index: 
     :returns: Signed area of the subpath.
     """
 
-def get_subpath_vertices_from_array(data: Sequence[Sequence[float]], subpath_index: int) -> list[tuple[float, float]]:
+def get_subpath_vertices_from_array(data: Sequence[Sequence[float]], subpath_index: int) -> Polygon:
     r"""
     Get the vertices of a subpath.
     
@@ -260,7 +260,7 @@ def get_total_distance_from_array(data: Sequence[Sequence[float]]) -> float:
     :returns: Total path length.
     """
 
-def is_clockwise(points: Sequence[tuple[float, float]]) -> bool:
+def is_clockwise(points: Sequence[Point]) -> bool:
     r"""
     Check if a polygon has clockwise winding order.
     
@@ -305,7 +305,7 @@ def remove_duplicate_segments(data: Optional[Sequence[Sequence[float]]], toleran
     :returns: Numpy array with duplicates removed.
     """
 
-def remove_duplicates(points: Sequence[tuple[float, float]]) -> list[tuple[float, float]]:
+def remove_duplicates(points: Sequence[Point]) -> Polygon:
     r"""
     Remove duplicate points from a sequence.
     

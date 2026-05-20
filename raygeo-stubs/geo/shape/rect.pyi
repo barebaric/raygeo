@@ -7,7 +7,7 @@ __all__ = [
     "is_point_inside_rect",
 ]
 
-def does_rect_contain_rect(outer: tuple[float, float, float, float], inner: tuple[float, float, float, float]) -> bool:
+def does_rect_contain_rect(outer: Rect, inner: Rect) -> bool:
     r"""
     Check if one rectangle contains another.
     
@@ -16,7 +16,7 @@ def does_rect_contain_rect(outer: tuple[float, float, float, float], inner: tupl
     :returns: True if outer fully contains inner.
     """
 
-def does_rect_intersect_rect(r1: tuple[float, float, float, float], r2: tuple[float, float, float, float]) -> bool:
+def does_rect_intersect_rect(r1: Rect, r2: Rect) -> bool:
     r"""
     Check if two rectangles intersect.
     
@@ -25,7 +25,7 @@ def does_rect_intersect_rect(r1: tuple[float, float, float, float], r2: tuple[fl
     :returns: True if the rectangles intersect.
     """
 
-def is_point_inside_rect(point: tuple[float, float], rect: tuple[float, float, float, float]) -> bool:
+def is_point_inside_rect(point: Point, rect: Rect) -> bool:
     r"""
     Check if a point is inside a rectangle.
     

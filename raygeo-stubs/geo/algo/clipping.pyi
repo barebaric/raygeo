@@ -9,7 +9,7 @@ __all__ = [
     "to_clipper",
 ]
 
-def clip_line_segment_with_polygons(p1: tuple[float, float, float], p2: tuple[float, float, float], regions: Sequence[Sequence[tuple[float, float]]]) -> list[tuple[tuple[float, float, float], tuple[float, float, float]]]:
+def clip_line_segment_with_polygons(p1: Point3D, p2: Point3D, regions: Sequence[Sequence[Point]]) -> list[tuple[Point3D, Point3D]]:
     r"""
     Clip line segments that fall within polygon regions.
     
@@ -19,7 +19,7 @@ def clip_line_segment_with_polygons(p1: tuple[float, float, float], p2: tuple[fl
     :returns: List of clipped segments.
     """
 
-def clip_line_segment_with_rect(p1: tuple[float, float, float], p2: tuple[float, float, float], rect: tuple[float, float, float, float]) -> Optional[tuple[tuple[float, float, float], tuple[float, float, float]]]:
+def clip_line_segment_with_rect(p1: Point3D, p2: Point3D, rect: Rect) -> Optional[tuple[Point3D, Point3D]]:
     r"""
     Clip a line segment with a rectangle.
     
@@ -38,7 +38,7 @@ def from_clipper(polygon: IntPolygon, scale: int = 10000000) -> Polygon:
     :returns: Polygon with float coordinates.
     """
 
-def subtract_polygons_from_line_segment(p1: tuple[float, float, float], p2: tuple[float, float, float], regions: Sequence[Sequence[tuple[float, float]]]) -> list[tuple[tuple[float, float, float], tuple[float, float, float]]]:
+def subtract_polygons_from_line_segment(p1: Point3D, p2: Point3D, regions: Sequence[Sequence[Point]]) -> list[tuple[Point3D, Point3D]]:
     r"""
     Subtract polygon regions from a line segment.
     

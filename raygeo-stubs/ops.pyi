@@ -301,7 +301,11 @@ class Ops:
     def last_move_to(self, value: tuple[builtins.float, builtins.float, builtins.float]) -> None: ...
     def transform(self, matrix: raygeo.geo.TransformMatrix) -> None:
         r"""
-        Apply a 4x4 transformation matrix to all geometry.
+        Apply a 4x4 affine transformation matrix to all geometry.
+        
+        See ``raygeo.geo.TransformMatrix`` for the matrix layout.
+        
+        :param matrix: A 4x4 affine transformation matrix.
         """
     def __new__(cls) -> Ops:
         r"""

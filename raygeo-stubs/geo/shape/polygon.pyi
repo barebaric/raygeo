@@ -45,7 +45,7 @@ __all__ = [
     "translate_polygons_numpy",
 ]
 
-def clean_polygon(polygon: Sequence[tuple[float, float]], tolerance: Optional[float] = None) -> Optional[list[tuple[float, float]]]:
+def clean_polygon(polygon: Sequence[Point], tolerance: Optional[float] = None) -> Optional[Polygon]:
     r"""
     Clean a polygon by removing near-duplicate points.
     
@@ -54,7 +54,7 @@ def clean_polygon(polygon: Sequence[tuple[float, float]], tolerance: Optional[fl
     :returns: Cleaned polygon or None.
     """
 
-def flip_polygon(polygon: Sequence[tuple[float, float]], flip_h: bool, flip_v: bool) -> list[tuple[float, float]]:
+def flip_polygon(polygon: Sequence[Point], flip_h: bool, flip_v: bool) -> Polygon:
     r"""
     Flip a polygon horizontally and/or vertically.
     
@@ -74,7 +74,7 @@ def flip_polygon_numpy(polygon: NDArray[f64], flip_h: bool, flip_v: bool) -> Any
     :returns: Flipped polygon as numpy array.
     """
 
-def flip_polygons(polygons: Any, flip_h: bool, flip_v: bool) -> list[list[tuple[float, float]]]:
+def flip_polygons(polygons: Any, flip_h: bool, flip_v: bool) -> list[Polygon]:
     r"""
     Flip multiple polygons.
     
@@ -94,7 +94,7 @@ def flip_polygons_numpy(polygons: list, flip_h: bool, flip_v: bool) -> Any:
     :returns: List of flipped numpy arrays.
     """
 
-def get_polygon_area(polygon: Sequence[tuple[float, float]]) -> float:
+def get_polygon_area(polygon: Sequence[Point]) -> float:
     r"""
     Get the unsigned area of a polygon.
     
@@ -102,7 +102,7 @@ def get_polygon_area(polygon: Sequence[tuple[float, float]]) -> float:
     :returns: Unsigned area.
     """
 
-def get_polygon_bounds(polygon: Sequence[tuple[float, float]]) -> tuple[float, float, float, float]:
+def get_polygon_bounds(polygon: Sequence[Point]) -> Rect:
     r"""
     Get the bounding rectangle of a polygon.
     
@@ -110,7 +110,7 @@ def get_polygon_bounds(polygon: Sequence[tuple[float, float]]) -> tuple[float, f
     :returns: Bounding rectangle as (x_min, y_min, x_max, y_max).
     """
 
-def get_polygon_centroid(polygon: Sequence[tuple[float, float]]) -> tuple[float, float]:
+def get_polygon_centroid(polygon: Sequence[Point]) -> Point:
     r"""
     Get the centroid of a polygon.
     
@@ -118,7 +118,7 @@ def get_polygon_centroid(polygon: Sequence[tuple[float, float]]) -> tuple[float,
     :returns: Centroid point (x, y).
     """
 
-def get_polygon_convex_hull(polygon: Sequence[tuple[float, float]]) -> list[tuple[float, float]]:
+def get_polygon_convex_hull(polygon: Sequence[Point]) -> Polygon:
     r"""
     Get the convex hull of a polygon.
     
@@ -126,7 +126,7 @@ def get_polygon_convex_hull(polygon: Sequence[tuple[float, float]]) -> list[tupl
     :returns: Convex hull as list of points.
     """
 
-def get_polygon_edges(polygon: Sequence[tuple[float, float]]) -> list[tuple[tuple[float, float], tuple[float, float]]]:
+def get_polygon_edges(polygon: Sequence[Point]) -> list[tuple[Point, Point]]:
     r"""
     Get the edges of a polygon.
     
@@ -134,7 +134,7 @@ def get_polygon_edges(polygon: Sequence[tuple[float, float]]) -> list[tuple[tupl
     :returns: List of ((x1, y1), (x2, y2)) edges.
     """
 
-def get_polygon_group_bounds(polygons: Any) -> tuple[float, float, float, float]:
+def get_polygon_group_bounds(polygons: Any) -> Rect:
     r"""
     Get the bounding rectangle of a group of polygons.
     
@@ -142,7 +142,7 @@ def get_polygon_group_bounds(polygons: Any) -> tuple[float, float, float, float]
     :returns: Bounding rectangle as (x_min, y_min, x_max, y_max).
     """
 
-def get_polygon_perimeter(polygon: Sequence[tuple[float, float]]) -> float:
+def get_polygon_perimeter(polygon: Sequence[Point]) -> float:
     r"""
     Get the perimeter of a polygon.
     
@@ -150,7 +150,7 @@ def get_polygon_perimeter(polygon: Sequence[tuple[float, float]]) -> float:
     :returns: Perimeter length.
     """
 
-def get_polygon_signed_area(polygon: Sequence[tuple[float, float]]) -> float:
+def get_polygon_signed_area(polygon: Sequence[Point]) -> float:
     r"""
     Get the signed area of a polygon.
     
@@ -158,7 +158,7 @@ def get_polygon_signed_area(polygon: Sequence[tuple[float, float]]) -> float:
     :returns: Signed area (positive for CCW, negative for CW).
     """
 
-def get_polygons_difference(poly1: Sequence[tuple[float, float]], poly2: Sequence[tuple[float, float]]) -> list[list[tuple[float, float]]]:
+def get_polygons_difference(poly1: Sequence[Point], poly2: Sequence[Point]) -> list[Polygon]:
     r"""
     Get the difference of two polygons.
     
@@ -167,7 +167,7 @@ def get_polygons_difference(poly1: Sequence[tuple[float, float]], poly2: Sequenc
     :returns: Difference polygon(s).
     """
 
-def get_polygons_intersection(poly1: Sequence[tuple[float, float]], poly2: Sequence[tuple[float, float]]) -> list[list[tuple[float, float]]]:
+def get_polygons_intersection(poly1: Sequence[Point], poly2: Sequence[Point]) -> list[Polygon]:
     r"""
     Get the intersection of two polygons.
     
@@ -176,7 +176,7 @@ def get_polygons_intersection(poly1: Sequence[tuple[float, float]], poly2: Seque
     :returns: Intersection polygon(s).
     """
 
-def get_polygons_union(polygons: Any) -> list[list[tuple[float, float]]]:
+def get_polygons_union(polygons: Any) -> list[Polygon]:
     r"""
     Get the union of multiple polygons.
     
@@ -194,7 +194,7 @@ def is_almost_equal(a: float, b: float, tolerance: Optional[float] = None) -> bo
     :returns: True if |a - b| < tolerance.
     """
 
-def is_point_inside_polygon(point: tuple[float, float], polygon: Sequence[tuple[float, float]]) -> bool:
+def is_point_inside_polygon(point: Point, polygon: Sequence[Point]) -> bool:
     r"""
     Check if a point is inside a polygon.
     
@@ -203,7 +203,7 @@ def is_point_inside_polygon(point: tuple[float, float], polygon: Sequence[tuple[
     :returns: True if point is inside the polygon.
     """
 
-def is_polygon_convex(polygon: Sequence[tuple[float, float]]) -> bool:
+def is_polygon_convex(polygon: Sequence[Point]) -> bool:
     r"""
     Check if a polygon is convex.
     
@@ -211,7 +211,7 @@ def is_polygon_convex(polygon: Sequence[tuple[float, float]]) -> bool:
     :returns: True if the polygon is convex.
     """
 
-def normalize_polygons(polygons: Any) -> tuple[list[list[tuple[float, float]]], float, float]:
+def normalize_polygons(polygons: Any) -> tuple[list[Polygon], float, float]:
     r"""
     Normalize polygons (outer CCW, inner CW).
     
@@ -227,7 +227,7 @@ def normalize_polygons_numpy(polygons: Sequence[NDArray[f64]]) -> tuple[list[NDA
     :returns: Tuple of (normalized_arrays, min_x, min_y).
     """
 
-def offset_polygon(polygon: Sequence[tuple[float, float]], offset: float) -> list[list[tuple[float, float]]]:
+def offset_polygon(polygon: Sequence[Point], offset: float) -> list[Polygon]:
     r"""
     Offset (inflate/deflate) a polygon.
     
@@ -236,7 +236,7 @@ def offset_polygon(polygon: Sequence[tuple[float, float]], offset: float) -> lis
     :returns: Offset polygon(s).
     """
 
-def point_in_polygon_numpy(point: tuple[float, float], polygon: NDArray[f64]) -> bool:
+def point_in_polygon_numpy(point: Point, polygon: NDArray[f64]) -> bool:
     r"""
     Check if point is in polygon from numpy array.
     
@@ -245,7 +245,7 @@ def point_in_polygon_numpy(point: tuple[float, float], polygon: NDArray[f64]) ->
     :returns: True if point is inside the polygon.
     """
 
-def point_line_distance(point: tuple[float, float], line_start: tuple[float, float], line_end: tuple[float, float]) -> float:
+def point_line_distance(point: Point, line_start: Point, line_end: Point) -> float:
     r"""
     Compute the distance from a point to a line.
     
@@ -263,7 +263,7 @@ def polygon_area_numpy(polygon: NDArray[f64]) -> float:
     :returns: Signed area.
     """
 
-def polygon_bounds_numpy(polygon: NDArray[f64]) -> tuple[float, float, float, float]:
+def polygon_bounds_numpy(polygon: NDArray[f64]) -> Rect:
     r"""
     Get bounds of a polygon from numpy array.
     
@@ -271,7 +271,7 @@ def polygon_bounds_numpy(polygon: NDArray[f64]) -> tuple[float, float, float, fl
     :returns: Bounding rectangle as (x_min, y_min, x_max, y_max).
     """
 
-def polygon_group_bounds_numpy(polygons: Sequence[NDArray[f64]]) -> tuple[float, float, float, float]:
+def polygon_group_bounds_numpy(polygons: Sequence[NDArray[f64]]) -> Rect:
     r"""
     Get bounds of polygon group from numpy arrays.
     
@@ -287,7 +287,7 @@ def polygon_perimeter_numpy(polygon: NDArray[f64]) -> float:
     :returns: Perimeter length.
     """
 
-def polygons_intersect(p1: Sequence[tuple[float, float]], p2: Sequence[tuple[float, float]], min_area: float = 0) -> bool:
+def polygons_intersect(p1: Sequence[Point], p2: Sequence[Point], min_area: float = 0) -> bool:
     r"""
     Check if two polygons intersect.
     
@@ -307,7 +307,7 @@ def polygons_intersect_numpy(poly1: NDArray[f64], poly2: NDArray[f64], min_area:
     :returns: True if polygons intersect.
     """
 
-def rotate_polygon(polygon: Sequence[tuple[float, float]], angle: float) -> list[tuple[float, float]]:
+def rotate_polygon(polygon: Sequence[Point], angle: float) -> Polygon:
     r"""
     Rotate a polygon by an angle.
     
@@ -325,7 +325,7 @@ def rotate_polygon_numpy(polygon: NDArray[f64], angle: float) -> Any:
     :returns: Rotated polygon as numpy array.
     """
 
-def rotate_polygons(polygons: Any, angle: float) -> list[list[tuple[float, float]]]:
+def rotate_polygons(polygons: Any, angle: float) -> list[Polygon]:
     r"""
     Rotate multiple polygons by an angle.
     
@@ -343,7 +343,7 @@ def rotate_polygons_numpy(polygons: Sequence[NDArray[f64]], angle: float) -> lis
     :returns: List of rotated numpy arrays.
     """
 
-def scale_polygon(polygon: Sequence[tuple[float, float]], scale: float, scale_y: Optional[float] = None) -> list[tuple[float, float]]:
+def scale_polygon(polygon: Sequence[Point], scale: float, scale_y: Optional[float] = None) -> Polygon:
     r"""
     Scale a polygon.
     
@@ -362,7 +362,7 @@ def to_clipper_numpy(polygon: Any, scale: int = 10000000) -> list[tuple[int, int
     :returns: Polygon with integer coordinates for Clipper.
     """
 
-def translate_bounds(bounds: tuple[float, float, float, float], dx: float, dy: float) -> tuple[float, float, float, float]:
+def translate_bounds(bounds: Rect, dx: float, dy: float) -> Rect:
     r"""
     Translate a bounding rectangle.
     
@@ -372,7 +372,7 @@ def translate_bounds(bounds: tuple[float, float, float, float], dx: float, dy: f
     :returns: Translated bounding rectangle.
     """
 
-def translate_polygon(polygon: Sequence[tuple[float, float]], dx: float, dy: float) -> list[tuple[float, float]]:
+def translate_polygon(polygon: Sequence[Point], dx: float, dy: float) -> Polygon:
     r"""
     Translate a polygon.
     
@@ -392,7 +392,7 @@ def translate_polygon_numpy(polygon: NDArray[f64], dx: float, dy: float) -> Any:
     :returns: Translated polygon as numpy array.
     """
 
-def translate_polygons(polygons: Any, dx: float, dy: float) -> list[list[tuple[float, float]]]:
+def translate_polygons(polygons: Any, dx: float, dy: float) -> list[Polygon]:
     r"""
     Translate a list of polygons.
     

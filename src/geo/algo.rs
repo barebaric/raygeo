@@ -115,7 +115,7 @@ fn to_data_array(data: Vec<Vec<f64>>) -> Vec<[f64; 8]> {
 
 #[gen_stub_pyfunction(python = r#"
     def are_points_collinear(
-        points: Sequence[tuple[float, float, float]],
+        points: Sequence[Point3D],
         tolerance: float = 1e-6,
     ) -> bool:
         """Check if three or more points are collinear within tolerance.
@@ -133,10 +133,10 @@ fn are_points_collinear_py(points: Vec<(f64, f64, f64)>, tolerance: f64) -> bool
 
 #[gen_stub_pyfunction(python = r#"
     def fit_circle_to_3_points(
-        p1: tuple[float, float] | tuple[float, float, float],
-        p2: tuple[float, float] | tuple[float, float, float],
-        p3: tuple[float, float] | tuple[float, float, float],
-    ) -> Optional[tuple[tuple[float, float], float]]:
+        p1: Point2DOr3D,
+        p2: Point2DOr3D,
+        p3: Point2DOr3D,
+    ) -> Optional[tuple[Point, float]]:
         """Fit a circle to three points.
 
         :param p1: First point (x, y) or (x, y, z).
@@ -156,8 +156,8 @@ fn fit_circle_to_3_points_py(
 
 #[gen_stub_pyfunction(python = r#"
     def fit_circle_to_points(
-        points: Sequence[tuple[float, float, float]],
-    ) -> Optional[tuple[tuple[float, float], float, float]]:
+        points: Sequence[Point3D],
+    ) -> Optional[tuple[Point, float, float]]:
         """Fit a circle to a set of points.
 
         :param points: Sequence of 3D points to fit.
@@ -171,10 +171,10 @@ fn fit_circle_to_points_py(points: Vec<(f64, f64, f64)>) -> Option<((f64, f64), 
 
 #[gen_stub_pyfunction(python = r#"
     def project_circle_center_to_bisector(
-        p1: tuple[float, float] | tuple[float, float, float],
-        p2: tuple[float, float] | tuple[float, float, float],
-        center: tuple[float, float],
-    ) -> tuple[float, float]:
+        p1: Point2DOr3D,
+        p2: Point2DOr3D,
+        center: Point,
+    ) -> Point:
         """Project a circle center onto the perpendicular bisector of two points.
 
         :param p1: First point (x, y) or (x, y, z).
@@ -196,7 +196,7 @@ fn project_circle_center_to_bisector_py(
     def flatten_to_points(
         data: Sequence[Sequence[float]],
         tolerance: float,
-    ) -> list[list[tuple[float, float, float]]]:
+    ) -> list[list[Point3D]]:
         """Flatten curves into linear segments.
 
         :param data: Array of command data.
@@ -230,7 +230,7 @@ fn linearize_geometry_py(data: Vec<Vec<f64>>, tolerance: f64) -> Vec<Vec<f64>> {
 
 #[gen_stub_pyfunction(python = r#"
     def create_line_cmd(
-        end_point: tuple[float, float, float],
+        end_point: Point3D,
     ) -> list[float]:
         """Create a line command array from an end point.
 
@@ -245,9 +245,9 @@ fn create_line_cmd_py(end_point: PyPoint3D) -> Vec<f64> {
 
 #[gen_stub_pyfunction(python = r#"
     def create_arc_cmd(
-        end: tuple[float, float, float],
-        center: tuple[float, float],
-        start: tuple[float, float, float],
+        end: Point3D,
+        center: Point,
+        start: Point3D,
     ) -> list[float]:
         """Create an arc command array.
 
@@ -268,9 +268,9 @@ fn create_arc_cmd_py(
 
 #[gen_stub_pyfunction(python = r#"
     def convert_arc_to_beziers_from_array(
-        start: tuple[float, float, float],
-        end: tuple[float, float, float],
-        center_offset: tuple[float, float],
+        start: Point3D,
+        end: Point3D,
+        center_offset: Point,
         clockwise: bool,
     ) -> list[list[float]]:
         """Convert an arc to bezier curves.
@@ -298,7 +298,7 @@ fn convert_arc_to_beziers_from_array_py(
 
 #[gen_stub_pyfunction(python = r#"
     def fit_points_recursive(
-        points: Sequence[tuple[float, float, float]],
+        points: Sequence[Point3D],
         tolerance: float,
         start_idx: int,
         end_idx: int,
@@ -327,7 +327,7 @@ fn fit_points_recursive_py(
 
 #[gen_stub_pyfunction(python = r#"
     def fit_points_with_primitives(
-        points: Sequence[tuple[float, float, float]],
+        points: Sequence[Point3D],
         tolerance: float,
     ) -> list[list[float]]:
         """Fit a polyline of points with arc and line primitives.
@@ -350,7 +350,7 @@ fn fit_points_with_primitives_py(
 
 #[gen_stub_pyfunction(python = r#"
     def get_polyline_line_deviation(
-        points: Sequence[tuple[float, float, float]],
+        points: Sequence[Point3D],
         start: int,
         end: int,
     ) -> tuple[float, int]:
@@ -373,8 +373,8 @@ fn get_polyline_line_deviation_py(
 
 #[gen_stub_pyfunction(python = r#"
     def get_polyline_arc_deviation(
-        points: Sequence[tuple[float, float, float]],
-        center: tuple[float, float],
+        points: Sequence[Point3D],
+        center: Point,
         radius: float,
     ) -> float:
         """Get the maximum arc deviation for a set of points.
@@ -396,10 +396,10 @@ fn get_polyline_arc_deviation_py(
 
 #[gen_stub_pyfunction(python = r#"
     def resample_polyline(
-        points: Sequence[tuple[float, float, float]],
+        points: Sequence[Point3D],
         max_segment_length: float,
         is_closed: bool,
-    ) -> list[tuple[float, float, float]]:
+    ) -> list[Point3D]:
         """Resample a polyline with a maximum segment length.
 
         :param points: Sequence of 3D points.
@@ -419,10 +419,10 @@ fn resample_polyline_py(
 
 #[gen_stub_pyfunction(python = r#"
     def clip_line_segment_with_rect(
-        p1: tuple[float, float, float],
-        p2: tuple[float, float, float],
-        rect: tuple[float, float, float, float],
-    ) -> Optional[tuple[tuple[float, float, float], tuple[float, float, float]]]:
+        p1: Point3D,
+        p2: Point3D,
+        rect: Rect,
+    ) -> Optional[tuple[Point3D, Point3D]]:
         """Clip a line segment with a rectangle.
 
         :param p1: Start point of the line segment.
@@ -442,10 +442,10 @@ fn clip_line_segment_py(
 
 #[gen_stub_pyfunction(python = r#"
     def subtract_polygons_from_line_segment(
-        p1: tuple[float, float, float],
-        p2: tuple[float, float, float],
-        regions: Sequence[Sequence[tuple[float, float]]],
-    ) -> list[tuple[tuple[float, float, float], tuple[float, float, float]]]:
+        p1: Point3D,
+        p2: Point3D,
+        regions: Sequence[Sequence[Point]],
+    ) -> list[tuple[Point3D, Point3D]]:
         """Subtract polygon regions from a line segment.
 
         :param p1: Start point of the line segment.
@@ -466,10 +466,10 @@ fn subtract_polygons_from_line_segment_py(
 
 #[gen_stub_pyfunction(python = r#"
     def clip_line_segment_with_polygons(
-        p1: tuple[float, float, float],
-        p2: tuple[float, float, float],
-        regions: Sequence[Sequence[tuple[float, float]]],
-    ) -> list[tuple[tuple[float, float, float], tuple[float, float, float]]]:
+        p1: Point3D,
+        p2: Point3D,
+        regions: Sequence[Sequence[Point]],
+    ) -> list[tuple[Point3D, Point3D]]:
         """Clip line segments that fall within polygon regions.
 
         :param p1: Start point of the line segment.
@@ -559,9 +559,9 @@ fn minkowski_sum_convex_py(
 
 #[gen_stub_pyfunction(python = r#"
     def get_inner_fit_polygon(
-        outer: Sequence[tuple[float, float]],
-        inner: Sequence[tuple[float, float]],
-    ) -> list[list[tuple[float, float]]]:
+        outer: Sequence[Point],
+        inner: Sequence[Point],
+    ) -> list[Polygon]:
         """Compute the inner fit polygon (no-fit polygon for nesting).
 
         :param outer: Outer polygon as (x, y) points.
@@ -579,9 +579,9 @@ fn get_inner_fit_polygon_py(
 
 #[gen_stub_pyfunction(python = r#"
     def get_no_fit_polygon(
-        subject: Sequence[tuple[float, float]],
-        tool: Sequence[tuple[float, float]],
-    ) -> list[list[tuple[float, float]]]:
+        subject: Sequence[Point],
+        tool: Sequence[Point],
+    ) -> list[Polygon]:
         """Compute the no-fit polygon for two 2D polygons.
 
         :param subject: Subject polygon as (x, y) points.
@@ -599,7 +599,7 @@ fn get_no_fit_polygon_py(
 
 #[gen_stub_pyfunction(python = r#"
     def calculate_input_scale(
-        polygons: Sequence[Sequence[tuple[float, float]]],
+        polygons: Sequence[Sequence[Point]],
         max_int: int = 2147483647,
     ) -> float:
         """Calculate the optimal input scale for clipper operations.
@@ -664,9 +664,9 @@ fn convolve_point_sequences_py(
 
 #[gen_stub_pyfunction(python = r#"
     def simplify_polyline(
-        points: Sequence[tuple[float, float]],
+        points: Sequence[Point],
         tolerance: float,
-    ) -> list[tuple[float, float]]:
+    ) -> Polygon:
         """Simplify a polyline using the Ramer-Douglas-Peucker algorithm.
 
         :param points: Sequence of (x, y) points.
@@ -727,9 +727,9 @@ fn compute_gaussian_kernel_py(amount: i32) -> (Vec<f64>, f64) {
 
 #[gen_stub_pyfunction(python = r#"
     def smooth_circularly(
-        points: Sequence[tuple[float, float, float]],
+        points: Sequence[Point3D],
         kernel: Sequence[float],
-    ) -> list[tuple[float, float, float]]:
+    ) -> list[Point3D]:
         """Smooth a closed polyline circularly.
 
         :param points: Sequence of 3D points to smooth.
@@ -747,11 +747,11 @@ fn smooth_circularly_py(
 
 #[gen_stub_pyfunction(python = r#"
     def smooth_polyline(
-        points: Sequence[tuple[float, float, float]],
+        points: Sequence[Point3D],
         amount: int,
         corner_angle_threshold: float,
         is_closed: Optional[bool] = None,
-    ) -> list[tuple[float, float, float]]:
+    ) -> list[Point3D]:
         """Smooth a polyline using Gaussian smoothing.
 
         :param points: Sequence of 3D points to smooth.
@@ -774,9 +774,9 @@ fn smooth_polyline_algo_py(
 
 #[gen_stub_pyfunction(python = r#"
     def smooth_sub_segment(
-        points: Sequence[tuple[float, float, float]],
+        points: Sequence[Point3D],
         kernel: Sequence[float],
-    ) -> list[tuple[float, float, float]]:
+    ) -> list[Point3D]:
         """Smooth a sub-segment of a polyline.
 
         :param points: Sequence of 3D points to smooth.

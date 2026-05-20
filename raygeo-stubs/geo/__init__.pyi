@@ -13,14 +13,34 @@ from . import algo
 from . import path
 from . import shape
 __all__ = [
+    "Point",
+    "Point2DOr3D",
     "Point3D",
     "Polygon",
+    "Rect",
     "TransformMatrix",
     "algo",
     "path",
     "shape",
 ]
 
-Point3D: TypeAlias = tuple[float, float] | tuple[float, float, float]
-Polygon: TypeAlias = list[Point3D]
+Point: TypeAlias = tuple[float, float]
+Point2DOr3D: TypeAlias = Point | Point3D
+Point3D: TypeAlias = tuple[float, float, float]
+Polygon: TypeAlias = list[Point]
+Rect: TypeAlias = tuple[float, float, float, float]
 TransformMatrix: TypeAlias = list[list[float]] | numpy.ndarray[tuple[int, int], float]
+r"""4x4 affine transformation matrix for 2D/3D coordinate transforms.
+
+Layout (row-major):
+
+```
+[ Rxx  Rxy  Rxz  Tx ]   row 0: X basis vector + X translation
+[ Ryx  Ryy  Ryz  Ty ]   row 1: Y basis vector + Y translation
+[ Rzx  Rzy  Rzz  Tz ]   row 2: Z basis vector + Z translation
+[  0    0    0   1  ]   row 3: homogeneous row (identity)
+```
+
+For 2D transforms, set the Z components to identity:
+  ``Rzx = Rzy = 0.0``, ``Rzz = 1.0``, ``Tz = 0.0``
+"""

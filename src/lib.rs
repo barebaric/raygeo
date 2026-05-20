@@ -110,6 +110,23 @@ state changes) with methods for transformation, clipping, linearization,
 timing estimation, serialization, and more.
 "),
     ].into_iter().collect();
+    let transform_matrix_doc = "\
+r\"\"\"4x4 affine transformation matrix for 2D/3D coordinate transforms.
+
+Layout (row-major):
+
+```
+[ Rxx  Rxy  Rxz  Tx ]   row 0: X basis vector + X translation
+[ Ryx  Ryy  Ryz  Ty ]   row 1: Y basis vector + Y translation
+[ Rzx  Rzy  Rzz  Tz ]   row 2: Z basis vector + Z translation
+[  0    0    0   1  ]   row 3: homogeneous row (identity)
+```
+
+For 2D transforms, set the Z components to identity:
+  ``Rzx = Rzy = 0.0``, ``Rzz = 1.0``, ``Tz = 0.0``
+\"\"\"
+";
+
     for module in stub_info.modules.values() {
         let mut content = module.format_with_config(false);
         if let Some(doc) = module_docs.get(module.name.as_str()) {
@@ -118,6 +135,15 @@ timing estimation, serialization, and more.
                 doc.trim_end()
             );
             content = doc_block + &content;
+        }
+        // Inject documentation for TransformMatrix type alias
+        if module.name == "raygeo.geo" {
+            let target = "TransformMatrix: TypeAlias = ";
+            if let Some(pos) = content.find(target) {
+                let end_of_line = content[pos..].find('\n').unwrap_or(0);
+                let insert_pos = pos + end_of_line + 1;
+                content.insert_str(insert_pos, transform_matrix_doc);
+            }
         }
         let parts: Vec<&str> = module.name.split('.').collect();
         if parts.len() == 1 {

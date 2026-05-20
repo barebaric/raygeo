@@ -449,11 +449,11 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
 
 #[gen_stub_pyfunction(python = r#"
     def get_arc_bounds(
-        start: tuple[float, float],
-        end: tuple[float, float],
-        center: tuple[float, float],
+        start: Point,
+        end: Point,
+        center: Point,
         clockwise: bool,
-    ) -> tuple[float, float, float, float]:
+    ) -> Rect:
         """Get the bounding rectangle of an arc.
 
         :param start: Arc start point (x, y).
@@ -476,9 +476,9 @@ fn get_arc_bounds_py(
 
 #[gen_stub_pyfunction(python = r#"
     def get_arc_direction(
-        center: tuple[float, float],
-        start: tuple[float, float],
-        mouse: tuple[float, float],
+        center: Point,
+        start: Point,
+        mouse: Point,
     ) -> bool:
         """Get the direction (CW/CCW) of an arc at a mouse point.
 
@@ -496,10 +496,10 @@ fn get_arc_direction_py(center: Point, start: Point, mouse: Point) -> bool {
 #[gen_stub_pyfunction(python = r#"
     def get_arc_closest_point(
         arc_cmd: Any,
-        start_pos: tuple[float, float, float],
+        start_pos: Point3D,
         x: float,
         y: float,
-    ) -> Optional[tuple[float, tuple[float, float], float]]:
+    ) -> Optional[tuple[float, Point, float]]:
         """Get the closest point on an arc to a given point.
 
         :param arc_cmd: Arc command row or MockArc-like object.
@@ -522,11 +522,11 @@ fn get_arc_closest_point_py(
 
 #[gen_stub_pyfunction(python = r#"
     def get_arc_midpoint(
-        start: tuple[float, float],
-        end: tuple[float, float],
-        center: tuple[float, float],
+        start: Point,
+        end: Point,
+        center: Point,
         clockwise: bool,
-    ) -> tuple[float, float]:
+    ) -> Point:
         """Get the midpoint of an arc.
 
         :param start: Arc start point (x, y).
@@ -549,11 +549,11 @@ fn get_arc_midpoint_py(
 
 #[gen_stub_pyfunction(python = r#"
     def get_arc_angles(
-        start: tuple[float, float],
-        end: tuple[float, float],
-        center: tuple[float, float],
+        start: Point,
+        end: Point,
+        center: Point,
         clockwise: bool,
-    ) -> tuple[float, float, float]:
+    ) -> Point3D:
         """Get the start, end, and sweep angles of an arc.
 
         :param start: Arc start point (x, y).
@@ -576,11 +576,11 @@ fn get_arc_angles_py(
 
 #[gen_stub_pyfunction(python = r#"
     def does_arc_intersect_rect(
-        arc_start: tuple[float, float],
-        arc_end: tuple[float, float],
-        arc_center: tuple[float, float],
+        arc_start: Point,
+        arc_end: Point,
+        arc_center: Point,
         clockwise: bool,
-        rect: tuple[float, float, float, float],
+        rect: Rect,
     ) -> bool:
         """Check if an arc intersects a rectangle.
 
@@ -606,11 +606,11 @@ fn does_arc_intersect_rect_py(
 
 #[gen_stub_pyfunction(python = r#"
     def does_arc_intersect_circle(
-        arc_start: tuple[float, float],
-        arc_end: tuple[float, float],
-        arc_center: tuple[float, float],
+        arc_start: Point,
+        arc_end: Point,
+        arc_center: Point,
         clockwise: bool,
-        circle_center: tuple[float, float],
+        circle_center: Point,
         circle_radius: float,
     ) -> bool:
         """Check if an arc intersects a circle.
@@ -646,8 +646,8 @@ fn does_arc_intersect_circle_py(
 
 #[gen_stub_pyfunction(python = r#"
     def is_arc_clockwise(
-        points: Sequence[tuple[float, float]],
-        center: tuple[float, float],
+        points: Sequence[Point],
+        center: Point,
     ) -> bool:
         """Check if an arc is clockwise.
 
@@ -664,9 +664,9 @@ fn is_arc_clockwise_py(points: Vec<PyPoint2D>, center: PyPoint2D) -> bool {
 
 #[gen_stub_pyfunction(python = r#"
     def is_arc_inside_polygons(
-        arc_start: tuple[float, float],
-        arc_end: tuple[float, float],
-        arc_center: tuple[float, float],
+        arc_start: Point,
+        arc_end: Point,
+        arc_center: Point,
         clockwise: bool,
         polygons: Any,
     ) -> bool:
@@ -731,9 +731,9 @@ fn normalize_angle_py(angle: f64) -> f64 {
 #[gen_stub_pyfunction(python = r#"
     def linearize_arc(
         arc_cmd: Any,
-        start_point: tuple[float, float, float],
+        start_point: Point3D,
         resolution: float = 0.1,
-    ) -> list[tuple[tuple[float, float, float], tuple[float, float, float]]]:
+    ) -> list[tuple[Point3D, Point3D]]:
         """Linearize an arc into line segments.
 
         :param arc_cmd: Arc command row or MockArc-like object.
@@ -756,7 +756,7 @@ fn linearize_arc_py(
 #[gen_stub_pyfunction(python = r#"
     def linearize_arc_from_array(
         data: Sequence[float],
-        start_point: tuple[float, float, float],
+        start_point: Point3D,
         max_seg_length: float,
     ) -> list[list[float]]:
         """Linearize an arc from array data.
@@ -782,12 +782,12 @@ fn linearize_arc_from_array_py(
 
 #[gen_stub_pyfunction(python = r#"
     def get_bezier_point_at(
-        p0: tuple[float, float],
-        p1: tuple[float, float],
-        p2: tuple[float, float],
-        p3: tuple[float, float],
+        p0: Point,
+        p1: Point,
+        p2: Point,
+        p3: Point,
         t: float,
-    ) -> tuple[float, float]:
+    ) -> Point:
         """Get a point on a cubic bezier at parameter t.
 
         :param p0: Start control point (x, y).
@@ -811,14 +811,14 @@ fn get_bezier_point_at_py(
 
 #[gen_stub_pyfunction(python = r#"
     def split_bezier(
-        p0: tuple[float, float],
-        p1: tuple[float, float],
-        p2: tuple[float, float],
-        p3: tuple[float, float],
+        p0: Point,
+        p1: Point,
+        p2: Point,
+        p3: Point,
         t: float,
     ) -> tuple[
-        tuple[tuple[float, float], tuple[float, float], tuple[float, float], tuple[float, float]],
-        tuple[tuple[float, float], tuple[float, float], tuple[float, float], tuple[float, float]],
+        tuple[Point, Point, Point, Point],
+        tuple[Point, Point, Point, Point],
     ]:
         """Split a cubic bezier at parameter t.
 
@@ -843,11 +843,11 @@ fn split_bezier_py(
 
 #[gen_stub_pyfunction(python = r#"
     def get_bezier_bounds(
-        p0: tuple[float, float],
-        p1: tuple[float, float],
-        p2: tuple[float, float],
-        p3: tuple[float, float],
-    ) -> tuple[float, float, float, float]:
+        p0: Point,
+        p1: Point,
+        p2: Point,
+        p3: Point,
+    ) -> Rect:
         """Get the bounding rectangle of a cubic bezier.
 
         :param p0: Start control point (x, y).
@@ -869,11 +869,11 @@ fn get_bezier_bounds_py(
 
 #[gen_stub_pyfunction(python = r#"
     def get_bezier_rect_intersections(
-        p0: tuple[float, float],
-        p1: tuple[float, float],
-        p2: tuple[float, float],
-        p3: tuple[float, float],
-        rect: tuple[float, float, float, float],
+        p0: Point,
+        p1: Point,
+        p2: Point,
+        p3: Point,
+        rect: Rect,
     ) -> list[float]:
         """Get intersection t-values of a bezier with a rectangle.
 
@@ -898,12 +898,12 @@ fn get_bezier_rect_intersections_py(
 
 #[gen_stub_pyfunction(python = r#"
     def clip_bezier_with_rect(
-        p0: tuple[float, float],
-        p1: tuple[float, float],
-        p2: tuple[float, float],
-        p3: tuple[float, float],
-        rect: tuple[float, float, float, float],
-    ) -> list[tuple[tuple[float, float], tuple[float, float], tuple[float, float], tuple[float, float]]]:
+        p0: Point,
+        p1: Point,
+        p2: Point,
+        p3: Point,
+        rect: Rect,
+    ) -> list[tuple[Point, Point, Point, Point]]:
         """Clip a cubic bezier with a rectangle.
 
         :param p0: Start control point (x, y).
@@ -927,11 +927,11 @@ fn clip_bezier_with_rect_py(
 
 #[gen_stub_pyfunction(python = r#"
     def convert_cubic_bezier_to_quadratic(
-        p0: tuple[float, float],
-        p1: tuple[float, float],
-        p2: tuple[float, float],
-        p3: tuple[float, float],
-    ) -> tuple[tuple[float, float], tuple[float, float], tuple[float, float]]:
+        p0: Point,
+        p1: Point,
+        p2: Point,
+        p3: Point,
+    ) -> tuple[Point, Point, Point]:
         """Convert a cubic bezier to a quadratic bezier.
 
         :param p0: Start control point (x, y).
@@ -953,10 +953,10 @@ fn convert_cubic_bezier_to_quadratic_py(
 
 #[gen_stub_pyfunction(python = r#"
     def is_bezier_inside_polygons(
-        p0: tuple[float, float],
-        p1: tuple[float, float],
-        p2: tuple[float, float],
-        p3: tuple[float, float],
+        p0: Point,
+        p1: Point,
+        p2: Point,
+        p3: Point,
         polygons: Any,
     ) -> bool:
         """Check if a bezier curve is inside a set of polygons.
@@ -986,12 +986,12 @@ fn is_bezier_inside_polygons_py(
 
 #[gen_stub_pyfunction(python = r#"
     def linearize_bezier(
-        p0: tuple[float, float, float],
-        p1: tuple[float, float, float],
-        p2: tuple[float, float, float],
-        p3: tuple[float, float, float],
+        p0: Point3D,
+        p1: Point3D,
+        p2: Point3D,
+        p3: Point3D,
         num_steps: int,
-    ) -> list[tuple[tuple[float, float, float], tuple[float, float, float]]]:
+    ) -> list[tuple[Point3D, Point3D]]:
         """Linearize a bezier into line segments.
 
         :param p0: Start control point (x, y, z).
@@ -1016,13 +1016,13 @@ fn linearize_bezier_py(
 
 #[gen_stub_pyfunction(python = r#"
     def linearize_bezier_adaptive(
-        p0: tuple[float, float],
-        p1: tuple[float, float],
-        p2: tuple[float, float],
-        p3: tuple[float, float],
+        p0: Point,
+        p1: Point,
+        p2: Point,
+        p3: Point,
         tolerance_sq: float,
         max_subdivisions: int = 20,
-    ) -> list[tuple[float, float]]:
+    ) -> Polygon:
         """Adaptively linearize a bezier curve.
 
         :param p0: Start control point (x, y).
@@ -1050,7 +1050,7 @@ fn linearize_bezier_adaptive_py(
 #[gen_stub_pyfunction(python = r#"
     def linearize_bezier_from_array(
         bezier_row: Sequence[float],
-        start_point: tuple[float, float, float],
+        start_point: Point3D,
         max_seg_length: float,
     ) -> list[list[float]]:
         """Linearize a bezier from array data.
@@ -1076,12 +1076,12 @@ fn linearize_bezier_from_array_py(
 
 #[gen_stub_pyfunction(python = r#"
     def linearize_bezier_segment(
-        p0: tuple[float, float, float],
-        p1: tuple[float, float, float],
-        p2: tuple[float, float, float],
-        p3: tuple[float, float, float],
+        p0: Point3D,
+        p1: Point3D,
+        p2: Point3D,
+        p3: Point3D,
         tolerance: float = 0.1,
-    ) -> list[tuple[float, float, float]]:
+    ) -> list[Point3D]:
         """Linearize a single bezier segment.
 
         :param p0: Start control point (x, y, z).
@@ -1113,10 +1113,10 @@ fn linearize_bezier_segment_py(
 
 #[gen_stub_pyfunction(python = r#"
     def flatten_bezier(
-        p0: tuple[float, float, float],
-        p1: tuple[float, float, float],
-        p2: tuple[float, float, float],
-        p3: tuple[float, float, float],
+        p0: Point3D,
+        p1: Point3D,
+        p2: Point3D,
+        p3: Point3D,
         tolerance: float,
         max_subdivisions: int,
         pts: list,
@@ -1162,10 +1162,10 @@ fn flatten_bezier_py(
 
 #[gen_stub_pyfunction(python = r#"
     def bezier_flatness_sq(
-        a: tuple[float, float, float],
-        b: tuple[float, float, float],
-        c: tuple[float, float, float],
-        d: tuple[float, float, float],
+        a: Point3D,
+        b: Point3D,
+        c: Point3D,
+        d: Point3D,
     ) -> float:
         """Compute the flatness squared of a cubic bezier.
 
@@ -1188,8 +1188,8 @@ fn bezier_flatness_sq_py(
 
 #[gen_stub_pyfunction(python = r#"
     def perp_dist_sq(
-        pt: tuple[float, float, float],
-        origin: tuple[float, float, float],
+        pt: Point3D,
+        origin: Point3D,
         vx: float,
         vy: float,
         vz: float = 0.0,
@@ -1221,11 +1221,11 @@ fn perp_dist_sq_py(
 
 #[gen_stub_pyfunction(python = r#"
     def get_circle_circle_intersections(
-        c1: tuple[float, float],
+        c1: Point,
         r1: float,
-        c2: tuple[float, float],
+        c2: Point,
         r2: float,
-    ) -> list[tuple[float, float]]:
+    ) -> Polygon:
         """Get intersection points of two circles.
 
         :param c1: Center of first circle (x, y).
@@ -1247,9 +1247,9 @@ fn get_circle_circle_intersections_py(
 
 #[gen_stub_pyfunction(python = r#"
     def is_circle_inside_rect(
-        center: tuple[float, float],
+        center: Point,
         radius: float,
-        rect: tuple[float, float, float, float],
+        rect: Rect,
     ) -> bool:
         """Check if a circle is inside a rectangle.
 
@@ -1270,9 +1270,9 @@ fn is_circle_inside_rect_py(
 
 #[gen_stub_pyfunction(python = r#"
     def does_circle_intersect_rect(
-        center: tuple[float, float],
+        center: Point,
         radius: float,
-        rect: tuple[float, float, float, float],
+        rect: Rect,
     ) -> bool:
         """Check if a circle intersects a rectangle.
 
@@ -1293,9 +1293,9 @@ fn does_circle_intersect_rect_py(
 
 #[gen_stub_pyfunction(python = r#"
     def line_segment_intersects_circle(
-        p1: tuple[float, float],
-        p2: tuple[float, float],
-        circle_center: tuple[float, float],
+        p1: Point,
+        p2: Point,
+        circle_center: Point,
         circle_radius: float,
     ) -> bool:
         """Check if a line segment intersects a circle.
@@ -1319,10 +1319,10 @@ fn line_segment_intersects_circle_py(
 
 #[gen_stub_pyfunction(python = r#"
     def project_point_onto_circle(
-        point: tuple[float, float],
-        center: tuple[float, float],
+        point: Point,
+        center: Point,
         radius: float,
-    ) -> Optional[tuple[float, float]]:
+    ) -> Optional[Point]:
         """Project a point onto a circle.
 
         :param point: Point to project (x, y).
@@ -1342,9 +1342,9 @@ fn project_point_onto_circle_py(
 
 #[gen_stub_pyfunction(python = r#"
     def clean_polygon(
-        polygon: Sequence[tuple[float, float]],
+        polygon: Sequence[Point],
         tolerance: Optional[float] = None,
-    ) -> Optional[list[tuple[float, float]]]:
+    ) -> Optional[Polygon]:
         """Clean a polygon by removing near-duplicate points.
 
         :param polygon: Input polygon as (x, y) points.
@@ -1379,7 +1379,7 @@ fn is_almost_equal_py(a: f64, b: f64, tolerance: Option<f64>) -> bool {
 }
 
 #[gen_stub_pyfunction(python = r#"
-    def normalize_polygons(polygons: Any) -> tuple[list[list[tuple[float, float]]], float, float]:
+    def normalize_polygons(polygons: Any) -> tuple[list[Polygon], float, float]:
         """Normalize polygons (outer CCW, inner CW).
 
         :param polygons: List of polygons to normalize.
@@ -1394,10 +1394,10 @@ fn normalize_polygons_py(polygons: &Bound<'_, PyAny>) -> PyResult<(Vec<Vec<Point
 
 #[gen_stub_pyfunction(python = r#"
     def translate_bounds(
-        bounds: tuple[float, float, float, float],
+        bounds: Rect,
         dx: float,
         dy: float,
-    ) -> tuple[float, float, float, float]:
+    ) -> Rect:
         """Translate a bounding rectangle.
 
         :param bounds: Bounding rectangle (x_min, y_min, x_max, y_max).
@@ -1412,7 +1412,7 @@ fn translate_bounds_py(bounds: (f64, f64, f64, f64), dx: f64, dy: f64) -> (f64, 
 }
 
 #[gen_stub_pyfunction(python = r#"
-    def translate_polygons(polygons: Any, dx: float, dy: float) -> list[list[tuple[float, float]]]:
+    def translate_polygons(polygons: Any, dx: float, dy: float) -> list[Polygon]:
         """Translate a list of polygons.
 
         :param polygons: List of polygons to translate.
@@ -1429,9 +1429,9 @@ fn translate_polygons_py(polygons: &Bound<'_, PyAny>, dx: f64, dy: f64) -> PyRes
 
 #[gen_stub_pyfunction(python = r#"
     def point_line_distance(
-        point: tuple[float, float],
-        line_start: tuple[float, float],
-        line_end: tuple[float, float],
+        point: Point,
+        line_start: Point,
+        line_end: Point,
     ) -> float:
         """Compute the distance from a point to a line.
 
@@ -1447,7 +1447,7 @@ fn point_line_distance_py(point: Point, line_start: Point, line_end: Point) -> f
 }
 
 #[gen_stub_pyfunction(python = r#"
-    def get_polygon_area(polygon: Sequence[tuple[float, float]]) -> float:
+    def get_polygon_area(polygon: Sequence[Point]) -> float:
         """Get the unsigned area of a polygon.
 
         :param polygon: Polygon as (x, y) points.
@@ -1461,7 +1461,7 @@ fn get_polygon_area_py(polygon: Vec<PyPoint2D>) -> f64 {
 
 #[gen_stub_pyfunction(python = r#"
     def get_polygon_signed_area(
-        polygon: Sequence[tuple[float, float]],
+        polygon: Sequence[Point],
     ) -> float:
         """Get the signed area of a polygon.
 
@@ -1476,7 +1476,7 @@ fn get_polygon_signed_area_py(polygon: Vec<PyPoint2D>) -> f64 {
 
 #[gen_stub_pyfunction(python = r#"
     def get_polygon_perimeter(
-        polygon: Sequence[tuple[float, float]],
+        polygon: Sequence[Point],
     ) -> float:
         """Get the perimeter of a polygon.
 
@@ -1491,8 +1491,8 @@ fn get_polygon_perimeter_py(polygon: Vec<PyPoint2D>) -> f64 {
 
 #[gen_stub_pyfunction(python = r#"
     def get_polygon_bounds(
-        polygon: Sequence[tuple[float, float]],
-    ) -> tuple[float, float, float, float]:
+        polygon: Sequence[Point],
+    ) -> Rect:
         """Get the bounding rectangle of a polygon.
 
         :param polygon: Polygon as (x, y) points.
@@ -1507,7 +1507,7 @@ fn get_polygon_bounds_py(polygon: Vec<PyPoint2D>) -> (f64, f64, f64, f64) {
 #[gen_stub_pyfunction(python = r#"
     def get_polygon_group_bounds(
         polygons: Any,
-    ) -> tuple[float, float, float, float]:
+    ) -> Rect:
         """Get the bounding rectangle of a group of polygons.
 
         :param polygons: List of polygons.
@@ -1524,8 +1524,8 @@ fn get_polygon_group_bounds_py(
 
 #[gen_stub_pyfunction(python = r#"
     def get_polygon_centroid(
-        polygon: Sequence[tuple[float, float]],
-    ) -> tuple[float, float]:
+        polygon: Sequence[Point],
+    ) -> Point:
         """Get the centroid of a polygon.
 
         :param polygon: Polygon as (x, y) points.
@@ -1539,7 +1539,7 @@ fn get_polygon_centroid_py(polygon: Vec<PyPoint2D>) -> Point {
 
 #[gen_stub_pyfunction(python = r#"
     def is_polygon_convex(
-        polygon: Sequence[tuple[float, float]],
+        polygon: Sequence[Point],
     ) -> bool:
         """Check if a polygon is convex.
 
@@ -1554,8 +1554,8 @@ fn is_polygon_convex_py(polygon: Vec<PyPoint2D>) -> bool {
 
 #[gen_stub_pyfunction(python = r#"
     def get_polygon_convex_hull(
-        polygon: Sequence[tuple[float, float]],
-    ) -> list[tuple[float, float]]:
+        polygon: Sequence[Point],
+    ) -> Polygon:
         """Get the convex hull of a polygon.
 
         :param polygon: Polygon as (x, y) points.
@@ -1569,8 +1569,8 @@ fn get_polygon_convex_hull_py(polygon: Vec<PyPoint2D>) -> Vec<Point> {
 
 #[gen_stub_pyfunction(python = r#"
     def get_polygon_edges(
-        polygon: Sequence[tuple[float, float]],
-    ) -> list[tuple[tuple[float, float], tuple[float, float]]]:
+        polygon: Sequence[Point],
+    ) -> list[tuple[Point, Point]]:
         """Get the edges of a polygon.
 
         :param polygon: Polygon as (x, y) points.
@@ -1584,8 +1584,8 @@ fn get_polygon_edges_py(polygon: Vec<PyPoint2D>) -> Vec<(Point, Point)> {
 
 #[gen_stub_pyfunction(python = r#"
     def is_point_inside_polygon(
-        point: tuple[float, float],
-        polygon: Sequence[tuple[float, float]],
+        point: Point,
+        polygon: Sequence[Point],
     ) -> bool:
         """Check if a point is inside a polygon.
 
@@ -1601,9 +1601,9 @@ fn is_point_inside_polygon_py(point: Point, polygon: Vec<PyPoint2D>) -> bool {
 
 #[gen_stub_pyfunction(python = r#"
     def offset_polygon(
-        polygon: Sequence[tuple[float, float]],
+        polygon: Sequence[Point],
         offset: float,
-    ) -> list[list[tuple[float, float]]]:
+    ) -> list[Polygon]:
         """Offset (inflate/deflate) a polygon.
 
         :param polygon: Polygon as (x, y) points.
@@ -1617,7 +1617,7 @@ fn offset_polygon_py(polygon: Vec<PyPoint2D>, offset: f64) -> Vec<Vec<Point>> {
 }
 
 #[gen_stub_pyfunction(python = r#"
-    def get_polygons_union(polygons: Any) -> list[list[tuple[float, float]]]:
+    def get_polygons_union(polygons: Any) -> list[Polygon]:
         """Get the union of multiple polygons.
 
         :param polygons: List of polygons to union.
@@ -1632,9 +1632,9 @@ fn get_polygons_union_py(polygons: &Bound<'_, PyAny>) -> PyResult<Vec<Vec<Point>
 
 #[gen_stub_pyfunction(python = r#"
     def get_polygons_intersection(
-        poly1: Sequence[tuple[float, float]],
-        poly2: Sequence[tuple[float, float]],
-    ) -> list[list[tuple[float, float]]]:
+        poly1: Sequence[Point],
+        poly2: Sequence[Point],
+    ) -> list[Polygon]:
         """Get the intersection of two polygons.
 
         :param poly1: First polygon as (x, y) points.
@@ -1652,9 +1652,9 @@ fn get_polygons_intersection_py(
 
 #[gen_stub_pyfunction(python = r#"
     def get_polygons_difference(
-        poly1: Sequence[tuple[float, float]],
-        poly2: Sequence[tuple[float, float]],
-    ) -> list[list[tuple[float, float]]]:
+        poly1: Sequence[Point],
+        poly2: Sequence[Point],
+    ) -> list[Polygon]:
         """Get the difference of two polygons.
 
         :param poly1: First polygon as (x, y) points.
@@ -1672,8 +1672,8 @@ fn get_polygons_difference_py(
 
 #[gen_stub_pyfunction(python = r#"
     def polygons_intersect(
-        p1: Sequence[tuple[float, float]],
-        p2: Sequence[tuple[float, float]],
+        p1: Sequence[Point],
+        p2: Sequence[Point],
         min_area: float = 0.0,
     ) -> bool:
         """Check if two polygons intersect.
@@ -1696,10 +1696,10 @@ fn polygons_intersect_py(
 
 #[gen_stub_pyfunction(python = r#"
     def flip_polygon(
-        polygon: Sequence[tuple[float, float]],
+        polygon: Sequence[Point],
         flip_h: bool,
         flip_v: bool,
-    ) -> list[tuple[float, float]]:
+    ) -> Polygon:
         """Flip a polygon horizontally and/or vertically.
 
         :param polygon: Polygon as (x, y) points.
@@ -1722,7 +1722,7 @@ fn flip_polygon_py(
         polygons: Any,
         flip_h: bool,
         flip_v: bool,
-    ) -> list[list[tuple[float, float]]]:
+    ) -> list[Polygon]:
         """Flip multiple polygons.
 
         :param polygons: List of polygons to flip.
@@ -1743,9 +1743,9 @@ fn flip_polygons_py(
 
 #[gen_stub_pyfunction(python = r#"
     def rotate_polygon(
-        polygon: Sequence[tuple[float, float]],
+        polygon: Sequence[Point],
         angle: float,
-    ) -> list[tuple[float, float]]:
+    ) -> Polygon:
         """Rotate a polygon by an angle.
 
         :param polygon: Polygon as (x, y) points.
@@ -1759,7 +1759,7 @@ fn rotate_polygon_py(polygon: Vec<PyPoint2D>, angle: f64) -> Vec<Point> {
 }
 
 #[gen_stub_pyfunction(python = r#"
-    def rotate_polygons(polygons: Any, angle: float) -> list[list[tuple[float, float]]]:
+    def rotate_polygons(polygons: Any, angle: float) -> list[Polygon]:
         """Rotate multiple polygons by an angle.
 
         :param polygons: List of polygons to rotate.
@@ -1778,10 +1778,10 @@ fn rotate_polygons_py(
 
 #[gen_stub_pyfunction(python = r#"
     def scale_polygon(
-        polygon: Sequence[tuple[float, float]],
+        polygon: Sequence[Point],
         scale: float,
         scale_y: Optional[float] = None,
-    ) -> list[tuple[float, float]]:
+    ) -> Polygon:
         """Scale a polygon.
 
         :param polygon: Polygon as (x, y) points.
@@ -1798,10 +1798,10 @@ fn scale_polygon_py(polygon: Vec<PyPoint2D>, scale: f64, scale_y: Option<f64>) -
 
 #[gen_stub_pyfunction(python = r#"
     def translate_polygon(
-        polygon: Sequence[tuple[float, float]],
+        polygon: Sequence[Point],
         dx: float,
         dy: float,
-    ) -> list[tuple[float, float]]:
+    ) -> Polygon:
         """Translate a polygon.
 
         :param polygon: Polygon as (x, y) points.
@@ -1856,7 +1856,7 @@ fn polygon_area_numpy_py(polygon: Bound<'_, PyArray2<f64>>) -> f64 {
 #[gen_stub_pyfunction(python = r#"
     def polygon_bounds_numpy(
         polygon: NDArray[f64],
-    ) -> tuple[float, float, float, float]:
+    ) -> Rect:
         """Get bounds of a polygon from numpy array.
 
         :param polygon: Polygon as a 2D numpy array.
@@ -1886,7 +1886,7 @@ fn polygon_perimeter_numpy_py(polygon: Bound<'_, PyArray2<f64>>) -> f64 {
 #[gen_stub_pyfunction(python = r#"
     def polygon_group_bounds_numpy(
         polygons: Sequence[NDArray[f64]],
-    ) -> tuple[float, float, float, float]:
+    ) -> Rect:
         """Get bounds of polygon group from numpy arrays.
 
         :param polygons: Sequence of 2D numpy arrays.
@@ -1980,7 +1980,7 @@ fn normalize_polygons_numpy_py(
 
 #[gen_stub_pyfunction(python = r#"
     def point_in_polygon_numpy(
-        point: tuple[float, float],
+        point: Point,
         polygon: NDArray[f64],
     ) -> bool:
         """Check if point is in polygon from numpy array.
@@ -2157,11 +2157,11 @@ fn to_clipper_numpy_py(
 
 #[gen_stub_pyfunction(python = r#"
     def get_line_line_intersection(
-        p1: tuple[float, float],
-        p2: tuple[float, float],
-        p3: tuple[float, float],
-        p4: tuple[float, float],
-    ) -> Optional[tuple[float, float]]:
+        p1: Point,
+        p2: Point,
+        p3: Point,
+        p4: Point,
+    ) -> Optional[Point]:
         """Get the intersection of two infinite lines.
 
         :param p1: First point on line 1.
@@ -2183,11 +2183,11 @@ fn get_line_line_intersection_py(
 
 #[gen_stub_pyfunction(python = r#"
     def get_line_segment_intersection(
-        p1: tuple[float, float],
-        p2: tuple[float, float],
-        p3: tuple[float, float],
-        p4: tuple[float, float],
-    ) -> Optional[tuple[float, float]]:
+        p1: Point,
+        p2: Point,
+        p3: Point,
+        p4: Point,
+    ) -> Optional[Point]:
         """Get the intersection of two line segments.
 
         :param p1: Start of segment 1.
@@ -2209,11 +2209,11 @@ fn get_line_segment_intersection_py(
 
 #[gen_stub_pyfunction(python = r#"
     def get_line_closest_point(
-        line_p1: tuple[float, float],
-        line_p2: tuple[float, float],
+        line_p1: Point,
+        line_p2: Point,
         x: float,
         y: float,
-    ) -> tuple[float, float]:
+    ) -> Point:
         """Get the closest point on a line to a given point.
 
         :param line_p1: First point on the line.
@@ -2235,11 +2235,11 @@ fn get_line_closest_point_py(
 
 #[gen_stub_pyfunction(python = r#"
     def get_line_segment_closest_point(
-        seg_p1: tuple[float, float],
-        seg_p2: tuple[float, float],
+        seg_p1: Point,
+        seg_p2: Point,
         x: float,
         y: float,
-    ) -> tuple[float, tuple[float, float], float]:
+    ) -> tuple[float, Point, float]:
         """Get closest point on a line segment to a point.
 
         :param seg_p1: Start of the line segment.
@@ -2261,9 +2261,9 @@ fn get_line_segment_closest_point_py(
 
 #[gen_stub_pyfunction(python = r#"
     def get_point_line_distance(
-        point: tuple[float, float],
-        line_p1: tuple[float, float],
-        line_p2: tuple[float, float],
+        point: Point,
+        line_p1: Point,
+        line_p2: Point,
     ) -> float:
         """Get the distance from a point to a line.
 
@@ -2284,9 +2284,9 @@ fn get_point_line_distance_py(
 
 #[gen_stub_pyfunction(python = r#"
     def is_point_on_line_segment(
-        point: tuple[float, float],
-        seg_p1: tuple[float, float],
-        seg_p2: tuple[float, float],
+        point: Point,
+        seg_p1: Point,
+        seg_p2: Point,
     ) -> bool:
         """Check if a point is on a line segment.
 
@@ -2307,9 +2307,9 @@ fn is_point_on_line_segment_py(
 
 #[gen_stub_pyfunction(python = r#"
     def does_line_segment_intersect_rect(
-        p1: tuple[float, float],
-        p2: tuple[float, float],
-        rect: tuple[float, float, float, float],
+        p1: Point,
+        p2: Point,
+        rect: Rect,
     ) -> bool:
         """Check if a line segment intersects a rectangle.
 
@@ -2330,9 +2330,9 @@ fn does_line_segment_intersect_rect_py(
 
 #[gen_stub_pyfunction(python = r#"
     def does_line_segment_intersect_circle(
-        p1: tuple[float, float],
-        p2: tuple[float, float],
-        circle_center: tuple[float, float],
+        p1: Point,
+        p2: Point,
+        circle_center: Point,
         circle_radius: float,
     ) -> bool:
         """Check if a line segment intersects a circle.
@@ -2356,9 +2356,9 @@ fn does_line_segment_intersect_circle_py(
 
 #[gen_stub_pyfunction(python = r#"
     def get_line_segment_polygon_intersections(
-        p1: tuple[float, float],
-        p2: tuple[float, float],
-        polygon: list[list[tuple[float, float]]],
+        p1: Point,
+        p2: Point,
+        polygon: list[Polygon],
     ) -> list[float]:
         """Get t-values of line segment-polygon intersections.
 
@@ -2379,8 +2379,8 @@ fn get_line_segment_polygon_intersections_py(
 
 #[gen_stub_pyfunction(python = r#"
     def is_point_inside_rect(
-        point: tuple[float, float],
-        rect: tuple[float, float, float, float],
+        point: Point,
+        rect: Rect,
     ) -> bool:
         """Check if a point is inside a rectangle.
 
@@ -2396,8 +2396,8 @@ fn is_point_inside_rect_py(point: Point, rect: (f64, f64, f64, f64)) -> bool {
 
 #[gen_stub_pyfunction(python = r#"
     def does_rect_contain_rect(
-        outer: tuple[float, float, float, float],
-        inner: tuple[float, float, float, float],
+        outer: Rect,
+        inner: Rect,
     ) -> bool:
         """Check if one rectangle contains another.
 
@@ -2416,8 +2416,8 @@ fn does_rect_contain_rect_py(
 
 #[gen_stub_pyfunction(python = r#"
     def does_rect_intersect_rect(
-        r1: tuple[float, float, float, float],
-        r2: tuple[float, float, float, float],
+        r1: Rect,
+        r2: Rect,
     ) -> bool:
         """Check if two rectangles intersect.
 
@@ -2437,9 +2437,9 @@ fn does_rect_intersect_rect_py(
 
 #[gen_stub_pyfunction(python = r#"
     def midpoint(
-        p1: tuple[float, float, float],
-        p2: tuple[float, float, float],
-    ) -> tuple[float, float, float]:
+        p1: Point3D,
+        p2: Point3D,
+    ) -> Point3D:
         """Get the midpoint between two 3D points.
 
         :param p1: First point (x, y, z).

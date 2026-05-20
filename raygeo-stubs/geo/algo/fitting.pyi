@@ -17,7 +17,7 @@ __all__ = [
     "project_circle_center_to_bisector",
 ]
 
-def are_points_collinear(points: Sequence[tuple[float, float, float]], tolerance: float = 0.000001) -> bool:
+def are_points_collinear(points: Sequence[Point3D], tolerance: float = 0.000001) -> bool:
     r"""
     Check if three or more points are collinear within tolerance.
     
@@ -26,7 +26,7 @@ def are_points_collinear(points: Sequence[tuple[float, float, float]], tolerance
     :returns: True if points are collinear.
     """
 
-def convert_arc_to_beziers_from_array(start: tuple[float, float, float], end: tuple[float, float, float], center_offset: tuple[float, float], clockwise: bool) -> list[list[float]]:
+def convert_arc_to_beziers_from_array(start: Point3D, end: Point3D, center_offset: Point, clockwise: bool) -> list[list[float]]:
     r"""
     Convert an arc to bezier curves.
     
@@ -37,7 +37,7 @@ def convert_arc_to_beziers_from_array(start: tuple[float, float, float], end: tu
     :returns: List of bezier command rows.
     """
 
-def create_arc_cmd(end: tuple[float, float, float], center: tuple[float, float], start: tuple[float, float, float]) -> list[float]:
+def create_arc_cmd(end: Point3D, center: Point, start: Point3D) -> list[float]:
     r"""
     Create an arc command array.
     
@@ -47,7 +47,7 @@ def create_arc_cmd(end: tuple[float, float, float], center: tuple[float, float],
     :returns: Arc command array (8 floats).
     """
 
-def create_line_cmd(end_point: tuple[float, float, float]) -> list[float]:
+def create_line_cmd(end_point: Point3D) -> list[float]:
     r"""
     Create a line command array from an end point.
     
@@ -55,7 +55,7 @@ def create_line_cmd(end_point: tuple[float, float, float]) -> list[float]:
     :returns: Line command array (8 floats).
     """
 
-def fit_circle_to_3_points(p1: tuple[float, float] | tuple[float, float, float], p2: tuple[float, float] | tuple[float, float, float], p3: tuple[float, float] | tuple[float, float, float]) -> Optional[tuple[tuple[float, float], float]]:
+def fit_circle_to_3_points(p1: Point2DOr3D, p2: Point2DOr3D, p3: Point2DOr3D) -> Optional[tuple[Point, float]]:
     r"""
     Fit a circle to three points.
     
@@ -65,7 +65,7 @@ def fit_circle_to_3_points(p1: tuple[float, float] | tuple[float, float, float],
     :returns: Tuple of (center, radius) or None.
     """
 
-def fit_circle_to_points(points: Sequence[tuple[float, float, float]]) -> Optional[tuple[tuple[float, float], float, float]]:
+def fit_circle_to_points(points: Sequence[Point3D]) -> Optional[tuple[Point, float, float]]:
     r"""
     Fit a circle to a set of points.
     
@@ -73,7 +73,7 @@ def fit_circle_to_points(points: Sequence[tuple[float, float, float]]) -> Option
     :returns: Tuple of (center, radius, error) or None.
     """
 
-def fit_points_recursive(points: Sequence[tuple[float, float, float]], tolerance: float, start_idx: int, end_idx: int) -> list[list[float]]:
+def fit_points_recursive(points: Sequence[Point3D], tolerance: float, start_idx: int, end_idx: int) -> list[list[float]]:
     r"""
     Recursively fit points with line and arc primitives.
     
@@ -84,7 +84,7 @@ def fit_points_recursive(points: Sequence[tuple[float, float, float]], tolerance
     :returns: List of fitted command rows.
     """
 
-def fit_points_with_primitives(points: Sequence[tuple[float, float, float]], tolerance: float) -> list[list[float]]:
+def fit_points_with_primitives(points: Sequence[Point3D], tolerance: float) -> list[list[float]]:
     r"""
     Fit a polyline of points with arc and line primitives.
     
@@ -93,7 +93,7 @@ def fit_points_with_primitives(points: Sequence[tuple[float, float, float]], tol
     :returns: List of fitted command rows.
     """
 
-def flatten_to_points(data: Sequence[Sequence[float]], tolerance: float) -> list[list[tuple[float, float, float]]]:
+def flatten_to_points(data: Sequence[Sequence[float]], tolerance: float) -> list[list[Point3D]]:
     r"""
     Flatten curves into linear segments.
     
@@ -102,7 +102,7 @@ def flatten_to_points(data: Sequence[Sequence[float]], tolerance: float) -> list
     :returns: List of flattened point segments.
     """
 
-def get_polyline_arc_deviation(points: Sequence[tuple[float, float, float]], center: tuple[float, float], radius: float) -> float:
+def get_polyline_arc_deviation(points: Sequence[Point3D], center: Point, radius: float) -> float:
     r"""
     Get the maximum arc deviation for a set of points.
     
@@ -112,7 +112,7 @@ def get_polyline_arc_deviation(points: Sequence[tuple[float, float, float]], cen
     :returns: Maximum deviation from the arc.
     """
 
-def get_polyline_line_deviation(points: Sequence[tuple[float, float, float]], start: int, end: int) -> tuple[float, int]:
+def get_polyline_line_deviation(points: Sequence[Point3D], start: int, end: int) -> tuple[float, int]:
     r"""
     Get the maximum line deviation for a segment of a polyline.
     
@@ -131,7 +131,7 @@ def linearize_geometry(data: Sequence[Sequence[float]], tolerance: float) -> lis
     :returns: List of linearized segment rows.
     """
 
-def project_circle_center_to_bisector(p1: tuple[float, float] | tuple[float, float, float], p2: tuple[float, float] | tuple[float, float, float], center: tuple[float, float]) -> tuple[float, float]:
+def project_circle_center_to_bisector(p1: Point2DOr3D, p2: Point2DOr3D, center: Point) -> Point:
     r"""
     Project a circle center onto the perpendicular bisector of two points.
     

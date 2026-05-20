@@ -18,7 +18,7 @@ __all__ = [
     "split_bezier",
 ]
 
-def bezier_flatness_sq(a: tuple[float, float, float], b: tuple[float, float, float], c: tuple[float, float, float], d: tuple[float, float, float]) -> float:
+def bezier_flatness_sq(a: Point3D, b: Point3D, c: Point3D, d: Point3D) -> float:
     r"""
     Compute the flatness squared of a cubic bezier.
     
@@ -29,7 +29,7 @@ def bezier_flatness_sq(a: tuple[float, float, float], b: tuple[float, float, flo
     :returns: Flatness squared value.
     """
 
-def clip_bezier_with_rect(p0: tuple[float, float], p1: tuple[float, float], p2: tuple[float, float], p3: tuple[float, float], rect: tuple[float, float, float, float]) -> list[tuple[tuple[float, float], tuple[float, float], tuple[float, float], tuple[float, float]]]:
+def clip_bezier_with_rect(p0: Point, p1: Point, p2: Point, p3: Point, rect: Rect) -> list[tuple[Point, Point, Point, Point]]:
     r"""
     Clip a cubic bezier with a rectangle.
     
@@ -41,7 +41,7 @@ def clip_bezier_with_rect(p0: tuple[float, float], p1: tuple[float, float], p2: 
     :returns: List of bezier segments inside the rectangle.
     """
 
-def convert_cubic_bezier_to_quadratic(p0: tuple[float, float], p1: tuple[float, float], p2: tuple[float, float], p3: tuple[float, float]) -> tuple[tuple[float, float], tuple[float, float], tuple[float, float]]:
+def convert_cubic_bezier_to_quadratic(p0: Point, p1: Point, p2: Point, p3: Point) -> tuple[Point, Point, Point]:
     r"""
     Convert a cubic bezier to a quadratic bezier.
     
@@ -52,7 +52,7 @@ def convert_cubic_bezier_to_quadratic(p0: tuple[float, float], p1: tuple[float, 
     :returns: Quadratic bezier (p0, p1, p2).
     """
 
-def flatten_bezier(p0: tuple[float, float, float], p1: tuple[float, float, float], p2: tuple[float, float, float], p3: tuple[float, float, float], tolerance: float, max_subdivisions: int, pts: list) -> None:
+def flatten_bezier(p0: Point3D, p1: Point3D, p2: Point3D, p3: Point3D, tolerance: float, max_subdivisions: int, pts: list) -> None:
     r"""
     Flatten a bezier curve into points.
     
@@ -65,7 +65,7 @@ def flatten_bezier(p0: tuple[float, float, float], p1: tuple[float, float, float
     :param pts: Output list to append points to.
     """
 
-def get_bezier_bounds(p0: tuple[float, float], p1: tuple[float, float], p2: tuple[float, float], p3: tuple[float, float]) -> tuple[float, float, float, float]:
+def get_bezier_bounds(p0: Point, p1: Point, p2: Point, p3: Point) -> Rect:
     r"""
     Get the bounding rectangle of a cubic bezier.
     
@@ -76,7 +76,7 @@ def get_bezier_bounds(p0: tuple[float, float], p1: tuple[float, float], p2: tupl
     :returns: Bounding rectangle as (x_min, y_min, x_max, y_max).
     """
 
-def get_bezier_point_at(p0: tuple[float, float], p1: tuple[float, float], p2: tuple[float, float], p3: tuple[float, float], t: float) -> tuple[float, float]:
+def get_bezier_point_at(p0: Point, p1: Point, p2: Point, p3: Point, t: float) -> Point:
     r"""
     Get a point on a cubic bezier at parameter t.
     
@@ -88,7 +88,7 @@ def get_bezier_point_at(p0: tuple[float, float], p1: tuple[float, float], p2: tu
     :returns: Point on the bezier curve (x, y).
     """
 
-def get_bezier_rect_intersections(p0: tuple[float, float], p1: tuple[float, float], p2: tuple[float, float], p3: tuple[float, float], rect: tuple[float, float, float, float]) -> list[float]:
+def get_bezier_rect_intersections(p0: Point, p1: Point, p2: Point, p3: Point, rect: Rect) -> list[float]:
     r"""
     Get intersection t-values of a bezier with a rectangle.
     
@@ -100,7 +100,7 @@ def get_bezier_rect_intersections(p0: tuple[float, float], p1: tuple[float, floa
     :returns: List of t-values where the bezier intersects.
     """
 
-def is_bezier_inside_polygons(p0: tuple[float, float], p1: tuple[float, float], p2: tuple[float, float], p3: tuple[float, float], polygons: Any) -> bool:
+def is_bezier_inside_polygons(p0: Point, p1: Point, p2: Point, p3: Point, polygons: Any) -> bool:
     r"""
     Check if a bezier curve is inside a set of polygons.
     
@@ -112,7 +112,7 @@ def is_bezier_inside_polygons(p0: tuple[float, float], p1: tuple[float, float], 
     :returns: True if the bezier is inside all polygons.
     """
 
-def linearize_bezier(p0: tuple[float, float, float], p1: tuple[float, float, float], p2: tuple[float, float, float], p3: tuple[float, float, float], num_steps: int) -> list[tuple[tuple[float, float, float], tuple[float, float, float]]]:
+def linearize_bezier(p0: Point3D, p1: Point3D, p2: Point3D, p3: Point3D, num_steps: int) -> list[tuple[Point3D, Point3D]]:
     r"""
     Linearize a bezier into line segments.
     
@@ -124,7 +124,7 @@ def linearize_bezier(p0: tuple[float, float, float], p1: tuple[float, float, flo
     :returns: List of (p1, p2) segment pairs.
     """
 
-def linearize_bezier_adaptive(p0: tuple[float, float], p1: tuple[float, float], p2: tuple[float, float], p3: tuple[float, float], tolerance_sq: float, max_subdivisions: int = 20) -> list[tuple[float, float]]:
+def linearize_bezier_adaptive(p0: Point, p1: Point, p2: Point, p3: Point, tolerance_sq: float, max_subdivisions: int = 20) -> Polygon:
     r"""
     Adaptively linearize a bezier curve.
     
@@ -137,7 +137,7 @@ def linearize_bezier_adaptive(p0: tuple[float, float], p1: tuple[float, float], 
     :returns: List of linearized points (x, y).
     """
 
-def linearize_bezier_from_array(bezier_row: Sequence[float], start_point: tuple[float, float, float], max_seg_length: float) -> list[list[float]]:
+def linearize_bezier_from_array(bezier_row: Sequence[float], start_point: Point3D, max_seg_length: float) -> list[list[float]]:
     r"""
     Linearize a bezier from array data.
     
@@ -147,7 +147,7 @@ def linearize_bezier_from_array(bezier_row: Sequence[float], start_point: tuple[
     :returns: List of segment rows.
     """
 
-def linearize_bezier_segment(p0: tuple[float, float, float], p1: tuple[float, float, float], p2: tuple[float, float, float], p3: tuple[float, float, float], tolerance: float = 0.1) -> list[tuple[float, float, float]]:
+def linearize_bezier_segment(p0: Point3D, p1: Point3D, p2: Point3D, p3: Point3D, tolerance: float = 0.1) -> list[Point3D]:
     r"""
     Linearize a single bezier segment.
     
@@ -159,7 +159,7 @@ def linearize_bezier_segment(p0: tuple[float, float, float], p1: tuple[float, fl
     :returns: List of linearized points (x, y, z).
     """
 
-def perp_dist_sq(pt: tuple[float, float, float], origin: tuple[float, float, float], vx: float, vy: float, vz: float = 0, norm_sq: float = 0) -> float:
+def perp_dist_sq(pt: Point3D, origin: Point3D, vx: float, vy: float, vz: float = 0, norm_sq: float = 0) -> float:
     r"""
     Compute the perpendicular distance squared.
     
@@ -172,7 +172,7 @@ def perp_dist_sq(pt: tuple[float, float, float], origin: tuple[float, float, flo
     :returns: Perpendicular distance squared.
     """
 
-def split_bezier(p0: tuple[float, float], p1: tuple[float, float], p2: tuple[float, float], p3: tuple[float, float], t: float) -> tuple[tuple[tuple[float, float], tuple[float, float], tuple[float, float], tuple[float, float]], tuple[tuple[float, float], tuple[float, float], tuple[float, float], tuple[float, float]]]:
+def split_bezier(p0: Point, p1: Point, p2: Point, p3: Point, t: float) -> tuple[tuple[Point, Point, Point, Point], tuple[Point, Point, Point, Point]]:
     r"""
     Split a cubic bezier at parameter t.
     

@@ -132,7 +132,13 @@ submit! {
         r#"
         class Geometry:
             def transform(self, matrix: geo.TransformMatrix) -> Geometry:
-                """Apply a 4x4 affine transformation matrix."""
+                """Apply a 4x4 affine transformation matrix.
+
+                See ``raygeo.geo.TransformMatrix`` for the matrix layout.
+
+                :param matrix: A 4x4 affine transformation matrix.
+                :returns: A new transformed Geometry.
+                """
                 ...
         "#
     }

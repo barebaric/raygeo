@@ -5,7 +5,7 @@ __all__ = [
     "midpoint",
 ]
 
-def midpoint(p1: tuple[float, float, float], p2: tuple[float, float, float]) -> tuple[float, float, float]:
+def midpoint(p1: Point3D, p2: Point3D) -> Point3D:
     r"""
     Get the midpoint between two 3D points.
     

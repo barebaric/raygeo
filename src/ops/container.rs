@@ -279,7 +279,12 @@ submit! {
         r#"
         class PyOps:
             def transform(self, matrix: raygeo.geo.TransformMatrix) -> None:
-                """Apply a 4x4 transformation matrix to all geometry."""
+                """Apply a 4x4 affine transformation matrix to all geometry.
+
+                See ``raygeo.geo.TransformMatrix`` for the matrix layout.
+
+                :param matrix: A 4x4 affine transformation matrix.
+                """
                 ...
         "#
     }

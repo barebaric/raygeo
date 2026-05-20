@@ -6,7 +6,7 @@ __all__ = [
     "simplify_polyline_to_array",
 ]
 
-def simplify_polyline(points: Sequence[tuple[float, float]], tolerance: float) -> list[tuple[float, float]]:
+def simplify_polyline(points: Sequence[Point], tolerance: float) -> Polygon:
     r"""
     Simplify a polyline using the Ramer-Douglas-Peucker algorithm.
     
