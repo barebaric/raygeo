@@ -158,27 +158,29 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
         fitting_mod.clone()
     )?)?;
 
+    let analysis_mod = PyModule::new(py, "analysis")?;
+    analysis_mod.add_function(wrap_pyfunction!(
+        remove_duplicates_py,
+        analysis_mod.clone()
+    )?)?;
+
     algo_mod.add_submodule(&minkowski_mod)?;
     algo_mod.add_submodule(&simplify_mod)?;
     algo_mod.add_submodule(&clipping_mod)?;
     algo_mod.add_submodule(&smooth_mod)?;
     algo_mod.add_submodule(&fitting_mod)?;
+    algo_mod.add_submodule(&analysis_mod)?;
 
     m.add_submodule(&algo_mod)?;
 
     let sys_modules = py.import("sys")?.getattr("modules")?;
     sys_modules.set_item("raygeo.geo.algo", &algo_mod)?;
+    sys_modules.set_item("raygeo.geo.algo.analysis", &analysis_mod)?;
+    sys_modules.set_item("raygeo.geo.algo.clipping", &clipping_mod)?;
+    sys_modules.set_item("raygeo.geo.algo.fitting", &fitting_mod)?;
     sys_modules.set_item("raygeo.geo.algo.minkowski", &minkowski_mod)?;
     sys_modules.set_item("raygeo.geo.algo.simplify", &simplify_mod)?;
-    sys_modules.set_item("raygeo.geo.algo.clipping", &clipping_mod)?;
     sys_modules.set_item("raygeo.geo.algo.smooth", &smooth_mod)?;
-    sys_modules.set_item("raygeo.geo.algo.fitting", &fitting_mod)?;
-    sys_modules.set_item("raygeo.algo", &algo_mod)?;
-    sys_modules.set_item("raygeo.algo.minkowski", &minkowski_mod)?;
-    sys_modules.set_item("raygeo.algo.simplify", &simplify_mod)?;
-    sys_modules.set_item("raygeo.algo.clipping", &clipping_mod)?;
-    sys_modules.set_item("raygeo.algo.smooth", &smooth_mod)?;
-    sys_modules.set_item("raygeo.algo.fitting", &fitting_mod)?;
 
     Ok(())
 }
@@ -832,6 +834,22 @@ fn simplify_polyline_py(points: Vec<PyPoint2D>, tolerance: f64) -> Vec<Point> {
         pts.iter().map(|p| (p.0, p.1, 0.0)).collect();
     let result = simplify_polyline(&points_3d, tolerance);
     result.iter().map(|p| (p.0, p.1)).collect()
+}
+
+#[gen_stub_pyfunction(
+    python = r#"
+    def remove_duplicates(points: Sequence[Point]) -> Polygon:
+        """Remove duplicate points from a sequence.
+
+        :param points: Sequence of (x, y) points.
+        :returns: List of unique points.
+        """
+"#,
+    module = "raygeo.geo.algo.analysis"
+)]
+#[pyfunction(name = "remove_duplicates")]
+fn remove_duplicates_py(points: Vec<(f64, f64)>) -> Vec<(f64, f64)> {
+    raygeo_core::geo::algo::analysis::remove_duplicates(&points)
 }
 
 #[gen_stub_pyfunction(

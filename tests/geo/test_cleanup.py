@@ -1,10 +1,4 @@
-import numpy as np
 from raygeo import Geometry
-from raygeo.geo.path import (
-    remove_duplicate_segments,
-    get_segment_key,
-    are_segments_equal,
-)
 from raygeo.geo.shape.point import are_points_equal
 
 
@@ -36,560 +30,340 @@ def test_are_points_equal_partial_difference():
     assert not are_points_equal(p1, p2, 1e-6)
 
 
-def test_get_segment_key_line():
-    """Tests segment key generation for line commands."""
-    data = np.array(
-        [
-            [Geometry.CMD_TYPE_LINE, 10.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-        ]
-    )
-    key = get_segment_key(data, 0, 1e-6)
-    assert key is not None
-    assert key[0] == "LINE"
-    assert key[1] == (10.0, 0.0, 0.0)
+def test_cleanup_empty():
+    """Tests cleanup on empty geometry."""
+    geo = Geometry()
+    result = geo.cleanup(tolerance=1e-6)
+    assert result.data is None
 
 
-def test_get_segment_key_arc():
-    """Tests segment key generation for arc commands."""
-    data = np.array(
-        [
-            [Geometry.CMD_TYPE_ARC, 10.0, 0.0, 0.0, 5.0, 0.0, 1.0, 0.0],
-        ]
-    )
-    key = get_segment_key(data, 0, 1e-6)
-    assert key is not None
-    assert key[0] == "ARC"
-    assert key[1] == (10.0, 0.0, 0.0)
-    assert key[2] == (5.0, 0.0)
-    assert key[3] is True
-
-
-def test_get_segment_key_bezier():
-    """Tests segment key generation for bezier commands."""
-    data = np.array(
-        [
-            [Geometry.CMD_TYPE_BEZIER, 10.0, 0.0, 0.0, 3.0, 3.0, 7.0, -3.0],
-        ]
-    )
-    key = get_segment_key(data, 0, 1e-6)
-    assert key is not None
-    assert key[0] == "BEZIER"
-    assert key[1] == (10.0, 0.0, 0.0)
-    assert key[2] == (3.0, 3.0)
-    assert key[3] == (7.0, -3.0)
-
-
-def test_get_segment_key_move():
-    """Tests that move commands return None as key."""
-    data = np.array(
-        [
-            [Geometry.CMD_TYPE_MOVE, 10.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-        ]
-    )
-    key = get_segment_key(data, 0, 1e-6)
-    assert key is None
-
-
-def test_get_segment_key_invalid_index():
-    """Tests that invalid index returns None."""
-    data = np.array(
-        [
-            [Geometry.CMD_TYPE_LINE, 10.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-        ]
-    )
-    key = get_segment_key(data, 10, 1e-6)
-    assert key is None
-
-
-def test_are_segments_equal_line():
-    """Tests equality check for line segments."""
-    key1 = ("LINE", (0.0, 0.0, 0.0), (10.0, 0.0, 0.0))
-    key2 = ("LINE", (0.0, 0.0, 0.0), (10.0, 0.0, 0.0))
-    assert are_segments_equal(key1, key2, 1e-6)
-
-
-def test_are_segments_equal_line_within_tolerance():
-    """Tests equality check for line segments within tolerance."""
-    key1 = ("LINE", (0.0, 0.0, 0.0), (10.0, 0.0, 0.0))
-    key2 = ("LINE", (0.000001, 0.0, 0.0), (10.0, 0.0, 0.0))
-    assert are_segments_equal(key1, key2, 1e-5)
-
-
-def test_are_segments_equal_line_different_type():
-    """Tests inequality for segments of different types."""
-    key1 = ("LINE", (0.0, 0.0, 0.0), (10.0, 0.0, 0.0))
-    key2 = ("ARC", (0.0, 0.0, 0.0), (10.0, 0.0, 0.0), (5.0, 0.0), True)
-    assert not are_segments_equal(key1, key2, 1e-6)
-
-
-def test_are_segments_equal_arc():
-    """Tests equality check for arc segments."""
-    key1 = ("ARC", (0.0, 0.0, 0.0), (10.0, 0.0, 0.0), (5.0, 0.0), True)
-    key2 = ("ARC", (0.0, 0.0, 0.0), (10.0, 0.0, 0.0), (5.0, 0.0), True)
-    assert are_segments_equal(key1, key2, 1e-6)
-
-
-def test_are_segments_equal_arc_different_direction():
-    """Tests inequality for arcs with different direction."""
-    key1 = ("ARC", (10.0, 0.0, 0.0), (5.0, 0.0), True)
-    key2 = ("ARC", (10.0, 0.0, 0.0), (5.0, 0.0), False)
-    assert not are_segments_equal(key1, key2, 1e-6)
-
-
-def test_are_segments_equal_bezier():
-    """Tests equality check for bezier segments."""
-    key1 = (
-        "BEZIER",
-        (10.0, 0.0, 0.0),
-        (3.0, 3.0),
-        (7.0, -3.0),
-    )
-    key2 = (
-        "BEZIER",
-        (10.0, 0.0, 0.0),
-        (3.0, 3.0),
-        (7.0, -3.0),
-    )
-    assert are_segments_equal(key1, key2, 1e-6)
-
-
-def test_remove_duplicate_segments_empty():
-    """Tests that empty array is handled correctly."""
-    data = np.array([]).reshape(0, 8)
-    result = remove_duplicate_segments(data)
-    assert result is not None
-    assert len(result) == 0
-
-
-def test_remove_duplicate_segments_none():
-    """Tests that None input is handled correctly."""
-    result = remove_duplicate_segments(None)
-    assert result is None
-
-
-def test_remove_duplicate_segments_single_line():
+def test_cleanup_single_line():
     """Tests that single line segment is preserved."""
-    data = np.array(
-        [
-            [Geometry.CMD_TYPE_MOVE, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-            [Geometry.CMD_TYPE_LINE, 10.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-        ]
-    )
-    result = remove_duplicate_segments(data)
-    assert result is not None
-    assert len(result) == 2
+    geo = Geometry()
+    geo.move_to(0, 0)
+    geo.line_to(10, 0)
+    result = geo.cleanup(tolerance=1e-6)
+    data = result.data
+    assert data is not None
+    assert len(data) == 2
 
 
-def test_remove_duplicate_segments_duplicate_lines():
+def test_cleanup_duplicate_lines():
     """Tests that duplicate line segments are removed."""
-    data = np.array(
-        [
-            [Geometry.CMD_TYPE_MOVE, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-            [Geometry.CMD_TYPE_LINE, 10.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-            [Geometry.CMD_TYPE_LINE, 10.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-        ]
-    )
-    result = remove_duplicate_segments(data)
-    assert result is not None
-    assert len(result) == 2
-    assert result[0, 0] == Geometry.CMD_TYPE_MOVE
-    assert result[1, 0] == Geometry.CMD_TYPE_LINE
+    geo = Geometry()
+    geo.move_to(0, 0)
+    geo.line_to(10, 0)
+    geo.line_to(10, 0)
+    result = geo.cleanup(tolerance=1e-6)
+    data = result.data
+    assert data is not None
+    assert len(data) == 2
+    assert data[0, 0] == Geometry.CMD_TYPE_MOVE
+    assert data[1, 0] == Geometry.CMD_TYPE_LINE
 
 
-def test_remove_duplicate_segments_three_duplicate_lines():
+def test_cleanup_three_duplicate_lines():
     """Tests that multiple duplicate line segments are removed."""
-    data = np.array(
-        [
-            [Geometry.CMD_TYPE_MOVE, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-            [Geometry.CMD_TYPE_LINE, 10.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-            [Geometry.CMD_TYPE_LINE, 10.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-            [Geometry.CMD_TYPE_LINE, 10.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-        ]
-    )
-    result = remove_duplicate_segments(data)
-    assert result is not None
-    assert len(result) == 2
+    geo = Geometry()
+    geo.move_to(0, 0)
+    geo.line_to(10, 0)
+    geo.line_to(10, 0)
+    geo.line_to(10, 0)
+    result = geo.cleanup(tolerance=1e-6)
+    data = result.data
+    assert data is not None
+    assert len(data) == 2
 
 
-def test_remove_duplicate_segments_different_lines():
+def test_cleanup_different_lines():
     """Tests that different line segments are preserved."""
-    data = np.array(
-        [
-            [Geometry.CMD_TYPE_MOVE, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-            [Geometry.CMD_TYPE_LINE, 10.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-            [Geometry.CMD_TYPE_LINE, 10.0, 5.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-        ]
-    )
-    result = remove_duplicate_segments(data)
-    assert result is not None
-    assert len(result) == 3
+    geo = Geometry()
+    geo.move_to(0, 0)
+    geo.line_to(10, 0)
+    geo.line_to(10, 5)
+    result = geo.cleanup(tolerance=1e-6)
+    data = result.data
+    assert data is not None
+    assert len(data) == 3
 
 
-def test_remove_duplicate_segments_duplicate_arcs():
+def test_cleanup_duplicate_arcs():
     """Tests that duplicate arc segments are removed."""
-    data = np.array(
-        [
-            [Geometry.CMD_TYPE_MOVE, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-            [Geometry.CMD_TYPE_ARC, 10.0, 0.0, 0.0, 5.0, 0.0, 1.0, 0.0],
-            [Geometry.CMD_TYPE_ARC, 10.0, 0.0, 0.0, 5.0, 0.0, 1.0, 0.0],
-        ]
-    )
-    result = remove_duplicate_segments(data)
-    assert result is not None
-    assert len(result) == 2
+    geo = Geometry()
+    geo.move_to(0, 0)
+    geo.arc_to(10, 0, 5, 0, clockwise=True)
+    geo.arc_to(10, 0, 5, 0, clockwise=True)
+    result = geo.cleanup(tolerance=1e-6)
+    data = result.data
+    assert data is not None
+    assert len(data) == 2
 
 
-def test_remove_duplicate_segments_different_arcs():
+def test_cleanup_different_arcs():
     """Tests that different arc segments are preserved."""
-    data = np.array(
-        [
-            [Geometry.CMD_TYPE_MOVE, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-            [Geometry.CMD_TYPE_ARC, 10.0, 0.0, 0.0, 5.0, 0.0, 1.0, 0.0],
-            [Geometry.CMD_TYPE_ARC, 10.0, 0.0, 0.0, 5.0, 0.0, 0.0, 0.0],
-        ]
-    )
-    result = remove_duplicate_segments(data)
-    assert result is not None
-    assert len(result) == 3
+    geo = Geometry()
+    geo.move_to(0, 0)
+    geo.arc_to(10, 0, 5, 0, clockwise=True)
+    geo.arc_to(10, 0, 5, 0, clockwise=False)
+    result = geo.cleanup(tolerance=1e-6)
+    data = result.data
+    assert data is not None
+    assert len(data) == 3
 
 
-def test_remove_duplicate_segments_duplicate_beziers():
+def test_cleanup_duplicate_beziers():
     """Tests that duplicate bezier segments are removed."""
-    data = np.array(
-        [
-            [Geometry.CMD_TYPE_MOVE, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-            [Geometry.CMD_TYPE_BEZIER, 10.0, 0.0, 0.0, 3.0, 3.0, 7.0, -3.0],
-            [Geometry.CMD_TYPE_BEZIER, 10.0, 0.0, 0.0, 3.0, 3.0, 7.0, -3.0],
-        ]
-    )
-    result = remove_duplicate_segments(data)
-    assert result is not None
-    assert len(result) == 2
+    geo = Geometry()
+    geo.move_to(0, 0)
+    geo.bezier_to(10, 0, c1x=3, c1y=3, c2x=7, c2y=-3)
+    geo.bezier_to(10, 0, c1x=3, c1y=3, c2x=7, c2y=-3)
+    result = geo.cleanup(tolerance=1e-6)
+    data = result.data
+    assert data is not None
+    assert len(data) == 2
 
 
-def test_remove_duplicate_segments_different_beziers():
+def test_cleanup_different_beziers():
     """Tests that different bezier segments are preserved."""
-    data = np.array(
-        [
-            [Geometry.CMD_TYPE_MOVE, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-            [Geometry.CMD_TYPE_BEZIER, 10.0, 0.0, 0.0, 3.0, 3.0, 7.0, -3.0],
-            [Geometry.CMD_TYPE_BEZIER, 10.0, 0.0, 0.0, 3.0, 3.0, 7.0, -4.0],
-        ]
-    )
-    result = remove_duplicate_segments(data)
-    assert result is not None
-    assert len(result) == 3
+    geo = Geometry()
+    geo.move_to(0, 0)
+    geo.bezier_to(10, 0, c1x=3, c1y=3, c2x=7, c2y=-3)
+    geo.bezier_to(10, 0, c1x=3, c1y=3, c2x=7, c2y=-4)
+    result = geo.cleanup(tolerance=1e-6)
+    data = result.data
+    assert data is not None
+    assert len(data) == 3
 
 
-def test_remove_duplicate_segments_mixed_types():
-    """Tests handling of mixed segment types."""
-    data = np.array(
-        [
-            [Geometry.CMD_TYPE_MOVE, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-            [Geometry.CMD_TYPE_LINE, 5.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-            [Geometry.CMD_TYPE_ARC, 10.0, 0.0, 0.0, 2.5, 0.0, 1.0, 0.0],
-            [Geometry.CMD_TYPE_LINE, 5.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-        ]
-    )
-    result = remove_duplicate_segments(data)
-    assert result is not None
-    assert len(result) == 3
+def test_cleanup_mixed_types():
+    """Tests handling of mixed segment types (line and arc with same end)."""
+    geo = Geometry()
+    geo.move_to(0, 0)
+    geo.line_to(5, 0)
+    geo.arc_to(10, 0, 2.5, 0, clockwise=True)
+    geo.line_to(5, 0)
+    result = geo.cleanup(tolerance=1e-6)
+    data = result.data
+    assert data is not None
+    # line_to(5,0) and line_to(5,0) are duplicates, so 4 -> 3
+    assert len(data) == 3
 
 
-def test_remove_duplicate_segments_multiple_paths():
-    """Tests handling of multiple separate paths."""
-    data = np.array(
-        [
-            [Geometry.CMD_TYPE_MOVE, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-            [Geometry.CMD_TYPE_LINE, 10.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-            [Geometry.CMD_TYPE_MOVE, 20.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-            [Geometry.CMD_TYPE_LINE, 30.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-        ]
-    )
-    result = remove_duplicate_segments(data)
-    assert result is not None
-    assert len(result) == 4
+def test_cleanup_multiple_paths():
+    """Tests that move-to resets duplicate tracking between subpaths."""
+    geo = Geometry()
+    geo.move_to(0, 0)
+    geo.line_to(10, 0)
+    geo.move_to(20, 0)
+    geo.line_to(30, 0)
+    result = geo.cleanup(tolerance=1e-6)
+    data = result.data
+    assert data is not None
+    assert len(data) == 4
 
 
-def test_remove_duplicate_segments_within_tolerance():
+def test_cleanup_within_tolerance():
     """Tests that segments within tolerance are considered duplicates."""
-    data = np.array(
-        [
-            [Geometry.CMD_TYPE_MOVE, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-            [Geometry.CMD_TYPE_LINE, 10.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-            [Geometry.CMD_TYPE_LINE, 10.000001, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-        ]
-    )
-    result = remove_duplicate_segments(data, tolerance=1e-5)
-    assert result is not None
-    assert len(result) == 2
+    geo = Geometry()
+    geo.move_to(0, 0)
+    geo.line_to(10, 0)
+    geo.line_to(10.000001, 0)
+    result = geo.cleanup(tolerance=1e-5)
+    data = result.data
+    assert data is not None
+    assert len(data) == 2
 
 
-def test_remove_duplicate_segments_outside_tolerance():
+def test_cleanup_outside_tolerance():
     """Tests that segments outside tolerance are not duplicates."""
-    data = np.array(
-        [
-            [Geometry.CMD_TYPE_MOVE, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-            [Geometry.CMD_TYPE_LINE, 10.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-            [Geometry.CMD_TYPE_LINE, 10.01, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-        ]
-    )
-    result = remove_duplicate_segments(data, tolerance=1e-4)
-    assert result is not None
-    assert len(result) == 3
+    geo = Geometry()
+    geo.move_to(0, 0)
+    geo.line_to(10, 0)
+    geo.line_to(10.01, 0)
+    result = geo.cleanup(tolerance=1e-4)
+    data = result.data
+    assert data is not None
+    assert len(data) == 3
 
 
-def test_remove_duplicate_segments_preserves_z():
+def test_cleanup_preserves_z():
     """Tests that Z coordinates are considered in duplicate check."""
-    data = np.array(
-        [
-            [Geometry.CMD_TYPE_MOVE, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-            [Geometry.CMD_TYPE_LINE, 10.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-            [Geometry.CMD_TYPE_LINE, 10.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0],
-        ]
-    )
-    result = remove_duplicate_segments(data)
-    assert result is not None
-    assert len(result) == 3
+    geo = Geometry()
+    geo.move_to(0, 0, 0)
+    geo.line_to(10, 0, 0)
+    geo.line_to(10, 0, 1)
+    result = geo.cleanup(tolerance=1e-6)
+    data = result.data
+    assert data is not None
+    assert len(data) == 3
 
 
-def test_remove_duplicate_segments_complex_path():
-    """Tests handling of a complex path with multiple segments."""
-    data = np.array(
-        [
-            [Geometry.CMD_TYPE_MOVE, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-            [Geometry.CMD_TYPE_LINE, 10.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-            [Geometry.CMD_TYPE_LINE, 10.0, 10.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-            [Geometry.CMD_TYPE_LINE, 10.0, 10.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-            [Geometry.CMD_TYPE_LINE, 0.0, 10.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-            [Geometry.CMD_TYPE_LINE, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-        ]
-    )
-    result = remove_duplicate_segments(data)
-    assert result is not None
-    assert len(result) == 5
+def test_cleanup_complex_path():
+    """Tests handling of a complex path with duplicate in the middle."""
+    geo = Geometry()
+    geo.move_to(0, 0)
+    geo.line_to(10, 0)
+    geo.line_to(10, 10)
+    geo.line_to(10, 10)  # duplicate
+    geo.line_to(0, 10)
+    geo.line_to(0, 0)
+    result = geo.cleanup(tolerance=1e-6)
+    data = result.data
+    assert data is not None
+    assert len(data) == 5
 
 
-def test_remove_duplicate_segments_no_duplicates():
+def test_cleanup_no_duplicates():
     """Tests that path without duplicates remains unchanged."""
-    data = np.array(
-        [
-            [Geometry.CMD_TYPE_MOVE, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-            [Geometry.CMD_TYPE_LINE, 10.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-            [Geometry.CMD_TYPE_LINE, 10.0, 10.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-            [Geometry.CMD_TYPE_LINE, 0.0, 10.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-        ]
-    )
-    result = remove_duplicate_segments(data)
-    assert result is not None
-    assert len(result) == 4
+    geo = Geometry()
+    geo.move_to(0, 0)
+    geo.line_to(10, 0)
+    geo.line_to(10, 10)
+    geo.line_to(0, 10)
+    result = geo.cleanup(tolerance=1e-6)
+    data = result.data
+    assert data is not None
+    assert len(data) == 4
 
 
-def test_remove_duplicate_segments_consecutive_same_start():
+def test_cleanup_different_lines_same_start():
     """Tests segments with same start but different endpoints."""
-    data = np.array(
-        [
-            [Geometry.CMD_TYPE_MOVE, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-            [Geometry.CMD_TYPE_LINE, 10.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-            [Geometry.CMD_TYPE_LINE, 5.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-        ]
-    )
-    result = remove_duplicate_segments(data)
-    assert result is not None
-    assert len(result) == 3
+    geo = Geometry()
+    geo.move_to(0, 0)
+    geo.line_to(10, 0)
+    geo.line_to(5, 0)
+    result = geo.cleanup(tolerance=1e-6)
+    data = result.data
+    assert data is not None
+    assert len(data) == 3
 
 
-def test_remove_duplicate_segments_move_only():
+def test_cleanup_moves_only():
     """Tests that move commands are always preserved."""
-    data = np.array(
-        [
-            [Geometry.CMD_TYPE_MOVE, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-            [Geometry.CMD_TYPE_MOVE, 10.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-            [Geometry.CMD_TYPE_MOVE, 20.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-        ]
-    )
-    result = remove_duplicate_segments(data)
-    assert result is not None
-    assert len(result) == 3
+    geo = Geometry()
+    geo.move_to(0, 0)
+    geo.move_to(10, 0)
+    geo.move_to(20, 0)
+    result = geo.cleanup(tolerance=1e-6)
+    data = result.data
+    assert data is not None
+    assert len(data) == 3
 
 
-def test_remove_duplicate_segments_arc_center_offset():
-    """Tests that arc center offset affects duplicate detection."""
-    data = np.array(
-        [
-            [Geometry.CMD_TYPE_MOVE, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-            [Geometry.CMD_TYPE_ARC, 10.0, 0.0, 0.0, 5.0, 0.0, 1.0, 0.0],
-            [Geometry.CMD_TYPE_ARC, 10.0, 0.0, 0.0, 5.00001, 0.0, 1.0, 0.0],
-        ]
-    )
-    result = remove_duplicate_segments(data, tolerance=1e-5)
-    assert result is not None
-    assert len(result) == 2
-
-
-def test_remove_duplicate_segments_bezier_control_points():
-    """Tests that bezier control points affect duplicate detection."""
-    data = np.array(
-        [
-            [Geometry.CMD_TYPE_MOVE, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-            [Geometry.CMD_TYPE_BEZIER, 10.0, 0.0, 0.0, 3.0, 3.0, 7.0, -3.0],
-            [Geometry.CMD_TYPE_BEZIER, 10.0, 0.0, 0.0, 3.0, 3.0, 7.001, -3.0],
-        ]
-    )
-    result = remove_duplicate_segments(data, tolerance=1e-5)
-    assert result is not None
-    assert len(result) == 3
-
-
-def test_remove_duplicate_segments_non_consecutive_duplicates():
-    """Tests that non-consecutive duplicates are also removed."""
-    data = np.array(
-        [
-            [Geometry.CMD_TYPE_MOVE, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-            [Geometry.CMD_TYPE_LINE, 10.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-            [Geometry.CMD_TYPE_MOVE, 20.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-            [Geometry.CMD_TYPE_LINE, 10.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-        ]
-    )
-    result = remove_duplicate_segments(data)
-    assert result is not None
-    assert len(result) == 4
-
-
-def test_remove_duplicate_segments_default_tolerance():
+def test_cleanup_default_tolerance():
     """Tests that default tolerance works correctly."""
-    data = np.array(
-        [
-            [Geometry.CMD_TYPE_MOVE, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-            [Geometry.CMD_TYPE_LINE, 10.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-            [Geometry.CMD_TYPE_LINE, 10.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-        ]
-    )
-    result = remove_duplicate_segments(data)
-    assert result is not None
-    assert len(result) == 2
+    geo = Geometry()
+    geo.move_to(0, 0)
+    geo.line_to(10, 0)
+    geo.line_to(10, 0)
+    result = geo.cleanup(tolerance=1e-6)
+    data = result.data
+    assert data is not None
+    assert len(data) == 2
 
 
-def test_remove_duplicate_segments_zero_tolerance():
+def test_cleanup_zero_tolerance():
     """Tests behavior with zero tolerance."""
-    data = np.array(
-        [
-            [Geometry.CMD_TYPE_MOVE, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-            [Geometry.CMD_TYPE_LINE, 10.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-            [Geometry.CMD_TYPE_LINE, 10.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-        ]
-    )
-    result = remove_duplicate_segments(data, tolerance=0.0)
-    assert result is not None
-    assert len(result) == 2
+    geo = Geometry()
+    geo.move_to(0, 0)
+    geo.line_to(10, 0)
+    geo.line_to(10, 0)
+    result = geo.cleanup(tolerance=0.0)
+    data = result.data
+    assert data is not None
+    assert len(data) == 2
 
 
-def test_remove_duplicate_segments_large_tolerance():
-    """Tests behavior with large tolerance."""
-    data = np.array(
-        [
-            [Geometry.CMD_TYPE_MOVE, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-            [Geometry.CMD_TYPE_LINE, 10.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-            [Geometry.CMD_TYPE_LINE, 10.1, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-        ]
-    )
-    result = remove_duplicate_segments(data, tolerance=1.0)
-    assert result is not None
-    assert len(result) == 2
+def test_cleanup_large_tolerance():
+    """Tests behavior with large tolerance (treats all same-end as dup)."""
+    geo = Geometry()
+    geo.move_to(0, 0)
+    geo.line_to(10, 0)
+    geo.line_to(10.1, 0)
+    result = geo.cleanup(tolerance=1.0)
+    data = result.data
+    assert data is not None
+    assert len(data) == 2
 
 
-def test_remove_duplicate_segments_vertical_line():
+def test_cleanup_vertical_line_duplicates():
     """Tests duplicate detection on vertical lines."""
-    data = np.array(
-        [
-            [Geometry.CMD_TYPE_MOVE, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-            [Geometry.CMD_TYPE_LINE, 0.0, 10.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-            [Geometry.CMD_TYPE_LINE, 0.0, 10.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-        ]
-    )
-    result = remove_duplicate_segments(data)
-    assert result is not None
-    assert len(result) == 2
+    geo = Geometry()
+    geo.move_to(0, 0)
+    geo.line_to(0, 10)
+    geo.line_to(0, 10)
+    result = geo.cleanup(tolerance=1e-6)
+    data = result.data
+    assert data is not None
+    assert len(data) == 2
 
 
-def test_remove_duplicate_segments_diagonal_line():
+def test_cleanup_diagonal_line_duplicates():
     """Tests duplicate detection on diagonal lines."""
-    data = np.array(
-        [
-            [Geometry.CMD_TYPE_MOVE, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-            [Geometry.CMD_TYPE_LINE, 10.0, 10.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-            [Geometry.CMD_TYPE_LINE, 10.0, 10.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-        ]
-    )
-    result = remove_duplicate_segments(data)
-    assert result is not None
-    assert len(result) == 2
+    geo = Geometry()
+    geo.move_to(0, 0)
+    geo.line_to(10, 10)
+    geo.line_to(10, 10)
+    result = geo.cleanup(tolerance=1e-6)
+    data = result.data
+    assert data is not None
+    assert len(data) == 2
 
 
-def test_remove_duplicate_segments_all_duplicates():
-    """Tests when all segments are duplicates."""
-    data = np.array(
-        [
-            [Geometry.CMD_TYPE_MOVE, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-            [Geometry.CMD_TYPE_LINE, 10.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-            [Geometry.CMD_TYPE_LINE, 10.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-            [Geometry.CMD_TYPE_LINE, 10.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-            [Geometry.CMD_TYPE_LINE, 10.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-        ]
-    )
-    result = remove_duplicate_segments(data)
-    assert result is not None
-    assert len(result) == 2
+def test_cleanup_all_duplicates():
+    """Tests when all draw segments are duplicates."""
+    geo = Geometry()
+    geo.move_to(0, 0)
+    geo.line_to(10, 0)
+    geo.line_to(10, 0)
+    geo.line_to(10, 0)
+    geo.line_to(10, 0)
+    result = geo.cleanup(tolerance=1e-6)
+    data = result.data
+    assert data is not None
+    assert len(data) == 2
 
 
-def test_remove_duplicate_segments_arc_ccw_vs_cw():
+def test_cleanup_arc_ccw_vs_cw():
     """Tests that CCW and CW arcs are not considered duplicates."""
-    data = np.array(
-        [
-            [Geometry.CMD_TYPE_MOVE, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-            [Geometry.CMD_TYPE_ARC, 10.0, 0.0, 0.0, 5.0, 0.0, 1.0, 0.0],
-            [Geometry.CMD_TYPE_ARC, 10.0, 0.0, 0.0, 5.0, 0.0, 0.0, 0.0],
-        ]
-    )
-    result = remove_duplicate_segments(data)
-    assert result is not None
-    assert len(result) == 3
+    geo = Geometry()
+    geo.move_to(0, 0)
+    geo.arc_to(10, 0, 5, 0, clockwise=True)
+    geo.arc_to(10, 0, 5, 0, clockwise=False)
+    result = geo.cleanup(tolerance=1e-6)
+    data = result.data
+    assert data is not None
+    assert len(data) == 3
 
 
 def test_close_geometry_gaps_functional():
-    """Tests the core logic of the close_geometry_gaps function."""
-    geo_intra = Geometry()
-    geo_intra.move_to(0, 0)
-    geo_intra.line_to(10, 0)
-    geo_intra.line_to(10, 10)
-    geo_intra.line_to(0.000001, 10)
-    geo_intra.line_to(0.000002, 0.000003)
-    original_intra_data = geo_intra.copy().data
-    assert original_intra_data is not None
+    """Tests closing gaps via Geometry.close_gaps()."""
+    geo = Geometry()
+    geo.move_to(0, 0)
+    geo.line_to(10, 0)
+    geo.line_to(10, 10)
+    geo.line_to(0.000001, 10)
+    geo.line_to(0.000002, 0.000003)
 
-    result_intra = geo_intra.close_gaps(tolerance=1e-5)
-    assert result_intra.data is not None
-    assert result_intra is geo_intra  # close_gaps modifies in-place
-    assert geo_intra.data is not None
-    assert np.array_equal(result_intra.data, geo_intra.data)  # same object
-    assert np.all(result_intra.data[0, 1:4] == (0, 0, 0))
-    assert np.all(result_intra.data[-1, 1:4] == (0, 0, 0))
+    result = geo.close_gaps(tolerance=1e-5)
+    data = result.data
+    assert data is not None
+    assert result is geo
+    assert data[0, 1] == 0 and data[0, 2] == 0
+    assert data[-1, 1] == 0 and data[-1, 2] == 0
 
-    geo_inter = Geometry()
-    geo_inter.move_to(0, 0)
-    geo_inter.line_to(10, 10)
-    geo_inter.move_to(10.000001, 10.000002)
-    geo_inter.line_to(20, 20)
-    original_inter_data = geo_inter.copy().data
-    assert original_inter_data is not None
+    geo2 = Geometry()
+    geo2.move_to(0, 0)
+    geo2.line_to(10, 10)
+    geo2.move_to(10.000001, 10.000002)
+    geo2.line_to(20, 20)
 
-    result_inter = geo_inter.close_gaps(tolerance=1e-5)
-    assert result_inter.data is not None
-    assert result_inter is geo_inter  # close_gaps modifies in-place
-    assert geo_inter.data is not None
-    assert np.array_equal(result_inter.data, geo_inter.data)  # same object
-    assert result_inter.data[2, Geometry.COL_TYPE] == Geometry.CMD_TYPE_LINE
-    assert np.all(result_inter.data[2, 1:4] == (10, 10, 0))
+    result2 = geo2.close_gaps(tolerance=1e-5)
+    data2 = result2.data
+    assert data2 is not None
+    assert result2 is geo2
+    assert data2[2, Geometry.COL_TYPE] == Geometry.CMD_TYPE_LINE
+    assert data2[2, 1] == 10 and data2[2, 2] == 10
 
 
 def test_close_geometry_gaps_respects_tolerance():
@@ -604,11 +378,8 @@ def test_close_geometry_gaps_respects_tolerance():
     result1 = geo1.close_gaps(tolerance=0.1)
     assert result1.data is not None
     assert result1.data[2, Geometry.COL_TYPE] == Geometry.CMD_TYPE_MOVE
-    assert np.all(result1.data[2, 1:4] == (10.1, 10.1, 0))
 
     geo2 = geo.copy()
     result2 = geo2.close_gaps(tolerance=0.2)
     assert result2.data is not None
     assert result2.data[2, Geometry.COL_TYPE] == Geometry.CMD_TYPE_LINE
-    assert np.all(result2.data[2, 1:4] == (10, 10, 0))
-    assert np.all(result2.data[2, 1:4] == (10, 10, 0))

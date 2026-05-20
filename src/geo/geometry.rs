@@ -9,7 +9,7 @@ use pyo3_stub_gen::inventory::submit;
 use pyo3_stub_gen::{PyStubType, TypeInfo};
 
 use raygeo_core::geo::algo::fitting::convert_arc_to_beziers_from_array;
-use raygeo_core::geo::analysis::get_point_and_tangent_at_from_array;
+use raygeo_core::geo::algo::analysis::get_point_and_tangent_at_from_array;
 use raygeo_core::geo::algo::topology::get_valid_contours_data;
 use raygeo_core::geo::math::map_geometry_to_frame;
 use raygeo_core::{
@@ -49,7 +49,10 @@ pub enum PyCommand {
 
 impl PyStubType for PyCommand {
     fn type_output() -> TypeInfo {
-        TypeInfo::with_module("raygeo.PyCommand", "raygeo.geo.path".into())
+        TypeInfo::with_module("raygeo.PyCommand", "raygeo.geo".into())
+    }
+    fn type_input() -> TypeInfo {
+        TypeInfo::with_module("raygeo.PyCommand", "raygeo.geo".into())
     }
 }
 

@@ -2,13 +2,12 @@ mod algo;
 mod flex_point;
 pub(crate) mod geometry;
 mod math;
-mod path;
 mod shape;
 
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::gen_type_alias_from_python;
 
-use crate::geo::geometry::Geometry;
+use crate::geo::geometry::{Geometry, PyCommand};
 use raygeo_core::{
     CMD_TYPE_ARC, CMD_TYPE_BEZIER, CMD_TYPE_LINE,
     CMD_TYPE_MOVE, COL_C1X, COL_C1Y, COL_C2X, COL_C2Y, COL_CW, COL_I, COL_J,
@@ -126,7 +125,6 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
 fn add_submodules(m: &Bound<'_, PyModule>) -> PyResult<()> {
     shape::register(m)?;
     algo::register(m)?;
-    path::register(m)?;
     math::register(m)?;
 
     let py = m.py();
@@ -239,6 +237,7 @@ fn add_functions(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add("GEO_ARRAY_COLS", GEO_ARRAY_COLS)?;
 
     m.add_class::<Geometry>()?;
+    m.add_class::<PyCommand>()?;
 
     Ok(())
 }

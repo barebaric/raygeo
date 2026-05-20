@@ -41,7 +41,6 @@ Examples:
 import builtins
 import numpy
 import numpy.typing
-from raygeo.geo import path
 import typing
 from . import geo
 from . import ops

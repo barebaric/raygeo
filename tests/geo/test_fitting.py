@@ -13,12 +13,6 @@ from raygeo.geo.algo.fitting import (
     get_polyline_arc_deviation,
     project_circle_center_to_bisector,
 )
-from raygeo.geo.path import (
-    create_arc_cmd,
-    create_line_cmd,
-    fit_arcs,
-    fit_curves,
-)
 
 
 def test_are_collinear():
@@ -451,56 +445,6 @@ def test_get_polyline_line_deviation_coincident_endpoints():
     assert max_idx == 1
 
 
-def test_create_line_cmd_2d():
-    """Test creating a line command from 2D point."""
-    end_point = (10.0, 20.0)
-    cmd = create_line_cmd(end_point)
-    assert cmd[Geometry.COL_TYPE] == Geometry.CMD_TYPE_LINE
-    assert cmd[Geometry.COL_X] == 10.0
-    assert cmd[Geometry.COL_Y] == 20.0
-    assert cmd[Geometry.COL_Z] == 0.0
-
-
-def test_create_line_cmd_3d():
-    """Test creating a line command from 3D point."""
-    end_point = (10.0, 20.0, 5.0)
-    cmd = create_line_cmd(end_point)
-    assert cmd[Geometry.COL_TYPE] == Geometry.CMD_TYPE_LINE
-    assert cmd[Geometry.COL_X] == 10.0
-    assert cmd[Geometry.COL_Y] == 20.0
-    assert cmd[Geometry.COL_Z] == 5.0
-
-
-def test_create_arc_cmd_ccw():
-    """Test creating an arc command for CCW direction."""
-    start = (10.0, 0.0, 0.0)
-    end = (0.0, 10.0, 0.0)
-    center = (0.0, 0.0)
-    cmd = create_arc_cmd(end, center, start)
-    assert cmd[Geometry.COL_TYPE] == Geometry.CMD_TYPE_ARC
-    assert cmd[Geometry.COL_X] == 0.0
-    assert cmd[Geometry.COL_Y] == 10.0
-    assert cmd[Geometry.COL_Z] == 0.0
-    assert cmd[Geometry.COL_I] == -10.0
-    assert cmd[Geometry.COL_J] == 0.0
-    assert cmd[Geometry.COL_CW] == 0.0
-
-
-def test_create_arc_cmd_cw():
-    """Test creating an arc command for CW direction."""
-    start = (0.0, 10.0, 0.0)
-    end = (10.0, 0.0, 0.0)
-    center = (0.0, 0.0)
-    cmd = create_arc_cmd(end, center, start)
-    assert cmd[Geometry.COL_TYPE] == Geometry.CMD_TYPE_ARC
-    assert cmd[Geometry.COL_X] == 10.0
-    assert cmd[Geometry.COL_Y] == 0.0
-    assert cmd[Geometry.COL_Z] == 0.0
-    assert cmd[Geometry.COL_I] == 0.0
-    assert cmd[Geometry.COL_J] == -10.0
-    assert cmd[Geometry.COL_CW] == 1.0
-
-
 def test_fit_points_recursive_line():
     """Test recursive fitting produces a line for collinear points."""
     points = [(0.0, 0.0, 0.0), (5.0, 0.0, 0.0), (10.0, 0.0, 0.0)]
@@ -548,164 +492,135 @@ def test_fit_points_recursive_single_point():
 
 
 def test_fit_arcs_simple_line():
-    """Tests fit_arcs with a simple line geometry."""
+    """Tests Geometry.fit_arcs() with a simple line geometry."""
     geo = Geometry()
     geo.move_to(0, 0)
     geo.line_to(10, 0)
 
-    data = geo.data
-
-    result = fit_arcs(data, 0.1)
+    result = geo.fit_arcs(0.1)
 
     # Should preserve move and line commands
-    assert result is not None
-    assert len(result) == 2
-    assert result[0][Geometry.COL_TYPE] == Geometry.CMD_TYPE_MOVE
-    assert result[1][Geometry.COL_TYPE] == Geometry.CMD_TYPE_LINE
+    assert result.data is not None
+    assert len(result.data) == 2
+    assert result.data[0][Geometry.COL_TYPE] == Geometry.CMD_TYPE_MOVE
+    assert result.data[1][Geometry.COL_TYPE] == Geometry.CMD_TYPE_LINE
 
 
 def test_fit_arcs_with_bezier():
-    """Tests fit_arcs with a bezier curve."""
+    """Tests Geometry.fit_arcs() with a bezier curve."""
     geo = Geometry()
     geo.move_to(0, 0)
     geo.bezier_to(10, 10, c1x=2, c1y=5, c2x=8, c2y=5)
 
-    data = geo.data
-
-    result = fit_arcs(data, 0.1)
+    result = geo.fit_arcs(0.1)
 
     # Should convert bezier to lines/arcs
-    assert result is not None
-    assert len(result) >= 1
-    assert result[0][Geometry.COL_TYPE] == Geometry.CMD_TYPE_MOVE
-    # The bezier should be simplified and fitted
-    assert result[1][Geometry.COL_TYPE] in (
+    assert result.data is not None
+    assert len(result.data) >= 1
+    assert result.data[0][Geometry.COL_TYPE] == Geometry.CMD_TYPE_MOVE
+    assert result.data[1][Geometry.COL_TYPE] in (
         Geometry.CMD_TYPE_LINE,
         Geometry.CMD_TYPE_ARC,
     )
 
 
 def test_fit_arcs_empty():
-    """Tests fit_arcs with empty geometry."""
-    result = fit_arcs(None, 0.1)
-    assert result is None
-
-
-def test_fit_arcs_with_progress():
-    """Tests fit_arcs with progress callback."""
+    """Tests Geometry.fit_arcs() with empty geometry."""
     geo = Geometry()
-    # Create a larger geometry to trigger progress callbacks
-    for i in range(100):
-        geo.move_to(i, 0)
-        geo.line_to(i + 1, 0)
-
-    data = geo.data
-
-    progress_values = []
-
-    def progress_callback(value: float) -> None:
-        progress_values.append(value)
-
-    fit_arcs(data, 0.1, progress_callback)
-
-    # Progress should be called
-    assert len(progress_values) > 0
-    # Last progress value should be close to 1.0
-    # Note: fit_arcs only calls progress every 50 rows
-    assert progress_values[-1] >= 0.75
+    result = geo.fit_arcs(0.1)
+    assert result is not None
+    assert result.data is None
 
 
-class TestFitCurves:
-    def test_preserve_bezier(self):
-        geo = Geometry()
-        geo.move_to(0, 0)
-        geo.bezier_to(10, 10, c1x=2, c1y=5, c2x=8, c2y=5)
+def test_fit_curves_preserve_bezier():
+    """Tests preserving beziers via Geometry.fit_curves()."""
+    geo = Geometry()
+    geo.move_to(0, 0)
+    geo.bezier_to(10, 10, c1x=2, c1y=5, c2x=8, c2y=5)
 
-        result = fit_curves(
-            geo.data, 0.1, preserve_beziers=True, preserve_arcs=True
+    result = geo.fit_curves(0.1, beziers=True, arcs=True)
+
+    assert result.data is not None
+    assert len(result.data) == 2
+    assert result.data[0][Geometry.COL_TYPE] == Geometry.CMD_TYPE_MOVE
+    assert result.data[1][Geometry.COL_TYPE] == Geometry.CMD_TYPE_BEZIER
+
+
+def test_fit_curves_linearize_bezier():
+    """Tests linearizing beziers via Geometry.fit_curves()."""
+    geo = Geometry()
+    geo.move_to(0, 0)
+    geo.bezier_to(10, 10, c1x=2, c1y=5, c2x=8, c2y=5)
+
+    result = geo.fit_curves(0.1, beziers=False, arcs=True)
+
+    assert result.data is not None
+    assert len(result.data) >= 2
+    assert result.data[0][Geometry.COL_TYPE] == Geometry.CMD_TYPE_MOVE
+    for row in result.data[1:]:
+        assert row[Geometry.COL_TYPE] in (
+            Geometry.CMD_TYPE_LINE,
+            Geometry.CMD_TYPE_ARC,
         )
 
-        assert result is not None
-        assert len(result) == 2
-        assert result[0][Geometry.COL_TYPE] == Geometry.CMD_TYPE_MOVE
-        assert result[1][Geometry.COL_TYPE] == Geometry.CMD_TYPE_BEZIER
 
-    def test_linearize_bezier(self):
-        geo = Geometry()
-        geo.move_to(0, 0)
-        geo.bezier_to(10, 10, c1x=2, c1y=5, c2x=8, c2y=5)
+def test_fit_curves_preserve_arc():
+    """Tests preserving arcs via Geometry.fit_curves()."""
+    geo = Geometry()
+    geo.move_to(0, 0)
+    geo.arc_to(10, 0, 5, 0, clockwise=True)
 
-        result = fit_curves(
-            geo.data, 0.1, preserve_beziers=False, preserve_arcs=True
+    result = geo.fit_curves(0.1, beziers=True, arcs=True)
+
+    assert result.data is not None
+    assert len(result.data) == 2
+    assert result.data[0][Geometry.COL_TYPE] == Geometry.CMD_TYPE_MOVE
+    assert result.data[1][Geometry.COL_TYPE] == Geometry.CMD_TYPE_ARC
+
+
+def test_fit_curves_linearize_arc():
+    """Tests linearizing arcs via Geometry.fit_curves()."""
+    geo = Geometry()
+    geo.move_to(0, 0)
+    geo.arc_to(10, 0, 5, 0, clockwise=True)
+
+    result = geo.fit_curves(0.1, beziers=False, arcs=False)
+
+    assert result.data is not None
+    assert result.data[0][Geometry.COL_TYPE] == Geometry.CMD_TYPE_MOVE
+    for row in result.data[1:]:
+        assert row[Geometry.COL_TYPE] in (
+            Geometry.CMD_TYPE_LINE,
+            Geometry.CMD_TYPE_ARC,
         )
 
-        assert result is not None
-        assert len(result) >= 2
-        assert result[0][Geometry.COL_TYPE] == Geometry.CMD_TYPE_MOVE
-        for row in result[1:]:
-            assert row[Geometry.COL_TYPE] in (
-                Geometry.CMD_TYPE_LINE,
-                Geometry.CMD_TYPE_ARC,
-            )
 
-    def test_preserve_arc(self):
-        geo = Geometry()
-        geo.move_to(0, 0)
-        geo.arc_to(10, 0, 5, 0, clockwise=True)
+def test_fit_curves_mixed_lines_beziers_arcs():
+    """Tests mixed geometry via Geometry.fit_curves()."""
+    geo = Geometry()
+    geo.move_to(0, 0)
+    geo.line_to(5, 0)
+    geo.bezier_to(15, 5, c1x=7, c1y=3, c2x=13, c2y=3)
+    geo.arc_to(25, 0, 5, 0, clockwise=True)
 
-        result = fit_curves(
-            geo.data, 0.1, preserve_beziers=True, preserve_arcs=True
-        )
+    result = geo.fit_curves(0.1, beziers=True, arcs=True)
 
-        assert result is not None
-        assert len(result) == 2
-        assert result[0][Geometry.COL_TYPE] == Geometry.CMD_TYPE_MOVE
-        assert result[1][Geometry.COL_TYPE] == Geometry.CMD_TYPE_ARC
+    assert result.data is not None
+    types = [r[Geometry.COL_TYPE] for r in result.data]
+    assert Geometry.CMD_TYPE_BEZIER in types
+    assert Geometry.CMD_TYPE_ARC in types
 
-    def test_linearize_arc(self):
-        geo = Geometry()
-        geo.move_to(0, 0)
-        geo.arc_to(10, 0, 5, 0, clockwise=True)
 
-        result = fit_curves(
-            geo.data, 0.1, preserve_beziers=False, preserve_arcs=False
-        )
+def test_fit_curves_backwards_compat():
+    """Tests Geometry.fit_curves() and Geometry.fit_arcs() agree."""
+    geo = Geometry()
+    geo.move_to(0, 0)
+    geo.bezier_to(10, 10, c1x=2, c1y=5, c2x=8, c2y=5)
 
-        assert result is not None
-        assert result[0][Geometry.COL_TYPE] == Geometry.CMD_TYPE_MOVE
-        for row in result[1:]:
-            assert row[Geometry.COL_TYPE] in (
-                Geometry.CMD_TYPE_LINE,
-                Geometry.CMD_TYPE_ARC,
-            )
+    result_old = geo.fit_arcs(0.1)
+    result_new = geo.fit_curves(0.1, beziers=False, arcs=True)
 
-    def test_mixed_lines_beziers_arcs(self):
-        geo = Geometry()
-        geo.move_to(0, 0)
-        geo.line_to(5, 0)
-        geo.bezier_to(15, 5, c1x=7, c1y=3, c2x=13, c2y=3)
-        geo.arc_to(25, 0, 5, 0, clockwise=True)
-
-        result = fit_curves(
-            geo.data, 0.1, preserve_beziers=True, preserve_arcs=True
-        )
-
-        assert result is not None
-        types = [r[Geometry.COL_TYPE] for r in result]
-        assert Geometry.CMD_TYPE_BEZIER in types
-        assert Geometry.CMD_TYPE_ARC in types
-
-    def test_fit_curves_backwards_compat(self):
-        geo = Geometry()
-        geo.move_to(0, 0)
-        geo.bezier_to(10, 10, c1x=2, c1y=5, c2x=8, c2y=5)
-
-        result_old = fit_arcs(geo.data, 0.1)
-        result_new = fit_curves(
-            geo.data, 0.1, preserve_beziers=False, preserve_arcs=True
-        )
-
-        assert result_old is not None
-        assert result_new is not None
-        assert len(result_old) == len(result_new)
-        np.testing.assert_array_equal(result_old, result_new)
+    assert result_old.data is not None
+    assert result_new.data is not None
+    assert len(result_old.data) == len(result_new.data)
+    np.testing.assert_array_equal(result_old.data, result_new.data)

@@ -3,6 +3,7 @@
 //! This module provides advanced geometric algorithms including clipping,
 //! curve fitting, Minkowski sums, simplification, and smoothing.
 
+pub mod analysis;
 pub mod cleanup;
 pub mod clipping;
 pub mod fitting;
@@ -14,6 +15,7 @@ pub mod simplify;
 pub mod smooth;
 pub mod topology;
 
+pub use analysis::*;
 pub use cleanup::*;
 pub use clipping::*;
 pub use fitting::*;
