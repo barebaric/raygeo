@@ -13,7 +13,7 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
 /// Tracks power level, air assist, cut/travel speeds,
 /// active laser UID, frequency, and pulse width.
 #[gen_stub_pyclass]
-#[pyclass(skip_from_py_object, module = "raygeo.ops", name = "State")]
+#[pyclass(skip_from_py_object, module = "raygeo.ops.state", name = "State")]
 #[derive(Clone)]
 pub struct PyState(pub State);
 

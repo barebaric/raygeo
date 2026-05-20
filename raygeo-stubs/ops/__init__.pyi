@@ -11,110 +11,18 @@ timing estimation, serialization, and more.
 import builtins
 import raygeo
 import typing
+from . import axis
+from . import state
+from . import types
 __all__ = [
-    "Axis",
-    "CommandCategory",
     "CommandInfo",
-    "CommandType",
     "Ops",
     "OpsSection",
     "OpsSectionRange",
-    "SectionType",
-    "State",
-    "category",
+    "axis",
+    "state",
+    "types",
 ]
-
-@typing.final
-class Axis:
-    r"""
-    Represents a single axis or a combination of axes (X, Y, Z, A, B, C, U).
-    
-    Axis values can be combined using bitwise operators (``|``, ``&``, ``^``, ``~``)
-    to represent multiple axes at once.
-    """
-    X: Axis = Axis.X
-    Y: Axis = Axis.Y
-    Z: Axis = Axis.Z
-    A: Axis = Axis.A
-    B: Axis = Axis.B
-    C: Axis = Axis.C
-    U: Axis = Axis.U
-    @property
-    def value(self) -> builtins.int:
-        r"""
-        The raw bit value of the axis.
-        """
-    @property
-    def label(self) -> builtins.str:
-        r"""
-        The uppercase label of the axis (e.g. ``"X"``, ``"Y"``, ``"Z"``).
-        """
-    def __or__(self, other: Axis) -> Axis:
-        r"""
-        Combine two axis masks with bitwise OR.
-        """
-    def __and__(self, other: Axis) -> Axis:
-        r"""
-        Intersect two axis masks with bitwise AND.
-        """
-    def __xor__(self, other: Axis) -> Axis:
-        r"""
-        Compute the symmetric difference of two axis masks.
-        """
-    def __invert__(self) -> Axis:
-        r"""
-        Invert (complement) the axis mask.
-        """
-    def __eq__(self, other: Axis) -> builtins.bool:
-        r"""
-        Check equality of two Axes.
-        """
-    def __ne__(self, other: Axis) -> builtins.bool:
-        r"""
-        Check inequality of two Axes.
-        """
-    def __repr__(self) -> builtins.str:
-        r"""
-        Return a string representation like ``Axis.X``.
-        """
-    def __hash__(self) -> builtins.int:
-        r"""
-        Hash based on the raw bit value.
-        """
-    def assert_single_axis(self) -> None:
-        r"""
-        Assert that this Axis represents exactly one axis (not a combination).
-        
-        :raises ValueError: If the axis mask contains multiple or zero bits set.
-        """
-
-@typing.final
-class CommandCategory:
-    r"""
-    Represents the category of a command: ``MOVING``, ``STATE``, or ``MARKER``.
-    
-    - **MOVING**: Commands that change the tool position (MoveTo, LineTo, ArcTo, etc.)
-    - **STATE**: Commands that change machine state (SetPower, SetCutSpeed, etc.)
-    - **MARKER**: Structural markers (JobStart/End, LayerStart/End, etc.)
-    """
-    MOVING: CommandCategory = CommandCategory.MOVING
-    STATE: CommandCategory = CommandCategory.STATE
-    MARKER: CommandCategory = CommandCategory.MARKER
-    @property
-    def value(self) -> builtins.int:
-        r"""
-        The raw integer value of this category.
-        """
-    @property
-    def name(self) -> builtins.str:
-        r"""
-        The uppercase name of this category (``"MOVING"``, ``"STATE"``, or ``"MARKER"``).
-        """
-    def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
-    def __repr__(self) -> builtins.str:
-        r"""
-        String representation like ``CommandCategory.MOVING``.
-        """
 
 @typing.final
 class CommandInfo:
@@ -125,13 +33,13 @@ class CommandInfo:
     parameters for any command type in a structured form.
     """
     @property
-    def type_(self) -> CommandType: ...
+    def type_(self) -> types.CommandType: ...
     @property
     def end(self) -> typing.Optional[tuple[builtins.float, builtins.float, builtins.float]]: ...
     @property
     def extra_axes(self) -> typing.Optional[dict]: ...
     @property
-    def state(self) -> typing.Optional[State]: ...
+    def state(self) -> typing.Optional[state.State]: ...
     @property
     def center_offset(self) -> typing.Optional[tuple[builtins.float, builtins.float]]: ...
     @property
@@ -163,53 +71,6 @@ class CommandInfo:
     @property
     def section_type(self) -> typing.Optional[builtins.str]: ...
     def __eq__(self, other: typing.Any) -> builtins.bool: ...
-
-@typing.final
-class CommandType:
-    r"""
-    Enumeration of all command types in an Ops sequence.
-    
-    Each constant represents a specific operation command such as
-    ``MOVE_TO``, ``LINE_TO``, ``ARC_TO``, ``SET_POWER``, etc.
-    """
-    MOVE_TO: CommandType = CommandType.MOVE_TO
-    LINE_TO: CommandType = CommandType.LINE_TO
-    ARC_TO: CommandType = CommandType.ARC_TO
-    SCAN_LINE: CommandType = CommandType.SCAN_LINE
-    DWELL: CommandType = CommandType.DWELL
-    BEZIER_TO: CommandType = CommandType.BEZIER_TO
-    QUADRATIC_BEZIER_TO: CommandType = CommandType.QUADRATIC_BEZIER_TO
-    SET_POWER: CommandType = CommandType.SET_POWER
-    SET_CUT_SPEED: CommandType = CommandType.SET_CUT_SPEED
-    SET_TRAVEL_SPEED: CommandType = CommandType.SET_TRAVEL_SPEED
-    ENABLE_AIR_ASSIST: CommandType = CommandType.ENABLE_AIR_ASSIST
-    DISABLE_AIR_ASSIST: CommandType = CommandType.DISABLE_AIR_ASSIST
-    SET_LASER: CommandType = CommandType.SET_LASER
-    SET_FREQUENCY: CommandType = CommandType.SET_FREQUENCY
-    SET_PULSE_WIDTH: CommandType = CommandType.SET_PULSE_WIDTH
-    JOB_START: CommandType = CommandType.JOB_START
-    JOB_END: CommandType = CommandType.JOB_END
-    LAYER_START: CommandType = CommandType.LAYER_START
-    LAYER_END: CommandType = CommandType.LAYER_END
-    WORKPIECE_START: CommandType = CommandType.WORKPIECE_START
-    WORKPIECE_END: CommandType = CommandType.WORKPIECE_END
-    OPS_SECTION_START: CommandType = CommandType.OPS_SECTION_START
-    OPS_SECTION_END: CommandType = CommandType.OPS_SECTION_END
-    @property
-    def value(self) -> builtins.int:
-        r"""
-        The raw integer value of this command type.
-        """
-    @property
-    def name(self) -> builtins.str:
-        r"""
-        The uppercase name of this command type (e.g. ``"MOVE_TO"``, ``"LINE_TO"``).
-        """
-    def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
-    def __repr__(self) -> builtins.str:
-        r"""
-        String representation like ``CommandType.MOVE_TO``.
-        """
 
 @typing.final
 class Ops:
@@ -267,14 +128,14 @@ class Ops:
         r"""
         Return the number of commands.
         """
-    def command_type(self, idx: builtins.int) -> CommandType:
+    def command_type(self, idx: builtins.int) -> types.CommandType:
         r"""
         Get the :class:`CommandType` at the given index.
         
         :param idx: Command index (negative = from end).
         :returns: The :class:`CommandType` of the command.
         """
-    def category(self, idx: builtins.int) -> CommandCategory:
+    def category(self, idx: builtins.int) -> types.CommandCategory:
         r"""
         Get the :class:`CommandCategory` at the given index.
         
@@ -316,7 +177,7 @@ class Ops:
         :param idx: Command index.
         :returns: True if the command is a ScanLine power command.
         """
-    def indices_of(self, ct: CommandType) -> builtins.list[builtins.int]:
+    def indices_of(self, ct: types.CommandType) -> builtins.list[builtins.int]:
         r"""
         Return all indices where the command type matches *ct*.
         
@@ -441,7 +302,7 @@ class Ops:
         :returns: The workpiece identifier.
         :raises TypeError: If the command is not a Workpiece command.
         """
-    def section_params(self, idx: builtins.int) -> tuple[SectionType, typing.Optional[builtins.str]]:
+    def section_params(self, idx: builtins.int) -> tuple[types.SectionType, typing.Optional[builtins.str]]:
         r"""
         Get the section type and optional workpiece UID from an OpsSection command.
         
@@ -456,7 +317,7 @@ class Ops:
         :param idx: Command index.
         :returns: Dict mapping axis names to values, or None.
         """
-    def preloaded_state(self, idx: builtins.int) -> typing.Optional[State]:
+    def preloaded_state(self, idx: builtins.int) -> typing.Optional[state.State]:
         r"""
         Get the preloaded machine state for a moving command (if available).
         
@@ -609,14 +470,14 @@ class Ops:
         
         :param workpiece_uid: The workpiece identifier.
         """
-    def ops_section_start(self, section_type: SectionType, workpiece_uid: builtins.str) -> None:
+    def ops_section_start(self, section_type: types.SectionType, workpiece_uid: builtins.str) -> None:
         r"""
         Mark the start of an ops section.
         
         :param section_type: The type of section.
         :param workpiece_uid: The workpiece identifier.
         """
-    def ops_section_end(self, section_type: SectionType) -> None:
+    def ops_section_end(self, section_type: types.SectionType) -> None:
         r"""
         Mark the end of an ops section.
         
@@ -680,7 +541,7 @@ class Ops:
         
         :returns: A list of index lists, one per cutting segment.
         """
-    def state_at(self, idx: builtins.int) -> State:
+    def state_at(self, idx: builtins.int) -> state.State:
         r"""
         Return the accumulated state at a given command index.
         
@@ -724,13 +585,13 @@ class Ops:
         r"""
         Pre-compute and store the accumulated state at each moving command.
         """
-    def set_state_on_moving(self, state: State) -> None:
+    def set_state_on_moving(self, state: state.State) -> None:
         r"""
         Apply a state to all moving commands without an explicit state.
         
         :param state: The state to apply.
         """
-    def set_state_at(self, idx: builtins.int, state: State) -> None:
+    def set_state_at(self, idx: builtins.int, state: state.State) -> None:
         r"""
         Overwrite the state at a specific command index.
         
@@ -947,7 +808,7 @@ class OpsSection:
     into logical sections based on ``OpsSectionStart``/``OpsSectionEnd`` markers.
     """
     @property
-    def section_type(self) -> typing.Optional[SectionType]:
+    def section_type(self) -> typing.Optional[types.SectionType]:
         r"""
         The type of this section (VectorOutline or RasterFill), if any.
         """
@@ -972,7 +833,7 @@ class OpsSectionRange:
     instead of individual index lists. Produced by :meth:`Ops.section_ranges`.
     """
     @property
-    def section_type(self) -> typing.Optional[SectionType]:
+    def section_type(self) -> typing.Optional[types.SectionType]:
         r"""
         The type of this section range (VectorOutline or RasterFill), if any.
         """
@@ -987,105 +848,4 @@ class OpsSectionRange:
         Starting index of the content within this section range.
         """
     def __repr__(self) -> builtins.str: ...
-
-@typing.final
-class SectionType:
-    r"""
-    The type of an operations section: ``VECTOR_OUTLINE`` or ``RASTER_FILL``.
-    
-    Sections divide an Ops sequence into vector and raster portions.
-    """
-    VECTOR_OUTLINE: SectionType = SectionType.VECTOR_OUTLINE
-    RASTER_FILL: SectionType = SectionType.RASTER_FILL
-    @property
-    def value(self) -> builtins.int:
-        r"""
-        The raw integer value of this section type.
-        """
-    @property
-    def name(self) -> builtins.str:
-        r"""
-        The uppercase name (``"VECTOR_OUTLINE"`` or ``"RASTER_FILL"``).
-        """
-    def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
-    def __repr__(self) -> builtins.str:
-        r"""
-        String representation like ``SectionType.VECTOR_OUTLINE``.
-        """
-
-@typing.final
-class State:
-    r"""
-    The current state of a laser cutting job.
-    
-    Tracks power level, air assist, cut/travel speeds,
-    active laser UID, frequency, and pulse width.
-    """
-    @property
-    def power(self) -> builtins.float:
-        r"""
-        Laser power level (0.0 – 1.0 typically).
-        """
-    @power.setter
-    def power(self, value: builtins.float) -> None: ...
-    @property
-    def air_assist(self) -> builtins.bool:
-        r"""
-        Whether air assist is enabled.
-        """
-    @air_assist.setter
-    def air_assist(self, value: builtins.bool) -> None: ...
-    @property
-    def cut_speed(self) -> typing.Optional[builtins.int]:
-        r"""
-        Cutting speed in mm/s (if set).
-        """
-    @cut_speed.setter
-    def cut_speed(self, value: typing.Optional[builtins.int]) -> None: ...
-    @property
-    def travel_speed(self) -> typing.Optional[builtins.int]:
-        r"""
-        Travel (rapid) speed in mm/s (if set).
-        """
-    @travel_speed.setter
-    def travel_speed(self, value: typing.Optional[builtins.int]) -> None: ...
-    @property
-    def active_laser_uid(self) -> typing.Optional[builtins.str]:
-        r"""
-        UID of the active laser source (if set).
-        """
-    @active_laser_uid.setter
-    def active_laser_uid(self, value: typing.Optional[builtins.str]) -> None: ...
-    @property
-    def frequency(self) -> typing.Optional[builtins.int]:
-        r"""
-        Laser pulse frequency in Hz (if set).
-        """
-    @frequency.setter
-    def frequency(self, value: typing.Optional[builtins.int]) -> None: ...
-    @property
-    def pulse_width(self) -> typing.Optional[builtins.float]:
-        r"""
-        Laser pulse width in microseconds (if set).
-        """
-    @pulse_width.setter
-    def pulse_width(self, value: typing.Optional[builtins.float]) -> None: ...
-    def __new__(cls, power: builtins.float = 0.0, air_assist: builtins.bool = False, cut_speed: typing.Optional[builtins.int] = None, travel_speed: typing.Optional[builtins.int] = None, active_laser_uid: typing.Optional[builtins.str] = None, frequency: typing.Optional[builtins.int] = None, pulse_width: typing.Optional[builtins.float] = None) -> State: ...
-    def __repr__(self) -> builtins.str:
-        r"""
-        String representation like ``State(power=..., air_assist=...)``.
-        """
-    def allow_rapid_change(self, target: State) -> builtins.bool:
-        r"""
-        Check whether the machine can transition from the current
-        state to the *target* state without a ``SetPower`` command.
-        
-        :param target: The target state to compare against.
-        :returns: True if the change is a rapid (non-power) change.
-        """
-
-def category(ct: CommandType) -> CommandCategory:
-    r"""
-    Get the category of a command type.
-    """
 

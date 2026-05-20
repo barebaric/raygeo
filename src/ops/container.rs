@@ -12,7 +12,7 @@ use raygeo_core::ops::{
 };
 
 use super::axis::PyAxis;
-use super::enums::{PyCommandCategory, PyCommandType, PySectionType};
+use super::types::{PyCommandCategory, PyCommandType, PySectionType};
 use super::state::PyState;
 use crate::geo::geometry::Geometry as PyGeometry;
 

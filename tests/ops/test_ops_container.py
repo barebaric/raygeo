@@ -6,13 +6,11 @@ import numpy as np
 from contextlib import redirect_stdout
 from raygeo import Geometry
 from raygeo.ops import (
-    Axis,
     Ops,
-    CommandType,
-    CommandCategory,
-    State,
-    SectionType,
 )
+from raygeo.ops.types import CommandType, CommandCategory, SectionType
+from raygeo.ops.axis import Axis
+from raygeo.ops.state import State
 
 
 @pytest.fixture

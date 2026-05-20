@@ -17,7 +17,7 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
 /// Each constant represents a specific operation command such as
 /// ``MOVE_TO``, ``LINE_TO``, ``ARC_TO``, ``SET_POWER``, etc.
 #[gen_stub_pyclass]
-#[pyclass(frozen, eq, skip_from_py_object, module = "raygeo.ops", name = "CommandType")]
+#[pyclass(frozen, eq, skip_from_py_object, module = "raygeo.ops.types", name = "CommandType")]
 #[derive(Clone, PartialEq)]
 pub struct PyCommandType(pub CommandType);
 
@@ -95,7 +95,7 @@ impl PyCommandType {
 /// - **STATE**: Commands that change machine state (SetPower, SetCutSpeed, etc.)
 /// - **MARKER**: Structural markers (JobStart/End, LayerStart/End, etc.)
 #[gen_stub_pyclass]
-#[pyclass(frozen, eq, skip_from_py_object, module = "raygeo.ops", name = "CommandCategory")]
+#[pyclass(frozen, eq, skip_from_py_object, module = "raygeo.ops.types", name = "CommandCategory")]
 #[derive(Clone, PartialEq)]
 pub struct PyCommandCategory(pub CommandCategory);
 
@@ -135,7 +135,7 @@ impl PyCommandCategory {
 ///
 /// Sections divide an Ops sequence into vector and raster portions.
 #[gen_stub_pyclass]
-#[pyclass(frozen, eq, skip_from_py_object, module = "raygeo.ops", name = "SectionType")]
+#[pyclass(frozen, eq, skip_from_py_object, module = "raygeo.ops.types", name = "SectionType")]
 #[derive(Clone, PartialEq)]
 pub struct PySectionType(pub SectionType);
 
@@ -168,7 +168,7 @@ impl PySectionType {
 #[gen_stub_pyfunction(python = r#"
     def category(ct: CommandType) -> CommandCategory:
         """Get the category of a command type."""
-"#, module = "raygeo.ops")]
+    "#, module = "raygeo.ops.types")]
 #[pyfunction(name = "category")]
 fn py_category(ct: &PyCommandType) -> PyCommandCategory {
     PyCommandCategory(ct.0.category())

@@ -2,7 +2,8 @@ from typing import List, Tuple
 
 import pytest
 
-from raygeo.ops import Ops, CommandType, CommandCategory
+from raygeo.ops import Ops
+from raygeo.ops.types import CommandType, CommandCategory
 
 
 def make_square_region(

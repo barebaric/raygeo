@@ -13,7 +13,12 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
 /// Axis values can be combined using bitwise operators (``|``, ``&``, ``^``, ``~``)
 /// to represent multiple axes at once.
 #[gen_stub_pyclass]
-#[pyclass(frozen, skip_from_py_object, module = "raygeo.ops", name = "Axis")]
+#[pyclass(
+    frozen,
+    skip_from_py_object,
+    module = "raygeo.ops.axis",
+    name = "Axis"
+)]
 #[derive(Clone)]
 pub struct PyAxis(pub Axis);
 

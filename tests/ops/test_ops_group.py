@@ -1,6 +1,8 @@
 from typing import List
 
-from raygeo.ops import Ops, CommandType, State
+from raygeo.ops import Ops
+from raygeo.ops.types import CommandType
+from raygeo.ops.state import State
 
 
 def test_group_by_command_type_empty():
