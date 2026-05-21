@@ -18,6 +18,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7f202df86484c868dbad7eaa557ef785d5c66295e41b460ef922eca0723b842c"
 
 [[package]]
+name = "approx"
+version = "0.5.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cab112f0a86d568ea0e627cc1d6be74a1e9cd55214684db5561995f6dad897c6"
+dependencies = [
+ "num-traits",
+]
+
+[[package]]
 name = "autocfg"
 version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -690,25 +699,19 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "60a357793950651c4ed0f3f52338f53b2f809f32d83a07f72909fa13e4c6c1e3"
 
 [[package]]
-name = "raygeo-core"
+name = "raygeo"
 version = "0.0.0"
 dependencies = [
+ "approx",
  "bitflags",
  "clipper2",
  "num_enum",
- "rstar",
- "strum",
- "thiserror",
-]
-
-[[package]]
-name = "raygeo-py"
-version = "0.0.0"
-dependencies = [
  "numpy",
  "pyo3",
  "pyo3-stub-gen",
- "raygeo-core",
+ "rstar",
+ "strum",
+ "thiserror",
 ]
 
 [[package]]

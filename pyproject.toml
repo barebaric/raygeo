@@ -29,8 +29,7 @@ test = [
 
 [tool.maturin]
 module-name = "raygeo"
-features = ["pyo3/extension-module"]
-include = ["raygeo-stubs/**/*"]
+python-source = "."
 
 [tool.pyo3-stub-gen]
 module-name = "raygeo"

@@ -13,25 +13,26 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install Pixi
-        uses: prefix-dev/setup-pixi@v0.9.4
-        with:
-          pixi-version: v0.68.1
-
-      - name: Setup environment
-        run: pixi install
-
-      - name: Run lint
-        run: pixi run lint
-
       - name: Build wheel
-        run: pixi run build
+        uses: PyO3/maturin-action@v1
+        with:
+          command: build
+          args: --release --out dist
 
-      - name: Generate stubs
-        run: pixi run gen-stubs
+      - name: Install wheel
+        run: pip install dist/raygeo-*.whl
 
       - name: Run pyright
-        run: pixi run pyright
+        run: npx --yes pyright --pythonpath $(which python) raygeo
+
+      - name: Validate stubs in wheel
+        run: |
+          cat > /tmp/test_stubs.py << 'EOF'
+          from raygeo import Geometry, Ops
+          g: Geometry
+          o: Ops
+          EOF
+          npx --yes pyright --pythonpath $(which python) /tmp/test_stubs.py
 
   test:
     name: Tests (${{ matrix.os }})
@@ -43,13 +44,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install Pixi
-        uses: prefix-dev/setup-pixi@v0.9.4
+      - uses: PyO3/maturin-action@v1
         with:
-          pixi-version: v0.68.1
+          command: build
+          args: --release --out dist
 
-      - name: Setup environment
-        run: pixi install
+      - name: Install wheel
+        shell: bash
+        run: pip install dist/raygeo-*.whl
+
+      - name: Install test dependencies
+        run: pip install pytest
 
       - name: Run tests
-        run: pixi run test
+        run: pytest -v

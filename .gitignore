@@ -3,4 +3,5 @@ __pycache__/
 *.pyc
 *.so
 *.pyd
-.pixi
+dist/
+.venv

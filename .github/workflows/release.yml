@@ -23,16 +23,10 @@ jobs:
           VERSION="${GITHUB_REF#refs/tags/v}"
           sed -i.bak "s/^version = \".*\"/version = \"$VERSION\"/" Cargo.toml
 
-      - name: Install Pixi
-        uses: prefix-dev/setup-pixi@v0.9.4
+      - uses: PyO3/maturin-action@v1
         with:
-          pixi-version: v0.68.1
-
-      - name: Setup environment
-        run: pixi install
-
-      - name: Build wheels
-        run: pixi run build-wheel
+          command: build
+          args: --release --out dist
 
       - name: Upload wheels as artifacts
         uses: actions/upload-artifact@v4
@@ -52,16 +46,10 @@ jobs:
           VERSION="${GITHUB_REF#refs/tags/v}"
           sed -i.bak "s/^version = \".*\"/version = \"$VERSION\"/" Cargo.toml
 
-      - name: Install Pixi
-        uses: prefix-dev/setup-pixi@v0.9.4
+      - uses: PyO3/maturin-action@v1
         with:
-          pixi-version: v0.68.1
-
-      - name: Setup environment
-        run: pixi install
-
-      - name: Build sdist
-        run: pixi run maturin sdist --out dist
+          command: sdist
+          args: --out dist
 
       - name: Upload sdist as artifact
         uses: actions/upload-artifact@v4
