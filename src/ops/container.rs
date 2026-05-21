@@ -12,8 +12,8 @@ use raygeo_core::ops::{
 };
 
 use super::axis::PyAxis;
-use super::types::{PyCommandCategory, PyCommandType, PySectionType};
 use super::state::PyState;
+use super::types::{PyCommandCategory, PyCommandType, PySectionType};
 use crate::geo::geometry::Geometry as PyGeometry;
 
 /// Normalize a Python-style index (negative = from end) to a usize.
@@ -1902,5 +1902,59 @@ impl PyOps {
     #[allow(non_snake_case)]
     fn get__time_params(&self) -> Option<(f64, f64, f64)> {
         self.inner.time_params
+    }
+
+    /// Optimize travel distance by reordering segments.
+    ///
+    /// Performs two-level optimization: workpiece-level reordering
+    /// (when workpiece markers are present) and segment-level
+    /// nearest-neighbor + 2-opt refinement.
+    ///
+    /// :param allow_flip: Whether to allow flipping subpaths.
+    /// :param preserve_first: Keep the first workpiece in place.
+    /// :param preserve_order: Workpiece UIDs whose order to preserve.
+    /// :param progress_cb: Optional callable(progress, message).
+    #[pyo3(signature = (allow_flip=true, preserve_first=false, preserve_order=Vec::new(), progress_cb=None))]
+    fn optimize_travel(
+        &mut self,
+        allow_flip: bool,
+        preserve_first: bool,
+        preserve_order: Vec<String>,
+        progress_cb: Option<&Bound<'_, PyAny>>,
+    ) -> PyResult<()> {
+        use raygeo_core::ops::optimize::ProgressCallback;
+
+        struct PyProgress<'py> {
+            cb: Option<&'py Bound<'py, PyAny>>,
+        }
+
+        impl<'py> ProgressCallback for PyProgress<'py> {
+            fn report(&self, progress: f64, message: &str) {
+                if let Some(cb) = self.cb {
+                    let _ = cb.call1((progress, message));
+                }
+            }
+
+            fn is_cancelled(&self) -> bool {
+                if let Some(cb) = self.cb {
+                    if let Ok(result) = cb.call_method0("is_cancelled") {
+                        if let Ok(cancelled) = result.extract::<bool>() {
+                            return cancelled;
+                        }
+                    }
+                }
+                false
+            }
+        }
+
+        let py_progress = PyProgress { cb: progress_cb };
+        raygeo_core::ops::optimize::optimize_travel(
+            &mut self.inner,
+            allow_flip,
+            preserve_first,
+            preserve_order,
+            Some(&py_progress),
+        );
+        Ok(())
     }
 }

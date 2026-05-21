@@ -5,7 +5,7 @@ use crate::constants::EPSILON_COLLINEAR;
 use super::axis::Axis;
 use super::enums::{CommandCategory, CommandType, SectionType};
 use super::state::State;
-use super::types::{MoveCmd, OpCategory, OpNode, StateCmd};
+use super::types::{MarkerCmd, MoveCmd, OpCategory, OpNode, StateCmd};
 use crate::types::Point3D;
 
 #[derive(Clone, Debug)]
@@ -67,6 +67,32 @@ impl Ops {
 
     pub fn endpoint(&self, idx: usize) -> Point3D {
         self.commands[idx].end_point()
+    }
+
+    pub fn scanline_data(&self, idx: usize) -> Vec<u8> {
+        if let OpCategory::Moving {
+            cmd: MoveCmd::ScanLine { power_values },
+            ..
+        } = &self.commands[idx].category
+        {
+            power_values.to_vec()
+        } else {
+            Vec::new()
+        }
+    }
+
+    pub fn workpiece_uid(&self, idx: usize) -> &str {
+        if let OpCategory::Marker(MarkerCmd::WorkpieceStart(uid)) =
+            &self.commands[idx].category
+        {
+            uid.as_ref()
+        } else if let OpCategory::Marker(MarkerCmd::WorkpieceEnd(uid)) =
+            &self.commands[idx].category
+        {
+            uid.as_ref()
+        } else {
+            ""
+        }
     }
 
     pub fn set_endpoint(

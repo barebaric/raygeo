@@ -11,6 +11,7 @@ pub mod flip;
 pub mod group;
 pub(crate) mod layer;
 pub mod linearize;
+pub mod optimize;
 pub mod types;
 pub mod state;
 pub(crate) mod transform;

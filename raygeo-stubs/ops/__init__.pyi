@@ -816,6 +816,19 @@ class Ops:
         
         :param arrays: Dictionary as produced by to_numpy_arrays.
         """
+    def optimize_travel(self, allow_flip: builtins.bool = True, preserve_first: builtins.bool = False, preserve_order: typing.Sequence[builtins.str] = [], progress_cb: typing.Optional[typing.Any] = None) -> None:
+        r"""
+        Optimize travel distance by reordering segments.
+        
+        Performs two-level optimization: workpiece-level reordering
+        (when workpiece markers are present) and segment-level
+        nearest-neighbor + 2-opt refinement.
+        
+        :param allow_flip: Whether to allow flipping subpaths.
+        :param preserve_first: Keep the first workpiece in place.
+        :param preserve_order: Workpiece UIDs whose order to preserve.
+        :param progress_cb: Optional callable(progress, message).
+        """
 
 @typing.final
 class OpsSection:
