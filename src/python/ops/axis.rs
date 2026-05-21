@@ -3,6 +3,8 @@ use pyo3::types::{PyList, PyType};
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 use crate::ops::axis::Axis;
 
+pyo3_stub_gen::module_doc!("raygeo.ops.axis", "{}", MODULE_DOC);
+
 pub(crate) const MODULE_DOC: &str = "\
 Axis bitflag for multi-axis machines.
 

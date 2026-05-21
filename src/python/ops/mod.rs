@@ -1,3 +1,5 @@
+pyo3_stub_gen::module_doc!("raygeo.ops", "{}", MODULE_DOC);
+
 pub(crate) const MODULE_DOC: &str = "\
 Command sequence (Ops) manipulation for laser cutter motion control.
 

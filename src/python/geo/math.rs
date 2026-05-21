@@ -1,6 +1,8 @@
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::gen_stub_pyfunction;
 
+pyo3_stub_gen::module_doc!("raygeo.geo.math", "{}", MODULE_DOC);
+
 pub(crate) const MODULE_DOC: &str = "\
 Matrix math utilities for geometric transformations.
 

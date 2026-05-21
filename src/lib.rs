@@ -45,9 +45,12 @@ pub use types::*;
 
 mod python;
 
-use pyo3::exceptions::PyRuntimeError;
 use pyo3::prelude::*;
-use pyo3_stub_gen::{StubGenConfig, StubInfo};
+use pyo3_stub_gen::define_stub_info_gatherer;
+
+define_stub_info_gatherer!(stub_info);
+
+pyo3_stub_gen::module_doc!("raygeo", "{}", MODULE_DOC);
 
 pub(crate) const MODULE_DOC: &str = concat!(
     "RayGeo — 2D/3D geometry engine for laser cutting and CAM applications.\n",
@@ -96,158 +99,5 @@ fn raygeo(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add("Geometry", m.getattr("geo")?.getattr("Geometry")?)?;
     m.add("Ops", m.getattr("ops")?.getattr("Ops")?)?;
     m.add("Rect", m.getattr("geo")?.getattr("types")?.getattr("Rect")?)?;
-    m.add_function(wrap_pyfunction!(generate_stubs, m)?)?;
-    Ok(())
-}
-
-#[pyfunction]
-fn generate_stubs(path: &str) -> PyResult<()> {
-    std::fs::create_dir_all(path).map_err(|e| {
-        PyRuntimeError::new_err(format!(
-            "Failed to create stub directory: {}",
-            e
-        ))
-    })?;
-    let stub_info = match StubInfo::from_project_root(
-        "raygeo".to_string(),
-        path.into(),
-        false,
-        StubGenConfig::default(),
-    ) {
-        Ok(info) => info,
-        Err(e) => {
-            return Err(PyRuntimeError::new_err(format!(
-                "StubInfo failed: {:?}",
-                e
-            )))
-        }
-    };
-    let module_docs: std::collections::HashMap<&str, &str> = [
-        ("raygeo", MODULE_DOC),
-        ("raygeo.geo", python::geo::MODULE_DOC),
-        ("raygeo.geo.algo", python::geo::algo::MODULE_DOC),
-        (
-            "raygeo.geo.algo.analysis",
-            python::geo::algo::MODULE_DOC_ANALYSIS,
-        ),
-        (
-            "raygeo.geo.algo.clipping",
-            python::geo::algo::MODULE_DOC_CLIPPING,
-        ),
-        (
-            "raygeo.geo.algo.fitting",
-            python::geo::algo::MODULE_DOC_FITTING,
-        ),
-        (
-            "raygeo.geo.algo.minkowski",
-            python::geo::algo::MODULE_DOC_MINKOWSKI,
-        ),
-        (
-            "raygeo.geo.algo.simplify",
-            python::geo::algo::MODULE_DOC_SIMPLIFY,
-        ),
-        (
-            "raygeo.geo.algo.smooth",
-            python::geo::algo::MODULE_DOC_SMOOTH,
-        ),
-        ("raygeo.geo.math", python::geo::math::MODULE_DOC),
-        ("raygeo.geo.shape", python::geo::shape::MODULE_DOC),
-        ("raygeo.geo.shape.arc", python::geo::shape::MODULE_DOC_ARC),
-        (
-            "raygeo.geo.shape.bezier",
-            python::geo::shape::MODULE_DOC_BEZIER,
-        ),
-        (
-            "raygeo.geo.shape.circle",
-            python::geo::shape::MODULE_DOC_CIRCLE,
-        ),
-        ("raygeo.geo.shape.line", python::geo::shape::MODULE_DOC_LINE),
-        (
-            "raygeo.geo.shape.point",
-            python::geo::shape::MODULE_DOC_POINT,
-        ),
-        (
-            "raygeo.geo.shape.polygon",
-            python::geo::shape::MODULE_DOC_POLYGON,
-        ),
-        ("raygeo.geo.shape.rect", python::geo::shape::MODULE_DOC_RECT),
-        ("raygeo.geo.types", python::geo::types::MODULE_DOC),
-        ("raygeo.ops", python::ops::MODULE_DOC),
-        ("raygeo.ops.axis", python::ops::axis::MODULE_DOC),
-        ("raygeo.ops.state", python::ops::state::MODULE_DOC),
-        ("raygeo.ops.types", python::ops::types::MODULE_DOC),
-    ]
-    .into_iter()
-    .collect();
-    let transform_matrix_doc = "\
-r\"\"\"4x4 affine transformation matrix for 2D/3D coordinate transforms.
-
-Layout (row-major):
-
-```
-[ Rxx  Rxy  Rxz  Tx ]   row 0: X basis vector + X translation
-[ Ryx  Ryy  Ryz  Ty ]   row 1: Y basis vector + Y translation
-[ Rzx  Rzy  Rzz  Tz ]   row 2: Z basis vector + Z translation
-[  0    0    0   1  ]   row 3: homogeneous row (identity)
-```
-
-For 2D transforms, set the Z components to identity:
-  ``Rzx = Rzy = 0.0``, ``Rzz = 1.0``, ``Tz = 0.0``
-\"\"\"
-";
-
-    for module in stub_info.modules.values() {
-        let mut content = module.format_with_config(false);
-        if let Some(doc) = module_docs.get(module.name.as_str()) {
-            let doc_block = format!("r\"\"\"{}\n\"\"\"\n\n", doc.trim_end());
-            content = doc_block + &content;
-        }
-        // Inject documentation for TransformMatrix type alias
-        if module.name == "raygeo.geo.types" {
-            let target = "TransformMatrix: TypeAlias = ";
-            if let Some(pos) = content.find(target) {
-                let end_of_line = content[pos..].find('\n').unwrap_or(0);
-                let insert_pos = pos + end_of_line + 1;
-                content.insert_str(insert_pos, transform_matrix_doc);
-            }
-        }
-        let parts: Vec<&str> = module.name.split('.').collect();
-        if parts.len() == 1 {
-            // Root module: raygeo -> __init__.pyi
-            // Backward-compat re-exports
-            content.push_str("from .geo import Geometry\n");
-            content.push_str("from .ops import Ops\n");
-            std::fs::write(format!("{}/__init__.pyi", path), content)
-                .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
-        } else {
-            // Strip "raygeo." prefix to get relative path components
-            let rel_parts = &parts[1..];
-            let has_submodules = stub_info.modules.values().any(|m| {
-                m.name != module.name
-                    && m.name.starts_with(&format!("{}.", module.name))
-            });
-            if has_submodules {
-                // Intermediate module -> directory with __init__.pyi
-                let subdir = format!("{}/{}", path, rel_parts.join("/"));
-                std::fs::create_dir_all(&subdir)
-                    .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
-                std::fs::write(format!("{}/__init__.pyi", subdir), content)
-                    .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
-            } else {
-                // Leaf module -> .pyi file in parent directory
-                let parent = &rel_parts[..rel_parts.len() - 1];
-                let filename = rel_parts.last().unwrap();
-                let subdir = if parent.is_empty() {
-                    path.to_string()
-                } else {
-                    format!("{}/{}", path, parent.join("/"))
-                };
-                std::fs::create_dir_all(&subdir)
-                    .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
-                std::fs::write(format!("{}/{}.pyi", subdir, filename), content)
-                    .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
-            }
-        }
-    }
     Ok(())
 }

@@ -1,3 +1,5 @@
+pyo3_stub_gen::module_doc!("raygeo.geo.shape", "{}", MODULE_DOC);
+
 pub(crate) const MODULE_DOC: &str = "\
 Primitive shape operations — arc, bezier, circle, line, point, polygon, rect.
 
@@ -5,6 +7,8 @@ Provides functions for geometric queries on primitive shapes including
 bounding boxes, intersection tests, containment checks, linearization,
 and affine transformations.
 ";
+
+pyo3_stub_gen::module_doc!("raygeo.geo.shape.arc", "{}", MODULE_DOC_ARC);
 
 pub(crate) const MODULE_DOC_ARC: &str = "\
 Arc geometry queries and conversions.
@@ -14,6 +18,8 @@ arc-circle, arc-polygons), arc linearization into line segments for
 rendering or further processing, angle utilities (normalize, direction,
 containment), and arc midpoint / closest-point lookups.
 ";
+
+pyo3_stub_gen::module_doc!("raygeo.geo.shape.bezier", "{}", MODULE_DOC_BEZIER);
 
 pub(crate) const MODULE_DOC_BEZIER: &str = "\
 Cubic bezier curve queries and conversions.
@@ -25,6 +31,8 @@ testing, perpendicular distance measurement, and conversion from
 cubic to quadratic form.
 ";
 
+pyo3_stub_gen::module_doc!("raygeo.geo.shape.circle", "{}", MODULE_DOC_CIRCLE);
+
 pub(crate) const MODULE_DOC_CIRCLE: &str = "\
 Circle geometry queries.
 
@@ -32,6 +40,8 @@ Provides circle-circle and circle-rectangle intersection detection,
 circle-rectangle full-containment checks, line-segment-vs-circle
 intersection, and point projection onto a circle's circumference.
 ";
+
+pyo3_stub_gen::module_doc!("raygeo.geo.shape.line", "{}", MODULE_DOC_LINE);
 
 pub(crate) const MODULE_DOC_LINE: &str = "\
 Line segment geometry queries.
@@ -42,6 +52,8 @@ intersections, point-on-segment tests, point-in-rectangle tests, rectangle
 containment checks, and angle-at-vertex computation.
 ";
 
+pyo3_stub_gen::module_doc!("raygeo.geo.shape.point", "{}", MODULE_DOC_POINT);
+
 pub(crate) const MODULE_DOC_POINT: &str = "\
 Individual point operations.
 
@@ -49,6 +61,8 @@ Provides equality testing within a configurable tolerance, midpoint
 computation between two points, and applying a 4x4 affine transformation
 matrix to a single point.
 ";
+
+pyo3_stub_gen::module_doc!("raygeo.geo.shape.polygon", "{}", MODULE_DOC_POLYGON);
 
 pub(crate) const MODULE_DOC_POLYGON: &str = "\
 Polygon manipulation functions.
@@ -61,6 +75,8 @@ normalisation (outer CCW / inner CW winding order), and transformations
 (translate, rotate, scale, flip). All functions accept list-of-tuples
 input; many also provide numpy array variants.
 ";
+
+pyo3_stub_gen::module_doc!("raygeo.geo.shape.rect", "{}", MODULE_DOC_RECT);
 
 pub(crate) const MODULE_DOC_RECT: &str = "\
 Rectangle intersection and containment tests.

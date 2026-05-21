@@ -2,6 +2,8 @@ use pyo3::prelude::*;
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods, gen_stub_pyfunction};
 use crate::ops::enums::{CommandCategory, CommandType, SectionType};
 
+pyo3_stub_gen::module_doc!("raygeo.ops.types", "{}", MODULE_DOC);
+
 pub(crate) const MODULE_DOC: &str = "\
 Core enumerations for the Ops command system.
 

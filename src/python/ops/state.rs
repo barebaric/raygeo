@@ -2,6 +2,8 @@ use pyo3::prelude::*;
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 use crate::ops::state::State;
 
+pyo3_stub_gen::module_doc!("raygeo.ops.state", "{}", MODULE_DOC);
+
 pub(crate) const MODULE_DOC: &str = "\
 Machine state tracking for laser cutting.
 

@@ -5,7 +5,7 @@ edition = "2021"
 description = "2D/3D geometry library for CAD/CAM applications with Python bindings"
 
 [dependencies]
-pyo3 = { version = "0.28", features = ["extension-module", "abi3", "abi3-py311"] }
+pyo3 = { version = "0.28", features = ["abi3", "abi3-py311"] }
 numpy = "0.28"
 pyo3-stub-gen = "0.22.3"
 bitflags = "2"

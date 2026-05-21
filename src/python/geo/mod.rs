@@ -5,6 +5,8 @@ pub(crate) mod math;
 pub(crate) mod shape;
 pub(crate) mod types;
 
+pyo3_stub_gen::module_doc!("raygeo.geo", "{}", MODULE_DOC);
+
 pub(crate) const MODULE_DOC: &str = "\
 Geometry types and operations for 2D/3D path data.
 

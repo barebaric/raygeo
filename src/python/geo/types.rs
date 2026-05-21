@@ -1,6 +1,8 @@
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::gen_type_alias_from_python;
 
+pyo3_stub_gen::module_doc!("raygeo.geo.types", "{}", MODULE_DOC);
+
 pub(crate) const MODULE_DOC: &str = "\
 Type aliases used throughout the raygeo API.
 
