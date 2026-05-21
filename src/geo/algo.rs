@@ -68,10 +68,19 @@ smoothing with configurable corner angle thresholds to preserve
 sharp features.
 ";
 
+pub(crate) const MODULE_DOC_OVERCUT: &str = "\
+Overcut operations for closed contours.
+
+Extends closed contours past their start point to ensure complete
+cuts through the material, particularly useful in laser cutting
+where the laser may not fully penetrate at the start/end point.
+";
+
 use crate::geo::flex_point::{
     extract_polygon, extract_polygons, int_poly_to_points, poly_to_points,
     PyPoint2D, PyPoint3D,
 };
+use crate::geo::Geometry;
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::gen_stub_pyfunction;
 use raygeo_core::geo::algo::clipping::{
@@ -95,6 +104,7 @@ use raygeo_core::geo::algo::smooth::{
     compute_gaussian_kernel, resample_polyline, smooth_circularly,
     smooth_polyline, smooth_sub_segment,
 };
+use raygeo_core::geo::algo::overcut::apply_overcut;
 use raygeo_core::Segment3D;
 
 const CLIPPER_SCALE: i64 = 10_000_000;
@@ -112,6 +122,9 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     clipping_mod.setattr("__doc__", MODULE_DOC_CLIPPING)?;
     let smooth_mod = PyModule::new(py, "smooth")?;
     smooth_mod.setattr("__doc__", MODULE_DOC_SMOOTH)?;
+
+    let overcut_mod = PyModule::new(py, "overcut")?;
+    overcut_mod.setattr("__doc__", MODULE_DOC_OVERCUT)?;
 
     clipping_mod.add_function(wrap_pyfunction!(
         clip_line_segment_py,
@@ -183,6 +196,11 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
         smooth_mod.clone()
     )?)?;
 
+    overcut_mod.add_function(wrap_pyfunction!(
+        apply_overcut_py,
+        overcut_mod.clone()
+    )?)?;
+
     let fitting_mod = PyModule::new(py, "fitting")?;
     fitting_mod.setattr("__doc__", MODULE_DOC_FITTING)?;
     fitting_mod.add_function(wrap_pyfunction!(
@@ -245,6 +263,7 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     algo_mod.add_submodule(&simplify_mod)?;
     algo_mod.add_submodule(&clipping_mod)?;
     algo_mod.add_submodule(&smooth_mod)?;
+    algo_mod.add_submodule(&overcut_mod)?;
     algo_mod.add_submodule(&fitting_mod)?;
     algo_mod.add_submodule(&analysis_mod)?;
 
@@ -258,6 +277,7 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     sys_modules.set_item("raygeo.geo.algo.minkowski", &minkowski_mod)?;
     sys_modules.set_item("raygeo.geo.algo.simplify", &simplify_mod)?;
     sys_modules.set_item("raygeo.geo.algo.smooth", &smooth_mod)?;
+    sys_modules.set_item("raygeo.geo.algo.overcut", &overcut_mod)?;
 
     Ok(())
 }
@@ -1021,4 +1041,34 @@ fn smooth_sub_segment_py(
     kernel: Vec<f64>,
 ) -> Vec<(f64, f64, f64)> {
     smooth_sub_segment(&points, &kernel)
+}
+
+#[gen_stub_pyfunction(
+    python = r#"
+    def apply_overcut(
+        geometry: Geometry,
+        overcut: float,
+    ) -> Geometry:
+        """Extend a closed contour past its start point.
+
+        When laser-cutting closed contours, the laser slows down at
+        corners and may not cut through completely. This function
+        extends the path by ``overcut`` distance past the start point
+        to ensure a clean cut.
+
+        If the geometry is not closed, empty, or overcut is <= 0, the
+        geometry is returned unchanged.
+
+        :param geometry: The input geometry (must be closed).
+        :param overcut: Distance to extend past the start point.
+        :returns: A new geometry with the overcut applied.
+        """
+"#,
+    module = "raygeo.geo.algo.overcut"
+)]
+#[pyfunction(name = "apply_overcut")]
+fn apply_overcut_py(geometry: &Geometry, overcut: f64) -> Geometry {
+    Geometry {
+        inner: apply_overcut(&geometry.inner, overcut),
+    }
 }

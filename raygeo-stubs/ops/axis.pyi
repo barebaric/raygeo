@@ -88,6 +88,17 @@ class Axis:
         :returns: The corresponding Axis constant.
         :raises ValueError: If the name is unknown.
         """
+    def __bool__(self) -> builtins.bool:
+        r"""
+        Check whether the axis mask is non-zero.
+        """
+    def __iter__(self) -> typing.Any:
+        r"""
+        Iterate over individual axes set in this mask.
+        
+        Yields each single-axis value (e.g. iterating ``Axis.X | Axis.Z``
+        yields ``Axis.X`` then ``Axis.Z``).
+        """
     def assert_single_axis(self) -> None:
         r"""
         Assert that this Axis represents exactly one axis (not a combination).

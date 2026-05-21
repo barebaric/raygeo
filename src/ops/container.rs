@@ -992,15 +992,15 @@ impl PyOps {
     /// Set the cutting speed for subsequent commands.
     ///
     /// :param speed: Cutting speed in units per second.
-    fn set_cut_speed(&mut self, speed: i32) {
-        self.inner.set_cut_speed(speed);
+    fn set_cut_speed(&mut self, speed: f64) {
+        self.inner.set_cut_speed(speed as i32);
     }
 
     /// Set the travel (rapid) speed for subsequent commands.
     ///
     /// :param speed: Travel speed in units per second.
-    fn set_travel_speed(&mut self, speed: i32) {
-        self.inner.set_travel_speed(speed);
+    fn set_travel_speed(&mut self, speed: f64) {
+        self.inner.set_travel_speed(speed as i32);
     }
 
     /// Pause execution for a given duration.

@@ -392,13 +392,13 @@ class Ops:
         
         :param power: Power level (0.0–1.0).
         """
-    def set_cut_speed(self, speed: builtins.int) -> None:
+    def set_cut_speed(self, speed: builtins.float) -> None:
         r"""
         Set the cutting speed for subsequent commands.
         
         :param speed: Cutting speed in units per second.
         """
-    def set_travel_speed(self, speed: builtins.int) -> None:
+    def set_travel_speed(self, speed: builtins.float) -> None:
         r"""
         Set the travel (rapid) speed for subsequent commands.
         
@@ -496,6 +496,14 @@ class Ops:
     def copy(self) -> Ops:
         r"""
         Return a deep copy of this Ops sequence.
+        """
+    def __copy__(self) -> Ops:
+        r"""
+        Shallow copy (same as :meth:`copy` since Ops is immutable).
+        """
+    def __deepcopy__(self, _memo: typing.Any) -> Ops:
+        r"""
+        Deep copy (same as :meth:`copy` since Ops is immutable).
         """
     def copy_command_from(self, source: Ops, idx: builtins.int) -> None:
         r"""

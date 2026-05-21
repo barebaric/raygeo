@@ -28,6 +28,7 @@ from . import analysis
 from . import clipping
 from . import fitting
 from . import minkowski
+from . import overcut
 from . import simplify
 from . import smooth
 __all__ = [
@@ -35,6 +36,7 @@ __all__ = [
     "clipping",
     "fitting",
     "minkowski",
+    "overcut",
     "simplify",
     "smooth",
 ]
