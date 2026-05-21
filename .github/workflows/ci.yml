@@ -50,6 +50,7 @@ jobs:
           args: --release --out dist
 
       - name: Install wheel
+        shell: bash
         run: pip install dist/raygeo-*.whl
 
       - name: Install test dependencies
