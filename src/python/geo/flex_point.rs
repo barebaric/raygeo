@@ -2,7 +2,7 @@ use numpy::{PyArray2, PyArrayMethods};
 use pyo3::prelude::*;
 use pyo3_stub_gen::{PyStubType, TypeInfo};
 
-use raygeo_core::Point;
+use crate::Point;
 
 /// A 2D point that accepts tuples `(x, y)`, `(x, y, z)`,
 /// or lists `[x, y]`, `[x, y, z]`, discarding the z coordinate.

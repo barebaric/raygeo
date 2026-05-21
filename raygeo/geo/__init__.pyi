@@ -72,6 +72,8 @@ class Geometry:
         The command data as a numpy array of shape
         (N, 8), or None if empty.
         """
+    @data.setter
+    def data(self, value: typing.Optional[numpy.typing.NDArray[numpy.float64]]) -> None: ...
     def transform(self, matrix: geo.types.TransformMatrix) -> Geometry:
         r"""
         Apply a 4x4 affine transformation matrix.
@@ -147,6 +149,10 @@ class Geometry:
     def copy(self) -> Geometry:
         r"""
         Return a deep copy of this geometry.
+        """
+    def get_last_point(self) -> tuple[builtins.float, builtins.float, builtins.float]:
+        r"""
+        Get the last point in the geometry.
         """
     def extend(self, other: Geometry) -> None:
         r"""

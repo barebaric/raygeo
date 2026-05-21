@@ -76,36 +76,36 @@ cuts through the material, particularly useful in laser cutting
 where the laser may not fully penetrate at the start/end point.
 ";
 
-use crate::geo::flex_point::{
+use super::flex_point::{
     extract_polygon, extract_polygons, int_poly_to_points, poly_to_points,
     PyPoint2D, PyPoint3D,
 };
-use crate::geo::Geometry;
-use pyo3::prelude::*;
-use pyo3_stub_gen::derive::gen_stub_pyfunction;
-use raygeo_core::geo::algo::clipping::{
+use super::Geometry;
+use crate::geo::algo::clipping::{
     clip_line_segment_with_polygons, clip_line_segment_with_rect,
     subtract_polygons_from_line_segment,
 };
-use raygeo_core::geo::algo::fitting::{
+use crate::geo::algo::fitting::{
     are_points_collinear, create_arc_cmd, create_line_cmd,
     fit_circle_to_3_points, fit_circle_to_points, fit_points_recursive,
     fit_points_with_primitives, flatten_to_points, get_polyline_arc_deviation,
     get_polyline_line_deviation, linearize_geometry,
     project_circle_center_to_bisector,
 };
-use raygeo_core::geo::algo::minkowski::{
+use crate::geo::algo::minkowski::{
     calculate_input_scale, convolve_point_sequences, convolve_two_segments,
     get_inner_fit_polygon, get_no_fit_polygon,
     get_polygon_minkowski_sum_convex,
 };
-use raygeo_core::geo::algo::simplify::simplify_polyline;
-use raygeo_core::geo::algo::smooth::{
+use crate::geo::algo::overcut::apply_overcut;
+use crate::geo::algo::simplify::simplify_polyline;
+use crate::geo::algo::smooth::{
     compute_gaussian_kernel, resample_polyline, smooth_circularly,
     smooth_polyline, smooth_sub_segment,
 };
-use raygeo_core::geo::algo::overcut::apply_overcut;
-use raygeo_core::Segment3D;
+use crate::Segment3D;
+use pyo3::prelude::*;
+use pyo3_stub_gen::derive::gen_stub_pyfunction;
 
 const CLIPPER_SCALE: i64 = 10_000_000;
 
@@ -753,7 +753,7 @@ fn to_clipper_py(
 )]
 #[pyfunction(name = "from_clipper")]
 fn from_clipper_py(
-    polygon: Vec<crate::geo::flex_point::PyIntPoint2D>,
+    polygon: Vec<crate::python::geo::flex_point::PyIntPoint2D>,
     scale: Option<i64>,
 ) -> Vec<Point> {
     let scale = scale.unwrap_or(CLIPPER_SCALE) as f64;
@@ -927,7 +927,7 @@ fn convolve_point_sequences_py(
 #[pyfunction(name = "simplify_polyline")]
 fn simplify_polyline_py(points: Vec<PyPoint2D>, tolerance: f64) -> Vec<Point> {
     let pts = poly_to_points(points);
-    let points_3d: Vec<raygeo_core::Point3D> =
+    let points_3d: Vec<crate::Point3D> =
         pts.iter().map(|p| (p.0, p.1, 0.0)).collect();
     let result = simplify_polyline(&points_3d, tolerance);
     result.iter().map(|p| (p.0, p.1)).collect()
@@ -946,7 +946,7 @@ fn simplify_polyline_py(points: Vec<PyPoint2D>, tolerance: f64) -> Vec<Point> {
 )]
 #[pyfunction(name = "remove_duplicates")]
 fn remove_duplicates_py(points: Vec<(f64, f64)>) -> Vec<(f64, f64)> {
-    raygeo_core::geo::algo::analysis::remove_duplicates(&points)
+    crate::geo::algo::analysis::remove_duplicates(&points)
 }
 
 #[gen_stub_pyfunction(
@@ -1067,8 +1067,8 @@ fn smooth_sub_segment_py(
     module = "raygeo.geo.algo.overcut"
 )]
 #[pyfunction(name = "apply_overcut")]
-fn apply_overcut_py(geometry: &Geometry, overcut: f64) -> Geometry {
-    Geometry {
+fn apply_overcut_py(geometry: &Geometry, overcut: f64) -> super::Geometry {
+    super::Geometry {
         inner: apply_overcut(&geometry.inner, overcut),
     }
 }

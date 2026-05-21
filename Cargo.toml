@@ -1,14 +1,22 @@
 [package]
-name = "raygeo-py"
+name = "raygeo"
 version = "0.0.0"
 edition = "2021"
-description = "PyO3 bindings for RayGeo geometry engine"
+description = "2D/3D geometry library for CAD/CAM applications with Python bindings"
 
 [dependencies]
 pyo3 = { version = "0.28", features = ["extension-module", "abi3", "abi3-py311"] }
-raygeo-core = { path = "crates/raygeo" }
 numpy = "0.28"
 pyo3-stub-gen = "0.22.3"
+bitflags = "2"
+clipper2 = "0.6"
+num_enum = "0.7"
+rstar = "0.12"
+strum = { version = "0.27", features = ["derive"] }
+thiserror = "2"
+
+[dev-dependencies]
+approx = "0.5"
 
 [lib]
 name = "raygeo"

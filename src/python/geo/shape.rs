@@ -69,44 +69,37 @@ Provides functions to test whether two axis-aligned rectangles intersect
 and whether one rectangle fully contains another.
 ";
 
-use crate::geo::flex_point::{
-    extract_polygons, poly_to_points, PyPoint2D, PyPoint3D,
-};
-use numpy::{PyArray2, PyArrayMethods, PyUntypedArrayMethods};
-use pyo3::prelude::*;
-use pyo3::types::PyList;
-use pyo3_stub_gen::derive::gen_stub_pyfunction;
-use raygeo_core::geo::shape::arc::is_arc_clockwise;
-use raygeo_core::geo::shape::arc::{
+use crate::geo::shape::arc::is_arc_clockwise;
+use crate::geo::shape::arc::{
     does_arc_intersect_circle, does_arc_intersect_rect, get_arc_angles,
     get_arc_bounds, get_arc_closest_point, get_arc_direction, get_arc_midpoint,
     is_angle_between, is_arc_inside_polygons, linearize_arc, normalize_angle,
 };
-use raygeo_core::geo::shape::bezier::{
+use crate::geo::shape::bezier::{
     bezier_flatness_sq, clip_bezier_with_rect,
     convert_cubic_bezier_to_quadratic, flatten_bezier, get_bezier_bounds,
     get_bezier_point_at, get_bezier_rect_intersections,
     is_bezier_inside_polygons, linearize_bezier, linearize_bezier_adaptive,
     linearize_bezier_segment, perp_dist_sq, split_bezier,
 };
-use raygeo_core::geo::shape::circle::{
+use crate::geo::shape::circle::{
     does_circle_intersect_rect, get_circle_circle_intersections,
     is_circle_inside_rect, line_segment_intersects_circle,
     project_point_onto_circle,
 };
-use raygeo_core::geo::shape::line::get_angle_at_vertex;
-use raygeo_core::geo::shape::line::{
+use crate::geo::shape::line::get_angle_at_vertex;
+use crate::geo::shape::line::{
     does_line_segment_intersect_circle, does_line_segment_intersect_rect,
     does_rect_contain_rect, get_line_closest_point, get_line_line_intersection,
     get_line_segment_closest_point, get_line_segment_intersection,
     get_line_segment_polygon_intersections, get_point_line_distance,
     is_point_inside_rect, is_point_on_segment,
 };
-use raygeo_core::geo::shape::point::are_points_equal;
-use raygeo_core::geo::shape::point::midpoint;
-use raygeo_core::geo::shape::point::transform_point;
-use raygeo_core::geo::shape::polygon::is_polygon_clockwise;
-use raygeo_core::geo::shape::polygon::{
+use crate::geo::shape::point::are_points_equal;
+use crate::geo::shape::point::midpoint;
+use crate::geo::shape::point::transform_point;
+use crate::geo::shape::polygon::is_polygon_clockwise;
+use crate::geo::shape::polygon::{
     clean_polygon, flip_polygon, flip_polygons, get_polygon_bounds,
     get_polygon_centroid, get_polygon_convex_hull, get_polygon_edges,
     get_polygon_group_bounds, get_polygon_perimeter, get_polygon_signed_area,
@@ -117,8 +110,15 @@ use raygeo_core::geo::shape::polygon::{
     to_clipper_from_points, translate_bounds, translate_polygon,
     translate_polygons,
 };
-use raygeo_core::geo::shape::rect::do_rects_intersect;
-use raygeo_core::{BezierSplit, Point, Segment3D, CMD_TYPE_ARC};
+use crate::geo::shape::rect::do_rects_intersect;
+use crate::{BezierSplit, Point, Segment3D, CMD_TYPE_ARC};
+use numpy::{PyArray2, PyArrayMethods, PyUntypedArrayMethods};
+use pyo3::prelude::*;
+use pyo3::types::PyList;
+use pyo3_stub_gen::derive::gen_stub_pyfunction;
+use super::flex_point::{
+    extract_polygons, poly_to_points, PyPoint2D, PyPoint3D,
+};
 
 fn _arc_row_from_any(arc_cmd: &Bound<'_, PyAny>) -> PyResult<[f64; 8]> {
     if let Ok(row) = arc_cmd.extract::<Vec<f64>>() {
@@ -2876,7 +2876,7 @@ fn does_rect_intersect_rect_py(
     r1: (f64, f64, f64, f64),
     r2: (f64, f64, f64, f64),
 ) -> bool {
-    use raygeo_core::geo::shape::line::does_rect_intersect_rect;
+    use crate::geo::shape::line::does_rect_intersect_rect;
     does_rect_intersect_rect(r1, r2)
 }
 

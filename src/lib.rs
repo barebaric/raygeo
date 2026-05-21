@@ -1,9 +1,53 @@
-use pyo3::prelude::*;
-use pyo3::exceptions::PyRuntimeError;
-use pyo3_stub_gen::{StubInfo, StubGenConfig};
+//! # RayForge Geometry Library
+//!
+//! A 2D/3D geometry library for CAD/CAM applications. Provides structures and functions
+//! for creating, manipulating, and analyzing geometric shapes including lines, arcs,
+//! Bezier curves, polygons, and complex paths.
+//!
+//! ## Core Concepts
+//!
+//! - **Geometry**: A path-based geometric structure supporting Move, Line, Arc, and Bezier commands
+//! - **Primitives**: Basic geometric operations like point-in-polygon, line intersections
+//! - **Analysis**: Path analysis including area calculation, winding order, and tangents
+//! - **Query**: Path queries for bounding boxes, distances, and closest points
+//!
+//! ## Usage
+//!
+//! ```rust
+//! use raygeo::{Geometry, Point};
+//!
+//! let mut geo = Geometry::new();
+//! geo.move_to(0.0, 0.0, 0.0);
+//! geo.line_to(10.0, 0.0, 0.0);
+//! geo.line_to(10.0, 10.0, 0.0);
+//! geo.close_path();
+//!
+//! let area = geo.area();
+//! let rect = geo.rect();
+//! ```
 
-mod geo;
-mod ops;
+pub mod constants;
+pub mod error;
+pub mod geo;
+pub mod ops;
+pub mod types;
+
+pub use constants::*;
+pub use error::*;
+pub use geo::*;
+pub use ops::axis::Axis;
+pub use ops::container::*;
+pub use ops::enums::*;
+pub use ops::group::*;
+pub use ops::state::*;
+pub use ops::types::*;
+pub use types::*;
+
+mod python;
+
+use pyo3::exceptions::PyRuntimeError;
+use pyo3::prelude::*;
+use pyo3_stub_gen::{StubGenConfig, StubInfo};
 
 pub(crate) const MODULE_DOC: &str = concat!(
     "RayGeo — 2D/3D geometry engine for laser cutting and CAM applications.\n",
@@ -46,8 +90,8 @@ pub(crate) const MODULE_DOC: &str = concat!(
 #[pymodule(gil_used = false)]
 fn raygeo(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.setattr("__doc__", MODULE_DOC)?;
-    geo::register(m)?;
-    ops::register(m)?;
+    python::geo::register(m)?;
+    python::ops::register(m)?;
     // Backward-compat re-exports on root
     m.add("Geometry", m.getattr("geo")?.getattr("Geometry")?)?;
     m.add("Ops", m.getattr("ops")?.getattr("Ops")?)?;
@@ -58,33 +102,83 @@ fn raygeo(m: &Bound<'_, PyModule>) -> PyResult<()> {
 
 #[pyfunction]
 fn generate_stubs(path: &str) -> PyResult<()> {
-    let stub_info = StubInfo::from_project_root("raygeo".to_string(), path.into(), false, StubGenConfig::default())
-        .map_err(|e| PyRuntimeError::new_err(format!("StubInfo failed: {}", e)))?;
+    std::fs::create_dir_all(path).map_err(|e| {
+        PyRuntimeError::new_err(format!(
+            "Failed to create stub directory: {}",
+            e
+        ))
+    })?;
+    let stub_info = match StubInfo::from_project_root(
+        "raygeo".to_string(),
+        path.into(),
+        false,
+        StubGenConfig::default(),
+    ) {
+        Ok(info) => info,
+        Err(e) => {
+            return Err(PyRuntimeError::new_err(format!(
+                "StubInfo failed: {:?}",
+                e
+            )))
+        }
+    };
     let module_docs: std::collections::HashMap<&str, &str> = [
-        ("raygeo", crate::MODULE_DOC),
-        ("raygeo.geo", crate::geo::MODULE_DOC),
-        ("raygeo.geo.algo", crate::geo::algo::MODULE_DOC),
-        ("raygeo.geo.algo.analysis", crate::geo::algo::MODULE_DOC_ANALYSIS),
-        ("raygeo.geo.algo.clipping", crate::geo::algo::MODULE_DOC_CLIPPING),
-        ("raygeo.geo.algo.fitting", crate::geo::algo::MODULE_DOC_FITTING),
-        ("raygeo.geo.algo.minkowski", crate::geo::algo::MODULE_DOC_MINKOWSKI),
-        ("raygeo.geo.algo.simplify", crate::geo::algo::MODULE_DOC_SIMPLIFY),
-        ("raygeo.geo.algo.smooth", crate::geo::algo::MODULE_DOC_SMOOTH),
-        ("raygeo.geo.math", crate::geo::math::MODULE_DOC),
-        ("raygeo.geo.shape", crate::geo::shape::MODULE_DOC),
-        ("raygeo.geo.shape.arc", crate::geo::shape::MODULE_DOC_ARC),
-        ("raygeo.geo.shape.bezier", crate::geo::shape::MODULE_DOC_BEZIER),
-        ("raygeo.geo.shape.circle", crate::geo::shape::MODULE_DOC_CIRCLE),
-        ("raygeo.geo.shape.line", crate::geo::shape::MODULE_DOC_LINE),
-        ("raygeo.geo.shape.point", crate::geo::shape::MODULE_DOC_POINT),
-        ("raygeo.geo.shape.polygon", crate::geo::shape::MODULE_DOC_POLYGON),
-        ("raygeo.geo.shape.rect", crate::geo::shape::MODULE_DOC_RECT),
-        ("raygeo.geo.types", crate::geo::types::MODULE_DOC),
-        ("raygeo.ops", crate::ops::MODULE_DOC),
-        ("raygeo.ops.axis", crate::ops::axis::MODULE_DOC),
-        ("raygeo.ops.state", crate::ops::state::MODULE_DOC),
-        ("raygeo.ops.types", crate::ops::types::MODULE_DOC),
-    ].into_iter().collect();
+        ("raygeo", MODULE_DOC),
+        ("raygeo.geo", python::geo::MODULE_DOC),
+        ("raygeo.geo.algo", python::geo::algo::MODULE_DOC),
+        (
+            "raygeo.geo.algo.analysis",
+            python::geo::algo::MODULE_DOC_ANALYSIS,
+        ),
+        (
+            "raygeo.geo.algo.clipping",
+            python::geo::algo::MODULE_DOC_CLIPPING,
+        ),
+        (
+            "raygeo.geo.algo.fitting",
+            python::geo::algo::MODULE_DOC_FITTING,
+        ),
+        (
+            "raygeo.geo.algo.minkowski",
+            python::geo::algo::MODULE_DOC_MINKOWSKI,
+        ),
+        (
+            "raygeo.geo.algo.simplify",
+            python::geo::algo::MODULE_DOC_SIMPLIFY,
+        ),
+        (
+            "raygeo.geo.algo.smooth",
+            python::geo::algo::MODULE_DOC_SMOOTH,
+        ),
+        ("raygeo.geo.math", python::geo::math::MODULE_DOC),
+        ("raygeo.geo.shape", python::geo::shape::MODULE_DOC),
+        ("raygeo.geo.shape.arc", python::geo::shape::MODULE_DOC_ARC),
+        (
+            "raygeo.geo.shape.bezier",
+            python::geo::shape::MODULE_DOC_BEZIER,
+        ),
+        (
+            "raygeo.geo.shape.circle",
+            python::geo::shape::MODULE_DOC_CIRCLE,
+        ),
+        ("raygeo.geo.shape.line", python::geo::shape::MODULE_DOC_LINE),
+        (
+            "raygeo.geo.shape.point",
+            python::geo::shape::MODULE_DOC_POINT,
+        ),
+        (
+            "raygeo.geo.shape.polygon",
+            python::geo::shape::MODULE_DOC_POLYGON,
+        ),
+        ("raygeo.geo.shape.rect", python::geo::shape::MODULE_DOC_RECT),
+        ("raygeo.geo.types", python::geo::types::MODULE_DOC),
+        ("raygeo.ops", python::ops::MODULE_DOC),
+        ("raygeo.ops.axis", python::ops::axis::MODULE_DOC),
+        ("raygeo.ops.state", python::ops::state::MODULE_DOC),
+        ("raygeo.ops.types", python::ops::types::MODULE_DOC),
+    ]
+    .into_iter()
+    .collect();
     let transform_matrix_doc = "\
 r\"\"\"4x4 affine transformation matrix for 2D/3D coordinate transforms.
 
@@ -105,10 +199,7 @@ For 2D transforms, set the Z components to identity:
     for module in stub_info.modules.values() {
         let mut content = module.format_with_config(false);
         if let Some(doc) = module_docs.get(module.name.as_str()) {
-            let doc_block = format!(
-                "r\"\"\"{}\n\"\"\"\n\n",
-                doc.trim_end()
-            );
+            let doc_block = format!("r\"\"\"{}\n\"\"\"\n\n", doc.trim_end());
             content = doc_block + &content;
         }
         // Inject documentation for TransformMatrix type alias
@@ -132,7 +223,8 @@ For 2D transforms, set the Z components to identity:
             // Strip "raygeo." prefix to get relative path components
             let rel_parts = &parts[1..];
             let has_submodules = stub_info.modules.values().any(|m| {
-                m.name != module.name && m.name.starts_with(&format!("{}.", module.name))
+                m.name != module.name
+                    && m.name.starts_with(&format!("{}.", module.name))
             });
             if has_submodules {
                 // Intermediate module -> directory with __init__.pyi

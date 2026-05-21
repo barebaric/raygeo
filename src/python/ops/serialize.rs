@@ -1,7 +1,7 @@
 use pyo3::prelude::*;
 use pyo3::types::{PyBytes, PyDict, PyList, PySlice, PyString};
 
-use raygeo_core::ops::{
+use crate::ops::{
     Axis, CommandCategory, CommandType, MarkerCmd, MoveCmd, OpCategory,
     StateCmd,
 };
@@ -62,7 +62,7 @@ pub fn axis_map_to_py_helper<'a>(
 /// :returns: Dict with keys like ``type``, ``end``, ``power``, etc.
 fn cmd_to_dict<'a>(
     py: Python<'a>,
-    ops: &raygeo_core::ops::Ops,
+    ops: &crate::ops::Ops,
     idx: usize,
 ) -> PyResult<Bound<'a, PyDict>> {
     let d = PyDict::new(py);
@@ -159,7 +159,7 @@ fn cmd_to_dict<'a>(
 /// :param ops: The ops container to mutate.
 fn create_and_append_command(
     cmd_data: &Bound<'_, PyDict>,
-    ops: &mut raygeo_core::ops::Ops,
+    ops: &mut crate::ops::Ops,
 ) -> PyResult<()> {
     let ct_str: String = cmd_data
         .get_item("type")?
@@ -368,7 +368,7 @@ fn create_and_append_command(
                 pyo3::exceptions::PyKeyError::new_err("missing 'section_type'")
             })?
             .extract()?;
-        let st = raygeo_core::ops::SectionType::from_name(&st_str).ok_or_else(
+        let st = crate::ops::SectionType::from_name(&st_str).ok_or_else(
             || {
                 pyo3::exceptions::PyValueError::new_err(format!(
                     "unknown section type: {}",
@@ -387,7 +387,7 @@ fn create_and_append_command(
                 pyo3::exceptions::PyKeyError::new_err("missing 'section_type'")
             })?
             .extract()?;
-        let st = raygeo_core::ops::SectionType::from_name(&st_str).ok_or_else(
+        let st = crate::ops::SectionType::from_name(&st_str).ok_or_else(
             || {
                 pyo3::exceptions::PyValueError::new_err(format!(
                     "unknown section type: {}",
@@ -414,7 +414,7 @@ fn create_and_append_command(
 /// :returns: Python dict suitable for :func:`ops_from_dict`.
 pub fn ops_to_dict(
     py: Python<'_>,
-    ops: &raygeo_core::ops::Ops,
+    ops: &crate::ops::Ops,
 ) -> PyResult<Py<PyDict>> {
     let commands = PyList::empty(py);
     for i in 0..ops.len() {
@@ -435,9 +435,9 @@ pub fn ops_to_dict(
 /// :returns: A new Ops instance.
 pub fn ops_from_dict(
     data: &Bound<'_, PyDict>,
-) -> PyResult<raygeo_core::ops::Ops> {
+) -> PyResult<crate::ops::Ops> {
     let _py = data.py();
-    let mut ops = raygeo_core::ops::Ops::new();
+    let mut ops = crate::ops::Ops::new();
     let last_move: (f64, f64, f64) = match data.get_item("last_move_to")? {
         Some(v) => {
             let l: Vec<f64> = v.extract()?;
@@ -467,7 +467,7 @@ pub fn ops_from_dict(
 
 pub fn ops_to_numpy_arrays(
     py: Python<'_>,
-    ops: &raygeo_core::ops::Ops,
+    ops: &crate::ops::Ops,
 ) -> PyResult<Py<PyDict>> {
     use pyo3::types::PyByteArray;
 
@@ -678,7 +678,7 @@ pub fn ops_to_numpy_arrays(
 
 pub fn ops_from_numpy_arrays(
     arrays: &Bound<'_, PyDict>,
-) -> PyResult<raygeo_core::ops::Ops> {
+) -> PyResult<crate::ops::Ops> {
     let py = arrays.py();
     let numpy = py.import("numpy")?;
 
@@ -691,7 +691,7 @@ pub fn ops_from_numpy_arrays(
         .extract()?;
 
     let num_cmds = types_arr.len();
-    let mut ops = raygeo_core::ops::Ops::new();
+    let mut ops = crate::ops::Ops::new();
 
     let json_bytes_bound = arrays
         .get_item("state_marker_json_bytes")?

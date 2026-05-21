@@ -16,19 +16,31 @@ IntPoint / IntPolygon — integer-coordinate variants for Clipper.
 
 from typing import TypeAlias
 __all__ = [
+    "CubicBezier",
+    "Edge",
+    "IntPoint",
+    "IntPolygon",
     "Point",
     "Point2DOr3D",
     "Point3D",
     "Polygon",
+    "Polygon3D",
     "Rect",
+    "Rect3D",
     "TransformMatrix",
 ]
 
+CubicBezier: TypeAlias = tuple[tuple[float, float], tuple[float, float], tuple[float, float], tuple[float, float]]
+Edge: TypeAlias = tuple[tuple[float, float], tuple[float, float]]
+IntPoint: TypeAlias = tuple[int, int]
+IntPolygon: TypeAlias = list[IntPoint]
 Point: TypeAlias = tuple[float, float]
 Point2DOr3D: TypeAlias = Point | Point3D
 Point3D: TypeAlias = tuple[float, float, float]
 Polygon: TypeAlias = list[Point]
+Polygon3D: TypeAlias = list[tuple[float, float, float]]
 Rect: TypeAlias = tuple[float, float, float, float]
+Rect3D: TypeAlias = tuple[float, float, float, float, float, float]
 TransformMatrix: TypeAlias = list[list[float]] | numpy.ndarray[tuple[int, int], float]
 r"""4x4 affine transformation matrix for 2D/3D coordinate transforms.
 
