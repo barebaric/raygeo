@@ -1,5 +1,5 @@
 use pyo3::prelude::*;
-use pyo3::types::PyType;
+use pyo3::types::{PyList, PyType};
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 use raygeo_core::ops::axis::Axis;
 
@@ -18,6 +18,16 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyAxis>()?;
     Ok(())
 }
+
+const SINGLE_AXES: [(u8, &str); 7] = [
+    (0x01, "X"),
+    (0x02, "Y"),
+    (0x04, "Z"),
+    (0x08, "A"),
+    (0x10, "B"),
+    (0x20, "C"),
+    (0x40, "U"),
+];
 
 /// Represents a single axis or a combination of axes (X, Y, Z, A, B, C, U).
 ///
@@ -129,6 +139,28 @@ impl PyAxis {
                 format!("unknown axis name: {}", name)
             ))?;
         Ok(PyAxis(axis))
+    }
+
+    /// Check whether the axis mask is non-zero.
+    fn __bool__(&self) -> bool {
+        self.0.bits() != 0
+    }
+
+    /// Iterate over individual axes set in this mask.
+    ///
+    /// Yields each single-axis value (e.g. iterating ``Axis.X | Axis.Z``
+    /// yields ``Axis.X`` then ``Axis.Z``).
+    fn __iter__<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyAny>> {
+        let mut result = Vec::new();
+        for (bits, name) in &SINGLE_AXES {
+            if self.0.bits() & bits == *bits {
+                if let Some(axis) = Axis::from_str_name(name) {
+                    result.push(PyAxis(axis));
+                }
+            }
+        }
+        let list = PyList::new(py, result)?;
+        list.call_method0("__iter__")
     }
 
     /// Assert that this Axis represents exactly one axis (not a combination).

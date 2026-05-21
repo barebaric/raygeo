@@ -199,7 +199,7 @@ fn create_and_append_command(
                 ops.line_to(end_tuple.0, end_tuple.1, end_tuple.2, extra_axes);
             }
             CommandType::ArcTo => {
-                let co: (f64, f64) = cmd_data
+                let co_vec: Vec<f64> = cmd_data
                     .get_item("center_offset")?
                     .ok_or_else(|| {
                         pyo3::exceptions::PyKeyError::new_err(
@@ -218,15 +218,15 @@ fn create_and_append_command(
                 ops.arc_to(
                     end_tuple.0,
                     end_tuple.1,
-                    co.0,
-                    co.1,
+                    co_vec[0],
+                    co_vec[1],
                     cw,
                     end_tuple.2,
                     extra_axes,
                 );
             }
             CommandType::BezierTo => {
-                let c1: (f64, f64, f64) = cmd_data
+                let c1_vec: Vec<f64> = cmd_data
                     .get_item("control1")?
                     .ok_or_else(|| {
                         pyo3::exceptions::PyKeyError::new_err(
@@ -234,7 +234,7 @@ fn create_and_append_command(
                         )
                     })?
                     .extract()?;
-                let c2: (f64, f64, f64) = cmd_data
+                let c2_vec: Vec<f64> = cmd_data
                     .get_item("control2")?
                     .ok_or_else(|| {
                         pyo3::exceptions::PyKeyError::new_err(
@@ -242,10 +242,12 @@ fn create_and_append_command(
                         )
                     })?
                     .extract()?;
+                let c1 = (c1_vec[0], c1_vec[1], c1_vec[2]);
+                let c2 = (c2_vec[0], c2_vec[1], c2_vec[2]);
                 ops.bezier_to(c1, c2, end_tuple, extra_axes);
             }
             CommandType::QuadraticBezierTo => {
-                let c: (f64, f64, f64) = cmd_data
+                let c_vec: Vec<f64> = cmd_data
                     .get_item("control")?
                     .ok_or_else(|| {
                         pyo3::exceptions::PyKeyError::new_err(
@@ -253,6 +255,7 @@ fn create_and_append_command(
                         )
                     })?
                     .extract()?;
+                let c = (c_vec[0], c_vec[1], c_vec[2]);
                 ops.quadratic_bezier_to(c, end_tuple, extra_axes);
             }
             CommandType::ScanLine => {

@@ -273,7 +273,7 @@ fn py_pyany_eq<T: pyo3::PyTypeInfo>(
 /// Use the builder methods (``move_to``, ``line_to``, ``arc_to``, etc.)
 /// to construct a sequence, or load from geometry/dict/numpy arrays.
 #[gen_stub_pyclass]
-#[pyclass(module = "raygeo.ops", name = "Ops", skip_from_py_object)]
+#[pyclass(dict, module = "raygeo.ops", name = "Ops", skip_from_py_object)]
 #[derive(Clone, Debug)]
 pub struct PyOps {
     pub inner: raygeo_core::ops::Ops,
@@ -1132,6 +1132,16 @@ impl PyOps {
         PyOps {
             inner: self.inner.copy(),
         }
+    }
+
+    /// Shallow copy (same as :meth:`copy` since Ops is immutable).
+    fn __copy__(&self) -> PyOps {
+        self.copy()
+    }
+
+    /// Deep copy (same as :meth:`copy` since Ops is immutable).
+    fn __deepcopy__(&self, _memo: Bound<'_, PyAny>) -> PyOps {
+        self.copy()
     }
 
     /// Copy a single command from another Ops sequence into this one.
