@@ -40,6 +40,13 @@ class Axis:
         r"""
         The uppercase label of the axis (e.g. ``"X"``, ``"Y"``, ``"Z"``).
         """
+    @property
+    def name(self) -> builtins.str:
+        r"""
+        The uppercase name of the axis (e.g. ``"X"``, ``"Y"``, ``"Z"``).
+        
+        Legacy alias for :attr:`label` to match Python ``IntFlag.name``.
+        """
     def __or__(self, other: Axis) -> Axis:
         r"""
         Combine two axis masks with bitwise OR.
@@ -71,6 +78,15 @@ class Axis:
     def __hash__(self) -> builtins.int:
         r"""
         Hash based on the raw bit value.
+        """
+    @classmethod
+    def from_name(cls, name: builtins.str) -> Axis:
+        r"""
+        Look up an Axis by its uppercase name.
+        
+        :param name: The uppercase letter (``"X"``, ``"Y"``, etc.).
+        :returns: The corresponding Axis constant.
+        :raises ValueError: If the name is unknown.
         """
     def assert_single_axis(self) -> None:
         r"""

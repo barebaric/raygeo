@@ -1,4 +1,5 @@
 use pyo3::prelude::*;
+use pyo3::types::PyType;
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 use raygeo_core::ops::axis::Axis;
 
@@ -103,6 +104,31 @@ impl PyAxis {
             Ok(s) => s.to_uppercase(),
             Err(_) => format!("{:?}", self.0),
         }
+    }
+
+    /// The uppercase name of the axis (e.g. ``"X"``, ``"Y"``, ``"Z"``).
+    ///
+    /// Legacy alias for :attr:`label` to match Python ``IntFlag.name``.
+    #[getter]
+    fn name(&self) -> String {
+        match self.0.label() {
+            Ok(s) => s.to_uppercase(),
+            Err(_) => format!("{:?}", self.0),
+        }
+    }
+
+    /// Look up an Axis by its uppercase name.
+    ///
+    /// :param name: The uppercase letter (``"X"``, ``"Y"``, etc.).
+    /// :returns: The corresponding Axis constant.
+    /// :raises ValueError: If the name is unknown.
+    #[classmethod]
+    fn from_name(_cls: &Bound<'_, PyType>, name: &str) -> PyResult<Self> {
+        let axis = Axis::from_str_name(name)
+            .ok_or_else(|| pyo3::exceptions::PyValueError::new_err(
+                format!("unknown axis name: {}", name)
+            ))?;
+        Ok(PyAxis(axis))
     }
 
     /// Assert that this Axis represents exactly one axis (not a combination).

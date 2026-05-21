@@ -51,6 +51,7 @@ fn raygeo(m: &Bound<'_, PyModule>) -> PyResult<()> {
     // Backward-compat re-exports on root
     m.add("Geometry", m.getattr("geo")?.getattr("Geometry")?)?;
     m.add("Ops", m.getattr("ops")?.getattr("Ops")?)?;
+    m.add("Rect", m.getattr("geo")?.getattr("types")?.getattr("Rect")?)?;
     m.add_function(wrap_pyfunction!(generate_stubs, m)?)?;
     Ok(())
 }

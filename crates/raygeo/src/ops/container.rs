@@ -260,8 +260,8 @@ impl Ops {
         self.invalidate_time_cache();
     }
 
-    pub fn enable_air_assist(&mut self) {
-        self.commands.push(OpNode::enable_air_assist());
+    pub fn enable_air_assist(&mut self, enabled: bool) {
+        self.commands.push(OpNode::enable_air_assist(enabled));
         self.invalidate_time_cache();
     }
 

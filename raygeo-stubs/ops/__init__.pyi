@@ -410,9 +410,11 @@ class Ops:
         
         :param duration_ms: Dwell duration in milliseconds.
         """
-    def enable_air_assist(self) -> None:
+    def enable_air_assist(self, enabled: builtins.bool = True) -> None:
         r"""
         Enable air assist for subsequent cutting.
+        
+        :param enabled: Whether to enable air assist (default True).
         """
     def disable_air_assist(self) -> None:
         r"""

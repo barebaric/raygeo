@@ -329,7 +329,7 @@ fn create_and_append_command(
             .extract()?;
         ops.set_laser(&uid);
     } else if ct == CommandType::EnableAirAssist {
-        ops.enable_air_assist();
+        ops.enable_air_assist(true);
     } else if ct == CommandType::DisableAirAssist {
         ops.disable_air_assist();
     } else if ct == CommandType::LayerStart || ct == CommandType::LayerEnd {

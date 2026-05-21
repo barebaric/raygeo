@@ -1011,8 +1011,11 @@ impl PyOps {
     }
 
     /// Enable air assist for subsequent cutting.
-    fn enable_air_assist(&mut self) {
-        self.inner.enable_air_assist();
+    ///
+    /// :param enabled: Whether to enable air assist (default True).
+    #[pyo3(signature = (enabled = true))]
+    fn enable_air_assist(&mut self, enabled: bool) {
+        self.inner.enable_air_assist(enabled);
     }
 
     /// Disable air assist.

@@ -209,9 +209,13 @@ impl OpNode {
         }
     }
 
-    pub fn enable_air_assist() -> Self {
+    pub fn enable_air_assist(enabled: bool) -> Self {
         OpNode {
-            category: OpCategory::State(StateCmd::EnableAirAssist),
+            category: OpCategory::State(if enabled {
+                StateCmd::EnableAirAssist
+            } else {
+                StateCmd::DisableAirAssist
+            }),
             state: None,
             extra_axes: None,
         }
