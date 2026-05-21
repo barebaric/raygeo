@@ -10,6 +10,8 @@ testing, perpendicular distance measurement, and conversion from
 cubic to quadratic form.
 """
 
+from raygeo import geo
+import typing
 __all__ = [
     "bezier_flatness_sq",
     "clip_bezier_with_rect",
@@ -26,7 +28,7 @@ __all__ = [
     "split_bezier",
 ]
 
-def bezier_flatness_sq(a: Point3D, b: Point3D, c: Point3D, d: Point3D) -> float:
+def bezier_flatness_sq(a: types.Point3D, b: types.Point3D, c: types.Point3D, d: types.Point3D) -> float:
     r"""
     Compute the flatness squared of a cubic bezier.
     
@@ -37,7 +39,7 @@ def bezier_flatness_sq(a: Point3D, b: Point3D, c: Point3D, d: Point3D) -> float:
     :returns: Flatness squared value.
     """
 
-def clip_bezier_with_rect(p0: Point, p1: Point, p2: Point, p3: Point, rect: Rect) -> list[tuple[Point, Point, Point, Point]]:
+def clip_bezier_with_rect(p0: types.Point, p1: types.Point, p2: types.Point, p3: types.Point, rect: types.Rect) -> list[tuple[types.Point, types.Point, types.Point, types.Point]]:
     r"""
     Clip a cubic bezier with a rectangle.
     
@@ -49,7 +51,7 @@ def clip_bezier_with_rect(p0: Point, p1: Point, p2: Point, p3: Point, rect: Rect
     :returns: List of bezier segments inside the rectangle.
     """
 
-def convert_cubic_bezier_to_quadratic(p0: Point, p1: Point, p2: Point, p3: Point) -> tuple[Point, Point, Point]:
+def convert_cubic_bezier_to_quadratic(p0: types.Point, p1: types.Point, p2: types.Point, p3: types.Point) -> tuple[types.Point, types.Point, types.Point]:
     r"""
     Convert a cubic bezier to a quadratic bezier.
     
@@ -60,7 +62,7 @@ def convert_cubic_bezier_to_quadratic(p0: Point, p1: Point, p2: Point, p3: Point
     :returns: Quadratic bezier (p0, p1, p2).
     """
 
-def flatten_bezier(p0: Point3D, p1: Point3D, p2: Point3D, p3: Point3D, tolerance: float, max_subdivisions: int, pts: list) -> None:
+def flatten_bezier(p0: types.Point3D, p1: types.Point3D, p2: types.Point3D, p3: types.Point3D, tolerance: float, max_subdivisions: int, pts: list) -> None:
     r"""
     Flatten a bezier curve into points.
     
@@ -73,7 +75,7 @@ def flatten_bezier(p0: Point3D, p1: Point3D, p2: Point3D, p3: Point3D, tolerance
     :param pts: Output list to append points to.
     """
 
-def get_bezier_bounds(p0: Point, p1: Point, p2: Point, p3: Point) -> Rect:
+def get_bezier_bounds(p0: types.Point, p1: types.Point, p2: types.Point, p3: types.Point) -> types.Rect:
     r"""
     Get the bounding rectangle of a cubic bezier.
     
@@ -84,7 +86,7 @@ def get_bezier_bounds(p0: Point, p1: Point, p2: Point, p3: Point) -> Rect:
     :returns: Bounding rectangle as (x_min, y_min, x_max, y_max).
     """
 
-def get_bezier_point_at(p0: Point, p1: Point, p2: Point, p3: Point, t: float) -> Point:
+def get_bezier_point_at(p0: types.Point, p1: types.Point, p2: types.Point, p3: types.Point, t: float) -> types.Point:
     r"""
     Get a point on a cubic bezier at parameter t.
     
@@ -96,7 +98,7 @@ def get_bezier_point_at(p0: Point, p1: Point, p2: Point, p3: Point, t: float) ->
     :returns: Point on the bezier curve (x, y).
     """
 
-def get_bezier_rect_intersections(p0: Point, p1: Point, p2: Point, p3: Point, rect: Rect) -> list[float]:
+def get_bezier_rect_intersections(p0: types.Point, p1: types.Point, p2: types.Point, p3: types.Point, rect: types.Rect) -> list[float]:
     r"""
     Get intersection t-values of a bezier with a rectangle.
     
@@ -108,7 +110,7 @@ def get_bezier_rect_intersections(p0: Point, p1: Point, p2: Point, p3: Point, re
     :returns: List of t-values where the bezier intersects.
     """
 
-def is_bezier_inside_polygons(p0: Point, p1: Point, p2: Point, p3: Point, polygons: Any) -> bool:
+def is_bezier_inside_polygons(p0: types.Point, p1: types.Point, p2: types.Point, p3: types.Point, polygons: typing.Any) -> bool:
     r"""
     Check if a bezier curve is inside a set of polygons.
     
@@ -120,7 +122,7 @@ def is_bezier_inside_polygons(p0: Point, p1: Point, p2: Point, p3: Point, polygo
     :returns: True if the bezier is inside all polygons.
     """
 
-def linearize_bezier(p0: Point3D, p1: Point3D, p2: Point3D, p3: Point3D, num_steps: int) -> list[tuple[Point3D, Point3D]]:
+def linearize_bezier(p0: types.Point3D, p1: types.Point3D, p2: types.Point3D, p3: types.Point3D, num_steps: int) -> list[tuple[types.Point3D, types.Point3D]]:
     r"""
     Linearize a bezier into line segments.
     
@@ -132,7 +134,7 @@ def linearize_bezier(p0: Point3D, p1: Point3D, p2: Point3D, p3: Point3D, num_ste
     :returns: List of (p1, p2) segment pairs.
     """
 
-def linearize_bezier_adaptive(p0: Point, p1: Point, p2: Point, p3: Point, tolerance_sq: float, max_subdivisions: int = 20) -> Polygon:
+def linearize_bezier_adaptive(p0: types.Point, p1: types.Point, p2: types.Point, p3: types.Point, tolerance_sq: float, max_subdivisions: int = 20) -> types.Polygon:
     r"""
     Adaptively linearize a bezier curve.
     
@@ -145,7 +147,7 @@ def linearize_bezier_adaptive(p0: Point, p1: Point, p2: Point, p3: Point, tolera
     :returns: List of linearized points (x, y).
     """
 
-def linearize_bezier_segment(p0: Point3D, p1: Point3D, p2: Point3D, p3: Point3D, tolerance: float = 0.1) -> list[Point3D]:
+def linearize_bezier_segment(p0: types.Point3D, p1: types.Point3D, p2: types.Point3D, p3: types.Point3D, tolerance: float = 0.1) -> list[types.Point3D]:
     r"""
     Linearize a single bezier segment.
     
@@ -157,7 +159,7 @@ def linearize_bezier_segment(p0: Point3D, p1: Point3D, p2: Point3D, p3: Point3D,
     :returns: List of linearized points (x, y, z).
     """
 
-def perp_dist_sq(pt: Point3D, origin: Point3D, vx: float, vy: float, vz: float = 0, norm_sq: float = 0) -> float:
+def perp_dist_sq(pt: types.Point3D, origin: types.Point3D, vx: float, vy: float, vz: float = 0, norm_sq: float = 0) -> float:
     r"""
     Compute the perpendicular distance squared.
     
@@ -170,7 +172,7 @@ def perp_dist_sq(pt: Point3D, origin: Point3D, vx: float, vy: float, vz: float =
     :returns: Perpendicular distance squared.
     """
 
-def split_bezier(p0: Point, p1: Point, p2: Point, p3: Point, t: float) -> tuple[tuple[Point, Point, Point, Point], tuple[Point, Point, Point, Point]]:
+def split_bezier(p0: types.Point, p1: types.Point, p2: types.Point, p3: types.Point, t: float) -> tuple[tuple[types.Point, types.Point, types.Point, types.Point], tuple[types.Point, types.Point, types.Point, types.Point]]:
     r"""
     Split a cubic bezier at parameter t.
     

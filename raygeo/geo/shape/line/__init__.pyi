@@ -9,6 +9,8 @@ intersections, point-on-segment tests, point-in-rectangle tests, rectangle
 containment checks, and angle-at-vertex computation.
 """
 
+from raygeo import geo
+import typing
 __all__ = [
     "does_line_segment_intersect_circle",
     "does_line_segment_intersect_rect",
@@ -22,7 +24,7 @@ __all__ = [
     "is_point_on_line_segment",
 ]
 
-def does_line_segment_intersect_circle(p1: Point, p2: Point, circle_center: Point, circle_radius: float) -> bool:
+def does_line_segment_intersect_circle(p1: types.Point, p2: types.Point, circle_center: types.Point, circle_radius: float) -> bool:
     r"""
     Check if a line segment intersects a circle.
     
@@ -33,7 +35,7 @@ def does_line_segment_intersect_circle(p1: Point, p2: Point, circle_center: Poin
     :returns: True if the segment intersects the circle.
     """
 
-def does_line_segment_intersect_rect(p1: Point, p2: Point, rect: Rect) -> bool:
+def does_line_segment_intersect_rect(p1: types.Point, p2: types.Point, rect: types.Rect) -> bool:
     r"""
     Check if a line segment intersects a rectangle.
     
@@ -43,7 +45,7 @@ def does_line_segment_intersect_rect(p1: Point, p2: Point, rect: Rect) -> bool:
     :returns: True if the segment intersects the rectangle.
     """
 
-def get_angle_at_vertex(p0: Point, p1: Point, p2: Point) -> float:
+def get_angle_at_vertex(p0: types.Point, p1: types.Point, p2: types.Point) -> float:
     r"""
     Get the angle at a vertex between three points.
     
@@ -53,7 +55,7 @@ def get_angle_at_vertex(p0: Point, p1: Point, p2: Point) -> float:
     :returns: Angle in radians.
     """
 
-def get_line_closest_point(line_p1: Point, line_p2: Point, x: float, y: float) -> Point:
+def get_line_closest_point(line_p1: types.Point, line_p2: types.Point, x: float, y: float) -> types.Point:
     r"""
     Get the closest point on a line to a given point.
     
@@ -64,7 +66,7 @@ def get_line_closest_point(line_p1: Point, line_p2: Point, x: float, y: float) -
     :returns: Closest point (x, y) on the line.
     """
 
-def get_line_line_intersection(p1: Point, p2: Point, p3: Point, p4: Point) -> Optional[Point]:
+def get_line_line_intersection(p1: types.Point, p2: types.Point, p3: types.Point, p4: types.Point) -> typing.Optional[types.Point]:
     r"""
     Get the intersection of two infinite lines.
     
@@ -75,7 +77,7 @@ def get_line_line_intersection(p1: Point, p2: Point, p3: Point, p4: Point) -> Op
     :returns: Intersection point (x, y) or None.
     """
 
-def get_line_segment_closest_point(seg_p1: Point, seg_p2: Point, x: float, y: float) -> tuple[float, Point, float]:
+def get_line_segment_closest_point(seg_p1: types.Point, seg_p2: types.Point, x: float, y: float) -> tuple[float, types.Point, float]:
     r"""
     Get closest point on a line segment to a point.
     
@@ -86,7 +88,7 @@ def get_line_segment_closest_point(seg_p1: Point, seg_p2: Point, x: float, y: fl
     :returns: Tuple of (parameter, closest_point, distance).
     """
 
-def get_line_segment_intersection(p1: Point, p2: Point, p3: Point, p4: Point) -> Optional[Point]:
+def get_line_segment_intersection(p1: types.Point, p2: types.Point, p3: types.Point, p4: types.Point) -> typing.Optional[types.Point]:
     r"""
     Get the intersection of two line segments.
     
@@ -97,7 +99,7 @@ def get_line_segment_intersection(p1: Point, p2: Point, p3: Point, p4: Point) ->
     :returns: Intersection point (x, y) or None.
     """
 
-def get_line_segment_polygon_intersections(p1: Point, p2: Point, polygon: list[Polygon]) -> list[float]:
+def get_line_segment_polygon_intersections(p1: types.Point, p2: types.Point, polygon: list[types.Polygon]) -> list[float]:
     r"""
     Get t-values of line segment-polygon intersections.
     
@@ -107,7 +109,7 @@ def get_line_segment_polygon_intersections(p1: Point, p2: Point, polygon: list[P
     :returns: List of t-values where the segment intersects.
     """
 
-def get_point_line_distance(point: Point, line_p1: Point, line_p2: Point) -> float:
+def get_point_line_distance(point: types.Point, line_p1: types.Point, line_p2: types.Point) -> float:
     r"""
     Get the distance from a point to a line.
     
@@ -117,7 +119,7 @@ def get_point_line_distance(point: Point, line_p1: Point, line_p2: Point) -> flo
     :returns: Perpendicular distance.
     """
 
-def is_point_on_line_segment(point: Point, seg_p1: Point, seg_p2: Point) -> bool:
+def is_point_on_line_segment(point: types.Point, seg_p1: types.Point, seg_p2: types.Point) -> bool:
     r"""
     Check if a point is on a line segment.
     

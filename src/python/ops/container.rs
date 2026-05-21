@@ -282,11 +282,13 @@ pub struct PyOps {
 submit! {
     gen_methods_from_python! {
         r#"
+        from raygeo import geo
+
         class PyOps:
-            def transform(self, matrix: raygeo.geo.types.TransformMatrix) -> None:
+            def transform(self, matrix: geo.types.TransformMatrix) -> None:
                 """Apply a 4x4 affine transformation matrix to all geometry.
 
-                See ``raygeo.geo.types.TransformMatrix`` for the matrix layout.
+                See ``geo.types.TransformMatrix`` for the matrix layout.
 
                 :param matrix: A 4x4 affine transformation matrix.
                 """

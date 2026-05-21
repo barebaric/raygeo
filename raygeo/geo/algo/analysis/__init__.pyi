@@ -7,11 +7,13 @@ Provides functions for removing duplicate points from point sequences
 and extracting individual points from path data.
 """
 
+import collections.abc
+from raygeo import geo
 __all__ = [
     "remove_duplicates",
 ]
 
-def remove_duplicates(points: Sequence[Point]) -> Polygon:
+def remove_duplicates(points: collections.abc.Sequence[types.Point]) -> types.Polygon:
     r"""
     Remove duplicate points from a sequence.
     

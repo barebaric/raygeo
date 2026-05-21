@@ -7,6 +7,7 @@ Provides functions to test whether two axis-aligned rectangles intersect
 and whether one rectangle fully contains another.
 """
 
+from raygeo import geo
 __all__ = [
     "do_rects_intersect",
     "does_rect_contain_rect",
@@ -14,7 +15,7 @@ __all__ = [
     "is_point_inside_rect",
 ]
 
-def do_rects_intersect(r1: Rect, r2: Rect) -> bool:
+def do_rects_intersect(r1: types.Rect, r2: types.Rect) -> bool:
     r"""
     Check if two rectangles intersect.
     
@@ -23,7 +24,7 @@ def do_rects_intersect(r1: Rect, r2: Rect) -> bool:
     :returns: True if the rectangles intersect.
     """
 
-def does_rect_contain_rect(outer: Rect, inner: Rect) -> bool:
+def does_rect_contain_rect(outer: types.Rect, inner: types.Rect) -> bool:
     r"""
     Check if one rectangle contains another.
     
@@ -32,7 +33,7 @@ def does_rect_contain_rect(outer: Rect, inner: Rect) -> bool:
     :returns: True if outer fully contains inner.
     """
 
-def does_rect_intersect_rect(r1: Rect, r2: Rect) -> bool:
+def does_rect_intersect_rect(r1: types.Rect, r2: types.Rect) -> bool:
     r"""
     Check if two rectangles intersect.
     
@@ -41,7 +42,7 @@ def does_rect_intersect_rect(r1: Rect, r2: Rect) -> bool:
     :returns: True if the rectangles intersect.
     """
 
-def is_point_inside_rect(point: Point, rect: Rect) -> bool:
+def is_point_inside_rect(point: types.Point, rect: types.Rect) -> bool:
     r"""
     Check if a point is inside a rectangle.
     

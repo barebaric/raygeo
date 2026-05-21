@@ -8,6 +8,8 @@ for convex polygons, and no-fit polygon / inner fit polygon calculations
 used in nesting and packing algorithms.
 """
 
+import collections.abc
+from raygeo import geo
 __all__ = [
     "calculate_input_scale",
     "convolve_point_sequences",
@@ -17,7 +19,7 @@ __all__ = [
     "get_polygon_minkowski_sum_convex",
 ]
 
-def calculate_input_scale(polygons: Sequence[Sequence[Point]], max_int: int = 2147483647) -> float:
+def calculate_input_scale(polygons: collections.abc.Sequence[collections.abc.Sequence[types.Point]], max_int: int = 2147483647) -> float:
     r"""
     Calculate the optimal input scale for clipper operations.
     
@@ -26,7 +28,7 @@ def calculate_input_scale(polygons: Sequence[Sequence[Point]], max_int: int = 21
     :returns: Optimal scale factor.
     """
 
-def convolve_point_sequences(seq_a: Sequence[tuple[int, int]], seq_b: Sequence[tuple[int, int]]) -> list[list[tuple[int, int]]]:
+def convolve_point_sequences(seq_a: collections.abc.Sequence[tuple[int, int]], seq_b: collections.abc.Sequence[tuple[int, int]]) -> list[list[tuple[int, int]]]:
     r"""
     Convolve two sequences of points.
     
@@ -46,7 +48,7 @@ def convolve_two_segments(a1: tuple[int, int], a2: tuple[int, int], b1: tuple[in
     :returns: Convolved point sequence.
     """
 
-def get_inner_fit_polygon(outer: Sequence[Point], inner: Sequence[Point]) -> list[Polygon]:
+def get_inner_fit_polygon(outer: collections.abc.Sequence[types.Point], inner: collections.abc.Sequence[types.Point]) -> list[types.Polygon]:
     r"""
     Compute the inner fit polygon (no-fit polygon for nesting).
     
@@ -55,7 +57,7 @@ def get_inner_fit_polygon(outer: Sequence[Point], inner: Sequence[Point]) -> lis
     :returns: Inner fit polygon.
     """
 
-def get_no_fit_polygon(subject: Sequence[Point], tool: Sequence[Point]) -> list[Polygon]:
+def get_no_fit_polygon(subject: collections.abc.Sequence[types.Point], tool: collections.abc.Sequence[types.Point]) -> list[types.Polygon]:
     r"""
     Compute the no-fit polygon for two 2D polygons.
     
@@ -64,7 +66,7 @@ def get_no_fit_polygon(subject: Sequence[Point], tool: Sequence[Point]) -> list[
     :returns: No-fit polygon.
     """
 
-def get_polygon_minkowski_sum_convex(poly_a: Sequence[tuple[int, int]], poly_b: Sequence[tuple[int, int]]) -> list[list[tuple[int, int]]]:
+def get_polygon_minkowski_sum_convex(poly_a: collections.abc.Sequence[tuple[int, int]], poly_b: collections.abc.Sequence[tuple[int, int]]) -> list[list[tuple[int, int]]]:
     r"""
     Compute the Minkowski sum of two convex polygons.
     

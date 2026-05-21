@@ -50,6 +50,9 @@ use pyo3_stub_gen::define_stub_info_gatherer;
 
 define_stub_info_gatherer!(stub_info);
 
+pyo3_stub_gen::reexport_module_members!("raygeo" from "raygeo.geo"; "Geometry");
+pyo3_stub_gen::reexport_module_members!("raygeo" from "raygeo.ops"; "Ops");
+
 pyo3_stub_gen::module_doc!("raygeo", "{}", MODULE_DOC);
 
 pub(crate) const MODULE_DOC: &str = concat!(

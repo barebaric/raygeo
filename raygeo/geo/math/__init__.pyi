@@ -8,11 +8,12 @@ which are used by Geometry.transform() and Ops.transform() to apply
 translation, rotation, scaling, and shearing to paths.
 """
 
+import collections.abc
 __all__ = [
     "mat4_mul",
 ]
 
-def mat4_mul(a: Sequence[Sequence[float]], b: Sequence[Sequence[float]]) -> list[list[float]]:
+def mat4_mul(a: collections.abc.Sequence[collections.abc.Sequence[float]], b: collections.abc.Sequence[collections.abc.Sequence[float]]) -> list[list[float]]:
     r"""
     Multiply two 4x4 matrices.
     

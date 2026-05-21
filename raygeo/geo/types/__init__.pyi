@@ -14,6 +14,8 @@ CubicBezier — four control points ``(p0, p1, p2, p3)``.
 IntPoint / IntPolygon — integer-coordinate variants for Clipper.
 """
 
+import numpy
+import typing
 from typing import TypeAlias
 __all__ = [
     "CubicBezier",
@@ -41,4 +43,4 @@ Polygon: TypeAlias = list[Point]
 Polygon3D: TypeAlias = list[tuple[float, float, float]]
 Rect: TypeAlias = tuple[float, float, float, float]
 Rect3D: TypeAlias = tuple[float, float, float, float, float, float]
-TransformMatrix: TypeAlias = list[list[float]] | numpy.ndarray[tuple[int, int], float]
+TransformMatrix: TypeAlias = list[list[float]] | numpy.ndarray[tuple[int, ...], typing.Any]

@@ -8,6 +8,9 @@ smoothing with configurable corner angle thresholds to preserve
 sharp features.
 """
 
+import collections.abc
+from raygeo import geo
+import typing
 __all__ = [
     "compute_gaussian_kernel",
     "resample_polyline",
@@ -24,7 +27,7 @@ def compute_gaussian_kernel(amount: int) -> tuple[list[float], float]:
     :returns: Tuple of (kernel_values, sigma).
     """
 
-def resample_polyline(points: Sequence[Point3D], max_segment_length: float, is_closed: bool) -> list[Point3D]:
+def resample_polyline(points: collections.abc.Sequence[types.Point3D], max_segment_length: float, is_closed: bool) -> list[types.Point3D]:
     r"""
     Resample a polyline with a maximum segment length.
     
@@ -34,7 +37,7 @@ def resample_polyline(points: Sequence[Point3D], max_segment_length: float, is_c
     :returns: Resampled points.
     """
 
-def smooth_circularly(points: Sequence[Point3D], kernel: Sequence[float]) -> list[Point3D]:
+def smooth_circularly(points: collections.abc.Sequence[types.Point3D], kernel: collections.abc.Sequence[float]) -> list[types.Point3D]:
     r"""
     Smooth a closed polyline circularly.
     
@@ -43,7 +46,7 @@ def smooth_circularly(points: Sequence[Point3D], kernel: Sequence[float]) -> lis
     :returns: Smoothed points.
     """
 
-def smooth_polyline(points: Sequence[Point3D], amount: int, corner_angle_threshold: float, is_closed: Optional[bool] = None) -> list[Point3D]:
+def smooth_polyline(points: collections.abc.Sequence[types.Point3D], amount: int, corner_angle_threshold: float, is_closed: typing.Optional[bool] = None) -> list[types.Point3D]:
     r"""
     Smooth a polyline using Gaussian smoothing.
     
@@ -54,7 +57,7 @@ def smooth_polyline(points: Sequence[Point3D], amount: int, corner_angle_thresho
     :returns: Smoothed points.
     """
 
-def smooth_sub_segment(points: Sequence[Point3D], kernel: Sequence[float]) -> list[Point3D]:
+def smooth_sub_segment(points: collections.abc.Sequence[types.Point3D], kernel: collections.abc.Sequence[float]) -> list[types.Point3D]:
     r"""
     Smooth a sub-segment of a polyline.
     

@@ -8,6 +8,9 @@ polygon regions, as well as converting between float and Clipper
 integer coordinate systems.
 """
 
+import collections.abc
+from raygeo import geo
+import typing
 __all__ = [
     "clip_line_segment_with_polygons",
     "clip_line_segment_with_rect",
@@ -16,7 +19,7 @@ __all__ = [
     "to_clipper",
 ]
 
-def clip_line_segment_with_polygons(p1: Point3D, p2: Point3D, regions: Sequence[Sequence[Point]]) -> list[tuple[Point3D, Point3D]]:
+def clip_line_segment_with_polygons(p1: types.Point3D, p2: types.Point3D, regions: collections.abc.Sequence[collections.abc.Sequence[types.Point]]) -> list[tuple[types.Point3D, types.Point3D]]:
     r"""
     Clip line segments that fall within polygon regions.
     
@@ -26,7 +29,7 @@ def clip_line_segment_with_polygons(p1: Point3D, p2: Point3D, regions: Sequence[
     :returns: List of clipped segments.
     """
 
-def clip_line_segment_with_rect(p1: Point3D, p2: Point3D, rect: Rect) -> Optional[tuple[Point3D, Point3D]]:
+def clip_line_segment_with_rect(p1: types.Point3D, p2: types.Point3D, rect: types.Rect) -> typing.Optional[tuple[types.Point3D, types.Point3D]]:
     r"""
     Clip a line segment with a rectangle.
     
@@ -36,7 +39,7 @@ def clip_line_segment_with_rect(p1: Point3D, p2: Point3D, rect: Rect) -> Optiona
     :returns: Clipped segment or None if fully outside.
     """
 
-def from_clipper(polygon: IntPolygon, scale: int = 10000000) -> Polygon:
+def from_clipper(polygon: types.IntPolygon, scale: int = 10000000) -> types.Polygon:
     r"""
     Convert a polygon from Clipper coordinates.
     
@@ -45,7 +48,7 @@ def from_clipper(polygon: IntPolygon, scale: int = 10000000) -> Polygon:
     :returns: Polygon with float coordinates.
     """
 
-def subtract_polygons_from_line_segment(p1: Point3D, p2: Point3D, regions: Sequence[Sequence[Point]]) -> list[tuple[Point3D, Point3D]]:
+def subtract_polygons_from_line_segment(p1: types.Point3D, p2: types.Point3D, regions: collections.abc.Sequence[collections.abc.Sequence[types.Point]]) -> list[tuple[types.Point3D, types.Point3D]]:
     r"""
     Subtract polygon regions from a line segment.
     
@@ -55,7 +58,7 @@ def subtract_polygons_from_line_segment(p1: Point3D, p2: Point3D, regions: Seque
     :returns: List of remaining segments after subtraction.
     """
 
-def to_clipper(polygon: Polygon, scale: int = 10000000) -> list[tuple[int, int]]:
+def to_clipper(polygon: types.Polygon, scale: int = 10000000) -> list[tuple[int, int]]:
     r"""
     Convert a polygon to Clipper coordinates.
     

@@ -19,6 +19,7 @@ sums for toolpath generation.
 """
 
 import builtins
+import enum
 import numpy
 import numpy.typing
 import typing
@@ -28,6 +29,7 @@ from . import shape
 from . import types
 __all__ = [
     "Geometry",
+    "PyCommand",
     "algo",
     "math",
     "shape",
@@ -74,7 +76,7 @@ class Geometry:
         """
     @data.setter
     def data(self, value: typing.Optional[numpy.typing.NDArray[numpy.float64]]) -> None: ...
-    def transform(self, matrix: geo.types.TransformMatrix) -> Geometry:
+    def transform(self, matrix: types.TransformMatrix) -> Geometry:
         r"""
         Apply a 4x4 affine transformation matrix.
         
@@ -417,4 +419,11 @@ class Geometry:
         r"""
         Return a string representation of the geometry.
         """
+
+@typing.final
+class PyCommand(enum.Enum):
+    Move = ...
+    Line = ...
+    Arc = ...
+    Bezier = ...
 

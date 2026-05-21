@@ -8,6 +8,8 @@ circle-rectangle full-containment checks, line-segment-vs-circle
 intersection, and point projection onto a circle's circumference.
 """
 
+from raygeo import geo
+import typing
 __all__ = [
     "does_circle_intersect_rect",
     "get_circle_circle_intersections",
@@ -16,7 +18,7 @@ __all__ = [
     "project_point_onto_circle",
 ]
 
-def does_circle_intersect_rect(center: Point, radius: float, rect: Rect) -> bool:
+def does_circle_intersect_rect(center: types.Point, radius: float, rect: types.Rect) -> bool:
     r"""
     Check if a circle intersects a rectangle.
     
@@ -26,7 +28,7 @@ def does_circle_intersect_rect(center: Point, radius: float, rect: Rect) -> bool
     :returns: True if the circle intersects the rectangle.
     """
 
-def get_circle_circle_intersections(c1: Point, r1: float, c2: Point, r2: float) -> Polygon:
+def get_circle_circle_intersections(c1: types.Point, r1: float, c2: types.Point, r2: float) -> types.Polygon:
     r"""
     Get intersection points of two circles.
     
@@ -37,7 +39,7 @@ def get_circle_circle_intersections(c1: Point, r1: float, c2: Point, r2: float) 
     :returns: List of intersection points (x, y).
     """
 
-def is_circle_inside_rect(center: Point, radius: float, rect: Rect) -> bool:
+def is_circle_inside_rect(center: types.Point, radius: float, rect: types.Rect) -> bool:
     r"""
     Check if a circle is inside a rectangle.
     
@@ -47,7 +49,7 @@ def is_circle_inside_rect(center: Point, radius: float, rect: Rect) -> bool:
     :returns: True if the circle is fully inside the rectangle.
     """
 
-def line_segment_intersects_circle(p1: Point, p2: Point, circle_center: Point, circle_radius: float) -> bool:
+def line_segment_intersects_circle(p1: types.Point, p2: types.Point, circle_center: types.Point, circle_radius: float) -> bool:
     r"""
     Check if a line segment intersects a circle.
     
@@ -58,7 +60,7 @@ def line_segment_intersects_circle(p1: Point, p2: Point, circle_center: Point, c
     :returns: True if the line segment intersects the circle.
     """
 
-def project_point_onto_circle(point: Point, center: Point, radius: float) -> Optional[Point]:
+def project_point_onto_circle(point: types.Point, center: types.Point, radius: float) -> typing.Optional[types.Point]:
     r"""
     Project a point onto a circle.
     

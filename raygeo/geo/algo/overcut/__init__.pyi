@@ -8,11 +8,12 @@ cuts through the material, particularly useful in laser cutting
 where the laser may not fully penetrate at the start/end point.
 """
 
+import raygeo
 __all__ = [
     "apply_overcut",
 ]
 
-def apply_overcut(geometry: Geometry, overcut: float) -> Geometry:
+def apply_overcut(geometry: geo.Geometry, overcut: float) -> geo.Geometry:
     r"""
     Extend a closed contour past its start point.
     

@@ -15,9 +15,11 @@ use crate::geo::math::mat4_mul;
 
 #[gen_stub_pyfunction(
     python = r#"
+    import collections.abc
+
     def mat4_mul(
-        a: Sequence[Sequence[float]],
-        b: Sequence[Sequence[float]],
+        a: collections.abc.Sequence[collections.abc.Sequence[float]],
+        b: collections.abc.Sequence[collections.abc.Sequence[float]],
     ) -> list[list[float]]:
         """Multiply two 4x4 matrices.
 

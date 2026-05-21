@@ -3,7 +3,7 @@ use numpy::{IntoPyArray, PyArray2, PyArrayMethods};
 use pyo3::prelude::*;
 use pyo3::types::{PyDict, PyList, PyType};
 use pyo3_stub_gen::derive::{
-    gen_methods_from_python, gen_stub_pyclass, gen_stub_pymethods,
+    gen_methods_from_python, gen_stub_pyclass, gen_stub_pyclass_enum, gen_stub_pymethods,
 };
 use pyo3_stub_gen::inventory::submit;
 use pyo3_stub_gen::{PyStubType, TypeInfo};
@@ -26,7 +26,8 @@ use crate::{
     COL_I, COL_J, COL_TYPE, COL_X, COL_Y, COL_Z,
 };
 
-#[pyclass(module = "raygeo.geo.path", frozen, eq, skip_from_py_object)]
+#[gen_stub_pyclass_enum]
+#[pyclass(module = "raygeo.geo", frozen, eq, skip_from_py_object)]
 #[derive(Clone, Debug, PartialEq)]
 pub enum PyCommand {
     Move {
@@ -45,15 +46,6 @@ pub enum PyCommand {
         control1: (f64, f64),
         control2: (f64, f64),
     },
-}
-
-impl PyStubType for PyCommand {
-    fn type_output() -> TypeInfo {
-        TypeInfo::with_module("raygeo.PyCommand", "raygeo.geo".into())
-    }
-    fn type_input() -> TypeInfo {
-        TypeInfo::with_module("raygeo.PyCommand", "raygeo.geo".into())
-    }
 }
 
 impl PyStubType for &mut Geometry {
@@ -133,8 +125,10 @@ pub struct Geometry {
 submit! {
     gen_methods_from_python! {
         r#"
+        from raygeo.geo import types
+
         class Geometry:
-            def transform(self, matrix: geo.types.TransformMatrix) -> Geometry:
+            def transform(self, matrix: types.TransformMatrix) -> Geometry:
                 """Apply a 4x4 affine transformation matrix.
 
                 See ``raygeo.geo.types.TransformMatrix`` for the matrix layout.

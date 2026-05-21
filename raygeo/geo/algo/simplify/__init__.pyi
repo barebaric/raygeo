@@ -7,11 +7,13 @@ Reduces the number of points in a polyline while preserving the overall
 shape within a given tolerance.
 """
 
+import collections.abc
+from raygeo import geo
 __all__ = [
     "simplify_polyline",
 ]
 
-def simplify_polyline(points: Sequence[Point], tolerance: float) -> Polygon:
+def simplify_polyline(points: collections.abc.Sequence[types.Point], tolerance: float) -> types.Polygon:
     r"""
     Simplify a polyline using the Ramer-Douglas-Peucker algorithm.
     

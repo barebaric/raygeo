@@ -38,15 +38,14 @@ Examples:
     100.0
 """
 
+from raygeo.geo import Geometry
+from raygeo.ops import Ops
 from . import geo
 from . import ops
-from .geo import Geometry
-from .ops import Ops
-
 __all__ = [
-    "geo",
-    "ops",
     "Geometry",
     "Ops",
+    "geo",
+    "ops",
 ]
 

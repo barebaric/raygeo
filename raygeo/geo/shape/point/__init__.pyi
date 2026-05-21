@@ -8,13 +8,15 @@ computation between two points, and applying a 4x4 affine transformation
 matrix to a single point.
 """
 
+import collections.abc
+from raygeo import geo
 __all__ = [
     "are_points_equal",
     "midpoint",
     "transform_point",
 ]
 
-def are_points_equal(p1: Point3D, p2: Point3D, tolerance: float) -> bool:
+def are_points_equal(p1: types.Point3D, p2: types.Point3D, tolerance: float) -> bool:
     r"""
     Check if two 3D points are equal within tolerance.
     
@@ -24,7 +26,7 @@ def are_points_equal(p1: Point3D, p2: Point3D, tolerance: float) -> bool:
     :returns: True if points are equal within tolerance.
     """
 
-def midpoint(p1: Point3D, p2: Point3D) -> Point3D:
+def midpoint(p1: types.Point3D, p2: types.Point3D) -> types.Point3D:
     r"""
     Get the midpoint between two 3D points.
     
@@ -33,7 +35,7 @@ def midpoint(p1: Point3D, p2: Point3D) -> Point3D:
     :returns: Midpoint (x, y, z).
     """
 
-def transform_point(matrix: Sequence[Sequence[float]], x: float, y: float, z: float) -> Point3D:
+def transform_point(matrix: collections.abc.Sequence[collections.abc.Sequence[float]], x: float, y: float, z: float) -> types.Point3D:
     r"""
     Apply an affine transformation matrix to a 3D point.
     

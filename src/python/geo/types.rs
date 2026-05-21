@@ -55,7 +55,10 @@ gen_type_alias_from_python!(
 gen_type_alias_from_python!(
     "raygeo.geo.types",
     r#"
-    type TransformMatrix = list[list[float]] | numpy.ndarray[tuple[int, int], float]
+    import numpy
+    import typing
+
+    type TransformMatrix = list[list[float]] | numpy.ndarray[tuple[int, ...], typing.Any]
     "#
 );
 

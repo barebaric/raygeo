@@ -17,6 +17,7 @@ air assist, frequency), and an Axis bitflag for multi-axis machines.
 """
 
 import builtins
+import raygeo
 from raygeo import geo
 import typing
 from . import axis
@@ -104,11 +105,11 @@ class Ops:
         """
     @last_move_to.setter
     def last_move_to(self, value: tuple[builtins.float, builtins.float, builtins.float]) -> None: ...
-    def transform(self, matrix: raygeo.geo.types.TransformMatrix) -> None:
+    def transform(self, matrix: geo.types.TransformMatrix) -> None:
         r"""
         Apply a 4x4 affine transformation matrix to all geometry.
         
-        See ``raygeo.geo.types.TransformMatrix`` for the matrix layout.
+        See ``geo.types.TransformMatrix`` for the matrix layout.
         
         :param matrix: A 4x4 affine transformation matrix.
         """
