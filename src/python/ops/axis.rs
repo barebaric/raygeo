@@ -1,7 +1,10 @@
+use crate::ops::axis::Axis;
 use pyo3::prelude::*;
 use pyo3::types::{PyList, PyType};
-use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
-use crate::ops::axis::Axis;
+use pyo3_stub_gen::derive::{
+    gen_methods_from_python, gen_stub_pyclass, gen_stub_pymethods,
+};
+use pyo3_stub_gen::inventory::submit;
 
 pyo3_stub_gen::module_doc!("raygeo.ops.axis", "{}", MODULE_DOC);
 
@@ -45,6 +48,20 @@ const SINGLE_AXES: [(u8, &str); 7] = [
 #[derive(Clone)]
 pub struct PyAxis(pub Axis);
 
+submit! {
+    gen_methods_from_python! {
+        r#"
+        class PyAxis:
+            def __eq__(self, other: object) -> bool:
+                """Check equality with another Axis."""
+                ...
+            def __ne__(self, other: object) -> bool:
+                """Check inequality with another Axis."""
+                ...
+        "#
+    }
+}
+
 #[gen_stub_pymethods]
 #[pymethods]
 impl PyAxis {
@@ -84,11 +101,13 @@ impl PyAxis {
     }
 
     /// Check equality of two Axes.
+    #[gen_stub(skip)]
     fn __eq__(&self, other: &Self) -> bool {
         self.0 == other.0
     }
 
     /// Check inequality of two Axes.
+    #[gen_stub(skip)]
     fn __ne__(&self, other: &Self) -> bool {
         self.0 != other.0
     }
@@ -136,10 +155,12 @@ impl PyAxis {
     /// :raises ValueError: If the name is unknown.
     #[classmethod]
     fn from_name(_cls: &Bound<'_, PyType>, name: &str) -> PyResult<Self> {
-        let axis = Axis::from_str_name(name)
-            .ok_or_else(|| pyo3::exceptions::PyValueError::new_err(
-                format!("unknown axis name: {}", name)
-            ))?;
+        let axis = Axis::from_str_name(name).ok_or_else(|| {
+            pyo3::exceptions::PyValueError::new_err(format!(
+                "unknown axis name: {}",
+                name
+            ))
+        })?;
         Ok(PyAxis(axis))
     }
 

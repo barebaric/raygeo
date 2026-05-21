@@ -9,7 +9,7 @@ integer coordinate systems.
 """
 
 import collections.abc
-from raygeo import geo
+from raygeo.geo import types
 import typing
 __all__ = [
     "clip_line_segment_with_polygons",

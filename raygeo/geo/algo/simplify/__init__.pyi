@@ -8,7 +8,7 @@ shape within a given tolerance.
 """
 
 import collections.abc
-from raygeo import geo
+from raygeo.geo import types
 __all__ = [
     "simplify_polyline",
 ]

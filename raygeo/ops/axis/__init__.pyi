@@ -47,6 +47,14 @@ class Axis:
         
         Legacy alias for :attr:`label` to match Python ``IntFlag.name``.
         """
+    def __eq__(self, other: object) -> bool:
+        r"""
+        Check equality with another Axis.
+        """
+    def __ne__(self, other: object) -> bool:
+        r"""
+        Check inequality with another Axis.
+        """
     def __or__(self, other: Axis) -> Axis:
         r"""
         Combine two axis masks with bitwise OR.
@@ -62,14 +70,6 @@ class Axis:
     def __invert__(self) -> Axis:
         r"""
         Invert (complement) the axis mask.
-        """
-    def __eq__(self, other: Axis) -> builtins.bool:
-        r"""
-        Check equality of two Axes.
-        """
-    def __ne__(self, other: Axis) -> builtins.bool:
-        r"""
-        Check inequality of two Axes.
         """
     def __repr__(self) -> builtins.str:
         r"""

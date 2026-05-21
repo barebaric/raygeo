@@ -565,7 +565,7 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
 
 #[gen_stub_pyfunction(
     python = r#"
-    from raygeo.geo import types
+    import raygeo.geo.types
 
     def get_arc_bounds(
         start: types.Point,
@@ -597,7 +597,7 @@ fn get_arc_bounds_py(
 
 #[gen_stub_pyfunction(
     python = r#"
-    from raygeo.geo import types
+    import raygeo.geo.types
 
     def get_arc_direction(
         center: types.Point,
@@ -622,7 +622,7 @@ fn get_arc_direction_py(center: Point, start: Point, mouse: Point) -> bool {
 #[gen_stub_pyfunction(
     python = r#"
     import typing
-    from raygeo.geo import types
+    import raygeo.geo.types
 
     def get_arc_closest_point(
         arc_cmd: typing.Any,
@@ -654,7 +654,7 @@ fn get_arc_closest_point_py(
 
 #[gen_stub_pyfunction(
     python = r#"
-    from raygeo.geo import types
+    import raygeo.geo.types
 
     def get_arc_midpoint(
         start: types.Point,
@@ -686,7 +686,7 @@ fn get_arc_midpoint_py(
 
 #[gen_stub_pyfunction(
     python = r#"
-    from raygeo.geo import types
+    import raygeo.geo.types
 
     def get_arc_angles(
         start: types.Point,
@@ -718,7 +718,7 @@ fn get_arc_angles_py(
 
 #[gen_stub_pyfunction(
     python = r#"
-    from raygeo.geo import types
+    import raygeo.geo.types
 
     def does_arc_intersect_rect(
         arc_start: types.Point,
@@ -753,7 +753,7 @@ fn does_arc_intersect_rect_py(
 
 #[gen_stub_pyfunction(
     python = r#"
-    from raygeo.geo import types
+    import raygeo.geo.types
 
     def does_arc_intersect_circle(
         arc_start: types.Point,
@@ -799,7 +799,7 @@ fn does_arc_intersect_circle_py(
 #[gen_stub_pyfunction(
     python = r#"
     import collections.abc
-    from raygeo.geo import types
+    import raygeo.geo.types
 
     def is_arc_clockwise(
         points: collections.abc.Sequence[types.Point],
@@ -824,7 +824,7 @@ fn is_arc_clockwise_py(points: Vec<PyPoint2D>, center: PyPoint2D) -> bool {
 #[gen_stub_pyfunction(
     python = r#"
     import typing
-    from raygeo.geo import types
+    import raygeo.geo.types
 
     def is_arc_inside_polygons(
         arc_start: types.Point,
@@ -913,7 +913,7 @@ fn normalize_angle_py(angle: f64) -> f64 {
 #[gen_stub_pyfunction(
     python = r#"
     import typing
-    from raygeo.geo import types
+    import raygeo.geo.types
 
     def linearize_arc(
         arc_cmd: typing.Any,
@@ -943,7 +943,7 @@ fn linearize_arc_py(
 
 #[gen_stub_pyfunction(
     python = r#"
-    from raygeo.geo import types
+    import raygeo.geo.types
 
     def get_bezier_point_at(
         p0: types.Point,
@@ -983,7 +983,7 @@ fn get_bezier_point_at_py(
 
 #[gen_stub_pyfunction(
     python = r#"
-    from raygeo.geo import types
+    import raygeo.geo.types
 
     def split_bezier(
         p0: types.Point,
@@ -1020,7 +1020,7 @@ fn split_bezier_py(
 
 #[gen_stub_pyfunction(
     python = r#"
-    from raygeo.geo import types
+    import raygeo.geo.types
 
     def get_bezier_bounds(
         p0: types.Point,
@@ -1051,7 +1051,7 @@ fn get_bezier_bounds_py(
 
 #[gen_stub_pyfunction(
     python = r#"
-    from raygeo.geo import types
+    import raygeo.geo.types
 
     def get_bezier_rect_intersections(
         p0: types.Point,
@@ -1091,7 +1091,7 @@ fn get_bezier_rect_intersections_py(
 
 #[gen_stub_pyfunction(
     python = r#"
-    from raygeo.geo import types
+    import raygeo.geo.types
 
     def clip_bezier_with_rect(
         p0: types.Point,
@@ -1131,7 +1131,7 @@ fn clip_bezier_with_rect_py(
 
 #[gen_stub_pyfunction(
     python = r#"
-    from raygeo.geo import types
+    import raygeo.geo.types
 
     def convert_cubic_bezier_to_quadratic(
         p0: types.Point,
@@ -1168,7 +1168,7 @@ fn convert_cubic_bezier_to_quadratic_py(
 #[gen_stub_pyfunction(
     python = r#"
     import typing
-    from raygeo.geo import types
+    import raygeo.geo.types
 
     def is_bezier_inside_polygons(
         p0: types.Point,
@@ -1209,7 +1209,7 @@ fn is_bezier_inside_polygons_py(
 
 #[gen_stub_pyfunction(
     python = r#"
-    from raygeo.geo import types
+    import raygeo.geo.types
 
     def linearize_bezier(
         p0: types.Point3D,
@@ -1250,7 +1250,7 @@ fn linearize_bezier_py(
 
 #[gen_stub_pyfunction(
     python = r#"
-    from raygeo.geo import types
+    import raygeo.geo.types
 
     def linearize_bezier_adaptive(
         p0: types.Point,
@@ -1295,7 +1295,7 @@ fn linearize_bezier_adaptive_py(
 
 #[gen_stub_pyfunction(
     python = r#"
-    from raygeo.geo import types
+    import raygeo.geo.types
 
     def linearize_bezier_segment(
         p0: types.Point3D,
@@ -1337,7 +1337,7 @@ fn linearize_bezier_segment_py(
 
 #[gen_stub_pyfunction(
     python = r#"
-    from raygeo.geo import types
+    import raygeo.geo.types
 
     def flatten_bezier(
         p0: types.Point3D,
@@ -1391,7 +1391,7 @@ fn flatten_bezier_py(
 
 #[gen_stub_pyfunction(
     python = r#"
-    from raygeo.geo import types
+    import raygeo.geo.types
 
     def bezier_flatness_sq(
         a: types.Point3D,
@@ -1427,7 +1427,7 @@ fn bezier_flatness_sq_py(
 
 #[gen_stub_pyfunction(
     python = r#"
-    from raygeo.geo import types
+    import raygeo.geo.types
 
     def perp_dist_sq(
         pt: types.Point3D,
@@ -1472,7 +1472,7 @@ fn perp_dist_sq_py(
 
 #[gen_stub_pyfunction(
     python = r#"
-    from raygeo.geo import types
+    import raygeo.geo.types
 
     def get_circle_circle_intersections(
         c1: types.Point,
@@ -1503,7 +1503,7 @@ fn get_circle_circle_intersections_py(
 
 #[gen_stub_pyfunction(
     python = r#"
-    from raygeo.geo import types
+    import raygeo.geo.types
 
     def is_circle_inside_rect(
         center: types.Point,
@@ -1531,7 +1531,7 @@ fn is_circle_inside_rect_py(
 
 #[gen_stub_pyfunction(
     python = r#"
-    from raygeo.geo import types
+    import raygeo.geo.types
 
     def does_circle_intersect_rect(
         center: types.Point,
@@ -1559,7 +1559,7 @@ fn does_circle_intersect_rect_py(
 
 #[gen_stub_pyfunction(
     python = r#"
-    from raygeo.geo import types
+    import raygeo.geo.types
 
     def line_segment_intersects_circle(
         p1: types.Point,
@@ -1591,7 +1591,7 @@ fn line_segment_intersects_circle_py(
 #[gen_stub_pyfunction(
     python = r#"
     import typing
-    from raygeo.geo import types
+    import raygeo.geo.types
 
     def project_point_onto_circle(
         point: types.Point,
@@ -1621,7 +1621,7 @@ fn project_point_onto_circle_py(
     python = r#"
     import collections.abc
     import typing
-    from raygeo.geo import types
+    import raygeo.geo.types
 
     def clean_polygon(
         polygon: collections.abc.Sequence[types.Point],
@@ -1673,7 +1673,7 @@ fn is_almost_equal_py(a: f64, b: f64, tolerance: Option<f64>) -> bool {
 #[gen_stub_pyfunction(
     python = r#"
     import typing
-    from raygeo.geo import types
+    import raygeo.geo.types
 
     def normalize_polygons(polygons: typing.Any) -> tuple[list[types.Polygon], float, float]:
         """Normalize polygons (outer CCW, inner CW).
@@ -1694,7 +1694,7 @@ fn normalize_polygons_py(
 
 #[gen_stub_pyfunction(
     python = r#"
-    from raygeo.geo import types
+    import raygeo.geo.types
 
     def translate_bounds(
         bounds: types.Rect,
@@ -1723,7 +1723,7 @@ fn translate_bounds_py(
 #[gen_stub_pyfunction(
     python = r#"
     import typing
-    from raygeo.geo import types
+    import raygeo.geo.types
 
     def translate_polygons(polygons: typing.Any, dx: float, dy: float) -> list[types.Polygon]:
         """Translate a list of polygons.
@@ -1748,7 +1748,7 @@ fn translate_polygons_py(
 
 #[gen_stub_pyfunction(
     python = r#"
-    from raygeo.geo import types
+    import raygeo.geo.types
 
     def point_line_distance(
         point: types.Point,
@@ -1777,7 +1777,7 @@ fn point_line_distance_py(
 #[gen_stub_pyfunction(
     python = r#"
     import collections.abc
-    from raygeo.geo import types
+    import raygeo.geo.types
 
     def get_polygon_area(polygon: collections.abc.Sequence[types.Point]) -> float:
         """Get the unsigned area of a polygon.
@@ -1796,7 +1796,7 @@ fn get_polygon_area_py(polygon: Vec<PyPoint2D>) -> f64 {
 #[gen_stub_pyfunction(
     python = r#"
     import collections.abc
-    from raygeo.geo import types
+    import raygeo.geo.types
 
     def get_polygon_signed_area(
         polygon: collections.abc.Sequence[types.Point],
@@ -1817,7 +1817,7 @@ fn get_polygon_signed_area_py(polygon: Vec<PyPoint2D>) -> f64 {
 #[gen_stub_pyfunction(
     python = r#"
     import collections.abc
-    from raygeo.geo import types
+    import raygeo.geo.types
 
     def get_polygon_perimeter(
         polygon: collections.abc.Sequence[types.Point],
@@ -1838,7 +1838,7 @@ fn get_polygon_perimeter_py(polygon: Vec<PyPoint2D>) -> f64 {
 #[gen_stub_pyfunction(
     python = r#"
     import collections.abc
-    from raygeo.geo import types
+    import raygeo.geo.types
 
     def get_polygon_bounds(
         polygon: collections.abc.Sequence[types.Point],
@@ -1859,7 +1859,7 @@ fn get_polygon_bounds_py(polygon: Vec<PyPoint2D>) -> (f64, f64, f64, f64) {
 #[gen_stub_pyfunction(
     python = r#"
     import typing
-    from raygeo.geo import types
+    import raygeo.geo.types
 
     def get_polygon_group_bounds(
         polygons: typing.Any,
@@ -1883,7 +1883,7 @@ fn get_polygon_group_bounds_py(
 #[gen_stub_pyfunction(
     python = r#"
     import collections.abc
-    from raygeo.geo import types
+    import raygeo.geo.types
 
     def get_polygon_centroid(
         polygon: collections.abc.Sequence[types.Point],
@@ -1904,7 +1904,7 @@ fn get_polygon_centroid_py(polygon: Vec<PyPoint2D>) -> Point {
 #[gen_stub_pyfunction(
     python = r#"
     import collections.abc
-    from raygeo.geo import types
+    import raygeo.geo.types
 
     def is_polygon_convex(
         polygon: collections.abc.Sequence[types.Point],
@@ -1925,7 +1925,7 @@ fn is_polygon_convex_py(polygon: Vec<PyPoint2D>) -> bool {
 #[gen_stub_pyfunction(
     python = r#"
     import collections.abc
-    from raygeo.geo import types
+    import raygeo.geo.types
 
     def get_polygon_convex_hull(
         polygon: collections.abc.Sequence[types.Point],
@@ -1946,7 +1946,7 @@ fn get_polygon_convex_hull_py(polygon: Vec<PyPoint2D>) -> Vec<Point> {
 #[gen_stub_pyfunction(
     python = r#"
     import collections.abc
-    from raygeo.geo import types
+    import raygeo.geo.types
 
     def get_polygon_edges(
         polygon: collections.abc.Sequence[types.Point],
@@ -1967,7 +1967,7 @@ fn get_polygon_edges_py(polygon: Vec<PyPoint2D>) -> Vec<(Point, Point)> {
 #[gen_stub_pyfunction(
     python = r#"
     import collections.abc
-    from raygeo.geo import types
+    import raygeo.geo.types
 
     def is_point_inside_polygon(
         point: types.Point,
@@ -1990,7 +1990,7 @@ fn is_point_inside_polygon_py(point: Point, polygon: Vec<PyPoint2D>) -> bool {
 #[gen_stub_pyfunction(
     python = r#"
     import collections.abc
-    from raygeo.geo import types
+    import raygeo.geo.types
 
     def offset_polygon(
         polygon: collections.abc.Sequence[types.Point],
@@ -2013,7 +2013,7 @@ fn offset_polygon_py(polygon: Vec<PyPoint2D>, offset: f64) -> Vec<Vec<Point>> {
 #[gen_stub_pyfunction(
     python = r#"
     import typing
-    from raygeo.geo import types
+    import raygeo.geo.types
 
     def get_polygons_union(polygons: typing.Any) -> list[types.Polygon]:
         """Get the union of multiple polygons.
@@ -2035,7 +2035,7 @@ fn get_polygons_union_py(
 #[gen_stub_pyfunction(
     python = r#"
     import collections.abc
-    from raygeo.geo import types
+    import raygeo.geo.types
 
     def get_polygons_intersection(
         poly1: collections.abc.Sequence[types.Point],
@@ -2061,7 +2061,7 @@ fn get_polygons_intersection_py(
 #[gen_stub_pyfunction(
     python = r#"
     import collections.abc
-    from raygeo.geo import types
+    import raygeo.geo.types
 
     def get_polygons_difference(
         poly1: collections.abc.Sequence[types.Point],
@@ -2087,7 +2087,7 @@ fn get_polygons_difference_py(
 #[gen_stub_pyfunction(
     python = r#"
     import collections.abc
-    from raygeo.geo import types
+    import raygeo.geo.types
 
     def polygons_intersect(
         p1: collections.abc.Sequence[types.Point],
@@ -2117,7 +2117,7 @@ fn polygons_intersect_py(
 #[gen_stub_pyfunction(
     python = r#"
     import collections.abc
-    from raygeo.geo import types
+    import raygeo.geo.types
 
     def flip_polygon(
         polygon: collections.abc.Sequence[types.Point],
@@ -2146,7 +2146,7 @@ fn flip_polygon_py(
 #[gen_stub_pyfunction(
     python = r#"
     import typing
-    from raygeo.geo import types
+    import raygeo.geo.types
 
     def flip_polygons(
         polygons: typing.Any,
@@ -2176,7 +2176,7 @@ fn flip_polygons_py(
 #[gen_stub_pyfunction(
     python = r#"
     import collections.abc
-    from raygeo.geo import types
+    import raygeo.geo.types
 
     def rotate_polygon(
         polygon: collections.abc.Sequence[types.Point],
@@ -2199,7 +2199,7 @@ fn rotate_polygon_py(polygon: Vec<PyPoint2D>, angle: f64) -> Vec<Point> {
 #[gen_stub_pyfunction(
     python = r#"
     import typing
-    from raygeo.geo import types
+    import raygeo.geo.types
 
     def rotate_polygons(polygons: typing.Any, angle: float) -> list[types.Polygon]:
         """Rotate multiple polygons by an angle.
@@ -2224,7 +2224,7 @@ fn rotate_polygons_py(
     python = r#"
     import collections.abc
     import typing
-    from raygeo.geo import types
+    import raygeo.geo.types
 
     def scale_polygon(
         polygon: collections.abc.Sequence[types.Point],
@@ -2254,7 +2254,7 @@ fn scale_polygon_py(
 #[gen_stub_pyfunction(
     python = r#"
     import collections.abc
-    from raygeo.geo import types
+    import raygeo.geo.types
 
     def translate_polygon(
         polygon: collections.abc.Sequence[types.Point],
@@ -2317,9 +2317,9 @@ fn _polygons_to_numpy_list(
 
 #[gen_stub_pyfunction(
     python = r#"
-    from numpy.typing import NDArray
+    import numpy.typing
 
-    def polygon_area_numpy(polygon: NDArray) -> float:
+    def polygon_area_numpy(polygon: numpy.typing.NDArray) -> float:
         """Get the area of a polygon from numpy array.
 
         :param polygon: Polygon as a 2D numpy array.
@@ -2336,11 +2336,11 @@ fn polygon_area_numpy_py(polygon: Bound<'_, PyArray2<f64>>) -> f64 {
 
 #[gen_stub_pyfunction(
     python = r#"
-    from numpy.typing import NDArray
-    from raygeo.geo import types
+    import numpy.typing
+    import raygeo.geo.types
 
     def polygon_bounds_numpy(
-        polygon: NDArray,
+        polygon: numpy.typing.NDArray,
     ) -> types.Rect:
         """Get bounds of a polygon from numpy array.
 
@@ -2360,9 +2360,9 @@ fn polygon_bounds_numpy_py(
 
 #[gen_stub_pyfunction(
     python = r#"
-    from numpy.typing import NDArray
+    import numpy.typing
 
-    def polygon_perimeter_numpy(polygon: NDArray) -> float:
+    def polygon_perimeter_numpy(polygon: numpy.typing.NDArray) -> float:
         """Get the perimeter of a polygon from numpy array.
 
         :param polygon: Polygon as a 2D numpy array.
@@ -2380,11 +2380,11 @@ fn polygon_perimeter_numpy_py(polygon: Bound<'_, PyArray2<f64>>) -> f64 {
 #[gen_stub_pyfunction(
     python = r#"
     import collections.abc
-    from numpy.typing import NDArray
-    from raygeo.geo import types
+    import numpy.typing
+    import raygeo.geo.types
 
     def polygon_group_bounds_numpy(
-        polygons: collections.abc.Sequence[NDArray],
+        polygons: collections.abc.Sequence[numpy.typing.NDArray],
     ) -> types.Rect:
         """Get bounds of polygon group from numpy arrays.
 
@@ -2405,10 +2405,10 @@ fn polygon_group_bounds_numpy_py(
 #[gen_stub_pyfunction(
     python = r#"
     import typing
-    from numpy.typing import NDArray
+    import numpy.typing
 
     def flip_polygon_numpy(
-        polygon: NDArray,
+        polygon: numpy.typing.NDArray,
         flip_h: bool,
         flip_v: bool,
     ) -> typing.Any:
@@ -2472,11 +2472,11 @@ fn flip_polygons_numpy_py<'py>(
 #[gen_stub_pyfunction(
     python = r#"
     import collections.abc
-    from numpy.typing import NDArray
+    import numpy.typing
 
     def normalize_polygons_numpy(
-        polygons: collections.abc.Sequence[NDArray],
-    ) -> tuple[list[NDArray], float, float]:
+        polygons: collections.abc.Sequence[numpy.typing.NDArray],
+    ) -> tuple[list[numpy.typing.NDArray], float, float]:
         """Normalize polygons from numpy arrays.
 
         :param polygons: Sequence of 2D numpy arrays.
@@ -2498,12 +2498,12 @@ fn normalize_polygons_numpy_py(
 
 #[gen_stub_pyfunction(
     python = r#"
-    from numpy.typing import NDArray
-    from raygeo.geo import types
+    import numpy.typing
+    import raygeo.geo.types
 
     def point_in_polygon_numpy(
         point: types.Point,
-        polygon: NDArray,
+        polygon: numpy.typing.NDArray,
     ) -> bool:
         """Check if point is in polygon from numpy array.
 
@@ -2525,11 +2525,11 @@ fn point_in_polygon_numpy_py(
 
 #[gen_stub_pyfunction(
     python = r#"
-    from numpy.typing import NDArray
+    import numpy.typing
 
     def polygons_intersect_numpy(
-        poly1: NDArray,
-        poly2: NDArray,
+        poly1: numpy.typing.NDArray,
+        poly2: numpy.typing.NDArray,
         min_area: float = 0.0,
     ) -> bool:
         """Check if polygons intersect from numpy arrays.
@@ -2557,10 +2557,10 @@ fn polygons_intersect_numpy_py(
 #[gen_stub_pyfunction(
     python = r#"
     import typing
-    from numpy.typing import NDArray
+    import numpy.typing
 
     def rotate_polygon_numpy(
-        polygon: NDArray,
+        polygon: numpy.typing.NDArray,
         angle: float,
     ) -> typing.Any:
         """Rotate a polygon from numpy array.
@@ -2587,10 +2587,10 @@ fn rotate_polygon_numpy_py(
     python = r#"
     import collections.abc
     import typing
-    from numpy.typing import NDArray
+    import numpy.typing
 
     def rotate_polygons_numpy(
-        polygons: collections.abc.Sequence[NDArray],
+        polygons: collections.abc.Sequence[numpy.typing.NDArray],
         angle: float,
     ) -> list[typing.Any]:
         """Rotate polygons from numpy arrays.
@@ -2616,10 +2616,10 @@ fn rotate_polygons_numpy_py(
 #[gen_stub_pyfunction(
     python = r#"
     import typing
-    from numpy.typing import NDArray
+    import numpy.typing
 
     def translate_polygon_numpy(
-        polygon: NDArray,
+        polygon: numpy.typing.NDArray,
         dx: float,
         dy: float,
     ) -> typing.Any:
@@ -2649,10 +2649,10 @@ fn translate_polygon_numpy_py(
     python = r#"
     import collections.abc
     import typing
-    from numpy.typing import NDArray
+    import numpy.typing
 
     def translate_polygons_numpy(
-        polygons: collections.abc.Sequence[NDArray],
+        polygons: collections.abc.Sequence[numpy.typing.NDArray],
         dx: float,
         dy: float,
     ) -> list[typing.Any]:
@@ -2722,7 +2722,7 @@ fn to_clipper_numpy_py(
 #[gen_stub_pyfunction(
     python = r#"
     import collections.abc
-    from raygeo.geo import types
+    import raygeo.geo.types
 
     def is_polygon_clockwise(points: collections.abc.Sequence[types.Point]) -> bool:
         """Check if a polygon has clockwise winding order.
@@ -2742,7 +2742,7 @@ fn is_polygon_clockwise_py(points: Vec<PyPoint2D>) -> bool {
 #[gen_stub_pyfunction(
     python = r#"
     import typing
-    from raygeo.geo import types
+    import raygeo.geo.types
 
     def get_line_line_intersection(
         p1: types.Point,
@@ -2774,7 +2774,7 @@ fn get_line_line_intersection_py(
 #[gen_stub_pyfunction(
     python = r#"
     import typing
-    from raygeo.geo import types
+    import raygeo.geo.types
 
     def get_line_segment_intersection(
         p1: types.Point,
@@ -2805,7 +2805,7 @@ fn get_line_segment_intersection_py(
 
 #[gen_stub_pyfunction(
     python = r#"
-    from raygeo.geo import types
+    import raygeo.geo.types
 
     def get_line_closest_point(
         line_p1: types.Point,
@@ -2836,7 +2836,7 @@ fn get_line_closest_point_py(
 
 #[gen_stub_pyfunction(
     python = r#"
-    from raygeo.geo import types
+    import raygeo.geo.types
 
     def get_line_segment_closest_point(
         seg_p1: types.Point,
@@ -2867,7 +2867,7 @@ fn get_line_segment_closest_point_py(
 
 #[gen_stub_pyfunction(
     python = r#"
-    from raygeo.geo import types
+    import raygeo.geo.types
 
     def get_point_line_distance(
         point: types.Point,
@@ -2895,7 +2895,7 @@ fn get_point_line_distance_py(
 
 #[gen_stub_pyfunction(
     python = r#"
-    from raygeo.geo import types
+    import raygeo.geo.types
 
     def is_point_on_line_segment(
         point: types.Point,
@@ -2923,7 +2923,7 @@ fn is_point_on_line_segment_py(
 
 #[gen_stub_pyfunction(
     python = r#"
-    from raygeo.geo import types
+    import raygeo.geo.types
 
     def does_line_segment_intersect_rect(
         p1: types.Point,
@@ -2951,7 +2951,7 @@ fn does_line_segment_intersect_rect_py(
 
 #[gen_stub_pyfunction(
     python = r#"
-    from raygeo.geo import types
+    import raygeo.geo.types
 
     def does_line_segment_intersect_circle(
         p1: types.Point,
@@ -2982,7 +2982,7 @@ fn does_line_segment_intersect_circle_py(
 
 #[gen_stub_pyfunction(
     python = r#"
-    from raygeo.geo import types
+    import raygeo.geo.types
 
     def get_line_segment_polygon_intersections(
         p1: types.Point,
@@ -3010,7 +3010,7 @@ fn get_line_segment_polygon_intersections_py(
 
 #[gen_stub_pyfunction(
     python = r#"
-    from raygeo.geo import types
+    import raygeo.geo.types
 
     def get_angle_at_vertex(
         p0: types.Point,
@@ -3038,7 +3038,7 @@ fn get_angle_at_vertex_py(
 
 #[gen_stub_pyfunction(
     python = r#"
-    from raygeo.geo import types
+    import raygeo.geo.types
 
     def is_point_inside_rect(
         point: types.Point,
@@ -3060,7 +3060,7 @@ fn is_point_inside_rect_py(point: Point, rect: (f64, f64, f64, f64)) -> bool {
 
 #[gen_stub_pyfunction(
     python = r#"
-    from raygeo.geo import types
+    import raygeo.geo.types
 
     def does_rect_contain_rect(
         outer: types.Rect,
@@ -3085,7 +3085,7 @@ fn does_rect_contain_rect_py(
 
 #[gen_stub_pyfunction(
     python = r#"
-    from raygeo.geo import types
+    import raygeo.geo.types
 
     def does_rect_intersect_rect(
         r1: types.Rect,
@@ -3111,7 +3111,7 @@ fn does_rect_intersect_rect_py(
 
 #[gen_stub_pyfunction(
     python = r#"
-    from raygeo.geo import types
+    import raygeo.geo.types
 
     def do_rects_intersect(
         r1: types.Rect,
@@ -3136,7 +3136,7 @@ fn do_rects_intersect_py(
 
 #[gen_stub_pyfunction(
     python = r#"
-    from raygeo.geo import types
+    import raygeo.geo.types
 
     def are_points_equal(
         p1: types.Point3D,
@@ -3167,7 +3167,7 @@ fn are_points_equal_py(
 #[gen_stub_pyfunction(
     python = r#"
     import collections.abc
-    from raygeo.geo import types
+    import raygeo.geo.types
 
     def transform_point(
         matrix: collections.abc.Sequence[collections.abc.Sequence[float]],
@@ -3204,7 +3204,7 @@ fn transform_point_py(
 
 #[gen_stub_pyfunction(
     python = r#"
-    from raygeo.geo import types
+    import raygeo.geo.types
 
     def midpoint(
         p1: types.Point3D,

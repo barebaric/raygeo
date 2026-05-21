@@ -9,7 +9,7 @@ intersections, point-on-segment tests, point-in-rectangle tests, rectangle
 containment checks, and angle-at-vertex computation.
 """
 
-from raygeo import geo
+from raygeo.geo import types
 import typing
 __all__ = [
     "does_line_segment_intersect_circle",

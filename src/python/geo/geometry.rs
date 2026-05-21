@@ -128,6 +128,12 @@ submit! {
         from raygeo.geo import types
 
         class Geometry:
+            def __eq__(self, other: object) -> bool:
+                """Check equality with another Geometry."""
+                ...
+            def __ne__(self, other: object) -> bool:
+                """Check inequality with another Geometry."""
+                ...
             def transform(self, matrix: types.TransformMatrix) -> Geometry:
                 """Apply a 4x4 affine transformation matrix.
 
@@ -816,6 +822,7 @@ impl Geometry {
     }
 
     /// Check equality with another Geometry.
+    #[gen_stub(skip)]
     fn __eq__(&self, other: &Geometry) -> bool {
         self.inner == other.inner
     }

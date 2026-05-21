@@ -8,7 +8,7 @@ circle-rectangle full-containment checks, line-segment-vs-circle
 intersection, and point projection onto a circle's circumference.
 """
 
-from raygeo import geo
+from raygeo.geo import types
 import typing
 __all__ = [
     "does_circle_intersect_rect",

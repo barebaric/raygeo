@@ -52,5 +52,8 @@ jobs:
       - name: Install wheel
         run: pip install dist/raygeo-*.whl
 
+      - name: Install test dependencies
+        run: pip install pytest
+
       - name: Run tests
         run: pytest -v

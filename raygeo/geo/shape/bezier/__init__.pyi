@@ -10,7 +10,7 @@ testing, perpendicular distance measurement, and conversion from
 cubic to quadratic form.
 """
 
-from raygeo import geo
+from raygeo.geo import types
 import typing
 __all__ = [
     "bezier_flatness_sq",

@@ -8,7 +8,7 @@ and extracting individual points from path data.
 """
 
 import collections.abc
-from raygeo import geo
+from raygeo.geo import types
 __all__ = [
     "remove_duplicates",
 ]

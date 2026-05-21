@@ -76,6 +76,14 @@ class Geometry:
         """
     @data.setter
     def data(self, value: typing.Optional[numpy.typing.NDArray[numpy.float64]]) -> None: ...
+    def __eq__(self, other: object) -> bool:
+        r"""
+        Check equality with another Geometry.
+        """
+    def __ne__(self, other: object) -> bool:
+        r"""
+        Check inequality with another Geometry.
+        """
     def transform(self, matrix: types.TransformMatrix) -> Geometry:
         r"""
         Apply a 4x4 affine transformation matrix.
@@ -236,10 +244,6 @@ class Geometry:
         :param points: A sequence of (x, y) or
             (x, y, z) coordinate tuples.
         :param close: Whether to close the path.
-        """
-    def __eq__(self, other: Geometry) -> builtins.bool:
-        r"""
-        Check equality with another Geometry.
         """
     def simplify(self, tolerance: builtins.float) -> Geometry:
         r"""

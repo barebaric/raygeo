@@ -9,7 +9,7 @@ used in nesting and packing algorithms.
 """
 
 import collections.abc
-from raygeo import geo
+from raygeo.geo import types
 __all__ = [
     "calculate_input_scale",
     "convolve_point_sequences",

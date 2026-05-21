@@ -95,7 +95,6 @@ pub(crate) const MODULE_DOC: &str = concat!(
 
 #[pymodule(gil_used = false)]
 fn raygeo(m: &Bound<'_, PyModule>) -> PyResult<()> {
-    m.setattr("__doc__", MODULE_DOC)?;
     python::geo::register(m)?;
     python::ops::register(m)?;
     // Backward-compat re-exports on root

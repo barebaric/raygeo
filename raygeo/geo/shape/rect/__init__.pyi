@@ -7,7 +7,7 @@ Provides functions to test whether two axis-aligned rectangles intersect
 and whether one rectangle fully contains another.
 """
 
-from raygeo import geo
+from raygeo.geo import types
 __all__ = [
     "do_rects_intersect",
     "does_rect_contain_rect",

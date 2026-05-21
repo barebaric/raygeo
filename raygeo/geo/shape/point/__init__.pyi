@@ -9,7 +9,7 @@ matrix to a single point.
 """
 
 import collections.abc
-from raygeo import geo
+from raygeo.geo import types
 __all__ = [
     "are_points_equal",
     "midpoint",

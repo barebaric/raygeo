@@ -10,7 +10,7 @@ containment), and arc midpoint / closest-point lookups.
 """
 
 import collections.abc
-from raygeo import geo
+from raygeo.geo import types
 import typing
 __all__ = [
     "does_arc_intersect_circle",

@@ -8,7 +8,7 @@ cuts through the material, particularly useful in laser cutting
 where the laser may not fully penetrate at the start/end point.
 """
 
-import raygeo
+from raygeo import geo
 __all__ = [
     "apply_overcut",
 ]

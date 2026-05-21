@@ -314,7 +314,7 @@ fn to_data_array(data: Vec<Vec<f64>>) -> Vec<[f64; 8]> {
 #[gen_stub_pyfunction(
     python = r#"
     from collections.abc import Sequence
-    from raygeo.geo import types
+    import raygeo.geo.types
 
     def are_points_collinear(
         points: collections.abc.Sequence[types.Point3D],
@@ -342,7 +342,7 @@ fn are_points_collinear_py(
     python = r#"
     import collections.abc
     import typing
-    from raygeo.geo import types
+    import raygeo.geo.types
 
     def fit_circle_to_3_points(
         p1: types.Point2DOr3D,
@@ -376,7 +376,7 @@ fn fit_circle_to_3_points_py(
     python = r#"
     import collections.abc
     import typing
-    from raygeo.geo import types
+    import raygeo.geo.types
 
     def fit_circle_to_points(
         points: collections.abc.Sequence[types.Point3D],
@@ -400,7 +400,7 @@ fn fit_circle_to_points_py(
     python = r#"
     import collections.abc
     import typing
-    from raygeo.geo import types
+    import raygeo.geo.types
 
     def project_circle_center_to_bisector(
         p1: types.Point2DOr3D,
@@ -433,7 +433,7 @@ fn project_circle_center_to_bisector_py(
 #[gen_stub_pyfunction(
     python = r#"
     import collections.abc
-    from raygeo.geo import types
+    import raygeo.geo.types
 
     def flatten_to_points(
         data: collections.abc.Sequence[collections.abc.Sequence[float]],
@@ -485,7 +485,7 @@ fn linearize_geometry_py(data: Vec<Vec<f64>>, tolerance: f64) -> Vec<Vec<f64>> {
 
 #[gen_stub_pyfunction(
     python = r#"
-    from raygeo.geo import types
+    import raygeo.geo.types
 
     def create_line_cmd(
         end_point: types.Point3D,
@@ -505,7 +505,7 @@ fn create_line_cmd_py(end_point: PyPoint3D) -> Vec<f64> {
 
 #[gen_stub_pyfunction(
     python = r#"
-    from raygeo.geo import types
+    import raygeo.geo.types
 
     def create_arc_cmd(
         end: types.Point3D,
@@ -535,7 +535,7 @@ fn create_arc_cmd_py(
 #[gen_stub_pyfunction(
     python = r#"
     import collections.abc
-    from raygeo.geo import types
+    import raygeo.geo.types
 
     def fit_points_recursive(
         points: collections.abc.Sequence[types.Point3D],
@@ -570,7 +570,7 @@ fn fit_points_recursive_py(
 #[gen_stub_pyfunction(
     python = r#"
     import collections.abc
-    from raygeo.geo import types
+    import raygeo.geo.types
 
     def fit_points_with_primitives(
         points: collections.abc.Sequence[types.Point3D],
@@ -599,7 +599,7 @@ fn fit_points_with_primitives_py(
 #[gen_stub_pyfunction(
     python = r#"
     import collections.abc
-    from raygeo.geo import types
+    import raygeo.geo.types
 
     def get_polyline_line_deviation(
         points: collections.abc.Sequence[types.Point3D],
@@ -628,7 +628,7 @@ fn get_polyline_line_deviation_py(
 #[gen_stub_pyfunction(
     python = r#"
     import collections.abc
-    from raygeo.geo import types
+    import raygeo.geo.types
 
     def get_polyline_arc_deviation(
         points: collections.abc.Sequence[types.Point3D],
@@ -657,7 +657,7 @@ fn get_polyline_arc_deviation_py(
 #[gen_stub_pyfunction(
     python = r#"
     import collections.abc
-    from raygeo.geo import types
+    import raygeo.geo.types
 
     def resample_polyline(
         points: collections.abc.Sequence[types.Point3D],
@@ -686,7 +686,7 @@ fn resample_polyline_py(
 #[gen_stub_pyfunction(
     python = r#"
     import typing
-    from raygeo.geo import types
+    import raygeo.geo.types
 
     def clip_line_segment_with_rect(
         p1: types.Point3D,
@@ -715,7 +715,7 @@ fn clip_line_segment_py(
 #[gen_stub_pyfunction(
     python = r#"
     import collections.abc
-    from raygeo.geo import types
+    import raygeo.geo.types
 
     def subtract_polygons_from_line_segment(
         p1: types.Point3D,
@@ -745,7 +745,7 @@ fn subtract_polygons_from_line_segment_py(
 #[gen_stub_pyfunction(
     python = r#"
     import collections.abc
-    from raygeo.geo import types
+    import raygeo.geo.types
 
     def clip_line_segment_with_polygons(
         p1: types.Point3D,
@@ -774,7 +774,7 @@ fn clip_line_segment_to_regions_py(
 
 #[gen_stub_pyfunction(
     python = r#"
-    from raygeo.geo import types
+    import raygeo.geo.types
 
     def to_clipper(
         polygon: types.Polygon,
@@ -804,7 +804,7 @@ fn to_clipper_py(
 
 #[gen_stub_pyfunction(
     python = r#"
-    from raygeo.geo import types
+    import raygeo.geo.types
 
     def from_clipper(
         polygon: types.IntPolygon,
@@ -859,7 +859,7 @@ fn minkowski_sum_convex_py(
 #[gen_stub_pyfunction(
     python = r#"
     import collections.abc
-    from raygeo.geo import types
+    import raygeo.geo.types
 
     def get_inner_fit_polygon(
         outer: collections.abc.Sequence[types.Point],
@@ -885,7 +885,7 @@ fn get_inner_fit_polygon_py(
 #[gen_stub_pyfunction(
     python = r#"
     import collections.abc
-    from raygeo.geo import types
+    import raygeo.geo.types
 
     def get_no_fit_polygon(
         subject: collections.abc.Sequence[types.Point],
@@ -911,7 +911,7 @@ fn get_no_fit_polygon_py(
 #[gen_stub_pyfunction(
     python = r#"
     import collections.abc
-    from raygeo.geo import types
+    import raygeo.geo.types
 
     def calculate_input_scale(
         polygons: collections.abc.Sequence[collections.abc.Sequence[types.Point]],
@@ -993,7 +993,7 @@ fn convolve_point_sequences_py(
 #[gen_stub_pyfunction(
     python = r#"
     import collections.abc
-    from raygeo.geo import types
+    import raygeo.geo.types
 
     def simplify_polyline(
         points: collections.abc.Sequence[types.Point],
@@ -1020,7 +1020,7 @@ fn simplify_polyline_py(points: Vec<PyPoint2D>, tolerance: f64) -> Vec<Point> {
 #[gen_stub_pyfunction(
     python = r#"
     import collections.abc
-    from raygeo.geo import types
+    import raygeo.geo.types
 
     def remove_duplicates(points: collections.abc.Sequence[types.Point]) -> types.Polygon:
         """Remove duplicate points from a sequence.
@@ -1057,7 +1057,7 @@ fn compute_gaussian_kernel_py(amount: i32) -> (Vec<f64>, f64) {
 #[gen_stub_pyfunction(
     python = r#"
     import collections.abc
-    from raygeo.geo import types
+    import raygeo.geo.types
 
     def smooth_circularly(
         points: collections.abc.Sequence[types.Point3D],
@@ -1084,7 +1084,7 @@ fn smooth_circularly_py(
     python = r#"
     import collections.abc
     import typing
-    from raygeo.geo import types
+    import raygeo.geo.types
 
     def smooth_polyline(
         points: collections.abc.Sequence[types.Point3D],
@@ -1117,7 +1117,7 @@ fn smooth_polyline_algo_py(
 #[gen_stub_pyfunction(
     python = r#"
     import collections.abc
-    from raygeo.geo import types
+    import raygeo.geo.types
 
     def smooth_sub_segment(
         points: collections.abc.Sequence[types.Point3D],
@@ -1142,7 +1142,7 @@ fn smooth_sub_segment_py(
 
 #[gen_stub_pyfunction(
     python = r#"
-    from raygeo import geo
+    import raygeo.geo
 
     def apply_overcut(
         geometry: geo.Geometry,

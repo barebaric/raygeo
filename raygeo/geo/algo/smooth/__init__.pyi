@@ -9,7 +9,7 @@ sharp features.
 """
 
 import collections.abc
-from raygeo import geo
+from raygeo.geo import types
 import typing
 __all__ = [
     "compute_gaussian_kernel",

@@ -14,7 +14,7 @@ input; many also provide numpy array variants.
 
 import collections.abc
 import numpy.typing
-from raygeo import geo
+from raygeo.geo import types
 import typing
 __all__ = [
     "clean_polygon",
@@ -80,7 +80,7 @@ def flip_polygon(polygon: collections.abc.Sequence[types.Point], flip_h: bool, f
     :returns: Flipped polygon.
     """
 
-def flip_polygon_numpy(polygon: NDArray, flip_h: bool, flip_v: bool) -> typing.Any:
+def flip_polygon_numpy(polygon: numpy.typing.NDArray, flip_h: bool, flip_v: bool) -> typing.Any:
     r"""
     Flip a polygon from numpy array.
     
@@ -243,7 +243,7 @@ def normalize_polygons(polygons: typing.Any) -> tuple[list[types.Polygon], float
     :returns: Tuple of (normalized_polygons, min_x, min_y).
     """
 
-def normalize_polygons_numpy(polygons: collections.abc.Sequence[NDArray]) -> tuple[list[NDArray], float, float]:
+def normalize_polygons_numpy(polygons: collections.abc.Sequence[numpy.typing.NDArray]) -> tuple[list[numpy.typing.NDArray], float, float]:
     r"""
     Normalize polygons from numpy arrays.
     
@@ -260,7 +260,7 @@ def offset_polygon(polygon: collections.abc.Sequence[types.Point], offset: float
     :returns: Offset polygon(s).
     """
 
-def point_in_polygon_numpy(point: types.Point, polygon: NDArray) -> bool:
+def point_in_polygon_numpy(point: types.Point, polygon: numpy.typing.NDArray) -> bool:
     r"""
     Check if point is in polygon from numpy array.
     
@@ -279,7 +279,7 @@ def point_line_distance(point: types.Point, line_start: types.Point, line_end: t
     :returns: Perpendicular distance.
     """
 
-def polygon_area_numpy(polygon: NDArray) -> float:
+def polygon_area_numpy(polygon: numpy.typing.NDArray) -> float:
     r"""
     Get the area of a polygon from numpy array.
     
@@ -287,7 +287,7 @@ def polygon_area_numpy(polygon: NDArray) -> float:
     :returns: Signed area.
     """
 
-def polygon_bounds_numpy(polygon: NDArray) -> types.Rect:
+def polygon_bounds_numpy(polygon: numpy.typing.NDArray) -> types.Rect:
     r"""
     Get bounds of a polygon from numpy array.
     
@@ -295,7 +295,7 @@ def polygon_bounds_numpy(polygon: NDArray) -> types.Rect:
     :returns: Bounding rectangle as (x_min, y_min, x_max, y_max).
     """
 
-def polygon_group_bounds_numpy(polygons: collections.abc.Sequence[NDArray]) -> types.Rect:
+def polygon_group_bounds_numpy(polygons: collections.abc.Sequence[numpy.typing.NDArray]) -> types.Rect:
     r"""
     Get bounds of polygon group from numpy arrays.
     
@@ -303,7 +303,7 @@ def polygon_group_bounds_numpy(polygons: collections.abc.Sequence[NDArray]) -> t
     :returns: Bounding rectangle as (x_min, y_min, x_max, y_max).
     """
 
-def polygon_perimeter_numpy(polygon: NDArray) -> float:
+def polygon_perimeter_numpy(polygon: numpy.typing.NDArray) -> float:
     r"""
     Get the perimeter of a polygon from numpy array.
     
@@ -321,7 +321,7 @@ def polygons_intersect(p1: collections.abc.Sequence[types.Point], p2: collection
     :returns: True if polygons intersect.
     """
 
-def polygons_intersect_numpy(poly1: NDArray, poly2: NDArray, min_area: float = 0) -> bool:
+def polygons_intersect_numpy(poly1: numpy.typing.NDArray, poly2: numpy.typing.NDArray, min_area: float = 0) -> bool:
     r"""
     Check if polygons intersect from numpy arrays.
     
@@ -340,7 +340,7 @@ def rotate_polygon(polygon: collections.abc.Sequence[types.Point], angle: float)
     :returns: Rotated polygon.
     """
 
-def rotate_polygon_numpy(polygon: NDArray, angle: float) -> typing.Any:
+def rotate_polygon_numpy(polygon: numpy.typing.NDArray, angle: float) -> typing.Any:
     r"""
     Rotate a polygon from numpy array.
     
@@ -358,7 +358,7 @@ def rotate_polygons(polygons: typing.Any, angle: float) -> list[types.Polygon]:
     :returns: Rotated polygons.
     """
 
-def rotate_polygons_numpy(polygons: collections.abc.Sequence[NDArray], angle: float) -> list[typing.Any]:
+def rotate_polygons_numpy(polygons: collections.abc.Sequence[numpy.typing.NDArray], angle: float) -> list[typing.Any]:
     r"""
     Rotate polygons from numpy arrays.
     
@@ -406,7 +406,7 @@ def translate_polygon(polygon: collections.abc.Sequence[types.Point], dx: float,
     :returns: Translated polygon.
     """
 
-def translate_polygon_numpy(polygon: NDArray, dx: float, dy: float) -> typing.Any:
+def translate_polygon_numpy(polygon: numpy.typing.NDArray, dx: float, dy: float) -> typing.Any:
     r"""
     Translate a polygon from numpy array.
     
@@ -426,7 +426,7 @@ def translate_polygons(polygons: typing.Any, dx: float, dy: float) -> list[types
     :returns: Translated polygons.
     """
 
-def translate_polygons_numpy(polygons: collections.abc.Sequence[NDArray], dx: float, dy: float) -> list[typing.Any]:
+def translate_polygons_numpy(polygons: collections.abc.Sequence[numpy.typing.NDArray], dx: float, dy: float) -> list[typing.Any]:
     r"""
     Translate polygons from numpy arrays.
     
