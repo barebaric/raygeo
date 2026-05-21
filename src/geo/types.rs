@@ -57,6 +57,48 @@ gen_type_alias_from_python!(
     "#
 );
 
+gen_type_alias_from_python!(
+    "raygeo.geo.types",
+    r#"
+    type Edge = tuple[tuple[float, float], tuple[float, float]]
+    "#
+);
+
+gen_type_alias_from_python!(
+    "raygeo.geo.types",
+    r#"
+    type CubicBezier = tuple[tuple[float, float], tuple[float, float], tuple[float, float], tuple[float, float]]
+    "#
+);
+
+gen_type_alias_from_python!(
+    "raygeo.geo.types",
+    r#"
+    type Polygon3D = list[tuple[float, float, float]]
+    "#
+);
+
+gen_type_alias_from_python!(
+    "raygeo.geo.types",
+    r#"
+    type IntPoint = tuple[int, int]
+    "#
+);
+
+gen_type_alias_from_python!(
+    "raygeo.geo.types",
+    r#"
+    type IntPolygon = list[IntPoint]
+    "#
+);
+
+gen_type_alias_from_python!(
+    "raygeo.geo.types",
+    r#"
+    type Rect3D = tuple[float, float, float, float, float, float]
+    "#
+);
+
 pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     let py = m.py();
     m.setattr("__doc__", MODULE_DOC)?;
@@ -78,7 +120,7 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
         float_type.clone(),
         float_type.clone(),
         float_type.clone(),
-        float_type,
+        float_type.clone(),
     ))?;
     let polygon = list_type.get_item(point.clone())?;
     let polygon3d = list_type.get_item(point3d.clone())?;
@@ -105,14 +147,14 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add("CubicBezier", cubic_bezier)?;
     m.add("Point2DOr3D", point_2d_or_3d)?;
 
-    let collections = py.import("collections")?;
-    let rect3d = collections.call_method1(
-        "namedtuple",
-        (
-            "Rect3D",
-            vec!["x_min", "x_max", "y_min", "y_max", "z_min", "z_max"],
-        ),
-    )?;
+    let rect3d = tuple_type.get_item((
+        float_type.clone(),
+        float_type.clone(),
+        float_type.clone(),
+        float_type.clone(),
+        float_type.clone(),
+        float_type,
+    ))?;
     m.add("Rect3D", rect3d)?;
 
     Ok(())

@@ -357,9 +357,8 @@ impl Geometry {
         }
     }
 
-    /// Internal: get the last point in the geometry.
-    #[gen_stub(skip)]
-    fn _get_last_point(&self) -> (f64, f64, f64) {
+    /// Get the last point in the geometry.
+    fn get_last_point(&self) -> (f64, f64, f64) {
         let data = self.inner.data();
         if let Some(last) = data.last() {
             return (last[COL_X], last[COL_Y], last[COL_Z]);
@@ -445,11 +444,9 @@ impl Geometry {
     }
 
     #[setter(data)]
-    #[gen_stub(skip)]
-    fn set_data<'py>(
+    fn set_data(
         &mut self,
-        _py: Python<'py>,
-        value: Option<Bound<'py, PyArray2<f64>>>,
+        value: Option<Bound<'_, PyArray2<f64>>>,
     ) -> PyResult<()> {
         let data = self.inner.synced_data_mut();
         let Some(arr) = value else {
