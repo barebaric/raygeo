@@ -1423,7 +1423,8 @@ impl PyOps {
     ///
     /// :param sx: X scale factor.
     /// :param sy: Y scale factor.
-    /// :param sz: Z scale factor.
+    /// :param sz: Z scale factor (default 1.0).
+    #[pyo3(signature = (sx, sy, sz = 1.0))]
     fn scale(&mut self, sx: f64, sy: f64, sz: f64) -> PyResult<()> {
         self.inner.scale(sx, sy, sz);
         Ok(())

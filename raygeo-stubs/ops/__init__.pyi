@@ -627,13 +627,13 @@ class Ops:
         :param dy: Y offset.
         :param dz: Z offset (default 0.0).
         """
-    def scale(self, sx: builtins.float, sy: builtins.float, sz: builtins.float) -> None:
+    def scale(self, sx: builtins.float, sy: builtins.float, sz: builtins.float = 1.0) -> None:
         r"""
         Scale all coordinates by the given factors.
         
         :param sx: X scale factor.
         :param sy: Y scale factor.
-        :param sz: Z scale factor.
+        :param sz: Z scale factor (default 1.0).
         """
     def rotate(self, angle_deg: builtins.float, cx: builtins.float, cy: builtins.float) -> None:
         r"""
