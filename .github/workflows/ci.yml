@@ -33,6 +33,23 @@ jobs:
       - name: Run pyright
         run: pixi run pyright
 
+      - name: Build wheel
+        run: pixi run build-wheel
+
+      - name: Validate stubs in wheel
+        run: |
+          python -m venv /tmp/stub-test
+          /tmp/stub-test/bin/pip install dist/raygeo-*.whl
+          /tmp/stub-test/bin/pip install pyright
+          cat > /tmp/test_stubs.py << 'EOF'
+          from raygeo import Geometry, Ops
+          from raygeo.geo import CMD_TYPE_MOVE, COL_TYPE
+          from raygeo.geo.types import Rect3D, Edge, IntPolygon
+          g: Geometry
+          o: Ops
+          EOF
+          /tmp/stub-test/bin/pyright /tmp/test_stubs.py
+
   test:
     name: Tests (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
