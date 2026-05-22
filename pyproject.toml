@@ -29,15 +29,21 @@ test = [
 
 [tool.maturin]
 module-name = "raygeo"
-python-source = "."
+python-source = "python"
 
 [tool.pyo3-stub-gen]
 module-name = "raygeo"
 
 [tool.pyright]
-stubPath = "."
+stubPath = "python"
 reportMissingModuleSource = false
-include = ["tests"]
+include = ["tests", "python"]
+
+[tool.ruff]
+exclude = ["*.pyi"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

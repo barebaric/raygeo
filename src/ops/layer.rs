@@ -2,6 +2,7 @@ use super::container::Ops;
 use super::types::{MarkerCmd, MoveCmd, OpCategory};
 
 impl Ops {
+    #[allow(clippy::type_complexity)]
     pub fn translate_layers(
         &mut self,
         default_offset: (f64, f64, f64),

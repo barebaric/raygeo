@@ -1,6 +1,6 @@
+use crate::ops::state::State;
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
-use crate::ops::state::State;
 
 pyo3_stub_gen::module_doc!("raygeo.ops.state", "{}", MODULE_DOC);
 
@@ -57,7 +57,10 @@ impl PyState {
 
     /// String representation like ``State(power=..., air_assist=...)``.
     fn __repr__(&self) -> String {
-        format!("State(power={}, air_assist={})", self.0.power, self.0.air_assist)
+        format!(
+            "State(power={}, air_assist={})",
+            self.0.power, self.0.air_assist
+        )
     }
 
     /// Check whether the machine can transition from the current
@@ -146,5 +149,3 @@ impl PyState {
         self.0.pulse_width = value;
     }
 }
-
-

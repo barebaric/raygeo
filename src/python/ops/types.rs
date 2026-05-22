@@ -1,6 +1,8 @@
-use pyo3::prelude::*;
-use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods, gen_stub_pyfunction};
 use crate::ops::enums::{CommandCategory, CommandType, SectionType};
+use pyo3::prelude::*;
+use pyo3_stub_gen::derive::{
+    gen_stub_pyclass, gen_stub_pyfunction, gen_stub_pymethods,
+};
 
 pyo3_stub_gen::module_doc!("raygeo.ops.types", "{}", MODULE_DOC);
 
@@ -33,7 +35,13 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
 /// Each constant represents a specific operation command such as
 /// ``MOVE_TO``, ``LINE_TO``, ``ARC_TO``, ``SET_POWER``, etc.
 #[gen_stub_pyclass]
-#[pyclass(frozen, eq, skip_from_py_object, module = "raygeo.ops.types", name = "CommandType")]
+#[pyclass(
+    frozen,
+    eq,
+    skip_from_py_object,
+    module = "raygeo.ops.types",
+    name = "CommandType"
+)]
 #[derive(Clone, PartialEq)]
 pub struct PyCommandType(pub CommandType);
 
@@ -53,39 +61,51 @@ impl PyCommandType {
     #[classattr]
     pub const BEZIER_TO: PyCommandType = PyCommandType(CommandType::BezierTo);
     #[classattr]
-    pub const QUADRATIC_BEZIER_TO: PyCommandType = PyCommandType(CommandType::QuadraticBezierTo);
+    pub const QUADRATIC_BEZIER_TO: PyCommandType =
+        PyCommandType(CommandType::QuadraticBezierTo);
     #[classattr]
     pub const SET_POWER: PyCommandType = PyCommandType(CommandType::SetPower);
     #[classattr]
-    pub const SET_CUT_SPEED: PyCommandType = PyCommandType(CommandType::SetCutSpeed);
+    pub const SET_CUT_SPEED: PyCommandType =
+        PyCommandType(CommandType::SetCutSpeed);
     #[classattr]
-    pub const SET_TRAVEL_SPEED: PyCommandType = PyCommandType(CommandType::SetTravelSpeed);
+    pub const SET_TRAVEL_SPEED: PyCommandType =
+        PyCommandType(CommandType::SetTravelSpeed);
     #[classattr]
-    pub const ENABLE_AIR_ASSIST: PyCommandType = PyCommandType(CommandType::EnableAirAssist);
+    pub const ENABLE_AIR_ASSIST: PyCommandType =
+        PyCommandType(CommandType::EnableAirAssist);
     #[classattr]
-    pub const DISABLE_AIR_ASSIST: PyCommandType = PyCommandType(CommandType::DisableAirAssist);
+    pub const DISABLE_AIR_ASSIST: PyCommandType =
+        PyCommandType(CommandType::DisableAirAssist);
     #[classattr]
     pub const SET_LASER: PyCommandType = PyCommandType(CommandType::SetLaser);
     #[classattr]
-    pub const SET_FREQUENCY: PyCommandType = PyCommandType(CommandType::SetFrequency);
+    pub const SET_FREQUENCY: PyCommandType =
+        PyCommandType(CommandType::SetFrequency);
     #[classattr]
-    pub const SET_PULSE_WIDTH: PyCommandType = PyCommandType(CommandType::SetPulseWidth);
+    pub const SET_PULSE_WIDTH: PyCommandType =
+        PyCommandType(CommandType::SetPulseWidth);
     #[classattr]
     pub const JOB_START: PyCommandType = PyCommandType(CommandType::JobStart);
     #[classattr]
     pub const JOB_END: PyCommandType = PyCommandType(CommandType::JobEnd);
     #[classattr]
-    pub const LAYER_START: PyCommandType = PyCommandType(CommandType::LayerStart);
+    pub const LAYER_START: PyCommandType =
+        PyCommandType(CommandType::LayerStart);
     #[classattr]
     pub const LAYER_END: PyCommandType = PyCommandType(CommandType::LayerEnd);
     #[classattr]
-    pub const WORKPIECE_START: PyCommandType = PyCommandType(CommandType::WorkpieceStart);
+    pub const WORKPIECE_START: PyCommandType =
+        PyCommandType(CommandType::WorkpieceStart);
     #[classattr]
-    pub const WORKPIECE_END: PyCommandType = PyCommandType(CommandType::WorkpieceEnd);
+    pub const WORKPIECE_END: PyCommandType =
+        PyCommandType(CommandType::WorkpieceEnd);
     #[classattr]
-    pub const OPS_SECTION_START: PyCommandType = PyCommandType(CommandType::OpsSectionStart);
+    pub const OPS_SECTION_START: PyCommandType =
+        PyCommandType(CommandType::OpsSectionStart);
     #[classattr]
-    pub const OPS_SECTION_END: PyCommandType = PyCommandType(CommandType::OpsSectionEnd);
+    pub const OPS_SECTION_END: PyCommandType =
+        PyCommandType(CommandType::OpsSectionEnd);
 
     /// String representation like ``CommandType.MOVE_TO``.
     fn __repr__(&self) -> String {
@@ -111,7 +131,13 @@ impl PyCommandType {
 /// - **STATE**: Commands that change machine state (SetPower, SetCutSpeed, etc.)
 /// - **MARKER**: Structural markers (JobStart/End, LayerStart/End, etc.)
 #[gen_stub_pyclass]
-#[pyclass(frozen, eq, skip_from_py_object, module = "raygeo.ops.types", name = "CommandCategory")]
+#[pyclass(
+    frozen,
+    eq,
+    skip_from_py_object,
+    module = "raygeo.ops.types",
+    name = "CommandCategory"
+)]
 #[derive(Clone, PartialEq)]
 pub struct PyCommandCategory(pub CommandCategory);
 
@@ -119,11 +145,14 @@ pub struct PyCommandCategory(pub CommandCategory);
 #[pymethods]
 impl PyCommandCategory {
     #[classattr]
-    pub const MOVING: PyCommandCategory = PyCommandCategory(CommandCategory::Moving);
+    pub const MOVING: PyCommandCategory =
+        PyCommandCategory(CommandCategory::Moving);
     #[classattr]
-    pub const STATE: PyCommandCategory = PyCommandCategory(CommandCategory::State);
+    pub const STATE: PyCommandCategory =
+        PyCommandCategory(CommandCategory::State);
     #[classattr]
-    pub const MARKER: PyCommandCategory = PyCommandCategory(CommandCategory::Marker);
+    pub const MARKER: PyCommandCategory =
+        PyCommandCategory(CommandCategory::Marker);
 
     /// String representation like ``CommandCategory.MOVING``.
     fn __repr__(&self) -> String {
@@ -143,7 +172,8 @@ impl PyCommandCategory {
             CommandCategory::Moving => "MOVING",
             CommandCategory::State => "STATE",
             CommandCategory::Marker => "MARKER",
-        }.to_string()
+        }
+        .to_string()
     }
 }
 
@@ -151,7 +181,13 @@ impl PyCommandCategory {
 ///
 /// Sections divide an Ops sequence into vector and raster portions.
 #[gen_stub_pyclass]
-#[pyclass(frozen, eq, skip_from_py_object, module = "raygeo.ops.types", name = "SectionType")]
+#[pyclass(
+    frozen,
+    eq,
+    skip_from_py_object,
+    module = "raygeo.ops.types",
+    name = "SectionType"
+)]
 #[derive(Clone, PartialEq)]
 pub struct PySectionType(pub SectionType);
 
@@ -159,9 +195,11 @@ pub struct PySectionType(pub SectionType);
 #[pymethods]
 impl PySectionType {
     #[classattr]
-    pub const VECTOR_OUTLINE: PySectionType = PySectionType(SectionType::VectorOutline);
+    pub const VECTOR_OUTLINE: PySectionType =
+        PySectionType(SectionType::VectorOutline);
     #[classattr]
-    pub const RASTER_FILL: PySectionType = PySectionType(SectionType::RasterFill);
+    pub const RASTER_FILL: PySectionType =
+        PySectionType(SectionType::RasterFill);
 
     /// String representation like ``SectionType.VECTOR_OUTLINE``.
     fn __repr__(&self) -> String {
@@ -181,10 +219,13 @@ impl PySectionType {
     }
 }
 
-#[gen_stub_pyfunction(python = r#"
+#[gen_stub_pyfunction(
+    python = r#"
     def category(ct: CommandType) -> CommandCategory:
         """Get the category of a command type."""
-    "#, module = "raygeo.ops.types")]
+    "#,
+    module = "raygeo.ops.types"
+)]
 #[pyfunction(name = "category")]
 fn py_category(ct: &PyCommandType) -> PyCommandCategory {
     PyCommandCategory(ct.0.category())

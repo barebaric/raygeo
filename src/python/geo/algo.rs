@@ -24,7 +24,11 @@ Smoothing — apply Gaussian kernel smoothing to polylines with
 configurable corner-angle thresholds to preserve sharp features.
 ";
 
-pyo3_stub_gen::module_doc!("raygeo.geo.algo.analysis", "{}", MODULE_DOC_ANALYSIS);
+pyo3_stub_gen::module_doc!(
+    "raygeo.geo.algo.analysis",
+    "{}",
+    MODULE_DOC_ANALYSIS
+);
 
 pub(crate) const MODULE_DOC_ANALYSIS: &str = "\
 Path analysis utilities for inspecting and cleaning geometry data.
@@ -33,7 +37,11 @@ Provides functions for removing duplicate points from point sequences
 and extracting individual points from path data.
 ";
 
-pyo3_stub_gen::module_doc!("raygeo.geo.algo.clipping", "{}", MODULE_DOC_CLIPPING);
+pyo3_stub_gen::module_doc!(
+    "raygeo.geo.algo.clipping",
+    "{}",
+    MODULE_DOC_CLIPPING
+);
 
 pub(crate) const MODULE_DOC_CLIPPING: &str = "\
 Line and polygon clipping operations.
@@ -53,7 +61,11 @@ point sequences. Includes recursive fitting with primitives, polyline
 linearization, and evaluating fitting quality (line and arc deviation).
 ";
 
-pyo3_stub_gen::module_doc!("raygeo.geo.algo.minkowski", "{}", MODULE_DOC_MINKOWSKI);
+pyo3_stub_gen::module_doc!(
+    "raygeo.geo.algo.minkowski",
+    "{}",
+    MODULE_DOC_MINKOWSKI
+);
 
 pub(crate) const MODULE_DOC_MINKOWSKI: &str = "\
 Minkowski sum operations for 2D polygon toolpath generation.
@@ -63,7 +75,11 @@ for convex polygons, and no-fit polygon / inner fit polygon calculations
 used in nesting and packing algorithms.
 ";
 
-pyo3_stub_gen::module_doc!("raygeo.geo.algo.simplify", "{}", MODULE_DOC_SIMPLIFY);
+pyo3_stub_gen::module_doc!(
+    "raygeo.geo.algo.simplify",
+    "{}",
+    MODULE_DOC_SIMPLIFY
+);
 
 pub(crate) const MODULE_DOC_SIMPLIFY: &str = "\
 Polyline simplification using the Ramer-Douglas-Peucker algorithm.

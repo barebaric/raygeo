@@ -79,7 +79,7 @@ fn cmd_to_dict<'a>(
                 let py_axis = Py::new(py, PyAxis(axis))?;
                 let label: String =
                     py_axis.bind(py).getattr("label")?.extract()?;
-                ea_dict.set_item(label, val as f64)?;
+                ea_dict.set_item(label, val)?;
             }
             d.set_item("extra_axes", ea_dict)?;
         }
@@ -368,14 +368,13 @@ fn create_and_append_command(
                 pyo3::exceptions::PyKeyError::new_err("missing 'section_type'")
             })?
             .extract()?;
-        let st = crate::ops::SectionType::from_name(&st_str).ok_or_else(
-            || {
+        let st =
+            crate::ops::SectionType::from_name(&st_str).ok_or_else(|| {
                 pyo3::exceptions::PyValueError::new_err(format!(
                     "unknown section type: {}",
                     st_str
                 ))
-            },
-        )?;
+            })?;
         let wp_uid: Option<String> = cmd_data
             .get_item("workpiece_uid")?
             .and_then(|v| v.extract().ok());
@@ -387,14 +386,13 @@ fn create_and_append_command(
                 pyo3::exceptions::PyKeyError::new_err("missing 'section_type'")
             })?
             .extract()?;
-        let st = crate::ops::SectionType::from_name(&st_str).ok_or_else(
-            || {
+        let st =
+            crate::ops::SectionType::from_name(&st_str).ok_or_else(|| {
                 pyo3::exceptions::PyValueError::new_err(format!(
                     "unknown section type: {}",
                     st_str
                 ))
-            },
-        )?;
+            })?;
         ops.ops_section_end(st);
     } else if ct == CommandType::JobStart {
         ops.job_start();
@@ -433,9 +431,7 @@ pub fn ops_to_dict(
 ///
 /// :param data: Dict with ``"commands"`` and optionally ``"last_move_to"``.
 /// :returns: A new Ops instance.
-pub fn ops_from_dict(
-    data: &Bound<'_, PyDict>,
-) -> PyResult<crate::ops::Ops> {
+pub fn ops_from_dict(data: &Bound<'_, PyDict>) -> PyResult<crate::ops::Ops> {
     let _py = data.py();
     let mut ops = crate::ops::Ops::new();
     let last_move: (f64, f64, f64) = match data.get_item("last_move_to")? {
@@ -690,7 +686,7 @@ pub fn ops_from_numpy_arrays(
         .call_method0("tolist")?
         .extract()?;
 
-    let num_cmds = types_arr.len();
+    let _num_cmds = types_arr.len();
     let mut ops = crate::ops::Ops::new();
 
     let json_bytes_bound = arrays
@@ -766,18 +762,17 @@ pub fn ops_from_numpy_arrays(
             pyo3::exceptions::PyKeyError::new_err("missing 'scanline_map'")
         })?;
 
-    for i in 0..num_cmds {
+    for (i, &cmd_type_val) in types_arr.iter().enumerate() {
         let i_str = i.to_string();
         let py_key = PyString::new(py, &i_str);
 
         let sm_bound = state_marker_cmds_data.bind(py);
         if let Some(cmd_data_any) = sm_bound.get_item(&py_key)? {
             let cmd_data = cmd_data_any.cast::<PyDict>()?;
-            create_and_append_command(&cmd_data, &mut ops)?;
+            create_and_append_command(cmd_data, &mut ops)?;
             continue;
         }
 
-        let cmd_type_val = types_arr[i];
         let ct = CommandType::try_from(cmd_type_val as u8).map_err(|e| {
             pyo3::exceptions::PyValueError::new_err(format!("{e}"))
         })?;
@@ -893,7 +888,7 @@ pub fn ops_from_numpy_arrays(
         let ea_bound = extra_axes_data.bind(py);
         if let Some(ea_item) = ea_bound.get_item(&py_key)? {
             let ea_dict = ea_item.cast::<PyDict>()?;
-            let ea_vec = py_to_axis_map_helper(&ea_dict)?;
+            let ea_vec = py_to_axis_map_helper(ea_dict)?;
             let last_idx = ops.len() - 1;
             ops.commands[last_idx].set_extra_axes(std::sync::Arc::from(ea_vec));
         }

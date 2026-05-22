@@ -12,9 +12,7 @@ def square_geometry() -> Geometry:
 @pytest.fixture
 def figure_eight_geometry() -> Geometry:
     """A figure-eight shape, which does self-intersect."""
-    return Geometry.from_points(
-        [(0, 0), (10, 10), (0, 10), (10, 0)], close=True
-    )
+    return Geometry.from_points([(0, 0), (10, 10), (0, 10), (10, 0)], close=True)
 
 
 @pytest.fixture
@@ -58,9 +56,7 @@ def test_self_intersection_t_junction_configurable(t_junction_geometry):
     configured to fail.
     """
     # By default, T-junctions are allowed (not considered intersections)
-    assert not t_junction_geometry.has_self_intersections(
-        fail_on_t_junction=False
-    )
+    assert not t_junction_geometry.has_self_intersections(fail_on_t_junction=False)
     assert not t_junction_geometry.has_self_intersections()  # Test default
 
     # With the flag, it should be detected as an intersection
@@ -90,9 +86,7 @@ def test_no_self_intersection_multiple_subpaths():
     """
     geo = Geometry.from_points([(0, 0), (5, 0), (5, 5), (0, 5)])
     # Add a second, separate square
-    second_square = Geometry.from_points(
-        [(10, 10), (15, 10), (15, 15), (10, 15)]
-    )
+    second_square = Geometry.from_points([(10, 10), (15, 10), (15, 15), (10, 15)])
     geo.extend(second_square)
     assert not geo.has_self_intersections()
 
@@ -179,9 +173,7 @@ def test_no_intersection_bounding_box_overlap():
     Tests two L-shapes in a yin-yang configuration whose bounding boxes
     overlap but whose paths do not intersect.
     """
-    geo1 = Geometry.from_points(
-        [(0, 0), (10, 0), (10, 1), (1, 1), (1, 10), (0, 10)]
-    )
+    geo1 = Geometry.from_points([(0, 0), (10, 0), (10, 1), (1, 1), (1, 10), (0, 10)])
     geo2 = Geometry.from_points([(2, 2), (9, 2), (9, 9), (2, 9)], close=False)
     assert not geo1.intersects_with(geo2)
     assert not geo2.intersects_with(geo1)

@@ -52,9 +52,7 @@ def test_move_to(sample_geometry):
     assert sample_geometry.data is not None
     last_row = sample_geometry.data[-1]
     assert last_row[Geometry.COL_TYPE] == Geometry.CMD_TYPE_MOVE
-    assert (
-        last_row[Geometry.COL_X : Geometry.COL_Z + 1] == (15.0, 15.0, 0.0)
-    ).all()
+    assert (last_row[Geometry.COL_X : Geometry.COL_Z + 1] == (15.0, 15.0, 0.0)).all()
 
 
 def test_line_to(sample_geometry):
@@ -62,9 +60,7 @@ def test_line_to(sample_geometry):
     assert sample_geometry.data is not None
     last_row = sample_geometry.data[-1]
     assert last_row[Geometry.COL_TYPE] == Geometry.CMD_TYPE_LINE
-    assert (
-        last_row[Geometry.COL_X : Geometry.COL_Z + 1] == (20.0, 20.0, 0.0)
-    ).all()
+    assert (last_row[Geometry.COL_X : Geometry.COL_Z + 1] == (20.0, 20.0, 0.0)).all()
 
 
 def test_close_path(sample_geometry):
@@ -74,12 +70,9 @@ def test_close_path(sample_geometry):
     last_row = sample_geometry.data[-1]
     assert last_row[Geometry.COL_TYPE] == Geometry.CMD_TYPE_LINE
     assert (
-        last_row[Geometry.COL_X : Geometry.COL_Z + 1]
-        == sample_geometry.last_move_to
+        last_row[Geometry.COL_X : Geometry.COL_Z + 1] == sample_geometry.last_move_to
     ).all()
-    assert (
-        last_row[Geometry.COL_X : Geometry.COL_Z + 1] == (5.0, 5.0, -1.0)
-    ).all()
+    assert (last_row[Geometry.COL_X : Geometry.COL_Z + 1] == (5.0, 5.0, -1.0)).all()
 
 
 def test_arc_to():
@@ -91,9 +84,7 @@ def test_arc_to():
     assert geo.data is not None
     last_row = geo.data[-1]
     assert last_row[Geometry.COL_TYPE] == Geometry.CMD_TYPE_ARC
-    assert (
-        last_row[Geometry.COL_X : Geometry.COL_Z + 1] == (5.0, 5.0, 0.0)
-    ).all()
+    assert (last_row[Geometry.COL_X : Geometry.COL_Z + 1] == (5.0, 5.0, 0.0)).all()
     assert last_row[6] == 0.0  # Clockwise is False
 
 
@@ -182,9 +173,7 @@ def test_area():
 
     # Test case 5: Two separate shapes
     geo_two_shapes = Geometry.from_points([(0, 0), (5, 0), (5, 5), (0, 5)])
-    second_shape = Geometry.from_points(
-        [(10, 10), (15, 10), (15, 15), (10, 15)]
-    )
+    second_shape = Geometry.from_points([(10, 10), (15, 10), (15, 15), (10, 15)])
     geo_two_shapes.extend(second_shape)  # Use extend to merge numpy data
     # Expected area = 25 + 25 = 50
     assert geo_two_shapes.area() == pytest.approx(50.0)
@@ -260,9 +249,7 @@ def test_from_points():
     geo_triangle_open = Geometry.from_points(points, close=False)
     assert len(geo_triangle_open) == 3
     assert geo_triangle_open.data is not None
-    assert (
-        geo_triangle_open.data[-1, 1:4] != geo_triangle_open.data[0, 1:4]
-    ).any()
+    assert (geo_triangle_open.data[-1, 1:4] != geo_triangle_open.data[0, 1:4]).any()
 
     # Test case 5: Points with Z coordinates (closed)
     points_3d = [(0, 0, 1), (10, 0, 2), (5, 10, 3)]
@@ -829,19 +816,14 @@ def test_upgrade_to_scalable_is_idempotent():
     assert geo.data is not None
     data_after_first_call = geo.data.copy()
     assert geo.uniform_scalable is True
-    assert (
-        Geometry.CMD_TYPE_ARC
-        not in data_after_first_call[:, Geometry.COL_TYPE]
-    )
+    assert Geometry.CMD_TYPE_ARC not in data_after_first_call[:, Geometry.COL_TYPE]
 
     # Second call
     geo.upgrade_to_scalable()
     data_after_second_call = geo.data
 
     # The data should be identical
-    np.testing.assert_array_equal(
-        data_after_first_call, data_after_second_call
-    )
+    np.testing.assert_array_equal(data_after_first_call, data_after_second_call)
 
 
 def test_linearize_approximation():
@@ -1070,9 +1052,7 @@ class TestAppendData:
         assert geo.data is not None
         original_len = len(geo.data)
 
-        extra = np.array(
-            [[Geometry.CMD_TYPE_LINE, 10.0, 10.0, 0.0, 0, 0, 0, 0]]
-        )
+        extra = np.array([[Geometry.CMD_TYPE_LINE, 10.0, 10.0, 0.0, 0, 0, 0, 0]])
         geo.append_data(extra)
 
         assert geo.data is not None

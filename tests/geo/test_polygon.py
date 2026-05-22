@@ -184,9 +184,7 @@ class TestGroupBounds:
         assert get_polygon_group_bounds([]) == (0.0, 0.0, 0.0, 0.0)
 
     def test_list_with_empty_polygons(self):
-        assert get_polygon_group_bounds(
-            [cast(Polygon, []), cast(Polygon, [])]
-        ) == (
+        assert get_polygon_group_bounds([cast(Polygon, []), cast(Polygon, [])]) == (
             0.0,
             0.0,
             0.0,
@@ -671,9 +669,7 @@ class TestPointInPolygonNumpy:
         assert point_in_polygon_numpy((5, 0), polygon) is True
 
     def test_empty_polygon(self):
-        assert (
-            point_in_polygon_numpy((5, 5), np.array([]).reshape(0, 2)) is False
-        )
+        assert point_in_polygon_numpy((5, 5), np.array([]).reshape(0, 2)) is False
 
     def test_too_few_points(self):
         polygon = PN((0, 0), (10, 0))
@@ -702,16 +698,11 @@ class TestPolygonsIntersect:
         assert result is False
 
     def test_empty(self):
-        assert (
-            polygons_intersect(cast(Polygon, []), P((0, 0), (1, 0), (1, 1)))
-            is False
-        )
+        assert polygons_intersect(cast(Polygon, []), P((0, 0), (1, 0), (1, 1))) is False
 
     def test_min_area_below_threshold(self):
         poly1 = P((0, 0), (10, 0), (10, 10), (0, 10))
-        poly2 = P(
-            (9.999, 9.999), (10.001, 9.999), (10.001, 10.001), (9.999, 10.001)
-        )
+        poly2 = P((9.999, 9.999), (10.001, 9.999), (10.001, 10.001), (9.999, 10.001))
         assert polygons_intersect(poly1, poly2, min_area=1e10) is False
 
     def test_min_area_above_threshold(self):
@@ -740,13 +731,8 @@ class TestPolygonsIntersect:
         assert polygons_intersect(poly1, poly2, min_area=1e15) is False
 
     def test_insufficient_vertices(self):
-        assert (
-            polygons_intersect(P((0, 0), (1, 0)), P((0, 0), (1, 0), (1, 1)))
-            is False
-        )
-        assert (
-            polygons_intersect(P((0, 0), (1, 0), (1, 1)), P((0, 0))) is False
-        )
+        assert polygons_intersect(P((0, 0), (1, 0)), P((0, 0), (1, 0), (1, 1))) is False
+        assert polygons_intersect(P((0, 0), (1, 0), (1, 1)), P((0, 0))) is False
 
 
 class TestPolygonsIntersectNumpy:
@@ -776,9 +762,7 @@ class TestPolygonsIntersectNumpy:
 
     def test_min_area_below_threshold(self):
         poly1 = PN((0, 0), (10, 0), (10, 10), (0, 10))
-        poly2 = PN(
-            (9.999, 9.999), (10.001, 9.999), (10.001, 10.001), (9.999, 10.001)
-        )
+        poly2 = PN((9.999, 9.999), (10.001, 9.999), (10.001, 10.001), (9.999, 10.001))
         assert polygons_intersect_numpy(poly1, poly2, min_area=1e10) is False
 
     def test_min_area_above_threshold(self):
@@ -808,15 +792,10 @@ class TestPolygonsIntersectNumpy:
 
     def test_insufficient_vertices(self):
         assert (
-            polygons_intersect_numpy(
-                PN((0, 0), (1, 0)), PN((0, 0), (1, 0), (1, 1))
-            )
+            polygons_intersect_numpy(PN((0, 0), (1, 0)), PN((0, 0), (1, 0), (1, 1)))
             is False
         )
-        assert (
-            polygons_intersect_numpy(PN((0, 0), (1, 0), (1, 1)), PN((0, 0)))
-            is False
-        )
+        assert polygons_intersect_numpy(PN((0, 0), (1, 0), (1, 1)), PN((0, 0))) is False
 
 
 class TestAlmostEqual:
@@ -1114,9 +1093,7 @@ class TestFlipPolygonsNumpy:
     def test_flip_multiple_horizontal(self):
         poly1 = PN((1, 2), (3, 4))
         poly2 = PN((5, 6), (7, 8))
-        flipped = flip_polygons_numpy(
-            [poly1, poly2], flip_h=True, flip_v=False
-        )
+        flipped = flip_polygons_numpy([poly1, poly2], flip_h=True, flip_v=False)
         assert len(flipped) == 2
         assert flipped[0][0, 0] == -1
         assert flipped[0][0, 1] == 2
@@ -1126,9 +1103,7 @@ class TestFlipPolygonsNumpy:
     def test_flip_multiple_vertical(self):
         poly1 = PN((1, 2), (3, 4))
         poly2 = PN((5, 6), (7, 8))
-        flipped = flip_polygons_numpy(
-            [poly1, poly2], flip_h=False, flip_v=True
-        )
+        flipped = flip_polygons_numpy([poly1, poly2], flip_h=False, flip_v=True)
         assert len(flipped) == 2
         assert flipped[0][0, 0] == 1
         assert flipped[0][0, 1] == -2

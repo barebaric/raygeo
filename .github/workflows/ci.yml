@@ -22,8 +22,11 @@ jobs:
       - name: Install wheel
         run: pip install dist/raygeo-*.whl
 
+      - name: Lint Python
+        run: pip install ruff && ruff check tests/
+
       - name: Run pyright
-        run: npx --yes pyright --pythonpath $(which python) raygeo
+        run: npx --yes pyright --pythonpath $(which python) python/raygeo
 
       - name: Validate stubs in wheel
         run: |

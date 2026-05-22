@@ -219,7 +219,7 @@ def is_point_inside_polygon(point: types.Point, polygon: collections.abc.Sequenc
     :returns: True if point is inside the polygon.
     """
 
-def is_polygon_clockwise(points: collections.abc.Sequence[types.Point]) -> bool:
+def is_polygon_clockwise(points: collections.abc.Sequence[types.Point2DOr3D]) -> bool:
     r"""
     Check if a polygon has clockwise winding order.
     

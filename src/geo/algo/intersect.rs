@@ -5,8 +5,8 @@
 //! line segments for testing, and an R-tree spatial index is used for
 //! O(N log M) bounding-box lookups instead of brute-force O(N × M) scans.
 
-use crate::constants::*;
 use crate::constants::EPSILON_INTERSECT;
+use crate::constants::*;
 use crate::geo::shape::arc::linearize_arc;
 use crate::geo::shape::bezier::linearize_bezier_from_array;
 use crate::geo::shape::line::get_line_segment_intersection;

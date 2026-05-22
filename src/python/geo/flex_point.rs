@@ -11,7 +11,9 @@ pub struct PyPoint2D(pub f64, pub f64);
 
 impl<'a, 'py> FromPyObject<'a, 'py> for PyPoint2D {
     type Error = PyErr;
-    fn extract(ob: pyo3::Borrowed<'a, 'py, pyo3::types::PyAny>) -> Result<Self, Self::Error> {
+    fn extract(
+        ob: pyo3::Borrowed<'a, 'py, pyo3::types::PyAny>,
+    ) -> Result<Self, Self::Error> {
         if let Ok((x, y)) = ob.extract::<(f64, f64)>() {
             return Ok(PyPoint2D(x, y));
         }
@@ -55,7 +57,9 @@ pub struct PyPoint3D(pub f64, pub f64, pub f64);
 
 impl<'a, 'py> FromPyObject<'a, 'py> for PyPoint3D {
     type Error = PyErr;
-    fn extract(ob: pyo3::Borrowed<'a, 'py, pyo3::types::PyAny>) -> Result<Self, Self::Error> {
+    fn extract(
+        ob: pyo3::Borrowed<'a, 'py, pyo3::types::PyAny>,
+    ) -> Result<Self, Self::Error> {
         if let Ok((x, y, z)) = ob.extract::<(f64, f64, f64)>() {
             return Ok(PyPoint3D(x, y, z));
         }
@@ -88,7 +92,9 @@ pub struct PyIntPoint2D(pub i64, pub i64);
 
 impl<'a, 'py> FromPyObject<'a, 'py> for PyIntPoint2D {
     type Error = PyErr;
-    fn extract(ob: pyo3::Borrowed<'a, 'py, pyo3::types::PyAny>) -> Result<Self, Self::Error> {
+    fn extract(
+        ob: pyo3::Borrowed<'a, 'py, pyo3::types::PyAny>,
+    ) -> Result<Self, Self::Error> {
         if let Ok((x, y)) = ob.extract::<(i64, i64)>() {
             return Ok(PyIntPoint2D(x, y));
         }

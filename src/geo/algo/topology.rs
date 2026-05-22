@@ -39,8 +39,11 @@ impl ContourHierarchy {
     /// After filtering, nesting depths are recomputed by walking the
     /// (now potentially shorter) parent chain, and new best parents
     /// are found for contours whose parent was removed.
-    pub fn filter_parents<F>(&mut self, info: &[Option<ContourInfo>], should_keep: F)
-    where
+    pub fn filter_parents<F>(
+        &mut self,
+        info: &[Option<ContourInfo>],
+        should_keep: F,
+    ) where
         F: Fn(usize, usize) -> bool,
     {
         let n = self.parent_map.len();
@@ -71,8 +74,10 @@ impl ContourHierarchy {
                             continue;
                         }
                         let (o_min_x, o_min_y, o_max_x, o_max_y) = other.rect;
-                        if tx < o_min_x || tx > o_max_x
-                            || ty < o_min_y || ty > o_max_y
+                        if tx < o_min_x
+                            || tx > o_max_x
+                            || ty < o_min_y
+                            || ty > o_max_y
                         {
                             continue;
                         }

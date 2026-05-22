@@ -34,10 +34,7 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     let geo_mod = PyModule::new(py, "geo")?;
 
     geo_mod.setattr("__doc__", MODULE_DOC)?;
-    geo_mod.add(
-        "__all__",
-        vec!["Geometry", "PyCommand", "types"],
-    )?;
+    geo_mod.add("__all__", vec!["Geometry", "PyCommand", "types"])?;
 
     add_functions(&geo_mod)?;
     add_submodules(&geo_mod)?;

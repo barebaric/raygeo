@@ -1,7 +1,7 @@
 use std::f64::consts::PI;
 
-use crate::geo::algo::simplify::simplify_polyline;
 use crate::constants::*;
+use crate::geo::algo::simplify::simplify_polyline;
 use crate::geo::shape::arc::is_arc_clockwise;
 use crate::geo::shape::arc::{get_arc_angles, linearize_arc};
 use crate::geo::shape::bezier::linearize_bezier_from_array;
