@@ -55,11 +55,12 @@ pub fn apply_overcut(geo: &Geometry, overcut: f64) -> Geometry {
                     );
                 }
                 Command::Bezier {
-                    control1,
-                    control2,
-                    ..
+                    control1, control2, ..
                 } => {
-                    result.bezier_to((*control1, *control2, (end.0, end.1)), end.2);
+                    result.bezier_to(
+                        (*control1, *control2, (end.0, end.1)),
+                        end.2,
+                    );
                 }
                 Command::Move { .. } => {}
             }

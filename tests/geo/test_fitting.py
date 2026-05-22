@@ -199,9 +199,7 @@ def test_fit_circle_to_points_insufficient_points():
     assert fit_circle_to_points([(0.0, 0.0, 0.0)]) is None
     assert fit_circle_to_points([(1.0, 2.0, 0.0), (3.0, 4.0, 0.0)]) is None
     assert (
-        fit_circle_to_points(
-            [(5.0, 5.0, 0.0), (5.0, 5.0, 0.0), (5.0, 5.0, 0.0)]
-        )
+        fit_circle_to_points([(5.0, 5.0, 0.0), (5.0, 5.0, 0.0), (5.0, 5.0, 0.0)])
         is None
     )
 
@@ -368,9 +366,7 @@ def test_fit_points_with_primitives_single_arc():
     assert cmd[Geometry.COL_TYPE] == Geometry.CMD_TYPE_ARC
     assert np.allclose((cmd[Geometry.COL_X], cmd[Geometry.COL_Y]), (0.0, 10.0))
     # Center offset from start point (10, 0) is (-10, 0)
-    assert np.allclose(
-        (cmd[Geometry.COL_I], cmd[Geometry.COL_J]), (-10.0, 0.0)
-    )
+    assert np.allclose((cmd[Geometry.COL_I], cmd[Geometry.COL_J]), (-10.0, 0.0))
     # CCW
     assert cmd[Geometry.COL_CW] == 0.0
 
@@ -388,13 +384,9 @@ def test_fit_points_with_primitives_corner_split():
 
     assert len(cmds) == 2
     assert cmds[0][Geometry.COL_TYPE] == Geometry.CMD_TYPE_LINE
-    assert np.allclose(
-        (cmds[0][Geometry.COL_X], cmds[0][Geometry.COL_Y]), (10.0, 0.0)
-    )
+    assert np.allclose((cmds[0][Geometry.COL_X], cmds[0][Geometry.COL_Y]), (10.0, 0.0))
     assert cmds[1][Geometry.COL_TYPE] == Geometry.CMD_TYPE_LINE
-    assert np.allclose(
-        (cmds[1][Geometry.COL_X], cmds[1][Geometry.COL_Y]), (10.0, 10.0)
-    )
+    assert np.allclose((cmds[1][Geometry.COL_X], cmds[1][Geometry.COL_Y]), (10.0, 10.0))
 
 
 def test_fit_points_with_primitives_line_arc_mixed():
@@ -404,9 +396,7 @@ def test_fit_points_with_primitives_line_arc_mixed():
     # Arc segment (tangent start at 10,0)
     # Center at (10, 5), radius 5. Start angle -pi/2, end 0
     angles = np.linspace(-np.pi / 2, 0, 11)
-    arc_pts = [
-        (10.0 + 5.0 * np.cos(t), 5.0 + 5.0 * np.sin(t), 0.0) for t in angles
-    ]
+    arc_pts = [(10.0 + 5.0 * np.cos(t), 5.0 + 5.0 * np.sin(t), 0.0) for t in angles]
     # Remove duplicate point at transition
     points = line_pts + arc_pts[1:]
 

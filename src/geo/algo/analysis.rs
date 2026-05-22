@@ -9,8 +9,10 @@
 
 use std::f64::consts::PI;
 
+use crate::geo::algo::topology::{
+    get_valid_contours_data, split_into_contours,
+};
 use crate::geo::geometry::Geometry;
-use crate::geo::algo::topology::{get_valid_contours_data, split_into_contours};
 use crate::geo::shape::arc::linearize_arc;
 use crate::geo::shape::bezier::linearize_bezier_from_array;
 use crate::geo::shape::polygon::is_point_inside_polygon;
@@ -409,9 +411,7 @@ pub fn segment_length_from_row_flat(
 ) -> f64 {
     let cmd = Command::from_row(row).expect("invalid command");
     match &cmd {
-        Command::Move { .. } | Command::Line { .. } => {
-            cmd.length(start_point)
-        }
+        Command::Move { .. } | Command::Line { .. } => cmd.length(start_point),
         Command::Arc { .. } | Command::Bezier { .. } => {
             segment_length_from_row(row, start_point)
         }
@@ -546,5 +546,4 @@ mod tests {
         let result = remove_duplicates(&points);
         assert_eq!(result, vec![1, 2, 3, 4]);
     }
-
 }

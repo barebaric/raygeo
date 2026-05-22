@@ -287,9 +287,7 @@ def test_encloses_with_hole():
     assert donut.encloses(content_inside) is True
 
     # Shape fully inside the donut's hole
-    content_in_hole = Geometry.from_points(
-        [(7, 7), (13, 7), (13, 13), (7, 13)]
-    )
+    content_in_hole = Geometry.from_points([(7, 7), (13, 7), (13, 13), (7, 13)])
     assert donut.encloses(content_in_hole) is False
 
 

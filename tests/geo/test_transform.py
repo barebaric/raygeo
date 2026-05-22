@@ -80,12 +80,8 @@ def test_transform_translate():
     # Check bezier
     assert np.allclose(geo.data[2, 1:4], (80, 75, 65))
     # Translation SHOULD affect bezier control points (absolute coords)
-    assert np.allclose(
-        geo.data[2, Geometry.COL_C1X : Geometry.COL_C1Y + 1], (65, 60)
-    )
-    assert np.allclose(
-        geo.data[2, Geometry.COL_C2X : Geometry.COL_C2Y + 1], (75, 70)
-    )
+    assert np.allclose(geo.data[2, Geometry.COL_C1X : Geometry.COL_C1Y + 1], (65, 60))
+    assert np.allclose(geo.data[2, Geometry.COL_C2X : Geometry.COL_C2Y + 1], (75, 70))
 
 
 def test_transform_scale_non_uniform_preserves_beziers():
@@ -171,12 +167,8 @@ def test_transform_uniform_scale_preserves_curves():
     assert bezier_row[Geometry.COL_TYPE] == Geometry.CMD_TYPE_BEZIER
     assert np.allclose(bezier_row[1:4], (40, 0, 0))
     # Control points should also scale
-    assert np.allclose(
-        bezier_row[Geometry.COL_C1X : Geometry.COL_C1Y + 1], (24, 4)
-    )
-    assert np.allclose(
-        bezier_row[Geometry.COL_C2X : Geometry.COL_C2Y + 1], (36, -4)
-    )
+    assert np.allclose(bezier_row[Geometry.COL_C1X : Geometry.COL_C1Y + 1], (24, 4))
+    assert np.allclose(bezier_row[Geometry.COL_C2X : Geometry.COL_C2Y + 1], (36, -4))
 
 
 # --- Grow/Offset Tests ---
@@ -271,9 +263,7 @@ def test_grow_circle():
     offset = -2.0
     shrunk_circle = circle.grow(offset)
     expected_shrunk_area = math.pi * (radius + offset) ** 2
-    assert shrunk_circle.area() == pytest.approx(
-        expected_shrunk_area, rel=1e-2
-    )
+    assert shrunk_circle.area() == pytest.approx(expected_shrunk_area, rel=1e-2)
 
 
 def test_shrink_to_nothing():
@@ -396,9 +386,7 @@ def test_grow_shape_with_multiple_holes():
     grown = geo.grow(1.0)
 
     grown_contours = grown.split_into_contours()
-    assert len(grown_contours) == 4, (
-        f"Expected 4 contours, got {len(grown_contours)}"
-    )
+    assert len(grown_contours) == 4, f"Expected 4 contours, got {len(grown_contours)}"
 
     nonzero = [g for g in grown_contours if g.area() > 1.0]
     assert len(nonzero) == 4

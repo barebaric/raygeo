@@ -1,7 +1,9 @@
 use num_enum::TryFromPrimitive;
 use strum::{Display, EnumString};
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, TryFromPrimitive, EnumString, Display)]
+#[derive(
+    Clone, Copy, Debug, PartialEq, Eq, TryFromPrimitive, EnumString, Display,
+)]
 #[repr(u8)]
 #[strum(serialize_all = "SCREAMING_SNAKE_CASE")]
 pub enum CommandType {
@@ -231,14 +233,8 @@ mod tests {
 
     #[test]
     fn test_try_from_valid() {
-        assert_eq!(
-            CommandType::try_from(1),
-            Ok(CommandType::MoveTo)
-        );
-        assert_eq!(
-            CommandType::try_from(107),
-            Ok(CommandType::OpsSectionEnd)
-        );
+        assert_eq!(CommandType::try_from(1), Ok(CommandType::MoveTo));
+        assert_eq!(CommandType::try_from(107), Ok(CommandType::OpsSectionEnd));
     }
 
     #[test]
@@ -251,21 +247,48 @@ mod tests {
 
     #[test]
     fn test_from_name_roundtrip() {
-        assert_eq!(CommandType::from_name("MOVE_TO"), Some(CommandType::MoveTo));
-        assert_eq!(CommandType::from_name("LINE_TO"), Some(CommandType::LineTo));
+        assert_eq!(
+            CommandType::from_name("MOVE_TO"),
+            Some(CommandType::MoveTo)
+        );
+        assert_eq!(
+            CommandType::from_name("LINE_TO"),
+            Some(CommandType::LineTo)
+        );
         assert_eq!(CommandType::from_name("ARC_TO"), Some(CommandType::ArcTo));
-        assert_eq!(CommandType::from_name("SCAN_LINE"), Some(CommandType::ScanLine));
-        assert_eq!(CommandType::from_name("BEZIER_TO"), Some(CommandType::BezierTo));
-        assert_eq!(CommandType::from_name("SET_POWER"), Some(CommandType::SetPower));
-        assert_eq!(CommandType::from_name("JOB_START"), Some(CommandType::JobStart));
-        assert_eq!(CommandType::from_name("OPS_SECTION_END"), Some(CommandType::OpsSectionEnd));
+        assert_eq!(
+            CommandType::from_name("SCAN_LINE"),
+            Some(CommandType::ScanLine)
+        );
+        assert_eq!(
+            CommandType::from_name("BEZIER_TO"),
+            Some(CommandType::BezierTo)
+        );
+        assert_eq!(
+            CommandType::from_name("SET_POWER"),
+            Some(CommandType::SetPower)
+        );
+        assert_eq!(
+            CommandType::from_name("JOB_START"),
+            Some(CommandType::JobStart)
+        );
+        assert_eq!(
+            CommandType::from_name("OPS_SECTION_END"),
+            Some(CommandType::OpsSectionEnd)
+        );
         assert_eq!(CommandType::from_name("INVALID"), None);
     }
 
     #[test]
     fn test_section_type_from_name() {
-        assert_eq!(SectionType::from_name("VECTOR_OUTLINE"), Some(SectionType::VectorOutline));
-        assert_eq!(SectionType::from_name("RASTER_FILL"), Some(SectionType::RasterFill));
+        assert_eq!(
+            SectionType::from_name("VECTOR_OUTLINE"),
+            Some(SectionType::VectorOutline)
+        );
+        assert_eq!(
+            SectionType::from_name("RASTER_FILL"),
+            Some(SectionType::RasterFill)
+        );
         assert_eq!(SectionType::from_name("INVALID"), None);
     }
 

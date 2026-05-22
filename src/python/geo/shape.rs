@@ -62,7 +62,11 @@ computation between two points, and applying a 4x4 affine transformation
 matrix to a single point.
 ";
 
-pyo3_stub_gen::module_doc!("raygeo.geo.shape.polygon", "{}", MODULE_DOC_POLYGON);
+pyo3_stub_gen::module_doc!(
+    "raygeo.geo.shape.polygon",
+    "{}",
+    MODULE_DOC_POLYGON
+);
 
 pub(crate) const MODULE_DOC_POLYGON: &str = "\
 Polygon manipulation functions.
@@ -85,6 +89,9 @@ Provides functions to test whether two axis-aligned rectangles intersect
 and whether one rectangle fully contains another.
 ";
 
+use super::flex_point::{
+    extract_polygons, poly_to_points, PyPoint2D, PyPoint3D,
+};
 use crate::geo::shape::arc::is_arc_clockwise;
 use crate::geo::shape::arc::{
     does_arc_intersect_circle, does_arc_intersect_rect, get_arc_angles,
@@ -132,9 +139,6 @@ use numpy::{PyArray2, PyArrayMethods, PyUntypedArrayMethods};
 use pyo3::prelude::*;
 use pyo3::types::PyList;
 use pyo3_stub_gen::derive::gen_stub_pyfunction;
-use super::flex_point::{
-    extract_polygons, poly_to_points, PyPoint2D, PyPoint3D,
-};
 
 fn _arc_row_from_any(arc_cmd: &Bound<'_, PyAny>) -> PyResult<[f64; 8]> {
     if let Ok(row) = arc_cmd.extract::<Vec<f64>>() {
@@ -802,8 +806,8 @@ fn does_arc_intersect_circle_py(
     import raygeo.geo.types
 
     def is_arc_clockwise(
-        points: collections.abc.Sequence[types.Point],
-        center: types.Point,
+        points: collections.abc.Sequence[types.Point2DOr3D],
+        center: types.Point2DOr3D,
     ) -> bool:
         """Check if an arc is clockwise.
 
@@ -1231,6 +1235,7 @@ fn is_bezier_inside_polygons_py(
     module = "raygeo.geo.shape.bezier"
 )]
 #[pyfunction(name = "linearize_bezier")]
+#[allow(clippy::type_complexity)]
 fn linearize_bezier_py(
     p0: PyPoint3D,
     p1: PyPoint3D,
@@ -1238,14 +1243,13 @@ fn linearize_bezier_py(
     p3: PyPoint3D,
     num_steps: usize,
 ) -> Vec<((f64, f64, f64), (f64, f64, f64))> {
-    let result = linearize_bezier(
+    linearize_bezier(
         (p0.0, p0.1, p0.2),
         (p1.0, p1.1, p1.2),
         (p2.0, p2.1, p2.2),
         (p3.0, p3.1, p3.2),
         num_steps,
-    );
-    result
+    )
 }
 
 #[gen_stub_pyfunction(
@@ -1325,14 +1329,13 @@ fn linearize_bezier_segment_py(
     p3: PyPoint3D,
     tolerance: f64,
 ) -> Vec<(f64, f64, f64)> {
-    let result = linearize_bezier_segment(
+    linearize_bezier_segment(
         (p0.0, p0.1, p0.2),
         (p1.0, p1.1, p1.2),
         (p2.0, p2.1, p2.2),
         (p3.0, p3.1, p3.2),
         Some(tolerance),
-    );
-    result
+    )
 }
 
 #[gen_stub_pyfunction(
@@ -2462,7 +2465,7 @@ fn flip_polygons_numpy_py<'py>(
     let mut p = Vec::new();
     for item in polygons.iter() {
         let arr = item.cast::<PyArray2<f64>>()?;
-        p.push(_polygon_from_numpy(&arr));
+        p.push(_polygon_from_numpy(arr));
     }
     let result = flip_polygons(&p, flip_h, flip_v);
     let np_list = _polygons_to_numpy_list(py, result);
@@ -2724,7 +2727,7 @@ fn to_clipper_numpy_py(
     import collections.abc
     import raygeo.geo.types
 
-    def is_polygon_clockwise(points: collections.abc.Sequence[types.Point]) -> bool:
+    def is_polygon_clockwise(points: collections.abc.Sequence[types.Point2DOr3D]) -> bool:
         """Check if a polygon has clockwise winding order.
 
         :param points: Sequence of (x, y) points defining a polygon.

@@ -214,6 +214,7 @@ impl Ops {
         );
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn arc_to(
         &mut self,
         x: f64,

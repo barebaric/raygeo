@@ -44,7 +44,7 @@ pub fn project_t_along_segment(
         + (point.1 - origin.1) * delta.dy
         + (point.2 - origin.2) * delta.dz)
         / delta.len_sq;
-    t.max(0.0).min(1.0)
+    t.clamp(0.0, 1.0)
 }
 
 /// Compute the parameter range `(t_start, t_end)` for a clipped sub-segment.
@@ -90,11 +90,7 @@ pub fn slice_scanline_data(data: &[u8], t_start: f64, t_end: f64) -> Vec<u8> {
 /// - `b`: Linear coefficient.
 /// - `c`: Constant term.
 /// - Returns: A tuple `(root1, root2)`, each `None` if no real root exists.
-pub fn solve_quadratic(
-    a: f64,
-    b: f64,
-    c: f64,
-) -> (Option<f64>, Option<f64>) {
+pub fn solve_quadratic(a: f64, b: f64, c: f64) -> (Option<f64>, Option<f64>) {
     if a.abs() <= EPSILON_COLLINEAR {
         if b.abs() <= EPSILON_COLLINEAR {
             return (None, None);
@@ -130,11 +126,7 @@ mod tests {
     #[test]
     fn test_project_t_along_segment() {
         let d = compute_segment_delta((0.0, 0.0, 0.0), (10.0, 0.0, 0.0));
-        let t = project_t_along_segment(
-            (0.0, 0.0, 0.0),
-            (5.0, 0.0, 0.0),
-            &d,
-        );
+        let t = project_t_along_segment((0.0, 0.0, 0.0), (5.0, 0.0, 0.0), &d);
         assert!((t - 0.5).abs() < 1e-9);
     }
 

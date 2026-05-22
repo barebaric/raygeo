@@ -383,9 +383,11 @@ impl Ops {
         let mut new_subpath =
             build_clipped_subpath(&temp_ops, gap_start_dist, gap_end_dist);
 
-        let original_endpoint = self.commands[if end_idx > 0 { end_idx - 1 } else { 0 }].end_point();
+        let original_endpoint = self.commands
+            [if end_idx > 0 { end_idx - 1 } else { 0 }]
+        .end_point();
         let mut new_endpoint: Option<Point3D> = None;
-        if new_subpath.len() > 0 {
+        if !new_subpath.is_empty() {
             for node in new_subpath.commands.iter().rev() {
                 if node.is_moving() {
                     new_endpoint = Some(node.end_point());
@@ -679,10 +681,7 @@ fn find_hit_command(
     let closest = crate::geo::query::find_closest_point_on_path_from_array(
         &geo.data, x, y,
     );
-    let (segment_index, _linear_t, point_on_path) = match closest {
-        Some(v) => v,
-        None => return None,
-    };
+    let (segment_index, _linear_t, point_on_path) = closest?;
 
     let dist_sq = (x - point_on_path.0) * (x - point_on_path.0)
         + (y - point_on_path.1) * (y - point_on_path.1);
@@ -754,9 +753,8 @@ fn accumulate_distance_to_hit(
     let mut hit_dist = 0.0;
     let mut last_pos = temp_ops.commands[linear_geo_cmds[0]].end_point();
 
-    for idx_i in 1..linear_segment_idx {
-        let j = linear_geo_cmds[idx_i];
-        let end_pt = temp_ops.commands[j].end_point();
+    for &cmd_idx in linear_geo_cmds.iter().take(linear_segment_idx).skip(1) {
+        let end_pt = temp_ops.commands[cmd_idx].end_point();
         let dp = (end_pt.0 - last_pos.0, end_pt.1 - last_pos.1);
         hit_dist += (dp.0 * dp.0 + dp.1 * dp.1).sqrt();
         last_pos = end_pt;

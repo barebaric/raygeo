@@ -366,5 +366,4 @@ mod tests {
         let rows = result.unwrap();
         assert_eq!(rows.len(), 2);
     }
-
 }

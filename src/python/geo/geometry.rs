@@ -3,13 +3,14 @@ use numpy::{IntoPyArray, PyArray2, PyArrayMethods};
 use pyo3::prelude::*;
 use pyo3::types::{PyDict, PyList, PyType};
 use pyo3_stub_gen::derive::{
-    gen_methods_from_python, gen_stub_pyclass, gen_stub_pyclass_enum, gen_stub_pymethods,
+    gen_methods_from_python, gen_stub_pyclass, gen_stub_pyclass_enum,
+    gen_stub_pymethods,
 };
 use pyo3_stub_gen::inventory::submit;
 use pyo3_stub_gen::{PyStubType, TypeInfo};
 
-use crate::geo::algo::fitting::convert_arc_to_beziers_from_array;
 use crate::geo::algo::analysis::get_point_and_tangent_at_from_array;
+use crate::geo::algo::fitting::convert_arc_to_beziers_from_array;
 use crate::geo::algo::topology::get_valid_contours_data;
 use crate::geo::math::map_geometry_to_frame;
 use crate::{
@@ -187,16 +188,16 @@ impl Geometry {
     const GEO_ARRAY_COLS: usize = crate::GEO_ARRAY_COLS;
 
     #[classattr]
-    const CMD_TYPE_MOVE: f64 = crate::CMD_TYPE_MOVE as f64;
+    const CMD_TYPE_MOVE: f64 = crate::CMD_TYPE_MOVE;
 
     #[classattr]
-    const CMD_TYPE_LINE: f64 = crate::CMD_TYPE_LINE as f64;
+    const CMD_TYPE_LINE: f64 = crate::CMD_TYPE_LINE;
 
     #[classattr]
-    const CMD_TYPE_ARC: f64 = crate::CMD_TYPE_ARC as f64;
+    const CMD_TYPE_ARC: f64 = crate::CMD_TYPE_ARC;
 
     #[classattr]
-    const CMD_TYPE_BEZIER: f64 = crate::CMD_TYPE_BEZIER as f64;
+    const CMD_TYPE_BEZIER: f64 = crate::CMD_TYPE_BEZIER;
 
     /// Create a new empty Geometry.
     #[new]
@@ -281,6 +282,7 @@ impl Geometry {
     /// :param c2y: Second control point Y.
     /// :param z: End Z coordinate (default 0.0).
     #[pyo3(signature = (x, y, c1x, c1y, c2x, c2y, z=0.0))]
+    #[allow(clippy::too_many_arguments)]
     fn bezier_to(
         &mut self,
         x: f64,
@@ -568,6 +570,7 @@ impl Geometry {
     }
 
     /// Serialize the geometry to a dictionary.
+    #[allow(clippy::wrong_self_convention)]
     fn to_dict<'py>(
         &mut self,
         py: Python<'py>,
@@ -925,8 +928,7 @@ impl Geometry {
             let mut geo = slf.borrow_mut();
             let data = geo.inner.synced_data();
             if !data.is_empty() {
-                let cleaned =
-                    crate::remove_duplicate_segments(data, tolerance);
+                let cleaned = crate::remove_duplicate_segments(data, tolerance);
                 *geo.inner.synced_data_mut() = cleaned;
             }
         }
@@ -1164,6 +1166,7 @@ impl Geometry {
     /// :param anchor_x: X anchor position.
     /// :param stable_src_width: Stable source width for anchoring.
     #[pyo3(signature = (origin, p_width, p_height, anchor_y=None, stable_src_height=None, anchor_x=None, stable_src_width=None))]
+    #[allow(clippy::too_many_arguments)]
     fn map_to_frame(
         &self,
         origin: (f64, f64),
@@ -1220,8 +1223,7 @@ impl Geometry {
                 continue;
             }
             let poly: Vec<Point> = seg.iter().map(|p| (p.0, p.1)).collect();
-            if let Some(cleaned) =
-                crate::clean_polygon(&poly, 0.01 * tolerance)
+            if let Some(cleaned) = crate::clean_polygon(&poly, 0.01 * tolerance)
             {
                 result.push(cleaned);
             } else if poly.len() >= 3 {

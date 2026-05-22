@@ -545,6 +545,7 @@ impl PyOps {
     /// :param idx: Command index.
     /// :returns: ``((c1x, c1y, c1z), (c2x, c2y, c2z))`` control points.
     /// :raises TypeError: If the command is not a BezierTo.
+    #[allow(clippy::type_complexity)]
     fn bezier_params(
         &self,
         idx: usize,
@@ -924,6 +925,7 @@ impl PyOps {
     /// :param z: End Z coordinate (default 0.0).
     /// :param extra: Optional dict of extra axis values.
     #[pyo3(signature = (x, y, i, j, clockwise=true, z=0.0, extra=None))]
+    #[allow(clippy::too_many_arguments)]
     fn arc_to(
         &mut self,
         x: f64,
@@ -1266,12 +1268,13 @@ impl PyOps {
         geometry: &PyGeometry,
     ) -> PyResult<Self> {
         Ok(PyOps {
-            inner: crate::ops::Ops::from_geometry(&geometry.inner)
-                .map_err(|e| {
+            inner: crate::ops::Ops::from_geometry(&geometry.inner).map_err(
+                |e| {
                     PyErr::new::<pyo3::exceptions::PyValueError, _>(
                         e.to_string(),
                     )
-                })?,
+                },
+            )?,
         })
     }
 
@@ -1535,6 +1538,7 @@ impl PyOps {
     /// :param default_offset: The ``(x, y, z)`` offset for layers not listed in layer_offsets.
     /// :param layer_offsets: Optional dict mapping layer UIDs to ``(x, y, z)`` offsets.
     #[pyo3(signature = (default_offset, layer_offsets = None))]
+    #[allow(clippy::type_complexity)]
     fn translate_layers(
         &mut self,
         default_offset: (f64, f64, f64),
@@ -1553,10 +1557,8 @@ impl PyOps {
             } else {
                 None
             };
-        self.inner.translate_layers(
-            default_offset,
-            layer_offsets_rust.as_ref().map(|v| v.as_slice()),
-        );
+        self.inner
+            .translate_layers(default_offset, layer_offsets_rust.as_deref());
         Ok(())
     }
 

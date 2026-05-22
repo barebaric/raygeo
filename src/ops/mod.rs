@@ -12,13 +12,13 @@ pub mod group;
 pub(crate) mod layer;
 pub mod linearize;
 pub mod optimize;
-pub mod types;
 pub mod state;
 pub(crate) mod transform;
+pub mod types;
 
 pub use axis::Axis;
 pub use container::*;
 pub use enums::*;
 pub use group::*;
-pub use types::*;
 pub use state::*;
+pub use types::*;

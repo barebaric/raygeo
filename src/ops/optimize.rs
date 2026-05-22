@@ -132,10 +132,10 @@ fn split_by_workpiece_markers(ops: &Ops) -> Vec<(String, Ops)> {
                 blocks.push((uid, current_block.clone()));
             }
             current_block = Ops::new();
-        } else if ops.category(i) == CommandCategory::Moving {
-            if current_uid.is_some() {
-                current_block.transfer_command_from(ops, i);
-            }
+        } else if ops.category(i) == CommandCategory::Moving
+            && current_uid.is_some()
+        {
+            current_block.transfer_command_from(ops, i);
         }
     }
 
@@ -236,7 +236,7 @@ fn kdtree_order_workpieces(metas: &mut [WorkpieceMeta]) -> Vec<WorkpieceMeta> {
     ordered
 }
 
-fn two_opt_workpieces(ordered: &mut Vec<WorkpieceMeta>) {
+fn two_opt_workpieces(ordered: &mut [WorkpieceMeta]) {
     let n = ordered.len();
     if n < 3 {
         return;
@@ -489,7 +489,7 @@ fn kdtree_order_segments(segments: &mut [Ops]) -> Vec<Ops> {
     ordered
 }
 
-fn two_opt(ordered: &mut Vec<Ops>) {
+fn two_opt(ordered: &mut [Ops]) {
     let n = ordered.len();
     if n < 3 {
         return;
@@ -751,9 +751,9 @@ fn optimize_workpiece_order(
     if !preserved_indices.is_empty() {
         let mut final_metas: Vec<WorkpieceMeta> = Vec::new();
         let mut reorder_idx = 0;
-        for i in 0..metas.len() {
+        for (i, meta) in metas.iter().enumerate() {
             if preserved_indices.contains(&i) {
-                final_metas.push(metas[i].clone());
+                final_metas.push(meta.clone());
             } else if reorder_idx < ordered_metas.len() {
                 final_metas.push(ordered_metas[reorder_idx].clone());
                 reorder_idx += 1;

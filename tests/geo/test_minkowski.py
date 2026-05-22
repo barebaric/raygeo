@@ -124,9 +124,7 @@ class TestCalculateInputScale:
         assert isinstance(scale, float)
 
     def test_large_polygons(self):
-        polygons = [
-            [(0.0, 0.0), (1000.0, 0.0), (1000.0, 1000.0), (0.0, 1000.0)]
-        ]
+        polygons = [[(0.0, 0.0), (1000.0, 0.0), (1000.0, 1000.0), (0.0, 1000.0)]]
         scale = calculate_input_scale(polygons)
         assert scale > 0
         assert scale < 1e6
@@ -162,9 +160,7 @@ class TestCalculateInputScale:
         assert scale <= 1000
 
     def test_very_small_coordinates(self):
-        polygons = [
-            [(0.001, 0.001), (0.002, 0.001), (0.002, 0.002), (0.001, 0.002)]
-        ]
+        polygons = [[(0.001, 0.001), (0.002, 0.001), (0.002, 0.002), (0.001, 0.002)]]
         scale = calculate_input_scale(polygons)
         assert scale > 0
         assert scale == pytest.approx(0.1 * 2147483647)
@@ -224,12 +220,8 @@ class TestCalculateNFP:
         assert abs((max_x - min_x) - 15.0) < 0.1
 
     def test_empty_inputs(self):
-        assert (
-            get_no_fit_polygon([], [(0.0, 0.0), (1.0, 0.0), (0.0, 1.0)]) == []
-        )
-        assert (
-            get_no_fit_polygon([(0.0, 0.0), (1.0, 0.0), (0.0, 1.0)], []) == []
-        )
+        assert get_no_fit_polygon([], [(0.0, 0.0), (1.0, 0.0), (0.0, 1.0)]) == []
+        assert get_no_fit_polygon([(0.0, 0.0), (1.0, 0.0), (0.0, 1.0)], []) == []
 
 
 class TestCalculateIFP:
@@ -254,11 +246,5 @@ class TestCalculateIFP:
         assert result == []
 
     def test_empty_inputs(self):
-        assert (
-            get_inner_fit_polygon([], [(0.0, 0.0), (1.0, 0.0), (0.0, 1.0)])
-            == []
-        )
-        assert (
-            get_inner_fit_polygon([(0.0, 0.0), (1.0, 0.0), (0.0, 1.0)], [])
-            == []
-        )
+        assert get_inner_fit_polygon([], [(0.0, 0.0), (1.0, 0.0), (0.0, 1.0)]) == []
+        assert get_inner_fit_polygon([(0.0, 0.0), (1.0, 0.0), (0.0, 1.0)], []) == []

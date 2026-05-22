@@ -132,13 +132,13 @@ mod tests {
     }
 
     #[test]
-fn test_get_circle_circle_intersections_one_point() {
-    let result =
-        get_circle_circle_intersections((0.0, 0.0), 1.0, (2.0, 0.0), 1.0);
-    assert_eq!(result.len(), 2);
-    assert!((result[0].0 - result[1].0).abs() < 1e-9);
-    assert!((result[0].1 - result[1].1).abs() < 1e-9);
-}
+    fn test_get_circle_circle_intersections_one_point() {
+        let result =
+            get_circle_circle_intersections((0.0, 0.0), 1.0, (2.0, 0.0), 1.0);
+        assert_eq!(result.len(), 2);
+        assert!((result[0].0 - result[1].0).abs() < 1e-9);
+        assert!((result[0].1 - result[1].1).abs() < 1e-9);
+    }
 
     #[test]
     fn test_get_circle_circle_intersections_two_points() {

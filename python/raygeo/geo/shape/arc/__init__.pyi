@@ -117,7 +117,7 @@ def is_angle_between(angle: float, start: float, end: float, clockwise: bool) ->
     :returns: True if angle is between start and end.
     """
 
-def is_arc_clockwise(points: collections.abc.Sequence[types.Point], center: types.Point) -> bool:
+def is_arc_clockwise(points: collections.abc.Sequence[types.Point2DOr3D], center: types.Point2DOr3D) -> bool:
     r"""
     Check if an arc is clockwise.
     
