@@ -1,8 +1,9 @@
 import math
 
 import pytest
-from raygeo.geo import Geometry
 from raygeo.geo.algo.overcut import apply_overcut
+
+from raygeo.geo import Geometry
 
 
 def _closed_rectangle(w=10, h=10):
