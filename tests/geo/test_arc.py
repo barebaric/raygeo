@@ -2,7 +2,6 @@ import math
 from collections import namedtuple
 
 import pytest
-from raygeo.geo import Geometry
 from raygeo.geo.shape.arc import (
     does_arc_intersect_circle,
     does_arc_intersect_rect,
@@ -16,6 +15,8 @@ from raygeo.geo.shape.arc import (
     linearize_arc,
     normalize_angle,
 )
+
+from raygeo.geo import Geometry
 
 
 @pytest.mark.parametrize(
