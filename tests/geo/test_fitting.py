@@ -2,6 +2,7 @@ import math
 
 import numpy as np
 import pytest
+from raygeo.geo import Geometry
 from raygeo.geo.algo.fitting import (
     are_points_collinear,
     fit_circle_to_3_points,
@@ -12,8 +13,6 @@ from raygeo.geo.algo.fitting import (
     get_polyline_line_deviation,
     project_circle_center_to_bisector,
 )
-
-from raygeo.geo import Geometry
 
 
 def test_are_collinear():
