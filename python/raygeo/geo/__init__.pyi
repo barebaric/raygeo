@@ -19,7 +19,6 @@ sums for toolpath generation.
 """
 
 import builtins
-import enum
 import numpy
 import numpy.typing
 import typing
@@ -28,13 +27,34 @@ from . import math
 from . import shape
 from . import types
 __all__ = [
+    "Arc",
+    "Bezier",
     "Geometry",
-    "PyCommand",
+    "Line",
+    "Move",
     "algo",
     "math",
     "shape",
     "types",
 ]
+
+@typing.final
+class Arc:
+    @property
+    def end(self) -> tuple[builtins.float, builtins.float, builtins.float]: ...
+    @property
+    def center_offset(self) -> tuple[builtins.float, builtins.float]: ...
+    @property
+    def clockwise(self) -> builtins.bool: ...
+
+@typing.final
+class Bezier:
+    @property
+    def end(self) -> tuple[builtins.float, builtins.float, builtins.float]: ...
+    @property
+    def control1(self) -> tuple[builtins.float, builtins.float]: ...
+    @property
+    def control2(self) -> tuple[builtins.float, builtins.float]: ...
 
 @typing.final
 class Geometry:
@@ -92,6 +112,16 @@ class Geometry:
         
         :param matrix: A 4x4 affine transformation matrix.
         :returns: A new transformed Geometry.
+        """
+    def iter_typed_commands(self) -> list[Move | Line | Arc | Bezier]:
+        r"""
+        Iterate over all commands as typed command objects.
+        """
+    def get_typed_command_at(self, index: int) -> Move | Line | Arc | Bezier | None:
+        r"""
+        Get the typed command at the given index.
+        
+        :param index: Command index.
         """
     def __new__(cls) -> Geometry:
         r"""
@@ -201,16 +231,6 @@ class Geometry:
     def iter_commands(self) -> builtins.list[tuple[builtins.float, builtins.float, builtins.float, builtins.float, builtins.float, builtins.float, builtins.float, builtins.float]]:
         r"""
         Iterate over all commands as raw tuples.
-        """
-    def iter_typed_commands(self) -> builtins.list[PyCommand]:
-        r"""
-        Iterate over all commands as typed PyCommand objects.
-        """
-    def get_typed_command_at(self, index: builtins.int) -> typing.Optional[PyCommand]:
-        r"""
-        Get the typed command at the given index.
-        
-        :param index: Command index.
         """
     def dump(self) -> dict:
         r"""
@@ -425,9 +445,12 @@ class Geometry:
         """
 
 @typing.final
-class PyCommand(enum.Enum):
-    Move = ...
-    Line = ...
-    Arc = ...
-    Bezier = ...
+class Line:
+    @property
+    def end(self) -> tuple[builtins.float, builtins.float, builtins.float]: ...
+
+@typing.final
+class Move:
+    @property
+    def end(self) -> tuple[builtins.float, builtins.float, builtins.float]: ...
 

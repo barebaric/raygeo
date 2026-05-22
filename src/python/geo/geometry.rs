@@ -3,8 +3,7 @@ use numpy::{IntoPyArray, PyArray2, PyArrayMethods};
 use pyo3::prelude::*;
 use pyo3::types::{PyDict, PyList, PyType};
 use pyo3_stub_gen::derive::{
-    gen_methods_from_python, gen_stub_pyclass, gen_stub_pyclass_enum,
-    gen_stub_pymethods,
+    gen_methods_from_python, gen_stub_pyclass, gen_stub_pymethods,
 };
 use pyo3_stub_gen::inventory::submit;
 use pyo3_stub_gen::{PyStubType, TypeInfo};
@@ -27,26 +26,89 @@ use crate::{
     COL_I, COL_J, COL_TYPE, COL_X, COL_Y, COL_Z,
 };
 
-#[gen_stub_pyclass_enum]
-#[pyclass(module = "raygeo.geo", frozen, eq, skip_from_py_object)]
-#[derive(Clone, Debug, PartialEq)]
-pub enum PyCommand {
-    Move {
-        end: (f64, f64, f64),
-    },
-    Line {
-        end: (f64, f64, f64),
-    },
-    Arc {
-        end: (f64, f64, f64),
-        center_offset: (f64, f64),
-        clockwise: bool,
-    },
-    Bezier {
-        end: (f64, f64, f64),
-        control1: (f64, f64),
-        control2: (f64, f64),
-    },
+#[gen_stub_pyclass]
+#[pyclass(module = "raygeo.geo", name = "Move", frozen, skip_from_py_object)]
+#[derive(Clone, Debug)]
+pub struct PyMove {
+    #[pyo3(get)]
+    pub end: (f64, f64, f64),
+}
+
+#[gen_stub_pyclass]
+#[pyclass(module = "raygeo.geo", name = "Line", frozen, skip_from_py_object)]
+#[derive(Clone, Debug)]
+pub struct PyLine {
+    #[pyo3(get)]
+    pub end: (f64, f64, f64),
+}
+
+#[gen_stub_pyclass]
+#[pyclass(module = "raygeo.geo", name = "Arc", frozen, skip_from_py_object)]
+#[derive(Clone, Debug)]
+pub struct PyArc {
+    #[pyo3(get)]
+    pub end: (f64, f64, f64),
+    #[pyo3(get)]
+    pub center_offset: (f64, f64),
+    #[pyo3(get)]
+    pub clockwise: bool,
+}
+
+#[gen_stub_pyclass]
+#[pyclass(module = "raygeo.geo", name = "Bezier", frozen, skip_from_py_object)]
+#[derive(Clone, Debug)]
+pub struct PyBezier {
+    #[pyo3(get)]
+    pub end: (f64, f64, f64),
+    #[pyo3(get)]
+    pub control1: (f64, f64),
+    #[pyo3(get)]
+    pub control2: (f64, f64),
+}
+
+enum PyTypedCommand {
+    Move(PyMove),
+    Line(PyLine),
+    Arc(PyArc),
+    Bezier(PyBezier),
+}
+
+impl From<CoreCommand> for PyTypedCommand {
+    fn from(cmd: CoreCommand) -> Self {
+        match cmd {
+            CoreCommand::Move { end } => PyTypedCommand::Move(PyMove { end }),
+            CoreCommand::Line { end } => PyTypedCommand::Line(PyLine { end }),
+            CoreCommand::Arc {
+                end,
+                center_offset,
+                clockwise,
+            } => PyTypedCommand::Arc(PyArc {
+                end,
+                center_offset,
+                clockwise,
+            }),
+            CoreCommand::Bezier {
+                end,
+                control1,
+                control2,
+            } => PyTypedCommand::Bezier(PyBezier {
+                end,
+                control1,
+                control2,
+            }),
+        }
+    }
+}
+
+impl PyTypedCommand {
+    fn into_py_obj(self, py: Python<'_>) -> Py<PyAny> {
+        match self {
+            PyTypedCommand::Move(c) => Py::new(py, c).unwrap().into_any(),
+            PyTypedCommand::Line(c) => Py::new(py, c).unwrap().into_any(),
+            PyTypedCommand::Arc(c) => Py::new(py, c).unwrap().into_any(),
+            PyTypedCommand::Bezier(c) => Py::new(py, c).unwrap().into_any(),
+        }
+    }
 }
 
 impl PyStubType for &mut Geometry {
@@ -55,33 +117,6 @@ impl PyStubType for &mut Geometry {
     }
     fn type_output() -> TypeInfo {
         Geometry::type_output()
-    }
-}
-
-impl From<CoreCommand> for PyCommand {
-    fn from(cmd: CoreCommand) -> Self {
-        match cmd {
-            CoreCommand::Move { end } => PyCommand::Move { end },
-            CoreCommand::Line { end } => PyCommand::Line { end },
-            CoreCommand::Arc {
-                end,
-                center_offset,
-                clockwise,
-            } => PyCommand::Arc {
-                end,
-                center_offset,
-                clockwise,
-            },
-            CoreCommand::Bezier {
-                end,
-                control1,
-                control2,
-            } => PyCommand::Bezier {
-                end,
-                control1,
-                control2,
-            },
-        }
     }
 }
 
@@ -142,6 +177,15 @@ submit! {
 
                 :param matrix: A 4x4 affine transformation matrix.
                 :returns: A new transformed Geometry.
+                """
+                ...
+            def iter_typed_commands(self) -> list[Move | Line | Arc | Bezier]:
+                """Iterate over all commands as typed command objects."""
+                ...
+            def get_typed_command_at(self, index: int) -> Move | Line | Arc | Bezier | None:
+                """Get the typed command at the given index.
+
+                :param index: Command index.
                 """
                 ...
         "#
@@ -488,13 +532,19 @@ impl Geometry {
     }
 
     /// Iterate over all commands as typed PyCommand objects.
-    fn iter_typed_commands(&mut self) -> PyResult<Vec<PyCommand>> {
+    #[gen_stub(skip)]
+    fn iter_typed_commands(
+        &mut self,
+        py: Python<'_>,
+    ) -> PyResult<Vec<Py<PyAny>>> {
         let data = self.inner.synced_data();
         data.iter()
             .map(|r| {
-                CoreCommand::from_row(r).map(PyCommand::from).map_err(|e| {
-                    pyo3::exceptions::PyValueError::new_err(e.to_string())
-                })
+                CoreCommand::from_row(r)
+                    .map(|c| PyTypedCommand::from(c).into_py_obj(py))
+                    .map_err(|e| {
+                        pyo3::exceptions::PyValueError::new_err(e.to_string())
+                    })
             })
             .collect()
     }
@@ -502,19 +552,23 @@ impl Geometry {
     /// Get the typed command at the given index.
     ///
     /// :param index: Command index.
+    #[gen_stub(skip)]
     fn get_typed_command_at(
         &mut self,
+        py: Python<'_>,
         index: isize,
-    ) -> PyResult<Option<PyCommand>> {
+    ) -> PyResult<Option<Py<PyAny>>> {
         if index < 0 {
             return Ok(None);
         }
         let data = self.inner.synced_data();
         match data.get(index as usize) {
             Some(row) => Ok(Some(
-                CoreCommand::from_row(row).map(PyCommand::from).map_err(
-                    |e| pyo3::exceptions::PyValueError::new_err(e.to_string()),
-                )?,
+                CoreCommand::from_row(row)
+                    .map(|c| PyTypedCommand::from(c).into_py_obj(py))
+                    .map_err(|e| {
+                        pyo3::exceptions::PyValueError::new_err(e.to_string())
+                    })?,
             )),
             None => Ok(None),
         }

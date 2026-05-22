@@ -27,14 +27,17 @@ sums for toolpath generation.
 
 use pyo3::prelude::*;
 
-use self::geometry::{Geometry, PyCommand};
+use self::geometry::{Geometry, PyArc, PyBezier, PyLine, PyMove};
 
 pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     let py = m.py();
     let geo_mod = PyModule::new(py, "geo")?;
 
     geo_mod.setattr("__doc__", MODULE_DOC)?;
-    geo_mod.add("__all__", vec!["Geometry", "PyCommand", "types"])?;
+    geo_mod.add(
+        "__all__",
+        vec!["Geometry", "Move", "Line", "Arc", "Bezier", "types"],
+    )?;
 
     add_functions(&geo_mod)?;
     add_submodules(&geo_mod)?;
@@ -91,6 +94,9 @@ fn add_submodules(m: &Bound<'_, PyModule>) -> PyResult<()> {
 
 fn add_functions(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<Geometry>()?;
-    m.add_class::<PyCommand>()?;
+    m.add_class::<PyMove>()?;
+    m.add_class::<PyLine>()?;
+    m.add_class::<PyArc>()?;
+    m.add_class::<PyBezier>()?;
     Ok(())
 }
