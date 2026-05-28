@@ -601,6 +601,60 @@ def test_fit_curves_mixed_lines_beziers_arcs():
     assert Geometry.CMD_TYPE_ARC in types
 
 
+def test_fit_points_recursive_closed_d_shape_no_full_circle():
+    """
+    Regression test: a closed D-shaped contour (semicircle + straight line)
+    must NOT be fitted as a single full-circle arc.
+
+    When the first and last points are coincident (closed contour via
+    close_path), the fitting algorithm used to produce a single full-circle
+    arc, discarding the straight closing segment.  The fix ensures that
+    closed contours are always split rather than fitted as one arc.
+    """
+    center = (0.0, 0.0)
+    radius = 5.0
+    angles = np.linspace(0, np.pi, 30)
+    arc_points = [
+        (center[0] + radius * np.cos(t), center[1] + radius * np.sin(t), 0.0)
+        for t in angles
+    ]
+    start = arc_points[0]
+    end = arc_points[-1]
+    points = arc_points + [start]
+
+    assert abs(points[0][0] - points[-1][0]) < 1e-9
+    assert abs(points[0][1] - points[-1][1]) < 1e-9
+
+    cmds = fit_points_recursive(points, 0.03, 0, len(points) - 1)
+
+    assert len(cmds) > 1, (
+        "Closed D-shape must not be fitted as a single primitive; "
+        "expected split into arc + line segments"
+    )
+
+    has_line = any(c[Geometry.COL_TYPE] == Geometry.CMD_TYPE_LINE for c in cmds)
+    has_arc = any(c[Geometry.COL_TYPE] == Geometry.CMD_TYPE_ARC for c in cmds)
+    assert has_line, "Expected at least one LINE segment (the closing edge)"
+    assert has_arc, "Expected at least one ARC segment (the curved edge)"
+
+
+def test_fit_points_recursive_open_arc_still_fits():
+    """
+    Ensure that an open arc (start != end) can still be fitted as a single
+    arc command.  This verifies the fix doesn't break normal arc fitting.
+    """
+    center = (0.0, 0.0)
+    radius = 10.0
+    angles = np.linspace(0, np.pi / 2, 20)
+    points = [
+        (center[0] + radius * np.cos(t), center[1] + radius * np.sin(t), 0.0)
+        for t in angles
+    ]
+    cmds = fit_points_recursive(points, 0.1, 0, len(points) - 1)
+    assert len(cmds) == 1
+    assert cmds[0][Geometry.COL_TYPE] == Geometry.CMD_TYPE_ARC
+
+
 def test_fit_curves_backwards_compat():
     """Tests Geometry.fit_curves() and Geometry.fit_arcs() agree."""
     geo = Geometry()
