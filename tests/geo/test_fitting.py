@@ -619,7 +619,6 @@ def test_fit_points_recursive_closed_d_shape_no_full_circle():
         for t in angles
     ]
     start = arc_points[0]
-    end = arc_points[-1]
     points = arc_points + [start]
 
     assert abs(points[0][0] - points[-1][0]) < 1e-9
