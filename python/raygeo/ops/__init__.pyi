@@ -791,6 +791,19 @@ class Ops:
         :param acceleration: Acceleration value (default 1000.0).
         :returns: Estimated time in seconds.
         """
+    def estimate_command_times(self, default_cut_speed: builtins.float = 1000.0, default_travel_speed: builtins.float = 3000.0, acceleration: builtins.float = 1000.0) -> builtins.list[builtins.float]:
+        r"""
+        Estimate the time of each individual command in the sequence.
+        
+        Returns a list with one entry per command. Moving commands
+        yield their estimated execution time in seconds. Non-moving
+        commands (state changes, markers) yield 0.0.
+        
+        :param default_cut_speed: Default cutting speed (default 1000.0).
+        :param default_travel_speed: Default travel speed (default 3000.0).
+        :param acceleration: Acceleration value (default 1000.0).
+        :returns: List of estimated times in seconds, one per command.
+        """
     def to_dict(self) -> dict:
         r"""
         Serialize this Ops sequence to a dict suitable for JSON export.
