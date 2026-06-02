@@ -622,7 +622,13 @@ pub fn fit_points_recursive(
         false
     };
 
-    if !is_sharp && end - start == 2 {
+    let is_closed_range = {
+        let sp = points[start];
+        let ep = points[end];
+        (sp.0 - ep.0).abs() < 1e-6 && (sp.1 - ep.1).abs() < 1e-6
+    };
+
+    if !is_sharp && !is_closed_range && end - start == 2 {
         let p1 = points[start];
         let p2 = points[start + 1];
         let p3 = points[end];
@@ -642,7 +648,7 @@ pub fn fit_points_recursive(
         }
     }
 
-    if !is_sharp {
+    if !is_sharp && !is_closed_range {
         let subset: Vec<Point3D> = points[start..=end].to_vec();
         if let Some((center, _, _)) = fit_circle_to_points(&subset) {
             let center = project_circle_center_to_bisector(
