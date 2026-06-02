@@ -1836,6 +1836,31 @@ impl PyOps {
         )
     }
 
+    /// Estimate the time of each individual command in the sequence.
+    ///
+    /// Returns a list with one entry per command. Moving commands
+    /// (MoveTo, LineTo, ArcTo, etc.) yield their estimated execution
+    /// time in seconds. Non-moving commands (state changes, markers)
+    /// yield 0.0.
+    ///
+    /// :param default_cut_speed: Default cutting speed (default 1000.0).
+    /// :param default_travel_speed: Default travel speed (default 3000.0).
+    /// :param acceleration: Acceleration value (default 1000.0).
+    /// :returns: List of estimated times in seconds, one per command.
+    #[pyo3(signature = (default_cut_speed = 1000.0, default_travel_speed = 3000.0, acceleration = 1000.0))]
+    fn estimate_command_times(
+        &mut self,
+        default_cut_speed: f64,
+        default_travel_speed: f64,
+        acceleration: f64,
+    ) -> Vec<f64> {
+        self.inner.estimate_command_times(
+            default_cut_speed,
+            default_travel_speed,
+            acceleration,
+        )
+    }
+
     // --- Properties ---
 
     /// The last ``(x, y, z)`` endpoint from a MoveTo command.

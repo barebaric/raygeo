@@ -600,6 +600,71 @@ impl Ops {
         total
     }
 
+    pub fn estimate_command_times(
+        &self,
+        default_cut_speed: f64,
+        default_travel_speed: f64,
+        acceleration: f64,
+    ) -> Vec<f64> {
+        let mut times = Vec::with_capacity(self.commands.len());
+        let mut last_point = (0.0, 0.0, 0.0);
+        let mut cut_speed = default_cut_speed;
+        let mut travel_speed = default_travel_speed;
+
+        for node in &self.commands {
+            let cmd_time = match &node.category {
+                OpCategory::State(StateCmd::SetCutSpeed(s)) => {
+                    cut_speed = *s as f64;
+                    0.0
+                }
+                OpCategory::State(StateCmd::SetTravelSpeed(s)) => {
+                    travel_speed = *s as f64;
+                    0.0
+                }
+                OpCategory::Moving { end, cmd } => {
+                    let dx = end.0 - last_point.0;
+                    let dy = end.1 - last_point.1;
+                    let distance = (dx * dx + dy * dy).sqrt();
+
+                    if distance < EPSILON_COLLINEAR {
+                        last_point = *end;
+                        0.0
+                    } else {
+                        let speed = if matches!(cmd, MoveCmd::MoveTo) {
+                            travel_speed
+                        } else {
+                            cut_speed
+                        };
+
+                        let speed_mm_per_sec = speed / 60.0;
+                        let move_time = if acceleration > 0.0 {
+                            let accel_time = speed_mm_per_sec / acceleration;
+                            let accel_distance =
+                                0.5 * acceleration * accel_time * accel_time;
+                            if distance < 2.0 * accel_distance {
+                                2.0 * (distance / acceleration).sqrt()
+                            } else {
+                                let cruise_distance =
+                                    distance - 2.0 * accel_distance;
+                                let cruise_time =
+                                    cruise_distance / speed_mm_per_sec;
+                                2.0 * accel_time + cruise_time
+                            }
+                        } else {
+                            distance / speed_mm_per_sec
+                        };
+
+                        last_point = *end;
+                        move_time
+                    }
+                }
+                _ => 0.0,
+            };
+            times.push(cmd_time);
+        }
+        times
+    }
+
     pub fn segment_indices(&self) -> Vec<Vec<usize>> {
         super::group::segment_indices(self)
     }
