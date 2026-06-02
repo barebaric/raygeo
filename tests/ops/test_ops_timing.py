@@ -295,18 +295,18 @@ class TestCommandTimes:
         ops = Ops()
         ops.line_to(60, 0, 0)
         ops.set_cut_speed(600)  # 10mm/s
-        ops.line_to(60, 0, 0)
+        ops.line_to(120, 0, 0)
         times = ops.estimate_command_times(acceleration=0)
         assert len(times) == 3
         assert times[1] == 0.0  # set_cut_speed is zero
-        # First line at default 1000mm/min, second at 600mm/min
+        # First 60mm at default 1000mm/min, second 60mm at 600mm/min
         assert times[0] < times[2]
 
     def test_move_vs_line_speeds(self):
         """Test that moves use travel speed, lines use cut speed."""
         ops = Ops()
         ops.move_to(100, 0, 0)
-        ops.line_to(100, 0, 0)
+        ops.line_to(200, 0, 0)
         times = ops.estimate_command_times(acceleration=0)
         assert len(times) == 2
         # travel_speed=3000 is 3x faster than cut_speed=1000
