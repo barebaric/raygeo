@@ -43,11 +43,13 @@ from raygeo.ops import Ops
 from . import geo
 from . import image
 from . import ops
+from . import svg
 __all__ = [
     "Geometry",
     "Ops",
     "geo",
     "image",
     "ops",
+    "svg",
 ]
 
