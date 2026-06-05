@@ -12,6 +12,7 @@ pub mod group;
 pub(crate) mod layer;
 pub mod linearize;
 pub mod optimize;
+pub mod raster;
 pub mod state;
 pub(crate) mod transform;
 pub mod types;
