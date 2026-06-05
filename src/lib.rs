@@ -31,6 +31,7 @@ pub mod error;
 pub mod geo;
 pub mod image;
 pub mod ops;
+pub mod svg;
 pub mod types;
 
 pub use constants::*;
@@ -99,6 +100,7 @@ fn raygeo(m: &Bound<'_, PyModule>) -> PyResult<()> {
     python::geo::register(m)?;
     python::image::register(m)?;
     python::ops::register(m)?;
+    python::svg::register(m)?;
     // Backward-compat re-exports on root
     m.add("Geometry", m.getattr("geo")?.getattr("Geometry")?)?;
     m.add("Ops", m.getattr("ops")?.getattr("Ops")?)?;
