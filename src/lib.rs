@@ -29,6 +29,7 @@
 pub mod constants;
 pub mod error;
 pub mod geo;
+pub mod image;
 pub mod ops;
 pub mod types;
 
@@ -96,6 +97,7 @@ pub(crate) const MODULE_DOC: &str = concat!(
 #[pymodule(gil_used = false)]
 fn raygeo(m: &Bound<'_, PyModule>) -> PyResult<()> {
     python::geo::register(m)?;
+    python::image::register(m)?;
     python::ops::register(m)?;
     // Backward-compat re-exports on root
     m.add("Geometry", m.getattr("geo")?.getattr("Geometry")?)?;

@@ -796,8 +796,9 @@ class Ops:
         Estimate the time of each individual command in the sequence.
         
         Returns a list with one entry per command. Moving commands
-        yield their estimated execution time in seconds. Non-moving
-        commands (state changes, markers) yield 0.0.
+        (MoveTo, LineTo, ArcTo, etc.) yield their estimated execution
+        time in seconds. Non-moving commands (state changes, markers)
+        yield 0.0.
         
         :param default_cut_speed: Default cutting speed (default 1000.0).
         :param default_travel_speed: Default travel speed (default 3000.0).

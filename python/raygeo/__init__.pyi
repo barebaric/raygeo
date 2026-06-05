@@ -41,11 +41,13 @@ Examples:
 from raygeo.geo import Geometry
 from raygeo.ops import Ops
 from . import geo
+from . import image
 from . import ops
 __all__ = [
     "Geometry",
     "Ops",
     "geo",
+    "image",
     "ops",
 ]
 
