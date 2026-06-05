@@ -3,7 +3,7 @@
 
 import numpy
 import numpy.typing
-import raygeo
+from raygeo import Geometry
 __all__ = [
     "parse_svg_path_data",
     "parse_svg_transform",
