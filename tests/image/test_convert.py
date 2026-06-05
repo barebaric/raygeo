@@ -1,12 +1,10 @@
+import cairo
 import numpy as np
-import pytest
 from raygeo.image import (
     rgba_to_binary,
     rgba_to_grayscale,
     rgba_to_grayscale_inplace,
 )
-
-cairo = pytest.importorskip("cairo")
 
 
 def _surface_to_flat(surface):
