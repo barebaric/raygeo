@@ -3,8 +3,15 @@
 
 import builtins
 import typing
+import numpy
+import numpy.typing
+from raygeo.ops import Ops
 __all__ = [
     "ScanLine",
+    "rasterize_mask_lines",
+    "rasterize_mask_scan",
+    "rasterize_multi_pass",
+    "rasterize_power_modulation",
 ]
 
 @typing.final
@@ -24,3 +31,49 @@ class ScanLine:
     def direction(self) -> tuple[builtins.float, builtins.float]: ...
     def pixel_to_mm(self, px: builtins.int, py: builtins.int, pixels_per_mm: tuple[builtins.float, builtins.float]) -> tuple[builtins.float, builtins.float]: ...
 
+def rasterize_power_modulation(
+    gray_image: numpy.typing.NDArray[numpy.uint8],
+    alpha: numpy.typing.NDArray[numpy.uint8],
+    pixels_per_mm: tuple[builtins.float, builtins.float],
+    offset_x_mm: builtins.float,
+    offset_y_mm: builtins.float,
+    line_interval_mm: builtins.float,
+    sample_interval_mm: builtins.float,
+    min_power: builtins.float = 0.0,
+    max_power: builtins.float = 1.0,
+    step_power: builtins.float = 1.0,
+    num_power_levels: builtins.int = 256,
+    angle: builtins.float = 0.0,
+) -> Ops: ...
+
+def rasterize_mask_scan(
+    mask: numpy.typing.NDArray[numpy.uint8],
+    pixels_per_mm: tuple[builtins.float, builtins.float],
+    offset_x_mm: builtins.float,
+    offset_y_mm: builtins.float,
+    line_interval_mm: builtins.float,
+    step_power: builtins.float = 1.0,
+    angle: builtins.float = 0.0,
+) -> Ops: ...
+
+def rasterize_mask_lines(
+    mask: numpy.typing.NDArray[numpy.uint8],
+    pixels_per_mm: tuple[builtins.float, builtins.float],
+    offset_x_mm: builtins.float,
+    offset_y_mm: builtins.float,
+    line_interval_mm: builtins.float,
+    z: builtins.float = 0.0,
+    angle: builtins.float = 0.0,
+) -> Ops: ...
+
+def rasterize_multi_pass(
+    gray_image: numpy.typing.NDArray[numpy.uint8],
+    pixels_per_mm: tuple[builtins.float, builtins.float],
+    offset_x_mm: builtins.float,
+    offset_y_mm: builtins.float,
+    line_interval_mm: builtins.float,
+    num_depth_levels: builtins.int,
+    z_step_down: builtins.float,
+    angle: builtins.float = 0.0,
+    angle_increment: builtins.float = 0.0,
+) -> Ops: ...
