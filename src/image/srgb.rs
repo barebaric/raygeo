@@ -1,6 +1,6 @@
-const FRAC_BITS: i32 = 15;
-const SCALE: i32 = 1 << FRAC_BITS;
-const INV_TABLE_SIZE: usize = (SCALE + 1) as usize;
+pub(crate) const FRAC_BITS: i32 = 15;
+pub(crate) const SCALE: i32 = 1 << FRAC_BITS;
+pub(crate) const INV_TABLE_SIZE: usize = (SCALE + 1) as usize;
 
 fn build_srgb_to_linear_lut() -> [f32; 256] {
     let mut lut = [0.0f32; 256];
@@ -35,11 +35,11 @@ static SRGB_TO_LINEAR: std::sync::OnceLock<[f32; 256]> =
 static LINEAR_TO_SRGB: std::sync::OnceLock<[u8; INV_TABLE_SIZE]> =
     std::sync::OnceLock::new();
 
-fn srgb_to_linear_lut() -> &'static [f32; 256] {
+pub(crate) fn srgb_to_linear_lut() -> &'static [f32; 256] {
     SRGB_TO_LINEAR.get_or_init(build_srgb_to_linear_lut)
 }
 
-fn linear_to_srgb_lut() -> &'static [u8; INV_TABLE_SIZE] {
+pub(crate) fn linear_to_srgb_lut() -> &'static [u8; INV_TABLE_SIZE] {
     LINEAR_TO_SRGB.get_or_init(build_linear_to_srgb_lut)
 }
 

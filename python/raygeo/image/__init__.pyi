@@ -3,7 +3,7 @@
 r"""
 Image processing functions for laser cutting applications.
 
-Provides sRGB/linear color space conversions, grayscale normalization with auto-levels, and dithering algorithms (Floyd-Steinberg, Bayer, minimum run length) for converting grayscale images to binary output.
+Provides sRGB/linear color space conversions, RGBA-to-grayscale/binary conversions with alpha unpremultiplication, grayscale normalization with auto-levels, and dithering algorithms (Floyd-Steinberg, Bayer, minimum run length) for converting grayscale images to binary output.
 """
 
 import numpy
@@ -15,6 +15,9 @@ __all__ = [
     "compute_auto_levels",
     "linear_to_srgb",
     "normalize_grayscale",
+    "rgba_to_binary",
+    "rgba_to_grayscale",
+    "rgba_to_grayscale_inplace",
     "srgb_to_linear",
 ]
 
@@ -74,6 +77,48 @@ def normalize_grayscale(gray_image: numpy.typing.NDArray[numpy.uint8], black_poi
     :param white_point: White point for normalization.
     :returns: Normalized grayscale image with the same shape.
     :raises ValueError: If black_point >= white_point.
+    """
+
+def rgba_to_binary(rgba: numpy.typing.NDArray[numpy.uint8], width: int, height: int, stride: int, threshold: int = 128, invert: bool = False) -> numpy.typing.NDArray[numpy.uint8]:
+    r"""
+    Convert raw BGRA pixel buffer to binary image using thresholding.
+    
+    Transparent pixels (alpha == 0) are always treated as white (0).
+    
+    :param rgba: Flattened uint8 buffer of shape (stride * height * 4,).
+    :param width: Image width in pixels.
+    :param height: Image height in pixels.
+    :param stride: Row stride in pixels.
+    :param threshold: Brightness value (0-255) for binarization.
+    :param invert: If True, pixels above threshold become black (1).
+    :returns: 2D binary uint8 array (values 0 or 1) with shape (height, width).
+    """
+
+def rgba_to_grayscale(rgba: numpy.typing.NDArray[numpy.uint8], width: int, height: int, stride: int) -> tuple[numpy.typing.NDArray[numpy.uint8], numpy.typing.NDArray[numpy.float32]]:
+    r"""
+    Convert raw BGRA pixel buffer to grayscale with alpha unpremultiplication.
+    
+    Performs proper unpremultiplication of alpha and blends to white
+    background for grayscale calculation using BT.601 luminance weights.
+    
+    :param rgba: Flattened uint8 buffer of shape (stride * height * 4,).
+    :param width: Image width in pixels.
+    :param height: Image height in pixels.
+    :param stride: Row stride in pixels (may be larger than width).
+    :returns: Tuple of (grayscale_uint8, alpha_float32) arrays, each (height, width).
+    """
+
+def rgba_to_grayscale_inplace(rgba: numpy.typing.NDArray[numpy.uint8], width: int, height: int, stride: int) -> None:
+    r"""
+    Convert raw BGRA pixel buffer to grayscale in place.
+    
+    Modifies the buffer directly, converting BGR channels to grayscale
+    while preserving the alpha channel.
+    
+    :param rgba: Flattened uint8 buffer of shape (stride * height * 4,).
+    :param width: Image width in pixels.
+    :param height: Image height in pixels.
+    :param stride: Row stride in pixels.
     """
 
 def srgb_to_linear(array: numpy.typing.NDArray[numpy.uint8]) -> numpy.typing.NDArray[numpy.float32]:
