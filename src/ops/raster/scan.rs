@@ -366,6 +366,89 @@ pub fn find_segments(values: &[u8]) -> Vec<(usize, usize)> {
     segments
 }
 
+pub struct DownsampledPower {
+    pub power: Vec<u8>,
+    pub x_mm: Vec<f64>,
+    pub y_mm: Vec<f64>,
+}
+
+pub fn downsample_power_values(
+    power_values: &[u8],
+    start_mm: (f64, f64),
+    end_mm: (f64, f64),
+    sample_interval_mm: f64,
+) -> DownsampledPower {
+    if power_values.is_empty() {
+        return DownsampledPower {
+            power: Vec::new(),
+            x_mm: Vec::new(),
+            y_mm: Vec::new(),
+        };
+    }
+
+    let dx = end_mm.0 - start_mm.0;
+    let dy = end_mm.1 - start_mm.1;
+    let segment_length = (dx * dx + dy * dy).sqrt();
+
+    if segment_length < 1e-9 || power_values.len() == 1 {
+        return DownsampledPower {
+            power: vec![power_values[0]],
+            x_mm: vec![start_mm.0],
+            y_mm: vec![start_mm.1],
+        };
+    }
+
+    let n = power_values.len();
+    let pixel_spacing = segment_length / (n - 1) as f64;
+
+    if sample_interval_mm <= pixel_spacing * 1.5 {
+        if n <= 1 {
+            return DownsampledPower {
+                power: power_values.to_vec(),
+                x_mm: vec![start_mm.0],
+                y_mm: vec![start_mm.1],
+            };
+        }
+        let step_x = dx / (n - 1) as f64;
+        let step_y = dy / (n - 1) as f64;
+        let mut x_mm = Vec::with_capacity(n);
+        let mut y_mm = Vec::with_capacity(n);
+        for i in 0..n {
+            x_mm.push(start_mm.0 + i as f64 * step_x);
+            y_mm.push(start_mm.1 + i as f64 * step_y);
+        }
+        return DownsampledPower {
+            power: power_values.to_vec(),
+            x_mm,
+            y_mm,
+        };
+    }
+
+    let num_samples =
+        2.max((segment_length / sample_interval_mm).ceil() as usize);
+
+    let step_x = dx / (num_samples - 1) as f64;
+    let step_y = dy / (num_samples - 1) as f64;
+    let mut resampled_power = Vec::with_capacity(num_samples);
+    let mut resampled_x = Vec::with_capacity(num_samples);
+    let mut resampled_y = Vec::with_capacity(num_samples);
+
+    for i in 0..num_samples {
+        let t = i as f64 / (num_samples - 1) as f64;
+        let pixel_t = t * (n - 1) as f64;
+        let idx = (pixel_t as usize).min(n - 1);
+        resampled_power.push(power_values[idx]);
+        resampled_x.push(start_mm.0 + i as f64 * step_x);
+        resampled_y.push(start_mm.1 + i as f64 * step_y);
+    }
+
+    DownsampledPower {
+        power: resampled_power,
+        x_mm: resampled_x,
+        y_mm: resampled_y,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

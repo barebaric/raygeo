@@ -2,11 +2,16 @@ import numpy as np
 import pytest
 from raygeo.ops.raster import (
     ScanLine,
+    downsample_power_values,
     find_mask_bounding_box,
     find_segments,
     generate_horizontal_scan_positions,
     generate_scan_lines,
     line_pixels,
+    rasterize_mask_lines,
+    rasterize_mask_scan,
+    rasterize_multi_pass,
+    rasterize_power_modulation,
     resample_rows,
 )
 
@@ -396,3 +401,193 @@ class TestModuleImport:
         assert sl.end_mm == (1.0, 1.0)
         assert sl.pixels == [(0, 0), (1, 1)]
         assert sl.line_interval_mm == 0.1
+
+
+# ---------------------------------------------------------------------------
+# downsample_power_values
+# ---------------------------------------------------------------------------
+
+
+class TestDownsamplePowerValues:
+    def test_empty(self):
+        p, x, y = downsample_power_values(
+            np.array([], dtype=np.uint8), (0.0, 0.0), (1.0, 0.0), 0.1
+        )
+        assert len(p) == 0
+        assert len(x) == 0
+        assert len(y) == 0
+
+    def test_single_value(self):
+        p, x, y = downsample_power_values(
+            np.array([128], dtype=np.uint8), (0.0, 0.0), (1.0, 0.0), 0.1
+        )
+        assert p[0] == 128
+        assert x[0] == 0.0
+        assert y[0] == 0.0
+
+    def test_short_segment_passthrough(self):
+        pv = np.array([100, 200], dtype=np.uint8)
+        p, x, y = downsample_power_values(pv, (0.0, 0.0), (0.01, 0.0), 0.1)
+        assert len(p) == 2
+        assert p[0] == 100
+        assert p[1] == 200
+
+    def test_long_segment_downsamples(self):
+        pv = np.arange(100, dtype=np.uint8)
+        p, x, y = downsample_power_values(pv, (0.0, 0.0), (10.0, 0.0), 1.0)
+        assert len(p) < len(pv)
+        assert len(p) >= 2
+        assert abs(x[0]) < 1e-9
+        assert abs(x[-1] - 10.0) < 0.1
+
+    def test_uniform_power(self):
+        pv = np.full(50, 200, dtype=np.uint8)
+        p, x, y = downsample_power_values(pv, (0.0, 0.0), (5.0, 0.0), 0.5)
+        for val in p:
+            assert val == 200
+
+
+# ---------------------------------------------------------------------------
+# rasterize_power_modulation
+# ---------------------------------------------------------------------------
+
+
+class TestRasterizePowerModulation:
+    def test_empty_alpha(self):
+        gray = np.full((10, 10), 128, dtype=np.uint8)
+        alpha = np.zeros((10, 10), dtype=np.uint8)
+        ops = rasterize_power_modulation(gray, alpha, (10.0, 10.0), 0.0, 0.0, 0.1, 0.05)
+        assert ops.is_empty()
+
+    def test_full_image(self):
+        gray = np.full((10, 10), 128, dtype=np.uint8)
+        alpha = np.full((10, 10), 255, dtype=np.uint8)
+        ops = rasterize_power_modulation(gray, alpha, (10.0, 10.0), 0.0, 0.0, 0.1, 0.05)
+        assert not ops.is_empty()
+
+    def test_white_image_empty(self):
+        gray = np.full((10, 10), 255, dtype=np.uint8)
+        alpha = np.full((10, 10), 255, dtype=np.uint8)
+        ops = rasterize_power_modulation(
+            gray,
+            alpha,
+            (10.0, 10.0),
+            0.0,
+            0.0,
+            0.1,
+            0.05,
+            min_power=0.0,
+            max_power=1.0,
+        )
+        assert ops.is_empty()
+
+    def test_with_power_quantization(self):
+        gray = np.full((10, 10), 64, dtype=np.uint8)
+        alpha = np.full((10, 10), 255, dtype=np.uint8)
+        ops = rasterize_power_modulation(
+            gray,
+            alpha,
+            (10.0, 10.0),
+            0.0,
+            0.0,
+            0.1,
+            0.05,
+            num_power_levels=4,
+        )
+        assert not ops.is_empty()
+
+    def test_with_angle(self):
+        gray = np.full((20, 20), 128, dtype=np.uint8)
+        alpha = np.full((20, 20), 255, dtype=np.uint8)
+        ops = rasterize_power_modulation(
+            gray, alpha, (10.0, 10.0), 0.0, 0.0, 0.1, 0.05, angle=45.0
+        )
+        assert not ops.is_empty()
+
+
+# ---------------------------------------------------------------------------
+# rasterize_mask_scan
+# ---------------------------------------------------------------------------
+
+
+class TestRasterizeMaskScan:
+    def test_empty_mask(self):
+        mask = np.zeros((10, 10), dtype=np.uint8)
+        ops = rasterize_mask_scan(mask, (10.0, 10.0), 0.0, 0.0, 0.1)
+        assert ops.is_empty()
+
+    def test_full_mask(self):
+        mask = np.ones((10, 10), dtype=np.uint8)
+        ops = rasterize_mask_scan(mask, (10.0, 10.0), 0.0, 0.0, 0.1)
+        assert not ops.is_empty()
+
+    def test_step_power(self):
+        mask = np.ones((10, 10), dtype=np.uint8)
+        ops = rasterize_mask_scan(mask, (10.0, 10.0), 0.0, 0.0, 0.1, step_power=0.5)
+        assert not ops.is_empty()
+
+    def test_with_angle(self):
+        mask = np.ones((20, 20), dtype=np.uint8)
+        ops = rasterize_mask_scan(mask, (10.0, 10.0), 0.0, 0.0, 0.1, angle=90.0)
+        assert not ops.is_empty()
+
+
+# ---------------------------------------------------------------------------
+# rasterize_mask_lines
+# ---------------------------------------------------------------------------
+
+
+class TestRasterizeMaskLines:
+    def test_empty_mask(self):
+        mask = np.zeros((10, 10), dtype=np.uint8)
+        ops = rasterize_mask_lines(mask, (10.0, 10.0), 0.0, 0.0, 0.1)
+        assert ops.is_empty()
+
+    def test_full_mask(self):
+        mask = np.ones((10, 10), dtype=np.uint8)
+        ops = rasterize_mask_lines(mask, (10.0, 10.0), 0.0, 0.0, 0.1)
+        assert not ops.is_empty()
+
+    def test_with_z_offset(self):
+        mask = np.ones((10, 10), dtype=np.uint8)
+        ops = rasterize_mask_lines(mask, (10.0, 10.0), 0.0, 0.0, 0.1, z=-2.0)
+        assert not ops.is_empty()
+
+
+# ---------------------------------------------------------------------------
+# rasterize_multi_pass
+# ---------------------------------------------------------------------------
+
+
+class TestRasterizeMultiPass:
+    def test_white_image_empty(self):
+        gray = np.full((10, 10), 255, dtype=np.uint8)
+        ops = rasterize_multi_pass(gray, (10.0, 10.0), 0.0, 0.0, 0.1, 5, 0.5)
+        assert ops.is_empty()
+
+    def test_dark_image(self):
+        gray = np.full((10, 10), 0, dtype=np.uint8)
+        ops = rasterize_multi_pass(gray, (10.0, 10.0), 0.0, 0.0, 0.1, 3, 0.5)
+        assert not ops.is_empty()
+
+    def test_gradient(self):
+        gray = np.zeros((20, 20), dtype=np.uint8)
+        for i in range(20):
+            gray[i, :] = int(i * 255 / 19)
+        ops = rasterize_multi_pass(gray, (10.0, 10.0), 0.0, 0.0, 0.1, 3, 0.5)
+        assert not ops.is_empty()
+
+    def test_with_angle_increment(self):
+        gray = np.full((10, 10), 64, dtype=np.uint8)
+        ops = rasterize_multi_pass(
+            gray,
+            (10.0, 10.0),
+            0.0,
+            0.0,
+            0.1,
+            3,
+            0.5,
+            angle=0.0,
+            angle_increment=45.0,
+        )
+        assert not ops.is_empty()

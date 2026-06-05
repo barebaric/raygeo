@@ -1,10 +1,16 @@
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 
-use crate::ops::raster::scan::{
-    self, find_mask_bounding_box, generate_horizontal_scan_positions,
-    generate_scan_lines, line_pixels, resample_rows,
+use crate::ops::raster::rasterize::{
+    rasterize_mask_lines, rasterize_mask_scan, rasterize_multi_pass,
+    rasterize_power_modulation,
 };
+use crate::ops::raster::scan::{
+    self, downsample_power_values, find_mask_bounding_box,
+    generate_horizontal_scan_positions, generate_scan_lines, line_pixels,
+    resample_rows,
+};
+use crate::python::ops::container::PyOps;
 
 #[gen_stub_pyclass]
 #[pyclass(module = "raygeo.ops.raster", name = "ScanLine", skip_from_py_object)]
@@ -214,6 +220,161 @@ fn py_resample_rows(
     Ok(reshaped.unbind())
 }
 
+fn extract_flat_u8(
+    py: Python<'_>,
+    arr: &Bound<'_, PyAny>,
+) -> PyResult<(Vec<u8>, usize, usize)> {
+    let numpy = py.import("numpy")?;
+    let a = numpy.call_method1("asarray", (arr,))?;
+    let shape: (usize, usize) = a.getattr("shape")?.extract()?;
+    let flat: Vec<u8> = a
+        .call_method0("flatten")?
+        .call_method0("tolist")?
+        .extract()?;
+    Ok((flat, shape.0, shape.1))
+}
+
+#[pyfunction(name = "downsample_power_values")]
+fn py_downsample_power_values(
+    power_values: &Bound<'_, PyAny>,
+    start_mm: (f64, f64),
+    end_mm: (f64, f64),
+    sample_interval_mm: f64,
+) -> PyResult<(Vec<u8>, Vec<f64>, Vec<f64>)> {
+    let pv: Vec<u8> = power_values.call_method0("tolist")?.extract()?;
+    let ds = downsample_power_values(&pv, start_mm, end_mm, sample_interval_mm);
+    Ok((ds.power, ds.x_mm, ds.y_mm))
+}
+
+#[pyfunction(name = "rasterize_power_modulation")]
+#[pyo3(signature = (gray_image, alpha, pixels_per_mm, offset_x_mm, offset_y_mm, line_interval_mm, sample_interval_mm, min_power=0.0, max_power=1.0, step_power=1.0, num_power_levels=256, angle=0.0))]
+#[allow(clippy::too_many_arguments)]
+fn py_rasterize_power_modulation(
+    py: Python<'_>,
+    gray_image: &Bound<'_, PyAny>,
+    alpha: &Bound<'_, PyAny>,
+    pixels_per_mm: (f64, f64),
+    offset_x_mm: f64,
+    offset_y_mm: f64,
+    line_interval_mm: f64,
+    sample_interval_mm: f64,
+    min_power: f64,
+    max_power: f64,
+    step_power: f64,
+    num_power_levels: usize,
+    angle: f64,
+) -> PyResult<PyOps> {
+    let (gray, h, w) = extract_flat_u8(py, gray_image)?;
+    let (alp, h2, w2) = extract_flat_u8(py, alpha)?;
+    debug_assert_eq!(h, h2);
+    debug_assert_eq!(w, w2);
+    let ops = rasterize_power_modulation(
+        &gray,
+        &alp,
+        h,
+        w,
+        pixels_per_mm,
+        offset_x_mm,
+        offset_y_mm,
+        line_interval_mm,
+        sample_interval_mm,
+        min_power,
+        max_power,
+        step_power,
+        num_power_levels,
+        angle,
+    );
+    Ok(PyOps { inner: ops })
+}
+
+#[pyfunction(name = "rasterize_mask_scan")]
+#[pyo3(signature = (mask, pixels_per_mm, offset_x_mm, offset_y_mm, line_interval_mm, step_power=1.0, angle=0.0))]
+#[allow(clippy::too_many_arguments)]
+fn py_rasterize_mask_scan(
+    py: Python<'_>,
+    mask: &Bound<'_, PyAny>,
+    pixels_per_mm: (f64, f64),
+    offset_x_mm: f64,
+    offset_y_mm: f64,
+    line_interval_mm: f64,
+    step_power: f64,
+    angle: f64,
+) -> PyResult<PyOps> {
+    let (m, h, w) = extract_flat_u8(py, mask)?;
+    let ops = rasterize_mask_scan(
+        &m,
+        h,
+        w,
+        pixels_per_mm,
+        offset_x_mm,
+        offset_y_mm,
+        line_interval_mm,
+        step_power,
+        angle,
+    );
+    Ok(PyOps { inner: ops })
+}
+
+#[pyfunction(name = "rasterize_mask_lines")]
+#[pyo3(signature = (mask, pixels_per_mm, offset_x_mm, offset_y_mm, line_interval_mm, z=0.0, angle=0.0))]
+#[allow(clippy::too_many_arguments)]
+fn py_rasterize_mask_lines(
+    py: Python<'_>,
+    mask: &Bound<'_, PyAny>,
+    pixels_per_mm: (f64, f64),
+    offset_x_mm: f64,
+    offset_y_mm: f64,
+    line_interval_mm: f64,
+    z: f64,
+    angle: f64,
+) -> PyResult<PyOps> {
+    let (m, h, w) = extract_flat_u8(py, mask)?;
+    let ops = rasterize_mask_lines(
+        &m,
+        h,
+        w,
+        pixels_per_mm,
+        offset_x_mm,
+        offset_y_mm,
+        line_interval_mm,
+        z,
+        angle,
+    );
+    Ok(PyOps { inner: ops })
+}
+
+#[pyfunction(name = "rasterize_multi_pass")]
+#[pyo3(signature = (gray_image, pixels_per_mm, offset_x_mm, offset_y_mm, line_interval_mm, num_depth_levels, z_step_down, angle=0.0, angle_increment=0.0))]
+#[allow(clippy::too_many_arguments)]
+fn py_rasterize_multi_pass(
+    py: Python<'_>,
+    gray_image: &Bound<'_, PyAny>,
+    pixels_per_mm: (f64, f64),
+    offset_x_mm: f64,
+    offset_y_mm: f64,
+    line_interval_mm: f64,
+    num_depth_levels: usize,
+    z_step_down: f64,
+    angle: f64,
+    angle_increment: f64,
+) -> PyResult<PyOps> {
+    let (gray, h, w) = extract_flat_u8(py, gray_image)?;
+    let ops = rasterize_multi_pass(
+        &gray,
+        h,
+        w,
+        pixels_per_mm,
+        offset_x_mm,
+        offset_y_mm,
+        line_interval_mm,
+        num_depth_levels,
+        z_step_down,
+        angle,
+        angle_increment,
+    );
+    Ok(PyOps { inner: ops })
+}
+
 pub(crate) fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     let raster_mod = PyModule::new(m.py(), "raster")?;
 
@@ -238,6 +399,26 @@ pub(crate) fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     )?)?;
     raster_mod.add_function(wrap_pyfunction!(
         py_resample_rows,
+        raster_mod.clone()
+    )?)?;
+    raster_mod.add_function(wrap_pyfunction!(
+        py_downsample_power_values,
+        raster_mod.clone()
+    )?)?;
+    raster_mod.add_function(wrap_pyfunction!(
+        py_rasterize_power_modulation,
+        raster_mod.clone()
+    )?)?;
+    raster_mod.add_function(wrap_pyfunction!(
+        py_rasterize_mask_scan,
+        raster_mod.clone()
+    )?)?;
+    raster_mod.add_function(wrap_pyfunction!(
+        py_rasterize_mask_lines,
+        raster_mod.clone()
+    )?)?;
+    raster_mod.add_function(wrap_pyfunction!(
+        py_rasterize_multi_pass,
         raster_mod.clone()
     )?)?;
 
