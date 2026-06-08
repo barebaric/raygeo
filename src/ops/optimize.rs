@@ -57,6 +57,7 @@ impl rstar::Point for Point2D {
     }
 }
 
+#[derive(Clone, PartialEq)]
 struct SegmentPoint {
     point: Point2D,
     segment_idx: usize,
@@ -171,66 +172,76 @@ fn kdtree_order_workpieces(metas: &mut [WorkpieceMeta]) -> Vec<WorkpieceMeta> {
         return metas.to_vec();
     }
 
+    let mut entry_points: Vec<Point2D> = Vec::with_capacity(n);
+    let mut exit_points: Vec<Point2D> = Vec::with_capacity(n);
     let mut points: Vec<SegmentPoint> = Vec::with_capacity(n * 2);
     for (i, meta) in metas.iter().enumerate() {
+        let entry = Point2D([meta.entry_point.0, meta.entry_point.1]);
+        let exit = Point2D([meta.exit_point.0, meta.exit_point.1]);
+        entry_points.push(entry);
+        exit_points.push(exit);
         points.push(SegmentPoint {
-            point: Point2D([meta.entry_point.0, meta.entry_point.1]),
+            point: entry,
             segment_idx: i,
             is_exit: false,
         });
         points.push(SegmentPoint {
-            point: Point2D([meta.exit_point.0, meta.exit_point.1]),
+            point: exit,
             segment_idx: i,
             is_exit: true,
         });
     }
 
-    let tree = RTree::bulk_load(points);
+    let mut tree = RTree::bulk_load(points);
     let mut ordered: Vec<WorkpieceMeta> = Vec::with_capacity(n);
-    let mut visited = vec![false; n];
 
     ordered.push(metas[0].clone());
-    visited[0] = true;
     let mut current_pos =
         Point2D([metas[0].exit_point.0, metas[0].exit_point.1]);
 
+    tree.remove(&SegmentPoint {
+        point: entry_points[0],
+        segment_idx: 0,
+        is_exit: false,
+    });
+    tree.remove(&SegmentPoint {
+        point: exit_points[0],
+        segment_idx: 0,
+        is_exit: true,
+    });
+
     while ordered.len() < n {
-        let mut found_next = false;
-        let neighbors: Vec<&SegmentPoint> =
-            tree.nearest_neighbor_iter(&current_pos).collect();
+        let sp = match tree.nearest_neighbor(&current_pos) {
+            Some(sp) => sp,
+            None => break,
+        };
 
-        for sp in &neighbors {
-            if !visited[sp.segment_idx] {
-                let mut next_meta = metas[sp.segment_idx].clone();
-                if next_meta.can_flip && sp.is_exit {
-                    next_meta = WorkpieceMeta {
-                        uid: next_meta.uid.clone(),
-                        ops: next_meta.ops.flip_ops(),
-                        entry_point: next_meta.exit_point,
-                        exit_point: next_meta.entry_point,
-                        can_flip: next_meta.can_flip,
-                    };
-                    metas[sp.segment_idx] = next_meta.clone();
-                }
-
-                ordered.push(next_meta.clone());
-                visited[sp.segment_idx] = true;
-                current_pos =
-                    Point2D([next_meta.exit_point.0, next_meta.exit_point.1]);
-                found_next = true;
-                break;
-            }
+        let seg_idx = sp.segment_idx;
+        let mut next_meta = metas[seg_idx].clone();
+        if next_meta.can_flip && sp.is_exit {
+            next_meta = WorkpieceMeta {
+                uid: next_meta.uid.clone(),
+                ops: next_meta.ops.flip_ops(),
+                entry_point: next_meta.exit_point,
+                exit_point: next_meta.entry_point,
+                can_flip: next_meta.can_flip,
+            };
+            metas[seg_idx] = next_meta.clone();
         }
 
-        if !found_next {
-            for i in 0..n {
-                if !visited[i] {
-                    ordered.push(metas[i].clone());
-                    visited[i] = true;
-                }
-            }
-            break;
-        }
+        ordered.push(next_meta.clone());
+        current_pos = Point2D([next_meta.exit_point.0, next_meta.exit_point.1]);
+
+        tree.remove(&SegmentPoint {
+            point: entry_points[seg_idx],
+            segment_idx: seg_idx,
+            is_exit: false,
+        });
+        tree.remove(&SegmentPoint {
+            point: exit_points[seg_idx],
+            segment_idx: seg_idx,
+            is_exit: true,
+        });
     }
 
     ordered
@@ -427,63 +438,74 @@ fn kdtree_order_segments(segments: &mut [Ops]) -> Vec<Ops> {
         return segments.to_vec();
     }
 
+    let mut entry_points: Vec<Point2D> = Vec::with_capacity(n);
+    let mut exit_points: Vec<Point2D> = Vec::with_capacity(n);
     let mut points: Vec<SegmentPoint> = Vec::with_capacity(n * 2);
     for (i, seg) in segments.iter().enumerate() {
         let start = seg.endpoint(0);
         let end = seg.endpoint(seg.len() - 1);
+        let start_pt = Point2D([start.0, start.1]);
+        let end_pt = Point2D([end.0, end.1]);
+        entry_points.push(start_pt);
+        exit_points.push(end_pt);
         points.push(SegmentPoint {
-            point: Point2D([start.0, start.1]),
+            point: start_pt,
             segment_idx: i,
             is_exit: false,
         });
         points.push(SegmentPoint {
-            point: Point2D([end.0, end.1]),
+            point: end_pt,
             segment_idx: i,
             is_exit: true,
         });
     }
 
-    let tree = RTree::bulk_load(points);
+    let mut tree = RTree::bulk_load(points);
     let mut ordered: Vec<Ops> = Vec::with_capacity(n);
-    let mut visited = vec![false; n];
 
     let first_seg = &segments[0];
     ordered.push(first_seg.clone());
-    visited[0] = true;
     let last = first_seg.endpoint(first_seg.len() - 1);
     let mut current_pos = Point2D([last.0, last.1]);
 
+    tree.remove(&SegmentPoint {
+        point: entry_points[0],
+        segment_idx: 0,
+        is_exit: false,
+    });
+    tree.remove(&SegmentPoint {
+        point: exit_points[0],
+        segment_idx: 0,
+        is_exit: true,
+    });
+
     while ordered.len() < n {
-        let mut found_next = false;
-        let neighbors: Vec<&SegmentPoint> =
-            tree.nearest_neighbor_iter(&current_pos).collect();
+        let sp = match tree.nearest_neighbor(&current_pos) {
+            Some(sp) => sp,
+            None => break,
+        };
 
-        for sp in &neighbors {
-            if !visited[sp.segment_idx] {
-                let next_seg = if sp.is_exit {
-                    segments[sp.segment_idx].flip_ops()
-                } else {
-                    segments[sp.segment_idx].clone()
-                };
+        let seg_idx = sp.segment_idx;
+        let next_seg = if sp.is_exit {
+            segments[seg_idx].flip_ops()
+        } else {
+            segments[seg_idx].clone()
+        };
 
-                let last = next_seg.endpoint(next_seg.len() - 1);
-                current_pos = Point2D([last.0, last.1]);
-                ordered.push(next_seg);
-                visited[sp.segment_idx] = true;
-                found_next = true;
-                break;
-            }
-        }
+        let last = next_seg.endpoint(next_seg.len() - 1);
+        current_pos = Point2D([last.0, last.1]);
+        ordered.push(next_seg);
 
-        if !found_next {
-            for i in 0..n {
-                if !visited[i] {
-                    ordered.push(segments[i].clone());
-                    visited[i] = true;
-                }
-            }
-            break;
-        }
+        tree.remove(&SegmentPoint {
+            point: entry_points[seg_idx],
+            segment_idx: seg_idx,
+            is_exit: false,
+        });
+        tree.remove(&SegmentPoint {
+            point: exit_points[seg_idx],
+            segment_idx: seg_idx,
+            is_exit: true,
+        });
     }
 
     ordered
@@ -814,6 +836,10 @@ fn optimize_segments(ops: &mut Ops, progress_cb: &dyn ProgressCallback) {
     let mut cumulative_workload: usize = 0;
 
     for (i, job) in jobs.iter().enumerate() {
+        if progress_cb.is_cancelled() {
+            break;
+        }
+
         let progress =
             0.05 + 0.85 * (cumulative_workload as f64 / total_workload as f64);
 
