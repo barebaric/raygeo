@@ -865,6 +865,16 @@ class Ops:
         
         :param tolerance: Maximum distance for considering lines collinear.
         """
+    def apply_overscan(self, distance_mm: builtins.float) -> None:
+        r"""
+        Apply overscan to raster lines.
+        
+        Extends raster line start/end points by ``distance_mm`` along
+        the line direction, adding zero-power lead-in and lead-out
+        segments for constant engraving velocity.
+        
+        :param distance_mm: Overscan distance in millimeters.
+        """
     def optimize_travel(self, allow_flip: builtins.bool = True, preserve_first: builtins.bool = False, preserve_order: typing.Sequence[builtins.str] = [], progress_cb: typing.Optional[typing.Any] = None) -> None:
         r"""
         Optimize travel distance by reordering segments.

@@ -13,6 +13,7 @@ pub(crate) mod layer;
 pub mod linearize;
 pub(crate) mod merge_lines;
 pub mod optimize;
+pub(crate) mod overscan;
 pub mod raster;
 pub mod state;
 pub(crate) mod tabs;

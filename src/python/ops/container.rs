@@ -1989,6 +1989,17 @@ impl PyOps {
         );
     }
 
+    /// Apply overscan to raster lines.
+    ///
+    /// Extends raster line start/end points by ``distance_mm`` along
+    /// the line direction, adding zero-power lead-in and lead-out
+    /// segments for constant engraving velocity.
+    ///
+    /// :param distance_mm: Overscan distance in millimeters.
+    fn apply_overscan(&mut self, distance_mm: f64) {
+        crate::ops::overscan::apply_overscan(&mut self.inner, distance_mm);
+    }
+
     /// Optimize travel distance by reordering segments.
     ///
     /// Performs two-level optimization: workpiece-level reordering
