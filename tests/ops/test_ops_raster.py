@@ -3,6 +3,7 @@ import pytest
 
 from raygeo.ops.raster import (
     ScanLine,
+    ScanMode,
     downsample_power_values,
     find_mask_bounding_box,
     find_segments,
@@ -15,6 +16,7 @@ from raygeo.ops.raster import (
     rasterize_power_modulation,
     resample_rows,
 )
+from raygeo.ops.types import CommandType
 
 # ---------------------------------------------------------------------------
 # ScanLine
@@ -592,3 +594,184 @@ class TestRasterizeMultiPass:
             angle_increment=45.0,
         )
         assert not ops.is_empty()
+
+
+# ---------------------------------------------------------------------------
+# ScanMode import & enum
+# ---------------------------------------------------------------------------
+
+
+class TestScanMode:
+    def test_import(self):
+        assert ScanMode is not None
+
+    def test_members(self):
+        assert hasattr(ScanMode, "Segmented")
+        assert hasattr(ScanMode, "FullSweep")
+
+
+# ---------------------------------------------------------------------------
+# Full Sweep – rasterize_power_modulation
+# ---------------------------------------------------------------------------
+
+
+class TestFullSweepPowerModulation:
+    def _make_images(self, size=30, gray_val=64):
+        gray = np.full((size, size), gray_val, dtype=np.uint8)
+        alpha = np.full((size, size), 255, dtype=np.uint8)
+        return gray, alpha
+
+    def test_fewer_scans_than_segmented(self):
+        gray, alpha = self._make_images()
+        seg = rasterize_power_modulation(gray, alpha, (10.0, 10.0), 0, 0, 0.1, 0.05)
+        fs = rasterize_power_modulation(
+            gray,
+            alpha,
+            (10.0, 10.0),
+            0,
+            0,
+            0.1,
+            0.05,
+            scan_mode=ScanMode.FullSweep,
+        )
+        assert fs.len() <= seg.len()
+
+    def test_produces_scan_lines(self):
+        gray, alpha = self._make_images()
+        ops = rasterize_power_modulation(
+            gray,
+            alpha,
+            (10.0, 10.0),
+            0,
+            0,
+            0.1,
+            0.05,
+            scan_mode=ScanMode.FullSweep,
+        )
+        types = [ops.command_type(i) for i in range(ops.len())]
+        assert CommandType.SCAN_LINE in types
+
+    def test_empty_alpha(self):
+        gray = np.full((10, 10), 128, dtype=np.uint8)
+        alpha = np.zeros((10, 10), dtype=np.uint8)
+        ops = rasterize_power_modulation(
+            gray,
+            alpha,
+            (10.0, 10.0),
+            0,
+            0,
+            0.1,
+            0.05,
+            scan_mode=ScanMode.FullSweep,
+        )
+        assert ops.is_empty()
+
+
+# ---------------------------------------------------------------------------
+# Full Sweep – rasterize_mask_scan
+# ---------------------------------------------------------------------------
+
+
+class TestFullSweepMaskScan:
+    def test_fewer_scans_than_segmented(self):
+        mask = np.ones((30, 30), dtype=np.uint8)
+        seg = rasterize_mask_scan(mask, (10.0, 10.0), 0, 0, 0.1)
+        fs = rasterize_mask_scan(
+            mask, (10.0, 10.0), 0, 0, 0.1, scan_mode=ScanMode.FullSweep
+        )
+        assert fs.len() <= seg.len()
+
+    def test_produces_scan_lines(self):
+        mask = np.ones((20, 20), dtype=np.uint8)
+        ops = rasterize_mask_scan(
+            mask, (10.0, 10.0), 0, 0, 0.1, scan_mode=ScanMode.FullSweep
+        )
+        types = [ops.command_type(i) for i in range(ops.len())]
+        assert CommandType.SCAN_LINE in types
+
+    def test_empty_mask(self):
+        mask = np.zeros((10, 10), dtype=np.uint8)
+        ops = rasterize_mask_scan(
+            mask, (10.0, 10.0), 0, 0, 0.1, scan_mode=ScanMode.FullSweep
+        )
+        assert ops.is_empty()
+
+
+# ---------------------------------------------------------------------------
+# Full Sweep – rasterize_mask_lines
+# ---------------------------------------------------------------------------
+
+
+class TestFullSweepMaskLines:
+    def test_fewer_lines_than_segmented(self):
+        mask = np.ones((30, 30), dtype=np.uint8)
+        seg = rasterize_mask_lines(mask, (10.0, 10.0), 0, 0, 0.1)
+        fs = rasterize_mask_lines(
+            mask, (10.0, 10.0), 0, 0, 0.1, scan_mode=ScanMode.FullSweep
+        )
+        assert fs.len() <= seg.len()
+
+    def test_produces_lines(self):
+        mask = np.ones((20, 20), dtype=np.uint8)
+        ops = rasterize_mask_lines(
+            mask, (10.0, 10.0), 0, 0, 0.1, scan_mode=ScanMode.FullSweep
+        )
+        types = [ops.command_type(i) for i in range(ops.len())]
+        assert CommandType.LINE_TO in types
+
+    def test_empty_mask(self):
+        mask = np.zeros((10, 10), dtype=np.uint8)
+        ops = rasterize_mask_lines(
+            mask, (10.0, 10.0), 0, 0, 0.1, scan_mode=ScanMode.FullSweep
+        )
+        assert ops.is_empty()
+
+
+# ---------------------------------------------------------------------------
+# Full Sweep – rasterize_multi_pass
+# ---------------------------------------------------------------------------
+
+
+class TestFullSweepMultiPass:
+    def test_fewer_lines_than_segmented(self):
+        gray = np.full((20, 20), 64, dtype=np.uint8)
+        seg = rasterize_multi_pass(gray, (10.0, 10.0), 0, 0, 0.1, 3, 0.5)
+        fs = rasterize_multi_pass(
+            gray,
+            (10.0, 10.0),
+            0,
+            0,
+            0.1,
+            3,
+            0.5,
+            scan_mode=ScanMode.FullSweep,
+        )
+        assert fs.len() <= seg.len()
+
+    def test_produces_lines(self):
+        gray = np.full((20, 20), 64, dtype=np.uint8)
+        ops = rasterize_multi_pass(
+            gray,
+            (10.0, 10.0),
+            0,
+            0,
+            0.1,
+            3,
+            0.5,
+            scan_mode=ScanMode.FullSweep,
+        )
+        assert not ops.is_empty()
+
+    def test_white_image_empty(self):
+        gray = np.full((10, 10), 255, dtype=np.uint8)
+        ops = rasterize_multi_pass(
+            gray,
+            (10.0, 10.0),
+            0,
+            0,
+            0.1,
+            3,
+            0.5,
+            scan_mode=ScanMode.FullSweep,
+        )
+        assert ops.is_empty()

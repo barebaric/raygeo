@@ -5,7 +5,7 @@ use pyo3_stub_gen::derive::{
 
 use crate::ops::raster::rasterize::{
     rasterize_mask_lines, rasterize_mask_scan, rasterize_multi_pass,
-    rasterize_power_modulation,
+    rasterize_power_modulation, ScanMode as RustScanMode,
 };
 use crate::ops::raster::scan::{
     self, downsample_power_values, find_mask_bounding_box,
@@ -13,6 +13,22 @@ use crate::ops::raster::scan::{
     resample_rows,
 };
 use crate::python::ops::container::PyOps;
+
+#[pyclass(module = "raygeo.ops.raster", name = "ScanMode", from_py_object)]
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum PyScanMode {
+    Segmented,
+    FullSweep,
+}
+
+impl From<PyScanMode> for RustScanMode {
+    fn from(mode: PyScanMode) -> Self {
+        match mode {
+            PyScanMode::Segmented => RustScanMode::Segmented,
+            PyScanMode::FullSweep => RustScanMode::FullSweep,
+        }
+    }
+}
 
 #[gen_stub_pyclass]
 #[pyclass(module = "raygeo.ops.raster", name = "ScanLine", skip_from_py_object)]
@@ -339,6 +355,7 @@ fn py_downsample_power_values(
     import numpy
     import numpy.typing
     from raygeo.ops import Ops
+    from raygeo.ops.raster import ScanMode
 
     def rasterize_power_modulation(
         gray_image: numpy.typing.NDArray[numpy.uint8],
@@ -353,12 +370,13 @@ fn py_downsample_power_values(
         step_power: float = 1.0,
         num_power_levels: int = 256,
         angle: float = 0.0,
+        scan_mode: ScanMode = ScanMode.Segmented,
     ) -> ops.Ops: ...
 "#,
     module = "raygeo.ops.raster"
 )]
 #[pyfunction(name = "rasterize_power_modulation")]
-#[pyo3(signature = (gray_image, alpha, pixels_per_mm, offset_x_mm, offset_y_mm, line_interval_mm, sample_interval_mm, min_power=0.0, max_power=1.0, step_power=1.0, num_power_levels=256, angle=0.0))]
+#[pyo3(signature = (gray_image, alpha, pixels_per_mm, offset_x_mm, offset_y_mm, line_interval_mm, sample_interval_mm, min_power=0.0, max_power=1.0, step_power=1.0, num_power_levels=256, angle=0.0, scan_mode=PyScanMode::Segmented))]
 #[allow(clippy::too_many_arguments)]
 fn py_rasterize_power_modulation(
     py: Python<'_>,
@@ -374,6 +392,7 @@ fn py_rasterize_power_modulation(
     step_power: f64,
     num_power_levels: usize,
     angle: f64,
+    scan_mode: PyScanMode,
 ) -> PyResult<PyOps> {
     let (gray, h, w) = extract_flat_u8(py, gray_image)?;
     let (alp, h2, w2) = extract_flat_u8(py, alpha)?;
@@ -394,6 +413,7 @@ fn py_rasterize_power_modulation(
         step_power,
         num_power_levels,
         angle,
+        scan_mode.into(),
     );
     Ok(PyOps { inner: ops })
 }
@@ -403,6 +423,7 @@ fn py_rasterize_power_modulation(
     import numpy
     import numpy.typing
     from raygeo.ops import Ops
+    from raygeo.ops.raster import ScanMode
 
     def rasterize_mask_scan(
         mask: numpy.typing.NDArray[numpy.uint8],
@@ -412,12 +433,13 @@ fn py_rasterize_power_modulation(
         line_interval_mm: float,
         step_power: float = 1.0,
         angle: float = 0.0,
+        scan_mode: ScanMode = ScanMode.Segmented,
     ) -> ops.Ops: ...
 "#,
     module = "raygeo.ops.raster"
 )]
 #[pyfunction(name = "rasterize_mask_scan")]
-#[pyo3(signature = (mask, pixels_per_mm, offset_x_mm, offset_y_mm, line_interval_mm, step_power=1.0, angle=0.0))]
+#[pyo3(signature = (mask, pixels_per_mm, offset_x_mm, offset_y_mm, line_interval_mm, step_power=1.0, angle=0.0, scan_mode=PyScanMode::Segmented))]
 #[allow(clippy::too_many_arguments)]
 fn py_rasterize_mask_scan(
     py: Python<'_>,
@@ -428,6 +450,7 @@ fn py_rasterize_mask_scan(
     line_interval_mm: f64,
     step_power: f64,
     angle: f64,
+    scan_mode: PyScanMode,
 ) -> PyResult<PyOps> {
     let (m, h, w) = extract_flat_u8(py, mask)?;
     let ops = rasterize_mask_scan(
@@ -440,6 +463,7 @@ fn py_rasterize_mask_scan(
         line_interval_mm,
         step_power,
         angle,
+        scan_mode.into(),
     );
     Ok(PyOps { inner: ops })
 }
@@ -449,6 +473,7 @@ fn py_rasterize_mask_scan(
     import numpy
     import numpy.typing
     from raygeo.ops import Ops
+    from raygeo.ops.raster import ScanMode
 
     def rasterize_mask_lines(
         mask: numpy.typing.NDArray[numpy.uint8],
@@ -458,12 +483,13 @@ fn py_rasterize_mask_scan(
         line_interval_mm: float,
         z: float = 0.0,
         angle: float = 0.0,
+        scan_mode: ScanMode = ScanMode.Segmented,
     ) -> ops.Ops: ...
 "#,
     module = "raygeo.ops.raster"
 )]
 #[pyfunction(name = "rasterize_mask_lines")]
-#[pyo3(signature = (mask, pixels_per_mm, offset_x_mm, offset_y_mm, line_interval_mm, z=0.0, angle=0.0))]
+#[pyo3(signature = (mask, pixels_per_mm, offset_x_mm, offset_y_mm, line_interval_mm, z=0.0, angle=0.0, scan_mode=PyScanMode::Segmented))]
 #[allow(clippy::too_many_arguments)]
 fn py_rasterize_mask_lines(
     py: Python<'_>,
@@ -474,6 +500,7 @@ fn py_rasterize_mask_lines(
     line_interval_mm: f64,
     z: f64,
     angle: f64,
+    scan_mode: PyScanMode,
 ) -> PyResult<PyOps> {
     let (m, h, w) = extract_flat_u8(py, mask)?;
     let ops = rasterize_mask_lines(
@@ -486,6 +513,7 @@ fn py_rasterize_mask_lines(
         line_interval_mm,
         z,
         angle,
+        scan_mode.into(),
     );
     Ok(PyOps { inner: ops })
 }
@@ -495,6 +523,7 @@ fn py_rasterize_mask_lines(
     import numpy
     import numpy.typing
     from raygeo.ops import Ops
+    from raygeo.ops.raster import ScanMode
 
     def rasterize_multi_pass(
         gray_image: numpy.typing.NDArray[numpy.uint8],
@@ -506,12 +535,13 @@ fn py_rasterize_mask_lines(
         z_step_down: float,
         angle: float = 0.0,
         angle_increment: float = 0.0,
+        scan_mode: ScanMode = ScanMode.Segmented,
     ) -> ops.Ops: ...
 "#,
     module = "raygeo.ops.raster"
 )]
 #[pyfunction(name = "rasterize_multi_pass")]
-#[pyo3(signature = (gray_image, pixels_per_mm, offset_x_mm, offset_y_mm, line_interval_mm, num_depth_levels, z_step_down, angle=0.0, angle_increment=0.0))]
+#[pyo3(signature = (gray_image, pixels_per_mm, offset_x_mm, offset_y_mm, line_interval_mm, num_depth_levels, z_step_down, angle=0.0, angle_increment=0.0, scan_mode=PyScanMode::Segmented))]
 #[allow(clippy::too_many_arguments)]
 fn py_rasterize_multi_pass(
     py: Python<'_>,
@@ -524,6 +554,7 @@ fn py_rasterize_multi_pass(
     z_step_down: f64,
     angle: f64,
     angle_increment: f64,
+    scan_mode: PyScanMode,
 ) -> PyResult<PyOps> {
     let (gray, h, w) = extract_flat_u8(py, gray_image)?;
     let ops = rasterize_multi_pass(
@@ -538,6 +569,7 @@ fn py_rasterize_multi_pass(
         z_step_down,
         angle,
         angle_increment,
+        scan_mode.into(),
     );
     Ok(PyOps { inner: ops })
 }
@@ -545,6 +577,7 @@ fn py_rasterize_multi_pass(
 pub(crate) fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     let raster_mod = PyModule::new(m.py(), "raster")?;
 
+    raster_mod.add_class::<PyScanMode>()?;
     raster_mod.add_class::<PyScanLine>()?;
     raster_mod.add_function(wrap_pyfunction!(
         py_find_mask_bounding_box,

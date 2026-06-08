@@ -8,6 +8,7 @@ from raygeo import ops
 import typing
 __all__ = [
     "ScanLine",
+    "ScanMode",
     "downsample_power_values",
     "find_mask_bounding_box",
     "find_segments",
@@ -20,6 +21,10 @@ __all__ = [
     "rasterize_power_modulation",
     "resample_rows",
 ]
+
+class ScanMode:
+    Segmented: ScanMode
+    FullSweep: ScanMode
 
 @typing.final
 class ScanLine:
@@ -50,13 +55,13 @@ def generate_scan_lines(bbox: tuple[int, int, int, int], image_size: tuple[int, 
 
 def line_pixels(start: tuple[float, float], end: tuple[float, float], width: int, height: int) -> list[tuple[int, int]]: ...
 
-def rasterize_mask_lines(mask: numpy.typing.NDArray[numpy.uint8], pixels_per_mm: tuple[float, float], offset_x_mm: float, offset_y_mm: float, line_interval_mm: float, z: float = 0, angle: float = 0) -> ops.Ops: ...
+def rasterize_mask_lines(mask: numpy.typing.NDArray[numpy.uint8], pixels_per_mm: tuple[float, float], offset_x_mm: float, offset_y_mm: float, line_interval_mm: float, z: float = 0, angle: float = 0, scan_mode: ScanMode = ScanMode.Segmented) -> ops.Ops: ...
 
-def rasterize_mask_scan(mask: numpy.typing.NDArray[numpy.uint8], pixels_per_mm: tuple[float, float], offset_x_mm: float, offset_y_mm: float, line_interval_mm: float, step_power: float = 1, angle: float = 0) -> ops.Ops: ...
+def rasterize_mask_scan(mask: numpy.typing.NDArray[numpy.uint8], pixels_per_mm: tuple[float, float], offset_x_mm: float, offset_y_mm: float, line_interval_mm: float, step_power: float = 1, angle: float = 0, scan_mode: ScanMode = ScanMode.Segmented) -> ops.Ops: ...
 
-def rasterize_multi_pass(gray_image: numpy.typing.NDArray[numpy.uint8], pixels_per_mm: tuple[float, float], offset_x_mm: float, offset_y_mm: float, line_interval_mm: float, num_depth_levels: int, z_step_down: float, angle: float = 0, angle_increment: float = 0) -> ops.Ops: ...
+def rasterize_multi_pass(gray_image: numpy.typing.NDArray[numpy.uint8], pixels_per_mm: tuple[float, float], offset_x_mm: float, offset_y_mm: float, line_interval_mm: float, num_depth_levels: int, z_step_down: float, angle: float = 0, angle_increment: float = 0, scan_mode: ScanMode = ScanMode.Segmented) -> ops.Ops: ...
 
-def rasterize_power_modulation(gray_image: numpy.typing.NDArray[numpy.uint8], alpha: numpy.typing.NDArray[numpy.uint8], pixels_per_mm: tuple[float, float], offset_x_mm: float, offset_y_mm: float, line_interval_mm: float, sample_interval_mm: float, min_power: float = 0, max_power: float = 1, step_power: float = 1, num_power_levels: int = 256, angle: float = 0) -> ops.Ops: ...
+def rasterize_power_modulation(gray_image: numpy.typing.NDArray[numpy.uint8], alpha: numpy.typing.NDArray[numpy.uint8], pixels_per_mm: tuple[float, float], offset_x_mm: float, offset_y_mm: float, line_interval_mm: float, sample_interval_mm: float, min_power: float = 0, max_power: float = 1, step_power: float = 1, num_power_levels: int = 256, angle: float = 0, scan_mode: ScanMode = ScanMode.Segmented) -> ops.Ops: ...
 
 def resample_rows(image: numpy.typing.NDArray[numpy.uint8], y_coords_px: numpy.ndarray) -> numpy.typing.NDArray[numpy.uint8]: ...
 
