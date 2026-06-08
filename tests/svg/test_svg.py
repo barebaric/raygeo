@@ -1,4 +1,5 @@
 import numpy as np
+
 from raygeo.svg import (
     parse_svg_path_data,
     parse_svg_transform,

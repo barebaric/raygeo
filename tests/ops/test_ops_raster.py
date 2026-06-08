@@ -1,5 +1,6 @@
 import numpy as np
 import pytest
+
 from raygeo.ops.raster import (
     ScanLine,
     downsample_power_values,

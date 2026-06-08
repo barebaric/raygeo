@@ -1,6 +1,7 @@
 import math
 
 import pytest
+
 from raygeo.ops import Ops
 from raygeo.ops.types import CommandType, SectionType
 

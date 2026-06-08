@@ -1,4 +1,5 @@
 import pytest
+
 from raygeo.geo.shape.line import (
     does_line_segment_intersect_rect,
     get_line_closest_point,

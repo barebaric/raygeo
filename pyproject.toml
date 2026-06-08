@@ -49,5 +49,8 @@ exclude = ["*.pyi"]
 [tool.ruff.lint]
 select = ["E", "F", "W", "I"]
 
+[tool.ruff.lint.isort]
+known-first-party = ["raygeo"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]

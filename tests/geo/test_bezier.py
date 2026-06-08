@@ -1,6 +1,7 @@
 import math
 
 import pytest
+
 from raygeo.geo.shape.bezier import (
     bezier_flatness_sq,
     clip_bezier_with_rect,

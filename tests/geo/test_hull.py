@@ -1,7 +1,7 @@
 import numpy as np
-from raygeo.geo.algo import hull
 
 from raygeo import Geometry
+from raygeo.geo.algo import hull
 
 
 def test_get_enclosing_hull():

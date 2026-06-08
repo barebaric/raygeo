@@ -1,6 +1,7 @@
 import math
 
 import pytest
+
 from raygeo.geo.algo.clipping import (
     clip_line_segment_with_polygons,
     clip_line_segment_with_rect,

@@ -1,6 +1,7 @@
 import math
 
 import pytest
+
 from raygeo.geo.shape.circle import (
     does_circle_intersect_rect,
     get_circle_circle_intersections,

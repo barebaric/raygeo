@@ -1,5 +1,6 @@
 import cairo
 import numpy as np
+
 from raygeo.image import (
     rgba_to_binary,
     rgba_to_grayscale,

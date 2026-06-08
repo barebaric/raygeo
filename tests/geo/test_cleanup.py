@@ -1,6 +1,5 @@
-from raygeo.geo.shape.point import are_points_equal
-
 from raygeo.geo import Geometry
+from raygeo.geo.shape.point import are_points_equal
 
 
 def test_are_points_equal_exact():

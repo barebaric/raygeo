@@ -1,5 +1,6 @@
 import numpy as np
 import pytest
+
 from raygeo.image import (
     apply_bayer_dither,
     apply_floyd_steinberg_dither,

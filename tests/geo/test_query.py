@@ -1,9 +1,9 @@
 import math
 
 import pytest
-from raygeo.geo.shape.rect import does_rect_intersect_rect
 
 from raygeo.geo import Geometry
+from raygeo.geo.shape.rect import does_rect_intersect_rect
 
 
 @pytest.fixture

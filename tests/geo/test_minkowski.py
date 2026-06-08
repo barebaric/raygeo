@@ -3,6 +3,7 @@ Tests for raygeo.minkowski module.
 """
 
 import pytest
+
 from raygeo.geo.algo.minkowski import (
     calculate_input_scale,
     convolve_point_sequences,
