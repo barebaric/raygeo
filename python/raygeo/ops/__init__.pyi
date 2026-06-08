@@ -855,6 +855,16 @@ class Ops:
         :param tab_power: Power level inside tab regions (0.0–1.0).
         :param original_power: Normal cutting power to restore after the tab.
         """
+    def merge_overlapping_lines(self, tolerance: builtins.float) -> None:
+        r"""
+        Merge overlapping line segments across all paths.
+        
+        Detects line segments that are collinear and overlapping and
+        replaces the covered sub-segments with travel moves to avoid
+        cutting the same line twice.
+        
+        :param tolerance: Maximum distance for considering lines collinear.
+        """
     def optimize_travel(self, allow_flip: builtins.bool = True, preserve_first: builtins.bool = False, preserve_order: typing.Sequence[builtins.str] = [], progress_cb: typing.Optional[typing.Any] = None) -> None:
         r"""
         Optimize travel distance by reordering segments.

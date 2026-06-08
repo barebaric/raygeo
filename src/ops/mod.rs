@@ -11,6 +11,7 @@ pub mod flip;
 pub mod group;
 pub(crate) mod layer;
 pub mod linearize;
+pub(crate) mod merge_lines;
 pub mod optimize;
 pub mod raster;
 pub mod state;

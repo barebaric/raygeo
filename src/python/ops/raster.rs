@@ -104,6 +104,16 @@ impl PyScanLine {
     }
 }
 
+#[gen_stub_pyfunction(
+    python = r#"
+    import numpy
+
+    def find_mask_bounding_box(
+        mask: numpy.ndarray,
+    ) -> tuple[int, int, int, int] | None: ...
+"#,
+    module = "raygeo.ops.raster"
+)]
 #[pyfunction(name = "find_mask_bounding_box")]
 fn py_find_mask_bounding_box(
     py: Python<'_>,
@@ -123,6 +133,16 @@ fn py_find_mask_bounding_box(
     Ok(find_mask_bounding_box(&flat_list, height, width))
 }
 
+#[gen_stub_pyfunction(
+    python = r#"
+    import numpy
+
+    def find_segments(
+        values: numpy.ndarray,
+    ) -> list[tuple[int, int]]: ...
+"#,
+    module = "raygeo.ops.raster"
+)]
 #[pyfunction(name = "find_segments")]
 fn py_find_segments(
     values: &Bound<'_, PyAny>,
@@ -131,6 +151,17 @@ fn py_find_segments(
     Ok(scan::find_segments(&list))
 }
 
+#[gen_stub_pyfunction(
+    python = r#"
+    def line_pixels(
+        start: tuple[float, float],
+        end: tuple[float, float],
+        width: int,
+        height: int,
+    ) -> list[tuple[int, int]]: ...
+"#,
+    module = "raygeo.ops.raster"
+)]
 #[pyfunction(name = "line_pixels")]
 fn py_line_pixels(
     start: (f64, f64),
@@ -141,6 +172,23 @@ fn py_line_pixels(
     line_pixels(start, end, width, height)
 }
 
+#[gen_stub_pyfunction(
+    python = r#"
+    from raygeo.ops.raster import ScanLine
+
+    def generate_scan_lines(
+        bbox: tuple[int, int, int, int],
+        image_size: tuple[int, int],
+        pixels_per_mm: tuple[float, float],
+        line_interval_mm: float,
+        direction_degrees: float = 0.0,
+        offset_x_mm: float = 0.0,
+        offset_y_mm: float = 0.0,
+        global_center_mm: tuple[float, float] | None = None,
+    ) -> list[ScanLine]: ...
+"#,
+    module = "raygeo.ops.raster"
+)]
 #[pyfunction(name = "generate_scan_lines")]
 #[pyo3(signature = (bbox, image_size, pixels_per_mm, line_interval_mm, direction_degrees=0.0, offset_x_mm=0.0, offset_y_mm=0.0, global_center_mm=None))]
 #[allow(clippy::too_many_arguments)]
@@ -176,6 +224,19 @@ fn py_generate_scan_lines(
         .collect()
 }
 
+#[gen_stub_pyfunction(
+    python = r#"
+    def generate_horizontal_scan_positions(
+        y_min_px: int,
+        y_max_px: int,
+        height_px: int,
+        pixels_per_mm: tuple[float, float],
+        line_interval_mm: float,
+        offset_y_mm: float,
+    ) -> tuple[list[float], list[float]]: ...
+"#,
+    module = "raygeo.ops.raster"
+)]
 #[pyfunction(name = "generate_horizontal_scan_positions")]
 fn py_generate_horizontal_scan_positions(
     y_min_px: i32,
@@ -195,6 +256,18 @@ fn py_generate_horizontal_scan_positions(
     )
 }
 
+#[gen_stub_pyfunction(
+    python = r#"
+    import numpy
+    import numpy.typing
+
+    def resample_rows(
+        image: numpy.typing.NDArray[numpy.uint8],
+        y_coords_px: numpy.ndarray,
+    ) -> numpy.typing.NDArray[numpy.uint8]: ...
+"#,
+    module = "raygeo.ops.raster"
+)]
 #[pyfunction(name = "resample_rows")]
 fn py_resample_rows(
     py: Python<'_>,
@@ -236,6 +309,19 @@ fn extract_flat_u8(
     Ok((flat, shape.0, shape.1))
 }
 
+#[gen_stub_pyfunction(
+    python = r#"
+    import numpy
+
+    def downsample_power_values(
+        power_values: numpy.ndarray,
+        start_mm: tuple[float, float],
+        end_mm: tuple[float, float],
+        sample_interval_mm: float,
+    ) -> tuple[numpy.ndarray, numpy.ndarray, numpy.ndarray]: ...
+"#,
+    module = "raygeo.ops.raster"
+)]
 #[pyfunction(name = "downsample_power_values")]
 fn py_downsample_power_values(
     power_values: &Bound<'_, PyAny>,
@@ -248,7 +334,8 @@ fn py_downsample_power_values(
     Ok((ds.power, ds.x_mm, ds.y_mm))
 }
 
-#[gen_stub_pyfunction(python = r#"
+#[gen_stub_pyfunction(
+    python = r#"
     import numpy
     import numpy.typing
     from raygeo.ops import Ops
@@ -266,8 +353,10 @@ fn py_downsample_power_values(
         step_power: float = 1.0,
         num_power_levels: int = 256,
         angle: float = 0.0,
-    ) -> Ops: ...
-"#)]
+    ) -> ops.Ops: ...
+"#,
+    module = "raygeo.ops.raster"
+)]
 #[pyfunction(name = "rasterize_power_modulation")]
 #[pyo3(signature = (gray_image, alpha, pixels_per_mm, offset_x_mm, offset_y_mm, line_interval_mm, sample_interval_mm, min_power=0.0, max_power=1.0, step_power=1.0, num_power_levels=256, angle=0.0))]
 #[allow(clippy::too_many_arguments)]
@@ -309,7 +398,8 @@ fn py_rasterize_power_modulation(
     Ok(PyOps { inner: ops })
 }
 
-#[gen_stub_pyfunction(python = r#"
+#[gen_stub_pyfunction(
+    python = r#"
     import numpy
     import numpy.typing
     from raygeo.ops import Ops
@@ -322,8 +412,10 @@ fn py_rasterize_power_modulation(
         line_interval_mm: float,
         step_power: float = 1.0,
         angle: float = 0.0,
-    ) -> Ops: ...
-"#)]
+    ) -> ops.Ops: ...
+"#,
+    module = "raygeo.ops.raster"
+)]
 #[pyfunction(name = "rasterize_mask_scan")]
 #[pyo3(signature = (mask, pixels_per_mm, offset_x_mm, offset_y_mm, line_interval_mm, step_power=1.0, angle=0.0))]
 #[allow(clippy::too_many_arguments)]
@@ -352,7 +444,8 @@ fn py_rasterize_mask_scan(
     Ok(PyOps { inner: ops })
 }
 
-#[gen_stub_pyfunction(python = r#"
+#[gen_stub_pyfunction(
+    python = r#"
     import numpy
     import numpy.typing
     from raygeo.ops import Ops
@@ -365,8 +458,10 @@ fn py_rasterize_mask_scan(
         line_interval_mm: float,
         z: float = 0.0,
         angle: float = 0.0,
-    ) -> Ops: ...
-"#)]
+    ) -> ops.Ops: ...
+"#,
+    module = "raygeo.ops.raster"
+)]
 #[pyfunction(name = "rasterize_mask_lines")]
 #[pyo3(signature = (mask, pixels_per_mm, offset_x_mm, offset_y_mm, line_interval_mm, z=0.0, angle=0.0))]
 #[allow(clippy::too_many_arguments)]
@@ -395,7 +490,8 @@ fn py_rasterize_mask_lines(
     Ok(PyOps { inner: ops })
 }
 
-#[gen_stub_pyfunction(python = r#"
+#[gen_stub_pyfunction(
+    python = r#"
     import numpy
     import numpy.typing
     from raygeo.ops import Ops
@@ -410,8 +506,10 @@ fn py_rasterize_mask_lines(
         z_step_down: float,
         angle: float = 0.0,
         angle_increment: float = 0.0,
-    ) -> Ops: ...
-"#)]
+    ) -> ops.Ops: ...
+"#,
+    module = "raygeo.ops.raster"
+)]
 #[pyfunction(name = "rasterize_multi_pass")]
 #[pyo3(signature = (gray_image, pixels_per_mm, offset_x_mm, offset_y_mm, line_interval_mm, num_depth_levels, z_step_down, angle=0.0, angle_increment=0.0))]
 #[allow(clippy::too_many_arguments)]

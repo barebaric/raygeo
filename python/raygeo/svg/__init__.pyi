@@ -10,7 +10,7 @@ __all__ = [
     "svg_string_to_geometries",
 ]
 
-def parse_svg_path_data(path_data: str, transform: numpy.typing.NDArray[numpy.float64] | None = None, scale_x: float = 1, scale_y: float = 1) -> list[Geometry]:
+def parse_svg_path_data(path_data: str, transform: numpy.typing.NDArray[numpy.float64] | None = None, scale_x: float = 1, scale_y: float = 1) -> list[raygeo.Geometry]:
     r"""
     Parse an SVG path d attribute into a list of Geometry objects.
     
@@ -34,7 +34,7 @@ def parse_svg_transform(transform_str: str) -> numpy.typing.NDArray[numpy.float6
     :returns: 3x3 affine transformation matrix as numpy array.
     """
 
-def svg_string_to_geometries(svg_str: str, scale_x: float = 1, scale_y: float = 1) -> list[Geometry]:
+def svg_string_to_geometries(svg_str: str, scale_x: float = 1, scale_y: float = 1) -> list[raygeo.Geometry]:
     r"""
     Parse an SVG string and extract all path elements as Geometry objects.
     

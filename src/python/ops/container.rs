@@ -1975,6 +1975,20 @@ impl PyOps {
         );
     }
 
+    /// Merge overlapping line segments across all paths.
+    ///
+    /// Detects line segments that are collinear and overlapping and
+    /// replaces the covered sub-segments with travel moves to avoid
+    /// cutting the same line twice.
+    ///
+    /// :param tolerance: Maximum distance for considering lines collinear.
+    fn merge_overlapping_lines(&mut self, tolerance: f64) {
+        crate::ops::merge_lines::merge_overlapping_lines(
+            &mut self.inner,
+            tolerance,
+        );
+    }
+
     /// Optimize travel distance by reordering segments.
     ///
     /// Performs two-level optimization: workpiece-level reordering

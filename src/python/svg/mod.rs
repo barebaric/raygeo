@@ -15,7 +15,7 @@ use crate::svg;
         transform: numpy.typing.NDArray[numpy.float64] | None = None,
         scale_x: float = 1.0,
         scale_y: float = 1.0,
-    ) -> list[Geometry]:
+    ) -> list[raygeo.Geometry]:
         """Parse an SVG path d attribute into a list of Geometry objects.
 
         Supports M/m, L/l, H/h, V/v, C/c, Z/z commands.
@@ -104,7 +104,7 @@ fn py_parse_svg_transform(
         svg_str: str,
         scale_x: float = 1.0,
         scale_y: float = 1.0,
-    ) -> list[Geometry]:
+    ) -> list[raygeo.Geometry]:
         """Parse an SVG string and extract all path elements as Geometry objects.
 
         Recursively traverses the SVG XML tree, extracting d attributes
