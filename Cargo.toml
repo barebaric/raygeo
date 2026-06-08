@@ -1,6 +1,6 @@
 [package]
 name = "raygeo"
-version = "0.6.1"
+version = "0.0.0"
 edition = "2021"
 description = "2D/3D geometry library for CAD/CAM applications with Python bindings"
 
