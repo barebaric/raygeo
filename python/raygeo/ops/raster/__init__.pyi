@@ -25,6 +25,8 @@ __all__ = [
 class ScanMode:
     Segmented: ScanMode
     FullSweep: ScanMode
+    @property
+    def name(self) -> builtins.str: ...
 
 @typing.final
 class ScanLine:

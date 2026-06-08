@@ -2,6 +2,7 @@ use pyo3::prelude::*;
 use pyo3_stub_gen::derive::{
     gen_stub_pyclass, gen_stub_pyfunction, gen_stub_pymethods,
 };
+use pyo3_stub_gen::{PyStubType, TypeInfo};
 
 use crate::ops::raster::rasterize::{
     rasterize_mask_lines, rasterize_mask_scan, rasterize_multi_pass,
@@ -21,11 +22,42 @@ pub enum PyScanMode {
     FullSweep,
 }
 
+impl PyStubType for PyScanMode {
+    fn type_output() -> TypeInfo {
+        TypeInfo::with_module(
+            "raygeo.ops.raster.ScanMode",
+            "raygeo.ops.raster".into(),
+        )
+    }
+}
+
 impl From<PyScanMode> for RustScanMode {
     fn from(mode: PyScanMode) -> Self {
         match mode {
             PyScanMode::Segmented => RustScanMode::Segmented,
             PyScanMode::FullSweep => RustScanMode::FullSweep,
+        }
+    }
+}
+
+#[pymethods]
+impl PyScanMode {
+    fn __repr__(&self) -> String {
+        match self {
+            PyScanMode::Segmented => "ScanMode.Segmented".to_string(),
+            PyScanMode::FullSweep => "ScanMode.FullSweep".to_string(),
+        }
+    }
+
+    fn __str__(&self) -> String {
+        self.__repr__()
+    }
+
+    #[getter]
+    fn name(&self) -> &str {
+        match self {
+            PyScanMode::Segmented => "Segmented",
+            PyScanMode::FullSweep => "FullSweep",
         }
     }
 }
