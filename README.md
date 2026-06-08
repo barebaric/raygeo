@@ -248,24 +248,50 @@ with the [RayForge Developer Docs](https://rayforge.org/docs/developer/raygeo-ap
 
 ### Prerequisites
 
-- Rust toolchain (via [rustup](https://rustup.rs))
-- Python 3.10+ with [maturin](https://www.maturin.rs) and `pytest`:
+- [Rust toolchain](https://rustup.rs) (latest stable)
+- Python 3.10+
+- [maturin](https://www.maturin.rs) (`pip install maturin`)
+- Node.js (only needed for `make lint-python`, which runs pyright via npx)
 
-```
+### Quick Start
+
+```bash
+# Create and activate a virtual environment (Unix)
+python -m venv .venv
+source .venv/bin/activate   # on Windows: .venv\Scripts\activate
+
+# Install build tool and build the extension
 pip install maturin pytest
+make dev                   # builds Rust extension and installs into venv
+
+# Run tests
+make test
+
+# Full check (lint + test)
+make check
 ```
 
-### Build and Test
+### Available Make Targets
 
-```
-maturin develop
-pytest tests/ -v
-```
+| Target           | Description                              |
+| ---------------- | ---------------------------------------- |
+| `make dev`       | Build and install into the active venv   |
+| `make build`     | Build release wheel to `dist/`           |
+| `make test`      | Run pytest                               |
+| `make lint`      | Lint Rust + Python (including pyright)   |
+| `make format`    | Auto-format Rust + Python               |
+| `make check`     | Lint + test                              |
+| `make stubs`     | Regenerate `.pyi` type stubs             |
+| `make visual`    | Launch Streamlit visual test playground  |
 
-### Running Rust Tests
+### Visual Testing
 
-```
-cargo test
+The `make visual` target launches an interactive Streamlit app for
+exploring geometry operations visually. Install the optional deps first:
+
+```bash
+pip install -e ".[visual]"
+make visual
 ```
 
 ## License

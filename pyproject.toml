@@ -26,6 +26,10 @@ test = [
     "pytest",
     "pytest-mock",
 ]
+visual = [
+    "streamlit",
+    "matplotlib",
+]
 
 [tool.maturin]
 module-name = "raygeo"

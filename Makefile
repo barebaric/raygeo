@@ -1,4 +1,4 @@
-.PHONY: build dev stubs format format-rust format-python lint lint-rust lint-python test check
+.PHONY: build dev stubs format format-rust format-python lint lint-rust lint-python test check visual
 
 build:
 	maturin build --release --out dist
@@ -33,3 +33,6 @@ test:
 	pytest -v
 
 check: lint test
+
+visual:
+	streamlit run tools/visual_test.py
