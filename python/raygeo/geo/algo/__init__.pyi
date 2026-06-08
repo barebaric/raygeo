@@ -27,6 +27,7 @@ configurable corner-angle thresholds to preserve sharp features.
 from . import analysis
 from . import clipping
 from . import fitting
+from . import hull
 from . import minkowski
 from . import overcut
 from . import simplify
@@ -35,6 +36,7 @@ __all__ = [
     "analysis",
     "clipping",
     "fitting",
+    "hull",
     "minkowski",
     "overcut",
     "simplify",

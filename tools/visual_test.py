@@ -1255,6 +1255,126 @@ def page_lead_in_out():
     c3.metric("Lead-out", f"{lead_out:.1f} mm")
 
 
+def page_concave_hull():
+    st.header("Concave Hull (Shrink-Wrap)")
+
+    from raygeo.geo.algo import hull
+
+    preset = st.selectbox(
+        "Shape",
+        [
+            "Two squares",
+            "Hourglass",
+            "L-shape",
+            "Circle",
+            "Three dots",
+        ],
+        key="ch_shape",
+    )
+
+    gravity = st.slider(
+        "Gravity", 0.0, 1.0, 0.1, 0.05, key="ch_grav"
+    )
+
+    height, width = 200, 200
+    img = np.zeros((height, width), dtype=bool)
+
+    if preset == "Two squares":
+        img[30:70, 30:70] = True
+        img[130:170, 130:170] = True
+    elif preset == "Hourglass":
+        r = 8
+        _fill_rounded_rect(img, (60, 30), (140, 70), r)
+        _fill_rounded_rect(img, (80, 110), (120, 150), r)
+        _fill_rounded_rect(img, (60, 110), (140, 170), r)
+    elif preset == "L-shape":
+        img[30:170, 30:70] = True
+        img[30:100, 70:170] = True
+    elif preset == "Circle":
+        yy, xx = np.ogrid[:height, :width]
+        mask = (xx - 100) ** 2 + (yy - 100) ** 2 <= 2500
+        img[mask] = True
+    elif preset == "Three dots":
+        for cy, cx in [(50, 50), (50, 150), (150, 100)]:
+            yy, xx = np.ogrid[:height, :width]
+            mask = (xx - cx) ** 2 + (yy - cy) ** 2 <= 400
+            img[mask] = True
+
+    convex_geo = hull.get_enclosing_hull(img)
+    concave_geo = hull.get_concave_hull(img, gravity=gravity)
+    per_component = hull.get_hulls_from_image(img)
+
+    fig, ax = plt.subplots(figsize=(8, 8))
+
+    ax.imshow(
+        img,
+        origin="upper",
+        cmap="Blues",
+        alpha=0.3,
+        extent=[0, width, height, 0],
+    )
+
+    if convex_geo is not None:
+        _plot_geometry(
+            ax,
+            convex_geo,
+            color="tomato",
+            label="Convex hull",
+            linewidth=1.5,
+        )
+
+    if concave_geo is not None:
+        _plot_geometry(
+            ax,
+            concave_geo,
+            color="forestgreen",
+            label="Concave hull",
+            linewidth=2,
+        )
+
+    for i, g in enumerate(per_component):
+        _plot_geometry(
+            ax,
+            g,
+            color="dodgerblue",
+            label="Per-component" if i == 0 else None,
+            linewidth=1,
+            show_points=True,
+        )
+
+    ax.set_aspect("equal")
+    ax.grid(True, alpha=0.3)
+    ax.legend(fontsize=10)
+    fig.tight_layout()
+    st.pyplot(fig)
+
+    c1, c2, c3 = st.columns(3)
+    c1.metric("Gravity", f"{gravity:.2f}")
+    if convex_geo is not None and concave_geo is not None:
+        c2.metric("Convex area", f"{convex_geo.area():.1f}")
+        c3.metric("Concave area", f"{concave_geo.area():.1f}")
+    c3.metric("Components", f"{len(per_component)}")
+
+
+def _fill_rounded_rect(img, pt1, pt2, r):
+    x1, y1 = pt1
+    x2, y2 = pt2
+    h, w = img.shape
+    img[max(0, y1 + r) : min(h, y2 - r), max(0, x1) : min(w, x2)] = True
+    img[max(0, y1) : min(h, y2), max(0, x1 + r) : min(w, x2 - r)] = True
+    for cy, cx in [
+        (y1 + r, x1 + r),
+        (y1 + r, x2 - r),
+        (y2 - r, x1 + r),
+        (y2 - r, x2 - r),
+    ]:
+        yy, xx = np.ogrid[-r : r + 1, -r : r + 1]
+        mask = xx**2 + yy**2 <= r**2
+        ys = slice(max(0, cy - r), min(h, cy + r + 1))
+        xs = slice(max(0, cx - r), min(w, cx + r + 1))
+        img[ys, xs][mask[: min(h, cy + r + 1) - max(0, cy - r), : min(w, cx + r + 1) - max(0, cx - r)]] = True
+
+
 st.set_page_config(layout="wide", page_title="raygeo visual test")
 st.title("raygeo Visual Test")
 
@@ -1270,6 +1390,7 @@ page = st.sidebar.radio(
         "Merge Lines",
         "Overscan",
         "Lead-In/Out",
+        "Concave Hull",
     ],
 )
 
@@ -1291,3 +1412,5 @@ elif page == "Overscan":
     page_overscan()
 elif page == "Lead-In/Out":
     page_lead_in_out()
+elif page == "Concave Hull":
+    page_concave_hull()
