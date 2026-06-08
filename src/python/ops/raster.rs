@@ -1,5 +1,7 @@
 use pyo3::prelude::*;
-use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pyfunction, gen_stub_pymethods};
+use pyo3_stub_gen::derive::{
+    gen_stub_pyclass, gen_stub_pyfunction, gen_stub_pymethods,
+};
 
 use crate::ops::raster::rasterize::{
     rasterize_mask_lines, rasterize_mask_scan, rasterize_multi_pass,
@@ -246,8 +248,7 @@ fn py_downsample_power_values(
     Ok((ds.power, ds.x_mm, ds.y_mm))
 }
 
-#[gen_stub_pyfunction(
-    python = r#"
+#[gen_stub_pyfunction(python = r#"
     import numpy
     import numpy.typing
     from raygeo.ops import Ops
@@ -266,8 +267,7 @@ fn py_downsample_power_values(
         num_power_levels: int = 256,
         angle: float = 0.0,
     ) -> Ops: ...
-"#
-)]
+"#)]
 #[pyfunction(name = "rasterize_power_modulation")]
 #[pyo3(signature = (gray_image, alpha, pixels_per_mm, offset_x_mm, offset_y_mm, line_interval_mm, sample_interval_mm, min_power=0.0, max_power=1.0, step_power=1.0, num_power_levels=256, angle=0.0))]
 #[allow(clippy::too_many_arguments)]
@@ -309,8 +309,7 @@ fn py_rasterize_power_modulation(
     Ok(PyOps { inner: ops })
 }
 
-#[gen_stub_pyfunction(
-    python = r#"
+#[gen_stub_pyfunction(python = r#"
     import numpy
     import numpy.typing
     from raygeo.ops import Ops
@@ -324,8 +323,7 @@ fn py_rasterize_power_modulation(
         step_power: float = 1.0,
         angle: float = 0.0,
     ) -> Ops: ...
-"#
-)]
+"#)]
 #[pyfunction(name = "rasterize_mask_scan")]
 #[pyo3(signature = (mask, pixels_per_mm, offset_x_mm, offset_y_mm, line_interval_mm, step_power=1.0, angle=0.0))]
 #[allow(clippy::too_many_arguments)]
@@ -354,8 +352,7 @@ fn py_rasterize_mask_scan(
     Ok(PyOps { inner: ops })
 }
 
-#[gen_stub_pyfunction(
-    python = r#"
+#[gen_stub_pyfunction(python = r#"
     import numpy
     import numpy.typing
     from raygeo.ops import Ops
@@ -369,8 +366,7 @@ fn py_rasterize_mask_scan(
         z: float = 0.0,
         angle: float = 0.0,
     ) -> Ops: ...
-"#
-)]
+"#)]
 #[pyfunction(name = "rasterize_mask_lines")]
 #[pyo3(signature = (mask, pixels_per_mm, offset_x_mm, offset_y_mm, line_interval_mm, z=0.0, angle=0.0))]
 #[allow(clippy::too_many_arguments)]
@@ -399,8 +395,7 @@ fn py_rasterize_mask_lines(
     Ok(PyOps { inner: ops })
 }
 
-#[gen_stub_pyfunction(
-    python = r#"
+#[gen_stub_pyfunction(python = r#"
     import numpy
     import numpy.typing
     from raygeo.ops import Ops
@@ -416,8 +411,7 @@ fn py_rasterize_mask_lines(
         angle: float = 0.0,
         angle_increment: float = 0.0,
     ) -> Ops: ...
-"#
-)]
+"#)]
 #[pyfunction(name = "rasterize_multi_pass")]
 #[pyo3(signature = (gray_image, pixels_per_mm, offset_x_mm, offset_y_mm, line_interval_mm, num_depth_levels, z_step_down, angle=0.0, angle_increment=0.0))]
 #[allow(clippy::too_many_arguments)]

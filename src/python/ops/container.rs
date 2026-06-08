@@ -1933,6 +1933,48 @@ impl PyOps {
         self.inner.time_params
     }
 
+    /// Apply holding tabs as gaps in the toolpath.
+    ///
+    /// For each clip point, the closest subpath is found and a gap of
+    /// the specified width is cut at the nearest point on the path.
+    /// Only ``VECTOR_OUTLINE`` sections are modified.
+    ///
+    /// :param clips: List of ``(x, y, width)`` tuples defining tab positions.
+    fn apply_tab_gaps(&mut self, clips: Vec<(f64, f64, f64)>) {
+        let clip_points: Vec<crate::ops::tabs::ClipPoint> = clips
+            .into_iter()
+            .map(|(x, y, width)| crate::ops::tabs::ClipPoint { x, y, width })
+            .collect();
+        crate::ops::tabs::apply_tab_gaps(&mut self.inner, &clip_points);
+    }
+
+    /// Apply holding tabs by reducing laser power in tab regions.
+    ///
+    /// Instead of cutting a gap, the laser power is lowered in the tab
+    /// area so the material stays connected but weaker. Only
+    /// ``VECTOR_OUTLINE`` sections are modified.
+    ///
+    /// :param clips: List of ``(x, y, width)`` tuples defining tab positions.
+    /// :param tab_power: Power level inside tab regions (0.0–1.0).
+    /// :param original_power: Normal cutting power to restore after the tab.
+    fn apply_tab_power(
+        &mut self,
+        clips: Vec<(f64, f64, f64)>,
+        tab_power: f64,
+        original_power: f64,
+    ) {
+        let clip_points: Vec<crate::ops::tabs::ClipPoint> = clips
+            .into_iter()
+            .map(|(x, y, width)| crate::ops::tabs::ClipPoint { x, y, width })
+            .collect();
+        crate::ops::tabs::apply_tab_power(
+            &mut self.inner,
+            &clip_points,
+            tab_power,
+            original_power,
+        );
+    }
+
     /// Optimize travel distance by reordering segments.
     ///
     /// Performs two-level optimization: workpiece-level reordering

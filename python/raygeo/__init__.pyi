@@ -38,6 +38,8 @@ Examples:
     100.0
 """
 
+import numpy
+import numpy.typing
 from raygeo.geo import Geometry
 from raygeo.ops import Ops
 from . import geo
@@ -50,6 +52,18 @@ __all__ = [
     "geo",
     "image",
     "ops",
+    "rasterize_mask_lines",
+    "rasterize_mask_scan",
+    "rasterize_multi_pass",
+    "rasterize_power_modulation",
     "svg",
 ]
+
+def rasterize_mask_lines(mask: numpy.typing.NDArray[numpy.uint8], pixels_per_mm: tuple[float, float], offset_x_mm: float, offset_y_mm: float, line_interval_mm: float, z: float = 0, angle: float = 0) -> Ops: ...
+
+def rasterize_mask_scan(mask: numpy.typing.NDArray[numpy.uint8], pixels_per_mm: tuple[float, float], offset_x_mm: float, offset_y_mm: float, line_interval_mm: float, step_power: float = 1, angle: float = 0) -> Ops: ...
+
+def rasterize_multi_pass(gray_image: numpy.typing.NDArray[numpy.uint8], pixels_per_mm: tuple[float, float], offset_x_mm: float, offset_y_mm: float, line_interval_mm: float, num_depth_levels: int, z_step_down: float, angle: float = 0, angle_increment: float = 0) -> Ops: ...
+
+def rasterize_power_modulation(gray_image: numpy.typing.NDArray[numpy.uint8], alpha: numpy.typing.NDArray[numpy.uint8], pixels_per_mm: tuple[float, float], offset_x_mm: float, offset_y_mm: float, line_interval_mm: float, sample_interval_mm: float, min_power: float = 0, max_power: float = 1, step_power: float = 1, num_power_levels: int = 256, angle: float = 0) -> Ops: ...
 

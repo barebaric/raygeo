@@ -833,6 +833,28 @@ class Ops:
         
         :param arrays: Dictionary as produced by to_numpy_arrays.
         """
+    def apply_tab_gaps(self, clips: typing.Sequence[tuple[builtins.float, builtins.float, builtins.float]]) -> None:
+        r"""
+        Apply holding tabs as gaps in the toolpath.
+        
+        For each clip point, the closest subpath is found and a gap of
+        the specified width is cut at the nearest point on the path.
+        Only ``VECTOR_OUTLINE`` sections are modified.
+        
+        :param clips: List of ``(x, y, width)`` tuples defining tab positions.
+        """
+    def apply_tab_power(self, clips: typing.Sequence[tuple[builtins.float, builtins.float, builtins.float]], tab_power: builtins.float, original_power: builtins.float) -> None:
+        r"""
+        Apply holding tabs by reducing laser power in tab regions.
+        
+        Instead of cutting a gap, the laser power is lowered in the tab
+        area so the material stays connected but weaker. Only
+        ``VECTOR_OUTLINE`` sections are modified.
+        
+        :param clips: List of ``(x, y, width)`` tuples defining tab positions.
+        :param tab_power: Power level inside tab regions (0.0–1.0).
+        :param original_power: Normal cutting power to restore after the tab.
+        """
     def optimize_travel(self, allow_flip: builtins.bool = True, preserve_first: builtins.bool = False, preserve_order: typing.Sequence[builtins.str] = [], progress_cb: typing.Optional[typing.Any] = None) -> None:
         r"""
         Optimize travel distance by reordering segments.

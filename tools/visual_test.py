@@ -517,6 +517,279 @@ def page_svg():
     st.pyplot(fig)
 
 
+def _plot_ops(
+    axes,
+    ops,
+    color="steelblue",
+    label=None,
+    show_points=False,
+    linewidth=1.5,
+    show_travel=False,
+    show_power=False,
+):
+    """Plot an Ops sequence, drawing lines/arcs/beziers and optionally
+    showing travel moves and power state."""
+    from raygeo.ops.types import CommandType
+
+    ops.preload_state()
+    last_pt = (0.0, 0.0, 0.0)
+    seg_label = label
+    draw_color = color
+    for i in range(ops.len()):
+        ct = ops.command_type(i)
+        if ct == CommandType.SET_POWER:
+            continue
+        if ct == CommandType.MOVE_TO:
+            ep = ops.endpoint(i)
+            if show_travel and last_pt != ep:
+                axes.plot(
+                    [last_pt[0], ep[0]],
+                    [last_pt[1], ep[1]],
+                    color="gray",
+                    linewidth=0.5,
+                    linestyle=":",
+                )
+            last_pt = ep
+            if show_points:
+                axes.plot(ep[0], ep[1], "o", color=draw_color, markersize=3)
+            continue
+        if ct not in (
+            CommandType.LINE_TO,
+            CommandType.BEZIER_TO,
+            CommandType.ARC_TO,
+        ):
+            continue
+        if show_power:
+            st = ops.preloaded_state(i)
+            if st is not None and st.power is not None:
+                draw_color = plt.cm.RdYlGn(st.power)
+            else:
+                draw_color = color
+        if ct == CommandType.LINE_TO:
+            ep = ops.endpoint(i)
+            axes.plot(
+                [last_pt[0], ep[0]],
+                [last_pt[1], ep[1]],
+                color=draw_color,
+                linewidth=linewidth,
+                label=seg_label,
+            )
+            seg_label = None
+            last_pt = ep
+            if show_points:
+                axes.plot(ep[0], ep[1], "o", color=draw_color, markersize=3)
+            continue
+        if ct == CommandType.BEZIER_TO:
+            ep = ops.endpoint(i)
+            info = ops.inspect(i)
+            c1 = info.control1
+            c2 = info.control2
+            if c1 and c2:
+                ts = np.linspace(0, 1, 64)
+                bx = (
+                    (1 - ts) ** 3 * last_pt[0]
+                    + 3 * (1 - ts) ** 2 * ts * c1[0]
+                    + 3 * (1 - ts) * ts**2 * c2[0]
+                    + ts**3 * ep[0]
+                )
+                by = (
+                    (1 - ts) ** 3 * last_pt[1]
+                    + 3 * (1 - ts) ** 2 * ts * c1[1]
+                    + 3 * (1 - ts) * ts**2 * c2[1]
+                    + ts**3 * ep[1]
+                )
+                axes.plot(
+                    bx,
+                    by,
+                    color=draw_color,
+                    linewidth=linewidth,
+                    label=seg_label,
+                )
+                seg_label = None
+            last_pt = ep
+            continue
+        if ct == CommandType.ARC_TO:
+            ep = ops.endpoint(i)
+            info = ops.inspect(i)
+            co = info.center_offset
+            cw = info.clockwise
+            if co:
+                cx = last_pt[0] + co[0]
+                cy = last_pt[1] + co[1]
+                r = math.sqrt(co[0] ** 2 + co[1] ** 2)
+                a_start = math.atan2(last_pt[1] - cy, last_pt[0] - cx)
+                a_end = math.atan2(ep[1] - cy, ep[0] - cx)
+                angles = _arc_angles(a_start, a_end, cw)
+                ax_pts = [cx + r * math.cos(a) for a in angles]
+                ay_pts = [cy + r * math.sin(a) for a in angles]
+                axes.plot(
+                    ax_pts,
+                    ay_pts,
+                    color=draw_color,
+                    linewidth=linewidth,
+                    label=seg_label,
+                )
+                seg_label = None
+            last_pt = ep
+            continue
+
+
+def page_tabs():
+    st.header("Tab Operations")
+
+    from raygeo.ops import Ops
+    from raygeo.ops.types import SectionType
+
+    c1, c2 = st.columns(2)
+    with c1:
+        shape = st.selectbox(
+            "Shape", ["Rectangle", "Circle", "Rounded Rect"], key="tab_shape"
+        )
+    with c2:
+        mode = st.selectbox("Mode", ["Gap", "Power"], key="tab_mode")
+
+    cx, cy = 10, 10
+    if shape == "Rectangle":
+        w = st.number_input("Width", 2.0, 100.0, 20.0, key="tab_w")
+        h = st.number_input("Height", 2.0, 100.0, 20.0, key="tab_h")
+        ops = Ops()
+        ops.ops_section_start(SectionType.VECTOR_OUTLINE, "wp1")
+        ops.set_power(1.0)
+        ops.move_to(cx - w / 2, cy - h / 2, 0)
+        ops.line_to(cx + w / 2, cy - h / 2, 0)
+        ops.line_to(cx + w / 2, cy + h / 2, 0)
+        ops.line_to(cx - w / 2, cy + h / 2, 0)
+        ops.close_path()
+        ops.ops_section_end(SectionType.VECTOR_OUTLINE)
+    elif shape == "Circle":
+        r = st.number_input("Radius", 1.0, 50.0, 10.0, key="tab_r")
+        n = st.number_input("Segments", 8, 128, 64, key="tab_n")
+        ops = Ops()
+        ops.ops_section_start(SectionType.VECTOR_OUTLINE, "wp1")
+        ops.set_power(1.0)
+        ops.move_to(cx + r, cy, 0)
+        for i in range(1, n + 1):
+            a = 2 * math.pi * i / n
+            ops.line_to(cx + r * math.cos(a), cy + r * math.sin(a), 0)
+        ops.ops_section_end(SectionType.VECTOR_OUTLINE)
+    else:
+        w = st.number_input("Width", 2.0, 100.0, 20.0, key="tab_w2")
+        h = st.number_input("Height", 2.0, 100.0, 20.0, key="tab_h2")
+        d = min(w, h) * 0.2
+        k = 0.5522847498
+        kd = k * d
+        x0, y0 = cx - w / 2, cy - h / 2
+        ops = Ops()
+        ops.ops_section_start(SectionType.VECTOR_OUTLINE, "wp1")
+        ops.set_power(1.0)
+        ops.move_to(x0 + d, y0, 0)
+        ops.line_to(x0 + w - d, y0, 0)
+        ops.bezier_to(
+            (x0 + w - d + kd, y0, 0),
+            (x0 + w, y0 + d - kd, 0),
+            (x0 + w, y0 + d, 0),
+        )
+        ops.line_to(x0 + w, y0 + h - d, 0)
+        ops.bezier_to(
+            (x0 + w, y0 + h - d + kd, 0),
+            (x0 + w - d + kd, y0 + h, 0),
+            (x0 + w - d, y0 + h, 0),
+        )
+        ops.line_to(x0 + d, y0 + h, 0)
+        ops.bezier_to(
+            (x0 + d - kd, y0 + h, 0),
+            (x0, y0 + h - d + kd, 0),
+            (x0, y0 + h - d, 0),
+        )
+        ops.line_to(x0, y0 + d, 0)
+        ops.bezier_to(
+            (x0, y0 + d - kd, 0),
+            (x0 + d - kd, y0, 0),
+            (x0 + d, y0, 0),
+        )
+        ops.ops_section_end(SectionType.VECTOR_OUTLINE)
+
+    orig_ops = ops
+
+    st.subheader("Tab Positions")
+    n_tabs = st.number_input("Number of tabs", 0, 10, 2, key="tab_count")
+    tab_power = st.slider("Tab power", 0.0, 1.0, 0.1, key="tab_pwr")
+    tab_width = st.number_input("Tab width (mm)", 0.1, 20.0, 2.0, key="tab_tw")
+
+    geo = orig_ops.to_geometry()
+    geo_data = geo.data
+    total_pts = len(geo_data) if geo_data is not None else 0
+
+    clips = []
+    if total_pts > 1:
+        seg_dists = []
+        for j in range(1, total_pts):
+            dx = geo_data[j, 1] - geo_data[j - 1, 1]
+            dy = geo_data[j, 2] - geo_data[j - 1, 2]
+            seg_dists.append(math.sqrt(dx * dx + dy * dy))
+        total_dist = sum(seg_dists)
+
+        for t in range(n_tabs):
+            target = total_dist * (t + 1) / (n_tabs + 1)
+            accum = 0.0
+            for seg_i, sd in enumerate(seg_dists):
+                if accum + sd >= target - 1e-9:
+                    frac = (target - accum) / sd if sd > 1e-9 else 0.0
+                    px = geo_data[seg_i, 1] + frac * (
+                        geo_data[seg_i + 1, 1] - geo_data[seg_i, 1]
+                    )
+                    py = geo_data[seg_i, 2] + frac * (
+                        geo_data[seg_i + 1, 2] - geo_data[seg_i, 2]
+                    )
+                    clips.append((px, py, tab_width))
+                    break
+                accum += sd
+
+    result_ops = orig_ops.copy()
+    if clips:
+        if mode == "Gap":
+            result_ops.apply_tab_gaps(clips)
+        else:
+            result_ops.apply_tab_power(clips, tab_power, 1.0)
+
+    fig, axes = plt.subplots(1, 2, figsize=(14, 6))
+    axes[0].set_title("Original")
+    _plot_ops(axes[0], orig_ops, color="steelblue")
+    for cx_, cy_, tw_ in clips:
+        axes[0].plot(cx_, cy_, "rx", markersize=10, markeredgewidth=2)
+        axes[0].add_patch(
+            plt.Circle(
+                (cx_, cy_),
+                tw_ / 2,
+                fill=False,
+                color="red",
+                linestyle="--",
+                linewidth=1,
+            )
+        )
+    axes[0].set_aspect("equal")
+    axes[0].grid(True, alpha=0.3)
+
+    axes[1].set_title(f"After {mode} Tabs")
+    show_pwr = mode == "Power"
+    _plot_ops(
+        axes[1],
+        result_ops,
+        color="steelblue",
+        show_power=show_pwr,
+    )
+    for cx_, cy_, tw_ in clips:
+        axes[1].plot(cx_, cy_, "rx", markersize=10, markeredgewidth=2)
+    axes[1].set_aspect("equal")
+    axes[1].grid(True, alpha=0.3)
+    st.pyplot(fig)
+
+    c1, c2, c3 = st.columns(3)
+    c1.metric("Original commands", orig_ops.len())
+    c2.metric("Result commands", result_ops.len())
+    c3.metric("Original cut dist", f"{orig_ops.cut_distance():.2f} mm")
+
+
 st.set_page_config(layout="wide", page_title="raygeo visual test")
 st.title("raygeo Visual Test")
 
@@ -528,6 +801,7 @@ page = st.sidebar.radio(
         "Polygon Offset",
         "Image Processing",
         "SVG Parsing",
+        "Tab Operations",
     ],
 )
 
@@ -541,3 +815,5 @@ elif page == "Image Processing":
     page_image()
 elif page == "SVG Parsing":
     page_svg()
+elif page == "Tab Operations":
+    page_tabs()
