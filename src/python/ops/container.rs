@@ -2000,6 +2000,22 @@ impl PyOps {
         crate::ops::overscan::apply_overscan(&mut self.inner, distance_mm);
     }
 
+    /// Apply lead-in and lead-out to vector contour paths.
+    ///
+    /// For each contour within a VECTOR_OUTLINE section, extends the
+    /// toolpath with zero-power lead-in and lead-out segments along
+    /// the tangent direction at the path start and end.
+    ///
+    /// :param lead_in_mm: Lead-in distance in millimeters.
+    /// :param lead_out_mm: Lead-out distance in millimeters.
+    fn apply_lead_in_out(&mut self, lead_in_mm: f64, lead_out_mm: f64) {
+        crate::ops::lead_in_out::apply_lead_in_out(
+            &mut self.inner,
+            lead_in_mm,
+            lead_out_mm,
+        );
+    }
+
     /// Optimize travel distance by reordering segments.
     ///
     /// Performs two-level optimization: workpiece-level reordering

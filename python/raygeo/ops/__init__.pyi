@@ -875,6 +875,17 @@ class Ops:
         
         :param distance_mm: Overscan distance in millimeters.
         """
+    def apply_lead_in_out(self, lead_in_mm: builtins.float, lead_out_mm: builtins.float) -> None:
+        r"""
+        Apply lead-in and lead-out to vector contour paths.
+        
+        For each contour within a VECTOR_OUTLINE section, extends the
+        toolpath with zero-power lead-in and lead-out segments along
+        the tangent direction at the path start and end.
+        
+        :param lead_in_mm: Lead-in distance in millimeters.
+        :param lead_out_mm: Lead-out distance in millimeters.
+        """
     def optimize_travel(self, allow_flip: builtins.bool = True, preserve_first: builtins.bool = False, preserve_order: typing.Sequence[builtins.str] = [], progress_cb: typing.Optional[typing.Any] = None) -> None:
         r"""
         Optimize travel distance by reordering segments.
