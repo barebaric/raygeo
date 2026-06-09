@@ -34,7 +34,7 @@ pub fn get_circle_circle_intersections(
     let y2 = c1.1 + a * dy / d;
 
     if h < 1e-9 {
-        return vec![(x2, y2), (x2, y2)];
+        return vec![(x2, y2)];
     }
 
     let x3_1 = x2 + h * dy / d;
@@ -108,6 +108,57 @@ pub fn does_circle_intersect_rect(
     true
 }
 
+/// Computes intersection points between a line segment and a circle.
+///
+/// Returns 0, 1, or 2 intersection points where the segment from `p1`
+/// to `p2` crosses the circle defined by `center` and `radius`.
+/// Only intersections with t in [0, 1] along the segment are returned.
+pub fn get_line_circle_intersections(
+    p1: Point,
+    p2: Point,
+    center: Point,
+    radius: f64,
+) -> Vec<Point> {
+    let dx = p2.0 - p1.0;
+    let dy = p2.1 - p1.1;
+    let fx = p1.0 - center.0;
+    let fy = p1.1 - center.1;
+
+    let a = dx * dx + dy * dy;
+    if a < 1e-20 {
+        return vec![];
+    }
+
+    let b = 2.0 * (fx * dx + fy * dy);
+    let c = fx * fx + fy * fy - radius * radius;
+
+    let discriminant = b * b - 4.0 * a * c;
+    if discriminant < 0.0 {
+        return vec![];
+    }
+
+    let sqrt_disc = discriminant.sqrt();
+    let t1 = (-b - sqrt_disc) / (2.0 * a);
+    let t2 = (-b + sqrt_disc) / (2.0 * a);
+
+    let mut results = Vec::new();
+
+    if sqrt_disc < 1e-10 {
+        if (0.0..=1.0).contains(&t1) {
+            results.push((p1.0 + t1 * dx, p1.1 + t1 * dy));
+        }
+    } else {
+        if (0.0..=1.0).contains(&t1) {
+            results.push((p1.0 + t1 * dx, p1.1 + t1 * dy));
+        }
+        if (0.0..=1.0).contains(&t2) {
+            results.push((p1.0 + t2 * dx, p1.1 + t2 * dy));
+        }
+    }
+
+    results
+}
+
 /// Tests if a line segment intersects a circle by checking closest point distance.
 pub fn line_segment_intersects_circle(
     p1: Point,
@@ -135,9 +186,9 @@ mod tests {
     fn test_get_circle_circle_intersections_one_point() {
         let result =
             get_circle_circle_intersections((0.0, 0.0), 1.0, (2.0, 0.0), 1.0);
-        assert_eq!(result.len(), 2);
-        assert!((result[0].0 - result[1].0).abs() < 1e-9);
-        assert!((result[0].1 - result[1].1).abs() < 1e-9);
+        assert_eq!(result.len(), 1);
+        assert!((result[0].0 - 1.0).abs() < 1e-9);
+        assert!(result[0].1.abs() < 1e-9);
     }
 
     #[test]
@@ -197,5 +248,73 @@ mod tests {
             (5.0, 5.0),
             0.5
         ));
+    }
+
+    #[test]
+    fn test_get_line_circle_intersections_two_points() {
+        let results = get_line_circle_intersections(
+            (-2.0, 0.0),
+            (2.0, 0.0),
+            (0.0, 0.0),
+            1.0,
+        );
+        assert_eq!(results.len(), 2);
+        let sorted = if results[0].0 < results[1].0 {
+            [results[0], results[1]]
+        } else {
+            [results[1], results[0]]
+        };
+        assert!((sorted[0].0 - (-1.0)).abs() < 1e-9);
+        assert!(sorted[0].1.abs() < 1e-9);
+        assert!((sorted[1].0 - 1.0).abs() < 1e-9);
+        assert!(sorted[1].1.abs() < 1e-9);
+    }
+
+    #[test]
+    fn test_get_line_circle_intersections_tangent() {
+        let results = get_line_circle_intersections(
+            (0.0, 1.0),
+            (2.0, 1.0),
+            (1.0, 0.0),
+            1.0,
+        );
+        assert_eq!(results.len(), 1);
+        assert!((results[0].0 - 1.0).abs() < 1e-9);
+        assert!((results[0].1 - 1.0).abs() < 1e-9);
+    }
+
+    #[test]
+    fn test_get_line_circle_intersections_no_intersection() {
+        let results = get_line_circle_intersections(
+            (0.0, 3.0),
+            (2.0, 3.0),
+            (1.0, 0.0),
+            1.0,
+        );
+        assert!(results.is_empty());
+    }
+
+    #[test]
+    fn test_get_line_circle_intersections_segment_short() {
+        let results = get_line_circle_intersections(
+            (0.0, 0.5),
+            (0.5, 0.5),
+            (0.0, 0.0),
+            1.0,
+        );
+        assert!(results.is_empty());
+    }
+
+    #[test]
+    fn test_get_line_circle_intersections_one_endpoint_inside() {
+        let results = get_line_circle_intersections(
+            (0.0, 0.0),
+            (3.0, 0.0),
+            (0.0, 0.0),
+            1.0,
+        );
+        assert_eq!(results.len(), 1);
+        assert!((results[0].0 - 1.0).abs() < 1e-9);
+        assert!(results[0].1.abs() < 1e-9);
     }
 }

@@ -37,8 +37,9 @@ pub(crate) const MODULE_DOC_CIRCLE: &str = "\
 Circle geometry queries.
 
 Provides circle-circle and circle-rectangle intersection detection,
-circle-rectangle full-containment checks, line-segment-vs-circle
-intersection, and point projection onto a circle's circumference.
+line-segment-vs-circle intersection points, circle-rectangle full-containment
+checks, line-segment-vs-circle intersection, and point projection onto a
+circle's circumference.
 ";
 
 pyo3_stub_gen::module_doc!("raygeo.geo.shape.line", "{}", MODULE_DOC_LINE);
@@ -107,8 +108,8 @@ use crate::geo::shape::bezier::{
 };
 use crate::geo::shape::circle::{
     does_circle_intersect_rect, get_circle_circle_intersections,
-    is_circle_inside_rect, line_segment_intersects_circle,
-    project_point_onto_circle,
+    get_line_circle_intersections, is_circle_inside_rect,
+    line_segment_intersects_circle, project_point_onto_circle,
 };
 use crate::geo::shape::line::get_angle_at_vertex;
 use crate::geo::shape::line::{
@@ -274,6 +275,10 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     circle_mod.setattr("__doc__", MODULE_DOC_CIRCLE)?;
     circle_mod.add_function(wrap_pyfunction!(
         get_circle_circle_intersections_py,
+        circle_mod.clone()
+    )?)?;
+    circle_mod.add_function(wrap_pyfunction!(
+        get_line_circle_intersections_py,
         circle_mod.clone()
     )?)?;
     circle_mod.add_function(wrap_pyfunction!(
@@ -1502,6 +1507,37 @@ fn get_circle_circle_intersections_py(
     r2: f64,
 ) -> Vec<Point> {
     get_circle_circle_intersections(c1, r1, c2, r2)
+}
+
+#[gen_stub_pyfunction(
+    python = r#"
+    import raygeo.geo.types
+
+    def get_line_circle_intersections(
+        p1: types.Point,
+        p2: types.Point,
+        center: types.Point,
+        radius: float,
+    ) -> types.Polygon:
+        """Get intersection points of a line segment with a circle.
+
+        :param p1: Start point of the line segment (x, y).
+        :param p2: End point of the line segment (x, y).
+        :param center: Circle center (x, y).
+        :param radius: Circle radius.
+        :returns: List of intersection points (x, y).
+        """
+"#,
+    module = "raygeo.geo.shape.circle"
+)]
+#[pyfunction(name = "get_line_circle_intersections")]
+fn get_line_circle_intersections_py(
+    p1: Point,
+    p2: Point,
+    center: Point,
+    radius: f64,
+) -> Vec<Point> {
+    get_line_circle_intersections(p1, p2, center, radius)
 }
 
 #[gen_stub_pyfunction(

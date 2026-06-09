@@ -4,8 +4,9 @@ r"""
 Circle geometry queries.
 
 Provides circle-circle and circle-rectangle intersection detection,
-circle-rectangle full-containment checks, line-segment-vs-circle
-intersection, and point projection onto a circle's circumference.
+line-segment-vs-circle intersection points, circle-rectangle full-containment
+checks, line-segment-vs-circle intersection, and point projection onto a
+circle's circumference.
 """
 
 from raygeo.geo import types
@@ -13,6 +14,7 @@ import typing
 __all__ = [
     "does_circle_intersect_rect",
     "get_circle_circle_intersections",
+    "get_line_circle_intersections",
     "is_circle_inside_rect",
     "line_segment_intersects_circle",
     "project_point_onto_circle",
@@ -36,6 +38,17 @@ def get_circle_circle_intersections(c1: types.Point, r1: float, c2: types.Point,
     :param r1: Radius of first circle.
     :param c2: Center of second circle (x, y).
     :param r2: Radius of second circle.
+    :returns: List of intersection points (x, y).
+    """
+
+def get_line_circle_intersections(p1: types.Point, p2: types.Point, center: types.Point, radius: float) -> types.Polygon:
+    r"""
+    Get intersection points of a line segment with a circle.
+    
+    :param p1: Start point of the line segment (x, y).
+    :param p2: End point of the line segment (x, y).
+    :param center: Circle center (x, y).
+    :param radius: Circle radius.
     :returns: List of intersection points (x, y).
     """
 

@@ -5,6 +5,7 @@ import pytest
 from raygeo.geo.shape.circle import (
     does_circle_intersect_rect,
     get_circle_circle_intersections,
+    get_line_circle_intersections,
     is_circle_inside_rect,
     line_segment_intersects_circle,
     project_point_onto_circle,
@@ -33,11 +34,8 @@ def test_get_circle_circle_intersections():
     c1, r1 = (0, 0), 5
     c2, r2 = (10, 0), 5
     intersections = get_circle_circle_intersections(c1, r1, c2, r2)
-    assert (
-        len(intersections) == 2
-    )  # Due to float precision, may return two very close points
+    assert len(intersections) == 1
     assert intersections[0] == pytest.approx((5, 0))
-    assert intersections[1] == pytest.approx((5, 0))
 
     # No intersection (separate)
     c1, r1 = (0, 0), 5
@@ -185,3 +183,58 @@ class TestLineSegmentIntersectsCircle:
 
     def test_zero_length_outside(self):
         assert not line_segment_intersects_circle((10, 0), (10, 0), (5, 0), 1)
+
+
+class TestGetLineCircleIntersections:
+    def test_two_intersections(self):
+        results = get_line_circle_intersections((-2, 0), (2, 0), (0, 0), 1)
+        assert len(results) == 2
+        sorted_pts = sorted(results)
+        assert sorted_pts == pytest.approx([(-1, 0), (1, 0)])
+
+    def test_tangent(self):
+        results = get_line_circle_intersections((0, 1), (2, 1), (1, 0), 1)
+        assert len(results) == 1
+        assert results[0] == pytest.approx((1, 1))
+
+    def test_no_intersection(self):
+        results = get_line_circle_intersections((0, 3), (2, 3), (1, 0), 1)
+        assert results == []
+
+    def test_segment_before_circle(self):
+        results = get_line_circle_intersections((-5, 0), (-2, 0), (0, 0), 1)
+        assert results == []
+
+    def test_segment_after_circle(self):
+        results = get_line_circle_intersections((2, 0), (5, 0), (0, 0), 1)
+        assert results == []
+
+    def test_one_endpoint_inside(self):
+        results = get_line_circle_intersections((0, 0), (3, 0), (0, 0), 1)
+        assert len(results) == 1
+        assert results[0] == pytest.approx((1, 0))
+
+    def test_diagonal_intersection(self):
+        results = get_line_circle_intersections((-2, -2), (2, 2), (0, 0), 1)
+        assert len(results) == 2
+        expected_dist = 1.0 / math.sqrt(2)
+        for px, py in results:
+            assert math.hypot(px, py) == pytest.approx(1.0)
+            assert abs(px) == pytest.approx(expected_dist)
+            assert abs(py) == pytest.approx(expected_dist)
+
+    def test_offset_center(self):
+        results = get_line_circle_intersections((8, -2), (8, 2), (8, 0), 1)
+        assert len(results) == 2
+        sorted_pts = sorted(results, key=lambda p: p[1])
+        assert sorted_pts == pytest.approx([(8, -1), (8, 1)])
+
+    def test_zero_length_segment(self):
+        results = get_line_circle_intersections((5, 5), (5, 5), (0, 0), 10)
+        assert results == []
+
+    def test_both_endpoints_on_circle(self):
+        results = get_line_circle_intersections((-1, 0), (1, 0), (0, 0), 1)
+        assert len(results) == 2
+        sorted_pts = sorted(results)
+        assert sorted_pts == pytest.approx([(-1, 0), (1, 0)])
