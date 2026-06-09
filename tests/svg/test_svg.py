@@ -1,6 +1,8 @@
 import numpy as np
 
+from raygeo import Geometry
 from raygeo.svg import (
+    geometry_to_svg_path,
     parse_svg_path_data,
     parse_svg_transform,
     svg_string_to_geometries,
@@ -176,3 +178,62 @@ class TestSvgStringToGeometries:
         geos = svg_string_to_geometries(svg)
         assert len(geos) == 1
         assert not geos[0].is_empty()
+
+
+class TestGeometryToSvgPath:
+    def test_empty_geometry(self):
+        geo = Geometry()
+        assert geometry_to_svg_path(geo, 100, 100) == ""
+
+    def test_move_and_line(self):
+        geo = Geometry()
+        geo.move_to(0.0, 1.0, 0.0)
+        geo.line_to(1.0, 0.0, 0.0)
+        path = geometry_to_svg_path(geo, 100, 200)
+        assert path.startswith("M 0.000 0.000")
+        assert "L 100.000 200.000" in path
+
+    def test_y_flip(self):
+        geo = Geometry()
+        geo.move_to(0.0, 0.0, 0.0)
+        geo.line_to(0.0, 1.0, 0.0)
+        path = geometry_to_svg_path(geo, 100, 100)
+        assert "M 0.000 100.000" in path
+        assert "L 0.000 0.000" in path
+
+    def test_bezier(self):
+        geo = Geometry()
+        geo.move_to(0.0, 0.0, 0.0)
+        geo.bezier_to(1.0, 1.0, 0.25, 0.5, 0.75, 0.5)
+        path = geometry_to_svg_path(geo, 100, 100)
+        assert "C 25.000 50.000 75.000 50.000 100.000 0.000" in path
+
+    def test_arc_cw(self):
+        geo = Geometry()
+        geo.move_to(0.5, 0.5, 0.0)
+        geo.arc_to(1.0, 1.0, i=0.5, j=0.0, clockwise=True)
+        path = geometry_to_svg_path(geo, 100, 100)
+        assert "A 50.000 50.000 0 0 1 100.000 0.000" in path
+
+    def test_arc_ccw(self):
+        geo = Geometry()
+        geo.move_to(0.5, 0.5, 0.0)
+        geo.arc_to(1.0, 1.0, i=0.5, j=0.0, clockwise=False)
+        path = geometry_to_svg_path(geo, 100, 100)
+        assert "A 50.000 50.000 0 0 0 100.000 0.000" in path
+
+    def test_close_path_not_in_output(self):
+        geo = Geometry()
+        geo.move_to(0.0, 0.0, 0.0)
+        geo.line_to(1.0, 0.0, 0.0)
+        geo.line_to(1.0, 1.0, 0.0)
+        geo.close_path()
+        path = geometry_to_svg_path(geo, 100, 100)
+        assert "Z" not in path
+
+    def test_roundtrip_simple(self):
+        geo = Geometry()
+        geo.move_to(0.0, 0.0, 0.0)
+        geo.line_to(1.0, 1.0, 0.0)
+        path = geometry_to_svg_path(geo, 100, 100)
+        assert path == "M 0.000 100.000 L 100.000 0.000"

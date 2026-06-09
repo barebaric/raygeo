@@ -1,4 +1,8 @@
 use crate::geo::geometry::Geometry;
+use crate::{
+    CMD_TYPE_ARC, CMD_TYPE_BEZIER, CMD_TYPE_LINE, CMD_TYPE_MOVE, COL_C1X,
+    COL_C1Y, COL_C2X, COL_C2Y, COL_CW, COL_I, COL_J, COL_TYPE, COL_X, COL_Y,
+};
 
 const BORDER_SIZE: f64 = 2.0;
 
@@ -362,6 +366,64 @@ fn mat3_mul(a: &[[f64; 3]; 3], b: &[[f64; 3]; 3]) -> [[f64; 3]; 3] {
     r
 }
 
+/// Converts a Geometry's commands into an SVG path `d` attribute string.
+///
+/// The geometry coordinates are in normalized [0, 1] space. They are scaled
+/// to pixel dimensions via `width` and `height`, and the Y axis is flipped
+/// (SVG Y increases downward).
+pub fn geometry_to_svg_path(
+    geometry: &Geometry,
+    width: i32,
+    height: i32,
+) -> String {
+    let data = geometry.data();
+    if data.is_empty() {
+        return String::new();
+    }
+
+    let w = width as f64;
+    let h = height as f64;
+    let mut parts = Vec::with_capacity(data.len());
+
+    for row in data {
+        let cmd_type = row[COL_TYPE] as i32;
+        let x = row[COL_X] * w;
+        let y = h * (1.0 - row[COL_Y]);
+
+        match cmd_type {
+            t if t == CMD_TYPE_MOVE as i32 => {
+                parts.push(format!("M {x:.3} {y:.3}"));
+            }
+            t if t == CMD_TYPE_LINE as i32 => {
+                parts.push(format!("L {x:.3} {y:.3}"));
+            }
+            t if t == CMD_TYPE_ARC as i32 => {
+                let i = row[COL_I];
+                let j = row[COL_J];
+                let radius = i.hypot(j);
+                let rx = radius * w;
+                let ry = radius * h;
+                let sweep = if row[COL_CW] != 0.0 { 1 } else { 0 };
+                parts.push(format!(
+                    "A {rx:.3} {ry:.3} 0 0 {sweep} {x:.3} {y:.3}"
+                ));
+            }
+            t if t == CMD_TYPE_BEZIER as i32 => {
+                let c1x = row[COL_C1X] * w;
+                let c1y = h * (1.0 - row[COL_C1Y]);
+                let c2x = row[COL_C2X] * w;
+                let c2y = h * (1.0 - row[COL_C2Y]);
+                parts.push(format!(
+                    "C {c1x:.3} {c1y:.3} {c2x:.3} {c2y:.3} {x:.3} {y:.3}"
+                ));
+            }
+            _ => {}
+        }
+    }
+
+    parts.join(" ")
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -494,5 +556,47 @@ mod tests {
         let r = mat3_mul(&a, &b);
         assert_eq!(r[0][0], 1.0);
         assert_eq!(r[1][2], 0.0);
+    }
+
+    #[test]
+    fn test_geometry_to_svg_path_empty() {
+        let geo = Geometry::new();
+        assert!(geometry_to_svg_path(&geo, 100, 100).is_empty());
+    }
+
+    #[test]
+    fn test_geometry_to_svg_path_move_line() {
+        let mut geo = Geometry::new();
+        geo.move_to(0.0, 1.0, 0.0);
+        geo.line_to(1.0, 0.0, 0.0);
+        let path = geometry_to_svg_path(&geo, 100, 200);
+        assert!(path.starts_with("M 0.000 0.000"));
+        assert!(path.contains("L 100.000 200.000"));
+    }
+
+    #[test]
+    fn test_geometry_to_svg_path_y_flip() {
+        let mut geo = Geometry::new();
+        geo.move_to(0.0, 1.0, 0.0);
+        let path = geometry_to_svg_path(&geo, 100, 100);
+        assert!(path.contains("M 0.000 0.000"));
+    }
+
+    #[test]
+    fn test_geometry_to_svg_path_arc() {
+        let mut geo = Geometry::new();
+        geo.move_to(0.5, 0.5, 0.0);
+        geo.arc_to((1.0, 1.0, 0.0), (0.5, 0.0), true);
+        let path = geometry_to_svg_path(&geo, 100, 100);
+        assert!(path.contains("A 50.000 50.000 0 0 1 100.000 0.000"));
+    }
+
+    #[test]
+    fn test_geometry_to_svg_path_bezier() {
+        let mut geo = Geometry::new();
+        geo.move_to(0.0, 0.0, 0.0);
+        geo.bezier_to(((0.25, 0.5), (0.75, 0.5), (1.0, 1.0)), 0.0);
+        let path = geometry_to_svg_path(&geo, 100, 100);
+        assert!(path.contains("C 25.000 50.000 75.000 50.000 100.000 0.000"));
     }
 }

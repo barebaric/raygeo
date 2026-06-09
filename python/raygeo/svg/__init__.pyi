@@ -5,10 +5,25 @@ import numpy
 import numpy.typing
 import raygeo
 __all__ = [
+    "geometry_to_svg_path",
     "parse_svg_path_data",
     "parse_svg_transform",
     "svg_string_to_geometries",
 ]
+
+def geometry_to_svg_path(geometry: raygeo.Geometry, width: int, height: int) -> str:
+    r"""
+    Convert a normalized Geometry to an SVG path d attribute string.
+    
+    The geometry coordinates should be in normalized [0, 1] space.
+    Coordinates are scaled to pixel dimensions via width and height,
+    with the Y axis flipped (SVG Y increases downward).
+    
+    :param geometry: A Geometry object with normalized coordinates.
+    :param width: Target pixel width.
+    :param height: Target pixel height.
+    :returns: SVG path d attribute string.
+    """
 
 def parse_svg_path_data(path_data: str, transform: numpy.typing.NDArray[numpy.float64] | None = None, scale_x: float = 1, scale_y: float = 1) -> list[raygeo.Geometry]:
     r"""

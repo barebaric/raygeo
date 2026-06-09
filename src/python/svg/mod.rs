@@ -129,18 +129,53 @@ fn py_svg_string_to_geometries(
     geos.into_iter().map(|g| Geometry { inner: g }).collect()
 }
 
+#[gen_stub_pyfunction(
+    python = r#"
+    from raygeo import Geometry
+
+    def geometry_to_svg_path(
+        geometry: Geometry,
+        width: int,
+        height: int,
+    ) -> str:
+        """Convert a normalized Geometry to an SVG path d attribute string.
+
+        The geometry coordinates should be in normalized [0, 1] space.
+        Coordinates are scaled to pixel dimensions via width and height,
+        with the Y axis flipped (SVG Y increases downward).
+
+        :param geometry: A Geometry object with normalized coordinates.
+        :param width: Target pixel width.
+        :param height: Target pixel height.
+        :returns: SVG path d attribute string.
+        """
+"#,
+    module = "raygeo.svg"
+)]
+#[pyfunction(name = "geometry_to_svg_path")]
+fn py_geometry_to_svg_path(
+    geometry: &Geometry,
+    width: i32,
+    height: i32,
+) -> String {
+    crate::svg::geometry_to_svg_path(&geometry.inner, width, height)
+}
+
 pub(crate) fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     let svg_mod = PyModule::new(m.py(), "svg")?;
 
     svg_mod.add(
         "__all__",
         vec![
+            "geometry_to_svg_path",
             "parse_svg_path_data",
             "parse_svg_transform",
             "svg_string_to_geometries",
         ],
     )?;
 
+    svg_mod
+        .add_function(wrap_pyfunction!(py_geometry_to_svg_path, &svg_mod)?)?;
     svg_mod
         .add_function(wrap_pyfunction!(py_parse_svg_path_data, &svg_mod)?)?;
     svg_mod
