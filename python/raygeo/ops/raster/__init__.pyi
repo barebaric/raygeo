@@ -2,12 +2,14 @@
 # ruff: noqa: E501, F401, F403, F405
 
 import builtins
+import enum
 import numpy
 import numpy.typing
 from raygeo import ops
 import typing
 __all__ = [
     "ScanLine",
+    "ScanMode",
     "downsample_power_values",
     "find_mask_bounding_box",
     "find_segments",
@@ -37,6 +39,11 @@ class ScanLine:
     def length_mm(self) -> builtins.float: ...
     def direction(self) -> tuple[builtins.float, builtins.float]: ...
     def pixel_to_mm(self, px: builtins.int, py: builtins.int, pixels_per_mm: tuple[builtins.float, builtins.float]) -> tuple[builtins.float, builtins.float]: ...
+
+@typing.final
+class ScanMode(enum.Enum):
+    Segmented = ...
+    FullSweep = ...
 
 def downsample_power_values(power_values: numpy.ndarray, start_mm: tuple[float, float], end_mm: tuple[float, float], sample_interval_mm: float) -> tuple[numpy.ndarray, numpy.ndarray, numpy.ndarray]: ...
 

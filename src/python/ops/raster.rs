@@ -1,8 +1,8 @@
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::{
-    gen_stub_pyclass, gen_stub_pyfunction, gen_stub_pymethods,
+    gen_stub_pyclass, gen_stub_pyclass_enum, gen_stub_pyfunction,
+    gen_stub_pymethods,
 };
-use pyo3_stub_gen::{PyStubType, TypeInfo};
 
 use crate::ops::raster::rasterize::{
     rasterize_mask_lines, rasterize_mask_scan, rasterize_multi_pass,
@@ -15,20 +15,12 @@ use crate::ops::raster::scan::{
 };
 use crate::python::ops::container::PyOps;
 
+#[gen_stub_pyclass_enum]
 #[pyclass(module = "raygeo.ops.raster", name = "ScanMode", from_py_object)]
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum PyScanMode {
     Segmented,
     FullSweep,
-}
-
-impl PyStubType for PyScanMode {
-    fn type_output() -> TypeInfo {
-        TypeInfo::with_module(
-            "raygeo.ops.raster.ScanMode",
-            "raygeo.ops.raster".into(),
-        )
-    }
 }
 
 impl From<PyScanMode> for RustScanMode {
