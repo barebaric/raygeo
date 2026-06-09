@@ -8,7 +8,6 @@ from raygeo import ops
 import typing
 __all__ = [
     "ScanLine",
-    "ScanMode",
     "downsample_power_values",
     "find_mask_bounding_box",
     "find_segments",
@@ -21,12 +20,6 @@ __all__ = [
     "rasterize_power_modulation",
     "resample_rows",
 ]
-
-class ScanMode:
-    Segmented: ScanMode
-    FullSweep: ScanMode
-    @property
-    def name(self) -> builtins.str: ...
 
 @typing.final
 class ScanLine:

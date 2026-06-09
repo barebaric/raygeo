@@ -11,7 +11,7 @@ __all__ = [
     "svg_string_to_geometries",
 ]
 
-def geometry_to_svg_path(geometry: raygeo.Geometry, width: int, height: int) -> str:
+def geometry_to_svg_path(geometry: Geometry, width: int, height: int) -> str:
     r"""
     Convert a normalized Geometry to an SVG path d attribute string.
     
