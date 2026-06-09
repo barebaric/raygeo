@@ -96,15 +96,16 @@ use super::flex_point::{
 use crate::geo::shape::arc::is_arc_clockwise;
 use crate::geo::shape::arc::{
     does_arc_intersect_circle, does_arc_intersect_rect, get_arc_angles,
-    get_arc_bounds, get_arc_closest_point, get_arc_direction, get_arc_midpoint,
-    is_angle_between, is_arc_inside_polygons, linearize_arc, normalize_angle,
+    get_arc_bounds, get_arc_closest_point, get_arc_direction, get_arc_length,
+    get_arc_midpoint, is_angle_between, is_arc_inside_polygons, linearize_arc,
+    normalize_angle,
 };
 use crate::geo::shape::bezier::{
-    bezier_flatness_sq, clip_bezier_with_rect,
-    convert_cubic_bezier_to_quadratic, flatten_bezier, get_bezier_bounds,
+    clip_bezier_with_rect, convert_cubic_bezier_to_quadratic, flatten_bezier,
+    get_bezier_bounds, get_bezier_flatness_sq, get_bezier_length,
     get_bezier_point_at, get_bezier_rect_intersections,
-    is_bezier_inside_polygons, linearize_bezier, linearize_bezier_adaptive,
-    linearize_bezier_segment, perp_dist_sq, split_bezier,
+    get_perpendicular_dist_sq, is_bezier_inside_polygons, linearize_bezier,
+    linearize_bezier_adaptive, linearize_bezier_segment, split_bezier,
 };
 use crate::geo::shape::circle::{
     does_circle_intersect_rect, get_circle_circle_intersections,
@@ -116,8 +117,8 @@ use crate::geo::shape::line::{
     does_line_segment_intersect_circle, does_line_segment_intersect_rect,
     does_rect_contain_rect, get_line_closest_point, get_line_line_intersection,
     get_line_segment_closest_point, get_line_segment_intersection,
-    get_line_segment_polygon_intersections, get_point_line_distance,
-    is_point_inside_rect, is_point_on_segment,
+    get_line_segment_length, get_line_segment_polygon_intersections,
+    get_point_line_distance, is_point_inside_rect, is_point_on_segment,
 };
 use crate::geo::shape::point::are_points_equal;
 use crate::geo::shape::point::midpoint;
@@ -217,6 +218,8 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
         .add_function(wrap_pyfunction!(normalize_angle_py, arc_mod.clone())?)?;
     arc_mod
         .add_function(wrap_pyfunction!(linearize_arc_py, arc_mod.clone())?)?;
+    arc_mod
+        .add_function(wrap_pyfunction!(get_arc_length_py, arc_mod.clone())?)?;
     shape_mod.add_submodule(&arc_mod)?;
 
     let bezier_mod = PyModule::new(py, "bezier")?;
@@ -264,11 +267,17 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
         bezier_mod.clone()
     )?)?;
     bezier_mod.add_function(wrap_pyfunction!(
-        bezier_flatness_sq_py,
+        get_bezier_flatness_sq_py,
         bezier_mod.clone()
     )?)?;
-    bezier_mod
-        .add_function(wrap_pyfunction!(perp_dist_sq_py, bezier_mod.clone())?)?;
+    bezier_mod.add_function(wrap_pyfunction!(
+        get_perpendicular_dist_sq_py,
+        bezier_mod.clone()
+    )?)?;
+    bezier_mod.add_function(wrap_pyfunction!(
+        get_bezier_length_py,
+        bezier_mod.clone()
+    )?)?;
     shape_mod.add_submodule(&bezier_mod)?;
 
     let circle_mod = PyModule::new(py, "circle")?;
@@ -513,6 +522,10 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
         get_angle_at_vertex_py,
         line_mod.clone()
     )?)?;
+    line_mod.add_function(wrap_pyfunction!(
+        get_line_segment_length_py,
+        line_mod.clone()
+    )?)?;
     shape_mod.add_submodule(&line_mod)?;
 
     let rect_mod = PyModule::new(py, "rect")?;
@@ -626,6 +639,37 @@ fn get_arc_bounds_py(
 #[pyfunction(name = "get_arc_direction")]
 fn get_arc_direction_py(center: Point, start: Point, mouse: Point) -> bool {
     get_arc_direction(center, start, mouse)
+}
+
+#[gen_stub_pyfunction(
+    python = r#"
+    import raygeo.geo.types
+
+    def get_arc_length(
+        start_pos: types.Point,
+        end_pos: types.Point,
+        center_offset: types.Point,
+        clockwise: bool,
+    ) -> float:
+        """Compute the arc length of a circular arc.
+
+        :param start_pos: Start point (x, y).
+        :param end_pos: End point (x, y).
+        :param center_offset: Center offset (i, j) from start.
+        :param clockwise: True for clockwise, False for counter-clockwise.
+        :returns: Arc length.
+        """
+"#,
+    module = "raygeo.geo.shape.arc"
+)]
+#[pyfunction(name = "get_arc_length")]
+fn get_arc_length_py(
+    start_pos: Point,
+    end_pos: Point,
+    center_offset: Point,
+    clockwise: bool,
+) -> f64 {
+    get_arc_length(start_pos, end_pos, center_offset, clockwise)
 }
 
 #[gen_stub_pyfunction(
@@ -1401,7 +1445,33 @@ fn flatten_bezier_py(
     python = r#"
     import raygeo.geo.types
 
-    def bezier_flatness_sq(
+    def get_bezier_length(
+        p0: types.Point,
+        c1: types.Point,
+        c2: types.Point,
+        p1: types.Point,
+    ) -> float:
+        """Compute the arc length of a cubic Bezier curve.
+
+        :param p0: Start point (x, y).
+        :param c1: First control point (x, y).
+        :param c2: Second control point (x, y).
+        :param p1: End point (x, y).
+        :returns: Arc length.
+        """
+"#,
+    module = "raygeo.geo.shape.bezier"
+)]
+#[pyfunction(name = "get_bezier_length")]
+fn get_bezier_length_py(p0: Point, c1: Point, c2: Point, p1: Point) -> f64 {
+    get_bezier_length(p0, c1, c2, p1)
+}
+
+#[gen_stub_pyfunction(
+    python = r#"
+    import raygeo.geo.types
+
+    def get_bezier_flatness_sq(
         a: types.Point3D,
         b: types.Point3D,
         c: types.Point3D,
@@ -1418,14 +1488,14 @@ fn flatten_bezier_py(
 "#,
     module = "raygeo.geo.shape.bezier"
 )]
-#[pyfunction(name = "bezier_flatness_sq")]
-fn bezier_flatness_sq_py(
+#[pyfunction(name = "get_bezier_flatness_sq")]
+fn get_bezier_flatness_sq_py(
     a: PyPoint3D,
     b: PyPoint3D,
     c: PyPoint3D,
     d: PyPoint3D,
 ) -> f64 {
-    bezier_flatness_sq(
+    get_bezier_flatness_sq(
         (a.0, a.1, a.2),
         (b.0, b.1, b.2),
         (c.0, c.1, c.2),
@@ -1437,7 +1507,7 @@ fn bezier_flatness_sq_py(
     python = r#"
     import raygeo.geo.types
 
-    def perp_dist_sq(
+    def get_perpendicular_dist_sq(
         pt: types.Point3D,
         origin: types.Point3D,
         vx: float,
@@ -1458,9 +1528,9 @@ fn bezier_flatness_sq_py(
 "#,
     module = "raygeo.geo.shape.bezier"
 )]
-#[pyfunction(name = "perp_dist_sq")]
+#[pyfunction(name = "get_perpendicular_dist_sq")]
 #[pyo3(signature = (pt, origin, vx, vy, vz=0.0, norm_sq=0.0))]
-fn perp_dist_sq_py(
+fn get_perpendicular_dist_sq_py(
     pt: PyPoint3D,
     origin: PyPoint3D,
     vx: f64,
@@ -1468,7 +1538,7 @@ fn perp_dist_sq_py(
     vz: f64,
     norm_sq: f64,
 ) -> f64 {
-    perp_dist_sq(
+    get_perpendicular_dist_sq(
         (pt.0, pt.1, pt.2),
         (origin.0, origin.1, origin.2),
         vx,
@@ -3073,6 +3143,28 @@ fn get_angle_at_vertex_py(
     p2: (f64, f64),
 ) -> f64 {
     get_angle_at_vertex(p0, p1, p2)
+}
+
+#[gen_stub_pyfunction(
+    python = r#"
+    import raygeo.geo.types
+
+    def get_line_segment_length(
+        p1: types.Point,
+        p2: types.Point,
+    ) -> float:
+        """Compute the Euclidean length of a line segment.
+
+        :param p1: Start point (x, y).
+        :param p2: End point (x, y).
+        :returns: Length of the segment.
+        """
+"#,
+    module = "raygeo.geo.shape.line"
+)]
+#[pyfunction(name = "get_line_segment_length")]
+fn get_line_segment_length_py(p1: (f64, f64), p2: (f64, f64)) -> f64 {
+    get_line_segment_length(p1, p2)
 }
 
 #[gen_stub_pyfunction(

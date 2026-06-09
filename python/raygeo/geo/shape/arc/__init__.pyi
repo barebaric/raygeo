@@ -19,6 +19,7 @@ __all__ = [
     "get_arc_bounds",
     "get_arc_closest_point",
     "get_arc_direction",
+    "get_arc_length",
     "get_arc_midpoint",
     "is_angle_between",
     "is_arc_clockwise",
@@ -93,6 +94,17 @@ def get_arc_direction(center: types.Point, start: types.Point, mouse: types.Poin
     :param start: Arc start point (x, y).
     :param mouse: Mouse point (x, y).
     :returns: True if clockwise, False if counter-clockwise.
+    """
+
+def get_arc_length(start_pos: types.Point, end_pos: types.Point, center_offset: types.Point, clockwise: bool) -> float:
+    r"""
+    Compute the arc length of a circular arc.
+    
+    :param start_pos: Start point (x, y).
+    :param end_pos: End point (x, y).
+    :param center_offset: Center offset (i, j) from start.
+    :param clockwise: True for clockwise, False for counter-clockwise.
+    :returns: Arc length.
     """
 
 def get_arc_midpoint(start: types.Point, end: types.Point, center: types.Point, clockwise: bool) -> types.Point:

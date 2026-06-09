@@ -1,6 +1,9 @@
 use std::fmt::Write;
 
 use crate::constants::EPSILON_COLLINEAR;
+use crate::geo::shape::arc::get_arc_length;
+use crate::geo::shape::bezier::get_bezier_length;
+use crate::geo::shape::line::get_line_segment_length;
 
 use super::axis::Axis;
 use super::enums::{CommandCategory, CommandType, SectionType};
@@ -622,9 +625,7 @@ impl Ops {
                     0.0
                 }
                 OpCategory::Moving { end, cmd } => {
-                    let dx = end.0 - last_point.0;
-                    let dy = end.1 - last_point.1;
-                    let distance = (dx * dx + dy * dy).sqrt();
+                    let distance = move_distance(cmd, last_point, *end);
 
                     if distance < EPSILON_COLLINEAR {
                         last_point = *end;
@@ -903,6 +904,39 @@ impl Ops {
     }
 }
 
+fn move_distance(cmd: &MoveCmd, last_point: Point3D, end: Point3D) -> f64 {
+    match cmd {
+        MoveCmd::ArcTo { center, cw } => get_arc_length(
+            (last_point.0, last_point.1),
+            (end.0, end.1),
+            *center,
+            *cw,
+        ),
+        MoveCmd::BezierTo { c1, c2 } => get_bezier_length(
+            (last_point.0, last_point.1),
+            (c1.0, c1.1),
+            (c2.0, c2.1),
+            (end.0, end.1),
+        ),
+        MoveCmd::QuadraticBezierTo { control } => {
+            let c = *control;
+            get_bezier_length(
+                (last_point.0, last_point.1),
+                (
+                    (last_point.0 + 2.0 * c.0) / 3.0,
+                    (last_point.1 + 2.0 * c.1) / 3.0,
+                ),
+                ((end.0 + 2.0 * c.0) / 3.0, (end.1 + 2.0 * c.1) / 3.0),
+                (end.0, end.1),
+            )
+        }
+        _ => get_line_segment_length(
+            (last_point.0, last_point.1),
+            (end.0, end.1),
+        ),
+    }
+}
+
 fn estimate_time_core(
     ops: &Ops,
     default_cut_speed: f64,
@@ -923,9 +957,7 @@ fn estimate_time_core(
                 travel_speed = *s as f64
             }
             OpCategory::Moving { end, cmd } => {
-                let dx = end.0 - last_point.0;
-                let dy = end.1 - last_point.1;
-                let distance = (dx * dx + dy * dy).sqrt();
+                let distance = move_distance(cmd, last_point, *end);
 
                 if distance < EPSILON_COLLINEAR {
                     last_point = *end;

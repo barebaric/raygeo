@@ -11,3 +11,7 @@
 - `make format-python` — format Python only (ruff handles formatting and import sorting)
 - `make test` — run the full test suite
 - `make check` — lint + test
+
+# Rules
+
+You are strictly forbidden from editing stubs manually. They are only to be edited using "make stubs".

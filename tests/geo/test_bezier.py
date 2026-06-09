@@ -3,18 +3,18 @@ import math
 import pytest
 
 from raygeo.geo.shape.bezier import (
-    bezier_flatness_sq,
     clip_bezier_with_rect,
     convert_cubic_bezier_to_quadratic,
     flatten_bezier,
     get_bezier_bounds,
+    get_bezier_flatness_sq,
     get_bezier_point_at,
     get_bezier_rect_intersections,
+    get_perpendicular_dist_sq,
     is_bezier_inside_polygons,
     linearize_bezier,
     linearize_bezier_adaptive,
     linearize_bezier_segment,
-    perp_dist_sq,
     split_bezier,
 )
 
@@ -380,54 +380,60 @@ def test_linearize_segment_zero_length():
     assert pts[1] == pytest.approx(p)
 
 
-def test_perp_dist_sq_on_line():
+def test_get_perpendicular_dist_sq_on_line():
     origin = (0.0, 0.0, 0.0)
     pt = (5.0, 0.0, 0.0)
-    assert perp_dist_sq(pt, origin, 1.0, 0.0, 0.0, 1.0) == pytest.approx(0.0)
+    assert get_perpendicular_dist_sq(pt, origin, 1.0, 0.0, 0.0, 1.0) == pytest.approx(
+        0.0
+    )
 
 
-def test_perp_dist_sq_off_line():
+def test_get_perpendicular_dist_sq_off_line():
     origin = (0.0, 0.0, 0.0)
     pt = (0.0, 3.0, 0.0)
-    assert perp_dist_sq(pt, origin, 1.0, 0.0, 0.0, 1.0) == pytest.approx(9.0)
+    assert get_perpendicular_dist_sq(pt, origin, 1.0, 0.0, 0.0, 1.0) == pytest.approx(
+        9.0
+    )
 
 
-def test_perp_dist_sq_3d():
+def test_get_perpendicular_dist_sq_3d():
     origin = (0.0, 0.0, 0.0)
     pt = (0.0, 0.0, 4.0)
-    assert perp_dist_sq(pt, origin, 1.0, 0.0, 0.0, 1.0) == pytest.approx(16.0)
+    assert get_perpendicular_dist_sq(pt, origin, 1.0, 0.0, 0.0, 1.0) == pytest.approx(
+        16.0
+    )
 
 
-def test_bezier_flatness_sq_collinear():
+def test_get_bezier_flatness_sq_collinear():
     a = (0.0, 0.0, 0.0)
     b = (3.0, 0.0, 0.0)
     c = (7.0, 0.0, 0.0)
     d = (10.0, 0.0, 0.0)
-    assert bezier_flatness_sq(a, b, c, d) == pytest.approx(0.0, abs=1e-9)
+    assert get_bezier_flatness_sq(a, b, c, d) == pytest.approx(0.0, abs=1e-9)
 
 
-def test_bezier_flatness_sq_nonzero():
+def test_get_bezier_flatness_sq_nonzero():
     a = (0.0, 0.0, 0.0)
     b = (0.0, 5.0, 0.0)
     c = (10.0, 5.0, 0.0)
     d = (10.0, 0.0, 0.0)
-    assert bezier_flatness_sq(a, b, c, d) > 0.0
+    assert get_bezier_flatness_sq(a, b, c, d) > 0.0
 
 
-def test_bezier_flatness_sq_coincident_endpoints():
+def test_get_bezier_flatness_sq_coincident_endpoints():
     a = (1.0, 1.0, 1.0)
     d = (1.0, 1.0, 1.0)
     b = (1.0, 1.0, 1.0)
     c = (1.0, 1.0, 1.0)
-    assert bezier_flatness_sq(a, b, c, d) == pytest.approx(0.0)
+    assert get_bezier_flatness_sq(a, b, c, d) == pytest.approx(0.0)
 
 
-def test_bezier_flatness_sq_coincident_endpoints_offset_ctrl():
+def test_get_bezier_flatness_sq_coincident_endpoints_offset_ctrl():
     a = (0.0, 0.0, 0.0)
     d = (0.0, 0.0, 0.0)
     b = (1.0, 0.0, 0.0)
     c = (0.0, 2.0, 0.0)
-    result = bezier_flatness_sq(a, b, c, d)
+    result = get_bezier_flatness_sq(a, b, c, d)
     assert result == pytest.approx(4.0)
 
 

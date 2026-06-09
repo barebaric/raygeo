@@ -6,6 +6,13 @@ use std::f64::consts::PI;
 
 use crate::types::{Point, Polygon, Rect};
 
+/// Computes the Euclidean length of a line segment.
+pub fn get_line_segment_length(p1: Point, p2: Point) -> f64 {
+    let dx = p2.0 - p1.0;
+    let dy = p2.1 - p1.1;
+    dx.hypot(dy)
+}
+
 /// Checks if a point lies on a line segment using dot product projection.
 pub fn is_point_on_segment(pt: Point, p1: Point, p2: Point) -> bool {
     let dot1 = (pt.0 - p1.0) * (p2.0 - p1.0) + (pt.1 - p1.1) * (p2.1 - p1.1);
@@ -401,5 +408,14 @@ mod tests {
 
         let d = get_point_line_distance((1.0, 1.0), (0.0, 0.0), (0.0, 0.0));
         assert!((d - 2.0f64.sqrt()).abs() < 1e-9);
+    }
+
+    #[test]
+    fn test_get_line_segment_length() {
+        let l = get_line_segment_length((0.0, 0.0), (3.0, 4.0));
+        assert!((l - 5.0).abs() < 1e-9);
+
+        let l = get_line_segment_length((0.0, 0.0), (0.0, 0.0));
+        assert!(l.abs() < 1e-9);
     }
 }

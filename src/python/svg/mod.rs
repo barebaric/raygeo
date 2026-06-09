@@ -131,10 +131,10 @@ fn py_svg_string_to_geometries(
 
 #[gen_stub_pyfunction(
     python = r#"
-    from raygeo import Geometry
+    import raygeo
 
     def geometry_to_svg_path(
-        geometry: Geometry,
+        geometry: raygeo.Geometry,
         width: int,
         height: int,
     ) -> str:

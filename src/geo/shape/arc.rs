@@ -16,6 +16,23 @@ use crate::geo::shape::line::{
 use crate::geo::shape::polygon::is_point_inside_polygon;
 use crate::types::{Point, Point3D, Polygon, Rect};
 
+/// Computes the arc length given start position, end position, center
+/// offset, and direction. Returns 0.0 if the radius is degenerate.
+pub fn get_arc_length(
+    start_pos: Point,
+    end_pos: Point,
+    center_offset: Point,
+    clockwise: bool,
+) -> f64 {
+    let center = (start_pos.0 + center_offset.0, start_pos.1 + center_offset.1);
+    let radius = (start_pos.0 - center.0).hypot(start_pos.1 - center.1);
+    if radius < 1e-9 {
+        return 0.0;
+    }
+    let (_, _, sweep) = get_arc_angles(start_pos, end_pos, center, clockwise);
+    sweep.abs() * radius
+}
+
 /// Normalizes an angle to the range [0, 2*PI).
 pub fn normalize_angle(angle: f64) -> f64 {
     ((angle % (2.0 * PI)) + 2.0 * PI) % (2.0 * PI)
@@ -660,5 +677,34 @@ mod tests {
             true,
             &[small_region]
         ));
+    }
+
+    #[test]
+    fn test_get_arc_length_quarter_circle() {
+        let start = (1.0, 0.0);
+        let end = (0.0, 1.0);
+        let center_offset = (0.0, 1.0);
+        let length = get_arc_length(start, end, center_offset, false);
+        let expected = PI / 2.0;
+        assert!((length - expected).abs() < 1e-9);
+    }
+
+    #[test]
+    fn test_get_arc_length_semicircle() {
+        let start = (1.0, 0.0);
+        let end = (-1.0, 0.0);
+        let center_offset = (-1.0, 0.0);
+        let length = get_arc_length(start, end, center_offset, true);
+        let expected = PI;
+        assert!((length - expected).abs() < 1e-9);
+    }
+
+    #[test]
+    fn test_get_arc_length_degenerate() {
+        let start = (0.0, 0.0);
+        let end = (1.0, 0.0);
+        let center_offset = (0.0, 0.0);
+        let length = get_arc_length(start, end, center_offset, false);
+        assert!(length.abs() < 1e-9);
     }
 }

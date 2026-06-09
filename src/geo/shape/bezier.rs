@@ -432,42 +432,6 @@ pub fn linearize_bezier_adaptive(
     points
 }
 
-/// Internal: Computes perpendicular distance squared from point to line.
-fn _perp_dist_sq(
-    pt: Point3D,
-    origin: Point3D,
-    vx: f64,
-    vy: f64,
-    vz: f64,
-    norm_sq: f64,
-) -> f64 {
-    let px = pt.0 - origin.0;
-    let py = pt.1 - origin.1;
-    let pz = pt.2 - origin.2;
-    let cx = py * vz - pz * vy;
-    let cy = pz * vx - px * vz;
-    let cz = px * vy - py * vx;
-    (cx * cx + cy * cy + cz * cz) / norm_sq
-}
-
-fn _bezier_flatness_sq(a: Point3D, b: Point3D, c: Point3D, d: Point3D) -> f64 {
-    let vx = d.0 - a.0;
-    let vy = d.1 - a.1;
-    let vz = d.2 - a.2;
-    let norm_sq = vx * vx + vy * vy + vz * vz;
-
-    if norm_sq < 1e-9 {
-        let d1 =
-            (b.0 - a.0).powi(2) + (b.1 - a.1).powi(2) + (b.2 - a.2).powi(2);
-        let d2 =
-            (c.0 - a.0).powi(2) + (c.1 - a.1).powi(2) + (c.2 - a.2).powi(2);
-        return d1.max(d2);
-    }
-
-    _perp_dist_sq(b, a, vx, vy, vz, norm_sq)
-        .max(_perp_dist_sq(c, a, vx, vy, vz, norm_sq))
-}
-
 const BEZIER_SEG_MAX_DEPTH: usize = 10;
 
 pub fn flatten_bezier(
@@ -481,7 +445,7 @@ pub fn flatten_bezier(
 ) {
     // Recursive subdivision with flatness test based on perpendicular distance
     if depth >= BEZIER_SEG_MAX_DEPTH
-        || _bezier_flatness_sq(a, b, c, d) <= tolerance_sq
+        || get_bezier_flatness_sq(a, b, c, d) <= tolerance_sq
     {
         points.push(d);
         return;
@@ -712,7 +676,7 @@ fn _cbrt(x: f64) -> f64 {
     }
 }
 
-pub fn perp_dist_sq(
+pub fn get_perpendicular_dist_sq(
     pt: Point3D,
     origin: Point3D,
     vx: f64,
@@ -729,7 +693,7 @@ pub fn perp_dist_sq(
     (cx * cx + cy * cy + cz * cz) / norm_sq
 }
 
-pub fn bezier_flatness_sq(
+pub fn get_bezier_flatness_sq(
     a: Point3D,
     b: Point3D,
     c: Point3D,
@@ -748,9 +712,26 @@ pub fn bezier_flatness_sq(
         return d1.max(d2);
     }
 
-    let dist_b = perp_dist_sq(b, a, vx, vy, vz, norm_sq);
-    let dist_c = perp_dist_sq(c, a, vx, vy, vz, norm_sq);
+    let dist_b = get_perpendicular_dist_sq(b, a, vx, vy, vz, norm_sq);
+    let dist_c = get_perpendicular_dist_sq(c, a, vx, vy, vz, norm_sq);
     dist_b.max(dist_c)
+}
+
+/// Computes the arc length of a cubic Bezier curve using adaptive
+/// Gaussian quadrature.
+pub fn get_bezier_length(p0: Point, c1: Point, c2: Point, p1: Point) -> f64 {
+    let n = 16;
+    let mut length = 0.0;
+    let mut prev = p0;
+    for i in 1..=n {
+        let t = i as f64 / n as f64;
+        let pt = get_bezier_point_at(p0, c1, c2, p1, t);
+        let dx = pt.0 - prev.0;
+        let dy = pt.1 - prev.1;
+        length += dx.hypot(dy);
+        prev = pt;
+    }
+    length
 }
 
 #[cfg(test)]
@@ -906,5 +887,26 @@ mod tests {
     fn test_solve_cubic() {
         let roots = _solve_cubic(1.0, -6.0, 11.0, -6.0);
         assert_eq!(roots.len(), 3);
+    }
+
+    #[test]
+    fn test_get_bezier_length_straight_line() {
+        let p0 = (0.0, 0.0);
+        let c1 = (0.0, 0.0);
+        let c2 = (10.0, 0.0);
+        let p1 = (10.0, 0.0);
+        let length = get_bezier_length(p0, c1, c2, p1);
+        assert!((length - 10.0).abs() < 0.1);
+    }
+
+    #[test]
+    fn test_get_bezier_length_curve() {
+        let p0 = (0.0, 0.0);
+        let c1 = (0.0, 10.0);
+        let c2 = (10.0, 10.0);
+        let p1 = (10.0, 0.0);
+        let length = get_bezier_length(p0, c1, c2, p1);
+        assert!(length > 10.0);
+        assert!(length < 30.0);
     }
 }

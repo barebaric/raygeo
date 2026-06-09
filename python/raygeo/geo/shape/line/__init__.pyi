@@ -19,6 +19,7 @@ __all__ = [
     "get_line_line_intersection",
     "get_line_segment_closest_point",
     "get_line_segment_intersection",
+    "get_line_segment_length",
     "get_line_segment_polygon_intersections",
     "get_point_line_distance",
     "is_point_on_line_segment",
@@ -97,6 +98,15 @@ def get_line_segment_intersection(p1: types.Point, p2: types.Point, p3: types.Po
     :param p3: Start of segment 2.
     :param p4: End of segment 2.
     :returns: Intersection point (x, y) or None.
+    """
+
+def get_line_segment_length(p1: types.Point, p2: types.Point) -> float:
+    r"""
+    Compute the Euclidean length of a line segment.
+    
+    :param p1: Start point (x, y).
+    :param p2: End point (x, y).
+    :returns: Length of the segment.
     """
 
 def get_line_segment_polygon_intersections(p1: types.Point, p2: types.Point, polygon: list[types.Polygon]) -> list[float]:

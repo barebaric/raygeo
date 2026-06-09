@@ -13,31 +13,21 @@ cubic to quadratic form.
 from raygeo.geo import types
 import typing
 __all__ = [
-    "bezier_flatness_sq",
     "clip_bezier_with_rect",
     "convert_cubic_bezier_to_quadratic",
     "flatten_bezier",
     "get_bezier_bounds",
+    "get_bezier_flatness_sq",
+    "get_bezier_length",
     "get_bezier_point_at",
     "get_bezier_rect_intersections",
+    "get_perpendicular_dist_sq",
     "is_bezier_inside_polygons",
     "linearize_bezier",
     "linearize_bezier_adaptive",
     "linearize_bezier_segment",
-    "perp_dist_sq",
     "split_bezier",
 ]
-
-def bezier_flatness_sq(a: types.Point3D, b: types.Point3D, c: types.Point3D, d: types.Point3D) -> float:
-    r"""
-    Compute the flatness squared of a cubic bezier.
-    
-    :param a: Start point (x, y, z).
-    :param b: First control point (x, y, z).
-    :param c: Second control point (x, y, z).
-    :param d: End point (x, y, z).
-    :returns: Flatness squared value.
-    """
 
 def clip_bezier_with_rect(p0: types.Point, p1: types.Point, p2: types.Point, p3: types.Point, rect: types.Rect) -> list[tuple[types.Point, types.Point, types.Point, types.Point]]:
     r"""
@@ -86,6 +76,28 @@ def get_bezier_bounds(p0: types.Point, p1: types.Point, p2: types.Point, p3: typ
     :returns: Bounding rectangle as (x_min, y_min, x_max, y_max).
     """
 
+def get_bezier_flatness_sq(a: types.Point3D, b: types.Point3D, c: types.Point3D, d: types.Point3D) -> float:
+    r"""
+    Compute the flatness squared of a cubic bezier.
+    
+    :param a: Start point (x, y, z).
+    :param b: First control point (x, y, z).
+    :param c: Second control point (x, y, z).
+    :param d: End point (x, y, z).
+    :returns: Flatness squared value.
+    """
+
+def get_bezier_length(p0: types.Point, c1: types.Point, c2: types.Point, p1: types.Point) -> float:
+    r"""
+    Compute the arc length of a cubic Bezier curve.
+    
+    :param p0: Start point (x, y).
+    :param c1: First control point (x, y).
+    :param c2: Second control point (x, y).
+    :param p1: End point (x, y).
+    :returns: Arc length.
+    """
+
 def get_bezier_point_at(p0: types.Point, p1: types.Point, p2: types.Point, p3: types.Point, t: float) -> types.Point:
     r"""
     Get a point on a cubic bezier at parameter t.
@@ -108,6 +120,19 @@ def get_bezier_rect_intersections(p0: types.Point, p1: types.Point, p2: types.Po
     :param p3: End control point (x, y).
     :param rect: Rectangle (x_min, y_min, x_max, y_max).
     :returns: List of t-values where the bezier intersects.
+    """
+
+def get_perpendicular_dist_sq(pt: types.Point3D, origin: types.Point3D, vx: float, vy: float, vz: float = 0, norm_sq: float = 0) -> float:
+    r"""
+    Compute the perpendicular distance squared.
+    
+    :param pt: Point to measure from.
+    :param origin: Origin of the line.
+    :param vx: X component of line direction.
+    :param vy: Y component of line direction.
+    :param vz: Z component of line direction.
+    :param norm_sq: Precomputed squared norm (optional).
+    :returns: Perpendicular distance squared.
     """
 
 def is_bezier_inside_polygons(p0: types.Point, p1: types.Point, p2: types.Point, p3: types.Point, polygons: typing.Any) -> bool:
@@ -157,19 +182,6 @@ def linearize_bezier_segment(p0: types.Point3D, p1: types.Point3D, p2: types.Poi
     :param p3: End control point (x, y, z).
     :param tolerance: Linearization tolerance.
     :returns: List of linearized points (x, y, z).
-    """
-
-def perp_dist_sq(pt: types.Point3D, origin: types.Point3D, vx: float, vy: float, vz: float = 0, norm_sq: float = 0) -> float:
-    r"""
-    Compute the perpendicular distance squared.
-    
-    :param pt: Point to measure from.
-    :param origin: Origin of the line.
-    :param vx: X component of line direction.
-    :param vy: Y component of line direction.
-    :param vz: Z component of line direction.
-    :param norm_sq: Precomputed squared norm (optional).
-    :returns: Perpendicular distance squared.
     """
 
 def split_bezier(p0: types.Point, p1: types.Point, p2: types.Point, p3: types.Point, t: float) -> tuple[tuple[types.Point, types.Point, types.Point, types.Point], tuple[types.Point, types.Point, types.Point, types.Point]]:
