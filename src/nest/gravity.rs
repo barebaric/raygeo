@@ -3,7 +3,7 @@ use crate::geo::shape::polygon::{
 };
 use crate::types::Polygon;
 
-use super::placement::{any_overlap, is_contained};
+use super::collision::{any_overlap, is_contained};
 
 const MIN_SLIDE: f64 = 0.01;
 const MIN_STEP: f64 = 0.1;

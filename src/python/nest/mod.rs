@@ -1,3 +1,4 @@
+pub(crate) mod collision;
 pub(crate) mod genetic;
 pub(crate) mod gravity;
 pub(crate) mod ifp;
@@ -36,12 +37,17 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     spatial_grid_mod.setattr("__doc__", spatial_grid::MODULE_DOC)?;
     spatial_grid::register(&spatial_grid_mod)?;
 
+    let collision_mod = PyModule::new(py, "collision")?;
+    collision_mod.setattr("__doc__", collision::MODULE_DOC)?;
+    collision::register(&collision_mod)?;
+
     nest_mod.add_submodule(&nfp_mod)?;
     nest_mod.add_submodule(&ifp_mod)?;
     nest_mod.add_submodule(&placement_mod)?;
     nest_mod.add_submodule(&gravity_mod)?;
     nest_mod.add_submodule(&genetic_mod)?;
     nest_mod.add_submodule(&spatial_grid_mod)?;
+    nest_mod.add_submodule(&collision_mod)?;
     m.add_submodule(&nest_mod)?;
 
     let sys_modules = py.import("sys")?.getattr("modules")?;
@@ -52,6 +58,7 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     sys_modules.set_item("raygeo.nest.gravity", &gravity_mod)?;
     sys_modules.set_item("raygeo.nest.genetic", &genetic_mod)?;
     sys_modules.set_item("raygeo.nest.spatial_grid", &spatial_grid_mod)?;
+    sys_modules.set_item("raygeo.nest.collision", &collision_mod)?;
 
     Ok(())
 }

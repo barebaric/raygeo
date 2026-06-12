@@ -1,3 +1,4 @@
+pub mod collision;
 pub mod genetic;
 pub mod gravity;
 pub mod ifp;

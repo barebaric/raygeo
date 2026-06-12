@@ -9,83 +9,11 @@ use crate::types::Polygon;
 pyo3_stub_gen::module_doc!("raygeo.nest.placement", "{}", MODULE_DOC);
 
 pub(crate) const MODULE_DOC: &str = "\
-Placement search and collision detection for nesting algorithms.
+Placement search for nesting algorithms.
 
 Provides candidate generation strategies (bottom-left, grid, perimeter),
-collision detection with spatial indexing, and high-level nesting orchestration.
+position search, and high-level nesting orchestration.
 ";
-
-// ---------------------------------------------------------------------------
-// is_contained
-// ---------------------------------------------------------------------------
-
-#[gen_stub_pyfunction(
-    python = r#"
-    import collections.abc
-    import raygeo.geo.types
-
-    def is_contained(
-        inner: collections.abc.Sequence[types.Polygon],
-        outer: types.Polygon,
-        scale: int,
-    ) -> bool:
-        """Check if inner polygons are fully contained within outer polygon.
-
-        :param inner: List of polygons to check.
-        :param outer: Outer polygon.
-        :param scale: Clipper scale factor.
-        :returns: True if all inner polygons are inside outer.
-        """
-"#,
-    module = "raygeo.nest.placement"
-)]
-#[pyfunction(name = "is_contained")]
-fn is_contained_py(
-    inner: Vec<Vec<PyPoint2D>>,
-    outer: Vec<PyPoint2D>,
-    scale: i64,
-) -> bool {
-    let inner_polys: Vec<Polygon> =
-        inner.into_iter().map(poly_to_points).collect();
-    let outer_poly = poly_to_points(outer);
-    placement::is_contained(&inner_polys, &outer_poly, scale)
-}
-
-// ---------------------------------------------------------------------------
-// any_overlap
-// ---------------------------------------------------------------------------
-
-#[gen_stub_pyfunction(
-    python = r#"
-    import collections.abc
-    import raygeo.geo.types
-
-    def any_overlap(
-        candidate: types.Polygon,
-        placed: collections.abc.Sequence[types.Polygon],
-        min_area: float = 1.0,
-    ) -> bool:
-        """Check if a candidate polygon overlaps any placed polygon.
-
-        :param candidate: Candidate polygon.
-        :param placed: List of already-placed polygons.
-        :param min_area: Minimum overlap area to consider (in clipper coords).
-        :returns: True if any overlap detected.
-        """
-"#,
-    module = "raygeo.nest.placement"
-)]
-#[pyfunction(name = "any_overlap")]
-fn any_overlap_py(
-    candidate: Vec<PyPoint2D>,
-    placed: Vec<Vec<PyPoint2D>>,
-    min_area: f64,
-) -> bool {
-    let cand_poly = poly_to_points(candidate);
-    let placed_polys: Vec<Polygon> =
-        placed.into_iter().map(poly_to_points).collect();
-    placement::any_overlap(&cand_poly, &placed_polys, min_area)
-}
 
 // ---------------------------------------------------------------------------
 // generate_bottom_left_candidates
@@ -362,8 +290,6 @@ fn place_parts_py<'py>(
 // ---------------------------------------------------------------------------
 
 pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
-    m.add_function(wrap_pyfunction!(is_contained_py, m)?)?;
-    m.add_function(wrap_pyfunction!(any_overlap_py, m)?)?;
     m.add_function(wrap_pyfunction!(generate_bottom_left_candidates_py, m)?)?;
     m.add_function(wrap_pyfunction!(generate_grid_candidates_py, m)?)?;
     m.add_function(wrap_pyfunction!(generate_perimeter_candidates_py, m)?)?;

@@ -336,7 +336,7 @@ def rotate_polygon(polygon: collections.abc.Sequence[types.Point], angle: float)
     Rotate a polygon by an angle.
     
     :param polygon: Polygon as (x, y) points.
-    :param angle: Rotation angle in radians.
+    :param angle: Rotation angle in degrees.
     :returns: Rotated polygon.
     """
 
@@ -345,7 +345,7 @@ def rotate_polygon_numpy(polygon: numpy.typing.NDArray, angle: float) -> typing.
     Rotate a polygon from numpy array.
     
     :param polygon: Polygon as a 2D numpy array.
-    :param angle: Rotation angle in radians.
+    :param angle: Rotation angle in degrees.
     :returns: Rotated polygon as numpy array.
     """
 
@@ -354,7 +354,7 @@ def rotate_polygons(polygons: typing.Any, angle: float) -> list[types.Polygon]:
     Rotate multiple polygons by an angle.
     
     :param polygons: List of polygons to rotate.
-    :param angle: Rotation angle in radians.
+    :param angle: Rotation angle in degrees.
     :returns: Rotated polygons.
     """
 
@@ -363,7 +363,7 @@ def rotate_polygons_numpy(polygons: collections.abc.Sequence[numpy.typing.NDArra
     Rotate polygons from numpy arrays.
     
     :param polygons: Sequence of 2D numpy arrays.
-    :param angle: Rotation angle in radians.
+    :param angle: Rotation angle in degrees.
     :returns: List of rotated numpy arrays.
     """
 

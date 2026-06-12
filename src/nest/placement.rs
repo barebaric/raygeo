@@ -1,9 +1,9 @@
 use crate::geo::shape::polygon::{
-    get_polygon_bounds, get_polygons_difference, is_point_in_polygon,
-    polygons_intersect, rotate_polygon, translate_polygon,
+    is_point_in_polygon, rotate_polygon, translate_polygon,
 };
 use crate::types::Polygon;
 
+use super::collision::{any_overlap, any_overlap_with_grid};
 use super::spatial_grid::SpatialGrid;
 
 /// A single placed part result.
@@ -39,105 +39,6 @@ impl Default for PlacementConfig {
             min_area: 1.0,
         }
     }
-}
-
-// ---------------------------------------------------------------------------
-// Containment & collision helpers
-// ---------------------------------------------------------------------------
-
-/// Check whether `inner` polygons are fully contained within `outer`.
-///
-/// Uses a fast bounding-box reject followed by Clipper difference.
-pub fn is_contained(inner: &[Polygon], outer: &Polygon, _scale: i64) -> bool {
-    if inner.is_empty() || outer.len() < 3 {
-        return false;
-    }
-    let inner_bounds =
-        crate::geo::shape::polygon::get_polygon_group_bounds(inner);
-    let outer_bounds = get_polygon_bounds(outer);
-    if inner_bounds.0 < outer_bounds.0 - 1e-6
-        || inner_bounds.1 < outer_bounds.1 - 1e-6
-        || inner_bounds.2 > outer_bounds.2 + 1e-6
-        || inner_bounds.3 > outer_bounds.3 + 1e-6
-    {
-        return false;
-    }
-    for poly in inner {
-        if poly.len() < 3 {
-            continue;
-        }
-        let diff = get_polygons_difference(poly, outer);
-        if !diff.is_empty() {
-            return false;
-        }
-    }
-    true
-}
-
-/// Check if `candidate` polygon overlaps any polygon in `placed`.
-///
-/// Uses bounding-box pre-filter before the full Clipper intersection test.
-pub fn any_overlap(
-    candidate: &Polygon,
-    placed: &[Polygon],
-    min_area: f64,
-) -> bool {
-    if candidate.len() < 3 {
-        return false;
-    }
-    let c_bounds = get_polygon_bounds(candidate);
-    for p in placed {
-        if p.len() < 3 {
-            continue;
-        }
-        let p_bounds = get_polygon_bounds(p);
-        if c_bounds.0 > p_bounds.2
-            || c_bounds.2 < p_bounds.0
-            || c_bounds.1 > p_bounds.3
-            || c_bounds.3 < p_bounds.1
-        {
-            continue;
-        }
-        if polygons_intersect(candidate, p, min_area) {
-            return true;
-        }
-    }
-    false
-}
-
-/// Overlap check accelerated by a [`SpatialGrid`] for large numbers of placed parts.
-pub fn any_overlap_with_grid(
-    candidate: &Polygon,
-    placed: &[Polygon],
-    grid: &SpatialGrid,
-    min_area: f64,
-) -> bool {
-    if candidate.len() < 3 {
-        return false;
-    }
-    let c_bounds = get_polygon_bounds(candidate);
-    let indices = grid.query(c_bounds);
-    for &idx in &indices {
-        if idx >= placed.len() {
-            continue;
-        }
-        let p = &placed[idx];
-        if p.len() < 3 {
-            continue;
-        }
-        let p_bounds = get_polygon_bounds(p);
-        if c_bounds.0 > p_bounds.2
-            || c_bounds.2 < p_bounds.0
-            || c_bounds.1 > p_bounds.3
-            || c_bounds.3 < p_bounds.1
-        {
-            continue;
-        }
-        if polygons_intersect(candidate, p, min_area) {
-            return true;
-        }
-    }
-    false
 }
 
 // ---------------------------------------------------------------------------

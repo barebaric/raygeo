@@ -19,7 +19,7 @@ inserted item with the cells its bounding box touches.
 #[gen_stub_pyclass(module = "raygeo.nest.spatial_grid")]
 #[pyclass]
 pub struct SpatialGrid {
-    inner: spatial_grid::SpatialGrid,
+    pub(crate) inner: spatial_grid::SpatialGrid,
 }
 
 #[gen_stub_pymethods]

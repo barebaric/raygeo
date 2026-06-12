@@ -1,13 +1,12 @@
 """Tests for the Rust placement module (raygeo.nest.placement)."""
 
+from raygeo.nest.collision import any_overlap, is_contained
 from raygeo.nest.placement import (
-    any_overlap,
     filter_candidates_multi_resolution,
     find_valid_position,
     generate_bottom_left_candidates,
     generate_grid_candidates,
     generate_perimeter_candidates,
-    is_contained,
 )
 
 
