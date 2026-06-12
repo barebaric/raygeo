@@ -2294,7 +2294,7 @@ fn flip_polygons_py(
         """Rotate a polygon by an angle.
 
         :param polygon: Polygon as (x, y) points.
-        :param angle: Rotation angle in radians.
+        :param angle: Rotation angle in degrees.
         :returns: Rotated polygon.
         """
 "#,
@@ -2314,7 +2314,7 @@ fn rotate_polygon_py(polygon: Vec<PyPoint2D>, angle: f64) -> Vec<Point> {
         """Rotate multiple polygons by an angle.
 
         :param polygons: List of polygons to rotate.
-        :param angle: Rotation angle in radians.
+        :param angle: Rotation angle in degrees.
         :returns: Rotated polygons.
         """
 "#,
@@ -2675,7 +2675,7 @@ fn polygons_intersect_numpy_py(
         """Rotate a polygon from numpy array.
 
         :param polygon: Polygon as a 2D numpy array.
-        :param angle: Rotation angle in radians.
+        :param angle: Rotation angle in degrees.
         :returns: Rotated polygon as numpy array.
         """
 "#,
@@ -2705,7 +2705,7 @@ fn rotate_polygon_numpy_py(
         """Rotate polygons from numpy arrays.
 
         :param polygons: Sequence of 2D numpy arrays.
-        :param angle: Rotation angle in radians.
+        :param angle: Rotation angle in degrees.
         :returns: List of rotated numpy arrays.
         """
 "#,

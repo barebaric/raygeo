@@ -586,7 +586,7 @@ mod tests {
     fn test_geometry_to_svg_path_arc() {
         let mut geo = Geometry::new();
         geo.move_to(0.5, 0.5, 0.0);
-        geo.arc_to((1.0, 1.0, 0.0), (0.5, 0.0), true);
+        geo.arc_to(1.0, 1.0, 0.0, 0.5, true, 0.0);
         let path = geometry_to_svg_path(&geo, 100, 100);
         assert!(path.contains("A 50.000 50.000 0 0 1 100.000 0.000"));
     }

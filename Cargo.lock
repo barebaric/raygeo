@@ -709,6 +709,7 @@ dependencies = [
  "numpy",
  "pyo3",
  "pyo3-stub-gen",
+ "rand",
  "roxmltree",
  "rstar",
  "strum",

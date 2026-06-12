@@ -1,5 +1,5 @@
 pub(crate) mod algo;
-mod flex_point;
+pub(crate) mod flex_point;
 pub(crate) mod geometry;
 pub(crate) mod math;
 pub(crate) mod shape;

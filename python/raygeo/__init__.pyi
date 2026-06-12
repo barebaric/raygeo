@@ -42,6 +42,7 @@ from raygeo.geo import Geometry
 from raygeo.ops import Ops
 from . import geo
 from . import image
+from . import nest
 from . import ops
 from . import svg
 __all__ = [
@@ -49,6 +50,7 @@ __all__ = [
     "Ops",
     "geo",
     "image",
+    "nest",
     "ops",
     "svg",
 ]
