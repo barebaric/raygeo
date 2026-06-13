@@ -10,6 +10,7 @@
 use std::f64::consts::PI;
 
 use crate::constants::EPSILON_COLLINEAR;
+use crate::geo::algo::analysis::{get_point_at_from_array, segment_length};
 use crate::geo::shape::arc::{get_arc_bounds, get_arc_closest_point};
 use crate::geo::shape::bezier::{
     compute_cubic_bezier_bounds_1d, get_bezier_closest_point,
@@ -17,8 +18,6 @@ use crate::geo::shape::bezier::{
 };
 use crate::geo::shape::line::get_line_segment_closest_point;
 use crate::types::{Command, Point, Point3D, Rect};
-
-use super::analysis::segment_length;
 
 /// Compute the axis-aligned bounding rectangle for a geometry command slice.
 ///
@@ -331,4 +330,76 @@ pub fn extract_overcut_rows(
     } else {
         Some(collected)
     }
+}
+
+/// Given a list of distances along the path, returns the corresponding
+/// (segment_index, t, point) for each distance.
+///
+/// Distances are clamped to [0, total_length]. Distances beyond the path
+/// end return the last point.
+///
+/// - `data`: Slice of geometry commands.
+/// - `distances`: Sorted list of distances along the path.
+/// - Returns: Vec of (segment_index, t, point) in the same order as distances.
+pub fn get_positions_at_distances_from_array(
+    data: &[Command],
+    distances: &[f64],
+) -> Vec<(usize, f64, Point)> {
+    if data.is_empty() || distances.is_empty() {
+        return Vec::new();
+    }
+
+    let total = get_total_distance_from_array(data);
+    let mut results = Vec::with_capacity(distances.len());
+    let mut last_point: Point3D = (0.0, 0.0, 0.0);
+    let mut cumulative = 0.0;
+    let mut di = 0;
+
+    for (seg_idx, cmd) in data.iter().enumerate() {
+        if di >= distances.len() {
+            break;
+        }
+        let end = cmd.end_point();
+
+        if matches!(cmd, Command::Move { .. }) {
+            last_point = end;
+            continue;
+        }
+
+        let seg_len = segment_length(cmd, last_point);
+        if seg_len < EPSILON_COLLINEAR {
+            last_point = end;
+            continue;
+        }
+
+        let next_cumulative = cumulative + seg_len;
+
+        while di < distances.len() {
+            let dist = distances[di].clamp(0.0, total);
+            if dist > next_cumulative + EPSILON_COLLINEAR {
+                break;
+            }
+            let dist_into = (dist - cumulative).max(0.0);
+            let t = (dist_into / seg_len).clamp(0.0, 1.0);
+            let pt = match get_point_at_from_array(data, seg_idx, t) {
+                Some(p3) => (p3.0, p3.1),
+                None => (last_point.0, last_point.1),
+            };
+            results.push((seg_idx, t, pt));
+            di += 1;
+        }
+
+        cumulative = next_cumulative;
+        last_point = end;
+    }
+
+    // Any remaining distances beyond path end: clamp to last point
+    while di < distances.len() {
+        let last_seg = data.len() - 1;
+        let last_pt = data[last_seg].end_point();
+        results.push((last_seg, 1.0, (last_pt.0, last_pt.1)));
+        di += 1;
+    }
+
+    results
 }

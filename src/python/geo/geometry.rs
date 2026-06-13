@@ -415,6 +415,47 @@ impl Geometry {
         self.inner.rect()
     }
 
+    /// Return the bounding box of a single segment at the given index.
+    /// Returns None for Move commands or if the index is out of bounds.
+    ///
+    /// :param index: Segment index.
+    /// :returns: (x_min, y_min, x_max, y_max) or None.
+    fn segment_bounds(&mut self, index: usize) -> Option<(f64, f64, f64, f64)> {
+        self.inner.segment_bounds(index)
+    }
+
+    /// Given a list of distances along the path, returns the corresponding
+    /// (segment_index, t, point) for each distance.
+    ///
+    /// Distances are clamped to [0, total_length].
+    ///
+    /// :param distances: List of distances along the path.
+    /// :returns: List of (segment_index, t, (x, y)) tuples.
+    fn get_positions_at_distances(
+        &mut self,
+        distances: Vec<f64>,
+    ) -> Vec<(usize, f64, (f64, f64))> {
+        self.inner.get_positions_at_distances(&distances)
+    }
+
+    /// Return indices of all segments whose bounding box intersects the
+    /// given rectangle. Excludes Move commands.
+    ///
+    /// :param x1: First corner X.
+    /// :param y1: First corner Y.
+    /// :param x2: Second corner X.
+    /// :param y2: Second corner Y.
+    /// :returns: List of segment indices.
+    fn segments_in_frame(
+        &mut self,
+        x1: f64,
+        y1: f64,
+        x2: f64,
+        y2: f64,
+    ) -> Vec<usize> {
+        self.inner.segments_in_frame(x1, y1, x2, y2)
+    }
+
     /// Return the total path distance.
     fn distance(&mut self) -> f64 {
         self.inner.distance()

@@ -15,8 +15,8 @@ format-rust:
 	cargo fmt
 
 format-python:
-	ruff format tests/ python/
-	ruff check --fix tests/ python/
+	ruff format tests/ python/ tools/
+	ruff check --fix tests/ python/ tools/
 
 lint: lint-rust lint-python
 
@@ -25,9 +25,9 @@ lint-rust:
 	cargo clippy -- -D warnings
 
 lint-python:
-	ruff check tests/ python/
-	ruff format --check tests/ python/
-	npx pyright python/raygeo tests
+	ruff check tests/ python/ tools/
+	ruff format --check tests/ python/ tools/
+	npx pyright python/raygeo tests tools
 
 test:
 	pytest -v

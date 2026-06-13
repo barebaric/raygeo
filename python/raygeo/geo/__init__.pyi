@@ -183,6 +183,35 @@ class Geometry:
         r"""
         Return the bounding rectangle (x_min, x_max, y_min, y_max).
         """
+    def segment_bounds(self, index: builtins.int) -> typing.Optional[tuple[builtins.float, builtins.float, builtins.float, builtins.float]]:
+        r"""
+        Return the bounding box of a single segment at the given index.
+        Returns None for Move commands or if the index is out of bounds.
+        
+        :param index: Segment index.
+        :returns: (x_min, y_min, x_max, y_max) or None.
+        """
+    def get_positions_at_distances(self, distances: typing.Sequence[builtins.float]) -> builtins.list[tuple[builtins.int, builtins.float, tuple[builtins.float, builtins.float]]]:
+        r"""
+        Given a list of distances along the path, returns the corresponding
+        (segment_index, t, point) for each distance.
+        
+        Distances are clamped to [0, total_length].
+        
+        :param distances: List of distances along the path.
+        :returns: List of (segment_index, t, (x, y)) tuples.
+        """
+    def segments_in_frame(self, x1: builtins.float, y1: builtins.float, x2: builtins.float, y2: builtins.float) -> builtins.list[builtins.int]:
+        r"""
+        Return indices of all segments whose bounding box intersects the
+        given rectangle. Excludes Move commands.
+        
+        :param x1: First corner X.
+        :param y1: First corner Y.
+        :param x2: Second corner X.
+        :param y2: Second corner Y.
+        :returns: List of segment indices.
+        """
     def distance(self) -> builtins.float:
         r"""
         Return the total path distance.

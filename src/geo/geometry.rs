@@ -6,7 +6,10 @@
 //! directly to the data array on construction and can be queried for various
 //! properties.
 
-use crate::types::{BezierControls, Command, Point3D, Rect};
+use crate::geo::query::get_positions_at_distances_from_array;
+use crate::geo::shape::arc::get_arc_bounds;
+use crate::geo::shape::bezier::get_bezier_bounds;
+use crate::types::{BezierControls, Command, Point, Point3D, Rect};
 
 /// A geometric path consisting of move, line, arc, and bezier commands.
 ///
@@ -149,6 +152,88 @@ impl Geometry {
             return (0.0, 0.0, 0.0, 0.0);
         }
         crate::query::get_bounding_rect_from_array(&self.data)
+    }
+
+    /// Returns the bounding box of a single segment at the given index.
+    /// Returns None for Move commands or if the index is out of bounds.
+    pub fn segment_bounds(&self, index: usize) -> Option<Rect> {
+        let cmd = self.data.get(index)?;
+        let end = cmd.end_point();
+
+        let (sx, sy) = if index > 0 {
+            let prev = self.data[index - 1].end_point();
+            (prev.0, prev.1)
+        } else {
+            (0.0, 0.0)
+        };
+
+        match cmd {
+            Command::Move { .. } => None,
+            Command::Line { .. } => Some((
+                sx.min(end.0),
+                sy.min(end.1),
+                sx.max(end.0),
+                sy.max(end.1),
+            )),
+            Command::Arc {
+                center_offset,
+                clockwise,
+                ..
+            } => Some(get_arc_bounds(
+                (sx, sy),
+                (end.0, end.1),
+                *center_offset,
+                *clockwise,
+            )),
+            Command::Bezier {
+                control1, control2, ..
+            } => Some(get_bezier_bounds(
+                (sx, sy),
+                *control1,
+                *control2,
+                (end.0, end.1),
+            )),
+        }
+    }
+
+    /// Given a list of distances along the path, returns the corresponding
+    /// (segment_index, t, point_2d) for each distance.
+    ///
+    /// Distances are clamped to [0, total_length].
+    pub fn get_positions_at_distances(
+        &self,
+        distances: &[f64],
+    ) -> Vec<(usize, f64, Point)> {
+        get_positions_at_distances_from_array(&self.data, distances)
+    }
+
+    /// Returns indices of all segments whose bounding box intersects the
+    /// given rectangle. Excludes Move commands.
+    pub fn segments_in_frame(
+        &self,
+        x1: f64,
+        y1: f64,
+        x2: f64,
+        y2: f64,
+    ) -> Vec<usize> {
+        let fmin_x = x1.min(x2);
+        let fmin_y = y1.min(y2);
+        let fmax_x = x1.max(x2);
+        let fmax_y = y1.max(y2);
+
+        let mut result = Vec::new();
+        for idx in 0..self.data.len() {
+            if let Some(bbox) = self.segment_bounds(idx) {
+                if bbox.2 >= fmin_x
+                    && bbox.0 <= fmax_x
+                    && bbox.3 >= fmin_y
+                    && bbox.1 <= fmax_y
+                {
+                    result.push(idx);
+                }
+            }
+        }
+        result
     }
 
     /// Returns the total path length (sum of all segment lengths).

@@ -3,15 +3,18 @@
 r"""
 Rectangle intersection and containment tests.
 
-Provides functions to test whether two axis-aligned rectangles intersect
-and whether one rectangle fully contains another.
+Provides functions to test whether two axis-aligned rectangles intersect,
+whether one rectangle fully contains another, and utilities for computing
+the union bounding rectangle of multiple geometries.
 """
 
+import raygeo
 from raygeo.geo import types
 __all__ = [
     "do_rects_intersect",
     "does_rect_contain_rect",
     "does_rect_intersect_rect",
+    "get_combined_rect",
     "is_point_inside_rect",
 ]
 
@@ -40,6 +43,14 @@ def does_rect_intersect_rect(r1: types.Rect, r2: types.Rect) -> bool:
     :param r1: First rectangle (x_min, y_min, x_max, y_max).
     :param r2: Second rectangle (x_min, y_min, x_max, y_max).
     :returns: True if the rectangles intersect.
+    """
+
+def get_combined_rect(geometries: list[raygeo.Geometry]) -> types.Rect:
+    r"""
+    Compute the union bounding box of multiple geometries.
+    
+    :param geometries: List of Geometry objects.
+    :returns: Union bounding rectangle (x_min, y_min, x_max, y_max).
     """
 
 def is_point_inside_rect(point: types.Point, rect: types.Rect) -> bool:

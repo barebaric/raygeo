@@ -1009,6 +1009,190 @@ class TestFilter:
         assert len(filtered) == 1
         assert isinstance(filtered.data[0], Move)
 
+
+class TestSegmentBounds:
+    def test_segment_bounds_line(self):
+        geo = Geometry()
+        geo.move_to(0, 0)
+        geo.line_to(10, 5)
+        bbox = geo.segment_bounds(1)
+        assert bbox == (0.0, 0.0, 10.0, 5.0)
+
+    def test_segment_bounds_move(self):
+        geo = Geometry()
+        geo.move_to(0, 0)
+        assert geo.segment_bounds(0) is None
+
+    def test_segment_bounds_arc(self):
+        geo = Geometry()
+        geo.move_to(0, 0)
+        geo.arc_to(10, 0, i=5, j=0, clockwise=True)
+        bbox = geo.segment_bounds(1)
+        assert bbox is not None
+
+    def test_segment_bounds_bezier(self):
+        geo = Geometry()
+        geo.move_to(0, 0)
+        geo.bezier_to(10, 10, c1x=2, c1y=5, c2x=8, c2y=5)
+        bbox = geo.segment_bounds(1)
+        assert bbox is not None
+
+    def test_segment_bounds_out_of_range(self):
+        geo = Geometry()
+        assert geo.segment_bounds(0) is None
+        assert geo.segment_bounds(99) is None
+
+    def test_segment_bounds_empty(self):
+        geo = Geometry()
+        assert geo.segment_bounds(0) is None
+
+
+class TestSegmentsInFrame:
+    def test_segments_in_frame_empty(self):
+        geo = Geometry()
+        assert geo.segments_in_frame(0, 0, 10, 10) == []
+
+    def test_segments_in_frame_selects_line(self):
+        geo = Geometry()
+        geo.move_to(0, 0)
+        geo.line_to(5, 0)
+        geo.line_to(10, 5)
+        # Segment 1 (bbox (0,0)-(5,0)) only: x range [0,5] ∩ [2,4] ✓
+        assert geo.segments_in_frame(2, -0.5, 4, 0.5) == [1]
+        # Segment 2 (bbox (5,0)-(10,5)) only: x range [5,10] ∩ [7,11] ✓
+        assert geo.segments_in_frame(7, 2, 11, 6) == [2]
+
+    def test_segments_in_frame_skips_move(self):
+        geo = Geometry()
+        geo.move_to(0, 0)
+        geo.line_to(10, 0)
+        assert 0 not in geo.segments_in_frame(0, 0, 10, 10)
+
+    def test_segments_in_frame_no_match(self):
+        geo = Geometry()
+        geo.move_to(0, 0)
+        geo.line_to(10, 0)
+        assert geo.segments_in_frame(20, 20, 30, 30) == []
+
+
+class TestGetPositionsAtDistances:
+    def test_empty_geometry(self):
+        geo = Geometry()
+        assert geo.get_positions_at_distances([5]) == []
+
+    def test_empty_distances(self):
+        geo = Geometry()
+        geo.move_to(0, 0)
+        geo.line_to(10, 0)
+        assert geo.get_positions_at_distances([]) == []
+
+    def test_single_line(self):
+        geo = Geometry()
+        geo.move_to(0, 0)
+        geo.line_to(10, 0)
+        # 40mm path. Midpoint at 5mm -> t=0.5 on segment 1, point (5, 0)
+        positions = geo.get_positions_at_distances([5])
+        assert len(positions) == 1
+        assert positions[0][0] == 1  # segment index
+        assert positions[0][1] == pytest.approx(0.5)  # t
+        assert positions[0][2] == (5.0, 0.0)  # point
+
+    def test_closed_square(self):
+        geo = Geometry()
+        geo.move_to(0, 0)
+        geo.line_to(10, 0)
+        geo.line_to(10, 10)
+        geo.line_to(0, 10)
+        geo.close_path()
+
+        total = geo.distance()
+        assert total == pytest.approx(40.0)
+
+        # Equidistant tabs like the tab_cmd logic
+        count = 4
+        spacing = total / count
+        targets = [(i + 0.5) * spacing for i in range(count)]
+        positions = geo.get_positions_at_distances(targets)
+
+        assert len(positions) == 4
+        # Should land in the middle of each side
+        assert positions[0] == (1, 0.5, (5.0, 0.0))
+        assert positions[1] == (2, 0.5, (10.0, 5.0))
+        assert positions[2] == (3, 0.5, (5.0, 10.0))
+        assert positions[3] == (4, 0.5, (0.0, 5.0))
+
+    def test_clamp_to_start(self):
+        geo = Geometry()
+        geo.move_to(0, 0)
+        geo.line_to(10, 0)
+        positions = geo.get_positions_at_distances([-5])
+        assert positions[0][2] == (0.0, 0.0)
+
+    def test_clamp_to_end(self):
+        geo = Geometry()
+        geo.move_to(0, 0)
+        geo.line_to(10, 0)
+        positions = geo.get_positions_at_distances([100])
+        assert positions[0][2] == (10.0, 0.0)
+
+    def test_multiple_distances(self):
+        geo = Geometry()
+        geo.move_to(0, 0)
+        geo.line_to(10, 0)
+        geo.line_to(10, 10)
+
+        total = geo.distance()
+        positions = geo.get_positions_at_distances([0, total / 2, total])
+        assert len(positions) == 3
+        assert positions[0][2] == (0.0, 0.0)
+
+    def test_with_arc(self):
+        geo = Geometry()
+        geo.move_to(10, 0)
+        # Quarter circle CCW: start (10,0), end (0,10), center (0,0), radius 10
+        geo.arc_to(0, 10, i=-10, j=0, clockwise=False)
+
+        # distance() includes Move, but get_positions_at_distances skips it.
+        # Use a position within the arc segment only.
+        arc_len = 10 * math.pi / 2
+        positions = geo.get_positions_at_distances([arc_len / 2])
+        assert len(positions) == 1
+        _, _, pt = positions[0]
+        # Midpoint of quarter circle radius 10 around (0,0) at 45 deg
+        assert pt[0] == pytest.approx(7.071, rel=1e-3)
+        assert pt[1] == pytest.approx(7.071, rel=1e-3)
+
+
+class TestGetCombinedRect:
+    def test_get_combined_rect_empty(self):
+        from raygeo.geo.shape.rect import get_combined_rect
+
+        assert get_combined_rect([]) == (0.0, 0.0, 0.0, 0.0)
+
+    def test_get_combined_rect_single(self):
+        from raygeo.geo.shape.rect import get_combined_rect
+
+        geo = Geometry()
+        geo.move_to(0, 0)
+        geo.line_to(10, 10)
+        assert get_combined_rect([geo]) == geo.rect()
+
+    def test_get_combined_rect_multiple(self):
+        from raygeo.geo.shape.rect import get_combined_rect
+
+        geo1 = Geometry()
+        geo1.move_to(0, 0)
+        geo1.line_to(10, 10)
+
+        geo2 = Geometry()
+        geo2.move_to(20, 20)
+        geo2.line_to(30, 30)
+
+        result = get_combined_rect([geo1, geo2])
+        assert result == (0.0, 0.0, 30.0, 30.0)
+
+
+class TestFilterExt:
     def test_filter_with_bezier(self):
         geo = Geometry()
         geo.move_to(0, 0)
