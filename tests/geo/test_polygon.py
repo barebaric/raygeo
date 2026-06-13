@@ -19,7 +19,10 @@ from raygeo.geo.shape.polygon import (
     get_polygon_edges,
     get_polygon_group_bounds,
     get_polygon_perimeter,
+    get_polygon_signed_area,
     get_polygons_difference,
+    get_polygons_group_difference,
+    get_polygons_group_intersection,
     get_polygons_intersection,
     get_polygons_union,
     is_almost_equal,
@@ -629,6 +632,114 @@ class TestPolygonBooleanOps:
         poly2 = P((5, 5), (15, 5), (15, 15), (5, 15))
         result = get_polygons_difference(poly1, poly2)
         assert len(result) >= 1
+
+
+class TestGetPolygonsGroupIntersection:
+    def test_overlapping_rects(self):
+        subject = [P((0, 0), (10, 0), (10, 10), (0, 10))]
+        clip = [P((5, 5), (15, 5), (15, 15), (5, 15))]
+        result = get_polygons_group_intersection(subject, clip)
+        assert len(result) >= 1
+        area = sum(abs(get_polygon_area(p)) for p in result)
+        assert abs(area - 25.0) < 0.1
+
+    def test_no_overlap(self):
+        subject = [P((0, 0), (10, 0), (10, 10), (0, 10))]
+        clip = [P((20, 20), (30, 20), (30, 30), (20, 30))]
+        result = get_polygons_group_intersection(subject, clip)
+        assert len(result) == 0
+
+    def test_subject_inside_clip(self):
+        subject = [P((2, 2), (8, 2), (8, 8), (2, 8))]
+        clip = [P((0, 0), (10, 0), (10, 10), (0, 10))]
+        result = get_polygons_group_intersection(subject, clip)
+        assert len(result) >= 1
+        area = sum(abs(get_polygon_area(p)) for p in result)
+        assert abs(area - 36.0) < 0.1
+
+    def test_empty_subject(self):
+        clip = [P((0, 0), (10, 0), (10, 10), (0, 10))]
+        result = get_polygons_group_intersection([], clip)
+        assert len(result) == 0
+
+    def test_empty_clip(self):
+        subject = [P((0, 0), (10, 0), (10, 10), (0, 10))]
+        result = get_polygons_group_intersection(subject, [])
+        assert len(result) == 0
+
+    def test_multiple_subject_polygons(self):
+        subject = [
+            P((0, 0), (5, 0), (5, 5), (0, 5)),
+            P((5, 5), (10, 5), (10, 10), (5, 10)),
+        ]
+        clip = [P((2, 2), (8, 2), (8, 8), (2, 8))]
+        result = get_polygons_group_intersection(subject, clip)
+        assert len(result) >= 1
+        area = sum(abs(get_polygon_area(p)) for p in result)
+        assert abs(area - 18.0) < 0.5
+
+    def test_touching_edges(self):
+        subject = [P((0, 0), (10, 0), (10, 10), (0, 10))]
+        clip = [P((10, 0), (20, 0), (20, 10), (10, 10))]
+        result = get_polygons_group_intersection(subject, clip)
+        assert len(result) == 0
+
+
+class TestGetPolygonsGroupDifference:
+    def test_subtract_inner_rect(self):
+        subject = [P((0, 0), (20, 0), (20, 20), (0, 20))]
+        clip = [P((5, 5), (15, 5), (15, 15), (5, 15))]
+        result = get_polygons_group_difference(subject, clip)
+        assert len(result) >= 1
+        signed_area = sum(get_polygon_signed_area(p) for p in result)
+        assert abs(signed_area - 300.0) < 1.0  # 400 - 100
+
+    def test_no_overlap(self):
+        subject = [P((0, 0), (10, 0), (10, 10), (0, 10))]
+        clip = [P((20, 20), (30, 20), (30, 30), (20, 30))]
+        result = get_polygons_group_difference(subject, clip)
+        assert len(result) >= 1
+        area = sum(abs(get_polygon_area(p)) for p in result)
+        assert abs(area - 100.0) < 0.1
+
+    def test_clip_fully_covers_subject(self):
+        subject = [P((2, 2), (8, 2), (8, 8), (2, 8))]
+        clip = [P((0, 0), (10, 0), (10, 10), (0, 10))]
+        result = get_polygons_group_difference(subject, clip)
+        assert len(result) == 0
+
+    def test_empty_subject(self):
+        clip = [P((0, 0), (10, 0), (10, 10), (0, 10))]
+        result = get_polygons_group_difference([], clip)
+        assert len(result) == 0
+
+    def test_empty_clip_returns_subject(self):
+        subject = [P((0, 0), (10, 0), (10, 10), (0, 10))]
+        result = get_polygons_group_difference(subject, [])
+        assert len(result) >= 1
+        area = sum(abs(get_polygon_area(p)) for p in result)
+        assert abs(area - 100.0) < 0.1
+
+    def test_multiple_clip_polygons(self):
+        subject = [P((0, 0), (20, 0), (20, 20), (0, 20))]
+        clip = [
+            P((2, 2), (8, 2), (8, 8), (2, 8)),
+            P((12, 12), (18, 12), (18, 18), (12, 18)),
+        ]
+        result = get_polygons_group_difference(subject, clip)
+        assert len(result) >= 1
+        signed_area = sum(get_polygon_signed_area(p) for p in result)
+        expected = 400.0 - 36.0 - 36.0  # 328
+        assert abs(signed_area - expected) < 1.0
+
+    def test_partial_overlap(self):
+        subject = [P((0, 0), (10, 0), (10, 10), (0, 10))]
+        clip = [P((5, 5), (15, 5), (15, 15), (5, 15))]
+        result = get_polygons_group_difference(subject, clip)
+        assert len(result) >= 1
+        signed_area = sum(get_polygon_signed_area(p) for p in result)
+        expected = 100.0 - 25.0  # full square minus intersection
+        assert abs(signed_area - expected) < 1.0
 
 
 class TestPointInPolygon:

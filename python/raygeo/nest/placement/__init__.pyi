@@ -9,11 +9,13 @@ position search, and high-level nesting orchestration.
 
 import collections.abc
 import numpy
-from raygeo.geo import types
+from raygeo.nest import spatial_grid
 __all__ = [
     "calculate_fitness",
     "filter_candidates_multi_resolution",
     "find_valid_position",
+    "find_valid_position_nfp",
+    "find_valid_position_scored",
     "generate_bottom_left_candidates",
     "generate_grid_candidates",
     "generate_perimeter_candidates",
@@ -43,16 +45,66 @@ def filter_candidates_multi_resolution(candidates: list[tuple[float, float]], if
     :returns: Filtered list of (x, y) positions.
     """
 
-def find_valid_position(ifp_polygons: collections.abc.Sequence[types.Polygon], part_polygons: collections.abc.Sequence[types.Polygon], placed_polygons: collections.abc.Sequence[types.Polygon], spacing: float, scale: int, min_area: float = 1) -> tuple[float, float] | None:
+def find_valid_position(ifp_polygons: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]], part_polygons: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]], part_hulls: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]], placed_polys_list: collections.abc.Sequence[collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]]], placed_hulls_list: collections.abc.Sequence[collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]]], grid: spatial_grid.SpatialGrid, sheet_world_offset: tuple[float, float], spacing: float = 1, scale: int = 10000000, min_area: float = 1, curve_tolerance: float = 0.5) -> tuple[float, float] | None:
     r"""
-    Find the first valid placement position for a part.
+    Find a valid position: heuristic search first, NFP fallback second.
+    
+    Supports hull-based collision detection and sheet world offsets.
     
     :param ifp_polygons: IFP polygons (valid placement region).
     :param part_polygons: Part polygons to place.
-    :param placed_polygons: Already-placed polygons.
+    :param part_hulls: Convex hulls for collision (may be empty).
+    :param placed_polys_list: Already-placed parts, each a list of polygons.
+    :param placed_hulls_list: Hulls of already-placed parts, each a list.
+    :param grid: SpatialGrid for fast neighbor lookup.
+    :param sheet_world_offset: (offset_x, offset_y) for this sheet.
     :param spacing: Minimum spacing between parts.
     :param scale: Clipper scale factor.
     :param min_area: Minimum overlap area (clipper coords).
+    :param curve_tolerance: Curve tolerance for distance filtering.
+    :returns: (x, y) position or None.
+    """
+
+def find_valid_position_nfp(ifp_polygons: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]], part_polygons: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]], part_hulls: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]], placed_polys_list: collections.abc.Sequence[collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]]], placed_hulls_list: collections.abc.Sequence[collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]]], grid: spatial_grid.SpatialGrid, sheet_world_offset: tuple[float, float], spacing: float = 1, scale: int = 10000000, min_area: float = 1, curve_tolerance: float = 0.5) -> tuple[float, float] | None:
+    r"""
+    Find a valid position using NFP-based region subtraction.
+    
+    Computes No-Fit Polygons for nearby placed parts and subtracts
+    them from the IFP to identify viable placement regions.
+    
+    :param ifp_polygons: IFP polygons (valid placement region).
+    :param part_polygons: Part polygons to place.
+    :param part_hulls: Convex hulls for collision (may be empty).
+    :param placed_polys_list: Already-placed parts, each a list of polygons.
+    :param placed_hulls_list: Hulls of already-placed parts, each a list.
+    :param grid: SpatialGrid for fast neighbor lookup.
+    :param sheet_world_offset: (offset_x, offset_y) for this sheet.
+    :param spacing: Minimum spacing between parts.
+    :param scale: Clipper scale factor.
+    :param min_area: Minimum overlap area (clipper coords).
+    :param curve_tolerance: Curve tolerance for distance filtering.
+    :returns: (x, y) position or None.
+    """
+
+def find_valid_position_scored(ifp_polygons: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]], part_polygons: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]], part_hulls: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]], placed_polys_list: collections.abc.Sequence[collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]]], placed_hulls_list: collections.abc.Sequence[collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]]], grid: spatial_grid.SpatialGrid, sheet_world_offset: tuple[float, float], spacing: float = 1, scale: int = 10000000, min_area: float = 1, curve_tolerance: float = 0.5) -> tuple[float, float] | None:
+    r"""
+    Find a valid position using heuristic candidate search.
+    
+    Uses IFP vertices, bottom-left sweep, grid, placed polygon vertices,
+    and perimeter candidates. Falls back to NFP-region candidates.
+    Scores candidates and picks the best valid one.
+    
+    :param ifp_polygons: IFP polygons (valid placement region).
+    :param part_polygons: Part polygons to place.
+    :param part_hulls: Convex hulls for collision (may be empty).
+    :param placed_polys_list: Already-placed parts, each a list of polygons.
+    :param placed_hulls_list: Hulls of already-placed parts, each a list.
+    :param grid: SpatialGrid for fast neighbor lookup.
+    :param sheet_world_offset: (offset_x, offset_y) for this sheet.
+    :param spacing: Minimum spacing between parts.
+    :param scale: Clipper scale factor.
+    :param min_area: Minimum overlap area (clipper coords).
+    :param curve_tolerance: Curve tolerance for distance filtering.
     :returns: (x, y) position or None.
     """
 
@@ -76,7 +128,7 @@ def generate_grid_candidates(ifp_bounds: tuple[float, float, float, float], part
     :returns: List of (x, y) candidate positions.
     """
 
-def generate_perimeter_candidates(placed_groups: collections.abc.Sequence[collections.abc.Sequence[types.Polygon]], part_bounds: tuple[float, float, float, float], spacing: float) -> list[tuple[float, float]]:
+def generate_perimeter_candidates(placed_groups: collections.abc.Sequence[collections.abc.Sequence[list[tuple[float, float]]]], part_bounds: tuple[float, float, float, float], spacing: float) -> list[tuple[float, float]]:
     r"""
     Generate edge-aligned candidates around placed parts.
     
@@ -90,20 +142,30 @@ def generate_perimeter_candidates(placed_groups: collections.abc.Sequence[collec
     :returns: List of (x, y) candidate positions.
     """
 
-def place_parts(parts: collections.abc.Sequence[collections.abc.Sequence[types.Polygon]], sheets: collections.abc.Sequence[types.Polygon], rotations: collections.abc.Sequence[float], spacing: float, scale: int, min_area: float = 1) -> list[dict]:
+def place_parts(part_polys: collections.abc.Sequence[collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]]], part_hulls: collections.abc.Sequence[collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]]], sheet_polys: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]], sheet_offsets: collections.abc.Sequence[tuple[float, float]], rotations: collections.abc.Sequence[float], flips_h: collections.abc.Sequence[bool], flips_v: collections.abc.Sequence[bool], spacing: float = 1, scale: int = 10000000, min_area: float = 1, curve_tolerance: float = 0.5) -> list[dict]:
     r"""
     Place as many parts as possible onto sheets.
     
-    Each part is a list of polygons (holes are separate polygons).
-    Each sheet is a single polygon.
+    Supports combined IFP for multi-polygon parts, hull-based
+    collision detection, world-space offsets per sheet, gravity
+    post-processing, and fitness calculation.
     
-    :param parts: List of parts (each part is a list of polygons).
-    :param sheets: List of sheet polygons.
-    :param rotations: List of rotation angles in degrees.
+    Parts are sorted by area (largest first).  For each part, the
+    best sheet and position are selected.  After all parts are
+    placed, gravity is applied per sheet.
+    
+    :param part_polys: List of parts, each a list of polygon point lists.
+    :param part_hulls: List of hull groups per part (may be empty).
+    :param sheet_polys: List of sheet polygons.
+    :param sheet_offsets: World-space offset (x, y) for each sheet.
+    :param rotations: Rotation angle (degrees) for each part.
+    :param flips_h: Horizontal flip flag per part.
+    :param flips_v: Vertical flip flag per part.
     :param spacing: Minimum spacing between parts.
     :param scale: Clipper scale factor.
     :param min_area: Minimum overlap area (clipper coords).
-    :returns: List of dicts, one per sheet, with keys:
-              ``placements``, ``sheet_index``, ``unused_part_indices``.
+    :param curve_tolerance: Curve tolerance for distance filtering.
+    :returns: List of dicts, one per sheet, with keys: placements,
+              sheet_index, unused_part_indices, fitness.
     """
 

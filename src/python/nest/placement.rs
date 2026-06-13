@@ -4,6 +4,7 @@ use pyo3::types::PyDict;
 use pyo3_stub_gen::derive::gen_stub_pyfunction;
 
 use super::super::geo::flex_point::{poly_to_points, PyPoint2D};
+use super::spatial_grid::SpatialGrid as PySpatialGrid;
 use crate::nest::placement;
 use crate::types::Polygon;
 
@@ -15,6 +16,16 @@ Placement search for nesting algorithms.
 Provides candidate generation strategies (bottom-left, grid, perimeter),
 position search, and high-level nesting orchestration.
 ";
+
+fn polys_from_py(polys: Vec<Vec<PyPoint2D>>) -> Vec<Polygon> {
+    polys.into_iter().map(poly_to_points).collect()
+}
+
+fn polys_list_from_py(list: Vec<Vec<Vec<PyPoint2D>>>) -> Vec<Vec<Polygon>> {
+    list.into_iter()
+        .map(|g| g.into_iter().map(poly_to_points).collect())
+        .collect()
+}
 
 // ---------------------------------------------------------------------------
 // generate_bottom_left_candidates
@@ -83,10 +94,9 @@ fn generate_grid_candidates_py(
 #[gen_stub_pyfunction(
     python = r#"
     import collections.abc
-    import raygeo.geo.types
 
     def generate_perimeter_candidates(
-        placed_groups: collections.abc.Sequence[collections.abc.Sequence[types.Polygon]],
+        placed_groups: collections.abc.Sequence[collections.abc.Sequence[list[tuple[float, float]]]],
         part_bounds: tuple[float, float, float, float],
         spacing: float,
     ) -> list[tuple[float, float]]:
@@ -151,6 +161,28 @@ fn filter_candidates_multi_resolution_py(
     )
 }
 
+fn make_config(
+    spacing: f64,
+    scale: i64,
+    min_area: f64,
+    curve_tolerance: f64,
+) -> placement::PlacementConfig {
+    placement::PlacementConfig {
+        spacing,
+        scale,
+        min_area,
+        curve_tolerance,
+    }
+}
+
+macro_rules! with_grid {
+    ($grid:expr, |$inner:ident| $($body:tt)+) => {{
+        let __g = $grid.borrow();
+        let $inner = &__g.inner;
+        $($body)+
+    }};
+}
+
 // ---------------------------------------------------------------------------
 // find_valid_position
 // ---------------------------------------------------------------------------
@@ -158,50 +190,237 @@ fn filter_candidates_multi_resolution_py(
 #[gen_stub_pyfunction(
     python = r#"
     import collections.abc
-    import raygeo.geo.types
+    import raygeo.nest.spatial_grid
 
     def find_valid_position(
-        ifp_polygons: collections.abc.Sequence[types.Polygon],
-        part_polygons: collections.abc.Sequence[types.Polygon],
-        placed_polygons: collections.abc.Sequence[types.Polygon],
-        spacing: float,
-        scale: int,
+        ifp_polygons: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]],
+        part_polygons: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]],
+        part_hulls: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]],
+        placed_polys_list: collections.abc.Sequence[collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]]],
+        placed_hulls_list: collections.abc.Sequence[collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]]],
+        grid: spatial_grid.SpatialGrid,
+        sheet_world_offset: tuple[float, float],
+        spacing: float = 1.0,
+        scale: int = 10000000,
         min_area: float = 1.0,
+        curve_tolerance: float = 0.5,
     ) -> tuple[float, float] | None:
-        """Find the first valid placement position for a part.
+        """Find a valid position: heuristic search first, NFP fallback second.
+
+        Supports hull-based collision detection and sheet world offsets.
 
         :param ifp_polygons: IFP polygons (valid placement region).
         :param part_polygons: Part polygons to place.
-        :param placed_polygons: Already-placed polygons.
+        :param part_hulls: Convex hulls for collision (may be empty).
+        :param placed_polys_list: Already-placed parts, each a list of polygons.
+        :param placed_hulls_list: Hulls of already-placed parts, each a list.
+        :param grid: SpatialGrid for fast neighbor lookup.
+        :param sheet_world_offset: (offset_x, offset_y) for this sheet.
         :param spacing: Minimum spacing between parts.
         :param scale: Clipper scale factor.
         :param min_area: Minimum overlap area (clipper coords).
+        :param curve_tolerance: Curve tolerance for distance filtering.
         :returns: (x, y) position or None.
         """
 "#,
     module = "raygeo.nest.placement"
 )]
 #[pyfunction(name = "find_valid_position")]
+#[pyo3(signature = (ifp_polygons, part_polygons, part_hulls, placed_polys_list, placed_hulls_list, grid, sheet_world_offset, spacing = 1.0, scale = 10000000, min_area = 1.0, curve_tolerance = 0.5))]
+#[allow(clippy::too_many_arguments)]
 fn find_valid_position_py(
     ifp_polygons: Vec<Vec<PyPoint2D>>,
     part_polygons: Vec<Vec<PyPoint2D>>,
-    placed_polygons: Vec<Vec<PyPoint2D>>,
+    part_hulls: Vec<Vec<PyPoint2D>>,
+    placed_polys_list: Vec<Vec<Vec<PyPoint2D>>>,
+    placed_hulls_list: Vec<Vec<Vec<PyPoint2D>>>,
+    grid: &Bound<'_, PySpatialGrid>,
+    sheet_world_offset: (f64, f64),
     spacing: f64,
     scale: i64,
     min_area: f64,
+    curve_tolerance: f64,
 ) -> Option<(f64, f64)> {
-    let ifp: Vec<Polygon> =
-        ifp_polygons.into_iter().map(poly_to_points).collect();
-    let part: Vec<Polygon> =
-        part_polygons.into_iter().map(poly_to_points).collect();
-    let placed: Vec<Polygon> =
-        placed_polygons.into_iter().map(poly_to_points).collect();
-    let config = placement::PlacementConfig {
-        spacing,
-        scale,
-        min_area,
-    };
-    placement::find_valid_position(&ifp, &part, &placed, &config, spacing)
+    let ifp = polys_from_py(ifp_polygons);
+    let part = polys_from_py(part_polygons);
+    let hulls = polys_from_py(part_hulls);
+    let placed = polys_list_from_py(placed_polys_list);
+    let placed_hulls = polys_list_from_py(placed_hulls_list);
+    let config = make_config(spacing, scale, min_area, curve_tolerance);
+    with_grid!(grid, |grid_ref| {
+        placement::find_valid_position(
+            &ifp,
+            &part,
+            &hulls,
+            &placed,
+            &placed_hulls,
+            grid_ref,
+            sheet_world_offset,
+            &config,
+            spacing,
+        )
+    })
+}
+
+// ---------------------------------------------------------------------------
+// find_valid_position_scored
+// ---------------------------------------------------------------------------
+
+#[gen_stub_pyfunction(
+    python = r#"
+    import collections.abc
+    import raygeo.nest.spatial_grid
+
+    def find_valid_position_scored(
+        ifp_polygons: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]],
+        part_polygons: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]],
+        part_hulls: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]],
+        placed_polys_list: collections.abc.Sequence[collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]]],
+        placed_hulls_list: collections.abc.Sequence[collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]]],
+        grid: spatial_grid.SpatialGrid,
+        sheet_world_offset: tuple[float, float],
+        spacing: float = 1.0,
+        scale: int = 10000000,
+        min_area: float = 1.0,
+        curve_tolerance: float = 0.5,
+    ) -> tuple[float, float] | None:
+        """Find a valid position using heuristic candidate search.
+
+        Uses IFP vertices, bottom-left sweep, grid, placed polygon vertices,
+        and perimeter candidates. Falls back to NFP-region candidates.
+        Scores candidates and picks the best valid one.
+
+        :param ifp_polygons: IFP polygons (valid placement region).
+        :param part_polygons: Part polygons to place.
+        :param part_hulls: Convex hulls for collision (may be empty).
+        :param placed_polys_list: Already-placed parts, each a list of polygons.
+        :param placed_hulls_list: Hulls of already-placed parts, each a list.
+        :param grid: SpatialGrid for fast neighbor lookup.
+        :param sheet_world_offset: (offset_x, offset_y) for this sheet.
+        :param spacing: Minimum spacing between parts.
+        :param scale: Clipper scale factor.
+        :param min_area: Minimum overlap area (clipper coords).
+        :param curve_tolerance: Curve tolerance for distance filtering.
+        :returns: (x, y) position or None.
+        """
+"#,
+    module = "raygeo.nest.placement"
+)]
+#[pyfunction(name = "find_valid_position_scored")]
+#[pyo3(signature = (ifp_polygons, part_polygons, part_hulls, placed_polys_list, placed_hulls_list, grid, sheet_world_offset, spacing = 1.0, scale = 10000000, min_area = 1.0, curve_tolerance = 0.5))]
+#[allow(clippy::too_many_arguments)]
+fn find_valid_position_scored_py(
+    ifp_polygons: Vec<Vec<PyPoint2D>>,
+    part_polygons: Vec<Vec<PyPoint2D>>,
+    part_hulls: Vec<Vec<PyPoint2D>>,
+    placed_polys_list: Vec<Vec<Vec<PyPoint2D>>>,
+    placed_hulls_list: Vec<Vec<Vec<PyPoint2D>>>,
+    grid: &Bound<'_, PySpatialGrid>,
+    sheet_world_offset: (f64, f64),
+    spacing: f64,
+    scale: i64,
+    min_area: f64,
+    curve_tolerance: f64,
+) -> Option<(f64, f64)> {
+    let ifp = polys_from_py(ifp_polygons);
+    let part = polys_from_py(part_polygons);
+    let hulls = polys_from_py(part_hulls);
+    let placed = polys_list_from_py(placed_polys_list);
+    let placed_hulls = polys_list_from_py(placed_hulls_list);
+    let config = make_config(spacing, scale, min_area, curve_tolerance);
+    with_grid!(grid, |grid_ref| {
+        placement::find_valid_position_scored(
+            &ifp,
+            &part,
+            &hulls,
+            &placed,
+            &placed_hulls,
+            grid_ref,
+            sheet_world_offset,
+            &config,
+            spacing,
+        )
+    })
+}
+
+// ---------------------------------------------------------------------------
+// find_valid_position_nfp
+// ---------------------------------------------------------------------------
+
+#[gen_stub_pyfunction(
+    python = r#"
+    import collections.abc
+    import raygeo.nest.spatial_grid
+
+    def find_valid_position_nfp(
+        ifp_polygons: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]],
+        part_polygons: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]],
+        part_hulls: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]],
+        placed_polys_list: collections.abc.Sequence[collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]]],
+        placed_hulls_list: collections.abc.Sequence[collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]]],
+        grid: spatial_grid.SpatialGrid,
+        sheet_world_offset: tuple[float, float],
+        spacing: float = 1.0,
+        scale: int = 10000000,
+        min_area: float = 1.0,
+        curve_tolerance: float = 0.5,
+    ) -> tuple[float, float] | None:
+        """Find a valid position using NFP-based region subtraction.
+
+        Computes No-Fit Polygons for nearby placed parts and subtracts
+        them from the IFP to identify viable placement regions.
+
+        :param ifp_polygons: IFP polygons (valid placement region).
+        :param part_polygons: Part polygons to place.
+        :param part_hulls: Convex hulls for collision (may be empty).
+        :param placed_polys_list: Already-placed parts, each a list of polygons.
+        :param placed_hulls_list: Hulls of already-placed parts, each a list.
+        :param grid: SpatialGrid for fast neighbor lookup.
+        :param sheet_world_offset: (offset_x, offset_y) for this sheet.
+        :param spacing: Minimum spacing between parts.
+        :param scale: Clipper scale factor.
+        :param min_area: Minimum overlap area (clipper coords).
+        :param curve_tolerance: Curve tolerance for distance filtering.
+        :returns: (x, y) position or None.
+        """
+"#,
+    module = "raygeo.nest.placement"
+)]
+#[pyfunction(name = "find_valid_position_nfp")]
+#[pyo3(signature = (ifp_polygons, part_polygons, part_hulls, placed_polys_list, placed_hulls_list, grid, sheet_world_offset, spacing = 1.0, scale = 10000000, min_area = 1.0, curve_tolerance = 0.5))]
+#[allow(clippy::too_many_arguments)]
+fn find_valid_position_nfp_py(
+    ifp_polygons: Vec<Vec<PyPoint2D>>,
+    part_polygons: Vec<Vec<PyPoint2D>>,
+    part_hulls: Vec<Vec<PyPoint2D>>,
+    placed_polys_list: Vec<Vec<Vec<PyPoint2D>>>,
+    placed_hulls_list: Vec<Vec<Vec<PyPoint2D>>>,
+    grid: &Bound<'_, PySpatialGrid>,
+    sheet_world_offset: (f64, f64),
+    spacing: f64,
+    scale: i64,
+    min_area: f64,
+    curve_tolerance: f64,
+) -> Option<(f64, f64)> {
+    let ifp = polys_from_py(ifp_polygons);
+    let part = polys_from_py(part_polygons);
+    let hulls = polys_from_py(part_hulls);
+    let placed = polys_list_from_py(placed_polys_list);
+    let placed_hulls = polys_list_from_py(placed_hulls_list);
+    let config = make_config(spacing, scale, min_area, curve_tolerance);
+    with_grid!(grid, |grid_ref| {
+        placement::find_valid_position_nfp(
+            &ifp,
+            &part,
+            &hulls,
+            &placed,
+            &placed_hulls,
+            grid_ref,
+            sheet_world_offset,
+            &config,
+            spacing,
+        )
+    })
 }
 
 // ---------------------------------------------------------------------------
@@ -211,56 +430,98 @@ fn find_valid_position_py(
 #[gen_stub_pyfunction(
     python = r#"
     import collections.abc
-    import raygeo.geo.types
 
     def place_parts(
-        parts: collections.abc.Sequence[collections.abc.Sequence[types.Polygon]],
-        sheets: collections.abc.Sequence[types.Polygon],
+        part_polys: collections.abc.Sequence[collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]]],
+        part_hulls: collections.abc.Sequence[collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]]],
+        sheet_polys: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]],
+        sheet_offsets: collections.abc.Sequence[tuple[float, float]],
         rotations: collections.abc.Sequence[float],
-        spacing: float,
-        scale: int,
+        flips_h: collections.abc.Sequence[bool],
+        flips_v: collections.abc.Sequence[bool],
+        spacing: float = 1.0,
+        scale: int = 10000000,
         min_area: float = 1.0,
+        curve_tolerance: float = 0.5,
     ) -> list[dict]:
         """Place as many parts as possible onto sheets.
 
-        Each part is a list of polygons (holes are separate polygons).
-        Each sheet is a single polygon.
+        Supports combined IFP for multi-polygon parts, hull-based
+        collision detection, world-space offsets per sheet, gravity
+        post-processing, and fitness calculation.
 
-        :param parts: List of parts (each part is a list of polygons).
-        :param sheets: List of sheet polygons.
-        :param rotations: List of rotation angles in degrees.
+        Parts are sorted by area (largest first).  For each part, the
+        best sheet and position are selected.  After all parts are
+        placed, gravity is applied per sheet.
+
+        :param part_polys: List of parts, each a list of polygon point lists.
+        :param part_hulls: List of hull groups per part (may be empty).
+        :param sheet_polys: List of sheet polygons.
+        :param sheet_offsets: World-space offset (x, y) for each sheet.
+        :param rotations: Rotation angle (degrees) for each part.
+        :param flips_h: Horizontal flip flag per part.
+        :param flips_v: Vertical flip flag per part.
         :param spacing: Minimum spacing between parts.
         :param scale: Clipper scale factor.
         :param min_area: Minimum overlap area (clipper coords).
-        :returns: List of dicts, one per sheet, with keys:
-                  ``placements``, ``sheet_index``, ``unused_part_indices``.
+        :param curve_tolerance: Curve tolerance for distance filtering.
+        :returns: List of dicts, one per sheet, with keys: placements,
+                  sheet_index, unused_part_indices, fitness.
         """
 "#,
     module = "raygeo.nest.placement"
 )]
 #[pyfunction(name = "place_parts")]
+#[pyo3(signature = (part_polys, part_hulls, sheet_polys, sheet_offsets, rotations, flips_h, flips_v, spacing = 1.0, scale = 10000000, min_area = 1.0, curve_tolerance = 0.5))]
+#[allow(clippy::too_many_arguments)]
 fn place_parts_py<'py>(
     py: Python<'py>,
-    parts: Vec<Vec<Vec<PyPoint2D>>>,
-    sheets: Vec<Vec<PyPoint2D>>,
+    part_polys: Vec<Vec<Vec<PyPoint2D>>>,
+    part_hulls: Vec<Vec<Vec<PyPoint2D>>>,
+    sheet_polys: Vec<Vec<PyPoint2D>>,
+    sheet_offsets: Vec<(f64, f64)>,
     rotations: Vec<f64>,
+    flips_h: Vec<bool>,
+    flips_v: Vec<bool>,
     spacing: f64,
     scale: i64,
     min_area: f64,
+    curve_tolerance: f64,
 ) -> Vec<Bound<'py, PyDict>> {
-    let parts_rust: Vec<Vec<Polygon>> = parts
+    let parts_rust: Vec<placement::PartDesc> = part_polys
         .into_iter()
-        .map(|part| part.into_iter().map(poly_to_points).collect())
+        .zip(part_hulls)
+        .map(|(polys, hulls)| placement::PartDesc {
+            polygons: polys.into_iter().map(poly_to_points).collect(),
+            hulls: hulls.into_iter().map(poly_to_points).collect(),
+        })
         .collect();
-    let sheets_rust: Vec<Polygon> =
-        sheets.into_iter().map(poly_to_points).collect();
+
+    let sheets_rust: Vec<placement::SheetDesc> = sheet_polys
+        .into_iter()
+        .zip(sheet_offsets)
+        .map(|(poly, offset)| placement::SheetDesc {
+            polygon: poly_to_points(poly),
+            world_offset: offset,
+        })
+        .collect();
+
     let config = placement::PlacementConfig {
         spacing,
         scale,
         min_area,
+        curve_tolerance,
     };
-    let results =
-        placement::place_parts(&parts_rust, &sheets_rust, &rotations, &config);
+
+    let results = placement::place_parts(
+        &parts_rust,
+        &sheets_rust,
+        &rotations,
+        &config,
+        &flips_h,
+        &flips_v,
+    );
+
     let mut py_results: Vec<Bound<'py, PyDict>> = Vec::new();
     for res in results {
         let mut placements_py: Vec<Bound<'py, PyDict>> = Vec::new();
@@ -271,8 +532,8 @@ fn place_parts_py<'py>(
                 .set_item("rotation_index", pl.rotation_index)
                 .unwrap();
             pl_dict.set_item("position", pl.position).unwrap();
-            let py_polys: Vec<Vec<(f64, f64)>> = pl.polygons;
-            pl_dict.set_item("polygons", py_polys).unwrap();
+            pl_dict.set_item("polygons", pl.polygons).unwrap();
+            pl_dict.set_item("hulls", pl.hulls).unwrap();
             placements_py.push(pl_dict);
         }
         let res_dict = PyDict::new(py);
@@ -281,6 +542,7 @@ fn place_parts_py<'py>(
         res_dict
             .set_item("unused_part_indices", res.unused_part_indices)
             .unwrap();
+        res_dict.set_item("fitness", res.fitness).unwrap();
         py_results.push(res_dict);
     }
     py_results
@@ -331,6 +593,7 @@ fn polygon_group_from_numpy_arrs(
     module = "raygeo.nest.placement"
 )]
 #[pyfunction(name = "calculate_fitness")]
+#[pyo3(signature = (polygon_groups, rotations, sheet_indices, num_parts = 0))]
 fn calculate_fitness_py(
     polygon_groups: Vec<Vec<Bound<'_, PyArray2<f64>>>>,
     rotations: Vec<f64>,
@@ -357,6 +620,8 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
         m
     )?)?;
     m.add_function(wrap_pyfunction!(find_valid_position_py, m)?)?;
+    m.add_function(wrap_pyfunction!(find_valid_position_scored_py, m)?)?;
+    m.add_function(wrap_pyfunction!(find_valid_position_nfp_py, m)?)?;
     m.add_function(wrap_pyfunction!(place_parts_py, m)?)?;
     m.add_function(wrap_pyfunction!(calculate_fitness_py, m)?)?;
     Ok(())
