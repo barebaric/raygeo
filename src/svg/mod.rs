@@ -101,7 +101,7 @@ fn apply_transform(px: f64, py: f64, transform: &[[f64; 3]; 3]) -> (f64, f64) {
     (tx, ty)
 }
 
-fn transform_point(
+fn transform_point_2d(
     px: f64,
     py: f64,
     transform: &[[f64; 3]; 3],
@@ -198,7 +198,7 @@ pub fn parse_svg_path_data(
                         pos.1 = coords[1];
                     }
                     subpath_start = pos;
-                    let (tx, ty) = transform_point(
+                    let (tx, ty) = transform_point_2d(
                         pos.0, pos.1, transform, scale_x, scale_y,
                     );
                     geo.move_to(tx, ty, 0.0);
@@ -212,7 +212,7 @@ pub fn parse_svg_path_data(
                                 pos.0 = coords[i];
                                 pos.1 = coords[i + 1];
                             }
-                            let (tx, ty) = transform_point(
+                            let (tx, ty) = transform_point_2d(
                                 pos.0, pos.1, transform, scale_x, scale_y,
                             );
                             geo.line_to(tx, ty, 0.0);
@@ -246,7 +246,7 @@ pub fn parse_svg_path_data(
                         }
                         _ => unreachable!(),
                     }
-                    let (tx, ty) = transform_point(
+                    let (tx, ty) = transform_point_2d(
                         pos.0, pos.1, transform, scale_x, scale_y,
                     );
                     geo.line_to(tx, ty, 0.0);
@@ -286,7 +286,7 @@ pub fn parse_svg_path_data(
                             20,
                         );
                         for (px, py) in points {
-                            let (tx, ty) = transform_point(
+                            let (tx, ty) = transform_point_2d(
                                 px, py, transform, scale_x, scale_y,
                             );
                             geo.line_to(tx, ty, 0.0);
