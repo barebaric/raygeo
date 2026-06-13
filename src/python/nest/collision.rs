@@ -8,7 +8,7 @@ use crate::geo::shape::polygon::{
     get_polygon_group_bounds, polygons_intersect,
 };
 use crate::nest::collision;
-use crate::types::Polygon;
+use crate::types::{Polygon, Rect};
 
 pyo3_stub_gen::module_doc!("raygeo.nest.collision", "{}", MODULE_DOC);
 
@@ -32,7 +32,7 @@ fn polygon_from_numpy(arr: &Bound<'_, PyArray2<f64>>) -> Polygon {
 
 /// Compute the bounding box of a numpy array (N×2 float64) WITHOUT
 /// converting it to a Polygon first. Returns (xmin, ymin, xmax, ymax).
-fn numpy_bbox(arr: &Bound<'_, PyArray2<f64>>) -> (f64, f64, f64, f64) {
+fn numpy_bbox(arr: &Bound<'_, PyArray2<f64>>) -> Rect {
     let readonly = arr.readonly();
     let view = readonly.as_array();
     let (mut xmin, mut ymin) = (f64::MAX, f64::MAX);
@@ -53,18 +53,16 @@ fn numpy_bbox(arr: &Bound<'_, PyArray2<f64>>) -> (f64, f64, f64, f64) {
             ymax = y;
         }
     }
-    (xmin, ymin, xmax, ymax)
+    Rect(xmin, ymin, xmax, ymax)
 }
 
 /// Compute the group bounding box from an array of numpy polygons, also
 /// without converting to Polygon.
-fn numpy_group_bbox(
-    polys: &[Bound<'_, PyArray2<f64>>],
-) -> (f64, f64, f64, f64) {
+fn numpy_group_bbox(polys: &[Bound<'_, PyArray2<f64>>]) -> Rect {
     let (mut xmin, mut ymin) = (f64::MAX, f64::MAX);
     let (mut xmax, mut ymax) = (f64::MIN, f64::MIN);
     for p in polys {
-        let (pxmin, pylow, pxmax, pyhigh) = numpy_bbox(p);
+        let Rect(pxmin, pylow, pxmax, pyhigh) = numpy_bbox(p);
         if pxmin < xmin {
             xmin = pxmin;
         }
@@ -78,10 +76,10 @@ fn numpy_group_bbox(
             ymax = pyhigh;
         }
     }
-    (xmin, ymin, xmax, ymax)
+    Rect(xmin, ymin, xmax, ymax)
 }
 
-fn rects_intersect(a: (f64, f64, f64, f64), b: (f64, f64, f64, f64)) -> bool {
+fn rects_intersect(a: Rect, b: Rect) -> bool {
     a.0 <= b.2 && a.2 >= b.0 && a.1 <= b.3 && a.3 >= b.1
 }
 
@@ -278,6 +276,12 @@ fn any_overlap_hierarchical_grid_py(
     candidate_bbox: (f64, f64, f64, f64),
     min_area: f64,
 ) -> bool {
+    let candidate_bbox = Rect(
+        candidate_bbox.0,
+        candidate_bbox.1,
+        candidate_bbox.2,
+        candidate_bbox.3,
+    );
     // Convert candidates upfront (always small: 1-4 polygons)
     let cand_polys: Vec<Polygon> = candidate_polys
         .into_iter()

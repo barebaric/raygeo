@@ -18,7 +18,7 @@ use crate::geo::shape::bezier::{
     get_perpendicular_dist_sq, is_bezier_inside_polygons, linearize_bezier,
     linearize_bezier_adaptive, linearize_bezier_segment, split_bezier,
 };
-use crate::{BezierSplit, Point};
+use crate::types::{BezierSplit, Point, Rect};
 use pyo3::prelude::*;
 use pyo3::types::PyList;
 use pyo3_stub_gen::derive::gen_stub_pyfunction;
@@ -155,7 +155,13 @@ fn get_bezier_bounds_py(
     p2: PyPoint2D,
     p3: PyPoint2D,
 ) -> (f64, f64, f64, f64) {
-    get_bezier_bounds((p0.0, p0.1), (p1.0, p1.1), (p2.0, p2.1), (p3.0, p3.1))
+    let r = get_bezier_bounds(
+        (p0.0, p0.1),
+        (p1.0, p1.1),
+        (p2.0, p2.1),
+        (p3.0, p3.1),
+    );
+    (r.0, r.1, r.2, r.3)
 }
 
 #[gen_stub_pyfunction(
@@ -194,7 +200,7 @@ fn get_bezier_rect_intersections_py(
         (p1.0, p1.1),
         (p2.0, p2.1),
         (p3.0, p3.1),
-        rect,
+        Rect(rect.0, rect.1, rect.2, rect.3),
     )
 }
 
@@ -234,7 +240,7 @@ fn clip_bezier_with_rect_py(
         (p1.0, p1.1),
         (p2.0, p2.1),
         (p3.0, p3.1),
-        rect,
+        Rect(rect.0, rect.1, rect.2, rect.3),
     )
 }
 

@@ -6,7 +6,7 @@ use pyo3_stub_gen::derive::gen_stub_pyfunction;
 use super::super::geo::flex_point::{poly_to_points, PyPoint2D};
 use super::spatial_grid::SpatialGrid as PySpatialGrid;
 use crate::nest::placement;
-use crate::types::Polygon;
+use crate::types::{Polygon, Rect};
 
 pyo3_stub_gen::module_doc!("raygeo.nest.placement", "{}", MODULE_DOC);
 
@@ -54,7 +54,11 @@ fn generate_bottom_left_candidates_py(
     part_bounds: (f64, f64, f64, f64),
     spacing: f64,
 ) -> Vec<(f64, f64)> {
-    placement::generate_bottom_left_candidates(ifp_bounds, part_bounds, spacing)
+    placement::generate_bottom_left_candidates(
+        Rect(ifp_bounds.0, ifp_bounds.1, ifp_bounds.2, ifp_bounds.3),
+        Rect(part_bounds.0, part_bounds.1, part_bounds.2, part_bounds.3),
+        spacing,
+    )
 }
 
 // ---------------------------------------------------------------------------
@@ -84,7 +88,11 @@ fn generate_grid_candidates_py(
     part_bounds: (f64, f64, f64, f64),
     spacing: f64,
 ) -> Vec<(f64, f64)> {
-    placement::generate_grid_candidates(ifp_bounds, part_bounds, spacing)
+    placement::generate_grid_candidates(
+        Rect(ifp_bounds.0, ifp_bounds.1, ifp_bounds.2, ifp_bounds.3),
+        Rect(part_bounds.0, part_bounds.1, part_bounds.2, part_bounds.3),
+        spacing,
+    )
 }
 
 // ---------------------------------------------------------------------------
@@ -124,7 +132,11 @@ fn generate_perimeter_candidates_py(
         .into_iter()
         .map(|group| group.into_iter().map(poly_to_points).collect())
         .collect();
-    placement::generate_perimeter_candidates(&groups, part_bounds, spacing)
+    placement::generate_perimeter_candidates(
+        &groups,
+        Rect(part_bounds.0, part_bounds.1, part_bounds.2, part_bounds.3),
+        spacing,
+    )
 }
 
 // ---------------------------------------------------------------------------
@@ -156,7 +168,7 @@ fn filter_candidates_multi_resolution_py(
 ) -> Vec<(f64, f64)> {
     placement::filter_candidates_multi_resolution(
         &candidates,
-        ifp_bounds,
+        Rect(ifp_bounds.0, ifp_bounds.1, ifp_bounds.2, ifp_bounds.3),
         min_dist,
     )
 }

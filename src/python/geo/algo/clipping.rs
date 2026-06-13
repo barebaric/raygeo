@@ -19,7 +19,7 @@ use crate::geo::algo::clipping::{
     clip_line_segment_with_polygons, clip_line_segment_with_rect,
     subtract_polygons_from_line_segment,
 };
-use crate::Segment3D;
+use crate::types::{Rect, Segment3D};
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::gen_stub_pyfunction;
 
@@ -69,7 +69,7 @@ fn clip_line_segment_py(
     p2: (f64, f64, f64),
     rect: (f64, f64, f64, f64),
 ) -> Option<Segment3D> {
-    clip_line_segment_with_rect(p1, p2, rect)
+    clip_line_segment_with_rect(p1, p2, Rect(rect.0, rect.1, rect.2, rect.3))
 }
 
 #[gen_stub_pyfunction(

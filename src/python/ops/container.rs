@@ -10,6 +10,7 @@ use crate::ops::{
     Axis, CommandType, MarkerCmd, MoveCmd, OpCategory, OpsSection,
     OpsSectionRange, StateCmd,
 };
+use crate::types::Rect;
 
 use super::axis::PyAxis;
 use super::state::PyState;
@@ -1468,7 +1469,7 @@ impl PyOps {
     /// :returns: A new Ops sequence containing the clipped commands.
     fn clip_rect(&self, rect: (f64, f64, f64, f64)) -> PyOps {
         PyOps {
-            inner: self.inner.clip_rect(rect),
+            inner: self.inner.clip_rect(Rect(rect.0, rect.1, rect.2, rect.3)),
         }
     }
 
@@ -1791,7 +1792,8 @@ impl PyOps {
     /// :returns: ``(x_min, y_min, x_max, y_max)``.
     #[pyo3(signature = (include_travel = false))]
     fn rect(&self, include_travel: bool) -> (f64, f64, f64, f64) {
-        self.inner.rect(include_travel)
+        let r = self.inner.rect(include_travel);
+        (r.0, r.1, r.2, r.3)
     }
 
     /// Extract a frame (first and last endpoints) from the sequence.

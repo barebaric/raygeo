@@ -2,7 +2,7 @@ use crate::geo::shape::polygon::{
     get_polygon_bounds, get_polygon_group_bounds, get_polygons_difference,
     polygons_intersect,
 };
-use crate::types::Polygon;
+use crate::types::{Polygon, Rect};
 
 use super::spatial_grid::SpatialGrid;
 
@@ -176,7 +176,7 @@ pub fn any_overlap_hierarchical_grid(
     placed_polys_groups: &[Vec<Polygon>],
     placed_hulls_groups: &[Vec<Polygon>],
     grid: &SpatialGrid,
-    candidate_bbox: (f64, f64, f64, f64),
+    candidate_bbox: Rect,
     min_area: f64,
 ) -> bool {
     if candidate_polys.is_empty() {

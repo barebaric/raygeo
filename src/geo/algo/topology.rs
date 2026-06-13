@@ -65,7 +65,8 @@ impl ContourHierarchy {
                         if self.nesting_depths[j] < 0 {
                             continue;
                         }
-                        let (o_min_x, o_min_y, o_max_x, o_max_y) = other.rect;
+                        let Rect(o_min_x, o_min_y, o_max_x, o_max_y) =
+                            other.rect;
                         if tx < o_min_x
                             || tx > o_max_x
                             || ty < o_min_y
@@ -180,7 +181,7 @@ pub fn build_hierarchy(contours: &[&Geometry]) -> ContourHierarchy {
                 None => continue,
             };
 
-            let (o_min_x, o_min_y, o_max_x, o_max_y) = other.rect;
+            let Rect(o_min_x, o_min_y, o_max_x, o_max_y) = other.rect;
             if tx < o_min_x || tx > o_max_x || ty < o_min_y || ty > o_max_y {
                 continue;
             }
@@ -622,5 +623,3 @@ pub fn remove_inner_edges(geometry: &Geometry) -> Geometry {
     final_geo.last_move_to = geometry.last_move_to;
     final_geo
 }
-
-

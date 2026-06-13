@@ -2,6 +2,7 @@ use pyo3::prelude::*;
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 
 use crate::nest::spatial_grid;
+use crate::types::Rect;
 
 pyo3_stub_gen::module_doc!("raygeo.nest.spatial_grid", "{}", MODULE_DOC);
 
@@ -33,12 +34,12 @@ impl SpatialGrid {
     }
 
     pub fn insert(&mut self, index: usize, bbox: Vec<f64>) {
-        let b = (bbox[0], bbox[1], bbox[2], bbox[3]);
+        let b = Rect(bbox[0], bbox[1], bbox[2], bbox[3]);
         self.inner.insert(index, b);
     }
 
     pub fn query(&self, bbox: Vec<f64>) -> Vec<usize> {
-        let b = (bbox[0], bbox[1], bbox[2], bbox[3]);
+        let b = Rect(bbox[0], bbox[1], bbox[2], bbox[3]);
         let result = self.inner.query(b);
         let mut vec: Vec<usize> = result.into_iter().collect();
         vec.sort();

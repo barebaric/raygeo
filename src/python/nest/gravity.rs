@@ -3,7 +3,7 @@ use pyo3_stub_gen::derive::gen_stub_pyfunction;
 
 use super::super::geo::flex_point::{poly_to_points, PyPoint2D};
 use crate::nest::gravity;
-use crate::types::Polygon;
+use crate::types::{Polygon, Rect};
 
 pyo3_stub_gen::module_doc!("raygeo.nest.gravity", "{}", MODULE_DOC);
 
@@ -66,7 +66,12 @@ fn find_max_slide_py(
     gravity::find_max_slide(
         &parts,
         &others,
-        sheet_bounds,
+        Rect(
+            sheet_bounds.0,
+            sheet_bounds.1,
+            sheet_bounds.2,
+            sheet_bounds.3,
+        ),
         &sheet,
         &axis,
         spacing,

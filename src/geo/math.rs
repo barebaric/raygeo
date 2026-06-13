@@ -7,7 +7,7 @@
 use crate::geo::geometry::Geometry;
 use crate::geo::shape::arc::linearize_arc;
 use crate::geo::shape::point::transform_point;
-use crate::types::{Command, Point, Point3D};
+use crate::types::{Command, Point, Point3D, Rect};
 
 fn transform_vec(matrix: &[[f64; 4]; 4], x: f64, y: f64) -> (f64, f64) {
     let vx = matrix[0][0] * x + matrix[0][1] * y;
@@ -192,7 +192,7 @@ pub fn map_geometry_to_frame(
         return Geometry::new();
     }
 
-    let (min_x, min_y, max_x, max_y) = geometry.rect();
+    let Rect(min_x, min_y, max_x, max_y) = geometry.rect();
     let src_width = stable_src_width.unwrap_or(max_x - min_x);
     let src_height = stable_src_height.unwrap_or(max_y - min_y);
 

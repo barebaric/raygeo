@@ -196,21 +196,21 @@ pub fn get_line_segment_polygon_intersections(
 /// Tests if a 2D point is inside an axis-aligned rectangle.
 pub fn is_point_inside_rect(point: Point, rect: Rect) -> bool {
     let (x, y) = point;
-    let (rx1, ry1, rx2, ry2) = rect;
+    let Rect(rx1, ry1, rx2, ry2) = rect;
     x >= rx1 && x <= rx2 && y >= ry1 && y <= ry2
 }
 
 /// Tests if rect_b is completely contained within rect_a.
 pub fn does_rect_contain_rect(rect_a: Rect, rect_b: Rect) -> bool {
-    let (ax1, ay1, ax2, ay2) = rect_a;
-    let (bx1, by1, bx2, by2) = rect_b;
+    let Rect(ax1, ay1, ax2, ay2) = rect_a;
+    let Rect(bx1, by1, bx2, by2) = rect_b;
     bx1 >= ax1 && by1 >= ay1 && bx2 <= ax2 && by2 <= ay2
 }
 
 /// Tests if two rectangles intersect.
 pub fn does_rect_intersect_rect(rect_a: Rect, rect_b: Rect) -> bool {
-    let (ax1, ay1, ax2, ay2) = rect_a;
-    let (bx1, by1, bx2, by2) = rect_b;
+    let Rect(ax1, ay1, ax2, ay2) = rect_a;
+    let Rect(bx1, by1, bx2, by2) = rect_b;
     !(ax2 < bx1 || ax1 > bx2 || ay2 < by1 || ay1 > by2)
 }
 
@@ -221,7 +221,7 @@ pub fn does_line_segment_intersect_rect(
     p2: Point,
     rect: Rect,
 ) -> bool {
-    let (xmin, ymin, xmax, ymax) = rect;
+    let Rect(xmin, ymin, xmax, ymax) = rect;
 
     if p1.0 >= xmin && p1.0 <= xmax && p1.1 >= ymin && p1.1 <= ymax {
         return true;
@@ -273,5 +273,3 @@ pub fn get_angle_at_vertex(p0: Point, p1: Point, p2: Point) -> f64 {
 
     cos_theta.acos()
 }
-
-

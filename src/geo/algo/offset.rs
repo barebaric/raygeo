@@ -155,5 +155,3 @@ pub fn grow_geometry(geometry: &Geometry, offset: f64) -> Geometry {
     }
     new_geo
 }
-
-

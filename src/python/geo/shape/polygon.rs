@@ -13,7 +13,7 @@ use crate::geo::shape::polygon::{
     rotate_polygons, scale_polygon, translate_bounds, translate_polygon,
     translate_polygons,
 };
-use crate::Point;
+use crate::types::{Point, Rect};
 use numpy::{PyArray2, PyArrayMethods};
 use pyo3::prelude::*;
 use pyo3::types::{PyAny, PyList};
@@ -210,7 +210,9 @@ fn translate_bounds_py(
     dx: f64,
     dy: f64,
 ) -> (f64, f64, f64, f64) {
-    translate_bounds(bounds, dx, dy)
+    let r =
+        translate_bounds(Rect(bounds.0, bounds.1, bounds.2, bounds.3), dx, dy);
+    (r.0, r.1, r.2, r.3)
 }
 
 #[gen_stub_pyfunction(
@@ -346,7 +348,8 @@ fn get_polygon_perimeter_py(polygon: Vec<PyPoint2D>) -> f64 {
 )]
 #[pyfunction(name = "get_polygon_bounds")]
 fn get_polygon_bounds_py(polygon: Vec<PyPoint2D>) -> (f64, f64, f64, f64) {
-    get_polygon_bounds(&poly_to_points(polygon))
+    let r = get_polygon_bounds(&poly_to_points(polygon));
+    (r.0, r.1, r.2, r.3)
 }
 
 #[gen_stub_pyfunction(
@@ -370,7 +373,8 @@ fn get_polygon_group_bounds_py(
     polygons: &Bound<'_, PyAny>,
 ) -> PyResult<(f64, f64, f64, f64)> {
     let p = extract_polygons(polygons)?;
-    Ok(get_polygon_group_bounds(&p))
+    let r = get_polygon_group_bounds(&p);
+    Ok((r.0, r.1, r.2, r.3))
 }
 
 #[gen_stub_pyfunction(
@@ -871,7 +875,8 @@ fn polygon_bounds_numpy_py(
     polygon: Bound<'_, PyArray2<f64>>,
 ) -> (f64, f64, f64, f64) {
     let p = _polygon_from_numpy(&polygon);
-    get_polygon_bounds(&p)
+    let r = get_polygon_bounds(&p);
+    (r.0, r.1, r.2, r.3)
 }
 
 #[gen_stub_pyfunction(
@@ -915,7 +920,8 @@ fn polygon_group_bounds_numpy_py(
     polygons: Vec<Bound<'_, PyArray2<f64>>>,
 ) -> (f64, f64, f64, f64) {
     let p = _polygons_from_numpy_list(polygons);
-    get_polygon_group_bounds(&p)
+    let r = get_polygon_group_bounds(&p);
+    (r.0, r.1, r.2, r.3)
 }
 
 #[gen_stub_pyfunction(

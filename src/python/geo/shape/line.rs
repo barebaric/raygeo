@@ -16,7 +16,7 @@ use crate::geo::shape::line::{
     get_line_segment_length, get_line_segment_polygon_intersections,
     get_point_line_distance, is_point_on_segment,
 };
-use crate::Point;
+use crate::types::{Point, Rect};
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::gen_stub_pyfunction;
 
@@ -250,7 +250,11 @@ fn does_line_segment_intersect_rect_py(
     p2: Point,
     rect: (f64, f64, f64, f64),
 ) -> bool {
-    does_line_segment_intersect_rect(p1, p2, rect)
+    does_line_segment_intersect_rect(
+        p1,
+        p2,
+        Rect(rect.0, rect.1, rect.2, rect.3),
+    )
 }
 
 #[gen_stub_pyfunction(

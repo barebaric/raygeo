@@ -16,7 +16,7 @@ use crate::geo::shape::arc::{
     get_arc_midpoint, get_arc_sweep, is_angle_between, is_arc_clockwise,
     is_arc_inside_polygons, linearize_arc, normalize_angle,
 };
-use crate::{Point, Segment3D};
+use crate::types::{Point, Rect, Segment3D};
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::gen_stub_pyfunction;
 
@@ -101,7 +101,8 @@ fn get_arc_bounds_py(
     center: Point,
     clockwise: bool,
 ) -> (f64, f64, f64, f64) {
-    get_arc_bounds(start, end, center, clockwise)
+    let r = get_arc_bounds(start, end, center, clockwise);
+    (r.0, r.1, r.2, r.3)
 }
 
 #[gen_stub_pyfunction(
@@ -315,7 +316,13 @@ fn does_arc_intersect_rect_py(
     clockwise: bool,
     rect: (f64, f64, f64, f64),
 ) -> bool {
-    does_arc_intersect_rect(arc_start, arc_end, arc_center, clockwise, rect)
+    does_arc_intersect_rect(
+        arc_start,
+        arc_end,
+        arc_center,
+        clockwise,
+        Rect(rect.0, rect.1, rect.2, rect.3),
+    )
 }
 
 #[gen_stub_pyfunction(

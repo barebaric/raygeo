@@ -3,7 +3,7 @@ use crate::geo::shape::polygon::{
     get_polygons_group_intersection, is_point_in_polygon, offset_polygon,
     rotate_polygon, translate_polygon,
 };
-use crate::types::Polygon;
+use crate::types::{Polygon, Rect};
 
 use super::collision::any_overlap_hierarchical_grid;
 use super::gravity::apply_gravity;
@@ -93,10 +93,10 @@ pub struct PartDesc {
 /// Generate edge-aligned placement candidates around already-placed parts.
 pub fn generate_perimeter_candidates(
     placed_groups: &[Vec<Polygon>],
-    part_bounds: (f64, f64, f64, f64),
+    part_bounds: Rect,
     spacing: f64,
 ) -> Vec<(f64, f64)> {
-    let (p_min_x, p_min_y, p_max_x, p_max_y) = part_bounds;
+    let Rect(p_min_x, p_min_y, p_max_x, p_max_y) = part_bounds;
     let mut candidates = Vec::with_capacity(placed_groups.len() * 8);
 
     for group in placed_groups {
@@ -104,7 +104,7 @@ pub fn generate_perimeter_candidates(
             continue;
         }
         let b = crate::geo::shape::polygon::get_polygon_group_bounds(group);
-        let (pb_min_x, pb_min_y, pb_max_x, pb_max_y) = b;
+        let Rect(pb_min_x, pb_min_y, pb_max_x, pb_max_y) = b;
 
         candidates.push((pb_max_x + spacing - p_min_x, pb_min_y - p_min_y));
         candidates.push((pb_max_x + spacing - p_min_x, pb_max_y - p_max_y));
@@ -121,8 +121,8 @@ pub fn generate_perimeter_candidates(
 
 /// Generate candidate positions by sweeping bottom-to-top, left-to-right.
 pub fn generate_bottom_left_candidates(
-    ifp_bounds: (f64, f64, f64, f64),
-    part_bounds: (f64, f64, f64, f64),
+    ifp_bounds: Rect,
+    part_bounds: Rect,
     spacing: f64,
 ) -> Vec<(f64, f64)> {
     let pw = part_bounds.2 - part_bounds.0;
@@ -144,8 +144,8 @@ pub fn generate_bottom_left_candidates(
 
 /// Generate a uniform grid of candidate positions.
 pub fn generate_grid_candidates(
-    ifp_bounds: (f64, f64, f64, f64),
-    _part_bounds: (f64, f64, f64, f64),
+    ifp_bounds: Rect,
+    _part_bounds: Rect,
     spacing: f64,
 ) -> Vec<(f64, f64)> {
     let step = spacing.max(1.0);
@@ -165,7 +165,7 @@ pub fn generate_grid_candidates(
 /// Remove candidates that are closer than `min_dist` to each other.
 pub fn filter_candidates_multi_resolution(
     candidates: &[(f64, f64)],
-    _ifp_bounds: (f64, f64, f64, f64),
+    _ifp_bounds: Rect,
     min_dist: f64,
 ) -> Vec<(f64, f64)> {
     if candidates.is_empty() || min_dist <= 0.0 {
@@ -215,7 +215,7 @@ fn ifp_vertex_candidates(ifp_polygons: &[Polygon]) -> Vec<(f64, f64)> {
 
 fn placed_vertex_candidates(
     placed_polys_list: &[Vec<Polygon>],
-    part_bounds: (f64, f64, f64, f64),
+    part_bounds: Rect,
 ) -> Vec<(f64, f64)> {
     let mut out = Vec::new();
     for group in placed_polys_list {
@@ -232,13 +232,13 @@ fn translate_polygons(polys: &[Polygon], dx: f64, dy: f64) -> Vec<Polygon> {
     polys.iter().map(|p| translate_polygon(p, dx, dy)).collect()
 }
 
-fn bbox_overlaps(a: (f64, f64, f64, f64), b: (f64, f64, f64, f64)) -> bool {
+fn bbox_overlaps(a: Rect, b: Rect) -> bool {
     !(a.0 > b.2 || a.2 < b.0 || a.1 > b.3 || a.3 < b.1)
 }
 
 fn filter_dist(
     candidates: &[(f64, f64)],
-    ifp_bounds: (f64, f64, f64, f64),
+    ifp_bounds: Rect,
     curve_tolerance: f64,
 ) -> Vec<(f64, f64)> {
     let min_dist = curve_tolerance.max(0.1) * 2.0;
@@ -258,7 +258,7 @@ fn filter_dist(
 fn get_nearby_parts(
     placed_polys_list: &[Vec<Polygon>],
     grid: &SpatialGrid,
-    bbox: (f64, f64, f64, f64),
+    bbox: Rect,
 ) -> Vec<Vec<Polygon>> {
     let indices = grid.query(bbox);
     indices
@@ -270,7 +270,7 @@ fn get_nearby_parts(
 fn query_nearby_indices(
     placed_polys_list: &[Vec<Polygon>],
     grid: &SpatialGrid,
-    bbox: (f64, f64, f64, f64),
+    bbox: Rect,
 ) -> Vec<usize> {
     grid.query(bbox)
         .into_iter()
@@ -296,7 +296,7 @@ fn evaluate_candidates(
     placed_polys_list: &[Vec<Polygon>],
     placed_hulls_list: &[Vec<Polygon>],
     grid: &SpatialGrid,
-    part_bounds: (f64, f64, f64, f64),
+    part_bounds: Rect,
 ) -> Option<(f64, f64)> {
     let mut best_score = f64::INFINITY;
     let mut best_pos: Option<(f64, f64)> = None;
@@ -322,7 +322,7 @@ fn evaluate_candidates(
             Vec::new()
         };
 
-        let cand_bbox = (
+        let cand_bbox = Rect(
             x + part_bounds.0,
             y + part_bounds.1,
             x + part_bounds.2,
@@ -355,7 +355,7 @@ fn evaluate_candidates(
 /// Build candidate list for the fast heuristic search.
 fn build_fast_candidates(
     ifp_world: &[Polygon],
-    part_bounds: (f64, f64, f64, f64),
+    part_bounds: Rect,
     placed_polys_list: &[Vec<Polygon>],
     grid: &SpatialGrid,
     spacing: f64,
@@ -376,7 +376,7 @@ fn build_fast_candidates(
         candidates
             .extend(placed_vertex_candidates(placed_polys_list, part_bounds));
 
-        let query_bbox = (
+        let query_bbox = Rect(
             ifp_bounds.0 - pw - spacing,
             ifp_bounds.1 - ph - spacing,
             ifp_bounds.2 + pw + spacing,
@@ -449,7 +449,7 @@ pub fn find_valid_position_scored(
 fn compute_nfp_clips_for_placed(
     placed_polys: &[Polygon],
     part_polygons: &[Polygon],
-    ifp_bounds: (f64, f64, f64, f64),
+    ifp_bounds: Rect,
     spacing: f64,
 ) -> Vec<Polygon> {
     let mut clips = Vec::new();
@@ -464,7 +464,7 @@ fn compute_nfp_clips_for_placed(
             let pw = part_bbox.2 - part_bbox.0;
             let ph = part_bbox.3 - part_bbox.1;
 
-            let expanded = (
+            let expanded = Rect(
                 placed_bbox.0 - pw - spacing,
                 placed_bbox.1 - ph - spacing,
                 placed_bbox.2 + pw + spacing,
@@ -529,7 +529,7 @@ fn compute_valid_regions(
 fn build_nfp_candidates(
     ifp_world: &[Polygon],
     part_polygons: &[Polygon],
-    part_bounds: (f64, f64, f64, f64),
+    part_bounds: Rect,
     placed_polys_list: &[Vec<Polygon>],
     grid: &SpatialGrid,
     _config: &PlacementConfig,
@@ -539,7 +539,7 @@ fn build_nfp_candidates(
     let pw = part_bounds.2 - part_bounds.0;
     let ph = part_bounds.3 - part_bounds.1;
 
-    let query_bbox = (
+    let query_bbox = Rect(
         ifp_bounds.0 - pw - spacing,
         ifp_bounds.1 - ph - spacing,
         ifp_bounds.2 + pw + spacing,
@@ -742,7 +742,7 @@ fn sort_part_indices_by_area(parts: &[PartDesc]) -> Vec<usize> {
 struct PreparedPart {
     polygons: Vec<Polygon>,
     hulls: Vec<Polygon>,
-    part_bounds: (f64, f64, f64, f64),
+    part_bounds: Rect,
 }
 
 fn prepare_part(
@@ -770,7 +770,7 @@ fn prepare_part(
     PreparedPart {
         polygons: translate_polygons(&rotated, -ox, -oy),
         hulls: translate_polygons(&rotated_hulls, -ox, -oy),
-        part_bounds: (
+        part_bounds: Rect(
             0.0,
             0.0,
             norm_bounds.2 - norm_bounds.0,

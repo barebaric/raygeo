@@ -12,6 +12,7 @@ use crate::geo::shape::line::does_rect_contain_rect;
 use crate::geo::shape::line::does_rect_intersect_rect;
 use crate::geo::shape::line::is_point_inside_rect;
 use crate::geo::shape::rect::do_rects_intersect;
+use crate::types::Rect;
 use crate::Point;
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::gen_stub_pyfunction;
@@ -53,7 +54,7 @@ pub fn register(shape_mod: &Bound<'_, PyModule>) -> PyResult<()> {
 )]
 #[pyfunction(name = "is_point_inside_rect")]
 fn is_point_inside_rect_py(point: Point, rect: (f64, f64, f64, f64)) -> bool {
-    is_point_inside_rect(point, rect)
+    is_point_inside_rect(point, Rect(rect.0, rect.1, rect.2, rect.3))
 }
 
 #[gen_stub_pyfunction(
@@ -78,7 +79,10 @@ fn does_rect_contain_rect_py(
     outer: (f64, f64, f64, f64),
     inner: (f64, f64, f64, f64),
 ) -> bool {
-    does_rect_contain_rect(outer, inner)
+    does_rect_contain_rect(
+        Rect(outer.0, outer.1, outer.2, outer.3),
+        Rect(inner.0, inner.1, inner.2, inner.3),
+    )
 }
 
 #[gen_stub_pyfunction(
@@ -103,7 +107,10 @@ fn does_rect_intersect_rect_py(
     r1: (f64, f64, f64, f64),
     r2: (f64, f64, f64, f64),
 ) -> bool {
-    does_rect_intersect_rect(r1, r2)
+    does_rect_intersect_rect(
+        Rect(r1.0, r1.1, r1.2, r1.3),
+        Rect(r2.0, r2.1, r2.2, r2.3),
+    )
 }
 
 #[gen_stub_pyfunction(
@@ -128,7 +135,10 @@ fn do_rects_intersect_py(
     r1: (f64, f64, f64, f64),
     r2: (f64, f64, f64, f64),
 ) -> bool {
-    do_rects_intersect(r1, r2)
+    do_rects_intersect(
+        Rect(r1.0, r1.1, r1.2, r1.3),
+        Rect(r2.0, r2.1, r2.2, r2.3),
+    )
 }
 
 #[gen_stub_pyfunction(
@@ -164,7 +174,7 @@ fn get_combined_rect_py(
                     e
                 ))
             })?;
-        let (gx0, gy0, gx1, gy1) = geo.borrow().inner.rect();
+        let Rect(gx0, gy0, gx1, gy1) = geo.borrow().inner.rect();
         min_x = min_x.min(gx0);
         min_y = min_y.min(gy0);
         max_x = max_x.max(gx1);

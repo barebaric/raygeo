@@ -67,7 +67,7 @@ pub fn project_point_onto_circle(
 /// Tests if a circle is completely contained within an axis-aligned rectangle.
 pub fn is_circle_inside_rect(center: Point, radius: f64, rect: Rect) -> bool {
     let (cx, cy) = center;
-    let (rx1, ry1, rx2, ry2) = rect;
+    let Rect(rx1, ry1, rx2, ry2) = rect;
     (cx - radius) >= rx1
         && (cy - radius) >= ry1
         && (cx + radius) <= rx2
@@ -82,7 +82,7 @@ pub fn does_circle_intersect_rect(
     rect: Rect,
 ) -> bool {
     let (cx, cy) = center;
-    let (rx1, ry1, rx2, ry2) = rect;
+    let Rect(rx1, ry1, rx2, ry2) = rect;
 
     // Fully contained circles don't intersect
     if is_circle_inside_rect(center, radius, rect) {
@@ -170,5 +170,3 @@ pub fn line_segment_intersects_circle(
         get_line_segment_closest_point(p1, p2, center.0, center.1);
     dist_sq <= radius * radius
 }
-
-

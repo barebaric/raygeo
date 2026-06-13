@@ -9,7 +9,7 @@ use super::axis::Axis;
 use super::enums::{CommandCategory, CommandType, SectionType};
 use super::state::State;
 use super::types::{MarkerCmd, MoveCmd, OpCategory, OpNode, StateCmd};
-use crate::types::Point3D;
+use crate::types::{Point3D, Rect};
 
 #[derive(Clone, Debug)]
 pub struct Ops {
@@ -667,7 +667,7 @@ impl Ops {
     }
 
     pub fn get_frame(&self, power: Option<f64>, speed: Option<f64>) -> Self {
-        let (min_x, min_y, max_x, max_y) = self.rect(false);
+        let Rect(min_x, min_y, max_x, max_y) = self.rect(false);
         if (min_x, min_y, max_x, max_y) == (0.0, 0.0, 0.0, 0.0) {
             return Ops::new();
         }
@@ -739,7 +739,7 @@ impl Ops {
         }
 
         if !has_content {
-            return (0.0, 0.0, 0.0, 0.0);
+            return Rect(0.0, 0.0, 0.0, 0.0);
         }
 
         if !xs.is_empty() {
@@ -803,7 +803,7 @@ impl Ops {
             }
         }
 
-        (min_x, min_y, max_x, max_y)
+        Rect(min_x, min_y, max_x, max_y)
     }
 
     pub fn without_state(&self) -> Self {

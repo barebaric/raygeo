@@ -35,5 +35,3 @@ pub fn are_points_equal(p1: &[f64; 3], p2: &[f64; 3], tolerance: f64) -> bool {
     }
     true
 }
-
-

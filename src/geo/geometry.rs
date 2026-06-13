@@ -155,7 +155,7 @@ impl Geometry {
     /// Returns (0, 0, 0, 0) if the geometry is empty.
     pub fn rect(&self) -> Rect {
         if self.data.is_empty() {
-            return (0.0, 0.0, 0.0, 0.0);
+            return Rect(0.0, 0.0, 0.0, 0.0);
         }
         crate::geo::query::get_bounding_rect_from_array(&self.data)
     }
@@ -175,7 +175,7 @@ impl Geometry {
 
         match cmd {
             Command::Move { .. } => None,
-            Command::Line { .. } => Some((
+            Command::Line { .. } => Some(Rect(
                 sx.min(end.0),
                 sy.min(end.1),
                 sx.max(end.0),

@@ -153,10 +153,6 @@ fn slice_scanline_data_py(data: Vec<u8>, t_start: f64, t_end: f64) -> Vec<u8> {
     module = "raygeo.geo.algo.interp"
 )]
 #[pyfunction(name = "solve_quadratic")]
-fn solve_quadratic_py(
-    a: f64,
-    b: f64,
-    c: f64,
-) -> (Option<f64>, Option<f64>) {
+fn solve_quadratic_py(a: f64, b: f64, c: f64) -> (Option<f64>, Option<f64>) {
     solve_quadratic(a, b, c)
 }

@@ -234,5 +234,3 @@ pub fn check_intersection_from_array(
 ) -> bool {
     data_intersect(data1, data2, false, fail_on_t_junction)
 }
-
-

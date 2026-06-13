@@ -14,7 +14,7 @@ use crate::geo::shape::circle::{
     get_line_circle_intersections, is_circle_inside_rect,
     line_segment_intersects_circle, project_point_onto_circle,
 };
-use crate::Point;
+use crate::types::{Point, Rect};
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::gen_stub_pyfunction;
 
@@ -124,7 +124,7 @@ fn is_circle_inside_rect_py(
     radius: f64,
     rect: (f64, f64, f64, f64),
 ) -> bool {
-    is_circle_inside_rect(center, radius, rect)
+    is_circle_inside_rect(center, radius, Rect(rect.0, rect.1, rect.2, rect.3))
 }
 
 #[gen_stub_pyfunction(
@@ -152,7 +152,11 @@ fn does_circle_intersect_rect_py(
     radius: f64,
     rect: (f64, f64, f64, f64),
 ) -> bool {
-    does_circle_intersect_rect(center, radius, rect)
+    does_circle_intersect_rect(
+        center,
+        radius,
+        Rect(rect.0, rect.1, rect.2, rect.3),
+    )
 }
 
 #[gen_stub_pyfunction(

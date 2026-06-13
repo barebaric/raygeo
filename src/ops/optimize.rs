@@ -850,5 +850,3 @@ fn optimize_segments(ops: &mut Ops, progress_cb: &dyn ProgressCallback) {
 
     report_progress(progress_cb, 1.0, "Optimization complete");
 }
-
-

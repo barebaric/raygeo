@@ -448,4 +448,3 @@ pub fn downsample_power_values(
         y_mm: resampled_y,
     }
 }
-

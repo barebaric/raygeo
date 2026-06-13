@@ -110,5 +110,3 @@ pub fn solve_quadratic(a: f64, b: f64, c: f64) -> (Option<f64>, Option<f64>) {
         (Some(t2), Some(t1))
     }
 }
-
-

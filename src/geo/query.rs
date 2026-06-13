@@ -27,7 +27,7 @@ use crate::types::{Command, Point, Point3D, Rect};
 /// - Returns: `(min_x, min_y, max_x, max_y)` bounding rectangle.
 pub fn get_bounding_rect_from_array(data: &[Command]) -> Rect {
     if data.is_empty() {
-        return (0.0, 0.0, 0.0, 0.0);
+        return Rect(0.0, 0.0, 0.0, 0.0);
     }
 
     // First pass: compute bounds from all endpoints
@@ -62,7 +62,7 @@ pub fn get_bounding_rect_from_array(data: &[Command]) -> Rect {
             ..
         } = cmd
         {
-            let (ax1, ay1, ax2, ay2) = get_arc_bounds(
+            let Rect(ax1, ay1, ax2, ay2) = get_arc_bounds(
                 last_point_2d,
                 (end.0, end.1),
                 *center_offset,
@@ -115,7 +115,7 @@ pub fn get_bounding_rect_from_array(data: &[Command]) -> Rect {
         last_point_3d = end;
     }
 
-    (min_x, min_y, max_x, max_y)
+    Rect(min_x, min_y, max_x, max_y)
 }
 
 /// Compute the total path length by summing segment lengths.

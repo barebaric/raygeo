@@ -259,5 +259,3 @@ pub fn smooth_polyline(
 fn approx_equal(a: f64, b: f64) -> bool {
     (a - b).abs() < 1e-12
 }
-
-

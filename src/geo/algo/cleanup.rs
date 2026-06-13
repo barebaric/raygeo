@@ -193,5 +193,3 @@ pub fn close_geometry_gaps_from_array(
 
     final_rows
 }
-
-

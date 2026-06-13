@@ -877,6 +877,3 @@ pub fn optimize_path_from_array(
 pub fn fit_arcs(data: &[Command], tolerance: f64) -> Vec<Command> {
     fit_curves(data, tolerance, false, true, None)
 }
-
-
-

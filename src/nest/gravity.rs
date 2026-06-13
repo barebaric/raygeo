@@ -1,7 +1,7 @@
 use crate::geo::shape::polygon::{
     get_polygon_bounds, get_polygon_group_bounds, translate_polygon,
 };
-use crate::types::Polygon;
+use crate::types::{Polygon, Rect};
 
 use super::collision::{any_overlap, is_contained};
 
@@ -13,12 +13,12 @@ const MIN_STEP: f64 = 0.1;
 pub fn find_max_slide(
     polys: &[Polygon],
     other_polys_list: &[Vec<Polygon>],
-    sheet_bounds: (f64, f64, f64, f64),
+    sheet_bounds: Rect,
     sheet_poly: &Polygon,
     axis: &str,
     spacing: f64,
 ) -> f64 {
-    let (sheet_min_x, sheet_min_y, _, _) = sheet_bounds;
+    let Rect(sheet_min_x, sheet_min_y, _, _) = sheet_bounds;
 
     let bounds = get_polygon_group_bounds(polys);
     let limit = if axis == "x" {

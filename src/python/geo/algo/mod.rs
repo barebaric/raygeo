@@ -2,6 +2,7 @@ pub(crate) mod analysis;
 pub(crate) mod clipping;
 pub(crate) mod fitting;
 pub(crate) mod hull;
+pub(crate) mod interp;
 pub(crate) mod minkowski;
 pub(crate) mod overcut;
 pub(crate) mod simplify;
@@ -44,6 +45,7 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     clipping::register(&algo_mod)?;
     fitting::register(&algo_mod)?;
     hull::register(&algo_mod)?;
+    interp::register(&algo_mod)?;
     minkowski::register(&algo_mod)?;
     overcut::register(&algo_mod)?;
     simplify::register(&algo_mod)?;
@@ -60,6 +62,8 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     sys_modules
         .set_item("raygeo.geo.algo.fitting", &algo_mod.getattr("fitting")?)?;
     sys_modules.set_item("raygeo.geo.algo.hull", &algo_mod.getattr("hull")?)?;
+    sys_modules
+        .set_item("raygeo.geo.algo.interp", &algo_mod.getattr("interp")?)?;
     sys_modules.set_item(
         "raygeo.geo.algo.minkowski",
         &algo_mod.getattr("minkowski")?,

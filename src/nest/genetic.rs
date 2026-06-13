@@ -401,5 +401,3 @@ fn mutate_internal(
     clone.fitness = f64::INFINITY;
     clone
 }
-
-

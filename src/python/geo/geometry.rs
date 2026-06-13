@@ -440,7 +440,8 @@ impl Geometry {
 
     /// Return the bounding rectangle (x_min, x_max, y_min, y_max).
     fn rect(&mut self) -> (f64, f64, f64, f64) {
-        self.inner.rect()
+        let r = self.inner.rect();
+        (r.0, r.1, r.2, r.3)
     }
 
     /// Return the bounding box of a single segment at the given index.
@@ -449,7 +450,9 @@ impl Geometry {
     /// :param index: Segment index.
     /// :returns: (x_min, y_min, x_max, y_max) or None.
     fn segment_bounds(&mut self, index: usize) -> Option<(f64, f64, f64, f64)> {
-        self.inner.segment_bounds(index)
+        self.inner
+            .segment_bounds(index)
+            .map(|r| (r.0, r.1, r.2, r.3))
     }
 
     /// Given a list of distances along the path, returns the corresponding

@@ -8,7 +8,8 @@ pub type Point = (f64, f64);
 pub type Point3D = (f64, f64, f64);
 
 /// A 2D axis-aligned bounding box represented as (x_min, y_min, x_max, y_max).
-pub type Rect = (f64, f64, f64, f64);
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct Rect(pub f64, pub f64, pub f64, pub f64);
 
 /// A cubic Bezier curve defined by four control points: (p0, c1, c2, p1).
 /// - p0: Start point

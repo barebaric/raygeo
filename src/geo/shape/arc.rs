@@ -147,7 +147,7 @@ pub fn get_arc_bounds(
         min_y = min_y.min(center_y - radius);
     }
 
-    (min_x, min_y, max_x, max_y)
+    Rect(min_x, min_y, max_x, max_y)
 }
 
 /// Determines arc direction based on center, start point, and a third reference point.
@@ -562,5 +562,3 @@ pub fn is_arc_inside_polygons(
     }
     true
 }
-
-

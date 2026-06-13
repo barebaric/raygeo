@@ -1,5 +1,7 @@
 use std::collections::{HashMap, HashSet};
 
+use crate::types::Rect;
+
 /// A grid-based spatial index for fast overlap queries.
 ///
 /// Divides the 2D plane into fixed-size cells and associates each
@@ -19,8 +21,8 @@ impl SpatialGrid {
         }
     }
 
-    pub fn insert(&mut self, index: usize, bbox: (f64, f64, f64, f64)) {
-        let (min_x, min_y, max_x, max_y) = bbox;
+    pub fn insert(&mut self, index: usize, bbox: Rect) {
+        let Rect(min_x, min_y, max_x, max_y) = bbox;
         let cell_min_x = (min_x / self.cell_size).floor() as i32;
         let cell_max_x = (max_x / self.cell_size).floor() as i32;
         let cell_min_y = (min_y / self.cell_size).floor() as i32;
@@ -32,8 +34,8 @@ impl SpatialGrid {
         }
     }
 
-    pub fn query(&self, bbox: (f64, f64, f64, f64)) -> HashSet<usize> {
-        let (min_x, min_y, max_x, max_y) = bbox;
+    pub fn query(&self, bbox: Rect) -> HashSet<usize> {
+        let Rect(min_x, min_y, max_x, max_y) = bbox;
         let cell_min_x = (min_x / self.cell_size).floor() as i32;
         let cell_max_x = (max_x / self.cell_size).floor() as i32;
         let cell_min_y = (min_y / self.cell_size).floor() as i32;

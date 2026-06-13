@@ -11,7 +11,7 @@ const BOTTOM: i32 = 4;
 const TOP: i32 = 8;
 
 fn compute_outcode(x: f64, y: f64, rect: Rect) -> i32 {
-    let (x_min, y_min, x_max, y_max) = rect;
+    let Rect(x_min, y_min, x_max, y_max) = rect;
     let mut code = INSIDE;
     if x < x_min {
         code |= LEFT;
@@ -33,7 +33,7 @@ pub fn clip_line_segment_with_rect(
     p2: Point3D,
     rect: Rect,
 ) -> Option<(Point3D, Point3D)> {
-    let (x_min, y_min, x_max, y_max) = rect;
+    let Rect(x_min, y_min, x_max, y_max) = rect;
     let (mut x1, mut y1, mut z1) = p1;
     let (mut x2, mut y2, mut z2) = p2;
     let (dx, dy, dz) = (x2 - x1, y2 - y1, z2 - z1);

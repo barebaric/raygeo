@@ -66,7 +66,7 @@ pub fn get_bezier_bounds(p0: Point, c1: Point, c2: Point, p1: Point) -> Rect {
     _add_axis_extrema(&mut candidates_x, p0.0, c1.0, c2.0, p1.0);
     _add_axis_extrema(&mut candidates_y, p0.1, c1.1, c2.1, p1.1);
 
-    (
+    Rect(
         candidates_x.iter().cloned().fold(f64::INFINITY, f64::min),
         candidates_y.iter().cloned().fold(f64::INFINITY, f64::min),
         candidates_x
@@ -122,9 +122,8 @@ pub fn get_bezier_rect_intersections(
     p1: Point,
     rect: Rect,
 ) -> Vec<f64> {
-    let (x_min, y_min, x_max, y_max) = rect;
+    let Rect(x_min, y_min, x_max, y_max) = rect;
     let mut t_crossings: Vec<f64> = Vec::new();
-
     let rect_edges: [(usize, f64); 4] =
         [(0, x_min), (0, x_max), (1, y_min), (1, y_max)];
 
@@ -184,9 +183,8 @@ pub fn clip_bezier_with_rect(
     p1: Point,
     rect: Rect,
 ) -> Vec<CubicBezier> {
-    let (x_min, y_min, x_max, y_max) = rect;
+    let Rect(x_min, y_min, x_max, y_max) = rect;
     let crossing_params = get_bezier_rect_intersections(p0, c1, c2, p1, rect);
-
     if crossing_params.len() < 2 {
         return vec![];
     }
@@ -737,5 +735,3 @@ pub fn get_bezier_length(p0: Point, c1: Point, c2: Point, p1: Point) -> f64 {
     }
     length
 }
-
-
