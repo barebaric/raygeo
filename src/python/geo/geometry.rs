@@ -925,7 +925,7 @@ impl Geometry {
     /// :param tolerance: Maximum deviation.
     /// :param beziers: Whether to fit bezier curves.
     /// :param arcs: Whether to fit arcs.
-    /// :param on_progress: Optional progress callback.
+    /// :param on_progress: Optional progress callback called with ``(current, total)``.
     #[pyo3(signature = (tolerance, beziers=true, arcs=true, on_progress=None))]
     fn fit_curves(
         slf: Bound<'_, Self>,
@@ -934,12 +934,19 @@ impl Geometry {
         arcs: bool,
         on_progress: Option<pyo3::Py<pyo3::PyAny>>,
     ) -> Bound<'_, Self> {
-        let _ = on_progress;
+        let on_progress_ref = on_progress.map(|cb| {
+            let py = slf.py();
+            move |current: usize, total: usize| {
+                let args = (current as u64, total as u64);
+                let _ = cb.call1(py, args);
+            }
+        });
+        let cb = on_progress_ref.as_ref().map(|f| f as &dyn Fn(usize, usize));
         {
             let mut geo = slf.borrow_mut();
             if !geo.inner.data.is_empty() {
                 let fitted =
-                    fit_curves(&geo.inner.data, tolerance, beziers, arcs);
+                    fit_curves(&geo.inner.data, tolerance, beziers, arcs, cb);
                 geo.inner.data = fitted;
             }
         }

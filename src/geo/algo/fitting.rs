@@ -718,11 +718,13 @@ pub fn fit_curves(
     tolerance: f64,
     preserve_beziers: bool,
     preserve_arcs: bool,
+    on_progress: Option<&dyn Fn(usize, usize)>,
 ) -> Vec<Command> {
     if data.is_empty() {
         return vec![];
     }
 
+    let total = data.len();
     let mut new_cmds: Vec<Command> = Vec::new();
     let mut point_chain: Vec<Point3D> = Vec::new();
 
@@ -737,7 +739,7 @@ pub fn fit_curves(
 
     let mut last_pos = (0.0, 0.0, 0.0);
 
-    for cmd in data {
+    for (i, cmd) in data.iter().enumerate() {
         let end_pos = cmd.end_point();
 
         if matches!(cmd, Command::Move { .. }) {
@@ -808,6 +810,10 @@ pub fn fit_curves(
         }
 
         last_pos = end_pos;
+
+        if let Some(cb) = on_progress {
+            cb(i + 1, total);
+        }
     }
 
     flush_chain(&mut point_chain, &mut new_cmds);
@@ -869,7 +875,7 @@ pub fn optimize_path_from_array(
 
 /// Fit arcs only (equivalent to fit_curves with preserve_beziers=false, preserve_arcs=true).
 pub fn fit_arcs(data: &[Command], tolerance: f64) -> Vec<Command> {
-    fit_curves(data, tolerance, false, true)
+    fit_curves(data, tolerance, false, true, None)
 }
 
 #[cfg(test)]
@@ -1049,7 +1055,7 @@ mod tests {
                 end: (2.0, 0.0, 0.0),
             },
         ];
-        let result = fit_curves(&data, 0.1, true, true);
+        let result = fit_curves(&data, 0.1, true, true, None);
         assert!(!result.is_empty());
         let has_bezier = result
             .iter()
