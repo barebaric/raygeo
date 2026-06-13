@@ -311,10 +311,6 @@ pub fn parse_svg_path_data(
         }
     }
 
-    if geometries.is_empty() {
-        return Err(RaygeoError::SvgEmptyPath);
-    }
-
     Ok(geometries)
 }
 
@@ -323,22 +319,21 @@ pub fn svg_string_to_geometries(
     scale_x: f64,
     scale_y: f64,
 ) -> RaygeoResult<Vec<Geometry>> {
-    let doc = roxmltree::Document::parse(svg_str)
-        .map_err(|e| RaygeoError::SvgParseError(e.to_string()))?;
-
-    let mut all_geometries = Vec::new();
-    let identity = parse_svg_transform("");
-    traverse_svg_node(
-        doc.root_element(),
-        &identity,
-        &mut all_geometries,
-        scale_x,
-        scale_y,
-    );
-
-    if all_geometries.is_empty() {
-        return Err(RaygeoError::SvgEmptyPath);
-    }
+    let all_geometries = match roxmltree::Document::parse(svg_str) {
+        Ok(doc) => {
+            let mut geos = Vec::new();
+            let identity = parse_svg_transform("");
+            traverse_svg_node(
+                doc.root_element(),
+                &identity,
+                &mut geos,
+                scale_x,
+                scale_y,
+            );
+            geos
+        }
+        Err(_) => Vec::new(),
+    };
 
     Ok(all_geometries)
 }

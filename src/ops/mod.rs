@@ -22,8 +22,12 @@ pub(crate) mod transform;
 pub mod types;
 
 pub use axis::Axis;
-pub use container::*;
-pub use enums::*;
-pub use group::*;
-pub use state::*;
-pub use types::*;
+pub use container::Ops;
+pub use enums::{CommandCategory, CommandType, SectionType};
+pub use group::{
+    group_by_state_continuity, iter_section_ranges, iter_sections,
+    segment_indices, segments, split_into_subpaths, without_state, OpsSection,
+    OpsSectionRange,
+};
+pub use state::State;
+pub use types::{MarkerCmd, MoveCmd, OpCategory, OpNode, StateCmd};

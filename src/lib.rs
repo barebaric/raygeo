@@ -35,16 +35,27 @@ pub mod ops;
 pub mod svg;
 pub mod types;
 
-pub use constants::*;
-pub use error::*;
-pub use geo::*;
+pub use constants::{
+    CLIPPER_SCALE, EPSILON_COLLINEAR, EPSILON_GAP_CLOSE, EPSILON_INTERSECT,
+    EPSILON_MEDIUM, EPSILON_MERGE, EPSILON_NEST,
+};
+pub use error::{AxisRepr, RaygeoError, RaygeoResult};
+pub use geo::geometry::Geometry;
 pub use ops::axis::Axis;
-pub use ops::container::*;
-pub use ops::enums::*;
-pub use ops::group::*;
-pub use ops::state::*;
-pub use ops::types::*;
-pub use types::*;
+pub use ops::container::Ops;
+pub use ops::enums::{CommandCategory, CommandType, SectionType};
+pub use ops::group::{
+    group_by_state_continuity, iter_section_ranges, iter_sections,
+    segment_indices, segments, split_into_subpaths, without_state, OpsSection,
+    OpsSectionRange,
+};
+pub use ops::state::State;
+pub use ops::types::{MarkerCmd, MoveCmd, OpCategory, OpNode, StateCmd};
+pub use types::{
+    BezierControls, BezierSplit, Command, ContourData, CubicBezier, Edge,
+    GeometryPair, IntPoint, IntPolygon, Point, Point3D, Polygon, Polygon3D,
+    Rect, Rect3D, Segment3D,
+};
 
 /// Register one or more PyO3 functions into a module.
 ///

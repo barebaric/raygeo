@@ -151,7 +151,7 @@ impl Geometry {
         if self.data.is_empty() {
             return (0.0, 0.0, 0.0, 0.0);
         }
-        crate::query::get_bounding_rect_from_array(&self.data)
+        crate::geo::query::get_bounding_rect_from_array(&self.data)
     }
 
     /// Returns the bounding box of a single segment at the given index.
@@ -242,7 +242,7 @@ impl Geometry {
         if self.data.is_empty() {
             return 0.0;
         }
-        crate::query::get_total_distance_from_array(&self.data)
+        crate::geo::query::get_total_distance_from_array(&self.data)
     }
 
     /// Returns the total area enclosed by the geometry (absolute value).
@@ -251,7 +251,7 @@ impl Geometry {
         if self.data.is_empty() {
             return 0.0;
         }
-        crate::analysis::get_area_from_array(&self.data)
+        crate::geo::algo::analysis::get_area_from_array(&self.data)
     }
 
     /// Returns true if the geometry forms a closed path within the given tolerance.

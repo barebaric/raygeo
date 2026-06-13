@@ -336,7 +336,9 @@ pub fn get_valid_contours_data(
         }
 
         let vertices =
-            crate::analysis::get_subpath_vertices_from_array(&geo.data, 0);
+            crate::geo::algo::analysis::get_subpath_vertices_from_array(
+                &geo.data, 0,
+            );
 
         result.push((geo.clone(), vertices, is_closed_flag));
     }

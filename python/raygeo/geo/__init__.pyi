@@ -288,7 +288,7 @@ class Geometry:
         :param tolerance: Maximum deviation.
         :param beziers: Whether to fit bezier curves.
         :param arcs: Whether to fit arcs.
-        :param on_progress: Optional progress callback.
+        :param on_progress: Optional progress callback called with ``(current, total)``.
         """
     def fit_arcs(self, tolerance: builtins.float) -> Geometry:
         r"""
