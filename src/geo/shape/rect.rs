@@ -1,4 +1,4 @@
-use crate::geo::Geometry;
+use crate::geo::geometry::Geometry;
 use crate::types::Rect;
 
 /// Compute the union bounding box of multiple geometries.

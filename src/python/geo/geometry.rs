@@ -7,21 +7,26 @@ use pyo3_stub_gen::inventory::submit;
 use pyo3_stub_gen::{PyStubType, TypeInfo};
 
 use crate::geo::algo::analysis::{
-    get_point_at_from_array, get_tangent_at_from_array,
+    get_outward_normal_at_from_array, get_point_at_from_array,
+    get_tangent_at_from_array,
 };
-use crate::geo::algo::fitting::convert_arc_to_beziers_from_array;
-use crate::geo::algo::topology::get_valid_contours_data;
-use crate::geo::math::map_geometry_to_frame;
-use crate::geo::{
+use crate::geo::algo::cleanup::close_geometry_gaps_from_array;
+use crate::geo::algo::fitting::{
+    convert_arc_to_beziers_from_array, convert_arcs_to_beziers, fit_curves,
+    linearize_data,
+};
+use crate::geo::algo::intersect::{
     check_intersection_from_array, check_self_intersection_from_array,
-    close_all_contours, close_geometry_gaps_from_array,
-    convert_arcs_to_beziers, filter_to_external_contours,
-    find_closest_point_on_path_from_array, fit_curves,
-    get_outward_normal_at_from_array, grow_geometry, linearize_data,
-    normalize_winding_orders, remove_inner_edges, reverse_contour,
-    simplify_data, split_inner_and_outer_contours, split_into_components,
-    split_into_contours,
 };
+use crate::geo::algo::offset::grow_geometry;
+use crate::geo::algo::simplify::simplify_data;
+use crate::geo::algo::topology::{
+    close_all_contours, filter_to_external_contours, get_valid_contours_data,
+    normalize_winding_orders, remove_inner_edges, reverse_contour,
+    split_inner_and_outer_contours, split_into_components, split_into_contours,
+};
+use crate::geo::math::map_geometry_to_frame;
+use crate::geo::query::find_closest_point_on_path_from_array;
 use crate::{Command as CoreCommand, Geometry as CoreGeometry, Point};
 
 #[gen_stub_pyclass]
@@ -1001,10 +1006,11 @@ impl Geometry {
         {
             let mut geo = slf.borrow_mut();
             if !geo.inner.data.is_empty() {
-                let cleaned = crate::geo::remove_duplicate_segments(
-                    &geo.inner.data,
-                    tolerance,
-                );
+                let cleaned =
+                    crate::geo::algo::cleanup::remove_duplicate_segments(
+                        &geo.inner.data,
+                        tolerance,
+                    );
                 geo.inner.data = cleaned;
             }
         }
@@ -1223,7 +1229,10 @@ impl Geometry {
     ///
     /// :param other: The potentially enclosed geometry.
     fn encloses(&mut self, other: &mut Geometry) -> PyResult<bool> {
-        Ok(crate::geo::does_enclose(&self.inner, &other.inner))
+        Ok(crate::geo::algo::analysis::does_enclose(
+            &self.inner,
+            &other.inner,
+        ))
     }
 
     /// Remove inner edges (shared between contours).
@@ -1329,9 +1338,10 @@ impl Geometry {
                 continue;
             }
             let poly: Vec<Point> = seg.iter().map(|p| (p.0, p.1)).collect();
-            if let Some(cleaned) =
-                crate::geo::clean_polygon(&poly, 0.01 * tolerance)
-            {
+            if let Some(cleaned) = crate::geo::shape::polygon::clean_polygon(
+                &poly,
+                0.01 * tolerance,
+            ) {
                 result.push(cleaned);
             } else if poly.len() >= 3 {
                 result.push(poly);
