@@ -97,6 +97,7 @@ impl fmt::Display for AxisRepr {
 pub type RaygeoResult<T> = Result<T, RaygeoError>;
 
 /// Converts a `RaygeoError` into a Python exception.
+#[cfg(feature = "python")]
 impl From<RaygeoError> for pyo3::PyErr {
     fn from(err: RaygeoError) -> Self {
         use pyo3::exceptions::{PyRuntimeError, PyTypeError, PyValueError};

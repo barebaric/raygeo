@@ -57,10 +57,13 @@ pub use types::{
     Rect, Rect3D, Segment3D,
 };
 
+// ── Python bindings (behind "python" feature) ─────────────────────
+
 /// Register one or more PyO3 functions into a module.
 ///
 /// Eliminates the repetitive `m.add_function(wrap_pyfunction!(func, m.clone())?)?;`
 /// boilerplate in every `register()` function.
+#[cfg(feature = "python")]
 #[macro_export]
 macro_rules! register_functions {
     ($m:ident, $($func:ident),* $(,)?) => {
@@ -70,18 +73,29 @@ macro_rules! register_functions {
     };
 }
 
+#[cfg(feature = "python")]
 mod python;
 
+#[cfg(feature = "python")]
 use pyo3::prelude::*;
+
+#[cfg(feature = "python")]
 use pyo3_stub_gen::define_stub_info_gatherer;
 
+#[cfg(feature = "python")]
 define_stub_info_gatherer!(stub_info);
 
+#[cfg(feature = "python")]
 pyo3_stub_gen::reexport_module_members!("raygeo" from "raygeo.geo"; "Geometry");
+
+#[cfg(feature = "python")]
 pyo3_stub_gen::reexport_module_members!("raygeo" from "raygeo.ops"; "Ops");
 
+#[cfg(feature = "python")]
 pyo3_stub_gen::module_doc!("raygeo", "{}", MODULE_DOC);
 
+/// Module documentation string used for Python `__doc__`.
+#[cfg_attr(not(feature = "python"), allow(dead_code))]
 pub(crate) const MODULE_DOC: &str = concat!(
     "RayGeo — 2D/3D geometry engine for laser cutting and CAM applications.\n",
     "\n",
@@ -120,6 +134,8 @@ pub(crate) const MODULE_DOC: &str = concat!(
     "    100.0",
 );
 
+/// Python extension module entry-point.
+#[cfg(feature = "python")]
 #[pymodule(gil_used = false)]
 fn raygeo(m: &Bound<'_, PyModule>) -> PyResult<()> {
     python::geo::register(m)?;

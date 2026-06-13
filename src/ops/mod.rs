@@ -10,14 +10,19 @@ pub mod enums;
 pub mod flip;
 pub mod group;
 pub(crate) mod layer;
+#[cfg_attr(not(feature = "python"), allow(dead_code))]
 pub(crate) mod lead_in_out;
 pub mod linearize;
+#[cfg_attr(not(feature = "python"), allow(dead_code))]
 pub(crate) mod merge_lines;
 pub mod optimize;
+#[cfg_attr(not(feature = "python"), allow(dead_code))]
 pub(crate) mod overscan;
 pub mod raster;
 pub mod state;
+#[cfg_attr(not(feature = "python"), allow(dead_code))]
 pub(crate) mod tabs;
+#[cfg_attr(not(feature = "python"), allow(dead_code))]
 pub(crate) mod transform;
 pub mod types;
 
