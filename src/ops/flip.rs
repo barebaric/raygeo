@@ -40,11 +40,7 @@ pub fn flip_ops(ops: &Ops) -> Ops {
                     let reversed: Vec<u8> =
                         power_values.iter().rev().copied().collect();
                     OpNode::scan_to(
-                        new_end.0,
-                        new_end.1,
-                        new_end.2,
-                        Some(reversed),
-                        extra,
+                        new_end.0, new_end.1, new_end.2, reversed, extra,
                     )
                 }
                 MoveCmd::BezierTo { control1, control2 } => {

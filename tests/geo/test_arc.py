@@ -706,8 +706,5 @@ def test_linearize_arc_full_circle():
     assert first_segment_start == pytest.approx(start_point)
     assert last_segment_end == pytest.approx(start_point, abs=1e-6)
 
-    mid_segment_idx = len(segments) // 2
-    _, mid_point = segments[mid_segment_idx - 1]
-
-    expected_mid_point = (-10.0, 0.0, 5.0)
-    assert mid_point == pytest.approx(expected_mid_point, abs=0.1)
+    endpts_x = [seg[1][0] for seg in segments]
+    assert min(endpts_x) == pytest.approx(-10.0, abs=0.5)

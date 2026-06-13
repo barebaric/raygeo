@@ -209,17 +209,11 @@ fn linearize_arc_impl(
     let start_angle = (p0.1 - center.1).atan2(p0.0 - center.0);
     let end_angle = (p1.1 - center.1).atan2(p1.0 - center.0);
 
-    let is_coincident =
-        (p0.0 - p1.0).abs() < 1e-9 && (p0.1 - p1.1).abs() < 1e-9;
-
     let angle_range = get_arc_sweep(start_angle, end_angle, clockwise);
 
     let avg_radius = (radius_start + radius_end) / 2.0;
     let arc_len = angle_range.abs() * avg_radius;
-    let mut num_segments = (arc_len / resolution).ceil().max(2.0) as usize;
-    if is_coincident {
-        num_segments = num_segments.div_ceil(2) * 2;
-    }
+    let num_segments = (arc_len / resolution).ceil().max(2.0) as usize;
 
     let mut prev_pt = p0;
     for i in 1..=num_segments {

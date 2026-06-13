@@ -1064,7 +1064,8 @@ impl PyOps {
             Some(ref d) => Some(py_to_axis_map(d)?),
             None => None,
         };
-        self.inner.scan_to(x, y, z, power_values, ea);
+        let pv = power_values.unwrap_or_else(|| vec![255]);
+        self.inner.scan_to(x, y, z, pv, ea);
         Ok(())
     }
 
@@ -1792,8 +1793,10 @@ impl PyOps {
     /// :returns: ``(x_min, y_min, x_max, y_max)``.
     #[pyo3(signature = (include_travel = false))]
     fn rect(&self, include_travel: bool) -> (f64, f64, f64, f64) {
-        let r = self.inner.rect(include_travel);
-        (r.0, r.1, r.2, r.3)
+        match self.inner.rect(include_travel) {
+            Some(r) => (r.0, r.1, r.2, r.3),
+            None => (0.0, 0.0, 0.0, 0.0),
+        }
     }
 
     /// Extract a frame (first and last endpoints) from the sequence.

@@ -167,7 +167,7 @@ fn rewrite_buffered_line(
             overscan_end.0,
             overscan_end.1,
             overscan_end.2,
-            Some(padded),
+            padded,
             None,
         );
         return;

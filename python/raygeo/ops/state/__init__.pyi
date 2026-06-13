@@ -73,7 +73,14 @@ class State:
         """
     @pulse_width.setter
     def pulse_width(self, value: typing.Optional[builtins.float]) -> None: ...
-    def __new__(cls, power: builtins.float = 0.0, air_assist: builtins.bool = False, cut_speed: typing.Optional[builtins.int] = None, travel_speed: typing.Optional[builtins.int] = None, active_laser_uid: typing.Optional[builtins.str] = None, frequency: typing.Optional[builtins.int] = None, pulse_width: typing.Optional[builtins.float] = None) -> State: ...
+    @property
+    def dwell_ms(self) -> typing.Optional[builtins.float]:
+        r"""
+        Dwell time in milliseconds (if set).
+        """
+    @dwell_ms.setter
+    def dwell_ms(self, value: typing.Optional[builtins.float]) -> None: ...
+    def __new__(cls, power: builtins.float = 0.0, air_assist: builtins.bool = False, cut_speed: typing.Optional[builtins.int] = None, travel_speed: typing.Optional[builtins.int] = None, active_laser_uid: typing.Optional[builtins.str] = None, frequency: typing.Optional[builtins.int] = None, pulse_width: typing.Optional[builtins.float] = None, dwell_ms: typing.Optional[builtins.float] = None) -> State: ...
     def __repr__(self) -> builtins.str:
         r"""
         String representation like ``State(power=..., air_assist=...)``.

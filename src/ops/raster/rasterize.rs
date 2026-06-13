@@ -169,13 +169,7 @@ fn emit_downsampled_scan(
     }
 
     ops.move_to(sx, convert_y_to_output(sy, ymax_mm), 0.0, None);
-    ops.scan_to(
-        ex,
-        convert_y_to_output(ey, ymax_mm),
-        0.0,
-        Some(ds_power),
-        None,
-    );
+    ops.scan_to(ex, convert_y_to_output(ey, ymax_mm), 0.0, ds_power, None);
     true
 }
 
@@ -196,7 +190,7 @@ fn emit_scan(
         end_mm.0,
         convert_y_to_output(end_mm.1, ymax_mm),
         0.0,
-        Some(power_values),
+        power_values,
         None,
     );
 }

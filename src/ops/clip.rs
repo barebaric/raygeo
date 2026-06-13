@@ -647,13 +647,7 @@ fn append_clipped_scanline(
             if needs_move_to(pen_pos, *new_start) {
                 new_ops.move_to(new_start.0, new_start.1, new_start.2, None);
             }
-            new_ops.scan_to(
-                new_end.0,
-                new_end.1,
-                new_end.2,
-                Some(new_pv),
-                None,
-            );
+            new_ops.scan_to(new_end.0, new_end.1, new_end.2, new_pv, None);
             pen_pos = Some(*new_end);
         }
     }

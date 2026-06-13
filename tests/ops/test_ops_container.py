@@ -194,9 +194,13 @@ def test_bezier_to():
 
 def test_bezier_to_no_start_point():
     ops = Ops()
-    # Should not raise an error, just do nothing and log a warning.
     ops.bezier_to((1, 1, 1), (2, 2, 2), (3, 3, 3))
-    assert ops.is_empty()
+    assert not ops.is_empty()
+    assert ops.command_type(0) == CommandType.BEZIER_TO
+    info = ops.inspect(0)
+    assert info.end == (3.0, 3.0, 3.0)
+    assert info.control1 == (1.0, 1.0, 1.0)
+    assert info.control2 == (2.0, 2.0, 2.0)
 
 
 def test_set_power(sample_ops):

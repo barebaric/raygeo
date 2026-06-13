@@ -248,7 +248,7 @@ pub fn does_line_segment_intersect_rect(
         get_line_segment_intersection(p1, p2, (xmin, ymax), (xmin, ymin)),
     ];
 
-    intersections.iter().filter(|x| x.is_some()).count() > 0
+    intersections.iter().any(|x| x.is_some())
 }
 
 /// Tests if a line segment intersects a circle by checking closest point distance.

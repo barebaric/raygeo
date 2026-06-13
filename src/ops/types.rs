@@ -171,15 +171,14 @@ impl OpNode {
         x: f64,
         y: f64,
         z: f64,
-        power_values: Option<Vec<u8>>,
+        power_values: Vec<u8>,
         extra: Option<Vec<(Axis, f64)>>,
     ) -> Self {
-        let pv = power_values.unwrap_or_else(|| vec![255]);
         OpNode {
             category: OpCategory::Moving {
                 end: (x, y, z),
                 cmd: MoveCmd::ScanLine {
-                    power_values: Arc::from(pv),
+                    power_values: Arc::from(power_values),
                 },
             },
             state: None,

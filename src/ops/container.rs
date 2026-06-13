@@ -261,7 +261,7 @@ impl Ops {
         x: f64,
         y: f64,
         z: f64,
-        power_values: Option<Vec<u8>>,
+        power_values: Vec<u8>,
         extra: Option<Vec<(Axis, f64)>>,
     ) {
         self.commands
@@ -537,32 +537,31 @@ impl Ops {
         let mut out = format!("Ops {{ len: {} }}\n", self.commands.len());
         for (i, node) in self.commands.iter().enumerate() {
             let ct = node.command_type();
-            let _ = write!(out, "  [{}] {}", i, ct);
+            write!(out, "  [{}] {}", i, ct).unwrap();
             if let OpCategory::Moving { end, cmd } = &node.category {
-                let _ = write!(
-                    out,
-                    " end=({:.3},{:.3},{:.3})",
-                    end.0, end.1, end.2
-                );
+                write!(out, " end=({:.3},{:.3},{:.3})", end.0, end.1, end.2)
+                    .unwrap();
                 match cmd {
                     MoveCmd::ArcTo { center, cw } => {
-                        let _ = write!(
+                        write!(
                             out,
                             " arc=(i={:.3},j={:.3},cw={})",
                             center.0, center.1, cw
-                        );
+                        )
+                        .unwrap();
                     }
                     MoveCmd::BezierTo { control1, control2 } => {
-                        let _ = write!(
+                        write!(
                             out,
                             " bezier=(control1=({:.3},{:.3}),control2=({:.3},{:.3}))",
                             control1.0, control1.1, control2.0, control2.1
-                        );
+                        )
+                        .unwrap();
                     }
                     _ => {}
                 }
             }
-            let _ = writeln!(out);
+            writeln!(out).unwrap();
         }
         out
     }
@@ -664,10 +663,9 @@ impl Ops {
     }
 
     pub fn get_frame(&self, power: Option<f64>, speed: Option<f64>) -> Self {
-        let Rect(min_x, min_y, max_x, max_y) = self.rect(false);
-        if (min_x, min_y, max_x, max_y) == (0.0, 0.0, 0.0, 0.0) {
+        let Some(Rect(min_x, min_y, max_x, max_y)) = self.rect(false) else {
             return Ops::new();
-        }
+        };
         let mut frame_ops = Ops::new();
         if let Some(p) = power {
             frame_ops.set_power(p);
@@ -683,7 +681,7 @@ impl Ops {
         frame_ops
     }
 
-    pub fn rect(&self, include_travel: bool) -> crate::types::Rect {
+    pub fn rect(&self, include_travel: bool) -> Option<Rect> {
         let mut min_x = f64::INFINITY;
         let mut min_y = f64::INFINITY;
         let mut max_x = f64::NEG_INFINITY;
@@ -697,20 +695,20 @@ impl Ops {
             curr_y = self.last_move_to.1;
         }
 
-        let mut xs: Vec<f64> = Vec::new();
-        let mut ys: Vec<f64> = Vec::new();
-        let mut arcs: Vec<(f64, f64, f64, f64, f64, f64, bool)> = Vec::new();
-
         for node in &self.commands {
             if let OpCategory::Moving { end, cmd } = &node.category {
                 let (end_x, end_y) = (end.0, end.1);
 
                 if matches!(cmd, MoveCmd::MoveTo) {
                     if include_travel {
-                        xs.push(curr_x);
-                        ys.push(curr_y);
-                        xs.push(end_x);
-                        ys.push(end_y);
+                        Self::update_bounds(
+                            &mut min_x, &mut min_y, &mut max_x, &mut max_y,
+                            curr_x, curr_y,
+                        );
+                        Self::update_bounds(
+                            &mut min_x, &mut min_y, &mut max_x, &mut max_y,
+                            end_x, end_y,
+                        );
                         has_content = true;
                     }
                     curr_x = end_x;
@@ -718,16 +716,57 @@ impl Ops {
                     continue;
                 }
 
-                xs.push(curr_x);
-                ys.push(curr_y);
-                xs.push(end_x);
-                ys.push(end_y);
+                Self::update_bounds(
+                    &mut min_x, &mut min_y, &mut max_x, &mut max_y, curr_x,
+                    curr_y,
+                );
+                Self::update_bounds(
+                    &mut min_x, &mut min_y, &mut max_x, &mut max_y, end_x,
+                    end_y,
+                );
                 has_content = true;
 
                 if let MoveCmd::ArcTo { center, cw } = cmd {
-                    arcs.push((
-                        curr_x, curr_y, end_x, end_y, center.0, center.1, *cw,
-                    ));
+                    let radius =
+                        (center.0 * center.0 + center.1 * center.1).sqrt();
+                    if (curr_x - end_x).abs() < EPSILON_COLLINEAR
+                        && (curr_y - end_y).abs() < EPSILON_COLLINEAR
+                        && radius > EPSILON_COLLINEAR
+                    {
+                        let cx = curr_x + center.0;
+                        let cy = curr_y + center.1;
+                        Self::update_bounds(
+                            &mut min_x,
+                            &mut min_y,
+                            &mut max_x,
+                            &mut max_y,
+                            cx - radius,
+                            cy - radius,
+                        );
+                        Self::update_bounds(
+                            &mut min_x,
+                            &mut min_y,
+                            &mut max_x,
+                            &mut max_y,
+                            cx + radius,
+                            cy + radius,
+                        );
+                    } else {
+                        let abox = crate::geo::shape::arc::get_arc_bounds(
+                            (curr_x, curr_y),
+                            (end_x, end_y),
+                            (center.0, center.1),
+                            *cw,
+                        );
+                        Self::update_bounds(
+                            &mut min_x, &mut min_y, &mut max_x, &mut max_y,
+                            abox.0, abox.1,
+                        );
+                        Self::update_bounds(
+                            &mut min_x, &mut min_y, &mut max_x, &mut max_y,
+                            abox.2, abox.3,
+                        );
+                    }
                 }
 
                 curr_x = end_x;
@@ -735,72 +774,33 @@ impl Ops {
             }
         }
 
-        if !has_content {
-            return Rect(0.0, 0.0, 0.0, 0.0);
+        if has_content {
+            Some(Rect(min_x, min_y, max_x, max_y))
+        } else {
+            None
         }
+    }
 
-        if !xs.is_empty() {
-            for &x in &xs {
-                if x < min_x {
-                    min_x = x;
-                }
-                if x > max_x {
-                    max_x = x;
-                }
-            }
-            for &y in &ys {
-                if y < min_y {
-                    min_y = y;
-                }
-                if y > max_y {
-                    max_y = y;
-                }
-            }
+    fn update_bounds(
+        min_x: &mut f64,
+        min_y: &mut f64,
+        max_x: &mut f64,
+        max_y: &mut f64,
+        x: f64,
+        y: f64,
+    ) {
+        if x < *min_x {
+            *min_x = x;
         }
-
-        for (ax, ay, bx, by, i, j, cw) in arcs {
-            let radius = (i * i + j * j).sqrt();
-            if (ax - bx).abs() < EPSILON_COLLINEAR
-                && (ay - by).abs() < EPSILON_COLLINEAR
-                && radius > EPSILON_COLLINEAR
-            {
-                let cx = ax + i;
-                let cy = ay + j;
-                if cx - radius < min_x {
-                    min_x = cx - radius;
-                }
-                if cx + radius > max_x {
-                    max_x = cx + radius;
-                }
-                if cy - radius < min_y {
-                    min_y = cy - radius;
-                }
-                if cy + radius > max_y {
-                    max_y = cy + radius;
-                }
-            } else {
-                let abox = crate::geo::shape::arc::get_arc_bounds(
-                    (ax, ay),
-                    (bx, by),
-                    (i, j),
-                    cw,
-                );
-                if abox.0 < min_x {
-                    min_x = abox.0;
-                }
-                if abox.1 < min_y {
-                    min_y = abox.1;
-                }
-                if abox.2 > max_x {
-                    max_x = abox.2;
-                }
-                if abox.3 > max_y {
-                    max_y = abox.3;
-                }
-            }
+        if x > *max_x {
+            *max_x = x;
         }
-
-        Rect(min_x, min_y, max_x, max_y)
+        if y < *min_y {
+            *min_y = y;
+        }
+        if y > *max_y {
+            *max_y = y;
+        }
     }
 
     pub fn without_state(&self) -> Self {

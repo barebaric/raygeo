@@ -616,13 +616,7 @@ pub fn is_point_in_polygon(point: Point, polygon: &Polygon) -> bool {
     let (mut p1x, mut p1y) = polygon[0];
     for i in 0..=n {
         let (p2x, p2y) = polygon[i % n];
-        if p1y == p2y {
-            p1x = p2x;
-            p1y = p2y;
-            continue;
-        }
-
-        if p1y.min(p2y) < y && y <= p1y.max(p2y) {
+        if (p1y > y) != (p2y > y) {
             let x_intersect = (y - p1y) * (p2x - p1x) / (p2y - p1y) + p1x;
             if x_intersect > x {
                 inside = !inside;

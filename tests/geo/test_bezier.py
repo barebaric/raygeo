@@ -232,8 +232,12 @@ class TestBezierToQuadratic:
     def test_midpoint_approximation(self):
         p0, c1, c2, p1 = (0, 0), (0, 3), (3, 3), (3, 0)
         qp0, qc, qp1 = convert_cubic_bezier_to_quadratic(p0, c1, c2, p1)
-        quad_mid = get_bezier_point_at(qp0, qc, qc, qp1, 0.5)
-        cubic_mid = get_bezier_point_at(p0, c1, c2, p1, 0.5)
+        t = 0.5
+        quad_mid = (
+            (1 - t) ** 2 * qp0[0] + 2 * t * (1 - t) * qc[0] + t**2 * qp1[0],
+            (1 - t) ** 2 * qp0[1] + 2 * t * (1 - t) * qc[1] + t**2 * qp1[1],
+        )
+        cubic_mid = get_bezier_point_at(p0, c1, c2, p1, t)
         err = math.hypot(
             quad_mid[0] - cubic_mid[0], quad_mid[1] - cubic_mid[1]
         )

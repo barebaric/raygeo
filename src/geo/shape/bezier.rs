@@ -726,18 +726,21 @@ pub fn get_bezier_flatness_sq(
 }
 
 /// Computes the arc length of a cubic Bezier curve using adaptive
-/// Gaussian quadrature.
+/// step sizing based on the control polygon length.
 pub fn get_bezier_length(p0: Point, c1: Point, c2: Point, p1: Point) -> f64 {
-    let n = 16;
-    let mut length = 0.0;
+    let l01 = (p0.0 - c1.0).hypot(p0.1 - c1.1);
+    let l12 = (c1.0 - c2.0).hypot(c1.1 - c2.1);
+    let l23 = (c2.0 - p1.0).hypot(c2.1 - p1.1);
+    let estimated_len = l01 + l12 + l23;
+    let num_steps = (estimated_len / 0.1).ceil().max(2.0) as usize;
+    let step_f = num_steps as f64;
+    let mut total = 0.0;
     let mut prev = p0;
-    for i in 1..=n {
-        let t = i as f64 / n as f64;
+    for i in 1..=num_steps {
+        let t = i as f64 / step_f;
         let pt = get_bezier_point_at(p0, c1, c2, p1, t);
-        let dx = pt.0 - prev.0;
-        let dy = pt.1 - prev.1;
-        length += dx.hypot(dy);
+        total += (pt.0 - prev.0).hypot(pt.1 - prev.1);
         prev = pt;
     }
-    length
+    total
 }

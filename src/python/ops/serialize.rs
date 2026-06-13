@@ -273,7 +273,7 @@ fn create_and_append_command(
                     end_tuple.0,
                     end_tuple.1,
                     end_tuple.2,
-                    Some(pv),
+                    pv,
                     extra_axes,
                 );
             }
@@ -884,7 +884,7 @@ pub fn ops_from_numpy_arrays(
                     end_tuple.0,
                     end_tuple.1,
                     end_tuple.2,
-                    Some(pv_bytes),
+                    pv_bytes,
                     None,
                 );
             }

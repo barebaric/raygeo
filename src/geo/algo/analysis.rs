@@ -372,9 +372,9 @@ pub fn get_outward_normal_at_from_array(
 }
 
 pub fn remove_duplicates<T: Clone + PartialEq>(points: &[T]) -> Vec<T> {
-    let mut result: Vec<T> = Vec::new();
+    let mut result: Vec<T> = Vec::with_capacity(points.len());
     for p in points {
-        if result.is_empty() || !result.contains(p) {
+        if !result.contains(p) {
             result.push(p.clone());
         }
     }
