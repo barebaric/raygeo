@@ -50,9 +50,9 @@ class Bezier:
     @property
     def end(self) -> tuple[builtins.float, builtins.float, builtins.float]: ...
     @property
-    def control1(self) -> tuple[builtins.float, builtins.float]: ...
+    def control1(self) -> tuple[builtins.float, builtins.float, builtins.float]: ...
     @property
-    def control2(self) -> tuple[builtins.float, builtins.float]: ...
+    def control2(self) -> tuple[builtins.float, builtins.float, builtins.float]: ...
 
 @typing.final
 class Geometry:
@@ -137,7 +137,7 @@ class Geometry:
         :param clockwise: Whether the arc is clockwise.
         :param z: Z coordinate (default 0.0).
         """
-    def bezier_to(self, x: builtins.float, y: builtins.float, c1x: builtins.float, c1y: builtins.float, c2x: builtins.float, c2y: builtins.float, z: builtins.float = 0.0) -> Geometry:
+    def bezier_to(self, x: builtins.float, y: builtins.float, c1x: builtins.float, c1y: builtins.float, c2x: builtins.float, c2y: builtins.float, *, c1z: builtins.float = 0.0, c2z: builtins.float = 0.0, z: builtins.float = 0.0) -> Geometry:
         r"""
         Draw a cubic bezier curve.
         
@@ -145,8 +145,10 @@ class Geometry:
         :param y: End Y coordinate.
         :param c1x: First control point X.
         :param c1y: First control point Y.
+        :param c1z: First control point Z (default 0.0).
         :param c2x: Second control point X.
         :param c2y: Second control point Y.
+        :param c2z: Second control point Z (default 0.0).
         :param z: End Z coordinate (default 0.0).
         """
     def __len__(self) -> builtins.int:

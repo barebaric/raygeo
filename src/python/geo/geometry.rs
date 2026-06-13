@@ -28,7 +28,7 @@ use crate::geo::algo::topology::{
 use crate::geo::geometry::Geometry as CoreGeometry;
 use crate::geo::math::map_geometry_to_frame;
 use crate::geo::query::find_closest_point_on_path_from_array;
-use crate::types::{BezierControls, Command as CoreCommand, Point};
+use crate::types::{Command as CoreCommand, Point};
 
 #[gen_stub_pyclass]
 #[pyclass(module = "raygeo.geo", name = "Move", frozen, skip_from_py_object)]
@@ -65,9 +65,9 @@ pub struct PyBezier {
     #[pyo3(get)]
     pub end: (f64, f64, f64),
     #[pyo3(get)]
-    pub control1: (f64, f64),
+    pub control1: (f64, f64, f64),
     #[pyo3(get)]
-    pub control2: (f64, f64),
+    pub control2: (f64, f64, f64),
 }
 
 enum PyTypedCommand {
@@ -292,10 +292,12 @@ impl Geometry {
     /// :param y: End Y coordinate.
     /// :param c1x: First control point X.
     /// :param c1y: First control point Y.
+    /// :param c1z: First control point Z (default 0.0).
     /// :param c2x: Second control point X.
     /// :param c2y: Second control point Y.
+    /// :param c2z: Second control point Z (default 0.0).
     /// :param z: End Z coordinate (default 0.0).
-    #[pyo3(signature = (x, y, c1x, c1y, c2x, c2y, z=0.0))]
+    #[pyo3(signature = (x, y, c1x, c1y, c2x, c2y, *, c1z=0.0, c2z=0.0, z=0.0))]
     #[allow(clippy::too_many_arguments)]
     fn bezier_to(
         slf: Bound<'_, Self>,
@@ -305,11 +307,15 @@ impl Geometry {
         c1y: f64,
         c2x: f64,
         c2y: f64,
+        c1z: f64,
+        c2z: f64,
         z: f64,
     ) -> Bound<'_, Self> {
-        slf.borrow_mut()
-            .inner
-            .bezier_to(BezierControls((c1x, c1y), (c2x, c2y), (x, y)), z);
+        slf.borrow_mut().inner.bezier_to(
+            (c1x, c1y, c1z),
+            (c2x, c2y, c2z),
+            (x, y, z),
+        );
         slf
     }
 
@@ -346,8 +352,10 @@ impl Geometry {
                 } => {
                     control1.0.to_bits().hash(&mut hasher);
                     control1.1.to_bits().hash(&mut hasher);
+                    control1.2.to_bits().hash(&mut hasher);
                     control2.0.to_bits().hash(&mut hasher);
                     control2.1.to_bits().hash(&mut hasher);
+                    control2.2.to_bits().hash(&mut hasher);
                     (end.0, end.1, end.2)
                 }
             };
@@ -635,8 +643,10 @@ impl Geometry {
                     entry.append(end.2)?;
                     entry.append(control1.0)?;
                     entry.append(control1.1)?;
+                    entry.append(control1.2)?;
                     entry.append(control2.0)?;
                     entry.append(control2.1)?;
+                    entry.append(control2.2)?;
                 }
             }
             commands.append(entry)?;
@@ -739,8 +749,10 @@ impl Geometry {
                                 if let (
                                     Some(c1x),
                                     Some(c1y),
+                                    Some(c1z),
                                     Some(c2x),
                                     Some(c2y),
+                                    Some(c2z),
                                 ) =
                                     (
                                         cmd_list.get_item(4).ok().and_then(
@@ -755,15 +767,18 @@ impl Geometry {
                                         cmd_list.get_item(7).ok().and_then(
                                             |v| v.extract::<f64>().ok(),
                                         ),
+                                        cmd_list.get_item(8).ok().and_then(
+                                            |v| v.extract::<f64>().ok(),
+                                        ),
+                                        cmd_list.get_item(9).ok().and_then(
+                                            |v| v.extract::<f64>().ok(),
+                                        ),
                                     )
                                 {
                                     geo.inner.bezier_to(
-                                        BezierControls(
-                                            (c1x, c1y),
-                                            (c2x, c2y),
-                                            (x, y),
-                                        ),
-                                        z,
+                                        (c1x, c1y, c1z),
+                                        (c2x, c2y, c2z),
+                                        (x, y, z),
                                     );
                                 }
                             }
@@ -809,18 +824,13 @@ impl Geometry {
                                     cmd_dict.get_item("control1"),
                                     cmd_dict.get_item("control2"),
                                 ) {
-                                    let c1v = c1.extract::<(f64, f64)>();
-                                    let c2v = c2.extract::<(f64, f64)>();
-                                    if let (Ok((c1x, c1y)), Ok((c2x, c2y))) =
-                                        (c1v, c2v)
-                                    {
+                                    let c1v = c1.extract::<(f64, f64, f64)>();
+                                    let c2v = c2.extract::<(f64, f64, f64)>();
+                                    if let (Ok(c1_3d), Ok(c2_3d)) = (c1v, c2v) {
                                         geo.inner.bezier_to(
-                                            BezierControls(
-                                                (c1x, c1y),
-                                                (c2x, c2y),
-                                                (x, y),
-                                            ),
-                                            z,
+                                            c1_3d,
+                                            c2_3d,
+                                            (x, y, z),
                                         );
                                     }
                                 }

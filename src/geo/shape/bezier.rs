@@ -232,8 +232,8 @@ pub fn convert_cubic_bezier_to_quadratic(
 
 pub fn get_bezier_closest_point(
     end: Point3D,
-    control1: Point,
-    control2: Point,
+    control1: Point3D,
+    control2: Point3D,
     start_pos: Point3D,
     x: f64,
     y: f64,
@@ -272,15 +272,15 @@ pub fn get_bezier_closest_point(
 /// Estimates number of steps based on control point distances and resolution.
 pub fn linearize_bezier_from_params(
     end: Point3D,
-    control1: Point,
-    control2: Point,
+    control1: Point3D,
+    control2: Point3D,
     start_point: Point3D,
     resolution: f64,
 ) -> Vec<(Point3D, Point3D)> {
     let p0 = start_point;
     let p1 = end;
-    let c1_2d = control1;
-    let c2_2d = control2;
+    let c1_2d = (control1.0, control1.1);
+    let c2_2d = (control2.0, control2.1);
 
     let z0 = p0.2;
     let z1 = p1.2;

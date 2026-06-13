@@ -938,9 +938,7 @@ fn clip_and_refit_arc(
                 Command::Bezier {
                     control1, control2, ..
                 } => {
-                    let control1 = (control1.0, control1.1, end.2);
-                    let control2 = (control2.0, control2.1, end.2);
-                    new_ops.bezier_to(control1, control2, end, None);
+                    new_ops.bezier_to(*control1, *control2, end, None);
                 }
                 Command::Move { .. } => {
                     continue;
@@ -1027,9 +1025,7 @@ fn clip_and_refit_bezier(
                 Command::Bezier {
                     control1, control2, ..
                 } => {
-                    let control1 = (control1.0, control1.1, end.2);
-                    let control2 = (control2.0, control2.1, end.2);
-                    new_ops.bezier_to(control1, control2, end, None);
+                    new_ops.bezier_to(*control1, *control2, end, None);
                 }
                 Command::Move { .. } => {
                     continue;

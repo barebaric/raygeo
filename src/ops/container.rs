@@ -9,7 +9,6 @@ use super::axis::Axis;
 use super::enums::{CommandCategory, CommandType, SectionType};
 use super::state::State;
 use super::types::{MarkerCmd, MoveCmd, OpCategory, OpNode, StateCmd};
-use crate::types::BezierControls;
 use crate::types::{Point3D, Rect};
 
 #[derive(Clone, Debug)]
@@ -824,7 +823,6 @@ impl Ops {
             return Ok(ops);
         }
 
-        let mut last_pos = (0.0, 0.0, 0.0);
         for cmd in &geometry.data {
             match cmd {
                 crate::Command::Move { end } => {
@@ -853,22 +851,9 @@ impl Ops {
                     control1,
                     control2,
                 } => {
-                    let z0 = last_pos.2;
-                    let z1 = end.2;
-                    let c1_3d = (
-                        control1.0,
-                        control1.1,
-                        z0 * 2.0 / 3.0 + z1 * 1.0 / 3.0,
-                    );
-                    let c2_3d = (
-                        control2.0,
-                        control2.1,
-                        z0 * 1.0 / 3.0 + z1 * 2.0 / 3.0,
-                    );
-                    ops.bezier_to(c1_3d, c2_3d, (end.0, end.1, end.2), None);
+                    ops.bezier_to(*control1, *control2, *end, None);
                 }
             }
-            last_pos = cmd.end_point();
         }
         ops.last_move_to = geometry.last_move_to;
         Ok(ops)
@@ -891,14 +876,7 @@ impl Ops {
                         );
                     }
                     MoveCmd::BezierTo { control1, control2 } => {
-                        geo.bezier_to(
-                            BezierControls(
-                                (control1.0, control1.1),
-                                (control2.0, control2.1),
-                                (end.0, end.1),
-                            ),
-                            end.2,
-                        );
+                        geo.bezier_to(*control1, *control2, *end);
                     }
                     _ => {}
                 }

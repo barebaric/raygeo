@@ -9,7 +9,7 @@
 use crate::geo::query::get_positions_at_distances_from_array;
 use crate::geo::shape::arc::get_arc_bounds;
 use crate::geo::shape::bezier::get_bezier_bounds;
-use crate::types::{BezierControls, Command, Point, Point3D, Rect};
+use crate::types::{Command, Point, Point3D, Rect};
 
 /// A geometric path consisting of move, line, arc, and bezier commands.
 ///
@@ -99,16 +99,20 @@ impl Geometry {
 
     /// Draws a cubic Bezier curve from the current position to the endpoint.
     ///
-    /// The curve is defined by three control points:
-    /// - `c1`: First control point
-    /// - `c2`: Second control point
-    /// - `p1`: End point (the start point is the current position)
-    pub fn bezier_to(&mut self, controls: BezierControls, z: f64) -> &mut Self {
-        let BezierControls(c1, c2, p1) = controls;
+    /// The curve is defined by:
+    /// - `control1`: First control point (3D)
+    /// - `control2`: Second control point (3D)
+    /// - `end`: End point (3D, the start point is the current position)
+    pub fn bezier_to(
+        &mut self,
+        control1: Point3D,
+        control2: Point3D,
+        end: Point3D,
+    ) -> &mut Self {
         self.data.push(Command::Bezier {
-            end: (p1.0, p1.1, z),
-            control1: c1,
-            control2: c2,
+            end,
+            control1,
+            control2,
         });
         self
     }
@@ -195,8 +199,8 @@ impl Geometry {
                 control1, control2, ..
             } => Some(get_bezier_bounds(
                 (sx, sy),
-                *control1,
-                *control2,
+                (control1.0, control1.1),
+                (control2.0, control2.1),
                 (end.0, end.1),
             )),
         }

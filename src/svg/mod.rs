@@ -428,10 +428,10 @@ pub fn geometry_to_svg_path(
                 ));
             }
             Command::Bezier {
-                control1: (c1x, c1y),
-                control2: (c2x, c2y),
-                ..
+                control1, control2, ..
             } => {
+                let (c1x, c1y, _) = *control1;
+                let (c2x, c2y, _) = *control2;
                 let c1x = c1x * w;
                 let c1y = h * (1.0 - c1y);
                 let c2x = c2x * w;

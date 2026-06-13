@@ -58,8 +58,8 @@ pub enum Command {
     },
     Bezier {
         end: Point3D,
-        control1: Point,
-        control2: Point,
+        control1: Point3D,
+        control2: Point3D,
     },
 }
 
@@ -180,25 +180,32 @@ impl Command {
             } => {
                 let c1x = control1.0;
                 let c1y = control1.1;
+                let c1z = control1.2;
                 let c2x = control2.0;
                 let c2y = control2.1;
+                let c2z = control2.2;
                 let p01x = sx + t * (c1x - sx);
                 let p01y = sy + t * (c1y - sy);
+                let p01z = sz + t * (c1z - sz);
                 let p12x = c1x + t * (c2x - c1x);
                 let p12y = c1y + t * (c2y - c1y);
+                let p12z = c1z + t * (c2z - c1z);
                 let p23x = c2x + t * (ex - c2x);
                 let p23y = c2y + t * (ey - c2y);
+                let p23z = c2z + t * (ez - c2z);
                 let p012x = p01x + t * (p12x - p01x);
                 let p012y = p01y + t * (p12y - p01y);
+                let p012z = p01z + t * (p12z - p01z);
                 let p123x = p12x + t * (p23x - p12x);
                 let p123y = p12y + t * (p23y - p12y);
+                let p123z = p12z + t * (p23z - p12z);
                 let p0123x = p012x + t * (p123x - p012x);
                 let p0123y = p012y + t * (p123y - p012y);
-                let nz = sz + t * (ez - sz);
+                let p0123z = p012z + t * (p123z - p012z);
                 Some(Command::Bezier {
-                    end: (p0123x, p0123y, nz),
-                    control1: (p01x, p01y),
-                    control2: (p012x, p012y),
+                    end: (p0123x, p0123y, p0123z),
+                    control1: (p01x, p01y, p01z),
+                    control2: (p012x, p012y, p012z),
                 })
             }
             Command::Move { .. } => None,

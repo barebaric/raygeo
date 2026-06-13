@@ -513,10 +513,12 @@ pub fn convert_arc_to_beziers_from_array(
         let c1 = (
             current_p0.0 + t_vec0.0 * kappa,
             current_p0.1 + t_vec0.1 * kappa,
+            current_p0.2 * 2.0 / 3.0 + current_p3.2 * 1.0 / 3.0,
         );
         let c2 = (
             current_p3.0 - t_vec1.0 * kappa,
             current_p3.1 - t_vec1.1 * kappa,
+            current_p0.2 * 1.0 / 3.0 + current_p3.2 * 2.0 / 3.0,
         );
 
         bezier_cmds.push(Command::Bezier {

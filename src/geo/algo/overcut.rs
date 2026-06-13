@@ -7,7 +7,7 @@
 use crate::constants::EPSILON_COLLINEAR;
 use crate::geo::geometry::Geometry;
 use crate::geo::query::extract_overcut_rows;
-use crate::types::{BezierControls, Command};
+use crate::types::Command;
 
 /// Apply overcut to a closed geometry.
 pub fn apply_overcut(geo: &Geometry, overcut: f64) -> Geometry {
@@ -48,10 +48,7 @@ pub fn apply_overcut(geo: &Geometry, overcut: f64) -> Geometry {
             Command::Bezier {
                 control1, control2, ..
             } => {
-                result.bezier_to(
-                    BezierControls(*control1, *control2, (end.0, end.1)),
-                    end.2,
-                );
+                result.bezier_to(*control1, *control2, end);
             }
             Command::Move { .. } => {}
         }

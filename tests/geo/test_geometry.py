@@ -87,8 +87,8 @@ def test_bezier_to(empty_geometry):
     last_row = empty_geometry.data[-1]
     assert isinstance(last_row, Bezier)
     assert last_row.end == (10.0, 10.0, 0.0)
-    assert last_row.control1 == (2.0, 2.0)
-    assert last_row.control2 == (8.0, 8.0)
+    assert last_row.control1 == (2.0, 2.0, 0.0)
+    assert last_row.control2 == (8.0, 8.0, 0.0)
 
 
 def test_serialization_deserialization(sample_geometry):
@@ -271,7 +271,18 @@ def test_to_dict_and_from_dict(sample_geometry):
     assert dict_data["commands"][0] == ["M", 0.0, 0.0, 0.0]
     assert dict_data["commands"][1] == ["L", 10.0, 10.0, 0.0]
     assert dict_data["commands"][2] == ["A", 20.0, 0.0, 0.0, 5.0, -10.0, 1]
-    assert dict_data["commands"][3] == ["B", 30.0, 10.0, 0.0, 22, 2, 28, 8]
+    assert dict_data["commands"][3] == [
+        "B",
+        30.0,
+        10.0,
+        0.0,
+        22,
+        2,
+        0.0,
+        28,
+        8,
+        0.0,
+    ]
 
     assert loaded_geo == geo_with_bezier
 
@@ -574,8 +585,8 @@ def test_get_command_at_valid_index():
     cmd3 = geo.get_command_at(3)
     assert isinstance(cmd3, Bezier)
     assert cmd3.end == (30.0, 10.0, 4.0)
-    assert cmd3.control1 == (22.0, 2.0)
-    assert cmd3.control2 == (28.0, 8.0)
+    assert cmd3.control1 == (22.0, 2.0, 0.0)
+    assert cmd3.control2 == (28.0, 8.0, 0.0)
 
 
 def test_get_command_at_negative_index():
@@ -620,8 +631,8 @@ def test_iter_commands():
     assert commands[2].center_offset == (5.0, -10.0)
     assert isinstance(commands[3], Bezier)
     assert commands[3].end == (30.0, 10.0, 4.0)
-    assert commands[3].control1 == (22.0, 2.0)
-    assert commands[3].control2 == (28.0, 8.0)
+    assert commands[3].control1 == (22.0, 2.0, 0.0)
+    assert commands[3].control2 == (28.0, 8.0, 0.0)
 
 
 def test_iter_commands_empty_geometry():

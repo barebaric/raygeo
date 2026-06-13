@@ -80,8 +80,8 @@ def test_transform_translate():
     # Check bezier
     assert np.allclose(geo.data[2].end, (80, 75, 65))
     # Translation SHOULD affect bezier control points (absolute coords)
-    assert np.allclose(geo.data[2].control1, (65, 60))
-    assert np.allclose(geo.data[2].control2, (75, 70))
+    assert np.allclose(geo.data[2].control1, (65, 60, 15))
+    assert np.allclose(geo.data[2].control2, (75, 70, 15))
 
 
 def test_transform_scale_non_uniform_preserves_beziers():
@@ -109,11 +109,11 @@ def test_transform_scale_non_uniform_preserves_beziers():
     # Check end point: (30*2, 30*3, -20*4) -> (60, 90, -80)
     assert np.allclose(final_bezier_row.end, (60.0, 90.0, -80.0))
 
-    # Check C1: (24*2, 24*3) -> (48, 72)
-    assert np.allclose(final_bezier_row.control1, (48.0, 72.0))
+    # Check C1: (24*2, 24*3, 0*4) -> (48, 72, 0)
+    assert np.allclose(final_bezier_row.control1, (48.0, 72.0, 0.0))
 
-    # Check C2: (28*2, 28*3) -> (56, 84)
-    assert np.allclose(final_bezier_row.control2, (56.0, 84.0))
+    # Check C2: (28*2, 28*3, 0*4) -> (56, 84, 0)
+    assert np.allclose(final_bezier_row.control2, (56.0, 84.0, 0.0))
 
     # 4. Check the final state of the arc_to_as_bezier command.
     # Its last segment is the second-to-last row.
@@ -160,8 +160,8 @@ def test_transform_uniform_scale_preserves_curves():
     assert isinstance(bezier_row, Bezier)
     assert np.allclose(bezier_row.end, (40, 0, 0))
     # Control points should also scale
-    assert np.allclose(bezier_row.control1, (24, 4))
-    assert np.allclose(bezier_row.control2, (36, -4))
+    assert np.allclose(bezier_row.control1, (24, 4, 0))
+    assert np.allclose(bezier_row.control2, (36, -4, 0))
 
 
 # --- Grow/Offset Tests ---

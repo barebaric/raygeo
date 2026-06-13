@@ -56,14 +56,14 @@ fn transform_array_uniform(
             Command::Bezier {
                 control1, control2, ..
             } => {
-                let (c1x, c1y, _) =
-                    transform_point(matrix, control1.0, control1.1, 0.0);
-                let (c2x, c2y, _) =
-                    transform_point(matrix, control2.0, control2.1, 0.0);
+                let (c1x, c1y, c1z) =
+                    transform_point(matrix, control1.0, control1.1, control1.2);
+                let (c2x, c2y, c2z) =
+                    transform_point(matrix, control2.0, control2.1, control2.2);
                 Command::Bezier {
                     end: (nx, ny, nz),
-                    control1: (c1x, c1y),
-                    control2: (c2x, c2y),
+                    control1: (c1x, c1y, c1z),
+                    control2: (c2x, c2y, c2z),
                 }
             }
             Command::Move { .. } => Command::Move { end: (nx, ny, nz) },
@@ -115,14 +115,14 @@ fn transform_array_non_uniform(
                     original_end.1,
                     original_end.2,
                 );
-                let (c1x, c1y, _) =
-                    transform_point(matrix, control1.0, control1.1, 0.0);
-                let (c2x, c2y, _) =
-                    transform_point(matrix, control2.0, control2.1, 0.0);
+                let (c1x, c1y, c1z) =
+                    transform_point(matrix, control1.0, control1.1, control1.2);
+                let (c2x, c2y, c2z) =
+                    transform_point(matrix, control2.0, control2.1, control2.2);
                 result.push(Command::Bezier {
                     end: (nx, ny, nz),
-                    control1: (c1x, c1y),
-                    control2: (c2x, c2y),
+                    control1: (c1x, c1y, c1z),
+                    control2: (c2x, c2y, c2z),
                 });
             }
             Command::Move { .. } => {
