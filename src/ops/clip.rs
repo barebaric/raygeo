@@ -520,11 +520,11 @@ impl Ops {
                             last_point = *end;
                         }
                     }
-                    MoveCmd::BezierTo { c1, c2 } => {
+                    MoveCmd::BezierTo { control1, control2 } => {
                         if is_bezier_inside_polygons(
                             (last_point.0, last_point.1),
-                            (c1.0, c1.1),
-                            (c2.0, c2.1),
+                            (control1.0, control1.1),
+                            (control2.0, control2.1),
                             (end.0, end.1),
                             &valid_regions,
                         ) {
@@ -938,9 +938,9 @@ fn clip_and_refit_arc(
                 Command::Bezier {
                     control1, control2, ..
                 } => {
-                    let c1 = (control1.0, control1.1, end.2);
-                    let c2 = (control2.0, control2.1, end.2);
-                    new_ops.bezier_to(c1, c2, end, None);
+                    let control1 = (control1.0, control1.1, end.2);
+                    let control2 = (control2.0, control2.1, end.2);
+                    new_ops.bezier_to(control1, control2, end, None);
                 }
                 Command::Move { .. } => {
                     continue;
@@ -1027,9 +1027,9 @@ fn clip_and_refit_bezier(
                 Command::Bezier {
                     control1, control2, ..
                 } => {
-                    let c1 = (control1.0, control1.1, end.2);
-                    let c2 = (control2.0, control2.1, end.2);
-                    new_ops.bezier_to(c1, c2, end, None);
+                    let control1 = (control1.0, control1.1, end.2);
+                    let control2 = (control2.0, control2.1, end.2);
+                    new_ops.bezier_to(control1, control2, end, None);
                 }
                 Command::Move { .. } => {
                     continue;

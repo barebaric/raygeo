@@ -97,10 +97,12 @@ impl Ops {
                                 cw: if flip_cw { !cw } else { *cw },
                             }
                         }
-                        MoveCmd::BezierTo { c1, c2 } => MoveCmd::BezierTo {
-                            c1: transform_point(matrix, *c1),
-                            c2: transform_point(matrix, *c2),
-                        },
+                        MoveCmd::BezierTo { control1, control2 } => {
+                            MoveCmd::BezierTo {
+                                control1: transform_point(matrix, *control1),
+                                control2: transform_point(matrix, *control2),
+                            }
+                        }
                         MoveCmd::QuadraticBezierTo { control } => {
                             MoveCmd::QuadraticBezierTo {
                                 control: transform_point(matrix, *control),

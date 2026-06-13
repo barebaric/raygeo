@@ -78,12 +78,12 @@ pub fn linearize_node(node: &OpNode, start_point: Point3D) -> Ops {
 
                 result
             }
-            MoveCmd::BezierTo { c1, c2 } => {
+            MoveCmd::BezierTo { control1, control2 } => {
                 let polyline =
                     crate::geo::shape::bezier::linearize_bezier_segment(
                         start_point,
-                        *c1,
-                        *c2,
+                        *control1,
+                        *control2,
                         end,
                         None,
                     );
@@ -98,12 +98,12 @@ pub fn linearize_node(node: &OpNode, start_point: Point3D) -> Ops {
                 result
             }
             MoveCmd::QuadraticBezierTo { control } => {
-                let c1 = (
+                let control1 = (
                     start_point.0 + (2.0 / 3.0) * (control.0 - start_point.0),
                     start_point.1 + (2.0 / 3.0) * (control.1 - start_point.1),
                     start_point.2 + (2.0 / 3.0) * (control.2 - start_point.2),
                 );
-                let c2 = (
+                let control2 = (
                     end.0 + (2.0 / 3.0) * (control.0 - end.0),
                     end.1 + (2.0 / 3.0) * (control.1 - end.1),
                     end.2 + (2.0 / 3.0) * (control.2 - end.2),
@@ -111,8 +111,8 @@ pub fn linearize_node(node: &OpNode, start_point: Point3D) -> Ops {
                 let polyline =
                     crate::geo::shape::bezier::linearize_bezier_segment(
                         start_point,
-                        c1,
-                        c2,
+                        control1,
+                        control2,
                         end,
                         None,
                     );

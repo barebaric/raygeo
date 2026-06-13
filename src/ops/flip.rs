@@ -47,8 +47,8 @@ pub fn flip_ops(ops: &Ops) -> Ops {
                         extra,
                     )
                 }
-                MoveCmd::BezierTo { c1, c2 } => {
-                    OpNode::bezier_to(*c2, *c1, new_end, extra)
+                MoveCmd::BezierTo { control1, control2 } => {
+                    OpNode::bezier_to(*control2, *control1, new_end, extra)
                 }
                 MoveCmd::ArcTo { center, cw } => {
                     let original_start =

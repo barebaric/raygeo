@@ -283,8 +283,8 @@ fn clip_subpath_with_gaps(sub_ops: &Ops, clips: &[ClipPoint]) -> Ops {
         };
 
         let seg_len = if ct == CommandType::BezierTo {
-            let (c1, c2) = bezier_params(sub_ops, i);
-            bezier_arc_length_2d(start_pt, c1, c2, end_pt)
+            let (control1, control2) = bezier_params(sub_ops, i);
+            bezier_arc_length_2d(start_pt, control1, control2, end_pt)
         } else {
             distance_2d(start_pt, end_pt)
         };
@@ -306,13 +306,15 @@ fn clip_subpath_with_gaps(sub_ops: &Ops, clips: &[ClipPoint]) -> Ops {
                 let d_end = k_end - seg_start;
 
                 if ct == CommandType::BezierTo {
-                    let (c1, c2) = bezier_params(sub_ops, i);
-                    let t_start =
-                        bezier_distance_to_t(start_pt, c1, c2, end_pt, d_start);
-                    let t_end =
-                        bezier_distance_to_t(start_pt, c1, c2, end_pt, d_end);
+                    let (control1, control2) = bezier_params(sub_ops, i);
+                    let t_start = bezier_distance_to_t(
+                        start_pt, control1, control2, end_pt, d_start,
+                    );
+                    let t_end = bezier_distance_to_t(
+                        start_pt, control1, control2, end_pt, d_end,
+                    );
                     let sub = extract_bezier_subsegment_3d(
-                        start_pt, c1, c2, end_pt, t_start, t_end,
+                        start_pt, control1, control2, end_pt, t_start, t_end,
                     );
 
                     let last_end = get_last_moving_end(&result);
@@ -488,8 +490,8 @@ fn insert_power_commands_curve_aware(
         };
 
         let seg_len = if ct == CommandType::BezierTo {
-            let (c1, c2) = bezier_params(sub_ops, i);
-            bezier_arc_length_2d(start_pt, c1, c2, end_pt)
+            let (control1, control2) = bezier_params(sub_ops, i);
+            bezier_arc_length_2d(start_pt, control1, control2, end_pt)
         } else {
             distance_2d(start_pt, end_pt)
         };
@@ -508,12 +510,12 @@ fn insert_power_commands_curve_aware(
         if events.is_empty() {
             result.commands.push(sub_ops.commands[i].clone());
         } else if ct == CommandType::BezierTo {
-            let (c1, c2) = bezier_params(sub_ops, i);
+            let (control1, control2) = bezier_params(sub_ops, i);
             split_bezier_with_power(
                 &mut result,
                 start_pt,
-                c1,
-                c2,
+                control1,
+                control2,
                 end_pt,
                 seg_start,
                 &events,
@@ -551,8 +553,8 @@ fn insert_power_commands_curve_aware(
 fn split_bezier_with_power(
     result: &mut Ops,
     p0: Point3D,
-    c1: Point3D,
-    c2: Point3D,
+    control1: Point3D,
+    control2: Point3D,
     p1: Point3D,
     seg_start: f64,
     events: &[(f64, EventType)],
@@ -566,7 +568,7 @@ fn split_bezier_with_power(
 
     for (event_dist, event_type) in events {
         let d = event_dist - seg_start;
-        let t_event = bezier_distance_to_t(p0, c1, c2, p1, d);
+        let t_event = bezier_distance_to_t(p0, control1, control2, p1, d);
         if t_event > last_t + 1e-9 {
             sub_segments.push((last_t, t_event, last_power));
         }
@@ -586,8 +588,9 @@ fn split_bezier_with_power(
             result.set_power(*power);
             *current_power = *power;
         }
-        let sub =
-            extract_bezier_subsegment_3d(p0, c1, c2, p1, *t_start, *t_end);
+        let sub = extract_bezier_subsegment_3d(
+            p0, control1, control2, p1, *t_start, *t_end,
+        );
         result.bezier_to(sub.1, sub.2, sub.3, None);
     }
 }
@@ -724,8 +727,8 @@ fn compute_hit_distance_original(
         };
 
         let seg_len = if ct == CommandType::BezierTo {
-            let (c1, c2) = bezier_params(sub_ops, i);
-            bezier_arc_length_2d(start, c1, c2, end_pt)
+            let (control1, control2) = bezier_params(sub_ops, i);
+            bezier_arc_length_2d(start, control1, control2, end_pt)
         } else {
             distance_2d(start, end_pt)
         };
@@ -916,8 +919,8 @@ fn process_segment_events(
 /// Approximate the arc length of a cubic Bezier curve.
 pub fn bezier_arc_length_2d(
     p0: Point3D,
-    c1: Point3D,
-    c2: Point3D,
+    control1: Point3D,
+    control2: Point3D,
     p1: Point3D,
 ) -> f64 {
     let num_samples = 200;
@@ -925,7 +928,7 @@ pub fn bezier_arc_length_2d(
     let mut prev = p0;
     for i in 1..=num_samples {
         let t = i as f64 / num_samples as f64;
-        let pt = eval_bezier(p0, c1, c2, p1, t);
+        let pt = eval_bezier(p0, control1, control2, p1, t);
         let dx = pt.0 - prev.0;
         let dy = pt.1 - prev.1;
         length += (dx * dx + dy * dy).sqrt();
@@ -937,8 +940,8 @@ pub fn bezier_arc_length_2d(
 /// Convert a target distance along the Bezier to parameter t ∈ [0, 1].
 pub fn bezier_distance_to_t(
     p0: Point3D,
-    c1: Point3D,
-    c2: Point3D,
+    control1: Point3D,
+    control2: Point3D,
     p1: Point3D,
     target_dist: f64,
 ) -> f64 {
@@ -947,7 +950,7 @@ pub fn bezier_distance_to_t(
     let mut prev = p0;
     for i in 1..=num_samples {
         let t = i as f64 / num_samples as f64;
-        let pt = eval_bezier(p0, c1, c2, p1, t);
+        let pt = eval_bezier(p0, control1, control2, p1, t);
         let dx = pt.0 - prev.0;
         let dy = pt.1 - prev.1;
         let seg_len = (dx * dx + dy * dy).sqrt();
@@ -967,24 +970,25 @@ pub fn bezier_distance_to_t(
 /// Extract a sub-segment [t_start, t_end] from a cubic Bezier curve.
 pub fn extract_bezier_subsegment_3d(
     p0: Point3D,
-    c1: Point3D,
-    c2: Point3D,
+    control1: Point3D,
+    control2: Point3D,
     p1: Point3D,
     t_start: f64,
     t_end: f64,
 ) -> (Point3D, Point3D, Point3D, Point3D) {
     if t_start <= 1e-9 && t_end >= 1.0 - 1e-9 {
-        return (p0, c1, c2, p1);
+        return (p0, control1, control2, p1);
     }
     if t_end >= 1.0 - 1e-9 {
-        let (_, right) = subdivide_bezier_3d(p0, c1, c2, p1, t_start);
+        let (_, right) =
+            subdivide_bezier_3d(p0, control1, control2, p1, t_start);
         return right;
     }
     if t_start <= 1e-9 {
-        let (left, _) = subdivide_bezier_3d(p0, c1, c2, p1, t_end);
+        let (left, _) = subdivide_bezier_3d(p0, control1, control2, p1, t_end);
         return left;
     }
-    let (_, right) = subdivide_bezier_3d(p0, c1, c2, p1, t_start);
+    let (_, right) = subdivide_bezier_3d(p0, control1, control2, p1, t_start);
     let s = (t_end - t_start) / (1.0 - t_start);
     let (sub_left, _) =
         subdivide_bezier_3d(right.0, right.1, right.2, right.3, s);
@@ -1013,8 +1017,8 @@ fn subdivide_bezier_3d(
 
 fn eval_bezier(
     p0: Point3D,
-    c1: Point3D,
-    c2: Point3D,
+    control1: Point3D,
+    control2: Point3D,
     p1: Point3D,
     t: f64,
 ) -> Point3D {
@@ -1024,9 +1028,18 @@ fn eval_bezier(
     let mt2 = mt * mt;
     let mt3 = mt2 * mt;
     (
-        mt3 * p0.0 + 3.0 * mt2 * t * c1.0 + 3.0 * mt * t2 * c2.0 + t3 * p1.0,
-        mt3 * p0.1 + 3.0 * mt2 * t * c1.1 + 3.0 * mt * t2 * c2.1 + t3 * p1.1,
-        mt3 * p0.2 + 3.0 * mt2 * t * c1.2 + 3.0 * mt * t2 * c2.2 + t3 * p1.2,
+        mt3 * p0.0
+            + 3.0 * mt2 * t * control1.0
+            + 3.0 * mt * t2 * control2.0
+            + t3 * p1.0,
+        mt3 * p0.1
+            + 3.0 * mt2 * t * control1.1
+            + 3.0 * mt * t2 * control2.1
+            + t3 * p1.1,
+        mt3 * p0.2
+            + 3.0 * mt2 * t * control1.2
+            + 3.0 * mt * t2 * control2.2
+            + t3 * p1.2,
     )
 }
 
@@ -1058,11 +1071,11 @@ fn distance_2d(a: Point3D, b: Point3D) -> f64 {
 
 fn bezier_params(ops: &Ops, idx: usize) -> (Point3D, Point3D) {
     if let OpCategory::Moving {
-        cmd: MoveCmd::BezierTo { c1, c2 },
+        cmd: MoveCmd::BezierTo { control1, control2 },
         ..
     } = &ops.commands[idx].category
     {
-        (*c1, *c2)
+        (*control1, *control2)
     } else {
         ((0.0, 0.0, 0.0), (0.0, 0.0, 0.0))
     }

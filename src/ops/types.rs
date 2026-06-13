@@ -9,10 +9,20 @@ use crate::types::Point3D;
 pub enum MoveCmd {
     MoveTo,
     LineTo,
-    ArcTo { center: (f64, f64), cw: bool },
-    BezierTo { c1: Point3D, c2: Point3D },
-    QuadraticBezierTo { control: Point3D },
-    ScanLine { power_values: Arc<[u8]> },
+    ArcTo {
+        center: (f64, f64),
+        cw: bool,
+    },
+    BezierTo {
+        control1: Point3D,
+        control2: Point3D,
+    },
+    QuadraticBezierTo {
+        control: Point3D,
+    },
+    ScanLine {
+        power_values: Arc<[u8]>,
+    },
 }
 
 #[derive(Clone, Debug)]
@@ -127,15 +137,15 @@ impl OpNode {
     }
 
     pub fn bezier_to(
-        c1: Point3D,
-        c2: Point3D,
+        control1: Point3D,
+        control2: Point3D,
         end: Point3D,
         extra: Option<Vec<(Axis, f64)>>,
     ) -> Self {
         OpNode {
             category: OpCategory::Moving {
                 end,
-                cmd: MoveCmd::BezierTo { c1, c2 },
+                cmd: MoveCmd::BezierTo { control1, control2 },
             },
             state: None,
             extra_axes: extra.map(Arc::from),

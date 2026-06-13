@@ -372,12 +372,12 @@ class Ops:
         :param z: End Z coordinate (default 0.0).
         :param extra: Optional dict of extra axis values.
         """
-    def bezier_to(self, c1: tuple[builtins.float, builtins.float, builtins.float], c2: tuple[builtins.float, builtins.float, builtins.float], end: tuple[builtins.float, builtins.float, builtins.float], extra: typing.Optional[dict] = None) -> None:
+    def bezier_to(self, control1: tuple[builtins.float, builtins.float, builtins.float], control2: tuple[builtins.float, builtins.float, builtins.float], end: tuple[builtins.float, builtins.float, builtins.float], extra: typing.Optional[dict] = None) -> None:
         r"""
         Add a cubic bezier curve to the given endpoint.
         
-        :param c1: First control point ``(x, y, z)``.
-        :param c2: Second control point ``(x, y, z)``.
+        :param control1: First control point ``(x, y, z)``.
+        :param control2: Second control point ``(x, y, z)``.
         :param end: End point ``(x, y, z)``.
         :param extra: Optional dict of extra axis values.
         """
@@ -555,12 +555,6 @@ class Ops:
         Return a copy with all state commands removed.
         
         :returns: A new Ops containing only moving commands.
-        """
-    def segments(self) -> builtins.list[builtins.list[builtins.int]]:
-        r"""
-        Return index ranges for cutting segments (runs of moving commands separated by travel).
-        
-        :returns: A list of index lists, one per cutting segment.
         """
     def state_at(self, idx: builtins.int) -> state.State:
         r"""

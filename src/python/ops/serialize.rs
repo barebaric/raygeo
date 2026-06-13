@@ -91,9 +91,11 @@ fn cmd_to_dict<'a>(
                 d.set_item("center_offset", (center.0, center.1))?;
                 d.set_item("clockwise", *cw)?;
             }
-            MoveCmd::BezierTo { c1, c2, .. } => {
-                d.set_item("control1", *c1)?;
-                d.set_item("control2", *c2)?;
+            MoveCmd::BezierTo {
+                control1, control2, ..
+            } => {
+                d.set_item("control1", *control1)?;
+                d.set_item("control2", *control2)?;
             }
             MoveCmd::QuadraticBezierTo { control, .. } => {
                 d.set_item("control", *control)?;
@@ -242,9 +244,9 @@ fn create_and_append_command(
                         )
                     })?
                     .extract()?;
-                let c1 = (c1_vec[0], c1_vec[1], c1_vec[2]);
-                let c2 = (c2_vec[0], c2_vec[1], c2_vec[2]);
-                ops.bezier_to(c1, c2, end_tuple, extra_axes);
+                let control1 = (c1_vec[0], c1_vec[1], c1_vec[2]);
+                let control2 = (c2_vec[0], c2_vec[1], c2_vec[2]);
+                ops.bezier_to(control1, control2, end_tuple, extra_axes);
             }
             CommandType::QuadraticBezierTo => {
                 let c_vec: Vec<f64> = cmd_data
@@ -549,10 +551,16 @@ pub fn ops_to_numpy_arrays(
                 .call_method1("__setitem__", (i, vec![end.0, end.1, end.2]))?;
 
             match cmd {
-                MoveCmd::BezierTo { c1, c2 } => {
+                MoveCmd::BezierTo { control1, control2 } => {
                     bezier_data.call_method1(
                         "__setitem__",
-                        (bezier_idx, vec![c1.0, c1.1, c1.2, c2.0, c2.1, c2.2]),
+                        (
+                            bezier_idx,
+                            vec![
+                                control1.0, control1.1, control1.2, control2.0,
+                                control2.1, control2.2,
+                            ],
+                        ),
                     )?;
                     bezier_map
                         .call_method1("__setitem__", (i, bezier_idx as i32))?;

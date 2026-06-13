@@ -44,9 +44,17 @@ impl Ops {
                         *e = (e.0 - ox, e.1 - oy, e.2 - oz);
                         // Also update control points. Arc centers are relative, so they don't change.
                         match cmd {
-                            MoveCmd::BezierTo { c1, c2 } => {
-                                *c1 = (c1.0 - ox, c1.1 - oy, c1.2 - oz);
-                                *c2 = (c2.0 - ox, c2.1 - oy, c2.2 - oz);
+                            MoveCmd::BezierTo { control1, control2 } => {
+                                *control1 = (
+                                    control1.0 - ox,
+                                    control1.1 - oy,
+                                    control1.2 - oz,
+                                );
+                                *control2 = (
+                                    control2.0 - ox,
+                                    control2.1 - oy,
+                                    control2.2 - oz,
+                                );
                             }
                             MoveCmd::QuadraticBezierTo { control } => {
                                 *control = (

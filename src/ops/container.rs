@@ -235,15 +235,16 @@ impl Ops {
 
     pub fn bezier_to(
         &mut self,
-        c1: Point3D,
-        c2: Point3D,
+        control1: Point3D,
+        control2: Point3D,
         end: Point3D,
         extra: Option<Vec<(Axis, f64)>>,
     ) {
         if self.commands.is_empty() {
             return;
         }
-        self.commands.push(OpNode::bezier_to(c1, c2, end, extra));
+        self.commands
+            .push(OpNode::bezier_to(control1, control2, end, extra));
         self.invalidate_time_cache();
     }
 
@@ -559,11 +560,11 @@ impl Ops {
                             center.0, center.1, cw
                         );
                     }
-                    MoveCmd::BezierTo { c1, c2 } => {
+                    MoveCmd::BezierTo { control1, control2 } => {
                         let _ = write!(
                             out,
-                            " bezier=(c1=({:.3},{:.3}),c2=({:.3},{:.3}))",
-                            c1.0, c1.1, c2.0, c2.1
+                            " bezier=(control1=({:.3},{:.3}),control2=({:.3},{:.3}))",
+                            control1.0, control1.1, control2.0, control2.1
                         );
                     }
                     _ => {}
@@ -887,8 +888,12 @@ impl Ops {
                     MoveCmd::ArcTo { center, cw } => {
                         geo.arc_to(end.0, end.1, center.0, center.1, *cw, end.2)
                     }
-                    MoveCmd::BezierTo { c1, c2 } => geo.bezier_to(
-                        ((c1.0, c1.1), (c2.0, c2.1), (end.0, end.1)),
+                    MoveCmd::BezierTo { control1, control2 } => geo.bezier_to(
+                        (
+                            (control1.0, control1.1),
+                            (control2.0, control2.1),
+                            (end.0, end.1),
+                        ),
                         end.2,
                     ),
                     _ => {}
@@ -907,10 +912,10 @@ fn move_distance(cmd: &MoveCmd, last_point: Point3D, end: Point3D) -> f64 {
             *center,
             *cw,
         ),
-        MoveCmd::BezierTo { c1, c2 } => get_bezier_length(
+        MoveCmd::BezierTo { control1, control2 } => get_bezier_length(
             (last_point.0, last_point.1),
-            (c1.0, c1.1),
-            (c2.0, c2.1),
+            (control1.0, control1.1),
+            (control2.0, control2.1),
             (end.0, end.1),
         ),
         MoveCmd::QuadraticBezierTo { control } => {

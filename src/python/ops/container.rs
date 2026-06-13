@@ -556,11 +556,11 @@ impl PyOps {
             ));
         }
         if let OpCategory::Moving {
-            cmd: MoveCmd::BezierTo { c1, c2 },
+            cmd: MoveCmd::BezierTo { control1, control2 },
             ..
         } = &self.inner.commands[idx].category
         {
-            Ok((*c1, *c2))
+            Ok((*control1, *control2))
         } else {
             Err(PyErr::new::<pyo3::exceptions::PyTypeError, _>(
                 "Not a BezierToCommand",
@@ -946,15 +946,15 @@ impl PyOps {
 
     /// Add a cubic bezier curve to the given endpoint.
     ///
-    /// :param c1: First control point ``(x, y, z)``.
-    /// :param c2: Second control point ``(x, y, z)``.
+    /// :param control1: First control point ``(x, y, z)``.
+    /// :param control2: Second control point ``(x, y, z)``.
     /// :param end: End point ``(x, y, z)``.
     /// :param extra: Optional dict of extra axis values.
-    #[pyo3(signature = (c1, c2, end, extra=None))]
+    #[pyo3(signature = (control1, control2, end, extra=None))]
     fn bezier_to(
         &mut self,
-        c1: (f64, f64, f64),
-        c2: (f64, f64, f64),
+        control1: (f64, f64, f64),
+        control2: (f64, f64, f64),
         end: (f64, f64, f64),
         extra: Option<Bound<'_, PyDict>>,
     ) -> PyResult<()> {
@@ -962,7 +962,7 @@ impl PyOps {
             Some(ref d) => Some(py_to_axis_map(d)?),
             None => None,
         };
-        self.inner.bezier_to(c1, c2, end, ea);
+        self.inner.bezier_to(control1, control2, end, ea);
         Ok(())
     }
 
@@ -1361,9 +1361,9 @@ impl PyOps {
                     info.center_offset = Some(*center);
                     info.clockwise = Some(*cw);
                 }
-                MoveCmd::BezierTo { c1, c2 } => {
-                    info.control1 = Some(*c1);
-                    info.control2 = Some(*c2);
+                MoveCmd::BezierTo { control1, control2 } => {
+                    info.control1 = Some(*control1);
+                    info.control2 = Some(*control2);
                 }
                 MoveCmd::QuadraticBezierTo { control } => {
                     info.control = Some(*control);
@@ -1673,8 +1673,10 @@ impl PyOps {
                             let new_off: Vec<f64> = off_py_list.extract()?;
                             *center = (new_off[0], new_off[1]);
                         }
-                        MoveCmd::BezierTo { c1, c2, .. } => {
-                            for cp in [c1, c2].iter_mut() {
+                        MoveCmd::BezierTo {
+                            control1, control2, ..
+                        } => {
+                            for cp in [control1, control2].iter_mut() {
                                 let cp_list = vec![cp.0, cp.1, cp.2];
                                 let cp_py_list = PyList::new(py, &cp_list)?;
                                 aux_cb.call1(py, (&cp_py_list,))?;
