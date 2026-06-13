@@ -13,6 +13,7 @@ determining path winding order.
 ";
 
 use super::super::Geometry;
+use crate::types::WindingOrder;
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::gen_stub_pyfunction;
 
@@ -152,8 +153,12 @@ fn get_path_winding_order_py(
     geometry: &Geometry,
     start_cmd_index: usize,
 ) -> &'static str {
-    crate::geo::algo::analysis::get_path_winding_order_from_array(
+    match crate::geo::algo::analysis::get_path_winding_order_from_array(
         geometry.inner.data(),
         start_cmd_index,
-    )
+    ) {
+        Some(WindingOrder::CCW) => "ccw",
+        Some(WindingOrder::CW) => "cw",
+        None => "unknown",
+    }
 }

@@ -54,7 +54,7 @@ pub use ops::types::{MarkerCmd, MoveCmd, OpCategory, OpNode, StateCmd};
 pub use types::{
     BezierControls, BezierSplit, Command, ContourData, CubicBezier, Edge,
     GeometryPair, IntPoint, IntPolygon, Point, Point3D, Polygon, Polygon3D,
-    Rect, Rect3D, Segment3D,
+    Rect, Rect3D, Segment3D, WindingOrder,
 };
 
 // ── Python bindings (behind "python" feature) ─────────────────────

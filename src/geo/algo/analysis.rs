@@ -16,7 +16,7 @@ use crate::geo::geometry::Geometry;
 use crate::geo::shape::arc::linearize_arc;
 use crate::geo::shape::bezier::linearize_bezier_from_params;
 use crate::geo::shape::polygon::is_point_inside_polygon;
-use crate::types::{Command, Point, Point3D, Polygon};
+use crate::types::{Command, Point, Point3D, Polygon, WindingOrder};
 
 /// Checks if a path forms a closed loop within the given tolerance.
 /// A closed path starts and ends at the same point.
@@ -179,19 +179,20 @@ pub fn get_area_from_array(data: &[Command]) -> f64 {
 }
 
 /// Determines the winding order of a subpath based on signed area.
-/// Returns "ccw" for counter-clockwise, "cw" for clockwise, or "unknown" if degenerate.
+/// Returns `Some(CCW)` for counter-clockwise, `Some(CW)` for clockwise,
+/// or `None` if the subpath is degenerate (zero area).
 pub fn get_path_winding_order_from_array(
     data: &[Command],
     start_cmd_index: usize,
-) -> &'static str {
+) -> Option<WindingOrder> {
     let area = get_subpath_area_from_array(data, start_cmd_index);
 
     if area.abs() < 1e-9 {
-        "unknown"
+        None
     } else if area > 0.0 {
-        "ccw"
+        Some(WindingOrder::CCW)
     } else {
-        "cw"
+        Some(WindingOrder::CW)
     }
 }
 
@@ -383,18 +384,14 @@ pub fn get_outward_normal_at_from_array(
     }
 
     let winding =
-        get_path_winding_order_from_array(data, subpath_start_index as usize);
-    if winding == "unknown" {
-        return None;
-    }
+        get_path_winding_order_from_array(data, subpath_start_index as usize)?;
 
     let tangent = get_tangent_at_from_array(data, row_index, t)?;
     let (tx, ty) = tangent;
 
-    if winding == "ccw" {
-        Some((ty, -tx))
-    } else {
-        Some((-ty, tx))
+    match winding {
+        WindingOrder::CCW => Some((ty, -tx)),
+        WindingOrder::CW => Some((-ty, tx)),
     }
 }
 

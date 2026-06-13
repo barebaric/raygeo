@@ -243,6 +243,15 @@ pub struct Rect3D {
     pub z_max: f64,
 }
 
+/// The winding order of a closed polygon or path.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum WindingOrder {
+    /// Clockwise winding.
+    CW,
+    /// Counter-clockwise winding.
+    CCW,
+}
+
 /// Container for contour/path data with geometric and topological information.
 #[derive(Clone, Debug)]
 pub struct ContourData {
@@ -254,6 +263,6 @@ pub struct ContourData {
     pub vertices: Polygon,
     /// The signed area of the contour (positive for CCW, negative for CW).
     pub area: f64,
-    /// Winding order: "cw", "ccw", or "unknown".
-    pub winding_order: String,
+    /// Winding order of the contour.
+    pub winding_order: Option<WindingOrder>,
 }
