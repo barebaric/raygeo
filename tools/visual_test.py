@@ -8,14 +8,13 @@ import math
 import matplotlib.pyplot as plt
 import numpy as np
 import streamlit as st
+from raygeo.geo import Arc, Bezier, Geometry, Line, Move
 from raygeo.geo.shape.polygon import (
     get_polygons_difference,
     get_polygons_intersection,
     get_polygons_union,
     offset_polygon,
 )
-
-from raygeo import Geometry
 
 
 def _plot_geometry(
@@ -26,71 +25,62 @@ def _plot_geometry(
     show_points=False,
     linewidth=1.5,
 ):
-    data = geom.data
-    if data is None:
+    cmds = geom.iter_typed_commands()
+    if not cmds:
         return
-    x = data[:, Geometry.COL_X]
-    y = data[:, Geometry.COL_Y]
-    types = data[:, Geometry.COL_TYPE].astype(int)
-    move_mask = types == Geometry.CMD_TYPE_MOVE
-    line_mask = types == Geometry.CMD_TYPE_LINE
-    arc_mask = types == Geometry.CMD_TYPE_ARC
-    bez_mask = types == Geometry.CMD_TYPE_BEZIER
-
-    for i in range(len(data)):
-        px, py = x[i], y[i]
-        if i == 0:
+    prev_end = None
+    seg_label = label
+    for cmd in cmds:
+        end = cmd.end
+        if isinstance(cmd, Move):
             if show_points:
-                axes.plot(px, py, "o", color=color, markersize=3)
+                axes.plot(end[0], end[1], "o", color=color, markersize=3)
+            prev_end = end
             continue
-        ppx, ppy = x[i - 1], y[i - 1]
-        if show_points:
-            axes.plot(px, py, "o", color=color, markersize=3)
-        if move_mask[i]:
+        if prev_end is None:
+            prev_end = end
             continue
-        if line_mask[i]:
+        if isinstance(cmd, Line):
             axes.plot(
-                [ppx, px],
-                [ppy, py],
+                [prev_end[0], end[0]],
+                [prev_end[1], end[1]],
                 color=color,
                 linewidth=linewidth,
-                label=label,
+                label=seg_label,
             )
-            label = None
-        elif arc_mask[i]:
-            ci = data[i, Geometry.COL_I]
-            cj = data[i, Geometry.COL_J]
-            cx = ppx + ci
-            cy = ppy + cj
-            cw = bool(data[i, Geometry.COL_CW])
-            r = math.sqrt(ci**2 + cj**2)
-            a_start = math.atan2(ppy - cy, ppx - cx)
-            a_end = math.atan2(py - cy, px - cx)
-            angles = _arc_angles(a_start, a_end, cw)
+            seg_label = None
+        elif isinstance(cmd, Arc):
+            cx = prev_end[0] + cmd.center_offset[0]
+            cy = prev_end[1] + cmd.center_offset[1]
+            r = math.sqrt(cmd.center_offset[0] ** 2 + cmd.center_offset[1] ** 2)
+            a_start = math.atan2(prev_end[1] - cy, prev_end[0] - cx)
+            a_end = math.atan2(end[1] - cy, end[0] - cx)
+            angles = _arc_angles(a_start, a_end, cmd.clockwise)
             ax_pts = [cx + r * math.cos(a) for a in angles]
             ay_pts = [cy + r * math.sin(a) for a in angles]
-            axes.plot(ax_pts, ay_pts, color=color, linewidth=linewidth, label=label)
-            label = None
-        elif bez_mask[i]:
-            c1x = data[i, Geometry.COL_I]
-            c1y = data[i, Geometry.COL_J]
-            c2x = data[i, Geometry.COL_CW]
-            c2y = data[i, Geometry.COL_C2Y]
+            axes.plot(ax_pts, ay_pts, color=color, linewidth=linewidth, label=seg_label)
+            seg_label = None
+        elif isinstance(cmd, Bezier):
+            c1 = cmd.control1
+            c2 = cmd.control2
             ts = np.linspace(0, 1, 64)
             bx = (
-                (1 - ts) ** 3 * ppx
-                + 3 * (1 - ts) ** 2 * ts * c1x
-                + 3 * (1 - ts) * ts**2 * c2x
-                + ts**3 * px
+                (1 - ts) ** 3 * prev_end[0]
+                + 3 * (1 - ts) ** 2 * ts * c1[0]
+                + 3 * (1 - ts) * ts**2 * c2[0]
+                + ts**3 * end[0]
             )
             by = (
-                (1 - ts) ** 3 * ppy
-                + 3 * (1 - ts) ** 2 * ts * c1y
-                + 3 * (1 - ts) * ts**2 * c2y
-                + ts**3 * py
+                (1 - ts) ** 3 * prev_end[1]
+                + 3 * (1 - ts) ** 2 * ts * c1[1]
+                + 3 * (1 - ts) * ts**2 * c2[1]
+                + ts**3 * end[1]
             )
-            axes.plot(bx, by, color=color, linewidth=linewidth, label=label)
-            label = None
+            axes.plot(bx, by, color=color, linewidth=linewidth, label=seg_label)
+            seg_label = None
+        if show_points:
+            axes.plot(end[0], end[1], "o", color=color, markersize=3)
+        prev_end = end
 
 
 def _arc_angles(a_start, a_end, clockwise):
@@ -108,15 +98,11 @@ def _arc_angles(a_start, a_end, clockwise):
 def _auto_limits(geoms):
     xs, ys = [], []
     for g in geoms:
+        if g.is_empty():
+            continue
         r = g.rect()
-        if r:
-            xs += [r[0], r[2]]
-            ys += [r[1], r[3]]
-        else:
-            d = g.data
-            if d is not None:
-                xs += [d[:, Geometry.COL_X].min(), d[:, Geometry.COL_X].max()]
-                ys += [d[:, Geometry.COL_Y].min(), d[:, Geometry.COL_Y].max()]
+        xs += [r[0], r[2]]
+        ys += [r[1], r[3]]
     if not xs:
         return -10, 10, -10, 10
     pad = max((max(xs) - min(xs)), (max(ys) - min(ys))) * 0.1 + 1
@@ -223,15 +209,15 @@ def page_geometry():
             amount = st.number_input("Offset amount", 0.01, 100.0, 1.0)
             geom = geom.grow(-amount)
         elif op == "Flip X":
-            geom.flip_x()
+            geom = geom.flip_x()
         elif op == "Flip Y":
-            geom.flip_y()
+            geom = geom.flip_y()
         elif op == "Simplify":
             tol = st.number_input("Tolerance", 0.001, 100.0, 0.1)
-            geom.simplify(tol)
+            geom = geom.simplify(tol)
         elif op == "Linearize":
             tol = st.number_input("Tolerance", 0.001, 100.0, 0.1)
-            geom.linearize(tol)
+            geom = geom.linearize(tol)
         elif op == "Split contours":
             contours = geom.split_into_contours()
             st.info(f"Split into {len(contours)} contour(s)")
@@ -261,7 +247,7 @@ def page_geometry():
         cols[1].metric("Area", f"{geom.area():.4f}")
         cols[2].metric("Distance", f"{geom.distance():.4f}")
         r = geom.rect()
-        if r:
+        if not geom.is_empty():
             bounds = f"({r[0]:.1f}, {r[1]:.1f}) - ({r[2]:.1f}, {r[3]:.1f})"
             cols[3].metric("Bounds", bounds)
         st.checkbox("Closed", value=geom.is_closed(), disabled=True, key="closed")
@@ -276,9 +262,9 @@ def page_geometry():
         )
         tol = st.number_input("Tolerance", 0.001, 100.0, 0.5)
         if fit_op == "Fit arcs":
-            geom.fit_arcs(tol)
+            geom = geom.fit_arcs(tol)
         else:
-            geom.fit_curves(tol, beziers=True, arcs=True)
+            geom = geom.fit_curves(tol, beziers=True, arcs=True)
 
     fig, ax = plt.subplots()
     show_pts = st.checkbox("Show control points", value=False, key="show_pts_build")
@@ -291,9 +277,27 @@ def page_geometry():
     st.pyplot(fig)
 
     with st.expander("Raw data"):
-        d = geom.data
-        if d is not None:
-            st.dataframe(d, width="stretch")
+        cmds = geom.iter_typed_commands()
+        if cmds:
+            rows = []
+            for cmd in cmds:
+                if isinstance(cmd, Move):
+                    rows.append({"type": "Move", "x": cmd.end[0], "y": cmd.end[1]})
+                elif isinstance(cmd, Line):
+                    rows.append({"type": "Line", "x": cmd.end[0], "y": cmd.end[1]})
+                elif isinstance(cmd, Arc):
+                    rows.append({
+                        "type": "Arc", "x": cmd.end[0], "y": cmd.end[1],
+                        "i": cmd.center_offset[0], "j": cmd.center_offset[1],
+                        "cw": cmd.clockwise,
+                    })
+                elif isinstance(cmd, Bezier):
+                    rows.append({
+                        "type": "Bezier", "x": cmd.end[0], "y": cmd.end[1],
+                        "c1x": cmd.control1[0], "c1y": cmd.control1[1],
+                        "c2x": cmd.control2[0], "c2y": cmd.control2[1],
+                    })
+            st.dataframe(rows)
 
 
 def page_polygon_boolean():
@@ -717,29 +721,29 @@ def page_tabs():
     tab_width = st.number_input("Tab width (mm)", 0.1, 20.0, 2.0, key="tab_tw")
 
     geo = orig_ops.to_geometry()
-    geo_data = geo.data
-    total_pts = len(geo_data) if geo_data is not None else 0
+    segments = geo.segments()
+    seg_dists = []
+    for seg in segments:
+        for j in range(1, len(seg)):
+            dx = seg[j][0] - seg[j - 1][0]
+            dy = seg[j][1] - seg[j - 1][1]
+            seg_dists.append(math.sqrt(dx * dx + dy * dy))
+    total_dist = sum(seg_dists)
 
     clips = []
-    if total_pts > 1:
-        seg_dists = []
-        for j in range(1, total_pts):
-            dx = geo_data[j, 1] - geo_data[j - 1, 1]
-            dy = geo_data[j, 2] - geo_data[j - 1, 2]
-            seg_dists.append(math.sqrt(dx * dx + dy * dy))
-        total_dist = sum(seg_dists)
-
+    if total_dist > 0 and n_tabs > 0:
+        flat_pts = [p for seg in segments for p in seg]
         for t in range(n_tabs):
             target = total_dist * (t + 1) / (n_tabs + 1)
             accum = 0.0
             for seg_i, sd in enumerate(seg_dists):
                 if accum + sd >= target - 1e-9:
                     frac = (target - accum) / sd if sd > 1e-9 else 0.0
-                    px = geo_data[seg_i, 1] + frac * (
-                        geo_data[seg_i + 1, 1] - geo_data[seg_i, 1]
+                    px = flat_pts[seg_i][0] + frac * (
+                        flat_pts[seg_i + 1][0] - flat_pts[seg_i][0]
                     )
-                    py = geo_data[seg_i, 2] + frac * (
-                        geo_data[seg_i + 1, 2] - geo_data[seg_i, 2]
+                    py = flat_pts[seg_i][1] + frac * (
+                        flat_pts[seg_i + 1][1] - flat_pts[seg_i][1]
                     )
                     clips.append((px, py, tab_width))
                     break
