@@ -1,15 +1,18 @@
 import pytest
 
 from raygeo.geo.shape.line import (
+    does_line_segment_intersect_circle,
     does_line_segment_intersect_rect,
     get_line_closest_point,
     get_line_line_intersection,
     get_line_segment_closest_point,
     get_line_segment_intersection,
+    get_line_segment_length,
     get_line_segment_polygon_intersections,
+    get_point_line_distance,
     is_point_on_line_segment,
 )
-from raygeo.geo.shape.point import midpoint
+from raygeo.geo.shape.point import midpoint, transform_point
 from raygeo.geo.shape.polygon import is_point_inside_polygon
 from raygeo.geo.shape.rect import (
     does_rect_contain_rect,
@@ -240,3 +243,33 @@ def test_midpoint_negative():
         0.0,
         0.0,
     )
+
+
+def test_get_line_segment_length():
+    assert get_line_segment_length((0, 0), (3, 4)) == pytest.approx(5.0)
+    assert get_line_segment_length((0, 0), (0, 0)) == pytest.approx(0.0)
+
+
+def test_get_point_line_distance():
+    d = get_point_line_distance((0, 1), (0, 0), (1, 0))
+    assert d == pytest.approx(1.0)
+    d = get_point_line_distance((0.5, 0), (0, 0), (1, 0))
+    assert d == pytest.approx(0.0)
+    d = get_point_line_distance((1, 1), (0, 0), (0, 0))
+    assert d == pytest.approx(2**0.5)
+
+
+def test_does_line_segment_intersect_circle():
+    assert does_line_segment_intersect_circle((0, 0), (10, 0), (5, 0), 2)
+    assert does_line_segment_intersect_circle((0, 0), (10, 0), (5, 2), 2)
+    assert not does_line_segment_intersect_circle((0, 5), (10, 5), (5, 0), 2)
+
+
+def test_transform_point():
+    mat = [[1, 0, 0, 10], [0, 1, 0, 20], [0, 0, 1, 30], [0, 0, 0, 1]]
+    result = transform_point(mat, 1, 2, 3)
+    assert result == (11.0, 22.0, 33.0)
+
+    scale_mat = [[2, 0, 0, 0], [0, 3, 0, 0], [0, 0, 4, 0], [0, 0, 0, 1]]
+    result = transform_point(scale_mat, 1, 2, 3)
+    assert result == (2.0, 6.0, 12.0)

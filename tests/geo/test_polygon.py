@@ -606,6 +606,9 @@ class TestPolygonOffset:
     def test_empty(self):
         assert offset_polygon(cast(Polygon, []), 1.0) == []
 
+    def test_degenerate_less_than_3_points(self):
+        assert offset_polygon(P((0, 0), (1, 0)), 0.1) == []
+
 
 class TestPolygonBooleanOps:
     def test_union(self):
@@ -613,6 +616,10 @@ class TestPolygonBooleanOps:
         poly2 = P((5, 5), (15, 5), (15, 15), (5, 15))
         result = get_polygons_union([poly1, poly2])
         assert len(result) >= 1
+
+    def test_union_empty(self):
+        result = get_polygons_union([])
+        assert result == []
 
     def test_intersection(self):
         poly1 = P((0, 0), (10, 0), (10, 10), (0, 10))
@@ -634,6 +641,13 @@ class TestPolygonBooleanOps:
         poly2 = P((5, 5), (15, 5), (15, 15), (5, 15))
         result = get_polygons_difference(poly1, poly2)
         assert len(result) >= 1
+
+    def test_difference_non_overlapping(self):
+        poly1 = P((0, 0), (10, 0), (10, 10), (0, 10))
+        poly2 = P((100, 100), (110, 100), (110, 110), (100, 110))
+        result = get_polygons_difference(poly1, poly2)
+        assert len(result) == 1
+        assert len(result[0]) == 4
 
 
 class TestGetPolygonsGroupIntersection:

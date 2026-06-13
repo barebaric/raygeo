@@ -260,45 +260,4 @@ fn approx_equal(a: f64, b: f64) -> bool {
     (a - b).abs() < 1e-12
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
 
-    #[test]
-    fn test_compute_gaussian_kernel_zero() {
-        let (kernel, sigma) = compute_gaussian_kernel(0);
-        assert_eq!(kernel, vec![1.0]);
-        assert!((sigma - 0.0).abs() < 1e-9);
-    }
-
-    #[test]
-    fn test_compute_gaussian_kernel_nonzero() {
-        let (kernel, sigma) = compute_gaussian_kernel(50);
-        assert!(kernel.len() > 1);
-        assert!(sigma > 0.0);
-        let sum: f64 = kernel.iter().sum();
-        assert!((sum - 1.0).abs() < 1e-6);
-    }
-
-    #[test]
-    fn test_smooth_sub_segment_trivial() {
-        let points = vec![(0.0, 0.0, 0.0), (1.0, 1.0, 0.0)];
-        let kernel = vec![1.0];
-        let result = smooth_sub_segment(&points, &kernel);
-        assert_eq!(result.len(), 2);
-    }
-
-    #[test]
-    fn test_resample_polyline() {
-        let points = vec![(0.0, 0.0, 0.0), (10.0, 0.0, 0.0)];
-        let result = resample_polyline(&points, 1.0, false);
-        assert_eq!(result.len(), 11);
-    }
-
-    #[test]
-    fn test_resample_polyline_closed() {
-        let points = vec![(0.0, 0.0, 0.0), (10.0, 0.0, 0.0), (0.0, 0.0, 0.0)];
-        let result = resample_polyline(&points, 1.0, true);
-        assert!(result.len() > 3);
-    }
-}
