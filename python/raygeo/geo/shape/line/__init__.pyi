@@ -48,11 +48,11 @@ def does_line_segment_intersect_rect(p1: types.Point, p2: types.Point, rect: typ
 
 def get_angle_at_vertex(p0: types.Point, p1: types.Point, p2: types.Point) -> float:
     r"""
-    Get the angle at a vertex between three points.
+    Compute the angle at vertex p1.
     
-    :param p0: First point.
+    :param p0: Previous point.
     :param p1: Vertex point.
-    :param p2: Third point.
+    :param p2: Next point.
     :returns: Angle in radians.
     """
 
@@ -102,21 +102,21 @@ def get_line_segment_intersection(p1: types.Point, p2: types.Point, p3: types.Po
 
 def get_line_segment_length(p1: types.Point, p2: types.Point) -> float:
     r"""
-    Compute the Euclidean length of a line segment.
+    Compute the length of a line segment.
     
     :param p1: Start point (x, y).
     :param p2: End point (x, y).
-    :returns: Length of the segment.
+    :returns: Distance between the two points.
     """
 
-def get_line_segment_polygon_intersections(p1: types.Point, p2: types.Point, polygon: list[types.Polygon]) -> list[float]:
+def get_line_segment_polygon_intersections(p1: types.Point, p2: types.Point, polygon: typing.Sequence[types.Polygon]) -> list[float]:
     r"""
-    Get t-values of line segment-polygon intersections.
+    Get t-values where a line segment intersects a polygon.
     
     :param p1: Start of the line segment.
     :param p2: End of the line segment.
-    :param polygon: Polygon(s) to test against.
-    :returns: List of t-values where the segment intersects.
+    :param polygon: Polygon to check against.
+    :returns: List of t-values of intersection points.
     """
 
 def get_point_line_distance(point: types.Point, line_p1: types.Point, line_p2: types.Point) -> float:
