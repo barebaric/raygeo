@@ -14,11 +14,7 @@ use crate::types::Polygon;
 ///
 /// Input polygons should be normalized (at origin). Output IFPs are also
 /// in normalized space — the caller translates to world coordinates.
-pub fn inner_fit_polygon(
-    bin: &Polygon,
-    part: &Polygon,
-    _scale: i64,
-) -> Vec<Polygon> {
+pub fn inner_fit_polygon(bin: &Polygon, part: &Polygon) -> Vec<Polygon> {
     if bin.len() < 3 || part.len() < 3 {
         return vec![];
     }

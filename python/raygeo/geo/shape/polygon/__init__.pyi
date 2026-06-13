@@ -397,12 +397,11 @@ def scale_polygon(polygon: collections.abc.Sequence[types.Point], scale: float, 
     :returns: Scaled polygon.
     """
 
-def to_clipper_numpy(polygon: typing.Any, scale: int = 10000000) -> list[tuple[int, int]]:
+def to_clipper_numpy(polygon: typing.Any) -> list[tuple[int, int]]:
     r"""
     Convert a polygon to Clipper coordinates.
     
     :param polygon: Polygon as numpy array or list of tuples.
-    :param scale: Scale factor for integer conversion.
     :returns: Polygon with integer coordinates for Clipper.
     """
 

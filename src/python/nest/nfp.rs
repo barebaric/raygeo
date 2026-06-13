@@ -23,13 +23,11 @@ sums, both for convex and general polygon pairs.
     def no_fit_polygon(
         static_poly: collections.abc.Sequence[types.Point],
         orbiting: collections.abc.Sequence[types.Point],
-        scale: int,
     ) -> list[types.Polygon]:
         """Compute the No-Fit Polygon (NFP) for two polygons.
 
         :param static_poly: Static polygon as (x, y) points.
         :param orbiting: Orbiting polygon as (x, y) points.
-        :param scale: Clipper scale factor.
         :returns: List of NFP polygons.
         """
 "#,
@@ -39,13 +37,8 @@ sums, both for convex and general polygon pairs.
 fn no_fit_polygon_py(
     static_poly: Vec<PyPoint2D>,
     orbiting: Vec<PyPoint2D>,
-    scale: i64,
 ) -> Vec<Vec<(f64, f64)>> {
-    nfp::no_fit_polygon(
-        &poly_to_points(static_poly),
-        &poly_to_points(orbiting),
-        scale,
-    )
+    nfp::no_fit_polygon(&poly_to_points(static_poly), &poly_to_points(orbiting))
 }
 
 #[gen_stub_pyfunction(
@@ -55,13 +48,11 @@ fn no_fit_polygon_py(
     def nfp_convex_fast(
         static_poly: collections.abc.Sequence[tuple[int, int]],
         orbiting: collections.abc.Sequence[tuple[int, int]],
-        scale: int,
     ) -> list[list[tuple[float, float]]]:
         """Fast NFP for convex polygon pairs.
 
         :param static_poly: Static polygon as integer points.
         :param orbiting: Orbiting polygon as integer points.
-        :param scale: Clipper scale factor.
         :returns: List of NFP polygons.
         """
 "#,
@@ -71,12 +62,10 @@ fn no_fit_polygon_py(
 fn nfp_convex_fast_py(
     static_poly: Vec<PyIntPoint2D>,
     orbiting: Vec<PyIntPoint2D>,
-    scale: i64,
 ) -> Vec<Vec<(f64, f64)>> {
     nfp::nfp_convex_fast(
         &int_poly_to_points(static_poly),
         &int_poly_to_points(orbiting),
-        scale,
     )
 }
 
@@ -87,13 +76,11 @@ fn nfp_convex_fast_py(
     def nfp_minkowski(
         static_poly: collections.abc.Sequence[tuple[int, int]],
         orbiting: collections.abc.Sequence[tuple[int, int]],
-        scale: int,
     ) -> list[list[tuple[float, float]]]:
         """General NFP using Minkowski sum with Clipper union.
 
         :param static_poly: Static polygon as integer points.
         :param orbiting: Orbiting polygon as integer points.
-        :param scale: Clipper scale factor.
         :returns: List of NFP polygons.
         """
 "#,
@@ -103,12 +90,10 @@ fn nfp_convex_fast_py(
 fn nfp_minkowski_py(
     static_poly: Vec<PyIntPoint2D>,
     orbiting: Vec<PyIntPoint2D>,
-    scale: i64,
 ) -> Vec<Vec<(f64, f64)>> {
     nfp::nfp_minkowski(
         &int_poly_to_points(static_poly),
         &int_poly_to_points(orbiting),
-        scale,
     )
 }
 

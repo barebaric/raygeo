@@ -703,6 +703,31 @@ pub fn to_clipper_from_points(points: &[(f64, f64)], scale: f64) -> IntPolygon {
         .collect()
 }
 
+/// Convert a float polygon to integer coordinates using GeoScale.
+pub fn polygon_to_int_path(polygon: &Polygon) -> IntPolygon {
+    polygon
+        .iter()
+        .map(|(x, y)| {
+            (
+                (x * GeoScale::MULTIPLIER) as i64,
+                (y * GeoScale::MULTIPLIER) as i64,
+            )
+        })
+        .collect()
+}
+
+/// Convert an integer polygon back to float coordinates using GeoScale.
+pub fn int_path_to_polygon(path: &IntPolygon) -> Polygon {
+    path.iter()
+        .map(|(x, y)| {
+            (
+                *x as f64 / GeoScale::MULTIPLIER,
+                *y as f64 / GeoScale::MULTIPLIER,
+            )
+        })
+        .collect()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

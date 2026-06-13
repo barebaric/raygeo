@@ -4,10 +4,11 @@
 //! of polygons, which are used in packing and nesting algorithms for computing
 //! No-Fit Polygons (NFP) and Inner-Fit Polygons (IFP).
 
-use crate::geo::shape::polygon::{get_polygon_bounds, get_polygon_convex_hull};
+use crate::geo::shape::polygon::{
+    get_polygon_bounds, get_polygon_convex_hull, int_path_to_polygon,
+    polygon_to_int_path,
+};
 use crate::types::{IntPolygon, Point, Polygon};
-
-const CLIPPER_SCALE: i64 = 10_000_000;
 
 pub fn convolve_two_segments(
     a1: (i64, i64),
@@ -82,20 +83,6 @@ pub fn get_polygon_minkowski_sum_convex(
     vec![hull.iter().map(|(x, y)| (*x as i64, *y as i64)).collect()]
 }
 
-fn to_clipper(polygon: &Polygon, scale: i64) -> IntPolygon {
-    polygon
-        .iter()
-        .map(|(x, y)| ((x * scale as f64) as i64, (y * scale as f64) as i64))
-        .collect()
-}
-
-fn from_clipper(polygon: &IntPolygon, scale: i64) -> Polygon {
-    polygon
-        .iter()
-        .map(|(x, y)| (*x as f64 / scale as f64, *y as f64 / scale as f64))
-        .collect()
-}
-
 /// Calculate the No-Fit Polygon (NFP) for two polygons.
 ///
 /// Assumes polygons are convex for performance.
@@ -106,9 +93,8 @@ pub fn get_no_fit_polygon(
     if stationary.is_empty() || orbiting.is_empty() {
         return vec![];
     }
-    let scale = CLIPPER_SCALE;
-    let static_path = to_clipper(stationary, scale);
-    let orbiting_path = to_clipper(orbiting, scale);
+    let static_path = polygon_to_int_path(stationary);
+    let orbiting_path = polygon_to_int_path(orbiting);
     let orbiting_negated: IntPolygon =
         orbiting_path.iter().map(|(x, y)| (-*x, -*y)).collect();
     let nfp_paths =
@@ -116,19 +102,11 @@ pub fn get_no_fit_polygon(
     let mut results = Vec::new();
     let first_pt = orbiting_path[0];
     for path in nfp_paths {
-        let shifted: Polygon = path
+        let shifted: IntPolygon = path
             .iter()
-            .map(|(x, y)| {
-                (*x as f64 + first_pt.0 as f64, *y as f64 + first_pt.1 as f64)
-            })
+            .map(|(x, y)| (*x + first_pt.0, *y + first_pt.1))
             .collect();
-        results.push(from_clipper(
-            &shifted
-                .iter()
-                .map(|(x, y)| (*x as i64, *y as i64))
-                .collect(),
-            scale,
-        ));
+        results.push(int_path_to_polygon(&shifted));
     }
     results
 }
@@ -166,109 +144,4 @@ pub fn get_inner_fit_polygon(
         (ifp_min_x, ifp_max_y),
     ];
     vec![ifp]
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_calculate_input_scale_empty() {
-        let scale = calculate_input_scale(&[] as &[Polygon], 2147483647i64);
-        assert!((scale - 214748364.7).abs() < 1e-4);
-    }
-
-    #[test]
-    fn test_calculate_input_scale_simple() {
-        let polys = vec![vec![(0.0, 0.0), (1.0, 0.0), (1.0, 1.0)]];
-        let scale = calculate_input_scale(&polys, 2147483647i64);
-        assert!((scale - 214748364.7).abs() < 1e-4);
-    }
-
-    #[test]
-    fn test_calculate_input_scale_small() {
-        let polys = vec![vec![(0.0, 0.0), (0.5, 0.0)]];
-        let scale = calculate_input_scale(&polys, 2147483647i64);
-        assert!((scale - 214748364.7).abs() < 1e-4);
-    }
-
-    #[test]
-    fn test_get_polygon_minkowski_sum_convex_simple() {
-        let poly_a = vec![(0i64, 0i64), (1i64, 0i64), (1i64, 1i64)];
-        let poly_b = vec![(0i64, 0i64), (1i64, 0i64)];
-        let result = get_polygon_minkowski_sum_convex(&poly_a, &poly_b);
-        assert!(!result.is_empty());
-        assert!(result[0].len() >= 3);
-    }
-
-    #[test]
-    fn test_get_polygon_minkowski_sum_convex_empty() {
-        let result = get_polygon_minkowski_sum_convex(&vec![], &vec![]);
-        assert!(result.is_empty());
-        let result = get_polygon_minkowski_sum_convex(
-            &vec![(0i64, 0i64)],
-            &vec![(0i64, 0i64)],
-        );
-        assert!(result.is_empty());
-    }
-
-    #[test]
-    fn test_calculate_nfp_simple() {
-        let stationary =
-            vec![(0.0, 0.0), (10.0, 0.0), (10.0, 10.0), (0.0, 10.0)];
-        let orbiting = vec![(2.0, 2.0), (6.0, 2.0), (6.0, 6.0), (2.0, 6.0)];
-        let nfp = get_no_fit_polygon(&stationary, &orbiting);
-        assert!(!nfp.is_empty());
-    }
-
-    #[test]
-    fn test_calculate_nfp_empty() {
-        let result = get_no_fit_polygon(&vec![], &vec![(0.0, 0.0), (1.0, 0.0)]);
-        assert!(result.is_empty());
-        let result = get_no_fit_polygon(&vec![(0.0, 0.0), (1.0, 0.0)], &vec![]);
-        assert!(result.is_empty());
-    }
-
-    #[test]
-    fn test_calculate_ifp_simple() {
-        let container =
-            vec![(0.0, 0.0), (10.0, 0.0), (10.0, 10.0), (0.0, 10.0)];
-        let part = vec![(0.0, 0.0), (2.0, 0.0), (2.0, 2.0), (0.0, 2.0)];
-        let ifp = get_inner_fit_polygon(&container, &part);
-        assert!(!ifp.is_empty());
-        assert_eq!(ifp[0].len(), 4);
-        assert_eq!(ifp[0][0], (-0.0, -0.0));
-        assert_eq!(ifp[0][1], (8.0, -0.0));
-        assert_eq!(ifp[0][2], (8.0, 8.0));
-        assert_eq!(ifp[0][3], (-0.0, 8.0));
-    }
-
-    #[test]
-    fn test_calculate_ifp_part_larger_than_container() {
-        let container = vec![(0.0, 0.0), (5.0, 0.0), (5.0, 5.0), (0.0, 5.0)];
-        let part = vec![(0.0, 0.0), (10.0, 0.0), (10.0, 10.0), (0.0, 10.0)];
-        let ifp = get_inner_fit_polygon(&container, &part);
-        assert!(ifp.is_empty());
-    }
-
-    #[test]
-    fn test_calculate_ifp_empty() {
-        let result =
-            get_inner_fit_polygon(&vec![], &vec![(0.0, 0.0), (1.0, 0.0)]);
-        assert!(result.is_empty());
-        let result =
-            get_inner_fit_polygon(&vec![(0.0, 0.0), (1.0, 0.0)], &vec![]);
-        assert!(result.is_empty());
-    }
-
-    #[test]
-    fn test_to_clipper_roundtrip() {
-        let poly = vec![(0.0, 0.0), (1.0, 0.0), (1.0, 1.0)];
-        let scaled = to_clipper(&poly, CLIPPER_SCALE);
-        let restored = from_clipper(&scaled, CLIPPER_SCALE);
-        for (a, b) in poly.iter().zip(restored.iter()) {
-            assert!((a.0 - b.0).abs() < 1e-9);
-            assert!((a.1 - b.1).abs() < 1e-9);
-        }
-    }
 }

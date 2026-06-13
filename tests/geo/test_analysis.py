@@ -3,7 +3,13 @@ import math
 import pytest
 
 from raygeo.geo import Geometry
-from raygeo.geo.algo.analysis import remove_duplicates
+from raygeo.geo.algo.analysis import (
+    get_area,
+    get_path_winding_order,
+    get_subpath_area,
+    get_subpath_vertices,
+    remove_duplicates,
+)
 from raygeo.geo.shape.arc import is_arc_clockwise
 from raygeo.geo.shape.line import get_angle_at_vertex
 from raygeo.geo.shape.polygon import is_polygon_clockwise as is_clockwise
@@ -432,3 +438,96 @@ def test_encloses_bbox_contained_but_path_outside():
     )
     other = Geometry.from_points([(2, 4), (5, 4), (5, 6), (2, 6)])
     assert c_shape.encloses(other) is False
+
+
+def test_get_subpath_vertices_square():
+    geo = Geometry()
+    geo.move_to(0, 0)
+    geo.line_to(10, 0)
+    geo.line_to(10, 10)
+    geo.line_to(0, 10)
+    geo.close_path()
+    vertices = get_subpath_vertices(geo, 0)
+    assert len(vertices) >= 4
+
+
+def test_get_subpath_area_square():
+    geo = Geometry()
+    geo.move_to(0, 0)
+    geo.line_to(10, 0)
+    geo.line_to(10, 10)
+    geo.line_to(0, 10)
+    geo.close_path()
+    area = get_subpath_area(geo, 0)
+    assert area == pytest.approx(100.0)
+
+
+def test_get_area_square():
+    geo = Geometry()
+    geo.move_to(0, 0)
+    geo.line_to(10, 0)
+    geo.line_to(10, 10)
+    geo.line_to(0, 10)
+    geo.close_path()
+    assert get_area(geo) == pytest.approx(100.0)
+
+
+def test_get_area_two_shapes():
+    geo = Geometry()
+    geo.move_to(0, 0)
+    geo.line_to(5, 0)
+    geo.line_to(5, 5)
+    geo.line_to(0, 5)
+    geo.close_path()
+    geo.move_to(10, 10)
+    geo.line_to(15, 10)
+    geo.line_to(15, 15)
+    geo.line_to(10, 15)
+    geo.close_path()
+    assert get_area(geo) == pytest.approx(50.0)
+
+
+def test_get_area_with_hole():
+    outer = Geometry.from_points([(0, 0), (10, 0), (10, 10), (0, 10)])
+    hole = Geometry.from_points([(2, 2), (2, 8), (8, 8), (8, 2)])
+    outer.extend(hole)
+    assert get_area(outer) == pytest.approx(64.0)
+
+
+def test_get_area_open_path():
+    geo = Geometry()
+    geo.move_to(0, 0)
+    geo.line_to(10, 0)
+    geo.line_to(10, 10)
+    assert get_area(geo) == pytest.approx(0.0)
+
+
+def test_get_area_empty():
+    assert get_area(Geometry()) == pytest.approx(0.0)
+
+
+def test_get_path_winding_order_ccw():
+    geo = Geometry()
+    geo.move_to(0, 0)
+    geo.line_to(10, 0)
+    geo.line_to(10, 10)
+    geo.line_to(0, 10)
+    geo.close_path()
+    assert get_path_winding_order(geo, 0) == "ccw"
+
+
+def test_get_path_winding_order_cw():
+    geo = Geometry()
+    geo.move_to(0, 0)
+    geo.line_to(0, 10)
+    geo.line_to(10, 10)
+    geo.line_to(10, 0)
+    geo.close_path()
+    assert get_path_winding_order(geo, 0) == "cw"
+
+
+def test_get_path_winding_order_open():
+    geo = Geometry()
+    geo.move_to(0, 0)
+    geo.line_to(10, 0)
+    assert get_path_winding_order(geo, 0) == "unknown"

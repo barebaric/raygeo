@@ -24,13 +24,12 @@ def build_no_go_zones(bin: collections.abc.Sequence[types.Point], part_neg: coll
     :returns: List of no-go zone polygons.
     """
 
-def inner_fit_polygon(bin: collections.abc.Sequence[types.Point], part: collections.abc.Sequence[types.Point], scale: int) -> list[types.Polygon]:
+def inner_fit_polygon(bin: collections.abc.Sequence[types.Point], part: collections.abc.Sequence[types.Point]) -> list[types.Polygon]:
     r"""
     Compute the Inner-Fit Polygon (IFP) for a part inside a bin.
     
     :param bin: Bin polygon as (x, y) points.
     :param part: Part polygon as (x, y) points.
-    :param scale: Clipper scale factor.
     :returns: List of IFP polygons.
     """
 

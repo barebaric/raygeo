@@ -13,11 +13,9 @@ use crate::geo::geometry::Geometry;
 use crate::geo::shape::polygon::{get_polygons_difference, offset_polygon};
 use crate::types::{Point, Polygon};
 
-const CLIPPER_SCALE: i64 = 10_000_000;
-
 #[derive(Clone, Debug)]
 struct ContourItem {
-    path: Vec<(i64, i64)>,
+    path: Polygon,
     #[allow(dead_code)]
     area: f64,
     id: usize,
@@ -48,17 +46,8 @@ fn prepare_contour_items(
             area -= verts[k].0 * verts[j].1;
         }
         area = area.abs() / 2.0;
-        let scaled_path: Vec<(i64, i64)> = verts
-            .iter()
-            .map(|v| {
-                (
-                    (v.0 * CLIPPER_SCALE as f64) as i64,
-                    (v.1 * CLIPPER_SCALE as f64) as i64,
-                )
-            })
-            .collect();
         items.push(ContourItem {
-            path: scaled_path,
+            path: verts,
             area,
             id: i,
         });
@@ -67,45 +56,23 @@ fn prepare_contour_items(
 }
 
 fn offset_contour_group(
-    solid_path: &[(i64, i64)],
-    hole_paths: &[Vec<(i64, i64)>],
+    solid_path: &Polygon,
+    hole_paths: &[Polygon],
     offset: f64,
 ) -> Vec<Polygon> {
-    let scale = CLIPPER_SCALE as f64;
-    let solid_poly: Polygon = solid_path
-        .iter()
-        .map(|(x, y)| (*x as f64 / scale, *y as f64 / scale))
-        .collect();
-    if solid_poly.len() < 3 {
+    if solid_path.len() < 3 {
         return vec![];
     }
     if hole_paths.is_empty() {
-        return offset_polygon(&solid_poly, offset);
-    }
-    let hole_polys: Vec<Polygon> = hole_paths
-        .iter()
-        .filter_map(|path| {
-            let poly: Polygon = path
-                .iter()
-                .map(|(x, y)| (*x as f64 / scale, *y as f64 / scale))
-                .collect();
-            if poly.len() >= 3 {
-                Some(poly)
-            } else {
-                None
-            }
-        })
-        .collect();
-    if hole_polys.is_empty() {
-        return offset_polygon(&solid_poly, offset);
+        return offset_polygon(solid_path, offset);
     }
     // Offset solid and holes separately, then subtract holes from solid.
     // For positive offset (grow): solid expands outward, hole contracts (inward).
     // For negative offset (shrink): solid contracts, hole expands.
     // The hole offset direction is always opposite to the solid offset.
-    let offset_solids = offset_polygon(&solid_poly, offset);
+    let offset_solids = offset_polygon(solid_path, offset);
     let mut final_polys = offset_solids;
-    for hole in &hole_polys {
+    for hole in hole_paths {
         let offset_holes = offset_polygon(hole, -offset);
         for offset_hole in &offset_holes {
             let mut new_result = Vec::new();
@@ -167,7 +134,7 @@ pub fn grow_geometry(geometry: &Geometry, offset: f64) -> Geometry {
             None => continue,
         };
         let solid_item = &closed_items[solid_item_idx];
-        let hole_paths: Vec<Vec<(i64, i64)>> = hole_contour_indices
+        let hole_paths: Vec<Polygon> = hole_contour_indices
             .iter()
             .filter_map(|&h_idx| {
                 contour_to_item

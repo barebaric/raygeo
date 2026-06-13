@@ -33,8 +33,9 @@ pyo3_stub_gen::module_doc!(
 pub(crate) const MODULE_DOC_ANALYSIS: &str = "\
 Path analysis utilities for inspecting and cleaning geometry data.
 
-Provides functions for removing duplicate points from point sequences
-and extracting individual points from path data.
+Provides functions for removing duplicate points from point sequences,
+extracting subpath vertices, computing subpath/geometry area, and
+determining path winding order.
 ";
 
 pyo3_stub_gen::module_doc!(
@@ -138,8 +139,6 @@ use crate::Geometry as CoreGeometry;
 use crate::Segment3D;
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::gen_stub_pyfunction;
-
-const CLIPPER_SCALE: i64 = 10_000_000;
 
 pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     let py = m.py();
@@ -288,6 +287,20 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     analysis_mod.setattr("__doc__", MODULE_DOC_ANALYSIS)?;
     analysis_mod.add_function(wrap_pyfunction!(
         remove_duplicates_py,
+        analysis_mod.clone()
+    )?)?;
+    analysis_mod.add_function(wrap_pyfunction!(
+        get_subpath_vertices_py,
+        analysis_mod.clone()
+    )?)?;
+    analysis_mod.add_function(wrap_pyfunction!(
+        get_subpath_area_py,
+        analysis_mod.clone()
+    )?)?;
+    analysis_mod
+        .add_function(wrap_pyfunction!(get_area_py, analysis_mod.clone())?)?;
+    analysis_mod.add_function(wrap_pyfunction!(
+        get_path_winding_order_py,
         analysis_mod.clone()
     )?)?;
 
@@ -824,27 +837,23 @@ fn clip_line_segment_to_regions_py(
 
     def to_clipper(
         polygon: types.Polygon,
-        scale: int = 10000000,
     ) -> list[tuple[int, int]]:
         """Convert a polygon to Clipper coordinates.
 
         :param polygon: Input polygon as a list of (x, y) points.
-        :param scale: Scale factor for integer conversion.
         :returns: Polygon with integer coordinates for Clipper.
         """
 "#,
     module = "raygeo.geo.algo.clipping"
 )]
 #[pyfunction(name = "to_clipper")]
-fn to_clipper_py(
-    polygon: &Bound<'_, PyAny>,
-    scale: Option<i64>,
-) -> PyResult<Vec<(i64, i64)>> {
-    let scale = scale.unwrap_or(CLIPPER_SCALE);
+fn to_clipper_py(polygon: &Bound<'_, PyAny>) -> PyResult<Vec<(i64, i64)>> {
     let poly = extract_polygon(polygon)?;
     Ok(poly
         .iter()
-        .map(|(x, y)| ((x * scale as f64) as i64, (y * scale as f64) as i64))
+        .map(|(x, y)| {
+            ((x * 10_000_000_f64) as i64, (y * 10_000_000_f64) as i64)
+        })
         .collect())
 }
 
@@ -854,12 +863,10 @@ fn to_clipper_py(
 
     def from_clipper(
         polygon: types.IntPolygon,
-        scale: int = 10000000,
     ) -> types.Polygon:
         """Convert a polygon from Clipper coordinates.
 
         :param polygon: Integer polygon from Clipper.
-        :param scale: Scale factor used during conversion.
         :returns: Polygon with float coordinates.
         """
 "#,
@@ -868,9 +875,8 @@ fn to_clipper_py(
 #[pyfunction(name = "from_clipper")]
 fn from_clipper_py(
     polygon: Vec<crate::python::geo::flex_point::PyIntPoint2D>,
-    scale: Option<i64>,
 ) -> Vec<Point> {
-    let scale = scale.unwrap_or(CLIPPER_SCALE) as f64;
+    let scale = 10_000_000_f64;
     let poly = int_poly_to_points(polygon);
     poly.iter()
         .map(|(x, y)| (*x as f64 / scale, *y as f64 / scale))
@@ -1074,12 +1080,117 @@ fn simplify_polyline_py(points: Vec<PyPoint2D>, tolerance: f64) -> Vec<Point> {
         :param points: Sequence of (x, y) points.
         :returns: List of unique points.
         """
-"#,
+    "#,
     module = "raygeo.geo.algo.analysis"
 )]
 #[pyfunction(name = "remove_duplicates")]
 fn remove_duplicates_py(points: Vec<(f64, f64)>) -> Vec<(f64, f64)> {
     crate::geo::algo::analysis::remove_duplicates(&points)
+}
+
+#[gen_stub_pyfunction(
+    python = r#"
+    import raygeo.geo
+
+    def get_subpath_vertices(
+        geometry: geo.Geometry,
+        start_cmd_index: int,
+    ) -> list[tuple[float, float]]:
+        """Extract vertices from a subpath starting at the given command index.
+
+        Linearizes arcs and beziers into vertex sequences.
+
+        :param geometry: Geometry to extract vertices from.
+        :param start_cmd_index: Index of the starting command.
+        :returns: List of (x, y) vertices.
+        """
+    "#,
+    module = "raygeo.geo.algo.analysis"
+)]
+#[pyfunction(name = "get_subpath_vertices")]
+fn get_subpath_vertices_py(
+    geometry: &Geometry,
+    start_cmd_index: usize,
+) -> Vec<(f64, f64)> {
+    crate::geo::algo::analysis::get_subpath_vertices_from_array(
+        geometry.inner.data(),
+        start_cmd_index,
+    )
+}
+
+#[gen_stub_pyfunction(
+    python = r#"
+    import raygeo.geo
+
+    def get_subpath_area(
+        geometry: geo.Geometry,
+        start_cmd_index: int,
+    ) -> float:
+        """Compute the signed area of a subpath using the shoelace formula.
+
+        Positive area is CCW, negative is CW. Returns 0 for unclosed subpaths.
+
+        :param geometry: Geometry to compute area from.
+        :param start_cmd_index: Index of the starting command.
+        :returns: Signed area.
+        """
+    "#,
+    module = "raygeo.geo.algo.analysis"
+)]
+#[pyfunction(name = "get_subpath_area")]
+fn get_subpath_area_py(geometry: &Geometry, start_cmd_index: usize) -> f64 {
+    crate::geo::algo::analysis::get_subpath_area_from_array(
+        geometry.inner.data(),
+        start_cmd_index,
+    )
+}
+
+#[gen_stub_pyfunction(
+    python = r#"
+    import raygeo.geo
+
+    def get_area(geometry: geo.Geometry) -> float:
+        """Compute the total unsigned area enclosed by the geometry.
+
+        Sums all subpaths (outer + inner). Returns 0 for empty or open geometry.
+
+        :param geometry: Geometry to compute area from.
+        :returns: Total unsigned area.
+        """
+    "#,
+    module = "raygeo.geo.algo.analysis"
+)]
+#[pyfunction(name = "get_area")]
+fn get_area_py(geometry: &Geometry) -> f64 {
+    crate::geo::algo::analysis::get_area_from_array(geometry.inner.data())
+}
+
+#[gen_stub_pyfunction(
+    python = r#"
+    import raygeo.geo
+
+    def get_path_winding_order(
+        geometry: geo.Geometry,
+        start_cmd_index: int,
+    ) -> str:
+        """Determine the winding order of a subpath.
+
+        :param geometry: Geometry to analyze.
+        :param start_cmd_index: Index of the starting command.
+        :returns: ``"ccw"``, ``"cw"``, or ``"unknown"``.
+        """
+    "#,
+    module = "raygeo.geo.algo.analysis"
+)]
+#[pyfunction(name = "get_path_winding_order")]
+fn get_path_winding_order_py(
+    geometry: &Geometry,
+    start_cmd_index: usize,
+) -> &'static str {
+    crate::geo::algo::analysis::get_path_winding_order_from_array(
+        geometry.inner.data(),
+        start_cmd_index,
+    )
 }
 
 #[gen_stub_pyfunction(

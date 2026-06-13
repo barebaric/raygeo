@@ -39,12 +39,11 @@ def clip_line_segment_with_rect(p1: types.Point3D, p2: types.Point3D, rect: type
     :returns: Clipped segment or None if fully outside.
     """
 
-def from_clipper(polygon: types.IntPolygon, scale: int = 10000000) -> types.Polygon:
+def from_clipper(polygon: types.IntPolygon) -> types.Polygon:
     r"""
     Convert a polygon from Clipper coordinates.
     
     :param polygon: Integer polygon from Clipper.
-    :param scale: Scale factor used during conversion.
     :returns: Polygon with float coordinates.
     """
 
@@ -58,12 +57,11 @@ def subtract_polygons_from_line_segment(p1: types.Point3D, p2: types.Point3D, re
     :returns: List of remaining segments after subtraction.
     """
 
-def to_clipper(polygon: types.Polygon, scale: int = 10000000) -> list[tuple[int, int]]:
+def to_clipper(polygon: types.Polygon) -> list[tuple[int, int]]:
     r"""
     Convert a polygon to Clipper coordinates.
     
     :param polygon: Input polygon as a list of (x, y) points.
-    :param scale: Scale factor for integer conversion.
     :returns: Polygon with integer coordinates for Clipper.
     """
 

@@ -163,13 +163,11 @@ fn filter_candidates_multi_resolution_py(
 
 fn make_config(
     spacing: f64,
-    scale: i64,
     min_area: f64,
     curve_tolerance: f64,
 ) -> placement::PlacementConfig {
     placement::PlacementConfig {
         spacing,
-        scale,
         min_area,
         curve_tolerance,
     }
@@ -201,7 +199,6 @@ macro_rules! with_grid {
         grid: spatial_grid.SpatialGrid,
         sheet_world_offset: tuple[float, float],
         spacing: float = 1.0,
-        scale: int = 10000000,
         min_area: float = 1.0,
         curve_tolerance: float = 0.5,
     ) -> tuple[float, float] | None:
@@ -217,7 +214,6 @@ macro_rules! with_grid {
         :param grid: SpatialGrid for fast neighbor lookup.
         :param sheet_world_offset: (offset_x, offset_y) for this sheet.
         :param spacing: Minimum spacing between parts.
-        :param scale: Clipper scale factor.
         :param min_area: Minimum overlap area (clipper coords).
         :param curve_tolerance: Curve tolerance for distance filtering.
         :returns: (x, y) position or None.
@@ -226,7 +222,7 @@ macro_rules! with_grid {
     module = "raygeo.nest.placement"
 )]
 #[pyfunction(name = "find_valid_position")]
-#[pyo3(signature = (ifp_polygons, part_polygons, part_hulls, placed_polys_list, placed_hulls_list, grid, sheet_world_offset, spacing = 1.0, scale = 10000000, min_area = 1.0, curve_tolerance = 0.5))]
+#[pyo3(signature = (ifp_polygons, part_polygons, part_hulls, placed_polys_list, placed_hulls_list, grid, sheet_world_offset, spacing = 1.0, min_area = 1.0, curve_tolerance = 0.5))]
 #[allow(clippy::too_many_arguments)]
 fn find_valid_position_py(
     ifp_polygons: Vec<Vec<PyPoint2D>>,
@@ -237,7 +233,6 @@ fn find_valid_position_py(
     grid: &Bound<'_, PySpatialGrid>,
     sheet_world_offset: (f64, f64),
     spacing: f64,
-    scale: i64,
     min_area: f64,
     curve_tolerance: f64,
 ) -> Option<(f64, f64)> {
@@ -246,7 +241,7 @@ fn find_valid_position_py(
     let hulls = polys_from_py(part_hulls);
     let placed = polys_list_from_py(placed_polys_list);
     let placed_hulls = polys_list_from_py(placed_hulls_list);
-    let config = make_config(spacing, scale, min_area, curve_tolerance);
+    let config = make_config(spacing, min_area, curve_tolerance);
     with_grid!(grid, |grid_ref| {
         placement::find_valid_position(
             &ifp,
@@ -280,7 +275,6 @@ fn find_valid_position_py(
         grid: spatial_grid.SpatialGrid,
         sheet_world_offset: tuple[float, float],
         spacing: float = 1.0,
-        scale: int = 10000000,
         min_area: float = 1.0,
         curve_tolerance: float = 0.5,
     ) -> tuple[float, float] | None:
@@ -298,7 +292,6 @@ fn find_valid_position_py(
         :param grid: SpatialGrid for fast neighbor lookup.
         :param sheet_world_offset: (offset_x, offset_y) for this sheet.
         :param spacing: Minimum spacing between parts.
-        :param scale: Clipper scale factor.
         :param min_area: Minimum overlap area (clipper coords).
         :param curve_tolerance: Curve tolerance for distance filtering.
         :returns: (x, y) position or None.
@@ -307,7 +300,7 @@ fn find_valid_position_py(
     module = "raygeo.nest.placement"
 )]
 #[pyfunction(name = "find_valid_position_scored")]
-#[pyo3(signature = (ifp_polygons, part_polygons, part_hulls, placed_polys_list, placed_hulls_list, grid, sheet_world_offset, spacing = 1.0, scale = 10000000, min_area = 1.0, curve_tolerance = 0.5))]
+#[pyo3(signature = (ifp_polygons, part_polygons, part_hulls, placed_polys_list, placed_hulls_list, grid, sheet_world_offset, spacing = 1.0, min_area = 1.0, curve_tolerance = 0.5))]
 #[allow(clippy::too_many_arguments)]
 fn find_valid_position_scored_py(
     ifp_polygons: Vec<Vec<PyPoint2D>>,
@@ -318,7 +311,6 @@ fn find_valid_position_scored_py(
     grid: &Bound<'_, PySpatialGrid>,
     sheet_world_offset: (f64, f64),
     spacing: f64,
-    scale: i64,
     min_area: f64,
     curve_tolerance: f64,
 ) -> Option<(f64, f64)> {
@@ -327,7 +319,7 @@ fn find_valid_position_scored_py(
     let hulls = polys_from_py(part_hulls);
     let placed = polys_list_from_py(placed_polys_list);
     let placed_hulls = polys_list_from_py(placed_hulls_list);
-    let config = make_config(spacing, scale, min_area, curve_tolerance);
+    let config = make_config(spacing, min_area, curve_tolerance);
     with_grid!(grid, |grid_ref| {
         placement::find_valid_position_scored(
             &ifp,
@@ -361,7 +353,6 @@ fn find_valid_position_scored_py(
         grid: spatial_grid.SpatialGrid,
         sheet_world_offset: tuple[float, float],
         spacing: float = 1.0,
-        scale: int = 10000000,
         min_area: float = 1.0,
         curve_tolerance: float = 0.5,
     ) -> tuple[float, float] | None:
@@ -378,7 +369,6 @@ fn find_valid_position_scored_py(
         :param grid: SpatialGrid for fast neighbor lookup.
         :param sheet_world_offset: (offset_x, offset_y) for this sheet.
         :param spacing: Minimum spacing between parts.
-        :param scale: Clipper scale factor.
         :param min_area: Minimum overlap area (clipper coords).
         :param curve_tolerance: Curve tolerance for distance filtering.
         :returns: (x, y) position or None.
@@ -387,7 +377,7 @@ fn find_valid_position_scored_py(
     module = "raygeo.nest.placement"
 )]
 #[pyfunction(name = "find_valid_position_nfp")]
-#[pyo3(signature = (ifp_polygons, part_polygons, part_hulls, placed_polys_list, placed_hulls_list, grid, sheet_world_offset, spacing = 1.0, scale = 10000000, min_area = 1.0, curve_tolerance = 0.5))]
+#[pyo3(signature = (ifp_polygons, part_polygons, part_hulls, placed_polys_list, placed_hulls_list, grid, sheet_world_offset, spacing = 1.0, min_area = 1.0, curve_tolerance = 0.5))]
 #[allow(clippy::too_many_arguments)]
 fn find_valid_position_nfp_py(
     ifp_polygons: Vec<Vec<PyPoint2D>>,
@@ -398,7 +388,6 @@ fn find_valid_position_nfp_py(
     grid: &Bound<'_, PySpatialGrid>,
     sheet_world_offset: (f64, f64),
     spacing: f64,
-    scale: i64,
     min_area: f64,
     curve_tolerance: f64,
 ) -> Option<(f64, f64)> {
@@ -407,7 +396,7 @@ fn find_valid_position_nfp_py(
     let hulls = polys_from_py(part_hulls);
     let placed = polys_list_from_py(placed_polys_list);
     let placed_hulls = polys_list_from_py(placed_hulls_list);
-    let config = make_config(spacing, scale, min_area, curve_tolerance);
+    let config = make_config(spacing, min_area, curve_tolerance);
     with_grid!(grid, |grid_ref| {
         placement::find_valid_position_nfp(
             &ifp,
@@ -440,7 +429,6 @@ fn find_valid_position_nfp_py(
         flips_h: collections.abc.Sequence[bool],
         flips_v: collections.abc.Sequence[bool],
         spacing: float = 1.0,
-        scale: int = 10000000,
         min_area: float = 1.0,
         curve_tolerance: float = 0.5,
     ) -> list[dict]:
@@ -462,7 +450,6 @@ fn find_valid_position_nfp_py(
         :param flips_h: Horizontal flip flag per part.
         :param flips_v: Vertical flip flag per part.
         :param spacing: Minimum spacing between parts.
-        :param scale: Clipper scale factor.
         :param min_area: Minimum overlap area (clipper coords).
         :param curve_tolerance: Curve tolerance for distance filtering.
         :returns: List of dicts, one per sheet, with keys: placements,
@@ -472,7 +459,7 @@ fn find_valid_position_nfp_py(
     module = "raygeo.nest.placement"
 )]
 #[pyfunction(name = "place_parts")]
-#[pyo3(signature = (part_polys, part_hulls, sheet_polys, sheet_offsets, rotations, flips_h, flips_v, spacing = 1.0, scale = 10000000, min_area = 1.0, curve_tolerance = 0.5))]
+#[pyo3(signature = (part_polys, part_hulls, sheet_polys, sheet_offsets, rotations, flips_h, flips_v, spacing = 1.0, min_area = 1.0, curve_tolerance = 0.5))]
 #[allow(clippy::too_many_arguments)]
 fn place_parts_py<'py>(
     py: Python<'py>,
@@ -484,7 +471,6 @@ fn place_parts_py<'py>(
     flips_h: Vec<bool>,
     flips_v: Vec<bool>,
     spacing: f64,
-    scale: i64,
     min_area: f64,
     curve_tolerance: f64,
 ) -> Vec<Bound<'py, PyDict>> {
@@ -508,7 +494,6 @@ fn place_parts_py<'py>(
 
     let config = placement::PlacementConfig {
         spacing,
-        scale,
         min_area,
         curve_tolerance,
     };

@@ -34,7 +34,6 @@ pub struct NestResult {
 #[derive(Clone, Debug)]
 pub struct PlacementConfig {
     pub spacing: f64,
-    pub scale: i64,
     pub min_area: f64,
     pub curve_tolerance: f64,
 }
@@ -43,7 +42,6 @@ impl Default for PlacementConfig {
     fn default() -> Self {
         PlacementConfig {
             spacing: 1.0,
-            scale: 10_000_000,
             min_area: 1.0,
             curve_tolerance: 0.5,
         }
@@ -429,7 +427,6 @@ fn compute_nfp_clips_for_placed(
     part_polygons: &[Polygon],
     ifp_bounds: (f64, f64, f64, f64),
     spacing: f64,
-    scale: i64,
 ) -> Vec<Polygon> {
     let mut clips = Vec::new();
     let _p_bounds = get_polygon_group_bounds(placed_polys);
@@ -454,7 +451,7 @@ fn compute_nfp_clips_for_placed(
                 continue;
             }
 
-            let nfps = no_fit_polygon(placed_poly, part_poly, scale);
+            let nfps = no_fit_polygon(placed_poly, part_poly);
             for nfp in nfps {
                 let origin = part_poly.first().copied().unwrap_or((0.0, 0.0));
                 let shifted: Polygon = nfp
@@ -511,7 +508,7 @@ fn build_nfp_candidates(
     part_bounds: (f64, f64, f64, f64),
     placed_polys_list: &[Vec<Polygon>],
     grid: &SpatialGrid,
-    config: &PlacementConfig,
+    _config: &PlacementConfig,
     spacing: f64,
 ) -> Vec<(f64, f64)> {
     let ifp_bounds = get_polygon_group_bounds(ifp_world);
@@ -557,7 +554,6 @@ fn build_nfp_candidates(
             part_polygons,
             ifp_bounds,
             spacing,
-            config.scale,
         ));
     }
 
@@ -675,14 +671,13 @@ pub fn find_valid_position(
 pub fn get_combined_ifp(
     bin: &Polygon,
     part_polygons: &[Polygon],
-    scale: i64,
 ) -> Vec<Polygon> {
     if part_polygons.is_empty() {
         return vec![];
     }
     let mut combined: Option<Vec<Polygon>> = None;
     for poly in part_polygons {
-        let ifps = inner_fit_polygon(bin, poly, scale);
+        let ifps = inner_fit_polygon(bin, poly);
         if ifps.is_empty() {
             return vec![];
         }
@@ -973,7 +968,7 @@ pub fn place_parts(
             &sheet_indices,
             &sheet_world_poly,
             config.spacing,
-            config.scale,
+            10_000_000,
         );
     }
 
@@ -1009,8 +1004,7 @@ fn find_best_sheet(
             continue;
         }
 
-        let ifps =
-            get_combined_ifp(&sheet.polygon, &prepared.polygons, config.scale);
+        let ifps = get_combined_ifp(&sheet.polygon, &prepared.polygons);
         if ifps.is_empty() {
             continue;
         }

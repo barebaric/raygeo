@@ -21,13 +21,11 @@ placement region for a part inside a bin.
     def inner_fit_polygon(
         bin: collections.abc.Sequence[types.Point],
         part: collections.abc.Sequence[types.Point],
-        scale: int,
     ) -> list[types.Polygon]:
         """Compute the Inner-Fit Polygon (IFP) for a part inside a bin.
 
         :param bin: Bin polygon as (x, y) points.
         :param part: Part polygon as (x, y) points.
-        :param scale: Clipper scale factor.
         :returns: List of IFP polygons.
         """
 "#,
@@ -37,9 +35,8 @@ placement region for a part inside a bin.
 fn inner_fit_polygon_py(
     bin: Vec<PyPoint2D>,
     part: Vec<PyPoint2D>,
-    scale: i64,
 ) -> Vec<Vec<(f64, f64)>> {
-    ifp::inner_fit_polygon(&poly_to_points(bin), &poly_to_points(part), scale)
+    ifp::inner_fit_polygon(&poly_to_points(bin), &poly_to_points(part))
 }
 
 #[gen_stub_pyfunction(

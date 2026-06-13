@@ -45,7 +45,7 @@ def filter_candidates_multi_resolution(candidates: list[tuple[float, float]], if
     :returns: Filtered list of (x, y) positions.
     """
 
-def find_valid_position(ifp_polygons: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]], part_polygons: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]], part_hulls: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]], placed_polys_list: collections.abc.Sequence[collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]]], placed_hulls_list: collections.abc.Sequence[collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]]], grid: spatial_grid.SpatialGrid, sheet_world_offset: tuple[float, float], spacing: float = 1, scale: int = 10000000, min_area: float = 1, curve_tolerance: float = 0.5) -> tuple[float, float] | None:
+def find_valid_position(ifp_polygons: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]], part_polygons: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]], part_hulls: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]], placed_polys_list: collections.abc.Sequence[collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]]], placed_hulls_list: collections.abc.Sequence[collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]]], grid: spatial_grid.SpatialGrid, sheet_world_offset: tuple[float, float], spacing: float = 1, min_area: float = 1, curve_tolerance: float = 0.5) -> tuple[float, float] | None:
     r"""
     Find a valid position: heuristic search first, NFP fallback second.
     
@@ -59,13 +59,12 @@ def find_valid_position(ifp_polygons: collections.abc.Sequence[collections.abc.S
     :param grid: SpatialGrid for fast neighbor lookup.
     :param sheet_world_offset: (offset_x, offset_y) for this sheet.
     :param spacing: Minimum spacing between parts.
-    :param scale: Clipper scale factor.
     :param min_area: Minimum overlap area (clipper coords).
     :param curve_tolerance: Curve tolerance for distance filtering.
     :returns: (x, y) position or None.
     """
 
-def find_valid_position_nfp(ifp_polygons: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]], part_polygons: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]], part_hulls: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]], placed_polys_list: collections.abc.Sequence[collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]]], placed_hulls_list: collections.abc.Sequence[collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]]], grid: spatial_grid.SpatialGrid, sheet_world_offset: tuple[float, float], spacing: float = 1, scale: int = 10000000, min_area: float = 1, curve_tolerance: float = 0.5) -> tuple[float, float] | None:
+def find_valid_position_nfp(ifp_polygons: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]], part_polygons: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]], part_hulls: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]], placed_polys_list: collections.abc.Sequence[collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]]], placed_hulls_list: collections.abc.Sequence[collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]]], grid: spatial_grid.SpatialGrid, sheet_world_offset: tuple[float, float], spacing: float = 1, min_area: float = 1, curve_tolerance: float = 0.5) -> tuple[float, float] | None:
     r"""
     Find a valid position using NFP-based region subtraction.
     
@@ -80,13 +79,12 @@ def find_valid_position_nfp(ifp_polygons: collections.abc.Sequence[collections.a
     :param grid: SpatialGrid for fast neighbor lookup.
     :param sheet_world_offset: (offset_x, offset_y) for this sheet.
     :param spacing: Minimum spacing between parts.
-    :param scale: Clipper scale factor.
     :param min_area: Minimum overlap area (clipper coords).
     :param curve_tolerance: Curve tolerance for distance filtering.
     :returns: (x, y) position or None.
     """
 
-def find_valid_position_scored(ifp_polygons: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]], part_polygons: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]], part_hulls: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]], placed_polys_list: collections.abc.Sequence[collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]]], placed_hulls_list: collections.abc.Sequence[collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]]], grid: spatial_grid.SpatialGrid, sheet_world_offset: tuple[float, float], spacing: float = 1, scale: int = 10000000, min_area: float = 1, curve_tolerance: float = 0.5) -> tuple[float, float] | None:
+def find_valid_position_scored(ifp_polygons: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]], part_polygons: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]], part_hulls: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]], placed_polys_list: collections.abc.Sequence[collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]]], placed_hulls_list: collections.abc.Sequence[collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]]], grid: spatial_grid.SpatialGrid, sheet_world_offset: tuple[float, float], spacing: float = 1, min_area: float = 1, curve_tolerance: float = 0.5) -> tuple[float, float] | None:
     r"""
     Find a valid position using heuristic candidate search.
     
@@ -102,7 +100,6 @@ def find_valid_position_scored(ifp_polygons: collections.abc.Sequence[collection
     :param grid: SpatialGrid for fast neighbor lookup.
     :param sheet_world_offset: (offset_x, offset_y) for this sheet.
     :param spacing: Minimum spacing between parts.
-    :param scale: Clipper scale factor.
     :param min_area: Minimum overlap area (clipper coords).
     :param curve_tolerance: Curve tolerance for distance filtering.
     :returns: (x, y) position or None.
@@ -142,7 +139,7 @@ def generate_perimeter_candidates(placed_groups: collections.abc.Sequence[collec
     :returns: List of (x, y) candidate positions.
     """
 
-def place_parts(part_polys: collections.abc.Sequence[collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]]], part_hulls: collections.abc.Sequence[collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]]], sheet_polys: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]], sheet_offsets: collections.abc.Sequence[tuple[float, float]], rotations: collections.abc.Sequence[float], flips_h: collections.abc.Sequence[bool], flips_v: collections.abc.Sequence[bool], spacing: float = 1, scale: int = 10000000, min_area: float = 1, curve_tolerance: float = 0.5) -> list[dict]:
+def place_parts(part_polys: collections.abc.Sequence[collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]]], part_hulls: collections.abc.Sequence[collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]]], sheet_polys: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]], sheet_offsets: collections.abc.Sequence[tuple[float, float]], rotations: collections.abc.Sequence[float], flips_h: collections.abc.Sequence[bool], flips_v: collections.abc.Sequence[bool], spacing: float = 1, min_area: float = 1, curve_tolerance: float = 0.5) -> list[dict]:
     r"""
     Place as many parts as possible onto sheets.
     
@@ -162,7 +159,6 @@ def place_parts(part_polys: collections.abc.Sequence[collections.abc.Sequence[co
     :param flips_h: Horizontal flip flag per part.
     :param flips_v: Vertical flip flag per part.
     :param spacing: Minimum spacing between parts.
-    :param scale: Clipper scale factor.
     :param min_area: Minimum overlap area (clipper coords).
     :param curve_tolerance: Curve tolerance for distance filtering.
     :returns: List of dicts, one per sheet, with keys: placements,

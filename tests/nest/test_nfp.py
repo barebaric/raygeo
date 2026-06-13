@@ -8,30 +8,30 @@ class TestNoFitPolygon:
 
     def test_empty_static(self):
         orbiting = [(0.0, 0.0), (10.0, 0.0), (10.0, 10.0), (0.0, 10.0)]
-        result = nfp.no_fit_polygon([], orbiting, 10000000)
+        result = nfp.no_fit_polygon([], orbiting)
         assert result == []
 
     def test_empty_orbiting(self):
         static = [(0.0, 0.0), (100.0, 0.0), (100.0, 100.0), (0.0, 100.0)]
-        result = nfp.no_fit_polygon(static, [], 10000000)
+        result = nfp.no_fit_polygon(static, [])
         assert result == []
 
     def test_static_too_few_points(self):
         static = [(0.0, 0.0), (10.0, 0.0)]
         orbiting = [(0.0, 0.0), (5.0, 0.0), (5.0, 5.0), (0.0, 5.0)]
-        result = nfp.no_fit_polygon(static, orbiting, 10000000)
+        result = nfp.no_fit_polygon(static, orbiting)
         assert result == []
 
     def test_orbiting_too_few_points(self):
         static = [(0.0, 0.0), (100.0, 0.0), (100.0, 100.0), (0.0, 100.0)]
         orbiting = [(0.0, 0.0), (5.0, 0.0)]
-        result = nfp.no_fit_polygon(static, orbiting, 10000000)
+        result = nfp.no_fit_polygon(static, orbiting)
         assert result == []
 
     def test_rectangle_outside(self):
         static = [(0.0, 0.0), (20.0, 0.0), (20.0, 20.0), (0.0, 20.0)]
         orbiting = [(0.0, 0.0), (10.0, 0.0), (10.0, 10.0), (0.0, 10.0)]
-        result = nfp.no_fit_polygon(static, orbiting, 10000000)
+        result = nfp.no_fit_polygon(static, orbiting)
         assert len(result) >= 1
         for nfp_poly in result:
             assert len(nfp_poly) >= 3
@@ -39,7 +39,7 @@ class TestNoFitPolygon:
     def test_triangle_outside(self):
         static = [(0.0, 0.0), (30.0, 0.0), (15.0, 30.0)]
         orbiting = [(0.0, 0.0), (10.0, 0.0), (5.0, 10.0)]
-        result = nfp.no_fit_polygon(static, orbiting, 10000000)
+        result = nfp.no_fit_polygon(static, orbiting)
         assert len(result) >= 0
 
     def test_complex_polygon(self):
@@ -52,7 +52,7 @@ class TestNoFitPolygon:
             (0.0, 50.0),
         ]
         orbiting = [(0.0, 0.0), (15.0, 0.0), (15.0, 15.0), (0.0, 15.0)]
-        result = nfp.no_fit_polygon(static, orbiting, 10000000)
+        result = nfp.no_fit_polygon(static, orbiting)
         assert len(result) >= 0
 
     def test_concave_polygon(self):
@@ -67,7 +67,7 @@ class TestNoFitPolygon:
             (0.0, 75.0),
         ]
         orbiting = [(0.0, 0.0), (10.0, 0.0), (10.0, 10.0), (0.0, 10.0)]
-        result = nfp.no_fit_polygon(static, orbiting, 10000000)
+        result = nfp.no_fit_polygon(static, orbiting)
         assert len(result) >= 0
 
 
@@ -75,7 +75,6 @@ class TestNfpConvexFast:
     """Tests for nfp_convex_fast function."""
 
     def test_convex_rectangles(self):
-        scale = 10000000
         static = [
             (0, 0),
             (200000000, 0),
@@ -88,7 +87,7 @@ class TestNfpConvexFast:
             (100000000, 100000000),
             (0, 100000000),
         ]
-        result = nfp.nfp_convex_fast(static, orbiting, scale)
+        result = nfp.nfp_convex_fast(static, orbiting)
         assert len(result) >= 1
         for poly in result:
             assert len(poly) >= 3
@@ -98,7 +97,6 @@ class TestNfpMinkowski:
     """Tests for nfp_minkowski function."""
 
     def test_basic(self):
-        scale = 10000000
         static = [
             (0, 0),
             (1000000000, 0),
@@ -111,13 +109,12 @@ class TestNfpMinkowski:
             (200000000, 200000000),
             (0, 200000000),
         ]
-        result = nfp.nfp_minkowski(static, orbiting, scale)
+        result = nfp.nfp_minkowski(static, orbiting)
         assert len(result) >= 1
         for poly in result:
             assert len(poly) >= 3
 
     def test_concave(self):
-        scale = 10000000
         static = [
             (0, 0),
             (500000000, 0),
@@ -134,7 +131,7 @@ class TestNfpMinkowski:
             (100000000, 100000000),
             (0, 100000000),
         ]
-        result = nfp.nfp_minkowski(static, orbiting, scale)
+        result = nfp.nfp_minkowski(static, orbiting)
         assert len(result) >= 0
 
 

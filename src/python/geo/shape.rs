@@ -2865,21 +2865,18 @@ fn translate_polygons_numpy_py(
     python = r#"
     import typing
 
-    def to_clipper_numpy(polygon: typing.Any, scale: int = 10000000) -> list[tuple[int, int]]:
+    def to_clipper_numpy(polygon: typing.Any) -> list[tuple[int, int]]:
         """Convert a polygon to Clipper coordinates.
 
         :param polygon: Polygon as numpy array or list of tuples.
-        :param scale: Scale factor for integer conversion.
         :returns: Polygon with integer coordinates for Clipper.
         """
 "#,
     module = "raygeo.geo.shape.polygon"
 )]
 #[pyfunction(name = "to_clipper_numpy")]
-#[pyo3(signature = (polygon, scale=10_000_000))]
 fn to_clipper_numpy_py(
     polygon: &Bound<'_, PyAny>,
-    scale: i64,
 ) -> PyResult<Vec<(i64, i64)>> {
     let points: Vec<(f64, f64)> =
         if let Ok(arr) = polygon.extract::<Bound<'_, PyArray2<f64>>>() {
@@ -2899,7 +2896,7 @@ fn to_clipper_numpy_py(
             "polygon must be an (N, 2) numpy array or list of (x, y) tuples",
         ));
         };
-    Ok(to_clipper_from_points(&points, scale as f64))
+    Ok(to_clipper_from_points(&points, 10_000_000.0))
 }
 
 #[gen_stub_pyfunction(

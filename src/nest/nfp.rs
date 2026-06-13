@@ -2,40 +2,34 @@ use crate::geo::algo::minkowski::{
     convolve_point_sequences, get_polygon_minkowski_sum_convex,
 };
 use crate::geo::shape::polygon::{
-    get_polygon_signed_area, get_polygons_union, is_polygon_convex,
+    get_polygon_signed_area, get_polygons_union, int_path_to_polygon,
+    is_polygon_convex, polygon_to_int_path,
 };
 use crate::types::{IntPolygon, Polygon};
+
+const CLIPPER_SCALE: f64 = 10_000_000.0;
 
 pub fn no_fit_polygon(
     static_poly: &Polygon,
     orbiting: &Polygon,
-    scale: i64,
 ) -> Vec<Polygon> {
     if static_poly.len() < 3 || orbiting.len() < 3 {
         return vec![];
     }
 
-    let scale_f = scale as f64;
-    let static_int: IntPolygon = static_poly
-        .iter()
-        .map(|(x, y)| ((x * scale_f) as i64, (y * scale_f) as i64))
-        .collect();
-    let orbiting_int: IntPolygon = orbiting
-        .iter()
-        .map(|(x, y)| ((x * scale_f) as i64, (y * scale_f) as i64))
-        .collect();
+    let static_int = polygon_to_int_path(static_poly);
+    let orbiting_int = polygon_to_int_path(orbiting);
 
     if is_polygon_convex(static_poly) && is_polygon_convex(orbiting) {
-        nfp_convex_fast(&static_int, &orbiting_int, scale)
+        nfp_convex_fast(&static_int, &orbiting_int)
     } else {
-        nfp_minkowski(&static_int, &orbiting_int, scale)
+        nfp_minkowski(&static_int, &orbiting_int)
     }
 }
 
 pub fn nfp_convex_fast(
     static_poly: &IntPolygon,
     orbiting: &IntPolygon,
-    scale: i64,
 ) -> Vec<Polygon> {
     if static_poly.len() < 3 || orbiting.len() < 3 {
         return vec![];
@@ -43,7 +37,6 @@ pub fn nfp_convex_fast(
 
     let x_shift = orbiting[0].0;
     let y_shift = orbiting[0].1;
-    let scale_f = scale as f64;
 
     let orbiting_negated: IntPolygon =
         orbiting.iter().map(|(x, y)| (-x, -y)).collect();
@@ -54,16 +47,11 @@ pub fn nfp_convex_fast(
     let mut results = Vec::new();
     for path in &nfp_paths {
         if path.len() >= 3 {
-            let shifted: Polygon = path
+            let shifted: IntPolygon = path
                 .iter()
-                .map(|(x, y)| {
-                    (
-                        (*x + x_shift) as f64 / scale_f,
-                        (*y + y_shift) as f64 / scale_f,
-                    )
-                })
+                .map(|(x, y)| (*x + x_shift, *y + y_shift))
                 .collect();
-            results.push(shifted);
+            results.push(int_path_to_polygon(&shifted));
         }
     }
     results
@@ -72,7 +60,6 @@ pub fn nfp_convex_fast(
 pub fn nfp_minkowski(
     static_poly: &IntPolygon,
     orbiting: &IntPolygon,
-    scale: i64,
 ) -> Vec<Polygon> {
     if static_poly.len() < 3 || orbiting.len() < 3 {
         return vec![];
@@ -80,19 +67,12 @@ pub fn nfp_minkowski(
 
     let x_shift = orbiting[0].0;
     let y_shift = orbiting[0].1;
-    let scale_f = scale as f64;
 
     let orbiting_negated: IntPolygon =
         orbiting.iter().map(|(x, y)| (-x, -y)).collect();
 
-    let static_float: Polygon = static_poly
-        .iter()
-        .map(|(x, y)| (*x as f64 / scale_f, *y as f64 / scale_f))
-        .collect();
-    let orbiting_neg_float: Polygon = orbiting_negated
-        .iter()
-        .map(|(x, y)| (*x as f64 / scale_f, *y as f64 / scale_f))
-        .collect();
+    let static_float = int_path_to_polygon(static_poly);
+    let orbiting_neg_float = int_path_to_polygon(&orbiting_negated);
 
     let mut subjects: Vec<Polygon> = Vec::new();
 
@@ -100,11 +80,7 @@ pub fn nfp_minkowski(
         convolve_point_sequences(static_poly, &orbiting_negated);
     for para in &parallelograms {
         if para.len() >= 3 {
-            let p: Polygon = para
-                .iter()
-                .map(|(x, y)| (*x as f64 / scale_f, *y as f64 / scale_f))
-                .collect();
-            subjects.push(p);
+            subjects.push(int_path_to_polygon(para));
         }
     }
 
@@ -130,8 +106,8 @@ pub fn nfp_minkowski(
 
     let union_result = get_polygons_union(&subjects);
 
-    let x_shift_f = x_shift as f64 / scale_f;
-    let y_shift_f = y_shift as f64 / scale_f;
+    let x_shift_f = x_shift as f64 / CLIPPER_SCALE;
+    let y_shift_f = y_shift as f64 / CLIPPER_SCALE;
 
     let mut results = Vec::new();
     for poly in &union_result {

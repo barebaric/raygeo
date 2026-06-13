@@ -3,15 +3,62 @@
 r"""
 Path analysis utilities for inspecting and cleaning geometry data.
 
-Provides functions for removing duplicate points from point sequences
-and extracting individual points from path data.
+Provides functions for removing duplicate points from point sequences,
+extracting subpath vertices, computing subpath/geometry area, and
+determining path winding order.
 """
 
 import collections.abc
+from raygeo import geo
 from raygeo.geo import types
 __all__ = [
+    "get_area",
+    "get_path_winding_order",
+    "get_subpath_area",
+    "get_subpath_vertices",
     "remove_duplicates",
 ]
+
+def get_area(geometry: geo.Geometry) -> float:
+    r"""
+    Compute the total unsigned area enclosed by the geometry.
+    
+    Sums all subpaths (outer + inner). Returns 0 for empty or open geometry.
+    
+    :param geometry: Geometry to compute area from.
+    :returns: Total unsigned area.
+    """
+
+def get_path_winding_order(geometry: geo.Geometry, start_cmd_index: int) -> str:
+    r"""
+    Determine the winding order of a subpath.
+    
+    :param geometry: Geometry to analyze.
+    :param start_cmd_index: Index of the starting command.
+    :returns: ``"ccw"``, ``"cw"``, or ``"unknown"``.
+    """
+
+def get_subpath_area(geometry: geo.Geometry, start_cmd_index: int) -> float:
+    r"""
+    Compute the signed area of a subpath using the shoelace formula.
+    
+    Positive area is CCW, negative is CW. Returns 0 for unclosed subpaths.
+    
+    :param geometry: Geometry to compute area from.
+    :param start_cmd_index: Index of the starting command.
+    :returns: Signed area.
+    """
+
+def get_subpath_vertices(geometry: geo.Geometry, start_cmd_index: int) -> list[tuple[float, float]]:
+    r"""
+    Extract vertices from a subpath starting at the given command index.
+    
+    Linearizes arcs and beziers into vertex sequences.
+    
+    :param geometry: Geometry to extract vertices from.
+    :param start_cmd_index: Index of the starting command.
+    :returns: List of (x, y) vertices.
+    """
 
 def remove_duplicates(points: collections.abc.Sequence[types.Point]) -> types.Polygon:
     r"""

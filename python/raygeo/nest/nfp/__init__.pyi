@@ -17,33 +17,30 @@ __all__ = [
     "polygon_to_key",
 ]
 
-def nfp_convex_fast(static_poly: collections.abc.Sequence[tuple[int, int]], orbiting: collections.abc.Sequence[tuple[int, int]], scale: int) -> list[list[tuple[float, float]]]:
+def nfp_convex_fast(static_poly: collections.abc.Sequence[tuple[int, int]], orbiting: collections.abc.Sequence[tuple[int, int]]) -> list[list[tuple[float, float]]]:
     r"""
     Fast NFP for convex polygon pairs.
     
     :param static_poly: Static polygon as integer points.
     :param orbiting: Orbiting polygon as integer points.
-    :param scale: Clipper scale factor.
     :returns: List of NFP polygons.
     """
 
-def nfp_minkowski(static_poly: collections.abc.Sequence[tuple[int, int]], orbiting: collections.abc.Sequence[tuple[int, int]], scale: int) -> list[list[tuple[float, float]]]:
+def nfp_minkowski(static_poly: collections.abc.Sequence[tuple[int, int]], orbiting: collections.abc.Sequence[tuple[int, int]]) -> list[list[tuple[float, float]]]:
     r"""
     General NFP using Minkowski sum with Clipper union.
     
     :param static_poly: Static polygon as integer points.
     :param orbiting: Orbiting polygon as integer points.
-    :param scale: Clipper scale factor.
     :returns: List of NFP polygons.
     """
 
-def no_fit_polygon(static_poly: collections.abc.Sequence[types.Point], orbiting: collections.abc.Sequence[types.Point], scale: int) -> list[types.Polygon]:
+def no_fit_polygon(static_poly: collections.abc.Sequence[types.Point], orbiting: collections.abc.Sequence[types.Point]) -> list[types.Polygon]:
     r"""
     Compute the No-Fit Polygon (NFP) for two polygons.
     
     :param static_poly: Static polygon as (x, y) points.
     :param orbiting: Orbiting polygon as (x, y) points.
-    :param scale: Clipper scale factor.
     :returns: List of NFP polygons.
     """
 
