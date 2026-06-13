@@ -26,11 +26,13 @@ pub fn register(algo_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     Ok(())
 }
 
-fn points_to_geometry(pts: &[crate::types::Point]) -> Option<crate::Geometry> {
-    if pts.len() < 3 {
+fn points_to_geometry(
+    pts: &[crate::types::Point],
+) -> Option<crate::geo::geometry::Geometry> {
+    if pts.len() < 2 {
         return None;
     }
-    let mut geo = crate::Geometry::new();
+    let mut geo = crate::geo::geometry::Geometry::new();
     geo.move_to(pts[0].0, pts[0].1, 0.0);
     for p in &pts[1..] {
         geo.line_to(p.0, p.1, 0.0);

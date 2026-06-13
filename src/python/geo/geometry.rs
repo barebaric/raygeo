@@ -25,9 +25,10 @@ use crate::geo::algo::topology::{
     normalize_winding_orders, remove_inner_edges, reverse_contour,
     split_inner_and_outer_contours, split_into_components, split_into_contours,
 };
+use crate::geo::geometry::Geometry as CoreGeometry;
 use crate::geo::math::map_geometry_to_frame;
 use crate::geo::query::find_closest_point_on_path_from_array;
-use crate::{Command as CoreCommand, Geometry as CoreGeometry, Point};
+use crate::types::{Command as CoreCommand, Point};
 
 #[gen_stub_pyclass]
 #[pyclass(module = "raygeo.geo", name = "Move", frozen, skip_from_py_object)]

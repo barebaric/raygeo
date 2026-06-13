@@ -16,7 +16,7 @@ use crate::geo::algo::fitting::{
     flatten_to_points, get_polyline_arc_deviation, get_polyline_line_deviation,
     linearize_geometry, project_circle_center_to_bisector,
 };
-use crate::Geometry as CoreGeometry;
+use crate::geo::geometry::Geometry as CoreGeometry;
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::gen_stub_pyfunction;
 

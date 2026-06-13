@@ -14,7 +14,8 @@
 //! ## Usage
 //!
 //! ```rust
-//! use raygeo::{Geometry, Point};
+//! use raygeo::geo::Geometry;
+//! use raygeo::types::Point;
 //!
 //! let mut geo = Geometry::new();
 //! geo.move_to(0.0, 0.0, 0.0);
@@ -40,7 +41,6 @@ pub use constants::{
     EPSILON_MEDIUM, EPSILON_MERGE, EPSILON_NEST,
 };
 pub use error::{AxisRepr, RaygeoError, RaygeoResult};
-pub use geo::geometry::Geometry;
 pub use ops::axis::Axis;
 pub use ops::container::Ops;
 pub use ops::enums::{CommandCategory, CommandType, SectionType};
@@ -54,7 +54,7 @@ pub use ops::types::{MarkerCmd, MoveCmd, OpCategory, OpNode, StateCmd};
 pub use types::{
     BezierControls, BezierSplit, Command, ContourData, CubicBezier, Edge,
     GeometryPair, IntPoint, IntPolygon, Point, Point3D, Polygon, Polygon3D,
-    Rect, Rect3D, Segment3D, WindingOrder,
+    Rect3D, Segment3D, WindingOrder,
 };
 
 // ── Python bindings (behind "python" feature) ─────────────────────
@@ -84,12 +84,6 @@ use pyo3_stub_gen::define_stub_info_gatherer;
 
 #[cfg(feature = "python")]
 define_stub_info_gatherer!(stub_info);
-
-#[cfg(feature = "python")]
-pyo3_stub_gen::reexport_module_members!("raygeo" from "raygeo.geo"; "Geometry");
-
-#[cfg(feature = "python")]
-pyo3_stub_gen::reexport_module_members!("raygeo" from "raygeo.ops"; "Ops");
 
 #[cfg(feature = "python")]
 pyo3_stub_gen::module_doc!("raygeo", "{}", MODULE_DOC);

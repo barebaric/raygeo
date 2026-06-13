@@ -5,9 +5,9 @@
 //! starting point (overcut) ensures a clean cut through the full contour.
 
 use crate::constants::EPSILON_COLLINEAR;
+use crate::geo::geometry::Geometry;
 use crate::geo::query::extract_overcut_rows;
 use crate::types::Command;
-use crate::Geometry;
 
 /// Apply overcut to a closed geometry.
 pub fn apply_overcut(geo: &Geometry, overcut: f64) -> Geometry {

@@ -239,7 +239,7 @@ pub enum WindingOrder {
 #[derive(Clone, Debug)]
 pub struct ContourData {
     /// The geometric data of the contour.
-    pub geo: super::Geometry,
+    pub geo: crate::geo::geometry::Geometry,
     /// Whether the contour forms a closed path.
     pub is_closed: bool,
     /// List of vertices defining the contour.

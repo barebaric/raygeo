@@ -820,7 +820,7 @@ impl Ops {
     }
 
     pub fn from_geometry(
-        geometry: &crate::Geometry,
+        geometry: &crate::geo::geometry::Geometry,
     ) -> Result<Self, crate::RaygeoError> {
         let mut ops = Ops::new();
         if geometry.data.is_empty() {
@@ -878,8 +878,8 @@ impl Ops {
         Ok(ops)
     }
 
-    pub fn to_geometry(&self) -> crate::Geometry {
-        let mut geo = crate::Geometry::new();
+    pub fn to_geometry(&self) -> crate::geo::geometry::Geometry {
+        let mut geo = crate::geo::geometry::Geometry::new();
         for node in &self.commands {
             if let OpCategory::Moving { end, cmd } = &node.category {
                 match cmd {
