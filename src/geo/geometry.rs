@@ -50,24 +50,27 @@ impl Geometry {
 
     /// Moves the current position to the specified point.
     /// Starts a new subpath; subsequent commands will continue from this point.
-    pub fn move_to(&mut self, x: f64, y: f64, z: f64) {
+    pub fn move_to(&mut self, x: f64, y: f64, z: f64) -> &mut Self {
         self.last_move_to = (x, y, z);
         self.data.push(Command::Move { end: (x, y, z) });
+        self
     }
 
     /// Draws a straight line from the current position to the specified point.
-    pub fn line_to(&mut self, x: f64, y: f64, z: f64) {
+    pub fn line_to(&mut self, x: f64, y: f64, z: f64) -> &mut Self {
         self.data.push(Command::Line { end: (x, y, z) });
+        self
     }
 
     /// Closes the current subpath by drawing a line back to the starting point.
     /// The starting point is the position of the last `move_to` command.
-    pub fn close_path(&mut self) {
+    pub fn close_path(&mut self) -> &mut Self {
         self.line_to(
             self.last_move_to.0,
             self.last_move_to.1,
             self.last_move_to.2,
         );
+        self
     }
 
     /// Draws an arc from the current position to the specified endpoint.
@@ -84,13 +87,14 @@ impl Geometry {
         j: f64,
         clockwise: bool,
         z: f64,
-    ) {
+    ) -> &mut Self {
         self.uniform_scalable = false;
         self.data.push(Command::Arc {
             end: (x, y, z),
             center_offset: (i, j),
             clockwise,
         });
+        self
     }
 
     /// Draws a cubic Bezier curve from the current position to the endpoint.
@@ -99,13 +103,14 @@ impl Geometry {
     /// - `c1`: First control point
     /// - `c2`: Second control point
     /// - `p1`: End point (the start point is the current position)
-    pub fn bezier_to(&mut self, controls: BezierControls, z: f64) {
+    pub fn bezier_to(&mut self, controls: BezierControls, z: f64) -> &mut Self {
         let (c1, c2, p1) = controls;
         self.data.push(Command::Bezier {
             end: (p1.0, p1.1, z),
             control1: c1,
             control2: c2,
         });
+        self
     }
 
     /// Returns a shared reference to the command data.
@@ -140,9 +145,10 @@ impl Geometry {
     }
 
     /// Clears all data and resets the geometry.
-    pub fn clear(&mut self) {
+    pub fn clear(&mut self) -> &mut Self {
         self.data.clear();
         self.uniform_scalable = true;
+        self
     }
 
     /// Returns the axis-aligned bounding rectangle of the geometry.
@@ -282,9 +288,9 @@ impl Geometry {
 
     /// Applies an affine transformation matrix to the geometry in place.
     /// The matrix is a 4x4 transformation matrix.
-    pub fn transform(&mut self, matrix: &[[f64; 4]; 4]) {
+    pub fn transform(&mut self, matrix: &[[f64; 4]; 4]) -> &mut Self {
         if self.data.is_empty() {
-            return;
+            return self;
         }
         self.data = crate::geo::math::apply_affine_transform_to_array(
             &self.data, matrix,
@@ -309,14 +315,16 @@ impl Geometry {
                 + matrix[2][2] * last_move_vec[2]
                 + matrix[2][3] * last_move_vec[3],
         );
+        self
     }
 
     /// Extends this geometry by appending all commands from another geometry.
-    pub fn extend(&mut self, other: &Geometry) {
+    pub fn extend(&mut self, other: &Geometry) -> &mut Self {
         if !other.data.is_empty() {
             self.data.extend(other.data.clone());
         }
         self.uniform_scalable = self.uniform_scalable && other.uniform_scalable;
+        self
     }
 
     /// Returns the geometry decomposed into continuous segments.

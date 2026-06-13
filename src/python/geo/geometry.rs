@@ -697,8 +697,12 @@ impl Geometry {
                             Err(_) => continue,
                         };
                         match cmd_type.as_str() {
-                            "M" => geo.inner.move_to(x, y, z),
-                            "L" => geo.inner.line_to(x, y, z),
+                            "M" => {
+                                geo.inner.move_to(x, y, z);
+                            }
+                            "L" => {
+                                geo.inner.line_to(x, y, z);
+                            }
                             "A" => {
                                 if let (
                                     Some(i_val),
@@ -786,8 +790,12 @@ impl Geometry {
                             }
                         };
                         match cmd_type.as_str() {
-                            "MoveToCommand" => geo.inner.move_to(x, y, z),
-                            "LineToCommand" => geo.inner.line_to(x, y, z),
+                            "MoveToCommand" => {
+                                geo.inner.move_to(x, y, z);
+                            }
+                            "LineToCommand" => {
+                                geo.inner.line_to(x, y, z);
+                            }
                             "CurveToCommand" | "BezierToCommand" => {
                                 if let (Ok(Some(c1)), Ok(Some(c2))) = (
                                     cmd_dict.get_item("control1"),
@@ -834,7 +842,9 @@ impl Geometry {
                                     geo.inner.arc_to(x, y, ci, cj, cw, z);
                                 }
                             }
-                            "ClosePathCommand" => geo.inner.close_path(),
+                            "ClosePathCommand" => {
+                                geo.inner.close_path();
+                            }
                             _ => {}
                         }
                     }

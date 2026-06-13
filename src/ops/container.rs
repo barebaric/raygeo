@@ -883,19 +883,27 @@ impl Ops {
         for node in &self.commands {
             if let OpCategory::Moving { end, cmd } = &node.category {
                 match cmd {
-                    MoveCmd::MoveTo => geo.move_to(end.0, end.1, end.2),
-                    MoveCmd::LineTo => geo.line_to(end.0, end.1, end.2),
-                    MoveCmd::ArcTo { center, cw } => {
-                        geo.arc_to(end.0, end.1, center.0, center.1, *cw, end.2)
+                    MoveCmd::MoveTo => {
+                        geo.move_to(end.0, end.1, end.2);
                     }
-                    MoveCmd::BezierTo { control1, control2 } => geo.bezier_to(
-                        (
-                            (control1.0, control1.1),
-                            (control2.0, control2.1),
-                            (end.0, end.1),
-                        ),
-                        end.2,
-                    ),
+                    MoveCmd::LineTo => {
+                        geo.line_to(end.0, end.1, end.2);
+                    }
+                    MoveCmd::ArcTo { center, cw } => {
+                        geo.arc_to(
+                            end.0, end.1, center.0, center.1, *cw, end.2,
+                        );
+                    }
+                    MoveCmd::BezierTo { control1, control2 } => {
+                        geo.bezier_to(
+                            (
+                                (control1.0, control1.1),
+                                (control2.0, control2.1),
+                                (end.0, end.1),
+                            ),
+                            end.2,
+                        );
+                    }
                     _ => {}
                 }
             }
