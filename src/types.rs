@@ -1,6 +1,5 @@
-use std::f64::consts::PI;
-
 use crate::constants::EPSILON_COLLINEAR;
+use crate::geo::shape::arc::get_arc_sweep;
 
 /// A 2D point represented as (x, y) coordinates.
 pub type Point = (f64, f64);
@@ -91,16 +90,8 @@ impl Command {
                 let start_angle =
                     (start_point.1 - cy).atan2(start_point.0 - cx);
                 let end_angle = (end.1 - cy).atan2(end.0 - cx);
-                let mut angle_span = end_angle - start_angle;
-                if angle_span.abs() < EPSILON_COLLINEAR {
-                    angle_span = if *clockwise { -2.0 * PI } else { 2.0 * PI };
-                } else if *clockwise {
-                    if angle_span > EPSILON_COLLINEAR {
-                        angle_span -= 2.0 * PI;
-                    }
-                } else if angle_span < -EPSILON_COLLINEAR {
-                    angle_span += 2.0 * PI;
-                }
+                let angle_span =
+                    get_arc_sweep(start_angle, end_angle, *clockwise);
                 (angle_span * radius).abs()
             }
             Command::Bezier {
@@ -168,16 +159,8 @@ impl Command {
                 let radius_end = (ex - cx).hypot(ey - cy);
                 let start_angle = (sy - cy).atan2(sx - cx);
                 let end_angle = (ey - cy).atan2(ex - cx);
-                let mut angle_span = end_angle - start_angle;
-                if angle_span.abs() < EPSILON_COLLINEAR {
-                    angle_span = if *clockwise { -2.0 * PI } else { 2.0 * PI };
-                } else if *clockwise {
-                    if angle_span > EPSILON_COLLINEAR {
-                        angle_span -= 2.0 * PI;
-                    }
-                } else if angle_span < -EPSILON_COLLINEAR {
-                    angle_span += 2.0 * PI;
-                }
+                let angle_span =
+                    get_arc_sweep(start_angle, end_angle, *clockwise);
                 let mid_angle = start_angle + t * angle_span;
                 let radius = radius_start + t * (radius_end - radius_start);
                 let nx = cx + radius * mid_angle.cos();

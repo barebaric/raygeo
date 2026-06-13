@@ -9,6 +9,7 @@
 
 use std::f64::consts::PI;
 
+use crate::constants::EPSILON_COLLINEAR;
 use crate::geo::shape::line::{
     does_line_segment_intersect_rect, get_line_segment_closest_point,
 };
@@ -37,8 +38,25 @@ pub fn normalize_angle(angle: f64) -> f64 {
     ((angle % (2.0 * PI)) + 2.0 * PI) % (2.0 * PI)
 }
 
+/// Compute the signed sweep angle for an arc, handling direction and
+/// full-circle detection when the start and end angles are nearly equal.
+pub fn get_arc_sweep(start_angle: f64, end_angle: f64, clockwise: bool) -> f64 {
+    let mut sweep = end_angle - start_angle;
+    if sweep.abs() < EPSILON_COLLINEAR {
+        sweep = if clockwise { -2.0 * PI } else { 2.0 * PI };
+    } else if clockwise {
+        if sweep > EPSILON_COLLINEAR {
+            sweep -= 2.0 * PI;
+        }
+    } else if sweep < -EPSILON_COLLINEAR {
+        sweep += 2.0 * PI;
+    }
+    sweep
+}
+
 /// Computes the start angle, end angle, and sweep angle for an arc.
-/// Handles the direction (CW/CCW) to compute the correct sweep.
+/// Handles the direction (CW/CCW) to compute the correct sweep,
+/// including full-circle detection when start ≈ end.
 pub fn get_arc_angles(
     start_pos: Point,
     end_pos: Point,
@@ -47,19 +65,7 @@ pub fn get_arc_angles(
 ) -> (f64, f64, f64) {
     let start_angle = (start_pos.1 - center.1).atan2(start_pos.0 - center.0);
     let end_angle = (end_pos.1 - center.1).atan2(end_pos.0 - center.0);
-
-    // Compute sweep angle, adjusting for direction
-    let mut sweep = end_angle - start_angle;
-    if clockwise {
-        if sweep > 0.0 {
-            sweep -= 2.0 * PI;
-        }
-    } else {
-        if sweep < 0.0 {
-            sweep += 2.0 * PI;
-        }
-    }
-
+    let sweep = get_arc_sweep(start_angle, end_angle, clockwise);
     (start_angle, end_angle, sweep)
 }
 

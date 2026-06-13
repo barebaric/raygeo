@@ -12,6 +12,7 @@ from raygeo.geo.shape.arc import (
     get_arc_closest_point,
     get_arc_direction,
     get_arc_midpoint,
+    get_arc_sweep,
     is_angle_between,
     is_arc_inside_polygons,
     linearize_arc,
@@ -330,6 +331,22 @@ def test_get_arc_midpoint():
     # Midpoint should be at the North point
     expected_midpoint_cw = (center[0], center[1] + radius)
     assert midpoint_cw == pytest.approx(expected_midpoint_cw)
+
+
+@pytest.mark.parametrize(
+    "start, end, cw, expected",
+    [
+        (0.0, math.pi / 2, False, math.pi / 2),
+        (0.0, math.pi / 2, True, -3 * math.pi / 2),
+        (0.0, 0.0, False, 2 * math.pi),
+        (0.0, 0.0, True, -2 * math.pi),
+        (math.pi / 2, 0.0, False, 3 * math.pi / 2),
+        (math.pi / 2, 0.0, True, -math.pi / 2),
+    ],
+)
+def test_get_arc_sweep(start, end, cw, expected):
+    result = get_arc_sweep(start, end, cw)
+    assert result == pytest.approx(expected)
 
 
 # Mock object for arc commands used in find_closest_point_on_arc

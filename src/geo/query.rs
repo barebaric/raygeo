@@ -7,11 +7,11 @@
 //! - Bounding box intersection tests
 //! - Path segment extraction
 
-use std::f64::consts::PI;
-
 use crate::constants::EPSILON_COLLINEAR;
 use crate::geo::algo::analysis::{get_point_at_from_array, segment_length};
-use crate::geo::shape::arc::{get_arc_bounds, get_arc_closest_point};
+use crate::geo::shape::arc::{
+    get_arc_bounds, get_arc_closest_point, get_arc_length,
+};
 use crate::geo::shape::bezier::{
     compute_cubic_bezier_bounds_1d, get_bezier_closest_point,
     linearize_bezier_from_params,
@@ -142,31 +142,12 @@ pub fn get_total_distance_from_array(data: &[Command]) -> f64 {
                 clockwise,
                 ..
             } => {
-                // Arc segment: arc length = radius * angle
-                let center_x = last_point.0 + center_offset.0;
-                let center_y = last_point.1 + center_offset.1;
-                let radius = center_offset.0.hypot(center_offset.1);
-
-                if radius > EPSILON_COLLINEAR {
-                    let start_angle = (last_point.1 - center_y)
-                        .atan2(last_point.0 - center_x);
-                    let end_angle =
-                        (end_point.1 - center_y).atan2(end_point.0 - center_x);
-                    let mut angle_span = end_angle - start_angle;
-
-                    // Normalize to handle full circles
-                    if *clockwise {
-                        if angle_span > EPSILON_COLLINEAR {
-                            angle_span -= 2.0 * PI;
-                        }
-                    } else {
-                        if angle_span < -EPSILON_COLLINEAR {
-                            angle_span += 2.0 * PI;
-                        }
-                    }
-
-                    total_dist += (angle_span * radius).abs();
-                }
+                total_dist += get_arc_length(
+                    (last_point.0, last_point.1),
+                    (end_point.0, end_point.1),
+                    *center_offset,
+                    *clockwise,
+                );
             }
             Command::Bezier {
                 end,

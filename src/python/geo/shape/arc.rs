@@ -13,7 +13,7 @@ use super::super::flex_point::{extract_polygons, PyPoint2D};
 use crate::geo::shape::arc::{
     does_arc_intersect_circle, does_arc_intersect_rect, get_arc_angles,
     get_arc_bounds, get_arc_closest_point, get_arc_direction, get_arc_length,
-    get_arc_midpoint, is_angle_between, is_arc_clockwise,
+    get_arc_midpoint, get_arc_sweep, is_angle_between, is_arc_clockwise,
     is_arc_inside_polygons, linearize_arc, normalize_angle,
 };
 use crate::{Point, Segment3D};
@@ -40,6 +40,7 @@ pub fn register(shape_mod: &Bound<'_, PyModule>) -> PyResult<()> {
         normalize_angle_py,
         linearize_arc_py,
         get_arc_length_py,
+        get_arc_sweep_py,
     );
 
     shape_mod.add_submodule(&m)?;
@@ -156,6 +157,26 @@ fn get_arc_length_py(
     clockwise: bool,
 ) -> f64 {
     get_arc_length(start_pos, end_pos, center_offset, clockwise)
+}
+
+#[gen_stub_pyfunction(
+    python = r#"
+    def get_arc_sweep(start_angle: float, end_angle: float, clockwise: bool) -> float:
+        """Compute the signed sweep angle for an arc.
+
+        Handles direction (CW/CCW) and full-circle detection.
+
+        :param start_angle: Start angle in radians.
+        :param end_angle: End angle in radians.
+        :param clockwise: Whether the arc is clockwise.
+        :returns: Signed sweep angle in radians.
+        """
+"#,
+    module = "raygeo.geo.shape.arc"
+)]
+#[pyfunction(name = "get_arc_sweep")]
+fn get_arc_sweep_py(start_angle: f64, end_angle: f64, clockwise: bool) -> f64 {
+    get_arc_sweep(start_angle, end_angle, clockwise)
 }
 
 #[gen_stub_pyfunction(

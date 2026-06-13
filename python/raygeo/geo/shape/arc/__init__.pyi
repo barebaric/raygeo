@@ -21,6 +21,7 @@ __all__ = [
     "get_arc_direction",
     "get_arc_length",
     "get_arc_midpoint",
+    "get_arc_sweep",
     "is_angle_between",
     "is_arc_clockwise",
     "is_arc_inside_polygons",
@@ -116,6 +117,18 @@ def get_arc_midpoint(start: types.Point, end: types.Point, center: types.Point, 
     :param center: Arc center point (x, y).
     :param clockwise: Whether the arc is clockwise.
     :returns: Midpoint (x, y).
+    """
+
+def get_arc_sweep(start_angle: float, end_angle: float, clockwise: bool) -> float:
+    r"""
+    Compute the signed sweep angle for an arc.
+    
+    Handles direction (CW/CCW) and full-circle detection.
+    
+    :param start_angle: Start angle in radians.
+    :param end_angle: End angle in radians.
+    :param clockwise: Whether the arc is clockwise.
+    :returns: Signed sweep angle in radians.
     """
 
 def is_angle_between(angle: float, start: float, end: float, clockwise: bool) -> bool:
