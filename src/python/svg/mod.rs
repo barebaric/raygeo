@@ -61,7 +61,7 @@ fn py_parse_svg_path_data(
         svg::parse_svg_transform("")
     };
 
-    let geos = svg::parse_svg_path_data(path_data, &matrix, scale_x, scale_y);
+    let geos = svg::parse_svg_path_data(path_data, &matrix, scale_x, scale_y)?;
     Ok(geos.into_iter().map(|g| Geometry { inner: g }).collect())
 }
 
@@ -124,9 +124,9 @@ fn py_svg_string_to_geometries(
     svg_str: &str,
     scale_x: f64,
     scale_y: f64,
-) -> Vec<Geometry> {
-    let geos = svg::svg_string_to_geometries(svg_str, scale_x, scale_y);
-    geos.into_iter().map(|g| Geometry { inner: g }).collect()
+) -> PyResult<Vec<Geometry>> {
+    let geos = svg::svg_string_to_geometries(svg_str, scale_x, scale_y)?;
+    Ok(geos.into_iter().map(|g| Geometry { inner: g }).collect())
 }
 
 #[gen_stub_pyfunction(

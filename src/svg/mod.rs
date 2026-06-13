@@ -1,3 +1,4 @@
+use crate::error::{RaygeoError, RaygeoResult};
 use crate::geo::geometry::Geometry;
 use crate::types::Command;
 
@@ -165,8 +166,13 @@ pub fn parse_svg_path_data(
     transform: &[[f64; 3]; 3],
     scale_x: f64,
     scale_y: f64,
-) -> Vec<Geometry> {
+) -> RaygeoResult<Vec<Geometry>> {
     let tokens = parse_path_tokens(path_data);
+    if tokens.is_empty() && !path_data.trim().is_empty() {
+        return Err(RaygeoError::SvgInvalidPath(
+            "no recognized SVG path commands found".into(),
+        ));
+    }
     let mut geometries = Vec::new();
     let mut current_geo: Option<Geometry> = None;
     let mut pos = (0.0f64, 0.0f64);
@@ -305,18 +311,20 @@ pub fn parse_svg_path_data(
         }
     }
 
-    geometries
+    if geometries.is_empty() {
+        return Err(RaygeoError::SvgEmptyPath);
+    }
+
+    Ok(geometries)
 }
 
 pub fn svg_string_to_geometries(
     svg_str: &str,
     scale_x: f64,
     scale_y: f64,
-) -> Vec<Geometry> {
-    let doc = match roxmltree::Document::parse(svg_str) {
-        Ok(d) => d,
-        Err(_) => return Vec::new(),
-    };
+) -> RaygeoResult<Vec<Geometry>> {
+    let doc = roxmltree::Document::parse(svg_str)
+        .map_err(|e| RaygeoError::SvgParseError(e.to_string()))?;
 
     let mut all_geometries = Vec::new();
     let identity = parse_svg_transform("");
@@ -327,7 +335,12 @@ pub fn svg_string_to_geometries(
         scale_x,
         scale_y,
     );
-    all_geometries
+
+    if all_geometries.is_empty() {
+        return Err(RaygeoError::SvgEmptyPath);
+    }
+
+    Ok(all_geometries)
 }
 
 fn traverse_svg_node(
@@ -344,9 +357,11 @@ fn traverse_svg_node(
     let tag = node.tag_name().name();
     if tag == "path" {
         if let Some(path_data) = node.attribute("d") {
-            let geos =
-                parse_svg_path_data(path_data, &combined, scale_x, scale_y);
-            all_geometries.extend(geos);
+            if let Ok(geos) =
+                parse_svg_path_data(path_data, &combined, scale_x, scale_y)
+            {
+                all_geometries.extend(geos);
+            }
         }
     }
 

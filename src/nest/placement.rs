@@ -225,7 +225,7 @@ fn filter_dist(
         result.sort_by(|a, b| {
             score_position(a.0, a.1)
                 .partial_cmp(&score_position(b.0, b.1))
-                .unwrap()
+                .unwrap_or(std::cmp::Ordering::Less)
         });
     }
     result
@@ -567,7 +567,7 @@ fn build_nfp_candidates(
     candidates.sort_by(|a, b| {
         score_position(a.0, a.1)
             .partial_cmp(&score_position(b.0, b.1))
-            .unwrap()
+            .unwrap_or(std::cmp::Ordering::Less)
     });
     candidates
 }
