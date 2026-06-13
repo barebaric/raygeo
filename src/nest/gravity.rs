@@ -17,7 +17,6 @@ pub fn find_max_slide(
     sheet_poly: &Polygon,
     axis: &str,
     spacing: f64,
-    scale: i64,
 ) -> f64 {
     let (sheet_min_x, sheet_min_y, _, _) = sheet_bounds;
 
@@ -71,7 +70,7 @@ pub fn find_max_slide(
         }
 
         // Check containment within sheet
-        if !is_contained(&test_polys, sheet_poly, scale) {
+        if !is_contained(&test_polys, sheet_poly) {
             step /= 2.0;
             continue;
         }
@@ -90,7 +89,6 @@ pub fn apply_gravity(
     placement_groups: &[Vec<Polygon>],
     sheet_poly: &Polygon,
     spacing: f64,
-    scale: i64,
 ) -> Vec<(f64, f64)> {
     let n = placement_groups.len();
     if n < 2 {
@@ -127,7 +125,6 @@ pub fn apply_gravity(
                 sheet_poly,
                 "y",
                 spacing,
-                scale,
             );
             if dy > MIN_SLIDE {
                 groups[idx] = groups[idx]
@@ -162,7 +159,6 @@ pub fn apply_gravity(
                 sheet_poly,
                 "x",
                 spacing,
-                scale,
             );
             if dx > MIN_SLIDE {
                 groups[idx] = groups[idx]

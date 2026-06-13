@@ -14,7 +14,7 @@ __all__ = [
     "find_max_slide",
 ]
 
-def apply_gravity(placement_groups: collections.abc.Sequence[collections.abc.Sequence[types.Polygon]], sheet_poly: types.Polygon, spacing: float, scale: int) -> list[tuple[float, float]]:
+def apply_gravity(placement_groups: collections.abc.Sequence[collections.abc.Sequence[types.Polygon]], sheet_poly: types.Polygon, spacing: float) -> list[tuple[float, float]]:
     r"""
     Apply gravity sliding to tighten a nesting layout.
     
@@ -24,11 +24,10 @@ def apply_gravity(placement_groups: collections.abc.Sequence[collections.abc.Seq
     :param placement_groups: List of placed parts (each a list of polygons).
     :param sheet_poly: Sheet polygon.
     :param spacing: Minimum spacing between parts.
-    :param scale: Clipper scale factor.
     :returns: List of ``(dx, dy)`` adjustments, one per group.
     """
 
-def find_max_slide(polys: collections.abc.Sequence[types.Polygon], other_polys_list: collections.abc.Sequence[collections.abc.Sequence[types.Polygon]], sheet_bounds: tuple[float, float, float, float], sheet_poly: types.Polygon, axis: str, spacing: float, scale: int) -> float:
+def find_max_slide(polys: collections.abc.Sequence[types.Polygon], other_polys_list: collections.abc.Sequence[collections.abc.Sequence[types.Polygon]], sheet_bounds: tuple[float, float, float, float], sheet_poly: types.Polygon, axis: str, spacing: float) -> float:
     r"""
     Find the maximum distance a part can slide in the negative axis direction.
     
@@ -40,7 +39,6 @@ def find_max_slide(polys: collections.abc.Sequence[types.Polygon], other_polys_l
     :param sheet_poly: Sheet polygon.
     :param axis: ``"x"`` or ``"y"`` — axis to slide along.
     :param spacing: Minimum spacing between parts.
-    :param scale: Clipper scale factor.
     :returns: Maximum slide distance.
     """
 

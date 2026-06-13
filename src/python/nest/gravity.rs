@@ -32,7 +32,6 @@ parts down and left as far as possible without overlapping.
         sheet_poly: types.Polygon,
         axis: str,
         spacing: float,
-        scale: int,
     ) -> float:
         """Find the maximum distance a part can slide in the negative axis direction.
 
@@ -44,7 +43,6 @@ parts down and left as far as possible without overlapping.
         :param sheet_poly: Sheet polygon.
         :param axis: ``"x"`` or ``"y"`` — axis to slide along.
         :param spacing: Minimum spacing between parts.
-        :param scale: Clipper scale factor.
         :returns: Maximum slide distance.
         """
 "#,
@@ -58,7 +56,6 @@ fn find_max_slide_py(
     sheet_poly: Vec<PyPoint2D>,
     axis: String,
     spacing: f64,
-    scale: i64,
 ) -> f64 {
     let parts: Vec<Polygon> = polys.into_iter().map(poly_to_points).collect();
     let others: Vec<Vec<Polygon>> = other_polys_list
@@ -73,7 +70,6 @@ fn find_max_slide_py(
         &sheet,
         &axis,
         spacing,
-        scale,
     )
 }
 
@@ -92,7 +88,6 @@ fn find_max_slide_py(
         ],
         sheet_poly: types.Polygon,
         spacing: float,
-        scale: int,
     ) -> list[tuple[float, float]]:
         """Apply gravity sliding to tighten a nesting layout.
 
@@ -102,7 +97,6 @@ fn find_max_slide_py(
         :param placement_groups: List of placed parts (each a list of polygons).
         :param sheet_poly: Sheet polygon.
         :param spacing: Minimum spacing between parts.
-        :param scale: Clipper scale factor.
         :returns: List of ``(dx, dy)`` adjustments, one per group.
         """
 "#,
@@ -113,14 +107,13 @@ fn apply_gravity_py(
     placement_groups: Vec<Vec<Vec<PyPoint2D>>>,
     sheet_poly: Vec<PyPoint2D>,
     spacing: f64,
-    scale: i64,
 ) -> Vec<(f64, f64)> {
     let groups: Vec<Vec<Polygon>> = placement_groups
         .into_iter()
         .map(|g| g.into_iter().map(poly_to_points).collect())
         .collect();
     let sheet = poly_to_points(sheet_poly);
-    gravity::apply_gravity(&groups, &sheet, spacing, scale)
+    gravity::apply_gravity(&groups, &sheet, spacing)
 }
 
 // ---------------------------------------------------------------------------

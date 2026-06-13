@@ -30,22 +30,22 @@ def _square(x1, y1, x2, y2):
 class TestIsContained:
     def test_empty_inner(self):
         outer = _square(0.0, 0.0, 100.0, 100.0)
-        assert is_contained([], outer, 10000000) is False
+        assert is_contained([], outer) is False
 
     def test_simple_contained(self):
         inner = [_square(10.0, 10.0, 20.0, 20.0)]
         outer = _square(0.0, 0.0, 100.0, 100.0)
-        assert is_contained(inner, outer, 10000000) is True
+        assert is_contained(inner, outer) is True
 
     def test_not_contained(self):
         inner = [_square(-10.0, -10.0, 10.0, 10.0)]
         outer = _square(0.0, 0.0, 100.0, 100.0)
-        assert is_contained(inner, outer, 10000000) is False
+        assert is_contained(inner, outer) is False
 
     def test_partially_outside(self):
         inner = [_square(50.0, 50.0, 150.0, 150.0)]
         outer = _square(0.0, 0.0, 100.0, 100.0)
-        assert is_contained(inner, outer, 10000000) is False
+        assert is_contained(inner, outer) is False
 
 
 class TestAnyOverlap:

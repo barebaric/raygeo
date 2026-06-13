@@ -9,7 +9,7 @@ use super::spatial_grid::SpatialGrid;
 /// Check whether `inner` polygons are fully contained within `outer`.
 ///
 /// Uses a fast bounding-box reject followed by Clipper difference.
-pub fn is_contained(inner: &[Polygon], outer: &Polygon, _scale: i64) -> bool {
+pub fn is_contained(inner: &[Polygon], outer: &Polygon) -> bool {
     if inner.is_empty() || outer.len() < 3 {
         return false;
     }

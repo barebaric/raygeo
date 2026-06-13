@@ -97,28 +97,22 @@ fn rects_intersect(a: (f64, f64, f64, f64), b: (f64, f64, f64, f64)) -> bool {
     def is_contained(
         inner: collections.abc.Sequence[types.Polygon],
         outer: types.Polygon,
-        scale: int,
     ) -> bool:
         """Check if inner polygons are fully contained within outer polygon.
 
         :param inner: List of polygons to check.
         :param outer: Outer polygon.
-        :param scale: Clipper scale factor.
         :returns: True if all inner polygons are inside outer.
         """
 "#,
     module = "raygeo.nest.collision"
 )]
 #[pyfunction(name = "is_contained")]
-fn is_contained_py(
-    inner: Vec<Vec<PyPoint2D>>,
-    outer: Vec<PyPoint2D>,
-    scale: i64,
-) -> bool {
+fn is_contained_py(inner: Vec<Vec<PyPoint2D>>, outer: Vec<PyPoint2D>) -> bool {
     let inner_polys: Vec<Polygon> =
         inner.into_iter().map(poly_to_points).collect();
     let outer_poly = poly_to_points(outer);
-    collision::is_contained(&inner_polys, &outer_poly, scale)
+    collision::is_contained(&inner_polys, &outer_poly)
 }
 
 // ---------------------------------------------------------------------------

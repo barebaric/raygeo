@@ -797,7 +797,7 @@ fn apply_sheet_gravity(
     sheet_indices: &[usize],
     sheet_poly: &Polygon,
     spacing: f64,
-    scale: i64,
+    _scale: i64,
 ) {
     let count = sheet_indices.len();
     if count < 2 {
@@ -811,7 +811,7 @@ fn apply_sheet_gravity(
         .map(|&i| all_placements[i].polygons.clone())
         .collect();
 
-    let adjustments = apply_gravity(&groups, sheet_poly, spacing, scale);
+    let adjustments = apply_gravity(&groups, sheet_poly, spacing);
 
     for (&idx, &(dx, dy)) in sheet_indices.iter().zip(adjustments.iter()) {
         let p = &mut all_placements[idx];

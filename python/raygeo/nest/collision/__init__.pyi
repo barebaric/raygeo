@@ -45,13 +45,12 @@ def any_overlap_hierarchical_grid(candidate_polys: collections.abc.Sequence[nump
     :param spatial_grid: SpatialGrid for fast neighbor lookup.
     """
 
-def is_contained(inner: collections.abc.Sequence[types.Polygon], outer: types.Polygon, scale: int) -> bool:
+def is_contained(inner: collections.abc.Sequence[types.Polygon], outer: types.Polygon) -> bool:
     r"""
     Check if inner polygons are fully contained within outer polygon.
     
     :param inner: List of polygons to check.
     :param outer: Outer polygon.
-    :param scale: Clipper scale factor.
     :returns: True if all inner polygons are inside outer.
     """
 

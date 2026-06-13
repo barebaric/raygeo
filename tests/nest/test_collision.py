@@ -21,22 +21,22 @@ def _p(*args):
 class TestIsContained:
     def test_empty_inner(self):
         outer = [(0.0, 0.0), (100.0, 0.0), (100.0, 100.0), (0.0, 100.0)]
-        assert is_contained([], outer, 10000000) is False
+        assert is_contained([], outer) is False
 
     def test_simple_contained(self):
         inner = [[(10.0, 10.0), (20.0, 10.0), (20.0, 20.0), (10.0, 20.0)]]
         outer = [(0.0, 0.0), (100.0, 0.0), (100.0, 100.0), (0.0, 100.0)]
-        assert is_contained(inner, outer, 10000000) is True
+        assert is_contained(inner, outer) is True
 
     def test_not_contained(self):
         inner = [[(-10.0, -10.0), (10.0, -10.0), (10.0, 10.0), (-10.0, 10.0)]]
         outer = [(0.0, 0.0), (100.0, 0.0), (100.0, 100.0), (0.0, 100.0)]
-        assert is_contained(inner, outer, 10000000) is False
+        assert is_contained(inner, outer) is False
 
     def test_partially_outside(self):
         inner = [[(50.0, 50.0), (150.0, 50.0), (150.0, 150.0), (50.0, 150.0)]]
         outer = [(0.0, 0.0), (100.0, 0.0), (100.0, 100.0), (0.0, 100.0)]
-        assert is_contained(inner, outer, 10000000) is False
+        assert is_contained(inner, outer) is False
 
 
 class TestAnyOverlap:
