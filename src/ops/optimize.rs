@@ -330,72 +330,10 @@ fn split_scanline(move_idx: usize, scan_idx: usize, ops: &Ops) -> Vec<Ops> {
         return Vec::new();
     }
 
-    let start = pv.iter().position(|&b| b != 0);
-    let end = pv.iter().rposition(|&b| b != 0);
-    let (Some(start_nz), Some(end_nz)) = (start, end) else {
-        return Vec::new();
-    };
-
-    if pv[start_nz..=end_nz].iter().all(|&b| b != 0) {
-        let mut result = Ops::new();
-        result.transfer_command_from(ops, move_idx);
-        result.transfer_command_from(ops, scan_idx);
-        return vec![result];
-    }
-
-    let p_start = ops.endpoint(move_idx);
-    let p_end = ops.endpoint(scan_idx);
-    let line_vec = (
-        p_end.0 - p_start.0,
-        p_end.1 - p_start.1,
-        p_end.2 - p_start.2,
-    );
-    let num_steps = pv.len() as f64;
-    let state = ops.preloaded_state(scan_idx).cloned();
-
-    let mut segments = Vec::new();
-    let mut i = 0;
-    while i < pv.len() {
-        if pv[i] == 0 {
-            i += 1;
-            continue;
-        }
-        let seg_start = i;
-        while i < pv.len() && pv[i] != 0 {
-            i += 1;
-        }
-        let seg_end = i;
-
-        let t_start = seg_start as f64 / num_steps;
-        let t_end = seg_end as f64 / num_steps;
-
-        let seg_start_pt = (
-            p_start.0 + t_start * line_vec.0,
-            p_start.1 + t_start * line_vec.1,
-            p_start.2 + t_start * line_vec.2,
-        );
-        let seg_end_pt = (
-            p_start.0 + t_end * line_vec.0,
-            p_start.1 + t_end * line_vec.1,
-            p_start.2 + t_end * line_vec.2,
-        );
-        let power_slice = pv[seg_start..seg_end].to_vec();
-
-        let mut new_ops = Ops::new();
-        new_ops.move_to(seg_start_pt.0, seg_start_pt.1, seg_start_pt.2, None);
-        new_ops.scan_to(
-            seg_end_pt.0,
-            seg_end_pt.1,
-            seg_end_pt.2,
-            Some(power_slice),
-            None,
-        );
-        if let Some(ref s) = state {
-            new_ops.set_state_on_moving(s);
-        }
-        segments.push(new_ops);
-    }
-    segments
+    let mut result = Ops::new();
+    result.transfer_command_from(ops, move_idx);
+    result.transfer_command_from(ops, scan_idx);
+    vec![result]
 }
 
 fn group_mixed_continuity(ops: &Ops) -> Vec<Ops> {

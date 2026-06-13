@@ -461,7 +461,8 @@ class TestOptimizeScanline:
             for i in range(ops.len())
             if ops.command_type(i) == CommandType.SCAN_LINE
         ]
-        assert len(scan_indices) == 2
+        # Scanlines are atomic — never split at zero-power gaps
+        assert len(scan_indices) == 1
 
     def test_overscanned_scanline_not_split(self):
         ops = Ops()
@@ -549,7 +550,8 @@ class TestOptimizeScanline:
             for i in range(ops.len())
             if ops.command_type(i) == CommandType.SCAN_LINE
         ]
-        assert len(scan_indices) == 2
+        # Scanlines are atomic — never split at zero-power gaps
+        assert len(scan_indices) == 1
         for scan_idx in scan_indices:
             move_idx = scan_idx - 1
             move_state = ops.preloaded_state(move_idx)
