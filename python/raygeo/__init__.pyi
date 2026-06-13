@@ -18,7 +18,7 @@ Submodules:
 Examples:
     Creating and inspecting geometry:
 
-    >>> from raygeo import Geometry
+    >>> from raygeo.geo import Geometry
     >>> geom = Geometry()
     >>> geom.add_rect(0, 0, 100, 50)
     >>> geom.add_circle(50, 25, 10)

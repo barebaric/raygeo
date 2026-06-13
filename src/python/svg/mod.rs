@@ -8,7 +8,7 @@ use crate::svg;
     python = r#"
     import numpy
     import numpy.typing
-    from raygeo import Geometry
+    from raygeo.geo import Geometry
 
     def parse_svg_path_data(
         path_data: str,
@@ -98,7 +98,7 @@ fn py_parse_svg_transform(
 
 #[gen_stub_pyfunction(
     python = r#"
-    from raygeo import Geometry
+    from raygeo.geo import Geometry
 
     def svg_string_to_geometries(
         svg_str: str,

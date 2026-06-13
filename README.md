@@ -28,7 +28,7 @@ sequence of move, line, arc, and cubic Bezier commands. All mutating methods
 return `self` for chaining:
 
 ```python
-from raygeo import Geometry
+from raygeo.geo import Geometry
 
 # Create a 10x10 square
 g = Geometry()
@@ -100,7 +100,7 @@ allowing chaining. Use `.copy()` first if you need to preserve the original:
 
 ```python
 import numpy as np
-from raygeo import Geometry
+from raygeo.geo import Geometry
 
 g = Geometry.from_points([(0, 0), (10, 0), (10, 10), (0, 10)])
 
@@ -166,7 +166,7 @@ g.remove_inner_edges()
 The `geo.shape.polygon` submodule provides polygon-specific operations powered by Clipper2:
 
 ```python
-from raygeo import Geometry
+from raygeo.geo import Geometry
 from raygeo.geo.shape.polygon import (
     get_polygon_area,
     get_polygon_bounds,
@@ -206,7 +206,7 @@ get_polygon_area(sq_np)  # also works with numpy arrays
 All fitting methods mutate the geometry in place and return `self`:
 
 ```python
-from raygeo import Geometry
+from raygeo.geo import Geometry
 
 # Simplify a path
 g.simplify(tolerance=0.1)

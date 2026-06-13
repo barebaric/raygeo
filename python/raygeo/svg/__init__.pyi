@@ -4,6 +4,7 @@
 import numpy
 import numpy.typing
 import raygeo
+from raygeo import geo
 __all__ = [
     "geometry_to_svg_path",
     "parse_svg_path_data",

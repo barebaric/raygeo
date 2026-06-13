@@ -114,7 +114,7 @@ pub(crate) const MODULE_DOC: &str = concat!(
     "Examples:\n",
     "    Creating and inspecting geometry:\n",
     "\n",
-    "    >>> from raygeo import Geometry\n",
+    "    >>> from raygeo.geo import Geometry\n",
     "    >>> geom = Geometry()\n",
     "    >>> geom.add_rect(0, 0, 100, 50)\n",
     "    >>> geom.add_circle(50, 25, 10)\n",
@@ -143,9 +143,6 @@ fn raygeo(m: &Bound<'_, PyModule>) -> PyResult<()> {
     python::nest::register(m)?;
     python::ops::register(m)?;
     python::svg::register(m)?;
-    // Backward-compat re-exports on root
-    m.add("Geometry", m.getattr("geo")?.getattr("Geometry")?)?;
-    m.add("Ops", m.getattr("ops")?.getattr("Ops")?)?;
-    m.add("Rect", m.getattr("geo")?.getattr("types")?.getattr("Rect")?)?;
+
     Ok(())
 }

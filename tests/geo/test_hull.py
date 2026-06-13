@@ -1,6 +1,6 @@
 import numpy as np
 
-from raygeo import Geometry
+from raygeo.geo import Geometry
 from raygeo.geo.algo import hull
 
 

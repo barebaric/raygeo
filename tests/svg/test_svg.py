@@ -1,6 +1,6 @@
 import numpy as np
 
-from raygeo import Geometry
+from raygeo.geo import Geometry
 from raygeo.svg import (
     geometry_to_svg_path,
     parse_svg_path_data,

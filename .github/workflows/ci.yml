@@ -31,7 +31,7 @@ jobs:
       - name: Validate stubs in wheel
         run: |
           cat > /tmp/test_stubs.py << 'EOF'
-          from raygeo import Geometry, Ops
+          from raygeo.geo import Geometry; from raygeo.ops import Ops
           g: Geometry
           o: Ops
           EOF
