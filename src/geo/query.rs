@@ -13,32 +13,31 @@ use crate::constants::EPSILON_COLLINEAR;
 use crate::geo::shape::arc::{get_arc_bounds, get_arc_closest_point};
 use crate::geo::shape::bezier::{
     compute_cubic_bezier_bounds_1d, get_bezier_closest_point,
-    linearize_bezier_from_array,
+    linearize_bezier_from_params,
 };
 use crate::geo::shape::line::get_line_segment_closest_point;
 use crate::types::{Command, Point, Point3D, Rect};
 
-use super::analysis::segment_length_from_row;
+use super::analysis::segment_length;
 
-/// Compute the axis-aligned bounding rectangle for a geometry array.
+/// Compute the axis-aligned bounding rectangle for a geometry command slice.
 ///
 /// Handles line, arc, and Bezier segments by computing their exact bounds.
 ///
-/// - `data`: Array of geometry command rows (8 columns each).
+/// - `data`: Array of geometry commands.
 /// - Returns: `(min_x, min_y, max_x, max_y)` bounding rectangle.
-pub fn get_bounding_rect_from_array(data: &[[f64; 8]]) -> Rect {
+pub fn get_bounding_rect_from_array(data: &[Command]) -> Rect {
     if data.is_empty() {
         return (0.0, 0.0, 0.0, 0.0);
     }
 
-    // First pass: compute bounds from all line endpoints
+    // First pass: compute bounds from all endpoints
     let mut min_x = f64::INFINITY;
     let mut max_x = f64::NEG_INFINITY;
     let mut min_y = f64::INFINITY;
     let mut max_y = f64::NEG_INFINITY;
 
-    for row in data {
-        let cmd = Command::from_row(row).expect("invalid command");
+    for cmd in data {
         let end = cmd.end_point();
         if end.0 < min_x {
             min_x = end.0;
@@ -56,14 +55,13 @@ pub fn get_bounding_rect_from_array(data: &[[f64; 8]]) -> Rect {
 
     // Second pass: check arcs for potentially larger bounds
     let mut last_point_2d: Point = (0.0, 0.0);
-    for row in data {
-        let cmd = Command::from_row(row).expect("invalid command");
+    for cmd in data {
         let end = cmd.end_point();
         if let Command::Arc {
             center_offset,
             clockwise,
             ..
-        } = &cmd
+        } = cmd
         {
             let (ax1, ay1, ax2, ay2) = get_arc_bounds(
                 last_point_2d,
@@ -90,12 +88,11 @@ pub fn get_bounding_rect_from_array(data: &[[f64; 8]]) -> Rect {
 
     // Third pass: compute Bezier curve extrema analytically
     let mut last_point_3d: Point3D = (0.0, 0.0, 0.0);
-    for row in data {
-        let cmd = Command::from_row(row).expect("invalid command");
+    for cmd in data {
         let end = cmd.end_point();
         if let Command::Bezier {
             control1, control2, ..
-        } = &cmd
+        } = cmd
         {
             let p0_x = vec![last_point_3d.0];
             let p0_y = vec![last_point_3d.1];
@@ -126,17 +123,16 @@ pub fn get_bounding_rect_from_array(data: &[[f64; 8]]) -> Rect {
 ///
 /// Handles lines (Euclidean distance), arcs (arc length), and Beziers (linearized).
 ///
-/// - `data`: Array of geometry command rows (8 columns each).
+/// - `data`: Slice of geometry commands.
 /// - Returns: The cumulative path distance.
-pub fn get_total_distance_from_array(data: &[[f64; 8]]) -> f64 {
+pub fn get_total_distance_from_array(data: &[Command]) -> f64 {
     let mut total_dist = 0.0;
     let mut last_point: Point3D = (0.0, 0.0, 0.0);
 
-    for row in data {
-        let cmd = Command::from_row(row).expect("invalid command");
+    for cmd in data {
         let end_point = cmd.end_point();
 
-        match &cmd {
+        match cmd {
             Command::Move { .. } | Command::Line { .. } => {
                 // Line segment: Euclidean distance
                 total_dist += (end_point.0 - last_point.0)
@@ -173,10 +169,16 @@ pub fn get_total_distance_from_array(data: &[[f64; 8]]) -> f64 {
                     total_dist += (angle_span * radius).abs();
                 }
             }
-            Command::Bezier { .. } => {
+            Command::Bezier {
+                end,
+                control1,
+                control2,
+                ..
+            } => {
                 // Bezier: linearize and sum segment lengths
-                let segments =
-                    linearize_bezier_from_array(row, last_point, 0.1);
+                let segments = linearize_bezier_from_params(
+                    *end, *control1, *control2, last_point, 0.1,
+                );
                 for (p1, p2) in segments {
                     total_dist += (p2.0 - p1.0).hypot(p2.1 - p1.1);
                 }
@@ -191,12 +193,12 @@ pub fn get_total_distance_from_array(data: &[[f64; 8]]) -> f64 {
 
 /// Find the closest point on the path to a given `(x, y)` coordinate.
 ///
-/// - `data`: Array of geometry command rows (8 columns each).
+/// - `data`: Slice of geometry commands.
 /// - `x`: Target X coordinate.
 /// - `y`: Target Y coordinate.
 /// - Returns: `(command_index, t_parameter, closest_point)` if the path is non-empty.
 pub fn find_closest_point_on_path_from_array(
-    data: &[[f64; 8]],
+    data: &[Command],
     x: f64,
     y: f64,
 ) -> Option<(usize, f64, Point)> {
@@ -205,8 +207,7 @@ pub fn find_closest_point_on_path_from_array(
 
     let mut last_pos_3d: Point3D = (0.0, 0.0, 0.0);
 
-    for (i, row) in data.iter().enumerate() {
-        let cmd = Command::from_row(row).expect("invalid command");
+    for (i, cmd) in data.iter().enumerate() {
         let end_point_3d = cmd.end_point();
 
         if matches!(cmd, Command::Move { .. }) {
@@ -216,7 +217,7 @@ pub fn find_closest_point_on_path_from_array(
 
         let start_pos_3d = last_pos_3d;
 
-        match &cmd {
+        match cmd {
             Command::Line { .. } => {
                 let t = get_line_segment_closest_point(
                     (start_pos_3d.0, start_pos_3d.1),
@@ -229,9 +230,21 @@ pub fn find_closest_point_on_path_from_array(
                     closest_info = Some((i, t.0, t.1));
                 }
             }
-            Command::Arc { .. } => {
+            Command::Arc {
+                end,
+                center_offset,
+                clockwise,
+                ..
+            } => {
                 if let Some((t_arc, pt_arc, dist_sq_arc)) =
-                    get_arc_closest_point(row, start_pos_3d, x, y)
+                    get_arc_closest_point(
+                        *end,
+                        *center_offset,
+                        *clockwise,
+                        start_pos_3d,
+                        x,
+                        y,
+                    )
                 {
                     if dist_sq_arc < min_dist_sq {
                         min_dist_sq = dist_sq_arc;
@@ -239,9 +252,21 @@ pub fn find_closest_point_on_path_from_array(
                     }
                 }
             }
-            Command::Bezier { .. } => {
+            Command::Bezier {
+                end,
+                control1,
+                control2,
+                ..
+            } => {
                 if let Some((t_bezier, pt_bezier, dist_sq_bezier)) =
-                    get_bezier_closest_point(row, start_pos_3d, x, y)
+                    get_bezier_closest_point(
+                        *end,
+                        *control1,
+                        *control2,
+                        start_pos_3d,
+                        x,
+                        y,
+                    )
                 {
                     if dist_sq_bezier < min_dist_sq {
                         min_dist_sq = dist_sq_bezier;
@@ -263,40 +288,36 @@ pub fn find_closest_point_on_path_from_array(
 /// Returns the commands that fall within `max_length`, including a partial command
 /// at the boundary if needed.
 ///
-/// - `data`: Array of geometry command rows (8 columns each).
+/// - `data`: Slice of geometry commands.
 /// - `max_length`: Maximum path distance to extract.
-/// - Returns: Collected rows up to `max_length`, or `None` if nothing was collected.
+/// - Returns: Collected commands up to `max_length`, or `None` if nothing was collected.
 pub fn extract_overcut_rows(
-    data: &[[f64; 8]],
+    data: &[Command],
     max_length: f64,
-) -> Option<Vec<[f64; 8]>> {
+) -> Option<Vec<Command>> {
     if data.len() < 2 || max_length <= 0.0 {
         return None;
     }
 
-    let first_cmd = Command::from_row(&data[0]).expect("invalid command");
-    let mut last_point: Point3D = first_cmd.end_point();
+    let mut last_point: Point3D = data[0].end_point();
     let mut accumulated = 0.0;
-    let mut collected: Vec<[f64; 8]> = Vec::new();
+    let mut collected: Vec<Command> = Vec::new();
 
-    for row in data.iter().skip(1) {
-        let cmd = Command::from_row(row).expect("invalid command");
-        let seg_length = segment_length_from_row(row, last_point);
+    for cmd in data.iter().skip(1) {
+        let seg_length = segment_length(cmd, last_point);
         if seg_length < EPSILON_COLLINEAR {
             last_point = cmd.end_point();
             continue;
         }
 
         if accumulated + seg_length <= max_length + EPSILON_COLLINEAR {
-            collected.push(*row);
+            collected.push(cmd.clone());
             accumulated += seg_length;
         } else {
             let remaining = max_length - accumulated;
             if remaining > EPSILON_COLLINEAR {
                 let t = remaining / seg_length;
-                if let Some(partial) =
-                    cmd.split_at_t(last_point, t).map(|c| c.to_row())
-                {
+                if let Some(partial) = cmd.split_at_t(last_point, t) {
                     collected.push(partial);
                 }
             }
@@ -315,37 +336,52 @@ pub fn extract_overcut_rows(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::constants::*;
 
     #[test]
     fn test_get_bounding_rect() {
-        let data: [[f64; 8]; 3] = [
-            [CMD_TYPE_MOVE, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-            [CMD_TYPE_LINE, 10.0, 5.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-            [CMD_TYPE_LINE, 10.0, 10.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+        let data = vec![
+            Command::Move {
+                end: (0.0, 0.0, 0.0),
+            },
+            Command::Line {
+                end: (10.0, 5.0, 0.0),
+            },
+            Command::Line {
+                end: (10.0, 10.0, 0.0),
+            },
         ];
-        let rect = get_bounding_rect_from_array(&data[..]);
+        let rect = get_bounding_rect_from_array(&data);
         assert_eq!(rect, (0.0, 0.0, 10.0, 10.0));
     }
 
     #[test]
     fn test_get_total_distance() {
-        let data: [[f64; 8]; 3] = [
-            [CMD_TYPE_MOVE, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-            [CMD_TYPE_LINE, 3.0, 4.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-            [CMD_TYPE_LINE, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+        let data = vec![
+            Command::Move {
+                end: (0.0, 0.0, 0.0),
+            },
+            Command::Line {
+                end: (3.0, 4.0, 0.0),
+            },
+            Command::Line {
+                end: (0.0, 0.0, 0.0),
+            },
         ];
-        let dist = get_total_distance_from_array(&data[..]);
+        let dist = get_total_distance_from_array(&data);
         assert!((dist - 10.0).abs() < 1e-6);
     }
 
     #[test]
     fn test_find_closest_point_on_path() {
-        let data: [[f64; 8]; 2] = [
-            [CMD_TYPE_MOVE, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-            [CMD_TYPE_LINE, 10.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+        let data = vec![
+            Command::Move {
+                end: (0.0, 0.0, 0.0),
+            },
+            Command::Line {
+                end: (10.0, 0.0, 0.0),
+            },
         ];
-        let result = find_closest_point_on_path_from_array(&data[..], 5.0, 1.0);
+        let result = find_closest_point_on_path_from_array(&data, 5.0, 1.0);
         assert!(result.is_some());
         let (idx, _t, pt) = result.unwrap();
         assert_eq!(idx, 1);
@@ -355,13 +391,21 @@ mod tests {
 
     #[test]
     fn test_extract_overcut_rows() {
-        let data: [[f64; 8]; 4] = [
-            [CMD_TYPE_MOVE, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-            [CMD_TYPE_LINE, 5.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-            [CMD_TYPE_LINE, 10.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-            [CMD_TYPE_LINE, 15.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+        let data = vec![
+            Command::Move {
+                end: (0.0, 0.0, 0.0),
+            },
+            Command::Line {
+                end: (5.0, 0.0, 0.0),
+            },
+            Command::Line {
+                end: (10.0, 0.0, 0.0),
+            },
+            Command::Line {
+                end: (15.0, 0.0, 0.0),
+            },
         ];
-        let result = extract_overcut_rows(&data[..], 7.5);
+        let result = extract_overcut_rows(&data, 7.5);
         assert!(result.is_some());
         let rows = result.unwrap();
         assert_eq!(rows.len(), 2);

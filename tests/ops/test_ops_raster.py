@@ -128,13 +128,17 @@ class TestGenerateScanLines:
     def simple_ppm(self):
         return (10.0, 10.0)
 
-    def test_horizontal_lines_count(self, simple_bbox, simple_image_size, simple_ppm):
+    def test_horizontal_lines_count(
+        self, simple_bbox, simple_image_size, simple_ppm
+    ):
         lines = generate_scan_lines(
             simple_bbox, simple_image_size, simple_ppm, 0.1, 0.0, 0.0, 0.0
         )
         assert len(lines) >= 10
 
-    def test_vertical_lines_count(self, simple_bbox, simple_image_size, simple_ppm):
+    def test_vertical_lines_count(
+        self, simple_bbox, simple_image_size, simple_ppm
+    ):
         lines = generate_scan_lines(
             simple_bbox, simple_image_size, simple_ppm, 0.1, 90.0, 0.0, 0.0
         )
@@ -149,7 +153,9 @@ class TestGenerateScanLines:
         for i in range(1, len(lines)):
             assert lines[i].index == lines[i - 1].index + 1
 
-    def test_horizontal_line_spacing(self, simple_bbox, simple_image_size, simple_ppm):
+    def test_horizontal_line_spacing(
+        self, simple_bbox, simple_image_size, simple_ppm
+    ):
         lines = generate_scan_lines(
             simple_bbox, simple_image_size, simple_ppm, 0.1, 0.0, 0.0, 0.0
         )
@@ -157,7 +163,9 @@ class TestGenerateScanLines:
             dy = abs(lines[1].start_mm[1] - lines[0].start_mm[1])
             assert abs(dy - 0.1) < 0.01
 
-    def test_lines_contain_pixels(self, simple_bbox, simple_image_size, simple_ppm):
+    def test_lines_contain_pixels(
+        self, simple_bbox, simple_image_size, simple_ppm
+    ):
         lines = generate_scan_lines(
             simple_bbox, simple_image_size, simple_ppm, 0.1, 0.0, 0.0, 0.0
         )
@@ -165,7 +173,9 @@ class TestGenerateScanLines:
             assert len(sl.pixels) > 0
             assert sl.pixels[0][0] >= 0
 
-    def test_offset_alignment(self, simple_bbox, simple_image_size, simple_ppm):
+    def test_offset_alignment(
+        self, simple_bbox, simple_image_size, simple_ppm
+    ):
         lines = generate_scan_lines(
             simple_bbox, simple_image_size, simple_ppm, 0.1, 0.0, 0.0, 0.0
         )
@@ -243,10 +253,14 @@ class TestFindSegments:
         ]
 
     def test_starts_with_value(self):
-        assert find_segments(np.array([1, 1, 0, 0], dtype=np.uint8)) == [(0, 2)]
+        assert find_segments(np.array([1, 1, 0, 0], dtype=np.uint8)) == [
+            (0, 2)
+        ]
 
     def test_ends_with_value(self):
-        assert find_segments(np.array([0, 0, 1, 1], dtype=np.uint8)) == [(2, 4)]
+        assert find_segments(np.array([0, 0, 1, 1], dtype=np.uint8)) == [
+            (2, 4)
+        ]
 
     def test_non_binary(self):
         assert find_segments(np.array([0, 5, 10, 0, 3], dtype=np.uint8)) == [
@@ -297,18 +311,24 @@ class TestFindMaskBoundingBox:
 
 class TestGenerateHorizontalScanPositions:
     def test_basic_positions(self):
-        mm, px = generate_horizontal_scan_positions(0, 9, 10, (10.0, 10.0), 0.1, 0.0)
+        mm, px = generate_horizontal_scan_positions(
+            0, 9, 10, (10.0, 10.0), 0.1, 0.0
+        )
         assert len(mm) > 0
         assert len(mm) == len(px)
 
     def test_offset_alignment(self):
-        mm, px = generate_horizontal_scan_positions(0, 9, 10, (10.0, 10.0), 0.1, 0.5)
+        mm, px = generate_horizontal_scan_positions(
+            0, 9, 10, (10.0, 10.0), 0.1, 0.5
+        )
         assert len(mm) > 0
         for val in px:
             assert 0 <= val <= 9
 
     def test_empty_for_inverted_range(self):
-        mm, px = generate_horizontal_scan_positions(20, 10, 30, (10.0, 10.0), 0.1, 0.0)
+        mm, px = generate_horizontal_scan_positions(
+            20, 10, 30, (10.0, 10.0), 0.1, 0.0
+        )
         assert len(mm) == 0
         assert len(px) == 0
 
@@ -459,13 +479,17 @@ class TestRasterizePowerModulation:
     def test_empty_alpha(self):
         gray = np.full((10, 10), 128, dtype=np.uint8)
         alpha = np.zeros((10, 10), dtype=np.uint8)
-        ops = rasterize_power_modulation(gray, alpha, (10.0, 10.0), 0.0, 0.0, 0.1, 0.05)
+        ops = rasterize_power_modulation(
+            gray, alpha, (10.0, 10.0), 0.0, 0.0, 0.1, 0.05
+        )
         assert ops.is_empty()
 
     def test_full_image(self):
         gray = np.full((10, 10), 128, dtype=np.uint8)
         alpha = np.full((10, 10), 255, dtype=np.uint8)
-        ops = rasterize_power_modulation(gray, alpha, (10.0, 10.0), 0.0, 0.0, 0.1, 0.05)
+        ops = rasterize_power_modulation(
+            gray, alpha, (10.0, 10.0), 0.0, 0.0, 0.1, 0.05
+        )
         assert not ops.is_empty()
 
     def test_white_image_empty(self):
@@ -526,12 +550,16 @@ class TestRasterizeMaskScan:
 
     def test_step_power(self):
         mask = np.ones((10, 10), dtype=np.uint8)
-        ops = rasterize_mask_scan(mask, (10.0, 10.0), 0.0, 0.0, 0.1, step_power=0.5)
+        ops = rasterize_mask_scan(
+            mask, (10.0, 10.0), 0.0, 0.0, 0.1, step_power=0.5
+        )
         assert not ops.is_empty()
 
     def test_with_angle(self):
         mask = np.ones((20, 20), dtype=np.uint8)
-        ops = rasterize_mask_scan(mask, (10.0, 10.0), 0.0, 0.0, 0.1, angle=90.0)
+        ops = rasterize_mask_scan(
+            mask, (10.0, 10.0), 0.0, 0.0, 0.1, angle=90.0
+        )
         assert not ops.is_empty()
 
 
@@ -623,7 +651,9 @@ class TestFullSweepPowerModulation:
 
     def test_fewer_scans_than_segmented(self):
         gray, alpha = self._make_images()
-        seg = rasterize_power_modulation(gray, alpha, (10.0, 10.0), 0, 0, 0.1, 0.05)
+        seg = rasterize_power_modulation(
+            gray, alpha, (10.0, 10.0), 0, 0, 0.1, 0.05
+        )
         fs = rasterize_power_modulation(
             gray,
             alpha,

@@ -31,51 +31,170 @@ def cw_square_geometry():
     return geo
 
 
-def test_get_point_and_tangent_at():
-    geo = Geometry()
-    geo.move_to(0, 0)
-    geo.line_to(10, 0)
-    assert geo.data is not None
+class TestGetPointAt:
+    def test_line(self):
+        geo = Geometry()
+        geo.move_to(0, 0)
+        geo.line_to(10, 0)
+        assert geo.data is not None
 
-    # Test horizontal line (segment index 1 = first line)
-    result = geo.get_point_and_tangent_at(1, 0.5)
-    assert result is not None
-    pt, tan = result
-    assert pt == pytest.approx((5, 0))
-    assert tan == pytest.approx((1, 0))
+        result = geo.get_point_at(1, 0.5)
+        assert result == pytest.approx((5.0, 0.0, 0.0))
 
-    geo.line_to(10, 10)
-    assert geo.data is not None
-    # Test vertical line (segment index 2)
-    result = geo.get_point_and_tangent_at(2, 0.25)
-    assert result is not None
-    pt, tan = result
-    assert pt == pytest.approx((10, 2.5))
-    assert tan == pytest.approx((0, 1))
+        result = geo.get_point_at(1, 0.0)
+        assert result == pytest.approx((0.0, 0.0, 0.0))
 
-    # Test arc (CCW 90 degree from (10,10) to (0,10))
-    # Start: (10,10). Center offset: (-10,0). Center: (0,10). Radius: 10.
-    geo.arc_to(0, 10, i=-10, j=0, clockwise=False)
-    assert geo.data is not None
-    # Start of arc (segment index 3)
-    result = geo.get_point_and_tangent_at(3, 0.0)
-    assert result is not None
-    pt, tan = result
-    assert pt == pytest.approx((10, 10))
-    assert tan == pytest.approx((0, 1))  # Tangent is vertical up
+        result = geo.get_point_at(1, 1.0)
+        assert result == pytest.approx((10.0, 0.0, 0.0))
 
-    # Midpoint of arc
-    result = geo.get_point_and_tangent_at(3, 0.5)
-    assert result is not None
-    pt, tan = result
-    # This arc is a spiral from (10,10) to its center (0,10), because the
-    # end radius is 0.
-    # At t=0.5, the radius is half the starting radius (5).
-    # Point is (center_x + r*cos(angle), center_y + r*sin(angle))
-    assert pt == pytest.approx((5, 10))
-    # Tangent for a spiral towards the center should be perpendicular to the
-    # radius vector from the center. Radius vec is (5,0), so tangent is (0,5).
-    assert tan == pytest.approx((0, 1))
+    def test_line_vertical(self):
+        geo = Geometry()
+        geo.move_to(5, 0)
+        geo.line_to(5, 10)
+
+        result = geo.get_point_at(1, 0.25)
+        assert result == pytest.approx((5.0, 2.5, 0.0))
+
+    def test_line_diagonal(self):
+        geo = Geometry()
+        geo.move_to(0, 0)
+        geo.line_to(10, 10)
+
+        result = geo.get_point_at(1, 0.3)
+        assert result == pytest.approx((3.0, 3.0, 0.0))
+
+    def test_line_with_z(self):
+        geo = Geometry()
+        geo.move_to(0, 0, 0)
+        geo.line_to(10, 0, 5)
+
+        result = geo.get_point_at(1, 0.5)
+        assert result == pytest.approx((5.0, 0.0, 2.5))
+
+    def test_arc(self):
+        geo = Geometry()
+        geo.move_to(10, 0)
+        geo.arc_to(0, 10, i=0, j=0, clockwise=False)
+        assert geo.data is not None
+
+        result = geo.get_point_at(1, 0.0)
+        assert result is not None
+        assert result[0] == pytest.approx(10.0)
+        assert result[1] == pytest.approx(0.0)
+
+        result = geo.get_point_at(1, 0.5)
+        assert result is not None
+        assert result[0] == pytest.approx(12.706, abs=1e-2)
+        assert result[1] == pytest.approx(6.533, abs=1e-2)
+
+    def test_bezier(self):
+        geo = Geometry()
+        geo.move_to(0, 0)
+        geo.bezier_to(10, 0, c1x=0, c1y=10, c2x=10, c2y=10)
+        assert geo.data is not None
+
+        result = geo.get_point_at(1, 0.0)
+        assert result == pytest.approx((0.0, 0.0, 0.0))
+
+        result = geo.get_point_at(1, 1.0)
+        assert result == pytest.approx((10.0, 0.0, 0.0))
+
+        result = geo.get_point_at(1, 0.5)
+        assert result is not None
+        assert result[0] == pytest.approx(5.0, abs=1e-3)
+        assert result[1] == pytest.approx(7.5, abs=1e-3)
+
+    def test_move_returns_none(self):
+        geo = Geometry()
+        geo.move_to(0, 0)
+        geo.line_to(10, 0)
+
+        result = geo.get_point_at(0, 0.5)
+        assert result is None
+
+    def test_out_of_range_index(self):
+        geo = Geometry()
+        geo.move_to(0, 0)
+        geo.line_to(10, 0)
+
+        result = geo.get_point_at(99, 0.5)
+        assert result is None
+
+    def test_empty_geometry(self):
+        geo = Geometry()
+        result = geo.get_point_at(0, 0.5)
+        assert result is None
+
+
+class TestGetTangentAt:
+    def test_line_horizontal(self):
+        geo = Geometry()
+        geo.move_to(0, 0)
+        geo.line_to(10, 0)
+
+        result = geo.get_tangent_at(1, 0.5)
+        assert result == pytest.approx((1.0, 0.0))
+
+    def test_line_vertical(self):
+        geo = Geometry()
+        geo.move_to(5, 0)
+        geo.line_to(5, 10)
+
+        result = geo.get_tangent_at(1, 0.5)
+        assert result == pytest.approx((0.0, 1.0))
+
+    def test_line_normalized(self):
+        geo = Geometry()
+        geo.move_to(0, 0)
+        geo.line_to(3, 4)
+
+        result = geo.get_tangent_at(1, 0.5)
+        assert result is not None
+        norm = (result[0] ** 2 + result[1] ** 2) ** 0.5
+        assert norm == pytest.approx(1.0)
+        assert result[0] == pytest.approx(0.6)
+        assert result[1] == pytest.approx(0.8)
+
+    def test_bezier(self):
+        geo = Geometry()
+        geo.move_to(0, 0)
+        geo.bezier_to(10, 0, c1x=0, c1y=10, c2x=10, c2y=10)
+
+        result = geo.get_tangent_at(1, 0.0)
+        assert result is not None
+        norm = (result[0] ** 2 + result[1] ** 2) ** 0.5
+        assert norm == pytest.approx(1.0)
+
+    def test_arc(self):
+        geo = Geometry()
+        geo.move_to(10, 0)
+        geo.arc_to(0, 10, i=0, j=0, clockwise=False)
+
+        result = geo.get_tangent_at(1, 0.0)
+        assert result is not None
+        norm = (result[0] ** 2 + result[1] ** 2) ** 0.5
+        assert norm == pytest.approx(1.0)
+
+    def test_move_returns_none(self):
+        geo = Geometry()
+        geo.move_to(0, 0)
+        geo.line_to(10, 0)
+
+        result = geo.get_tangent_at(0, 0.5)
+        assert result is None
+
+    def test_out_of_range_index(self):
+        geo = Geometry()
+        geo.move_to(0, 0)
+        geo.line_to(10, 0)
+
+        result = geo.get_tangent_at(99, 0.5)
+        assert result is None
+
+    def test_empty_geometry(self):
+        geo = Geometry()
+        result = geo.get_tangent_at(0, 0.5)
+        assert result is None
 
 
 def test_get_angle_at_vertex():
@@ -288,7 +407,9 @@ def test_encloses_with_hole():
     assert donut.encloses(content_inside) is True
 
     # Shape fully inside the donut's hole
-    content_in_hole = Geometry.from_points([(7, 7), (13, 7), (13, 13), (7, 13)])
+    content_in_hole = Geometry.from_points(
+        [(7, 7), (13, 7), (13, 13), (7, 13)]
+    )
     assert donut.encloses(content_in_hole) is False
 
 

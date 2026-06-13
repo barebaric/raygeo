@@ -1,6 +1,4 @@
-import numpy as np
-
-from raygeo.geo import Geometry
+from raygeo.geo import Geometry, Move
 
 
 def test_split_into_contours_empty():
@@ -19,8 +17,8 @@ def test_split_into_contours_single():
     contours = geo.split_into_contours()
     assert len(contours) == 1
     assert len(contours[0]) == 3
-    assert contours[0].data is not None
-    assert np.all(contours[0].data[0, 1:4] == (0, 0, 0))
+    assert isinstance(contours[0].data[0], Move)
+    assert contours[0].data[0].end == (0, 0, 0)
 
 
 def test_split_into_contours_multiple_disjoint():
@@ -37,10 +35,10 @@ def test_split_into_contours_multiple_disjoint():
     assert len(contours) == 2
     assert len(contours[0]) == 2
     assert len(contours[1]) == 3
-    assert contours[0].data is not None
-    assert contours[1].data is not None
-    assert np.all(contours[0].data[0, 1:4] == (0, 0, 0))
-    assert np.all(contours[1].data[0, 1:4] == (10, 10, 0))
+    assert isinstance(contours[0].data[0], Move)
+    assert isinstance(contours[1].data[0], Move)
+    assert contours[0].data[0].end == (0, 0, 0)
+    assert contours[1].data[0].end == (10, 10, 0)
 
 
 def test_split_into_contours_no_initial_move_to():

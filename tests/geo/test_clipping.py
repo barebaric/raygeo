@@ -241,7 +241,9 @@ class TestClipToCircleRegions:
         circle1 = create_circle_polygon(25, 50, 10)
         circle2 = create_circle_polygon(75, 50, 10)
 
-        kept_segments = clip_line_segment_with_polygons(p1, p2, [circle1, circle2])
+        kept_segments = clip_line_segment_with_polygons(
+            p1, p2, [circle1, circle2]
+        )
 
         assert len(kept_segments) == 2
         s1_p1, s1_p2 = kept_segments[0]

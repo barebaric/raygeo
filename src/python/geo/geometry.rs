@@ -1,5 +1,3 @@
-use numpy::ndarray;
-use numpy::{IntoPyArray, PyArray2, PyArrayMethods};
 use pyo3::prelude::*;
 use pyo3::types::{PyDict, PyList, PyType};
 use pyo3_stub_gen::derive::{
@@ -8,7 +6,9 @@ use pyo3_stub_gen::derive::{
 use pyo3_stub_gen::inventory::submit;
 use pyo3_stub_gen::{PyStubType, TypeInfo};
 
-use crate::geo::algo::analysis::get_point_and_tangent_at_from_array;
+use crate::geo::algo::analysis::{
+    get_point_at_from_array, get_tangent_at_from_array,
+};
 use crate::geo::algo::fitting::convert_arc_to_beziers_from_array;
 use crate::geo::algo::topology::get_valid_contours_data;
 use crate::geo::math::map_geometry_to_frame;
@@ -20,10 +20,8 @@ use crate::{
     get_outward_normal_at_from_array, grow_geometry, linearize_data,
     normalize_winding_orders, remove_inner_edges, reverse_contour,
     simplify_data, split_inner_and_outer_contours, split_into_components,
-    split_into_contours, Command as CoreCommand, CommandRow,
-    Geometry as CoreGeometry, Point, CMD_TYPE_ARC, CMD_TYPE_BEZIER,
-    CMD_TYPE_LINE, CMD_TYPE_MOVE, COL_C1X, COL_C1Y, COL_C2X, COL_C2Y, COL_CW,
-    COL_I, COL_J, COL_TYPE, COL_X, COL_Y, COL_Z,
+    split_into_contours, Command as CoreCommand, Geometry as CoreGeometry,
+    Point,
 };
 
 #[gen_stub_pyclass]
@@ -195,54 +193,6 @@ submit! {
 #[gen_stub_pymethods]
 #[pymethods]
 impl Geometry {
-    #[classattr]
-    const COL_TYPE: usize = crate::COL_TYPE;
-
-    #[classattr]
-    const COL_X: usize = crate::COL_X;
-
-    #[classattr]
-    const COL_Y: usize = crate::COL_Y;
-
-    #[classattr]
-    const COL_Z: usize = crate::COL_Z;
-
-    #[classattr]
-    const COL_I: usize = crate::COL_I;
-
-    #[classattr]
-    const COL_J: usize = crate::COL_J;
-
-    #[classattr]
-    const COL_CW: usize = crate::COL_CW;
-
-    #[classattr]
-    const COL_C1X: usize = crate::COL_C1X;
-
-    #[classattr]
-    const COL_C1Y: usize = crate::COL_C1Y;
-
-    #[classattr]
-    const COL_C2X: usize = crate::COL_C2X;
-
-    #[classattr]
-    const COL_C2Y: usize = crate::COL_C2Y;
-
-    #[classattr]
-    const GEO_ARRAY_COLS: usize = crate::GEO_ARRAY_COLS;
-
-    #[classattr]
-    const CMD_TYPE_MOVE: f64 = crate::CMD_TYPE_MOVE;
-
-    #[classattr]
-    const CMD_TYPE_LINE: f64 = crate::CMD_TYPE_LINE;
-
-    #[classattr]
-    const CMD_TYPE_ARC: f64 = crate::CMD_TYPE_ARC;
-
-    #[classattr]
-    const CMD_TYPE_BEZIER: f64 = crate::CMD_TYPE_BEZIER;
-
     /// Create a new empty Geometry.
     #[new]
     fn new() -> Self {
@@ -350,16 +300,37 @@ impl Geometry {
         use std::collections::hash_map::DefaultHasher;
         use std::hash::{Hash, Hasher};
         let mut hasher = DefaultHasher::new();
-        for row in self.inner.data() {
-            for &val in row.iter() {
-                let normalized = if val == 0.0 { 0.0 } else { val };
-                let bits = if normalized.is_nan() {
-                    f64::NAN.to_bits()
-                } else {
-                    normalized.to_bits()
-                };
-                bits.hash(&mut hasher);
-            }
+        for cmd in self.inner.data() {
+            std::mem::discriminant(cmd).hash(&mut hasher);
+            let (ex, ey, ez) = match cmd {
+                CoreCommand::Move { end } | CoreCommand::Line { end } => {
+                    (end.0, end.1, end.2)
+                }
+                CoreCommand::Arc {
+                    end,
+                    center_offset,
+                    clockwise,
+                } => {
+                    center_offset.0.to_bits().hash(&mut hasher);
+                    center_offset.1.to_bits().hash(&mut hasher);
+                    clockwise.hash(&mut hasher);
+                    (end.0, end.1, end.2)
+                }
+                CoreCommand::Bezier {
+                    end,
+                    control1,
+                    control2,
+                } => {
+                    control1.0.to_bits().hash(&mut hasher);
+                    control1.1.to_bits().hash(&mut hasher);
+                    control2.0.to_bits().hash(&mut hasher);
+                    control2.1.to_bits().hash(&mut hasher);
+                    (end.0, end.1, end.2)
+                }
+            };
+            ex.to_bits().hash(&mut hasher);
+            ey.to_bits().hash(&mut hasher);
+            ez.to_bits().hash(&mut hasher);
         }
         hasher.finish()
     }
@@ -405,9 +376,8 @@ impl Geometry {
 
     /// Get the last point in the geometry.
     fn get_last_point(&self) -> (f64, f64, f64) {
-        let data = self.inner.data();
-        if let Some(last) = data.last() {
-            return (last[COL_X], last[COL_Y], last[COL_Z]);
+        if let Some(last) = self.inner.data().last() {
+            return last.end_point();
         }
         (0.0, 0.0, 0.0)
     }
@@ -468,66 +438,41 @@ impl Geometry {
         self.inner.segments()
     }
 
-    /// The command data as a numpy array of shape
-    /// (N, 8), or None if empty.
+    /// The commands as a list of typed command objects.
     #[getter]
-    fn data<'py>(
-        &mut self,
-        py: Python<'py>,
-    ) -> PyResult<Option<Bound<'py, PyArray2<f64>>>> {
-        let data = self.inner.synced_data();
-        if data.is_empty() {
-            return Ok(None);
-        }
-        let rows = data.len();
-        let flat: Vec<f64> = data.iter().flatten().copied().collect();
-        match ndarray::Array2::from_shape_vec((rows, 8usize), flat) {
-            Ok(arr) => Ok(Some(arr.into_pyarray(py))),
-            Err(e) => Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(
-                format!("{}", e),
-            )),
-        }
+    fn data<'py>(&mut self, py: Python<'py>) -> Vec<Py<PyAny>> {
+        self.inner
+            .data
+            .iter()
+            .map(|cmd| PyTypedCommand::from(cmd.clone()).into_py_obj(py))
+            .collect()
     }
 
-    #[setter(data)]
-    fn set_data(
-        &mut self,
-        value: Option<Bound<'_, PyArray2<f64>>>,
-    ) -> PyResult<()> {
-        let data = self.inner.synced_data_mut();
-        let Some(arr) = value else {
-            data.clear();
-            return Ok(());
-        };
-        let readonly = arr.readonly();
-        let view = readonly.as_array();
-        data.clear();
-        for row in view.rows() {
-            let mut chunk = [0.0; 8];
-            let row_slice: &[f64] = row.as_slice().unwrap();
-            chunk.copy_from_slice(row_slice);
-            data.push(chunk);
-        }
-        Ok(())
-    }
-
-    /// Get the command at the given index as a raw tuple.
+    /// Get the command at the given index as a typed command object.
     ///
     /// :param index: Command index (negative returns None).
-    fn get_command_at(&mut self, index: isize) -> Option<CommandRow> {
+    fn get_command_at(
+        &mut self,
+        py: Python<'_>,
+        index: isize,
+    ) -> PyResult<Option<Py<PyAny>>> {
         if index < 0 {
-            return None;
+            return Ok(None);
         }
-        let data = self.inner.synced_data();
-        data.get(index as usize)
-            .map(|r| (r[0], r[1], r[2], r[3], r[4], r[5], r[6], r[7]))
+        let data = self.inner.data();
+        match data.get(index as usize) {
+            Some(cmd) => {
+                Ok(Some(PyTypedCommand::from(cmd.clone()).into_py_obj(py)))
+            }
+            None => Ok(None),
+        }
     }
 
-    /// Iterate over all commands as raw tuples.
-    fn iter_commands(&mut self) -> Vec<CommandRow> {
-        let data = self.inner.synced_data();
+    /// Iterate over all commands as typed command objects.
+    fn iter_commands(&mut self, py: Python<'_>) -> PyResult<Vec<Py<PyAny>>> {
+        let data = self.inner.data();
         data.iter()
-            .map(|r| (r[0], r[1], r[2], r[3], r[4], r[5], r[6], r[7]))
+            .map(|cmd| Ok(PyTypedCommand::from(cmd.clone()).into_py_obj(py)))
             .collect()
     }
 
@@ -537,15 +482,9 @@ impl Geometry {
         &mut self,
         py: Python<'_>,
     ) -> PyResult<Vec<Py<PyAny>>> {
-        let data = self.inner.synced_data();
+        let data = self.inner.data();
         data.iter()
-            .map(|r| {
-                CoreCommand::from_row(r)
-                    .map(|c| PyTypedCommand::from(c).into_py_obj(py))
-                    .map_err(|e| {
-                        pyo3::exceptions::PyValueError::new_err(e.to_string())
-                    })
-            })
+            .map(|cmd| Ok(PyTypedCommand::from(cmd.clone()).into_py_obj(py)))
             .collect()
     }
 
@@ -561,15 +500,11 @@ impl Geometry {
         if index < 0 {
             return Ok(None);
         }
-        let data = self.inner.synced_data();
+        let data = self.inner.data();
         match data.get(index as usize) {
-            Some(row) => Ok(Some(
-                CoreCommand::from_row(row)
-                    .map(|c| PyTypedCommand::from(c).into_py_obj(py))
-                    .map_err(|e| {
-                        pyo3::exceptions::PyValueError::new_err(e.to_string())
-                    })?,
-            )),
+            Some(cmd) => {
+                Ok(Some(PyTypedCommand::from(cmd.clone()).into_py_obj(py)))
+            }
             None => Ok(None),
         }
     }
@@ -578,7 +513,6 @@ impl Geometry {
     fn dump<'py>(&mut self, py: Python<'py>) -> PyResult<Bound<'py, PyDict>> {
         let last_move_to = self.inner.last_move_to;
         let uniform_scalable = self.inner.uniform_scalable;
-        let data = self.inner.synced_data();
         let dict = PyDict::new(py);
         dict.set_item(
             "last_move_to",
@@ -586,38 +520,50 @@ impl Geometry {
         )?;
         dict.set_item("uniform_scalable", uniform_scalable)?;
         let commands = PyList::empty(py);
-        for row in data {
-            let cmd_type = row[0] as i32;
-            let cmd = PyList::empty(py);
-            if cmd_type == CMD_TYPE_MOVE as i32 {
-                cmd.append("M")?;
-                cmd.append(row[1])?;
-                cmd.append(row[2])?;
-                cmd.append(row[3])?;
-            } else if cmd_type == CMD_TYPE_LINE as i32 {
-                cmd.append("L")?;
-                cmd.append(row[1])?;
-                cmd.append(row[2])?;
-                cmd.append(row[3])?;
-            } else if cmd_type == CMD_TYPE_ARC as i32 {
-                cmd.append("A")?;
-                cmd.append(row[1])?;
-                cmd.append(row[2])?;
-                cmd.append(row[3])?;
-                cmd.append(row[4])?;
-                cmd.append(row[5])?;
-                cmd.append(row[6])?;
-            } else if cmd_type == CMD_TYPE_BEZIER as i32 {
-                cmd.append("B")?;
-                cmd.append(row[1])?;
-                cmd.append(row[2])?;
-                cmd.append(row[3])?;
-                cmd.append(row[4])?;
-                cmd.append(row[5])?;
-                cmd.append(row[6])?;
-                cmd.append(row[7])?;
+        for cmd in &self.inner.data {
+            let entry = PyList::empty(py);
+            match cmd {
+                CoreCommand::Move { end } => {
+                    entry.append("M")?;
+                    entry.append(end.0)?;
+                    entry.append(end.1)?;
+                    entry.append(end.2)?;
+                }
+                CoreCommand::Line { end } => {
+                    entry.append("L")?;
+                    entry.append(end.0)?;
+                    entry.append(end.1)?;
+                    entry.append(end.2)?;
+                }
+                CoreCommand::Arc {
+                    end,
+                    center_offset,
+                    clockwise,
+                } => {
+                    entry.append("A")?;
+                    entry.append(end.0)?;
+                    entry.append(end.1)?;
+                    entry.append(end.2)?;
+                    entry.append(center_offset.0)?;
+                    entry.append(center_offset.1)?;
+                    entry.append(if *clockwise { 1.0 } else { 0.0 })?;
+                }
+                CoreCommand::Bezier {
+                    end,
+                    control1,
+                    control2,
+                } => {
+                    entry.append("B")?;
+                    entry.append(end.0)?;
+                    entry.append(end.1)?;
+                    entry.append(end.2)?;
+                    entry.append(control1.0)?;
+                    entry.append(control1.1)?;
+                    entry.append(control2.0)?;
+                    entry.append(control2.1)?;
+                }
             }
-            commands.append(cmd)?;
+            commands.append(entry)?;
         }
         dict.set_item("commands", commands)?;
         Ok(dict)
@@ -878,6 +824,24 @@ impl Geometry {
         Ok(geo)
     }
 
+    /// Return a new Geometry containing only commands at the given
+    /// indices.
+    ///
+    /// :param indices: Set of command indices to keep.
+    /// :returns: A new Geometry with the filtered commands.
+    fn filter(&self, indices: std::collections::HashSet<usize>) -> Self {
+        let mut core = CoreGeometry::new();
+        core.data = self
+            .inner
+            .data
+            .iter()
+            .enumerate()
+            .filter(|(i, _)| indices.contains(i))
+            .map(|(_, cmd)| cmd.clone())
+            .collect();
+        Self { inner: core }
+    }
+
     /// Check equality with another Geometry.
     #[gen_stub(skip)]
     fn __eq__(&self, other: &Geometry) -> bool {
@@ -888,10 +852,9 @@ impl Geometry {
     ///
     /// :param tolerance: Maximum deviation from original.
     fn simplify(&mut self, tolerance: f64) -> Self {
-        let data = self.inner.synced_data();
-        if data.len() > 2 {
-            let simplified = simplify_data(data, tolerance);
-            *self.inner.synced_data_mut() = simplified;
+        if self.inner.data.len() > 2 {
+            let simplified = simplify_data(&self.inner.data, tolerance);
+            self.inner.data = simplified;
         }
         self.clone()
     }
@@ -900,10 +863,9 @@ impl Geometry {
     ///
     /// :param tolerance: Maximum deviation from curves.
     fn linearize(&mut self, tolerance: f64) -> Self {
-        let data = self.inner.synced_data();
-        if !data.is_empty() {
-            let linearized = linearize_data(data, tolerance);
-            *self.inner.synced_data_mut() = linearized;
+        if !self.inner.data.is_empty() {
+            let linearized = linearize_data(&self.inner.data, tolerance);
+            self.inner.data = linearized;
         }
         self.clone()
     }
@@ -923,10 +885,9 @@ impl Geometry {
         on_progress: Option<pyo3::Py<pyo3::PyAny>>,
     ) -> Self {
         let _ = on_progress;
-        let data = self.inner.synced_data();
-        if !data.is_empty() {
-            let fitted = fit_curves(data, tolerance, beziers, arcs);
-            *self.inner.synced_data_mut() = fitted;
+        if !self.inner.data.is_empty() {
+            let fitted = fit_curves(&self.inner.data, tolerance, beziers, arcs);
+            self.inner.data = fitted;
         }
         self.clone()
     }
@@ -942,10 +903,9 @@ impl Geometry {
     fn upgrade_to_scalable(slf: Bound<'_, Self>) -> Bound<'_, Self> {
         {
             let mut geo = slf.borrow_mut();
-            let data = geo.inner.synced_data();
-            if !data.is_empty() {
-                let converted = convert_arcs_to_beziers(data);
-                *geo.inner.synced_data_mut() = converted;
+            if !geo.inner.data.is_empty() {
+                let converted = convert_arcs_to_beziers(&geo.inner.data);
+                geo.inner.data = converted;
                 geo.inner.uniform_scalable = true;
             }
         }
@@ -962,13 +922,12 @@ impl Geometry {
     ) -> Bound<'_, Self> {
         {
             let mut geo = slf.borrow_mut();
-            let data = geo.inner.synced_data();
-            if !data.is_empty() {
+            if !geo.inner.data.is_empty() {
                 let closed = close_geometry_gaps_from_array(
-                    data,
+                    &geo.inner.data,
                     tolerance.unwrap_or(0.5),
                 );
-                *geo.inner.synced_data_mut() = closed;
+                geo.inner.data = closed;
             }
         }
         slf
@@ -980,54 +939,45 @@ impl Geometry {
     fn cleanup(slf: Bound<'_, Self>, tolerance: f64) -> Bound<'_, Self> {
         {
             let mut geo = slf.borrow_mut();
-            let data = geo.inner.synced_data();
-            if !data.is_empty() {
-                let cleaned = crate::remove_duplicate_segments(data, tolerance);
-                *geo.inner.synced_data_mut() = cleaned;
+            if !geo.inner.data.is_empty() {
+                let cleaned = crate::remove_duplicate_segments(
+                    &geo.inner.data,
+                    tolerance,
+                );
+                geo.inner.data = cleaned;
             }
         }
         slf
-    }
-
-    /// Append rows of command data to the geometry.
-    ///
-    /// :param rows: A numpy array of shape (N, 8)
-    ///     containing command rows, or None.
-    fn append_data<'py>(
-        &mut self,
-        py: Python<'py>,
-        rows: Option<Py<PyArray2<f64>>>,
-    ) -> PyResult<()> {
-        let Some(arr) = rows else {
-            return Ok(());
-        };
-        let arr = arr.bind(py);
-        let data = self.inner.synced_data_mut();
-        let readonly: numpy::PyReadonlyArray<f64, numpy::ndarray::Ix2> =
-            arr.readonly();
-        let view: numpy::ndarray::ArrayView2<f64> = readonly.as_array();
-        for row in view.rows() {
-            let mut chunk = [0.0; 8];
-            let row_slice: &[f64] = row.as_slice().unwrap();
-            chunk.copy_from_slice(row_slice);
-            data.push(chunk);
-        }
-        Ok(())
     }
 
     /// Mirror the geometry along the X axis.
     fn flip_x(slf: Bound<'_, Self>) -> Bound<'_, Self> {
         {
             let mut geo = slf.borrow_mut();
-            for row in geo.inner.synced_data_mut().iter_mut() {
-                row[COL_X] = -row[COL_X];
-                let cmd_type = row[COL_TYPE] as i32;
-                if cmd_type == CMD_TYPE_BEZIER as i32 {
-                    row[COL_C1X] = -row[COL_C1X];
-                    row[COL_C2X] = -row[COL_C2X];
-                } else if cmd_type == CMD_TYPE_ARC as i32 {
-                    row[COL_I] = -row[COL_I];
-                    row[COL_CW] = if row[COL_CW] != 0.0 { 0.0 } else { 1.0 };
+            for cmd in geo.inner.data.iter_mut() {
+                match cmd {
+                    CoreCommand::Move { ref mut end }
+                    | CoreCommand::Line { ref mut end } => {
+                        end.0 = -end.0;
+                    }
+                    CoreCommand::Arc {
+                        ref mut end,
+                        ref mut center_offset,
+                        ref mut clockwise,
+                    } => {
+                        end.0 = -end.0;
+                        center_offset.0 = -center_offset.0;
+                        *clockwise = !*clockwise;
+                    }
+                    CoreCommand::Bezier {
+                        ref mut end,
+                        ref mut control1,
+                        ref mut control2,
+                    } => {
+                        end.0 = -end.0;
+                        control1.0 = -control1.0;
+                        control2.0 = -control2.0;
+                    }
                 }
             }
         }
@@ -1038,15 +988,30 @@ impl Geometry {
     fn flip_y(slf: Bound<'_, Self>) -> Bound<'_, Self> {
         {
             let mut geo = slf.borrow_mut();
-            for row in geo.inner.synced_data_mut().iter_mut() {
-                row[COL_Y] = -row[COL_Y];
-                let cmd_type = row[COL_TYPE] as i32;
-                if cmd_type == CMD_TYPE_BEZIER as i32 {
-                    row[COL_C1Y] = -row[COL_C1Y];
-                    row[COL_C2Y] = -row[COL_C2Y];
-                } else if cmd_type == CMD_TYPE_ARC as i32 {
-                    row[COL_J] = -row[COL_J];
-                    row[COL_CW] = if row[COL_CW] != 0.0 { 0.0 } else { 1.0 };
+            for cmd in geo.inner.data.iter_mut() {
+                match cmd {
+                    CoreCommand::Move { ref mut end }
+                    | CoreCommand::Line { ref mut end } => {
+                        end.1 = -end.1;
+                    }
+                    CoreCommand::Arc {
+                        ref mut end,
+                        ref mut center_offset,
+                        ref mut clockwise,
+                    } => {
+                        end.1 = -end.1;
+                        center_offset.1 = -center_offset.1;
+                        *clockwise = !*clockwise;
+                    }
+                    CoreCommand::Bezier {
+                        ref mut end,
+                        ref mut control1,
+                        ref mut control2,
+                    } => {
+                        end.1 = -end.1;
+                        control1.1 = -control1.1;
+                        control2.1 = -control2.1;
+                    }
                 }
             }
         }
@@ -1063,28 +1028,42 @@ impl Geometry {
         x: f64,
         y: f64,
     ) -> Option<(usize, f64, (f64, f64))> {
-        let data = self.inner.synced_data();
-        if data.is_empty() {
+        if self.inner.data.is_empty() {
             return None;
         }
-        find_closest_point_on_path_from_array(data, x, y)
+        find_closest_point_on_path_from_array(&self.inner.data, x, y)
     }
 
-    /// Get the point and tangent vector at parameter t on a segment.
+    /// Get the point at parameter t on a segment.
     ///
     /// :param segment_index: Index of the segment.
     /// :param t: Parameter in [0, 1].
-    /// :returns: Tuple of (point, tangent) or None.
-    fn get_point_and_tangent_at(
+    /// :returns: The 3D point or None.
+    fn get_point_at(
         &mut self,
         segment_index: usize,
         t: f64,
-    ) -> Option<((f64, f64), (f64, f64))> {
-        let data = self.inner.synced_data();
-        if data.is_empty() {
+    ) -> Option<(f64, f64, f64)> {
+        if self.inner.data.is_empty() {
             return None;
         }
-        get_point_and_tangent_at_from_array(data, segment_index, t)
+        get_point_at_from_array(&self.inner.data, segment_index, t)
+    }
+
+    /// Get the tangent vector at parameter t on a segment.
+    ///
+    /// :param segment_index: Index of the segment.
+    /// :param t: Parameter in [0, 1].
+    /// :returns: The normalized tangent vector or None.
+    fn get_tangent_at(
+        &mut self,
+        segment_index: usize,
+        t: f64,
+    ) -> Option<(f64, f64)> {
+        if self.inner.data.is_empty() {
+            return None;
+        }
+        get_tangent_at_from_array(&self.inner.data, segment_index, t)
     }
 
     /// Get the outward normal at parameter t on a segment.
@@ -1097,11 +1076,10 @@ impl Geometry {
         segment_index: usize,
         t: f64,
     ) -> Option<(f64, f64)> {
-        let data = self.inner.synced_data();
-        if data.is_empty() {
+        if self.inner.data.is_empty() {
             return None;
         }
-        get_outward_normal_at_from_array(data, segment_index, t)
+        get_outward_normal_at_from_array(&self.inner.data, segment_index, t)
     }
 
     /// Draw an arc, converting it to bezier curves.
@@ -1123,22 +1101,19 @@ impl Geometry {
         z: f64,
     ) {
         let start_point = if let Some(last) = self.inner.data().last() {
-            (last[COL_X], last[COL_Y], last[COL_Z])
+            last.end_point()
         } else {
             self.inner.last_move_to
         };
         let end_point = (x, y, z);
         let center_offset = (i, j);
-        let bezier_rows = convert_arc_to_beziers_from_array(
+        let beziers = convert_arc_to_beziers_from_array(
             start_point,
             end_point,
             center_offset,
             clockwise,
         );
-        let data = self.inner.synced_data_mut();
-        for row in bezier_rows {
-            data.push(row);
-        }
+        self.inner.data.extend(beziers);
     }
 
     /// Check if the geometry has self-intersections.
@@ -1146,23 +1121,24 @@ impl Geometry {
     /// :param fail_on_t_junction: Whether to fail on T-junctions.
     #[pyo3(signature = (fail_on_t_junction=false))]
     fn has_self_intersections(&mut self, fail_on_t_junction: bool) -> bool {
-        let data = self.inner.synced_data();
-        if data.is_empty() {
+        if self.inner.data.is_empty() {
             return false;
         }
-        check_self_intersection_from_array(data, fail_on_t_junction)
+        check_self_intersection_from_array(&self.inner.data, fail_on_t_junction)
     }
 
     /// Check if this geometry intersects with another.
     ///
     /// :param other: The other geometry.
     fn intersects_with(&mut self, other: &mut Geometry) -> bool {
-        let data = self.inner.synced_data();
-        let other_data = other.inner.synced_data();
-        if data.is_empty() || other_data.is_empty() {
+        if self.inner.data.is_empty() || other.inner.data.is_empty() {
             return false;
         }
-        check_intersection_from_array(data, other_data, false)
+        check_intersection_from_array(
+            &self.inner.data,
+            &other.inner.data,
+            false,
+        )
     }
 
     /// Offset (grow/shrink) the geometry by the given amount.
@@ -1266,9 +1242,9 @@ impl Geometry {
     #[pyo3(signature = (tolerance=0.01))]
     fn to_polygons(&self, tolerance: f64) -> Vec<Vec<Point>> {
         let mut linearized = self.inner.copy();
-        if !linearized.data().is_empty() {
-            let lin = linearize_data(linearized.synced_data(), tolerance);
-            *linearized.synced_data_mut() = lin;
+        if !linearized.data.is_empty() {
+            let lin = linearize_data(&linearized.data, tolerance);
+            linearized.data = lin;
         }
         let segs = linearized.segments();
         let mut result = Vec::new();

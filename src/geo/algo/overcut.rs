@@ -10,14 +10,6 @@ use crate::types::Command;
 use crate::Geometry;
 
 /// Apply overcut to a closed geometry.
-///
-/// Extends a closed contour by `overcut` distance past its start point.
-/// If the geometry is not closed, empty, or overcut is <= 0, a copy is
-/// returned unchanged.
-///
-/// - `geo`: The input geometry (must be closed for overcut to apply).
-/// - `overcut`: Distance to extend the contour past the start point.
-/// - Returns: A new geometry with the overcut applied.
 pub fn apply_overcut(geo: &Geometry, overcut: f64) -> Geometry {
     if overcut <= 0.0 || geo.is_empty() || geo.data().len() < 2 {
         return geo.copy();
@@ -28,42 +20,37 @@ pub fn apply_overcut(geo: &Geometry, overcut: f64) -> Geometry {
 
     let mut result = geo.copy();
 
-    let overcut_rows = match extract_overcut_rows(geo.data(), overcut) {
-        Some(rows) => rows,
+    let overcut_cmds = match extract_overcut_rows(geo.data(), overcut) {
+        Some(cmds) => cmds,
         None => return result,
     };
 
-    for row in &overcut_rows {
-        if let Ok(cmd) = Command::from_row(row) {
-            let end = cmd.end_point();
-            match &cmd {
-                Command::Line { .. } => {
-                    result.line_to(end.0, end.1, end.2);
-                }
-                Command::Arc {
-                    center_offset,
-                    clockwise,
-                    ..
-                } => {
-                    result.arc_to(
-                        end.0,
-                        end.1,
-                        center_offset.0,
-                        center_offset.1,
-                        *clockwise,
-                        end.2,
-                    );
-                }
-                Command::Bezier {
-                    control1, control2, ..
-                } => {
-                    result.bezier_to(
-                        (*control1, *control2, (end.0, end.1)),
-                        end.2,
-                    );
-                }
-                Command::Move { .. } => {}
+    for cmd in &overcut_cmds {
+        let end = cmd.end_point();
+        match cmd {
+            Command::Line { .. } => {
+                result.line_to(end.0, end.1, end.2);
             }
+            Command::Arc {
+                center_offset,
+                clockwise,
+                ..
+            } => {
+                result.arc_to(
+                    end.0,
+                    end.1,
+                    center_offset.0,
+                    center_offset.1,
+                    *clockwise,
+                    end.2,
+                );
+            }
+            Command::Bezier {
+                control1, control2, ..
+            } => {
+                result.bezier_to((*control1, *control2, (end.0, end.1)), end.2);
+            }
+            Command::Move { .. } => {}
         }
     }
 

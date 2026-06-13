@@ -3,7 +3,7 @@ import math
 import numpy as np
 import pytest
 
-from raygeo.geo import Geometry
+from raygeo.geo import Arc, Bezier, Geometry, Line, Move
 from raygeo.geo.algo.fitting import (
     are_points_collinear,
     fit_circle_to_3_points,
@@ -200,7 +200,9 @@ def test_fit_circle_to_points_insufficient_points():
     assert fit_circle_to_points([(0.0, 0.0, 0.0)]) is None
     assert fit_circle_to_points([(1.0, 2.0, 0.0), (3.0, 4.0, 0.0)]) is None
     assert (
-        fit_circle_to_points([(5.0, 5.0, 0.0), (5.0, 5.0, 0.0), (5.0, 5.0, 0.0)])
+        fit_circle_to_points(
+            [(5.0, 5.0, 0.0), (5.0, 5.0, 0.0), (5.0, 5.0, 0.0)]
+        )
         is None
     )
 
@@ -340,9 +342,9 @@ def test_fit_points_with_primitives_single_line():
     cmds = fit_points_with_primitives(points, tolerance)
 
     assert len(cmds) == 1
-    cmd = cmds[0]
-    assert cmd[Geometry.COL_TYPE] == Geometry.CMD_TYPE_LINE
-    assert np.allclose((cmd[Geometry.COL_X], cmd[Geometry.COL_Y]), (10.0, 0.0))
+    cmd = cmds.data[0]
+    assert isinstance(cmd, Line)
+    assert cmd.end == (10.0, 0.0, 0.0)
 
 
 def test_fit_points_with_primitives_single_arc():
@@ -363,13 +365,13 @@ def test_fit_points_with_primitives_single_arc():
     cmds = fit_points_with_primitives(points, tolerance)
 
     assert len(cmds) == 1
-    cmd = cmds[0]
-    assert cmd[Geometry.COL_TYPE] == Geometry.CMD_TYPE_ARC
-    assert np.allclose((cmd[Geometry.COL_X], cmd[Geometry.COL_Y]), (0.0, 10.0))
+    cmd = cmds.data[0]
+    assert isinstance(cmd, Arc)
+    np.testing.assert_allclose(cmd.end, (0.0, 10.0, 0.0), atol=1e-6)
     # Center offset from start point (10, 0) is (-10, 0)
-    assert np.allclose((cmd[Geometry.COL_I], cmd[Geometry.COL_J]), (-10.0, 0.0))
+    np.testing.assert_allclose(cmd.center_offset, (-10.0, 0.0), atol=1e-6)
     # CCW
-    assert cmd[Geometry.COL_CW] == 0.0
+    assert cmd.clockwise is False
 
 
 def test_fit_points_with_primitives_corner_split():
@@ -384,10 +386,10 @@ def test_fit_points_with_primitives_corner_split():
     cmds = fit_points_with_primitives(points, tolerance)
 
     assert len(cmds) == 2
-    assert cmds[0][Geometry.COL_TYPE] == Geometry.CMD_TYPE_LINE
-    assert np.allclose((cmds[0][Geometry.COL_X], cmds[0][Geometry.COL_Y]), (10.0, 0.0))
-    assert cmds[1][Geometry.COL_TYPE] == Geometry.CMD_TYPE_LINE
-    assert np.allclose((cmds[1][Geometry.COL_X], cmds[1][Geometry.COL_Y]), (10.0, 10.0))
+    assert isinstance(cmds.data[0], Line)
+    assert cmds.data[0].end == (10.0, 0.0, 0.0)
+    assert isinstance(cmds.data[1], Line)
+    assert cmds.data[1].end == (10.0, 10.0, 0.0)
 
 
 def test_fit_points_with_primitives_line_arc_mixed():
@@ -397,7 +399,9 @@ def test_fit_points_with_primitives_line_arc_mixed():
     # Arc segment (tangent start at 10,0)
     # Center at (10, 5), radius 5. Start angle -pi/2, end 0
     angles = np.linspace(-np.pi / 2, 0, 11)
-    arc_pts = [(10.0 + 5.0 * np.cos(t), 5.0 + 5.0 * np.sin(t), 0.0) for t in angles]
+    arc_pts = [
+        (10.0 + 5.0 * np.cos(t), 5.0 + 5.0 * np.sin(t), 0.0) for t in angles
+    ]
     # Remove duplicate point at transition
     points = line_pts + arc_pts[1:]
 
@@ -408,8 +412,8 @@ def test_fit_points_with_primitives_line_arc_mixed():
     # Depending on resolution and tolerance, it might be perfect or
     # slightly split, but we expect basic types.
     assert len(cmds) >= 2
-    assert cmds[0][Geometry.COL_TYPE] == Geometry.CMD_TYPE_LINE
-    assert cmds[-1][Geometry.COL_TYPE] == Geometry.CMD_TYPE_ARC
+    assert isinstance(cmds.data[0], Line)
+    assert isinstance(cmds.data[-1], Arc)
 
 
 def test_get_polyline_line_deviation_collinear():
@@ -441,7 +445,7 @@ def test_fit_points_recursive_line():
     points = [(0.0, 0.0, 0.0), (5.0, 0.0, 0.0), (10.0, 0.0, 0.0)]
     cmds = fit_points_recursive(points, 0.1, 0, 2)
     assert len(cmds) == 1
-    assert cmds[0][Geometry.COL_TYPE] == Geometry.CMD_TYPE_LINE
+    assert isinstance(cmds.data[0], Line)
 
 
 def test_fit_points_recursive_arc():
@@ -455,7 +459,7 @@ def test_fit_points_recursive_arc():
     ]
     cmds = fit_points_recursive(points, 0.1, 0, len(points) - 1)
     assert len(cmds) == 1
-    assert cmds[0][Geometry.COL_TYPE] == Geometry.CMD_TYPE_ARC
+    assert isinstance(cmds.data[0], Arc)
 
 
 def test_fit_points_recursive_split():
@@ -463,8 +467,8 @@ def test_fit_points_recursive_split():
     points = [(0.0, 0.0, 0.0), (10.0, 0.0, 0.0), (10.0, 10.0, 0.0)]
     cmds = fit_points_recursive(points, 0.1, 0, 2)
     assert len(cmds) == 2
-    assert cmds[0][Geometry.COL_TYPE] == Geometry.CMD_TYPE_LINE
-    assert cmds[1][Geometry.COL_TYPE] == Geometry.CMD_TYPE_LINE
+    assert isinstance(cmds.data[0], Line)
+    assert isinstance(cmds.data[1], Line)
 
 
 def test_fit_points_recursive_empty():
@@ -479,7 +483,7 @@ def test_fit_points_recursive_single_point():
     points = [(0.0, 0.0, 0.0), (10.0, 0.0, 0.0)]
     cmds = fit_points_recursive(points, 0.1, 0, 1)
     assert len(cmds) == 1
-    assert cmds[0][Geometry.COL_TYPE] == Geometry.CMD_TYPE_LINE
+    assert isinstance(cmds.data[0], Line)
 
 
 def test_fit_arcs_simple_line():
@@ -491,10 +495,9 @@ def test_fit_arcs_simple_line():
     result = geo.fit_arcs(0.1)
 
     # Should preserve move and line commands
-    assert result.data is not None
     assert len(result.data) == 2
-    assert result.data[0][Geometry.COL_TYPE] == Geometry.CMD_TYPE_MOVE
-    assert result.data[1][Geometry.COL_TYPE] == Geometry.CMD_TYPE_LINE
+    assert isinstance(result.data[0], Move)
+    assert isinstance(result.data[1], Line)
 
 
 def test_fit_arcs_with_bezier():
@@ -506,13 +509,9 @@ def test_fit_arcs_with_bezier():
     result = geo.fit_arcs(0.1)
 
     # Should convert bezier to lines/arcs
-    assert result.data is not None
     assert len(result.data) >= 1
-    assert result.data[0][Geometry.COL_TYPE] == Geometry.CMD_TYPE_MOVE
-    assert result.data[1][Geometry.COL_TYPE] in (
-        Geometry.CMD_TYPE_LINE,
-        Geometry.CMD_TYPE_ARC,
-    )
+    assert isinstance(result.data[0], Move)
+    assert isinstance(result.data[1], (Line, Arc))
 
 
 def test_fit_arcs_empty():
@@ -520,7 +519,7 @@ def test_fit_arcs_empty():
     geo = Geometry()
     result = geo.fit_arcs(0.1)
     assert result is not None
-    assert result.data is None
+    assert len(result.data) == 0
 
 
 def test_fit_curves_preserve_bezier():
@@ -531,10 +530,9 @@ def test_fit_curves_preserve_bezier():
 
     result = geo.fit_curves(0.1, beziers=True, arcs=True)
 
-    assert result.data is not None
     assert len(result.data) == 2
-    assert result.data[0][Geometry.COL_TYPE] == Geometry.CMD_TYPE_MOVE
-    assert result.data[1][Geometry.COL_TYPE] == Geometry.CMD_TYPE_BEZIER
+    assert isinstance(result.data[0], Move)
+    assert isinstance(result.data[1], Bezier)
 
 
 def test_fit_curves_linearize_bezier():
@@ -545,14 +543,10 @@ def test_fit_curves_linearize_bezier():
 
     result = geo.fit_curves(0.1, beziers=False, arcs=True)
 
-    assert result.data is not None
     assert len(result.data) >= 2
-    assert result.data[0][Geometry.COL_TYPE] == Geometry.CMD_TYPE_MOVE
-    for row in result.data[1:]:
-        assert row[Geometry.COL_TYPE] in (
-            Geometry.CMD_TYPE_LINE,
-            Geometry.CMD_TYPE_ARC,
-        )
+    assert isinstance(result.data[0], Move)
+    for cmd in result.data[1:]:
+        assert isinstance(cmd, (Line, Arc))
 
 
 def test_fit_curves_preserve_arc():
@@ -563,10 +557,9 @@ def test_fit_curves_preserve_arc():
 
     result = geo.fit_curves(0.1, beziers=True, arcs=True)
 
-    assert result.data is not None
     assert len(result.data) == 2
-    assert result.data[0][Geometry.COL_TYPE] == Geometry.CMD_TYPE_MOVE
-    assert result.data[1][Geometry.COL_TYPE] == Geometry.CMD_TYPE_ARC
+    assert isinstance(result.data[0], Move)
+    assert isinstance(result.data[1], Arc)
 
 
 def test_fit_curves_linearize_arc():
@@ -577,13 +570,9 @@ def test_fit_curves_linearize_arc():
 
     result = geo.fit_curves(0.1, beziers=False, arcs=False)
 
-    assert result.data is not None
-    assert result.data[0][Geometry.COL_TYPE] == Geometry.CMD_TYPE_MOVE
-    for row in result.data[1:]:
-        assert row[Geometry.COL_TYPE] in (
-            Geometry.CMD_TYPE_LINE,
-            Geometry.CMD_TYPE_ARC,
-        )
+    assert isinstance(result.data[0], Move)
+    for cmd in result.data[1:]:
+        assert isinstance(cmd, (Line, Arc))
 
 
 def test_fit_curves_mixed_lines_beziers_arcs():
@@ -596,10 +585,9 @@ def test_fit_curves_mixed_lines_beziers_arcs():
 
     result = geo.fit_curves(0.1, beziers=True, arcs=True)
 
-    assert result.data is not None
-    types = [r[Geometry.COL_TYPE] for r in result.data]
-    assert Geometry.CMD_TYPE_BEZIER in types
-    assert Geometry.CMD_TYPE_ARC in types
+    types = {type(cmd) for cmd in result.data}
+    assert Bezier in types
+    assert Arc in types
 
 
 def test_fit_points_recursive_closed_d_shape_no_full_circle():
@@ -632,8 +620,8 @@ def test_fit_points_recursive_closed_d_shape_no_full_circle():
         "expected split into arc + line segments"
     )
 
-    has_line = any(c[Geometry.COL_TYPE] == Geometry.CMD_TYPE_LINE for c in cmds)
-    has_arc = any(c[Geometry.COL_TYPE] == Geometry.CMD_TYPE_ARC for c in cmds)
+    has_line = any(isinstance(c, Line) for c in cmds.data)
+    has_arc = any(isinstance(c, Arc) for c in cmds.data)
     assert has_line, "Expected at least one LINE segment (the closing edge)"
     assert has_arc, "Expected at least one ARC segment (the curved edge)"
 
@@ -652,7 +640,7 @@ def test_fit_points_recursive_open_arc_still_fits():
     ]
     cmds = fit_points_recursive(points, 0.1, 0, len(points) - 1)
     assert len(cmds) == 1
-    assert cmds[0][Geometry.COL_TYPE] == Geometry.CMD_TYPE_ARC
+    assert isinstance(cmds.data[0], Arc)
 
 
 def test_fit_curves_backwards_compat():
@@ -664,7 +652,7 @@ def test_fit_curves_backwards_compat():
     result_old = geo.fit_arcs(0.1)
     result_new = geo.fit_curves(0.1, beziers=False, arcs=True)
 
-    assert result_old.data is not None
-    assert result_new.data is not None
     assert len(result_old.data) == len(result_new.data)
-    np.testing.assert_array_equal(result_old.data, result_new.data)
+    for old_cmd, new_cmd in zip(result_old.data, result_new.data):
+        assert type(old_cmd) is type(new_cmd)
+        assert old_cmd.end == new_cmd.end

@@ -9,7 +9,6 @@
 
 use std::f64::consts::PI;
 
-use crate::constants::*;
 use crate::geo::shape::line::{
     does_line_segment_intersect_rect, get_line_segment_closest_point,
 };
@@ -179,16 +178,16 @@ pub fn is_arc_clockwise(points: &[Point], center: Point) -> bool {
 }
 
 /// Internal: Linearizes an arc into line segments for approximation.
-pub fn _linearize_arc_from_array(
-    arc_row: &[f64; 8],
+fn linearize_arc_impl(
+    end: Point3D,
+    center_offset: Point,
+    clockwise: bool,
     start_point: Point3D,
     resolution: f64,
 ) -> Vec<(Point3D, Point3D)> {
     let mut segments: Vec<(Point3D, Point3D)> = Vec::new();
     let p0 = start_point;
-    let p1 = (arc_row[COL_X], arc_row[COL_Y], arc_row[COL_Z]);
-    let center_offset = (arc_row[COL_I], arc_row[COL_J]);
-    let clockwise = arc_row[COL_CW] != 0.0;
+    let p1 = end;
     let z0 = p0.2;
     let z1 = p1.2;
 
@@ -254,21 +253,26 @@ pub fn _linearize_arc_from_array(
 /// Converts an arc into a series of line segments for approximation.
 /// The resolution parameter controls the maximum length of each segment.
 pub fn linearize_arc(
-    arc_row: &[f64; 8],
+    end: Point3D,
+    center_offset: Point,
+    clockwise: bool,
     start_point: Point3D,
     resolution: f64,
 ) -> Vec<(Point3D, Point3D)> {
-    _linearize_arc_from_array(arc_row, start_point, resolution)
+    linearize_arc_impl(end, center_offset, clockwise, start_point, resolution)
 }
 
 /// Internal: Finds closest point on arc using linearized approximation.
-fn _find_closest_on_linearized_arc(
-    arc_row: &[f64; 8],
+fn find_closest_on_linearized_arc(
+    end: Point3D,
+    center_offset: Point,
+    clockwise: bool,
     start_pos: Point3D,
     x: f64,
     y: f64,
 ) -> Option<(f64, Point, f64)> {
-    let arc_segments = linearize_arc(arc_row, start_pos, 0.1);
+    let arc_segments =
+        linearize_arc(end, center_offset, clockwise, start_pos, 0.1);
     if arc_segments.is_empty() {
         return None;
     }
@@ -295,23 +299,30 @@ fn _find_closest_on_linearized_arc(
     })
 }
 
-fn _find_closest_point_on_arc_from_array(
-    arc_row: &[f64; 8],
+fn find_closest_point_on_arc_impl(
+    end: Point3D,
+    center_offset: Point,
+    clockwise: bool,
     start_pos: Point3D,
     x: f64,
     y: f64,
 ) -> Option<(f64, Point, f64)> {
     let p0 = (start_pos.0, start_pos.1);
-    let p1 = (arc_row[COL_X], arc_row[COL_Y]);
-    let center_offset = (arc_row[COL_I], arc_row[COL_J]);
-    let clockwise = arc_row[COL_CW] != 0.0;
+    let p1 = (end.0, end.1);
     let center = (p0.0 + center_offset.0, p0.1 + center_offset.1);
 
     let radius_start = (p0.0 - center.0).hypot(p0.1 - center.1);
     let radius_end = (p1.0 - center.0).hypot(p1.1 - center.1);
 
     if (radius_start - radius_end).abs() > 1e-9 {
-        return _find_closest_on_linearized_arc(arc_row, start_pos, x, y);
+        return find_closest_on_linearized_arc(
+            end,
+            center_offset,
+            clockwise,
+            start_pos,
+            x,
+            y,
+        );
     }
 
     let radius = radius_start;
@@ -388,12 +399,21 @@ fn _find_closest_point_on_arc_from_array(
 /// Finds the closest point on an arc to a given (x, y) coordinate.
 /// Returns (t_parameter, closest_point, distance_squared).
 pub fn get_arc_closest_point(
-    arc_row: &[f64; 8],
+    end: Point3D,
+    center_offset: Point,
+    clockwise: bool,
     start_pos: Point3D,
     x: f64,
     y: f64,
 ) -> Option<(f64, Point, f64)> {
-    _find_closest_point_on_arc_from_array(arc_row, start_pos, x, y)
+    find_closest_point_on_arc_impl(
+        end,
+        center_offset,
+        clockwise,
+        start_pos,
+        x,
+        y,
+    )
 }
 
 /// Tests if an arc intersects an axis-aligned rectangle.
@@ -424,19 +444,10 @@ pub fn does_arc_intersect_rect(
     let center_offset = (center.0 - start_pos.0, center.1 - start_pos.1);
     let radius = (start_pos.0 - center.0).hypot(start_pos.1 - center.1);
     let start_3d: Point3D = (start_pos.0, start_pos.1, 0.0);
+    let end_3d: Point3D = (end_pos.0, end_pos.1, 0.0);
 
-    let arc_data: [f64; 8] = [
-        CMD_TYPE_ARC,
-        end_pos.0,
-        end_pos.1,
-        0.0,
-        center_offset.0,
-        center_offset.1,
-        if clockwise { 1.0 } else { 0.0 },
-        0.0,
-    ];
-
-    let segments = linearize_arc(&arc_data, start_3d, radius * 0.1);
+    let segments =
+        linearize_arc(end_3d, center_offset, clockwise, start_3d, radius * 0.1);
     for (p1_3d, p2_3d) in segments {
         if does_line_segment_intersect_rect(
             (p1_3d.0, p1_3d.1),
@@ -597,20 +608,21 @@ mod tests {
 
     #[test]
     fn test_linearize_arc() {
-        let arc_row: [f64; 8] =
-            [CMD_TYPE_ARC, 1.0, 0.0, 0.0, -1.0, 0.0, 1.0, 0.0];
+        let end: Point3D = (1.0, 0.0, 0.0);
+        let center_offset = (-1.0, 0.0);
         let start: Point3D = (0.0, 0.0, 0.0);
-        let segments = linearize_arc(&arc_row, start, 0.1);
+        let segments = linearize_arc(end, center_offset, true, start, 0.1);
         assert!(!segments.is_empty());
         assert_eq!(segments.last().unwrap().1, (1.0, 0.0, 0.0));
     }
 
     #[test]
     fn test_get_arc_closest_point() {
-        let arc_row: [f64; 8] =
-            [CMD_TYPE_ARC, 1.0, 0.0, 0.0, -1.0, 0.0, 0.0, 0.0];
+        let end: Point3D = (1.0, 0.0, 0.0);
+        let center_offset = (-1.0, 0.0);
         let start: Point3D = (0.0, 0.0, 0.0);
-        let result = get_arc_closest_point(&arc_row, start, 0.5, 0.5);
+        let result =
+            get_arc_closest_point(end, center_offset, false, start, 0.5, 0.5);
         assert!(result.is_some());
         let (t, _pt, _) = result.unwrap();
         assert!((0.0..=1.0).contains(&t));

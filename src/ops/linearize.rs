@@ -53,18 +53,10 @@ pub fn linearize_node(node: &OpNode, start_point: Point3D) -> Ops {
                 result
             }
             MoveCmd::ArcTo { center, cw } => {
-                let arc_row: [f64; 8] = [
-                    crate::constants::CMD_TYPE_ARC,
-                    end.0,
-                    end.1,
-                    end.2,
-                    center.0,
-                    center.1,
-                    if *cw { 1.0 } else { 0.0 },
-                    0.0,
-                ];
                 let segments = crate::geo::shape::arc::linearize_arc(
-                    &arc_row,
+                    end,
+                    *center,
+                    *cw,
                     start_point,
                     0.1,
                 );

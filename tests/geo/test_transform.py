@@ -3,7 +3,7 @@ import math
 import numpy as np
 import pytest
 
-from raygeo.geo import Geometry
+from raygeo.geo import Arc, Bezier, Geometry
 
 
 def _create_translate_matrix(x, y, z):
@@ -70,19 +70,18 @@ def test_transform_translate():
 
     translate_matrix = _create_translate_matrix(10, -5, 15)
     geo.transform(translate_matrix)
-    assert geo.data is not None
 
     # Check move
-    assert np.allclose(geo.data[0, 1:4], (20, 15, 45))
+    assert np.allclose(geo.data[0].end, (20, 15, 45))
     # Check arc
-    assert np.allclose(geo.data[1, 1:4], (60, 55, 55))
+    assert np.allclose(geo.data[1].end, (60, 55, 55))
     # Translation should NOT affect arc center offsets (vectors)
-    assert np.allclose(geo.data[1, 4:6], (5, 7))
+    assert np.allclose(geo.data[1].center_offset, (5, 7))
     # Check bezier
-    assert np.allclose(geo.data[2, 1:4], (80, 75, 65))
+    assert np.allclose(geo.data[2].end, (80, 75, 65))
     # Translation SHOULD affect bezier control points (absolute coords)
-    assert np.allclose(geo.data[2, Geometry.COL_C1X : Geometry.COL_C1Y + 1], (65, 60))
-    assert np.allclose(geo.data[2, Geometry.COL_C2X : Geometry.COL_C2Y + 1], (75, 70))
+    assert np.allclose(geo.data[2].control1, (65, 60))
+    assert np.allclose(geo.data[2].control2, (75, 70))
 
 
 def test_transform_scale_non_uniform_preserves_beziers():
@@ -96,37 +95,32 @@ def test_transform_scale_non_uniform_preserves_beziers():
     scale_matrix = _create_scale_matrix(2, 3, 4)
 
     geo.transform(scale_matrix)
-    assert geo.data is not None
 
     # 1. Check Move
-    assert np.allclose(geo.data[0, 1:4], (20, 60, 20))
+    assert np.allclose(geo.data[0].end, (20, 60, 20))
 
     # 2. Check that all subsequent commands are still Beziers
-    assert np.all(geo.data[1:, Geometry.COL_TYPE] == Geometry.CMD_TYPE_BEZIER)
+    assert all(isinstance(cmd, Bezier) for cmd in geo.data[1:])
 
     # 3. Check the final state of the explicit bezier_to command.
     # It's the last row.
     final_bezier_row = geo.data[-1]
 
     # Check end point: (30*2, 30*3, -20*4) -> (60, 90, -80)
-    final_point = final_bezier_row[Geometry.COL_X : Geometry.COL_Z + 1]
-    assert np.allclose(final_point, (60.0, 90.0, -80.0))
+    assert np.allclose(final_bezier_row.end, (60.0, 90.0, -80.0))
 
     # Check C1: (24*2, 24*3) -> (48, 72)
-    final_c1 = final_bezier_row[Geometry.COL_C1X : Geometry.COL_C1Y + 1]
-    assert np.allclose(final_c1, (48.0, 72.0))
+    assert np.allclose(final_bezier_row.control1, (48.0, 72.0))
 
     # Check C2: (28*2, 28*3) -> (56, 84)
-    final_c2 = final_bezier_row[Geometry.COL_C2X : Geometry.COL_C2Y + 1]
-    assert np.allclose(final_c2, (56.0, 84.0))
+    assert np.allclose(final_bezier_row.control2, (56.0, 84.0))
 
     # 4. Check the final state of the arc_to_as_bezier command.
     # Its last segment is the second-to-last row.
     arc_end_row = geo.data[-2]
 
     # Check end point: (22*2, 22*3, -10*4) -> (44, 66, -40)
-    arc_final_point = arc_end_row[Geometry.COL_X : Geometry.COL_Z + 1]
-    assert np.allclose(arc_final_point, (44.0, 66.0, -40.0))
+    assert np.allclose(arc_end_row.end, (44.0, 66.0, -40.0))
 
 
 def test_transform_rotate_preserves_z():
@@ -135,9 +129,8 @@ def test_transform_rotate_preserves_z():
     rotate_matrix = _create_z_rotate_matrix(math.radians(90))
 
     geo.transform(rotate_matrix)
-    assert geo.data is not None
 
-    x, y, z = geo.data[0, 1:4]
+    x, y, z = geo.data[0].end
     assert z == -5
     assert x == pytest.approx(-10)
     assert y == pytest.approx(10)
@@ -154,22 +147,21 @@ def test_transform_uniform_scale_preserves_curves():
     # Uniform scale by 2
     scale_matrix = _create_scale_matrix(2, 2, 2)
     geo.transform(scale_matrix)
-    assert geo.data is not None
 
     # Check arc
     arc_row = geo.data[1]
-    assert arc_row[Geometry.COL_TYPE] == Geometry.CMD_TYPE_ARC
-    assert np.allclose(arc_row[1:4], (20, 0, 0))
+    assert isinstance(arc_row, Arc)
+    assert np.allclose(arc_row.end, (20, 0, 0))
     # Offset should also scale
-    assert np.allclose(arc_row[4:6], (10, 0))
+    assert np.allclose(arc_row.center_offset, (10, 0))
 
     # Check bezier
     bezier_row = geo.data[2]
-    assert bezier_row[Geometry.COL_TYPE] == Geometry.CMD_TYPE_BEZIER
-    assert np.allclose(bezier_row[1:4], (40, 0, 0))
+    assert isinstance(bezier_row, Bezier)
+    assert np.allclose(bezier_row.end, (40, 0, 0))
     # Control points should also scale
-    assert np.allclose(bezier_row[Geometry.COL_C1X : Geometry.COL_C1Y + 1], (24, 4))
-    assert np.allclose(bezier_row[Geometry.COL_C2X : Geometry.COL_C2Y + 1], (36, -4))
+    assert np.allclose(bezier_row.control1, (24, 4))
+    assert np.allclose(bezier_row.control2, (36, -4))
 
 
 # --- Grow/Offset Tests ---
@@ -264,7 +256,9 @@ def test_grow_circle():
     offset = -2.0
     shrunk_circle = circle.grow(offset)
     expected_shrunk_area = math.pi * (radius + offset) ** 2
-    assert shrunk_circle.area() == pytest.approx(expected_shrunk_area, rel=1e-2)
+    assert shrunk_circle.area() == pytest.approx(
+        expected_shrunk_area, rel=1e-2
+    )
 
 
 def test_shrink_to_nothing():
@@ -387,7 +381,9 @@ def test_grow_shape_with_multiple_holes():
     grown = geo.grow(1.0)
 
     grown_contours = grown.split_into_contours()
-    assert len(grown_contours) == 4, f"Expected 4 contours, got {len(grown_contours)}"
+    assert len(grown_contours) == 4, (
+        f"Expected 4 contours, got {len(grown_contours)}"
+    )
 
     nonzero = [g for g in grown_contours if g.area() > 1.0]
     assert len(nonzero) == 4

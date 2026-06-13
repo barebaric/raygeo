@@ -13,8 +13,8 @@ use crate::types::{BezierControls, Command, Point3D, Rect};
 /// Commands are appended directly to the `data` array on construction.
 #[derive(Clone, Debug)]
 pub struct Geometry {
-    /// Command data array, each row is [type, x, y, z, aux1, aux2, aux3, aux4].
-    pub(crate) data: Vec<[f64; 8]>,
+    /// Command data stored as typed Command enum variants.
+    pub(crate) data: Vec<Command>,
     /// The position where the last MOVE command was issued.
     pub last_move_to: Point3D,
     /// Whether the geometry can be uniformly scaled without distortion (false if arcs present).
@@ -49,12 +49,12 @@ impl Geometry {
     /// Starts a new subpath; subsequent commands will continue from this point.
     pub fn move_to(&mut self, x: f64, y: f64, z: f64) {
         self.last_move_to = (x, y, z);
-        self.data.push(Command::Move { end: (x, y, z) }.to_row());
+        self.data.push(Command::Move { end: (x, y, z) });
     }
 
     /// Draws a straight line from the current position to the specified point.
     pub fn line_to(&mut self, x: f64, y: f64, z: f64) {
-        self.data.push(Command::Line { end: (x, y, z) }.to_row());
+        self.data.push(Command::Line { end: (x, y, z) });
     }
 
     /// Closes the current subpath by drawing a line back to the starting point.
@@ -83,14 +83,11 @@ impl Geometry {
         z: f64,
     ) {
         self.uniform_scalable = false;
-        self.data.push(
-            Command::Arc {
-                end: (x, y, z),
-                center_offset: (i, j),
-                clockwise,
-            }
-            .to_row(),
-        );
+        self.data.push(Command::Arc {
+            end: (x, y, z),
+            center_offset: (i, j),
+            clockwise,
+        });
     }
 
     /// Draws a cubic Bezier curve from the current position to the endpoint.
@@ -101,28 +98,15 @@ impl Geometry {
     /// - `p1`: End point (the start point is the current position)
     pub fn bezier_to(&mut self, controls: BezierControls, z: f64) {
         let (c1, c2, p1) = controls;
-        self.data.push(
-            Command::Bezier {
-                end: (p1.0, p1.1, z),
-                control1: c1,
-                control2: c2,
-            }
-            .to_row(),
-        );
+        self.data.push(Command::Bezier {
+            end: (p1.0, p1.1, z),
+            control1: c1,
+            control2: c2,
+        });
     }
 
-    /// Returns a reference to the data array.
-    pub fn synced_data(&mut self) -> &Vec<[f64; 8]> {
-        &self.data
-    }
-
-    /// Returns a mutable reference to the data array.
-    pub fn synced_data_mut(&mut self) -> &mut Vec<[f64; 8]> {
-        &mut self.data
-    }
-
-    /// Returns a shared reference to the data array.
-    pub fn data(&self) -> &Vec<[f64; 8]> {
+    /// Returns a shared reference to the command data.
+    pub fn data(&self) -> &Vec<Command> {
         &self.data
     }
 
@@ -191,14 +175,11 @@ impl Geometry {
         if self.data.len() < 2 {
             return false;
         }
-        let first = Command::from_row(&self.data[0]).expect("invalid command");
-        if !matches!(first, Command::Move { .. }) {
+        if !matches!(&self.data[0], Command::Move { .. }) {
             return false;
         }
-        let start = first.end_point();
-        let last = Command::from_row(&self.data[self.data.len() - 1])
-            .expect("invalid command");
-        let end = last.end_point();
+        let start = self.data[0].end_point();
+        let end = self.data[self.data.len() - 1].end_point();
         let dist_sq = (start.0 - end.0).powi(2)
             + (start.1 - end.1).powi(2)
             + (start.2 - end.2).powi(2);
@@ -265,8 +246,7 @@ impl Geometry {
         let mut current_segment: Vec<Point3D> = Vec::new();
         let mut last_point: Point3D = (0.0, 0.0, 0.0);
 
-        for row in &self.data {
-            let cmd = Command::from_row(row).expect("invalid command");
+        for cmd in &self.data {
             let end_point = cmd.end_point();
 
             match cmd {
@@ -294,18 +274,14 @@ impl Geometry {
         all_segments
     }
 
-    /// Returns the command at the given index, if it exists.
-    pub fn get_command_at(&self, index: usize) -> Option<[f64; 8]> {
-        if index < self.data.len() {
-            Some(self.data[index])
-        } else {
-            None
-        }
+    /// Returns a reference to the command at the given index, if it exists.
+    pub fn get_command_at(&self, index: usize) -> Option<&Command> {
+        self.data.get(index)
     }
 
     /// Returns an iterator over all commands.
-    pub fn iter_commands(&self) -> impl Iterator<Item = [f64; 8]> + '_ {
-        self.data.iter().copied()
+    pub fn iter_commands(&self) -> impl Iterator<Item = &Command> + '_ {
+        self.data.iter()
     }
 }
 

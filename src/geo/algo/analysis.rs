@@ -14,29 +14,24 @@ use crate::geo::algo::topology::{
 };
 use crate::geo::geometry::Geometry;
 use crate::geo::shape::arc::linearize_arc;
-use crate::geo::shape::bezier::linearize_bezier_from_array;
+use crate::geo::shape::bezier::linearize_bezier_from_params;
 use crate::geo::shape::polygon::is_point_inside_polygon;
 use crate::types::{Command, Point, Point3D, Polygon};
 
 /// Checks if a path forms a closed loop within the given tolerance.
 /// A closed path starts and ends at the same point.
-pub fn is_closed(commands: &[[f64; 8]], tolerance: f64) -> bool {
+pub fn is_closed(commands: &[Command], tolerance: f64) -> bool {
     if commands.len() < 2 {
         return false;
     }
 
-    // Must start with a MOVE command
-    let first = Command::from_row(&commands[0]).expect("invalid command");
-    if !matches!(first, Command::Move { .. }) {
+    if !matches!(&commands[0], Command::Move { .. }) {
         return false;
     }
 
-    let start_point = first.end_point();
-    let last = Command::from_row(&commands[commands.len() - 1])
-        .expect("invalid command");
-    let end_point = last.end_point();
+    let start_point = commands[0].end_point();
+    let end_point = commands[commands.len() - 1].end_point();
 
-    // Check if start and end are within tolerance distance
     let dist_sq = (start_point.0 - end_point.0).powi(2)
         + (start_point.1 - end_point.1).powi(2)
         + (start_point.2 - end_point.2).powi(2);
@@ -47,7 +42,7 @@ pub fn is_closed(commands: &[[f64; 8]], tolerance: f64) -> bool {
 /// Extracts all vertices from a subpath starting at the given command index.
 /// Linearizes arcs and Beziers into vertex sequences.
 pub fn get_subpath_vertices_from_array(
-    data: &[[f64; 8]],
+    data: &[Command],
     start_cmd_index: usize,
 ) -> Polygon {
     let mut vertices: Polygon = Vec::new();
@@ -55,25 +50,26 @@ pub fn get_subpath_vertices_from_array(
         return vertices;
     }
 
-    let start_cmd =
-        Command::from_row(&data[start_cmd_index]).expect("invalid command");
-    let last_pos_3d = start_cmd.end_point();
+    let last_pos_3d = data[start_cmd_index].end_point();
     vertices.push((last_pos_3d.0, last_pos_3d.1));
 
-    for row in data.iter().skip(start_cmd_index + 1) {
-        let cmd = Command::from_row(row).expect("invalid command");
-
+    for cmd in data.iter().skip(start_cmd_index + 1) {
         if matches!(cmd, Command::Move { .. }) {
             break;
         }
 
         let end_point_3d = cmd.end_point();
 
-        match &cmd {
+        match cmd {
             Command::Line { .. } => {
                 vertices.push((end_point_3d.0, end_point_3d.1));
             }
-            Command::Arc { .. } => {
+            Command::Arc {
+                end,
+                center_offset,
+                clockwise,
+                ..
+            } => {
                 let start_3d: Point3D = if vertices.len() >= 2 {
                     (
                         vertices[vertices.len() - 1].0,
@@ -83,12 +79,23 @@ pub fn get_subpath_vertices_from_array(
                 } else {
                     last_pos_3d
                 };
-                let segments = linearize_arc(row, start_3d, 0.1);
+                let segments = linearize_arc(
+                    *end,
+                    *center_offset,
+                    *clockwise,
+                    start_3d,
+                    0.1,
+                );
                 for (_, p2) in segments {
                     vertices.push((p2.0, p2.1));
                 }
             }
-            Command::Bezier { .. } => {
+            Command::Bezier {
+                end,
+                control1,
+                control2,
+                ..
+            } => {
                 let start_3d: Point3D = if vertices.len() >= 2 {
                     (
                         vertices[vertices.len() - 1].0,
@@ -98,7 +105,9 @@ pub fn get_subpath_vertices_from_array(
                 } else {
                     last_pos_3d
                 };
-                let segments = linearize_bezier_from_array(row, start_3d, 0.1);
+                let segments = linearize_bezier_from_params(
+                    *end, *control1, *control2, start_3d, 0.1,
+                );
                 for (_, p2) in segments {
                     vertices.push((p2.0, p2.1));
                 }
@@ -113,7 +122,7 @@ pub fn get_subpath_vertices_from_array(
 /// Computes the signed area of a subpath using the shoelace formula.
 /// Positive area indicates counter-clockwise (CCW), negative indicates clockwise (CW).
 pub fn get_subpath_area_from_array(
-    data: &[[f64; 8]],
+    data: &[Command],
     start_cmd_index: usize,
 ) -> f64 {
     let vertices = get_subpath_vertices_from_array(data, start_cmd_index);
@@ -121,7 +130,6 @@ pub fn get_subpath_area_from_array(
         return 0.0;
     }
 
-    // Must be a closed polygon (start = end)
     let p_start = vertices[0];
     let p_end = vertices[vertices.len() - 1];
 
@@ -131,7 +139,6 @@ pub fn get_subpath_area_from_array(
         return 0.0;
     }
 
-    // Shoelace formula: sum(x_i * y_{i+1} - x_{i+1} * y_i) / 2
     let mut area = 0.0;
     for i in 0..vertices.len() - 1 {
         let x = vertices[i].0;
@@ -146,29 +153,24 @@ pub fn get_subpath_area_from_array(
 
 /// Computes the total area enclosed by the geometry, summing all subpaths.
 /// Returns the absolute value (unsigned area).
-pub fn get_area_from_array(data: &[[f64; 8]]) -> f64 {
+pub fn get_area_from_array(data: &[Command]) -> f64 {
     if data.is_empty() {
         return 0.0;
     }
 
-    // Validate that path starts with MOVE
-    let first = Command::from_row(&data[0]).expect("invalid command");
-    if !matches!(first, Command::Move { .. }) {
+    if !matches!(&data[0], Command::Move { .. }) {
         return 0.0;
     }
 
     let mut total_signed_area = 0.0;
 
-    // Find all MOVE command indices (start of each subpath)
     let mut move_indices: Vec<usize> = Vec::new();
-    for (i, row) in data.iter().enumerate() {
-        let cmd = Command::from_row(row).expect("invalid command");
+    for (i, cmd) in data.iter().enumerate() {
         if matches!(cmd, Command::Move { .. }) {
             move_indices.push(i);
         }
     }
 
-    // Sum area from each subpath
     for &i in &move_indices {
         total_signed_area += get_subpath_area_from_array(data, i);
     }
@@ -179,7 +181,7 @@ pub fn get_area_from_array(data: &[[f64; 8]]) -> f64 {
 /// Determines the winding order of a subpath based on signed area.
 /// Returns "ccw" for counter-clockwise, "cw" for clockwise, or "unknown" if degenerate.
 pub fn get_path_winding_order_from_array(
-    data: &[[f64; 8]],
+    data: &[Command],
     start_cmd_index: usize,
 ) -> &'static str {
     let area = get_subpath_area_from_array(data, start_cmd_index);
@@ -193,24 +195,102 @@ pub fn get_path_winding_order_from_array(
     }
 }
 
-/// Evaluates a point and its tangent vector at a given t parameter along a path segment.
+/// Evaluates a point at a given t parameter along a path segment.
 /// Returns None for MOVE commands or invalid indices.
-pub fn get_point_and_tangent_at_from_array(
-    data: &[[f64; 8]],
+pub fn get_point_at_from_array(
+    data: &[Command],
     row_index: usize,
     t: f64,
-) -> Option<(Point, Point)> {
+) -> Option<Point3D> {
     if row_index >= data.len() {
         return None;
     }
 
-    let row = data[row_index];
-    let cmd = Command::from_row(&row).expect("invalid command");
-
+    let cmd = &data[row_index];
     let start_pos_3d: Point3D = if row_index > 0 {
-        Command::from_row(&data[row_index - 1])
-            .expect("invalid command")
-            .end_point()
+        data[row_index - 1].end_point()
+    } else {
+        (0.0, 0.0, 0.0)
+    };
+
+    let p0 = start_pos_3d;
+    let end_3d = cmd.end_point();
+    let p1 = end_3d;
+
+    let (px, py) = match cmd {
+        Command::Line { .. } => {
+            let px = p0.0 + t * (p1.0 - p0.0);
+            let py = p0.1 + t * (p1.1 - p0.1);
+            (px, py)
+        }
+        Command::Arc {
+            center_offset,
+            clockwise,
+            ..
+        } => {
+            let center = (p0.0 + center_offset.0, p0.1 + center_offset.1);
+
+            let start_angle = (p0.1 - center.1).atan2(p0.0 - center.0);
+            let end_angle = (p1.1 - center.1).atan2(p1.0 - center.0);
+            let mut angle_range = end_angle - start_angle;
+
+            if *clockwise {
+                if angle_range > 0.0 {
+                    angle_range -= 2.0 * PI;
+                }
+            } else {
+                if angle_range < 0.0 {
+                    angle_range += 2.0 * PI;
+                }
+            }
+
+            let current_angle = start_angle + t * angle_range;
+            let radius_start = (p0.0 - center.0).hypot(p0.1 - center.1);
+            let radius_end = (p1.0 - center.0).hypot(p1.1 - center.1);
+            let radius = radius_start + t * (radius_end - radius_start);
+
+            let px = center.0 + radius * current_angle.cos();
+            let py = center.1 + radius * current_angle.sin();
+            (px, py)
+        }
+        Command::Bezier {
+            control1, control2, ..
+        } => {
+            let c1 = *control1;
+            let c2 = *control2;
+
+            let omt = 1.0 - t;
+            let px = omt.powi(3) * p0.0
+                + 3.0 * omt.powi(2) * t * c1.0
+                + 3.0 * omt * t.powi(2) * c2.0
+                + t.powi(3) * p1.0;
+            let py = omt.powi(3) * p0.1
+                + 3.0 * omt.powi(2) * t * c1.1
+                + 3.0 * omt * t.powi(2) * c2.1
+                + t.powi(3) * p1.1;
+            (px, py)
+        }
+        _ => return None,
+    };
+
+    let pz = p0.2 + t * (p1.2 - p0.2);
+    Some((px, py, pz))
+}
+
+/// Evaluates a tangent at a given t parameter along a path segment.
+/// Returns None for MOVE commands or invalid indices.
+pub fn get_tangent_at_from_array(
+    data: &[Command],
+    row_index: usize,
+    t: f64,
+) -> Option<Point> {
+    if row_index >= data.len() {
+        return None;
+    }
+
+    let cmd = &data[row_index];
+    let start_pos_3d: Point3D = if row_index > 0 {
+        data[row_index - 1].end_point()
     } else {
         (0.0, 0.0, 0.0)
     };
@@ -219,12 +299,8 @@ pub fn get_point_and_tangent_at_from_array(
     let end_3d = cmd.end_point();
     let p1 = (end_3d.0, end_3d.1);
 
-    let (point, tangent_vec) = match &cmd {
-        Command::Line { .. } => {
-            let point = (p0.0 + t * (p1.0 - p0.0), p0.1 + t * (p1.1 - p0.1));
-            let tangent_vec = (p1.0 - p0.0, p1.1 - p0.1);
-            (point, tangent_vec)
-        }
+    let tangent_vec: Point = match cmd {
+        Command::Line { .. } => (p1.0 - p0.0, p1.1 - p0.1),
         Command::Arc {
             center_offset,
             clockwise,
@@ -257,13 +333,11 @@ pub fn get_point_and_tangent_at_from_array(
             );
 
             let radius_vec = (point.0 - center.0, point.1 - center.1);
-            let tangent_vec = if *clockwise {
+            if *clockwise {
                 (radius_vec.1, -radius_vec.0)
             } else {
                 (-radius_vec.1, radius_vec.0)
-            };
-
-            (point, tangent_vec)
+            }
         }
         Command::Bezier {
             control1, control2, ..
@@ -272,51 +346,34 @@ pub fn get_point_and_tangent_at_from_array(
             let c2 = *control2;
 
             let omt = 1.0 - t;
-            let p_x = omt.powi(3) * p0.0
-                + 3.0 * omt.powi(2) * t * c1.0
-                + 3.0 * omt * t.powi(2) * c2.0
-                + t.powi(3) * p1.0;
-            let p_y = omt.powi(3) * p0.1
-                + 3.0 * omt.powi(2) * t * c1.1
-                + 3.0 * omt * t.powi(2) * c2.1
-                + t.powi(3) * p1.1;
-
-            let point = (p_x, p_y);
-
             let tx = 3.0 * omt.powi(2) * (c1.0 - p0.0)
                 + 6.0 * omt * t * (c2.0 - c1.0)
                 + 3.0 * t.powi(2) * (p1.0 - c2.0);
             let ty = 3.0 * omt.powi(2) * (c1.1 - p0.1)
                 + 6.0 * omt * t * (c2.1 - c1.1)
                 + 3.0 * t.powi(2) * (p1.1 - c2.1);
-
-            (point, (tx, ty))
+            (tx, ty)
         }
         _ => return None,
     };
 
     let norm = (tangent_vec.0.powi(2) + tangent_vec.1.powi(2)).sqrt();
     if norm < 1e-9 {
-        return Some((point, (1.0, 0.0)));
+        return Some((1.0, 0.0));
     }
 
-    let normalized_tangent = (tangent_vec.0 / norm, tangent_vec.1 / norm);
-    Some((point, normalized_tangent))
+    Some((tangent_vec.0 / norm, tangent_vec.1 / norm))
 }
 
 /// Computes the outward-facing normal vector at a point on the path.
-/// The normal is perpendicular to the tangent, pointing outward from the path
-/// based on the winding order (CCW = left of tangent, CW = right of tangent).
 pub fn get_outward_normal_at_from_array(
-    data: &[[f64; 8]],
+    data: &[Command],
     row_index: usize,
     t: f64,
 ) -> Option<Point> {
-    // Find the start of the subpath containing this segment
     let mut subpath_start_index: isize = -1;
     for i in (0..=row_index).rev() {
-        let cmd = Command::from_row(&data[i]).expect("invalid command");
-        if matches!(cmd, Command::Move { .. }) {
+        if matches!(&data[i], Command::Move { .. }) {
             subpath_start_index = i as isize;
             break;
         }
@@ -331,11 +388,9 @@ pub fn get_outward_normal_at_from_array(
         return None;
     }
 
-    let result = get_point_and_tangent_at_from_array(data, row_index, t)?;
-    let (_, tangent) = result;
+    let tangent = get_tangent_at_from_array(data, row_index, t)?;
     let (tx, ty) = tangent;
 
-    // Rotate tangent 90 degrees to get normal (direction depends on winding)
     if winding == "ccw" {
         Some((ty, -tx))
     } else {
@@ -400,33 +455,18 @@ pub fn does_enclose(container: &Geometry, content: &Geometry) -> bool {
     winding_number > 0
 }
 
-pub fn segment_length_from_row(row: &[f64; 8], start_point: Point3D) -> f64 {
-    let cmd = Command::from_row(row).expect("invalid command");
+pub fn segment_length(cmd: &Command, start_point: Point3D) -> f64 {
     cmd.length(start_point)
 }
 
-pub fn segment_length_from_row_flat(
-    row: &[f64; 8],
-    start_point: Point3D,
-) -> f64 {
-    let cmd = Command::from_row(row).expect("invalid command");
-    match &cmd {
-        Command::Move { .. } | Command::Line { .. } => cmd.length(start_point),
-        Command::Arc { .. } | Command::Bezier { .. } => {
-            segment_length_from_row(row, start_point)
-        }
-    }
-}
-
-/// Computes a partial segment from a geometry row by interpolating at
+/// Computes a partial command from a command by interpolating at
 /// parameter t along the segment. Returns None for MOVE commands.
-pub fn partial_segment_from_row(
-    row: &[f64; 8],
+pub fn partial_segment(
+    cmd: &Command,
     start_point: Point3D,
     t: f64,
-) -> Option<[f64; 8]> {
-    let cmd = Command::from_row(row).expect("invalid command");
-    cmd.split_at_t(start_point, t).map(|c| c.to_row())
+) -> Option<Command> {
+    cmd.split_at_t(start_point, t)
 }
 
 fn container_intersects_content(
@@ -443,100 +483,137 @@ fn container_intersects_content(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::constants::*;
 
     #[test]
     fn test_is_closed() {
-        let data: [[f64; 8]; 4] = [
-            [CMD_TYPE_MOVE, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-            [CMD_TYPE_LINE, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-            [CMD_TYPE_LINE, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-            [CMD_TYPE_LINE, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+        let data = vec![
+            Command::Move {
+                end: (0.0, 0.0, 0.0),
+            },
+            Command::Line {
+                end: (1.0, 0.0, 0.0),
+            },
+            Command::Line {
+                end: (1.0, 1.0, 0.0),
+            },
+            Command::Line {
+                end: (0.0, 0.0, 0.0),
+            },
         ];
         assert!(is_closed(&data, 1e-6));
     }
 
     #[test]
     fn test_is_not_closed() {
-        let data: [[f64; 8]; 3] = [
-            [CMD_TYPE_MOVE, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-            [CMD_TYPE_LINE, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-            [CMD_TYPE_LINE, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+        let data = vec![
+            Command::Move {
+                end: (0.0, 0.0, 0.0),
+            },
+            Command::Line {
+                end: (1.0, 0.0, 0.0),
+            },
+            Command::Line {
+                end: (1.0, 1.0, 0.0),
+            },
         ];
         assert!(!is_closed(&data, 1e-6));
     }
 
     #[test]
     fn test_get_subpath_vertices() {
-        let data: [[f64; 8]; 3] = [
-            [CMD_TYPE_MOVE, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-            [CMD_TYPE_LINE, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-            [CMD_TYPE_LINE, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+        let data = vec![
+            Command::Move {
+                end: (0.0, 0.0, 0.0),
+            },
+            Command::Line {
+                end: (1.0, 0.0, 0.0),
+            },
+            Command::Line {
+                end: (1.0, 1.0, 0.0),
+            },
         ];
-        let vertices = get_subpath_vertices_from_array(&data[..], 0);
+        let vertices = get_subpath_vertices_from_array(&data, 0);
         assert_eq!(vertices.len(), 3);
         assert_eq!(vertices[0], (0.0, 0.0));
     }
 
     #[test]
     fn test_get_subpath_area() {
-        let data: [[f64; 8]; 4] = [
-            [CMD_TYPE_MOVE, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-            [CMD_TYPE_LINE, 4.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-            [CMD_TYPE_LINE, 4.0, 4.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-            [CMD_TYPE_LINE, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+        let data = vec![
+            Command::Move {
+                end: (0.0, 0.0, 0.0),
+            },
+            Command::Line {
+                end: (4.0, 0.0, 0.0),
+            },
+            Command::Line {
+                end: (4.0, 4.0, 0.0),
+            },
+            Command::Line {
+                end: (0.0, 0.0, 0.0),
+            },
         ];
-        let area = get_subpath_area_from_array(&data[..], 0);
+        let area = get_subpath_area_from_array(&data, 0);
         assert!((area - 8.0).abs() < 1e-6);
     }
 
     #[test]
     fn test_get_area_from_array() {
-        let data: [[f64; 8]; 4] = [
-            [CMD_TYPE_MOVE, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-            [CMD_TYPE_LINE, 4.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-            [CMD_TYPE_LINE, 4.0, 4.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-            [CMD_TYPE_LINE, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+        let data = vec![
+            Command::Move {
+                end: (0.0, 0.0, 0.0),
+            },
+            Command::Line {
+                end: (4.0, 0.0, 0.0),
+            },
+            Command::Line {
+                end: (4.0, 4.0, 0.0),
+            },
+            Command::Line {
+                end: (0.0, 0.0, 0.0),
+            },
         ];
-        let area = get_area_from_array(&data[..]);
+        let area = get_area_from_array(&data);
         assert!((area - 8.0).abs() < 1e-6);
     }
 
     #[test]
     fn test_get_path_winding_order() {
-        let data: [[f64; 8]; 4] = [
-            [CMD_TYPE_MOVE, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-            [CMD_TYPE_LINE, 4.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-            [CMD_TYPE_LINE, 4.0, 4.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-            [CMD_TYPE_LINE, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+        let data = vec![
+            Command::Move {
+                end: (0.0, 0.0, 0.0),
+            },
+            Command::Line {
+                end: (4.0, 0.0, 0.0),
+            },
+            Command::Line {
+                end: (4.0, 4.0, 0.0),
+            },
+            Command::Line {
+                end: (0.0, 0.0, 0.0),
+            },
         ];
-        let winding = get_path_winding_order_from_array(&data[..], 0);
+        let winding = get_path_winding_order_from_array(&data, 0);
         assert_eq!(winding, "ccw");
     }
 
     #[test]
-    fn test_get_point_and_tangent_at_from_array() {
-        let data: [[f64; 8]; 2] = [
-            [CMD_TYPE_MOVE, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-            [CMD_TYPE_LINE, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-        ];
-        let result = get_point_and_tangent_at_from_array(&data[..], 1, 0.5);
-        assert!(result.is_some());
-        let (point, tangent) = result.unwrap();
-        assert!((point.0 - 0.5).abs() < 1e-9);
-        assert!((point.1 - 0.0).abs() < 1e-9);
-        assert!((tangent.0 - 1.0).abs() < 1e-9);
-    }
-
-    #[test]
     fn test_get_outward_normal() {
-        let data: [[f64; 8]; 4] = [
-            [CMD_TYPE_MOVE, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-            [CMD_TYPE_LINE, 4.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-            [CMD_TYPE_LINE, 4.0, 4.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-            [CMD_TYPE_LINE, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+        let data = vec![
+            Command::Move {
+                end: (0.0, 0.0, 0.0),
+            },
+            Command::Line {
+                end: (4.0, 0.0, 0.0),
+            },
+            Command::Line {
+                end: (4.0, 4.0, 0.0),
+            },
+            Command::Line {
+                end: (0.0, 0.0, 0.0),
+            },
         ];
-        let normal = get_outward_normal_at_from_array(&data[..], 1, 0.5);
+        let normal = get_outward_normal_at_from_array(&data, 1, 0.5);
         assert!(normal.is_some());
     }
 

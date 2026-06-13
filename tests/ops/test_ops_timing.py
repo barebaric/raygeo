@@ -317,7 +317,9 @@ class TestCommandTimes:
         """Test per-command times with custom speed arguments."""
         ops = Ops()
         ops.line_to(60, 0, 0)
-        times = ops.estimate_command_times(default_cut_speed=1200.0, acceleration=0)
+        times = ops.estimate_command_times(
+            default_cut_speed=1200.0, acceleration=0
+        )
         assert len(times) == 1
         expected = 3.0  # 60mm / (1200mm/min / 60) = 3s
         assert abs(times[0] - expected) < 0.01

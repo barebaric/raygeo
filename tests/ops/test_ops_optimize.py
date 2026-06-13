@@ -172,7 +172,9 @@ class TestOptimizeAllowFlip:
         ops.scan_to(10, 0, 0, power_values=bytearray([10, 20, 30]))
         ops.optimize_travel(allow_flip=True)
         scan_indices = [
-            i for i in range(ops.len()) if ops.command_type(i) == CommandType.SCAN_LINE
+            i
+            for i in range(ops.len())
+            if ops.command_type(i) == CommandType.SCAN_LINE
         ]
         assert len(scan_indices) == 1
         move_idx = scan_indices[0] - 1
@@ -417,7 +419,9 @@ class TestOptimizeScanline:
         ops.scan_to(10, 0, 0, power_values=bytearray([10, 20, 30]))
         ops.optimize_travel()
         scan_indices = [
-            i for i in range(ops.len()) if ops.command_type(i) == CommandType.SCAN_LINE
+            i
+            for i in range(ops.len())
+            if ops.command_type(i) == CommandType.SCAN_LINE
         ]
         assert len(scan_indices) == 1
         move_idx = scan_indices[0] - 1
@@ -433,10 +437,14 @@ class TestOptimizeScanline:
         ops.scan_to(10, 0, 0, power_values=bytearray([10, 20, 30]))
         ops.optimize_travel()
         scan_indices = [
-            i for i in range(ops.len()) if ops.command_type(i) == CommandType.SCAN_LINE
+            i
+            for i in range(ops.len())
+            if ops.command_type(i) == CommandType.SCAN_LINE
         ]
         assert len(scan_indices) == 1
-        assert bytearray(ops.scanline_data(scan_indices[0])) == bytearray([30, 20, 10])
+        assert bytearray(ops.scanline_data(scan_indices[0])) == bytearray(
+            [30, 20, 10]
+        )
 
     def test_split_scanline(self):
         ops = Ops()
@@ -444,10 +452,14 @@ class TestOptimizeScanline:
         ops.move_to(0, 5, 0)
         ops.line_to(108, 5, 0)
         ops.move_to(100, 5, 0)
-        ops.scan_to(110, 5, 0, power_values=bytearray([50, 50, 0, 0, 0, 60, 60]))
+        ops.scan_to(
+            110, 5, 0, power_values=bytearray([50, 50, 0, 0, 0, 60, 60])
+        )
         ops.optimize_travel()
         scan_indices = [
-            i for i in range(ops.len()) if ops.command_type(i) == CommandType.SCAN_LINE
+            i
+            for i in range(ops.len())
+            if ops.command_type(i) == CommandType.SCAN_LINE
         ]
         assert len(scan_indices) == 2
 
@@ -461,11 +473,15 @@ class TestOptimizeScanline:
         ops.scan_to(*end_pt, power_values=power_values)
         ops.optimize_travel()
         scan_indices = [
-            i for i in range(ops.len()) if ops.command_type(i) == CommandType.SCAN_LINE
+            i
+            for i in range(ops.len())
+            if ops.command_type(i) == CommandType.SCAN_LINE
         ]
         assert len(scan_indices) == 1
         move_indices = [
-            i for i in range(ops.len()) if ops.command_type(i) == CommandType.MOVE_TO
+            i
+            for i in range(ops.len())
+            if ops.command_type(i) == CommandType.MOVE_TO
         ]
         assert len(move_indices) == 1
         assert ops.endpoint(move_indices[0]) == pytest.approx(start_pt)
@@ -481,7 +497,9 @@ class TestOptimizeScanline:
         ops.line_to(30, 0, 0)
         ops.optimize_travel()
         scan_indices = [
-            i for i in range(ops.len()) if ops.command_type(i) == CommandType.SCAN_LINE
+            i
+            for i in range(ops.len())
+            if ops.command_type(i) == CommandType.SCAN_LINE
         ]
         assert len(scan_indices) == 1
 
@@ -497,7 +515,9 @@ class TestOptimizeScanline:
         ops.optimize_travel()
         ops.preload_state()
         scan_indices = [
-            i for i in range(ops.len()) if ops.command_type(i) == CommandType.SCAN_LINE
+            i
+            for i in range(ops.len())
+            if ops.command_type(i) == CommandType.SCAN_LINE
         ]
         assert len(scan_indices) == 1
         scan_idx = scan_indices[0]
@@ -525,7 +545,9 @@ class TestOptimizeScanline:
         ops.optimize_travel()
         ops.preload_state()
         scan_indices = [
-            i for i in range(ops.len()) if ops.command_type(i) == CommandType.SCAN_LINE
+            i
+            for i in range(ops.len())
+            if ops.command_type(i) == CommandType.SCAN_LINE
         ]
         assert len(scan_indices) == 2
         for scan_idx in scan_indices:
@@ -555,7 +577,9 @@ class TestOptimizeScanline:
         ops.optimize_travel()
         ops.preload_state()
         scan_indices = [
-            i for i in range(ops.len()) if ops.command_type(i) == CommandType.SCAN_LINE
+            i
+            for i in range(ops.len())
+            if ops.command_type(i) == CommandType.SCAN_LINE
         ]
         assert len(scan_indices) == 1
         flipped_scan_idx = scan_indices[0]
@@ -570,7 +594,10 @@ class TestOptimizeScanline:
         assert scan_state.cut_speed == pytest.approx(2000)
         assert ops.endpoint(move_idx) == pytest.approx(end_pt)
         assert ops.endpoint(flipped_scan_idx) == pytest.approx(start_pt)
-        assert bytearray(ops.scanline_data(flipped_scan_idx)) == power_values[::-1]
+        assert (
+            bytearray(ops.scanline_data(flipped_scan_idx))
+            == power_values[::-1]
+        )
 
 
 class TestOptimizeBezier:
@@ -584,7 +611,9 @@ class TestOptimizeBezier:
         ops.optimize_travel()
         ops.preload_state()
         bezier_indices = [
-            i for i in range(ops.len()) if ops.command_type(i) == CommandType.BEZIER_TO
+            i
+            for i in range(ops.len())
+            if ops.command_type(i) == CommandType.BEZIER_TO
         ]
         assert len(bezier_indices) == 1
         c1, c2 = ops.bezier_params(bezier_indices[0])
@@ -602,7 +631,9 @@ class TestOptimizeBezier:
         ops.optimize_travel()
         ops.preload_state()
         bezier_indices = [
-            i for i in range(ops.len()) if ops.command_type(i) == CommandType.BEZIER_TO
+            i
+            for i in range(ops.len())
+            if ops.command_type(i) == CommandType.BEZIER_TO
         ]
         assert len(bezier_indices) == 1
         idx = bezier_indices[0]
@@ -634,11 +665,15 @@ class TestOptimizeBezier:
         travel_before = _travel_distance(ops_unopt)
         assert travel_after < travel_before
         bezier_indices = [
-            i for i in range(ops.len()) if ops.command_type(i) == CommandType.BEZIER_TO
+            i
+            for i in range(ops.len())
+            if ops.command_type(i) == CommandType.BEZIER_TO
         ]
         assert len(bezier_indices) == 1
         line_indices = [
-            i for i in range(ops.len()) if ops.command_type(i) == CommandType.LINE_TO
+            i
+            for i in range(ops.len())
+            if ops.command_type(i) == CommandType.LINE_TO
         ]
         assert len(line_indices) == 2
 
@@ -651,7 +686,9 @@ class TestOptimizeArc:
         ops.arc_to(10, 0, 5, 0, False)
         ops.optimize_travel()
         arc_indices = [
-            i for i in range(ops.len()) if ops.command_type(i) == CommandType.ARC_TO
+            i
+            for i in range(ops.len())
+            if ops.command_type(i) == CommandType.ARC_TO
         ]
         assert len(arc_indices) == 1
 
@@ -666,7 +703,9 @@ class TestOptimizeArc:
         ops.line_to(10, 10)
         ops.optimize_travel()
         arc_indices = [
-            i for i in range(ops.len()) if ops.command_type(i) == CommandType.ARC_TO
+            i
+            for i in range(ops.len())
+            if ops.command_type(i) == CommandType.ARC_TO
         ]
         assert len(arc_indices) == 1
 
@@ -882,7 +921,9 @@ class TestOptimizeEdgeCases:
         ops.set_cut_speed(500)
         ops.optimize_travel()
         move_count = sum(
-            1 for i in range(ops.len()) if ops.category(i) == CommandCategory.MOVING
+            1
+            for i in range(ops.len())
+            if ops.category(i) == CommandCategory.MOVING
         )
         assert move_count == 0
 
@@ -1062,7 +1103,9 @@ class TestOptimizeComplexScenarios:
         ops.scan_to(10, 0, 0, power_values=bytearray([100]))
         ops.optimize_travel()
         scan_indices = [
-            i for i in range(ops.len()) if ops.command_type(i) == CommandType.SCAN_LINE
+            i
+            for i in range(ops.len())
+            if ops.command_type(i) == CommandType.SCAN_LINE
         ]
         assert len(scan_indices) == 1
 

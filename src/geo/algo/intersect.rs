@@ -6,38 +6,49 @@
 //! O(N log M) bounding-box lookups instead of brute-force O(N × M) scans.
 
 use crate::constants::EPSILON_INTERSECT;
-use crate::constants::*;
 use crate::geo::shape::arc::linearize_arc;
-use crate::geo::shape::bezier::linearize_bezier_from_array;
+use crate::geo::shape::bezier::linearize_bezier_from_params;
 use crate::geo::shape::line::get_line_segment_intersection;
-use crate::types::Point3D;
+use crate::types::{Command, Point3D};
 use rstar::{PointDistance, RTree, RTreeObject, AABB};
 
-/// Returns a list of linearized line segments for a given row in a data array.
-/// Arcs and Beziers are converted to approximating line segments.
-fn get_segments_for_row(
-    data: &[[f64; 8]],
+/// Returns a list of linearized line segments for a given command index.
+fn get_segments_for_cmd(
+    data: &[Command],
     index: usize,
 ) -> Vec<(Point3D, Point3D)> {
-    let row = data[index];
-    let cmd_type = row[COL_TYPE] as i32;
-    let end_point = (row[COL_X], row[COL_Y], row[COL_Z]);
+    let cmd = &data[index];
+    let end_point = cmd.end_point();
 
     let start_point = if index > 0 {
-        let prev = data[index - 1];
-        (prev[COL_X], prev[COL_Y], prev[COL_Z])
+        data[index - 1].end_point()
     } else {
         (0.0, 0.0, 0.0)
     };
 
-    if cmd_type == CMD_TYPE_LINE as i32 {
-        vec![(start_point, end_point)]
-    } else if cmd_type == CMD_TYPE_ARC as i32 {
-        linearize_arc(&row, start_point, 0.1)
-    } else if cmd_type == CMD_TYPE_BEZIER as i32 {
-        linearize_bezier_from_array(&row, start_point, 0.1)
-    } else {
-        vec![]
+    match cmd {
+        Command::Line { .. } => {
+            vec![(start_point, end_point)]
+        }
+        Command::Arc {
+            end,
+            center_offset,
+            clockwise,
+            ..
+        } => linearize_arc(*end, *center_offset, *clockwise, start_point, 0.1),
+        Command::Bezier {
+            end,
+            control1,
+            control2,
+            ..
+        } => linearize_bezier_from_params(
+            *end,
+            *control1,
+            *control2,
+            start_point,
+            0.1,
+        ),
+        Command::Move { .. } => vec![],
     }
 }
 
@@ -74,17 +85,14 @@ impl PointDistance for RowSegments {
 }
 
 /// Pre-compute linearized segments and bounding boxes for all draw commands.
-fn precompute_row_segments(data: &[[f64; 8]]) -> Vec<RowSegments> {
+fn precompute_cmd_segments(data: &[Command]) -> Vec<RowSegments> {
     let mut rows = Vec::new();
     for i in 0..data.len() {
-        let cmd_type = data[i][COL_TYPE] as i32;
-        if cmd_type != CMD_TYPE_LINE as i32
-            && cmd_type != CMD_TYPE_ARC as i32
-            && cmd_type != CMD_TYPE_BEZIER as i32
-        {
+        let cmd = &data[i];
+        if matches!(cmd, Command::Move { .. }) {
             continue;
         }
-        let segments = get_segments_for_row(data, i);
+        let segments = get_segments_for_cmd(data, i);
         if segments.is_empty() {
             continue;
         }
@@ -117,29 +125,21 @@ fn precompute_row_segments(data: &[[f64; 8]]) -> Vec<RowSegments> {
     rows
 }
 
-/// Core intersection test between two geometry data arrays.
-///
-/// For self-intersection checks (`is_self_check=true`), adjacent segments
-/// sharing a vertex are not counted as intersecting (they share an endpoint
-/// by construction).
-///
-/// Uses an R-tree on `data2`'s bounding boxes for O(N log M) lookup
-/// instead of brute-force O(N × M) comparison.
+/// Core intersection test between two geometry command arrays.
 fn data_intersect(
-    data1: &[[f64; 8]],
-    data2: &[[f64; 8]],
+    data1: &[Command],
+    data2: &[Command],
     is_self_check: bool,
     fail_on_t_junction: bool,
 ) -> bool {
-    let rows1 = precompute_row_segments(data1);
-    let rows2 = precompute_row_segments(data2);
+    let rows1 = precompute_cmd_segments(data1);
+    let rows2 = precompute_cmd_segments(data2);
 
     let tree = RTree::bulk_load(rows2);
 
     for ri1 in &rows1 {
         let query = ri1.aabb();
         for ri2 in tree.locate_in_envelope_intersecting(&query) {
-            // Skip self-comparisons for self-intersection and adjacent rows
             if is_self_check && ri2.index <= ri1.index {
                 continue;
             }
@@ -154,15 +154,10 @@ fn data_intersect(
                     );
 
                     if let Some(pt) = intersection {
-                        // For adjacent segments in a self-intersection check,
-                        // the shared vertex is not a real intersection
                         if is_self_check && ri2.index == ri1.index + 1 {
-                            let shared_vertex = [
-                                data1[ri1.index][COL_X],
-                                data1[ri1.index][COL_Y],
-                            ];
-                            let dsq = (pt.0 - shared_vertex[0]).powi(2)
-                                + (pt.1 - shared_vertex[1]).powi(2);
+                            let shared_vertex = data1[ri1.index].end_point();
+                            let dsq = (pt.0 - shared_vertex.0).powi(2)
+                                + (pt.1 - shared_vertex.1).powi(2);
                             if dsq < EPSILON_INTERSECT {
                                 continue;
                             }
@@ -198,14 +193,13 @@ fn data_intersect(
 }
 
 /// Check if a path self-intersects.
-/// Each subpath (delimited by MOVE commands) is checked independently.
 pub fn check_self_intersection_from_array(
-    data: &[[f64; 8]],
+    data: &[Command],
     fail_on_t_junction: bool,
 ) -> bool {
     let mut move_indices: Vec<usize> = Vec::new();
-    for (i, row) in data.iter().enumerate() {
-        if (row[COL_TYPE] as i32) == CMD_TYPE_MOVE as i32 {
+    for (i, cmd) in data.iter().enumerate() {
+        if matches!(cmd, Command::Move { .. }) {
             move_indices.push(i);
         }
     }
@@ -234,8 +228,8 @@ pub fn check_self_intersection_from_array(
 
 /// Check if two geometry data arrays intersect each other.
 pub fn check_intersection_from_array(
-    data1: &[[f64; 8]],
-    data2: &[[f64; 8]],
+    data1: &[Command],
+    data2: &[Command],
     fail_on_t_junction: bool,
 ) -> bool {
     data_intersect(data1, data2, false, fail_on_t_junction)
@@ -247,48 +241,80 @@ mod tests {
 
     #[test]
     fn test_no_self_intersection() {
-        let data = [
-            [CMD_TYPE_MOVE, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-            [CMD_TYPE_LINE, 10.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-            [CMD_TYPE_LINE, 10.0, 10.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-            [CMD_TYPE_LINE, 0.0, 10.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+        let data = vec![
+            Command::Move {
+                end: (0.0, 0.0, 0.0),
+            },
+            Command::Line {
+                end: (10.0, 0.0, 0.0),
+            },
+            Command::Line {
+                end: (10.0, 10.0, 0.0),
+            },
+            Command::Line {
+                end: (0.0, 10.0, 0.0),
+            },
         ];
         assert!(!check_self_intersection_from_array(&data, false));
     }
 
     #[test]
     fn test_self_intersection_found() {
-        let data = [
-            [CMD_TYPE_MOVE, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-            [CMD_TYPE_LINE, 10.0, 10.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-            [CMD_TYPE_LINE, 0.0, 10.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-            [CMD_TYPE_LINE, 10.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+        let data = vec![
+            Command::Move {
+                end: (0.0, 0.0, 0.0),
+            },
+            Command::Line {
+                end: (10.0, 10.0, 0.0),
+            },
+            Command::Line {
+                end: (0.0, 10.0, 0.0),
+            },
+            Command::Line {
+                end: (10.0, 0.0, 0.0),
+            },
         ];
         assert!(check_self_intersection_from_array(&data, false));
     }
 
     #[test]
     fn test_intersection_between_paths() {
-        let data1 = [
-            [CMD_TYPE_MOVE, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-            [CMD_TYPE_LINE, 10.0, 10.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+        let data1 = vec![
+            Command::Move {
+                end: (0.0, 0.0, 0.0),
+            },
+            Command::Line {
+                end: (10.0, 10.0, 0.0),
+            },
         ];
-        let data2 = [
-            [CMD_TYPE_MOVE, 0.0, 10.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-            [CMD_TYPE_LINE, 10.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+        let data2 = vec![
+            Command::Move {
+                end: (0.0, 10.0, 0.0),
+            },
+            Command::Line {
+                end: (10.0, 0.0, 0.0),
+            },
         ];
         assert!(check_intersection_from_array(&data1, &data2, false));
     }
 
     #[test]
     fn test_no_intersection_between_paths() {
-        let data1 = [
-            [CMD_TYPE_MOVE, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-            [CMD_TYPE_LINE, 10.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+        let data1 = vec![
+            Command::Move {
+                end: (0.0, 0.0, 0.0),
+            },
+            Command::Line {
+                end: (10.0, 0.0, 0.0),
+            },
         ];
-        let data2 = [
-            [CMD_TYPE_MOVE, 0.0, 10.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-            [CMD_TYPE_LINE, 10.0, 10.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+        let data2 = vec![
+            Command::Move {
+                end: (0.0, 10.0, 0.0),
+            },
+            Command::Line {
+                end: (10.0, 10.0, 0.0),
+            },
         ];
         assert!(!check_intersection_from_array(&data1, &data2, false));
     }

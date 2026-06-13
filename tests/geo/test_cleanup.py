@@ -1,4 +1,4 @@
-from raygeo.geo import Geometry
+from raygeo.geo import Geometry, Line, Move
 from raygeo.geo.shape.point import are_points_equal
 
 
@@ -34,7 +34,7 @@ def test_cleanup_empty():
     """Tests cleanup on empty geometry."""
     geo = Geometry()
     result = geo.cleanup(tolerance=1e-6)
-    assert result.data is None
+    assert len(result.data) == 0
 
 
 def test_cleanup_single_line():
@@ -58,8 +58,8 @@ def test_cleanup_duplicate_lines():
     data = result.data
     assert data is not None
     assert len(data) == 2
-    assert data[0, 0] == Geometry.CMD_TYPE_MOVE
-    assert data[1, 0] == Geometry.CMD_TYPE_LINE
+    assert isinstance(data[0], Move)
+    assert isinstance(data[1], Line)
 
 
 def test_cleanup_three_duplicate_lines():
@@ -349,8 +349,8 @@ def test_close_geometry_gaps_functional():
     data = result.data
     assert data is not None
     assert result is geo
-    assert data[0, 1] == 0 and data[0, 2] == 0
-    assert data[-1, 1] == 0 and data[-1, 2] == 0
+    assert data[0].end[0] == 0 and data[0].end[1] == 0
+    assert data[-1].end[0] == 0 and data[-1].end[1] == 0
 
     geo2 = Geometry()
     geo2.move_to(0, 0)
@@ -362,8 +362,8 @@ def test_close_geometry_gaps_functional():
     data2 = result2.data
     assert data2 is not None
     assert result2 is geo2
-    assert data2[2, Geometry.COL_TYPE] == Geometry.CMD_TYPE_LINE
-    assert data2[2, 1] == 10 and data2[2, 2] == 10
+    assert isinstance(data2[2], Line)
+    assert data2[2].end[0] == 10 and data2[2].end[1] == 10
 
 
 def test_close_geometry_gaps_respects_tolerance():
@@ -377,9 +377,9 @@ def test_close_geometry_gaps_respects_tolerance():
     geo1 = geo.copy()
     result1 = geo1.close_gaps(tolerance=0.1)
     assert result1.data is not None
-    assert result1.data[2, Geometry.COL_TYPE] == Geometry.CMD_TYPE_MOVE
+    assert isinstance(result1.data[2], Move)
 
     geo2 = geo.copy()
     result2 = geo2.close_gaps(tolerance=0.2)
     assert result2.data is not None
-    assert result2.data[2, Geometry.COL_TYPE] == Geometry.CMD_TYPE_LINE
+    assert isinstance(result2.data[2], Line)

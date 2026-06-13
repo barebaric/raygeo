@@ -9,6 +9,7 @@ linearization, and evaluating fitting quality (line and arc deviation).
 """
 
 import collections.abc
+from raygeo import geo
 from raygeo.geo import types
 import typing
 __all__ = [
@@ -35,22 +36,22 @@ def are_points_collinear(points: collections.abc.Sequence[types.Point3D], tolera
     :returns: True if points are collinear.
     """
 
-def create_arc_cmd(end: types.Point3D, center: types.Point, start: types.Point3D) -> list[float]:
+def create_arc_cmd(end: types.Point3D, center: types.Point, start: types.Point3D) -> geo.Arc:
     r"""
-    Create an arc command array.
+    Create an arc command.
     
     :param end: End point (x, y, z).
     :param center: Center offset (dx, dy).
     :param start: Start point (x, y, z).
-    :returns: Arc command array (8 floats).
+    :returns: An Arc command.
     """
 
-def create_line_cmd(end_point: types.Point3D) -> list[float]:
+def create_line_cmd(end_point: types.Point3D) -> geo.Line:
     r"""
-    Create a line command array from an end point.
+    Create a line command from an end point.
     
     :param end_point: End point (x, y, z).
-    :returns: Line command array (8 floats).
+    :returns: A Line command.
     """
 
 def fit_circle_to_3_points(p1: types.Point2DOr3D, p2: types.Point2DOr3D, p3: types.Point2DOr3D) -> typing.Optional[tuple[types.Point, float]]:
@@ -71,7 +72,7 @@ def fit_circle_to_points(points: collections.abc.Sequence[types.Point3D]) -> typ
     :returns: Tuple of (center, radius, error) or None.
     """
 
-def fit_points_recursive(points: collections.abc.Sequence[types.Point3D], tolerance: float, start_idx: int, end_idx: int) -> list[list[float]]:
+def fit_points_recursive(points: collections.abc.Sequence[types.Point3D], tolerance: float, start_idx: int, end_idx: int) -> geo.Geometry:
     r"""
     Recursively fit points with line and arc primitives.
     
@@ -79,23 +80,23 @@ def fit_points_recursive(points: collections.abc.Sequence[types.Point3D], tolera
     :param tolerance: Fitting tolerance.
     :param start_idx: Start index in the points array.
     :param end_idx: End index in the points array.
-    :returns: List of fitted command rows.
+    :returns: Geometry of fitted commands.
     """
 
-def fit_points_with_primitives(points: collections.abc.Sequence[types.Point3D], tolerance: float) -> list[list[float]]:
+def fit_points_with_primitives(points: collections.abc.Sequence[types.Point3D], tolerance: float) -> geo.Geometry:
     r"""
     Fit a polyline of points with arc and line primitives.
     
     :param points: Sequence of 3D points to fit.
     :param tolerance: Fitting tolerance.
-    :returns: List of fitted command rows.
+    :returns: Geometry of fitted commands.
     """
 
-def flatten_to_points(data: collections.abc.Sequence[collections.abc.Sequence[float]], tolerance: float) -> list[list[types.Point3D]]:
+def flatten_to_points(geometry: geo.Geometry, tolerance: float) -> list[list[types.Point3D]]:
     r"""
     Flatten curves into linear segments.
     
-    :param data: Array of command data.
+    :param geometry: Geometry to flatten.
     :param tolerance: Flattening tolerance.
     :returns: List of flattened point segments.
     """
@@ -120,13 +121,13 @@ def get_polyline_line_deviation(points: collections.abc.Sequence[types.Point3D],
     :returns: Tuple of (max_deviation, index_of_max).
     """
 
-def linearize_geometry(data: collections.abc.Sequence[collections.abc.Sequence[float]], tolerance: float) -> list[list[float]]:
+def linearize_geometry(geometry: geo.Geometry, tolerance: float) -> geo.Geometry:
     r"""
     Linearize geometry data into line segments.
     
-    :param data: Array of command data.
+    :param geometry: Geometry to linearize.
     :param tolerance: Linearization tolerance.
-    :returns: List of linearized segment rows.
+    :returns: Linearized Geometry.
     """
 
 def project_circle_center_to_bisector(p1: types.Point2DOr3D, p2: types.Point2DOr3D, center: types.Point) -> types.Point:

@@ -1,10 +1,6 @@
 use super::container::Ops;
 use super::types::{MoveCmd, OpCategory, OpNode};
-use crate::constants::{
-    CMD_TYPE_ARC, CMD_TYPE_BEZIER, CMD_TYPE_LINE, COL_C1X, COL_C1Y, COL_C2X,
-    COL_C2Y, COL_CW, COL_I, COL_J, COL_TYPE, COL_X, COL_Y, COL_Z,
-    EPSILON_COLLINEAR, EPSILON_GAP_CLOSE,
-};
+use crate::constants::{EPSILON_COLLINEAR, EPSILON_GAP_CLOSE};
 use crate::geo::algo::clipping::{
     clip_line_segment_with_polygons, clip_line_segment_with_rect,
     subtract_polygons_from_line_segment,
@@ -15,6 +11,7 @@ use crate::geo::algo::interp::{
 };
 use crate::geo::shape::arc::is_arc_inside_polygons;
 use crate::geo::shape::bezier::is_bezier_inside_polygons;
+use crate::types::Command;
 use crate::types::{Point, Point3D, Polygon, Rect};
 
 /// Add a clipped line segment to `new_ops`, inserting a move-to if the pen position
@@ -917,22 +914,37 @@ fn clip_and_refit_arc(
         if needs_move {
             new_ops.move_to(chain[0].0, chain[0].1, chain[0].2, None);
         }
-        for prim_row in &primitives {
-            let ct_val = prim_row[COL_TYPE];
-            let end = (prim_row[COL_X], prim_row[COL_Y], prim_row[COL_Z]);
-            if (ct_val - CMD_TYPE_LINE).abs() < 0.5 {
-                new_ops.line_to(end.0, end.1, end.2, None);
-            } else if (ct_val - CMD_TYPE_ARC).abs() < 0.5 {
-                let co_i = prim_row[COL_I];
-                let co_j = prim_row[COL_J];
-                let cw = prim_row[COL_CW] != 0.0;
-                new_ops.arc_to(end.0, end.1, co_i, co_j, cw, end.2, None);
-            } else if (ct_val - CMD_TYPE_BEZIER).abs() < 0.5 {
-                let c1 = (prim_row[COL_C1X], prim_row[COL_C1Y], end.2);
-                let c2 = (prim_row[COL_C2X], prim_row[COL_C2Y], end.2);
-                new_ops.bezier_to(c1, c2, end, None);
-            } else {
-                continue;
+        for prim_cmd in &primitives {
+            let end = prim_cmd.end_point();
+            match prim_cmd {
+                Command::Line { .. } => {
+                    new_ops.line_to(end.0, end.1, end.2, None);
+                }
+                Command::Arc {
+                    center_offset,
+                    clockwise,
+                    ..
+                } => {
+                    new_ops.arc_to(
+                        end.0,
+                        end.1,
+                        center_offset.0,
+                        center_offset.1,
+                        *clockwise,
+                        end.2,
+                        None,
+                    );
+                }
+                Command::Bezier {
+                    control1, control2, ..
+                } => {
+                    let c1 = (control1.0, control1.1, end.2);
+                    let c2 = (control2.0, control2.1, end.2);
+                    new_ops.bezier_to(c1, c2, end, None);
+                }
+                Command::Move { .. } => {
+                    continue;
+                }
             }
             if let Some(ref s) = arc_state {
                 let last = new_ops.len() - 1;
@@ -991,22 +1003,37 @@ fn clip_and_refit_bezier(
         if needs_move {
             new_ops.move_to(chain[0].0, chain[0].1, chain[0].2, None);
         }
-        for prim_row in &primitives {
-            let ct_val = prim_row[COL_TYPE];
-            let end = (prim_row[COL_X], prim_row[COL_Y], prim_row[COL_Z]);
-            if (ct_val - CMD_TYPE_LINE).abs() < 0.5 {
-                new_ops.line_to(end.0, end.1, end.2, None);
-            } else if (ct_val - CMD_TYPE_ARC).abs() < 0.5 {
-                let co_i = prim_row[COL_I];
-                let co_j = prim_row[COL_J];
-                let cw = prim_row[COL_CW] != 0.0;
-                new_ops.arc_to(end.0, end.1, co_i, co_j, cw, end.2, None);
-            } else if (ct_val - CMD_TYPE_BEZIER).abs() < 0.5 {
-                let c1 = (prim_row[COL_C1X], prim_row[COL_C1Y], end.2);
-                let c2 = (prim_row[COL_C2X], prim_row[COL_C2Y], end.2);
-                new_ops.bezier_to(c1, c2, end, None);
-            } else {
-                continue;
+        for prim_cmd in &primitives {
+            let end = prim_cmd.end_point();
+            match prim_cmd {
+                Command::Line { .. } => {
+                    new_ops.line_to(end.0, end.1, end.2, None);
+                }
+                Command::Arc {
+                    center_offset,
+                    clockwise,
+                    ..
+                } => {
+                    new_ops.arc_to(
+                        end.0,
+                        end.1,
+                        center_offset.0,
+                        center_offset.1,
+                        *clockwise,
+                        end.2,
+                        None,
+                    );
+                }
+                Command::Bezier {
+                    control1, control2, ..
+                } => {
+                    let c1 = (control1.0, control1.1, end.2);
+                    let c2 = (control2.0, control2.1, end.2);
+                    new_ops.bezier_to(c1, c2, end, None);
+                }
+                Command::Move { .. } => {
+                    continue;
+                }
             }
             if let Some(ref s) = bezier_state {
                 let last = new_ops.len() - 1;

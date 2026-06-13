@@ -283,7 +283,9 @@ def test_get_arc_angles():
     center = (0, 0)
     # 90 degree CCW arc
     start_pos, end_pos = (1, 0), (0, 1)
-    start_a, end_a, sweep = get_arc_angles(start_pos, end_pos, center, clockwise=False)
+    start_a, end_a, sweep = get_arc_angles(
+        start_pos, end_pos, center, clockwise=False
+    )
     assert start_a == pytest.approx(0)
     assert end_a == pytest.approx(math.pi / 2)
     assert sweep == pytest.approx(math.pi / 2)
@@ -298,7 +300,9 @@ def test_get_arc_angles():
 
     # CCW wrap-around
     start_pos, end_pos = (-1, -1), (1, -1)
-    start_a, end_a, sweep = get_arc_angles(start_pos, end_pos, center, clockwise=False)
+    start_a, end_a, sweep = get_arc_angles(
+        start_pos, end_pos, center, clockwise=False
+    )
     # atan2 returns angles in [-pi, pi]. The test must match this range.
     assert start_a == pytest.approx(-3 * math.pi / 4)
     assert end_a == pytest.approx(-math.pi / 4)
@@ -340,7 +344,9 @@ def test_get_arc_closest_point():
     # 180 degree CCW arc from (10,0) to (-10,0)
     end_pos = (-10, 0, 0)
     center_offset = (center[0] - start_pos[0], center[1] - start_pos[1])
-    arc_cmd = MockArc(end=end_pos, center_offset=center_offset, clockwise=False)
+    arc_cmd = MockArc(
+        end=end_pos, center_offset=center_offset, clockwise=False
+    )
     x, y = 0, 20  # Point to check
     result = get_arc_closest_point(arc_cmd, start_pos, x, y)
     assert result is not None
@@ -400,17 +406,25 @@ def selection_rect():
 
 def test_does_arc_intersect_rect(selection_rect):
     # Center (30,30), radius 10. Arc from East to North. Fully inside.
-    assert does_arc_intersect_rect((40, 30), (30, 40), (30, 30), False, selection_rect)
+    assert does_arc_intersect_rect(
+        (40, 30), (30, 40), (30, 30), False, selection_rect
+    )
     # Arc from outside to inside
-    assert does_arc_intersect_rect((0, 30), (30, 40), (30, 30), False, selection_rect)
+    assert does_arc_intersect_rect(
+        (0, 30), (30, 40), (30, 30), False, selection_rect
+    )
     # Arc passing through (top semi-circle)
-    assert does_arc_intersect_rect((0, 30), (60, 30), (30, 0), True, selection_rect)
+    assert does_arc_intersect_rect(
+        (0, 30), (60, 30), (30, 0), True, selection_rect
+    )
     # Arc fully outside
     assert not does_arc_intersect_rect(
         (100, 100), (110, 110), (100, 110), False, selection_rect
     )
     # Arc bbox intersects, but arc does not (C-shape arc around a corner)
-    assert not does_arc_intersect_rect((0, 30), (30, 0), (0, 0), False, selection_rect)
+    assert not does_arc_intersect_rect(
+        (0, 30), (30, 0), (0, 0), False, selection_rect
+    )
 
 
 def test_determine_arc_direction_clockwise():
@@ -550,7 +564,9 @@ class TestArcIntersectsCircle:
         start = (10, 0)
         end = (0, 10)
         center = (0, 0)
-        assert not does_arc_intersect_circle(start, end, center, False, (-10, -10), 1)
+        assert not does_arc_intersect_circle(
+            start, end, center, False, (-10, -10), 1
+        )
 
     def test_degenerate_arc_inside(self):
         start = (3, 0)
@@ -562,7 +578,9 @@ class TestArcIntersectsCircle:
         start = (10, 0)
         end = (10, 0)
         center = (10, 0)
-        assert not does_arc_intersect_circle(start, end, center, True, (0, 0), 1)
+        assert not does_arc_intersect_circle(
+            start, end, center, True, (0, 0), 1
+        )
 
     def test_arc_midpoint_inside_circle(self):
         start = (6, 0)
@@ -633,13 +651,12 @@ def sample_geometry():
 
 def test_linearize_arc(sample_geometry):
     """Tests the external linearize_arc function."""
-    assert sample_geometry.data is not None
-    start_point = tuple(sample_geometry.data[1, 1:4])
+    start_point = sample_geometry.data[1].end
     arc_row = sample_geometry.data[2]
     arc_cmd = MockArc(
-        end=tuple(arc_row[1:4]),
-        center_offset=(arc_row[4], arc_row[5]),
-        clockwise=bool(arc_row[6]),
+        end=arc_row.end,
+        center_offset=arc_row.center_offset,
+        clockwise=arc_row.clockwise,
     )
 
     segments = linearize_arc(arc_cmd, start_point)

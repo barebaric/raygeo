@@ -65,10 +65,16 @@ class TestAnyOverlapHierarchical:
     def test_no_overlap_bbox_reject(self):
         cand_polys = [PN([(0.0, 0.0), (10.0, 0.0), (10.0, 10.0), (0.0, 10.0)])]
         cand_hulls = [PN([(0.0, 0.0), (10.0, 0.0), (10.0, 10.0), (0.0, 10.0)])]
-        placed = [[PN([(50.0, 50.0), (60.0, 50.0), (60.0, 60.0), (50.0, 60.0)])]]
-        placed_hulls = [[PN([(50.0, 50.0), (60.0, 50.0), (60.0, 60.0), (50.0, 60.0)])]]
+        placed = [
+            [PN([(50.0, 50.0), (60.0, 50.0), (60.0, 60.0), (50.0, 60.0)])]
+        ]
+        placed_hulls = [
+            [PN([(50.0, 50.0), (60.0, 50.0), (60.0, 60.0), (50.0, 60.0)])]
+        ]
         assert (
-            any_overlap_hierarchical(cand_polys, cand_hulls, placed, placed_hulls, 0.0)
+            any_overlap_hierarchical(
+                cand_polys, cand_hulls, placed, placed_hulls, 0.0
+            )
             is False
         )
 
@@ -76,9 +82,13 @@ class TestAnyOverlapHierarchical:
         cand_polys = [PN([(0.0, 0.0), (10.0, 0.0), (10.0, 10.0), (0.0, 10.0)])]
         cand_hulls = [PN([(0.0, 0.0), (10.0, 0.0), (10.0, 10.0), (0.0, 10.0)])]
         placed = [[PN([(5.0, 5.0), (15.0, 5.0), (15.0, 15.0), (5.0, 15.0)])]]
-        placed_hulls = [[PN([(5.0, 5.0), (15.0, 5.0), (15.0, 15.0), (5.0, 15.0)])]]
+        placed_hulls = [
+            [PN([(5.0, 5.0), (15.0, 5.0), (15.0, 15.0), (5.0, 15.0)])]
+        ]
         assert (
-            any_overlap_hierarchical(cand_polys, cand_hulls, placed, placed_hulls, 0.0)
+            any_overlap_hierarchical(
+                cand_polys, cand_hulls, placed, placed_hulls, 0.0
+            )
             is True
         )
 
@@ -110,9 +120,13 @@ class TestAnyOverlapHierarchical:
                 )
             ]
         ]
-        placed_hulls = [[PN([(20.0, 20.0), (30.0, 20.0), (30.0, 30.0), (20.0, 30.0)])]]
+        placed_hulls = [
+            [PN([(20.0, 20.0), (30.0, 20.0), (30.0, 30.0), (20.0, 30.0)])]
+        ]
         assert (
-            any_overlap_hierarchical(cand_polys, cand_hulls, placed, placed_hulls, 0.0)
+            any_overlap_hierarchical(
+                cand_polys, cand_hulls, placed, placed_hulls, 0.0
+            )
             is False
         )
 
@@ -133,8 +147,12 @@ class TestAnyOverlapHierarchicalGrid:
     def test_no_overlap_with_grid(self):
         cand_polys = [PN([(0.0, 0.0), (10.0, 0.0), (10.0, 10.0), (0.0, 10.0)])]
         cand_hulls = [PN([(0.0, 0.0), (10.0, 0.0), (10.0, 10.0), (0.0, 10.0)])]
-        placed = [[PN([(50.0, 50.0), (60.0, 50.0), (60.0, 60.0), (50.0, 60.0)])]]
-        placed_hulls = [[PN([(50.0, 50.0), (60.0, 50.0), (60.0, 60.0), (50.0, 60.0)])]]
+        placed = [
+            [PN([(50.0, 50.0), (60.0, 50.0), (60.0, 60.0), (50.0, 60.0)])]
+        ]
+        placed_hulls = [
+            [PN([(50.0, 50.0), (60.0, 50.0), (60.0, 60.0), (50.0, 60.0)])]
+        ]
         grid = SpatialGrid(50.0)
         grid.insert(0, [50.0, 50.0, 60.0, 60.0])
         assert (
@@ -154,7 +172,9 @@ class TestAnyOverlapHierarchicalGrid:
         cand_polys = [PN([(0.0, 0.0), (10.0, 0.0), (10.0, 10.0), (0.0, 10.0)])]
         cand_hulls = [PN([(0.0, 0.0), (10.0, 0.0), (10.0, 10.0), (0.0, 10.0)])]
         placed = [[PN([(5.0, 5.0), (15.0, 5.0), (15.0, 15.0), (5.0, 15.0)])]]
-        placed_hulls = [[PN([(5.0, 5.0), (15.0, 5.0), (15.0, 15.0), (5.0, 15.0)])]]
+        placed_hulls = [
+            [PN([(5.0, 5.0), (15.0, 5.0), (15.0, 15.0), (5.0, 15.0)])]
+        ]
         grid = SpatialGrid(50.0)
         grid.insert(0, [5.0, 5.0, 15.0, 15.0])
         assert (

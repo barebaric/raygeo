@@ -1,6 +1,6 @@
 import numpy as np
 
-from raygeo.geo import Geometry
+from raygeo.geo import Geometry, Line, Move
 
 
 def test_flatten_to_points():
@@ -44,21 +44,21 @@ def test_linearize_geometry():
     result = geo.linearize(tolerance=0.1)
 
     data = result.data
-    assert data is not None
 
     # Should contain only MOVE and LINE commands
-    cmd_types = data[:, Geometry.COL_TYPE]
-    assert Geometry.CMD_TYPE_ARC not in cmd_types
-    assert Geometry.CMD_TYPE_MOVE in cmd_types
-    assert Geometry.CMD_TYPE_LINE in cmd_types
+    for cmd in data:
+        assert isinstance(cmd, (Move, Line)), (
+            f"Unexpected command type: {type(cmd)}"
+        )
+    assert isinstance(data[0], Move)
+    assert all(isinstance(cmd, Line) for cmd in data[1:])
 
     # The end point should still be (10, 10)
-    end_point = data[-1, 1:4]
-    np.testing.assert_allclose(end_point, (10.0, 10.0, 0.0), atol=1e-6)
+    np.testing.assert_allclose(data[-1].end, (10.0, 10.0, 0.0), atol=1e-6)
 
 
 def test_linearize_geometry_empty():
     """Tests Geometry.linearize() with empty geometry."""
     geo = Geometry()
     result = geo.linearize(tolerance=0.1)
-    assert result.data is None
+    assert len(result.data) == 0

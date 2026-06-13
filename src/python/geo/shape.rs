@@ -137,35 +137,31 @@ use crate::geo::shape::polygon::{
     translate_polygons,
 };
 use crate::geo::shape::rect::do_rects_intersect;
-use crate::{BezierSplit, Point, Segment3D, CMD_TYPE_ARC};
+use crate::{BezierSplit, Point, Segment3D};
 use numpy::{PyArray2, PyArrayMethods, PyUntypedArrayMethods};
 use pyo3::prelude::*;
 use pyo3::types::PyList;
 use pyo3_stub_gen::derive::gen_stub_pyfunction;
 
-fn _arc_row_from_any(arc_cmd: &Bound<'_, PyAny>) -> PyResult<[f64; 8]> {
-    if let Ok(row) = arc_cmd.extract::<Vec<f64>>() {
-        let mut arr = [0.0; 8];
-        let len = row.len().min(8);
-        arr[..len].copy_from_slice(&row[..len]);
-        return Ok(arr);
-    }
+#[allow(clippy::type_complexity)]
+fn _arc_params_from_any(
+    arc_cmd: &Bound<'_, PyAny>,
+) -> PyResult<((f64, f64, f64), (f64, f64), bool)> {
     if let Ok(end) = arc_cmd.getattr("end") {
         let end: (f64, f64, f64) = end.extract()?;
         let center_offset: (f64, f64) =
             arc_cmd.getattr("center_offset")?.extract()?;
         let clockwise: bool = arc_cmd.getattr("clockwise")?.extract()?;
-        let arr: [f64; 8] = [
-            CMD_TYPE_ARC,
-            end.0,
-            end.1,
-            end.2,
-            center_offset.0,
-            center_offset.1,
-            if clockwise { 1.0 } else { 0.0 },
-            0.0,
-        ];
-        return Ok(arr);
+        return Ok((end, center_offset, clockwise));
+    }
+    if let Ok(row) = arc_cmd.extract::<Vec<f64>>() {
+        if row.len() >= 7 {
+            return Ok((
+                (row[1], row[2], row[3]),
+                (row[4], row[5]),
+                row[6] > 0.5,
+            ));
+        }
     }
     Err(pyo3::exceptions::PyTypeError::new_err(
         "expected a command row or a MockArc-like namedtuple with end, center_offset, clockwise",
@@ -710,8 +706,15 @@ fn get_arc_closest_point_py(
     x: f64,
     y: f64,
 ) -> PyResult<Option<(f64, Point, f64)>> {
-    let arr = _arc_row_from_any(arc_cmd)?;
-    Ok(get_arc_closest_point(&arr, start_pos, x, y))
+    let (end, center_offset, clockwise) = _arc_params_from_any(arc_cmd)?;
+    Ok(get_arc_closest_point(
+        end,
+        center_offset,
+        clockwise,
+        start_pos,
+        x,
+        y,
+    ))
 }
 
 #[gen_stub_pyfunction(
@@ -999,8 +1002,14 @@ fn linearize_arc_py(
     start_point: (f64, f64, f64),
     resolution: f64,
 ) -> PyResult<Vec<Segment3D>> {
-    let arr = _arc_row_from_any(arc_cmd)?;
-    Ok(linearize_arc(&arr, start_point, resolution))
+    let (end, center_offset, clockwise) = _arc_params_from_any(arc_cmd)?;
+    Ok(linearize_arc(
+        end,
+        center_offset,
+        clockwise,
+        start_point,
+        resolution,
+    ))
 }
 
 #[gen_stub_pyfunction(

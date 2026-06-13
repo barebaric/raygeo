@@ -103,24 +103,40 @@ class TestConstantPower:
         ops.apply_overscan(DIST)
 
         move_indices = [
-            i for i in range(ops.len()) if ops.command_type(i) == CommandType.MOVE_TO
+            i
+            for i in range(ops.len())
+            if ops.command_type(i) == CommandType.MOVE_TO
         ]
         line_indices = [
-            i for i in range(ops.len()) if ops.command_type(i) == CommandType.LINE_TO
+            i
+            for i in range(ops.len())
+            if ops.command_type(i) == CommandType.LINE_TO
         ]
 
         assert len(move_indices) == 3
         assert len(line_indices) == 9
 
-        assert ops.endpoint(move_indices[0]) == pytest.approx((10 - DIST, 20, 0))
-        assert ops.endpoint(line_indices[2]) == pytest.approx((30 + DIST, 20, 0))
-        assert ops.endpoint(move_indices[1]) == pytest.approx((30 + DIST, 22, 0))
-        assert ops.endpoint(line_indices[5]) == pytest.approx((10 - DIST, 22, 0))
+        assert ops.endpoint(move_indices[0]) == pytest.approx(
+            (10 - DIST, 20, 0)
+        )
+        assert ops.endpoint(line_indices[2]) == pytest.approx(
+            (30 + DIST, 20, 0)
+        )
+        assert ops.endpoint(move_indices[1]) == pytest.approx(
+            (30 + DIST, 22, 0)
+        )
+        assert ops.endpoint(line_indices[5]) == pytest.approx(
+            (10 - DIST, 22, 0)
+        )
 
         norm_v = 1.0 / math.sqrt(2.0)
         ox = oy = DIST * norm_v
-        assert ops.endpoint(move_indices[2]) == pytest.approx((5 - ox, 30 - oy, 0))
-        assert ops.endpoint(line_indices[8]) == pytest.approx((15 + ox, 40 + oy, 0))
+        assert ops.endpoint(move_indices[2]) == pytest.approx(
+            (5 - ox, 30 - oy, 0)
+        )
+        assert ops.endpoint(line_indices[8]) == pytest.approx(
+            (15 + ox, 40 + oy, 0)
+        )
 
     def test_zero_length_line_unchanged(self):
         ops = Ops()

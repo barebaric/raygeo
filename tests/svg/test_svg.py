@@ -77,12 +77,16 @@ class TestParseSvgPathData:
 
     def test_with_transform(self):
         transform = parse_svg_transform("translate(5, 3)")
-        geos = parse_svg_path_data("M 0 0 L 10 0 L 10 10 Z", transform=transform)
+        geos = parse_svg_path_data(
+            "M 0 0 L 10 0 L 10 10 Z", transform=transform
+        )
         assert len(geos) == 1
         assert not geos[0].is_empty()
 
     def test_with_scale(self):
-        geos = parse_svg_path_data("M 0 0 L 10 0 L 10 10 Z", scale_x=2.0, scale_y=2.0)
+        geos = parse_svg_path_data(
+            "M 0 0 L 10 0 L 10 10 Z", scale_x=2.0, scale_y=2.0
+        )
         assert len(geos) == 1
 
     def test_implicit_lineto_after_moveto(self):
@@ -146,7 +150,9 @@ class TestSvgStringToGeometries:
         assert len(geos) == 1
 
     def test_no_paths(self):
-        svg = '<svg xmlns="http://www.w3.org/2000/svg"><rect x="0" y="0"/></svg>'
+        svg = (
+            '<svg xmlns="http://www.w3.org/2000/svg"><rect x="0" y="0"/></svg>'
+        )
         geos = svg_string_to_geometries(svg)
         assert len(geos) == 0
 
@@ -155,7 +161,10 @@ class TestSvgStringToGeometries:
         assert len(geos) == 0
 
     def test_path_without_d_attribute(self):
-        svg = '<svg xmlns="http://www.w3.org/2000/svg"><path fill="black"/></svg>'
+        svg = (
+            '<svg xmlns="http://www.w3.org/2000/svg">'
+            '<path fill="black"/></svg>'
+        )
         geos = svg_string_to_geometries(svg)
         assert len(geos) == 0
 

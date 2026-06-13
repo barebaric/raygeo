@@ -94,8 +94,12 @@ def test_split_inner_and_outer_contours_two_letter_b_shapes():
 
     # Component 2: Another "B" shape, shifted
     b2_outer = Geometry.from_points([(100, 0), (110, 0), (110, 20), (100, 20)])
-    b2_hole_top = Geometry.from_points([(102, 12), (108, 12), (108, 18), (102, 18)])
-    b2_hole_bottom = Geometry.from_points([(102, 2), (108, 2), (108, 8), (102, 2)])
+    b2_hole_top = Geometry.from_points(
+        [(102, 12), (108, 12), (108, 18), (102, 18)]
+    )
+    b2_hole_bottom = Geometry.from_points(
+        [(102, 2), (108, 2), (108, 8), (102, 2)]
+    )
 
     # Combine all contours into one geometry
     combined = b1_outer.copy()
@@ -220,8 +224,12 @@ def test_filter_external_two_separate_shapes():
 def test_filter_external_shape_inside_another_hole():
     """Tests a shape that is inside the hole of another shape."""
     # This is topologically identical to the bullseye test.
-    c1_outer_boundary = Geometry.from_points([(0, 0), (30, 0), (30, 30), (0, 30)])
-    c2_hole_boundary = Geometry.from_points([(5, 5), (25, 5), (25, 25), (5, 25)])
+    c1_outer_boundary = Geometry.from_points(
+        [(0, 0), (30, 0), (30, 30), (0, 30)]
+    )
+    c2_hole_boundary = Geometry.from_points(
+        [(5, 5), (25, 5), (25, 25), (5, 25)]
+    )
     c3_island = Geometry.from_points([(10, 10), (20, 10), (20, 20), (10, 20)])
     combined = c1_outer_boundary.copy()
     combined.extend(c2_hole_boundary)
@@ -294,10 +302,14 @@ def test_remove_inner_edges():
 
     # Test Case 6: Bullseye shape (3 nested closed paths)
     c1 = Geometry.from_points([(0, 0), (30, 0), (30, 30), (0, 30)])  # Outer
-    c2_ccw = Geometry.from_points([(5, 5), (25, 5), (25, 25), (5, 25)])  # Middle hole
+    c2_ccw = Geometry.from_points(
+        [(5, 5), (25, 5), (25, 25), (5, 25)]
+    )  # Middle hole
     # Reverse the middle contour to make it a proper hole (CW)
     c2_hole = c2_ccw.reverse_contour()
-    c3 = Geometry.from_points([(10, 10), (20, 10), (20, 20), (10, 20)])  # Inner
+    c3 = Geometry.from_points(
+        [(10, 10), (20, 10), (20, 20), (10, 20)]
+    )  # Inner
     geo_bullseye = Geometry()
     geo_bullseye.extend(c1)
     geo_bullseye.extend(c2_hole)
@@ -405,7 +417,9 @@ def test_get_valid_contours_data_mixed_valid_invalid():
     result = combined.get_valid_contours_data()
 
     assert len(result) == 1
-    assert result[0]["original_index"] == 0  # first valid contour in combined geometry
+    assert (
+        result[0]["original_index"] == 0
+    )  # first valid contour in combined geometry
 
 
 def test_get_valid_contours_data_preserves_indices():

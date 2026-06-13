@@ -11,7 +11,6 @@
 
 use std::f64::consts::PI;
 
-use crate::constants::*;
 use crate::geo::algo::interp::solve_quadratic;
 use crate::geo::shape::line::get_line_segment_closest_point;
 use crate::geo::shape::point::midpoint;
@@ -233,14 +232,16 @@ pub fn convert_cubic_bezier_to_quadratic(
 }
 
 pub fn get_bezier_closest_point(
-    bezier_row: &[f64; 8],
+    end: Point3D,
+    control1: Point,
+    control2: Point,
     start_pos: Point3D,
     x: f64,
     y: f64,
 ) -> Option<(f64, Point, f64)> {
     // Linearize and search for closest point on segments
     let bezier_segments =
-        linearize_bezier_from_array(bezier_row, start_pos, 0.005);
+        linearize_bezier_from_params(end, control1, control2, start_pos, 0.005);
     if bezier_segments.is_empty() {
         return None;
     }
@@ -268,17 +269,19 @@ pub fn get_bezier_closest_point(
     })
 }
 
-/// Converts a Bezier curve from array format into line segments.
+/// Converts a Bezier curve from parameters into line segments.
 /// Estimates number of steps based on control point distances and resolution.
-pub fn linearize_bezier_from_array(
-    bezier_row: &[f64; 8],
+pub fn linearize_bezier_from_params(
+    end: Point3D,
+    control1: Point,
+    control2: Point,
     start_point: Point3D,
     resolution: f64,
 ) -> Vec<(Point3D, Point3D)> {
     let p0 = start_point;
-    let p1 = (bezier_row[COL_X], bezier_row[COL_Y], bezier_row[COL_Z]);
-    let c1_2d = (bezier_row[COL_C1X], bezier_row[COL_C1Y]);
-    let c2_2d = (bezier_row[COL_C2X], bezier_row[COL_C2Y]);
+    let p1 = end;
+    let c1_2d = control1;
+    let c2_2d = control2;
 
     let z0 = p0.2;
     let z1 = p1.2;
@@ -830,11 +833,13 @@ mod tests {
     }
 
     #[test]
-    fn test_linearize_bezier_from_array() {
-        let bezier_row: [f64; 8] =
-            [CMD_TYPE_BEZIER, 1.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0];
+    fn test_linearize_bezier_from_params() {
+        let end: Point3D = (1.0, 0.0, 0.0);
+        let control1 = (0.0, 1.0);
+        let control2 = (1.0, 1.0);
         let start: Point3D = (0.0, 0.0, 0.0);
-        let segments = linearize_bezier_from_array(&bezier_row, start, 0.1);
+        let segments =
+            linearize_bezier_from_params(end, control1, control2, start, 0.1);
         assert!(!segments.is_empty());
         assert_eq!(segments.last().unwrap().1, (1.0, 0.0, 0.0));
     }

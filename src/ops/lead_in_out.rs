@@ -1,7 +1,7 @@
 use super::container::Ops;
 use super::enums::{CommandCategory, CommandType, SectionType};
 use super::types::{MarkerCmd, OpCategory};
-use crate::geo::algo::analysis::get_point_and_tangent_at_from_array;
+use crate::geo::algo::analysis::get_tangent_at_from_array;
 use crate::types::Point3D;
 
 pub fn apply_lead_in_out(ops: &mut Ops, lead_in_mm: f64, lead_out_mm: f64) {
@@ -115,16 +115,15 @@ fn get_tangent_at_start(ops: &Ops, indices: &[usize]) -> Option<(f64, f64)> {
     if data.len() < 2 {
         return None;
     }
-    let seg_start_x = data[0][1];
-    let seg_start_y = data[0][2];
-    let seg_end_x = data[1][1];
-    let seg_end_y = data[1][2];
+    let seg_start_x = data[0].end_point().0;
+    let seg_start_y = data[0].end_point().1;
+    let seg_end_x = data[1].end_point().0;
+    let seg_end_y = data[1].end_point().1;
     let seg_len = (seg_end_x - seg_start_x).hypot(seg_end_y - seg_start_y);
     if seg_len < 1e-9 {
         return None;
     }
-    let result = get_point_and_tangent_at_from_array(data, 1, 0.0)?;
-    let (_, tangent) = result;
+    let tangent = get_tangent_at_from_array(data, 1, 0.0)?;
     let len = (tangent.0).hypot(tangent.1);
     if len < 1e-9 {
         return None;
@@ -140,16 +139,15 @@ fn get_tangent_at_end(ops: &Ops, indices: &[usize]) -> Option<(f64, f64)> {
         return None;
     }
     let last_idx = data.len() - 1;
-    let prev_x = data[last_idx - 1][1];
-    let prev_y = data[last_idx - 1][2];
-    let end_x = data[last_idx][1];
-    let end_y = data[last_idx][2];
+    let prev_x = data[last_idx - 1].end_point().0;
+    let prev_y = data[last_idx - 1].end_point().1;
+    let end_x = data[last_idx].end_point().0;
+    let end_y = data[last_idx].end_point().1;
     let seg_len = (end_x - prev_x).hypot(end_y - prev_y);
     if seg_len < 1e-9 {
         return None;
     }
-    let result = get_point_and_tangent_at_from_array(data, last_idx, 1.0)?;
-    let (_, tangent) = result;
+    let tangent = get_tangent_at_from_array(data, last_idx, 1.0)?;
     let len = (tangent.0).hypot(tangent.1);
     if len < 1e-9 {
         return None;

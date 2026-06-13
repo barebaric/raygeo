@@ -61,19 +61,11 @@ impl Ops {
                         MoveCmd::ArcTo { center, cw } if is_non_uniform => {
                             let start_point = last_point_untransformed
                                 .unwrap_or((0.0, 0.0, 0.0));
-                            let arc_row: [f64; 8] = [
-                                crate::constants::CMD_TYPE_ARC,
-                                end.0,
-                                end.1,
-                                end.2,
-                                center.0,
-                                center.1,
-                                if *cw { 1.0 } else { 0.0 },
-                                0.0,
-                            ];
                             let segments =
                                 crate::geo::shape::arc::linearize_arc(
-                                    &arc_row,
+                                    *end,
+                                    *center,
+                                    *cw,
                                     start_point,
                                     0.1,
                                 );

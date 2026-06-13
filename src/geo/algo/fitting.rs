@@ -1,40 +1,37 @@
 use std::f64::consts::PI;
 
-use crate::constants::*;
 use crate::geo::algo::simplify::simplify_polyline;
 use crate::geo::shape::arc::is_arc_clockwise;
 use crate::geo::shape::arc::{get_arc_angles, linearize_arc};
-use crate::geo::shape::bezier::linearize_bezier_from_array;
+use crate::geo::shape::bezier::linearize_bezier_from_params;
 use crate::types::{Command, Point, Point3D};
 
 /// Converts all arc commands in a geometry data array into cubic bezier approximations.
-/// After conversion, the geometry can be uniformly scaled without distortion.
-pub fn convert_arcs_to_beziers(data: &[[f64; 8]]) -> Vec<[f64; 8]> {
+pub fn convert_arcs_to_beziers(data: &[Command]) -> Vec<Command> {
     if data.is_empty() {
         return vec![];
     }
-    let mut result: Vec<[f64; 8]> = Vec::new();
+    let mut result: Vec<Command> = Vec::new();
     let mut last_pos = (0.0, 0.0, 0.0);
-    for row in data {
-        let cmd = Command::from_row(row).expect("invalid command");
+    for cmd in data {
         let end_pos = cmd.end_point();
 
-        match &cmd {
+        match cmd {
             Command::Arc {
                 center_offset,
                 clockwise,
                 ..
             } => {
-                let bezier_rows = convert_arc_to_beziers_from_array(
+                let bezier_cmds = convert_arc_to_beziers_from_array(
                     last_pos,
                     end_pos,
                     *center_offset,
                     *clockwise,
                 );
-                result.extend(bezier_rows);
+                result.extend(bezier_cmds);
             }
             _ => {
-                result.push(*row);
+                result.push(cmd.clone());
             }
         }
         last_pos = end_pos;
@@ -42,33 +39,48 @@ pub fn convert_arcs_to_beziers(data: &[[f64; 8]]) -> Vec<[f64; 8]> {
     result
 }
 
-/// Converts all arc and bezier commands into chains of line segments, effectively
-/// linearizing the entire geometry at the given resolution.
-pub fn linearize_data(data: &[[f64; 8]], tolerance: f64) -> Vec<[f64; 8]> {
+/// Converts all arc and bezier commands into chains of line segments.
+pub fn linearize_data(data: &[Command], tolerance: f64) -> Vec<Command> {
     if data.is_empty() {
         return vec![];
     }
-    let mut result: Vec<[f64; 8]> = Vec::new();
+    let mut result: Vec<Command> = Vec::new();
     let mut last_pos = (0.0, 0.0, 0.0);
-    for row in data {
-        let cmd = Command::from_row(row).expect("invalid command");
+    for cmd in data {
         let end_pos = cmd.end_point();
 
-        match &cmd {
+        match cmd {
             Command::Move { .. } | Command::Line { .. } => {
-                result.push(*row);
+                result.push(cmd.clone());
             }
-            Command::Arc { .. } => {
-                let segments = linearize_arc(row, last_pos, tolerance);
+            Command::Arc {
+                end,
+                center_offset,
+                clockwise,
+                ..
+            } => {
+                let segments = linearize_arc(
+                    *end,
+                    *center_offset,
+                    *clockwise,
+                    last_pos,
+                    tolerance,
+                );
                 for (_, p_end) in segments {
-                    result.push(Command::Line { end: p_end }.to_row());
+                    result.push(Command::Line { end: p_end });
                 }
             }
-            Command::Bezier { .. } => {
-                let segments =
-                    linearize_bezier_from_array(row, last_pos, tolerance);
+            Command::Bezier {
+                end,
+                control1,
+                control2,
+                ..
+            } => {
+                let segments = linearize_bezier_from_params(
+                    *end, *control1, *control2, last_pos, tolerance,
+                );
                 for (_, p_end) in segments {
-                    result.push(Command::Line { end: p_end }.to_row());
+                    result.push(Command::Line { end: p_end });
                 }
             }
         }
@@ -78,9 +90,8 @@ pub fn linearize_data(data: &[[f64; 8]], tolerance: f64) -> Vec<[f64; 8]> {
 }
 
 /// Converts geometry data into a list of dense point lists (one per subpath).
-/// Arcs and Beziers are linearized using the given resolution.
 pub fn flatten_to_points(
-    data: &[[f64; 8]],
+    data: &[Command],
     resolution: f64,
 ) -> Vec<Vec<Point3D>> {
     if data.is_empty() {
@@ -91,11 +102,10 @@ pub fn flatten_to_points(
     let mut current_subpath: Vec<Point3D> = Vec::new();
     let mut last_pos = (0.0, 0.0, 0.0);
 
-    for row in data {
-        let cmd = Command::from_row(row).expect("invalid command");
+    for cmd in data {
         let end_pos = cmd.end_point();
 
-        match &cmd {
+        match cmd {
             Command::Move { .. } => {
                 if !current_subpath.is_empty() {
                     subpaths.push(current_subpath);
@@ -106,15 +116,32 @@ pub fn flatten_to_points(
             Command::Line { .. } => {
                 current_subpath.push(end_pos);
             }
-            Command::Arc { .. } => {
-                let segments = linearize_arc(row, last_pos, resolution);
+            Command::Arc {
+                end,
+                center_offset,
+                clockwise,
+                ..
+            } => {
+                let segments = linearize_arc(
+                    *end,
+                    *center_offset,
+                    *clockwise,
+                    last_pos,
+                    resolution,
+                );
                 for (_, p_end) in segments {
                     current_subpath.push(p_end);
                 }
             }
-            Command::Bezier { .. } => {
-                let segments =
-                    linearize_bezier_from_array(row, last_pos, resolution);
+            Command::Bezier {
+                end,
+                control1,
+                control2,
+                ..
+            } => {
+                let segments = linearize_bezier_from_params(
+                    *end, *control1, *control2, last_pos, resolution,
+                );
                 for (_, p_end) in segments {
                     current_subpath.push(p_end);
                 }
@@ -133,7 +160,7 @@ pub fn flatten_to_points(
 
 /// Converts geometry data to a polyline approximation (Lines only),
 /// reducing vertex count using the Ramer-Douglas-Peucker algorithm.
-pub fn linearize_geometry(data: &[[f64; 8]], tolerance: f64) -> Vec<[f64; 8]> {
+pub fn linearize_geometry(data: &[Command], tolerance: f64) -> Vec<Command> {
     if data.is_empty() {
         return vec![];
     }
@@ -141,30 +168,28 @@ pub fn linearize_geometry(data: &[[f64; 8]], tolerance: f64) -> Vec<[f64; 8]> {
     let resolution = tolerance * 0.25;
     let subpaths_points = flatten_to_points(data, resolution);
 
-    let mut new_rows: Vec<[f64; 8]> = Vec::new();
+    let mut new_cmds: Vec<Command> = Vec::new();
     for points in &subpaths_points {
         if points.is_empty() {
             continue;
         }
 
-        let simplified =
-            crate::simplify::simplify_polyline_to_array(points, tolerance);
+        let simplified = simplify_polyline(points, tolerance);
 
         if !simplified.is_empty() {
             let p0 = simplified[0];
-            new_rows.push(Command::Move { end: p0 }.to_row());
+            new_cmds.push(Command::Move { end: p0 });
 
             for p in simplified.iter().skip(1) {
-                new_rows.push(Command::Line { end: *p }.to_row());
+                new_cmds.push(Command::Line { end: *p });
             }
         }
     }
 
-    new_rows
+    new_cmds
 }
 
 /// Tests whether a sequence of points lies on a straight line within the given tolerance.
-/// Returns true for fewer than 3 points (trivially collinear).
 pub fn are_points_collinear(points: &[Point3D], tolerance: f64) -> bool {
     if points.len() < 3 {
         return true;
@@ -194,7 +219,6 @@ pub fn are_points_collinear(points: &[Point3D], tolerance: f64) -> bool {
 }
 
 /// Fits a circle through three points using the perpendicular bisector method.
-/// Returns `Some((center, radius))` if the points are not collinear.
 pub fn fit_circle_to_3_points(
     p1: Point3D,
     p2: Point3D,
@@ -273,7 +297,6 @@ fn solve_3x3(ata: [[f64; 3]; 3], atb: [f64; 3]) -> Option<[f64; 3]> {
 }
 
 /// Fits a circle to a set of points using Kasa's least-squares method.
-/// Returns `Some((center, radius, max_error))` or `None` if fewer than 3 points or collinear.
 pub fn fit_circle_to_points(points: &[Point3D]) -> Option<(Point, f64, f64)> {
     if points.len() < 3 || are_points_collinear(points, 0.01) {
         return None;
@@ -330,7 +353,6 @@ pub fn fit_circle_to_points(points: &[Point3D]) -> Option<(Point, f64, f64)> {
 }
 
 /// Projects a circle center onto the perpendicular bisector of chord `p1`–`p2`.
-/// This constrains the center to lie on the bisector, improving arc fitting stability.
 pub fn project_circle_center_to_bisector(
     p1: Point3D,
     p2: Point3D,
@@ -361,7 +383,7 @@ pub fn project_circle_center_to_bisector(
 }
 
 /// Computes the maximum deviation of a polyline from a reference arc defined by
-/// `center` and `radius`. Used to validate candidate arc fits during curve fitting.
+/// `center` and `radius`.
 pub fn get_polyline_arc_deviation(
     points: &[Point3D],
     center: Point,
@@ -418,13 +440,12 @@ pub fn get_polyline_arc_deviation(
 }
 
 /// Converts a single arc command into one or more cubic bezier segments.
-/// Full-circle arcs are split at 90-degree increments for accuracy.
 pub fn convert_arc_to_beziers_from_array(
     start_point: Point3D,
     end_point: Point3D,
     center_offset: (f64, f64),
     clockwise: bool,
-) -> Vec<[f64; 8]> {
+) -> Vec<Command> {
     let p0_2d = (start_point.0, start_point.1);
     let p_end_2d = (end_point.0, end_point.1);
     let z_start = start_point.2;
@@ -458,7 +479,7 @@ pub fn convert_arc_to_beziers_from_array(
     let segment_sweep = total_sweep / num_segments as f64;
     let kappa = (4.0 / 3.0) * (segment_sweep.abs() / 4.0).tan();
 
-    let mut bezier_rows: Vec<[f64; 8]> = Vec::new();
+    let mut bezier_cmds: Vec<Command> = Vec::new();
     let mut current_p0 = start_point;
 
     for i in 0..num_segments {
@@ -498,25 +519,20 @@ pub fn convert_arc_to_beziers_from_array(
             current_p3.1 - t_vec1.1 * kappa,
         );
 
-        bezier_rows.push([
-            CMD_TYPE_BEZIER,
-            current_p3.0,
-            current_p3.1,
-            current_p3.2,
-            c1.0,
-            c1.1,
-            c2.0,
-            c2.1,
-        ]);
+        bezier_cmds.push(Command::Bezier {
+            end: current_p3,
+            control1: c1,
+            control2: c2,
+        });
 
         current_p0 = current_p3;
     }
 
-    bezier_rows
+    bezier_cmds
 }
 
 /// Returns the maximum perpendicular deviation from the chord `points[start]`–`points[end]`
-/// and the index of the furthest point. Used as the split criterion in RDP-style recursive fitting.
+/// and the index of the furthest point.
 pub fn get_polyline_line_deviation(
     points: &[Point3D],
     start: usize,
@@ -554,18 +570,18 @@ pub fn get_polyline_line_deviation(
     (max_dist_sq.sqrt(), max_idx)
 }
 
-/// Creates a `CMD_TYPE_LINE` geometry command row for the given endpoint.
-pub fn create_line_cmd(end_point: Point3D) -> [f64; 8] {
-    Command::Line { end: end_point }.to_row()
+/// Creates a `Command::Line` for the given endpoint.
+pub fn create_line_cmd(end_point: Point3D) -> Command {
+    Command::Line { end: end_point }
 }
 
-/// Creates a `CMD_TYPE_ARC` geometry command row. The clockwise flag is determined
+/// Creates a `Command::Arc` for the given endpoint. The clockwise flag is determined
 /// automatically from the cross product of the start → center and end → center vectors.
 pub fn create_arc_cmd(
     end_point: Point3D,
     center: Point,
     start_point: Point3D,
-) -> [f64; 8] {
+) -> Command {
     let (xc, yc) = center;
     let v1x = start_point.0 - xc;
     let v1y = start_point.1 - yc;
@@ -579,20 +595,15 @@ pub fn create_arc_cmd(
         center_offset: (xc - start_point.0, yc - start_point.1),
         clockwise,
     }
-    .to_row()
 }
 
 /// Recursively fits line and arc primitives to a range of points.
-/// At each recursion, the point furthest from the chord is identified as a split candidate.
-/// If all points are within tolerance of a line, a single line command is emitted.
-/// Otherwise arc fitting is attempted (both 3-point and least-squares).
-/// Sharp corners (dot product < 0.5, i.e. deflection > ~60°) prevent arc fitting.
 pub fn fit_points_recursive(
     points: &[Point3D],
     tolerance: f64,
     start: usize,
     end: usize,
-) -> Vec<[f64; 8]> {
+) -> Vec<Command> {
     if start >= end {
         return vec![];
     }
@@ -642,7 +653,9 @@ pub fn fit_points_recursive(
                 let mut row = create_arc_cmd(p3, center, p1);
                 let pts = [(p1.0, p1.1), (p2.0, p2.1), (p3.0, p3.1)];
                 let is_cw = is_arc_clockwise(pts.as_slice(), center);
-                row[COL_CW] = if is_cw { 1.0 } else { 0.0 };
+                if let Command::Arc { clockwise, .. } = &mut row {
+                    *clockwise = is_cw;
+                }
                 return vec![row];
             }
         }
@@ -667,7 +680,9 @@ pub fn fit_points_recursive(
                         subset.iter().map(|p| (p.0, p.1)).collect();
                     is_arc_clockwise(&pts2d, center)
                 };
-                row[COL_CW] = if is_cw { 1.0 } else { 0.0 };
+                if let Command::Arc { clockwise, .. } = &mut row {
+                    *clockwise = is_cw;
+                }
                 return vec![row];
             }
         }
@@ -686,12 +701,11 @@ pub fn fit_points_recursive(
     result
 }
 
-/// Entry point for recursive primitive fitting. Converts a polyline into a mix of
-/// line and arc commands that stay within `tolerance` of the original points.
+/// Entry point for recursive primitive fitting.
 pub fn fit_points_with_primitives(
     points: &[Point3D],
     tolerance: f64,
-) -> Vec<[f64; 8]> {
+) -> Vec<Command> {
     if points.len() < 2 {
         return vec![];
     }
@@ -699,39 +713,36 @@ pub fn fit_points_with_primitives(
 }
 
 /// Fits line and arc primitives to a geometry data array.
-/// The input is segmented at MOVE commands. Line chains are simplified and fit to
-/// primitives; arc and bezier commands are optionally preserved or linearised first.
 pub fn fit_curves(
-    data: &[[f64; 8]],
+    data: &[Command],
     tolerance: f64,
     preserve_beziers: bool,
     preserve_arcs: bool,
-) -> Vec<[f64; 8]> {
+) -> Vec<Command> {
     if data.is_empty() {
         return vec![];
     }
 
-    let mut new_rows: Vec<[f64; 8]> = Vec::new();
+    let mut new_cmds: Vec<Command> = Vec::new();
     let mut point_chain: Vec<Point3D> = Vec::new();
 
-    let flush_chain = |chain: &mut Vec<Point3D>, rows: &mut Vec<[f64; 8]>| {
+    let flush_chain = |chain: &mut Vec<Point3D>, cmds: &mut Vec<Command>| {
         if chain.len() > 1 {
             let simplified = simplify_polyline(chain, tolerance);
             let primitives = fit_points_with_primitives(&simplified, tolerance);
-            rows.extend(primitives);
+            cmds.extend(primitives);
         }
         chain.clear();
     };
 
     let mut last_pos = (0.0, 0.0, 0.0);
 
-    for &row in data {
-        let cmd = Command::from_row(&row).expect("invalid command");
+    for cmd in data {
         let end_pos = cmd.end_point();
 
         if matches!(cmd, Command::Move { .. }) {
-            flush_chain(&mut point_chain, &mut new_rows);
-            new_rows.push(row);
+            flush_chain(&mut point_chain, &mut new_cmds);
+            new_cmds.push(cmd.clone());
             last_pos = end_pos;
             continue;
         }
@@ -740,31 +751,48 @@ pub fn fit_curves(
             point_chain.push(last_pos);
         }
 
-        match &cmd {
+        match cmd {
             Command::Line { .. } => {
                 point_chain.push(end_pos);
             }
-            Command::Arc { .. } => {
+            Command::Arc {
+                end,
+                center_offset,
+                clockwise,
+                ..
+            } => {
                 if preserve_arcs {
-                    flush_chain(&mut point_chain, &mut new_rows);
-                    new_rows.push(row);
+                    flush_chain(&mut point_chain, &mut new_cmds);
+                    new_cmds.push(cmd.clone());
                     point_chain.push(end_pos);
                 } else {
-                    let segments =
-                        linearize_arc(&row, last_pos, tolerance * 0.25);
+                    let segments = linearize_arc(
+                        *end,
+                        *center_offset,
+                        *clockwise,
+                        last_pos,
+                        tolerance * 0.25,
+                    );
                     for (_, p_end) in segments {
                         point_chain.push(p_end);
                     }
                 }
             }
-            Command::Bezier { .. } => {
+            Command::Bezier {
+                end,
+                control1,
+                control2,
+                ..
+            } => {
                 if preserve_beziers {
-                    flush_chain(&mut point_chain, &mut new_rows);
-                    new_rows.push(row);
+                    flush_chain(&mut point_chain, &mut new_cmds);
+                    new_cmds.push(cmd.clone());
                     point_chain.push(end_pos);
                 } else {
-                    let segments = linearize_bezier_from_array(
-                        &row,
+                    let segments = linearize_bezier_from_params(
+                        *end,
+                        *control1,
+                        *control2,
                         last_pos,
                         tolerance * 0.25,
                     );
@@ -774,43 +802,41 @@ pub fn fit_curves(
                 }
             }
             Command::Move { .. } => {
-                flush_chain(&mut point_chain, &mut new_rows);
-                new_rows.push(row);
+                flush_chain(&mut point_chain, &mut new_cmds);
+                new_cmds.push(cmd.clone());
             }
         }
 
         last_pos = end_pos;
     }
 
-    flush_chain(&mut point_chain, &mut new_rows);
+    flush_chain(&mut point_chain, &mut new_cmds);
 
-    new_rows
+    new_cmds
 }
 
 /// Optimises a geometry path by simplifying line chains and optionally fitting arcs.
-/// Non-line commands (MOVE, ARC, BEZIER) are passed through unchanged and act as
-/// chain boundaries.
 pub fn optimize_path_from_array(
-    data: &[[f64; 8]],
+    data: &[Command],
     tolerance: f64,
     use_fit_arcs: bool,
-) -> Vec<[f64; 8]> {
+) -> Vec<Command> {
     if data.is_empty() {
         return vec![];
     }
 
-    let mut optimized_rows: Vec<[f64; 8]> = Vec::new();
+    let mut optimized_cmds: Vec<Command> = Vec::new();
     let mut point_chain: Vec<Point3D> = Vec::new();
 
-    let flush_chain = |chain: &mut Vec<Point3D>, rows: &mut Vec<[f64; 8]>| {
+    let flush_chain = |chain: &mut Vec<Point3D>, cmds: &mut Vec<Command>| {
         if chain.len() > 1 {
             if use_fit_arcs {
                 let primitives = fit_points_with_primitives(chain, tolerance);
-                rows.extend(primitives);
+                cmds.extend(primitives);
             } else {
                 let simplified = simplify_polyline(chain, tolerance);
                 for p in simplified.iter().skip(1) {
-                    rows.push(create_line_cmd(*p));
+                    cmds.push(create_line_cmd(*p));
                 }
             }
         }
@@ -819,8 +845,7 @@ pub fn optimize_path_from_array(
 
     let mut last_pos = (0.0, 0.0, 0.0);
 
-    for &row in data {
-        let cmd = Command::from_row(&row).expect("invalid command");
+    for cmd in data {
         let end_pos = cmd.end_point();
 
         if matches!(cmd, Command::Line { .. }) {
@@ -829,23 +854,21 @@ pub fn optimize_path_from_array(
             }
             point_chain.push(end_pos);
         } else {
-            flush_chain(&mut point_chain, &mut optimized_rows);
-            optimized_rows.push(row);
+            flush_chain(&mut point_chain, &mut optimized_cmds);
+            optimized_cmds.push(cmd.clone());
             point_chain = vec![end_pos];
         }
 
         last_pos = end_pos;
     }
 
-    flush_chain(&mut point_chain, &mut optimized_rows);
+    flush_chain(&mut point_chain, &mut optimized_cmds);
 
-    optimized_rows
+    optimized_cmds
 }
 
-/// Fit arcs only (equivalent to fit_curves with preserve_beziers=false,
-/// preserve_arcs=true).
-/// Bezier curves are linearized and refitted as arcs.
-pub fn fit_arcs(data: &[[f64; 8]], tolerance: f64) -> Vec<[f64; 8]> {
+/// Fit arcs only (equivalent to fit_curves with preserve_beziers=false, preserve_arcs=true).
+pub fn fit_arcs(data: &[Command], tolerance: f64) -> Vec<Command> {
     fit_curves(data, tolerance, false, true)
 }
 
@@ -924,18 +947,27 @@ mod tests {
     #[test]
     fn test_create_line_cmd_basic() {
         let cmd = create_line_cmd((10.0, 20.0, 5.0));
-        assert_eq!(cmd[COL_TYPE], CMD_TYPE_LINE);
-        assert_eq!(cmd[COL_X], 10.0);
-        assert_eq!(cmd[COL_Y], 20.0);
-        assert_eq!(cmd[COL_Z], 5.0);
+        match cmd {
+            Command::Line { end } => {
+                assert_eq!(end, (10.0, 20.0, 5.0));
+            }
+            _ => panic!("expected Line"),
+        }
     }
 
     #[test]
     fn test_create_arc_cmd_basic() {
         let cmd = create_arc_cmd((1.0, 0.0, 0.0), (0.0, 0.0), (0.0, 1.0, 0.0));
-        assert_eq!(cmd[COL_TYPE], CMD_TYPE_ARC);
-        assert_eq!(cmd[COL_I], 0.0);
-        assert_eq!(cmd[COL_J], -1.0);
+        match cmd {
+            Command::Arc {
+                end, center_offset, ..
+            } => {
+                assert_eq!(end, (1.0, 0.0, 0.0));
+                assert!((center_offset.0 - 0.0).abs() < 1e-9);
+                assert!((center_offset.1 - (-1.0)).abs() < 1e-9);
+            }
+            _ => panic!("expected Arc"),
+        }
     }
 
     #[test]
@@ -947,8 +979,8 @@ mod tests {
             true,
         );
         assert!(!result.is_empty());
-        for row in &result {
-            assert_eq!(row[COL_TYPE], CMD_TYPE_BEZIER);
+        for cmd in &result {
+            assert!(matches!(cmd, Command::Bezier { .. }));
         }
     }
 
@@ -957,15 +989,16 @@ mod tests {
         let points = vec![(0.0, 0.0, 0.0), (5.0, 0.0, 0.0), (10.0, 0.0, 0.0)];
         let result = fit_points_with_primitives(&points, 0.1);
         assert!(!result.is_empty());
-        assert_eq!(result[0][COL_TYPE], CMD_TYPE_LINE);
-        assert_eq!(result[0][COL_X], 10.0);
+        match &result[0] {
+            Command::Line { end } => {
+                assert!((end.0 - 10.0).abs() < 1e-9);
+            }
+            _ => panic!("expected Line"),
+        }
     }
 
     #[test]
     fn test_fit_points_with_primitives_arc() {
-        // Five points forming a gentle arc where no internal vertex
-        // is sharp (each deflection < 60 deg). This exercises the
-        // general-purpose least-squares circle fitter.
         let points = vec![
             (2.0, 0.0, 0.0),
             (1.5, 1.5, 0.0),
@@ -975,17 +1008,27 @@ mod tests {
         ];
         let result = fit_points_with_primitives(&points, 1.0);
         assert!(!result.is_empty());
-        assert_eq!(result[0][COL_TYPE], CMD_TYPE_ARC);
+        assert!(matches!(&result[0], Command::Arc { .. }));
     }
 
     #[test]
     fn test_optimize_path() {
-        let data: Vec<[f64; 8]> = vec![
-            [CMD_TYPE_MOVE, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-            [CMD_TYPE_LINE, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-            [CMD_TYPE_LINE, 2.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-            [CMD_TYPE_LINE, 3.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-            [CMD_TYPE_LINE, 10.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+        let data: Vec<Command> = vec![
+            Command::Move {
+                end: (0.0, 0.0, 0.0),
+            },
+            Command::Line {
+                end: (1.0, 0.0, 0.0),
+            },
+            Command::Line {
+                end: (2.0, 0.0, 0.0),
+            },
+            Command::Line {
+                end: (3.0, 0.0, 0.0),
+            },
+            Command::Line {
+                end: (10.0, 0.0, 0.0),
+            },
         ];
         let result = optimize_path_from_array(&data, 0.5, false);
         assert!(result.len() >= 2);
@@ -993,16 +1036,24 @@ mod tests {
 
     #[test]
     fn test_fit_curves_preserve_beziers() {
-        let data: Vec<[f64; 8]> = vec![
-            [CMD_TYPE_MOVE, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-            [CMD_TYPE_BEZIER, 1.0, 1.0, 0.0, 0.25, 0.5, 0.75, 0.5],
-            [CMD_TYPE_LINE, 2.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+        let data: Vec<Command> = vec![
+            Command::Move {
+                end: (0.0, 0.0, 0.0),
+            },
+            Command::Bezier {
+                end: (1.0, 1.0, 0.0),
+                control1: (0.25, 0.5),
+                control2: (0.75, 0.5),
+            },
+            Command::Line {
+                end: (2.0, 0.0, 0.0),
+            },
         ];
         let result = fit_curves(&data, 0.1, true, true);
         assert!(!result.is_empty());
         let has_bezier = result
             .iter()
-            .any(|r| (r[COL_TYPE] as i32) == CMD_TYPE_BEZIER as i32);
+            .any(|cmd| matches!(cmd, Command::Bezier { .. }));
         assert!(has_bezier);
     }
 }

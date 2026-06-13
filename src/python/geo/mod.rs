@@ -61,34 +61,6 @@ fn add_submodules(m: &Bound<'_, PyModule>) -> PyResult<()> {
     algo::register(m)?;
     math::register(m)?;
 
-    let py = m.py();
-    let types_mod = py.import("types")?;
-    let constants = types_mod.call_method0("SimpleNamespace")?;
-    {
-        use crate::{
-            CMD_TYPE_ARC, CMD_TYPE_BEZIER, CMD_TYPE_LINE, CMD_TYPE_MOVE,
-            COL_C1X, COL_C1Y, COL_C2X, COL_C2Y, COL_CW, COL_I, COL_J, COL_TYPE,
-            COL_X, COL_Y, COL_Z, GEO_ARRAY_COLS,
-        };
-        constants.setattr("CMD_TYPE_MOVE", CMD_TYPE_MOVE)?;
-        constants.setattr("CMD_TYPE_LINE", CMD_TYPE_LINE)?;
-        constants.setattr("CMD_TYPE_ARC", CMD_TYPE_ARC)?;
-        constants.setattr("CMD_TYPE_BEZIER", CMD_TYPE_BEZIER)?;
-        constants.setattr("COL_TYPE", COL_TYPE)?;
-        constants.setattr("COL_X", COL_X)?;
-        constants.setattr("COL_Y", COL_Y)?;
-        constants.setattr("COL_Z", COL_Z)?;
-        constants.setattr("COL_I", COL_I)?;
-        constants.setattr("COL_J", COL_J)?;
-        constants.setattr("COL_CW", COL_CW)?;
-        constants.setattr("COL_C1X", COL_C1X)?;
-        constants.setattr("COL_C1Y", COL_C1Y)?;
-        constants.setattr("COL_C2X", COL_C2X)?;
-        constants.setattr("COL_C2Y", COL_C2Y)?;
-        constants.setattr("GEO_ARRAY_COLS", GEO_ARRAY_COLS)?;
-    }
-    m.add("constants", constants)?;
-
     Ok(())
 }
 

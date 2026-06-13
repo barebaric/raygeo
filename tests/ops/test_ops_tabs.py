@@ -89,7 +89,11 @@ def count_moving_segments(ops):
         if ct == CommandType.MOVE_TO:
             count += 1
             in_subpath = True
-        elif ct in (CommandType.LINE_TO, CommandType.BEZIER_TO, CommandType.ARC_TO):
+        elif ct in (
+            CommandType.LINE_TO,
+            CommandType.BEZIER_TO,
+            CommandType.ARC_TO,
+        ):
             if not in_subpath:
                 count += 1
                 in_subpath = True
@@ -231,7 +235,9 @@ class TestApplyTabGapsBezier:
         ops = make_bezier_rect_ops(0, 0, 10, 10)
         ops.apply_tab_gaps([(10, 5, 2)])
         moving_count = sum(
-            1 for i in range(ops.len()) if ops.category(i) == CommandCategory.MOVING
+            1
+            for i in range(ops.len())
+            if ops.category(i) == CommandCategory.MOVING
         )
         assert moving_count >= 2
 
@@ -293,11 +299,15 @@ class TestApplyTabPowerBasic:
         """A single tab should insert SET_POWER commands."""
         ops = make_rect_ops(0, 0, 10, 10)
         orig_power_count = sum(
-            1 for i in range(ops.len()) if ops.command_type(i) == CommandType.SET_POWER
+            1
+            for i in range(ops.len())
+            if ops.command_type(i) == CommandType.SET_POWER
         )
         ops.apply_tab_power([(5, 0, 2)], 0.1, 1.0)
         new_power_count = sum(
-            1 for i in range(ops.len()) if ops.command_type(i) == CommandType.SET_POWER
+            1
+            for i in range(ops.len())
+            if ops.command_type(i) == CommandType.SET_POWER
         )
         # Should have added at least 1 new power command
         # (enter tab or exit tab — one of them may reuse the existing
@@ -337,11 +347,15 @@ class TestApplyTabPowerBezier:
         """Power tab on bezier path should insert SET_POWER commands."""
         ops = make_bezier_rect_ops(0, 0, 10, 10)
         orig_power_count = sum(
-            1 for i in range(ops.len()) if ops.command_type(i) == CommandType.SET_POWER
+            1
+            for i in range(ops.len())
+            if ops.command_type(i) == CommandType.SET_POWER
         )
         ops.apply_tab_power([(5, 0, 2)], 0.1, 1.0)
         new_power_count = sum(
-            1 for i in range(ops.len()) if ops.command_type(i) == CommandType.SET_POWER
+            1
+            for i in range(ops.len())
+            if ops.command_type(i) == CommandType.SET_POWER
         )
         assert new_power_count > orig_power_count
 

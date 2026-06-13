@@ -46,12 +46,16 @@ def test_get_line_segment_intersection():
     # Crossing lines
     p1, p2 = (0, 0), (10, 10)
     p3, p4 = (0, 10), (10, 0)
-    assert get_line_segment_intersection(p1, p2, p3, p4) == pytest.approx((5, 5))
+    assert get_line_segment_intersection(p1, p2, p3, p4) == pytest.approx(
+        (5, 5)
+    )
 
     # T-junction (endpoint on segment)
     p1, p2 = (0, 0), (10, 0)
     p3, p4 = (5, -5), (5, 5)
-    assert get_line_segment_intersection(p1, p2, p3, p4) == pytest.approx((5, 0))
+    assert get_line_segment_intersection(p1, p2, p3, p4) == pytest.approx(
+        (5, 0)
+    )
 
     # No intersection (parallel)
     p1, p2 = (0, 0), (10, 0)
@@ -83,7 +87,9 @@ def test_get_line_segment_polygon_intersections():
     # Test a line fully outside
     p_out1 = (-20, 0)
     p_out2 = (-10, 0)
-    intersections = get_line_segment_polygon_intersections(p_out1, p_out2, [region])
+    intersections = get_line_segment_polygon_intersections(
+        p_out1, p_out2, [region]
+    )
     # Should only return the start and end points
     assert intersections == pytest.approx([0.0, 1.0])
 

@@ -6,10 +6,8 @@
 use crate::geo::shape::point::are_points_equal;
 use crate::types::Command;
 
-/// Extract a hashable key for a segment at the given index.
-/// Returns None for MOVE commands.
-pub fn get_segment_key(row: &[f64; 8]) -> Option<(u32, [f64; 3], [f64; 4])> {
-    let cmd = Command::from_row(row).ok()?;
+/// Extract a hashable key for a segment. Returns None for MOVE commands.
+pub fn get_segment_key(cmd: &Command) -> Option<(u32, [f64; 3], [f64; 4])> {
     match cmd {
         Command::Move { .. } => None,
         Command::Line { end } => Some((2, [end.0, end.1, end.2], [0.0; 4])),
@@ -21,7 +19,7 @@ pub fn get_segment_key(row: &[f64; 8]) -> Option<(u32, [f64; 3], [f64; 4])> {
             let params = [
                 center_offset.0,
                 center_offset.1,
-                if clockwise { 1.0 } else { 0.0 },
+                if *clockwise { 1.0 } else { 0.0 },
                 0.0,
             ];
             Some((3, [end.0, end.1, end.2], params))
@@ -69,31 +67,25 @@ pub fn are_segments_equal(
 }
 
 /// Remove duplicate segments from geometry command data.
-///
-/// A segment is considered duplicate if it has the same type, endpoint,
-/// and parameters as another segment within the same subpath. MOVE commands
-/// reset duplicate detection for new paths.
 pub fn remove_duplicate_segments(
-    data: &[[f64; 8]],
+    data: &[Command],
     tolerance: f64,
-) -> Vec<[f64; 8]> {
+) -> Vec<Command> {
     if data.is_empty() {
         return data.to_vec();
     }
 
-    let mut result: Vec<[f64; 8]> = Vec::new();
+    let mut result: Vec<Command> = Vec::new();
     let mut seen_segments: Vec<(u32, [f64; 3], [f64; 4])> = Vec::new();
 
-    for row in data {
-        let cmd = Command::from_row(row).expect("invalid command");
-
+    for cmd in data {
         if matches!(cmd, Command::Move { .. }) {
             seen_segments.clear();
-            result.push(*row);
+            result.push(cmd.clone());
             continue;
         }
 
-        if let Some(key) = get_segment_key(row) {
+        if let Some(key) = get_segment_key(cmd) {
             let is_dup = seen_segments
                 .iter()
                 .any(|sk| are_segments_equal(&key, sk, tolerance));
@@ -102,41 +94,32 @@ pub fn remove_duplicate_segments(
             }
             seen_segments.push(key);
         }
-        result.push(*row);
+        result.push(cmd.clone());
     }
 
     result
 }
 
 /// Close small gaps in a geometry data array to form clean, connected paths.
-///
-/// Two operations are performed:
-/// 1. Within each subpath (between MOVE commands), if the end point is within
-///    tolerance of the start point, snap the end point to the start.
-/// 2. If a MOVE command starts within tolerance of the previous subpath's end,
-///    convert it to a LINE command (bridging the gap).
 pub fn close_geometry_gaps_from_array(
-    data: &[[f64; 8]],
+    data: &[Command],
     tolerance: f64,
-) -> Vec<[f64; 8]> {
+) -> Vec<Command> {
     if data.len() < 2 {
         return data.to_vec();
     }
 
     let tol_sq = tolerance * tolerance;
 
-    // Find MOVE command indices to identify subpath boundaries
     let mut move_indices: Vec<usize> = Vec::new();
-    for (i, row) in data.iter().enumerate() {
-        let cmd = Command::from_row(row).expect("invalid command");
+    for (i, cmd) in data.iter().enumerate() {
         if matches!(cmd, Command::Move { .. }) {
             move_indices.push(i);
         }
     }
 
-    let mut modified: Vec<[f64; 8]> = data.to_vec();
+    let mut modified: Vec<Command> = data.to_vec();
 
-    // Build ranges for each subpath
     let sub_ranges: Vec<(usize, usize)> = if move_indices.is_empty() {
         vec![(0, data.len())]
     } else {
@@ -150,14 +133,10 @@ pub fn close_geometry_gaps_from_array(
         ranges
     };
 
-    // Close gaps within each subpath
     for &(start, end) in &sub_ranges {
         if end - start >= 2 {
-            let s = Command::from_row(&modified[start])
-                .expect("invalid command")
-                .end_point();
-            let e_cmd =
-                Command::from_row(&modified[end - 1]).expect("invalid command");
+            let s = modified[start].end_point();
+            let e_cmd = &modified[end - 1];
             let e = e_cmd.end_point();
             let dsq =
                 (s.0 - e.0).powi(2) + (s.1 - e.1).powi(2) + (s.2 - e.2).powi(2);
@@ -171,28 +150,26 @@ pub fn close_geometry_gaps_from_array(
                         ..
                     } => Command::Arc {
                         end: s,
-                        center_offset,
-                        clockwise,
+                        center_offset: *center_offset,
+                        clockwise: *clockwise,
                     },
                     Command::Bezier {
                         control1, control2, ..
                     } => Command::Bezier {
                         end: s,
-                        control1,
-                        control2,
+                        control1: *control1,
+                        control2: *control2,
                     },
                 };
-                modified[end - 1] = new_cmd.to_row();
+                modified[end - 1] = new_cmd;
             }
         }
     }
 
-    // Convert MOVE to LINE when at the same position as previous endpoint
-    let mut final_rows: Vec<[f64; 8]> = Vec::new();
+    let mut final_rows: Vec<Command> = Vec::new();
     let mut last_end: Option<(f64, f64, f64)> = None;
 
-    for &row in &modified {
-        let cmd = Command::from_row(&row).expect("invalid command");
+    for cmd in &modified {
         let end_pt = cmd.end_point();
 
         if matches!(cmd, Command::Move { .. }) {
@@ -201,16 +178,15 @@ pub fn close_geometry_gaps_from_array(
                     + (end_pt.1 - prev.1).powi(2)
                     + (end_pt.2 - prev.2).powi(2);
                 if dsq < tol_sq {
-                    let line = Command::Line { end: prev };
-                    final_rows.push(line.to_row());
+                    final_rows.push(Command::Line { end: prev });
                 } else {
-                    final_rows.push(row);
+                    final_rows.push(cmd.clone());
                 }
             } else {
-                final_rows.push(row);
+                final_rows.push(cmd.clone());
             }
         } else {
-            final_rows.push(row);
+            final_rows.push(cmd.clone());
         }
         last_end = Some(end_pt);
     }
@@ -221,14 +197,19 @@ pub fn close_geometry_gaps_from_array(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::constants::*;
 
     #[test]
     fn test_remove_duplicate_lines() {
-        let data: Vec<[f64; 8]> = vec![
-            [CMD_TYPE_MOVE, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-            [CMD_TYPE_LINE, 10.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-            [CMD_TYPE_LINE, 10.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+        let data = vec![
+            Command::Move {
+                end: (0.0, 0.0, 0.0),
+            },
+            Command::Line {
+                end: (10.0, 0.0, 0.0),
+            },
+            Command::Line {
+                end: (10.0, 0.0, 0.0),
+            },
         ];
         let result = remove_duplicate_segments(&data, 1e-6);
         assert_eq!(result.len(), 2);
@@ -236,10 +217,16 @@ mod tests {
 
     #[test]
     fn test_remove_duplicate_different() {
-        let data: Vec<[f64; 8]> = vec![
-            [CMD_TYPE_MOVE, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-            [CMD_TYPE_LINE, 10.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-            [CMD_TYPE_LINE, 10.0, 10.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+        let data = vec![
+            Command::Move {
+                end: (0.0, 0.0, 0.0),
+            },
+            Command::Line {
+                end: (10.0, 0.0, 0.0),
+            },
+            Command::Line {
+                end: (10.0, 10.0, 0.0),
+            },
         ];
         let result = remove_duplicate_segments(&data, 1e-6);
         assert_eq!(result.len(), 3);
@@ -247,14 +234,22 @@ mod tests {
 
     #[test]
     fn test_close_gaps_simple() {
-        let data: Vec<[f64; 8]> = vec![
-            [CMD_TYPE_MOVE, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-            [CMD_TYPE_LINE, 10.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-            [CMD_TYPE_LINE, 10.0, 10.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-            [CMD_TYPE_LINE, 0.1, 0.1, 0.0, 0.0, 0.0, 0.0, 0.0],
+        let data = vec![
+            Command::Move {
+                end: (0.0, 0.0, 0.0),
+            },
+            Command::Line {
+                end: (10.0, 0.0, 0.0),
+            },
+            Command::Line {
+                end: (10.0, 10.0, 0.0),
+            },
+            Command::Line {
+                end: (0.1, 0.1, 0.0),
+            },
         ];
         let result = close_geometry_gaps_from_array(&data, 0.2);
-        assert_eq!(result.last().unwrap()[COL_X], 0.0);
-        assert_eq!(result.last().unwrap()[COL_Y], 0.0);
+        assert_eq!(result.last().unwrap().end_point().0, 0.0);
+        assert_eq!(result.last().unwrap().end_point().1, 0.0);
     }
 }

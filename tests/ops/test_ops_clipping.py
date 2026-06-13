@@ -91,7 +91,9 @@ class TestClipOpsToRegionsArcs:
         clip_ops_to_regions(ops, regions)
         arc_indices = ops.indices_of(CommandType.ARC_TO)
         assert len(arc_indices) == 1
-        assert ops.endpoint(arc_indices[0]) == pytest.approx((6, 5, 0), abs=1e-6)
+        assert ops.endpoint(arc_indices[0]) == pytest.approx(
+            (6, 5, 0), abs=1e-6
+        )
 
     def test_arc_fully_outside_removed(self):
         ops = Ops()
@@ -181,7 +183,9 @@ class TestClipOpsToRegionsBezier:
         clip_ops_to_regions(ops, regions)
         bezier_indices = ops.indices_of(CommandType.BEZIER_TO)
         assert len(bezier_indices) == 1
-        assert ops.endpoint(bezier_indices[0]) == pytest.approx((7, 5, 0), abs=1e-6)
+        assert ops.endpoint(bezier_indices[0]) == pytest.approx(
+            (7, 5, 0), abs=1e-6
+        )
 
     def test_bezier_fully_outside_removed(self):
         ops = Ops()

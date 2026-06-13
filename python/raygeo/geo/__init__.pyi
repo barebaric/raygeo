@@ -19,8 +19,6 @@ sums for toolpath generation.
 """
 
 import builtins
-import numpy
-import numpy.typing
 import typing
 from . import algo
 from . import math
@@ -58,22 +56,6 @@ class Bezier:
 
 @typing.final
 class Geometry:
-    COL_TYPE: builtins.int = 0
-    COL_X: builtins.int = 1
-    COL_Y: builtins.int = 2
-    COL_Z: builtins.int = 3
-    COL_I: builtins.int = 4
-    COL_J: builtins.int = 5
-    COL_CW: builtins.int = 6
-    COL_C1X: builtins.int = 4
-    COL_C1Y: builtins.int = 5
-    COL_C2X: builtins.int = 6
-    COL_C2Y: builtins.int = 7
-    GEO_ARRAY_COLS: builtins.int = 8
-    CMD_TYPE_MOVE: builtins.float = 1.0
-    CMD_TYPE_LINE: builtins.float = 2.0
-    CMD_TYPE_ARC: builtins.float = 3.0
-    CMD_TYPE_BEZIER: builtins.float = 4.0
     @property
     def last_move_to(self) -> tuple[builtins.float, builtins.float, builtins.float]:
         r"""
@@ -89,13 +71,10 @@ class Geometry:
     @uniform_scalable.setter
     def uniform_scalable(self, value: builtins.bool) -> None: ...
     @property
-    def data(self) -> typing.Optional[numpy.typing.NDArray[numpy.float64]]:
+    def data(self) -> builtins.list[typing.Any]:
         r"""
-        The command data as a numpy array of shape
-        (N, 8), or None if empty.
+        The commands as a list of typed command objects.
         """
-    @data.setter
-    def data(self, value: typing.Optional[numpy.typing.NDArray[numpy.float64]]) -> None: ...
     def __eq__(self, other: object) -> bool:
         r"""
         Check equality with another Geometry.
@@ -222,15 +201,15 @@ class Geometry:
         r"""
         Return the geometry split into segments of connected commands.
         """
-    def get_command_at(self, index: builtins.int) -> typing.Optional[tuple[builtins.float, builtins.float, builtins.float, builtins.float, builtins.float, builtins.float, builtins.float, builtins.float]]:
+    def get_command_at(self, index: builtins.int) -> typing.Optional[typing.Any]:
         r"""
-        Get the command at the given index as a raw tuple.
+        Get the command at the given index as a typed command object.
         
         :param index: Command index (negative returns None).
         """
-    def iter_commands(self) -> builtins.list[tuple[builtins.float, builtins.float, builtins.float, builtins.float, builtins.float, builtins.float, builtins.float, builtins.float]]:
+    def iter_commands(self) -> builtins.list[typing.Any]:
         r"""
-        Iterate over all commands as raw tuples.
+        Iterate over all commands as typed command objects.
         """
     def dump(self) -> dict:
         r"""
@@ -264,6 +243,14 @@ class Geometry:
         :param points: A sequence of (x, y) or
             (x, y, z) coordinate tuples.
         :param close: Whether to close the path.
+        """
+    def filter(self, indices: builtins.set[builtins.int]) -> Geometry:
+        r"""
+        Return a new Geometry containing only commands at the given
+        indices.
+        
+        :param indices: Set of command indices to keep.
+        :returns: A new Geometry with the filtered commands.
         """
     def simplify(self, tolerance: builtins.float) -> Geometry:
         r"""
@@ -308,13 +295,6 @@ class Geometry:
         
         :param tolerance: Maximum deviation for equality.
         """
-    def append_data(self, rows: typing.Optional[numpy.typing.NDArray[numpy.float64]]) -> None:
-        r"""
-        Append rows of command data to the geometry.
-        
-        :param rows: A numpy array of shape (N, 8)
-            containing command rows, or None.
-        """
     def flip_x(self) -> Geometry:
         r"""
         Mirror the geometry along the X axis.
@@ -331,13 +311,21 @@ class Geometry:
         :param y: Y coordinate.
         :returns: Tuple of (segment_index, t, point) or None.
         """
-    def get_point_and_tangent_at(self, segment_index: builtins.int, t: builtins.float) -> typing.Optional[tuple[tuple[builtins.float, builtins.float], tuple[builtins.float, builtins.float]]]:
+    def get_point_at(self, segment_index: builtins.int, t: builtins.float) -> typing.Optional[tuple[builtins.float, builtins.float, builtins.float]]:
         r"""
-        Get the point and tangent vector at parameter t on a segment.
+        Get the point at parameter t on a segment.
         
         :param segment_index: Index of the segment.
         :param t: Parameter in [0, 1].
-        :returns: Tuple of (point, tangent) or None.
+        :returns: The 3D point or None.
+        """
+    def get_tangent_at(self, segment_index: builtins.int, t: builtins.float) -> typing.Optional[tuple[builtins.float, builtins.float]]:
+        r"""
+        Get the tangent vector at parameter t on a segment.
+        
+        :param segment_index: Index of the segment.
+        :param t: Parameter in [0, 1].
+        :returns: The normalized tangent vector or None.
         """
     def get_outward_normal_at(self, segment_index: builtins.int, t: builtins.float) -> typing.Optional[tuple[builtins.float, builtins.float]]:
         r"""

@@ -48,9 +48,8 @@ def test_get_enclosing_hull_pixel_coords():
     assert geo is not None
 
     data = geo.data
-    assert data is not None
     for row in data:
-        x, y = row[1], row[2]
+        x, y = row.end[0], row.end[1]
         assert 20 <= x <= 79
         assert 20 <= y <= 79
 
@@ -130,7 +129,9 @@ def test_get_concave_hull_zero_gravity():
     assert convex_geo is not None
     assert concave_geo is not None
     assert len(convex_geo) == len(concave_geo)
-    np.testing.assert_array_equal(convex_geo.data, concave_geo.data)
+    for a, b in zip(convex_geo.data, concave_geo.data):
+        assert type(a) is type(b)
+        assert a.end == b.end
 
 
 def test_get_concave_hull_no_content():
@@ -147,9 +148,8 @@ def test_enclosing_hull_y_not_flipped():
     assert geo is not None
 
     data = geo.data
-    assert data is not None
     for row in data:
-        assert 10 <= row[2] <= 19
+        assert 10 <= row.end[1] <= 19
 
 
 def _fill_rounded_rect(img, pt1, pt2, r):

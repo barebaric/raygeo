@@ -1,24 +1,17 @@
-use crate::types::Point3D;
+use crate::types::{Command, Point3D};
 
 /// Simplify a sequence of 3D points using the Ramer-Douglas-Peucker algorithm.
-///
-/// Uses an iterative stack-based approach (not recursion) to avoid stack overflow
-/// on large point sequences. The first and last points are always preserved.
-/// Only the X and Y coordinates are used for distance calculation; the Z coordinate
-/// is preserved in the output.
 pub fn simplify_polyline(points: &[Point3D], tolerance: f64) -> Vec<Point3D> {
     let n = points.len();
     if n < 3 {
         return points.to_vec();
     }
 
-    // Boolean mask of points to keep
     let tol_sq = tolerance * tolerance;
     let mut keep = vec![false; n];
     keep[0] = true;
     keep[n - 1] = true;
 
-    // Iterative stack to avoid recursion depth issues
     let mut stack: Vec<(usize, usize)> = vec![(0, n - 1)];
 
     while let Some((start, end)) = stack.pop() {
@@ -36,7 +29,6 @@ pub fn simplify_polyline(points: &[Point3D], tolerance: f64) -> Vec<Point3D> {
         let mut max_idx = start;
 
         if chord_len_sq < 1e-12 {
-            // Start and End are practically identical; use Euclidean distance from start
             for (i, p) in points.iter().enumerate().take(end).skip(start + 1) {
                 let d_sq =
                     (p.0 - p_start.0).powi(2) + (p.1 - p_start.1).powi(2);
@@ -46,7 +38,6 @@ pub fn simplify_polyline(points: &[Point3D], tolerance: f64) -> Vec<Point3D> {
                 }
             }
         } else {
-            // Vectorized perpendicular distance: |Cross(v_start_to_pt, chord)| / |chord|
             for (i, p) in points.iter().enumerate().take(end).skip(start + 1) {
                 let cross = (p.0 - p_start.0) * chord_vec.1
                     - (p.1 - p_start.1) * chord_vec.0;
@@ -73,11 +64,17 @@ pub fn simplify_polyline(points: &[Point3D], tolerance: f64) -> Vec<Point3D> {
         .collect()
 }
 
+fn chord_len_sq(p_start: &Point3D, p_end: &Point3D) -> f64 {
+    let dx = p_end.0 - p_start.0;
+    let dy = p_end.1 - p_start.1;
+    dx * dx + dy * dy
+}
+
 /// Simplify geometry command data using the Ramer-Douglas-Peucker algorithm.
 ///
-/// Operates directly on `[f64; 8]` command rows (columns 1=X, 2=Y used for
-/// distance; all columns preserved in output).
-pub fn simplify_data(data: &[[f64; 8]], tolerance: f64) -> Vec<[f64; 8]> {
+/// Uses an iterative stack-based approach (not recursion). The first and last
+/// points of each subpath are always preserved. MOVE commands are always kept.
+pub fn simplify_data(data: &[Command], tolerance: f64) -> Vec<Command> {
     let n = data.len();
     if n < 3 {
         return data.to_vec();
@@ -95,29 +92,37 @@ pub fn simplify_data(data: &[[f64; 8]], tolerance: f64) -> Vec<[f64; 8]> {
             continue;
         }
 
-        let p_start = (data[start][1], data[start][2]);
-        let p_end = (data[end][1], data[end][2]);
-        let chord_vec = (p_end.0 - p_start.0, p_end.1 - p_start.1);
-        let chord_len_sq =
-            chord_vec.0 * chord_vec.0 + chord_vec.1 * chord_vec.1;
+        let p_start = data[start].end_point();
+        let p_end = data[end].end_point();
+        let chord_len_sq_val = chord_len_sq(&p_start, &p_end);
 
         let mut max_dist_sq = 0.0_f64;
         let mut max_idx = start;
 
-        if chord_len_sq < 1e-12 {
-            for (i, row) in data.iter().enumerate().take(end).skip(start + 1) {
+        if chord_len_sq_val < 1e-12 {
+            for (i, cmd) in data.iter().enumerate().take(end).skip(start + 1) {
+                if matches!(cmd, Command::Move { .. }) {
+                    keep[i] = true;
+                    continue;
+                }
+                let p = cmd.end_point();
                 let d_sq =
-                    (row[1] - p_start.0).powi(2) + (row[2] - p_start.1).powi(2);
+                    (p.0 - p_start.0).powi(2) + (p.1 - p_start.1).powi(2);
                 if d_sq > max_dist_sq {
                     max_dist_sq = d_sq;
                     max_idx = i;
                 }
             }
         } else {
-            for (i, row) in data.iter().enumerate().take(end).skip(start + 1) {
-                let cross = (row[1] - p_start.0) * chord_vec.1
-                    - (row[2] - p_start.1) * chord_vec.0;
-                let d_sq = (cross * cross) / chord_len_sq;
+            for (i, cmd) in data.iter().enumerate().take(end).skip(start + 1) {
+                if matches!(cmd, Command::Move { .. }) {
+                    keep[i] = true;
+                    continue;
+                }
+                let p = cmd.end_point();
+                let cross = (p.0 - p_start.0) * (p_end.1 - p_start.1)
+                    - (p.1 - p_start.1) * (p_end.0 - p_start.0);
+                let d_sq = (cross * cross) / chord_len_sq_val;
                 if d_sq > max_dist_sq {
                     max_dist_sq = d_sq;
                     max_idx = i;
@@ -135,59 +140,68 @@ pub fn simplify_data(data: &[[f64; 8]], tolerance: f64) -> Vec<[f64; 8]> {
     data.iter()
         .enumerate()
         .filter(|(i, _)| keep[*i])
-        .map(|(_, r)| *r)
+        .map(|(_, cmd)| cmd.clone())
         .collect()
-}
-
-/// Simplify a sequence of 3D points using RDP, returning the simplified points.
-/// Input is a flat Nx3 array (rows of [x, y, z]).
-pub fn simplify_polyline_to_array(
-    points: &[Point3D],
-    tolerance: f64,
-) -> Vec<Point3D> {
-    simplify_polyline(points, tolerance)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::types::Command;
 
     #[test]
-    fn test_simplify_trivial() {
-        let points = vec![(0.0, 0.0, 0.0), (10.0, 10.0, 0.0)];
-        let result = simplify_polyline(&points, 0.001);
+    fn test_simplify_data_trivial() {
+        let data = vec![
+            Command::Move {
+                end: (0.0, 0.0, 0.0),
+            },
+            Command::Line {
+                end: (10.0, 10.0, 0.0),
+            },
+        ];
+        let result = simplify_data(&data, 0.001);
         assert_eq!(result.len(), 2);
     }
 
     #[test]
     fn test_simplify_collinear() {
-        let points = vec![
-            (0.0, 0.0, 0.0),
-            (1.0, 1.0, 0.0),
-            (2.0, 2.0, 0.0),
-            (3.0, 3.0, 0.0),
-            (10.0, 10.0, 0.0),
+        let data = vec![
+            Command::Move {
+                end: (0.0, 0.0, 0.0),
+            },
+            Command::Line {
+                end: (1.0, 1.0, 0.0),
+            },
+            Command::Line {
+                end: (2.0, 2.0, 0.0),
+            },
+            Command::Line {
+                end: (3.0, 3.0, 0.0),
+            },
+            Command::Line {
+                end: (10.0, 10.0, 0.0),
+            },
         ];
-        let result = simplify_polyline(&points, 0.001);
+        let result = simplify_data(&data, 0.001);
         assert_eq!(result.len(), 2);
-        assert_eq!(result[0], (0.0, 0.0, 0.0));
-        assert_eq!(result[result.len() - 1], (10.0, 10.0, 0.0));
+        assert_eq!(result[0].end_point(), (0.0, 0.0, 0.0));
+        assert_eq!(result[result.len() - 1].end_point(), (10.0, 10.0, 0.0));
     }
 
     #[test]
     fn test_simplify_keeps_corner() {
-        let points = vec![(0.0, 0.0, 0.0), (5.0, 5.0, 0.0), (10.0, 0.0, 0.0)];
-        let result = simplify_polyline(&points, 0.1);
-        assert_eq!(result.len(), 3);
-    }
-
-    #[test]
-    fn test_simplify_data_trivial() {
-        let data: Vec<[f64; 8]> = vec![
-            [1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-            [2.0, 10.0, 10.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+        let data = vec![
+            Command::Move {
+                end: (0.0, 0.0, 0.0),
+            },
+            Command::Line {
+                end: (5.0, 5.0, 0.0),
+            },
+            Command::Line {
+                end: (10.0, 0.0, 0.0),
+            },
         ];
-        let result = simplify_data(&data, 0.001);
-        assert_eq!(result.len(), 2);
+        let result = simplify_data(&data, 0.1);
+        assert_eq!(result.len(), 3);
     }
 }

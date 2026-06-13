@@ -1,7 +1,6 @@
 use std::f64::consts::PI;
 
-use crate::constants::*;
-use crate::error::RaygeoError;
+use crate::constants::EPSILON_COLLINEAR;
 
 /// A 2D point represented as (x, y) coordinates.
 pub type Point = (f64, f64);
@@ -41,11 +40,6 @@ pub type Edge = (Point, Point);
 /// A line segment in 3D space represented as (start, end).
 pub type Segment3D = (Point3D, Point3D);
 
-/// A row in the geometry command array: [type, x, y, z, aux1, aux2, aux3, aux4].
-/// type is the command type (move/line/arc/bezier), x/y/z are the endpoint,
-/// and aux1-4 are additional parameters (e.g., control points, arc center offsets).
-pub type CommandRow = (f64, f64, f64, f64, f64, f64, f64, f64);
-
 /// Typed view over a single `[f64; 8]` geometry command row.
 #[derive(Clone, Debug, PartialEq)]
 pub enum Command {
@@ -68,65 +62,6 @@ pub enum Command {
 }
 
 impl Command {
-    pub fn from_row(row: &[f64; 8]) -> Result<Command, RaygeoError> {
-        let cmd_type = row[COL_TYPE] as i32;
-        let end = (row[COL_X], row[COL_Y], row[COL_Z]);
-        match cmd_type {
-            t if t == CMD_TYPE_MOVE as i32 => Ok(Command::Move { end }),
-            t if t == CMD_TYPE_LINE as i32 => Ok(Command::Line { end }),
-            t if t == CMD_TYPE_ARC as i32 => Ok(Command::Arc {
-                end,
-                center_offset: (row[COL_I], row[COL_J]),
-                clockwise: row[COL_CW] != 0.0,
-            }),
-            t if t == CMD_TYPE_BEZIER as i32 => Ok(Command::Bezier {
-                end,
-                control1: (row[COL_C1X], row[COL_C1Y]),
-                control2: (row[COL_C2X], row[COL_C2Y]),
-            }),
-            _ => Err(RaygeoError::UnknownCommandType(cmd_type)),
-        }
-    }
-
-    pub fn to_row(&self) -> [f64; 8] {
-        match self {
-            Command::Move { end } => {
-                [CMD_TYPE_MOVE, end.0, end.1, end.2, 0.0, 0.0, 0.0, 0.0]
-            }
-            Command::Line { end } => {
-                [CMD_TYPE_LINE, end.0, end.1, end.2, 0.0, 0.0, 0.0, 0.0]
-            }
-            Command::Arc {
-                end,
-                center_offset,
-                clockwise,
-            } => [
-                CMD_TYPE_ARC,
-                end.0,
-                end.1,
-                end.2,
-                center_offset.0,
-                center_offset.1,
-                if *clockwise { 1.0 } else { 0.0 },
-                0.0,
-            ],
-            Command::Bezier {
-                end,
-                control1,
-                control2,
-            } => [
-                CMD_TYPE_BEZIER,
-                end.0,
-                end.1,
-                end.2,
-                control1.0,
-                control1.1,
-                control2.0,
-                control2.1,
-            ],
-        }
-    }
-
     pub fn end_point(&self) -> Point3D {
         match self {
             Command::Move { end } => *end,
@@ -282,25 +217,6 @@ impl Command {
             }
             Command::Move { .. } => None,
         }
-    }
-}
-
-pub trait CommandSlice {
-    fn iter_commands(&self) -> impl Iterator<Item = Command> + '_;
-    fn try_iter_commands(
-        &self,
-    ) -> impl Iterator<Item = Result<Command, RaygeoError>> + '_;
-}
-
-impl CommandSlice for [[f64; 8]] {
-    fn iter_commands(&self) -> impl Iterator<Item = Command> + '_ {
-        self.iter().filter_map(|r| Command::from_row(r).ok())
-    }
-
-    fn try_iter_commands(
-        &self,
-    ) -> impl Iterator<Item = Result<Command, RaygeoError>> + '_ {
-        self.iter().map(Command::from_row)
     }
 }
 

@@ -57,7 +57,9 @@ class TestLeadInOut:
 
         lead_out_idx = ops_fixture.len() - 2
         assert ops_fixture.command_type(lead_out_idx) == CommandType.LINE_TO
-        assert ops_fixture.endpoint(lead_out_idx) == pytest.approx((10.0, 5.0, 0.0))
+        assert ops_fixture.endpoint(lead_out_idx) == pytest.approx(
+            (10.0, 5.0, 0.0)
+        )
 
     def test_lead_in_only(self):
         ops = Ops()
@@ -69,7 +71,9 @@ class TestLeadInOut:
         ops.apply_lead_in_out(5.0, 0.0)
 
         move_indices = [
-            i for i in range(ops.len()) if ops.command_type(i) == CommandType.MOVE_TO
+            i
+            for i in range(ops.len())
+            if ops.command_type(i) == CommandType.MOVE_TO
         ]
         assert len(move_indices) == 1
         assert ops.endpoint(move_indices[0]) == pytest.approx((5.0, 10.0, 0.0))
@@ -103,7 +107,9 @@ class TestLeadInOut:
 
         norm = 1.0 / math.sqrt(2)
         assert ops.command_type(2) == CommandType.MOVE_TO
-        assert ops.endpoint(2) == pytest.approx((-5.0 * norm, -5.0 * norm, 0.0))
+        assert ops.endpoint(2) == pytest.approx(
+            (-5.0 * norm, -5.0 * norm, 0.0)
+        )
         lead_out_idx = ops.len() - 2
         assert ops.command_type(lead_out_idx) == CommandType.LINE_TO
         assert ops.endpoint(lead_out_idx) == pytest.approx(
@@ -136,10 +142,14 @@ class TestLeadInOut:
         ops.apply_lead_in_out(5.0, 5.0)
 
         move_indices = [
-            i for i in range(ops.len()) if ops.command_type(i) == CommandType.MOVE_TO
+            i
+            for i in range(ops.len())
+            if ops.command_type(i) == CommandType.MOVE_TO
         ]
         assert len(move_indices) == 1
-        assert ops.endpoint(move_indices[0]) == pytest.approx((10.0, 10.0, 0.0))
+        assert ops.endpoint(move_indices[0]) == pytest.approx(
+            (10.0, 10.0, 0.0)
+        )
         lead_out_idx = ops.len() - 2
         assert ops.command_type(lead_out_idx) == CommandType.LINE_TO
         assert ops.endpoint(lead_out_idx) == pytest.approx((35.0, 10.0, 0.0))
@@ -158,11 +168,15 @@ class TestLeadInOut:
         ops.apply_lead_in_out(5.0, 5.0)
 
         move_indices = [
-            i for i in range(ops.len()) if ops.command_type(i) == CommandType.MOVE_TO
+            i
+            for i in range(ops.len())
+            if ops.command_type(i) == CommandType.MOVE_TO
         ]
         assert len(move_indices) == 2
         assert ops.endpoint(move_indices[0]) == pytest.approx((5.0, 10.0, 0.0))
-        assert ops.endpoint(move_indices[1]) == pytest.approx((45.0, 50.0, 0.0))
+        assert ops.endpoint(move_indices[1]) == pytest.approx(
+            (45.0, 50.0, 0.0)
+        )
 
     def test_with_z_height(self):
         ops = Ops()
@@ -190,7 +204,9 @@ class TestLeadInOut:
         ops.apply_lead_in_out(3.0, 7.0)
 
         move_idx = next(
-            i for i in range(ops.len()) if ops.command_type(i) == CommandType.MOVE_TO
+            i
+            for i in range(ops.len())
+            if ops.command_type(i) == CommandType.MOVE_TO
         )
         assert ops.endpoint(move_idx) == pytest.approx((7.0, 10.0, 0.0))
         lead_out_idx = ops.len() - 2

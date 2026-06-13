@@ -76,8 +76,18 @@ class TestNfpConvexFast:
 
     def test_convex_rectangles(self):
         scale = 10000000
-        static = [(0, 0), (200000000, 0), (200000000, 200000000), (0, 200000000)]
-        orbiting = [(0, 0), (100000000, 0), (100000000, 100000000), (0, 100000000)]
+        static = [
+            (0, 0),
+            (200000000, 0),
+            (200000000, 200000000),
+            (0, 200000000),
+        ]
+        orbiting = [
+            (0, 0),
+            (100000000, 0),
+            (100000000, 100000000),
+            (0, 100000000),
+        ]
         result = nfp.nfp_convex_fast(static, orbiting, scale)
         assert len(result) >= 1
         for poly in result:
@@ -89,8 +99,18 @@ class TestNfpMinkowski:
 
     def test_basic(self):
         scale = 10000000
-        static = [(0, 0), (1000000000, 0), (1000000000, 1000000000), (0, 1000000000)]
-        orbiting = [(0, 0), (200000000, 0), (200000000, 200000000), (0, 200000000)]
+        static = [
+            (0, 0),
+            (1000000000, 0),
+            (1000000000, 1000000000),
+            (0, 1000000000),
+        ]
+        orbiting = [
+            (0, 0),
+            (200000000, 0),
+            (200000000, 200000000),
+            (0, 200000000),
+        ]
         result = nfp.nfp_minkowski(static, orbiting, scale)
         assert len(result) >= 1
         for poly in result:
@@ -108,7 +128,12 @@ class TestNfpMinkowski:
             (500000000, 750000000),
             (0, 750000000),
         ]
-        orbiting = [(0, 0), (100000000, 0), (100000000, 100000000), (0, 100000000)]
+        orbiting = [
+            (0, 0),
+            (100000000, 0),
+            (100000000, 100000000),
+            (0, 100000000),
+        ]
         result = nfp.nfp_minkowski(static, orbiting, scale)
         assert len(result) >= 0
 

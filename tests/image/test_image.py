@@ -120,7 +120,9 @@ class TestNormalizeGrayscale:
     def test_invalid_raises(self):
         with pytest.raises(Exception):
             normalize_grayscale(
-                np.array([128], dtype=np.uint8), black_point=128, white_point=128
+                np.array([128], dtype=np.uint8),
+                black_point=128,
+                white_point=128,
             )
 
 

@@ -118,11 +118,10 @@ use crate::geo::algo::clipping::{
     subtract_polygons_from_line_segment,
 };
 use crate::geo::algo::fitting::{
-    are_points_collinear, create_arc_cmd, create_line_cmd,
-    fit_circle_to_3_points, fit_circle_to_points, fit_points_recursive,
-    fit_points_with_primitives, flatten_to_points, get_polyline_arc_deviation,
-    get_polyline_line_deviation, linearize_geometry,
-    project_circle_center_to_bisector,
+    are_points_collinear, create_arc_cmd, fit_circle_to_3_points,
+    fit_circle_to_points, fit_points_recursive, fit_points_with_primitives,
+    flatten_to_points, get_polyline_arc_deviation, get_polyline_line_deviation,
+    linearize_geometry, project_circle_center_to_bisector,
 };
 use crate::geo::algo::minkowski::{
     calculate_input_scale, convolve_point_sequences, convolve_two_segments,
@@ -135,6 +134,7 @@ use crate::geo::algo::smooth::{
     compute_gaussian_kernel, resample_polyline, smooth_circularly,
     smooth_polyline, smooth_sub_segment,
 };
+use crate::Geometry as CoreGeometry;
 use crate::Segment3D;
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::gen_stub_pyfunction;
@@ -333,17 +333,6 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
 
 type Point = (f64, f64);
 
-fn to_data_array(data: Vec<Vec<f64>>) -> Vec<[f64; 8]> {
-    data.into_iter()
-        .map(|r| {
-            let mut a = [0.0; 8];
-            let len = r.len().min(8);
-            a[..len].copy_from_slice(&r[..len]);
-            a
-        })
-        .collect()
-}
-
 #[gen_stub_pyfunction(
     python = r#"
     from collections.abc import Sequence
@@ -466,15 +455,16 @@ fn project_circle_center_to_bisector_py(
 #[gen_stub_pyfunction(
     python = r#"
     import collections.abc
+    import raygeo.geo
     import raygeo.geo.types
 
     def flatten_to_points(
-        data: collections.abc.Sequence[collections.abc.Sequence[float]],
+        geometry: geo.Geometry,
         tolerance: float,
     ) -> list[list[types.Point3D]]:
         """Flatten curves into linear segments.
 
-        :param data: Array of command data.
+        :param geometry: Geometry to flatten.
         :param tolerance: Flattening tolerance.
         :returns: List of flattened point segments.
         """
@@ -483,74 +473,76 @@ fn project_circle_center_to_bisector_py(
 )]
 #[pyfunction(name = "flatten_to_points")]
 fn flatten_to_points_py(
-    data: Vec<Vec<f64>>,
+    geometry: &Geometry,
     tolerance: f64,
 ) -> Vec<Vec<(f64, f64, f64)>> {
-    let arr = to_data_array(data);
-    flatten_to_points(&arr, tolerance)
+    flatten_to_points(geometry.inner.data(), tolerance)
 }
 
 #[gen_stub_pyfunction(
     python = r#"
     import collections.abc
+    import raygeo.geo
 
     def linearize_geometry(
-        data: collections.abc.Sequence[collections.abc.Sequence[float]],
+        geometry: geo.Geometry,
         tolerance: float,
-    ) -> list[list[float]]:
+    ) -> geo.Geometry:
         """Linearize geometry data into line segments.
 
-        :param data: Array of command data.
+        :param geometry: Geometry to linearize.
         :param tolerance: Linearization tolerance.
-        :returns: List of linearized segment rows.
+        :returns: Linearized Geometry.
         """
 "#,
     module = "raygeo.geo.algo.fitting"
 )]
 #[pyfunction(name = "linearize_geometry")]
-fn linearize_geometry_py(data: Vec<Vec<f64>>, tolerance: f64) -> Vec<Vec<f64>> {
-    let arr = to_data_array(data);
-    linearize_geometry(&arr, tolerance)
-        .into_iter()
-        .map(|r| r.to_vec())
-        .collect()
+fn linearize_geometry_py(geometry: &Geometry, tolerance: f64) -> Geometry {
+    let mut result = geometry.inner.copy();
+    result.data = linearize_geometry(&result.data, tolerance);
+    Geometry { inner: result }
 }
 
 #[gen_stub_pyfunction(
     python = r#"
+    import raygeo.geo
     import raygeo.geo.types
 
     def create_line_cmd(
         end_point: types.Point3D,
-    ) -> list[float]:
-        """Create a line command array from an end point.
+    ) -> geo.Line:
+        """Create a line command from an end point.
 
         :param end_point: End point (x, y, z).
-        :returns: Line command array (8 floats).
+        :returns: A Line command.
         """
 "#,
     module = "raygeo.geo.algo.fitting"
 )]
 #[pyfunction(name = "create_line_cmd")]
-fn create_line_cmd_py(end_point: PyPoint3D) -> Vec<f64> {
-    create_line_cmd((end_point.0, end_point.1, end_point.2)).to_vec()
+fn create_line_cmd_py(end_point: PyPoint3D) -> super::geometry::PyLine {
+    super::geometry::PyLine {
+        end: (end_point.0, end_point.1, end_point.2),
+    }
 }
 
 #[gen_stub_pyfunction(
     python = r#"
+    import raygeo.geo
     import raygeo.geo.types
 
     def create_arc_cmd(
         end: types.Point3D,
         center: types.Point,
         start: types.Point3D,
-    ) -> list[float]:
-        """Create an arc command array.
+    ) -> geo.Arc:
+        """Create an arc command.
 
         :param end: End point (x, y, z).
         :param center: Center offset (dx, dy).
         :param start: Start point (x, y, z).
-        :returns: Arc command array (8 floats).
+        :returns: An Arc command.
         """
 "#,
     module = "raygeo.geo.algo.fitting"
@@ -560,14 +552,30 @@ fn create_arc_cmd_py(
     end: PyPoint3D,
     center: (f64, f64),
     start: PyPoint3D,
-) -> Vec<f64> {
-    create_arc_cmd((end.0, end.1, end.2), center, (start.0, start.1, start.2))
-        .to_vec()
+) -> super::geometry::PyArc {
+    let cmd = create_arc_cmd(
+        (end.0, end.1, end.2),
+        center,
+        (start.0, start.1, start.2),
+    );
+    match cmd {
+        crate::types::Command::Arc {
+            end,
+            center_offset,
+            clockwise,
+        } => super::geometry::PyArc {
+            end,
+            center_offset,
+            clockwise,
+        },
+        _ => unreachable!(),
+    }
 }
 
 #[gen_stub_pyfunction(
     python = r#"
     import collections.abc
+    import raygeo.geo
     import raygeo.geo.types
 
     def fit_points_recursive(
@@ -575,14 +583,14 @@ fn create_arc_cmd_py(
         tolerance: float,
         start_idx: int,
         end_idx: int,
-    ) -> list[list[float]]:
+    ) -> geo.Geometry:
         """Recursively fit points with line and arc primitives.
 
         :param points: Sequence of 3D points to fit.
         :param tolerance: Fitting tolerance.
         :param start_idx: Start index in the points array.
         :param end_idx: End index in the points array.
-        :returns: List of fitted command rows.
+        :returns: Geometry of fitted commands.
         """
 "#,
     module = "raygeo.geo.algo.fitting"
@@ -593,27 +601,30 @@ fn fit_points_recursive_py(
     tolerance: f64,
     start_idx: usize,
     end_idx: usize,
-) -> Vec<Vec<f64>> {
-    fit_points_recursive(&points, tolerance, start_idx, end_idx)
-        .into_iter()
-        .map(|r| r.to_vec())
-        .collect()
+) -> Geometry {
+    let core = CoreGeometry {
+        data: fit_points_recursive(&points, tolerance, start_idx, end_idx),
+        last_move_to: (0.0, 0.0, 0.0),
+        uniform_scalable: true,
+    };
+    Geometry { inner: core }
 }
 
 #[gen_stub_pyfunction(
     python = r#"
     import collections.abc
+    import raygeo.geo
     import raygeo.geo.types
 
     def fit_points_with_primitives(
         points: collections.abc.Sequence[types.Point3D],
         tolerance: float,
-    ) -> list[list[float]]:
+    ) -> geo.Geometry:
         """Fit a polyline of points with arc and line primitives.
 
         :param points: Sequence of 3D points to fit.
         :param tolerance: Fitting tolerance.
-        :returns: List of fitted command rows.
+        :returns: Geometry of fitted commands.
         """
 "#,
     module = "raygeo.geo.algo.fitting"
@@ -622,11 +633,13 @@ fn fit_points_recursive_py(
 fn fit_points_with_primitives_py(
     points: Vec<(f64, f64, f64)>,
     tolerance: f64,
-) -> Vec<Vec<f64>> {
-    fit_points_with_primitives(&points, tolerance)
-        .into_iter()
-        .map(|r| r.to_vec())
-        .collect()
+) -> Geometry {
+    let core = CoreGeometry {
+        data: fit_points_with_primitives(&points, tolerance),
+        last_move_to: (0.0, 0.0, 0.0),
+        uniform_scalable: true,
+    };
+    Geometry { inner: core }
 }
 
 #[gen_stub_pyfunction(

@@ -28,12 +28,11 @@ pub fn mat4_mul(a: &[[f64; 4]; 4], b: &[[f64; 4]; 4]) -> [[f64; 4]; 4] {
 }
 
 fn transform_array_uniform(
-    data: &[[f64; 8]],
+    data: &[Command],
     matrix: &[[f64; 4]; 4],
-) -> Vec<[f64; 8]> {
-    let mut result: Vec<[f64; 8]> = Vec::with_capacity(data.len());
-    for row in data {
-        let cmd = Command::from_row(row).expect("invalid command");
+) -> Vec<Command> {
+    let mut result: Vec<Command> = Vec::with_capacity(data.len());
+    for cmd in data {
         let (ex, ey, ez) = cmd.end_point();
         let (nx, ny, nz) = transform_point(matrix, ex, ey, ez);
 
@@ -47,7 +46,7 @@ fn transform_array_uniform(
                     transform_vec(matrix, center_offset.0, center_offset.1);
                 let det =
                     matrix[0][0] * matrix[1][1] - matrix[0][1] * matrix[1][0];
-                let cw = if det < 0.0 { !clockwise } else { clockwise };
+                let cw = if det < 0.0 { !*clockwise } else { *clockwise };
                 Command::Arc {
                     end: (nx, ny, nz),
                     center_offset: (vi, vj),
@@ -71,31 +70,40 @@ fn transform_array_uniform(
             Command::Line { .. } => Command::Line { end: (nx, ny, nz) },
         };
 
-        result.push(transformed.to_row());
+        result.push(transformed);
     }
     result
 }
 
 fn transform_array_non_uniform(
-    data: &[[f64; 8]],
+    data: &[Command],
     matrix: &[[f64; 4]; 4],
-) -> Vec<[f64; 8]> {
-    let mut result: Vec<[f64; 8]> = Vec::new();
+) -> Vec<Command> {
+    let mut result: Vec<Command> = Vec::new();
     let mut last_pos: Point3D = (0.0, 0.0, 0.0);
 
-    for row in data {
-        let cmd = Command::from_row(row).expect("invalid command");
+    for cmd in data {
         let original_end = cmd.end_point();
 
         match cmd {
-            Command::Arc { .. } => {
+            Command::Arc {
+                end,
+                center_offset,
+                clockwise,
+                ..
+            } => {
                 let start_pt = last_pos;
-                let segments = linearize_arc(row, start_pt, 0.1);
+                let segments = linearize_arc(
+                    *end,
+                    *center_offset,
+                    *clockwise,
+                    start_pt,
+                    0.1,
+                );
                 for (_, p2) in segments {
                     let (tx, ty, tz) =
                         transform_point(matrix, p2.0, p2.1, p2.2);
-                    let line_cmd = Command::Line { end: (tx, ty, tz) };
-                    result.push(line_cmd.to_row());
+                    result.push(Command::Line { end: (tx, ty, tz) });
                 }
             }
             Command::Bezier {
@@ -111,12 +119,11 @@ fn transform_array_non_uniform(
                     transform_point(matrix, control1.0, control1.1, 0.0);
                 let (c2x, c2y, _) =
                     transform_point(matrix, control2.0, control2.1, 0.0);
-                let bezier_cmd = Command::Bezier {
+                result.push(Command::Bezier {
                     end: (nx, ny, nz),
                     control1: (c1x, c1y),
                     control2: (c2x, c2y),
-                };
-                result.push(bezier_cmd.to_row());
+                });
             }
             Command::Move { .. } => {
                 let (nx, ny, nz) = transform_point(
@@ -125,7 +132,7 @@ fn transform_array_non_uniform(
                     original_end.1,
                     original_end.2,
                 );
-                result.push(Command::Move { end: (nx, ny, nz) }.to_row());
+                result.push(Command::Move { end: (nx, ny, nz) });
             }
             Command::Line { .. } => {
                 let (nx, ny, nz) = transform_point(
@@ -134,7 +141,7 @@ fn transform_array_non_uniform(
                     original_end.1,
                     original_end.2,
                 );
-                result.push(Command::Line { end: (nx, ny, nz) }.to_row());
+                result.push(Command::Line { end: (nx, ny, nz) });
             }
         }
 
@@ -143,14 +150,14 @@ fn transform_array_non_uniform(
     result
 }
 
-/// Applies an affine transformation matrix to a geometry data array.
+/// Applies an affine transformation matrix to geometry commands.
 /// Handles uniform and non-uniform scaling (linearizing arcs for the latter).
-/// Returns the transformed data. For non-uniform scaling, the returned data
+/// Returns the transformed commands. For non-uniform scaling, the result
 /// may be longer than the input (arcs are linearized into lines).
 pub fn apply_affine_transform_to_array(
-    data: &[[f64; 8]],
+    data: &[Command],
     matrix: &[[f64; 4]; 4],
-) -> Vec<[f64; 8]> {
+) -> Vec<Command> {
     if data.is_empty() {
         return vec![];
     }

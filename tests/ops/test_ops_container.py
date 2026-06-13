@@ -246,10 +246,16 @@ def test_set_pulse_width():
 
 def test_enable_disable_air_assist(empty_ops):
     empty_ops.enable_air_assist()
-    assert empty_ops.command_type(empty_ops.len() - 1) == CommandType.ENABLE_AIR_ASSIST
+    assert (
+        empty_ops.command_type(empty_ops.len() - 1)
+        == CommandType.ENABLE_AIR_ASSIST
+    )
 
     empty_ops.disable_air_assist()
-    assert empty_ops.command_type(empty_ops.len() - 1) == CommandType.DISABLE_AIR_ASSIST
+    assert (
+        empty_ops.command_type(empty_ops.len() - 1)
+        == CommandType.DISABLE_AIR_ASSIST
+    )
 
 
 def test_scan_to(empty_ops):
@@ -535,7 +541,9 @@ def test_transform_non_uniform():
     assert ops.endpoint(0) == pytest.approx((20, 0, 0))
 
     # Arc must be linearized into LineToCommands
-    assert all(ops.command_type(i) == CommandType.LINE_TO for i in range(1, ops.len()))
+    assert all(
+        ops.command_type(i) == CommandType.LINE_TO for i in range(1, ops.len())
+    )
     assert ops.len() > 2
 
     # Final point should be original arc end (0,10) scaled -> (0, 30)
@@ -598,7 +606,9 @@ def test_transform_bezier_linearize_matches():
 
     ops_linearized_first = Ops()
     ops_linearized_first.move_to(0, 0)
-    ops_linearized_first.bezier_to(c1=(10, 0, 0), c2=(10, 10, 0), end=(0, 10, 0))
+    ops_linearized_first.bezier_to(
+        c1=(10, 0, 0), c2=(10, 10, 0), end=(0, 10, 0)
+    )
     ops_linearized_first.linearize_curves()
 
     matrix = np.array(
@@ -689,11 +699,17 @@ def test_linearize_all():
     assert ops.command_type(1) == CommandType.LINE_TO
     # All geometric commands after the first two should be LineTo
     moving_cmds_after = [
-        i for i in range(2, ops.len()) if ops.category(i) == CommandCategory.MOVING
+        i
+        for i in range(2, ops.len())
+        if ops.category(i) == CommandCategory.MOVING
     ]
-    assert all(ops.command_type(i) == CommandType.LINE_TO for i in moving_cmds_after)
+    assert all(
+        ops.command_type(i) == CommandType.LINE_TO for i in moving_cmds_after
+    )
     # Check that state command is still there
-    assert any(ops.command_type(i) == CommandType.SET_POWER for i in range(ops.len()))
+    assert any(
+        ops.command_type(i) == CommandType.SET_POWER for i in range(ops.len())
+    )
 
 
 @pytest.fixture
@@ -1111,7 +1127,8 @@ def test_from_geometry_with_bezier():
     assert ops.command_type(1) == CommandType.LINE_TO
     assert ops.endpoint(1) == pytest.approx((20, 20, 0))
     assert all(
-        ops.command_type(i) == CommandType.BEZIER_TO for i in range(2, ops.len())
+        ops.command_type(i) == CommandType.BEZIER_TO
+        for i in range(2, ops.len())
     )
     assert ops.endpoint(ops.len() - 1) == pytest.approx((30, 10, 0))
     assert ops.last_move_to == geo_obj.last_move_to
@@ -1643,7 +1660,9 @@ def test_numpy_serialization_bezier_arrays():
     ops.move_to(0, 0, 0)  # index 0
     ops.bezier_to(c1=(1, 2, 3), c2=(4, 5, 6), end=(7, 8, 9))  # index 1
     ops.line_to(10, 10, 10)  # index 2
-    ops.bezier_to(c1=(11, 12, 13), c2=(14, 15, 16), end=(17, 18, 19))  # index 3
+    ops.bezier_to(
+        c1=(11, 12, 13), c2=(14, 15, 16), end=(17, 18, 19)
+    )  # index 3
 
     arrays = ops.to_numpy_arrays()
 
@@ -1656,7 +1675,9 @@ def test_numpy_serialization_bezier_arrays():
     assert arrays["bezier_map"][3] == 1
 
     np.testing.assert_allclose(arrays["bezier_data"][0], [1, 2, 3, 4, 5, 6])
-    np.testing.assert_allclose(arrays["bezier_data"][1], [11, 12, 13, 14, 15, 16])
+    np.testing.assert_allclose(
+        arrays["bezier_data"][1], [11, 12, 13, 14, 15, 16]
+    )
 
 
 def test_numpy_serialization_bezier_round_trip():
@@ -1709,9 +1730,13 @@ def test_linearize_curves():
     )
     assert ops.command_type(0) == CommandType.MOVE_TO
     moving_indices = [
-        i for i in range(1, ops.len() - 1) if ops.category(i) == CommandCategory.MOVING
+        i
+        for i in range(1, ops.len() - 1)
+        if ops.category(i) == CommandCategory.MOVING
     ]
-    assert all(ops.command_type(i) == CommandType.LINE_TO for i in moving_indices)
+    assert all(
+        ops.command_type(i) == CommandType.LINE_TO for i in moving_indices
+    )
     assert ops.command_type(ops.len() - 2) == CommandType.SET_POWER
     assert ops.command_type(ops.len() - 1) == CommandType.LINE_TO
     assert ops.endpoint(ops.len() - 1) == (5, 5, 0)
@@ -1729,7 +1754,8 @@ def test_linearize_curves_preserves_arcs():
     assert ops.command_type(1) == CommandType.ARC_TO
     assert ops.command_type(ops.len() - 1) == CommandType.LINE_TO
     assert not any(
-        ops.command_type(i) in (CommandType.BEZIER_TO, CommandType.QUADRATIC_BEZIER_TO)
+        ops.command_type(i)
+        in (CommandType.BEZIER_TO, CommandType.QUADRATIC_BEZIER_TO)
         for i in range(ops.len())
     )
 
@@ -1755,7 +1781,9 @@ def test_linearize_arcs_preserves_beziers():
     ops.linearize_arcs()
 
     bezier_indices = [
-        i for i in range(ops.len()) if ops.command_type(i) == CommandType.BEZIER_TO
+        i
+        for i in range(ops.len())
+        if ops.command_type(i) == CommandType.BEZIER_TO
     ]
     assert len(bezier_indices) == 1
     info = ops.inspect(bezier_indices[0])

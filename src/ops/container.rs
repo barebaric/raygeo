@@ -832,8 +832,7 @@ impl Ops {
         }
 
         let mut last_pos = (0.0, 0.0, 0.0);
-        for row in &geometry.data {
-            let cmd = crate::Command::from_row(row)?;
+        for cmd in &geometry.data {
             match cmd {
                 crate::Command::Move { end } => {
                     ops.move_to(end.0, end.1, end.2, None);
@@ -851,7 +850,7 @@ impl Ops {
                         end.1,
                         center_offset.0,
                         center_offset.1,
-                        clockwise,
+                        *clockwise,
                         end.2,
                         None,
                     );

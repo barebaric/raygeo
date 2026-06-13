@@ -31,14 +31,6 @@ pub struct ContourHierarchy {
 }
 
 impl ContourHierarchy {
-    /// Remove parent relationships that fail a validation check and
-    /// recompute nesting depths from the filtered parent chain.
-    ///
-    /// `should_keep(i, parent)` returns false if the parent relationship
-    /// between contour `i` and its parent `parent` should be removed.
-    /// After filtering, nesting depths are recomputed by walking the
-    /// (now potentially shorter) parent chain, and new best parents
-    /// are found for contours whose parent was removed.
     pub fn filter_parents<F>(
         &mut self,
         info: &[Option<ContourInfo>],
@@ -120,11 +112,6 @@ impl ContourHierarchy {
 }
 
 /// Build a containment hierarchy from a list of geometries.
-///
-/// For each contour, computes its nesting depth by counting how many
-/// other closed contours contain its test point (even-odd rule).
-/// Also computes a parent_map identifying each contour's direct parent
-/// (the smallest enclosing contour by bounding box area).
 pub fn build_hierarchy(contours: &[Geometry]) -> ContourHierarchy {
     let count = contours.len();
     let mut info: Vec<Option<ContourInfo>> = Vec::with_capacity(count);
@@ -243,10 +230,6 @@ pub fn group_solids_and_holes(
 }
 
 /// Split a Geometry into individual contour geometries.
-///
-/// Each contour is a continuous subpath starting with a MOVE command.
-/// The array is split at each MOVE boundary, creating separate Geometry
-/// objects for each resulting segment.
 pub fn split_into_contours(geometry: &Geometry) -> Vec<Geometry> {
     if geometry.data.is_empty() {
         return vec![];
@@ -256,37 +239,28 @@ pub fn split_into_contours(geometry: &Geometry) -> Vec<Geometry> {
     let move_indices: Vec<usize> = data
         .iter()
         .enumerate()
-        .filter(|(_, row)| {
-            matches!(Command::from_row(row), Ok(Command::Move { .. }))
-        })
+        .filter(|(_, cmd)| matches!(cmd, Command::Move { .. }))
         .map(|(i, _)| i)
         .collect();
 
-    // No MOVE commands: treat entire data as one contour
     if move_indices.is_empty() {
         let mut new_geo = Geometry::new();
         new_geo.data = data.to_vec();
-        new_geo.last_move_to = Command::from_row(&data[0])
-            .expect("invalid command")
-            .end_point();
+        new_geo.last_move_to = data[0].end_point();
         return vec![new_geo];
     }
 
     let mut contours: Vec<Geometry> = Vec::new();
 
-    // Handle any leading data before the first MOVE
     if move_indices[0] != 0 {
         let mut new_geo = Geometry::new();
         new_geo.data = data[..move_indices[0]].to_vec();
         if !new_geo.data.is_empty() {
-            new_geo.last_move_to = Command::from_row(&new_geo.data[0])
-                .expect("invalid command")
-                .end_point();
+            new_geo.last_move_to = new_geo.data[0].end_point();
         }
         contours.push(new_geo);
     }
 
-    // Split at each MOVE boundary
     for i in 0..move_indices.len() {
         let start = move_indices[i];
         let end = if i + 1 < move_indices.len() {
@@ -298,9 +272,7 @@ pub fn split_into_contours(geometry: &Geometry) -> Vec<Geometry> {
         if !slice.is_empty() {
             let mut new_geo = Geometry::new();
             new_geo.data = slice.to_vec();
-            new_geo.last_move_to = Command::from_row(&slice[0])
-                .expect("invalid command")
-                .end_point();
+            new_geo.last_move_to = slice[0].end_point();
             contours.push(new_geo);
         }
     }
@@ -339,9 +311,6 @@ fn find_connected_components_bfs(
 }
 
 /// Extract valid contour data from a list of contour geometries.
-///
-/// Filters out empty, non-closed, or degenerate contours and returns
-/// `(geometry, vertices, is_closed)` tuples for each valid contour.
 pub fn get_valid_contours_data(
     contour_geometries: &[Geometry],
 ) -> Vec<(Geometry, Vec<Point>, bool)> {
@@ -353,8 +322,7 @@ pub fn get_valid_contours_data(
         if geo.data.len() < 2 {
             continue;
         }
-        if !matches!(Command::from_row(&geo.data[0]), Ok(Command::Move { .. }))
-        {
+        if !matches!(&geo.data[0], Command::Move { .. }) {
             continue;
         }
 
@@ -376,9 +344,6 @@ pub fn get_valid_contours_data(
 }
 
 /// Split a Geometry into logically connected components.
-///
-/// Uses point-in-polygon containment tests and BFS to group nested
-/// contours (islands and holes) into separate component geometries.
 pub fn split_into_components(geometry: &Geometry) -> Vec<Geometry> {
     if geometry.is_empty() {
         return vec![];
@@ -399,7 +364,6 @@ pub fn split_into_components(geometry: &Geometry) -> Vec<Geometry> {
         return vec![geometry.copy()];
     }
 
-    // Build adjacency based on point-in-polygon containment
     let num_contours = all_contour_data.len();
     let mut adj: Vec<Vec<usize>> = vec![vec![]; num_contours];
 
@@ -463,32 +427,23 @@ pub fn reverse_contour(contour: &Geometry) -> Geometry {
     if data.is_empty() {
         return contour.copy();
     }
-    let first_cmd = Command::from_row(&data[0]).expect("invalid command");
-    if !matches!(first_cmd, Command::Move { .. }) {
+    if !matches!(&data[0], Command::Move { .. }) {
         return contour.copy();
     }
 
-    let mut new_rows: Vec<[f64; 8]> = Vec::with_capacity(data.len());
+    let mut new_rows: Vec<Command> = Vec::with_capacity(data.len());
 
-    let last_cmd =
-        Command::from_row(&data[data.len() - 1]).expect("invalid command");
-    new_rows.push(
-        Command::Move {
-            end: last_cmd.end_point(),
-        }
-        .to_row(),
-    );
-    let mut last_point = last_cmd.end_point();
+    let last_point = data[data.len() - 1].end_point();
+    new_rows.push(Command::Move { end: last_point });
+    let mut last_point = last_point;
 
     for i in (1..data.len()).rev() {
-        let end_cmd = Command::from_row(&data[i]).expect("invalid command");
-        let start_cmd =
-            Command::from_row(&data[i - 1]).expect("invalid command");
-        let start_point = start_cmd.end_point();
+        let end_cmd = &data[i];
+        let start_point = data[i - 1].end_point();
 
         match end_cmd {
             Command::Line { .. } => {
-                new_rows.push(Command::Line { end: start_point }.to_row());
+                new_rows.push(Command::Line { end: start_point });
             }
             Command::Arc {
                 center_offset,
@@ -499,26 +454,20 @@ pub fn reverse_contour(contour: &Geometry) -> Geometry {
                 let center_abs_y = start_point.1 + center_offset.1;
                 let new_offset_x = center_abs_x - last_point.0;
                 let new_offset_y = center_abs_y - last_point.1;
-                new_rows.push(
-                    Command::Arc {
-                        end: start_point,
-                        center_offset: (new_offset_x, new_offset_y),
-                        clockwise: !clockwise,
-                    }
-                    .to_row(),
-                );
+                new_rows.push(Command::Arc {
+                    end: start_point,
+                    center_offset: (new_offset_x, new_offset_y),
+                    clockwise: !clockwise,
+                });
             }
             Command::Bezier {
                 control1, control2, ..
             } => {
-                new_rows.push(
-                    Command::Bezier {
-                        end: start_point,
-                        control1: control2,
-                        control2: control1,
-                    }
-                    .to_row(),
-                );
+                new_rows.push(Command::Bezier {
+                    end: start_point,
+                    control1: *control2,
+                    control2: *control1,
+                });
             }
             Command::Move { .. } => {}
         }
@@ -528,7 +477,7 @@ pub fn reverse_contour(contour: &Geometry) -> Geometry {
 
     let mut new_geo = Geometry::new();
     new_geo.data = new_rows;
-    new_geo.last_move_to = first_cmd.end_point();
+    new_geo.last_move_to = data[0].end_point();
     new_geo
 }
 

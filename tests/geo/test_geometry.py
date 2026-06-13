@@ -3,7 +3,7 @@ import math
 import numpy as np
 import pytest
 
-from raygeo.geo import Geometry
+from raygeo.geo import Arc, Bezier, Geometry, Line, Move
 
 
 @pytest.fixture
@@ -31,9 +31,8 @@ def test_add_commands(empty_geometry):
     assert len(empty_geometry) == 1
     empty_geometry.line_to(10, 10)
     assert len(empty_geometry) == 2
-    assert empty_geometry.data is not None
-    assert empty_geometry.data[0, Geometry.COL_TYPE] == Geometry.CMD_TYPE_MOVE
-    assert empty_geometry.data[1, Geometry.COL_TYPE] == Geometry.CMD_TYPE_LINE
+    assert isinstance(empty_geometry.data[0], Move)
+    assert isinstance(empty_geometry.data[1], Line)
 
 
 def test_simplify_wrapper(sample_geometry):
@@ -50,30 +49,25 @@ def test_clear_commands(sample_geometry):
 
 def test_move_to(sample_geometry):
     sample_geometry.move_to(15, 15)
-    assert sample_geometry.data is not None
     last_row = sample_geometry.data[-1]
-    assert last_row[Geometry.COL_TYPE] == Geometry.CMD_TYPE_MOVE
-    assert (last_row[Geometry.COL_X : Geometry.COL_Z + 1] == (15.0, 15.0, 0.0)).all()
+    assert isinstance(last_row, Move)
+    assert last_row.end == (15.0, 15.0, 0.0)
 
 
 def test_line_to(sample_geometry):
     sample_geometry.line_to(20, 20)
-    assert sample_geometry.data is not None
     last_row = sample_geometry.data[-1]
-    assert last_row[Geometry.COL_TYPE] == Geometry.CMD_TYPE_LINE
-    assert (last_row[Geometry.COL_X : Geometry.COL_Z + 1] == (20.0, 20.0, 0.0)).all()
+    assert isinstance(last_row, Line)
+    assert last_row.end == (20.0, 20.0, 0.0)
 
 
 def test_close_path(sample_geometry):
     sample_geometry.move_to(5, 5, -1.0)
     sample_geometry.close_path()
-    assert sample_geometry.data is not None
     last_row = sample_geometry.data[-1]
-    assert last_row[Geometry.COL_TYPE] == Geometry.CMD_TYPE_LINE
-    assert (
-        last_row[Geometry.COL_X : Geometry.COL_Z + 1] == sample_geometry.last_move_to
-    ).all()
-    assert (last_row[Geometry.COL_X : Geometry.COL_Z + 1] == (5.0, 5.0, -1.0)).all()
+    assert isinstance(last_row, Line)
+    assert last_row.end == sample_geometry.last_move_to
+    assert last_row.end == (5.0, 5.0, -1.0)
 
 
 def test_arc_to():
@@ -82,20 +76,19 @@ def test_arc_to():
     geo.line_to(10, 10)
     geo.arc_to(20, 0, i=5, j=-10)
     geo.arc_to(5, 5, 2, 3, clockwise=False)
-    assert geo.data is not None
     last_row = geo.data[-1]
-    assert last_row[Geometry.COL_TYPE] == Geometry.CMD_TYPE_ARC
-    assert (last_row[Geometry.COL_X : Geometry.COL_Z + 1] == (5.0, 5.0, 0.0)).all()
-    assert last_row[6] == 0.0  # Clockwise is False
+    assert isinstance(last_row, Arc)
+    assert last_row.end == (5.0, 5.0, 0.0)
+    assert last_row.clockwise is False
 
 
 def test_bezier_to(empty_geometry):
     empty_geometry.bezier_to(10, 10, c1x=2, c1y=2, c2x=8, c2y=8)
-    assert empty_geometry.data is not None
     last_row = empty_geometry.data[-1]
-    assert last_row[Geometry.COL_TYPE] == Geometry.CMD_TYPE_BEZIER
-    assert (last_row[1:4] == (10.0, 10.0, 0.0)).all()
-    assert (last_row[4:8] == (2.0, 2.0, 8.0, 8.0)).all()
+    assert isinstance(last_row, Bezier)
+    assert last_row.end == (10.0, 10.0, 0.0)
+    assert last_row.control1 == (2.0, 2.0)
+    assert last_row.control2 == (8.0, 8.0)
 
 
 def test_serialization_deserialization(sample_geometry):
@@ -174,7 +167,9 @@ def test_area():
 
     # Test case 5: Two separate shapes
     geo_two_shapes = Geometry.from_points([(0, 0), (5, 0), (5, 5), (0, 5)])
-    second_shape = Geometry.from_points([(10, 10), (15, 10), (15, 15), (10, 15)])
+    second_shape = Geometry.from_points(
+        [(10, 10), (15, 10), (15, 15), (10, 15)]
+    )
     geo_two_shapes.extend(second_shape)  # Use extend to merge numpy data
     # Expected area = 25 + 25 = 50
     assert geo_two_shapes.area() == pytest.approx(50.0)
@@ -231,34 +226,30 @@ def test_from_points():
     # Test case 2: Single point
     geo_single = Geometry.from_points([(10, 20)])
     assert len(geo_single) == 1
-    assert geo_single.data is not None
-    assert geo_single.data[0, Geometry.COL_TYPE] == Geometry.CMD_TYPE_MOVE
-    assert (geo_single.data[0, 1:4] == (10, 20, 0)).all()
+    assert isinstance(geo_single.data[0], Move)
+    assert geo_single.data[0].end == (10, 20, 0)
     assert geo_single.last_move_to == (10, 20, 0)
 
     # Test case 3: Triangle (closed by default)
     points = [(0, 0), (10, 0), (5, 10)]
     geo_triangle = Geometry.from_points(points)
     assert len(geo_triangle) == 4
-    assert geo_triangle.data is not None
-    assert geo_triangle.data[0, Geometry.COL_TYPE] == Geometry.CMD_TYPE_MOVE
-    assert (geo_triangle.data[0, 1:4] == (0, 0, 0)).all()
-    assert geo_triangle.data[3, Geometry.COL_TYPE] == Geometry.CMD_TYPE_LINE
-    assert (geo_triangle.data[3, 1:4] == (0, 0, 0)).all()
+    assert isinstance(geo_triangle.data[0], Move)
+    assert geo_triangle.data[0].end == (0, 0, 0)
+    assert isinstance(geo_triangle.data[3], Line)
+    assert geo_triangle.data[3].end == (0, 0, 0)
 
     # Test case 4: Triangle (open)
     geo_triangle_open = Geometry.from_points(points, close=False)
     assert len(geo_triangle_open) == 3
-    assert geo_triangle_open.data is not None
-    assert (geo_triangle_open.data[-1, 1:4] != geo_triangle_open.data[0, 1:4]).any()
+    assert geo_triangle_open.data[-1].end != geo_triangle_open.data[0].end
 
     # Test case 5: Points with Z coordinates (closed)
     points_3d = [(0, 0, 1), (10, 0, 2), (5, 10, 3)]
     geo_3d = Geometry.from_points(points_3d)
     assert len(geo_3d) == 4
-    assert geo_3d.data is not None
-    assert (geo_3d.data[0, 1:4] == (0, 0, 1)).all()
-    assert (geo_3d.data[3, 1:4] == (0, 0, 1)).all()
+    assert geo_3d.data[0].end == (0, 0, 1)
+    assert geo_3d.data[3].end == (0, 0, 1)
     assert geo_3d.last_move_to == (0, 0, 1)
 
 
@@ -324,21 +315,19 @@ def test_arc_to_as_bezier():
     # i=10, j=0. Clockwise=False (CCW)
     geo.arc_to_as_bezier(10, 10, i=10, j=0, clockwise=False)
 
-    # Force sync
     data = geo.data
-    assert data is not None
 
     assert len(data) > 1
-    assert data[0, Geometry.COL_TYPE] == Geometry.CMD_TYPE_MOVE
+    assert isinstance(data[0], Move)
 
     # Check that subsequent commands are BEZIER, not ARC
     for i in range(1, len(data)):
-        assert data[i, Geometry.COL_TYPE] == Geometry.CMD_TYPE_BEZIER
+        assert isinstance(data[i], Bezier)
 
     # Check endpoints of the last segment match the requested arc end
     last_row = data[-1]
-    assert math.isclose(last_row[Geometry.COL_X], 10.0)
-    assert math.isclose(last_row[Geometry.COL_Y], 10.0)
+    assert math.isclose(last_row.end[0], 10.0)
+    assert math.isclose(last_row.end[1], 10.0)
 
 
 def test_extend_preserves_uniform_scalable():
@@ -355,11 +344,10 @@ def test_extend_preserves_uniform_scalable():
     dest.extend(source)
 
     data = dest.data
-    assert data is not None
 
     # Should contain Moves and Arcs
-    assert np.any(data[:, Geometry.COL_TYPE] == Geometry.CMD_TYPE_MOVE)
-    assert np.any(data[:, Geometry.COL_TYPE] == Geometry.CMD_TYPE_ARC)
+    assert any(isinstance(c, Move) for c in data)
+    assert any(isinstance(c, Arc) for c in data)
     assert not dest.uniform_scalable
 
 
@@ -374,16 +362,15 @@ def test_load_preserves_uniform_scalable(sample_geometry):
     loaded = Geometry.load(dumped)
 
     data = loaded.data
-    assert data is not None
 
-    assert np.any(data[:, Geometry.COL_TYPE] == Geometry.CMD_TYPE_ARC)
+    assert any(isinstance(c, Arc) for c in data)
     assert not loaded.uniform_scalable
 
     # Check that endpoint is preserved
     last_row = data[-1]
     # sample_geometry ends at (20, 0)
-    assert math.isclose(last_row[Geometry.COL_X], 20.0)
-    assert math.isclose(last_row[Geometry.COL_Y], 0.0)
+    assert math.isclose(last_row.end[0], 20.0)
+    assert math.isclose(last_row.end[1], 0.0)
 
 
 # --- Wrapper Method Tests ---
@@ -468,7 +455,7 @@ def test_transform_wrapper(sample_geometry):
     matrix = np.identity(4)
     sample_geometry.transform(matrix)
     # Identity matrix should leave geometry unchanged
-    assert sample_geometry.data is not None
+    assert len(sample_geometry.data) == 3
 
 
 def test_flip_x():
@@ -479,9 +466,8 @@ def test_flip_x():
     geo.arc_to(20, 5, i=5, j=-5, clockwise=False)
     geo.bezier_to(30, 10, c1x=22, c1y=2, c2x=28, c2y=8)
 
-    # Sync to get original data
-    assert geo.data is not None
-    original_data = geo.data.copy()
+    # Save original data
+    original_data = geo.data[:]
 
     # Apply flip_x
     result = geo.flip_x()
@@ -490,28 +476,32 @@ def test_flip_x():
 
     # Check that X coordinates are inverted
     # MoveTo: (0, 0) -> (0, 0)
-    assert math.isclose(geo.data[0, Geometry.COL_X], 0.0)
-    assert math.isclose(geo.data[0, Geometry.COL_Y], 0.0)
+    assert math.isclose(geo.data[0].end[0], 0.0)
+    assert math.isclose(geo.data[0].end[1], 0.0)
 
     # LineTo: (10, 10) -> (-10, 10)
-    assert math.isclose(geo.data[1, Geometry.COL_X], -10.0)
-    assert math.isclose(geo.data[1, Geometry.COL_Y], 10.0)
+    assert math.isclose(geo.data[1].end[0], -10.0)
+    assert math.isclose(geo.data[1].end[1], 10.0)
 
     # ArcTo: (20, 5) -> (-20, 5), I=5 -> -5, CW toggled
-    assert math.isclose(geo.data[2, Geometry.COL_X], -20.0)
-    assert math.isclose(geo.data[2, Geometry.COL_Y], 5.0)
-    assert math.isclose(geo.data[2, Geometry.COL_I], -5.0)
-    assert math.isclose(geo.data[2, Geometry.COL_CW], 1.0)
+    assert isinstance(geo.data[2], Arc)
+    assert math.isclose(geo.data[2].end[0], -20.0)
+    assert math.isclose(geo.data[2].end[1], 5.0)
+    assert math.isclose(geo.data[2].center_offset[0], -5.0)
+    assert geo.data[2].clockwise is True
 
     # BezierTo: (30, 10) -> (-30, 10), C1X=22 -> -22, C2X=28 -> -28
-    assert math.isclose(geo.data[3, Geometry.COL_X], -30.0)
-    assert math.isclose(geo.data[3, Geometry.COL_Y], 10.0)
-    assert math.isclose(geo.data[3, Geometry.COL_C1X], -22.0)
-    assert math.isclose(geo.data[3, Geometry.COL_C2X], -28.0)
+    assert isinstance(geo.data[3], Bezier)
+    assert math.isclose(geo.data[3].end[0], -30.0)
+    assert math.isclose(geo.data[3].end[1], 10.0)
+    assert math.isclose(geo.data[3].control1[0], -22.0)
+    assert math.isclose(geo.data[3].control2[0], -28.0)
 
     # Flipping twice should return to original
     geo.flip_x()
-    np.testing.assert_allclose(geo.data, original_data, atol=1e-9)
+    for cmd, orig in zip(geo.data, original_data):
+        assert type(cmd) is type(orig)
+        np.testing.assert_allclose(cmd.end, orig.end, atol=1e-9)
 
 
 def test_flip_y():
@@ -522,9 +512,8 @@ def test_flip_y():
     geo.arc_to(20, 5, i=5, j=-5, clockwise=False)
     geo.bezier_to(30, 10, c1x=22, c1y=2, c2x=28, c2y=8)
 
-    # Sync to get original data
-    assert geo.data is not None
-    original_data = geo.data.copy()
+    # Save original data
+    original_data = geo.data[:]
 
     # Apply flip_y
     result = geo.flip_y()
@@ -533,28 +522,32 @@ def test_flip_y():
 
     # Check that Y coordinates are inverted
     # MoveTo: (0, 0) -> (0, 0)
-    assert math.isclose(geo.data[0, Geometry.COL_X], 0.0)
-    assert math.isclose(geo.data[0, Geometry.COL_Y], 0.0)
+    assert math.isclose(geo.data[0].end[0], 0.0)
+    assert math.isclose(geo.data[0].end[1], 0.0)
 
     # LineTo: (10, 10) -> (10, -10)
-    assert math.isclose(geo.data[1, Geometry.COL_X], 10.0)
-    assert math.isclose(geo.data[1, Geometry.COL_Y], -10.0)
+    assert math.isclose(geo.data[1].end[0], 10.0)
+    assert math.isclose(geo.data[1].end[1], -10.0)
 
     # ArcTo: (20, 5) -> (20, -5), J=-5 -> 5, CW toggled
-    assert math.isclose(geo.data[2, Geometry.COL_X], 20.0)
-    assert math.isclose(geo.data[2, Geometry.COL_Y], -5.0)
-    assert math.isclose(geo.data[2, Geometry.COL_J], 5.0)
-    assert math.isclose(geo.data[2, Geometry.COL_CW], 1.0)
+    assert isinstance(geo.data[2], Arc)
+    assert math.isclose(geo.data[2].end[0], 20.0)
+    assert math.isclose(geo.data[2].end[1], -5.0)
+    assert math.isclose(geo.data[2].center_offset[1], 5.0)
+    assert geo.data[2].clockwise is True
 
     # BezierTo: (30, 10) -> (30, -10), C1Y=2 -> -2, C2Y=8 -> -8
-    assert math.isclose(geo.data[3, Geometry.COL_X], 30.0)
-    assert math.isclose(geo.data[3, Geometry.COL_Y], -10.0)
-    assert math.isclose(geo.data[3, Geometry.COL_C1Y], -2.0)
-    assert math.isclose(geo.data[3, Geometry.COL_C2Y], -8.0)
+    assert isinstance(geo.data[3], Bezier)
+    assert math.isclose(geo.data[3].end[0], 30.0)
+    assert math.isclose(geo.data[3].end[1], -10.0)
+    assert math.isclose(geo.data[3].control1[1], -2.0)
+    assert math.isclose(geo.data[3].control2[1], -8.0)
 
     # Flipping twice should return to original
     geo.flip_y()
-    np.testing.assert_allclose(geo.data, original_data, atol=1e-9)
+    for cmd, orig in zip(geo.data, original_data):
+        assert type(cmd) is type(orig)
+        np.testing.assert_allclose(cmd.end, orig.end, atol=1e-9)
 
 
 def test_get_command_at_valid_index():
@@ -566,43 +559,23 @@ def test_get_command_at_valid_index():
     geo.bezier_to(30, 10, c1x=22, c1y=2, c2x=28, c2y=8, z=4)
 
     cmd0 = geo.get_command_at(0)
-    assert cmd0 == (Geometry.CMD_TYPE_MOVE, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0)
+    assert isinstance(cmd0, Move)
+    assert cmd0.end == (0.0, 0.0, 1.0)
 
     cmd1 = geo.get_command_at(1)
-    assert cmd1 == (
-        Geometry.CMD_TYPE_LINE,
-        10.0,
-        10.0,
-        2.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-    )
+    assert isinstance(cmd1, Line)
+    assert cmd1.end == (10.0, 10.0, 2.0)
 
     cmd2 = geo.get_command_at(2)
-    assert cmd2 == (
-        Geometry.CMD_TYPE_ARC,
-        20.0,
-        0.0,
-        3.0,
-        5.0,
-        -10.0,
-        0.0,
-        0.0,
-    )
+    assert isinstance(cmd2, Arc)
+    assert cmd2.end == (20.0, 0.0, 3.0)
+    assert cmd2.center_offset == (5.0, -10.0)
 
     cmd3 = geo.get_command_at(3)
-    assert cmd3 == (
-        Geometry.CMD_TYPE_BEZIER,
-        30.0,
-        10.0,
-        4.0,
-        22.0,
-        2.0,
-        28.0,
-        8.0,
-    )
+    assert isinstance(cmd3, Bezier)
+    assert cmd3.end == (30.0, 10.0, 4.0)
+    assert cmd3.control1 == (22.0, 2.0)
+    assert cmd3.control2 == (28.0, 8.0)
 
 
 def test_get_command_at_negative_index():
@@ -638,46 +611,17 @@ def test_iter_commands():
     commands = list(geo.iter_commands())
 
     assert len(commands) == 4
-    assert commands[0] == (
-        Geometry.CMD_TYPE_MOVE,
-        0.0,
-        0.0,
-        1.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-    )
-    assert commands[1] == (
-        Geometry.CMD_TYPE_LINE,
-        10.0,
-        10.0,
-        2.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-    )
-    assert commands[2] == (
-        Geometry.CMD_TYPE_ARC,
-        20.0,
-        0.0,
-        3.0,
-        5.0,
-        -10.0,
-        0.0,
-        0.0,
-    )
-    assert commands[3] == (
-        Geometry.CMD_TYPE_BEZIER,
-        30.0,
-        10.0,
-        4.0,
-        22.0,
-        2.0,
-        28.0,
-        8.0,
-    )
+    assert isinstance(commands[0], Move)
+    assert commands[0].end == (0.0, 0.0, 1.0)
+    assert isinstance(commands[1], Line)
+    assert commands[1].end == (10.0, 10.0, 2.0)
+    assert isinstance(commands[2], Arc)
+    assert commands[2].end == (20.0, 0.0, 3.0)
+    assert commands[2].center_offset == (5.0, -10.0)
+    assert isinstance(commands[3], Bezier)
+    assert commands[3].end == (30.0, 10.0, 4.0)
+    assert commands[3].control1 == (22.0, 2.0)
+    assert commands[3].control2 == (28.0, 8.0)
 
 
 def test_iter_commands_empty_geometry():
@@ -696,26 +640,12 @@ def test_iter_commands_clockwise_arc():
     commands = list(geo.iter_commands())
 
     assert len(commands) == 2
-    assert commands[0] == (
-        Geometry.CMD_TYPE_MOVE,
-        10.0,
-        10.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-    )
-    assert commands[1] == (
-        Geometry.CMD_TYPE_ARC,
-        15.0,
-        10.0,
-        0.0,
-        0.0,
-        -5.0,
-        1.0,
-        0.0,
-    )
+    assert isinstance(commands[0], Move)
+    assert commands[0].end == (10.0, 10.0, 0.0)
+    assert isinstance(commands[1], Arc)
+    assert commands[1].end == (15.0, 10.0, 0.0)
+    assert commands[1].center_offset == (0.0, -5.0)
+    assert commands[1].clockwise is True
 
 
 def test_upgrade_to_scalable_on_scalable_geo():
@@ -727,15 +657,16 @@ def test_upgrade_to_scalable_on_scalable_geo():
     geo.move_to(0, 0)
     geo.line_to(10, 10)
     geo.bezier_to(20, 0, c1x=12, c1y=12, c2x=18, c2y=2)
-    assert geo.data is not None
-    original_data = geo.data.copy()
+    original_data = geo.data[:]
 
     assert geo.uniform_scalable is True
     result = geo.upgrade_to_scalable()
 
     assert result is geo
     assert geo.uniform_scalable is True
-    np.testing.assert_array_equal(geo.data, original_data)
+    for cmd, orig in zip(geo.data, original_data):
+        assert type(cmd) is type(orig)
+        assert cmd.end == orig.end
 
 
 def test_upgrade_to_scalable_on_empty_geo():
@@ -767,19 +698,16 @@ def test_upgrade_to_scalable_converts_arcs():
 
     # Final state check
     assert geo.uniform_scalable is True
-    assert geo.data is not None
 
     # Check command types
-    command_types = geo.data[:, Geometry.COL_TYPE]
-    assert Geometry.CMD_TYPE_ARC not in command_types
-    assert Geometry.CMD_TYPE_BEZIER in command_types
-    assert Geometry.CMD_TYPE_LINE in command_types
-    assert Geometry.CMD_TYPE_MOVE in command_types
+    assert not any(isinstance(c, Arc) for c in geo.data)
+    assert any(isinstance(c, Bezier) for c in geo.data)
+    assert any(isinstance(c, Line) for c in geo.data)
+    assert any(isinstance(c, Move) for c in geo.data)
 
     # Check path integrity
     # The last bezier should end where the arc ended.
-    final_point = geo.data[-1, Geometry.COL_X : Geometry.COL_Z + 1]
-    np.testing.assert_allclose(final_point, [20.0, 0.0, 0.0], atol=1e-9)
+    np.testing.assert_allclose(geo.data[-1].end, [20.0, 0.0, 0.0], atol=1e-9)
 
 
 def test_upgrade_to_scalable_multiple_arcs():
@@ -796,12 +724,10 @@ def test_upgrade_to_scalable_multiple_arcs():
     geo.upgrade_to_scalable()
 
     assert geo.uniform_scalable is True
-    assert geo.data is not None
-    assert Geometry.CMD_TYPE_ARC not in geo.data[:, Geometry.COL_TYPE]
+    assert not any(isinstance(c, Arc) for c in geo.data)
 
     # Verify that the final endpoint of the entire path is preserved
-    final_point_after = geo.data[-1, Geometry.COL_X : Geometry.COL_Z + 1]
-    np.testing.assert_allclose(final_point_after, final_end_point, atol=1e-9)
+    np.testing.assert_allclose(geo.data[-1].end, final_end_point, atol=1e-9)
 
 
 def test_upgrade_to_scalable_is_idempotent():
@@ -814,17 +740,21 @@ def test_upgrade_to_scalable_is_idempotent():
 
     # First call
     geo.upgrade_to_scalable()
-    assert geo.data is not None
-    data_after_first_call = geo.data.copy()
+    data_after_first_call = geo.data[:]
     assert geo.uniform_scalable is True
-    assert Geometry.CMD_TYPE_ARC not in data_after_first_call[:, Geometry.COL_TYPE]
+    assert not any(isinstance(c, Arc) for c in data_after_first_call)
 
     # Second call
     geo.upgrade_to_scalable()
     data_after_second_call = geo.data
 
     # The data should be identical
-    np.testing.assert_array_equal(data_after_first_call, data_after_second_call)
+    for cmd, orig in zip(data_after_second_call, data_after_first_call):
+        assert type(cmd) is type(orig)
+        assert cmd.end == orig.end
+        if isinstance(cmd, Bezier):
+            assert cmd.control1 == orig.control1
+            assert cmd.control2 == orig.control2
 
 
 def test_linearize_approximation():
@@ -839,17 +769,13 @@ def test_linearize_approximation():
     # Use a coarse tolerance to see visible simplification
     geo.linearize(tolerance=0.1)
 
-    assert geo.data is not None
-    cmd_types = geo.data[:, Geometry.COL_TYPE]
-
     # Should contain no Arcs
-    assert Geometry.CMD_TYPE_ARC not in cmd_types
+    assert not any(isinstance(c, Arc) for c in geo.data)
     # Should contain Lines
-    assert Geometry.CMD_TYPE_LINE in cmd_types
+    assert any(isinstance(c, Line) for c in geo.data)
 
     # The end point should still be (10, 10)
-    end_point = geo.data[-1, Geometry.COL_X : Geometry.COL_Z + 1]
-    np.testing.assert_allclose(end_point, (10.0, 10.0, 0.0), atol=1e-6)
+    np.testing.assert_allclose(geo.data[-1].end, (10.0, 10.0, 0.0), atol=1e-6)
 
 
 def test_fit_arcs_approximation():
@@ -869,16 +795,13 @@ def test_fit_arcs_approximation():
     geo = Geometry.from_points(points, close=False)
 
     # Before fitting, it should be all Lines
-    assert geo.data is not None
-    assert np.all(geo.data[1:, Geometry.COL_TYPE] == Geometry.CMD_TYPE_LINE)
+    assert all(isinstance(c, Line) for c in geo.data[1:])
 
     # Fit arcs with a reasonable tolerance
     geo.fit_arcs(tolerance=0.1)
 
     # After fitting, it should contain Arcs
-    assert geo.data is not None
-    cmd_types = geo.data[:, Geometry.COL_TYPE]
-    assert Geometry.CMD_TYPE_ARC in cmd_types
+    assert any(isinstance(c, Arc) for c in geo.data)
 
     # Should have significantly fewer commands than 100 lines
     assert len(geo.data) < 10
@@ -892,8 +815,7 @@ def test_fit_arcs_mixed_geometry():
     geo.move_to(0, 0)
     geo.line_to(10, 0)  # Straight line
     geo.arc_to(20, 10, i=0, j=10, clockwise=False)  # 90 deg arc
-    assert geo.data is not None
-    original_data = geo.data.copy()
+    original_data = geo.data[:]
 
     # Fitting arcs should process both the line and the arc segments.
     # Note: Because the fitting process is not perfectly lossless (it relies on
@@ -902,18 +824,15 @@ def test_fit_arcs_mixed_geometry():
     # rather than strict binary equality.
     geo.fit_arcs(tolerance=0.1)
 
-    assert geo.data is not None
-
     # 1. Verify the endpoints are preserved
     # The last point should still be (20, 10, 0)
-    final_end_point = geo.data[-1, Geometry.COL_X : Geometry.COL_Z + 1]
-    original_end_point = original_data[-1, Geometry.COL_X : Geometry.COL_Z + 1]
-    np.testing.assert_allclose(final_end_point, original_end_point, atol=1e-6)
+    np.testing.assert_allclose(
+        geo.data[-1].end, original_data[-1].end, atol=1e-6
+    )
 
     # 2. Verify we still have Arcs and Lines
-    cmd_types = geo.data[:, Geometry.COL_TYPE]
-    assert Geometry.CMD_TYPE_ARC in cmd_types
-    assert Geometry.CMD_TYPE_LINE in cmd_types
+    assert any(isinstance(c, Arc) for c in geo.data)
+    assert any(isinstance(c, Line) for c in geo.data)
 
     # 3. Verify the number of commands didn't explode (it shouldn't degrade
     # to polylines). Original was 3 commands (Move, Line, Arc).
@@ -929,9 +848,7 @@ def test_fit_curves_preserves_beziers():
 
     geo.fit_curves(tolerance=0.1, beziers=True, arcs=True)
 
-    assert geo.data is not None
-    cmd_types = geo.data[:, Geometry.COL_TYPE]
-    assert Geometry.CMD_TYPE_BEZIER in cmd_types
+    assert any(isinstance(c, Bezier) for c in geo.data)
 
 
 def test_fit_curves_delegates_to_fit_arcs():
@@ -943,9 +860,7 @@ def test_fit_curves_delegates_to_fit_arcs():
 
     geo.fit_arcs(tolerance=0.1)
 
-    assert geo.data is not None
-    cmd_types = geo.data[:, Geometry.COL_TYPE]
-    assert Geometry.CMD_TYPE_ARC in cmd_types
+    assert any(isinstance(c, Arc) for c in geo.data)
 
 
 class TestToPolygons:
@@ -1045,75 +960,65 @@ class TestToPolygons:
         assert len(polygons) == 2
 
 
-class TestAppendData:
-    def test_appends_rows_to_existing_geometry(self):
+class TestFilter:
+    def test_filter_keep_all(self):
         geo = Geometry()
         geo.move_to(0, 0)
         geo.line_to(10, 0)
-        assert geo.data is not None
-        original_len = len(geo.data)
+        geo.arc_to(10, 10, i=5, j=0)
+        geo.line_to(0, 10)
 
-        extra = np.array([[Geometry.CMD_TYPE_LINE, 10.0, 10.0, 0.0, 0, 0, 0, 0]])
-        geo.append_data(extra)
+        filtered = geo.filter({0, 1, 2, 3})
+        assert len(filtered) == 4
+        assert isinstance(filtered.data[0], Move)
+        assert isinstance(filtered.data[1], Line)
+        assert isinstance(filtered.data[2], Arc)
+        assert isinstance(filtered.data[3], Line)
 
-        assert geo.data is not None
-        assert len(geo.data) == original_len + 1
-        np.testing.assert_array_equal(geo.data[-1], extra[0])
-
-    def test_appends_multiple_rows(self):
+    def test_filter_keep_subset(self):
         geo = Geometry()
         geo.move_to(0, 0)
-        assert geo.data is not None
+        geo.line_to(10, 0)
+        geo.arc_to(10, 10, i=5, j=0)
+        geo.line_to(0, 10)
 
-        rows = np.array(
-            [
-                [Geometry.CMD_TYPE_LINE, 5.0, 0.0, 0.0, 0, 0, 0, 0],
-                [Geometry.CMD_TYPE_LINE, 5.0, 5.0, 0.0, 0, 0, 0, 0],
-                [Geometry.CMD_TYPE_LINE, 0.0, 5.0, 0.0, 0, 0, 0, 0],
-            ]
-        )
-        geo.append_data(rows)
+        filtered = geo.filter({0, 2})
+        assert len(filtered) == 2
+        assert isinstance(filtered.data[0], Move)
+        assert isinstance(filtered.data[1], Arc)
+        assert filtered.data[1].end[0] == pytest.approx(10.0)
+        assert filtered.data[1].end[1] == pytest.approx(10.0)
+        assert filtered.data[1].center_offset[0] == pytest.approx(5.0)
 
-        assert geo.data is not None
-        assert len(geo.data) == 4
-
-    def test_sets_data_when_empty(self):
-        geo = Geometry()
-        rows = np.array([[Geometry.CMD_TYPE_LINE, 1.0, 2.0, 0.0, 0, 0, 0, 0]])
-        geo.append_data(rows)
-
-        assert geo.data is not None
-        assert len(geo.data) == 1
-        np.testing.assert_array_equal(geo.data[0], rows[0])
-
-    def test_none_is_noop(self):
-        geo = Geometry()
-        geo.move_to(1, 1)
-        assert geo.data is not None
-        original = geo.data.copy()
-
-        geo.append_data(None)
-
-        assert geo.data is not None
-        np.testing.assert_array_equal(geo.data, original)
-
-    def test_empty_array_is_noop(self):
-        geo = Geometry()
-        geo.move_to(1, 1)
-        assert geo.data is not None
-        original = geo.data.copy()
-
-        geo.append_data(np.empty((0, Geometry.GEO_ARRAY_COLS)))
-
-        assert geo.data is not None
-        np.testing.assert_array_equal(geo.data, original)
-
-    def test_does_not_mutate_input(self):
+    def test_filter_empty_indices(self):
         geo = Geometry()
         geo.move_to(0, 0)
+        geo.line_to(10, 0)
 
-        rows = np.array([[Geometry.CMD_TYPE_LINE, 5.0, 5.0, 0.0, 0, 0, 0, 0]])
-        original_rows = rows.copy()
-        geo.append_data(rows)
+        filtered = geo.filter(set())
+        assert len(filtered) == 0
 
-        np.testing.assert_array_equal(rows, original_rows)
+    def test_filter_preserves_original(self):
+        geo = Geometry()
+        geo.move_to(0, 0)
+        geo.line_to(10, 0)
+        geo.line_to(10, 10)
+
+        filtered = geo.filter({0})
+        assert len(geo) == 3
+        assert len(filtered) == 1
+        assert isinstance(filtered.data[0], Move)
+
+    def test_filter_with_bezier(self):
+        geo = Geometry()
+        geo.move_to(0, 0)
+        geo.bezier_to(10, 10, 3, 5, 7, 2)
+
+        filtered = geo.filter({1})
+        assert len(filtered) == 1
+        cmd = filtered.data[0]
+        assert isinstance(cmd, Bezier)
+        assert cmd.end[0] == pytest.approx(10.0)
+        assert cmd.end[1] == pytest.approx(10.0)
+        assert cmd.control1[0] == pytest.approx(3.0)
+        assert cmd.control2[1] == pytest.approx(2.0)

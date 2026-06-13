@@ -234,7 +234,9 @@ class TestBezierToQuadratic:
         qp0, qc, qp1 = convert_cubic_bezier_to_quadratic(p0, c1, c2, p1)
         quad_mid = get_bezier_point_at(qp0, qc, qc, qp1, 0.5)
         cubic_mid = get_bezier_point_at(p0, c1, c2, p1, 0.5)
-        err = math.hypot(quad_mid[0] - cubic_mid[0], quad_mid[1] - cubic_mid[1])
+        err = math.hypot(
+            quad_mid[0] - cubic_mid[0], quad_mid[1] - cubic_mid[1]
+        )
         assert err < 0.5
 
     def test_linear_case(self):
@@ -290,7 +292,9 @@ def test_linearize_bezier_adaptive_curved():
     p1 = (10.0, 0.0)
 
     points_coarse = linearize_bezier_adaptive(p0, c1, c2, p1, tolerance_sq=1.0)
-    points_fine = linearize_bezier_adaptive(p0, c1, c2, p1, tolerance_sq=0.0001)
+    points_fine = linearize_bezier_adaptive(
+        p0, c1, c2, p1, tolerance_sq=0.0001
+    )
 
     assert len(points_fine) > len(points_coarse)
     assert points_fine[-1] == p1
@@ -353,7 +357,9 @@ def test_linearize_segment_midpoint_accuracy():
     expected_x = 0.125 * 0 + 0.375 * 1 + 0.375 * 2 + 0.125 * 3
     expected_y = 0.125 * 0 + 0.375 * 1 + 0.375 * 1 + 0.125 * 0
     expected_z = 0.125 * 0 + 0.375 * 5 + 0.375 * 5 + 0.125 * 10
-    assert actual_mid == pytest.approx((expected_x, expected_y, expected_z), abs=0.01)
+    assert actual_mid == pytest.approx(
+        (expected_x, expected_y, expected_z), abs=0.01
+    )
 
 
 def test_linearize_segment_default_tolerance():
@@ -383,25 +389,25 @@ def test_linearize_segment_zero_length():
 def test_get_perpendicular_dist_sq_on_line():
     origin = (0.0, 0.0, 0.0)
     pt = (5.0, 0.0, 0.0)
-    assert get_perpendicular_dist_sq(pt, origin, 1.0, 0.0, 0.0, 1.0) == pytest.approx(
-        0.0
-    )
+    assert get_perpendicular_dist_sq(
+        pt, origin, 1.0, 0.0, 0.0, 1.0
+    ) == pytest.approx(0.0)
 
 
 def test_get_perpendicular_dist_sq_off_line():
     origin = (0.0, 0.0, 0.0)
     pt = (0.0, 3.0, 0.0)
-    assert get_perpendicular_dist_sq(pt, origin, 1.0, 0.0, 0.0, 1.0) == pytest.approx(
-        9.0
-    )
+    assert get_perpendicular_dist_sq(
+        pt, origin, 1.0, 0.0, 0.0, 1.0
+    ) == pytest.approx(9.0)
 
 
 def test_get_perpendicular_dist_sq_3d():
     origin = (0.0, 0.0, 0.0)
     pt = (0.0, 0.0, 4.0)
-    assert get_perpendicular_dist_sq(pt, origin, 1.0, 0.0, 0.0, 1.0) == pytest.approx(
-        16.0
-    )
+    assert get_perpendicular_dist_sq(
+        pt, origin, 1.0, 0.0, 0.0, 1.0
+    ) == pytest.approx(16.0)
 
 
 def test_get_bezier_flatness_sq_collinear():

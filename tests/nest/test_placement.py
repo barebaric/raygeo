@@ -72,7 +72,9 @@ class TestGenerateBottomLeftCandidates:
     def test_basic(self):
         ifp_bounds = (0.0, 0.0, 100.0, 100.0)
         part_bounds = (0.0, 0.0, 10.0, 10.0)
-        candidates = generate_bottom_left_candidates(ifp_bounds, part_bounds, 5.0)
+        candidates = generate_bottom_left_candidates(
+            ifp_bounds, part_bounds, 5.0
+        )
         assert len(candidates) > 0
         for x, y in candidates:
             assert x >= 0.0
@@ -83,7 +85,9 @@ class TestGenerateBottomLeftCandidates:
     def test_spacing(self):
         ifp_bounds = (0.0, 0.0, 50.0, 50.0)
         part_bounds = (0.0, 0.0, 10.0, 10.0)
-        candidates = generate_bottom_left_candidates(ifp_bounds, part_bounds, 15.0)
+        candidates = generate_bottom_left_candidates(
+            ifp_bounds, part_bounds, 15.0
+        )
         if len(candidates) > 1:
             dx = candidates[1][0] - candidates[0][0]
             dy = candidates[1][1] - candidates[0][1]
@@ -109,7 +113,9 @@ class TestGeneratePerimeterCandidates:
         assert len(candidates) == 8
 
     def test_no_placed(self):
-        candidates = generate_perimeter_candidates([], (0.0, 0.0, 5.0, 5.0), 5.0)
+        candidates = generate_perimeter_candidates(
+            [], (0.0, 0.0, 5.0, 5.0), 5.0
+        )
         assert candidates == []
 
 
@@ -131,7 +137,10 @@ class TestFilterCandidatesMultiResolution:
         assert len(filtered) == 3
 
     def test_empty(self):
-        assert filter_candidates_multi_resolution([], (0.0, 0.0, 1.0, 1.0), 1.0) == []
+        assert (
+            filter_candidates_multi_resolution([], (0.0, 0.0, 1.0, 1.0), 1.0)
+            == []
+        )
 
     def test_zero_dist(self):
         candidates = [(0.0, 0.0), (1.0, 1.0)]
@@ -165,7 +174,9 @@ class TestFindValidPosition:
         ifp = [_square(0.0, 0.0, 100.0, 100.0)]
         part = [_square(0.0, 0.0, 10.0, 10.0)]
         placed = [[_square(50.0, 50.0, 60.0, 60.0)]]
-        pos = find_valid_position(ifp, part, [], placed, [], _grid(), (0.0, 0.0))
+        pos = find_valid_position(
+            ifp, part, [], placed, [], _grid(), (0.0, 0.0)
+        )
         assert pos is not None
         x, y = pos
         assert not (50.0 <= x <= 60.0 and 50.0 <= y <= 60.0)
@@ -174,7 +185,9 @@ class TestFindValidPosition:
         ifp = [_square(0.0, 0.0, 100.0, 100.0)]
         part = [_square(0.0, 0.0, 10.0, 10.0)]
         hulls = [_square(0.0, 0.0, 10.0, 10.0)]  # same as polygon
-        pos = find_valid_position(ifp, part, hulls, [], [], _grid(), (0.0, 0.0))
+        pos = find_valid_position(
+            ifp, part, hulls, [], [], _grid(), (0.0, 0.0)
+        )
         assert pos is not None
 
     def test_with_world_offset(self):
@@ -191,7 +204,9 @@ class TestFindValidPositionScored:
     def test_simple_valid(self):
         ifp = [_square(0.0, 0.0, 100.0, 100.0)]
         part = [_square(0.0, 0.0, 10.0, 10.0)]
-        pos = find_valid_position_scored(ifp, part, [], [], [], _grid(), (0.0, 0.0))
+        pos = find_valid_position_scored(
+            ifp, part, [], [], [], _grid(), (0.0, 0.0)
+        )
         assert pos is not None
         x, y = pos
         assert x >= 0.0
@@ -200,27 +215,36 @@ class TestFindValidPositionScored:
     def test_empty_ifp(self):
         part = [_square(0.0, 0.0, 10.0, 10.0)]
         assert (
-            find_valid_position_scored([], part, [], [], [], _grid(), (0.0, 0.0))
+            find_valid_position_scored(
+                [], part, [], [], [], _grid(), (0.0, 0.0)
+            )
             is None
         )
 
     def test_empty_part(self):
         ifp = [_square(0.0, 0.0, 10.0, 10.0)]
         assert (
-            find_valid_position_scored(ifp, [], [], [], [], _grid(), (0.0, 0.0)) is None
+            find_valid_position_scored(
+                ifp, [], [], [], [], _grid(), (0.0, 0.0)
+            )
+            is None
         )
 
     def test_with_placed_parts(self):
         ifp = [_square(0.0, 0.0, 100.0, 100.0)]
         part = [_square(0.0, 0.0, 10.0, 10.0)]
         placed = [[_square(50.0, 50.0, 60.0, 60.0)]]
-        pos = find_valid_position_scored(ifp, part, [], placed, [], _grid(), (0.0, 0.0))
+        pos = find_valid_position_scored(
+            ifp, part, [], placed, [], _grid(), (0.0, 0.0)
+        )
         assert pos is not None
 
     def test_with_hulls(self):
         ifp = [_square(0.0, 0.0, 100.0, 100.0)]
         part = [_square(0.0, 0.0, 10.0, 10.0)]
-        pos = find_valid_position_scored(ifp, part, part, [], [], _grid(), (0.0, 0.0))
+        pos = find_valid_position_scored(
+            ifp, part, part, [], [], _grid(), (0.0, 0.0)
+        )
         assert pos is not None
 
     def test_custom_curve_tolerance(self):
@@ -244,14 +268,18 @@ class TestFindValidPositionNfp:
         ifp = [_square(0.0, 0.0, 100.0, 100.0)]
         part = [_square(0.0, 0.0, 10.0, 10.0)]
         placed = [[_square(50.0, 50.0, 60.0, 60.0)]]
-        pos = find_valid_position_nfp(ifp, part, [], placed, [], _grid(), (0.0, 0.0))
+        pos = find_valid_position_nfp(
+            ifp, part, [], placed, [], _grid(), (0.0, 0.0)
+        )
         assert pos is not None
 
     def test_empty_ifp(self):
         part = [_square(0.0, 0.0, 10.0, 10.0)]
         placed = [[_square(50.0, 50.0, 60.0, 60.0)]]
         assert (
-            find_valid_position_nfp([], part, [], placed, [], _grid(), (0.0, 0.0))
+            find_valid_position_nfp(
+                [], part, [], placed, [], _grid(), (0.0, 0.0)
+            )
             is None
         )
 
@@ -260,7 +288,8 @@ class TestFindValidPositionNfp:
         ifp = [_square(0.0, 0.0, 100.0, 100.0)]
         part = [_square(0.0, 0.0, 10.0, 10.0)]
         assert (
-            find_valid_position_nfp(ifp, part, [], [], [], _grid(), (0.0, 0.0)) is None
+            find_valid_position_nfp(ifp, part, [], [], [], _grid(), (0.0, 0.0))
+            is None
         )
 
     def test_with_hulls(self):
@@ -280,7 +309,9 @@ class TestFindValidPositionNfp:
             [_square(20.0, 20.0, 30.0, 30.0)],
             [_square(100.0, 100.0, 110.0, 110.0)],
         ]
-        pos = find_valid_position_nfp(ifp, part, [], placed, [], _grid(), (0.0, 0.0))
+        pos = find_valid_position_nfp(
+            ifp, part, [], placed, [], _grid(), (0.0, 0.0)
+        )
         assert pos is not None
 
 

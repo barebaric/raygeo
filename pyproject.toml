@@ -45,6 +45,7 @@ reportMissingModuleSource = false
 include = ["tests", "python"]
 
 [tool.ruff]
+line-length = 79
 exclude = ["*.pyi"]
 
 [tool.ruff.lint]
