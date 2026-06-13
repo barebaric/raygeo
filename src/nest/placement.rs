@@ -11,6 +11,30 @@ use super::ifp::inner_fit_polygon;
 use super::nfp::no_fit_polygon;
 use super::spatial_grid::SpatialGrid;
 
+/// Weight applied to the gravity penalty (distance from origin).
+/// A small value because gravity is a weak optimization signal —
+/// it only breaks ties between otherwise-equivalent placements.
+const GRAVITY_PENALTY_WEIGHT: f64 = 0.001;
+
+/// Weight applied to the compaction penalty (bounding-box spread).
+/// A medium value to encourage tight packing on the sheet.
+const COMPACTION_PENALTY_WEIGHT: f64 = 0.01;
+
+/// Relative importance of vertical vs horizontal compaction.
+/// Height differences are penalised 10× more than width, biasing
+/// toward layouts that minimise Y-axis extents.
+const COMPACTION_HEIGHT_FACTOR: f64 = 10.0;
+
+/// Weight applied to the orientation penalty (deviation from axis-aligned).
+/// A small value because rotation is only adjusted when other metrics
+/// are equal.
+const ORIENTATION_PENALTY_WEIGHT: f64 = 0.05;
+
+/// Penalty added per missing part. Fitness is on the order of single-digit
+/// values for good layouts, so 1000 ensures any solution that omits a part
+/// ranks far below one that places everything.
+const MISSING_PARTS_PENALTY: f64 = 1000.0;
+
 /// A single placed part result.
 #[derive(Clone, Debug)]
 pub struct PlacedPart {
@@ -1100,7 +1124,7 @@ pub fn calculate_fitness(
         let width = b.2 - b.0;
         let height = b.3 - b.1;
         total_bounds_area += width * height;
-        compaction_penalty += width + height * 10.0;
+        compaction_penalty += width + height * COMPACTION_HEIGHT_FACTOR;
         gravity_penalty += b.0 + b.1;
         gravity_penalty += b.4 - (b.0 * b.6 as f64);
         gravity_penalty += b.5 - (b.1 * b.6 as f64);
@@ -1109,8 +1133,8 @@ pub fn calculate_fitness(
     let mut fitness = total_bounds_area / total_part_area;
 
     let scale_factor = total_part_area.sqrt().max(1.0);
-    fitness += (gravity_penalty / scale_factor) * 0.001;
-    fitness += (compaction_penalty / scale_factor) * 0.01;
+    fitness += (gravity_penalty / scale_factor) * GRAVITY_PENALTY_WEIGHT;
+    fitness += (compaction_penalty / scale_factor) * COMPACTION_PENALTY_WEIGHT;
 
     // Orientation penalty
     let mut orientation_penalty = 0.0;
@@ -1123,7 +1147,8 @@ pub fn calculate_fitness(
             } else {
                 rotation_mod
             };
-            orientation_penalty += (rot_mod / 90.0) * 0.05;
+            orientation_penalty +=
+                (rot_mod / 90.0) * ORIENTATION_PENALTY_WEIGHT;
         }
     }
     fitness += orientation_penalty;
@@ -1131,7 +1156,7 @@ pub fn calculate_fitness(
     // Missing parts penalty
     if num_parts > 0 && polygon_groups.len() < num_parts {
         let missing = (num_parts - polygon_groups.len()) as f64;
-        fitness += missing * 1000.0;
+        fitness += missing * MISSING_PARTS_PENALTY;
     }
 
     fitness
