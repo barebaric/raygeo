@@ -24,7 +24,8 @@ or macOS Apple Silicon). Pre-compiled wheels are available on
 ### Building Paths
 
 The `Geometry` class is the core abstraction. It stores a vector path as a
-sequence of move, line, arc, and cubic Bezier commands:
+sequence of move, line, arc, and cubic Bezier commands. All mutating methods
+return `self` for chaining:
 
 ```python
 from raygeo import Geometry
@@ -42,37 +43,18 @@ print(g.rect())    # (0.0, 0.0, 10.0, 10.0)
 print(g.is_closed())  # True
 ```
 
+Builder methods can be chained:
+
+```python
+g = Geometry()
+g.move_to(0, 0).line_to(10, 0).line_to(10, 10).line_to(0, 10).close_path()
+```
+
 You can also create paths from point lists:
 
 ```python
 triangle = Geometry.from_points([(0, 0), (10, 0), (5, 8.66)])
 ```
-
-### Accessing Raw Data
-
-Internally, geometry data is stored as an `(N, 8)` NumPy float64 array.
-Each row represents one command:
-
-```python
-import numpy as np
-from raygeo import COL_TYPE, COL_X, COL_Y, CMD_TYPE_LINE
-
-data = g.data  # numpy array, shape (N, 8)
-print(data[:, COL_X])  # all x coordinates
-```
-
-The 8 columns are:
-
-| Column               | Index | Description                              |
-| -------------------- | ----- | ---------------------------------------- |
-| `COL_TYPE`           | 0     | Command type (move/line/arc/bezier)      |
-| `COL_X`              | 1     | X coordinate                             |
-| `COL_Y`              | 2     | Y coordinate                             |
-| `COL_Z`              | 3     | Z coordinate                             |
-| `COL_I` / `COL_C1X`  | 4     | Arc center offset X / Bezier control 1 X |
-| `COL_J` / `COL_C1Y`  | 5     | Arc center offset Y / Bezier control 1 Y |
-| `COL_CW` / `COL_C2X` | 6     | Arc clockwise flag / Bezier control 2 X  |
-| — / `COL_C2Y`        | 7     | (unused for arcs) / Bezier control 2 Y   |
 
 ### Arcs and Bezier Curves
 
@@ -104,13 +86,17 @@ print(g.is_closed())      # path closure check
 print(g.segments())       # split into sub-paths
 
 # Find closest point on path
-result = g.find_closest_point(5, 5)  # (segment_index, distance, (px, py))
+result = g.find_closest_point(5, 5)  # (segment_index, t, (x, y))
 
 # Point and tangent at parameter t on a segment
-pos, tangent = g.get_point_and_tangent_at(segment_index=0, t=0.5)
+point = g.get_point_at(segment_index=0, t=0.5)
+tangent = g.get_tangent_at(segment_index=0, t=0.5)
 ```
 
 ### Transformations
+
+All transformation methods mutate the geometry in place and return `self`,
+allowing chaining. Use `.copy()` first if you need to preserve the original:
 
 ```python
 import numpy as np
@@ -118,11 +104,16 @@ from raygeo import Geometry
 
 g = Geometry.from_points([(0, 0), (10, 0), (10, 10), (0, 10)])
 
-# Offset (grow/shrink)
-grown = g.grow(2.0)   # offset outward by 2 units
-shrunk = g.grow(-1.0)  # offset inward by 1 unit
+# Offset (grow/shrink) — mutates in place
+g.grow(2.0)   # offset outward by 2 units
+print(g.area())  # 144.0
 
-# Affine transform (4x4 matrix)
+# Use .copy() to preserve the original
+original = Geometry.from_points([(0, 0), (10, 0), (10, 10), (0, 10)])
+shrunk = original.copy()
+shrunk.grow(-1.0)  # offset inward by 1 unit
+
+# Affine transform (4x4 matrix) — mutates in place
 matrix = [
     [1, 0, 0, 5],  # translate x by 5
     [0, 1, 0, 3],  # translate y by 3
@@ -131,8 +122,8 @@ matrix = [
 ]
 g.transform(matrix)
 
-# Map geometry into a frame
-mapped = g.map_to_frame(
+# Map geometry into a frame — mutates in place
+g.map_to_frame(
     origin=(0, 0),
     p_width=(100, 0),
     p_height=(0, 100),
@@ -140,22 +131,34 @@ mapped = g.map_to_frame(
 
 g.flip_x()  # negate all x coordinates
 g.flip_y()  # negate all y coordinates
+
+# Chaining is possible since all methods return self
+g2 = Geometry.from_points([(0, 0), (10, 0), (10, 10), (0, 10)])
+g2.transform(matrix).flip_x().grow(1.0)
 ```
 
 ### Contour Operations
 
+All contour methods mutate the geometry in place and return `self`:
+
 ```python
-# Split into separate closed contours
+# Split into separate closed contours (returns list, does not mutate)
 contours = g.split_into_contours()
 
-# Split into disconnected components
+# Split into disconnected components (returns list, does not mutate)
 components = g.split_into_components()
 
-# Separate holes from solids
+# Separate holes from solids (returns tuple, does not mutate)
 inner, outer = g.split_inner_and_outer_contours()
 
-# Remove shared edges between sub-paths
-outer_only = g.remove_inner_edges()
+# Normalize winding orders — mutates in place
+g.normalize_winding_orders()
+
+# Filter to only external contours — mutates in place
+g.filter_to_external_contours()
+
+# Remove shared edges between sub-paths — mutates in place
+g.remove_inner_edges()
 ```
 
 ### Polygon Operations
@@ -200,6 +203,8 @@ get_polygon_area(sq_np)  # also works with numpy arrays
 
 ### Curve Fitting
 
+All fitting methods mutate the geometry in place and return `self`:
+
 ```python
 from raygeo import Geometry
 
@@ -213,7 +218,7 @@ g.linearize(tolerance=0.01)
 g.fit_arcs(tolerance=0.5)
 g.fit_curves(tolerance=0.5, beziers=True, arcs=True)
 
-# Convert geometry to polygons
+# Convert geometry to polygons (returns list, does not mutate)
 polygons = g.to_polygons(tolerance=0.01)
 ```
 
@@ -273,16 +278,16 @@ make check
 
 ### Available Make Targets
 
-| Target           | Description                              |
-| ---------------- | ---------------------------------------- |
-| `make dev`       | Build and install into the active venv   |
-| `make build`     | Build release wheel to `dist/`           |
-| `make test`      | Run pytest                               |
-| `make lint`      | Lint Rust + Python (including pyright)   |
-| `make format`    | Auto-format Rust + Python               |
-| `make check`     | Lint + test                              |
-| `make stubs`     | Regenerate `.pyi` type stubs             |
-| `make visual`    | Launch Streamlit visual test playground  |
+| Target        | Description                             |
+| ------------- | --------------------------------------- |
+| `make dev`    | Build and install into the active venv  |
+| `make build`  | Build release wheel to `dist/`          |
+| `make test`   | Run pytest                              |
+| `make lint`   | Lint Rust + Python (including pyright)  |
+| `make format` | Auto-format Rust + Python               |
+| `make check`  | Lint + test                             |
+| `make stubs`  | Regenerate `.pyi` type stubs            |
+| `make visual` | Launch Streamlit visual test playground |
 
 ### Visual Testing
 

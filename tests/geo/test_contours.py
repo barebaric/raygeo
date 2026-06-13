@@ -126,10 +126,12 @@ def test_normalize_winding_donut_all_ccw():
 
     combined = outer.copy()
     combined.extend(hole)
-    normalized = combined.normalize_winding_orders()
-    assert len(normalized) == 2
-    assert normalized[0].data is not None
-    assert normalized[1].data is not None
+    result = combined.normalize_winding_orders()
+    assert result is combined
+    contours = result.split_into_contours()
+    assert len(contours) == 2
+    assert contours[0].data is not None
+    assert contours[1].data is not None
 
 
 def test_normalize_winding_with_incorrect_container():
@@ -151,24 +153,28 @@ def test_normalize_winding_with_incorrect_container():
     # Therefore, it would think the hole isn't nested and would not flip it.
     combined = outer_cw.copy()
     combined.extend(hole_ccw)
-    normalized = combined.normalize_winding_orders()
+    result = combined.normalize_winding_orders()
 
-    assert len(normalized) == 2
-    assert normalized[1].data is not None
+    assert result is combined
+    contours = result.split_into_contours()
+    assert len(contours) == 2
+    assert contours[1].data is not None
 
 
-def test_filter_external_empty_list():
-    """Tests filtering an empty list of contours."""
+def test_filter_external_empty():
+    """Tests filtering an empty geometry."""
     combined = Geometry()
     result = combined.filter_to_external_contours()
-    assert result == []
+    assert result is combined
+    assert result.is_empty()
 
 
 def test_filter_external_single_contour():
     """Tests a single contour, which should always be external."""
     contour = Geometry.from_points([(0, 0), (10, 0), (10, 10), (0, 10)])
     result = contour.filter_to_external_contours()
-    assert len(result) == 1
+    assert result is contour
+    assert len(result.split_into_contours()) == 1
 
 
 def test_filter_external_shape_with_hole():
@@ -178,7 +184,8 @@ def test_filter_external_shape_with_hole():
     combined = outer.copy()
     combined.extend(hole)
     result = combined.filter_to_external_contours()
-    assert len(result) == 1
+    assert result is combined
+    assert len(result.split_into_contours()) == 1
 
 
 def test_filter_external_bullseye_nesting():
@@ -190,7 +197,8 @@ def test_filter_external_bullseye_nesting():
     combined.extend(c2)
     combined.extend(c3)
     result = combined.filter_to_external_contours()
-    assert len(result) == 2
+    assert result is combined
+    assert len(result.split_into_contours()) == 2
 
 
 def test_filter_external_robust_to_winding_order():
@@ -208,7 +216,8 @@ def test_filter_external_robust_to_winding_order():
     combined = outer.copy()
     combined.extend(incorrect_hole)
     result = combined.filter_to_external_contours()
-    assert len(result) == 1
+    assert result is combined
+    assert len(result.split_into_contours()) == 1
 
 
 def test_filter_external_two_separate_shapes():
@@ -218,7 +227,8 @@ def test_filter_external_two_separate_shapes():
     combined = s1.copy()
     combined.extend(s2)
     result = combined.filter_to_external_contours()
-    assert len(result) == 2
+    assert result is combined
+    assert len(result.split_into_contours()) == 2
 
 
 def test_filter_external_shape_inside_another_hole():
@@ -236,7 +246,8 @@ def test_filter_external_shape_inside_another_hole():
     combined.extend(c3_island)
     result = combined.filter_to_external_contours()
 
-    assert len(result) == 2
+    assert result is combined
+    assert len(result.split_into_contours()) == 2
 
 
 def test_remove_inner_edges():
@@ -248,7 +259,7 @@ def test_remove_inner_edges():
     geo_empty = Geometry()
     result_empty = geo_empty.remove_inner_edges()
     assert result_empty.is_empty()
-    assert result_empty is not geo_empty, "Should return a new object"
+    assert result_empty is geo_empty
 
     # Test Case 2: Geometry with only an open path
     geo_open = Geometry()
@@ -459,11 +470,11 @@ def test_get_valid_contours_data_vertices_extraction():
 
 
 def test_close_all_contours_empty():
-    """Tests that closing an empty geometry returns a copy."""
+    """Tests that closing an empty geometry returns self."""
     geo = Geometry()
     result = geo.close_all_contours()
     assert result.is_empty()
-    assert result is not geo, "Should return a new object"
+    assert result is geo
 
 
 def test_close_all_contours_single_open():

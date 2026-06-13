@@ -106,7 +106,7 @@ class Geometry:
         r"""
         Create a new empty Geometry.
         """
-    def move_to(self, x: builtins.float, y: builtins.float, z: builtins.float = 0.0) -> None:
+    def move_to(self, x: builtins.float, y: builtins.float, z: builtins.float = 0.0) -> Geometry:
         r"""
         Move the pen to the given coordinates.
         
@@ -114,7 +114,7 @@ class Geometry:
         :param y: Y coordinate.
         :param z: Z coordinate (default 0.0).
         """
-    def line_to(self, x: builtins.float, y: builtins.float, z: builtins.float = 0.0) -> None:
+    def line_to(self, x: builtins.float, y: builtins.float, z: builtins.float = 0.0) -> Geometry:
         r"""
         Draw a line to the given coordinates.
         
@@ -122,11 +122,11 @@ class Geometry:
         :param y: Y coordinate.
         :param z: Z coordinate (default 0.0).
         """
-    def close_path(self) -> None:
+    def close_path(self) -> Geometry:
         r"""
         Close the current sub-path.
         """
-    def arc_to(self, x: builtins.float, y: builtins.float, i: builtins.float = 0.0, j: builtins.float = 0.0, clockwise: builtins.bool = True, z: builtins.float = 0.0) -> None:
+    def arc_to(self, x: builtins.float, y: builtins.float, i: builtins.float = 0.0, j: builtins.float = 0.0, clockwise: builtins.bool = True, z: builtins.float = 0.0) -> Geometry:
         r"""
         Draw an arc to the given coordinates.
         
@@ -137,7 +137,7 @@ class Geometry:
         :param clockwise: Whether the arc is clockwise.
         :param z: Z coordinate (default 0.0).
         """
-    def bezier_to(self, x: builtins.float, y: builtins.float, c1x: builtins.float, c1y: builtins.float, c2x: builtins.float, c2y: builtins.float, z: builtins.float = 0.0) -> None:
+    def bezier_to(self, x: builtins.float, y: builtins.float, c1x: builtins.float, c1y: builtins.float, c2x: builtins.float, c2y: builtins.float, z: builtins.float = 0.0) -> Geometry:
         r"""
         Draw a cubic bezier curve.
         
@@ -161,7 +161,7 @@ class Geometry:
         r"""
         Check if the geometry has no commands.
         """
-    def clear(self) -> None:
+    def clear(self) -> Geometry:
         r"""
         Remove all commands from the geometry.
         """
@@ -173,7 +173,7 @@ class Geometry:
         r"""
         Get the last point in the geometry.
         """
-    def extend(self, other: Geometry) -> None:
+    def extend(self, other: Geometry) -> Geometry:
         r"""
         Append another geometry's commands to this one.
         
@@ -352,7 +352,7 @@ class Geometry:
         :param t: Parameter in [0, 1].
         :returns: Normal vector or None.
         """
-    def arc_to_as_bezier(self, x: builtins.float, y: builtins.float, i: builtins.float, j: builtins.float, clockwise: builtins.bool = True, z: builtins.float = 0.0) -> None:
+    def arc_to_as_bezier(self, x: builtins.float, y: builtins.float, i: builtins.float, j: builtins.float, clockwise: builtins.bool = True, z: builtins.float = 0.0) -> Geometry:
         r"""
         Draw an arc, converting it to bezier curves.
         
@@ -429,11 +429,11 @@ class Geometry:
         r"""
         Close all open contours in the geometry.
         """
-    def normalize_winding_orders(self) -> builtins.list[Geometry]:
+    def normalize_winding_orders(self) -> Geometry:
         r"""
         Normalize winding orders (outer CCW, inner CW) of all contours.
         """
-    def filter_to_external_contours(self) -> builtins.list[Geometry]:
+    def filter_to_external_contours(self) -> Geometry:
         r"""
         Filter to only external (outermost) contours.
         """

@@ -181,8 +181,10 @@ def test_grow_simple_square():
         "Expected grown vertex not found"
     )
 
-    # Shrink the square
-    shrunk_square = square.grow(-1.0)
+    # Shrink a fresh square
+    shrunk_square = Geometry.from_points(
+        [(0, 0), (10, 0), (10, 10), (0, 10)]
+    ).grow(-1.0)
     assert shrunk_square.area() == pytest.approx(64.0)  # (10-2)^2
     shrunk_points = shrunk_square.segments()[0]
     assert any(np.allclose(p, (1.0, 1.0, 0.0)) for p in shrunk_points), (
@@ -192,15 +194,14 @@ def test_grow_simple_square():
 
 def test_grow_clockwise_square():
     """Tests that offset direction is consistent for a CW shape."""
-    # A clockwise square
-    square_cw = Geometry.from_points([(0, 0), (0, 10), (10, 10), (10, 0)])
-
-    # A positive offset on any shape should grow it
-    grown_square = square_cw.grow(1.0)
+    # A clockwise square — positive offset should grow it
+    grown_square = Geometry.from_points([(0, 0), (0, 10), (10, 10), (10, 0)])
+    grown_square.grow(1.0)
     assert grown_square.area() == pytest.approx(144.0)
 
     # A negative offset on any shape should shrink it
-    shrunk_square = square_cw.grow(-1.0)
+    shrunk_square = Geometry.from_points([(0, 0), (0, 10), (10, 10), (10, 0)])
+    shrunk_square.grow(-1.0)
     assert shrunk_square.area() == pytest.approx(64.0)
 
 
@@ -210,19 +211,22 @@ def test_grow_shape_with_hole():
     outer = Geometry.from_points([(0, 0), (20, 0), (20, 20), (0, 20)])
     # Inner CW square (hole) (5,5) -> (15,15), Area = -100
     inner = Geometry.from_points([(5, 5), (5, 15), (15, 15), (15, 5)])
+
     shape_with_hole = outer.copy()
     shape_with_hole.extend(inner)
     assert shape_with_hole.area() == pytest.approx(300.0)
 
     # Grow by 1. Outer becomes 22x22, inner becomes 8x8.
     # New area = 22*22 - 8*8 = 484 - 64 = 420.
-    grown_shape = shape_with_hole.grow(1.0)
-    assert grown_shape.area() == pytest.approx(420.0)
+    shape_with_hole.grow(1.0)
+    assert shape_with_hole.area() == pytest.approx(420.0)
 
-    # Shrink by 1. Outer becomes 18x18, inner becomes 12x12.
+    # Shrink a fresh copy by 1. Outer becomes 18x18, inner becomes 12x12.
     # New area = 18*18 - 12*12 = 324 - 144 = 180.
-    shrunk_shape = shape_with_hole.grow(-1.0)
-    assert shrunk_shape.area() == pytest.approx(180.0)
+    fresh = outer.copy()
+    fresh.extend(inner)
+    fresh.grow(-1.0)
+    assert fresh.area() == pytest.approx(180.0)
 
 
 def test_grow_open_path_is_ignored():
@@ -247,18 +251,15 @@ def test_grow_circle():
     assert circle.area() == pytest.approx(original_area, rel=1e-3)
 
     # Grow the circle
-    offset = 2.0
-    grown_circle = circle.grow(offset)
-    expected_grown_area = math.pi * (radius + offset) ** 2
-    assert grown_circle.area() == pytest.approx(expected_grown_area, rel=1e-2)
+    circle.grow(2.0)
+    expected_grown_area = math.pi * (radius + 2.0) ** 2
+    assert circle.area() == pytest.approx(expected_grown_area, rel=1e-2)
 
-    # Shrink the circle
-    offset = -2.0
-    shrunk_circle = circle.grow(offset)
-    expected_shrunk_area = math.pi * (radius + offset) ** 2
-    assert shrunk_circle.area() == pytest.approx(
-        expected_shrunk_area, rel=1e-2
-    )
+    # Shrink a fresh circle
+    fresh = Geometry.from_points(points)
+    fresh.grow(-2.0)
+    expected_shrunk_area = math.pi * (radius - 2.0) ** 2
+    assert fresh.area() == pytest.approx(expected_shrunk_area, rel=1e-2)
 
 
 def test_shrink_to_nothing():
@@ -266,15 +267,15 @@ def test_shrink_to_nothing():
     square = Geometry.from_points([(0, 0), (10, 0), (10, 10), (0, 10)])
 
     # Shrinking by half the width should result in a zero-area shape
-    shrunk_to_point = square.grow(-5.0)
-    assert shrunk_to_point.area() == pytest.approx(0.0)
+    square.grow(-5.0)
+    assert square.area() == pytest.approx(0.0)
 
-    # Shrinking by more than the half-width should also result in zero area
-    shrunk_past_zero = square.grow(-6.0)
+    # Shrinking a fresh square by more than the half-width
+    square2 = Geometry.from_points([(0, 0), (10, 0), (10, 10), (0, 10)])
+    square2.grow(-6.0)
     # The algorithm might produce a small self-intersecting shape with non-zero
-    # area in this case, but it should be very small. A robust offset algorithm
-    # would clean this up, but for now we check that it's close to zero.
-    assert shrunk_past_zero.area() == pytest.approx(0.0, abs=1.0)
+    # area in this case, but it should be very small.
+    assert square2.area() == pytest.approx(0.0, abs=1.0)
 
 
 def test_grow_adjacent_contours_preserved():

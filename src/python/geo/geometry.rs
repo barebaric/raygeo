@@ -226,8 +226,14 @@ impl Geometry {
     /// :param y: Y coordinate.
     /// :param z: Z coordinate (default 0.0).
     #[pyo3(signature = (x, y, z=0.0))]
-    fn move_to(&mut self, x: f64, y: f64, z: f64) {
-        self.inner.move_to(x, y, z);
+    fn move_to(
+        slf: Bound<'_, Self>,
+        x: f64,
+        y: f64,
+        z: f64,
+    ) -> Bound<'_, Self> {
+        slf.borrow_mut().inner.move_to(x, y, z);
+        slf
     }
 
     /// Draw a line to the given coordinates.
@@ -236,13 +242,20 @@ impl Geometry {
     /// :param y: Y coordinate.
     /// :param z: Z coordinate (default 0.0).
     #[pyo3(signature = (x, y, z=0.0))]
-    fn line_to(&mut self, x: f64, y: f64, z: f64) {
-        self.inner.line_to(x, y, z);
+    fn line_to(
+        slf: Bound<'_, Self>,
+        x: f64,
+        y: f64,
+        z: f64,
+    ) -> Bound<'_, Self> {
+        slf.borrow_mut().inner.line_to(x, y, z);
+        slf
     }
 
     /// Close the current sub-path.
-    fn close_path(&mut self) {
-        self.inner.close_path();
+    fn close_path(slf: Bound<'_, Self>) -> Bound<'_, Self> {
+        slf.borrow_mut().inner.close_path();
+        slf
     }
 
     /// Draw an arc to the given coordinates.
@@ -255,15 +268,16 @@ impl Geometry {
     /// :param z: Z coordinate (default 0.0).
     #[pyo3(signature = (x, y, i=0.0, j=0.0, clockwise=true, z=0.0))]
     fn arc_to(
-        &mut self,
+        slf: Bound<'_, Self>,
         x: f64,
         y: f64,
         i: f64,
         j: f64,
         clockwise: bool,
         z: f64,
-    ) {
-        self.inner.arc_to(x, y, i, j, clockwise, z);
+    ) -> Bound<'_, Self> {
+        slf.borrow_mut().inner.arc_to(x, y, i, j, clockwise, z);
+        slf
     }
 
     /// Draw a cubic bezier curve.
@@ -278,7 +292,7 @@ impl Geometry {
     #[pyo3(signature = (x, y, c1x, c1y, c2x, c2y, z=0.0))]
     #[allow(clippy::too_many_arguments)]
     fn bezier_to(
-        &mut self,
+        slf: Bound<'_, Self>,
         x: f64,
         y: f64,
         c1x: f64,
@@ -286,8 +300,11 @@ impl Geometry {
         c2x: f64,
         c2y: f64,
         z: f64,
-    ) {
-        self.inner.bezier_to(((c1x, c1y), (c2x, c2y), (x, y)), z);
+    ) -> Bound<'_, Self> {
+        slf.borrow_mut()
+            .inner
+            .bezier_to(((c1x, c1y), (c2x, c2y), (x, y)), z);
+        slf
     }
 
     /// Return the number of commands.
@@ -341,8 +358,9 @@ impl Geometry {
     }
 
     /// Remove all commands from the geometry.
-    fn clear(&mut self) {
-        self.inner.clear();
+    fn clear(slf: Bound<'_, Self>) -> Bound<'_, Self> {
+        slf.borrow_mut().inner.clear();
+        slf
     }
 
     /// The coordinates of the last move-to command.
@@ -406,8 +424,12 @@ impl Geometry {
     /// Append another geometry's commands to this one.
     ///
     /// :param other: The geometry to append.
-    fn extend(&mut self, other: &Geometry) {
-        self.inner.extend(&other.inner);
+    fn extend<'a>(
+        slf: Bound<'a, Self>,
+        other: &'a Geometry,
+    ) -> Bound<'a, Self> {
+        slf.borrow_mut().inner.extend(&other.inner);
+        slf
     }
 
     /// Return the bounding rectangle (x_min, x_max, y_min, y_max).
@@ -838,12 +860,12 @@ impl Geometry {
             return Ok(geo);
         }
         let first = &points_vec[0];
-        geo.move_to(first.x, first.y, first.z);
+        geo.inner.move_to(first.x, first.y, first.z);
         for p in &points_vec[1..] {
-            geo.line_to(p.x, p.y, p.z);
+            geo.inner.line_to(p.x, p.y, p.z);
         }
         if close && points_vec.len() > 2 {
-            geo.close_path();
+            geo.inner.close_path();
         }
         Ok(geo)
     }
@@ -875,23 +897,27 @@ impl Geometry {
     /// Simplify the geometry using Ramer-Douglas-Peucker.
     ///
     /// :param tolerance: Maximum deviation from original.
-    fn simplify(&mut self, tolerance: f64) -> Self {
-        if self.inner.data.len() > 2 {
-            let simplified = simplify_data(&self.inner.data, tolerance);
-            self.inner.data = simplified;
+    fn simplify(slf: Bound<'_, Self>, tolerance: f64) -> Bound<'_, Self> {
+        let mut geo = slf.borrow_mut();
+        if geo.inner.data.len() > 2 {
+            let simplified = simplify_data(&geo.inner.data, tolerance);
+            geo.inner.data = simplified;
         }
-        self.clone()
+        drop(geo);
+        slf
     }
 
     /// Convert all curves to line segments.
     ///
     /// :param tolerance: Maximum deviation from curves.
-    fn linearize(&mut self, tolerance: f64) -> Self {
-        if !self.inner.data.is_empty() {
-            let linearized = linearize_data(&self.inner.data, tolerance);
-            self.inner.data = linearized;
+    fn linearize(slf: Bound<'_, Self>, tolerance: f64) -> Bound<'_, Self> {
+        let mut geo = slf.borrow_mut();
+        if !geo.inner.data.is_empty() {
+            let linearized = linearize_data(&geo.inner.data, tolerance);
+            geo.inner.data = linearized;
         }
-        self.clone()
+        drop(geo);
+        slf
     }
 
     /// Fit curves (beziers and arcs) to the linearized geometry.
@@ -902,25 +928,29 @@ impl Geometry {
     /// :param on_progress: Optional progress callback.
     #[pyo3(signature = (tolerance, beziers=true, arcs=true, on_progress=None))]
     fn fit_curves(
-        &mut self,
+        slf: Bound<'_, Self>,
         tolerance: f64,
         beziers: bool,
         arcs: bool,
         on_progress: Option<pyo3::Py<pyo3::PyAny>>,
-    ) -> Self {
+    ) -> Bound<'_, Self> {
         let _ = on_progress;
-        if !self.inner.data.is_empty() {
-            let fitted = fit_curves(&self.inner.data, tolerance, beziers, arcs);
-            self.inner.data = fitted;
+        {
+            let mut geo = slf.borrow_mut();
+            if !geo.inner.data.is_empty() {
+                let fitted =
+                    fit_curves(&geo.inner.data, tolerance, beziers, arcs);
+                geo.inner.data = fitted;
+            }
         }
-        self.clone()
+        slf
     }
 
     /// Fit arcs only to the linearized geometry.
     ///
     /// :param tolerance: Maximum deviation.
-    fn fit_arcs(&mut self, tolerance: f64) -> Self {
-        self.fit_curves(tolerance, false, true, None)
+    fn fit_arcs(slf: Bound<'_, Self>, tolerance: f64) -> Bound<'_, Self> {
+        Self::fit_curves(slf, tolerance, false, true, None)
     }
 
     /// Convert all arcs to bezier curves for uniform scaling.
@@ -1116,18 +1146,21 @@ impl Geometry {
     /// :param z: End Z coordinate.
     #[pyo3(signature = (x, y, i, j, clockwise=true, z=0.0))]
     fn arc_to_as_bezier(
-        &mut self,
+        slf: Bound<'_, Self>,
         x: f64,
         y: f64,
         i: f64,
         j: f64,
         clockwise: bool,
         z: f64,
-    ) {
-        let start_point = if let Some(last) = self.inner.data().last() {
-            last.end_point()
-        } else {
-            self.inner.last_move_to
+    ) -> Bound<'_, Self> {
+        let start_point = {
+            let inner = slf.borrow();
+            if let Some(last) = inner.inner.data().last() {
+                last.end_point()
+            } else {
+                inner.inner.last_move_to
+            }
         };
         let end_point = (x, y, z);
         let center_offset = (i, j);
@@ -1137,7 +1170,8 @@ impl Geometry {
             center_offset,
             clockwise,
         );
-        self.inner.data.extend(beziers);
+        slf.borrow_mut().inner.data.extend(beziers);
+        slf
     }
 
     /// Check if the geometry has self-intersections.
@@ -1169,9 +1203,13 @@ impl Geometry {
     ///
     /// :param amount: Positive to grow, negative to shrink.
     #[pyo3(signature = (amount))]
-    fn grow(&self, amount: f64) -> Self {
-        let result = grow_geometry(&self.inner, amount);
-        Geometry { inner: result }
+    fn grow(slf: Bound<'_, Self>, amount: f64) -> Bound<'_, Self> {
+        let result = {
+            let geo = slf.borrow();
+            grow_geometry(&geo.inner, amount)
+        };
+        slf.borrow_mut().inner = result;
+        slf
     }
 
     /// Check if this geometry encloses another.
@@ -1182,10 +1220,13 @@ impl Geometry {
     }
 
     /// Remove inner edges (shared between contours).
-    fn remove_inner_edges(&mut self) -> PyResult<Geometry> {
-        Ok(Geometry {
-            inner: remove_inner_edges(&self.inner),
-        })
+    fn remove_inner_edges(slf: Bound<'_, Self>) -> Bound<'_, Self> {
+        let result = {
+            let geo = slf.borrow();
+            remove_inner_edges(&geo.inner)
+        };
+        slf.borrow_mut().inner = result;
+        slf
     }
 
     /// Split contours into inner and outer groups.
@@ -1222,7 +1263,7 @@ impl Geometry {
     #[pyo3(signature = (origin, p_width, p_height, anchor_y=None, stable_src_height=None, anchor_x=None, stable_src_width=None))]
     #[allow(clippy::too_many_arguments)]
     fn map_to_frame(
-        &self,
+        slf: Bound<'_, Self>,
         origin: (f64, f64),
         p_width: (f64, f64),
         p_height: (f64, f64),
@@ -1230,18 +1271,22 @@ impl Geometry {
         stable_src_height: Option<f64>,
         anchor_x: Option<f64>,
         stable_src_width: Option<f64>,
-    ) -> Geometry {
-        let result = map_geometry_to_frame(
-            &self.inner,
-            origin,
-            p_width,
-            p_height,
-            anchor_y,
-            stable_src_height,
-            anchor_x,
-            stable_src_width,
-        );
-        Geometry { inner: result }
+    ) -> Bound<'_, Self> {
+        let result = {
+            let geo = slf.borrow();
+            map_geometry_to_frame(
+                &geo.inner,
+                origin,
+                p_width,
+                p_height,
+                anchor_y,
+                stable_src_height,
+                anchor_x,
+                stable_src_width,
+            )
+        };
+        slf.borrow_mut().inner = result;
+        slf
     }
 
     /// Split the geometry into individual contours.
@@ -1288,35 +1333,53 @@ impl Geometry {
     }
 
     /// Reverse the winding direction of all contours.
-    fn reverse_contour(&self) -> Geometry {
-        Geometry {
-            inner: reverse_contour(&self.inner),
-        }
+    fn reverse_contour(slf: Bound<'_, Self>) -> Bound<'_, Self> {
+        let result = {
+            let geo = slf.borrow();
+            reverse_contour(&geo.inner)
+        };
+        slf.borrow_mut().inner = result;
+        slf
     }
 
     /// Close all open contours in the geometry.
-    fn close_all_contours(&self) -> Geometry {
-        Geometry {
-            inner: close_all_contours(&self.inner),
-        }
+    fn close_all_contours(slf: Bound<'_, Self>) -> Bound<'_, Self> {
+        let result = {
+            let geo = slf.borrow();
+            close_all_contours(&geo.inner)
+        };
+        slf.borrow_mut().inner = result;
+        slf
     }
 
     /// Normalize winding orders (outer CCW, inner CW) of all contours.
-    fn normalize_winding_orders(&self) -> Vec<Geometry> {
-        let contours = split_into_contours(&self.inner);
-        normalize_winding_orders(&contours)
-            .into_iter()
-            .map(|g| Geometry { inner: g })
-            .collect()
+    fn normalize_winding_orders(slf: Bound<'_, Self>) -> Bound<'_, Self> {
+        let normalized = {
+            let geo = slf.borrow();
+            let contours = split_into_contours(&geo.inner);
+            normalize_winding_orders(&contours)
+        };
+        let mut new_inner = CoreGeometry::new();
+        for n in normalized {
+            new_inner.extend(&n);
+        }
+        slf.borrow_mut().inner = new_inner;
+        slf
     }
 
     /// Filter to only external (outermost) contours.
-    fn filter_to_external_contours(&self) -> Vec<Geometry> {
-        let contours = split_into_contours(&self.inner);
-        filter_to_external_contours(&contours)
-            .into_iter()
-            .map(|g| Geometry { inner: g })
-            .collect()
+    fn filter_to_external_contours(slf: Bound<'_, Self>) -> Bound<'_, Self> {
+        let external = {
+            let geo = slf.borrow();
+            let contours = split_into_contours(&geo.inner);
+            filter_to_external_contours(&contours)
+        };
+        let mut new_inner = CoreGeometry::new();
+        for n in external {
+            new_inner.extend(&n);
+        }
+        slf.borrow_mut().inner = new_inner;
+        slf
     }
 
     /// Get valid contour data from the geometry's contours.
