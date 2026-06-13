@@ -1,5 +1,13 @@
 use crate::image::srgb;
 
+/// Epsilon used when dividing by alpha to avoid division by zero.
+const ALPHA_EPSILON: f32 = 1e-6;
+
+/// Luminance coefficients from ITU-R BT.709 / Rec. 709.
+const R_LUMINANCE: f32 = 0.2989;
+const G_LUMINANCE: f32 = 0.5870;
+const B_LUMINANCE: f32 = 0.1140;
+
 pub fn rgba_to_grayscale(
     rgba: &[u8],
     width: usize,
@@ -17,7 +25,7 @@ pub fn rgba_to_grayscale(
             let r = rgba[px + 2] as f32;
             let a = rgba[px + 3] as f32 / 255.0;
 
-            let a_safe = a.max(1e-6);
+            let a_safe = a.max(ALPHA_EPSILON);
             let r_unpremult = (r / a_safe).clamp(0.0, 255.0);
             let g_unpremult = (g / a_safe).clamp(0.0, 255.0);
             let b_unpremult = (b / a_safe).clamp(0.0, 255.0);
@@ -30,8 +38,9 @@ pub fn rgba_to_grayscale(
             let g_blended = 1.0 - (1.0 - g_lin) * a;
             let b_blended = 1.0 - (1.0 - b_lin) * a;
 
-            let gray_lin =
-                0.2989 * r_blended + 0.5870 * g_blended + 0.1140 * b_blended;
+            let gray_lin = R_LUMINANCE * r_blended
+                + G_LUMINANCE * g_blended
+                + B_LUMINANCE * b_blended;
 
             let idx = y * width + x;
             let inv_lut = srgb::linear_to_srgb_lut();
@@ -69,7 +78,8 @@ pub fn rgba_to_binary(
             let g_lin = lut[g as usize];
             let b_lin = lut[b as usize];
 
-            let gray_lin = 0.2989 * r_lin + 0.5870 * g_lin + 0.1140 * b_lin;
+            let gray_lin =
+                R_LUMINANCE * r_lin + G_LUMINANCE * g_lin + B_LUMINANCE * b_lin;
 
             let vi = gray_lin.clamp(0.0, 1.0);
             let li = (vi * scale as f32).round() as usize;
@@ -108,7 +118,8 @@ pub fn rgba_to_grayscale_inplace(
             let g_lin = lut[g as usize];
             let b_lin = lut[b as usize];
 
-            let gray_lin = 0.2989 * r_lin + 0.5870 * g_lin + 0.1140 * b_lin;
+            let gray_lin =
+                R_LUMINANCE * r_lin + G_LUMINANCE * g_lin + B_LUMINANCE * b_lin;
 
             let vi = gray_lin.clamp(0.0, 1.0);
             let li = (vi * scale as f32).round() as usize;

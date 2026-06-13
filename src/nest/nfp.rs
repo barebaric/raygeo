@@ -6,8 +6,10 @@ use crate::geo::shape::polygon::{
     is_polygon_convex, polygon_to_int_path,
 };
 use crate::types::{IntPolygon, Polygon};
+use crate::CLIPPER_SCALE;
 
-const CLIPPER_SCALE: f64 = 10_000_000.0;
+/// Scale factor for converting polygon coordinates to integer hash keys.
+const POLYGON_KEY_SCALE: f64 = 10000.0;
 
 pub fn no_fit_polygon(
     static_poly: &Polygon,
@@ -141,7 +143,10 @@ pub fn normalize_polygon(poly: &Polygon) -> (Polygon, f64, f64) {
 pub fn polygon_to_key(poly: &Polygon) -> Vec<(i64, i64)> {
     poly.iter()
         .map(|(x, y)| {
-            ((x * 10000.0).round() as i64, (y * 10000.0).round() as i64)
+            (
+                (x * POLYGON_KEY_SCALE).round() as i64,
+                (y * POLYGON_KEY_SCALE).round() as i64,
+            )
         })
         .collect()
 }

@@ -686,7 +686,7 @@ pub fn polygons_intersect(
     }
     // min_area is specified in clipper integer coordinates (scale^2),
     // convert to float area for comparison
-    let scale = 10_000_000.0;
+    let scale = GeoScale::MULTIPLIER;
     let min_area_float = min_area / (scale * scale);
     for poly in &intersection {
         if get_polygon_area(poly) > min_area_float {

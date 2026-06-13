@@ -2896,7 +2896,7 @@ fn to_clipper_numpy_py(
             "polygon must be an (N, 2) numpy array or list of (x, y) tuples",
         ));
         };
-    Ok(to_clipper_from_points(&points, 10_000_000.0))
+    Ok(to_clipper_from_points(&points, crate::CLIPPER_SCALE))
 }
 
 #[gen_stub_pyfunction(

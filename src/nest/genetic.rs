@@ -1,6 +1,16 @@
 use rand::rngs::ThreadRng;
 use rand::Rng;
 
+/// Probability of flipping a part horizontally or vertically when generating
+/// a random individual.
+const RANDOM_FLIP_PROBABILITY: f64 = 0.5;
+
+/// Base probability for mutating a part's rotation angle.
+const ROTATION_MUTATION_BASE: f64 = 0.01;
+
+/// Probability of toggling a flip during mutation.
+const FLIP_MUTATION_PROBABILITY: f64 = 0.05;
+
 /// A single individual in the genetic algorithm population.
 #[derive(Clone, Debug)]
 pub struct Individual {
@@ -46,8 +56,8 @@ fn random_individual(
             0
         };
         rot.push(angle_idx as f64 * angle_step);
-        fh.push(config.flip_h && rng.gen_bool(0.5));
-        fv.push(config.flip_v && rng.gen_bool(0.5));
+        fh.push(config.flip_h && rng.gen_bool(RANDOM_FLIP_PROBABILITY));
+        fv.push(config.flip_v && rng.gen_bool(RANDOM_FLIP_PROBABILITY));
     }
     Individual {
         rotation: rot,
@@ -371,19 +381,19 @@ fn mutate_internal(
     for i in 0..num_parts {
         // Random rotation change
         if config.rotation_count > 0
-            && rng.gen_bool(0.01 * config.mutation_rate)
+            && rng.gen_bool(ROTATION_MUTATION_BASE * config.mutation_rate)
         {
             let angle_idx = rng.gen_range(0..config.rotation_count);
             clone.rotation[i] = angle_idx as f64 * angle_step;
         }
 
         // Horizontal flip toggle
-        if config.flip_h && rng.gen_bool(0.05) {
+        if config.flip_h && rng.gen_bool(FLIP_MUTATION_PROBABILITY) {
             clone.flip_h[i] = !clone.flip_h[i];
         }
 
         // Vertical flip toggle
-        if config.flip_v && rng.gen_bool(0.05) {
+        if config.flip_v && rng.gen_bool(FLIP_MUTATION_PROBABILITY) {
             clone.flip_v[i] = !clone.flip_v[i];
         }
     }

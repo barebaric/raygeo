@@ -852,7 +852,10 @@ fn to_clipper_py(polygon: &Bound<'_, PyAny>) -> PyResult<Vec<(i64, i64)>> {
     Ok(poly
         .iter()
         .map(|(x, y)| {
-            ((x * 10_000_000_f64) as i64, (y * 10_000_000_f64) as i64)
+            (
+                (x * crate::CLIPPER_SCALE) as i64,
+                (y * crate::CLIPPER_SCALE) as i64,
+            )
         })
         .collect())
 }
@@ -876,7 +879,7 @@ fn to_clipper_py(polygon: &Bound<'_, PyAny>) -> PyResult<Vec<(i64, i64)>> {
 fn from_clipper_py(
     polygon: Vec<crate::python::geo::flex_point::PyIntPoint2D>,
 ) -> Vec<Point> {
-    let scale = 10_000_000_f64;
+    let scale = crate::CLIPPER_SCALE;
     let poly = int_poly_to_points(polygon);
     poly.iter()
         .map(|(x, y)| (*x as f64 / scale, *y as f64 / scale))

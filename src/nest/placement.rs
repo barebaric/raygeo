@@ -968,7 +968,7 @@ pub fn place_parts(
             &sheet_indices,
             &sheet_world_poly,
             config.spacing,
-            10_000_000,
+            crate::CLIPPER_SCALE as i64,
         );
     }
 
