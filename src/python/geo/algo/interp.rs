@@ -138,8 +138,11 @@ fn compute_t_range_py(
     module = "raygeo.geo.algo.interp"
 )]
 #[pyfunction(name = "slice_scanline_data")]
-fn slice_scanline_data_py(data: Vec<u8>, t_start: f64, t_end: f64) -> Vec<u8> {
+fn slice_scanline_data_py(data: Vec<u8>, t_start: f64, t_end: f64) -> Vec<i32> {
     slice_scanline_data(&data, t_start, t_end)
+        .into_iter()
+        .map(|v| v as i32)
+        .collect()
 }
 
 #[gen_stub_pyfunction(
