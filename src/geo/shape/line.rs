@@ -188,7 +188,8 @@ pub fn get_line_segment_polygon_intersections(
         }
     }
 
-    cut_points_t.sort_by(|a, b| a.partial_cmp(b).unwrap());
+    cut_points_t
+        .sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
     cut_points_t
 }
 

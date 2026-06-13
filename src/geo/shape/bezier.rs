@@ -172,7 +172,8 @@ pub fn get_bezier_rect_intersections(
         t_crossings.push(1.0);
     }
 
-    t_crossings.sort_by(|a, b| a.partial_cmp(b).unwrap());
+    t_crossings
+        .sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
     t_crossings
 }
 

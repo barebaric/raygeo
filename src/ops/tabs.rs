@@ -360,7 +360,7 @@ fn clip_subpath_with_gaps(sub_ops: &Ops, clips: &[ClipPoint]) -> Ops {
     let orig_endpoint = get_last_moving_end(sub_ops);
     if let Some(orig) = orig_endpoint {
         let last_end = get_last_moving_end(&result);
-        if last_end.is_none() || distance_2d(last_end.unwrap(), orig) > 1e-6 {
+        if last_end.is_none_or(|end| distance_2d(end, orig) > 1e-6) {
             result.move_to(orig.0, orig.1, orig.2, None);
         }
     }
@@ -445,7 +445,11 @@ fn insert_power_commands_curve_aware(
         return sub_ops.copy();
     }
     let mut tab_regions = tab_regions;
-    tab_regions.sort_by(|a, b| a.start.partial_cmp(&b.start).unwrap());
+    tab_regions.sort_by(|a, b| {
+        a.start
+            .partial_cmp(&b.start)
+            .unwrap_or(std::cmp::Ordering::Equal)
+    });
 
     let mut result = Ops::new();
     let mut accum_dist = 0.0;
@@ -859,7 +863,9 @@ fn collect_events(
         events.push((enter, EventType::Enter));
         events.push((exit_, EventType::Exit));
     }
-    events.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap());
+    events.sort_by(|a, b| {
+        a.0.partial_cmp(&b.0).unwrap_or(std::cmp::Ordering::Equal)
+    });
     events
 }
 

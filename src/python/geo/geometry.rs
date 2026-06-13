@@ -99,13 +99,13 @@ impl From<CoreCommand> for PyTypedCommand {
 }
 
 impl PyTypedCommand {
-    fn into_py_obj(self, py: Python<'_>) -> Py<PyAny> {
-        match self {
-            PyTypedCommand::Move(c) => Py::new(py, c).unwrap().into_any(),
-            PyTypedCommand::Line(c) => Py::new(py, c).unwrap().into_any(),
-            PyTypedCommand::Arc(c) => Py::new(py, c).unwrap().into_any(),
-            PyTypedCommand::Bezier(c) => Py::new(py, c).unwrap().into_any(),
-        }
+    fn into_py_obj(self, py: Python<'_>) -> PyResult<Py<PyAny>> {
+        Ok(match self {
+            PyTypedCommand::Move(c) => Py::new(py, c)?.into_any(),
+            PyTypedCommand::Line(c) => Py::new(py, c)?.into_any(),
+            PyTypedCommand::Arc(c) => Py::new(py, c)?.into_any(),
+            PyTypedCommand::Bezier(c) => Py::new(py, c)?.into_any(),
+        })
     }
 }
 
@@ -503,7 +503,7 @@ impl Geometry {
 
     /// The commands as a list of typed command objects.
     #[getter]
-    fn data<'py>(&mut self, py: Python<'py>) -> Vec<Py<PyAny>> {
+    fn data<'py>(&mut self, py: Python<'py>) -> PyResult<Vec<Py<PyAny>>> {
         self.inner
             .data
             .iter()
@@ -525,7 +525,7 @@ impl Geometry {
         let data = self.inner.data();
         match data.get(index as usize) {
             Some(cmd) => {
-                Ok(Some(PyTypedCommand::from(cmd.clone()).into_py_obj(py)))
+                Ok(Some(PyTypedCommand::from(cmd.clone()).into_py_obj(py)?))
             }
             None => Ok(None),
         }
@@ -535,7 +535,7 @@ impl Geometry {
     fn iter_commands(&mut self, py: Python<'_>) -> PyResult<Vec<Py<PyAny>>> {
         let data = self.inner.data();
         data.iter()
-            .map(|cmd| Ok(PyTypedCommand::from(cmd.clone()).into_py_obj(py)))
+            .map(|cmd| PyTypedCommand::from(cmd.clone()).into_py_obj(py))
             .collect()
     }
 
@@ -547,7 +547,7 @@ impl Geometry {
     ) -> PyResult<Vec<Py<PyAny>>> {
         let data = self.inner.data();
         data.iter()
-            .map(|cmd| Ok(PyTypedCommand::from(cmd.clone()).into_py_obj(py)))
+            .map(|cmd| PyTypedCommand::from(cmd.clone()).into_py_obj(py))
             .collect()
     }
 
@@ -566,7 +566,7 @@ impl Geometry {
         let data = self.inner.data();
         match data.get(index as usize) {
             Some(cmd) => {
-                Ok(Some(PyTypedCommand::from(cmd.clone()).into_py_obj(py)))
+                Ok(Some(PyTypedCommand::from(cmd.clone()).into_py_obj(py)?))
             }
             None => Ok(None),
         }
@@ -1395,10 +1395,10 @@ impl Geometry {
         for (orig_idx, geo) in contours.iter().enumerate() {
             let single_result =
                 get_valid_contours_data(std::slice::from_ref(geo));
-            if single_result.is_empty() {
+            let Some((_, pts, closed)) = single_result.into_iter().next()
+            else {
                 continue;
-            }
-            let (_, pts, closed) = single_result.into_iter().next().unwrap();
+            };
             let py_geo = Geometry { inner: geo.copy() };
             let dict = PyDict::new(py);
             dict.set_item("geo", py_geo)?;

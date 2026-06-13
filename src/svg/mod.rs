@@ -12,26 +12,36 @@ fn parse_path_coords(coords_str: &str) -> Vec<f64> {
         if ch == '-' || ch == '+' || ch == '.' || ch.is_ascii_digit() {
             buf.clear();
             if ch == '-' || ch == '+' {
-                buf.push(chars.next().unwrap());
+                if let Some(c) = chars.next() {
+                    buf.push(c);
+                }
             }
             let mut has_dot = false;
             let mut has_exp = false;
             loop {
                 match chars.peek() {
                     Some(&c) if c.is_ascii_digit() => {
-                        buf.push(chars.next().unwrap());
+                        if let Some(c) = chars.next() {
+                            buf.push(c);
+                        }
                     }
                     Some(&'.') if !has_dot && !has_exp => {
                         has_dot = true;
-                        buf.push(chars.next().unwrap());
+                        if let Some(c) = chars.next() {
+                            buf.push(c);
+                        }
                     }
                     Some(&'e') | Some(&'E') if !has_exp => {
                         has_exp = true;
-                        buf.push(chars.next().unwrap());
+                        if let Some(c) = chars.next() {
+                            buf.push(c);
+                        }
                         if chars.peek() == Some(&'+')
                             || chars.peek() == Some(&'-')
                         {
-                            buf.push(chars.next().unwrap());
+                            if let Some(c) = chars.next() {
+                                buf.push(c);
+                            }
                         }
                     }
                     _ => break,

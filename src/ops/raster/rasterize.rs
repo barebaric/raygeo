@@ -41,8 +41,10 @@ fn line_endpoints_mm(
     scan_line: &ScanLine,
     pixels_per_mm: (f64, f64),
 ) -> ((f64, f64), (f64, f64)) {
-    let first = scan_line.pixels.first().unwrap();
-    let last = scan_line.pixels.last().unwrap();
+    let Some(first) = scan_line.pixels.first() else {
+        return ((0.0, 0.0), (0.0, 0.0));
+    };
+    let last = scan_line.pixels.last().unwrap_or(first);
     (
         scan_line.pixel_to_mm(first.0, first.1, pixels_per_mm),
         scan_line.pixel_to_mm(last.0, last.1, pixels_per_mm),

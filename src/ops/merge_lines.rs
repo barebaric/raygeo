@@ -419,11 +419,13 @@ fn get_uncovered(intervals: &[(f64, f64)]) -> Vec<(f64, f64)> {
     }
 
     let mut sorted: Vec<(f64, f64)> = intervals.to_vec();
-    sorted.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap());
+    sorted.sort_by(|a, b| {
+        a.0.partial_cmp(&b.0).unwrap_or(std::cmp::Ordering::Equal)
+    });
 
     let mut merged: Vec<(f64, f64)> = vec![sorted[0]];
     for current in &sorted[1..] {
-        let last = merged.last_mut().unwrap();
+        let Some(last) = merged.last_mut() else { break };
         if current.0 <= last.1 + 1e-6 {
             *last = (last.0, last.1.max(current.1));
         } else {
