@@ -419,10 +419,6 @@ class Ops:
         
         :param enabled: Whether to enable air assist (default True).
         """
-    def disable_air_assist(self) -> None:
-        r"""
-        Disable air assist.
-        """
     def set_laser(self, laser_uid: builtins.str) -> None:
         r"""
         Switch to a specific laser by UID.

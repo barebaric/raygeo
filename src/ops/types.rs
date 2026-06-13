@@ -231,14 +231,6 @@ impl OpNode {
         }
     }
 
-    pub fn disable_air_assist() -> Self {
-        OpNode {
-            category: OpCategory::State(StateCmd::DisableAirAssist),
-            state: None,
-            extra_axes: None,
-        }
-    }
-
     pub fn set_laser(laser_uid: &str) -> Self {
         OpNode {
             category: OpCategory::State(StateCmd::SetLaser(Arc::from(

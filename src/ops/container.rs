@@ -296,11 +296,6 @@ impl Ops {
         self.invalidate_time_cache();
     }
 
-    pub fn disable_air_assist(&mut self) {
-        self.commands.push(OpNode::disable_air_assist());
-        self.invalidate_time_cache();
-    }
-
     pub fn set_laser(&mut self, laser_uid: &str) {
         self.commands.push(OpNode::set_laser(laser_uid));
         self.invalidate_time_cache();

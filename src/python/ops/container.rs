@@ -1022,11 +1022,6 @@ impl PyOps {
         self.inner.enable_air_assist(enabled);
     }
 
-    /// Disable air assist.
-    fn disable_air_assist(&mut self) {
-        self.inner.disable_air_assist();
-    }
-
     /// Switch to a specific laser by UID.
     ///
     /// :param laser_uid: The laser identifier.

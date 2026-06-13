@@ -593,11 +593,7 @@ fn sync_state_commands(ops: &mut Ops, state: &State, prev: &State) -> State {
         }
     }
     if state.air_assist != prev.air_assist {
-        if state.air_assist {
-            ops.enable_air_assist(true);
-        } else {
-            ops.disable_air_assist();
-        }
+        ops.enable_air_assist(state.air_assist);
         prev.air_assist = state.air_assist;
     }
     if let Some(ref uid) = state.active_laser_uid {

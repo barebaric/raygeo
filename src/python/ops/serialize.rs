@@ -336,7 +336,7 @@ fn create_and_append_command(
     } else if ct == CommandType::EnableAirAssist {
         ops.enable_air_assist(true);
     } else if ct == CommandType::DisableAirAssist {
-        ops.disable_air_assist();
+        ops.enable_air_assist(false);
     } else if ct == CommandType::LayerStart || ct == CommandType::LayerEnd {
         let uid: String = cmd_data
             .get_item("layer_uid")?
