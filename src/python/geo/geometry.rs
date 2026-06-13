@@ -551,7 +551,11 @@ impl Geometry {
     }
 
     /// Serialize the geometry to a dictionary.
-    fn dump<'py>(&mut self, py: Python<'py>) -> PyResult<Bound<'py, PyDict>> {
+    #[allow(clippy::wrong_self_convention)]
+    fn to_dict<'py>(
+        &mut self,
+        py: Python<'py>,
+    ) -> PyResult<Bound<'py, PyDict>> {
         let last_move_to = self.inner.last_move_to;
         let uniform_scalable = self.inner.uniform_scalable;
         let dict = PyDict::new(py);
@@ -610,21 +614,12 @@ impl Geometry {
         Ok(dict)
     }
 
-    /// Serialize the geometry to a dictionary.
-    #[allow(clippy::wrong_self_convention)]
-    fn to_dict<'py>(
-        &mut self,
-        py: Python<'py>,
-    ) -> PyResult<Bound<'py, PyDict>> {
-        self.dump(py)
-    }
-
-    /// Load a geometry from a dictionary.
+    /// Create a Geometry from a dictionary.
     ///
     /// :param data: A dictionary as produced by
     ///     :meth:`to_dict`.
     #[classmethod]
-    fn load<'py>(
+    fn from_dict<'py>(
         _cls: &Bound<'py, PyType>,
         data: &Bound<'py, PyDict>,
     ) -> PyResult<Self> {
@@ -820,18 +815,6 @@ impl Geometry {
             }
         }
         Ok(geo)
-    }
-
-    /// Create a Geometry from a dictionary.
-    ///
-    /// :param data: A dictionary as produced by
-    ///     :meth:`to_dict`.
-    #[classmethod]
-    fn from_dict<'py>(
-        _cls: &Bound<'py, PyType>,
-        data: &Bound<'py, PyDict>,
-    ) -> PyResult<Self> {
-        Self::load(_cls, data)
     }
 
     /// Create a Geometry from a sequence of points.

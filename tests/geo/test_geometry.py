@@ -92,7 +92,7 @@ def test_bezier_to(empty_geometry):
 
 
 def test_serialization_deserialization(sample_geometry):
-    geo_dict = sample_geometry.dump()
+    geo_dict = sample_geometry.to_dict()
     new_geo = Geometry.from_dict(geo_dict)
     assert new_geo == sample_geometry
 
@@ -253,9 +253,9 @@ def test_from_points():
     assert geo_3d.last_move_to == (0, 0, 1)
 
 
-def test_dump_and_load(sample_geometry):
+def test_to_dict_and_from_dict(sample_geometry):
     """
-    Tests the dump() and load() methods for space-efficient serialization.
+    Tests the to_dict() and from_dict() methods for serialization.
     """
     # Test with a non-empty geometry
     geo_with_bezier = Geometry()
@@ -263,25 +263,25 @@ def test_dump_and_load(sample_geometry):
     geo_with_bezier.line_to(10, 10)
     geo_with_bezier.arc_to(20, 0, i=5, j=-10)
     geo_with_bezier.bezier_to(30, 10, c1x=22, c1y=2, c2x=28, c2y=8)
-    dumped_data = geo_with_bezier.dump()
-    loaded_geo = Geometry.load(dumped_data)
+    dict_data = geo_with_bezier.to_dict()
+    loaded_geo = Geometry.from_dict(dict_data)
 
-    assert dumped_data["last_move_to"] == list(geo_with_bezier.last_move_to)
-    assert len(dumped_data["commands"]) == 4
-    assert dumped_data["commands"][0] == ["M", 0.0, 0.0, 0.0]
-    assert dumped_data["commands"][1] == ["L", 10.0, 10.0, 0.0]
-    assert dumped_data["commands"][2] == ["A", 20.0, 0.0, 0.0, 5.0, -10.0, 1]
-    assert dumped_data["commands"][3] == ["B", 30.0, 10.0, 0.0, 22, 2, 28, 8]
+    assert dict_data["last_move_to"] == list(geo_with_bezier.last_move_to)
+    assert len(dict_data["commands"]) == 4
+    assert dict_data["commands"][0] == ["M", 0.0, 0.0, 0.0]
+    assert dict_data["commands"][1] == ["L", 10.0, 10.0, 0.0]
+    assert dict_data["commands"][2] == ["A", 20.0, 0.0, 0.0, 5.0, -10.0, 1]
+    assert dict_data["commands"][3] == ["B", 30.0, 10.0, 0.0, 22, 2, 28, 8]
 
     assert loaded_geo == geo_with_bezier
 
     # Test with an empty geometry
     empty_geo = Geometry()
-    dumped_empty = empty_geo.dump()
-    loaded_empty = Geometry.load(dumped_empty)
+    dict_empty = empty_geo.to_dict()
+    loaded_empty = Geometry.from_dict(dict_empty)
 
-    assert dumped_empty["last_move_to"] == [0.0, 0.0, 0.0]
-    assert dumped_empty["commands"] == []
+    assert dict_empty["last_move_to"] == [0.0, 0.0, 0.0]
+    assert dict_empty["commands"] == []
     assert loaded_empty.is_empty()
     assert loaded_empty.last_move_to == (0.0, 0.0, 0.0)
 
@@ -351,15 +351,15 @@ def test_extend_preserves_uniform_scalable():
     assert not dest.uniform_scalable
 
 
-def test_load_preserves_uniform_scalable(sample_geometry):
+def test_from_dict_preserves_uniform_scalable(sample_geometry):
     """
-    Test that loading from a dump preserves the uniform_scalable flag.
+    Test that from_dict preserves the uniform_scalable flag.
     """
     # sample_geometry contains an arc
-    dumped = sample_geometry.dump()
+    dict_data = sample_geometry.to_dict()
 
     # Load
-    loaded = Geometry.load(dumped)
+    loaded = Geometry.from_dict(dict_data)
 
     data = loaded.data
 

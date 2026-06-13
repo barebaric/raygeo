@@ -240,21 +240,9 @@ class Geometry:
         r"""
         Iterate over all commands as typed command objects.
         """
-    def dump(self) -> dict:
-        r"""
-        Serialize the geometry to a dictionary.
-        """
     def to_dict(self) -> dict:
         r"""
         Serialize the geometry to a dictionary.
-        """
-    @classmethod
-    def load(cls, data: dict) -> Geometry:
-        r"""
-        Load a geometry from a dictionary.
-        
-        :param data: A dictionary as produced by
-            :meth:`to_dict`.
         """
     @classmethod
     def from_dict(cls, data: dict) -> Geometry:
