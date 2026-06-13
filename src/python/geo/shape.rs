@@ -86,8 +86,9 @@ pyo3_stub_gen::module_doc!("raygeo.geo.shape.rect", "{}", MODULE_DOC_RECT);
 pub(crate) const MODULE_DOC_RECT: &str = "\
 Rectangle intersection and containment tests.
 
-Provides functions to test whether two axis-aligned rectangles intersect
-and whether one rectangle fully contains another.
+Provides functions to test whether two axis-aligned rectangles intersect,
+whether one rectangle fully contains another, and utilities for computing
+the union bounding rectangle of multiple geometries.
 ";
 
 use super::flex_point::{
@@ -549,6 +550,10 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     )?)?;
     rect_mod.add_function(wrap_pyfunction!(
         do_rects_intersect_py,
+        rect_mod.clone()
+    )?)?;
+    rect_mod.add_function(wrap_pyfunction!(
+        get_combined_rect_py,
         rect_mod.clone()
     )?)?;
     shape_mod.add_submodule(&rect_mod)?;
@@ -3334,6 +3339,51 @@ fn do_rects_intersect_py(
     r2: (f64, f64, f64, f64),
 ) -> bool {
     do_rects_intersect(r1, r2)
+}
+
+#[gen_stub_pyfunction(
+    python = r#"
+    import raygeo
+    import raygeo.geo.types
+
+    def get_combined_rect(
+        geometries: list[raygeo.Geometry],
+    ) -> types.Rect:
+        """Compute the union bounding box of multiple geometries.
+
+        :param geometries: List of Geometry objects.
+        :returns: Union bounding rectangle (x_min, y_min, x_max, y_max).
+        """
+"#,
+    module = "raygeo.geo.shape.rect"
+)]
+#[pyfunction(name = "get_combined_rect")]
+fn get_combined_rect_py(
+    geometries: &Bound<'_, PyAny>,
+) -> PyResult<(f64, f64, f64, f64)> {
+    let mut min_x = f64::INFINITY;
+    let mut min_y = f64::INFINITY;
+    let mut max_x = f64::NEG_INFINITY;
+    let mut max_y = f64::NEG_INFINITY;
+    for item in geometries.try_iter()? {
+        let item = item?;
+        let geo: &Bound<'_, super::geometry::Geometry> =
+            item.cast().map_err(|e| {
+                pyo3::exceptions::PyTypeError::new_err(format!(
+                    "Expected Geometry object: {}",
+                    e
+                ))
+            })?;
+        let (gx0, gy0, gx1, gy1) = geo.borrow().inner.rect();
+        min_x = min_x.min(gx0);
+        min_y = min_y.min(gy0);
+        max_x = max_x.max(gx1);
+        max_y = max_y.max(gy1);
+    }
+    if min_x.is_infinite() {
+        return Ok((0.0, 0.0, 0.0, 0.0));
+    }
+    Ok((min_x, min_y, max_x, max_y))
 }
 
 #[gen_stub_pyfunction(

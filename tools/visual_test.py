@@ -5,9 +5,12 @@ Run with: make visual  (or: streamlit run tools/visual_test.py)
 
 import math
 
+import matplotlib.patches as mpatches
 import matplotlib.pyplot as plt
 import numpy as np
 import streamlit as st
+from matplotlib.colors import to_hex
+
 from raygeo.geo import Arc, Bezier, Geometry, Line, Move
 from raygeo.geo.shape.polygon import (
     get_polygons_difference,
@@ -52,13 +55,21 @@ def _plot_geometry(
         elif isinstance(cmd, Arc):
             cx = prev_end[0] + cmd.center_offset[0]
             cy = prev_end[1] + cmd.center_offset[1]
-            r = math.sqrt(cmd.center_offset[0] ** 2 + cmd.center_offset[1] ** 2)
+            r = math.sqrt(
+                cmd.center_offset[0] ** 2 + cmd.center_offset[1] ** 2
+            )
             a_start = math.atan2(prev_end[1] - cy, prev_end[0] - cx)
             a_end = math.atan2(end[1] - cy, end[0] - cx)
             angles = _arc_angles(a_start, a_end, cmd.clockwise)
             ax_pts = [cx + r * math.cos(a) for a in angles]
             ay_pts = [cy + r * math.sin(a) for a in angles]
-            axes.plot(ax_pts, ay_pts, color=color, linewidth=linewidth, label=seg_label)
+            axes.plot(
+                ax_pts,
+                ay_pts,
+                color=color,
+                linewidth=linewidth,
+                label=seg_label,
+            )
             seg_label = None
         elif isinstance(cmd, Bezier):
             c1 = cmd.control1
@@ -76,7 +87,9 @@ def _plot_geometry(
                 + 3 * (1 - ts) * ts**2 * c2[1]
                 + ts**3 * end[1]
             )
-            axes.plot(bx, by, color=color, linewidth=linewidth, label=seg_label)
+            axes.plot(
+                bx, by, color=color, linewidth=linewidth, label=seg_label
+            )
             seg_label = None
         if show_points:
             axes.plot(end[0], end[1], "o", color=color, markersize=3)
@@ -121,7 +134,7 @@ def page_geometry():
             "Shape preset",
             [
                 "Rectangle",
-                "Circle (linearized)",
+                "Circle",
                 "Polygon (regular)",
                 "Star",
                 "Custom path",
@@ -136,14 +149,13 @@ def page_geometry():
             h = c2.number_input("Height", 0.1, 1000.0, 10.0)
             geom = Geometry.from_points([(0, 0), (w, 0), (w, h), (0, h)])
 
-        elif shape == "Circle (linearized)":
+        elif shape == "Circle":
             c1, c2 = st.columns(2)
             r = c1.number_input("Radius", 0.1, 500.0, 10.0)
-            n = c2.number_input("Segments", 3, 360, 64)
-            geom.move_to(r, 0)
-            for i in range(1, n + 1):
-                a = 2 * math.pi * i / n
-                geom.line_to(r * math.cos(a), r * math.sin(a))
+            cw = c2.checkbox("Clockwise", value=True)
+            geom.move_to(r, 0, 0)
+            geom.arc_to(-r, 0, -r, 0, cw, 0)
+            geom.arc_to(r, 0, r, 0, cw, 0)
 
         elif shape == "Polygon (regular)":
             c1, c2 = st.columns(2)
@@ -222,7 +234,8 @@ def page_geometry():
             contours = geom.split_into_contours()
             st.info(f"Split into {len(contours)} contour(s)")
             fig, ax = plt.subplots()
-            colors = plt.cm.tab10.colors
+            cmap = plt.get_cmap("tab10")
+            colors = [to_hex(cmap(i / 10)) for i in range(10)]
             for i, c in enumerate(contours):
                 lbl = f"Contour {i}"
                 _plot_geometry(
@@ -250,12 +263,15 @@ def page_geometry():
         if not geom.is_empty():
             bounds = f"({r[0]:.1f}, {r[1]:.1f}) - ({r[2]:.1f}, {r[3]:.1f})"
             cols[3].metric("Bounds", bounds)
-        st.checkbox("Closed", value=geom.is_closed(), disabled=True, key="closed")
+        st.checkbox(
+            "Closed", value=geom.is_closed(), disabled=True, key="closed"
+        )
 
     with tab_fit:
         fit_op = st.selectbox(
             "Fit operation",
             [
+                "None",
                 "Fit arcs",
                 "Fit curves (arcs + beziers)",
             ],
@@ -263,11 +279,13 @@ def page_geometry():
         tol = st.number_input("Tolerance", 0.001, 100.0, 0.5)
         if fit_op == "Fit arcs":
             geom = geom.fit_arcs(tol)
-        else:
+        elif fit_op == "Fit curves (arcs + beziers)":
             geom = geom.fit_curves(tol, beziers=True, arcs=True)
 
     fig, ax = plt.subplots()
-    show_pts = st.checkbox("Show control points", value=False, key="show_pts_build")
+    show_pts = st.checkbox(
+        "Show control points", value=False, key="show_pts_build"
+    )
     _plot_geometry(ax, geom, show_points=show_pts)
     xmin, xmax, ymin, ymax = _auto_limits([geom])
     ax.set_xlim(xmin, xmax)
@@ -282,21 +300,36 @@ def page_geometry():
             rows = []
             for cmd in cmds:
                 if isinstance(cmd, Move):
-                    rows.append({"type": "Move", "x": cmd.end[0], "y": cmd.end[1]})
+                    rows.append(
+                        {"type": "Move", "x": cmd.end[0], "y": cmd.end[1]}
+                    )
                 elif isinstance(cmd, Line):
-                    rows.append({"type": "Line", "x": cmd.end[0], "y": cmd.end[1]})
+                    rows.append(
+                        {"type": "Line", "x": cmd.end[0], "y": cmd.end[1]}
+                    )
                 elif isinstance(cmd, Arc):
-                    rows.append({
-                        "type": "Arc", "x": cmd.end[0], "y": cmd.end[1],
-                        "i": cmd.center_offset[0], "j": cmd.center_offset[1],
-                        "cw": cmd.clockwise,
-                    })
+                    rows.append(
+                        {
+                            "type": "Arc",
+                            "x": cmd.end[0],
+                            "y": cmd.end[1],
+                            "i": cmd.center_offset[0],
+                            "j": cmd.center_offset[1],
+                            "cw": cmd.clockwise,
+                        }
+                    )
                 elif isinstance(cmd, Bezier):
-                    rows.append({
-                        "type": "Bezier", "x": cmd.end[0], "y": cmd.end[1],
-                        "c1x": cmd.control1[0], "c1y": cmd.control1[1],
-                        "c2x": cmd.control2[0], "c2y": cmd.control2[1],
-                    })
+                    rows.append(
+                        {
+                            "type": "Bezier",
+                            "x": cmd.end[0],
+                            "y": cmd.end[1],
+                            "c1x": cmd.control1[0],
+                            "c1y": cmd.control1[1],
+                            "c2x": cmd.control2[0],
+                            "c2y": cmd.control2[1],
+                        }
+                    )
             st.dataframe(rows)
 
 
@@ -307,7 +340,9 @@ def page_polygon_boolean():
     with c1:
         st.subheader("Shape A (polygon)")
         a_type = st.selectbox("Shape A type", ["Square", "Circle"])
-        a_r = st.number_input("A: radius / half-size", 0.5, 100.0, 10.0, key="a_r")
+        a_r = st.number_input(
+            "A: radius / half-size", 0.5, 100.0, 10.0, key="a_r"
+        )
     with c2:
         st.subheader("Shape B (polygon)")
         b_type = st.selectbox(
@@ -315,9 +350,13 @@ def page_polygon_boolean():
             ["Square", "Circle"],
             key="b_type",
         )
-        b_r = st.number_input("B: radius / half-size", 0.5, 100.0, 8.0, key="b_r")
+        b_r = st.number_input(
+            "B: radius / half-size", 0.5, 100.0, 8.0, key="b_r"
+        )
 
-    n_seg = st.number_input("Circle segments", 3, 360, 64, step=1, key="bool_n")
+    n_seg = st.number_input(
+        "Circle segments", 3, 360, 64, step=1, key="bool_n"
+    )
 
     dx = st.number_input("B offset X", -50.0, 50.0, 6.0)
     dy = st.number_input("B offset Y", -50.0, 50.0, 0.0)
@@ -332,10 +371,17 @@ def page_polygon_boolean():
         ]
 
     def _make_square(r, ox=0.0, oy=0.0):
-        return [(ox - r, oy - r), (ox + r, oy - r), (ox + r, oy + r), (ox - r, oy + r)]
+        return [
+            (ox - r, oy - r),
+            (ox + r, oy - r),
+            (ox + r, oy + r),
+            (ox - r, oy + r),
+        ]
 
     a = _make_circle(a_r, n_seg) if a_type == "Circle" else _make_square(a_r)
-    b_raw = _make_circle(b_r, n_seg) if b_type == "Circle" else _make_square(b_r)
+    b_raw = (
+        _make_circle(b_r, n_seg) if b_type == "Circle" else _make_square(b_r)
+    )
     b = [(x + dx, y + dy) for x, y in b_raw]
 
     op = st.selectbox("Operation", ["Union", "Intersection", "Difference"])
@@ -374,7 +420,10 @@ def page_offset():
     amount = st.number_input("Offset amount", -50.0, 50.0, 2.0)
 
     pts = [
-        (r * math.cos(2 * math.pi * i / n_seg), r * math.sin(2 * math.pi * i / n_seg))
+        (
+            r * math.cos(2 * math.pi * i / n_seg),
+            r * math.sin(2 * math.pi * i / n_seg),
+        )
         for i in range(n_seg)
     ]
 
@@ -434,7 +483,7 @@ def page_image():
     else:
         bayer = np.array(
             [[0, 8, 2, 10], [12, 4, 14, 6], [3, 11, 1, 9], [15, 7, 13, 5]],
-            dtype=np.float64,
+            dtype=np.float32,
         )
         dithered = img.apply_bayer_dither(gray, bayer, invert, cell_size=1)
 
@@ -508,7 +557,8 @@ def page_svg():
     geoms = parse_svg_path_data(path_data)
 
     fig, ax = plt.subplots()
-    colors = plt.cm.tab10.colors
+    _cmap = plt.get_cmap("tab10")
+    colors = [to_hex(_cmap(i / 10)) for i in range(10)]
     for i, g in enumerate(geoms):
         _plot_geometry(ax, g, color=colors[i % len(colors)], label=f"Path {i}")
     xmin, xmax, ymin, ymax = _auto_limits(geoms) if geoms else (0, 100, 0, 100)
@@ -566,7 +616,7 @@ def _plot_ops(
         if show_power:
             st = ops.preloaded_state(i)
             if st is not None and st.power is not None:
-                draw_color = plt.cm.RdYlGn(st.power)
+                draw_color = plt.get_cmap("RdYlGn")(st.power)
             else:
                 draw_color = color
         if ct == CommandType.LINE_TO:
@@ -762,7 +812,7 @@ def page_tabs():
     for cx_, cy_, tw_ in clips:
         axes[0].plot(cx_, cy_, "rx", markersize=10, markeredgewidth=2)
         axes[0].add_patch(
-            plt.Circle(
+            mpatches.Circle(
                 (cx_, cy_),
                 tw_ / 2,
                 fill=False,
@@ -968,7 +1018,9 @@ def page_overscan():
         key="os_preset",
     )
 
-    dist = st.slider("Overscan distance (mm)", 0.0, 20.0, 5.0, 0.5, key="os_dist")
+    dist = st.slider(
+        "Overscan distance (mm)", 0.0, 20.0, 5.0, 0.5, key="os_dist"
+    )
 
     ops = Ops()
     ops.set_power(1.0)
@@ -1015,14 +1067,22 @@ def page_overscan():
     orig = ops.copy()
     orig_lines = len(ops.indices_of(CommandType.LINE_TO))
     orig_scans = len(
-        [i for i in range(ops.len()) if ops.command_type(i) == CommandType.SCAN_LINE]
+        [
+            i
+            for i in range(ops.len())
+            if ops.command_type(i) == CommandType.SCAN_LINE
+        ]
     )
 
     ops.apply_overscan(dist)
 
     result_lines = len(ops.indices_of(CommandType.LINE_TO))
     result_scans = len(
-        [i for i in range(ops.len()) if ops.command_type(i) == CommandType.SCAN_LINE]
+        [
+            i
+            for i in range(ops.len())
+            if ops.command_type(i) == CommandType.SCAN_LINE
+        ]
     )
 
     fig, ax = plt.subplots(figsize=(12, 8))
@@ -1095,9 +1155,7 @@ def page_overscan():
             pos = ep
 
     ax.plot([], [], color="tomato", linewidth=5, alpha=0.35, label="Original")
-    ax.plot(
-        [], [], color="forestgreen", linewidth=2.5, label="With overscan"
-    )
+    ax.plot([], [], color="forestgreen", linewidth=2.5, label="With overscan")
     ax.plot([], [], color="gray", linewidth=0.7, linestyle=":", label="Travel")
     ax.set_aspect("equal")
     ax.grid(True, alpha=0.3)
@@ -1131,9 +1189,7 @@ def page_lead_in_out():
 
     c1, c2 = st.columns(2)
     with c1:
-        lead_in = st.slider(
-            "Lead-in (mm)", 0.0, 20.0, 5.0, 0.5, key="lio_in"
-        )
+        lead_in = st.slider("Lead-in (mm)", 0.0, 20.0, 5.0, 0.5, key="lio_in")
     with c2:
         lead_out = st.slider(
             "Lead-out (mm)", 0.0, 20.0, 5.0, 0.5, key="lio_out"
@@ -1233,7 +1289,9 @@ def page_lead_in_out():
         if ct == CommandType.LINE_TO:
             ep = ops.endpoint(i)
             state = ops.preloaded_state(i)
-            color = "dodgerblue" if state and state.power < 0.01 else "forestgreen"
+            color = (
+                "dodgerblue" if state and state.power < 0.01 else "forestgreen"
+            )
             ax.plot(
                 [pos[0], ep[0]],
                 [pos[1], ep[1]],
@@ -1244,8 +1302,12 @@ def page_lead_in_out():
             pos = ep
 
     ax.plot([], [], color="tomato", linewidth=5, alpha=0.35, label="Original")
-    ax.plot([], [], color="forestgreen", linewidth=2.5, label="Cut (power > 0)")
-    ax.plot([], [], color="dodgerblue", linewidth=2.5, label="Lead (power = 0)")
+    ax.plot(
+        [], [], color="forestgreen", linewidth=2.5, label="Cut (power > 0)"
+    )
+    ax.plot(
+        [], [], color="dodgerblue", linewidth=2.5, label="Lead (power = 0)"
+    )
     ax.plot([], [], color="gray", linewidth=0.7, linestyle=":", label="Travel")
     ax.set_aspect("equal")
     ax.grid(True, alpha=0.3)
@@ -1276,9 +1338,7 @@ def page_concave_hull():
         key="ch_shape",
     )
 
-    gravity = st.slider(
-        "Gravity", 0.0, 1.0, 0.1, 0.05, key="ch_grav"
-    )
+    gravity = st.slider("Gravity", 0.0, 1.0, 0.1, 0.05, key="ch_grav")
 
     height, width = 200, 200
     img = np.zeros((height, width), dtype=bool)
@@ -1315,7 +1375,7 @@ def page_concave_hull():
         origin="upper",
         cmap="Blues",
         alpha=0.3,
-        extent=[0, width, height, 0],
+        extent=(0, width, height, 0),
     )
 
     if convex_geo is not None:
@@ -1376,13 +1436,17 @@ def _fill_rounded_rect(img, pt1, pt2, r):
         mask = xx**2 + yy**2 <= r**2
         ys = slice(max(0, cy - r), min(h, cy + r + 1))
         xs = slice(max(0, cx - r), min(w, cx + r + 1))
-        img[ys, xs][mask[: min(h, cy + r + 1) - max(0, cy - r), : min(w, cx + r + 1) - max(0, cx - r)]] = True
+        img[ys, xs][
+            mask[
+                : min(h, cy + r + 1) - max(0, cy - r),
+                : min(w, cx + r + 1) - max(0, cx - r),
+            ]
+        ] = True
 
 
 def page_rasterization():
     st.header("Rasterization")
 
-    from raygeo.ops import Ops
     from raygeo.ops.raster import (
         ScanMode,
         rasterize_mask_lines,
@@ -1430,6 +1494,11 @@ def page_rasterization():
             "Pixels per mm", 1.0, 50.0, 10.0, 0.5, key="rast_ppm"
         )
     with c5:
+        sample_interval = 0.05
+        min_power = 0.0
+        max_power = 1.0
+        num_depth = 3
+        z_step = 0.5
         if mode == "Power Modulation":
             sample_interval = st.slider(
                 "Sample interval (mm)",
@@ -1446,18 +1515,12 @@ def page_rasterization():
                 "Max power", 0.0, 1.0, 1.0, 0.1, key="rast_maxp"
             )
         elif mode == "Multi-Pass":
-            num_depth = st.slider(
-                "Depth levels", 2, 10, 3, key="rast_depth"
-            )
+            num_depth = st.slider("Depth levels", 2, 10, 3, key="rast_depth")
             z_step = st.slider(
                 "Z step down", 0.1, 2.0, 0.5, 0.1, key="rast_zstep"
             )
 
-    sm = (
-        ScanMode.Segmented
-        if scan_mode == "Segmented"
-        else ScanMode.FullSweep
-    )
+    sm = ScanMode.Segmented if scan_mode == "Segmented" else ScanMode.FullSweep
 
     gray = _make_pattern(img_size, img_size, pattern)
 
@@ -1517,7 +1580,7 @@ def page_rasterization():
     axes[0].set_title("Input image")
     axes[0].set_aspect("equal")
 
-    cmap = plt.cm.hot
+    cmap = plt.get_cmap("hot")
 
     ops.preload_state()
     pos = (0.0, 0.0, 0.0)
@@ -1525,10 +1588,7 @@ def page_rasterization():
         ct = ops.command_type(i)
         if ct == CommandType.MOVE_TO:
             ep = ops.endpoint(i)
-            if (
-                abs(pos[0] - ep[0]) > 1e-6
-                or abs(pos[1] - ep[1]) > 1e-6
-            ):
+            if abs(pos[0] - ep[0]) > 1e-6 or abs(pos[1] - ep[1]) > 1e-6:
                 axes[1].plot(
                     [pos[0], ep[0]],
                     [pos[1], ep[1]],
@@ -1587,9 +1647,7 @@ def page_rasterization():
     axes[1].set_aspect("equal")
     axes[1].grid(True, alpha=0.3)
     axes[1].legend(fontsize=9)
-    axes[1].set_title(
-        f"{scan_mode} | {mode} ({angle}\u00b0)"
-    )
+    axes[1].set_title(f"{scan_mode} | {mode} ({angle}\u00b0)")
     fig.tight_layout()
     st.pyplot(fig)
 
