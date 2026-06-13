@@ -86,6 +86,12 @@ use pyo3_stub_gen::define_stub_info_gatherer;
 define_stub_info_gatherer!(stub_info);
 
 #[cfg(feature = "python")]
+pyo3_stub_gen::reexport_module_members!("raygeo" from "raygeo.geo"; "Geometry");
+
+#[cfg(feature = "python")]
+pyo3_stub_gen::reexport_module_members!("raygeo" from "raygeo.ops"; "Ops");
+
+#[cfg(feature = "python")]
 pyo3_stub_gen::module_doc!("raygeo", "{}", MODULE_DOC);
 
 /// Module documentation string used for Python `__doc__`.

@@ -38,12 +38,16 @@ Examples:
     100.0
 """
 
+from raygeo.geo import Geometry
+from raygeo.ops import Ops
 from . import geo
 from . import image
 from . import nest
 from . import ops
 from . import svg
 __all__ = [
+    "Geometry",
+    "Ops",
     "geo",
     "image",
     "nest",
