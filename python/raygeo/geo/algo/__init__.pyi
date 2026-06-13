@@ -28,6 +28,7 @@ from . import analysis
 from . import clipping
 from . import fitting
 from . import hull
+from . import interp
 from . import minkowski
 from . import overcut
 from . import simplify
@@ -37,6 +38,7 @@ __all__ = [
     "clipping",
     "fitting",
     "hull",
+    "interp",
     "minkowski",
     "overcut",
     "simplify",

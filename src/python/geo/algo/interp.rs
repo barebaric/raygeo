@@ -1,3 +1,10 @@
+pyo3_stub_gen::module_doc!("raygeo.geo.algo.interp", "{}", MODULE_DOC_INTERP);
+
+pub(crate) const MODULE_DOC_INTERP: &str = "\
+Segment interpolation utilities for parameter-based point projection,
+clipping, and scanline data slicing along 3D line segments.
+";
+
 use crate::geo::algo::interp::{
     compute_segment_delta, compute_t_range, project_t_along_segment,
     slice_scanline_data, solve_quadratic,
