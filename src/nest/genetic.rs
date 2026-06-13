@@ -51,13 +51,13 @@ fn random_individual(
     let mut fv = Vec::with_capacity(num_parts);
     for _ in 0..num_parts {
         let angle_idx = if config.rotation_count > 0 {
-            rng.gen_range(0..config.rotation_count)
+            rng.random_range(0..config.rotation_count)
         } else {
             0
         };
         rot.push(angle_idx as f64 * angle_step);
-        fh.push(config.flip_h && rng.gen_bool(RANDOM_FLIP_PROBABILITY));
-        fv.push(config.flip_v && rng.gen_bool(RANDOM_FLIP_PROBABILITY));
+        fh.push(config.flip_h && rng.random_bool(RANDOM_FLIP_PROBABILITY));
+        fv.push(config.flip_v && rng.random_bool(RANDOM_FLIP_PROBABILITY));
     }
     Individual {
         rotation: rot,
@@ -183,7 +183,7 @@ fn create_initial_population(
 
 impl GeneticAlgorithm {
     pub fn new(num_parts: usize, config: GeneticConfig) -> Self {
-        let mut rng = rand::thread_rng();
+        let mut rng = rand::rng();
         let angle_step = if config.rotation_count > 0 {
             360.0 / config.rotation_count as f64
         } else {
@@ -195,7 +195,7 @@ impl GeneticAlgorithm {
 
         // Fill remaining population with mutated copies
         while population.len() < config.population_size {
-            let donor_idx = rng.gen_range(0..population.len());
+            let donor_idx = rng.random_range(0..population.len());
             let mutant = mutate_internal(
                 &population[donor_idx],
                 &config,
@@ -215,7 +215,7 @@ impl GeneticAlgorithm {
     }
 
     pub fn mutate(&self, idx: usize) -> Individual {
-        let mut rng = rand::thread_rng();
+        let mut rng = rand::rng();
         mutate_internal(
             &self.population[idx],
             &self.config,
@@ -237,8 +237,8 @@ impl GeneticAlgorithm {
             return (male.clone(), female.clone());
         }
 
-        let mut rng = rand::thread_rng();
-        let cutpoint = rng.gen_range(1..self.num_parts);
+        let mut rng = rand::rng();
+        let cutpoint = rng.random_range(1..self.num_parts);
 
         let child1_rot: Vec<f64> = male.rotation[..cutpoint]
             .iter()
@@ -295,7 +295,7 @@ impl GeneticAlgorithm {
                 .unwrap_or(std::cmp::Ordering::Equal)
         });
 
-        let mut rng = rand::thread_rng();
+        let mut rng = rand::rng();
         let mut new_population: Vec<Individual> =
             Vec::with_capacity(self.population.len());
 
@@ -355,7 +355,7 @@ fn random_weighted_individual(
     // Linear ranking: rank 0 (best) gets weight len, rank len-1 (worst)
     // gets weight 1. Sum = len*(len+1)/2.
     let denom = (len * (len + 1) / 2) as f64;
-    let rand_float: f64 = rng.gen();
+    let rand_float: f64 = rng.random();
     let mut cumulative = 0.0;
 
     for (pos, &idx) in indices.iter().enumerate() {
@@ -381,19 +381,19 @@ fn mutate_internal(
     for i in 0..num_parts {
         // Random rotation change
         if config.rotation_count > 0
-            && rng.gen_bool(ROTATION_MUTATION_BASE * config.mutation_rate)
+            && rng.random_bool(ROTATION_MUTATION_BASE * config.mutation_rate)
         {
-            let angle_idx = rng.gen_range(0..config.rotation_count);
+            let angle_idx = rng.random_range(0..config.rotation_count);
             clone.rotation[i] = angle_idx as f64 * angle_step;
         }
 
         // Horizontal flip toggle
-        if config.flip_h && rng.gen_bool(FLIP_MUTATION_PROBABILITY) {
+        if config.flip_h && rng.random_bool(FLIP_MUTATION_PROBABILITY) {
             clone.flip_h[i] = !clone.flip_h[i];
         }
 
         // Vertical flip toggle
-        if config.flip_v && rng.gen_bool(FLIP_MUTATION_PROBABILITY) {
+        if config.flip_v && rng.random_bool(FLIP_MUTATION_PROBABILITY) {
             clone.flip_v[i] = !clone.flip_v[i];
         }
     }
