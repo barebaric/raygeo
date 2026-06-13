@@ -189,10 +189,8 @@ fn rewrite_buffered_line(
         }
     };
 
-    let original_power = old_ops
-        .preloaded_state(first_cut_idx)
-        .map(|s| s.power)
-        .unwrap_or(0.0);
+    let original_power =
+        old_ops.state(first_cut_idx).map(|s| s.power).unwrap_or(0.0);
 
     new_ops.move_to(overscan_start.0, overscan_start.1, overscan_start.2, None);
     new_ops.set_power(0.0);

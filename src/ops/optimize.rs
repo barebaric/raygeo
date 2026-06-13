@@ -731,7 +731,7 @@ fn reassemble_workpieces(ops: &mut Ops, ordered_metas: &[WorkpieceMeta]) {
     for meta in ordered_metas {
         ops.workpiece_start(&meta.uid);
         for j in 0..meta.ops.len() {
-            if let Some(state) = meta.ops.preloaded_state(j) {
+            if let Some(state) = meta.ops.state(j) {
                 prev = sync_state_commands(ops, state, &prev);
             }
             ops.transfer_command_from(&meta.ops, j);
@@ -841,7 +841,7 @@ fn optimize_segments(ops: &mut Ops, progress_cb: &dyn ProgressCallback) {
             continue;
         }
         for j in 0..segment_ops.len() {
-            if let Some(state) = segment_ops.preloaded_state(j) {
+            if let Some(state) = segment_ops.state(j) {
                 prev = sync_state_commands(ops, state, &prev);
             }
             ops.transfer_command_from(segment_ops, j);

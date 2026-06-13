@@ -614,7 +614,7 @@ def _plot_ops(
         ):
             continue
         if show_power:
-            st = ops.preloaded_state(i)
+            st = ops.state(i)
             if st is not None and st.power is not None:
                 draw_color = plt.get_cmap("RdYlGn")(st.power)
             else:
@@ -1288,7 +1288,7 @@ def page_lead_in_out():
             continue
         if ct == CommandType.LINE_TO:
             ep = ops.endpoint(i)
-            state = ops.preloaded_state(i)
+            state = ops.state(i)
             color = (
                 "dodgerblue" if state and state.power < 0.01 else "forestgreen"
             )

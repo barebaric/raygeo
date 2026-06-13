@@ -118,10 +118,6 @@ impl Ops {
         self.commands[idx].state()
     }
 
-    pub fn preloaded_state(&self, idx: usize) -> Option<&State> {
-        self.commands[idx].state()
-    }
-
     pub fn set_state_on_moving(&mut self, state: &State) {
         for node in &mut self.commands {
             if node.is_moving() {

@@ -311,7 +311,7 @@ class TestOptimizeStateBoundaries:
         air_on_idx = -1
         for i in range(ops.len()):
             if ops.category(i) == CommandCategory.MOVING:
-                state = ops.preloaded_state(i)
+                state = ops.state(i)
                 assert state is not None
                 if state.air_assist:
                     air_on_idx = i
@@ -319,7 +319,7 @@ class TestOptimizeStateBoundaries:
         assert air_on_idx != -1
         for i in range(air_on_idx):
             if ops.category(i) == CommandCategory.MOVING:
-                state = ops.preloaded_state(i)
+                state = ops.state(i)
                 assert state is not None
                 assert not state.air_assist
 
@@ -336,7 +336,7 @@ class TestOptimizeStateBoundaries:
         powers = set()
         for i in range(ops.len()):
             if ops.category(i) == CommandCategory.MOVING:
-                state = ops.preloaded_state(i)
+                state = ops.state(i)
                 assert state is not None
                 powers.add(round(state.power, 2))
         assert 0.4 in powers
@@ -355,7 +355,7 @@ class TestOptimizeStateBoundaries:
         speeds = set()
         for i in range(ops.len()):
             if ops.category(i) == CommandCategory.MOVING:
-                state = ops.preloaded_state(i)
+                state = ops.state(i)
                 assert state is not None
                 if state.cut_speed is not None:
                     speeds.add(state.cut_speed)
@@ -523,12 +523,12 @@ class TestOptimizeScanline:
         assert len(scan_indices) == 1
         scan_idx = scan_indices[0]
         move_idx = scan_idx - 1
-        move_state = ops.preloaded_state(move_idx)
+        move_state = ops.state(move_idx)
         assert move_state is not None
         assert move_state.power == pytest.approx(0.85)
         assert move_state.cut_speed == pytest.approx(1234)
         assert move_state.air_assist is True
-        scan_state = ops.preloaded_state(scan_idx)
+        scan_state = ops.state(scan_idx)
         assert scan_state is not None
         assert scan_state.power == pytest.approx(0.85)
         assert scan_state.cut_speed == pytest.approx(1234)
@@ -554,12 +554,12 @@ class TestOptimizeScanline:
         assert len(scan_indices) == 1
         for scan_idx in scan_indices:
             move_idx = scan_idx - 1
-            move_state = ops.preloaded_state(move_idx)
+            move_state = ops.state(move_idx)
             assert move_state is not None
             assert move_state.power == pytest.approx(0.77)
             assert move_state.travel_speed == pytest.approx(5678)
             assert move_state.air_assist is False
-            scan_state = ops.preloaded_state(scan_idx)
+            scan_state = ops.state(scan_idx)
             assert scan_state is not None
             assert scan_state.power == pytest.approx(0.77)
             assert scan_state.travel_speed == pytest.approx(5678)
@@ -586,11 +586,11 @@ class TestOptimizeScanline:
         assert len(scan_indices) == 1
         flipped_scan_idx = scan_indices[0]
         move_idx = flipped_scan_idx - 1
-        move_state = ops.preloaded_state(move_idx)
+        move_state = ops.state(move_idx)
         assert move_state is not None
         assert move_state.power == pytest.approx(0.66)
         assert move_state.cut_speed == pytest.approx(2000)
-        scan_state = ops.preloaded_state(flipped_scan_idx)
+        scan_state = ops.state(flipped_scan_idx)
         assert scan_state is not None
         assert scan_state.power == pytest.approx(0.66)
         assert scan_state.cut_speed == pytest.approx(2000)
@@ -816,7 +816,7 @@ class TestOptimizeStateSynchronization:
         has_10 = False
         for i in range(ops.len()):
             if ops.category(i) == CommandCategory.MOVING:
-                state = ops.preloaded_state(i)
+                state = ops.state(i)
                 assert state is not None
                 if abs(state.power - 0.5) < 0.01:
                     has_05 = True
@@ -838,7 +838,7 @@ class TestOptimizeStateSynchronization:
         air_states = set()
         for i in range(ops.len()):
             if ops.category(i) == CommandCategory.MOVING:
-                state = ops.preloaded_state(i)
+                state = ops.state(i)
                 assert state is not None
                 air_states.add(state.air_assist)
         assert True in air_states
@@ -857,7 +857,7 @@ class TestOptimizeStateSynchronization:
         speeds = set()
         for i in range(ops.len()):
             if ops.category(i) == CommandCategory.MOVING:
-                state = ops.preloaded_state(i)
+                state = ops.state(i)
                 assert state is not None
                 if state.travel_speed is not None:
                     speeds.add(state.travel_speed)
@@ -878,7 +878,7 @@ class TestOptimizeStateSynchronization:
         lasers = set()
         for i in range(ops.len()):
             if ops.category(i) == CommandCategory.MOVING:
-                state = ops.preloaded_state(i)
+                state = ops.state(i)
                 assert state is not None
                 if state.active_laser_uid is not None:
                     lasers.add(state.active_laser_uid)
@@ -1052,7 +1052,7 @@ class TestOptimizeComplexScenarios:
         power_change_idx = -1
         for i in range(ops.len()):
             if ops.category(i) == CommandCategory.MOVING:
-                state = ops.preloaded_state(i)
+                state = ops.state(i)
                 assert state is not None
                 if state.power == pytest.approx(0.9):
                     power_change_idx = i
@@ -1060,7 +1060,7 @@ class TestOptimizeComplexScenarios:
         assert power_change_idx != -1
         for i in range(power_change_idx):
             if ops.category(i) == CommandCategory.MOVING:
-                state = ops.preloaded_state(i)
+                state = ops.state(i)
                 assert state is not None
                 assert state.power == pytest.approx(0.4)
 

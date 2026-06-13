@@ -328,12 +328,9 @@ class Ops:
         :param idx: Command index.
         :returns: Dict mapping axis names to values, or None.
         """
-    def preloaded_state(self, idx: builtins.int) -> typing.Optional[state.State]:
+    def state(self, idx: builtins.int) -> typing.Optional[state.State]:
         r"""
-        Get the preloaded machine state for a moving command (if available).
-        
-        The preloaded state is the state that was in effect at the time
-        this command was created (after calling :meth:`preload_state`).
+        Get the machine state stored on a command (if available).
         
         :param idx: Command index.
         :returns: The :class:`State` at that index, or None.

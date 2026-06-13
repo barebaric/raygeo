@@ -230,7 +230,7 @@ fn rewrite_buffered_contour(
         .iter()
         .find(|&&j| {
             old_ops.command_type(j) == CommandType::LineTo
-                && old_ops.preloaded_state(j).is_some()
+                && old_ops.state(j).is_some()
         })
         .copied();
 
@@ -244,10 +244,8 @@ fn rewrite_buffered_contour(
         }
     };
 
-    let original_power = old_ops
-        .preloaded_state(first_cut_idx)
-        .map(|s| s.power)
-        .unwrap_or(0.0);
+    let original_power =
+        old_ops.state(first_cut_idx).map(|s| s.power).unwrap_or(0.0);
 
     let start_3d = old_ops.endpoint(moving_indices[0]);
     let end_3d = old_ops.endpoint(moving_indices[moving_indices.len() - 1]);

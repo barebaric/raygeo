@@ -846,20 +846,17 @@ impl PyOps {
         }
     }
 
-    /// Get the preloaded machine state for a moving command (if available).
-    ///
-    /// The preloaded state is the state that was in effect at the time
-    /// this command was created (after calling :meth:`preload_state`).
+    /// Get the machine state stored on a command (if available).
     ///
     /// :param idx: Command index.
     /// :returns: The :class:`State` at that index, or None.
-    fn preloaded_state(&self, idx: usize) -> PyResult<Option<PyState>> {
+    fn state(&self, idx: usize) -> PyResult<Option<PyState>> {
         if idx >= self.inner.len() {
             return Err(PyErr::new::<pyo3::exceptions::PyIndexError, _>(
                 "index out of range",
             ));
         }
-        match self.inner.commands[idx].state() {
+        match self.inner.state(idx) {
             Some(s) => Ok(Some(PyState(s.clone()))),
             None => Ok(None),
         }
