@@ -16,11 +16,13 @@ pub struct Rect(pub f64, pub f64, pub f64, pub f64);
 /// - c1: First control point
 /// - c2: Second control point
 /// - p1: End point
-pub type CubicBezier = (Point, Point, Point, Point);
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct CubicBezier(pub Point, pub Point, pub Point, pub Point);
 
 /// Control points for a cubic Bezier curve: (c1, c2, p1).
 /// c1 and c2 are the control points, p1 is the end point.
-pub type BezierControls = (Point, Point, Point);
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct BezierControls(pub Point, pub Point, pub Point);
 
 /// Result of splitting a cubic Bezier curve: (first_half, second_half).
 pub type BezierSplit = (CubicBezier, CubicBezier);

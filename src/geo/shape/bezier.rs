@@ -53,8 +53,8 @@ pub fn split_bezier(
     let mid_c1c2_c2p1 = _lerp2(mid_c1_c2, mid_c2_p1, t);
     let split_point = _lerp2(mid_p0c1_c1c2, mid_c1c2_c2p1, t);
 
-    let left: CubicBezier = (p0, mid_p0_c1, mid_p0c1_c1c2, split_point);
-    let right: CubicBezier = (split_point, mid_c1c2_c2p1, mid_c2_p1, p1);
+    let left = CubicBezier(p0, mid_p0_c1, mid_p0c1_c1c2, split_point);
+    let right = CubicBezier(split_point, mid_c1c2_c2p1, mid_c2_p1, p1);
     (left, right)
 }
 
@@ -371,7 +371,7 @@ pub fn linearize_bezier_adaptive(
         tolerance_sq: f64,
         points: &mut Polygon,
     ) {
-        let (p0, c1, c2, p1) = curve;
+        let CubicBezier(p0, c1, c2, p1) = curve;
         let vx = p1.0 - p0.0;
         let vy = p1.1 - p0.1;
         let norm_sq = vx * vx + vy * vy;
@@ -413,7 +413,7 @@ pub fn linearize_bezier_adaptive(
 
         // Recurse on both halves
         recursive_step(
-            (p0, m01, q01, r),
+            CubicBezier(p0, m01, q01, r),
             depth + 1,
             max_depth,
             tolerance_sq,
@@ -421,7 +421,7 @@ pub fn linearize_bezier_adaptive(
         );
         points.push(r);
         recursive_step(
-            (r, q12, m23, p1),
+            CubicBezier(r, q12, m23, p1),
             depth + 1,
             max_depth,
             tolerance_sq,
@@ -429,7 +429,13 @@ pub fn linearize_bezier_adaptive(
         );
     }
 
-    recursive_step((p0, c1, c2, p1), 0, max_depth, tolerance_sq, &mut points);
+    recursive_step(
+        CubicBezier(p0, c1, c2, p1),
+        0,
+        max_depth,
+        tolerance_sq,
+        &mut points,
+    );
     points.push(p1);
     points
 }
@@ -588,7 +594,7 @@ fn _extract_subsegment(
     let ends_at_one = (t_end - 1.0).abs() < 1e-12;
 
     if starts_at_zero && ends_at_one {
-        return (p0, c1, c2, p1);
+        return CubicBezier(p0, c1, c2, p1);
     }
     if starts_at_zero {
         let (left, _) = split_bezier(p0, c1, c2, p1, t_end);

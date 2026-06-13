@@ -28,7 +28,7 @@ use crate::geo::algo::topology::{
 use crate::geo::geometry::Geometry as CoreGeometry;
 use crate::geo::math::map_geometry_to_frame;
 use crate::geo::query::find_closest_point_on_path_from_array;
-use crate::types::{Command as CoreCommand, Point};
+use crate::types::{BezierControls, Command as CoreCommand, Point};
 
 #[gen_stub_pyclass]
 #[pyclass(module = "raygeo.geo", name = "Move", frozen, skip_from_py_object)]
@@ -309,7 +309,7 @@ impl Geometry {
     ) -> Bound<'_, Self> {
         slf.borrow_mut()
             .inner
-            .bezier_to(((c1x, c1y), (c2x, c2y), (x, y)), z);
+            .bezier_to(BezierControls((c1x, c1y), (c2x, c2y), (x, y)), z);
         slf
     }
 
@@ -758,7 +758,11 @@ impl Geometry {
                                     )
                                 {
                                     geo.inner.bezier_to(
-                                        ((c1x, c1y), (c2x, c2y), (x, y)),
+                                        BezierControls(
+                                            (c1x, c1y),
+                                            (c2x, c2y),
+                                            (x, y),
+                                        ),
                                         z,
                                     );
                                 }
@@ -811,7 +815,11 @@ impl Geometry {
                                         (c1v, c2v)
                                     {
                                         geo.inner.bezier_to(
-                                            ((c1x, c1y), (c2x, c2y), (x, y)),
+                                            BezierControls(
+                                                (c1x, c1y),
+                                                (c2x, c2y),
+                                                (x, y),
+                                            ),
                                             z,
                                         );
                                     }

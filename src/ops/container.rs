@@ -9,6 +9,7 @@ use super::axis::Axis;
 use super::enums::{CommandCategory, CommandType, SectionType};
 use super::state::State;
 use super::types::{MarkerCmd, MoveCmd, OpCategory, OpNode, StateCmd};
+use crate::types::BezierControls;
 use crate::types::{Point3D, Rect};
 
 #[derive(Clone, Debug)]
@@ -891,7 +892,7 @@ impl Ops {
                     }
                     MoveCmd::BezierTo { control1, control2 } => {
                         geo.bezier_to(
-                            (
+                            BezierControls(
                                 (control1.0, control1.1),
                                 (control2.0, control2.1),
                                 (end.0, end.1),

@@ -18,7 +18,7 @@ use crate::geo::shape::bezier::{
     get_perpendicular_dist_sq, is_bezier_inside_polygons, linearize_bezier,
     linearize_bezier_adaptive, linearize_bezier_segment, split_bezier,
 };
-use crate::types::{BezierSplit, Point, Rect};
+use crate::types::{Point, Rect};
 use pyo3::prelude::*;
 use pyo3::types::PyList;
 use pyo3_stub_gen::derive::gen_stub_pyfunction;
@@ -117,14 +117,20 @@ fn get_bezier_point_at_py(
     module = "raygeo.geo.shape.bezier"
 )]
 #[pyfunction(name = "split_bezier")]
+#[allow(clippy::type_complexity)]
 fn split_bezier_py(
     p0: PyPoint2D,
     p1: PyPoint2D,
     p2: PyPoint2D,
     p3: PyPoint2D,
     t: f64,
-) -> BezierSplit {
-    split_bezier((p0.0, p0.1), (p1.0, p1.1), (p2.0, p2.1), (p3.0, p3.1), t)
+) -> ((Point, Point, Point, Point), (Point, Point, Point, Point)) {
+    let (left, right) =
+        split_bezier((p0.0, p0.1), (p1.0, p1.1), (p2.0, p2.1), (p3.0, p3.1), t);
+    (
+        (left.0, left.1, left.2, left.3),
+        (right.0, right.1, right.2, right.3),
+    )
 }
 
 #[gen_stub_pyfunction(
@@ -242,6 +248,9 @@ fn clip_bezier_with_rect_py(
         (p3.0, p3.1),
         Rect(rect.0, rect.1, rect.2, rect.3),
     )
+    .into_iter()
+    .map(|c| (c.0, c.1, c.2, c.3))
+    .collect()
 }
 
 #[gen_stub_pyfunction(

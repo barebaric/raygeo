@@ -104,7 +104,7 @@ impl Geometry {
     /// - `c2`: Second control point
     /// - `p1`: End point (the start point is the current position)
     pub fn bezier_to(&mut self, controls: BezierControls, z: f64) -> &mut Self {
-        let (c1, c2, p1) = controls;
+        let BezierControls(c1, c2, p1) = controls;
         self.data.push(Command::Bezier {
             end: (p1.0, p1.1, z),
             control1: c1,
