@@ -2,10 +2,12 @@ use crate::constants::EPSILON_COLLINEAR;
 use crate::geo::shape::arc::get_arc_sweep;
 
 /// A 2D point represented as (x, y) coordinates.
-pub type Point = (f64, f64);
+#[derive(Clone, Copy, Debug, Default, PartialEq, PartialOrd)]
+pub struct Point(pub f64, pub f64);
 
 /// A 3D point represented as (x, y, z) coordinates.
-pub type Point3D = (f64, f64, f64);
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct Point3D(pub f64, pub f64, pub f64);
 
 /// A 2D axis-aligned bounding box represented as (x_min, y_min, x_max, y_max).
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
@@ -147,7 +149,9 @@ impl Command {
                 let nx = sx + t * (ex - sx);
                 let ny = sy + t * (ey - sy);
                 let nz = sz + t * (ez - sz);
-                Some(Command::Line { end: (nx, ny, nz) })
+                Some(Command::Line {
+                    end: Point3D(nx, ny, nz),
+                })
             }
             Command::Arc {
                 center_offset,
@@ -170,8 +174,8 @@ impl Command {
                 let ny = cy + radius * mid_angle.sin();
                 let nz = sz + t * (ez - sz);
                 Some(Command::Arc {
-                    end: (nx, ny, nz),
-                    center_offset: (i_off, j_off),
+                    end: Point3D(nx, ny, nz),
+                    center_offset: Point(i_off, j_off),
                     clockwise: *clockwise,
                 })
             }
@@ -203,9 +207,9 @@ impl Command {
                 let p0123y = p012y + t * (p123y - p012y);
                 let p0123z = p012z + t * (p123z - p012z);
                 Some(Command::Bezier {
-                    end: (p0123x, p0123y, p0123z),
-                    control1: (p01x, p01y, p01z),
-                    control2: (p012x, p012y, p012z),
+                    end: Point3D(p0123x, p0123y, p0123z),
+                    control1: Point3D(p01x, p01y, p01z),
+                    control2: Point3D(p012x, p012y, p012z),
                 })
             }
             Command::Move { .. } => None,

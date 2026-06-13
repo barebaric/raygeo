@@ -52,8 +52,8 @@ pub fn calculate_input_scale(polygons: &[Polygon], max_int: i64) -> f64 {
     }
     let mut max_abs = 0.0f64;
     for poly in polygons {
-        for &(x, y) in poly {
-            max_abs = max_abs.max(x.abs()).max(y.abs());
+        for p in poly {
+            max_abs = max_abs.max(p.0.abs()).max(p.1.abs());
         }
     }
     if max_abs < 1.0 {
@@ -72,15 +72,17 @@ pub fn get_polygon_minkowski_sum_convex(
     let mut all_points: Vec<Point> = Vec::new();
     for p1 in poly_a {
         for p2 in poly_b {
-            all_points
-                .push((p1.0 as f64 + p2.0 as f64, p1.1 as f64 + p2.1 as f64));
+            all_points.push(Point(
+                p1.0 as f64 + p2.0 as f64,
+                p1.1 as f64 + p2.1 as f64,
+            ));
         }
     }
     let hull = get_polygon_convex_hull(&all_points);
     if hull.len() < 3 {
         return vec![];
     }
-    vec![hull.iter().map(|(x, y)| (*x as i64, *y as i64)).collect()]
+    vec![hull.iter().map(|p| (p.0 as i64, p.1 as i64)).collect()]
 }
 
 /// Calculate the No-Fit Polygon (NFP) for two polygons.
@@ -138,10 +140,10 @@ pub fn get_inner_fit_polygon(
         return vec![];
     }
     let ifp = vec![
-        (ifp_min_x, ifp_min_y),
-        (ifp_max_x, ifp_min_y),
-        (ifp_max_x, ifp_max_y),
-        (ifp_min_x, ifp_max_y),
+        Point(ifp_min_x, ifp_min_y),
+        Point(ifp_max_x, ifp_min_y),
+        Point(ifp_max_x, ifp_max_y),
+        Point(ifp_min_x, ifp_max_y),
     ];
     vec![ifp]
 }

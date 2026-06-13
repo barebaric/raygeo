@@ -8,10 +8,12 @@ smoothing with configurable corner angle thresholds to preserve
 sharp features.
 ";
 
+use super::super::flex_point::PyPoint3D;
 use crate::geo::algo::smooth::{
     compute_gaussian_kernel, resample_polyline, smooth_circularly,
     smooth_polyline, smooth_sub_segment,
 };
+use crate::types::Point3D;
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::gen_stub_pyfunction;
 
@@ -55,11 +57,13 @@ pub fn register(algo_mod: &Bound<'_, PyModule>) -> PyResult<()> {
 )]
 #[pyfunction(name = "resample_polyline")]
 fn resample_polyline_py(
-    points: Vec<(f64, f64, f64)>,
+    points: Vec<PyPoint3D>,
     max_segment_length: f64,
     is_closed: bool,
-) -> Vec<(f64, f64, f64)> {
-    resample_polyline(&points, max_segment_length, is_closed)
+) -> Vec<Point3D> {
+    let pts: Vec<Point3D> =
+        points.iter().map(|p| Point3D(p.0, p.1, p.2)).collect();
+    resample_polyline(&pts, max_segment_length, is_closed)
 }
 
 #[gen_stub_pyfunction(
@@ -100,10 +104,12 @@ fn compute_gaussian_kernel_py(amount: i32) -> (Vec<f64>, f64) {
 )]
 #[pyfunction(name = "smooth_circularly")]
 fn smooth_circularly_py(
-    points: Vec<(f64, f64, f64)>,
+    points: Vec<PyPoint3D>,
     kernel: Vec<f64>,
-) -> Vec<(f64, f64, f64)> {
-    smooth_circularly(&points, &kernel)
+) -> Vec<Point3D> {
+    let pts: Vec<Point3D> =
+        points.iter().map(|p| Point3D(p.0, p.1, p.2)).collect();
+    smooth_circularly(&pts, &kernel)
 }
 
 #[gen_stub_pyfunction(
@@ -132,12 +138,14 @@ fn smooth_circularly_py(
 #[pyfunction(name = "smooth_polyline")]
 #[pyo3(signature = (points, amount, corner_angle_threshold, is_closed=None))]
 fn smooth_polyline_algo_py(
-    points: Vec<(f64, f64, f64)>,
+    points: Vec<PyPoint3D>,
     amount: i32,
     corner_angle_threshold: f64,
     is_closed: Option<bool>,
-) -> Vec<(f64, f64, f64)> {
-    smooth_polyline(&points, amount, corner_angle_threshold, is_closed)
+) -> Vec<Point3D> {
+    let pts: Vec<Point3D> =
+        points.iter().map(|p| Point3D(p.0, p.1, p.2)).collect();
+    smooth_polyline(&pts, amount, corner_angle_threshold, is_closed)
 }
 
 #[gen_stub_pyfunction(
@@ -160,8 +168,10 @@ fn smooth_polyline_algo_py(
 )]
 #[pyfunction(name = "smooth_sub_segment")]
 fn smooth_sub_segment_py(
-    points: Vec<(f64, f64, f64)>,
+    points: Vec<PyPoint3D>,
     kernel: Vec<f64>,
-) -> Vec<(f64, f64, f64)> {
-    smooth_sub_segment(&points, &kernel)
+) -> Vec<Point3D> {
+    let pts: Vec<Point3D> =
+        points.iter().map(|p| Point3D(p.0, p.1, p.2)).collect();
+    smooth_sub_segment(&pts, &kernel)
 }

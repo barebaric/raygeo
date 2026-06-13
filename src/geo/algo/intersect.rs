@@ -9,7 +9,7 @@ use crate::constants::EPSILON_INTERSECT;
 use crate::geo::shape::arc::linearize_arc;
 use crate::geo::shape::bezier::linearize_bezier_from_params;
 use crate::geo::shape::line::get_line_segment_intersection;
-use crate::types::{Command, Point3D};
+use crate::types::{Command, Point, Point3D};
 use rstar::{PointDistance, RTree, RTreeObject, AABB};
 
 /// Returns a list of linearized line segments for a given command index.
@@ -23,7 +23,7 @@ fn get_segments_for_cmd(
     let start_point = if index > 0 {
         data[index - 1].end_point()
     } else {
-        (0.0, 0.0, 0.0)
+        Point3D(0.0, 0.0, 0.0)
     };
 
     match cmd {
@@ -147,10 +147,10 @@ fn data_intersect(
             for &(seg1_p1, seg1_p2) in &ri1.segments {
                 for &(seg2_p1, seg2_p2) in &ri2.segments {
                     let intersection = get_line_segment_intersection(
-                        (seg1_p1.0, seg1_p1.1),
-                        (seg1_p2.0, seg1_p2.1),
-                        (seg2_p1.0, seg2_p1.1),
-                        (seg2_p2.0, seg2_p2.1),
+                        Point(seg1_p1.0, seg1_p1.1),
+                        Point(seg1_p2.0, seg1_p2.1),
+                        Point(seg2_p1.0, seg2_p1.1),
+                        Point(seg2_p2.0, seg2_p2.1),
                     );
 
                     if let Some(pt) = intersection {

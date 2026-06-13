@@ -49,7 +49,7 @@ fn trace_contour(
 
     let mut cx = start_x as i32;
     let mut cy = start_y as i32;
-    contour.push((cx as f64, cy as f64));
+    contour.push(Point(cx as f64, cy as f64));
 
     let mut dir_idx = 7;
     let max_steps = width * height * 2;
@@ -69,7 +69,7 @@ fn trace_contour(
                     cy = ny;
                     dir_idx = d;
                     visited[nidx] = true;
-                    contour.push((cx as f64, cy as f64));
+                    contour.push(Point(cx as f64, cy as f64));
                     found = true;
                     break;
                 }
@@ -172,18 +172,18 @@ pub fn get_concave_hull(
     for i in 0..num_hull {
         let p0 = hull_vertices[i];
         let p2 = hull_vertices[(i + 1) % num_hull];
-        let midpoint = ((p0.0 + p2.0) / 2.0, (p0.1 + p2.1) / 2.0);
+        let midpoint = Point((p0.0 + p2.0) / 2.0, (p0.1 + p2.1) / 2.0);
 
         let closest = find_closest_point(&all_contour_points, midpoint);
 
-        let target_sag = (
+        let target_sag = Point(
             midpoint.0 * (1.0 - effective_gravity)
                 + closest.0 * effective_gravity,
             midpoint.1 * (1.0 - effective_gravity)
                 + closest.1 * effective_gravity,
         );
 
-        let control = (
+        let control = Point(
             midpoint.0 + 2.0 * (target_sag.0 - midpoint.0),
             midpoint.1 + 2.0 * (target_sag.1 - midpoint.1),
         );
@@ -196,7 +196,7 @@ pub fn get_concave_hull(
             let y = (1.0 - t).powi(2) * p0.1
                 + 2.0 * (1.0 - t) * t * control.1
                 + t * t * p2.1;
-            points.push((x, y));
+            points.push(Point(x, y));
         }
     }
 

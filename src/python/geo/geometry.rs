@@ -28,14 +28,14 @@ use crate::geo::algo::topology::{
 use crate::geo::geometry::Geometry as CoreGeometry;
 use crate::geo::math::map_geometry_to_frame;
 use crate::geo::query::find_closest_point_on_path_from_array;
-use crate::types::{Command as CoreCommand, Point};
+use crate::types::{Command as CoreCommand, Point, Point3D};
 
 #[gen_stub_pyclass]
 #[pyclass(module = "raygeo.geo", name = "Move", frozen, skip_from_py_object)]
 #[derive(Clone, Debug)]
 pub struct PyMove {
     #[pyo3(get)]
-    pub end: (f64, f64, f64),
+    pub end: Point3D,
 }
 
 #[gen_stub_pyclass]
@@ -43,7 +43,7 @@ pub struct PyMove {
 #[derive(Clone, Debug)]
 pub struct PyLine {
     #[pyo3(get)]
-    pub end: (f64, f64, f64),
+    pub end: Point3D,
 }
 
 #[gen_stub_pyclass]
@@ -51,9 +51,9 @@ pub struct PyLine {
 #[derive(Clone, Debug)]
 pub struct PyArc {
     #[pyo3(get)]
-    pub end: (f64, f64, f64),
+    pub end: Point3D,
     #[pyo3(get)]
-    pub center_offset: (f64, f64),
+    pub center_offset: Point,
     #[pyo3(get)]
     pub clockwise: bool,
 }
@@ -63,11 +63,11 @@ pub struct PyArc {
 #[derive(Clone, Debug)]
 pub struct PyBezier {
     #[pyo3(get)]
-    pub end: (f64, f64, f64),
+    pub end: Point3D,
     #[pyo3(get)]
-    pub control1: (f64, f64, f64),
+    pub control1: Point3D,
     #[pyo3(get)]
-    pub control2: (f64, f64, f64),
+    pub control2: Point3D,
 }
 
 enum PyTypedCommand {
@@ -312,9 +312,9 @@ impl Geometry {
         z: f64,
     ) -> Bound<'_, Self> {
         slf.borrow_mut().inner.bezier_to(
-            (c1x, c1y, c1z),
-            (c2x, c2y, c2z),
-            (x, y, z),
+            Point3D(c1x, c1y, c1z),
+            Point3D(c2x, c2y, c2z),
+            Point3D(x, y, z),
         );
         slf
     }
@@ -379,12 +379,12 @@ impl Geometry {
 
     /// The coordinates of the last move-to command.
     #[getter]
-    fn last_move_to(&self) -> (f64, f64, f64) {
+    fn last_move_to(&self) -> Point3D {
         self.inner.last_move_to
     }
 
     #[setter]
-    fn set_last_move_to(&mut self, value: (f64, f64, f64)) {
+    fn set_last_move_to(&mut self, value: Point3D) {
         self.inner.last_move_to = value;
     }
 
@@ -407,11 +407,11 @@ impl Geometry {
     }
 
     /// Get the last point in the geometry.
-    fn get_last_point(&self) -> (f64, f64, f64) {
+    fn get_last_point(&self) -> Point3D {
         if let Some(last) = self.inner.data().last() {
             return last.end_point();
         }
-        (0.0, 0.0, 0.0)
+        Point3D(0.0, 0.0, 0.0)
     }
 
     /// Apply a 4x4 affine transformation matrix.
@@ -473,7 +473,7 @@ impl Geometry {
     fn get_positions_at_distances(
         &mut self,
         distances: Vec<f64>,
-    ) -> Vec<(usize, f64, (f64, f64))> {
+    ) -> Vec<(usize, f64, Point)> {
         self.inner.get_positions_at_distances(&distances)
     }
 
@@ -514,7 +514,7 @@ impl Geometry {
     }
 
     /// Return the geometry split into segments of connected commands.
-    fn segments(&mut self) -> Vec<Vec<(f64, f64, f64)>> {
+    fn segments(&mut self) -> Vec<Vec<Point3D>> {
         self.inner.segments()
     }
 
@@ -669,7 +669,7 @@ impl Geometry {
             if let Ok(lmt_list) = lmt.extract::<Vec<f64>>() {
                 if lmt_list.len() >= 3 {
                     geo.inner.last_move_to =
-                        (lmt_list[0], lmt_list[1], lmt_list[2]);
+                        Point3D(lmt_list[0], lmt_list[1], lmt_list[2]);
                 }
             }
         }
@@ -776,9 +776,9 @@ impl Geometry {
                                     )
                                 {
                                     geo.inner.bezier_to(
-                                        (c1x, c1y, c1z),
-                                        (c2x, c2y, c2z),
-                                        (x, y, z),
+                                        Point3D(c1x, c1y, c1z),
+                                        Point3D(c2x, c2y, c2z),
+                                        Point3D(x, y, z),
                                     );
                                 }
                             }
@@ -824,13 +824,13 @@ impl Geometry {
                                     cmd_dict.get_item("control1"),
                                     cmd_dict.get_item("control2"),
                                 ) {
-                                    let c1v = c1.extract::<(f64, f64, f64)>();
-                                    let c2v = c2.extract::<(f64, f64, f64)>();
+                                    let c1v = c1.extract::<Point3D>();
+                                    let c2v = c2.extract::<Point3D>();
                                     if let (Ok(c1_3d), Ok(c2_3d)) = (c1v, c2v) {
                                         geo.inner.bezier_to(
                                             c1_3d,
                                             c2_3d,
-                                            (x, y, z),
+                                            Point3D(x, y, z),
                                         );
                                     }
                                 }
@@ -1126,7 +1126,7 @@ impl Geometry {
         &mut self,
         x: f64,
         y: f64,
-    ) -> Option<(usize, f64, (f64, f64))> {
+    ) -> Option<(usize, f64, Point)> {
         if self.inner.data.is_empty() {
             return None;
         }
@@ -1142,7 +1142,7 @@ impl Geometry {
         &mut self,
         segment_index: usize,
         t: f64,
-    ) -> Option<(f64, f64, f64)> {
+    ) -> Option<Point3D> {
         if self.inner.data.is_empty() {
             return None;
         }
@@ -1158,7 +1158,7 @@ impl Geometry {
         &mut self,
         segment_index: usize,
         t: f64,
-    ) -> Option<(f64, f64)> {
+    ) -> Option<Point> {
         if self.inner.data.is_empty() {
             return None;
         }
@@ -1174,7 +1174,7 @@ impl Geometry {
         &mut self,
         segment_index: usize,
         t: f64,
-    ) -> Option<(f64, f64)> {
+    ) -> Option<Point> {
         if self.inner.data.is_empty() {
             return None;
         }
@@ -1207,8 +1207,8 @@ impl Geometry {
                 inner.inner.last_move_to
             }
         };
-        let end_point = (x, y, z);
-        let center_offset = (i, j);
+        let end_point = Point3D(x, y, z);
+        let center_offset = Point(i, j);
         let beziers = convert_arc_to_beziers_from_array(
             start_point,
             end_point,
@@ -1314,9 +1314,9 @@ impl Geometry {
     #[allow(clippy::too_many_arguments)]
     fn map_to_frame(
         slf: Bound<'_, Self>,
-        origin: (f64, f64),
-        p_width: (f64, f64),
-        p_height: (f64, f64),
+        origin: Point,
+        p_width: Point,
+        p_height: Point,
         anchor_y: Option<f64>,
         stable_src_height: Option<f64>,
         anchor_x: Option<f64>,
@@ -1371,7 +1371,8 @@ impl Geometry {
             if seg.len() < 3 {
                 continue;
             }
-            let poly: Vec<Point> = seg.iter().map(|p| (p.0, p.1)).collect();
+            let poly: Vec<Point> =
+                seg.iter().map(|p| Point(p.0, p.1)).collect();
             if let Some(cleaned) = crate::geo::shape::polygon::clean_polygon(
                 &poly,
                 0.01 * tolerance,
@@ -1458,7 +1459,7 @@ impl Geometry {
             let py_geo = Geometry { inner: geo.copy() };
             let dict = PyDict::new(py);
             dict.set_item("geo", py_geo)?;
-            let py_pts: Vec<(f64, f64)> = pts;
+            let py_pts: Vec<Point> = pts;
             dict.set_item("vertices", py_pts)?;
             dict.set_item("is_closed", closed)?;
             dict.set_item("original_index", orig_idx)?;

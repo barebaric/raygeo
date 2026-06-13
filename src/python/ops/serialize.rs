@@ -7,6 +7,7 @@ use crate::ops::{
 };
 
 use super::axis::PyAxis;
+use crate::types::Point3D;
 
 /// Convert a Python dictionary of axis-value pairs into a Rust vector.
 ///
@@ -191,7 +192,7 @@ fn create_and_append_command(
                 pyo3::exceptions::PyKeyError::new_err("missing 'end'")
             })?
             .extract()?;
-        let end_tuple = (end_data[0], end_data[1], end_data[2]);
+        let end_tuple = Point3D(end_data[0], end_data[1], end_data[2]);
 
         match ct {
             CommandType::MoveTo => {
@@ -244,8 +245,8 @@ fn create_and_append_command(
                         )
                     })?
                     .extract()?;
-                let control1 = (c1_vec[0], c1_vec[1], c1_vec[2]);
-                let control2 = (c2_vec[0], c2_vec[1], c2_vec[2]);
+                let control1 = Point3D(c1_vec[0], c1_vec[1], c1_vec[2]);
+                let control2 = Point3D(c2_vec[0], c2_vec[1], c2_vec[2]);
                 ops.bezier_to(control1, control2, end_tuple, extra_axes);
             }
             CommandType::QuadraticBezierTo => {
@@ -257,7 +258,7 @@ fn create_and_append_command(
                         )
                     })?
                     .extract()?;
-                let c = (c_vec[0], c_vec[1], c_vec[2]);
+                let c = Point3D(c_vec[0], c_vec[1], c_vec[2]);
                 ops.quadratic_bezier_to(c, end_tuple, extra_axes);
             }
             CommandType::ScanLine => {
@@ -436,7 +437,7 @@ pub fn ops_to_dict(
 pub fn ops_from_dict(data: &Bound<'_, PyDict>) -> PyResult<crate::ops::Ops> {
     let _py = data.py();
     let mut ops = crate::ops::Ops::new();
-    let last_move: (f64, f64, f64) = match data.get_item("last_move_to")? {
+    let last_move: Point3D = match data.get_item("last_move_to")? {
         Some(v) => {
             let l: Vec<f64> = v.extract()?;
             if l.len() != 3 {
@@ -444,9 +445,9 @@ pub fn ops_from_dict(data: &Bound<'_, PyDict>) -> PyResult<crate::ops::Ops> {
                     "last_move_to must be a 3-tuple",
                 ));
             }
-            (l[0], l[1], l[2])
+            Point3D(l[0], l[1], l[2])
         }
-        None => (0.0, 0.0, 0.0),
+        None => Point3D(0.0, 0.0, 0.0),
     };
     ops.last_move_to = last_move;
 
@@ -795,7 +796,7 @@ pub fn ops_from_numpy_arrays(
             .call_method0("tolist")?
             .extract()?;
         let end_tuple =
-            (end_list[0] as f64, end_list[1] as f64, end_list[2] as f64);
+            Point3D(end_list[0] as f64, end_list[1] as f64, end_list[2] as f64);
 
         match ct {
             CommandType::MoveTo => {
@@ -831,12 +832,12 @@ pub fn ops_from_numpy_arrays(
                     .call_method0("tolist")?
                     .extract()?;
                 ops.bezier_to(
-                    (
+                    Point3D(
                         bez_vals[0] as f64,
                         bez_vals[1] as f64,
                         bez_vals[2] as f64,
                     ),
-                    (
+                    Point3D(
                         bez_vals[3] as f64,
                         bez_vals[4] as f64,
                         bez_vals[5] as f64,
@@ -854,7 +855,7 @@ pub fn ops_from_numpy_arrays(
                     .call_method0("tolist")?
                     .extract()?;
                 ops.quadratic_bezier_to(
-                    (
+                    Point3D(
                         bez_vals[0] as f64,
                         bez_vals[1] as f64,
                         bez_vals[2] as f64,

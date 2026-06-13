@@ -2,10 +2,10 @@ use crate::constants::EPSILON_COLLINEAR;
 
 use super::container::Ops;
 use super::types::{MoveCmd, OpCategory, OpNode};
-use crate::types::Point3D;
+use crate::types::{Point, Point3D};
 
 fn transform_point(matrix: &[[f64; 4]; 4], p: Point3D) -> Point3D {
-    (
+    Point3D(
         matrix[0][0] * p.0
             + matrix[0][1] * p.1
             + matrix[0][2] * p.2
@@ -60,7 +60,7 @@ impl Ops {
                     let new_cmd = match cmd {
                         MoveCmd::ArcTo { center, cw } if is_non_uniform => {
                             let start_point = last_point_untransformed
-                                .unwrap_or((0.0, 0.0, 0.0));
+                                .unwrap_or(Point3D(0.0, 0.0, 0.0));
                             let segments =
                                 crate::geo::shape::arc::linearize_arc(
                                     *end,
@@ -93,7 +93,7 @@ impl Ops {
                             let new_cj = matrix[1][0] * center.0
                                 + matrix[1][1] * center.1;
                             MoveCmd::ArcTo {
-                                center: (new_ci, new_cj),
+                                center: Point(new_ci, new_cj),
                                 cw: if flip_cw { !cw } else { *cw },
                             }
                         }

@@ -12,7 +12,7 @@ pub fn convert_arcs_to_beziers(data: &[Command]) -> Vec<Command> {
         return vec![];
     }
     let mut result: Vec<Command> = Vec::new();
-    let mut last_pos = (0.0, 0.0, 0.0);
+    let mut last_pos = Point3D(0.0, 0.0, 0.0);
     for cmd in data {
         let end_pos = cmd.end_point();
 
@@ -45,7 +45,7 @@ pub fn linearize_data(data: &[Command], tolerance: f64) -> Vec<Command> {
         return vec![];
     }
     let mut result: Vec<Command> = Vec::new();
-    let mut last_pos = (0.0, 0.0, 0.0);
+    let mut last_pos = Point3D(0.0, 0.0, 0.0);
     for cmd in data {
         let end_pos = cmd.end_point();
 
@@ -100,7 +100,7 @@ pub fn flatten_to_points(
 
     let mut subpaths: Vec<Vec<Point3D>> = Vec::new();
     let mut current_subpath: Vec<Point3D> = Vec::new();
-    let mut last_pos = (0.0, 0.0, 0.0);
+    let mut last_pos = Point3D(0.0, 0.0, 0.0);
 
     for cmd in data {
         let end_pos = cmd.end_point();
@@ -245,7 +245,7 @@ pub fn fit_circle_to_3_points(
     let xc = ((sq1 - sq2) * (y3 - y2) - (sq2 - sq3) * (y2 - y1)) / d12;
     let yc = ((x2 - x1) * (sq2 - sq3) - (x3 - x2) * (sq1 - sq2)) / d12;
 
-    let center = (xc, yc);
+    let center = Point(xc, yc);
     let radius = (x1 - xc).hypot(y1 - yc);
     Some((center, radius))
 }
@@ -338,7 +338,7 @@ pub fn fit_circle_to_points(points: &[Point3D]) -> Option<(Point, f64, f64)> {
         return None;
     }
     let r = r_sq.sqrt();
-    let center = (xc, yc);
+    let center = Point(xc, yc);
 
     let mut max_err = 0.0;
     for p in points {
@@ -360,7 +360,8 @@ pub fn project_circle_center_to_bisector(
 ) -> Point {
     let (x1, y1) = (p1.0, p1.1);
     let (x2, y2) = (p2.0, p2.1);
-    let (cx, cy) = center;
+    let cx = center.0;
+    let cy = center.1;
 
     let dx = x2 - x1;
     let dy = y2 - y1;
@@ -379,7 +380,7 @@ pub fn project_circle_center_to_bisector(
     let proj_x = dx * proj_factor;
     let proj_y = dy * proj_factor;
 
-    (cx - proj_x, cy - proj_y)
+    Point(cx - proj_x, cy - proj_y)
 }
 
 /// Computes the maximum deviation of a polyline from a reference arc defined by
@@ -392,7 +393,8 @@ pub fn get_polyline_arc_deviation(
     if points.len() < 2 {
         return 0.0;
     }
-    let (xc, yc) = center;
+    let xc = center.0;
+    let yc = center.1;
     let mut max_deviation = 0.0_f64;
 
     for i in 0..(points.len() - 1) {
@@ -443,15 +445,15 @@ pub fn get_polyline_arc_deviation(
 pub fn convert_arc_to_beziers_from_array(
     start_point: Point3D,
     end_point: Point3D,
-    center_offset: (f64, f64),
+    center_offset: Point,
     clockwise: bool,
 ) -> Vec<Command> {
-    let p0_2d = (start_point.0, start_point.1);
-    let p_end_2d = (end_point.0, end_point.1);
+    let p0_2d = Point(start_point.0, start_point.1);
+    let p_end_2d = Point(end_point.0, end_point.1);
     let z_start = start_point.2;
     let z_end = end_point.2;
 
-    let center = (p0_2d.0 + center_offset.0, p0_2d.1 + center_offset.1);
+    let center = Point(p0_2d.0 + center_offset.0, p0_2d.1 + center_offset.1);
     let radius = center_offset.0.hypot(center_offset.1);
     let radius_end = (p_end_2d.0 - center.0).hypot(p_end_2d.1 - center.1);
 
@@ -493,29 +495,29 @@ pub fn convert_arc_to_beziers_from_array(
             let p3x = center.0 + radius1 * angle1.cos();
             let p3y = center.1 + radius1 * angle1.sin();
             let p3z = z_start + t1 * (z_end - z_start);
-            (p3x, p3y, p3z)
+            Point3D(p3x, p3y, p3z)
         };
 
-        let r_vec0 = (current_p0.0 - center.0, current_p0.1 - center.1);
-        let r_vec1 = (current_p3.0 - center.0, current_p3.1 - center.1);
+        let r_vec0 = Point(current_p0.0 - center.0, current_p0.1 - center.1);
+        let r_vec1 = Point(current_p3.0 - center.0, current_p3.1 - center.1);
 
         let t_vec0 = if clockwise {
-            (r_vec0.1, -r_vec0.0)
+            Point(r_vec0.1, -r_vec0.0)
         } else {
-            (-r_vec0.1, r_vec0.0)
+            Point(-r_vec0.1, r_vec0.0)
         };
         let t_vec1 = if clockwise {
-            (r_vec1.1, -r_vec1.0)
+            Point(r_vec1.1, -r_vec1.0)
         } else {
-            (-r_vec1.1, r_vec1.0)
+            Point(-r_vec1.1, r_vec1.0)
         };
 
-        let c1 = (
+        let c1 = Point3D(
             current_p0.0 + t_vec0.0 * kappa,
             current_p0.1 + t_vec0.1 * kappa,
             current_p0.2 * 2.0 / 3.0 + current_p3.2 * 1.0 / 3.0,
         );
-        let c2 = (
+        let c2 = Point3D(
             current_p3.0 - t_vec1.0 * kappa,
             current_p3.1 - t_vec1.1 * kappa,
             current_p0.2 * 1.0 / 3.0 + current_p3.2 * 2.0 / 3.0,
@@ -584,7 +586,8 @@ pub fn create_arc_cmd(
     center: Point,
     start_point: Point3D,
 ) -> Command {
-    let (xc, yc) = center;
+    let xc = center.0;
+    let yc = center.1;
     let v1x = start_point.0 - xc;
     let v1y = start_point.1 - yc;
     let v2x = end_point.0 - xc;
@@ -594,7 +597,7 @@ pub fn create_arc_cmd(
 
     Command::Arc {
         end: end_point,
-        center_offset: (xc - start_point.0, yc - start_point.1),
+        center_offset: Point(xc - start_point.0, yc - start_point.1),
         clockwise,
     }
 }
@@ -653,7 +656,8 @@ pub fn fit_points_recursive(
                 get_polyline_arc_deviation(three.as_slice(), center, radius);
             if arc_dev < tolerance {
                 let mut row = create_arc_cmd(p3, center, p1);
-                let pts = [(p1.0, p1.1), (p2.0, p2.1), (p3.0, p3.1)];
+                let pts =
+                    [Point(p1.0, p1.1), Point(p2.0, p2.1), Point(p3.0, p3.1)];
                 let is_cw = is_arc_clockwise(pts.as_slice(), center);
                 if let Command::Arc { clockwise, .. } = &mut row {
                     *clockwise = is_cw;
@@ -679,7 +683,7 @@ pub fn fit_points_recursive(
                     create_arc_cmd(points[end], center, points[start]);
                 let is_cw = {
                     let pts2d: Vec<Point> =
-                        subset.iter().map(|p| (p.0, p.1)).collect();
+                        subset.iter().map(|p| Point(p.0, p.1)).collect();
                     is_arc_clockwise(&pts2d, center)
                 };
                 if let Command::Arc { clockwise, .. } = &mut row {
@@ -739,7 +743,7 @@ pub fn fit_curves(
         chain.clear();
     };
 
-    let mut last_pos = (0.0, 0.0, 0.0);
+    let mut last_pos = Point3D(0.0, 0.0, 0.0);
 
     for (i, cmd) in data.iter().enumerate() {
         let end_pos = cmd.end_point();
@@ -851,7 +855,7 @@ pub fn optimize_path_from_array(
         chain.clear();
     };
 
-    let mut last_pos = (0.0, 0.0, 0.0);
+    let mut last_pos = Point3D(0.0, 0.0, 0.0);
 
     for cmd in data {
         let end_pos = cmd.end_point();

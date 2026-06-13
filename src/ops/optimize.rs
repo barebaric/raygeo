@@ -10,6 +10,7 @@ use rstar::{PointDistance, RTree, RTreeObject, AABB};
 use super::container::Ops;
 use super::enums::{CommandCategory, CommandType};
 use super::state::State;
+use crate::types::Point3D;
 
 const TWO_OPT_SEGMENT_THRESHOLD: usize = 1000;
 const TWO_OPT_COMMAND_LIMIT: usize = 10000;
@@ -32,8 +33,8 @@ impl ProgressCallback for NoopProgress {
 struct WorkpieceMeta {
     uid: String,
     ops: Ops,
-    entry_point: (f64, f64, f64),
-    exit_point: (f64, f64, f64),
+    entry_point: Point3D,
+    exit_point: Point3D,
     can_flip: bool,
 }
 
@@ -80,13 +81,13 @@ impl PointDistance for SegmentPoint {
     }
 }
 
-fn dist_2d(p1: (f64, f64, f64), p2: (f64, f64, f64)) -> f64 {
+fn dist_2d(p1: Point3D, p2: Point3D) -> f64 {
     let dx = p1.0 - p2.0;
     let dy = p1.1 - p2.1;
     dx.hypot(dy)
 }
 
-fn get_entry_point(ops: &Ops) -> Option<(f64, f64, f64)> {
+fn get_entry_point(ops: &Ops) -> Option<Point3D> {
     for i in 0..ops.len() {
         if ops.is_travel(i) {
             return Some(ops.endpoint(i));
@@ -100,7 +101,7 @@ fn get_entry_point(ops: &Ops) -> Option<(f64, f64, f64)> {
     None
 }
 
-fn get_exit_point(ops: &Ops) -> Option<(f64, f64, f64)> {
+fn get_exit_point(ops: &Ops) -> Option<Point3D> {
     for i in (0..ops.len()).rev() {
         if ops.category(i) == CommandCategory::Moving {
             return Some(ops.endpoint(i));

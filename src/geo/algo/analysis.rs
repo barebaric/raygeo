@@ -49,7 +49,7 @@ pub fn get_subpath_vertices_from_array(
     }
 
     let last_pos_3d = data[start_cmd_index].end_point();
-    vertices.push((last_pos_3d.0, last_pos_3d.1));
+    vertices.push(Point(last_pos_3d.0, last_pos_3d.1));
 
     for cmd in data.iter().skip(start_cmd_index + 1) {
         if matches!(cmd, Command::Move { .. }) {
@@ -60,7 +60,7 @@ pub fn get_subpath_vertices_from_array(
 
         match cmd {
             Command::Line { .. } => {
-                vertices.push((end_point_3d.0, end_point_3d.1));
+                vertices.push(Point(end_point_3d.0, end_point_3d.1));
             }
             Command::Arc {
                 end,
@@ -69,7 +69,7 @@ pub fn get_subpath_vertices_from_array(
                 ..
             } => {
                 let start_3d: Point3D = if vertices.len() >= 2 {
-                    (
+                    Point3D(
                         vertices[vertices.len() - 1].0,
                         vertices[vertices.len() - 1].1,
                         last_pos_3d.2,
@@ -85,7 +85,7 @@ pub fn get_subpath_vertices_from_array(
                     0.1,
                 );
                 for (_, p2) in segments {
-                    vertices.push((p2.0, p2.1));
+                    vertices.push(Point(p2.0, p2.1));
                 }
             }
             Command::Bezier {
@@ -95,7 +95,7 @@ pub fn get_subpath_vertices_from_array(
                 ..
             } => {
                 let start_3d: Point3D = if vertices.len() >= 2 {
-                    (
+                    Point3D(
                         vertices[vertices.len() - 1].0,
                         vertices[vertices.len() - 1].1,
                         last_pos_3d.2,
@@ -107,7 +107,7 @@ pub fn get_subpath_vertices_from_array(
                     *end, *control1, *control2, start_3d, 0.1,
                 );
                 for (_, p2) in segments {
-                    vertices.push((p2.0, p2.1));
+                    vertices.push(Point(p2.0, p2.1));
                 }
             }
             _ => {}
@@ -209,7 +209,7 @@ pub fn get_point_at_from_array(
     let start_pos_3d: Point3D = if row_index > 0 {
         data[row_index - 1].end_point()
     } else {
-        (0.0, 0.0, 0.0)
+        Point3D(0.0, 0.0, 0.0)
     };
 
     let p0 = start_pos_3d;
@@ -262,7 +262,7 @@ pub fn get_point_at_from_array(
     };
 
     let pz = p0.2 + t * (p1.2 - p0.2);
-    Some((px, py, pz))
+    Some(Point3D(px, py, pz))
 }
 
 /// Evaluates a tangent at a given t parameter along a path segment.
@@ -280,21 +280,21 @@ pub fn get_tangent_at_from_array(
     let start_pos_3d: Point3D = if row_index > 0 {
         data[row_index - 1].end_point()
     } else {
-        (0.0, 0.0, 0.0)
+        Point3D(0.0, 0.0, 0.0)
     };
 
-    let p0 = (start_pos_3d.0, start_pos_3d.1);
+    let p0 = Point(start_pos_3d.0, start_pos_3d.1);
     let end_3d = cmd.end_point();
-    let p1 = (end_3d.0, end_3d.1);
+    let p1 = Point(end_3d.0, end_3d.1);
 
     let tangent_vec: Point = match cmd {
-        Command::Line { .. } => (p1.0 - p0.0, p1.1 - p0.1),
+        Command::Line { .. } => Point(p1.0 - p0.0, p1.1 - p0.1),
         Command::Arc {
             center_offset,
             clockwise,
             ..
         } => {
-            let center = (p0.0 + center_offset.0, p0.1 + center_offset.1);
+            let center = Point(p0.0 + center_offset.0, p0.1 + center_offset.1);
 
             let start_angle = (p0.1 - center.1).atan2(p0.0 - center.0);
             let end_angle = (p1.1 - center.1).atan2(p1.0 - center.0);
@@ -304,16 +304,16 @@ pub fn get_tangent_at_from_array(
             let radius_end = (p1.0 - center.0).hypot(p1.1 - center.1);
             let radius = radius_start + t * (radius_end - radius_start);
 
-            let point = (
+            let point = Point(
                 center.0 + radius * current_angle.cos(),
                 center.1 + radius * current_angle.sin(),
             );
 
-            let radius_vec = (point.0 - center.0, point.1 - center.1);
+            let radius_vec = Point(point.0 - center.0, point.1 - center.1);
             if *clockwise {
-                (radius_vec.1, -radius_vec.0)
+                Point(radius_vec.1, -radius_vec.0)
             } else {
-                (-radius_vec.1, radius_vec.0)
+                Point(-radius_vec.1, radius_vec.0)
             }
         }
         Command::Bezier {
@@ -321,25 +321,25 @@ pub fn get_tangent_at_from_array(
         } => {
             let c1 = *control1;
             let c2 = *control2;
-
             let omt = 1.0 - t;
+
             let tx = 3.0 * omt.powi(2) * (c1.0 - p0.0)
                 + 6.0 * omt * t * (c2.0 - c1.0)
                 + 3.0 * t.powi(2) * (p1.0 - c2.0);
             let ty = 3.0 * omt.powi(2) * (c1.1 - p0.1)
                 + 6.0 * omt * t * (c2.1 - c1.1)
                 + 3.0 * t.powi(2) * (p1.1 - c2.1);
-            (tx, ty)
+            Point(tx, ty)
         }
         _ => return None,
     };
 
     let norm = (tangent_vec.0.powi(2) + tangent_vec.1.powi(2)).sqrt();
     if norm < 1e-9 {
-        return Some((1.0, 0.0));
+        return Some(Point(1.0, 0.0));
     }
 
-    Some((tangent_vec.0 / norm, tangent_vec.1 / norm))
+    Some(Point(tangent_vec.0 / norm, tangent_vec.1 / norm))
 }
 
 /// Computes the outward-facing normal vector at a point on the path.
@@ -363,11 +363,12 @@ pub fn get_outward_normal_at_from_array(
         get_path_winding_order_from_array(data, subpath_start_index as usize)?;
 
     let tangent = get_tangent_at_from_array(data, row_index, t)?;
-    let (tx, ty) = tangent;
+    let tx = tangent.0;
+    let ty = tangent.1;
 
     match winding {
-        WindingOrder::CCW => Some((ty, -tx)),
-        WindingOrder::CW => Some((-ty, tx)),
+        WindingOrder::CCW => Some(Point(ty, -tx)),
+        WindingOrder::CW => Some(Point(-ty, tx)),
     }
 }
 
@@ -405,7 +406,8 @@ pub fn does_enclose(container: &Geometry, content: &Geometry) -> bool {
     if other_segments.is_empty() || other_segments[0].is_empty() {
         return false;
     }
-    let test_point: Point = (other_segments[0][0].0, other_segments[0][0].1);
+    let test_point: Point =
+        Point(other_segments[0][0].0, other_segments[0][0].1);
 
     let self_contours = split_into_contours(container);
     let all_contour_data = get_valid_contours_data(&self_contours);

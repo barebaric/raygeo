@@ -50,7 +50,8 @@ impl ContourHierarchy {
                         Some(ci) => ci,
                         None => continue,
                     };
-                    let (tx, ty) = current.test_point;
+                    let tx = current.test_point.0;
+                    let ty = current.test_point.1;
                     let mut best_parent: isize = -1;
                     let mut best_parent_area = f64::INFINITY;
 
@@ -137,10 +138,10 @@ pub fn build_hierarchy(contours: &[&Geometry]) -> ContourHierarchy {
 
         let verts_3d = &segments[0];
         let verts_2d: Vec<Point> =
-            verts_3d.iter().map(|p| (p.0, p.1)).collect();
+            verts_3d.iter().map(|p| Point(p.0, p.1)).collect();
         let rect = c.rect();
         let test_point = if verts_2d.is_empty() {
-            (0.0, 0.0)
+            Point(0.0, 0.0)
         } else {
             verts_2d[0]
         };
@@ -170,7 +171,8 @@ pub fn build_hierarchy(contours: &[&Geometry]) -> ContourHierarchy {
         let mut depth = 0i32;
         let mut best_parent: isize = -1;
         let mut best_parent_area = f64::INFINITY;
-        let (tx, ty) = current.test_point;
+        let tx = current.test_point.0;
+        let ty = current.test_point.1;
 
         for (j, info_j) in info.iter().enumerate() {
             if i == j {
@@ -459,7 +461,7 @@ pub fn reverse_contour(contour: &Geometry) -> Geometry {
                 let new_offset_y = center_abs_y - last_point.1;
                 new_rows.push(Command::Arc {
                     end: start_point,
-                    center_offset: (new_offset_x, new_offset_y),
+                    center_offset: Point(new_offset_x, new_offset_y),
                     clockwise: !clockwise,
                 });
             }

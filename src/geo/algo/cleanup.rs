@@ -4,7 +4,7 @@
 //! duplicate segments and closing small gaps between connected paths.
 
 use crate::geo::shape::point::are_points_equal;
-use crate::types::Command;
+use crate::types::{Command, Point3D};
 
 /// Extract a hashable key for a segment. Returns None for MOVE commands.
 pub fn get_segment_key(cmd: &Command) -> Option<(u32, [f64; 3], [f64; 4])> {
@@ -167,7 +167,7 @@ pub fn close_geometry_gaps_from_array(
     }
 
     let mut final_rows: Vec<Command> = Vec::new();
-    let mut last_end: Option<(f64, f64, f64)> = None;
+    let mut last_end: Option<Point3D> = None;
 
     for cmd in &modified {
         let end_pt = cmd.end_point();

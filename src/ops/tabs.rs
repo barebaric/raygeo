@@ -1027,7 +1027,7 @@ fn eval_bezier(
     let mt = 1.0 - t;
     let mt2 = mt * mt;
     let mt3 = mt2 * mt;
-    (
+    Point3D(
         mt3 * p0.0
             + 3.0 * mt2 * t * control1.0
             + 3.0 * mt * t2 * control2.0
@@ -1048,7 +1048,7 @@ fn eval_bezier(
 // ---------------------------------------------------------------------------
 
 fn lerp_3d(a: Point3D, b: Point3D, t: f64) -> Point3D {
-    (
+    Point3D(
         a.0 + t * (b.0 - a.0),
         a.1 + t * (b.1 - a.1),
         a.2 + t * (b.2 - a.2),
@@ -1056,7 +1056,7 @@ fn lerp_3d(a: Point3D, b: Point3D, t: f64) -> Point3D {
 }
 
 fn interpolate_point(p1: Point3D, p2: Point3D, t: f64) -> Point3D {
-    (
+    Point3D(
         p1.0 + t * (p2.0 - p1.0),
         p1.1 + t * (p2.1 - p1.1),
         p1.2 + t * (p2.2 - p1.2),
@@ -1077,7 +1077,7 @@ fn bezier_params(ops: &Ops, idx: usize) -> (Point3D, Point3D) {
     {
         (*control1, *control2)
     } else {
-        ((0.0, 0.0, 0.0), (0.0, 0.0, 0.0))
+        (Point3D(0.0, 0.0, 0.0), Point3D(0.0, 0.0, 0.0))
     }
 }
 

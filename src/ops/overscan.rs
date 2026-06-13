@@ -126,12 +126,12 @@ fn rewrite_buffered_line(
     let dir_x = dx / original_length;
     let dir_y = dy / original_length;
 
-    let overscan_start: Point3D = (
+    let overscan_start: Point3D = Point3D(
         sx - distance_mm * dir_x,
         sy - distance_mm * dir_y,
         content_start.2,
     );
-    let overscan_end: Point3D = (
+    let overscan_end: Point3D = Point3D(
         ex + distance_mm * dir_x,
         ey + distance_mm * dir_y,
         content_end.2,

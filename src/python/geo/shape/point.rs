@@ -12,6 +12,7 @@ use super::super::flex_point::PyPoint3D;
 use crate::geo::shape::point::are_points_equal;
 use crate::geo::shape::point::midpoint;
 use crate::geo::shape::point::transform_point;
+use crate::types::Point3D;
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::gen_stub_pyfunction;
 
@@ -89,7 +90,7 @@ fn transform_point_py(
     x: f64,
     y: f64,
     z: f64,
-) -> (f64, f64, f64) {
+) -> Point3D {
     let mat: [[f64; 4]; 4] = [
         [matrix[0][0], matrix[0][1], matrix[0][2], matrix[0][3]],
         [matrix[1][0], matrix[1][1], matrix[1][2], matrix[1][3]],
@@ -117,9 +118,8 @@ fn transform_point_py(
     module = "raygeo.geo.shape.point"
 )]
 #[pyfunction(name = "midpoint")]
-fn midpoint_py(p1: PyPoint3D, p2: PyPoint3D) -> (f64, f64, f64) {
-    let p1_3d = (p1.0, p1.1, p1.2);
-    let p2_3d = (p2.0, p2.1, p2.2);
-    let result = midpoint(p1_3d, p2_3d);
-    (result.0, result.1, result.2)
+fn midpoint_py(p1: PyPoint3D, p2: PyPoint3D) -> Point3D {
+    let p1_3d = Point3D(p1.0, p1.1, p1.2);
+    let p2_3d = Point3D(p2.0, p2.1, p2.2);
+    midpoint(p1_3d, p2_3d)
 }

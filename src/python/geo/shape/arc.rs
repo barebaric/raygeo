@@ -16,7 +16,7 @@ use crate::geo::shape::arc::{
     get_arc_midpoint, get_arc_sweep, is_angle_between, is_arc_clockwise,
     is_arc_inside_polygons, linearize_arc, normalize_angle,
 };
-use crate::types::{Point, Rect, Segment3D};
+use crate::types::{Point, Point3D, Rect, Segment3D};
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::gen_stub_pyfunction;
 
@@ -50,10 +50,10 @@ pub fn register(shape_mod: &Bound<'_, PyModule>) -> PyResult<()> {
 #[allow(clippy::type_complexity)]
 fn _arc_params_from_any(
     arc_cmd: &Bound<'_, PyAny>,
-) -> PyResult<((f64, f64, f64), (f64, f64), bool)> {
+) -> PyResult<(Point3D, Point, bool)> {
     if let Ok(end) = arc_cmd.getattr("end") {
-        let end: (f64, f64, f64) = end.extract()?;
-        let center_offset: (f64, f64) =
+        let end: Point3D = end.extract()?;
+        let center_offset: Point =
             arc_cmd.getattr("center_offset")?.extract()?;
         let clockwise: bool = arc_cmd.getattr("clockwise")?.extract()?;
         return Ok((end, center_offset, clockwise));
@@ -61,8 +61,8 @@ fn _arc_params_from_any(
     if let Ok(row) = arc_cmd.extract::<Vec<f64>>() {
         if row.len() >= 7 {
             return Ok((
-                (row[1], row[2], row[3]),
-                (row[4], row[5]),
+                Point3D(row[1], row[2], row[3]),
+                Point(row[4], row[5]),
                 row[6] > 0.5,
             ));
         }
@@ -205,7 +205,7 @@ fn get_arc_sweep_py(start_angle: f64, end_angle: f64, clockwise: bool) -> f64 {
 #[pyfunction(name = "get_arc_closest_point")]
 fn get_arc_closest_point_py(
     arc_cmd: &Bound<'_, PyAny>,
-    start_pos: (f64, f64, f64),
+    start_pos: Point3D,
     x: f64,
     y: f64,
 ) -> PyResult<Option<(f64, Point, f64)>> {
@@ -390,9 +390,9 @@ fn does_arc_intersect_circle_py(
 )]
 #[pyfunction(name = "is_arc_clockwise")]
 fn is_arc_clockwise_py(points: Vec<PyPoint2D>, center: PyPoint2D) -> bool {
-    let points_2d: Vec<(f64, f64)> =
-        points.iter().map(|p| (p.0, p.1)).collect();
-    is_arc_clockwise(&points_2d, (center.0, center.1))
+    let points_2d: Vec<Point> =
+        points.iter().map(|p| Point(p.0, p.1)).collect();
+    is_arc_clockwise(&points_2d, Point(center.0, center.1))
 }
 
 #[gen_stub_pyfunction(
@@ -508,7 +508,7 @@ fn normalize_angle_py(angle: f64) -> f64 {
 #[pyo3(signature = (arc_cmd, start_point, resolution=0.1))]
 fn linearize_arc_py(
     arc_cmd: &Bound<'_, PyAny>,
-    start_point: (f64, f64, f64),
+    start_point: Point3D,
     resolution: f64,
 ) -> PyResult<Vec<Segment3D>> {
     let (end, center_offset, clockwise) = _arc_params_from_any(arc_cmd)?;

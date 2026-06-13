@@ -34,7 +34,7 @@ pub fn get_circle_circle_intersections(
     let y2 = c1.1 + a * dy / d;
 
     if h < 1e-9 {
-        return vec![(x2, y2)];
+        return vec![Point(x2, y2)];
     }
 
     let x3_1 = x2 + h * dy / d;
@@ -42,7 +42,7 @@ pub fn get_circle_circle_intersections(
     let x3_2 = x2 - h * dy / d;
     let y3_2 = y2 + h * dx / d;
 
-    vec![(x3_1, y3_1), (x3_2, y3_2)]
+    vec![Point(x3_1, y3_1), Point(x3_2, y3_2)]
 }
 
 /// Projects a point onto a circle's circumference.
@@ -61,12 +61,13 @@ pub fn project_point_onto_circle(
     }
 
     let scale = radius / dist;
-    Some((center.0 + dx * scale, center.1 + dy * scale))
+    Some(Point(center.0 + dx * scale, center.1 + dy * scale))
 }
 
 /// Tests if a circle is completely contained within an axis-aligned rectangle.
 pub fn is_circle_inside_rect(center: Point, radius: f64, rect: Rect) -> bool {
-    let (cx, cy) = center;
+    let cx = center.0;
+    let cy = center.1;
     let Rect(rx1, ry1, rx2, ry2) = rect;
     (cx - radius) >= rx1
         && (cy - radius) >= ry1
@@ -81,7 +82,8 @@ pub fn does_circle_intersect_rect(
     radius: f64,
     rect: Rect,
 ) -> bool {
-    let (cx, cy) = center;
+    let cx = center.0;
+    let cy = center.1;
     let Rect(rx1, ry1, rx2, ry2) = rect;
 
     // Fully contained circles don't intersect
@@ -145,14 +147,14 @@ pub fn get_line_circle_intersections(
 
     if sqrt_disc < 1e-10 {
         if (0.0..=1.0).contains(&t1) {
-            results.push((p1.0 + t1 * dx, p1.1 + t1 * dy));
+            results.push(Point(p1.0 + t1 * dx, p1.1 + t1 * dy));
         }
     } else {
         if (0.0..=1.0).contains(&t1) {
-            results.push((p1.0 + t1 * dx, p1.1 + t1 * dy));
+            results.push(Point(p1.0 + t1 * dx, p1.1 + t1 * dy));
         }
         if (0.0..=1.0).contains(&t2) {
-            results.push((p1.0 + t2 * dx, p1.1 + t2 * dy));
+            results.push(Point(p1.0 + t2 * dx, p1.1 + t2 * dy));
         }
     }
 

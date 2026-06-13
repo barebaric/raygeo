@@ -4,7 +4,7 @@
 //! to open or closed polylines with optional corner preservation.
 
 use crate::geo::shape::line::get_angle_at_vertex;
-use crate::types::Point3D;
+use crate::types::{Point, Point3D};
 
 /// Compute a normalized Gaussian kernel based on smoothing amount.
 ///
@@ -54,7 +54,7 @@ pub fn smooth_sub_segment(points: &[Point3D], kernel: &[f64]) -> Vec<Point3D> {
             new_x += pt.0 * k_weight;
             new_y += pt.1 * k_weight;
         }
-        smoothed.push((new_x, new_y, points[i].2));
+        smoothed.push(Point3D(new_x, new_y, points[i].2));
     }
 
     smoothed.push(points[num_pts - 1]);
@@ -81,7 +81,7 @@ pub fn smooth_circularly(points: &[Point3D], kernel: &[f64]) -> Vec<Point3D> {
             new_x += pt.0 * k_weight;
             new_y += pt.1 * k_weight;
         }
-        smoothed.push((new_x, new_y, points[i].2));
+        smoothed.push(Point3D(new_x, new_y, points[i].2));
     }
 
     if !smoothed.is_empty() {
@@ -121,7 +121,7 @@ pub fn resample_polyline(
                 let t = j as f64 / num_sub as f64;
                 let px = p1.0 * (1.0 - t) + p2.0 * t;
                 let py = p1.1 * (1.0 - t) + p2.1 * t;
-                new_points.push((px, py, p1.2));
+                new_points.push(Point3D(px, py, p1.2));
             }
         }
 
@@ -193,9 +193,9 @@ pub fn smooth_polyline(
         let p_curr = prepared[i];
         let p_next = prepared[(i + 1) % num_points];
         let angle = get_angle_at_vertex(
-            (p_prev.0, p_prev.1),
-            (p_curr.0, p_curr.1),
-            (p_next.0, p_next.1),
+            Point(p_prev.0, p_prev.1),
+            Point(p_curr.0, p_curr.1),
+            Point(p_next.0, p_next.1),
         );
 
         if angle < corner_threshold_rad

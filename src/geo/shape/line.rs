@@ -45,10 +45,14 @@ pub fn get_line_line_intersection(
     p3: Point,
     p4: Point,
 ) -> Option<Point> {
-    let (x1, y1) = p1;
-    let (x2, y2) = p2;
-    let (x3, y3) = p3;
-    let (x4, y4) = p4;
+    let x1 = p1.0;
+    let y1 = p1.1;
+    let x2 = p2.0;
+    let y2 = p2.1;
+    let x3 = p3.0;
+    let y3 = p3.1;
+    let x4 = p4.0;
+    let y4 = p4.1;
 
     let denom = (y4 - y3) * (x2 - x1) - (x4 - x3) * (y2 - y1);
     if denom == 0.0 {
@@ -56,7 +60,7 @@ pub fn get_line_line_intersection(
     }
 
     let ua = ((x4 - x3) * (y1 - y3) - (y4 - y3) * (x1 - x3)) / denom;
-    Some((x1 + ua * (x2 - x1), y1 + ua * (y2 - y1)))
+    Some(Point(x1 + ua * (x2 - x1), y1 + ua * (y2 - y1)))
 }
 
 /// Computes the intersection of two line segments.
@@ -68,10 +72,14 @@ pub fn get_line_segment_intersection(
     p3: Point,
     p4: Point,
 ) -> Option<Point> {
-    let (x1, y1) = p1;
-    let (x2, y2) = p2;
-    let (x3, y3) = p3;
-    let (x4, y4) = p4;
+    let x1 = p1.0;
+    let y1 = p1.1;
+    let x2 = p2.0;
+    let y2 = p2.1;
+    let x3 = p3.0;
+    let y3 = p3.1;
+    let x4 = p4.0;
+    let y4 = p4.1;
 
     let den = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4);
     if den.abs() < 1e-9 {
@@ -85,7 +93,7 @@ pub fn get_line_segment_intersection(
     let u = u_num / den;
 
     if (0.0..=1.0).contains(&t) && (0.0..=1.0).contains(&u) {
-        Some((x1 + t * (x2 - x1), y1 + t * (y2 - y1)))
+        Some(Point(x1 + t * (x2 - x1), y1 + t * (y2 - y1)))
     } else {
         None
     }
@@ -105,7 +113,7 @@ pub fn get_line_closest_point(p1: Point, p2: Point, x: f64, y: f64) -> Point {
     }
 
     let t = (px * dx + py * dy) / len_sq;
-    (p1.0 + t * dx, p1.1 + t * dy)
+    Point(p1.0 + t * dx, p1.1 + t * dy)
 }
 
 /// Finds the closest point on a line segment to a given point.
@@ -133,7 +141,7 @@ pub fn get_line_segment_closest_point(
     let closest_y = p1.1 + t * dy;
     let dist_sq = (x - closest_x).powi(2) + (y - closest_y).powi(2);
 
-    (t, (closest_x, closest_y), dist_sq)
+    (t, Point(closest_x, closest_y), dist_sq)
 }
 
 /// Perpendicular distance from a point to a line segment.
@@ -176,7 +184,8 @@ pub fn get_line_segment_polygon_intersections(
             if let Some(intersection) =
                 get_line_segment_intersection(p1_2d, p2_2d, p3, p4)
             {
-                let (ix, iy) = intersection;
+                let ix = intersection.0;
+                let iy = intersection.1;
                 let seg_dx = p2_2d.0 - p1_2d.0;
                 let seg_dy = p2_2d.1 - p1_2d.1;
 
@@ -206,7 +215,8 @@ pub fn get_line_segment_polygon_intersections(
 
 /// Tests if a 2D point is inside an axis-aligned rectangle.
 pub fn is_point_inside_rect(point: Point, rect: Rect) -> bool {
-    let (x, y) = point;
+    let x = point.0;
+    let y = point.1;
     let Rect(rx1, ry1, rx2, ry2) = rect;
     x >= rx1 && x <= rx2 && y >= ry1 && y <= ry2
 }
@@ -242,10 +252,30 @@ pub fn does_line_segment_intersect_rect(
     }
 
     let intersections = [
-        get_line_segment_intersection(p1, p2, (xmin, ymin), (xmax, ymin)),
-        get_line_segment_intersection(p1, p2, (xmax, ymin), (xmax, ymax)),
-        get_line_segment_intersection(p1, p2, (xmax, ymax), (xmin, ymax)),
-        get_line_segment_intersection(p1, p2, (xmin, ymax), (xmin, ymin)),
+        get_line_segment_intersection(
+            p1,
+            p2,
+            Point(xmin, ymin),
+            Point(xmax, ymin),
+        ),
+        get_line_segment_intersection(
+            p1,
+            p2,
+            Point(xmax, ymin),
+            Point(xmax, ymax),
+        ),
+        get_line_segment_intersection(
+            p1,
+            p2,
+            Point(xmax, ymax),
+            Point(xmin, ymax),
+        ),
+        get_line_segment_intersection(
+            p1,
+            p2,
+            Point(xmin, ymax),
+            Point(xmin, ymin),
+        ),
     ];
 
     intersections.iter().any(|x| x.is_some())

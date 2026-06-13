@@ -252,7 +252,7 @@ fn rewrite_buffered_contour(
 
     if has_lead_in {
         if let Some((tx, ty)) = lead_in_tangent {
-            let lead_in_start: Point3D = (
+            let lead_in_start: Point3D = Point3D(
                 start_3d.0 - tx * lead_in_mm,
                 start_3d.1 - ty * lead_in_mm,
                 start_3d.2,
@@ -284,7 +284,7 @@ fn rewrite_buffered_contour(
 
     if has_lead_out {
         if let Some((tx, ty)) = lead_out_tangent {
-            let lead_out_end: Point3D = (
+            let lead_out_end: Point3D = Point3D(
                 end_3d.0 + tx * lead_out_mm,
                 end_3d.1 + ty * lead_out_mm,
                 end_3d.2,

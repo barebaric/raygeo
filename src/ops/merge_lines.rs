@@ -452,7 +452,7 @@ fn get_uncovered(intervals: &[(f64, f64)]) -> Vec<(f64, f64)> {
 // ---------------------------------------------------------------------------
 
 fn interpolate(p1: Point3D, p2: Point3D, t: f64) -> Point3D {
-    (
+    Point3D(
         p1.0 + (p2.0 - p1.0) * t,
         p1.1 + (p2.1 - p1.1) * t,
         p1.2 + (p2.2 - p1.2) * t,

@@ -3,14 +3,14 @@ use std::sync::Arc;
 use super::axis::Axis;
 use super::enums::{CommandType, SectionType};
 use super::state::State;
-use crate::types::Point3D;
+use crate::types::{Point, Point3D};
 
 #[derive(Clone, Debug)]
 pub enum MoveCmd {
     MoveTo,
     LineTo,
     ArcTo {
-        center: (f64, f64),
+        center: Point,
         cw: bool,
     },
     BezierTo {
@@ -79,7 +79,7 @@ impl OpNode {
     ) -> Self {
         OpNode {
             category: OpCategory::Moving {
-                end: (x, y, z),
+                end: Point3D(x, y, z),
                 cmd: MoveCmd::MoveTo,
             },
             state: None,
@@ -95,7 +95,7 @@ impl OpNode {
     ) -> Self {
         OpNode {
             category: OpCategory::Moving {
-                end: (x, y, z),
+                end: Point3D(x, y, z),
                 cmd: MoveCmd::LineTo,
             },
             state: None,
@@ -125,9 +125,9 @@ impl OpNode {
     ) -> Self {
         OpNode {
             category: OpCategory::Moving {
-                end: (x, y, z),
+                end: Point3D(x, y, z),
                 cmd: MoveCmd::ArcTo {
-                    center: (i, j),
+                    center: Point(i, j),
                     cw: clockwise,
                 },
             },
@@ -176,7 +176,7 @@ impl OpNode {
     ) -> Self {
         OpNode {
             category: OpCategory::Moving {
-                end: (x, y, z),
+                end: Point3D(x, y, z),
                 cmd: MoveCmd::ScanLine {
                     power_values: Arc::from(power_values),
                 },
@@ -391,7 +391,7 @@ impl OpNode {
         if let OpCategory::Moving { end, .. } = &self.category {
             *end
         } else {
-            (0.0, 0.0, 0.0)
+            Point3D(0.0, 0.0, 0.0)
         }
     }
 

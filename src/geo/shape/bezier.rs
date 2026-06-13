@@ -35,7 +35,7 @@ pub fn get_bezier_point_at(
         + 3.0 * complement.powi(2) * t * c1.1
         + 3.0 * complement * t.powi(2) * c2.1
         + t.powi(3) * p1.1;
-    (x, y)
+    Point(x, y)
 }
 
 /// Splits a Bezier curve into two sub-curves at parameter t.
@@ -94,10 +94,10 @@ pub fn is_bezier_inside_polygons(
     let mid = get_bezier_point_at(start_pos, c1, c2, end_pos, 0.5);
 
     let sample_points: Vec<Point> = vec![
-        (bbox.0, bbox.1),
-        (bbox.2, bbox.1),
-        (bbox.2, bbox.3),
-        (bbox.0, bbox.3),
+        Point(bbox.0, bbox.1),
+        Point(bbox.2, bbox.1),
+        Point(bbox.2, bbox.3),
+        Point(bbox.0, bbox.3),
         start_pos,
         end_pos,
         mid,
@@ -225,7 +225,7 @@ pub fn convert_cubic_bezier_to_quadratic(
     c2: Point,
     p1: Point,
 ) -> (Point, Point, Point) {
-    let quadratic_control = (
+    let quadratic_control = Point(
         (3.0 * c1.0 + 3.0 * c2.0 - p0.0 - p1.0) / 4.0,
         (3.0 * c1.1 + 3.0 * c2.1 - p0.1 - p1.1) / 4.0,
     );
@@ -252,8 +252,8 @@ pub fn get_bezier_closest_point(
 
     for (seg_idx, (seg_start, seg_end)) in bezier_segments.iter().enumerate() {
         let t_sub = get_line_segment_closest_point(
-            (seg_start.0, seg_start.1),
-            (seg_end.0, seg_end.1),
+            Point(seg_start.0, seg_start.1),
+            Point(seg_end.0, seg_end.1),
             x,
             y,
         );
@@ -281,14 +281,16 @@ pub fn linearize_bezier_from_params(
 ) -> Vec<(Point3D, Point3D)> {
     let p0 = start_point;
     let p1 = end;
-    let c1_2d = (control1.0, control1.1);
-    let c2_2d = (control2.0, control2.1);
+    let c1_2d = Point(control1.0, control1.1);
+    let c2_2d = Point(control2.0, control2.1);
 
     let z0 = p0.2;
     let z1 = p1.2;
     // Linear interpolation of Z coordinate for control points
-    let c1: Point3D = (c1_2d.0, c1_2d.1, z0 * (2.0 / 3.0) + z1 * (1.0 / 3.0));
-    let c2: Point3D = (c2_2d.0, c2_2d.1, z0 * (1.0 / 3.0) + z1 * (2.0 / 3.0));
+    let c1: Point3D =
+        Point3D(c1_2d.0, c1_2d.1, z0 * (2.0 / 3.0) + z1 * (1.0 / 3.0));
+    let c2: Point3D =
+        Point3D(c2_2d.0, c2_2d.1, z0 * (1.0 / 3.0) + z1 * (2.0 / 3.0));
 
     // Estimate curve length using polygon approximation
     let l01 = (p0.0 - c1.0).hypot(p0.1 - c1.1);
@@ -319,7 +321,7 @@ pub fn linearize_bezier(
         let t = i as f64 / step_f;
         let t_next = (i as f64 + 1.0) / step_f;
 
-        let p_start = (
+        let p_start = Point3D(
             (1.0 - t).powi(3) * p0.0
                 + 3.0 * (1.0 - t).powi(2) * t * c1.0
                 + 3.0 * (1.0 - t) * t.powi(2) * c2.0
@@ -334,7 +336,7 @@ pub fn linearize_bezier(
                 + t.powi(3) * p1.2,
         );
 
-        let p_end = (
+        let p_end = Point3D(
             (1.0 - t_next).powi(3) * p0.0
                 + 3.0 * (1.0 - t_next).powi(2) * t_next * c1.0
                 + 3.0 * (1.0 - t_next) * t_next.powi(2) * c2.0
@@ -404,14 +406,14 @@ pub fn linearize_bezier_adaptive(
         }
 
         // Subdivide using de Casteljau's algorithm
-        let m01 = ((p0.0 + c1.0) / 2.0, (p0.1 + c1.1) / 2.0);
-        let m12 = ((c1.0 + c2.0) / 2.0, (c1.1 + c2.1) / 2.0);
-        let m23 = ((c2.0 + p1.0) / 2.0, (c2.1 + p1.1) / 2.0);
+        let m01 = Point((p0.0 + c1.0) / 2.0, (p0.1 + c1.1) / 2.0);
+        let m12 = Point((c1.0 + c2.0) / 2.0, (c1.1 + c2.1) / 2.0);
+        let m23 = Point((c2.0 + p1.0) / 2.0, (c2.1 + p1.1) / 2.0);
 
-        let q01 = ((m01.0 + m12.0) / 2.0, (m01.1 + m12.1) / 2.0);
-        let q12 = ((m12.0 + m23.0) / 2.0, (m12.1 + m23.1) / 2.0);
+        let q01 = Point((m01.0 + m12.0) / 2.0, (m01.1 + m12.1) / 2.0);
+        let q12 = Point((m12.0 + m23.0) / 2.0, (m12.1 + m23.1) / 2.0);
 
-        let r = ((q01.0 + q12.0) / 2.0, (q01.1 + q12.1) / 2.0);
+        let r = Point((q01.0 + q12.0) / 2.0, (q01.1 + q12.1) / 2.0);
 
         // Recurse on both halves
         recursive_step(
@@ -493,7 +495,7 @@ pub fn linearize_bezier_segment(
 }
 
 fn _lerp2(a: Point, b: Point, t: f64) -> Point {
-    (a.0 + (b.0 - a.0) * t, a.1 + (b.1 - a.1) * t)
+    Point(a.0 + (b.0 - a.0) * t, a.1 + (b.1 - a.1) * t)
 }
 
 fn _add_axis_extrema(

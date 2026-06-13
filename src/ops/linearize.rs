@@ -98,12 +98,12 @@ pub fn linearize_node(node: &OpNode, start_point: Point3D) -> Ops {
                 result
             }
             MoveCmd::QuadraticBezierTo { control } => {
-                let control1 = (
+                let control1 = Point3D(
                     start_point.0 + (2.0 / 3.0) * (control.0 - start_point.0),
                     start_point.1 + (2.0 / 3.0) * (control.1 - start_point.1),
                     start_point.2 + (2.0 / 3.0) * (control.2 - start_point.2),
                 );
-                let control2 = (
+                let control2 = Point3D(
                     end.0 + (2.0 / 3.0) * (control.0 - end.0),
                     end.1 + (2.0 / 3.0) * (control.1 - end.1),
                     end.2 + (2.0 / 3.0) * (control.2 - end.2),
@@ -149,7 +149,7 @@ impl Ops {
 
     pub fn linearize_all(&mut self) {
         let mut new_cmds = Vec::new();
-        let mut last_point: Point3D = (0.0, 0.0, 0.0);
+        let mut last_point: Point3D = Point3D(0.0, 0.0, 0.0);
 
         for node in &self.commands {
             if let OpCategory::Moving {
@@ -182,7 +182,7 @@ impl Ops {
 
     pub fn linearize_curves(&mut self) {
         let mut new_cmds = Vec::new();
-        let mut last_point: Point3D = (0.0, 0.0, 0.0);
+        let mut last_point: Point3D = Point3D(0.0, 0.0, 0.0);
 
         for node in &self.commands {
             if let OpCategory::Moving { end, cmd } = &node.category {
@@ -216,7 +216,7 @@ impl Ops {
 
     pub fn linearize_arcs(&mut self) {
         let mut new_cmds = Vec::new();
-        let mut last_point: Point3D = (0.0, 0.0, 0.0);
+        let mut last_point: Point3D = Point3D(0.0, 0.0, 0.0);
 
         for node in &self.commands {
             if let OpCategory::Moving { end, cmd } = &node.category {

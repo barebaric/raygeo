@@ -34,8 +34,8 @@ pub fn clip_line_segment_with_rect(
     rect: Rect,
 ) -> Option<(Point3D, Point3D)> {
     let Rect(x_min, y_min, x_max, y_max) = rect;
-    let (mut x1, mut y1, mut z1) = p1;
-    let (mut x2, mut y2, mut z2) = p2;
+    let (mut x1, mut y1, mut z1) = (p1.0, p1.1, p1.2);
+    let (mut x2, mut y2, mut z2) = (p2.0, p2.1, p2.2);
     let (dx, dy, dz) = (x2 - x1, y2 - y1, z2 - z1);
 
     let mut outcode1 = compute_outcode(x1, y1, rect);
@@ -43,7 +43,7 @@ pub fn clip_line_segment_with_rect(
 
     loop {
         if (outcode1 | outcode2) == 0 {
-            return Some(((x1, y1, z1), (x2, y2, z2)));
+            return Some((Point3D(x1, y1, z1), Point3D(x2, y2, z2)));
         }
         if (outcode1 & outcode2) != 0 {
             return None;
@@ -122,8 +122,8 @@ pub fn subtract_polygons_from_line_segment(
     p2: Point3D,
     regions: &[Polygon],
 ) -> Vec<(Point3D, Point3D)> {
-    let p1_2d: Point = (p1.0, p1.1);
-    let p2_2d: Point = (p2.0, p2.1);
+    let p1_2d: Point = Point(p1.0, p1.1);
+    let p2_2d: Point = Point(p2.0, p2.1);
     let sorted_cuts =
         get_line_segment_polygon_intersections(p1_2d, p2_2d, regions);
 
@@ -138,18 +138,18 @@ pub fn subtract_polygons_from_line_segment(
 
         let mid_t = (t1 + t2) / 2.0;
         let mid_p: Point =
-            (p1.0 + (p2.0 - p1.0) * mid_t, p1.1 + (p2.1 - p1.1) * mid_t);
+            Point(p1.0 + (p2.0 - p1.0) * mid_t, p1.1 + (p2.1 - p1.1) * mid_t);
 
         let is_inside_any =
             regions.iter().any(|r| is_point_inside_polygon(mid_p, r));
 
         if !is_inside_any {
-            let sub_p1: Point3D = (
+            let sub_p1: Point3D = Point3D(
                 p1.0 + (p2.0 - p1.0) * t1,
                 p1.1 + (p2.1 - p1.1) * t1,
                 p1.2 + (p2.2 - p1.2) * t1,
             );
-            let sub_p2: Point3D = (
+            let sub_p2: Point3D = Point3D(
                 p1.0 + (p2.0 - p1.0) * t2,
                 p1.1 + (p2.1 - p1.1) * t2,
                 p1.2 + (p2.2 - p1.2) * t2,
@@ -172,8 +172,8 @@ pub fn clip_line_segment_with_polygons(
         return Vec::new();
     }
 
-    let p1_2d: Point = (p1.0, p1.1);
-    let p2_2d: Point = (p2.0, p2.1);
+    let p1_2d: Point = Point(p1.0, p1.1);
+    let p2_2d: Point = Point(p2.0, p2.1);
     let sorted_cuts =
         get_line_segment_polygon_intersections(p1_2d, p2_2d, regions);
 
@@ -188,18 +188,18 @@ pub fn clip_line_segment_with_polygons(
 
         let mid_t = (t1 + t2) / 2.0;
         let mid_p: Point =
-            (p1.0 + (p2.0 - p1.0) * mid_t, p1.1 + (p2.1 - p1.1) * mid_t);
+            Point(p1.0 + (p2.0 - p1.0) * mid_t, p1.1 + (p2.1 - p1.1) * mid_t);
 
         let is_inside_any =
             regions.iter().any(|r| is_point_inside_polygon(mid_p, r));
 
         if is_inside_any {
-            let sub_p1: Point3D = (
+            let sub_p1: Point3D = Point3D(
                 p1.0 + (p2.0 - p1.0) * t1,
                 p1.1 + (p2.1 - p1.1) * t1,
                 p1.2 + (p2.2 - p1.2) * t1,
             );
-            let sub_p2: Point3D = (
+            let sub_p2: Point3D = Point3D(
                 p1.0 + (p2.0 - p1.0) * t2,
                 p1.1 + (p2.1 - p1.1) * t2,
                 p1.2 + (p2.2 - p1.2) * t2,

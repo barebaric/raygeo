@@ -19,11 +19,9 @@ use crate::geo::algo::clipping::{
     clip_line_segment_with_polygons, clip_line_segment_with_rect,
     subtract_polygons_from_line_segment,
 };
-use crate::types::{Rect, Segment3D};
+use crate::types::{Point, Point3D, Rect, Segment3D};
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::gen_stub_pyfunction;
-
-type Point = (f64, f64);
 
 pub fn register(algo_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     let py = algo_mod.py();
@@ -65,8 +63,8 @@ pub fn register(algo_mod: &Bound<'_, PyModule>) -> PyResult<()> {
 )]
 #[pyfunction(name = "clip_line_segment_with_rect")]
 fn clip_line_segment_py(
-    p1: (f64, f64, f64),
-    p2: (f64, f64, f64),
+    p1: Point3D,
+    p2: Point3D,
     rect: (f64, f64, f64, f64),
 ) -> Option<Segment3D> {
     clip_line_segment_with_rect(p1, p2, Rect(rect.0, rect.1, rect.2, rect.3))
@@ -94,8 +92,8 @@ fn clip_line_segment_py(
 )]
 #[pyfunction(name = "subtract_polygons_from_line_segment")]
 fn subtract_polygons_from_line_segment_py(
-    p1: (f64, f64, f64),
-    p2: (f64, f64, f64),
+    p1: Point3D,
+    p2: Point3D,
     regions: &Bound<'_, PyAny>,
 ) -> PyResult<Vec<Segment3D>> {
     let regions = extract_polygons(regions)?;
@@ -124,8 +122,8 @@ fn subtract_polygons_from_line_segment_py(
 )]
 #[pyfunction(name = "clip_line_segment_with_polygons")]
 fn clip_line_segment_to_regions_py(
-    p1: (f64, f64, f64),
-    p2: (f64, f64, f64),
+    p1: Point3D,
+    p2: Point3D,
     regions: &Bound<'_, PyAny>,
 ) -> PyResult<Vec<Segment3D>> {
     let regions = extract_polygons(regions)?;
@@ -152,10 +150,10 @@ fn to_clipper_py(polygon: &Bound<'_, PyAny>) -> PyResult<Vec<(i64, i64)>> {
     let poly = extract_polygon(polygon)?;
     Ok(poly
         .iter()
-        .map(|(x, y)| {
+        .map(|p| {
             (
-                (x * crate::CLIPPER_SCALE) as i64,
-                (y * crate::CLIPPER_SCALE) as i64,
+                (p.0 * crate::CLIPPER_SCALE) as i64,
+                (p.1 * crate::CLIPPER_SCALE) as i64,
             )
         })
         .collect())
@@ -183,6 +181,6 @@ fn from_clipper_py(
     let scale = crate::CLIPPER_SCALE;
     let poly = int_poly_to_points(polygon);
     poly.iter()
-        .map(|(x, y)| (*x as f64 / scale, *y as f64 / scale))
+        .map(|(x, y)| Point(*x as f64 / scale, *y as f64 / scale))
         .collect()
 }

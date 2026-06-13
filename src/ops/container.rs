@@ -9,7 +9,7 @@ use super::axis::Axis;
 use super::enums::{CommandCategory, CommandType, SectionType};
 use super::state::State;
 use super::types::{MarkerCmd, MoveCmd, OpCategory, OpNode, StateCmd};
-use crate::types::{Point3D, Rect};
+use crate::types::{Point, Point3D, Rect};
 
 #[derive(Clone, Debug)]
 pub struct Ops {
@@ -24,7 +24,7 @@ impl Ops {
     pub fn new() -> Self {
         Ops {
             commands: Vec::new(),
-            last_move_to: (0.0, 0.0, 0.0),
+            last_move_to: Point3D(0.0, 0.0, 0.0),
             time_dirty: true,
             cached_time: 0.0,
             time_params: None,
@@ -188,7 +188,7 @@ impl Ops {
         z: f64,
         extra: Option<Vec<(Axis, f64)>>,
     ) {
-        self.last_move_to = (x, y, z);
+        self.last_move_to = Point3D(x, y, z);
         self.commands.push(OpNode::move_to(x, y, z, extra));
         self.invalidate_time_cache();
     }
@@ -598,7 +598,7 @@ impl Ops {
         acceleration: f64,
     ) -> Vec<f64> {
         let mut times = Vec::with_capacity(self.commands.len());
-        let mut last_point = (0.0, 0.0, 0.0);
+        let mut last_point = Point3D(0.0, 0.0, 0.0);
         let mut cut_speed = default_cut_speed;
         let mut travel_speed = default_travel_speed;
 
@@ -749,9 +749,9 @@ impl Ops {
                         );
                     } else {
                         let abox = crate::geo::shape::arc::get_arc_bounds(
-                            (curr_x, curr_y),
-                            (end_x, end_y),
-                            (center.0, center.1),
+                            Point(curr_x, curr_y),
+                            Point(end_x, end_y),
+                            Point(center.0, center.1),
                             *cw,
                         );
                         Self::update_bounds(
@@ -882,32 +882,32 @@ impl Ops {
 fn move_distance(cmd: &MoveCmd, last_point: Point3D, end: Point3D) -> f64 {
     match cmd {
         MoveCmd::ArcTo { center, cw } => get_arc_length(
-            (last_point.0, last_point.1),
-            (end.0, end.1),
+            Point(last_point.0, last_point.1),
+            Point(end.0, end.1),
             *center,
             *cw,
         ),
         MoveCmd::BezierTo { control1, control2 } => get_bezier_length(
-            (last_point.0, last_point.1),
-            (control1.0, control1.1),
-            (control2.0, control2.1),
-            (end.0, end.1),
+            Point(last_point.0, last_point.1),
+            Point(control1.0, control1.1),
+            Point(control2.0, control2.1),
+            Point(end.0, end.1),
         ),
         MoveCmd::QuadraticBezierTo { control } => {
             let c = *control;
             get_bezier_length(
-                (last_point.0, last_point.1),
-                (
+                Point(last_point.0, last_point.1),
+                Point(
                     (last_point.0 + 2.0 * c.0) / 3.0,
                     (last_point.1 + 2.0 * c.1) / 3.0,
                 ),
-                ((end.0 + 2.0 * c.0) / 3.0, (end.1 + 2.0 * c.1) / 3.0),
-                (end.0, end.1),
+                Point((end.0 + 2.0 * c.0) / 3.0, (end.1 + 2.0 * c.1) / 3.0),
+                Point(end.0, end.1),
             )
         }
         _ => get_line_segment_length(
-            (last_point.0, last_point.1),
-            (end.0, end.1),
+            Point(last_point.0, last_point.1),
+            Point(end.0, end.1),
         ),
     }
 }

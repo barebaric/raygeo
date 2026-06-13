@@ -18,10 +18,9 @@ use crate::geo::algo::minkowski::{
     get_inner_fit_polygon, get_no_fit_polygon,
     get_polygon_minkowski_sum_convex,
 };
+use crate::types::Point;
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::gen_stub_pyfunction;
-
-type Point = (f64, f64);
 
 pub fn register(algo_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     let py = algo_mod.py();

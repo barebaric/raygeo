@@ -5,6 +5,7 @@ use super::super::geo::flex_point::{
     int_poly_to_points, poly_to_points, PyIntPoint2D, PyPoint2D,
 };
 use crate::nest::nfp;
+use crate::types::Point;
 
 pyo3_stub_gen::module_doc!("raygeo.nest.nfp", "{}", MODULE_DOC);
 
@@ -37,7 +38,7 @@ sums, both for convex and general polygon pairs.
 fn no_fit_polygon_py(
     static_poly: Vec<PyPoint2D>,
     orbiting: Vec<PyPoint2D>,
-) -> Vec<Vec<(f64, f64)>> {
+) -> Vec<Vec<Point>> {
     nfp::no_fit_polygon(&poly_to_points(static_poly), &poly_to_points(orbiting))
 }
 
@@ -62,7 +63,7 @@ fn no_fit_polygon_py(
 fn nfp_convex_fast_py(
     static_poly: Vec<PyIntPoint2D>,
     orbiting: Vec<PyIntPoint2D>,
-) -> Vec<Vec<(f64, f64)>> {
+) -> Vec<Vec<Point>> {
     nfp::nfp_convex_fast(
         &int_poly_to_points(static_poly),
         &int_poly_to_points(orbiting),
@@ -90,7 +91,7 @@ fn nfp_convex_fast_py(
 fn nfp_minkowski_py(
     static_poly: Vec<PyIntPoint2D>,
     orbiting: Vec<PyIntPoint2D>,
-) -> Vec<Vec<(f64, f64)>> {
+) -> Vec<Vec<Point>> {
     nfp::nfp_minkowski(
         &int_poly_to_points(static_poly),
         &int_poly_to_points(orbiting),
@@ -114,7 +115,7 @@ fn nfp_minkowski_py(
     module = "raygeo.nest.nfp"
 )]
 #[pyfunction(name = "normalize_polygon")]
-fn normalize_polygon_py(poly: Vec<PyPoint2D>) -> (Vec<(f64, f64)>, f64, f64) {
+fn normalize_polygon_py(poly: Vec<PyPoint2D>) -> (Vec<Point>, f64, f64) {
     nfp::normalize_polygon(&poly_to_points(poly))
 }
 

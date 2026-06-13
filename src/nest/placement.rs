@@ -3,7 +3,7 @@ use crate::geo::shape::polygon::{
     get_polygons_group_intersection, is_point_in_polygon, offset_polygon,
     rotate_polygon, translate_polygon,
 };
-use crate::types::{Polygon, Rect};
+use crate::types::{Point, Polygon, Rect};
 
 use super::collision::any_overlap_hierarchical_grid;
 use super::gravity::apply_gravity;
@@ -40,7 +40,7 @@ const MISSING_PARTS_PENALTY: f64 = 1000.0;
 pub struct PlacedPart {
     pub part_index: usize,
     pub rotation_index: usize,
-    pub position: (f64, f64),
+    pub position: Point,
     pub polygons: Vec<Polygon>,
     pub hulls: Vec<Polygon>,
 }
@@ -95,7 +95,7 @@ pub fn generate_perimeter_candidates(
     placed_groups: &[Vec<Polygon>],
     part_bounds: Rect,
     spacing: f64,
-) -> Vec<(f64, f64)> {
+) -> Vec<Point> {
     let Rect(p_min_x, p_min_y, p_max_x, p_max_y) = part_bounds;
     let mut candidates = Vec::with_capacity(placed_groups.len() * 8);
 
@@ -106,14 +106,22 @@ pub fn generate_perimeter_candidates(
         let b = crate::geo::shape::polygon::get_polygon_group_bounds(group);
         let Rect(pb_min_x, pb_min_y, pb_max_x, pb_max_y) = b;
 
-        candidates.push((pb_max_x + spacing - p_min_x, pb_min_y - p_min_y));
-        candidates.push((pb_max_x + spacing - p_min_x, pb_max_y - p_max_y));
-        candidates.push((pb_min_x - spacing - p_max_x, pb_min_y - p_min_y));
-        candidates.push((pb_min_x - spacing - p_max_x, pb_max_y - p_max_y));
-        candidates.push((pb_min_x - p_min_x, pb_max_y + spacing - p_min_y));
-        candidates.push((pb_max_x - p_max_x, pb_max_y + spacing - p_min_y));
-        candidates.push((pb_min_x - p_min_x, pb_min_y - spacing - p_max_y));
-        candidates.push((pb_max_x - p_max_x, pb_min_y - spacing - p_max_y));
+        candidates
+            .push(Point(pb_max_x + spacing - p_min_x, pb_min_y - p_min_y));
+        candidates
+            .push(Point(pb_max_x + spacing - p_min_x, pb_max_y - p_max_y));
+        candidates
+            .push(Point(pb_min_x - spacing - p_max_x, pb_min_y - p_min_y));
+        candidates
+            .push(Point(pb_min_x - spacing - p_max_x, pb_max_y - p_max_y));
+        candidates
+            .push(Point(pb_min_x - p_min_x, pb_max_y + spacing - p_min_y));
+        candidates
+            .push(Point(pb_max_x - p_max_x, pb_max_y + spacing - p_min_y));
+        candidates
+            .push(Point(pb_min_x - p_min_x, pb_min_y - spacing - p_max_y));
+        candidates
+            .push(Point(pb_max_x - p_max_x, pb_min_y - spacing - p_max_y));
     }
 
     candidates
@@ -124,7 +132,7 @@ pub fn generate_bottom_left_candidates(
     ifp_bounds: Rect,
     part_bounds: Rect,
     spacing: f64,
-) -> Vec<(f64, f64)> {
+) -> Vec<Point> {
     let pw = part_bounds.2 - part_bounds.0;
     let ph = part_bounds.3 - part_bounds.1;
     let sx = (pw + spacing).max(spacing);
@@ -134,7 +142,7 @@ pub fn generate_bottom_left_candidates(
     while y + ph <= ifp_bounds.3 + 1e-6 {
         let mut x = ifp_bounds.0;
         while x + pw <= ifp_bounds.2 + 1e-6 {
-            cand.push((x, y));
+            cand.push(Point(x, y));
             x += sx;
         }
         y += sy;
@@ -147,14 +155,14 @@ pub fn generate_grid_candidates(
     ifp_bounds: Rect,
     _part_bounds: Rect,
     spacing: f64,
-) -> Vec<(f64, f64)> {
+) -> Vec<Point> {
     let step = spacing.max(1.0);
     let mut cand = Vec::new();
     let mut y = ifp_bounds.1;
     while y <= ifp_bounds.3 + 1e-6 {
         let mut x = ifp_bounds.0;
         while x <= ifp_bounds.2 + 1e-6 {
-            cand.push((x, y));
+            cand.push(Point(x, y));
             x += step;
         }
         y += step;
@@ -164,17 +172,19 @@ pub fn generate_grid_candidates(
 
 /// Remove candidates that are closer than `min_dist` to each other.
 pub fn filter_candidates_multi_resolution(
-    candidates: &[(f64, f64)],
+    candidates: &[Point],
     _ifp_bounds: Rect,
     min_dist: f64,
-) -> Vec<(f64, f64)> {
+) -> Vec<Point> {
     if candidates.is_empty() || min_dist <= 0.0 {
         return candidates.to_vec();
     }
     let mut grid: std::collections::HashMap<(i32, i32), (f64, f64)> =
         std::collections::HashMap::new();
     let mut result = Vec::new();
-    for &(x, y) in candidates {
+    for p in candidates {
+        let x = p.0;
+        let y = p.1;
         let cx = (x / min_dist).floor() as i32;
         let cy = (y / min_dist).floor() as i32;
         let mut keep = true;
@@ -191,7 +201,7 @@ pub fn filter_candidates_multi_resolution(
         }
         if keep {
             grid.insert((cx, cy), (x, y));
-            result.push((x, y));
+            result.push(Point(x, y));
         }
     }
     result
@@ -205,7 +215,7 @@ fn score_position(x: f64, y: f64) -> f64 {
     y * 100.0 + x
 }
 
-fn ifp_vertex_candidates(ifp_polygons: &[Polygon]) -> Vec<(f64, f64)> {
+fn ifp_vertex_candidates(ifp_polygons: &[Polygon]) -> Vec<Point> {
     let mut out = Vec::new();
     for poly in ifp_polygons {
         out.extend(poly.iter().copied());
@@ -216,12 +226,12 @@ fn ifp_vertex_candidates(ifp_polygons: &[Polygon]) -> Vec<(f64, f64)> {
 fn placed_vertex_candidates(
     placed_polys_list: &[Vec<Polygon>],
     part_bounds: Rect,
-) -> Vec<(f64, f64)> {
+) -> Vec<Point> {
     let mut out = Vec::new();
     for group in placed_polys_list {
         for poly in group {
-            for &(vx, vy) in poly {
-                out.push((vx - part_bounds.0, vy - part_bounds.1));
+            for p in poly {
+                out.push(Point(p.0 - part_bounds.0, p.1 - part_bounds.1));
             }
         }
     }
@@ -237,10 +247,10 @@ fn bbox_overlaps(a: Rect, b: Rect) -> bool {
 }
 
 fn filter_dist(
-    candidates: &[(f64, f64)],
+    candidates: &[Point],
     ifp_bounds: Rect,
     curve_tolerance: f64,
-) -> Vec<(f64, f64)> {
+) -> Vec<Point> {
     let min_dist = curve_tolerance.max(0.1) * 2.0;
     let mut result =
         filter_candidates_multi_resolution(candidates, ifp_bounds, min_dist);
@@ -289,7 +299,7 @@ fn query_nearby_indices(
 /// the best scoring valid position.
 #[allow(clippy::too_many_arguments)]
 fn evaluate_candidates(
-    candidates: &[(f64, f64)],
+    candidates: &[Point],
     ifp_world: &[Polygon],
     part_polygons: &[Polygon],
     part_hulls: &[Polygon],
@@ -297,18 +307,21 @@ fn evaluate_candidates(
     placed_hulls_list: &[Vec<Polygon>],
     grid: &SpatialGrid,
     part_bounds: Rect,
-) -> Option<(f64, f64)> {
+) -> Option<Point> {
     let mut best_score = f64::INFINITY;
-    let mut best_pos: Option<(f64, f64)> = None;
+    let mut best_pos: Option<Point> = None;
 
-    for &(x, y) in candidates {
+    for p in candidates {
+        let x = p.0;
+        let y = p.1;
         let score = score_position(x, y);
         if score >= best_score {
             continue;
         }
 
-        let in_ifp =
-            ifp_world.iter().any(|ifp| is_point_in_polygon((x, y), ifp));
+        let in_ifp = ifp_world
+            .iter()
+            .any(|ifp| is_point_in_polygon(Point(x, y), ifp));
         if !in_ifp {
             continue;
         }
@@ -342,7 +355,7 @@ fn evaluate_candidates(
         }
 
         best_score = score;
-        best_pos = Some((x, y));
+        best_pos = Some(Point(x, y));
     }
 
     best_pos
@@ -359,7 +372,7 @@ fn build_fast_candidates(
     placed_polys_list: &[Vec<Polygon>],
     grid: &SpatialGrid,
     spacing: f64,
-) -> Vec<(f64, f64)> {
+) -> Vec<Point> {
     let ifp_bounds = get_polygon_group_bounds(ifp_world);
     let pw = part_bounds.2 - part_bounds.0;
     let ph = part_bounds.3 - part_bounds.1;
@@ -407,7 +420,7 @@ pub fn find_valid_position_scored(
     sheet_world_offset: (f64, f64),
     config: &PlacementConfig,
     spacing: f64,
-) -> Option<(f64, f64)> {
+) -> Option<Point> {
     if ifp_polygons.is_empty() || part_polygons.is_empty() {
         return None;
     }
@@ -477,10 +490,11 @@ fn compute_nfp_clips_for_placed(
 
             let nfps = no_fit_polygon(placed_poly, part_poly);
             for nfp in nfps {
-                let origin = part_poly.first().copied().unwrap_or((0.0, 0.0));
+                let origin =
+                    part_poly.first().copied().unwrap_or(Point(0.0, 0.0));
                 let shifted: Polygon = nfp
                     .iter()
-                    .map(|(px, py)| (px - origin.0, py - origin.1))
+                    .map(|p| Point(p.0 - origin.0, p.1 - origin.1))
                     .collect();
 
                 if spacing > 0.0 {
@@ -503,7 +517,7 @@ fn compute_valid_regions(
     ifp_world: &[Polygon],
     nfp_clips: &[Polygon],
 ) -> Vec<Polygon> {
-    let ifp_points: Vec<(f64, f64)> =
+    let ifp_points: Vec<Point> =
         ifp_world.iter().flat_map(|p| p.iter().copied()).collect();
 
     if ifp_points.len() < 3 {
@@ -534,7 +548,7 @@ fn build_nfp_candidates(
     grid: &SpatialGrid,
     _config: &PlacementConfig,
     spacing: f64,
-) -> Vec<(f64, f64)> {
+) -> Vec<Point> {
     let ifp_bounds = get_polygon_group_bounds(ifp_world);
     let pw = part_bounds.2 - part_bounds.0;
     let ph = part_bounds.3 - part_bounds.1;
@@ -548,7 +562,7 @@ fn build_nfp_candidates(
     let nearby_indices =
         query_nearby_indices(placed_polys_list, grid, query_bbox);
 
-    let mut candidates: Vec<(f64, f64)> = Vec::new();
+    let mut candidates: Vec<Point> = Vec::new();
     let mut nfp_clips: Vec<Polygon> = Vec::new();
 
     for &pi in &nearby_indices {
@@ -556,19 +570,19 @@ fn build_nfp_candidates(
         let p_bounds = get_polygon_group_bounds(placed_polys);
 
         // Bounding-box corners
-        candidates.push((
+        candidates.push(Point(
             p_bounds.0 - part_bounds.2 - spacing,
             p_bounds.1 - part_bounds.3 - spacing,
         ));
-        candidates.push((
+        candidates.push(Point(
             p_bounds.2 - part_bounds.0 + spacing,
             p_bounds.1 - part_bounds.3 - spacing,
         ));
-        candidates.push((
+        candidates.push(Point(
             p_bounds.2 - part_bounds.0 + spacing,
             p_bounds.3 - part_bounds.1 + spacing,
         ));
-        candidates.push((
+        candidates.push(Point(
             p_bounds.0 - part_bounds.2 - spacing,
             p_bounds.3 - part_bounds.1 + spacing,
         ));
@@ -608,7 +622,7 @@ pub fn find_valid_position_nfp(
     sheet_world_offset: (f64, f64),
     config: &PlacementConfig,
     spacing: f64,
-) -> Option<(f64, f64)> {
+) -> Option<Point> {
     if ifp_polygons.is_empty()
         || part_polygons.is_empty()
         || placed_polys_list.is_empty()
@@ -659,7 +673,7 @@ pub fn find_valid_position(
     sheet_world_offset: (f64, f64),
     config: &PlacementConfig,
     spacing: f64,
-) -> Option<(f64, f64)> {
+) -> Option<Point> {
     let fast = find_valid_position_scored(
         ifp_polygons,
         part_polygons,
@@ -1011,11 +1025,11 @@ fn find_best_sheet(
     sheets: &[SheetDesc],
     sheet_states: &[SheetState],
     config: &PlacementConfig,
-) -> Option<((f64, f64), usize)> {
+) -> Option<(Point, usize)> {
     let part_width = prepared.part_bounds.2 - prepared.part_bounds.0;
     let part_height = prepared.part_bounds.3 - prepared.part_bounds.1;
 
-    let mut best_pos: Option<((f64, f64), usize)> = None;
+    let mut best_pos: Option<(Point, usize)> = None;
     let mut best_score = f64::INFINITY;
 
     for (si, sheet) in sheets.iter().enumerate() {

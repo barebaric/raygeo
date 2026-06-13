@@ -6,7 +6,7 @@ use pyo3_stub_gen::derive::gen_stub_pyfunction;
 use super::super::geo::flex_point::{poly_to_points, PyPoint2D};
 use super::spatial_grid::SpatialGrid as PySpatialGrid;
 use crate::nest::placement;
-use crate::types::{Polygon, Rect};
+use crate::types::{Point, Polygon, Rect};
 
 pyo3_stub_gen::module_doc!("raygeo.nest.placement", "{}", MODULE_DOC);
 
@@ -53,7 +53,7 @@ fn generate_bottom_left_candidates_py(
     ifp_bounds: (f64, f64, f64, f64),
     part_bounds: (f64, f64, f64, f64),
     spacing: f64,
-) -> Vec<(f64, f64)> {
+) -> Vec<Point> {
     placement::generate_bottom_left_candidates(
         Rect(ifp_bounds.0, ifp_bounds.1, ifp_bounds.2, ifp_bounds.3),
         Rect(part_bounds.0, part_bounds.1, part_bounds.2, part_bounds.3),
@@ -87,7 +87,7 @@ fn generate_grid_candidates_py(
     ifp_bounds: (f64, f64, f64, f64),
     part_bounds: (f64, f64, f64, f64),
     spacing: f64,
-) -> Vec<(f64, f64)> {
+) -> Vec<Point> {
     placement::generate_grid_candidates(
         Rect(ifp_bounds.0, ifp_bounds.1, ifp_bounds.2, ifp_bounds.3),
         Rect(part_bounds.0, part_bounds.1, part_bounds.2, part_bounds.3),
@@ -127,7 +127,7 @@ fn generate_perimeter_candidates_py(
     placed_groups: Vec<Vec<Vec<PyPoint2D>>>,
     part_bounds: (f64, f64, f64, f64),
     spacing: f64,
-) -> Vec<(f64, f64)> {
+) -> Vec<Point> {
     let groups: Vec<Vec<Polygon>> = placed_groups
         .into_iter()
         .map(|group| group.into_iter().map(poly_to_points).collect())
@@ -162,10 +162,10 @@ fn generate_perimeter_candidates_py(
 )]
 #[pyfunction(name = "filter_candidates_multi_resolution")]
 fn filter_candidates_multi_resolution_py(
-    candidates: Vec<(f64, f64)>,
+    candidates: Vec<Point>,
     ifp_bounds: (f64, f64, f64, f64),
     min_dist: f64,
-) -> Vec<(f64, f64)> {
+) -> Vec<Point> {
     placement::filter_candidates_multi_resolution(
         &candidates,
         Rect(ifp_bounds.0, ifp_bounds.1, ifp_bounds.2, ifp_bounds.3),
@@ -247,7 +247,7 @@ fn find_valid_position_py(
     spacing: f64,
     min_area: f64,
     curve_tolerance: f64,
-) -> Option<(f64, f64)> {
+) -> Option<Point> {
     let ifp = polys_from_py(ifp_polygons);
     let part = polys_from_py(part_polygons);
     let hulls = polys_from_py(part_hulls);
@@ -325,7 +325,7 @@ fn find_valid_position_scored_py(
     spacing: f64,
     min_area: f64,
     curve_tolerance: f64,
-) -> Option<(f64, f64)> {
+) -> Option<Point> {
     let ifp = polys_from_py(ifp_polygons);
     let part = polys_from_py(part_polygons);
     let hulls = polys_from_py(part_hulls);
@@ -402,7 +402,7 @@ fn find_valid_position_nfp_py(
     spacing: f64,
     min_area: f64,
     curve_tolerance: f64,
-) -> Option<(f64, f64)> {
+) -> Option<Point> {
     let ifp = polys_from_py(ifp_polygons);
     let part = polys_from_py(part_polygons);
     let hulls = polys_from_py(part_hulls);
@@ -558,7 +558,7 @@ fn polygon_group_from_numpy_arrs(
             let view = readonly.as_array();
             view.rows()
                 .into_iter()
-                .map(|row| (row[0], row[1]))
+                .map(|row| Point(row[0], row[1]))
                 .collect()
         })
         .collect()

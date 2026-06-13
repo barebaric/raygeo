@@ -403,7 +403,8 @@ pub fn geometry_to_svg_path(
     let mut parts = Vec::with_capacity(data.len());
 
     for cmd in data {
-        let (ex, ey, _) = cmd.end_point();
+        let end_pt = cmd.end_point();
+        let (ex, ey, _) = (end_pt.0, end_pt.1, end_pt.2);
         let x = ex * w;
         let y = h * (1.0 - ey);
 
@@ -415,11 +416,11 @@ pub fn geometry_to_svg_path(
                 parts.push(format!("L {x:.3} {y:.3}"));
             }
             Command::Arc {
-                center_offset: (i, j),
+                center_offset,
                 clockwise,
                 ..
             } => {
-                let radius = i.hypot(*j);
+                let radius = center_offset.0.hypot(center_offset.1);
                 let rx = radius * w;
                 let ry = radius * h;
                 let sweep = if *clockwise { 1 } else { 0 };
@@ -430,8 +431,8 @@ pub fn geometry_to_svg_path(
             Command::Bezier {
                 control1, control2, ..
             } => {
-                let (c1x, c1y, _) = *control1;
-                let (c2x, c2y, _) = *control2;
+                let (c1x, c1y, _) = (control1.0, control1.1, control1.2);
+                let (c2x, c2y, _) = (control2.0, control2.1, control2.2);
                 let c1x = c1x * w;
                 let c1y = h * (1.0 - c1y);
                 let c2x = c2x * w;

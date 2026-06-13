@@ -13,7 +13,7 @@ determining path winding order.
 ";
 
 use super::super::Geometry;
-use crate::types::WindingOrder;
+use crate::types::{Point, WindingOrder};
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::gen_stub_pyfunction;
 
@@ -77,7 +77,7 @@ fn remove_duplicates_py(points: Vec<(f64, f64)>) -> Vec<(f64, f64)> {
 fn get_subpath_vertices_py(
     geometry: &Geometry,
     start_cmd_index: usize,
-) -> Vec<(f64, f64)> {
+) -> Vec<Point> {
     crate::geo::algo::analysis::get_subpath_vertices_from_array(
         geometry.inner.data(),
         start_cmd_index,

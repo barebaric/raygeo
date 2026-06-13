@@ -312,7 +312,7 @@ fn does_line_segment_intersect_circle_py(
 fn get_line_segment_polygon_intersections_py(
     p1: Point,
     p2: Point,
-    polygon: Vec<Vec<(f64, f64)>>,
+    polygon: Vec<Vec<Point>>,
 ) -> Vec<f64> {
     get_line_segment_polygon_intersections(p1, p2, &polygon)
 }

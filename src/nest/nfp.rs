@@ -5,7 +5,7 @@ use crate::geo::shape::polygon::{
     get_polygon_signed_area, get_polygons_union, int_path_to_polygon,
     is_polygon_convex, polygon_to_int_path,
 };
-use crate::types::{IntPolygon, Polygon};
+use crate::types::{IntPolygon, Point, Polygon};
 use crate::CLIPPER_SCALE;
 
 /// Scale factor for converting polygon coordinates to integer hash keys.
@@ -90,14 +90,14 @@ pub fn nfp_minkowski(
         let first_on = orbiting_neg_float[0];
         let shifted: Polygon = static_float
             .iter()
-            .map(|(x, y)| (x + first_on.0, y + first_on.1))
+            .map(|p| Point(p.0 + first_on.0, p.1 + first_on.1))
             .collect();
         subjects.push(shifted);
 
         let first_s = static_float[0];
         let neg_shifted: Polygon = orbiting_neg_float
             .iter()
-            .map(|(x, y)| (x + first_s.0, y + first_s.1))
+            .map(|p| Point(p.0 + first_s.0, p.1 + first_s.1))
             .collect();
         subjects.push(neg_shifted);
     }
@@ -116,7 +116,7 @@ pub fn nfp_minkowski(
         if poly.len() >= 3 {
             let shifted: Polygon = poly
                 .iter()
-                .map(|(x, y)| (x + x_shift_f, y + y_shift_f))
+                .map(|p| Point(p.0 + x_shift_f, p.1 + y_shift_f))
                 .collect();
 
             let area = get_polygon_signed_area(&shifted);
@@ -135,17 +135,19 @@ pub fn normalize_polygon(poly: &Polygon) -> (Polygon, f64, f64) {
     }
     let min_x = poly.iter().map(|p| p.0).fold(f64::INFINITY, f64::min);
     let min_y = poly.iter().map(|p| p.1).fold(f64::INFINITY, f64::min);
-    let normalized: Polygon =
-        poly.iter().map(|(x, y)| (x - min_x, y - min_y)).collect();
+    let normalized: Polygon = poly
+        .iter()
+        .map(|p| Point(p.0 - min_x, p.1 - min_y))
+        .collect();
     (normalized, min_x, min_y)
 }
 
 pub fn polygon_to_key(poly: &Polygon) -> Vec<(i64, i64)> {
     poly.iter()
-        .map(|(x, y)| {
+        .map(|p| {
             (
-                (x * POLYGON_KEY_SCALE).round() as i64,
-                (y * POLYGON_KEY_SCALE).round() as i64,
+                (p.0 * POLYGON_KEY_SCALE).round() as i64,
+                (p.1 * POLYGON_KEY_SCALE).round() as i64,
             )
         })
         .collect()

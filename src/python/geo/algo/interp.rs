@@ -9,6 +9,7 @@ use crate::geo::algo::interp::{
     compute_segment_delta, compute_t_range, project_t_along_segment,
     slice_scanline_data, solve_quadratic,
 };
+use crate::types::Point3D;
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::gen_stub_pyfunction;
 
@@ -46,8 +47,8 @@ pub fn register(algo_mod: &Bound<'_, PyModule>) -> PyResult<()> {
 )]
 #[pyfunction(name = "compute_segment_delta")]
 fn compute_segment_delta_py(
-    start: (f64, f64, f64),
-    end: (f64, f64, f64),
+    start: Point3D,
+    end: Point3D,
 ) -> (f64, f64, f64, f64) {
     let d = compute_segment_delta(start, end);
     (d.dx, d.dy, d.dz, d.len_sq)
@@ -72,8 +73,8 @@ fn compute_segment_delta_py(
 )]
 #[pyfunction(name = "project_t_along_segment")]
 fn project_t_along_segment_py(
-    origin: (f64, f64, f64),
-    point: (f64, f64, f64),
+    origin: Point3D,
+    point: Point3D,
     delta: (f64, f64, f64, f64),
 ) -> f64 {
     let d = crate::geo::algo::interp::SegmentDelta {
@@ -106,9 +107,9 @@ fn project_t_along_segment_py(
 )]
 #[pyfunction(name = "compute_t_range")]
 fn compute_t_range_py(
-    origin: (f64, f64, f64),
-    new_start: (f64, f64, f64),
-    new_end: (f64, f64, f64),
+    origin: Point3D,
+    new_start: Point3D,
+    new_end: Point3D,
     delta: (f64, f64, f64, f64),
 ) -> (f64, f64) {
     let d = crate::geo::algo::interp::SegmentDelta {

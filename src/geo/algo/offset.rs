@@ -11,7 +11,7 @@ use crate::geo::algo::topology::{
 };
 use crate::geo::geometry::Geometry;
 use crate::geo::shape::polygon::{get_polygons_difference, offset_polygon};
-use crate::types::{Point, Polygon};
+use crate::types::{Point, Point3D, Polygon};
 
 #[derive(Clone, Debug)]
 struct ContourItem {
@@ -145,8 +145,10 @@ pub fn grow_geometry(geometry: &Geometry, offset: f64) -> Geometry {
         let offset_contours =
             offset_contour_group(&solid_item.path, &hole_paths, offset);
         for new_vertices in offset_contours {
-            let points: Vec<(f64, f64, f64)> =
-                new_vertices.iter().map(|(x, y)| (*x, *y, 0.0)).collect();
+            let points: Vec<Point3D> = new_vertices
+                .iter()
+                .map(|p| Point3D(p.0, p.1, 0.0))
+                .collect();
             let new_contour_geo = Geometry::from_points(&points, true);
             if !new_contour_geo.is_empty() {
                 new_geo.extend(&new_contour_geo);

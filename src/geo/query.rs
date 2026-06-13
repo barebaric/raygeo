@@ -53,7 +53,7 @@ pub fn get_bounding_rect_from_array(data: &[Command]) -> Rect {
     }
 
     // Second pass: check arcs for potentially larger bounds
-    let mut last_point_2d: Point = (0.0, 0.0);
+    let mut last_point_2d: Point = Point(0.0, 0.0);
     for cmd in data {
         let end = cmd.end_point();
         if let Command::Arc {
@@ -64,7 +64,7 @@ pub fn get_bounding_rect_from_array(data: &[Command]) -> Rect {
         {
             let Rect(ax1, ay1, ax2, ay2) = get_arc_bounds(
                 last_point_2d,
-                (end.0, end.1),
+                Point(end.0, end.1),
                 *center_offset,
                 *clockwise,
             );
@@ -82,11 +82,11 @@ pub fn get_bounding_rect_from_array(data: &[Command]) -> Rect {
                 max_y = ay2;
             }
         }
-        last_point_2d = (end.0, end.1);
+        last_point_2d = Point(end.0, end.1);
     }
 
     // Third pass: compute Bezier curve extrema analytically
-    let mut last_point_3d: Point3D = (0.0, 0.0, 0.0);
+    let mut last_point_3d: Point3D = Point3D(0.0, 0.0, 0.0);
     for cmd in data {
         let end = cmd.end_point();
         if let Command::Bezier {
@@ -126,7 +126,7 @@ pub fn get_bounding_rect_from_array(data: &[Command]) -> Rect {
 /// - Returns: The cumulative path distance.
 pub fn get_total_distance_from_array(data: &[Command]) -> f64 {
     let mut total_dist = 0.0;
-    let mut last_point: Point3D = (0.0, 0.0, 0.0);
+    let mut last_point: Point3D = Point3D(0.0, 0.0, 0.0);
 
     for cmd in data {
         let end_point = cmd.end_point();
@@ -143,8 +143,8 @@ pub fn get_total_distance_from_array(data: &[Command]) -> f64 {
                 ..
             } => {
                 total_dist += get_arc_length(
-                    (last_point.0, last_point.1),
-                    (end_point.0, end_point.1),
+                    Point(last_point.0, last_point.1),
+                    Point(end_point.0, end_point.1),
                     *center_offset,
                     *clockwise,
                 );
@@ -185,7 +185,7 @@ pub fn find_closest_point_on_path_from_array(
     let mut min_dist_sq = f64::INFINITY;
     let mut closest_info: Option<(usize, f64, Point)> = None;
 
-    let mut last_pos_3d: Point3D = (0.0, 0.0, 0.0);
+    let mut last_pos_3d: Point3D = Point3D(0.0, 0.0, 0.0);
 
     for (i, cmd) in data.iter().enumerate() {
         let end_point_3d = cmd.end_point();
@@ -200,8 +200,8 @@ pub fn find_closest_point_on_path_from_array(
         match cmd {
             Command::Line { .. } => {
                 let t = get_line_segment_closest_point(
-                    (start_pos_3d.0, start_pos_3d.1),
-                    (end_point_3d.0, end_point_3d.1),
+                    Point(start_pos_3d.0, start_pos_3d.1),
+                    Point(end_point_3d.0, end_point_3d.1),
                     x,
                     y,
                 );
@@ -332,7 +332,7 @@ pub fn get_positions_at_distances_from_array(
 
     let total = get_total_distance_from_array(data);
     let mut results = Vec::with_capacity(distances.len());
-    let mut last_point: Point3D = (0.0, 0.0, 0.0);
+    let mut last_point: Point3D = Point3D(0.0, 0.0, 0.0);
     let mut cumulative = 0.0;
     let mut di = 0;
 
@@ -363,8 +363,8 @@ pub fn get_positions_at_distances_from_array(
             let dist_into = (dist - cumulative).max(0.0);
             let t = (dist_into / seg_len).clamp(0.0, 1.0);
             let pt = match get_point_at_from_array(data, seg_idx, t) {
-                Some(p3) => (p3.0, p3.1),
-                None => (last_point.0, last_point.1),
+                Some(p3) => Point(p3.0, p3.1),
+                None => Point(last_point.0, last_point.1),
             };
             results.push((seg_idx, t, pt));
             di += 1;
@@ -378,7 +378,7 @@ pub fn get_positions_at_distances_from_array(
     while di < distances.len() {
         let last_seg = data.len() - 1;
         let last_pt = data[last_seg].end_point();
-        results.push((last_seg, 1.0, (last_pt.0, last_pt.1)));
+        results.push((last_seg, 1.0, Point(last_pt.0, last_pt.1)));
         di += 1;
     }
 

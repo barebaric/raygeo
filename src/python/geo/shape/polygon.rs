@@ -21,18 +21,18 @@ use pyo3_stub_gen::derive::gen_stub_pyfunction;
 
 // -- numpy wrapper helpers --
 
-fn _polygon_from_numpy(arr: &Bound<'_, PyArray2<f64>>) -> Vec<(f64, f64)> {
+fn _polygon_from_numpy(arr: &Bound<'_, PyArray2<f64>>) -> Vec<Point> {
     let readonly = arr.readonly();
     let view = readonly.as_array();
     view.rows()
         .into_iter()
-        .map(|row| (row[0], row[1]))
+        .map(|row| Point(row[0], row[1]))
         .collect()
 }
 
-fn _polygon_to_numpy(py: Python<'_>, poly: Vec<(f64, f64)>) -> Py<PyAny> {
+fn _polygon_to_numpy(py: Python<'_>, poly: Vec<Point>) -> Py<PyAny> {
     let vecs: Vec<Vec<f64>> =
-        poly.into_iter().map(|(x, y)| vec![x, y]).collect();
+        poly.into_iter().map(|p| vec![p.0, p.1]).collect();
     let np_arr = PyArray2::<f64>::from_vec2(py, &vecs)
         .expect("failed to create numpy array");
     np_arr.into_any().unbind()
@@ -40,13 +40,13 @@ fn _polygon_to_numpy(py: Python<'_>, poly: Vec<(f64, f64)>) -> Py<PyAny> {
 
 fn _polygons_from_numpy_list(
     polys: Vec<Bound<'_, PyArray2<f64>>>,
-) -> Vec<Vec<(f64, f64)>> {
+) -> Vec<Vec<Point>> {
     polys.into_iter().map(|a| _polygon_from_numpy(&a)).collect()
 }
 
 fn _polygons_to_numpy_list(
     py: Python<'_>,
-    polys: Vec<Vec<(f64, f64)>>,
+    polys: Vec<Vec<Point>>,
 ) -> Vec<Py<PyAny>> {
     polys
         .into_iter()
@@ -1038,7 +1038,7 @@ fn normalize_polygons_numpy_py(
 )]
 #[pyfunction(name = "point_in_polygon_numpy")]
 fn point_in_polygon_numpy_py(
-    point: (f64, f64),
+    point: Point,
     polygon: Bound<'_, PyArray2<f64>>,
 ) -> bool {
     let p = _polygon_from_numpy(&polygon);
@@ -1219,9 +1219,9 @@ fn to_clipper_numpy_py(
     p.into_iter()
         .map(|poly| {
             poly.into_iter()
-                .map(|(x, y)| {
+                .map(|p| {
                     let scale = 10_000_000.0;
-                    ((x * scale) as i64, (y * scale) as i64)
+                    ((p.0 * scale) as i64, (p.1 * scale) as i64)
                 })
                 .collect()
         })
@@ -1246,7 +1246,7 @@ fn to_clipper_numpy_py(
 )]
 #[pyfunction(name = "is_polygon_clockwise")]
 fn is_polygon_clockwise_py(points: Vec<PyPoint2D>) -> bool {
-    let points_2d: Vec<(f64, f64)> =
-        points.iter().map(|p| (p.0, p.1)).collect();
+    let points_2d: Vec<Point> =
+        points.iter().map(|p| Point(p.0, p.1)).collect();
     is_polygon_clockwise(&points_2d)
 }

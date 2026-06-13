@@ -43,7 +43,7 @@ impl Geometry {
     pub fn new() -> Self {
         Geometry {
             data: Vec::new(),
-            last_move_to: (0.0, 0.0, 0.0),
+            last_move_to: Point3D(0.0, 0.0, 0.0),
             uniform_scalable: true,
         }
     }
@@ -51,14 +51,18 @@ impl Geometry {
     /// Moves the current position to the specified point.
     /// Starts a new subpath; subsequent commands will continue from this point.
     pub fn move_to(&mut self, x: f64, y: f64, z: f64) -> &mut Self {
-        self.last_move_to = (x, y, z);
-        self.data.push(Command::Move { end: (x, y, z) });
+        self.last_move_to = Point3D(x, y, z);
+        self.data.push(Command::Move {
+            end: Point3D(x, y, z),
+        });
         self
     }
 
     /// Draws a straight line from the current position to the specified point.
     pub fn line_to(&mut self, x: f64, y: f64, z: f64) -> &mut Self {
-        self.data.push(Command::Line { end: (x, y, z) });
+        self.data.push(Command::Line {
+            end: Point3D(x, y, z),
+        });
         self
     }
 
@@ -90,8 +94,8 @@ impl Geometry {
     ) -> &mut Self {
         self.uniform_scalable = false;
         self.data.push(Command::Arc {
-            end: (x, y, z),
-            center_offset: (i, j),
+            end: Point3D(x, y, z),
+            center_offset: Point(i, j),
             clockwise,
         });
         self
@@ -123,14 +127,14 @@ impl Geometry {
     }
 
     /// Creates a new geometry from a list of 3D points connected by line segments.
-    pub fn from_points(points: &[(f64, f64, f64)], close: bool) -> Self {
+    pub fn from_points(points: &[Point3D], close: bool) -> Self {
         let mut geo = Self::new();
         if points.is_empty() {
             return geo;
         }
         geo.move_to(points[0].0, points[0].1, points[0].2);
-        for &(x, y, z) in points.iter().skip(1) {
-            geo.line_to(x, y, z);
+        for &p in points.iter().skip(1) {
+            geo.line_to(p.0, p.1, p.2);
         }
         if close && points.len() > 1 {
             geo.close_path();
@@ -190,18 +194,18 @@ impl Geometry {
                 clockwise,
                 ..
             } => Some(get_arc_bounds(
-                (sx, sy),
-                (end.0, end.1),
+                Point(sx, sy),
+                Point(end.0, end.1),
                 *center_offset,
                 *clockwise,
             )),
             Command::Bezier {
                 control1, control2, ..
             } => Some(get_bezier_bounds(
-                (sx, sy),
-                (control1.0, control1.1),
-                (control2.0, control2.1),
-                (end.0, end.1),
+                Point(sx, sy),
+                Point(control1.0, control1.1),
+                Point(control2.0, control2.1),
+                Point(end.0, end.1),
             )),
         }
     }
@@ -305,7 +309,7 @@ impl Geometry {
             self.last_move_to.2,
             1.0,
         ];
-        self.last_move_to = (
+        self.last_move_to = Point3D(
             matrix[0][0] * last_move_vec[0]
                 + matrix[0][1] * last_move_vec[1]
                 + matrix[0][2] * last_move_vec[2]
@@ -342,7 +346,7 @@ impl Geometry {
 
         let mut all_segments: Vec<Vec<Point3D>> = Vec::new();
         let mut current_segment: Vec<Point3D> = Vec::new();
-        let mut last_point: Point3D = (0.0, 0.0, 0.0);
+        let mut last_point: Point3D = Point3D(0.0, 0.0, 0.0);
 
         for cmd in &self.data {
             let end_point = cmd.end_point();

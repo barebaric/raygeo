@@ -46,21 +46,21 @@ class CommandInfo:
     @property
     def type_(self) -> types.CommandType: ...
     @property
-    def end(self) -> typing.Optional[tuple[builtins.float, builtins.float, builtins.float]]: ...
+    def end(self) -> typing.Optional[tuple[float, float, float]]: ...
     @property
     def extra_axes(self) -> typing.Optional[dict]: ...
     @property
     def state(self) -> typing.Optional[state.State]: ...
     @property
-    def center_offset(self) -> typing.Optional[tuple[builtins.float, builtins.float]]: ...
+    def center_offset(self) -> typing.Optional[tuple[float, float]]: ...
     @property
     def clockwise(self) -> typing.Optional[builtins.bool]: ...
     @property
-    def control1(self) -> typing.Optional[tuple[builtins.float, builtins.float, builtins.float]]: ...
+    def control1(self) -> typing.Optional[tuple[float, float, float]]: ...
     @property
-    def control2(self) -> typing.Optional[tuple[builtins.float, builtins.float, builtins.float]]: ...
+    def control2(self) -> typing.Optional[tuple[float, float, float]]: ...
     @property
-    def control(self) -> typing.Optional[tuple[builtins.float, builtins.float, builtins.float]]: ...
+    def control(self) -> typing.Optional[tuple[float, float, float]]: ...
     @property
     def power_values(self) -> typing.Optional[bytes]: ...
     @property
@@ -101,12 +101,12 @@ class Ops:
         Return the number of scanline commands in the sequence.
         """
     @property
-    def last_move_to(self) -> tuple[builtins.float, builtins.float, builtins.float]:
+    def last_move_to(self) -> builtins.tuple[float, float, float]:
         r"""
         The last ``(x, y, z)`` endpoint from a MoveTo command.
         """
     @last_move_to.setter
-    def last_move_to(self, value: tuple[builtins.float, builtins.float, builtins.float]) -> None: ...
+    def last_move_to(self, value: builtins.tuple[float, float, float]) -> None: ...
     def transform(self, matrix: geo.types.TransformMatrix) -> None:
         r"""
         Apply a 4x4 affine transformation matrix to all geometry.
@@ -211,7 +211,7 @@ class Ops:
         r"""
         Compute the total cutting distance (excluding travel moves).
         """
-    def endpoint(self, idx: builtins.int) -> tuple[builtins.float, builtins.float, builtins.float]:
+    def endpoint(self, idx: builtins.int) -> builtins.tuple[float, float, float]:
         r"""
         Get the endpoint coordinates of a moving command.
         
@@ -226,7 +226,7 @@ class Ops:
         :returns: ``(i, j, clockwise)`` tuple.
         :raises TypeError: If the command is not an ArcTo.
         """
-    def bezier_params(self, idx: builtins.int) -> tuple[tuple[builtins.float, builtins.float, builtins.float], tuple[builtins.float, builtins.float, builtins.float]]:
+    def bezier_params(self, idx: builtins.int) -> tuple[tuple[float, float, float], tuple[float, float, float]]:
         r"""
         Get the cubic bezier control points.
         
@@ -234,7 +234,7 @@ class Ops:
         :returns: ``((c1x, c1y, c1z), (c2x, c2y, c2z))`` control points.
         :raises TypeError: If the command is not a BezierTo.
         """
-    def quadratic_bezier_params(self, idx: builtins.int) -> tuple[builtins.float, builtins.float, builtins.float]:
+    def quadratic_bezier_params(self, idx: builtins.int) -> builtins.tuple[float, float, float]:
         r"""
         Get the quadratic bezier control point.
         
@@ -369,7 +369,7 @@ class Ops:
         :param z: End Z coordinate (default 0.0).
         :param extra: Optional dict of extra axis values.
         """
-    def bezier_to(self, control1: tuple[builtins.float, builtins.float, builtins.float], control2: tuple[builtins.float, builtins.float, builtins.float], end: tuple[builtins.float, builtins.float, builtins.float], extra: typing.Optional[dict] = None) -> None:
+    def bezier_to(self, control1: builtins.tuple[float, float, float], control2: builtins.tuple[float, float, float], end: builtins.tuple[float, float, float], extra: typing.Optional[dict] = None) -> None:
         r"""
         Add a cubic bezier curve to the given endpoint.
         
@@ -378,7 +378,7 @@ class Ops:
         :param end: End point ``(x, y, z)``.
         :param extra: Optional dict of extra axis values.
         """
-    def quadratic_bezier_to(self, control: tuple[builtins.float, builtins.float, builtins.float], end: tuple[builtins.float, builtins.float, builtins.float], extra: typing.Optional[dict] = None) -> None:
+    def quadratic_bezier_to(self, control: builtins.tuple[float, float, float], end: builtins.tuple[float, float, float], extra: typing.Optional[dict] = None) -> None:
         r"""
         Add a quadratic bezier curve to the given endpoint.
         
@@ -648,7 +648,7 @@ class Ops:
         :param rect: ``(x_min, y_min, x_max, y_max)``.
         :returns: A new Ops sequence containing the clipped commands.
         """
-    def subtract_regions(self, regions: typing.Sequence[typing.Sequence[tuple[builtins.float, builtins.float]]]) -> None:
+    def subtract_regions(self, regions: typing.Sequence[typing.Sequence[tuple[float, float]]]) -> None:
         r"""
         Subtract polygonal regions from the cutting paths.
         
@@ -661,7 +661,7 @@ class Ops:
         :param regions: List of polygons, each being a list of ``(x, y)`` vertices.
         :param tolerance: Approximation tolerance (default 0.3).
         """
-    def clip_ops_to_regions(self, regions: typing.Sequence[typing.Sequence[tuple[builtins.float, builtins.float]]], tolerance: builtins.float = 0.3) -> None:
+    def clip_ops_to_regions(self, regions: typing.Sequence[typing.Sequence[tuple[float, float]]], tolerance: builtins.float = 0.3) -> None:
         r"""
         Clip paths using polygonal regions as boundaries; keeps what is inside.
         
@@ -704,7 +704,7 @@ class Ops:
         :param on_endpoint: Callable ``(endpoint, extra_axes) -> None``.
         :param on_aux_point: Optional callable ``(point,) -> None`` for curve control points.
         """
-    def linearize(self, idx: builtins.int, start_point: tuple[builtins.float, builtins.float, builtins.float]) -> Ops:
+    def linearize(self, idx: builtins.int, start_point: builtins.tuple[float, float, float]) -> Ops:
         r"""
         Decompose a curved command into linear segments.
         

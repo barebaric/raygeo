@@ -6,7 +6,7 @@ use crate::types::Point3D;
 
 /// Computes the midpoint between two 3D points.
 pub fn midpoint(a: Point3D, b: Point3D) -> Point3D {
-    ((a.0 + b.0) / 2.0, (a.1 + b.1) / 2.0, (a.2 + b.2) / 2.0)
+    Point3D((a.0 + b.0) / 2.0, (a.1 + b.1) / 2.0, (a.2 + b.2) / 2.0)
 }
 
 /// Apply an affine transformation matrix to a 3D point.
@@ -23,7 +23,7 @@ pub fn transform_point(
         matrix[1][0] * x + matrix[1][1] * y + matrix[1][2] * z + matrix[1][3];
     let pz =
         matrix[2][0] * x + matrix[2][1] * y + matrix[2][2] * z + matrix[2][3];
-    (px, py, pz)
+    Point3D(px, py, pz)
 }
 
 /// Check if two points (as 3-element arrays) are equal within a tolerance.

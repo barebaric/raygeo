@@ -39,30 +39,30 @@ __all__ = [
 @typing.final
 class Arc:
     @property
-    def end(self) -> tuple[builtins.float, builtins.float, builtins.float]: ...
+    def end(self) -> builtins.tuple[float, float, float]: ...
     @property
-    def center_offset(self) -> tuple[builtins.float, builtins.float]: ...
+    def center_offset(self) -> builtins.tuple[float, float]: ...
     @property
     def clockwise(self) -> builtins.bool: ...
 
 @typing.final
 class Bezier:
     @property
-    def end(self) -> tuple[builtins.float, builtins.float, builtins.float]: ...
+    def end(self) -> builtins.tuple[float, float, float]: ...
     @property
-    def control1(self) -> tuple[builtins.float, builtins.float, builtins.float]: ...
+    def control1(self) -> builtins.tuple[float, float, float]: ...
     @property
-    def control2(self) -> tuple[builtins.float, builtins.float, builtins.float]: ...
+    def control2(self) -> builtins.tuple[float, float, float]: ...
 
 @typing.final
 class Geometry:
     @property
-    def last_move_to(self) -> tuple[builtins.float, builtins.float, builtins.float]:
+    def last_move_to(self) -> builtins.tuple[float, float, float]:
         r"""
         The coordinates of the last move-to command.
         """
     @last_move_to.setter
-    def last_move_to(self, value: tuple[builtins.float, builtins.float, builtins.float]) -> None: ...
+    def last_move_to(self, value: builtins.tuple[float, float, float]) -> None: ...
     @property
     def uniform_scalable(self) -> builtins.bool:
         r"""
@@ -171,7 +171,7 @@ class Geometry:
         r"""
         Return a deep copy of this geometry.
         """
-    def get_last_point(self) -> tuple[builtins.float, builtins.float, builtins.float]:
+    def get_last_point(self) -> builtins.tuple[float, float, float]:
         r"""
         Get the last point in the geometry.
         """
@@ -183,7 +183,7 @@ class Geometry:
         """
     def rect(self) -> tuple[builtins.float, builtins.float, builtins.float, builtins.float]:
         r"""
-        Return the bounding rectangle (x_min, x_max, y_min, y_max).
+        Return the bounding rectangle (x_min, y_min, x_max, y_max).
         """
     def segment_bounds(self, index: builtins.int) -> typing.Optional[tuple[builtins.float, builtins.float, builtins.float, builtins.float]]:
         r"""
@@ -193,7 +193,7 @@ class Geometry:
         :param index: Segment index.
         :returns: (x_min, y_min, x_max, y_max) or None.
         """
-    def get_positions_at_distances(self, distances: typing.Sequence[builtins.float]) -> builtins.list[tuple[builtins.int, builtins.float, tuple[builtins.float, builtins.float]]]:
+    def get_positions_at_distances(self, distances: typing.Sequence[builtins.float]) -> builtins.list[tuple[builtins.int, builtins.float, tuple[float, float]]]:
         r"""
         Given a list of distances along the path, returns the corresponding
         (segment_index, t, point) for each distance.
@@ -228,7 +228,7 @@ class Geometry:
         
         :param tolerance: Max gap between start and end point.
         """
-    def segments(self) -> builtins.list[builtins.list[tuple[builtins.float, builtins.float, builtins.float]]]:
+    def segments(self) -> builtins.list[builtins.list[builtins.tuple[float, float, float]]]:
         r"""
         Return the geometry split into segments of connected commands.
         """
@@ -322,7 +322,7 @@ class Geometry:
         r"""
         Mirror the geometry along the Y axis.
         """
-    def find_closest_point(self, x: builtins.float, y: builtins.float) -> typing.Optional[tuple[builtins.int, builtins.float, tuple[builtins.float, builtins.float]]]:
+    def find_closest_point(self, x: builtins.float, y: builtins.float) -> typing.Optional[tuple[builtins.int, builtins.float, tuple[float, float]]]:
         r"""
         Find the closest point on the path to (x, y).
         
@@ -330,7 +330,7 @@ class Geometry:
         :param y: Y coordinate.
         :returns: Tuple of (segment_index, t, point) or None.
         """
-    def get_point_at(self, segment_index: builtins.int, t: builtins.float) -> typing.Optional[tuple[builtins.float, builtins.float, builtins.float]]:
+    def get_point_at(self, segment_index: builtins.int, t: builtins.float) -> typing.Optional[tuple[float, float, float]]:
         r"""
         Get the point at parameter t on a segment.
         
@@ -338,7 +338,7 @@ class Geometry:
         :param t: Parameter in [0, 1].
         :returns: The 3D point or None.
         """
-    def get_tangent_at(self, segment_index: builtins.int, t: builtins.float) -> typing.Optional[tuple[builtins.float, builtins.float]]:
+    def get_tangent_at(self, segment_index: builtins.int, t: builtins.float) -> typing.Optional[tuple[float, float]]:
         r"""
         Get the tangent vector at parameter t on a segment.
         
@@ -346,7 +346,7 @@ class Geometry:
         :param t: Parameter in [0, 1].
         :returns: The normalized tangent vector or None.
         """
-    def get_outward_normal_at(self, segment_index: builtins.int, t: builtins.float) -> typing.Optional[tuple[builtins.float, builtins.float]]:
+    def get_outward_normal_at(self, segment_index: builtins.int, t: builtins.float) -> typing.Optional[tuple[float, float]]:
         r"""
         Get the outward normal at parameter t on a segment.
         
@@ -397,7 +397,7 @@ class Geometry:
         r"""
         Split contours into inner and outer groups.
         """
-    def map_to_frame(self, origin: tuple[builtins.float, builtins.float], p_width: tuple[builtins.float, builtins.float], p_height: tuple[builtins.float, builtins.float], anchor_y: typing.Optional[builtins.float] = None, stable_src_height: typing.Optional[builtins.float] = None, anchor_x: typing.Optional[builtins.float] = None, stable_src_width: typing.Optional[builtins.float] = None) -> Geometry:
+    def map_to_frame(self, origin: builtins.tuple[float, float], p_width: builtins.tuple[float, float], p_height: builtins.tuple[float, float], anchor_y: typing.Optional[builtins.float] = None, stable_src_height: typing.Optional[builtins.float] = None, anchor_x: typing.Optional[builtins.float] = None, stable_src_width: typing.Optional[builtins.float] = None) -> Geometry:
         r"""
         Map the geometry into a rectangular frame.
         
@@ -417,7 +417,7 @@ class Geometry:
         r"""
         Split the geometry into connected components.
         """
-    def to_polygons(self, tolerance: builtins.float = 0.01) -> builtins.list[builtins.list[tuple[builtins.float, builtins.float]]]:
+    def to_polygons(self, tolerance: builtins.float = 0.01) -> builtins.list[builtins.list[builtins.tuple[float, float]]]:
         r"""
         Convert the geometry to a list of polygons.
         
@@ -454,10 +454,10 @@ class Geometry:
 @typing.final
 class Line:
     @property
-    def end(self) -> tuple[builtins.float, builtins.float, builtins.float]: ...
+    def end(self) -> builtins.tuple[float, float, float]: ...
 
 @typing.final
 class Move:
     @property
-    def end(self) -> tuple[builtins.float, builtins.float, builtins.float]: ...
+    def end(self) -> builtins.tuple[float, float, float]: ...
 

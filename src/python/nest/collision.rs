@@ -8,6 +8,7 @@ use crate::geo::shape::polygon::{
     get_polygon_group_bounds, polygons_intersect,
 };
 use crate::nest::collision;
+use crate::types::Point;
 use crate::types::{Polygon, Rect};
 
 pyo3_stub_gen::module_doc!("raygeo.nest.collision", "{}", MODULE_DOC);
@@ -26,7 +27,7 @@ fn polygon_from_numpy(arr: &Bound<'_, PyArray2<f64>>) -> Polygon {
     let view = readonly.as_array();
     view.rows()
         .into_iter()
-        .map(|row| (row[0], row[1]))
+        .map(|row| Point(row[0], row[1]))
         .collect()
 }
 

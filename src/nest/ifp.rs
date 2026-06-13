@@ -3,7 +3,7 @@ use clipper2::FillRule;
 use crate::geo::shape::polygon::{
     get_polygon_bounds, get_polygon_convex_hull, polygons_to_paths,
 };
-use crate::types::Polygon;
+use crate::types::{Point, Polygon};
 
 /// Compute the Inner-Fit Polygon (IFP) for placing a part inside a bin.
 ///
@@ -30,7 +30,7 @@ pub fn inner_fit_polygon(bin: &Polygon, part: &Polygon) -> Vec<Polygon> {
         return vec![];
     }
 
-    let part_neg: Polygon = part.iter().map(|(x, y)| (-x, -y)).collect();
+    let part_neg: Polygon = part.iter().map(|p| Point(-p.0, -p.1)).collect();
     let no_go_zones = build_no_go_zones(bin, &part_neg);
 
     if no_go_zones.is_empty() {
@@ -48,7 +48,13 @@ pub fn inner_fit_polygon(bin: &Polygon, part: &Polygon) -> Vec<Polygon> {
         .add_clip(no_go_paths)
         .difference(FillRule::NonZero)
     {
-        Ok(paths) => paths.into(),
+        Ok(paths) => {
+            let tuples: Vec<Vec<(f64, f64)>> = Vec::from(paths);
+            tuples
+                .iter()
+                .map(|path| path.iter().map(|(x, y)| Point(*x, *y)).collect())
+                .collect()
+        }
         Err(_) => return vec![],
     };
 
@@ -65,8 +71,10 @@ pub fn build_no_go_zones(bin: &Polygon, part_neg: &Polygon) -> Vec<Polygon> {
 
     // Corner caps: part_neg placed at each bin vertex
     for &v in bin {
-        let translated: Polygon =
-            part_neg.iter().map(|(x, y)| (x + v.0, y + v.1)).collect();
+        let translated: Polygon = part_neg
+            .iter()
+            .map(|p| Point(p.0 + v.0, p.1 + v.1))
+            .collect();
         if translated.len() >= 3 {
             subjects.push(translated);
         }
@@ -90,14 +98,14 @@ pub fn build_no_go_zones(bin: &Polygon, part_neg: &Polygon) -> Vec<Polygon> {
 ///
 /// The result is the convex hull of `part_neg` translated to p1 and to p2.
 pub fn sweep_hull_for_edge(
-    p1: (f64, f64),
-    p2: (f64, f64),
+    p1: Point,
+    p2: Point,
     part_neg: &Polygon,
 ) -> Polygon {
-    let mut points: Vec<(f64, f64)> = Vec::with_capacity(part_neg.len() * 2);
-    for &(x, y) in part_neg {
-        points.push((x + p1.0, y + p1.1));
-        points.push((x + p2.0, y + p2.1));
+    let mut points: Vec<Point> = Vec::with_capacity(part_neg.len() * 2);
+    for p in part_neg {
+        points.push(Point(p.0 + p1.0, p.1 + p1.1));
+        points.push(Point(p.0 + p2.0, p.1 + p2.1));
     }
     get_polygon_convex_hull(&points)
 }

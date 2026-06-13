@@ -1,5 +1,6 @@
 use super::container::Ops;
 use super::types::{MarkerCmd, MoveCmd, OpCategory};
+use crate::types::Point3D;
 
 impl Ops {
     #[allow(clippy::type_complexity)]
@@ -41,23 +42,23 @@ impl Ops {
                     }
                     let (ox, oy, oz) = active_offset;
                     if ox != 0.0 || oy != 0.0 || oz != 0.0 {
-                        *e = (e.0 - ox, e.1 - oy, e.2 - oz);
+                        *e = Point3D(e.0 - ox, e.1 - oy, e.2 - oz);
                         // Also update control points. Arc centers are relative, so they don't change.
                         match cmd {
                             MoveCmd::BezierTo { control1, control2 } => {
-                                *control1 = (
+                                *control1 = Point3D(
                                     control1.0 - ox,
                                     control1.1 - oy,
                                     control1.2 - oz,
                                 );
-                                *control2 = (
+                                *control2 = Point3D(
                                     control2.0 - ox,
                                     control2.1 - oy,
                                     control2.2 - oz,
                                 );
                             }
                             MoveCmd::QuadraticBezierTo { control } => {
-                                *control = (
+                                *control = Point3D(
                                     control.0 - ox,
                                     control.1 - oy,
                                     control.2 - oz,

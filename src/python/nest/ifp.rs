@@ -3,6 +3,7 @@ use pyo3_stub_gen::derive::gen_stub_pyfunction;
 
 use super::super::geo::flex_point::{poly_to_points, PyPoint2D};
 use crate::nest::ifp;
+use crate::types::Point;
 
 pyo3_stub_gen::module_doc!("raygeo.nest.ifp", "{}", MODULE_DOC);
 
@@ -35,7 +36,7 @@ placement region for a part inside a bin.
 fn inner_fit_polygon_py(
     bin: Vec<PyPoint2D>,
     part: Vec<PyPoint2D>,
-) -> Vec<Vec<(f64, f64)>> {
+) -> Vec<Vec<Point>> {
     ifp::inner_fit_polygon(&poly_to_points(bin), &poly_to_points(part))
 }
 
@@ -61,7 +62,7 @@ fn inner_fit_polygon_py(
 fn build_no_go_zones_py(
     bin: Vec<PyPoint2D>,
     part_neg: Vec<PyPoint2D>,
-) -> Vec<Vec<(f64, f64)>> {
+) -> Vec<Vec<Point>> {
     ifp::build_no_go_zones(&poly_to_points(bin), &poly_to_points(part_neg))
 }
 
@@ -90,10 +91,10 @@ fn sweep_hull_for_edge_py(
     p1: PyPoint2D,
     p2: PyPoint2D,
     part_neg: Vec<PyPoint2D>,
-) -> Vec<(f64, f64)> {
+) -> Vec<Point> {
     ifp::sweep_hull_for_edge(
-        (p1.0, p1.1),
-        (p2.0, p2.1),
+        Point(p1.0, p1.1),
+        Point(p2.0, p2.1),
         &poly_to_points(part_neg),
     )
 }

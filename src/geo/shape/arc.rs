@@ -24,7 +24,8 @@ pub fn get_arc_length(
     center_offset: Point,
     clockwise: bool,
 ) -> f64 {
-    let center = (start_pos.0 + center_offset.0, start_pos.1 + center_offset.1);
+    let center =
+        Point(start_pos.0 + center_offset.0, start_pos.1 + center_offset.1);
     let radius = (start_pos.0 - center.0).hypot(start_pos.1 - center.1);
     if radius < 1e-9 {
         return 0.0;
@@ -80,7 +81,7 @@ pub fn get_arc_midpoint(
         get_arc_angles(start_pos, end_pos, center, clockwise);
     let mid_angle = start_a + sweep / 2.0;
     let radius = (start_pos.0 - center.0).hypot(start_pos.1 - center.1);
-    (
+    Point(
         center.0 + radius * mid_angle.cos(),
         center.1 + radius * mid_angle.sin(),
     )
@@ -167,12 +168,15 @@ pub fn get_arc_direction(center: Point, start: Point, mouse: Point) -> bool {
 /// Determines if points along an arc traverse in clockwise direction relative to center.
 /// Uses cumulative cross product of successive radius vectors.
 pub fn is_arc_clockwise(points: &[Point], center: Point) -> bool {
-    let (xc, yc) = center;
+    let xc = center.0;
+    let yc = center.1;
     let mut cross_product_sum = 0.0;
 
     for i in 0..points.len() - 1 {
-        let (x0, y0) = points[i];
-        let (x1, y1) = points[i + 1];
+        let x0 = points[i].0;
+        let y0 = points[i].1;
+        let x1 = points[i + 1].0;
+        let y1 = points[i + 1].1;
         let v0x = x0 - xc;
         let v0y = y0 - yc;
         let v1x = x1 - xc;
@@ -221,7 +225,7 @@ fn linearize_arc_impl(
         let radius = radius_start + (radius_end - radius_start) * t;
         let angle = start_angle + angle_range * t;
         let z = z0 + (z1 - z0) * t;
-        let next_pt = (
+        let next_pt = Point3D(
             center.0 + radius * angle.cos(),
             center.1 + radius * angle.sin(),
             z,
@@ -264,8 +268,8 @@ fn find_closest_on_linearized_arc(
 
     for (j, (p1_3d, p2_3d)) in arc_segments.iter().enumerate() {
         let t_sub = get_line_segment_closest_point(
-            (p1_3d.0, p1_3d.1),
-            (p2_3d.0, p2_3d.1),
+            Point(p1_3d.0, p1_3d.1),
+            Point(p2_3d.0, p2_3d.1),
             x,
             y,
         );
@@ -289,9 +293,9 @@ fn find_closest_point_on_arc_impl(
     x: f64,
     y: f64,
 ) -> Option<(f64, Point, f64)> {
-    let p0 = (start_pos.0, start_pos.1);
-    let p1 = (end.0, end.1);
-    let center = (p0.0 + center_offset.0, p0.1 + center_offset.1);
+    let p0 = Point(start_pos.0, start_pos.1);
+    let p1 = Point(end.0, end.1);
+    let center = Point(p0.0 + center_offset.0, p0.1 + center_offset.1);
 
     let radius_start = (p0.0 - center.0).hypot(p0.1 - center.1);
     let radius_end = (p1.0 - center.0).hypot(p1.1 - center.1);
@@ -318,7 +322,7 @@ fn find_closest_point_on_arc_impl(
     let closest_on_circle = if dist_to_center < 1e-9 {
         p0
     } else {
-        (
+        Point(
             center.0 + vec_to_point.0 / dist_to_center * radius,
             center.1 + vec_to_point.1 / dist_to_center * radius,
         )
@@ -411,7 +415,7 @@ pub fn does_arc_intersect_rect(
     let arc_box = get_arc_bounds(
         start_pos,
         end_pos,
-        (center.0 - start_pos.0, center.1 - start_pos.1),
+        Point(center.0 - start_pos.0, center.1 - start_pos.1),
         clockwise,
     );
     if arc_box.2 < rect.0
@@ -423,17 +427,17 @@ pub fn does_arc_intersect_rect(
     }
 
     // Linearize and test each segment
-    let center_offset = (center.0 - start_pos.0, center.1 - start_pos.1);
+    let center_offset = Point(center.0 - start_pos.0, center.1 - start_pos.1);
     let radius = (start_pos.0 - center.0).hypot(start_pos.1 - center.1);
-    let start_3d: Point3D = (start_pos.0, start_pos.1, 0.0);
-    let end_3d: Point3D = (end_pos.0, end_pos.1, 0.0);
+    let start_3d: Point3D = Point3D(start_pos.0, start_pos.1, 0.0);
+    let end_3d: Point3D = Point3D(end_pos.0, end_pos.1, 0.0);
 
     let segments =
         linearize_arc(end_3d, center_offset, clockwise, start_3d, radius * 0.1);
     for (p1_3d, p2_3d) in segments {
         if does_line_segment_intersect_rect(
-            (p1_3d.0, p1_3d.1),
-            (p2_3d.0, p2_3d.1),
+            Point(p1_3d.0, p1_3d.1),
+            Point(p2_3d.0, p2_3d.1),
             rect,
         ) {
             return true;
@@ -514,15 +518,16 @@ pub fn is_arc_inside_polygons(
     clockwise: bool,
     regions: &[Polygon],
 ) -> bool {
-    let center = (start_pos.0 + center_offset.0, start_pos.1 + center_offset.1);
+    let center =
+        Point(start_pos.0 + center_offset.0, start_pos.1 + center_offset.1);
     let bbox = get_arc_bounds(start_pos, end_pos, center_offset, clockwise);
     let mid = get_arc_midpoint(start_pos, end_pos, center, clockwise);
 
     let sample_points: Vec<Point> = vec![
-        (bbox.0, bbox.1),
-        (bbox.2, bbox.1),
-        (bbox.2, bbox.3),
-        (bbox.0, bbox.3),
+        Point(bbox.0, bbox.1),
+        Point(bbox.2, bbox.1),
+        Point(bbox.2, bbox.3),
+        Point(bbox.0, bbox.3),
         start_pos,
         end_pos,
         mid,

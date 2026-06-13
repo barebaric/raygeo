@@ -47,7 +47,7 @@ impl Ops {
             return new_ops;
         }
 
-        let mut last_point: Point3D = (0.0, 0.0, 0.0);
+        let mut last_point: Point3D = Point3D(0.0, 0.0, 0.0);
         let mut clipped_pen_pos: Option<Point3D> = None;
 
         for node in &self.commands {
@@ -112,7 +112,7 @@ impl Ops {
         }
 
         let mut new_ops = Ops::new();
-        let mut last_point: Point3D = (0.0, 0.0, 0.0);
+        let mut last_point: Point3D = Point3D(0.0, 0.0, 0.0);
         let mut pen_pos: Option<Point3D> = None;
 
         let first_move_idx = self
@@ -216,7 +216,7 @@ impl Ops {
         }
 
         let mut new_ops = Ops::new();
-        let mut last_point: Point3D = (0.0, 0.0, 0.0);
+        let mut last_point: Point3D = Point3D(0.0, 0.0, 0.0);
         let mut pen_pos: Option<Point3D> = None;
 
         let first_move_idx = self
@@ -453,7 +453,7 @@ impl Ops {
         }
 
         let mut new_ops = Ops::new();
-        let mut last_point: Point3D = (0.0, 0.0, 0.0);
+        let mut last_point: Point3D = Point3D(0.0, 0.0, 0.0);
         let mut pen_pos: Option<Point3D> = None;
 
         let first_move_idx = self
@@ -491,8 +491,8 @@ impl Ops {
                     }
                     MoveCmd::ArcTo { center, cw } => {
                         if is_arc_inside_polygons(
-                            (last_point.0, last_point.1),
-                            (end.0, end.1),
+                            Point(last_point.0, last_point.1),
+                            Point(end.0, end.1),
                             *center,
                             *cw,
                             &valid_regions,
@@ -522,10 +522,10 @@ impl Ops {
                     }
                     MoveCmd::BezierTo { control1, control2 } => {
                         if is_bezier_inside_polygons(
-                            (last_point.0, last_point.1),
-                            (control1.0, control1.1),
-                            (control2.0, control2.1),
-                            (end.0, end.1),
+                            Point(last_point.0, last_point.1),
+                            Point(control1.0, control1.1),
+                            Point(control2.0, control2.1),
+                            Point(end.0, end.1),
                             &valid_regions,
                         ) {
                             if needs_move_to(pen_pos, last_point) {
@@ -821,12 +821,12 @@ fn build_clipped_subpath(
                     1.0
                 };
 
-                let start_pt = (
+                let start_pt = Point3D(
                     p1.0 + t_start * vec_dx,
                     p1.1 + t_start * vec_dy,
                     p1.2 + t_start * dz,
                 );
-                let end_pt = (
+                let end_pt = Point3D(
                     p1.0 + t_end * vec_dx,
                     p1.1 + t_end * vec_dy,
                     p1.2 + t_end * dz,

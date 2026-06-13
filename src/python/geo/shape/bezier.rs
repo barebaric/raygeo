@@ -18,7 +18,7 @@ use crate::geo::shape::bezier::{
     get_perpendicular_dist_sq, is_bezier_inside_polygons, linearize_bezier,
     linearize_bezier_adaptive, linearize_bezier_segment, split_bezier,
 };
-use crate::types::{Point, Rect};
+use crate::types::{Point, Point3D, Rect};
 use pyo3::prelude::*;
 use pyo3::types::PyList;
 use pyo3_stub_gen::derive::gen_stub_pyfunction;
@@ -82,10 +82,10 @@ fn get_bezier_point_at_py(
     t: f64,
 ) -> Point {
     get_bezier_point_at(
-        (p0.0, p0.1),
-        (p1.0, p1.1),
-        (p2.0, p2.1),
-        (p3.0, p3.1),
+        Point(p0.0, p0.1),
+        Point(p1.0, p1.1),
+        Point(p2.0, p2.1),
+        Point(p3.0, p3.1),
         t,
     )
 }
@@ -125,8 +125,13 @@ fn split_bezier_py(
     p3: PyPoint2D,
     t: f64,
 ) -> ((Point, Point, Point, Point), (Point, Point, Point, Point)) {
-    let (left, right) =
-        split_bezier((p0.0, p0.1), (p1.0, p1.1), (p2.0, p2.1), (p3.0, p3.1), t);
+    let (left, right) = split_bezier(
+        Point(p0.0, p0.1),
+        Point(p1.0, p1.1),
+        Point(p2.0, p2.1),
+        Point(p3.0, p3.1),
+        t,
+    );
     (
         (left.0, left.1, left.2, left.3),
         (right.0, right.1, right.2, right.3),
@@ -162,10 +167,10 @@ fn get_bezier_bounds_py(
     p3: PyPoint2D,
 ) -> (f64, f64, f64, f64) {
     let r = get_bezier_bounds(
-        (p0.0, p0.1),
-        (p1.0, p1.1),
-        (p2.0, p2.1),
-        (p3.0, p3.1),
+        Point(p0.0, p0.1),
+        Point(p1.0, p1.1),
+        Point(p2.0, p2.1),
+        Point(p3.0, p3.1),
     );
     (r.0, r.1, r.2, r.3)
 }
@@ -202,10 +207,10 @@ fn get_bezier_rect_intersections_py(
     rect: (f64, f64, f64, f64),
 ) -> Vec<f64> {
     get_bezier_rect_intersections(
-        (p0.0, p0.1),
-        (p1.0, p1.1),
-        (p2.0, p2.1),
-        (p3.0, p3.1),
+        Point(p0.0, p0.1),
+        Point(p1.0, p1.1),
+        Point(p2.0, p2.1),
+        Point(p3.0, p3.1),
         Rect(rect.0, rect.1, rect.2, rect.3),
     )
 }
@@ -242,10 +247,10 @@ fn clip_bezier_with_rect_py(
     rect: (f64, f64, f64, f64),
 ) -> Vec<(Point, Point, Point, Point)> {
     clip_bezier_with_rect(
-        (p0.0, p0.1),
-        (p1.0, p1.1),
-        (p2.0, p2.1),
-        (p3.0, p3.1),
+        Point(p0.0, p0.1),
+        Point(p1.0, p1.1),
+        Point(p2.0, p2.1),
+        Point(p3.0, p3.1),
         Rect(rect.0, rect.1, rect.2, rect.3),
     )
     .into_iter()
@@ -282,10 +287,10 @@ fn convert_cubic_bezier_to_quadratic_py(
     p3: PyPoint2D,
 ) -> (Point, Point, Point) {
     convert_cubic_bezier_to_quadratic(
-        (p0.0, p0.1),
-        (p1.0, p1.1),
-        (p2.0, p2.1),
-        (p3.0, p3.1),
+        Point(p0.0, p0.1),
+        Point(p1.0, p1.1),
+        Point(p2.0, p2.1),
+        Point(p3.0, p3.1),
     )
 }
 
@@ -323,10 +328,10 @@ fn is_bezier_inside_polygons_py(
 ) -> PyResult<bool> {
     let polygons_2d = extract_polygons(polygons)?;
     Ok(is_bezier_inside_polygons(
-        (p0.0, p0.1),
-        (p1.0, p1.1),
-        (p2.0, p2.1),
-        (p3.0, p3.1),
+        Point(p0.0, p0.1),
+        Point(p1.0, p1.1),
+        Point(p2.0, p2.1),
+        Point(p3.0, p3.1),
         &polygons_2d,
     ))
 }
@@ -362,12 +367,12 @@ fn linearize_bezier_py(
     p2: PyPoint3D,
     p3: PyPoint3D,
     num_steps: usize,
-) -> Vec<((f64, f64, f64), (f64, f64, f64))> {
+) -> Vec<(Point3D, Point3D)> {
     linearize_bezier(
-        (p0.0, p0.1, p0.2),
-        (p1.0, p1.1, p1.2),
-        (p2.0, p2.1, p2.2),
-        (p3.0, p3.1, p3.2),
+        Point3D(p0.0, p0.1, p0.2),
+        Point3D(p1.0, p1.1, p1.2),
+        Point3D(p2.0, p2.1, p2.2),
+        Point3D(p3.0, p3.1, p3.2),
         num_steps,
     )
 }
@@ -406,12 +411,12 @@ fn linearize_bezier_adaptive_py(
     p3: PyPoint2D,
     tolerance_sq: f64,
     max_subdivisions: usize,
-) -> Vec<(f64, f64)> {
+) -> Vec<Point> {
     linearize_bezier_adaptive(
-        (p0.0, p0.1),
-        (p1.0, p1.1),
-        (p2.0, p2.1),
-        (p3.0, p3.1),
+        Point(p0.0, p0.1),
+        Point(p1.0, p1.1),
+        Point(p2.0, p2.1),
+        Point(p3.0, p3.1),
         tolerance_sq,
         max_subdivisions,
     )
@@ -448,12 +453,12 @@ fn linearize_bezier_segment_py(
     p2: PyPoint3D,
     p3: PyPoint3D,
     tolerance: f64,
-) -> Vec<(f64, f64, f64)> {
+) -> Vec<Point3D> {
     linearize_bezier_segment(
-        (p0.0, p0.1, p0.2),
-        (p1.0, p1.1, p1.2),
-        (p2.0, p2.1, p2.2),
-        (p3.0, p3.1, p3.2),
+        Point3D(p0.0, p0.1, p0.2),
+        Point3D(p1.0, p1.1, p1.2),
+        Point3D(p2.0, p2.1, p2.2),
+        Point3D(p3.0, p3.1, p3.2),
         Some(tolerance),
     )
 }
@@ -496,10 +501,10 @@ fn flatten_bezier_py(
 ) -> PyResult<()> {
     let mut result = Vec::new();
     flatten_bezier(
-        (p0.0, p0.1, p0.2),
-        (p1.0, p1.1, p1.2),
-        (p2.0, p2.1, p2.2),
-        (p3.0, p3.1, p3.2),
+        Point3D(p0.0, p0.1, p0.2),
+        Point3D(p1.0, p1.1, p1.2),
+        Point3D(p2.0, p2.1, p2.2),
+        Point3D(p3.0, p3.1, p3.2),
         tolerance,
         max_subdivisions,
         &mut result,
@@ -540,10 +545,10 @@ fn get_bezier_flatness_sq_py(
     d: PyPoint3D,
 ) -> f64 {
     get_bezier_flatness_sq(
-        (a.0, a.1, a.2),
-        (b.0, b.1, b.2),
-        (c.0, c.1, c.2),
-        (d.0, d.1, d.2),
+        Point3D(a.0, a.1, a.2),
+        Point3D(b.0, b.1, b.2),
+        Point3D(c.0, c.1, c.2),
+        Point3D(d.0, d.1, d.2),
     )
 }
 
@@ -583,8 +588,8 @@ fn get_perpendicular_dist_sq_py(
     norm_sq: f64,
 ) -> f64 {
     get_perpendicular_dist_sq(
-        (pt.0, pt.1, pt.2),
-        (origin.0, origin.1, origin.2),
+        Point3D(pt.0, pt.1, pt.2),
+        Point3D(origin.0, origin.1, origin.2),
         vx,
         vy,
         vz,

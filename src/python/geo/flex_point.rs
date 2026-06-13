@@ -2,7 +2,7 @@ use numpy::{PyArray2, PyArrayMethods};
 use pyo3::prelude::*;
 use pyo3_stub_gen::{PyStubType, TypeInfo};
 
-use crate::Point;
+use crate::{Point, Point3D};
 
 /// A 2D point that accepts tuples `(x, y)`, `(x, y, z)`,
 /// or lists `[x, y]`, `[x, y, z]`, discarding the z coordinate.
@@ -46,8 +46,66 @@ impl From<&PyPoint2D> for (f64, f64) {
     }
 }
 
-pub fn poly_to_points(poly: Vec<PyPoint2D>) -> Vec<(f64, f64)> {
-    poly.into_iter().map(|p| (p.0, p.1)).collect()
+pub fn poly_to_points(poly: Vec<PyPoint2D>) -> Vec<Point> {
+    poly.into_iter().map(|p| Point(p.0, p.1)).collect()
+}
+
+impl PyStubType for Point {
+    fn type_output() -> TypeInfo {
+        TypeInfo::with_module("tuple[float, float]", "builtins".into())
+    }
+}
+
+impl PyStubType for Point3D {
+    fn type_output() -> TypeInfo {
+        TypeInfo::with_module("tuple[float, float, float]", "builtins".into())
+    }
+}
+
+impl<'py> pyo3::IntoPyObject<'py> for Point {
+    type Target = pyo3::types::PyTuple;
+    type Output = Bound<'py, Self::Target>;
+    type Error = pyo3::PyErr;
+
+    fn into_pyobject(
+        self,
+        py: Python<'py>,
+    ) -> Result<Self::Output, Self::Error> {
+        (self.0, self.1).into_pyobject(py)
+    }
+}
+
+impl<'py> pyo3::IntoPyObject<'py> for Point3D {
+    type Target = pyo3::types::PyTuple;
+    type Output = Bound<'py, Self::Target>;
+    type Error = pyo3::PyErr;
+
+    fn into_pyobject(
+        self,
+        py: Python<'py>,
+    ) -> Result<Self::Output, Self::Error> {
+        (self.0, self.1, self.2).into_pyobject(py)
+    }
+}
+
+impl<'a, 'py> FromPyObject<'a, 'py> for Point {
+    type Error = PyErr;
+    fn extract(
+        ob: pyo3::Borrowed<'a, 'py, pyo3::types::PyAny>,
+    ) -> PyResult<Self> {
+        let p = ob.extract::<PyPoint2D>()?;
+        Ok(Point(p.0, p.1))
+    }
+}
+
+impl<'a, 'py> FromPyObject<'a, 'py> for Point3D {
+    type Error = PyErr;
+    fn extract(
+        ob: pyo3::Borrowed<'a, 'py, pyo3::types::PyAny>,
+    ) -> PyResult<Self> {
+        let p = ob.extract::<PyPoint3D>()?;
+        Ok(Point3D(p.0, p.1, p.2))
+    }
 }
 
 /// A 3D point that accepts both 2-tuple `(x, y)` (z defaults to 0.0)
@@ -127,7 +185,7 @@ pub fn extract_polygon(ob: &Bound<'_, PyAny>) -> PyResult<Vec<Point>> {
     for item in ob.try_iter()? {
         let item = item?;
         if let Ok(p) = item.extract::<PyPoint2D>() {
-            points.push((p.0, p.1));
+            points.push(Point(p.0, p.1));
         } else {
             return Err(pyo3::exceptions::PyTypeError::new_err(
                 "polygon elements must be (x, y) tuples or numpy array",
@@ -174,7 +232,7 @@ fn polygon_from_numpy(arr: &Bound<'_, PyArray2<f64>>) -> Vec<Point> {
     let nrows = view.nrows();
     let mut points = Vec::with_capacity(nrows);
     for i in 0..nrows {
-        points.push((view[[i, 0]], view[[i, 1]]));
+        points.push(Point(view[[i, 0]], view[[i, 1]]));
     }
     points
 }
