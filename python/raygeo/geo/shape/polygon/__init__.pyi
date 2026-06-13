@@ -31,6 +31,8 @@ __all__ = [
     "get_polygon_perimeter",
     "get_polygon_signed_area",
     "get_polygons_difference",
+    "get_polygons_group_difference",
+    "get_polygons_group_intersection",
     "get_polygons_intersection",
     "get_polygons_union",
     "is_almost_equal",
@@ -181,6 +183,24 @@ def get_polygons_difference(poly1: collections.abc.Sequence[types.Point], poly2:
     :param poly1: First polygon as (x, y) points.
     :param poly2: Second polygon to subtract.
     :returns: Difference polygon(s).
+    """
+
+def get_polygons_group_difference(subject: typing.Sequence[types.Polygon], clip: typing.Sequence[types.Polygon]) -> list[types.Polygon]:
+    r"""
+    Subtract clip polygons from subject polygons.
+    
+    :param subject: Subject polygons.
+    :param clip: Clip polygons to subtract.
+    :returns: Difference polygon(s).
+    """
+
+def get_polygons_group_intersection(subject: typing.Sequence[types.Polygon], clip: typing.Sequence[types.Polygon]) -> list[types.Polygon]:
+    r"""
+    Intersect two groups of polygons (subject & clip).
+    
+    :param subject: Subject polygons.
+    :param clip: Clip polygons.
+    :returns: Intersection polygon(s).
     """
 
 def get_polygons_intersection(poly1: collections.abc.Sequence[types.Point], poly2: collections.abc.Sequence[types.Point]) -> list[types.Polygon]:

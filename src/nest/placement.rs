@@ -1,5 +1,6 @@
 use crate::geo::shape::polygon::{
-    is_point_in_polygon, rotate_polygon, translate_polygon,
+    get_polygon_area, get_polygon_group_bounds, is_point_in_polygon,
+    rotate_polygon, translate_polygon,
 };
 use crate::types::Polygon;
 
@@ -401,4 +402,109 @@ pub fn place_parts(
     }
 
     results
+}
+
+/// Calculate fitness score for a set of placements.
+///
+/// Lower is better.  Returns `f64::INFINITY` if no placements or zero area.
+///
+/// * `polygon_groups` — Polygons for each placement.
+/// * `rotations` — Rotation angle in degrees for each placement.
+/// * `sheet_indices` — 0-based sheet index for each placement.
+/// * `num_parts` — Total number of parts (some may be unplaced).
+pub fn calculate_fitness(
+    polygon_groups: &[Vec<Polygon>],
+    rotations: &[f64],
+    sheet_indices: &[usize],
+    num_parts: usize,
+) -> f64 {
+    if polygon_groups.is_empty() {
+        return f64::INFINITY;
+    }
+
+    let total_part_area: f64 = polygon_groups
+        .iter()
+        .flat_map(|polys| polys.iter())
+        .map(|poly| get_polygon_area(poly).abs())
+        .sum();
+
+    if total_part_area < 1e-9 {
+        return f64::INFINITY;
+    }
+
+    // Determine number of unique sheets.
+    let num_sheets = sheet_indices.iter().max().map(|m| m + 1).unwrap_or(0);
+    let mut sheet_bounds: Vec<(f64, f64, f64, f64, f64, f64, usize)> = vec![
+            (
+                f64::INFINITY,
+                f64::INFINITY,
+                f64::NEG_INFINITY,
+                f64::NEG_INFINITY,
+                0.0,
+                0.0,
+                0,
+            );
+            num_sheets.max(1)
+        ];
+
+    for (i, polys) in polygon_groups.iter().enumerate() {
+        let si = sheet_indices.get(i).copied().unwrap_or(0);
+        if si >= sheet_bounds.len() {
+            continue;
+        }
+        let b = get_polygon_group_bounds(polys);
+        let entry = &mut sheet_bounds[si];
+        entry.0 = entry.0.min(b.0);
+        entry.1 = entry.1.min(b.1);
+        entry.2 = entry.2.max(b.2);
+        entry.3 = entry.3.max(b.3);
+        entry.4 += b.0;
+        entry.5 += b.1;
+        entry.6 += 1;
+    }
+
+    let mut total_bounds_area = 0.0;
+    let mut gravity_penalty = 0.0;
+    let mut compaction_penalty = 0.0;
+
+    for b in &sheet_bounds {
+        let width = b.2 - b.0;
+        let height = b.3 - b.1;
+        total_bounds_area += width * height;
+        compaction_penalty += width + height * 10.0;
+        gravity_penalty += b.0 + b.1;
+        let avg_x_dist = b.4 - (b.0 * b.6 as f64);
+        let avg_y_dist = b.5 - (b.1 * b.6 as f64);
+        gravity_penalty += avg_x_dist + avg_y_dist;
+    }
+
+    let mut fitness = total_bounds_area / total_part_area;
+
+    let scale_factor = total_part_area.sqrt().max(1.0);
+    fitness += (gravity_penalty / scale_factor) * 0.001;
+    fitness += (compaction_penalty / scale_factor) * 0.01;
+
+    // Orientation penalty.
+    let mut orientation_penalty = 0.0;
+    for (i, polys) in polygon_groups.iter().enumerate() {
+        if polys.len() == 1 && polys[0].len() == 4 {
+            let rot = rotations.get(i).copied().unwrap_or(0.0);
+            let rotation_mod = rot.abs() % 90.0;
+            let rot_mod = if rotation_mod > 45.0 {
+                90.0 - rotation_mod
+            } else {
+                rotation_mod
+            };
+            orientation_penalty += (rot_mod / 90.0) * 0.05;
+        }
+    }
+    fitness += orientation_penalty;
+
+    // Missing parts penalty.
+    if num_parts > 0 && polygon_groups.len() < num_parts {
+        let missing = (num_parts - polygon_groups.len()) as f64;
+        fitness += missing * 1000.0;
+    }
+
+    fitness
 }

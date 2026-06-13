@@ -1,3 +1,4 @@
+use numpy::{PyArray2, PyArrayMethods};
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
 use pyo3_stub_gen::derive::gen_stub_pyfunction;
@@ -286,6 +287,64 @@ fn place_parts_py<'py>(
 }
 
 // ---------------------------------------------------------------------------
+// calculate_fitness
+// ---------------------------------------------------------------------------
+
+fn polygon_group_from_numpy_arrs(
+    arrs: Vec<Bound<'_, PyArray2<f64>>>,
+) -> Vec<Polygon> {
+    arrs.iter()
+        .map(|arr| {
+            let readonly = arr.readonly();
+            let view = readonly.as_array();
+            view.rows()
+                .into_iter()
+                .map(|row| (row[0], row[1]))
+                .collect()
+        })
+        .collect()
+}
+
+#[gen_stub_pyfunction(
+    python = r#"
+    import collections.abc
+    import numpy
+
+    def calculate_fitness(
+        polygon_groups: collections.abc.Sequence[collections.abc.Sequence[numpy.ndarray]],
+        rotations: collections.abc.Sequence[float],
+        sheet_indices: collections.abc.Sequence[int],
+        *,
+        num_parts: int = 0,
+    ) -> float:
+        """Calculate fitness score for a set of placements.
+
+        Lower is better. Returns infinity if no placements or zero area.
+
+        :param polygon_groups: Polygons for each placement.
+        :param rotations: Rotation angle in degrees for each placement.
+        :param sheet_indices: 0-based sheet index for each placement.
+        :param num_parts: Total number of parts (some may be unplaced).
+        :returns: Fitness score (lower is better).
+        """
+"#,
+    module = "raygeo.nest.placement"
+)]
+#[pyfunction(name = "calculate_fitness")]
+fn calculate_fitness_py(
+    polygon_groups: Vec<Vec<Bound<'_, PyArray2<f64>>>>,
+    rotations: Vec<f64>,
+    sheet_indices: Vec<usize>,
+    num_parts: usize,
+) -> f64 {
+    let groups: Vec<Vec<Polygon>> = polygon_groups
+        .into_iter()
+        .map(polygon_group_from_numpy_arrs)
+        .collect();
+    placement::calculate_fitness(&groups, &rotations, &sheet_indices, num_parts)
+}
+
+// ---------------------------------------------------------------------------
 // Register
 // ---------------------------------------------------------------------------
 
@@ -299,5 +358,6 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     )?)?;
     m.add_function(wrap_pyfunction!(find_valid_position_py, m)?)?;
     m.add_function(wrap_pyfunction!(place_parts_py, m)?)?;
+    m.add_function(wrap_pyfunction!(calculate_fitness_py, m)?)?;
     Ok(())
 }

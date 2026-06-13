@@ -473,6 +473,29 @@ pub fn get_polygons_union(polygons: &[Polygon]) -> Vec<Polygon> {
         .collect()
 }
 
+/// Compute the intersection of two groups of polygons (subject vs clip).
+/// Equivalent to clipper CT_INTERSECTION between two sets of paths.
+pub fn get_polygons_group_intersection(
+    subject: &[Polygon],
+    clip: &[Polygon],
+) -> Vec<Polygon> {
+    if subject.is_empty() || clip.is_empty() {
+        return vec![];
+    }
+    let subject_paths = polygons_to_paths(subject);
+    let clip_paths = polygons_to_paths(clip);
+    if subject_paths.is_empty() || clip_paths.is_empty() {
+        return vec![];
+    }
+    let result =
+        clipper_intersect(subject_paths, clip_paths, FillRule::NonZero)
+            .unwrap_or_default();
+    paths_to_polygons(&result)
+        .into_iter()
+        .filter(|p| p.len() >= 3)
+        .collect()
+}
+
 /// Compute the intersection of two polygons.
 pub fn get_polygons_intersection(
     poly1: &Polygon,
@@ -485,6 +508,29 @@ pub fn get_polygons_intersection(
     let path2 = polygons_to_paths(std::slice::from_ref(poly2));
     let result =
         clipper_intersect(path1, path2, FillRule::NonZero).unwrap_or_default();
+    paths_to_polygons(&result)
+        .into_iter()
+        .filter(|p| p.len() >= 3)
+        .collect()
+}
+
+/// Compute the difference of two groups of polygons (subject - clip).
+/// Equivalent to clipper CT_DIFFERENCE between two sets of paths.
+pub fn get_polygons_group_difference(
+    subject: &[Polygon],
+    clip: &[Polygon],
+) -> Vec<Polygon> {
+    if subject.is_empty() {
+        return vec![];
+    }
+    let subject_paths = polygons_to_paths(subject);
+    let clip_paths = polygons_to_paths(clip);
+    if subject_paths.is_empty() {
+        return vec![];
+    }
+    let result =
+        clipper_difference(subject_paths, clip_paths, FillRule::NonZero)
+            .unwrap_or_default();
     paths_to_polygons(&result)
         .into_iter()
         .filter(|p| p.len() >= 3)

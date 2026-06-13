@@ -8,8 +8,10 @@ position search, and high-level nesting orchestration.
 """
 
 import collections.abc
+import numpy
 from raygeo.geo import types
 __all__ = [
+    "calculate_fitness",
     "filter_candidates_multi_resolution",
     "find_valid_position",
     "generate_bottom_left_candidates",
@@ -17,6 +19,19 @@ __all__ = [
     "generate_perimeter_candidates",
     "place_parts",
 ]
+
+def calculate_fitness(polygon_groups: collections.abc.Sequence[collections.abc.Sequence[numpy.ndarray]], rotations: collections.abc.Sequence[float], sheet_indices: collections.abc.Sequence[int], *, num_parts: int = 0) -> float:
+    r"""
+    Calculate fitness score for a set of placements.
+    
+    Lower is better. Returns infinity if no placements or zero area.
+    
+    :param polygon_groups: Polygons for each placement.
+    :param rotations: Rotation angle in degrees for each placement.
+    :param sheet_indices: 0-based sheet index for each placement.
+    :param num_parts: Total number of parts (some may be unplaced).
+    :returns: Fitness score (lower is better).
+    """
 
 def filter_candidates_multi_resolution(candidates: list[tuple[float, float]], ifp_bounds: tuple[float, float, float, float], min_dist: float) -> list[tuple[float, float]]:
     r"""

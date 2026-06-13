@@ -128,9 +128,10 @@ use crate::geo::shape::polygon::{
     clean_polygon, flip_polygon, flip_polygons, get_polygon_bounds,
     get_polygon_centroid, get_polygon_convex_hull, get_polygon_edges,
     get_polygon_group_bounds, get_polygon_perimeter, get_polygon_signed_area,
-    get_polygons_difference, get_polygons_intersection, get_polygons_union,
-    is_almost_equal, is_point_inside_polygon, is_polygon_convex,
-    normalize_polygons, offset_polygon, point_line_distance,
+    get_polygons_difference, get_polygons_group_difference,
+    get_polygons_group_intersection, get_polygons_intersection,
+    get_polygons_union, is_almost_equal, is_point_inside_polygon,
+    is_polygon_convex, normalize_polygons, offset_polygon, point_line_distance,
     polygons_intersect, rotate_polygon, rotate_polygons, scale_polygon,
     to_clipper_from_points, translate_bounds, translate_polygon,
     translate_polygons,
@@ -388,6 +389,14 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     )?)?;
     polygon_mod.add_function(wrap_pyfunction!(
         get_polygons_difference_py,
+        polygon_mod.clone()
+    )?)?;
+    polygon_mod.add_function(wrap_pyfunction!(
+        get_polygons_group_intersection_py,
+        polygon_mod.clone()
+    )?)?;
+    polygon_mod.add_function(wrap_pyfunction!(
+        get_polygons_group_difference_py,
         polygon_mod.clone()
     )?)?;
     polygon_mod.add_function(wrap_pyfunction!(
@@ -2191,6 +2200,62 @@ fn get_polygons_difference_py(
     poly2: Vec<PyPoint2D>,
 ) -> Vec<Vec<Point>> {
     get_polygons_difference(&poly_to_points(poly1), &poly_to_points(poly2))
+}
+
+#[gen_stub_pyfunction(
+    python = r#"
+    import typing
+    import raygeo.geo.types
+
+    def get_polygons_group_intersection(
+        subject: typing.Sequence[types.Polygon],
+        clip: typing.Sequence[types.Polygon],
+    ) -> list[types.Polygon]:
+        """Intersect two groups of polygons (subject & clip).
+
+        :param subject: Subject polygons.
+        :param clip: Clip polygons.
+        :returns: Intersection polygon(s).
+        """
+"#,
+    module = "raygeo.geo.shape.polygon"
+)]
+#[pyfunction(name = "get_polygons_group_intersection")]
+fn get_polygons_group_intersection_py(
+    subject: &Bound<'_, PyAny>,
+    clip: &Bound<'_, PyAny>,
+) -> PyResult<Vec<Vec<Point>>> {
+    let subject_polys = extract_polygons(subject)?;
+    let clip_polys = extract_polygons(clip)?;
+    Ok(get_polygons_group_intersection(&subject_polys, &clip_polys))
+}
+
+#[gen_stub_pyfunction(
+    python = r#"
+    import typing
+    import raygeo.geo.types
+
+    def get_polygons_group_difference(
+        subject: typing.Sequence[types.Polygon],
+        clip: typing.Sequence[types.Polygon],
+    ) -> list[types.Polygon]:
+        """Subtract clip polygons from subject polygons.
+
+        :param subject: Subject polygons.
+        :param clip: Clip polygons to subtract.
+        :returns: Difference polygon(s).
+        """
+"#,
+    module = "raygeo.geo.shape.polygon"
+)]
+#[pyfunction(name = "get_polygons_group_difference")]
+fn get_polygons_group_difference_py(
+    subject: &Bound<'_, PyAny>,
+    clip: &Bound<'_, PyAny>,
+) -> PyResult<Vec<Vec<Point>>> {
+    let subject_polys = extract_polygons(subject)?;
+    let clip_polys = extract_polygons(clip)?;
+    Ok(get_polygons_group_difference(&subject_polys, &clip_polys))
 }
 
 #[gen_stub_pyfunction(
