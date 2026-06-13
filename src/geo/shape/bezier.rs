@@ -655,18 +655,10 @@ fn _solve_cubic(a: f64, b: f64, c: f64, d: f64) -> Vec<f64> {
         return vec![real_root];
     }
 
-    let neg_q_cubed = if depressed_q < 0.0 {
-        -depressed_q.powi(3)
-    } else {
-        1e-30
-    };
+    let neg_q_cubed = -depressed_q.powi(3);
     let cos_arg = (depressed_r / neg_q_cubed.sqrt()).clamp(-1.0, 1.0);
     let theta = cos_arg.acos();
-    let amplitude = if depressed_q < 0.0 {
-        2.0 * (-depressed_q).sqrt()
-    } else {
-        0.0
-    };
+    let amplitude = 2.0 * (-depressed_q).sqrt();
     let offset = b / 3.0;
 
     vec![

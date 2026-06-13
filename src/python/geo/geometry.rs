@@ -446,7 +446,7 @@ impl Geometry {
         slf
     }
 
-    /// Return the bounding rectangle (x_min, x_max, y_min, y_max).
+    /// Return the bounding rectangle (x_min, y_min, x_max, y_max).
     fn rect(&mut self) -> (f64, f64, f64, f64) {
         let r = self.inner.rect();
         (r.0, r.1, r.2, r.3)
