@@ -68,7 +68,7 @@ fn cmd_to_dict<'a>(
     let d = PyDict::new(py);
     let node = &ops.commands[idx];
     let ct = node.command_type();
-    let ct_name = ct.name();
+    let ct_name = ct.to_string();
     d.set_item("type", ct_name)?;
 
     if let OpCategory::Moving { end, .. } = &node.category {

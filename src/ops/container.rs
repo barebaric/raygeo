@@ -540,7 +540,7 @@ impl Ops {
         let mut out = format!("Ops {{ len: {} }}\n", self.commands.len());
         for (i, node) in self.commands.iter().enumerate() {
             let ct = node.command_type();
-            let _ = write!(out, "  [{}] {}", i, ct.name());
+            let _ = write!(out, "  [{}] {}", i, ct);
             if let OpCategory::Moving { end, cmd } = &node.category {
                 let _ = write!(
                     out,
