@@ -46,7 +46,7 @@ pub use ops::container::Ops;
 pub use ops::enums::{CommandCategory, CommandType, SectionType};
 pub use ops::group::{
     group_by_state_continuity, iter_section_ranges, iter_sections,
-    segment_indices, segments, split_into_subpaths, without_state, OpsSection,
+    segment_indices, split_into_subpaths, without_state, OpsSection,
     OpsSectionRange,
 };
 pub use ops::state::State;

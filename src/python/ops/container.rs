@@ -1214,13 +1214,6 @@ impl PyOps {
         }
     }
 
-    /// Return index ranges for cutting segments (runs of moving commands separated by travel).
-    ///
-    /// :returns: A list of index lists, one per cutting segment.
-    fn segments(&self) -> Vec<Vec<usize>> {
-        self.inner.segments()
-    }
-
     /// Return the accumulated state at a given command index.
     ///
     /// :param idx: The command index.

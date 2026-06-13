@@ -670,10 +670,6 @@ impl Ops {
         super::group::segment_indices(self)
     }
 
-    pub fn segments(&self) -> Vec<Vec<usize>> {
-        super::group::segments(self)
-    }
-
     pub fn get_frame(&self, power: Option<f64>, speed: Option<f64>) -> Self {
         let (min_x, min_y, max_x, max_y) = self.rect(false);
         if (min_x, min_y, max_x, max_y) == (0.0, 0.0, 0.0, 0.0) {

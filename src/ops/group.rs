@@ -158,10 +158,6 @@ pub fn segment_indices(ops: &Ops) -> Vec<Vec<usize>> {
     result
 }
 
-pub fn segments(ops: &Ops) -> Vec<Vec<usize>> {
-    segment_indices(ops)
-}
-
 pub fn without_state(ops: &Ops) -> Ops {
     let mut result = Ops::new();
     for node in &ops.commands {
