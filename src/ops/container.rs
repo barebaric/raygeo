@@ -506,7 +506,7 @@ impl Ops {
                 }
                 StateCmd::SetFrequency(f) => state.frequency = Some(*f),
                 StateCmd::SetPulseWidth(pw) => state.pulse_width = Some(*pw),
-                _ => {}
+                StateCmd::Dwell(_) => {}
             }
         }
     }
