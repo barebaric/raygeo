@@ -20,9 +20,12 @@ pub fn register(shape_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     let m = PyModule::new(py, "point")?;
     m.setattr("__doc__", MODULE_DOC_POINT)?;
 
-    m.add_function(wrap_pyfunction!(midpoint_py, m.clone())?)?;
-    m.add_function(wrap_pyfunction!(are_points_equal_py, m.clone())?)?;
-    m.add_function(wrap_pyfunction!(transform_point_py, m.clone())?)?;
+    register_functions!(
+        m,
+        midpoint_py,
+        are_points_equal_py,
+        transform_point_py,
+    );
 
     shape_mod.add_submodule(&m)?;
     Ok(())

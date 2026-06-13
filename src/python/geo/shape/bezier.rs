@@ -28,26 +28,23 @@ pub fn register(shape_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     let m = PyModule::new(py, "bezier")?;
     m.setattr("__doc__", MODULE_DOC_BEZIER)?;
 
-    m.add_function(wrap_pyfunction!(get_bezier_point_at_py, m.clone())?)?;
-    m.add_function(wrap_pyfunction!(split_bezier_py, m.clone())?)?;
-    m.add_function(wrap_pyfunction!(get_bezier_bounds_py, m.clone())?)?;
-    m.add_function(wrap_pyfunction!(
+    register_functions!(
+        m,
+        get_bezier_point_at_py,
+        split_bezier_py,
+        get_bezier_bounds_py,
         get_bezier_rect_intersections_py,
-        m.clone()
-    )?)?;
-    m.add_function(wrap_pyfunction!(clip_bezier_with_rect_py, m.clone())?)?;
-    m.add_function(wrap_pyfunction!(
+        clip_bezier_with_rect_py,
         convert_cubic_bezier_to_quadratic_py,
-        m.clone()
-    )?)?;
-    m.add_function(wrap_pyfunction!(is_bezier_inside_polygons_py, m.clone())?)?;
-    m.add_function(wrap_pyfunction!(linearize_bezier_py, m.clone())?)?;
-    m.add_function(wrap_pyfunction!(linearize_bezier_adaptive_py, m.clone())?)?;
-    m.add_function(wrap_pyfunction!(linearize_bezier_segment_py, m.clone())?)?;
-    m.add_function(wrap_pyfunction!(flatten_bezier_py, m.clone())?)?;
-    m.add_function(wrap_pyfunction!(get_bezier_flatness_sq_py, m.clone())?)?;
-    m.add_function(wrap_pyfunction!(get_perpendicular_dist_sq_py, m.clone())?)?;
-    m.add_function(wrap_pyfunction!(get_bezier_length_py, m.clone())?)?;
+        is_bezier_inside_polygons_py,
+        linearize_bezier_py,
+        linearize_bezier_adaptive_py,
+        linearize_bezier_segment_py,
+        flatten_bezier_py,
+        get_bezier_flatness_sq_py,
+        get_perpendicular_dist_sq_py,
+        get_bezier_length_py,
+    );
 
     shape_mod.add_submodule(&m)?;
     Ok(())

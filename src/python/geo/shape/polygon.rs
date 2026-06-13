@@ -58,59 +58,53 @@ pub fn register(shape_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     let py = shape_mod.py();
     let m = PyModule::new(py, "polygon")?;
 
-    m.add_function(wrap_pyfunction!(clean_polygon_py, m.clone())?)?;
-    m.add_function(wrap_pyfunction!(is_almost_equal_py, m.clone())?)?;
-    m.add_function(wrap_pyfunction!(normalize_polygons_py, m.clone())?)?;
-    m.add_function(wrap_pyfunction!(translate_bounds_py, m.clone())?)?;
-    m.add_function(wrap_pyfunction!(translate_polygons_py, m.clone())?)?;
-    m.add_function(wrap_pyfunction!(point_line_distance_py, m.clone())?)?;
-    m.add_function(wrap_pyfunction!(get_polygon_area_py, m.clone())?)?;
-    m.add_function(wrap_pyfunction!(get_polygon_signed_area_py, m.clone())?)?;
-    m.add_function(wrap_pyfunction!(get_polygon_perimeter_py, m.clone())?)?;
-    m.add_function(wrap_pyfunction!(get_polygon_bounds_py, m.clone())?)?;
-    m.add_function(wrap_pyfunction!(get_polygon_group_bounds_py, m.clone())?)?;
-    m.add_function(wrap_pyfunction!(get_polygon_centroid_py, m.clone())?)?;
-    m.add_function(wrap_pyfunction!(is_polygon_convex_py, m.clone())?)?;
-    m.add_function(wrap_pyfunction!(get_polygon_convex_hull_py, m.clone())?)?;
-    m.add_function(wrap_pyfunction!(get_polygon_edges_py, m.clone())?)?;
-    m.add_function(wrap_pyfunction!(is_point_inside_polygon_py, m.clone())?)?;
-    m.add_function(wrap_pyfunction!(offset_polygon_py, m.clone())?)?;
-    m.add_function(wrap_pyfunction!(get_polygons_union_py, m.clone())?)?;
-    m.add_function(wrap_pyfunction!(get_polygons_intersection_py, m.clone())?)?;
-    m.add_function(wrap_pyfunction!(get_polygons_difference_py, m.clone())?)?;
-    m.add_function(wrap_pyfunction!(
-        get_polygons_group_intersection_py,
-        m.clone()
-    )?)?;
-    m.add_function(wrap_pyfunction!(
+    register_functions!(
+        m,
+        clean_polygon_py,
+        flip_polygon_numpy_py,
+        flip_polygon_py,
+        flip_polygons_numpy_py,
+        flip_polygons_py,
+        get_polygon_area_py,
+        get_polygon_bounds_py,
+        get_polygon_centroid_py,
+        get_polygon_convex_hull_py,
+        get_polygon_edges_py,
+        get_polygon_group_bounds_py,
+        get_polygon_perimeter_py,
+        get_polygon_signed_area_py,
+        get_polygons_difference_py,
         get_polygons_group_difference_py,
-        m.clone()
-    )?)?;
-    m.add_function(wrap_pyfunction!(polygons_intersect_py, m.clone())?)?;
-    m.add_function(wrap_pyfunction!(flip_polygon_py, m.clone())?)?;
-    m.add_function(wrap_pyfunction!(flip_polygons_py, m.clone())?)?;
-    m.add_function(wrap_pyfunction!(rotate_polygon_py, m.clone())?)?;
-    m.add_function(wrap_pyfunction!(rotate_polygons_py, m.clone())?)?;
-    m.add_function(wrap_pyfunction!(scale_polygon_py, m.clone())?)?;
-    m.add_function(wrap_pyfunction!(translate_polygon_py, m.clone())?)?;
-    m.add_function(wrap_pyfunction!(polygon_area_numpy_py, m.clone())?)?;
-    m.add_function(wrap_pyfunction!(polygon_bounds_numpy_py, m.clone())?)?;
-    m.add_function(wrap_pyfunction!(polygon_perimeter_numpy_py, m.clone())?)?;
-    m.add_function(wrap_pyfunction!(
+        get_polygons_group_intersection_py,
+        get_polygons_intersection_py,
+        get_polygons_union_py,
+        is_almost_equal_py,
+        is_point_inside_polygon_py,
+        is_polygon_clockwise_py,
+        is_polygon_convex_py,
+        normalize_polygons_numpy_py,
+        normalize_polygons_py,
+        offset_polygon_py,
+        point_in_polygon_numpy_py,
+        point_line_distance_py,
+        polygon_area_numpy_py,
+        polygon_bounds_numpy_py,
         polygon_group_bounds_numpy_py,
-        m.clone()
-    )?)?;
-    m.add_function(wrap_pyfunction!(flip_polygon_numpy_py, m.clone())?)?;
-    m.add_function(wrap_pyfunction!(flip_polygons_numpy_py, m.clone())?)?;
-    m.add_function(wrap_pyfunction!(normalize_polygons_numpy_py, m.clone())?)?;
-    m.add_function(wrap_pyfunction!(point_in_polygon_numpy_py, m.clone())?)?;
-    m.add_function(wrap_pyfunction!(polygons_intersect_numpy_py, m.clone())?)?;
-    m.add_function(wrap_pyfunction!(rotate_polygon_numpy_py, m.clone())?)?;
-    m.add_function(wrap_pyfunction!(rotate_polygons_numpy_py, m.clone())?)?;
-    m.add_function(wrap_pyfunction!(translate_polygon_numpy_py, m.clone())?)?;
-    m.add_function(wrap_pyfunction!(translate_polygons_numpy_py, m.clone())?)?;
-    m.add_function(wrap_pyfunction!(to_clipper_numpy_py, m.clone())?)?;
-    m.add_function(wrap_pyfunction!(is_polygon_clockwise_py, m.clone())?)?;
+        polygon_perimeter_numpy_py,
+        polygons_intersect_numpy_py,
+        polygons_intersect_py,
+        rotate_polygon_numpy_py,
+        rotate_polygon_py,
+        rotate_polygons_numpy_py,
+        rotate_polygons_py,
+        scale_polygon_py,
+        to_clipper_numpy_py,
+        translate_bounds_py,
+        translate_polygon_numpy_py,
+        translate_polygon_py,
+        translate_polygons_numpy_py,
+        translate_polygons_py,
+    );
 
     shape_mod.add_submodule(&m)?;
     Ok(())

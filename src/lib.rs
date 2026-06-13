@@ -46,6 +46,19 @@ pub use ops::state::*;
 pub use ops::types::*;
 pub use types::*;
 
+/// Register one or more PyO3 functions into a module.
+///
+/// Eliminates the repetitive `m.add_function(wrap_pyfunction!(func, m.clone())?)?;`
+/// boilerplate in every `register()` function.
+#[macro_export]
+macro_rules! register_functions {
+    ($m:ident, $($func:ident),* $(,)?) => {
+        $(
+            $m.add_function(pyo3::wrap_pyfunction!($func, $m.clone())?)?;
+        )*
+    };
+}
+
 mod python;
 
 use pyo3::prelude::*;

@@ -23,24 +23,15 @@ pub fn register(shape_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     let m = PyModule::new(py, "circle")?;
     m.setattr("__doc__", MODULE_DOC_CIRCLE)?;
 
-    m.add_function(wrap_pyfunction!(
+    register_functions!(
+        m,
         get_circle_circle_intersections_py,
-        m.clone()
-    )?)?;
-    m.add_function(wrap_pyfunction!(
         get_line_circle_intersections_py,
-        m.clone()
-    )?)?;
-    m.add_function(wrap_pyfunction!(is_circle_inside_rect_py, m.clone())?)?;
-    m.add_function(wrap_pyfunction!(
+        is_circle_inside_rect_py,
         does_circle_intersect_rect_py,
-        m.clone()
-    )?)?;
-    m.add_function(wrap_pyfunction!(
         line_segment_intersects_circle_py,
-        m.clone()
-    )?)?;
-    m.add_function(wrap_pyfunction!(project_point_onto_circle_py, m.clone())?)?;
+        project_point_onto_circle_py,
+    );
 
     shape_mod.add_submodule(&m)?;
     Ok(())

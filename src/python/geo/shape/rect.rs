@@ -21,11 +21,14 @@ pub fn register(shape_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     let m = PyModule::new(py, "rect")?;
     m.setattr("__doc__", MODULE_DOC_RECT)?;
 
-    m.add_function(wrap_pyfunction!(is_point_inside_rect_py, m.clone())?)?;
-    m.add_function(wrap_pyfunction!(does_rect_contain_rect_py, m.clone())?)?;
-    m.add_function(wrap_pyfunction!(does_rect_intersect_rect_py, m.clone())?)?;
-    m.add_function(wrap_pyfunction!(do_rects_intersect_py, m.clone())?)?;
-    m.add_function(wrap_pyfunction!(get_combined_rect_py, m.clone())?)?;
+    register_functions!(
+        m,
+        is_point_inside_rect_py,
+        does_rect_contain_rect_py,
+        does_rect_intersect_rect_py,
+        do_rects_intersect_py,
+        get_combined_rect_py,
+    );
 
     shape_mod.add_submodule(&m)?;
     Ok(())

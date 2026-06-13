@@ -25,19 +25,22 @@ pub fn register(shape_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     let m = PyModule::new(py, "arc")?;
     m.setattr("__doc__", MODULE_DOC_ARC)?;
 
-    m.add_function(wrap_pyfunction!(get_arc_bounds_py, m.clone())?)?;
-    m.add_function(wrap_pyfunction!(get_arc_direction_py, m.clone())?)?;
-    m.add_function(wrap_pyfunction!(get_arc_closest_point_py, m.clone())?)?;
-    m.add_function(wrap_pyfunction!(get_arc_midpoint_py, m.clone())?)?;
-    m.add_function(wrap_pyfunction!(get_arc_angles_py, m.clone())?)?;
-    m.add_function(wrap_pyfunction!(does_arc_intersect_rect_py, m.clone())?)?;
-    m.add_function(wrap_pyfunction!(does_arc_intersect_circle_py, m.clone())?)?;
-    m.add_function(wrap_pyfunction!(is_arc_clockwise_py, m.clone())?)?;
-    m.add_function(wrap_pyfunction!(is_arc_inside_polygons_py, m.clone())?)?;
-    m.add_function(wrap_pyfunction!(is_angle_between_py, m.clone())?)?;
-    m.add_function(wrap_pyfunction!(normalize_angle_py, m.clone())?)?;
-    m.add_function(wrap_pyfunction!(linearize_arc_py, m.clone())?)?;
-    m.add_function(wrap_pyfunction!(get_arc_length_py, m.clone())?)?;
+    register_functions!(
+        m,
+        get_arc_bounds_py,
+        get_arc_direction_py,
+        get_arc_closest_point_py,
+        get_arc_midpoint_py,
+        get_arc_angles_py,
+        does_arc_intersect_rect_py,
+        does_arc_intersect_circle_py,
+        is_arc_clockwise_py,
+        is_arc_inside_polygons_py,
+        is_angle_between_py,
+        normalize_angle_py,
+        linearize_arc_py,
+        get_arc_length_py,
+    );
 
     shape_mod.add_submodule(&m)?;
     Ok(())

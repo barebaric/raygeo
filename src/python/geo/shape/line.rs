@@ -25,35 +25,20 @@ pub fn register(shape_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     let m = PyModule::new(py, "line")?;
     m.setattr("__doc__", MODULE_DOC_LINE)?;
 
-    m.add_function(wrap_pyfunction!(
+    register_functions!(
+        m,
         get_line_line_intersection_py,
-        m.clone()
-    )?)?;
-    m.add_function(wrap_pyfunction!(
         get_line_segment_intersection_py,
-        m.clone()
-    )?)?;
-    m.add_function(wrap_pyfunction!(get_line_closest_point_py, m.clone())?)?;
-    m.add_function(wrap_pyfunction!(
+        get_line_closest_point_py,
         get_line_segment_closest_point_py,
-        m.clone()
-    )?)?;
-    m.add_function(wrap_pyfunction!(get_point_line_distance_py, m.clone())?)?;
-    m.add_function(wrap_pyfunction!(is_point_on_line_segment_py, m.clone())?)?;
-    m.add_function(wrap_pyfunction!(
+        get_point_line_distance_py,
+        is_point_on_line_segment_py,
         does_line_segment_intersect_rect_py,
-        m.clone()
-    )?)?;
-    m.add_function(wrap_pyfunction!(
         does_line_segment_intersect_circle_py,
-        m.clone()
-    )?)?;
-    m.add_function(wrap_pyfunction!(
         get_line_segment_polygon_intersections_py,
-        m.clone()
-    )?)?;
-    m.add_function(wrap_pyfunction!(get_angle_at_vertex_py, m.clone())?)?;
-    m.add_function(wrap_pyfunction!(get_line_segment_length_py, m.clone())?)?;
+        get_angle_at_vertex_py,
+        get_line_segment_length_py,
+    );
 
     shape_mod.add_submodule(&m)?;
     Ok(())
