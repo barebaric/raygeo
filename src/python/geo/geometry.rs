@@ -1260,8 +1260,10 @@ impl Geometry {
         &mut self,
     ) -> PyResult<(Vec<Geometry>, Vec<Geometry>)> {
         let contours = split_into_contours(&self.inner);
+        let contour_refs: Vec<&crate::geo::geometry::Geometry> =
+            contours.iter().collect();
         let (inner_indices, outer_indices) =
-            split_inner_and_outer_contours(&contours);
+            split_inner_and_outer_contours(&contour_refs);
         let inner: Vec<Geometry> = inner_indices
             .into_iter()
             .map(|i| Geometry {
@@ -1385,7 +1387,9 @@ impl Geometry {
         let normalized = {
             let geo = slf.borrow();
             let contours = split_into_contours(&geo.inner);
-            normalize_winding_orders(&contours)
+            let contour_refs: Vec<&crate::geo::geometry::Geometry> =
+                contours.iter().collect();
+            normalize_winding_orders(&contour_refs)
         };
         let mut new_inner = CoreGeometry::new();
         for n in normalized {
@@ -1400,7 +1404,9 @@ impl Geometry {
         let external = {
             let geo = slf.borrow();
             let contours = split_into_contours(&geo.inner);
-            filter_to_external_contours(&contours)
+            let contour_refs: Vec<&crate::geo::geometry::Geometry> =
+                contours.iter().collect();
+            filter_to_external_contours(&contour_refs)
         };
         let mut new_inner = CoreGeometry::new();
         for n in external {

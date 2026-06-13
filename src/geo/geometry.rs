@@ -321,7 +321,8 @@ impl Geometry {
     /// Extends this geometry by appending all commands from another geometry.
     pub fn extend(&mut self, other: &Geometry) -> &mut Self {
         if !other.data.is_empty() {
-            self.data.extend(other.data.clone());
+            self.data.reserve(other.data.len());
+            self.data.extend(other.data.iter().cloned());
         }
         self.uniform_scalable = self.uniform_scalable && other.uniform_scalable;
         self

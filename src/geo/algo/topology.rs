@@ -112,7 +112,7 @@ impl ContourHierarchy {
 }
 
 /// Build a containment hierarchy from a list of geometries.
-pub fn build_hierarchy(contours: &[Geometry]) -> ContourHierarchy {
+pub fn build_hierarchy(contours: &[&Geometry]) -> ContourHierarchy {
     let count = contours.len();
     let mut info: Vec<Option<ContourInfo>> = Vec::with_capacity(count);
 
@@ -313,7 +313,7 @@ fn find_connected_components_bfs(
 /// Extract valid contour data from a list of contour geometries.
 pub fn get_valid_contours_data(
     contour_geometries: &[Geometry],
-) -> Vec<(Geometry, Vec<Point>, bool)> {
+) -> Vec<(&Geometry, Vec<Point>, bool)> {
     let mut result = Vec::new();
     for geo in contour_geometries {
         if geo.is_empty() {
@@ -340,7 +340,7 @@ pub fn get_valid_contours_data(
                 &geo.data, 0,
             );
 
-        result.push((geo.clone(), vertices, is_closed_flag));
+        result.push((geo, vertices, is_closed_flag));
     }
     result
 }
@@ -402,7 +402,7 @@ pub fn split_into_components(geometry: &Geometry) -> Vec<Geometry> {
         let mut has_closed = false;
 
         for &idx in indices {
-            let (ref geo_data, _, closed) = &all_contour_data[idx];
+            let (geo_data, _, closed) = &all_contour_data[idx];
             component_geo.extend(geo_data);
             if *closed {
                 has_closed = true;
@@ -485,7 +485,7 @@ pub fn reverse_contour(contour: &Geometry) -> Geometry {
 
 /// Split contours into inner and outer groups based on the even-odd rule.
 pub fn split_inner_and_outer_contours(
-    contours: &[Geometry],
+    contours: &[&Geometry],
 ) -> (Vec<usize>, Vec<usize>) {
     if contours.is_empty() {
         return (vec![], vec![]);
@@ -535,7 +535,7 @@ pub fn close_all_contours(geometry: &Geometry) -> Geometry {
 }
 
 /// Normalize winding orders of contours (CCW for solids, CW for holes).
-pub fn normalize_winding_orders(contours: &[Geometry]) -> Vec<Geometry> {
+pub fn normalize_winding_orders(contours: &[&Geometry]) -> Vec<Geometry> {
     if contours.is_empty() {
         return vec![];
     }
@@ -567,7 +567,7 @@ pub fn normalize_winding_orders(contours: &[Geometry]) -> Vec<Geometry> {
 }
 
 /// Filter to only external contours (solid filled areas).
-pub fn filter_to_external_contours(contours: &[Geometry]) -> Vec<Geometry> {
+pub fn filter_to_external_contours(contours: &[&Geometry]) -> Vec<Geometry> {
     if contours.is_empty() {
         return vec![];
     }
@@ -608,7 +608,8 @@ pub fn remove_inner_edges(geometry: &Geometry) -> Geometry {
         }
     }
 
-    let external_closed = filter_to_external_contours(&closed_contours);
+    let closed_refs: Vec<&Geometry> = closed_contours.iter().collect();
+    let external_closed = filter_to_external_contours(&closed_refs);
 
     let mut final_geo = Geometry::new();
     for contour in &external_closed {
@@ -676,7 +677,8 @@ mod tests {
         geo.line_to(10.0, 10.0, 0.0);
         geo.line_to(0.0, 0.0, 0.0);
         let contours = split_into_contours(&geo);
-        let hierarchy = build_hierarchy(&contours);
+        let contour_refs: Vec<&Geometry> = contours.iter().collect();
+        let hierarchy = build_hierarchy(&contour_refs);
         assert_eq!(hierarchy.nesting_depths.len(), 1);
         assert_eq!(hierarchy.nesting_depths[0], 0);
         assert_eq!(hierarchy.parent_map[0], -1);
@@ -690,7 +692,8 @@ mod tests {
         geo.line_to(10.0, 10.0, 0.0);
         geo.line_to(0.0, 0.0, 0.0);
         let contours = split_into_contours(&geo);
-        let hierarchy = build_hierarchy(&contours);
+        let contour_refs: Vec<&Geometry> = contours.iter().collect();
+        let hierarchy = build_hierarchy(&contour_refs);
         let groups = group_solids_and_holes(&hierarchy);
         assert!(groups.contains_key(&0));
         assert!(groups[&0].is_empty());

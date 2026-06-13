@@ -22,7 +22,7 @@ struct ContourItem {
 }
 
 fn prepare_contour_items(
-    contour_data: &[(Geometry, Vec<Point>, bool)],
+    contour_data: &[(&Geometry, Vec<Point>, bool)],
 ) -> Vec<ContourItem> {
     let mut items = Vec::new();
     for (i, (_geo, vertices, _is_closed)) in contour_data.iter().enumerate() {
@@ -108,8 +108,8 @@ pub fn grow_geometry(geometry: &Geometry, offset: f64) -> Geometry {
         return Geometry::new();
     }
 
-    let hierarchy_geoms: Vec<Geometry> =
-        contour_data.iter().map(|(g, _, _)| g.clone()).collect();
+    let hierarchy_geoms: Vec<&Geometry> =
+        contour_data.iter().map(|(g, _, _)| *g).collect();
     let mut hierarchy = build_hierarchy(&hierarchy_geoms);
     let hierarchy_info = hierarchy.info.clone();
     hierarchy.filter_parents(&hierarchy_info, |child, parent| {
@@ -214,8 +214,8 @@ mod tests {
         let rect = rectangle_geo(0.0, 0.0, 10.0, 10.0);
         let contours = split_into_contours(&rect);
         let contour_data = get_valid_contours_data(&contours);
-        let hierarchy_geoms: Vec<Geometry> =
-            contour_data.iter().map(|(g, _, _)| g.clone()).collect();
+        let hierarchy_geoms: Vec<&Geometry> =
+            contour_data.iter().map(|(g, _, _)| *g).collect();
         let hierarchy = build_hierarchy(&hierarchy_geoms);
         let groups = group_solids_and_holes(&hierarchy);
         assert!(groups.contains_key(&0));
