@@ -212,25 +212,7 @@ fn linearize_arc_impl(
     let is_coincident =
         (p0.0 - p1.0).abs() < 1e-9 && (p0.1 - p1.1).abs() < 1e-9;
 
-    let mut angle_range = if is_coincident && radius_start > 1e-9 {
-        if clockwise {
-            -2.0 * PI
-        } else {
-            2.0 * PI
-        }
-    } else {
-        end_angle - start_angle
-    };
-
-    if clockwise {
-        if angle_range > 1e-9 {
-            angle_range -= 2.0 * PI;
-        }
-    } else {
-        if angle_range < -1e-9 {
-            angle_range += 2.0 * PI;
-        }
-    }
+    let angle_range = get_arc_sweep(start_angle, end_angle, clockwise);
 
     let avg_radius = (radius_start + radius_end) / 2.0;
     let arc_len = angle_range.abs() * avg_radius;

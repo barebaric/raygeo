@@ -7,13 +7,11 @@
 //! - Point and tangent computation along paths
 //! - Outward normal computation
 
-use std::f64::consts::PI;
-
 use crate::geo::algo::topology::{
     get_valid_contours_data, split_into_contours,
 };
 use crate::geo::geometry::Geometry;
-use crate::geo::shape::arc::linearize_arc;
+use crate::geo::shape::arc::{get_arc_sweep, linearize_arc};
 use crate::geo::shape::bezier::linearize_bezier_from_params;
 use crate::geo::shape::polygon::is_point_inside_polygon;
 use crate::types::{Command, Point, Point3D, Polygon, WindingOrder};
@@ -233,18 +231,7 @@ pub fn get_point_at_from_array(
 
             let start_angle = (p0.1 - center.1).atan2(p0.0 - center.0);
             let end_angle = (p1.1 - center.1).atan2(p1.0 - center.0);
-            let mut angle_range = end_angle - start_angle;
-
-            if *clockwise {
-                if angle_range > 0.0 {
-                    angle_range -= 2.0 * PI;
-                }
-            } else {
-                if angle_range < 0.0 {
-                    angle_range += 2.0 * PI;
-                }
-            }
-
+            let angle_range = get_arc_sweep(start_angle, end_angle, *clockwise);
             let current_angle = start_angle + t * angle_range;
             let radius_start = (p0.0 - center.0).hypot(p0.1 - center.1);
             let radius_end = (p1.0 - center.0).hypot(p1.1 - center.1);
@@ -311,18 +298,7 @@ pub fn get_tangent_at_from_array(
 
             let start_angle = (p0.1 - center.1).atan2(p0.0 - center.0);
             let end_angle = (p1.1 - center.1).atan2(p1.0 - center.0);
-            let mut angle_range = end_angle - start_angle;
-
-            if *clockwise {
-                if angle_range > 0.0 {
-                    angle_range -= 2.0 * PI;
-                }
-            } else {
-                if angle_range < 0.0 {
-                    angle_range += 2.0 * PI;
-                }
-            }
-
+            let angle_range = get_arc_sweep(start_angle, end_angle, *clockwise);
             let current_angle = start_angle + t * angle_range;
             let radius_start = (p0.0 - center.0).hypot(p0.1 - center.1);
             let radius_end = (p1.0 - center.0).hypot(p1.1 - center.1);
@@ -473,6 +449,6 @@ fn container_intersects_content(
     crate::geo::algo::intersect::check_intersection_from_array(
         &container.data,
         &content.data,
-        false,
+        true,
     )
 }

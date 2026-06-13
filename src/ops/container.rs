@@ -240,9 +240,6 @@ impl Ops {
         end: Point3D,
         extra: Option<Vec<(Axis, f64)>>,
     ) {
-        if self.commands.is_empty() {
-            return;
-        }
         self.commands
             .push(OpNode::bezier_to(control1, control2, end, extra));
         self.invalidate_time_cache();
@@ -502,7 +499,7 @@ impl Ops {
                 }
                 StateCmd::SetFrequency(f) => state.frequency = Some(*f),
                 StateCmd::SetPulseWidth(pw) => state.pulse_width = Some(*pw),
-                StateCmd::Dwell(_) => {}
+                StateCmd::Dwell(d) => state.dwell_ms = Some(*d),
             }
         }
     }
@@ -925,58 +922,13 @@ fn estimate_time_core(
     default_travel_speed: f64,
     acceleration: f64,
 ) -> f64 {
-    let mut total_time = 0.0;
-    let mut last_point = (0.0, 0.0, 0.0);
-    let mut cut_speed = default_cut_speed;
-    let mut travel_speed = default_travel_speed;
-
-    for node in &ops.commands {
-        match &node.category {
-            OpCategory::State(StateCmd::SetCutSpeed(s)) => {
-                cut_speed = *s as f64
-            }
-            OpCategory::State(StateCmd::SetTravelSpeed(s)) => {
-                travel_speed = *s as f64
-            }
-            OpCategory::Moving { end, cmd } => {
-                let distance = move_distance(cmd, last_point, *end);
-
-                if distance < EPSILON_COLLINEAR {
-                    last_point = *end;
-                    continue;
-                }
-
-                let speed = if matches!(cmd, MoveCmd::MoveTo) {
-                    travel_speed
-                } else {
-                    cut_speed
-                };
-
-                let speed_mm_per_sec = speed / 60.0;
-
-                let move_time = if acceleration > 0.0 {
-                    let accel_time = speed_mm_per_sec / acceleration;
-                    let accel_distance =
-                        0.5 * acceleration * accel_time * accel_time;
-                    if distance < 2.0 * accel_distance {
-                        2.0 * (distance / acceleration).sqrt()
-                    } else {
-                        let cruise_distance = distance - 2.0 * accel_distance;
-                        let cruise_time = cruise_distance / speed_mm_per_sec;
-                        2.0 * accel_time + cruise_time
-                    }
-                } else {
-                    distance / speed_mm_per_sec
-                };
-
-                total_time += move_time;
-                last_point = *end;
-            }
-            _ => {}
-        }
-    }
-
-    total_time
+    ops.estimate_command_times(
+        default_cut_speed,
+        default_travel_speed,
+        acceleration,
+    )
+    .into_iter()
+    .sum()
 }
 
 impl Default for Ops {

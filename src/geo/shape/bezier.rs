@@ -11,6 +11,7 @@
 
 use std::f64::consts::PI;
 
+use crate::constants::EPSILON_INTERSECT;
 use crate::geo::algo::interp::solve_quadratic;
 use crate::geo::shape::line::get_line_segment_closest_point;
 use crate::geo::shape::point::midpoint;
@@ -216,7 +217,8 @@ pub fn clip_bezier_with_rect(
 }
 
 /// Approximates a cubic Bezier curve with a quadratic (single control point).
-/// Uses a 3/7 weighted average of the control points for approximation.
+/// Uses the least-squares optimal approximation:
+/// Q = (3*C1 + 3*C2 - P0 - P1) / 4
 pub fn convert_cubic_bezier_to_quadratic(
     p0: Point,
     c1: Point,
@@ -224,8 +226,8 @@ pub fn convert_cubic_bezier_to_quadratic(
     p1: Point,
 ) -> (Point, Point, Point) {
     let quadratic_control = (
-        3.0 / 7.0 * c1.0 + 3.0 / 7.0 * c2.0 + 1.0 / 7.0 * p0.0,
-        3.0 / 7.0 * c1.1 + 3.0 / 7.0 * c2.1 + 1.0 / 7.0 * p0.1,
+        (3.0 * c1.0 + 3.0 * c2.0 - p0.0 - p1.0) / 4.0,
+        (3.0 * c1.1 + 3.0 * c2.1 - p0.1 - p1.1) / 4.0,
     );
     (p0, quadratic_control, p1)
 }
@@ -618,9 +620,9 @@ fn _extract_subsegment(
 }
 
 fn _solve_cubic(a: f64, b: f64, c: f64, d: f64) -> Vec<f64> {
-    if a.abs() < 1e-12 {
-        if b.abs() < 1e-12 {
-            if c.abs() < 1e-12 {
+    if a.abs() < EPSILON_INTERSECT {
+        if b.abs() < EPSILON_INTERSECT {
+            if c.abs() < EPSILON_INTERSECT {
                 return vec![];
             }
             return vec![-d / c];
@@ -645,7 +647,7 @@ fn _solve_cubic(a: f64, b: f64, c: f64, d: f64) -> Vec<f64> {
     let depressed_r = (9.0 * b * c - 27.0 * d - 2.0 * b * b * b) / 54.0;
     let discriminant = depressed_q.powi(3) + depressed_r.powi(2);
 
-    if discriminant >= 0.0 {
+    if discriminant > -EPSILON_INTERSECT {
         let sqrt_disc = discriminant.sqrt();
         let cube_root_sum = _cbrt(depressed_r + sqrt_disc);
         let cube_root_diff = _cbrt(depressed_r - sqrt_disc);
@@ -658,9 +660,7 @@ fn _solve_cubic(a: f64, b: f64, c: f64, d: f64) -> Vec<f64> {
     } else {
         1e-30
     };
-    let cos_arg = (-1.0_f64)
-        .max(1.0_f64)
-        .min(depressed_r / neg_q_cubed.sqrt());
+    let cos_arg = (depressed_r / neg_q_cubed.sqrt()).clamp(-1.0, 1.0);
     let theta = cos_arg.acos();
     let amplitude = if depressed_q < 0.0 {
         2.0 * (-depressed_q).sqrt()

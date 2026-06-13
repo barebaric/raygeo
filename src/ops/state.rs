@@ -7,6 +7,7 @@ pub struct State {
     pub active_laser_uid: Option<String>,
     pub frequency: Option<i32>,
     pub pulse_width: Option<f64>,
+    pub dwell_ms: Option<f64>,
 }
 
 impl State {

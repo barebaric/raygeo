@@ -33,8 +33,9 @@ pub struct PyState(pub State);
 #[gen_stub_pymethods]
 #[pymethods]
 impl PyState {
+    #[allow(clippy::too_many_arguments)]
     #[new]
-    #[pyo3(signature = (power=0.0, air_assist=false, cut_speed=None, travel_speed=None, active_laser_uid=None, frequency=None, pulse_width=None))]
+    #[pyo3(signature = (power=0.0, air_assist=false, cut_speed=None, travel_speed=None, active_laser_uid=None, frequency=None, pulse_width=None, dwell_ms=None))]
     fn new(
         power: f64,
         air_assist: bool,
@@ -43,6 +44,7 @@ impl PyState {
         active_laser_uid: Option<String>,
         frequency: Option<i32>,
         pulse_width: Option<f64>,
+        dwell_ms: Option<f64>,
     ) -> Self {
         PyState(State {
             power,
@@ -52,6 +54,7 @@ impl PyState {
             active_laser_uid,
             frequency,
             pulse_width,
+            dwell_ms,
         })
     }
 
@@ -147,5 +150,16 @@ impl PyState {
     #[setter]
     fn set_pulse_width(&mut self, value: Option<f64>) {
         self.0.pulse_width = value;
+    }
+
+    /// Dwell time in milliseconds (if set).
+    #[getter]
+    fn dwell_ms(&self) -> Option<f64> {
+        self.0.dwell_ms
+    }
+
+    #[setter]
+    fn set_dwell_ms(&mut self, value: Option<f64>) {
+        self.0.dwell_ms = value;
     }
 }

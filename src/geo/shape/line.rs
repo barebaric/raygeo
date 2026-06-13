@@ -13,13 +13,24 @@ pub fn get_line_segment_length(p1: Point, p2: Point) -> f64 {
     dx.hypot(dy)
 }
 
-/// Checks if a point lies on a line segment using dot product projection.
+/// Checks if a point lies on a line segment using dot product projection
+/// and cross-product collinearity test.
 pub fn is_point_on_segment(pt: Point, p1: Point, p2: Point) -> bool {
-    let dot1 = (pt.0 - p1.0) * (p2.0 - p1.0) + (pt.1 - p1.1) * (p2.1 - p1.1);
+    let dx = p2.0 - p1.0;
+    let dy = p2.1 - p1.1;
+    let len_sq = dx * dx + dy * dy;
+
+    // Collinearity test: cross product magnitude squared
+    let cross = (pt.0 - p1.0) * dy - (pt.1 - p1.1) * dx;
+    if cross.abs() > 1e-9 * len_sq.max(1.0) {
+        return false;
+    }
+
+    let dot1 = (pt.0 - p1.0) * dx + (pt.1 - p1.1) * dy;
     if dot1 < 0.0 {
         return false;
     }
-    let dot2 = (pt.0 - p2.0) * (p1.0 - p2.0) + (pt.1 - p2.1) * (p1.1 - p2.1);
+    let dot2 = (pt.0 - p2.0) * (-dx) + (pt.1 - p2.1) * (-dy);
     if dot2 < 0.0 {
         return false;
     }

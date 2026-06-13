@@ -43,7 +43,7 @@ pub fn polygons_to_paths(polygons: &[Polygon]) -> ClipperPaths {
 }
 
 /// Calculate the signed area of a polygon using the shoelace formula.
-pub fn get_polygon_signed_area(polygon: &Polygon) -> f64 {
+pub fn get_polygon_signed_area(polygon: &[Point]) -> f64 {
     if polygon.len() < 3 {
         return 0.0;
     }
@@ -402,12 +402,12 @@ pub fn clean_polygon(polygon: &Polygon, tolerance: f64) -> Option<Polygon> {
     if simplified.is_empty() {
         return None;
     }
-    let mut biggest = simplified.get(0).unwrap().clone();
+    let mut biggest = simplified.first().unwrap().clone();
     let mut biggest_area = biggest.signed_area().abs();
-    for i in 1..simplified.len() {
-        let area = simplified.get(i).unwrap().signed_area().abs();
+    for path in simplified.iter().skip(1) {
+        let area = path.signed_area().abs();
         if area > biggest_area {
-            biggest = simplified.get(i).unwrap().clone();
+            biggest = path.clone();
             biggest_area = area;
         }
     }
@@ -558,20 +558,9 @@ pub fn get_polygons_difference(
         .collect()
 }
 
-/// Determines if a polygon is wound in clockwise order using the cross product.
-/// Uses only the first three points to determine overall winding direction.
+/// Determines if a polygon is wound in clockwise order using the signed area (shoelace).
 pub fn is_polygon_clockwise(points: &[Point]) -> bool {
-    if points.len() < 3 {
-        return false;
-    }
-
-    let p1 = points[0];
-    let p2 = points[1];
-    let p3 = points[2];
-
-    let cross_product =
-        (p2.0 - p1.0) * (p3.1 - p2.1) - (p2.1 - p1.1) * (p3.0 - p2.0);
-    cross_product < 0.0
+    points.len() >= 3 && get_polygon_signed_area(points) < 0.0
 }
 
 /// Tests if a point is inside a polygon using the ray casting algorithm.
