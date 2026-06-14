@@ -9,6 +9,10 @@ raygeo provides vector path construction, polygon boolean operations, curve
 fitting, path transformations, and geometric queries — all backed by a native
 Rust extension.
 
+![Showcase](docs/api/images/showcase.png)
+
+*Concave hull, arc fitting, nesting, and raster power modulation*
+
 ## Installation
 
 ```
