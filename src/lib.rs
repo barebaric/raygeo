@@ -49,7 +49,11 @@ pub use ops::group::{
     segment_indices, split_into_subpaths, without_state, OpsSection,
     OpsSectionRange,
 };
+pub use ops::lead_in_out::apply_lead_in_out;
+pub use ops::merge_lines::merge_overlapping_lines;
+pub use ops::overscan::apply_overscan;
 pub use ops::state::State;
+pub use ops::tabs::{apply_tab_gaps, apply_tab_power, ClipPoint};
 pub use ops::types::{MarkerCmd, MoveCmd, OpCategory, OpNode, StateCmd};
 pub use types::{
     BezierControls, BezierSplit, Command, ContourData, CubicBezier, Edge,

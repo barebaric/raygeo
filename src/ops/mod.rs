@@ -10,20 +10,15 @@ pub mod enums;
 pub mod flip;
 pub mod group;
 pub(crate) mod layer;
-#[cfg(feature = "python")]
-pub(crate) mod lead_in_out;
+pub mod lead_in_out;
 pub mod linearize;
-#[cfg(feature = "python")]
-pub(crate) mod merge_lines;
+pub mod merge_lines;
 pub mod optimize;
-#[cfg(feature = "python")]
-pub(crate) mod overscan;
+pub mod overscan;
 pub mod raster;
 pub mod state;
-#[cfg(feature = "python")]
-pub(crate) mod tabs;
-#[cfg(feature = "python")]
-pub(crate) mod transform;
+pub mod tabs;
+pub mod transform;
 pub mod types;
 
 pub use axis::Axis;
@@ -34,5 +29,9 @@ pub use group::{
     segment_indices, split_into_subpaths, without_state, OpsSection,
     OpsSectionRange,
 };
+pub use lead_in_out::apply_lead_in_out;
+pub use merge_lines::merge_overlapping_lines;
+pub use overscan::apply_overscan;
 pub use state::State;
+pub use tabs::{apply_tab_gaps, apply_tab_power, ClipPoint};
 pub use types::{MarkerCmd, MoveCmd, OpCategory, OpNode, StateCmd};
