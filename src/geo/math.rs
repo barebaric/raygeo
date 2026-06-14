@@ -215,10 +215,10 @@ pub fn map_geometry_to_frame(
     );
 
     let t3 = DMat4::from_cols(
-        DVec4::new(u_vec.x(), v_vec.x(), 0.0, origin.x()),
-        DVec4::new(u_vec.y(), v_vec.y(), 0.0, origin.y()),
+        DVec4::new(u_vec.x(), u_vec.y(), 0.0, 0.0),
+        DVec4::new(v_vec.x(), v_vec.y(), 0.0, 0.0),
         DVec4::new(0.0, 0.0, 1.0, 0.0),
-        DVec4::new(0.0, 0.0, 0.0, 1.0),
+        DVec4::new(origin.x(), origin.y(), 0.0, 1.0),
     );
 
     let final_matrix = t3 * t2 * t1;
