@@ -11,9 +11,9 @@ linearization, and evaluating fitting quality (line and arc deviation).
 use super::super::flex_point::PyPoint3D;
 use super::super::Geometry;
 use crate::geo::algo::fitting::{
-    are_points_collinear, create_arc_cmd, fit_circle_to_3_points,
-    fit_circle_to_points, fit_points_recursive, fit_points_with_primitives,
-    flatten_to_points, get_polyline_arc_deviation, get_polyline_line_deviation,
+    are_points_collinear, fit_circle_to_3_points, fit_circle_to_points,
+    fit_points_recursive, fit_points_with_primitives, flatten_to_points,
+    get_polyline_arc_deviation, get_polyline_line_deviation,
     linearize_geometry, project_circle_center_to_bisector,
 };
 use crate::geo::geometry::Geometry as CoreGeometry;
@@ -34,8 +34,6 @@ pub fn register(algo_mod: &Bound<'_, PyModule>) -> PyResult<()> {
         project_circle_center_to_bisector_py,
         flatten_to_points_py,
         linearize_geometry_py,
-        create_line_cmd_py,
-        create_arc_cmd_py,
         fit_points_recursive_py,
         fit_points_with_primitives_py,
         get_polyline_line_deviation_py,
@@ -216,74 +214,6 @@ fn linearize_geometry_py(geometry: &Geometry, tolerance: f64) -> Geometry {
     let mut result = geometry.inner.copy();
     result.data = linearize_geometry(&result.data, tolerance);
     Geometry { inner: result }
-}
-
-#[gen_stub_pyfunction(
-    python = r#"
-    import raygeo.geo
-    import raygeo.geo.types
-
-    def create_line_cmd(
-        end_point: types.Point3D,
-    ) -> geo.Line:
-        """Create a line command from an end point.
-
-        :param end_point: End point (x, y, z).
-        :returns: A Line command.
-        """
-"#,
-    module = "raygeo.geo.algo.fitting"
-)]
-#[pyfunction(name = "create_line_cmd")]
-fn create_line_cmd_py(end_point: PyPoint3D) -> super::super::geometry::PyLine {
-    super::super::geometry::PyLine {
-        end: Point3D(end_point.0, end_point.1, end_point.2),
-    }
-}
-
-#[gen_stub_pyfunction(
-    python = r#"
-    import raygeo.geo
-    import raygeo.geo.types
-
-    def create_arc_cmd(
-        end: types.Point3D,
-        center: types.Point,
-        start: types.Point3D,
-    ) -> geo.Arc:
-        """Create an arc command.
-
-        :param end: End point (x, y, z).
-        :param center: Center offset (dx, dy).
-        :param start: Start point (x, y, z).
-        :returns: An Arc command.
-        """
-"#,
-    module = "raygeo.geo.algo.fitting"
-)]
-#[pyfunction(name = "create_arc_cmd")]
-fn create_arc_cmd_py(
-    end: PyPoint3D,
-    center: Point,
-    start: PyPoint3D,
-) -> super::super::geometry::PyArc {
-    let cmd = create_arc_cmd(
-        Point3D(end.0, end.1, end.2),
-        center,
-        Point3D(start.0, start.1, start.2),
-    );
-    match cmd {
-        crate::types::Command::Arc {
-            end,
-            center_offset,
-            clockwise,
-        } => super::super::geometry::PyArc {
-            end,
-            center_offset,
-            clockwise,
-        },
-        _ => unreachable!(),
-    }
 }
 
 #[gen_stub_pyfunction(

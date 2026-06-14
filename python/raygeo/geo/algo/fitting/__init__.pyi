@@ -14,8 +14,6 @@ from raygeo.geo import types
 import typing
 __all__ = [
     "are_points_collinear",
-    "create_arc_cmd",
-    "create_line_cmd",
     "fit_circle_to_3_points",
     "fit_circle_to_points",
     "fit_points_recursive",
@@ -34,24 +32,6 @@ def are_points_collinear(points: collections.abc.Sequence[types.Point3D], tolera
     :param points: Sequence of 3D points.
     :param tolerance: Collinearity tolerance.
     :returns: True if points are collinear.
-    """
-
-def create_arc_cmd(end: types.Point3D, center: types.Point, start: types.Point3D) -> geo.Arc:
-    r"""
-    Create an arc command.
-    
-    :param end: End point (x, y, z).
-    :param center: Center offset (dx, dy).
-    :param start: Start point (x, y, z).
-    :returns: An Arc command.
-    """
-
-def create_line_cmd(end_point: types.Point3D) -> geo.Line:
-    r"""
-    Create a line command from an end point.
-    
-    :param end_point: End point (x, y, z).
-    :returns: A Line command.
     """
 
 def fit_circle_to_3_points(p1: types.Point2DOr3D, p2: types.Point2DOr3D, p3: types.Point2DOr3D) -> typing.Optional[tuple[types.Point, float]]:

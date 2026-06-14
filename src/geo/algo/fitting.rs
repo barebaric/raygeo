@@ -546,34 +546,6 @@ pub fn get_polyline_line_deviation(
     (max_dist_sq.sqrt(), max_idx)
 }
 
-/// Creates a `Command::Line` for the given endpoint.
-pub fn create_line_cmd(end_point: Point3D) -> Command {
-    Command::Line { end: end_point }
-}
-
-/// Creates a `Command::Arc` for the given endpoint. The clockwise flag is determined
-/// automatically from the cross product of the start → center and end → center vectors.
-pub fn create_arc_cmd(
-    end_point: Point3D,
-    center: Point,
-    start_point: Point3D,
-) -> Command {
-    let xc = center.0;
-    let yc = center.1;
-    let v1x = start_point.0 - xc;
-    let v1y = start_point.1 - yc;
-    let v2x = end_point.0 - xc;
-    let v2y = end_point.1 - yc;
-    let cross = v1x * v2y - v1y * v2x;
-    let clockwise = cross < 0.0;
-
-    Command::Arc {
-        end: end_point,
-        center_offset: Point(xc - start_point.0, yc - start_point.1),
-        clockwise,
-    }
-}
-
 /// Recursively fits line and arc primitives to a range of points.
 pub fn fit_points_recursive(
     points: &[Point3D],
@@ -587,7 +559,7 @@ pub fn fit_points_recursive(
 
     let (max_dist, split_idx) = get_polyline_line_deviation(points, start, end);
     if max_dist < tolerance {
-        return vec![create_line_cmd(points[end])];
+        return vec![Command::Line { end: points[end] }];
     }
 
     let is_sharp = if start < split_idx && split_idx < end {
@@ -627,14 +599,14 @@ pub fn fit_points_recursive(
             let arc_dev =
                 get_polyline_arc_deviation(three.as_slice(), center, radius);
             if arc_dev < tolerance {
-                let mut row = create_arc_cmd(p3, center, p1);
                 let pts =
                     [Point(p1.0, p1.1), Point(p2.0, p2.1), Point(p3.0, p3.1)];
                 let is_cw = is_arc_clockwise(pts.as_slice(), center);
-                if let Command::Arc { clockwise, .. } = &mut row {
-                    *clockwise = is_cw;
-                }
-                return vec![row];
+                return vec![Command::Arc {
+                    end: p3,
+                    center_offset: Point(center.0 - p1.0, center.1 - p1.1),
+                    clockwise: is_cw,
+                }];
             }
         }
     }
@@ -651,17 +623,19 @@ pub fn fit_points_recursive(
                 (points[start].0 - center.0).hypot(points[start].1 - center.1);
             let arc_dev = get_polyline_arc_deviation(&subset, center, radius);
             if arc_dev < tolerance {
-                let mut row =
-                    create_arc_cmd(points[end], center, points[start]);
                 let is_cw = {
                     let pts2d: Vec<Point> =
                         subset.iter().map(|p| Point(p.0, p.1)).collect();
                     is_arc_clockwise(&pts2d, center)
                 };
-                if let Command::Arc { clockwise, .. } = &mut row {
-                    *clockwise = is_cw;
-                }
-                return vec![row];
+                return vec![Command::Arc {
+                    end: points[end],
+                    center_offset: Point(
+                        center.0 - points[start].0,
+                        center.1 - points[start].1,
+                    ),
+                    clockwise: is_cw,
+                }];
             }
         }
     }
@@ -822,7 +796,7 @@ pub fn optimize_path_from_array(
             } else {
                 let simplified = simplify_polyline(chain, tolerance);
                 for p in simplified.iter().skip(1) {
-                    cmds.push(create_line_cmd(*p));
+                    cmds.push(Command::Line { end: *p });
                 }
             }
         }

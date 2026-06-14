@@ -34,12 +34,11 @@ pub use clipping::{
 };
 pub use fitting::{
     are_points_collinear, convert_arc_to_beziers_from_array,
-    convert_arcs_to_beziers, create_arc_cmd, create_line_cmd, fit_arcs,
-    fit_circle_to_3_points, fit_circle_to_points, fit_curves,
-    fit_points_recursive, fit_points_with_primitives, flatten_to_points,
-    get_polyline_arc_deviation, get_polyline_line_deviation, linearize_data,
-    linearize_geometry, optimize_path_from_array,
-    project_circle_center_to_bisector,
+    convert_arcs_to_beziers, fit_arcs, fit_circle_to_3_points,
+    fit_circle_to_points, fit_curves, fit_points_recursive,
+    fit_points_with_primitives, flatten_to_points, get_polyline_arc_deviation,
+    get_polyline_line_deviation, linearize_data, linearize_geometry,
+    optimize_path_from_array, project_circle_center_to_bisector,
 };
 pub use hull::{
     find_external_contours, get_concave_hull, get_enclosing_hull,
