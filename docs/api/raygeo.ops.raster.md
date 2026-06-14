@@ -4,22 +4,6 @@ sidebar_label: raygeo.ops.raster
 sidebar_position: 33
 ---
 
-![Rasterization: Power Modulation](images/rasterization-power-modulation.png)
-
-_Rasterization: Power Modulation_
-
-![Rasterization: Mask Scan](images/rasterization-mask-scan.png)
-
-_Rasterization: Mask Scan_
-
-![Rasterization: Mask Lines](images/rasterization-mask-lines.png)
-
-_Rasterization: Mask Lines_
-
-![Rasterization: Multi-Pass](images/rasterization-multi-pass.png)
-
-_Rasterization: Multi-Pass_
-
 ## ScanLine
 
 ### `end_mm`
@@ -161,6 +145,10 @@ _Rasterization: Multi-Pass_
 | `scan_mode`        | `ScanMode = ScanMode.Segmented` |             |
 | _Returns_          | `ops.Ops`                       |             |
 
+![Rasterization: Mask Lines](images/rasterization-mask-lines.png)
+
+_Rasterization: Mask Lines_
+
 ### `rasterize_mask_scan()`
 
 `rasterize_mask_scan(mask: numpy.NDArray[numpy.uint8], pixels_per_mm: tuple[float, float], offset_x_mm: float, offset_y_mm: float, line_interval_mm: float, step_power: float = 1, angle: float = 0, scan_mode: ScanMode = ScanMode.Segmented) -> ops.Ops`
@@ -176,6 +164,10 @@ _Rasterization: Multi-Pass_
 | `angle`            | `float = 0`                     |             |
 | `scan_mode`        | `ScanMode = ScanMode.Segmented` |             |
 | _Returns_          | `ops.Ops`                       |             |
+
+![Rasterization: Mask Scan](images/rasterization-mask-scan.png)
+
+_Rasterization: Mask Scan_
 
 ### `rasterize_multi_pass()`
 
@@ -194,6 +186,10 @@ _Rasterization: Multi-Pass_
 | `angle_increment`  | `float = 0`                     |             |
 | `scan_mode`        | `ScanMode = ScanMode.Segmented` |             |
 | _Returns_          | `ops.Ops`                       |             |
+
+![Rasterization: Multi-Pass](images/rasterization-multi-pass.png)
+
+_Rasterization: Multi-Pass_
 
 ### `rasterize_power_modulation()`
 
@@ -215,6 +211,10 @@ _Rasterization: Multi-Pass_
 | `angle`              | `float = 0`                     |             |
 | `scan_mode`          | `ScanMode = ScanMode.Segmented` |             |
 | _Returns_            | `ops.Ops`                       |             |
+
+![Rasterization: Power Modulation](images/rasterization-power-modulation.png)
+
+_Rasterization: Power Modulation_
 
 ### `resample_rows()`
 

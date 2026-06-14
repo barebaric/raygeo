@@ -4,10 +4,6 @@ sidebar_label: raygeo.geo.algo.overcut
 sidebar_position: 10
 ---
 
-![Overcut on closed contour](images/overcut.png)
-
-_Overcut on closed contour_
-
 Overcut operations for closed contours.
 
 Extends closed contours past their start point to ensure complete cuts through the material,
@@ -34,3 +30,7 @@ If the geometry is not closed, empty, or overcut is <= 0, the geometry is return
 | `geometry` | `geo.Geometry` | The input geometry (must be closed).     |
 | `overcut`  | `float`        | Distance to extend past the start point. |
 | _Returns_  | `geo.Geometry` |                                          |
+
+![Overcut on closed contour](images/overcut.png)
+
+_Overcut on closed contour_

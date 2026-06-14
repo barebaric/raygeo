@@ -4,10 +4,6 @@ sidebar_label: raygeo.geo.algo.hull
 sidebar_position: 7
 ---
 
-![Concave vs convex hull](images/concave-hull.png)
-
-_Concave vs convex hull_
-
 Hull computation from binary images.
 
 Provides convex and concave (shrink-wrap) hull generation from boolean images, using contour tracing
@@ -28,6 +24,10 @@ Compute a concave (shrink-wrap) hull with Bézier gravity.
 | `boolean_image` | `numpy.ndarray` | 2D boolean array.                                |
 | `gravity`       | `float = 0.1`   | Shrink-wrap factor 0.0-1.0. 0 gives convex hull. |
 | _Returns_       | `Geometry       | None`                                            |     |
+
+![Concave vs convex hull](images/concave-hull.png)
+
+_Concave vs convex hull_
 
 ### `get_enclosing_hull()`
 

@@ -6,9 +6,8 @@ sidebar_position: 1
 
 ![Various geometry shapes and operations](images/geometry-playground.png)
 
-_Various geometry shapes and operations_
-
-RayGeo — 2D/3D geometry engine for laser cutting and CAM applications.
+_Various geometry shapes and operations_ RayGeo — 2D/3D geometry engine for laser cutting and CAM
+applications.
 
 Core features:
 

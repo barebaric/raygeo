@@ -7,6 +7,16 @@ import raygeo.image as img
 from tools.plot import make_pattern
 
 
+def _plot_dither(gray, dithered, title):
+    fig, axes = plt.subplots(1, 2, figsize=(10, 4))
+    axes[0].imshow(gray, cmap="gray", vmin=0, vmax=255)
+    axes[0].set_title("Original")
+    axes[1].imshow(dithered, cmap="gray", vmin=0, vmax=1)
+    axes[1].set_title(title)
+    fig.tight_layout()
+    return fig
+
+
 def generate_examples(output_dir):
     images = []
     w, h = 128, 128
@@ -32,29 +42,32 @@ def generate_examples(output_dir):
     )
 
     gray = img.normalize_grayscale(arr).astype(np.uint8)
+
     dithered_fs = img.apply_floyd_steinberg_dither(gray, False)
+    fig2 = _plot_dither(gray, dithered_fs, "Floyd-Steinberg")
+    path2 = output_dir / "image-processing-dither-floyd.png"
+    fig2.savefig(path2, dpi=150)
+    plt.close(fig2)
+    images.append(
+        {
+            "path": "image-processing-dither-floyd.png",
+            "caption": "Floyd-Steinberg dithering",
+        }
+    )
+
     bayer = np.array(
         [[0, 8, 2, 10], [12, 4, 14, 6], [3, 11, 1, 9], [15, 7, 13, 5]],
         dtype=np.float32,
     )
     dithered_bayer = img.apply_bayer_dither(gray, bayer, False, cell_size=1)
-
-    fig2, axes2 = plt.subplots(1, 3, figsize=(14, 4))
-    axes2[0].imshow(arr, cmap="gray", vmin=0, vmax=255)
-    axes2[0].set_title("Original")
-    axes2[1].imshow(dithered_fs, cmap="gray", vmin=0, vmax=1)
-    axes2[1].set_title("Floyd-Steinberg")
-    axes2[2].imshow(dithered_bayer, cmap="gray", vmin=0, vmax=1)
-    axes2[2].set_title("Bayer 4x4")
-
-    fig2.tight_layout()
-    path2 = output_dir / "image-processing-dither.png"
-    fig2.savefig(path2, dpi=150)
-    plt.close(fig2)
+    fig3 = _plot_dither(gray, dithered_bayer, "Bayer 4x4")
+    path3 = output_dir / "image-processing-dither-bayer.png"
+    fig3.savefig(path3, dpi=150)
+    plt.close(fig3)
     images.append(
         {
-            "path": "image-processing-dither.png",
-            "caption": "Dithering modes: Floyd-Steinberg and Bayer 4x4",
+            "path": "image-processing-dither-bayer.png",
+            "caption": "Bayer 4x4 ordered dithering",
         }
     )
 

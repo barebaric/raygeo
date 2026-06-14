@@ -20,41 +20,44 @@ def generate_examples(output_dir):
     ]
     pts_3d = [(x, y, 0.0) for x, y in pts]
 
-    smooth_amounts = [2, 5, 10]
+    fig, axes = plt.subplots(2, 4, figsize=(20, 9))
 
-    fig, axes = plt.subplots(1, 4, figsize=(18, 5))
-
-    xs, ys = zip(*pts)
-    axes[0].plot(
-        xs + (xs[0],),
-        ys + (ys[0],),
-        color="tomato",
-        linewidth=2,
-        label="Original",
-    )
-    axes[0].scatter(xs, ys, color="tomato", s=15)
-    axes[0].set_title("Original (jagged)")
-    axes[0].set_aspect("equal")
-    axes[0].grid(True, alpha=0.3)
-    axes[0].set_xlim(0, 100)
-    axes[0].set_ylim(0, 100)
-
-    for ax_i, amount in zip(axes[1:], smooth_amounts):
-        smoothed = smooth_polyline(pts_3d, amount, 120.0, True)
-        sx, sy = zip(*[(p[0], p[1]) for p in smoothed])
-        ax_i.plot(
+    def draw(ax, points, title, color, xlim=(0, 100), ylim=(0, 100)):
+        sx, sy = zip(*[(p[0], p[1]) for p in points])
+        ax.plot(
             sx + (sx[0],),
             sy + (sy[0],),
-            color="forestgreen",
+            color=color,
             linewidth=2.5,
-            label=f"Amount={amount}",
         )
-        ax_i.scatter(sx, sy, color="forestgreen", s=10)
-        ax_i.set_title(f"Smooth amount={amount}")
-        ax_i.set_aspect("equal")
-        ax_i.grid(True, alpha=0.3)
-        ax_i.set_xlim(0, 100)
-        ax_i.set_ylim(0, 100)
+        ax.set_title(title)
+        ax.set_aspect("equal")
+        ax.grid(True, alpha=0.3)
+        ax.set_xlim(*xlim)
+        ax.set_ylim(*ylim)
+
+    amounts = [50, 100, 200]
+
+    xs, ys = zip(*pts)
+    draw(axes[0, 0], pts, "Original", "gray")
+    draw(axes[1, 0], pts, "Original", "gray")
+
+    for col, amount in enumerate(amounts, 1):
+        smoothed_no_preserve = smooth_polyline(pts_3d, amount, 0.0, True)
+        draw(
+            axes[0, col],
+            smoothed_no_preserve,
+            f"Smooth {amount}, no preserve",
+            "tomato",
+        )
+
+        smoothed_preserve = smooth_polyline(pts_3d, amount, 120.0, True)
+        draw(
+            axes[1, col],
+            smoothed_preserve,
+            f"Smooth {amount}, preserve<120°",
+            "forestgreen",
+        )
 
     fig.tight_layout()
     path = output_dir / "smooth.png"

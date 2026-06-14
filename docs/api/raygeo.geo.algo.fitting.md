@@ -4,14 +4,6 @@ sidebar_label: raygeo.geo.algo.fitting
 sidebar_position: 6
 ---
 
-![Circle fitted to points](images/fitting-circle.png)
-
-_Circle fitted to points_
-
-![Fitted primitives](images/fitting-primitives.png)
-
-_Fitted primitives_
-
 Curve and primitive fitting algorithms.
 
 Provides functions for fitting arcs, lines, circles, and beziers to point sequences. Includes
@@ -90,6 +82,10 @@ Fit a circle to a set of points.
 | `points`  | `collections.abc.Sequence[types.Point3D]`    | Sequence of 3D points to fit. |
 | _Returns_ | `Optional[tuple[types.Point, float, float]]` |                               |
 
+![Circle fitted to points](images/fitting-circle.png)
+
+_Circle fitted to points_
+
 ### `fit_points_recursive()`
 
 `fit_points_recursive(points: collections.abc.Sequence[types.Point3D], tolerance: float, start_idx: int, end_idx: int) -> geo.Geometry`
@@ -119,6 +115,10 @@ Fit a polyline of points with arc and line primitives.
 | `points`    | `collections.abc.Sequence[types.Point3D]` | Sequence of 3D points to fit. |
 | `tolerance` | `float`                                   | Fitting tolerance.            |
 | _Returns_   | `geo.Geometry`                            |                               |
+
+![Fitted primitives](images/fitting-primitives.png)
+
+_Fitted primitives_
 
 ### `flatten_to_points()`
 

@@ -4,14 +4,6 @@ sidebar_label: raygeo.geo.shape.polygon
 sidebar_position: 19
 ---
 
-![Polygon boolean operations](images/polygon-boolean.png)
-
-_Polygon boolean operations_
-
-![Polygon offset (outward)](images/polygon-offset.png)
-
-_Polygon offset (outward)_
-
 ## Functions
 
 ### `clean_polygon()`
@@ -206,6 +198,10 @@ Get the difference of two polygons.
 | `poly2`   | `collections.abc.Sequence[types.Point]` | Second polygon to subtract.     |
 | _Returns_ | `list[types.Polygon]`                   |                                 |
 
+![Polygon difference](images/polygon-boolean-difference.png)
+
+_Polygon difference_
+
 ### `get_polygons_group_difference()`
 
 `get_polygons_group_difference(subject: Sequence[types.Polygon], clip: Sequence[types.Polygon]) -> list[types.Polygon]`
@@ -248,6 +244,10 @@ Get the intersection of two polygons.
 | `poly2`   | `collections.abc.Sequence[types.Point]` | Second polygon as (x, y) points. |
 | _Returns_ | `list[types.Polygon]`                   |                                  |
 
+![Polygon intersection](images/polygon-boolean-intersection.png)
+
+_Polygon intersection_
+
 ### `get_polygons_union()`
 
 `get_polygons_union(polygons: Any) -> list[types.Polygon]`
@@ -260,6 +260,10 @@ Get the union of multiple polygons.
 | ---------- | --------------------- | -------------------------- |
 | `polygons` | `Any`                 | List of polygons to union. |
 | _Returns_  | `list[types.Polygon]` |                            |
+
+![Polygon union](images/polygon-boolean-union.png)
+
+_Polygon union_
 
 ### `is_almost_equal()`
 
@@ -355,6 +359,10 @@ Offset (inflate/deflate) a polygon.
 | `polygon` | `collections.abc.Sequence[types.Point]` | Polygon as (x, y) points.                                   |
 | `offset`  | `float`                                 | Offset distance (positive to inflate, negative to deflate). |
 | _Returns_ | `list[types.Polygon]`                   |                                                             |
+
+![Polygon offset (outward)](images/polygon-offset.png)
+
+_Polygon offset (outward)_
 
 ### `point_in_polygon_numpy()`
 

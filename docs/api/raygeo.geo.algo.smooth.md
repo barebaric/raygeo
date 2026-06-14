@@ -4,10 +4,6 @@ sidebar_label: raygeo.geo.algo.smooth
 sidebar_position: 12
 ---
 
-![Gaussian smoothing](images/smooth.png)
-
-_Gaussian smoothing_
-
 Polyline smoothing using Gaussian kernels.
 
 Provides Gaussian kernel computation and circular/linear polyline smoothing with configurable corner
@@ -72,6 +68,10 @@ Smooth a polyline using Gaussian smoothing.
 | `corner_angle_threshold` | `float`                                   | Angle threshold for preserving corners. |
 | `is_closed`              | `Optional[bool] = None`                   | Whether the polyline is closed.         |
 | _Returns_                | `list[types.Point3D]`                     |                                         |
+
+![Gaussian smoothing](images/smooth.png)
+
+_Gaussian smoothing_
 
 ### `smooth_sub_segment()`
 

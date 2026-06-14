@@ -13,65 +13,133 @@ import matplotlib
 import tools.examples
 from tools import api_docs
 
+# Each entry maps a doc file to a list of (section_heading, stem, caption).
+# section_heading is the function name to find the `### \`func()\`` heading,
+# or None to place the image at the top of the page content.
 _INLINE_IMAGE_MAP = {
     "raygeo.md": [
-        ("geometry-playground", "Various geometry shapes and operations"),
+        (
+            None,
+            "geometry-playground",
+            "Various geometry shapes and operations",
+        ),
     ],
     "raygeo.geo.md": [
-        ("geometry-playground", "Various geometry shapes and operations"),
+        (
+            None,
+            "geometry-playground",
+            "Various geometry shapes and operations",
+        ),
     ],
     "raygeo.geo.shape.polygon.md": [
-        ("polygon-boolean", "Polygon boolean operations"),
-        ("polygon-offset", "Polygon offset (outward)"),
+        (
+            "get_polygons_union",
+            "polygon-boolean-union",
+            "Polygon union",
+        ),
+        (
+            "get_polygons_intersection",
+            "polygon-boolean-intersection",
+            "Polygon intersection",
+        ),
+        (
+            "get_polygons_difference",
+            "polygon-boolean-difference",
+            "Polygon difference",
+        ),
+        ("offset_polygon", "polygon-offset", "Polygon offset (outward)"),
     ],
     "raygeo.image.md": [
-        ("image-processing-srgb", "sRGB to linear round-trip"),
         (
-            "image-processing-dither",
-            "Dithering: Floyd-Steinberg and Bayer 4x4",
+            "srgb_to_linear",
+            "image-processing-srgb",
+            "sRGB to linear round-trip",
+        ),
+        (
+            "apply_floyd_steinberg_dither",
+            "image-processing-dither-floyd",
+            "Floyd-Steinberg dithering",
+        ),
+        (
+            "apply_bayer_dither",
+            "image-processing-dither-bayer",
+            "Bayer 4x4 ordered dithering",
         ),
     ],
     "raygeo.svg.md": [
-        ("svg-parsing", "SVG path data parsed into geometries"),
+        (None, "svg-parsing", "SVG path data parsed into geometries"),
     ],
     "raygeo.ops.md": [
-        ("tab-operations", "Tab operations on a rectangle"),
-        ("merge-lines", "Line merging before and after"),
-        ("overscan", "Overscan applied to raster lines"),
-        ("lead-in-out", "Lead-in and lead-out paths"),
+        ("apply_tab_gaps", "tab-operations", "Tab operations on a rectangle"),
+        (
+            "merge_overlapping_lines",
+            "merge-lines",
+            "Line merging before and after",
+        ),
+        ("apply_overscan", "overscan", "Overscan applied to raster lines"),
+        ("apply_lead_in_out", "lead-in-out", "Lead-in and lead-out paths"),
     ],
     "raygeo.ops.raster.md": [
         (
+            "rasterize_power_modulation",
             "rasterization-power-modulation",
             "Rasterization: Power Modulation",
         ),
-        ("rasterization-mask-scan", "Rasterization: Mask Scan"),
-        ("rasterization-mask-lines", "Rasterization: Mask Lines"),
-        ("rasterization-multi-pass", "Rasterization: Multi-Pass"),
+        (
+            "rasterize_mask_scan",
+            "rasterization-mask-scan",
+            "Rasterization: Mask Scan",
+        ),
+        (
+            "rasterize_mask_lines",
+            "rasterization-mask-lines",
+            "Rasterization: Mask Lines",
+        ),
+        (
+            "rasterize_multi_pass",
+            "rasterization-multi-pass",
+            "Rasterization: Multi-Pass",
+        ),
     ],
     "raygeo.geo.algo.hull.md": [
-        ("concave-hull", "Concave vs convex hull"),
+        ("get_concave_hull", "concave-hull", "Concave vs convex hull"),
     ],
     "raygeo.geo.algo.clipping.md": [
-        ("clipping-rect", "Line clipped to rectangle"),
-        ("clipping-polygon", "Line clipped to polygon"),
-        ("clipping-subtract", "Subtract polygon from line"),
+        (
+            "clip_line_segment_with_rect",
+            "clipping-rect",
+            "Line clipped to rectangle",
+        ),
+        (
+            "clip_line_segment_with_polygons",
+            "clipping-polygon",
+            "Line clipped to polygon",
+        ),
+        (
+            "subtract_polygons_from_line_segment",
+            "clipping-subtract",
+            "Subtract polygon from line",
+        ),
     ],
     "raygeo.geo.algo.fitting.md": [
-        ("fitting-circle", "Circle fitted to points"),
-        ("fitting-primitives", "Fitted primitives"),
+        ("fit_circle_to_points", "fitting-circle", "Circle fitted to points"),
+        (
+            "fit_points_with_primitives",
+            "fitting-primitives",
+            "Fitted primitives",
+        ),
     ],
     "raygeo.geo.algo.overcut.md": [
-        ("overcut", "Overcut on closed contour"),
+        ("apply_overcut", "overcut", "Overcut on closed contour"),
     ],
     "raygeo.geo.algo.simplify.md": [
-        ("simplify", "Simplify and linearize"),
+        ("simplify_polyline", "simplify", "Simplify and linearize"),
     ],
     "raygeo.geo.algo.smooth.md": [
-        ("smooth", "Gaussian smoothing"),
+        ("smooth_polyline", "smooth", "Gaussian smoothing"),
     ],
     "raygeo.nest.md": [
-        ("nesting", "Part nesting on a sheet"),
+        (None, "nesting", "Part nesting on a sheet"),
     ],
 }
 
@@ -111,38 +179,44 @@ def _inject_images_into_api(api_dir: Path, images_dir: Path):
 
         content = path.read_text()
 
-        image_block_parts = []
-        for stem, caption in image_list:
+        insertions = []
+        for heading, stem, caption in image_list:
             if not (images_dir / f"{stem}.png").exists():
                 continue
-            image_block_parts.append(f"![{caption}](images/{stem}.png)")
-            image_block_parts.append("")
-            image_block_parts.append(f"*{caption}*")
-            image_block_parts.append("")
+            image_block = f"![{caption}](images/{stem}.png)\n\n*{caption}*\n"
 
-        if not image_block_parts:
+            if heading is None:
+                frontmatter_end = content.find("---\n", 3)
+                if frontmatter_end == -1:
+                    continue
+                body_start = frontmatter_end + 4
+                body = content[body_start:].split("\n")
+                insert_pos = body_start
+                for i, line in enumerate(body):
+                    if line.strip():
+                        insert_pos = body_start + sum(
+                            len(ln) + 1 for ln in body[:i]
+                        )
+                        break
+                insertions.append((insert_pos, image_block))
+            else:
+                section_pattern = f"### `{heading}()`"
+                pos = content.find(section_pattern)
+                if pos == -1:
+                    continue
+                section_end = content.find(
+                    "\n### ", pos + len(section_pattern)
+                )
+                if section_end == -1:
+                    section_end = len(content)
+                insertions.append((section_end, image_block))
+
+        if not insertions:
             continue
 
-        image_block = "\n".join(image_block_parts) + "\n"
+        for pos, block in sorted(insertions, key=lambda x: -x[0]):
+            content = content[:pos] + "\n" + block + content[pos:]
 
-        frontmatter_end = content.find("---\n", 3)
-        if frontmatter_end == -1:
-            continue
-
-        body_start = frontmatter_end + 4
-        lines = content[body_start:].split("\n")
-        skip_empty = True
-        insert_pos = body_start
-        for i, line in enumerate(lines):
-            if skip_empty and line.strip() == "":
-                continue
-            skip_empty = False
-            insert_pos = body_start + sum(len(ln) + 1 for ln in lines[:i])
-            break
-
-        content = (
-            content[:insert_pos] + "\n" + image_block + content[insert_pos:]
-        )
         path.write_text(content)
         print(f"  Injected images into {md_file}")
 

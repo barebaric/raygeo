@@ -4,14 +4,6 @@ sidebar_label: raygeo.image
 sidebar_position: 22
 ---
 
-![sRGB to linear round-trip](images/image-processing-srgb.png)
-
-_sRGB to linear round-trip_
-
-![Dithering: Floyd-Steinberg and Bayer 4x4](images/image-processing-dither.png)
-
-_Dithering: Floyd-Steinberg and Bayer 4x4_
-
 Image processing functions for laser cutting applications.
 
 Provides sRGB/linear color space conversions, RGBA-to-grayscale/binary conversions with alpha
@@ -36,6 +28,10 @@ Apply ordered (Bayer) dithering using a threshold matrix.
 | `cell_size`    | `int = 1`                      | Pixel grouping size for the threshold. |
 | _Returns_      | `numpy.NDArray[numpy.uint8]`   |                                        |
 
+![Bayer 4x4 ordered dithering](images/image-processing-dither-bayer.png)
+
+_Bayer 4x4 ordered dithering_
+
 ### `apply_floyd_steinberg_dither()`
 
 `apply_floyd_steinberg_dither(grayscale: numpy.NDArray[numpy.uint8], invert: bool) -> numpy.NDArray[numpy.uint8]`
@@ -49,6 +45,10 @@ Apply Floyd-Steinberg error-diffusion dithering.
 | `grayscale` | `numpy.NDArray[numpy.uint8]` | 2D grayscale image as uint8 array.             |
 | `invert`    | `bool`                       | If True, invert the output (swap black/white). |
 | _Returns_   | `numpy.NDArray[numpy.uint8]` |                                                |
+
+![Floyd-Steinberg dithering](images/image-processing-dither-floyd.png)
+
+_Floyd-Steinberg dithering_
 
 ### `apply_minimum_run_length()`
 
@@ -177,3 +177,7 @@ Convert sRGB pixel values to linear light values.
 | --------- | ------------------------------ | --------------------------------- |
 | `array`   | `numpy.NDArray[numpy.uint8]`   | Input array of sRGB uint8 values. |
 | _Returns_ | `numpy.NDArray[numpy.float32]` |                                   |
+
+![sRGB to linear round-trip](images/image-processing-srgb.png)
+
+_sRGB to linear round-trip_

@@ -4,18 +4,6 @@ sidebar_label: raygeo.geo.algo.clipping
 sidebar_position: 5
 ---
 
-![Line clipped to rectangle](images/clipping-rect.png)
-
-_Line clipped to rectangle_
-
-![Line clipped to polygon](images/clipping-polygon.png)
-
-_Line clipped to polygon_
-
-![Subtract polygon from line](images/clipping-subtract.png)
-
-_Subtract polygon from line_
-
 Line and polygon clipping operations.
 
 Provides functions for clipping line segments against rectangles and polygon regions, as well as
@@ -38,6 +26,10 @@ Clip line segments that fall within polygon regions.
 | `regions` | `collections.abc.Sequence[collections.abc.Sequence[types.Point]]` | Polygon regions to clip against. |
 | _Returns_ | `list[tuple[types.Point3D, types.Point3D]]`                       |                                  |
 
+![Line clipped to polygon](images/clipping-polygon.png)
+
+_Line clipped to polygon_
+
 ### `clip_line_segment_with_rect()`
 
 `clip_line_segment_with_rect(p1: types.Point3D, p2: types.Point3D, rect: types.Rect) -> Optional[tuple[types.Point3D, types.Point3D]]`
@@ -52,6 +44,10 @@ Clip a line segment with a rectangle.
 | `p2`      | `types.Point3D`                                 | End point of the line segment.                   |
 | `rect`    | `types.Rect`                                    | Clipping rectangle (x_min, y_min, x_max, y_max). |
 | _Returns_ | `Optional[tuple[types.Point3D, types.Point3D]]` |                                                  |
+
+![Line clipped to rectangle](images/clipping-rect.png)
+
+_Line clipped to rectangle_
 
 ### `from_clipper()`
 
@@ -80,6 +76,10 @@ Subtract polygon regions from a line segment.
 | `p2`      | `types.Point3D`                                                   | End point of the line segment.       |
 | `regions` | `collections.abc.Sequence[collections.abc.Sequence[types.Point]]` | List of polygon regions to subtract. |
 | _Returns_ | `list[tuple[types.Point3D, types.Point3D]]`                       |                                      |
+
+![Subtract polygon from line](images/clipping-subtract.png)
+
+_Subtract polygon from line_
 
 ### `to_clipper()`
 

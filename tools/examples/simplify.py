@@ -21,26 +21,57 @@ def generate_examples(output_dir):
     ]
     geom = Geometry.from_points(pts, close=True)
 
-    tol = 5.0
-    simplified = geom.simplify(tol)
-    linearized = geom.linearize(tol)
+    tol3 = 3.0
+    tol5 = 5.0
+    tol8 = 8.0
 
-    fig, axes = plt.subplots(1, 3, figsize=(16, 5))
+    simplified3 = geom.copy()
+    simplified3.simplify(tol3)
+
+    simplified5 = geom.copy()
+    simplified5.simplify(tol5)
+
+    linearized = geom.copy()
+    linearized.fit_curves(tol8)
+    linearized.linearize(tol8)
+
+    fig, axes = plt.subplots(1, 4, figsize=(20, 5))
 
     axes[0].set_title(f"Original ({len(geom)} cmds)")
-    plot_geometry(axes[0], geom, color="tomato", linewidth=2)
+    plot_geometry(
+        axes[0], geom, color="tomato", linewidth=2,     )
     axes[0].set_aspect("equal")
     axes[0].grid(True, alpha=0.3)
 
-    axes[1].set_title(f"Simplified tol={tol} ({len(simplified)} cmds)")
-    plot_geometry(axes[1], simplified, color="steelblue", linewidth=2)
+    axes[1].set_title(
+        f"Simplify tol={tol3} ({len(simplified3)} cmds)"
+    )
+    plot_geometry(
+        axes[1], simplified3, color="tomato", linewidth=2,
+        show_points=True,
+    )
     axes[1].set_aspect("equal")
     axes[1].grid(True, alpha=0.3)
 
-    axes[2].set_title(f"Linearized tol={tol} ({len(linearized)} cmds)")
-    plot_geometry(axes[2], linearized, color="forestgreen", linewidth=2)
+    axes[2].set_title(
+        f"Simplify tol={tol5} ({len(simplified5)} cmds)"
+    )
+    plot_geometry(
+        axes[2], simplified5, color="steelblue", linewidth=2,
+        show_points=True,
+    )
     axes[2].set_aspect("equal")
     axes[2].grid(True, alpha=0.3)
+
+    axes[3].set_title(
+        f"Fit + Linearize tol={tol8} ({len(linearized)} cmds)"
+    )
+    plot_geometry(
+        axes[3], linearized, color="forestgreen", linewidth=2,
+        show_points=True,
+    )
+    axes[3].set_aspect("equal")
+    axes[3].grid(True, alpha=0.3)
 
     for ax in axes:
         ax.set_xlim(0, 100)
@@ -61,7 +92,8 @@ def generate_examples(output_dir):
         "title": "Simplify",
         "description": (
             "Reduce the number of points in a geometry using "
-            "Ramer-Douglas-Peucker simplification and linearization."
+            "Ramer-Douglas-Peucker simplification, or convert curves "
+            "to line segments via linearization."
         ),
         "images": images,
     }

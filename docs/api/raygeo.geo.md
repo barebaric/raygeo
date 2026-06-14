@@ -6,9 +6,7 @@ sidebar_position: 2
 
 ![Various geometry shapes and operations](images/geometry-playground.png)
 
-_Various geometry shapes and operations_
-
-Geometry types and operations for 2D/3D path data.
+_Various geometry shapes and operations_ Geometry types and operations for 2D/3D path data.
 
 The central type is Geometry — a mutable sequence of drawing commands (move, line, arc, bezier) that
 represents one or more closed or open paths. Geometry supports construction (add_rect, add_circle,
@@ -529,6 +527,8 @@ Draw a line to the given coordinates.
 
 Convert all curves to line segments.
 
+**Returns:** A new linearized Geometry (original is not modified).
+
 | Parameter   | Type       | Description                    |
 | ----------- | ---------- | ------------------------------ |
 | `tolerance` | `float`    | Maximum deviation from curves. |
@@ -650,6 +650,8 @@ commands.
 `simplify(tolerance: float) -> Geometry`
 
 Simplify the geometry using Ramer-Douglas-Peucker.
+
+**Returns:** A new simplified Geometry (original is not modified).
 
 | Parameter   | Type       | Description                      |
 | ----------- | ---------- | -------------------------------- |

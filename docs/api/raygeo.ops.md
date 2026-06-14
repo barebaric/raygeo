@@ -4,22 +4,6 @@ sidebar_label: raygeo.ops
 sidebar_position: 31
 ---
 
-![Tab operations on a rectangle](images/tab-operations.png)
-
-_Tab operations on a rectangle_
-
-![Line merging before and after](images/merge-lines.png)
-
-_Line merging before and after_
-
-![Overscan applied to raster lines](images/overscan.png)
-
-_Overscan applied to raster lines_
-
-![Lead-in and lead-out paths](images/lead-in-out.png)
-
-_Lead-in and lead-out paths_
-
 Command sequence (Ops) manipulation for laser cutter motion control.
 
 Ops is a container of ordered commands (move, line, arc, bezier, state changes like power/speed)
@@ -153,6 +137,10 @@ lead-out segments along the tangent direction at the path start and end.
 | `lead_out_mm` | `float` | Lead-out distance in millimeters. |
 | _Returns_     | `None`  |                                   |
 
+![Lead-in and lead-out paths](images/lead-in-out.png)
+
+_Lead-in and lead-out paths_
+
 ### `apply_overscan()`
 
 `apply_overscan(distance_mm: float) -> None`
@@ -167,6 +155,10 @@ lead-in and lead-out segments for constant engraving velocity.
 | `distance_mm` | `float` | Overscan distance in millimeters. |
 | _Returns_     | `None`  |                                   |
 
+![Overscan applied to raster lines](images/overscan.png)
+
+_Overscan applied to raster lines_
+
 ### `apply_tab_gaps()`
 
 `apply_tab_gaps(clips: Sequence[tuple[float, float, float]]) -> None`
@@ -180,6 +172,10 @@ nearest point on the path. Only `VECTOR_OUTLINE` sections are modified.
 | --------- | -------------------------------------- | ------------------------------------------------------ |
 | `clips`   | `Sequence[tuple[float, float, float]]` | List of `(x, y, width)` tuples defining tab positions. |
 | _Returns_ | `None`                                 |                                                        |
+
+![Tab operations on a rectangle](images/tab-operations.png)
+
+_Tab operations on a rectangle_
 
 ### `apply_tab_power()`
 
@@ -871,6 +867,10 @@ travel moves to avoid cutting the same line twice.
 | ----------- | ------- | ------------------------------------------------- |
 | `tolerance` | `float` | Maximum distance for considering lines collinear. |
 | _Returns_   | `None`  |                                                   |
+
+![Line merging before and after](images/merge-lines.png)
+
+_Line merging before and after_
 
 ### `move_to()`
 

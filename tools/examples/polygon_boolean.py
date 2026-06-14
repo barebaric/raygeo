@@ -31,39 +31,59 @@ def _make_square(r, ox=0.0, oy=0.0):
     ]
 
 
+def _plot_boolean(a, b, result, title):
+    fig, ax = plt.subplots(figsize=(7, 7))
+    plot_polygon(ax, a, "steelblue", "A")
+    plot_polygon(ax, b, "tomato", "B")
+    if result:
+        plot_polygon(ax, result[0], "limegreen", "Result", linewidth=2.5)
+    ax.set_aspect("equal")
+    ax.grid(True, alpha=0.3)
+    ax.legend()
+    ax.set_title(title)
+    fig.tight_layout()
+    return fig
+
+
 def generate_examples(output_dir):
     images = []
     n_seg = 64
     a = _make_circle(10, n_seg)
     b = [(-4, 0), (12, 0), (12, 8), (-4, 8)]
 
-    ops = [
-        ("Union", get_polygons_union([a, b])),
-        ("Intersection", get_polygons_intersection(a, b)),
-        ("Difference", get_polygons_difference(a, b)),
-    ]
-
-    fig, axes = plt.subplots(1, 3, figsize=(16, 5))
-    for ax, (title, result) in zip(axes, ops):
-        plot_polygon(ax, a, "steelblue", "A")
-        plot_polygon(ax, b, "tomato", "B")
-        if result:
-            plot_polygon(ax, result[0], "limegreen", "Result", linewidth=2.5)
-        ax.set_aspect("equal")
-        ax.grid(True, alpha=0.3)
-        ax.legend()
-        ax.set_title(title)
-
-    fig.tight_layout()
-    path = output_dir / "polygon-boolean.png"
-    fig.savefig(path, dpi=150)
-    plt.close(fig)
+    union_result = get_polygons_union([a, b])
+    fig1 = _plot_boolean(a, b, union_result, "Union")
+    path1 = output_dir / "polygon-boolean-union.png"
+    fig1.savefig(path1, dpi=150)
+    plt.close(fig1)
     images.append(
         {
-            "path": "polygon-boolean.png",
-            "caption": (
-                "Polygon boolean operations: union, intersection, difference"
-            ),
+            "path": "polygon-boolean-union.png",
+            "caption": "Polygon union",
+        }
+    )
+
+    inter_result = get_polygons_intersection(a, b)
+    fig2 = _plot_boolean(a, b, inter_result, "Intersection")
+    path2 = output_dir / "polygon-boolean-intersection.png"
+    fig2.savefig(path2, dpi=150)
+    plt.close(fig2)
+    images.append(
+        {
+            "path": "polygon-boolean-intersection.png",
+            "caption": "Polygon intersection",
+        }
+    )
+
+    diff_result = get_polygons_difference(a, b)
+    fig3 = _plot_boolean(a, b, diff_result, "Difference")
+    path3 = output_dir / "polygon-boolean-difference.png"
+    fig3.savefig(path3, dpi=150)
+    plt.close(fig3)
+    images.append(
+        {
+            "path": "polygon-boolean-difference.png",
+            "caption": "Polygon difference",
         }
     )
 
