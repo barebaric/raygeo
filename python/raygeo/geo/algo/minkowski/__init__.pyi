@@ -28,16 +28,16 @@ def calculate_input_scale(polygons: collections.abc.Sequence[collections.abc.Seq
     :returns: Optimal scale factor.
     """
 
-def convolve_point_sequences(seq_a: collections.abc.Sequence[tuple[int, int]], seq_b: collections.abc.Sequence[tuple[int, int]]) -> list[list[tuple[int, int]]]:
+def convolve_point_sequences(seq_a: collections.abc.Sequence[tuple[float, float]], seq_b: collections.abc.Sequence[tuple[float, float]]) -> list[list[tuple[float, float]]]:
     r"""
     Convolve two sequences of points.
     
-    :param seq_a: First sequence of integer points.
-    :param seq_b: Second sequence of integer points.
+    :param seq_a: First sequence of points.
+    :param seq_b: Second sequence of points.
     :returns: Convolved point sequences.
     """
 
-def convolve_two_segments(a1: tuple[int, int], a2: tuple[int, int], b1: tuple[int, int], b2: tuple[int, int]) -> list[tuple[int, int]]:
+def convolve_two_segments(a1: tuple[float, float], a2: tuple[float, float], b1: tuple[float, float], b2: tuple[float, float]) -> list[tuple[float, float]]:
     r"""
     Convolve two line segments.
     
@@ -66,12 +66,12 @@ def get_no_fit_polygon(subject: collections.abc.Sequence[types.Point], tool: col
     :returns: No-fit polygon.
     """
 
-def get_polygon_minkowski_sum_convex(poly_a: collections.abc.Sequence[tuple[int, int]], poly_b: collections.abc.Sequence[tuple[int, int]]) -> list[list[tuple[int, int]]]:
+def get_polygon_minkowski_sum_convex(poly_a: collections.abc.Sequence[tuple[float, float]], poly_b: collections.abc.Sequence[tuple[float, float]]) -> list[list[tuple[float, float]]]:
     r"""
     Compute the Minkowski sum of two convex polygons.
     
-    :param poly_a: First convex polygon as integer points.
-    :param poly_b: Second convex polygon as integer points.
+    :param poly_a: First convex polygon as points.
+    :param poly_b: Second convex polygon as points.
     :returns: Minkowski sum as list of polygons.
     """
 

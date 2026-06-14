@@ -145,35 +145,6 @@ impl From<PyPoint3D> for (f64, f64, f64) {
     }
 }
 
-#[derive(Clone, Copy, Debug)]
-pub struct PyIntPoint2D(pub i64, pub i64);
-
-impl<'a, 'py> FromPyObject<'a, 'py> for PyIntPoint2D {
-    type Error = PyErr;
-    fn extract(
-        ob: pyo3::Borrowed<'a, 'py, pyo3::types::PyAny>,
-    ) -> Result<Self, Self::Error> {
-        if let Ok((x, y)) = ob.extract::<(i64, i64)>() {
-            return Ok(PyIntPoint2D(x, y));
-        }
-        let iter = ob.try_iter()?;
-        let items: Vec<i64> = iter
-            .take(2)
-            .map(|i| i?.extract::<i64>())
-            .collect::<Result<Vec<_>, _>>()?;
-        if items.len() >= 2 {
-            return Ok(PyIntPoint2D(items[0], items[1]));
-        }
-        Err(pyo3::exceptions::PyValueError::new_err(
-            "expected a sequence of 2 integers",
-        ))
-    }
-}
-
-pub fn int_poly_to_points(poly: Vec<PyIntPoint2D>) -> Vec<(i64, i64)> {
-    poly.into_iter().map(|p| (p.0, p.1)).collect()
-}
-
 /// Extract a single polygon (list of 2D points) from a Python object.
 /// Accepts either a list of (x, y) tuples or an (N, 2) numpy array.
 /// Returns `Vec<Point>` directly, avoiding `PyPoint2D` intermediate.
@@ -216,12 +187,6 @@ impl PyStubType for PyPoint2D {
 impl PyStubType for PyPoint3D {
     fn type_output() -> TypeInfo {
         TypeInfo::with_module("tuple[float, float, float]", "builtins".into())
-    }
-}
-
-impl PyStubType for PyIntPoint2D {
-    fn type_output() -> TypeInfo {
-        TypeInfo::with_module("tuple[int, int]", "builtins".into())
     }
 }
 

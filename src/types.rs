@@ -427,12 +427,6 @@ impl Command {
     }
 }
 
-/// A 2D integer point for grid-based operations.
-pub type IntPoint = (i64, i64);
-
-/// A 2D integer polygon for grid-based operations.
-pub type IntPolygon = Vec<IntPoint>;
-
 /// A 3D axis-aligned bounding box with separate min/max bounds for each axis.
 #[derive(Clone, Debug, Default)]
 pub struct Rect3D {

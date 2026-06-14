@@ -39,7 +39,7 @@ def clip_line_segment_with_rect(p1: types.Point3D, p2: types.Point3D, rect: type
     :returns: Clipped segment or None if fully outside.
     """
 
-def from_clipper(polygon: types.IntPolygon) -> types.Polygon:
+def from_clipper(polygon: list[tuple[int, int]]) -> list[tuple[float, float]]:
     r"""
     Convert a polygon from Clipper coordinates.
     

@@ -12,9 +12,7 @@ polygon regions, as well as converting between float and Clipper
 integer coordinate systems.
 ";
 
-use super::super::flex_point::{
-    extract_polygon, extract_polygons, int_poly_to_points,
-};
+use super::super::flex_point::{extract_polygon, extract_polygons};
 use crate::geo::algo::clipping::{
     clip_line_segment_with_polygons, clip_line_segment_with_rect,
     subtract_polygons_from_line_segment,
@@ -164,8 +162,8 @@ fn to_clipper_py(polygon: &Bound<'_, PyAny>) -> PyResult<Vec<(i64, i64)>> {
     import raygeo.geo.types
 
     def from_clipper(
-        polygon: types.IntPolygon,
-    ) -> types.Polygon:
+        polygon: list[tuple[int, int]],
+    ) -> list[tuple[float, float]]:
         """Convert a polygon from Clipper coordinates.
 
         :param polygon: Integer polygon from Clipper.
@@ -175,12 +173,10 @@ fn to_clipper_py(polygon: &Bound<'_, PyAny>) -> PyResult<Vec<(i64, i64)>> {
     module = "raygeo.geo.algo.clipping"
 )]
 #[pyfunction(name = "from_clipper")]
-fn from_clipper_py(
-    polygon: Vec<crate::python::geo::flex_point::PyIntPoint2D>,
-) -> Vec<Point> {
+fn from_clipper_py(polygon: Vec<(i64, i64)>) -> Vec<Point> {
     let scale = crate::CLIPPER_SCALE;
-    let poly = int_poly_to_points(polygon);
-    poly.iter()
+    polygon
+        .iter()
         .map(|(x, y)| Point(*x as f64 / scale, *y as f64 / scale))
         .collect()
 }

@@ -1,9 +1,7 @@
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::gen_stub_pyfunction;
 
-use super::super::geo::flex_point::{
-    int_poly_to_points, poly_to_points, PyIntPoint2D, PyPoint2D,
-};
+use super::super::geo::flex_point::{poly_to_points, PyPoint2D};
 use crate::nest::nfp;
 use crate::types::Point;
 
@@ -47,13 +45,13 @@ fn no_fit_polygon_py(
     import collections.abc
 
     def nfp_convex_fast(
-        static_poly: collections.abc.Sequence[tuple[int, int]],
-        orbiting: collections.abc.Sequence[tuple[int, int]],
+        static_poly: collections.abc.Sequence[tuple[float, float]],
+        orbiting: collections.abc.Sequence[tuple[float, float]],
     ) -> list[list[tuple[float, float]]]:
         """Fast NFP for convex polygon pairs.
 
-        :param static_poly: Static polygon as integer points.
-        :param orbiting: Orbiting polygon as integer points.
+        :param static_poly: Static polygon as points.
+        :param orbiting: Orbiting polygon as points.
         :returns: List of NFP polygons.
         """
 "#,
@@ -61,12 +59,12 @@ fn no_fit_polygon_py(
 )]
 #[pyfunction(name = "nfp_convex_fast")]
 fn nfp_convex_fast_py(
-    static_poly: Vec<PyIntPoint2D>,
-    orbiting: Vec<PyIntPoint2D>,
+    static_poly: Vec<PyPoint2D>,
+    orbiting: Vec<PyPoint2D>,
 ) -> Vec<Vec<Point>> {
     nfp::nfp_convex_fast(
-        &int_poly_to_points(static_poly),
-        &int_poly_to_points(orbiting),
+        &poly_to_points(static_poly),
+        &poly_to_points(orbiting),
     )
 }
 
@@ -75,13 +73,13 @@ fn nfp_convex_fast_py(
     import collections.abc
 
     def nfp_minkowski(
-        static_poly: collections.abc.Sequence[tuple[int, int]],
-        orbiting: collections.abc.Sequence[tuple[int, int]],
+        static_poly: collections.abc.Sequence[tuple[float, float]],
+        orbiting: collections.abc.Sequence[tuple[float, float]],
     ) -> list[list[tuple[float, float]]]:
         """General NFP using Minkowski sum with Clipper union.
 
-        :param static_poly: Static polygon as integer points.
-        :param orbiting: Orbiting polygon as integer points.
+        :param static_poly: Static polygon as points.
+        :param orbiting: Orbiting polygon as points.
         :returns: List of NFP polygons.
         """
 "#,
@@ -89,13 +87,10 @@ fn nfp_convex_fast_py(
 )]
 #[pyfunction(name = "nfp_minkowski")]
 fn nfp_minkowski_py(
-    static_poly: Vec<PyIntPoint2D>,
-    orbiting: Vec<PyIntPoint2D>,
+    static_poly: Vec<PyPoint2D>,
+    orbiting: Vec<PyPoint2D>,
 ) -> Vec<Vec<Point>> {
-    nfp::nfp_minkowski(
-        &int_poly_to_points(static_poly),
-        &int_poly_to_points(orbiting),
-    )
+    nfp::nfp_minkowski(&poly_to_points(static_poly), &poly_to_points(orbiting))
 }
 
 #[gen_stub_pyfunction(

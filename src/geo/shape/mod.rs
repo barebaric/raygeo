@@ -45,11 +45,11 @@ pub use polygon::{
     get_polygon_edges, get_polygon_group_bounds, get_polygon_perimeter,
     get_polygon_signed_area, get_polygons_difference,
     get_polygons_group_difference, get_polygons_group_intersection,
-    get_polygons_intersection, get_polygons_union, int_get_polygon_bounds,
-    is_almost_equal, is_point_in_polygon, is_polygon_clockwise,
-    is_polygon_convex, normalize_polygons, offset_polygon, path_to_polygon,
-    paths_to_polygons, point_line_distance, polygon_to_path, polygons_to_paths,
-    rotate_polygon, rotate_polygons, scale_polygon, translate_bounds,
-    translate_polygon, translate_polygons, ClipperPath, ClipperPaths, GeoScale,
+    get_polygons_intersection, get_polygons_union, is_almost_equal,
+    is_point_in_polygon, is_polygon_clockwise, is_polygon_convex,
+    normalize_polygons, offset_polygon, path_to_polygon, paths_to_polygons,
+    point_line_distance, polygon_to_path, polygons_to_paths, rotate_polygon,
+    rotate_polygons, scale_polygon, translate_bounds, translate_polygon,
+    translate_polygons, ClipperPath, ClipperPaths, GeoScale,
 };
 pub use rect::{do_rects_intersect, get_combined_rect};

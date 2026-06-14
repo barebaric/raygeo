@@ -46,13 +46,13 @@ pub fn register(algo_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     import collections.abc
 
     def get_polygon_minkowski_sum_convex(
-        poly_a: collections.abc.Sequence[tuple[int, int]],
-        poly_b: collections.abc.Sequence[tuple[int, int]],
-    ) -> list[list[tuple[int, int]]]:
+        poly_a: collections.abc.Sequence[tuple[float, float]],
+        poly_b: collections.abc.Sequence[tuple[float, float]],
+    ) -> list[list[tuple[float, float]]]:
         """Compute the Minkowski sum of two convex polygons.
 
-        :param poly_a: First convex polygon as integer points.
-        :param poly_b: Second convex polygon as integer points.
+        :param poly_a: First convex polygon as points.
+        :param poly_b: Second convex polygon as points.
         :returns: Minkowski sum as list of polygons.
         """
 "#,
@@ -60,10 +60,14 @@ pub fn register(algo_mod: &Bound<'_, PyModule>) -> PyResult<()> {
 )]
 #[pyfunction(name = "get_polygon_minkowski_sum_convex")]
 fn minkowski_sum_convex_py(
-    poly_a: Vec<(i64, i64)>,
-    poly_b: Vec<(i64, i64)>,
-) -> Vec<Vec<(i64, i64)>> {
-    get_polygon_minkowski_sum_convex(&poly_a, &poly_b)
+    poly_a: Vec<(f64, f64)>,
+    poly_b: Vec<(f64, f64)>,
+) -> Vec<Vec<Point>> {
+    let poly_a_pts: Vec<Point> =
+        poly_a.iter().map(|(x, y)| Point(*x, *y)).collect();
+    let poly_b_pts: Vec<Point> =
+        poly_b.iter().map(|(x, y)| Point(*x, *y)).collect();
+    get_polygon_minkowski_sum_convex(&poly_a_pts, &poly_b_pts)
 }
 
 #[gen_stub_pyfunction(
@@ -149,11 +153,11 @@ fn calculate_input_scale_py(
 #[gen_stub_pyfunction(
     python = r#"
     def convolve_two_segments(
-        a1: tuple[int, int],
-        a2: tuple[int, int],
-        b1: tuple[int, int],
-        b2: tuple[int, int],
-    ) -> list[tuple[int, int]]:
+        a1: tuple[float, float],
+        a2: tuple[float, float],
+        b1: tuple[float, float],
+        b2: tuple[float, float],
+    ) -> list[tuple[float, float]]:
         """Convolve two line segments.
 
         :param a1: Start point of segment A.
@@ -167,12 +171,18 @@ fn calculate_input_scale_py(
 )]
 #[pyfunction(name = "convolve_two_segments")]
 fn convolve_two_segments_py(
-    a1: (i64, i64),
-    a2: (i64, i64),
-    b1: (i64, i64),
-    b2: (i64, i64),
-) -> Vec<(i64, i64)> {
-    convolve_two_segments(a1, a2, b1, b2)
+    a1: (f64, f64),
+    a2: (f64, f64),
+    b1: (f64, f64),
+    b2: (f64, f64),
+) -> Vec<(f64, f64)> {
+    let result = convolve_two_segments(
+        Point(a1.0, a1.1),
+        Point(a2.0, a2.1),
+        Point(b1.0, b1.1),
+        Point(b2.0, b2.1),
+    );
+    result.into_iter().map(|p| (p.0, p.1)).collect()
 }
 
 #[gen_stub_pyfunction(
@@ -180,13 +190,13 @@ fn convolve_two_segments_py(
     import collections.abc
 
     def convolve_point_sequences(
-        seq_a: collections.abc.Sequence[tuple[int, int]],
-        seq_b: collections.abc.Sequence[tuple[int, int]],
-    ) -> list[list[tuple[int, int]]]:
+        seq_a: collections.abc.Sequence[tuple[float, float]],
+        seq_b: collections.abc.Sequence[tuple[float, float]],
+    ) -> list[list[tuple[float, float]]]:
         """Convolve two sequences of points.
 
-        :param seq_a: First sequence of integer points.
-        :param seq_b: Second sequence of integer points.
+        :param seq_a: First sequence of points.
+        :param seq_b: Second sequence of points.
         :returns: Convolved point sequences.
         """
 "#,
@@ -194,8 +204,16 @@ fn convolve_two_segments_py(
 )]
 #[pyfunction(name = "convolve_point_sequences")]
 fn convolve_point_sequences_py(
-    seq_a: Vec<(i64, i64)>,
-    seq_b: Vec<(i64, i64)>,
-) -> Vec<Vec<(i64, i64)>> {
-    convolve_point_sequences(&seq_a, &seq_b)
+    seq_a: Vec<(f64, f64)>,
+    seq_b: Vec<(f64, f64)>,
+) -> Vec<Vec<(f64, f64)>> {
+    let seq_a_pts: Vec<Point> =
+        seq_a.iter().map(|(x, y)| Point(*x, *y)).collect();
+    let seq_b_pts: Vec<Point> =
+        seq_b.iter().map(|(x, y)| Point(*x, *y)).collect();
+    let result = convolve_point_sequences(&seq_a_pts, &seq_b_pts);
+    result
+        .into_iter()
+        .map(|poly| poly.into_iter().map(|p| (p.0, p.1)).collect())
+        .collect()
 }

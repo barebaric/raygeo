@@ -5,7 +5,7 @@ use clipper2::{
     PointInPolygonResult, PointScaler,
 };
 
-use crate::types::{Edge, IntPolygon, Point, Polygon, Rect};
+use crate::types::{Edge, Point, Polygon, Rect};
 
 /// Custom point scaler matching Python's CLIPPER_SCALE = 10^7.
 #[derive(Debug, Default, Clone, Copy, PartialEq, Hash)]
@@ -151,34 +151,6 @@ pub fn get_polygon_bounds(polygon: &Polygon) -> Rect {
         }
     }
     Rect(min_x, min_y, max_x, max_y)
-}
-
-/// Calculate bounds of an integer polygon.
-pub fn int_get_polygon_bounds(polygon: &IntPolygon) -> (i64, i64, i64, i64) {
-    if polygon.is_empty() {
-        return (0, 0, 0, 0);
-    }
-    let mut min_x = polygon[0].0;
-    let mut max_x = polygon[0].0;
-    let mut min_y = polygon[0].1;
-    let mut max_y = polygon[0].1;
-    for p in polygon {
-        let x = p.0;
-        let y = p.1;
-        if x < min_x {
-            min_x = x;
-        }
-        if x > max_x {
-            max_x = x;
-        }
-        if y < min_y {
-            min_y = y;
-        }
-        if y > max_y {
-            max_y = y;
-        }
-    }
-    (min_x, min_y, max_x, max_y)
 }
 
 /// Get the bounding box of multiple polygons.
@@ -704,36 +676,4 @@ pub fn polygons_intersect(
         }
     }
     false
-}
-
-pub fn to_clipper_from_points(points: &[(f64, f64)], scale: f64) -> IntPolygon {
-    points
-        .iter()
-        .map(|(x, y)| ((*x * scale) as i64, (*y * scale) as i64))
-        .collect()
-}
-
-/// Convert a float polygon to integer coordinates using GeoScale.
-pub fn polygon_to_int_path(polygon: &Polygon) -> IntPolygon {
-    polygon
-        .iter()
-        .map(|p| {
-            (
-                (p.0 * GeoScale::MULTIPLIER) as i64,
-                (p.1 * GeoScale::MULTIPLIER) as i64,
-            )
-        })
-        .collect()
-}
-
-/// Convert an integer polygon back to float coordinates using GeoScale.
-pub fn int_path_to_polygon(path: &IntPolygon) -> Polygon {
-    path.iter()
-        .map(|(x, y)| {
-            Point(
-                *x as f64 / GeoScale::MULTIPLIER,
-                *y as f64 / GeoScale::MULTIPLIER,
-            )
-        })
-        .collect()
 }

@@ -4,31 +4,28 @@
 //! of polygons, which are used in packing and nesting algorithms for computing
 //! No-Fit Polygons (NFP) and Inner-Fit Polygons (IFP).
 
-use crate::geo::shape::polygon::{
-    get_polygon_bounds, get_polygon_convex_hull, int_path_to_polygon,
-    polygon_to_int_path,
-};
-use crate::types::{IntPolygon, Point, Polygon};
+use crate::geo::shape::polygon::{get_polygon_bounds, get_polygon_convex_hull};
+use crate::types::{Point, Polygon};
 
 pub fn convolve_two_segments(
-    a1: (i64, i64),
-    a2: (i64, i64),
-    b1: (i64, i64),
-    b2: (i64, i64),
-) -> Vec<(i64, i64)> {
+    a1: Point,
+    a2: Point,
+    b1: Point,
+    b2: Point,
+) -> Vec<Point> {
     vec![
-        (a1.0 + b2.0, a1.1 + b2.1),
-        (a1.0 + b1.0, a1.1 + b1.1),
-        (a2.0 + b1.0, a2.1 + b1.1),
-        (a2.0 + b2.0, a2.1 + b2.1),
+        Point(a1.0 + b2.0, a1.1 + b2.1),
+        Point(a1.0 + b1.0, a1.1 + b1.1),
+        Point(a2.0 + b1.0, a2.1 + b1.1),
+        Point(a2.0 + b2.0, a2.1 + b2.1),
     ]
 }
 
 pub fn convolve_point_sequences(
-    seq_a: &IntPolygon,
-    seq_b: &IntPolygon,
-) -> Vec<IntPolygon> {
-    let mut parallelograms: Vec<IntPolygon> = Vec::new();
+    seq_a: &Polygon,
+    seq_b: &Polygon,
+) -> Vec<Polygon> {
+    let mut parallelograms: Vec<Polygon> = Vec::new();
     if seq_a.len() < 2 || seq_b.len() < 2 {
         return parallelograms;
     }
@@ -63,26 +60,23 @@ pub fn calculate_input_scale(polygons: &[Polygon], max_int: i64) -> f64 {
 }
 
 pub fn get_polygon_minkowski_sum_convex(
-    poly_a: &IntPolygon,
-    poly_b: &IntPolygon,
-) -> Vec<IntPolygon> {
+    poly_a: &Polygon,
+    poly_b: &Polygon,
+) -> Vec<Polygon> {
     if poly_a.is_empty() || poly_b.is_empty() {
         return vec![];
     }
     let mut all_points: Vec<Point> = Vec::new();
     for p1 in poly_a {
         for p2 in poly_b {
-            all_points.push(Point(
-                p1.0 as f64 + p2.0 as f64,
-                p1.1 as f64 + p2.1 as f64,
-            ));
+            all_points.push(Point(p1.0 + p2.0, p1.1 + p2.1));
         }
     }
     let hull = get_polygon_convex_hull(&all_points);
     if hull.len() < 3 {
         return vec![];
     }
-    vec![hull.iter().map(|p| (p.0 as i64, p.1 as i64)).collect()]
+    vec![hull]
 }
 
 /// Calculate the No-Fit Polygon (NFP) for two polygons.
@@ -95,20 +89,18 @@ pub fn get_no_fit_polygon(
     if stationary.is_empty() || orbiting.is_empty() {
         return vec![];
     }
-    let static_path = polygon_to_int_path(stationary);
-    let orbiting_path = polygon_to_int_path(orbiting);
-    let orbiting_negated: IntPolygon =
-        orbiting_path.iter().map(|(x, y)| (-*x, -*y)).collect();
+    let orbiting_negated: Polygon =
+        orbiting.iter().map(|p| Point(-p.0, -p.1)).collect();
     let nfp_paths =
-        get_polygon_minkowski_sum_convex(&static_path, &orbiting_negated);
+        get_polygon_minkowski_sum_convex(stationary, &orbiting_negated);
     let mut results = Vec::new();
-    let first_pt = orbiting_path[0];
+    let first_pt = orbiting[0];
     for path in nfp_paths {
-        let shifted: IntPolygon = path
+        let shifted: Polygon = path
             .iter()
-            .map(|(x, y)| (*x + first_pt.0, *y + first_pt.1))
+            .map(|p| Point(p.0 + first_pt.0, p.1 + first_pt.1))
             .collect();
-        results.push(int_path_to_polygon(&shifted));
+        results.push(shifted);
     }
     results
 }

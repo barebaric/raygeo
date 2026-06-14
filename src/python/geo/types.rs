@@ -14,7 +14,6 @@ Rect — a bounding rectangle as ``(x_min, y_min, x_max, y_max)``.
 TransformMatrix — a 4x4 affine transformation matrix for 2D/3D transforms.
 Edge — a pair of points ``((x1, y1), (x2, y2))``.
 CubicBezier — four control points ``(p0, p1, p2, p3)``.
-IntPoint / IntPolygon — integer-coordinate variants for Clipper.
 ";
 
 gen_type_alias_from_python!(
@@ -86,20 +85,6 @@ gen_type_alias_from_python!(
 gen_type_alias_from_python!(
     "raygeo.geo.types",
     r#"
-    type IntPoint = tuple[int, int]
-    "#
-);
-
-gen_type_alias_from_python!(
-    "raygeo.geo.types",
-    r#"
-    type IntPolygon = list[IntPoint]
-    "#
-);
-
-gen_type_alias_from_python!(
-    "raygeo.geo.types",
-    r#"
     type Rect3D = tuple[float, float, float, float, float, float]
     "#
 );
@@ -112,7 +97,6 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     let list_type = typing.getattr("List")?;
     let union_type = typing.getattr("Union")?;
     let float_type = py.get_type::<pyo3::types::PyFloat>();
-    let int_type = py.import("builtins")?.getattr("int")?;
 
     let point =
         tuple_type.get_item((float_type.clone(), float_type.clone()))?;
@@ -129,8 +113,6 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     ))?;
     let polygon = list_type.get_item(point.clone())?;
     let polygon3d = list_type.get_item(point3d.clone())?;
-    let int_point = tuple_type.get_item((int_type.clone(), int_type))?;
-    let int_polygon = list_type.get_item(int_point.clone())?;
     let edge = tuple_type.get_item((point.clone(), point.clone()))?;
     let cubic_bezier = tuple_type.get_item((
         point.clone(),
@@ -146,8 +128,6 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add("Rect", rect)?;
     m.add("Polygon", polygon)?;
     m.add("Polygon3D", polygon3d)?;
-    m.add("IntPoint", int_point)?;
-    m.add("IntPolygon", int_polygon)?;
     m.add("Edge", edge)?;
     m.add("CubicBezier", cubic_bezier)?;
     m.add("Point2DOr3D", point_2d_or_3d)?;

@@ -11,7 +11,6 @@ Rect — a bounding rectangle as ``(x_min, y_min, x_max, y_max)``.
 TransformMatrix — a 4x4 affine transformation matrix for 2D/3D transforms.
 Edge — a pair of points ``((x1, y1), (x2, y2))``.
 CubicBezier — four control points ``(p0, p1, p2, p3)``.
-IntPoint / IntPolygon — integer-coordinate variants for Clipper.
 """
 
 import numpy
@@ -20,8 +19,6 @@ from typing import TypeAlias
 __all__ = [
     "CubicBezier",
     "Edge",
-    "IntPoint",
-    "IntPolygon",
     "Point",
     "Point2DOr3D",
     "Point3D",
@@ -34,8 +31,6 @@ __all__ = [
 
 CubicBezier: TypeAlias = tuple[tuple[float, float], tuple[float, float], tuple[float, float], tuple[float, float]]
 Edge: TypeAlias = tuple[tuple[float, float], tuple[float, float]]
-IntPoint: TypeAlias = tuple[int, int]
-IntPolygon: TypeAlias = list[IntPoint]
 Point: TypeAlias = tuple[float, float]
 Point2DOr3D: TypeAlias = Point | Point3D
 Point3D: TypeAlias = tuple[float, float, float]

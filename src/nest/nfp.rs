@@ -2,11 +2,9 @@ use crate::geo::algo::minkowski::{
     convolve_point_sequences, get_polygon_minkowski_sum_convex,
 };
 use crate::geo::shape::polygon::{
-    get_polygon_signed_area, get_polygons_union, int_path_to_polygon,
-    is_polygon_convex, polygon_to_int_path,
+    get_polygon_signed_area, get_polygons_union, is_polygon_convex,
 };
-use crate::types::{IntPolygon, Point, Polygon};
-use crate::CLIPPER_SCALE;
+use crate::types::{Point, Polygon};
 
 /// Scale factor for converting polygon coordinates to integer hash keys.
 const POLYGON_KEY_SCALE: f64 = 10000.0;
@@ -19,19 +17,16 @@ pub fn no_fit_polygon(
         return vec![];
     }
 
-    let static_int = polygon_to_int_path(static_poly);
-    let orbiting_int = polygon_to_int_path(orbiting);
-
     if is_polygon_convex(static_poly) && is_polygon_convex(orbiting) {
-        nfp_convex_fast(&static_int, &orbiting_int)
+        nfp_convex_fast(static_poly, orbiting)
     } else {
-        nfp_minkowski(&static_int, &orbiting_int)
+        nfp_minkowski(static_poly, orbiting)
     }
 }
 
 pub fn nfp_convex_fast(
-    static_poly: &IntPolygon,
-    orbiting: &IntPolygon,
+    static_poly: &Polygon,
+    orbiting: &Polygon,
 ) -> Vec<Polygon> {
     if static_poly.len() < 3 || orbiting.len() < 3 {
         return vec![];
@@ -40,8 +35,8 @@ pub fn nfp_convex_fast(
     let x_shift = orbiting[0].0;
     let y_shift = orbiting[0].1;
 
-    let orbiting_negated: IntPolygon =
-        orbiting.iter().map(|(x, y)| (-x, -y)).collect();
+    let orbiting_negated: Polygon =
+        orbiting.iter().map(|p| Point(-p.0, -p.1)).collect();
 
     let nfp_paths =
         get_polygon_minkowski_sum_convex(static_poly, &orbiting_negated);
@@ -49,19 +44,19 @@ pub fn nfp_convex_fast(
     let mut results = Vec::new();
     for path in &nfp_paths {
         if path.len() >= 3 {
-            let shifted: IntPolygon = path
+            let shifted: Polygon = path
                 .iter()
-                .map(|(x, y)| (*x + x_shift, *y + y_shift))
+                .map(|p| Point(p.0 + x_shift, p.1 + y_shift))
                 .collect();
-            results.push(int_path_to_polygon(&shifted));
+            results.push(shifted);
         }
     }
     results
 }
 
 pub fn nfp_minkowski(
-    static_poly: &IntPolygon,
-    orbiting: &IntPolygon,
+    static_poly: &Polygon,
+    orbiting: &Polygon,
 ) -> Vec<Polygon> {
     if static_poly.len() < 3 || orbiting.len() < 3 {
         return vec![];
@@ -70,11 +65,8 @@ pub fn nfp_minkowski(
     let x_shift = orbiting[0].0;
     let y_shift = orbiting[0].1;
 
-    let orbiting_negated: IntPolygon =
-        orbiting.iter().map(|(x, y)| (-x, -y)).collect();
-
-    let static_float = int_path_to_polygon(static_poly);
-    let orbiting_neg_float = int_path_to_polygon(&orbiting_negated);
+    let orbiting_negated: Polygon =
+        orbiting.iter().map(|p| Point(-p.0, -p.1)).collect();
 
     let mut subjects: Vec<Polygon> = Vec::new();
 
@@ -82,20 +74,20 @@ pub fn nfp_minkowski(
         convolve_point_sequences(static_poly, &orbiting_negated);
     for para in &parallelograms {
         if para.len() >= 3 {
-            subjects.push(int_path_to_polygon(para));
+            subjects.push(para.clone());
         }
     }
 
-    if !static_float.is_empty() && !orbiting_neg_float.is_empty() {
-        let first_on = orbiting_neg_float[0];
-        let shifted: Polygon = static_float
+    if !static_poly.is_empty() && !orbiting_negated.is_empty() {
+        let first_on = orbiting_negated[0];
+        let shifted: Polygon = static_poly
             .iter()
             .map(|p| Point(p.0 + first_on.0, p.1 + first_on.1))
             .collect();
         subjects.push(shifted);
 
-        let first_s = static_float[0];
-        let neg_shifted: Polygon = orbiting_neg_float
+        let first_s = static_poly[0];
+        let neg_shifted: Polygon = orbiting_negated
             .iter()
             .map(|p| Point(p.0 + first_s.0, p.1 + first_s.1))
             .collect();
@@ -108,15 +100,12 @@ pub fn nfp_minkowski(
 
     let union_result = get_polygons_union(&subjects);
 
-    let x_shift_f = x_shift as f64 / CLIPPER_SCALE;
-    let y_shift_f = y_shift as f64 / CLIPPER_SCALE;
-
     let mut results = Vec::new();
     for poly in &union_result {
         if poly.len() >= 3 {
             let shifted: Polygon = poly
                 .iter()
-                .map(|p| Point(p.0 + x_shift_f, p.1 + y_shift_f))
+                .map(|p| Point(p.0 + x_shift, p.1 + y_shift))
                 .collect();
 
             let area = get_polygon_signed_area(&shifted);

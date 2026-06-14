@@ -17,21 +17,21 @@ __all__ = [
     "polygon_to_key",
 ]
 
-def nfp_convex_fast(static_poly: collections.abc.Sequence[tuple[int, int]], orbiting: collections.abc.Sequence[tuple[int, int]]) -> list[list[tuple[float, float]]]:
+def nfp_convex_fast(static_poly: collections.abc.Sequence[tuple[float, float]], orbiting: collections.abc.Sequence[tuple[float, float]]) -> list[list[tuple[float, float]]]:
     r"""
     Fast NFP for convex polygon pairs.
     
-    :param static_poly: Static polygon as integer points.
-    :param orbiting: Orbiting polygon as integer points.
+    :param static_poly: Static polygon as points.
+    :param orbiting: Orbiting polygon as points.
     :returns: List of NFP polygons.
     """
 
-def nfp_minkowski(static_poly: collections.abc.Sequence[tuple[int, int]], orbiting: collections.abc.Sequence[tuple[int, int]]) -> list[list[tuple[float, float]]]:
+def nfp_minkowski(static_poly: collections.abc.Sequence[tuple[float, float]], orbiting: collections.abc.Sequence[tuple[float, float]]) -> list[list[tuple[float, float]]]:
     r"""
     General NFP using Minkowski sum with Clipper union.
     
-    :param static_poly: Static polygon as integer points.
-    :param orbiting: Orbiting polygon as integer points.
+    :param static_poly: Static polygon as points.
+    :param orbiting: Orbiting polygon as points.
     :returns: List of NFP polygons.
     """
 
