@@ -611,6 +611,9 @@ fn compute_gap_regions_from_original(
         return Vec::new();
     }
 
+    let total_length = geo.distance();
+    let is_closed = geo.is_closed(1e-6);
+
     let mut gap_regions: Vec<TabRegion> = Vec::new();
     for clip in clips {
         let closest = crate::geo::query::find_closest_point_on_path_from_array(
@@ -634,9 +637,21 @@ fn compute_gap_regions_from_original(
             None => continue,
         };
 
+        let half_width = clip.width / 2.0;
+        let start = 0.0_f64.max(hit_dist - half_width);
+        let end = hit_dist + half_width;
+
+        if is_closed && end > total_length {
+            let wrapped_end = end - total_length;
+            gap_regions.push(TabRegion {
+                start: 0.0,
+                end: wrapped_end,
+            });
+        }
+
         gap_regions.push(TabRegion {
-            start: 0.0_f64.max(hit_dist - clip.width / 2.0),
-            end: hit_dist + clip.width / 2.0,
+            start: start.min(total_length),
+            end: end.min(total_length),
         });
     }
 

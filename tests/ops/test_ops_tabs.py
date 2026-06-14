@@ -462,6 +462,57 @@ class TestEdgeCases:
         ops.apply_tab_gaps([(5, 10, 1)])
         assert ops.len() > 0
 
+    def test_gap_wraps_around_path_seam_on_closed_shape(self):
+        """A tab near the end of a closed path should wrap the gap
+        around to the start of the path."""
+        ops = make_rect_ops(0, 0, 10, 10)
+        orig_endpoint = ops.endpoint(ops.len() - 1)
+
+        # Place a tab near the end of the 4th (left) edge, close to the
+        # seam at (0,0). The gap should wrap from the end of the path
+        # around to the beginning.
+        orig_cut = ops.cut_distance()
+        ops.apply_tab_gaps([(0, 9, 4)])
+        new_cut = ops.cut_distance()
+
+        # Gap width 4mm at distance ~39 along 40mm path wraps from
+        # [37, 40] to [0, 1], so ~4mm of cut distance should be removed.
+        removed = orig_cut - new_cut
+        assert removed > 3.0, f"Expected ~4mm removed, got {removed:.2f}"
+
+        # Endpoint must still be preserved.
+        last_ep = None
+        for i in range(ops.len() - 1, -1, -1):
+            if ops.category(i) == CommandCategory.MOVING:
+                last_ep = ops.endpoint(i)
+                break
+        assert last_ep is not None
+        assert abs(last_ep[0] - orig_endpoint[0]) < 1e-3
+        assert abs(last_ep[1] - orig_endpoint[1]) < 1e-3
+
+    def test_gap_wraps_multiple_tabs_near_seam(self):
+        """Multiple tabs near the seam should all wrap correctly."""
+        ops = make_rect_ops(0, 0, 10, 10)
+        orig_endpoint = ops.endpoint(ops.len() - 1)
+
+        ops.apply_tab_gaps(
+            [
+                (0, 8, 3),
+                (0, 2, 2),
+            ]
+        )
+        # After wrapping, the first segment should have gaps at both
+        # the beginning (wrapped) and where the tab hits the left
+        # edge. Path should still end at the original endpoint.
+        last_ep = None
+        for i in range(ops.len() - 1, -1, -1):
+            if ops.category(i) == CommandCategory.MOVING:
+                last_ep = ops.endpoint(i)
+                break
+        assert last_ep is not None
+        assert abs(last_ep[0] - orig_endpoint[0]) < 1e-3
+        assert abs(last_ep[1] - orig_endpoint[1]) < 1e-3
+
 
 # ===================================================================
 # Structural / invariant tests
