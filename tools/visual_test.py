@@ -18,6 +18,23 @@ from matplotlib.colors import to_hex
 import raygeo.image as img
 from raygeo.geo import Arc, Bezier, Geometry, Line, Move
 from raygeo.geo.algo import hull
+from raygeo.geo.algo.analysis import get_area, get_path_winding_order
+from raygeo.geo.shape.arc import linearize_arc
+from raygeo.geo.shape.bezier import (
+    flatten_bezier,
+    get_bezier_point_at,
+    split_bezier,
+)
+from raygeo.geo.shape.circle import (
+    get_circle_circle_intersections,
+    get_line_circle_intersections,
+)
+from raygeo.geo.shape.line import (
+    get_line_closest_point,
+    get_line_line_intersection,
+    get_line_segment_intersection,
+    get_point_line_distance,
+)
 from raygeo.geo.shape.polygon import (
     get_polygon_convex_hull,
     get_polygons_difference,
@@ -1668,6 +1685,650 @@ def page_nesting():
         st.info("Configure parts and sheet above, then click **Run Nesting**.")
 
 
+def page_arc_linearize():
+    st.header("Arc Linearization")
+    st.write("Convert arcs into line segments at adjustable resolution.")
+
+    c1, c2 = st.columns(2)
+    r = c1.number_input("Arc radius", 1.0, 50.0, 10.0, key="al_r")
+    arc_deg = c2.slider("Arc sweep (degrees)", 10, 360, 180, key="al_sweep")
+
+    resolution = st.slider(
+        "Linearization resolution", 0.1, 5.0, 1.0, key="al_res"
+    )
+
+    geom = Geometry()
+    sweep_rad = math.radians(arc_deg)
+    end_x = r * math.cos(sweep_rad)
+    end_y = r * math.sin(sweep_rad)
+    geom.move_to(r, 0, 0)
+    geom.arc_to(end_x, end_y, -r, 0, False, 0)
+
+    cmds = geom.iter_typed_commands()
+    first_arc = None
+    for cmd in cmds:
+        if isinstance(cmd, Arc):
+            first_arc = cmd
+            break
+
+    fig, axes = st.columns(2)
+    fig_mpl, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 6))
+
+    plot_geometry(ax1, geom, color="steelblue", linewidth=2.5)
+    ax1.set_aspect("equal")
+    ax1.grid(True, alpha=0.3)
+    ax1.set_title(f"Original arc ({arc_deg}°)", fontsize=13)
+    margin = r * 0.3
+    ax1.set_xlim(-margin, r * 1.2 + margin)
+    ax1.set_ylim(-r * 1.2 - margin, r * 1.2 + margin)
+
+    segments = linearize_arc(first_arc, (r, 0.0, 0.0), resolution)
+    for (sx, sy, _), (ex, ey, _) in segments:
+        ax2.plot([sx, ex], [sy, ey], color="tomato", linewidth=2.5)
+    ax2.scatter(
+        [pt for seg in segments for pt in (seg[0], seg[1])],
+        [pt for seg in segments for pt in (seg[0], seg[1])],
+        color="tomato",
+        s=20,
+        zorder=3,
+    )
+    ax2.set_aspect("equal")
+    ax2.grid(True, alpha=0.3)
+    ax2.set_title(f"Linearized ({len(segments)} segments)", fontsize=13)
+    ax2.set_xlim(ax1.get_xlim())
+    ax2.set_ylim(ax1.get_ylim())
+
+    fig_mpl.tight_layout()
+    st.pyplot(fig_mpl)
+
+
+def page_bezier_curves():
+    st.header("Bezier Curve Operations")
+    st.write("Split, evaluate, and flatten cubic bezier curves.")
+
+    tab_split, tab_eval, tab_flatten = st.tabs(
+        ["Split", "Point at t", "Flatten"]
+    )
+
+    p0, p1, p2, p3 = (0.0, 0.0), (0.0, 10.0), (12.0, 10.0), (12.0, 0.0)
+
+    def eval_bezier(pts, n=100):
+        ts = np.linspace(0, 1, n)
+        result = []
+        for t in ts:
+            u = 1 - t
+            x = (
+                u**3 * pts[0][0]
+                + 3 * u**2 * t * pts[1][0]
+                + 3 * u * t**2 * pts[2][0]
+                + t**3 * pts[3][0]
+            )
+            y = (
+                u**3 * pts[0][1]
+                + 3 * u**2 * t * pts[1][1]
+                + 3 * u * t**2 * pts[2][1]
+                + t**3 * pts[3][1]
+            )
+            result.append((x, y))
+        return result
+
+    def plot_curve(ax, pts, color, lw=3, label=None, ls="-"):
+        xs = [p[0] for p in pts]
+        ys = [p[1] for p in pts]
+        ax.plot(xs, ys, color=color, lw=lw, label=label, ls=ls)
+
+    with tab_split:
+        t_split = st.slider("Split parameter t", 0.01, 0.99, 0.4, 0.01)
+        left, right = split_bezier(p0, p1, p2, p3, t_split)
+        split_pt = get_bezier_point_at(p0, p1, p2, p3, t_split)
+        curve = eval_bezier((p0, p1, p2, p3))
+        left_curve = eval_bezier(left)
+        right_curve = eval_bezier(right)
+
+        fig, ax = plt.subplots(figsize=(8, 6))
+        plot_curve(ax, curve, "gray", lw=2, ls="--", label="Original")
+        plot_curve(ax, left_curve, "tomato", lw=3, label="Left half")
+        plot_curve(ax, right_curve, "forestgreen", lw=3, label="Right half")
+        ax.plot(
+            split_pt[0],
+            split_pt[1],
+            "*",
+            color="gold",
+            markersize=15,
+            zorder=5,
+        )
+        ax.set_aspect("equal")
+        ax.grid(True, alpha=0.3)
+        ax.legend(fontsize=11)
+        ax.set_xlim(-1, 14)
+        ax.set_ylim(-1, 12)
+        st.pyplot(fig)
+
+    with tab_eval:
+        t_eval = st.slider("Parameter t", 0.0, 1.0, 0.6, 0.01, key="bez_eval")
+        pt = get_bezier_point_at(p0, p1, p2, p3, t_eval)
+        cp = [(0.0, 0.0), (0.0, 10.0), (12.0, 10.0), (12.0, 0.0)]
+        pt = get_bezier_point_at(cp[0], cp[1], cp[2], cp[3], t_eval)
+        curve = eval_bezier(cp)
+        fig, ax = plt.subplots(figsize=(8, 6))
+        plot_curve(ax, curve, "steelblue", lw=3)
+        for cpi, cpv in enumerate(cp):
+            ax.plot(cpv[0], cpv[1], "o", color="gray", markersize=6, zorder=4)
+            ax.plot(pt[0], pt[1], "o", color="tomato", markersize=12, zorder=5)
+            ax.annotate(
+                f"t={t_eval}",
+                pt,
+                xytext=(8, 8),
+                textcoords="offset points",
+                fontsize=12,
+                color="tomato",
+                fontweight="bold",
+            )
+            ax.set_aspect("equal")
+            ax.grid(True, alpha=0.3)
+            ax.set_xlim(-1, 14)
+            ax.set_ylim(-1, 12)
+            st.pyplot(fig)
+
+    with tab_flatten:
+        c_tol, c_nsub = st.columns(2)
+        tolerance = c_tol.slider("Tolerance", 0.1, 10.0, 2.0, 0.1)
+        max_sub = c_nsub.number_input("Max subdivisions", 1, 64, 20, 1)
+        pts = []
+        p0_3d = (p0[0], p0[1], 0.0)
+        p1_3d = (p1[0], p1[1], 0.0)
+        p2_3d = (p2[0], p2[1], 0.0)
+        p3_3d = (p3[0], p3[1], 0.0)
+        flatten_bezier(p0_3d, p1_3d, p2_3d, p3_3d, tolerance, max_sub, pts)
+
+        fig, ax = plt.subplots(figsize=(8, 6))
+        curve = eval_bezier((p0, p1, p2, p3))
+        plot_curve(ax, curve, "steelblue", lw=2, ls="--", label="Original")
+        xs_f = [p[0] for p in pts]
+        ys_f = [p[1] for p in pts]
+        ax.plot(
+            xs_f,
+            ys_f,
+            "o-",
+            color="tomato",
+            lw=2,
+            markersize=4,
+            label=f"Flattened ({len(pts)} pts)",
+        )
+        ax.set_aspect("equal")
+        ax.grid(True, alpha=0.3)
+        ax.set_xlim(-1, 14)
+        ax.set_ylim(-1, 12)
+        ax.legend(fontsize=11)
+        st.pyplot(fig)
+
+
+def page_circle_intersections():
+    st.header("Circle Intersections")
+    st.write("Find intersection points between circles and lines.")
+
+    tab_cc, tab_lc = st.tabs(["Circle-Circle", "Line-Circle"])
+
+    with tab_cc:
+        c1, c2 = st.columns(2)
+        with c1:
+            cx1 = st.number_input(
+                "Circle 1 X", -20.0, 20.0, -3.0, key="cc_cx1"
+            )
+            cy1 = st.number_input("Circle 1 Y", -20.0, 20.0, 0.0, key="cc_cy1")
+            r1 = st.number_input(
+                "Circle 1 radius", 0.1, 20.0, 5.0, key="cc_r1"
+            )
+        with c2:
+            cx2 = st.number_input("Circle 2 X", -20.0, 20.0, 5.0, key="cc_cx2")
+            cy2 = st.number_input("Circle 2 Y", -20.0, 20.0, 0.0, key="cc_cy2")
+            r2 = st.number_input(
+                "Circle 2 radius", 0.1, 20.0, 4.0, key="cc_r2"
+            )
+
+        fig, ax = plt.subplots(figsize=(8, 7))
+        circ1 = mpatches.Circle(
+            (cx1, cy1), r1, fill=False, edgecolor="steelblue", lw=2.5
+        )
+        circ2 = mpatches.Circle(
+            (cx2, cy2), r2, fill=False, edgecolor="tomato", lw=2.5
+        )
+        ax.add_patch(circ1)
+        ax.add_patch(circ2)
+        ax.plot(cx1, cy1, "o", color="steelblue", markersize=6)
+        ax.plot(cx2, cy2, "o", color="tomato", markersize=6)
+
+        pts = get_circle_circle_intersections((cx1, cy1), r1, (cx2, cy2), r2)
+        for pt in pts:
+            ax.plot(pt[0], pt[1], "*", color="gold", markersize=18, zorder=5)
+        ax.set_aspect("equal")
+        ax.grid(True, alpha=0.3)
+        margin = max(r1, r2) * 0.3
+        all_xs = [cx1 - r1, cx1 + r1, cx2 - r2, cx2 + r2]
+        all_ys = [cy1 - r1, cy1 + r1, cy2 - r2, cy2 + r2]
+        ax.set_xlim(min(all_xs) - margin, max(all_xs) + margin)
+        ax.set_ylim(min(all_ys) - margin, max(all_ys) + margin)
+        ax.set_title(f"Circle-Circle: {len(pts)} intersection(s)", fontsize=13)
+        if pts:
+            st.success(f"Found {len(pts)} intersection point(s)")
+        else:
+            st.info(
+                "No intersections (circles separated or one inside the other)"
+            )
+        st.pyplot(fig)
+
+    with tab_lc:
+        c1, c2 = st.columns(2)
+        with c1:
+            lx1 = st.number_input(
+                "Line start X", -20.0, 20.0, -5.0, key="lc_lx1"
+            )
+            ly1 = st.number_input(
+                "Line start Y", -20.0, 20.0, 3.0, key="lc_ly1"
+            )
+        with c2:
+            lx2 = st.number_input(
+                "Line end X", -20.0, 20.0, 10.0, key="lc_lx2"
+            )
+            ly2 = st.number_input(
+                "Line end Y", -20.0, 20.0, -2.0, key="lc_ly2"
+            )
+        ccx = st.number_input("Circle center X", -20.0, 20.0, 3.0, key="lc_cx")
+        ccy = st.number_input("Circle center Y", -20.0, 20.0, 0.0, key="lc_cy")
+        cr = st.number_input("Circle radius", 0.1, 20.0, 5.0, key="lc_r")
+
+        fig, ax = plt.subplots(figsize=(8, 7))
+        circ = mpatches.Circle(
+            (ccx, ccy), cr, fill=False, edgecolor="steelblue", lw=2.5
+        )
+        ax.add_patch(circ)
+        ax.plot(
+            [lx1, lx2],
+            [ly1, ly2],
+            color="tomato",
+            lw=2.5,
+            label="Line segment",
+        )
+
+        pts = get_line_circle_intersections(
+            (lx1, ly1), (lx2, ly2), (ccx, ccy), cr
+        )
+        for pt in pts:
+            ax.plot(pt[0], pt[1], "*", color="gold", markersize=18, zorder=5)
+        ax.set_aspect("equal")
+        ax.grid(True, alpha=0.3)
+        margin = cr * 0.3
+        all_xs = [lx1, lx2, ccx - cr, ccx + cr]
+        all_ys = [ly1, ly2, ccy - cr, ccy + cr]
+        ax.set_xlim(min(all_xs) - margin, max(all_xs) + margin)
+        ax.set_ylim(min(all_ys) - margin, max(all_ys) + margin)
+        ax.set_title(f"Line-Circle: {len(pts)} intersection(s)", fontsize=13)
+        ax.legend(fontsize=11)
+        if pts:
+            st.success(f"Found {len(pts)} intersection point(s)")
+        else:
+            st.info("No intersections")
+        st.pyplot(fig)
+
+
+def page_line_intersections():
+    st.header("Line Intersections")
+    st.write(
+        "Find intersections between lines and segments, and measure distances."
+    )
+
+    tab_ll, tab_ss, tab_dist = st.tabs(
+        ["Line-Line", "Segment-Segment", "Point-Line Distance"]
+    )
+
+    with tab_ll:
+        c1, c2 = st.columns(2)
+        with c1:
+            l1x1 = st.number_input(
+                "Line 1 start X", -10.0, 20.0, 2.0, key="ll_l1x1"
+            )
+            l1y1 = st.number_input(
+                "Line 1 start Y", -10.0, 20.0, 1.0, key="ll_l1y1"
+            )
+            l1x2 = st.number_input(
+                "Line 1 end X", -10.0, 20.0, 10.0, key="ll_l1x2"
+            )
+            l1y2 = st.number_input(
+                "Line 1 end Y", -10.0, 20.0, 8.0, key="ll_l1y2"
+            )
+        with c2:
+            l2x1 = st.number_input(
+                "Line 2 start X", -10.0, 20.0, 2.0, key="ll_l2x1"
+            )
+            l2y1 = st.number_input(
+                "Line 2 start Y", -10.0, 20.0, 8.0, key="ll_l2y1"
+            )
+            l2x2 = st.number_input(
+                "Line 2 end X", -10.0, 20.0, 10.0, key="ll_l2x2"
+            )
+            l2y2 = st.number_input(
+                "Line 2 end Y", -10.0, 20.0, 1.0, key="ll_l2y2"
+            )
+
+        fig, ax = plt.subplots(figsize=(8, 7))
+        ax.plot(
+            [l1x1, l1x2],
+            [l1y1, l1y2],
+            "o-",
+            color="steelblue",
+            lw=2.5,
+            label="Line 1",
+        )
+        ax.plot(
+            [l2x1, l2x2],
+            [l2y1, l2y2],
+            "o-",
+            color="tomato",
+            lw=2.5,
+            label="Line 2",
+        )
+        inter = get_line_line_intersection(
+            (l1x1, l1y1), (l1x2, l1y2), (l2x1, l2y1), (l2x2, l2y2)
+        )
+        if inter:
+            ax.plot(
+                inter[0], inter[1], "*", color="gold", markersize=18, zorder=5
+            )
+            ax.annotate(
+                f"({inter[0]:.2f}, {inter[1]:.2f})",
+                inter,
+                xytext=(5, 8),
+                textcoords="offset points",
+                fontsize=11,
+                color="gold",
+                fontweight="bold",
+            )
+            st.success(f"Intersection at ({inter[0]:.3f}, {inter[1]:.3f})")
+        else:
+            st.info("Lines are parallel — no intersection")
+        ax.set_aspect("equal")
+        ax.grid(True, alpha=0.3)
+        ax.legend(fontsize=11)
+        all_xs = [l1x1, l1x2, l2x1, l2x2]
+        all_ys = [l1y1, l1y2, l2y1, l2y2]
+        margin = 1
+        ax.set_xlim(min(all_xs) - margin, max(all_xs) + margin)
+        ax.set_ylim(min(all_ys) - margin, max(all_ys) + margin)
+        st.pyplot(fig)
+
+    with tab_ss:
+        c1, c2 = st.columns(2)
+        with c1:
+            s1x1 = st.number_input(
+                "Seg 1 start X", -10.0, 20.0, 2.0, key="ss_s1x1"
+            )
+            s1y1 = st.number_input(
+                "Seg 1 start Y", -10.0, 20.0, 1.0, key="ss_s1y1"
+            )
+            s1x2 = st.number_input(
+                "Seg 1 end X", -10.0, 20.0, 8.0, key="ss_s1x2"
+            )
+            s1y2 = st.number_input(
+                "Seg 1 end Y", -10.0, 20.0, 7.0, key="ss_s1y2"
+            )
+        with c2:
+            s2x1 = st.number_input(
+                "Seg 2 start X", -10.0, 20.0, 2.0, key="ss_s2x1"
+            )
+            s2y1 = st.number_input(
+                "Seg 2 start Y", -10.0, 20.0, 6.0, key="ss_s2y1"
+            )
+            s2x2 = st.number_input(
+                "Seg 2 end X", -10.0, 20.0, 9.0, key="ss_s2x2"
+            )
+            s2y2 = st.number_input(
+                "Seg 2 end Y", -10.0, 20.0, 2.0, key="ss_s2y2"
+            )
+
+        fig, ax = plt.subplots(figsize=(8, 7))
+        ax.plot(
+            [s1x1, s1x2],
+            [s1y1, s1y2],
+            "o-",
+            color="steelblue",
+            lw=3,
+            label="Segment 1",
+        )
+        ax.plot(
+            [s2x1, s2x2],
+            [s2y1, s2y2],
+            "o-",
+            color="tomato",
+            lw=3,
+            label="Segment 2",
+        )
+        inter = get_line_segment_intersection(
+            (s1x1, s1y1), (s1x2, s1y2), (s2x1, s2y1), (s2x2, s2y2)
+        )
+        if inter:
+            ax.plot(
+                inter[0], inter[1], "*", color="gold", markersize=18, zorder=5
+            )
+            ax.annotate(
+                f"({inter[0]:.2f}, {inter[1]:.2f})",
+                inter,
+                xytext=(5, 8),
+                textcoords="offset points",
+                fontsize=11,
+                color="gold",
+                fontweight="bold",
+            )
+            st.success(
+                f"Segments intersect at ({inter[0]:.3f}, {inter[1]:.3f})"
+            )
+        else:
+            st.info("Segments do not intersect")
+        ax.set_aspect("equal")
+        ax.grid(True, alpha=0.3)
+        ax.legend(fontsize=11)
+        all_xs = [s1x1, s1x2, s2x1, s2x2]
+        all_ys = [s1y1, s1y2, s2y1, s2y2]
+        margin = 1
+        ax.set_xlim(min(all_xs) - margin, max(all_xs) + margin)
+        ax.set_ylim(min(all_ys) - margin, max(all_ys) + margin)
+        st.pyplot(fig)
+
+    with tab_dist:
+        c1, c2 = st.columns(2)
+        with c1:
+            dlx1 = st.number_input(
+                "Line point 1 X", -10.0, 20.0, 2.0, key="dist_lx1"
+            )
+            dly1 = st.number_input(
+                "Line point 1 Y", -10.0, 20.0, 1.0, key="dist_ly1"
+            )
+            dlx2 = st.number_input(
+                "Line point 2 X", -10.0, 20.0, 10.0, key="dist_lx2"
+            )
+            dly2 = st.number_input(
+                "Line point 2 Y", -10.0, 20.0, 7.0, key="dist_ly2"
+            )
+        with c2:
+            dpx = st.number_input("Point X", -10.0, 20.0, 4.0, key="dist_px")
+            dpy = st.number_input("Point Y", -10.0, 20.0, 6.0, key="dist_py")
+
+        point = (dpx, dpy)
+        line_p1 = (dlx1, dly1)
+        line_p2 = (dlx2, dly2)
+        dist = get_point_line_distance(point, line_p1, line_p2)
+        closest = get_line_closest_point(line_p1, line_p2, point[0], point[1])
+
+        fig, ax = plt.subplots(figsize=(8, 7))
+        ax.plot(
+            [line_p1[0], line_p2[0]],
+            [line_p1[1], line_p2[1]],
+            "o-",
+            color="steelblue",
+            lw=2.5,
+            label="Line",
+        )
+        ax.plot(
+            point[0],
+            point[1],
+            "o",
+            color="tomato",
+            markersize=10,
+            zorder=5,
+            label="Point",
+        )
+        ax.plot(
+            closest[0],
+            closest[1],
+            "o",
+            color="forestgreen",
+            markersize=8,
+            zorder=5,
+            label="Closest",
+        )
+        ax.plot(
+            [point[0], closest[0]],
+            [point[1], closest[1]],
+            "--",
+            color="forestgreen",
+            lw=2,
+            label=f"Distance = {dist:.3f}",
+        )
+        ax.set_aspect("equal")
+        ax.grid(True, alpha=0.3)
+        ax.legend(fontsize=11)
+        all_xs = [dlx1, dlx2, dpx]
+        all_ys = [dly1, dly2, dpy]
+        margin = 1
+        ax.set_xlim(min(all_xs) - margin, max(all_xs) + margin)
+        ax.set_ylim(min(all_ys) - margin, max(all_ys) + margin)
+        ax.set_title(f"Perpendicular distance: {dist:.3f}", fontsize=13)
+        st.pyplot(fig)
+
+
+def page_analysis():
+    st.header("Geometry Analysis")
+    st.write("Compute polygon area and determine winding order.")
+
+    tab_area, tab_winding = st.tabs(["Area", "Winding Order"])
+
+    with tab_area:
+        preset = st.selectbox(
+            "Shape preset",
+            ["Rectangle", "Circle", "Star", "Custom"],
+            key="area_preset",
+        )
+        if preset == "Rectangle":
+            c1, c2 = st.columns(2)
+            w = c1.number_input("Width", 0.1, 50.0, 10.0, key="area_rw")
+            h = c2.number_input("Height", 0.1, 50.0, 8.0, key="area_rh")
+            geom = Geometry.from_points([(0, 0), (w, 0), (w, h), (0, h)])
+        elif preset == "Circle":
+            r = st.number_input("Radius", 0.1, 50.0, 8.0, key="area_cr")
+            n = st.number_input("Segments", 8, 128, 64, key="area_cn")
+            pts = [
+                (
+                    r * math.cos(2 * math.pi * i / n),
+                    r * math.sin(2 * math.pi * i / n),
+                )
+                for i in range(n)
+            ]
+            geom = Geometry.from_points(pts, close=True)
+        elif preset == "Star":
+            c1, c2, c3 = st.columns(3)
+            outer_r = c1.number_input(
+                "Outer radius", 0.1, 50.0, 10.0, key="area_or"
+            )
+            inner_r = c2.number_input(
+                "Inner radius", 0.1, 50.0, 4.0, key="area_ir"
+            )
+            n_pts = c3.number_input("Points", 3, 64, 5, step=1, key="area_np")
+            pts = []
+            for i in range(n_pts * 2):
+                a = -math.pi / 2 + math.pi * i / n_pts
+                rd = outer_r if i % 2 == 0 else inner_r
+                pts.append((rd * math.cos(a), rd * math.sin(a)))
+            geom = Geometry.from_points(pts, close=True)
+        else:
+            pts_text = st.text_area(
+                "Points (one per line: x,y)",
+                "0,0\n10,0\n10,10\n0,10",
+                key="area_pts",
+            )
+            close = st.checkbox("Close path", value=True, key="area_close")
+            pts = []
+            for line in pts_text.strip().splitlines():
+                line = line.strip()
+                if not line:
+                    continue
+                parts = line.split(",")
+                pts.append((float(parts[0]), float(parts[1])))
+            geom = (
+                Geometry.from_points(pts, close=close) if pts else Geometry()
+            )
+
+        if not geom.is_empty():
+            area = get_area(geom)
+            try:
+                winding = get_path_winding_order(geom, 0)
+            except Exception:
+                winding = "unknown"
+
+            fig, ax = plt.subplots(figsize=(8, 7))
+            plot_geometry(ax, geom, color="steelblue", linewidth=2.5)
+            xmin, xmax, ymin, ymax = auto_limits([geom])
+            ax.set_xlim(xmin, xmax)
+            ax.set_ylim(ymin, ymax)
+            ax.set_aspect("equal")
+            ax.grid(True, alpha=0.3)
+            ax.set_title(
+                f"Area = {area:.4f}  |  Winding = {winding}", fontsize=13
+            )
+            st.pyplot(fig)
+
+            cols = st.columns(3)
+            cols[0].metric("Area", f"{area:.4f}")
+            cols[1].metric("Winding", winding)
+            cols[2].metric("Commands", len(geom))
+        else:
+            st.warning("Empty geometry — enter valid points")
+
+    with tab_winding:
+        st.write(
+            "**CW vs CCW** — Polygons wound clockwise or counter-clockwise."
+        )
+        c1, c2 = st.columns(2)
+        with c1:
+            st.subheader("Counter-Clockwise (CCW)")
+            ccw = Geometry.from_points(
+                [(2, 2), (10, 2), (10, 10), (2, 10)], close=True
+            )
+            fig1, ax1 = plt.subplots(figsize=(5, 5))
+            plot_geometry(ax1, ccw, color="steelblue", linewidth=2.5)
+            w1 = get_path_winding_order(ccw, 0)
+            ax1.set_title(f"CCW — {w1}", fontsize=12)
+            ax1.set_aspect("equal")
+            ax1.grid(True, alpha=0.3)
+            ax1.set_xlim(0, 12)
+            ax1.set_ylim(0, 12)
+            st.pyplot(fig1)
+        with c2:
+            st.subheader("Clockwise (CW)")
+            cw = Geometry()
+            cw.move_to(2, 2, 0)
+            cw.line_to(2, 10, 0)
+            cw.line_to(10, 10, 0)
+            cw.line_to(10, 2, 0)
+            fig2, ax2 = plt.subplots(figsize=(5, 5))
+            plot_geometry(ax2, cw, color="tomato", linewidth=2.5)
+            w2 = get_path_winding_order(cw, 0)
+            ax2.set_title(f"CW — {w2}", fontsize=12)
+            ax2.set_aspect("equal")
+            ax2.grid(True, alpha=0.3)
+            ax2.set_xlim(0, 12)
+            ax2.set_ylim(0, 12)
+            st.pyplot(fig2)
+
+
 st.set_page_config(layout="wide", page_title="raygeo visual test")
 st.title("raygeo Visual Test")
 
@@ -1675,6 +2336,11 @@ page = st.sidebar.radio(
     "Page",
     [
         "Geometry",
+        "Arc Linearization",
+        "Bezier Curves",
+        "Circle Intersections",
+        "Line Intersections",
+        "Geometry Analysis",
         "Polygon Boolean",
         "Polygon Offset",
         "Image Processing",
@@ -1691,6 +2357,16 @@ page = st.sidebar.radio(
 
 if page == "Geometry":
     page_geometry()
+elif page == "Arc Linearization":
+    page_arc_linearize()
+elif page == "Bezier Curves":
+    page_bezier_curves()
+elif page == "Circle Intersections":
+    page_circle_intersections()
+elif page == "Line Intersections":
+    page_line_intersections()
+elif page == "Geometry Analysis":
+    page_analysis()
 elif page == "Polygon Boolean":
     page_polygon_boolean()
 elif page == "Polygon Offset":

@@ -285,8 +285,9 @@ def test_linearize_bezier_adaptive_flat():
 
     points = linearize_bezier_adaptive(p0, c1, c2, p1, tolerance_sq=0.01)
 
-    assert len(points) == 1
-    assert points[0] == p1
+    assert len(points) == 2
+    assert points[0] == p0
+    assert points[1] == p1
 
 
 def test_linearize_bezier_adaptive_curved():
@@ -302,7 +303,9 @@ def test_linearize_bezier_adaptive_curved():
     )
 
     assert len(points_fine) > len(points_coarse)
+    assert points_fine[0] == p0
     assert points_fine[-1] == p1
+    assert points_coarse[0] == p0
     assert points_coarse[-1] == p1
 
 

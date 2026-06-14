@@ -55,7 +55,7 @@ Supports hull-based collision detection and sheet world offsets.
 **Returns:** (x, y) position or None.
 
 | Parameter            | Type                                                                                                | Description                                    |
-| -------------------- | --------------------------------------------------------------------------------------------------- | ---------------------------------------------- | --- |
+| -------------------- | --------------------------------------------------------------------------------------------------- | ---------------------------------------------- |
 | `ifp_polygons`       | `collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]]`                           | IFP polygons (valid placement region).         |
 | `part_polygons`      | `collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]]`                           | Part polygons to place.                        |
 | `part_hulls`         | `collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]]`                           | Convex hulls for collision (may be empty).     |
@@ -66,7 +66,7 @@ Supports hull-based collision detection and sheet world offsets.
 | `spacing`            | `float = 1`                                                                                         | Minimum spacing between parts.                 |
 | `min_area`           | `float = 1`                                                                                         | Minimum overlap area (clipper coords).         |
 | `curve_tolerance`    | `float = 0.5`                                                                                       | Curve tolerance for distance filtering.        |
-| _Returns_            | `tuple[float, float]                                                                                | None`                                          |     |
+| _Returns_            | `tuple[float, float] &#124; None`                                                                   |                                                |
 
 ### `find_valid_position_nfp()`
 
@@ -80,7 +80,7 @@ placement regions.
 **Returns:** (x, y) position or None.
 
 | Parameter            | Type                                                                                                | Description                                    |
-| -------------------- | --------------------------------------------------------------------------------------------------- | ---------------------------------------------- | --- |
+| -------------------- | --------------------------------------------------------------------------------------------------- | ---------------------------------------------- |
 | `ifp_polygons`       | `collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]]`                           | IFP polygons (valid placement region).         |
 | `part_polygons`      | `collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]]`                           | Part polygons to place.                        |
 | `part_hulls`         | `collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]]`                           | Convex hulls for collision (may be empty).     |
@@ -91,7 +91,7 @@ placement regions.
 | `spacing`            | `float = 1`                                                                                         | Minimum spacing between parts.                 |
 | `min_area`           | `float = 1`                                                                                         | Minimum overlap area (clipper coords).         |
 | `curve_tolerance`    | `float = 0.5`                                                                                       | Curve tolerance for distance filtering.        |
-| _Returns_            | `tuple[float, float]                                                                                | None`                                          |     |
+| _Returns_            | `tuple[float, float] &#124; None`                                                                   |                                                |
 
 ### `find_valid_position_scored()`
 
@@ -105,7 +105,7 @@ back to NFP-region candidates. Scores candidates and picks the best valid one.
 **Returns:** (x, y) position or None.
 
 | Parameter            | Type                                                                                                | Description                                    |
-| -------------------- | --------------------------------------------------------------------------------------------------- | ---------------------------------------------- | --- |
+| -------------------- | --------------------------------------------------------------------------------------------------- | ---------------------------------------------- |
 | `ifp_polygons`       | `collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]]`                           | IFP polygons (valid placement region).         |
 | `part_polygons`      | `collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]]`                           | Part polygons to place.                        |
 | `part_hulls`         | `collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]]`                           | Convex hulls for collision (may be empty).     |
@@ -116,7 +116,7 @@ back to NFP-region candidates. Scores candidates and picks the best valid one.
 | `spacing`            | `float = 1`                                                                                         | Minimum spacing between parts.                 |
 | `min_area`           | `float = 1`                                                                                         | Minimum overlap area (clipper coords).         |
 | `curve_tolerance`    | `float = 0.5`                                                                                       | Curve tolerance for distance filtering.        |
-| _Returns_            | `tuple[float, float]                                                                                | None`                                          |     |
+| _Returns_            | `tuple[float, float] &#124; None`                                                                   |                                                |
 
 ### `generate_bottom_left_candidates()`
 

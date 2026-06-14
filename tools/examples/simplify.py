@@ -39,35 +39,42 @@ def generate_examples(output_dir):
 
     axes[0].set_title(f"Original ({len(geom)} cmds)")
     plot_geometry(
-        axes[0], geom, color="tomato", linewidth=2,     )
+        axes[0],
+        geom,
+        color="tomato",
+        linewidth=2,
+    )
     axes[0].set_aspect("equal")
     axes[0].grid(True, alpha=0.3)
 
-    axes[1].set_title(
-        f"Simplify tol={tol3} ({len(simplified3)} cmds)"
-    )
+    axes[1].set_title(f"Simplify tol={tol3} ({len(simplified3)} cmds)")
     plot_geometry(
-        axes[1], simplified3, color="tomato", linewidth=2,
+        axes[1],
+        simplified3,
+        color="tomato",
+        linewidth=2,
         show_points=True,
     )
     axes[1].set_aspect("equal")
     axes[1].grid(True, alpha=0.3)
 
-    axes[2].set_title(
-        f"Simplify tol={tol5} ({len(simplified5)} cmds)"
-    )
+    axes[2].set_title(f"Simplify tol={tol5} ({len(simplified5)} cmds)")
     plot_geometry(
-        axes[2], simplified5, color="steelblue", linewidth=2,
+        axes[2],
+        simplified5,
+        color="steelblue",
+        linewidth=2,
         show_points=True,
     )
     axes[2].set_aspect("equal")
     axes[2].grid(True, alpha=0.3)
 
-    axes[3].set_title(
-        f"Fit + Linearize tol={tol8} ({len(linearized)} cmds)"
-    )
+    axes[3].set_title(f"Fit + Linearize tol={tol8} ({len(linearized)} cmds)")
     plot_geometry(
-        axes[3], linearized, color="forestgreen", linewidth=2,
+        axes[3],
+        linearized,
+        color="forestgreen",
+        linewidth=2,
         show_points=True,
     )
     axes[3].set_aspect("equal")

@@ -73,10 +73,10 @@ sidebar_position: 33
 
 `find_mask_bounding_box(mask: numpy.ndarray) -> tuple[int, int, int, int] | None`
 
-| Parameter | Type                       | Description |
-| --------- | -------------------------- | ----------- | --- |
-| `mask`    | `numpy.ndarray`            |             |
-| _Returns_ | `tuple[int, int, int, int] | None`       |     |
+| Parameter | Type                                    | Description |
+| --------- | --------------------------------------- | ----------- |
+| `mask`    | `numpy.ndarray`                         |             |
+| _Returns_ | `tuple[int, int, int, int] &#124; None` |             |
 
 ### `find_segments()`
 
@@ -105,17 +105,17 @@ sidebar_position: 33
 
 `generate_scan_lines(bbox: tuple[int, int, int, int], image_size: tuple[int, int], pixels_per_mm: tuple[float, float], line_interval_mm: float, direction_degrees: float = 0, offset_x_mm: float = 0, offset_y_mm: float = 0, global_center_mm: tuple[float, float] | None = None) -> list[ScanLine]`
 
-| Parameter           | Type                        | Description  |
-| ------------------- | --------------------------- | ------------ | --- |
-| `bbox`              | `tuple[int, int, int, int]` |              |
-| `image_size`        | `tuple[int, int]`           |              |
-| `pixels_per_mm`     | `tuple[float, float]`       |              |
-| `line_interval_mm`  | `float`                     |              |
-| `direction_degrees` | `float = 0`                 |              |
-| `offset_x_mm`       | `float = 0`                 |              |
-| `offset_y_mm`       | `float = 0`                 |              |
-| `global_center_mm`  | `tuple[float, float]        | None = None` |     |
-| _Returns_           | `list[ScanLine]`            |              |
+| Parameter           | Type                                     | Description |
+| ------------------- | ---------------------------------------- | ----------- |
+| `bbox`              | `tuple[int, int, int, int]`              |             |
+| `image_size`        | `tuple[int, int]`                        |             |
+| `pixels_per_mm`     | `tuple[float, float]`                    |             |
+| `line_interval_mm`  | `float`                                  |             |
+| `direction_degrees` | `float = 0`                              |             |
+| `offset_x_mm`       | `float = 0`                              |             |
+| `offset_y_mm`       | `float = 0`                              |             |
+| `global_center_mm`  | `tuple[float, float] &#124; None = None` |             |
+| _Returns_           | `list[ScanLine]`                         |             |
 
 ### `line_pixels()`
 

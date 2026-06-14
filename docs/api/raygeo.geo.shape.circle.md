@@ -43,6 +43,10 @@ Get intersection points of two circles.
 | `r2`      | `float`         | Radius of second circle.        |
 | _Returns_ | `types.Polygon` |                                 |
 
+![Circle-circle and line-circle intersection points](images/circle-intersections.png)
+
+_Circle-circle and line-circle intersection points_
+
 ### `get_line_circle_intersections()`
 
 `get_line_circle_intersections(p1: types.Point, p2: types.Point, center: types.Point, radius: float) -> types.Polygon`

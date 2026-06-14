@@ -251,6 +251,11 @@ def make_pattern(w, h, pattern):
         dist = np.sqrt((xx - cx) ** 2 + (yy - cy) ** 2)
         r = min(w, h) / 2 * 0.8
         arr = np.where(dist < r, 255, 0).astype(np.uint8)
+    elif pattern == "Radial":
+        cx, cy = w / 2, h / 2
+        dist = np.sqrt((xx - cx) ** 2 + (yy - cy) ** 2)
+        r = min(w, h) / 2 * 0.8
+        arr = np.where(dist < r, ((1 - dist / r) * 255), 0).astype(np.uint8)
     else:
         rng = np.random.default_rng(42)
         arr = rng.integers(0, 256, (h, w), dtype=np.uint8)

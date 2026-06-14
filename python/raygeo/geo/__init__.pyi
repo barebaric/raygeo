@@ -274,14 +274,12 @@ class Geometry:
         Simplify the geometry using Ramer-Douglas-Peucker.
         
         :param tolerance: Maximum deviation from original.
-        :returns: A new simplified Geometry (original is not modified).
         """
     def linearize(self, tolerance: builtins.float) -> Geometry:
         r"""
         Convert all curves to line segments.
         
         :param tolerance: Maximum deviation from curves.
-        :returns: A new linearized Geometry (original is not modified).
         """
     def fit_curves(self, tolerance: builtins.float, beziers: builtins.bool = True, arcs: builtins.bool = True, on_progress: typing.Optional[typing.Any] = None) -> Geometry:
         r"""

@@ -377,21 +377,15 @@ pub fn is_bezier_flat(
     let norm_sq = vx * vx + vy * vy;
 
     if norm_sq < 1e-9 {
-        // Degenerate case: zero-length chord
         let d1_sq = (c1.0 - p0.0).powi(2) + (c1.1 - p0.1).powi(2);
         let d2_sq = (c2.0 - p0.0).powi(2) + (c2.1 - p0.1).powi(2);
-        d1_sq < tolerance_sq && d2_sq < tolerance_sq
+        d1_sq <= tolerance_sq && d2_sq <= tolerance_sq
     } else {
-        // Test cross product distance from chord line
-        let term1 = -vy;
-        let term2 = vx;
-        let term3 = p0.0 * p1.1 - p0.1 * p1.0;
-
-        let cross1 = (term1 * c1.0 + term2 * c1.1 - term3).abs();
-        let cross2 = (term1 * c2.0 + term2 * c2.1 - term3).abs();
-
-        let limit = tolerance_sq * norm_sq;
-        cross1 * cross1 < limit && cross2 * cross2 < limit
+        let cross1 = vx * (c1.1 - p0.1) - vy * (c1.0 - p0.0);
+        let cross2 = vx * (c2.1 - p0.1) - vy * (c2.0 - p0.0);
+        let dist1_sq = (cross1 * cross1) / norm_sq;
+        let dist2_sq = (cross2 * cross2) / norm_sq;
+        dist1_sq <= tolerance_sq && dist2_sq <= tolerance_sq
     }
 }
 
@@ -403,44 +397,24 @@ pub fn linearize_bezier_adaptive(
     tolerance_sq: f64,
     max_depth: usize,
 ) -> Polygon {
-    let mut points: Polygon = vec![];
+    let mut points: Polygon = vec![p0];
 
-    enum Frame {
-        Subdivide(CubicBezier, usize),
-        EmitMidpoint(Point),
-    }
+    let mut stack: Vec<(CubicBezier, usize)> =
+        vec![(CubicBezier(p0, c1, c2, p1), 0)];
 
-    let mut stack: Vec<Frame> =
-        vec![Frame::Subdivide(CubicBezier(p0, c1, c2, p1), 0)];
-
-    while let Some(frame) = stack.pop() {
-        match frame {
-            Frame::EmitMidpoint(r) => points.push(r),
-            Frame::Subdivide(curve, depth) => {
-                if depth >= max_depth
-                    || is_bezier_flat(
-                        curve.0,
-                        curve.1,
-                        curve.2,
-                        curve.3,
-                        tolerance_sq,
-                    )
-                {
-                    continue;
-                }
-
-                let CubicBezier(p0, c1, c2, p1) = curve;
-                let (left, right) = split_bezier(p0, c1, c2, p1, 0.5);
-                let r = left.3;
-
-                stack.push(Frame::Subdivide(right, depth + 1));
-                stack.push(Frame::EmitMidpoint(r));
-                stack.push(Frame::Subdivide(left, depth + 1));
-            }
+    while let Some((curve, depth)) = stack.pop() {
+        let CubicBezier(sp0, sc1, sc2, sp1) = curve;
+        if depth >= max_depth
+            || is_bezier_flat(sp0, sc1, sc2, sp1, tolerance_sq)
+        {
+            points.push(sp1);
+        } else {
+            let (left, right) = split_bezier(sp0, sc1, sc2, sp1, 0.5);
+            stack.push((right, depth + 1));
+            stack.push((left, depth + 1));
         }
     }
 
-    points.push(p1);
     points
 }
 

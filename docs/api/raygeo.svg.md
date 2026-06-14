@@ -39,13 +39,13 @@ Supports M/m, L/l, H/h, V/v, C/c, Z/z commands. Cubic Bezier curves are flattene
 
 **Returns:** List of Geometry objects, one per subpath.
 
-| Parameter   | Type                          | Description                                   |
-| ----------- | ----------------------------- | --------------------------------------------- | ------------------------------------------------------- |
-| `path_data` | `str`                         | SVG path d attribute string.                  |
-| `transform` | `numpy.NDArray[numpy.float64] | None = None`                                  | 3x3 affine transformation matrix, or None for identity. |
-| `scale_x`   | `float = 1`                   | X-axis scale factor for coordinate transform. |
-| `scale_y`   | `float = 1`                   | Y-axis scale factor for coordinate transform. |
-| _Returns_   | `list[Geometry]`              |                                               |
+| Parameter   | Type                                              | Description                                             |
+| ----------- | ------------------------------------------------- | ------------------------------------------------------- |
+| `path_data` | `str`                                             | SVG path d attribute string.                            |
+| `transform` | `numpy.NDArray[numpy.float64] &#124; None = None` | 3x3 affine transformation matrix, or None for identity. |
+| `scale_x`   | `float = 1`                                       | X-axis scale factor for coordinate transform.           |
+| `scale_y`   | `float = 1`                                       | Y-axis scale factor for coordinate transform.           |
+| _Returns_   | `list[Geometry]`                                  |                                                         |
 
 ### `parse_svg_transform()`
 

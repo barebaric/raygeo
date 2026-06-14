@@ -63,6 +63,10 @@ Flatten a bezier curve into points.
 | `pts`              | `list`          | Output list to append points to. |
 | _Returns_          | `None`          |                                  |
 
+![Bezier flattening via adaptive subdivision](images/bezier-flatten.png)
+
+_Bezier flattening via adaptive subdivision_
+
 ### `get_bezier_bounds()`
 
 `get_bezier_bounds(p0: types.Point, p1: types.Point, p2: types.Point, p3: types.Point) -> types.Rect`
@@ -127,6 +131,10 @@ Get a point on a cubic bezier at parameter t.
 | `p3`      | `types.Point` | End control point (x, y).    |
 | `t`       | `float`       | Parameter value (0..1).      |
 | _Returns_ | `types.Point` |                              |
+
+![Bezier point evaluation at parameter t](images/bezier-point-at.png)
+
+_Bezier point evaluation at parameter t_
 
 ### `get_bezier_rect_intersections()`
 
@@ -269,3 +277,7 @@ Split a cubic bezier at parameter t.
 | `p3`      | `types.Point`                                                                                                                 | End control point (x, y).    |
 | `t`       | `float`                                                                                                                       | Split parameter (0..1).      |
 | _Returns_ | `tuple[tuple[types.Point, types.Point, types.Point, types.Point], tuple[types.Point, types.Point, types.Point, types.Point]]` |                              |
+
+![Bezier split at parameter t](images/bezier-split.png)
+
+_Bezier split at parameter t_

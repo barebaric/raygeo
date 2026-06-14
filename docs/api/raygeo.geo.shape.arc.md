@@ -221,6 +221,10 @@ Linearize an arc into line segments.
 | `resolution`  | `float = 0.1`                               | Maximum segment length.                 |
 | _Returns_     | `list[tuple[types.Point3D, types.Point3D]]` |                                         |
 
+![Arc linearization: coarse and fine resolution](images/arc-linearize.png)
+
+_Arc linearization: coarse and fine resolution_
+
 ### `normalize_angle()`
 
 `normalize_angle(angle: float) -> float`

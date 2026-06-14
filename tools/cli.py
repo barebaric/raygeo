@@ -138,6 +138,56 @@ _INLINE_IMAGE_MAP = {
     "raygeo.geo.algo.smooth.md": [
         ("smooth_polyline", "smooth", "Gaussian smoothing"),
     ],
+    "raygeo.geo.shape.arc.md": [
+        (
+            "linearize_arc",
+            "arc-linearize",
+            "Arc linearization: coarse and fine resolution",
+        ),
+    ],
+    "raygeo.geo.shape.bezier.md": [
+        (
+            "split_bezier",
+            "bezier-split",
+            "Bezier split at parameter t",
+        ),
+        (
+            "get_bezier_point_at",
+            "bezier-point-at",
+            "Bezier point evaluation at parameter t",
+        ),
+        (
+            "flatten_bezier",
+            "bezier-flatten",
+            "Bezier flattening via adaptive subdivision",
+        ),
+    ],
+    "raygeo.geo.shape.circle.md": [
+        (
+            "get_circle_circle_intersections",
+            "circle-intersections",
+            "Circle-circle and line-circle intersection points",
+        ),
+    ],
+    "raygeo.geo.shape.line.md": [
+        (
+            "get_line_line_intersection",
+            "line-intersections",
+            "Line-line and segment intersection",
+        ),
+        (
+            "get_point_line_distance",
+            "line-point-distance",
+            "Perpendicular distance from a point to a line",
+        ),
+    ],
+    "raygeo.geo.algo.analysis.md": [
+        (
+            "get_area",
+            "analysis-area-winding",
+            "Polygon area and winding order analysis",
+        ),
+    ],
     "raygeo.nest.md": [
         (None, "nesting", "Part nesting on a sheet"),
     ],

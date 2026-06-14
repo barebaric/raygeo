@@ -19,11 +19,11 @@ Compute a concave (shrink-wrap) hull with Bézier gravity.
 
 **Returns:** Concave hull as Geometry in pixel coords, or None.
 
-| Parameter       | Type            | Description                                      |
-| --------------- | --------------- | ------------------------------------------------ | --- |
-| `boolean_image` | `numpy.ndarray` | 2D boolean array.                                |
-| `gravity`       | `float = 0.1`   | Shrink-wrap factor 0.0-1.0. 0 gives convex hull. |
-| _Returns_       | `Geometry       | None`                                            |     |
+| Parameter       | Type                   | Description                                      |
+| --------------- | ---------------------- | ------------------------------------------------ |
+| `boolean_image` | `numpy.ndarray`        | 2D boolean array.                                |
+| `gravity`       | `float = 0.1`          | Shrink-wrap factor 0.0-1.0. 0 gives convex hull. |
+| _Returns_       | `Geometry &#124; None` |                                                  |
 
 ![Concave vs convex hull](images/concave-hull.png)
 
@@ -37,10 +37,10 @@ Compute a single convex hull enclosing all content.
 
 **Returns:** Convex hull as Geometry in pixel coords, or None.
 
-| Parameter       | Type            | Description       |
-| --------------- | --------------- | ----------------- | --- |
-| `boolean_image` | `numpy.ndarray` | 2D boolean array. |
-| _Returns_       | `Geometry       | None`             |     |
+| Parameter       | Type                   | Description       |
+| --------------- | ---------------------- | ----------------- |
+| `boolean_image` | `numpy.ndarray`        | 2D boolean array. |
+| _Returns_       | `Geometry &#124; None` |                   |
 
 ### `get_hulls_from_image()`
 

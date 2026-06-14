@@ -417,10 +417,10 @@ Get the tangent vector at parameter t on a segment.
 
 Get the typed command at the given index.
 
-| Parameter | Type  | Description    |
-| --------- | ----- | -------------- | --- | ------ | ----- | --- |
-| `index`   | `int` | Command index. |
-| _Returns_ | `Move | Line           | Arc | Bezier | None` |     |
+| Parameter | Type                                                    | Description    |
+| --------- | ------------------------------------------------------- | -------------- |
+| `index`   | `int`                                                   | Command index. |
+| _Returns_ | `Move &#124; Line &#124; Arc &#124; Bezier &#124; None` |                |
 
 ### `get_valid_contours_data()`
 
@@ -504,9 +504,9 @@ Iterate over all commands as typed command objects.
 
 Iterate over all commands as typed command objects.
 
-| Parameter | Type       | Description |
-| --------- | ---------- | ----------- | --- | -------- | --- |
-| _Returns_ | `list[Move | Line        | Arc | Bezier]` |     |
+| Parameter | Type                                              | Description |
+| --------- | ------------------------------------------------- | ----------- |
+| _Returns_ | `list[Move &#124; Line &#124; Arc &#124; Bezier]` |             |
 
 ### `line_to()`
 
@@ -526,8 +526,6 @@ Draw a line to the given coordinates.
 `linearize(tolerance: float) -> Geometry`
 
 Convert all curves to line segments.
-
-**Returns:** A new linearized Geometry (original is not modified).
 
 | Parameter   | Type       | Description                    |
 | ----------- | ---------- | ------------------------------ |
@@ -650,8 +648,6 @@ commands.
 `simplify(tolerance: float) -> Geometry`
 
 Simplify the geometry using Ramer-Douglas-Peucker.
-
-**Returns:** A new simplified Geometry (original is not modified).
 
 | Parameter   | Type       | Description                      |
 | ----------- | ---------- | -------------------------------- |

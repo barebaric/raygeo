@@ -659,6 +659,9 @@ def render_members(members: dict, mod_doc: str | None) -> str:
     has_funcs = bool(members["functions"])
     has_re = bool(members["re_exports"])
 
+    def _escape_table_pipe(text: str) -> str:
+        return text.replace("|", "&#124;")
+
     def _render_params(
         params: list[dict],
         param_docs: dict[str, str],
@@ -671,12 +674,12 @@ def render_members(members: dict, mod_doc: str | None) -> str:
         lines.append("| --- | --- | --- |")
         for p in params:
             ptype = p.get("type", "")
-            ptype_md = f"`{ptype}`" if ptype else ""
+            ptype_md = f"`{_escape_table_pipe(ptype)}`" if ptype else ""
             desc = param_docs.get(p["name"], "")
             lines.append(f"| `{p['name']}` | {ptype_md} | {desc} |")
         if "->" in signature:
             ret = signature.split("->", 1)[1].strip()
-            lines.append(f"| *Returns* | `{ret}` |  |")
+            lines.append(f"| *Returns* | `{_escape_table_pipe(ret)}` |  |")
         lines.append("")
 
     if has_alias:

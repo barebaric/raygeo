@@ -90,6 +90,10 @@ Get the intersection of two infinite lines.
 | `p4`      | `types.Point`           | Second point on line 2. |
 | _Returns_ | `Optional[types.Point]` |                         |
 
+![Line-line and segment intersection](images/line-intersections.png)
+
+_Line-line and segment intersection_
+
 ### `get_line_segment_closest_point()`
 
 `get_line_segment_closest_point(seg_p1: types.Point, seg_p2: types.Point, x: float, y: float) -> tuple[float, types.Point, float]`
@@ -165,6 +169,10 @@ Get the distance from a point to a line.
 | `line_p1` | `types.Point` | First point on the line.  |
 | `line_p2` | `types.Point` | Second point on the line. |
 | _Returns_ | `float`       |                           |
+
+![Perpendicular distance from a point to a line](images/line-point-distance.png)
+
+_Perpendicular distance from a point to a line_
 
 ### `is_point_on_line_segment()`
 

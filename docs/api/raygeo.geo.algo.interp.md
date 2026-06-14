@@ -77,9 +77,9 @@ Solve quadratic equation a x^2 + b x + c = 0.
 
 **Returns:** (root1, root2), each None if no real root.
 
-| Parameter | Type         | Description            |
-| --------- | ------------ | ---------------------- | ------ | --- |
-| `a`       | `float`      | Quadratic coefficient. |
-| `b`       | `float`      | Linear coefficient.    |
-| `c`       | `float`      | Constant term.         |
-| _Returns_ | `tuple[float | None, float            | None]` |     |
+| Parameter | Type                                          | Description            |
+| --------- | --------------------------------------------- | ---------------------- |
+| `a`       | `float`                                       | Quadratic coefficient. |
+| `b`       | `float`                                       | Linear coefficient.    |
+| `c`       | `float`                                       | Constant term.         |
+| _Returns_ | `tuple[float &#124; None, float &#124; None]` |                        |
