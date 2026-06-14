@@ -9,6 +9,39 @@ use crate::geo::shape::arc::linearize_arc;
 use crate::geo::shape::point::transform_point;
 use crate::types::{Command, Point, Point3D, Rect};
 
+/// 3x3 identity matrix.
+pub fn identity_mat3() -> [[f64; 3]; 3] {
+    let mut m = [[0.0f64; 3]; 3];
+    m[0][0] = 1.0;
+    m[1][1] = 1.0;
+    m[2][2] = 1.0;
+    m
+}
+
+/// Multiply two 3x3 matrices.
+pub fn mat3_mul(a: &[[f64; 3]; 3], b: &[[f64; 3]; 3]) -> [[f64; 3]; 3] {
+    let mut r = [[0.0f64; 3]; 3];
+    for i in 0..3 {
+        for j in 0..3 {
+            r[i][j] = a[i][0] * b[0][j] + a[i][1] * b[1][j] + a[i][2] * b[2][j];
+        }
+    }
+    r
+}
+
+/// Transform a 2D point by a 3x3 affine matrix (homogeneous coordinates).
+pub fn mat3_transform(m: &[[f64; 3]; 3], x: f64, y: f64) -> (f64, f64) {
+    (
+        m[0][0] * x + m[0][1] * y + m[0][2],
+        m[1][0] * x + m[1][1] * y + m[1][2],
+    )
+}
+
+/// Determinant of the 2x2 sub-matrix (linear part) of a 3x3 matrix.
+pub fn mat3_det2x2(m: &[[f64; 3]; 3]) -> f64 {
+    m[0][0] * m[1][1] - m[0][1] * m[1][0]
+}
+
 fn transform_vec(matrix: &[[f64; 4]; 4], x: f64, y: f64) -> (f64, f64) {
     let vx = matrix[0][0] * x + matrix[0][1] * y;
     let vy = matrix[1][0] * x + matrix[1][1] * y;

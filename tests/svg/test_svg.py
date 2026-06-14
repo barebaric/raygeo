@@ -246,3 +246,248 @@ class TestGeometryToSvgPath:
         geo.line_to(1.0, 1.0, 0.0)
         path = geometry_to_svg_path(geo, 100, 100)
         assert path == "M 0.000 100.000 L 100.000 0.000"
+
+
+# ---------------------------------------------------------------------------
+# Extended SVG path commands (Q, T, S, A)
+# ---------------------------------------------------------------------------
+
+
+class TestQuadraticBezier:
+    def test_quadratic_absolute(self):
+        geos = parse_svg_path_data("M 0 0 Q 10 20 30 0")
+        assert len(geos) == 1
+        assert not geos[0].is_empty()
+
+    def test_quadratic_relative(self):
+        geos = parse_svg_path_data("M 0 0 q 10 20 30 0")
+        assert len(geos) == 1
+        assert not geos[0].is_empty()
+
+    def test_smooth_quadratic_absolute(self):
+        geos = parse_svg_path_data("M 0 0 Q 10 20 30 0 T 60 0")
+        assert len(geos) == 1
+        assert not geos[0].is_empty()
+
+    def test_smooth_quadratic_relative(self):
+        geos = parse_svg_path_data("M 0 0 q 10 20 30 0 t 30 0")
+        assert len(geos) == 1
+        assert not geos[0].is_empty()
+
+    def test_smooth_quadratic_no_prev(self):
+        geos = parse_svg_path_data("M 0 0 T 30 0")
+        assert len(geos) == 1
+        assert not geos[0].is_empty()
+
+
+class TestSmoothCubic:
+    def test_smooth_cubic_absolute(self):
+        geos = parse_svg_path_data("M 0 0 C 10 0 20 10 30 0 S 50 10 60 0")
+        assert len(geos) == 1
+        assert not geos[0].is_empty()
+
+    def test_smooth_cubic_relative(self):
+        geos = parse_svg_path_data("M 0 0 c 10 0 20 10 30 0 s 20 10 30 0")
+        assert len(geos) == 1
+        assert not geos[0].is_empty()
+
+    def test_smooth_cubic_no_prev(self):
+        geos = parse_svg_path_data("M 0 0 S 20 10 30 0")
+        assert len(geos) == 1
+        assert not geos[0].is_empty()
+
+
+class TestArc:
+    def test_arc_circular_absolute(self):
+        geos = parse_svg_path_data("M 0 0 A 10 10 0 0 1 20 0")
+        assert len(geos) == 1
+        assert not geos[0].is_empty()
+
+    def test_arc_circular_relative(self):
+        geos = parse_svg_path_data("M 0 0 a 10 10 0 0 1 20 0")
+        assert len(geos) == 1
+        assert not geos[0].is_empty()
+
+    def test_arc_elliptical(self):
+        geos = parse_svg_path_data("M 0 0 A 20 10 45 0 1 30 0")
+        assert len(geos) == 1
+        assert not geos[0].is_empty()
+
+    def test_arc_large_flag(self):
+        geos = parse_svg_path_data("M 0 0 A 10 10 0 1 1 20 0")
+        assert len(geos) == 1
+        assert not geos[0].is_empty()
+
+    def test_arc_sweep_flag(self):
+        geos = parse_svg_path_data("M 0 0 A 10 10 0 0 0 20 0")
+        assert len(geos) == 1
+        assert not geos[0].is_empty()
+
+
+# ---------------------------------------------------------------------------
+# Extended transforms (scale, rotate, matrix, skewX, skewY)
+# ---------------------------------------------------------------------------
+
+
+class TestExtendedTransform:
+    def test_scale(self):
+        m = parse_svg_transform("scale(2)")
+        assert m.shape == (3, 3)
+
+    def test_scale_xy(self):
+        m = parse_svg_transform("scale(2, 3)")
+        assert m.shape == (3, 3)
+
+    def test_rotate(self):
+        m = parse_svg_transform("rotate(45)")
+        assert m.shape == (3, 3)
+
+    def test_rotate_with_center(self):
+        m = parse_svg_transform("rotate(45, 10, 20)")
+        assert m.shape == (3, 3)
+
+    def test_skew_x(self):
+        m = parse_svg_transform("skewX(30)")
+        assert m.shape == (3, 3)
+
+    def test_skew_y(self):
+        m = parse_svg_transform("skewY(30)")
+        assert m.shape == (3, 3)
+
+    def test_matrix(self):
+        m = parse_svg_transform("matrix(1, 0, 0, 1, 10, 20)")
+        assert m.shape == (3, 3)
+
+    def test_combined_transforms(self):
+        m = parse_svg_transform("translate(10, 20) scale(2) rotate(45)")
+        assert m.shape == (3, 3)
+
+    def test_combined_with_matrix(self):
+        m = parse_svg_transform("translate(5, 10) matrix(1, 0, 0, 1, 3, 4)")
+        assert m.shape == (3, 3)
+
+
+# ---------------------------------------------------------------------------
+# Basic shapes (rect, circle, ellipse, line, polyline, polygon)
+# ---------------------------------------------------------------------------
+
+
+class TestSvgBasicShapes:
+    def test_rect(self):
+        svg = (
+            '<svg xmlns="http://www.w3.org/2000/svg">'
+            '<rect x="0" y="0" width="10" height="20"/>'
+            "</svg>"
+        )
+        geos = svg_string_to_geometries(svg)
+        assert len(geos) == 1
+
+    def test_rect_rounded(self):
+        svg = (
+            '<svg xmlns="http://www.w3.org/2000/svg">'
+            '<rect x="0" y="0" width="20" height="20" rx="5" ry="5"/>'
+            "</svg>"
+        )
+        geos = svg_string_to_geometries(svg)
+        assert len(geos) == 1
+
+    def test_circle(self):
+        svg = (
+            '<svg xmlns="http://www.w3.org/2000/svg">'
+            '<circle cx="10" cy="10" r="5"/>'
+            "</svg>"
+        )
+        geos = svg_string_to_geometries(svg)
+        assert len(geos) == 1
+
+    def test_ellipse(self):
+        svg = (
+            '<svg xmlns="http://www.w3.org/2000/svg">'
+            '<ellipse cx="10" cy="10" rx="8" ry="5"/>'
+            "</svg>"
+        )
+        geos = svg_string_to_geometries(svg)
+        assert len(geos) == 1
+
+    def test_line(self):
+        svg = (
+            '<svg xmlns="http://www.w3.org/2000/svg">'
+            '<line x1="0" y1="0" x2="10" y2="20"/>'
+            "</svg>"
+        )
+        geos = svg_string_to_geometries(svg)
+        assert len(geos) == 1
+
+    def test_polyline(self):
+        svg = (
+            '<svg xmlns="http://www.w3.org/2000/svg">'
+            '<polyline points="0,0 10,0 10,10"/>'
+            "</svg>"
+        )
+        geos = svg_string_to_geometries(svg)
+        assert len(geos) == 1
+
+    def test_polygon(self):
+        svg = (
+            '<svg xmlns="http://www.w3.org/2000/svg">'
+            '<polygon points="0,0 10,0 10,10 0,10"/>'
+            "</svg>"
+        )
+        geos = svg_string_to_geometries(svg)
+        assert len(geos) == 1
+
+    def test_mixed_shapes(self):
+        svg = (
+            '<svg xmlns="http://www.w3.org/2000/svg">'
+            '<rect x="0" y="0" width="10" height="10"/>'
+            '<circle cx="20" cy="20" r="5"/>'
+            '<path d="M 30 30 L 40 30 L 40 40 Z"/>'
+            "</svg>"
+        )
+        geos = svg_string_to_geometries(svg)
+        assert len(geos) == 3
+
+
+# ---------------------------------------------------------------------------
+# Display / visibility filtering
+# ---------------------------------------------------------------------------
+
+
+class TestSvgVisibility:
+    def test_display_none(self):
+        svg = (
+            '<svg xmlns="http://www.w3.org/2000/svg">'
+            '<path d="M 0 0 L 10 10" display="none"/>'
+            "</svg>"
+        )
+        geos = svg_string_to_geometries(svg)
+        assert len(geos) == 0
+
+    def test_visibility_hidden(self):
+        svg = (
+            '<svg xmlns="http://www.w3.org/2000/svg">'
+            '<path d="M 0 0 L 10 10" visibility="hidden"/>'
+            "</svg>"
+        )
+        geos = svg_string_to_geometries(svg)
+        assert len(geos) == 0
+
+    def test_visible_path_included(self):
+        svg = (
+            '<svg xmlns="http://www.w3.org/2000/svg">'
+            '<path d="M 0 0 L 10 10" visibility="visible"/>'
+            "</svg>"
+        )
+        geos = svg_string_to_geometries(svg)
+        assert len(geos) == 1
+
+    def test_nested_hidden_group(self):
+        svg = (
+            '<svg xmlns="http://www.w3.org/2000/svg">'
+            '<g display="none">'
+            '<path d="M 0 0 L 10 10"/>'
+            "</g>"
+            "</svg>"
+        )
+        geos = svg_string_to_geometries(svg)
+        assert len(geos) == 0
