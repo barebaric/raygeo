@@ -371,7 +371,7 @@ fn group_mixed_continuity(ops: &Ops) -> Vec<Ops> {
     segments
 }
 
-fn kdtree_order_segments(segments: &mut [Ops]) -> Vec<Ops> {
+fn kdtree_order_segments(segments: &mut [Ops], allow_flip: bool) -> Vec<Ops> {
     let n = segments.len();
     if n < 2 {
         return segments.to_vec();
@@ -425,7 +425,7 @@ fn kdtree_order_segments(segments: &mut [Ops]) -> Vec<Ops> {
         };
 
         let seg_idx = sp.segment_idx;
-        let next_seg = if sp.is_exit {
+        let next_seg = if sp.is_exit && allow_flip {
             segments[seg_idx].flip_ops()
         } else {
             segments[seg_idx].clone()
@@ -450,7 +450,7 @@ fn kdtree_order_segments(segments: &mut [Ops]) -> Vec<Ops> {
     ordered
 }
 
-fn two_opt(ordered: &mut [Ops]) {
+fn two_opt(ordered: &mut [Ops], allow_flip: bool) {
     let n = ordered.len();
     if n < 3 {
         return;
@@ -480,8 +480,10 @@ fn two_opt(ordered: &mut [Ops]) {
 
                 if new_cost < curr_cost {
                     let mut sub = ordered[i + 1..=j].to_vec();
-                    for seg in &mut sub {
-                        *seg = seg.flip_ops();
+                    if allow_flip {
+                        for seg in &mut sub {
+                            *seg = seg.flip_ops();
+                        }
                     }
                     sub.reverse();
                     for k in (i + 1)..=j {
@@ -644,7 +646,7 @@ pub fn optimize_travel(
         return;
     }
 
-    optimize_segments(ops, cb);
+    optimize_segments(ops, allow_flip, cb);
 }
 
 fn report_progress(
@@ -741,7 +743,11 @@ fn reassemble_workpieces(ops: &mut Ops, ordered_metas: &[WorkpieceMeta]) {
     }
 }
 
-fn optimize_segments(ops: &mut Ops, progress_cb: &dyn ProgressCallback) {
+fn optimize_segments(
+    ops: &mut Ops,
+    allow_flip: bool,
+    progress_cb: &dyn ProgressCallback,
+) {
     report_progress(progress_cb, 0.0, "Preprocessing for optimization...");
 
     let nons = ops.without_state();
@@ -801,11 +807,12 @@ fn optimize_segments(ops: &mut Ops, progress_cb: &dyn ProgressCallback) {
                 );
 
                 let mut sub_segments = sub_segments.clone();
-                let ordered = kdtree_order_segments(&mut sub_segments);
+                let ordered =
+                    kdtree_order_segments(&mut sub_segments, allow_flip);
 
                 let final_segments = if matches!(job, OptJob::TwoOpt { .. }) {
                     let mut segs = ordered;
-                    two_opt(&mut segs);
+                    two_opt(&mut segs, allow_flip);
                     segs
                 } else {
                     ordered
