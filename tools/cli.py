@@ -78,6 +78,16 @@ _INLINE_IMAGE_MAP = {
         ),
         ("apply_overscan", "overscan", "Overscan applied to raster lines"),
         ("apply_lead_in_out", "lead-in-out", "Lead-in and lead-out paths"),
+        (
+            "optimize_travel",
+            "ops-optimize-travel",
+            "Travel path before and after optimization",
+        ),
+        (
+            "clip_rect",
+            "ops-clip-rect",
+            "Ops paths clipped to a rectangle",
+        ),
     ],
     "raygeo.ops.raster.md": [
         (
@@ -186,6 +196,27 @@ _INLINE_IMAGE_MAP = {
             "get_area",
             "analysis-area-winding",
             "Polygon area and winding order analysis",
+        ),
+    ],
+    "raygeo.geo.algo.minkowski.md": [
+        (
+            "get_polygon_minkowski_sum_convex",
+            "minkowski-sum",
+            "Minkowski sum of two convex polygons",
+        ),
+    ],
+    "raygeo.nest.ifp.md": [
+        (
+            "inner_fit_polygon",
+            "inner-fit-polygon",
+            "Inner Fit Polygon showing valid placement region",
+        ),
+    ],
+    "raygeo.nest.gravity.md": [
+        (
+            "apply_gravity",
+            "gravity",
+            "Gravity tightening: before vs after",
         ),
     ],
     "raygeo.nest.md": [

@@ -117,13 +117,14 @@ fn get_line_segment_intersection_py(
         x: float,
         y: float,
     ) -> types.Point:
-        """Get the closest point on a line to a given point.
+        """Get the closest point on an **infinite line** to a given point.
+        The result may lie beyond the segment endpoints (unclamped projection).
 
         :param line_p1: First point on the line.
         :param line_p2: Second point on the line.
         :param x: X coordinate of target point.
         :param y: Y coordinate of target point.
-        :returns: Closest point (x, y) on the line.
+        :returns: Closest point (x, y) on the infinite line.
         """
 "#,
     module = "raygeo.geo.shape.line"
@@ -178,12 +179,14 @@ fn get_line_segment_closest_point_py(
         line_p1: types.Point,
         line_p2: types.Point,
     ) -> float:
-        """Get the distance from a point to a line.
+        """Get the distance from a point to a **line segment**.
+        The projection is clamped to the segment, so distance is measured to
+        the nearest endpoint when the perpendicular falls outside.
 
         :param point: Point (x, y).
-        :param line_p1: First point on the line.
-        :param line_p2: Second point on the line.
-        :returns: Perpendicular distance.
+        :param line_p1: First point on the segment.
+        :param line_p2: Second point on the segment.
+        :returns: Distance (clamped to segment).
         """
 "#,
     module = "raygeo.geo.shape.line"

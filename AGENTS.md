@@ -11,7 +11,10 @@
 - `make format-python` — format Python only (ruff handles formatting and import sorting)
 - `make test` — run the full test suite
 - `make check` — lint + test
+- `make docs` — re-generate the API docs
 
 # Rules
 
-You are strictly forbidden from editing stubs manually. They are only to be edited using "make stubs".
+- You are strictly forbidden from editing stubs manually. They are only to be edited using "make stubs".
+- You should never edit markdown docs. They are auto-generated.
+- Use make commands when available - avoid calling the underlying tools directly.

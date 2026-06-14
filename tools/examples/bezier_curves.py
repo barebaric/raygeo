@@ -94,9 +94,7 @@ def generate_examples(output_dir):
     fig2, ax = plt.subplots(1, 1, figsize=(7, 6))
     _plot_bezier(ax, curve, "steelblue", linewidth=3)
     mid_pt = get_bezier_point_at(p0, p1, p2, p3, t_mid)
-    ax.plot(
-        mid_pt[0], mid_pt[1], "o", color="tomato", markersize=12, zorder=5
-    )
+    ax.plot(mid_pt[0], mid_pt[1], "o", color="tomato", markersize=12, zorder=5)
     ax.annotate(
         f"t={t_mid}",
         mid_pt,

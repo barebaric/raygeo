@@ -19,6 +19,7 @@ import raygeo.image as img
 from raygeo.geo import Arc, Bezier, Geometry, Line, Move
 from raygeo.geo.algo import hull
 from raygeo.geo.algo.analysis import get_area, get_path_winding_order
+from raygeo.geo.algo.minkowski import get_polygon_minkowski_sum_convex
 from raygeo.geo.shape.arc import linearize_arc
 from raygeo.geo.shape.bezier import (
     flatten_bezier,
@@ -44,6 +45,7 @@ from raygeo.geo.shape.polygon import (
 )
 from raygeo.nest.genetic import GeneticAlgorithm
 from raygeo.nest.gravity import apply_gravity
+from raygeo.nest.ifp import inner_fit_polygon
 from raygeo.nest.placement import place_parts
 from raygeo.ops import Ops
 from raygeo.ops.raster import (
@@ -2329,6 +2331,480 @@ def page_analysis():
             st.pyplot(fig2)
 
 
+def page_minkowski():
+    st.header("Minkowski Sum")
+    st.write("Compute the Minkowski sum of two convex polygons.")
+
+    c1, c2 = st.columns(2)
+    with c1:
+        st.subheader("Polygon A (triangle)")
+        a_size = st.number_input("Triangle size", 5.0, 100.0, 40.0, key="mk_a")
+        a_off = st.number_input(
+            "Triangle offset", -50.0, 50.0, 0.0, key="mk_ao"
+        )
+    with c2:
+        st.subheader("Polygon B (square)")
+        b_size = st.number_input("Square size", 5.0, 100.0, 20.0, key="mk_b")
+        b_off = st.number_input("Square offset", -50.0, 50.0, 0.0, key="mk_bo")
+
+    tri = [
+        (a_off, a_off),
+        (a_off + a_size, a_off),
+        (a_off + a_size / 2, a_off + a_size * 0.875),
+    ]
+    sq = [
+        (b_off, b_off),
+        (b_off + b_size, b_off),
+        (b_off + b_size, b_off + b_size),
+        (b_off, b_off + b_size),
+    ]
+
+    result = get_polygon_minkowski_sum_convex(tri, sq)
+
+    fig, ax = plt.subplots(figsize=(8, 8))
+    plot_polygon(ax, tri, "steelblue", "Triangle (A)", linewidth=2.5)
+    plot_polygon(ax, sq, "tomato", "Square (B)", linewidth=2.5)
+    for poly in result:
+        plot_polygon(
+            ax, poly, "limegreen", "A ⊕ B (Minkowski sum)", linewidth=2.5
+        )
+    ax.set_aspect("equal")
+    ax.grid(True, alpha=0.3)
+    ax.legend(fontsize=11)
+
+    all_pts = tri + sq
+    for p in result:
+        all_pts.extend(p)
+    xs = [p[0] for p in all_pts]
+    ys = [p[1] for p in all_pts]
+    if xs:
+        xmin, xmax = min(xs), max(xs)
+        ymin, ymax = min(ys), max(ys)
+        margin = max(xmax - xmin, ymax - ymin) * 0.25 + 20
+        ax.set_xlim(xmin - margin, xmax + margin)
+        ax.set_ylim(ymin - margin, ymax + margin)
+
+    fig.tight_layout()
+    st.pyplot(fig)
+
+    if result:
+        st.success(f"Minkowski sum produced {len(result)} polygon(s)")
+    else:
+        st.warning("No result — polygons may not be convex")
+
+
+def page_inner_fit_polygon():
+    st.header("Inner Fit Polygon (IFP)")
+    st.write("Compute the valid placement region for a part inside a bin.")
+
+    c1, c2 = st.columns(2)
+    with c1:
+        bin_w = st.number_input("Bin width", 20.0, 300.0, 100.0, key="ifp_bw")
+        bin_h = st.number_input("Bin height", 20.0, 300.0, 80.0, key="ifp_bh")
+    with c2:
+        part_w = st.number_input("Part width", 5.0, 100.0, 30.0, key="ifp_pw")
+        part_h = st.number_input("Part height", 5.0, 100.0, 25.0, key="ifp_ph")
+
+    bin_poly = [(0.0, 0.0), (bin_w, 0.0), (bin_w, bin_h), (0.0, bin_h)]
+    part = [(0.0, 0.0), (part_w, 0.0), (part_w, part_h), (0.0, part_h)]
+
+    ifp_result = inner_fit_polygon(bin_poly, part)
+
+    fig, ax = plt.subplots(figsize=(8, 8))
+    plot_polygon(ax, bin_poly, "black", "Bin", linewidth=2.5)
+    if ifp_result:
+        plot_polygon(
+            ax, ifp_result[0], "limegreen", "IFP (valid region)", linewidth=2.5
+        )
+        xs = [p[0] for p in ifp_result[0]] + [ifp_result[0][0][0]]
+        ys = [p[1] for p in ifp_result[0]] + [ifp_result[0][0][1]]
+        ax.fill(xs, ys, alpha=0.08, color="limegreen")
+
+    sample_x = st.slider(
+        "Sample part X", 0.0, max(bin_w - part_w, 1.0), 15.0, key="ifp_sx"
+    )
+    sample_y = st.slider(
+        "Sample part Y", 0.0, max(bin_h - part_h, 1.0), 12.0, key="ifp_sy"
+    )
+    shifted = [(p[0] + sample_x, p[1] + sample_y) for p in part]
+    plot_polygon(ax, shifted, "tomato", "Part (placed example)", linewidth=2.5)
+    xs_s = [p[0] for p in shifted] + [shifted[0][0]]
+    ys_s = [p[1] for p in shifted] + [shifted[0][1]]
+    ax.fill(xs_s, ys_s, alpha=0.15, color="tomato")
+
+    ax.set_aspect("equal")
+    ax.set_xlim(-bin_w * 0.1, bin_w * 1.1)
+    ax.set_ylim(-bin_h * 0.1, bin_h * 1.1)
+    ax.grid(True, alpha=0.3)
+    ax.legend(fontsize=10)
+    fig.tight_layout()
+    st.pyplot(fig)
+
+    c1, c2 = st.columns(2)
+    c1.metric("IFP polygons", len(ifp_result))
+    if ifp_result:
+        poly = ifp_result[0]
+        ifp_area = abs(
+            sum(
+                poly[i][0] * poly[(i + 1) % len(poly)][1]
+                - poly[(i + 1) % len(poly)][0] * poly[i][1]
+                for i in range(len(poly))
+            )
+            * 0.5
+        )
+        c2.metric("IFP area", f"{ifp_area:.1f}")
+
+
+def page_gravity():
+    st.header("Gravity Tightening")
+    st.write("Apply gravity sliding to tighten a nesting layout.")
+
+    c1, c2, c3 = st.columns(3)
+    with c1:
+        n_parts = st.slider("Number of parts", 2, 20, 8, key="grav_n")
+    with c2:
+        size = st.slider("Part size", 10, 80, 25, key="grav_size")
+    with c3:
+        spacing = st.slider("Spacing", 0.0, 10.0, 2.0, 0.5, key="grav_spc")
+
+    sheet_w = st.number_input("Sheet width", 50, 500, 160, key="grav_sw")
+    sheet_h = st.number_input("Sheet height", 50, 500, 120, key="grav_sh")
+
+    if st.button("Run Gravity", type="primary", key="grav_run"):
+        rng = np.random.default_rng(42)
+
+        def _make_part(i):
+            if i % 2 == 0:
+                w = size * (0.5 + 0.5 * rng.random())
+                h = size * (0.5 + 0.5 * rng.random())
+                return [(0, 0), (w, 0), (w, h), (0, h)]
+            else:
+                leg_w = size * (0.3 + 0.3 * rng.random())
+                leg_h = size * (0.3 + 0.3 * rng.random())
+                body_w = size * (0.5 + 0.3 * rng.random())
+                body_h = size * (0.5 + 0.3 * rng.random())
+                return [
+                    (0, 0),
+                    (body_w, 0),
+                    (body_w, leg_h),
+                    (leg_w, leg_h),
+                    (leg_w, body_h),
+                    (0, body_h),
+                ]
+
+        parts = [_make_part(i) for i in range(n_parts)]
+
+        cols = 4
+        placed_groups = []
+        for i, poly in enumerate(parts):
+            bx = min(p[0] for p in poly)
+            by = min(p[1] for p in poly)
+            col = i % cols
+            row = i // cols
+            ox = col * (size * 1.5) + 10 + rng.uniform(0, size * 0.3)
+            oy = row * (size * 1.5) + 10 + rng.uniform(0, size * 0.3)
+            shifted = [(p[0] - bx + ox, p[1] - by + oy) for p in poly]
+            placed_groups.append([shifted])
+
+        sheet_poly = [
+            (0.0, 0.0),
+            (sheet_w, 0.0),
+            (sheet_w, sheet_h),
+            (0.0, sheet_h),
+        ]
+
+        with st.spinner("Applying gravity..."):
+            adjustments = apply_gravity(placed_groups, sheet_poly, spacing)
+
+        cmap = plt.get_cmap("tab10")
+        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 7))
+
+        for ax in (ax1, ax2):
+            ax.plot(
+                [p[0] for p in sheet_poly] + [sheet_poly[0][0]],
+                [p[1] for p in sheet_poly] + [sheet_poly[0][1]],
+                color="black",
+                linewidth=2,
+            )
+
+        for pi, polys in enumerate(placed_groups):
+            for poly in polys:
+                px = [p[0] for p in poly] + [poly[0][0]]
+                py = [p[1] for p in poly] + [poly[0][1]]
+                color = to_hex(cmap(pi % 10))
+                ax1.fill(px, py, alpha=0.25, color=color)
+                ax1.plot(px, py, color=color, linewidth=1.5)
+
+        for pi, (polys, adj) in enumerate(zip(placed_groups, adjustments)):
+            for poly in polys:
+                shifted = [(p[0] + adj[0], p[1] + adj[1]) for p in poly]
+                px = [p[0] for p in shifted] + [shifted[0][0]]
+                py = [p[1] for p in shifted] + [shifted[0][1]]
+                color = to_hex(cmap(pi % 10))
+                ax2.fill(px, py, alpha=0.25, color=color)
+                ax2.plot(px, py, color=color, linewidth=1.5)
+
+        for ax, title in zip(
+            (ax1, ax2),
+            ("Before gravity (loose placement)", "After gravity (tightened)"),
+        ):
+            ax.set_aspect("equal")
+            ax.grid(True, alpha=0.3)
+            ax.set_title(title, fontsize=14)
+
+        fig.tight_layout()
+        st.pyplot(fig)
+        st.success(f"Applied {len(adjustments)} adjustments")
+
+        c1, c2, c3 = st.columns(3)
+        c1.metric("Parts", len(placed_groups))
+        c2.metric("Adjustments", len(adjustments))
+        if adjustments:
+            total_dx = sum(abs(a[0]) for a in adjustments)
+            total_dy = sum(abs(a[1]) for a in adjustments)
+            c3.metric("Total movement", f"{total_dx + total_dy:.1f}")
+    else:
+        st.info("Configure parameters and click **Run Gravity**.")
+
+
+def page_ops_optimize_travel():
+    st.header("Travel Optimization")
+    st.write("Optimize the travel (non-cutting) path by reordering segments.")
+
+    preset = st.selectbox(
+        "Preset",
+        ["Multiple rectangles", "Triangle + squares", "Scattered segments"],
+        key="opt_preset",
+    )
+
+    ops = Ops()
+    ops.set_power(1.0)
+    ops.ops_section_start(SectionType.VECTOR_OUTLINE, "wp1")
+
+    if preset == "Multiple rectangles":
+        ops.move_to(10, 10, 0)
+        ops.line_to(30, 10, 0)
+        ops.line_to(30, 30, 0)
+        ops.line_to(10, 30, 0)
+        ops.line_to(10, 10, 0)
+        ops.move_to(50, 50, 0)
+        ops.line_to(70, 50, 0)
+        ops.line_to(70, 70, 0)
+        ops.line_to(50, 70, 0)
+        ops.line_to(50, 50, 0)
+        ops.move_to(10, 60, 0)
+        ops.line_to(30, 60, 0)
+        ops.line_to(30, 80, 0)
+        ops.line_to(10, 80, 0)
+        ops.line_to(10, 60, 0)
+        ops.move_to(60, 10, 0)
+        ops.line_to(80, 10, 0)
+        ops.line_to(80, 30, 0)
+        ops.line_to(60, 30, 0)
+        ops.line_to(60, 10, 0)
+    elif preset == "Triangle + squares":
+        ops.move_to(5, 75, 0)
+        ops.line_to(20, 75, 0)
+        ops.line_to(20, 90, 0)
+        ops.line_to(5, 90, 0)
+        ops.line_to(5, 75, 0)
+        ops.move_to(80, 5, 0)
+        ops.line_to(95, 5, 0)
+        ops.line_to(95, 20, 0)
+        ops.line_to(80, 20, 0)
+        ops.line_to(80, 5, 0)
+        ops.move_to(50, 40, 0)
+        ops.line_to(70, 80, 0)
+        ops.line_to(30, 80, 0)
+        ops.line_to(50, 40, 0)
+    else:
+        ops.move_to(10, 10, 0)
+        ops.line_to(40, 10, 0)
+        ops.move_to(60, 70, 0)
+        ops.line_to(80, 50, 0)
+        ops.move_to(30, 80, 0)
+        ops.line_to(50, 80, 0)
+        ops.line_to(50, 60, 0)
+        ops.move_to(70, 20, 0)
+        ops.line_to(90, 20, 0)
+        ops.line_to(90, 40, 0)
+
+    ops.ops_section_end(SectionType.VECTOR_OUTLINE)
+
+    orig = ops.copy()
+    ops_noflip = ops.copy()
+    ops_flip = ops.copy()
+    ops_noflip.optimize_travel(allow_flip=False)
+    ops_flip.optimize_travel(allow_flip=True)
+
+    before_travel = orig.distance() - orig.cut_distance()
+    travel_noflip = ops_noflip.distance() - ops_noflip.cut_distance()
+    travel_flip = ops_flip.distance() - ops_flip.cut_distance()
+
+    fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(22, 7))
+
+    def _plot(ax, seq, title, travel_d):
+        seq.preload_state()
+        pos = (0.0, 0.0, 0.0)
+        for i in range(seq.len()):
+            ct = seq.command_type(i)
+            if ct == CommandType.MOVE_TO:
+                ep = seq.endpoint(i)
+                if pos != ep:
+                    ax.annotate(
+                        "",
+                        xy=(ep[0], ep[1]),
+                        xytext=(pos[0], pos[1]),
+                        arrowprops=dict(
+                            arrowstyle="->",
+                            color="gray",
+                            lw=1.5,
+                            linestyle=":",
+                        ),
+                    )
+                pos = ep
+                continue
+            if ct == CommandType.LINE_TO:
+                ep = seq.endpoint(i)
+                ax.plot(
+                    [pos[0], ep[0]],
+                    [pos[1], ep[1]],
+                    color="steelblue",
+                    linewidth=3,
+                    solid_capstyle="round",
+                )
+                pos = ep
+        ax.plot([], [], color="steelblue", linewidth=3, label="Cut")
+        ax.plot(
+            [], [], color="gray", linewidth=1.5, linestyle=":", label="Travel"
+        )
+        ax.set_aspect("equal")
+        ax.set_xlim(0, 100)
+        ax.set_ylim(0, 100)
+        ax.grid(True, alpha=0.3)
+        ax.legend(fontsize=10)
+        ax.set_title(f"{title}\nTravel: {travel_d:.1f}", fontsize=12)
+
+    _plot(ax1, orig, "Before optimization", before_travel)
+    _plot(ax2, ops_noflip, "Optimized (no flip)", travel_noflip)
+    _plot(ax3, ops_flip, "Optimized (with flip)", travel_flip)
+
+    fig.tight_layout()
+    st.pyplot(fig)
+
+    c1, c2, c3 = st.columns(3)
+    c1.metric("Cut distance", f"{orig.cut_distance():.1f}")
+    c2.metric("Travel (no flip)", f"{travel_noflip:.1f}")
+    c3.metric("Travel (with flip)", f"{travel_flip:.1f}")
+
+
+def page_ops_clip():
+    st.header("Ops Clipping")
+    st.write("Clip Ops paths to rectangles and polygonal regions.")
+
+    preset = st.selectbox(
+        "Shape preset",
+        ["Nested squares + triangle", "Overlapping lines", "Cross pattern"],
+        key="clip_preset",
+    )
+
+    ops = Ops()
+    ops.set_power(1.0)
+
+    if preset == "Nested squares + triangle":
+        ops.move_to(10, 10, 0)
+        ops.line_to(90, 10, 0)
+        ops.line_to(90, 90, 0)
+        ops.line_to(10, 90, 0)
+        ops.line_to(10, 10, 0)
+        ops.move_to(30, 30, 0)
+        ops.line_to(70, 30, 0)
+        ops.line_to(70, 70, 0)
+        ops.line_to(30, 70, 0)
+        ops.line_to(30, 30, 0)
+        ops.move_to(20, 40, 0)
+        ops.line_to(80, 40, 0)
+        ops.line_to(50, 80, 0)
+        ops.line_to(20, 40, 0)
+    elif preset == "Overlapping lines":
+        ops.move_to(5, 50, 0)
+        ops.line_to(95, 50, 0)
+        ops.move_to(50, 5, 0)
+        ops.line_to(50, 95, 0)
+        ops.move_to(10, 10, 0)
+        ops.line_to(90, 90, 0)
+        ops.move_to(10, 90, 0)
+        ops.line_to(90, 10, 0)
+    else:
+        ops.move_to(10, 50, 0)
+        ops.line_to(90, 50, 0)
+        ops.move_to(50, 10, 0)
+        ops.line_to(50, 90, 0)
+        ops.move_to(10, 10, 0)
+        ops.line_to(90, 90, 0)
+        ops.move_to(90, 10, 0)
+        ops.line_to(10, 90, 0)
+
+    c1, c2 = st.columns(2)
+    with c1:
+        rx1 = st.slider("Clip rect X1", 0.0, 100.0, 25.0, key="clip_rx1")
+        ry1 = st.slider("Clip rect Y1", 0.0, 100.0, 25.0, key="clip_ry1")
+    with c2:
+        rx2 = st.slider("Clip rect X2", 0.0, 100.0, 75.0, key="clip_rx2")
+        ry2 = st.slider("Clip rect Y2", 0.0, 100.0, 85.0, key="clip_ry2")
+
+    clip_rect = (rx1, ry1, rx2, ry2)
+    clipped = ops.clip_rect(clip_rect)
+
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 7))
+
+    def _plot(ax, seq, title):
+        seq.preload_state()
+        pos = (0.0, 0.0, 0.0)
+        for i in range(seq.len()):
+            ct = seq.command_type(i)
+            if ct == CommandType.MOVE_TO:
+                pos = seq.endpoint(i)
+                continue
+            if ct == CommandType.LINE_TO:
+                ep = seq.endpoint(i)
+                ax.plot(
+                    [pos[0], ep[0]],
+                    [pos[1], ep[1]],
+                    color="steelblue",
+                    linewidth=2.5,
+                    solid_capstyle="round",
+                )
+                pos = ep
+        rect = mpatches.Rectangle(
+            (clip_rect[0], clip_rect[1]),
+            clip_rect[2] - clip_rect[0],
+            clip_rect[3] - clip_rect[1],
+            fill=False,
+            edgecolor="tomato",
+            linewidth=2,
+            linestyle="--",
+            label="Clip rect",
+        )
+        ax.add_patch(rect)
+        ax.set_aspect("equal")
+        ax.set_xlim(0, 100)
+        ax.set_ylim(0, 100)
+        ax.grid(True, alpha=0.3)
+        ax.legend(fontsize=10)
+        ax.set_title(title, fontsize=13)
+
+    _plot(ax1, ops, "Original paths")
+    _plot(ax2, clipped, "After clip_rect")
+
+    fig.tight_layout()
+    st.pyplot(fig)
+
+    c1, c2 = st.columns(2)
+    c1.metric("Original commands", ops.len())
+    c2.metric("Clipped commands", clipped.len())
+
+
 st.set_page_config(layout="wide", page_title="raygeo visual test")
 st.title("raygeo Visual Test")
 
@@ -2352,6 +2828,11 @@ page = st.sidebar.radio(
         "Rasterization",
         "Concave Hull",
         "Nesting",
+        "Minkowski Sum",
+        "Inner Fit Polygon",
+        "Gravity",
+        "Travel Optimization",
+        "Ops Clipping",
     ],
 )
 
@@ -2389,3 +2870,13 @@ elif page == "Concave Hull":
     page_concave_hull()
 elif page == "Nesting":
     page_nesting()
+elif page == "Minkowski Sum":
+    page_minkowski()
+elif page == "Inner Fit Polygon":
+    page_inner_fit_polygon()
+elif page == "Gravity":
+    page_gravity()
+elif page == "Travel Optimization":
+    page_ops_optimize_travel()
+elif page == "Ops Clipping":
+    page_ops_clip()

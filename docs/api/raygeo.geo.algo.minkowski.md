@@ -96,3 +96,7 @@ Compute the Minkowski sum of two convex polygons.
 | `poly_a`  | `collections.abc.Sequence[tuple[float, float]]` | First convex polygon as points.  |
 | `poly_b`  | `collections.abc.Sequence[tuple[float, float]]` | Second convex polygon as points. |
 | _Returns_ | `list[list[tuple[float, float]]]`               |                                  |
+
+![Minkowski sum of two convex polygons](images/minkowski-sum.png)
+
+_Minkowski sum of two convex polygons_

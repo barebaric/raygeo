@@ -62,9 +62,10 @@ Compute the angle at vertex p1.
 
 `get_line_closest_point(line_p1: types.Point, line_p2: types.Point, x: float, y: float) -> types.Point`
 
-Get the closest point on a line to a given point.
+Get the closest point on an **infinite line** to a given point. The result may lie beyond the
+segment endpoints (unclamped projection).
 
-**Returns:** Closest point (x, y) on the line.
+**Returns:** Closest point (x, y) on the infinite line.
 
 | Parameter | Type          | Description                   |
 | --------- | ------------- | ----------------------------- |
@@ -159,16 +160,17 @@ Get t-values where a line segment intersects a polygon.
 
 `get_point_line_distance(point: types.Point, line_p1: types.Point, line_p2: types.Point) -> float`
 
-Get the distance from a point to a line.
+Get the distance from a point to a **line segment**. The projection is clamped to the segment, so
+distance is measured to the nearest endpoint when the perpendicular falls outside.
 
-**Returns:** Perpendicular distance.
+**Returns:** Distance (clamped to segment).
 
-| Parameter | Type          | Description               |
-| --------- | ------------- | ------------------------- |
-| `point`   | `types.Point` | Point (x, y).             |
-| `line_p1` | `types.Point` | First point on the line.  |
-| `line_p2` | `types.Point` | Second point on the line. |
-| _Returns_ | `float`       |                           |
+| Parameter | Type          | Description                  |
+| --------- | ------------- | ---------------------------- |
+| `point`   | `types.Point` | Point (x, y).                |
+| `line_p1` | `types.Point` | First point on the segment.  |
+| `line_p2` | `types.Point` | Second point on the segment. |
+| _Returns_ | `float`       |                              |
 
 ![Perpendicular distance from a point to a line](images/line-point-distance.png)
 

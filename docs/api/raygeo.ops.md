@@ -317,6 +317,10 @@ Clip this sequence to a rectangle, keeping only commands inside.
 | `rect`    | `tuple[float, float, float, float]` | `(x_min, y_min, x_max, y_max)`. |
 | _Returns_ | `Ops`                               |                                 |
 
+![Ops paths clipped to a rectangle](images/ops-clip-rect.png)
+
+_Ops paths clipped to a rectangle_
+
 ### `clip_to_regions()`
 
 `clip_to_regions(regions: Sequence[Sequence[tuple[float, float]]], tolerance: float = 0.3) -> None`
@@ -925,6 +929,10 @@ segment-level nearest-neighbor + 2-opt refinement.
 | `preserve_order` | `Sequence[str] = []`   | Workpiece UIDs whose order to preserve. |
 | `progress_cb`    | `Optional[Any] = None` | Optional callable(progress, message).   |
 | _Returns_        | `None`                 |                                         |
+
+![Travel path before and after optimization](images/ops-optimize-travel.png)
+
+_Travel path before and after optimization_
 
 ### `power()`
 

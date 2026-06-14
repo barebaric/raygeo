@@ -29,6 +29,10 @@ for each input group in order.
 | `spacing`          | `float`                                                             | Minimum spacing between parts.                  |
 | _Returns_          | `list[tuple[float, float]]`                                         |                                                 |
 
+![Gravity tightening: before vs after](images/gravity.png)
+
+_Gravity tightening: before vs after_
+
 ### `find_max_slide()`
 
 `find_max_slide(polys: collections.abc.Sequence[types.Polygon], other_polys_list: collections.abc.Sequence[collections.abc.Sequence[types.Polygon]], sheet_bounds: tuple[float, float, float, float], sheet_poly: types.Polygon, axis: str, spacing: float) -> float`

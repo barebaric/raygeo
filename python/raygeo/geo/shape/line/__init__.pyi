@@ -58,13 +58,14 @@ def get_angle_at_vertex(p0: types.Point, p1: types.Point, p2: types.Point) -> fl
 
 def get_line_closest_point(line_p1: types.Point, line_p2: types.Point, x: float, y: float) -> types.Point:
     r"""
-    Get the closest point on a line to a given point.
+    Get the closest point on an **infinite line** to a given point.
+    The result may lie beyond the segment endpoints (unclamped projection).
     
     :param line_p1: First point on the line.
     :param line_p2: Second point on the line.
     :param x: X coordinate of target point.
     :param y: Y coordinate of target point.
-    :returns: Closest point (x, y) on the line.
+    :returns: Closest point (x, y) on the infinite line.
     """
 
 def get_line_line_intersection(p1: types.Point, p2: types.Point, p3: types.Point, p4: types.Point) -> typing.Optional[types.Point]:
@@ -121,12 +122,14 @@ def get_line_segment_polygon_intersections(p1: types.Point, p2: types.Point, pol
 
 def get_point_line_distance(point: types.Point, line_p1: types.Point, line_p2: types.Point) -> float:
     r"""
-    Get the distance from a point to a line.
+    Get the distance from a point to a **line segment**.
+    The projection is clamped to the segment, so distance is measured to
+    the nearest endpoint when the perpendicular falls outside.
     
     :param point: Point (x, y).
-    :param line_p1: First point on the line.
-    :param line_p2: Second point on the line.
-    :returns: Perpendicular distance.
+    :param line_p1: First point on the segment.
+    :param line_p2: Second point on the segment.
+    :returns: Distance (clamped to segment).
     """
 
 def is_point_on_line_segment(point: types.Point, seg_p1: types.Point, seg_p2: types.Point) -> bool:

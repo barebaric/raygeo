@@ -39,6 +39,10 @@ Compute the Inner-Fit Polygon (IFP) for a part inside a bin.
 | `part`    | `collections.abc.Sequence[types.Point]` | Part polygon as (x, y) points. |
 | _Returns_ | `list[types.Polygon]`                   |                                |
 
+![Inner Fit Polygon showing valid placement region](images/inner-fit-polygon.png)
+
+_Inner Fit Polygon showing valid placement region_
+
 ### `sweep_hull_for_edge()`
 
 `sweep_hull_for_edge(p1: types.Point, p2: types.Point, part_neg: collections.abc.Sequence[types.Point]) -> types.Polygon`
