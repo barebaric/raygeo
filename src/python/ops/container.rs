@@ -1,3 +1,4 @@
+use glam::{DMat4, DVec4};
 use pyo3::prelude::*;
 use pyo3::types::{PyBytes, PyDict, PyList, PyType};
 use pyo3::{Bound, Py, PyAny, PyResult};
@@ -1446,13 +1447,13 @@ impl PyOps {
                 "transform requires a 4x4 matrix",
             ));
         }
-        let m: [[f64; 4]; 4] = [
-            [matrix[0][0], matrix[0][1], matrix[0][2], matrix[0][3]],
-            [matrix[1][0], matrix[1][1], matrix[1][2], matrix[1][3]],
-            [matrix[2][0], matrix[2][1], matrix[2][2], matrix[2][3]],
-            [matrix[3][0], matrix[3][1], matrix[3][2], matrix[3][3]],
-        ];
-        self.inner.transform(&m);
+        let m = DMat4::from_cols(
+            DVec4::new(matrix[0][0], matrix[1][0], matrix[2][0], matrix[3][0]),
+            DVec4::new(matrix[0][1], matrix[1][1], matrix[2][1], matrix[3][1]),
+            DVec4::new(matrix[0][2], matrix[1][2], matrix[2][2], matrix[3][2]),
+            DVec4::new(matrix[0][3], matrix[1][3], matrix[2][3], matrix[3][3]),
+        );
+        self.inner.transform(m);
         Ok(())
     }
 

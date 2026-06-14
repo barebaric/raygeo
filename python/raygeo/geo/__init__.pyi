@@ -21,7 +21,6 @@ sums for toolpath generation.
 import builtins
 import typing
 from . import algo
-from . import math
 from . import shape
 from . import types
 __all__ = [
@@ -31,7 +30,6 @@ __all__ = [
     "Line",
     "Move",
     "algo",
-    "math",
     "shape",
     "types",
 ]

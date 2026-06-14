@@ -6,6 +6,8 @@ use pyo3_stub_gen::derive::{
 use pyo3_stub_gen::inventory::submit;
 use pyo3_stub_gen::{PyStubType, TypeInfo};
 
+use glam::{DMat4, DVec4};
+
 use crate::geo::algo::analysis::{
     get_outward_normal_at_from_array, get_point_at_from_array,
     get_tangent_at_from_array,
@@ -424,12 +426,32 @@ impl Geometry {
     ) -> Bound<'_, Self> {
         {
             let mut geo = slf.borrow_mut();
-            let mat: [[f64; 4]; 4] = [
-                [matrix[0][0], matrix[0][1], matrix[0][2], matrix[0][3]],
-                [matrix[1][0], matrix[1][1], matrix[1][2], matrix[1][3]],
-                [matrix[2][0], matrix[2][1], matrix[2][2], matrix[2][3]],
-                [matrix[3][0], matrix[3][1], matrix[3][2], matrix[3][3]],
-            ];
+            let mat = DMat4::from_cols(
+                DVec4::new(
+                    matrix[0][0],
+                    matrix[1][0],
+                    matrix[2][0],
+                    matrix[3][0],
+                ),
+                DVec4::new(
+                    matrix[0][1],
+                    matrix[1][1],
+                    matrix[2][1],
+                    matrix[3][1],
+                ),
+                DVec4::new(
+                    matrix[0][2],
+                    matrix[1][2],
+                    matrix[2][2],
+                    matrix[3][2],
+                ),
+                DVec4::new(
+                    matrix[0][3],
+                    matrix[1][3],
+                    matrix[2][3],
+                    matrix[3][3],
+                ),
+            );
             geo.inner.transform(&mat);
         }
         slf

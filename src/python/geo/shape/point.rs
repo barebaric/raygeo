@@ -8,6 +8,8 @@ computation between two points, and applying a 4x4 affine transformation
 matrix to a single point.
 ";
 
+use glam::{DMat4, DVec4};
+
 use super::super::flex_point::PyPoint3D;
 use crate::geo::shape::point::are_points_equal;
 use crate::geo::shape::point::midpoint;
@@ -91,13 +93,13 @@ fn transform_point_py(
     y: f64,
     z: f64,
 ) -> Point3D {
-    let mat: [[f64; 4]; 4] = [
-        [matrix[0][0], matrix[0][1], matrix[0][2], matrix[0][3]],
-        [matrix[1][0], matrix[1][1], matrix[1][2], matrix[1][3]],
-        [matrix[2][0], matrix[2][1], matrix[2][2], matrix[2][3]],
-        [matrix[3][0], matrix[3][1], matrix[3][2], matrix[3][3]],
-    ];
-    transform_point(&mat, x, y, z)
+    let mat = DMat4::from_cols(
+        DVec4::new(matrix[0][0], matrix[1][0], matrix[2][0], matrix[3][0]),
+        DVec4::new(matrix[0][1], matrix[1][1], matrix[2][1], matrix[3][1]),
+        DVec4::new(matrix[0][2], matrix[1][2], matrix[2][2], matrix[3][2]),
+        DVec4::new(matrix[0][3], matrix[1][3], matrix[2][3], matrix[3][3]),
+    );
+    transform_point(mat, Point3D(x, y, z))
 }
 
 #[gen_stub_pyfunction(

@@ -1,3 +1,4 @@
+use glam::DMat3;
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::gen_stub_pyfunction;
 
@@ -46,22 +47,29 @@ fn py_parse_svg_path_data(
             .call_method("flatten", (), None)?
             .call_method0("tolist")?
             .extract()?;
-        let mut m = [[0.0f64; 3]; 3];
-        m[0][0] = flat.first().copied().unwrap_or(1.0);
-        m[0][1] = flat.get(1).copied().unwrap_or(0.0);
-        m[0][2] = flat.get(2).copied().unwrap_or(0.0);
-        m[1][0] = flat.get(3).copied().unwrap_or(0.0);
-        m[1][1] = flat.get(4).copied().unwrap_or(1.0);
-        m[1][2] = flat.get(5).copied().unwrap_or(0.0);
-        m[2][0] = flat.get(6).copied().unwrap_or(0.0);
-        m[2][1] = flat.get(7).copied().unwrap_or(0.0);
-        m[2][2] = flat.get(8).copied().unwrap_or(1.0);
-        m
+        // Flat array is in row-major order; convert to column-major DMat3
+        DMat3::from_cols(
+            glam::DVec3::new(
+                flat.first().copied().unwrap_or(1.0),
+                flat.get(3).copied().unwrap_or(0.0),
+                flat.get(6).copied().unwrap_or(0.0),
+            ),
+            glam::DVec3::new(
+                flat.get(1).copied().unwrap_or(0.0),
+                flat.get(4).copied().unwrap_or(1.0),
+                flat.get(7).copied().unwrap_or(0.0),
+            ),
+            glam::DVec3::new(
+                flat.get(2).copied().unwrap_or(0.0),
+                flat.get(5).copied().unwrap_or(0.0),
+                flat.get(8).copied().unwrap_or(1.0),
+            ),
+        )
     } else {
         svg::parse_svg_transform("")
     };
 
-    let geos = svg::parse_svg_path_data(path_data, &matrix, scale_x, scale_y)?;
+    let geos = svg::parse_svg_path_data(path_data, matrix, scale_x, scale_y)?;
     Ok(geos.into_iter().map(|g| Geometry { inner: g }).collect())
 }
 
@@ -90,7 +98,11 @@ fn py_parse_svg_transform(
 ) -> PyResult<Py<PyAny>> {
     let numpy = py.import("numpy")?;
     let m = svg::parse_svg_transform(transform_str);
-    let flat: Vec<f64> = m.iter().flat_map(|row| row.iter().copied()).collect();
+    // Convert from column-major DMat3 to row-major flat array
+    let flat = vec![
+        m.x_axis.x, m.y_axis.x, m.z_axis.x, m.x_axis.y, m.y_axis.y, m.z_axis.y,
+        m.x_axis.z, m.y_axis.z, m.z_axis.z,
+    ];
     let arr = numpy.call_method("array", (flat,), None)?;
     let reshaped = arr.call_method1("reshape", (3, 3))?;
     Ok(reshaped.unbind())

@@ -1,7 +1,6 @@
 pub(crate) mod algo;
 pub(crate) mod flex_point;
 pub(crate) mod geometry;
-pub(crate) mod math;
 pub(crate) mod shape;
 pub(crate) mod types;
 
@@ -59,7 +58,6 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
 fn add_submodules(m: &Bound<'_, PyModule>) -> PyResult<()> {
     shape::register(m)?;
     algo::register(m)?;
-    math::register(m)?;
 
     Ok(())
 }

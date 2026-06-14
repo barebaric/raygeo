@@ -1,3 +1,7 @@
+use std::ops::{
+    Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign,
+};
+
 use crate::constants::EPSILON_COLLINEAR;
 use crate::geo::shape::arc::{
     get_arc_bounds, get_arc_closest_point, get_arc_sweep, linearize_arc,
@@ -14,6 +18,191 @@ pub struct Point(pub f64, pub f64);
 /// A 3D point represented as (x, y, z) coordinates.
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct Point3D(pub f64, pub f64, pub f64);
+
+// --- Point operator overloading ---
+
+impl Add for Point {
+    type Output = Self;
+    fn add(self, rhs: Self) -> Self {
+        Point(self.0 + rhs.0, self.1 + rhs.1)
+    }
+}
+impl AddAssign for Point {
+    fn add_assign(&mut self, rhs: Self) {
+        self.0 += rhs.0;
+        self.1 += rhs.1;
+    }
+}
+impl Sub for Point {
+    type Output = Self;
+    fn sub(self, rhs: Self) -> Self {
+        Point(self.0 - rhs.0, self.1 - rhs.1)
+    }
+}
+impl SubAssign for Point {
+    fn sub_assign(&mut self, rhs: Self) {
+        self.0 -= rhs.0;
+        self.1 -= rhs.1;
+    }
+}
+impl Mul<f64> for Point {
+    type Output = Self;
+    fn mul(self, rhs: f64) -> Self {
+        Point(self.0 * rhs, self.1 * rhs)
+    }
+}
+impl MulAssign<f64> for Point {
+    fn mul_assign(&mut self, rhs: f64) {
+        self.0 *= rhs;
+        self.1 *= rhs;
+    }
+}
+impl Div<f64> for Point {
+    type Output = Self;
+    fn div(self, rhs: f64) -> Self {
+        Point(self.0 / rhs, self.1 / rhs)
+    }
+}
+impl DivAssign<f64> for Point {
+    fn div_assign(&mut self, rhs: f64) {
+        self.0 /= rhs;
+        self.1 /= rhs;
+    }
+}
+impl Neg for Point {
+    type Output = Self;
+    fn neg(self) -> Self {
+        Point(-self.0, -self.1)
+    }
+}
+
+impl Point {
+    pub fn new(x: f64, y: f64) -> Self {
+        Point(x, y)
+    }
+    pub fn x(self) -> f64 {
+        self.0
+    }
+    pub fn y(self) -> f64 {
+        self.1
+    }
+    pub fn length(self) -> f64 {
+        (self.0 * self.0 + self.1 * self.1).sqrt()
+    }
+    pub fn length_sq(self) -> f64 {
+        self.0 * self.0 + self.1 * self.1
+    }
+    pub fn distance(self, other: Point) -> f64 {
+        (self - other).length()
+    }
+    pub fn dot(self, other: Point) -> f64 {
+        self.0 * other.0 + self.1 * other.1
+    }
+    pub fn normalize(self) -> Point {
+        let len = self.length();
+        if len < 1e-15 {
+            Point(0.0, 0.0)
+        } else {
+            self / len
+        }
+    }
+}
+
+// --- Point3D operator overloading ---
+
+impl Add for Point3D {
+    type Output = Self;
+    fn add(self, rhs: Self) -> Self {
+        Point3D(self.0 + rhs.0, self.1 + rhs.1, self.2 + rhs.2)
+    }
+}
+impl AddAssign for Point3D {
+    fn add_assign(&mut self, rhs: Self) {
+        self.0 += rhs.0;
+        self.1 += rhs.1;
+        self.2 += rhs.2;
+    }
+}
+impl Sub for Point3D {
+    type Output = Self;
+    fn sub(self, rhs: Self) -> Self {
+        Point3D(self.0 - rhs.0, self.1 - rhs.1, self.2 - rhs.2)
+    }
+}
+impl SubAssign for Point3D {
+    fn sub_assign(&mut self, rhs: Self) {
+        self.0 -= rhs.0;
+        self.1 -= rhs.1;
+        self.2 -= rhs.2;
+    }
+}
+impl Mul<f64> for Point3D {
+    type Output = Self;
+    fn mul(self, rhs: f64) -> Self {
+        Point3D(self.0 * rhs, self.1 * rhs, self.2 * rhs)
+    }
+}
+impl MulAssign<f64> for Point3D {
+    fn mul_assign(&mut self, rhs: f64) {
+        self.0 *= rhs;
+        self.1 *= rhs;
+        self.2 *= rhs;
+    }
+}
+impl Div<f64> for Point3D {
+    type Output = Self;
+    fn div(self, rhs: f64) -> Self {
+        Point3D(self.0 / rhs, self.1 / rhs, self.2 / rhs)
+    }
+}
+impl DivAssign<f64> for Point3D {
+    fn div_assign(&mut self, rhs: f64) {
+        self.0 /= rhs;
+        self.1 /= rhs;
+        self.2 /= rhs;
+    }
+}
+impl Neg for Point3D {
+    type Output = Self;
+    fn neg(self) -> Self {
+        Point3D(-self.0, -self.1, -self.2)
+    }
+}
+
+impl Point3D {
+    pub fn new(x: f64, y: f64, z: f64) -> Self {
+        Point3D(x, y, z)
+    }
+    pub fn x(self) -> f64 {
+        self.0
+    }
+    pub fn y(self) -> f64 {
+        self.1
+    }
+    pub fn z(self) -> f64 {
+        self.2
+    }
+    pub fn length(self) -> f64 {
+        (self.0 * self.0 + self.1 * self.1 + self.2 * self.2).sqrt()
+    }
+    pub fn length_sq(self) -> f64 {
+        self.0 * self.0 + self.1 * self.1 + self.2 * self.2
+    }
+    pub fn distance(self, other: Point3D) -> f64 {
+        (self - other).length()
+    }
+    pub fn dot(self, other: Point3D) -> f64 {
+        self.0 * other.0 + self.1 * other.1 + self.2 * other.2
+    }
+    pub fn normalize(self) -> Point3D {
+        let len = self.length();
+        if len < 1e-15 {
+            Point3D(0.0, 0.0, 0.0)
+        } else {
+            self / len
+        }
+    }
+}
 
 /// A 2D axis-aligned bounding box represented as (x_min, y_min, x_max, y_max).
 #[derive(Clone, Copy, Debug, Default, PartialEq)]

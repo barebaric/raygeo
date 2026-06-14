@@ -20,6 +20,7 @@ rstar = "0.12"
 roxmltree = "0.20"
 strum = { version = "0.27", features = ["derive"] }
 thiserror = "2"
+glam = "0.29"
 
 [dev-dependencies]
 approx = "0.5"

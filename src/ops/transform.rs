@@ -1,48 +1,21 @@
+use glam::{DMat4, DVec2, DVec3, DVec4};
+
 use crate::constants::EPSILON_COLLINEAR;
+use crate::geo::shape::point::transform_point;
 
 use super::container::Ops;
 use super::types::{MoveCmd, OpCategory, OpNode};
 use crate::types::{Point, Point3D};
 
-fn transform_point(matrix: &[[f64; 4]; 4], p: Point3D) -> Point3D {
-    Point3D(
-        matrix[0][0] * p.0
-            + matrix[0][1] * p.1
-            + matrix[0][2] * p.2
-            + matrix[0][3],
-        matrix[1][0] * p.0
-            + matrix[1][1] * p.1
-            + matrix[1][2] * p.2
-            + matrix[1][3],
-        matrix[2][0] * p.0
-            + matrix[2][1] * p.1
-            + matrix[2][2] * p.2
-            + matrix[2][3],
-    )
-}
-
-fn mat4_mul(a: &[[f64; 4]; 4], b: &[[f64; 4]; 4]) -> [[f64; 4]; 4] {
-    let mut result = [[0.0; 4]; 4];
-    for i in 0..4 {
-        for j in 0..4 {
-            result[i][j] = a[i][0] * b[0][j]
-                + a[i][1] * b[1][j]
-                + a[i][2] * b[2][j]
-                + a[i][3] * b[3][j];
-        }
-    }
-    result
-}
-
 impl Ops {
-    pub fn transform(&mut self, matrix: &[[f64; 4]; 4]) -> &mut Self {
-        let vx = [matrix[0][0], matrix[1][0]];
-        let vy = [matrix[0][1], matrix[1][1]];
-        let len_x = (vx[0] * vx[0] + vx[1] * vx[1]).sqrt();
-        let len_y = (vy[0] * vy[0] + vy[1] * vy[1]).sqrt();
-        let is_non_uniform = (len_x - len_y).abs() > EPSILON_COLLINEAR;
+    pub fn transform(&mut self, matrix: DMat4) -> &mut Self {
+        let vx = DVec2::new(matrix.x_axis.x, matrix.x_axis.y);
+        let vy = DVec2::new(matrix.y_axis.x, matrix.y_axis.y);
+        let is_non_uniform =
+            (vx.length() - vy.length()).abs() > EPSILON_COLLINEAR;
 
-        let det = matrix[0][0] * matrix[1][1] - matrix[0][1] * matrix[1][0];
+        let det = matrix.x_axis.x * matrix.y_axis.y
+            - matrix.y_axis.x * matrix.x_axis.y;
         let flip_cw = det < 0.0;
 
         let mut new_cmds = Vec::new();
@@ -74,9 +47,9 @@ impl Ops {
                             for (_, p2) in &segments {
                                 let tv = transform_point(matrix, *p2);
                                 let mut lcmd = OpNode::line_to(
-                                    tv.0,
-                                    tv.1,
-                                    tv.2,
+                                    tv.x(),
+                                    tv.y(),
+                                    tv.z(),
                                     extra.clone(),
                                 );
                                 if let Some(s) = &node.state {
@@ -88,12 +61,13 @@ impl Ops {
                             continue; // We broke this into multiple lines, skip the single node push
                         }
                         MoveCmd::ArcTo { center, cw } => {
-                            let new_ci = matrix[0][0] * center.0
-                                + matrix[0][1] * center.1;
-                            let new_cj = matrix[1][0] * center.0
-                                + matrix[1][1] * center.1;
+                            let new_vec = matrix.transform_vector3(DVec3::new(
+                                center.x(),
+                                center.y(),
+                                0.0,
+                            ));
                             MoveCmd::ArcTo {
-                                center: Point(new_ci, new_cj),
+                                center: Point(new_vec.x, new_vec.y),
                                 cw: if flip_cw { !cw } else { *cw },
                             }
                         }
@@ -140,23 +114,23 @@ impl Ops {
     }
 
     pub fn translate(&mut self, dx: f64, dy: f64, dz: f64) -> &mut Self {
-        let matrix = [
-            [1.0, 0.0, 0.0, dx],
-            [0.0, 1.0, 0.0, dy],
-            [0.0, 0.0, 1.0, dz],
-            [0.0, 0.0, 0.0, 1.0],
-        ];
-        self.transform(&matrix)
+        let matrix = DMat4::from_cols(
+            DVec4::new(1.0, 0.0, 0.0, 0.0),
+            DVec4::new(0.0, 1.0, 0.0, 0.0),
+            DVec4::new(0.0, 0.0, 1.0, 0.0),
+            DVec4::new(dx, dy, dz, 1.0),
+        );
+        self.transform(matrix)
     }
 
     pub fn scale(&mut self, sx: f64, sy: f64, sz: f64) -> &mut Self {
-        let matrix = [
-            [sx, 0.0, 0.0, 0.0],
-            [0.0, sy, 0.0, 0.0],
-            [0.0, 0.0, sz, 0.0],
-            [0.0, 0.0, 0.0, 1.0],
-        ];
-        self.transform(&matrix)
+        let matrix = DMat4::from_cols(
+            DVec4::new(sx, 0.0, 0.0, 0.0),
+            DVec4::new(0.0, sy, 0.0, 0.0),
+            DVec4::new(0.0, 0.0, sz, 0.0),
+            DVec4::new(0.0, 0.0, 0.0, 1.0),
+        );
+        self.transform(matrix)
     }
 
     pub fn rotate(&mut self, angle_deg: f64, cx: f64, cy: f64) -> &mut Self {
@@ -164,27 +138,26 @@ impl Ops {
         let cos_a = angle_rad.cos();
         let sin_a = angle_rad.sin();
 
-        let translate_to_origin = [
-            [1.0, 0.0, 0.0, -cx],
-            [0.0, 1.0, 0.0, -cy],
-            [0.0, 0.0, 1.0, 0.0],
-            [0.0, 0.0, 0.0, 1.0],
-        ];
-        let rotation_matrix = [
-            [cos_a, -sin_a, 0.0, 0.0],
-            [sin_a, cos_a, 0.0, 0.0],
-            [0.0, 0.0, 1.0, 0.0],
-            [0.0, 0.0, 0.0, 1.0],
-        ];
-        let translate_back = [
-            [1.0, 0.0, 0.0, cx],
-            [0.0, 1.0, 0.0, cy],
-            [0.0, 0.0, 1.0, 0.0],
-            [0.0, 0.0, 0.0, 1.0],
-        ];
+        let translate_to_origin = DMat4::from_cols(
+            DVec4::new(1.0, 0.0, 0.0, 0.0),
+            DVec4::new(0.0, 1.0, 0.0, 0.0),
+            DVec4::new(0.0, 0.0, 1.0, 0.0),
+            DVec4::new(-cx, -cy, 0.0, 1.0),
+        );
+        let rotation_mat = DMat4::from_cols(
+            DVec4::new(cos_a, sin_a, 0.0, 0.0),
+            DVec4::new(-sin_a, cos_a, 0.0, 0.0),
+            DVec4::new(0.0, 0.0, 1.0, 0.0),
+            DVec4::new(0.0, 0.0, 0.0, 1.0),
+        );
+        let translate_back = DMat4::from_cols(
+            DVec4::new(1.0, 0.0, 0.0, 0.0),
+            DVec4::new(0.0, 1.0, 0.0, 0.0),
+            DVec4::new(0.0, 0.0, 1.0, 0.0),
+            DVec4::new(cx, cy, 0.0, 1.0),
+        );
 
-        let m = mat4_mul(&rotation_matrix, &translate_to_origin);
-        let matrix = mat4_mul(&translate_back, &m);
-        self.transform(&matrix)
+        let matrix = translate_back * rotation_mat * translate_to_origin;
+        self.transform(matrix)
     }
 }

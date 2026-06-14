@@ -6,6 +6,8 @@
 //! directly to the data array on construction and can be queried for various
 //! properties.
 
+use glam::DMat4;
+
 use crate::geo::query::get_positions_at_distances_from_array;
 use crate::types::{Command, Point, Point3D, Rect};
 
@@ -267,32 +269,16 @@ impl Geometry {
 
     /// Applies an affine transformation matrix to the geometry in place.
     /// The matrix is a 4x4 transformation matrix.
-    pub fn transform(&mut self, matrix: &[[f64; 4]; 4]) -> &mut Self {
+    pub fn transform(&mut self, matrix: &DMat4) -> &mut Self {
         if self.data.is_empty() {
             return self;
         }
         self.data = crate::geo::math::apply_affine_transform_to_array(
-            &self.data, matrix,
+            &self.data, *matrix,
         );
-        let last_move_vec = [
-            self.last_move_to.0,
-            self.last_move_to.1,
-            self.last_move_to.2,
-            1.0,
-        ];
-        self.last_move_to = Point3D(
-            matrix[0][0] * last_move_vec[0]
-                + matrix[0][1] * last_move_vec[1]
-                + matrix[0][2] * last_move_vec[2]
-                + matrix[0][3] * last_move_vec[3],
-            matrix[1][0] * last_move_vec[0]
-                + matrix[1][1] * last_move_vec[1]
-                + matrix[1][2] * last_move_vec[2]
-                + matrix[1][3] * last_move_vec[3],
-            matrix[2][0] * last_move_vec[0]
-                + matrix[2][1] * last_move_vec[1]
-                + matrix[2][2] * last_move_vec[2]
-                + matrix[2][3] * last_move_vec[3],
+        self.last_move_to = crate::geo::shape::point::transform_point(
+            *matrix,
+            self.last_move_to,
         );
         self
     }

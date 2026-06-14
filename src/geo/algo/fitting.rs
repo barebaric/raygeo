@@ -250,50 +250,14 @@ pub fn fit_circle_to_3_points(
     Some((center, radius))
 }
 
-fn solve_3x3(ata: [[f64; 3]; 3], atb: [f64; 3]) -> Option<[f64; 3]> {
-    let mut a = ata;
-    let mut b = atb;
+use glam::{DMat3, DVec3};
 
-    for col in 0..3 {
-        let mut max_val = a[col][col].abs();
-        let mut max_row = col;
-        for (row, row_vals) in a.iter().enumerate().skip(col + 1) {
-            let val = row_vals[col].abs();
-            if val > max_val {
-                max_val = val;
-                max_row = row;
-            }
-        }
-        if max_val < 1e-15 {
-            return None;
-        }
-        a.swap(col, max_row);
-        b.swap(col, max_row);
-
-        let pivot = a[col][col];
-        for item in a[col].iter_mut().skip(col) {
-            *item /= pivot;
-        }
-        b[col] /= pivot;
-
-        let ref_row = a[col];
-        for (row_idx, row_vals) in a.iter_mut().enumerate().skip(col + 1) {
-            let factor = row_vals[col];
-            for (j, item) in row_vals.iter_mut().enumerate().skip(col) {
-                *item -= factor * ref_row[j];
-            }
-            b[row_idx] -= factor * b[col];
-        }
+fn solve_3x3(ata: DMat3, atb: DVec3) -> Option<DVec3> {
+    let det = ata.determinant();
+    if det.abs() < 1e-15 {
+        return None;
     }
-
-    let mut x = [0.0; 3];
-    for i in (0..3).rev() {
-        x[i] = b[i];
-        for j in (i + 1)..3 {
-            x[i] -= a[i][j] * x[j];
-        }
-    }
-    Some(x)
+    Some(ata.inverse() * atb)
 }
 
 /// Fits a circle to a set of points using Kasa's least-squares method.
@@ -327,11 +291,15 @@ pub fn fit_circle_to_points(points: &[Point3D]) -> Option<(Point, f64, f64)> {
     }
     let sn = n as f64;
 
-    let ata = [[sxx, sxy, sx], [sxy, syy, sy], [sx, sy, sn]];
-    let atb = [sbx, sby, sb];
+    let ata = DMat3::from_cols(
+        DVec3::new(sxx, sxy, sx),
+        DVec3::new(sxy, syy, sy),
+        DVec3::new(sx, sy, sn),
+    );
+    let atb = DVec3::new(sbx, sby, sb);
 
     let result = solve_3x3(ata, atb)?;
-    let (xc, yc, c) = (result[0], result[1], result[2]);
+    let (xc, yc, c) = (result.x, result.y, result.z);
 
     let r_sq = xc * xc + yc * yc + c;
     if r_sq < 1e-10 {

@@ -2,7 +2,9 @@ use std::f64::consts::PI;
 
 use crate::error::{RaygeoError, RaygeoResult};
 use crate::geo::geometry::Geometry;
-use crate::geo::math::{identity_mat3, mat3_det2x2, mat3_mul, mat3_transform};
+use glam::{DMat3, DVec3};
+
+use crate::geo::math::{mat3_det2x2, mat3_transform};
 use crate::types::Command;
 
 type BezierSeg = ((f64, f64), (f64, f64), (f64, f64), (f64, f64));
@@ -106,19 +108,9 @@ fn parse_path_tokens(d: &str) -> Vec<(char, String)> {
     tokens
 }
 
-fn apply_txfm(px: f64, py: f64, m: &[[f64; 3]; 3]) -> (f64, f64) {
-    mat3_transform(m, px, py)
-}
-
 /// Apply the affine transform + border/scale to a single SVG coordinate.
-fn txfm_pt(
-    px: f64,
-    py: f64,
-    m: &[[f64; 3]; 3],
-    sx: f64,
-    sy: f64,
-) -> (f64, f64) {
-    let (tx, ty) = apply_txfm(px, py, m);
+fn txfm_pt(px: f64, py: f64, m: DMat3, sx: f64, sy: f64) -> (f64, f64) {
+    let (tx, ty) = mat3_transform(m, px, py);
     ((tx - BORDER_SIZE) / sx, (ty - BORDER_SIZE) / sy)
 }
 
@@ -127,7 +119,7 @@ fn txfm_arc(
     start: (f64, f64),
     center: (f64, f64),
     clockwise: bool,
-    m: &[[f64; 3]; 3],
+    m: DMat3,
     sx: f64,
     sy: f64,
 ) -> (f64, f64, f64, f64, bool) {
@@ -295,14 +287,7 @@ fn elliptical_arc_to_beziers(ac: &ArcCenter) -> Vec<BezierSeg> {
     segs
 }
 
-fn push_line(
-    geo: &mut Geometry,
-    x: f64,
-    y: f64,
-    m: &[[f64; 3]; 3],
-    sx: f64,
-    sy: f64,
-) {
+fn push_line(geo: &mut Geometry, x: f64, y: f64, m: DMat3, sx: f64, sy: f64) {
     let (tx, ty) = txfm_pt(x, y, m, sx, sy);
     geo.line_to(tx, ty, 0.0);
 }
@@ -317,7 +302,7 @@ fn handle_move(
     sub_start: &mut (f64, f64),
     prev_c2: &mut Option<(f64, f64)>,
     prev_q: &mut Option<(f64, f64)>,
-    m: &[[f64; 3]; 3],
+    m: DMat3,
     sx: f64,
     sy: f64,
 ) {
@@ -366,7 +351,7 @@ fn handle_linelike(
     pos: &mut (f64, f64),
     prev_c2: &mut Option<(f64, f64)>,
     prev_q: &mut Option<(f64, f64)>,
-    m: &[[f64; 3]; 3],
+    m: DMat3,
     sx: f64,
     sy: f64,
 ) {
@@ -412,7 +397,7 @@ fn handle_cubic(
     pos: &mut (f64, f64),
     prev_c2: &mut Option<(f64, f64)>,
     prev_q: &mut Option<(f64, f64)>,
-    m: &[[f64; 3]; 3],
+    m: DMat3,
     sx: f64,
     sy: f64,
 ) {
@@ -464,7 +449,7 @@ fn handle_smooth_cubic(
     pos: &mut (f64, f64),
     prev_c2: &mut Option<(f64, f64)>,
     prev_q: &mut Option<(f64, f64)>,
-    m: &[[f64; 3]; 3],
+    m: DMat3,
     sx: f64,
     sy: f64,
 ) {
@@ -511,7 +496,7 @@ fn handle_quad(
     pos: &mut (f64, f64),
     prev_c2: &mut Option<(f64, f64)>,
     prev_q: &mut Option<(f64, f64)>,
-    m: &[[f64; 3]; 3],
+    m: DMat3,
     sx: f64,
     sy: f64,
 ) {
@@ -558,7 +543,7 @@ fn handle_smooth_quad(
     pos: &mut (f64, f64),
     prev_c2: &mut Option<(f64, f64)>,
     prev_q: &mut Option<(f64, f64)>,
-    m: &[[f64; 3]; 3],
+    m: DMat3,
     sx: f64,
     sy: f64,
 ) {
@@ -604,7 +589,7 @@ fn handle_arc(
     pos: &mut (f64, f64),
     prev_c2: &mut Option<(f64, f64)>,
     prev_q: &mut Option<(f64, f64)>,
-    m: &[[f64; 3]; 3],
+    m: DMat3,
     sx: f64,
     sy: f64,
 ) {
@@ -688,7 +673,7 @@ fn handle_close(
 /// elliptical arcs are approximated with cubic beziers.
 pub fn parse_svg_path_data(
     path_data: &str,
-    transform: &[[f64; 3]; 3],
+    transform: DMat3,
     scale_x: f64,
     scale_y: f64,
 ) -> RaygeoResult<Vec<Geometry>> {
@@ -810,92 +795,98 @@ pub fn parse_svg_path_data(
     Ok(geometries)
 }
 
-fn translate_m(coords: &[f64]) -> [[f64; 3]; 3] {
-    let mut m = identity_mat3();
+fn translate_m(coords: &[f64]) -> DMat3 {
+    let mut m = DMat3::IDENTITY;
     if !coords.is_empty() {
-        m[0][2] = coords[0];
-        if coords.len() > 1 {
-            m[1][2] = coords[1];
-        }
+        let tx = coords[0];
+        let ty = if coords.len() > 1 { coords[1] } else { 0.0 };
+        m = DMat3::from_cols(
+            DVec3::new(1.0, 0.0, 0.0),
+            DVec3::new(0.0, 1.0, 0.0),
+            DVec3::new(tx, ty, 1.0),
+        );
     }
     m
 }
 
-fn scale_m(coords: &[f64]) -> [[f64; 3]; 3] {
-    let mut m = identity_mat3();
-    if !coords.is_empty() {
-        let sx = coords[0];
-        let sy = if coords.len() > 1 { coords[1] } else { sx };
-        m[0][0] = sx;
-        m[1][1] = sy;
-    }
-    m
-}
-
-fn rotate_m(coords: &[f64]) -> [[f64; 3]; 3] {
+fn scale_m(coords: &[f64]) -> DMat3 {
     if coords.is_empty() {
-        return identity_mat3();
+        return DMat3::IDENTITY;
+    }
+    let sx = coords[0];
+    let sy = if coords.len() > 1 { coords[1] } else { sx };
+    DMat3::from_cols(
+        DVec3::new(sx, 0.0, 0.0),
+        DVec3::new(0.0, sy, 0.0),
+        DVec3::new(0.0, 0.0, 1.0),
+    )
+}
+
+fn rotate_m(coords: &[f64]) -> DMat3 {
+    if coords.is_empty() {
+        return DMat3::IDENTITY;
     }
     let a = coords[0].to_radians();
     let (c, s) = a.sin_cos();
     if coords.len() >= 3 {
         let (cx, cy) = (coords[1], coords[2]);
-        let mut m = [[0.0; 3]; 3];
-        m[0][0] = c;
-        m[0][1] = -s;
-        m[0][2] = cx - cx * c + cy * s;
-        m[1][0] = s;
-        m[1][1] = c;
-        m[1][2] = cy - cx * s - cy * c;
-        m[2][2] = 1.0;
-        m
+        DMat3::from_cols(
+            DVec3::new(c, s, 0.0),
+            DVec3::new(-s, c, 0.0),
+            DVec3::new(cx - cx * c + cy * s, cy - cx * s - cy * c, 1.0),
+        )
     } else {
-        let mut m = identity_mat3();
-        m[0][0] = c;
-        m[0][1] = -s;
-        m[1][0] = s;
-        m[1][1] = c;
-        m
+        DMat3::from_cols(
+            DVec3::new(c, s, 0.0),
+            DVec3::new(-s, c, 0.0),
+            DVec3::new(0.0, 0.0, 1.0),
+        )
     }
 }
 
-fn skew_x_m(coords: &[f64]) -> [[f64; 3]; 3] {
-    let mut m = identity_mat3();
+fn skew_x_m(coords: &[f64]) -> DMat3 {
     if let Some(&a) = coords.first() {
-        m[0][1] = a.to_radians().tan();
+        let t = a.to_radians().tan();
+        DMat3::from_cols(
+            DVec3::new(1.0, 0.0, 0.0),
+            DVec3::new(t, 1.0, 0.0),
+            DVec3::new(0.0, 0.0, 1.0),
+        )
+    } else {
+        DMat3::IDENTITY
     }
-    m
 }
 
-fn skew_y_m(coords: &[f64]) -> [[f64; 3]; 3] {
-    let mut m = identity_mat3();
+fn skew_y_m(coords: &[f64]) -> DMat3 {
     if let Some(&a) = coords.first() {
-        m[1][0] = a.to_radians().tan();
+        let t = a.to_radians().tan();
+        DMat3::from_cols(
+            DVec3::new(1.0, t, 0.0),
+            DVec3::new(0.0, 1.0, 0.0),
+            DVec3::new(0.0, 0.0, 1.0),
+        )
+    } else {
+        DMat3::IDENTITY
     }
-    m
 }
 
-fn affine_m(coords: &[f64]) -> [[f64; 3]; 3] {
+fn affine_m(coords: &[f64]) -> DMat3 {
     if coords.len() < 6 {
-        return identity_mat3();
+        return DMat3::IDENTITY;
     }
-    let mut m = [[0.0; 3]; 3];
-    m[0][0] = coords[0];
-    m[0][1] = coords[2];
-    m[0][2] = coords[4];
-    m[1][0] = coords[1];
-    m[1][1] = coords[3];
-    m[1][2] = coords[5];
-    m[2][2] = 1.0;
-    m
+    DMat3::from_cols(
+        DVec3::new(coords[0], coords[1], 0.0),
+        DVec3::new(coords[2], coords[3], 0.0),
+        DVec3::new(coords[4], coords[5], 1.0),
+    )
 }
 
 /// Parse an SVG `transform` attribute into a 3×3 affine matrix.
 ///
 /// Supports: `translate`, `scale`, `rotate`, `skewX`, `skewY`, `matrix`.
 /// Multiple functions can be chained (e.g. `translate(10,20) scale(2)`).
-pub fn parse_svg_transform(transform_str: &str) -> [[f64; 3]; 3] {
-    let mut matrix = identity_mat3();
+pub fn parse_svg_transform(transform_str: &str) -> DMat3 {
+    let mut matrix = DMat3::IDENTITY;
     if transform_str.is_empty() {
         return matrix;
     }
@@ -922,9 +913,9 @@ pub fn parse_svg_transform(transform_str: &str) -> [[f64; 3]; 3] {
                     "skewX" => skew_x_m(&coords),
                     "skewY" => skew_y_m(&coords),
                     "matrix" => affine_m(&coords),
-                    _ => identity_mat3(),
+                    _ => DMat3::IDENTITY,
                 };
-                matrix = mat3_mul(&matrix, &fm);
+                matrix *= fm;
                 remaining = remaining[close + 1..].trim_start();
             } else {
                 break;
@@ -1080,14 +1071,8 @@ pub fn svg_string_to_geometries(
     let all_geometries = match roxmltree::Document::parse(svg_str) {
         Ok(doc) => {
             let mut geos = Vec::new();
-            let identity = identity_mat3();
-            traverse(
-                doc.root_element(),
-                &identity,
-                &mut geos,
-                scale_x,
-                scale_y,
-            );
+            let identity = DMat3::IDENTITY;
+            traverse(doc.root_element(), identity, &mut geos, scale_x, scale_y);
             geos
         }
         Err(_) => Vec::new(),
@@ -1097,7 +1082,7 @@ pub fn svg_string_to_geometries(
 
 fn traverse(
     node: roxmltree::Node,
-    parent_tfm: &[[f64; 3]; 3],
+    parent_tfm: DMat3,
     geos: &mut Vec<Geometry>,
     scale_x: f64,
     scale_y: f64,
@@ -1107,13 +1092,13 @@ fn traverse(
     }
 
     let local = parse_svg_transform(node.attribute("transform").unwrap_or(""));
-    let combined = mat3_mul(parent_tfm, &local);
+    let combined = parent_tfm * local;
 
     match node.tag_name().name() {
         "path" => {
             if let Some(d) = node.attribute("d") {
                 if let Ok(g) =
-                    parse_svg_path_data(d, &combined, scale_x, scale_y)
+                    parse_svg_path_data(d, combined, scale_x, scale_y)
                 {
                     geos.extend(g);
                 }
@@ -1122,7 +1107,7 @@ fn traverse(
         "rect" => {
             if let Some(d) = rect_to_d(&node) {
                 if let Ok(g) =
-                    parse_svg_path_data(&d, &combined, scale_x, scale_y)
+                    parse_svg_path_data(&d, combined, scale_x, scale_y)
                 {
                     geos.extend(g);
                 }
@@ -1131,7 +1116,7 @@ fn traverse(
         "circle" => {
             if let Some(d) = circle_to_d(&node) {
                 if let Ok(g) =
-                    parse_svg_path_data(&d, &combined, scale_x, scale_y)
+                    parse_svg_path_data(&d, combined, scale_x, scale_y)
                 {
                     geos.extend(g);
                 }
@@ -1140,7 +1125,7 @@ fn traverse(
         "ellipse" => {
             if let Some(d) = ellipse_to_d(&node) {
                 if let Ok(g) =
-                    parse_svg_path_data(&d, &combined, scale_x, scale_y)
+                    parse_svg_path_data(&d, combined, scale_x, scale_y)
                 {
                     geos.extend(g);
                 }
@@ -1149,7 +1134,7 @@ fn traverse(
         "line" => {
             if let Some(d) = line_to_d(&node) {
                 if let Ok(g) =
-                    parse_svg_path_data(&d, &combined, scale_x, scale_y)
+                    parse_svg_path_data(&d, combined, scale_x, scale_y)
                 {
                     geos.extend(g);
                 }
@@ -1158,7 +1143,7 @@ fn traverse(
         "polyline" | "polygon" => {
             if let Some(d) = poly_to_d(&node) {
                 if let Ok(g) =
-                    parse_svg_path_data(&d, &combined, scale_x, scale_y)
+                    parse_svg_path_data(&d, combined, scale_x, scale_y)
                 {
                     geos.extend(g);
                 }
@@ -1169,7 +1154,7 @@ fn traverse(
 
     for child in node.children() {
         if child.is_element() {
-            traverse(child, &combined, geos, scale_x, scale_y);
+            traverse(child, combined, geos, scale_x, scale_y);
         }
     }
 }
