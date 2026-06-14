@@ -4,13 +4,16 @@ Run with: make visual  (or: streamlit run tools/visual_test.py)
 """
 
 import math
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import matplotlib.patches as mpatches
 import matplotlib.pyplot as plt
 import numpy as np
 import streamlit as st
 from matplotlib.colors import to_hex
-from matplotlib.path import Path as MPath
 
 import raygeo.image as img
 from raygeo.geo import Arc, Bezier, Geometry, Line, Move
@@ -35,6 +38,15 @@ from raygeo.ops.raster import (
 )
 from raygeo.ops.types import CommandType, SectionType
 from raygeo.svg import parse_svg_path_data, svg_string_to_geometries
+from tools.plot import (
+    auto_limits,
+    fill_rounded_rect,
+    make_pattern,
+    plot_geometry,
+    plot_ops,
+    plot_polygon,
+    rasterize_geometries_to_mask,
+)
 
 EXAMPLE_SVG = (
     '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">\n'
@@ -43,228 +55,6 @@ EXAMPLE_SVG = (
     '  <path d="M 10 70 L 40 90 L 30 50 Z" />\n'
     "</svg>"
 )
-
-
-def _plot_geometry(
-    axes,
-    geom,
-    color="steelblue",
-    label=None,
-    show_points=False,
-    linewidth=1.5,
-):
-    cmds = geom.iter_typed_commands()
-    if not cmds:
-        return
-    prev_end = None
-    seg_label = label
-    for cmd in cmds:
-        end = cmd.end
-        if isinstance(cmd, Move):
-            if show_points:
-                axes.plot(end[0], end[1], "o", color=color, markersize=3)
-            prev_end = end
-            continue
-        if prev_end is None:
-            prev_end = end
-            continue
-        if isinstance(cmd, Line):
-            axes.plot(
-                [prev_end[0], end[0]],
-                [prev_end[1], end[1]],
-                color=color,
-                linewidth=linewidth,
-                label=seg_label,
-            )
-            seg_label = None
-        elif isinstance(cmd, Arc):
-            cx = prev_end[0] + cmd.center_offset[0]
-            cy = prev_end[1] + cmd.center_offset[1]
-            r = math.sqrt(
-                cmd.center_offset[0] ** 2 + cmd.center_offset[1] ** 2
-            )
-            a_start = math.atan2(prev_end[1] - cy, prev_end[0] - cx)
-            a_end = math.atan2(end[1] - cy, end[0] - cx)
-            angles = _arc_angles(a_start, a_end, cmd.clockwise)
-            ax_pts = [cx + r * math.cos(a) for a in angles]
-            ay_pts = [cy + r * math.sin(a) for a in angles]
-            axes.plot(
-                ax_pts,
-                ay_pts,
-                color=color,
-                linewidth=linewidth,
-                label=seg_label,
-            )
-            seg_label = None
-        elif isinstance(cmd, Bezier):
-            c1 = cmd.control1
-            c2 = cmd.control2
-            ts = np.linspace(0, 1, 64)
-            bx = (
-                (1 - ts) ** 3 * prev_end[0]
-                + 3 * (1 - ts) ** 2 * ts * c1[0]
-                + 3 * (1 - ts) * ts**2 * c2[0]
-                + ts**3 * end[0]
-            )
-            by = (
-                (1 - ts) ** 3 * prev_end[1]
-                + 3 * (1 - ts) ** 2 * ts * c1[1]
-                + 3 * (1 - ts) * ts**2 * c2[1]
-                + ts**3 * end[1]
-            )
-            axes.plot(
-                bx, by, color=color, linewidth=linewidth, label=seg_label
-            )
-            seg_label = None
-        if show_points:
-            axes.plot(end[0], end[1], "o", color=color, markersize=3)
-        prev_end = end
-
-
-def _arc_angles(a_start, a_end, clockwise):
-    diff = a_end - a_start
-    if clockwise:
-        if diff >= 0:
-            diff -= 2 * math.pi
-    else:
-        if diff <= 0:
-            diff += 2 * math.pi
-    n = max(32, int(abs(diff) * 16))
-    return [a_start + diff * i / n for i in range(n + 1)]
-
-
-def _auto_limits(geoms):
-    xs, ys = [], []
-    for g in geoms:
-        if g.is_empty():
-            continue
-        r = g.rect()
-        xs += [r[0], r[2]]
-        ys += [r[1], r[3]]
-    if not xs:
-        return -10, 10, -10, 10
-    pad = max((max(xs) - min(xs)), (max(ys) - min(ys))) * 0.1 + 1
-    return min(xs) - pad, max(xs) + pad, min(ys) - pad, max(ys) + pad
-
-
-def _geometry_to_mpath(geom):
-    """Convert a single raygeo Geometry to a matplotlib Path for
-    point-in-polygon testing."""
-    cmds = geom.iter_typed_commands()
-    if not cmds:
-        return None
-
-    vertices = []
-    codes = []
-    prev_end = None
-
-    for cmd in cmds:
-        end = (cmd.end[0], cmd.end[1])
-        if isinstance(cmd, Move):
-            if prev_end is not None and codes and codes[-1] != MPath.CLOSEPOLY:
-                vertices.append((0, 0))
-                codes.append(MPath.CLOSEPOLY)
-            vertices.append(end)
-            codes.append(MPath.MOVETO)
-            prev_end = end
-            continue
-        if prev_end is None:
-            prev_end = end
-            continue
-        if isinstance(cmd, Line):
-            vertices.append(end)
-            codes.append(MPath.LINETO)
-            prev_end = end
-        elif isinstance(cmd, Arc):
-            co = cmd.center_offset
-            cx = prev_end[0] + co[0]
-            cy = prev_end[1] + co[1]
-            r = math.sqrt(co[0] ** 2 + co[1] ** 2)
-            a_start = math.atan2(prev_end[1] - cy, prev_end[0] - cx)
-            a_end = math.atan2(end[1] - cy, end[0] - cx)
-            angles = _arc_angles(a_start, a_end, cmd.clockwise)
-            for a in angles[1:]:
-                vertices.append((cx + r * math.cos(a), cy + r * math.sin(a)))
-                codes.append(MPath.LINETO)
-            prev_end = end
-        elif isinstance(cmd, Bezier):
-            c1, c2 = cmd.control1, cmd.control2
-            p0 = prev_end
-            for t in np.linspace(1 / 20, 1, 20):
-                u = 1 - t
-                bx = (
-                    u**3 * p0[0]
-                    + 3 * u**2 * t * c1[0]
-                    + 3 * u * t**2 * c2[0]
-                    + t**3 * end[0]
-                )
-                by = (
-                    u**3 * p0[1]
-                    + 3 * u**2 * t * c1[1]
-                    + 3 * u * t**2 * c2[1]
-                    + t**3 * end[1]
-                )
-                vertices.append((bx, by))
-                codes.append(MPath.LINETO)
-            prev_end = end
-
-    if prev_end is not None and codes and codes[-1] != MPath.CLOSEPOLY:
-        if geom.is_closed():
-            vertices.append((0, 0))
-            codes.append(MPath.CLOSEPOLY)
-
-    return MPath(vertices, codes)
-
-
-def _rasterize_geometries_to_mask(geometries, width, height):
-    """Rasterize a list of Geometry objects into a boolean mask, fitting the
-    content within the requested dimensions while preserving aspect ratio."""
-
-    if not geometries:
-        return np.zeros((height, width), dtype=bool)
-
-    xs, ys = [], []
-    for g in geometries:
-        if g.is_empty():
-            continue
-        r = g.rect()
-        xs += [r[0], r[2]]
-        ys += [r[1], r[3]]
-    if not xs:
-        return np.zeros((height, width), dtype=bool)
-
-    xmin, xmax = min(xs), max(xs)
-    ymin, ymax = min(ys), max(ys)
-    cw, ch = xmax - xmin, ymax - ymin
-    if cw < 1e-6:
-        cw = 1.0
-    if ch < 1e-6:
-        ch = 1.0
-
-    pad = 5
-    scale = min((width - 2 * pad) / cw, (height - 2 * pad) / ch)
-
-    offset_x = (width - cw * scale) * 0.5
-    offset_y = (height - ch * scale) * 0.5
-
-    mask = np.zeros((height, width), dtype=bool)
-
-    for geom in geometries:
-        if geom.is_empty():
-            continue
-        mpath = _geometry_to_mpath(geom)
-        if mpath is None:
-            continue
-
-        yy, xx = np.mgrid[0:height, 0:width]
-        px = (xx - offset_x) / scale + xmin
-        py = (yy - offset_y) / scale + ymin
-        points = np.column_stack((px.ravel(), py.ravel()))
-
-        inside = mpath.contains_points(points)
-        mask |= inside.reshape(height, width)
-
-    return mask
 
 
 def page_geometry():
@@ -383,13 +173,13 @@ def page_geometry():
             colors = [to_hex(cmap(i / 10)) for i in range(10)]
             for i, c in enumerate(contours):
                 lbl = f"Contour {i}"
-                _plot_geometry(
+                plot_geometry(
                     ax,
                     c,
                     color=colors[i % len(colors)],
                     label=lbl,
                 )
-            xmin, xmax, ymin, ymax = _auto_limits(contours)
+            xmin, xmax, ymin, ymax = auto_limits(contours)
             ax.set_xlim(xmin, xmax)
             ax.set_ylim(ymin, ymax)
             ax.set_aspect("equal")
@@ -431,8 +221,8 @@ def page_geometry():
     show_pts = st.checkbox(
         "Show control points", value=False, key="show_pts_build"
     )
-    _plot_geometry(ax, geom, show_points=show_pts)
-    xmin, xmax, ymin, ymax = _auto_limits([geom])
+    plot_geometry(ax, geom, show_points=show_pts)
+    xmin, xmax, ymin, ymax = auto_limits([geom])
     ax.set_xlim(xmin, xmax)
     ax.set_ylim(ymin, ymax)
     ax.set_aspect("equal")
@@ -539,22 +329,14 @@ def page_polygon_boolean():
         result = get_polygons_difference(a, b)
 
     fig, ax = plt.subplots()
-    _plot_polygon(ax, a, "steelblue", "A")
-    _plot_polygon(ax, b, "tomato", "B")
+    plot_polygon(ax, a, "steelblue", "A")
+    plot_polygon(ax, b, "tomato", "B")
     if result:
-        _plot_polygon(ax, result[0], "limegreen", "Result", linewidth=2.5)
+        plot_polygon(ax, result[0], "limegreen", "Result", linewidth=2.5)
     ax.set_aspect("equal")
     ax.grid(True, alpha=0.3)
     ax.legend()
     st.pyplot(fig)
-
-
-def _plot_polygon(ax, pts, color, label, linewidth=1.5):
-    if not pts:
-        return
-    xs = [p[0] for p in pts] + [pts[0][0]]
-    ys = [p[1] for p in pts] + [pts[0][1]]
-    ax.plot(xs, ys, color=color, linewidth=linewidth, label=label)
 
 
 def page_offset():
@@ -575,9 +357,9 @@ def page_offset():
     result = offset_polygon(pts, amount)
 
     fig, ax = plt.subplots()
-    _plot_polygon(ax, pts, "steelblue", "Original")
+    plot_polygon(ax, pts, "steelblue", "Original")
     for i, poly in enumerate(result):
-        _plot_polygon(ax, poly, "limegreen", f"Offset {i}", linewidth=2.5)
+        plot_polygon(ax, poly, "limegreen", f"Offset {i}", linewidth=2.5)
     ax.set_aspect("equal")
     ax.grid(True, alpha=0.3)
     ax.legend()
@@ -602,7 +384,7 @@ def page_image():
             ],
         )
 
-    arr = _make_pattern(w, h, pattern)
+    arr = make_pattern(w, h, pattern)
 
     fig, axes = plt.subplots(1, 2, figsize=(10, 4))
 
@@ -636,29 +418,6 @@ def page_image():
     axes2[1].imshow(dithered, cmap="gray", vmin=0, vmax=1)
     axes2[1].set_title(f"Dithered ({dither})")
     st.pyplot(fig2)
-
-
-def _make_pattern(w, h, pattern):
-    x = np.arange(w, dtype=np.float64)
-    y = np.arange(h, dtype=np.float64)
-    xx, yy = np.meshgrid(x, y)
-
-    if pattern == "Gradient":
-        arr = ((xx / w) * 255).astype(np.uint8)
-    elif pattern == "Checkered":
-        block = 16
-        checker = ((xx // block) + (yy // block)) % 2 == 0
-        arr = np.where(checker, 255, 0).astype(np.uint8)
-    elif pattern == "Circle":
-        cx, cy = w / 2, h / 2
-        dist = np.sqrt((xx - cx) ** 2 + (yy - cy) ** 2)
-        r = min(w, h) / 2 * 0.8
-        arr = np.where(dist < r, 255, 0).astype(np.uint8)
-    else:
-        rng = np.random.default_rng(42)
-        arr = rng.integers(0, 256, (h, w), dtype=np.uint8)
-
-    return arr
 
 
 def page_svg():
@@ -698,11 +457,11 @@ def page_svg():
     geoms = parse_svg_path_data(path_data)
 
     fig, ax = plt.subplots()
-    _cmap = plt.get_cmap("tab10")
-    colors = [to_hex(_cmap(i / 10)) for i in range(10)]
+    cmap = plt.get_cmap("tab10")
+    colors = [to_hex(cmap(i / 10)) for i in range(10)]
     for i, g in enumerate(geoms):
-        _plot_geometry(ax, g, color=colors[i % len(colors)], label=f"Path {i}")
-    xmin, xmax, ymin, ymax = _auto_limits(geoms) if geoms else (0, 100, 0, 100)
+        plot_geometry(ax, g, color=colors[i % len(colors)], label=f"Path {i}")
+    xmin, xmax, ymin, ymax = auto_limits(geoms) if geoms else (0, 100, 0, 100)
     ax.set_xlim(xmin, xmax)
     ax.set_ylim(ymin, ymax)
     ax.set_aspect("equal")
@@ -710,122 +469,6 @@ def page_svg():
     if geoms:
         ax.legend()
     st.pyplot(fig)
-
-
-def _plot_ops(
-    axes,
-    ops,
-    color="steelblue",
-    label=None,
-    show_points=False,
-    linewidth=1.5,
-    show_travel=False,
-    show_power=False,
-):
-    """Plot an Ops sequence, drawing lines/arcs/beziers and optionally
-    showing travel moves and power state."""
-
-    ops.preload_state()
-    last_pt = (0.0, 0.0, 0.0)
-    seg_label = label
-    draw_color = color
-    for i in range(ops.len()):
-        ct = ops.command_type(i)
-        if ct == CommandType.SET_POWER:
-            continue
-        if ct == CommandType.MOVE_TO:
-            ep = ops.endpoint(i)
-            if show_travel and last_pt != ep:
-                axes.plot(
-                    [last_pt[0], ep[0]],
-                    [last_pt[1], ep[1]],
-                    color="gray",
-                    linewidth=0.5,
-                    linestyle=":",
-                )
-            last_pt = ep
-            if show_points:
-                axes.plot(ep[0], ep[1], "o", color=draw_color, markersize=3)
-            continue
-        if ct not in (
-            CommandType.LINE_TO,
-            CommandType.BEZIER_TO,
-            CommandType.ARC_TO,
-        ):
-            continue
-        if show_power:
-            st = ops.state(i)
-            if st is not None and st.power is not None:
-                draw_color = plt.get_cmap("RdYlGn")(st.power)
-            else:
-                draw_color = color
-        if ct == CommandType.LINE_TO:
-            ep = ops.endpoint(i)
-            axes.plot(
-                [last_pt[0], ep[0]],
-                [last_pt[1], ep[1]],
-                color=draw_color,
-                linewidth=linewidth,
-                label=seg_label,
-            )
-            seg_label = None
-            last_pt = ep
-            if show_points:
-                axes.plot(ep[0], ep[1], "o", color=draw_color, markersize=3)
-            continue
-        if ct == CommandType.BEZIER_TO:
-            ep = ops.endpoint(i)
-            info = ops.inspect(i)
-            c1 = info.control1
-            c2 = info.control2
-            if c1 and c2:
-                ts = np.linspace(0, 1, 64)
-                bx = (
-                    (1 - ts) ** 3 * last_pt[0]
-                    + 3 * (1 - ts) ** 2 * ts * c1[0]
-                    + 3 * (1 - ts) * ts**2 * c2[0]
-                    + ts**3 * ep[0]
-                )
-                by = (
-                    (1 - ts) ** 3 * last_pt[1]
-                    + 3 * (1 - ts) ** 2 * ts * c1[1]
-                    + 3 * (1 - ts) * ts**2 * c2[1]
-                    + ts**3 * ep[1]
-                )
-                axes.plot(
-                    bx,
-                    by,
-                    color=draw_color,
-                    linewidth=linewidth,
-                    label=seg_label,
-                )
-                seg_label = None
-            last_pt = ep
-            continue
-        if ct == CommandType.ARC_TO:
-            ep = ops.endpoint(i)
-            info = ops.inspect(i)
-            co = info.center_offset
-            cw = info.clockwise
-            if co:
-                cx = last_pt[0] + co[0]
-                cy = last_pt[1] + co[1]
-                r = math.sqrt(co[0] ** 2 + co[1] ** 2)
-                a_start = math.atan2(last_pt[1] - cy, last_pt[0] - cx)
-                a_end = math.atan2(ep[1] - cy, ep[0] - cx)
-                angles = _arc_angles(a_start, a_end, cw)
-                ax_pts = [cx + r * math.cos(a) for a in angles]
-                ay_pts = [cy + r * math.sin(a) for a in angles]
-                axes.plot(
-                    ax_pts,
-                    ay_pts,
-                    color=draw_color,
-                    linewidth=linewidth,
-                    label=seg_label,
-                )
-                seg_label = None
-            last_pt = ep
-            continue
 
 
 def page_tabs():
@@ -945,7 +588,7 @@ def page_tabs():
 
     fig, axes = plt.subplots(1, 2, figsize=(14, 6))
     axes[0].set_title("Original")
-    _plot_ops(axes[0], orig_ops, color="steelblue")
+    plot_ops(axes[0], orig_ops, color="steelblue")
     for cx_, cy_, tw_ in clips:
         axes[0].plot(cx_, cy_, "rx", markersize=10, markeredgewidth=2)
         axes[0].add_patch(
@@ -963,7 +606,7 @@ def page_tabs():
 
     axes[1].set_title(f"After {mode} Tabs")
     show_pwr = mode == "Power"
-    _plot_ops(
+    plot_ops(
         axes[1],
         result_ops,
         color="steelblue",
@@ -1496,7 +1139,7 @@ def page_concave_hull():
             try:
                 svg_geoms = svg_string_to_geometries(svg_str)
                 if svg_geoms:
-                    img = _rasterize_geometries_to_mask(
+                    img = rasterize_geometries_to_mask(
                         svg_geoms, width, height
                     )
                 else:
@@ -1508,9 +1151,9 @@ def page_concave_hull():
         img[130:170, 130:170] = True
     elif preset == "Hourglass":
         r = 8
-        _fill_rounded_rect(img, (60, 30), (140, 70), r)
-        _fill_rounded_rect(img, (80, 110), (120, 150), r)
-        _fill_rounded_rect(img, (60, 110), (140, 170), r)
+        fill_rounded_rect(img, (60, 30), (140, 70), r)
+        fill_rounded_rect(img, (80, 110), (120, 150), r)
+        fill_rounded_rect(img, (60, 110), (140, 170), r)
     elif preset == "L-shape":
         img[30:170, 30:70] = True
         img[30:100, 70:170] = True
@@ -1539,7 +1182,7 @@ def page_concave_hull():
     )
 
     if convex_geo is not None:
-        _plot_geometry(
+        plot_geometry(
             ax,
             convex_geo,
             color="tomato",
@@ -1548,7 +1191,7 @@ def page_concave_hull():
         )
 
     if concave_geo is not None:
-        _plot_geometry(
+        plot_geometry(
             ax,
             concave_geo,
             color="forestgreen",
@@ -1557,7 +1200,7 @@ def page_concave_hull():
         )
 
     for i, g in enumerate(per_component):
-        _plot_geometry(
+        plot_geometry(
             ax,
             g,
             color="dodgerblue",
@@ -1584,14 +1227,14 @@ def page_concave_hull():
         c = plt.get_cmap("tab10")
         fig2, ax2 = plt.subplots(figsize=(6, 6))
         for i, g in enumerate(svg_geoms):
-            _plot_geometry(
+            plot_geometry(
                 ax2,
                 g,
                 color=to_hex(c(i / 10)),
                 label=f"Path {i}",
                 linewidth=1.5,
             )
-        xmin, xmax, ymin, ymax = _auto_limits(svg_geoms)
+        xmin, xmax, ymin, ymax = auto_limits(svg_geoms)
         ax2.set_xlim(xmin, xmax)
         ax2.set_ylim(ymin, ymax)
         ax2.set_aspect("equal")
@@ -1599,30 +1242,6 @@ def page_concave_hull():
         ax2.legend(fontsize=8)
         fig2.tight_layout()
         st.pyplot(fig2)
-
-
-def _fill_rounded_rect(img, pt1, pt2, r):
-    x1, y1 = pt1
-    x2, y2 = pt2
-    h, w = img.shape
-    img[max(0, y1 + r) : min(h, y2 - r), max(0, x1) : min(w, x2)] = True
-    img[max(0, y1) : min(h, y2), max(0, x1 + r) : min(w, x2 - r)] = True
-    for cy, cx in [
-        (y1 + r, x1 + r),
-        (y1 + r, x2 - r),
-        (y2 - r, x1 + r),
-        (y2 - r, x2 - r),
-    ]:
-        yy, xx = np.ogrid[-r : r + 1, -r : r + 1]
-        mask = xx**2 + yy**2 <= r**2
-        ys = slice(max(0, cy - r), min(h, cy + r + 1))
-        xs = slice(max(0, cx - r), min(w, cx + r + 1))
-        img[ys, xs][
-            mask[
-                : min(h, cy + r + 1) - max(0, cy - r),
-                : min(w, cx + r + 1) - max(0, cx - r),
-            ]
-        ] = True
 
 
 def page_rasterization():
@@ -1694,7 +1313,7 @@ def page_rasterization():
 
     sm = ScanMode.Segmented if scan_mode == "Segmented" else ScanMode.FullSweep
 
-    gray = _make_pattern(img_size, img_size, pattern)
+    gray = make_pattern(img_size, img_size, pattern)
 
     if mode == "Power Modulation":
         alpha = np.full((img_size, img_size), 255, dtype=np.uint8)

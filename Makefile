@@ -1,4 +1,4 @@
-.PHONY: build dev stubs format format-rust format-python lint lint-rust lint-python test check visual
+.PHONY: build dev stubs format format-rust format-python lint lint-rust lint-python test check visual doc docs
 
 build:
 	maturin build --release --out dist
@@ -36,3 +36,7 @@ check: lint test
 
 visual:
 	streamlit run tools/visual_test.py
+
+doc docs:
+	python -m tools.cli all
+	npx prettier --write --prose-wrap always --print-width 100 "docs/**/*.md"

@@ -86,7 +86,7 @@ print(g.is_closed())      # path closure check
 print(g.segments())       # split into sub-paths
 
 # Find closest point on path
-result = g.find_closest_point(5, 5)  # (segment_index, t, (x, y))
+result = g.find_closest_point(5, 5)  # (segment_index, t, (x, y)) or None
 
 # Point and tangent at parameter t on a segment
 point = g.get_point_at(segment_index=0, t=0.5)
@@ -189,8 +189,8 @@ is_point_inside_polygon((5, 5), square) # True
 
 # Boolean operations
 union = get_polygons_union([square, circle_approx])
-intersection = get_polygons_intersection([square, circle_approx])
-difference = get_polygons_difference([square], [circle_approx])
+intersection = get_polygons_intersection(square, circle_approx)
+difference = get_polygons_difference(square, circle_approx)
 
 # Offset
 inflated = offset_polygon(square, 2.0)
@@ -233,11 +233,11 @@ g.encloses(other_geometry)          # check if this fully encloses another
 ### Serialization
 
 ```python
-# Dump to dict (JSON-safe)
-data = g.dump()
+# Serialize to dict (JSON-safe)
+data = g.to_dict()
 
-# Load from dict
-g2 = Geometry.load(data)
+# Deserialize from dict
+g2 = Geometry.from_dict(data)
 
 # Pickle support (via __reduce_ex__)
 import pickle
@@ -246,8 +246,12 @@ g3 = pickle.loads(pickle.dumps(g))
 
 ## Documentation
 
-Full API documentation is generated from the source type stubs and published
-with the [RayForge Developer Docs](https://rayforge.org/docs/developer/raygeo-api/raygeo).
+Full API reference documentation is generated from the source type stubs.
+Run `make docs` to build it locally — this produces Markdown pages in
+`docs/api/` with inline visual examples.
+
+The docs are also published online with the
+[RayForge Developer Docs](https://rayforge.org/docs/developer/raygeo-api/raygeo).
 
 ## Development
 
@@ -278,26 +282,32 @@ make check
 
 ### Available Make Targets
 
-| Target        | Description                             |
-| ------------- | --------------------------------------- |
-| `make dev`    | Build and install into the active venv  |
-| `make build`  | Build release wheel to `dist/`          |
-| `make test`   | Run pytest                              |
-| `make lint`   | Lint Rust + Python (including pyright)  |
-| `make format` | Auto-format Rust + Python               |
-| `make check`  | Lint + test                             |
-| `make stubs`  | Regenerate `.pyi` type stubs            |
-| `make visual` | Launch Streamlit visual test playground |
+| Target        | Description                                |
+| ------------- | ------------------------------------------ |
+| `make dev`    | Build and install into the active venv     |
+| `make build`  | Build release wheel to `dist/`             |
+| `make test`   | Run pytest                                 |
+| `make lint`   | Lint Rust + Python (including pyright)     |
+| `make format` | Auto-format Rust + Python                  |
+| `make check`  | Lint + test                                |
+| `make stubs`  | Regenerate `.pyi` type stubs               |
+| `make docs`   | Build API docs with inline visual examples |
+| `make visual` | Launch Streamlit visual test playground    |
 
 ### Visual Testing
 
-The `make visual` target launches an interactive Streamlit app for
-exploring geometry operations visually. Install the optional deps first:
+The `make visual` target launches an interactive Streamlit playground
+with real-time plots for geometry construction, polygon booleans, curve
+fitting, image processing, SVG parsing, tab operations, overscan, lead-
+in/out, merging, rasterization, concave hull, and nesting.
 
 ```bash
 pip install -e ".[visual]"
 make visual
 ```
+
+See [Visual Testing](visual-testing.md) for a full walkthrough of every
+page and its controls.
 
 ## License
 
