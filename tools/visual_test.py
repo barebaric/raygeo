@@ -10,13 +10,38 @@ import matplotlib.pyplot as plt
 import numpy as np
 import streamlit as st
 from matplotlib.colors import to_hex
+from matplotlib.path import Path as MPath
 
+import raygeo.image as img
 from raygeo.geo import Arc, Bezier, Geometry, Line, Move
+from raygeo.geo.algo import hull
 from raygeo.geo.shape.polygon import (
+    get_polygon_convex_hull,
     get_polygons_difference,
     get_polygons_intersection,
     get_polygons_union,
     offset_polygon,
+)
+from raygeo.nest.genetic import GeneticAlgorithm
+from raygeo.nest.gravity import apply_gravity
+from raygeo.nest.placement import place_parts
+from raygeo.ops import Ops
+from raygeo.ops.raster import (
+    ScanMode,
+    rasterize_mask_lines,
+    rasterize_mask_scan,
+    rasterize_multi_pass,
+    rasterize_power_modulation,
+)
+from raygeo.ops.types import CommandType, SectionType
+from raygeo.svg import parse_svg_path_data, svg_string_to_geometries
+
+EXAMPLE_SVG = (
+    '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">\n'
+    '  <rect x="10" y="10" width="30" height="30" />\n'
+    '  <circle cx="70" cy="70" r="20" />\n'
+    '  <path d="M 10 70 L 40 90 L 30 50 Z" />\n'
+    "</svg>"
 )
 
 
@@ -120,6 +145,126 @@ def _auto_limits(geoms):
         return -10, 10, -10, 10
     pad = max((max(xs) - min(xs)), (max(ys) - min(ys))) * 0.1 + 1
     return min(xs) - pad, max(xs) + pad, min(ys) - pad, max(ys) + pad
+
+
+def _geometry_to_mpath(geom):
+    """Convert a single raygeo Geometry to a matplotlib Path for
+    point-in-polygon testing."""
+    cmds = geom.iter_typed_commands()
+    if not cmds:
+        return None
+
+    vertices = []
+    codes = []
+    prev_end = None
+
+    for cmd in cmds:
+        end = (cmd.end[0], cmd.end[1])
+        if isinstance(cmd, Move):
+            if prev_end is not None and codes and codes[-1] != MPath.CLOSEPOLY:
+                vertices.append((0, 0))
+                codes.append(MPath.CLOSEPOLY)
+            vertices.append(end)
+            codes.append(MPath.MOVETO)
+            prev_end = end
+            continue
+        if prev_end is None:
+            prev_end = end
+            continue
+        if isinstance(cmd, Line):
+            vertices.append(end)
+            codes.append(MPath.LINETO)
+            prev_end = end
+        elif isinstance(cmd, Arc):
+            co = cmd.center_offset
+            cx = prev_end[0] + co[0]
+            cy = prev_end[1] + co[1]
+            r = math.sqrt(co[0] ** 2 + co[1] ** 2)
+            a_start = math.atan2(prev_end[1] - cy, prev_end[0] - cx)
+            a_end = math.atan2(end[1] - cy, end[0] - cx)
+            angles = _arc_angles(a_start, a_end, cmd.clockwise)
+            for a in angles[1:]:
+                vertices.append((cx + r * math.cos(a), cy + r * math.sin(a)))
+                codes.append(MPath.LINETO)
+            prev_end = end
+        elif isinstance(cmd, Bezier):
+            c1, c2 = cmd.control1, cmd.control2
+            p0 = prev_end
+            for t in np.linspace(1 / 20, 1, 20):
+                u = 1 - t
+                bx = (
+                    u**3 * p0[0]
+                    + 3 * u**2 * t * c1[0]
+                    + 3 * u * t**2 * c2[0]
+                    + t**3 * end[0]
+                )
+                by = (
+                    u**3 * p0[1]
+                    + 3 * u**2 * t * c1[1]
+                    + 3 * u * t**2 * c2[1]
+                    + t**3 * end[1]
+                )
+                vertices.append((bx, by))
+                codes.append(MPath.LINETO)
+            prev_end = end
+
+    if prev_end is not None and codes and codes[-1] != MPath.CLOSEPOLY:
+        if geom.is_closed():
+            vertices.append((0, 0))
+            codes.append(MPath.CLOSEPOLY)
+
+    return MPath(vertices, codes)
+
+
+def _rasterize_geometries_to_mask(geometries, width, height):
+    """Rasterize a list of Geometry objects into a boolean mask, fitting the
+    content within the requested dimensions while preserving aspect ratio."""
+
+    if not geometries:
+        return np.zeros((height, width), dtype=bool)
+
+    xs, ys = [], []
+    for g in geometries:
+        if g.is_empty():
+            continue
+        r = g.rect()
+        xs += [r[0], r[2]]
+        ys += [r[1], r[3]]
+    if not xs:
+        return np.zeros((height, width), dtype=bool)
+
+    xmin, xmax = min(xs), max(xs)
+    ymin, ymax = min(ys), max(ys)
+    cw, ch = xmax - xmin, ymax - ymin
+    if cw < 1e-6:
+        cw = 1.0
+    if ch < 1e-6:
+        ch = 1.0
+
+    pad = 5
+    scale = min((width - 2 * pad) / cw, (height - 2 * pad) / ch)
+
+    offset_x = (width - cw * scale) * 0.5
+    offset_y = (height - ch * scale) * 0.5
+
+    mask = np.zeros((height, width), dtype=bool)
+
+    for geom in geometries:
+        if geom.is_empty():
+            continue
+        mpath = _geometry_to_mpath(geom)
+        if mpath is None:
+            continue
+
+        yy, xx = np.mgrid[0:height, 0:width]
+        px = (xx - offset_x) / scale + xmin
+        py = (yy - offset_y) / scale + ymin
+        points = np.column_stack((px.ravel(), py.ravel()))
+
+        inside = mpath.contains_points(points)
+        mask |= inside.reshape(height, width)
+
+    return mask
 
 
 def page_geometry():
@@ -442,8 +587,6 @@ def page_offset():
 def page_image():
     st.header("Image Processing")
 
-    import raygeo.image as img
-
     c1, c2 = st.columns(2)
     with c1:
         w = st.number_input("Width", 8, 1024, 128, step=8, key="img_w")
@@ -552,8 +695,6 @@ def page_svg():
             "M 0 0 L 100 0 L 100 100 Z",
         )
 
-    from raygeo.svg import parse_svg_path_data
-
     geoms = parse_svg_path_data(path_data)
 
     fig, ax = plt.subplots()
@@ -583,7 +724,6 @@ def _plot_ops(
 ):
     """Plot an Ops sequence, drawing lines/arcs/beziers and optionally
     showing travel moves and power state."""
-    from raygeo.ops.types import CommandType
 
     ops.preload_state()
     last_pt = (0.0, 0.0, 0.0)
@@ -690,9 +830,6 @@ def _plot_ops(
 
 def page_tabs():
     st.header("Tab Operations")
-
-    from raygeo.ops import Ops
-    from raygeo.ops.types import SectionType
 
     c1, c2 = st.columns(2)
     with c1:
@@ -847,9 +984,6 @@ def page_tabs():
 def page_merge_lines():
     st.header("Merge Lines")
 
-    from raygeo.ops import Ops
-    from raygeo.ops.types import CommandType
-
     preset = st.selectbox(
         "Preset",
         [
@@ -1002,9 +1136,6 @@ def page_merge_lines():
 
 def page_overscan():
     st.header("Overscan")
-
-    from raygeo.ops import Ops
-    from raygeo.ops.types import CommandType, SectionType
 
     preset = st.selectbox(
         "Preset",
@@ -1172,9 +1303,6 @@ def page_overscan():
 def page_lead_in_out():
     st.header("Lead-In / Lead-Out")
 
-    from raygeo.ops import Ops
-    from raygeo.ops.types import CommandType, SectionType
-
     preset = st.selectbox(
         "Preset",
         [
@@ -1324,8 +1452,6 @@ def page_lead_in_out():
 def page_concave_hull():
     st.header("Concave Hull (Shrink-Wrap)")
 
-    from raygeo.geo.algo import hull
-
     preset = st.selectbox(
         "Shape",
         [
@@ -1334,16 +1460,50 @@ def page_concave_hull():
             "L-shape",
             "Circle",
             "Three dots",
+            "Upload SVG",
         ],
         key="ch_shape",
     )
 
+    height = st.slider("Resolution", 200, 1000, 500, 50, key="ch_res")
+    width = height
+
     gravity = st.slider("Gravity", 0.0, 1.0, 0.1, 0.05, key="ch_grav")
 
-    height, width = 200, 200
     img = np.zeros((height, width), dtype=bool)
+    svg_geoms = []
 
-    if preset == "Two squares":
+    if preset == "Upload SVG":
+        svg_source = st.radio(
+            "SVG source", ["Upload file", "Paste SVG text"], key="ch_svg_src"
+        )
+        svg_str = ""
+        if svg_source == "Upload file":
+            uploaded = st.file_uploader(
+                "Choose an SVG file", type=["svg"], key="ch_svg_file"
+            )
+            if uploaded is not None:
+                svg_str = uploaded.read().decode("utf-8")
+        else:
+            svg_str = st.text_area(
+                "SVG markup",
+                EXAMPLE_SVG,
+                height=200,
+                key="ch_svg_text",
+            )
+
+        if svg_str.strip():
+            try:
+                svg_geoms = svg_string_to_geometries(svg_str)
+                if svg_geoms:
+                    img = _rasterize_geometries_to_mask(
+                        svg_geoms, width, height
+                    )
+                else:
+                    st.warning("No geometries found in SVG")
+            except Exception as e:
+                st.error(f"Failed to parse SVG: {e}")
+    elif preset == "Two squares":
         img[30:70, 30:70] = True
         img[130:170, 130:170] = True
     elif preset == "Hourglass":
@@ -1419,6 +1579,27 @@ def page_concave_hull():
         c3.metric("Concave area", f"{concave_geo.area():.1f}")
     c3.metric("Components", f"{len(per_component)}")
 
+    if preset == "Upload SVG" and svg_geoms:
+        st.subheader("Parsed SVG geometries")
+        c = plt.get_cmap("tab10")
+        fig2, ax2 = plt.subplots(figsize=(6, 6))
+        for i, g in enumerate(svg_geoms):
+            _plot_geometry(
+                ax2,
+                g,
+                color=to_hex(c(i / 10)),
+                label=f"Path {i}",
+                linewidth=1.5,
+            )
+        xmin, xmax, ymin, ymax = _auto_limits(svg_geoms)
+        ax2.set_xlim(xmin, xmax)
+        ax2.set_ylim(ymin, ymax)
+        ax2.set_aspect("equal")
+        ax2.grid(True, alpha=0.3)
+        ax2.legend(fontsize=8)
+        fig2.tight_layout()
+        st.pyplot(fig2)
+
 
 def _fill_rounded_rect(img, pt1, pt2, r):
     x1, y1 = pt1
@@ -1446,15 +1627,6 @@ def _fill_rounded_rect(img, pt1, pt2, r):
 
 def page_rasterization():
     st.header("Rasterization")
-
-    from raygeo.ops.raster import (
-        ScanMode,
-        rasterize_mask_lines,
-        rasterize_mask_scan,
-        rasterize_multi_pass,
-        rasterize_power_modulation,
-    )
-    from raygeo.ops.types import CommandType
 
     c1, c2 = st.columns(2)
     with c1:
@@ -1660,10 +1832,6 @@ def page_rasterization():
 def page_nesting():
     st.header("Nesting")
 
-    from raygeo.geo.shape.polygon import get_polygon_convex_hull
-    from raygeo.nest import placement as npla
-    from raygeo.nest.gravity import apply_gravity
-
     c1, c2, c3 = st.columns(3)
     with c1:
         shape = st.selectbox(
@@ -1754,8 +1922,6 @@ def page_nesting():
         sheet_offsets = [(0.0, 0.0)] * n_sheets
 
         if use_ga and rot_max > 0:
-            from raygeo.nest.genetic import GeneticAlgorithm
-
             ga_config = {
                 "rotation_count": max(1, rot_max // 45) + 1,
                 "flip_h": flip_h,
@@ -1771,7 +1937,7 @@ def page_nesting():
             for gen in range(n_gen):
                 for idx in range(len(ga)):
                     rots, fh_arr, fv_arr, _ = ga.get_individual(idx)
-                    result = npla.place_parts(
+                    result = place_parts(
                         part_polys,
                         part_hulls,
                         sheet_poly,
@@ -1799,7 +1965,7 @@ def page_nesting():
             fh = [flip_h] * n_parts
             fv = [flip_v] * n_parts
             with st.spinner("Nesting..."):
-                result = npla.place_parts(
+                result = place_parts(
                     part_polys,
                     part_hulls,
                     sheet_poly,
