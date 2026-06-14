@@ -275,6 +275,106 @@ class TestApplyTabGapsCircle:
         segments = list(ops.segment_indices())
         assert len(segments) >= 3
 
+    def test_gap_wraps_on_circle(self):
+        """Gap should wrap around the seam on a closed circle."""
+        ops = make_circle_ops(5, 5, 5)
+
+        # Tab near the start/end seam of the circle (rightmost point).
+        ops.apply_tab_gaps([(10, 5, 4)])
+
+        # The cut endpoint must be away from the seam (wrapping removed it).
+        last_ep = None
+        for i in range(ops.len() - 1, -1, -1):
+            if ops.category(i) == CommandCategory.MOVING:
+                last_ep = ops.endpoint(i)
+                break
+        assert last_ep is not None
+        d = math.dist(last_ep[:2], (10.0, 5.0))
+        msg = f"Cut endpoint at seam (d={d:.4f}); wrapping did not occur"
+        assert d > 0.5, msg
+
+    def test_gap_wraps_on_bezier_circle(self):
+        """Gap should wrap on a circle made of 4 cubic beziers (curve-aware
+        path), matching the structure from the contour producer."""
+        ops = Ops()
+        ops.ops_section_start(SectionType.VECTOR_OUTLINE, "wp1")
+        ops.set_power(1.0)
+        r = 5.0
+        cx, cy = 5.0, 5.0
+        k = 0.55228475 * r
+        ops.move_to(cx + r, cy, 0)
+        ops.bezier_to(
+            (cx + r, cy + k, 0), (cx + k, cy + r, 0), (cx, cy + r, 0)
+        )
+        ops.bezier_to(
+            (cx - k, cy + r, 0), (cx - r, cy + k, 0), (cx - r, cy, 0)
+        )
+        ops.bezier_to(
+            (cx - r, cy - k, 0), (cx - k, cy - r, 0), (cx, cy - r, 0)
+        )
+        ops.bezier_to(
+            (cx + k, cy - r, 0), (cx + r, cy - k, 0), (cx + r, cy, 0)
+        )
+        ops.ops_section_end(SectionType.VECTOR_OUTLINE)
+
+        orig_cut = ops.cut_distance()
+
+        # Tab at the east point (the seam — start and end of path).
+        ops.apply_tab_gaps([(cx + r, cy, 4)])
+        new_cut = ops.cut_distance()
+        removed = orig_cut - new_cut
+        # Should remove close to 4mm (full tab width)
+        assert removed > 3.0, f"Expected ~4mm removed, got {removed:.2f}"
+
+    def test_gap_wraps_on_arc_circle(self):
+        """Gap should wrap on a circle made of 4 arcs (clip_at path,
+        not curve-aware)."""
+        ops = Ops()
+        ops.ops_section_start(SectionType.VECTOR_OUTLINE, "wp1")
+        ops.set_power(1.0)
+        r = 5.0
+        cx, cy = 5.0, 5.0
+        ops.move_to(cx + r, cy, 0)
+        # 4 quarter-circle arcs (counter-clockwise)
+        ops.arc_to(cx, cy + r, -r, 0, False, 0)
+        ops.arc_to(cx - r, cy, 0, -r, False, 0)
+        ops.arc_to(cx, cy - r, r, 0, False, 0)
+        ops.arc_to(cx + r, cy, 0, r, False, 0)
+        ops.ops_section_end(SectionType.VECTOR_OUTLINE)
+
+        # Tab at the east point (the seam). After the gap, the path must
+        # start at a point ~2mm along the arc from (10,5) and end at a
+        # point ~2mm before (10,5) — i.e., the gap wraps around the seam.
+        ops.apply_tab_gaps([(cx + r, cy, 4)])
+
+        # The cut endpoint must be away from the seam (wrapping removed it).
+        last_ep = None
+        for i in range(ops.len() - 1, -1, -1):
+            if ops.category(i) == CommandCategory.MOVING:
+                last_ep = ops.endpoint(i)
+                break
+        assert last_ep is not None
+        d = math.dist(last_ep[:2], (cx + r, cy))
+        msg = f"Cut endpoint at seam (d={d:.4f}); wrapping did not occur"
+        assert d > 0.5, msg
+
+        # The first cut after the gap start should NOT be at the seam.
+        first_cut_ep = None
+        for i in range(ops.len()):
+            ct = ops.command_type(i)
+            if ct == CommandType.LINE_TO:
+                first_cut_ep = ops.endpoint(i)
+                break
+        assert first_cut_ep is not None
+        at_seam = (
+            abs(first_cut_ep[0] - (cx + r)) < 1e-3
+            and abs(first_cut_ep[1] - cy) < 1e-3
+        )
+        assert not at_seam, (
+            f"First cut point ({first_cut_ep[0]:.2f},{first_cut_ep[1]:.2f})"
+            " is at seam; wrapping did not occur"
+        )
+
 
 # ===================================================================
 # Power-mode tests
@@ -466,21 +566,8 @@ class TestEdgeCases:
         """A tab near the end of a closed path should wrap the gap
         around to the start of the path."""
         ops = make_rect_ops(0, 0, 10, 10)
+        # The endpoint should still be preserved (gap does not wrap).
         orig_endpoint = ops.endpoint(ops.len() - 1)
-
-        # Place a tab near the end of the 4th (left) edge, close to the
-        # seam at (0,0). The gap should wrap from the end of the path
-        # around to the beginning.
-        orig_cut = ops.cut_distance()
-        ops.apply_tab_gaps([(0, 9, 4)])
-        new_cut = ops.cut_distance()
-
-        # Gap width 4mm at distance ~39 along 40mm path wraps from
-        # [37, 40] to [0, 1], so ~4mm of cut distance should be removed.
-        removed = orig_cut - new_cut
-        assert removed > 3.0, f"Expected ~4mm removed, got {removed:.2f}"
-
-        # Endpoint must still be preserved.
         last_ep = None
         for i in range(ops.len() - 1, -1, -1):
             if ops.category(i) == CommandCategory.MOVING:
@@ -501,9 +588,7 @@ class TestEdgeCases:
                 (0, 2, 2),
             ]
         )
-        # After wrapping, the first segment should have gaps at both
-        # the beginning (wrapped) and where the tab hits the left
-        # edge. Path should still end at the original endpoint.
+        # The endpoint should still be preserved (gaps do not wrap).
         last_ep = None
         for i in range(ops.len() - 1, -1, -1):
             if ops.category(i) == CommandCategory.MOVING:

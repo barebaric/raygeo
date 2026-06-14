@@ -1,4 +1,5 @@
 use super::container::Ops;
+use super::enums::CommandType;
 use super::types::{MoveCmd, OpCategory, OpNode};
 use crate::constants::{EPSILON_COLLINEAR, EPSILON_GAP_CLOSE};
 use crate::geo::algo::clipping::{
@@ -374,11 +375,49 @@ impl Ops {
             linear_t2,
         );
 
-        let gap_start_dist = 0.0f64.max(hit_dist - width / 2.0);
-        let gap_end_dist = hit_dist + width / 2.0;
+        let half_width = width / 2.0;
+        let gap_start_dist = hit_dist - half_width;
+        let gap_end_dist = hit_dist + half_width;
 
-        let mut new_subpath =
-            build_clipped_subpath(&temp_ops, gap_start_dist, gap_end_dist);
+        let gaps = &[(gap_start_dist, gap_end_dist)];
+        let mut new_subpath = build_clipped_subpath(&temp_ops, gaps);
+
+        // For a closed subpath, if the gap extends past the total path
+        // length, wrap the excess around to the beginning of the path.
+        let total_length = accumulate_distance_to_hit(
+            &temp_ops,
+            &linear_geo_cmds,
+            linear_geo_cmds.len() - 1,
+            1.0,
+        );
+        if gap_start_dist < 0.0 || gap_end_dist > total_length {
+            let first_pt = temp_ops.commands[0].end_point();
+            let last_pt = temp_ops
+                .commands
+                .iter()
+                .rev()
+                .find(|n| n.is_moving())
+                .map(|n| n.end_point())
+                .unwrap_or(first_pt);
+            let is_closed = (first_pt.0 - last_pt.0).powi(2)
+                + (first_pt.1 - last_pt.1).powi(2)
+                < EPSILON_GAP_CLOSE * EPSILON_GAP_CLOSE;
+            if is_closed {
+                let mut wrap_gaps: Vec<(f64, f64)> = Vec::new();
+                if gap_start_dist < 0.0 {
+                    wrap_gaps
+                        .push((total_length + gap_start_dist, total_length));
+                }
+                if gap_end_dist > total_length {
+                    wrap_gaps.push((0.0, gap_end_dist - total_length));
+                }
+                wrap_gaps.push((
+                    gap_start_dist.max(0.0),
+                    gap_end_dist.min(total_length),
+                ));
+                new_subpath = build_clipped_subpath(&temp_ops, &wrap_gaps);
+            }
+        }
 
         let original_endpoint = self.commands
             [if end_idx > 0 { end_idx - 1 } else { 0 }]
@@ -403,12 +442,31 @@ impl Ops {
         };
 
         if !endpoint_match {
-            new_subpath.move_to(
-                original_endpoint.0,
-                original_endpoint.1,
-                original_endpoint.2,
-                None,
-            );
+            // For a closed subpath where the gap wraps around the seam,
+            // the new subpath ends at the correct position (before the
+            // seam). Adding a travel move back to the seam would undo
+            // the wrapping. Check whether the seam falls inside the gap.
+            let first_pt = temp_ops.commands[0].end_point();
+            let last_pt = temp_ops
+                .commands
+                .iter()
+                .rev()
+                .find(|n| n.is_moving())
+                .map(|n| n.end_point())
+                .unwrap_or(first_pt);
+            let subpath_is_closed = (first_pt.0 - last_pt.0).powi(2)
+                + (first_pt.1 - last_pt.1).powi(2)
+                < EPSILON_GAP_CLOSE * EPSILON_GAP_CLOSE;
+            let seam_gapped = subpath_is_closed
+                && (gap_start_dist < 0.0 || gap_end_dist > total_length);
+            if !seam_gapped {
+                new_subpath.move_to(
+                    original_endpoint.0,
+                    original_endpoint.1,
+                    original_endpoint.2,
+                    None,
+                );
+            }
         }
 
         let mut new_cmds = Vec::new();
@@ -760,17 +818,12 @@ fn accumulate_distance_to_hit(
     hit_dist
 }
 
-/// Build a new subpath by removing the segment range `[gap_start_dist, gap_end_dist]`.
+/// Build a new subpath by removing the given gap ranges.
 ///
 /// - `temp_ops`: Linearized subpath ops.
-/// - `gap_start_dist`: Start distance of the gap to remove.
-/// - `gap_end_dist`: End distance of the gap to remove.
-/// - Returns: A new `Ops` with the gap removed.
-fn build_clipped_subpath(
-    temp_ops: &Ops,
-    gap_start_dist: f64,
-    gap_end_dist: f64,
-) -> Ops {
+/// - `gaps`: Slice of `(start, end)` distance ranges to remove.
+/// - Returns: A new `Ops` with the gaps removed.
+fn build_clipped_subpath(temp_ops: &Ops, gaps: &[(f64, f64)]) -> Ops {
     let mut new_subpath = Ops::new();
     new_subpath.commands.push(temp_ops.commands[0].clone());
 
@@ -797,12 +850,31 @@ fn build_clipped_subpath(
             let seg_start_dist = accum_dist;
             let seg_end_dist = accum_dist + seg_len;
 
-            let mut kept: Vec<(f64, f64)> = Vec::new();
-            if seg_start_dist < gap_start_dist {
-                kept.push((seg_start_dist, seg_end_dist.min(gap_start_dist)));
+            // Start with the full segment as kept, then carve out each gap.
+            let mut kept: Vec<(f64, f64)> =
+                vec![(seg_start_dist, seg_end_dist)];
+            for (gap_start, gap_end) in gaps {
+                let mut next_kept: Vec<(f64, f64)> = Vec::new();
+                for (ks, ke) in &kept {
+                    if *ks < *gap_end && *ke > *gap_start {
+                        // overlap → split into up to two kept pieces
+                        if *ks < *gap_start {
+                            next_kept.push((*ks, (*ke).min(*gap_start)));
+                        }
+                        if *ke > *gap_end {
+                            next_kept.push(((*ks).max(*gap_end), *ke));
+                        }
+                    } else {
+                        next_kept.push((*ks, *ke));
+                    }
+                }
+                kept = next_kept;
             }
-            if seg_end_dist > gap_end_dist {
-                kept.push((seg_start_dist.max(gap_end_dist), seg_end_dist));
+
+            if kept.is_empty() {
+                last_pos = *p2;
+                accum_dist += seg_len;
+                continue;
             }
 
             let vec_dx = p2.0 - p1.0;
@@ -853,13 +925,135 @@ fn build_clipped_subpath(
             last_pos = *p2;
             accum_dist += seg_len;
         } else {
-            if !(gap_start_dist < accum_dist && accum_dist < gap_end_dist) {
+            let in_any_gap = gaps
+                .iter()
+                .any(|(gs, ge)| *gs <= accum_dist && accum_dist <= *ge);
+            if !in_any_gap {
                 new_subpath.commands.push(node.clone());
             }
         }
     }
 
     new_subpath
+}
+
+/// Linearize once and apply all clip gaps in a single pass.
+///
+/// Unlike calling `clip_at` in a loop (whose successive calls
+/// interfere via travel MoveTos), this linearizes the subpath
+/// once, computes all gap regions at once, and emits a single
+/// gapped path via `build_clipped_subpath`.
+pub fn clip_subpath_linear(
+    sub_ops: &Ops,
+    clips: &[super::tabs::ClipPoint],
+) -> Ops {
+    let mut temp = sub_ops.copy();
+    temp.linearize_all();
+
+    let geo = temp.to_geometry();
+    // Compute total length by summing the same way build_clipped_subpath
+    // will traverse — avoids floating-point drift between geo.distance()
+    // and the iterated segment lengths in build_clipped_subpath.
+    let total_len: f64 = (1..temp.len())
+        .filter(|&j| temp.command_type(j) == CommandType::LineTo)
+        .scan(temp.commands[0].end_point(), |last, j| {
+            let ep = temp.endpoint(j);
+            let d = ((ep.0 - last.0).powi(2) + (ep.1 - last.1).powi(2)).sqrt();
+            *last = ep;
+            Some(d)
+        })
+        .sum();
+    let is_closed = geo.is_closed(1e-6);
+
+    let mut gaps: Vec<(f64, f64)> = Vec::new();
+    for clip in clips {
+        let closest = crate::geo::query::find_closest_point_on_path_from_array(
+            &geo.data, clip.x, clip.y,
+        );
+        let (seg_idx, t, pt) = match closest {
+            Some(v) => v,
+            None => continue,
+        };
+        let dx = clip.x - pt.0;
+        let dy = clip.y - pt.1;
+        if dx * dx + dy * dy > (clip.width * 2.0).powi(2) {
+            continue;
+        }
+
+        // distance along the linearised path to the hit point.
+        // seg_idx from find_closest_point_on_path_from_array is the
+        // index in the geometry data (0 = Move, 1 = first LineTo, …).
+        // We skip the Move (index 0) and count LineTo commands.
+        let mut hd = 0.0;
+        let mut last = temp.commands[0].end_point();
+        let mut line_idx = 0usize;
+        for j in 1..temp.len() {
+            if temp.command_type(j) != CommandType::LineTo {
+                continue;
+            }
+            let ep = temp.endpoint(j);
+            let seg_len =
+                ((ep.0 - last.0).powi(2) + (ep.1 - last.1).powi(2)).sqrt();
+            if line_idx + 1 == seg_idx {
+                // this is the segment that was hit
+                hd += t * seg_len;
+                last = ep;
+                break;
+            }
+            hd += seg_len;
+            last = ep;
+            line_idx += 1;
+        }
+
+        let half = clip.width / 2.0;
+        let gs = hd - half;
+        let ge = hd + half;
+
+        if is_closed {
+            if gs < 0.0 {
+                gaps.push((total_len + gs, total_len));
+            }
+            if ge > total_len {
+                gaps.push((0.0, ge - total_len));
+            }
+        }
+        gaps.push((gs.max(0.0).min(total_len), ge.max(0.0).min(total_len)));
+    }
+
+    if gaps.is_empty() {
+        return sub_ops.copy();
+    }
+    let mut result = build_clipped_subpath(&temp, &gaps);
+
+    // When the gap wraps around the seam of a closed path the
+    // endpoint falls inside a gap — adding a travel MoveTo back
+    // to it would undo the wrapping. Check whether the subpath's
+    // original endpoint lies within any gap.
+    let orig_end = sub_ops.endpoint(sub_ops.len() - 1);
+    let last_cut = result
+        .commands
+        .iter()
+        .rev()
+        .find(|n| n.is_moving())
+        .map(|n| n.end_point());
+    let needs_travel = match last_cut {
+        Some(ep) => {
+            let dx = orig_end.0 - ep.0;
+            let dy = orig_end.1 - ep.1;
+            (dx * dx + dy * dy).sqrt() > EPSILON_GAP_CLOSE
+        }
+        None => false,
+    };
+    if needs_travel {
+        let seam_gapped = gaps
+            .iter()
+            .any(|(gs, ge)| *gs <= total_len && *ge >= total_len);
+        if !seam_gapped {
+            result.move_to(orig_end.0, orig_end.1, orig_end.2, None);
+        }
+    }
+
+    result
 }
 
 /// Clip an arc command against polygon regions and refit primitives to the kept chains.

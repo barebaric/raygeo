@@ -9,6 +9,7 @@
 //!
 //! The main entry points are [`apply_tab_gaps`] and [`apply_tab_power`].
 
+use super::clip::clip_subpath_linear;
 use super::container::Ops;
 use super::enums::{CommandCategory, CommandType, SectionType};
 use super::types::{MoveCmd, OpCategory};
@@ -95,9 +96,7 @@ pub fn apply_tab_gaps(ops: &mut Ops, clips: &[ClipPoint]) {
                 } else {
                     let mut sp = sp_ops;
                     sp.preload_state();
-                    for clip in sp_clips {
-                        sp.clip_at(clip.x, clip.y, clip.width);
-                    }
+                    sp = clip_subpath_linear(&sp, sp_clips);
                     new_ops.extend(&sp);
                 }
             } else {
@@ -363,7 +362,18 @@ fn clip_subpath_with_gaps(sub_ops: &Ops, clips: &[ClipPoint]) -> Ops {
     if let Some(orig) = orig_endpoint {
         let last_end = get_last_moving_end(&result);
         if last_end.is_none_or(|end| distance_2d(end, orig) > 1e-6) {
-            result.move_to(orig.0, orig.1, orig.2, None);
+            // When a gap wraps around the seam of a closed path the
+            // endpoint falls inside a gap region — don't add a travel
+            // move back to it.
+            let mut temp = sub_ops.copy();
+            temp.preload_state();
+            let total_len = temp.to_geometry().distance();
+            let seam_gapped = gap_regions
+                .iter()
+                .any(|g| g.start <= total_len && g.end >= total_len);
+            if !seam_gapped {
+                result.move_to(orig.0, orig.1, orig.2, None);
+            }
         }
     }
 
@@ -638,20 +648,27 @@ fn compute_gap_regions_from_original(
         };
 
         let half_width = clip.width / 2.0;
-        let start = 0.0_f64.max(hit_dist - half_width);
+        let start = hit_dist - half_width;
         let end = hit_dist + half_width;
 
-        if is_closed && end > total_length {
-            let wrapped_end = end - total_length;
-            gap_regions.push(TabRegion {
-                start: 0.0,
-                end: wrapped_end,
-            });
+        if is_closed {
+            if start < 0.0 {
+                gap_regions.push(TabRegion {
+                    start: (total_length + start).max(0.0),
+                    end: total_length,
+                });
+            }
+            if end > total_length {
+                gap_regions.push(TabRegion {
+                    start: 0.0,
+                    end: (end - total_length).min(total_length),
+                });
+            }
         }
 
         gap_regions.push(TabRegion {
-            start: start.min(total_length),
-            end: end.min(total_length),
+            start: start.max(0.0).min(total_length),
+            end: end.max(0.0).min(total_length),
         });
     }
 
