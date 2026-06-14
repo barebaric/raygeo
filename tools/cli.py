@@ -65,6 +65,21 @@ _INLINE_IMAGE_MAP = {
             "image-processing-dither-bayer",
             "Bayer 4x4 ordered dithering",
         ),
+        (
+            "grayscale_to_binary",
+            "image-processing-otsu",
+            "Grayscale to binary via Otsu and fixed threshold",
+        ),
+        (
+            "get_component_areas",
+            "image-processing-component-areas",
+            "Connected component areas sorted ascending",
+        ),
+        (
+            "filter_components",
+            "image-processing-filter-components",
+            "Component filtering by minimum area",
+        ),
     ],
     "raygeo.svg.md": [
         (None, "svg-parsing", "SVG path data parsed into geometries"),

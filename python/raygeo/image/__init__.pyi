@@ -13,6 +13,9 @@ __all__ = [
     "apply_floyd_steinberg_dither",
     "apply_minimum_run_length",
     "compute_auto_levels",
+    "filter_components",
+    "get_component_areas",
+    "grayscale_to_binary",
     "linear_to_srgb",
     "normalize_grayscale",
     "rgba_to_binary",
@@ -61,6 +64,45 @@ def compute_auto_levels(gray_image: numpy.typing.NDArray[numpy.uint8], clip_perc
     :param clip_percent: Percentage of pixels to clip from each end.
     :returns: Tuple of (black_point, white_point).
     :complexity: O(n) where n = number of pixels
+    """
+
+def filter_components(binary: numpy.typing.NDArray[numpy.uint8], min_area: int) -> numpy.typing.NDArray[numpy.uint8]:
+    r"""
+    Remove connected components smaller than min_area.
+    
+    Uses 8-connectivity for component detection.
+    
+    :param binary: 2D binary uint8 array (values 0 or 1).
+    :param min_area: Minimum pixel count to keep a component.
+    :returns: 2D binary uint8 array (values 0 or 1).
+    :complexity: O(w*h)
+    """
+
+def get_component_areas(binary: numpy.typing.NDArray[numpy.uint8]) -> list[int]:
+    r"""
+    Compute the pixel area of each connected component.
+    
+    Uses 8-connectivity. Areas are returned sorted ascending.
+    Background (0-valued pixels) is excluded.
+    
+    :param binary: 2D binary uint8 array (values 0 or 1).
+    :returns: Sorted list of component pixel areas.
+    :complexity: O(w*h)
+    """
+
+def grayscale_to_binary(gray: numpy.typing.NDArray[numpy.uint8], threshold: float = 0.5, invert: bool = False, auto_threshold: bool = True) -> numpy.typing.NDArray[numpy.uint8]:
+    r"""
+    Convert grayscale image to binary using Otsu or fixed threshold.
+    
+    Pixels at or below the threshold become foreground (1).
+    Uses Otsu's method when auto_threshold is True.
+    
+    :param gray: 2D grayscale uint8 image.
+    :param threshold: Fixed threshold (0.0-1.0), used only if auto_threshold is False.
+    :param invert: If True, pixels above threshold become foreground.
+    :param auto_threshold: If True, compute threshold via Otsu's method.
+    :returns: 2D binary uint8 array (values 0 or 1).
+    :complexity: O(w*h)
     """
 
 def linear_to_srgb(array: numpy.typing.NDArray[numpy.float32], dither: bool = False) -> numpy.typing.NDArray[numpy.uint8]:

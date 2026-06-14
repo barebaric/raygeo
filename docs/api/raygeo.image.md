@@ -82,6 +82,71 @@ Compute auto black/white levels from a grayscale image histogram.
 | _Returns_      | `tuple[int, int]`            |                                             |
 | _Complexity_   |                              | O(n) where n = number of pixels             |
 
+### `filter_components()`
+
+`filter_components(binary: numpy.NDArray[numpy.uint8], min_area: int) -> numpy.NDArray[numpy.uint8]`
+
+Remove connected components smaller than min_area.
+
+Uses 8-connectivity for component detection.
+
+**Returns:** 2D binary uint8 array (values 0 or 1).
+
+| Parameter    | Type                         | Description                              |
+| ------------ | ---------------------------- | ---------------------------------------- |
+| `binary`     | `numpy.NDArray[numpy.uint8]` | 2D binary uint8 array (values 0 or 1).   |
+| `min_area`   | `int`                        | Minimum pixel count to keep a component. |
+| _Returns_    | `numpy.NDArray[numpy.uint8]` |                                          |
+| _Complexity_ |                              | O(w\*h)                                  |
+
+![Component filtering by minimum area](images/image-processing-filter-components.png)
+
+_Component filtering by minimum area_
+
+### `get_component_areas()`
+
+`get_component_areas(binary: numpy.NDArray[numpy.uint8]) -> list[int]`
+
+Compute the pixel area of each connected component.
+
+Uses 8-connectivity. Areas are returned sorted ascending. Background (0-valued pixels) is excluded.
+
+**Returns:** Sorted list of component pixel areas.
+
+| Parameter    | Type                         | Description                            |
+| ------------ | ---------------------------- | -------------------------------------- |
+| `binary`     | `numpy.NDArray[numpy.uint8]` | 2D binary uint8 array (values 0 or 1). |
+| _Returns_    | `list[int]`                  |                                        |
+| _Complexity_ |                              | O(w\*h)                                |
+
+![Connected component areas sorted ascending](images/image-processing-component-areas.png)
+
+_Connected component areas sorted ascending_
+
+### `grayscale_to_binary()`
+
+`grayscale_to_binary(gray: numpy.NDArray[numpy.uint8], threshold: float = 0.5, invert: bool = False, auto_threshold: bool = True) -> numpy.NDArray[numpy.uint8]`
+
+Convert grayscale image to binary using Otsu or fixed threshold.
+
+Pixels at or below the threshold become foreground (1). Uses Otsu's method when auto_threshold is
+True.
+
+**Returns:** 2D binary uint8 array (values 0 or 1).
+
+| Parameter        | Type                         | Description                                                      |
+| ---------------- | ---------------------------- | ---------------------------------------------------------------- |
+| `gray`           | `numpy.NDArray[numpy.uint8]` | 2D grayscale uint8 image.                                        |
+| `threshold`      | `float = 0.5`                | Fixed threshold (0.0-1.0), used only if auto_threshold is False. |
+| `invert`         | `bool = False`               | If True, pixels above threshold become foreground.               |
+| `auto_threshold` | `bool = True`                | If True, compute threshold via Otsu's method.                    |
+| _Returns_        | `numpy.NDArray[numpy.uint8]` |                                                                  |
+| _Complexity_     |                              | O(w\*h)                                                          |
+
+![Grayscale to binary via Otsu and fixed threshold](images/image-processing-otsu.png)
+
+_Grayscale to binary via Otsu and fixed threshold_
+
 ### `linear_to_srgb()`
 
 `linear_to_srgb(array: numpy.NDArray[numpy.float32], dither: bool = False) -> numpy.NDArray[numpy.uint8]`

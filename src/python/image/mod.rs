@@ -3,6 +3,7 @@ use pyo3::prelude::*;
 mod convert;
 mod dither;
 mod grayscale;
+mod preprocess;
 mod srgb;
 
 pyo3_stub_gen::module_doc!("raygeo.image", "{}", MODULE_DOC);
@@ -33,6 +34,9 @@ pub(crate) fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
             "rgba_to_grayscale",
             "rgba_to_binary",
             "rgba_to_grayscale_inplace",
+            "grayscale_to_binary",
+            "get_component_areas",
+            "filter_components",
         ],
     )?;
 
@@ -40,6 +44,7 @@ pub(crate) fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     srgb::register(&image_mod)?;
     grayscale::register(&image_mod)?;
     dither::register(&image_mod)?;
+    preprocess::register(&image_mod)?;
 
     m.add_submodule(&image_mod)?;
 
