@@ -89,6 +89,7 @@ fn _arc_params_from_any(
         :param center: Arc center point (x, y).
         :param clockwise: Whether the arc is clockwise.
         :returns: Bounding rectangle as (x_min, y_min, x_max, y_max).
+        :complexity: O(1) time, O(1) space
         """
 "#,
     module = "raygeo.geo.shape.arc"
@@ -120,6 +121,7 @@ fn get_arc_bounds_py(
         :param start: Arc start point (x, y).
         :param mouse: Mouse point (x, y).
         :returns: True if clockwise, False if counter-clockwise.
+        :complexity: O(1) time, O(1) space
         """
 "#,
     module = "raygeo.geo.shape.arc"
@@ -146,6 +148,7 @@ fn get_arc_direction_py(center: Point, start: Point, mouse: Point) -> bool {
         :param center_offset: Center offset (i, j) from start.
         :param clockwise: True for clockwise, False for counter-clockwise.
         :returns: Arc length.
+        :complexity: O(1) time, O(1) space
         """
 "#,
     module = "raygeo.geo.shape.arc"
@@ -171,6 +174,7 @@ fn get_arc_length_py(
         :param end_angle: End angle in radians.
         :param clockwise: Whether the arc is clockwise.
         :returns: Signed sweep angle in radians.
+        :complexity: O(1) time, O(1) space
         """
 "#,
     module = "raygeo.geo.shape.arc"
@@ -198,6 +202,7 @@ fn get_arc_sweep_py(start_angle: f64, end_angle: f64, clockwise: bool) -> f64 {
         :param x: X coordinate of target point.
         :param y: Y coordinate of target point.
         :returns: Tuple of (parameter, closest_point, distance) or None.
+        :complexity: O(n) time, O(1) space
         """
 "#,
     module = "raygeo.geo.shape.arc"
@@ -237,6 +242,7 @@ fn get_arc_closest_point_py(
         :param center: Arc center point (x, y).
         :param clockwise: Whether the arc is clockwise.
         :returns: Midpoint (x, y).
+        :complexity: O(1) time, O(1) space
         """
 "#,
     module = "raygeo.geo.shape.arc"
@@ -269,6 +275,7 @@ fn get_arc_midpoint_py(
         :param center: Arc center point (x, y).
         :param clockwise: Whether the arc is clockwise.
         :returns: Tuple of (start_angle, end_angle, sweep_angle) in radians.
+        :complexity: O(1) time, O(1) space
         """
 "#,
     module = "raygeo.geo.shape.arc"
@@ -303,6 +310,7 @@ fn get_arc_angles_py(
         :param clockwise: Whether the arc is clockwise.
         :param rect: Rectangle (x_min, y_min, x_max, y_max).
         :returns: True if the arc intersects the rectangle.
+        :complexity: O(n) time, O(1) space
         """
 "#,
     module = "raygeo.geo.shape.arc"
@@ -346,6 +354,7 @@ fn does_arc_intersect_rect_py(
         :param circle_center: Circle center (x, y).
         :param circle_radius: Circle radius.
         :returns: True if the arc intersects the circle.
+        :complexity: O(n) time, O(1) space
         """
 "#,
     module = "raygeo.geo.shape.arc"
@@ -384,6 +393,7 @@ fn does_arc_intersect_circle_py(
         :param points: Sequence of (x, y) points on the arc.
         :param center: Arc center (x, y).
         :returns: True if the arc is clockwise.
+        :complexity: O(n) time, O(1) space
         """
 "#,
     module = "raygeo.geo.shape.arc"
@@ -415,6 +425,7 @@ fn is_arc_clockwise_py(points: Vec<PyPoint2D>, center: PyPoint2D) -> bool {
         :param clockwise: Whether the arc is clockwise.
         :param polygons: List of polygons to check against.
         :returns: True if the arc is inside all polygons.
+        :complexity: O(n * m) time, O(1) space
         """
 "#,
     module = "raygeo.geo.shape.arc"
@@ -453,6 +464,7 @@ fn is_arc_inside_polygons_py(
         :param end: End angle.
         :param clockwise: Whether the arc is clockwise.
         :returns: True if angle is between start and end.
+        :complexity: O(1) time, O(1) space
         """
 "#,
     module = "raygeo.geo.shape.arc"
@@ -475,6 +487,7 @@ fn is_angle_between_py(
 
         :param angle: Angle in radians.
         :returns: Normalized angle in [0, 2*pi).
+        :complexity: O(1) time, O(1) space
         """
 "#,
     module = "raygeo.geo.shape.arc"
@@ -500,6 +513,7 @@ fn normalize_angle_py(angle: f64) -> f64 {
         :param start_point: Start point (x, y, z).
         :param resolution: Maximum segment length.
         :returns: List of (p1, p2) segment pairs.
+        :complexity: O(n) time, O(n) space
         """
 "#,
     module = "raygeo.geo.shape.arc"

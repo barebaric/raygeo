@@ -42,6 +42,7 @@ pub fn register(algo_mod: &Bound<'_, PyModule>) -> PyResult<()> {
         :param points: Sequence of (x, y) points.
         :param tolerance: Simplification tolerance.
         :returns: Simplified point sequence.
+        :complexity: O(n log n) average time, O(n) space
         """
 "#,
     module = "raygeo.geo.algo.simplify"

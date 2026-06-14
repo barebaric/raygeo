@@ -74,15 +74,16 @@ Whether the geometry uses uniform scalable arcs.
 
 Draw an arc to the given coordinates.
 
-| Parameter   | Type          | Description                            |
-| ----------- | ------------- | -------------------------------------- |
-| `x`         | `float`       | X coordinate.                          |
-| `y`         | `float`       | Y coordinate.                          |
-| `i`         | `float = 0.0` | I offset from current point to center. |
-| `j`         | `float = 0.0` | J offset from current point to center. |
-| `clockwise` | `bool = True` | Whether the arc is clockwise.          |
-| `z`         | `float = 0.0` | Z coordinate (default 0.0).            |
-| _Returns_   | `Geometry`    |                                        |
+| Parameter    | Type          | Description                            |
+| ------------ | ------------- | -------------------------------------- |
+| `x`          | `float`       | X coordinate.                          |
+| `y`          | `float`       | Y coordinate.                          |
+| `i`          | `float = 0.0` | I offset from current point to center. |
+| `j`          | `float = 0.0` | J offset from current point to center. |
+| `clockwise`  | `bool = True` | Whether the arc is clockwise.          |
+| `z`          | `float = 0.0` | Z coordinate (default 0.0).            |
+| _Returns_    | `Geometry`    |                                        |
+| _Complexity_ |               | O(1) time, O(1) space                  |
 
 ### `arc_to_as_bezier()`
 
@@ -90,15 +91,16 @@ Draw an arc to the given coordinates.
 
 Draw an arc, converting it to bezier curves.
 
-| Parameter   | Type          | Description         |
-| ----------- | ------------- | ------------------- |
-| `x`         | `float`       | End X coordinate.   |
-| `y`         | `float`       | End Y coordinate.   |
-| `i`         | `float`       | I offset to center. |
-| `j`         | `float`       | J offset to center. |
-| `clockwise` | `bool = True` | Arc direction.      |
-| `z`         | `float = 0.0` | End Z coordinate.   |
-| _Returns_   | `Geometry`    |                     |
+| Parameter    | Type          | Description           |
+| ------------ | ------------- | --------------------- |
+| `x`          | `float`       | End X coordinate.     |
+| `y`          | `float`       | End Y coordinate.     |
+| `i`          | `float`       | I offset to center.   |
+| `j`          | `float`       | J offset to center.   |
+| `clockwise`  | `bool = True` | Arc direction.        |
+| `z`          | `float = 0.0` | End Z coordinate.     |
+| _Returns_    | `Geometry`    |                       |
+| _Complexity_ |               | O(1) time, O(1) space |
 
 ### `area()`
 
@@ -106,9 +108,10 @@ Draw an arc, converting it to bezier curves.
 
 Return the signed area of the geometry.
 
-| Parameter | Type    | Description |
-| --------- | ------- | ----------- |
-| _Returns_ | `float` |             |
+| Parameter    | Type    | Description           |
+| ------------ | ------- | --------------------- |
+| _Returns_    | `float` |                       |
+| _Complexity_ |         | O(n) time, O(1) space |
 
 ### `bezier_to()`
 
@@ -116,18 +119,19 @@ Return the signed area of the geometry.
 
 Draw a cubic bezier curve.
 
-| Parameter | Type       | Description                           |
-| --------- | ---------- | ------------------------------------- |
-| `x`       | `float`    | End X coordinate.                     |
-| `y`       | `float`    | End Y coordinate.                     |
-| `c1x`     | `float`    | First control point X.                |
-| `c1y`     | `float`    | First control point Y.                |
-| `c2x`     | `float`    | Second control point X.               |
-| `c2y`     | `float`    | Second control point Y.               |
-| `c1z`     | `float`    | First control point Z (default 0.0).  |
-| `c2z`     | `float`    | Second control point Z (default 0.0). |
-| `z`       | `float`    | End Z coordinate (default 0.0).       |
-| _Returns_ | `Geometry` |                                       |
+| Parameter    | Type       | Description                           |
+| ------------ | ---------- | ------------------------------------- |
+| `x`          | `float`    | End X coordinate.                     |
+| `y`          | `float`    | End Y coordinate.                     |
+| `c1x`        | `float`    | First control point X.                |
+| `c1y`        | `float`    | First control point Y.                |
+| `c2x`        | `float`    | Second control point X.               |
+| `c2y`        | `float`    | Second control point Y.               |
+| `c1z`        | `float`    | First control point Z (default 0.0).  |
+| `c2z`        | `float`    | Second control point Z (default 0.0). |
+| `z`          | `float`    | End Z coordinate (default 0.0).       |
+| _Returns_    | `Geometry` |                                       |
+| _Complexity_ |            | O(1) time, O(1) space                 |
 
 ### `cleanup()`
 
@@ -135,10 +139,11 @@ Draw a cubic bezier curve.
 
 Remove duplicate segments from the geometry.
 
-| Parameter   | Type       | Description                     |
-| ----------- | ---------- | ------------------------------- |
-| `tolerance` | `float`    | Maximum deviation for equality. |
-| _Returns_   | `Geometry` |                                 |
+| Parameter    | Type       | Description                         |
+| ------------ | ---------- | ----------------------------------- |
+| `tolerance`  | `float`    | Maximum deviation for equality.     |
+| _Returns_    | `Geometry` |                                     |
+| _Complexity_ |            | O(n log n) average time, O(n) space |
 
 ### `clear()`
 
@@ -146,9 +151,10 @@ Remove duplicate segments from the geometry.
 
 Remove all commands from the geometry.
 
-| Parameter | Type       | Description |
-| --------- | ---------- | ----------- |
-| _Returns_ | `Geometry` |             |
+| Parameter    | Type       | Description           |
+| ------------ | ---------- | --------------------- |
+| _Returns_    | `Geometry` |                       |
+| _Complexity_ |            | O(1) time, O(1) space |
 
 ### `close_all_contours()`
 
@@ -156,9 +162,10 @@ Remove all commands from the geometry.
 
 Close all open contours in the geometry.
 
-| Parameter | Type       | Description |
-| --------- | ---------- | ----------- |
-| _Returns_ | `Geometry` |             |
+| Parameter    | Type       | Description           |
+| ------------ | ---------- | --------------------- |
+| _Returns_    | `Geometry` |                       |
+| _Complexity_ |            | O(n) time, O(n) space |
 
 ### `close_gaps()`
 
@@ -166,10 +173,11 @@ Close all open contours in the geometry.
 
 Close gaps between sub-paths.
 
-| Parameter   | Type                     | Description       |
-| ----------- | ------------------------ | ----------------- |
-| `tolerance` | `Optional[float] = None` | Max gap to close. |
-| _Returns_   | `Geometry`               |                   |
+| Parameter    | Type                     | Description           |
+| ------------ | ------------------------ | --------------------- |
+| `tolerance`  | `Optional[float] = None` | Max gap to close.     |
+| _Returns_    | `Geometry`               |                       |
+| _Complexity_ |                          | O(n) time, O(n) space |
 
 ### `close_path()`
 
@@ -177,9 +185,10 @@ Close gaps between sub-paths.
 
 Close the current sub-path.
 
-| Parameter | Type       | Description |
-| --------- | ---------- | ----------- |
-| _Returns_ | `Geometry` |             |
+| Parameter    | Type       | Description           |
+| ------------ | ---------- | --------------------- |
+| _Returns_    | `Geometry` |                       |
+| _Complexity_ |            | O(1) time, O(1) space |
 
 ### `copy()`
 
@@ -187,9 +196,10 @@ Close the current sub-path.
 
 Return a deep copy of this geometry.
 
-| Parameter | Type       | Description |
-| --------- | ---------- | ----------- |
-| _Returns_ | `Geometry` |             |
+| Parameter    | Type       | Description           |
+| ------------ | ---------- | --------------------- |
+| _Returns_    | `Geometry` |                       |
+| _Complexity_ |            | O(n) time, O(n) space |
 
 ### `distance()`
 
@@ -197,9 +207,10 @@ Return a deep copy of this geometry.
 
 Return the total path distance.
 
-| Parameter | Type    | Description |
-| --------- | ------- | ----------- |
-| _Returns_ | `float` |             |
+| Parameter    | Type    | Description           |
+| ------------ | ------- | --------------------- |
+| _Returns_    | `float` |                       |
+| _Complexity_ |         | O(n) time, O(1) space |
 
 ### `encloses()`
 
@@ -207,10 +218,11 @@ Return the total path distance.
 
 Check if this geometry encloses another.
 
-| Parameter | Type       | Description                        |
-| --------- | ---------- | ---------------------------------- |
-| `other`   | `Geometry` | The potentially enclosed geometry. |
-| _Returns_ | `bool`     |                                    |
+| Parameter    | Type       | Description                         |
+| ------------ | ---------- | ----------------------------------- |
+| `other`      | `Geometry` | The potentially enclosed geometry.  |
+| _Returns_    | `bool`     |                                     |
+| _Complexity_ |            | O(n log n) average time, O(n) space |
 
 ### `extend()`
 
@@ -218,10 +230,11 @@ Check if this geometry encloses another.
 
 Append another geometry's commands to this one.
 
-| Parameter | Type       | Description             |
-| --------- | ---------- | ----------------------- |
-| `other`   | `Geometry` | The geometry to append. |
-| _Returns_ | `Geometry` |                         |
+| Parameter    | Type       | Description             |
+| ------------ | ---------- | ----------------------- |
+| `other`      | `Geometry` | The geometry to append. |
+| _Returns_    | `Geometry` |                         |
+| _Complexity_ |            | O(n) time, O(n) space   |
 
 ### `filter()`
 
@@ -231,10 +244,11 @@ Return a new Geometry containing only commands at the given indices.
 
 **Returns:** A new Geometry with the filtered commands.
 
-| Parameter | Type       | Description                     |
-| --------- | ---------- | ------------------------------- |
-| `indices` | `set[int]` | Set of command indices to keep. |
-| _Returns_ | `Geometry` |                                 |
+| Parameter    | Type       | Description                     |
+| ------------ | ---------- | ------------------------------- |
+| `indices`    | `set[int]` | Set of command indices to keep. |
+| _Returns_    | `Geometry` |                                 |
+| _Complexity_ |            | O(n) time, O(n) space           |
 
 ### `filter_to_external_contours()`
 
@@ -242,9 +256,10 @@ Return a new Geometry containing only commands at the given indices.
 
 Filter to only external (outermost) contours.
 
-| Parameter | Type       | Description |
-| --------- | ---------- | ----------- |
-| _Returns_ | `Geometry` |             |
+| Parameter    | Type       | Description                         |
+| ------------ | ---------- | ----------------------------------- |
+| _Returns_    | `Geometry` |                                     |
+| _Complexity_ |            | O(n log n) average time, O(n) space |
 
 ### `find_closest_point()`
 
@@ -254,11 +269,12 @@ Find the closest point on the path to (x, y).
 
 **Returns:** Tuple of (segment_index, t, point) or None.
 
-| Parameter | Type                                               | Description   |
-| --------- | -------------------------------------------------- | ------------- |
-| `x`       | `float`                                            | X coordinate. |
-| `y`       | `float`                                            | Y coordinate. |
-| _Returns_ | `Optional[tuple[int, float, tuple[float, float]]]` |               |
+| Parameter    | Type                                               | Description           |
+| ------------ | -------------------------------------------------- | --------------------- |
+| `x`          | `float`                                            | X coordinate.         |
+| `y`          | `float`                                            | Y coordinate.         |
+| _Returns_    | `Optional[tuple[int, float, tuple[float, float]]]` |                       |
+| _Complexity_ |                                                    | O(n) time, O(1) space |
 
 ### `fit_arcs()`
 
@@ -266,10 +282,11 @@ Find the closest point on the path to (x, y).
 
 Fit arcs only to the linearized geometry.
 
-| Parameter   | Type       | Description        |
-| ----------- | ---------- | ------------------ |
-| `tolerance` | `float`    | Maximum deviation. |
-| _Returns_   | `Geometry` |                    |
+| Parameter    | Type       | Description                         |
+| ------------ | ---------- | ----------------------------------- |
+| `tolerance`  | `float`    | Maximum deviation.                  |
+| _Returns_    | `Geometry` |                                     |
+| _Complexity_ |            | O(n log n) average time, O(n) space |
 
 ### `fit_curves()`
 
@@ -284,6 +301,7 @@ Fit curves (beziers and arcs) to the linearized geometry.
 | `arcs`        | `bool = True`          | Whether to fit arcs.                                       |
 | `on_progress` | `Optional[Any] = None` | Optional progress callback called with `(current, total)`. |
 | _Returns_     | `Geometry`             |                                                            |
+| _Complexity_  |                        | O(n log n) average time, O(n) space                        |
 
 ### `flip_x()`
 
@@ -291,9 +309,10 @@ Fit curves (beziers and arcs) to the linearized geometry.
 
 Mirror the geometry along the X axis.
 
-| Parameter | Type       | Description |
-| --------- | ---------- | ----------- |
-| _Returns_ | `Geometry` |             |
+| Parameter    | Type       | Description           |
+| ------------ | ---------- | --------------------- |
+| _Returns_    | `Geometry` |                       |
+| _Complexity_ |            | O(n) time, O(1) space |
 
 ### `flip_y()`
 
@@ -301,9 +320,10 @@ Mirror the geometry along the X axis.
 
 Mirror the geometry along the Y axis.
 
-| Parameter | Type       | Description |
-| --------- | ---------- | ----------- |
-| _Returns_ | `Geometry` |             |
+| Parameter    | Type       | Description           |
+| ------------ | ---------- | --------------------- |
+| _Returns_    | `Geometry` |                       |
+| _Complexity_ |            | O(n) time, O(1) space |
 
 ### `from_dict()`
 
@@ -313,10 +333,11 @@ Create a Geometry from a dictionary.
 
     **to_dict**.
 
-| Parameter | Type       | Description                 |
-| --------- | ---------- | --------------------------- |
-| `data`    | `dict`     | A dictionary as produced by |
-| _Returns_ | `Geometry` |                             |
+| Parameter    | Type       | Description                 |
+| ------------ | ---------- | --------------------------- |
+| `data`       | `dict`     | A dictionary as produced by |
+| _Returns_    | `Geometry` |                             |
+| _Complexity_ |            | O(n) time, O(n) space       |
 
 ### `from_points()`
 
@@ -326,11 +347,12 @@ Create a Geometry from a sequence of points.
 
     (x, y, z) coordinate tuples.
 
-| Parameter | Type          | Description                |
-| --------- | ------------- | -------------------------- |
-| `points`  | `Any`         | A sequence of (x, y) or    |
-| `close`   | `bool = True` | Whether to close the path. |
-| _Returns_ | `Geometry`    |                            |
+| Parameter    | Type          | Description                |
+| ------------ | ------------- | -------------------------- |
+| `points`     | `Any`         | A sequence of (x, y) or    |
+| `close`      | `bool = True` | Whether to close the path. |
+| _Returns_    | `Geometry`    |                            |
+| _Complexity_ |               | O(n) time, O(n) space      |
 
 ### `get_command_at()`
 
@@ -338,10 +360,11 @@ Create a Geometry from a sequence of points.
 
 Get the command at the given index as a typed command object.
 
-| Parameter | Type            | Description                            |
-| --------- | --------------- | -------------------------------------- |
-| `index`   | `int`           | Command index (negative returns None). |
-| _Returns_ | `Optional[Any]` |                                        |
+| Parameter    | Type            | Description                            |
+| ------------ | --------------- | -------------------------------------- |
+| `index`      | `int`           | Command index (negative returns None). |
+| _Returns_    | `Optional[Any]` |                                        |
+| _Complexity_ |                 | O(1) time, O(1) space                  |
 
 ### `get_last_point()`
 
@@ -349,9 +372,10 @@ Get the command at the given index as a typed command object.
 
 Get the last point in the geometry.
 
-| Parameter | Type                         | Description |
-| --------- | ---------------------------- | ----------- |
-| _Returns_ | `tuple[float, float, float]` |             |
+| Parameter    | Type                         | Description           |
+| ------------ | ---------------------------- | --------------------- |
+| _Returns_    | `tuple[float, float, float]` |                       |
+| _Complexity_ |                              | O(1) time, O(1) space |
 
 ### `get_outward_normal_at()`
 
@@ -366,6 +390,7 @@ Get the outward normal at parameter t on a segment.
 | `segment_index` | `int`                           | Index of the segment. |
 | `t`             | `float`                         | Parameter in [0, 1].  |
 | _Returns_       | `Optional[tuple[float, float]]` |                       |
+| _Complexity_    |                                 | O(1) time, O(1) space |
 
 ### `get_point_at()`
 
@@ -380,6 +405,7 @@ Get the point at parameter t on a segment.
 | `segment_index` | `int`                                  | Index of the segment. |
 | `t`             | `float`                                | Parameter in [0, 1].  |
 | _Returns_       | `Optional[tuple[float, float, float]]` |                       |
+| _Complexity_    |                                        | O(1) time, O(1) space |
 
 ### `get_positions_at_distances()`
 
@@ -392,10 +418,11 @@ Distances are clamped to [0, total_length].
 
 **Returns:** List of (segment_index, t, (x, y)) tuples.
 
-| Parameter   | Type                                           | Description                       |
-| ----------- | ---------------------------------------------- | --------------------------------- |
-| `distances` | `Sequence[float]`                              | List of distances along the path. |
-| _Returns_   | `list[tuple[int, float, tuple[float, float]]]` |                                   |
+| Parameter    | Type                                           | Description                                                                               |
+| ------------ | ---------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| `distances`  | `Sequence[float]`                              | List of distances along the path.                                                         |
+| _Returns_    | `list[tuple[int, float, tuple[float, float]]]` |                                                                                           |
+| _Complexity_ |                                                | O(n + m) time, O(m) space where n is the number of segments and m the number of distances |
 
 ### `get_tangent_at()`
 
@@ -410,6 +437,7 @@ Get the tangent vector at parameter t on a segment.
 | `segment_index` | `int`                           | Index of the segment. |
 | `t`             | `float`                         | Parameter in [0, 1].  |
 | _Returns_       | `Optional[tuple[float, float]]` |                       |
+| _Complexity_    |                                 | O(1) time, O(1) space |
 
 ### `get_typed_command_at()`
 
@@ -417,10 +445,11 @@ Get the tangent vector at parameter t on a segment.
 
 Get the typed command at the given index.
 
-| Parameter | Type                                                    | Description    |
-| --------- | ------------------------------------------------------- | -------------- |
-| `index`   | `int`                                                   | Command index. |
-| _Returns_ | `Move &#124; Line &#124; Arc &#124; Bezier &#124; None` |                |
+| Parameter    | Type                                                    | Description           |
+| ------------ | ------------------------------------------------------- | --------------------- |
+| `index`      | `int`                                                   | Command index.        |
+| _Returns_    | `Move &#124; Line &#124; Arc &#124; Bezier &#124; None` |                       |
+| _Complexity_ |                                                         | O(1) time, O(1) space |
 
 ### `get_valid_contours_data()`
 
@@ -430,9 +459,10 @@ Get valid contour data from the geometry's contours.
 
 **Returns:** List of dicts with keys "geo", "vertices", "is_closed", "original_index".
 
-| Parameter | Type         | Description |
-| --------- | ------------ | ----------- |
-| _Returns_ | `list[dict]` |             |
+| Parameter    | Type         | Description           |
+| ------------ | ------------ | --------------------- |
+| _Returns_    | `list[dict]` |                       |
+| _Complexity_ |              | O(n) time, O(n) space |
 
 ### `grow()`
 
@@ -440,10 +470,11 @@ Get valid contour data from the geometry's contours.
 
 Offset (grow/shrink) the geometry by the given amount.
 
-| Parameter | Type       | Description                           |
-| --------- | ---------- | ------------------------------------- |
-| `amount`  | `float`    | Positive to grow, negative to shrink. |
-| _Returns_ | `Geometry` |                                       |
+| Parameter    | Type       | Description                           |
+| ------------ | ---------- | ------------------------------------- |
+| `amount`     | `float`    | Positive to grow, negative to shrink. |
+| _Returns_    | `Geometry` |                                       |
+| _Complexity_ |            | O(n log n) average time, O(n) space   |
 
 ### `has_self_intersections()`
 
@@ -451,10 +482,11 @@ Offset (grow/shrink) the geometry by the given amount.
 
 Check if the geometry has self-intersections.
 
-| Parameter            | Type           | Description                     |
-| -------------------- | -------------- | ------------------------------- |
-| `fail_on_t_junction` | `bool = False` | Whether to fail on T-junctions. |
-| _Returns_            | `bool`         |                                 |
+| Parameter            | Type           | Description                       |
+| -------------------- | -------------- | --------------------------------- |
+| `fail_on_t_junction` | `bool = False` | Whether to fail on T-junctions.   |
+| _Returns_            | `bool`         |                                   |
+| _Complexity_         |                | O(n²) worst-case time, O(1) space |
 
 ### `intersects_with()`
 
@@ -462,10 +494,11 @@ Check if the geometry has self-intersections.
 
 Check if this geometry intersects with another.
 
-| Parameter | Type       | Description         |
-| --------- | ---------- | ------------------- |
-| `other`   | `Geometry` | The other geometry. |
-| _Returns_ | `bool`     |                     |
+| Parameter    | Type       | Description                                                                                     |
+| ------------ | ---------- | ----------------------------------------------------------------------------------------------- |
+| `other`      | `Geometry` | The other geometry.                                                                             |
+| _Returns_    | `bool`     |                                                                                                 |
+| _Complexity_ |            | O(n \* m) worst-case time, O(1) space where n and m are the number of segments in each geometry |
 
 ### `is_closed()`
 
@@ -473,10 +506,11 @@ Check if this geometry intersects with another.
 
 Check if the geometry forms a closed path.
 
-| Parameter   | Type            | Description                          |
-| ----------- | --------------- | ------------------------------------ |
-| `tolerance` | `float = 1e-06` | Max gap between start and end point. |
-| _Returns_   | `bool`          |                                      |
+| Parameter    | Type            | Description                          |
+| ------------ | --------------- | ------------------------------------ |
+| `tolerance`  | `float = 1e-06` | Max gap between start and end point. |
+| _Returns_    | `bool`          |                                      |
+| _Complexity_ |                 | O(n) time, O(1) space                |
 
 ### `is_empty()`
 
@@ -484,9 +518,10 @@ Check if the geometry forms a closed path.
 
 Check if the geometry has no commands.
 
-| Parameter | Type   | Description |
-| --------- | ------ | ----------- |
-| _Returns_ | `bool` |             |
+| Parameter    | Type   | Description           |
+| ------------ | ------ | --------------------- |
+| _Returns_    | `bool` |                       |
+| _Complexity_ |        | O(1) time, O(1) space |
 
 ### `iter_commands()`
 
@@ -494,9 +529,10 @@ Check if the geometry has no commands.
 
 Iterate over all commands as typed command objects.
 
-| Parameter | Type        | Description |
-| --------- | ----------- | ----------- |
-| _Returns_ | `list[Any]` |             |
+| Parameter    | Type        | Description           |
+| ------------ | ----------- | --------------------- |
+| _Returns_    | `list[Any]` |                       |
+| _Complexity_ |             | O(n) time, O(n) space |
 
 ### `iter_typed_commands()`
 
@@ -504,9 +540,10 @@ Iterate over all commands as typed command objects.
 
 Iterate over all commands as typed command objects.
 
-| Parameter | Type                                              | Description |
-| --------- | ------------------------------------------------- | ----------- |
-| _Returns_ | `list[Move &#124; Line &#124; Arc &#124; Bezier]` |             |
+| Parameter    | Type                                              | Description           |
+| ------------ | ------------------------------------------------- | --------------------- |
+| _Returns_    | `list[Move &#124; Line &#124; Arc &#124; Bezier]` |                       |
+| _Complexity_ |                                                   | O(n) time, O(n) space |
 
 ### `line_to()`
 
@@ -514,12 +551,13 @@ Iterate over all commands as typed command objects.
 
 Draw a line to the given coordinates.
 
-| Parameter | Type          | Description                 |
-| --------- | ------------- | --------------------------- |
-| `x`       | `float`       | X coordinate.               |
-| `y`       | `float`       | Y coordinate.               |
-| `z`       | `float = 0.0` | Z coordinate (default 0.0). |
-| _Returns_ | `Geometry`    |                             |
+| Parameter    | Type          | Description                 |
+| ------------ | ------------- | --------------------------- |
+| `x`          | `float`       | X coordinate.               |
+| `y`          | `float`       | Y coordinate.               |
+| `z`          | `float = 0.0` | Z coordinate (default 0.0). |
+| _Returns_    | `Geometry`    |                             |
+| _Complexity_ |               | O(1) time, O(1) space       |
 
 ### `linearize()`
 
@@ -527,10 +565,11 @@ Draw a line to the given coordinates.
 
 Convert all curves to line segments.
 
-| Parameter   | Type       | Description                    |
-| ----------- | ---------- | ------------------------------ |
-| `tolerance` | `float`    | Maximum deviation from curves. |
-| _Returns_   | `Geometry` |                                |
+| Parameter    | Type       | Description                    |
+| ------------ | ---------- | ------------------------------ |
+| `tolerance`  | `float`    | Maximum deviation from curves. |
+| _Returns_    | `Geometry` |                                |
+| _Complexity_ |            | O(n) time, O(n) space          |
 
 ### `map_to_frame()`
 
@@ -548,6 +587,7 @@ Map the geometry into a rectangular frame.
 | `anchor_x`          | `Optional[float] = None` | X anchor position.                  |
 | `stable_src_width`  | `Optional[float] = None` | Stable source width for anchoring.  |
 | _Returns_           | `Geometry`               |                                     |
+| _Complexity_        |                          | O(n) time, O(n) space               |
 
 ### `move_to()`
 
@@ -555,12 +595,13 @@ Map the geometry into a rectangular frame.
 
 Move the pen to the given coordinates.
 
-| Parameter | Type          | Description                 |
-| --------- | ------------- | --------------------------- |
-| `x`       | `float`       | X coordinate.               |
-| `y`       | `float`       | Y coordinate.               |
-| `z`       | `float = 0.0` | Z coordinate (default 0.0). |
-| _Returns_ | `Geometry`    |                             |
+| Parameter    | Type          | Description                 |
+| ------------ | ------------- | --------------------------- |
+| `x`          | `float`       | X coordinate.               |
+| `y`          | `float`       | Y coordinate.               |
+| `z`          | `float = 0.0` | Z coordinate (default 0.0). |
+| _Returns_    | `Geometry`    |                             |
+| _Complexity_ |               | O(1) time, O(1) space       |
 
 ### `normalize_winding_orders()`
 
@@ -568,9 +609,10 @@ Move the pen to the given coordinates.
 
 Normalize winding orders (outer CCW, inner CW) of all contours.
 
-| Parameter | Type       | Description |
-| --------- | ---------- | ----------- |
-| _Returns_ | `Geometry` |             |
+| Parameter    | Type       | Description                         |
+| ------------ | ---------- | ----------------------------------- |
+| _Returns_    | `Geometry` |                                     |
+| _Complexity_ |            | O(n log n) average time, O(n) space |
 
 ### `rect()`
 
@@ -578,9 +620,10 @@ Normalize winding orders (outer CCW, inner CW) of all contours.
 
 Return the bounding rectangle (x_min, y_min, x_max, y_max).
 
-| Parameter | Type                                | Description |
-| --------- | ----------------------------------- | ----------- |
-| _Returns_ | `tuple[float, float, float, float]` |             |
+| Parameter    | Type                                | Description           |
+| ------------ | ----------------------------------- | --------------------- |
+| _Returns_    | `tuple[float, float, float, float]` |                       |
+| _Complexity_ |                                     | O(n) time, O(1) space |
 
 ### `remove_inner_edges()`
 
@@ -588,9 +631,10 @@ Return the bounding rectangle (x_min, y_min, x_max, y_max).
 
 Remove inner edges (shared between contours).
 
-| Parameter | Type       | Description |
-| --------- | ---------- | ----------- |
-| _Returns_ | `Geometry` |             |
+| Parameter    | Type       | Description           |
+| ------------ | ---------- | --------------------- |
+| _Returns_    | `Geometry` |                       |
+| _Complexity_ |            | O(n) time, O(n) space |
 
 ### `reverse_contour()`
 
@@ -598,9 +642,10 @@ Remove inner edges (shared between contours).
 
 Reverse the winding direction of all contours.
 
-| Parameter | Type       | Description |
-| --------- | ---------- | ----------- |
-| _Returns_ | `Geometry` |             |
+| Parameter    | Type       | Description           |
+| ------------ | ---------- | --------------------- |
+| _Returns_    | `Geometry` |                       |
+| _Complexity_ |            | O(n) time, O(n) space |
 
 ### `segment_bounds()`
 
@@ -611,10 +656,11 @@ the index is out of bounds.
 
 **Returns:** (x_min, y_min, x_max, y_max) or None.
 
-| Parameter | Type                                          | Description    |
-| --------- | --------------------------------------------- | -------------- |
-| `index`   | `int`                                         | Segment index. |
-| _Returns_ | `Optional[tuple[float, float, float, float]]` |                |
+| Parameter    | Type                                          | Description           |
+| ------------ | --------------------------------------------- | --------------------- |
+| `index`      | `int`                                         | Segment index.        |
+| _Returns_    | `Optional[tuple[float, float, float, float]]` |                       |
+| _Complexity_ |                                               | O(1) time, O(1) space |
 
 ### `segments()`
 
@@ -622,9 +668,10 @@ the index is out of bounds.
 
 Return the geometry split into segments of connected commands.
 
-| Parameter | Type                                     | Description |
-| --------- | ---------------------------------------- | ----------- |
-| _Returns_ | `list[list[tuple[float, float, float]]]` |             |
+| Parameter    | Type                                     | Description           |
+| ------------ | ---------------------------------------- | --------------------- |
+| _Returns_    | `list[list[tuple[float, float, float]]]` |                       |
+| _Complexity_ |                                          | O(n) time, O(n) space |
 
 ### `segments_in_frame()`
 
@@ -635,13 +682,14 @@ commands.
 
 **Returns:** List of segment indices.
 
-| Parameter | Type        | Description      |
-| --------- | ----------- | ---------------- |
-| `x1`      | `float`     | First corner X.  |
-| `y1`      | `float`     | First corner Y.  |
-| `x2`      | `float`     | Second corner X. |
-| `y2`      | `float`     | Second corner Y. |
-| _Returns_ | `list[int]` |                  |
+| Parameter    | Type        | Description           |
+| ------------ | ----------- | --------------------- |
+| `x1`         | `float`     | First corner X.       |
+| `y1`         | `float`     | First corner Y.       |
+| `x2`         | `float`     | Second corner X.      |
+| `y2`         | `float`     | Second corner Y.      |
+| _Returns_    | `list[int]` |                       |
+| _Complexity_ |             | O(n) time, O(n) space |
 
 ### `simplify()`
 
@@ -649,10 +697,11 @@ commands.
 
 Simplify the geometry using Ramer-Douglas-Peucker.
 
-| Parameter   | Type       | Description                      |
-| ----------- | ---------- | -------------------------------- |
-| `tolerance` | `float`    | Maximum deviation from original. |
-| _Returns_   | `Geometry` |                                  |
+| Parameter    | Type       | Description                         |
+| ------------ | ---------- | ----------------------------------- |
+| `tolerance`  | `float`    | Maximum deviation from original.    |
+| _Returns_    | `Geometry` |                                     |
+| _Complexity_ |            | O(n log n) average time, O(n) space |
 
 ### `split_inner_and_outer_contours()`
 
@@ -660,9 +709,10 @@ Simplify the geometry using Ramer-Douglas-Peucker.
 
 Split contours into inner and outer groups.
 
-| Parameter | Type                                    | Description |
-| --------- | --------------------------------------- | ----------- |
-| _Returns_ | `tuple[list[Geometry], list[Geometry]]` |             |
+| Parameter    | Type                                    | Description                         |
+| ------------ | --------------------------------------- | ----------------------------------- |
+| _Returns_    | `tuple[list[Geometry], list[Geometry]]` |                                     |
+| _Complexity_ |                                         | O(n log n) average time, O(n) space |
 
 ### `split_into_components()`
 
@@ -670,9 +720,10 @@ Split contours into inner and outer groups.
 
 Split the geometry into connected components.
 
-| Parameter | Type             | Description |
-| --------- | ---------------- | ----------- |
-| _Returns_ | `list[Geometry]` |             |
+| Parameter    | Type             | Description                         |
+| ------------ | ---------------- | ----------------------------------- |
+| _Returns_    | `list[Geometry]` |                                     |
+| _Complexity_ |                  | O(n log n) average time, O(n) space |
 
 ### `split_into_contours()`
 
@@ -680,9 +731,10 @@ Split the geometry into connected components.
 
 Split the geometry into individual contours.
 
-| Parameter | Type             | Description |
-| --------- | ---------------- | ----------- |
-| _Returns_ | `list[Geometry]` |             |
+| Parameter    | Type             | Description           |
+| ------------ | ---------------- | --------------------- |
+| _Returns_    | `list[Geometry]` |                       |
+| _Complexity_ |                  | O(n) time, O(n) space |
 
 ### `to_dict()`
 
@@ -690,9 +742,10 @@ Split the geometry into individual contours.
 
 Serialize the geometry to a dictionary.
 
-| Parameter | Type   | Description |
-| --------- | ------ | ----------- |
-| _Returns_ | `dict` |             |
+| Parameter    | Type   | Description           |
+| ------------ | ------ | --------------------- |
+| _Returns_    | `dict` |                       |
+| _Complexity_ |        | O(n) time, O(n) space |
 
 ### `to_polygons()`
 
@@ -700,10 +753,11 @@ Serialize the geometry to a dictionary.
 
 Convert the geometry to a list of polygons.
 
-| Parameter   | Type                              | Description                      |
-| ----------- | --------------------------------- | -------------------------------- |
-| `tolerance` | `float = 0.01`                    | Max deviation for linearization. |
-| _Returns_   | `list[list[tuple[float, float]]]` |                                  |
+| Parameter    | Type                              | Description                      |
+| ------------ | --------------------------------- | -------------------------------- |
+| `tolerance`  | `float = 0.01`                    | Max deviation for linearization. |
+| _Returns_    | `list[list[tuple[float, float]]]` |                                  |
+| _Complexity_ |                                   | O(n) time, O(n) space            |
 
 ### `transform()`
 
@@ -715,10 +769,11 @@ See `raygeo.geo.types.TransformMatrix` for the matrix layout.
 
 **Returns:** A new transformed Geometry.
 
-| Parameter | Type                    | Description                         |
-| --------- | ----------------------- | ----------------------------------- |
-| `matrix`  | `types.TransformMatrix` | A 4x4 affine transformation matrix. |
-| _Returns_ | `Geometry`              |                                     |
+| Parameter    | Type                    | Description                         |
+| ------------ | ----------------------- | ----------------------------------- |
+| `matrix`     | `types.TransformMatrix` | A 4x4 affine transformation matrix. |
+| _Returns_    | `Geometry`              |                                     |
+| _Complexity_ |                         | O(n) time, O(n) space               |
 
 ### `upgrade_to_scalable()`
 
@@ -726,9 +781,10 @@ See `raygeo.geo.types.TransformMatrix` for the matrix layout.
 
 Convert all arcs to bezier curves for uniform scaling.
 
-| Parameter | Type       | Description |
-| --------- | ---------- | ----------- |
-| _Returns_ | `Geometry` |             |
+| Parameter    | Type       | Description           |
+| ------------ | ---------- | --------------------- |
+| _Returns_    | `Geometry` |                       |
+| _Complexity_ |            | O(n) time, O(n) space |
 
 ## Line
 

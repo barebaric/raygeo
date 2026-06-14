@@ -17,11 +17,12 @@ Compute delta vector and squared length between two 3D points.
 
 **Returns:** (dx, dy, dz, len_sq).
 
-| Parameter | Type                                | Description               |
-| --------- | ----------------------------------- | ------------------------- |
-| `start`   | `tuple[float, float, float]`        | Starting point (x, y, z). |
-| `end`     | `tuple[float, float, float]`        | Ending point (x, y, z).   |
-| _Returns_ | `tuple[float, float, float, float]` |                           |
+| Parameter    | Type                                | Description               |
+| ------------ | ----------------------------------- | ------------------------- |
+| `start`      | `tuple[float, float, float]`        | Starting point (x, y, z). |
+| `end`        | `tuple[float, float, float]`        | Ending point (x, y, z).   |
+| _Returns_    | `tuple[float, float, float, float]` |                           |
+| _Complexity_ |                                     | O(1) time, O(1) space     |
 
 ### `compute_t_range()`
 
@@ -31,13 +32,14 @@ Compute parameter range (t_start, t_end) for a clipped sub-segment.
 
 **Returns:** (t_start, t_end) in [0, 1].
 
-| Parameter   | Type                                | Description                               |
-| ----------- | ----------------------------------- | ----------------------------------------- |
-| `origin`    | `tuple[float, float, float]`        | Start of original segment (x, y, z).      |
-| `new_start` | `tuple[float, float, float]`        | Start of clipped sub-segment (x, y, z).   |
-| `new_end`   | `tuple[float, float, float]`        | End of clipped sub-segment (x, y, z).     |
-| `delta`     | `tuple[float, float, float, float]` | Segment delta from compute_segment_delta. |
-| _Returns_   | `tuple[float, float]`               |                                           |
+| Parameter    | Type                                | Description                               |
+| ------------ | ----------------------------------- | ----------------------------------------- |
+| `origin`     | `tuple[float, float, float]`        | Start of original segment (x, y, z).      |
+| `new_start`  | `tuple[float, float, float]`        | Start of clipped sub-segment (x, y, z).   |
+| `new_end`    | `tuple[float, float, float]`        | End of clipped sub-segment (x, y, z).     |
+| `delta`      | `tuple[float, float, float, float]` | Segment delta from compute_segment_delta. |
+| _Returns_    | `tuple[float, float]`               |                                           |
+| _Complexity_ |                                     | O(1) time, O(1) space                     |
 
 ### `project_t_along_segment()`
 
@@ -47,12 +49,13 @@ Project a point onto a line segment, returning t in [0, 1].
 
 **Returns:** Parameter t clamped to [0, 1].
 
-| Parameter | Type                                | Description                               |
-| --------- | ----------------------------------- | ----------------------------------------- |
-| `origin`  | `tuple[float, float, float]`        | Start of segment (x, y, z).               |
-| `point`   | `tuple[float, float, float]`        | Point to project (x, y, z).               |
-| `delta`   | `tuple[float, float, float, float]` | Segment delta from compute_segment_delta. |
-| _Returns_ | `float`                             |                                           |
+| Parameter    | Type                                | Description                               |
+| ------------ | ----------------------------------- | ----------------------------------------- |
+| `origin`     | `tuple[float, float, float]`        | Start of segment (x, y, z).               |
+| `point`      | `tuple[float, float, float]`        | Point to project (x, y, z).               |
+| `delta`      | `tuple[float, float, float, float]` | Segment delta from compute_segment_delta. |
+| _Returns_    | `float`                             |                                           |
+| _Complexity_ |                                     | O(1) time, O(1) space                     |
 
 ### `slice_scanline_data()`
 
@@ -62,12 +65,13 @@ Slice a scanline power array by parameter range [t_start, t_end).
 
 **Returns:** Sliced power values.
 
-| Parameter | Type        | Description                 |
-| --------- | ----------- | --------------------------- |
-| `data`    | `list[int]` | Full scanline power values. |
-| `t_start` | `float`     | Start parameter in [0, 1].  |
-| `t_end`   | `float`     | End parameter in [0, 1].    |
-| _Returns_ | `list[int]` |                             |
+| Parameter    | Type        | Description                                                   |
+| ------------ | ----------- | ------------------------------------------------------------- |
+| `data`       | `list[int]` | Full scanline power values.                                   |
+| `t_start`    | `float`     | Start parameter in [0, 1].                                    |
+| `t_end`      | `float`     | End parameter in [0, 1].                                      |
+| _Returns_    | `list[int]` |                                                               |
+| _Complexity_ |             | O(n) time, O(n) space where n is the length of the data slice |
 
 ### `solve_quadratic()`
 
@@ -77,9 +81,10 @@ Solve quadratic equation a x^2 + b x + c = 0.
 
 **Returns:** (root1, root2), each None if no real root.
 
-| Parameter | Type                                          | Description            |
-| --------- | --------------------------------------------- | ---------------------- |
-| `a`       | `float`                                       | Quadratic coefficient. |
-| `b`       | `float`                                       | Linear coefficient.    |
-| `c`       | `float`                                       | Constant term.         |
-| _Returns_ | `tuple[float &#124; None, float &#124; None]` |                        |
+| Parameter    | Type                                          | Description            |
+| ------------ | --------------------------------------------- | ---------------------- |
+| `a`          | `float`                                       | Quadratic coefficient. |
+| `b`          | `float`                                       | Linear coefficient.    |
+| `c`          | `float`                                       | Constant term.         |
+| _Returns_    | `tuple[float &#124; None, float &#124; None]` |                        |
+| _Complexity_ |                                               | O(1) time, O(1) space  |

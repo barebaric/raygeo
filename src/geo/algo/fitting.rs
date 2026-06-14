@@ -91,7 +91,10 @@ pub fn linearize_data(data: &[Command], tolerance: f64) -> Vec<Command> {
     result
 }
 
-/// Converts geometry data into a list of dense point lists (one per subpath).
+/// Converts geometry commands into dense point lists (one per subpath) by
+/// sampling arcs and beziers into line segments at the given resolution.
+/// No vertex reduction is performed; use [`linearize_geometry`] for a
+/// simplified polyline approximation.
 pub fn flatten_to_points(
     data: &[Command],
     resolution: f64,
@@ -162,8 +165,9 @@ pub fn flatten_to_points(
     subpaths
 }
 
-/// Converts geometry data to a polyline approximation (Lines only),
-/// reducing vertex count using the Ramer-Douglas-Peucker algorithm.
+/// Converts geometry commands to a line-only polyline approximation by first
+/// densely sampling curves via [`flatten_to_points`] (at `tolerance * 0.25`),
+/// then reducing vertices with the Ramer-Douglas-Peucker algorithm.
 pub fn linearize_geometry(data: &[Command], tolerance: f64) -> Vec<Command> {
     if data.is_empty() {
         return vec![];

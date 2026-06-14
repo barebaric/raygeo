@@ -51,6 +51,7 @@ pub fn register(algo_mod: &Bound<'_, PyModule>) -> PyResult<()> {
         :param max_segment_length: Maximum allowed segment length.
         :param is_closed: Whether the polyline is closed.
         :returns: Resampled points.
+        :complexity: O(n) time, O(n) space
         """
 "#,
     module = "raygeo.geo.algo.smooth"
@@ -77,6 +78,7 @@ fn resample_polyline_py(
 
         :param amount: Kernel size.
         :returns: Tuple of (kernel_values, sigma).
+        :complexity: O(k) time, O(k) space
         """
 "#,
     module = "raygeo.geo.algo.smooth"
@@ -100,6 +102,7 @@ fn compute_gaussian_kernel_py(amount: i32) -> (Vec<f64>, f64) {
         :param points: Sequence of 3D points to smooth.
         :param kernel: Gaussian kernel values.
         :returns: Smoothed points.
+        :complexity: O(n * k) time, O(n) space where k is the kernel size and n the number of points
         """
 "#,
     module = "raygeo.geo.algo.smooth"
@@ -135,6 +138,7 @@ fn smooth_circularly_py(
         :param corner_angle_threshold: Angle threshold for preserving corners.
         :param is_closed: Whether the polyline is closed.
         :returns: Smoothed points.
+        :complexity: O(n * k) time, O(n) space where k is the kernel size and n the number of points
         """
 "#,
     module = "raygeo.geo.algo.smooth"
@@ -166,6 +170,7 @@ fn smooth_polyline_algo_py(
         :param points: Sequence of 3D points to smooth.
         :param kernel: Gaussian kernel values.
         :returns: Smoothed points.
+        :complexity: O(n * k) time, O(n) space where k is the kernel size and n the number of points
         """
 "#,
     module = "raygeo.geo.algo.smooth"

@@ -18,6 +18,7 @@ use crate::image::grayscale as rust_grayscale;
         :param gray_image: Grayscale image as uint8 array.
         :param clip_percent: Percentage of pixels to clip from each end.
         :returns: Tuple of (black_point, white_point).
+        :complexity: O(n) where n = number of pixels
         """
 "#,
     module = "raygeo.image"
@@ -55,6 +56,7 @@ fn py_compute_auto_levels(
         :param white_point: White point for normalization.
         :returns: Normalized grayscale image with the same shape.
         :raises ValueError: If black_point >= white_point.
+        :complexity: O(n) where n = number of pixels
         """
 "#,
     module = "raygeo.image"

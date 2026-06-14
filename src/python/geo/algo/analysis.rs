@@ -45,6 +45,7 @@ pub fn register(algo_mod: &Bound<'_, PyModule>) -> PyResult<()> {
 
         :param points: Sequence of (x, y) points.
         :returns: List of unique points.
+        :complexity: O(n) time, O(n) space
         """
     "#,
     module = "raygeo.geo.algo.analysis"
@@ -69,6 +70,7 @@ fn remove_duplicates_py(points: Vec<(f64, f64)>) -> Vec<(f64, f64)> {
         :param geometry: Geometry to extract vertices from.
         :param start_cmd_index: Index of the starting command.
         :returns: List of (x, y) vertices.
+        :complexity: O(n + m) time, O(m) space where n is the number of commands and m the number of output vertices
         """
     "#,
     module = "raygeo.geo.algo.analysis"
@@ -99,6 +101,7 @@ fn get_subpath_vertices_py(
         :param geometry: Geometry to compute area from.
         :param start_cmd_index: Index of the starting command.
         :returns: Signed area.
+        :complexity: O(n) time, O(1) space
         """
     "#,
     module = "raygeo.geo.algo.analysis"
@@ -122,6 +125,7 @@ fn get_subpath_area_py(geometry: &Geometry, start_cmd_index: usize) -> f64 {
 
         :param geometry: Geometry to compute area from.
         :returns: Total unsigned area.
+        :complexity: O(n) time, O(1) space
         """
     "#,
     module = "raygeo.geo.algo.analysis"
@@ -144,6 +148,7 @@ fn get_area_py(geometry: &Geometry) -> f64 {
         :param geometry: Geometry to analyze.
         :param start_cmd_index: Index of the starting command.
         :returns: ``"ccw"``, ``"cw"``, or ``"unknown"``.
+        :complexity: O(n) time, O(1) space
         """
     "#,
     module = "raygeo.geo.algo.analysis"

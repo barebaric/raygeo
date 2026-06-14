@@ -26,6 +26,7 @@ use crate::image::convert as rust_convert;
         :param height: Image height in pixels.
         :param stride: Row stride in pixels (may be larger than width).
         :returns: Tuple of (grayscale_uint8, alpha_float32) arrays, each (height, width).
+        :complexity: O(w*h)
         """
 "#,
     module = "raygeo.image"
@@ -89,6 +90,7 @@ fn py_rgba_to_grayscale(
         :param threshold: Brightness value (0-255) for binarization.
         :param invert: If True, pixels above threshold become black (1).
         :returns: 2D binary uint8 array (values 0 or 1) with shape (height, width).
+        :complexity: O(w*h)
         """
 "#,
     module = "raygeo.image"
@@ -147,6 +149,7 @@ fn py_rgba_to_binary(
         :param width: Image width in pixels.
         :param height: Image height in pixels.
         :param stride: Row stride in pixels.
+        :complexity: O(w*h)
         """
 "#,
     module = "raygeo.image"

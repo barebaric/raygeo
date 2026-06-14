@@ -90,13 +90,17 @@ def convert_sphinx(text: str) -> str:
 PARAM_RE = re.compile(r"^:param\s+(\w[\w_]*):\s*(.*)")
 RETURN_RE = re.compile(r"^:returns?:\s*(.*)")
 RAISE_RE = re.compile(r"^:raises?\s+(\w[\w_]*):\s*(.*)")
+COMPLEXITY_RE = re.compile(r"^:complexity:\s*(.*)")
 
 
-def convert_docstring_sections(text: str) -> tuple[str, dict[str, str]]:
-    """Parse docstring and return (description_text, param_descriptions)."""
+def convert_docstring_sections(
+    text: str,
+) -> tuple[str, dict[str, str], str]:
+    """Parse docstring into (desc, param_docs, complexity)."""
     lines = text.split("\n")
     result = []
     param_docs: dict[str, str] = {}
+    complexity = ""
     i = 0
     in_args = False
     in_returns = False
@@ -263,13 +267,19 @@ def convert_docstring_sections(text: str) -> tuple[str, dict[str, str]]:
             i += 1
             continue
 
+        m = COMPLEXITY_RE.match(stripped)
+        if m:
+            complexity = convert_sphinx(m.group(1))
+            i += 1
+            continue
+
         result.append(convert_sphinx(line.rstrip()))
         i += 1
 
     if in_example and example_lines:
         result.extend(example_lines)
 
-    return str("\n".join(result)), param_docs
+    return str("\n".join(result)), param_docs, complexity
 
 
 def dedent_doc(text: str) -> str:
@@ -289,14 +299,14 @@ def dedent_doc(text: str) -> str:
     return "\n".join(result)
 
 
-def format_docstring(doc: str | None) -> tuple[str, dict[str, str]]:
+def format_docstring(doc: str | None) -> tuple[str, dict[str, str], str]:
     if not doc:
-        return "", {}
+        return "", {}, ""
     text = dedent_doc(doc)
     text = convert_sphinx(text)
-    text, param_docs = convert_docstring_sections(text)
+    text, param_docs, complexity = convert_docstring_sections(text)
     text = text.strip()
-    return text, param_docs
+    return text, param_docs, complexity
 
 
 def clean_type(text: str) -> str:
@@ -666,8 +676,9 @@ def render_members(members: dict, mod_doc: str | None) -> str:
         params: list[dict],
         param_docs: dict[str, str],
         signature: str = "",
+        complexity: str = "",
     ) -> None:
-        if not params and "->" not in signature:
+        if not params and "->" not in signature and not complexity:
             return
         lines.append("")
         lines.append("| Parameter | Type | Description |")
@@ -680,6 +691,8 @@ def render_members(members: dict, mod_doc: str | None) -> str:
         if "->" in signature:
             ret = signature.split("->", 1)[1].strip()
             lines.append(f"| *Returns* | `{_escape_table_pipe(ret)}` |  |")
+        if complexity:
+            lines.append(f"| *Complexity* | | {complexity} |")
         lines.append("")
 
     if has_alias:
@@ -690,7 +703,7 @@ def render_members(members: dict, mod_doc: str | None) -> str:
             lines.append("")
             lines.append(f"Type: `{a['type']}`")
             lines.append("")
-            doc, _ = format_docstring(a["doc"])
+            doc, _, _ = format_docstring(a["doc"])
             if doc:
                 lines.append(doc)
                 lines.append("")
@@ -705,7 +718,7 @@ def render_members(members: dict, mod_doc: str | None) -> str:
             if c["type"]:
                 lines.append(f"``{c['type']}``")
                 lines.append("")
-            doc, _ = format_docstring(c["doc"])
+            doc, _, _ = format_docstring(c["doc"])
             if doc:
                 lines.append(doc)
                 lines.append("")
@@ -715,7 +728,7 @@ def render_members(members: dict, mod_doc: str | None) -> str:
         for cls in sorted(members["classes"], key=lambda x: x["name"]):
             lines.append(f"## {cls['name']}")
             lines.append("")
-            doc, _ = format_docstring(cls["doc"])
+            doc, _, _ = format_docstring(cls["doc"])
             if doc:
                 lines.append(doc)
                 lines.append("")
@@ -748,7 +761,7 @@ def render_members(members: dict, mod_doc: str | None) -> str:
                 if sig:
                     lines.append(f"``{p['name']}{sig}``")
                     lines.append("")
-                pd, _ = format_docstring(p["doc"])
+                pd, _, _ = format_docstring(p["doc"])
                 if pd:
                     lines.append(pd)
                     lines.append("")
@@ -759,18 +772,21 @@ def render_members(members: dict, mod_doc: str | None) -> str:
                 lines.append("")
                 lines.append(f"``{dec}{m['name']}{m['signature']}``")
                 lines.append("")
-                mdoc, param_docs = format_docstring(m["doc"])
+                mdoc, param_docs, m_complexity = format_docstring(m["doc"])
                 if mdoc:
                     lines.append(mdoc)
                     lines.append("")
                 _render_params(
-                    m.get("params", []), param_docs, m.get("signature", "")
+                    m.get("params", []),
+                    param_docs,
+                    m.get("signature", ""),
+                    m_complexity,
                 )
 
             for nc in public_nested:
                 lines.append(f"### {nc['name']}")
                 lines.append("")
-                ndoc, _ = format_docstring(nc["doc"])
+                ndoc, _, _ = format_docstring(nc["doc"])
                 if ndoc:
                     lines.append(ndoc)
                     lines.append("")
@@ -790,6 +806,7 @@ def render_members(members: dict, mod_doc: str | None) -> str:
                     ),
                     key=lambda x: x["name"],
                 )
+                pd = ""
                 for p in nc_public_props:
                     sig = f": {p['signature']}" if p.get("signature") else ""
                     lines.append(f"#### `{p['name']}`")
@@ -797,7 +814,7 @@ def render_members(members: dict, mod_doc: str | None) -> str:
                     if sig:
                         lines.append(f"``{p['name']}{sig}``")
                         lines.append("")
-                    pd, _ = format_docstring(p["doc"])
+                    pd, _, _ = format_docstring(p["doc"])
                     if pd:
                         lines.append(pd)
                         lines.append("")
@@ -807,7 +824,7 @@ def render_members(members: dict, mod_doc: str | None) -> str:
                     lines.append("")
                     lines.append(f"``{dec}{m['name']}{m['signature']}``")
                     lines.append("")
-                    mdoc, param_docs = format_docstring(m["doc"])
+                    mdoc, param_docs, m_complexity = format_docstring(m["doc"])
                     if mdoc:
                         lines.append(mdoc)
                         lines.append("")
@@ -815,6 +832,7 @@ def render_members(members: dict, mod_doc: str | None) -> str:
                         m.get("params", []),
                         param_docs,
                         m.get("signature", ""),
+                        m_complexity,
                     )
         lines.append("")
 
@@ -826,12 +844,15 @@ def render_members(members: dict, mod_doc: str | None) -> str:
             lines.append("")
             lines.append(f"``{f['name']}{f['signature']}``")
             lines.append("")
-            doc, param_docs = format_docstring(f["doc"])
+            doc, param_docs, f_complexity = format_docstring(f["doc"])
             if doc:
                 lines.append(doc)
                 lines.append("")
             _render_params(
-                f.get("params", []), param_docs, f.get("signature", "")
+                f.get("params", []),
+                param_docs,
+                f.get("signature", ""),
+                f_complexity,
             )
         lines.append("")
 

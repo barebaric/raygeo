@@ -18,6 +18,7 @@ use crate::image::dither as rust_dither;
         :param grayscale: 2D grayscale image as uint8 array.
         :param invert: If True, invert the output (swap black/white).
         :returns: 2D binary uint8 array (values 0 or 1).
+        :complexity: O(w*h)
         """
 "#,
     module = "raygeo.image"
@@ -66,6 +67,7 @@ fn py_apply_floyd_steinberg_dither(
         :param binary: 2D binary uint8 array (values 0 or 1).
         :param min_run_length: Minimum run length to keep.
         :returns: 2D binary uint8 array with short runs removed.
+        :complexity: O(w*h)
         """
 "#,
     module = "raygeo.image"
@@ -116,6 +118,7 @@ fn py_apply_minimum_run_length(
         :param invert: If True, invert the output.
         :param cell_size: Pixel grouping size for the threshold.
         :returns: 2D binary uint8 array (values 0 or 1).
+        :complexity: O(w*h)
         """
 "#,
     module = "raygeo.image"

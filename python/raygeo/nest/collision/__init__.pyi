@@ -26,6 +26,7 @@ def any_overlap(candidate: types.Polygon, placed: collections.abc.Sequence[types
     :param placed: List of already-placed polygons.
     :param min_area: Minimum overlap area to consider (in clipper coords).
     :returns: True if any overlap detected.
+    :complexity: O(n * m) where n = candidate vertices, m = placed polygon vertices.
     """
 
 def any_overlap_hierarchical(candidate_polys: collections.abc.Sequence[numpy.ndarray], candidate_hulls: collections.abc.Sequence[numpy.ndarray], placed_polys_groups: collections.abc.Sequence[collections.abc.Sequence[numpy.ndarray]], placed_hulls_groups: collections.abc.Sequence[collections.abc.Sequence[numpy.ndarray]], min_area: float = 1) -> bool:
@@ -38,11 +39,13 @@ def any_overlap_hierarchical(candidate_polys: collections.abc.Sequence[numpy.nda
     :param placed_hulls_groups: Convex hulls of placed groups.
     :param min_area: Minimum overlap area (clipper coords).
     :returns: True if any overlap detected.
+    :complexity: O(n * m) with bbox/hull early-exit acceleration.
     """
 
 def any_overlap_hierarchical_grid(candidate_polys: collections.abc.Sequence[numpy.ndarray], candidate_hulls: collections.abc.Sequence[numpy.ndarray], placed_polys_groups: collections.abc.Sequence[collections.abc.Sequence[numpy.ndarray]], placed_hulls_groups: collections.abc.Sequence[collections.abc.Sequence[numpy.ndarray]], spatial_grid: spatial_grid.SpatialGrid, candidate_bbox: tuple[float, float, float, float], min_area: float = 1) -> bool:
     r"""
     :param spatial_grid: SpatialGrid for fast neighbor lookup.
+    :complexity: O(n * m / k) where k = grid cell density factor.
     """
 
 def is_contained(inner: collections.abc.Sequence[types.Polygon], outer: types.Polygon) -> bool:
@@ -52,5 +55,6 @@ def is_contained(inner: collections.abc.Sequence[types.Polygon], outer: types.Po
     :param inner: List of polygons to check.
     :param outer: Outer polygon.
     :returns: True if all inner polygons are inside outer.
+    :complexity: O(n * m) where n = inner polygons, m = outer polygon vertices.
     """
 

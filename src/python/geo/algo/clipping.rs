@@ -55,6 +55,7 @@ pub fn register(algo_mod: &Bound<'_, PyModule>) -> PyResult<()> {
         :param p2: End point of the line segment.
         :param rect: Clipping rectangle (x_min, y_min, x_max, y_max).
         :returns: Clipped segment or None if fully outside.
+        :complexity: O(1) time, O(1) space
         """
 "#,
     module = "raygeo.geo.algo.clipping"
@@ -84,6 +85,7 @@ fn clip_line_segment_py(
         :param p2: End point of the line segment.
         :param regions: List of polygon regions to subtract.
         :returns: List of remaining segments after subtraction.
+        :complexity: O(n * m) time, O(n) space where n is the number of regions and m their average vertex count
         """
 "#,
     module = "raygeo.geo.algo.clipping"
@@ -114,6 +116,7 @@ fn subtract_polygons_from_line_segment_py(
         :param p2: End point of the line segment.
         :param regions: Polygon regions to clip against.
         :returns: List of clipped segments.
+        :complexity: O(n * m) time, O(n) space where n is the number of regions and m their average vertex count
         """
 "#,
     module = "raygeo.geo.algo.clipping"
@@ -139,6 +142,7 @@ fn clip_line_segment_to_regions_py(
 
         :param polygon: Input polygon as a list of (x, y) points.
         :returns: Polygon with integer coordinates for Clipper.
+        :complexity: O(n) time, O(n) space
         """
 "#,
     module = "raygeo.geo.algo.clipping"
@@ -168,6 +172,7 @@ fn to_clipper_py(polygon: &Bound<'_, PyAny>) -> PyResult<Vec<(i64, i64)>> {
 
         :param polygon: Integer polygon from Clipper.
         :returns: Polygon with float coordinates.
+        :complexity: O(n) time, O(n) space
         """
 "#,
     module = "raygeo.geo.algo.clipping"

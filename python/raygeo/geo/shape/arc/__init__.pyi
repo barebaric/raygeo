@@ -40,6 +40,7 @@ def does_arc_intersect_circle(arc_start: types.Point, arc_end: types.Point, arc_
     :param circle_center: Circle center (x, y).
     :param circle_radius: Circle radius.
     :returns: True if the arc intersects the circle.
+    :complexity: O(n) time, O(1) space
     """
 
 def does_arc_intersect_rect(arc_start: types.Point, arc_end: types.Point, arc_center: types.Point, clockwise: bool, rect: types.Rect) -> bool:
@@ -52,6 +53,7 @@ def does_arc_intersect_rect(arc_start: types.Point, arc_end: types.Point, arc_ce
     :param clockwise: Whether the arc is clockwise.
     :param rect: Rectangle (x_min, y_min, x_max, y_max).
     :returns: True if the arc intersects the rectangle.
+    :complexity: O(n) time, O(1) space
     """
 
 def get_arc_angles(start: types.Point, end: types.Point, center: types.Point, clockwise: bool) -> types.Point3D:
@@ -63,6 +65,7 @@ def get_arc_angles(start: types.Point, end: types.Point, center: types.Point, cl
     :param center: Arc center point (x, y).
     :param clockwise: Whether the arc is clockwise.
     :returns: Tuple of (start_angle, end_angle, sweep_angle) in radians.
+    :complexity: O(1) time, O(1) space
     """
 
 def get_arc_bounds(start: types.Point, end: types.Point, center: types.Point, clockwise: bool) -> types.Rect:
@@ -74,6 +77,7 @@ def get_arc_bounds(start: types.Point, end: types.Point, center: types.Point, cl
     :param center: Arc center point (x, y).
     :param clockwise: Whether the arc is clockwise.
     :returns: Bounding rectangle as (x_min, y_min, x_max, y_max).
+    :complexity: O(1) time, O(1) space
     """
 
 def get_arc_closest_point(arc_cmd: typing.Any, start_pos: types.Point3D, x: float, y: float) -> typing.Optional[tuple[float, types.Point, float]]:
@@ -85,6 +89,7 @@ def get_arc_closest_point(arc_cmd: typing.Any, start_pos: types.Point3D, x: floa
     :param x: X coordinate of target point.
     :param y: Y coordinate of target point.
     :returns: Tuple of (parameter, closest_point, distance) or None.
+    :complexity: O(n) time, O(1) space
     """
 
 def get_arc_direction(center: types.Point, start: types.Point, mouse: types.Point) -> bool:
@@ -95,6 +100,7 @@ def get_arc_direction(center: types.Point, start: types.Point, mouse: types.Poin
     :param start: Arc start point (x, y).
     :param mouse: Mouse point (x, y).
     :returns: True if clockwise, False if counter-clockwise.
+    :complexity: O(1) time, O(1) space
     """
 
 def get_arc_length(start_pos: types.Point, end_pos: types.Point, center_offset: types.Point, clockwise: bool) -> float:
@@ -106,6 +112,7 @@ def get_arc_length(start_pos: types.Point, end_pos: types.Point, center_offset: 
     :param center_offset: Center offset (i, j) from start.
     :param clockwise: True for clockwise, False for counter-clockwise.
     :returns: Arc length.
+    :complexity: O(1) time, O(1) space
     """
 
 def get_arc_midpoint(start: types.Point, end: types.Point, center: types.Point, clockwise: bool) -> types.Point:
@@ -117,6 +124,7 @@ def get_arc_midpoint(start: types.Point, end: types.Point, center: types.Point, 
     :param center: Arc center point (x, y).
     :param clockwise: Whether the arc is clockwise.
     :returns: Midpoint (x, y).
+    :complexity: O(1) time, O(1) space
     """
 
 def get_arc_sweep(start_angle: float, end_angle: float, clockwise: bool) -> float:
@@ -129,6 +137,7 @@ def get_arc_sweep(start_angle: float, end_angle: float, clockwise: bool) -> floa
     :param end_angle: End angle in radians.
     :param clockwise: Whether the arc is clockwise.
     :returns: Signed sweep angle in radians.
+    :complexity: O(1) time, O(1) space
     """
 
 def is_angle_between(angle: float, start: float, end: float, clockwise: bool) -> bool:
@@ -140,6 +149,7 @@ def is_angle_between(angle: float, start: float, end: float, clockwise: bool) ->
     :param end: End angle.
     :param clockwise: Whether the arc is clockwise.
     :returns: True if angle is between start and end.
+    :complexity: O(1) time, O(1) space
     """
 
 def is_arc_clockwise(points: collections.abc.Sequence[types.Point2DOr3D], center: types.Point2DOr3D) -> bool:
@@ -149,6 +159,7 @@ def is_arc_clockwise(points: collections.abc.Sequence[types.Point2DOr3D], center
     :param points: Sequence of (x, y) points on the arc.
     :param center: Arc center (x, y).
     :returns: True if the arc is clockwise.
+    :complexity: O(n) time, O(1) space
     """
 
 def is_arc_inside_polygons(arc_start: types.Point, arc_end: types.Point, arc_center: types.Point, clockwise: bool, polygons: typing.Any) -> bool:
@@ -161,6 +172,7 @@ def is_arc_inside_polygons(arc_start: types.Point, arc_end: types.Point, arc_cen
     :param clockwise: Whether the arc is clockwise.
     :param polygons: List of polygons to check against.
     :returns: True if the arc is inside all polygons.
+    :complexity: O(n * m) time, O(1) space
     """
 
 def linearize_arc(arc_cmd: typing.Any, start_point: types.Point3D, resolution: float = 0.1) -> list[tuple[types.Point3D, types.Point3D]]:
@@ -171,6 +183,7 @@ def linearize_arc(arc_cmd: typing.Any, start_point: types.Point3D, resolution: f
     :param start_point: Start point (x, y, z).
     :param resolution: Maximum segment length.
     :returns: List of (p1, p2) segment pairs.
+    :complexity: O(n) time, O(n) space
     """
 
 def normalize_angle(angle: float) -> float:
@@ -179,5 +192,6 @@ def normalize_angle(angle: float) -> float:
     
     :param angle: Angle in radians.
     :returns: Normalized angle in [0, 2*pi).
+    :complexity: O(1) time, O(1) space
     """
 

@@ -21,10 +21,11 @@ Sums all subpaths (outer + inner). Returns 0 for empty or open geometry.
 
 **Returns:** Total unsigned area.
 
-| Parameter  | Type           | Description                    |
-| ---------- | -------------- | ------------------------------ |
-| `geometry` | `geo.Geometry` | Geometry to compute area from. |
-| _Returns_  | `float`        |                                |
+| Parameter    | Type           | Description                    |
+| ------------ | -------------- | ------------------------------ |
+| `geometry`   | `geo.Geometry` | Geometry to compute area from. |
+| _Returns_    | `float`        |                                |
+| _Complexity_ |                | O(n) time, O(1) space          |
 
 ### `get_path_winding_order()`
 
@@ -39,6 +40,7 @@ Determine the winding order of a subpath.
 | `geometry`        | `geo.Geometry` | Geometry to analyze.           |
 | `start_cmd_index` | `int`          | Index of the starting command. |
 | _Returns_         | `str`          |                                |
+| _Complexity_      |                | O(n) time, O(1) space          |
 
 ### `get_subpath_area()`
 
@@ -55,6 +57,7 @@ Positive area is CCW, negative is CW. Returns 0 for unclosed subpaths.
 | `geometry`        | `geo.Geometry` | Geometry to compute area from. |
 | `start_cmd_index` | `int`          | Index of the starting command. |
 | _Returns_         | `float`        |                                |
+| _Complexity_      |                | O(n) time, O(1) space          |
 
 ### `get_subpath_vertices()`
 
@@ -66,11 +69,12 @@ Linearizes arcs and beziers into vertex sequences.
 
 **Returns:** List of (x, y) vertices.
 
-| Parameter         | Type                        | Description                        |
-| ----------------- | --------------------------- | ---------------------------------- |
-| `geometry`        | `geo.Geometry`              | Geometry to extract vertices from. |
-| `start_cmd_index` | `int`                       | Index of the starting command.     |
-| _Returns_         | `list[tuple[float, float]]` |                                    |
+| Parameter         | Type                        | Description                                                                                     |
+| ----------------- | --------------------------- | ----------------------------------------------------------------------------------------------- |
+| `geometry`        | `geo.Geometry`              | Geometry to extract vertices from.                                                              |
+| `start_cmd_index` | `int`                       | Index of the starting command.                                                                  |
+| _Returns_         | `list[tuple[float, float]]` |                                                                                                 |
+| _Complexity_      |                             | O(n + m) time, O(m) space where n is the number of commands and m the number of output vertices |
 
 ### `remove_duplicates()`
 
@@ -80,7 +84,8 @@ Remove duplicate points from a sequence.
 
 **Returns:** List of unique points.
 
-| Parameter | Type                                    | Description                |
-| --------- | --------------------------------------- | -------------------------- |
-| `points`  | `collections.abc.Sequence[types.Point]` | Sequence of (x, y) points. |
-| _Returns_ | `types.Polygon`                         |                            |
+| Parameter    | Type                                    | Description                |
+| ------------ | --------------------------------------- | -------------------------- |
+| `points`     | `collections.abc.Sequence[types.Point]` | Sequence of (x, y) points. |
+| _Returns_    | `types.Polygon`                         |                            |
+| _Complexity_ |                                         | O(n) time, O(n) space      |

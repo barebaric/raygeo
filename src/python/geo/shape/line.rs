@@ -61,6 +61,7 @@ pub fn register(shape_mod: &Bound<'_, PyModule>) -> PyResult<()> {
         :param p3: First point on line 2.
         :param p4: Second point on line 2.
         :returns: Intersection point (x, y) or None.
+        :complexity: O(1) time, O(1) space
         """
 "#,
     module = "raygeo.geo.shape.line"
@@ -93,6 +94,7 @@ fn get_line_line_intersection_py(
         :param p3: Start of segment 2.
         :param p4: End of segment 2.
         :returns: Intersection point (x, y) or None.
+        :complexity: O(1) time, O(1) space
         """
 "#,
     module = "raygeo.geo.shape.line"
@@ -125,6 +127,7 @@ fn get_line_segment_intersection_py(
         :param x: X coordinate of target point.
         :param y: Y coordinate of target point.
         :returns: Closest point (x, y) on the infinite line.
+        :complexity: O(1) time, O(1) space
         """
 "#,
     module = "raygeo.geo.shape.line"
@@ -156,6 +159,7 @@ fn get_line_closest_point_py(
         :param x: X coordinate of target point.
         :param y: Y coordinate of target point.
         :returns: Tuple of (parameter, closest_point, distance).
+        :complexity: O(1) time, O(1) space
         """
 "#,
     module = "raygeo.geo.shape.line"
@@ -187,6 +191,7 @@ fn get_line_segment_closest_point_py(
         :param line_p1: First point on the segment.
         :param line_p2: Second point on the segment.
         :returns: Distance (clamped to segment).
+        :complexity: O(1) time, O(1) space
         """
 "#,
     module = "raygeo.geo.shape.line"
@@ -215,6 +220,7 @@ fn get_point_line_distance_py(
         :param seg_p1: Start of the line segment.
         :param seg_p2: End of the line segment.
         :returns: True if the point lies on the segment.
+        :complexity: O(1) time, O(1) space
         """
 "#,
     module = "raygeo.geo.shape.line"
@@ -243,6 +249,7 @@ fn is_point_on_line_segment_py(
         :param p2: End of the line segment.
         :param rect: Rectangle (x_min, y_min, x_max, y_max).
         :returns: True if the segment intersects the rectangle.
+        :complexity: O(1) time, O(1) space
         """
 "#,
     module = "raygeo.geo.shape.line"
@@ -277,6 +284,7 @@ fn does_line_segment_intersect_rect_py(
         :param circle_center: Circle center (x, y).
         :param circle_radius: Circle radius.
         :returns: True if the segment intersects the circle.
+        :complexity: O(1) time, O(1) space
         """
 "#,
     module = "raygeo.geo.shape.line"
@@ -307,6 +315,7 @@ fn does_line_segment_intersect_circle_py(
         :param p2: End of the line segment.
         :param polygon: Polygon to check against.
         :returns: List of t-values of intersection points.
+        :complexity: O(n) time, O(1) space
         """
 "#,
     module = "raygeo.geo.shape.line"
@@ -335,6 +344,7 @@ fn get_line_segment_polygon_intersections_py(
         :param p1: Vertex point.
         :param p2: Next point.
         :returns: Angle in radians.
+        :complexity: O(1) time, O(1) space
         """
 "#,
     module = "raygeo.geo.shape.line"
@@ -357,6 +367,7 @@ fn get_angle_at_vertex_py(p0: Point, p1: Point, p2: Point) -> f64 {
         :param p1: Start point (x, y).
         :param p2: End point (x, y).
         :returns: Distance between the two points.
+        :complexity: O(1) time, O(1) space
         """
 "#,
     module = "raygeo.geo.shape.line"

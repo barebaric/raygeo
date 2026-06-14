@@ -28,6 +28,7 @@ for each input group in order.
 | `sheet_poly`       | `types.Polygon`                                                     | Sheet polygon.                                  |
 | `spacing`          | `float`                                                             | Minimum spacing between parts.                  |
 | _Returns_          | `list[tuple[float, float]]`                                         |                                                 |
+| _Complexity_       |                                                                     | O(passes _ n _ m) where passes ≤ 10.            |
 
 ![Gravity tightening: before vs after](images/gravity.png)
 
@@ -43,12 +44,13 @@ Uses binary search with polygon overlap and containment checks.
 
 **Returns:** Maximum slide distance.
 
-| Parameter          | Type                                                                | Description                                      |
-| ------------------ | ------------------------------------------------------------------- | ------------------------------------------------ |
-| `polys`            | `collections.abc.Sequence[types.Polygon]`                           | Polygons of the part to slide.                   |
-| `other_polys_list` | `collections.abc.Sequence[collections.abc.Sequence[types.Polygon]]` | Polygons of all other placed parts (grouped).    |
-| `sheet_bounds`     | `tuple[float, float, float, float]`                                 | Sheet bounding box (min_x, min_y, max_x, max_y). |
-| `sheet_poly`       | `types.Polygon`                                                     | Sheet polygon.                                   |
-| `axis`             | `str`                                                               | `"x"` or `"y"` — axis to slide along.            |
-| `spacing`          | `float`                                                             | Minimum spacing between parts.                   |
-| _Returns_          | `float`                                                             |                                                  |
+| Parameter          | Type                                                                | Description                                                 |
+| ------------------ | ------------------------------------------------------------------- | ----------------------------------------------------------- |
+| `polys`            | `collections.abc.Sequence[types.Polygon]`                           | Polygons of the part to slide.                              |
+| `other_polys_list` | `collections.abc.Sequence[collections.abc.Sequence[types.Polygon]]` | Polygons of all other placed parts (grouped).               |
+| `sheet_bounds`     | `tuple[float, float, float, float]`                                 | Sheet bounding box (min_x, min_y, max_x, max_y).            |
+| `sheet_poly`       | `types.Polygon`                                                     | Sheet polygon.                                              |
+| `axis`             | `str`                                                               | `"x"` or `"y"` — axis to slide along.                       |
+| `spacing`          | `float`                                                             | Minimum spacing between parts.                              |
+| _Returns_          | `float`                                                             |                                                             |
+| _Complexity_       |                                                                     | O(log range _ n _ m) for binary search with overlap checks. |

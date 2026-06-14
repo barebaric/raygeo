@@ -40,6 +40,7 @@ def clip_bezier_with_rect(p0: types.Point, p1: types.Point, p2: types.Point, p3:
     :param p3: End control point (x, y).
     :param rect: Clipping rectangle (x_min, y_min, x_max, y_max).
     :returns: List of bezier segments inside the rectangle.
+    :complexity: O(n)
     """
 
 def convert_cubic_bezier_to_quadratic(p0: types.Point, p1: types.Point, p2: types.Point, p3: types.Point) -> tuple[types.Point, types.Point, types.Point]:
@@ -51,6 +52,7 @@ def convert_cubic_bezier_to_quadratic(p0: types.Point, p1: types.Point, p2: type
     :param p2: Second control point (x, y).
     :param p3: End control point (x, y).
     :returns: Quadratic bezier (p0, p1, p2).
+    :complexity: O(1)
     """
 
 def flatten_bezier(p0: types.Point3D, p1: types.Point3D, p2: types.Point3D, p3: types.Point3D, tolerance: float, max_subdivisions: int, pts: list) -> None:
@@ -64,6 +66,7 @@ def flatten_bezier(p0: types.Point3D, p1: types.Point3D, p2: types.Point3D, p3: 
     :param tolerance: Flattening tolerance.
     :param max_subdivisions: Maximum recursion depth.
     :param pts: Output list to append points to.
+    :complexity: O(n)
     """
 
 def get_bezier_bounds(p0: types.Point, p1: types.Point, p2: types.Point, p3: types.Point) -> types.Rect:
@@ -75,6 +78,7 @@ def get_bezier_bounds(p0: types.Point, p1: types.Point, p2: types.Point, p3: typ
     :param p2: Second control point (x, y).
     :param p3: End control point (x, y).
     :returns: Bounding rectangle as (x_min, y_min, x_max, y_max).
+    :complexity: O(1)
     """
 
 def get_bezier_flatness_sq(a: types.Point3D, b: types.Point3D, c: types.Point3D, d: types.Point3D) -> float:
@@ -86,6 +90,7 @@ def get_bezier_flatness_sq(a: types.Point3D, b: types.Point3D, c: types.Point3D,
     :param c: Second control point (x, y, z).
     :param d: End point (x, y, z).
     :returns: Flatness squared value.
+    :complexity: O(1)
     """
 
 def get_bezier_length(p0: types.Point, c1: types.Point, c2: types.Point, p1: types.Point) -> float:
@@ -97,6 +102,7 @@ def get_bezier_length(p0: types.Point, c1: types.Point, c2: types.Point, p1: typ
     :param c2: Second control point (x, y).
     :param p1: End point (x, y).
     :returns: Arc length.
+    :complexity: O(n)
     """
 
 def get_bezier_point_at(p0: types.Point, p1: types.Point, p2: types.Point, p3: types.Point, t: float) -> types.Point:
@@ -109,6 +115,7 @@ def get_bezier_point_at(p0: types.Point, p1: types.Point, p2: types.Point, p3: t
     :param p3: End control point (x, y).
     :param t: Parameter value (0..1).
     :returns: Point on the bezier curve (x, y).
+    :complexity: O(1)
     """
 
 def get_bezier_rect_intersections(p0: types.Point, p1: types.Point, p2: types.Point, p3: types.Point, rect: types.Rect) -> list[float]:
@@ -121,6 +128,7 @@ def get_bezier_rect_intersections(p0: types.Point, p1: types.Point, p2: types.Po
     :param p3: End control point (x, y).
     :param rect: Rectangle (x_min, y_min, x_max, y_max).
     :returns: List of t-values where the bezier intersects.
+    :complexity: O(n)
     """
 
 def get_perpendicular_dist_sq(pt: types.Point3D, origin: types.Point3D, vx: float, vy: float, vz: float = 0, norm_sq: float = 0) -> float:
@@ -134,6 +142,7 @@ def get_perpendicular_dist_sq(pt: types.Point3D, origin: types.Point3D, vx: floa
     :param vz: Z component of line direction.
     :param norm_sq: Precomputed squared norm (optional).
     :returns: Perpendicular distance squared.
+    :complexity: O(1)
     """
 
 def is_bezier_flat(p0: types.Point, p1: types.Point, p2: types.Point, p3: types.Point, tolerance_sq: float) -> bool:
@@ -151,6 +160,7 @@ def is_bezier_flat(p0: types.Point, p1: types.Point, p2: types.Point, p3: types.
     :param p3: End control point (x, y).
     :param tolerance_sq: Squared tolerance for flatness.
     :returns: True if the curve is flat enough.
+    :complexity: O(1)
     """
 
 def is_bezier_inside_polygons(p0: types.Point, p1: types.Point, p2: types.Point, p3: types.Point, polygons: typing.Any) -> bool:
@@ -163,6 +173,7 @@ def is_bezier_inside_polygons(p0: types.Point, p1: types.Point, p2: types.Point,
     :param p3: End control point (x, y).
     :param polygons: List of polygons to check against.
     :returns: True if the bezier is inside all polygons.
+    :complexity: O(n * m)
     """
 
 def linearize_bezier(p0: types.Point3D, p1: types.Point3D, p2: types.Point3D, p3: types.Point3D, num_steps: int) -> list[tuple[types.Point3D, types.Point3D]]:
@@ -175,6 +186,7 @@ def linearize_bezier(p0: types.Point3D, p1: types.Point3D, p2: types.Point3D, p3
     :param p3: End control point (x, y, z).
     :param num_steps: Number of linearization steps.
     :returns: List of (p1, p2) segment pairs.
+    :complexity: O(n)
     """
 
 def linearize_bezier_adaptive(p0: types.Point, p1: types.Point, p2: types.Point, p3: types.Point, tolerance_sq: float, max_subdivisions: int = 20) -> types.Polygon:
@@ -188,6 +200,7 @@ def linearize_bezier_adaptive(p0: types.Point, p1: types.Point, p2: types.Point,
     :param tolerance_sq: Squared tolerance for subdivision.
     :param max_subdivisions: Maximum recursion depth.
     :returns: List of linearized points (x, y).
+    :complexity: O(n)
     """
 
 def linearize_bezier_segment(p0: types.Point3D, p1: types.Point3D, p2: types.Point3D, p3: types.Point3D, tolerance: float = 0.1) -> list[types.Point3D]:
@@ -200,6 +213,7 @@ def linearize_bezier_segment(p0: types.Point3D, p1: types.Point3D, p2: types.Poi
     :param p3: End control point (x, y, z).
     :param tolerance: Linearization tolerance.
     :returns: List of linearized points (x, y, z).
+    :complexity: O(n)
     """
 
 def split_bezier(p0: types.Point, p1: types.Point, p2: types.Point, p3: types.Point, t: float) -> tuple[tuple[types.Point, types.Point, types.Point, types.Point], tuple[types.Point, types.Point, types.Point, types.Point]]:
@@ -212,5 +226,6 @@ def split_bezier(p0: types.Point, p1: types.Point, p2: types.Point, p3: types.Po
     :param p3: End control point (x, y).
     :param t: Split parameter (0..1).
     :returns: Two bezier curves (left, right).
+    :complexity: O(1)
     """
 

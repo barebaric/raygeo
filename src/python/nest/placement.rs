@@ -44,6 +44,7 @@ fn polys_list_from_py(list: Vec<Vec<Vec<PyPoint2D>>>) -> Vec<Vec<Polygon>> {
         :param part_bounds: Part bounding box (min_x, min_y, max_x, max_y).
         :param spacing: Minimum spacing between parts.
         :returns: List of (x, y) candidate positions.
+        :complexity: O(n) where n = number of grid cells scanned.
         """
 "#,
     module = "raygeo.nest.placement"
@@ -78,6 +79,7 @@ fn generate_bottom_left_candidates_py(
         :param part_bounds: Part bounding box (min_x, min_y, max_x, max_y).
         :param spacing: Grid spacing.
         :returns: List of (x, y) candidate positions.
+        :complexity: O(n) where n = number of grid cells.
         """
 "#,
     module = "raygeo.nest.placement"
@@ -118,6 +120,7 @@ fn generate_grid_candidates_py(
         :param part_bounds: Part bounding box (min_x, min_y, max_x, max_y).
         :param spacing: Minimum spacing between parts.
         :returns: List of (x, y) candidate positions.
+        :complexity: O(n) where n = number of placed parts.
         """
 "#,
     module = "raygeo.nest.placement"
@@ -156,6 +159,7 @@ fn generate_perimeter_candidates_py(
         :param ifp_bounds: IFP bounding box (min_x, min_y, max_x, max_y).
         :param min_dist: Minimum allowed distance between candidates.
         :returns: Filtered list of (x, y) positions.
+        :complexity: O(n log n) for spatial distance filtering.
         """
 "#,
     module = "raygeo.nest.placement"
@@ -229,6 +233,7 @@ macro_rules! with_grid {
         :param min_area: Minimum overlap area (clipper coords).
         :param curve_tolerance: Curve tolerance for distance filtering.
         :returns: (x, y) position or None.
+        :complexity: O(n * m) for candidate search with overlap checks.
         """
 "#,
     module = "raygeo.nest.placement"
@@ -307,6 +312,7 @@ fn find_valid_position_py(
         :param min_area: Minimum overlap area (clipper coords).
         :param curve_tolerance: Curve tolerance for distance filtering.
         :returns: (x, y) position or None.
+        :complexity: O(n * m) for scored candidate search.
         """
 "#,
     module = "raygeo.nest.placement"
@@ -384,6 +390,7 @@ fn find_valid_position_scored_py(
         :param min_area: Minimum overlap area (clipper coords).
         :param curve_tolerance: Curve tolerance for distance filtering.
         :returns: (x, y) position or None.
+        :complexity: O(n * m) for NFP construction per nearby placed part.
         """
 "#,
     module = "raygeo.nest.placement"
@@ -466,6 +473,7 @@ fn find_valid_position_nfp_py(
         :param curve_tolerance: Curve tolerance for distance filtering.
         :returns: List of dicts, one per sheet, with keys: placements,
                   sheet_index, unused_part_indices, fitness.
+        :complexity: O(p * s * n * m) where p = parts, s = sheets.
         """
 "#,
     module = "raygeo.nest.placement"
@@ -585,6 +593,7 @@ fn polygon_group_from_numpy_arrs(
         :param sheet_indices: 0-based sheet index for each placement.
         :param num_parts: Total number of parts (some may be unplaced).
         :returns: Fitness score (lower is better).
+        :complexity: O(n) where n = number of placements.
         """
 "#,
     module = "raygeo.nest.placement"

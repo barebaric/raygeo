@@ -59,6 +59,7 @@ def clean_polygon(polygon: collections.abc.Sequence[types.Point], tolerance: typ
     :param polygon: Input polygon as (x, y) points.
     :param tolerance: Distance tolerance for deduplication.
     :returns: Cleaned polygon or None.
+    :complexity: O(n)
     """
 
 def flip_polygon(polygon: collections.abc.Sequence[types.Point], flip_h: bool, flip_v: bool) -> types.Polygon:
@@ -69,6 +70,7 @@ def flip_polygon(polygon: collections.abc.Sequence[types.Point], flip_h: bool, f
     :param flip_h: Whether to flip horizontally.
     :param flip_v: Whether to flip vertically.
     :returns: Flipped polygon.
+    :complexity: O(n)
     """
 
 def flip_polygon_numpy(polygon: numpy.typing.NDArray, flip_h: bool, flip_v: bool) -> typing.Any:
@@ -79,6 +81,7 @@ def flip_polygon_numpy(polygon: numpy.typing.NDArray, flip_h: bool, flip_v: bool
     :param flip_h: Whether to flip horizontally.
     :param flip_v: Whether to flip vertically.
     :returns: Flipped polygon as numpy array.
+    :complexity: O(n)
     """
 
 def flip_polygons(polygons: typing.Any, flip_h: bool, flip_v: bool) -> list[types.Polygon]:
@@ -89,6 +92,7 @@ def flip_polygons(polygons: typing.Any, flip_h: bool, flip_v: bool) -> list[type
     :param flip_h: Whether to flip horizontally.
     :param flip_v: Whether to flip vertically.
     :returns: Flipped polygons.
+    :complexity: O(n * m)
     """
 
 def flip_polygons_numpy(polygons: list, flip_h: bool, flip_v: bool) -> typing.Any:
@@ -99,6 +103,7 @@ def flip_polygons_numpy(polygons: list, flip_h: bool, flip_v: bool) -> typing.An
     :param flip_h: Whether to flip horizontally.
     :param flip_v: Whether to flip vertically.
     :returns: List of flipped numpy arrays.
+    :complexity: O(n * m)
     """
 
 def get_polygon_area(polygon: collections.abc.Sequence[types.Point]) -> float:
@@ -107,6 +112,7 @@ def get_polygon_area(polygon: collections.abc.Sequence[types.Point]) -> float:
     
     :param polygon: Polygon as (x, y) points.
     :returns: Unsigned area.
+    :complexity: O(n)
     """
 
 def get_polygon_bounds(polygon: collections.abc.Sequence[types.Point]) -> types.Rect:
@@ -115,6 +121,7 @@ def get_polygon_bounds(polygon: collections.abc.Sequence[types.Point]) -> types.
     
     :param polygon: Polygon as (x, y) points.
     :returns: Bounding rectangle as (x_min, y_min, x_max, y_max).
+    :complexity: O(n)
     """
 
 def get_polygon_centroid(polygon: collections.abc.Sequence[types.Point]) -> types.Point:
@@ -123,6 +130,7 @@ def get_polygon_centroid(polygon: collections.abc.Sequence[types.Point]) -> type
     
     :param polygon: Polygon as (x, y) points.
     :returns: Centroid point (x, y).
+    :complexity: O(n)
     """
 
 def get_polygon_convex_hull(polygon: collections.abc.Sequence[types.Point]) -> types.Polygon:
@@ -131,6 +139,7 @@ def get_polygon_convex_hull(polygon: collections.abc.Sequence[types.Point]) -> t
     
     :param polygon: Polygon as (x, y) points.
     :returns: Convex hull as list of points.
+    :complexity: O(n log n)
     """
 
 def get_polygon_edges(polygon: collections.abc.Sequence[types.Point]) -> list[tuple[types.Point, types.Point]]:
@@ -139,6 +148,7 @@ def get_polygon_edges(polygon: collections.abc.Sequence[types.Point]) -> list[tu
     
     :param polygon: Polygon as (x, y) points.
     :returns: List of ((x1, y1), (x2, y2)) edges.
+    :complexity: O(n)
     """
 
 def get_polygon_group_bounds(polygons: typing.Any) -> types.Rect:
@@ -147,6 +157,7 @@ def get_polygon_group_bounds(polygons: typing.Any) -> types.Rect:
     
     :param polygons: List of polygons.
     :returns: Bounding rectangle as (x_min, y_min, x_max, y_max).
+    :complexity: O(n * m)
     """
 
 def get_polygon_perimeter(polygon: collections.abc.Sequence[types.Point]) -> float:
@@ -155,6 +166,7 @@ def get_polygon_perimeter(polygon: collections.abc.Sequence[types.Point]) -> flo
     
     :param polygon: Polygon as (x, y) points.
     :returns: Perimeter length.
+    :complexity: O(n)
     """
 
 def get_polygon_signed_area(polygon: collections.abc.Sequence[types.Point]) -> float:
@@ -163,6 +175,7 @@ def get_polygon_signed_area(polygon: collections.abc.Sequence[types.Point]) -> f
     
     :param polygon: Polygon as (x, y) points.
     :returns: Signed area (positive for CCW, negative for CW).
+    :complexity: O(n)
     """
 
 def get_polygons_difference(poly1: collections.abc.Sequence[types.Point], poly2: collections.abc.Sequence[types.Point]) -> list[types.Polygon]:
@@ -172,6 +185,7 @@ def get_polygons_difference(poly1: collections.abc.Sequence[types.Point], poly2:
     :param poly1: First polygon as (x, y) points.
     :param poly2: Second polygon to subtract.
     :returns: Difference polygon(s).
+    :complexity: O(n log n)
     """
 
 def get_polygons_group_difference(subject: typing.Sequence[types.Polygon], clip: typing.Sequence[types.Polygon]) -> list[types.Polygon]:
@@ -181,6 +195,7 @@ def get_polygons_group_difference(subject: typing.Sequence[types.Polygon], clip:
     :param subject: Subject polygons.
     :param clip: Clip polygons to subtract.
     :returns: Difference polygon(s).
+    :complexity: O(n log n)
     """
 
 def get_polygons_group_intersection(subject: typing.Sequence[types.Polygon], clip: typing.Sequence[types.Polygon]) -> list[types.Polygon]:
@@ -190,6 +205,7 @@ def get_polygons_group_intersection(subject: typing.Sequence[types.Polygon], cli
     :param subject: Subject polygons.
     :param clip: Clip polygons.
     :returns: Intersection polygon(s).
+    :complexity: O(n log n)
     """
 
 def get_polygons_intersection(poly1: collections.abc.Sequence[types.Point], poly2: collections.abc.Sequence[types.Point]) -> list[types.Polygon]:
@@ -199,6 +215,7 @@ def get_polygons_intersection(poly1: collections.abc.Sequence[types.Point], poly
     :param poly1: First polygon as (x, y) points.
     :param poly2: Second polygon as (x, y) points.
     :returns: Intersection polygon(s).
+    :complexity: O(n log n)
     """
 
 def get_polygons_union(polygons: typing.Any) -> list[types.Polygon]:
@@ -207,6 +224,7 @@ def get_polygons_union(polygons: typing.Any) -> list[types.Polygon]:
     
     :param polygons: List of polygons to union.
     :returns: Union polygon(s).
+    :complexity: O(n log n)
     """
 
 def is_almost_equal(a: float, b: float, tolerance: typing.Optional[float] = None) -> bool:
@@ -217,6 +235,7 @@ def is_almost_equal(a: float, b: float, tolerance: typing.Optional[float] = None
     :param b: Second float.
     :param tolerance: Comparison tolerance.
     :returns: True if |a - b| < tolerance.
+    :complexity: O(1)
     """
 
 def is_point_inside_polygon(point: types.Point, polygon: collections.abc.Sequence[types.Point]) -> bool:
@@ -226,6 +245,7 @@ def is_point_inside_polygon(point: types.Point, polygon: collections.abc.Sequenc
     :param point: Point (x, y) to test.
     :param polygon: Polygon as (x, y) points.
     :returns: True if point is inside the polygon.
+    :complexity: O(n)
     """
 
 def is_polygon_clockwise(points: collections.abc.Sequence[types.Point2DOr3D]) -> bool:
@@ -234,6 +254,7 @@ def is_polygon_clockwise(points: collections.abc.Sequence[types.Point2DOr3D]) ->
     
     :param points: Sequence of (x, y) or (x, y, z) points.
     :returns: True if the polygon is clockwise.
+    :complexity: O(n)
     """
 
 def is_polygon_convex(polygon: collections.abc.Sequence[types.Point]) -> bool:
@@ -242,6 +263,7 @@ def is_polygon_convex(polygon: collections.abc.Sequence[types.Point]) -> bool:
     
     :param polygon: Polygon as (x, y) points.
     :returns: True if the polygon is convex.
+    :complexity: O(n)
     """
 
 def normalize_polygons(polygons: typing.Any) -> tuple[list[types.Polygon], float, float]:
@@ -250,6 +272,7 @@ def normalize_polygons(polygons: typing.Any) -> tuple[list[types.Polygon], float
     
     :param polygons: List of polygons to normalize.
     :returns: Tuple of (normalized_polygons, min_x, min_y).
+    :complexity: O(n log n)
     """
 
 def normalize_polygons_numpy(polygons: collections.abc.Sequence[numpy.typing.NDArray]) -> tuple[list[numpy.typing.NDArray], float, float]:
@@ -258,6 +281,7 @@ def normalize_polygons_numpy(polygons: collections.abc.Sequence[numpy.typing.NDA
     
     :param polygons: Sequence of 2D numpy arrays.
     :returns: Tuple of (normalized_arrays, min_x, min_y).
+    :complexity: O(n log n)
     """
 
 def offset_polygon(polygon: collections.abc.Sequence[types.Point], offset: float) -> list[types.Polygon]:
@@ -267,6 +291,7 @@ def offset_polygon(polygon: collections.abc.Sequence[types.Point], offset: float
     :param polygon: Polygon as (x, y) points.
     :param offset: Offset distance (positive to inflate, negative to deflate).
     :returns: Offset polygon(s).
+    :complexity: O(n log n)
     """
 
 def point_in_polygon_numpy(point: types.Point, polygon: numpy.typing.NDArray) -> bool:
@@ -276,6 +301,7 @@ def point_in_polygon_numpy(point: types.Point, polygon: numpy.typing.NDArray) ->
     :param point: Point (x, y) to test.
     :param polygon: Polygon as a 2D numpy array.
     :returns: True if point is inside the polygon.
+    :complexity: O(n)
     """
 
 def point_line_distance(point: types.Point, line_start: types.Point, line_end: types.Point) -> float:
@@ -286,6 +312,7 @@ def point_line_distance(point: types.Point, line_start: types.Point, line_end: t
     :param line_start: Line start point (x, y).
     :param line_end: Line end point (x, y).
     :returns: Perpendicular distance.
+    :complexity: O(1)
     """
 
 def polygon_area_numpy(polygon: numpy.typing.NDArray) -> float:
@@ -294,6 +321,7 @@ def polygon_area_numpy(polygon: numpy.typing.NDArray) -> float:
     
     :param polygon: Polygon as a 2D numpy array.
     :returns: Signed area.
+    :complexity: O(n)
     """
 
 def polygon_bounds_numpy(polygon: numpy.typing.NDArray) -> types.Rect:
@@ -302,6 +330,7 @@ def polygon_bounds_numpy(polygon: numpy.typing.NDArray) -> types.Rect:
     
     :param polygon: Polygon as a 2D numpy array.
     :returns: Bounding rectangle as (x_min, y_min, x_max, y_max).
+    :complexity: O(n)
     """
 
 def polygon_group_bounds_numpy(polygons: collections.abc.Sequence[numpy.typing.NDArray]) -> types.Rect:
@@ -310,6 +339,7 @@ def polygon_group_bounds_numpy(polygons: collections.abc.Sequence[numpy.typing.N
     
     :param polygons: Sequence of 2D numpy arrays.
     :returns: Bounding rectangle as (x_min, y_min, x_max, y_max).
+    :complexity: O(n * m)
     """
 
 def polygon_perimeter_numpy(polygon: numpy.typing.NDArray) -> float:
@@ -318,6 +348,7 @@ def polygon_perimeter_numpy(polygon: numpy.typing.NDArray) -> float:
     
     :param polygon: Polygon as a 2D numpy array.
     :returns: Perimeter length.
+    :complexity: O(n)
     """
 
 def polygons_intersect(p1: collections.abc.Sequence[types.Point], p2: collections.abc.Sequence[types.Point], min_area: float = 0) -> bool:
@@ -328,6 +359,7 @@ def polygons_intersect(p1: collections.abc.Sequence[types.Point], p2: collection
     :param p2: Second polygon as (x, y) points.
     :param min_area: Minimum intersection area threshold.
     :returns: True if polygons intersect.
+    :complexity: O(n * m)
     """
 
 def polygons_intersect_numpy(poly1: numpy.typing.NDArray, poly2: numpy.typing.NDArray, min_area: float = 0) -> bool:
@@ -338,6 +370,7 @@ def polygons_intersect_numpy(poly1: numpy.typing.NDArray, poly2: numpy.typing.ND
     :param poly2: Second polygon as a 2D numpy array.
     :param min_area: Minimum intersection area threshold.
     :returns: True if polygons intersect.
+    :complexity: O(n * m)
     """
 
 def rotate_polygon(polygon: collections.abc.Sequence[types.Point], angle: float) -> types.Polygon:
@@ -347,6 +380,7 @@ def rotate_polygon(polygon: collections.abc.Sequence[types.Point], angle: float)
     :param polygon: Polygon as (x, y) points.
     :param angle: Rotation angle in degrees.
     :returns: Rotated polygon.
+    :complexity: O(n)
     """
 
 def rotate_polygon_numpy(polygon: numpy.typing.NDArray, angle: float) -> typing.Any:
@@ -356,6 +390,7 @@ def rotate_polygon_numpy(polygon: numpy.typing.NDArray, angle: float) -> typing.
     :param polygon: Polygon as a 2D numpy array.
     :param angle: Rotation angle in degrees.
     :returns: Rotated polygon as numpy array.
+    :complexity: O(n)
     """
 
 def rotate_polygons(polygons: typing.Any, angle: float) -> list[types.Polygon]:
@@ -365,6 +400,7 @@ def rotate_polygons(polygons: typing.Any, angle: float) -> list[types.Polygon]:
     :param polygons: List of polygons to rotate.
     :param angle: Rotation angle in degrees.
     :returns: Rotated polygons.
+    :complexity: O(n * m)
     """
 
 def rotate_polygons_numpy(polygons: collections.abc.Sequence[numpy.typing.NDArray], angle: float) -> typing.Any:
@@ -374,6 +410,7 @@ def rotate_polygons_numpy(polygons: collections.abc.Sequence[numpy.typing.NDArra
     :param polygons: Sequence of 2D numpy arrays.
     :param angle: Rotation angle in degrees.
     :returns: List of rotated numpy arrays.
+    :complexity: O(n * m)
     """
 
 def scale_polygon(polygon: collections.abc.Sequence[types.Point], scale: float, scale_y: typing.Optional[float] = None) -> types.Polygon:
@@ -384,6 +421,7 @@ def scale_polygon(polygon: collections.abc.Sequence[types.Point], scale: float, 
     :param scale: X (and Y if scale_y is None) scale factor.
     :param scale_y: Y scale factor (optional).
     :returns: Scaled polygon.
+    :complexity: O(n)
     """
 
 def to_clipper_numpy(polygon: collections.abc.Sequence[numpy.typing.NDArray]) -> list[tuple[int, int]]:
@@ -392,6 +430,7 @@ def to_clipper_numpy(polygon: collections.abc.Sequence[numpy.typing.NDArray]) ->
     
     :param polygon: Sequence of 2D numpy arrays.
     :returns: List of (x, y) integer tuples.
+    :complexity: O(n * m)
     """
 
 def translate_bounds(bounds: types.Rect, dx: float, dy: float) -> types.Rect:
@@ -402,6 +441,7 @@ def translate_bounds(bounds: types.Rect, dx: float, dy: float) -> types.Rect:
     :param dx: X translation.
     :param dy: Y translation.
     :returns: Translated bounding rectangle.
+    :complexity: O(1)
     """
 
 def translate_polygon(polygon: collections.abc.Sequence[types.Point], dx: float, dy: float) -> types.Polygon:
@@ -412,6 +452,7 @@ def translate_polygon(polygon: collections.abc.Sequence[types.Point], dx: float,
     :param dx: X translation.
     :param dy: Y translation.
     :returns: Translated polygon.
+    :complexity: O(n)
     """
 
 def translate_polygon_numpy(polygon: numpy.typing.NDArray, dx: float, dy: float) -> typing.Any:
@@ -422,6 +463,7 @@ def translate_polygon_numpy(polygon: numpy.typing.NDArray, dx: float, dy: float)
     :param dx: X translation.
     :param dy: Y translation.
     :returns: Translated polygon as numpy array.
+    :complexity: O(n)
     """
 
 def translate_polygons(polygons: typing.Any, dx: float, dy: float) -> list[types.Polygon]:
@@ -432,6 +474,7 @@ def translate_polygons(polygons: typing.Any, dx: float, dy: float) -> list[types
     :param dx: X translation.
     :param dy: Y translation.
     :returns: Translated polygons.
+    :complexity: O(n * m)
     """
 
 def translate_polygons_numpy(polygons: collections.abc.Sequence[numpy.typing.NDArray], dx: float, dy: float) -> typing.Any:
@@ -442,5 +485,6 @@ def translate_polygons_numpy(polygons: collections.abc.Sequence[numpy.typing.NDA
     :param dx: X translation.
     :param dy: Y translation.
     :returns: List of translated numpy arrays.
+    :complexity: O(n * m)
     """
 

@@ -38,16 +38,22 @@ class CommandCategory:
     def value(self) -> builtins.int:
         r"""
         The raw integer value of this category.
+        
+        :complexity: O(1)
         """
     @property
     def name(self) -> builtins.str:
         r"""
         The uppercase name of this category (``"MOVING"``, ``"STATE"``, or ``"MARKER"``).
+        
+        :complexity: O(1)
         """
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
     def __repr__(self) -> builtins.str:
         r"""
         String representation like ``CommandCategory.MOVING``.
+        
+        :complexity: O(1)
         """
 
 @typing.final
@@ -85,16 +91,22 @@ class CommandType:
     def value(self) -> builtins.int:
         r"""
         The raw integer value of this command type.
+        
+        :complexity: O(1)
         """
     @property
     def name(self) -> builtins.str:
         r"""
         The uppercase name of this command type (e.g. ``"MOVE_TO"``, ``"LINE_TO"``).
+        
+        :complexity: O(1)
         """
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
     def __repr__(self) -> builtins.str:
         r"""
         String representation like ``CommandType.MOVE_TO``.
+        
+        :complexity: O(1)
         """
 
 @typing.final
@@ -110,20 +122,28 @@ class SectionType:
     def value(self) -> builtins.int:
         r"""
         The raw integer value of this section type.
+        
+        :complexity: O(1)
         """
     @property
     def name(self) -> builtins.str:
         r"""
         The uppercase name (``"VECTOR_OUTLINE"`` or ``"RASTER_FILL"``).
+        
+        :complexity: O(1)
         """
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
     def __repr__(self) -> builtins.str:
         r"""
         String representation like ``SectionType.VECTOR_OUTLINE``.
+        
+        :complexity: O(1)
         """
 
 def category(ct: CommandType) -> CommandCategory:
     r"""
     Get the category of a command type.
+    
+    :complexity: O(1)
     """
 

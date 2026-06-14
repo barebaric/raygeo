@@ -41,6 +41,7 @@ pub fn register(algo_mod: &Bound<'_, PyModule>) -> PyResult<()> {
         :param start: Starting point (x, y, z).
         :param end: Ending point (x, y, z).
         :returns: (dx, dy, dz, len_sq).
+        :complexity: O(1) time, O(1) space
         """
 "#,
     module = "raygeo.geo.algo.interp"
@@ -67,6 +68,7 @@ fn compute_segment_delta_py(
         :param point: Point to project (x, y, z).
         :param delta: Segment delta from compute_segment_delta.
         :returns: Parameter t clamped to [0, 1].
+        :complexity: O(1) time, O(1) space
         """
 "#,
     module = "raygeo.geo.algo.interp"
@@ -101,6 +103,7 @@ fn project_t_along_segment_py(
         :param new_end: End of clipped sub-segment (x, y, z).
         :param delta: Segment delta from compute_segment_delta.
         :returns: (t_start, t_end) in [0, 1].
+        :complexity: O(1) time, O(1) space
         """
 "#,
     module = "raygeo.geo.algo.interp"
@@ -134,6 +137,7 @@ fn compute_t_range_py(
         :param t_start: Start parameter in [0, 1].
         :param t_end: End parameter in [0, 1].
         :returns: Sliced power values.
+        :complexity: O(n) time, O(n) space where n is the length of the data slice
         """
 "#,
     module = "raygeo.geo.algo.interp"
@@ -159,6 +163,7 @@ fn slice_scanline_data_py(data: Vec<u8>, t_start: f64, t_end: f64) -> Vec<i32> {
         :param b: Linear coefficient.
         :param c: Constant term.
         :returns: (root1, root2), each None if no real root.
+        :complexity: O(1) time, O(1) space
         """
 "#,
     module = "raygeo.geo.algo.interp"

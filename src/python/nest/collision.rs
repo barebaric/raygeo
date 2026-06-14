@@ -102,6 +102,7 @@ fn rects_intersect(a: Rect, b: Rect) -> bool {
         :param inner: List of polygons to check.
         :param outer: Outer polygon.
         :returns: True if all inner polygons are inside outer.
+        :complexity: O(n * m) where n = inner polygons, m = outer polygon vertices.
         """
 "#,
     module = "raygeo.nest.collision"
@@ -134,6 +135,7 @@ fn is_contained_py(inner: Vec<Vec<PyPoint2D>>, outer: Vec<PyPoint2D>) -> bool {
         :param placed: List of already-placed polygons.
         :param min_area: Minimum overlap area to consider (in clipper coords).
         :returns: True if any overlap detected.
+        :complexity: O(n * m) where n = candidate vertices, m = placed polygon vertices.
         """
 "#,
     module = "raygeo.nest.collision"
@@ -174,6 +176,7 @@ fn any_overlap_py(
         :param placed_hulls_groups: Convex hulls of placed groups.
         :param min_area: Minimum overlap area (clipper coords).
         :returns: True if any overlap detected.
+        :complexity: O(n * m) with bbox/hull early-exit acceleration.
         """
 "#,
     module = "raygeo.nest.collision"
@@ -263,6 +266,7 @@ fn any_overlap_hierarchical_py(
         min_area: float = 1.0,
     ) -> bool:
         """:param spatial_grid: SpatialGrid for fast neighbor lookup.
+        :complexity: O(n * m / k) where k = grid cell density factor.
         """
 "#,
     module = "raygeo.nest.collision"

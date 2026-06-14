@@ -44,6 +44,7 @@ parts down and left as far as possible without overlapping.
         :param axis: ``"x"`` or ``"y"`` — axis to slide along.
         :param spacing: Minimum spacing between parts.
         :returns: Maximum slide distance.
+        :complexity: O(log range * n * m) for binary search with overlap checks.
         """
 "#,
     module = "raygeo.nest.gravity"
@@ -103,6 +104,7 @@ fn find_max_slide_py(
         :param sheet_poly: Sheet polygon.
         :param spacing: Minimum spacing between parts.
         :returns: List of ``(dx, dy)`` adjustments, one per group.
+        :complexity: O(passes * n * m) where passes ≤ 10.
         """
 "#,
     module = "raygeo.nest.gravity"

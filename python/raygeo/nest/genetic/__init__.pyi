@@ -21,25 +21,37 @@ class GeneticAlgorithm:
     def get_individual(self, idx: builtins.int) -> tuple[builtins.list[builtins.float], builtins.list[builtins.bool], builtins.list[builtins.bool], builtins.float]:
         r"""
         Returns (rotations, flips_h, flips_v, fitness) for individual at idx.
+        
+        :complexity: O(1)
         """
     def set_fitness(self, idx: builtins.int, fitness: builtins.float) -> None:
         r"""
         Set the fitness for individual at idx.
+        
+        :complexity: O(1)
         """
     def get_fitness(self, idx: builtins.int) -> builtins.float:
         r"""
         Returns the fitness of individual at idx.
+        
+        :complexity: O(1)
         """
     def generation(self) -> None:
         r"""
         Evolve one generation.
+        
+        :complexity: O(p * n) where p = population size, n = num_parts
         """
     def mutate(self, idx: builtins.int) -> tuple[builtins.list[builtins.float], builtins.list[builtins.bool], builtins.list[builtins.bool]]:
         r"""
         Mutate and return a copy of individual at idx.
+        
+        :complexity: O(n) where n = num_parts
         """
     def mate(self, male_idx: builtins.int, female_idx: builtins.int) -> builtins.list[tuple[builtins.list[builtins.float], builtins.list[builtins.bool], builtins.list[builtins.bool]]]:
         r"""
         Mate two individuals and return the two children.
+        
+        :complexity: O(n) where n = num_parts
         """
 

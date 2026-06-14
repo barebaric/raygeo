@@ -25,6 +25,7 @@ def do_rects_intersect(r1: types.Rect, r2: types.Rect) -> bool:
     :param r1: First rectangle (x_min, y_min, x_max, y_max).
     :param r2: Second rectangle (x_min, y_min, x_max, y_max).
     :returns: True if the rectangles intersect.
+    :complexity: O(1) time, O(1) space
     """
 
 def does_rect_contain_rect(outer: types.Rect, inner: types.Rect) -> bool:
@@ -34,6 +35,7 @@ def does_rect_contain_rect(outer: types.Rect, inner: types.Rect) -> bool:
     :param outer: Outer rectangle (x_min, y_min, x_max, y_max).
     :param inner: Inner rectangle (x_min, y_min, x_max, y_max).
     :returns: True if outer fully contains inner.
+    :complexity: O(1) time, O(1) space
     """
 
 def does_rect_intersect_rect(r1: types.Rect, r2: types.Rect) -> bool:
@@ -43,6 +45,7 @@ def does_rect_intersect_rect(r1: types.Rect, r2: types.Rect) -> bool:
     :param r1: First rectangle (x_min, y_min, x_max, y_max).
     :param r2: Second rectangle (x_min, y_min, x_max, y_max).
     :returns: True if the rectangles intersect.
+    :complexity: O(1) time, O(1) space
     """
 
 def get_combined_rect(geometries: list[raygeo.Geometry]) -> types.Rect:
@@ -51,6 +54,7 @@ def get_combined_rect(geometries: list[raygeo.Geometry]) -> types.Rect:
     
     :param geometries: List of Geometry objects.
     :returns: Union bounding rectangle (x_min, y_min, x_max, y_max).
+    :complexity: O(n) time, O(1) space where n is the number of geometries
     """
 
 def is_point_inside_rect(point: types.Point, rect: types.Rect) -> bool:
@@ -60,5 +64,6 @@ def is_point_inside_rect(point: types.Point, rect: types.Rect) -> bool:
     :param point: Point (x, y) to test.
     :param rect: Rectangle (x_min, y_min, x_max, y_max).
     :returns: True if the point is inside the rectangle.
+    :complexity: O(1) time, O(1) space
     """
 

@@ -138,6 +138,36 @@ _INLINE_IMAGE_MAP = {
             "fitting-primitives",
             "Fitted primitives",
         ),
+        (
+            "fit_circle_to_3_points",
+            "fitting-3-points",
+            "Circle fitted to three points",
+        ),
+        (
+            "flatten_to_points",
+            "fitting-flatten",
+            "Arc curve flattened to dense line segments",
+        ),
+        (
+            "linearize_geometry",
+            "fitting-linearize",
+            "Arc curve linearized with RDP simplification",
+        ),
+        (
+            "get_polyline_arc_deviation",
+            "fitting-arc-deviation",
+            "Maximum deviation from a reference arc",
+        ),
+        (
+            "get_polyline_line_deviation",
+            "fitting-line-deviation",
+            "Maximum deviation from a chord",
+        ),
+        (
+            "project_circle_center_to_bisector",
+            "fitting-project-bisector",
+            "Circle center projected onto the perpendicular bisector",
+        ),
     ],
     "raygeo.geo.algo.overcut.md": [
         ("apply_overcut", "overcut", "Overcut on closed contour"),
@@ -147,6 +177,26 @@ _INLINE_IMAGE_MAP = {
     ],
     "raygeo.geo.algo.smooth.md": [
         ("smooth_polyline", "smooth", "Gaussian smoothing"),
+        (
+            "compute_gaussian_kernel",
+            "smooth-gaussian-kernel",
+            "Gaussian kernel weights",
+        ),
+        (
+            "resample_polyline",
+            "smooth-resample",
+            "Polyline resampling",
+        ),
+        (
+            "smooth_circularly",
+            "smooth-circular",
+            "Circular smoothing",
+        ),
+        (
+            "smooth_sub_segment",
+            "smooth-sub-segment",
+            "Sub-segment smoothing",
+        ),
     ],
     "raygeo.geo.shape.arc.md": [
         (

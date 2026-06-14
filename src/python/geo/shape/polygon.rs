@@ -125,6 +125,7 @@ pub fn register(shape_mod: &Bound<'_, PyModule>) -> PyResult<()> {
         :param polygon: Input polygon as (x, y) points.
         :param tolerance: Distance tolerance for deduplication.
         :returns: Cleaned polygon or None.
+        :complexity: O(n)
         """
 "#,
     module = "raygeo.geo.shape.polygon"
@@ -153,6 +154,7 @@ fn clean_polygon_py(
         :param b: Second float.
         :param tolerance: Comparison tolerance.
         :returns: True if |a - b| < tolerance.
+        :complexity: O(1)
         """
 "#,
     module = "raygeo.geo.shape.polygon"
@@ -173,6 +175,7 @@ fn is_almost_equal_py(a: f64, b: f64, tolerance: Option<f64>) -> bool {
 
         :param polygons: List of polygons to normalize.
         :returns: Tuple of (normalized_polygons, min_x, min_y).
+        :complexity: O(n log n)
         """
 "#,
     module = "raygeo.geo.shape.polygon"
@@ -200,6 +203,7 @@ fn normalize_polygons_py(
         :param dx: X translation.
         :param dy: Y translation.
         :returns: Translated bounding rectangle.
+        :complexity: O(1)
         """
 "#,
     module = "raygeo.geo.shape.polygon"
@@ -227,6 +231,7 @@ fn translate_bounds_py(
         :param dx: X translation.
         :param dy: Y translation.
         :returns: Translated polygons.
+        :complexity: O(n * m)
         """
 "#,
     module = "raygeo.geo.shape.polygon"
@@ -256,6 +261,7 @@ fn translate_polygons_py(
         :param line_start: Line start point (x, y).
         :param line_end: Line end point (x, y).
         :returns: Perpendicular distance.
+        :complexity: O(1)
         """
 "#,
     module = "raygeo.geo.shape.polygon"
@@ -279,6 +285,7 @@ fn point_line_distance_py(
 
         :param polygon: Polygon as (x, y) points.
         :returns: Unsigned area.
+        :complexity: O(n)
         """
 "#,
     module = "raygeo.geo.shape.polygon"
@@ -300,6 +307,7 @@ fn get_polygon_area_py(polygon: Vec<PyPoint2D>) -> f64 {
 
         :param polygon: Polygon as (x, y) points.
         :returns: Signed area (positive for CCW, negative for CW).
+        :complexity: O(n)
         """
 "#,
     module = "raygeo.geo.shape.polygon"
@@ -321,6 +329,7 @@ fn get_polygon_signed_area_py(polygon: Vec<PyPoint2D>) -> f64 {
 
         :param polygon: Polygon as (x, y) points.
         :returns: Perimeter length.
+        :complexity: O(n)
         """
 "#,
     module = "raygeo.geo.shape.polygon"
@@ -342,6 +351,7 @@ fn get_polygon_perimeter_py(polygon: Vec<PyPoint2D>) -> f64 {
 
         :param polygon: Polygon as (x, y) points.
         :returns: Bounding rectangle as (x_min, y_min, x_max, y_max).
+        :complexity: O(n)
         """
 "#,
     module = "raygeo.geo.shape.polygon"
@@ -364,6 +374,7 @@ fn get_polygon_bounds_py(polygon: Vec<PyPoint2D>) -> (f64, f64, f64, f64) {
 
         :param polygons: List of polygons.
         :returns: Bounding rectangle as (x_min, y_min, x_max, y_max).
+        :complexity: O(n * m)
         """
 "#,
     module = "raygeo.geo.shape.polygon"
@@ -389,6 +400,7 @@ fn get_polygon_group_bounds_py(
 
         :param polygon: Polygon as (x, y) points.
         :returns: Centroid point (x, y).
+        :complexity: O(n)
         """
 "#,
     module = "raygeo.geo.shape.polygon"
@@ -410,6 +422,7 @@ fn get_polygon_centroid_py(polygon: Vec<PyPoint2D>) -> Point {
 
         :param polygon: Polygon as (x, y) points.
         :returns: True if the polygon is convex.
+        :complexity: O(n)
         """
 "#,
     module = "raygeo.geo.shape.polygon"
@@ -431,6 +444,7 @@ fn is_polygon_convex_py(polygon: Vec<PyPoint2D>) -> bool {
 
         :param polygon: Polygon as (x, y) points.
         :returns: Convex hull as list of points.
+        :complexity: O(n log n)
         """
 "#,
     module = "raygeo.geo.shape.polygon"
@@ -452,6 +466,7 @@ fn get_polygon_convex_hull_py(polygon: Vec<PyPoint2D>) -> Vec<Point> {
 
         :param polygon: Polygon as (x, y) points.
         :returns: List of ((x1, y1), (x2, y2)) edges.
+        :complexity: O(n)
         """
 "#,
     module = "raygeo.geo.shape.polygon"
@@ -475,6 +490,7 @@ fn get_polygon_edges_py(polygon: Vec<PyPoint2D>) -> Vec<(Point, Point)> {
         :param point: Point (x, y) to test.
         :param polygon: Polygon as (x, y) points.
         :returns: True if point is inside the polygon.
+        :complexity: O(n)
         """
 "#,
     module = "raygeo.geo.shape.polygon"
@@ -498,6 +514,7 @@ fn is_point_inside_polygon_py(point: Point, polygon: Vec<PyPoint2D>) -> bool {
         :param polygon: Polygon as (x, y) points.
         :param offset: Offset distance (positive to inflate, negative to deflate).
         :returns: Offset polygon(s).
+        :complexity: O(n log n)
         """
 "#,
     module = "raygeo.geo.shape.polygon"
@@ -517,6 +534,7 @@ fn offset_polygon_py(polygon: Vec<PyPoint2D>, offset: f64) -> Vec<Vec<Point>> {
 
         :param polygons: List of polygons to union.
         :returns: Union polygon(s).
+        :complexity: O(n log n)
         """
 "#,
     module = "raygeo.geo.shape.polygon"
@@ -543,6 +561,7 @@ fn get_polygons_union_py(
         :param poly1: First polygon as (x, y) points.
         :param poly2: Second polygon as (x, y) points.
         :returns: Intersection polygon(s).
+        :complexity: O(n log n)
         """
 "#,
     module = "raygeo.geo.shape.polygon"
@@ -569,6 +588,7 @@ fn get_polygons_intersection_py(
         :param poly1: First polygon as (x, y) points.
         :param poly2: Second polygon to subtract.
         :returns: Difference polygon(s).
+        :complexity: O(n log n)
         """
 "#,
     module = "raygeo.geo.shape.polygon"
@@ -595,6 +615,7 @@ fn get_polygons_difference_py(
         :param subject: Subject polygons.
         :param clip: Clip polygons.
         :returns: Intersection polygon(s).
+        :complexity: O(n log n)
         """
 "#,
     module = "raygeo.geo.shape.polygon"
@@ -623,6 +644,7 @@ fn get_polygons_group_intersection_py(
         :param subject: Subject polygons.
         :param clip: Clip polygons to subtract.
         :returns: Difference polygon(s).
+        :complexity: O(n log n)
         """
 "#,
     module = "raygeo.geo.shape.polygon"
@@ -653,6 +675,7 @@ fn get_polygons_group_difference_py(
         :param p2: Second polygon as (x, y) points.
         :param min_area: Minimum intersection area threshold.
         :returns: True if polygons intersect.
+        :complexity: O(n * m)
         """
 "#,
     module = "raygeo.geo.shape.polygon"
@@ -683,6 +706,7 @@ fn polygons_intersect_py(
         :param flip_h: Whether to flip horizontally.
         :param flip_v: Whether to flip vertically.
         :returns: Flipped polygon.
+        :complexity: O(n)
         """
 "#,
     module = "raygeo.geo.shape.polygon"
@@ -712,6 +736,7 @@ fn flip_polygon_py(
         :param flip_h: Whether to flip horizontally.
         :param flip_v: Whether to flip vertically.
         :returns: Flipped polygons.
+        :complexity: O(n * m)
         """
 "#,
     module = "raygeo.geo.shape.polygon"
@@ -740,6 +765,7 @@ fn flip_polygons_py(
         :param polygon: Polygon as (x, y) points.
         :param angle: Rotation angle in degrees.
         :returns: Rotated polygon.
+        :complexity: O(n)
         """
 "#,
     module = "raygeo.geo.shape.polygon"
@@ -760,6 +786,7 @@ fn rotate_polygon_py(polygon: Vec<PyPoint2D>, angle: f64) -> Vec<Point> {
         :param polygons: List of polygons to rotate.
         :param angle: Rotation angle in degrees.
         :returns: Rotated polygons.
+        :complexity: O(n * m)
         """
 "#,
     module = "raygeo.geo.shape.polygon"
@@ -790,6 +817,7 @@ fn rotate_polygons_py(
         :param scale: X (and Y if scale_y is None) scale factor.
         :param scale_y: Y scale factor (optional).
         :returns: Scaled polygon.
+        :complexity: O(n)
         """
 "#,
     module = "raygeo.geo.shape.polygon"
@@ -820,6 +848,7 @@ fn scale_polygon_py(
         :param dx: X translation.
         :param dy: Y translation.
         :returns: Translated polygon.
+        :complexity: O(n)
         """
 "#,
     module = "raygeo.geo.shape.polygon"
@@ -844,6 +873,7 @@ fn translate_polygon_py(
 
         :param polygon: Polygon as a 2D numpy array.
         :returns: Signed area.
+        :complexity: O(n)
         """
 "#,
     module = "raygeo.geo.shape.polygon"
@@ -866,6 +896,7 @@ fn polygon_area_numpy_py(polygon: Bound<'_, PyArray2<f64>>) -> f64 {
 
         :param polygon: Polygon as a 2D numpy array.
         :returns: Bounding rectangle as (x_min, y_min, x_max, y_max).
+        :complexity: O(n)
         """
 "#,
     module = "raygeo.geo.shape.polygon"
@@ -888,6 +919,7 @@ fn polygon_bounds_numpy_py(
 
         :param polygon: Polygon as a 2D numpy array.
         :returns: Perimeter length.
+        :complexity: O(n)
         """
 "#,
     module = "raygeo.geo.shape.polygon"
@@ -911,6 +943,7 @@ fn polygon_perimeter_numpy_py(polygon: Bound<'_, PyArray2<f64>>) -> f64 {
 
         :param polygons: Sequence of 2D numpy arrays.
         :returns: Bounding rectangle as (x_min, y_min, x_max, y_max).
+        :complexity: O(n * m)
         """
 "#,
     module = "raygeo.geo.shape.polygon"
@@ -940,6 +973,7 @@ fn polygon_group_bounds_numpy_py(
         :param flip_h: Whether to flip horizontally.
         :param flip_v: Whether to flip vertically.
         :returns: Flipped polygon as numpy array.
+        :complexity: O(n)
         """
 "#,
     module = "raygeo.geo.shape.polygon"
@@ -967,6 +1001,7 @@ fn flip_polygon_numpy_py(
         :param flip_h: Whether to flip horizontally.
         :param flip_v: Whether to flip vertically.
         :returns: List of flipped numpy arrays.
+        :complexity: O(n * m)
         """
 "#,
     module = "raygeo.geo.shape.polygon"
@@ -1003,6 +1038,7 @@ fn flip_polygons_numpy_py<'py>(
 
         :param polygons: Sequence of 2D numpy arrays.
         :returns: Tuple of (normalized_arrays, min_x, min_y).
+        :complexity: O(n log n)
         """
 "#,
     module = "raygeo.geo.shape.polygon"
@@ -1032,6 +1068,7 @@ fn normalize_polygons_numpy_py(
         :param point: Point (x, y) to test.
         :param polygon: Polygon as a 2D numpy array.
         :returns: True if point is inside the polygon.
+        :complexity: O(n)
         """
 "#,
     module = "raygeo.geo.shape.polygon"
@@ -1060,6 +1097,7 @@ fn point_in_polygon_numpy_py(
         :param poly2: Second polygon as a 2D numpy array.
         :param min_area: Minimum intersection area threshold.
         :returns: True if polygons intersect.
+        :complexity: O(n * m)
         """
 "#,
     module = "raygeo.geo.shape.polygon"
@@ -1090,6 +1128,7 @@ fn polygons_intersect_numpy_py(
         :param polygon: Polygon as a 2D numpy array.
         :param angle: Rotation angle in degrees.
         :returns: Rotated polygon as numpy array.
+        :complexity: O(n)
         """
 "#,
     module = "raygeo.geo.shape.polygon"
@@ -1119,6 +1158,7 @@ fn rotate_polygon_numpy_py(
         :param polygons: Sequence of 2D numpy arrays.
         :param angle: Rotation angle in degrees.
         :returns: List of rotated numpy arrays.
+        :complexity: O(n * m)
         """
 "#,
     module = "raygeo.geo.shape.polygon"
@@ -1149,6 +1189,7 @@ fn rotate_polygons_numpy_py(
         :param dx: X translation.
         :param dy: Y translation.
         :returns: Translated polygon as numpy array.
+        :complexity: O(n)
         """
 "#,
     module = "raygeo.geo.shape.polygon"
@@ -1181,6 +1222,7 @@ fn translate_polygon_numpy_py(
         :param dx: X translation.
         :param dy: Y translation.
         :returns: List of translated numpy arrays.
+        :complexity: O(n * m)
         """
 "#,
     module = "raygeo.geo.shape.polygon"
@@ -1207,6 +1249,7 @@ fn translate_polygons_numpy_py(
 
         :param polygon: Sequence of 2D numpy arrays.
         :returns: List of (x, y) integer tuples.
+        :complexity: O(n * m)
         """
 "#,
     module = "raygeo.geo.shape.polygon"
@@ -1240,6 +1283,7 @@ fn to_clipper_numpy_py(
 
         :param points: Sequence of (x, y) or (x, y, z) points.
         :returns: True if the polygon is clockwise.
+        :complexity: O(n)
         """
 "#,
     module = "raygeo.geo.shape.polygon"

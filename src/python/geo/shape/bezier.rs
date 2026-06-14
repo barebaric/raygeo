@@ -71,6 +71,7 @@ pub fn register(shape_mod: &Bound<'_, PyModule>) -> PyResult<()> {
         :param p3: End control point (x, y).
         :param t: Parameter value (0..1).
         :returns: Point on the bezier curve (x, y).
+        :complexity: O(1)
         """
 "#,
     module = "raygeo.geo.shape.bezier"
@@ -114,6 +115,7 @@ fn get_bezier_point_at_py(
         :param p3: End control point (x, y).
         :param t: Split parameter (0..1).
         :returns: Two bezier curves (left, right).
+        :complexity: O(1)
         """
 "#,
     module = "raygeo.geo.shape.bezier"
@@ -157,6 +159,7 @@ fn split_bezier_py(
         :param p2: Second control point (x, y).
         :param p3: End control point (x, y).
         :returns: Bounding rectangle as (x_min, y_min, x_max, y_max).
+        :complexity: O(1)
         """
 "#,
     module = "raygeo.geo.shape.bezier"
@@ -196,6 +199,7 @@ fn get_bezier_bounds_py(
         :param p3: End control point (x, y).
         :param rect: Rectangle (x_min, y_min, x_max, y_max).
         :returns: List of t-values where the bezier intersects.
+        :complexity: O(n)
         """
 "#,
     module = "raygeo.geo.shape.bezier"
@@ -236,6 +240,7 @@ fn get_bezier_rect_intersections_py(
         :param p3: End control point (x, y).
         :param rect: Clipping rectangle (x_min, y_min, x_max, y_max).
         :returns: List of bezier segments inside the rectangle.
+        :complexity: O(n)
         """
 "#,
     module = "raygeo.geo.shape.bezier"
@@ -277,6 +282,7 @@ fn clip_bezier_with_rect_py(
         :param p2: Second control point (x, y).
         :param p3: End control point (x, y).
         :returns: Quadratic bezier (p0, p1, p2).
+        :complexity: O(1)
         """
 "#,
     module = "raygeo.geo.shape.bezier"
@@ -320,6 +326,7 @@ fn convert_cubic_bezier_to_quadratic_py(
         :param p3: End control point (x, y).
         :param tolerance_sq: Squared tolerance for flatness.
         :returns: True if the curve is flat enough.
+        :complexity: O(1)
         """
 "#,
     module = "raygeo.geo.shape.bezier"
@@ -361,6 +368,7 @@ fn is_bezier_flat_py(
         :param p3: End control point (x, y).
         :param polygons: List of polygons to check against.
         :returns: True if the bezier is inside all polygons.
+        :complexity: O(n * m)
         """
 "#,
     module = "raygeo.geo.shape.bezier"
@@ -402,6 +410,7 @@ fn is_bezier_inside_polygons_py(
         :param p3: End control point (x, y, z).
         :param num_steps: Number of linearization steps.
         :returns: List of (p1, p2) segment pairs.
+        :complexity: O(n)
         """
 "#,
     module = "raygeo.geo.shape.bezier"
@@ -445,6 +454,7 @@ fn linearize_bezier_py(
         :param tolerance_sq: Squared tolerance for subdivision.
         :param max_subdivisions: Maximum recursion depth.
         :returns: List of linearized points (x, y).
+        :complexity: O(n)
         """
 "#,
     module = "raygeo.geo.shape.bezier"
@@ -488,6 +498,7 @@ fn linearize_bezier_adaptive_py(
         :param p3: End control point (x, y, z).
         :param tolerance: Linearization tolerance.
         :returns: List of linearized points (x, y, z).
+        :complexity: O(n)
         """
 "#,
     module = "raygeo.geo.shape.bezier"
@@ -532,6 +543,7 @@ fn linearize_bezier_segment_py(
         :param tolerance: Flattening tolerance.
         :param max_subdivisions: Maximum recursion depth.
         :param pts: Output list to append points to.
+        :complexity: O(n)
         """
 "#,
     module = "raygeo.geo.shape.bezier"
@@ -580,6 +592,7 @@ fn flatten_bezier_py(
         :param c: Second control point (x, y, z).
         :param d: End point (x, y, z).
         :returns: Flatness squared value.
+        :complexity: O(1)
         """
 "#,
     module = "raygeo.geo.shape.bezier"
@@ -620,6 +633,7 @@ fn get_bezier_flatness_sq_py(
         :param vz: Z component of line direction.
         :param norm_sq: Precomputed squared norm (optional).
         :returns: Perpendicular distance squared.
+        :complexity: O(1)
         """
 "#,
     module = "raygeo.geo.shape.bezier"
@@ -661,6 +675,7 @@ fn get_perpendicular_dist_sq_py(
         :param c2: Second control point (x, y).
         :param p1: End point (x, y).
         :returns: Arc length.
+        :complexity: O(n)
         """
 "#,
     module = "raygeo.geo.shape.bezier"

@@ -21,12 +21,13 @@ dimensions via width and height, with the Y axis flipped (SVG Y increases downwa
 
 **Returns:** SVG path d attribute string.
 
-| Parameter  | Type       | Description                                    |
-| ---------- | ---------- | ---------------------------------------------- |
-| `geometry` | `Geometry` | A Geometry object with normalized coordinates. |
-| `width`    | `int`      | Target pixel width.                            |
-| `height`   | `int`      | Target pixel height.                           |
-| _Returns_  | `str`      |                                                |
+| Parameter    | Type       | Description                                    |
+| ------------ | ---------- | ---------------------------------------------- |
+| `geometry`   | `Geometry` | A Geometry object with normalized coordinates. |
+| `width`      | `int`      | Target pixel width.                            |
+| `height`     | `int`      | Target pixel height.                           |
+| _Returns_    | `str`      |                                                |
+| _Complexity_ |            | O(n) where n = number of commands              |
 
 ### `parse_svg_path_data()`
 
@@ -39,13 +40,14 @@ Supports M/m, L/l, H/h, V/v, C/c, Z/z commands. Cubic Bezier curves are flattene
 
 **Returns:** List of Geometry objects, one per subpath.
 
-| Parameter   | Type                                              | Description                                             |
-| ----------- | ------------------------------------------------- | ------------------------------------------------------- |
-| `path_data` | `str`                                             | SVG path d attribute string.                            |
-| `transform` | `numpy.NDArray[numpy.float64] &#124; None = None` | 3x3 affine transformation matrix, or None for identity. |
-| `scale_x`   | `float = 1`                                       | X-axis scale factor for coordinate transform.           |
-| `scale_y`   | `float = 1`                                       | Y-axis scale factor for coordinate transform.           |
-| _Returns_   | `list[Geometry]`                                  |                                                         |
+| Parameter    | Type                                              | Description                                             |
+| ------------ | ------------------------------------------------- | ------------------------------------------------------- |
+| `path_data`  | `str`                                             | SVG path d attribute string.                            |
+| `transform`  | `numpy.NDArray[numpy.float64] &#124; None = None` | 3x3 affine transformation matrix, or None for identity. |
+| `scale_x`    | `float = 1`                                       | X-axis scale factor for coordinate transform.           |
+| `scale_y`    | `float = 1`                                       | Y-axis scale factor for coordinate transform.           |
+| _Returns_    | `list[Geometry]`                                  |                                                         |
+| _Complexity_ |                                                   | O(n) where n = length of path data                      |
 
 ### `parse_svg_transform()`
 
@@ -61,6 +63,7 @@ Returns a 3x3 identity matrix with translation applied.
 | --------------- | ------------------------------ | ------------------------------ |
 | `transform_str` | `str`                          | SVG transform attribute value. |
 | _Returns_       | `numpy.NDArray[numpy.float64]` |                                |
+| _Complexity_    |                                | O(1)                           |
 
 ### `svg_string_to_geometries()`
 
@@ -73,9 +76,10 @@ them to Geometry.
 
 **Returns:** List of Geometry objects from all path elements.
 
-| Parameter | Type             | Description                                   |
-| --------- | ---------------- | --------------------------------------------- |
-| `svg_str` | `str`            | SVG document as a string.                     |
-| `scale_x` | `float = 1`      | X-axis scale factor for coordinate transform. |
-| `scale_y` | `float = 1`      | Y-axis scale factor for coordinate transform. |
-| _Returns_ | `list[Geometry]` |                                               |
+| Parameter    | Type             | Description                                   |
+| ------------ | ---------------- | --------------------------------------------- |
+| `svg_str`    | `str`            | SVG document as a string.                     |
+| `scale_x`    | `float = 1`      | X-axis scale factor for coordinate transform. |
+| `scale_y`    | `float = 1`      | Y-axis scale factor for coordinate transform. |
+| _Returns_    | `list[Geometry]` |                                               |
+| _Complexity_ |                  | O(n) where n = size of SVG document           |

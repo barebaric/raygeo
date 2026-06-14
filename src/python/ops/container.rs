@@ -293,6 +293,7 @@ submit! {
                 See ``geo.types.TransformMatrix`` for the matrix layout.
 
                 :param matrix: A 4x4 affine transformation matrix.
+                :complexity: O(n) time, O(n) space
                 """
                 ...
         "#
@@ -303,6 +304,8 @@ submit! {
 #[pymethods]
 impl PyOps {
     /// Create a new, empty Ops sequence.
+    ///
+    /// :complexity: O(1) time, O(1) space
     #[new]
     pub fn new() -> Self {
         PyOps {
@@ -311,11 +314,15 @@ impl PyOps {
     }
 
     /// Return the number of commands.
+    ///
+    /// :complexity: O(1) time, O(1) space
     fn __len__(&self) -> usize {
         self.inner.len()
     }
 
     /// Concatenate two Ops sequences (``ops1 + ops2``).
+    ///
+    /// :complexity: O(n) time, O(n) space
     fn __add__(&self, other: &PyOps) -> PyOps {
         PyOps {
             inner: &self.inner + &other.inner,
@@ -323,6 +330,8 @@ impl PyOps {
     }
 
     /// Repeat the ops sequence *count* times (``ops * n``).
+    ///
+    /// :complexity: O(n * k) time, O(n * k) space where k is the repeat count
     fn __mul__(&self, count: usize) -> PyOps {
         PyOps {
             inner: &self.inner * count,
@@ -330,11 +339,15 @@ impl PyOps {
     }
 
     /// Check if the ops sequence is empty.
+    ///
+    /// :complexity: O(1) time, O(1) space
     fn is_empty(&self) -> bool {
         self.inner.is_empty()
     }
 
     /// Return the number of commands.
+    ///
+    /// :complexity: O(1) time, O(1) space
     fn len(&self) -> usize {
         self.inner.len()
     }
@@ -343,6 +356,7 @@ impl PyOps {
     ///
     /// :param idx: Command index (negative = from end).
     /// :returns: The :class:`CommandType` of the command.
+    /// :complexity: O(1) time, O(1) space
     fn command_type(&self, idx: isize) -> PyResult<PyCommandType> {
         let idx = normalize_index(idx, self.inner.len())?;
         Ok(PyCommandType(self.inner.commands[idx].command_type()))
@@ -352,6 +366,7 @@ impl PyOps {
     ///
     /// :param idx: Command index (negative = from end).
     /// :returns: The category (MOVING, STATE, or MARKER).
+    /// :complexity: O(1) time, O(1) space
     fn category(&self, idx: isize) -> PyResult<PyCommandCategory> {
         let idx = normalize_index(idx, self.inner.len())?;
         Ok(PyCommandCategory(
@@ -363,6 +378,7 @@ impl PyOps {
     ///
     /// :param idx: Command index.
     /// :returns: True if the command is a travel move.
+    /// :complexity: O(1) time, O(1) space
     fn is_travel(&self, idx: usize) -> PyResult<bool> {
         if idx >= self.inner.len() {
             return Err(PyErr::new::<pyo3::exceptions::PyIndexError, _>(
@@ -382,6 +398,7 @@ impl PyOps {
     ///
     /// :param idx: Command index.
     /// :returns: True if the command is a cutting move.
+    /// :complexity: O(1) time, O(1) space
     fn is_cutting(&self, idx: usize) -> PyResult<bool> {
         if idx >= self.inner.len() {
             return Err(PyErr::new::<pyo3::exceptions::PyIndexError, _>(
@@ -405,6 +422,7 @@ impl PyOps {
     ///
     /// :param idx: Command index.
     /// :returns: True if the command modifies machine state.
+    /// :complexity: O(1) time, O(1) space
     fn is_state(&self, idx: usize) -> PyResult<bool> {
         if idx >= self.inner.len() {
             return Err(PyErr::new::<pyo3::exceptions::PyIndexError, _>(
@@ -418,6 +436,7 @@ impl PyOps {
     ///
     /// :param idx: Command index.
     /// :returns: True if the command is a structural marker (JobStart, LayerStart, etc.).
+    /// :complexity: O(1) time, O(1) space
     fn is_marker(&self, idx: usize) -> PyResult<bool> {
         if idx >= self.inner.len() {
             return Err(PyErr::new::<pyo3::exceptions::PyIndexError, _>(
@@ -431,6 +450,7 @@ impl PyOps {
     ///
     /// :param idx: Command index.
     /// :returns: True if the command is a ScanLine power command.
+    /// :complexity: O(1) time, O(1) space
     fn is_scanline(&self, idx: usize) -> PyResult<bool> {
         if idx >= self.inner.len() {
             return Err(PyErr::new::<pyo3::exceptions::PyIndexError, _>(
@@ -444,6 +464,7 @@ impl PyOps {
     ///
     /// :param ct: The :class:`CommandType` to search for.
     /// :returns: List of matching command indices.
+    /// :complexity: O(n) time, O(n) space
     fn indices_of(&self, ct: &PyCommandType) -> Vec<usize> {
         self.inner
             .commands
@@ -459,6 +480,7 @@ impl PyOps {
     /// :param idx: Command index.
     /// :param last_point: Optional starting point override.
     /// :returns: Cumulative distance.
+    /// :complexity: O(1) time, O(1) space
     #[pyo3(signature = (idx, last_point=None))]
     fn distance_at(
         &self,
@@ -482,16 +504,22 @@ impl PyOps {
     }
 
     /// Compute the total distance of all commands.
+    ///
+    /// :complexity: O(n) time, O(1) space
     fn distance(&self) -> f64 {
         self.inner.distance()
     }
 
     /// Compute the total cutting distance (excluding travel moves).
+    ///
+    /// :complexity: O(n) time, O(1) space
     fn cut_distance(&self) -> f64 {
         self.inner.cut_distance()
     }
 
     /// Return the number of scanline commands in the sequence.
+    ///
+    /// :complexity: O(n) time, O(1) space
     #[getter]
     fn scanline_count(&self) -> usize {
         self.inner
@@ -513,6 +541,7 @@ impl PyOps {
     ///
     /// :param idx: Command index (negative = from end).
     /// :returns: ``(x, y, z)`` tuple.
+    /// :complexity: O(1) time, O(1) space
     fn endpoint(&self, idx: isize) -> PyResult<Point3D> {
         let idx = normalize_index(idx, self.inner.len())?;
         Ok(self.inner.commands[idx].end_point())
@@ -523,6 +552,7 @@ impl PyOps {
     /// :param idx: Command index.
     /// :returns: ``(i, j, clockwise)`` tuple.
     /// :raises TypeError: If the command is not an ArcTo.
+    /// :complexity: O(1) time, O(1) space
     fn arc_params(&self, idx: usize) -> PyResult<(f64, f64, bool)> {
         if idx >= self.inner.len() {
             return Err(PyErr::new::<pyo3::exceptions::PyIndexError, _>(
@@ -547,6 +577,7 @@ impl PyOps {
     /// :param idx: Command index.
     /// :returns: ``((c1x, c1y, c1z), (c2x, c2y, c2z))`` control points.
     /// :raises TypeError: If the command is not a BezierTo.
+    /// :complexity: O(1) time, O(1) space
     #[allow(clippy::type_complexity)]
     fn bezier_params(&self, idx: usize) -> PyResult<(Point3D, Point3D)> {
         if idx >= self.inner.len() {
@@ -572,6 +603,7 @@ impl PyOps {
     /// :param idx: Command index.
     /// :returns: ``(cx, cy, cz)`` control point.
     /// :raises TypeError: If the command is not a QuadraticBezierTo.
+    /// :complexity: O(1) time, O(1) space
     fn quadratic_bezier_params(&self, idx: usize) -> PyResult<Point3D> {
         if idx >= self.inner.len() {
             return Err(PyErr::new::<pyo3::exceptions::PyIndexError, _>(
@@ -595,6 +627,7 @@ impl PyOps {
     ///
     /// :param idx: Command index.
     /// :returns: Raw bytes of scanline power data.
+    /// :complexity: O(1) time, O(1) space
     fn scanline_data<'py>(
         &self,
         py: Python<'py>,
@@ -623,6 +656,7 @@ impl PyOps {
     /// :param idx: Command index.
     /// :returns: Duration in milliseconds.
     /// :raises TypeError: If the command is not a Dwell.
+    /// :complexity: O(1) time, O(1) space
     fn dwell_duration(&self, idx: usize) -> PyResult<f64> {
         if idx >= self.inner.len() {
             return Err(PyErr::new::<pyo3::exceptions::PyIndexError, _>(
@@ -645,6 +679,7 @@ impl PyOps {
     /// :param idx: Command index.
     /// :returns: Power level (0.0–1.0 typically).
     /// :raises TypeError: If the command is not a SetPower.
+    /// :complexity: O(1) time, O(1) space
     fn power(&self, idx: usize) -> PyResult<f64> {
         if idx >= self.inner.len() {
             return Err(PyErr::new::<pyo3::exceptions::PyIndexError, _>(
@@ -667,6 +702,7 @@ impl PyOps {
     /// :param idx: Command index.
     /// :returns: Speed in mm/s.
     /// :raises TypeError: If the command is not a speed command.
+    /// :complexity: O(1) time, O(1) space
     fn speed(&self, idx: usize) -> PyResult<i32> {
         if idx >= self.inner.len() {
             return Err(PyErr::new::<pyo3::exceptions::PyIndexError, _>(
@@ -687,6 +723,7 @@ impl PyOps {
     /// :param idx: Command index.
     /// :returns: Frequency in Hz.
     /// :raises TypeError: If the command is not a SetFrequency.
+    /// :complexity: O(1) time, O(1) space
     fn frequency(&self, idx: usize) -> PyResult<i32> {
         if idx >= self.inner.len() {
             return Err(PyErr::new::<pyo3::exceptions::PyIndexError, _>(
@@ -709,6 +746,7 @@ impl PyOps {
     /// :param idx: Command index.
     /// :returns: Pulse width in microseconds.
     /// :raises TypeError: If the command is not a SetPulseWidth.
+    /// :complexity: O(1) time, O(1) space
     fn pulse_width(&self, idx: usize) -> PyResult<f64> {
         if idx >= self.inner.len() {
             return Err(PyErr::new::<pyo3::exceptions::PyIndexError, _>(
@@ -731,6 +769,7 @@ impl PyOps {
     /// :param idx: Command index.
     /// :returns: The laser source identifier.
     /// :raises TypeError: If the command is not a SetLaser.
+    /// :complexity: O(1) time, O(1) space
     fn laser_uid(&self, idx: usize) -> PyResult<String> {
         if idx >= self.inner.len() {
             return Err(PyErr::new::<pyo3::exceptions::PyIndexError, _>(
@@ -753,6 +792,7 @@ impl PyOps {
     /// :param idx: Command index.
     /// :returns: The layer identifier.
     /// :raises TypeError: If the command is not a Layer command.
+    /// :complexity: O(1) time, O(1) space
     fn layer_uid(&self, idx: usize) -> PyResult<String> {
         if idx >= self.inner.len() {
             return Err(PyErr::new::<pyo3::exceptions::PyIndexError, _>(
@@ -775,6 +815,7 @@ impl PyOps {
     /// :param idx: Command index.
     /// :returns: The workpiece identifier.
     /// :raises TypeError: If the command is not a Workpiece command.
+    /// :complexity: O(1) time, O(1) space
     fn workpiece_uid(&self, idx: usize) -> PyResult<String> {
         if idx >= self.inner.len() {
             return Err(PyErr::new::<pyo3::exceptions::PyIndexError, _>(
@@ -797,6 +838,7 @@ impl PyOps {
     /// :param idx: Command index.
     /// :returns: ``(SectionType, Optional[workpiece_uid])``.
     /// :raises TypeError: If the command is not an OpsSectionStart or OpsSectionEnd.
+    /// :complexity: O(1) time, O(1) space
     fn section_params(
         &self,
         idx: usize,
@@ -828,6 +870,7 @@ impl PyOps {
     ///
     /// :param idx: Command index.
     /// :returns: Dict mapping axis names to values, or None.
+    /// :complexity: O(1) time, O(1) space
     fn extra_axes<'py>(
         &self,
         py: Python<'py>,
@@ -848,6 +891,7 @@ impl PyOps {
     ///
     /// :param idx: Command index.
     /// :returns: The :class:`State` at that index, or None.
+    /// :complexity: O(1) time, O(1) space
     fn state(&self, idx: usize) -> PyResult<Option<PyState>> {
         if idx >= self.inner.len() {
             return Err(PyErr::new::<pyo3::exceptions::PyIndexError, _>(
@@ -868,6 +912,7 @@ impl PyOps {
     /// :param y: Y coordinate.
     /// :param z: Z coordinate (default 0.0).
     /// :param extra: Optional dict of extra axis values.
+    /// :complexity: O(1) time, O(1) space
     #[pyo3(signature = (x, y, z=0.0, extra=None))]
     fn move_to(
         &mut self,
@@ -890,6 +935,7 @@ impl PyOps {
     /// :param y: Y coordinate.
     /// :param z: Z coordinate (default 0.0).
     /// :param extra: Optional dict of extra axis values.
+    /// :complexity: O(1) time, O(1) space
     #[pyo3(signature = (x, y, z=0.0, extra=None))]
     fn line_to(
         &mut self,
@@ -907,6 +953,8 @@ impl PyOps {
     }
 
     /// Close the current sub-path by adding a line back to the start.
+    ///
+    /// :complexity: O(1) time, O(1) space
     fn close_path(&mut self) {
         self.inner.close_path();
     }
@@ -920,6 +968,7 @@ impl PyOps {
     /// :param clockwise: Whether the arc is clockwise (default True).
     /// :param z: End Z coordinate (default 0.0).
     /// :param extra: Optional dict of extra axis values.
+    /// :complexity: O(1) time, O(1) space
     #[pyo3(signature = (x, y, i, j, clockwise=true, z=0.0, extra=None))]
     #[allow(clippy::too_many_arguments)]
     fn arc_to(
@@ -946,6 +995,7 @@ impl PyOps {
     /// :param control2: Second control point ``(x, y, z)``.
     /// :param end: End point ``(x, y, z)``.
     /// :param extra: Optional dict of extra axis values.
+    /// :complexity: O(1) time, O(1) space
     #[pyo3(signature = (control1, control2, end, extra=None))]
     fn bezier_to(
         &mut self,
@@ -967,6 +1017,7 @@ impl PyOps {
     /// :param control: Control point ``(x, y, z)``.
     /// :param end: End point ``(x, y, z)``.
     /// :param extra: Optional dict of extra axis values.
+    /// :complexity: O(1) time, O(1) space
     #[pyo3(signature = (control, end, extra=None))]
     fn quadratic_bezier_to(
         &mut self,
@@ -985,6 +1036,7 @@ impl PyOps {
     /// Set the laser power for subsequent commands.
     ///
     /// :param power: Power level (0.0–1.0).
+    /// :complexity: O(1) time, O(1) space
     fn set_power(&mut self, power: f64) {
         self.inner.set_power(power);
     }
@@ -992,6 +1044,7 @@ impl PyOps {
     /// Set the cutting speed for subsequent commands.
     ///
     /// :param speed: Cutting speed in units per second.
+    /// :complexity: O(1) time, O(1) space
     fn set_cut_speed(&mut self, speed: f64) {
         self.inner.set_cut_speed(speed as i32);
     }
@@ -999,6 +1052,7 @@ impl PyOps {
     /// Set the travel (rapid) speed for subsequent commands.
     ///
     /// :param speed: Travel speed in units per second.
+    /// :complexity: O(1) time, O(1) space
     fn set_travel_speed(&mut self, speed: f64) {
         self.inner.set_travel_speed(speed as i32);
     }
@@ -1006,6 +1060,7 @@ impl PyOps {
     /// Pause execution for a given duration.
     ///
     /// :param duration_ms: Dwell duration in milliseconds.
+    /// :complexity: O(1) time, O(1) space
     fn dwell(&mut self, duration_ms: f64) {
         self.inner.dwell(duration_ms);
     }
@@ -1013,6 +1068,7 @@ impl PyOps {
     /// Enable air assist for subsequent cutting.
     ///
     /// :param enabled: Whether to enable air assist (default True).
+    /// :complexity: O(1) time, O(1) space
     #[pyo3(signature = (enabled = true))]
     fn enable_air_assist(&mut self, enabled: bool) {
         self.inner.enable_air_assist(enabled);
@@ -1021,6 +1077,7 @@ impl PyOps {
     /// Switch to a specific laser by UID.
     ///
     /// :param laser_uid: The laser identifier.
+    /// :complexity: O(1) time, O(1) space
     fn set_laser(&mut self, laser_uid: &str) {
         self.inner.set_laser(laser_uid);
     }
@@ -1028,6 +1085,7 @@ impl PyOps {
     /// Set the laser pulse frequency.
     ///
     /// :param frequency: Frequency in Hz.
+    /// :complexity: O(1) time, O(1) space
     fn set_frequency(&mut self, frequency: i32) {
         self.inner.set_frequency(frequency);
     }
@@ -1035,6 +1093,7 @@ impl PyOps {
     /// Set the laser pulse width.
     ///
     /// :param pulse_width: Pulse width in microseconds.
+    /// :complexity: O(1) time, O(1) space
     fn set_pulse_width(&mut self, pulse_width: f64) {
         self.inner.set_pulse_width(pulse_width);
     }
@@ -1046,6 +1105,7 @@ impl PyOps {
     /// :param z: End Z coordinate (default 0.0).
     /// :param power_values: Optional per-pixel 8-bit power values.
     /// :param extra: Optional dict of extra axis values.
+    /// :complexity: O(1) time, O(1) space
     #[pyo3(signature = (x, y, z=0.0, power_values=None, extra=None))]
     fn scan_to(
         &mut self,
@@ -1065,11 +1125,15 @@ impl PyOps {
     }
 
     /// Mark the start of a job.
+    ///
+    /// :complexity: O(1) time, O(1) space
     fn job_start(&mut self) {
         self.inner.job_start();
     }
 
     /// Mark the end of a job.
+    ///
+    /// :complexity: O(1) time, O(1) space
     fn job_end(&mut self) {
         self.inner.job_end();
     }
@@ -1077,6 +1141,7 @@ impl PyOps {
     /// Mark the start of a layer.
     ///
     /// :param layer_uid: The layer identifier.
+    /// :complexity: O(1) time, O(1) space
     fn layer_start(&mut self, layer_uid: &str) {
         self.inner.layer_start(layer_uid);
     }
@@ -1084,6 +1149,7 @@ impl PyOps {
     /// Mark the end of a layer.
     ///
     /// :param layer_uid: The layer identifier.
+    /// :complexity: O(1) time, O(1) space
     fn layer_end(&mut self, layer_uid: &str) {
         self.inner.layer_end(layer_uid);
     }
@@ -1091,6 +1157,7 @@ impl PyOps {
     /// Mark the start of a workpiece.
     ///
     /// :param workpiece_uid: The workpiece identifier.
+    /// :complexity: O(1) time, O(1) space
     fn workpiece_start(&mut self, workpiece_uid: &str) {
         self.inner.workpiece_start(workpiece_uid);
     }
@@ -1098,6 +1165,7 @@ impl PyOps {
     /// Mark the end of a workpiece.
     ///
     /// :param workpiece_uid: The workpiece identifier.
+    /// :complexity: O(1) time, O(1) space
     fn workpiece_end(&mut self, workpiece_uid: &str) {
         self.inner.workpiece_end(workpiece_uid);
     }
@@ -1106,6 +1174,7 @@ impl PyOps {
     ///
     /// :param section_type: The type of section.
     /// :param workpiece_uid: The workpiece identifier.
+    /// :complexity: O(1) time, O(1) space
     fn ops_section_start(
         &mut self,
         section_type: &PySectionType,
@@ -1117,6 +1186,7 @@ impl PyOps {
     /// Mark the end of an ops section.
     ///
     /// :param section_type: The type of section.
+    /// :complexity: O(1) time, O(1) space
     fn ops_section_end(&mut self, section_type: &PySectionType) {
         self.inner.ops_section_end(section_type.0);
     }
@@ -1124,6 +1194,8 @@ impl PyOps {
     // --- Copy / Transfer ---
 
     /// Return a deep copy of this Ops sequence.
+    ///
+    /// :complexity: O(n) time, O(n) space
     fn copy(&self) -> PyOps {
         PyOps {
             inner: self.inner.copy(),
@@ -1131,11 +1203,15 @@ impl PyOps {
     }
 
     /// Shallow copy (same as :meth:`copy` since Ops is immutable).
+    ///
+    /// :complexity: O(n) time, O(n) space
     fn __copy__(&self) -> PyOps {
         self.copy()
     }
 
     /// Deep copy (same as :meth:`copy` since Ops is immutable).
+    ///
+    /// :complexity: O(n) time, O(n) space
     fn __deepcopy__(&self, _memo: Bound<'_, PyAny>) -> PyOps {
         self.copy()
     }
@@ -1144,6 +1220,7 @@ impl PyOps {
     ///
     /// :param source: The source Ops sequence.
     /// :param idx: Index of the command to copy.
+    /// :complexity: O(1) time, O(1) space
     fn copy_command_from(&mut self, source: &PyOps, idx: usize) {
         self.inner.copy_command_from(&source.inner, idx);
     }
@@ -1152,6 +1229,7 @@ impl PyOps {
     ///
     /// :param source: The source Ops sequence.
     /// :param idx: Index of the command to transfer.
+    /// :complexity: O(1) time, O(1) space
     fn transfer_command_from(&mut self, source: &PyOps, idx: usize) {
         self.inner.transfer_command_from(&source.inner, idx);
     }
@@ -1159,6 +1237,7 @@ impl PyOps {
     /// Extend this Ops sequence with commands from another.
     ///
     /// :param other: The other Ops sequence (or None for no-op).
+    /// :complexity: O(n) time, O(n) space
     fn extend(&mut self, other: Option<&PyOps>) {
         if let Some(other) = other {
             self.inner.extend(&other.inner);
@@ -1166,6 +1245,8 @@ impl PyOps {
     }
 
     /// Remove all commands from this Ops sequence.
+    ///
+    /// :complexity: O(1) time, O(1) space
     fn clear(&mut self) {
         self.inner.clear();
     }
@@ -1173,6 +1254,7 @@ impl PyOps {
     /// Return index ranges for each subpath.
     ///
     /// :returns: A list of index lists, one per subpath.
+    /// :complexity: O(n) time, O(n) space
     fn subpath_indices(&self) -> Vec<Vec<usize>> {
         self.inner.subpath_indices()
     }
@@ -1180,6 +1262,7 @@ impl PyOps {
     /// Split this Ops sequence into separate subpaths.
     ///
     /// :returns: A list of Ops sequences, one per subpath.
+    /// :complexity: O(n) time, O(n) space
     fn split_into_subpaths(&self) -> Vec<PyOps> {
         self.inner
             .split_into_subpaths()
@@ -1191,6 +1274,7 @@ impl PyOps {
     /// Reverse the order of subpaths.
     ///
     /// :returns: A new Ops with subpath order reversed.
+    /// :complexity: O(n) time, O(n) space
     fn flip_ops(&self) -> PyOps {
         PyOps {
             inner: self.inner.flip_ops(),
@@ -1200,6 +1284,7 @@ impl PyOps {
     /// Return a copy with all state commands removed.
     ///
     /// :returns: A new Ops containing only moving commands.
+    /// :complexity: O(n) time, O(n) space
     fn without_state(&self) -> PyOps {
         PyOps {
             inner: self.inner.without_state(),
@@ -1211,6 +1296,7 @@ impl PyOps {
     /// :param idx: The command index.
     /// :returns: The state at that point.
     /// :raises IndexError: If the index is out of range.
+    /// :complexity: O(1) time, O(1) space
     fn state_at(&self, idx: usize) -> PyResult<PyState> {
         if idx >= self.inner.len() {
             return Err(PyErr::new::<pyo3::exceptions::PyIndexError, _>(
@@ -1224,6 +1310,7 @@ impl PyOps {
     ///
     /// :param indices: List of command indices to extract.
     /// :returns: A new Ops sequence containing only the specified commands.
+    /// :complexity: O(n) time, O(n) space
     fn sub_ops(&self, indices: Vec<usize>) -> PyOps {
         PyOps {
             inner: self.inner.sub_ops(&indices),
@@ -1233,6 +1320,7 @@ impl PyOps {
     /// Replace all commands in this sequence with those from another.
     ///
     /// :param source: The source Ops sequence.
+    /// :complexity: O(n) time, O(n) space
     fn replace_all(&mut self, source: &PyOps) {
         self.inner.replace_all(&source.inner);
     }
@@ -1240,6 +1328,7 @@ impl PyOps {
     /// Replace the internal buffer of this sequence with a copy from another.
     ///
     /// :param source: The source Ops sequence.
+    /// :complexity: O(n) time, O(n) space
     fn replace_with(&mut self, source: &PyOps) {
         self.inner.replace_with(&source.inner);
     }
@@ -1247,6 +1336,7 @@ impl PyOps {
     /// Create an Ops sequence from a Geometry.
     ///
     /// :param geometry: The geometry to convert.
+    /// :complexity: O(n) time, O(n) space
     #[classmethod]
     fn from_geometry(
         _cls: &Bound<'_, PyType>,
@@ -1266,6 +1356,7 @@ impl PyOps {
     /// Convert this Ops sequence back into a Geometry.
     ///
     /// :returns: A Geometry representing the same paths.
+    /// :complexity: O(n) time, O(n) space
     fn to_geometry(&self) -> PyGeometry {
         PyGeometry {
             inner: self.inner.to_geometry(),
@@ -1273,6 +1364,8 @@ impl PyOps {
     }
 
     /// Pre-compute and store the accumulated state at each moving command.
+    ///
+    /// :complexity: O(n) time, O(n) space
     fn preload_state(&mut self) {
         self.inner.preload_state();
     }
@@ -1280,6 +1373,7 @@ impl PyOps {
     /// Apply a state to all moving commands without an explicit state.
     ///
     /// :param state: The state to apply.
+    /// :complexity: O(n) time, O(1) space
     fn set_state_on_moving(&mut self, state: &PyState) {
         self.inner.set_state_on_moving(&state.0);
     }
@@ -1288,11 +1382,14 @@ impl PyOps {
     ///
     /// :param idx: The command index.
     /// :param state: The new state.
+    /// :complexity: O(1) time, O(1) space
     fn set_state_at(&mut self, idx: usize, state: &PyState) {
         self.inner.set_state_at(idx, &state.0);
     }
 
     /// Print a human-readable dump of all commands.
+    ///
+    /// :complexity: O(n) time, O(n) space
     fn dump(&self, py: Python<'_>) -> PyResult<()> {
         let output = self.inner.format_dump();
         let print_fn = py.import("builtins")?.getattr("print")?;
@@ -1306,6 +1403,7 @@ impl PyOps {
     ///
     /// :param idx: The command index.
     /// :returns: A CommandInfo object with type, endpoint, state, axes, etc.
+    /// :complexity: O(1) time, O(1) space
     fn inspect(&self, py: Python<'_>, idx: usize) -> PyResult<PyCommandInfo> {
         let inner = &self.inner;
         let ct = inner.commands[idx].command_type();
@@ -1413,6 +1511,7 @@ impl PyOps {
     /// :param dx: X offset.
     /// :param dy: Y offset.
     /// :param dz: Z offset (default 0.0).
+    /// :complexity: O(n) time, O(1) space
     #[pyo3(signature = (dx, dy, dz = 0.0))]
     fn translate(&mut self, dx: f64, dy: f64, dz: f64) -> PyResult<()> {
         self.inner.translate(dx, dy, dz);
@@ -1424,6 +1523,7 @@ impl PyOps {
     /// :param sx: X scale factor.
     /// :param sy: Y scale factor.
     /// :param sz: Z scale factor (default 1.0).
+    /// :complexity: O(n) time, O(1) space
     #[pyo3(signature = (sx, sy, sz = 1.0))]
     fn scale(&mut self, sx: f64, sy: f64, sz: f64) -> PyResult<()> {
         self.inner.scale(sx, sy, sz);
@@ -1435,6 +1535,7 @@ impl PyOps {
     /// :param angle_deg: Rotation angle in degrees.
     /// :param cx: Pivot X coordinate.
     /// :param cy: Pivot Y coordinate.
+    /// :complexity: O(n) time, O(1) space
     fn rotate(&mut self, angle_deg: f64, cx: f64, cy: f64) -> PyResult<()> {
         self.inner.rotate(angle_deg, cx, cy);
         Ok(())
@@ -1463,6 +1564,7 @@ impl PyOps {
     ///
     /// :param rect: ``(x_min, y_min, x_max, y_max)``.
     /// :returns: A new Ops sequence containing the clipped commands.
+    /// :complexity: O(n) time, O(n) space
     fn clip_rect(&self, rect: (f64, f64, f64, f64)) -> PyOps {
         PyOps {
             inner: self.inner.clip_rect(Rect(rect.0, rect.1, rect.2, rect.3)),
@@ -1472,6 +1574,7 @@ impl PyOps {
     /// Subtract polygonal regions from the cutting paths.
     ///
     /// :param regions: List of polygons, each being a list of ``(x, y)`` vertices.
+    /// :complexity: O(n * m) time, O(n) space where m is the number of polygon vertices
     fn subtract_regions(&mut self, regions: Vec<Vec<Point>>) -> PyResult<()> {
         self.inner.subtract_regions(&regions);
         Ok(())
@@ -1481,6 +1584,7 @@ impl PyOps {
     ///
     /// :param regions: List of polygons, each being a list of ``(x, y)`` vertices.
     /// :param tolerance: Approximation tolerance (default 0.3).
+    /// :complexity: O(n * m) time, O(n) space where m is the number of polygon vertices
     #[pyo3(signature = (regions, tolerance = 0.3))]
     fn clip_to_regions(
         &mut self,
@@ -1499,6 +1603,7 @@ impl PyOps {
     ///
     /// :param regions: List of polygons, each being a list of ``(x, y)`` vertices.
     /// :param tolerance: Approximation tolerance (default 0.3).
+    /// :complexity: O(n * m) time, O(n) space where m is the number of polygon vertices
     #[pyo3(signature = (regions, tolerance = 0.3))]
     fn clip_ops_to_regions(
         &mut self,
@@ -1515,6 +1620,7 @@ impl PyOps {
     /// :param y: Y coordinate (used to find the relevant segment).
     /// :param width: Width of the band.
     /// :returns: True if any commands were kept.
+    /// :complexity: O(n) time, O(1) space
     fn clip_at(&mut self, x: f64, y: f64, width: f64) -> bool {
         self.inner.clip_at(x, y, width)
     }
@@ -1523,6 +1629,7 @@ impl PyOps {
     ///
     /// :param default_offset: The ``(x, y, z)`` offset for layers not listed in layer_offsets.
     /// :param layer_offsets: Optional dict mapping layer UIDs to ``(x, y, z)`` offsets.
+    /// :complexity: O(n) time, O(1) space
     #[pyo3(signature = (default_offset, layer_offsets = None))]
     #[allow(clippy::type_complexity)]
     fn translate_layers(
@@ -1554,6 +1661,7 @@ impl PyOps {
     /// mutate the layer_ops in place.
     ///
     /// :param callback: A callable accepting ``(layer_uid, layer_ops)``.
+    /// :complexity: O(n) time, O(n) space
     fn transform_layers(
         &mut self,
         py: Python<'_>,
@@ -1616,6 +1724,7 @@ impl PyOps {
     ///
     /// :param on_endpoint: Callable ``(endpoint, extra_axes) -> None``.
     /// :param on_aux_point: Optional callable ``(point,) -> None`` for curve control points.
+    /// :complexity: O(n) time, O(1) space
     #[pyo3(signature = (on_endpoint, on_aux_point = None))]
     fn transform_moving(
         &mut self,
@@ -1699,6 +1808,7 @@ impl PyOps {
     /// :param start_point: The ``(x, y, z)`` start point of the curve.
     /// :returns: A new Ops containing the linearized sub-commands.
     /// :raises TypeError: If the command at idx is not a curve or line type.
+    /// :complexity: O(n) time, O(n) space
     fn linearize(&self, idx: usize, start_point: Point3D) -> PyResult<Self> {
         let ct = self.inner.commands[idx].command_type();
         match ct {
@@ -1718,16 +1828,22 @@ impl PyOps {
     }
 
     /// Replace all curved commands with linear approximations in-place.
+    ///
+    /// :complexity: O(n) time, O(n) space
     fn linearize_all(&mut self) {
         self.inner.linearize_all();
     }
 
     /// Replace only bezier and quadratic bezier curves with linear approximations.
+    ///
+    /// :complexity: O(n) time, O(n) space
     fn linearize_curves(&mut self) {
         self.inner.linearize_curves();
     }
 
     /// Replace only arc commands with linear approximations.
+    ///
+    /// :complexity: O(n) time, O(n) space
     fn linearize_arcs(&mut self) {
         self.inner.linearize_arcs();
     }
@@ -1735,6 +1851,7 @@ impl PyOps {
     /// Return index ranges for each contiguous cutting segment.
     ///
     /// :returns: A list of index lists, one per segment.
+    /// :complexity: O(n) time, O(n) space
     fn segment_indices(&self) -> Vec<Vec<usize>> {
         self.inner.segment_indices()
     }
@@ -1742,6 +1859,7 @@ impl PyOps {
     /// Group contiguous commands with the same state into separate Ops sequences.
     ///
     /// :returns: A list of Ops sequences grouped by state continuity.
+    /// :complexity: O(n) time, O(n) space
     fn group_by_state_continuity(&self) -> Vec<PyOps> {
         self.inner
             .group_by_state_continuity()
@@ -1757,6 +1875,7 @@ impl PyOps {
     /// portions.
     ///
     /// :returns: List of OpsSection objects.
+    /// :complexity: O(n) time, O(n) space
     fn sections(&self) -> Vec<PyOpsSection> {
         self.inner
             .iter_sections()
@@ -1771,6 +1890,7 @@ impl PyOps {
     /// index ranges instead of individual index lists.
     ///
     /// :returns: List of OpsSectionRange objects.
+    /// :complexity: O(n) time, O(n) space
     fn section_ranges(&self) -> Vec<PyOpsSectionRange> {
         self.inner
             .iter_section_ranges()
@@ -1783,6 +1903,7 @@ impl PyOps {
     ///
     /// :param include_travel: Whether to include travel moves (default False).
     /// :returns: ``(x_min, y_min, x_max, y_max)``.
+    /// :complexity: O(n) time, O(1) space
     #[pyo3(signature = (include_travel = false))]
     fn rect(&self, include_travel: bool) -> (f64, f64, f64, f64) {
         match self.inner.rect(include_travel) {
@@ -1796,6 +1917,7 @@ impl PyOps {
     /// :param power: Optional power to set on the frame commands.
     /// :param speed: Optional speed to set on the frame commands.
     /// :returns: A new Ops containing only the frame endpoints.
+    /// :complexity: O(n) time, O(n) space
     #[pyo3(signature = (power = None, speed = None))]
     fn get_frame(&self, power: Option<f64>, speed: Option<f64>) -> PyOps {
         PyOps {
@@ -1809,6 +1931,7 @@ impl PyOps {
     /// :param default_travel_speed: Default travel speed (default 3000.0).
     /// :param acceleration: Acceleration value (default 1000.0).
     /// :returns: Estimated time in seconds.
+    /// :complexity: O(n) time, O(1) space
     #[pyo3(signature = (default_cut_speed = 1000.0, default_travel_speed = 3000.0, acceleration = 1000.0))]
     fn estimate_time(
         &mut self,
@@ -1834,6 +1957,7 @@ impl PyOps {
     /// :param default_travel_speed: Default travel speed (default 3000.0).
     /// :param acceleration: Acceleration value (default 1000.0).
     /// :returns: List of estimated times in seconds, one per command.
+    /// :complexity: O(n) time, O(n) space
     #[pyo3(signature = (default_cut_speed = 1000.0, default_travel_speed = 3000.0, acceleration = 1000.0))]
     fn estimate_command_times(
         &mut self,
@@ -1851,11 +1975,16 @@ impl PyOps {
     // --- Properties ---
 
     /// The last ``(x, y, z)`` endpoint from a MoveTo command.
+    ///
+    /// :complexity: O(1) time, O(1) space
     #[getter]
     fn get_last_move_to(&self) -> Point3D {
         self.inner.last_move_to
     }
 
+    /// Set the last move-to position.
+    ///
+    /// :complexity: O(1) time, O(1) space
     #[setter]
     fn set_last_move_to(&mut self, val: Point3D) {
         self.inner.last_move_to = val;
@@ -1864,6 +1993,7 @@ impl PyOps {
     /// Serialize this Ops sequence to a dict suitable for JSON export.
     ///
     /// :returns: A Python dict representation.
+    /// :complexity: O(n) time, O(n) space
     fn to_dict(&self, py: Python<'_>) -> PyResult<Py<PyDict>> {
         super::serialize::ops_to_dict(py, &self.inner)
     }
@@ -1871,6 +2001,7 @@ impl PyOps {
     /// Create an Ops sequence from a dictionary.
     ///
     /// :param data: Dictionary as produced by to_dict.
+    /// :complexity: O(n) time, O(n) space
     #[classmethod]
     fn from_dict(
         _cls: &Bound<'_, PyType>,
@@ -1883,6 +2014,7 @@ impl PyOps {
     /// Serialize this Ops sequence to numpy arrays.
     ///
     /// :returns: A Python dict of numpy arrays.
+    /// :complexity: O(n) time, O(n) space
     fn to_numpy_arrays(&self, py: Python<'_>) -> PyResult<Py<PyDict>> {
         super::serialize::ops_to_numpy_arrays(py, &self.inner)
     }
@@ -1890,6 +2022,7 @@ impl PyOps {
     /// Create an Ops sequence from numpy arrays.
     ///
     /// :param arrays: Dictionary as produced by to_numpy_arrays.
+    /// :complexity: O(n) time, O(n) space
     #[classmethod]
     fn from_numpy_arrays(
         _cls: &Bound<'_, PyType>,
@@ -1927,6 +2060,7 @@ impl PyOps {
     /// Only ``VECTOR_OUTLINE`` sections are modified.
     ///
     /// :param clips: List of ``(x, y, width)`` tuples defining tab positions.
+    /// :complexity: O(n * k) time, O(1) space where k is the number of tab clips
     fn apply_tab_gaps(&mut self, clips: Vec<(f64, f64, f64)>) {
         let clip_points: Vec<crate::ops::tabs::ClipPoint> = clips
             .into_iter()
@@ -1944,6 +2078,7 @@ impl PyOps {
     /// :param clips: List of ``(x, y, width)`` tuples defining tab positions.
     /// :param tab_power: Power level inside tab regions (0.0–1.0).
     /// :param original_power: Normal cutting power to restore after the tab.
+    /// :complexity: O(n * k) time, O(1) space where k is the number of tab clips
     fn apply_tab_power(
         &mut self,
         clips: Vec<(f64, f64, f64)>,
@@ -1969,6 +2104,7 @@ impl PyOps {
     /// cutting the same line twice.
     ///
     /// :param tolerance: Maximum distance for considering lines collinear.
+    /// :complexity: O(n log n) average time, O(n) space
     fn merge_overlapping_lines(&mut self, tolerance: f64) {
         crate::ops::merge_lines::merge_overlapping_lines(
             &mut self.inner,
@@ -1983,6 +2119,7 @@ impl PyOps {
     /// segments for constant engraving velocity.
     ///
     /// :param distance_mm: Overscan distance in millimeters.
+    /// :complexity: O(n) time, O(n) space
     fn apply_overscan(&mut self, distance_mm: f64) {
         crate::ops::overscan::apply_overscan(&mut self.inner, distance_mm);
     }
@@ -1995,6 +2132,7 @@ impl PyOps {
     ///
     /// :param lead_in_mm: Lead-in distance in millimeters.
     /// :param lead_out_mm: Lead-out distance in millimeters.
+    /// :complexity: O(n) time, O(n) space
     fn apply_lead_in_out(&mut self, lead_in_mm: f64, lead_out_mm: f64) {
         crate::ops::lead_in_out::apply_lead_in_out(
             &mut self.inner,
@@ -2013,6 +2151,7 @@ impl PyOps {
     /// :param preserve_first: Keep the first workpiece in place.
     /// :param preserve_order: Workpiece UIDs whose order to preserve.
     /// :param progress_cb: Optional callable(progress, message).
+    /// :complexity: O(n²) average time, O(n) space
     #[pyo3(signature = (allow_flip=true, preserve_first=false, preserve_order=Vec::new(), progress_cb=None))]
     fn optimize_travel(
         &mut self,

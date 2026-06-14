@@ -33,6 +33,7 @@ def calculate_fitness(polygon_groups: collections.abc.Sequence[collections.abc.S
     :param sheet_indices: 0-based sheet index for each placement.
     :param num_parts: Total number of parts (some may be unplaced).
     :returns: Fitness score (lower is better).
+    :complexity: O(n) where n = number of placements.
     """
 
 def filter_candidates_multi_resolution(candidates: list[tuple[float, float]], ifp_bounds: tuple[float, float, float, float], min_dist: float) -> list[tuple[float, float]]:
@@ -43,6 +44,7 @@ def filter_candidates_multi_resolution(candidates: list[tuple[float, float]], if
     :param ifp_bounds: IFP bounding box (min_x, min_y, max_x, max_y).
     :param min_dist: Minimum allowed distance between candidates.
     :returns: Filtered list of (x, y) positions.
+    :complexity: O(n log n) for spatial distance filtering.
     """
 
 def find_valid_position(ifp_polygons: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]], part_polygons: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]], part_hulls: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]], placed_polys_list: collections.abc.Sequence[collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]]], placed_hulls_list: collections.abc.Sequence[collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]]], grid: spatial_grid.SpatialGrid, sheet_world_offset: tuple[float, float], spacing: float = 1, min_area: float = 1, curve_tolerance: float = 0.5) -> tuple[float, float] | None:
@@ -62,6 +64,7 @@ def find_valid_position(ifp_polygons: collections.abc.Sequence[collections.abc.S
     :param min_area: Minimum overlap area (clipper coords).
     :param curve_tolerance: Curve tolerance for distance filtering.
     :returns: (x, y) position or None.
+    :complexity: O(n * m) for candidate search with overlap checks.
     """
 
 def find_valid_position_nfp(ifp_polygons: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]], part_polygons: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]], part_hulls: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]], placed_polys_list: collections.abc.Sequence[collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]]], placed_hulls_list: collections.abc.Sequence[collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]]], grid: spatial_grid.SpatialGrid, sheet_world_offset: tuple[float, float], spacing: float = 1, min_area: float = 1, curve_tolerance: float = 0.5) -> tuple[float, float] | None:
@@ -82,6 +85,7 @@ def find_valid_position_nfp(ifp_polygons: collections.abc.Sequence[collections.a
     :param min_area: Minimum overlap area (clipper coords).
     :param curve_tolerance: Curve tolerance for distance filtering.
     :returns: (x, y) position or None.
+    :complexity: O(n * m) for NFP construction per nearby placed part.
     """
 
 def find_valid_position_scored(ifp_polygons: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]], part_polygons: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]], part_hulls: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]], placed_polys_list: collections.abc.Sequence[collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]]], placed_hulls_list: collections.abc.Sequence[collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]]], grid: spatial_grid.SpatialGrid, sheet_world_offset: tuple[float, float], spacing: float = 1, min_area: float = 1, curve_tolerance: float = 0.5) -> tuple[float, float] | None:
@@ -103,6 +107,7 @@ def find_valid_position_scored(ifp_polygons: collections.abc.Sequence[collection
     :param min_area: Minimum overlap area (clipper coords).
     :param curve_tolerance: Curve tolerance for distance filtering.
     :returns: (x, y) position or None.
+    :complexity: O(n * m) for scored candidate search.
     """
 
 def generate_bottom_left_candidates(ifp_bounds: tuple[float, float, float, float], part_bounds: tuple[float, float, float, float], spacing: float) -> list[tuple[float, float]]:
@@ -113,6 +118,7 @@ def generate_bottom_left_candidates(ifp_bounds: tuple[float, float, float, float
     :param part_bounds: Part bounding box (min_x, min_y, max_x, max_y).
     :param spacing: Minimum spacing between parts.
     :returns: List of (x, y) candidate positions.
+    :complexity: O(n) where n = number of grid cells scanned.
     """
 
 def generate_grid_candidates(ifp_bounds: tuple[float, float, float, float], part_bounds: tuple[float, float, float, float], spacing: float) -> list[tuple[float, float]]:
@@ -123,6 +129,7 @@ def generate_grid_candidates(ifp_bounds: tuple[float, float, float, float], part
     :param part_bounds: Part bounding box (min_x, min_y, max_x, max_y).
     :param spacing: Grid spacing.
     :returns: List of (x, y) candidate positions.
+    :complexity: O(n) where n = number of grid cells.
     """
 
 def generate_perimeter_candidates(placed_groups: collections.abc.Sequence[collections.abc.Sequence[list[tuple[float, float]]]], part_bounds: tuple[float, float, float, float], spacing: float) -> list[tuple[float, float]]:
@@ -137,6 +144,7 @@ def generate_perimeter_candidates(placed_groups: collections.abc.Sequence[collec
     :param part_bounds: Part bounding box (min_x, min_y, max_x, max_y).
     :param spacing: Minimum spacing between parts.
     :returns: List of (x, y) candidate positions.
+    :complexity: O(n) where n = number of placed parts.
     """
 
 def place_parts(part_polys: collections.abc.Sequence[collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]]], part_hulls: collections.abc.Sequence[collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]]], sheet_polys: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]], sheet_offsets: collections.abc.Sequence[tuple[float, float]], rotations: collections.abc.Sequence[float], flips_h: collections.abc.Sequence[bool], flips_v: collections.abc.Sequence[bool], spacing: float = 1, min_area: float = 1, curve_tolerance: float = 0.5) -> list[dict]:
@@ -163,5 +171,6 @@ def place_parts(part_polys: collections.abc.Sequence[collections.abc.Sequence[co
     :param curve_tolerance: Curve tolerance for distance filtering.
     :returns: List of dicts, one per sheet, with keys: placements,
               sheet_index, unused_part_indices, fitness.
+    :complexity: O(p * s * n * m) where p = parts, s = sheets.
     """
 

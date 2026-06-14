@@ -26,6 +26,7 @@ def calculate_input_scale(polygons: collections.abc.Sequence[collections.abc.Seq
     :param polygons: List of polygons to scale.
     :param max_int: Maximum integer value for Clipper.
     :returns: Optimal scale factor.
+    :complexity: O(n) time, O(1) space
     """
 
 def convolve_point_sequences(seq_a: collections.abc.Sequence[tuple[float, float]], seq_b: collections.abc.Sequence[tuple[float, float]]) -> list[list[tuple[float, float]]]:
@@ -35,6 +36,7 @@ def convolve_point_sequences(seq_a: collections.abc.Sequence[tuple[float, float]
     :param seq_a: First sequence of points.
     :param seq_b: Second sequence of points.
     :returns: Convolved point sequences.
+    :complexity: O(n * m) time, O(n * m) space
     """
 
 def convolve_two_segments(a1: tuple[float, float], a2: tuple[float, float], b1: tuple[float, float], b2: tuple[float, float]) -> list[tuple[float, float]]:
@@ -46,6 +48,7 @@ def convolve_two_segments(a1: tuple[float, float], a2: tuple[float, float], b1: 
     :param b1: Start point of segment B.
     :param b2: End point of segment B.
     :returns: Convolved point sequence.
+    :complexity: O(1) time, O(1) space
     """
 
 def get_inner_fit_polygon(outer: collections.abc.Sequence[types.Point], inner: collections.abc.Sequence[types.Point]) -> list[types.Polygon]:
@@ -55,6 +58,7 @@ def get_inner_fit_polygon(outer: collections.abc.Sequence[types.Point], inner: c
     :param outer: Outer polygon as (x, y) points.
     :param inner: Inner polygon as (x, y) points.
     :returns: Inner fit polygon.
+    :complexity: O(n * m) time, O(n + m) space
     """
 
 def get_no_fit_polygon(subject: collections.abc.Sequence[types.Point], tool: collections.abc.Sequence[types.Point]) -> list[types.Polygon]:
@@ -64,6 +68,7 @@ def get_no_fit_polygon(subject: collections.abc.Sequence[types.Point], tool: col
     :param subject: Subject polygon as (x, y) points.
     :param tool: Tool polygon as (x, y) points.
     :returns: No-fit polygon.
+    :complexity: O(n * m) time, O(n + m) space
     """
 
 def get_polygon_minkowski_sum_convex(poly_a: collections.abc.Sequence[tuple[float, float]], poly_b: collections.abc.Sequence[tuple[float, float]]) -> list[list[tuple[float, float]]]:
@@ -73,5 +78,6 @@ def get_polygon_minkowski_sum_convex(poly_a: collections.abc.Sequence[tuple[floa
     :param poly_a: First convex polygon as points.
     :param poly_b: Second convex polygon as points.
     :returns: Minkowski sum as list of polygons.
+    :complexity: O(n + m) time, O(n + m) space
     """
 

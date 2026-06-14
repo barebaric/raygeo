@@ -48,6 +48,7 @@ pub fn register(shape_mod: &Bound<'_, PyModule>) -> PyResult<()> {
         :param point: Point (x, y) to test.
         :param rect: Rectangle (x_min, y_min, x_max, y_max).
         :returns: True if the point is inside the rectangle.
+        :complexity: O(1) time, O(1) space
         """
 "#,
     module = "raygeo.geo.shape.rect"
@@ -70,6 +71,7 @@ fn is_point_inside_rect_py(point: Point, rect: (f64, f64, f64, f64)) -> bool {
         :param outer: Outer rectangle (x_min, y_min, x_max, y_max).
         :param inner: Inner rectangle (x_min, y_min, x_max, y_max).
         :returns: True if outer fully contains inner.
+        :complexity: O(1) time, O(1) space
         """
 "#,
     module = "raygeo.geo.shape.rect"
@@ -98,6 +100,7 @@ fn does_rect_contain_rect_py(
         :param r1: First rectangle (x_min, y_min, x_max, y_max).
         :param r2: Second rectangle (x_min, y_min, x_max, y_max).
         :returns: True if the rectangles intersect.
+        :complexity: O(1) time, O(1) space
         """
 "#,
     module = "raygeo.geo.shape.rect"
@@ -126,6 +129,7 @@ fn does_rect_intersect_rect_py(
         :param r1: First rectangle (x_min, y_min, x_max, y_max).
         :param r2: Second rectangle (x_min, y_min, x_max, y_max).
         :returns: True if the rectangles intersect.
+        :complexity: O(1) time, O(1) space
         """
 "#,
     module = "raygeo.geo.shape.rect"
@@ -153,6 +157,7 @@ fn do_rects_intersect_py(
 
         :param geometries: List of Geometry objects.
         :returns: Union bounding rectangle (x_min, y_min, x_max, y_max).
+        :complexity: O(n) time, O(1) space where n is the number of geometries
         """
 "#,
     module = "raygeo.geo.shape.rect"

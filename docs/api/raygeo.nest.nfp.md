@@ -19,11 +19,12 @@ Fast NFP for convex polygon pairs.
 
 **Returns:** List of NFP polygons.
 
-| Parameter     | Type                                            | Description                 |
-| ------------- | ----------------------------------------------- | --------------------------- |
-| `static_poly` | `collections.abc.Sequence[tuple[float, float]]` | Static polygon as points.   |
-| `orbiting`    | `collections.abc.Sequence[tuple[float, float]]` | Orbiting polygon as points. |
-| _Returns_     | `list[list[tuple[float, float]]]`               |                             |
+| Parameter     | Type                                            | Description                        |
+| ------------- | ----------------------------------------------- | ---------------------------------- |
+| `static_poly` | `collections.abc.Sequence[tuple[float, float]]` | Static polygon as points.          |
+| `orbiting`    | `collections.abc.Sequence[tuple[float, float]]` | Orbiting polygon as points.        |
+| _Returns_     | `list[list[tuple[float, float]]]`               |                                    |
+| _Complexity_  |                                                 | O(n + m) for convex polygon pairs. |
 
 ### `nfp_minkowski()`
 
@@ -33,11 +34,12 @@ General NFP using Minkowski sum with Clipper union.
 
 **Returns:** List of NFP polygons.
 
-| Parameter     | Type                                            | Description                 |
-| ------------- | ----------------------------------------------- | --------------------------- |
-| `static_poly` | `collections.abc.Sequence[tuple[float, float]]` | Static polygon as points.   |
-| `orbiting`    | `collections.abc.Sequence[tuple[float, float]]` | Orbiting polygon as points. |
-| _Returns_     | `list[list[tuple[float, float]]]`               |                             |
+| Parameter     | Type                                            | Description                           |
+| ------------- | ----------------------------------------------- | ------------------------------------- |
+| `static_poly` | `collections.abc.Sequence[tuple[float, float]]` | Static polygon as points.             |
+| `orbiting`    | `collections.abc.Sequence[tuple[float, float]]` | Orbiting polygon as points.           |
+| _Returns_     | `list[list[tuple[float, float]]]`               |                                       |
+| _Complexity_  |                                                 | O(n \* m) where n, m = vertex counts. |
 
 ### `no_fit_polygon()`
 
@@ -47,11 +49,12 @@ Compute the No-Fit Polygon (NFP) for two polygons.
 
 **Returns:** List of NFP polygons.
 
-| Parameter     | Type                                    | Description                        |
-| ------------- | --------------------------------------- | ---------------------------------- |
-| `static_poly` | `collections.abc.Sequence[types.Point]` | Static polygon as (x, y) points.   |
-| `orbiting`    | `collections.abc.Sequence[types.Point]` | Orbiting polygon as (x, y) points. |
-| _Returns_     | `list[types.Polygon]`                   |                                    |
+| Parameter     | Type                                    | Description                                             |
+| ------------- | --------------------------------------- | ------------------------------------------------------- |
+| `static_poly` | `collections.abc.Sequence[types.Point]` | Static polygon as (x, y) points.                        |
+| `orbiting`    | `collections.abc.Sequence[types.Point]` | Orbiting polygon as (x, y) points.                      |
+| _Returns_     | `list[types.Polygon]`                   |                                                         |
+| _Complexity_  |                                         | O(n \* m) where n, m = vertex counts of input polygons. |
 
 ### `normalize_polygon()`
 
@@ -61,10 +64,11 @@ Shift a polygon so its bounding box minimum is at (0, 0).
 
 **Returns:** (normalized_polygon, offset_x, offset_y).
 
-| Parameter | Type                                    | Description                     |
-| --------- | --------------------------------------- | ------------------------------- |
-| `poly`    | `collections.abc.Sequence[types.Point]` | Input polygon as (x, y) points. |
-| _Returns_ | `tuple[types.Polygon, float, float]`    |                                 |
+| Parameter    | Type                                    | Description                     |
+| ------------ | --------------------------------------- | ------------------------------- |
+| `poly`       | `collections.abc.Sequence[types.Point]` | Input polygon as (x, y) points. |
+| _Returns_    | `tuple[types.Polygon, float, float]`    |                                 |
+| _Complexity_ |                                         | O(n) where n = vertex count.    |
 
 ### `polygon_to_key()`
 
@@ -74,7 +78,8 @@ Convert a polygon to a rounded integer key for caching.
 
 **Returns:** List of rounded (x, y) integer tuples.
 
-| Parameter | Type                                    | Description                     |
-| --------- | --------------------------------------- | ------------------------------- |
-| `poly`    | `collections.abc.Sequence[types.Point]` | Input polygon as (x, y) points. |
-| _Returns_ | `list[tuple[int, int]]`                 |                                 |
+| Parameter    | Type                                    | Description                     |
+| ------------ | --------------------------------------- | ------------------------------- |
+| `poly`       | `collections.abc.Sequence[types.Point]` | Input polygon as (x, y) points. |
+| _Returns_    | `list[tuple[int, int]]`                 |                                 |
+| _Complexity_ |                                         | O(n) where n = vertex count.    |

@@ -58,6 +58,7 @@ pub fn register(algo_mod: &Bound<'_, PyModule>) -> PyResult<()> {
         :param points: Sequence of 3D points.
         :param tolerance: Collinearity tolerance.
         :returns: True if points are collinear.
+        :complexity: O(n) time, O(1) space
         """
 "#,
     module = "raygeo.geo.algo.fitting"
@@ -87,6 +88,7 @@ fn are_points_collinear_py(points: Vec<PyPoint3D>, tolerance: f64) -> bool {
         :param p2: Second point (x, y) or (x, y, z).
         :param p3: Third point (x, y) or (x, y, z).
         :returns: Tuple of (center, radius) or None.
+        :complexity: O(1) time, O(1) space
         """
 "#,
     module = "raygeo.geo.algo.fitting"
@@ -117,6 +119,7 @@ fn fit_circle_to_3_points_py(
 
         :param points: Sequence of 3D points to fit.
         :returns: Tuple of (center, radius, error) or None.
+        :complexity: O(n) time, O(1) space
         """
 "#,
     module = "raygeo.geo.algo.fitting"
@@ -147,6 +150,7 @@ fn fit_circle_to_points_py(
         :param p2: Second point (x, y) or (x, y, z).
         :param center: Circle center to project.
         :returns: Projected center point (x, y).
+        :complexity: O(1) time, O(1) space
         """
 "#,
     module = "raygeo.geo.algo.fitting"
@@ -179,6 +183,7 @@ fn project_circle_center_to_bisector_py(
         :param geometry: Geometry to flatten.
         :param tolerance: Flattening tolerance.
         :returns: List of flattened point segments.
+        :complexity: O(n + m) time, O(m) space where n is the number of commands and m the number of output points
         """
 "#,
     module = "raygeo.geo.algo.fitting"
@@ -205,6 +210,7 @@ fn flatten_to_points_py(
         :param geometry: Geometry to linearize.
         :param tolerance: Linearization tolerance.
         :returns: Linearized Geometry.
+        :complexity: O(n + m) time, O(m) space where n is the number of commands and m the number of output segments
         """
 "#,
     module = "raygeo.geo.algo.fitting"
@@ -235,6 +241,7 @@ fn linearize_geometry_py(geometry: &Geometry, tolerance: f64) -> Geometry {
         :param start_idx: Start index in the points array.
         :param end_idx: End index in the points array.
         :returns: Geometry of fitted commands.
+        :complexity: O(n log n) average time, O(n) space
         """
 "#,
     module = "raygeo.geo.algo.fitting"
@@ -271,6 +278,7 @@ fn fit_points_recursive_py(
         :param points: Sequence of 3D points to fit.
         :param tolerance: Fitting tolerance.
         :returns: Geometry of fitted commands.
+        :complexity: O(n log n) average time, O(n) space
         """
 "#,
     module = "raygeo.geo.algo.fitting"
@@ -306,6 +314,7 @@ fn fit_points_with_primitives_py(
         :param start: Start index.
         :param end: End index.
         :returns: Tuple of (max_deviation, index_of_max).
+        :complexity: O(n) time, O(1) space
         """
 "#,
     module = "raygeo.geo.algo.fitting"
@@ -337,6 +346,7 @@ fn get_polyline_line_deviation_py(
         :param center: Arc center (x, y).
         :param radius: Arc radius.
         :returns: Maximum deviation from the arc.
+        :complexity: O(n) time, O(1) space
         """
 "#,
     module = "raygeo.geo.algo.fitting"

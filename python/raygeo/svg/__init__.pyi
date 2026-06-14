@@ -24,6 +24,7 @@ def geometry_to_svg_path(geometry: raygeo.Geometry, width: int, height: int) -> 
     :param width: Target pixel width.
     :param height: Target pixel height.
     :returns: SVG path d attribute string.
+    :complexity: O(n) where n = number of commands
     """
 
 def parse_svg_path_data(path_data: str, transform: numpy.typing.NDArray[numpy.float64] | None = None, scale_x: float = 1, scale_y: float = 1) -> list[raygeo.Geometry]:
@@ -38,6 +39,7 @@ def parse_svg_path_data(path_data: str, transform: numpy.typing.NDArray[numpy.fl
     :param scale_x: X-axis scale factor for coordinate transform.
     :param scale_y: Y-axis scale factor for coordinate transform.
     :returns: List of Geometry objects, one per subpath.
+    :complexity: O(n) where n = length of path data
     """
 
 def parse_svg_transform(transform_str: str) -> numpy.typing.NDArray[numpy.float64]:
@@ -48,6 +50,7 @@ def parse_svg_transform(transform_str: str) -> numpy.typing.NDArray[numpy.float6
     
     :param transform_str: SVG transform attribute value.
     :returns: 3x3 affine transformation matrix as numpy array.
+    :complexity: O(1)
     """
 
 def svg_string_to_geometries(svg_str: str, scale_x: float = 1, scale_y: float = 1) -> list[raygeo.Geometry]:
@@ -61,5 +64,6 @@ def svg_string_to_geometries(svg_str: str, scale_x: float = 1, scale_y: float = 
     :param scale_x: X-axis scale factor for coordinate transform.
     :param scale_y: Y-axis scale factor for coordinate transform.
     :returns: List of Geometry objects from all path elements.
+    :complexity: O(n) where n = size of SVG document
     """
 

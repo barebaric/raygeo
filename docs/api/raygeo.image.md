@@ -27,6 +27,7 @@ Apply ordered (Bayer) dithering using a threshold matrix.
 | `invert`       | `bool`                         | If True, invert the output.            |
 | `cell_size`    | `int = 1`                      | Pixel grouping size for the threshold. |
 | _Returns_      | `numpy.NDArray[numpy.uint8]`   |                                        |
+| _Complexity_   |                                | O(w\*h)                                |
 
 ![Bayer 4x4 ordered dithering](images/image-processing-dither-bayer.png)
 
@@ -40,11 +41,12 @@ Apply Floyd-Steinberg error-diffusion dithering.
 
 **Returns:** 2D binary uint8 array (values 0 or 1).
 
-| Parameter   | Type                         | Description                                    |
-| ----------- | ---------------------------- | ---------------------------------------------- |
-| `grayscale` | `numpy.NDArray[numpy.uint8]` | 2D grayscale image as uint8 array.             |
-| `invert`    | `bool`                       | If True, invert the output (swap black/white). |
-| _Returns_   | `numpy.NDArray[numpy.uint8]` |                                                |
+| Parameter    | Type                         | Description                                    |
+| ------------ | ---------------------------- | ---------------------------------------------- |
+| `grayscale`  | `numpy.NDArray[numpy.uint8]` | 2D grayscale image as uint8 array.             |
+| `invert`     | `bool`                       | If True, invert the output (swap black/white). |
+| _Returns_    | `numpy.NDArray[numpy.uint8]` |                                                |
+| _Complexity_ |                              | O(w\*h)                                        |
 
 ![Floyd-Steinberg dithering](images/image-processing-dither-floyd.png)
 
@@ -63,6 +65,7 @@ Remove binary runs shorter than the given minimum.
 | `binary`         | `numpy.NDArray[numpy.uint8]` | 2D binary uint8 array (values 0 or 1). |
 | `min_run_length` | `int`                        | Minimum run length to keep.            |
 | _Returns_        | `numpy.NDArray[numpy.uint8]` |                                        |
+| _Complexity_     |                              | O(w\*h)                                |
 
 ### `compute_auto_levels()`
 
@@ -77,6 +80,7 @@ Compute auto black/white levels from a grayscale image histogram.
 | `gray_image`   | `numpy.NDArray[numpy.uint8]` | Grayscale image as uint8 array.             |
 | `clip_percent` | `float = 1`                  | Percentage of pixels to clip from each end. |
 | _Returns_      | `tuple[int, int]`            |                                             |
+| _Complexity_   |                              | O(n) where n = number of pixels             |
 
 ### `linear_to_srgb()`
 
@@ -86,11 +90,12 @@ Convert linear light values to sRGB pixel values.
 
 **Returns:** Array of sRGB uint8 values with the same shape.
 
-| Parameter | Type                           | Description                                     |
-| --------- | ------------------------------ | ----------------------------------------------- |
-| `array`   | `numpy.NDArray[numpy.float32]` | Input array of linear float32 values in [0, 1]. |
-| `dither`  | `bool = False`                 | Apply dithering to reduce banding artifacts.    |
-| _Returns_ | `numpy.NDArray[numpy.uint8]`   |                                                 |
+| Parameter    | Type                           | Description                                     |
+| ------------ | ------------------------------ | ----------------------------------------------- |
+| `array`      | `numpy.NDArray[numpy.float32]` | Input array of linear float32 values in [0, 1]. |
+| `dither`     | `bool = False`                 | Apply dithering to reduce banding artifacts.    |
+| _Returns_    | `numpy.NDArray[numpy.uint8]`   |                                                 |
+| _Complexity_ |                                | O(n) where n = number of pixels                 |
 
 ### `normalize_grayscale()`
 
@@ -108,6 +113,7 @@ Normalize a grayscale image by stretching the dynamic range.
 | `black_point` | `int = 0`                    | Black point for normalization.        |
 | `white_point` | `int = 255`                  | White point for normalization.        |
 | _Returns_     | `numpy.NDArray[numpy.uint8]` |                                       |
+| _Complexity_  |                              | O(n) where n = number of pixels       |
 
 ### `rgba_to_binary()`
 
@@ -119,15 +125,16 @@ Transparent pixels (alpha == 0) are always treated as white (0).
 
 **Returns:** 2D binary uint8 array (values 0 or 1) with shape (height, width).
 
-| Parameter   | Type                         | Description                                             |
-| ----------- | ---------------------------- | ------------------------------------------------------- |
-| `rgba`      | `numpy.NDArray[numpy.uint8]` | Flattened uint8 buffer of shape (stride _ height _ 4,). |
-| `width`     | `int`                        | Image width in pixels.                                  |
-| `height`    | `int`                        | Image height in pixels.                                 |
-| `stride`    | `int`                        | Row stride in pixels.                                   |
-| `threshold` | `int = 128`                  | Brightness value (0-255) for binarization.              |
-| `invert`    | `bool = False`               | If True, pixels above threshold become black (1).       |
-| _Returns_   | `numpy.NDArray[numpy.uint8]` |                                                         |
+| Parameter    | Type                         | Description                                             |
+| ------------ | ---------------------------- | ------------------------------------------------------- |
+| `rgba`       | `numpy.NDArray[numpy.uint8]` | Flattened uint8 buffer of shape (stride _ height _ 4,). |
+| `width`      | `int`                        | Image width in pixels.                                  |
+| `height`     | `int`                        | Image height in pixels.                                 |
+| `stride`     | `int`                        | Row stride in pixels.                                   |
+| `threshold`  | `int = 128`                  | Brightness value (0-255) for binarization.              |
+| `invert`     | `bool = False`               | If True, pixels above threshold become black (1).       |
+| _Returns_    | `numpy.NDArray[numpy.uint8]` |                                                         |
+| _Complexity_ |                              | O(w\*h)                                                 |
 
 ### `rgba_to_grayscale()`
 
@@ -140,13 +147,14 @@ calculation using BT.601 luminance weights.
 
 **Returns:** Tuple of (grayscale_uint8, alpha_float32) arrays, each (height, width).
 
-| Parameter | Type                                                              | Description                                             |
-| --------- | ----------------------------------------------------------------- | ------------------------------------------------------- |
-| `rgba`    | `numpy.NDArray[numpy.uint8]`                                      | Flattened uint8 buffer of shape (stride _ height _ 4,). |
-| `width`   | `int`                                                             | Image width in pixels.                                  |
-| `height`  | `int`                                                             | Image height in pixels.                                 |
-| `stride`  | `int`                                                             | Row stride in pixels (may be larger than width).        |
-| _Returns_ | `tuple[numpy.NDArray[numpy.uint8], numpy.NDArray[numpy.float32]]` |                                                         |
+| Parameter    | Type                                                              | Description                                             |
+| ------------ | ----------------------------------------------------------------- | ------------------------------------------------------- |
+| `rgba`       | `numpy.NDArray[numpy.uint8]`                                      | Flattened uint8 buffer of shape (stride _ height _ 4,). |
+| `width`      | `int`                                                             | Image width in pixels.                                  |
+| `height`     | `int`                                                             | Image height in pixels.                                 |
+| `stride`     | `int`                                                             | Row stride in pixels (may be larger than width).        |
+| _Returns_    | `tuple[numpy.NDArray[numpy.uint8], numpy.NDArray[numpy.float32]]` |                                                         |
+| _Complexity_ |                                                                   | O(w\*h)                                                 |
 
 ### `rgba_to_grayscale_inplace()`
 
@@ -157,13 +165,14 @@ Convert raw BGRA pixel buffer to grayscale in place.
 Modifies the buffer directly, converting BGR channels to grayscale while preserving the alpha
 channel.
 
-| Parameter | Type                         | Description                                             |
-| --------- | ---------------------------- | ------------------------------------------------------- |
-| `rgba`    | `numpy.NDArray[numpy.uint8]` | Flattened uint8 buffer of shape (stride _ height _ 4,). |
-| `width`   | `int`                        | Image width in pixels.                                  |
-| `height`  | `int`                        | Image height in pixels.                                 |
-| `stride`  | `int`                        | Row stride in pixels.                                   |
-| _Returns_ | `None`                       |                                                         |
+| Parameter    | Type                         | Description                                             |
+| ------------ | ---------------------------- | ------------------------------------------------------- |
+| `rgba`       | `numpy.NDArray[numpy.uint8]` | Flattened uint8 buffer of shape (stride _ height _ 4,). |
+| `width`      | `int`                        | Image width in pixels.                                  |
+| `height`     | `int`                        | Image height in pixels.                                 |
+| `stride`     | `int`                        | Row stride in pixels.                                   |
+| _Returns_    | `None`                       |                                                         |
+| _Complexity_ |                              | O(w\*h)                                                 |
 
 ### `srgb_to_linear()`
 
@@ -173,10 +182,11 @@ Convert sRGB pixel values to linear light values.
 
 **Returns:** Array of linear float32 values with the same shape.
 
-| Parameter | Type                           | Description                       |
-| --------- | ------------------------------ | --------------------------------- |
-| `array`   | `numpy.NDArray[numpy.uint8]`   | Input array of sRGB uint8 values. |
-| _Returns_ | `numpy.NDArray[numpy.float32]` |                                   |
+| Parameter    | Type                           | Description                       |
+| ------------ | ------------------------------ | --------------------------------- |
+| `array`      | `numpy.NDArray[numpy.uint8]`   | Input array of sRGB uint8 values. |
+| _Returns_    | `numpy.NDArray[numpy.float32]` |                                   |
+| _Complexity_ |                                | O(n) where n = number of pixels   |
 
 ![sRGB to linear round-trip](images/image-processing-srgb.png)
 

@@ -20,6 +20,7 @@ def compute_segment_delta(start: tuple[float, float, float], end: tuple[float, f
     :param start: Starting point (x, y, z).
     :param end: Ending point (x, y, z).
     :returns: (dx, dy, dz, len_sq).
+    :complexity: O(1) time, O(1) space
     """
 
 def compute_t_range(origin: tuple[float, float, float], new_start: tuple[float, float, float], new_end: tuple[float, float, float], delta: tuple[float, float, float, float]) -> tuple[float, float]:
@@ -31,6 +32,7 @@ def compute_t_range(origin: tuple[float, float, float], new_start: tuple[float, 
     :param new_end: End of clipped sub-segment (x, y, z).
     :param delta: Segment delta from compute_segment_delta.
     :returns: (t_start, t_end) in [0, 1].
+    :complexity: O(1) time, O(1) space
     """
 
 def project_t_along_segment(origin: tuple[float, float, float], point: tuple[float, float, float], delta: tuple[float, float, float, float]) -> float:
@@ -41,6 +43,7 @@ def project_t_along_segment(origin: tuple[float, float, float], point: tuple[flo
     :param point: Point to project (x, y, z).
     :param delta: Segment delta from compute_segment_delta.
     :returns: Parameter t clamped to [0, 1].
+    :complexity: O(1) time, O(1) space
     """
 
 def slice_scanline_data(data: list[int], t_start: float, t_end: float) -> list[int]:
@@ -51,6 +54,7 @@ def slice_scanline_data(data: list[int], t_start: float, t_end: float) -> list[i
     :param t_start: Start parameter in [0, 1].
     :param t_end: End parameter in [0, 1].
     :returns: Sliced power values.
+    :complexity: O(n) time, O(n) space where n is the length of the data slice
     """
 
 def solve_quadratic(a: float, b: float, c: float) -> tuple[float | None, float | None]:
@@ -61,5 +65,6 @@ def solve_quadratic(a: float, b: float, c: float) -> tuple[float | None, float |
     :param b: Linear coefficient.
     :param c: Constant term.
     :returns: (root1, root2), each None if no real root.
+    :complexity: O(1) time, O(1) space
     """
 

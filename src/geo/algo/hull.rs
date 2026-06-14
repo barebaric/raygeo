@@ -119,6 +119,9 @@ pub fn get_enclosing_hull(
     }
 }
 
+/// Extracts the convex hull of each foreground region in a binary image.
+/// Pixels with value 0 are treated as background; non-zero values are foreground.
+/// Returns a list of hulls (each hull is a `Vec<Point>` ordered counter-clockwise).
 pub fn get_hulls_from_image(
     image: &[u8],
     width: usize,

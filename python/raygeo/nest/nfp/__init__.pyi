@@ -24,6 +24,7 @@ def nfp_convex_fast(static_poly: collections.abc.Sequence[tuple[float, float]], 
     :param static_poly: Static polygon as points.
     :param orbiting: Orbiting polygon as points.
     :returns: List of NFP polygons.
+    :complexity: O(n + m) for convex polygon pairs.
     """
 
 def nfp_minkowski(static_poly: collections.abc.Sequence[tuple[float, float]], orbiting: collections.abc.Sequence[tuple[float, float]]) -> list[list[tuple[float, float]]]:
@@ -33,6 +34,7 @@ def nfp_minkowski(static_poly: collections.abc.Sequence[tuple[float, float]], or
     :param static_poly: Static polygon as points.
     :param orbiting: Orbiting polygon as points.
     :returns: List of NFP polygons.
+    :complexity: O(n * m) where n, m = vertex counts.
     """
 
 def no_fit_polygon(static_poly: collections.abc.Sequence[types.Point], orbiting: collections.abc.Sequence[types.Point]) -> list[types.Polygon]:
@@ -42,6 +44,7 @@ def no_fit_polygon(static_poly: collections.abc.Sequence[types.Point], orbiting:
     :param static_poly: Static polygon as (x, y) points.
     :param orbiting: Orbiting polygon as (x, y) points.
     :returns: List of NFP polygons.
+    :complexity: O(n * m) where n, m = vertex counts of input polygons.
     """
 
 def normalize_polygon(poly: collections.abc.Sequence[types.Point]) -> tuple[types.Polygon, float, float]:
@@ -50,6 +53,7 @@ def normalize_polygon(poly: collections.abc.Sequence[types.Point]) -> tuple[type
     
     :param poly: Input polygon as (x, y) points.
     :returns: (normalized_polygon, offset_x, offset_y).
+    :complexity: O(n) where n = vertex count.
     """
 
 def polygon_to_key(poly: collections.abc.Sequence[types.Point]) -> list[tuple[int, int]]:
@@ -58,5 +62,6 @@ def polygon_to_key(poly: collections.abc.Sequence[types.Point]) -> list[tuple[in
     
     :param poly: Input polygon as (x, y) points.
     :returns: List of rounded (x, y) integer tuples.
+    :complexity: O(n) where n = vertex count.
     """
 

@@ -20,5 +20,6 @@ def simplify_polyline(points: collections.abc.Sequence[types.Point], tolerance: 
     :param points: Sequence of (x, y) points.
     :param tolerance: Simplification tolerance.
     :returns: Simplified point sequence.
+    :complexity: O(n log n) average time, O(n) space
     """
 

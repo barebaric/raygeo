@@ -21,6 +21,7 @@ def get_concave_hull(boolean_image: numpy.ndarray, gravity: float = 0.1) -> rayg
     :param boolean_image: 2D boolean array.
     :param gravity: Shrink-wrap factor 0.0-1.0. 0 gives convex hull.
     :returns: Concave hull as Geometry in pixel coords, or None.
+    :complexity: O(w*h + n log n + n * g) time, O(n) space where w*h is the image size, n the number of contour points, and g the number of gravity iterations
     """
 
 def get_enclosing_hull(boolean_image: numpy.ndarray) -> raygeo.Geometry | None:
@@ -29,6 +30,7 @@ def get_enclosing_hull(boolean_image: numpy.ndarray) -> raygeo.Geometry | None:
     
     :param boolean_image: 2D boolean array.
     :returns: Convex hull as Geometry in pixel coords, or None.
+    :complexity: O(w*h + n log n) time, O(n) space where w*h is the image size and n the number of contour points
     """
 
 def get_hulls_from_image(boolean_image: numpy.ndarray) -> list[raygeo.Geometry]:
@@ -37,5 +39,6 @@ def get_hulls_from_image(boolean_image: numpy.ndarray) -> list[raygeo.Geometry]:
     
     :param boolean_image: 2D boolean array.
     :returns: List of Geometry objects in pixel coords.
+    :complexity: O(w*h + n log n) time, O(n) space where w*h is the image size and n the total number of contour points
     """
 

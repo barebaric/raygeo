@@ -54,6 +54,7 @@ pub fn register(shape_mod: &Bound<'_, PyModule>) -> PyResult<()> {
         :param c2: Center of second circle (x, y).
         :param r2: Radius of second circle.
         :returns: List of intersection points (x, y).
+        :complexity: O(1) time, O(1) space
         """
 "#,
     module = "raygeo.geo.shape.circle"
@@ -85,6 +86,7 @@ fn get_circle_circle_intersections_py(
         :param center: Circle center (x, y).
         :param radius: Circle radius.
         :returns: List of intersection points (x, y).
+        :complexity: O(1) time, O(1) space
         """
 "#,
     module = "raygeo.geo.shape.circle"
@@ -114,6 +116,7 @@ fn get_line_circle_intersections_py(
         :param radius: Circle radius.
         :param rect: Rectangle (x_min, y_min, x_max, y_max).
         :returns: True if the circle is fully inside the rectangle.
+        :complexity: O(1) time, O(1) space
         """
 "#,
     module = "raygeo.geo.shape.circle"
@@ -142,6 +145,7 @@ fn is_circle_inside_rect_py(
         :param radius: Circle radius.
         :param rect: Rectangle (x_min, y_min, x_max, y_max).
         :returns: True if the circle intersects the rectangle.
+        :complexity: O(1) time, O(1) space
         """
 "#,
     module = "raygeo.geo.shape.circle"
@@ -176,6 +180,7 @@ fn does_circle_intersect_rect_py(
         :param circle_center: Circle center (x, y).
         :param circle_radius: Circle radius.
         :returns: True if the line segment intersects the circle.
+        :complexity: O(1) time, O(1) space
         """
 "#,
     module = "raygeo.geo.shape.circle"
@@ -206,6 +211,7 @@ fn line_segment_intersects_circle_py(
         :param center: Circle center (x, y).
         :param radius: Circle radius.
         :returns: Projected point on the circle (x, y).
+        :complexity: O(1) time, O(1) space
         """
 "#,
     module = "raygeo.geo.shape.circle"

@@ -28,6 +28,7 @@ sums, both for convex and general polygon pairs.
         :param static_poly: Static polygon as (x, y) points.
         :param orbiting: Orbiting polygon as (x, y) points.
         :returns: List of NFP polygons.
+        :complexity: O(n * m) where n, m = vertex counts of input polygons.
         """
 "#,
     module = "raygeo.nest.nfp"
@@ -53,6 +54,7 @@ fn no_fit_polygon_py(
         :param static_poly: Static polygon as points.
         :param orbiting: Orbiting polygon as points.
         :returns: List of NFP polygons.
+        :complexity: O(n + m) for convex polygon pairs.
         """
 "#,
     module = "raygeo.nest.nfp"
@@ -81,6 +83,7 @@ fn nfp_convex_fast_py(
         :param static_poly: Static polygon as points.
         :param orbiting: Orbiting polygon as points.
         :returns: List of NFP polygons.
+        :complexity: O(n * m) where n, m = vertex counts.
         """
 "#,
     module = "raygeo.nest.nfp"
@@ -105,6 +108,7 @@ fn nfp_minkowski_py(
 
         :param poly: Input polygon as (x, y) points.
         :returns: (normalized_polygon, offset_x, offset_y).
+        :complexity: O(n) where n = vertex count.
         """
 "#,
     module = "raygeo.nest.nfp"
@@ -126,6 +130,7 @@ fn normalize_polygon_py(poly: Vec<PyPoint2D>) -> (Vec<Point>, f64, f64) {
 
         :param poly: Input polygon as (x, y) points.
         :returns: List of rounded (x, y) integer tuples.
+        :complexity: O(n) where n = vertex count.
         """
 "#,
     module = "raygeo.nest.nfp"

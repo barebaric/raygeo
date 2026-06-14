@@ -99,14 +99,23 @@ class Ops:
     def scanline_count(self) -> builtins.int:
         r"""
         Return the number of scanline commands in the sequence.
+        
+        :complexity: O(n) time, O(1) space
         """
     @property
     def last_move_to(self) -> builtins.tuple[float, float, float]:
         r"""
         The last ``(x, y, z)`` endpoint from a MoveTo command.
+        
+        :complexity: O(1) time, O(1) space
         """
     @last_move_to.setter
-    def last_move_to(self, value: builtins.tuple[float, float, float]) -> None: ...
+    def last_move_to(self, value: builtins.tuple[float, float, float]) -> None:
+        r"""
+        Set the last move-to position.
+        
+        :complexity: O(1) time, O(1) space
+        """
     def transform(self, matrix: geo.types.TransformMatrix) -> None:
         r"""
         Apply a 4x4 affine transformation matrix to all geometry.
@@ -114,30 +123,43 @@ class Ops:
         See ``geo.types.TransformMatrix`` for the matrix layout.
         
         :param matrix: A 4x4 affine transformation matrix.
+        :complexity: O(n) time, O(n) space
         """
     def __new__(cls) -> Ops:
         r"""
         Create a new, empty Ops sequence.
+        
+        :complexity: O(1) time, O(1) space
         """
     def __len__(self) -> builtins.int:
         r"""
         Return the number of commands.
+        
+        :complexity: O(1) time, O(1) space
         """
     def __add__(self, other: Ops) -> Ops:
         r"""
         Concatenate two Ops sequences (``ops1 + ops2``).
+        
+        :complexity: O(n) time, O(n) space
         """
     def __mul__(self, count: builtins.int) -> Ops:
         r"""
         Repeat the ops sequence *count* times (``ops * n``).
+        
+        :complexity: O(n * k) time, O(n * k) space where k is the repeat count
         """
     def is_empty(self) -> builtins.bool:
         r"""
         Check if the ops sequence is empty.
+        
+        :complexity: O(1) time, O(1) space
         """
     def len(self) -> builtins.int:
         r"""
         Return the number of commands.
+        
+        :complexity: O(1) time, O(1) space
         """
     def command_type(self, idx: builtins.int) -> types.CommandType:
         r"""
@@ -145,6 +167,7 @@ class Ops:
         
         :param idx: Command index (negative = from end).
         :returns: The :class:`CommandType` of the command.
+        :complexity: O(1) time, O(1) space
         """
     def category(self, idx: builtins.int) -> types.CommandCategory:
         r"""
@@ -152,6 +175,7 @@ class Ops:
         
         :param idx: Command index (negative = from end).
         :returns: The category (MOVING, STATE, or MARKER).
+        :complexity: O(1) time, O(1) space
         """
     def is_travel(self, idx: builtins.int) -> builtins.bool:
         r"""
@@ -159,6 +183,7 @@ class Ops:
         
         :param idx: Command index.
         :returns: True if the command is a travel move.
+        :complexity: O(1) time, O(1) space
         """
     def is_cutting(self, idx: builtins.int) -> builtins.bool:
         r"""
@@ -166,6 +191,7 @@ class Ops:
         
         :param idx: Command index.
         :returns: True if the command is a cutting move.
+        :complexity: O(1) time, O(1) space
         """
     def is_state(self, idx: builtins.int) -> builtins.bool:
         r"""
@@ -173,6 +199,7 @@ class Ops:
         
         :param idx: Command index.
         :returns: True if the command modifies machine state.
+        :complexity: O(1) time, O(1) space
         """
     def is_marker(self, idx: builtins.int) -> builtins.bool:
         r"""
@@ -180,6 +207,7 @@ class Ops:
         
         :param idx: Command index.
         :returns: True if the command is a structural marker (JobStart, LayerStart, etc.).
+        :complexity: O(1) time, O(1) space
         """
     def is_scanline(self, idx: builtins.int) -> builtins.bool:
         r"""
@@ -187,6 +215,7 @@ class Ops:
         
         :param idx: Command index.
         :returns: True if the command is a ScanLine power command.
+        :complexity: O(1) time, O(1) space
         """
     def indices_of(self, ct: types.CommandType) -> builtins.list[builtins.int]:
         r"""
@@ -194,6 +223,7 @@ class Ops:
         
         :param ct: The :class:`CommandType` to search for.
         :returns: List of matching command indices.
+        :complexity: O(n) time, O(n) space
         """
     def distance_at(self, idx: builtins.int, last_point: typing.Optional[tuple[builtins.float, builtins.float, builtins.float]] = None) -> builtins.float:
         r"""
@@ -202,14 +232,19 @@ class Ops:
         :param idx: Command index.
         :param last_point: Optional starting point override.
         :returns: Cumulative distance.
+        :complexity: O(1) time, O(1) space
         """
     def distance(self) -> builtins.float:
         r"""
         Compute the total distance of all commands.
+        
+        :complexity: O(n) time, O(1) space
         """
     def cut_distance(self) -> builtins.float:
         r"""
         Compute the total cutting distance (excluding travel moves).
+        
+        :complexity: O(n) time, O(1) space
         """
     def endpoint(self, idx: builtins.int) -> builtins.tuple[float, float, float]:
         r"""
@@ -217,6 +252,7 @@ class Ops:
         
         :param idx: Command index (negative = from end).
         :returns: ``(x, y, z)`` tuple.
+        :complexity: O(1) time, O(1) space
         """
     def arc_params(self, idx: builtins.int) -> tuple[builtins.float, builtins.float, builtins.bool]:
         r"""
@@ -225,6 +261,7 @@ class Ops:
         :param idx: Command index.
         :returns: ``(i, j, clockwise)`` tuple.
         :raises TypeError: If the command is not an ArcTo.
+        :complexity: O(1) time, O(1) space
         """
     def bezier_params(self, idx: builtins.int) -> tuple[tuple[float, float, float], tuple[float, float, float]]:
         r"""
@@ -233,6 +270,7 @@ class Ops:
         :param idx: Command index.
         :returns: ``((c1x, c1y, c1z), (c2x, c2y, c2z))`` control points.
         :raises TypeError: If the command is not a BezierTo.
+        :complexity: O(1) time, O(1) space
         """
     def quadratic_bezier_params(self, idx: builtins.int) -> builtins.tuple[float, float, float]:
         r"""
@@ -241,6 +279,7 @@ class Ops:
         :param idx: Command index.
         :returns: ``(cx, cy, cz)`` control point.
         :raises TypeError: If the command is not a QuadraticBezierTo.
+        :complexity: O(1) time, O(1) space
         """
     def scanline_data(self, idx: builtins.int) -> bytes:
         r"""
@@ -248,6 +287,7 @@ class Ops:
         
         :param idx: Command index.
         :returns: Raw bytes of scanline power data.
+        :complexity: O(1) time, O(1) space
         """
     def dwell_duration(self, idx: builtins.int) -> builtins.float:
         r"""
@@ -256,6 +296,7 @@ class Ops:
         :param idx: Command index.
         :returns: Duration in milliseconds.
         :raises TypeError: If the command is not a Dwell.
+        :complexity: O(1) time, O(1) space
         """
     def power(self, idx: builtins.int) -> builtins.float:
         r"""
@@ -264,6 +305,7 @@ class Ops:
         :param idx: Command index.
         :returns: Power level (0.0–1.0 typically).
         :raises TypeError: If the command is not a SetPower.
+        :complexity: O(1) time, O(1) space
         """
     def speed(self, idx: builtins.int) -> builtins.int:
         r"""
@@ -272,6 +314,7 @@ class Ops:
         :param idx: Command index.
         :returns: Speed in mm/s.
         :raises TypeError: If the command is not a speed command.
+        :complexity: O(1) time, O(1) space
         """
     def frequency(self, idx: builtins.int) -> builtins.int:
         r"""
@@ -280,6 +323,7 @@ class Ops:
         :param idx: Command index.
         :returns: Frequency in Hz.
         :raises TypeError: If the command is not a SetFrequency.
+        :complexity: O(1) time, O(1) space
         """
     def pulse_width(self, idx: builtins.int) -> builtins.float:
         r"""
@@ -288,6 +332,7 @@ class Ops:
         :param idx: Command index.
         :returns: Pulse width in microseconds.
         :raises TypeError: If the command is not a SetPulseWidth.
+        :complexity: O(1) time, O(1) space
         """
     def laser_uid(self, idx: builtins.int) -> builtins.str:
         r"""
@@ -296,6 +341,7 @@ class Ops:
         :param idx: Command index.
         :returns: The laser source identifier.
         :raises TypeError: If the command is not a SetLaser.
+        :complexity: O(1) time, O(1) space
         """
     def layer_uid(self, idx: builtins.int) -> builtins.str:
         r"""
@@ -304,6 +350,7 @@ class Ops:
         :param idx: Command index.
         :returns: The layer identifier.
         :raises TypeError: If the command is not a Layer command.
+        :complexity: O(1) time, O(1) space
         """
     def workpiece_uid(self, idx: builtins.int) -> builtins.str:
         r"""
@@ -312,6 +359,7 @@ class Ops:
         :param idx: Command index.
         :returns: The workpiece identifier.
         :raises TypeError: If the command is not a Workpiece command.
+        :complexity: O(1) time, O(1) space
         """
     def section_params(self, idx: builtins.int) -> tuple[types.SectionType, typing.Optional[builtins.str]]:
         r"""
@@ -320,6 +368,7 @@ class Ops:
         :param idx: Command index.
         :returns: ``(SectionType, Optional[workpiece_uid])``.
         :raises TypeError: If the command is not an OpsSectionStart or OpsSectionEnd.
+        :complexity: O(1) time, O(1) space
         """
     def extra_axes(self, idx: builtins.int) -> typing.Optional[dict]:
         r"""
@@ -327,6 +376,7 @@ class Ops:
         
         :param idx: Command index.
         :returns: Dict mapping axis names to values, or None.
+        :complexity: O(1) time, O(1) space
         """
     def state(self, idx: builtins.int) -> typing.Optional[state.State]:
         r"""
@@ -334,6 +384,7 @@ class Ops:
         
         :param idx: Command index.
         :returns: The :class:`State` at that index, or None.
+        :complexity: O(1) time, O(1) space
         """
     def move_to(self, x: builtins.float, y: builtins.float, z: builtins.float = 0.0, extra: typing.Optional[dict] = None) -> None:
         r"""
@@ -343,6 +394,7 @@ class Ops:
         :param y: Y coordinate.
         :param z: Z coordinate (default 0.0).
         :param extra: Optional dict of extra axis values.
+        :complexity: O(1) time, O(1) space
         """
     def line_to(self, x: builtins.float, y: builtins.float, z: builtins.float = 0.0, extra: typing.Optional[dict] = None) -> None:
         r"""
@@ -352,10 +404,13 @@ class Ops:
         :param y: Y coordinate.
         :param z: Z coordinate (default 0.0).
         :param extra: Optional dict of extra axis values.
+        :complexity: O(1) time, O(1) space
         """
     def close_path(self) -> None:
         r"""
         Close the current sub-path by adding a line back to the start.
+        
+        :complexity: O(1) time, O(1) space
         """
     def arc_to(self, x: builtins.float, y: builtins.float, i: builtins.float, j: builtins.float, clockwise: builtins.bool = True, z: builtins.float = 0.0, extra: typing.Optional[dict] = None) -> None:
         r"""
@@ -368,6 +423,7 @@ class Ops:
         :param clockwise: Whether the arc is clockwise (default True).
         :param z: End Z coordinate (default 0.0).
         :param extra: Optional dict of extra axis values.
+        :complexity: O(1) time, O(1) space
         """
     def bezier_to(self, control1: builtins.tuple[float, float, float], control2: builtins.tuple[float, float, float], end: builtins.tuple[float, float, float], extra: typing.Optional[dict] = None) -> None:
         r"""
@@ -377,6 +433,7 @@ class Ops:
         :param control2: Second control point ``(x, y, z)``.
         :param end: End point ``(x, y, z)``.
         :param extra: Optional dict of extra axis values.
+        :complexity: O(1) time, O(1) space
         """
     def quadratic_bezier_to(self, control: builtins.tuple[float, float, float], end: builtins.tuple[float, float, float], extra: typing.Optional[dict] = None) -> None:
         r"""
@@ -385,54 +442,63 @@ class Ops:
         :param control: Control point ``(x, y, z)``.
         :param end: End point ``(x, y, z)``.
         :param extra: Optional dict of extra axis values.
+        :complexity: O(1) time, O(1) space
         """
     def set_power(self, power: builtins.float) -> None:
         r"""
         Set the laser power for subsequent commands.
         
         :param power: Power level (0.0–1.0).
+        :complexity: O(1) time, O(1) space
         """
     def set_cut_speed(self, speed: builtins.float) -> None:
         r"""
         Set the cutting speed for subsequent commands.
         
         :param speed: Cutting speed in units per second.
+        :complexity: O(1) time, O(1) space
         """
     def set_travel_speed(self, speed: builtins.float) -> None:
         r"""
         Set the travel (rapid) speed for subsequent commands.
         
         :param speed: Travel speed in units per second.
+        :complexity: O(1) time, O(1) space
         """
     def dwell(self, duration_ms: builtins.float) -> None:
         r"""
         Pause execution for a given duration.
         
         :param duration_ms: Dwell duration in milliseconds.
+        :complexity: O(1) time, O(1) space
         """
     def enable_air_assist(self, enabled: builtins.bool = True) -> None:
         r"""
         Enable air assist for subsequent cutting.
         
         :param enabled: Whether to enable air assist (default True).
+        :complexity: O(1) time, O(1) space
         """
     def set_laser(self, laser_uid: builtins.str) -> None:
         r"""
         Switch to a specific laser by UID.
         
         :param laser_uid: The laser identifier.
+        :complexity: O(1) time, O(1) space
         """
     def set_frequency(self, frequency: builtins.int) -> None:
         r"""
         Set the laser pulse frequency.
         
         :param frequency: Frequency in Hz.
+        :complexity: O(1) time, O(1) space
         """
     def set_pulse_width(self, pulse_width: builtins.float) -> None:
         r"""
         Set the laser pulse width.
         
         :param pulse_width: Pulse width in microseconds.
+        :complexity: O(1) time, O(1) space
         """
     def scan_to(self, x: builtins.float, y: builtins.float, z: builtins.float = 0.0, power_values: typing.Optional[typing.Sequence[builtins.int]] = None, extra: typing.Optional[dict] = None) -> None:
         r"""
@@ -443,38 +509,47 @@ class Ops:
         :param z: End Z coordinate (default 0.0).
         :param power_values: Optional per-pixel 8-bit power values.
         :param extra: Optional dict of extra axis values.
+        :complexity: O(1) time, O(1) space
         """
     def job_start(self) -> None:
         r"""
         Mark the start of a job.
+        
+        :complexity: O(1) time, O(1) space
         """
     def job_end(self) -> None:
         r"""
         Mark the end of a job.
+        
+        :complexity: O(1) time, O(1) space
         """
     def layer_start(self, layer_uid: builtins.str) -> None:
         r"""
         Mark the start of a layer.
         
         :param layer_uid: The layer identifier.
+        :complexity: O(1) time, O(1) space
         """
     def layer_end(self, layer_uid: builtins.str) -> None:
         r"""
         Mark the end of a layer.
         
         :param layer_uid: The layer identifier.
+        :complexity: O(1) time, O(1) space
         """
     def workpiece_start(self, workpiece_uid: builtins.str) -> None:
         r"""
         Mark the start of a workpiece.
         
         :param workpiece_uid: The workpiece identifier.
+        :complexity: O(1) time, O(1) space
         """
     def workpiece_end(self, workpiece_uid: builtins.str) -> None:
         r"""
         Mark the end of a workpiece.
         
         :param workpiece_uid: The workpiece identifier.
+        :complexity: O(1) time, O(1) space
         """
     def ops_section_start(self, section_type: types.SectionType, workpiece_uid: builtins.str) -> None:
         r"""
@@ -482,24 +557,32 @@ class Ops:
         
         :param section_type: The type of section.
         :param workpiece_uid: The workpiece identifier.
+        :complexity: O(1) time, O(1) space
         """
     def ops_section_end(self, section_type: types.SectionType) -> None:
         r"""
         Mark the end of an ops section.
         
         :param section_type: The type of section.
+        :complexity: O(1) time, O(1) space
         """
     def copy(self) -> Ops:
         r"""
         Return a deep copy of this Ops sequence.
+        
+        :complexity: O(n) time, O(n) space
         """
     def __copy__(self) -> Ops:
         r"""
         Shallow copy (same as :meth:`copy` since Ops is immutable).
+        
+        :complexity: O(n) time, O(n) space
         """
     def __deepcopy__(self, _memo: typing.Any) -> Ops:
         r"""
         Deep copy (same as :meth:`copy` since Ops is immutable).
+        
+        :complexity: O(n) time, O(n) space
         """
     def copy_command_from(self, source: Ops, idx: builtins.int) -> None:
         r"""
@@ -507,6 +590,7 @@ class Ops:
         
         :param source: The source Ops sequence.
         :param idx: Index of the command to copy.
+        :complexity: O(1) time, O(1) space
         """
     def transfer_command_from(self, source: Ops, idx: builtins.int) -> None:
         r"""
@@ -514,40 +598,48 @@ class Ops:
         
         :param source: The source Ops sequence.
         :param idx: Index of the command to transfer.
+        :complexity: O(1) time, O(1) space
         """
     def extend(self, other: typing.Optional[Ops]) -> None:
         r"""
         Extend this Ops sequence with commands from another.
         
         :param other: The other Ops sequence (or None for no-op).
+        :complexity: O(n) time, O(n) space
         """
     def clear(self) -> None:
         r"""
         Remove all commands from this Ops sequence.
+        
+        :complexity: O(1) time, O(1) space
         """
     def subpath_indices(self) -> builtins.list[builtins.list[builtins.int]]:
         r"""
         Return index ranges for each subpath.
         
         :returns: A list of index lists, one per subpath.
+        :complexity: O(n) time, O(n) space
         """
     def split_into_subpaths(self) -> builtins.list[Ops]:
         r"""
         Split this Ops sequence into separate subpaths.
         
         :returns: A list of Ops sequences, one per subpath.
+        :complexity: O(n) time, O(n) space
         """
     def flip_ops(self) -> Ops:
         r"""
         Reverse the order of subpaths.
         
         :returns: A new Ops with subpath order reversed.
+        :complexity: O(n) time, O(n) space
         """
     def without_state(self) -> Ops:
         r"""
         Return a copy with all state commands removed.
         
         :returns: A new Ops containing only moving commands.
+        :complexity: O(n) time, O(n) space
         """
     def state_at(self, idx: builtins.int) -> state.State:
         r"""
@@ -556,6 +648,7 @@ class Ops:
         :param idx: The command index.
         :returns: The state at that point.
         :raises IndexError: If the index is out of range.
+        :complexity: O(1) time, O(1) space
         """
     def sub_ops(self, indices: typing.Sequence[builtins.int]) -> Ops:
         r"""
@@ -563,18 +656,21 @@ class Ops:
         
         :param indices: List of command indices to extract.
         :returns: A new Ops sequence containing only the specified commands.
+        :complexity: O(n) time, O(n) space
         """
     def replace_all(self, source: Ops) -> None:
         r"""
         Replace all commands in this sequence with those from another.
         
         :param source: The source Ops sequence.
+        :complexity: O(n) time, O(n) space
         """
     def replace_with(self, source: Ops) -> None:
         r"""
         Replace the internal buffer of this sequence with a copy from another.
         
         :param source: The source Ops sequence.
+        :complexity: O(n) time, O(n) space
         """
     @classmethod
     def from_geometry(cls, geometry: geo.Geometry) -> Ops:
@@ -582,22 +678,27 @@ class Ops:
         Create an Ops sequence from a Geometry.
         
         :param geometry: The geometry to convert.
+        :complexity: O(n) time, O(n) space
         """
     def to_geometry(self) -> geo.Geometry:
         r"""
         Convert this Ops sequence back into a Geometry.
         
         :returns: A Geometry representing the same paths.
+        :complexity: O(n) time, O(n) space
         """
     def preload_state(self) -> None:
         r"""
         Pre-compute and store the accumulated state at each moving command.
+        
+        :complexity: O(n) time, O(n) space
         """
     def set_state_on_moving(self, state: state.State) -> None:
         r"""
         Apply a state to all moving commands without an explicit state.
         
         :param state: The state to apply.
+        :complexity: O(n) time, O(1) space
         """
     def set_state_at(self, idx: builtins.int, state: state.State) -> None:
         r"""
@@ -605,10 +706,13 @@ class Ops:
         
         :param idx: The command index.
         :param state: The new state.
+        :complexity: O(1) time, O(1) space
         """
     def dump(self) -> None:
         r"""
         Print a human-readable dump of all commands.
+        
+        :complexity: O(n) time, O(n) space
         """
     def inspect(self, idx: builtins.int) -> CommandInfo:
         r"""
@@ -616,6 +720,7 @@ class Ops:
         
         :param idx: The command index.
         :returns: A CommandInfo object with type, endpoint, state, axes, etc.
+        :complexity: O(1) time, O(1) space
         """
     def translate(self, dx: builtins.float, dy: builtins.float, dz: builtins.float = 0.0) -> None:
         r"""
@@ -624,6 +729,7 @@ class Ops:
         :param dx: X offset.
         :param dy: Y offset.
         :param dz: Z offset (default 0.0).
+        :complexity: O(n) time, O(1) space
         """
     def scale(self, sx: builtins.float, sy: builtins.float, sz: builtins.float = 1.0) -> None:
         r"""
@@ -632,6 +738,7 @@ class Ops:
         :param sx: X scale factor.
         :param sy: Y scale factor.
         :param sz: Z scale factor (default 1.0).
+        :complexity: O(n) time, O(1) space
         """
     def rotate(self, angle_deg: builtins.float, cx: builtins.float, cy: builtins.float) -> None:
         r"""
@@ -640,6 +747,7 @@ class Ops:
         :param angle_deg: Rotation angle in degrees.
         :param cx: Pivot X coordinate.
         :param cy: Pivot Y coordinate.
+        :complexity: O(n) time, O(1) space
         """
     def clip_rect(self, rect: tuple[builtins.float, builtins.float, builtins.float, builtins.float]) -> Ops:
         r"""
@@ -647,12 +755,14 @@ class Ops:
         
         :param rect: ``(x_min, y_min, x_max, y_max)``.
         :returns: A new Ops sequence containing the clipped commands.
+        :complexity: O(n) time, O(n) space
         """
     def subtract_regions(self, regions: typing.Sequence[typing.Sequence[tuple[float, float]]]) -> None:
         r"""
         Subtract polygonal regions from the cutting paths.
         
         :param regions: List of polygons, each being a list of ``(x, y)`` vertices.
+        :complexity: O(n * m) time, O(n) space where m is the number of polygon vertices
         """
     def clip_to_regions(self, regions: typing.Sequence[typing.Sequence[tuple[builtins.float, builtins.float]]], tolerance: builtins.float = 0.3) -> None:
         r"""
@@ -660,6 +770,7 @@ class Ops:
         
         :param regions: List of polygons, each being a list of ``(x, y)`` vertices.
         :param tolerance: Approximation tolerance (default 0.3).
+        :complexity: O(n * m) time, O(n) space where m is the number of polygon vertices
         """
     def clip_ops_to_regions(self, regions: typing.Sequence[typing.Sequence[tuple[float, float]]], tolerance: builtins.float = 0.3) -> None:
         r"""
@@ -667,6 +778,7 @@ class Ops:
         
         :param regions: List of polygons, each being a list of ``(x, y)`` vertices.
         :param tolerance: Approximation tolerance (default 0.3).
+        :complexity: O(n * m) time, O(n) space where m is the number of polygon vertices
         """
     def clip_at(self, x: builtins.float, y: builtins.float, width: builtins.float) -> builtins.bool:
         r"""
@@ -676,6 +788,7 @@ class Ops:
         :param y: Y coordinate (used to find the relevant segment).
         :param width: Width of the band.
         :returns: True if any commands were kept.
+        :complexity: O(n) time, O(1) space
         """
     def translate_layers(self, default_offset: tuple[builtins.float, builtins.float, builtins.float], layer_offsets: typing.Optional[dict] = None) -> None:
         r"""
@@ -683,6 +796,7 @@ class Ops:
         
         :param default_offset: The ``(x, y, z)`` offset for layers not listed in layer_offsets.
         :param layer_offsets: Optional dict mapping layer UIDs to ``(x, y, z)`` offsets.
+        :complexity: O(n) time, O(1) space
         """
     def transform_layers(self, callback: typing.Any) -> None:
         r"""
@@ -692,6 +806,7 @@ class Ops:
         mutate the layer_ops in place.
         
         :param callback: A callable accepting ``(layer_uid, layer_ops)``.
+        :complexity: O(n) time, O(n) space
         """
     def transform_moving(self, on_endpoint: typing.Any, on_aux_point: typing.Optional[typing.Any] = None) -> None:
         r"""
@@ -703,6 +818,7 @@ class Ops:
         
         :param on_endpoint: Callable ``(endpoint, extra_axes) -> None``.
         :param on_aux_point: Optional callable ``(point,) -> None`` for curve control points.
+        :complexity: O(n) time, O(1) space
         """
     def linearize(self, idx: builtins.int, start_point: builtins.tuple[float, float, float]) -> Ops:
         r"""
@@ -712,30 +828,39 @@ class Ops:
         :param start_point: The ``(x, y, z)`` start point of the curve.
         :returns: A new Ops containing the linearized sub-commands.
         :raises TypeError: If the command at idx is not a curve or line type.
+        :complexity: O(n) time, O(n) space
         """
     def linearize_all(self) -> None:
         r"""
         Replace all curved commands with linear approximations in-place.
+        
+        :complexity: O(n) time, O(n) space
         """
     def linearize_curves(self) -> None:
         r"""
         Replace only bezier and quadratic bezier curves with linear approximations.
+        
+        :complexity: O(n) time, O(n) space
         """
     def linearize_arcs(self) -> None:
         r"""
         Replace only arc commands with linear approximations.
+        
+        :complexity: O(n) time, O(n) space
         """
     def segment_indices(self) -> builtins.list[builtins.list[builtins.int]]:
         r"""
         Return index ranges for each contiguous cutting segment.
         
         :returns: A list of index lists, one per segment.
+        :complexity: O(n) time, O(n) space
         """
     def group_by_state_continuity(self) -> builtins.list[Ops]:
         r"""
         Group contiguous commands with the same state into separate Ops sequences.
         
         :returns: A list of Ops sequences grouped by state continuity.
+        :complexity: O(n) time, O(n) space
         """
     def sections(self) -> builtins.list[OpsSection]:
         r"""
@@ -746,6 +871,7 @@ class Ops:
         portions.
         
         :returns: List of OpsSection objects.
+        :complexity: O(n) time, O(n) space
         """
     def section_ranges(self) -> builtins.list[OpsSectionRange]:
         r"""
@@ -755,6 +881,7 @@ class Ops:
         index ranges instead of individual index lists.
         
         :returns: List of OpsSectionRange objects.
+        :complexity: O(n) time, O(n) space
         """
     def rect(self, include_travel: builtins.bool = False) -> tuple[builtins.float, builtins.float, builtins.float, builtins.float]:
         r"""
@@ -762,6 +889,7 @@ class Ops:
         
         :param include_travel: Whether to include travel moves (default False).
         :returns: ``(x_min, y_min, x_max, y_max)``.
+        :complexity: O(n) time, O(1) space
         """
     def get_frame(self, power: typing.Optional[builtins.float] = None, speed: typing.Optional[builtins.float] = None) -> Ops:
         r"""
@@ -770,6 +898,7 @@ class Ops:
         :param power: Optional power to set on the frame commands.
         :param speed: Optional speed to set on the frame commands.
         :returns: A new Ops containing only the frame endpoints.
+        :complexity: O(n) time, O(n) space
         """
     def estimate_time(self, default_cut_speed: builtins.float = 1000.0, default_travel_speed: builtins.float = 3000.0, acceleration: builtins.float = 1000.0) -> builtins.float:
         r"""
@@ -779,6 +908,7 @@ class Ops:
         :param default_travel_speed: Default travel speed (default 3000.0).
         :param acceleration: Acceleration value (default 1000.0).
         :returns: Estimated time in seconds.
+        :complexity: O(n) time, O(1) space
         """
     def estimate_command_times(self, default_cut_speed: builtins.float = 1000.0, default_travel_speed: builtins.float = 3000.0, acceleration: builtins.float = 1000.0) -> builtins.list[builtins.float]:
         r"""
@@ -793,12 +923,14 @@ class Ops:
         :param default_travel_speed: Default travel speed (default 3000.0).
         :param acceleration: Acceleration value (default 1000.0).
         :returns: List of estimated times in seconds, one per command.
+        :complexity: O(n) time, O(n) space
         """
     def to_dict(self) -> dict:
         r"""
         Serialize this Ops sequence to a dict suitable for JSON export.
         
         :returns: A Python dict representation.
+        :complexity: O(n) time, O(n) space
         """
     @classmethod
     def from_dict(cls, data: dict) -> Ops:
@@ -806,12 +938,14 @@ class Ops:
         Create an Ops sequence from a dictionary.
         
         :param data: Dictionary as produced by to_dict.
+        :complexity: O(n) time, O(n) space
         """
     def to_numpy_arrays(self) -> dict:
         r"""
         Serialize this Ops sequence to numpy arrays.
         
         :returns: A Python dict of numpy arrays.
+        :complexity: O(n) time, O(n) space
         """
     @classmethod
     def from_numpy_arrays(cls, arrays: dict) -> Ops:
@@ -819,6 +953,7 @@ class Ops:
         Create an Ops sequence from numpy arrays.
         
         :param arrays: Dictionary as produced by to_numpy_arrays.
+        :complexity: O(n) time, O(n) space
         """
     def apply_tab_gaps(self, clips: typing.Sequence[tuple[builtins.float, builtins.float, builtins.float]]) -> None:
         r"""
@@ -829,6 +964,7 @@ class Ops:
         Only ``VECTOR_OUTLINE`` sections are modified.
         
         :param clips: List of ``(x, y, width)`` tuples defining tab positions.
+        :complexity: O(n * k) time, O(1) space where k is the number of tab clips
         """
     def apply_tab_power(self, clips: typing.Sequence[tuple[builtins.float, builtins.float, builtins.float]], tab_power: builtins.float, original_power: builtins.float) -> None:
         r"""
@@ -841,6 +977,7 @@ class Ops:
         :param clips: List of ``(x, y, width)`` tuples defining tab positions.
         :param tab_power: Power level inside tab regions (0.0–1.0).
         :param original_power: Normal cutting power to restore after the tab.
+        :complexity: O(n * k) time, O(1) space where k is the number of tab clips
         """
     def merge_overlapping_lines(self, tolerance: builtins.float) -> None:
         r"""
@@ -851,6 +988,7 @@ class Ops:
         cutting the same line twice.
         
         :param tolerance: Maximum distance for considering lines collinear.
+        :complexity: O(n log n) average time, O(n) space
         """
     def apply_overscan(self, distance_mm: builtins.float) -> None:
         r"""
@@ -861,6 +999,7 @@ class Ops:
         segments for constant engraving velocity.
         
         :param distance_mm: Overscan distance in millimeters.
+        :complexity: O(n) time, O(n) space
         """
     def apply_lead_in_out(self, lead_in_mm: builtins.float, lead_out_mm: builtins.float) -> None:
         r"""
@@ -872,6 +1011,7 @@ class Ops:
         
         :param lead_in_mm: Lead-in distance in millimeters.
         :param lead_out_mm: Lead-out distance in millimeters.
+        :complexity: O(n) time, O(n) space
         """
     def optimize_travel(self, allow_flip: builtins.bool = True, preserve_first: builtins.bool = False, preserve_order: typing.Sequence[builtins.str] = [], progress_cb: typing.Optional[typing.Any] = None) -> None:
         r"""
@@ -885,6 +1025,7 @@ class Ops:
         :param preserve_first: Keep the first workpiece in place.
         :param preserve_order: Workpiece UIDs whose order to preserve.
         :param progress_cb: Optional callable(progress, message).
+        :complexity: O(n²) average time, O(n) space
         """
 
 @typing.final

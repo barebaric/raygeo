@@ -108,17 +108,23 @@ impl PyCommandType {
         PyCommandType(CommandType::OpsSectionEnd);
 
     /// String representation like ``CommandType.MOVE_TO``.
+    ///
+    /// :complexity: O(1)
     fn __repr__(&self) -> String {
         format!("CommandType.{}", self.name())
     }
 
     /// The raw integer value of this command type.
+    ///
+    /// :complexity: O(1)
     #[getter]
     fn value(&self) -> u8 {
         self.0 as u8
     }
 
     /// The uppercase name of this command type (e.g. ``"MOVE_TO"``, ``"LINE_TO"``).
+    ///
+    /// :complexity: O(1)
     #[getter]
     fn name(&self) -> String {
         self.0.to_string()
@@ -155,17 +161,23 @@ impl PyCommandCategory {
         PyCommandCategory(CommandCategory::Marker);
 
     /// String representation like ``CommandCategory.MOVING``.
+    ///
+    /// :complexity: O(1)
     fn __repr__(&self) -> String {
         format!("CommandCategory.{}", self.name())
     }
 
     /// The raw integer value of this category.
+    ///
+    /// :complexity: O(1)
     #[getter]
     fn value(&self) -> u8 {
         self.0 as u8
     }
 
     /// The uppercase name of this category (``"MOVING"``, ``"STATE"``, or ``"MARKER"``).
+    ///
+    /// :complexity: O(1)
     #[getter]
     fn name(&self) -> String {
         match self.0 {
@@ -202,17 +214,23 @@ impl PySectionType {
         PySectionType(SectionType::RasterFill);
 
     /// String representation like ``SectionType.VECTOR_OUTLINE``.
+    ///
+    /// :complexity: O(1)
     fn __repr__(&self) -> String {
         format!("SectionType.{}", self.name())
     }
 
     /// The raw integer value of this section type.
+    ///
+    /// :complexity: O(1)
     #[getter]
     fn value(&self) -> u8 {
         self.0 as u8
     }
 
     /// The uppercase name (``"VECTOR_OUTLINE"`` or ``"RASTER_FILL"``).
+    ///
+    /// :complexity: O(1)
     #[getter]
     fn name(&self) -> String {
         self.0.to_string()
@@ -222,7 +240,10 @@ impl PySectionType {
 #[gen_stub_pyfunction(
     python = r#"
     def category(ct: CommandType) -> CommandCategory:
-        """Get the category of a command type."""
+        """Get the category of a command type.
+
+        :complexity: O(1)
+        """
     "#,
     module = "raygeo.ops.types"
 )]

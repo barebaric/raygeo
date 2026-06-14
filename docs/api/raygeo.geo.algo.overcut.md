@@ -25,11 +25,12 @@ If the geometry is not closed, empty, or overcut is <= 0, the geometry is return
 
 **Returns:** A new geometry with the overcut applied.
 
-| Parameter  | Type           | Description                              |
-| ---------- | -------------- | ---------------------------------------- |
-| `geometry` | `geo.Geometry` | The input geometry (must be closed).     |
-| `overcut`  | `float`        | Distance to extend past the start point. |
-| _Returns_  | `geo.Geometry` |                                          |
+| Parameter    | Type           | Description                              |
+| ------------ | -------------- | ---------------------------------------- |
+| `geometry`   | `geo.Geometry` | The input geometry (must be closed).     |
+| `overcut`    | `float`        | Distance to extend past the start point. |
+| _Returns_    | `geo.Geometry` |                                          |
+| _Complexity_ |                | O(n) time, O(n) space                    |
 
 ![Overcut on closed contour](images/overcut.png)
 

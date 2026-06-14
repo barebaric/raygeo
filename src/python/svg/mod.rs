@@ -27,6 +27,7 @@ use crate::svg;
         :param scale_x: X-axis scale factor for coordinate transform.
         :param scale_y: Y-axis scale factor for coordinate transform.
         :returns: List of Geometry objects, one per subpath.
+        :complexity: O(n) where n = length of path data
         """
 "#,
     module = "raygeo.svg"
@@ -87,6 +88,7 @@ fn py_parse_svg_path_data(
 
         :param transform_str: SVG transform attribute value.
         :returns: 3x3 affine transformation matrix as numpy array.
+        :complexity: O(1)
         """
 "#,
     module = "raygeo.svg"
@@ -126,6 +128,7 @@ fn py_parse_svg_transform(
         :param scale_x: X-axis scale factor for coordinate transform.
         :param scale_y: Y-axis scale factor for coordinate transform.
         :returns: List of Geometry objects from all path elements.
+        :complexity: O(n) where n = size of SVG document
         """
 "#,
     module = "raygeo.svg"
@@ -160,6 +163,7 @@ fn py_svg_string_to_geometries(
         :param width: Target pixel width.
         :param height: Target pixel height.
         :returns: SVG path d attribute string.
+        :complexity: O(n) where n = number of commands
         """
 "#,
     module = "raygeo.svg"

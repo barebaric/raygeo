@@ -16,6 +16,7 @@ use crate::image::srgb as rust_srgb;
 
         :param array: Input array of sRGB uint8 values.
         :returns: Array of linear float32 values with the same shape.
+        :complexity: O(n) where n = number of pixels
         """
 "#,
     module = "raygeo.image"
@@ -55,6 +56,7 @@ fn py_srgb_to_linear(
         :param array: Input array of linear float32 values in [0, 1].
         :param dither: Apply dithering to reduce banding artifacts.
         :returns: Array of sRGB uint8 values with the same shape.
+        :complexity: O(n) where n = number of pixels
         """
 "#,
     module = "raygeo.image"

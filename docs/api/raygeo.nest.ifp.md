@@ -19,11 +19,12 @@ Build the no-go zones for a bin-part pair.
 
 **Returns:** List of no-go zone polygons.
 
-| Parameter  | Type                                    | Description                                |
-| ---------- | --------------------------------------- | ------------------------------------------ |
-| `bin`      | `collections.abc.Sequence[types.Point]` | Bin polygon as (x, y) points.              |
-| `part_neg` | `collections.abc.Sequence[types.Point]` | Orbiting polygon negated as (x, y) points. |
-| _Returns_  | `list[types.Polygon]`                   |                                            |
+| Parameter    | Type                                    | Description                                |
+| ------------ | --------------------------------------- | ------------------------------------------ |
+| `bin`        | `collections.abc.Sequence[types.Point]` | Bin polygon as (x, y) points.              |
+| `part_neg`   | `collections.abc.Sequence[types.Point]` | Orbiting polygon negated as (x, y) points. |
+| _Returns_    | `list[types.Polygon]`                   |                                            |
+| _Complexity_ |                                         | O(n \* m) where n, m = vertex counts.      |
 
 ### `inner_fit_polygon()`
 
@@ -33,11 +34,12 @@ Compute the Inner-Fit Polygon (IFP) for a part inside a bin.
 
 **Returns:** List of IFP polygons.
 
-| Parameter | Type                                    | Description                    |
-| --------- | --------------------------------------- | ------------------------------ |
-| `bin`     | `collections.abc.Sequence[types.Point]` | Bin polygon as (x, y) points.  |
-| `part`    | `collections.abc.Sequence[types.Point]` | Part polygon as (x, y) points. |
-| _Returns_ | `list[types.Polygon]`                   |                                |
+| Parameter    | Type                                    | Description                                           |
+| ------------ | --------------------------------------- | ----------------------------------------------------- |
+| `bin`        | `collections.abc.Sequence[types.Point]` | Bin polygon as (x, y) points.                         |
+| `part`       | `collections.abc.Sequence[types.Point]` | Part polygon as (x, y) points.                        |
+| _Returns_    | `list[types.Polygon]`                   |                                                       |
+| _Complexity_ |                                         | O(n \* m) where n, m = vertex counts of bin and part. |
 
 ![Inner Fit Polygon showing valid placement region](images/inner-fit-polygon.png)
 
@@ -51,9 +53,10 @@ Compute the convex hull sweep of part_neg along the edge p1->p2.
 
 **Returns:** Convex hull polygon.
 
-| Parameter  | Type                                    | Description                                |
-| ---------- | --------------------------------------- | ------------------------------------------ |
-| `p1`       | `types.Point`                           | First edge endpoint.                       |
-| `p2`       | `types.Point`                           | Second edge endpoint.                      |
-| `part_neg` | `collections.abc.Sequence[types.Point]` | Orbiting polygon negated as (x, y) points. |
-| _Returns_  | `types.Polygon`                         |                                            |
+| Parameter    | Type                                    | Description                                |
+| ------------ | --------------------------------------- | ------------------------------------------ |
+| `p1`         | `types.Point`                           | First edge endpoint.                       |
+| `p2`         | `types.Point`                           | Second edge endpoint.                      |
+| `part_neg`   | `collections.abc.Sequence[types.Point]` | Orbiting polygon negated as (x, y) points. |
+| _Returns_    | `types.Polygon`                         |                                            |
+| _Complexity_ |                                         | O(n log n) for convex hull computation.    |

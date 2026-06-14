@@ -30,6 +30,7 @@ def apply_bayer_dither(grayscale: numpy.typing.NDArray[numpy.uint8], bayer_matri
     :param invert: If True, invert the output.
     :param cell_size: Pixel grouping size for the threshold.
     :returns: 2D binary uint8 array (values 0 or 1).
+    :complexity: O(w*h)
     """
 
 def apply_floyd_steinberg_dither(grayscale: numpy.typing.NDArray[numpy.uint8], invert: bool) -> numpy.typing.NDArray[numpy.uint8]:
@@ -39,6 +40,7 @@ def apply_floyd_steinberg_dither(grayscale: numpy.typing.NDArray[numpy.uint8], i
     :param grayscale: 2D grayscale image as uint8 array.
     :param invert: If True, invert the output (swap black/white).
     :returns: 2D binary uint8 array (values 0 or 1).
+    :complexity: O(w*h)
     """
 
 def apply_minimum_run_length(binary: numpy.typing.NDArray[numpy.uint8], min_run_length: int) -> numpy.typing.NDArray[numpy.uint8]:
@@ -48,6 +50,7 @@ def apply_minimum_run_length(binary: numpy.typing.NDArray[numpy.uint8], min_run_
     :param binary: 2D binary uint8 array (values 0 or 1).
     :param min_run_length: Minimum run length to keep.
     :returns: 2D binary uint8 array with short runs removed.
+    :complexity: O(w*h)
     """
 
 def compute_auto_levels(gray_image: numpy.typing.NDArray[numpy.uint8], clip_percent: float = 1) -> tuple[int, int]:
@@ -57,6 +60,7 @@ def compute_auto_levels(gray_image: numpy.typing.NDArray[numpy.uint8], clip_perc
     :param gray_image: Grayscale image as uint8 array.
     :param clip_percent: Percentage of pixels to clip from each end.
     :returns: Tuple of (black_point, white_point).
+    :complexity: O(n) where n = number of pixels
     """
 
 def linear_to_srgb(array: numpy.typing.NDArray[numpy.float32], dither: bool = False) -> numpy.typing.NDArray[numpy.uint8]:
@@ -66,6 +70,7 @@ def linear_to_srgb(array: numpy.typing.NDArray[numpy.float32], dither: bool = Fa
     :param array: Input array of linear float32 values in [0, 1].
     :param dither: Apply dithering to reduce banding artifacts.
     :returns: Array of sRGB uint8 values with the same shape.
+    :complexity: O(n) where n = number of pixels
     """
 
 def normalize_grayscale(gray_image: numpy.typing.NDArray[numpy.uint8], black_point: int = 0, white_point: int = 255) -> numpy.typing.NDArray[numpy.uint8]:
@@ -77,6 +82,7 @@ def normalize_grayscale(gray_image: numpy.typing.NDArray[numpy.uint8], black_poi
     :param white_point: White point for normalization.
     :returns: Normalized grayscale image with the same shape.
     :raises ValueError: If black_point >= white_point.
+    :complexity: O(n) where n = number of pixels
     """
 
 def rgba_to_binary(rgba: numpy.typing.NDArray[numpy.uint8], width: int, height: int, stride: int, threshold: int = 128, invert: bool = False) -> numpy.typing.NDArray[numpy.uint8]:
@@ -92,6 +98,7 @@ def rgba_to_binary(rgba: numpy.typing.NDArray[numpy.uint8], width: int, height: 
     :param threshold: Brightness value (0-255) for binarization.
     :param invert: If True, pixels above threshold become black (1).
     :returns: 2D binary uint8 array (values 0 or 1) with shape (height, width).
+    :complexity: O(w*h)
     """
 
 def rgba_to_grayscale(rgba: numpy.typing.NDArray[numpy.uint8], width: int, height: int, stride: int) -> tuple[numpy.typing.NDArray[numpy.uint8], numpy.typing.NDArray[numpy.float32]]:
@@ -106,6 +113,7 @@ def rgba_to_grayscale(rgba: numpy.typing.NDArray[numpy.uint8], width: int, heigh
     :param height: Image height in pixels.
     :param stride: Row stride in pixels (may be larger than width).
     :returns: Tuple of (grayscale_uint8, alpha_float32) arrays, each (height, width).
+    :complexity: O(w*h)
     """
 
 def rgba_to_grayscale_inplace(rgba: numpy.typing.NDArray[numpy.uint8], width: int, height: int, stride: int) -> None:
@@ -119,6 +127,7 @@ def rgba_to_grayscale_inplace(rgba: numpy.typing.NDArray[numpy.uint8], width: in
     :param width: Image width in pixels.
     :param height: Image height in pixels.
     :param stride: Row stride in pixels.
+    :complexity: O(w*h)
     """
 
 def srgb_to_linear(array: numpy.typing.NDArray[numpy.uint8]) -> numpy.typing.NDArray[numpy.float32]:
@@ -127,5 +136,6 @@ def srgb_to_linear(array: numpy.typing.NDArray[numpy.uint8]) -> numpy.typing.NDA
     
     :param array: Input array of sRGB uint8 values.
     :returns: Array of linear float32 values with the same shape.
+    :complexity: O(n) where n = number of pixels
     """
 

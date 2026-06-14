@@ -45,6 +45,7 @@ pub fn register(algo_mod: &Bound<'_, PyModule>) -> PyResult<()> {
         :param geometry: The input geometry (must be closed).
         :param overcut: Distance to extend past the start point.
         :returns: A new geometry with the overcut applied.
+        :complexity: O(n) time, O(n) space
         """
 "#,
     module = "raygeo.geo.algo.overcut"

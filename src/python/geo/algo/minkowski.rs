@@ -54,6 +54,7 @@ pub fn register(algo_mod: &Bound<'_, PyModule>) -> PyResult<()> {
         :param poly_a: First convex polygon as points.
         :param poly_b: Second convex polygon as points.
         :returns: Minkowski sum as list of polygons.
+        :complexity: O(n + m) time, O(n + m) space
         """
 "#,
     module = "raygeo.geo.algo.minkowski"
@@ -84,6 +85,7 @@ fn minkowski_sum_convex_py(
         :param outer: Outer polygon as (x, y) points.
         :param inner: Inner polygon as (x, y) points.
         :returns: Inner fit polygon.
+        :complexity: O(n * m) time, O(n + m) space
         """
 "#,
     module = "raygeo.geo.algo.minkowski"
@@ -110,6 +112,7 @@ fn get_inner_fit_polygon_py(
         :param subject: Subject polygon as (x, y) points.
         :param tool: Tool polygon as (x, y) points.
         :returns: No-fit polygon.
+        :complexity: O(n * m) time, O(n + m) space
         """
 "#,
     module = "raygeo.geo.algo.minkowski"
@@ -136,6 +139,7 @@ fn get_no_fit_polygon_py(
         :param polygons: List of polygons to scale.
         :param max_int: Maximum integer value for Clipper.
         :returns: Optimal scale factor.
+        :complexity: O(n) time, O(1) space
         """
 "#,
     module = "raygeo.geo.algo.minkowski"
@@ -165,6 +169,7 @@ fn calculate_input_scale_py(
         :param b1: Start point of segment B.
         :param b2: End point of segment B.
         :returns: Convolved point sequence.
+        :complexity: O(1) time, O(1) space
         """
 "#,
     module = "raygeo.geo.algo.minkowski"
@@ -198,6 +203,7 @@ fn convolve_two_segments_py(
         :param seq_a: First sequence of points.
         :param seq_b: Second sequence of points.
         :returns: Convolved point sequences.
+        :complexity: O(n * m) time, O(n * m) space
         """
 "#,
     module = "raygeo.geo.algo.minkowski"

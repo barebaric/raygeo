@@ -80,7 +80,8 @@ The raw integer value of this section type.
 
 Get the category of a command type.
 
-| Parameter | Type              | Description |
-| --------- | ----------------- | ----------- |
-| `ct`      | `CommandType`     |             |
-| _Returns_ | `CommandCategory` |             |
+| Parameter    | Type              | Description |
+| ------------ | ----------------- | ----------- |
+| `ct`         | `CommandType`     |             |
+| _Returns_    | `CommandCategory` |             |
+| _Complexity_ |                   | O(1)        |

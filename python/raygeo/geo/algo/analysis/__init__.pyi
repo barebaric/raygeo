@@ -27,6 +27,7 @@ def get_area(geometry: geo.Geometry) -> float:
     
     :param geometry: Geometry to compute area from.
     :returns: Total unsigned area.
+    :complexity: O(n) time, O(1) space
     """
 
 def get_path_winding_order(geometry: geo.Geometry, start_cmd_index: int) -> str:
@@ -36,6 +37,7 @@ def get_path_winding_order(geometry: geo.Geometry, start_cmd_index: int) -> str:
     :param geometry: Geometry to analyze.
     :param start_cmd_index: Index of the starting command.
     :returns: ``"ccw"``, ``"cw"``, or ``"unknown"``.
+    :complexity: O(n) time, O(1) space
     """
 
 def get_subpath_area(geometry: geo.Geometry, start_cmd_index: int) -> float:
@@ -47,6 +49,7 @@ def get_subpath_area(geometry: geo.Geometry, start_cmd_index: int) -> float:
     :param geometry: Geometry to compute area from.
     :param start_cmd_index: Index of the starting command.
     :returns: Signed area.
+    :complexity: O(n) time, O(1) space
     """
 
 def get_subpath_vertices(geometry: geo.Geometry, start_cmd_index: int) -> list[tuple[float, float]]:
@@ -58,6 +61,7 @@ def get_subpath_vertices(geometry: geo.Geometry, start_cmd_index: int) -> list[t
     :param geometry: Geometry to extract vertices from.
     :param start_cmd_index: Index of the starting command.
     :returns: List of (x, y) vertices.
+    :complexity: O(n + m) time, O(m) space where n is the number of commands and m the number of output vertices
     """
 
 def remove_duplicates(points: collections.abc.Sequence[types.Point]) -> types.Polygon:
@@ -66,5 +70,6 @@ def remove_duplicates(points: collections.abc.Sequence[types.Point]) -> types.Po
     
     :param points: Sequence of (x, y) points.
     :returns: List of unique points.
+    :complexity: O(n) time, O(n) space
     """
 

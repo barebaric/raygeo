@@ -32,6 +32,7 @@ def are_points_collinear(points: collections.abc.Sequence[types.Point3D], tolera
     :param points: Sequence of 3D points.
     :param tolerance: Collinearity tolerance.
     :returns: True if points are collinear.
+    :complexity: O(n) time, O(1) space
     """
 
 def fit_circle_to_3_points(p1: types.Point2DOr3D, p2: types.Point2DOr3D, p3: types.Point2DOr3D) -> typing.Optional[tuple[types.Point, float]]:
@@ -42,6 +43,7 @@ def fit_circle_to_3_points(p1: types.Point2DOr3D, p2: types.Point2DOr3D, p3: typ
     :param p2: Second point (x, y) or (x, y, z).
     :param p3: Third point (x, y) or (x, y, z).
     :returns: Tuple of (center, radius) or None.
+    :complexity: O(1) time, O(1) space
     """
 
 def fit_circle_to_points(points: collections.abc.Sequence[types.Point3D]) -> typing.Optional[tuple[types.Point, float, float]]:
@@ -50,6 +52,7 @@ def fit_circle_to_points(points: collections.abc.Sequence[types.Point3D]) -> typ
     
     :param points: Sequence of 3D points to fit.
     :returns: Tuple of (center, radius, error) or None.
+    :complexity: O(n) time, O(1) space
     """
 
 def fit_points_recursive(points: collections.abc.Sequence[types.Point3D], tolerance: float, start_idx: int, end_idx: int) -> geo.Geometry:
@@ -61,6 +64,7 @@ def fit_points_recursive(points: collections.abc.Sequence[types.Point3D], tolera
     :param start_idx: Start index in the points array.
     :param end_idx: End index in the points array.
     :returns: Geometry of fitted commands.
+    :complexity: O(n log n) average time, O(n) space
     """
 
 def fit_points_with_primitives(points: collections.abc.Sequence[types.Point3D], tolerance: float) -> geo.Geometry:
@@ -70,6 +74,7 @@ def fit_points_with_primitives(points: collections.abc.Sequence[types.Point3D], 
     :param points: Sequence of 3D points to fit.
     :param tolerance: Fitting tolerance.
     :returns: Geometry of fitted commands.
+    :complexity: O(n log n) average time, O(n) space
     """
 
 def flatten_to_points(geometry: geo.Geometry, tolerance: float) -> list[list[types.Point3D]]:
@@ -79,6 +84,7 @@ def flatten_to_points(geometry: geo.Geometry, tolerance: float) -> list[list[typ
     :param geometry: Geometry to flatten.
     :param tolerance: Flattening tolerance.
     :returns: List of flattened point segments.
+    :complexity: O(n + m) time, O(m) space where n is the number of commands and m the number of output points
     """
 
 def get_polyline_arc_deviation(points: collections.abc.Sequence[types.Point3D], center: types.Point, radius: float) -> float:
@@ -89,6 +95,7 @@ def get_polyline_arc_deviation(points: collections.abc.Sequence[types.Point3D], 
     :param center: Arc center (x, y).
     :param radius: Arc radius.
     :returns: Maximum deviation from the arc.
+    :complexity: O(n) time, O(1) space
     """
 
 def get_polyline_line_deviation(points: collections.abc.Sequence[types.Point3D], start: int, end: int) -> tuple[float, int]:
@@ -99,6 +106,7 @@ def get_polyline_line_deviation(points: collections.abc.Sequence[types.Point3D],
     :param start: Start index.
     :param end: End index.
     :returns: Tuple of (max_deviation, index_of_max).
+    :complexity: O(n) time, O(1) space
     """
 
 def linearize_geometry(geometry: geo.Geometry, tolerance: float) -> geo.Geometry:
@@ -108,6 +116,7 @@ def linearize_geometry(geometry: geo.Geometry, tolerance: float) -> geo.Geometry
     :param geometry: Geometry to linearize.
     :param tolerance: Linearization tolerance.
     :returns: Linearized Geometry.
+    :complexity: O(n + m) time, O(m) space where n is the number of commands and m the number of output segments
     """
 
 def project_circle_center_to_bisector(p1: types.Point2DOr3D, p2: types.Point2DOr3D, center: types.Point) -> types.Point:
@@ -118,5 +127,6 @@ def project_circle_center_to_bisector(p1: types.Point2DOr3D, p2: types.Point2DOr
     :param p2: Second point (x, y) or (x, y, z).
     :param center: Circle center to project.
     :returns: Projected center point (x, y).
+    :complexity: O(1) time, O(1) space
     """
 

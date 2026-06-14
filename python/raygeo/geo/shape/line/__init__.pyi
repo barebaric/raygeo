@@ -34,6 +34,7 @@ def does_line_segment_intersect_circle(p1: types.Point, p2: types.Point, circle_
     :param circle_center: Circle center (x, y).
     :param circle_radius: Circle radius.
     :returns: True if the segment intersects the circle.
+    :complexity: O(1) time, O(1) space
     """
 
 def does_line_segment_intersect_rect(p1: types.Point, p2: types.Point, rect: types.Rect) -> bool:
@@ -44,6 +45,7 @@ def does_line_segment_intersect_rect(p1: types.Point, p2: types.Point, rect: typ
     :param p2: End of the line segment.
     :param rect: Rectangle (x_min, y_min, x_max, y_max).
     :returns: True if the segment intersects the rectangle.
+    :complexity: O(1) time, O(1) space
     """
 
 def get_angle_at_vertex(p0: types.Point, p1: types.Point, p2: types.Point) -> float:
@@ -54,6 +56,7 @@ def get_angle_at_vertex(p0: types.Point, p1: types.Point, p2: types.Point) -> fl
     :param p1: Vertex point.
     :param p2: Next point.
     :returns: Angle in radians.
+    :complexity: O(1) time, O(1) space
     """
 
 def get_line_closest_point(line_p1: types.Point, line_p2: types.Point, x: float, y: float) -> types.Point:
@@ -66,6 +69,7 @@ def get_line_closest_point(line_p1: types.Point, line_p2: types.Point, x: float,
     :param x: X coordinate of target point.
     :param y: Y coordinate of target point.
     :returns: Closest point (x, y) on the infinite line.
+    :complexity: O(1) time, O(1) space
     """
 
 def get_line_line_intersection(p1: types.Point, p2: types.Point, p3: types.Point, p4: types.Point) -> typing.Optional[types.Point]:
@@ -77,6 +81,7 @@ def get_line_line_intersection(p1: types.Point, p2: types.Point, p3: types.Point
     :param p3: First point on line 2.
     :param p4: Second point on line 2.
     :returns: Intersection point (x, y) or None.
+    :complexity: O(1) time, O(1) space
     """
 
 def get_line_segment_closest_point(seg_p1: types.Point, seg_p2: types.Point, x: float, y: float) -> tuple[float, types.Point, float]:
@@ -88,6 +93,7 @@ def get_line_segment_closest_point(seg_p1: types.Point, seg_p2: types.Point, x: 
     :param x: X coordinate of target point.
     :param y: Y coordinate of target point.
     :returns: Tuple of (parameter, closest_point, distance).
+    :complexity: O(1) time, O(1) space
     """
 
 def get_line_segment_intersection(p1: types.Point, p2: types.Point, p3: types.Point, p4: types.Point) -> typing.Optional[types.Point]:
@@ -99,6 +105,7 @@ def get_line_segment_intersection(p1: types.Point, p2: types.Point, p3: types.Po
     :param p3: Start of segment 2.
     :param p4: End of segment 2.
     :returns: Intersection point (x, y) or None.
+    :complexity: O(1) time, O(1) space
     """
 
 def get_line_segment_length(p1: types.Point, p2: types.Point) -> float:
@@ -108,6 +115,7 @@ def get_line_segment_length(p1: types.Point, p2: types.Point) -> float:
     :param p1: Start point (x, y).
     :param p2: End point (x, y).
     :returns: Distance between the two points.
+    :complexity: O(1) time, O(1) space
     """
 
 def get_line_segment_polygon_intersections(p1: types.Point, p2: types.Point, polygon: typing.Sequence[types.Polygon]) -> list[float]:
@@ -118,6 +126,7 @@ def get_line_segment_polygon_intersections(p1: types.Point, p2: types.Point, pol
     :param p2: End of the line segment.
     :param polygon: Polygon to check against.
     :returns: List of t-values of intersection points.
+    :complexity: O(n) time, O(1) space
     """
 
 def get_point_line_distance(point: types.Point, line_p1: types.Point, line_p2: types.Point) -> float:
@@ -130,6 +139,7 @@ def get_point_line_distance(point: types.Point, line_p1: types.Point, line_p2: t
     :param line_p1: First point on the segment.
     :param line_p2: Second point on the segment.
     :returns: Distance (clamped to segment).
+    :complexity: O(1) time, O(1) space
     """
 
 def is_point_on_line_segment(point: types.Point, seg_p1: types.Point, seg_p2: types.Point) -> bool:
@@ -140,5 +150,6 @@ def is_point_on_line_segment(point: types.Point, seg_p1: types.Point, seg_p2: ty
     :param seg_p1: Start of the line segment.
     :param seg_p2: End of the line segment.
     :returns: True if the point lies on the segment.
+    :complexity: O(1) time, O(1) space
     """
 

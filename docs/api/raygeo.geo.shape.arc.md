@@ -29,6 +29,7 @@ Check if an arc intersects a circle.
 | `circle_center` | `types.Point` | Circle center (x, y).         |
 | `circle_radius` | `float`       | Circle radius.                |
 | _Returns_       | `bool`        |                               |
+| _Complexity_    |               | O(n) time, O(1) space         |
 
 ### `does_arc_intersect_rect()`
 
@@ -46,6 +47,7 @@ Check if an arc intersects a rectangle.
 | `clockwise`  | `bool`        | Whether the arc is clockwise.           |
 | `rect`       | `types.Rect`  | Rectangle (x_min, y_min, x_max, y_max). |
 | _Returns_    | `bool`        |                                         |
+| _Complexity_ |               | O(n) time, O(1) space                   |
 
 ### `get_arc_angles()`
 
@@ -55,13 +57,14 @@ Get the start, end, and sweep angles of an arc.
 
 **Returns:** Tuple of (start_angle, end_angle, sweep_angle) in radians.
 
-| Parameter   | Type            | Description                   |
-| ----------- | --------------- | ----------------------------- |
-| `start`     | `types.Point`   | Arc start point (x, y).       |
-| `end`       | `types.Point`   | Arc end point (x, y).         |
-| `center`    | `types.Point`   | Arc center point (x, y).      |
-| `clockwise` | `bool`          | Whether the arc is clockwise. |
-| _Returns_   | `types.Point3D` |                               |
+| Parameter    | Type            | Description                   |
+| ------------ | --------------- | ----------------------------- |
+| `start`      | `types.Point`   | Arc start point (x, y).       |
+| `end`        | `types.Point`   | Arc end point (x, y).         |
+| `center`     | `types.Point`   | Arc center point (x, y).      |
+| `clockwise`  | `bool`          | Whether the arc is clockwise. |
+| _Returns_    | `types.Point3D` |                               |
+| _Complexity_ |                 | O(1) time, O(1) space         |
 
 ### `get_arc_bounds()`
 
@@ -71,13 +74,14 @@ Get the bounding rectangle of an arc.
 
 **Returns:** Bounding rectangle as (x_min, y_min, x_max, y_max).
 
-| Parameter   | Type          | Description                   |
-| ----------- | ------------- | ----------------------------- |
-| `start`     | `types.Point` | Arc start point (x, y).       |
-| `end`       | `types.Point` | Arc end point (x, y).         |
-| `center`    | `types.Point` | Arc center point (x, y).      |
-| `clockwise` | `bool`        | Whether the arc is clockwise. |
-| _Returns_   | `types.Rect`  |                               |
+| Parameter    | Type          | Description                   |
+| ------------ | ------------- | ----------------------------- |
+| `start`      | `types.Point` | Arc start point (x, y).       |
+| `end`        | `types.Point` | Arc end point (x, y).         |
+| `center`     | `types.Point` | Arc center point (x, y).      |
+| `clockwise`  | `bool`        | Whether the arc is clockwise. |
+| _Returns_    | `types.Rect`  |                               |
+| _Complexity_ |               | O(1) time, O(1) space         |
 
 ### `get_arc_closest_point()`
 
@@ -87,13 +91,14 @@ Get the closest point on an arc to a given point.
 
 **Returns:** Tuple of (parameter, closest_point, distance) or None.
 
-| Parameter   | Type                                         | Description                             |
-| ----------- | -------------------------------------------- | --------------------------------------- |
-| `arc_cmd`   | `Any`                                        | Arc command row or MockArc-like object. |
-| `start_pos` | `types.Point3D`                              | Start position (x, y, z).               |
-| `x`         | `float`                                      | X coordinate of target point.           |
-| `y`         | `float`                                      | Y coordinate of target point.           |
-| _Returns_   | `Optional[tuple[float, types.Point, float]]` |                                         |
+| Parameter    | Type                                         | Description                             |
+| ------------ | -------------------------------------------- | --------------------------------------- |
+| `arc_cmd`    | `Any`                                        | Arc command row or MockArc-like object. |
+| `start_pos`  | `types.Point3D`                              | Start position (x, y, z).               |
+| `x`          | `float`                                      | X coordinate of target point.           |
+| `y`          | `float`                                      | Y coordinate of target point.           |
+| _Returns_    | `Optional[tuple[float, types.Point, float]]` |                                         |
+| _Complexity_ |                                              | O(n) time, O(1) space                   |
 
 ### `get_arc_direction()`
 
@@ -103,12 +108,13 @@ Get the direction (CW/CCW) of an arc at a mouse point.
 
 **Returns:** True if clockwise, False if counter-clockwise.
 
-| Parameter | Type          | Description             |
-| --------- | ------------- | ----------------------- |
-| `center`  | `types.Point` | Arc center (x, y).      |
-| `start`   | `types.Point` | Arc start point (x, y). |
-| `mouse`   | `types.Point` | Mouse point (x, y).     |
-| _Returns_ | `bool`        |                         |
+| Parameter    | Type          | Description             |
+| ------------ | ------------- | ----------------------- |
+| `center`     | `types.Point` | Arc center (x, y).      |
+| `start`      | `types.Point` | Arc start point (x, y). |
+| `mouse`      | `types.Point` | Mouse point (x, y).     |
+| _Returns_    | `bool`        |                         |
+| _Complexity_ |               | O(1) time, O(1) space   |
 
 ### `get_arc_length()`
 
@@ -125,6 +131,7 @@ Compute the arc length of a circular arc.
 | `center_offset` | `types.Point` | Center offset (i, j) from start.                 |
 | `clockwise`     | `bool`        | True for clockwise, False for counter-clockwise. |
 | _Returns_       | `float`       |                                                  |
+| _Complexity_    |               | O(1) time, O(1) space                            |
 
 ### `get_arc_midpoint()`
 
@@ -134,13 +141,14 @@ Get the midpoint of an arc.
 
 **Returns:** Midpoint (x, y).
 
-| Parameter   | Type          | Description                   |
-| ----------- | ------------- | ----------------------------- |
-| `start`     | `types.Point` | Arc start point (x, y).       |
-| `end`       | `types.Point` | Arc end point (x, y).         |
-| `center`    | `types.Point` | Arc center point (x, y).      |
-| `clockwise` | `bool`        | Whether the arc is clockwise. |
-| _Returns_   | `types.Point` |                               |
+| Parameter    | Type          | Description                   |
+| ------------ | ------------- | ----------------------------- |
+| `start`      | `types.Point` | Arc start point (x, y).       |
+| `end`        | `types.Point` | Arc end point (x, y).         |
+| `center`     | `types.Point` | Arc center point (x, y).      |
+| `clockwise`  | `bool`        | Whether the arc is clockwise. |
+| _Returns_    | `types.Point` |                               |
+| _Complexity_ |               | O(1) time, O(1) space         |
 
 ### `get_arc_sweep()`
 
@@ -158,6 +166,7 @@ Handles direction (CW/CCW) and full-circle detection.
 | `end_angle`   | `float` | End angle in radians.         |
 | `clockwise`   | `bool`  | Whether the arc is clockwise. |
 | _Returns_     | `float` |                               |
+| _Complexity_  |         | O(1) time, O(1) space         |
 
 ### `is_angle_between()`
 
@@ -167,13 +176,14 @@ Check if an angle is between two other angles.
 
 **Returns:** True if angle is between start and end.
 
-| Parameter   | Type    | Description                   |
-| ----------- | ------- | ----------------------------- |
-| `angle`     | `float` | Angle to test.                |
-| `start`     | `float` | Start angle.                  |
-| `end`       | `float` | End angle.                    |
-| `clockwise` | `bool`  | Whether the arc is clockwise. |
-| _Returns_   | `bool`  |                               |
+| Parameter    | Type    | Description                   |
+| ------------ | ------- | ----------------------------- |
+| `angle`      | `float` | Angle to test.                |
+| `start`      | `float` | Start angle.                  |
+| `end`        | `float` | End angle.                    |
+| `clockwise`  | `bool`  | Whether the arc is clockwise. |
+| _Returns_    | `bool`  |                               |
+| _Complexity_ |         | O(1) time, O(1) space         |
 
 ### `is_arc_clockwise()`
 
@@ -183,11 +193,12 @@ Check if an arc is clockwise.
 
 **Returns:** True if the arc is clockwise.
 
-| Parameter | Type                                          | Description                           |
-| --------- | --------------------------------------------- | ------------------------------------- |
-| `points`  | `collections.abc.Sequence[types.Point2DOr3D]` | Sequence of (x, y) points on the arc. |
-| `center`  | `types.Point2DOr3D`                           | Arc center (x, y).                    |
-| _Returns_ | `bool`                                        |                                       |
+| Parameter    | Type                                          | Description                           |
+| ------------ | --------------------------------------------- | ------------------------------------- |
+| `points`     | `collections.abc.Sequence[types.Point2DOr3D]` | Sequence of (x, y) points on the arc. |
+| `center`     | `types.Point2DOr3D`                           | Arc center (x, y).                    |
+| _Returns_    | `bool`                                        |                                       |
+| _Complexity_ |                                               | O(n) time, O(1) space                 |
 
 ### `is_arc_inside_polygons()`
 
@@ -205,6 +216,7 @@ Check if an arc is inside a set of polygons.
 | `clockwise`  | `bool`        | Whether the arc is clockwise.      |
 | `polygons`   | `Any`         | List of polygons to check against. |
 | _Returns_    | `bool`        |                                    |
+| _Complexity_ |               | O(n \* m) time, O(1) space         |
 
 ### `linearize_arc()`
 
@@ -220,6 +232,7 @@ Linearize an arc into line segments.
 | `start_point` | `types.Point3D`                             | Start point (x, y, z).                  |
 | `resolution`  | `float = 0.1`                               | Maximum segment length.                 |
 | _Returns_     | `list[tuple[types.Point3D, types.Point3D]]` |                                         |
+| _Complexity_  |                                             | O(n) time, O(n) space                   |
 
 ![Arc linearization: coarse and fine resolution](images/arc-linearize.png)
 
@@ -233,7 +246,8 @@ Normalize an angle to the range [0, 2\*pi).
 
 **Returns:** Normalized angle in [0, 2\*pi).
 
-| Parameter | Type    | Description       |
-| --------- | ------- | ----------------- |
-| `angle`   | `float` | Angle in radians. |
-| _Returns_ | `float` |                   |
+| Parameter    | Type    | Description           |
+| ------------ | ------- | --------------------- |
+| `angle`      | `float` | Angle in radians.     |
+| _Returns_    | `float` |                       |
+| _Complexity_ |         | O(1) time, O(1) space |

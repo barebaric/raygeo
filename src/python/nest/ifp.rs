@@ -28,6 +28,7 @@ placement region for a part inside a bin.
         :param bin: Bin polygon as (x, y) points.
         :param part: Part polygon as (x, y) points.
         :returns: List of IFP polygons.
+        :complexity: O(n * m) where n, m = vertex counts of bin and part.
         """
 "#,
     module = "raygeo.nest.ifp"
@@ -54,6 +55,7 @@ fn inner_fit_polygon_py(
         :param bin: Bin polygon as (x, y) points.
         :param part_neg: Orbiting polygon negated as (x, y) points.
         :returns: List of no-go zone polygons.
+        :complexity: O(n * m) where n, m = vertex counts.
         """
 "#,
     module = "raygeo.nest.ifp"
@@ -82,6 +84,7 @@ fn build_no_go_zones_py(
         :param p2: Second edge endpoint.
         :param part_neg: Orbiting polygon negated as (x, y) points.
         :returns: Convex hull polygon.
+        :complexity: O(n log n) for convex hull computation.
         """
 "#,
     module = "raygeo.nest.ifp"

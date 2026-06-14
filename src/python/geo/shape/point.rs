@@ -49,6 +49,7 @@ pub fn register(shape_mod: &Bound<'_, PyModule>) -> PyResult<()> {
         :param p2: Second point (x, y, z).
         :param tolerance: Maximum allowed difference.
         :returns: True if points are equal within tolerance.
+        :complexity: O(1) time, O(1) space
         """
 "#,
     module = "raygeo.geo.shape.point"
@@ -82,6 +83,7 @@ fn are_points_equal_py(
         :param y: Y coordinate.
         :param z: Z coordinate.
         :returns: Transformed point (x, y, z).
+        :complexity: O(1) time, O(1) space
         """
 "#,
     module = "raygeo.geo.shape.point"
@@ -115,6 +117,7 @@ fn transform_point_py(
         :param p1: First point (x, y, z).
         :param p2: Second point (x, y, z).
         :returns: Midpoint (x, y, z).
+        :complexity: O(1) time, O(1) space
         """
 "#,
     module = "raygeo.geo.shape.point"

@@ -25,6 +25,7 @@ def apply_gravity(placement_groups: collections.abc.Sequence[collections.abc.Seq
     :param sheet_poly: Sheet polygon.
     :param spacing: Minimum spacing between parts.
     :returns: List of ``(dx, dy)`` adjustments, one per group.
+    :complexity: O(passes * n * m) where passes ≤ 10.
     """
 
 def find_max_slide(polys: collections.abc.Sequence[types.Polygon], other_polys_list: collections.abc.Sequence[collections.abc.Sequence[types.Polygon]], sheet_bounds: tuple[float, float, float, float], sheet_poly: types.Polygon, axis: str, spacing: float) -> float:
@@ -40,5 +41,6 @@ def find_max_slide(polys: collections.abc.Sequence[types.Polygon], other_polys_l
     :param axis: ``"x"`` or ``"y"`` — axis to slide along.
     :param spacing: Minimum spacing between parts.
     :returns: Maximum slide distance.
+    :complexity: O(log range * n * m) for binary search with overlap checks.
     """
 

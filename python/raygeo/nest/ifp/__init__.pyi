@@ -22,6 +22,7 @@ def build_no_go_zones(bin: collections.abc.Sequence[types.Point], part_neg: coll
     :param bin: Bin polygon as (x, y) points.
     :param part_neg: Orbiting polygon negated as (x, y) points.
     :returns: List of no-go zone polygons.
+    :complexity: O(n * m) where n, m = vertex counts.
     """
 
 def inner_fit_polygon(bin: collections.abc.Sequence[types.Point], part: collections.abc.Sequence[types.Point]) -> list[types.Polygon]:
@@ -31,6 +32,7 @@ def inner_fit_polygon(bin: collections.abc.Sequence[types.Point], part: collecti
     :param bin: Bin polygon as (x, y) points.
     :param part: Part polygon as (x, y) points.
     :returns: List of IFP polygons.
+    :complexity: O(n * m) where n, m = vertex counts of bin and part.
     """
 
 def sweep_hull_for_edge(p1: types.Point, p2: types.Point, part_neg: collections.abc.Sequence[types.Point]) -> types.Polygon:
@@ -41,5 +43,6 @@ def sweep_hull_for_edge(p1: types.Point, p2: types.Point, part_neg: collections.
     :param p2: Second edge endpoint.
     :param part_neg: Orbiting polygon negated as (x, y) points.
     :returns: Convex hull polygon.
+    :complexity: O(n log n) for convex hull computation.
     """
 

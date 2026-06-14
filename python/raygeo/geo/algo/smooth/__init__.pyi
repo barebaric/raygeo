@@ -25,6 +25,7 @@ def compute_gaussian_kernel(amount: int) -> tuple[list[float], float]:
     
     :param amount: Kernel size.
     :returns: Tuple of (kernel_values, sigma).
+    :complexity: O(k) time, O(k) space
     """
 
 def resample_polyline(points: collections.abc.Sequence[types.Point3D], max_segment_length: float, is_closed: bool) -> list[types.Point3D]:
@@ -35,6 +36,7 @@ def resample_polyline(points: collections.abc.Sequence[types.Point3D], max_segme
     :param max_segment_length: Maximum allowed segment length.
     :param is_closed: Whether the polyline is closed.
     :returns: Resampled points.
+    :complexity: O(n) time, O(n) space
     """
 
 def smooth_circularly(points: collections.abc.Sequence[types.Point3D], kernel: collections.abc.Sequence[float]) -> list[types.Point3D]:
@@ -44,6 +46,7 @@ def smooth_circularly(points: collections.abc.Sequence[types.Point3D], kernel: c
     :param points: Sequence of 3D points to smooth.
     :param kernel: Gaussian kernel values.
     :returns: Smoothed points.
+    :complexity: O(n * k) time, O(n) space where k is the kernel size and n the number of points
     """
 
 def smooth_polyline(points: collections.abc.Sequence[types.Point3D], amount: int, corner_angle_threshold: float, is_closed: typing.Optional[bool] = None) -> list[types.Point3D]:
@@ -55,6 +58,7 @@ def smooth_polyline(points: collections.abc.Sequence[types.Point3D], amount: int
     :param corner_angle_threshold: Angle threshold for preserving corners.
     :param is_closed: Whether the polyline is closed.
     :returns: Smoothed points.
+    :complexity: O(n * k) time, O(n) space where k is the kernel size and n the number of points
     """
 
 def smooth_sub_segment(points: collections.abc.Sequence[types.Point3D], kernel: collections.abc.Sequence[float]) -> list[types.Point3D]:
@@ -64,5 +68,6 @@ def smooth_sub_segment(points: collections.abc.Sequence[types.Point3D], kernel: 
     :param points: Sequence of 3D points to smooth.
     :param kernel: Gaussian kernel values.
     :returns: Smoothed points.
+    :complexity: O(n * k) time, O(n) space where k is the kernel size and n the number of points
     """
 

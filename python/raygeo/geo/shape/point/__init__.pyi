@@ -24,6 +24,7 @@ def are_points_equal(p1: types.Point3D, p2: types.Point3D, tolerance: float) -> 
     :param p2: Second point (x, y, z).
     :param tolerance: Maximum allowed difference.
     :returns: True if points are equal within tolerance.
+    :complexity: O(1) time, O(1) space
     """
 
 def midpoint(p1: types.Point3D, p2: types.Point3D) -> types.Point3D:
@@ -33,6 +34,7 @@ def midpoint(p1: types.Point3D, p2: types.Point3D) -> types.Point3D:
     :param p1: First point (x, y, z).
     :param p2: Second point (x, y, z).
     :returns: Midpoint (x, y, z).
+    :complexity: O(1) time, O(1) space
     """
 
 def transform_point(matrix: collections.abc.Sequence[collections.abc.Sequence[float]], x: float, y: float, z: float) -> types.Point3D:
@@ -44,5 +46,6 @@ def transform_point(matrix: collections.abc.Sequence[collections.abc.Sequence[fl
     :param y: Y coordinate.
     :param z: Z coordinate.
     :returns: Transformed point (x, y, z).
+    :complexity: O(1) time, O(1) space
     """
 

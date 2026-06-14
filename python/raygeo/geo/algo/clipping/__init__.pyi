@@ -27,6 +27,7 @@ def clip_line_segment_with_polygons(p1: types.Point3D, p2: types.Point3D, region
     :param p2: End point of the line segment.
     :param regions: Polygon regions to clip against.
     :returns: List of clipped segments.
+    :complexity: O(n * m) time, O(n) space where n is the number of regions and m their average vertex count
     """
 
 def clip_line_segment_with_rect(p1: types.Point3D, p2: types.Point3D, rect: types.Rect) -> typing.Optional[tuple[types.Point3D, types.Point3D]]:
@@ -37,6 +38,7 @@ def clip_line_segment_with_rect(p1: types.Point3D, p2: types.Point3D, rect: type
     :param p2: End point of the line segment.
     :param rect: Clipping rectangle (x_min, y_min, x_max, y_max).
     :returns: Clipped segment or None if fully outside.
+    :complexity: O(1) time, O(1) space
     """
 
 def from_clipper(polygon: list[tuple[int, int]]) -> list[tuple[float, float]]:
@@ -45,6 +47,7 @@ def from_clipper(polygon: list[tuple[int, int]]) -> list[tuple[float, float]]:
     
     :param polygon: Integer polygon from Clipper.
     :returns: Polygon with float coordinates.
+    :complexity: O(n) time, O(n) space
     """
 
 def subtract_polygons_from_line_segment(p1: types.Point3D, p2: types.Point3D, regions: collections.abc.Sequence[collections.abc.Sequence[types.Point]]) -> list[tuple[types.Point3D, types.Point3D]]:
@@ -55,6 +58,7 @@ def subtract_polygons_from_line_segment(p1: types.Point3D, p2: types.Point3D, re
     :param p2: End point of the line segment.
     :param regions: List of polygon regions to subtract.
     :returns: List of remaining segments after subtraction.
+    :complexity: O(n * m) time, O(n) space where n is the number of regions and m their average vertex count
     """
 
 def to_clipper(polygon: types.Polygon) -> list[tuple[int, int]]:
@@ -63,5 +67,6 @@ def to_clipper(polygon: types.Polygon) -> list[tuple[int, int]]:
     
     :param polygon: Input polygon as a list of (x, y) points.
     :returns: Polygon with integer coordinates for Clipper.
+    :complexity: O(n) time, O(n) space
     """
 

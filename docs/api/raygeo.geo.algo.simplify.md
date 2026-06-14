@@ -19,11 +19,12 @@ Simplify a polyline using the Ramer-Douglas-Peucker algorithm.
 
 **Returns:** Simplified point sequence.
 
-| Parameter   | Type                                    | Description                |
-| ----------- | --------------------------------------- | -------------------------- |
-| `points`    | `collections.abc.Sequence[types.Point]` | Sequence of (x, y) points. |
-| `tolerance` | `float`                                 | Simplification tolerance.  |
-| _Returns_   | `types.Polygon`                         |                            |
+| Parameter    | Type                                    | Description                         |
+| ------------ | --------------------------------------- | ----------------------------------- |
+| `points`     | `collections.abc.Sequence[types.Point]` | Sequence of (x, y) points.          |
+| `tolerance`  | `float`                                 | Simplification tolerance.           |
+| _Returns_    | `types.Polygon`                         |                                     |
+| _Complexity_ |                                         | O(n log n) average time, O(n) space |
 
 ![Simplify and linearize](images/simplify.png)
 

@@ -28,6 +28,7 @@ def does_circle_intersect_rect(center: types.Point, radius: float, rect: types.R
     :param radius: Circle radius.
     :param rect: Rectangle (x_min, y_min, x_max, y_max).
     :returns: True if the circle intersects the rectangle.
+    :complexity: O(1) time, O(1) space
     """
 
 def get_circle_circle_intersections(c1: types.Point, r1: float, c2: types.Point, r2: float) -> types.Polygon:
@@ -39,6 +40,7 @@ def get_circle_circle_intersections(c1: types.Point, r1: float, c2: types.Point,
     :param c2: Center of second circle (x, y).
     :param r2: Radius of second circle.
     :returns: List of intersection points (x, y).
+    :complexity: O(1) time, O(1) space
     """
 
 def get_line_circle_intersections(p1: types.Point, p2: types.Point, center: types.Point, radius: float) -> types.Polygon:
@@ -50,6 +52,7 @@ def get_line_circle_intersections(p1: types.Point, p2: types.Point, center: type
     :param center: Circle center (x, y).
     :param radius: Circle radius.
     :returns: List of intersection points (x, y).
+    :complexity: O(1) time, O(1) space
     """
 
 def is_circle_inside_rect(center: types.Point, radius: float, rect: types.Rect) -> bool:
@@ -60,6 +63,7 @@ def is_circle_inside_rect(center: types.Point, radius: float, rect: types.Rect) 
     :param radius: Circle radius.
     :param rect: Rectangle (x_min, y_min, x_max, y_max).
     :returns: True if the circle is fully inside the rectangle.
+    :complexity: O(1) time, O(1) space
     """
 
 def line_segment_intersects_circle(p1: types.Point, p2: types.Point, circle_center: types.Point, circle_radius: float) -> bool:
@@ -71,6 +75,7 @@ def line_segment_intersects_circle(p1: types.Point, p2: types.Point, circle_cent
     :param circle_center: Circle center (x, y).
     :param circle_radius: Circle radius.
     :returns: True if the line segment intersects the circle.
+    :complexity: O(1) time, O(1) space
     """
 
 def project_point_onto_circle(point: types.Point, center: types.Point, radius: float) -> typing.Optional[types.Point]:
@@ -81,5 +86,6 @@ def project_point_onto_circle(point: types.Point, center: types.Point, radius: f
     :param center: Circle center (x, y).
     :param radius: Circle radius.
     :returns: Projected point on the circle (x, y).
+    :complexity: O(1) time, O(1) space
     """
 
