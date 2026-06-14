@@ -67,6 +67,27 @@ Remove binary runs shorter than the given minimum.
 | _Returns_        | `numpy.NDArray[numpy.uint8]` |                                        |
 | _Complexity_     |                              | O(w\*h)                                |
 
+### `compute_adaptive_threshold()`
+
+`compute_adaptive_threshold(areas: list[int]) -> int`
+
+Compute an adaptive area threshold to separate noise from content.
+
+Analyses the distribution of connected component areas and finds the largest gap to determine a
+threshold that separates noise (small components) from meaningful content.
+
+**Returns:** Adaptive threshold value (minimum area to keep).
+
+| Parameter    | Type        | Description                                 |
+| ------------ | ----------- | ------------------------------------------- |
+| `areas`      | `list[int]` | Sorted list of component pixel areas.       |
+| _Returns_    | `int`       |                                             |
+| _Complexity_ |             | O(n) where n = number of unique area values |
+
+![Adaptive threshold from component area distribution](images/image-processing-adaptive-threshold.png)
+
+_Adaptive threshold from component area distribution_
+
 ### `compute_auto_levels()`
 
 `compute_auto_levels(gray_image: numpy.NDArray[numpy.uint8], clip_percent: float = 1) -> tuple[int, int]`
@@ -81,6 +102,28 @@ Compute auto black/white levels from a grayscale image histogram.
 | `clip_percent` | `float = 1`                  | Percentage of pixels to clip from each end. |
 | _Returns_      | `tuple[int, int]`            |                                             |
 | _Complexity_   |                              | O(n) where n = number of pixels             |
+
+### `denoise_binary()`
+
+`denoise_binary(binary: numpy.NDArray[numpy.uint8]) -> numpy.NDArray[numpy.uint8]`
+
+Remove small noise components from a binary image using adaptive thresholding.
+
+Computes connected components, finds the largest gap in component area distribution to separate
+noise from content, and removes small components. Uses the same algorithm as the legacy Python
+`_find_adaptive_area_threshold`.
+
+**Returns:** 2D binary uint8 array with noise removed.
+
+| Parameter    | Type                         | Description                            |
+| ------------ | ---------------------------- | -------------------------------------- |
+| `binary`     | `numpy.NDArray[numpy.uint8]` | 2D binary uint8 array (values 0 or 1). |
+| _Returns_    | `numpy.NDArray[numpy.uint8]` |                                        |
+| _Complexity_ |                              | O(w\*h)                                |
+
+![Binary image denoised via adaptive thresholding](images/image-processing-denoise-binary.png)
+
+_Binary image denoised via adaptive thresholding_
 
 ### `filter_components()`
 

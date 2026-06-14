@@ -37,6 +37,8 @@ pub(crate) fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
             "grayscale_to_binary",
             "get_component_areas",
             "filter_components",
+            "denoise_binary",
+            "compute_adaptive_threshold",
         ],
     )?;
 

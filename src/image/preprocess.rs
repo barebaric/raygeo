@@ -174,7 +174,11 @@ fn connected_components_8(
     (labels, area_map)
 }
 
-pub fn get_component_areas(binary: &[u8], width: usize, height: usize) -> Vec<u32> {
+pub fn get_component_areas(
+    binary: &[u8],
+    width: usize,
+    height: usize,
+) -> Vec<u32> {
     let size = width * height;
     assert_eq!(binary.len(), size, "binary buffer size mismatch");
 
@@ -187,6 +191,95 @@ pub fn get_component_areas(binary: &[u8], width: usize, height: usize) -> Vec<u3
     let mut areas: Vec<u32> = area_map.into_values().collect();
     areas.sort_unstable();
     areas
+}
+
+pub fn compute_adaptive_threshold(areas: &[u32]) -> usize {
+    if areas.is_empty() {
+        return 0;
+    }
+
+    // Heuristic: if all unique areas are > 10 and each appears < 10 times,
+    // the image is likely already clean — return minimum threshold.
+    let max_a = *areas.iter().max().unwrap_or(&0) as usize;
+    let mut bin_counts = vec![0u32; max_a + 1];
+    for &a in areas {
+        bin_counts[a as usize] += 1;
+    }
+
+    let mut is_clean = true;
+    for (area, &count) in bin_counts.iter().enumerate() {
+        if count > 0 && (area <= 10 || count >= 10) {
+            is_clean = false;
+            break;
+        }
+    }
+    if is_clean {
+        return 2;
+    }
+
+    // Find all area sizes that are actually present in the image
+    let present_areas: Vec<usize> = bin_counts
+        .iter()
+        .enumerate()
+        .filter(|(_, &c)| c > 0)
+        .map(|(i, _)| i)
+        .collect();
+
+    if present_areas.len() <= 1 {
+        return 2;
+    }
+
+    // Find the largest gap between consecutive size values
+    let mut max_gap = 0usize;
+    let mut gap_idx = 0;
+    for i in 1..present_areas.len() {
+        let gap = present_areas[i] - present_areas[i - 1];
+        if gap > max_gap {
+            max_gap = gap;
+            gap_idx = i - 1;
+        }
+    }
+
+    let last_noisy = present_areas[gap_idx];
+    let threshold = last_noisy + 1;
+    let capped = threshold.min(100);
+    capped.max(2)
+}
+
+pub fn denoise_binary(binary: &[u8], width: usize, height: usize) -> Vec<u8> {
+    let size = width * height;
+    assert_eq!(binary.len(), size, "binary buffer size mismatch");
+
+    if binary.iter().all(|&p| p == 0) {
+        return binary.to_vec();
+    }
+
+    let (labels, area_map) = connected_components_8(binary, width, height);
+
+    if area_map.len() <= 1 {
+        return binary.to_vec();
+    }
+
+    let mut areas: Vec<u32> = area_map.values().copied().collect();
+    areas.sort_unstable();
+
+    let min_area = compute_adaptive_threshold(&areas);
+
+    if min_area <= 1 {
+        return binary.to_vec();
+    }
+
+    let mut output = vec![0u8; size];
+    for (i, &label) in labels.iter().enumerate() {
+        if label > 0 {
+            if let Some(&area) = area_map.get(&label) {
+                if (area as usize) >= min_area {
+                    output[i] = 1;
+                }
+            }
+        }
+    }
+    output
 }
 
 pub fn filter_components(

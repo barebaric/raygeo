@@ -12,7 +12,9 @@ __all__ = [
     "apply_bayer_dither",
     "apply_floyd_steinberg_dither",
     "apply_minimum_run_length",
+    "compute_adaptive_threshold",
     "compute_auto_levels",
+    "denoise_binary",
     "filter_components",
     "get_component_areas",
     "grayscale_to_binary",
@@ -56,6 +58,19 @@ def apply_minimum_run_length(binary: numpy.typing.NDArray[numpy.uint8], min_run_
     :complexity: O(w*h)
     """
 
+def compute_adaptive_threshold(areas: list[int]) -> int:
+    r"""
+    Compute an adaptive area threshold to separate noise from content.
+    
+    Analyses the distribution of connected component areas and finds the
+    largest gap to determine a threshold that separates noise (small
+    components) from meaningful content.
+    
+    :param areas: Sorted list of component pixel areas.
+    :returns: Adaptive threshold value (minimum area to keep).
+    :complexity: O(n) where n = number of unique area values
+    """
+
 def compute_auto_levels(gray_image: numpy.typing.NDArray[numpy.uint8], clip_percent: float = 1) -> tuple[int, int]:
     r"""
     Compute auto black/white levels from a grayscale image histogram.
@@ -64,6 +79,19 @@ def compute_auto_levels(gray_image: numpy.typing.NDArray[numpy.uint8], clip_perc
     :param clip_percent: Percentage of pixels to clip from each end.
     :returns: Tuple of (black_point, white_point).
     :complexity: O(n) where n = number of pixels
+    """
+
+def denoise_binary(binary: numpy.typing.NDArray[numpy.uint8]) -> numpy.typing.NDArray[numpy.uint8]:
+    r"""
+    Remove small noise components from a binary image using adaptive thresholding.
+    
+    Computes connected components, finds the largest gap in component area
+    distribution to separate noise from content, and removes small components.
+    Uses the same algorithm as the legacy Python ``_find_adaptive_area_threshold``.
+    
+    :param binary: 2D binary uint8 array (values 0 or 1).
+    :returns: 2D binary uint8 array with noise removed.
+    :complexity: O(w*h)
     """
 
 def filter_components(binary: numpy.typing.NDArray[numpy.uint8], min_area: int) -> numpy.typing.NDArray[numpy.uint8]:

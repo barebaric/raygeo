@@ -80,6 +80,16 @@ _INLINE_IMAGE_MAP = {
             "image-processing-filter-components",
             "Component filtering by minimum area",
         ),
+        (
+            "denoise_binary",
+            "image-processing-denoise-binary",
+            "Binary image denoised via adaptive thresholding",
+        ),
+        (
+            "compute_adaptive_threshold",
+            "image-processing-adaptive-threshold",
+            "Adaptive threshold from component area distribution",
+        ),
     ],
     "raygeo.svg.md": [
         (None, "svg-parsing", "SVG path data parsed into geometries"),

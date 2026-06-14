@@ -148,9 +148,80 @@ fn py_filter_components(
     Ok(reshaped.unbind())
 }
 
+#[gen_stub_pyfunction(
+    python = r#"
+    import numpy
+    import numpy.typing
+
+    def denoise_binary(
+        binary: numpy.typing.NDArray[numpy.uint8],
+    ) -> numpy.typing.NDArray[numpy.uint8]:
+        """Remove small noise components from a binary image using adaptive thresholding.
+
+        Computes connected components, finds the largest gap in component area
+        distribution to separate noise from content, and removes small components.
+        Uses the same algorithm as the legacy Python ``_find_adaptive_area_threshold``.
+
+        :param binary: 2D binary uint8 array (values 0 or 1).
+        :returns: 2D binary uint8 array with noise removed.
+        :complexity: O(w*h)
+        """
+"#,
+    module = "raygeo.image"
+)]
+#[pyfunction(name = "denoise_binary")]
+fn py_denoise_binary(
+    py: Python<'_>,
+    binary: &Bound<'_, PyAny>,
+) -> PyResult<Py<PyAny>> {
+    let numpy = py.import("numpy")?;
+    let arr = numpy.call_method1("asarray", (binary,))?;
+    let shape = arr.getattr("shape")?.extract::<(usize, usize)>()?;
+    let height = shape.0;
+    let width = shape.1;
+    let flat: Vec<u8> = arr
+        .call_method0("flatten")?
+        .call_method0("tolist")?
+        .extract()?;
+
+    let output = rust_preprocess::denoise_binary(&flat, width, height);
+
+    let result = output.into_pyarray(py);
+    let reshaped = result.call_method1("reshape", (height, width))?;
+    Ok(reshaped.unbind())
+}
+
+#[gen_stub_pyfunction(
+    python = r#"
+    def compute_adaptive_threshold(
+        areas: list[int],
+    ) -> int:
+        """Compute an adaptive area threshold to separate noise from content.
+
+        Analyses the distribution of connected component areas and finds the
+        largest gap to determine a threshold that separates noise (small
+        components) from meaningful content.
+
+        :param areas: Sorted list of component pixel areas.
+        :returns: Adaptive threshold value (minimum area to keep).
+        :complexity: O(n) where n = number of unique area values
+        """
+"#,
+    module = "raygeo.image"
+)]
+#[pyfunction(name = "compute_adaptive_threshold")]
+fn py_compute_adaptive_threshold(areas: Vec<u32>) -> usize {
+    rust_preprocess::compute_adaptive_threshold(&areas)
+}
+
 pub(crate) fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(py_grayscale_to_binary, m.clone())?)?;
     m.add_function(wrap_pyfunction!(py_get_component_areas, m.clone())?)?;
     m.add_function(wrap_pyfunction!(py_filter_components, m.clone())?)?;
+    m.add_function(wrap_pyfunction!(py_denoise_binary, m.clone())?)?;
+    m.add_function(wrap_pyfunction!(
+        py_compute_adaptive_threshold,
+        m.clone()
+    )?)?;
     Ok(())
 }
