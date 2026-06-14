@@ -66,48 +66,6 @@ fn parse_coords(s: &str) -> Vec<f64> {
     coords
 }
 
-fn parse_path_tokens(d: &str) -> Vec<(char, String)> {
-    let mut tokens = Vec::new();
-    let mut cmd = 0u8;
-    let mut args = String::new();
-    for ch in d.chars() {
-        if matches!(
-            ch,
-            'M' | 'm'
-                | 'L'
-                | 'l'
-                | 'H'
-                | 'h'
-                | 'V'
-                | 'v'
-                | 'C'
-                | 'c'
-                | 'Q'
-                | 'q'
-                | 'T'
-                | 't'
-                | 'S'
-                | 's'
-                | 'A'
-                | 'a'
-                | 'Z'
-                | 'z'
-        ) {
-            if cmd != 0 {
-                tokens.push((cmd as char, args.clone()));
-            }
-            cmd = ch as u8;
-            args.clear();
-        } else {
-            args.push(ch);
-        }
-    }
-    if cmd != 0 {
-        tokens.push((cmd as char, args));
-    }
-    tokens
-}
-
 /// Apply the affine transform + border/scale to a single SVG coordinate.
 fn txfm_pt(px: f64, py: f64, m: DMat3, sx: f64, sy: f64) -> (f64, f64) {
     let (tx, ty) = mat3_transform(m, px, py);
@@ -292,379 +250,6 @@ fn push_line(geo: &mut Geometry, x: f64, y: f64, m: DMat3, sx: f64, sy: f64) {
     geo.line_to(tx, ty, 0.0);
 }
 
-#[allow(clippy::too_many_arguments)]
-fn handle_move(
-    tokens: &[(char, String)],
-    i: &mut usize,
-    geo: &mut Option<Geometry>,
-    geos: &mut Vec<Geometry>,
-    pos: &mut (f64, f64),
-    sub_start: &mut (f64, f64),
-    prev_c2: &mut Option<(f64, f64)>,
-    prev_q: &mut Option<(f64, f64)>,
-    m: DMat3,
-    sx: f64,
-    sy: f64,
-) {
-    *prev_c2 = None;
-    *prev_q = None;
-    if let Some(g) = geo.take() {
-        if !g.is_empty() {
-            geos.push(g);
-        }
-    }
-    let (cmd, ref args) = tokens[*i];
-    let coords = parse_coords(args);
-    let mut g = Geometry::new();
-    if coords.len() >= 2 {
-        if cmd == 'm' {
-            pos.0 += coords[0];
-            pos.1 += coords[1];
-        } else {
-            pos.0 = coords[0];
-            pos.1 = coords[1];
-        }
-        *sub_start = *pos;
-        let (tx, ty) = txfm_pt(pos.0, pos.1, m, sx, sy);
-        g.move_to(tx, ty, 0.0);
-        for j in (2..coords.len()).step_by(2) {
-            if j + 1 < coords.len() {
-                if cmd == 'm' {
-                    pos.0 += coords[j];
-                    pos.1 += coords[j + 1];
-                } else {
-                    pos.0 = coords[j];
-                    pos.1 = coords[j + 1];
-                }
-                push_line(&mut g, pos.0, pos.1, m, sx, sy);
-            }
-        }
-    }
-    *geo = Some(g);
-}
-
-#[allow(clippy::too_many_arguments)]
-fn handle_linelike(
-    tokens: &[(char, String)],
-    i: &mut usize,
-    geo: &mut Option<Geometry>,
-    pos: &mut (f64, f64),
-    prev_c2: &mut Option<(f64, f64)>,
-    prev_q: &mut Option<(f64, f64)>,
-    m: DMat3,
-    sx: f64,
-    sy: f64,
-) {
-    *prev_c2 = None;
-    *prev_q = None;
-    let (cmd, ref args) = tokens[*i];
-    let coords = parse_coords(args);
-    let g = match geo.as_mut() {
-        Some(g) => g,
-        None => return,
-    };
-    match cmd {
-        'L' => {
-            pos.0 = coords[0];
-            pos.1 = coords[1];
-        }
-        'l' => {
-            pos.0 += coords[0];
-            pos.1 += coords[1];
-        }
-        'H' => {
-            pos.0 = coords[0];
-        }
-        'h' => {
-            pos.0 += coords[0];
-        }
-        'V' => {
-            pos.1 = coords[0];
-        }
-        'v' => {
-            pos.1 += coords[0];
-        }
-        _ => {}
-    }
-    push_line(g, pos.0, pos.1, m, sx, sy);
-}
-
-#[allow(clippy::too_many_arguments)]
-fn handle_cubic(
-    tokens: &[(char, String)],
-    i: &mut usize,
-    geo: &mut Option<Geometry>,
-    pos: &mut (f64, f64),
-    prev_c2: &mut Option<(f64, f64)>,
-    prev_q: &mut Option<(f64, f64)>,
-    m: DMat3,
-    sx: f64,
-    sy: f64,
-) {
-    *prev_q = None;
-    let (cmd, ref args) = tokens[*i];
-    let coords = parse_coords(args);
-    let g = match geo.as_mut() {
-        Some(g) => g,
-        None => return,
-    };
-    for j in (0..coords.len()).step_by(6) {
-        if j + 5 >= coords.len() {
-            break;
-        }
-        let (c1x, c1y, c2x, c2y, ex, ey) = if cmd == 'C' {
-            (
-                coords[j],
-                coords[j + 1],
-                coords[j + 2],
-                coords[j + 3],
-                coords[j + 4],
-                coords[j + 5],
-            )
-        } else {
-            (
-                pos.0 + coords[j],
-                pos.1 + coords[j + 1],
-                pos.0 + coords[j + 2],
-                pos.1 + coords[j + 3],
-                pos.0 + coords[j + 4],
-                pos.1 + coords[j + 5],
-            )
-        };
-        *prev_c2 = Some((c2x, c2y));
-        for (px, py) in
-            flatten_cubic(*pos, (c1x, c1y), (c2x, c2y), (ex, ey), 20)
-        {
-            push_line(g, px, py, m, sx, sy);
-        }
-        *pos = (ex, ey);
-    }
-}
-
-#[allow(clippy::too_many_arguments)]
-fn handle_smooth_cubic(
-    tokens: &[(char, String)],
-    i: &mut usize,
-    geo: &mut Option<Geometry>,
-    pos: &mut (f64, f64),
-    prev_c2: &mut Option<(f64, f64)>,
-    prev_q: &mut Option<(f64, f64)>,
-    m: DMat3,
-    sx: f64,
-    sy: f64,
-) {
-    *prev_q = None;
-    let (cmd, ref args) = tokens[*i];
-    let coords = parse_coords(args);
-    let g = match geo.as_mut() {
-        Some(g) => g,
-        None => return,
-    };
-    for j in (0..coords.len()).step_by(4) {
-        if j + 3 >= coords.len() {
-            break;
-        }
-        let (c2x, c2y, ex, ey) = if cmd == 'S' {
-            (coords[j], coords[j + 1], coords[j + 2], coords[j + 3])
-        } else {
-            (
-                pos.0 + coords[j],
-                pos.1 + coords[j + 1],
-                pos.0 + coords[j + 2],
-                pos.1 + coords[j + 3],
-            )
-        };
-        let (c1x, c1y) = match *prev_c2 {
-            Some((px, py)) => (2.0 * pos.0 - px, 2.0 * pos.1 - py),
-            None => *pos,
-        };
-        *prev_c2 = Some((c2x, c2y));
-        for (px, py) in
-            flatten_cubic(*pos, (c1x, c1y), (c2x, c2y), (ex, ey), 20)
-        {
-            push_line(g, px, py, m, sx, sy);
-        }
-        *pos = (ex, ey);
-    }
-}
-
-#[allow(clippy::too_many_arguments)]
-fn handle_quad(
-    tokens: &[(char, String)],
-    i: &mut usize,
-    geo: &mut Option<Geometry>,
-    pos: &mut (f64, f64),
-    prev_c2: &mut Option<(f64, f64)>,
-    prev_q: &mut Option<(f64, f64)>,
-    m: DMat3,
-    sx: f64,
-    sy: f64,
-) {
-    *prev_c2 = None;
-    let (cmd, ref args) = tokens[*i];
-    let coords = parse_coords(args);
-    let g = match geo.as_mut() {
-        Some(g) => g,
-        None => return,
-    };
-    for j in (0..coords.len()).step_by(4) {
-        if j + 3 >= coords.len() {
-            break;
-        }
-        let (qx, qy, ex, ey) = if cmd == 'Q' {
-            (coords[j], coords[j + 1], coords[j + 2], coords[j + 3])
-        } else {
-            (
-                pos.0 + coords[j],
-                pos.1 + coords[j + 1],
-                pos.0 + coords[j + 2],
-                pos.1 + coords[j + 3],
-            )
-        };
-        *prev_q = Some((qx, qy));
-        let c1x = pos.0 + 2.0 / 3.0 * (qx - pos.0);
-        let c1y = pos.1 + 2.0 / 3.0 * (qy - pos.1);
-        let c2x = qx + 1.0 / 3.0 * (ex - qx);
-        let c2y = qy + 1.0 / 3.0 * (ey - qy);
-        for (px, py) in
-            flatten_cubic(*pos, (c1x, c1y), (c2x, c2y), (ex, ey), 20)
-        {
-            push_line(g, px, py, m, sx, sy);
-        }
-        *pos = (ex, ey);
-    }
-}
-
-#[allow(clippy::too_many_arguments)]
-fn handle_smooth_quad(
-    tokens: &[(char, String)],
-    i: &mut usize,
-    geo: &mut Option<Geometry>,
-    pos: &mut (f64, f64),
-    prev_c2: &mut Option<(f64, f64)>,
-    prev_q: &mut Option<(f64, f64)>,
-    m: DMat3,
-    sx: f64,
-    sy: f64,
-) {
-    *prev_c2 = None;
-    let (cmd, ref args) = tokens[*i];
-    let coords = parse_coords(args);
-    let g = match geo.as_mut() {
-        Some(g) => g,
-        None => return,
-    };
-    for j in (0..coords.len()).step_by(2) {
-        if j + 1 >= coords.len() {
-            break;
-        }
-        let (ex, ey) = if cmd == 'T' {
-            (coords[j], coords[j + 1])
-        } else {
-            (pos.0 + coords[j], pos.1 + coords[j + 1])
-        };
-        let (qx, qy) = match *prev_q {
-            Some((px, py)) => (2.0 * pos.0 - px, 2.0 * pos.1 - py),
-            None => *pos,
-        };
-        *prev_q = Some((qx, qy));
-        let c1x = pos.0 + 2.0 / 3.0 * (qx - pos.0);
-        let c1y = pos.1 + 2.0 / 3.0 * (qy - pos.1);
-        let c2x = qx + 1.0 / 3.0 * (ex - qx);
-        let c2y = qy + 1.0 / 3.0 * (ey - qy);
-        for (px, py) in
-            flatten_cubic(*pos, (c1x, c1y), (c2x, c2y), (ex, ey), 20)
-        {
-            push_line(g, px, py, m, sx, sy);
-        }
-        *pos = (ex, ey);
-    }
-}
-
-#[allow(clippy::too_many_arguments)]
-fn handle_arc(
-    tokens: &[(char, String)],
-    i: &mut usize,
-    geo: &mut Option<Geometry>,
-    pos: &mut (f64, f64),
-    prev_c2: &mut Option<(f64, f64)>,
-    prev_q: &mut Option<(f64, f64)>,
-    m: DMat3,
-    sx: f64,
-    sy: f64,
-) {
-    *prev_c2 = None;
-    *prev_q = None;
-    let (cmd, ref args) = tokens[*i];
-    let coords = parse_coords(args);
-    let g = match geo.as_mut() {
-        Some(g) => g,
-        None => return,
-    };
-    for j in (0..coords.len()).step_by(7) {
-        if j + 6 >= coords.len() {
-            break;
-        }
-        let rx = coords[j];
-        let ry = coords[j + 1];
-        let x_rot = coords[j + 2];
-        let large = coords[j + 3] != 0.0;
-        let sweep = coords[j + 4] != 0.0;
-        let (ex, ey) = if cmd == 'A' {
-            (coords[j + 5], coords[j + 6])
-        } else {
-            (pos.0 + coords[j + 5], pos.1 + coords[j + 6])
-        };
-
-        let ac = match svg_arc_center(
-            pos.0, pos.1, rx, ry, x_rot, large, sweep, ex, ey,
-        ) {
-            Some(ac) => ac,
-            None => {
-                *pos = (ex, ey);
-                continue;
-            }
-        };
-
-        let is_circular = (ac.rx - ac.ry).abs() / ac.rx.max(ac.ry) < 1e-3;
-
-        if is_circular {
-            let (tex, tey, ti, tj, cw) =
-                txfm_arc(*pos, (ac.cx, ac.cy), sweep, m, sx, sy);
-            g.arc_to(tex, tey, ti, tj, cw, 0.0);
-        } else {
-            for (_, (c1x, c1y), (c2x, c2y), (ex, ey)) in
-                elliptical_arc_to_beziers(&ac)
-            {
-                let (tc1x, tc1y) = txfm_pt(c1x, c1y, m, sx, sy);
-                let (tc2x, tc2y) = txfm_pt(c2x, c2y, m, sx, sy);
-                let (tex, tey) = txfm_pt(ex, ey, m, sx, sy);
-                g.bezier_to(
-                    crate::types::Point3D(tc1x, tc1y, 0.0),
-                    crate::types::Point3D(tc2x, tc2y, 0.0),
-                    crate::types::Point3D(tex, tey, 0.0),
-                );
-            }
-        }
-        *pos = (ex, ey);
-    }
-}
-
-fn handle_close(
-    geo: &mut Option<Geometry>,
-    pos: &mut (f64, f64),
-    sub_start: &mut (f64, f64),
-    prev_c2: &mut Option<(f64, f64)>,
-    prev_q: &mut Option<(f64, f64)>,
-) {
-    *prev_c2 = None;
-    *prev_q = None;
-    if let Some(g) = geo.as_mut() {
-        g.close_path();
-    }
-    *pos = *sub_start;
-}
-
 /// Parse an SVG path `d` attribute into a list of geometries.
 ///
 /// Supports M/m, L/l, H/h, V/v, C/c, S/s, Q/q, T/t, A/a, Z/z.
@@ -677,12 +262,7 @@ pub fn parse_svg_path_data(
     scale_x: f64,
     scale_y: f64,
 ) -> RaygeoResult<Vec<Geometry>> {
-    let tokens = parse_path_tokens(path_data);
-    if tokens.is_empty() && !path_data.trim().is_empty() {
-        return Err(RaygeoError::SvgInvalidPath(
-            "no recognized SVG path commands found".into(),
-        ));
-    }
+    use svgtypes::PathSegment;
 
     let mut geometries = Vec::new();
     let mut current_geo: Option<Geometry> = None;
@@ -690,100 +270,262 @@ pub fn parse_svg_path_data(
     let mut subpath_start = (0.0, 0.0);
     let mut prev_c2: Option<(f64, f64)> = None;
     let mut prev_q: Option<(f64, f64)> = None;
+    let mut has_valid = false;
+    let mut parse_error = false;
 
-    let mut i = 0;
-    while i < tokens.len() {
-        let cmd = tokens[i].0;
-        match cmd {
-            'M' | 'm' => handle_move(
-                &tokens,
-                &mut i,
-                &mut current_geo,
-                &mut geometries,
-                &mut pos,
-                &mut subpath_start,
-                &mut prev_c2,
-                &mut prev_q,
-                transform,
-                scale_x,
-                scale_y,
-            ),
-            'L' | 'l' | 'H' | 'h' | 'V' | 'v' => handle_linelike(
-                &tokens,
-                &mut i,
-                &mut current_geo,
-                &mut pos,
-                &mut prev_c2,
-                &mut prev_q,
-                transform,
-                scale_x,
-                scale_y,
-            ),
-            'C' | 'c' => handle_cubic(
-                &tokens,
-                &mut i,
-                &mut current_geo,
-                &mut pos,
-                &mut prev_c2,
-                &mut prev_q,
-                transform,
-                scale_x,
-                scale_y,
-            ),
-            'S' | 's' => handle_smooth_cubic(
-                &tokens,
-                &mut i,
-                &mut current_geo,
-                &mut pos,
-                &mut prev_c2,
-                &mut prev_q,
-                transform,
-                scale_x,
-                scale_y,
-            ),
-            'Q' | 'q' => handle_quad(
-                &tokens,
-                &mut i,
-                &mut current_geo,
-                &mut pos,
-                &mut prev_c2,
-                &mut prev_q,
-                transform,
-                scale_x,
-                scale_y,
-            ),
-            'T' | 't' => handle_smooth_quad(
-                &tokens,
-                &mut i,
-                &mut current_geo,
-                &mut pos,
-                &mut prev_c2,
-                &mut prev_q,
-                transform,
-                scale_x,
-                scale_y,
-            ),
-            'A' | 'a' => handle_arc(
-                &tokens,
-                &mut i,
-                &mut current_geo,
-                &mut pos,
-                &mut prev_c2,
-                &mut prev_q,
-                transform,
-                scale_x,
-                scale_y,
-            ),
-            'Z' | 'z' => handle_close(
-                &mut current_geo,
-                &mut pos,
-                &mut subpath_start,
-                &mut prev_c2,
-                &mut prev_q,
-            ),
-            _ => {}
+    for segment in svgtypes::PathParser::from(path_data) {
+        let seg = match segment {
+            Ok(s) => {
+                has_valid = true;
+                s
+            }
+            Err(_) => {
+                parse_error = true;
+                continue;
+            }
+        };
+
+        match seg {
+            PathSegment::MoveTo { abs, x, y } => {
+                prev_c2 = None;
+                prev_q = None;
+                if let Some(g) = current_geo.take() {
+                    if !g.is_empty() {
+                        geometries.push(g);
+                    }
+                }
+                let mut g = Geometry::new();
+                if abs {
+                    pos = (x, y);
+                } else {
+                    pos = (pos.0 + x, pos.1 + y);
+                }
+                subpath_start = pos;
+                let (tx, ty) =
+                    txfm_pt(pos.0, pos.1, transform, scale_x, scale_y);
+                g.move_to(tx, ty, 0.0);
+                current_geo = Some(g);
+            }
+
+            PathSegment::LineTo { abs, x, y } => {
+                prev_c2 = None;
+                prev_q = None;
+                if abs {
+                    pos = (x, y);
+                } else {
+                    pos = (pos.0 + x, pos.1 + y);
+                }
+                if let Some(ref mut g) = current_geo {
+                    push_line(g, pos.0, pos.1, transform, scale_x, scale_y);
+                }
+            }
+
+            PathSegment::HorizontalLineTo { abs, x } => {
+                prev_c2 = None;
+                prev_q = None;
+                if abs {
+                    pos.0 = x;
+                } else {
+                    pos.0 += x;
+                }
+                if let Some(ref mut g) = current_geo {
+                    push_line(g, pos.0, pos.1, transform, scale_x, scale_y);
+                }
+            }
+
+            PathSegment::VerticalLineTo { abs, y } => {
+                prev_c2 = None;
+                prev_q = None;
+                if abs {
+                    pos.1 = y;
+                } else {
+                    pos.1 += y;
+                }
+                if let Some(ref mut g) = current_geo {
+                    push_line(g, pos.0, pos.1, transform, scale_x, scale_y);
+                }
+            }
+
+            PathSegment::CurveTo {
+                abs,
+                x1,
+                y1,
+                x2,
+                y2,
+                x,
+                y,
+            } => {
+                prev_q = None;
+                let (c1x, c1y, c2x, c2y, ex, ey) = if abs {
+                    (x1, y1, x2, y2, x, y)
+                } else {
+                    (
+                        pos.0 + x1,
+                        pos.1 + y1,
+                        pos.0 + x2,
+                        pos.1 + y2,
+                        pos.0 + x,
+                        pos.1 + y,
+                    )
+                };
+                prev_c2 = Some((c2x, c2y));
+                if let Some(ref mut g) = current_geo {
+                    for (px, py) in
+                        flatten_cubic(pos, (c1x, c1y), (c2x, c2y), (ex, ey), 20)
+                    {
+                        push_line(g, px, py, transform, scale_x, scale_y);
+                    }
+                }
+                pos = (ex, ey);
+            }
+
+            PathSegment::SmoothCurveTo { abs, x2, y2, x, y } => {
+                prev_q = None;
+                let (c2x, c2y, ex, ey) = if abs {
+                    (x2, y2, x, y)
+                } else {
+                    (pos.0 + x2, pos.1 + y2, pos.0 + x, pos.1 + y)
+                };
+                let (c1x, c1y) = match prev_c2 {
+                    Some((px, py)) => (2.0 * pos.0 - px, 2.0 * pos.1 - py),
+                    None => pos,
+                };
+                prev_c2 = Some((c2x, c2y));
+                if let Some(ref mut g) = current_geo {
+                    for (px, py) in
+                        flatten_cubic(pos, (c1x, c1y), (c2x, c2y), (ex, ey), 20)
+                    {
+                        push_line(g, px, py, transform, scale_x, scale_y);
+                    }
+                }
+                pos = (ex, ey);
+            }
+
+            PathSegment::Quadratic { abs, x1, y1, x, y } => {
+                prev_c2 = None;
+                let (qx, qy, ex, ey) = if abs {
+                    (x1, y1, x, y)
+                } else {
+                    (pos.0 + x1, pos.1 + y1, pos.0 + x, pos.1 + y)
+                };
+                prev_q = Some((qx, qy));
+                let c1x = pos.0 + 2.0 / 3.0 * (qx - pos.0);
+                let c1y = pos.1 + 2.0 / 3.0 * (qy - pos.1);
+                let c2x = qx + 1.0 / 3.0 * (ex - qx);
+                let c2y = qy + 1.0 / 3.0 * (ey - qy);
+                if let Some(ref mut g) = current_geo {
+                    for (px, py) in
+                        flatten_cubic(pos, (c1x, c1y), (c2x, c2y), (ex, ey), 20)
+                    {
+                        push_line(g, px, py, transform, scale_x, scale_y);
+                    }
+                }
+                pos = (ex, ey);
+            }
+
+            PathSegment::SmoothQuadratic { abs, x, y } => {
+                prev_c2 = None;
+                let (ex, ey) =
+                    if abs { (x, y) } else { (pos.0 + x, pos.1 + y) };
+                let (qx, qy) = match prev_q {
+                    Some((px, py)) => (2.0 * pos.0 - px, 2.0 * pos.1 - py),
+                    None => pos,
+                };
+                prev_q = Some((qx, qy));
+                let c1x = pos.0 + 2.0 / 3.0 * (qx - pos.0);
+                let c1y = pos.1 + 2.0 / 3.0 * (qy - pos.1);
+                let c2x = qx + 1.0 / 3.0 * (ex - qx);
+                let c2y = qy + 1.0 / 3.0 * (ey - qy);
+                if let Some(ref mut g) = current_geo {
+                    for (px, py) in
+                        flatten_cubic(pos, (c1x, c1y), (c2x, c2y), (ex, ey), 20)
+                    {
+                        push_line(g, px, py, transform, scale_x, scale_y);
+                    }
+                }
+                pos = (ex, ey);
+            }
+
+            PathSegment::EllipticalArc {
+                abs,
+                rx,
+                ry,
+                x_axis_rotation,
+                large_arc,
+                sweep,
+                x,
+                y,
+            } => {
+                prev_c2 = None;
+                prev_q = None;
+                let (ex, ey) =
+                    if abs { (x, y) } else { (pos.0 + x, pos.1 + y) };
+                let ac = match svg_arc_center(
+                    pos.0,
+                    pos.1,
+                    rx,
+                    ry,
+                    x_axis_rotation,
+                    large_arc,
+                    sweep,
+                    ex,
+                    ey,
+                ) {
+                    Some(ac) => ac,
+                    None => {
+                        pos = (ex, ey);
+                        continue;
+                    }
+                };
+                let is_circular =
+                    (ac.rx - ac.ry).abs() / ac.rx.max(ac.ry) < 1e-3;
+                if let Some(ref mut g) = current_geo {
+                    if is_circular {
+                        let (tex, tey, ti, tj, cw) = txfm_arc(
+                            pos,
+                            (ac.cx, ac.cy),
+                            sweep,
+                            transform,
+                            scale_x,
+                            scale_y,
+                        );
+                        g.arc_to(tex, tey, ti, tj, cw, 0.0);
+                    } else {
+                        for (_, (c1x, c1y), (c2x, c2y), (ex, ey)) in
+                            elliptical_arc_to_beziers(&ac)
+                        {
+                            let (tc1x, tc1y) =
+                                txfm_pt(c1x, c1y, transform, scale_x, scale_y);
+                            let (tc2x, tc2y) =
+                                txfm_pt(c2x, c2y, transform, scale_x, scale_y);
+                            let (tex, tey) =
+                                txfm_pt(ex, ey, transform, scale_x, scale_y);
+                            g.bezier_to(
+                                crate::types::Point3D(tc1x, tc1y, 0.0),
+                                crate::types::Point3D(tc2x, tc2y, 0.0),
+                                crate::types::Point3D(tex, tey, 0.0),
+                            );
+                        }
+                    }
+                }
+                pos = (ex, ey);
+            }
+
+            PathSegment::ClosePath { .. } => {
+                prev_c2 = None;
+                prev_q = None;
+                if let Some(ref mut g) = current_geo {
+                    g.close_path();
+                }
+                pos = subpath_start;
+            }
         }
-        i += 1;
+    }
+
+    if !has_valid && parse_error {
+        return Err(RaygeoError::SvgInvalidPath(
+            "no valid SVG path commands found".into(),
+        ));
     }
 
     if let Some(geo) = current_geo.take() {
