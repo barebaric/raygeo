@@ -317,14 +317,14 @@ impl PyOps {
     /// Concatenate two Ops sequences (``ops1 + ops2``).
     fn __add__(&self, other: &PyOps) -> PyOps {
         PyOps {
-            inner: self.inner.ops_add(&other.inner),
+            inner: &self.inner + &other.inner,
         }
     }
 
     /// Repeat the ops sequence *count* times (``ops * n``).
     fn __mul__(&self, count: usize) -> PyOps {
         PyOps {
-            inner: self.inner.ops_mul(count),
+            inner: &self.inner * count,
         }
     }
 

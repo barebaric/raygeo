@@ -7,8 +7,6 @@
 //! properties.
 
 use crate::geo::query::get_positions_at_distances_from_array;
-use crate::geo::shape::arc::get_arc_bounds;
-use crate::geo::shape::bezier::get_bezier_bounds;
 use crate::types::{Command, Point, Point3D, Rect};
 
 /// A geometric path consisting of move, line, arc, and bezier commands.
@@ -172,7 +170,6 @@ impl Geometry {
     /// Returns None for Move commands or if the index is out of bounds.
     pub fn segment_bounds(&self, index: usize) -> Option<Rect> {
         let cmd = self.data.get(index)?;
-        let end = cmd.end_point();
 
         let (sx, sy) = if index > 0 {
             let prev = self.data[index - 1].end_point();
@@ -181,33 +178,7 @@ impl Geometry {
             (0.0, 0.0)
         };
 
-        match cmd {
-            Command::Move { .. } => None,
-            Command::Line { .. } => Some(Rect(
-                sx.min(end.0),
-                sy.min(end.1),
-                sx.max(end.0),
-                sy.max(end.1),
-            )),
-            Command::Arc {
-                center_offset,
-                clockwise,
-                ..
-            } => Some(get_arc_bounds(
-                Point(sx, sy),
-                Point(end.0, end.1),
-                *center_offset,
-                *clockwise,
-            )),
-            Command::Bezier {
-                control1, control2, ..
-            } => Some(get_bezier_bounds(
-                Point(sx, sy),
-                Point(control1.0, control1.1),
-                Point(control2.0, control2.1),
-                Point(end.0, end.1),
-            )),
-        }
+        cmd.bounding_box(Point(sx, sy))
     }
 
     /// Given a list of distances along the path, returns the corresponding

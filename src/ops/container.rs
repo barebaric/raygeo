@@ -501,8 +501,12 @@ impl Ops {
     }
 
     // --- Arithmetic ---
+}
 
-    pub fn ops_add(&self, other: &Ops) -> Self {
+impl std::ops::Add<&Ops> for &Ops {
+    type Output = Ops;
+
+    fn add(self, other: &Ops) -> Ops {
         let mut result = Ops::new();
         for cmd in &self.commands {
             result.commands.push(cmd.clone());
@@ -512,17 +516,23 @@ impl Ops {
         }
         result
     }
+}
 
-    pub fn ops_mul(&self, count: usize) -> Self {
+impl std::ops::Mul<usize> for &Ops {
+    type Output = Ops;
+
+    fn mul(self, other: usize) -> Ops {
         let mut result = Ops::new();
-        for _ in 0..count {
+        for _ in 0..other {
             for cmd in &self.commands {
                 result.commands.push(cmd.clone());
             }
         }
         result
     }
+}
 
+impl Ops {
     // --- Utility ---
 
     pub fn dump(&self) {

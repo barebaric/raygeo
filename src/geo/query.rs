@@ -9,14 +9,8 @@
 
 use crate::constants::EPSILON_COLLINEAR;
 use crate::geo::algo::analysis::{get_point_at_from_array, segment_length};
-use crate::geo::shape::arc::{
-    get_arc_bounds, get_arc_closest_point, get_arc_length,
-};
-use crate::geo::shape::bezier::{
-    compute_cubic_bezier_bounds_1d, get_bezier_closest_point,
-    linearize_bezier_from_params,
-};
-use crate::geo::shape::line::get_line_segment_closest_point;
+use crate::geo::shape::arc::get_arc_bounds;
+use crate::geo::shape::bezier::compute_cubic_bezier_bounds_1d;
 use crate::types::{Command, Point, Point3D, Rect};
 
 /// Compute the axis-aligned bounding rectangle for a geometry command slice.
@@ -131,38 +125,8 @@ pub fn get_total_distance_from_array(data: &[Command]) -> f64 {
     for cmd in data {
         let end_point = cmd.end_point();
 
-        match cmd {
-            Command::Move { .. } | Command::Line { .. } => {
-                // Line segment: Euclidean distance
-                total_dist += (end_point.0 - last_point.0)
-                    .hypot(end_point.1 - last_point.1);
-            }
-            Command::Arc {
-                center_offset,
-                clockwise,
-                ..
-            } => {
-                total_dist += get_arc_length(
-                    Point(last_point.0, last_point.1),
-                    Point(end_point.0, end_point.1),
-                    *center_offset,
-                    *clockwise,
-                );
-            }
-            Command::Bezier {
-                end,
-                control1,
-                control2,
-                ..
-            } => {
-                // Bezier: linearize and sum segment lengths
-                let segments = linearize_bezier_from_params(
-                    *end, *control1, *control2, last_point, 0.1,
-                );
-                for (p1, p2) in segments {
-                    total_dist += (p2.0 - p1.0).hypot(p2.1 - p1.1);
-                }
-            }
+        if !matches!(cmd, Command::Move { .. }) {
+            total_dist += cmd.length(last_point);
         }
 
         last_point = end_point;
@@ -195,66 +159,12 @@ pub fn find_closest_point_on_path_from_array(
             continue;
         }
 
-        let start_pos_3d = last_pos_3d;
-
-        match cmd {
-            Command::Line { .. } => {
-                let t = get_line_segment_closest_point(
-                    Point(start_pos_3d.0, start_pos_3d.1),
-                    Point(end_point_3d.0, end_point_3d.1),
-                    x,
-                    y,
-                );
-                if t.2 < min_dist_sq {
-                    min_dist_sq = t.2;
-                    closest_info = Some((i, t.0, t.1));
-                }
+        if let Some((t, pt, dist_sq)) = cmd.closest_point_to(last_pos_3d, x, y)
+        {
+            if dist_sq < min_dist_sq {
+                min_dist_sq = dist_sq;
+                closest_info = Some((i, t, pt));
             }
-            Command::Arc {
-                end,
-                center_offset,
-                clockwise,
-                ..
-            } => {
-                if let Some((t_arc, pt_arc, dist_sq_arc)) =
-                    get_arc_closest_point(
-                        *end,
-                        *center_offset,
-                        *clockwise,
-                        start_pos_3d,
-                        x,
-                        y,
-                    )
-                {
-                    if dist_sq_arc < min_dist_sq {
-                        min_dist_sq = dist_sq_arc;
-                        closest_info = Some((i, t_arc, pt_arc));
-                    }
-                }
-            }
-            Command::Bezier {
-                end,
-                control1,
-                control2,
-                ..
-            } => {
-                if let Some((t_bezier, pt_bezier, dist_sq_bezier)) =
-                    get_bezier_closest_point(
-                        *end,
-                        *control1,
-                        *control2,
-                        start_pos_3d,
-                        x,
-                        y,
-                    )
-                {
-                    if dist_sq_bezier < min_dist_sq {
-                        min_dist_sq = dist_sq_bezier;
-                        closest_info = Some((i, t_bezier, pt_bezier));
-                    }
-                }
-            }
-            Command::Move { .. } => {}
         }
 
         last_pos_3d = end_point_3d;

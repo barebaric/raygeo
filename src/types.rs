@@ -1,5 +1,11 @@
 use crate::constants::EPSILON_COLLINEAR;
-use crate::geo::shape::arc::get_arc_sweep;
+use crate::geo::shape::arc::{
+    get_arc_bounds, get_arc_closest_point, get_arc_sweep, linearize_arc,
+};
+use crate::geo::shape::bezier::{
+    get_bezier_bounds, get_bezier_closest_point, linearize_bezier_from_params,
+};
+use crate::geo::shape::line::get_line_segment_closest_point;
 
 /// A 2D point represented as (x, y) coordinates.
 #[derive(Clone, Copy, Debug, Default, PartialEq, PartialOrd)]
@@ -213,6 +219,210 @@ impl Command {
                 })
             }
             Command::Move { .. } => None,
+        }
+    }
+
+    pub fn point_at(&self, start: Point3D, t: f64) -> Option<Point3D> {
+        let p0 = start;
+        let p1 = self.end_point();
+        let (px, py) = match self {
+            Command::Move { .. } => return None,
+            Command::Line { .. } => {
+                let px = p0.0 + t * (p1.0 - p0.0);
+                let py = p0.1 + t * (p1.1 - p0.1);
+                (px, py)
+            }
+            Command::Arc {
+                center_offset,
+                clockwise,
+                ..
+            } => {
+                let cx = p0.0 + center_offset.0;
+                let cy = p0.1 + center_offset.1;
+                let start_angle = (p0.1 - cy).atan2(p0.0 - cx);
+                let end_angle = (p1.1 - cy).atan2(p1.0 - cx);
+                let angle_range =
+                    get_arc_sweep(start_angle, end_angle, *clockwise);
+                let current_angle = start_angle + t * angle_range;
+                let radius_start = (p0.0 - cx).hypot(p0.1 - cy);
+                let radius_end = (p1.0 - cx).hypot(p1.1 - cy);
+                let radius = radius_start + t * (radius_end - radius_start);
+                let px = cx + radius * current_angle.cos();
+                let py = cy + radius * current_angle.sin();
+                (px, py)
+            }
+            Command::Bezier {
+                control1, control2, ..
+            } => {
+                let c1 = (control1.0, control1.1);
+                let c2 = (control2.0, control2.1);
+                let omt = 1.0 - t;
+                let px = omt.powi(3) * p0.0
+                    + 3.0 * omt.powi(2) * t * c1.0
+                    + 3.0 * omt * t.powi(2) * c2.0
+                    + t.powi(3) * p1.0;
+                let py = omt.powi(3) * p0.1
+                    + 3.0 * omt.powi(2) * t * c1.1
+                    + 3.0 * omt * t.powi(2) * c2.1
+                    + t.powi(3) * p1.1;
+                (px, py)
+            }
+        };
+        let pz = p0.2 + t * (p1.2 - p0.2);
+        Some(Point3D(px, py, pz))
+    }
+
+    pub fn tangent_at(&self, start: Point3D, t: f64) -> Option<Point> {
+        let p0 = Point(start.0, start.1);
+        let p1_pt = self.end_point();
+        let p1 = Point(p1_pt.0, p1_pt.1);
+
+        let tangent_vec: Point = match self {
+            Command::Move { .. } => return None,
+            Command::Line { .. } => Point(p1.0 - p0.0, p1.1 - p0.1),
+            Command::Arc {
+                center_offset,
+                clockwise,
+                ..
+            } => {
+                let center =
+                    Point(p0.0 + center_offset.0, p0.1 + center_offset.1);
+                let start_angle = (p0.1 - center.1).atan2(p0.0 - center.0);
+                let end_angle = (p1.1 - center.1).atan2(p1.0 - center.0);
+                let angle_range =
+                    get_arc_sweep(start_angle, end_angle, *clockwise);
+                let current_angle = start_angle + t * angle_range;
+                let radius_start = (p0.0 - center.0).hypot(p0.1 - center.1);
+                let radius_end = (p1.0 - center.0).hypot(p1.1 - center.1);
+                let radius = radius_start + t * (radius_end - radius_start);
+                let point = Point(
+                    center.0 + radius * current_angle.cos(),
+                    center.1 + radius * current_angle.sin(),
+                );
+                let radius_vec = Point(point.0 - center.0, point.1 - center.1);
+                if *clockwise {
+                    Point(radius_vec.1, -radius_vec.0)
+                } else {
+                    Point(-radius_vec.1, radius_vec.0)
+                }
+            }
+            Command::Bezier {
+                control1, control2, ..
+            } => {
+                let c1 = (control1.0, control1.1);
+                let c2 = (control2.0, control2.1);
+                let omt = 1.0 - t;
+                let tx = 3.0 * omt.powi(2) * (c1.0 - p0.0)
+                    + 6.0 * omt * t * (c2.0 - c1.0)
+                    + 3.0 * t.powi(2) * (p1.0 - c2.0);
+                let ty = 3.0 * omt.powi(2) * (c1.1 - p0.1)
+                    + 6.0 * omt * t * (c2.1 - c1.1)
+                    + 3.0 * t.powi(2) * (p1.1 - c2.1);
+                Point(tx, ty)
+            }
+        };
+
+        let norm = (tangent_vec.0.powi(2) + tangent_vec.1.powi(2)).sqrt();
+        if norm < 1e-9 {
+            return Some(Point(1.0, 0.0));
+        }
+        Some(Point(tangent_vec.0 / norm, tangent_vec.1 / norm))
+    }
+
+    pub fn closest_point_to(
+        &self,
+        start: Point3D,
+        x: f64,
+        y: f64,
+    ) -> Option<(f64, Point, f64)> {
+        match self {
+            Command::Move { .. } => None,
+            Command::Line { .. } => {
+                let p0 = Point(start.0, start.1);
+                let p1 = Point(self.end_point().0, self.end_point().1);
+                Some(get_line_segment_closest_point(p0, p1, x, y))
+            }
+            Command::Arc {
+                end,
+                center_offset,
+                clockwise,
+                ..
+            } => get_arc_closest_point(
+                *end,
+                *center_offset,
+                *clockwise,
+                start,
+                x,
+                y,
+            ),
+            Command::Bezier {
+                end,
+                control1,
+                control2,
+                ..
+            } => get_bezier_closest_point(
+                *end, *control1, *control2, start, x, y,
+            ),
+        }
+    }
+
+    pub fn linearize(
+        &self,
+        start: Point3D,
+        resolution: f64,
+    ) -> Vec<(Point3D, Point3D)> {
+        match self {
+            Command::Move { .. } => vec![],
+            Command::Line { .. } => {
+                vec![(start, self.end_point())]
+            }
+            Command::Arc {
+                end,
+                center_offset,
+                clockwise,
+                ..
+            } => linearize_arc(
+                *end,
+                *center_offset,
+                *clockwise,
+                start,
+                resolution,
+            ),
+            Command::Bezier {
+                end,
+                control1,
+                control2,
+                ..
+            } => linearize_bezier_from_params(
+                *end, *control1, *control2, start, resolution,
+            ),
+        }
+    }
+
+    pub fn bounding_box(&self, start: Point) -> Option<Rect> {
+        let end = self.end_point();
+        let p1 = Point(end.0, end.1);
+        match self {
+            Command::Move { .. } => None,
+            Command::Line { .. } => Some(Rect(
+                start.0.min(p1.0),
+                start.1.min(p1.1),
+                start.0.max(p1.0),
+                start.1.max(p1.1),
+            )),
+            Command::Arc {
+                center_offset,
+                clockwise,
+                ..
+            } => Some(get_arc_bounds(start, p1, *center_offset, *clockwise)),
+            Command::Bezier {
+                control1, control2, ..
+            } => Some(get_bezier_bounds(
+                start,
+                Point(control1.0, control1.1),
+                Point(control2.0, control2.1),
+                p1,
+            )),
         }
     }
 }

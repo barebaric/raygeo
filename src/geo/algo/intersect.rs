@@ -6,8 +6,6 @@
 //! O(N log M) bounding-box lookups instead of brute-force O(N × M) scans.
 
 use crate::constants::EPSILON_INTERSECT;
-use crate::geo::shape::arc::linearize_arc;
-use crate::geo::shape::bezier::linearize_bezier_from_params;
 use crate::geo::shape::line::get_line_segment_intersection;
 use crate::types::{Command, Point, Point3D};
 use rstar::{PointDistance, RTree, RTreeObject, AABB};
@@ -18,38 +16,12 @@ fn get_segments_for_cmd(
     index: usize,
 ) -> Vec<(Point3D, Point3D)> {
     let cmd = &data[index];
-    let end_point = cmd.end_point();
-
     let start_point = if index > 0 {
         data[index - 1].end_point()
     } else {
         Point3D(0.0, 0.0, 0.0)
     };
-
-    match cmd {
-        Command::Line { .. } => {
-            vec![(start_point, end_point)]
-        }
-        Command::Arc {
-            end,
-            center_offset,
-            clockwise,
-            ..
-        } => linearize_arc(*end, *center_offset, *clockwise, start_point, 0.1),
-        Command::Bezier {
-            end,
-            control1,
-            control2,
-            ..
-        } => linearize_bezier_from_params(
-            *end,
-            *control1,
-            *control2,
-            start_point,
-            0.1,
-        ),
-        Command::Move { .. } => vec![],
-    }
+    cmd.linearize(start_point, 0.1)
 }
 
 /// Pre-computed segments and bounding box for a single command row.

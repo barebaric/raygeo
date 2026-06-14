@@ -11,8 +11,6 @@ use crate::geo::algo::topology::{
     get_valid_contours_data, split_into_contours,
 };
 use crate::geo::geometry::Geometry;
-use crate::geo::shape::arc::{get_arc_sweep, linearize_arc};
-use crate::geo::shape::bezier::linearize_bezier_from_params;
 use crate::geo::shape::polygon::is_point_inside_polygon;
 use crate::types::{Command, Point, Point3D, Polygon, WindingOrder};
 
@@ -56,61 +54,19 @@ pub fn get_subpath_vertices_from_array(
             break;
         }
 
-        let end_point_3d = cmd.end_point();
+        let start_3d: Point3D = if vertices.len() >= 2 {
+            Point3D(
+                vertices[vertices.len() - 1].0,
+                vertices[vertices.len() - 1].1,
+                last_pos_3d.2,
+            )
+        } else {
+            last_pos_3d
+        };
 
-        match cmd {
-            Command::Line { .. } => {
-                vertices.push(Point(end_point_3d.0, end_point_3d.1));
-            }
-            Command::Arc {
-                end,
-                center_offset,
-                clockwise,
-                ..
-            } => {
-                let start_3d: Point3D = if vertices.len() >= 2 {
-                    Point3D(
-                        vertices[vertices.len() - 1].0,
-                        vertices[vertices.len() - 1].1,
-                        last_pos_3d.2,
-                    )
-                } else {
-                    last_pos_3d
-                };
-                let segments = linearize_arc(
-                    *end,
-                    *center_offset,
-                    *clockwise,
-                    start_3d,
-                    0.1,
-                );
-                for (_, p2) in segments {
-                    vertices.push(Point(p2.0, p2.1));
-                }
-            }
-            Command::Bezier {
-                end,
-                control1,
-                control2,
-                ..
-            } => {
-                let start_3d: Point3D = if vertices.len() >= 2 {
-                    Point3D(
-                        vertices[vertices.len() - 1].0,
-                        vertices[vertices.len() - 1].1,
-                        last_pos_3d.2,
-                    )
-                } else {
-                    last_pos_3d
-                };
-                let segments = linearize_bezier_from_params(
-                    *end, *control1, *control2, start_3d, 0.1,
-                );
-                for (_, p2) in segments {
-                    vertices.push(Point(p2.0, p2.1));
-                }
-            }
-            _ => {}
+        let segments = cmd.linearize(start_3d, 0.1);
+        for (_, p2) in segments {
+            vertices.push(Point(p2.0, p2.1));
         }
     }
 
@@ -212,57 +168,7 @@ pub fn get_point_at_from_array(
         Point3D(0.0, 0.0, 0.0)
     };
 
-    let p0 = start_pos_3d;
-    let end_3d = cmd.end_point();
-    let p1 = end_3d;
-
-    let (px, py) = match cmd {
-        Command::Line { .. } => {
-            let px = p0.0 + t * (p1.0 - p0.0);
-            let py = p0.1 + t * (p1.1 - p0.1);
-            (px, py)
-        }
-        Command::Arc {
-            center_offset,
-            clockwise,
-            ..
-        } => {
-            let center = (p0.0 + center_offset.0, p0.1 + center_offset.1);
-
-            let start_angle = (p0.1 - center.1).atan2(p0.0 - center.0);
-            let end_angle = (p1.1 - center.1).atan2(p1.0 - center.0);
-            let angle_range = get_arc_sweep(start_angle, end_angle, *clockwise);
-            let current_angle = start_angle + t * angle_range;
-            let radius_start = (p0.0 - center.0).hypot(p0.1 - center.1);
-            let radius_end = (p1.0 - center.0).hypot(p1.1 - center.1);
-            let radius = radius_start + t * (radius_end - radius_start);
-
-            let px = center.0 + radius * current_angle.cos();
-            let py = center.1 + radius * current_angle.sin();
-            (px, py)
-        }
-        Command::Bezier {
-            control1, control2, ..
-        } => {
-            let c1 = *control1;
-            let c2 = *control2;
-
-            let omt = 1.0 - t;
-            let px = omt.powi(3) * p0.0
-                + 3.0 * omt.powi(2) * t * c1.0
-                + 3.0 * omt * t.powi(2) * c2.0
-                + t.powi(3) * p1.0;
-            let py = omt.powi(3) * p0.1
-                + 3.0 * omt.powi(2) * t * c1.1
-                + 3.0 * omt * t.powi(2) * c2.1
-                + t.powi(3) * p1.1;
-            (px, py)
-        }
-        _ => return None,
-    };
-
-    let pz = p0.2 + t * (p1.2 - p0.2);
-    Some(Point3D(px, py, pz))
+    cmd.point_at(start_pos_3d, t)
 }
 
 /// Evaluates a tangent at a given t parameter along a path segment.
@@ -283,63 +189,7 @@ pub fn get_tangent_at_from_array(
         Point3D(0.0, 0.0, 0.0)
     };
 
-    let p0 = Point(start_pos_3d.0, start_pos_3d.1);
-    let end_3d = cmd.end_point();
-    let p1 = Point(end_3d.0, end_3d.1);
-
-    let tangent_vec: Point = match cmd {
-        Command::Line { .. } => Point(p1.0 - p0.0, p1.1 - p0.1),
-        Command::Arc {
-            center_offset,
-            clockwise,
-            ..
-        } => {
-            let center = Point(p0.0 + center_offset.0, p0.1 + center_offset.1);
-
-            let start_angle = (p0.1 - center.1).atan2(p0.0 - center.0);
-            let end_angle = (p1.1 - center.1).atan2(p1.0 - center.0);
-            let angle_range = get_arc_sweep(start_angle, end_angle, *clockwise);
-            let current_angle = start_angle + t * angle_range;
-            let radius_start = (p0.0 - center.0).hypot(p0.1 - center.1);
-            let radius_end = (p1.0 - center.0).hypot(p1.1 - center.1);
-            let radius = radius_start + t * (radius_end - radius_start);
-
-            let point = Point(
-                center.0 + radius * current_angle.cos(),
-                center.1 + radius * current_angle.sin(),
-            );
-
-            let radius_vec = Point(point.0 - center.0, point.1 - center.1);
-            if *clockwise {
-                Point(radius_vec.1, -radius_vec.0)
-            } else {
-                Point(-radius_vec.1, radius_vec.0)
-            }
-        }
-        Command::Bezier {
-            control1, control2, ..
-        } => {
-            let c1 = *control1;
-            let c2 = *control2;
-            let omt = 1.0 - t;
-
-            let tx = 3.0 * omt.powi(2) * (c1.0 - p0.0)
-                + 6.0 * omt * t * (c2.0 - c1.0)
-                + 3.0 * t.powi(2) * (p1.0 - c2.0);
-            let ty = 3.0 * omt.powi(2) * (c1.1 - p0.1)
-                + 6.0 * omt * t * (c2.1 - c1.1)
-                + 3.0 * t.powi(2) * (p1.1 - c2.1);
-            Point(tx, ty)
-        }
-        _ => return None,
-    };
-
-    let norm = (tangent_vec.0.powi(2) + tangent_vec.1.powi(2)).sqrt();
-    if norm < 1e-9 {
-        return Some(Point(1.0, 0.0));
-    }
-
-    Some(Point(tangent_vec.0 / norm, tangent_vec.1 / norm))
+    cmd.tangent_at(start_pos_3d, t)
 }
 
 /// Computes the outward-facing normal vector at a point on the path.
