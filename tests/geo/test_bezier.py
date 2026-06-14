@@ -11,6 +11,7 @@ from raygeo.geo.shape.bezier import (
     get_bezier_point_at,
     get_bezier_rect_intersections,
     get_perpendicular_dist_sq,
+    is_bezier_flat,
     is_bezier_inside_polygons,
     linearize_bezier,
     linearize_bezier_adaptive,
@@ -303,6 +304,34 @@ def test_linearize_bezier_adaptive_curved():
     assert len(points_fine) > len(points_coarse)
     assert points_fine[-1] == p1
     assert points_coarse[-1] == p1
+
+
+class TestIsBezierFlat:
+    def test_collinear_controls_is_flat(self):
+        p0, c1, c2, p1 = (0.0, 0.0), (3.0, 0.0), (7.0, 0.0), (10.0, 0.0)
+        assert is_bezier_flat(p0, c1, c2, p1, tolerance_sq=0.01)
+
+    def test_curved_controls_not_flat(self):
+        p0, c1, c2, p1 = (0.0, 0.0), (0.0, 10.0), (10.0, 10.0), (10.0, 0.0)
+        assert not is_bezier_flat(p0, c1, c2, p1, tolerance_sq=0.01)
+
+    def test_strict_tolerance_detects_curvature(self):
+        p0, c1, c2, p1 = (0.0, 0.0), (1.0, 0.5), (9.0, 0.5), (10.0, 0.0)
+        assert is_bezier_flat(p0, c1, c2, p1, tolerance_sq=1.0)
+        assert not is_bezier_flat(p0, c1, c2, p1, tolerance_sq=0.01)
+
+    def test_degenerate_coincident_endpoints(self):
+        p = (5.0, 5.0)
+        c1, c2 = (6.0, 8.0), (9.0, 6.0)
+        assert not is_bezier_flat(p, c1, c2, p, tolerance_sq=0.01)
+
+    def test_degenerate_all_coincident(self):
+        p = (5.0, 5.0)
+        assert is_bezier_flat(p, p, p, p, tolerance_sq=0.01)
+
+    def test_zero_tolerance_implies_not_flat(self):
+        p0, c1, c2, p1 = (0.0, 0.0), (1.0, 1.0), (9.0, 1.0), (10.0, 0.0)
+        assert not is_bezier_flat(p0, c1, c2, p1, tolerance_sq=0.0)
 
 
 def test_linearize_segment_start_end():

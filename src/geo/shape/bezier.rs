@@ -357,6 +357,44 @@ pub fn linearize_bezier(
     result
 }
 
+/// Tests whether a cubic Bezier curve is flat enough to approximate with a
+/// line segment, using a chord-distance flatness test.
+///
+/// For non-degenerate curves (where start ≠ end), it checks whether both
+/// control points lie within `tolerance_sq` of the chord line using the
+/// squared cross-product distance. For degenerate curves (start ≈ end), it
+/// checks whether both control points are within `tolerance_sq` of the start
+/// point.
+pub fn is_bezier_flat(
+    p0: Point,
+    c1: Point,
+    c2: Point,
+    p1: Point,
+    tolerance_sq: f64,
+) -> bool {
+    let vx = p1.0 - p0.0;
+    let vy = p1.1 - p0.1;
+    let norm_sq = vx * vx + vy * vy;
+
+    if norm_sq < 1e-9 {
+        // Degenerate case: zero-length chord
+        let d1_sq = (c1.0 - p0.0).powi(2) + (c1.1 - p0.1).powi(2);
+        let d2_sq = (c2.0 - p0.0).powi(2) + (c2.1 - p0.1).powi(2);
+        d1_sq < tolerance_sq && d2_sq < tolerance_sq
+    } else {
+        // Test cross product distance from chord line
+        let term1 = -vy;
+        let term2 = vx;
+        let term3 = p0.0 * p1.1 - p0.1 * p1.0;
+
+        let cross1 = (term1 * c1.0 + term2 * c1.1 - term3).abs();
+        let cross2 = (term1 * c2.0 + term2 * c2.1 - term3).abs();
+
+        let limit = tolerance_sq * norm_sq;
+        cross1 * cross1 < limit && cross2 * cross2 < limit
+    }
+}
+
 pub fn linearize_bezier_adaptive(
     p0: Point,
     c1: Point,
@@ -367,79 +405,41 @@ pub fn linearize_bezier_adaptive(
 ) -> Polygon {
     let mut points: Polygon = vec![];
 
-    /// Recursive subdivision with flatness test based on control point distances
-    fn recursive_step(
-        curve: CubicBezier,
-        depth: usize,
-        max_depth: usize,
-        tolerance_sq: f64,
-        points: &mut Polygon,
-    ) {
-        let CubicBezier(p0, c1, c2, p1) = curve;
-        let vx = p1.0 - p0.0;
-        let vy = p1.1 - p0.1;
-        let norm_sq = vx * vx + vy * vy;
-
-        // Test if curve is flat enough to approximate with a line
-        let is_flat = if depth >= max_depth {
-            true
-        } else if norm_sq < 1e-9 {
-            // Degenerate case: zero-length chord
-            let d1_sq = (c1.0 - p0.0).powi(2) + (c1.1 - p0.1).powi(2);
-            let d2_sq = (c2.0 - p0.0).powi(2) + (c2.1 - p0.1).powi(2);
-            d1_sq < tolerance_sq && d2_sq < tolerance_sq
-        } else {
-            // Test cross product distance from chord line
-            let term1 = -vy;
-            let term2 = vx;
-            let term3 = p0.0 * p1.1 - p0.1 * p1.0;
-
-            let cross1 = (term1 * c1.0 + term2 * c1.1 - term3).abs();
-            let cross2 = (term1 * c2.0 + term2 * c2.1 - term3).abs();
-
-            let limit = tolerance_sq * norm_sq;
-            cross1 * cross1 < limit && cross2 * cross2 < limit
-        };
-
-        if is_flat {
-            return;
-        }
-
-        // Subdivide using de Casteljau's algorithm
-        let m01 = Point((p0.0 + c1.0) / 2.0, (p0.1 + c1.1) / 2.0);
-        let m12 = Point((c1.0 + c2.0) / 2.0, (c1.1 + c2.1) / 2.0);
-        let m23 = Point((c2.0 + p1.0) / 2.0, (c2.1 + p1.1) / 2.0);
-
-        let q01 = Point((m01.0 + m12.0) / 2.0, (m01.1 + m12.1) / 2.0);
-        let q12 = Point((m12.0 + m23.0) / 2.0, (m12.1 + m23.1) / 2.0);
-
-        let r = Point((q01.0 + q12.0) / 2.0, (q01.1 + q12.1) / 2.0);
-
-        // Recurse on both halves
-        recursive_step(
-            CubicBezier(p0, m01, q01, r),
-            depth + 1,
-            max_depth,
-            tolerance_sq,
-            points,
-        );
-        points.push(r);
-        recursive_step(
-            CubicBezier(r, q12, m23, p1),
-            depth + 1,
-            max_depth,
-            tolerance_sq,
-            points,
-        );
+    enum Frame {
+        Subdivide(CubicBezier, usize),
+        EmitMidpoint(Point),
     }
 
-    recursive_step(
-        CubicBezier(p0, c1, c2, p1),
-        0,
-        max_depth,
-        tolerance_sq,
-        &mut points,
-    );
+    let mut stack: Vec<Frame> =
+        vec![Frame::Subdivide(CubicBezier(p0, c1, c2, p1), 0)];
+
+    while let Some(frame) = stack.pop() {
+        match frame {
+            Frame::EmitMidpoint(r) => points.push(r),
+            Frame::Subdivide(curve, depth) => {
+                if depth >= max_depth
+                    || is_bezier_flat(
+                        curve.0,
+                        curve.1,
+                        curve.2,
+                        curve.3,
+                        tolerance_sq,
+                    )
+                {
+                    continue;
+                }
+
+                let CubicBezier(p0, c1, c2, p1) = curve;
+                let (left, right) = split_bezier(p0, c1, c2, p1, 0.5);
+                let r = left.3;
+
+                stack.push(Frame::Subdivide(right, depth + 1));
+                stack.push(Frame::EmitMidpoint(r));
+                stack.push(Frame::Subdivide(left, depth + 1));
+            }
+        }
+    }
+
     points.push(p1);
     points
 }

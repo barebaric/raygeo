@@ -15,8 +15,9 @@ use crate::geo::shape::bezier::{
     clip_bezier_with_rect, convert_cubic_bezier_to_quadratic, flatten_bezier,
     get_bezier_bounds, get_bezier_flatness_sq, get_bezier_length,
     get_bezier_point_at, get_bezier_rect_intersections,
-    get_perpendicular_dist_sq, is_bezier_inside_polygons, linearize_bezier,
-    linearize_bezier_adaptive, linearize_bezier_segment, split_bezier,
+    get_perpendicular_dist_sq, is_bezier_flat, is_bezier_inside_polygons,
+    linearize_bezier, linearize_bezier_adaptive, linearize_bezier_segment,
+    split_bezier,
 };
 use crate::types::{Point, Point3D, Rect};
 use pyo3::prelude::*;
@@ -36,6 +37,7 @@ pub fn register(shape_mod: &Bound<'_, PyModule>) -> PyResult<()> {
         get_bezier_rect_intersections_py,
         clip_bezier_with_rect_py,
         convert_cubic_bezier_to_quadratic_py,
+        is_bezier_flat_py,
         is_bezier_inside_polygons_py,
         linearize_bezier_py,
         linearize_bezier_adaptive_py,
@@ -291,6 +293,51 @@ fn convert_cubic_bezier_to_quadratic_py(
         Point(p1.0, p1.1),
         Point(p2.0, p2.1),
         Point(p3.0, p3.1),
+    )
+}
+
+#[gen_stub_pyfunction(
+    python = r#"
+    import raygeo.geo.types
+
+    def is_bezier_flat(
+        p0: types.Point,
+        p1: types.Point,
+        p2: types.Point,
+        p3: types.Point,
+        tolerance_sq: float,
+    ) -> bool:
+        """Test whether a cubic bezier curve is flat enough to approximate with a line segment.
+
+        Uses a chord-distance flatness test. For non-degenerate curves (p0 != p3)
+        it checks whether both control points lie within tolerance_sq of the chord
+        line. For degenerate curves (p0 approx p3) it checks the control point
+        distances from the start point.
+
+        :param p0: Start control point (x, y).
+        :param p1: First control point (x, y).
+        :param p2: Second control point (x, y).
+        :param p3: End control point (x, y).
+        :param tolerance_sq: Squared tolerance for flatness.
+        :returns: True if the curve is flat enough.
+        """
+"#,
+    module = "raygeo.geo.shape.bezier"
+)]
+#[pyfunction(name = "is_bezier_flat")]
+fn is_bezier_flat_py(
+    p0: PyPoint2D,
+    p1: PyPoint2D,
+    p2: PyPoint2D,
+    p3: PyPoint2D,
+    tolerance_sq: f64,
+) -> bool {
+    is_bezier_flat(
+        Point(p0.0, p0.1),
+        Point(p1.0, p1.1),
+        Point(p2.0, p2.1),
+        Point(p3.0, p3.1),
+        tolerance_sq,
     )
 }
 

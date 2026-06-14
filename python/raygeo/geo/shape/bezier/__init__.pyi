@@ -22,6 +22,7 @@ __all__ = [
     "get_bezier_point_at",
     "get_bezier_rect_intersections",
     "get_perpendicular_dist_sq",
+    "is_bezier_flat",
     "is_bezier_inside_polygons",
     "linearize_bezier",
     "linearize_bezier_adaptive",
@@ -133,6 +134,23 @@ def get_perpendicular_dist_sq(pt: types.Point3D, origin: types.Point3D, vx: floa
     :param vz: Z component of line direction.
     :param norm_sq: Precomputed squared norm (optional).
     :returns: Perpendicular distance squared.
+    """
+
+def is_bezier_flat(p0: types.Point, p1: types.Point, p2: types.Point, p3: types.Point, tolerance_sq: float) -> bool:
+    r"""
+    Test whether a cubic bezier curve is flat enough to approximate with a line segment.
+    
+    Uses a chord-distance flatness test. For non-degenerate curves (p0 != p3)
+    it checks whether both control points lie within tolerance_sq of the chord
+    line. For degenerate curves (p0 approx p3) it checks the control point
+    distances from the start point.
+    
+    :param p0: Start control point (x, y).
+    :param p1: First control point (x, y).
+    :param p2: Second control point (x, y).
+    :param p3: End control point (x, y).
+    :param tolerance_sq: Squared tolerance for flatness.
+    :returns: True if the curve is flat enough.
     """
 
 def is_bezier_inside_polygons(p0: types.Point, p1: types.Point, p2: types.Point, p3: types.Point, polygons: typing.Any) -> bool:
