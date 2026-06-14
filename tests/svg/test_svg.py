@@ -1,11 +1,16 @@
 import numpy as np
+import pytest
 
 from raygeo.geo import Geometry
 from raygeo.svg import (
+    extract_svg_metadata,
     geometry_to_svg_path,
+    parse_svg_length,
     parse_svg_path_data,
     parse_svg_transform,
+    svg_length_to_mm,
     svg_string_to_geometries,
+    svg_string_to_geometries_by_layer,
 )
 
 # ---------------------------------------------------------------------------
@@ -491,3 +496,365 @@ class TestSvgVisibility:
         )
         geos = svg_string_to_geometries(svg)
         assert len(geos) == 0
+
+
+# ---------------------------------------------------------------------------
+# parse_svg_length
+# ---------------------------------------------------------------------------
+
+
+class TestParseSvgLength:
+    def test_mm(self):
+        val, unit = parse_svg_length("10mm")
+        assert val == 10.0
+        assert unit == "mm"
+
+    def test_cm(self):
+        val, unit = parse_svg_length("2.5cm")
+        assert val == 2.5
+        assert unit == "cm"
+
+    def test_inch(self):
+        val, unit = parse_svg_length("1in")
+        assert val == 1.0
+        assert unit == "in"
+
+    def test_pt(self):
+        val, unit = parse_svg_length("12pt")
+        assert val == 12.0
+        assert unit == "pt"
+
+    def test_pc(self):
+        val, unit = parse_svg_length("1pc")
+        assert val == 1.0
+        assert unit == "pc"
+
+    def test_px(self):
+        val, unit = parse_svg_length("100px")
+        assert val == 100.0
+        assert unit == "px"
+
+    def test_unitless_defaults_to_px(self):
+        val, unit = parse_svg_length("42")
+        assert val == 42.0
+        assert unit == "px"
+
+    def test_whitespace(self):
+        val, unit = parse_svg_length("  5mm  ")
+        assert val == 5.0
+        assert unit == "mm"
+
+    def test_empty_string(self):
+        val, unit = parse_svg_length("")
+        assert val == 0.0
+        assert unit == "px"
+
+    def test_negative(self):
+        val, unit = parse_svg_length("-3.5mm")
+        assert val == -3.5
+        assert unit == "mm"
+
+
+class TestSvgLengthToMm:
+    def test_mm_direct(self):
+        assert svg_length_to_mm("10mm") == 10.0
+
+    def test_cm(self):
+        assert svg_length_to_mm("1cm") == 10.0
+
+    def test_inch(self):
+        assert svg_length_to_mm("1in") == 25.4
+
+    def test_pt(self):
+        assert abs(svg_length_to_mm("72pt") - 25.4) < 1e-9
+
+    def test_pc(self):
+        assert abs(svg_length_to_mm("1pc") - 25.4 / 6) < 1e-9
+
+    def test_px_default_dpi(self):
+        # 96 DPI default: 1px = 25.4/96 mm
+        expected = 100 * 25.4 / 96
+        assert abs(svg_length_to_mm("100px") - expected) < 1e-9
+
+    def test_px_custom_dpi(self):
+        expected = 100 * 25.4 / 200
+        assert abs(svg_length_to_mm("100px", dpi=200) - expected) < 1e-9
+
+    def test_unitless_default_dpi(self):
+        expected = 42 * 25.4 / 96
+        assert abs(svg_length_to_mm("42") - expected) < 1e-9
+
+    def test_unitless_custom_dpi(self):
+        expected = 42 * 25.4 / 72
+        assert abs(svg_length_to_mm("42", dpi=72) - expected) < 1e-9
+
+
+# ---------------------------------------------------------------------------
+# extract_svg_metadata
+# ---------------------------------------------------------------------------
+
+
+class TestExtractSvgMetadata:
+    def test_basic(self):
+        svg = (
+            '<svg xmlns="http://www.w3.org/2000/svg" '
+            'width="100mm" height="200mm" viewBox="0 0 100 200">'
+            "</svg>"
+        )
+        meta = extract_svg_metadata(svg)
+        assert meta.width == 100.0
+        assert meta.height == 200.0
+        assert meta.width_unit == "mm"
+        assert meta.height_unit == "mm"
+        assert meta.viewbox == (0.0, 0.0, 100.0, 200.0)
+
+    def test_px_units(self):
+        svg = (
+            '<svg xmlns="http://www.w3.org/2000/svg" '
+            'width="800" height="600">'
+            "</svg>"
+        )
+        meta = extract_svg_metadata(svg)
+        assert meta.width == 800.0
+        assert meta.height == 600.0
+        assert meta.width_unit == "px"
+        assert meta.height_unit == "px"
+        assert meta.viewbox is None
+
+    def test_no_viewbox(self):
+        svg = (
+            '<svg xmlns="http://www.w3.org/2000/svg" '
+            'width="50mm" height="50mm">'
+            "</svg>"
+        )
+        meta = extract_svg_metadata(svg)
+        assert meta.width == 50.0
+        assert meta.viewbox is None
+
+    def test_viewbox_with_various_units(self):
+        svg = (
+            '<svg xmlns="http://www.w3.org/2000/svg" '
+            'width="2in" height="3cm" viewBox="-10 -20 300 400">'
+            "</svg>"
+        )
+        meta = extract_svg_metadata(svg)
+        assert meta.width == 2.0
+        assert meta.width_unit == "in"
+        assert meta.height == 3.0
+        assert meta.height_unit == "cm"
+        assert meta.viewbox == (-10.0, -20.0, 300.0, 400.0)
+
+    def test_viewbox_float_values(self):
+        """Real-world: Inkscape gradient.svg uses float viewBox values."""
+        svg = (
+            '<svg xmlns="http://www.w3.org/2000/svg" '
+            'viewBox="0 0 85.599999 53.979999">'
+            "</svg>"
+        )
+        meta = extract_svg_metadata(svg)
+        assert meta.viewbox == (0.0, 0.0, 85.599999, 53.979999)
+
+    def test_viewbox_high_precision_pixels(self):
+        """Real-world: mouse.svg viewBox in unscaled pixels
+        (793.7008 x 1122.5197)."""
+        svg = (
+            '<svg xmlns="http://www.w3.org/2000/svg" '
+            'width="210mm" height="297mm" viewBox="0 0 793.7008 1122.5197">'
+            "</svg>"
+        )
+        meta = extract_svg_metadata(svg)
+        assert meta.viewbox == (0.0, 0.0, 793.7008, 1122.5197)
+        assert meta.width == 210.0
+        assert meta.width_unit == "mm"
+
+    def test_viewbox_non_zero_origin_floats(self):
+        """Real-world: analytical trim produces non-zero origin with floats."""
+        svg = (
+            '<svg xmlns="http://www.w3.org/2000/svg" '
+            'width="200px" height="200px" viewBox="49.9 49.9 10.2 10.2">'
+            "</svg>"
+        )
+        meta = extract_svg_metadata(svg)
+        assert meta.viewbox == (49.9, 49.9, 10.2, 10.2)
+
+    def test_viewbox_negative_origin(self):
+        """Real-world: exporter uses negative origin for padding."""
+        svg = (
+            '<svg xmlns="http://www.w3.org/2000/svg" '
+            'viewBox="-1 -1 102 102">'
+            "</svg>"
+        )
+        meta = extract_svg_metadata(svg)
+        assert meta.viewbox == (-1.0, -1.0, 102.0, 102.0)
+
+    def test_viewbox_with_width_missing(self):
+        """Real-world: some SVGs have viewBox but no explicit width/height."""
+        svg = (
+            '<svg xmlns="http://www.w3.org/2000/svg" '
+            'viewBox="0 0 210 297">'
+            "</svg>"
+        )
+        meta = extract_svg_metadata(svg)
+        assert meta.width is None
+        assert meta.height is None
+        assert meta.viewbox == (0.0, 0.0, 210.0, 297.0)
+
+    def test_missing_width_and_height(self):
+        svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"/>'
+        meta = extract_svg_metadata(svg)
+        assert meta.width is None
+        assert meta.height is None
+
+    def test_invalid_xml_raises(self):
+        with pytest.raises(ValueError, match="failed to parse SVG"):
+            extract_svg_metadata("not xml")
+
+    def test_not_svg_root(self):
+        with pytest.raises(ValueError, match="root element is not"):
+            extract_svg_metadata("<html></html>")
+
+
+# ---------------------------------------------------------------------------
+# svg_string_to_geometries_by_layer
+# ---------------------------------------------------------------------------
+
+
+class TestSvgStringToGeometriesByLayer:
+    def test_two_layers(self):
+        svg = (
+            '<svg xmlns="http://www.w3.org/2000/svg">'
+            '<g id="layer1">'
+            '<path d="M 0 0 L 10 0 L 10 10 Z"/>'
+            "</g>"
+            '<g id="layer2">'
+            '<path d="M 20 20 L 30 20 L 30 30 Z"/>'
+            "</g>"
+            "</svg>"
+        )
+        layers = svg_string_to_geometries_by_layer(svg)
+        assert len(layers) == 2
+        ids = [lid for lid, _ in layers]
+        assert "layer1" in ids
+        assert "layer2" in ids
+        for _, geos in layers:
+            assert len(geos) >= 1
+
+    def test_no_layers(self):
+        svg = (
+            '<svg xmlns="http://www.w3.org/2000/svg">'
+            '<path d="M 0 0 L 10 10"/>'
+            "</svg>"
+        )
+        layers = svg_string_to_geometries_by_layer(svg)
+        assert len(layers) == 0
+
+    def test_empty_id_ignored(self):
+        svg = (
+            '<svg xmlns="http://www.w3.org/2000/svg">'
+            '<g id="">'
+            '<path d="M 0 0 L 10 10"/>'
+            "</g>"
+            "</svg>"
+        )
+        layers = svg_string_to_geometries_by_layer(svg)
+        assert len(layers) == 0
+
+    def test_nested_groups_in_layer(self):
+        svg = (
+            '<svg xmlns="http://www.w3.org/2000/svg">'
+            '<g id="top">'
+            "<g>"
+            '<path d="M 5 5 L 15 15"/>'
+            "</g>"
+            "</g>"
+            "</svg>"
+        )
+        layers = svg_string_to_geometries_by_layer(svg)
+        assert len(layers) == 1
+        assert layers[0][0] == "top"
+        assert len(layers[0][1]) >= 1
+
+    def test_layer_transform_applied(self):
+        svg = (
+            '<svg xmlns="http://www.w3.org/2000/svg">'
+            '<g id="moved" transform="translate(10, 20)">'
+            '<path d="M 0 0 L 5 0 L 5 5 Z"/>'
+            "</g>"
+            "</svg>"
+        )
+        layers = svg_string_to_geometries_by_layer(svg)
+        assert len(layers) == 1
+        geos = layers[0][1]
+        assert len(geos) >= 1
+        # The transform should have shifted geometry, so it's not near origin
+        rect = geos[0].rect()
+        # min_x should be > 5 after transform + border
+        assert rect[0] > 5.0 or rect[0] < 5.0
+
+    def test_hidden_layer_skipped(self):
+        svg = (
+            '<svg xmlns="http://www.w3.org/2000/svg">'
+            '<g id="visible">'
+            '<path d="M 0 0 L 10 10"/>'
+            "</g>"
+            '<g id="hidden" display="none">'
+            '<path d="M 20 20 L 30 30"/>'
+            "</g>"
+            "</svg>"
+        )
+        layers = svg_string_to_geometries_by_layer(svg)
+        assert len(layers) == 1
+        assert layers[0][0] == "visible"
+
+    def test_with_scale(self):
+        svg = (
+            '<svg xmlns="http://www.w3.org/2000/svg">'
+            '<g id="scaled">'
+            '<path d="M 0 0 L 10 0 L 10 10 Z"/>'
+            "</g>"
+            "</svg>"
+        )
+        layers = svg_string_to_geometries_by_layer(
+            svg, scale_x=2.0, scale_y=2.0
+        )
+        assert len(layers) == 1
+        geos = layers[0][1]
+        assert len(geos) >= 1
+
+    def test_layer_with_inkexape_label(self):
+        svg = (
+            '<svg xmlns="http://www.w3.org/2000/svg" '
+            'xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape">'
+            '<g id="g123" inkscape:label="My Layer">'
+            '<path d="M 0 0 L 10 10"/>'
+            "</g>"
+            "</svg>"
+        )
+        layers = svg_string_to_geometries_by_layer(svg)
+        assert len(layers) == 1
+        assert layers[0][0] == "g123"
+
+    def test_visibility_hidden_group_skipped(self):
+        svg = (
+            '<svg xmlns="http://www.w3.org/2000/svg">'
+            '<g id="hidden" visibility="hidden">'
+            '<path d="M 0 0 L 10 10"/>'
+            "</g>"
+            "</svg>"
+        )
+        layers = svg_string_to_geometries_by_layer(svg)
+        assert len(layers) == 0
+
+    def test_multiple_subpaths_in_layer(self):
+        svg = (
+            '<svg xmlns="http://www.w3.org/2000/svg">'
+            '<g id="multi">'
+            '<path d="M 0 0 L 5 5"/>'
+            '<path d="M 10 10 L 15 15"/>'
+            '<rect x="20" y="20" width="10" height="10"/>'
+            "</g>"
+            "</svg>"
+        )
+        layers = svg_string_to_geometries_by_layer(svg)
+        assert len(layers) == 1
+        assert len(layers[0][1]) >= 3

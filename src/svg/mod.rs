@@ -901,6 +901,182 @@ fn traverse(
     }
 }
 
+// ── SVG Length parsing ────────────────────────────────────────────
+
+/// A parsed SVG length value with its unit suffix.
+///
+/// Supports: `mm`, `cm`, `in`, `pt`, `pc`, `px` and unitless (treated as `px`).
+#[derive(Debug, Clone, PartialEq)]
+pub struct SvgLength {
+    pub value: f64,
+    pub unit: String,
+}
+
+impl SvgLength {
+    /// Convert this length to millimetres using the given DPI for `px` / unitless values.
+    pub fn to_mm(&self, dpi: f64) -> f64 {
+        match self.unit.as_str() {
+            "mm" => self.value,
+            "cm" => self.value * 10.0,
+            "dm" => self.value * 100.0,
+            "m" => self.value * 1000.0,
+            "in" | "inch" => self.value * 25.4,
+            "pt" => self.value * 25.4 / 72.0,
+            "pc" => self.value * 25.4 / 6.0,
+            _ => self.value * 25.4 / dpi, // px, unitless, em, ex, %
+        }
+    }
+
+    /// Convert this length to pixels using the given DPI.
+    pub fn to_px(&self, dpi: f64) -> f64 {
+        match self.unit.as_str() {
+            "mm" => self.value * dpi / 25.4,
+            "cm" => self.value * dpi / 2.54,
+            "dm" => self.value * dpi / 0.254,
+            "m" => self.value * dpi / 0.0254,
+            "in" | "inch" => self.value * dpi,
+            "pt" => self.value * dpi / 72.0,
+            "pc" => self.value * dpi / 6.0,
+            _ => self.value, // px, unitless
+        }
+    }
+}
+
+/// Parse an SVG length string (e.g. `"10mm"`, `"2.5in"`, `"100"`, `"3cm"`, `"12pt"`).
+///
+/// Returns the numeric value and unit string. Unitless or `px` lengths are
+/// returned with `unit = "px"`.
+pub fn parse_svg_length(length_str: &str) -> RaygeoResult<SvgLength> {
+    let s = length_str.trim();
+    if s.is_empty() {
+        return Ok(SvgLength {
+            value: 0.0,
+            unit: "px".into(),
+        });
+    }
+    let num_end = s
+        .find(|c: char| !c.is_ascii_digit() && c != '.' && c != '-' && c != '+')
+        .unwrap_or(s.len());
+    if num_end == 0 {
+        return Err(RaygeoError::SvgParseError(format!(
+            "invalid SVG length: {length_str}"
+        )));
+    }
+    let value: f64 = s[..num_end].parse().map_err(|_| {
+        RaygeoError::SvgParseError(format!(
+            "invalid SVG length value: {length_str}"
+        ))
+    })?;
+    let unit = s[num_end..].trim().to_string();
+    let unit = if unit.is_empty() { "px".into() } else { unit };
+    Ok(SvgLength { value, unit })
+}
+
+// ── SVG Metadata extraction ───────────────────────────────────────
+
+/// Metadata extracted from the root `<svg>` element.
+#[derive(Debug, Clone)]
+pub struct SvgMetadata {
+    pub width: Option<f64>,
+    pub height: Option<f64>,
+    pub width_unit: String,
+    pub height_unit: String,
+    pub viewbox: Option<(f64, f64, f64, f64)>,
+}
+
+/// Extract metadata (width, height, units, viewBox) from an SVG string.
+pub fn extract_svg_metadata(svg_str: &str) -> RaygeoResult<SvgMetadata> {
+    let doc = roxmltree::Document::parse(svg_str)
+        .map_err(|e| RaygeoError::SvgParseError(format!("{e}")))?;
+    let root = doc.root_element();
+    if root.tag_name().name() != "svg" {
+        return Err(RaygeoError::SvgParseError(
+            "root element is not <svg>".into(),
+        ));
+    }
+
+    let (width, width_unit) = if let Some(w) = root.attribute("width") {
+        let pl = parse_svg_length(w)?;
+        (Some(pl.value), pl.unit)
+    } else {
+        (None, "px".into())
+    };
+
+    let (height, height_unit) = if let Some(h) = root.attribute("height") {
+        let pl = parse_svg_length(h)?;
+        (Some(pl.value), pl.unit)
+    } else {
+        (None, "px".into())
+    };
+
+    let viewbox = root.attribute("viewBox").and_then(|vb| {
+        let parts: Vec<f64> = vb
+            .split_whitespace()
+            .filter_map(|s| s.parse().ok())
+            .collect();
+        if parts.len() == 4 {
+            Some((parts[0], parts[1], parts[2], parts[3]))
+        } else {
+            None
+        }
+    });
+
+    Ok(SvgMetadata {
+        width,
+        height,
+        width_unit,
+        height_unit,
+        viewbox,
+    })
+}
+
+// ── Layer-aware geometry extraction ──────────────────────────────
+
+/// Extract geometries grouped by layer (top-level `<g>` elements with an `id`
+/// attribute).
+///
+/// Only top-level groups (immediate children of `<svg>`) with a non-empty `id`
+/// are treated as layers. If no such groups exist, the returned vector is empty.
+///
+/// Hidden elements (`display="none"`, `visibility="hidden"`) within a layer
+/// are skipped, matching the behaviour of [`svg_string_to_geometries`].
+pub fn svg_string_to_geometries_by_layer(
+    svg_str: &str,
+    scale_x: f64,
+    scale_y: f64,
+) -> RaygeoResult<Vec<(String, Vec<Geometry>)>> {
+    let doc = roxmltree::Document::parse(svg_str)
+        .map_err(|e| RaygeoError::SvgParseError(format!("{e}")))?;
+    let root = doc.root_element();
+
+    let mut layers: Vec<(String, Vec<Geometry>)> = Vec::new();
+
+    for child in root.children() {
+        if !child.is_element() {
+            continue;
+        }
+        if child.tag_name().name() == "g" {
+            if let Some(id) = child.attribute("id") {
+                if !id.is_empty() {
+                    let mut geos = Vec::new();
+                    traverse(
+                        child,
+                        DMat3::IDENTITY,
+                        &mut geos,
+                        scale_x,
+                        scale_y,
+                    );
+                    if !geos.is_empty() {
+                        layers.push((id.to_string(), geos));
+                    }
+                }
+            }
+        }
+    }
+
+    Ok(layers)
+}
+
 /// Convert a normalised Geometry into an SVG path `d` string.
 ///
 /// Coordinates are scaled by (`width`, `height`) and Y is flipped

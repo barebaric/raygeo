@@ -1,6 +1,8 @@
 use glam::DMat3;
 use pyo3::prelude::*;
-use pyo3_stub_gen::derive::gen_stub_pyfunction;
+use pyo3_stub_gen::derive::{
+    gen_stub_pyclass, gen_stub_pyfunction, gen_stub_pymethods,
+};
 
 use crate::python::geo::geometry::Geometry;
 use crate::svg;
@@ -177,27 +179,239 @@ fn py_geometry_to_svg_path(
     crate::svg::geometry_to_svg_path(&geometry.inner, width, height)
 }
 
+// ── parse_svg_length ──────────────────────────────────────────────
+
+#[gen_stub_pyfunction(
+    python = r#"
+    def parse_svg_length(
+        length_str: str,
+    ) -> tuple[float, str]:
+        """Parse an SVG length string into a (value, unit) tuple.
+
+        Supports: mm, cm, in, pt, pc, px. Unitless values default to 'px'.
+
+        :param length_str: SVG length string (e.g. '10mm', '2.5in', '100').
+        :returns: Tuple of (value, unit).
+        :complexity: O(1)
+        """
+"#,
+    module = "raygeo.svg"
+)]
+#[pyfunction(name = "parse_svg_length")]
+fn py_parse_svg_length(length_str: &str) -> PyResult<(f64, String)> {
+    let sl = svg::parse_svg_length(length_str)?;
+    Ok((sl.value, sl.unit))
+}
+
+// ── svg_length_to_mm ──────────────────────────────────────────────
+
+#[gen_stub_pyfunction(
+    python = r#"
+    def svg_length_to_mm(
+        length_str: str,
+        dpi: float = 96.0,
+    ) -> float:
+        """Parse an SVG length string and convert to millimetres.
+
+        :param length_str: SVG length string (e.g. '10mm', '2.5in', '100').
+        :param dpi: Pixels per inch used for px/unitless conversion (default 96).
+        :returns: Length in millimetres.
+        :complexity: O(1)
+        """
+"#,
+    module = "raygeo.svg"
+)]
+#[pyfunction(name = "svg_length_to_mm")]
+#[pyo3(signature = (length_str, dpi=96.0))]
+fn py_svg_length_to_mm(length_str: &str, dpi: f64) -> PyResult<f64> {
+    let sl = svg::parse_svg_length(length_str)?;
+    Ok(sl.to_mm(dpi))
+}
+
+// ── SvgMetadata Python class ──────────────────────────────────────
+
+#[gen_stub_pyclass]
+#[pyclass(module = "raygeo.svg", name = "SvgMetadata", skip_from_py_object)]
+#[derive(Clone, Debug)]
+pub struct SvgMetadata {
+    inner: svg::SvgMetadata,
+}
+
+impl From<svg::SvgMetadata> for SvgMetadata {
+    fn from(inner: svg::SvgMetadata) -> Self {
+        SvgMetadata { inner }
+    }
+}
+
+#[gen_stub_pymethods]
+#[pymethods]
+impl SvgMetadata {
+    #[getter]
+    fn get_width(&self) -> Option<f64> {
+        self.inner.width
+    }
+
+    #[getter]
+    fn get_height(&self) -> Option<f64> {
+        self.inner.height
+    }
+
+    #[getter]
+    fn get_width_unit(&self) -> &str {
+        &self.inner.width_unit
+    }
+
+    #[getter]
+    fn get_height_unit(&self) -> &str {
+        &self.inner.height_unit
+    }
+
+    #[getter]
+    fn get_viewbox(&self) -> Option<(f64, f64, f64, f64)> {
+        self.inner.viewbox
+    }
+
+    fn __repr__(&self) -> String {
+        format!(
+            "SvgMetadata(width={:?}, height={:?}, width_unit={:?}, height_unit={:?}, viewbox={:?})",
+            self.inner.width,
+            self.inner.height,
+            self.inner.width_unit,
+            self.inner.height_unit,
+            self.inner.viewbox,
+        )
+    }
+
+    fn __richcmp__(
+        &self,
+        other: &Self,
+        op: pyo3::class::basic::CompareOp,
+    ) -> bool {
+        match op {
+            pyo3::class::basic::CompareOp::Eq => {
+                self.inner.width == other.inner.width
+                    && self.inner.height == other.inner.height
+                    && self.inner.width_unit == other.inner.width_unit
+                    && self.inner.height_unit == other.inner.height_unit
+                    && self.inner.viewbox == other.inner.viewbox
+            }
+            pyo3::class::basic::CompareOp::Ne => {
+                self.inner.width != other.inner.width
+                    || self.inner.height != other.inner.height
+                    || self.inner.width_unit != other.inner.width_unit
+                    || self.inner.height_unit != other.inner.height_unit
+                    || self.inner.viewbox != other.inner.viewbox
+            }
+            _ => unimplemented!(),
+        }
+    }
+}
+
+// ── extract_svg_metadata ──────────────────────────────────────────
+
+#[gen_stub_pyfunction(
+    python = r#"
+    def extract_svg_metadata(
+        svg_str: str,
+    ) -> SvgMetadata:
+        """Extract width, height, units and viewBox from an SVG string.
+
+        :param svg_str: SVG document as a string.
+        :returns: SvgMetadata instance with width, height, width_unit,
+                  height_unit, and viewbox attributes.
+        :complexity: O(n) where n = size of SVG document
+        """
+"#,
+    module = "raygeo.svg"
+)]
+#[pyfunction(name = "extract_svg_metadata")]
+fn py_extract_svg_metadata(svg_str: &str) -> PyResult<SvgMetadata> {
+    let meta = svg::extract_svg_metadata(svg_str)?;
+    Ok(SvgMetadata::from(meta))
+}
+
+// ── svg_string_to_geometries_by_layer ─────────────────────────────
+
+#[gen_stub_pyfunction(
+    python = r#"
+    from raygeo.geo import Geometry
+
+    def svg_string_to_geometries_by_layer(
+        svg_str: str,
+        scale_x: float = 1.0,
+        scale_y: float = 1.0,
+    ) -> list[tuple[str, list[raygeo.Geometry]]]:
+        """Extract geometries grouped by top-level <g> layer.
+
+        Returns a list of (layer_id, geometries) tuples. Only top-level
+        <g> elements with an id attribute are treated as layers.
+
+        :param svg_str: SVG document as a string.
+        :param scale_x: X-axis scale factor for coordinate transform.
+        :param scale_y: Y-axis scale factor for coordinate transform.
+        :returns: List of (layer_id, geometry_list) tuples.
+        :complexity: O(n) where n = size of SVG document
+        """
+"#,
+    module = "raygeo.svg"
+)]
+#[pyfunction(name = "svg_string_to_geometries_by_layer")]
+#[pyo3(signature = (svg_str, scale_x=1.0, scale_y=1.0))]
+fn py_svg_string_to_geometries_by_layer(
+    svg_str: &str,
+    scale_x: f64,
+    scale_y: f64,
+) -> PyResult<Vec<(String, Vec<Geometry>)>> {
+    let layers =
+        svg::svg_string_to_geometries_by_layer(svg_str, scale_x, scale_y)?;
+    Ok(layers
+        .into_iter()
+        .map(|(id, geos)| {
+            (
+                id,
+                geos.into_iter()
+                    .map(|g| Geometry { inner: g })
+                    .collect::<Vec<_>>(),
+            )
+        })
+        .collect::<Vec<_>>())
+}
+
 pub(crate) fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     let svg_mod = PyModule::new(m.py(), "svg")?;
 
     svg_mod.add(
         "__all__",
         vec![
+            "SvgMetadata",
+            "extract_svg_metadata",
             "geometry_to_svg_path",
+            "parse_svg_length",
             "parse_svg_path_data",
             "parse_svg_transform",
+            "svg_length_to_mm",
             "svg_string_to_geometries",
+            "svg_string_to_geometries_by_layer",
         ],
     )?;
 
+    svg_mod.add_class::<SvgMetadata>()?;
+    svg_mod
+        .add_function(wrap_pyfunction!(py_extract_svg_metadata, &svg_mod)?)?;
     svg_mod
         .add_function(wrap_pyfunction!(py_geometry_to_svg_path, &svg_mod)?)?;
+    svg_mod.add_function(wrap_pyfunction!(py_parse_svg_length, &svg_mod)?)?;
     svg_mod
         .add_function(wrap_pyfunction!(py_parse_svg_path_data, &svg_mod)?)?;
     svg_mod
         .add_function(wrap_pyfunction!(py_parse_svg_transform, &svg_mod)?)?;
+    svg_mod.add_function(wrap_pyfunction!(py_svg_length_to_mm, &svg_mod)?)?;
     svg_mod.add_function(wrap_pyfunction!(
         py_svg_string_to_geometries,
+        &svg_mod
+    )?)?;
+    svg_mod.add_function(wrap_pyfunction!(
+        py_svg_string_to_geometries_by_layer,
         &svg_mod
     )?)?;
 

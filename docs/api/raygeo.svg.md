@@ -8,7 +8,44 @@ sidebar_position: 36
 
 _SVG path data parsed into geometries_
 
+## SvgMetadata
+
+### `height`
+
+`height: Optional[float]`
+
+### `height_unit`
+
+`height_unit: str`
+
+### `viewbox`
+
+`viewbox: Optional[tuple[float, float, float, float]]`
+
+### `width`
+
+`width: Optional[float]`
+
+### `width_unit`
+
+`width_unit: str`
+
 ## Functions
+
+### `extract_svg_metadata()`
+
+`extract_svg_metadata(svg_str: str) -> SvgMetadata`
+
+Extract width, height, units and viewBox from an SVG string.
+
+**Returns:** SvgMetadata instance with width, height, width_unit, height_unit, and viewbox
+attributes.
+
+| Parameter    | Type          | Description                         |
+| ------------ | ------------- | ----------------------------------- |
+| `svg_str`    | `str`         | SVG document as a string.           |
+| _Returns_    | `SvgMetadata` |                                     |
+| _Complexity_ |               | O(n) where n = size of SVG document |
 
 ### `geometry_to_svg_path()`
 
@@ -28,6 +65,22 @@ dimensions via width and height, with the Y axis flipped (SVG Y increases downwa
 | `height`     | `int`      | Target pixel height.                           |
 | _Returns_    | `str`      |                                                |
 | _Complexity_ |            | O(n) where n = number of commands              |
+
+### `parse_svg_length()`
+
+`parse_svg_length(length_str: str) -> tuple[float, str]`
+
+Parse an SVG length string into a (value, unit) tuple.
+
+Supports: mm, cm, in, pt, pc, px. Unitless values default to 'px'.
+
+**Returns:** Tuple of (value, unit).
+
+| Parameter    | Type                | Description                                      |
+| ------------ | ------------------- | ------------------------------------------------ |
+| `length_str` | `str`               | SVG length string (e.g. '10mm', '2.5in', '100'). |
+| _Returns_    | `tuple[float, str]` |                                                  |
+| _Complexity_ |                     | O(1)                                             |
 
 ### `parse_svg_path_data()`
 
@@ -65,6 +118,21 @@ Returns a 3x3 identity matrix with translation applied.
 | _Returns_       | `numpy.NDArray[numpy.float64]` |                                |
 | _Complexity_    |                                | O(1)                           |
 
+### `svg_length_to_mm()`
+
+`svg_length_to_mm(length_str: str, dpi: float = 96) -> float`
+
+Parse an SVG length string and convert to millimetres.
+
+**Returns:** Length in millimetres.
+
+| Parameter    | Type         | Description                                                   |
+| ------------ | ------------ | ------------------------------------------------------------- |
+| `length_str` | `str`        | SVG length string (e.g. '10mm', '2.5in', '100').              |
+| `dpi`        | `float = 96` | Pixels per inch used for px/unitless conversion (default 96). |
+| _Returns_    | `float`      |                                                               |
+| _Complexity_ |              | O(1)                                                          |
+
 ### `svg_string_to_geometries()`
 
 `svg_string_to_geometries(svg_str: str, scale_x: float = 1, scale_y: float = 1) -> list[Geometry]`
@@ -83,3 +151,22 @@ them to Geometry.
 | `scale_y`    | `float = 1`      | Y-axis scale factor for coordinate transform. |
 | _Returns_    | `list[Geometry]` |                                               |
 | _Complexity_ |                  | O(n) where n = size of SVG document           |
+
+### `svg_string_to_geometries_by_layer()`
+
+`svg_string_to_geometries_by_layer(svg_str: str, scale_x: float = 1, scale_y: float = 1) -> list[tuple[str, list[Geometry]]]`
+
+Extract geometries grouped by top-level <g> layer.
+
+Returns a list of (layer_id, geometries) tuples. Only top-level <g> elements with an id attribute
+are treated as layers.
+
+**Returns:** List of (layer_id, geometry_list) tuples.
+
+| Parameter    | Type                               | Description                                   |
+| ------------ | ---------------------------------- | --------------------------------------------- |
+| `svg_str`    | `str`                              | SVG document as a string.                     |
+| `scale_x`    | `float = 1`                        | X-axis scale factor for coordinate transform. |
+| `scale_y`    | `float = 1`                        | Y-axis scale factor for coordinate transform. |
+| _Returns_    | `list[tuple[str, list[Geometry]]]` |                                               |
+| _Complexity_ |                                    | O(n) where n = size of SVG document           |
