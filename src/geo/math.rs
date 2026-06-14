@@ -83,6 +83,7 @@ fn transform_array_non_uniform(
 ) -> Vec<Command> {
     let mut result: Vec<Command> = Vec::new();
     let mut last_pos: Point3D = Point3D(0.0, 0.0, 0.0);
+    let mut arc_buf = Vec::new();
 
     for cmd in data {
         let original_end = cmd.end_point();
@@ -95,14 +96,15 @@ fn transform_array_non_uniform(
                 ..
             } => {
                 let start_pt = last_pos;
-                let segments = linearize_arc(
+                linearize_arc(
                     *end,
                     *center_offset,
                     *clockwise,
                     start_pt,
                     0.1,
+                    &mut arc_buf,
                 );
-                for (_, p2) in segments {
+                for (_, p2) in arc_buf.drain(..) {
                     let pt = transform_point(matrix, p2);
                     let (tx, ty, tz) = (pt.x(), pt.y(), pt.z());
                     result.push(Command::Line {

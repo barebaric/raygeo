@@ -187,15 +187,18 @@ pub fn is_arc_clockwise(points: &[Point], center: Point) -> bool {
     cross_product_sum < 0.0
 }
 
-/// Internal: Linearizes an arc into line segments for approximation.
-fn linearize_arc_impl(
+/// Converts an arc into a series of line segments for approximation.
+/// The resolution parameter controls the maximum length of each segment.
+/// Writes into a caller-provided buffer so allocations can be reused across calls.
+pub fn linearize_arc(
     end: Point3D,
     center_offset: Point,
     clockwise: bool,
     start_point: Point3D,
     resolution: f64,
-) -> Vec<(Point3D, Point3D)> {
-    let mut segments: Vec<(Point3D, Point3D)> = Vec::new();
+    out: &mut Vec<(Point3D, Point3D)>,
+) {
+    out.clear();
     let p0 = start_point;
     let p1 = end;
     let z0 = p0.2;
@@ -207,7 +210,8 @@ fn linearize_arc_impl(
     let radius_end = (p1.0 - center.0).hypot(p1.1 - center.1);
 
     if radius_start < 1e-9 {
-        return vec![(p0, p1)];
+        out.push((p0, p1));
+        return;
     }
 
     let start_angle = (p0.1 - center.1).atan2(p0.0 - center.0);
@@ -230,22 +234,9 @@ fn linearize_arc_impl(
             center.1 + radius * angle.sin(),
             z,
         );
-        segments.push((prev_pt, next_pt));
+        out.push((prev_pt, next_pt));
         prev_pt = next_pt;
     }
-    segments
-}
-
-/// Converts an arc into a series of line segments for approximation.
-/// The resolution parameter controls the maximum length of each segment.
-pub fn linearize_arc(
-    end: Point3D,
-    center_offset: Point,
-    clockwise: bool,
-    start_point: Point3D,
-    resolution: f64,
-) -> Vec<(Point3D, Point3D)> {
-    linearize_arc_impl(end, center_offset, clockwise, start_point, resolution)
 }
 
 /// Internal: Finds closest point on arc using linearized approximation.
@@ -257,8 +248,15 @@ fn find_closest_on_linearized_arc(
     x: f64,
     y: f64,
 ) -> Option<(f64, Point, f64)> {
-    let arc_segments =
-        linearize_arc(end, center_offset, clockwise, start_pos, 0.1);
+    let mut arc_segments = Vec::new();
+    linearize_arc(
+        end,
+        center_offset,
+        clockwise,
+        start_pos,
+        0.1,
+        &mut arc_segments,
+    );
     if arc_segments.is_empty() {
         return None;
     }
@@ -432,8 +430,15 @@ pub fn does_arc_intersect_rect(
     let start_3d: Point3D = Point3D(start_pos.0, start_pos.1, 0.0);
     let end_3d: Point3D = Point3D(end_pos.0, end_pos.1, 0.0);
 
-    let segments =
-        linearize_arc(end_3d, center_offset, clockwise, start_3d, radius * 0.1);
+    let mut segments = Vec::new();
+    linearize_arc(
+        end_3d,
+        center_offset,
+        clockwise,
+        start_3d,
+        radius * 0.1,
+        &mut segments,
+    );
     for (p1_3d, p2_3d) in segments {
         if does_line_segment_intersect_rect(
             Point(p1_3d.0, p1_3d.1),

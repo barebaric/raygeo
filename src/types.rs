@@ -559,11 +559,13 @@ impl Command {
         &self,
         start: Point3D,
         resolution: f64,
-    ) -> Vec<(Point3D, Point3D)> {
+        out: &mut Vec<(Point3D, Point3D)>,
+    ) {
+        out.clear();
         match self {
-            Command::Move { .. } => vec![],
+            Command::Move { .. } => {}
             Command::Line { .. } => {
-                vec![(start, self.end_point())]
+                out.push((start, self.end_point()));
             }
             Command::Arc {
                 end,
@@ -576,15 +578,19 @@ impl Command {
                 *clockwise,
                 start,
                 resolution,
+                out,
             ),
             Command::Bezier {
                 end,
                 control1,
                 control2,
                 ..
-            } => linearize_bezier_from_params(
-                *end, *control1, *control2, start, resolution,
-            ),
+            } => {
+                let segments = linearize_bezier_from_params(
+                    *end, *control1, *control2, start, resolution,
+                );
+                out.extend(segments);
+            }
         }
     }
 

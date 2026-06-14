@@ -36,7 +36,8 @@ pub use line::{
     get_line_closest_point, get_line_line_intersection,
     get_line_segment_closest_point, get_line_segment_intersection,
     get_line_segment_length, get_line_segment_polygon_intersections,
-    get_point_line_distance, is_point_inside_rect, is_point_on_segment,
+    get_line_segment_polygon_intersections_into, get_point_line_distance,
+    is_point_inside_rect, is_point_on_segment,
 };
 pub use point::{are_points_equal, midpoint, transform_point};
 pub use polygon::{

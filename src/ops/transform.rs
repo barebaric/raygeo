@@ -34,17 +34,18 @@ impl Ops {
                         MoveCmd::ArcTo { center, cw } if is_non_uniform => {
                             let start_point = last_point_untransformed
                                 .unwrap_or(Point3D(0.0, 0.0, 0.0));
-                            let segments =
-                                crate::geo::shape::arc::linearize_arc(
-                                    *end,
-                                    *center,
-                                    *cw,
-                                    start_point,
-                                    0.1,
-                                );
+                            let mut arc_buf = Vec::new();
+                            crate::geo::shape::arc::linearize_arc(
+                                *end,
+                                *center,
+                                *cw,
+                                start_point,
+                                0.1,
+                                &mut arc_buf,
+                            );
                             let extra =
                                 node.extra_axes.as_deref().map(|e| e.to_vec());
-                            for (_, p2) in &segments {
+                            for (_, p2) in &arc_buf {
                                 let tv = transform_point(matrix, *p2);
                                 let mut lcmd = OpNode::line_to(
                                     tv.x(),

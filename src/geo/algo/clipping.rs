@@ -1,6 +1,6 @@
 //! Clipping: Line segment clipping and region operations.
 
-use crate::geo::shape::line::get_line_segment_polygon_intersections;
+use crate::geo::shape::line::get_line_segment_polygon_intersections_into;
 use crate::geo::shape::polygon::is_point_inside_polygon;
 use crate::types::{Point, Point3D, Polygon, Rect};
 
@@ -124,8 +124,14 @@ pub fn subtract_polygons_from_line_segment(
 ) -> Vec<(Point3D, Point3D)> {
     let p1_2d: Point = Point(p1.0, p1.1);
     let p2_2d: Point = Point(p2.0, p2.1);
-    let sorted_cuts =
-        get_line_segment_polygon_intersections(p1_2d, p2_2d, regions);
+    let mut cut_buf = Vec::new();
+    get_line_segment_polygon_intersections_into(
+        p1_2d,
+        p2_2d,
+        regions,
+        &mut cut_buf,
+    );
+    let sorted_cuts = &*cut_buf;
 
     let mut kept_segments: Vec<(Point3D, Point3D)> = Vec::new();
 
@@ -174,8 +180,14 @@ pub fn clip_line_segment_with_polygons(
 
     let p1_2d: Point = Point(p1.0, p1.1);
     let p2_2d: Point = Point(p2.0, p2.1);
-    let sorted_cuts =
-        get_line_segment_polygon_intersections(p1_2d, p2_2d, regions);
+    let mut cut_buf = Vec::new();
+    get_line_segment_polygon_intersections_into(
+        p1_2d,
+        p2_2d,
+        regions,
+        &mut cut_buf,
+    );
+    let sorted_cuts = &*cut_buf;
 
     let mut kept_segments: Vec<(Point3D, Point3D)> = Vec::new();
 

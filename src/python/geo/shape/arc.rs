@@ -512,11 +512,14 @@ fn linearize_arc_py(
     resolution: f64,
 ) -> PyResult<Vec<Segment3D>> {
     let (end, center_offset, clockwise) = _arc_params_from_any(arc_cmd)?;
-    Ok(linearize_arc(
+    let mut segments = Vec::new();
+    linearize_arc(
         end,
         center_offset,
         clockwise,
         start_point,
         resolution,
-    ))
+        &mut segments,
+    );
+    Ok(segments)
 }

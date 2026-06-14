@@ -35,14 +35,21 @@ pub fn compute_gaussian_kernel(amount: i32) -> (Vec<f64>, f64) {
 }
 
 /// Apply a Gaussian kernel to an open list of 3D points. Endpoints are preserved.
-pub fn smooth_sub_segment(points: &[Point3D], kernel: &[f64]) -> Vec<Point3D> {
+/// Writes into a caller-provided buffer to reuse allocations across calls.
+pub fn smooth_sub_segment(
+    points: &[Point3D],
+    kernel: &[f64],
+    out: &mut Vec<Point3D>,
+) {
+    out.clear();
     let num_pts = points.len();
     if num_pts < 3 {
-        return points.to_vec();
+        out.extend_from_slice(points);
+        return;
     }
 
     let kernel_radius = (kernel.len() - 1) / 2;
-    let mut smoothed = vec![points[0]];
+    out.push(points[0]);
 
     for i in 1..(num_pts - 1) {
         let mut new_x = 0.0;
@@ -54,22 +61,27 @@ pub fn smooth_sub_segment(points: &[Point3D], kernel: &[f64]) -> Vec<Point3D> {
             new_x += pt.0 * k_weight;
             new_y += pt.1 * k_weight;
         }
-        smoothed.push(Point3D(new_x, new_y, points[i].2));
+        out.push(Point3D(new_x, new_y, points[i].2));
     }
 
-    smoothed.push(points[num_pts - 1]);
-    smoothed
+    out.push(points[num_pts - 1]);
 }
 
 /// Apply a wrapping Gaussian filter to a closed loop of points.
-pub fn smooth_circularly(points: &[Point3D], kernel: &[f64]) -> Vec<Point3D> {
+/// Writes into a caller-provided buffer to reuse allocations across calls.
+pub fn smooth_circularly(
+    points: &[Point3D],
+    kernel: &[f64],
+    out: &mut Vec<Point3D>,
+) {
+    out.clear();
     let num_pts = points.len();
     if num_pts < 3 {
-        return points.to_vec();
+        out.extend_from_slice(points);
+        return;
     }
 
     let kernel_radius = (kernel.len() - 1) / 2;
-    let mut smoothed = Vec::with_capacity(num_pts);
 
     for i in 0..num_pts {
         let mut new_x = 0.0;
@@ -81,27 +93,29 @@ pub fn smooth_circularly(points: &[Point3D], kernel: &[f64]) -> Vec<Point3D> {
             new_x += pt.0 * k_weight;
             new_y += pt.1 * k_weight;
         }
-        smoothed.push(Point3D(new_x, new_y, points[i].2));
+        out.push(Point3D(new_x, new_y, points[i].2));
     }
 
-    if !smoothed.is_empty() {
-        smoothed.push(smoothed[0]);
+    if !out.is_empty() {
+        out.push(out[0]);
     }
-    smoothed
 }
 
 /// Resample a polyline so that no segment is longer than `max_segment_length`.
 /// New points are added by linear interpolation along existing segments.
+/// Writes into a caller-provided buffer to reuse allocations across calls.
 pub fn resample_polyline(
     points: &[Point3D],
     max_segment_length: f64,
     is_closed: bool,
-) -> Vec<Point3D> {
+    out: &mut Vec<Point3D>,
+) {
+    out.clear();
     if points.is_empty() {
-        return vec![];
+        return;
     }
 
-    let mut new_points = vec![points[0]];
+    out.push(points[0]);
     let num_segments = if is_closed {
         points.len()
     } else {
@@ -121,16 +135,14 @@ pub fn resample_polyline(
                 let t = j as f64 / num_sub as f64;
                 let px = p1.0 * (1.0 - t) + p2.0 * t;
                 let py = p1.1 * (1.0 - t) + p2.1 * t;
-                new_points.push(Point3D(px, py, p1.2));
+                out.push(Point3D(px, py, p1.2));
             }
         }
 
         if !(is_closed && i == num_segments - 1) {
-            new_points.push(p2);
+            out.push(p2);
         }
     }
-
-    new_points
 }
 
 /// Smooth a polyline using Gaussian filtering with optional corner preservation.
@@ -172,7 +184,8 @@ pub fn smooth_polyline(
         points
     };
     let max_len = (0.1_f64).max(sigma / 4.0);
-    let prepared = resample_polyline(work_points, max_len, is_closed);
+    let mut prepared = Vec::new();
+    resample_polyline(work_points, max_len, is_closed, &mut prepared);
     let num_points = prepared.len();
 
     if num_points < 3 {
@@ -208,25 +221,28 @@ pub fn smooth_polyline(
 
     anchor_indices.sort_unstable();
     let mut final_points: Vec<Point3D> = Vec::new();
+    let mut smooth_buf: Vec<Point3D> = Vec::new();
+    let mut sub_seg_buf: Vec<Point3D> = Vec::new();
 
     if is_closed {
         if anchor_indices.is_empty() {
-            return smooth_circularly(&prepared, &kernel);
+            smooth_circularly(&prepared, &kernel, &mut smooth_buf);
+            return smooth_buf;
         }
 
         let num_anchors = anchor_indices.len();
         for i in 0..num_anchors {
             let start_idx = anchor_indices[i];
             let end_idx = anchor_indices[(i + 1) % num_anchors];
-            let sub_seg: Vec<Point3D> = if start_idx < end_idx {
-                prepared[start_idx..=end_idx].to_vec()
+            sub_seg_buf.clear();
+            if start_idx < end_idx {
+                sub_seg_buf.extend_from_slice(&prepared[start_idx..=end_idx]);
             } else {
-                let mut seg: Vec<Point3D> = prepared[start_idx..].to_vec();
-                seg.extend_from_slice(&prepared[..=end_idx]);
-                seg
-            };
-            let smoothed_sub = smooth_sub_segment(&sub_seg, &kernel);
-            for p in smoothed_sub.iter().take(smoothed_sub.len() - 1) {
+                sub_seg_buf.extend_from_slice(&prepared[start_idx..]);
+                sub_seg_buf.extend_from_slice(&prepared[..=end_idx]);
+            }
+            smooth_sub_segment(&sub_seg_buf, &kernel, &mut smooth_buf);
+            for p in smooth_buf.iter().take(smooth_buf.len() - 1) {
                 final_points.push(*p);
             }
         }
@@ -237,15 +253,16 @@ pub fn smooth_polyline(
         final_points
     } else {
         if anchor_indices.len() < 2 {
-            return smooth_sub_segment(&prepared, &kernel);
+            smooth_sub_segment(&prepared, &kernel, &mut smooth_buf);
+            return smooth_buf;
         }
 
         let mut last_anchor = anchor_indices[0];
         for &anchor_idx in anchor_indices.iter().skip(1) {
-            let sub_seg: Vec<Point3D> =
-                prepared[last_anchor..=anchor_idx].to_vec();
-            let smoothed_sub = smooth_sub_segment(&sub_seg, &kernel);
-            for p in smoothed_sub.iter().take(smoothed_sub.len() - 1) {
+            sub_seg_buf.clear();
+            sub_seg_buf.extend_from_slice(&prepared[last_anchor..=anchor_idx]);
+            smooth_sub_segment(&sub_seg_buf, &kernel, &mut smooth_buf);
+            for p in smooth_buf.iter().take(smooth_buf.len() - 1) {
                 final_points.push(*p);
             }
             last_anchor = anchor_idx;

@@ -175,7 +175,24 @@ pub fn get_line_segment_polygon_intersections(
     p2_2d: Point,
     regions: &[Polygon],
 ) -> Vec<f64> {
-    let mut cut_points_t: Vec<f64> = vec![0.0, 1.0];
+    let mut cuts = Vec::new();
+    get_line_segment_polygon_intersections_into(
+        p1_2d, p2_2d, regions, &mut cuts,
+    );
+    cuts
+}
+
+/// Writes intersection parameters into a caller-provided buffer to reuse allocations.
+/// The buffer is cleared and filled with sorted t values [0, 1].
+pub fn get_line_segment_polygon_intersections_into(
+    p1_2d: Point,
+    p2_2d: Point,
+    regions: &[Polygon],
+    out: &mut Vec<f64>,
+) {
+    out.clear();
+    out.push(0.0);
+    out.push(1.0);
 
     for region in regions {
         for i in 0..region.len() {
@@ -201,16 +218,14 @@ pub fn get_line_segment_polygon_intersections(
                     0.0
                 };
                 let t_clamped = t.clamp(0.0, 1.0);
-                if !cut_points_t.contains(&t_clamped) {
-                    cut_points_t.push(t_clamped);
+                if !out.contains(&t_clamped) {
+                    out.push(t_clamped);
                 }
             }
         }
     }
 
-    cut_points_t
-        .sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
-    cut_points_t
+    out.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
 }
 
 /// Tests if a 2D point is inside an axis-aligned rectangle.

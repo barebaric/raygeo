@@ -63,7 +63,9 @@ fn resample_polyline_py(
 ) -> Vec<Point3D> {
     let pts: Vec<Point3D> =
         points.iter().map(|p| Point3D(p.0, p.1, p.2)).collect();
-    resample_polyline(&pts, max_segment_length, is_closed)
+    let mut out = Vec::new();
+    resample_polyline(&pts, max_segment_length, is_closed, &mut out);
+    out
 }
 
 #[gen_stub_pyfunction(
@@ -109,7 +111,9 @@ fn smooth_circularly_py(
 ) -> Vec<Point3D> {
     let pts: Vec<Point3D> =
         points.iter().map(|p| Point3D(p.0, p.1, p.2)).collect();
-    smooth_circularly(&pts, &kernel)
+    let mut out = Vec::new();
+    smooth_circularly(&pts, &kernel, &mut out);
+    out
 }
 
 #[gen_stub_pyfunction(
@@ -173,5 +177,7 @@ fn smooth_sub_segment_py(
 ) -> Vec<Point3D> {
     let pts: Vec<Point3D> =
         points.iter().map(|p| Point3D(p.0, p.1, p.2)).collect();
-    smooth_sub_segment(&pts, &kernel)
+    let mut out = Vec::new();
+    smooth_sub_segment(&pts, &kernel, &mut out);
+    out
 }

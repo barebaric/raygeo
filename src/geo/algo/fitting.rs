@@ -46,6 +46,7 @@ pub fn linearize_data(data: &[Command], tolerance: f64) -> Vec<Command> {
     }
     let mut result: Vec<Command> = Vec::new();
     let mut last_pos = Point3D(0.0, 0.0, 0.0);
+    let mut arc_buf = Vec::new();
     for cmd in data {
         let end_pos = cmd.end_point();
 
@@ -59,14 +60,15 @@ pub fn linearize_data(data: &[Command], tolerance: f64) -> Vec<Command> {
                 clockwise,
                 ..
             } => {
-                let segments = linearize_arc(
+                linearize_arc(
                     *end,
                     *center_offset,
                     *clockwise,
                     last_pos,
                     tolerance,
+                    &mut arc_buf,
                 );
-                for (_, p_end) in segments {
+                for (_, p_end) in arc_buf.drain(..) {
                     result.push(Command::Line { end: p_end });
                 }
             }
@@ -101,6 +103,7 @@ pub fn flatten_to_points(
     let mut subpaths: Vec<Vec<Point3D>> = Vec::new();
     let mut current_subpath: Vec<Point3D> = Vec::new();
     let mut last_pos = Point3D(0.0, 0.0, 0.0);
+    let mut arc_buf = Vec::new();
 
     for cmd in data {
         let end_pos = cmd.end_point();
@@ -122,14 +125,15 @@ pub fn flatten_to_points(
                 clockwise,
                 ..
             } => {
-                let segments = linearize_arc(
+                linearize_arc(
                     *end,
                     *center_offset,
                     *clockwise,
                     last_pos,
                     resolution,
+                    &mut arc_buf,
                 );
-                for (_, p_end) in segments {
+                for (_, p_end) in arc_buf.drain(..) {
                     current_subpath.push(p_end);
                 }
             }
@@ -701,6 +705,7 @@ pub fn fit_curves(
     let total = data.len();
     let mut new_cmds: Vec<Command> = Vec::new();
     let mut point_chain: Vec<Point3D> = Vec::new();
+    let mut arc_buf = Vec::new();
 
     let flush_chain = |chain: &mut Vec<Point3D>, cmds: &mut Vec<Command>| {
         if chain.len() > 1 {
@@ -742,14 +747,15 @@ pub fn fit_curves(
                     new_cmds.push(cmd.clone());
                     point_chain.push(end_pos);
                 } else {
-                    let segments = linearize_arc(
+                    linearize_arc(
                         *end,
                         *center_offset,
                         *clockwise,
                         last_pos,
                         tolerance * 0.25,
+                        &mut arc_buf,
                     );
-                    for (_, p_end) in segments {
+                    for (_, p_end) in arc_buf.drain(..) {
                         point_chain.push(p_end);
                     }
                 }

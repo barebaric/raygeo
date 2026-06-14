@@ -1,5 +1,6 @@
 use super::container::Ops;
 use super::types::{MoveCmd, OpCategory, OpNode};
+use crate::geo::shape::arc::linearize_arc;
 use crate::types::Point3D;
 
 pub fn linearize_node(node: &OpNode, start_point: Point3D) -> Ops {
@@ -53,21 +54,20 @@ pub fn linearize_node(node: &OpNode, start_point: Point3D) -> Ops {
                 result
             }
             MoveCmd::ArcTo { center, cw } => {
-                let segments = crate::geo::shape::arc::linearize_arc(
+                let mut arc_buf = Vec::new();
+                linearize_arc(
                     end,
                     *center,
                     *cw,
                     start_point,
                     0.1,
+                    &mut arc_buf,
                 );
-                if segments.is_empty() {
-                    return Ops::new();
-                }
 
                 let extra_owned = extra.map(|e| e.to_vec());
                 let mut result = Ops::new();
 
-                for (_, seg_end) in &segments {
+                for (_, seg_end) in arc_buf.drain(..) {
                     result.line_to(
                         seg_end.0,
                         seg_end.1,

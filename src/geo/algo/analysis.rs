@@ -49,6 +49,7 @@ pub fn get_subpath_vertices_from_array(
     let last_pos_3d = data[start_cmd_index].end_point();
     vertices.push(Point(last_pos_3d.0, last_pos_3d.1));
 
+    let mut linearize_buf = Vec::new();
     for cmd in data.iter().skip(start_cmd_index + 1) {
         if matches!(cmd, Command::Move { .. }) {
             break;
@@ -64,8 +65,8 @@ pub fn get_subpath_vertices_from_array(
             last_pos_3d
         };
 
-        let segments = cmd.linearize(start_3d, 0.1);
-        for (_, p2) in segments {
+        cmd.linearize(start_3d, 0.1, &mut linearize_buf);
+        for (_, p2) in linearize_buf.drain(..) {
             vertices.push(Point(p2.0, p2.1));
         }
     }

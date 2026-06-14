@@ -14,14 +14,15 @@ use rstar::{PointDistance, RTree, RTreeObject, AABB};
 fn get_segments_for_cmd(
     data: &[Command],
     index: usize,
-) -> Vec<(Point3D, Point3D)> {
+    out: &mut Vec<(Point3D, Point3D)>,
+) {
     let cmd = &data[index];
     let start_point = if index > 0 {
         data[index - 1].end_point()
     } else {
         Point3D(0.0, 0.0, 0.0)
     };
-    cmd.linearize(start_point, 0.1)
+    cmd.linearize(start_point, 0.1, out);
 }
 
 /// Pre-computed segments and bounding box for a single command row.
@@ -59,20 +60,21 @@ impl PointDistance for RowSegments {
 /// Pre-compute linearized segments and bounding boxes for all draw commands.
 fn precompute_cmd_segments(data: &[Command]) -> Vec<RowSegments> {
     let mut rows = Vec::new();
+    let mut buf = Vec::new();
     for i in 0..data.len() {
         let cmd = &data[i];
         if matches!(cmd, Command::Move { .. }) {
             continue;
         }
-        let segments = get_segments_for_cmd(data, i);
-        if segments.is_empty() {
+        get_segments_for_cmd(data, i, &mut buf);
+        if buf.is_empty() {
             continue;
         }
         let mut min_x = f64::INFINITY;
         let mut max_x = f64::NEG_INFINITY;
         let mut min_y = f64::INFINITY;
         let mut max_y = f64::NEG_INFINITY;
-        for (p1, p2) in &segments {
+        for (p1, p2) in &buf {
             for &pt in &[p1, p2] {
                 if pt.0 < min_x {
                     min_x = pt.0;
@@ -90,7 +92,7 @@ fn precompute_cmd_segments(data: &[Command]) -> Vec<RowSegments> {
         }
         rows.push(RowSegments {
             index: i,
-            segments,
+            segments: std::mem::take(&mut buf),
             bbox: (min_x, min_y, max_x, max_y),
         });
     }
