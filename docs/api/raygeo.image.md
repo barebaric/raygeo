@@ -67,6 +67,10 @@ Remove binary runs shorter than the given minimum.
 | _Returns_        | `numpy.NDArray[numpy.uint8]` |                                        |
 | _Complexity_     |                              | O(w\*h)                                |
 
+![Minimum run length applied to binary image](images/image-processing-min-run-len.png)
+
+_Minimum run length applied to binary image_
+
 ### `compute_adaptive_threshold()`
 
 `compute_adaptive_threshold(areas: list[int]) -> int`

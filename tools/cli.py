@@ -90,6 +90,11 @@ _INLINE_IMAGE_MAP = {
             "image-processing-adaptive-threshold",
             "Adaptive threshold from component area distribution",
         ),
+        (
+            "apply_minimum_run_length",
+            "image-processing-min-run-len",
+            "Minimum run length applied to binary image",
+        ),
     ],
     "raygeo.svg.md": [
         (None, "svg-parsing", "SVG path data parsed into geometries"),
