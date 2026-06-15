@@ -502,6 +502,21 @@ def test_grow_wrapper(sample_geometry):
     assert isinstance(result, Geometry)
 
 
+def test_grow_preserves_z():
+    """Z-coordinate must be preserved through grow_geometry."""
+    points = [
+        (0.0, 0.0, 5.0),
+        (10.0, 0.0, 5.0),
+        (10.0, 10.0, 5.0),
+        (0.0, 10.0, 5.0),
+    ]
+    geo = Geometry.from_points(points, close=True)
+    geo.grow(1.0)
+    for seg in geo.segments():
+        for pt in seg:
+            assert pt[2] == pytest.approx(5.0), f"Z lost in grow output: {pt}"
+
+
 def test_transform_wrapper(sample_geometry):
     """
     Tests that Geometry.transform() correctly transforms geometry data.

@@ -4,8 +4,11 @@ import pytest
 
 from raygeo.geo.algo.clipping import (
     clip_line_segment_with_polygons,
+    clip_line_segment_with_polygons_2d,
     clip_line_segment_with_rect,
+    clip_line_segment_with_rect_2d,
     subtract_polygons_from_line_segment,
+    subtract_polygons_from_line_segment_2d,
 )
 
 
@@ -311,3 +314,159 @@ class TestSubtractCircleRegions:
         s1_p1, s1_p2 = kept_segments[0]
         assert s1_p1[0] == pytest.approx(70.0, abs=0.5)
         assert s1_p2[0] == pytest.approx(80.0)
+
+
+# ── Pure 2D clipping cores (XY-plane only, no Z) ─────────────────────
+
+
+class TestClipRect2D:
+    """Tests for clip_line_segment_with_rect_2d (pure 2D, no Z)."""
+
+    _rect = (0.0, 0.0, 100.0, 100.0)
+
+    def test_fully_inside(self):
+        p1 = (10.0, 10.0)
+        p2 = (90.0, 90.0)
+        result = clip_line_segment_with_rect_2d(p1, p2, self._rect)
+        assert result is not None
+        res_p1, res_p2 = result
+        assert res_p1 == pytest.approx(p1)
+        assert res_p2 == pytest.approx(p2)
+
+    def test_fully_outside(self):
+        p1 = (110.0, 110.0)
+        p2 = (120.0, 120.0)
+        result = clip_line_segment_with_rect_2d(p1, p2, self._rect)
+        assert result is None
+
+    def test_crossing_one_boundary(self):
+        p1 = (50.0, 50.0)
+        p2 = (150.0, 50.0)
+        result = clip_line_segment_with_rect_2d(p1, p2, self._rect)
+        assert result is not None
+        res_p1, res_p2 = result
+        assert res_p1 == pytest.approx(p1)
+        assert res_p2 == pytest.approx((100.0, 50.0))
+
+    def test_crossing_two_boundaries(self):
+        p1 = (-50.0, 50.0)
+        p2 = (150.0, 50.0)
+        result = clip_line_segment_with_rect_2d(p1, p2, self._rect)
+        assert result is not None
+        res_p1, res_p2 = result
+        assert res_p1 == pytest.approx((0.0, 50.0))
+        assert res_p2 == pytest.approx((100.0, 50.0))
+
+    def test_returns_2d_points(self):
+        p1 = (10.0, 10.0)
+        p2 = (90.0, 90.0)
+        result = clip_line_segment_with_rect_2d(p1, p2, self._rect)
+        assert result is not None
+        res_p1, res_p2 = result
+        assert len(res_p1) == 2
+        assert len(res_p2) == 2
+
+
+class TestClipPolygons2D:
+    """Tests for clip_line_segment_with_polygons_2d (pure 2D, no Z)."""
+
+    def test_basic_inside(self):
+        p1 = (0.0, 50.0)
+        p2 = (100.0, 50.0)
+        region = [(40.0, 45.0), (60.0, 45.0), (60.0, 55.0), (40.0, 55.0)]
+        kept = clip_line_segment_with_polygons_2d(p1, p2, [region])
+        assert len(kept) == 1
+        s1, s2 = kept[0]
+        assert s1 == pytest.approx((40.0, 50.0))
+        assert s2 == pytest.approx((60.0, 50.0))
+
+    def test_fully_outside(self):
+        p1 = (0.0, 50.0)
+        p2 = (30.0, 50.0)
+        region = [(40.0, 45.0), (60.0, 45.0), (60.0, 55.0), (40.0, 55.0)]
+        kept = clip_line_segment_with_polygons_2d(p1, p2, [region])
+        assert len(kept) == 0
+
+    def test_fully_inside(self):
+        p1 = (45.0, 50.0)
+        p2 = (55.0, 50.0)
+        region = [(40.0, 45.0), (60.0, 45.0), (60.0, 55.0), (40.0, 55.0)]
+        kept = clip_line_segment_with_polygons_2d(p1, p2, [region])
+        assert len(kept) == 1
+        s1, s2 = kept[0]
+        assert s1 == pytest.approx((45.0, 50.0))
+        assert s2 == pytest.approx((55.0, 50.0))
+
+    def test_multiple_regions(self):
+        p1 = (0.0, 50.0)
+        p2 = (100.0, 50.0)
+        r1 = [(20.0, 45.0), (30.0, 45.0), (30.0, 55.0), (20.0, 55.0)]
+        r2 = [(70.0, 45.0), (80.0, 45.0), (80.0, 55.0), (70.0, 55.0)]
+        kept = clip_line_segment_with_polygons_2d(p1, p2, [r1, r2])
+        assert len(kept) == 2
+        s1, s2 = kept[0]
+        assert s1 == pytest.approx((20.0, 50.0))
+        assert s2 == pytest.approx((30.0, 50.0))
+        s1, s2 = kept[1]
+        assert s1 == pytest.approx((70.0, 50.0))
+        assert s2 == pytest.approx((80.0, 50.0))
+
+    def test_empty_regions(self):
+        p1 = (0.0, 50.0)
+        p2 = (100.0, 50.0)
+        kept = clip_line_segment_with_polygons_2d(p1, p2, [])
+        assert len(kept) == 0
+
+    def test_returns_2d_points(self):
+        p1 = (0.0, 50.0)
+        p2 = (100.0, 50.0)
+        region = [(40.0, 45.0), (60.0, 45.0), (60.0, 55.0), (40.0, 55.0)]
+        kept = clip_line_segment_with_polygons_2d(p1, p2, [region])
+        assert len(kept) == 1
+        s1, s2 = kept[0]
+        assert len(s1) == 2
+        assert len(s2) == 2
+
+
+class TestSubtractPolygons2D:
+    """Tests for subtract_polygons_from_line_segment_2d (pure 2D, no Z)."""
+
+    def test_basic_subtract(self):
+        p1 = (0.0, 50.0)
+        p2 = (100.0, 50.0)
+        region = [(40.0, 45.0), (60.0, 45.0), (60.0, 55.0), (40.0, 55.0)]
+        kept = subtract_polygons_from_line_segment_2d(p1, p2, [region])
+        assert len(kept) == 2
+        s1, s2 = kept[0]
+        assert s1 == pytest.approx((0.0, 50.0))
+        assert s2 == pytest.approx((40.0, 50.0))
+        s1, s2 = kept[1]
+        assert s1 == pytest.approx((60.0, 50.0))
+        assert s2 == pytest.approx((100.0, 50.0))
+
+    def test_fully_contained(self):
+        p1 = (45.0, 50.0)
+        p2 = (55.0, 50.0)
+        region = [(40.0, 45.0), (60.0, 45.0), (60.0, 55.0), (40.0, 55.0)]
+        kept = subtract_polygons_from_line_segment_2d(p1, p2, [region])
+        assert len(kept) == 0
+
+    def test_starts_inside(self):
+        p1 = (45.0, 50.0)
+        p2 = (80.0, 50.0)
+        region = [(40.0, 45.0), (60.0, 45.0), (60.0, 55.0), (40.0, 55.0)]
+        kept = subtract_polygons_from_line_segment_2d(p1, p2, [region])
+        assert len(kept) == 1
+        s1, s2 = kept[0]
+        assert s1 == pytest.approx((60.0, 50.0))
+        assert s2 == pytest.approx((80.0, 50.0))
+
+    def test_returns_2d_points(self):
+        p1 = (0.0, 50.0)
+        p2 = (100.0, 50.0)
+        region = [(40.0, 45.0), (60.0, 45.0), (60.0, 55.0), (40.0, 55.0)]
+        kept = subtract_polygons_from_line_segment_2d(p1, p2, [region])
+        assert len(kept) == 2
+        s1, s2 = kept[0]
+        assert len(s1) == 2
+        assert len(s2) == 2

@@ -14,8 +14,10 @@ integer coordinate systems.
 
 use super::super::flex_point::{extract_polygon, extract_polygons};
 use crate::geo::algo::clipping::{
-    clip_line_segment_with_polygons, clip_line_segment_with_rect,
+    clip_line_segment_with_polygons, clip_line_segment_with_polygons_2d,
+    clip_line_segment_with_rect, clip_line_segment_with_rect_2d,
     subtract_polygons_from_line_segment,
+    subtract_polygons_from_line_segment_2d,
 };
 use crate::types::{Point, Point3D, Rect, Segment3D};
 use pyo3::prelude::*;
@@ -31,6 +33,9 @@ pub fn register(algo_mod: &Bound<'_, PyModule>) -> PyResult<()> {
         clip_line_segment_py,
         clip_line_segment_to_regions_py,
         subtract_polygons_from_line_segment_py,
+        clip_line_segment_with_rect_2d_py,
+        clip_line_segment_with_polygons_2d_py,
+        subtract_polygons_from_line_segment_2d_py,
         to_clipper_py,
         from_clipper_py,
     );
@@ -129,6 +134,98 @@ fn clip_line_segment_to_regions_py(
 ) -> PyResult<Vec<Segment3D>> {
     let regions = extract_polygons(regions)?;
     Ok(clip_line_segment_with_polygons(p1, p2, &regions))
+}
+
+#[gen_stub_pyfunction(
+    python = r#"
+    import typing
+    import raygeo.geo.types
+
+    def clip_line_segment_with_rect_2d(
+        p1: types.Point,
+        p2: types.Point,
+        rect: types.Rect,
+    ) -> typing.Optional[tuple[types.Point, types.Point]]:
+        """Clip a 2D line segment with a rectangle (XY-plane only).
+
+        :param p1: Start point (x, y).
+        :param p2: End point (x, y).
+        :param rect: Clipping rectangle (x_min, y_min, x_max, y_max).
+        :returns: Clipped segment or None if fully outside.
+        :complexity: O(1) time, O(1) space
+        """
+"#,
+    module = "raygeo.geo.algo.clipping"
+)]
+#[pyfunction(name = "clip_line_segment_with_rect_2d")]
+fn clip_line_segment_with_rect_2d_py(
+    p1: Point,
+    p2: Point,
+    rect: (f64, f64, f64, f64),
+) -> Option<(Point, Point)> {
+    clip_line_segment_with_rect_2d(p1, p2, Rect(rect.0, rect.1, rect.2, rect.3))
+}
+
+#[gen_stub_pyfunction(
+    python = r#"
+    import collections.abc
+    import raygeo.geo.types
+
+    def clip_line_segment_with_polygons_2d(
+        p1: types.Point,
+        p2: types.Point,
+        regions: collections.abc.Sequence[collections.abc.Sequence[types.Point]],
+    ) -> list[tuple[types.Point, types.Point]]:
+        """Clip 2D line segments that fall within polygon regions (XY-plane only).
+
+        :param p1: Start point (x, y).
+        :param p2: End point (x, y).
+        :param regions: Polygon regions to clip against.
+        :returns: List of clipped segments.
+        :complexity: O(n * m) time, O(n) space where n is the number of regions and m their average vertex count
+        """
+"#,
+    module = "raygeo.geo.algo.clipping"
+)]
+#[pyfunction(name = "clip_line_segment_with_polygons_2d")]
+fn clip_line_segment_with_polygons_2d_py(
+    p1: Point,
+    p2: Point,
+    regions: &Bound<'_, PyAny>,
+) -> PyResult<Vec<(Point, Point)>> {
+    let regions = extract_polygons(regions)?;
+    Ok(clip_line_segment_with_polygons_2d(p1, p2, &regions))
+}
+
+#[gen_stub_pyfunction(
+    python = r#"
+    import collections.abc
+    import raygeo.geo.types
+
+    def subtract_polygons_from_line_segment_2d(
+        p1: types.Point,
+        p2: types.Point,
+        regions: collections.abc.Sequence[collections.abc.Sequence[types.Point]],
+    ) -> list[tuple[types.Point, types.Point]]:
+        """Subtract polygon regions from a 2D line segment (XY-plane only).
+
+        :param p1: Start point (x, y).
+        :param p2: End point (x, y).
+        :param regions: List of polygon regions to subtract.
+        :returns: List of remaining segments after subtraction.
+        :complexity: O(n * m) time, O(n) space where n is the number of regions and m their average vertex count
+        """
+"#,
+    module = "raygeo.geo.algo.clipping"
+)]
+#[pyfunction(name = "subtract_polygons_from_line_segment_2d")]
+fn subtract_polygons_from_line_segment_2d_py(
+    p1: Point,
+    p2: Point,
+    regions: &Bound<'_, PyAny>,
+) -> PyResult<Vec<(Point, Point)>> {
+    let regions = extract_polygons(regions)?;
+    Ok(subtract_polygons_from_line_segment_2d(p1, p2, &regions))
 }
 
 #[gen_stub_pyfunction(

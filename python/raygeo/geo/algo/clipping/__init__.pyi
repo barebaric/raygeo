@@ -13,9 +13,12 @@ from raygeo.geo import types
 import typing
 __all__ = [
     "clip_line_segment_with_polygons",
+    "clip_line_segment_with_polygons_2d",
     "clip_line_segment_with_rect",
+    "clip_line_segment_with_rect_2d",
     "from_clipper",
     "subtract_polygons_from_line_segment",
+    "subtract_polygons_from_line_segment_2d",
     "to_clipper",
 ]
 
@@ -30,12 +33,34 @@ def clip_line_segment_with_polygons(p1: types.Point3D, p2: types.Point3D, region
     :complexity: O(n * m) time, O(n) space where n is the number of regions and m their average vertex count
     """
 
+def clip_line_segment_with_polygons_2d(p1: types.Point, p2: types.Point, regions: collections.abc.Sequence[collections.abc.Sequence[types.Point]]) -> list[tuple[types.Point, types.Point]]:
+    r"""
+    Clip 2D line segments that fall within polygon regions (XY-plane only).
+    
+    :param p1: Start point (x, y).
+    :param p2: End point (x, y).
+    :param regions: Polygon regions to clip against.
+    :returns: List of clipped segments.
+    :complexity: O(n * m) time, O(n) space where n is the number of regions and m their average vertex count
+    """
+
 def clip_line_segment_with_rect(p1: types.Point3D, p2: types.Point3D, rect: types.Rect) -> typing.Optional[tuple[types.Point3D, types.Point3D]]:
     r"""
     Clip a line segment with a rectangle.
     
     :param p1: Start point of the line segment.
     :param p2: End point of the line segment.
+    :param rect: Clipping rectangle (x_min, y_min, x_max, y_max).
+    :returns: Clipped segment or None if fully outside.
+    :complexity: O(1) time, O(1) space
+    """
+
+def clip_line_segment_with_rect_2d(p1: types.Point, p2: types.Point, rect: types.Rect) -> typing.Optional[tuple[types.Point, types.Point]]:
+    r"""
+    Clip a 2D line segment with a rectangle (XY-plane only).
+    
+    :param p1: Start point (x, y).
+    :param p2: End point (x, y).
     :param rect: Clipping rectangle (x_min, y_min, x_max, y_max).
     :returns: Clipped segment or None if fully outside.
     :complexity: O(1) time, O(1) space
@@ -56,6 +81,17 @@ def subtract_polygons_from_line_segment(p1: types.Point3D, p2: types.Point3D, re
     
     :param p1: Start point of the line segment.
     :param p2: End point of the line segment.
+    :param regions: List of polygon regions to subtract.
+    :returns: List of remaining segments after subtraction.
+    :complexity: O(n * m) time, O(n) space where n is the number of regions and m their average vertex count
+    """
+
+def subtract_polygons_from_line_segment_2d(p1: types.Point, p2: types.Point, regions: collections.abc.Sequence[collections.abc.Sequence[types.Point]]) -> list[tuple[types.Point, types.Point]]:
+    r"""
+    Subtract polygon regions from a 2D line segment (XY-plane only).
+    
+    :param p1: Start point (x, y).
+    :param p2: End point (x, y).
     :param regions: List of polygon regions to subtract.
     :returns: List of remaining segments after subtraction.
     :complexity: O(n * m) time, O(n) space where n is the number of regions and m their average vertex count

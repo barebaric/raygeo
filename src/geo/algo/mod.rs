@@ -14,6 +14,8 @@ pub mod intersect;
 pub mod minkowski;
 pub mod offset;
 pub mod overcut;
+pub mod planar;
+pub mod project;
 pub mod simplify;
 pub mod smooth;
 pub mod topology;
@@ -30,8 +32,10 @@ pub use cleanup::{
     remove_duplicate_segments,
 };
 pub use clipping::{
-    clip_line_segment_with_polygons, clip_line_segment_with_rect,
+    clip_line_segment_with_polygons, clip_line_segment_with_polygons_2d,
+    clip_line_segment_with_rect, clip_line_segment_with_rect_2d,
     subtract_polygons_from_line_segment,
+    subtract_polygons_from_line_segment_2d,
 };
 pub use fitting::{
     are_points_collinear, convert_arc_to_beziers_from_array,
@@ -59,6 +63,10 @@ pub use minkowski::{
 };
 pub use offset::grow_geometry;
 pub use overcut::apply_overcut;
+pub use project::{
+    is_planar_in_z, lift_points_to_xy_plane, project_point_to_xy,
+    project_points_to_xy,
+};
 pub use simplify::{simplify_data, simplify_polyline};
 pub use smooth::{
     compute_gaussian_kernel, resample_polyline, smooth_circularly,

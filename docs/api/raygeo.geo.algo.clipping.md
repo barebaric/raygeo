@@ -35,6 +35,26 @@ Clip line segments that fall within polygon regions.
 
 _Line clipped to polygon_
 
+### `clip_line_segment_with_polygons_2d()`
+
+```python
+clip_line_segment_with_polygons_2d(
+    p1: types.Point,
+    p2: types.Point,
+    regions: Sequence[Sequence[types.Point]],
+) -> list[tuple[types.Point, types.Point]]
+```
+
+Clip 2D line segments that fall within polygon regions (XY-plane only).
+
+| Parameter    | Type                                    | Description                                                                                  |
+| ------------ | --------------------------------------- | -------------------------------------------------------------------------------------------- |
+| `p1`         | `types.Point`                           | Start point (x, y).                                                                          |
+| `p2`         | `types.Point`                           | End point (x, y).                                                                            |
+| `regions`    | `Sequence[Sequence[types.Point]]`       | Polygon regions to clip against.                                                             |
+| _Returns_    | `list[tuple[types.Point, types.Point]]` | List of clipped segments.                                                                    |
+| _Complexity_ |                                         | O(n \* m) time, O(n) space where n is the number of regions and m their average vertex count |
+
 ### `clip_line_segment_with_rect()`
 
 ```python
@@ -58,6 +78,26 @@ Clip a line segment with a rectangle.
 ![Line clipped to rectangle](images/clipping-rect.png)
 
 _Line clipped to rectangle_
+
+### `clip_line_segment_with_rect_2d()`
+
+```python
+clip_line_segment_with_rect_2d(
+    p1: types.Point,
+    p2: types.Point,
+    rect: types.Rect,
+) -> Optional[tuple[types.Point, types.Point]]
+```
+
+Clip a 2D line segment with a rectangle (XY-plane only).
+
+| Parameter    | Type                                        | Description                                      |
+| ------------ | ------------------------------------------- | ------------------------------------------------ |
+| `p1`         | `types.Point`                               | Start point (x, y).                              |
+| `p2`         | `types.Point`                               | End point (x, y).                                |
+| `rect`       | `types.Rect`                                | Clipping rectangle (x_min, y_min, x_max, y_max). |
+| _Returns_    | `Optional[tuple[types.Point, types.Point]]` | Clipped segment or None if fully outside.        |
+| _Complexity_ |                                             | O(1) time, O(1) space                            |
 
 ### `from_clipper()`
 
@@ -96,6 +136,26 @@ Subtract polygon regions from a line segment.
 ![Subtract polygon from line](images/clipping-subtract.png)
 
 _Subtract polygon from line_
+
+### `subtract_polygons_from_line_segment_2d()`
+
+```python
+subtract_polygons_from_line_segment_2d(
+    p1: types.Point,
+    p2: types.Point,
+    regions: Sequence[Sequence[types.Point]],
+) -> list[tuple[types.Point, types.Point]]
+```
+
+Subtract polygon regions from a 2D line segment (XY-plane only).
+
+| Parameter    | Type                                    | Description                                                                                  |
+| ------------ | --------------------------------------- | -------------------------------------------------------------------------------------------- |
+| `p1`         | `types.Point`                           | Start point (x, y).                                                                          |
+| `p2`         | `types.Point`                           | End point (x, y).                                                                            |
+| `regions`    | `Sequence[Sequence[types.Point]]`       | List of polygon regions to subtract.                                                         |
+| _Returns_    | `list[tuple[types.Point, types.Point]]` | List of remaining segments after subtraction.                                                |
+| _Complexity_ |                                         | O(n \* m) time, O(n) space where n is the number of regions and m their average vertex count |
 
 ### `to_clipper()`
 

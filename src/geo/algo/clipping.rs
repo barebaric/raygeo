@@ -1,8 +1,17 @@
 //! Clipping: Line segment clipping and region operations.
+//!
+//! Functions with a `_2d` suffix operate in the **pure XY plane** (no Z).
+//! Functions without the suffix are **2.5D wrappers** — the clip is performed
+//! in XY and Z is linearly interpolated from the input points.
+//!
+//! Callers of the 2D cores must explicitly project 3D data before calling;
+//! see [`crate::types`] (or [`super::project`]) for helpers.
 
 use crate::geo::shape::line::get_line_segment_polygon_intersections_into;
 use crate::geo::shape::polygon::is_point_inside_polygon;
 use crate::types::{Point, Point3D, Polygon, Rect};
+
+// ── Cohen–Sutherland outcodes ─────────────────────────────────────────
 
 const INSIDE: i32 = 0;
 const LEFT: i32 = 1;
@@ -10,7 +19,7 @@ const RIGHT: i32 = 2;
 const BOTTOM: i32 = 4;
 const TOP: i32 = 8;
 
-fn compute_outcode(x: f64, y: f64, rect: Rect) -> i32 {
+fn compute_outcode_2d(x: f64, y: f64, rect: Rect) -> i32 {
     let Rect(x_min, y_min, x_max, y_max) = rect;
     let mut code = INSIDE;
     if x < x_min {
@@ -26,31 +35,35 @@ fn compute_outcode(x: f64, y: f64, rect: Rect) -> i32 {
     code
 }
 
-/// Clips a 3D line segment to an axis-aligned 2D rectangle using
-/// the Cohen-Sutherland algorithm. Z-coordinates are interpolated.
-pub fn clip_line_segment_with_rect(
-    p1: Point3D,
-    p2: Point3D,
-    rect: Rect,
-) -> Option<(Point3D, Point3D)> {
-    let Rect(x_min, y_min, x_max, y_max) = rect;
-    let (mut x1, mut y1, mut z1) = (p1.0, p1.1, p1.2);
-    let (mut x2, mut y2, mut z2) = (p2.0, p2.1, p2.2);
-    let (dx, dy, dz) = (x2 - x1, y2 - y1, z2 - z1);
+// ── 2D core: rectangle clip ──────────────────────────────────────────
 
-    let mut outcode1 = compute_outcode(x1, y1, rect);
-    let mut outcode2 = compute_outcode(x2, y2, rect);
+/// Pure 2D Cohen-Sutherland line clipping against an axis-aligned rectangle.
+///
+/// **XY-plane only.** No Z involvement. Returns the clipped segment or `None`
+/// if the segment lies entirely outside the rectangle.
+pub fn clip_line_segment_with_rect_2d(
+    p1: Point,
+    p2: Point,
+    rect: Rect,
+) -> Option<(Point, Point)> {
+    let Rect(x_min, y_min, x_max, y_max) = rect;
+    let (mut x1, mut y1) = (p1.0, p1.1);
+    let (mut x2, mut y2) = (p2.0, p2.1);
+    let (dx, dy) = (x2 - x1, y2 - y1);
+
+    let mut outcode1 = compute_outcode_2d(x1, y1, rect);
+    let mut outcode2 = compute_outcode_2d(x2, y2, rect);
 
     loop {
         if (outcode1 | outcode2) == 0 {
-            return Some((Point3D(x1, y1, z1), Point3D(x2, y2, z2)));
+            return Some((Point(x1, y1), Point(x2, y2)));
         }
         if (outcode1 & outcode2) != 0 {
             return None;
         }
 
         let outcode_out = if outcode1 != 0 { outcode1 } else { outcode2 };
-        let (mut x, mut y, mut z) = (0.0, 0.0, 0.0);
+        let (mut x, mut y) = (0.0, 0.0);
 
         if (outcode_out & TOP) != 0 {
             y = y_max;
@@ -59,22 +72,12 @@ pub fn clip_line_segment_with_rect(
             } else {
                 x1
             };
-            z = if dy != 0.0 {
-                z1 + dz * (y_max - y1) / dy
-            } else {
-                z1
-            };
         } else if (outcode_out & BOTTOM) != 0 {
             y = y_min;
             x = if dy != 0.0 {
                 x1 + dx * (y_min - y1) / dy
             } else {
                 x1
-            };
-            z = if dy != 0.0 {
-                z1 + dz * (y_min - y1) / dy
-            } else {
-                z1
             };
         } else if (outcode_out & RIGHT) != 0 {
             x = x_max;
@@ -83,11 +86,6 @@ pub fn clip_line_segment_with_rect(
             } else {
                 y1
             };
-            z = if dx != 0.0 {
-                z1 + dz * (x_max - x1) / dx
-            } else {
-                z1
-            };
         } else if (outcode_out & LEFT) != 0 {
             x = x_min;
             y = if dx != 0.0 {
@@ -95,46 +93,79 @@ pub fn clip_line_segment_with_rect(
             } else {
                 y1
             };
-            z = if dx != 0.0 {
-                z1 + dz * (x_min - x1) / dx
-            } else {
-                z1
-            };
         }
 
         if outcode_out == outcode1 {
             x1 = x;
             y1 = y;
-            z1 = z;
-            outcode1 = compute_outcode(x1, y1, rect);
+            outcode1 = compute_outcode_2d(x1, y1, rect);
         } else {
             x2 = x;
             y2 = y;
-            z2 = z;
-            outcode2 = compute_outcode(x2, y2, rect);
+            outcode2 = compute_outcode_2d(x2, y2, rect);
         }
     }
 }
 
-/// Calculates the sub-segments of a line that lie outside a list of polygons.
-pub fn subtract_polygons_from_line_segment(
+// ── 2.5D wrapper: rectangle clip ─────────────────────────────────────
+
+/// Clips a line segment to an axis-aligned 2D rectangle using
+/// the Cohen-Sutherland algorithm.
+///
+/// **2.5D:** The clip test is performed in the XY plane. Z-coordinates are
+/// linearly interpolated from the input points. This is not a true 3D clip;
+/// for a pure 2D version see [`clip_line_segment_with_rect_2d`].
+pub fn clip_line_segment_with_rect(
     p1: Point3D,
     p2: Point3D,
+    rect: Rect,
+) -> Option<(Point3D, Point3D)> {
+    let p1_2d = Point(p1.0, p1.1);
+    let p2_2d = Point(p2.0, p2.1);
+    let clipped_2d = clip_line_segment_with_rect_2d(p1_2d, p2_2d, rect)?;
+
+    let dz = p2.2 - p1.2;
+    let dx = p2.0 - p1.0;
+    let dy = p2.1 - p1.1;
+    let len_sq = dx * dx + dy * dy;
+
+    let interpolate_z = |pt: Point| -> f64 {
+        if len_sq < 1e-30 {
+            p1.2
+        } else {
+            let t = ((pt.0 - p1_2d.0) * dx + (pt.1 - p1_2d.1) * dy) / len_sq;
+            p1.2 + t * dz
+        }
+    };
+
+    let (c1, c2) = clipped_2d;
+    Some((
+        Point3D(c1.0, c1.1, interpolate_z(c1)),
+        Point3D(c2.0, c2.1, interpolate_z(c2)),
+    ))
+}
+
+// ── 2D core: polygon-based clip / subtract ───────────────────────────
+
+/// Internal helper: compute kept t-ranges for a 2D segment against polygons.
+///
+/// When `keep_inside = true` the returned ranges are the portions **inside**
+/// the regions (clip); when `false` they are the portions **outside** (subtract).
+fn compute_kept_t_ranges(
+    p1: Point,
+    p2: Point,
     regions: &[Polygon],
-) -> Vec<(Point3D, Point3D)> {
-    let p1_2d: Point = Point(p1.0, p1.1);
-    let p2_2d: Point = Point(p2.0, p2.1);
+    keep_inside: bool,
+) -> Vec<(f64, f64)> {
+    if regions.is_empty() {
+        return vec![];
+    }
+
     let mut cut_buf = Vec::new();
-    get_line_segment_polygon_intersections_into(
-        p1_2d,
-        p2_2d,
-        regions,
-        &mut cut_buf,
-    );
+    get_line_segment_polygon_intersections_into(p1, p2, regions, &mut cut_buf);
     let sorted_cuts = &*cut_buf;
 
-    let mut kept_segments: Vec<(Point3D, Point3D)> = Vec::new();
-
+    let mut kept: Vec<(f64, f64)> = Vec::new();
     for i in 0..sorted_cuts.len().saturating_sub(1) {
         let t1 = sorted_cuts[i];
         let t2 = sorted_cuts[i + 1];
@@ -143,82 +174,126 @@ pub fn subtract_polygons_from_line_segment(
         }
 
         let mid_t = (t1 + t2) / 2.0;
-        let mid_p: Point =
+        let mid_p =
             Point(p1.0 + (p2.0 - p1.0) * mid_t, p1.1 + (p2.1 - p1.1) * mid_t);
 
-        let is_inside_any =
+        let is_inside =
             regions.iter().any(|r| is_point_inside_polygon(mid_p, r));
 
-        if !is_inside_any {
-            let sub_p1: Point3D = Point3D(
-                p1.0 + (p2.0 - p1.0) * t1,
-                p1.1 + (p2.1 - p1.1) * t1,
-                p1.2 + (p2.2 - p1.2) * t1,
-            );
-            let sub_p2: Point3D = Point3D(
-                p1.0 + (p2.0 - p1.0) * t2,
-                p1.1 + (p2.1 - p1.1) * t2,
-                p1.2 + (p2.2 - p1.2) * t2,
-            );
-            kept_segments.push((sub_p1, sub_p2));
+        if (keep_inside && is_inside) || (!keep_inside && !is_inside) {
+            kept.push((t1, t2));
         }
     }
 
-    kept_segments
+    kept
 }
 
-/// Returns the sub-segments of a line segment that lie inside a list of polygons.
-/// This is the inverse of subtract_polygons_from_line_segment.
+/// Pure 2D: returns the sub-segments of a 2D line segment that lie **inside**
+/// a list of polygon regions.
+///
+/// **XY-plane only.** No Z involvement.
+pub fn clip_line_segment_with_polygons_2d(
+    p1: Point,
+    p2: Point,
+    regions: &[Polygon],
+) -> Vec<(Point, Point)> {
+    let ranges = compute_kept_t_ranges(p1, p2, regions, true);
+    ranges
+        .into_iter()
+        .map(|(t1, t2)| {
+            (
+                Point(p1.0 + (p2.0 - p1.0) * t1, p1.1 + (p2.1 - p1.1) * t1),
+                Point(p1.0 + (p2.0 - p1.0) * t2, p1.1 + (p2.1 - p1.1) * t2),
+            )
+        })
+        .collect()
+}
+
+/// Pure 2D: returns the sub-segments of a 2D line segment that lie **outside**
+/// a list of polygon regions (inverse of clip).
+///
+/// **XY-plane only.** No Z involvement.
+pub fn subtract_polygons_from_line_segment_2d(
+    p1: Point,
+    p2: Point,
+    regions: &[Polygon],
+) -> Vec<(Point, Point)> {
+    let ranges = compute_kept_t_ranges(p1, p2, regions, false);
+    ranges
+        .into_iter()
+        .map(|(t1, t2)| {
+            (
+                Point(p1.0 + (p2.0 - p1.0) * t1, p1.1 + (p2.1 - p1.1) * t1),
+                Point(p1.0 + (p2.0 - p1.0) * t2, p1.1 + (p2.1 - p1.1) * t2),
+            )
+        })
+        .collect()
+}
+
+// ── 2.5D wrappers: polygon-based clip / subtract ─────────────────────
+
+/// Returns the sub-segments of a line segment that lie **inside** a list of
+/// polygons.  This is the inverse of `subtract_polygons_from_line_segment`.
+///
+/// **2.5D:** The point-in-polygon test is performed in the XY plane.
+/// Z-coordinates are linearly interpolated from the input points. For a pure
+/// 2D version see [`clip_line_segment_with_polygons_2d`].
 pub fn clip_line_segment_with_polygons(
     p1: Point3D,
     p2: Point3D,
     regions: &[Polygon],
 ) -> Vec<(Point3D, Point3D)> {
-    if regions.is_empty() {
-        return Vec::new();
-    }
+    let p1_2d = Point(p1.0, p1.1);
+    let p2_2d = Point(p2.0, p2.1);
+    let ranges = compute_kept_t_ranges(p1_2d, p2_2d, regions, true);
+    ranges
+        .into_iter()
+        .map(|(t1, t2)| {
+            (
+                Point3D(
+                    p1.0 + (p2.0 - p1.0) * t1,
+                    p1.1 + (p2.1 - p1.1) * t1,
+                    p1.2 + (p2.2 - p1.2) * t1,
+                ),
+                Point3D(
+                    p1.0 + (p2.0 - p1.0) * t2,
+                    p1.1 + (p2.1 - p1.1) * t2,
+                    p1.2 + (p2.2 - p1.2) * t2,
+                ),
+            )
+        })
+        .collect()
+}
 
-    let p1_2d: Point = Point(p1.0, p1.1);
-    let p2_2d: Point = Point(p2.0, p2.1);
-    let mut cut_buf = Vec::new();
-    get_line_segment_polygon_intersections_into(
-        p1_2d,
-        p2_2d,
-        regions,
-        &mut cut_buf,
-    );
-    let sorted_cuts = &*cut_buf;
-
-    let mut kept_segments: Vec<(Point3D, Point3D)> = Vec::new();
-
-    for i in 0..sorted_cuts.len().saturating_sub(1) {
-        let t1 = sorted_cuts[i];
-        let t2 = sorted_cuts[i + 1];
-        if (t1 - t2).abs() < 1e-9 {
-            continue;
-        }
-
-        let mid_t = (t1 + t2) / 2.0;
-        let mid_p: Point =
-            Point(p1.0 + (p2.0 - p1.0) * mid_t, p1.1 + (p2.1 - p1.1) * mid_t);
-
-        let is_inside_any =
-            regions.iter().any(|r| is_point_inside_polygon(mid_p, r));
-
-        if is_inside_any {
-            let sub_p1: Point3D = Point3D(
-                p1.0 + (p2.0 - p1.0) * t1,
-                p1.1 + (p2.1 - p1.1) * t1,
-                p1.2 + (p2.2 - p1.2) * t1,
-            );
-            let sub_p2: Point3D = Point3D(
-                p1.0 + (p2.0 - p1.0) * t2,
-                p1.1 + (p2.1 - p1.1) * t2,
-                p1.2 + (p2.2 - p1.2) * t2,
-            );
-            kept_segments.push((sub_p1, sub_p2));
-        }
-    }
-
-    kept_segments
+/// Calculates the sub-segments of a line that lie **outside** a list of
+/// polygons.
+///
+/// **2.5D:** The point-in-polygon test is performed in the XY plane.
+/// Z-coordinates are linearly interpolated from the input points. For a pure
+/// 2D version see [`subtract_polygons_from_line_segment_2d`].
+pub fn subtract_polygons_from_line_segment(
+    p1: Point3D,
+    p2: Point3D,
+    regions: &[Polygon],
+) -> Vec<(Point3D, Point3D)> {
+    let p1_2d = Point(p1.0, p1.1);
+    let p2_2d = Point(p2.0, p2.1);
+    let ranges = compute_kept_t_ranges(p1_2d, p2_2d, regions, false);
+    ranges
+        .into_iter()
+        .map(|(t1, t2)| {
+            (
+                Point3D(
+                    p1.0 + (p2.0 - p1.0) * t1,
+                    p1.1 + (p2.1 - p1.1) * t1,
+                    p1.2 + (p2.2 - p1.2) * t1,
+                ),
+                Point3D(
+                    p1.0 + (p2.0 - p1.0) * t2,
+                    p1.1 + (p2.1 - p1.1) * t2,
+                    p1.2 + (p2.2 - p1.2) * t2,
+                ),
+            )
+        })
+        .collect()
 }

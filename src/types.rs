@@ -15,6 +15,32 @@ use crate::geo::shape::line::get_line_segment_closest_point;
 #[derive(Clone, Copy, Debug, Default, PartialEq, PartialOrd)]
 pub struct Point(pub f64, pub f64);
 
+/// Project a 3D point to the XY plane, dropping Z.
+pub fn project_point_to_xy(p: Point3D) -> Point {
+    Point(p.0, p.1)
+}
+
+/// Project a slice of 3D points to the XY plane, dropping Z.
+pub fn project_points_to_xy(points: &[Point3D]) -> Vec<Point> {
+    points.iter().map(|p| Point(p.0, p.1)).collect()
+}
+
+/// Lift 2D points to the XY plane at a given Z height.
+pub fn lift_points_to_xy_plane(points: &[Point], z: f64) -> Vec<Point3D> {
+    points.iter().map(|p| Point3D(p.0, p.1, z)).collect()
+}
+
+/// Check whether all points share the same Z (within tolerance).
+/// Returns `Some(z)` if planar in Z, `None` otherwise.
+pub fn is_planar_in_z(points: &[Point3D], tol: f64) -> Option<f64> {
+    let z0 = points.first()?.2;
+    if points.iter().all(|p| (p.2 - z0).abs() <= tol) {
+        Some(z0)
+    } else {
+        None
+    }
+}
+
 /// A 3D point represented as (x, y, z) coordinates.
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct Point3D(pub f64, pub f64, pub f64);

@@ -1,5 +1,7 @@
 //! Minkowski: Minkowski sum/difference operations for polygons.
 //!
+//! **Planar (XY-plane only).** Z is not modeled.
+//!
 //! This module provides functions for calculating Minkowski sums and differences
 //! of polygons, which are used in packing and nesting algorithms for computing
 //! No-Fit Polygons (NFP) and Inner-Fit Polygons (IFP).

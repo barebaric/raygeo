@@ -1,6 +1,10 @@
 //! Offset: Polygon offsetting (growing/shrinking) for geometry data.
 //!
-//! Provides functions for offsetting closed contours using Clipper2.
+//! **Planar (XY-plane) with Z passthrough.** The core inflate uses Clipper2
+//! (strictly 2D).  When offsetting a `Geometry` the source contour's Z
+//! (taken from its first vertex) is preserved on the output — the operation
+//! is a 2D inflate of the XY outline at the source Z plane.
+//!
 //! Handles containment hierarchies (holes within solids) correctly by
 //! offsetting solids and holes independently and subtracting holes from solids.
 
@@ -19,13 +23,16 @@ struct ContourItem {
     #[allow(dead_code)]
     area: f64,
     id: usize,
+    /// The Z height of this contour (from its first vertex).
+    /// Preserved from the source 3D geometry so offset output keeps Z.
+    z: f64,
 }
 
 fn prepare_contour_items(
     contour_data: &[(&Geometry, Vec<Point>, bool)],
 ) -> Vec<ContourItem> {
     let mut items = Vec::new();
-    for (i, (_geo, vertices, _is_closed)) in contour_data.iter().enumerate() {
+    for (i, (geo, vertices, _is_closed)) in contour_data.iter().enumerate() {
         if vertices.len() < 2 {
             continue;
         }
@@ -46,10 +53,13 @@ fn prepare_contour_items(
             area -= verts[k].0 * verts[j].1;
         }
         area = area.abs() / 2.0;
+        // Preserve Z from the source geometry's first point (Move command).
+        let z = geo.data.first().map(|cmd| cmd.end_point().2).unwrap_or(0.0);
         items.push(ContourItem {
             path: verts,
             area,
             id: i,
+            z,
         });
     }
     items
@@ -145,10 +155,9 @@ pub fn grow_geometry(geometry: &Geometry, offset: f64) -> Geometry {
         let offset_contours =
             offset_contour_group(&solid_item.path, &hole_paths, offset);
         for new_vertices in offset_contours {
-            let points: Vec<Point3D> = new_vertices
-                .iter()
-                .map(|p| Point3D(p.0, p.1, 0.0))
-                .collect();
+            let z = solid_item.z;
+            let points: Vec<Point3D> =
+                new_vertices.iter().map(|p| Point3D(p.0, p.1, z)).collect();
             let new_contour_geo = Geometry::from_points(&points, true);
             if !new_contour_geo.is_empty() {
                 new_geo.extend(&new_contour_geo);

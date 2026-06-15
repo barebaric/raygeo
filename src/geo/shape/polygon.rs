@@ -1,3 +1,20 @@
+//! Polygon shapes and boolean operations.
+//!
+//! # Planar-only (XY-plane) operations
+//!
+//! All Boolean functions in this module (`offset_polygon`,
+//! `get_polygons_union`, `get_polygons_intersection`,
+//! `get_polygons_difference`, `get_polygons_group_intersection`,
+//! `get_polygons_group_difference`) are **strictly 2D** — they operate on
+//! `Polygon` (= `Vec<Point>`) and use [Clipper2] under the hood.  Z
+//! coordinates are not modeled.
+//!
+//! 3D callers must project to the XY plane before calling these functions
+//! and (if desired) lift the result back to the source Z afterwards.  See
+//! [`crate::geo::algo::project`] for helpers.
+//!
+//! [Clipper2]: https://www.angusj.com/clipper2/Docs/Overview.htm
+
 use clipper2::{
     difference as clipper_difference, intersect as clipper_intersect,
     simplify as clipper_simplify, union as clipper_union, EndType, FillRule,
@@ -428,6 +445,9 @@ pub fn clean_polygon(polygon: &Polygon, tolerance: f64) -> Option<Polygon> {
 }
 
 /// Offset (inflate/deflate) a polygon.
+/// Offset (inflate/deflate) a closed polygon using Clipper2.
+///
+/// **Planar (XY-plane only).** Z is not modeled.
 pub fn offset_polygon(polygon: &Polygon, offset: f64) -> Vec<Polygon> {
     if polygon.len() < 3 {
         return vec![];
@@ -448,6 +468,8 @@ pub fn offset_polygon(polygon: &Polygon, offset: f64) -> Vec<Polygon> {
 }
 
 /// Compute the union of multiple polygons.
+///
+/// **Planar (XY-plane only).** Uses Clipper2. Z is not modeled.
 pub fn get_polygons_union(polygons: &[Polygon]) -> Vec<Polygon> {
     if polygons.is_empty() {
         return vec![];
@@ -467,6 +489,8 @@ pub fn get_polygons_union(polygons: &[Polygon]) -> Vec<Polygon> {
 
 /// Compute the intersection of two groups of polygons (subject vs clip).
 /// Equivalent to clipper CT_INTERSECTION between two sets of paths.
+///
+/// **Planar (XY-plane only).** Uses Clipper2. Z is not modeled.
 pub fn get_polygons_group_intersection(
     subject: &[Polygon],
     clip: &[Polygon],
@@ -489,6 +513,8 @@ pub fn get_polygons_group_intersection(
 }
 
 /// Compute the intersection of two polygons.
+///
+/// **Planar (XY-plane only).** Uses Clipper2. Z is not modeled.
 pub fn get_polygons_intersection(
     poly1: &Polygon,
     poly2: &Polygon,
@@ -508,6 +534,8 @@ pub fn get_polygons_intersection(
 
 /// Compute the difference of two groups of polygons (subject - clip).
 /// Equivalent to clipper CT_DIFFERENCE between two sets of paths.
+///
+/// **Planar (XY-plane only).** Uses Clipper2. Z is not modeled.
 pub fn get_polygons_group_difference(
     subject: &[Polygon],
     clip: &[Polygon],
@@ -530,6 +558,8 @@ pub fn get_polygons_group_difference(
 }
 
 /// Compute the difference of two polygons (poly1 - poly2).
+///
+/// **Planar (XY-plane only).** Uses Clipper2. Z is not modeled.
 pub fn get_polygons_difference(
     poly1: &Polygon,
     poly2: &Polygon,
