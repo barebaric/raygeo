@@ -480,6 +480,44 @@ fn py_svg_string_to_geometries_by_layer(
         .collect::<Vec<_>>())
 }
 
+#[gen_stub_pyfunction(
+    python = r#"
+    import raygeo
+
+    def svg_string_to_geometry_by_layer(
+        svg_str: str,
+        scale_x: float = 1.0,
+        scale_y: float = 1.0,
+    ) -> list[tuple[str, raygeo.Geometry]]:
+        """Extract geometries grouped by layer, merged into one Geometry each.
+
+        Like svg_string_to_geometries_by_layer but merges each layer's
+        subpaths into a single Geometry, avoiding a Python merge loop.
+
+        :param svg_str: SVG document as a string.
+        :param scale_x: X-axis scale factor for coordinate transform.
+        :param scale_y: Y-axis scale factor for coordinate transform.
+        :returns: List of (layer_id, merged_geometry) tuples.
+        :complexity: O(n) where n = size of SVG document
+        """
+"#,
+    module = "raygeo.svg"
+)]
+#[pyfunction(name = "svg_string_to_geometry_by_layer")]
+#[pyo3(signature = (svg_str, scale_x=1.0, scale_y=1.0))]
+fn py_svg_string_to_geometry_by_layer(
+    svg_str: &str,
+    scale_x: f64,
+    scale_y: f64,
+) -> PyResult<Vec<(String, Geometry)>> {
+    let layers =
+        svg::svg_string_to_geometry_by_layer(svg_str, scale_x, scale_y)?;
+    Ok(layers
+        .into_iter()
+        .map(|(id, g)| (id, Geometry { inner: g }))
+        .collect())
+}
+
 pub(crate) fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     let svg_mod = PyModule::new(m.py(), "svg")?;
 
@@ -496,6 +534,7 @@ pub(crate) fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
             "svg_length_to_px",
             "svg_string_to_geometries",
             "svg_string_to_geometry",
+            "svg_string_to_geometry_by_layer",
             "svg_string_to_geometries_by_layer",
         ],
     )?;
@@ -518,6 +557,10 @@ pub(crate) fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     )?)?;
     svg_mod
         .add_function(wrap_pyfunction!(py_svg_string_to_geometry, &svg_mod)?)?;
+    svg_mod.add_function(wrap_pyfunction!(
+        py_svg_string_to_geometry_by_layer,
+        &svg_mod
+    )?)?;
     svg_mod.add_function(wrap_pyfunction!(
         py_svg_string_to_geometries_by_layer,
         &svg_mod

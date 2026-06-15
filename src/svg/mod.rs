@@ -1101,6 +1101,26 @@ pub fn svg_string_to_geometries_by_layer(
     Ok(layers)
 }
 
+/// Like [`svg_string_to_geometries_by_layer`] but merges each layer's
+/// subpaths into a single [`Geometry`] per layer.
+pub fn svg_string_to_geometry_by_layer(
+    svg_str: &str,
+    scale_x: f64,
+    scale_y: f64,
+) -> RaygeoResult<Vec<(String, Geometry)>> {
+    let layers = svg_string_to_geometries_by_layer(svg_str, scale_x, scale_y)?;
+    Ok(layers
+        .into_iter()
+        .map(|(id, geos)| {
+            let mut combined = Geometry::new();
+            for g in geos {
+                combined.extend(&g);
+            }
+            (id, combined)
+        })
+        .collect())
+}
+
 /// Convert a normalised Geometry into an SVG path `d` string.
 ///
 /// Coordinates are scaled by (`width`, `height`) and Y is flipped

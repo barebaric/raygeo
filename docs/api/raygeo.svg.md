@@ -240,3 +240,22 @@ Python-side merge loop.
 | `scale_y`    | `float = 1` | Y-axis scale factor for coordinate transform. |
 | _Returns_    | `Geometry`  |                                               |
 | _Complexity_ |             | O(n) where n = size of SVG document           |
+
+### `svg_string_to_geometry_by_layer()`
+
+`svg_string_to_geometry_by_layer(svg_str: str, scale_x: float = 1, scale_y: float = 1) -> list[tuple[str, Geometry]]`
+
+Extract geometries grouped by layer, merged into one Geometry each.
+
+Like svg_string_to_geometries_by_layer but merges each layer's subpaths into a single Geometry,
+avoiding a Python merge loop.
+
+**Returns:** List of (layer_id, merged_geometry) tuples.
+
+| Parameter    | Type                         | Description                                   |
+| ------------ | ---------------------------- | --------------------------------------------- |
+| `svg_str`    | `str`                        | SVG document as a string.                     |
+| `scale_x`    | `float = 1`                  | X-axis scale factor for coordinate transform. |
+| `scale_y`    | `float = 1`                  | Y-axis scale factor for coordinate transform. |
+| _Returns_    | `list[tuple[str, Geometry]]` |                                               |
+| _Complexity_ |                              | O(n) where n = size of SVG document           |
