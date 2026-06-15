@@ -24,20 +24,61 @@ __all__ = [
 
 @typing.final
 class SvgMetadata:
+    r"""
+    SVG document metadata extracted from an SVG string.
+    
+    Provides width, height, units and viewBox values parsed from the
+    root ``<svg>`` element.
+    """
     @property
-    def width(self) -> typing.Optional[builtins.float]: ...
+    def width(self) -> typing.Optional[builtins.float]:
+        r"""
+        Document width as a numeric value (may be ``None`` if not set).
+        """
     @property
-    def height(self) -> typing.Optional[builtins.float]: ...
+    def height(self) -> typing.Optional[builtins.float]:
+        r"""
+        Document height as a numeric value (may be ``None`` if not set).
+        """
     @property
-    def width_unit(self) -> builtins.str: ...
+    def width_unit(self) -> builtins.str:
+        r"""
+        Unit string for the width attribute (e.g. ``"mm"``, ``"in"``, ``"px"``).
+        """
     @property
-    def height_unit(self) -> builtins.str: ...
+    def height_unit(self) -> builtins.str:
+        r"""
+        Unit string for the height attribute.
+        """
     @property
-    def viewbox(self) -> typing.Optional[tuple[builtins.float, builtins.float, builtins.float, builtins.float]]: ...
-    def width_mm(self, dpi: builtins.float = 96.0) -> typing.Optional[builtins.float]: ...
-    def height_mm(self, dpi: builtins.float = 96.0) -> typing.Optional[builtins.float]: ...
-    def width_px(self, dpi: builtins.float = 96.0) -> typing.Optional[builtins.float]: ...
-    def height_px(self, dpi: builtins.float = 96.0) -> typing.Optional[builtins.float]: ...
+    def viewbox(self) -> typing.Optional[tuple[builtins.float, builtins.float, builtins.float, builtins.float]]:
+        r"""
+        ViewBox as ``(min_x, min_y, width, height)``, or ``None``.
+        """
+    def width_mm(self, dpi: builtins.float = 96.0) -> typing.Optional[builtins.float]:
+        r"""
+        Convert the document width to millimetres.
+        
+        :param dpi: Pixels-per-inch for px/unitless conversion (default 96).
+        """
+    def height_mm(self, dpi: builtins.float = 96.0) -> typing.Optional[builtins.float]:
+        r"""
+        Convert the document height to millimetres.
+        
+        :param dpi: Pixels-per-inch for px/unitless conversion (default 96).
+        """
+    def width_px(self, dpi: builtins.float = 96.0) -> typing.Optional[builtins.float]:
+        r"""
+        Convert the document width to pixels.
+        
+        :param dpi: Pixels-per-inch for conversion (default 96).
+        """
+    def height_px(self, dpi: builtins.float = 96.0) -> typing.Optional[builtins.float]:
+        r"""
+        Convert the document height to pixels.
+        
+        :param dpi: Pixels-per-inch for conversion (default 96).
+        """
     def __repr__(self) -> builtins.str: ...
     def __richcmp__(self, other: SvgMetadata, op: int) -> builtins.bool: ...
 

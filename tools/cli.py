@@ -155,6 +155,11 @@ _INLINE_IMAGE_MAP = {
             "rasterization-multi-pass",
             "Rasterization: Multi-Pass",
         ),
+        (
+            "extract_zero_power_segments",
+            "zero-power-segments",
+            "Zero-power segment extraction",
+        ),
     ],
     "raygeo.geo.algo.hull.md": [
         ("get_concave_hull", "concave-hull", "Concave vs convex hull"),

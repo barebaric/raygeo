@@ -15,9 +15,35 @@ __all__ = [
 
 @typing.final
 class SpatialGrid:
-    def __new__(cls, cell_size: builtins.float) -> SpatialGrid: ...
-    def insert(self, index: builtins.int, bbox: typing.Sequence[builtins.float]) -> None: ...
-    def query(self, bbox: typing.Sequence[builtins.float]) -> builtins.list[builtins.int]: ...
-    def clear(self) -> None: ...
+    r"""
+    A grid-based spatial index for fast overlap queries.
+    
+    Divides the 2D plane into fixed-size cells and indexes items by
+    their bounding box for efficient overlap lookups.
+    """
+    def __new__(cls, cell_size: builtins.float) -> SpatialGrid:
+        r"""
+        Create a new spatial grid with the given cell size.
+        
+        :param cell_size: Side length of each grid cell in mm.
+        """
+    def insert(self, index: builtins.int, bbox: typing.Sequence[builtins.float]) -> None:
+        r"""
+        Insert an item into the grid by its bounding box.
+        
+        :param index: Unique identifier for the item.
+        :param bbox: ``[x_min, y_min, x_max, y_max]`` bounding box.
+        """
+    def query(self, bbox: typing.Sequence[builtins.float]) -> builtins.list[builtins.int]:
+        r"""
+        Query all items whose bounding box overlaps *bbox*.
+        
+        :param bbox: ``[x_min, y_min, x_max, y_max]`` query region.
+        :returns: Sorted list of matching item indices.
+        """
+    def clear(self) -> None:
+        r"""
+        Remove all items from the grid.
+        """
     def __repr__(self) -> builtins.str: ...
 

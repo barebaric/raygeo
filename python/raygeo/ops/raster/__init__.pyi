@@ -11,6 +11,7 @@ __all__ = [
     "ScanLine",
     "ScanMode",
     "downsample_power_values",
+    "extract_zero_power_segments",
     "find_mask_bounding_box",
     "find_segments",
     "generate_horizontal_scan_positions",
@@ -25,45 +26,278 @@ __all__ = [
 
 @typing.final
 class ScanLine:
+    r"""
+    A single scan line with its pixel coverage and mm-space endpoints.
+    
+    Produced by :func:`generate_scan_lines`. Each line has a unique
+    index, start/end positions in mm, and the set of pixels it
+    intersects in the image.
+    """
     @property
-    def index(self) -> builtins.int: ...
+    def index(self) -> builtins.int:
+        r"""
+        The index of this scan line (used to determine alternating direction).
+        """
     @property
-    def start_mm(self) -> tuple[builtins.float, builtins.float]: ...
+    def start_mm(self) -> tuple[builtins.float, builtins.float]:
+        r"""
+        Start position of the scan line in mm space.
+        """
     @property
-    def end_mm(self) -> tuple[builtins.float, builtins.float]: ...
+    def end_mm(self) -> tuple[builtins.float, builtins.float]:
+        r"""
+        End position of the scan line in mm space.
+        """
     @property
-    def pixels(self) -> builtins.list[tuple[builtins.int, builtins.int]]: ...
+    def pixels(self) -> builtins.list[tuple[builtins.int, builtins.int]]:
+        r"""
+        Pixel coordinates covered by this scan line.
+        """
     @property
-    def line_interval_mm(self) -> builtins.float: ...
-    def __new__(cls, index: builtins.int, start_mm: tuple[builtins.float, builtins.float], end_mm: tuple[builtins.float, builtins.float], pixels: typing.Sequence[tuple[builtins.int, builtins.int]], line_interval_mm: builtins.float) -> ScanLine: ...
-    def length_mm(self) -> builtins.float: ...
-    def direction(self) -> tuple[builtins.float, builtins.float]: ...
-    def pixel_to_mm(self, px: builtins.int, py: builtins.int, pixels_per_mm: tuple[builtins.float, builtins.float]) -> tuple[builtins.float, builtins.float]: ...
+    def line_interval_mm(self) -> builtins.float:
+        r"""
+        Spacing between scan lines in mm.
+        """
+    def __new__(cls, index: builtins.int, start_mm: tuple[builtins.float, builtins.float], end_mm: tuple[builtins.float, builtins.float], pixels: typing.Sequence[tuple[builtins.int, builtins.int]], line_interval_mm: builtins.float) -> ScanLine:
+        r"""
+        Create a new ScanLine.
+        """
+    def length_mm(self) -> builtins.float:
+        r"""
+        Compute the length of this scan line in mm.
+        """
+    def direction(self) -> tuple[builtins.float, builtins.float]:
+        r"""
+        Normalised direction vector from start to end in mm space.
+        
+        :returns: ``(dx, dy)`` unit vector.
+        """
+    def pixel_to_mm(self, px: builtins.int, py: builtins.int, pixels_per_mm: tuple[builtins.float, builtins.float]) -> tuple[builtins.float, builtins.float]:
+        r"""
+        Convert pixel coordinates to mm space, projected onto this scan line.
+        
+        :param px: X pixel coordinate.
+        :param py: Y pixel coordinate.
+        :param pixels_per_mm: ``(x, y)`` pixel density in px/mm.
+        :returns: ``(x, y)`` position in mm, projected onto the scan line.
+        """
 
 @typing.final
 class ScanMode(enum.Enum):
+    r"""
+    Scan mode for raster operations.
+    
+    ``Segmented`` skips zero-power gaps within a scan line.
+    ``FullSweep`` emits the full line with power values (zeros included).
+    """
     Segmented = ...
     FullSweep = ...
 
-def downsample_power_values(power_values: numpy.ndarray, start_mm: tuple[float, float], end_mm: tuple[float, float], sample_interval_mm: float) -> tuple[numpy.ndarray, numpy.ndarray, numpy.ndarray]: ...
+def downsample_power_values(power_values: numpy.ndarray, start_mm: tuple[float, float], end_mm: tuple[float, float], sample_interval_mm: float) -> tuple[numpy.ndarray, numpy.ndarray, numpy.ndarray]:
+    r"""
+    Downsample power values along a scan segment.
+    
+    If the sample interval is larger than the native pixel spacing,
+    the power values are resampled by nearest-neighbour at the
+    target spacing. Otherwise the original values are returned
+    with their corresponding positions.
+    
+    :param power_values: 1-D array of byte power values.
+    :param start_mm: ``(x, y)`` start position of the segment in mm.
+    :param end_mm: ``(x, y)`` end position of the segment in mm.
+    :param sample_interval_mm: Desired sample spacing in mm.
+    :returns: ``(power, x_mm, y_mm)`` of downsampled values.
+    :complexity: O(n) where n = number of power values
+    """
 
-def find_mask_bounding_box(mask: numpy.ndarray) -> tuple[int, int, int, int] | None: ...
+def extract_zero_power_segments(start: tuple[float, float, float], end: tuple[float, float, float], power_values: bytes) -> list[float]:
+    r"""
+    Extract zero-power segment endpoints from scanline power data.
+    
+    Finds contiguous runs of zero values in *power_values* and computes
+    their 3D start/end points via linear interpolation along the
+    scanline segment from *start* to *end*.
+    
+    :param start: (x, y, z) start position of the scanline in mm.
+    :param end: (x, y, z) end position of the scanline in mm.
+    :param power_values: Per-step power bytes.
+    :returns: Flat list of ``[sx, sy, sz, ex, ey, ez, ...]`` segments.
+    :complexity: O(n) where n = number of steps
+    """
 
-def find_segments(values: numpy.ndarray) -> list[tuple[int, int]]: ...
+def find_mask_bounding_box(mask: numpy.ndarray) -> tuple[int, int, int, int] | None:
+    r"""
+    Find the bounding box of non-zero pixels in a binary mask.
+    
+    Scans the mask and returns the (y_min, y_max, x_min, x_max) of
+    the smallest axis-aligned rectangle covering all non-zero pixels.
+    
+    :param mask: 2-D binary mask array.
+    :returns: ``(y_min, y_max, x_min, x_max)`` pixel coordinates,
+        or ``None`` if the mask is entirely zero.
+    :complexity: O(h*w)
+    """
 
-def generate_horizontal_scan_positions(y_min_px: int, y_max_px: int, height_px: int, pixels_per_mm: tuple[float, float], line_interval_mm: float, offset_y_mm: float) -> tuple[list[float], list[float]]: ...
+def find_segments(values: numpy.ndarray) -> list[tuple[int, int]]:
+    r"""
+    Find contiguous non-zero segments in a 1-D array.
+    
+    Returns a list of ``(start, end)`` index pairs covering every
+    run of consecutive non-zero values.
+    
+    :param values: 1-D array of byte values.
+    :returns: List of ``(start, end)`` index pairs.
+    :complexity: O(n)
+    """
 
-def generate_scan_lines(bbox: tuple[int, int, int, int], image_size: tuple[int, int], pixels_per_mm: tuple[float, float], line_interval_mm: float, direction_degrees: float = 0, offset_x_mm: float = 0, offset_y_mm: float = 0, global_center_mm: tuple[float, float] | None = None) -> list[ScanLine]: ...
+def generate_horizontal_scan_positions(y_min_px: int, y_max_px: int, height_px: int, pixels_per_mm: tuple[float, float], line_interval_mm: float, offset_y_mm: float) -> tuple[list[float], list[float]]:
+    r"""
+    Compute Y positions for horizontal scan lines.
+    
+    Given a vertical pixel range, computes the mm and pixel Y
+    coordinates of evenly-spaced scan lines (aligned to a global
+    grid defined by *line_interval_mm* and *offset_y_mm*).
+    
+    :param y_min_px: Minimum Y pixel coordinate.
+    :param y_max_px: Maximum Y pixel coordinate.
+    :param height_px: Image height in pixels.
+    :param pixels_per_mm: ``(x, y)`` pixel density in px/mm.
+    :param line_interval_mm: Spacing between scan lines in mm.
+    :param offset_y_mm: Global Y offset in mm.
+    :returns: ``(y_coords_mm, y_coords_px)`` tuple of Y positions.
+    :complexity: O(n) where n = number of scan lines
+    """
 
-def line_pixels(start: tuple[float, float], end: tuple[float, float], width: int, height: int) -> list[tuple[int, int]]: ...
+def generate_scan_lines(bbox: tuple[int, int, int, int], image_size: tuple[int, int], pixels_per_mm: tuple[float, float], line_interval_mm: float, direction_degrees: float = 0, offset_x_mm: float = 0, offset_y_mm: float = 0, global_center_mm: tuple[float, float] | None = None) -> list[ScanLine]:
+    r"""
+    Generate scan lines covering a bounding box.
+    
+    Creates a set of parallel scan lines at a given angle and
+    spacing that cover the bounding box region. Each line is
+    rasterised to pixels and stored as a :class:`ScanLine`.
+    
+    :param bbox: ``(y_min, y_max, x_min, x_max)`` of the region.
+    :param image_size: ``(width, height)`` of the image in pixels.
+    :param pixels_per_mm: ``(x, y)`` pixel density in px/mm.
+    :param line_interval_mm: Spacing between scan lines in mm.
+    :param direction_degrees: Scan direction angle in degrees.
+    :param offset_x_mm: Global X offset in mm.
+    :param offset_y_mm: Global Y offset in mm.
+    :param global_center_mm: Optional rotation centre in mm;
+        defaults to the bbox centre + offset.
+    :returns: List of :class:`ScanLine` objects.
+    :complexity: O(n * p) where n = number of lines, p = pixels per line
+    """
 
-def rasterize_mask_lines(mask: numpy.typing.NDArray[numpy.uint8], pixels_per_mm: tuple[float, float], offset_x_mm: float, offset_y_mm: float, line_interval_mm: float, z: float = 0, angle: float = 0, scan_mode: ScanMode = ScanMode.Segmented) -> ops.Ops: ...
+def line_pixels(start: tuple[float, float], end: tuple[float, float], width: int, height: int) -> list[tuple[int, int]]:
+    r"""
+    Rasterise a line segment into pixel coordinates.
+    
+    Uses Bresenham's line algorithm to enumerate all integer pixel
+    positions intersecting the line from *start* to *end*, clipped
+    to the image dimensions ``(width, height)``.
+    
+    :param start: (x, y) start position in pixel coordinates.
+    :param end: (x, y) end position in pixel coordinates.
+    :param width: Image width in pixels.
+    :param height: Image height in pixels.
+    :returns: List of ``(x, y)`` pixel coordinates on the line.
+    :complexity: O(n) where n = number of pixels on the line
+    """
 
-def rasterize_mask_scan(mask: numpy.typing.NDArray[numpy.uint8], pixels_per_mm: tuple[float, float], offset_x_mm: float, offset_y_mm: float, line_interval_mm: float, step_power: float = 1, angle: float = 0, scan_mode: ScanMode = ScanMode.Segmented) -> ops.Ops: ...
+def rasterize_mask_lines(mask: numpy.typing.NDArray[numpy.uint8], pixels_per_mm: tuple[float, float], offset_x_mm: float, offset_y_mm: float, line_interval_mm: float, z: float = 0, angle: float = 0, scan_mode: ScanMode = ScanMode.Segmented) -> ops.Ops:
+    r"""
+    Rasterise a binary mask into line-to commands (no power).
+    
+    Similar to :func:`rasterize_mask_scan` but emits move-to/line-to
+    commands with a Z offset instead of scan-to with power values.
+    Useful for simple contour or hatch patterns.
+    
+    :param mask: 2-D binary mask array.
+    :param pixels_per_mm: ``(x, y)`` pixel density in px/mm.
+    :param offset_x_mm: Global X offset in mm.
+    :param offset_y_mm: Global Y offset in mm.
+    :param line_interval_mm: Spacing between scan lines in mm.
+    :param z: Z offset for the lines in mm.
+    :param angle: Scan angle in degrees.
+    :param scan_mode: ``ScanMode.Segmented`` or ``ScanMode.FullSweep``.
+    :returns: An :class:`~raygeo.ops.Ops` container.
+    """
 
-def rasterize_multi_pass(gray_image: numpy.typing.NDArray[numpy.uint8], pixels_per_mm: tuple[float, float], offset_x_mm: float, offset_y_mm: float, line_interval_mm: float, num_depth_levels: int, z_step_down: float, angle: float = 0, angle_increment: float = 0, scan_mode: ScanMode = ScanMode.Segmented) -> ops.Ops: ...
+def rasterize_mask_scan(mask: numpy.typing.NDArray[numpy.uint8], pixels_per_mm: tuple[float, float], offset_x_mm: float, offset_y_mm: float, line_interval_mm: float, step_power: float = 1, angle: float = 0, scan_mode: ScanMode = ScanMode.Segmented) -> ops.Ops:
+    r"""
+    Rasterise a binary mask into scan-to commands.
+    
+    Generates scan lines covering the mask's bounding box, samples
+    the mask along each line, and emits move-to/scan-to commands
+    for each non-zero segment (or the full sweep).
+    
+    :param mask: 2-D binary mask array.
+    :param pixels_per_mm: ``(x, y)`` pixel density in px/mm.
+    :param offset_x_mm: Global X offset in mm.
+    :param offset_y_mm: Global Y offset in mm.
+    :param line_interval_mm: Spacing between scan lines in mm.
+    :param step_power: Power value (0-1) for exposed pixels.
+    :param angle: Scan angle in degrees.
+    :param scan_mode: ``ScanMode.Segmented`` or ``ScanMode.FullSweep``.
+    :returns: An :class:`~raygeo.ops.Ops` container.
+    """
 
-def rasterize_power_modulation(gray_image: numpy.typing.NDArray[numpy.uint8], alpha: numpy.typing.NDArray[numpy.uint8], pixels_per_mm: tuple[float, float], offset_x_mm: float, offset_y_mm: float, line_interval_mm: float, sample_interval_mm: float, min_power: float = 0, max_power: float = 1, step_power: float = 1, num_power_levels: int = 256, angle: float = 0, scan_mode: ScanMode = ScanMode.Segmented) -> ops.Ops: ...
+def rasterize_multi_pass(gray_image: numpy.typing.NDArray[numpy.uint8], pixels_per_mm: tuple[float, float], offset_x_mm: float, offset_y_mm: float, line_interval_mm: float, num_depth_levels: int, z_step_down: float, angle: float = 0, angle_increment: float = 0, scan_mode: ScanMode = ScanMode.Segmented) -> ops.Ops:
+    r"""
+    Rasterise a grayscale image as multiple Z-depth passes.
+    
+    Decomposes the grayscale image into *num_depth_levels* layers
+    by depth-slicing, then rasterises each layer with a progressive
+    Z offset and optional per-pass angle increment.
+    
+    :param gray_image: 2-D grayscale image (0 = black, 255 = white).
+    :param pixels_per_mm: ``(x, y)`` pixel density in px/mm.
+    :param offset_x_mm: Global X offset in mm.
+    :param offset_y_mm: Global Y offset in mm.
+    :param line_interval_mm: Spacing between scan lines in mm.
+    :param num_depth_levels: Number of depth layers to produce.
+    :param z_step_down: Z decrement per depth layer in mm.
+    :param angle: Initial scan angle in degrees.
+    :param angle_increment: Angle added per depth layer in degrees.
+    :param scan_mode: ``ScanMode.Segmented`` or ``ScanMode.FullSweep``.
+    :returns: An :class:`~raygeo.ops.Ops` container.
+    """
 
-def resample_rows(image: numpy.typing.NDArray[numpy.uint8], y_coords_px: numpy.ndarray) -> numpy.typing.NDArray[numpy.uint8]: ...
+def rasterize_power_modulation(gray_image: numpy.typing.NDArray[numpy.uint8], alpha: numpy.typing.NDArray[numpy.uint8], pixels_per_mm: tuple[float, float], offset_x_mm: float, offset_y_mm: float, line_interval_mm: float, sample_interval_mm: float, min_power: float = 0, max_power: float = 1, step_power: float = 1, num_power_levels: int = 256, angle: float = 0, scan_mode: ScanMode = ScanMode.Segmented) -> ops.Ops:
+    r"""
+    Rasterise a grayscale image with power-modulated scans.
+    
+    Samples the image along scan lines and computes per-pixel power
+    values from the grayscale intensity and alpha channel, then
+    emits move-to/scan-to commands with the modulated power.
+    
+    :param gray_image: 2-D grayscale image (0 = black, 255 = white).
+    :param alpha: 2-D alpha mask (0 = transparent/no emission).
+    :param pixels_per_mm: ``(x, y)`` pixel density in px/mm.
+    :param offset_x_mm: Global X offset in mm.
+    :param offset_y_mm: Global Y offset in mm.
+    :param line_interval_mm: Spacing between scan lines in mm.
+    :param sample_interval_mm: Output sample spacing in mm.
+    :param min_power: Minimum power fraction (for white pixels).
+    :param max_power: Maximum power fraction (for black pixels).
+    :param step_power: Global power multiplier.
+    :param num_power_levels: Number of quantised power levels.
+    :param angle: Scan angle in degrees.
+    :param scan_mode: ``ScanMode.Segmented`` or ``ScanMode.FullSweep``.
+    :returns: An :class:`~raygeo.ops.Ops` container.
+    """
+
+def resample_rows(image: numpy.typing.NDArray[numpy.uint8], y_coords_px: numpy.ndarray) -> numpy.typing.NDArray[numpy.uint8]:
+    r"""
+    Resample image rows at arbitrary Y coordinates.
+    
+    Performs linear interpolation between adjacent rows to sample
+    the image at the given (potentially fractional) Y positions.
+    
+    :param image: 2-D input image array.
+    :param y_coords_px: 1-D array of Y pixel coordinates.
+    :returns: 2-D array with shape ``(len(y_coords_px), width)``.
+    :complexity: O(m * w) where m = output rows, w = image width
+    """
 

@@ -289,6 +289,10 @@ fn py_svg_length_to_px(length_str: &str, dpi: f64) -> PyResult<f64> {
 
 // ── SvgMetadata Python class ──────────────────────────────────────
 
+/// SVG document metadata extracted from an SVG string.
+///
+/// Provides width, height, units and viewBox values parsed from the
+/// root ``<svg>`` element.
 #[gen_stub_pyclass]
 #[pyclass(module = "raygeo.svg", name = "SvgMetadata", skip_from_py_object)]
 #[derive(Clone, Debug)]
@@ -305,31 +309,39 @@ impl From<svg::SvgMetadata> for SvgMetadata {
 #[gen_stub_pymethods]
 #[pymethods]
 impl SvgMetadata {
+    /// Document width as a numeric value (may be ``None`` if not set).
     #[getter]
     fn get_width(&self) -> Option<f64> {
         self.inner.width
     }
 
+    /// Document height as a numeric value (may be ``None`` if not set).
     #[getter]
     fn get_height(&self) -> Option<f64> {
         self.inner.height
     }
 
+    /// Unit string for the width attribute (e.g. ``"mm"``, ``"in"``, ``"px"``).
     #[getter]
     fn get_width_unit(&self) -> &str {
         &self.inner.width_unit
     }
 
+    /// Unit string for the height attribute.
     #[getter]
     fn get_height_unit(&self) -> &str {
         &self.inner.height_unit
     }
 
+    /// ViewBox as ``(min_x, min_y, width, height)``, or ``None``.
     #[getter]
     fn get_viewbox(&self) -> Option<(f64, f64, f64, f64)> {
         self.inner.viewbox
     }
 
+    /// Convert the document width to millimetres.
+    ///
+    /// :param dpi: Pixels-per-inch for px/unitless conversion (default 96).
     #[pyo3(signature = (dpi=96.0))]
     fn width_mm(&self, dpi: f64) -> Option<f64> {
         self.inner.width.map(|w| {
@@ -341,6 +353,9 @@ impl SvgMetadata {
         })
     }
 
+    /// Convert the document height to millimetres.
+    ///
+    /// :param dpi: Pixels-per-inch for px/unitless conversion (default 96).
     #[pyo3(signature = (dpi=96.0))]
     fn height_mm(&self, dpi: f64) -> Option<f64> {
         self.inner.height.map(|h| {
@@ -352,6 +367,9 @@ impl SvgMetadata {
         })
     }
 
+    /// Convert the document width to pixels.
+    ///
+    /// :param dpi: Pixels-per-inch for conversion (default 96).
     #[pyo3(signature = (dpi=96.0))]
     fn width_px(&self, dpi: f64) -> Option<f64> {
         self.inner.width.map(|w| {
@@ -363,6 +381,9 @@ impl SvgMetadata {
         })
     }
 
+    /// Convert the document height to pixels.
+    ///
+    /// :param dpi: Pixels-per-inch for conversion (default 96).
     #[pyo3(signature = (dpi=96.0))]
     fn height_px(&self, dpi: f64) -> Option<f64> {
         self.inner.height.map(|h| {

@@ -32,42 +32,54 @@ use crate::geo::math::map_geometry_to_frame;
 use crate::geo::query::find_closest_point_on_path_from_array;
 use crate::types::{Command as CoreCommand, Point, Point3D};
 
+/// A rapid-move command with an endpoint but no cutting.
 #[gen_stub_pyclass]
 #[pyclass(module = "raygeo.geo", name = "Move", frozen, skip_from_py_object)]
 #[derive(Clone, Debug)]
 pub struct PyMove {
+    /// Endpoint of the move in 3D space.
     #[pyo3(get)]
     pub end: Point3D,
 }
 
+/// A straight-line cutting command.
 #[gen_stub_pyclass]
 #[pyclass(module = "raygeo.geo", name = "Line", frozen, skip_from_py_object)]
 #[derive(Clone, Debug)]
 pub struct PyLine {
+    /// Endpoint of the line in 3D space.
     #[pyo3(get)]
     pub end: Point3D,
 }
 
+/// A circular-arc cutting command.
 #[gen_stub_pyclass]
 #[pyclass(module = "raygeo.geo", name = "Arc", frozen, skip_from_py_object)]
 #[derive(Clone, Debug)]
 pub struct PyArc {
+    /// Endpoint of the arc in 3D space.
     #[pyo3(get)]
     pub end: Point3D,
+    /// Centre offset from the start point (2D).
     #[pyo3(get)]
     pub center_offset: Point,
+    /// Whether the arc is clockwise.
     #[pyo3(get)]
     pub clockwise: bool,
 }
 
+/// A cubic-Bezier curve cutting command.
 #[gen_stub_pyclass]
 #[pyclass(module = "raygeo.geo", name = "Bezier", frozen, skip_from_py_object)]
 #[derive(Clone, Debug)]
 pub struct PyBezier {
+    /// Endpoint of the curve in 3D space.
     #[pyo3(get)]
     pub end: Point3D,
+    /// First control point in 3D space.
     #[pyo3(get)]
     pub control1: Point3D,
+    /// Second control point in 3D space.
     #[pyo3(get)]
     pub control2: Point3D,
 }
@@ -157,6 +169,11 @@ impl<'a, 'py> FromPyObject<'a, 'py> for FlexPoint {
     }
 }
 
+/// A sequence of geometric commands (Move, Line, Arc, Bezier).
+///
+/// The primary building block for vector geometry in raygeo.
+/// Geometry objects can be constructed procedurally, parsed from SVG,
+/// or obtained by converting an :class:`~raygeo.ops.Ops` sequence.
 #[gen_stub_pyclass]
 #[pyclass(module = "raygeo.geo", skip_from_py_object)]
 #[derive(Clone)]

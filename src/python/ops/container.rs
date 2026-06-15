@@ -128,42 +128,61 @@ impl PyOpsSectionRange {
 #[gen_stub_pyclass]
 #[pyclass(module = "raygeo.ops", name = "CommandInfo")]
 pub struct PyCommandInfo {
+    /// The type of this command (e.g. Move, Line, Arc, Bezier, ScanTo, …).
     #[pyo3(get)]
     pub type_: PyCommandType,
+    /// Endpoint of the command in 3D space, if applicable.
     #[pyo3(get)]
     pub end: Option<Point3D>,
+    /// Extra axis positions, if any.
     #[pyo3(get)]
     pub extra_axes: Option<Py<PyDict>>,
+    /// State snapshot at this command, if present.
     #[pyo3(get)]
     pub state: Option<Py<PyState>>,
+    /// Arc centre offset from start point, if an arc command.
     #[pyo3(get)]
     pub center_offset: Option<Point>,
+    /// Whether an arc is clockwise, if an arc command.
     #[pyo3(get)]
     pub clockwise: Option<bool>,
+    /// First cubic-Bezier control point, if a Bezier command.
     #[pyo3(get)]
     pub control1: Option<Point3D>,
+    /// Second cubic-Bezier control point, if a Bezier command.
     #[pyo3(get)]
     pub control2: Option<Point3D>,
+    /// Quadratic-Bezier control point, if a quad. Bezier command.
     #[pyo3(get)]
     pub control: Option<Point3D>,
+    /// Per-step power byte values for scan-to commands.
     #[pyo3(get)]
     pub power_values: Option<Py<PyBytes>>,
+    /// Power level (0–1), if a power-setting command.
     #[pyo3(get)]
     pub power: Option<f64>,
+    /// Cut speed setting, if a speed-setting command.
     #[pyo3(get)]
     pub speed: Option<i32>,
+    /// Laser frequency (Hz), if a frequency-setting command.
     #[pyo3(get)]
     pub frequency: Option<i32>,
+    /// Laser pulse width (µs), if a pulse-width-setting command.
     #[pyo3(get)]
     pub pulse_width: Option<f64>,
+    /// Unique identifier of the active laser, if a laser-setting command.
     #[pyo3(get)]
     pub laser_uid: Option<String>,
+    /// Dwell duration in ms, if a dwell command.
     #[pyo3(get)]
     pub duration_ms: Option<f64>,
+    /// Unique identifier of the active layer, if a layer-start command.
     #[pyo3(get)]
     pub layer_uid: Option<String>,
+    /// Unique identifier of the active workpiece, if a workpiece-start command.
     #[pyo3(get)]
     pub workpiece_uid: Option<String>,
+    /// Section type string (e.g. "VectorOutline", "RasterFill"), if a section marker.
     #[pyo3(get)]
     pub section_type: Option<String>,
 }

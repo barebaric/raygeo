@@ -36,24 +36,55 @@ __all__ = [
 
 @typing.final
 class Arc:
+    r"""
+    A circular-arc cutting command.
+    """
     @property
-    def end(self) -> builtins.tuple[float, float, float]: ...
+    def end(self) -> builtins.tuple[float, float, float]:
+        r"""
+        Endpoint of the arc in 3D space.
+        """
     @property
-    def center_offset(self) -> builtins.tuple[float, float]: ...
+    def center_offset(self) -> builtins.tuple[float, float]:
+        r"""
+        Centre offset from the start point (2D).
+        """
     @property
-    def clockwise(self) -> builtins.bool: ...
+    def clockwise(self) -> builtins.bool:
+        r"""
+        Whether the arc is clockwise.
+        """
 
 @typing.final
 class Bezier:
+    r"""
+    A cubic-Bezier curve cutting command.
+    """
     @property
-    def end(self) -> builtins.tuple[float, float, float]: ...
+    def end(self) -> builtins.tuple[float, float, float]:
+        r"""
+        Endpoint of the curve in 3D space.
+        """
     @property
-    def control1(self) -> builtins.tuple[float, float, float]: ...
+    def control1(self) -> builtins.tuple[float, float, float]:
+        r"""
+        First control point in 3D space.
+        """
     @property
-    def control2(self) -> builtins.tuple[float, float, float]: ...
+    def control2(self) -> builtins.tuple[float, float, float]:
+        r"""
+        Second control point in 3D space.
+        """
 
 @typing.final
 class Geometry:
+    r"""
+    A sequence of geometric commands (Move, Line, Arc, Bezier).
+    
+    The primary building block for vector geometry in raygeo.
+    Geometry objects can be constructed procedurally, parsed from SVG,
+    or obtained by converting an :class:`~raygeo.ops.Ops` sequence.
+    """
     @property
     def last_move_to(self) -> builtins.tuple[float, float, float]:
         r"""
@@ -565,11 +596,23 @@ class Geometry:
 
 @typing.final
 class Line:
+    r"""
+    A straight-line cutting command.
+    """
     @property
-    def end(self) -> builtins.tuple[float, float, float]: ...
+    def end(self) -> builtins.tuple[float, float, float]:
+        r"""
+        Endpoint of the line in 3D space.
+        """
 
 @typing.final
 class Move:
+    r"""
+    A rapid-move command with an endpoint but no cutting.
+    """
     @property
-    def end(self) -> builtins.tuple[float, float, float]: ...
+    def end(self) -> builtins.tuple[float, float, float]:
+        r"""
+        Endpoint of the move in 3D space.
+        """
 

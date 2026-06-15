@@ -44,43 +44,100 @@ class CommandInfo:
     parameters for any command type in a structured form.
     """
     @property
-    def type_(self) -> types.CommandType: ...
+    def type_(self) -> types.CommandType:
+        r"""
+        The type of this command (e.g. Move, Line, Arc, Bezier, ScanTo, …).
+        """
     @property
-    def end(self) -> typing.Optional[tuple[float, float, float]]: ...
+    def end(self) -> typing.Optional[tuple[float, float, float]]:
+        r"""
+        Endpoint of the command in 3D space, if applicable.
+        """
     @property
-    def extra_axes(self) -> typing.Optional[dict]: ...
+    def extra_axes(self) -> typing.Optional[dict]:
+        r"""
+        Extra axis positions, if any.
+        """
     @property
-    def state(self) -> typing.Optional[state.State]: ...
+    def state(self) -> typing.Optional[state.State]:
+        r"""
+        State snapshot at this command, if present.
+        """
     @property
-    def center_offset(self) -> typing.Optional[tuple[float, float]]: ...
+    def center_offset(self) -> typing.Optional[tuple[float, float]]:
+        r"""
+        Arc centre offset from start point, if an arc command.
+        """
     @property
-    def clockwise(self) -> typing.Optional[builtins.bool]: ...
+    def clockwise(self) -> typing.Optional[builtins.bool]:
+        r"""
+        Whether an arc is clockwise, if an arc command.
+        """
     @property
-    def control1(self) -> typing.Optional[tuple[float, float, float]]: ...
+    def control1(self) -> typing.Optional[tuple[float, float, float]]:
+        r"""
+        First cubic-Bezier control point, if a Bezier command.
+        """
     @property
-    def control2(self) -> typing.Optional[tuple[float, float, float]]: ...
+    def control2(self) -> typing.Optional[tuple[float, float, float]]:
+        r"""
+        Second cubic-Bezier control point, if a Bezier command.
+        """
     @property
-    def control(self) -> typing.Optional[tuple[float, float, float]]: ...
+    def control(self) -> typing.Optional[tuple[float, float, float]]:
+        r"""
+        Quadratic-Bezier control point, if a quad. Bezier command.
+        """
     @property
-    def power_values(self) -> typing.Optional[bytes]: ...
+    def power_values(self) -> typing.Optional[bytes]:
+        r"""
+        Per-step power byte values for scan-to commands.
+        """
     @property
-    def power(self) -> typing.Optional[builtins.float]: ...
+    def power(self) -> typing.Optional[builtins.float]:
+        r"""
+        Power level (0–1), if a power-setting command.
+        """
     @property
-    def speed(self) -> typing.Optional[builtins.int]: ...
+    def speed(self) -> typing.Optional[builtins.int]:
+        r"""
+        Cut speed setting, if a speed-setting command.
+        """
     @property
-    def frequency(self) -> typing.Optional[builtins.int]: ...
+    def frequency(self) -> typing.Optional[builtins.int]:
+        r"""
+        Laser frequency (Hz), if a frequency-setting command.
+        """
     @property
-    def pulse_width(self) -> typing.Optional[builtins.float]: ...
+    def pulse_width(self) -> typing.Optional[builtins.float]:
+        r"""
+        Laser pulse width (µs), if a pulse-width-setting command.
+        """
     @property
-    def laser_uid(self) -> typing.Optional[builtins.str]: ...
+    def laser_uid(self) -> typing.Optional[builtins.str]:
+        r"""
+        Unique identifier of the active laser, if a laser-setting command.
+        """
     @property
-    def duration_ms(self) -> typing.Optional[builtins.float]: ...
+    def duration_ms(self) -> typing.Optional[builtins.float]:
+        r"""
+        Dwell duration in ms, if a dwell command.
+        """
     @property
-    def layer_uid(self) -> typing.Optional[builtins.str]: ...
+    def layer_uid(self) -> typing.Optional[builtins.str]:
+        r"""
+        Unique identifier of the active layer, if a layer-start command.
+        """
     @property
-    def workpiece_uid(self) -> typing.Optional[builtins.str]: ...
+    def workpiece_uid(self) -> typing.Optional[builtins.str]:
+        r"""
+        Unique identifier of the active workpiece, if a workpiece-start command.
+        """
     @property
-    def section_type(self) -> typing.Optional[builtins.str]: ...
+    def section_type(self) -> typing.Optional[builtins.str]:
+        r"""
+        Section type string (e.g. "VectorOutline", "RasterFill"), if a section marker.
+        """
     def __eq__(self, other: typing.Any) -> builtins.bool: ...
 
 @typing.final

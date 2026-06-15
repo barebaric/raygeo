@@ -342,6 +342,57 @@ pub fn generate_scan_lines(
     result
 }
 
+pub fn extract_zero_power_segments(
+    start: (f64, f64, f64),
+    end: (f64, f64, f64),
+    power_values: &[u8],
+) -> Vec<f32> {
+    let num_steps = power_values.len();
+    if num_steps == 0 {
+        return Vec::new();
+    }
+
+    let (sx, sy, sz) = start;
+    let (ex, ey, ez) = end;
+    let dx = ex - sx;
+    let dy = ey - sy;
+    let dz = ez - sz;
+    let inv_n = 1.0 / num_steps as f64;
+
+    let mut result: Vec<f32> = Vec::new();
+    let mut run_start: isize = -1;
+
+    for (i, &val) in power_values.iter().enumerate() {
+        if val == 0 {
+            if run_start < 0 {
+                run_start = i as isize;
+            }
+        } else if run_start >= 0 {
+            let t0 = run_start as f64 * inv_n;
+            let t1 = i as f64 * inv_n;
+            result.push((sx + t0 * dx) as f32);
+            result.push((sy + t0 * dy) as f32);
+            result.push((sz + t0 * dz) as f32);
+            result.push((sx + t1 * dx) as f32);
+            result.push((sy + t1 * dy) as f32);
+            result.push((sz + t1 * dz) as f32);
+            run_start = -1;
+        }
+    }
+
+    if run_start >= 0 {
+        let t0 = run_start as f64 * inv_n;
+        result.push((sx + t0 * dx) as f32);
+        result.push((sy + t0 * dy) as f32);
+        result.push((sz + t0 * dz) as f32);
+        result.push(ex as f32);
+        result.push(ey as f32);
+        result.push(ez as f32);
+    }
+
+    result
+}
+
 pub fn find_segments(values: &[u8]) -> Vec<(usize, usize)> {
     if values.is_empty() {
         return Vec::new();
