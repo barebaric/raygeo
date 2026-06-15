@@ -61,6 +61,11 @@ _INLINE_IMAGE_MAP = {
     ],
     "raygeo.image.md": [
         (
+            "rasterize_scanlines",
+            "rasterize-scanlines",
+            "Scanline ops rasterized into a 2D power-map buffer",
+        ),
+        (
             "srgb_to_linear",
             "image-processing-srgb",
             "sRGB to linear round-trip",
@@ -286,6 +291,13 @@ _INLINE_IMAGE_MAP = {
             "get_area",
             "analysis-area-winding",
             "Polygon area and winding order analysis",
+        ),
+    ],
+    "raygeo.geo.algo.cylindrical.md": [
+        (
+            "transform_to_cylinder",
+            "cylindrical-transform",
+            "Flat vertex pairs wrapped onto a cylinder surface",
         ),
     ],
     "raygeo.geo.algo.minkowski.md": [

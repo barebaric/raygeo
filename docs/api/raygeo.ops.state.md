@@ -1,7 +1,7 @@
 ---
 title: raygeo.ops.state
 sidebar_label: raygeo.ops.state
-sidebar_position: 34
+sidebar_position: 35
 ---
 
 Machine state tracking for laser cutting.

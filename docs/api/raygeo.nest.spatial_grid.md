@@ -1,7 +1,7 @@
 ---
 title: raygeo.nest.spatial_grid
 sidebar_label: raygeo.nest.spatial_grid
-sidebar_position: 30
+sidebar_position: 31
 ---
 
 Grid-based spatial index for fast overlap queries.

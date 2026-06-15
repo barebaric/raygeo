@@ -1,5 +1,6 @@
 pub(crate) mod analysis;
 pub(crate) mod clipping;
+pub(crate) mod cylindrical;
 pub(crate) mod fitting;
 pub(crate) mod hull;
 pub(crate) mod interp;
@@ -43,6 +44,7 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
 
     analysis::register(&algo_mod)?;
     clipping::register(&algo_mod)?;
+    cylindrical::register(&algo_mod)?;
     fitting::register(&algo_mod)?;
     hull::register(&algo_mod)?;
     interp::register(&algo_mod)?;
@@ -74,6 +76,10 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
         .set_item("raygeo.geo.algo.simplify", &algo_mod.getattr("simplify")?)?;
     sys_modules
         .set_item("raygeo.geo.algo.smooth", &algo_mod.getattr("smooth")?)?;
+    sys_modules.set_item(
+        "raygeo.geo.algo.cylindrical",
+        &algo_mod.getattr("cylindrical")?,
+    )?;
 
     Ok(())
 }

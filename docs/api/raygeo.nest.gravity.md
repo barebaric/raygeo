@@ -1,7 +1,7 @@
 ---
 title: raygeo.nest.gravity
 sidebar_label: raygeo.nest.gravity
-sidebar_position: 26
+sidebar_position: 27
 ---
 
 Gravity optimization for nesting layouts.

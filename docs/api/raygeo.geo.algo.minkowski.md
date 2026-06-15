@@ -1,7 +1,7 @@
 ---
 title: raygeo.geo.algo.minkowski
 sidebar_label: raygeo.geo.algo.minkowski
-sidebar_position: 9
+sidebar_position: 10
 ---
 
 Minkowski sum operations for 2D polygon toolpath generation.

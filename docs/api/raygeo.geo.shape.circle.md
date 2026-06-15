@@ -1,7 +1,7 @@
 ---
 title: raygeo.geo.shape.circle
 sidebar_label: raygeo.geo.shape.circle
-sidebar_position: 16
+sidebar_position: 17
 ---
 
 Circle geometry queries.

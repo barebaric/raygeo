@@ -26,6 +26,7 @@ configurable corner-angle thresholds to preserve sharp features.
 
 from . import analysis
 from . import clipping
+from . import cylindrical
 from . import fitting
 from . import hull
 from . import interp
@@ -36,6 +37,7 @@ from . import smooth
 __all__ = [
     "analysis",
     "clipping",
+    "cylindrical",
     "fitting",
     "hull",
     "interp",

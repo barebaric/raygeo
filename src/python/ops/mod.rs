@@ -18,7 +18,7 @@ air assist, frequency), and an Axis bitflag for multi-axis machines.
 
 use pyo3::prelude::*;
 pub(crate) mod axis;
-mod container;
+pub(crate) mod container;
 pub(crate) mod optimize;
 pub(crate) mod raster;
 mod serialize;

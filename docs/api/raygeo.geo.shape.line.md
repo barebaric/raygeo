@@ -1,7 +1,7 @@
 ---
 title: raygeo.geo.shape.line
 sidebar_label: raygeo.geo.shape.line
-sidebar_position: 17
+sidebar_position: 18
 ---
 
 Line segment geometry queries.

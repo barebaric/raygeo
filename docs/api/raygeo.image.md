@@ -1,14 +1,15 @@
 ---
 title: raygeo.image
 sidebar_label: raygeo.image
-sidebar_position: 22
+sidebar_position: 23
 ---
 
 Image processing functions for laser cutting applications.
 
 Provides sRGB/linear color space conversions, RGBA-to-grayscale/binary conversions with alpha
-unpremultiplication, grayscale normalization with auto-levels, and dithering algorithms
-(Floyd-Steinberg, Bayer, minimum run length) for converting grayscale images to binary output.
+unpremultiplication, grayscale normalization with auto-levels, dithering algorithms
+(Floyd-Steinberg, Bayer, minimum run length) for converting grayscale images to binary output, and
+scanline rasterization for converting Ops scanlines into pixel buffers.
 
 ## Functions
 
@@ -226,6 +227,31 @@ Normalize a grayscale image by stretching the dynamic range.
 | `white_point` | `int = 255`                  | White point for normalization.        |
 | _Returns_     | `numpy.NDArray[numpy.uint8]` |                                       |
 | _Complexity_  |                              | O(n) where n = number of pixels       |
+
+### `rasterize_scanlines()`
+
+`rasterize_scanlines(ops: ops.Ops, width_px: int, height_px: int, px_per_mm: tuple[float, float], origin_mm: tuple[float, float] = (0, 0)) -> numpy.NDArray[numpy.uint8]`
+
+Rasterize ScanLine commands from _ops_ into a 2D power-map buffer.
+
+Iterates all scanline commands in _ops_, converts their mm coordinates to pixel space using
+_px_per_mm_, and returns a uint8 array where each pixel holds the maximum power value written to it.
+
+**Returns:** 2D uint8 array of shape (height_px, width_px).
+
+| Parameter    | Type                           | Description                                        |
+| ------------ | ------------------------------ | -------------------------------------------------- |
+| `ops`        | `ops.Ops`                      | Command sequence to rasterize.                     |
+| `width_px`   | `int`                          | Width of the output texture in pixels.             |
+| `height_px`  | `int`                          | Height of the output texture in pixels.            |
+| `px_per_mm`  | `tuple[float, float]`          | (x, y) resolution in pixels per millimeter.        |
+| `origin_mm`  | `tuple[float, float] = (0, 0)` | (x, y) origin offset in mm (default `(0.0, 0.0)`). |
+| _Returns_    | `numpy.NDArray[numpy.uint8]`   |                                                    |
+| _Complexity_ |                                | O(scanline_pixels)                                 |
+
+![Scanline ops rasterized into a 2D power-map buffer](images/rasterize-scanlines.png)
+
+_Scanline ops rasterized into a 2D power-map buffer_
 
 ### `rgba_to_binary()`
 

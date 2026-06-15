@@ -6,6 +6,7 @@
 pub mod analysis;
 pub mod cleanup;
 pub mod clipping;
+pub mod cylindrical;
 pub mod fitting;
 pub mod hull;
 pub mod interp;

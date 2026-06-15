@@ -3,11 +3,12 @@
 r"""
 Image processing functions for laser cutting applications.
 
-Provides sRGB/linear color space conversions, RGBA-to-grayscale/binary conversions with alpha unpremultiplication, grayscale normalization with auto-levels, and dithering algorithms (Floyd-Steinberg, Bayer, minimum run length) for converting grayscale images to binary output.
+Provides sRGB/linear color space conversions, RGBA-to-grayscale/binary conversions with alpha unpremultiplication, grayscale normalization with auto-levels, dithering algorithms (Floyd-Steinberg, Bayer, minimum run length) for converting grayscale images to binary output, and scanline rasterization for converting Ops scanlines into pixel buffers.
 """
 
 import numpy
 import numpy.typing
+from raygeo import ops
 __all__ = [
     "apply_bayer_dither",
     "apply_floyd_steinberg_dither",
@@ -20,6 +21,7 @@ __all__ = [
     "grayscale_to_binary",
     "linear_to_srgb",
     "normalize_grayscale",
+    "rasterize_scanlines",
     "rgba_to_binary",
     "rgba_to_grayscale",
     "rgba_to_grayscale_inplace",
@@ -153,6 +155,23 @@ def normalize_grayscale(gray_image: numpy.typing.NDArray[numpy.uint8], black_poi
     :returns: Normalized grayscale image with the same shape.
     :raises ValueError: If black_point >= white_point.
     :complexity: O(n) where n = number of pixels
+    """
+
+def rasterize_scanlines(ops: ops.Ops, width_px: int, height_px: int, px_per_mm: tuple[float, float], origin_mm: tuple[float, float] = (0, 0)) -> numpy.typing.NDArray[numpy.uint8]:
+    r"""
+    Rasterize ScanLine commands from *ops* into a 2D power-map buffer.
+    
+    Iterates all scanline commands in *ops*, converts their mm coordinates
+    to pixel space using *px_per_mm*, and returns a uint8 array where each
+    pixel holds the maximum power value written to it.
+    
+    :param ops: Command sequence to rasterize.
+    :param width_px: Width of the output texture in pixels.
+    :param height_px: Height of the output texture in pixels.
+    :param px_per_mm: (x, y) resolution in pixels per millimeter.
+    :param origin_mm: (x, y) origin offset in mm (default ``(0.0, 0.0)``).
+    :returns: 2D uint8 array of shape (height_px, width_px).
+    :complexity: O(scanline_pixels)
     """
 
 def rgba_to_binary(rgba: numpy.typing.NDArray[numpy.uint8], width: int, height: int, stride: int, threshold: int = 128, invert: bool = False) -> numpy.typing.NDArray[numpy.uint8]:

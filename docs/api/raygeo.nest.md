@@ -1,7 +1,7 @@
 ---
 title: raygeo.nest
 sidebar_label: raygeo.nest
-sidebar_position: 23
+sidebar_position: 24
 ---
 
 ![Part nesting on a sheet](images/nesting.png)
