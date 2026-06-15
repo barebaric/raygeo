@@ -10,67 +10,109 @@ _SVG path data parsed into geometries_
 
 ## SvgMetadata
 
+SVG document metadata extracted from an SVG string.
+
+Provides width, height, units and viewBox values parsed from the root `<svg>` element.
+
 ### `height`
 
-`height: Optional[float]`
+```python
+height: Optional[float]
+```
+
+Document height as a numeric value (may be `None` if not set).
 
 ### `height_unit`
 
-`height_unit: str`
+```python
+height_unit: str
+```
+
+Unit string for the height attribute.
 
 ### `viewbox`
 
-`viewbox: Optional[tuple[float, float, float, float]]`
+```python
+viewbox: Optional[tuple[float, float, float, float]]
+```
+
+ViewBox as `(min_x, min_y, width, height)`, or `None`.
 
 ### `width`
 
-`width: Optional[float]`
+```python
+width: Optional[float]
+```
+
+Document width as a numeric value (may be `None` if not set).
 
 ### `width_unit`
 
-`width_unit: str`
+```python
+width_unit: str
+```
+
+Unit string for the width attribute (e.g. `"mm"`, `"in"`, `"px"`).
 
 ### `height_mm()`
 
-`height_mm(dpi: float = 96.0) -> Optional[float]`
+```python
+height_mm(dpi: float = 96.0) -> Optional[float]
+```
 
-| Parameter | Type              | Description |
-| --------- | ----------------- | ----------- |
-| `dpi`     | `float = 96.0`    |             |
-| _Returns_ | `Optional[float]` |             |
+Convert the document height to millimetres.
+
+| Parameter | Type              | Description                                              |
+| --------- | ----------------- | -------------------------------------------------------- |
+| `dpi`     | `float = 96.0`    | Pixels-per-inch for px/unitless conversion (default 96). |
+| _Returns_ | `Optional[float]` |                                                          |
 
 ### `height_px()`
 
-`height_px(dpi: float = 96.0) -> Optional[float]`
+```python
+height_px(dpi: float = 96.0) -> Optional[float]
+```
 
-| Parameter | Type              | Description |
-| --------- | ----------------- | ----------- |
-| `dpi`     | `float = 96.0`    |             |
-| _Returns_ | `Optional[float]` |             |
+Convert the document height to pixels.
+
+| Parameter | Type              | Description                                  |
+| --------- | ----------------- | -------------------------------------------- |
+| `dpi`     | `float = 96.0`    | Pixels-per-inch for conversion (default 96). |
+| _Returns_ | `Optional[float]` |                                              |
 
 ### `width_mm()`
 
-`width_mm(dpi: float = 96.0) -> Optional[float]`
+```python
+width_mm(dpi: float = 96.0) -> Optional[float]
+```
 
-| Parameter | Type              | Description |
-| --------- | ----------------- | ----------- |
-| `dpi`     | `float = 96.0`    |             |
-| _Returns_ | `Optional[float]` |             |
+Convert the document width to millimetres.
+
+| Parameter | Type              | Description                                              |
+| --------- | ----------------- | -------------------------------------------------------- |
+| `dpi`     | `float = 96.0`    | Pixels-per-inch for px/unitless conversion (default 96). |
+| _Returns_ | `Optional[float]` |                                                          |
 
 ### `width_px()`
 
-`width_px(dpi: float = 96.0) -> Optional[float]`
+```python
+width_px(dpi: float = 96.0) -> Optional[float]
+```
 
-| Parameter | Type              | Description |
-| --------- | ----------------- | ----------- |
-| `dpi`     | `float = 96.0`    |             |
-| _Returns_ | `Optional[float]` |             |
+Convert the document width to pixels.
+
+| Parameter | Type              | Description                                  |
+| --------- | ----------------- | -------------------------------------------- |
+| `dpi`     | `float = 96.0`    | Pixels-per-inch for conversion (default 96). |
+| _Returns_ | `Optional[float]` |                                              |
 
 ## Functions
 
 ### `extract_svg_metadata()`
 
-`extract_svg_metadata(svg_str: str) -> SvgMetadata`
+```python
+extract_svg_metadata(svg_str: str) -> SvgMetadata
+```
 
 Extract width, height, units and viewBox from an SVG string.
 
@@ -85,7 +127,9 @@ attributes.
 
 ### `geometry_to_svg_path()`
 
-`geometry_to_svg_path(geometry: Geometry, width: int, height: int) -> str`
+```python
+geometry_to_svg_path(geometry: Geometry, width: int, height: int) -> str
+```
 
 Convert a normalized Geometry to an SVG path d attribute string.
 
@@ -104,7 +148,9 @@ dimensions via width and height, with the Y axis flipped (SVG Y increases downwa
 
 ### `parse_svg_length()`
 
-`parse_svg_length(length_str: str) -> tuple[float, str]`
+```python
+parse_svg_length(length_str: str) -> tuple[float, str]
+```
 
 Parse an SVG length string into a (value, unit) tuple.
 
@@ -120,7 +166,14 @@ Supports: mm, cm, in, pt, pc, px. Unitless values default to 'px'.
 
 ### `parse_svg_path_data()`
 
-`parse_svg_path_data(path_data: str, transform: numpy.NDArray[numpy.float64] | None = None, scale_x: float = 1, scale_y: float = 1) -> list[Geometry]`
+```python
+parse_svg_path_data(
+    path_data: str,
+    transform: numpy.NDArray[numpy.float64] | None = None,
+    scale_x: float = 1,
+    scale_y: float = 1,
+) -> list[Geometry]
+```
 
 Parse an SVG path d attribute into a list of Geometry objects.
 
@@ -140,7 +193,9 @@ Supports M/m, L/l, H/h, V/v, C/c, Z/z commands. Cubic Bezier curves are flattene
 
 ### `parse_svg_transform()`
 
-`parse_svg_transform(transform_str: str) -> numpy.NDArray[numpy.float64]`
+```python
+parse_svg_transform(transform_str: str) -> numpy.NDArray[numpy.float64]
+```
 
 Parse an SVG transform attribute string (translate only).
 
@@ -156,7 +211,9 @@ Returns a 3x3 identity matrix with translation applied.
 
 ### `svg_length_to_mm()`
 
-`svg_length_to_mm(length_str: str, dpi: float = 96) -> float`
+```python
+svg_length_to_mm(length_str: str, dpi: float = 96) -> float
+```
 
 Parse an SVG length string and convert to millimetres.
 
@@ -171,7 +228,9 @@ Parse an SVG length string and convert to millimetres.
 
 ### `svg_length_to_px()`
 
-`svg_length_to_px(length_str: str, dpi: float = 96) -> float`
+```python
+svg_length_to_px(length_str: str, dpi: float = 96) -> float
+```
 
 Parse an SVG length string and convert to pixels.
 
@@ -186,7 +245,13 @@ Parse an SVG length string and convert to pixels.
 
 ### `svg_string_to_geometries()`
 
-`svg_string_to_geometries(svg_str: str, scale_x: float = 1, scale_y: float = 1) -> list[Geometry]`
+```python
+svg_string_to_geometries(
+    svg_str: str,
+    scale_x: float = 1,
+    scale_y: float = 1,
+) -> list[Geometry]
+```
 
 Parse an SVG string and extract all path elements as Geometry objects.
 
@@ -205,7 +270,13 @@ them to Geometry.
 
 ### `svg_string_to_geometries_by_layer()`
 
-`svg_string_to_geometries_by_layer(svg_str: str, scale_x: float = 1, scale_y: float = 1) -> list[tuple[str, list[Geometry]]]`
+```python
+svg_string_to_geometries_by_layer(
+    svg_str: str,
+    scale_x: float = 1,
+    scale_y: float = 1,
+) -> list[tuple[str, list[Geometry]]]
+```
 
 Extract geometries grouped by top-level <g> layer.
 
@@ -224,7 +295,13 @@ are treated as layers.
 
 ### `svg_string_to_geometry()`
 
-`svg_string_to_geometry(svg_str: str, scale_x: float = 1, scale_y: float = 1) -> Geometry`
+```python
+svg_string_to_geometry(
+    svg_str: str,
+    scale_x: float = 1,
+    scale_y: float = 1,
+) -> Geometry
+```
 
 Parse an SVG string and merge all subpaths into a single Geometry.
 
@@ -243,7 +320,13 @@ Python-side merge loop.
 
 ### `svg_string_to_geometry_by_layer()`
 
-`svg_string_to_geometry_by_layer(svg_str: str, scale_x: float = 1, scale_y: float = 1) -> list[tuple[str, Geometry]]`
+```python
+svg_string_to_geometry_by_layer(
+    svg_str: str,
+    scale_x: float = 1,
+    scale_y: float = 1,
+) -> list[tuple[str, Geometry]]
+```
 
 Extract geometries grouped by layer, merged into one Geometry each.
 

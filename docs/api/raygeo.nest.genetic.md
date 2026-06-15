@@ -13,7 +13,9 @@ flips) and evolves them via mutation, crossover, and selection.
 
 ### `generation()`
 
-`generation() -> None`
+```python
+generation() -> None
+```
 
 Evolve one generation.
 
@@ -24,7 +26,9 @@ Evolve one generation.
 
 ### `get_fitness()`
 
-`get_fitness(idx: int) -> float`
+```python
+get_fitness(idx: int) -> float
+```
 
 Returns the fitness of individual at idx.
 
@@ -36,7 +40,9 @@ Returns the fitness of individual at idx.
 
 ### `get_individual()`
 
-`get_individual(idx: int) -> tuple[list[float], list[bool], list[bool], float]`
+```python
+get_individual(idx: int) -> tuple[list[float], list[bool], list[bool], float]
+```
 
 Returns (rotations, flips_h, flips_v, fitness) for individual at idx.
 
@@ -48,7 +54,12 @@ Returns (rotations, flips_h, flips_v, fitness) for individual at idx.
 
 ### `mate()`
 
-`mate(male_idx: int, female_idx: int) -> list[tuple[list[float], list[bool], list[bool]]]`
+```python
+mate(
+    male_idx: int,
+    female_idx: int,
+) -> list[tuple[list[float], list[bool], list[bool]]]
+```
 
 Mate two individuals and return the two children.
 
@@ -61,7 +72,9 @@ Mate two individuals and return the two children.
 
 ### `mutate()`
 
-`mutate(idx: int) -> tuple[list[float], list[bool], list[bool]]`
+```python
+mutate(idx: int) -> tuple[list[float], list[bool], list[bool]]
+```
 
 Mutate and return a copy of individual at idx.
 
@@ -73,7 +86,9 @@ Mutate and return a copy of individual at idx.
 
 ### `set_fitness()`
 
-`set_fitness(idx: int, fitness: float) -> None`
+```python
+set_fitness(idx: int, fitness: float) -> None
+```
 
 Set the fitness for individual at idx.
 

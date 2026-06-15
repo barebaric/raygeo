@@ -13,18 +13,23 @@ tolerance.
 
 ### `simplify_polyline()`
 
-`simplify_polyline(points: collections.abc.Sequence[types.Point], tolerance: float) -> types.Polygon`
+```python
+simplify_polyline(
+    points: Sequence[types.Point],
+    tolerance: float,
+) -> types.Polygon
+```
 
 Simplify a polyline using the Ramer-Douglas-Peucker algorithm.
 
 **Returns:** Simplified point sequence.
 
-| Parameter    | Type                                    | Description                         |
-| ------------ | --------------------------------------- | ----------------------------------- |
-| `points`     | `collections.abc.Sequence[types.Point]` | Sequence of (x, y) points.          |
-| `tolerance`  | `float`                                 | Simplification tolerance.           |
-| _Returns_    | `types.Polygon`                         |                                     |
-| _Complexity_ |                                         | O(n log n) average time, O(n) space |
+| Parameter    | Type                    | Description                         |
+| ------------ | ----------------------- | ----------------------------------- |
+| `points`     | `Sequence[types.Point]` | Sequence of (x, y) points.          |
+| `tolerance`  | `float`                 | Simplification tolerance.           |
+| _Returns_    | `types.Polygon`         |                                     |
+| _Complexity_ |                         | O(n log n) average time, O(n) space |
 
 ![Simplify and linearize](images/simplify.png)
 

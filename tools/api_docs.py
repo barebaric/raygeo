@@ -17,6 +17,86 @@ import sys
 from pathlib import Path
 
 
+def _split_top_level(text: str, delim: str = ",") -> list[str]:
+    """Split by delimiter, respecting nested brackets (top-level only)."""
+    parts: list[str] = []
+    depth = 0
+    current: list[str] = []
+    for ch in text:
+        if ch in "([{<":
+            depth += 1
+        elif ch in ")]}>":
+            depth -= 1
+        if ch == delim and depth == 0:
+            parts.append("".join(current).strip())
+            current = []
+        else:
+            current.append(ch)
+    if current:
+        parts.append("".join(current).strip())
+    return parts
+
+
+def _format_sig(sig_text: str) -> str:
+    """Render a function/method/property signature in a Python code block.
+
+    Long signatures are wrapped with PEP8-compliant line breaks.
+    """
+    if len(sig_text) <= 79:
+        return f"```python\n{sig_text}\n```"
+
+    # Extract optional decorator
+    decorator = ""
+    rest = sig_text
+    if sig_text.startswith("@"):
+        space = sig_text.find(" ")
+        if space != -1:
+            decorator = sig_text[:space]
+            rest = sig_text[space + 1:]
+        else:
+            decorator = sig_text
+            rest = ""
+
+    paren_idx = rest.find("(")
+    if paren_idx == -1:
+        # Property-style signature (just a type annotation)
+        return f"``{sig_text}``"
+
+    func_part = rest[:paren_idx]
+
+    depth = 0
+    close_idx = -1
+    for i in range(paren_idx, len(rest)):
+        if rest[i] == "(":
+            depth += 1
+        elif rest[i] == ")":
+            depth -= 1
+            if depth == 0:
+                close_idx = i
+                break
+
+    if close_idx == -1:
+        return f"``{sig_text}``"
+
+    params_str = rest[paren_idx + 1 : close_idx]
+    after = rest[close_idx + 1 :]
+
+    params = _split_top_level(params_str) if params_str.strip() else []
+
+    indent = " " * 4
+    lines: list[str] = []
+    if decorator:
+        lines.append(decorator)
+        if decorator == "@classmethod":
+            indent = " " * 4
+    lines.append(f"{func_part}(")
+    for p in params:
+        lines.append(f"{indent}{p},")
+    lines.append(f"){after}")
+
+    return "```python\n" + "\n".join(lines) + "\n```"
+
+
 def module_name_from_path(rel_path: str, root_module: str) -> str:
     parts = rel_path.replace("\\", "/").split("/")
     if parts[-1] == "__init__.pyi":
@@ -247,15 +327,34 @@ def convert_docstring_sections(
 
         m = PARAM_RE.match(stripped)
         if m:
-            param_docs[m.group(1)] = convert_sphinx(m.group(2))
+            pname = m.group(1)
+            pdesc = convert_sphinx(m.group(2))
             i += 1
+            while i < len(lines):
+                nxt = lines[i]
+                nxt_stripped = nxt.strip()
+                if nxt_stripped and nxt.startswith(" ") and not nxt_stripped.startswith(":"):
+                    pdesc += " " + convert_sphinx(nxt_stripped)
+                    i += 1
+                else:
+                    break
+            param_docs[pname] = pdesc
             continue
 
         m = RETURN_RE.match(stripped)
         if m:
-            result.append("")
-            result.append(f"**Returns:** {convert_sphinx(m.group(1))}")
+            ret_desc = convert_sphinx(m.group(1))
             i += 1
+            while i < len(lines):
+                nxt = lines[i]
+                nxt_stripped = nxt.strip()
+                if nxt_stripped and nxt.startswith(" ") and not nxt_stripped.startswith(":"):
+                    ret_desc += " " + convert_sphinx(nxt_stripped)
+                    i += 1
+                else:
+                    break
+            result.append("")
+            result.append(f"**Returns:** {ret_desc}")
             continue
 
         m = RAISE_RE.match(stripped)
@@ -314,6 +413,8 @@ def clean_type(text: str) -> str:
     text = text.replace("builtins.", "")
     text = text.replace("typing.", "")
     text = text.replace("raygeo.", "")
+    text = text.replace("collections.abc.", "")
+    text = text.replace("enum.", "")
     return text
 
 
@@ -759,7 +860,7 @@ def render_members(members: dict, mod_doc: str | None) -> str:
                 lines.append(f"### `{p['name']}`")
                 lines.append("")
                 if sig:
-                    lines.append(f"``{p['name']}{sig}``")
+                    lines.append(_format_sig(f"{p['name']}{sig}"))
                     lines.append("")
                 pd, _, _ = format_docstring(p["doc"])
                 if pd:
@@ -770,7 +871,7 @@ def render_members(members: dict, mod_doc: str | None) -> str:
                 dec = "@classmethod " if m.get("is_classmethod") else ""
                 lines.append(f"### `{m['name']}()`")
                 lines.append("")
-                lines.append(f"``{dec}{m['name']}{m['signature']}``")
+                lines.append(_format_sig(f"{dec}{m['name']}{m['signature']}"))
                 lines.append("")
                 mdoc, param_docs, m_complexity = format_docstring(m["doc"])
                 if mdoc:
@@ -812,7 +913,7 @@ def render_members(members: dict, mod_doc: str | None) -> str:
                     lines.append(f"#### `{p['name']}`")
                     lines.append("")
                     if sig:
-                        lines.append(f"``{p['name']}{sig}``")
+                        lines.append(_format_sig(f"{p['name']}{sig}"))
                         lines.append("")
                     pd, _, _ = format_docstring(p["doc"])
                     if pd:
@@ -822,7 +923,7 @@ def render_members(members: dict, mod_doc: str | None) -> str:
                     dec = "@classmethod " if m.get("is_classmethod") else ""
                     lines.append(f"#### `{m['name']}()`")
                     lines.append("")
-                    lines.append(f"``{dec}{m['name']}{m['signature']}``")
+                    lines.append(_format_sig(f"{dec}{m['name']}{m['signature']}"))
                     lines.append("")
                     mdoc, param_docs, m_complexity = format_docstring(m["doc"])
                     if mdoc:
@@ -842,7 +943,7 @@ def render_members(members: dict, mod_doc: str | None) -> str:
         for f in sorted(members["functions"], key=lambda x: x["name"]):
             lines.append(f"### `{f['name']}()`")
             lines.append("")
-            lines.append(f"``{f['name']}{f['signature']}``")
+            lines.append(_format_sig(f"{f['name']}{f['signature']}"))
             lines.append("")
             doc, param_docs, f_complexity = format_docstring(f["doc"])
             if doc:

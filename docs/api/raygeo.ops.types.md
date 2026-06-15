@@ -25,13 +25,17 @@ Represents the category of a command: `MOVING`, `STATE`, or `MARKER`.
 
 ### `name`
 
-`name: str`
+```python
+name: str
+```
 
 The uppercase name of this category (`"MOVING"`, `"STATE"`, or `"MARKER"`).
 
 ### `value`
 
-`value: int`
+```python
+value: int
+```
 
 The raw integer value of this category.
 
@@ -44,13 +48,17 @@ Each constant represents a specific operation command such as `MOVE_TO`, `LINE_T
 
 ### `name`
 
-`name: str`
+```python
+name: str
+```
 
 The uppercase name of this command type (e.g. `"MOVE_TO"`, `"LINE_TO"`).
 
 ### `value`
 
-`value: int`
+```python
+value: int
+```
 
 The raw integer value of this command type.
 
@@ -62,13 +70,17 @@ Sections divide an Ops sequence into vector and raster portions.
 
 ### `name`
 
-`name: str`
+```python
+name: str
+```
 
 The uppercase name (`"VECTOR_OUTLINE"` or `"RASTER_FILL"`).
 
 ### `value`
 
-`value: int`
+```python
+value: int
+```
 
 The raw integer value of this section type.
 
@@ -76,7 +88,9 @@ The raw integer value of this section type.
 
 ### `category()`
 
-`category(ct: CommandType) -> CommandCategory`
+```python
+category(ct: CommandType) -> CommandCategory
+```
 
 Get the category of a command type.
 

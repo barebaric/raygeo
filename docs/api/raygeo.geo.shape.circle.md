@@ -14,7 +14,13 @@ and point projection onto a circle's circumference.
 
 ### `does_circle_intersect_rect()`
 
-`does_circle_intersect_rect(center: types.Point, radius: float, rect: types.Rect) -> bool`
+```python
+does_circle_intersect_rect(
+    center: types.Point,
+    radius: float,
+    rect: types.Rect,
+) -> bool
+```
 
 Check if a circle intersects a rectangle.
 
@@ -30,7 +36,14 @@ Check if a circle intersects a rectangle.
 
 ### `get_circle_circle_intersections()`
 
-`get_circle_circle_intersections(c1: types.Point, r1: float, c2: types.Point, r2: float) -> types.Polygon`
+```python
+get_circle_circle_intersections(
+    c1: types.Point,
+    r1: float,
+    c2: types.Point,
+    r2: float,
+) -> types.Polygon
+```
 
 Get intersection points of two circles.
 
@@ -51,7 +64,14 @@ _Circle-circle and line-circle intersection points_
 
 ### `get_line_circle_intersections()`
 
-`get_line_circle_intersections(p1: types.Point, p2: types.Point, center: types.Point, radius: float) -> types.Polygon`
+```python
+get_line_circle_intersections(
+    p1: types.Point,
+    p2: types.Point,
+    center: types.Point,
+    radius: float,
+) -> types.Polygon
+```
 
 Get intersection points of a line segment with a circle.
 
@@ -68,7 +88,13 @@ Get intersection points of a line segment with a circle.
 
 ### `is_circle_inside_rect()`
 
-`is_circle_inside_rect(center: types.Point, radius: float, rect: types.Rect) -> bool`
+```python
+is_circle_inside_rect(
+    center: types.Point,
+    radius: float,
+    rect: types.Rect,
+) -> bool
+```
 
 Check if a circle is inside a rectangle.
 
@@ -84,7 +110,14 @@ Check if a circle is inside a rectangle.
 
 ### `line_segment_intersects_circle()`
 
-`line_segment_intersects_circle(p1: types.Point, p2: types.Point, circle_center: types.Point, circle_radius: float) -> bool`
+```python
+line_segment_intersects_circle(
+    p1: types.Point,
+    p2: types.Point,
+    circle_center: types.Point,
+    circle_radius: float,
+) -> bool
+```
 
 Check if a line segment intersects a circle.
 
@@ -101,7 +134,13 @@ Check if a line segment intersects a circle.
 
 ### `project_point_onto_circle()`
 
-`project_point_onto_circle(point: types.Point, center: types.Point, radius: float) -> Optional[types.Point]`
+```python
+project_point_onto_circle(
+    point: types.Point,
+    center: types.Point,
+    radius: float,
+) -> Optional[types.Point]
+```
 
 Project a point onto a circle.
 

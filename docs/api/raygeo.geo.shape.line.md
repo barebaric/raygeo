@@ -14,7 +14,14 @@ point-in-rectangle tests, rectangle containment checks, and angle-at-vertex comp
 
 ### `does_line_segment_intersect_circle()`
 
-`does_line_segment_intersect_circle(p1: types.Point, p2: types.Point, circle_center: types.Point, circle_radius: float) -> bool`
+```python
+does_line_segment_intersect_circle(
+    p1: types.Point,
+    p2: types.Point,
+    circle_center: types.Point,
+    circle_radius: float,
+) -> bool
+```
 
 Check if a line segment intersects a circle.
 
@@ -31,7 +38,13 @@ Check if a line segment intersects a circle.
 
 ### `does_line_segment_intersect_rect()`
 
-`does_line_segment_intersect_rect(p1: types.Point, p2: types.Point, rect: types.Rect) -> bool`
+```python
+does_line_segment_intersect_rect(
+    p1: types.Point,
+    p2: types.Point,
+    rect: types.Rect,
+) -> bool
+```
 
 Check if a line segment intersects a rectangle.
 
@@ -47,7 +60,9 @@ Check if a line segment intersects a rectangle.
 
 ### `get_angle_at_vertex()`
 
-`get_angle_at_vertex(p0: types.Point, p1: types.Point, p2: types.Point) -> float`
+```python
+get_angle_at_vertex(p0: types.Point, p1: types.Point, p2: types.Point) -> float
+```
 
 Compute the angle at vertex p1.
 
@@ -63,7 +78,14 @@ Compute the angle at vertex p1.
 
 ### `get_line_closest_point()`
 
-`get_line_closest_point(line_p1: types.Point, line_p2: types.Point, x: float, y: float) -> types.Point`
+```python
+get_line_closest_point(
+    line_p1: types.Point,
+    line_p2: types.Point,
+    x: float,
+    y: float,
+) -> types.Point
+```
 
 Get the closest point on an **infinite line** to a given point. The result may lie beyond the
 segment endpoints (unclamped projection).
@@ -81,7 +103,14 @@ segment endpoints (unclamped projection).
 
 ### `get_line_line_intersection()`
 
-`get_line_line_intersection(p1: types.Point, p2: types.Point, p3: types.Point, p4: types.Point) -> Optional[types.Point]`
+```python
+get_line_line_intersection(
+    p1: types.Point,
+    p2: types.Point,
+    p3: types.Point,
+    p4: types.Point,
+) -> Optional[types.Point]
+```
 
 Get the intersection of two infinite lines.
 
@@ -102,7 +131,14 @@ _Line-line and segment intersection_
 
 ### `get_line_segment_closest_point()`
 
-`get_line_segment_closest_point(seg_p1: types.Point, seg_p2: types.Point, x: float, y: float) -> tuple[float, types.Point, float]`
+```python
+get_line_segment_closest_point(
+    seg_p1: types.Point,
+    seg_p2: types.Point,
+    x: float,
+    y: float,
+) -> tuple[float, types.Point, float]
+```
 
 Get closest point on a line segment to a point.
 
@@ -119,7 +155,14 @@ Get closest point on a line segment to a point.
 
 ### `get_line_segment_intersection()`
 
-`get_line_segment_intersection(p1: types.Point, p2: types.Point, p3: types.Point, p4: types.Point) -> Optional[types.Point]`
+```python
+get_line_segment_intersection(
+    p1: types.Point,
+    p2: types.Point,
+    p3: types.Point,
+    p4: types.Point,
+) -> Optional[types.Point]
+```
 
 Get the intersection of two line segments.
 
@@ -136,7 +179,9 @@ Get the intersection of two line segments.
 
 ### `get_line_segment_length()`
 
-`get_line_segment_length(p1: types.Point, p2: types.Point) -> float`
+```python
+get_line_segment_length(p1: types.Point, p2: types.Point) -> float
+```
 
 Compute the length of a line segment.
 
@@ -151,7 +196,13 @@ Compute the length of a line segment.
 
 ### `get_line_segment_polygon_intersections()`
 
-`get_line_segment_polygon_intersections(p1: types.Point, p2: types.Point, polygon: Sequence[types.Polygon]) -> list[float]`
+```python
+get_line_segment_polygon_intersections(
+    p1: types.Point,
+    p2: types.Point,
+    polygon: Sequence[types.Polygon],
+) -> list[float]
+```
 
 Get t-values where a line segment intersects a polygon.
 
@@ -167,7 +218,13 @@ Get t-values where a line segment intersects a polygon.
 
 ### `get_point_line_distance()`
 
-`get_point_line_distance(point: types.Point, line_p1: types.Point, line_p2: types.Point) -> float`
+```python
+get_point_line_distance(
+    point: types.Point,
+    line_p1: types.Point,
+    line_p2: types.Point,
+) -> float
+```
 
 Get the distance from a point to a **line segment**. The projection is clamped to the segment, so
 distance is measured to the nearest endpoint when the perpendicular falls outside.
@@ -188,7 +245,13 @@ _Perpendicular distance from a point to a line_
 
 ### `is_point_on_line_segment()`
 
-`is_point_on_line_segment(point: types.Point, seg_p1: types.Point, seg_p2: types.Point) -> bool`
+```python
+is_point_on_line_segment(
+    point: types.Point,
+    seg_p1: types.Point,
+    seg_p2: types.Point,
+) -> bool
+```
 
 Check if a point is on a line segment.
 

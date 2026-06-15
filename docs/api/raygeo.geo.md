@@ -22,55 +22,103 @@ smoothing, curve fitting, and Minkowski sums for toolpath generation.
 
 ## Arc
 
+A circular-arc cutting command.
+
 ### `center_offset`
 
-`center_offset: tuple[float, float]`
+```python
+center_offset: tuple[float, float]
+```
+
+Centre offset from the start point (2D).
 
 ### `clockwise`
 
-`clockwise: bool`
+```python
+clockwise: bool
+```
+
+Whether the arc is clockwise.
 
 ### `end`
 
-`end: tuple[float, float, float]`
+```python
+end: tuple[float, float, float]
+```
+
+Endpoint of the arc in 3D space.
 
 ## Bezier
 
+A cubic-Bezier curve cutting command.
+
 ### `control1`
 
-`control1: tuple[float, float, float]`
+```python
+control1: tuple[float, float, float]
+```
+
+First control point in 3D space.
 
 ### `control2`
 
-`control2: tuple[float, float, float]`
+```python
+control2: tuple[float, float, float]
+```
+
+Second control point in 3D space.
 
 ### `end`
 
-`end: tuple[float, float, float]`
+```python
+end: tuple[float, float, float]
+```
+
+Endpoint of the curve in 3D space.
 
 ## Geometry
 
+A sequence of geometric commands (Move, Line, Arc, Bezier).
+
+The primary building block for vector geometry in raygeo. Geometry objects can be constructed
+procedurally, parsed from SVG, or obtained by converting an **~raygeo.ops.Ops** sequence.
+
 ### `data`
 
-`data: list[Any]`
+```python
+data: list[Any]
+```
 
 The commands as a list of typed command objects.
 
 ### `last_move_to`
 
-`last_move_to: tuple[float, float, float]`
+```python
+last_move_to: tuple[float, float, float]
+```
 
 The coordinates of the last move-to command.
 
 ### `uniform_scalable`
 
-`uniform_scalable: bool`
+```python
+uniform_scalable: bool
+```
 
 Whether the geometry uses uniform scalable arcs.
 
 ### `arc_to()`
 
-`arc_to(x: float, y: float, i: float = 0.0, j: float = 0.0, clockwise: bool = True, z: float = 0.0) -> Geometry`
+```python
+arc_to(
+    x: float,
+    y: float,
+    i: float = 0.0,
+    j: float = 0.0,
+    clockwise: bool = True,
+    z: float = 0.0,
+) -> Geometry
+```
 
 Draw an arc to the given coordinates.
 
@@ -87,7 +135,16 @@ Draw an arc to the given coordinates.
 
 ### `arc_to_as_bezier()`
 
-`arc_to_as_bezier(x: float, y: float, i: float, j: float, clockwise: bool = True, z: float = 0.0) -> Geometry`
+```python
+arc_to_as_bezier(
+    x: float,
+    y: float,
+    i: float,
+    j: float,
+    clockwise: bool = True,
+    z: float = 0.0,
+) -> Geometry
+```
 
 Draw an arc, converting it to bezier curves.
 
@@ -104,7 +161,9 @@ Draw an arc, converting it to bezier curves.
 
 ### `area()`
 
-`area() -> float`
+```python
+area() -> float
+```
 
 Return the signed area of the geometry.
 
@@ -115,7 +174,20 @@ Return the signed area of the geometry.
 
 ### `bezier_to()`
 
-`bezier_to(x: float, y: float, c1x: float, c1y: float, c2x: float, c2y: float, *, c1z: float = 0.0, c2z: float = 0.0, z: float = 0.0) -> Geometry`
+```python
+bezier_to(
+    x: float,
+    y: float,
+    c1x: float,
+    c1y: float,
+    c2x: float,
+    c2y: float,
+    *,
+    c1z: float = 0.0,
+    c2z: float = 0.0,
+    z: float = 0.0,
+) -> Geometry
+```
 
 Draw a cubic bezier curve.
 
@@ -135,7 +207,9 @@ Draw a cubic bezier curve.
 
 ### `cleanup()`
 
-`cleanup(tolerance: float) -> Geometry`
+```python
+cleanup(tolerance: float) -> Geometry
+```
 
 Remove duplicate segments from the geometry.
 
@@ -147,7 +221,9 @@ Remove duplicate segments from the geometry.
 
 ### `clear()`
 
-`clear() -> Geometry`
+```python
+clear() -> Geometry
+```
 
 Remove all commands from the geometry.
 
@@ -158,7 +234,9 @@ Remove all commands from the geometry.
 
 ### `close_all_contours()`
 
-`close_all_contours() -> Geometry`
+```python
+close_all_contours() -> Geometry
+```
 
 Close all open contours in the geometry.
 
@@ -169,7 +247,9 @@ Close all open contours in the geometry.
 
 ### `close_gaps()`
 
-`close_gaps(tolerance: Optional[float] = None) -> Geometry`
+```python
+close_gaps(tolerance: Optional[float] = None) -> Geometry
+```
 
 Close gaps between sub-paths.
 
@@ -181,7 +261,9 @@ Close gaps between sub-paths.
 
 ### `close_path()`
 
-`close_path() -> Geometry`
+```python
+close_path() -> Geometry
+```
 
 Close the current sub-path.
 
@@ -192,7 +274,9 @@ Close the current sub-path.
 
 ### `convert_arcs_to_beziers()`
 
-`convert_arcs_to_beziers() -> None`
+```python
+convert_arcs_to_beziers() -> None
+```
 
 Convert all Arc commands to Bezier curve approximations in-place.
 
@@ -213,7 +297,9 @@ _Arc commands converted to Bezier curve approximations_
 
 ### `copy()`
 
-`copy() -> Geometry`
+```python
+copy() -> Geometry
+```
 
 Return a deep copy of this geometry.
 
@@ -224,7 +310,9 @@ Return a deep copy of this geometry.
 
 ### `distance()`
 
-`distance() -> float`
+```python
+distance() -> float
+```
 
 Return the total path distance.
 
@@ -235,7 +323,9 @@ Return the total path distance.
 
 ### `encloses()`
 
-`encloses(other: Geometry) -> bool`
+```python
+encloses(other: Geometry) -> bool
+```
 
 Check if this geometry encloses another.
 
@@ -247,7 +337,9 @@ Check if this geometry encloses another.
 
 ### `extend()`
 
-`extend(other: Geometry) -> Geometry`
+```python
+extend(other: Geometry) -> Geometry
+```
 
 Append another geometry's commands to this one.
 
@@ -259,7 +351,9 @@ Append another geometry's commands to this one.
 
 ### `filter()`
 
-`filter(indices: set[int]) -> Geometry`
+```python
+filter(indices: set[int]) -> Geometry
+```
 
 Return a new Geometry containing only commands at the given indices.
 
@@ -273,7 +367,9 @@ Return a new Geometry containing only commands at the given indices.
 
 ### `filter_to_external_contours()`
 
-`filter_to_external_contours() -> Geometry`
+```python
+filter_to_external_contours() -> Geometry
+```
 
 Filter to only external (outermost) contours.
 
@@ -284,7 +380,12 @@ Filter to only external (outermost) contours.
 
 ### `find_closest_point()`
 
-`find_closest_point(x: float, y: float) -> Optional[tuple[int, float, tuple[float, float]]]`
+```python
+find_closest_point(
+    x: float,
+    y: float,
+) -> Optional[tuple[int, float, tuple[float, float]]]
+```
 
 Find the closest point on the path to (x, y).
 
@@ -299,7 +400,9 @@ Find the closest point on the path to (x, y).
 
 ### `fit_arcs()`
 
-`fit_arcs(tolerance: float) -> Geometry`
+```python
+fit_arcs(tolerance: float) -> Geometry
+```
 
 Fit arcs only to the linearized geometry.
 
@@ -311,7 +414,14 @@ Fit arcs only to the linearized geometry.
 
 ### `fit_curves()`
 
-`fit_curves(tolerance: float, beziers: bool = True, arcs: bool = True, on_progress: Optional[Any] = None) -> Geometry`
+```python
+fit_curves(
+    tolerance: float,
+    beziers: bool = True,
+    arcs: bool = True,
+    on_progress: Optional[Any] = None,
+) -> Geometry
+```
 
 Fit curves (beziers and arcs) to the linearized geometry.
 
@@ -326,7 +436,9 @@ Fit curves (beziers and arcs) to the linearized geometry.
 
 ### `flip_x()`
 
-`flip_x() -> Geometry`
+```python
+flip_x() -> Geometry
+```
 
 Mirror the geometry along the X axis.
 
@@ -337,7 +449,9 @@ Mirror the geometry along the X axis.
 
 ### `flip_y()`
 
-`flip_y() -> Geometry`
+```python
+flip_y() -> Geometry
+```
 
 Mirror the geometry along the Y axis.
 
@@ -348,36 +462,38 @@ Mirror the geometry along the Y axis.
 
 ### `from_dict()`
 
-`@classmethod from_dict(data: dict) -> Geometry`
+```python
+@classmethod from_dict(data: dict) -> Geometry
+```
 
 Create a Geometry from a dictionary.
 
-    **to_dict**.
-
-| Parameter    | Type       | Description                 |
-| ------------ | ---------- | --------------------------- |
-| `data`       | `dict`     | A dictionary as produced by |
-| _Returns_    | `Geometry` |                             |
-| _Complexity_ |            | O(n) time, O(n) space       |
+| Parameter    | Type       | Description                              |
+| ------------ | ---------- | ---------------------------------------- |
+| `data`       | `dict`     | A dictionary as produced by **to_dict**. |
+| _Returns_    | `Geometry` |                                          |
+| _Complexity_ |            | O(n) time, O(n) space                    |
 
 ### `from_points()`
 
-`@classmethod from_points(points: Any, close: bool = True) -> Geometry`
+```python
+@classmethod from_points(points: Any, close: bool = True) -> Geometry
+```
 
 Create a Geometry from a sequence of points.
 
-    (x, y, z) coordinate tuples.
-
-| Parameter    | Type          | Description                |
-| ------------ | ------------- | -------------------------- |
-| `points`     | `Any`         | A sequence of (x, y) or    |
-| `close`      | `bool = True` | Whether to close the path. |
-| _Returns_    | `Geometry`    |                            |
-| _Complexity_ |               | O(n) time, O(n) space      |
+| Parameter    | Type          | Description                                          |
+| ------------ | ------------- | ---------------------------------------------------- |
+| `points`     | `Any`         | A sequence of (x, y) or (x, y, z) coordinate tuples. |
+| `close`      | `bool = True` | Whether to close the path.                           |
+| _Returns_    | `Geometry`    |                                                      |
+| _Complexity_ |               | O(n) time, O(n) space                                |
 
 ### `get_command_at()`
 
-`get_command_at(index: int) -> Optional[Any]`
+```python
+get_command_at(index: int) -> Optional[Any]
+```
 
 Get the command at the given index as a typed command object.
 
@@ -389,7 +505,9 @@ Get the command at the given index as a typed command object.
 
 ### `get_last_point()`
 
-`get_last_point() -> tuple[float, float, float]`
+```python
+get_last_point() -> tuple[float, float, float]
+```
 
 Get the last point in the geometry.
 
@@ -400,7 +518,12 @@ Get the last point in the geometry.
 
 ### `get_outward_normal_at()`
 
-`get_outward_normal_at(segment_index: int, t: float) -> Optional[tuple[float, float]]`
+```python
+get_outward_normal_at(
+    segment_index: int,
+    t: float,
+) -> Optional[tuple[float, float]]
+```
 
 Get the outward normal at parameter t on a segment.
 
@@ -415,7 +538,12 @@ Get the outward normal at parameter t on a segment.
 
 ### `get_point_at()`
 
-`get_point_at(segment_index: int, t: float) -> Optional[tuple[float, float, float]]`
+```python
+get_point_at(
+    segment_index: int,
+    t: float,
+) -> Optional[tuple[float, float, float]]
+```
 
 Get the point at parameter t on a segment.
 
@@ -430,7 +558,11 @@ Get the point at parameter t on a segment.
 
 ### `get_positions_at_distances()`
 
-`get_positions_at_distances(distances: Sequence[float]) -> list[tuple[int, float, tuple[float, float]]]`
+```python
+get_positions_at_distances(
+    distances: Sequence[float],
+) -> list[tuple[int, float, tuple[float, float]]]
+```
 
 Given a list of distances along the path, returns the corresponding (segment_index, t, point) for
 each distance.
@@ -447,7 +579,9 @@ Distances are clamped to [0, total_length].
 
 ### `get_tangent_at()`
 
-`get_tangent_at(segment_index: int, t: float) -> Optional[tuple[float, float]]`
+```python
+get_tangent_at(segment_index: int, t: float) -> Optional[tuple[float, float]]
+```
 
 Get the tangent vector at parameter t on a segment.
 
@@ -462,7 +596,9 @@ Get the tangent vector at parameter t on a segment.
 
 ### `get_typed_command_at()`
 
-`get_typed_command_at(index: int) -> Move | Line | Arc | Bezier | None`
+```python
+get_typed_command_at(index: int) -> Move | Line | Arc | Bezier | None
+```
 
 Get the typed command at the given index.
 
@@ -474,7 +610,9 @@ Get the typed command at the given index.
 
 ### `get_valid_contours_data()`
 
-`get_valid_contours_data() -> list[dict]`
+```python
+get_valid_contours_data() -> list[dict]
+```
 
 Get valid contour data from the geometry's contours.
 
@@ -487,7 +625,9 @@ Get valid contour data from the geometry's contours.
 
 ### `grow()`
 
-`grow(amount: float) -> Geometry`
+```python
+grow(amount: float) -> Geometry
+```
 
 Offset (grow/shrink) the geometry by the given amount.
 
@@ -499,7 +639,9 @@ Offset (grow/shrink) the geometry by the given amount.
 
 ### `has_self_intersections()`
 
-`has_self_intersections(fail_on_t_junction: bool = False) -> bool`
+```python
+has_self_intersections(fail_on_t_junction: bool = False) -> bool
+```
 
 Check if the geometry has self-intersections.
 
@@ -511,7 +653,9 @@ Check if the geometry has self-intersections.
 
 ### `intersects_with()`
 
-`intersects_with(other: Geometry) -> bool`
+```python
+intersects_with(other: Geometry) -> bool
+```
 
 Check if this geometry intersects with another.
 
@@ -523,7 +667,9 @@ Check if this geometry intersects with another.
 
 ### `is_closed()`
 
-`is_closed(tolerance: float = 1e-06) -> bool`
+```python
+is_closed(tolerance: float = 1e-06) -> bool
+```
 
 Check if the geometry forms a closed path.
 
@@ -535,7 +681,9 @@ Check if the geometry forms a closed path.
 
 ### `is_empty()`
 
-`is_empty() -> bool`
+```python
+is_empty() -> bool
+```
 
 Check if the geometry has no commands.
 
@@ -546,7 +694,9 @@ Check if the geometry has no commands.
 
 ### `iter_commands()`
 
-`iter_commands() -> list[Any]`
+```python
+iter_commands() -> list[Any]
+```
 
 Iterate over all commands as typed command objects.
 
@@ -557,7 +707,9 @@ Iterate over all commands as typed command objects.
 
 ### `iter_typed_commands()`
 
-`iter_typed_commands() -> list[Move | Line | Arc | Bezier]`
+```python
+iter_typed_commands() -> list[Move | Line | Arc | Bezier]
+```
 
 Iterate over all commands as typed command objects.
 
@@ -568,7 +720,9 @@ Iterate over all commands as typed command objects.
 
 ### `line_to()`
 
-`line_to(x: float, y: float, z: float = 0.0) -> Geometry`
+```python
+line_to(x: float, y: float, z: float = 0.0) -> Geometry
+```
 
 Draw a line to the given coordinates.
 
@@ -582,7 +736,9 @@ Draw a line to the given coordinates.
 
 ### `linearize()`
 
-`linearize(tolerance: float) -> Geometry`
+```python
+linearize(tolerance: float) -> Geometry
+```
 
 Convert all curves to line segments.
 
@@ -594,7 +750,17 @@ Convert all curves to line segments.
 
 ### `map_to_frame()`
 
-`map_to_frame(origin: tuple[float, float], p_width: tuple[float, float], p_height: tuple[float, float], anchor_y: Optional[float] = None, stable_src_height: Optional[float] = None, anchor_x: Optional[float] = None, stable_src_width: Optional[float] = None) -> Geometry`
+```python
+map_to_frame(
+    origin: tuple[float, float],
+    p_width: tuple[float, float],
+    p_height: tuple[float, float],
+    anchor_y: Optional[float] = None,
+    stable_src_height: Optional[float] = None,
+    anchor_x: Optional[float] = None,
+    stable_src_width: Optional[float] = None,
+) -> Geometry
+```
 
 Map the geometry into a rectangular frame.
 
@@ -612,7 +778,9 @@ Map the geometry into a rectangular frame.
 
 ### `move_to()`
 
-`move_to(x: float, y: float, z: float = 0.0) -> Geometry`
+```python
+move_to(x: float, y: float, z: float = 0.0) -> Geometry
+```
 
 Move the pen to the given coordinates.
 
@@ -626,7 +794,9 @@ Move the pen to the given coordinates.
 
 ### `normalize_winding_orders()`
 
-`normalize_winding_orders() -> Geometry`
+```python
+normalize_winding_orders() -> Geometry
+```
 
 Normalize winding orders (outer CCW, inner CW) of all contours.
 
@@ -637,7 +807,9 @@ Normalize winding orders (outer CCW, inner CW) of all contours.
 
 ### `rect()`
 
-`rect() -> tuple[float, float, float, float]`
+```python
+rect() -> tuple[float, float, float, float]
+```
 
 Return the bounding rectangle (x_min, y_min, x_max, y_max).
 
@@ -648,7 +820,9 @@ Return the bounding rectangle (x_min, y_min, x_max, y_max).
 
 ### `remove_inner_edges()`
 
-`remove_inner_edges() -> Geometry`
+```python
+remove_inner_edges() -> Geometry
+```
 
 Remove inner edges (shared between contours).
 
@@ -659,7 +833,9 @@ Remove inner edges (shared between contours).
 
 ### `reverse_contour()`
 
-`reverse_contour() -> Geometry`
+```python
+reverse_contour() -> Geometry
+```
 
 Reverse the winding direction of all contours.
 
@@ -670,7 +846,9 @@ Reverse the winding direction of all contours.
 
 ### `segment_bounds()`
 
-`segment_bounds(index: int) -> Optional[tuple[float, float, float, float]]`
+```python
+segment_bounds(index: int) -> Optional[tuple[float, float, float, float]]
+```
 
 Return the bounding box of a single segment at the given index. Returns None for Move commands or if
 the index is out of bounds.
@@ -685,7 +863,9 @@ the index is out of bounds.
 
 ### `segments()`
 
-`segments() -> list[list[tuple[float, float, float]]]`
+```python
+segments() -> list[list[tuple[float, float, float]]]
+```
 
 Return the geometry split into segments of connected commands.
 
@@ -696,7 +876,9 @@ Return the geometry split into segments of connected commands.
 
 ### `segments_in_frame()`
 
-`segments_in_frame(x1: float, y1: float, x2: float, y2: float) -> list[int]`
+```python
+segments_in_frame(x1: float, y1: float, x2: float, y2: float) -> list[int]
+```
 
 Return indices of all segments whose bounding box intersects the given rectangle. Excludes Move
 commands.
@@ -714,7 +896,9 @@ commands.
 
 ### `simplify()`
 
-`simplify(tolerance: float) -> Geometry`
+```python
+simplify(tolerance: float) -> Geometry
+```
 
 Simplify the geometry using Ramer-Douglas-Peucker.
 
@@ -726,7 +910,9 @@ Simplify the geometry using Ramer-Douglas-Peucker.
 
 ### `split_inner_and_outer_contours()`
 
-`split_inner_and_outer_contours() -> tuple[list[Geometry], list[Geometry]]`
+```python
+split_inner_and_outer_contours() -> tuple[list[Geometry], list[Geometry]]
+```
 
 Split contours into inner and outer groups.
 
@@ -737,7 +923,9 @@ Split contours into inner and outer groups.
 
 ### `split_into_components()`
 
-`split_into_components() -> list[Geometry]`
+```python
+split_into_components() -> list[Geometry]
+```
 
 Split the geometry into connected components.
 
@@ -748,7 +936,9 @@ Split the geometry into connected components.
 
 ### `split_into_contours()`
 
-`split_into_contours() -> list[Geometry]`
+```python
+split_into_contours() -> list[Geometry]
+```
 
 Split the geometry into individual contours.
 
@@ -759,7 +949,9 @@ Split the geometry into individual contours.
 
 ### `to_dict()`
 
-`to_dict() -> dict`
+```python
+to_dict() -> dict
+```
 
 Serialize the geometry to a dictionary.
 
@@ -770,7 +962,9 @@ Serialize the geometry to a dictionary.
 
 ### `to_polygons()`
 
-`to_polygons(tolerance: float = 0.01) -> list[list[tuple[float, float]]]`
+```python
+to_polygons(tolerance: float = 0.01) -> list[list[tuple[float, float]]]
+```
 
 Convert the geometry to a list of polygons.
 
@@ -782,7 +976,9 @@ Convert the geometry to a list of polygons.
 
 ### `transform()`
 
-`transform(matrix: types.TransformMatrix) -> Geometry`
+```python
+transform(matrix: types.TransformMatrix) -> Geometry
+```
 
 Apply a 4x4 affine transformation matrix.
 
@@ -798,7 +994,9 @@ See `raygeo.geo.types.TransformMatrix` for the matrix layout.
 
 ### `upgrade_to_scalable()`
 
-`upgrade_to_scalable() -> Geometry`
+```python
+upgrade_to_scalable() -> Geometry
+```
 
 Convert all arcs to bezier curves for uniform scaling.
 
@@ -809,12 +1007,24 @@ Convert all arcs to bezier curves for uniform scaling.
 
 ## Line
 
+A straight-line cutting command.
+
 ### `end`
 
-`end: tuple[float, float, float]`
+```python
+end: tuple[float, float, float]
+```
+
+Endpoint of the line in 3D space.
 
 ## Move
 
+A rapid-move command with an endpoint but no cutting.
+
 ### `end`
 
-`end: tuple[float, float, float]`
+```python
+end: tuple[float, float, float]
+```
+
+Endpoint of the move in 3D space.

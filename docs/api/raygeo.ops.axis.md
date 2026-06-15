@@ -19,13 +19,17 @@ at once.
 
 ### `label`
 
-`label: str`
+```python
+label: str
+```
 
 The uppercase label of the axis (e.g. `"X"`, `"Y"`, `"Z"`).
 
 ### `name`
 
-`name: str`
+```python
+name: str
+```
 
 The uppercase name of the axis (e.g. `"X"`, `"Y"`, `"Z"`).
 
@@ -33,13 +37,17 @@ Legacy alias for **label** to match Python `IntFlag.name`.
 
 ### `value`
 
-`value: int`
+```python
+value: int
+```
 
 The raw bit value of the axis.
 
 ### `assert_single_axis()`
 
-`assert_single_axis() -> None`
+```python
+assert_single_axis() -> None
+```
 
 Assert that this Axis represents exactly one axis (not a combination).
 
@@ -51,7 +59,9 @@ Assert that this Axis represents exactly one axis (not a combination).
 
 ### `from_name()`
 
-`@classmethod from_name(name: str) -> Axis`
+```python
+@classmethod from_name(name: str) -> Axis
+```
 
 Look up an Axis by its uppercase name.
 

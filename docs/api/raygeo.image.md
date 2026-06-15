@@ -15,7 +15,14 @@ scanline rasterization for converting Ops scanlines into pixel buffers.
 
 ### `apply_bayer_dither()`
 
-`apply_bayer_dither(grayscale: numpy.NDArray[numpy.uint8], bayer_matrix: numpy.NDArray[numpy.float32], invert: bool, cell_size: int = 1) -> numpy.NDArray[numpy.uint8]`
+```python
+apply_bayer_dither(
+    grayscale: numpy.NDArray[numpy.uint8],
+    bayer_matrix: numpy.NDArray[numpy.float32],
+    invert: bool,
+    cell_size: int = 1,
+) -> numpy.NDArray[numpy.uint8]
+```
 
 Apply ordered (Bayer) dithering using a threshold matrix.
 
@@ -36,7 +43,12 @@ _Bayer 4x4 ordered dithering_
 
 ### `apply_floyd_steinberg_dither()`
 
-`apply_floyd_steinberg_dither(grayscale: numpy.NDArray[numpy.uint8], invert: bool) -> numpy.NDArray[numpy.uint8]`
+```python
+apply_floyd_steinberg_dither(
+    grayscale: numpy.NDArray[numpy.uint8],
+    invert: bool,
+) -> numpy.NDArray[numpy.uint8]
+```
 
 Apply Floyd-Steinberg error-diffusion dithering.
 
@@ -55,7 +67,12 @@ _Floyd-Steinberg dithering_
 
 ### `apply_minimum_run_length()`
 
-`apply_minimum_run_length(binary: numpy.NDArray[numpy.uint8], min_run_length: int) -> numpy.NDArray[numpy.uint8]`
+```python
+apply_minimum_run_length(
+    binary: numpy.NDArray[numpy.uint8],
+    min_run_length: int,
+) -> numpy.NDArray[numpy.uint8]
+```
 
 Remove binary runs shorter than the given minimum.
 
@@ -74,7 +91,9 @@ _Minimum run length applied to binary image_
 
 ### `compute_adaptive_threshold()`
 
-`compute_adaptive_threshold(areas: list[int]) -> int`
+```python
+compute_adaptive_threshold(areas: list[int]) -> int
+```
 
 Compute an adaptive area threshold to separate noise from content.
 
@@ -95,7 +114,12 @@ _Adaptive threshold from component area distribution_
 
 ### `compute_auto_levels()`
 
-`compute_auto_levels(gray_image: numpy.NDArray[numpy.uint8], clip_percent: float = 1) -> tuple[int, int]`
+```python
+compute_auto_levels(
+    gray_image: numpy.NDArray[numpy.uint8],
+    clip_percent: float = 1,
+) -> tuple[int, int]
+```
 
 Compute auto black/white levels from a grayscale image histogram.
 
@@ -110,7 +134,11 @@ Compute auto black/white levels from a grayscale image histogram.
 
 ### `denoise_binary()`
 
-`denoise_binary(binary: numpy.NDArray[numpy.uint8]) -> numpy.NDArray[numpy.uint8]`
+```python
+denoise_binary(
+    binary: numpy.NDArray[numpy.uint8],
+) -> numpy.NDArray[numpy.uint8]
+```
 
 Remove small noise components from a binary image using adaptive thresholding.
 
@@ -132,7 +160,12 @@ _Binary image denoised via adaptive thresholding_
 
 ### `filter_components()`
 
-`filter_components(binary: numpy.NDArray[numpy.uint8], min_area: int) -> numpy.NDArray[numpy.uint8]`
+```python
+filter_components(
+    binary: numpy.NDArray[numpy.uint8],
+    min_area: int,
+) -> numpy.NDArray[numpy.uint8]
+```
 
 Remove connected components smaller than min_area.
 
@@ -153,7 +186,9 @@ _Component filtering by minimum area_
 
 ### `get_component_areas()`
 
-`get_component_areas(binary: numpy.NDArray[numpy.uint8]) -> list[int]`
+```python
+get_component_areas(binary: numpy.NDArray[numpy.uint8]) -> list[int]
+```
 
 Compute the pixel area of each connected component.
 
@@ -173,7 +208,14 @@ _Connected component areas sorted ascending_
 
 ### `grayscale_to_binary()`
 
-`grayscale_to_binary(gray: numpy.NDArray[numpy.uint8], threshold: float = 0.5, invert: bool = False, auto_threshold: bool = True) -> numpy.NDArray[numpy.uint8]`
+```python
+grayscale_to_binary(
+    gray: numpy.NDArray[numpy.uint8],
+    threshold: float = 0.5,
+    invert: bool = False,
+    auto_threshold: bool = True,
+) -> numpy.NDArray[numpy.uint8]
+```
 
 Convert grayscale image to binary using Otsu or fixed threshold.
 
@@ -197,7 +239,12 @@ _Grayscale to binary via Otsu and fixed threshold_
 
 ### `linear_to_srgb()`
 
-`linear_to_srgb(array: numpy.NDArray[numpy.float32], dither: bool = False) -> numpy.NDArray[numpy.uint8]`
+```python
+linear_to_srgb(
+    array: numpy.NDArray[numpy.float32],
+    dither: bool = False,
+) -> numpy.NDArray[numpy.uint8]
+```
 
 Convert linear light values to sRGB pixel values.
 
@@ -212,7 +259,13 @@ Convert linear light values to sRGB pixel values.
 
 ### `normalize_grayscale()`
 
-`normalize_grayscale(gray_image: numpy.NDArray[numpy.uint8], black_point: int = 0, white_point: int = 255) -> numpy.NDArray[numpy.uint8]`
+```python
+normalize_grayscale(
+    gray_image: numpy.NDArray[numpy.uint8],
+    black_point: int = 0,
+    white_point: int = 255,
+) -> numpy.NDArray[numpy.uint8]
+```
 
 Normalize a grayscale image by stretching the dynamic range.
 
@@ -230,7 +283,15 @@ Normalize a grayscale image by stretching the dynamic range.
 
 ### `rasterize_scanlines()`
 
-`rasterize_scanlines(ops: ops.Ops, width_px: int, height_px: int, px_per_mm: tuple[float, float], origin_mm: tuple[float, float] = (0, 0)) -> numpy.NDArray[numpy.uint8]`
+```python
+rasterize_scanlines(
+    ops: ops.Ops,
+    width_px: int,
+    height_px: int,
+    px_per_mm: tuple[float, float],
+    origin_mm: tuple[float, float] = (0, 0),
+) -> numpy.NDArray[numpy.uint8]
+```
 
 Rasterize ScanLine commands from _ops_ into a 2D power-map buffer.
 
@@ -255,7 +316,16 @@ _Scanline ops rasterized into a 2D power-map buffer_
 
 ### `rgba_to_binary()`
 
-`rgba_to_binary(rgba: numpy.NDArray[numpy.uint8], width: int, height: int, stride: int, threshold: int = 128, invert: bool = False) -> numpy.NDArray[numpy.uint8]`
+```python
+rgba_to_binary(
+    rgba: numpy.NDArray[numpy.uint8],
+    width: int,
+    height: int,
+    stride: int,
+    threshold: int = 128,
+    invert: bool = False,
+) -> numpy.NDArray[numpy.uint8]
+```
 
 Convert raw BGRA pixel buffer to binary image using thresholding.
 
@@ -276,7 +346,14 @@ Transparent pixels (alpha == 0) are always treated as white (0).
 
 ### `rgba_to_grayscale()`
 
-`rgba_to_grayscale(rgba: numpy.NDArray[numpy.uint8], width: int, height: int, stride: int) -> tuple[numpy.NDArray[numpy.uint8], numpy.NDArray[numpy.float32]]`
+```python
+rgba_to_grayscale(
+    rgba: numpy.NDArray[numpy.uint8],
+    width: int,
+    height: int,
+    stride: int,
+) -> tuple[numpy.NDArray[numpy.uint8], numpy.NDArray[numpy.float32]]
+```
 
 Convert raw BGRA pixel buffer to grayscale with alpha unpremultiplication.
 
@@ -296,7 +373,14 @@ calculation using BT.601 luminance weights.
 
 ### `rgba_to_grayscale_inplace()`
 
-`rgba_to_grayscale_inplace(rgba: numpy.NDArray[numpy.uint8], width: int, height: int, stride: int) -> None`
+```python
+rgba_to_grayscale_inplace(
+    rgba: numpy.NDArray[numpy.uint8],
+    width: int,
+    height: int,
+    stride: int,
+) -> None
+```
 
 Convert raw BGRA pixel buffer to grayscale in place.
 
@@ -314,7 +398,11 @@ channel.
 
 ### `srgb_to_linear()`
 
-`srgb_to_linear(array: numpy.NDArray[numpy.uint8]) -> numpy.NDArray[numpy.float32]`
+```python
+srgb_to_linear(
+    array: numpy.NDArray[numpy.uint8],
+) -> numpy.NDArray[numpy.float32]
+```
 
 Convert sRGB pixel values to linear light values.
 

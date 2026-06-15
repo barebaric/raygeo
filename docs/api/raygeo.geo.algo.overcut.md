@@ -13,7 +13,9 @@ particularly useful in laser cutting where the laser may not fully penetrate at 
 
 ### `apply_overcut()`
 
-`apply_overcut(geometry: geo.Geometry, overcut: float) -> geo.Geometry`
+```python
+apply_overcut(geometry: geo.Geometry, overcut: float) -> geo.Geometry
+```
 
 Extend a closed contour past its start point.
 

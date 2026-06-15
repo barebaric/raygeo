@@ -13,7 +13,9 @@ computing subpath/geometry area, and determining path winding order.
 
 ### `get_area()`
 
-`get_area(geometry: geo.Geometry) -> float`
+```python
+get_area(geometry: geo.Geometry) -> float
+```
 
 Compute the total unsigned area enclosed by the geometry.
 
@@ -29,7 +31,9 @@ Sums all subpaths (outer + inner). Returns 0 for empty or open geometry.
 
 ### `get_path_winding_order()`
 
-`get_path_winding_order(geometry: geo.Geometry, start_cmd_index: int) -> str`
+```python
+get_path_winding_order(geometry: geo.Geometry, start_cmd_index: int) -> str
+```
 
 Determine the winding order of a subpath.
 
@@ -44,7 +48,9 @@ Determine the winding order of a subpath.
 
 ### `get_subpath_area()`
 
-`get_subpath_area(geometry: geo.Geometry, start_cmd_index: int) -> float`
+```python
+get_subpath_area(geometry: geo.Geometry, start_cmd_index: int) -> float
+```
 
 Compute the signed area of a subpath using the shoelace formula.
 
@@ -61,7 +67,12 @@ Positive area is CCW, negative is CW. Returns 0 for unclosed subpaths.
 
 ### `get_subpath_vertices()`
 
-`get_subpath_vertices(geometry: geo.Geometry, start_cmd_index: int) -> list[tuple[float, float]]`
+```python
+get_subpath_vertices(
+    geometry: geo.Geometry,
+    start_cmd_index: int,
+) -> list[tuple[float, float]]
+```
 
 Extract vertices from a subpath starting at the given command index.
 
@@ -78,14 +89,16 @@ Linearizes arcs and beziers into vertex sequences.
 
 ### `remove_duplicates()`
 
-`remove_duplicates(points: collections.abc.Sequence[types.Point]) -> types.Polygon`
+```python
+remove_duplicates(points: Sequence[types.Point]) -> types.Polygon
+```
 
 Remove duplicate points from a sequence.
 
 **Returns:** List of unique points.
 
-| Parameter    | Type                                    | Description                |
-| ------------ | --------------------------------------- | -------------------------- |
-| `points`     | `collections.abc.Sequence[types.Point]` | Sequence of (x, y) points. |
-| _Returns_    | `types.Polygon`                         |                            |
-| _Complexity_ |                                         | O(n) time, O(n) space      |
+| Parameter    | Type                    | Description                |
+| ------------ | ----------------------- | -------------------------- |
+| `points`     | `Sequence[types.Point]` | Sequence of (x, y) points. |
+| _Returns_    | `types.Polygon`         |                            |
+| _Complexity_ |                         | O(n) time, O(n) space      |

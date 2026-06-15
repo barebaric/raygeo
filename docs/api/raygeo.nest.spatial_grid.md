@@ -11,9 +11,18 @@ bounding box touches.
 
 ## SpatialGrid
 
+A grid-based spatial index for fast overlap queries.
+
+Divides the 2D plane into fixed-size cells and indexes items by their bounding box for efficient
+overlap lookups.
+
 ### `clear()`
 
-`clear() -> None`
+```python
+clear() -> None
+```
+
+Remove all items from the grid.
 
 | Parameter | Type   | Description |
 | --------- | ------ | ----------- |
@@ -21,19 +30,29 @@ bounding box touches.
 
 ### `insert()`
 
-`insert(index: int, bbox: Sequence[float]) -> None`
+```python
+insert(index: int, bbox: Sequence[float]) -> None
+```
 
-| Parameter | Type              | Description |
-| --------- | ----------------- | ----------- |
-| `index`   | `int`             |             |
-| `bbox`    | `Sequence[float]` |             |
-| _Returns_ | `None`            |             |
+Insert an item into the grid by its bounding box.
+
+| Parameter | Type              | Description                                  |
+| --------- | ----------------- | -------------------------------------------- |
+| `index`   | `int`             | Unique identifier for the item.              |
+| `bbox`    | `Sequence[float]` | `[x_min, y_min, x_max, y_max]` bounding box. |
+| _Returns_ | `None`            |                                              |
 
 ### `query()`
 
-`query(bbox: Sequence[float]) -> list[int]`
+```python
+query(bbox: Sequence[float]) -> list[int]
+```
 
-| Parameter | Type              | Description |
-| --------- | ----------------- | ----------- |
-| `bbox`    | `Sequence[float]` |             |
-| _Returns_ | `list[int]`       |             |
+Query all items whose bounding box overlaps _bbox_.
+
+**Returns:** Sorted list of matching item indices.
+
+| Parameter | Type              | Description                                  |
+| --------- | ----------------- | -------------------------------------------- |
+| `bbox`    | `Sequence[float]` | `[x_min, y_min, x_max, y_max]` query region. |
+| _Returns_ | `list[int]`       |                                              |

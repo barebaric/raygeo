@@ -13,7 +13,15 @@ high-level nesting orchestration.
 
 ### `calculate_fitness()`
 
-`calculate_fitness(polygon_groups: collections.abc.Sequence[collections.abc.Sequence[numpy.ndarray]], rotations: collections.abc.Sequence[float], sheet_indices: collections.abc.Sequence[int], *, num_parts: int = 0) -> float`
+```python
+calculate_fitness(
+    polygon_groups: Sequence[Sequence[numpy.ndarray]],
+    rotations: Sequence[float],
+    sheet_indices: Sequence[int],
+    *,
+    num_parts: int = 0,
+) -> float
+```
 
 Calculate fitness score for a set of placements.
 
@@ -21,18 +29,24 @@ Lower is better. Returns infinity if no placements or zero area.
 
 **Returns:** Fitness score (lower is better).
 
-| Parameter        | Type                                                                | Description                                   |
-| ---------------- | ------------------------------------------------------------------- | --------------------------------------------- |
-| `polygon_groups` | `collections.abc.Sequence[collections.abc.Sequence[numpy.ndarray]]` | Polygons for each placement.                  |
-| `rotations`      | `collections.abc.Sequence[float]`                                   | Rotation angle in degrees for each placement. |
-| `sheet_indices`  | `collections.abc.Sequence[int]`                                     | 0-based sheet index for each placement.       |
-| `num_parts`      | `int`                                                               | Total number of parts (some may be unplaced). |
-| _Returns_        | `float`                                                             |                                               |
-| _Complexity_     |                                                                     | O(n) where n = number of placements.          |
+| Parameter        | Type                                | Description                                   |
+| ---------------- | ----------------------------------- | --------------------------------------------- |
+| `polygon_groups` | `Sequence[Sequence[numpy.ndarray]]` | Polygons for each placement.                  |
+| `rotations`      | `Sequence[float]`                   | Rotation angle in degrees for each placement. |
+| `sheet_indices`  | `Sequence[int]`                     | 0-based sheet index for each placement.       |
+| `num_parts`      | `int`                               | Total number of parts (some may be unplaced). |
+| _Returns_        | `float`                             |                                               |
+| _Complexity_     |                                     | O(n) where n = number of placements.          |
 
 ### `filter_candidates_multi_resolution()`
 
-`filter_candidates_multi_resolution(candidates: list[tuple[float, float]], ifp_bounds: tuple[float, float, float, float], min_dist: float) -> list[tuple[float, float]]`
+```python
+filter_candidates_multi_resolution(
+    candidates: list[tuple[float, float]],
+    ifp_bounds: tuple[float, float, float, float],
+    min_dist: float,
+) -> list[tuple[float, float]]
+```
 
 Remove candidates that are too close together.
 
@@ -48,7 +62,20 @@ Remove candidates that are too close together.
 
 ### `find_valid_position()`
 
-`find_valid_position(ifp_polygons: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]], part_polygons: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]], part_hulls: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]], placed_polys_list: collections.abc.Sequence[collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]]], placed_hulls_list: collections.abc.Sequence[collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]]], grid: spatial_grid.SpatialGrid, sheet_world_offset: tuple[float, float], spacing: float = 1, min_area: float = 1, curve_tolerance: float = 0.5) -> tuple[float, float] | None`
+```python
+find_valid_position(
+    ifp_polygons: Sequence[Sequence[tuple[float, float]]],
+    part_polygons: Sequence[Sequence[tuple[float, float]]],
+    part_hulls: Sequence[Sequence[tuple[float, float]]],
+    placed_polys_list: Sequence[Sequence[Sequence[tuple[float, float]]]],
+    placed_hulls_list: Sequence[Sequence[Sequence[tuple[float, float]]]],
+    grid: spatial_grid.SpatialGrid,
+    sheet_world_offset: tuple[float, float],
+    spacing: float = 1,
+    min_area: float = 1,
+    curve_tolerance: float = 0.5,
+) -> tuple[float, float] | None
+```
 
 Find a valid position: heuristic search first, NFP fallback second.
 
@@ -56,24 +83,37 @@ Supports hull-based collision detection and sheet world offsets.
 
 **Returns:** (x, y) position or None.
 
-| Parameter            | Type                                                                                                | Description                                         |
-| -------------------- | --------------------------------------------------------------------------------------------------- | --------------------------------------------------- |
-| `ifp_polygons`       | `collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]]`                           | IFP polygons (valid placement region).              |
-| `part_polygons`      | `collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]]`                           | Part polygons to place.                             |
-| `part_hulls`         | `collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]]`                           | Convex hulls for collision (may be empty).          |
-| `placed_polys_list`  | `collections.abc.Sequence[collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]]]` | Already-placed parts, each a list of polygons.      |
-| `placed_hulls_list`  | `collections.abc.Sequence[collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]]]` | Hulls of already-placed parts, each a list.         |
-| `grid`               | `spatial_grid.SpatialGrid`                                                                          | SpatialGrid for fast neighbor lookup.               |
-| `sheet_world_offset` | `tuple[float, float]`                                                                               | (offset_x, offset_y) for this sheet.                |
-| `spacing`            | `float = 1`                                                                                         | Minimum spacing between parts.                      |
-| `min_area`           | `float = 1`                                                                                         | Minimum overlap area (clipper coords).              |
-| `curve_tolerance`    | `float = 0.5`                                                                                       | Curve tolerance for distance filtering.             |
-| _Returns_            | `tuple[float, float] &#124; None`                                                                   |                                                     |
-| _Complexity_         |                                                                                                     | O(n \* m) for candidate search with overlap checks. |
+| Parameter            | Type                                                | Description                                         |
+| -------------------- | --------------------------------------------------- | --------------------------------------------------- |
+| `ifp_polygons`       | `Sequence[Sequence[tuple[float, float]]]`           | IFP polygons (valid placement region).              |
+| `part_polygons`      | `Sequence[Sequence[tuple[float, float]]]`           | Part polygons to place.                             |
+| `part_hulls`         | `Sequence[Sequence[tuple[float, float]]]`           | Convex hulls for collision (may be empty).          |
+| `placed_polys_list`  | `Sequence[Sequence[Sequence[tuple[float, float]]]]` | Already-placed parts, each a list of polygons.      |
+| `placed_hulls_list`  | `Sequence[Sequence[Sequence[tuple[float, float]]]]` | Hulls of already-placed parts, each a list.         |
+| `grid`               | `spatial_grid.SpatialGrid`                          | SpatialGrid for fast neighbor lookup.               |
+| `sheet_world_offset` | `tuple[float, float]`                               | (offset_x, offset_y) for this sheet.                |
+| `spacing`            | `float = 1`                                         | Minimum spacing between parts.                      |
+| `min_area`           | `float = 1`                                         | Minimum overlap area (clipper coords).              |
+| `curve_tolerance`    | `float = 0.5`                                       | Curve tolerance for distance filtering.             |
+| _Returns_            | `tuple[float, float] &#124; None`                   |                                                     |
+| _Complexity_         |                                                     | O(n \* m) for candidate search with overlap checks. |
 
 ### `find_valid_position_nfp()`
 
-`find_valid_position_nfp(ifp_polygons: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]], part_polygons: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]], part_hulls: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]], placed_polys_list: collections.abc.Sequence[collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]]], placed_hulls_list: collections.abc.Sequence[collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]]], grid: spatial_grid.SpatialGrid, sheet_world_offset: tuple[float, float], spacing: float = 1, min_area: float = 1, curve_tolerance: float = 0.5) -> tuple[float, float] | None`
+```python
+find_valid_position_nfp(
+    ifp_polygons: Sequence[Sequence[tuple[float, float]]],
+    part_polygons: Sequence[Sequence[tuple[float, float]]],
+    part_hulls: Sequence[Sequence[tuple[float, float]]],
+    placed_polys_list: Sequence[Sequence[Sequence[tuple[float, float]]]],
+    placed_hulls_list: Sequence[Sequence[Sequence[tuple[float, float]]]],
+    grid: spatial_grid.SpatialGrid,
+    sheet_world_offset: tuple[float, float],
+    spacing: float = 1,
+    min_area: float = 1,
+    curve_tolerance: float = 0.5,
+) -> tuple[float, float] | None
+```
 
 Find a valid position using NFP-based region subtraction.
 
@@ -82,24 +122,37 @@ placement regions.
 
 **Returns:** (x, y) position or None.
 
-| Parameter            | Type                                                                                                | Description                                            |
-| -------------------- | --------------------------------------------------------------------------------------------------- | ------------------------------------------------------ |
-| `ifp_polygons`       | `collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]]`                           | IFP polygons (valid placement region).                 |
-| `part_polygons`      | `collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]]`                           | Part polygons to place.                                |
-| `part_hulls`         | `collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]]`                           | Convex hulls for collision (may be empty).             |
-| `placed_polys_list`  | `collections.abc.Sequence[collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]]]` | Already-placed parts, each a list of polygons.         |
-| `placed_hulls_list`  | `collections.abc.Sequence[collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]]]` | Hulls of already-placed parts, each a list.            |
-| `grid`               | `spatial_grid.SpatialGrid`                                                                          | SpatialGrid for fast neighbor lookup.                  |
-| `sheet_world_offset` | `tuple[float, float]`                                                                               | (offset_x, offset_y) for this sheet.                   |
-| `spacing`            | `float = 1`                                                                                         | Minimum spacing between parts.                         |
-| `min_area`           | `float = 1`                                                                                         | Minimum overlap area (clipper coords).                 |
-| `curve_tolerance`    | `float = 0.5`                                                                                       | Curve tolerance for distance filtering.                |
-| _Returns_            | `tuple[float, float] &#124; None`                                                                   |                                                        |
-| _Complexity_         |                                                                                                     | O(n \* m) for NFP construction per nearby placed part. |
+| Parameter            | Type                                                | Description                                            |
+| -------------------- | --------------------------------------------------- | ------------------------------------------------------ |
+| `ifp_polygons`       | `Sequence[Sequence[tuple[float, float]]]`           | IFP polygons (valid placement region).                 |
+| `part_polygons`      | `Sequence[Sequence[tuple[float, float]]]`           | Part polygons to place.                                |
+| `part_hulls`         | `Sequence[Sequence[tuple[float, float]]]`           | Convex hulls for collision (may be empty).             |
+| `placed_polys_list`  | `Sequence[Sequence[Sequence[tuple[float, float]]]]` | Already-placed parts, each a list of polygons.         |
+| `placed_hulls_list`  | `Sequence[Sequence[Sequence[tuple[float, float]]]]` | Hulls of already-placed parts, each a list.            |
+| `grid`               | `spatial_grid.SpatialGrid`                          | SpatialGrid for fast neighbor lookup.                  |
+| `sheet_world_offset` | `tuple[float, float]`                               | (offset_x, offset_y) for this sheet.                   |
+| `spacing`            | `float = 1`                                         | Minimum spacing between parts.                         |
+| `min_area`           | `float = 1`                                         | Minimum overlap area (clipper coords).                 |
+| `curve_tolerance`    | `float = 0.5`                                       | Curve tolerance for distance filtering.                |
+| _Returns_            | `tuple[float, float] &#124; None`                   |                                                        |
+| _Complexity_         |                                                     | O(n \* m) for NFP construction per nearby placed part. |
 
 ### `find_valid_position_scored()`
 
-`find_valid_position_scored(ifp_polygons: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]], part_polygons: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]], part_hulls: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]], placed_polys_list: collections.abc.Sequence[collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]]], placed_hulls_list: collections.abc.Sequence[collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]]], grid: spatial_grid.SpatialGrid, sheet_world_offset: tuple[float, float], spacing: float = 1, min_area: float = 1, curve_tolerance: float = 0.5) -> tuple[float, float] | None`
+```python
+find_valid_position_scored(
+    ifp_polygons: Sequence[Sequence[tuple[float, float]]],
+    part_polygons: Sequence[Sequence[tuple[float, float]]],
+    part_hulls: Sequence[Sequence[tuple[float, float]]],
+    placed_polys_list: Sequence[Sequence[Sequence[tuple[float, float]]]],
+    placed_hulls_list: Sequence[Sequence[Sequence[tuple[float, float]]]],
+    grid: spatial_grid.SpatialGrid,
+    sheet_world_offset: tuple[float, float],
+    spacing: float = 1,
+    min_area: float = 1,
+    curve_tolerance: float = 0.5,
+) -> tuple[float, float] | None
+```
 
 Find a valid position using heuristic candidate search.
 
@@ -108,24 +161,30 @@ back to NFP-region candidates. Scores candidates and picks the best valid one.
 
 **Returns:** (x, y) position or None.
 
-| Parameter            | Type                                                                                                | Description                                    |
-| -------------------- | --------------------------------------------------------------------------------------------------- | ---------------------------------------------- |
-| `ifp_polygons`       | `collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]]`                           | IFP polygons (valid placement region).         |
-| `part_polygons`      | `collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]]`                           | Part polygons to place.                        |
-| `part_hulls`         | `collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]]`                           | Convex hulls for collision (may be empty).     |
-| `placed_polys_list`  | `collections.abc.Sequence[collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]]]` | Already-placed parts, each a list of polygons. |
-| `placed_hulls_list`  | `collections.abc.Sequence[collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]]]` | Hulls of already-placed parts, each a list.    |
-| `grid`               | `spatial_grid.SpatialGrid`                                                                          | SpatialGrid for fast neighbor lookup.          |
-| `sheet_world_offset` | `tuple[float, float]`                                                                               | (offset_x, offset_y) for this sheet.           |
-| `spacing`            | `float = 1`                                                                                         | Minimum spacing between parts.                 |
-| `min_area`           | `float = 1`                                                                                         | Minimum overlap area (clipper coords).         |
-| `curve_tolerance`    | `float = 0.5`                                                                                       | Curve tolerance for distance filtering.        |
-| _Returns_            | `tuple[float, float] &#124; None`                                                                   |                                                |
-| _Complexity_         |                                                                                                     | O(n \* m) for scored candidate search.         |
+| Parameter            | Type                                                | Description                                    |
+| -------------------- | --------------------------------------------------- | ---------------------------------------------- |
+| `ifp_polygons`       | `Sequence[Sequence[tuple[float, float]]]`           | IFP polygons (valid placement region).         |
+| `part_polygons`      | `Sequence[Sequence[tuple[float, float]]]`           | Part polygons to place.                        |
+| `part_hulls`         | `Sequence[Sequence[tuple[float, float]]]`           | Convex hulls for collision (may be empty).     |
+| `placed_polys_list`  | `Sequence[Sequence[Sequence[tuple[float, float]]]]` | Already-placed parts, each a list of polygons. |
+| `placed_hulls_list`  | `Sequence[Sequence[Sequence[tuple[float, float]]]]` | Hulls of already-placed parts, each a list.    |
+| `grid`               | `spatial_grid.SpatialGrid`                          | SpatialGrid for fast neighbor lookup.          |
+| `sheet_world_offset` | `tuple[float, float]`                               | (offset_x, offset_y) for this sheet.           |
+| `spacing`            | `float = 1`                                         | Minimum spacing between parts.                 |
+| `min_area`           | `float = 1`                                         | Minimum overlap area (clipper coords).         |
+| `curve_tolerance`    | `float = 0.5`                                       | Curve tolerance for distance filtering.        |
+| _Returns_            | `tuple[float, float] &#124; None`                   |                                                |
+| _Complexity_         |                                                     | O(n \* m) for scored candidate search.         |
 
 ### `generate_bottom_left_candidates()`
 
-`generate_bottom_left_candidates(ifp_bounds: tuple[float, float, float, float], part_bounds: tuple[float, float, float, float], spacing: float) -> list[tuple[float, float]]`
+```python
+generate_bottom_left_candidates(
+    ifp_bounds: tuple[float, float, float, float],
+    part_bounds: tuple[float, float, float, float],
+    spacing: float,
+) -> list[tuple[float, float]]
+```
 
 Generate candidate positions scanning from bottom-left.
 
@@ -141,7 +200,13 @@ Generate candidate positions scanning from bottom-left.
 
 ### `generate_grid_candidates()`
 
-`generate_grid_candidates(ifp_bounds: tuple[float, float, float, float], part_bounds: tuple[float, float, float, float], spacing: float) -> list[tuple[float, float]]`
+```python
+generate_grid_candidates(
+    ifp_bounds: tuple[float, float, float, float],
+    part_bounds: tuple[float, float, float, float],
+    spacing: float,
+) -> list[tuple[float, float]]
+```
 
 Generate candidate positions in a grid pattern.
 
@@ -157,7 +222,13 @@ Generate candidate positions in a grid pattern.
 
 ### `generate_perimeter_candidates()`
 
-`generate_perimeter_candidates(placed_groups: collections.abc.Sequence[collections.abc.Sequence[list[tuple[float, float]]]], part_bounds: tuple[float, float, float, float], spacing: float) -> list[tuple[float, float]]`
+```python
+generate_perimeter_candidates(
+    placed_groups: Sequence[Sequence[list[tuple[float, float]]]],
+    part_bounds: tuple[float, float, float, float],
+    spacing: float,
+) -> list[tuple[float, float]]
+```
 
 Generate edge-aligned candidates around placed parts.
 
@@ -166,17 +237,30 @@ left-bottom, left-top, above-left, above-right, below-left, below-right.
 
 **Returns:** List of (x, y) candidate positions.
 
-| Parameter       | Type                                                                            | Description                                     |
-| --------------- | ------------------------------------------------------------------------------- | ----------------------------------------------- |
-| `placed_groups` | `collections.abc.Sequence[collections.abc.Sequence[list[tuple[float, float]]]]` | List of placed parts, each a list of polygons.  |
-| `part_bounds`   | `tuple[float, float, float, float]`                                             | Part bounding box (min_x, min_y, max_x, max_y). |
-| `spacing`       | `float`                                                                         | Minimum spacing between parts.                  |
-| _Returns_       | `list[tuple[float, float]]`                                                     |                                                 |
-| _Complexity_    |                                                                                 | O(n) where n = number of placed parts.          |
+| Parameter       | Type                                            | Description                                     |
+| --------------- | ----------------------------------------------- | ----------------------------------------------- |
+| `placed_groups` | `Sequence[Sequence[list[tuple[float, float]]]]` | List of placed parts, each a list of polygons.  |
+| `part_bounds`   | `tuple[float, float, float, float]`             | Part bounding box (min_x, min_y, max_x, max_y). |
+| `spacing`       | `float`                                         | Minimum spacing between parts.                  |
+| _Returns_       | `list[tuple[float, float]]`                     |                                                 |
+| _Complexity_    |                                                 | O(n) where n = number of placed parts.          |
 
 ### `place_parts()`
 
-`place_parts(part_polys: collections.abc.Sequence[collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]]], part_hulls: collections.abc.Sequence[collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]]], sheet_polys: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]], sheet_offsets: collections.abc.Sequence[tuple[float, float]], rotations: collections.abc.Sequence[float], flips_h: collections.abc.Sequence[bool], flips_v: collections.abc.Sequence[bool], spacing: float = 1, min_area: float = 1, curve_tolerance: float = 0.5) -> list[dict]`
+```python
+place_parts(
+    part_polys: Sequence[Sequence[Sequence[tuple[float, float]]]],
+    part_hulls: Sequence[Sequence[Sequence[tuple[float, float]]]],
+    sheet_polys: Sequence[Sequence[tuple[float, float]]],
+    sheet_offsets: Sequence[tuple[float, float]],
+    rotations: Sequence[float],
+    flips_h: Sequence[bool],
+    flips_v: Sequence[bool],
+    spacing: float = 1,
+    min_area: float = 1,
+    curve_tolerance: float = 0.5,
+) -> list[dict]
+```
 
 Place as many parts as possible onto sheets.
 
@@ -189,17 +273,17 @@ After all parts are placed, gravity is applied per sheet.
 **Returns:** List of dicts, one per sheet, with keys: placements, sheet_index, unused_part_indices,
 fitness.
 
-| Parameter         | Type                                                                                                | Description                                        |
-| ----------------- | --------------------------------------------------------------------------------------------------- | -------------------------------------------------- |
-| `part_polys`      | `collections.abc.Sequence[collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]]]` | List of parts, each a list of polygon point lists. |
-| `part_hulls`      | `collections.abc.Sequence[collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]]]` | List of hull groups per part (may be empty).       |
-| `sheet_polys`     | `collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]]`                           | List of sheet polygons.                            |
-| `sheet_offsets`   | `collections.abc.Sequence[tuple[float, float]]`                                                     | World-space offset (x, y) for each sheet.          |
-| `rotations`       | `collections.abc.Sequence[float]`                                                                   | Rotation angle (degrees) for each part.            |
-| `flips_h`         | `collections.abc.Sequence[bool]`                                                                    | Horizontal flip flag per part.                     |
-| `flips_v`         | `collections.abc.Sequence[bool]`                                                                    | Vertical flip flag per part.                       |
-| `spacing`         | `float = 1`                                                                                         | Minimum spacing between parts.                     |
-| `min_area`        | `float = 1`                                                                                         | Minimum overlap area (clipper coords).             |
-| `curve_tolerance` | `float = 0.5`                                                                                       | Curve tolerance for distance filtering.            |
-| _Returns_         | `list[dict]`                                                                                        |                                                    |
-| _Complexity_      |                                                                                                     | O(p _ s _ n \* m) where p = parts, s = sheets.     |
+| Parameter         | Type                                                | Description                                        |
+| ----------------- | --------------------------------------------------- | -------------------------------------------------- |
+| `part_polys`      | `Sequence[Sequence[Sequence[tuple[float, float]]]]` | List of parts, each a list of polygon point lists. |
+| `part_hulls`      | `Sequence[Sequence[Sequence[tuple[float, float]]]]` | List of hull groups per part (may be empty).       |
+| `sheet_polys`     | `Sequence[Sequence[tuple[float, float]]]`           | List of sheet polygons.                            |
+| `sheet_offsets`   | `Sequence[tuple[float, float]]`                     | World-space offset (x, y) for each sheet.          |
+| `rotations`       | `Sequence[float]`                                   | Rotation angle (degrees) for each part.            |
+| `flips_h`         | `Sequence[bool]`                                    | Horizontal flip flag per part.                     |
+| `flips_v`         | `Sequence[bool]`                                    | Vertical flip flag per part.                       |
+| `spacing`         | `float = 1`                                         | Minimum spacing between parts.                     |
+| `min_area`        | `float = 1`                                         | Minimum overlap area (clipper coords).             |
+| `curve_tolerance` | `float = 0.5`                                       | Curve tolerance for distance filtering.            |
+| _Returns_         | `list[dict]`                                        |                                                    |
+| _Complexity_      |                                                     | O(p _ s _ n \* m) where p = parts, s = sheets.     |

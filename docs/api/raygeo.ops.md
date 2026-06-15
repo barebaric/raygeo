@@ -25,79 +25,155 @@ structured form.
 
 ### `center_offset`
 
-`center_offset: Optional[tuple[float, float]]`
+```python
+center_offset: Optional[tuple[float, float]]
+```
+
+Arc centre offset from start point, if an arc command.
 
 ### `clockwise`
 
-`clockwise: Optional[bool]`
+```python
+clockwise: Optional[bool]
+```
+
+Whether an arc is clockwise, if an arc command.
 
 ### `control`
 
-`control: Optional[tuple[float, float, float]]`
+```python
+control: Optional[tuple[float, float, float]]
+```
+
+Quadratic-Bezier control point, if a quad. Bezier command.
 
 ### `control1`
 
-`control1: Optional[tuple[float, float, float]]`
+```python
+control1: Optional[tuple[float, float, float]]
+```
+
+First cubic-Bezier control point, if a Bezier command.
 
 ### `control2`
 
-`control2: Optional[tuple[float, float, float]]`
+```python
+control2: Optional[tuple[float, float, float]]
+```
+
+Second cubic-Bezier control point, if a Bezier command.
 
 ### `duration_ms`
 
-`duration_ms: Optional[float]`
+```python
+duration_ms: Optional[float]
+```
+
+Dwell duration in ms, if a dwell command.
 
 ### `end`
 
-`end: Optional[tuple[float, float, float]]`
+```python
+end: Optional[tuple[float, float, float]]
+```
+
+Endpoint of the command in 3D space, if applicable.
 
 ### `extra_axes`
 
-`extra_axes: Optional[dict]`
+```python
+extra_axes: Optional[dict]
+```
+
+Extra axis positions, if any.
 
 ### `frequency`
 
-`frequency: Optional[int]`
+```python
+frequency: Optional[int]
+```
+
+Laser frequency (Hz), if a frequency-setting command.
 
 ### `laser_uid`
 
-`laser_uid: Optional[str]`
+```python
+laser_uid: Optional[str]
+```
+
+Unique identifier of the active laser, if a laser-setting command.
 
 ### `layer_uid`
 
-`layer_uid: Optional[str]`
+```python
+layer_uid: Optional[str]
+```
+
+Unique identifier of the active layer, if a layer-start command.
 
 ### `power`
 
-`power: Optional[float]`
+```python
+power: Optional[float]
+```
+
+Power level (0–1), if a power-setting command.
 
 ### `power_values`
 
-`power_values: Optional[bytes]`
+```python
+power_values: Optional[bytes]
+```
+
+Per-step power byte values for scan-to commands.
 
 ### `pulse_width`
 
-`pulse_width: Optional[float]`
+```python
+pulse_width: Optional[float]
+```
+
+Laser pulse width (µs), if a pulse-width-setting command.
 
 ### `section_type`
 
-`section_type: Optional[str]`
+```python
+section_type: Optional[str]
+```
+
+Section type string (e.g. "VectorOutline", "RasterFill"), if a section marker.
 
 ### `speed`
 
-`speed: Optional[int]`
+```python
+speed: Optional[int]
+```
+
+Cut speed setting, if a speed-setting command.
 
 ### `state`
 
-`state: Optional[state.State]`
+```python
+state: Optional[state.State]
+```
+
+State snapshot at this command, if present.
 
 ### `type_`
 
-`type_: types.CommandType`
+```python
+type_: types.CommandType
+```
+
+The type of this command (e.g. Move, Line, Arc, Bezier, ScanTo, …).
 
 ### `workpiece_uid`
 
-`workpiece_uid: Optional[str]`
+```python
+workpiece_uid: Optional[str]
+```
+
+Unique identifier of the active workpiece, if a workpiece-start command.
 
 ## Ops
 
@@ -112,19 +188,25 @@ geometry/dict/numpy arrays.
 
 ### `last_move_to`
 
-`last_move_to: tuple[float, float, float]`
+```python
+last_move_to: tuple[float, float, float]
+```
 
 The last `(x, y, z)` endpoint from a MoveTo command.
 
 ### `scanline_count`
 
-`scanline_count: int`
+```python
+scanline_count: int
+```
 
 Return the number of scanline commands in the sequence.
 
 ### `apply_lead_in_out()`
 
-`apply_lead_in_out(lead_in_mm: float, lead_out_mm: float) -> None`
+```python
+apply_lead_in_out(lead_in_mm: float, lead_out_mm: float) -> None
+```
 
 Apply lead-in and lead-out to vector contour paths.
 
@@ -144,7 +226,9 @@ _Lead-in and lead-out paths_
 
 ### `apply_overscan()`
 
-`apply_overscan(distance_mm: float) -> None`
+```python
+apply_overscan(distance_mm: float) -> None
+```
 
 Apply overscan to raster lines.
 
@@ -163,7 +247,9 @@ _Overscan applied to raster lines_
 
 ### `apply_tab_gaps()`
 
-`apply_tab_gaps(clips: Sequence[tuple[float, float, float]]) -> None`
+```python
+apply_tab_gaps(clips: Sequence[tuple[float, float, float]]) -> None
+```
 
 Apply holding tabs as gaps in the toolpath.
 
@@ -182,7 +268,13 @@ _Tab operations on a rectangle_
 
 ### `apply_tab_power()`
 
-`apply_tab_power(clips: Sequence[tuple[float, float, float]], tab_power: float, original_power: float) -> None`
+```python
+apply_tab_power(
+    clips: Sequence[tuple[float, float, float]],
+    tab_power: float,
+    original_power: float,
+) -> None
+```
 
 Apply holding tabs by reducing laser power in tab regions.
 
@@ -199,7 +291,9 @@ but weaker. Only `VECTOR_OUTLINE` sections are modified.
 
 ### `arc_params()`
 
-`arc_params(idx: int) -> tuple[float, float, bool]`
+```python
+arc_params(idx: int) -> tuple[float, float, bool]
+```
 
 Get the arc parameters (center offset i, j, and clockwise flag).
 
@@ -215,7 +309,17 @@ Get the arc parameters (center offset i, j, and clockwise flag).
 
 ### `arc_to()`
 
-`arc_to(x: float, y: float, i: float, j: float, clockwise: bool = True, z: float = 0.0, extra: Optional[dict] = None) -> None`
+```python
+arc_to(
+    x: float,
+    y: float,
+    i: float,
+    j: float,
+    clockwise: bool = True,
+    z: float = 0.0,
+    extra: Optional[dict] = None,
+) -> None
+```
 
 Add a circular arc to the given coordinates.
 
@@ -233,7 +337,11 @@ Add a circular arc to the given coordinates.
 
 ### `bezier_params()`
 
-`bezier_params(idx: int) -> tuple[tuple[float, float, float], tuple[float, float, float]]`
+```python
+bezier_params(
+    idx: int,
+) -> tuple[tuple[float, float, float], tuple[float, float, float]]
+```
 
 Get the cubic bezier control points.
 
@@ -249,7 +357,14 @@ Get the cubic bezier control points.
 
 ### `bezier_to()`
 
-`bezier_to(control1: tuple[float, float, float], control2: tuple[float, float, float], end: tuple[float, float, float], extra: Optional[dict] = None) -> None`
+```python
+bezier_to(
+    control1: tuple[float, float, float],
+    control2: tuple[float, float, float],
+    end: tuple[float, float, float],
+    extra: Optional[dict] = None,
+) -> None
+```
 
 Add a cubic bezier curve to the given endpoint.
 
@@ -264,7 +379,9 @@ Add a cubic bezier curve to the given endpoint.
 
 ### `category()`
 
-`category(idx: int) -> types.CommandCategory`
+```python
+category(idx: int) -> types.CommandCategory
+```
 
 Get the **CommandCategory** at the given index.
 
@@ -278,7 +395,9 @@ Get the **CommandCategory** at the given index.
 
 ### `clear()`
 
-`clear() -> None`
+```python
+clear() -> None
+```
 
 Remove all commands from this Ops sequence.
 
@@ -289,7 +408,9 @@ Remove all commands from this Ops sequence.
 
 ### `clip_at()`
 
-`clip_at(x: float, y: float, width: float) -> bool`
+```python
+clip_at(x: float, y: float, width: float) -> bool
+```
 
 Clip at a single vertical swath, keeping commands that intersect the band.
 
@@ -305,7 +426,12 @@ Clip at a single vertical swath, keeping commands that intersect the band.
 
 ### `clip_ops_to_regions()`
 
-`clip_ops_to_regions(regions: Sequence[Sequence[tuple[float, float]]], tolerance: float = 0.3) -> None`
+```python
+clip_ops_to_regions(
+    regions: Sequence[Sequence[tuple[float, float]]],
+    tolerance: float = 0.3,
+) -> None
+```
 
 Clip paths using polygonal regions as boundaries; keeps what is inside.
 
@@ -318,7 +444,9 @@ Clip paths using polygonal regions as boundaries; keeps what is inside.
 
 ### `clip_rect()`
 
-`clip_rect(rect: tuple[float, float, float, float]) -> Ops`
+```python
+clip_rect(rect: tuple[float, float, float, float]) -> Ops
+```
 
 Clip this sequence to a rectangle, keeping only commands inside.
 
@@ -336,7 +464,12 @@ _Ops paths clipped to a rectangle_
 
 ### `clip_to_regions()`
 
-`clip_to_regions(regions: Sequence[Sequence[tuple[float, float]]], tolerance: float = 0.3) -> None`
+```python
+clip_to_regions(
+    regions: Sequence[Sequence[tuple[float, float]]],
+    tolerance: float = 0.3,
+) -> None
+```
 
 Clip paths to the given polygonal regions, keeping only what is inside.
 
@@ -349,7 +482,9 @@ Clip paths to the given polygonal regions, keeping only what is inside.
 
 ### `close_path()`
 
-`close_path() -> None`
+```python
+close_path() -> None
+```
 
 Close the current sub-path by adding a line back to the start.
 
@@ -360,7 +495,9 @@ Close the current sub-path by adding a line back to the start.
 
 ### `command_type()`
 
-`command_type(idx: int) -> types.CommandType`
+```python
+command_type(idx: int) -> types.CommandType
+```
 
 Get the **CommandType** at the given index.
 
@@ -374,7 +511,9 @@ Get the **CommandType** at the given index.
 
 ### `copy()`
 
-`copy() -> Ops`
+```python
+copy() -> Ops
+```
 
 Return a deep copy of this Ops sequence.
 
@@ -385,7 +524,9 @@ Return a deep copy of this Ops sequence.
 
 ### `copy_command_from()`
 
-`copy_command_from(source: Ops, idx: int) -> None`
+```python
+copy_command_from(source: Ops, idx: int) -> None
+```
 
 Copy a single command from another Ops sequence into this one.
 
@@ -398,7 +539,9 @@ Copy a single command from another Ops sequence into this one.
 
 ### `cut_distance()`
 
-`cut_distance() -> float`
+```python
+cut_distance() -> float
+```
 
 Compute the total cutting distance (excluding travel moves).
 
@@ -409,7 +552,9 @@ Compute the total cutting distance (excluding travel moves).
 
 ### `distance()`
 
-`distance() -> float`
+```python
+distance() -> float
+```
 
 Compute the total distance of all commands.
 
@@ -420,7 +565,12 @@ Compute the total distance of all commands.
 
 ### `distance_at()`
 
-`distance_at(idx: int, last_point: Optional[tuple[float, float, float]] = None) -> float`
+```python
+distance_at(
+    idx: int,
+    last_point: Optional[tuple[float, float, float]] = None,
+) -> float
+```
 
 Compute the distance traveled up to command _idx_.
 
@@ -435,7 +585,9 @@ Compute the distance traveled up to command _idx_.
 
 ### `dump()`
 
-`dump() -> None`
+```python
+dump() -> None
+```
 
 Print a human-readable dump of all commands.
 
@@ -446,7 +598,9 @@ Print a human-readable dump of all commands.
 
 ### `dwell()`
 
-`dwell(duration_ms: float) -> None`
+```python
+dwell(duration_ms: float) -> None
+```
 
 Pause execution for a given duration.
 
@@ -458,7 +612,9 @@ Pause execution for a given duration.
 
 ### `dwell_duration()`
 
-`dwell_duration(idx: int) -> float`
+```python
+dwell_duration(idx: int) -> float
+```
 
 Get the duration (milliseconds) of a Dwell command.
 
@@ -474,7 +630,9 @@ Get the duration (milliseconds) of a Dwell command.
 
 ### `enable_air_assist()`
 
-`enable_air_assist(enabled: bool = True) -> None`
+```python
+enable_air_assist(enabled: bool = True) -> None
+```
 
 Enable air assist for subsequent cutting.
 
@@ -486,7 +644,9 @@ Enable air assist for subsequent cutting.
 
 ### `endpoint()`
 
-`endpoint(idx: int) -> tuple[float, float, float]`
+```python
+endpoint(idx: int) -> tuple[float, float, float]
+```
 
 Get the endpoint coordinates of a moving command.
 
@@ -500,7 +660,13 @@ Get the endpoint coordinates of a moving command.
 
 ### `estimate_command_times()`
 
-`estimate_command_times(default_cut_speed: float = 1000.0, default_travel_speed: float = 3000.0, acceleration: float = 1000.0) -> list[float]`
+```python
+estimate_command_times(
+    default_cut_speed: float = 1000.0,
+    default_travel_speed: float = 3000.0,
+    acceleration: float = 1000.0,
+) -> list[float]
+```
 
 Estimate the time of each individual command in the sequence.
 
@@ -519,7 +685,13 @@ estimated execution time in seconds. Non-moving commands (state changes, markers
 
 ### `estimate_time()`
 
-`estimate_time(default_cut_speed: float = 1000.0, default_travel_speed: float = 3000.0, acceleration: float = 1000.0) -> float`
+```python
+estimate_time(
+    default_cut_speed: float = 1000.0,
+    default_travel_speed: float = 3000.0,
+    acceleration: float = 1000.0,
+) -> float
+```
 
 Estimate the total processing time for this sequence.
 
@@ -535,7 +707,9 @@ Estimate the total processing time for this sequence.
 
 ### `extend()`
 
-`extend(other: Optional[Ops]) -> None`
+```python
+extend(other: Optional[Ops]) -> None
+```
 
 Extend this Ops sequence with commands from another.
 
@@ -547,7 +721,9 @@ Extend this Ops sequence with commands from another.
 
 ### `extra_axes()`
 
-`extra_axes(idx: int) -> Optional[dict]`
+```python
+extra_axes(idx: int) -> Optional[dict]
+```
 
 Get the extra axes data for a moving command.
 
@@ -561,7 +737,9 @@ Get the extra axes data for a moving command.
 
 ### `flip_ops()`
 
-`flip_ops() -> Ops`
+```python
+flip_ops() -> Ops
+```
 
 Reverse the order of subpaths.
 
@@ -574,7 +752,9 @@ Reverse the order of subpaths.
 
 ### `frequency()`
 
-`frequency(idx: int) -> int`
+```python
+frequency(idx: int) -> int
+```
 
 Get the frequency of a SetFrequency command.
 
@@ -590,7 +770,9 @@ Get the frequency of a SetFrequency command.
 
 ### `from_dict()`
 
-`@classmethod from_dict(data: dict) -> Ops`
+```python
+@classmethod from_dict(data: dict) -> Ops
+```
 
 Create an Ops sequence from a dictionary.
 
@@ -602,7 +784,9 @@ Create an Ops sequence from a dictionary.
 
 ### `from_geometry()`
 
-`@classmethod from_geometry(geometry: geo.Geometry) -> Ops`
+```python
+@classmethod from_geometry(geometry: geo.Geometry) -> Ops
+```
 
 Create an Ops sequence from a Geometry.
 
@@ -614,7 +798,9 @@ Create an Ops sequence from a Geometry.
 
 ### `from_numpy_arrays()`
 
-`@classmethod from_numpy_arrays(arrays: dict) -> Ops`
+```python
+@classmethod from_numpy_arrays(arrays: dict) -> Ops
+```
 
 Create an Ops sequence from numpy arrays.
 
@@ -626,7 +812,9 @@ Create an Ops sequence from numpy arrays.
 
 ### `get_frame()`
 
-`get_frame(power: Optional[float] = None, speed: Optional[float] = None) -> Ops`
+```python
+get_frame(power: Optional[float] = None, speed: Optional[float] = None) -> Ops
+```
 
 Extract a frame (first and last endpoints) from the sequence.
 
@@ -641,7 +829,9 @@ Extract a frame (first and last endpoints) from the sequence.
 
 ### `group_by_state_continuity()`
 
-`group_by_state_continuity() -> list[Ops]`
+```python
+group_by_state_continuity() -> list[Ops]
+```
 
 Group contiguous commands with the same state into separate Ops sequences.
 
@@ -654,7 +844,9 @@ Group contiguous commands with the same state into separate Ops sequences.
 
 ### `indices_of()`
 
-`indices_of(ct: types.CommandType) -> list[int]`
+```python
+indices_of(ct: types.CommandType) -> list[int]
+```
 
 Return all indices where the command type matches _ct_.
 
@@ -668,7 +860,9 @@ Return all indices where the command type matches _ct_.
 
 ### `inspect()`
 
-`inspect(idx: int) -> CommandInfo`
+```python
+inspect(idx: int) -> CommandInfo
+```
 
 Return detailed information about a single command.
 
@@ -682,7 +876,9 @@ Return detailed information about a single command.
 
 ### `is_cutting()`
 
-`is_cutting(idx: int) -> bool`
+```python
+is_cutting(idx: int) -> bool
+```
 
 Check whether the command at _idx_ is a cutting move.
 
@@ -696,7 +892,9 @@ Check whether the command at _idx_ is a cutting move.
 
 ### `is_empty()`
 
-`is_empty() -> bool`
+```python
+is_empty() -> bool
+```
 
 Check if the ops sequence is empty.
 
@@ -707,7 +905,9 @@ Check if the ops sequence is empty.
 
 ### `is_marker()`
 
-`is_marker(idx: int) -> bool`
+```python
+is_marker(idx: int) -> bool
+```
 
 Check whether the command at _idx_ is a marker command.
 
@@ -721,7 +921,9 @@ Check whether the command at _idx_ is a marker command.
 
 ### `is_scanline()`
 
-`is_scanline(idx: int) -> bool`
+```python
+is_scanline(idx: int) -> bool
+```
 
 Check whether the command at _idx_ is a scanline command.
 
@@ -735,7 +937,9 @@ Check whether the command at _idx_ is a scanline command.
 
 ### `is_state()`
 
-`is_state(idx: int) -> bool`
+```python
+is_state(idx: int) -> bool
+```
 
 Check whether the command at _idx_ is a state command.
 
@@ -749,7 +953,9 @@ Check whether the command at _idx_ is a state command.
 
 ### `is_travel()`
 
-`is_travel(idx: int) -> bool`
+```python
+is_travel(idx: int) -> bool
+```
 
 Check whether the command at _idx_ is a travel (non-cutting) move.
 
@@ -763,7 +969,9 @@ Check whether the command at _idx_ is a travel (non-cutting) move.
 
 ### `job_end()`
 
-`job_end() -> None`
+```python
+job_end() -> None
+```
 
 Mark the end of a job.
 
@@ -774,7 +982,9 @@ Mark the end of a job.
 
 ### `job_start()`
 
-`job_start() -> None`
+```python
+job_start() -> None
+```
 
 Mark the start of a job.
 
@@ -785,7 +995,9 @@ Mark the start of a job.
 
 ### `laser_uid()`
 
-`laser_uid(idx: int) -> str`
+```python
+laser_uid(idx: int) -> str
+```
 
 Get the laser UID from a SetLaser command.
 
@@ -801,7 +1013,9 @@ Get the laser UID from a SetLaser command.
 
 ### `layer_end()`
 
-`layer_end(layer_uid: str) -> None`
+```python
+layer_end(layer_uid: str) -> None
+```
 
 Mark the end of a layer.
 
@@ -813,7 +1027,9 @@ Mark the end of a layer.
 
 ### `layer_start()`
 
-`layer_start(layer_uid: str) -> None`
+```python
+layer_start(layer_uid: str) -> None
+```
 
 Mark the start of a layer.
 
@@ -825,7 +1041,9 @@ Mark the start of a layer.
 
 ### `layer_uid()`
 
-`layer_uid(idx: int) -> str`
+```python
+layer_uid(idx: int) -> str
+```
 
 Get the layer UID from a LayerStart or LayerEnd command.
 
@@ -841,7 +1059,9 @@ Get the layer UID from a LayerStart or LayerEnd command.
 
 ### `len()`
 
-`len() -> int`
+```python
+len() -> int
+```
 
 Return the number of commands.
 
@@ -852,7 +1072,14 @@ Return the number of commands.
 
 ### `line_to()`
 
-`line_to(x: float, y: float, z: float = 0.0, extra: Optional[dict] = None) -> None`
+```python
+line_to(
+    x: float,
+    y: float,
+    z: float = 0.0,
+    extra: Optional[dict] = None,
+) -> None
+```
 
 Add a cutting line to the given coordinates.
 
@@ -867,7 +1094,9 @@ Add a cutting line to the given coordinates.
 
 ### `linearize()`
 
-`linearize(idx: int, start_point: tuple[float, float, float]) -> Ops`
+```python
+linearize(idx: int, start_point: tuple[float, float, float]) -> Ops
+```
 
 Decompose a curved command into linear segments.
 
@@ -884,7 +1113,9 @@ Decompose a curved command into linear segments.
 
 ### `linearize_all()`
 
-`linearize_all() -> None`
+```python
+linearize_all() -> None
+```
 
 Replace all curved commands with linear approximations in-place.
 
@@ -895,7 +1126,9 @@ Replace all curved commands with linear approximations in-place.
 
 ### `linearize_arcs()`
 
-`linearize_arcs() -> None`
+```python
+linearize_arcs() -> None
+```
 
 Replace only arc commands with linear approximations.
 
@@ -906,7 +1139,9 @@ Replace only arc commands with linear approximations.
 
 ### `linearize_curves()`
 
-`linearize_curves() -> None`
+```python
+linearize_curves() -> None
+```
 
 Replace only bezier and quadratic bezier curves with linear approximations.
 
@@ -917,7 +1152,9 @@ Replace only bezier and quadratic bezier curves with linear approximations.
 
 ### `merge_overlapping_lines()`
 
-`merge_overlapping_lines(tolerance: float) -> None`
+```python
+merge_overlapping_lines(tolerance: float) -> None
+```
 
 Merge overlapping line segments across all paths.
 
@@ -936,7 +1173,14 @@ _Line merging before and after_
 
 ### `move_to()`
 
-`move_to(x: float, y: float, z: float = 0.0, extra: Optional[dict] = None) -> None`
+```python
+move_to(
+    x: float,
+    y: float,
+    z: float = 0.0,
+    extra: Optional[dict] = None,
+) -> None
+```
 
 Add a rapid (non-cutting) move to the given coordinates.
 
@@ -951,7 +1195,9 @@ Add a rapid (non-cutting) move to the given coordinates.
 
 ### `ops_section_end()`
 
-`ops_section_end(section_type: types.SectionType) -> None`
+```python
+ops_section_end(section_type: types.SectionType) -> None
+```
 
 Mark the end of an ops section.
 
@@ -963,7 +1209,9 @@ Mark the end of an ops section.
 
 ### `ops_section_start()`
 
-`ops_section_start(section_type: types.SectionType, workpiece_uid: str) -> None`
+```python
+ops_section_start(section_type: types.SectionType, workpiece_uid: str) -> None
+```
 
 Mark the start of an ops section.
 
@@ -976,7 +1224,14 @@ Mark the start of an ops section.
 
 ### `optimize_travel()`
 
-`optimize_travel(allow_flip: bool = True, preserve_first: bool = False, preserve_order: Sequence[str] = [], progress_cb: Optional[Any] = None) -> None`
+```python
+optimize_travel(
+    allow_flip: bool = True,
+    preserve_first: bool = False,
+    preserve_order: Sequence[str] = [],
+    progress_cb: Optional[Any] = None,
+) -> None
+```
 
 Optimize travel distance by reordering segments.
 
@@ -998,7 +1253,9 @@ _Travel path before and after optimization_
 
 ### `power()`
 
-`power(idx: int) -> float`
+```python
+power(idx: int) -> float
+```
 
 Get the power level of a SetPower command.
 
@@ -1014,7 +1271,9 @@ Get the power level of a SetPower command.
 
 ### `preload_state()`
 
-`preload_state() -> None`
+```python
+preload_state() -> None
+```
 
 Pre-compute and store the accumulated state at each moving command.
 
@@ -1025,7 +1284,9 @@ Pre-compute and store the accumulated state at each moving command.
 
 ### `pulse_width()`
 
-`pulse_width(idx: int) -> float`
+```python
+pulse_width(idx: int) -> float
+```
 
 Get the pulse width of a SetPulseWidth command.
 
@@ -1041,7 +1302,9 @@ Get the pulse width of a SetPulseWidth command.
 
 ### `quadratic_bezier_params()`
 
-`quadratic_bezier_params(idx: int) -> tuple[float, float, float]`
+```python
+quadratic_bezier_params(idx: int) -> tuple[float, float, float]
+```
 
 Get the quadratic bezier control point.
 
@@ -1057,7 +1320,13 @@ Get the quadratic bezier control point.
 
 ### `quadratic_bezier_to()`
 
-`quadratic_bezier_to(control: tuple[float, float, float], end: tuple[float, float, float], extra: Optional[dict] = None) -> None`
+```python
+quadratic_bezier_to(
+    control: tuple[float, float, float],
+    end: tuple[float, float, float],
+    extra: Optional[dict] = None,
+) -> None
+```
 
 Add a quadratic bezier curve to the given endpoint.
 
@@ -1071,7 +1340,9 @@ Add a quadratic bezier curve to the given endpoint.
 
 ### `rect()`
 
-`rect(include_travel: bool = False) -> tuple[float, float, float, float]`
+```python
+rect(include_travel: bool = False) -> tuple[float, float, float, float]
+```
 
 Compute the bounding rectangle of all commands.
 
@@ -1085,7 +1356,9 @@ Compute the bounding rectangle of all commands.
 
 ### `replace_all()`
 
-`replace_all(source: Ops) -> None`
+```python
+replace_all(source: Ops) -> None
+```
 
 Replace all commands in this sequence with those from another.
 
@@ -1097,7 +1370,9 @@ Replace all commands in this sequence with those from another.
 
 ### `replace_with()`
 
-`replace_with(source: Ops) -> None`
+```python
+replace_with(source: Ops) -> None
+```
 
 Replace the internal buffer of this sequence with a copy from another.
 
@@ -1109,7 +1384,9 @@ Replace the internal buffer of this sequence with a copy from another.
 
 ### `rotate()`
 
-`rotate(angle_deg: float, cx: float, cy: float) -> None`
+```python
+rotate(angle_deg: float, cx: float, cy: float) -> None
+```
 
 Rotate all coordinates around a pivot point.
 
@@ -1123,7 +1400,9 @@ Rotate all coordinates around a pivot point.
 
 ### `scale()`
 
-`scale(sx: float, sy: float, sz: float = 1.0) -> None`
+```python
+scale(sx: float, sy: float, sz: float = 1.0) -> None
+```
 
 Scale all coordinates by the given factors.
 
@@ -1137,7 +1416,15 @@ Scale all coordinates by the given factors.
 
 ### `scan_to()`
 
-`scan_to(x: float, y: float, z: float = 0.0, power_values: Optional[Sequence[int]] = None, extra: Optional[dict] = None) -> None`
+```python
+scan_to(
+    x: float,
+    y: float,
+    z: float = 0.0,
+    power_values: Optional[Sequence[int]] = None,
+    extra: Optional[dict] = None,
+) -> None
+```
 
 Add a scan-line move with per-pixel power values.
 
@@ -1153,7 +1440,9 @@ Add a scan-line move with per-pixel power values.
 
 ### `scanline_data()`
 
-`scanline_data(idx: int) -> bytes`
+```python
+scanline_data(idx: int) -> bytes
+```
 
 Get the raw scanline power data for a scanline command.
 
@@ -1167,7 +1456,9 @@ Get the raw scanline power data for a scanline command.
 
 ### `section_params()`
 
-`section_params(idx: int) -> tuple[types.SectionType, Optional[str]]`
+```python
+section_params(idx: int) -> tuple[types.SectionType, Optional[str]]
+```
 
 Get the section type and optional workpiece UID from an OpsSection command.
 
@@ -1183,7 +1474,9 @@ Get the section type and optional workpiece UID from an OpsSection command.
 
 ### `section_ranges()`
 
-`section_ranges() -> list[OpsSectionRange]`
+```python
+section_ranges() -> list[OpsSectionRange]
+```
 
 Return the section ranges of the ops as index ranges.
 
@@ -1198,7 +1491,9 @@ Similar to **sections** but returns contiguous index ranges instead of individua
 
 ### `sections()`
 
-`sections() -> list[OpsSection]`
+```python
+sections() -> list[OpsSection]
+```
 
 Return the logical sections of the ops.
 
@@ -1214,7 +1509,9 @@ vector-outline and raster-fill portions.
 
 ### `segment_indices()`
 
-`segment_indices() -> list[list[int]]`
+```python
+segment_indices() -> list[list[int]]
+```
 
 Return index ranges for each contiguous cutting segment.
 
@@ -1227,7 +1524,9 @@ Return index ranges for each contiguous cutting segment.
 
 ### `set_cut_speed()`
 
-`set_cut_speed(speed: float) -> None`
+```python
+set_cut_speed(speed: float) -> None
+```
 
 Set the cutting speed for subsequent commands.
 
@@ -1239,7 +1538,9 @@ Set the cutting speed for subsequent commands.
 
 ### `set_frequency()`
 
-`set_frequency(frequency: int) -> None`
+```python
+set_frequency(frequency: int) -> None
+```
 
 Set the laser pulse frequency.
 
@@ -1251,7 +1552,9 @@ Set the laser pulse frequency.
 
 ### `set_laser()`
 
-`set_laser(laser_uid: str) -> None`
+```python
+set_laser(laser_uid: str) -> None
+```
 
 Switch to a specific laser by UID.
 
@@ -1263,7 +1566,9 @@ Switch to a specific laser by UID.
 
 ### `set_power()`
 
-`set_power(power: float) -> None`
+```python
+set_power(power: float) -> None
+```
 
 Set the laser power for subsequent commands.
 
@@ -1275,7 +1580,9 @@ Set the laser power for subsequent commands.
 
 ### `set_pulse_width()`
 
-`set_pulse_width(pulse_width: float) -> None`
+```python
+set_pulse_width(pulse_width: float) -> None
+```
 
 Set the laser pulse width.
 
@@ -1287,7 +1594,9 @@ Set the laser pulse width.
 
 ### `set_state_at()`
 
-`set_state_at(idx: int, state: state.State) -> None`
+```python
+set_state_at(idx: int, state: state.State) -> None
+```
 
 Overwrite the state at a specific command index.
 
@@ -1300,7 +1609,9 @@ Overwrite the state at a specific command index.
 
 ### `set_state_on_moving()`
 
-`set_state_on_moving(state: state.State) -> None`
+```python
+set_state_on_moving(state: state.State) -> None
+```
 
 Apply a state to all moving commands without an explicit state.
 
@@ -1312,7 +1623,9 @@ Apply a state to all moving commands without an explicit state.
 
 ### `set_travel_speed()`
 
-`set_travel_speed(speed: float) -> None`
+```python
+set_travel_speed(speed: float) -> None
+```
 
 Set the travel (rapid) speed for subsequent commands.
 
@@ -1324,7 +1637,9 @@ Set the travel (rapid) speed for subsequent commands.
 
 ### `speed()`
 
-`speed(idx: int) -> int`
+```python
+speed(idx: int) -> int
+```
 
 Get the speed value from a SetCutSpeed or SetTravelSpeed command.
 
@@ -1340,7 +1655,9 @@ Get the speed value from a SetCutSpeed or SetTravelSpeed command.
 
 ### `split_into_subpaths()`
 
-`split_into_subpaths() -> list[Ops]`
+```python
+split_into_subpaths() -> list[Ops]
+```
 
 Split this Ops sequence into separate subpaths.
 
@@ -1353,7 +1670,9 @@ Split this Ops sequence into separate subpaths.
 
 ### `state()`
 
-`state(idx: int) -> Optional[state.State]`
+```python
+state(idx: int) -> Optional[state.State]
+```
 
 Get the machine state stored on a command (if available).
 
@@ -1367,7 +1686,9 @@ Get the machine state stored on a command (if available).
 
 ### `state_at()`
 
-`state_at(idx: int) -> state.State`
+```python
+state_at(idx: int) -> state.State
+```
 
 Return the accumulated state at a given command index.
 
@@ -1383,7 +1704,9 @@ Return the accumulated state at a given command index.
 
 ### `sub_ops()`
 
-`sub_ops(indices: Sequence[int]) -> Ops`
+```python
+sub_ops(indices: Sequence[int]) -> Ops
+```
 
 Extract a subset of commands by index.
 
@@ -1397,7 +1720,9 @@ Extract a subset of commands by index.
 
 ### `subpath_indices()`
 
-`subpath_indices() -> list[list[int]]`
+```python
+subpath_indices() -> list[list[int]]
+```
 
 Return index ranges for each subpath.
 
@@ -1410,7 +1735,9 @@ Return index ranges for each subpath.
 
 ### `subtract_regions()`
 
-`subtract_regions(regions: Sequence[Sequence[tuple[float, float]]]) -> None`
+```python
+subtract_regions(regions: Sequence[Sequence[tuple[float, float]]]) -> None
+```
 
 Subtract polygonal regions from the cutting paths.
 
@@ -1422,7 +1749,9 @@ Subtract polygonal regions from the cutting paths.
 
 ### `to_dict()`
 
-`to_dict() -> dict`
+```python
+to_dict() -> dict
+```
 
 Serialize this Ops sequence to a dict suitable for JSON export.
 
@@ -1435,7 +1764,9 @@ Serialize this Ops sequence to a dict suitable for JSON export.
 
 ### `to_geometry()`
 
-`to_geometry() -> geo.Geometry`
+```python
+to_geometry() -> geo.Geometry
+```
 
 Convert this Ops sequence back into a Geometry.
 
@@ -1448,7 +1779,9 @@ Convert this Ops sequence back into a Geometry.
 
 ### `to_numpy_arrays()`
 
-`to_numpy_arrays() -> dict`
+```python
+to_numpy_arrays() -> dict
+```
 
 Serialize this Ops sequence to numpy arrays.
 
@@ -1461,7 +1794,9 @@ Serialize this Ops sequence to numpy arrays.
 
 ### `transfer_command_from()`
 
-`transfer_command_from(source: Ops, idx: int) -> None`
+```python
+transfer_command_from(source: Ops, idx: int) -> None
+```
 
 Transfer (move) a single command from another Ops sequence into this one.
 
@@ -1474,7 +1809,9 @@ Transfer (move) a single command from another Ops sequence into this one.
 
 ### `transform()`
 
-`transform(matrix: geo.types.TransformMatrix) -> None`
+```python
+transform(matrix: geo.types.TransformMatrix) -> None
+```
 
 Apply a 4x4 affine transformation matrix to all geometry.
 
@@ -1488,7 +1825,9 @@ See `geo.types.TransformMatrix` for the matrix layout.
 
 ### `transform_layers()`
 
-`transform_layers(callback: Any) -> None`
+```python
+transform_layers(callback: Any) -> None
+```
 
 Transform each layer by calling a Python callback with the layer UID and ops.
 
@@ -1502,7 +1841,9 @@ The callback receives `(layer_uid: str, layer_ops: Ops)` and should mutate the l
 
 ### `transform_moving()`
 
-`transform_moving(on_endpoint: Any, on_aux_point: Optional[Any] = None) -> None`
+```python
+transform_moving(on_endpoint: Any, on_aux_point: Optional[Any] = None) -> None
+```
 
 Transform moving commands by calling Python callbacks on each endpoint and aux point.
 
@@ -1518,7 +1859,9 @@ in-place. The optional `on_aux_point` callback receives control points for curve
 
 ### `translate()`
 
-`translate(dx: float, dy: float, dz: float = 0.0) -> None`
+```python
+translate(dx: float, dy: float, dz: float = 0.0) -> None
+```
 
 Translate all moving commands by the given offset.
 
@@ -1532,7 +1875,12 @@ Translate all moving commands by the given offset.
 
 ### `translate_layers()`
 
-`translate_layers(default_offset: tuple[float, float, float], layer_offsets: Optional[dict] = None) -> None`
+```python
+translate_layers(
+    default_offset: tuple[float, float, float],
+    layer_offsets: Optional[dict] = None,
+) -> None
+```
 
 Translate each layer by its own offset, with a default fallback.
 
@@ -1545,7 +1893,9 @@ Translate each layer by its own offset, with a default fallback.
 
 ### `without_state()`
 
-`without_state() -> Ops`
+```python
+without_state() -> Ops
+```
 
 Return a copy with all state commands removed.
 
@@ -1558,7 +1908,9 @@ Return a copy with all state commands removed.
 
 ### `workpiece_end()`
 
-`workpiece_end(workpiece_uid: str) -> None`
+```python
+workpiece_end(workpiece_uid: str) -> None
+```
 
 Mark the end of a workpiece.
 
@@ -1570,7 +1922,9 @@ Mark the end of a workpiece.
 
 ### `workpiece_start()`
 
-`workpiece_start(workpiece_uid: str) -> None`
+```python
+workpiece_start(workpiece_uid: str) -> None
+```
 
 Mark the start of a workpiece.
 
@@ -1582,7 +1936,9 @@ Mark the start of a workpiece.
 
 ### `workpiece_uid()`
 
-`workpiece_uid(idx: int) -> str`
+```python
+workpiece_uid(idx: int) -> str
+```
 
 Get the workpiece UID from a WorkpieceStart or WorkpieceEnd command.
 
@@ -1605,19 +1961,25 @@ Produced by **Ops.sections** when splitting an Ops sequence into logical section
 
 ### `content_indices`
 
-`content_indices: list[int]`
+```python
+content_indices: list[int]
+```
 
 Indices of the content commands belonging to this section.
 
 ### `marker_indices`
 
-`marker_indices: list[int]`
+```python
+marker_indices: list[int]
+```
 
 Indices of the section-marker commands (start/end) for this section.
 
 ### `section_type`
 
-`section_type: Optional[types.SectionType]`
+```python
+section_type: Optional[types.SectionType]
+```
 
 The type of this section (VectorOutline or RasterFill), if any.
 
@@ -1630,18 +1992,24 @@ Produced by **Ops.section_ranges**.
 
 ### `content_indices`
 
-`content_indices: list[int]`
+```python
+content_indices: list[int]
+```
 
 Starting index of the content within this section range.
 
 ### `marker_indices`
 
-`marker_indices: list[int]`
+```python
+marker_indices: list[int]
+```
 
 Indices of the section-marker commands that bracket this range.
 
 ### `section_type`
 
-`section_type: Optional[types.SectionType]`
+```python
+section_type: Optional[types.SectionType]
+```
 
 The type of this section range (VectorOutline or RasterFill), if any.

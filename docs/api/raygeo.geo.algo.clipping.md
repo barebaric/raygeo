@@ -13,19 +13,25 @@ converting between float and Clipper integer coordinate systems.
 
 ### `clip_line_segment_with_polygons()`
 
-`clip_line_segment_with_polygons(p1: types.Point3D, p2: types.Point3D, regions: collections.abc.Sequence[collections.abc.Sequence[types.Point]]) -> list[tuple[types.Point3D, types.Point3D]]`
+```python
+clip_line_segment_with_polygons(
+    p1: types.Point3D,
+    p2: types.Point3D,
+    regions: Sequence[Sequence[types.Point]],
+) -> list[tuple[types.Point3D, types.Point3D]]
+```
 
 Clip line segments that fall within polygon regions.
 
 **Returns:** List of clipped segments.
 
-| Parameter    | Type                                                              | Description                                                                                  |
-| ------------ | ----------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
-| `p1`         | `types.Point3D`                                                   | Start point of the line segment.                                                             |
-| `p2`         | `types.Point3D`                                                   | End point of the line segment.                                                               |
-| `regions`    | `collections.abc.Sequence[collections.abc.Sequence[types.Point]]` | Polygon regions to clip against.                                                             |
-| _Returns_    | `list[tuple[types.Point3D, types.Point3D]]`                       |                                                                                              |
-| _Complexity_ |                                                                   | O(n \* m) time, O(n) space where n is the number of regions and m their average vertex count |
+| Parameter    | Type                                        | Description                                                                                  |
+| ------------ | ------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| `p1`         | `types.Point3D`                             | Start point of the line segment.                                                             |
+| `p2`         | `types.Point3D`                             | End point of the line segment.                                                               |
+| `regions`    | `Sequence[Sequence[types.Point]]`           | Polygon regions to clip against.                                                             |
+| _Returns_    | `list[tuple[types.Point3D, types.Point3D]]` |                                                                                              |
+| _Complexity_ |                                             | O(n \* m) time, O(n) space where n is the number of regions and m their average vertex count |
 
 ![Line clipped to polygon](images/clipping-polygon.png)
 
@@ -33,7 +39,13 @@ _Line clipped to polygon_
 
 ### `clip_line_segment_with_rect()`
 
-`clip_line_segment_with_rect(p1: types.Point3D, p2: types.Point3D, rect: types.Rect) -> Optional[tuple[types.Point3D, types.Point3D]]`
+```python
+clip_line_segment_with_rect(
+    p1: types.Point3D,
+    p2: types.Point3D,
+    rect: types.Rect,
+) -> Optional[tuple[types.Point3D, types.Point3D]]
+```
 
 Clip a line segment with a rectangle.
 
@@ -53,7 +65,9 @@ _Line clipped to rectangle_
 
 ### `from_clipper()`
 
-`from_clipper(polygon: list[tuple[int, int]]) -> list[tuple[float, float]]`
+```python
+from_clipper(polygon: list[tuple[int, int]]) -> list[tuple[float, float]]
+```
 
 Convert a polygon from Clipper coordinates.
 
@@ -67,19 +81,25 @@ Convert a polygon from Clipper coordinates.
 
 ### `subtract_polygons_from_line_segment()`
 
-`subtract_polygons_from_line_segment(p1: types.Point3D, p2: types.Point3D, regions: collections.abc.Sequence[collections.abc.Sequence[types.Point]]) -> list[tuple[types.Point3D, types.Point3D]]`
+```python
+subtract_polygons_from_line_segment(
+    p1: types.Point3D,
+    p2: types.Point3D,
+    regions: Sequence[Sequence[types.Point]],
+) -> list[tuple[types.Point3D, types.Point3D]]
+```
 
 Subtract polygon regions from a line segment.
 
 **Returns:** List of remaining segments after subtraction.
 
-| Parameter    | Type                                                              | Description                                                                                  |
-| ------------ | ----------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
-| `p1`         | `types.Point3D`                                                   | Start point of the line segment.                                                             |
-| `p2`         | `types.Point3D`                                                   | End point of the line segment.                                                               |
-| `regions`    | `collections.abc.Sequence[collections.abc.Sequence[types.Point]]` | List of polygon regions to subtract.                                                         |
-| _Returns_    | `list[tuple[types.Point3D, types.Point3D]]`                       |                                                                                              |
-| _Complexity_ |                                                                   | O(n \* m) time, O(n) space where n is the number of regions and m their average vertex count |
+| Parameter    | Type                                        | Description                                                                                  |
+| ------------ | ------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| `p1`         | `types.Point3D`                             | Start point of the line segment.                                                             |
+| `p2`         | `types.Point3D`                             | End point of the line segment.                                                               |
+| `regions`    | `Sequence[Sequence[types.Point]]`           | List of polygon regions to subtract.                                                         |
+| _Returns_    | `list[tuple[types.Point3D, types.Point3D]]` |                                                                                              |
+| _Complexity_ |                                             | O(n \* m) time, O(n) space where n is the number of regions and m their average vertex count |
 
 ![Subtract polygon from line](images/clipping-subtract.png)
 
@@ -87,7 +107,9 @@ _Subtract polygon from line_
 
 ### `to_clipper()`
 
-`to_clipper(polygon: types.Polygon) -> list[tuple[int, int]]`
+```python
+to_clipper(polygon: types.Polygon) -> list[tuple[int, int]]
+```
 
 Convert a polygon to Clipper coordinates.
 

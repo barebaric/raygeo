@@ -14,7 +14,9 @@ geometries.
 
 ### `do_rects_intersect()`
 
-`do_rects_intersect(r1: types.Rect, r2: types.Rect) -> bool`
+```python
+do_rects_intersect(r1: types.Rect, r2: types.Rect) -> bool
+```
 
 Check if two rectangles intersect.
 
@@ -29,7 +31,9 @@ Check if two rectangles intersect.
 
 ### `does_rect_contain_rect()`
 
-`does_rect_contain_rect(outer: types.Rect, inner: types.Rect) -> bool`
+```python
+does_rect_contain_rect(outer: types.Rect, inner: types.Rect) -> bool
+```
 
 Check if one rectangle contains another.
 
@@ -44,7 +48,9 @@ Check if one rectangle contains another.
 
 ### `does_rect_intersect_rect()`
 
-`does_rect_intersect_rect(r1: types.Rect, r2: types.Rect) -> bool`
+```python
+does_rect_intersect_rect(r1: types.Rect, r2: types.Rect) -> bool
+```
 
 Check if two rectangles intersect.
 
@@ -59,7 +65,9 @@ Check if two rectangles intersect.
 
 ### `get_combined_rect()`
 
-`get_combined_rect(geometries: list[Geometry]) -> types.Rect`
+```python
+get_combined_rect(geometries: list[Geometry]) -> types.Rect
+```
 
 Compute the union bounding box of multiple geometries.
 
@@ -73,7 +81,9 @@ Compute the union bounding box of multiple geometries.
 
 ### `is_point_inside_rect()`
 
-`is_point_inside_rect(point: types.Point, rect: types.Rect) -> bool`
+```python
+is_point_inside_rect(point: types.Point, rect: types.Rect) -> bool
+```
 
 Check if a point is inside a rectangle.
 

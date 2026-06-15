@@ -19,55 +19,73 @@ Tracks power level, air assist, cut/travel speeds, active laser UID, frequency, 
 
 ### `active_laser_uid`
 
-`active_laser_uid: Optional[str]`
+```python
+active_laser_uid: Optional[str]
+```
 
 UID of the active laser source (if set).
 
 ### `air_assist`
 
-`air_assist: bool`
+```python
+air_assist: bool
+```
 
 Whether air assist is enabled.
 
 ### `cut_speed`
 
-`cut_speed: Optional[int]`
+```python
+cut_speed: Optional[int]
+```
 
 Cutting speed in mm/s (if set).
 
 ### `dwell_ms`
 
-`dwell_ms: Optional[float]`
+```python
+dwell_ms: Optional[float]
+```
 
 Dwell time in milliseconds (if set).
 
 ### `frequency`
 
-`frequency: Optional[int]`
+```python
+frequency: Optional[int]
+```
 
 Laser pulse frequency in Hz (if set).
 
 ### `power`
 
-`power: float`
+```python
+power: float
+```
 
 Laser power level (0.0 – 1.0 typically).
 
 ### `pulse_width`
 
-`pulse_width: Optional[float]`
+```python
+pulse_width: Optional[float]
+```
 
 Laser pulse width in microseconds (if set).
 
 ### `travel_speed`
 
-`travel_speed: Optional[int]`
+```python
+travel_speed: Optional[int]
+```
 
 Travel (rapid) speed in mm/s (if set).
 
 ### `allow_rapid_change()`
 
-`allow_rapid_change(target: State) -> bool`
+```python
+allow_rapid_change(target: State) -> bool
+```
 
 Check whether the machine can transition from the current state to the _target_ state without a
 `SetPower` command.

@@ -13,7 +13,12 @@ and Bézier gravity attraction. Coordinates are returned in image pixel space (y
 
 ### `get_concave_hull()`
 
-`get_concave_hull(boolean_image: numpy.ndarray, gravity: float = 0.1) -> Geometry | None`
+```python
+get_concave_hull(
+    boolean_image: numpy.ndarray,
+    gravity: float = 0.1,
+) -> Geometry | None
+```
 
 Compute a concave (shrink-wrap) hull with Bézier gravity.
 
@@ -32,7 +37,9 @@ _Concave vs convex hull_
 
 ### `get_enclosing_hull()`
 
-`get_enclosing_hull(boolean_image: numpy.ndarray) -> Geometry | None`
+```python
+get_enclosing_hull(boolean_image: numpy.ndarray) -> Geometry | None
+```
 
 Compute a single convex hull enclosing all content.
 
@@ -46,7 +53,9 @@ Compute a single convex hull enclosing all content.
 
 ### `get_hulls_from_image()`
 
-`get_hulls_from_image(boolean_image: numpy.ndarray) -> list[Geometry]`
+```python
+get_hulls_from_image(boolean_image: numpy.ndarray) -> list[Geometry]
+```
 
 Compute a separate convex hull for each distinct component.
 

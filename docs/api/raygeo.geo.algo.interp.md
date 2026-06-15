@@ -11,7 +11,12 @@ slicing along 3D line segments.
 
 ### `compute_segment_delta()`
 
-`compute_segment_delta(start: tuple[float, float, float], end: tuple[float, float, float]) -> tuple[float, float, float, float]`
+```python
+compute_segment_delta(
+    start: tuple[float, float, float],
+    end: tuple[float, float, float],
+) -> tuple[float, float, float, float]
+```
 
 Compute delta vector and squared length between two 3D points.
 
@@ -26,7 +31,14 @@ Compute delta vector and squared length between two 3D points.
 
 ### `compute_t_range()`
 
-`compute_t_range(origin: tuple[float, float, float], new_start: tuple[float, float, float], new_end: tuple[float, float, float], delta: tuple[float, float, float, float]) -> tuple[float, float]`
+```python
+compute_t_range(
+    origin: tuple[float, float, float],
+    new_start: tuple[float, float, float],
+    new_end: tuple[float, float, float],
+    delta: tuple[float, float, float, float],
+) -> tuple[float, float]
+```
 
 Compute parameter range (t_start, t_end) for a clipped sub-segment.
 
@@ -43,7 +55,13 @@ Compute parameter range (t_start, t_end) for a clipped sub-segment.
 
 ### `project_t_along_segment()`
 
-`project_t_along_segment(origin: tuple[float, float, float], point: tuple[float, float, float], delta: tuple[float, float, float, float]) -> float`
+```python
+project_t_along_segment(
+    origin: tuple[float, float, float],
+    point: tuple[float, float, float],
+    delta: tuple[float, float, float, float],
+) -> float
+```
 
 Project a point onto a line segment, returning t in [0, 1].
 
@@ -59,7 +77,9 @@ Project a point onto a line segment, returning t in [0, 1].
 
 ### `slice_scanline_data()`
 
-`slice_scanline_data(data: list[int], t_start: float, t_end: float) -> list[int]`
+```python
+slice_scanline_data(data: list[int], t_start: float, t_end: float) -> list[int]
+```
 
 Slice a scanline power array by parameter range [t_start, t_end).
 
@@ -75,7 +95,13 @@ Slice a scanline power array by parameter range [t_start, t_end).
 
 ### `solve_quadratic()`
 
-`solve_quadratic(a: float, b: float, c: float) -> tuple[float | None, float | None]`
+```python
+solve_quadratic(
+    a: float,
+    b: float,
+    c: float,
+) -> tuple[float | None, float | None]
+```
 
 Solve quadratic equation a x^2 + b x + c = 0.
 
