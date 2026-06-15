@@ -357,13 +357,11 @@ filter(indices: set[int]) -> Geometry
 
 Return a new Geometry containing only commands at the given indices.
 
-**Returns:** A new Geometry with the filtered commands.
-
-| Parameter    | Type       | Description                     |
-| ------------ | ---------- | ------------------------------- |
-| `indices`    | `set[int]` | Set of command indices to keep. |
-| _Returns_    | `Geometry` |                                 |
-| _Complexity_ |            | O(n) time, O(n) space           |
+| Parameter    | Type       | Description                                |
+| ------------ | ---------- | ------------------------------------------ |
+| `indices`    | `set[int]` | Set of command indices to keep.            |
+| _Returns_    | `Geometry` | A new Geometry with the filtered commands. |
+| _Complexity_ |            | O(n) time, O(n) space                      |
 
 ### `filter_to_external_contours()`
 
@@ -389,14 +387,12 @@ find_closest_point(
 
 Find the closest point on the path to (x, y).
 
-**Returns:** Tuple of (segment_index, t, point) or None.
-
-| Parameter    | Type                                               | Description           |
-| ------------ | -------------------------------------------------- | --------------------- |
-| `x`          | `float`                                            | X coordinate.         |
-| `y`          | `float`                                            | Y coordinate.         |
-| _Returns_    | `Optional[tuple[int, float, tuple[float, float]]]` |                       |
-| _Complexity_ |                                                    | O(n) time, O(1) space |
+| Parameter    | Type                                               | Description                                 |
+| ------------ | -------------------------------------------------- | ------------------------------------------- |
+| `x`          | `float`                                            | X coordinate.                               |
+| `y`          | `float`                                            | Y coordinate.                               |
+| _Returns_    | `Optional[tuple[int, float, tuple[float, float]]]` | Tuple of (segment_index, t, point) or None. |
+| _Complexity_ |                                                    | O(n) time, O(1) space                       |
 
 ### `fit_arcs()`
 
@@ -527,14 +523,12 @@ get_outward_normal_at(
 
 Get the outward normal at parameter t on a segment.
 
-**Returns:** Normal vector or None.
-
-| Parameter       | Type                            | Description           |
-| --------------- | ------------------------------- | --------------------- |
-| `segment_index` | `int`                           | Index of the segment. |
-| `t`             | `float`                         | Parameter in [0, 1].  |
-| _Returns_       | `Optional[tuple[float, float]]` |                       |
-| _Complexity_    |                                 | O(1) time, O(1) space |
+| Parameter       | Type                            | Description            |
+| --------------- | ------------------------------- | ---------------------- |
+| `segment_index` | `int`                           | Index of the segment.  |
+| `t`             | `float`                         | Parameter in [0, 1].   |
+| _Returns_       | `Optional[tuple[float, float]]` | Normal vector or None. |
+| _Complexity_    |                                 | O(1) time, O(1) space  |
 
 ### `get_point_at()`
 
@@ -547,13 +541,11 @@ get_point_at(
 
 Get the point at parameter t on a segment.
 
-**Returns:** The 3D point or None.
-
 | Parameter       | Type                                   | Description           |
 | --------------- | -------------------------------------- | --------------------- |
 | `segment_index` | `int`                                  | Index of the segment. |
 | `t`             | `float`                                | Parameter in [0, 1].  |
-| _Returns_       | `Optional[tuple[float, float, float]]` |                       |
+| _Returns_       | `Optional[tuple[float, float, float]]` | The 3D point or None. |
 | _Complexity_    |                                        | O(1) time, O(1) space |
 
 ### `get_positions_at_distances()`
@@ -569,12 +561,10 @@ each distance.
 
 Distances are clamped to [0, total_length].
 
-**Returns:** List of (segment_index, t, (x, y)) tuples.
-
 | Parameter    | Type                                           | Description                                                                               |
 | ------------ | ---------------------------------------------- | ----------------------------------------------------------------------------------------- |
 | `distances`  | `Sequence[float]`                              | List of distances along the path.                                                         |
-| _Returns_    | `list[tuple[int, float, tuple[float, float]]]` |                                                                                           |
+| _Returns_    | `list[tuple[int, float, tuple[float, float]]]` | List of (segment_index, t, (x, y)) tuples.                                                |
 | _Complexity_ |                                                | O(n + m) time, O(m) space where n is the number of segments and m the number of distances |
 
 ### `get_tangent_at()`
@@ -585,14 +575,12 @@ get_tangent_at(segment_index: int, t: float) -> Optional[tuple[float, float]]
 
 Get the tangent vector at parameter t on a segment.
 
-**Returns:** The normalized tangent vector or None.
-
-| Parameter       | Type                            | Description           |
-| --------------- | ------------------------------- | --------------------- |
-| `segment_index` | `int`                           | Index of the segment. |
-| `t`             | `float`                         | Parameter in [0, 1].  |
-| _Returns_       | `Optional[tuple[float, float]]` |                       |
-| _Complexity_    |                                 | O(1) time, O(1) space |
+| Parameter       | Type                            | Description                            |
+| --------------- | ------------------------------- | -------------------------------------- |
+| `segment_index` | `int`                           | Index of the segment.                  |
+| `t`             | `float`                         | Parameter in [0, 1].                   |
+| _Returns_       | `Optional[tuple[float, float]]` | The normalized tangent vector or None. |
+| _Complexity_    |                                 | O(1) time, O(1) space                  |
 
 ### `get_typed_command_at()`
 
@@ -616,12 +604,10 @@ get_valid_contours_data() -> list[dict]
 
 Get valid contour data from the geometry's contours.
 
-**Returns:** List of dicts with keys "geo", "vertices", "is_closed", "original_index".
-
-| Parameter    | Type         | Description           |
-| ------------ | ------------ | --------------------- |
-| _Returns_    | `list[dict]` |                       |
-| _Complexity_ |              | O(n) time, O(n) space |
+| Parameter    | Type         | Description                                                               |
+| ------------ | ------------ | ------------------------------------------------------------------------- |
+| _Returns_    | `list[dict]` | List of dicts with keys "geo", "vertices", "is_closed", "original_index". |
+| _Complexity_ |              | O(n) time, O(n) space                                                     |
 
 ### `grow()`
 
@@ -853,13 +839,11 @@ segment_bounds(index: int) -> Optional[tuple[float, float, float, float]]
 Return the bounding box of a single segment at the given index. Returns None for Move commands or if
 the index is out of bounds.
 
-**Returns:** (x_min, y_min, x_max, y_max) or None.
-
-| Parameter    | Type                                          | Description           |
-| ------------ | --------------------------------------------- | --------------------- |
-| `index`      | `int`                                         | Segment index.        |
-| _Returns_    | `Optional[tuple[float, float, float, float]]` |                       |
-| _Complexity_ |                                               | O(1) time, O(1) space |
+| Parameter    | Type                                          | Description                           |
+| ------------ | --------------------------------------------- | ------------------------------------- |
+| `index`      | `int`                                         | Segment index.                        |
+| _Returns_    | `Optional[tuple[float, float, float, float]]` | (x_min, y_min, x_max, y_max) or None. |
+| _Complexity_ |                                               | O(1) time, O(1) space                 |
 
 ### `segments()`
 
@@ -883,16 +867,14 @@ segments_in_frame(x1: float, y1: float, x2: float, y2: float) -> list[int]
 Return indices of all segments whose bounding box intersects the given rectangle. Excludes Move
 commands.
 
-**Returns:** List of segment indices.
-
-| Parameter    | Type        | Description           |
-| ------------ | ----------- | --------------------- |
-| `x1`         | `float`     | First corner X.       |
-| `y1`         | `float`     | First corner Y.       |
-| `x2`         | `float`     | Second corner X.      |
-| `y2`         | `float`     | Second corner Y.      |
-| _Returns_    | `list[int]` |                       |
-| _Complexity_ |             | O(n) time, O(n) space |
+| Parameter    | Type        | Description              |
+| ------------ | ----------- | ------------------------ |
+| `x1`         | `float`     | First corner X.          |
+| `y1`         | `float`     | First corner Y.          |
+| `x2`         | `float`     | Second corner X.         |
+| `y2`         | `float`     | Second corner Y.         |
+| _Returns_    | `list[int]` | List of segment indices. |
+| _Complexity_ |             | O(n) time, O(n) space    |
 
 ### `simplify()`
 
@@ -984,12 +966,10 @@ Apply a 4x4 affine transformation matrix.
 
 See `raygeo.geo.types.TransformMatrix` for the matrix layout.
 
-**Returns:** A new transformed Geometry.
-
 | Parameter    | Type                    | Description                         |
 | ------------ | ----------------------- | ----------------------------------- |
 | `matrix`     | `types.TransformMatrix` | A 4x4 affine transformation matrix. |
-| _Returns_    | `Geometry`              |                                     |
+| _Returns_    | `Geometry`              | A new transformed Geometry.         |
 | _Complexity_ |                         | O(n) time, O(n) space               |
 
 ### `upgrade_to_scalable()`

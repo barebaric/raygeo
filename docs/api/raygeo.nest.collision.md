@@ -23,14 +23,12 @@ any_overlap(
 
 Check if a candidate polygon overlaps any placed polygon.
 
-**Returns:** True if any overlap detected.
-
 | Parameter    | Type                      | Description                                                          |
 | ------------ | ------------------------- | -------------------------------------------------------------------- |
 | `candidate`  | `types.Polygon`           | Candidate polygon.                                                   |
 | `placed`     | `Sequence[types.Polygon]` | List of already-placed polygons.                                     |
 | `min_area`   | `float = 1`               | Minimum overlap area to consider (in clipper coords).                |
-| _Returns_    | `bool`                    |                                                                      |
+| _Returns_    | `bool`                    | True if any overlap detected.                                        |
 | _Complexity_ |                           | O(n \* m) where n = candidate vertices, m = placed polygon vertices. |
 
 ### `any_overlap_hierarchical()`
@@ -47,8 +45,6 @@ any_overlap_hierarchical(
 
 Hierarchical overlap: bbox -> hull -> detailed polygon.
 
-**Returns:** True if any overlap detected.
-
 | Parameter             | Type                                | Description                                       |
 | --------------------- | ----------------------------------- | ------------------------------------------------- |
 | `candidate_polys`     | `Sequence[numpy.ndarray]`           | Candidate polygons to check.                      |
@@ -56,7 +52,7 @@ Hierarchical overlap: bbox -> hull -> detailed polygon.
 | `placed_polys_groups` | `Sequence[Sequence[numpy.ndarray]]` | Groups of already-placed polygons.                |
 | `placed_hulls_groups` | `Sequence[Sequence[numpy.ndarray]]` | Convex hulls of placed groups.                    |
 | `min_area`            | `float = 1`                         | Minimum overlap area (clipper coords).            |
-| _Returns_             | `bool`                              |                                                   |
+| _Returns_             | `bool`                              | True if any overlap detected.                     |
 | _Complexity_          |                                     | O(n \* m) with bbox/hull early-exit acceleration. |
 
 ### `any_overlap_hierarchical_grid()`
@@ -93,11 +89,9 @@ is_contained(inner: Sequence[types.Polygon], outer: types.Polygon) -> bool
 
 Check if inner polygons are fully contained within outer polygon.
 
-**Returns:** True if all inner polygons are inside outer.
-
 | Parameter    | Type                      | Description                                                     |
 | ------------ | ------------------------- | --------------------------------------------------------------- |
 | `inner`      | `Sequence[types.Polygon]` | List of polygons to check.                                      |
 | `outer`      | `types.Polygon`           | Outer polygon.                                                  |
-| _Returns_    | `bool`                    |                                                                 |
+| _Returns_    | `bool`                    | True if all inner polygons are inside outer.                    |
 | _Complexity_ |                           | O(n \* m) where n = inner polygons, m = outer polygon vertices. |

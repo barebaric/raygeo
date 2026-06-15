@@ -19,13 +19,11 @@ compute_gaussian_kernel(amount: int) -> tuple[list[float], float]
 
 Compute a Gaussian kernel of the given size.
 
-**Returns:** Tuple of (kernel_values, sigma).
-
-| Parameter    | Type                        | Description           |
-| ------------ | --------------------------- | --------------------- |
-| `amount`     | `int`                       | Kernel size.          |
-| _Returns_    | `tuple[list[float], float]` |                       |
-| _Complexity_ |                             | O(k) time, O(k) space |
+| Parameter    | Type                        | Description                      |
+| ------------ | --------------------------- | -------------------------------- |
+| `amount`     | `int`                       | Kernel size.                     |
+| _Returns_    | `tuple[list[float], float]` | Tuple of (kernel_values, sigma). |
+| _Complexity_ |                             | O(k) time, O(k) space            |
 
 ![Gaussian kernel weights](images/smooth-gaussian-kernel.png)
 
@@ -43,14 +41,12 @@ resample_polyline(
 
 Resample a polyline with a maximum segment length.
 
-**Returns:** Resampled points.
-
 | Parameter            | Type                      | Description                     |
 | -------------------- | ------------------------- | ------------------------------- |
 | `points`             | `Sequence[types.Point3D]` | Sequence of 3D points.          |
 | `max_segment_length` | `float`                   | Maximum allowed segment length. |
 | `is_closed`          | `bool`                    | Whether the polyline is closed. |
-| _Returns_            | `list[types.Point3D]`     |                                 |
+| _Returns_            | `list[types.Point3D]`     | Resampled points.               |
 | _Complexity_         |                           | O(n) time, O(n) space           |
 
 ![Polyline resampling](images/smooth-resample.png)
@@ -68,13 +64,11 @@ smooth_circularly(
 
 Smooth a closed polyline circularly.
 
-**Returns:** Smoothed points.
-
 | Parameter    | Type                      | Description                                                                      |
 | ------------ | ------------------------- | -------------------------------------------------------------------------------- |
 | `points`     | `Sequence[types.Point3D]` | Sequence of 3D points to smooth.                                                 |
 | `kernel`     | `Sequence[float]`         | Gaussian kernel values.                                                          |
-| _Returns_    | `list[types.Point3D]`     |                                                                                  |
+| _Returns_    | `list[types.Point3D]`     | Smoothed points.                                                                 |
 | _Complexity_ |                           | O(n \* k) time, O(n) space where k is the kernel size and n the number of points |
 
 ![Circular smoothing](images/smooth-circular.png)
@@ -94,15 +88,13 @@ smooth_polyline(
 
 Smooth a polyline using Gaussian smoothing.
 
-**Returns:** Smoothed points.
-
 | Parameter                | Type                      | Description                                                                      |
 | ------------------------ | ------------------------- | -------------------------------------------------------------------------------- |
 | `points`                 | `Sequence[types.Point3D]` | Sequence of 3D points to smooth.                                                 |
 | `amount`                 | `int`                     | Smoothing amount (kernel size).                                                  |
 | `corner_angle_threshold` | `float`                   | Angle threshold for preserving corners.                                          |
 | `is_closed`              | `Optional[bool] = None`   | Whether the polyline is closed.                                                  |
-| _Returns_                | `list[types.Point3D]`     |                                                                                  |
+| _Returns_                | `list[types.Point3D]`     | Smoothed points.                                                                 |
 | _Complexity_             |                           | O(n \* k) time, O(n) space where k is the kernel size and n the number of points |
 
 ![Gaussian smoothing](images/smooth.png)
@@ -120,13 +112,11 @@ smooth_sub_segment(
 
 Smooth a sub-segment of a polyline.
 
-**Returns:** Smoothed points.
-
 | Parameter    | Type                      | Description                                                                      |
 | ------------ | ------------------------- | -------------------------------------------------------------------------------- |
 | `points`     | `Sequence[types.Point3D]` | Sequence of 3D points to smooth.                                                 |
 | `kernel`     | `Sequence[float]`         | Gaussian kernel values.                                                          |
-| _Returns_    | `list[types.Point3D]`     |                                                                                  |
+| _Returns_    | `list[types.Point3D]`     | Smoothed points.                                                                 |
 | _Complexity_ |                           | O(n \* k) time, O(n) space where k is the kernel size and n the number of points |
 
 ![Sub-segment smoothing](images/smooth-sub-segment.png)

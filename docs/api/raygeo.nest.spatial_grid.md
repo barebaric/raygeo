@@ -50,9 +50,7 @@ query(bbox: Sequence[float]) -> list[int]
 
 Query all items whose bounding box overlaps _bbox_.
 
-**Returns:** Sorted list of matching item indices.
-
 | Parameter | Type              | Description                                  |
 | --------- | ----------------- | -------------------------------------------- |
 | `bbox`    | `Sequence[float]` | `[x_min, y_min, x_max, y_max]` query region. |
-| _Returns_ | `list[int]`       |                                              |
+| _Returns_ | `list[int]`       | Sorted list of matching item indices.        |

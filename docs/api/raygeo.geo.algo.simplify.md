@@ -22,13 +22,11 @@ simplify_polyline(
 
 Simplify a polyline using the Ramer-Douglas-Peucker algorithm.
 
-**Returns:** Simplified point sequence.
-
 | Parameter    | Type                    | Description                         |
 | ------------ | ----------------------- | ----------------------------------- |
 | `points`     | `Sequence[types.Point]` | Sequence of (x, y) points.          |
 | `tolerance`  | `float`                 | Simplification tolerance.           |
-| _Returns_    | `types.Polygon`         |                                     |
+| _Returns_    | `types.Polygon`         | Simplified point sequence.          |
 | _Complexity_ |                         | O(n log n) average time, O(n) space |
 
 ![Simplify and linearize](images/simplify.png)

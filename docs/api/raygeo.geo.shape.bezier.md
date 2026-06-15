@@ -27,8 +27,6 @@ clip_bezier_with_rect(
 
 Clip a cubic bezier with a rectangle.
 
-**Returns:** List of bezier segments inside the rectangle.
-
 | Parameter    | Type                                                              | Description                                      |
 | ------------ | ----------------------------------------------------------------- | ------------------------------------------------ |
 | `p0`         | `types.Point`                                                     | Start control point (x, y).                      |
@@ -36,7 +34,7 @@ Clip a cubic bezier with a rectangle.
 | `p2`         | `types.Point`                                                     | Second control point (x, y).                     |
 | `p3`         | `types.Point`                                                     | End control point (x, y).                        |
 | `rect`       | `types.Rect`                                                      | Clipping rectangle (x_min, y_min, x_max, y_max). |
-| _Returns_    | `list[tuple[types.Point, types.Point, types.Point, types.Point]]` |                                                  |
+| _Returns_    | `list[tuple[types.Point, types.Point, types.Point, types.Point]]` | List of bezier segments inside the rectangle.    |
 | _Complexity_ |                                                                   | O(n)                                             |
 
 ### `convert_cubic_bezier_to_quadratic()`
@@ -52,16 +50,14 @@ convert_cubic_bezier_to_quadratic(
 
 Convert a cubic bezier to a quadratic bezier.
 
-**Returns:** Quadratic bezier (p0, p1, p2).
-
-| Parameter    | Type                                           | Description                  |
-| ------------ | ---------------------------------------------- | ---------------------------- |
-| `p0`         | `types.Point`                                  | Start control point (x, y).  |
-| `p1`         | `types.Point`                                  | First control point (x, y).  |
-| `p2`         | `types.Point`                                  | Second control point (x, y). |
-| `p3`         | `types.Point`                                  | End control point (x, y).    |
-| _Returns_    | `tuple[types.Point, types.Point, types.Point]` |                              |
-| _Complexity_ |                                                | O(1)                         |
+| Parameter    | Type                                           | Description                    |
+| ------------ | ---------------------------------------------- | ------------------------------ |
+| `p0`         | `types.Point`                                  | Start control point (x, y).    |
+| `p1`         | `types.Point`                                  | First control point (x, y).    |
+| `p2`         | `types.Point`                                  | Second control point (x, y).   |
+| `p3`         | `types.Point`                                  | End control point (x, y).      |
+| _Returns_    | `tuple[types.Point, types.Point, types.Point]` | Quadratic bezier (p0, p1, p2). |
+| _Complexity_ |                                                | O(1)                           |
 
 ### `flatten_bezier()`
 
@@ -108,16 +104,14 @@ get_bezier_bounds(
 
 Get the bounding rectangle of a cubic bezier.
 
-**Returns:** Bounding rectangle as (x_min, y_min, x_max, y_max).
-
-| Parameter    | Type          | Description                  |
-| ------------ | ------------- | ---------------------------- |
-| `p0`         | `types.Point` | Start control point (x, y).  |
-| `p1`         | `types.Point` | First control point (x, y).  |
-| `p2`         | `types.Point` | Second control point (x, y). |
-| `p3`         | `types.Point` | End control point (x, y).    |
-| _Returns_    | `types.Rect`  |                              |
-| _Complexity_ |               | O(1)                         |
+| Parameter    | Type          | Description                                         |
+| ------------ | ------------- | --------------------------------------------------- |
+| `p0`         | `types.Point` | Start control point (x, y).                         |
+| `p1`         | `types.Point` | First control point (x, y).                         |
+| `p2`         | `types.Point` | Second control point (x, y).                        |
+| `p3`         | `types.Point` | End control point (x, y).                           |
+| _Returns_    | `types.Rect`  | Bounding rectangle as (x_min, y_min, x_max, y_max). |
+| _Complexity_ |               | O(1)                                                |
 
 ### `get_bezier_flatness_sq()`
 
@@ -132,15 +126,13 @@ get_bezier_flatness_sq(
 
 Compute the flatness squared of a cubic bezier.
 
-**Returns:** Flatness squared value.
-
 | Parameter    | Type            | Description                     |
 | ------------ | --------------- | ------------------------------- |
 | `a`          | `types.Point3D` | Start point (x, y, z).          |
 | `b`          | `types.Point3D` | First control point (x, y, z).  |
 | `c`          | `types.Point3D` | Second control point (x, y, z). |
 | `d`          | `types.Point3D` | End point (x, y, z).            |
-| _Returns_    | `float`         |                                 |
+| _Returns_    | `float`         | Flatness squared value.         |
 | _Complexity_ |                 | O(1)                            |
 
 ### `get_bezier_length()`
@@ -156,15 +148,13 @@ get_bezier_length(
 
 Compute the arc length of a cubic Bezier curve.
 
-**Returns:** Arc length.
-
 | Parameter    | Type          | Description                  |
 | ------------ | ------------- | ---------------------------- |
 | `p0`         | `types.Point` | Start point (x, y).          |
 | `c1`         | `types.Point` | First control point (x, y).  |
 | `c2`         | `types.Point` | Second control point (x, y). |
 | `p1`         | `types.Point` | End point (x, y).            |
-| _Returns_    | `float`       |                              |
+| _Returns_    | `float`       | Arc length.                  |
 | _Complexity_ |               | O(n)                         |
 
 ### `get_bezier_point_at()`
@@ -181,17 +171,15 @@ get_bezier_point_at(
 
 Get a point on a cubic bezier at parameter t.
 
-**Returns:** Point on the bezier curve (x, y).
-
-| Parameter    | Type          | Description                  |
-| ------------ | ------------- | ---------------------------- |
-| `p0`         | `types.Point` | Start control point (x, y).  |
-| `p1`         | `types.Point` | First control point (x, y).  |
-| `p2`         | `types.Point` | Second control point (x, y). |
-| `p3`         | `types.Point` | End control point (x, y).    |
-| `t`          | `float`       | Parameter value (0..1).      |
-| _Returns_    | `types.Point` |                              |
-| _Complexity_ |               | O(1)                         |
+| Parameter    | Type          | Description                       |
+| ------------ | ------------- | --------------------------------- |
+| `p0`         | `types.Point` | Start control point (x, y).       |
+| `p1`         | `types.Point` | First control point (x, y).       |
+| `p2`         | `types.Point` | Second control point (x, y).      |
+| `p3`         | `types.Point` | End control point (x, y).         |
+| `t`          | `float`       | Parameter value (0..1).           |
+| _Returns_    | `types.Point` | Point on the bezier curve (x, y). |
+| _Complexity_ |               | O(1)                              |
 
 ![Bezier point evaluation at parameter t](images/bezier-point-at.png)
 
@@ -211,17 +199,15 @@ get_bezier_rect_intersections(
 
 Get intersection t-values of a bezier with a rectangle.
 
-**Returns:** List of t-values where the bezier intersects.
-
-| Parameter    | Type          | Description                             |
-| ------------ | ------------- | --------------------------------------- |
-| `p0`         | `types.Point` | Start control point (x, y).             |
-| `p1`         | `types.Point` | First control point (x, y).             |
-| `p2`         | `types.Point` | Second control point (x, y).            |
-| `p3`         | `types.Point` | End control point (x, y).               |
-| `rect`       | `types.Rect`  | Rectangle (x_min, y_min, x_max, y_max). |
-| _Returns_    | `list[float]` |                                         |
-| _Complexity_ |               | O(n)                                    |
+| Parameter    | Type          | Description                                   |
+| ------------ | ------------- | --------------------------------------------- |
+| `p0`         | `types.Point` | Start control point (x, y).                   |
+| `p1`         | `types.Point` | First control point (x, y).                   |
+| `p2`         | `types.Point` | Second control point (x, y).                  |
+| `p3`         | `types.Point` | End control point (x, y).                     |
+| `rect`       | `types.Rect`  | Rectangle (x_min, y_min, x_max, y_max).       |
+| _Returns_    | `list[float]` | List of t-values where the bezier intersects. |
+| _Complexity_ |               | O(n)                                          |
 
 ### `get_perpendicular_dist_sq()`
 
@@ -238,8 +224,6 @@ get_perpendicular_dist_sq(
 
 Compute the perpendicular distance squared.
 
-**Returns:** Perpendicular distance squared.
-
 | Parameter    | Type            | Description                          |
 | ------------ | --------------- | ------------------------------------ |
 | `pt`         | `types.Point3D` | Point to measure from.               |
@@ -248,7 +232,7 @@ Compute the perpendicular distance squared.
 | `vy`         | `float`         | Y component of line direction.       |
 | `vz`         | `float = 0`     | Z component of line direction.       |
 | `norm_sq`    | `float = 0`     | Precomputed squared norm (optional). |
-| _Returns_    | `float`         |                                      |
+| _Returns_    | `float`         | Perpendicular distance squared.      |
 | _Complexity_ |                 | O(1)                                 |
 
 ### `is_bezier_flat()`
@@ -269,17 +253,15 @@ Uses a chord-distance flatness test. For non-degenerate curves (p0 != p3) it che
 control points lie within tolerance_sq of the chord line. For degenerate curves (p0 approx p3) it
 checks the control point distances from the start point.
 
-**Returns:** True if the curve is flat enough.
-
-| Parameter      | Type          | Description                     |
-| -------------- | ------------- | ------------------------------- |
-| `p0`           | `types.Point` | Start control point (x, y).     |
-| `p1`           | `types.Point` | First control point (x, y).     |
-| `p2`           | `types.Point` | Second control point (x, y).    |
-| `p3`           | `types.Point` | End control point (x, y).       |
-| `tolerance_sq` | `float`       | Squared tolerance for flatness. |
-| _Returns_      | `bool`        |                                 |
-| _Complexity_   |               | O(1)                            |
+| Parameter      | Type          | Description                       |
+| -------------- | ------------- | --------------------------------- |
+| `p0`           | `types.Point` | Start control point (x, y).       |
+| `p1`           | `types.Point` | First control point (x, y).       |
+| `p2`           | `types.Point` | Second control point (x, y).      |
+| `p3`           | `types.Point` | End control point (x, y).         |
+| `tolerance_sq` | `float`       | Squared tolerance for flatness.   |
+| _Returns_      | `bool`        | True if the curve is flat enough. |
+| _Complexity_   |               | O(1)                              |
 
 ### `is_bezier_inside_polygons()`
 
@@ -295,17 +277,15 @@ is_bezier_inside_polygons(
 
 Check if a bezier curve is inside a set of polygons.
 
-**Returns:** True if the bezier is inside all polygons.
-
-| Parameter    | Type          | Description                        |
-| ------------ | ------------- | ---------------------------------- |
-| `p0`         | `types.Point` | Start control point (x, y).        |
-| `p1`         | `types.Point` | First control point (x, y).        |
-| `p2`         | `types.Point` | Second control point (x, y).       |
-| `p3`         | `types.Point` | End control point (x, y).          |
-| `polygons`   | `Any`         | List of polygons to check against. |
-| _Returns_    | `bool`        |                                    |
-| _Complexity_ |               | O(n \* m)                          |
+| Parameter    | Type          | Description                                |
+| ------------ | ------------- | ------------------------------------------ |
+| `p0`         | `types.Point` | Start control point (x, y).                |
+| `p1`         | `types.Point` | First control point (x, y).                |
+| `p2`         | `types.Point` | Second control point (x, y).               |
+| `p3`         | `types.Point` | End control point (x, y).                  |
+| `polygons`   | `Any`         | List of polygons to check against.         |
+| _Returns_    | `bool`        | True if the bezier is inside all polygons. |
+| _Complexity_ |               | O(n \* m)                                  |
 
 ### `linearize_bezier()`
 
@@ -321,8 +301,6 @@ linearize_bezier(
 
 Linearize a bezier into line segments.
 
-**Returns:** List of (p1, p2) segment pairs.
-
 | Parameter    | Type                                        | Description                     |
 | ------------ | ------------------------------------------- | ------------------------------- |
 | `p0`         | `types.Point3D`                             | Start control point (x, y, z).  |
@@ -330,7 +308,7 @@ Linearize a bezier into line segments.
 | `p2`         | `types.Point3D`                             | Second control point (x, y, z). |
 | `p3`         | `types.Point3D`                             | End control point (x, y, z).    |
 | `num_steps`  | `int`                                       | Number of linearization steps.  |
-| _Returns_    | `list[tuple[types.Point3D, types.Point3D]]` |                                 |
+| _Returns_    | `list[tuple[types.Point3D, types.Point3D]]` | List of (p1, p2) segment pairs. |
 | _Complexity_ |                                             | O(n)                            |
 
 ### `linearize_bezier_adaptive()`
@@ -348,8 +326,6 @@ linearize_bezier_adaptive(
 
 Adaptively linearize a bezier curve.
 
-**Returns:** List of linearized points (x, y).
-
 | Parameter          | Type            | Description                        |
 | ------------------ | --------------- | ---------------------------------- |
 | `p0`               | `types.Point`   | Start control point (x, y).        |
@@ -358,7 +334,7 @@ Adaptively linearize a bezier curve.
 | `p3`               | `types.Point`   | End control point (x, y).          |
 | `tolerance_sq`     | `float`         | Squared tolerance for subdivision. |
 | `max_subdivisions` | `int = 20`      | Maximum recursion depth.           |
-| _Returns_          | `types.Polygon` |                                    |
+| _Returns_          | `types.Polygon` | List of linearized points (x, y).  |
 | _Complexity_       |                 | O(n)                               |
 
 ### `linearize_bezier_segment()`
@@ -375,17 +351,15 @@ linearize_bezier_segment(
 
 Linearize a single bezier segment.
 
-**Returns:** List of linearized points (x, y, z).
-
-| Parameter    | Type                  | Description                     |
-| ------------ | --------------------- | ------------------------------- |
-| `p0`         | `types.Point3D`       | Start control point (x, y, z).  |
-| `p1`         | `types.Point3D`       | First control point (x, y, z).  |
-| `p2`         | `types.Point3D`       | Second control point (x, y, z). |
-| `p3`         | `types.Point3D`       | End control point (x, y, z).    |
-| `tolerance`  | `float = 0.1`         | Linearization tolerance.        |
-| _Returns_    | `list[types.Point3D]` |                                 |
-| _Complexity_ |                       | O(n)                            |
+| Parameter    | Type                  | Description                          |
+| ------------ | --------------------- | ------------------------------------ |
+| `p0`         | `types.Point3D`       | Start control point (x, y, z).       |
+| `p1`         | `types.Point3D`       | First control point (x, y, z).       |
+| `p2`         | `types.Point3D`       | Second control point (x, y, z).      |
+| `p3`         | `types.Point3D`       | End control point (x, y, z).         |
+| `tolerance`  | `float = 0.1`         | Linearization tolerance.             |
+| _Returns_    | `list[types.Point3D]` | List of linearized points (x, y, z). |
+| _Complexity_ |                       | O(n)                                 |
 
 ### `split_bezier()`
 
@@ -401,17 +375,15 @@ split_bezier(
 
 Split a cubic bezier at parameter t.
 
-**Returns:** Two bezier curves (left, right).
-
-| Parameter    | Type                                                                                                                          | Description                  |
-| ------------ | ----------------------------------------------------------------------------------------------------------------------------- | ---------------------------- |
-| `p0`         | `types.Point`                                                                                                                 | Start control point (x, y).  |
-| `p1`         | `types.Point`                                                                                                                 | First control point (x, y).  |
-| `p2`         | `types.Point`                                                                                                                 | Second control point (x, y). |
-| `p3`         | `types.Point`                                                                                                                 | End control point (x, y).    |
-| `t`          | `float`                                                                                                                       | Split parameter (0..1).      |
-| _Returns_    | `tuple[tuple[types.Point, types.Point, types.Point, types.Point], tuple[types.Point, types.Point, types.Point, types.Point]]` |                              |
-| _Complexity_ |                                                                                                                               | O(1)                         |
+| Parameter    | Type                                                                                                                          | Description                      |
+| ------------ | ----------------------------------------------------------------------------------------------------------------------------- | -------------------------------- |
+| `p0`         | `types.Point`                                                                                                                 | Start control point (x, y).      |
+| `p1`         | `types.Point`                                                                                                                 | First control point (x, y).      |
+| `p2`         | `types.Point`                                                                                                                 | Second control point (x, y).     |
+| `p3`         | `types.Point`                                                                                                                 | End control point (x, y).        |
+| `t`          | `float`                                                                                                                       | Split parameter (0..1).          |
+| _Returns_    | `tuple[tuple[types.Point, types.Point, types.Point, types.Point], tuple[types.Point, types.Point, types.Point, types.Point]]` | Two bezier curves (left, right). |
+| _Complexity_ |                                                                                                                               | O(1)                             |
 
 ![Bezier split at parameter t](images/bezier-split.png)
 

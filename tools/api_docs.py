@@ -52,7 +52,7 @@ def _format_sig(sig_text: str) -> str:
         space = sig_text.find(" ")
         if space != -1:
             decorator = sig_text[:space]
-            rest = sig_text[space + 1:]
+            rest = sig_text[space + 1 :]
         else:
             decorator = sig_text
             rest = ""
@@ -175,11 +175,12 @@ COMPLEXITY_RE = re.compile(r"^:complexity:\s*(.*)")
 
 def convert_docstring_sections(
     text: str,
-) -> tuple[str, dict[str, str], str]:
-    """Parse docstring into (desc, param_docs, complexity)."""
+) -> tuple[str, dict[str, str], str, str]:
+    """Parse docstring into (desc, param_docs, return_desc, complexity)."""
     lines = text.split("\n")
     result = []
     param_docs: dict[str, str] = {}
+    return_desc = ""
     complexity = ""
     i = 0
     in_args = False
@@ -266,9 +267,7 @@ def convert_docstring_sections(
             in_args = False
             in_returns = True
             in_raises = False
-            result.append("")
-            ret_desc = convert_sphinx(stripped.split(":", 1)[1].strip())
-            result.append(f"**Returns:** {ret_desc}")
+            return_desc = convert_sphinx(stripped.split(":", 1)[1].strip())
             i += 1
             continue
 
@@ -307,7 +306,7 @@ def convert_docstring_sections(
                 i += 1
                 continue
             if stripped == "":
-                result.append("")
+                return_desc += " "
                 i += 1
                 continue
             if (
@@ -321,7 +320,7 @@ def convert_docstring_sections(
             if stripped_desc.startswith(":") and ":" in stripped_desc[1:]:
                 in_returns = False
                 continue
-            result.append(convert_sphinx(line.rstrip()))
+            return_desc += " " + convert_sphinx(line.rstrip())
             i += 1
             continue
 
@@ -333,7 +332,11 @@ def convert_docstring_sections(
             while i < len(lines):
                 nxt = lines[i]
                 nxt_stripped = nxt.strip()
-                if nxt_stripped and nxt.startswith(" ") and not nxt_stripped.startswith(":"):
+                if (
+                    nxt_stripped
+                    and nxt.startswith(" ")
+                    and not nxt_stripped.startswith(":")
+                ):
                     pdesc += " " + convert_sphinx(nxt_stripped)
                     i += 1
                 else:
@@ -343,18 +346,20 @@ def convert_docstring_sections(
 
         m = RETURN_RE.match(stripped)
         if m:
-            ret_desc = convert_sphinx(m.group(1))
+            return_desc = convert_sphinx(m.group(1))
             i += 1
             while i < len(lines):
                 nxt = lines[i]
                 nxt_stripped = nxt.strip()
-                if nxt_stripped and nxt.startswith(" ") and not nxt_stripped.startswith(":"):
-                    ret_desc += " " + convert_sphinx(nxt_stripped)
+                if (
+                    nxt_stripped
+                    and nxt.startswith(" ")
+                    and not nxt_stripped.startswith(":")
+                ):
+                    return_desc += " " + convert_sphinx(nxt_stripped)
                     i += 1
                 else:
                     break
-            result.append("")
-            result.append(f"**Returns:** {ret_desc}")
             continue
 
         m = RAISE_RE.match(stripped)
@@ -378,7 +383,7 @@ def convert_docstring_sections(
     if in_example and example_lines:
         result.extend(example_lines)
 
-    return str("\n".join(result)), param_docs, complexity
+    return str("\n".join(result)), param_docs, return_desc, complexity
 
 
 def dedent_doc(text: str) -> str:
@@ -398,14 +403,16 @@ def dedent_doc(text: str) -> str:
     return "\n".join(result)
 
 
-def format_docstring(doc: str | None) -> tuple[str, dict[str, str], str]:
+def format_docstring(doc: str | None) -> tuple[str, dict[str, str], str, str]:
     if not doc:
-        return "", {}, ""
+        return "", {}, "", ""
     text = dedent_doc(doc)
     text = convert_sphinx(text)
-    text, param_docs, complexity = convert_docstring_sections(text)
+    text, param_docs, return_desc, complexity = convert_docstring_sections(
+        text
+    )
     text = text.strip()
-    return text, param_docs, complexity
+    return text, param_docs, return_desc, complexity
 
 
 def clean_type(text: str) -> str:
@@ -773,11 +780,15 @@ def render_members(members: dict, mod_doc: str | None) -> str:
     def _escape_table_pipe(text: str) -> str:
         return text.replace("|", "&#124;")
 
+    def _escape_md(text: str) -> str:
+        return text.replace("*", "\\*")
+
     def _render_params(
         params: list[dict],
         param_docs: dict[str, str],
         signature: str = "",
         complexity: str = "",
+        return_desc: str = "",
     ) -> None:
         if not params and "->" not in signature and not complexity:
             return
@@ -791,9 +802,12 @@ def render_members(members: dict, mod_doc: str | None) -> str:
             lines.append(f"| `{p['name']}` | {ptype_md} | {desc} |")
         if "->" in signature:
             ret = signature.split("->", 1)[1].strip()
-            lines.append(f"| *Returns* | `{_escape_table_pipe(ret)}` |  |")
+            ret_desc = _escape_md(return_desc) if return_desc else ""
+            lines.append(
+                f"| *Returns* | `{_escape_table_pipe(ret)}` | {ret_desc} |"
+            )
         if complexity:
-            lines.append(f"| *Complexity* | | {complexity} |")
+            lines.append(f"| *Complexity* | | {_escape_md(complexity)} |")
         lines.append("")
 
     if has_alias:
@@ -804,7 +818,7 @@ def render_members(members: dict, mod_doc: str | None) -> str:
             lines.append("")
             lines.append(f"Type: `{a['type']}`")
             lines.append("")
-            doc, _, _ = format_docstring(a["doc"])
+            doc, _, _, _ = format_docstring(a["doc"])
             if doc:
                 lines.append(doc)
                 lines.append("")
@@ -819,7 +833,7 @@ def render_members(members: dict, mod_doc: str | None) -> str:
             if c["type"]:
                 lines.append(f"``{c['type']}``")
                 lines.append("")
-            doc, _, _ = format_docstring(c["doc"])
+            doc, _, _, _ = format_docstring(c["doc"])
             if doc:
                 lines.append(doc)
                 lines.append("")
@@ -829,7 +843,7 @@ def render_members(members: dict, mod_doc: str | None) -> str:
         for cls in sorted(members["classes"], key=lambda x: x["name"]):
             lines.append(f"## {cls['name']}")
             lines.append("")
-            doc, _, _ = format_docstring(cls["doc"])
+            doc, _, _, _ = format_docstring(cls["doc"])
             if doc:
                 lines.append(doc)
                 lines.append("")
@@ -862,7 +876,7 @@ def render_members(members: dict, mod_doc: str | None) -> str:
                 if sig:
                     lines.append(_format_sig(f"{p['name']}{sig}"))
                     lines.append("")
-                pd, _, _ = format_docstring(p["doc"])
+                pd, _, _, _ = format_docstring(p["doc"])
                 if pd:
                     lines.append(pd)
                     lines.append("")
@@ -873,7 +887,9 @@ def render_members(members: dict, mod_doc: str | None) -> str:
                 lines.append("")
                 lines.append(_format_sig(f"{dec}{m['name']}{m['signature']}"))
                 lines.append("")
-                mdoc, param_docs, m_complexity = format_docstring(m["doc"])
+                mdoc, param_docs, m_return_desc, m_complexity = (
+                    format_docstring(m["doc"])
+                )
                 if mdoc:
                     lines.append(mdoc)
                     lines.append("")
@@ -882,12 +898,13 @@ def render_members(members: dict, mod_doc: str | None) -> str:
                     param_docs,
                     m.get("signature", ""),
                     m_complexity,
+                    m_return_desc,
                 )
 
             for nc in public_nested:
                 lines.append(f"### {nc['name']}")
                 lines.append("")
-                ndoc, _, _ = format_docstring(nc["doc"])
+                ndoc, _, _, _ = format_docstring(nc["doc"])
                 if ndoc:
                     lines.append(ndoc)
                     lines.append("")
@@ -915,7 +932,7 @@ def render_members(members: dict, mod_doc: str | None) -> str:
                     if sig:
                         lines.append(_format_sig(f"{p['name']}{sig}"))
                         lines.append("")
-                    pd, _, _ = format_docstring(p["doc"])
+                    pd, _, _, _ = format_docstring(p["doc"])
                     if pd:
                         lines.append(pd)
                         lines.append("")
@@ -923,9 +940,13 @@ def render_members(members: dict, mod_doc: str | None) -> str:
                     dec = "@classmethod " if m.get("is_classmethod") else ""
                     lines.append(f"#### `{m['name']}()`")
                     lines.append("")
-                    lines.append(_format_sig(f"{dec}{m['name']}{m['signature']}"))
+                    lines.append(
+                        _format_sig(f"{dec}{m['name']}{m['signature']}")
+                    )
                     lines.append("")
-                    mdoc, param_docs, m_complexity = format_docstring(m["doc"])
+                    mdoc, param_docs, m_return_desc, m_complexity = (
+                        format_docstring(m["doc"])
+                    )
                     if mdoc:
                         lines.append(mdoc)
                         lines.append("")
@@ -934,6 +955,7 @@ def render_members(members: dict, mod_doc: str | None) -> str:
                         param_docs,
                         m.get("signature", ""),
                         m_complexity,
+                        m_return_desc,
                     )
         lines.append("")
 
@@ -945,7 +967,9 @@ def render_members(members: dict, mod_doc: str | None) -> str:
             lines.append("")
             lines.append(_format_sig(f"{f['name']}{f['signature']}"))
             lines.append("")
-            doc, param_docs, f_complexity = format_docstring(f["doc"])
+            doc, param_docs, f_return_desc, f_complexity = format_docstring(
+                f["doc"]
+            )
             if doc:
                 lines.append(doc)
                 lines.append("")
@@ -954,6 +978,7 @@ def render_members(members: dict, mod_doc: str | None) -> str:
                 param_docs,
                 f.get("signature", ""),
                 f_complexity,
+                f_return_desc,
             )
         lines.append("")
 

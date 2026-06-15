@@ -59,11 +59,9 @@ direction() -> tuple[float, float]
 
 Normalised direction vector from start to end in mm space.
 
-**Returns:** `(dx, dy)` unit vector.
-
-| Parameter | Type                  | Description |
-| --------- | --------------------- | ----------- |
-| _Returns_ | `tuple[float, float]` |             |
+| Parameter | Type                  | Description             |
+| --------- | --------------------- | ----------------------- |
+| _Returns_ | `tuple[float, float]` | `(dx, dy)` unit vector. |
 
 ### `length_mm()`
 
@@ -89,14 +87,12 @@ pixel_to_mm(
 
 Convert pixel coordinates to mm space, projected onto this scan line.
 
-**Returns:** `(x, y)` position in mm, projected onto the scan line.
-
-| Parameter       | Type                  | Description                      |
-| --------------- | --------------------- | -------------------------------- |
-| `px`            | `int`                 | X pixel coordinate.              |
-| `py`            | `int`                 | Y pixel coordinate.              |
-| `pixels_per_mm` | `tuple[float, float]` | `(x, y)` pixel density in px/mm. |
-| _Returns_       | `tuple[float, float]` |                                  |
+| Parameter       | Type                  | Description                                            |
+| --------------- | --------------------- | ------------------------------------------------------ |
+| `px`            | `int`                 | X pixel coordinate.                                    |
+| `py`            | `int`                 | Y pixel coordinate.                                    |
+| `pixels_per_mm` | `tuple[float, float]` | `(x, y)` pixel density in px/mm.                       |
+| _Returns_       | `tuple[float, float]` | `(x, y)` position in mm, projected onto the scan line. |
 
 ## ScanMode
 
@@ -124,15 +120,13 @@ If the sample interval is larger than the native pixel spacing, the power values
 nearest-neighbour at the target spacing. Otherwise the original values are returned with their
 corresponding positions.
 
-**Returns:** `(power, x_mm, y_mm)` of downsampled values.
-
 | Parameter            | Type                                                 | Description                                   |
 | -------------------- | ---------------------------------------------------- | --------------------------------------------- |
 | `power_values`       | `numpy.ndarray`                                      | 1-D array of byte power values.               |
 | `start_mm`           | `tuple[float, float]`                                | `(x, y)` start position of the segment in mm. |
 | `end_mm`             | `tuple[float, float]`                                | `(x, y)` end position of the segment in mm.   |
 | `sample_interval_mm` | `float`                                              | Desired sample spacing in mm.                 |
-| _Returns_            | `tuple[numpy.ndarray, numpy.ndarray, numpy.ndarray]` |                                               |
+| _Returns_            | `tuple[numpy.ndarray, numpy.ndarray, numpy.ndarray]` | `(power, x_mm, y_mm)` of downsampled values.  |
 | _Complexity_         |                                                      | O(n) where n = number of power values         |
 
 ### `extract_zero_power_segments()`
@@ -150,15 +144,13 @@ Extract zero-power segment endpoints from scanline power data.
 Finds contiguous runs of zero values in _power_values_ and computes their 3D start/end points via
 linear interpolation along the scanline segment from _start_ to _end_.
 
-**Returns:** Flat list of `[sx, sy, sz, ex, ey, ez, ...]` segments.
-
-| Parameter      | Type                         | Description                                     |
-| -------------- | ---------------------------- | ----------------------------------------------- |
-| `start`        | `tuple[float, float, float]` | (x, y, z) start position of the scanline in mm. |
-| `end`          | `tuple[float, float, float]` | (x, y, z) end position of the scanline in mm.   |
-| `power_values` | `bytes`                      | Per-step power bytes.                           |
-| _Returns_      | `list[float]`                |                                                 |
-| _Complexity_   |                              | O(n) where n = number of steps                  |
+| Parameter      | Type                         | Description                                            |
+| -------------- | ---------------------------- | ------------------------------------------------------ |
+| `start`        | `tuple[float, float, float]` | (x, y, z) start position of the scanline in mm.        |
+| `end`          | `tuple[float, float, float]` | (x, y, z) end position of the scanline in mm.          |
+| `power_values` | `bytes`                      | Per-step power bytes.                                  |
+| _Returns_      | `list[float]`                | Flat list of `[sx, sy, sz, ex, ey, ez, ...]` segments. |
+| _Complexity_   |                              | O(n) where n = number of steps                         |
 
 ![Zero-power segment extraction](images/zero-power-segments.png)
 
@@ -175,14 +167,11 @@ Find the bounding box of non-zero pixels in a binary mask.
 Scans the mask and returns the (y_min, y_max, x_min, x_max) of the smallest axis-aligned rectangle
 covering all non-zero pixels.
 
-**Returns:** `(y_min, y_max, x_min, x_max)` pixel coordinates, or `None` if the mask is entirely
-zero.
-
-| Parameter    | Type                                    | Description            |
-| ------------ | --------------------------------------- | ---------------------- |
-| `mask`       | `numpy.ndarray`                         | 2-D binary mask array. |
-| _Returns_    | `tuple[int, int, int, int] &#124; None` |                        |
-| _Complexity_ |                                         | O(h\*w)                |
+| Parameter    | Type                                    | Description                                                                               |
+| ------------ | --------------------------------------- | ----------------------------------------------------------------------------------------- |
+| `mask`       | `numpy.ndarray`                         | 2-D binary mask array.                                                                    |
+| _Returns_    | `tuple[int, int, int, int] &#124; None` | `(y_min, y_max, x_min, x_max)` pixel coordinates, or `None` if the mask is entirely zero. |
+| _Complexity_ |                                         | O(h\*w)                                                                                   |
 
 ### `find_segments()`
 
@@ -194,13 +183,11 @@ Find contiguous non-zero segments in a 1-D array.
 
 Returns a list of `(start, end)` index pairs covering every run of consecutive non-zero values.
 
-**Returns:** List of `(start, end)` index pairs.
-
-| Parameter    | Type                    | Description               |
-| ------------ | ----------------------- | ------------------------- |
-| `values`     | `numpy.ndarray`         | 1-D array of byte values. |
-| _Returns_    | `list[tuple[int, int]]` |                           |
-| _Complexity_ |                         | O(n)                      |
+| Parameter    | Type                    | Description                         |
+| ------------ | ----------------------- | ----------------------------------- |
+| `values`     | `numpy.ndarray`         | 1-D array of byte values.           |
+| _Returns_    | `list[tuple[int, int]]` | List of `(start, end)` index pairs. |
+| _Complexity_ |                         | O(n)                                |
 
 ### `generate_horizontal_scan_positions()`
 
@@ -220,18 +207,16 @@ Compute Y positions for horizontal scan lines.
 Given a vertical pixel range, computes the mm and pixel Y coordinates of evenly-spaced scan lines
 (aligned to a global grid defined by _line_interval_mm_ and _offset_y_mm_).
 
-**Returns:** `(y_coords_mm, y_coords_px)` tuple of Y positions.
-
-| Parameter          | Type                              | Description                         |
-| ------------------ | --------------------------------- | ----------------------------------- |
-| `y_min_px`         | `int`                             | Minimum Y pixel coordinate.         |
-| `y_max_px`         | `int`                             | Maximum Y pixel coordinate.         |
-| `height_px`        | `int`                             | Image height in pixels.             |
-| `pixels_per_mm`    | `tuple[float, float]`             | `(x, y)` pixel density in px/mm.    |
-| `line_interval_mm` | `float`                           | Spacing between scan lines in mm.   |
-| `offset_y_mm`      | `float`                           | Global Y offset in mm.              |
-| _Returns_          | `tuple[list[float], list[float]]` |                                     |
-| _Complexity_       |                                   | O(n) where n = number of scan lines |
+| Parameter          | Type                              | Description                                        |
+| ------------------ | --------------------------------- | -------------------------------------------------- |
+| `y_min_px`         | `int`                             | Minimum Y pixel coordinate.                        |
+| `y_max_px`         | `int`                             | Maximum Y pixel coordinate.                        |
+| `height_px`        | `int`                             | Image height in pixels.                            |
+| `pixels_per_mm`    | `tuple[float, float]`             | `(x, y)` pixel density in px/mm.                   |
+| `line_interval_mm` | `float`                           | Spacing between scan lines in mm.                  |
+| `offset_y_mm`      | `float`                           | Global Y offset in mm.                             |
+| _Returns_          | `tuple[list[float], list[float]]` | `(y_coords_mm, y_coords_px)` tuple of Y positions. |
+| _Complexity_       |                                   | O(n) where n = number of scan lines                |
 
 ### `generate_scan_lines()`
 
@@ -253,8 +238,6 @@ Generate scan lines covering a bounding box.
 Creates a set of parallel scan lines at a given angle and spacing that cover the bounding box
 region. Each line is rasterised to pixels and stored as a **ScanLine**.
 
-**Returns:** List of **ScanLine** objects.
-
 | Parameter           | Type                                     | Description                                                           |
 | ------------------- | ---------------------------------------- | --------------------------------------------------------------------- |
 | `bbox`              | `tuple[int, int, int, int]`              | `(y_min, y_max, x_min, x_max)` of the region.                         |
@@ -265,7 +248,7 @@ region. Each line is rasterised to pixels and stored as a **ScanLine**.
 | `offset_x_mm`       | `float = 0`                              | Global X offset in mm.                                                |
 | `offset_y_mm`       | `float = 0`                              | Global Y offset in mm.                                                |
 | `global_center_mm`  | `tuple[float, float] &#124; None = None` | Optional rotation centre in mm; defaults to the bbox centre + offset. |
-| _Returns_           | `list[ScanLine]`                         |                                                                       |
+| _Returns_           | `list[ScanLine]`                         | List of \*\*ScanLine\*\* objects.                                     |
 | _Complexity_        |                                          | O(n \* p) where n = number of lines, p = pixels per line              |
 
 ### `line_pixels()`
@@ -284,16 +267,14 @@ Rasterise a line segment into pixel coordinates.
 Uses Bresenham's line algorithm to enumerate all integer pixel positions intersecting the line from
 _start_ to _end_, clipped to the image dimensions `(width, height)`.
 
-**Returns:** List of `(x, y)` pixel coordinates on the line.
-
-| Parameter    | Type                    | Description                                 |
-| ------------ | ----------------------- | ------------------------------------------- |
-| `start`      | `tuple[float, float]`   | (x, y) start position in pixel coordinates. |
-| `end`        | `tuple[float, float]`   | (x, y) end position in pixel coordinates.   |
-| `width`      | `int`                   | Image width in pixels.                      |
-| `height`     | `int`                   | Image height in pixels.                     |
-| _Returns_    | `list[tuple[int, int]]` |                                             |
-| _Complexity_ |                         | O(n) where n = number of pixels on the line |
+| Parameter    | Type                    | Description                                     |
+| ------------ | ----------------------- | ----------------------------------------------- |
+| `start`      | `tuple[float, float]`   | (x, y) start position in pixel coordinates.     |
+| `end`        | `tuple[float, float]`   | (x, y) end position in pixel coordinates.       |
+| `width`      | `int`                   | Image width in pixels.                          |
+| `height`     | `int`                   | Image height in pixels.                         |
+| _Returns_    | `list[tuple[int, int]]` | List of `(x, y)` pixel coordinates on the line. |
+| _Complexity_ |                         | O(n) where n = number of pixels on the line     |
 
 ### `rasterize_mask_lines()`
 
@@ -315,8 +296,6 @@ Rasterise a binary mask into line-to commands (no power).
 Similar to **rasterize_mask_scan** but emits move-to/line-to commands with a Z offset instead of
 scan-to with power values. Useful for simple contour or hatch patterns.
 
-**Returns:** An **~raygeo.ops.Ops** container.
-
 | Parameter          | Type                            | Description                                   |
 | ------------------ | ------------------------------- | --------------------------------------------- |
 | `mask`             | `numpy.NDArray[numpy.uint8]`    | 2-D binary mask array.                        |
@@ -327,7 +306,7 @@ scan-to with power values. Useful for simple contour or hatch patterns.
 | `z`                | `float = 0`                     | Z offset for the lines in mm.                 |
 | `angle`            | `float = 0`                     | Scan angle in degrees.                        |
 | `scan_mode`        | `ScanMode = ScanMode.Segmented` | `ScanMode.Segmented` or `ScanMode.FullSweep`. |
-| _Returns_          | `ops.Ops`                       |                                               |
+| _Returns_          | `ops.Ops`                       | An \*\*~raygeo.ops.Ops\*\* container.         |
 
 ![Rasterization: Mask Lines](images/rasterization-mask-lines.png)
 
@@ -353,8 +332,6 @@ Rasterise a binary mask into scan-to commands.
 Generates scan lines covering the mask's bounding box, samples the mask along each line, and emits
 move-to/scan-to commands for each non-zero segment (or the full sweep).
 
-**Returns:** An **~raygeo.ops.Ops** container.
-
 | Parameter          | Type                            | Description                                   |
 | ------------------ | ------------------------------- | --------------------------------------------- |
 | `mask`             | `numpy.NDArray[numpy.uint8]`    | 2-D binary mask array.                        |
@@ -365,7 +342,7 @@ move-to/scan-to commands for each non-zero segment (or the full sweep).
 | `step_power`       | `float = 1`                     | Power value (0-1) for exposed pixels.         |
 | `angle`            | `float = 0`                     | Scan angle in degrees.                        |
 | `scan_mode`        | `ScanMode = ScanMode.Segmented` | `ScanMode.Segmented` or `ScanMode.FullSweep`. |
-| _Returns_          | `ops.Ops`                       |                                               |
+| _Returns_          | `ops.Ops`                       | An \*\*~raygeo.ops.Ops\*\* container.         |
 
 ![Rasterization: Mask Scan](images/rasterization-mask-scan.png)
 
@@ -393,8 +370,6 @@ Rasterise a grayscale image as multiple Z-depth passes.
 Decomposes the grayscale image into _num_depth_levels_ layers by depth-slicing, then rasterises each
 layer with a progressive Z offset and optional per-pass angle increment.
 
-**Returns:** An **~raygeo.ops.Ops** container.
-
 | Parameter          | Type                            | Description                                   |
 | ------------------ | ------------------------------- | --------------------------------------------- |
 | `gray_image`       | `numpy.NDArray[numpy.uint8]`    | 2-D grayscale image (0 = black, 255 = white). |
@@ -407,7 +382,7 @@ layer with a progressive Z offset and optional per-pass angle increment.
 | `angle`            | `float = 0`                     | Initial scan angle in degrees.                |
 | `angle_increment`  | `float = 0`                     | Angle added per depth layer in degrees.       |
 | `scan_mode`        | `ScanMode = ScanMode.Segmented` | `ScanMode.Segmented` or `ScanMode.FullSweep`. |
-| _Returns_          | `ops.Ops`                       |                                               |
+| _Returns_          | `ops.Ops`                       | An \*\*~raygeo.ops.Ops\*\* container.         |
 
 ![Rasterization: Multi-Pass](images/rasterization-multi-pass.png)
 
@@ -438,8 +413,6 @@ Rasterise a grayscale image with power-modulated scans.
 Samples the image along scan lines and computes per-pixel power values from the grayscale intensity
 and alpha channel, then emits move-to/scan-to commands with the modulated power.
 
-**Returns:** An **~raygeo.ops.Ops** container.
-
 | Parameter            | Type                            | Description                                   |
 | -------------------- | ------------------------------- | --------------------------------------------- |
 | `gray_image`         | `numpy.NDArray[numpy.uint8]`    | 2-D grayscale image (0 = black, 255 = white). |
@@ -455,7 +428,7 @@ and alpha channel, then emits move-to/scan-to commands with the modulated power.
 | `num_power_levels`   | `int = 256`                     | Number of quantised power levels.             |
 | `angle`              | `float = 0`                     | Scan angle in degrees.                        |
 | `scan_mode`          | `ScanMode = ScanMode.Segmented` | `ScanMode.Segmented` or `ScanMode.FullSweep`. |
-| _Returns_            | `ops.Ops`                       |                                               |
+| _Returns_            | `ops.Ops`                       | An \*\*~raygeo.ops.Ops\*\* container.         |
 
 ![Rasterization: Power Modulation](images/rasterization-power-modulation.png)
 
@@ -475,11 +448,9 @@ Resample image rows at arbitrary Y coordinates.
 Performs linear interpolation between adjacent rows to sample the image at the given (potentially
 fractional) Y positions.
 
-**Returns:** 2-D array with shape `(len(y_coords_px), width)`.
-
-| Parameter     | Type                         | Description                                      |
-| ------------- | ---------------------------- | ------------------------------------------------ |
-| `image`       | `numpy.NDArray[numpy.uint8]` | 2-D input image array.                           |
-| `y_coords_px` | `numpy.ndarray`              | 1-D array of Y pixel coordinates.                |
-| _Returns_     | `numpy.NDArray[numpy.uint8]` |                                                  |
-| _Complexity_  |                              | O(m \* w) where m = output rows, w = image width |
+| Parameter     | Type                         | Description                                       |
+| ------------- | ---------------------------- | ------------------------------------------------- |
+| `image`       | `numpy.NDArray[numpy.uint8]` | 2-D input image array.                            |
+| `y_coords_px` | `numpy.ndarray`              | 1-D array of Y pixel coordinates.                 |
+| _Returns_     | `numpy.NDArray[numpy.uint8]` | 2-D array with shape `(len(y_coords_px), width)`. |
+| _Complexity_  |                              | O(m \* w) where m = output rows, w = image width  |

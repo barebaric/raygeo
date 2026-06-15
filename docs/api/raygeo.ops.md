@@ -297,15 +297,13 @@ arc_params(idx: int) -> tuple[float, float, bool]
 
 Get the arc parameters (center offset i, j, and clockwise flag).
 
-**Returns:** `(i, j, clockwise)` tuple.
-
 **Raises:** `TypeError` — If the command is not an ArcTo.
 
-| Parameter    | Type                        | Description           |
-| ------------ | --------------------------- | --------------------- |
-| `idx`        | `int`                       | Command index.        |
-| _Returns_    | `tuple[float, float, bool]` |                       |
-| _Complexity_ |                             | O(1) time, O(1) space |
+| Parameter    | Type                        | Description                |
+| ------------ | --------------------------- | -------------------------- |
+| `idx`        | `int`                       | Command index.             |
+| _Returns_    | `tuple[float, float, bool]` | `(i, j, clockwise)` tuple. |
+| _Complexity_ |                             | O(1) time, O(1) space      |
 
 ### `arc_to()`
 
@@ -345,15 +343,13 @@ bezier_params(
 
 Get the cubic bezier control points.
 
-**Returns:** `((c1x, c1y, c1z), (c2x, c2y, c2z))` control points.
-
 **Raises:** `TypeError` — If the command is not a BezierTo.
 
-| Parameter    | Type                                                            | Description           |
-| ------------ | --------------------------------------------------------------- | --------------------- |
-| `idx`        | `int`                                                           | Command index.        |
-| _Returns_    | `tuple[tuple[float, float, float], tuple[float, float, float]]` |                       |
-| _Complexity_ |                                                                 | O(1) time, O(1) space |
+| Parameter    | Type                                                            | Description                                          |
+| ------------ | --------------------------------------------------------------- | ---------------------------------------------------- |
+| `idx`        | `int`                                                           | Command index.                                       |
+| _Returns_    | `tuple[tuple[float, float, float], tuple[float, float, float]]` | `((c1x, c1y, c1z), (c2x, c2y, c2z))` control points. |
+| _Complexity_ |                                                                 | O(1) time, O(1) space                                |
 
 ### `bezier_to()`
 
@@ -385,13 +381,11 @@ category(idx: int) -> types.CommandCategory
 
 Get the **CommandCategory** at the given index.
 
-**Returns:** The category (MOVING, STATE, or MARKER).
-
-| Parameter    | Type                    | Description                          |
-| ------------ | ----------------------- | ------------------------------------ |
-| `idx`        | `int`                   | Command index (negative = from end). |
-| _Returns_    | `types.CommandCategory` |                                      |
-| _Complexity_ |                         | O(1) time, O(1) space                |
+| Parameter    | Type                    | Description                              |
+| ------------ | ----------------------- | ---------------------------------------- |
+| `idx`        | `int`                   | Command index (negative = from end).     |
+| _Returns_    | `types.CommandCategory` | The category (MOVING, STATE, or MARKER). |
+| _Complexity_ |                         | O(1) time, O(1) space                    |
 
 ### `clear()`
 
@@ -414,14 +408,12 @@ clip_at(x: float, y: float, width: float) -> bool
 
 Clip at a single vertical swath, keeping commands that intersect the band.
 
-**Returns:** True if any commands were kept.
-
 | Parameter    | Type    | Description                                       |
 | ------------ | ------- | ------------------------------------------------- |
 | `x`          | `float` | X coordinate of the left edge.                    |
 | `y`          | `float` | Y coordinate (used to find the relevant segment). |
 | `width`      | `float` | Width of the band.                                |
-| _Returns_    | `bool`  |                                                   |
+| _Returns_    | `bool`  | True if any commands were kept.                   |
 | _Complexity_ |         | O(n) time, O(1) space                             |
 
 ### `clip_ops_to_regions()`
@@ -450,13 +442,11 @@ clip_rect(rect: tuple[float, float, float, float]) -> Ops
 
 Clip this sequence to a rectangle, keeping only commands inside.
 
-**Returns:** A new Ops sequence containing the clipped commands.
-
-| Parameter    | Type                                | Description                     |
-| ------------ | ----------------------------------- | ------------------------------- |
-| `rect`       | `tuple[float, float, float, float]` | `(x_min, y_min, x_max, y_max)`. |
-| _Returns_    | `Ops`                               |                                 |
-| _Complexity_ |                                     | O(n) time, O(n) space           |
+| Parameter    | Type                                | Description                                         |
+| ------------ | ----------------------------------- | --------------------------------------------------- |
+| `rect`       | `tuple[float, float, float, float]` | `(x_min, y_min, x_max, y_max)`.                     |
+| _Returns_    | `Ops`                               | A new Ops sequence containing the clipped commands. |
+| _Complexity_ |                                     | O(n) time, O(n) space                               |
 
 ![Ops paths clipped to a rectangle](images/ops-clip-rect.png)
 
@@ -501,13 +491,11 @@ command_type(idx: int) -> types.CommandType
 
 Get the **CommandType** at the given index.
 
-**Returns:** The **CommandType** of the command.
-
-| Parameter    | Type                | Description                          |
-| ------------ | ------------------- | ------------------------------------ |
-| `idx`        | `int`               | Command index (negative = from end). |
-| _Returns_    | `types.CommandType` |                                      |
-| _Complexity_ |                     | O(1) time, O(1) space                |
+| Parameter    | Type                | Description                             |
+| ------------ | ------------------- | --------------------------------------- |
+| `idx`        | `int`               | Command index (negative = from end).    |
+| _Returns_    | `types.CommandType` | The \*\*CommandType\*\* of the command. |
+| _Complexity_ |                     | O(1) time, O(1) space                   |
 
 ### `copy()`
 
@@ -574,13 +562,11 @@ distance_at(
 
 Compute the distance traveled up to command _idx_.
 
-**Returns:** Cumulative distance.
-
 | Parameter    | Type                                          | Description                       |
 | ------------ | --------------------------------------------- | --------------------------------- |
 | `idx`        | `int`                                         | Command index.                    |
 | `last_point` | `Optional[tuple[float, float, float]] = None` | Optional starting point override. |
-| _Returns_    | `float`                                       |                                   |
+| _Returns_    | `float`                                       | Cumulative distance.              |
 | _Complexity_ |                                               | O(1) time, O(1) space             |
 
 ### `dump()`
@@ -618,15 +604,13 @@ dwell_duration(idx: int) -> float
 
 Get the duration (milliseconds) of a Dwell command.
 
-**Returns:** Duration in milliseconds.
-
 **Raises:** `TypeError` — If the command is not a Dwell.
 
-| Parameter    | Type    | Description           |
-| ------------ | ------- | --------------------- |
-| `idx`        | `int`   | Command index.        |
-| _Returns_    | `float` |                       |
-| _Complexity_ |         | O(1) time, O(1) space |
+| Parameter    | Type    | Description               |
+| ------------ | ------- | ------------------------- |
+| `idx`        | `int`   | Command index.            |
+| _Returns_    | `float` | Duration in milliseconds. |
+| _Complexity_ |         | O(1) time, O(1) space     |
 
 ### `enable_air_assist()`
 
@@ -650,12 +634,10 @@ endpoint(idx: int) -> tuple[float, float, float]
 
 Get the endpoint coordinates of a moving command.
 
-**Returns:** `(x, y, z)` tuple.
-
 | Parameter    | Type                         | Description                          |
 | ------------ | ---------------------------- | ------------------------------------ |
 | `idx`        | `int`                        | Command index (negative = from end). |
-| _Returns_    | `tuple[float, float, float]` |                                      |
+| _Returns_    | `tuple[float, float, float]` | `(x, y, z)` tuple.                   |
 | _Complexity_ |                              | O(1) time, O(1) space                |
 
 ### `estimate_command_times()`
@@ -673,15 +655,13 @@ Estimate the time of each individual command in the sequence.
 Returns a list with one entry per command. Moving commands (MoveTo, LineTo, ArcTo, etc.) yield their
 estimated execution time in seconds. Non-moving commands (state changes, markers) yield 0.0.
 
-**Returns:** List of estimated times in seconds, one per command.
-
-| Parameter              | Type             | Description                             |
-| ---------------------- | ---------------- | --------------------------------------- |
-| `default_cut_speed`    | `float = 1000.0` | Default cutting speed (default 1000.0). |
-| `default_travel_speed` | `float = 3000.0` | Default travel speed (default 3000.0).  |
-| `acceleration`         | `float = 1000.0` | Acceleration value (default 1000.0).    |
-| _Returns_              | `list[float]`    |                                         |
-| _Complexity_           |                  | O(n) time, O(n) space                   |
+| Parameter              | Type             | Description                                          |
+| ---------------------- | ---------------- | ---------------------------------------------------- |
+| `default_cut_speed`    | `float = 1000.0` | Default cutting speed (default 1000.0).              |
+| `default_travel_speed` | `float = 3000.0` | Default travel speed (default 3000.0).               |
+| `acceleration`         | `float = 1000.0` | Acceleration value (default 1000.0).                 |
+| _Returns_              | `list[float]`    | List of estimated times in seconds, one per command. |
+| _Complexity_           |                  | O(n) time, O(n) space                                |
 
 ### `estimate_time()`
 
@@ -695,14 +675,12 @@ estimate_time(
 
 Estimate the total processing time for this sequence.
 
-**Returns:** Estimated time in seconds.
-
 | Parameter              | Type             | Description                             |
 | ---------------------- | ---------------- | --------------------------------------- |
 | `default_cut_speed`    | `float = 1000.0` | Default cutting speed (default 1000.0). |
 | `default_travel_speed` | `float = 3000.0` | Default travel speed (default 3000.0).  |
 | `acceleration`         | `float = 1000.0` | Acceleration value (default 1000.0).    |
-| _Returns_              | `float`          |                                         |
+| _Returns_              | `float`          | Estimated time in seconds.              |
 | _Complexity_           |                  | O(n) time, O(1) space                   |
 
 ### `extend()`
@@ -727,13 +705,11 @@ extra_axes(idx: int) -> Optional[dict]
 
 Get the extra axes data for a moving command.
 
-**Returns:** Dict mapping axis names to values, or None.
-
-| Parameter    | Type             | Description           |
-| ------------ | ---------------- | --------------------- |
-| `idx`        | `int`            | Command index.        |
-| _Returns_    | `Optional[dict]` |                       |
-| _Complexity_ |                  | O(1) time, O(1) space |
+| Parameter    | Type             | Description                                 |
+| ------------ | ---------------- | ------------------------------------------- |
+| `idx`        | `int`            | Command index.                              |
+| _Returns_    | `Optional[dict]` | Dict mapping axis names to values, or None. |
+| _Complexity_ |                  | O(1) time, O(1) space                       |
 
 ### `flip_ops()`
 
@@ -743,12 +719,10 @@ flip_ops() -> Ops
 
 Reverse the order of subpaths.
 
-**Returns:** A new Ops with subpath order reversed.
-
-| Parameter    | Type  | Description           |
-| ------------ | ----- | --------------------- |
-| _Returns_    | `Ops` |                       |
-| _Complexity_ |       | O(n) time, O(n) space |
+| Parameter    | Type  | Description                            |
+| ------------ | ----- | -------------------------------------- |
+| _Returns_    | `Ops` | A new Ops with subpath order reversed. |
+| _Complexity_ |       | O(n) time, O(n) space                  |
 
 ### `frequency()`
 
@@ -758,14 +732,12 @@ frequency(idx: int) -> int
 
 Get the frequency of a SetFrequency command.
 
-**Returns:** Frequency in Hz.
-
 **Raises:** `TypeError` — If the command is not a SetFrequency.
 
 | Parameter    | Type  | Description           |
 | ------------ | ----- | --------------------- |
 | `idx`        | `int` | Command index.        |
-| _Returns_    | `int` |                       |
+| _Returns_    | `int` | Frequency in Hz.      |
 | _Complexity_ |       | O(1) time, O(1) space |
 
 ### `from_dict()`
@@ -818,14 +790,12 @@ get_frame(power: Optional[float] = None, speed: Optional[float] = None) -> Ops
 
 Extract a frame (first and last endpoints) from the sequence.
 
-**Returns:** A new Ops containing only the frame endpoints.
-
-| Parameter    | Type                     | Description                                  |
-| ------------ | ------------------------ | -------------------------------------------- |
-| `power`      | `Optional[float] = None` | Optional power to set on the frame commands. |
-| `speed`      | `Optional[float] = None` | Optional speed to set on the frame commands. |
-| _Returns_    | `Ops`                    |                                              |
-| _Complexity_ |                          | O(n) time, O(n) space                        |
+| Parameter    | Type                     | Description                                    |
+| ------------ | ------------------------ | ---------------------------------------------- |
+| `power`      | `Optional[float] = None` | Optional power to set on the frame commands.   |
+| `speed`      | `Optional[float] = None` | Optional speed to set on the frame commands.   |
+| _Returns_    | `Ops`                    | A new Ops containing only the frame endpoints. |
+| _Complexity_ |                          | O(n) time, O(n) space                          |
 
 ### `group_by_state_continuity()`
 
@@ -835,12 +805,10 @@ group_by_state_continuity() -> list[Ops]
 
 Group contiguous commands with the same state into separate Ops sequences.
 
-**Returns:** A list of Ops sequences grouped by state continuity.
-
-| Parameter    | Type        | Description           |
-| ------------ | ----------- | --------------------- |
-| _Returns_    | `list[Ops]` |                       |
-| _Complexity_ |             | O(n) time, O(n) space |
+| Parameter    | Type        | Description                                          |
+| ------------ | ----------- | ---------------------------------------------------- |
+| _Returns_    | `list[Ops]` | A list of Ops sequences grouped by state continuity. |
+| _Complexity_ |             | O(n) time, O(n) space                                |
 
 ### `indices_of()`
 
@@ -850,12 +818,10 @@ indices_of(ct: types.CommandType) -> list[int]
 
 Return all indices where the command type matches _ct_.
 
-**Returns:** List of matching command indices.
-
 | Parameter    | Type                | Description                        |
 | ------------ | ------------------- | ---------------------------------- |
 | `ct`         | `types.CommandType` | The **CommandType** to search for. |
-| _Returns_    | `list[int]`         |                                    |
+| _Returns_    | `list[int]`         | List of matching command indices.  |
 | _Complexity_ |                     | O(n) time, O(n) space              |
 
 ### `inspect()`
@@ -866,13 +832,11 @@ inspect(idx: int) -> CommandInfo
 
 Return detailed information about a single command.
 
-**Returns:** A CommandInfo object with type, endpoint, state, axes, etc.
-
-| Parameter    | Type          | Description           |
-| ------------ | ------------- | --------------------- |
-| `idx`        | `int`         | The command index.    |
-| _Returns_    | `CommandInfo` |                       |
-| _Complexity_ |               | O(1) time, O(1) space |
+| Parameter    | Type          | Description                                                 |
+| ------------ | ------------- | ----------------------------------------------------------- |
+| `idx`        | `int`         | The command index.                                          |
+| _Returns_    | `CommandInfo` | A CommandInfo object with type, endpoint, state, axes, etc. |
+| _Complexity_ |               | O(1) time, O(1) space                                       |
 
 ### `is_cutting()`
 
@@ -882,13 +846,11 @@ is_cutting(idx: int) -> bool
 
 Check whether the command at _idx_ is a cutting move.
 
-**Returns:** True if the command is a cutting move.
-
-| Parameter    | Type   | Description           |
-| ------------ | ------ | --------------------- |
-| `idx`        | `int`  | Command index.        |
-| _Returns_    | `bool` |                       |
-| _Complexity_ |        | O(1) time, O(1) space |
+| Parameter    | Type   | Description                            |
+| ------------ | ------ | -------------------------------------- |
+| `idx`        | `int`  | Command index.                         |
+| _Returns_    | `bool` | True if the command is a cutting move. |
+| _Complexity_ |        | O(1) time, O(1) space                  |
 
 ### `is_empty()`
 
@@ -911,13 +873,11 @@ is_marker(idx: int) -> bool
 
 Check whether the command at _idx_ is a marker command.
 
-**Returns:** True if the command is a structural marker (JobStart, LayerStart, etc.).
-
-| Parameter    | Type   | Description           |
-| ------------ | ------ | --------------------- |
-| `idx`        | `int`  | Command index.        |
-| _Returns_    | `bool` |                       |
-| _Complexity_ |        | O(1) time, O(1) space |
+| Parameter    | Type   | Description                                                              |
+| ------------ | ------ | ------------------------------------------------------------------------ |
+| `idx`        | `int`  | Command index.                                                           |
+| _Returns_    | `bool` | True if the command is a structural marker (JobStart, LayerStart, etc.). |
+| _Complexity_ |        | O(1) time, O(1) space                                                    |
 
 ### `is_scanline()`
 
@@ -927,13 +887,11 @@ is_scanline(idx: int) -> bool
 
 Check whether the command at _idx_ is a scanline command.
 
-**Returns:** True if the command is a ScanLine power command.
-
-| Parameter    | Type   | Description           |
-| ------------ | ------ | --------------------- |
-| `idx`        | `int`  | Command index.        |
-| _Returns_    | `bool` |                       |
-| _Complexity_ |        | O(1) time, O(1) space |
+| Parameter    | Type   | Description                                      |
+| ------------ | ------ | ------------------------------------------------ |
+| `idx`        | `int`  | Command index.                                   |
+| _Returns_    | `bool` | True if the command is a ScanLine power command. |
+| _Complexity_ |        | O(1) time, O(1) space                            |
 
 ### `is_state()`
 
@@ -943,13 +901,11 @@ is_state(idx: int) -> bool
 
 Check whether the command at _idx_ is a state command.
 
-**Returns:** True if the command modifies machine state.
-
-| Parameter    | Type   | Description           |
-| ------------ | ------ | --------------------- |
-| `idx`        | `int`  | Command index.        |
-| _Returns_    | `bool` |                       |
-| _Complexity_ |        | O(1) time, O(1) space |
+| Parameter    | Type   | Description                                 |
+| ------------ | ------ | ------------------------------------------- |
+| `idx`        | `int`  | Command index.                              |
+| _Returns_    | `bool` | True if the command modifies machine state. |
+| _Complexity_ |        | O(1) time, O(1) space                       |
 
 ### `is_travel()`
 
@@ -959,13 +915,11 @@ is_travel(idx: int) -> bool
 
 Check whether the command at _idx_ is a travel (non-cutting) move.
 
-**Returns:** True if the command is a travel move.
-
-| Parameter    | Type   | Description           |
-| ------------ | ------ | --------------------- |
-| `idx`        | `int`  | Command index.        |
-| _Returns_    | `bool` |                       |
-| _Complexity_ |        | O(1) time, O(1) space |
+| Parameter    | Type   | Description                           |
+| ------------ | ------ | ------------------------------------- |
+| `idx`        | `int`  | Command index.                        |
+| _Returns_    | `bool` | True if the command is a travel move. |
+| _Complexity_ |        | O(1) time, O(1) space                 |
 
 ### `job_end()`
 
@@ -1001,15 +955,13 @@ laser_uid(idx: int) -> str
 
 Get the laser UID from a SetLaser command.
 
-**Returns:** The laser source identifier.
-
 **Raises:** `TypeError` — If the command is not a SetLaser.
 
-| Parameter    | Type  | Description           |
-| ------------ | ----- | --------------------- |
-| `idx`        | `int` | Command index.        |
-| _Returns_    | `str` |                       |
-| _Complexity_ |       | O(1) time, O(1) space |
+| Parameter    | Type  | Description                  |
+| ------------ | ----- | ---------------------------- |
+| `idx`        | `int` | Command index.               |
+| _Returns_    | `str` | The laser source identifier. |
+| _Complexity_ |       | O(1) time, O(1) space        |
 
 ### `layer_end()`
 
@@ -1047,14 +999,12 @@ layer_uid(idx: int) -> str
 
 Get the layer UID from a LayerStart or LayerEnd command.
 
-**Returns:** The layer identifier.
-
 **Raises:** `TypeError` — If the command is not a Layer command.
 
 | Parameter    | Type  | Description           |
 | ------------ | ----- | --------------------- |
 | `idx`        | `int` | Command index.        |
-| _Returns_    | `str` |                       |
+| _Returns_    | `str` | The layer identifier. |
 | _Complexity_ |       | O(1) time, O(1) space |
 
 ### `len()`
@@ -1100,16 +1050,14 @@ linearize(idx: int, start_point: tuple[float, float, float]) -> Ops
 
 Decompose a curved command into linear segments.
 
-**Returns:** A new Ops containing the linearized sub-commands.
-
 **Raises:** `TypeError` — If the command at idx is not a curve or line type.
 
-| Parameter     | Type                         | Description                               |
-| ------------- | ---------------------------- | ----------------------------------------- |
-| `idx`         | `int`                        | Index of the command to linearize.        |
-| `start_point` | `tuple[float, float, float]` | The `(x, y, z)` start point of the curve. |
-| _Returns_     | `Ops`                        |                                           |
-| _Complexity_  |                              | O(n) time, O(n) space                     |
+| Parameter     | Type                         | Description                                       |
+| ------------- | ---------------------------- | ------------------------------------------------- |
+| `idx`         | `int`                        | Index of the command to linearize.                |
+| `start_point` | `tuple[float, float, float]` | The `(x, y, z)` start point of the curve.         |
+| _Returns_     | `Ops`                        | A new Ops containing the linearized sub-commands. |
+| _Complexity_  |                              | O(n) time, O(n) space                             |
 
 ### `linearize_all()`
 
@@ -1259,15 +1207,13 @@ power(idx: int) -> float
 
 Get the power level of a SetPower command.
 
-**Returns:** Power level (0.0–1.0 typically).
-
 **Raises:** `TypeError` — If the command is not a SetPower.
 
-| Parameter    | Type    | Description           |
-| ------------ | ------- | --------------------- |
-| `idx`        | `int`   | Command index.        |
-| _Returns_    | `float` |                       |
-| _Complexity_ |         | O(1) time, O(1) space |
+| Parameter    | Type    | Description                      |
+| ------------ | ------- | -------------------------------- |
+| `idx`        | `int`   | Command index.                   |
+| _Returns_    | `float` | Power level (0.0–1.0 typically). |
+| _Complexity_ |         | O(1) time, O(1) space            |
 
 ### `preload_state()`
 
@@ -1290,15 +1236,13 @@ pulse_width(idx: int) -> float
 
 Get the pulse width of a SetPulseWidth command.
 
-**Returns:** Pulse width in microseconds.
-
 **Raises:** `TypeError` — If the command is not a SetPulseWidth.
 
-| Parameter    | Type    | Description           |
-| ------------ | ------- | --------------------- |
-| `idx`        | `int`   | Command index.        |
-| _Returns_    | `float` |                       |
-| _Complexity_ |         | O(1) time, O(1) space |
+| Parameter    | Type    | Description                  |
+| ------------ | ------- | ---------------------------- |
+| `idx`        | `int`   | Command index.               |
+| _Returns_    | `float` | Pulse width in microseconds. |
+| _Complexity_ |         | O(1) time, O(1) space        |
 
 ### `quadratic_bezier_params()`
 
@@ -1308,15 +1252,13 @@ quadratic_bezier_params(idx: int) -> tuple[float, float, float]
 
 Get the quadratic bezier control point.
 
-**Returns:** `(cx, cy, cz)` control point.
-
 **Raises:** `TypeError` — If the command is not a QuadraticBezierTo.
 
-| Parameter    | Type                         | Description           |
-| ------------ | ---------------------------- | --------------------- |
-| `idx`        | `int`                        | Command index.        |
-| _Returns_    | `tuple[float, float, float]` |                       |
-| _Complexity_ |                              | O(1) time, O(1) space |
+| Parameter    | Type                         | Description                   |
+| ------------ | ---------------------------- | ----------------------------- |
+| `idx`        | `int`                        | Command index.                |
+| _Returns_    | `tuple[float, float, float]` | `(cx, cy, cz)` control point. |
+| _Complexity_ |                              | O(1) time, O(1) space         |
 
 ### `quadratic_bezier_to()`
 
@@ -1346,12 +1288,10 @@ rect(include_travel: bool = False) -> tuple[float, float, float, float]
 
 Compute the bounding rectangle of all commands.
 
-**Returns:** `(x_min, y_min, x_max, y_max)`.
-
 | Parameter        | Type                                | Description                                      |
 | ---------------- | ----------------------------------- | ------------------------------------------------ |
 | `include_travel` | `bool = False`                      | Whether to include travel moves (default False). |
-| _Returns_        | `tuple[float, float, float, float]` |                                                  |
+| _Returns_        | `tuple[float, float, float, float]` | `(x_min, y_min, x_max, y_max)`.                  |
 | _Complexity_     |                                     | O(n) time, O(1) space                            |
 
 ### `replace_all()`
@@ -1446,13 +1386,11 @@ scanline_data(idx: int) -> bytes
 
 Get the raw scanline power data for a scanline command.
 
-**Returns:** Raw bytes of scanline power data.
-
-| Parameter    | Type    | Description           |
-| ------------ | ------- | --------------------- |
-| `idx`        | `int`   | Command index.        |
-| _Returns_    | `bytes` |                       |
-| _Complexity_ |         | O(1) time, O(1) space |
+| Parameter    | Type    | Description                       |
+| ------------ | ------- | --------------------------------- |
+| `idx`        | `int`   | Command index.                    |
+| _Returns_    | `bytes` | Raw bytes of scanline power data. |
+| _Complexity_ |         | O(1) time, O(1) space             |
 
 ### `section_params()`
 
@@ -1462,15 +1400,13 @@ section_params(idx: int) -> tuple[types.SectionType, Optional[str]]
 
 Get the section type and optional workpiece UID from an OpsSection command.
 
-**Returns:** `(SectionType, Optional[workpiece_uid])`.
-
 **Raises:** `TypeError` — If the command is not an OpsSectionStart or OpsSectionEnd.
 
-| Parameter    | Type                                      | Description           |
-| ------------ | ----------------------------------------- | --------------------- |
-| `idx`        | `int`                                     | Command index.        |
-| _Returns_    | `tuple[types.SectionType, Optional[str]]` |                       |
-| _Complexity_ |                                           | O(1) time, O(1) space |
+| Parameter    | Type                                      | Description                               |
+| ------------ | ----------------------------------------- | ----------------------------------------- |
+| `idx`        | `int`                                     | Command index.                            |
+| _Returns_    | `tuple[types.SectionType, Optional[str]]` | `(SectionType, Optional[workpiece_uid])`. |
+| _Complexity_ |                                           | O(1) time, O(1) space                     |
 
 ### `section_ranges()`
 
@@ -1482,12 +1418,10 @@ Return the section ranges of the ops as index ranges.
 
 Similar to **sections** but returns contiguous index ranges instead of individual index lists.
 
-**Returns:** List of OpsSectionRange objects.
-
-| Parameter    | Type                    | Description           |
-| ------------ | ----------------------- | --------------------- |
-| _Returns_    | `list[OpsSectionRange]` |                       |
-| _Complexity_ |                         | O(n) time, O(n) space |
+| Parameter    | Type                    | Description                      |
+| ------------ | ----------------------- | -------------------------------- |
+| _Returns_    | `list[OpsSectionRange]` | List of OpsSectionRange objects. |
+| _Complexity_ |                         | O(n) time, O(n) space            |
 
 ### `sections()`
 
@@ -1500,12 +1434,10 @@ Return the logical sections of the ops.
 Sections are delimited by `OpsSectionStart`/`OpsSectionEnd` markers and group commands into
 vector-outline and raster-fill portions.
 
-**Returns:** List of OpsSection objects.
-
-| Parameter    | Type               | Description           |
-| ------------ | ------------------ | --------------------- |
-| _Returns_    | `list[OpsSection]` |                       |
-| _Complexity_ |                    | O(n) time, O(n) space |
+| Parameter    | Type               | Description                 |
+| ------------ | ------------------ | --------------------------- |
+| _Returns_    | `list[OpsSection]` | List of OpsSection objects. |
+| _Complexity_ |                    | O(n) time, O(n) space       |
 
 ### `segment_indices()`
 
@@ -1515,12 +1447,10 @@ segment_indices() -> list[list[int]]
 
 Return index ranges for each contiguous cutting segment.
 
-**Returns:** A list of index lists, one per segment.
-
-| Parameter    | Type              | Description           |
-| ------------ | ----------------- | --------------------- |
-| _Returns_    | `list[list[int]]` |                       |
-| _Complexity_ |                   | O(n) time, O(n) space |
+| Parameter    | Type              | Description                             |
+| ------------ | ----------------- | --------------------------------------- |
+| _Returns_    | `list[list[int]]` | A list of index lists, one per segment. |
+| _Complexity_ |                   | O(n) time, O(n) space                   |
 
 ### `set_cut_speed()`
 
@@ -1643,14 +1573,12 @@ speed(idx: int) -> int
 
 Get the speed value from a SetCutSpeed or SetTravelSpeed command.
 
-**Returns:** Speed in mm/s.
-
 **Raises:** `TypeError` — If the command is not a speed command.
 
 | Parameter    | Type  | Description           |
 | ------------ | ----- | --------------------- |
 | `idx`        | `int` | Command index.        |
-| _Returns_    | `int` |                       |
+| _Returns_    | `int` | Speed in mm/s.        |
 | _Complexity_ |       | O(1) time, O(1) space |
 
 ### `split_into_subpaths()`
@@ -1661,12 +1589,10 @@ split_into_subpaths() -> list[Ops]
 
 Split this Ops sequence into separate subpaths.
 
-**Returns:** A list of Ops sequences, one per subpath.
-
-| Parameter    | Type        | Description           |
-| ------------ | ----------- | --------------------- |
-| _Returns_    | `list[Ops]` |                       |
-| _Complexity_ |             | O(n) time, O(n) space |
+| Parameter    | Type        | Description                               |
+| ------------ | ----------- | ----------------------------------------- |
+| _Returns_    | `list[Ops]` | A list of Ops sequences, one per subpath. |
+| _Complexity_ |             | O(n) time, O(n) space                     |
 
 ### `state()`
 
@@ -1676,13 +1602,11 @@ state(idx: int) -> Optional[state.State]
 
 Get the machine state stored on a command (if available).
 
-**Returns:** The **State** at that index, or None.
-
-| Parameter    | Type                    | Description           |
-| ------------ | ----------------------- | --------------------- |
-| `idx`        | `int`                   | Command index.        |
-| _Returns_    | `Optional[state.State]` |                       |
-| _Complexity_ |                         | O(1) time, O(1) space |
+| Parameter    | Type                    | Description                               |
+| ------------ | ----------------------- | ----------------------------------------- |
+| `idx`        | `int`                   | Command index.                            |
+| _Returns_    | `Optional[state.State]` | The \*\*State\*\* at that index, or None. |
+| _Complexity_ |                         | O(1) time, O(1) space                     |
 
 ### `state_at()`
 
@@ -1692,15 +1616,13 @@ state_at(idx: int) -> state.State
 
 Return the accumulated state at a given command index.
 
-**Returns:** The state at that point.
-
 **Raises:** `IndexError` — If the index is out of range.
 
-| Parameter    | Type          | Description           |
-| ------------ | ------------- | --------------------- |
-| `idx`        | `int`         | The command index.    |
-| _Returns_    | `state.State` |                       |
-| _Complexity_ |               | O(1) time, O(1) space |
+| Parameter    | Type          | Description              |
+| ------------ | ------------- | ------------------------ |
+| `idx`        | `int`         | The command index.       |
+| _Returns_    | `state.State` | The state at that point. |
+| _Complexity_ |               | O(1) time, O(1) space    |
 
 ### `sub_ops()`
 
@@ -1710,13 +1632,11 @@ sub_ops(indices: Sequence[int]) -> Ops
 
 Extract a subset of commands by index.
 
-**Returns:** A new Ops sequence containing only the specified commands.
-
-| Parameter    | Type            | Description                         |
-| ------------ | --------------- | ----------------------------------- |
-| `indices`    | `Sequence[int]` | List of command indices to extract. |
-| _Returns_    | `Ops`           |                                     |
-| _Complexity_ |                 | O(n) time, O(n) space               |
+| Parameter    | Type            | Description                                                |
+| ------------ | --------------- | ---------------------------------------------------------- |
+| `indices`    | `Sequence[int]` | List of command indices to extract.                        |
+| _Returns_    | `Ops`           | A new Ops sequence containing only the specified commands. |
+| _Complexity_ |                 | O(n) time, O(n) space                                      |
 
 ### `subpath_indices()`
 
@@ -1726,12 +1646,10 @@ subpath_indices() -> list[list[int]]
 
 Return index ranges for each subpath.
 
-**Returns:** A list of index lists, one per subpath.
-
-| Parameter    | Type              | Description           |
-| ------------ | ----------------- | --------------------- |
-| _Returns_    | `list[list[int]]` |                       |
-| _Complexity_ |                   | O(n) time, O(n) space |
+| Parameter    | Type              | Description                             |
+| ------------ | ----------------- | --------------------------------------- |
+| _Returns_    | `list[list[int]]` | A list of index lists, one per subpath. |
+| _Complexity_ |                   | O(n) time, O(n) space                   |
 
 ### `subtract_regions()`
 
@@ -1755,12 +1673,10 @@ to_dict() -> dict
 
 Serialize this Ops sequence to a dict suitable for JSON export.
 
-**Returns:** A Python dict representation.
-
-| Parameter    | Type   | Description           |
-| ------------ | ------ | --------------------- |
-| _Returns_    | `dict` |                       |
-| _Complexity_ |        | O(n) time, O(n) space |
+| Parameter    | Type   | Description                   |
+| ------------ | ------ | ----------------------------- |
+| _Returns_    | `dict` | A Python dict representation. |
+| _Complexity_ |        | O(n) time, O(n) space         |
 
 ### `to_geometry()`
 
@@ -1770,12 +1686,10 @@ to_geometry() -> geo.Geometry
 
 Convert this Ops sequence back into a Geometry.
 
-**Returns:** A Geometry representing the same paths.
-
-| Parameter    | Type           | Description           |
-| ------------ | -------------- | --------------------- |
-| _Returns_    | `geo.Geometry` |                       |
-| _Complexity_ |                | O(n) time, O(n) space |
+| Parameter    | Type           | Description                             |
+| ------------ | -------------- | --------------------------------------- |
+| _Returns_    | `geo.Geometry` | A Geometry representing the same paths. |
+| _Complexity_ |                | O(n) time, O(n) space                   |
 
 ### `to_numpy_arrays()`
 
@@ -1785,12 +1699,10 @@ to_numpy_arrays() -> dict
 
 Serialize this Ops sequence to numpy arrays.
 
-**Returns:** A Python dict of numpy arrays.
-
-| Parameter    | Type   | Description           |
-| ------------ | ------ | --------------------- |
-| _Returns_    | `dict` |                       |
-| _Complexity_ |        | O(n) time, O(n) space |
+| Parameter    | Type   | Description                    |
+| ------------ | ------ | ------------------------------ |
+| _Returns_    | `dict` | A Python dict of numpy arrays. |
+| _Complexity_ |        | O(n) time, O(n) space          |
 
 ### `transfer_command_from()`
 
@@ -1899,12 +1811,10 @@ without_state() -> Ops
 
 Return a copy with all state commands removed.
 
-**Returns:** A new Ops containing only moving commands.
-
-| Parameter    | Type  | Description           |
-| ------------ | ----- | --------------------- |
-| _Returns_    | `Ops` |                       |
-| _Complexity_ |       | O(n) time, O(n) space |
+| Parameter    | Type  | Description                                |
+| ------------ | ----- | ------------------------------------------ |
+| _Returns_    | `Ops` | A new Ops containing only moving commands. |
+| _Complexity_ |       | O(n) time, O(n) space                      |
 
 ### `workpiece_end()`
 
@@ -1942,15 +1852,13 @@ workpiece_uid(idx: int) -> str
 
 Get the workpiece UID from a WorkpieceStart or WorkpieceEnd command.
 
-**Returns:** The workpiece identifier.
-
 **Raises:** `TypeError` — If the command is not a Workpiece command.
 
-| Parameter    | Type  | Description           |
-| ------------ | ----- | --------------------- |
-| `idx`        | `int` | Command index.        |
-| _Returns_    | `str` |                       |
-| _Complexity_ |       | O(1) time, O(1) space |
+| Parameter    | Type  | Description               |
+| ------------ | ----- | ------------------------- |
+| `idx`        | `int` | Command index.            |
+| _Returns_    | `str` | The workpiece identifier. |
+| _Complexity_ |       | O(1) time, O(1) space     |
 
 ## OpsSection
 

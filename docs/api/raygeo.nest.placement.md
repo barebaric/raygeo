@@ -27,15 +27,13 @@ Calculate fitness score for a set of placements.
 
 Lower is better. Returns infinity if no placements or zero area.
 
-**Returns:** Fitness score (lower is better).
-
 | Parameter        | Type                                | Description                                   |
 | ---------------- | ----------------------------------- | --------------------------------------------- |
 | `polygon_groups` | `Sequence[Sequence[numpy.ndarray]]` | Polygons for each placement.                  |
 | `rotations`      | `Sequence[float]`                   | Rotation angle in degrees for each placement. |
 | `sheet_indices`  | `Sequence[int]`                     | 0-based sheet index for each placement.       |
 | `num_parts`      | `int`                               | Total number of parts (some may be unplaced). |
-| _Returns_        | `float`                             |                                               |
+| _Returns_        | `float`                             | Fitness score (lower is better).              |
 | _Complexity_     |                                     | O(n) where n = number of placements.          |
 
 ### `filter_candidates_multi_resolution()`
@@ -50,14 +48,12 @@ filter_candidates_multi_resolution(
 
 Remove candidates that are too close together.
 
-**Returns:** Filtered list of (x, y) positions.
-
 | Parameter    | Type                                | Description                                    |
 | ------------ | ----------------------------------- | ---------------------------------------------- |
 | `candidates` | `list[tuple[float, float]]`         | List of (x, y) candidate positions.            |
 | `ifp_bounds` | `tuple[float, float, float, float]` | IFP bounding box (min_x, min_y, max_x, max_y). |
 | `min_dist`   | `float`                             | Minimum allowed distance between candidates.   |
-| _Returns_    | `list[tuple[float, float]]`         |                                                |
+| _Returns_    | `list[tuple[float, float]]`         | Filtered list of (x, y) positions.             |
 | _Complexity_ |                                     | O(n log n) for spatial distance filtering.     |
 
 ### `find_valid_position()`
@@ -81,8 +77,6 @@ Find a valid position: heuristic search first, NFP fallback second.
 
 Supports hull-based collision detection and sheet world offsets.
 
-**Returns:** (x, y) position or None.
-
 | Parameter            | Type                                                | Description                                         |
 | -------------------- | --------------------------------------------------- | --------------------------------------------------- |
 | `ifp_polygons`       | `Sequence[Sequence[tuple[float, float]]]`           | IFP polygons (valid placement region).              |
@@ -95,7 +89,7 @@ Supports hull-based collision detection and sheet world offsets.
 | `spacing`            | `float = 1`                                         | Minimum spacing between parts.                      |
 | `min_area`           | `float = 1`                                         | Minimum overlap area (clipper coords).              |
 | `curve_tolerance`    | `float = 0.5`                                       | Curve tolerance for distance filtering.             |
-| _Returns_            | `tuple[float, float] &#124; None`                   |                                                     |
+| _Returns_            | `tuple[float, float] &#124; None`                   | (x, y) position or None.                            |
 | _Complexity_         |                                                     | O(n \* m) for candidate search with overlap checks. |
 
 ### `find_valid_position_nfp()`
@@ -120,8 +114,6 @@ Find a valid position using NFP-based region subtraction.
 Computes No-Fit Polygons for nearby placed parts and subtracts them from the IFP to identify viable
 placement regions.
 
-**Returns:** (x, y) position or None.
-
 | Parameter            | Type                                                | Description                                            |
 | -------------------- | --------------------------------------------------- | ------------------------------------------------------ |
 | `ifp_polygons`       | `Sequence[Sequence[tuple[float, float]]]`           | IFP polygons (valid placement region).                 |
@@ -134,7 +126,7 @@ placement regions.
 | `spacing`            | `float = 1`                                         | Minimum spacing between parts.                         |
 | `min_area`           | `float = 1`                                         | Minimum overlap area (clipper coords).                 |
 | `curve_tolerance`    | `float = 0.5`                                       | Curve tolerance for distance filtering.                |
-| _Returns_            | `tuple[float, float] &#124; None`                   |                                                        |
+| _Returns_            | `tuple[float, float] &#124; None`                   | (x, y) position or None.                               |
 | _Complexity_         |                                                     | O(n \* m) for NFP construction per nearby placed part. |
 
 ### `find_valid_position_scored()`
@@ -159,8 +151,6 @@ Find a valid position using heuristic candidate search.
 Uses IFP vertices, bottom-left sweep, grid, placed polygon vertices, and perimeter candidates. Falls
 back to NFP-region candidates. Scores candidates and picks the best valid one.
 
-**Returns:** (x, y) position or None.
-
 | Parameter            | Type                                                | Description                                    |
 | -------------------- | --------------------------------------------------- | ---------------------------------------------- |
 | `ifp_polygons`       | `Sequence[Sequence[tuple[float, float]]]`           | IFP polygons (valid placement region).         |
@@ -173,7 +163,7 @@ back to NFP-region candidates. Scores candidates and picks the best valid one.
 | `spacing`            | `float = 1`                                         | Minimum spacing between parts.                 |
 | `min_area`           | `float = 1`                                         | Minimum overlap area (clipper coords).         |
 | `curve_tolerance`    | `float = 0.5`                                       | Curve tolerance for distance filtering.        |
-| _Returns_            | `tuple[float, float] &#124; None`                   |                                                |
+| _Returns_            | `tuple[float, float] &#124; None`                   | (x, y) position or None.                       |
 | _Complexity_         |                                                     | O(n \* m) for scored candidate search.         |
 
 ### `generate_bottom_left_candidates()`
@@ -188,14 +178,12 @@ generate_bottom_left_candidates(
 
 Generate candidate positions scanning from bottom-left.
 
-**Returns:** List of (x, y) candidate positions.
-
 | Parameter     | Type                                | Description                                     |
 | ------------- | ----------------------------------- | ----------------------------------------------- |
 | `ifp_bounds`  | `tuple[float, float, float, float]` | IFP bounding box (min_x, min_y, max_x, max_y).  |
 | `part_bounds` | `tuple[float, float, float, float]` | Part bounding box (min_x, min_y, max_x, max_y). |
 | `spacing`     | `float`                             | Minimum spacing between parts.                  |
-| _Returns_     | `list[tuple[float, float]]`         |                                                 |
+| _Returns_     | `list[tuple[float, float]]`         | List of (x, y) candidate positions.             |
 | _Complexity_  |                                     | O(n) where n = number of grid cells scanned.    |
 
 ### `generate_grid_candidates()`
@@ -210,14 +198,12 @@ generate_grid_candidates(
 
 Generate candidate positions in a grid pattern.
 
-**Returns:** List of (x, y) candidate positions.
-
 | Parameter     | Type                                | Description                                     |
 | ------------- | ----------------------------------- | ----------------------------------------------- |
 | `ifp_bounds`  | `tuple[float, float, float, float]` | IFP bounding box (min_x, min_y, max_x, max_y).  |
 | `part_bounds` | `tuple[float, float, float, float]` | Part bounding box (min_x, min_y, max_x, max_y). |
 | `spacing`     | `float`                             | Grid spacing.                                   |
-| _Returns_     | `list[tuple[float, float]]`         |                                                 |
+| _Returns_     | `list[tuple[float, float]]`         | List of (x, y) candidate positions.             |
 | _Complexity_  |                                     | O(n) where n = number of grid cells.            |
 
 ### `generate_perimeter_candidates()`
@@ -235,14 +221,12 @@ Generate edge-aligned candidates around placed parts.
 For each placed part (group of polygons), produces 8 positions: right-bottom, right-top,
 left-bottom, left-top, above-left, above-right, below-left, below-right.
 
-**Returns:** List of (x, y) candidate positions.
-
 | Parameter       | Type                                            | Description                                     |
 | --------------- | ----------------------------------------------- | ----------------------------------------------- |
 | `placed_groups` | `Sequence[Sequence[list[tuple[float, float]]]]` | List of placed parts, each a list of polygons.  |
 | `part_bounds`   | `tuple[float, float, float, float]`             | Part bounding box (min_x, min_y, max_x, max_y). |
 | `spacing`       | `float`                                         | Minimum spacing between parts.                  |
-| _Returns_       | `list[tuple[float, float]]`                     |                                                 |
+| _Returns_       | `list[tuple[float, float]]`                     | List of (x, y) candidate positions.             |
 | _Complexity_    |                                                 | O(n) where n = number of placed parts.          |
 
 ### `place_parts()`
@@ -270,20 +254,17 @@ per sheet, gravity post-processing, and fitness calculation.
 Parts are sorted by area (largest first). For each part, the best sheet and position are selected.
 After all parts are placed, gravity is applied per sheet.
 
-**Returns:** List of dicts, one per sheet, with keys: placements, sheet_index, unused_part_indices,
-fitness.
-
-| Parameter         | Type                                                | Description                                        |
-| ----------------- | --------------------------------------------------- | -------------------------------------------------- |
-| `part_polys`      | `Sequence[Sequence[Sequence[tuple[float, float]]]]` | List of parts, each a list of polygon point lists. |
-| `part_hulls`      | `Sequence[Sequence[Sequence[tuple[float, float]]]]` | List of hull groups per part (may be empty).       |
-| `sheet_polys`     | `Sequence[Sequence[tuple[float, float]]]`           | List of sheet polygons.                            |
-| `sheet_offsets`   | `Sequence[tuple[float, float]]`                     | World-space offset (x, y) for each sheet.          |
-| `rotations`       | `Sequence[float]`                                   | Rotation angle (degrees) for each part.            |
-| `flips_h`         | `Sequence[bool]`                                    | Horizontal flip flag per part.                     |
-| `flips_v`         | `Sequence[bool]`                                    | Vertical flip flag per part.                       |
-| `spacing`         | `float = 1`                                         | Minimum spacing between parts.                     |
-| `min_area`        | `float = 1`                                         | Minimum overlap area (clipper coords).             |
-| `curve_tolerance` | `float = 0.5`                                       | Curve tolerance for distance filtering.            |
-| _Returns_         | `list[dict]`                                        |                                                    |
-| _Complexity_      |                                                     | O(p _ s _ n \* m) where p = parts, s = sheets.     |
+| Parameter         | Type                                                | Description                                                                                     |
+| ----------------- | --------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| `part_polys`      | `Sequence[Sequence[Sequence[tuple[float, float]]]]` | List of parts, each a list of polygon point lists.                                              |
+| `part_hulls`      | `Sequence[Sequence[Sequence[tuple[float, float]]]]` | List of hull groups per part (may be empty).                                                    |
+| `sheet_polys`     | `Sequence[Sequence[tuple[float, float]]]`           | List of sheet polygons.                                                                         |
+| `sheet_offsets`   | `Sequence[tuple[float, float]]`                     | World-space offset (x, y) for each sheet.                                                       |
+| `rotations`       | `Sequence[float]`                                   | Rotation angle (degrees) for each part.                                                         |
+| `flips_h`         | `Sequence[bool]`                                    | Horizontal flip flag per part.                                                                  |
+| `flips_v`         | `Sequence[bool]`                                    | Vertical flip flag per part.                                                                    |
+| `spacing`         | `float = 1`                                         | Minimum spacing between parts.                                                                  |
+| `min_area`        | `float = 1`                                         | Minimum overlap area (clipper coords).                                                          |
+| `curve_tolerance` | `float = 0.5`                                       | Curve tolerance for distance filtering.                                                         |
+| _Returns_         | `list[dict]`                                        | List of dicts, one per sheet, with keys: placements, sheet_index, unused_part_indices, fitness. |
+| _Complexity_      |                                                     | O(p \* s \* n \* m) where p = parts, s = sheets.                                                |

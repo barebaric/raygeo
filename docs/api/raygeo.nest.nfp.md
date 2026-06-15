@@ -22,13 +22,11 @@ nfp_convex_fast(
 
 Fast NFP for convex polygon pairs.
 
-**Returns:** List of NFP polygons.
-
 | Parameter     | Type                              | Description                        |
 | ------------- | --------------------------------- | ---------------------------------- |
 | `static_poly` | `Sequence[tuple[float, float]]`   | Static polygon as points.          |
 | `orbiting`    | `Sequence[tuple[float, float]]`   | Orbiting polygon as points.        |
-| _Returns_     | `list[list[tuple[float, float]]]` |                                    |
+| _Returns_     | `list[list[tuple[float, float]]]` | List of NFP polygons.              |
 | _Complexity_  |                                   | O(n + m) for convex polygon pairs. |
 
 ### `nfp_minkowski()`
@@ -42,13 +40,11 @@ nfp_minkowski(
 
 General NFP using Minkowski sum with Clipper union.
 
-**Returns:** List of NFP polygons.
-
 | Parameter     | Type                              | Description                           |
 | ------------- | --------------------------------- | ------------------------------------- |
 | `static_poly` | `Sequence[tuple[float, float]]`   | Static polygon as points.             |
 | `orbiting`    | `Sequence[tuple[float, float]]`   | Orbiting polygon as points.           |
-| _Returns_     | `list[list[tuple[float, float]]]` |                                       |
+| _Returns_     | `list[list[tuple[float, float]]]` | List of NFP polygons.                 |
 | _Complexity_  |                                   | O(n \* m) where n, m = vertex counts. |
 
 ### `no_fit_polygon()`
@@ -62,13 +58,11 @@ no_fit_polygon(
 
 Compute the No-Fit Polygon (NFP) for two polygons.
 
-**Returns:** List of NFP polygons.
-
 | Parameter     | Type                    | Description                                             |
 | ------------- | ----------------------- | ------------------------------------------------------- |
 | `static_poly` | `Sequence[types.Point]` | Static polygon as (x, y) points.                        |
 | `orbiting`    | `Sequence[types.Point]` | Orbiting polygon as (x, y) points.                      |
-| _Returns_     | `list[types.Polygon]`   |                                                         |
+| _Returns_     | `list[types.Polygon]`   | List of NFP polygons.                                   |
 | _Complexity_  |                         | O(n \* m) where n, m = vertex counts of input polygons. |
 
 ### `normalize_polygon()`
@@ -81,13 +75,11 @@ normalize_polygon(
 
 Shift a polygon so its bounding box minimum is at (0, 0).
 
-**Returns:** (normalized_polygon, offset_x, offset_y).
-
-| Parameter    | Type                                 | Description                     |
-| ------------ | ------------------------------------ | ------------------------------- |
-| `poly`       | `Sequence[types.Point]`              | Input polygon as (x, y) points. |
-| _Returns_    | `tuple[types.Polygon, float, float]` |                                 |
-| _Complexity_ |                                      | O(n) where n = vertex count.    |
+| Parameter    | Type                                 | Description                               |
+| ------------ | ------------------------------------ | ----------------------------------------- |
+| `poly`       | `Sequence[types.Point]`              | Input polygon as (x, y) points.           |
+| _Returns_    | `tuple[types.Polygon, float, float]` | (normalized_polygon, offset_x, offset_y). |
+| _Complexity_ |                                      | O(n) where n = vertex count.              |
 
 ### `polygon_to_key()`
 
@@ -97,10 +89,8 @@ polygon_to_key(poly: Sequence[types.Point]) -> list[tuple[int, int]]
 
 Convert a polygon to a rounded integer key for caching.
 
-**Returns:** List of rounded (x, y) integer tuples.
-
-| Parameter    | Type                    | Description                     |
-| ------------ | ----------------------- | ------------------------------- |
-| `poly`       | `Sequence[types.Point]` | Input polygon as (x, y) points. |
-| _Returns_    | `list[tuple[int, int]]` |                                 |
-| _Complexity_ |                         | O(n) where n = vertex count.    |
+| Parameter    | Type                    | Description                            |
+| ------------ | ----------------------- | -------------------------------------- |
+| `poly`       | `Sequence[types.Point]` | Input polygon as (x, y) points.        |
+| _Returns_    | `list[tuple[int, int]]` | List of rounded (x, y) integer tuples. |
+| _Complexity_ |                         | O(n) where n = vertex count.           |

@@ -65,11 +65,9 @@ Assert that this Axis represents exactly one axis (not a combination).
 
 Look up an Axis by its uppercase name.
 
-**Returns:** The corresponding Axis constant.
-
 **Raises:** `ValueError` — If the name is unknown.
 
 | Parameter | Type   | Description                                |
 | --------- | ------ | ------------------------------------------ |
 | `name`    | `str`  | The uppercase letter (`"X"`, `"Y"`, etc.). |
-| _Returns_ | `Axis` |                                            |
+| _Returns_ | `Axis` | The corresponding Axis constant.           |

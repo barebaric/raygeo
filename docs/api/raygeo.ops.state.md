@@ -90,9 +90,7 @@ allow_rapid_change(target: State) -> bool
 Check whether the machine can transition from the current state to the _target_ state without a
 `SetPower` command.
 
-**Returns:** True if the change is a rapid (non-power) change.
-
-| Parameter | Type    | Description                          |
-| --------- | ------- | ------------------------------------ |
-| `target`  | `State` | The target state to compare against. |
-| _Returns_ | `bool`  |                                      |
+| Parameter | Type    | Description                                       |
+| --------- | ------- | ------------------------------------------------- |
+| `target`  | `State` | The target state to compare against.              |
+| _Returns_ | `bool`  | True if the change is a rapid (non-power) change. |
