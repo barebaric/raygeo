@@ -190,6 +190,27 @@ Close the current sub-path.
 | _Returns_    | `Geometry` |                       |
 | _Complexity_ |            | O(1) time, O(1) space |
 
+### `convert_arcs_to_beziers()`
+
+`convert_arcs_to_beziers() -> None`
+
+Convert all Arc commands to Bezier curve approximations in-place.
+
+After this call, the geometry will only contain Move, Line, and Bezier commands.
+
+| Parameter    | Type   | Description                                        |
+| ------------ | ------ | -------------------------------------------------- |
+| _Returns_    | `None` |                                                    |
+| _Complexity_ |        | O(n) time, O(n) space where n = number of commands |
+
+![Overlay showing Bezier curves closely matching the original arcs](images/arc-to-bezier-overlay.png)
+
+_Overlay showing Bezier curves closely matching the original arcs_
+
+![Arc commands converted to Bezier curve approximations](images/arc-to-bezier.png)
+
+_Arc commands converted to Bezier curve approximations_
+
 ### `copy()`
 
 `copy() -> Geometry`

@@ -30,6 +30,16 @@ _INLINE_IMAGE_MAP = {
             "geometry-playground",
             "Various geometry shapes and operations",
         ),
+        (
+            "convert_arcs_to_beziers",
+            "arc-to-bezier",
+            "Arc commands converted to Bezier curve approximations",
+        ),
+        (
+            "convert_arcs_to_beziers",
+            "arc-to-bezier-overlay",
+            "Overlay showing Bezier curves closely matching the original arcs",
+        ),
     ],
     "raygeo.geo.shape.polygon.md": [
         (

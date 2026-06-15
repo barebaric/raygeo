@@ -40,10 +40,12 @@ def generate_examples(output_dir):
     path = output_dir / "image-processing-min-run-len.png"
     fig.savefig(path, dpi=150)
     plt.close(fig)
-    images.append({
-        "path": "image-processing-min-run-len.png",
-        "caption": "Minimum run length applied to binary image",
-    })
+    images.append(
+        {
+            "path": "image-processing-min-run-len.png",
+            "caption": "Minimum run length applied to binary image",
+        }
+    )
 
     return {
         "title": "Minimum Run Length",

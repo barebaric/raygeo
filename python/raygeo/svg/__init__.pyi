@@ -15,6 +15,7 @@ __all__ = [
     "parse_svg_path_data",
     "parse_svg_transform",
     "svg_length_to_mm",
+    "svg_length_to_px",
     "svg_string_to_geometries",
     "svg_string_to_geometries_by_layer",
 ]
@@ -103,6 +104,16 @@ def svg_length_to_mm(length_str: str, dpi: float = 96) -> float:
     :param length_str: SVG length string (e.g. '10mm', '2.5in', '100').
     :param dpi: Pixels per inch used for px/unitless conversion (default 96).
     :returns: Length in millimetres.
+    :complexity: O(1)
+    """
+
+def svg_length_to_px(length_str: str, dpi: float = 96) -> float:
+    r"""
+    Parse an SVG length string and convert to pixels.
+    
+    :param length_str: SVG length string (e.g. '10mm', '2.5in', '100').
+    :param dpi: Pixels per inch used for px/unitless conversion (default 96).
+    :returns: Length in pixels.
     :complexity: O(1)
     """
 

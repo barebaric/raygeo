@@ -228,6 +228,31 @@ fn py_svg_length_to_mm(length_str: &str, dpi: f64) -> PyResult<f64> {
     Ok(sl.to_mm(dpi))
 }
 
+// ── svg_length_to_px ──────────────────────────────────────────────
+
+#[gen_stub_pyfunction(
+    python = r#"
+    def svg_length_to_px(
+        length_str: str,
+        dpi: float = 96.0,
+    ) -> float:
+        """Parse an SVG length string and convert to pixels.
+
+        :param length_str: SVG length string (e.g. '10mm', '2.5in', '100').
+        :param dpi: Pixels per inch used for px/unitless conversion (default 96).
+        :returns: Length in pixels.
+        :complexity: O(1)
+        """
+"#,
+    module = "raygeo.svg"
+)]
+#[pyfunction(name = "svg_length_to_px")]
+#[pyo3(signature = (length_str, dpi=96.0))]
+fn py_svg_length_to_px(length_str: &str, dpi: f64) -> PyResult<f64> {
+    let sl = svg::parse_svg_length(length_str)?;
+    Ok(sl.to_px(dpi))
+}
+
 // ── SvgMetadata Python class ──────────────────────────────────────
 
 #[gen_stub_pyclass]
@@ -390,6 +415,7 @@ pub(crate) fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
             "parse_svg_path_data",
             "parse_svg_transform",
             "svg_length_to_mm",
+            "svg_length_to_px",
             "svg_string_to_geometries",
             "svg_string_to_geometries_by_layer",
         ],
@@ -406,6 +432,7 @@ pub(crate) fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     svg_mod
         .add_function(wrap_pyfunction!(py_parse_svg_transform, &svg_mod)?)?;
     svg_mod.add_function(wrap_pyfunction!(py_svg_length_to_mm, &svg_mod)?)?;
+    svg_mod.add_function(wrap_pyfunction!(py_svg_length_to_px, &svg_mod)?)?;
     svg_mod.add_function(wrap_pyfunction!(
         py_svg_string_to_geometries,
         &svg_mod

@@ -133,6 +133,21 @@ Parse an SVG length string and convert to millimetres.
 | _Returns_    | `float`      |                                                               |
 | _Complexity_ |              | O(1)                                                          |
 
+### `svg_length_to_px()`
+
+`svg_length_to_px(length_str: str, dpi: float = 96) -> float`
+
+Parse an SVG length string and convert to pixels.
+
+**Returns:** Length in pixels.
+
+| Parameter    | Type         | Description                                                   |
+| ------------ | ------------ | ------------------------------------------------------------- |
+| `length_str` | `str`        | SVG length string (e.g. '10mm', '2.5in', '100').              |
+| `dpi`        | `float = 96` | Pixels per inch used for px/unitless conversion (default 96). |
+| _Returns_    | `float`      |                                                               |
+| _Complexity_ |              | O(1)                                                          |
+
 ### `svg_string_to_geometries()`
 
 `svg_string_to_geometries(svg_str: str, scale_x: float = 1, scale_y: float = 1) -> list[Geometry]`

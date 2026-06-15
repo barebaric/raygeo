@@ -1321,6 +1321,17 @@ impl Geometry {
         slf
     }
 
+    /// Convert all Arc commands to Bezier curve approximations in-place.
+    ///
+    /// After this call, the geometry will only contain Move, Line, and Bezier
+    /// commands.
+    ///
+    /// :complexity: O(n) time, O(n) space where n = number of commands
+    fn convert_arcs_to_beziers(&mut self) -> PyResult<()> {
+        self.inner.convert_arcs_to_beziers();
+        Ok(())
+    }
+
     /// Check if the geometry has self-intersections.
     ///
     /// :param fail_on_t_junction: Whether to fail on T-junctions.

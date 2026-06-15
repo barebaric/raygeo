@@ -443,6 +443,15 @@ class Geometry:
         :param z: End Z coordinate.
         :complexity: O(1) time, O(1) space
         """
+    def convert_arcs_to_beziers(self) -> None:
+        r"""
+        Convert all Arc commands to Bezier curve approximations in-place.
+        
+        After this call, the geometry will only contain Move, Line, and Bezier
+        commands.
+        
+        :complexity: O(n) time, O(n) space where n = number of commands
+        """
     def has_self_intersections(self, fail_on_t_junction: builtins.bool = False) -> builtins.bool:
         r"""
         Check if the geometry has self-intersections.

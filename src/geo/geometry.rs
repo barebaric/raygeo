@@ -8,6 +8,7 @@
 
 use glam::DMat4;
 
+use crate::geo::algo::fitting::convert_arc_to_beziers_from_array;
 use crate::geo::query::get_positions_at_distances_from_array;
 use crate::types::{Command, Point, Point3D, Rect};
 
@@ -290,6 +291,53 @@ impl Geometry {
             self.data.extend(other.data.iter().cloned());
         }
         self.uniform_scalable = self.uniform_scalable && other.uniform_scalable;
+        self
+    }
+
+    /// Converts all Arc commands to Bezier curve approximations in-place.
+    ///
+    /// This is useful when you need a geometry that only contains Move, Line,
+    /// and Bezier commands (e.g., for SVG export where endpoint-param arcs
+    /// may be lossy).
+    pub fn convert_arcs_to_beziers(&mut self) -> &mut Self {
+        // Collect (index, start, end, center_offset, clockwise) for all arcs.
+        let arcs: Vec<(usize, Point3D, Point3D, Point, bool)> = {
+            let data = &self.data;
+            let mut arcs = Vec::new();
+            let mut last_point = self.last_move_to;
+            for (idx, cmd) in data.iter().enumerate() {
+                if let Command::Arc {
+                    end,
+                    center_offset,
+                    clockwise,
+                    ..
+                } = cmd
+                {
+                    arcs.push((
+                        idx,
+                        last_point,
+                        *end,
+                        *center_offset,
+                        *clockwise,
+                    ));
+                }
+                last_point = cmd.end_point();
+            }
+            arcs
+        };
+        // Replace arcs in reverse order to preserve indices.
+        for (idx, start, end, center_offset, clockwise) in
+            arcs.into_iter().rev()
+        {
+            let beziers = convert_arc_to_beziers_from_array(
+                start,
+                end,
+                center_offset,
+                clockwise,
+            );
+            self.data.splice(idx..=idx, beziers);
+        }
+        self.uniform_scalable = true;
         self
     }
 
