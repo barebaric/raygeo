@@ -221,3 +221,22 @@ are treated as layers.
 | `scale_y`    | `float = 1`                        | Y-axis scale factor for coordinate transform. |
 | _Returns_    | `list[tuple[str, list[Geometry]]]` |                                               |
 | _Complexity_ |                                    | O(n) where n = size of SVG document           |
+
+### `svg_string_to_geometry()`
+
+`svg_string_to_geometry(svg_str: str, scale_x: float = 1, scale_y: float = 1) -> Geometry`
+
+Parse an SVG string and merge all subpaths into a single Geometry.
+
+Like svg_string_to_geometries but returns one combined Geometry instead of a list, avoiding a
+Python-side merge loop.
+
+**Returns:** A single Geometry containing all paths.
+
+| Parameter    | Type        | Description                                   |
+| ------------ | ----------- | --------------------------------------------- |
+| `svg_str`    | `str`       | SVG document as a string.                     |
+| `scale_x`    | `float = 1` | X-axis scale factor for coordinate transform. |
+| `scale_y`    | `float = 1` | Y-axis scale factor for coordinate transform. |
+| _Returns_    | `Geometry`  |                                               |
+| _Complexity_ |             | O(n) where n = size of SVG document           |

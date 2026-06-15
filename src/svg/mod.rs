@@ -149,7 +149,8 @@ fn svg_arc_center(
     let mut rx = rx.abs();
     let mut ry = ry.abs();
     let phi = phi_deg.to_radians();
-    let (cp, sp) = phi.sin_cos();
+    let cp = phi.cos();
+    let sp = phi.sin();
     let dx = (x1 - x2) / 2.0;
     let dy = (y1 - y2) / 2.0;
     let x1p = cp * dx + sp * dy;
@@ -204,9 +205,12 @@ fn arc_seg_to_bezier(
     t2: f64,
 ) -> BezierSeg {
     let k = 4.0 / 3.0 * ((t2 - t1) / 4.0).tan();
-    let (cp, sp) = phi.sin_cos();
-    let (c1, s1) = t1.sin_cos();
-    let (c2, s2) = t2.sin_cos();
+    let cp = phi.cos();
+    let sp = phi.sin();
+    let c1 = t1.cos();
+    let s1 = t1.sin();
+    let c2 = t2.cos();
+    let s2 = t2.sin();
     let sx = cx + rx * c1 * cp - ry * s1 * sp;
     let sy = cy + rx * c1 * sp + ry * s1 * cp;
     let ex = cx + rx * c2 * cp - ry * s2 * sp;
@@ -477,17 +481,22 @@ pub fn parse_svg_path_data(
                 };
                 let is_circular =
                     (ac.rx - ac.ry).abs() / ac.rx.max(ac.ry) < 1e-3;
+                let is_short_arc = ac.sweep.abs() <= PI + 1e-9;
                 if let Some(ref mut g) = current_geo {
-                    if is_circular {
-                        let (tex, tey, ti, tj, cw) = txfm_arc(
+                    if is_circular && is_short_arc {
+                        // SVG sweep=true means positive-angle direction (CCW
+                        // in atan2), which is clockwise=false in raygeo.
+                        let (_cx, _cy, ti, tj, cw) = txfm_arc(
                             pos,
                             (ac.cx, ac.cy),
-                            sweep,
+                            !sweep,
                             transform,
                             scale_x,
                             scale_y,
                         );
-                        g.arc_to(tex, tey, ti, tj, cw, 0.0);
+                        let (end_x, end_y) =
+                            txfm_pt(ex, ey, transform, scale_x, scale_y);
+                        g.arc_to(end_x, end_y, ti, tj, cw, 0.0);
                     } else {
                         for (_, (c1x, c1y), (c2x, c2y), (ex, ey)) in
                             elliptical_arc_to_beziers(&ac)
@@ -567,7 +576,8 @@ fn rotate_m(coords: &[f64]) -> DMat3 {
         return DMat3::IDENTITY;
     }
     let a = coords[0].to_radians();
-    let (c, s) = a.sin_cos();
+    let c = a.cos();
+    let s = a.sin();
     if coords.len() >= 3 {
         let (cx, cy) = (coords[1], coords[2]);
         DMat3::from_cols(
@@ -818,6 +828,22 @@ pub fn svg_string_to_geometries(
         Err(_) => Vec::new(),
     };
     Ok(all_geometries)
+}
+
+/// Like [`svg_string_to_geometries`] but merges all subpaths into a single
+/// [`Geometry`].  This avoids a Python-side loop when you only need one
+/// combined path.
+pub fn svg_string_to_geometry(
+    svg_str: &str,
+    scale_x: f64,
+    scale_y: f64,
+) -> RaygeoResult<Geometry> {
+    let geos = svg_string_to_geometries(svg_str, scale_x, scale_y)?;
+    let mut combined = Geometry::new();
+    for g in geos {
+        combined.extend(&g);
+    }
+    Ok(combined)
 }
 
 fn traverse(
@@ -1084,6 +1110,8 @@ pub fn geometry_to_svg_path(
     width: i32,
     height: i32,
 ) -> String {
+    use crate::geo::shape::arc::get_arc_sweep;
+
     let data = geometry.data();
     if data.is_empty() {
         return String::new();
@@ -1091,23 +1119,35 @@ pub fn geometry_to_svg_path(
     let w = width as f64;
     let h = height as f64;
     let mut parts = Vec::with_capacity(data.len());
+    let mut prev_x = 0.0;
+    let mut prev_y = 0.0;
     for cmd in data {
         let (ex, ey, _) =
             (cmd.end_point().0, cmd.end_point().1, cmd.end_point().2);
         let x = ex * w;
         let y = h * (1.0 - ey);
         match cmd {
-            Command::Move { .. } => parts.push(format!("M {x:.3} {y:.3}")),
-            Command::Line { .. } => parts.push(format!("L {x:.3} {y:.3}")),
+            Command::Move { .. } => {
+                parts.push(format!("M {x:.3} {y:.3}"));
+            }
+            Command::Line { .. } => {
+                parts.push(format!("L {x:.3} {y:.3}"));
+            }
             Command::Arc {
                 center_offset,
                 clockwise,
                 ..
             } => {
                 let r = center_offset.0.hypot(center_offset.1);
-                let sweep = if *clockwise { 1 } else { 0 };
+                let sweep_flag = if *clockwise { 1 } else { 0 };
+                let cx = prev_x + center_offset.0;
+                let cy = prev_y + center_offset.1;
+                let start_angle = (prev_y - cy).atan2(prev_x - cx);
+                let end_angle = (ey - cy).atan2(ex - cx);
+                let sweep = get_arc_sweep(start_angle, end_angle, *clockwise);
+                let large = if sweep.abs() > PI + 1e-9 { 1 } else { 0 };
                 parts.push(format!(
-                    "A {:.3} {:.3} 0 0 {sweep} {x:.3} {y:.3}",
+                    "A {:.3} {:.3} 0 {large} {sweep_flag} {x:.3} {y:.3}",
                     r * w,
                     r * h
                 ));
@@ -1126,6 +1166,8 @@ pub fn geometry_to_svg_path(
                 ));
             }
         }
+        prev_x = ex;
+        prev_y = ey;
     }
     parts.join(" ")
 }

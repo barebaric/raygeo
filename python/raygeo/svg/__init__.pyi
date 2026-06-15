@@ -18,6 +18,7 @@ __all__ = [
     "svg_length_to_px",
     "svg_string_to_geometries",
     "svg_string_to_geometries_by_layer",
+    "svg_string_to_geometry",
 ]
 
 @typing.final
@@ -146,6 +147,20 @@ def svg_string_to_geometries_by_layer(svg_str: str, scale_x: float = 1, scale_y:
     :param scale_x: X-axis scale factor for coordinate transform.
     :param scale_y: Y-axis scale factor for coordinate transform.
     :returns: List of (layer_id, geometry_list) tuples.
+    :complexity: O(n) where n = size of SVG document
+    """
+
+def svg_string_to_geometry(svg_str: str, scale_x: float = 1, scale_y: float = 1) -> raygeo.Geometry:
+    r"""
+    Parse an SVG string and merge all subpaths into a single Geometry.
+    
+    Like svg_string_to_geometries but returns one combined Geometry
+    instead of a list, avoiding a Python-side merge loop.
+    
+    :param svg_str: SVG document as a string.
+    :param scale_x: X-axis scale factor for coordinate transform.
+    :param scale_y: Y-axis scale factor for coordinate transform.
+    :returns: A single Geometry containing all paths.
     :complexity: O(n) where n = size of SVG document
     """
 

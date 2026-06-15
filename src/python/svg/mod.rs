@@ -150,6 +150,40 @@ fn py_svg_string_to_geometries(
     python = r#"
     import raygeo
 
+    def svg_string_to_geometry(
+        svg_str: str,
+        scale_x: float = 1.0,
+        scale_y: float = 1.0,
+    ) -> raygeo.Geometry:
+        """Parse an SVG string and merge all subpaths into a single Geometry.
+
+        Like svg_string_to_geometries but returns one combined Geometry
+        instead of a list, avoiding a Python-side merge loop.
+
+        :param svg_str: SVG document as a string.
+        :param scale_x: X-axis scale factor for coordinate transform.
+        :param scale_y: Y-axis scale factor for coordinate transform.
+        :returns: A single Geometry containing all paths.
+        :complexity: O(n) where n = size of SVG document
+        """
+"#,
+    module = "raygeo.svg"
+)]
+#[pyfunction(name = "svg_string_to_geometry")]
+#[pyo3(signature = (svg_str, scale_x=1.0, scale_y=1.0))]
+fn py_svg_string_to_geometry(
+    svg_str: &str,
+    scale_x: f64,
+    scale_y: f64,
+) -> PyResult<Geometry> {
+    let geo = svg::svg_string_to_geometry(svg_str, scale_x, scale_y)?;
+    Ok(Geometry { inner: geo })
+}
+
+#[gen_stub_pyfunction(
+    python = r#"
+    import raygeo
+
     def geometry_to_svg_path(
         geometry: raygeo.Geometry,
         width: int,
@@ -461,6 +495,7 @@ pub(crate) fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
             "svg_length_to_mm",
             "svg_length_to_px",
             "svg_string_to_geometries",
+            "svg_string_to_geometry",
             "svg_string_to_geometries_by_layer",
         ],
     )?;
@@ -481,6 +516,8 @@ pub(crate) fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
         py_svg_string_to_geometries,
         &svg_mod
     )?)?;
+    svg_mod
+        .add_function(wrap_pyfunction!(py_svg_string_to_geometry, &svg_mod)?)?;
     svg_mod.add_function(wrap_pyfunction!(
         py_svg_string_to_geometries_by_layer,
         &svg_mod

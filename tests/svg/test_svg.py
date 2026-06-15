@@ -11,6 +11,7 @@ from raygeo.svg import (
     svg_length_to_mm,
     svg_string_to_geometries,
     svg_string_to_geometries_by_layer,
+    svg_string_to_geometry,
 )
 
 # ---------------------------------------------------------------------------
@@ -234,7 +235,8 @@ class TestGeometryToSvgPath:
         geo.move_to(0.5, 0.5, 0.0)
         geo.arc_to(1.0, 1.0, i=0.5, j=0.0, clockwise=False)
         path = geometry_to_svg_path(geo, 100, 100)
-        assert "A 50.000 50.000 0 0 0 100.000 0.000" in path
+        # 270° CCW sweep => large-arc=1
+        assert "A 50.000 50.000 0 1 0 100.000 0.000" in path
 
     def test_close_path_not_in_output(self):
         geo = Geometry()
@@ -327,6 +329,135 @@ class TestArc:
         geos = parse_svg_path_data("M 0 0 A 10 10 0 0 0 20 0")
         assert len(geos) == 1
         assert not geos[0].is_empty()
+
+    def test_long_arc_non_diametrical_cw(self):
+        """Large-arc flag + CW sweep, points NOT diametrically opposed.
+
+        Sweep > 180° → arc is decomposed to beziers at parse time.
+        """
+        geos = parse_svg_path_data("M 10 0 A 10 10 0 1 1 0 10")
+        assert len(geos) == 1
+        assert not geos[0].is_empty()
+
+    def test_long_arc_non_diametrical_ccw(self):
+        """Large-arc flag + CCW sweep, points NOT diametrically opposed."""
+        geos = parse_svg_path_data("M 10 0 A 10 10 0 1 0 0 10")
+        assert len(geos) == 1
+        assert not geos[0].is_empty()
+
+    def test_large_arc_diametrically_opposed(self):
+        """
+        Diametrically opposed sweep == PI exactly, large-arc derived as 0.
+        """
+        geos = parse_svg_path_data("M 0.25 0.5 A 0.25 0.25 0 1 1 0.75 0.5")
+        assert len(geos) == 1
+        exported = geometry_to_svg_path(geos[0], 100, 100)
+        # large-arc flag must be 0 (sweep == PI exactly).
+        assert "A 25.000 25.000 0 0 " in exported
+        # Verify geometry survives the roundtrip: re-import and check
+        # that the arc has the correct bounding box (Y-flipped + scaled).
+        geo2 = parse_svg_path_data(exported)[0]
+        min_x, min_y, max_x, max_y = geo2.rect()
+        assert max_x - min_x == pytest.approx(50.0, abs=1.0)
+        assert max_y - min_y == pytest.approx(25.0, abs=1.0)
+
+    def test_large_arc_to_dict_roundtrip(self):
+        """Arc dict roundtrip preserves geometry (not the flag)."""
+        d = "M 0.25 0.5 A 0.25 0.25 0 1 1 0.75 0.5"
+        geos = parse_svg_path_data(d)
+        orig = geos[0]
+        d = orig.to_dict()
+        restored = Geometry.from_dict(d)
+        assert restored == orig
+
+    def test_arc_cw_export_match(self):
+        """Export of CW arc (90 sweep) has correct large-arc=0."""
+        geo = Geometry()
+        geo.move_to(0.5, 0.5, 0.0)
+        geo.arc_to(1.0, 1.0, i=0.5, j=0.0, clockwise=True)
+        path = geometry_to_svg_path(geo, 100, 100)
+        assert path == "M 50.000 50.000 A 50.000 50.000 0 0 1 100.000 0.000"
+
+    def test_arc_ccw_export_match(self):
+        """Export of CCW arc (270 sweep) has correct large-arc=1."""
+        geo = Geometry()
+        geo.move_to(0.5, 0.5, 0.0)
+        geo.arc_to(1.0, 1.0, i=0.5, j=0.0, clockwise=False)
+        path = geometry_to_svg_path(geo, 100, 100)
+        assert path == "M 50.000 50.000 A 50.000 50.000 0 1 0 100.000 0.000"
+
+    def test_arc_sweep_pi_export_match(self):
+        """Export of half-circle arc has large-arc=0 (sweep==PI exactly)."""
+        geo = Geometry()
+        geo.move_to(0.25, 0.5, 0.0)
+        geo.arc_to(0.75, 0.5, i=0.25, j=0.0, clockwise=True)
+        path = geometry_to_svg_path(geo, 100, 100)
+        assert path == "M 25.000 50.000 A 25.000 25.000 0 0 1 75.000 50.000"
+
+    def test_elliptical_long_arc(self):
+        """Elliptical arcs with large-flag always go through bezier path."""
+        geos = parse_svg_path_data("M 0 0 A 20 10 45 1 1 30 0")
+        assert len(geos) == 1
+        assert not geos[0].is_empty()
+
+
+# ---------------------------------------------------------------------------
+# svg_string_to_geometry (new)
+# ---------------------------------------------------------------------------
+
+
+class TestSvgStringToGeometry:
+    def test_single_path(self):
+        svg = (
+            '<svg xmlns="http://www.w3.org/2000/svg">'
+            '<path d="M 0 0 L 10 0 L 10 10 Z"/>'
+            "</svg>"
+        )
+        geo = svg_string_to_geometry(svg)
+        assert not geo.is_empty()
+
+    def test_merged_paths(self):
+        svg = (
+            '<svg xmlns="http://www.w3.org/2000/svg">'
+            '<path d="M 0 0 L 5 5"/>'
+            '<path d="M 10 10 L 15 15"/>'
+            "</svg>"
+        )
+        geo = svg_string_to_geometry(svg)
+        assert not geo.is_empty()
+        # Both paths should be in a single geometry
+        assert len(geo.data) >= 1
+
+    def test_with_long_arc(self):
+        svg = (
+            '<svg xmlns="http://www.w3.org/2000/svg">'
+            '<path d="M 0.25 0.5 A 0.25 0.25 0 1 1 0.75 0.5"/>'
+            "</svg>"
+        )
+        geo = svg_string_to_geometry(svg)
+        assert not geo.is_empty()
+        exported = geometry_to_svg_path(geo, 100, 100)
+        assert "A 25.000 25.000 0" in exported
+
+    def test_invalid_xml(self):
+        geo = svg_string_to_geometry("not xml")
+        assert geo.is_empty()
+
+    def test_no_paths(self):
+        svg = (
+            '<svg xmlns="http://www.w3.org/2000/svg"><rect x="0" y="0"/></svg>'
+        )
+        geo = svg_string_to_geometry(svg)
+        assert geo.is_empty()
+
+    def test_with_scale(self):
+        svg = (
+            '<svg xmlns="http://www.w3.org/2000/svg">'
+            '<path d="M 0 0 L 10 0 L 10 10 Z"/>'
+            "</svg>"
+        )
+        geo = svg_string_to_geometry(svg, scale_x=2.0, scale_y=3.0)
+        assert not geo.is_empty()
 
 
 # ---------------------------------------------------------------------------

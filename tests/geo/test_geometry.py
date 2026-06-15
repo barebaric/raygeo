@@ -4,6 +4,8 @@ import numpy as np
 import pytest
 
 from raygeo.geo import Arc, Bezier, Geometry, Line, Move
+from raygeo.geo.shape.rect import get_combined_rect
+from raygeo.svg import geometry_to_svg_path, parse_svg_path_data
 
 
 @pytest.fixture
@@ -295,6 +297,36 @@ def test_to_dict_and_from_dict(sample_geometry):
     assert dict_empty["commands"] == []
     assert loaded_empty.is_empty()
     assert loaded_empty.last_move_to == (0.0, 0.0, 0.0)
+
+
+def test_to_dict_arc_roundtrip_preserves_geometry():
+    """Arc roundtrip through dict preserves geometry."""
+    for d in [
+        "M 0.25 0.5 A 0.25 0.25 0 1 1 0.75 0.5",
+        "M 0.25 0.5 A 0.25 0.25 0 0 1 0.75 0.5",
+    ]:
+        orig = parse_svg_path_data(d)[0]
+        dict_data = orig.to_dict()
+        restored = Geometry.from_dict(dict_data)
+        assert restored == orig
+
+
+def test_arc_cw_export_string_match():
+    """Constructed CW arc exported string is predictable."""
+    geo = Geometry()
+    geo.move_to(0.5, 0.5, 0.0)
+    geo.arc_to(1.0, 1.0, i=0.5, j=0.0, clockwise=True)
+    path = geometry_to_svg_path(geo, 100, 100)
+    assert path == "M 50.000 50.000 A 50.000 50.000 0 0 1 100.000 0.000"
+
+
+def test_arc_ccw_export_string_match():
+    """Constructed CCW arc exported string is predictable (large-arc=1)."""
+    geo = Geometry()
+    geo.move_to(0.5, 0.5, 0.0)
+    geo.arc_to(1.0, 1.0, i=0.5, j=0.0, clockwise=False)
+    path = geometry_to_svg_path(geo, 100, 100)
+    assert path == "M 50.000 50.000 A 50.000 50.000 0 1 0 100.000 0.000"
 
 
 def test_map_to_frame_wrapper():
@@ -1176,21 +1208,15 @@ class TestGetPositionsAtDistances:
 
 class TestGetCombinedRect:
     def test_get_combined_rect_empty(self):
-        from raygeo.geo.shape.rect import get_combined_rect
-
         assert get_combined_rect([]) == (0.0, 0.0, 0.0, 0.0)
 
     def test_get_combined_rect_single(self):
-        from raygeo.geo.shape.rect import get_combined_rect
-
         geo = Geometry()
         geo.move_to(0, 0)
         geo.line_to(10, 10)
         assert get_combined_rect([geo]) == geo.rect()
 
     def test_get_combined_rect_multiple(self):
-        from raygeo.geo.shape.rect import get_combined_rect
-
         geo1 = Geometry()
         geo1.move_to(0, 0)
         geo1.line_to(10, 10)
