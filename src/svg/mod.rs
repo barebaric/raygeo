@@ -9,8 +9,6 @@ use crate::types::Command;
 
 type BezierSeg = ((f64, f64), (f64, f64), (f64, f64), (f64, f64));
 
-const BORDER_SIZE: f64 = 2.0;
-
 fn parse_coords(s: &str) -> Vec<f64> {
     let mut coords = Vec::new();
     let mut chars = s.chars().peekable();
@@ -66,10 +64,10 @@ fn parse_coords(s: &str) -> Vec<f64> {
     coords
 }
 
-/// Apply the affine transform + border/scale to a single SVG coordinate.
+/// Apply the affine transform + scale to a single SVG coordinate.
 fn txfm_pt(px: f64, py: f64, m: DMat3, sx: f64, sy: f64) -> (f64, f64) {
     let (tx, ty) = mat3_transform(m, px, py);
-    ((tx - BORDER_SIZE) / sx, (ty - BORDER_SIZE) / sy)
+    (tx / sx, ty / sy)
 }
 
 /// Transform an arc's center offset and determine if direction flips.
