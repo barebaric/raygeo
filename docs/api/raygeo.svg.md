@@ -30,6 +30,42 @@ _SVG path data parsed into geometries_
 
 `width_unit: str`
 
+### `height_mm()`
+
+`height_mm(dpi: float = 96.0) -> Optional[float]`
+
+| Parameter | Type              | Description |
+| --------- | ----------------- | ----------- |
+| `dpi`     | `float = 96.0`    |             |
+| _Returns_ | `Optional[float]` |             |
+
+### `height_px()`
+
+`height_px(dpi: float = 96.0) -> Optional[float]`
+
+| Parameter | Type              | Description |
+| --------- | ----------------- | ----------- |
+| `dpi`     | `float = 96.0`    |             |
+| _Returns_ | `Optional[float]` |             |
+
+### `width_mm()`
+
+`width_mm(dpi: float = 96.0) -> Optional[float]`
+
+| Parameter | Type              | Description |
+| --------- | ----------------- | ----------- |
+| `dpi`     | `float = 96.0`    |             |
+| _Returns_ | `Optional[float]` |             |
+
+### `width_px()`
+
+`width_px(dpi: float = 96.0) -> Optional[float]`
+
+| Parameter | Type              | Description |
+| --------- | ----------------- | ----------- |
+| `dpi`     | `float = 96.0`    |             |
+| _Returns_ | `Optional[float]` |             |
+
 ## Functions
 
 ### `extract_svg_metadata()`

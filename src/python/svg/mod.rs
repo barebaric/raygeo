@@ -296,6 +296,50 @@ impl SvgMetadata {
         self.inner.viewbox
     }
 
+    #[pyo3(signature = (dpi=96.0))]
+    fn width_mm(&self, dpi: f64) -> Option<f64> {
+        self.inner.width.map(|w| {
+            let sl = crate::svg::SvgLength {
+                value: w,
+                unit: self.inner.width_unit.clone(),
+            };
+            sl.to_mm(dpi)
+        })
+    }
+
+    #[pyo3(signature = (dpi=96.0))]
+    fn height_mm(&self, dpi: f64) -> Option<f64> {
+        self.inner.height.map(|h| {
+            let sl = crate::svg::SvgLength {
+                value: h,
+                unit: self.inner.height_unit.clone(),
+            };
+            sl.to_mm(dpi)
+        })
+    }
+
+    #[pyo3(signature = (dpi=96.0))]
+    fn width_px(&self, dpi: f64) -> Option<f64> {
+        self.inner.width.map(|w| {
+            let sl = crate::svg::SvgLength {
+                value: w,
+                unit: self.inner.width_unit.clone(),
+            };
+            sl.to_px(dpi)
+        })
+    }
+
+    #[pyo3(signature = (dpi=96.0))]
+    fn height_px(&self, dpi: f64) -> Option<f64> {
+        self.inner.height.map(|h| {
+            let sl = crate::svg::SvgLength {
+                value: h,
+                unit: self.inner.height_unit.clone(),
+            };
+            sl.to_px(dpi)
+        })
+    }
+
     fn __repr__(&self) -> String {
         format!(
             "SvgMetadata(width={:?}, height={:?}, width_unit={:?}, height_unit={:?}, viewbox={:?})",
