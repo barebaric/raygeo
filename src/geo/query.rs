@@ -52,15 +52,16 @@ pub fn get_bounding_rect_from_array(data: &[Command]) -> Rect {
         let end = cmd.end_point();
         if let Command::Arc {
             center_offset,
-            clockwise,
+            normal,
             ..
         } = cmd
         {
+            let clockwise = normal.2 < 0.0;
             let Rect(ax1, ay1, ax2, ay2) = get_arc_bounds(
                 last_point_2d,
                 Point(end.0, end.1),
-                *center_offset,
-                *clockwise,
+                Point(center_offset.0, center_offset.1),
+                clockwise,
             );
 
             if ax1 < min_x {

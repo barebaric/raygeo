@@ -81,7 +81,7 @@ def test_arc_to():
     last_row = geo.data[-1]
     assert isinstance(last_row, Arc)
     assert last_row.end == (5.0, 5.0, 0.0)
-    assert last_row.clockwise is False
+    assert last_row.normal == (0.0, 0.0, 1.0)
 
 
 def test_bezier_to(empty_geometry):
@@ -272,7 +272,18 @@ def test_to_dict_and_from_dict(sample_geometry):
     assert len(dict_data["commands"]) == 4
     assert dict_data["commands"][0] == ["M", 0.0, 0.0, 0.0]
     assert dict_data["commands"][1] == ["L", 10.0, 10.0, 0.0]
-    assert dict_data["commands"][2] == ["A", 20.0, 0.0, 0.0, 5.0, -10.0, 1]
+    assert dict_data["commands"][2] == [
+        "A",
+        20.0,
+        0.0,
+        0.0,
+        5.0,
+        -10.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.0,
+    ]
     assert dict_data["commands"][3] == [
         "B",
         30.0,
@@ -531,7 +542,7 @@ def test_flip_x():
     assert math.isclose(geo.data[2].end[0], -20.0)
     assert math.isclose(geo.data[2].end[1], 5.0)
     assert math.isclose(geo.data[2].center_offset[0], -5.0)
-    assert geo.data[2].clockwise is True
+    assert geo.data[2].normal == (0.0, 0.0, -1.0)
 
     # BezierTo: (30, 10) -> (-30, 10), C1X=22 -> -22, C2X=28 -> -28
     assert isinstance(geo.data[3], Bezier)
@@ -577,7 +588,7 @@ def test_flip_y():
     assert math.isclose(geo.data[2].end[0], 20.0)
     assert math.isclose(geo.data[2].end[1], -5.0)
     assert math.isclose(geo.data[2].center_offset[1], 5.0)
-    assert geo.data[2].clockwise is True
+    assert geo.data[2].normal == (0.0, 0.0, -1.0)
 
     # BezierTo: (30, 10) -> (30, -10), C1Y=2 -> -2, C2Y=8 -> -8
     assert isinstance(geo.data[3], Bezier)
@@ -612,7 +623,7 @@ def test_get_command_at_valid_index():
     cmd2 = geo.get_command_at(2)
     assert isinstance(cmd2, Arc)
     assert cmd2.end == (20.0, 0.0, 3.0)
-    assert cmd2.center_offset == (5.0, -10.0)
+    assert cmd2.center_offset == (5.0, -10.0, 0.0)
 
     cmd3 = geo.get_command_at(3)
     assert isinstance(cmd3, Bezier)
@@ -660,7 +671,7 @@ def test_iter_commands():
     assert commands[1].end == (10.0, 10.0, 2.0)
     assert isinstance(commands[2], Arc)
     assert commands[2].end == (20.0, 0.0, 3.0)
-    assert commands[2].center_offset == (5.0, -10.0)
+    assert commands[2].center_offset == (5.0, -10.0, 0.0)
     assert isinstance(commands[3], Bezier)
     assert commands[3].end == (30.0, 10.0, 4.0)
     assert commands[3].control1 == (22.0, 2.0, 0.0)
@@ -687,8 +698,8 @@ def test_iter_commands_clockwise_arc():
     assert commands[0].end == (10.0, 10.0, 0.0)
     assert isinstance(commands[1], Arc)
     assert commands[1].end == (15.0, 10.0, 0.0)
-    assert commands[1].center_offset == (0.0, -5.0)
-    assert commands[1].clockwise is True
+    assert commands[1].center_offset == (0.0, -5.0, 0.0)
+    assert commands[1].normal == (0.0, 0.0, -1.0)
 
 
 def test_upgrade_to_scalable_on_scalable_geo():

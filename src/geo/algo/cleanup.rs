@@ -14,12 +14,13 @@ pub fn get_segment_key(cmd: &Command) -> Option<(u32, [f64; 3], [f64; 4])> {
         Command::Arc {
             end,
             center_offset,
-            clockwise,
+            normal,
         } => {
+            let clockwise = normal.2 < 0.0;
             let params = [
                 center_offset.0,
                 center_offset.1,
-                if *clockwise { 1.0 } else { 0.0 },
+                if clockwise { 1.0 } else { 0.0 },
                 0.0,
             ];
             Some((3, [end.0, end.1, end.2], params))
@@ -146,12 +147,12 @@ pub fn close_geometry_gaps_from_array(
                     Command::Line { .. } => Command::Line { end: s },
                     Command::Arc {
                         center_offset,
-                        clockwise,
+                        normal,
                         ..
                     } => Command::Arc {
                         end: s,
                         center_offset: *center_offset,
-                        clockwise: *clockwise,
+                        normal: *normal,
                     },
                     Command::Bezier {
                         control1, control2, ..

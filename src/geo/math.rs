@@ -37,18 +37,26 @@ fn transform_array_uniform(data: &[Command], matrix: DMat4) -> Vec<Command> {
         let transformed = match cmd {
             Command::Arc {
                 center_offset,
-                clockwise,
+                normal,
                 ..
             } => {
                 let (vi, vj) =
                     transform_vec(matrix, center_offset.x(), center_offset.y());
                 let det = matrix.x_axis.x * matrix.y_axis.y
                     - matrix.y_axis.x * matrix.x_axis.y;
-                let cw = if det < 0.0 { !*clockwise } else { *clockwise };
+                let cw = if det < 0.0 {
+                    normal.2 >= 0.0
+                } else {
+                    normal.2 < 0.0
+                };
                 Command::Arc {
                     end: Point3D(nx, ny, nz),
-                    center_offset: Point(vi, vj),
-                    clockwise: cw,
+                    center_offset: Point3D(vi, vj, 0.0),
+                    normal: if cw {
+                        Point3D(0.0, 0.0, -1.0)
+                    } else {
+                        Point3D(0.0, 0.0, 1.0)
+                    },
                 }
             }
             Command::Bezier {
@@ -92,14 +100,14 @@ fn transform_array_non_uniform(
             Command::Arc {
                 end,
                 center_offset,
-                clockwise,
+                normal,
                 ..
             } => {
                 let start_pt = last_pos;
                 linearize_arc(
                     *end,
                     *center_offset,
-                    *clockwise,
+                    *normal,
                     start_pt,
                     0.1,
                     &mut arc_buf,

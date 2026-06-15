@@ -27,10 +27,10 @@ A circular-arc cutting command.
 ### `center_offset`
 
 ```python
-center_offset: tuple[float, float]
+center_offset: tuple[float, float, float]
 ```
 
-Centre offset from the start point (2D).
+Centre offset from the start point (3D).
 
 ### `clockwise`
 
@@ -38,7 +38,7 @@ Centre offset from the start point (2D).
 clockwise: bool
 ```
 
-Whether the arc is clockwise.
+Whether the arc is clockwise (computed from the normal).
 
 ### `end`
 
@@ -47,6 +47,14 @@ end: tuple[float, float, float]
 ```
 
 Endpoint of the arc in 3D space.
+
+### `normal`
+
+```python
+normal: tuple[float, float, float]
+```
+
+Plane normal of the arc. A positive Z component means CCW in XY.
 
 ## Bezier
 

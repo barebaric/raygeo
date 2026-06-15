@@ -50,25 +50,25 @@ pub fn register(shape_mod: &Bound<'_, PyModule>) -> PyResult<()> {
 #[allow(clippy::type_complexity)]
 fn _arc_params_from_any(
     arc_cmd: &Bound<'_, PyAny>,
-) -> PyResult<(Point3D, Point, bool)> {
+) -> PyResult<(Point3D, Point3D, Point3D)> {
     if let Ok(end) = arc_cmd.getattr("end") {
         let end: Point3D = end.extract()?;
-        let center_offset: Point =
+        let center_offset: Point3D =
             arc_cmd.getattr("center_offset")?.extract()?;
-        let clockwise: bool = arc_cmd.getattr("clockwise")?.extract()?;
-        return Ok((end, center_offset, clockwise));
+        let normal: Point3D = arc_cmd.getattr("normal")?.extract()?;
+        return Ok((end, center_offset, normal));
     }
     if let Ok(row) = arc_cmd.extract::<Vec<f64>>() {
-        if row.len() >= 7 {
+        if row.len() >= 10 {
             return Ok((
                 Point3D(row[1], row[2], row[3]),
-                Point(row[4], row[5]),
-                row[6] > 0.5,
+                Point3D(row[4], row[5], row[6]),
+                Point3D(row[7], row[8], row[9]),
             ));
         }
     }
     Err(pyo3::exceptions::PyTypeError::new_err(
-        "expected a command row or a MockArc-like namedtuple with end, center_offset, clockwise",
+        "expected a command row or a MockArc-like namedtuple with end, center_offset, normal",
     ))
 }
 
@@ -214,11 +214,11 @@ fn get_arc_closest_point_py(
     x: f64,
     y: f64,
 ) -> PyResult<Option<(f64, Point, f64)>> {
-    let (end, center_offset, clockwise) = _arc_params_from_any(arc_cmd)?;
+    let (end, center_offset, normal) = _arc_params_from_any(arc_cmd)?;
     Ok(get_arc_closest_point(
         end,
         center_offset,
-        clockwise,
+        normal,
         start_pos,
         x,
         y,
@@ -525,12 +525,12 @@ fn linearize_arc_py(
     start_point: Point3D,
     resolution: f64,
 ) -> PyResult<Vec<Segment3D>> {
-    let (end, center_offset, clockwise) = _arc_params_from_any(arc_cmd)?;
+    let (end, center_offset, normal) = _arc_params_from_any(arc_cmd)?;
     let mut segments = Vec::new();
     linearize_arc(
         end,
         center_offset,
-        clockwise,
+        normal,
         start_point,
         resolution,
         &mut segments,

@@ -368,10 +368,10 @@ def test_fit_points_with_primitives_single_arc():
     cmd = cmds.data[0]
     assert isinstance(cmd, Arc)
     np.testing.assert_allclose(cmd.end, (0.0, 10.0, 0.0), atol=1e-6)
-    # Center offset from start point (10, 0) is (-10, 0)
-    np.testing.assert_allclose(cmd.center_offset, (-10.0, 0.0), atol=1e-6)
+    # Center offset from start point (10, 0) is (-10, 0, 0)
+    np.testing.assert_allclose(cmd.center_offset, (-10.0, 0.0, 0.0), atol=1e-6)
     # CCW
-    assert cmd.clockwise is False
+    assert cmd.normal == (0.0, 0.0, 1.0)
 
 
 def test_fit_points_with_primitives_corner_split():

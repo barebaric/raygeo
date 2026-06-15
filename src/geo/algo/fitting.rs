@@ -19,14 +19,15 @@ pub fn convert_arcs_to_beziers(data: &[Command]) -> Vec<Command> {
         match cmd {
             Command::Arc {
                 center_offset,
-                clockwise,
+                normal,
                 ..
             } => {
+                let clockwise = normal.2 < 0.0;
                 let bezier_cmds = convert_arc_to_beziers_from_array(
                     last_pos,
                     end_pos,
-                    *center_offset,
-                    *clockwise,
+                    Point(center_offset.0, center_offset.1),
+                    clockwise,
                 );
                 result.extend(bezier_cmds);
             }
@@ -57,13 +58,13 @@ pub fn linearize_data(data: &[Command], tolerance: f64) -> Vec<Command> {
             Command::Arc {
                 end,
                 center_offset,
-                clockwise,
+                normal,
                 ..
             } => {
                 linearize_arc(
                     *end,
                     *center_offset,
-                    *clockwise,
+                    *normal,
                     last_pos,
                     tolerance,
                     &mut arc_buf,
@@ -125,13 +126,13 @@ pub fn flatten_to_points(
             Command::Arc {
                 end,
                 center_offset,
-                clockwise,
+                normal,
                 ..
             } => {
                 linearize_arc(
                     *end,
                     *center_offset,
-                    *clockwise,
+                    *normal,
                     last_pos,
                     resolution,
                     &mut arc_buf,
@@ -608,8 +609,16 @@ pub fn fit_points_recursive(
                 let is_cw = is_arc_clockwise(pts.as_slice(), center);
                 return vec![Command::Arc {
                     end: p3,
-                    center_offset: Point(center.0 - p1.0, center.1 - p1.1),
-                    clockwise: is_cw,
+                    center_offset: Point3D(
+                        center.0 - p1.0,
+                        center.1 - p1.1,
+                        0.0,
+                    ),
+                    normal: if is_cw {
+                        Point3D(0.0, 0.0, -1.0)
+                    } else {
+                        Point3D(0.0, 0.0, 1.0)
+                    },
                 }];
             }
         }
@@ -634,11 +643,16 @@ pub fn fit_points_recursive(
                 };
                 return vec![Command::Arc {
                     end: points[end],
-                    center_offset: Point(
+                    center_offset: Point3D(
                         center.0 - points[start].0,
                         center.1 - points[start].1,
+                        0.0,
                     ),
-                    clockwise: is_cw,
+                    normal: if is_cw {
+                        Point3D(0.0, 0.0, -1.0)
+                    } else {
+                        Point3D(0.0, 0.0, 1.0)
+                    },
                 }];
             }
         }
@@ -717,7 +731,7 @@ pub fn fit_curves(
             Command::Arc {
                 end,
                 center_offset,
-                clockwise,
+                normal,
                 ..
             } => {
                 if preserve_arcs {
@@ -728,7 +742,7 @@ pub fn fit_curves(
                     linearize_arc(
                         *end,
                         *center_offset,
-                        *clockwise,
+                        *normal,
                         last_pos,
                         tolerance * 0.25,
                         &mut arc_buf,

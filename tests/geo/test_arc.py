@@ -350,7 +350,15 @@ def test_get_arc_sweep(start, end, cw, expected):
 
 
 # Mock object for arc commands used in find_closest_point_on_arc
-MockArc = namedtuple("MockArc", ["end", "center_offset", "clockwise"])
+MockArc = namedtuple("MockArc", ["end", "center_offset", "normal"])
+
+
+def _ccw():
+    return (0.0, 0.0, 1.0)
+
+
+def _cw():
+    return (0.0, 0.0, -1.0)
 
 
 def test_get_arc_closest_point():
@@ -360,10 +368,8 @@ def test_get_arc_closest_point():
     # Test 1: Closest point is projection onto arc
     # 180 degree CCW arc from (10,0) to (-10,0)
     end_pos = (-10, 0, 0)
-    center_offset = (center[0] - start_pos[0], center[1] - start_pos[1])
-    arc_cmd = MockArc(
-        end=end_pos, center_offset=center_offset, clockwise=False
-    )
+    center_offset = (center[0] - start_pos[0], center[1] - start_pos[1], 0.0)
+    arc_cmd = MockArc(end=end_pos, center_offset=center_offset, normal=_ccw())
     x, y = 0, 20  # Point to check
     result = get_arc_closest_point(arc_cmd, start_pos, x, y)
     assert result is not None
@@ -402,9 +408,9 @@ def test_get_arc_closest_point():
     # This is an approximation, so we can't be too strict on the assertions
     # Make a spiral from radius 10 to radius 5
     end_pos_spiral = (-5, 0, 0)
-    center_offset = (center[0] - start_pos[0], center[1] - start_pos[1])
+    center_offset = (center[0] - start_pos[0], center[1] - start_pos[1], 0.0)
     arc_cmd_spiral = MockArc(
-        end=end_pos_spiral, center_offset=center_offset, clockwise=False
+        end=end_pos_spiral, center_offset=center_offset, normal=_ccw()
     )
     x, y = 0, 20  # Point to check
     result = get_arc_closest_point(arc_cmd_spiral, start_pos, x, y)
@@ -673,7 +679,7 @@ def test_linearize_arc(sample_geometry):
     arc_cmd = MockArc(
         end=arc_row.end,
         center_offset=arc_row.center_offset,
-        clockwise=arc_row.clockwise,
+        normal=arc_row.normal,
     )
 
     segments = linearize_arc(arc_cmd, start_point)
@@ -692,8 +698,8 @@ def test_linearize_arc_full_circle():
     start_point = (10.0, 0.0, 5.0)
     arc_cmd = MockArc(
         end=start_point,
-        center_offset=(-10.0, 0.0),
-        clockwise=False,
+        center_offset=(-10.0, 0.0, 0.0),
+        normal=_ccw(),
     )
 
     segments = linearize_arc(arc_cmd, start_point, resolution=1.0)

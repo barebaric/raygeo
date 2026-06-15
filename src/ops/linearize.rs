@@ -55,10 +55,16 @@ pub fn linearize_node(node: &OpNode, start_point: Point3D) -> Ops {
             }
             MoveCmd::ArcTo { center, cw } => {
                 let mut arc_buf = Vec::new();
+                let center_3d = Point3D(center.0, center.1, 0.0);
+                let normal = if *cw {
+                    Point3D(0.0, 0.0, -1.0)
+                } else {
+                    Point3D(0.0, 0.0, 1.0)
+                };
                 linearize_arc(
                     end,
-                    *center,
-                    *cw,
+                    center_3d,
+                    normal,
                     start_point,
                     0.1,
                     &mut arc_buf,

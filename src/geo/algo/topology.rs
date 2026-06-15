@@ -9,7 +9,7 @@
 use crate::geo::algo::analysis::{get_subpath_area_from_array, is_closed};
 use crate::geo::geometry::Geometry;
 use crate::geo::shape::polygon::is_point_inside_polygon;
-use crate::types::{Command, Point, Rect};
+use crate::types::{Command, Point, Point3D, Rect};
 
 /// Preprocessed contour data for hierarchy analysis.
 #[derive(Clone, Debug)]
@@ -452,7 +452,7 @@ pub fn reverse_contour(contour: &Geometry) -> Geometry {
             }
             Command::Arc {
                 center_offset,
-                clockwise,
+                normal,
                 ..
             } => {
                 let center_abs_x = start_point.0 + center_offset.0;
@@ -461,8 +461,8 @@ pub fn reverse_contour(contour: &Geometry) -> Geometry {
                 let new_offset_y = center_abs_y - last_point.1;
                 new_rows.push(Command::Arc {
                     end: start_point,
-                    center_offset: Point(new_offset_x, new_offset_y),
-                    clockwise: !clockwise,
+                    center_offset: Point3D(new_offset_x, new_offset_y, 0.0),
+                    normal: Point3D(-normal.0, -normal.1, -normal.2),
                 });
             }
             Command::Bezier {

@@ -76,7 +76,7 @@ def test_transform_translate():
     # Check arc
     assert np.allclose(geo.data[1].end, (60, 55, 55))
     # Translation should NOT affect arc center offsets (vectors)
-    assert np.allclose(geo.data[1].center_offset, (5, 7))
+    assert np.allclose(geo.data[1].center_offset, (5, 7, 0))
     # Check bezier
     assert np.allclose(geo.data[2].end, (80, 75, 65))
     # Translation SHOULD affect bezier control points (absolute coords)
@@ -153,7 +153,7 @@ def test_transform_uniform_scale_preserves_curves():
     assert isinstance(arc_row, Arc)
     assert np.allclose(arc_row.end, (20, 0, 0))
     # Offset should also scale
-    assert np.allclose(arc_row.center_offset, (10, 0))
+    assert np.allclose(arc_row.center_offset, (10, 0, 0))
 
     # Check bezier
     bezier_row = geo.data[2]

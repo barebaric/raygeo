@@ -45,14 +45,19 @@ class Arc:
         Endpoint of the arc in 3D space.
         """
     @property
-    def center_offset(self) -> builtins.tuple[float, float]:
+    def center_offset(self) -> builtins.tuple[float, float, float]:
         r"""
-        Centre offset from the start point (2D).
+        Centre offset from the start point (3D).
+        """
+    @property
+    def normal(self) -> builtins.tuple[float, float, float]:
+        r"""
+        Plane normal of the arc. A positive Z component means CCW in XY.
         """
     @property
     def clockwise(self) -> builtins.bool:
         r"""
-        Whether the arc is clockwise.
+        Whether the arc is clockwise (computed from the normal).
         """
 
 @typing.final

@@ -1155,16 +1155,17 @@ pub fn geometry_to_svg_path(
             }
             Command::Arc {
                 center_offset,
-                clockwise,
+                normal,
                 ..
             } => {
+                let clockwise = normal.2 < 0.0;
                 let r = center_offset.0.hypot(center_offset.1);
-                let sweep_flag = if *clockwise { 1 } else { 0 };
+                let sweep_flag = if clockwise { 1 } else { 0 };
                 let cx = prev_x + center_offset.0;
                 let cy = prev_y + center_offset.1;
                 let start_angle = (prev_y - cy).atan2(prev_x - cx);
                 let end_angle = (ey - cy).atan2(ex - cx);
-                let sweep = get_arc_sweep(start_angle, end_angle, *clockwise);
+                let sweep = get_arc_sweep(start_angle, end_angle, clockwise);
                 let large = if sweep.abs() > PI + 1e-9 { 1 } else { 0 };
                 parts.push(format!(
                     "A {:.3} {:.3} 0 {large} {sweep_flag} {x:.3} {y:.3}",

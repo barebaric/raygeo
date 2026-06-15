@@ -60,12 +60,22 @@ pub struct PyArc {
     /// Endpoint of the arc in 3D space.
     #[pyo3(get)]
     pub end: Point3D,
-    /// Centre offset from the start point (2D).
+    /// Centre offset from the start point (3D).
     #[pyo3(get)]
-    pub center_offset: Point,
-    /// Whether the arc is clockwise.
+    pub center_offset: Point3D,
+    /// Plane normal of the arc. A positive Z component means CCW in XY.
     #[pyo3(get)]
-    pub clockwise: bool,
+    pub normal: Point3D,
+}
+
+#[gen_stub_pymethods]
+#[pymethods]
+impl PyArc {
+    /// Whether the arc is clockwise (computed from the normal).
+    #[getter]
+    fn clockwise(&self) -> bool {
+        self.normal.2 < 0.0
+    }
 }
 
 /// A cubic-Bezier curve cutting command.
@@ -99,11 +109,11 @@ impl From<CoreCommand> for PyTypedCommand {
             CoreCommand::Arc {
                 end,
                 center_offset,
-                clockwise,
+                normal,
             } => PyTypedCommand::Arc(PyArc {
                 end,
                 center_offset,
-                clockwise,
+                normal,
             }),
             CoreCommand::Bezier {
                 end,
@@ -378,11 +388,14 @@ impl Geometry {
                 CoreCommand::Arc {
                     end,
                     center_offset,
-                    clockwise,
+                    normal,
                 } => {
                     center_offset.0.to_bits().hash(&mut hasher);
                     center_offset.1.to_bits().hash(&mut hasher);
-                    clockwise.hash(&mut hasher);
+                    center_offset.2.to_bits().hash(&mut hasher);
+                    normal.0.to_bits().hash(&mut hasher);
+                    normal.1.to_bits().hash(&mut hasher);
+                    normal.2.to_bits().hash(&mut hasher);
                     (end.0, end.1, end.2)
                 }
                 CoreCommand::Bezier {
@@ -721,7 +734,7 @@ impl Geometry {
                 CoreCommand::Arc {
                     end,
                     center_offset,
-                    clockwise,
+                    normal,
                 } => {
                     entry.append("A")?;
                     entry.append(end.0)?;
@@ -729,7 +742,10 @@ impl Geometry {
                     entry.append(end.2)?;
                     entry.append(center_offset.0)?;
                     entry.append(center_offset.1)?;
-                    entry.append(if *clockwise { 1.0 } else { 0.0 })?;
+                    entry.append(center_offset.2)?;
+                    entry.append(normal.0)?;
+                    entry.append(normal.1)?;
+                    entry.append(normal.2)?;
                 }
                 CoreCommand::Bezier {
                     end,
@@ -818,31 +834,61 @@ impl Geometry {
                                 geo.inner.line_to(x, y, z);
                             }
                             "A" => {
-                                if let (
-                                    Some(i_val),
-                                    Some(j_val),
-                                    Some(cw_val),
-                                ) =
-                                    (
-                                        cmd_list.get_item(4).ok().and_then(
-                                            |v| v.extract::<f64>().ok(),
-                                        ),
-                                        cmd_list.get_item(5).ok().and_then(
-                                            |v| v.extract::<f64>().ok(),
-                                        ),
-                                        cmd_list.get_item(6).ok().and_then(
-                                            |v| v.extract::<f64>().ok(),
-                                        ),
-                                    )
+                                let i_val = cmd_list
+                                    .get_item(4)
+                                    .ok()
+                                    .and_then(|v| v.extract::<f64>().ok());
+                                let j_val = cmd_list
+                                    .get_item(5)
+                                    .ok()
+                                    .and_then(|v| v.extract::<f64>().ok());
+                                if let (Some(i_val), Some(j_val)) =
+                                    (i_val, j_val)
                                 {
-                                    geo.inner.arc_to(
-                                        x,
-                                        y,
-                                        i_val,
-                                        j_val,
-                                        cw_val > 0.5,
-                                        z,
-                                    );
+                                    // 10-element format: [A, x, y, z, i, j, k, nx, ny, nz]
+                                    let k_val = cmd_list
+                                        .get_item(6)
+                                        .ok()
+                                        .and_then(|v| v.extract::<f64>().ok());
+                                    if let (
+                                        Some(k_val),
+                                        Some(nx),
+                                        Some(ny),
+                                        Some(nz),
+                                    ) = (
+                                        k_val,
+                                        cmd_list.get_item(7).ok().and_then(
+                                            |v| v.extract::<f64>().ok(),
+                                        ),
+                                        cmd_list.get_item(8).ok().and_then(
+                                            |v| v.extract::<f64>().ok(),
+                                        ),
+                                        cmd_list.get_item(9).ok().and_then(
+                                            |v| v.extract::<f64>().ok(),
+                                        ),
+                                    ) {
+                                        geo.inner.arc_to_3d(
+                                            x, y, z, i_val, j_val, k_val, nx,
+                                            ny, nz,
+                                        );
+                                    } else {
+                                        // Legacy 7-element format: [A, x, y, z, i, j, cw]
+                                        let cw_val = cmd_list
+                                            .get_item(6)
+                                            .ok()
+                                            .and_then(|v| {
+                                                v.extract::<f64>().ok()
+                                            })
+                                            .unwrap_or(1.0);
+                                        geo.inner.arc_to(
+                                            x,
+                                            y,
+                                            i_val,
+                                            j_val,
+                                            cw_val > 0.5,
+                                            z,
+                                        );
+                                    }
                                 }
                             }
                             "B" => {
@@ -1174,11 +1220,12 @@ impl Geometry {
                     CoreCommand::Arc {
                         ref mut end,
                         ref mut center_offset,
-                        ref mut clockwise,
+                        ref mut normal,
                     } => {
                         end.0 = -end.0;
                         center_offset.0 = -center_offset.0;
-                        *clockwise = !*clockwise;
+                        // Reflection flips the winding direction (axial vector)
+                        normal.2 = -normal.2;
                     }
                     CoreCommand::Bezier {
                         ref mut end,
@@ -1210,11 +1257,11 @@ impl Geometry {
                     CoreCommand::Arc {
                         ref mut end,
                         ref mut center_offset,
-                        ref mut clockwise,
+                        ref mut normal,
                     } => {
                         end.1 = -end.1;
                         center_offset.1 = -center_offset.1;
-                        *clockwise = !*clockwise;
+                        normal.2 = -normal.2;
                     }
                     CoreCommand::Bezier {
                         ref mut end,

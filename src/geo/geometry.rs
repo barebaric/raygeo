@@ -96,8 +96,35 @@ impl Geometry {
         self.uniform_scalable = false;
         self.data.push(Command::Arc {
             end: Point3D(x, y, z),
-            center_offset: Point(i, j),
-            clockwise,
+            center_offset: Point3D(i, j, 0.0),
+            normal: if clockwise {
+                Point3D(0.0, 0.0, -1.0)
+            } else {
+                Point3D(0.0, 0.0, 1.0)
+            },
+        });
+        self
+    }
+
+    /// Draws a 3D arc using a full 3D center offset and plane normal.
+    #[allow(clippy::too_many_arguments)]
+    pub fn arc_to_3d(
+        &mut self,
+        x: f64,
+        y: f64,
+        z: f64,
+        i: f64,
+        j: f64,
+        k: f64,
+        nx: f64,
+        ny: f64,
+        nz: f64,
+    ) -> &mut Self {
+        self.uniform_scalable = false;
+        self.data.push(Command::Arc {
+            end: Point3D(x, y, z),
+            center_offset: Point3D(i, j, k),
+            normal: Point3D(nx, ny, nz),
         });
         self
     }
@@ -309,7 +336,7 @@ impl Geometry {
                 if let Command::Arc {
                     end,
                     center_offset,
-                    clockwise,
+                    normal,
                     ..
                 } = cmd
                 {
@@ -317,8 +344,8 @@ impl Geometry {
                         idx,
                         last_point,
                         *end,
-                        *center_offset,
-                        *clockwise,
+                        Point(center_offset.0, center_offset.1),
+                        normal.2 < 0.0,
                     ));
                 }
                 last_point = cmd.end_point();

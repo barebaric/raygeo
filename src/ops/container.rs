@@ -837,14 +837,15 @@ impl Ops {
                 crate::Command::Arc {
                     end,
                     center_offset,
-                    clockwise,
+                    normal,
                 } => {
+                    let clockwise = normal.2 < 0.0;
                     ops.arc_to(
                         end.0,
                         end.1,
                         center_offset.0,
                         center_offset.1,
-                        *clockwise,
+                        clockwise,
                         end.2,
                         None,
                     );

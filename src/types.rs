@@ -4,7 +4,7 @@ use std::ops::{
 
 use crate::constants::EPSILON_COLLINEAR;
 use crate::geo::shape::arc::{
-    get_arc_bounds, get_arc_closest_point, get_arc_sweep, linearize_arc,
+    get_arc_bounds, get_arc_closest_point, get_arc_sweep_3d, linearize_arc,
 };
 use crate::geo::shape::bezier::{
     get_bezier_bounds, get_bezier_closest_point, linearize_bezier_from_params,
@@ -250,8 +250,8 @@ pub enum Command {
     },
     Arc {
         end: Point3D,
-        center_offset: Point,
-        clockwise: bool,
+        center_offset: Point3D,
+        normal: Point3D,
     },
     Bezier {
         end: Point3D,
@@ -279,20 +279,47 @@ impl Command {
             Command::Arc {
                 end,
                 center_offset,
-                clockwise,
+                normal,
             } => {
-                let cx = start_point.0 + center_offset.0;
-                let cy = start_point.1 + center_offset.1;
-                let radius = center_offset.0.hypot(center_offset.1);
+                // Use 2D projection for length (XY-plane arcs; for true 3D
+                // arcs this falls back to the 2D sweep in the arc's plane).
+                let n =
+                    glam::DVec3::new(normal.0, normal.1, normal.2).normalize();
+                if n.length() < 1e-30 {
+                    return (end.0 - start_point.0)
+                        .hypot(end.1 - start_point.1);
+                }
+                let center = glam::DVec3::new(
+                    start_point.0 + center_offset.0,
+                    start_point.1 + center_offset.1,
+                    start_point.2 + center_offset.2,
+                );
+                let r0 = glam::DVec3::new(
+                    start_point.0 - center.x,
+                    start_point.1 - center.y,
+                    start_point.2 - center.z,
+                );
+                let r1 = glam::DVec3::new(
+                    end.0 - center.x,
+                    end.1 - center.y,
+                    end.2 - center.z,
+                );
+                let r0_proj = r0 - n * r0.dot(n);
+                let radius = r0_proj.length();
                 if radius < EPSILON_COLLINEAR {
                     return 0.0;
                 }
-                let start_angle =
-                    (start_point.1 - cy).atan2(start_point.0 - cx);
-                let end_angle = (end.1 - cy).atan2(end.0 - cx);
-                let angle_span =
-                    get_arc_sweep(start_angle, end_angle, *clockwise);
-                (angle_span * radius).abs()
+                let u = r0_proj / radius;
+                let v = n.cross(u);
+                let theta_end = f64::atan2(r1.dot(v), r1.dot(u));
+                let sweep = if theta_end.abs() < EPSILON_COLLINEAR {
+                    2.0 * std::f64::consts::PI
+                } else if theta_end < 0.0 {
+                    theta_end + 2.0 * std::f64::consts::PI
+                } else {
+                    theta_end
+                };
+                (sweep * radius).abs()
             }
             Command::Bezier {
                 end,
@@ -350,28 +377,55 @@ impl Command {
             }
             Command::Arc {
                 center_offset,
-                clockwise,
+                normal,
                 ..
             } => {
-                let i_off = center_offset.0;
-                let j_off = center_offset.1;
-                let cx = sx + i_off;
-                let cy = sy + j_off;
-                let radius_start = i_off.hypot(j_off);
-                let radius_end = (ex - cx).hypot(ey - cy);
-                let start_angle = (sy - cy).atan2(sx - cx);
-                let end_angle = (ey - cy).atan2(ex - cx);
-                let angle_span =
-                    get_arc_sweep(start_angle, end_angle, *clockwise);
-                let mid_angle = start_angle + t * angle_span;
-                let radius = radius_start + t * (radius_end - radius_start);
-                let nx = cx + radius * mid_angle.cos();
-                let ny = cy + radius * mid_angle.sin();
+                let n =
+                    glam::DVec3::new(normal.0, normal.1, normal.2).normalize();
+                let center = glam::DVec3::new(
+                    sx + center_offset.0,
+                    sy + center_offset.1,
+                    sz + center_offset.2,
+                );
+                let r0 = glam::DVec3::new(
+                    sx - center.x,
+                    sy - center.y,
+                    sz - center.z,
+                );
+                let r1 = glam::DVec3::new(
+                    ex - center.x,
+                    ey - center.y,
+                    ez - center.z,
+                );
+                let r0_proj = r0 - n * r0.dot(n);
+                let r1_proj = r1 - n * r1.dot(n);
+                let (nx, ny) = if r0_proj.length() < EPSILON_COLLINEAR {
+                    // Degenerate start radius — linear interpolation
+                    (sx + t * (ex - sx), sy + t * (ey - sy))
+                } else {
+                    let u = r0_proj.normalize();
+                    let v = n.cross(u).normalize();
+                    let theta_end = f64::atan2(r1_proj.dot(v), r1_proj.dot(u));
+                    let sweep = if theta_end.abs() < EPSILON_COLLINEAR {
+                        2.0 * std::f64::consts::PI
+                    } else if theta_end < 0.0 {
+                        theta_end + 2.0 * std::f64::consts::PI
+                    } else {
+                        theta_end
+                    };
+                    let angle = sweep * t;
+                    let radius = r0_proj.length()
+                        + (r1_proj.length() - r0_proj.length()) * t;
+                    let (s, c) = angle.sin_cos();
+                    let dir = u * (radius * c) + v * (radius * s);
+                    let pt = center + dir;
+                    (pt.x, pt.y)
+                };
                 let nz = sz + t * (ez - sz);
                 Some(Command::Arc {
                     end: Point3D(nx, ny, nz),
-                    center_offset: Point(i_off, j_off),
-                    clockwise: *clockwise,
+                    center_offset: *center_offset,
+                    normal: *normal,
                 })
             }
             Command::Bezier {
@@ -423,22 +477,57 @@ impl Command {
             }
             Command::Arc {
                 center_offset,
-                clockwise,
+                normal,
                 ..
             } => {
-                let cx = p0.0 + center_offset.0;
-                let cy = p0.1 + center_offset.1;
-                let start_angle = (p0.1 - cy).atan2(p0.0 - cx);
-                let end_angle = (p1.1 - cy).atan2(p1.0 - cx);
-                let angle_range =
-                    get_arc_sweep(start_angle, end_angle, *clockwise);
-                let current_angle = start_angle + t * angle_range;
-                let radius_start = (p0.0 - cx).hypot(p0.1 - cy);
-                let radius_end = (p1.0 - cx).hypot(p1.1 - cy);
-                let radius = radius_start + t * (radius_end - radius_start);
-                let px = cx + radius * current_angle.cos();
-                let py = cy + radius * current_angle.sin();
-                (px, py)
+                let n =
+                    glam::DVec3::new(normal.0, normal.1, normal.2).normalize();
+                let center = glam::DVec3::new(
+                    p0.0 + center_offset.0,
+                    p0.1 + center_offset.1,
+                    p0.2 + center_offset.2,
+                );
+                let r0 = glam::DVec3::new(
+                    p0.0 - center.x,
+                    p0.1 - center.y,
+                    p0.2 - center.z,
+                );
+                let r1 = glam::DVec3::new(
+                    p1.0 - center.x,
+                    p1.1 - center.y,
+                    p1.2 - center.z,
+                );
+                let r0_proj = r0 - n * r0.dot(n);
+                let r1_proj = r1 - n * r1.dot(n);
+                if r0_proj.length() < EPSILON_COLLINEAR
+                    && r1_proj.length() < EPSILON_COLLINEAR
+                {
+                    (p0.0, p0.1)
+                } else {
+                    let (u, v, r_start, r_end) =
+                        if r0_proj.length() < EPSILON_COLLINEAR {
+                            // Degenerate start — use an arbitrary reference in the plane
+                            let u_ref = if n.x.abs() < 0.9 {
+                                (glam::DVec3::X - n * n.x).normalize()
+                            } else {
+                                (glam::DVec3::Y - n * n.y).normalize()
+                            };
+                            let v_ref = n.cross(u_ref).normalize();
+                            (u_ref, v_ref, 0.0, r1_proj.length())
+                        } else {
+                            let u = r0_proj.normalize();
+                            let v = n.cross(u).normalize();
+                            (u, v, r0_proj.length(), r1_proj.length())
+                        };
+                    let theta_end = f64::atan2(r1_proj.dot(v), r1_proj.dot(u));
+                    let sweep = get_arc_sweep_3d(0.0, theta_end);
+                    let angle = sweep * t;
+                    let radius = r_start + (r_end - r_start) * t;
+                    let (s, c) = angle.sin_cos();
+                    let dir = u * (radius * c) + v * (radius * s);
+                    let pt = center + dir;
+                    (pt.x, pt.y)
+                }
             }
             Command::Bezier {
                 control1, control2, ..
@@ -471,29 +560,58 @@ impl Command {
             Command::Line { .. } => Point(p1.0 - p0.0, p1.1 - p0.1),
             Command::Arc {
                 center_offset,
-                clockwise,
+                normal,
                 ..
             } => {
-                let center =
-                    Point(p0.0 + center_offset.0, p0.1 + center_offset.1);
-                let start_angle = (p0.1 - center.1).atan2(p0.0 - center.0);
-                let end_angle = (p1.1 - center.1).atan2(p1.0 - center.0);
-                let angle_range =
-                    get_arc_sweep(start_angle, end_angle, *clockwise);
-                let current_angle = start_angle + t * angle_range;
-                let radius_start = (p0.0 - center.0).hypot(p0.1 - center.1);
-                let radius_end = (p1.0 - center.0).hypot(p1.1 - center.1);
-                let radius = radius_start + t * (radius_end - radius_start);
-                let point = Point(
-                    center.0 + radius * current_angle.cos(),
-                    center.1 + radius * current_angle.sin(),
+                // Use the original 3D start point for the arc math, then
+                // project the resulting tangent into the XY plane.
+                let s3 = start;
+                let n =
+                    glam::DVec3::new(normal.0, normal.1, normal.2).normalize();
+                let center = glam::DVec3::new(
+                    s3.0 + center_offset.0,
+                    s3.1 + center_offset.1,
+                    s3.2 + center_offset.2,
                 );
-                let radius_vec = Point(point.0 - center.0, point.1 - center.1);
-                if *clockwise {
-                    Point(radius_vec.1, -radius_vec.0)
-                } else {
-                    Point(-radius_vec.1, radius_vec.0)
-                }
+                let r0 = glam::DVec3::new(
+                    s3.0 - center.x,
+                    s3.1 - center.y,
+                    s3.2 - center.z,
+                );
+                let r1 = glam::DVec3::new(
+                    p1_pt.0 - center.x,
+                    p1_pt.1 - center.y,
+                    p1_pt.2 - center.z,
+                );
+                let r0_proj = r0 - n * r0.dot(n);
+                let r1_proj = r1 - n * r1.dot(n);
+                let (u, v, r_start, r_end) =
+                    if r0_proj.length() < EPSILON_COLLINEAR {
+                        if r1_proj.length() < EPSILON_COLLINEAR {
+                            return Some(Point(1.0, 0.0));
+                        }
+                        let u_ref = if n.x.abs() < 0.9 {
+                            (glam::DVec3::X - n * n.x).normalize()
+                        } else {
+                            (glam::DVec3::Y - n * n.y).normalize()
+                        };
+                        let v_ref = n.cross(u_ref).normalize();
+                        (u_ref, v_ref, 0.0, r1_proj.length())
+                    } else {
+                        let u = r0_proj.normalize();
+                        let v = n.cross(u).normalize();
+                        (u, v, r0_proj.length(), r1_proj.length())
+                    };
+                let theta_end = f64::atan2(r1_proj.dot(v), r1_proj.dot(u));
+                let sweep = get_arc_sweep_3d(0.0, theta_end);
+                let angle = sweep * t;
+                let radius = r_start + (r_end - r_start) * t;
+                let (s, c) = angle.sin_cos();
+                let dir = u * (radius * c) + v * (radius * s);
+                let pt = center + dir;
+                let radius_vec = pt - center;
+                let tangent = n.cross(radius_vec);
+                Point(tangent.x, tangent.y)
             }
             Command::Bezier {
                 control1, control2, ..
@@ -534,12 +652,12 @@ impl Command {
             Command::Arc {
                 end,
                 center_offset,
-                clockwise,
+                normal,
                 ..
             } => get_arc_closest_point(
                 *end,
                 *center_offset,
-                *clockwise,
+                *normal,
                 start,
                 x,
                 y,
@@ -570,12 +688,12 @@ impl Command {
             Command::Arc {
                 end,
                 center_offset,
-                clockwise,
+                normal,
                 ..
             } => linearize_arc(
                 *end,
                 *center_offset,
-                *clockwise,
+                *normal,
                 start,
                 resolution,
                 out,
@@ -607,9 +725,17 @@ impl Command {
             )),
             Command::Arc {
                 center_offset,
-                clockwise,
+                normal,
                 ..
-            } => Some(get_arc_bounds(start, p1, *center_offset, *clockwise)),
+            } => {
+                let clockwise = normal.2 < 0.0;
+                Some(get_arc_bounds(
+                    start,
+                    p1,
+                    Point(center_offset.0, center_offset.1),
+                    clockwise,
+                ))
+            }
             Command::Bezier {
                 control1, control2, ..
             } => Some(get_bezier_bounds(

@@ -33,15 +33,16 @@ pub fn apply_overcut(geo: &Geometry, overcut: f64) -> Geometry {
             }
             Command::Arc {
                 center_offset,
-                clockwise,
+                normal,
                 ..
             } => {
+                let clockwise = normal.2 < 0.0;
                 result.arc_to(
                     end.0,
                     end.1,
                     center_offset.0,
                     center_offset.1,
-                    *clockwise,
+                    clockwise,
                     end.2,
                 );
             }

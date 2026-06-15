@@ -9,12 +9,44 @@
 
 use std::f64::consts::PI;
 
+use glam::DVec3;
+
 use crate::constants::EPSILON_COLLINEAR;
 use crate::geo::shape::line::{
     does_line_segment_intersect_rect, get_line_segment_closest_point,
 };
 use crate::geo::shape::polygon::is_point_inside_polygon;
 use crate::types::{Point, Point3D, Polygon, Rect};
+
+/// Normal for a CCW arc in the XY plane (G17 G03).
+pub const XY_NORMAL_CCW: Point3D = Point3D(0.0, 0.0, 1.0);
+
+/// Convert the legacy `clockwise: bool` to a 3D plane normal.
+///
+/// `clockwise = false` (CCW in XY) → `(0, 0, +1)`.
+/// `clockwise = true`  (CW  in XY) → `(0, 0, -1)`.
+pub fn normal_from_clockwise(clockwise: bool) -> Point3D {
+    if clockwise {
+        Point3D(0.0, 0.0, -1.0)
+    } else {
+        XY_NORMAL_CCW
+    }
+}
+
+/// Compute the signed sweep angle for an arc in 3D.
+///
+/// Returns the sweep from start to end going in the positive (right-hand) direction
+/// around `normal`.  The sweep is always in `(0, 2π]` so that the arc is always
+/// traversed counter-clockwise around the normal.  A full circle is `2π`.
+pub fn get_arc_sweep_3d(start_angle: f64, end_angle: f64) -> f64 {
+    let mut sweep = end_angle - start_angle;
+    if sweep.abs() < EPSILON_COLLINEAR {
+        sweep = 2.0 * PI;
+    } else if sweep < EPSILON_COLLINEAR {
+        sweep += 2.0 * PI;
+    }
+    sweep
+}
 
 /// Computes the arc length given start position, end position, center
 /// offset, and direction. Returns 0.0 if the radius is degenerate.
@@ -188,52 +220,75 @@ pub fn is_arc_clockwise(points: &[Point], center: Point) -> bool {
 }
 
 /// Converts an arc into a series of line segments for approximation.
-/// The resolution parameter controls the maximum length of each segment.
+///
+/// The arc is defined by its endpoint, center offset, plane normal, and start
+/// point.  The sweep always goes counter-clockwise around the normal (right-hand
+/// rule).  For XY-plane arcs, pass `normal = (0,0,+1)` for CCW or `(0,0,-1)` for CW.
+///
+/// `resolution` controls the maximum length of each chord segment.
 /// Writes into a caller-provided buffer so allocations can be reused across calls.
 pub fn linearize_arc(
     end: Point3D,
-    center_offset: Point,
-    clockwise: bool,
+    center_offset: Point3D,
+    normal: Point3D,
     start_point: Point3D,
     resolution: f64,
     out: &mut Vec<(Point3D, Point3D)>,
 ) {
     out.clear();
-    let p0 = start_point;
-    let p1 = end;
-    let z0 = p0.2;
-    let z1 = p1.2;
+    let p0 = DVec3::new(start_point.0, start_point.1, start_point.2);
+    let p1 = DVec3::new(end.0, end.1, end.2);
+    let n = DVec3::new(normal.0, normal.1, normal.2).normalize();
 
-    let center = (p0.0 + center_offset.0, p0.1 + center_offset.1);
-
-    let radius_start = (p0.0 - center.0).hypot(p0.1 - center.1);
-    let radius_end = (p1.0 - center.0).hypot(p1.1 - center.1);
-
-    if radius_start < 1e-9 {
-        out.push((p0, p1));
+    // Reject zero-length normals — treat as degenerate (straight line)
+    if n.length() < 1e-30 {
+        out.push((start_point, end));
         return;
     }
 
-    let start_angle = (p0.1 - center.1).atan2(p0.0 - center.0);
-    let end_angle = (p1.1 - center.1).atan2(p1.0 - center.0);
+    let center =
+        p0 + DVec3::new(center_offset.0, center_offset.1, center_offset.2);
 
-    let angle_range = get_arc_sweep(start_angle, end_angle, clockwise);
+    let r0 = p0 - center;
+    let r1 = p1 - center;
+
+    // Project radius vectors into the arc plane
+    let r0_proj = r0 - n * r0.dot(n);
+    let r1_proj = r1 - n * r1.dot(n);
+
+    let radius_start = r0_proj.length();
+    if radius_start < 1e-9 {
+        out.push((start_point, end));
+        return;
+    }
+
+    let radius_end = r1_proj.length();
+
+    // Build orthonormal basis in the arc plane
+    let u = r0_proj / radius_start;
+    let v = n.cross(u).normalize();
+
+    // Compute the sweep angle (always positive around the normal)
+    let theta_end = f64::atan2(r1_proj.dot(v), r1_proj.dot(u));
+    let sweep = get_arc_sweep_3d(0.0, theta_end);
 
     let avg_radius = (radius_start + radius_end) / 2.0;
-    let arc_len = angle_range.abs() * avg_radius;
+    let arc_len = sweep * avg_radius;
     let num_segments = (arc_len / resolution).ceil().max(2.0) as usize;
 
-    let mut prev_pt = p0;
+    // Helical Z interpolation + linear radius interpolation (for spiral arcs)
+    let z0 = p0.z;
+    let z1 = p1.z;
+
+    let mut prev_pt = start_point;
     for i in 1..=num_segments {
         let t = i as f64 / num_segments as f64;
+        let angle = sweep * t;
         let radius = radius_start + (radius_end - radius_start) * t;
-        let angle = start_angle + angle_range * t;
+        let (s, c) = angle.sin_cos();
+        let pt = center + u * (radius * c) + v * (radius * s);
         let z = z0 + (z1 - z0) * t;
-        let next_pt = Point3D(
-            center.0 + radius * angle.cos(),
-            center.1 + radius * angle.sin(),
-            z,
-        );
+        let next_pt = Point3D(pt.x, pt.y, z);
         out.push((prev_pt, next_pt));
         prev_pt = next_pt;
     }
@@ -242,8 +297,8 @@ pub fn linearize_arc(
 /// Internal: Finds closest point on arc using linearized approximation.
 fn find_closest_on_linearized_arc(
     end: Point3D,
-    center_offset: Point,
-    clockwise: bool,
+    center_offset: Point3D,
+    normal: Point3D,
     start_pos: Point3D,
     x: f64,
     y: f64,
@@ -252,7 +307,7 @@ fn find_closest_on_linearized_arc(
     linearize_arc(
         end,
         center_offset,
-        clockwise,
+        normal,
         start_pos,
         0.1,
         &mut arc_segments,
@@ -285,12 +340,19 @@ fn find_closest_on_linearized_arc(
 
 fn find_closest_point_on_arc_impl(
     end: Point3D,
-    center_offset: Point,
-    clockwise: bool,
+    center_offset: Point3D,
+    normal: Point3D,
     start_pos: Point3D,
     x: f64,
     y: f64,
 ) -> Option<(f64, Point, f64)> {
+    // Project to XY plane for the 2D closest-point computation.
+    // The `normal` is used to determine the effective direction:
+    //   normal.(0,0,+1) → CCW (clockwise=false)
+    //   normal.(0,0,-1) → CW  (clockwise=true)
+    // For non-Z normals the 2D projection is approximate.
+    let clockwise = normal.2 < 0.0;
+
     let p0 = Point(start_pos.0, start_pos.1);
     let p1 = Point(end.0, end.1);
     let center = Point(p0.0 + center_offset.0, p0.1 + center_offset.1);
@@ -302,7 +364,7 @@ fn find_closest_point_on_arc_impl(
         return find_closest_on_linearized_arc(
             end,
             center_offset,
-            clockwise,
+            normal,
             start_pos,
             x,
             y,
@@ -382,22 +444,17 @@ fn find_closest_point_on_arc_impl(
 
 /// Finds the closest point on an arc to a given (x, y) coordinate.
 /// Returns (t_parameter, closest_point, distance_squared).
+///
+/// For non-XY-plane arcs the projection is approximate.
 pub fn get_arc_closest_point(
     end: Point3D,
-    center_offset: Point,
-    clockwise: bool,
+    center_offset: Point3D,
+    normal: Point3D,
     start_pos: Point3D,
     x: f64,
     y: f64,
 ) -> Option<(f64, Point, f64)> {
-    find_closest_point_on_arc_impl(
-        end,
-        center_offset,
-        clockwise,
-        start_pos,
-        x,
-        y,
-    )
+    find_closest_point_on_arc_impl(end, center_offset, normal, start_pos, x, y)
 }
 
 /// Tests if an arc intersects an axis-aligned rectangle.
@@ -425,7 +482,9 @@ pub fn does_arc_intersect_rect(
     }
 
     // Linearize and test each segment
-    let center_offset = Point(center.0 - start_pos.0, center.1 - start_pos.1);
+    let offset_3d =
+        Point3D(center.0 - start_pos.0, center.1 - start_pos.1, 0.0);
+    let normal = normal_from_clockwise(clockwise);
     let radius = (start_pos.0 - center.0).hypot(start_pos.1 - center.1);
     let start_3d: Point3D = Point3D(start_pos.0, start_pos.1, 0.0);
     let end_3d: Point3D = Point3D(end_pos.0, end_pos.1, 0.0);
@@ -433,8 +492,8 @@ pub fn does_arc_intersect_rect(
     let mut segments = Vec::new();
     linearize_arc(
         end_3d,
-        center_offset,
-        clockwise,
+        offset_3d,
+        normal,
         start_3d,
         radius * 0.1,
         &mut segments,
