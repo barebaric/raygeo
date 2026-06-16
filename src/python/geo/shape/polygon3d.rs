@@ -1,14 +1,23 @@
-//! Python bindings for 3D polygon boolean and offset operations.
+//! Python bindings for 3D polygon operations.
 
-use super::super::flex_point::points3d_to_tuples;
+use super::super::flex_point::{
+    edge_pairs3d_to_tuples, point3d_to_tuple, points3d_to_tuples, PyPoint3D,
+};
 use crate::geo::shape::polygon3d::{
+    flip_polygon_3d, flip_polygons_3d, get_polygon_bounds_3d,
+    get_polygon_centroid_3d, get_polygon_convex_hull_3d, get_polygon_edges_3d,
+    get_polygon_group_bounds_3d, get_polygon_perimeter_3d,
     get_polygons_difference_3d, get_polygons_group_difference_3d,
     get_polygons_group_intersection_3d, get_polygons_intersection_3d,
-    get_polygons_union_3d, offset_polygon_3d,
+    get_polygons_union_3d, offset_polygon_3d, rotate_polygon_3d,
+    rotate_polygons_3d, scale_polygon_3d, translate_polygon_3d,
+    translate_polygons_3d,
 };
 use crate::types::Point3D;
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::gen_stub_pyfunction;
+
+use super::super::types::Edge3D;
 
 fn extract_polygon3d(ob: &Bound<'_, PyAny>) -> PyResult<Vec<Point3D>> {
     let mut points = Vec::new();
@@ -28,6 +37,14 @@ fn extract_polygons3d(ob: &Bound<'_, PyAny>) -> PyResult<Vec<Vec<Point3D>>> {
     }
     Ok(result)
 }
+
+fn poly3d_to_points(poly: Vec<PyPoint3D>) -> Vec<Point3D> {
+    poly.into_iter()
+        .map(|p| Point3D::new(p.0, p.1, p.2))
+        .collect()
+}
+
+// ── Boolean & Offset (existing) ──────────────────────────────────────
 
 #[gen_stub_pyfunction(
     python = r#"
@@ -176,6 +193,405 @@ fn offset_polygon_3d_py(
     Ok(result.into_iter().map(points3d_to_tuples).collect())
 }
 
+// ── 3D Analytical functions ──────────────────────────────────────────
+
+#[gen_stub_pyfunction(
+    python = r#"
+    import collections.abc
+    import raygeo.geo.types
+
+    def get_polygon_perimeter_3d(
+        polygon: collections.abc.Sequence[types.Point3D],
+    ) -> float:
+        """Get the perimeter of a 3D polygon using full 3D edge lengths.
+
+        :param polygon: Polygon as (x, y, z) points.
+        :returns: Perimeter length.
+        :complexity: O(n)
+        """
+"#,
+    module = "raygeo.geo.shape.polygon3d"
+)]
+#[pyfunction(name = "get_polygon_perimeter_3d")]
+fn get_polygon_perimeter_3d_py(polygon: Vec<PyPoint3D>) -> f64 {
+    get_polygon_perimeter_3d(&poly3d_to_points(polygon))
+}
+
+#[gen_stub_pyfunction(
+    python = r#"
+    import collections.abc
+    import raygeo.geo.types
+
+    def get_polygon_bounds_3d(
+        polygon: collections.abc.Sequence[types.Point3D],
+    ) -> types.Rect3D:
+        """Get the 3D bounding box of a polygon.
+
+        :param polygon: Polygon as (x, y, z) points.
+        :returns: Bounding box as (x_min, y_min, x_max, y_max, z_min, z_max).
+        :complexity: O(n)
+        """
+"#,
+    module = "raygeo.geo.shape.polygon3d"
+)]
+#[pyfunction(name = "get_polygon_bounds_3d")]
+fn get_polygon_bounds_3d_py(
+    polygon: Vec<PyPoint3D>,
+) -> (f64, f64, f64, f64, f64, f64) {
+    let r = get_polygon_bounds_3d(&poly3d_to_points(polygon));
+    (r.x_min, r.y_min, r.x_max, r.y_max, r.z_min, r.z_max)
+}
+
+#[gen_stub_pyfunction(
+    python = r#"
+    import typing
+    import raygeo.geo.types
+
+    def get_polygon_group_bounds_3d(
+        polygons: typing.Any,
+    ) -> types.Rect3D:
+        """Get the 3D bounding box of a group of polygons.
+
+        :param polygons: List of 3D polygons.
+        :returns: Bounding box as (x_min, y_min, x_max, y_max, z_min, z_max).
+        :complexity: O(n * m)
+        """
+"#,
+    module = "raygeo.geo.shape.polygon3d"
+)]
+#[pyfunction(name = "get_polygon_group_bounds_3d")]
+fn get_polygon_group_bounds_3d_py(
+    polygons: &Bound<'_, PyAny>,
+) -> PyResult<(f64, f64, f64, f64, f64, f64)> {
+    let p = extract_polygons3d(polygons)?;
+    let r = get_polygon_group_bounds_3d(&p);
+    Ok((r.x_min, r.y_min, r.x_max, r.y_max, r.z_min, r.z_max))
+}
+
+#[gen_stub_pyfunction(
+    python = r#"
+    import collections.abc
+    import raygeo.geo.types
+
+    def get_polygon_centroid_3d(
+        polygon: collections.abc.Sequence[types.Point3D],
+    ) -> types.Point3D:
+        """Get the centroid of a 3D polygon.
+
+        XY centroid from shoelace formula, Z from average.
+
+        :param polygon: Polygon as (x, y, z) points.
+        :returns: Centroid point (x, y, z).
+        :complexity: O(n)
+        """
+"#,
+    module = "raygeo.geo.shape.polygon3d"
+)]
+#[pyfunction(name = "get_polygon_centroid_3d")]
+fn get_polygon_centroid_3d_py(polygon: Vec<PyPoint3D>) -> (f64, f64, f64) {
+    point3d_to_tuple(get_polygon_centroid_3d(&poly3d_to_points(polygon)))
+}
+
+#[gen_stub_pyfunction(
+    python = r#"
+    import collections.abc
+    import raygeo.geo.types
+
+    def get_polygon_edges_3d(
+        polygon: collections.abc.Sequence[types.Point3D],
+    ) -> list[tuple[types.Point3D, types.Point3D]]:
+        """Get the edges of a 3D polygon.
+
+        :param polygon: Polygon as (x, y, z) points.
+        :returns: List of ((x1, y1, z1), (x2, y2, z2)) edges.
+        :complexity: O(n)
+        """
+"#,
+    module = "raygeo.geo.shape.polygon3d"
+)]
+#[pyfunction(name = "get_polygon_edges_3d")]
+fn get_polygon_edges_3d_py(polygon: Vec<PyPoint3D>) -> Vec<Edge3D> {
+    edge_pairs3d_to_tuples(get_polygon_edges_3d(&poly3d_to_points(polygon)))
+}
+
+#[gen_stub_pyfunction(
+    python = r#"
+    import collections.abc
+    import raygeo.geo.types
+
+    def get_polygon_convex_hull_3d(
+        polygon: collections.abc.Sequence[types.Point3D],
+    ) -> types.Polygon3D:
+        """Get the convex hull of a 3D polygon (XY-plane, Z from first vertex).
+
+        :param polygon: Polygon as (x, y, z) points.
+        :returns: Convex hull as list of (x, y, z) points.
+        :complexity: O(n log n)
+        """
+"#,
+    module = "raygeo.geo.shape.polygon3d"
+)]
+#[pyfunction(name = "get_polygon_convex_hull_3d")]
+fn get_polygon_convex_hull_3d_py(
+    polygon: Vec<PyPoint3D>,
+) -> Vec<(f64, f64, f64)> {
+    points3d_to_tuples(get_polygon_convex_hull_3d(&poly3d_to_points(polygon)))
+}
+
+// ── 3D Transform functions ───────────────────────────────────────────
+
+#[gen_stub_pyfunction(
+    python = r#"
+    import collections.abc
+    import raygeo.geo.types
+
+    def translate_polygon_3d(
+        polygon: collections.abc.Sequence[types.Point3D],
+        dx: float,
+        dy: float,
+        dz: float = 0.0,
+    ) -> types.Polygon3D:
+        """Translate a 3D polygon.
+
+        :param polygon: Polygon as (x, y, z) points.
+        :param dx: X translation.
+        :param dy: Y translation.
+        :param dz: Z translation.
+        :returns: Translated polygon.
+        :complexity: O(n)
+        """
+"#,
+    module = "raygeo.geo.shape.polygon3d"
+)]
+#[pyfunction(name = "translate_polygon_3d")]
+#[pyo3(signature = (polygon, dx, dy, dz=0.0))]
+fn translate_polygon_3d_py(
+    polygon: Vec<PyPoint3D>,
+    dx: f64,
+    dy: f64,
+    dz: f64,
+) -> Vec<(f64, f64, f64)> {
+    points3d_to_tuples(translate_polygon_3d(
+        &poly3d_to_points(polygon),
+        dx,
+        dy,
+        dz,
+    ))
+}
+
+#[gen_stub_pyfunction(
+    python = r#"
+    import typing
+    import raygeo.geo.types
+
+    def translate_polygons_3d(
+        polygons: typing.Any,
+        dx: float,
+        dy: float,
+        dz: float = 0.0,
+    ) -> list[types.Polygon3D]:
+        """Translate a list of 3D polygons.
+
+        :param polygons: List of 3D polygons.
+        :param dx: X translation.
+        :param dy: Y translation.
+        :param dz: Z translation.
+        :returns: Translated polygons.
+        :complexity: O(n * m)
+        """
+"#,
+    module = "raygeo.geo.shape.polygon3d"
+)]
+#[pyfunction(name = "translate_polygons_3d")]
+#[pyo3(signature = (polygons, dx, dy, dz=0.0))]
+fn translate_polygons_3d_py(
+    polygons: &Bound<'_, PyAny>,
+    dx: f64,
+    dy: f64,
+    dz: f64,
+) -> PyResult<Vec<Vec<(f64, f64, f64)>>> {
+    let p = extract_polygons3d(polygons)?;
+    Ok(translate_polygons_3d(&p, dx, dy, dz)
+        .into_iter()
+        .map(points3d_to_tuples)
+        .collect())
+}
+
+#[gen_stub_pyfunction(
+    python = r#"
+    import collections.abc
+    import typing
+    import raygeo.geo.types
+
+    def scale_polygon_3d(
+        polygon: collections.abc.Sequence[types.Point3D],
+        scale: float,
+        scale_y: typing.Optional[float] = None,
+        scale_z: typing.Optional[float] = None,
+    ) -> types.Polygon3D:
+        """Scale a 3D polygon.
+
+        :param polygon: Polygon as (x, y, z) points.
+        :param scale: X (and Y/Z if scale_y/scale_z are None) scale factor.
+        :param scale_y: Y scale factor (optional).
+        :param scale_z: Z scale factor (optional).
+        :returns: Scaled polygon.
+        :complexity: O(n)
+        """
+"#,
+    module = "raygeo.geo.shape.polygon3d"
+)]
+#[pyfunction(name = "scale_polygon_3d")]
+#[pyo3(signature = (polygon, scale, scale_y=None, scale_z=None))]
+fn scale_polygon_3d_py(
+    polygon: Vec<PyPoint3D>,
+    scale: f64,
+    scale_y: Option<f64>,
+    scale_z: Option<f64>,
+) -> Vec<(f64, f64, f64)> {
+    points3d_to_tuples(scale_polygon_3d(
+        &poly3d_to_points(polygon),
+        scale,
+        scale_y,
+        scale_z,
+    ))
+}
+
+#[gen_stub_pyfunction(
+    python = r#"
+    import collections.abc
+    import raygeo.geo.types
+
+    def flip_polygon_3d(
+        polygon: collections.abc.Sequence[types.Point3D],
+        flip_h: bool = False,
+        flip_v: bool = False,
+        flip_z: bool = False,
+    ) -> types.Polygon3D:
+        """Flip a 3D polygon horizontally, vertically, and/or along Z.
+
+        :param polygon: Polygon as (x, y, z) points.
+        :param flip_h: Whether to flip horizontally (negate X).
+        :param flip_v: Whether to flip vertically (negate Y).
+        :param flip_z: Whether to flip along Z (negate Z).
+        :returns: Flipped polygon.
+        :complexity: O(n)
+        """
+"#,
+    module = "raygeo.geo.shape.polygon3d"
+)]
+#[pyfunction(name = "flip_polygon_3d")]
+#[pyo3(signature = (polygon, flip_h=false, flip_v=false, flip_z=false))]
+fn flip_polygon_3d_py(
+    polygon: Vec<PyPoint3D>,
+    flip_h: bool,
+    flip_v: bool,
+    flip_z: bool,
+) -> Vec<(f64, f64, f64)> {
+    points3d_to_tuples(flip_polygon_3d(
+        &poly3d_to_points(polygon),
+        flip_h,
+        flip_v,
+        flip_z,
+    ))
+}
+
+#[gen_stub_pyfunction(
+    python = r#"
+    import typing
+    import raygeo.geo.types
+
+    def flip_polygons_3d(
+        polygons: typing.Any,
+        flip_h: bool = False,
+        flip_v: bool = False,
+        flip_z: bool = False,
+    ) -> list[types.Polygon3D]:
+        """Flip multiple 3D polygons.
+
+        :param polygons: List of 3D polygons.
+        :param flip_h: Whether to flip horizontally (negate X).
+        :param flip_v: Whether to flip vertically (negate Y).
+        :param flip_z: Whether to flip along Z (negate Z).
+        :returns: Flipped polygons.
+        :complexity: O(n * m)
+        """
+"#,
+    module = "raygeo.geo.shape.polygon3d"
+)]
+#[pyfunction(name = "flip_polygons_3d")]
+#[pyo3(signature = (polygons, flip_h=false, flip_v=false, flip_z=false))]
+fn flip_polygons_3d_py(
+    polygons: &Bound<'_, PyAny>,
+    flip_h: bool,
+    flip_v: bool,
+    flip_z: bool,
+) -> PyResult<Vec<Vec<(f64, f64, f64)>>> {
+    let p = extract_polygons3d(polygons)?;
+    Ok(flip_polygons_3d(&p, flip_h, flip_v, flip_z)
+        .into_iter()
+        .map(points3d_to_tuples)
+        .collect())
+}
+
+#[gen_stub_pyfunction(
+    python = r#"
+    import collections.abc
+    import raygeo.geo.types
+
+    def rotate_polygon_3d(
+        polygon: collections.abc.Sequence[types.Point3D],
+        angle: float,
+    ) -> types.Polygon3D:
+        """Rotate a 3D polygon around the Z axis (XY rotation, Z preserved).
+
+        :param polygon: Polygon as (x, y, z) points.
+        :param angle: Rotation angle in degrees.
+        :returns: Rotated polygon.
+        :complexity: O(n)
+        """
+"#,
+    module = "raygeo.geo.shape.polygon3d"
+)]
+#[pyfunction(name = "rotate_polygon_3d")]
+fn rotate_polygon_3d_py(
+    polygon: Vec<PyPoint3D>,
+    angle: f64,
+) -> Vec<(f64, f64, f64)> {
+    points3d_to_tuples(rotate_polygon_3d(&poly3d_to_points(polygon), angle))
+}
+
+#[gen_stub_pyfunction(
+    python = r#"
+    import typing
+    import raygeo.geo.types
+
+    def rotate_polygons_3d(
+        polygons: typing.Any,
+        angle: float,
+    ) -> list[types.Polygon3D]:
+        """Rotate multiple 3D polygons around the Z axis.
+
+        :param polygons: List of 3D polygons.
+        :param angle: Rotation angle in degrees.
+        :returns: Rotated polygons.
+        :complexity: O(n * m)
+        """
+"#,
+    module = "raygeo.geo.shape.polygon3d"
+)]
+#[pyfunction(name = "rotate_polygons_3d")]
+fn rotate_polygons_3d_py(
+    polygons: &Bound<'_, PyAny>,
+    angle: f64,
+) -> PyResult<Vec<Vec<(f64, f64, f64)>>> {
+    let p = extract_polygons3d(polygons)?;
+    Ok(rotate_polygons_3d(&p, angle)
+        .into_iter()
+        .map(points3d_to_tuples)
+        .collect())
+}
+
 pub fn register(shape_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     let py = shape_mod.py();
     let m = PyModule::new(py, "polygon3d")?;
@@ -188,6 +604,19 @@ pub fn register(shape_mod: &Bound<'_, PyModule>) -> PyResult<()> {
         get_polygons_group_intersection_3d_py,
         get_polygons_group_difference_3d_py,
         offset_polygon_3d_py,
+        get_polygon_perimeter_3d_py,
+        get_polygon_bounds_3d_py,
+        get_polygon_group_bounds_3d_py,
+        get_polygon_centroid_3d_py,
+        get_polygon_edges_3d_py,
+        get_polygon_convex_hull_3d_py,
+        translate_polygon_3d_py,
+        translate_polygons_3d_py,
+        scale_polygon_3d_py,
+        flip_polygon_3d_py,
+        flip_polygons_3d_py,
+        rotate_polygon_3d_py,
+        rotate_polygons_3d_py,
     );
 
     shape_mod.add_submodule(&m)?;

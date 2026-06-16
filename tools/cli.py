@@ -80,6 +80,51 @@ _INLINE_IMAGE_MAP = {
             "polygon3d-offset",
             "3D polygon offset — Z preserved from input",
         ),
+        (
+            "get_polygon_perimeter_3d",
+            "polygon3d-perimeter",
+            "3D polygon perimeter using full 3D edge lengths",
+        ),
+        (
+            "get_polygon_bounds_3d",
+            "polygon3d-bounds",
+            "3D bounding box (Rect3D)",
+        ),
+        (
+            "get_polygon_centroid_3d",
+            "polygon3d-centroid",
+            "3D centroid – XY via shoelace, Z as average",
+        ),
+        (
+            "get_polygon_edges_3d",
+            "polygon3d-edges",
+            "3D polygon edges as (start, end) pairs",
+        ),
+        (
+            "get_polygon_convex_hull_3d",
+            "polygon3d-convex-hull",
+            "3D convex hull (XY-plane, Z from first hull vertex)",
+        ),
+        (
+            "translate_polygon_3d",
+            "polygon3d-translate",
+            "3D polygon translated by dx, dy, dz",
+        ),
+        (
+            "scale_polygon_3d",
+            "polygon3d-scale",
+            "3D polygon scaled uniformly",
+        ),
+        (
+            "flip_polygon_3d",
+            "polygon3d-flip",
+            "3D polygon flipped horizontally and along Z",
+        ),
+        (
+            "rotate_polygon_3d",
+            "polygon3d-rotate",
+            "3D polygon rotated around Z axis (Z preserved)",
+        ),
     ],
     "raygeo.image.md": [
         (

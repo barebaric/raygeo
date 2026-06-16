@@ -7,12 +7,25 @@ Verifies Z preservation through all boolean and offset operations.
 from typing import List, Tuple
 
 from raygeo.geo.shape.polygon3d import (
+    flip_polygon_3d,
+    flip_polygons_3d,
+    get_polygon_bounds_3d,
+    get_polygon_centroid_3d,
+    get_polygon_convex_hull_3d,
+    get_polygon_edges_3d,
+    get_polygon_group_bounds_3d,
+    get_polygon_perimeter_3d,
     get_polygons_difference_3d,
     get_polygons_group_difference_3d,
     get_polygons_group_intersection_3d,
     get_polygons_intersection_3d,
     get_polygons_union_3d,
     offset_polygon_3d,
+    rotate_polygon_3d,
+    rotate_polygons_3d,
+    scale_polygon_3d,
+    translate_polygon_3d,
+    translate_polygons_3d,
 )
 
 Polygon3D = List[Tuple[float, float, float]]
@@ -209,3 +222,219 @@ class TestGroupDifference3D:
     def test_empty_subject(self):
         clip = [P3((0, 0, 0), (10, 0, 0), (10, 10, 0), (0, 10, 0))]
         assert len(get_polygons_group_difference_3d([], clip)) == 0
+
+
+# ── 3D Analytical functions ──────────────────────────────────────────
+
+
+class TestPerimeter3D:
+    def test_square_perimeter(self):
+        poly = P3((0, 0, 0), (10, 0, 0), (10, 10, 0), (0, 10, 0))
+        assert abs(get_polygon_perimeter_3d(poly) - 40.0) < 1e-9
+
+    def test_3d_diagonal(self):
+        poly = P3((0, 0, 0), (3, 0, 0), (3, 4, 0))
+        expected = 3.0 + 4.0 + 5.0  # 5 = sqrt(3^2 + 4^2)
+        assert abs(get_polygon_perimeter_3d(poly) - expected) < 1e-9
+
+    def test_3d_z_edge_length(self):
+        poly = P3((0, 0, 0), (0, 0, 5), (0, 0, 10))
+        expected = 5.0 + 5.0 + 10.0  # edges: 5, 5, 10 (back to start)
+        assert abs(get_polygon_perimeter_3d(poly) - expected) < 1e-9
+
+    def test_empty(self):
+        assert get_polygon_perimeter_3d([]) == 0.0
+
+    def test_single_point(self):
+        assert get_polygon_perimeter_3d([(1, 2, 3)]) == 0.0
+
+
+class TestBounds3D:
+    def test_basic(self):
+        poly = P3((0, 0, 0), (10, 0, 5), (10, 10, 5), (0, 10, 10))
+        x_min, y_min, x_max, y_max, z_min, z_max = get_polygon_bounds_3d(poly)
+        assert x_min == 0.0
+        assert y_min == 0.0
+        assert x_max == 10.0
+        assert y_max == 10.0
+        assert z_min == 0.0
+        assert z_max == 10.0
+
+    def test_empty(self):
+        assert get_polygon_bounds_3d([]) == (0, 0, 0, 0, 0, 0)
+
+    def test_negative_z(self):
+        poly = P3((0, 0, -5), (10, 0, -5), (10, 10, 3), (0, 10, 3))
+        *_, z_min, z_max = get_polygon_bounds_3d(poly)
+        assert z_min == -5.0
+        assert z_max == 3.0
+
+
+class TestGroupBounds3D:
+    def test_basic(self):
+        polys = [
+            P3((0, 0, 0), (10, 0, 0), (10, 10, 0), (0, 10, 0)),
+            P3((5, 5, 5), (15, 5, 5), (15, 15, 5), (5, 15, 5)),
+        ]
+        x_min, y_min, x_max, y_max, z_min, z_max = get_polygon_group_bounds_3d(
+            polys
+        )
+        assert x_min == 0.0
+        assert y_min == 0.0
+        assert x_max == 15.0
+        assert y_max == 15.0
+        assert z_min == 0.0
+        assert z_max == 5.0
+
+    def test_empty(self):
+        assert get_polygon_group_bounds_3d([]) == (0, 0, 0, 0, 0, 0)
+
+
+class TestCentroid3D:
+    def test_square_xy_centroid(self):
+        poly = P3((0, 0, 0), (10, 0, 0), (10, 10, 0), (0, 10, 0))
+        cx, cy, cz = get_polygon_centroid_3d(poly)
+        assert abs(cx - 5.0) < 1e-9
+        assert abs(cy - 5.0) < 1e-9
+        assert abs(cz - 0.0) < 1e-9
+
+    def test_z_average(self):
+        poly = P3((0, 0, 0), (10, 0, 2), (10, 10, 4), (0, 10, 6))
+        *_, cz = get_polygon_centroid_3d(poly)
+        assert abs(cz - 3.0) < 1e-9  # avg of (0+2+4+6)/4
+
+    def test_empty(self):
+        cx, cy, cz = get_polygon_centroid_3d([])
+        assert cx == 0.0 and cy == 0.0 and cz == 0.0
+
+
+class TestEdges3D:
+    def test_square_edges(self):
+        poly = P3((0, 0, 0), (10, 0, 0), (10, 10, 0), (0, 10, 0))
+        edges = get_polygon_edges_3d(poly)
+        assert len(edges) == 4
+        assert edges[0] == ((0, 0, 0), (10, 0, 0))
+        assert edges[1] == ((10, 0, 0), (10, 10, 0))
+        assert edges[2] == ((10, 10, 0), (0, 10, 0))
+        assert edges[3] == ((0, 10, 0), (0, 0, 0))
+
+    def test_empty(self):
+        assert get_polygon_edges_3d([]) == []
+
+    def test_single_point(self):
+        assert get_polygon_edges_3d([(1, 2, 3)]) == []
+
+
+class TestConvexHull3D:
+    def test_square(self):
+        poly = P3((0, 0, 5), (10, 0, 5), (10, 10, 5), (0, 10, 5))
+        hull = get_polygon_convex_hull_3d(poly)
+        assert len(hull) == 4
+        for p in hull:
+            assert p[2] == 5.0
+
+    def test_z_from_first_hull_vertex(self):
+        poly = P3((0, 0, 5), (10, 0, 5), (10, 10, 5), (0, 10, 5), (2, 2, 99))
+        hull = get_polygon_convex_hull_3d(poly)
+        assert len(hull) >= 3
+        for p in hull:
+            assert p[2] == 5.0  # Z from first vertex
+
+    def test_less_than_3(self):
+        assert get_polygon_convex_hull_3d([(0, 0, 0), (1, 0, 0)]) == [
+            (0, 0, 0),
+            (1, 0, 0),
+        ]
+
+    def test_empty(self):
+        assert get_polygon_convex_hull_3d([]) == []
+
+
+# ── 3D Transform functions ───────────────────────────────────────────
+
+
+class TestTranslate3D:
+    def test_translate_xy(self):
+        poly = P3((0, 0, 5), (10, 0, 5), (10, 10, 5))
+        result = translate_polygon_3d(poly, 2.0, 3.0)
+        assert result == P3((2, 3, 5), (12, 3, 5), (12, 13, 5))
+
+    def test_translate_z(self):
+        poly = P3((0, 0, 5), (10, 0, 5), (10, 10, 5))
+        result = translate_polygon_3d(poly, 0.0, 0.0, 10.0)
+        for p in result:
+            assert p[2] == 15.0
+
+    def test_translate_polygons(self):
+        polys = [P3((0, 0, 0), (1, 0, 0), (0, 1, 0))]
+        result = translate_polygons_3d(polys, 5.0, 5.0, 5.0)
+        assert len(result) == 1
+        for p in result[0]:
+            assert p[2] == 5.0
+
+
+class TestScale3D:
+    def test_uniform_scale(self):
+        poly = P3((0, 0, 0), (10, 0, 0), (10, 10, 0))
+        result = scale_polygon_3d(poly, 2.0)
+        assert result == P3((0, 0, 0), (20, 0, 0), (20, 20, 0))
+
+    def test_nonuniform_scale_y(self):
+        poly = P3((0, 0, 0), (10, 0, 0), (10, 10, 0), (0, 10, 0))
+        result = scale_polygon_3d(poly, 2.0, scale_y=3.0)
+        for p in result:
+            assert p[0] in (0.0, 20.0)
+            assert p[1] in (0.0, 30.0)
+
+    def test_scale_z(self):
+        poly = P3((0, 0, 5), (10, 0, 5), (10, 10, 5))
+        result = scale_polygon_3d(poly, 1.0, scale_z=2.0)
+        for p in result:
+            assert p[2] == 10.0
+
+
+class TestFlip3D:
+    def test_flip_horizontal(self):
+        poly = P3((0, 0, 5), (10, 0, 5), (10, 10, 5))
+        result = flip_polygon_3d(poly, flip_h=True)
+        assert result == P3((0, 0, 5), (-10, 0, 5), (-10, 10, 5))
+
+    def test_flip_z(self):
+        poly = P3((0, 0, 5), (10, 0, 5), (10, 10, 5))
+        result = flip_polygon_3d(poly, flip_z=True)
+        for p in result:
+            assert p[2] == -5.0
+
+    def test_flip_polygons(self):
+        polys = [P3((0, 0, 3), (10, 0, 3), (10, 10, 3))]
+        result = flip_polygons_3d(polys, flip_h=True, flip_z=True)
+        assert len(result) == 1
+        for p in result[0]:
+            assert p[2] == -3.0
+
+    def test_no_flip(self):
+        poly = P3((0, 0, 5), (10, 0, 5), (10, 10, 5))
+        assert flip_polygon_3d(poly) == poly
+
+
+class TestRotate3D:
+    def test_rotate_90_degrees(self):
+        poly = P3((10, 0, 5), (20, 0, 5), (20, 10, 5))
+        result = rotate_polygon_3d(poly, 90.0)
+        for p in result:
+            assert p[2] == 5.0  # Z preserved
+
+    def test_rotate_360_is_identity(self):
+        poly = P3((0, 0, 5), (10, 0, 5), (10, 10, 5), (0, 10, 5))
+        result = rotate_polygon_3d(poly, 360.0)
+        for a, b in zip(poly, result):
+            assert abs(a[0] - b[0]) < 1e-9
+            assert abs(a[1] - b[1]) < 1e-9
+            assert abs(a[2] - b[2]) < 1e-9
+
+    def test_rotate_polygons(self):
+        polys = [P3((10, 0, 5), (20, 0, 5), (20, 10, 5))]
+        result = rotate_polygons_3d(polys, 180.0)
+        assert len(result) == 1
+        for p in result[0]:
+            assert p[2] == 5.0

@@ -6,6 +6,162 @@ sidebar_position: 29
 
 ## Functions
 
+### `flip_polygon_3d()`
+
+```python
+flip_polygon_3d(
+    polygon: Sequence[types.Point3D],
+    flip_h: bool = False,
+    flip_v: bool = False,
+    flip_z: bool = False,
+) -> types.Polygon3D
+```
+
+Flip a 3D polygon horizontally, vertically, and/or along Z.
+
+| Parameter    | Type                      | Description                              |
+| ------------ | ------------------------- | ---------------------------------------- |
+| `polygon`    | `Sequence[types.Point3D]` | Polygon as (x, y, z) points.             |
+| `flip_h`     | `bool = False`            | Whether to flip horizontally (negate X). |
+| `flip_v`     | `bool = False`            | Whether to flip vertically (negate Y).   |
+| `flip_z`     | `bool = False`            | Whether to flip along Z (negate Z).      |
+| _Returns_    | `types.Polygon3D`         | Flipped polygon.                         |
+| _Complexity_ |                           | O(n)                                     |
+
+![3D polygon flipped horizontally and along Z](images/polygon3d-flip.png)
+
+_3D polygon flipped horizontally and along Z_
+
+### `flip_polygons_3d()`
+
+```python
+flip_polygons_3d(
+    polygons: Any,
+    flip_h: bool = False,
+    flip_v: bool = False,
+    flip_z: bool = False,
+) -> list[types.Polygon3D]
+```
+
+Flip multiple 3D polygons.
+
+| Parameter    | Type                    | Description                              |
+| ------------ | ----------------------- | ---------------------------------------- |
+| `polygons`   | `Any`                   | List of 3D polygons.                     |
+| `flip_h`     | `bool = False`          | Whether to flip horizontally (negate X). |
+| `flip_v`     | `bool = False`          | Whether to flip vertically (negate Y).   |
+| `flip_z`     | `bool = False`          | Whether to flip along Z (negate Z).      |
+| _Returns_    | `list[types.Polygon3D]` | Flipped polygons.                        |
+| _Complexity_ |                         | O(n \* m)                                |
+
+### `get_polygon_bounds_3d()`
+
+```python
+get_polygon_bounds_3d(polygon: Sequence[types.Point3D]) -> types.Rect3D
+```
+
+Get the 3D bounding box of a polygon.
+
+| Parameter    | Type                      | Description                                                 |
+| ------------ | ------------------------- | ----------------------------------------------------------- |
+| `polygon`    | `Sequence[types.Point3D]` | Polygon as (x, y, z) points.                                |
+| _Returns_    | `types.Rect3D`            | Bounding box as (x_min, y_min, x_max, y_max, z_min, z_max). |
+| _Complexity_ |                           | O(n)                                                        |
+
+![3D bounding box (Rect3D)](images/polygon3d-bounds.png)
+
+_3D bounding box (Rect3D)_
+
+### `get_polygon_centroid_3d()`
+
+```python
+get_polygon_centroid_3d(polygon: Sequence[types.Point3D]) -> types.Point3D
+```
+
+Get the centroid of a 3D polygon.
+
+XY centroid from shoelace formula, Z from average.
+
+| Parameter    | Type                      | Description                  |
+| ------------ | ------------------------- | ---------------------------- |
+| `polygon`    | `Sequence[types.Point3D]` | Polygon as (x, y, z) points. |
+| _Returns_    | `types.Point3D`           | Centroid point (x, y, z).    |
+| _Complexity_ |                           | O(n)                         |
+
+![3D centroid – XY via shoelace, Z as average](images/polygon3d-centroid.png)
+
+_3D centroid – XY via shoelace, Z as average_
+
+### `get_polygon_convex_hull_3d()`
+
+```python
+get_polygon_convex_hull_3d(polygon: Sequence[types.Point3D]) -> types.Polygon3D
+```
+
+Get the convex hull of a 3D polygon (XY-plane, Z from first vertex).
+
+| Parameter    | Type                      | Description                              |
+| ------------ | ------------------------- | ---------------------------------------- |
+| `polygon`    | `Sequence[types.Point3D]` | Polygon as (x, y, z) points.             |
+| _Returns_    | `types.Polygon3D`         | Convex hull as list of (x, y, z) points. |
+| _Complexity_ |                           | O(n log n)                               |
+
+![3D convex hull (XY-plane, Z from first hull vertex)](images/polygon3d-convex-hull.png)
+
+_3D convex hull (XY-plane, Z from first hull vertex)_
+
+### `get_polygon_edges_3d()`
+
+```python
+get_polygon_edges_3d(
+    polygon: Sequence[types.Point3D],
+) -> list[tuple[types.Point3D, types.Point3D]]
+```
+
+Get the edges of a 3D polygon.
+
+| Parameter    | Type                                        | Description                                 |
+| ------------ | ------------------------------------------- | ------------------------------------------- |
+| `polygon`    | `Sequence[types.Point3D]`                   | Polygon as (x, y, z) points.                |
+| _Returns_    | `list[tuple[types.Point3D, types.Point3D]]` | List of ((x1, y1, z1), (x2, y2, z2)) edges. |
+| _Complexity_ |                                             | O(n)                                        |
+
+![3D polygon edges as (start, end) pairs](images/polygon3d-edges.png)
+
+_3D polygon edges as (start, end) pairs_
+
+### `get_polygon_group_bounds_3d()`
+
+```python
+get_polygon_group_bounds_3d(polygons: Any) -> types.Rect3D
+```
+
+Get the 3D bounding box of a group of polygons.
+
+| Parameter    | Type           | Description                                                 |
+| ------------ | -------------- | ----------------------------------------------------------- |
+| `polygons`   | `Any`          | List of 3D polygons.                                        |
+| _Returns_    | `types.Rect3D` | Bounding box as (x_min, y_min, x_max, y_max, z_min, z_max). |
+| _Complexity_ |                | O(n \* m)                                                   |
+
+### `get_polygon_perimeter_3d()`
+
+```python
+get_polygon_perimeter_3d(polygon: Sequence[types.Point3D]) -> float
+```
+
+Get the perimeter of a 3D polygon using full 3D edge lengths.
+
+| Parameter    | Type                      | Description                  |
+| ------------ | ------------------------- | ---------------------------- |
+| `polygon`    | `Sequence[types.Point3D]` | Polygon as (x, y, z) points. |
+| _Returns_    | `float`                   | Perimeter length.            |
+| _Complexity_ |                           | O(n)                         |
+
+![3D polygon perimeter using full 3D edge lengths](images/polygon3d-perimeter.png)
+
+_3D polygon perimeter using full 3D edge lengths_
+
 ### `get_polygons_difference_3d()`
 
 ```python
@@ -110,3 +266,114 @@ Offset (inflate/deflate) a closed 3D polygon.
 ![3D polygon offset — Z preserved from input](images/polygon3d-offset.png)
 
 _3D polygon offset — Z preserved from input_
+
+### `rotate_polygon_3d()`
+
+```python
+rotate_polygon_3d(
+    polygon: Sequence[types.Point3D],
+    angle: float,
+) -> types.Polygon3D
+```
+
+Rotate a 3D polygon around the Z axis (XY rotation, Z preserved).
+
+| Parameter    | Type                      | Description                  |
+| ------------ | ------------------------- | ---------------------------- |
+| `polygon`    | `Sequence[types.Point3D]` | Polygon as (x, y, z) points. |
+| `angle`      | `float`                   | Rotation angle in degrees.   |
+| _Returns_    | `types.Polygon3D`         | Rotated polygon.             |
+| _Complexity_ |                           | O(n)                         |
+
+![3D polygon rotated around Z axis (Z preserved)](images/polygon3d-rotate.png)
+
+_3D polygon rotated around Z axis (Z preserved)_
+
+### `rotate_polygons_3d()`
+
+```python
+rotate_polygons_3d(polygons: Any, angle: float) -> list[types.Polygon3D]
+```
+
+Rotate multiple 3D polygons around the Z axis.
+
+| Parameter    | Type                    | Description                |
+| ------------ | ----------------------- | -------------------------- |
+| `polygons`   | `Any`                   | List of 3D polygons.       |
+| `angle`      | `float`                 | Rotation angle in degrees. |
+| _Returns_    | `list[types.Polygon3D]` | Rotated polygons.          |
+| _Complexity_ |                         | O(n \* m)                  |
+
+### `scale_polygon_3d()`
+
+```python
+scale_polygon_3d(
+    polygon: Sequence[types.Point3D],
+    scale: float,
+    scale_y: Optional[float] = None,
+    scale_z: Optional[float] = None,
+) -> types.Polygon3D
+```
+
+Scale a 3D polygon.
+
+| Parameter    | Type                      | Description                                           |
+| ------------ | ------------------------- | ----------------------------------------------------- |
+| `polygon`    | `Sequence[types.Point3D]` | Polygon as (x, y, z) points.                          |
+| `scale`      | `float`                   | X (and Y/Z if scale_y/scale_z are None) scale factor. |
+| `scale_y`    | `Optional[float] = None`  | Y scale factor (optional).                            |
+| `scale_z`    | `Optional[float] = None`  | Z scale factor (optional).                            |
+| _Returns_    | `types.Polygon3D`         | Scaled polygon.                                       |
+| _Complexity_ |                           | O(n)                                                  |
+
+![3D polygon scaled uniformly](images/polygon3d-scale.png)
+
+_3D polygon scaled uniformly_
+
+### `translate_polygon_3d()`
+
+```python
+translate_polygon_3d(
+    polygon: Sequence[types.Point3D],
+    dx: float,
+    dy: float,
+    dz: float = 0,
+) -> types.Polygon3D
+```
+
+Translate a 3D polygon.
+
+| Parameter    | Type                      | Description                  |
+| ------------ | ------------------------- | ---------------------------- |
+| `polygon`    | `Sequence[types.Point3D]` | Polygon as (x, y, z) points. |
+| `dx`         | `float`                   | X translation.               |
+| `dy`         | `float`                   | Y translation.               |
+| `dz`         | `float = 0`               | Z translation.               |
+| _Returns_    | `types.Polygon3D`         | Translated polygon.          |
+| _Complexity_ |                           | O(n)                         |
+
+![3D polygon translated by dx, dy, dz](images/polygon3d-translate.png)
+
+_3D polygon translated by dx, dy, dz_
+
+### `translate_polygons_3d()`
+
+```python
+translate_polygons_3d(
+    polygons: Any,
+    dx: float,
+    dy: float,
+    dz: float = 0,
+) -> list[types.Polygon3D]
+```
+
+Translate a list of 3D polygons.
+
+| Parameter    | Type                    | Description          |
+| ------------ | ----------------------- | -------------------- |
+| `polygons`   | `Any`                   | List of 3D polygons. |
+| `dx`         | `float`                 | X translation.       |
+| `dy`         | `float`                 | Y translation.       |
+| `dz`         | `float = 0`             | Z translation.       |
+| _Returns_    | `list[types.Polygon3D]` | Translated polygons. |
+| _Complexity_ |                         | O(n \* m)            |

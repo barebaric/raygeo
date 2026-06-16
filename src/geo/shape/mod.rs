@@ -55,8 +55,13 @@ pub use polygon::{
     translate_polygons, ClipperPath, ClipperPaths, GeoScale,
 };
 pub use polygon3d::{
+    flip_polygon_3d, flip_polygons_3d, get_polygon_bounds_3d,
+    get_polygon_centroid_3d, get_polygon_convex_hull_3d, get_polygon_edges_3d,
+    get_polygon_group_bounds_3d, get_polygon_perimeter_3d,
     get_polygons_difference_3d, get_polygons_group_difference_3d,
     get_polygons_group_intersection_3d, get_polygons_intersection_3d,
-    get_polygons_union_3d, offset_polygon_3d,
+    get_polygons_union_3d, offset_polygon_3d, rotate_polygon_3d,
+    rotate_polygons_3d, scale_polygon_3d, translate_polygon_3d,
+    translate_polygons_3d,
 };
 pub use rect::{do_rects_intersect, get_combined_rect};
