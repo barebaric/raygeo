@@ -59,6 +59,28 @@ _INLINE_IMAGE_MAP = {
         ),
         ("offset_polygon", "polygon-offset", "Polygon offset (outward)"),
     ],
+    "raygeo.geo.shape.polygon3d.md": [
+        (
+            "get_polygons_union_3d",
+            "polygon3d-boolean-union",
+            "3D polygon union — Z from first polygon",
+        ),
+        (
+            "get_polygons_intersection_3d",
+            "polygon3d-boolean-intersection",
+            "3D polygon intersection — Z from first polygon",
+        ),
+        (
+            "get_polygons_difference_3d",
+            "polygon3d-boolean-difference",
+            "3D polygon difference (A − B) — Z from A",
+        ),
+        (
+            "offset_polygon_3d",
+            "polygon3d-offset",
+            "3D polygon offset — Z preserved from input",
+        ),
+    ],
     "raygeo.image.md": [
         (
             "rasterize_scanlines",

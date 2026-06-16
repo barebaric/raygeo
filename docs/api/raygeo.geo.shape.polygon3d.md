@@ -20,6 +20,10 @@ Compute the difference of two 3D polygons (poly1 - poly2).
 | `poly2`   | `Any`                   | Clip 3D polygon.                             |
 | _Returns_ | `list[types.Polygon3D]` | Difference result with Z from first polygon. |
 
+![3D polygon difference (A − B) — Z from A](images/polygon3d-boolean-difference.png)
+
+_3D polygon difference (A − B) — Z from A_
+
 ### `get_polygons_group_difference_3d()`
 
 ```python
@@ -68,6 +72,10 @@ Compute the intersection of two 3D polygons (XY-plane, Z preserved).
 | `poly2`   | `Any`                   | Second 3D polygon.                             |
 | _Returns_ | `list[types.Polygon3D]` | Intersection result with Z from first polygon. |
 
+![3D polygon intersection — Z from first polygon](images/polygon3d-boolean-intersection.png)
+
+_3D polygon intersection — Z from first polygon_
+
 ### `get_polygons_union_3d()`
 
 ```python
@@ -80,6 +88,10 @@ Compute the union of 3D polygons (XY-plane, Z preserved).
 | ---------- | ----------------------- | --------------------------------------- |
 | `polygons` | `Any`                   | List of 3D polygons.                    |
 | _Returns_  | `list[types.Polygon3D]` | Union result with Z from first polygon. |
+
+![3D polygon union — Z from first polygon](images/polygon3d-boolean-union.png)
+
+_3D polygon union — Z from first polygon_
 
 ### `offset_polygon_3d()`
 
@@ -94,3 +106,7 @@ Offset (inflate/deflate) a closed 3D polygon.
 | `polygon` | `Any`                   | Input 3D polygon.                                     |
 | `offset`  | `float`                 | Offset distance (positive = grow, negative = shrink). |
 | _Returns_ | `list[types.Polygon3D]` | Offset polygons with Z from input.                    |
+
+![3D polygon offset — Z preserved from input](images/polygon3d-offset.png)
+
+_3D polygon offset — Z preserved from input_
