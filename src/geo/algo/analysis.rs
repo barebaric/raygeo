@@ -28,9 +28,9 @@ pub fn is_closed(commands: &[Command], tolerance: f64) -> bool {
     let start_point = commands[0].end_point();
     let end_point = commands[commands.len() - 1].end_point();
 
-    let dist_sq = (start_point.0 - end_point.0).powi(2)
-        + (start_point.1 - end_point.1).powi(2)
-        + (start_point.2 - end_point.2).powi(2);
+    let dist_sq = (start_point.x - end_point.x).powi(2)
+        + (start_point.y - end_point.y).powi(2)
+        + (start_point.z - end_point.z).powi(2);
 
     dist_sq < tolerance * tolerance
 }
@@ -47,7 +47,7 @@ pub fn get_subpath_vertices_from_array(
     }
 
     let last_pos_3d = data[start_cmd_index].end_point();
-    vertices.push(Point(last_pos_3d.0, last_pos_3d.1));
+    vertices.push(Point::new(last_pos_3d.x, last_pos_3d.y));
 
     let mut linearize_buf = Vec::new();
     for cmd in data.iter().skip(start_cmd_index + 1) {
@@ -56,10 +56,10 @@ pub fn get_subpath_vertices_from_array(
         }
 
         let start_3d: Point3D = if vertices.len() >= 2 {
-            Point3D(
-                vertices[vertices.len() - 1].0,
-                vertices[vertices.len() - 1].1,
-                last_pos_3d.2,
+            Point3D::new(
+                vertices[vertices.len() - 1].x,
+                vertices[vertices.len() - 1].y,
+                last_pos_3d.z,
             )
         } else {
             last_pos_3d
@@ -67,7 +67,7 @@ pub fn get_subpath_vertices_from_array(
 
         cmd.linearize(start_3d, 0.1, &mut linearize_buf);
         for (_, p2) in linearize_buf.drain(..) {
-            vertices.push(Point(p2.0, p2.1));
+            vertices.push(Point::new(p2.x, p2.y));
         }
     }
 
@@ -88,18 +88,18 @@ pub fn get_subpath_area_from_array(
     let p_start = vertices[0];
     let p_end = vertices[vertices.len() - 1];
 
-    if (p_start.0 - p_end.0).abs() >= 1e-9
-        || (p_start.1 - p_end.1).abs() >= 1e-9
+    if (p_start.x - p_end.x).abs() >= 1e-9
+        || (p_start.y - p_end.y).abs() >= 1e-9
     {
         return 0.0;
     }
 
     let mut area = 0.0;
     for i in 0..vertices.len() - 1 {
-        let x = vertices[i].0;
-        let y_shifted = vertices[i + 1].1;
-        let y = vertices[i].1;
-        let x_shifted = vertices[i + 1].0;
+        let x = vertices[i].x;
+        let y_shifted = vertices[i + 1].y;
+        let y = vertices[i].y;
+        let x_shifted = vertices[i + 1].x;
         area += x * y_shifted - x_shifted * y;
     }
 
@@ -166,7 +166,7 @@ pub fn get_point_at_from_array(
     let start_pos_3d: Point3D = if row_index > 0 {
         data[row_index - 1].end_point()
     } else {
-        Point3D(0.0, 0.0, 0.0)
+        Point3D::new(0.0, 0.0, 0.0)
     };
 
     cmd.point_at(start_pos_3d, t)
@@ -187,7 +187,7 @@ pub fn get_tangent_at_from_array(
     let start_pos_3d: Point3D = if row_index > 0 {
         data[row_index - 1].end_point()
     } else {
-        Point3D(0.0, 0.0, 0.0)
+        Point3D::new(0.0, 0.0, 0.0)
     };
 
     cmd.tangent_at(start_pos_3d, t)
@@ -214,12 +214,12 @@ pub fn get_outward_normal_at_from_array(
         get_path_winding_order_from_array(data, subpath_start_index as usize)?;
 
     let tangent = get_tangent_at_from_array(data, row_index, t)?;
-    let tx = tangent.0;
-    let ty = tangent.1;
+    let tx = tangent.x;
+    let ty = tangent.y;
 
     match winding {
-        WindingOrder::CCW => Some(Point(ty, -tx)),
-        WindingOrder::CW => Some(Point(-ty, tx)),
+        WindingOrder::CCW => Some(Point::new(ty, -tx)),
+        WindingOrder::CW => Some(Point::new(-ty, tx)),
     }
 }
 
@@ -258,7 +258,7 @@ pub fn does_enclose(container: &Geometry, content: &Geometry) -> bool {
         return false;
     }
     let test_point: Point =
-        Point(other_segments[0][0].0, other_segments[0][0].1);
+        Point::new(other_segments[0][0].x, other_segments[0][0].y);
 
     let self_contours = split_into_contours(container);
     let all_contour_data = get_valid_contours_data(&self_contours);

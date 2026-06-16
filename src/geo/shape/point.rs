@@ -14,8 +14,8 @@ pub fn midpoint(a: Point3D, b: Point3D) -> Point3D {
 /// Apply an affine transformation matrix to a 3D point.
 /// Returns the transformed point `(x, y, z)`.
 pub fn transform_point(matrix: DMat4, p: Point3D) -> Point3D {
-    let r = matrix.transform_point3(DVec3::new(p.x(), p.y(), p.z()));
-    Point3D(r.x, r.y, r.z)
+    let r = matrix.transform_point3(DVec3::new(p.x, p.y, p.z));
+    Point3D::new(r.x, r.y, r.z)
 }
 
 /// Check if two points (as 3-element arrays) are equal within a tolerance.

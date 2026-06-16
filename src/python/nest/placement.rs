@@ -3,7 +3,10 @@ use pyo3::prelude::*;
 use pyo3::types::PyDict;
 use pyo3_stub_gen::derive::gen_stub_pyfunction;
 
-use super::super::geo::flex_point::{poly_to_points, PyPoint2D};
+use super::super::geo::flex_point::{
+    option_point_to_tuple, points_to_tuples, poly_to_points,
+    polygons_to_tuples, tuples_to_points, PyPoint2D,
+};
 use super::spatial_grid::SpatialGrid as PySpatialGrid;
 use crate::nest::placement;
 use crate::types::{Point, Polygon, Rect};
@@ -54,12 +57,12 @@ fn generate_bottom_left_candidates_py(
     ifp_bounds: (f64, f64, f64, f64),
     part_bounds: (f64, f64, f64, f64),
     spacing: f64,
-) -> Vec<Point> {
-    placement::generate_bottom_left_candidates(
+) -> Vec<(f64, f64)> {
+    points_to_tuples(placement::generate_bottom_left_candidates(
         Rect(ifp_bounds.0, ifp_bounds.1, ifp_bounds.2, ifp_bounds.3),
         Rect(part_bounds.0, part_bounds.1, part_bounds.2, part_bounds.3),
         spacing,
-    )
+    ))
 }
 
 // ---------------------------------------------------------------------------
@@ -89,12 +92,12 @@ fn generate_grid_candidates_py(
     ifp_bounds: (f64, f64, f64, f64),
     part_bounds: (f64, f64, f64, f64),
     spacing: f64,
-) -> Vec<Point> {
-    placement::generate_grid_candidates(
+) -> Vec<(f64, f64)> {
+    points_to_tuples(placement::generate_grid_candidates(
         Rect(ifp_bounds.0, ifp_bounds.1, ifp_bounds.2, ifp_bounds.3),
         Rect(part_bounds.0, part_bounds.1, part_bounds.2, part_bounds.3),
         spacing,
-    )
+    ))
 }
 
 // ---------------------------------------------------------------------------
@@ -130,16 +133,16 @@ fn generate_perimeter_candidates_py(
     placed_groups: Vec<Vec<Vec<PyPoint2D>>>,
     part_bounds: (f64, f64, f64, f64),
     spacing: f64,
-) -> Vec<Point> {
+) -> Vec<(f64, f64)> {
     let groups: Vec<Vec<Polygon>> = placed_groups
         .into_iter()
         .map(|group| group.into_iter().map(poly_to_points).collect())
         .collect();
-    placement::generate_perimeter_candidates(
+    points_to_tuples(placement::generate_perimeter_candidates(
         &groups,
         Rect(part_bounds.0, part_bounds.1, part_bounds.2, part_bounds.3),
         spacing,
-    )
+    ))
 }
 
 // ---------------------------------------------------------------------------
@@ -166,15 +169,16 @@ fn generate_perimeter_candidates_py(
 )]
 #[pyfunction(name = "filter_candidates_multi_resolution")]
 fn filter_candidates_multi_resolution_py(
-    candidates: Vec<Point>,
+    candidates: Vec<(f64, f64)>,
     ifp_bounds: (f64, f64, f64, f64),
     min_dist: f64,
-) -> Vec<Point> {
-    placement::filter_candidates_multi_resolution(
+) -> Vec<(f64, f64)> {
+    let candidates = tuples_to_points(candidates);
+    points_to_tuples(placement::filter_candidates_multi_resolution(
         &candidates,
         Rect(ifp_bounds.0, ifp_bounds.1, ifp_bounds.2, ifp_bounds.3),
         min_dist,
-    )
+    ))
 }
 
 fn make_config(
@@ -252,14 +256,14 @@ fn find_valid_position_py(
     spacing: f64,
     min_area: f64,
     curve_tolerance: f64,
-) -> Option<Point> {
+) -> Option<(f64, f64)> {
     let ifp = polys_from_py(ifp_polygons);
     let part = polys_from_py(part_polygons);
     let hulls = polys_from_py(part_hulls);
     let placed = polys_list_from_py(placed_polys_list);
     let placed_hulls = polys_list_from_py(placed_hulls_list);
     let config = make_config(spacing, min_area, curve_tolerance);
-    with_grid!(grid, |grid_ref| {
+    option_point_to_tuple(with_grid!(grid, |grid_ref| {
         placement::find_valid_position(
             &ifp,
             &part,
@@ -271,7 +275,7 @@ fn find_valid_position_py(
             &config,
             spacing,
         )
-    })
+    }))
 }
 
 // ---------------------------------------------------------------------------
@@ -331,14 +335,14 @@ fn find_valid_position_scored_py(
     spacing: f64,
     min_area: f64,
     curve_tolerance: f64,
-) -> Option<Point> {
+) -> Option<(f64, f64)> {
     let ifp = polys_from_py(ifp_polygons);
     let part = polys_from_py(part_polygons);
     let hulls = polys_from_py(part_hulls);
     let placed = polys_list_from_py(placed_polys_list);
     let placed_hulls = polys_list_from_py(placed_hulls_list);
     let config = make_config(spacing, min_area, curve_tolerance);
-    with_grid!(grid, |grid_ref| {
+    option_point_to_tuple(with_grid!(grid, |grid_ref| {
         placement::find_valid_position_scored(
             &ifp,
             &part,
@@ -350,7 +354,7 @@ fn find_valid_position_scored_py(
             &config,
             spacing,
         )
-    })
+    }))
 }
 
 // ---------------------------------------------------------------------------
@@ -409,14 +413,14 @@ fn find_valid_position_nfp_py(
     spacing: f64,
     min_area: f64,
     curve_tolerance: f64,
-) -> Option<Point> {
+) -> Option<(f64, f64)> {
     let ifp = polys_from_py(ifp_polygons);
     let part = polys_from_py(part_polygons);
     let hulls = polys_from_py(part_hulls);
     let placed = polys_list_from_py(placed_polys_list);
     let placed_hulls = polys_list_from_py(placed_hulls_list);
     let config = make_config(spacing, min_area, curve_tolerance);
-    with_grid!(grid, |grid_ref| {
+    option_point_to_tuple(with_grid!(grid, |grid_ref| {
         placement::find_valid_position_nfp(
             &ifp,
             &part,
@@ -428,7 +432,7 @@ fn find_valid_position_nfp_py(
             &config,
             spacing,
         )
-    })
+    }))
 }
 
 // ---------------------------------------------------------------------------
@@ -536,9 +540,15 @@ fn place_parts_py<'py>(
             pl_dict
                 .set_item("rotation_index", pl.rotation_index)
                 .unwrap();
-            pl_dict.set_item("position", pl.position).unwrap();
-            pl_dict.set_item("polygons", pl.polygons).unwrap();
-            pl_dict.set_item("hulls", pl.hulls).unwrap();
+            pl_dict
+                .set_item("position", (pl.position.x, pl.position.y))
+                .unwrap();
+            pl_dict
+                .set_item("polygons", polygons_to_tuples(pl.polygons))
+                .unwrap();
+            pl_dict
+                .set_item("hulls", polygons_to_tuples(pl.hulls))
+                .unwrap();
             placements_py.push(pl_dict);
         }
         let res_dict = PyDict::new(py);
@@ -566,7 +576,7 @@ fn polygon_group_from_numpy_arrs(
             let view = readonly.as_array();
             view.rows()
                 .into_iter()
-                .map(|row| Point(row[0], row[1]))
+                .map(|row| Point::new(row[0], row[1]))
                 .collect()
         })
         .collect()

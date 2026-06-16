@@ -12,7 +12,9 @@ for convex polygons, and no-fit polygon / inner fit polygon calculations
 used in nesting and packing algorithms.
 ";
 
-use super::super::flex_point::{extract_polygons, poly_to_points, PyPoint2D};
+use super::super::flex_point::{
+    extract_polygons, poly_to_points, polygons_to_tuples, PyPoint2D,
+};
 use crate::geo::algo::minkowski::{
     calculate_input_scale, convolve_point_sequences, convolve_two_segments,
     get_inner_fit_polygon, get_no_fit_polygon,
@@ -63,12 +65,15 @@ pub fn register(algo_mod: &Bound<'_, PyModule>) -> PyResult<()> {
 fn minkowski_sum_convex_py(
     poly_a: Vec<(f64, f64)>,
     poly_b: Vec<(f64, f64)>,
-) -> Vec<Vec<Point>> {
+) -> Vec<Vec<(f64, f64)>> {
     let poly_a_pts: Vec<Point> =
-        poly_a.iter().map(|(x, y)| Point(*x, *y)).collect();
+        poly_a.iter().map(|(x, y)| Point::new(*x, *y)).collect();
     let poly_b_pts: Vec<Point> =
-        poly_b.iter().map(|(x, y)| Point(*x, *y)).collect();
-    get_polygon_minkowski_sum_convex(&poly_a_pts, &poly_b_pts)
+        poly_b.iter().map(|(x, y)| Point::new(*x, *y)).collect();
+    polygons_to_tuples(get_polygon_minkowski_sum_convex(
+        &poly_a_pts,
+        &poly_b_pts,
+    ))
 }
 
 #[gen_stub_pyfunction(
@@ -94,8 +99,11 @@ fn minkowski_sum_convex_py(
 fn get_inner_fit_polygon_py(
     outer: Vec<PyPoint2D>,
     inner: Vec<PyPoint2D>,
-) -> Vec<Vec<Point>> {
-    get_inner_fit_polygon(&poly_to_points(outer), &poly_to_points(inner))
+) -> Vec<Vec<(f64, f64)>> {
+    polygons_to_tuples(get_inner_fit_polygon(
+        &poly_to_points(outer),
+        &poly_to_points(inner),
+    ))
 }
 
 #[gen_stub_pyfunction(
@@ -121,8 +129,11 @@ fn get_inner_fit_polygon_py(
 fn get_no_fit_polygon_py(
     subject: Vec<PyPoint2D>,
     tool: Vec<PyPoint2D>,
-) -> Vec<Vec<Point>> {
-    get_no_fit_polygon(&poly_to_points(subject), &poly_to_points(tool))
+) -> Vec<Vec<(f64, f64)>> {
+    polygons_to_tuples(get_no_fit_polygon(
+        &poly_to_points(subject),
+        &poly_to_points(tool),
+    ))
 }
 
 #[gen_stub_pyfunction(
@@ -182,12 +193,12 @@ fn convolve_two_segments_py(
     b2: (f64, f64),
 ) -> Vec<(f64, f64)> {
     let result = convolve_two_segments(
-        Point(a1.0, a1.1),
-        Point(a2.0, a2.1),
-        Point(b1.0, b1.1),
-        Point(b2.0, b2.1),
+        Point::new(a1.0, a1.1),
+        Point::new(a2.0, a2.1),
+        Point::new(b1.0, b1.1),
+        Point::new(b2.0, b2.1),
     );
-    result.into_iter().map(|p| (p.0, p.1)).collect()
+    result.into_iter().map(|p| (p.x, p.y)).collect()
 }
 
 #[gen_stub_pyfunction(
@@ -214,12 +225,12 @@ fn convolve_point_sequences_py(
     seq_b: Vec<(f64, f64)>,
 ) -> Vec<Vec<(f64, f64)>> {
     let seq_a_pts: Vec<Point> =
-        seq_a.iter().map(|(x, y)| Point(*x, *y)).collect();
+        seq_a.iter().map(|(x, y)| Point::new(*x, *y)).collect();
     let seq_b_pts: Vec<Point> =
-        seq_b.iter().map(|(x, y)| Point(*x, *y)).collect();
+        seq_b.iter().map(|(x, y)| Point::new(*x, *y)).collect();
     let result = convolve_point_sequences(&seq_a_pts, &seq_b_pts);
     result
         .into_iter()
-        .map(|poly| poly.into_iter().map(|p| (p.0, p.1)).collect())
+        .map(|poly| poly.into_iter().map(|p| (p.x, p.y)).collect())
         .collect()
 }

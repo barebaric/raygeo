@@ -19,9 +19,9 @@ pub struct SegmentDelta {
 /// - `end`: Ending point.
 /// - Returns: A `SegmentDelta` containing the component deltas and squared length.
 pub fn compute_segment_delta(start: Point3D, end: Point3D) -> SegmentDelta {
-    let dx = end.0 - start.0;
-    let dy = end.1 - start.1;
-    let dz = end.2 - start.2;
+    let dx = end.x - start.x;
+    let dy = end.y - start.y;
+    let dz = end.z - start.z;
     let len_sq = dx * dx + dy * dy + dz * dz;
     SegmentDelta { dx, dy, dz, len_sq }
 }
@@ -40,9 +40,9 @@ pub fn project_t_along_segment(
     if delta.len_sq <= EPSILON_COLLINEAR {
         return 0.0;
     }
-    let t = ((point.0 - origin.0) * delta.dx
-        + (point.1 - origin.1) * delta.dy
-        + (point.2 - origin.2) * delta.dz)
+    let t = ((point.x - origin.x) * delta.dx
+        + (point.y - origin.y) * delta.dy
+        + (point.z - origin.z) * delta.dz)
         / delta.len_sq;
     t.clamp(0.0, 1.0)
 }

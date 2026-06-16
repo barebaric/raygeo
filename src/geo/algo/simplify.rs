@@ -19,8 +19,8 @@ pub fn simplify_polyline(points: &[Point3D], tolerance: f64) -> Vec<Point3D> {
             continue;
         }
 
-        let p_start = (points[start].0, points[start].1);
-        let p_end = (points[end].0, points[end].1);
+        let p_start = (points[start].x, points[start].y);
+        let p_end = (points[end].x, points[end].y);
         let chord_vec = (p_end.0 - p_start.0, p_end.1 - p_start.1);
         let chord_len_sq =
             chord_vec.0 * chord_vec.0 + chord_vec.1 * chord_vec.1;
@@ -31,7 +31,7 @@ pub fn simplify_polyline(points: &[Point3D], tolerance: f64) -> Vec<Point3D> {
         if chord_len_sq < 1e-12 {
             for (i, p) in points.iter().enumerate().take(end).skip(start + 1) {
                 let d_sq =
-                    (p.0 - p_start.0).powi(2) + (p.1 - p_start.1).powi(2);
+                    (p.x - p_start.0).powi(2) + (p.y - p_start.1).powi(2);
                 if d_sq > max_dist_sq {
                     max_dist_sq = d_sq;
                     max_idx = i;
@@ -39,8 +39,8 @@ pub fn simplify_polyline(points: &[Point3D], tolerance: f64) -> Vec<Point3D> {
             }
         } else {
             for (i, p) in points.iter().enumerate().take(end).skip(start + 1) {
-                let cross = (p.0 - p_start.0) * chord_vec.1
-                    - (p.1 - p_start.1) * chord_vec.0;
+                let cross = (p.x - p_start.0) * chord_vec.1
+                    - (p.y - p_start.1) * chord_vec.0;
                 let d_sq = (cross * cross) / chord_len_sq;
                 if d_sq > max_dist_sq {
                     max_dist_sq = d_sq;
@@ -65,8 +65,8 @@ pub fn simplify_polyline(points: &[Point3D], tolerance: f64) -> Vec<Point3D> {
 }
 
 fn chord_len_sq(p_start: &Point3D, p_end: &Point3D) -> f64 {
-    let dx = p_end.0 - p_start.0;
-    let dy = p_end.1 - p_start.1;
+    let dx = p_end.x - p_start.x;
+    let dy = p_end.y - p_start.y;
     dx * dx + dy * dy
 }
 
@@ -107,7 +107,7 @@ pub fn simplify_data(data: &[Command], tolerance: f64) -> Vec<Command> {
                 }
                 let p = cmd.end_point();
                 let d_sq =
-                    (p.0 - p_start.0).powi(2) + (p.1 - p_start.1).powi(2);
+                    (p.x - p_start.x).powi(2) + (p.y - p_start.y).powi(2);
                 if d_sq > max_dist_sq {
                     max_dist_sq = d_sq;
                     max_idx = i;
@@ -120,8 +120,8 @@ pub fn simplify_data(data: &[Command], tolerance: f64) -> Vec<Command> {
                     continue;
                 }
                 let p = cmd.end_point();
-                let cross = (p.0 - p_start.0) * (p_end.1 - p_start.1)
-                    - (p.1 - p_start.1) * (p_end.0 - p_start.0);
+                let cross = (p.x - p_start.x) * (p_end.y - p_start.y)
+                    - (p.y - p_start.y) * (p_end.x - p_start.x);
                 let d_sq = (cross * cross) / chord_len_sq_val;
                 if d_sq > max_dist_sq {
                     max_dist_sq = d_sq;

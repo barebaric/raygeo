@@ -1,7 +1,9 @@
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::gen_stub_pyfunction;
 
-use super::super::geo::flex_point::{poly_to_points, PyPoint2D};
+use super::super::geo::flex_point::{
+    points_to_tuples, poly_to_points, polygons_to_tuples, PyPoint2D,
+};
 use crate::nest::ifp;
 use crate::types::Point;
 
@@ -37,8 +39,11 @@ placement region for a part inside a bin.
 fn inner_fit_polygon_py(
     bin: Vec<PyPoint2D>,
     part: Vec<PyPoint2D>,
-) -> Vec<Vec<Point>> {
-    ifp::inner_fit_polygon(&poly_to_points(bin), &poly_to_points(part))
+) -> Vec<Vec<(f64, f64)>> {
+    polygons_to_tuples(ifp::inner_fit_polygon(
+        &poly_to_points(bin),
+        &poly_to_points(part),
+    ))
 }
 
 #[gen_stub_pyfunction(
@@ -64,8 +69,11 @@ fn inner_fit_polygon_py(
 fn build_no_go_zones_py(
     bin: Vec<PyPoint2D>,
     part_neg: Vec<PyPoint2D>,
-) -> Vec<Vec<Point>> {
-    ifp::build_no_go_zones(&poly_to_points(bin), &poly_to_points(part_neg))
+) -> Vec<Vec<(f64, f64)>> {
+    polygons_to_tuples(ifp::build_no_go_zones(
+        &poly_to_points(bin),
+        &poly_to_points(part_neg),
+    ))
 }
 
 #[gen_stub_pyfunction(
@@ -94,12 +102,12 @@ fn sweep_hull_for_edge_py(
     p1: PyPoint2D,
     p2: PyPoint2D,
     part_neg: Vec<PyPoint2D>,
-) -> Vec<Point> {
-    ifp::sweep_hull_for_edge(
-        Point(p1.0, p1.1),
-        Point(p2.0, p2.1),
+) -> Vec<(f64, f64)> {
+    points_to_tuples(ifp::sweep_hull_for_edge(
+        Point::new(p1.0, p1.1),
+        Point::new(p2.0, p2.1),
         &poly_to_points(part_neg),
-    )
+    ))
 }
 
 pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {

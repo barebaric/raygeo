@@ -508,9 +508,9 @@ pub fn parse_svg_path_data(
                             let (tex, tey) =
                                 txfm_pt(ex, ey, transform, scale_x, scale_y);
                             g.bezier_to(
-                                crate::types::Point3D(tc1x, tc1y, 0.0),
-                                crate::types::Point3D(tc2x, tc2y, 0.0),
-                                crate::types::Point3D(tex, tey, 0.0),
+                                crate::types::Point3D::new(tc1x, tc1y, 0.0),
+                                crate::types::Point3D::new(tc2x, tc2y, 0.0),
+                                crate::types::Point3D::new(tex, tey, 0.0),
                             );
                         }
                     }
@@ -1143,7 +1143,7 @@ pub fn geometry_to_svg_path(
     let mut prev_y = 0.0;
     for cmd in data {
         let (ex, ey, _) =
-            (cmd.end_point().0, cmd.end_point().1, cmd.end_point().2);
+            (cmd.end_point().x, cmd.end_point().y, cmd.end_point().z);
         let x = ex * w;
         let y = h * (1.0 - ey);
         match cmd {
@@ -1158,11 +1158,11 @@ pub fn geometry_to_svg_path(
                 normal,
                 ..
             } => {
-                let clockwise = normal.2 < 0.0;
-                let r = center_offset.0.hypot(center_offset.1);
+                let clockwise = normal.z < 0.0;
+                let r = center_offset.x.hypot(center_offset.y);
                 let sweep_flag = if clockwise { 1 } else { 0 };
-                let cx = prev_x + center_offset.0;
-                let cy = prev_y + center_offset.1;
+                let cx = prev_x + center_offset.x;
+                let cy = prev_y + center_offset.y;
                 let start_angle = (prev_y - cy).atan2(prev_x - cx);
                 let end_angle = (ey - cy).atan2(ex - cx);
                 let sweep = get_arc_sweep(start_angle, end_angle, clockwise);
@@ -1176,8 +1176,8 @@ pub fn geometry_to_svg_path(
             Command::Bezier {
                 control1, control2, ..
             } => {
-                let (c1x, c1y, _) = (control1.0, control1.1, control1.2);
-                let (c2x, c2y, _) = (control2.0, control2.1, control2.2);
+                let (c1x, c1y, _) = (control1.x, control1.y, control1.z);
+                let (c2x, c2y, _) = (control2.x, control2.y, control2.z);
                 parts.push(format!(
                     "C {:.3} {:.3} {:.3} {:.3} {x:.3} {y:.3}",
                     c1x * w,

@@ -1,6 +1,10 @@
 //! Python bindings for polygon operations.
 
-use super::super::flex_point::{extract_polygons, poly_to_points, PyPoint2D};
+use super::super::flex_point::{
+    edge_pairs_to_tuples, extract_polygons, point_to_tuple, points_to_tuples,
+    poly_to_points, polygons_to_tuples, PyPoint2D,
+};
+use super::super::types::NormalizePolygonsResult;
 use crate::geo::shape::polygon::{
     clean_polygon, flip_polygon, flip_polygons, get_polygon_bounds,
     get_polygon_centroid, get_polygon_convex_hull, get_polygon_edges,
@@ -26,13 +30,13 @@ fn _polygon_from_numpy(arr: &Bound<'_, PyArray2<f64>>) -> Vec<Point> {
     let view = readonly.as_array();
     view.rows()
         .into_iter()
-        .map(|row| Point(row[0], row[1]))
+        .map(|row| Point::new(row[0], row[1]))
         .collect()
 }
 
 fn _polygon_to_numpy(py: Python<'_>, poly: Vec<Point>) -> Py<PyAny> {
     let vecs: Vec<Vec<f64>> =
-        poly.into_iter().map(|p| vec![p.0, p.1]).collect();
+        poly.into_iter().map(|p| vec![p.x, p.y]).collect();
     let np_arr = PyArray2::<f64>::from_vec2(py, &vecs)
         .expect("failed to create numpy array");
     np_arr.into_any().unbind()
@@ -135,8 +139,9 @@ pub fn register(shape_mod: &Bound<'_, PyModule>) -> PyResult<()> {
 fn clean_polygon_py(
     polygon: Vec<PyPoint2D>,
     tolerance: Option<f64>,
-) -> Option<Vec<Point>> {
+) -> Option<Vec<(f64, f64)>> {
     clean_polygon(&poly_to_points(polygon), tolerance.unwrap_or(1e-6))
+        .map(points_to_tuples)
 }
 
 #[gen_stub_pyfunction(
@@ -183,9 +188,10 @@ fn is_almost_equal_py(a: f64, b: f64, tolerance: Option<f64>) -> bool {
 #[pyfunction(name = "normalize_polygons")]
 fn normalize_polygons_py(
     polygons: &Bound<'_, PyAny>,
-) -> PyResult<(Vec<Vec<Point>>, f64, f64)> {
+) -> PyResult<NormalizePolygonsResult> {
     let p = extract_polygons(polygons)?;
-    Ok(normalize_polygons(&p))
+    let (result, min_x, min_y) = normalize_polygons(&p);
+    Ok((polygons_to_tuples(result), min_x, min_y))
 }
 
 #[gen_stub_pyfunction(
@@ -241,9 +247,9 @@ fn translate_polygons_py(
     polygons: &Bound<'_, PyAny>,
     dx: f64,
     dy: f64,
-) -> PyResult<Vec<Vec<Point>>> {
+) -> PyResult<Vec<Vec<(f64, f64)>>> {
     let p = extract_polygons(polygons)?;
-    Ok(translate_polygons(&p, dx, dy))
+    Ok(polygons_to_tuples(translate_polygons(&p, dx, dy)))
 }
 
 #[gen_stub_pyfunction(
@@ -268,11 +274,15 @@ fn translate_polygons_py(
 )]
 #[pyfunction(name = "point_line_distance")]
 fn point_line_distance_py(
-    point: Point,
-    line_start: Point,
-    line_end: Point,
+    point: (f64, f64),
+    line_start: (f64, f64),
+    line_end: (f64, f64),
 ) -> f64 {
-    point_line_distance(point, line_start, line_end)
+    point_line_distance(
+        Point::new(point.0, point.1),
+        Point::new(line_start.0, line_start.1),
+        Point::new(line_end.0, line_end.1),
+    )
 }
 
 #[gen_stub_pyfunction(
@@ -406,8 +416,8 @@ fn get_polygon_group_bounds_py(
     module = "raygeo.geo.shape.polygon"
 )]
 #[pyfunction(name = "get_polygon_centroid")]
-fn get_polygon_centroid_py(polygon: Vec<PyPoint2D>) -> Point {
-    get_polygon_centroid(&poly_to_points(polygon))
+fn get_polygon_centroid_py(polygon: Vec<PyPoint2D>) -> (f64, f64) {
+    point_to_tuple(get_polygon_centroid(&poly_to_points(polygon)))
 }
 
 #[gen_stub_pyfunction(
@@ -450,8 +460,8 @@ fn is_polygon_convex_py(polygon: Vec<PyPoint2D>) -> bool {
     module = "raygeo.geo.shape.polygon"
 )]
 #[pyfunction(name = "get_polygon_convex_hull")]
-fn get_polygon_convex_hull_py(polygon: Vec<PyPoint2D>) -> Vec<Point> {
-    get_polygon_convex_hull(&poly_to_points(polygon))
+fn get_polygon_convex_hull_py(polygon: Vec<PyPoint2D>) -> Vec<(f64, f64)> {
+    points_to_tuples(get_polygon_convex_hull(&poly_to_points(polygon)))
 }
 
 #[gen_stub_pyfunction(
@@ -472,8 +482,10 @@ fn get_polygon_convex_hull_py(polygon: Vec<PyPoint2D>) -> Vec<Point> {
     module = "raygeo.geo.shape.polygon"
 )]
 #[pyfunction(name = "get_polygon_edges")]
-fn get_polygon_edges_py(polygon: Vec<PyPoint2D>) -> Vec<(Point, Point)> {
-    get_polygon_edges(&poly_to_points(polygon))
+fn get_polygon_edges_py(
+    polygon: Vec<PyPoint2D>,
+) -> Vec<((f64, f64), (f64, f64))> {
+    edge_pairs_to_tuples(get_polygon_edges(&poly_to_points(polygon)))
 }
 
 #[gen_stub_pyfunction(
@@ -496,8 +508,14 @@ fn get_polygon_edges_py(polygon: Vec<PyPoint2D>) -> Vec<(Point, Point)> {
     module = "raygeo.geo.shape.polygon"
 )]
 #[pyfunction(name = "is_point_inside_polygon")]
-fn is_point_inside_polygon_py(point: Point, polygon: Vec<PyPoint2D>) -> bool {
-    is_point_inside_polygon(point, &poly_to_points(polygon))
+fn is_point_inside_polygon_py(
+    point: (f64, f64),
+    polygon: Vec<PyPoint2D>,
+) -> bool {
+    is_point_inside_polygon(
+        Point::new(point.0, point.1),
+        &poly_to_points(polygon),
+    )
 }
 
 #[gen_stub_pyfunction(
@@ -520,8 +538,11 @@ fn is_point_inside_polygon_py(point: Point, polygon: Vec<PyPoint2D>) -> bool {
     module = "raygeo.geo.shape.polygon"
 )]
 #[pyfunction(name = "offset_polygon")]
-fn offset_polygon_py(polygon: Vec<PyPoint2D>, offset: f64) -> Vec<Vec<Point>> {
-    offset_polygon(&poly_to_points(polygon), offset)
+fn offset_polygon_py(
+    polygon: Vec<PyPoint2D>,
+    offset: f64,
+) -> Vec<Vec<(f64, f64)>> {
+    polygons_to_tuples(offset_polygon(&poly_to_points(polygon), offset))
 }
 
 #[gen_stub_pyfunction(
@@ -542,9 +563,9 @@ fn offset_polygon_py(polygon: Vec<PyPoint2D>, offset: f64) -> Vec<Vec<Point>> {
 #[pyfunction(name = "get_polygons_union")]
 fn get_polygons_union_py(
     polygons: &Bound<'_, PyAny>,
-) -> PyResult<Vec<Vec<Point>>> {
+) -> PyResult<Vec<Vec<(f64, f64)>>> {
     let p = extract_polygons(polygons)?;
-    Ok(get_polygons_union(&p))
+    Ok(polygons_to_tuples(get_polygons_union(&p)))
 }
 
 #[gen_stub_pyfunction(
@@ -570,8 +591,11 @@ fn get_polygons_union_py(
 fn get_polygons_intersection_py(
     poly1: Vec<PyPoint2D>,
     poly2: Vec<PyPoint2D>,
-) -> Vec<Vec<Point>> {
-    get_polygons_intersection(&poly_to_points(poly1), &poly_to_points(poly2))
+) -> Vec<Vec<(f64, f64)>> {
+    polygons_to_tuples(get_polygons_intersection(
+        &poly_to_points(poly1),
+        &poly_to_points(poly2),
+    ))
 }
 
 #[gen_stub_pyfunction(
@@ -597,8 +621,11 @@ fn get_polygons_intersection_py(
 fn get_polygons_difference_py(
     poly1: Vec<PyPoint2D>,
     poly2: Vec<PyPoint2D>,
-) -> Vec<Vec<Point>> {
-    get_polygons_difference(&poly_to_points(poly1), &poly_to_points(poly2))
+) -> Vec<Vec<(f64, f64)>> {
+    polygons_to_tuples(get_polygons_difference(
+        &poly_to_points(poly1),
+        &poly_to_points(poly2),
+    ))
 }
 
 #[gen_stub_pyfunction(
@@ -624,10 +651,13 @@ fn get_polygons_difference_py(
 fn get_polygons_group_intersection_py(
     subject: &Bound<'_, PyAny>,
     clip: &Bound<'_, PyAny>,
-) -> PyResult<Vec<Vec<Point>>> {
+) -> PyResult<Vec<Vec<(f64, f64)>>> {
     let subject_polys = extract_polygons(subject)?;
     let clip_polys = extract_polygons(clip)?;
-    Ok(get_polygons_group_intersection(&subject_polys, &clip_polys))
+    Ok(polygons_to_tuples(get_polygons_group_intersection(
+        &subject_polys,
+        &clip_polys,
+    )))
 }
 
 #[gen_stub_pyfunction(
@@ -653,10 +683,13 @@ fn get_polygons_group_intersection_py(
 fn get_polygons_group_difference_py(
     subject: &Bound<'_, PyAny>,
     clip: &Bound<'_, PyAny>,
-) -> PyResult<Vec<Vec<Point>>> {
+) -> PyResult<Vec<Vec<(f64, f64)>>> {
     let subject_polys = extract_polygons(subject)?;
     let clip_polys = extract_polygons(clip)?;
-    Ok(get_polygons_group_difference(&subject_polys, &clip_polys))
+    Ok(polygons_to_tuples(get_polygons_group_difference(
+        &subject_polys,
+        &clip_polys,
+    )))
 }
 
 #[gen_stub_pyfunction(
@@ -716,8 +749,8 @@ fn flip_polygon_py(
     polygon: Vec<PyPoint2D>,
     flip_h: bool,
     flip_v: bool,
-) -> Vec<Point> {
-    flip_polygon(&poly_to_points(polygon), flip_h, flip_v)
+) -> Vec<(f64, f64)> {
+    points_to_tuples(flip_polygon(&poly_to_points(polygon), flip_h, flip_v))
 }
 
 #[gen_stub_pyfunction(
@@ -746,9 +779,9 @@ fn flip_polygons_py(
     polygons: &Bound<'_, PyAny>,
     flip_h: bool,
     flip_v: bool,
-) -> PyResult<Vec<Vec<Point>>> {
+) -> PyResult<Vec<Vec<(f64, f64)>>> {
     let p = extract_polygons(polygons)?;
-    Ok(flip_polygons(&p, flip_h, flip_v))
+    Ok(polygons_to_tuples(flip_polygons(&p, flip_h, flip_v)))
 }
 
 #[gen_stub_pyfunction(
@@ -771,8 +804,8 @@ fn flip_polygons_py(
     module = "raygeo.geo.shape.polygon"
 )]
 #[pyfunction(name = "rotate_polygon")]
-fn rotate_polygon_py(polygon: Vec<PyPoint2D>, angle: f64) -> Vec<Point> {
-    rotate_polygon(&poly_to_points(polygon), angle)
+fn rotate_polygon_py(polygon: Vec<PyPoint2D>, angle: f64) -> Vec<(f64, f64)> {
+    points_to_tuples(rotate_polygon(&poly_to_points(polygon), angle))
 }
 
 #[gen_stub_pyfunction(
@@ -795,9 +828,9 @@ fn rotate_polygon_py(polygon: Vec<PyPoint2D>, angle: f64) -> Vec<Point> {
 fn rotate_polygons_py(
     polygons: &Bound<'_, PyAny>,
     angle: f64,
-) -> PyResult<Vec<Vec<Point>>> {
+) -> PyResult<Vec<Vec<(f64, f64)>>> {
     let p = extract_polygons(polygons)?;
-    Ok(rotate_polygons(&p, angle))
+    Ok(polygons_to_tuples(rotate_polygons(&p, angle)))
 }
 
 #[gen_stub_pyfunction(
@@ -828,8 +861,8 @@ fn scale_polygon_py(
     polygon: Vec<PyPoint2D>,
     scale: f64,
     scale_y: Option<f64>,
-) -> Vec<Point> {
-    scale_polygon(&poly_to_points(polygon), scale, scale_y)
+) -> Vec<(f64, f64)> {
+    points_to_tuples(scale_polygon(&poly_to_points(polygon), scale, scale_y))
 }
 
 #[gen_stub_pyfunction(
@@ -858,8 +891,8 @@ fn translate_polygon_py(
     polygon: Vec<PyPoint2D>,
     dx: f64,
     dy: f64,
-) -> Vec<Point> {
-    translate_polygon(&poly_to_points(polygon), dx, dy)
+) -> Vec<(f64, f64)> {
+    points_to_tuples(translate_polygon(&poly_to_points(polygon), dx, dy))
 }
 
 // -- numpy variants --
@@ -1075,11 +1108,11 @@ fn normalize_polygons_numpy_py(
 )]
 #[pyfunction(name = "point_in_polygon_numpy")]
 fn point_in_polygon_numpy_py(
-    point: Point,
+    point: (f64, f64),
     polygon: Bound<'_, PyArray2<f64>>,
 ) -> bool {
     let p = _polygon_from_numpy(&polygon);
-    is_point_inside_polygon(point, &p)
+    is_point_inside_polygon(Point::new(point.0, point.1), &p)
 }
 
 #[gen_stub_pyfunction(
@@ -1264,7 +1297,7 @@ fn to_clipper_numpy_py(
             poly.into_iter()
                 .map(|p| {
                     let scale = 10_000_000.0;
-                    ((p.0 * scale) as i64, (p.1 * scale) as i64)
+                    ((p.x * scale) as i64, (p.y * scale) as i64)
                 })
                 .collect()
         })
@@ -1291,6 +1324,6 @@ fn to_clipper_numpy_py(
 #[pyfunction(name = "is_polygon_clockwise")]
 fn is_polygon_clockwise_py(points: Vec<PyPoint2D>) -> bool {
     let points_2d: Vec<Point> =
-        points.iter().map(|p| Point(p.0, p.1)).collect();
+        points.iter().map(|p| Point::new(p.0, p.1)).collect();
     is_polygon_clockwise(&points_2d)
 }

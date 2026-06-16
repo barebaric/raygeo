@@ -30,7 +30,8 @@ pub fn inner_fit_polygon(bin: &Polygon, part: &Polygon) -> Vec<Polygon> {
         return vec![];
     }
 
-    let part_neg: Polygon = part.iter().map(|p| Point(-p.0, -p.1)).collect();
+    let part_neg: Polygon =
+        part.iter().map(|p| Point::new(-p.x, -p.y)).collect();
     let no_go_zones = build_no_go_zones(bin, &part_neg);
 
     if no_go_zones.is_empty() {
@@ -52,7 +53,9 @@ pub fn inner_fit_polygon(bin: &Polygon, part: &Polygon) -> Vec<Polygon> {
             let tuples: Vec<Vec<(f64, f64)>> = Vec::from(paths);
             tuples
                 .iter()
-                .map(|path| path.iter().map(|(x, y)| Point(*x, *y)).collect())
+                .map(|path| {
+                    path.iter().map(|(x, y)| Point::new(*x, *y)).collect()
+                })
                 .collect()
         }
         Err(_) => return vec![],
@@ -73,7 +76,7 @@ pub fn build_no_go_zones(bin: &Polygon, part_neg: &Polygon) -> Vec<Polygon> {
     for &v in bin {
         let translated: Polygon = part_neg
             .iter()
-            .map(|p| Point(p.0 + v.0, p.1 + v.1))
+            .map(|p| Point::new(p.x + v.x, p.y + v.y))
             .collect();
         if translated.len() >= 3 {
             subjects.push(translated);
@@ -104,8 +107,8 @@ pub fn sweep_hull_for_edge(
 ) -> Polygon {
     let mut points: Vec<Point> = Vec::with_capacity(part_neg.len() * 2);
     for p in part_neg {
-        points.push(Point(p.0 + p1.0, p.1 + p1.1));
-        points.push(Point(p.0 + p2.0, p.1 + p2.1));
+        points.push(Point::new(p.x + p1.x, p.y + p1.y));
+        points.push(Point::new(p.x + p2.x, p.y + p2.y));
     }
     get_polygon_convex_hull(&points)
 }

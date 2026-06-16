@@ -73,7 +73,7 @@ fn cmd_to_dict<'a>(
     d.set_item("type", ct_name)?;
 
     if let OpCategory::Moving { end, .. } = &node.category {
-        d.set_item("end", (end.0, end.1, end.2))?;
+        d.set_item("end", (end.x, end.y, end.z))?;
         if let Some(ea) = node.extra_axes() {
             let ea_dict = PyDict::new(py);
             for &(axis, val) in ea {
@@ -89,17 +89,17 @@ fn cmd_to_dict<'a>(
     match &node.category {
         OpCategory::Moving { cmd, .. } => match cmd {
             MoveCmd::ArcTo { center, cw, .. } => {
-                d.set_item("center_offset", (center.0, center.1))?;
+                d.set_item("center_offset", (center.x, center.y))?;
                 d.set_item("clockwise", *cw)?;
             }
             MoveCmd::BezierTo {
                 control1, control2, ..
             } => {
-                d.set_item("control1", *control1)?;
-                d.set_item("control2", *control2)?;
+                d.set_item("control1", (control1.x, control1.y, control1.z))?;
+                d.set_item("control2", (control2.x, control2.y, control2.z))?;
             }
             MoveCmd::QuadraticBezierTo { control, .. } => {
-                d.set_item("control", *control)?;
+                d.set_item("control", (control.x, control.y, control.z))?;
             }
             MoveCmd::ScanLine { power_values, .. } => {
                 d.set_item(
@@ -192,14 +192,14 @@ fn create_and_append_command(
                 pyo3::exceptions::PyKeyError::new_err("missing 'end'")
             })?
             .extract()?;
-        let end_tuple = Point3D(end_data[0], end_data[1], end_data[2]);
+        let end_tuple = Point3D::new(end_data[0], end_data[1], end_data[2]);
 
         match ct {
             CommandType::MoveTo => {
-                ops.move_to(end_tuple.0, end_tuple.1, end_tuple.2, extra_axes);
+                ops.move_to(end_tuple.x, end_tuple.y, end_tuple.z, extra_axes);
             }
             CommandType::LineTo => {
-                ops.line_to(end_tuple.0, end_tuple.1, end_tuple.2, extra_axes);
+                ops.line_to(end_tuple.x, end_tuple.y, end_tuple.z, extra_axes);
             }
             CommandType::ArcTo => {
                 let co_vec: Vec<f64> = cmd_data
@@ -219,12 +219,12 @@ fn create_and_append_command(
                     })?
                     .extract()?;
                 ops.arc_to(
-                    end_tuple.0,
-                    end_tuple.1,
+                    end_tuple.x,
+                    end_tuple.y,
                     co_vec[0],
                     co_vec[1],
                     cw,
-                    end_tuple.2,
+                    end_tuple.z,
                     extra_axes,
                 );
             }
@@ -245,8 +245,8 @@ fn create_and_append_command(
                         )
                     })?
                     .extract()?;
-                let control1 = Point3D(c1_vec[0], c1_vec[1], c1_vec[2]);
-                let control2 = Point3D(c2_vec[0], c2_vec[1], c2_vec[2]);
+                let control1 = Point3D::new(c1_vec[0], c1_vec[1], c1_vec[2]);
+                let control2 = Point3D::new(c2_vec[0], c2_vec[1], c2_vec[2]);
                 ops.bezier_to(control1, control2, end_tuple, extra_axes);
             }
             CommandType::QuadraticBezierTo => {
@@ -258,7 +258,7 @@ fn create_and_append_command(
                         )
                     })?
                     .extract()?;
-                let c = Point3D(c_vec[0], c_vec[1], c_vec[2]);
+                let c = Point3D::new(c_vec[0], c_vec[1], c_vec[2]);
                 ops.quadratic_bezier_to(c, end_tuple, extra_axes);
             }
             CommandType::ScanLine => {
@@ -271,9 +271,9 @@ fn create_and_append_command(
                     })?
                     .extract()?;
                 ops.scan_to(
-                    end_tuple.0,
-                    end_tuple.1,
-                    end_tuple.2,
+                    end_tuple.x,
+                    end_tuple.y,
+                    end_tuple.z,
                     pv,
                     extra_axes,
                 );
@@ -424,7 +424,10 @@ pub fn ops_to_dict(
     }
     let result = PyDict::new(py);
     result.set_item("commands", commands)?;
-    result.set_item("last_move_to", ops.last_move_to)?;
+    result.set_item(
+        "last_move_to",
+        (ops.last_move_to.x, ops.last_move_to.y, ops.last_move_to.z),
+    )?;
     Ok(result.unbind())
 }
 
@@ -445,9 +448,9 @@ pub fn ops_from_dict(data: &Bound<'_, PyDict>) -> PyResult<crate::ops::Ops> {
                     "last_move_to must be a 3-tuple",
                 ));
             }
-            Point3D(l[0], l[1], l[2])
+            Point3D::new(l[0], l[1], l[2])
         }
-        None => Point3D(0.0, 0.0, 0.0),
+        None => Point3D::new(0.0, 0.0, 0.0),
     };
     ops.last_move_to = last_move;
 
@@ -549,7 +552,7 @@ pub fn ops_to_numpy_arrays(
 
         if let OpCategory::Moving { end, cmd } = &node.category {
             endpoints
-                .call_method1("__setitem__", (i, vec![end.0, end.1, end.2]))?;
+                .call_method1("__setitem__", (i, vec![end.x, end.y, end.z]))?;
 
             match cmd {
                 MoveCmd::BezierTo { control1, control2 } => {
@@ -558,8 +561,8 @@ pub fn ops_to_numpy_arrays(
                         (
                             bezier_idx,
                             vec![
-                                control1.0, control1.1, control1.2, control2.0,
-                                control2.1, control2.2,
+                                control1.x, control1.y, control1.z, control2.x,
+                                control2.y, control2.z,
                             ],
                         ),
                     )?;
@@ -573,7 +576,7 @@ pub fn ops_to_numpy_arrays(
                         (
                             bezier_idx,
                             vec![
-                                control.0, control.1, control.2, 0.0, 0.0, 0.0,
+                                control.x, control.y, control.z, 0.0, 0.0, 0.0,
                             ],
                         ),
                     )?;
@@ -587,8 +590,8 @@ pub fn ops_to_numpy_arrays(
                         (
                             arc_idx,
                             vec![
-                                center.0,
-                                center.1,
+                                center.x,
+                                center.y,
                                 if *cw { 1.0 } else { 0.0 },
                             ],
                         ),
@@ -795,15 +798,18 @@ pub fn ops_from_numpy_arrays(
             .call_method1("__getitem__", (i,))?
             .call_method0("tolist")?
             .extract()?;
-        let end_tuple =
-            Point3D(end_list[0] as f64, end_list[1] as f64, end_list[2] as f64);
+        let end_tuple = Point3D::new(
+            end_list[0] as f64,
+            end_list[1] as f64,
+            end_list[2] as f64,
+        );
 
         match ct {
             CommandType::MoveTo => {
-                ops.move_to(end_tuple.0, end_tuple.1, end_tuple.2, None);
+                ops.move_to(end_tuple.x, end_tuple.y, end_tuple.z, None);
             }
             CommandType::LineTo => {
-                ops.line_to(end_tuple.0, end_tuple.1, end_tuple.2, None);
+                ops.line_to(end_tuple.x, end_tuple.y, end_tuple.z, None);
             }
             CommandType::ArcTo => {
                 let arc_idx_val: i32 = arc_map_bound
@@ -814,12 +820,12 @@ pub fn ops_from_numpy_arrays(
                     .call_method0("tolist")?
                     .extract()?;
                 ops.arc_to(
-                    end_tuple.0,
-                    end_tuple.1,
+                    end_tuple.x,
+                    end_tuple.y,
                     arc_vals[0] as f64,
                     arc_vals[1] as f64,
                     arc_vals[2] != 0.0,
-                    end_tuple.2,
+                    end_tuple.z,
                     None,
                 );
             }
@@ -832,12 +838,12 @@ pub fn ops_from_numpy_arrays(
                     .call_method0("tolist")?
                     .extract()?;
                 ops.bezier_to(
-                    Point3D(
+                    Point3D::new(
                         bez_vals[0] as f64,
                         bez_vals[1] as f64,
                         bez_vals[2] as f64,
                     ),
-                    Point3D(
+                    Point3D::new(
                         bez_vals[3] as f64,
                         bez_vals[4] as f64,
                         bez_vals[5] as f64,
@@ -855,7 +861,7 @@ pub fn ops_from_numpy_arrays(
                     .call_method0("tolist")?
                     .extract()?;
                 ops.quadratic_bezier_to(
-                    Point3D(
+                    Point3D::new(
                         bez_vals[0] as f64,
                         bez_vals[1] as f64,
                         bez_vals[2] as f64,
@@ -882,9 +888,9 @@ pub fn ops_from_numpy_arrays(
                     .call_method1("tobytes", ())?
                     .extract()?;
                 ops.scan_to(
-                    end_tuple.0,
-                    end_tuple.1,
-                    end_tuple.2,
+                    end_tuple.x,
+                    end_tuple.y,
+                    end_tuple.z,
                     pv_bytes,
                     None,
                 );

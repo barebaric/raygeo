@@ -40,17 +40,17 @@ class Arc:
     A circular-arc cutting command.
     """
     @property
-    def end(self) -> builtins.tuple[float, float, float]:
+    def end(self) -> tuple[builtins.float, builtins.float, builtins.float]:
         r"""
         Endpoint of the arc in 3D space.
         """
     @property
-    def center_offset(self) -> builtins.tuple[float, float, float]:
+    def center_offset(self) -> tuple[builtins.float, builtins.float, builtins.float]:
         r"""
         Centre offset from the start point (3D).
         """
     @property
-    def normal(self) -> builtins.tuple[float, float, float]:
+    def normal(self) -> tuple[builtins.float, builtins.float, builtins.float]:
         r"""
         Plane normal of the arc. A positive Z component means CCW in XY.
         """
@@ -66,17 +66,17 @@ class Bezier:
     A cubic-Bezier curve cutting command.
     """
     @property
-    def end(self) -> builtins.tuple[float, float, float]:
+    def end(self) -> tuple[builtins.float, builtins.float, builtins.float]:
         r"""
         Endpoint of the curve in 3D space.
         """
     @property
-    def control1(self) -> builtins.tuple[float, float, float]:
+    def control1(self) -> tuple[builtins.float, builtins.float, builtins.float]:
         r"""
         First control point in 3D space.
         """
     @property
-    def control2(self) -> builtins.tuple[float, float, float]:
+    def control2(self) -> tuple[builtins.float, builtins.float, builtins.float]:
         r"""
         Second control point in 3D space.
         """
@@ -91,14 +91,14 @@ class Geometry:
     or obtained by converting an :class:`~raygeo.ops.Ops` sequence.
     """
     @property
-    def last_move_to(self) -> builtins.tuple[float, float, float]:
+    def last_move_to(self) -> tuple[builtins.float, builtins.float, builtins.float]:
         r"""
         The coordinates of the last move-to command.
         
         :complexity: O(1) time, O(1) space
         """
     @last_move_to.setter
-    def last_move_to(self, value: builtins.tuple[float, float, float]) -> None:
+    def last_move_to(self, value: tuple[builtins.float, builtins.float, builtins.float]) -> None:
         r"""
         Set the last move-to position.
         
@@ -245,7 +245,7 @@ class Geometry:
         
         :complexity: O(n) time, O(n) space
         """
-    def get_last_point(self) -> builtins.tuple[float, float, float]:
+    def get_last_point(self) -> tuple[builtins.float, builtins.float, builtins.float]:
         r"""
         Get the last point in the geometry.
         
@@ -273,7 +273,7 @@ class Geometry:
         :returns: (x_min, y_min, x_max, y_max) or None.
         :complexity: O(1) time, O(1) space
         """
-    def get_positions_at_distances(self, distances: typing.Sequence[builtins.float]) -> builtins.list[tuple[builtins.int, builtins.float, tuple[float, float]]]:
+    def get_positions_at_distances(self, distances: typing.Sequence[builtins.float]) -> builtins.list[tuple[builtins.int, builtins.float, tuple[builtins.float, builtins.float]]]:
         r"""
         Given a list of distances along the path, returns the corresponding
         (segment_index, t, point) for each distance.
@@ -315,7 +315,7 @@ class Geometry:
         :param tolerance: Max gap between start and end point.
         :complexity: O(n) time, O(1) space
         """
-    def segments(self) -> builtins.list[builtins.list[builtins.tuple[float, float, float]]]:
+    def segments(self) -> builtins.list[builtins.list[tuple[builtins.float, builtins.float, builtins.float]]]:
         r"""
         Return the geometry split into segments of connected commands.
         
@@ -431,7 +431,7 @@ class Geometry:
         
         :complexity: O(n) time, O(1) space
         """
-    def find_closest_point(self, x: builtins.float, y: builtins.float) -> typing.Optional[tuple[builtins.int, builtins.float, tuple[float, float]]]:
+    def find_closest_point(self, x: builtins.float, y: builtins.float) -> typing.Optional[tuple[builtins.int, builtins.float, tuple[builtins.float, builtins.float]]]:
         r"""
         Find the closest point on the path to (x, y).
         
@@ -440,7 +440,7 @@ class Geometry:
         :returns: Tuple of (segment_index, t, point) or None.
         :complexity: O(n) time, O(1) space
         """
-    def get_point_at(self, segment_index: builtins.int, t: builtins.float) -> typing.Optional[tuple[float, float, float]]:
+    def get_point_at(self, segment_index: builtins.int, t: builtins.float) -> typing.Optional[tuple[builtins.float, builtins.float, builtins.float]]:
         r"""
         Get the point at parameter t on a segment.
         
@@ -449,7 +449,7 @@ class Geometry:
         :returns: The 3D point or None.
         :complexity: O(1) time, O(1) space
         """
-    def get_tangent_at(self, segment_index: builtins.int, t: builtins.float) -> typing.Optional[tuple[float, float]]:
+    def get_tangent_at(self, segment_index: builtins.int, t: builtins.float) -> typing.Optional[tuple[builtins.float, builtins.float]]:
         r"""
         Get the tangent vector at parameter t on a segment.
         
@@ -458,7 +458,7 @@ class Geometry:
         :returns: The normalized tangent vector or None.
         :complexity: O(1) time, O(1) space
         """
-    def get_outward_normal_at(self, segment_index: builtins.int, t: builtins.float) -> typing.Optional[tuple[float, float]]:
+    def get_outward_normal_at(self, segment_index: builtins.int, t: builtins.float) -> typing.Optional[tuple[builtins.float, builtins.float]]:
         r"""
         Get the outward normal at parameter t on a segment.
         
@@ -528,7 +528,7 @@ class Geometry:
         
         :complexity: O(n log n) average time, O(n) space
         """
-    def map_to_frame(self, origin: builtins.tuple[float, float], p_width: builtins.tuple[float, float], p_height: builtins.tuple[float, float], anchor_y: typing.Optional[builtins.float] = None, stable_src_height: typing.Optional[builtins.float] = None, anchor_x: typing.Optional[builtins.float] = None, stable_src_width: typing.Optional[builtins.float] = None) -> Geometry:
+    def map_to_frame(self, origin: tuple[builtins.float, builtins.float], p_width: tuple[builtins.float, builtins.float], p_height: tuple[builtins.float, builtins.float], anchor_y: typing.Optional[builtins.float] = None, stable_src_height: typing.Optional[builtins.float] = None, anchor_x: typing.Optional[builtins.float] = None, stable_src_width: typing.Optional[builtins.float] = None) -> Geometry:
         r"""
         Map the geometry into a rectangular frame.
         
@@ -553,7 +553,7 @@ class Geometry:
         
         :complexity: O(n log n) average time, O(n) space
         """
-    def to_polygons(self, tolerance: builtins.float = 0.01) -> builtins.list[builtins.list[builtins.tuple[float, float]]]:
+    def to_polygons(self, tolerance: builtins.float = 0.01) -> builtins.list[builtins.list[tuple[builtins.float, builtins.float]]]:
         r"""
         Convert the geometry to a list of polygons.
         
@@ -605,7 +605,7 @@ class Line:
     A straight-line cutting command.
     """
     @property
-    def end(self) -> builtins.tuple[float, float, float]:
+    def end(self) -> tuple[builtins.float, builtins.float, builtins.float]:
         r"""
         Endpoint of the line in 3D space.
         """
@@ -616,7 +616,7 @@ class Move:
     A rapid-move command with an endpoint but no cutting.
     """
     @property
-    def end(self) -> builtins.tuple[float, float, float]:
+    def end(self) -> tuple[builtins.float, builtins.float, builtins.float]:
         r"""
         Endpoint of the move in 3D space.
         """

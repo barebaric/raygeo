@@ -20,7 +20,7 @@ fn get_segments_for_cmd(
     let start_point = if index > 0 {
         data[index - 1].end_point()
     } else {
-        Point3D(0.0, 0.0, 0.0)
+        Point3D::new(0.0, 0.0, 0.0)
     };
     cmd.linearize(start_point, 0.1, out);
 }
@@ -76,17 +76,17 @@ fn precompute_cmd_segments(data: &[Command]) -> Vec<RowSegments> {
         let mut max_y = f64::NEG_INFINITY;
         for (p1, p2) in &buf {
             for &pt in &[p1, p2] {
-                if pt.0 < min_x {
-                    min_x = pt.0;
+                if pt.x < min_x {
+                    min_x = pt.x;
                 }
-                if pt.0 > max_x {
-                    max_x = pt.0;
+                if pt.x > max_x {
+                    max_x = pt.x;
                 }
-                if pt.1 < min_y {
-                    min_y = pt.1;
+                if pt.y < min_y {
+                    min_y = pt.y;
                 }
-                if pt.1 > max_y {
-                    max_y = pt.1;
+                if pt.y > max_y {
+                    max_y = pt.y;
                 }
             }
         }
@@ -121,34 +121,34 @@ fn data_intersect(
             for &(seg1_p1, seg1_p2) in &ri1.segments {
                 for &(seg2_p1, seg2_p2) in &ri2.segments {
                     let intersection = get_line_segment_intersection(
-                        Point(seg1_p1.0, seg1_p1.1),
-                        Point(seg1_p2.0, seg1_p2.1),
-                        Point(seg2_p1.0, seg2_p1.1),
-                        Point(seg2_p2.0, seg2_p2.1),
+                        Point::new(seg1_p1.x, seg1_p1.y),
+                        Point::new(seg1_p2.x, seg1_p2.y),
+                        Point::new(seg2_p1.x, seg2_p1.y),
+                        Point::new(seg2_p2.x, seg2_p2.y),
                     );
 
                     if let Some(pt) = intersection {
                         if is_self_check && ri2.index == ri1.index + 1 {
                             let shared_vertex = data1[ri1.index].end_point();
-                            let dsq = (pt.0 - shared_vertex.0).powi(2)
-                                + (pt.1 - shared_vertex.1).powi(2);
+                            let dsq = (pt.x - shared_vertex.x).powi(2)
+                                + (pt.y - shared_vertex.y).powi(2);
                             if dsq < EPSILON_INTERSECT {
                                 continue;
                             }
                             return true;
                         }
 
-                        let at_end1 = (pt.0 - seg1_p1.0).powi(2)
-                            + (pt.1 - seg1_p1.1).powi(2)
+                        let at_end1 = (pt.x - seg1_p1.x).powi(2)
+                            + (pt.y - seg1_p1.y).powi(2)
                             < EPSILON_INTERSECT
-                            || (pt.0 - seg1_p2.0).powi(2)
-                                + (pt.1 - seg1_p2.1).powi(2)
+                            || (pt.x - seg1_p2.x).powi(2)
+                                + (pt.y - seg1_p2.y).powi(2)
                                 < EPSILON_INTERSECT;
-                        let at_end2 = (pt.0 - seg2_p1.0).powi(2)
-                            + (pt.1 - seg2_p1.1).powi(2)
+                        let at_end2 = (pt.x - seg2_p1.x).powi(2)
+                            + (pt.y - seg2_p1.y).powi(2)
                             < EPSILON_INTERSECT
-                            || (pt.0 - seg2_p2.0).powi(2)
-                                + (pt.1 - seg2_p2.1).powi(2)
+                            || (pt.x - seg2_p2.x).powi(2)
+                                + (pt.y - seg2_p2.y).powi(2)
                                 < EPSILON_INTERSECT;
 
                         if is_self_check

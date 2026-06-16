@@ -82,8 +82,8 @@ impl PointDistance for SegmentPoint {
 }
 
 fn dist_2d(p1: Point3D, p2: Point3D) -> f64 {
-    let dx = p1.0 - p2.0;
-    let dy = p1.1 - p2.1;
+    let dx = p1.x - p2.x;
+    let dy = p1.y - p2.y;
     dx.hypot(dy)
 }
 
@@ -177,8 +177,8 @@ fn kdtree_order_workpieces(metas: &mut [WorkpieceMeta]) -> Vec<WorkpieceMeta> {
     let mut exit_points: Vec<Point2D> = Vec::with_capacity(n);
     let mut points: Vec<SegmentPoint> = Vec::with_capacity(n * 2);
     for (i, meta) in metas.iter().enumerate() {
-        let entry = Point2D([meta.entry_point.0, meta.entry_point.1]);
-        let exit = Point2D([meta.exit_point.0, meta.exit_point.1]);
+        let entry = Point2D([meta.entry_point.x, meta.entry_point.y]);
+        let exit = Point2D([meta.exit_point.x, meta.exit_point.y]);
         entry_points.push(entry);
         exit_points.push(exit);
         points.push(SegmentPoint {
@@ -198,7 +198,7 @@ fn kdtree_order_workpieces(metas: &mut [WorkpieceMeta]) -> Vec<WorkpieceMeta> {
 
     ordered.push(metas[0].clone());
     let mut current_pos =
-        Point2D([metas[0].exit_point.0, metas[0].exit_point.1]);
+        Point2D([metas[0].exit_point.x, metas[0].exit_point.y]);
 
     tree.remove(&SegmentPoint {
         point: entry_points[0],
@@ -231,7 +231,7 @@ fn kdtree_order_workpieces(metas: &mut [WorkpieceMeta]) -> Vec<WorkpieceMeta> {
         }
 
         ordered.push(next_meta.clone());
-        current_pos = Point2D([next_meta.exit_point.0, next_meta.exit_point.1]);
+        current_pos = Point2D([next_meta.exit_point.x, next_meta.exit_point.y]);
 
         tree.remove(&SegmentPoint {
             point: entry_points[seg_idx],
@@ -383,8 +383,8 @@ fn kdtree_order_segments(segments: &mut [Ops], allow_flip: bool) -> Vec<Ops> {
     for (i, seg) in segments.iter().enumerate() {
         let start = seg.endpoint(0);
         let end = seg.endpoint(seg.len() - 1);
-        let start_pt = Point2D([start.0, start.1]);
-        let end_pt = Point2D([end.0, end.1]);
+        let start_pt = Point2D([start.x, start.y]);
+        let end_pt = Point2D([end.x, end.y]);
         entry_points.push(start_pt);
         exit_points.push(end_pt);
         points.push(SegmentPoint {
@@ -405,7 +405,7 @@ fn kdtree_order_segments(segments: &mut [Ops], allow_flip: bool) -> Vec<Ops> {
     let first_seg = &segments[0];
     ordered.push(first_seg.clone());
     let last = first_seg.endpoint(first_seg.len() - 1);
-    let mut current_pos = Point2D([last.0, last.1]);
+    let mut current_pos = Point2D([last.x, last.y]);
 
     tree.remove(&SegmentPoint {
         point: entry_points[0],
@@ -432,7 +432,7 @@ fn kdtree_order_segments(segments: &mut [Ops], allow_flip: bool) -> Vec<Ops> {
         };
 
         let last = next_seg.endpoint(next_seg.len() - 1);
-        current_pos = Point2D([last.0, last.1]);
+        current_pos = Point2D([last.x, last.y]);
         ordered.push(next_seg);
 
         tree.remove(&SegmentPoint {

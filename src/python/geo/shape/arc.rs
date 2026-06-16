@@ -9,14 +9,18 @@ rendering or further processing, angle utilities (normalize, direction,
 containment), and arc midpoint / closest-point lookups.
 ";
 
-use super::super::flex_point::{extract_polygons, PyPoint2D};
+use super::super::flex_point::{
+    edge_pairs3d_to_tuples, extract_polygons, point_to_tuple, tuple_to_point3d,
+    PyPoint2D,
+};
+use super::super::types::{ArcClosestResult, Edge3D};
 use crate::geo::shape::arc::{
     does_arc_intersect_circle, does_arc_intersect_rect, get_arc_angles,
     get_arc_bounds, get_arc_closest_point, get_arc_direction, get_arc_length,
     get_arc_midpoint, get_arc_sweep, is_angle_between, is_arc_clockwise,
     is_arc_inside_polygons, linearize_arc, normalize_angle,
 };
-use crate::types::{Point, Point3D, Rect, Segment3D};
+use crate::types::{Point, Point3D, Rect};
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::gen_stub_pyfunction;
 
@@ -52,18 +56,22 @@ fn _arc_params_from_any(
     arc_cmd: &Bound<'_, PyAny>,
 ) -> PyResult<(Point3D, Point3D, Point3D)> {
     if let Ok(end) = arc_cmd.getattr("end") {
-        let end: Point3D = end.extract()?;
-        let center_offset: Point3D =
+        let end: (f64, f64, f64) = end.extract()?;
+        let center_offset: (f64, f64, f64) =
             arc_cmd.getattr("center_offset")?.extract()?;
-        let normal: Point3D = arc_cmd.getattr("normal")?.extract()?;
-        return Ok((end, center_offset, normal));
+        let normal: (f64, f64, f64) = arc_cmd.getattr("normal")?.extract()?;
+        return Ok((
+            Point3D::new(end.0, end.1, end.2),
+            Point3D::new(center_offset.0, center_offset.1, center_offset.2),
+            Point3D::new(normal.0, normal.1, normal.2),
+        ));
     }
     if let Ok(row) = arc_cmd.extract::<Vec<f64>>() {
         if row.len() >= 10 {
             return Ok((
-                Point3D(row[1], row[2], row[3]),
-                Point3D(row[4], row[5], row[6]),
-                Point3D(row[7], row[8], row[9]),
+                Point3D::new(row[1], row[2], row[3]),
+                Point3D::new(row[4], row[5], row[6]),
+                Point3D::new(row[7], row[8], row[9]),
             ));
         }
     }
@@ -97,12 +105,17 @@ fn _arc_params_from_any(
 #[pyfunction(name = "get_arc_bounds")]
 #[pyo3(signature = (start, end, center, clockwise))]
 fn get_arc_bounds_py(
-    start: Point,
-    end: Point,
-    center: Point,
+    start: (f64, f64),
+    end: (f64, f64),
+    center: (f64, f64),
     clockwise: bool,
 ) -> (f64, f64, f64, f64) {
-    let r = get_arc_bounds(start, end, center, clockwise);
+    let r = get_arc_bounds(
+        Point::new(start.0, start.1),
+        Point::new(end.0, end.1),
+        Point::new(center.0, center.1),
+        clockwise,
+    );
     (r.0, r.1, r.2, r.3)
 }
 
@@ -127,8 +140,16 @@ fn get_arc_bounds_py(
     module = "raygeo.geo.shape.arc"
 )]
 #[pyfunction(name = "get_arc_direction")]
-fn get_arc_direction_py(center: Point, start: Point, mouse: Point) -> bool {
-    get_arc_direction(center, start, mouse)
+fn get_arc_direction_py(
+    center: (f64, f64),
+    start: (f64, f64),
+    mouse: (f64, f64),
+) -> bool {
+    get_arc_direction(
+        Point::new(center.0, center.1),
+        Point::new(start.0, start.1),
+        Point::new(mouse.0, mouse.1),
+    )
 }
 
 #[gen_stub_pyfunction(
@@ -155,12 +176,17 @@ fn get_arc_direction_py(center: Point, start: Point, mouse: Point) -> bool {
 )]
 #[pyfunction(name = "get_arc_length")]
 fn get_arc_length_py(
-    start_pos: Point,
-    end_pos: Point,
-    center_offset: Point,
+    start_pos: (f64, f64),
+    end_pos: (f64, f64),
+    center_offset: (f64, f64),
     clockwise: bool,
 ) -> f64 {
-    get_arc_length(start_pos, end_pos, center_offset, clockwise)
+    get_arc_length(
+        Point::new(start_pos.0, start_pos.1),
+        Point::new(end_pos.0, end_pos.1),
+        Point::new(center_offset.0, center_offset.1),
+        clockwise,
+    )
 }
 
 #[gen_stub_pyfunction(
@@ -210,19 +236,20 @@ fn get_arc_sweep_py(start_angle: f64, end_angle: f64, clockwise: bool) -> f64 {
 #[pyfunction(name = "get_arc_closest_point")]
 fn get_arc_closest_point_py(
     arc_cmd: &Bound<'_, PyAny>,
-    start_pos: Point3D,
+    start_pos: (f64, f64, f64),
     x: f64,
     y: f64,
-) -> PyResult<Option<(f64, Point, f64)>> {
+) -> PyResult<Option<ArcClosestResult>> {
     let (end, center_offset, normal) = _arc_params_from_any(arc_cmd)?;
     Ok(get_arc_closest_point(
         end,
         center_offset,
         normal,
-        start_pos,
+        tuple_to_point3d(start_pos),
         x,
         y,
-    ))
+    )
+    .map(|(a, p, c)| (a, point_to_tuple(p), c)))
 }
 
 #[gen_stub_pyfunction(
@@ -250,12 +277,17 @@ fn get_arc_closest_point_py(
 #[pyfunction(name = "get_arc_midpoint")]
 #[pyo3(signature = (start, end, center, clockwise))]
 fn get_arc_midpoint_py(
-    start: Point,
-    end: Point,
-    center: Point,
+    start: (f64, f64),
+    end: (f64, f64),
+    center: (f64, f64),
     clockwise: bool,
-) -> Point {
-    get_arc_midpoint(start, end, center, clockwise)
+) -> (f64, f64) {
+    point_to_tuple(get_arc_midpoint(
+        Point::new(start.0, start.1),
+        Point::new(end.0, end.1),
+        Point::new(center.0, center.1),
+        clockwise,
+    ))
 }
 
 #[gen_stub_pyfunction(
@@ -283,12 +315,17 @@ fn get_arc_midpoint_py(
 #[pyfunction(name = "get_arc_angles")]
 #[pyo3(signature = (start, end, center, clockwise))]
 fn get_arc_angles_py(
-    start: Point,
-    end: Point,
-    center: Point,
+    start: (f64, f64),
+    end: (f64, f64),
+    center: (f64, f64),
     clockwise: bool,
 ) -> (f64, f64, f64) {
-    get_arc_angles(start, end, center, clockwise)
+    get_arc_angles(
+        Point::new(start.0, start.1),
+        Point::new(end.0, end.1),
+        Point::new(center.0, center.1),
+        clockwise,
+    )
 }
 
 #[gen_stub_pyfunction(
@@ -318,16 +355,16 @@ fn get_arc_angles_py(
 #[pyfunction(name = "does_arc_intersect_rect")]
 #[pyo3(signature = (arc_start, arc_end, arc_center, clockwise, rect))]
 fn does_arc_intersect_rect_py(
-    arc_start: Point,
-    arc_end: Point,
-    arc_center: Point,
+    arc_start: (f64, f64),
+    arc_end: (f64, f64),
+    arc_center: (f64, f64),
     clockwise: bool,
     rect: (f64, f64, f64, f64),
 ) -> bool {
     does_arc_intersect_rect(
-        arc_start,
-        arc_end,
-        arc_center,
+        Point::new(arc_start.0, arc_start.1),
+        Point::new(arc_end.0, arc_end.1),
+        Point::new(arc_center.0, arc_center.1),
         clockwise,
         Rect(rect.0, rect.1, rect.2, rect.3),
     )
@@ -362,19 +399,19 @@ fn does_arc_intersect_rect_py(
 #[pyfunction(name = "does_arc_intersect_circle")]
 #[pyo3(signature = (arc_start, arc_end, arc_center, clockwise, circle_center, circle_radius))]
 fn does_arc_intersect_circle_py(
-    arc_start: Point,
-    arc_end: Point,
-    arc_center: Point,
+    arc_start: (f64, f64),
+    arc_end: (f64, f64),
+    arc_center: (f64, f64),
     clockwise: bool,
-    circle_center: Point,
+    circle_center: (f64, f64),
     circle_radius: f64,
 ) -> bool {
     does_arc_intersect_circle(
-        arc_start,
-        arc_end,
-        arc_center,
+        Point::new(arc_start.0, arc_start.1),
+        Point::new(arc_end.0, arc_end.1),
+        Point::new(arc_center.0, arc_center.1),
         clockwise,
-        circle_center,
+        Point::new(circle_center.0, circle_center.1),
         circle_radius,
     )
 }
@@ -401,8 +438,8 @@ fn does_arc_intersect_circle_py(
 #[pyfunction(name = "is_arc_clockwise")]
 fn is_arc_clockwise_py(points: Vec<PyPoint2D>, center: PyPoint2D) -> bool {
     let points_2d: Vec<Point> =
-        points.iter().map(|p| Point(p.0, p.1)).collect();
-    is_arc_clockwise(&points_2d, Point(center.0, center.1))
+        points.iter().map(|p| Point::new(p.0, p.1)).collect();
+    is_arc_clockwise(&points_2d, Point::new(center.0, center.1))
 }
 
 #[gen_stub_pyfunction(
@@ -433,17 +470,17 @@ fn is_arc_clockwise_py(points: Vec<PyPoint2D>, center: PyPoint2D) -> bool {
 #[pyfunction(name = "is_arc_inside_polygons")]
 #[pyo3(signature = (arc_start, arc_end, arc_center, clockwise, polygons))]
 fn is_arc_inside_polygons_py(
-    arc_start: Point,
-    arc_end: Point,
-    arc_center: Point,
+    arc_start: (f64, f64),
+    arc_end: (f64, f64),
+    arc_center: (f64, f64),
     clockwise: bool,
     polygons: &Bound<'_, PyAny>,
 ) -> PyResult<bool> {
     let polygons_2d = extract_polygons(polygons)?;
     Ok(is_arc_inside_polygons(
-        arc_start,
-        arc_end,
-        arc_center,
+        Point::new(arc_start.0, arc_start.1),
+        Point::new(arc_end.0, arc_end.1),
+        Point::new(arc_center.0, arc_center.1),
         clockwise,
         &polygons_2d,
     ))
@@ -522,18 +559,18 @@ fn normalize_angle_py(angle: f64) -> f64 {
 #[pyo3(signature = (arc_cmd, start_point, resolution=0.1))]
 fn linearize_arc_py(
     arc_cmd: &Bound<'_, PyAny>,
-    start_point: Point3D,
+    start_point: (f64, f64, f64),
     resolution: f64,
-) -> PyResult<Vec<Segment3D>> {
+) -> PyResult<Vec<Edge3D>> {
     let (end, center_offset, normal) = _arc_params_from_any(arc_cmd)?;
     let mut segments = Vec::new();
     linearize_arc(
         end,
         center_offset,
         normal,
-        start_point,
+        tuple_to_point3d(start_point),
         resolution,
         &mut segments,
     );
-    Ok(segments)
+    Ok(edge_pairs3d_to_tuples(segments))
 }

@@ -28,9 +28,9 @@ fn add_clipped_segment(
 ) {
     if let Some((p1, p2)) = segment {
         if needs_move_to(*pen_pos, p1) {
-            new_ops.move_to(p1.0, p1.1, p1.2, None);
+            new_ops.move_to(p1.x, p1.y, p1.z, None);
         }
-        new_ops.line_to(p2.0, p2.1, p2.2, None);
+        new_ops.line_to(p2.x, p2.y, p2.z, None);
         *pen_pos = Some(p2);
     } else {
         *pen_pos = None;
@@ -48,7 +48,7 @@ impl Ops {
             return new_ops;
         }
 
-        let mut last_point: Point3D = Point3D(0.0, 0.0, 0.0);
+        let mut last_point: Point3D = Point3D::new(0.0, 0.0, 0.0);
         let mut clipped_pen_pos: Option<Point3D> = None;
 
         for node in &self.commands {
@@ -113,7 +113,7 @@ impl Ops {
         }
 
         let mut new_ops = Ops::new();
-        let mut last_point: Point3D = Point3D(0.0, 0.0, 0.0);
+        let mut last_point: Point3D = Point3D::new(0.0, 0.0, 0.0);
         let mut pen_pos: Option<Point3D> = None;
 
         let first_move_idx = self
@@ -162,11 +162,11 @@ impl Ops {
                             for (sub_p1, sub_p2) in kept {
                                 if needs_move_to(pen_pos, sub_p1) {
                                     new_ops.move_to(
-                                        sub_p1.0, sub_p1.1, sub_p1.2, None,
+                                        sub_p1.x, sub_p1.y, sub_p1.z, None,
                                     );
                                 }
                                 new_ops.line_to(
-                                    sub_p2.0, sub_p2.1, sub_p2.2, None,
+                                    sub_p2.x, sub_p2.y, sub_p2.z, None,
                                 );
                                 pen_pos = Some(sub_p2);
                             }
@@ -217,7 +217,7 @@ impl Ops {
         }
 
         let mut new_ops = Ops::new();
-        let mut last_point: Point3D = Point3D(0.0, 0.0, 0.0);
+        let mut last_point: Point3D = Point3D::new(0.0, 0.0, 0.0);
         let mut pen_pos: Option<Point3D> = None;
 
         let first_move_idx = self
@@ -268,11 +268,11 @@ impl Ops {
                             for (sub_p1, sub_p2) in kept {
                                 if needs_move_to(pen_pos, sub_p1) {
                                     new_ops.move_to(
-                                        sub_p1.0, sub_p1.1, sub_p1.2, None,
+                                        sub_p1.x, sub_p1.y, sub_p1.z, None,
                                     );
                                 }
                                 new_ops.line_to(
-                                    sub_p2.0, sub_p2.1, sub_p2.2, None,
+                                    sub_p2.x, sub_p2.y, sub_p2.z, None,
                                 );
                                 pen_pos = Some(sub_p2);
                             }
@@ -399,8 +399,8 @@ impl Ops {
                 .find(|n| n.is_moving())
                 .map(|n| n.end_point())
                 .unwrap_or(first_pt);
-            let is_closed = (first_pt.0 - last_pt.0).powi(2)
-                + (first_pt.1 - last_pt.1).powi(2)
+            let is_closed = (first_pt.x - last_pt.x).powi(2)
+                + (first_pt.y - last_pt.y).powi(2)
                 < EPSILON_GAP_CLOSE * EPSILON_GAP_CLOSE;
             if is_closed {
                 let mut wrap_gaps: Vec<(f64, f64)> = Vec::new();
@@ -435,7 +435,7 @@ impl Ops {
         let endpoint_match = match new_endpoint {
             Some(ne) => {
                 let d =
-                    (original_endpoint.0 - ne.0, original_endpoint.1 - ne.1);
+                    (original_endpoint.x - ne.x, original_endpoint.y - ne.y);
                 (d.0 * d.0 + d.1 * d.1).sqrt() <= EPSILON_GAP_CLOSE
             }
             None => false,
@@ -454,16 +454,16 @@ impl Ops {
                 .find(|n| n.is_moving())
                 .map(|n| n.end_point())
                 .unwrap_or(first_pt);
-            let subpath_is_closed = (first_pt.0 - last_pt.0).powi(2)
-                + (first_pt.1 - last_pt.1).powi(2)
+            let subpath_is_closed = (first_pt.x - last_pt.x).powi(2)
+                + (first_pt.y - last_pt.y).powi(2)
                 < EPSILON_GAP_CLOSE * EPSILON_GAP_CLOSE;
             let seam_gapped = subpath_is_closed
                 && (gap_start_dist < 0.0 || gap_end_dist > total_length);
             if !seam_gapped {
                 new_subpath.move_to(
-                    original_endpoint.0,
-                    original_endpoint.1,
-                    original_endpoint.2,
+                    original_endpoint.x,
+                    original_endpoint.y,
+                    original_endpoint.z,
                     None,
                 );
             }
@@ -511,7 +511,7 @@ impl Ops {
         }
 
         let mut new_ops = Ops::new();
-        let mut last_point: Point3D = Point3D(0.0, 0.0, 0.0);
+        let mut last_point: Point3D = Point3D::new(0.0, 0.0, 0.0);
         let mut pen_pos: Option<Point3D> = None;
 
         let first_move_idx = self
@@ -549,17 +549,17 @@ impl Ops {
                     }
                     MoveCmd::ArcTo { center, cw } => {
                         if is_arc_inside_polygons(
-                            Point(last_point.0, last_point.1),
-                            Point(end.0, end.1),
+                            Point::new(last_point.x, last_point.y),
+                            Point::new(end.x, end.y),
                             *center,
                             *cw,
                             &valid_regions,
                         ) {
                             if needs_move_to(pen_pos, last_point) {
                                 new_ops.move_to(
-                                    last_point.0,
-                                    last_point.1,
-                                    last_point.2,
+                                    last_point.x,
+                                    last_point.y,
+                                    last_point.z,
                                     None,
                                 );
                             }
@@ -580,17 +580,17 @@ impl Ops {
                     }
                     MoveCmd::BezierTo { control1, control2 } => {
                         if is_bezier_inside_polygons(
-                            Point(last_point.0, last_point.1),
-                            Point(control1.0, control1.1),
-                            Point(control2.0, control2.1),
-                            Point(end.0, end.1),
+                            Point::new(last_point.x, last_point.y),
+                            Point::new(control1.x, control1.y),
+                            Point::new(control2.x, control2.y),
+                            Point::new(end.x, end.y),
                             &valid_regions,
                         ) {
                             if needs_move_to(pen_pos, last_point) {
                                 new_ops.move_to(
-                                    last_point.0,
-                                    last_point.1,
-                                    last_point.2,
+                                    last_point.x,
+                                    last_point.y,
+                                    last_point.z,
                                     None,
                                 );
                             }
@@ -624,11 +624,11 @@ impl Ops {
                             for (sub_p1, sub_p2) in kept_segments {
                                 if needs_move_to(pen_pos, sub_p1) {
                                     new_ops.move_to(
-                                        sub_p1.0, sub_p1.1, sub_p1.2, None,
+                                        sub_p1.x, sub_p1.y, sub_p1.z, None,
                                     );
                                 }
                                 new_ops.line_to(
-                                    sub_p2.0, sub_p2.1, sub_p2.2, None,
+                                    sub_p2.x, sub_p2.y, sub_p2.z, None,
                                 );
                                 pen_pos = Some(sub_p2);
                             }
@@ -668,8 +668,8 @@ impl Ops {
 fn needs_move_to(pen_pos: Option<Point3D>, target: Point3D) -> bool {
     match pen_pos {
         Some(prev) => {
-            let dx = target.0 - prev.0;
-            let dy = target.1 - prev.1;
+            let dx = target.x - prev.x;
+            let dy = target.y - prev.y;
             (dx * dx + dy * dy).sqrt() > EPSILON_GAP_CLOSE
         }
         None => true,
@@ -703,9 +703,9 @@ fn append_clipped_scanline(
 
         if !new_pv.is_empty() {
             if needs_move_to(pen_pos, *new_start) {
-                new_ops.move_to(new_start.0, new_start.1, new_start.2, None);
+                new_ops.move_to(new_start.x, new_start.y, new_start.z, None);
             }
-            new_ops.scan_to(new_end.0, new_end.1, new_end.2, new_pv, None);
+            new_ops.scan_to(new_end.x, new_end.y, new_end.z, new_pv, None);
             pen_pos = Some(*new_end);
         }
     }
@@ -732,8 +732,8 @@ fn find_hit_command(
     );
     let (segment_index, _linear_t, point_on_path) = closest?;
 
-    let dist_sq = (x - point_on_path.0) * (x - point_on_path.0)
-        + (y - point_on_path.1) * (y - point_on_path.1);
+    let dist_sq = (x - point_on_path.x) * (x - point_on_path.x)
+        + (y - point_on_path.y) * (y - point_on_path.y);
     if dist_sq > (width * 2.0) * (width * 2.0) {
         return None;
     }
@@ -804,14 +804,14 @@ fn accumulate_distance_to_hit(
 
     for &cmd_idx in linear_geo_cmds.iter().take(linear_segment_idx).skip(1) {
         let end_pt = temp_ops.commands[cmd_idx].end_point();
-        let dp = (end_pt.0 - last_pos.0, end_pt.1 - last_pos.1);
+        let dp = (end_pt.x - last_pos.x, end_pt.y - last_pos.y);
         hit_dist += (dp.0 * dp.0 + dp.1 * dp.1).sqrt();
         last_pos = end_pt;
     }
 
     let hit_segment_j = linear_geo_cmds[linear_segment_idx];
     let hit_end = temp_ops.commands[hit_segment_j].end_point();
-    let dp = (hit_end.0 - last_pos.0, hit_end.1 - last_pos.1);
+    let dp = (hit_end.x - last_pos.x, hit_end.y - last_pos.y);
     let dist = (dp.0 * dp.0 + dp.1 * dp.1).sqrt();
     hit_dist += linear_t * dist;
 
@@ -838,7 +838,7 @@ fn build_clipped_subpath(temp_ops: &Ops, gaps: &[(f64, f64)]) -> Ops {
         {
             let p1 = last_pos;
             let seg_len = {
-                let dp = (p2.0 - p1.0, p2.1 - p1.1);
+                let dp = (p2.x - p1.x, p2.y - p1.y);
                 (dp.0 * dp.0 + dp.1 * dp.1).sqrt()
             };
 
@@ -877,9 +877,9 @@ fn build_clipped_subpath(temp_ops: &Ops, gaps: &[(f64, f64)]) -> Ops {
                 continue;
             }
 
-            let vec_dx = p2.0 - p1.0;
-            let vec_dy = p2.1 - p1.1;
-            let dz = p2.2 - p1.2;
+            let vec_dx = p2.x - p1.x;
+            let vec_dy = p2.y - p1.y;
+            let dz = p2.z - p1.z;
 
             for (start_d, end_d) in kept {
                 let t_start = if seg_len > 0.0 {
@@ -893,15 +893,15 @@ fn build_clipped_subpath(temp_ops: &Ops, gaps: &[(f64, f64)]) -> Ops {
                     1.0
                 };
 
-                let start_pt = Point3D(
-                    p1.0 + t_start * vec_dx,
-                    p1.1 + t_start * vec_dy,
-                    p1.2 + t_start * dz,
+                let start_pt = Point3D::new(
+                    p1.x + t_start * vec_dx,
+                    p1.y + t_start * vec_dy,
+                    p1.z + t_start * dz,
                 );
-                let end_pt = Point3D(
-                    p1.0 + t_end * vec_dx,
-                    p1.1 + t_end * vec_dy,
-                    p1.2 + t_end * dz,
+                let end_pt = Point3D::new(
+                    p1.x + t_end * vec_dx,
+                    p1.y + t_end * vec_dy,
+                    p1.z + t_end * dz,
                 );
 
                 let mut last_kept_pos: Option<Point3D> = None;
@@ -915,11 +915,11 @@ fn build_clipped_subpath(temp_ops: &Ops, gaps: &[(f64, f64)]) -> Ops {
                 if let Some(lkp) = last_kept_pos {
                     if needs_move_to(Some(lkp), start_pt) {
                         new_subpath
-                            .move_to(start_pt.0, start_pt.1, start_pt.2, None);
+                            .move_to(start_pt.x, start_pt.y, start_pt.z, None);
                     }
                 }
 
-                new_subpath.line_to(end_pt.0, end_pt.1, end_pt.2, None);
+                new_subpath.line_to(end_pt.x, end_pt.y, end_pt.z, None);
             }
 
             last_pos = *p2;
@@ -958,7 +958,7 @@ pub fn clip_subpath_linear(
         .filter(|&j| temp.command_type(j) == CommandType::LineTo)
         .scan(temp.commands[0].end_point(), |last, j| {
             let ep = temp.endpoint(j);
-            let d = ((ep.0 - last.0).powi(2) + (ep.1 - last.1).powi(2)).sqrt();
+            let d = ((ep.x - last.x).powi(2) + (ep.y - last.y).powi(2)).sqrt();
             *last = ep;
             Some(d)
         })
@@ -974,8 +974,8 @@ pub fn clip_subpath_linear(
             Some(v) => v,
             None => continue,
         };
-        let dx = clip.x - pt.0;
-        let dy = clip.y - pt.1;
+        let dx = clip.x - pt.x;
+        let dy = clip.y - pt.y;
         if dx * dx + dy * dy > (clip.width * 2.0).powi(2) {
             continue;
         }
@@ -993,7 +993,7 @@ pub fn clip_subpath_linear(
             }
             let ep = temp.endpoint(j);
             let seg_len =
-                ((ep.0 - last.0).powi(2) + (ep.1 - last.1).powi(2)).sqrt();
+                ((ep.x - last.x).powi(2) + (ep.y - last.y).powi(2)).sqrt();
             if line_idx + 1 == seg_idx {
                 // this is the segment that was hit
                 hd += t * seg_len;
@@ -1038,8 +1038,8 @@ pub fn clip_subpath_linear(
         .map(|n| n.end_point());
     let needs_travel = match last_cut {
         Some(ep) => {
-            let dx = orig_end.0 - ep.0;
-            let dy = orig_end.1 - ep.1;
+            let dx = orig_end.x - ep.x;
+            let dy = orig_end.y - ep.y;
             (dx * dx + dy * dy).sqrt() > EPSILON_GAP_CLOSE
         }
         None => false,
@@ -1049,7 +1049,7 @@ pub fn clip_subpath_linear(
             .iter()
             .any(|(gs, ge)| *gs <= total_len && *ge >= total_len);
         if !seam_gapped {
-            result.move_to(orig_end.0, orig_end.1, orig_end.2, None);
+            result.move_to(orig_end.x, orig_end.y, orig_end.z, None);
         }
     }
 
@@ -1100,27 +1100,27 @@ fn clip_and_refit_arc(
         }
         let needs_move = needs_move_to(pen_pos, chain[0]);
         if needs_move {
-            new_ops.move_to(chain[0].0, chain[0].1, chain[0].2, None);
+            new_ops.move_to(chain[0].x, chain[0].y, chain[0].z, None);
         }
         for prim_cmd in &primitives {
             let end = prim_cmd.end_point();
             match prim_cmd {
                 Command::Line { .. } => {
-                    new_ops.line_to(end.0, end.1, end.2, None);
+                    new_ops.line_to(end.x, end.y, end.z, None);
                 }
                 Command::Arc {
                     center_offset,
                     normal,
                     ..
                 } => {
-                    let clockwise = normal.2 < 0.0;
+                    let clockwise = normal.z < 0.0;
                     new_ops.arc_to(
-                        end.0,
-                        end.1,
-                        center_offset.0,
-                        center_offset.1,
+                        end.x,
+                        end.y,
+                        center_offset.x,
+                        center_offset.y,
                         clockwise,
-                        end.2,
+                        end.z,
                         None,
                     );
                 }
@@ -1188,27 +1188,27 @@ fn clip_and_refit_bezier(
         }
         let needs_move = needs_move_to(pen_pos, chain[0]);
         if needs_move {
-            new_ops.move_to(chain[0].0, chain[0].1, chain[0].2, None);
+            new_ops.move_to(chain[0].x, chain[0].y, chain[0].z, None);
         }
         for prim_cmd in &primitives {
             let end = prim_cmd.end_point();
             match prim_cmd {
                 Command::Line { .. } => {
-                    new_ops.line_to(end.0, end.1, end.2, None);
+                    new_ops.line_to(end.x, end.y, end.z, None);
                 }
                 Command::Arc {
                     center_offset,
                     normal,
                     ..
                 } => {
-                    let clockwise = normal.2 < 0.0;
+                    let clockwise = normal.z < 0.0;
                     new_ops.arc_to(
-                        end.0,
-                        end.1,
-                        center_offset.0,
-                        center_offset.1,
+                        end.x,
+                        end.y,
+                        center_offset.x,
+                        center_offset.y,
                         clockwise,
-                        end.2,
+                        end.z,
                         None,
                     );
                 }
@@ -1243,8 +1243,8 @@ fn build_chains(kept_pairs: &[(Point3D, Point3D)]) -> Vec<Vec<Point3D>> {
     for (p1, p2) in kept_pairs {
         if let Some(last_chain) = chains.last_mut() {
             let last = last_chain[last_chain.len() - 1];
-            let dx = p1.0 - last.0;
-            let dy = p1.1 - last.1;
+            let dx = p1.x - last.x;
+            let dy = p1.y - last.y;
             if (dx * dx + dy * dy).sqrt() <= EPSILON_GAP_CLOSE {
                 last_chain.push(*p2);
                 continue;

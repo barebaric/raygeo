@@ -49,7 +49,7 @@ fn trace_contour(
 
     let mut cx = start_x as i32;
     let mut cy = start_y as i32;
-    contour.push(Point(cx as f64, cy as f64));
+    contour.push(Point::new(cx as f64, cy as f64));
 
     let mut dir_idx = 7;
     let max_steps = width * height * 2;
@@ -69,7 +69,7 @@ fn trace_contour(
                     cy = ny;
                     dir_idx = d;
                     visited[nidx] = true;
-                    contour.push(Point(cx as f64, cy as f64));
+                    contour.push(Point::new(cx as f64, cy as f64));
                     found = true;
                     break;
                 }
@@ -175,31 +175,31 @@ pub fn get_concave_hull(
     for i in 0..num_hull {
         let p0 = hull_vertices[i];
         let p2 = hull_vertices[(i + 1) % num_hull];
-        let midpoint = Point((p0.0 + p2.0) / 2.0, (p0.1 + p2.1) / 2.0);
+        let midpoint = Point::new((p0.x + p2.x) / 2.0, (p0.y + p2.y) / 2.0);
 
         let closest = find_closest_point(&all_contour_points, midpoint);
 
-        let target_sag = Point(
-            midpoint.0 * (1.0 - effective_gravity)
-                + closest.0 * effective_gravity,
-            midpoint.1 * (1.0 - effective_gravity)
-                + closest.1 * effective_gravity,
+        let target_sag = Point::new(
+            midpoint.x * (1.0 - effective_gravity)
+                + closest.x * effective_gravity,
+            midpoint.y * (1.0 - effective_gravity)
+                + closest.y * effective_gravity,
         );
 
-        let control = Point(
-            midpoint.0 + 2.0 * (target_sag.0 - midpoint.0),
-            midpoint.1 + 2.0 * (target_sag.1 - midpoint.1),
+        let control = Point::new(
+            midpoint.x + 2.0 * (target_sag.x - midpoint.x),
+            midpoint.y + 2.0 * (target_sag.y - midpoint.y),
         );
 
         for j in 0..=samples_per_curve {
             let t = j as f64 / samples_per_curve as f64;
-            let x = (1.0 - t).powi(2) * p0.0
-                + 2.0 * (1.0 - t) * t * control.0
-                + t * t * p2.0;
-            let y = (1.0 - t).powi(2) * p0.1
-                + 2.0 * (1.0 - t) * t * control.1
-                + t * t * p2.1;
-            points.push(Point(x, y));
+            let x = (1.0 - t).powi(2) * p0.x
+                + 2.0 * (1.0 - t) * t * control.x
+                + t * t * p2.x;
+            let y = (1.0 - t).powi(2) * p0.y
+                + 2.0 * (1.0 - t) * t * control.y
+                + t * t * p2.y;
+            points.push(Point::new(x, y));
         }
     }
 
@@ -210,7 +210,7 @@ fn find_closest_point(points: &[Point], target: Point) -> Point {
     let mut best = points[0];
     let mut best_dist = f64::MAX;
     for &p in points {
-        let d = (p.0 - target.0).powi(2) + (p.1 - target.1).powi(2);
+        let d = (p.x - target.x).powi(2) + (p.y - target.y).powi(2);
         if d < best_dist {
             best_dist = d;
             best = p;

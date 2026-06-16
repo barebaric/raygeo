@@ -33,13 +33,14 @@ impl Ops {
                     let new_cmd = match cmd {
                         MoveCmd::ArcTo { center, cw } if is_non_uniform => {
                             let start_point = last_point_untransformed
-                                .unwrap_or(Point3D(0.0, 0.0, 0.0));
+                                .unwrap_or(Point3D::new(0.0, 0.0, 0.0));
                             let mut arc_buf = Vec::new();
-                            let center_3d = Point3D(center.0, center.1, 0.0);
+                            let center_3d =
+                                Point3D::new(center.x, center.y, 0.0);
                             let normal = if *cw {
-                                Point3D(0.0, 0.0, -1.0)
+                                Point3D::new(0.0, 0.0, -1.0)
                             } else {
-                                Point3D(0.0, 0.0, 1.0)
+                                Point3D::new(0.0, 0.0, 1.0)
                             };
                             crate::geo::shape::arc::linearize_arc(
                                 *end,
@@ -54,9 +55,9 @@ impl Ops {
                             for (_, p2) in &arc_buf {
                                 let tv = transform_point(matrix, *p2);
                                 let mut lcmd = OpNode::line_to(
-                                    tv.x(),
-                                    tv.y(),
-                                    tv.z(),
+                                    tv.x,
+                                    tv.y,
+                                    tv.z,
                                     extra.clone(),
                                 );
                                 if let Some(s) = &node.state {
@@ -69,12 +70,10 @@ impl Ops {
                         }
                         MoveCmd::ArcTo { center, cw } => {
                             let new_vec = matrix.transform_vector3(DVec3::new(
-                                center.x(),
-                                center.y(),
-                                0.0,
+                                center.x, center.y, 0.0,
                             ));
                             MoveCmd::ArcTo {
-                                center: Point(new_vec.x, new_vec.y),
+                                center: Point::new(new_vec.x, new_vec.y),
                                 cw: if flip_cw { !cw } else { *cw },
                             }
                         }

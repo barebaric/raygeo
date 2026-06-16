@@ -10,28 +10,28 @@ use crate::types::{Command, Point3D};
 pub fn get_segment_key(cmd: &Command) -> Option<(u32, [f64; 3], [f64; 4])> {
     match cmd {
         Command::Move { .. } => None,
-        Command::Line { end } => Some((2, [end.0, end.1, end.2], [0.0; 4])),
+        Command::Line { end } => Some((2, [end.x, end.y, end.z], [0.0; 4])),
         Command::Arc {
             end,
             center_offset,
             normal,
         } => {
-            let clockwise = normal.2 < 0.0;
+            let clockwise = normal.z < 0.0;
             let params = [
-                center_offset.0,
-                center_offset.1,
+                center_offset.x,
+                center_offset.y,
                 if clockwise { 1.0 } else { 0.0 },
                 0.0,
             ];
-            Some((3, [end.0, end.1, end.2], params))
+            Some((3, [end.x, end.y, end.z], params))
         }
         Command::Bezier {
             end,
             control1,
             control2,
         } => {
-            let params = [control1.0, control1.1, control2.0, control2.1];
-            Some((4, [end.0, end.1, end.2], params))
+            let params = [control1.x, control1.y, control2.x, control2.y];
+            Some((4, [end.x, end.y, end.z], params))
         }
     }
 }
@@ -140,7 +140,7 @@ pub fn close_geometry_gaps_from_array(
             let e_cmd = &modified[end - 1];
             let e = e_cmd.end_point();
             let dsq =
-                (s.0 - e.0).powi(2) + (s.1 - e.1).powi(2) + (s.2 - e.2).powi(2);
+                (s.x - e.x).powi(2) + (s.y - e.y).powi(2) + (s.z - e.z).powi(2);
             if dsq < tol_sq {
                 let new_cmd = match e_cmd {
                     Command::Move { .. } => Command::Move { end: s },
@@ -175,9 +175,9 @@ pub fn close_geometry_gaps_from_array(
 
         if matches!(cmd, Command::Move { .. }) {
             if let Some(prev) = last_end {
-                let dsq = (end_pt.0 - prev.0).powi(2)
-                    + (end_pt.1 - prev.1).powi(2)
-                    + (end_pt.2 - prev.2).powi(2);
+                let dsq = (end_pt.x - prev.x).powi(2)
+                    + (end_pt.y - prev.y).powi(2)
+                    + (end_pt.z - prev.z).powi(2);
                 if dsq < tol_sq {
                     final_rows.push(Command::Line { end: prev });
                 } else {

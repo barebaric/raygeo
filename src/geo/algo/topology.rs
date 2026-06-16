@@ -50,8 +50,8 @@ impl ContourHierarchy {
                         Some(ci) => ci,
                         None => continue,
                     };
-                    let tx = current.test_point.0;
-                    let ty = current.test_point.1;
+                    let tx = current.test_point.x;
+                    let ty = current.test_point.y;
                     let mut best_parent: isize = -1;
                     let mut best_parent_area = f64::INFINITY;
 
@@ -138,10 +138,10 @@ pub fn build_hierarchy(contours: &[&Geometry]) -> ContourHierarchy {
 
         let verts_3d = &segments[0];
         let verts_2d: Vec<Point> =
-            verts_3d.iter().map(|p| Point(p.0, p.1)).collect();
+            verts_3d.iter().map(|p| Point::new(p.x, p.y)).collect();
         let rect = c.rect();
         let test_point = if verts_2d.is_empty() {
-            Point(0.0, 0.0)
+            Point::new(0.0, 0.0)
         } else {
             verts_2d[0]
         };
@@ -171,8 +171,8 @@ pub fn build_hierarchy(contours: &[&Geometry]) -> ContourHierarchy {
         let mut depth = 0i32;
         let mut best_parent: isize = -1;
         let mut best_parent_area = f64::INFINITY;
-        let tx = current.test_point.0;
-        let ty = current.test_point.1;
+        let tx = current.test_point.x;
+        let ty = current.test_point.y;
 
         for (j, info_j) in info.iter().enumerate() {
             if i == j {
@@ -455,14 +455,18 @@ pub fn reverse_contour(contour: &Geometry) -> Geometry {
                 normal,
                 ..
             } => {
-                let center_abs_x = start_point.0 + center_offset.0;
-                let center_abs_y = start_point.1 + center_offset.1;
-                let new_offset_x = center_abs_x - last_point.0;
-                let new_offset_y = center_abs_y - last_point.1;
+                let center_abs_x = start_point.x + center_offset.x;
+                let center_abs_y = start_point.y + center_offset.y;
+                let new_offset_x = center_abs_x - last_point.x;
+                let new_offset_y = center_abs_y - last_point.y;
                 new_rows.push(Command::Arc {
                     end: start_point,
-                    center_offset: Point3D(new_offset_x, new_offset_y, 0.0),
-                    normal: Point3D(-normal.0, -normal.1, -normal.2),
+                    center_offset: Point3D::new(
+                        new_offset_x,
+                        new_offset_y,
+                        0.0,
+                    ),
+                    normal: Point3D::new(-normal.x, -normal.y, -normal.z),
                 });
             }
             Command::Bezier {

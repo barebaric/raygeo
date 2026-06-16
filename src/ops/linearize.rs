@@ -24,9 +24,9 @@ pub fn linearize_node(node: &OpNode, start_point: Point3D) -> Ops {
 
                 if num_steps > 1 {
                     let line_vec = (
-                        end.0 - start_point.0,
-                        end.1 - start_point.1,
-                        end.2 - start_point.2,
+                        end.x - start_point.x,
+                        end.y - start_point.y,
+                        end.z - start_point.z,
                     );
                     let mut cur_start_power = seg_start_power;
                     for i in 1..num_steps {
@@ -34,9 +34,9 @@ pub fn linearize_node(node: &OpNode, start_point: Point3D) -> Ops {
                         if cur_power != cur_start_power {
                             let t = i as f64 / num_steps as f64;
                             let seg_end = (
-                                start_point.0 + t * line_vec.0,
-                                start_point.1 + t * line_vec.1,
-                                start_point.2 + t * line_vec.2,
+                                start_point.x + t * line_vec.0,
+                                start_point.y + t * line_vec.1,
+                                start_point.z + t * line_vec.2,
                             );
                             result.line_to(
                                 seg_end.0,
@@ -50,16 +50,16 @@ pub fn linearize_node(node: &OpNode, start_point: Point3D) -> Ops {
                     }
                 }
 
-                result.line_to(end.0, end.1, end.2, extra_owned);
+                result.line_to(end.x, end.y, end.z, extra_owned);
                 result
             }
             MoveCmd::ArcTo { center, cw } => {
                 let mut arc_buf = Vec::new();
-                let center_3d = Point3D(center.0, center.1, 0.0);
+                let center_3d = Point3D::new(center.x, center.y, 0.0);
                 let normal = if *cw {
-                    Point3D(0.0, 0.0, -1.0)
+                    Point3D::new(0.0, 0.0, -1.0)
                 } else {
-                    Point3D(0.0, 0.0, 1.0)
+                    Point3D::new(0.0, 0.0, 1.0)
                 };
                 linearize_arc(
                     end,
@@ -75,9 +75,9 @@ pub fn linearize_node(node: &OpNode, start_point: Point3D) -> Ops {
 
                 for (_, seg_end) in arc_buf.drain(..) {
                     result.line_to(
-                        seg_end.0,
-                        seg_end.1,
-                        seg_end.2,
+                        seg_end.x,
+                        seg_end.y,
+                        seg_end.z,
                         extra_owned.clone(),
                     );
                 }
@@ -98,21 +98,21 @@ pub fn linearize_node(node: &OpNode, start_point: Point3D) -> Ops {
                 let mut result = Ops::new();
 
                 for pt in polyline.iter().skip(1) {
-                    result.line_to(pt.0, pt.1, pt.2, extra_owned.clone());
+                    result.line_to(pt.x, pt.y, pt.z, extra_owned.clone());
                 }
 
                 result
             }
             MoveCmd::QuadraticBezierTo { control } => {
-                let control1 = Point3D(
-                    start_point.0 + (2.0 / 3.0) * (control.0 - start_point.0),
-                    start_point.1 + (2.0 / 3.0) * (control.1 - start_point.1),
-                    start_point.2 + (2.0 / 3.0) * (control.2 - start_point.2),
+                let control1 = Point3D::new(
+                    start_point.x + (2.0 / 3.0) * (control.x - start_point.x),
+                    start_point.y + (2.0 / 3.0) * (control.y - start_point.y),
+                    start_point.z + (2.0 / 3.0) * (control.z - start_point.z),
                 );
-                let control2 = Point3D(
-                    end.0 + (2.0 / 3.0) * (control.0 - end.0),
-                    end.1 + (2.0 / 3.0) * (control.1 - end.1),
-                    end.2 + (2.0 / 3.0) * (control.2 - end.2),
+                let control2 = Point3D::new(
+                    end.x + (2.0 / 3.0) * (control.x - end.x),
+                    end.y + (2.0 / 3.0) * (control.y - end.y),
+                    end.z + (2.0 / 3.0) * (control.z - end.z),
                 );
                 let polyline =
                     crate::geo::shape::bezier::linearize_bezier_segment(
@@ -127,7 +127,7 @@ pub fn linearize_node(node: &OpNode, start_point: Point3D) -> Ops {
                 let mut result = Ops::new();
 
                 for pt in polyline.iter().skip(1) {
-                    result.line_to(pt.0, pt.1, pt.2, extra_owned.clone());
+                    result.line_to(pt.x, pt.y, pt.z, extra_owned.clone());
                 }
 
                 result
@@ -136,9 +136,9 @@ pub fn linearize_node(node: &OpNode, start_point: Point3D) -> Ops {
                 let extra_owned = extra.map(|e| e.to_vec());
                 let mut result = Ops::new();
                 if matches!(cmd, MoveCmd::MoveTo) {
-                    result.move_to(end.0, end.1, end.2, extra_owned);
+                    result.move_to(end.x, end.y, end.z, extra_owned);
                 } else {
-                    result.line_to(end.0, end.1, end.2, extra_owned);
+                    result.line_to(end.x, end.y, end.z, extra_owned);
                 }
                 result
             }
@@ -155,7 +155,7 @@ impl Ops {
 
     pub fn linearize_all(&mut self) {
         let mut new_cmds = Vec::new();
-        let mut last_point: Point3D = Point3D(0.0, 0.0, 0.0);
+        let mut last_point: Point3D = Point3D::new(0.0, 0.0, 0.0);
 
         for node in &self.commands {
             if let OpCategory::Moving {
@@ -188,7 +188,7 @@ impl Ops {
 
     pub fn linearize_curves(&mut self) {
         let mut new_cmds = Vec::new();
-        let mut last_point: Point3D = Point3D(0.0, 0.0, 0.0);
+        let mut last_point: Point3D = Point3D::new(0.0, 0.0, 0.0);
 
         for node in &self.commands {
             if let OpCategory::Moving { end, cmd } = &node.category {
@@ -222,7 +222,7 @@ impl Ops {
 
     pub fn linearize_arcs(&mut self) {
         let mut new_cmds = Vec::new();
-        let mut last_point: Point3D = Point3D(0.0, 0.0, 0.0);
+        let mut last_point: Point3D = Point3D::new(0.0, 0.0, 0.0);
 
         for node in &self.commands {
             if let OpCategory::Moving { end, cmd } = &node.category {

@@ -27,7 +27,7 @@ fn polygon_from_numpy(arr: &Bound<'_, PyArray2<f64>>) -> Polygon {
     let view = readonly.as_array();
     view.rows()
         .into_iter()
-        .map(|row| Point(row[0], row[1]))
+        .map(|row| Point::new(row[0], row[1]))
         .collect()
 }
 

@@ -1,6 +1,13 @@
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::gen_type_alias_from_python;
 
+// --- Rust type aliases for complex return types ---
+pub type Edge2D = ((f64, f64), (f64, f64));
+pub type Edge3D = ((f64, f64, f64), (f64, f64, f64));
+pub type ArcClosestResult = (f64, (f64, f64), f64);
+pub type CubicBezier2D = ((f64, f64), (f64, f64), (f64, f64), (f64, f64));
+pub type NormalizePolygonsResult = (Vec<Vec<(f64, f64)>>, f64, f64);
+
 pyo3_stub_gen::module_doc!("raygeo.geo.types", "{}", MODULE_DOC);
 
 pub(crate) const MODULE_DOC: &str = "\

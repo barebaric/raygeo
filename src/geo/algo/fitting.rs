@@ -12,7 +12,7 @@ pub fn convert_arcs_to_beziers(data: &[Command]) -> Vec<Command> {
         return vec![];
     }
     let mut result: Vec<Command> = Vec::new();
-    let mut last_pos = Point3D(0.0, 0.0, 0.0);
+    let mut last_pos = Point3D::new(0.0, 0.0, 0.0);
     for cmd in data {
         let end_pos = cmd.end_point();
 
@@ -22,11 +22,11 @@ pub fn convert_arcs_to_beziers(data: &[Command]) -> Vec<Command> {
                 normal,
                 ..
             } => {
-                let clockwise = normal.2 < 0.0;
+                let clockwise = normal.z < 0.0;
                 let bezier_cmds = convert_arc_to_beziers_from_array(
                     last_pos,
                     end_pos,
-                    Point(center_offset.0, center_offset.1),
+                    Point::new(center_offset.x, center_offset.y),
                     clockwise,
                 );
                 result.extend(bezier_cmds);
@@ -46,7 +46,7 @@ pub fn linearize_data(data: &[Command], tolerance: f64) -> Vec<Command> {
         return vec![];
     }
     let mut result: Vec<Command> = Vec::new();
-    let mut last_pos = Point3D(0.0, 0.0, 0.0);
+    let mut last_pos = Point3D::new(0.0, 0.0, 0.0);
     let mut arc_buf = Vec::new();
     for cmd in data {
         let end_pos = cmd.end_point();
@@ -106,7 +106,7 @@ pub fn flatten_to_points(
 
     let mut subpaths: Vec<Vec<Point3D>> = Vec::new();
     let mut current_subpath: Vec<Point3D> = Vec::new();
-    let mut last_pos = Point3D(0.0, 0.0, 0.0);
+    let mut last_pos = Point3D::new(0.0, 0.0, 0.0);
     let mut arc_buf = Vec::new();
 
     for cmd in data {
@@ -206,19 +206,19 @@ pub fn are_points_collinear(points: &[Point3D], tolerance: f64) -> bool {
 
     let p1 = points[0];
     let p2 = points[points.len() - 1];
-    let dx = p2.0 - p1.0;
-    let dy = p2.1 - p1.1;
+    let dx = p2.x - p1.x;
+    let dy = p2.y - p1.y;
     let line_length = dx.hypot(dy);
 
     if line_length < 1e-9 {
         return points
             .iter()
-            .all(|p| (p.0 - p1.0).hypot(p.1 - p1.1) < tolerance);
+            .all(|p| (p.x - p1.x).hypot(p.y - p1.y) < tolerance);
     }
 
     for p in points.iter().skip(1).take(points.len() - 2) {
-        let vx = p.0 - p1.0;
-        let vy = p.1 - p1.1;
+        let vx = p.x - p1.x;
+        let vy = p.y - p1.y;
         let dist = (vx * dy - vy * dx).abs() / line_length;
         if dist > tolerance {
             return false;
@@ -233,9 +233,9 @@ pub fn fit_circle_to_3_points(
     p2: Point3D,
     p3: Point3D,
 ) -> Option<(Point, f64)> {
-    let (x1, y1) = (p1.0, p1.1);
-    let (x2, y2) = (p2.0, p2.1);
-    let (x3, y3) = (p3.0, p3.1);
+    let (x1, y1) = (p1.x, p1.y);
+    let (x2, y2) = (p2.x, p2.y);
+    let (x3, y3) = (p3.x, p3.y);
 
     let area = x1 * (y2 - y3) + x2 * (y3 - y1) + x3 * (y1 - y2);
     if area.abs() < 1e-9 {
@@ -254,7 +254,7 @@ pub fn fit_circle_to_3_points(
     let xc = ((sq1 - sq2) * (y3 - y2) - (sq2 - sq3) * (y2 - y1)) / d12;
     let yc = ((x2 - x1) * (sq2 - sq3) - (x3 - x2) * (sq1 - sq2)) / d12;
 
-    let center = Point(xc, yc);
+    let center = Point::new(xc, yc);
     let radius = (x1 - xc).hypot(y1 - yc);
     Some((center, radius))
 }
@@ -286,8 +286,8 @@ pub fn fit_circle_to_points(points: &[Point3D]) -> Option<(Point, f64, f64)> {
     let mut sb = 0.0;
 
     for p in points {
-        let x = p.0;
-        let y = p.1;
+        let x = p.x;
+        let y = p.y;
         let x2y2 = x * x + y * y;
         sxx += 2.0 * x * 2.0 * x;
         sxy += 2.0 * x * 2.0 * y;
@@ -315,11 +315,11 @@ pub fn fit_circle_to_points(points: &[Point3D]) -> Option<(Point, f64, f64)> {
         return None;
     }
     let r = r_sq.sqrt();
-    let center = Point(xc, yc);
+    let center = Point::new(xc, yc);
 
     let mut max_err = 0.0;
     for p in points {
-        let dist = (p.0 - xc).hypot(p.1 - yc);
+        let dist = (p.x - xc).hypot(p.y - yc);
         let err = (dist - r).abs();
         if err > max_err {
             max_err = err;
@@ -335,10 +335,10 @@ pub fn project_circle_center_to_bisector(
     p2: Point3D,
     center: Point,
 ) -> Point {
-    let (x1, y1) = (p1.0, p1.1);
-    let (x2, y2) = (p2.0, p2.1);
-    let cx = center.0;
-    let cy = center.1;
+    let (x1, y1) = (p1.x, p1.y);
+    let (x2, y2) = (p2.x, p2.y);
+    let cx = center.x;
+    let cy = center.y;
 
     let dx = x2 - x1;
     let dy = y2 - y1;
@@ -357,7 +357,7 @@ pub fn project_circle_center_to_bisector(
     let proj_x = dx * proj_factor;
     let proj_y = dy * proj_factor;
 
-    Point(cx - proj_x, cy - proj_y)
+    Point::new(cx - proj_x, cy - proj_y)
 }
 
 /// Computes the maximum deviation of a polyline from a reference arc defined by
@@ -370,15 +370,15 @@ pub fn get_polyline_arc_deviation(
     if points.len() < 2 {
         return 0.0;
     }
-    let xc = center.0;
-    let yc = center.1;
+    let xc = center.x;
+    let yc = center.y;
     let mut max_deviation = 0.0_f64;
 
     for i in 0..(points.len() - 1) {
         let p1 = points[i];
         let p2 = points[i + 1];
-        let (x1, y1) = (p1.0, p1.1);
-        let (x2, y2) = (p2.0, p2.1);
+        let (x1, y1) = (p1.x, p1.y);
+        let (x2, y2) = (p2.x, p2.y);
         let dx = x2 - x1;
         let dy = y2 - y1;
         let seg_len = dx.hypot(dy);
@@ -425,24 +425,25 @@ pub fn convert_arc_to_beziers_from_array(
     center_offset: Point,
     clockwise: bool,
 ) -> Vec<Command> {
-    let p0_2d = Point(start_point.0, start_point.1);
-    let p_end_2d = Point(end_point.0, end_point.1);
-    let z_start = start_point.2;
-    let z_end = end_point.2;
+    let p0_2d = Point::new(start_point.x, start_point.y);
+    let p_end_2d = Point::new(end_point.x, end_point.y);
+    let z_start = start_point.z;
+    let z_end = end_point.z;
 
-    let center = Point(p0_2d.0 + center_offset.0, p0_2d.1 + center_offset.1);
-    let radius = center_offset.0.hypot(center_offset.1);
-    let radius_end = (p_end_2d.0 - center.0).hypot(p_end_2d.1 - center.1);
+    let center =
+        Point::new(p0_2d.x + center_offset.x, p0_2d.y + center_offset.y);
+    let radius = center_offset.x.hypot(center_offset.y);
+    let radius_end = (p_end_2d.x - center.x).hypot(p_end_2d.y - center.y);
 
     if radius < 1e-9 {
         return vec![];
     }
 
-    let is_coincident = (start_point.0 - end_point.0).abs() < 1e-12
-        && (start_point.1 - end_point.1).abs() < 1e-12;
+    let is_coincident = (start_point.x - end_point.x).abs() < 1e-12
+        && (start_point.y - end_point.y).abs() < 1e-12;
 
     let (start_angle, total_sweep) = if is_coincident {
-        let sa = (p0_2d.1 - center.1).atan2(p0_2d.0 - center.0);
+        let sa = (p0_2d.y - center.y).atan2(p0_2d.x - center.x);
         let sweep = if clockwise { -2.0 * PI } else { 2.0 * PI };
         (sa, sweep)
     } else {
@@ -469,35 +470,37 @@ pub fn convert_arc_to_beziers_from_array(
         } else {
             let t1 = (i + 1) as f64 / num_segments as f64;
             let radius1 = radius + t1 * (radius_end - radius);
-            let p3x = center.0 + radius1 * angle1.cos();
-            let p3y = center.1 + radius1 * angle1.sin();
+            let p3x = center.x + radius1 * angle1.cos();
+            let p3y = center.y + radius1 * angle1.sin();
             let p3z = z_start + t1 * (z_end - z_start);
-            Point3D(p3x, p3y, p3z)
+            Point3D::new(p3x, p3y, p3z)
         };
 
-        let r_vec0 = Point(current_p0.0 - center.0, current_p0.1 - center.1);
-        let r_vec1 = Point(current_p3.0 - center.0, current_p3.1 - center.1);
+        let r_vec0 =
+            Point::new(current_p0.x - center.x, current_p0.y - center.y);
+        let r_vec1 =
+            Point::new(current_p3.x - center.x, current_p3.y - center.y);
 
         let t_vec0 = if clockwise {
-            Point(r_vec0.1, -r_vec0.0)
+            Point::new(r_vec0.y, -r_vec0.x)
         } else {
-            Point(-r_vec0.1, r_vec0.0)
+            Point::new(-r_vec0.y, r_vec0.x)
         };
         let t_vec1 = if clockwise {
-            Point(r_vec1.1, -r_vec1.0)
+            Point::new(r_vec1.y, -r_vec1.x)
         } else {
-            Point(-r_vec1.1, r_vec1.0)
+            Point::new(-r_vec1.y, r_vec1.x)
         };
 
-        let c1 = Point3D(
-            current_p0.0 + t_vec0.0 * kappa,
-            current_p0.1 + t_vec0.1 * kappa,
-            current_p0.2 * 2.0 / 3.0 + current_p3.2 * 1.0 / 3.0,
+        let c1 = Point3D::new(
+            current_p0.x + t_vec0.x * kappa,
+            current_p0.y + t_vec0.y * kappa,
+            current_p0.z * 2.0 / 3.0 + current_p3.z * 1.0 / 3.0,
         );
-        let c2 = Point3D(
-            current_p3.0 - t_vec1.0 * kappa,
-            current_p3.1 - t_vec1.1 * kappa,
-            current_p0.2 * 1.0 / 3.0 + current_p3.2 * 2.0 / 3.0,
+        let c2 = Point3D::new(
+            current_p3.x - t_vec1.x * kappa,
+            current_p3.y - t_vec1.y * kappa,
+            current_p0.z * 1.0 / 3.0 + current_p3.z * 2.0 / 3.0,
         );
 
         bezier_cmds.push(Command::Bezier {
@@ -521,8 +524,8 @@ pub fn get_polyline_line_deviation(
 ) -> (f64, usize) {
     let p_start = points[start];
     let p_end = points[end];
-    let dx = p_end.0 - p_start.0;
-    let dy = p_end.1 - p_start.1;
+    let dx = p_end.x - p_start.x;
+    let dy = p_end.y - p_start.y;
     let line_len_sq = dx * dx + dy * dy;
 
     let mut max_dist_sq = 0.0;
@@ -530,7 +533,7 @@ pub fn get_polyline_line_deviation(
 
     if line_len_sq < 1e-12 {
         for (i, p) in points.iter().enumerate().take(end).skip(start + 1) {
-            let d_sq = (p.0 - p_start.0).powi(2) + (p.1 - p_start.1).powi(2);
+            let d_sq = (p.x - p_start.x).powi(2) + (p.y - p_start.y).powi(2);
             if d_sq > max_dist_sq {
                 max_dist_sq = d_sq;
                 max_idx = i;
@@ -540,7 +543,7 @@ pub fn get_polyline_line_deviation(
     }
 
     for (i, p) in points.iter().enumerate().take(end).skip(start + 1) {
-        let cross = (p.0 - p_start.0) * dy - (p.1 - p_start.1) * dx;
+        let cross = (p.x - p_start.x) * dy - (p.y - p_start.y) * dx;
         let d_sq = (cross * cross) / line_len_sq;
         if d_sq > max_dist_sq {
             max_dist_sq = d_sq;
@@ -571,10 +574,10 @@ pub fn fit_points_recursive(
         let p_prev = points[split_idx - 1];
         let p_curr = points[split_idx];
         let p_next = points[split_idx + 1];
-        let dx1 = p_curr.0 - p_prev.0;
-        let dy1 = p_curr.1 - p_prev.1;
-        let dx2 = p_next.0 - p_curr.0;
-        let dy2 = p_next.1 - p_curr.1;
+        let dx1 = p_curr.x - p_prev.x;
+        let dy1 = p_curr.y - p_prev.y;
+        let dx2 = p_next.x - p_curr.x;
+        let dy2 = p_next.y - p_curr.y;
         let len1 = dx1.hypot(dy1);
         let len2 = dx2.hypot(dy2);
         if len1 > 1e-9 && len2 > 1e-9 {
@@ -590,7 +593,7 @@ pub fn fit_points_recursive(
     let is_closed_range = {
         let sp = points[start];
         let ep = points[end];
-        (sp.0 - ep.0).abs() < 1e-6 && (sp.1 - ep.1).abs() < 1e-6
+        (sp.x - ep.x).abs() < 1e-6 && (sp.y - ep.y).abs() < 1e-6
     };
 
     if !is_sharp && !is_closed_range && end - start == 2 {
@@ -599,25 +602,28 @@ pub fn fit_points_recursive(
         let p3 = points[end];
         if let Some((center, _radius)) = fit_circle_to_3_points(p1, p2, p3) {
             let center = project_circle_center_to_bisector(p1, p3, center);
-            let radius = (p1.0 - center.0).hypot(p1.1 - center.1);
+            let radius = (p1.x - center.x).hypot(p1.y - center.y);
             let three = [p1, p2, p3];
             let arc_dev =
                 get_polyline_arc_deviation(three.as_slice(), center, radius);
             if arc_dev < tolerance {
-                let pts =
-                    [Point(p1.0, p1.1), Point(p2.0, p2.1), Point(p3.0, p3.1)];
+                let pts = [
+                    Point::new(p1.x, p1.y),
+                    Point::new(p2.x, p2.y),
+                    Point::new(p3.x, p3.y),
+                ];
                 let is_cw = is_arc_clockwise(pts.as_slice(), center);
                 return vec![Command::Arc {
                     end: p3,
-                    center_offset: Point3D(
-                        center.0 - p1.0,
-                        center.1 - p1.1,
+                    center_offset: Point3D::new(
+                        center.x - p1.x,
+                        center.y - p1.y,
                         0.0,
                     ),
                     normal: if is_cw {
-                        Point3D(0.0, 0.0, -1.0)
+                        Point3D::new(0.0, 0.0, -1.0)
                     } else {
-                        Point3D(0.0, 0.0, 1.0)
+                        Point3D::new(0.0, 0.0, 1.0)
                     },
                 }];
             }
@@ -633,25 +639,25 @@ pub fn fit_points_recursive(
                 center,
             );
             let radius =
-                (points[start].0 - center.0).hypot(points[start].1 - center.1);
+                (points[start].x - center.x).hypot(points[start].y - center.y);
             let arc_dev = get_polyline_arc_deviation(&subset, center, radius);
             if arc_dev < tolerance {
                 let is_cw = {
                     let pts2d: Vec<Point> =
-                        subset.iter().map(|p| Point(p.0, p.1)).collect();
+                        subset.iter().map(|p| Point::new(p.x, p.y)).collect();
                     is_arc_clockwise(&pts2d, center)
                 };
                 return vec![Command::Arc {
                     end: points[end],
-                    center_offset: Point3D(
-                        center.0 - points[start].0,
-                        center.1 - points[start].1,
+                    center_offset: Point3D::new(
+                        center.x - points[start].x,
+                        center.y - points[start].y,
                         0.0,
                     ),
                     normal: if is_cw {
-                        Point3D(0.0, 0.0, -1.0)
+                        Point3D::new(0.0, 0.0, -1.0)
                     } else {
-                        Point3D(0.0, 0.0, 1.0)
+                        Point3D::new(0.0, 0.0, 1.0)
                     },
                 }];
             }
@@ -708,7 +714,7 @@ pub fn fit_curves(
         chain.clear();
     };
 
-    let mut last_pos = Point3D(0.0, 0.0, 0.0);
+    let mut last_pos = Point3D::new(0.0, 0.0, 0.0);
 
     for (i, cmd) in data.iter().enumerate() {
         let end_pos = cmd.end_point();
@@ -821,7 +827,7 @@ pub fn optimize_path_from_array(
         chain.clear();
     };
 
-    let mut last_pos = Point3D(0.0, 0.0, 0.0);
+    let mut last_pos = Point3D::new(0.0, 0.0, 0.0);
 
     for cmd in data {
         let end_pos = cmd.end_point();

@@ -39,7 +39,7 @@ fn prepare_contour_items(
         let mut verts = vertices.clone();
         let first = verts[0];
         let last = verts[verts.len() - 1];
-        if (first.0 - last.0).abs() < 1e-9 && (first.1 - last.1).abs() < 1e-9 {
+        if (first.x - last.x).abs() < 1e-9 && (first.y - last.y).abs() < 1e-9 {
             verts.pop();
         }
         if verts.len() < 3 {
@@ -49,12 +49,12 @@ fn prepare_contour_items(
         let n = verts.len();
         for j in 0..n {
             let k = (j + 1) % n;
-            area += verts[j].0 * verts[k].1;
-            area -= verts[k].0 * verts[j].1;
+            area += verts[j].x * verts[k].y;
+            area -= verts[k].x * verts[j].y;
         }
         area = area.abs() / 2.0;
         // Preserve Z from the source geometry's first point (Move command).
-        let z = geo.data.first().map(|cmd| cmd.end_point().2).unwrap_or(0.0);
+        let z = geo.data.first().map(|cmd| cmd.end_point().z).unwrap_or(0.0);
         items.push(ContourItem {
             path: verts,
             area,
@@ -156,8 +156,10 @@ pub fn grow_geometry(geometry: &Geometry, offset: f64) -> Geometry {
             offset_contour_group(&solid_item.path, &hole_paths, offset);
         for new_vertices in offset_contours {
             let z = solid_item.z;
-            let points: Vec<Point3D> =
-                new_vertices.iter().map(|p| Point3D(p.0, p.1, z)).collect();
+            let points: Vec<Point3D> = new_vertices
+                .iter()
+                .map(|p| Point3D::new(p.x, p.y, z))
+                .collect();
             let new_contour_geo = Geometry::from_points(&points, true);
             if !new_contour_geo.is_empty() {
                 new_geo.extend(&new_contour_geo);

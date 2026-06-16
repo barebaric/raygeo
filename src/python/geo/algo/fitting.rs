@@ -8,7 +8,7 @@ point sequences. Includes recursive fitting with primitives, polyline
 linearization, and evaluating fitting quality (line and arc deviation).
 ";
 
-use super::super::flex_point::PyPoint3D;
+use super::super::flex_point::{point_to_tuple, points3d_to_tuples, PyPoint3D};
 use super::super::Geometry;
 use crate::geo::algo::fitting::{
     are_points_collinear, fit_circle_to_3_points, fit_circle_to_points,
@@ -67,7 +67,7 @@ pub fn register(algo_mod: &Bound<'_, PyModule>) -> PyResult<()> {
 #[pyo3(signature = (points, tolerance=1e-6))]
 fn are_points_collinear_py(points: Vec<PyPoint3D>, tolerance: f64) -> bool {
     let pts: Vec<Point3D> =
-        points.iter().map(|p| Point3D(p.0, p.1, p.2)).collect();
+        points.iter().map(|p| Point3D::new(p.0, p.1, p.2)).collect();
     are_points_collinear(&pts, tolerance)
 }
 
@@ -98,12 +98,13 @@ fn fit_circle_to_3_points_py(
     p1: PyPoint3D,
     p2: PyPoint3D,
     p3: PyPoint3D,
-) -> Option<(Point, f64)> {
+) -> Option<((f64, f64), f64)> {
     fit_circle_to_3_points(
-        Point3D(p1.0, p1.1, p1.2),
-        Point3D(p2.0, p2.1, p2.2),
-        Point3D(p3.0, p3.1, p3.2),
+        Point3D::new(p1.0, p1.1, p1.2),
+        Point3D::new(p2.0, p2.1, p2.2),
+        Point3D::new(p3.0, p3.1, p3.2),
     )
+    .map(|(center, radius)| ((center.x, center.y), radius))
 }
 
 #[gen_stub_pyfunction(
@@ -127,10 +128,11 @@ fn fit_circle_to_3_points_py(
 #[pyfunction(name = "fit_circle_to_points")]
 fn fit_circle_to_points_py(
     points: Vec<PyPoint3D>,
-) -> Option<(Point, f64, f64)> {
+) -> Option<((f64, f64), f64, f64)> {
     let pts: Vec<Point3D> =
-        points.iter().map(|p| Point3D(p.0, p.1, p.2)).collect();
+        points.iter().map(|p| Point3D::new(p.0, p.1, p.2)).collect();
     fit_circle_to_points(&pts)
+        .map(|(center, radius, error)| ((center.x, center.y), radius, error))
 }
 
 #[gen_stub_pyfunction(
@@ -159,13 +161,13 @@ fn fit_circle_to_points_py(
 fn project_circle_center_to_bisector_py(
     p1: PyPoint3D,
     p2: PyPoint3D,
-    center: Point,
-) -> Point {
-    project_circle_center_to_bisector(
-        Point3D(p1.0, p1.1, p1.2),
-        Point3D(p2.0, p2.1, p2.2),
-        center,
-    )
+    center: (f64, f64),
+) -> (f64, f64) {
+    point_to_tuple(project_circle_center_to_bisector(
+        Point3D::new(p1.0, p1.1, p1.2),
+        Point3D::new(p2.0, p2.1, p2.2),
+        Point::new(center.0, center.1),
+    ))
 }
 
 #[gen_stub_pyfunction(
@@ -192,8 +194,11 @@ fn project_circle_center_to_bisector_py(
 fn flatten_to_points_py(
     geometry: &Geometry,
     tolerance: f64,
-) -> Vec<Vec<Point3D>> {
+) -> Vec<Vec<(f64, f64, f64)>> {
     flatten_to_points(geometry.inner.data(), tolerance)
+        .into_iter()
+        .map(points3d_to_tuples)
+        .collect()
 }
 
 #[gen_stub_pyfunction(
@@ -254,10 +259,10 @@ fn fit_points_recursive_py(
     end_idx: usize,
 ) -> Geometry {
     let pts: Vec<Point3D> =
-        points.iter().map(|p| Point3D(p.0, p.1, p.2)).collect();
+        points.iter().map(|p| Point3D::new(p.0, p.1, p.2)).collect();
     let core = CoreGeometry {
         data: fit_points_recursive(&pts, tolerance, start_idx, end_idx),
-        last_move_to: Point3D(0.0, 0.0, 0.0),
+        last_move_to: Point3D::new(0.0, 0.0, 0.0),
         uniform_scalable: true,
     };
     Geometry { inner: core }
@@ -289,10 +294,10 @@ fn fit_points_with_primitives_py(
     tolerance: f64,
 ) -> Geometry {
     let pts: Vec<Point3D> =
-        points.iter().map(|p| Point3D(p.0, p.1, p.2)).collect();
+        points.iter().map(|p| Point3D::new(p.0, p.1, p.2)).collect();
     let core = CoreGeometry {
         data: fit_points_with_primitives(&pts, tolerance),
-        last_move_to: Point3D(0.0, 0.0, 0.0),
+        last_move_to: Point3D::new(0.0, 0.0, 0.0),
         uniform_scalable: true,
     };
     Geometry { inner: core }
@@ -326,7 +331,7 @@ fn get_polyline_line_deviation_py(
     end: usize,
 ) -> (f64, usize) {
     let pts: Vec<Point3D> =
-        points.iter().map(|p| Point3D(p.0, p.1, p.2)).collect();
+        points.iter().map(|p| Point3D::new(p.0, p.1, p.2)).collect();
     get_polyline_line_deviation(&pts, start, end)
 }
 
@@ -354,10 +359,10 @@ fn get_polyline_line_deviation_py(
 #[pyfunction(name = "get_polyline_arc_deviation")]
 fn get_polyline_arc_deviation_py(
     points: Vec<PyPoint3D>,
-    center: Point,
+    center: (f64, f64),
     radius: f64,
 ) -> f64 {
     let pts: Vec<Point3D> =
-        points.iter().map(|p| Point3D(p.0, p.1, p.2)).collect();
-    get_polyline_arc_deviation(&pts, center, radius)
+        points.iter().map(|p| Point3D::new(p.0, p.1, p.2)).collect();
+    get_polyline_arc_deviation(&pts, Point::new(center.0, center.1), radius)
 }

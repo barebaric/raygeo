@@ -1,7 +1,3 @@
-use std::ops::{
-    Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign,
-};
-
 use crate::constants::EPSILON_COLLINEAR;
 use crate::geo::shape::arc::{
     get_arc_bounds, get_arc_closest_point, get_arc_sweep_3d, linearize_arc,
@@ -12,29 +8,28 @@ use crate::geo::shape::bezier::{
 use crate::geo::shape::line::get_line_segment_closest_point;
 
 /// A 2D point represented as (x, y) coordinates.
-#[derive(Clone, Copy, Debug, Default, PartialEq, PartialOrd)]
-pub struct Point(pub f64, pub f64);
+pub type Point = glam::DVec2;
 
 /// Project a 3D point to the XY plane, dropping Z.
 pub fn project_point_to_xy(p: Point3D) -> Point {
-    Point(p.0, p.1)
+    Point::new(p.x, p.y)
 }
 
 /// Project a slice of 3D points to the XY plane, dropping Z.
 pub fn project_points_to_xy(points: &[Point3D]) -> Vec<Point> {
-    points.iter().map(|p| Point(p.0, p.1)).collect()
+    points.iter().map(|p| Point::new(p.x, p.y)).collect()
 }
 
 /// Lift 2D points to the XY plane at a given Z height.
 pub fn lift_points_to_xy_plane(points: &[Point], z: f64) -> Vec<Point3D> {
-    points.iter().map(|p| Point3D(p.0, p.1, z)).collect()
+    points.iter().map(|p| Point3D::new(p.x, p.y, z)).collect()
 }
 
 /// Check whether all points share the same Z (within tolerance).
 /// Returns `Some(z)` if planar in Z, `None` otherwise.
 pub fn is_planar_in_z(points: &[Point3D], tol: f64) -> Option<f64> {
-    let z0 = points.first()?.2;
-    if points.iter().all(|p| (p.2 - z0).abs() <= tol) {
+    let z0 = points.first()?.z;
+    if points.iter().all(|p| (p.z - z0).abs() <= tol) {
         Some(z0)
     } else {
         None
@@ -42,193 +37,7 @@ pub fn is_planar_in_z(points: &[Point3D], tol: f64) -> Option<f64> {
 }
 
 /// A 3D point represented as (x, y, z) coordinates.
-#[derive(Clone, Copy, Debug, Default, PartialEq)]
-pub struct Point3D(pub f64, pub f64, pub f64);
-
-// --- Point operator overloading ---
-
-impl Add for Point {
-    type Output = Self;
-    fn add(self, rhs: Self) -> Self {
-        Point(self.0 + rhs.0, self.1 + rhs.1)
-    }
-}
-impl AddAssign for Point {
-    fn add_assign(&mut self, rhs: Self) {
-        self.0 += rhs.0;
-        self.1 += rhs.1;
-    }
-}
-impl Sub for Point {
-    type Output = Self;
-    fn sub(self, rhs: Self) -> Self {
-        Point(self.0 - rhs.0, self.1 - rhs.1)
-    }
-}
-impl SubAssign for Point {
-    fn sub_assign(&mut self, rhs: Self) {
-        self.0 -= rhs.0;
-        self.1 -= rhs.1;
-    }
-}
-impl Mul<f64> for Point {
-    type Output = Self;
-    fn mul(self, rhs: f64) -> Self {
-        Point(self.0 * rhs, self.1 * rhs)
-    }
-}
-impl MulAssign<f64> for Point {
-    fn mul_assign(&mut self, rhs: f64) {
-        self.0 *= rhs;
-        self.1 *= rhs;
-    }
-}
-impl Div<f64> for Point {
-    type Output = Self;
-    fn div(self, rhs: f64) -> Self {
-        Point(self.0 / rhs, self.1 / rhs)
-    }
-}
-impl DivAssign<f64> for Point {
-    fn div_assign(&mut self, rhs: f64) {
-        self.0 /= rhs;
-        self.1 /= rhs;
-    }
-}
-impl Neg for Point {
-    type Output = Self;
-    fn neg(self) -> Self {
-        Point(-self.0, -self.1)
-    }
-}
-
-impl Point {
-    pub fn new(x: f64, y: f64) -> Self {
-        Point(x, y)
-    }
-    pub fn x(self) -> f64 {
-        self.0
-    }
-    pub fn y(self) -> f64 {
-        self.1
-    }
-    pub fn length(self) -> f64 {
-        (self.0 * self.0 + self.1 * self.1).sqrt()
-    }
-    pub fn length_sq(self) -> f64 {
-        self.0 * self.0 + self.1 * self.1
-    }
-    pub fn distance(self, other: Point) -> f64 {
-        (self - other).length()
-    }
-    pub fn dot(self, other: Point) -> f64 {
-        self.0 * other.0 + self.1 * other.1
-    }
-    pub fn normalize(self) -> Point {
-        let len = self.length();
-        if len < 1e-15 {
-            Point(0.0, 0.0)
-        } else {
-            self / len
-        }
-    }
-}
-
-// --- Point3D operator overloading ---
-
-impl Add for Point3D {
-    type Output = Self;
-    fn add(self, rhs: Self) -> Self {
-        Point3D(self.0 + rhs.0, self.1 + rhs.1, self.2 + rhs.2)
-    }
-}
-impl AddAssign for Point3D {
-    fn add_assign(&mut self, rhs: Self) {
-        self.0 += rhs.0;
-        self.1 += rhs.1;
-        self.2 += rhs.2;
-    }
-}
-impl Sub for Point3D {
-    type Output = Self;
-    fn sub(self, rhs: Self) -> Self {
-        Point3D(self.0 - rhs.0, self.1 - rhs.1, self.2 - rhs.2)
-    }
-}
-impl SubAssign for Point3D {
-    fn sub_assign(&mut self, rhs: Self) {
-        self.0 -= rhs.0;
-        self.1 -= rhs.1;
-        self.2 -= rhs.2;
-    }
-}
-impl Mul<f64> for Point3D {
-    type Output = Self;
-    fn mul(self, rhs: f64) -> Self {
-        Point3D(self.0 * rhs, self.1 * rhs, self.2 * rhs)
-    }
-}
-impl MulAssign<f64> for Point3D {
-    fn mul_assign(&mut self, rhs: f64) {
-        self.0 *= rhs;
-        self.1 *= rhs;
-        self.2 *= rhs;
-    }
-}
-impl Div<f64> for Point3D {
-    type Output = Self;
-    fn div(self, rhs: f64) -> Self {
-        Point3D(self.0 / rhs, self.1 / rhs, self.2 / rhs)
-    }
-}
-impl DivAssign<f64> for Point3D {
-    fn div_assign(&mut self, rhs: f64) {
-        self.0 /= rhs;
-        self.1 /= rhs;
-        self.2 /= rhs;
-    }
-}
-impl Neg for Point3D {
-    type Output = Self;
-    fn neg(self) -> Self {
-        Point3D(-self.0, -self.1, -self.2)
-    }
-}
-
-impl Point3D {
-    pub fn new(x: f64, y: f64, z: f64) -> Self {
-        Point3D(x, y, z)
-    }
-    pub fn x(self) -> f64 {
-        self.0
-    }
-    pub fn y(self) -> f64 {
-        self.1
-    }
-    pub fn z(self) -> f64 {
-        self.2
-    }
-    pub fn length(self) -> f64 {
-        (self.0 * self.0 + self.1 * self.1 + self.2 * self.2).sqrt()
-    }
-    pub fn length_sq(self) -> f64 {
-        self.0 * self.0 + self.1 * self.1 + self.2 * self.2
-    }
-    pub fn distance(self, other: Point3D) -> f64 {
-        (self - other).length()
-    }
-    pub fn dot(self, other: Point3D) -> f64 {
-        self.0 * other.0 + self.1 * other.1 + self.2 * other.2
-    }
-    pub fn normalize(self) -> Point3D {
-        let len = self.length();
-        if len < 1e-15 {
-            Point3D(0.0, 0.0, 0.0)
-        } else {
-            self / len
-        }
-    }
-}
+pub type Point3D = glam::DVec3;
 
 /// A 2D axis-aligned bounding box represented as (x_min, y_min, x_max, y_max).
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
@@ -300,7 +109,7 @@ impl Command {
         match self {
             Command::Move { .. } | Command::Line { .. } => {
                 let end = self.end_point();
-                (end.0 - start_point.0).hypot(end.1 - start_point.1)
+                (end.x - start_point.x).hypot(end.y - start_point.y)
             }
             Command::Arc {
                 end,
@@ -310,25 +119,25 @@ impl Command {
                 // Use 2D projection for length (XY-plane arcs; for true 3D
                 // arcs this falls back to the 2D sweep in the arc's plane).
                 let n =
-                    glam::DVec3::new(normal.0, normal.1, normal.2).normalize();
+                    glam::DVec3::new(normal.x, normal.y, normal.z).normalize();
                 if n.length() < 1e-30 {
-                    return (end.0 - start_point.0)
-                        .hypot(end.1 - start_point.1);
+                    return (end.x - start_point.x)
+                        .hypot(end.y - start_point.y);
                 }
                 let center = glam::DVec3::new(
-                    start_point.0 + center_offset.0,
-                    start_point.1 + center_offset.1,
-                    start_point.2 + center_offset.2,
+                    start_point.x + center_offset.x,
+                    start_point.y + center_offset.y,
+                    start_point.z + center_offset.z,
                 );
                 let r0 = glam::DVec3::new(
-                    start_point.0 - center.x,
-                    start_point.1 - center.y,
-                    start_point.2 - center.z,
+                    start_point.x - center.x,
+                    start_point.y - center.y,
+                    start_point.z - center.z,
                 );
                 let r1 = glam::DVec3::new(
-                    end.0 - center.x,
-                    end.1 - center.y,
-                    end.2 - center.z,
+                    end.x - center.x,
+                    end.y - center.y,
+                    end.z - center.z,
                 );
                 let r0_proj = r0 - n * r0.dot(n);
                 let radius = r0_proj.length();
@@ -352,14 +161,14 @@ impl Command {
                 control1,
                 control2,
             } => {
-                let sx = start_point.0;
-                let sy = start_point.1;
-                let ex = end.0;
-                let ey = end.1;
-                let l01 = (sx - control1.0).hypot(sy - control1.1);
+                let sx = start_point.x;
+                let sy = start_point.y;
+                let ex = end.x;
+                let ey = end.y;
+                let l01 = (sx - control1.x).hypot(sy - control1.y);
                 let l12 =
-                    (control1.0 - control2.0).hypot(control1.1 - control2.1);
-                let l23 = (control2.0 - ex).hypot(control2.1 - ey);
+                    (control1.x - control2.x).hypot(control1.y - control2.y);
+                let l23 = (control2.x - ex).hypot(control2.y - ey);
                 let estimated_len = l01 + l12 + l23;
                 let num_steps = (estimated_len / 0.1).ceil().max(2.0) as usize;
                 let step_f = num_steps as f64;
@@ -369,12 +178,12 @@ impl Command {
                     let t = i as f64 / step_f;
                     let omt = 1.0 - t;
                     let px = omt.powi(3) * sx
-                        + 3.0 * omt.powi(2) * t * control1.0
-                        + 3.0 * omt * t.powi(2) * control2.0
+                        + 3.0 * omt.powi(2) * t * control1.x
+                        + 3.0 * omt * t.powi(2) * control2.x
                         + t.powi(3) * ex;
                     let py = omt.powi(3) * sy
-                        + 3.0 * omt.powi(2) * t * control1.1
-                        + 3.0 * omt * t.powi(2) * control2.1
+                        + 3.0 * omt.powi(2) * t * control1.y
+                        + 3.0 * omt * t.powi(2) * control2.y
                         + t.powi(3) * ey;
                     total += (px - prev.0).hypot(py - prev.1);
                     prev = (px, py);
@@ -385,20 +194,20 @@ impl Command {
     }
 
     pub fn split_at_t(&self, start_point: Point3D, t: f64) -> Option<Command> {
-        let sx = start_point.0;
-        let sy = start_point.1;
-        let sz = start_point.2;
+        let sx = start_point.x;
+        let sy = start_point.y;
+        let sz = start_point.z;
         let end = self.end_point();
-        let ex = end.0;
-        let ey = end.1;
-        let ez = end.2;
+        let ex = end.x;
+        let ey = end.y;
+        let ez = end.z;
         match self {
             Command::Line { .. } => {
                 let nx = sx + t * (ex - sx);
                 let ny = sy + t * (ey - sy);
                 let nz = sz + t * (ez - sz);
                 Some(Command::Line {
-                    end: Point3D(nx, ny, nz),
+                    end: Point3D::new(nx, ny, nz),
                 })
             }
             Command::Arc {
@@ -407,11 +216,11 @@ impl Command {
                 ..
             } => {
                 let n =
-                    glam::DVec3::new(normal.0, normal.1, normal.2).normalize();
+                    glam::DVec3::new(normal.x, normal.y, normal.z).normalize();
                 let center = glam::DVec3::new(
-                    sx + center_offset.0,
-                    sy + center_offset.1,
-                    sz + center_offset.2,
+                    sx + center_offset.x,
+                    sy + center_offset.y,
+                    sz + center_offset.z,
                 );
                 let r0 = glam::DVec3::new(
                     sx - center.x,
@@ -449,7 +258,7 @@ impl Command {
                 };
                 let nz = sz + t * (ez - sz);
                 Some(Command::Arc {
-                    end: Point3D(nx, ny, nz),
+                    end: Point3D::new(nx, ny, nz),
                     center_offset: *center_offset,
                     normal: *normal,
                 })
@@ -457,12 +266,12 @@ impl Command {
             Command::Bezier {
                 control1, control2, ..
             } => {
-                let c1x = control1.0;
-                let c1y = control1.1;
-                let c1z = control1.2;
-                let c2x = control2.0;
-                let c2y = control2.1;
-                let c2z = control2.2;
+                let c1x = control1.x;
+                let c1y = control1.y;
+                let c1z = control1.z;
+                let c2x = control2.x;
+                let c2y = control2.y;
+                let c2z = control2.z;
                 let p01x = sx + t * (c1x - sx);
                 let p01y = sy + t * (c1y - sy);
                 let p01z = sz + t * (c1z - sz);
@@ -482,9 +291,9 @@ impl Command {
                 let p0123y = p012y + t * (p123y - p012y);
                 let p0123z = p012z + t * (p123z - p012z);
                 Some(Command::Bezier {
-                    end: Point3D(p0123x, p0123y, p0123z),
-                    control1: Point3D(p01x, p01y, p01z),
-                    control2: Point3D(p012x, p012y, p012z),
+                    end: Point3D::new(p0123x, p0123y, p0123z),
+                    control1: Point3D::new(p01x, p01y, p01z),
+                    control2: Point3D::new(p012x, p012y, p012z),
                 })
             }
             Command::Move { .. } => None,
@@ -497,8 +306,8 @@ impl Command {
         let (px, py) = match self {
             Command::Move { .. } => return None,
             Command::Line { .. } => {
-                let px = p0.0 + t * (p1.0 - p0.0);
-                let py = p0.1 + t * (p1.1 - p0.1);
+                let px = p0.x + t * (p1.x - p0.x);
+                let py = p0.y + t * (p1.y - p0.y);
                 (px, py)
             }
             Command::Arc {
@@ -507,28 +316,28 @@ impl Command {
                 ..
             } => {
                 let n =
-                    glam::DVec3::new(normal.0, normal.1, normal.2).normalize();
+                    glam::DVec3::new(normal.x, normal.y, normal.z).normalize();
                 let center = glam::DVec3::new(
-                    p0.0 + center_offset.0,
-                    p0.1 + center_offset.1,
-                    p0.2 + center_offset.2,
+                    p0.x + center_offset.x,
+                    p0.y + center_offset.y,
+                    p0.z + center_offset.z,
                 );
                 let r0 = glam::DVec3::new(
-                    p0.0 - center.x,
-                    p0.1 - center.y,
-                    p0.2 - center.z,
+                    p0.x - center.x,
+                    p0.y - center.y,
+                    p0.z - center.z,
                 );
                 let r1 = glam::DVec3::new(
-                    p1.0 - center.x,
-                    p1.1 - center.y,
-                    p1.2 - center.z,
+                    p1.x - center.x,
+                    p1.y - center.y,
+                    p1.z - center.z,
                 );
                 let r0_proj = r0 - n * r0.dot(n);
                 let r1_proj = r1 - n * r1.dot(n);
                 if r0_proj.length() < EPSILON_COLLINEAR
                     && r1_proj.length() < EPSILON_COLLINEAR
                 {
-                    (p0.0, p0.1)
+                    (p0.x, p0.y)
                 } else {
                     let (u, v, r_start, r_end) =
                         if r0_proj.length() < EPSILON_COLLINEAR {
@@ -558,32 +367,32 @@ impl Command {
             Command::Bezier {
                 control1, control2, ..
             } => {
-                let c1 = (control1.0, control1.1);
-                let c2 = (control2.0, control2.1);
+                let c1 = (control1.x, control1.y);
+                let c2 = (control2.x, control2.y);
                 let omt = 1.0 - t;
-                let px = omt.powi(3) * p0.0
+                let px = omt.powi(3) * p0.x
                     + 3.0 * omt.powi(2) * t * c1.0
                     + 3.0 * omt * t.powi(2) * c2.0
-                    + t.powi(3) * p1.0;
-                let py = omt.powi(3) * p0.1
+                    + t.powi(3) * p1.x;
+                let py = omt.powi(3) * p0.y
                     + 3.0 * omt.powi(2) * t * c1.1
                     + 3.0 * omt * t.powi(2) * c2.1
-                    + t.powi(3) * p1.1;
+                    + t.powi(3) * p1.y;
                 (px, py)
             }
         };
-        let pz = p0.2 + t * (p1.2 - p0.2);
-        Some(Point3D(px, py, pz))
+        let pz = p0.z + t * (p1.z - p0.z);
+        Some(Point3D::new(px, py, pz))
     }
 
     pub fn tangent_at(&self, start: Point3D, t: f64) -> Option<Point> {
-        let p0 = Point(start.0, start.1);
+        let p0 = Point::new(start.x, start.y);
         let p1_pt = self.end_point();
-        let p1 = Point(p1_pt.0, p1_pt.1);
+        let p1 = Point::new(p1_pt.x, p1_pt.y);
 
         let tangent_vec: Point = match self {
             Command::Move { .. } => return None,
-            Command::Line { .. } => Point(p1.0 - p0.0, p1.1 - p0.1),
+            Command::Line { .. } => Point::new(p1.x - p0.x, p1.y - p0.y),
             Command::Arc {
                 center_offset,
                 normal,
@@ -593,28 +402,28 @@ impl Command {
                 // project the resulting tangent into the XY plane.
                 let s3 = start;
                 let n =
-                    glam::DVec3::new(normal.0, normal.1, normal.2).normalize();
+                    glam::DVec3::new(normal.x, normal.y, normal.z).normalize();
                 let center = glam::DVec3::new(
-                    s3.0 + center_offset.0,
-                    s3.1 + center_offset.1,
-                    s3.2 + center_offset.2,
+                    s3.x + center_offset.x,
+                    s3.y + center_offset.y,
+                    s3.z + center_offset.z,
                 );
                 let r0 = glam::DVec3::new(
-                    s3.0 - center.x,
-                    s3.1 - center.y,
-                    s3.2 - center.z,
+                    s3.x - center.x,
+                    s3.y - center.y,
+                    s3.z - center.z,
                 );
                 let r1 = glam::DVec3::new(
-                    p1_pt.0 - center.x,
-                    p1_pt.1 - center.y,
-                    p1_pt.2 - center.z,
+                    p1_pt.x - center.x,
+                    p1_pt.y - center.y,
+                    p1_pt.z - center.z,
                 );
                 let r0_proj = r0 - n * r0.dot(n);
                 let r1_proj = r1 - n * r1.dot(n);
                 let (u, v, r_start, r_end) =
                     if r0_proj.length() < EPSILON_COLLINEAR {
                         if r1_proj.length() < EPSILON_COLLINEAR {
-                            return Some(Point(1.0, 0.0));
+                            return Some(Point::new(1.0, 0.0));
                         }
                         let u_ref = if n.x.abs() < 0.9 {
                             (glam::DVec3::X - n * n.x).normalize()
@@ -637,29 +446,29 @@ impl Command {
                 let pt = center + dir;
                 let radius_vec = pt - center;
                 let tangent = n.cross(radius_vec);
-                Point(tangent.x, tangent.y)
+                Point::new(tangent.x, tangent.y)
             }
             Command::Bezier {
                 control1, control2, ..
             } => {
-                let c1 = (control1.0, control1.1);
-                let c2 = (control2.0, control2.1);
+                let c1 = (control1.x, control1.y);
+                let c2 = (control2.x, control2.y);
                 let omt = 1.0 - t;
-                let tx = 3.0 * omt.powi(2) * (c1.0 - p0.0)
+                let tx = 3.0 * omt.powi(2) * (c1.0 - p0.x)
                     + 6.0 * omt * t * (c2.0 - c1.0)
-                    + 3.0 * t.powi(2) * (p1.0 - c2.0);
-                let ty = 3.0 * omt.powi(2) * (c1.1 - p0.1)
+                    + 3.0 * t.powi(2) * (p1.x - c2.0);
+                let ty = 3.0 * omt.powi(2) * (c1.1 - p0.y)
                     + 6.0 * omt * t * (c2.1 - c1.1)
-                    + 3.0 * t.powi(2) * (p1.1 - c2.1);
-                Point(tx, ty)
+                    + 3.0 * t.powi(2) * (p1.y - c2.1);
+                Point::new(tx, ty)
             }
         };
 
-        let norm = (tangent_vec.0.powi(2) + tangent_vec.1.powi(2)).sqrt();
+        let norm = (tangent_vec.x.powi(2) + tangent_vec.y.powi(2)).sqrt();
         if norm < 1e-9 {
-            return Some(Point(1.0, 0.0));
+            return Some(Point::new(1.0, 0.0));
         }
-        Some(Point(tangent_vec.0 / norm, tangent_vec.1 / norm))
+        Some(Point::new(tangent_vec.x / norm, tangent_vec.y / norm))
     }
 
     pub fn closest_point_to(
@@ -671,8 +480,8 @@ impl Command {
         match self {
             Command::Move { .. } => None,
             Command::Line { .. } => {
-                let p0 = Point(start.0, start.1);
-                let p1 = Point(self.end_point().0, self.end_point().1);
+                let p0 = Point::new(start.x, start.y);
+                let p1 = Point::new(self.end_point().x, self.end_point().y);
                 Some(get_line_segment_closest_point(p0, p1, x, y))
             }
             Command::Arc {
@@ -740,25 +549,25 @@ impl Command {
 
     pub fn bounding_box(&self, start: Point) -> Option<Rect> {
         let end = self.end_point();
-        let p1 = Point(end.0, end.1);
+        let p1 = Point::new(end.x, end.y);
         match self {
             Command::Move { .. } => None,
             Command::Line { .. } => Some(Rect(
-                start.0.min(p1.0),
-                start.1.min(p1.1),
-                start.0.max(p1.0),
-                start.1.max(p1.1),
+                start.x.min(p1.x),
+                start.y.min(p1.y),
+                start.x.max(p1.x),
+                start.y.max(p1.y),
             )),
             Command::Arc {
                 center_offset,
                 normal,
                 ..
             } => {
-                let clockwise = normal.2 < 0.0;
+                let clockwise = normal.z < 0.0;
                 Some(get_arc_bounds(
                     start,
                     p1,
-                    Point(center_offset.0, center_offset.1),
+                    Point::new(center_offset.x, center_offset.y),
                     clockwise,
                 ))
             }
@@ -766,8 +575,8 @@ impl Command {
                 control1, control2, ..
             } => Some(get_bezier_bounds(
                 start,
-                Point(control1.0, control1.1),
-                Point(control2.0, control2.1),
+                Point::new(control1.x, control1.y),
+                Point::new(control2.x, control2.y),
                 p1,
             )),
         }

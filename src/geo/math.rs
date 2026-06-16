@@ -32,7 +32,7 @@ fn transform_array_uniform(data: &[Command], matrix: DMat4) -> Vec<Command> {
     for cmd in data {
         let end_pt = cmd.end_point();
         let p = transform_point(matrix, end_pt);
-        let (nx, ny, nz) = (p.x(), p.y(), p.z());
+        let (nx, ny, nz) = (p.x, p.y, p.z);
 
         let transformed = match cmd {
             Command::Arc {
@@ -41,21 +41,21 @@ fn transform_array_uniform(data: &[Command], matrix: DMat4) -> Vec<Command> {
                 ..
             } => {
                 let (vi, vj) =
-                    transform_vec(matrix, center_offset.x(), center_offset.y());
+                    transform_vec(matrix, center_offset.x, center_offset.y);
                 let det = matrix.x_axis.x * matrix.y_axis.y
                     - matrix.y_axis.x * matrix.x_axis.y;
                 let cw = if det < 0.0 {
-                    normal.2 >= 0.0
+                    normal.z >= 0.0
                 } else {
-                    normal.2 < 0.0
+                    normal.z < 0.0
                 };
                 Command::Arc {
-                    end: Point3D(nx, ny, nz),
-                    center_offset: Point3D(vi, vj, 0.0),
+                    end: Point3D::new(nx, ny, nz),
+                    center_offset: Point3D::new(vi, vj, 0.0),
                     normal: if cw {
-                        Point3D(0.0, 0.0, -1.0)
+                        Point3D::new(0.0, 0.0, -1.0)
                     } else {
-                        Point3D(0.0, 0.0, 1.0)
+                        Point3D::new(0.0, 0.0, 1.0)
                     },
                 }
             }
@@ -63,20 +63,20 @@ fn transform_array_uniform(data: &[Command], matrix: DMat4) -> Vec<Command> {
                 control1, control2, ..
             } => {
                 let c1_t = transform_point(matrix, *control1);
-                let (c1x, c1y, c1z) = (c1_t.x(), c1_t.y(), c1_t.z());
+                let (c1x, c1y, c1z) = (c1_t.x, c1_t.y, c1_t.z);
                 let c2_t = transform_point(matrix, *control2);
-                let (c2x, c2y, c2z) = (c2_t.x(), c2_t.y(), c2_t.z());
+                let (c2x, c2y, c2z) = (c2_t.x, c2_t.y, c2_t.z);
                 Command::Bezier {
-                    end: Point3D(nx, ny, nz),
-                    control1: Point3D(c1x, c1y, c1z),
-                    control2: Point3D(c2x, c2y, c2z),
+                    end: Point3D::new(nx, ny, nz),
+                    control1: Point3D::new(c1x, c1y, c1z),
+                    control2: Point3D::new(c2x, c2y, c2z),
                 }
             }
             Command::Move { .. } => Command::Move {
-                end: Point3D(nx, ny, nz),
+                end: Point3D::new(nx, ny, nz),
             },
             Command::Line { .. } => Command::Line {
-                end: Point3D(nx, ny, nz),
+                end: Point3D::new(nx, ny, nz),
             },
         };
 
@@ -90,7 +90,7 @@ fn transform_array_non_uniform(
     matrix: DMat4,
 ) -> Vec<Command> {
     let mut result: Vec<Command> = Vec::new();
-    let mut last_pos: Point3D = Point3D(0.0, 0.0, 0.0);
+    let mut last_pos: Point3D = Point3D::new(0.0, 0.0, 0.0);
     let mut arc_buf = Vec::new();
 
     for cmd in data {
@@ -114,9 +114,9 @@ fn transform_array_non_uniform(
                 );
                 for (_, p2) in arc_buf.drain(..) {
                     let pt = transform_point(matrix, p2);
-                    let (tx, ty, tz) = (pt.x(), pt.y(), pt.z());
+                    let (tx, ty, tz) = (pt.x, pt.y, pt.z);
                     result.push(Command::Line {
-                        end: Point3D(tx, ty, tz),
+                        end: Point3D::new(tx, ty, tz),
                     });
                 }
             }
@@ -124,29 +124,29 @@ fn transform_array_non_uniform(
                 control1, control2, ..
             } => {
                 let p_t = transform_point(matrix, original_end);
-                let (nx, ny, nz) = (p_t.x(), p_t.y(), p_t.z());
+                let (nx, ny, nz) = (p_t.x, p_t.y, p_t.z);
                 let c1_t = transform_point(matrix, *control1);
-                let (c1x, c1y, c1z) = (c1_t.x(), c1_t.y(), c1_t.z());
+                let (c1x, c1y, c1z) = (c1_t.x, c1_t.y, c1_t.z);
                 let c2_t = transform_point(matrix, *control2);
-                let (c2x, c2y, c2z) = (c2_t.x(), c2_t.y(), c2_t.z());
+                let (c2x, c2y, c2z) = (c2_t.x, c2_t.y, c2_t.z);
                 result.push(Command::Bezier {
-                    end: Point3D(nx, ny, nz),
-                    control1: Point3D(c1x, c1y, c1z),
-                    control2: Point3D(c2x, c2y, c2z),
+                    end: Point3D::new(nx, ny, nz),
+                    control1: Point3D::new(c1x, c1y, c1z),
+                    control2: Point3D::new(c2x, c2y, c2z),
                 });
             }
             Command::Move { .. } => {
                 let p_t = transform_point(matrix, original_end);
-                let (nx, ny, nz) = (p_t.x(), p_t.y(), p_t.z());
+                let (nx, ny, nz) = (p_t.x, p_t.y, p_t.z);
                 result.push(Command::Move {
-                    end: Point3D(nx, ny, nz),
+                    end: Point3D::new(nx, ny, nz),
                 });
             }
             Command::Line { .. } => {
                 let p_t = transform_point(matrix, original_end);
-                let (nx, ny, nz) = (p_t.x(), p_t.y(), p_t.z());
+                let (nx, ny, nz) = (p_t.x, p_t.y, p_t.z);
                 result.push(Command::Line {
-                    end: Point3D(nx, ny, nz),
+                    end: Point3D::new(nx, ny, nz),
                 });
             }
         }
@@ -225,10 +225,10 @@ pub fn map_geometry_to_frame(
     );
 
     let t3 = DMat4::from_cols(
-        DVec4::new(u_vec.x(), u_vec.y(), 0.0, 0.0),
-        DVec4::new(v_vec.x(), v_vec.y(), 0.0, 0.0),
+        DVec4::new(u_vec.x, u_vec.y, 0.0, 0.0),
+        DVec4::new(v_vec.x, v_vec.y, 0.0, 0.0),
         DVec4::new(0.0, 0.0, 1.0, 0.0),
-        DVec4::new(origin.x(), origin.y(), 0.0, 1.0),
+        DVec4::new(origin.x, origin.y, 0.0, 1.0),
     );
 
     let final_matrix = t3 * t2 * t1;

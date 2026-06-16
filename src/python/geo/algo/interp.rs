@@ -9,7 +9,7 @@ use crate::geo::algo::interp::{
     compute_segment_delta, compute_t_range, project_t_along_segment,
     slice_scanline_data, solve_quadratic,
 };
-use crate::types::Point3D;
+use crate::python::geo::flex_point::tuple_to_point3d;
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::gen_stub_pyfunction;
 
@@ -48,10 +48,11 @@ pub fn register(algo_mod: &Bound<'_, PyModule>) -> PyResult<()> {
 )]
 #[pyfunction(name = "compute_segment_delta")]
 fn compute_segment_delta_py(
-    start: Point3D,
-    end: Point3D,
+    start: (f64, f64, f64),
+    end: (f64, f64, f64),
 ) -> (f64, f64, f64, f64) {
-    let d = compute_segment_delta(start, end);
+    let d =
+        compute_segment_delta(tuple_to_point3d(start), tuple_to_point3d(end));
     (d.dx, d.dy, d.dz, d.len_sq)
 }
 
@@ -75,8 +76,8 @@ fn compute_segment_delta_py(
 )]
 #[pyfunction(name = "project_t_along_segment")]
 fn project_t_along_segment_py(
-    origin: Point3D,
-    point: Point3D,
+    origin: (f64, f64, f64),
+    point: (f64, f64, f64),
     delta: (f64, f64, f64, f64),
 ) -> f64 {
     let d = crate::geo::algo::interp::SegmentDelta {
@@ -85,7 +86,11 @@ fn project_t_along_segment_py(
         dz: delta.2,
         len_sq: delta.3,
     };
-    project_t_along_segment(origin, point, &d)
+    project_t_along_segment(
+        tuple_to_point3d(origin),
+        tuple_to_point3d(point),
+        &d,
+    )
 }
 
 #[gen_stub_pyfunction(
@@ -110,9 +115,9 @@ fn project_t_along_segment_py(
 )]
 #[pyfunction(name = "compute_t_range")]
 fn compute_t_range_py(
-    origin: Point3D,
-    new_start: Point3D,
-    new_end: Point3D,
+    origin: (f64, f64, f64),
+    new_start: (f64, f64, f64),
+    new_end: (f64, f64, f64),
     delta: (f64, f64, f64, f64),
 ) -> (f64, f64) {
     let d = crate::geo::algo::interp::SegmentDelta {
@@ -121,7 +126,12 @@ fn compute_t_range_py(
         dz: delta.2,
         len_sq: delta.3,
     };
-    compute_t_range(origin, new_start, new_end, &d)
+    compute_t_range(
+        tuple_to_point3d(origin),
+        tuple_to_point3d(new_start),
+        tuple_to_point3d(new_end),
+        &d,
+    )
 }
 
 #[gen_stub_pyfunction(

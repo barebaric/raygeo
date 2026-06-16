@@ -47,8 +47,8 @@ pub fn clip_line_segment_with_rect_2d(
     rect: Rect,
 ) -> Option<(Point, Point)> {
     let Rect(x_min, y_min, x_max, y_max) = rect;
-    let (mut x1, mut y1) = (p1.0, p1.1);
-    let (mut x2, mut y2) = (p2.0, p2.1);
+    let (mut x1, mut y1) = (p1.x, p1.y);
+    let (mut x2, mut y2) = (p2.x, p2.y);
     let (dx, dy) = (x2 - x1, y2 - y1);
 
     let mut outcode1 = compute_outcode_2d(x1, y1, rect);
@@ -56,7 +56,7 @@ pub fn clip_line_segment_with_rect_2d(
 
     loop {
         if (outcode1 | outcode2) == 0 {
-            return Some((Point(x1, y1), Point(x2, y2)));
+            return Some((Point::new(x1, y1), Point::new(x2, y2)));
         }
         if (outcode1 & outcode2) != 0 {
             return None;
@@ -120,28 +120,28 @@ pub fn clip_line_segment_with_rect(
     p2: Point3D,
     rect: Rect,
 ) -> Option<(Point3D, Point3D)> {
-    let p1_2d = Point(p1.0, p1.1);
-    let p2_2d = Point(p2.0, p2.1);
+    let p1_2d = Point::new(p1.x, p1.y);
+    let p2_2d = Point::new(p2.x, p2.y);
     let clipped_2d = clip_line_segment_with_rect_2d(p1_2d, p2_2d, rect)?;
 
-    let dz = p2.2 - p1.2;
-    let dx = p2.0 - p1.0;
-    let dy = p2.1 - p1.1;
+    let dz = p2.z - p1.z;
+    let dx = p2.x - p1.x;
+    let dy = p2.y - p1.y;
     let len_sq = dx * dx + dy * dy;
 
     let interpolate_z = |pt: Point| -> f64 {
         if len_sq < 1e-30 {
-            p1.2
+            p1.z
         } else {
-            let t = ((pt.0 - p1_2d.0) * dx + (pt.1 - p1_2d.1) * dy) / len_sq;
-            p1.2 + t * dz
+            let t = ((pt.x - p1_2d.x) * dx + (pt.y - p1_2d.y) * dy) / len_sq;
+            p1.z + t * dz
         }
     };
 
     let (c1, c2) = clipped_2d;
     Some((
-        Point3D(c1.0, c1.1, interpolate_z(c1)),
-        Point3D(c2.0, c2.1, interpolate_z(c2)),
+        Point3D::new(c1.x, c1.y, interpolate_z(c1)),
+        Point3D::new(c2.x, c2.y, interpolate_z(c2)),
     ))
 }
 
@@ -174,8 +174,10 @@ fn compute_kept_t_ranges(
         }
 
         let mid_t = (t1 + t2) / 2.0;
-        let mid_p =
-            Point(p1.0 + (p2.0 - p1.0) * mid_t, p1.1 + (p2.1 - p1.1) * mid_t);
+        let mid_p = Point::new(
+            p1.x + (p2.x - p1.x) * mid_t,
+            p1.y + (p2.y - p1.y) * mid_t,
+        );
 
         let is_inside =
             regions.iter().any(|r| is_point_inside_polygon(mid_p, r));
@@ -202,8 +204,14 @@ pub fn clip_line_segment_with_polygons_2d(
         .into_iter()
         .map(|(t1, t2)| {
             (
-                Point(p1.0 + (p2.0 - p1.0) * t1, p1.1 + (p2.1 - p1.1) * t1),
-                Point(p1.0 + (p2.0 - p1.0) * t2, p1.1 + (p2.1 - p1.1) * t2),
+                Point::new(
+                    p1.x + (p2.x - p1.x) * t1,
+                    p1.y + (p2.y - p1.y) * t1,
+                ),
+                Point::new(
+                    p1.x + (p2.x - p1.x) * t2,
+                    p1.y + (p2.y - p1.y) * t2,
+                ),
             )
         })
         .collect()
@@ -223,8 +231,14 @@ pub fn subtract_polygons_from_line_segment_2d(
         .into_iter()
         .map(|(t1, t2)| {
             (
-                Point(p1.0 + (p2.0 - p1.0) * t1, p1.1 + (p2.1 - p1.1) * t1),
-                Point(p1.0 + (p2.0 - p1.0) * t2, p1.1 + (p2.1 - p1.1) * t2),
+                Point::new(
+                    p1.x + (p2.x - p1.x) * t1,
+                    p1.y + (p2.y - p1.y) * t1,
+                ),
+                Point::new(
+                    p1.x + (p2.x - p1.x) * t2,
+                    p1.y + (p2.y - p1.y) * t2,
+                ),
             )
         })
         .collect()
@@ -243,22 +257,22 @@ pub fn clip_line_segment_with_polygons(
     p2: Point3D,
     regions: &[Polygon],
 ) -> Vec<(Point3D, Point3D)> {
-    let p1_2d = Point(p1.0, p1.1);
-    let p2_2d = Point(p2.0, p2.1);
+    let p1_2d = Point::new(p1.x, p1.y);
+    let p2_2d = Point::new(p2.x, p2.y);
     let ranges = compute_kept_t_ranges(p1_2d, p2_2d, regions, true);
     ranges
         .into_iter()
         .map(|(t1, t2)| {
             (
-                Point3D(
-                    p1.0 + (p2.0 - p1.0) * t1,
-                    p1.1 + (p2.1 - p1.1) * t1,
-                    p1.2 + (p2.2 - p1.2) * t1,
+                Point3D::new(
+                    p1.x + (p2.x - p1.x) * t1,
+                    p1.y + (p2.y - p1.y) * t1,
+                    p1.z + (p2.z - p1.z) * t1,
                 ),
-                Point3D(
-                    p1.0 + (p2.0 - p1.0) * t2,
-                    p1.1 + (p2.1 - p1.1) * t2,
-                    p1.2 + (p2.2 - p1.2) * t2,
+                Point3D::new(
+                    p1.x + (p2.x - p1.x) * t2,
+                    p1.y + (p2.y - p1.y) * t2,
+                    p1.z + (p2.z - p1.z) * t2,
                 ),
             )
         })
@@ -276,22 +290,22 @@ pub fn subtract_polygons_from_line_segment(
     p2: Point3D,
     regions: &[Polygon],
 ) -> Vec<(Point3D, Point3D)> {
-    let p1_2d = Point(p1.0, p1.1);
-    let p2_2d = Point(p2.0, p2.1);
+    let p1_2d = Point::new(p1.x, p1.y);
+    let p2_2d = Point::new(p2.x, p2.y);
     let ranges = compute_kept_t_ranges(p1_2d, p2_2d, regions, false);
     ranges
         .into_iter()
         .map(|(t1, t2)| {
             (
-                Point3D(
-                    p1.0 + (p2.0 - p1.0) * t1,
-                    p1.1 + (p2.1 - p1.1) * t1,
-                    p1.2 + (p2.2 - p1.2) * t1,
+                Point3D::new(
+                    p1.x + (p2.x - p1.x) * t1,
+                    p1.y + (p2.y - p1.y) * t1,
+                    p1.z + (p2.z - p1.z) * t1,
                 ),
-                Point3D(
-                    p1.0 + (p2.0 - p1.0) * t2,
-                    p1.1 + (p2.1 - p1.1) * t2,
-                    p1.2 + (p2.2 - p1.2) * t2,
+                Point3D::new(
+                    p1.x + (p2.x - p1.x) * t2,
+                    p1.y + (p2.y - p1.y) * t2,
+                    p1.z + (p2.z - p1.z) * t2,
                 ),
             )
         })

@@ -79,7 +79,7 @@ impl OpNode {
     ) -> Self {
         OpNode {
             category: OpCategory::Moving {
-                end: Point3D(x, y, z),
+                end: Point3D::new(x, y, z),
                 cmd: MoveCmd::MoveTo,
             },
             state: None,
@@ -95,7 +95,7 @@ impl OpNode {
     ) -> Self {
         OpNode {
             category: OpCategory::Moving {
-                end: Point3D(x, y, z),
+                end: Point3D::new(x, y, z),
                 cmd: MoveCmd::LineTo,
             },
             state: None,
@@ -125,9 +125,9 @@ impl OpNode {
     ) -> Self {
         OpNode {
             category: OpCategory::Moving {
-                end: Point3D(x, y, z),
+                end: Point3D::new(x, y, z),
                 cmd: MoveCmd::ArcTo {
-                    center: Point(i, j),
+                    center: Point::new(i, j),
                     cw: clockwise,
                 },
             },
@@ -176,7 +176,7 @@ impl OpNode {
     ) -> Self {
         OpNode {
             category: OpCategory::Moving {
-                end: Point3D(x, y, z),
+                end: Point3D::new(x, y, z),
                 cmd: MoveCmd::ScanLine {
                     power_values: Arc::from(power_values),
                 },
@@ -391,7 +391,7 @@ impl OpNode {
         if let OpCategory::Moving { end, .. } = &self.category {
             *end
         } else {
-            Point3D(0.0, 0.0, 0.0)
+            Point3D::new(0.0, 0.0, 0.0)
         }
     }
 

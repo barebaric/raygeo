@@ -17,9 +17,9 @@ pub fn flip_ops(ops: &Ops) -> Ops {
     let first_state = ops.commands[moving_indices[0]].state().cloned();
 
     let mut first_cmd = OpNode::move_to(
-        last_moving_end.0,
-        last_moving_end.1,
-        last_moving_end.2,
+        last_moving_end.x,
+        last_moving_end.y,
+        last_moving_end.z,
         None,
     );
     if let Some(ref s) = first_state {
@@ -40,7 +40,7 @@ pub fn flip_ops(ops: &Ops) -> Ops {
                     let reversed: Vec<u8> =
                         power_values.iter().rev().copied().collect();
                     OpNode::scan_to(
-                        new_end.0, new_end.1, new_end.2, reversed, extra,
+                        new_end.x, new_end.y, new_end.z, reversed, extra,
                     )
                 }
                 MoveCmd::BezierTo { control1, control2 } => {
@@ -50,20 +50,20 @@ pub fn flip_ops(ops: &Ops) -> Ops {
                     let original_start =
                         ops.commands[orig_prev_idx].end_point();
                     let original_end = ops.commands[orig_k_idx].end_point();
-                    let center_x = original_start.0 + center.0;
-                    let center_y = original_start.1 + center.1;
-                    let new_i = center_x - original_end.0;
-                    let new_j = center_y - original_end.1;
+                    let center_x = original_start.x + center.x;
+                    let center_y = original_start.y + center.y;
+                    let new_i = center_x - original_end.x;
+                    let new_j = center_y - original_end.y;
                     OpNode::arc_to(
-                        new_end.0, new_end.1, new_i, new_j, !cw, new_end.2,
+                        new_end.x, new_end.y, new_i, new_j, !cw, new_end.z,
                         extra,
                     )
                 }
                 MoveCmd::MoveTo => {
-                    OpNode::move_to(new_end.0, new_end.1, new_end.2, extra)
+                    OpNode::move_to(new_end.x, new_end.y, new_end.z, extra)
                 }
                 MoveCmd::LineTo => {
-                    OpNode::line_to(new_end.0, new_end.1, new_end.2, extra)
+                    OpNode::line_to(new_end.x, new_end.y, new_end.z, extra)
                 }
                 MoveCmd::QuadraticBezierTo { control } => {
                     OpNode::quadratic_bezier_to(*control, new_end, extra)

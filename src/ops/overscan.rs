@@ -103,8 +103,8 @@ fn rewrite_buffered_line(
     let content_end =
         old_ops.endpoint(moving_indices[moving_indices.len() - 1]);
 
-    let (sx, sy) = (content_start.0, content_start.1);
-    let (ex, ey) = (content_end.0, content_end.1);
+    let (sx, sy) = (content_start.x, content_start.y);
+    let (ex, ey) = (content_end.x, content_end.y);
 
     if sx == ex && sy == ey {
         for &j in indices {
@@ -126,15 +126,15 @@ fn rewrite_buffered_line(
     let dir_x = dx / original_length;
     let dir_y = dy / original_length;
 
-    let overscan_start: Point3D = Point3D(
+    let overscan_start: Point3D = Point3D::new(
         sx - distance_mm * dir_x,
         sy - distance_mm * dir_y,
-        content_start.2,
+        content_start.z,
     );
-    let overscan_end: Point3D = Point3D(
+    let overscan_end: Point3D = Point3D::new(
         ex + distance_mm * dir_x,
         ey + distance_mm * dir_y,
-        content_end.2,
+        content_end.z,
     );
 
     // Case 1: Variable Power ScanLine
@@ -158,15 +158,15 @@ fn rewrite_buffered_line(
         padded.extend_from_slice(&pad);
 
         new_ops.move_to(
-            overscan_start.0,
-            overscan_start.1,
-            overscan_start.2,
+            overscan_start.x,
+            overscan_start.y,
+            overscan_start.z,
             None,
         );
         new_ops.scan_to(
-            overscan_end.0,
-            overscan_end.1,
-            overscan_end.2,
+            overscan_end.x,
+            overscan_end.y,
+            overscan_end.z,
             padded,
             None,
         );
@@ -192,9 +192,9 @@ fn rewrite_buffered_line(
     let original_power =
         old_ops.state(first_cut_idx).map(|s| s.power).unwrap_or(0.0);
 
-    new_ops.move_to(overscan_start.0, overscan_start.1, overscan_start.2, None);
+    new_ops.move_to(overscan_start.x, overscan_start.y, overscan_start.z, None);
     new_ops.set_power(0.0);
-    new_ops.line_to(content_start.0, content_start.1, content_start.2, None);
+    new_ops.line_to(content_start.x, content_start.y, content_start.z, None);
 
     let content_indices = &indices[1..];
 
@@ -210,5 +210,5 @@ fn rewrite_buffered_line(
     }
 
     new_ops.set_power(0.0);
-    new_ops.line_to(overscan_end.0, overscan_end.1, overscan_end.2, None);
+    new_ops.line_to(overscan_end.x, overscan_end.y, overscan_end.z, None);
 }

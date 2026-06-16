@@ -9,7 +9,7 @@
 //! ```rust
 //! use raygeo::types::{Point3D, project_points_to_xy, lift_points_to_xy_plane};
 //!
-//! let pts_3d = vec![Point3D(1.0, 2.0, 5.0), Point3D(3.0, 4.0, 5.0)];
+//! let pts_3d = vec![Point3D::new(1.0, 2.0, 5.0), Point3D::new(3.0, 4.0, 5.0)];
 //! let pts_2d = project_points_to_xy(&pts_3d);
 //! // feed pts_2d to a planar-only Clipper2 function …
 //! let result_3d = lift_points_to_xy_plane(&pts_2d, 5.0);

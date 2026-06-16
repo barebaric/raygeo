@@ -30,6 +30,9 @@ use crate::geo::algo::topology::{
 use crate::geo::geometry::Geometry as CoreGeometry;
 use crate::geo::math::map_geometry_to_frame;
 use crate::geo::query::find_closest_point_on_path_from_array;
+use crate::python::geo::flex_point::{
+    point3d_to_tuple, points_to_tuples, polygons_to_tuples,
+};
 use crate::types::{Command as CoreCommand, Point, Point3D};
 
 /// A rapid-move command with an endpoint but no cutting.
@@ -39,7 +42,7 @@ use crate::types::{Command as CoreCommand, Point, Point3D};
 pub struct PyMove {
     /// Endpoint of the move in 3D space.
     #[pyo3(get)]
-    pub end: Point3D,
+    pub end: (f64, f64, f64),
 }
 
 /// A straight-line cutting command.
@@ -49,7 +52,7 @@ pub struct PyMove {
 pub struct PyLine {
     /// Endpoint of the line in 3D space.
     #[pyo3(get)]
-    pub end: Point3D,
+    pub end: (f64, f64, f64),
 }
 
 /// A circular-arc cutting command.
@@ -59,13 +62,13 @@ pub struct PyLine {
 pub struct PyArc {
     /// Endpoint of the arc in 3D space.
     #[pyo3(get)]
-    pub end: Point3D,
+    pub end: (f64, f64, f64),
     /// Centre offset from the start point (3D).
     #[pyo3(get)]
-    pub center_offset: Point3D,
+    pub center_offset: (f64, f64, f64),
     /// Plane normal of the arc. A positive Z component means CCW in XY.
     #[pyo3(get)]
-    pub normal: Point3D,
+    pub normal: (f64, f64, f64),
 }
 
 #[gen_stub_pymethods]
@@ -85,13 +88,13 @@ impl PyArc {
 pub struct PyBezier {
     /// Endpoint of the curve in 3D space.
     #[pyo3(get)]
-    pub end: Point3D,
+    pub end: (f64, f64, f64),
     /// First control point in 3D space.
     #[pyo3(get)]
-    pub control1: Point3D,
+    pub control1: (f64, f64, f64),
     /// Second control point in 3D space.
     #[pyo3(get)]
-    pub control2: Point3D,
+    pub control2: (f64, f64, f64),
 }
 
 enum PyTypedCommand {
@@ -104,25 +107,29 @@ enum PyTypedCommand {
 impl From<CoreCommand> for PyTypedCommand {
     fn from(cmd: CoreCommand) -> Self {
         match cmd {
-            CoreCommand::Move { end } => PyTypedCommand::Move(PyMove { end }),
-            CoreCommand::Line { end } => PyTypedCommand::Line(PyLine { end }),
+            CoreCommand::Move { end } => PyTypedCommand::Move(PyMove {
+                end: point3d_to_tuple(end),
+            }),
+            CoreCommand::Line { end } => PyTypedCommand::Line(PyLine {
+                end: point3d_to_tuple(end),
+            }),
             CoreCommand::Arc {
                 end,
                 center_offset,
                 normal,
             } => PyTypedCommand::Arc(PyArc {
-                end,
-                center_offset,
-                normal,
+                end: point3d_to_tuple(end),
+                center_offset: point3d_to_tuple(center_offset),
+                normal: point3d_to_tuple(normal),
             }),
             CoreCommand::Bezier {
                 end,
                 control1,
                 control2,
             } => PyTypedCommand::Bezier(PyBezier {
-                end,
-                control1,
-                control2,
+                end: point3d_to_tuple(end),
+                control1: point3d_to_tuple(control1),
+                control2: point3d_to_tuple(control2),
             }),
         }
     }
@@ -358,9 +365,9 @@ impl Geometry {
         z: f64,
     ) -> Bound<'_, Self> {
         slf.borrow_mut().inner.bezier_to(
-            Point3D(c1x, c1y, c1z),
-            Point3D(c2x, c2y, c2z),
-            Point3D(x, y, z),
+            Point3D::new(c1x, c1y, c1z),
+            Point3D::new(c2x, c2y, c2z),
+            Point3D::new(x, y, z),
         );
         slf
     }
@@ -383,33 +390,33 @@ impl Geometry {
             std::mem::discriminant(cmd).hash(&mut hasher);
             let (ex, ey, ez) = match cmd {
                 CoreCommand::Move { end } | CoreCommand::Line { end } => {
-                    (end.0, end.1, end.2)
+                    (end.x, end.y, end.z)
                 }
                 CoreCommand::Arc {
                     end,
                     center_offset,
                     normal,
                 } => {
-                    center_offset.0.to_bits().hash(&mut hasher);
-                    center_offset.1.to_bits().hash(&mut hasher);
-                    center_offset.2.to_bits().hash(&mut hasher);
-                    normal.0.to_bits().hash(&mut hasher);
-                    normal.1.to_bits().hash(&mut hasher);
-                    normal.2.to_bits().hash(&mut hasher);
-                    (end.0, end.1, end.2)
+                    center_offset.x.to_bits().hash(&mut hasher);
+                    center_offset.y.to_bits().hash(&mut hasher);
+                    center_offset.z.to_bits().hash(&mut hasher);
+                    normal.x.to_bits().hash(&mut hasher);
+                    normal.y.to_bits().hash(&mut hasher);
+                    normal.z.to_bits().hash(&mut hasher);
+                    (end.x, end.y, end.z)
                 }
                 CoreCommand::Bezier {
                     end,
                     control1,
                     control2,
                 } => {
-                    control1.0.to_bits().hash(&mut hasher);
-                    control1.1.to_bits().hash(&mut hasher);
-                    control1.2.to_bits().hash(&mut hasher);
-                    control2.0.to_bits().hash(&mut hasher);
-                    control2.1.to_bits().hash(&mut hasher);
-                    control2.2.to_bits().hash(&mut hasher);
-                    (end.0, end.1, end.2)
+                    control1.x.to_bits().hash(&mut hasher);
+                    control1.y.to_bits().hash(&mut hasher);
+                    control1.z.to_bits().hash(&mut hasher);
+                    control2.x.to_bits().hash(&mut hasher);
+                    control2.y.to_bits().hash(&mut hasher);
+                    control2.z.to_bits().hash(&mut hasher);
+                    (end.x, end.y, end.z)
                 }
             };
             ex.to_bits().hash(&mut hasher);
@@ -438,16 +445,16 @@ impl Geometry {
     ///
     /// :complexity: O(1) time, O(1) space
     #[getter]
-    fn last_move_to(&self) -> Point3D {
-        self.inner.last_move_to
+    fn last_move_to(&self) -> (f64, f64, f64) {
+        point3d_to_tuple(self.inner.last_move_to)
     }
 
     /// Set the last move-to position.
     ///
     /// :complexity: O(1) time, O(1) space
     #[setter]
-    fn set_last_move_to(&mut self, value: Point3D) {
-        self.inner.last_move_to = value;
+    fn set_last_move_to(&mut self, value: (f64, f64, f64)) {
+        self.inner.last_move_to = Point3D::new(value.0, value.1, value.2);
     }
 
     /// Whether the geometry uses uniform scalable arcs.
@@ -478,11 +485,11 @@ impl Geometry {
     /// Get the last point in the geometry.
     ///
     /// :complexity: O(1) time, O(1) space
-    fn get_last_point(&self) -> Point3D {
+    fn get_last_point(&self) -> (f64, f64, f64) {
         if let Some(last) = self.inner.data().last() {
-            return last.end_point();
+            return point3d_to_tuple(last.end_point());
         }
-        Point3D(0.0, 0.0, 0.0)
+        (0.0, 0.0, 0.0)
     }
 
     /// Apply a 4x4 affine transformation matrix.
@@ -570,8 +577,12 @@ impl Geometry {
     fn get_positions_at_distances(
         &mut self,
         distances: Vec<f64>,
-    ) -> Vec<(usize, f64, Point)> {
-        self.inner.get_positions_at_distances(&distances)
+    ) -> Vec<(usize, f64, (f64, f64))> {
+        self.inner
+            .get_positions_at_distances(&distances)
+            .into_iter()
+            .map(|(a, b, p)| (a, b, (p.x, p.y)))
+            .collect()
     }
 
     /// Return indices of all segments whose bounding box intersects the
@@ -619,8 +630,12 @@ impl Geometry {
     /// Return the geometry split into segments of connected commands.
     ///
     /// :complexity: O(n) time, O(n) space
-    fn segments(&mut self) -> Vec<Vec<Point3D>> {
-        self.inner.segments()
+    fn segments(&mut self) -> Vec<Vec<(f64, f64, f64)>> {
+        self.inner
+            .segments()
+            .into_iter()
+            .map(|seg| seg.into_iter().map(point3d_to_tuple).collect())
+            .collect()
     }
 
     /// The commands as a list of typed command objects.
@@ -712,7 +727,7 @@ impl Geometry {
         let dict = PyDict::new(py);
         dict.set_item(
             "last_move_to",
-            vec![last_move_to.0, last_move_to.1, last_move_to.2],
+            vec![last_move_to.x, last_move_to.y, last_move_to.z],
         )?;
         dict.set_item("uniform_scalable", uniform_scalable)?;
         let commands = PyList::empty(py);
@@ -721,15 +736,15 @@ impl Geometry {
             match cmd {
                 CoreCommand::Move { end } => {
                     entry.append("M")?;
-                    entry.append(end.0)?;
-                    entry.append(end.1)?;
-                    entry.append(end.2)?;
+                    entry.append(end.x)?;
+                    entry.append(end.y)?;
+                    entry.append(end.z)?;
                 }
                 CoreCommand::Line { end } => {
                     entry.append("L")?;
-                    entry.append(end.0)?;
-                    entry.append(end.1)?;
-                    entry.append(end.2)?;
+                    entry.append(end.x)?;
+                    entry.append(end.y)?;
+                    entry.append(end.z)?;
                 }
                 CoreCommand::Arc {
                     end,
@@ -737,15 +752,15 @@ impl Geometry {
                     normal,
                 } => {
                     entry.append("A")?;
-                    entry.append(end.0)?;
-                    entry.append(end.1)?;
-                    entry.append(end.2)?;
-                    entry.append(center_offset.0)?;
-                    entry.append(center_offset.1)?;
-                    entry.append(center_offset.2)?;
-                    entry.append(normal.0)?;
-                    entry.append(normal.1)?;
-                    entry.append(normal.2)?;
+                    entry.append(end.x)?;
+                    entry.append(end.y)?;
+                    entry.append(end.z)?;
+                    entry.append(center_offset.x)?;
+                    entry.append(center_offset.y)?;
+                    entry.append(center_offset.z)?;
+                    entry.append(normal.x)?;
+                    entry.append(normal.y)?;
+                    entry.append(normal.z)?;
                 }
                 CoreCommand::Bezier {
                     end,
@@ -753,15 +768,15 @@ impl Geometry {
                     control2,
                 } => {
                     entry.append("B")?;
-                    entry.append(end.0)?;
-                    entry.append(end.1)?;
-                    entry.append(end.2)?;
-                    entry.append(control1.0)?;
-                    entry.append(control1.1)?;
-                    entry.append(control1.2)?;
-                    entry.append(control2.0)?;
-                    entry.append(control2.1)?;
-                    entry.append(control2.2)?;
+                    entry.append(end.x)?;
+                    entry.append(end.y)?;
+                    entry.append(end.z)?;
+                    entry.append(control1.x)?;
+                    entry.append(control1.y)?;
+                    entry.append(control1.z)?;
+                    entry.append(control2.x)?;
+                    entry.append(control2.y)?;
+                    entry.append(control2.z)?;
                 }
             }
             commands.append(entry)?;
@@ -785,7 +800,7 @@ impl Geometry {
             if let Ok(lmt_list) = lmt.extract::<Vec<f64>>() {
                 if lmt_list.len() >= 3 {
                     geo.inner.last_move_to =
-                        Point3D(lmt_list[0], lmt_list[1], lmt_list[2]);
+                        Point3D::new(lmt_list[0], lmt_list[1], lmt_list[2]);
                 }
             }
         }
@@ -922,9 +937,9 @@ impl Geometry {
                                     )
                                 {
                                     geo.inner.bezier_to(
-                                        Point3D(c1x, c1y, c1z),
-                                        Point3D(c2x, c2y, c2z),
-                                        Point3D(x, y, z),
+                                        Point3D::new(c1x, c1y, c1z),
+                                        Point3D::new(c2x, c2y, c2z),
+                                        Point3D::new(x, y, z),
                                     );
                                 }
                             }
@@ -970,13 +985,17 @@ impl Geometry {
                                     cmd_dict.get_item("control1"),
                                     cmd_dict.get_item("control2"),
                                 ) {
-                                    let c1v = c1.extract::<Point3D>();
-                                    let c2v = c2.extract::<Point3D>();
+                                    let c1v = c1.extract::<(f64, f64, f64)>();
+                                    let c2v = c2.extract::<(f64, f64, f64)>();
                                     if let (Ok(c1_3d), Ok(c2_3d)) = (c1v, c2v) {
                                         geo.inner.bezier_to(
-                                            c1_3d,
-                                            c2_3d,
-                                            Point3D(x, y, z),
+                                            Point3D::new(
+                                                c1_3d.0, c1_3d.1, c1_3d.2,
+                                            ),
+                                            Point3D::new(
+                                                c2_3d.0, c2_3d.1, c2_3d.2,
+                                            ),
+                                            Point3D::new(x, y, z),
                                         );
                                     }
                                 }
@@ -1215,26 +1234,26 @@ impl Geometry {
                 match cmd {
                     CoreCommand::Move { ref mut end }
                     | CoreCommand::Line { ref mut end } => {
-                        end.0 = -end.0;
+                        end.x = -end.x;
                     }
                     CoreCommand::Arc {
                         ref mut end,
                         ref mut center_offset,
                         ref mut normal,
                     } => {
-                        end.0 = -end.0;
-                        center_offset.0 = -center_offset.0;
+                        end.x = -end.x;
+                        center_offset.x = -center_offset.x;
                         // Reflection flips the winding direction (axial vector)
-                        normal.2 = -normal.2;
+                        normal.z = -normal.z;
                     }
                     CoreCommand::Bezier {
                         ref mut end,
                         ref mut control1,
                         ref mut control2,
                     } => {
-                        end.0 = -end.0;
-                        control1.0 = -control1.0;
-                        control2.0 = -control2.0;
+                        end.x = -end.x;
+                        control1.x = -control1.x;
+                        control2.x = -control2.x;
                     }
                 }
             }
@@ -1252,25 +1271,25 @@ impl Geometry {
                 match cmd {
                     CoreCommand::Move { ref mut end }
                     | CoreCommand::Line { ref mut end } => {
-                        end.1 = -end.1;
+                        end.y = -end.y;
                     }
                     CoreCommand::Arc {
                         ref mut end,
                         ref mut center_offset,
                         ref mut normal,
                     } => {
-                        end.1 = -end.1;
-                        center_offset.1 = -center_offset.1;
-                        normal.2 = -normal.2;
+                        end.y = -end.y;
+                        center_offset.y = -center_offset.y;
+                        normal.z = -normal.z;
                     }
                     CoreCommand::Bezier {
                         ref mut end,
                         ref mut control1,
                         ref mut control2,
                     } => {
-                        end.1 = -end.1;
-                        control1.1 = -control1.1;
-                        control2.1 = -control2.1;
+                        end.y = -end.y;
+                        control1.y = -control1.y;
+                        control2.y = -control2.y;
                     }
                 }
             }
@@ -1288,11 +1307,12 @@ impl Geometry {
         &mut self,
         x: f64,
         y: f64,
-    ) -> Option<(usize, f64, Point)> {
+    ) -> Option<(usize, f64, (f64, f64))> {
         if self.inner.data.is_empty() {
             return None;
         }
         find_closest_point_on_path_from_array(&self.inner.data, x, y)
+            .map(|(a, b, p)| (a, b, (p.x, p.y)))
     }
 
     /// Get the point at parameter t on a segment.
@@ -1305,11 +1325,12 @@ impl Geometry {
         &mut self,
         segment_index: usize,
         t: f64,
-    ) -> Option<Point3D> {
+    ) -> Option<(f64, f64, f64)> {
         if self.inner.data.is_empty() {
             return None;
         }
         get_point_at_from_array(&self.inner.data, segment_index, t)
+            .map(point3d_to_tuple)
     }
 
     /// Get the tangent vector at parameter t on a segment.
@@ -1322,11 +1343,12 @@ impl Geometry {
         &mut self,
         segment_index: usize,
         t: f64,
-    ) -> Option<Point> {
+    ) -> Option<(f64, f64)> {
         if self.inner.data.is_empty() {
             return None;
         }
         get_tangent_at_from_array(&self.inner.data, segment_index, t)
+            .map(|p| (p.x, p.y))
     }
 
     /// Get the outward normal at parameter t on a segment.
@@ -1339,11 +1361,12 @@ impl Geometry {
         &mut self,
         segment_index: usize,
         t: f64,
-    ) -> Option<Point> {
+    ) -> Option<(f64, f64)> {
         if self.inner.data.is_empty() {
             return None;
         }
         get_outward_normal_at_from_array(&self.inner.data, segment_index, t)
+            .map(|p| (p.x, p.y))
     }
 
     /// Draw an arc, converting it to bezier curves.
@@ -1373,8 +1396,8 @@ impl Geometry {
                 inner.inner.last_move_to
             }
         };
-        let end_point = Point3D(x, y, z);
-        let center_offset = Point(i, j);
+        let end_point = Point3D::new(x, y, z);
+        let center_offset = Point::new(i, j);
         let beziers = convert_arc_to_beziers_from_array(
             start_point,
             end_point,
@@ -1500,14 +1523,17 @@ impl Geometry {
     #[allow(clippy::too_many_arguments)]
     fn map_to_frame(
         slf: Bound<'_, Self>,
-        origin: Point,
-        p_width: Point,
-        p_height: Point,
+        origin: (f64, f64),
+        p_width: (f64, f64),
+        p_height: (f64, f64),
         anchor_y: Option<f64>,
         stable_src_height: Option<f64>,
         anchor_x: Option<f64>,
         stable_src_width: Option<f64>,
     ) -> Bound<'_, Self> {
+        let origin = Point::new(origin.0, origin.1);
+        let p_width = Point::new(p_width.0, p_width.1);
+        let p_height = Point::new(p_height.0, p_height.1);
         let result = {
             let geo = slf.borrow();
             map_geometry_to_frame(
@@ -1550,7 +1576,7 @@ impl Geometry {
     /// :param tolerance: Max deviation for linearization.
     /// :complexity: O(n) time, O(n) space
     #[pyo3(signature = (tolerance=0.01))]
-    fn to_polygons(&self, tolerance: f64) -> Vec<Vec<Point>> {
+    fn to_polygons(&self, tolerance: f64) -> Vec<Vec<(f64, f64)>> {
         let mut linearized = self.inner.copy();
         if !linearized.data.is_empty() {
             let lin = linearize_data(&linearized.data, tolerance);
@@ -1563,7 +1589,7 @@ impl Geometry {
                 continue;
             }
             let poly: Vec<Point> =
-                seg.iter().map(|p| Point(p.0, p.1)).collect();
+                seg.iter().map(|p| Point::new(p.x, p.y)).collect();
             if let Some(cleaned) = crate::geo::shape::polygon::clean_polygon(
                 &poly,
                 0.01 * tolerance,
@@ -1573,7 +1599,7 @@ impl Geometry {
                 result.push(poly);
             }
         }
-        result
+        polygons_to_tuples(result)
     }
 
     /// Reverse the winding direction of all contours.
@@ -1659,7 +1685,7 @@ impl Geometry {
             let py_geo = Geometry { inner: geo.copy() };
             let dict = PyDict::new(py);
             dict.set_item("geo", py_geo)?;
-            let py_pts: Vec<Point> = pts;
+            let py_pts: Vec<(f64, f64)> = points_to_tuples(pts);
             dict.set_item("vertices", py_pts)?;
             dict.set_item("is_closed", closed)?;
             dict.set_item("original_index", orig_idx)?;

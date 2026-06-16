@@ -1,9 +1,10 @@
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::gen_stub_pyfunction;
 
-use super::super::geo::flex_point::{poly_to_points, PyPoint2D};
+use super::super::geo::flex_point::{
+    points_to_tuples, poly_to_points, polygons_to_tuples, PyPoint2D,
+};
 use crate::nest::nfp;
-use crate::types::Point;
 
 pyo3_stub_gen::module_doc!("raygeo.nest.nfp", "{}", MODULE_DOC);
 
@@ -37,8 +38,11 @@ sums, both for convex and general polygon pairs.
 fn no_fit_polygon_py(
     static_poly: Vec<PyPoint2D>,
     orbiting: Vec<PyPoint2D>,
-) -> Vec<Vec<Point>> {
-    nfp::no_fit_polygon(&poly_to_points(static_poly), &poly_to_points(orbiting))
+) -> Vec<Vec<(f64, f64)>> {
+    polygons_to_tuples(nfp::no_fit_polygon(
+        &poly_to_points(static_poly),
+        &poly_to_points(orbiting),
+    ))
 }
 
 #[gen_stub_pyfunction(
@@ -63,11 +67,11 @@ fn no_fit_polygon_py(
 fn nfp_convex_fast_py(
     static_poly: Vec<PyPoint2D>,
     orbiting: Vec<PyPoint2D>,
-) -> Vec<Vec<Point>> {
-    nfp::nfp_convex_fast(
+) -> Vec<Vec<(f64, f64)>> {
+    polygons_to_tuples(nfp::nfp_convex_fast(
         &poly_to_points(static_poly),
         &poly_to_points(orbiting),
-    )
+    ))
 }
 
 #[gen_stub_pyfunction(
@@ -92,8 +96,11 @@ fn nfp_convex_fast_py(
 fn nfp_minkowski_py(
     static_poly: Vec<PyPoint2D>,
     orbiting: Vec<PyPoint2D>,
-) -> Vec<Vec<Point>> {
-    nfp::nfp_minkowski(&poly_to_points(static_poly), &poly_to_points(orbiting))
+) -> Vec<Vec<(f64, f64)>> {
+    polygons_to_tuples(nfp::nfp_minkowski(
+        &poly_to_points(static_poly),
+        &poly_to_points(orbiting),
+    ))
 }
 
 #[gen_stub_pyfunction(
@@ -114,8 +121,9 @@ fn nfp_minkowski_py(
     module = "raygeo.nest.nfp"
 )]
 #[pyfunction(name = "normalize_polygon")]
-fn normalize_polygon_py(poly: Vec<PyPoint2D>) -> (Vec<Point>, f64, f64) {
-    nfp::normalize_polygon(&poly_to_points(poly))
+fn normalize_polygon_py(poly: Vec<PyPoint2D>) -> (Vec<(f64, f64)>, f64, f64) {
+    let (points, ox, oy) = nfp::normalize_polygon(&poly_to_points(poly));
+    (points_to_tuples(points), ox, oy)
 }
 
 #[gen_stub_pyfunction(

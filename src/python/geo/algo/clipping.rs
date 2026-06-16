@@ -12,14 +12,18 @@ polygon regions, as well as converting between float and Clipper
 integer coordinate systems.
 ";
 
-use super::super::flex_point::{extract_polygon, extract_polygons};
+use super::super::flex_point::{
+    edge_pairs3d_to_tuples, edge_pairs_to_tuples, extract_polygon,
+    extract_polygons, point3d_to_tuple, points_to_tuples, tuple_to_point3d,
+};
+use super::super::types::{Edge2D, Edge3D};
 use crate::geo::algo::clipping::{
     clip_line_segment_with_polygons, clip_line_segment_with_polygons_2d,
     clip_line_segment_with_rect, clip_line_segment_with_rect_2d,
     subtract_polygons_from_line_segment,
     subtract_polygons_from_line_segment_2d,
 };
-use crate::types::{Point, Point3D, Rect, Segment3D};
+use crate::types::{Point, Rect};
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::gen_stub_pyfunction;
 
@@ -67,11 +71,16 @@ pub fn register(algo_mod: &Bound<'_, PyModule>) -> PyResult<()> {
 )]
 #[pyfunction(name = "clip_line_segment_with_rect")]
 fn clip_line_segment_py(
-    p1: Point3D,
-    p2: Point3D,
+    p1: (f64, f64, f64),
+    p2: (f64, f64, f64),
     rect: (f64, f64, f64, f64),
-) -> Option<Segment3D> {
-    clip_line_segment_with_rect(p1, p2, Rect(rect.0, rect.1, rect.2, rect.3))
+) -> Option<Edge3D> {
+    clip_line_segment_with_rect(
+        tuple_to_point3d(p1),
+        tuple_to_point3d(p2),
+        Rect(rect.0, rect.1, rect.2, rect.3),
+    )
+    .map(|(a, b)| (point3d_to_tuple(a), point3d_to_tuple(b)))
 }
 
 #[gen_stub_pyfunction(
@@ -97,12 +106,16 @@ fn clip_line_segment_py(
 )]
 #[pyfunction(name = "subtract_polygons_from_line_segment")]
 fn subtract_polygons_from_line_segment_py(
-    p1: Point3D,
-    p2: Point3D,
+    p1: (f64, f64, f64),
+    p2: (f64, f64, f64),
     regions: &Bound<'_, PyAny>,
-) -> PyResult<Vec<Segment3D>> {
+) -> PyResult<Vec<Edge3D>> {
     let regions = extract_polygons(regions)?;
-    Ok(subtract_polygons_from_line_segment(p1, p2, &regions))
+    Ok(edge_pairs3d_to_tuples(subtract_polygons_from_line_segment(
+        tuple_to_point3d(p1),
+        tuple_to_point3d(p2),
+        &regions,
+    )))
 }
 
 #[gen_stub_pyfunction(
@@ -128,12 +141,16 @@ fn subtract_polygons_from_line_segment_py(
 )]
 #[pyfunction(name = "clip_line_segment_with_polygons")]
 fn clip_line_segment_to_regions_py(
-    p1: Point3D,
-    p2: Point3D,
+    p1: (f64, f64, f64),
+    p2: (f64, f64, f64),
     regions: &Bound<'_, PyAny>,
-) -> PyResult<Vec<Segment3D>> {
+) -> PyResult<Vec<Edge3D>> {
     let regions = extract_polygons(regions)?;
-    Ok(clip_line_segment_with_polygons(p1, p2, &regions))
+    Ok(edge_pairs3d_to_tuples(clip_line_segment_with_polygons(
+        tuple_to_point3d(p1),
+        tuple_to_point3d(p2),
+        &regions,
+    )))
 }
 
 #[gen_stub_pyfunction(
@@ -159,11 +176,14 @@ fn clip_line_segment_to_regions_py(
 )]
 #[pyfunction(name = "clip_line_segment_with_rect_2d")]
 fn clip_line_segment_with_rect_2d_py(
-    p1: Point,
-    p2: Point,
+    p1: (f64, f64),
+    p2: (f64, f64),
     rect: (f64, f64, f64, f64),
-) -> Option<(Point, Point)> {
+) -> Option<Edge2D> {
+    let p1 = Point::new(p1.0, p1.1);
+    let p2 = Point::new(p2.0, p2.1);
     clip_line_segment_with_rect_2d(p1, p2, Rect(rect.0, rect.1, rect.2, rect.3))
+        .map(|(a, b)| ((a.x, a.y), (b.x, b.y)))
 }
 
 #[gen_stub_pyfunction(
@@ -189,12 +209,16 @@ fn clip_line_segment_with_rect_2d_py(
 )]
 #[pyfunction(name = "clip_line_segment_with_polygons_2d")]
 fn clip_line_segment_with_polygons_2d_py(
-    p1: Point,
-    p2: Point,
+    p1: (f64, f64),
+    p2: (f64, f64),
     regions: &Bound<'_, PyAny>,
-) -> PyResult<Vec<(Point, Point)>> {
+) -> PyResult<Vec<Edge2D>> {
+    let p1 = Point::new(p1.0, p1.1);
+    let p2 = Point::new(p2.0, p2.1);
     let regions = extract_polygons(regions)?;
-    Ok(clip_line_segment_with_polygons_2d(p1, p2, &regions))
+    Ok(edge_pairs_to_tuples(clip_line_segment_with_polygons_2d(
+        p1, p2, &regions,
+    )))
 }
 
 #[gen_stub_pyfunction(
@@ -220,12 +244,16 @@ fn clip_line_segment_with_polygons_2d_py(
 )]
 #[pyfunction(name = "subtract_polygons_from_line_segment_2d")]
 fn subtract_polygons_from_line_segment_2d_py(
-    p1: Point,
-    p2: Point,
+    p1: (f64, f64),
+    p2: (f64, f64),
     regions: &Bound<'_, PyAny>,
-) -> PyResult<Vec<(Point, Point)>> {
+) -> PyResult<Vec<Edge2D>> {
+    let p1 = Point::new(p1.0, p1.1);
+    let p2 = Point::new(p2.0, p2.1);
     let regions = extract_polygons(regions)?;
-    Ok(subtract_polygons_from_line_segment_2d(p1, p2, &regions))
+    Ok(edge_pairs_to_tuples(
+        subtract_polygons_from_line_segment_2d(p1, p2, &regions),
+    ))
 }
 
 #[gen_stub_pyfunction(
@@ -251,8 +279,8 @@ fn to_clipper_py(polygon: &Bound<'_, PyAny>) -> PyResult<Vec<(i64, i64)>> {
         .iter()
         .map(|p| {
             (
-                (p.0 * crate::CLIPPER_SCALE) as i64,
-                (p.1 * crate::CLIPPER_SCALE) as i64,
+                (p.x * crate::CLIPPER_SCALE) as i64,
+                (p.y * crate::CLIPPER_SCALE) as i64,
             )
         })
         .collect())
@@ -275,10 +303,12 @@ fn to_clipper_py(polygon: &Bound<'_, PyAny>) -> PyResult<Vec<(i64, i64)>> {
     module = "raygeo.geo.algo.clipping"
 )]
 #[pyfunction(name = "from_clipper")]
-fn from_clipper_py(polygon: Vec<(i64, i64)>) -> Vec<Point> {
+fn from_clipper_py(polygon: Vec<(i64, i64)>) -> Vec<(f64, f64)> {
     let scale = crate::CLIPPER_SCALE;
-    polygon
-        .iter()
-        .map(|(x, y)| Point(*x as f64 / scale, *y as f64 / scale))
-        .collect()
+    points_to_tuples(
+        polygon
+            .iter()
+            .map(|(x, y)| Point::new(*x as f64 / scale, *y as f64 / scale))
+            .collect(),
+    )
 }

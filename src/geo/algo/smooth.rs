@@ -58,10 +58,10 @@ pub fn smooth_sub_segment(
             let p_idx = (i as i32 - kernel_radius as i32 + k_idx as i32)
                 .clamp(0, num_pts as i32 - 1) as usize;
             let pt = points[p_idx];
-            new_x += pt.0 * k_weight;
-            new_y += pt.1 * k_weight;
+            new_x += pt.x * k_weight;
+            new_y += pt.y * k_weight;
         }
-        out.push(Point3D(new_x, new_y, points[i].2));
+        out.push(Point3D::new(new_x, new_y, points[i].z));
     }
 
     out.push(points[num_pts - 1]);
@@ -90,10 +90,10 @@ pub fn smooth_circularly(
             let p_idx = (i as i32 - kernel_radius as i32 + k_idx as i32)
                 .rem_euclid(num_pts as i32) as usize;
             let pt = points[p_idx];
-            new_x += pt.0 * k_weight;
-            new_y += pt.1 * k_weight;
+            new_x += pt.x * k_weight;
+            new_y += pt.y * k_weight;
         }
-        out.push(Point3D(new_x, new_y, points[i].2));
+        out.push(Point3D::new(new_x, new_y, points[i].z));
     }
 
     if !out.is_empty() {
@@ -125,17 +125,17 @@ pub fn resample_polyline(
     for i in 0..num_segments {
         let p1 = points[i];
         let p2 = points[(i + 1) % points.len()];
-        let dx = p2.0 - p1.0;
-        let dy = p2.1 - p1.1;
+        let dx = p2.x - p1.x;
+        let dy = p2.y - p1.y;
         let dist = dx.hypot(dy);
 
         if dist > max_segment_length {
             let num_sub = (dist / max_segment_length).ceil() as i32;
             for j in 1..num_sub {
                 let t = j as f64 / num_sub as f64;
-                let px = p1.0 * (1.0 - t) + p2.0 * t;
-                let py = p1.1 * (1.0 - t) + p2.1 * t;
-                out.push(Point3D(px, py, p1.2));
+                let px = p1.x * (1.0 - t) + p2.x * t;
+                let py = p1.y * (1.0 - t) + p2.y * t;
+                out.push(Point3D::new(px, py, p1.z));
             }
         }
 
@@ -169,8 +169,8 @@ pub fn smooth_polyline(
     let is_closed = is_closed.unwrap_or_else(|| {
         if points.len() >= 3 {
             let tol = 1e-6;
-            (points[0].0 - points[points.len() - 1].0)
-                .hypot(points[0].1 - points[points.len() - 1].1)
+            (points[0].x - points[points.len() - 1].x)
+                .hypot(points[0].y - points[points.len() - 1].y)
                 < tol
         } else {
             false
@@ -206,9 +206,9 @@ pub fn smooth_polyline(
         let p_curr = prepared[i];
         let p_next = prepared[(i + 1) % num_points];
         let angle = get_angle_at_vertex(
-            Point(p_prev.0, p_prev.1),
-            Point(p_curr.0, p_curr.1),
-            Point(p_next.0, p_next.1),
+            Point::new(p_prev.x, p_prev.y),
+            Point::new(p_curr.x, p_curr.y),
+            Point::new(p_next.x, p_next.y),
         );
 
         if angle < corner_threshold_rad

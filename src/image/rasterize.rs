@@ -152,7 +152,7 @@ pub fn rasterize_scanlines(
 
         if ct == CommandType::MoveTo {
             let end = ops.endpoint(i);
-            current_pos = (end.0, end.1, end.2);
+            current_pos = (end.x, end.y, end.z);
             continue;
         }
 
@@ -164,14 +164,14 @@ pub fn rasterize_scanlines(
         let power_values = ops.scanline_data(i);
         let num_steps = power_values.len();
         if num_steps == 0 {
-            current_pos = (end.0, end.1, end.2);
+            current_pos = (end.x, end.y, end.z);
             continue;
         }
 
         let sx = (current_pos.0 - ox) * px_mm_x;
         let sy = h as f64 - (current_pos.1 - oy) * px_mm_y;
-        let ex = (end.0 - ox) * px_mm_x;
-        let ey = h as f64 - (end.1 - oy) * px_mm_y;
+        let ex = (end.x - ox) * px_mm_x;
+        let ey = h as f64 - (end.y - oy) * px_mm_y;
 
         let dx = (ex - sx) / num_steps as f64;
         let dy = (ey - sy) / num_steps as f64;
@@ -199,7 +199,7 @@ pub fn rasterize_scanlines(
             );
         }
 
-        current_pos = (end.0, end.1, end.2);
+        current_pos = (end.x, end.y, end.z);
     }
 
     buffer

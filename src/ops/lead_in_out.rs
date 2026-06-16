@@ -115,20 +115,20 @@ fn get_tangent_at_start(ops: &Ops, indices: &[usize]) -> Option<(f64, f64)> {
     if data.len() < 2 {
         return None;
     }
-    let seg_start_x = data[0].end_point().0;
-    let seg_start_y = data[0].end_point().1;
-    let seg_end_x = data[1].end_point().0;
-    let seg_end_y = data[1].end_point().1;
+    let seg_start_x = data[0].end_point().x;
+    let seg_start_y = data[0].end_point().y;
+    let seg_end_x = data[1].end_point().x;
+    let seg_end_y = data[1].end_point().y;
     let seg_len = (seg_end_x - seg_start_x).hypot(seg_end_y - seg_start_y);
     if seg_len < 1e-9 {
         return None;
     }
     let tangent = get_tangent_at_from_array(data, 1, 0.0)?;
-    let len = (tangent.0).hypot(tangent.1);
+    let len = (tangent.x).hypot(tangent.y);
     if len < 1e-9 {
         return None;
     }
-    Some((tangent.0 / len, tangent.1 / len))
+    Some((tangent.x / len, tangent.y / len))
 }
 
 fn get_tangent_at_end(ops: &Ops, indices: &[usize]) -> Option<(f64, f64)> {
@@ -139,20 +139,20 @@ fn get_tangent_at_end(ops: &Ops, indices: &[usize]) -> Option<(f64, f64)> {
         return None;
     }
     let last_idx = data.len() - 1;
-    let prev_x = data[last_idx - 1].end_point().0;
-    let prev_y = data[last_idx - 1].end_point().1;
-    let end_x = data[last_idx].end_point().0;
-    let end_y = data[last_idx].end_point().1;
+    let prev_x = data[last_idx - 1].end_point().x;
+    let prev_y = data[last_idx - 1].end_point().y;
+    let end_x = data[last_idx].end_point().x;
+    let end_y = data[last_idx].end_point().y;
     let seg_len = (end_x - prev_x).hypot(end_y - prev_y);
     if seg_len < 1e-9 {
         return None;
     }
     let tangent = get_tangent_at_from_array(data, last_idx, 1.0)?;
-    let len = (tangent.0).hypot(tangent.1);
+    let len = (tangent.x).hypot(tangent.y);
     if len < 1e-9 {
         return None;
     }
-    Some((tangent.0 / len, tangent.1 / len))
+    Some((tangent.x / len, tangent.y / len))
 }
 
 fn make_sub_ops(ops: &Ops, indices: &[usize]) -> Ops {
@@ -252,19 +252,19 @@ fn rewrite_buffered_contour(
 
     if has_lead_in {
         if let Some((tx, ty)) = lead_in_tangent {
-            let lead_in_start: Point3D = Point3D(
-                start_3d.0 - tx * lead_in_mm,
-                start_3d.1 - ty * lead_in_mm,
-                start_3d.2,
+            let lead_in_start: Point3D = Point3D::new(
+                start_3d.x - tx * lead_in_mm,
+                start_3d.y - ty * lead_in_mm,
+                start_3d.z,
             );
             new_ops.move_to(
-                lead_in_start.0,
-                lead_in_start.1,
-                lead_in_start.2,
+                lead_in_start.x,
+                lead_in_start.y,
+                lead_in_start.z,
                 None,
             );
             new_ops.set_power(0.0);
-            new_ops.line_to(start_3d.0, start_3d.1, start_3d.2, None);
+            new_ops.line_to(start_3d.x, start_3d.y, start_3d.z, None);
         }
     } else {
         new_ops.transfer_command_from(old_ops, indices[0]);
@@ -284,16 +284,16 @@ fn rewrite_buffered_contour(
 
     if has_lead_out {
         if let Some((tx, ty)) = lead_out_tangent {
-            let lead_out_end: Point3D = Point3D(
-                end_3d.0 + tx * lead_out_mm,
-                end_3d.1 + ty * lead_out_mm,
-                end_3d.2,
+            let lead_out_end: Point3D = Point3D::new(
+                end_3d.x + tx * lead_out_mm,
+                end_3d.y + ty * lead_out_mm,
+                end_3d.z,
             );
             new_ops.set_power(0.0);
             new_ops.line_to(
-                lead_out_end.0,
-                lead_out_end.1,
-                lead_out_end.2,
+                lead_out_end.x,
+                lead_out_end.y,
+                lead_out_end.z,
                 None,
             );
         }

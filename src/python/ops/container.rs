@@ -11,6 +11,9 @@ use crate::ops::{
     Axis, CommandType, MarkerCmd, MoveCmd, OpCategory, OpsSection,
     OpsSectionRange, StateCmd,
 };
+use crate::python::geo::flex_point::{
+    point3d_to_tuple, polygons_from_tuples, tuple_to_point3d,
+};
 use crate::types::{Point, Point3D, Rect};
 
 use super::axis::PyAxis;
@@ -133,7 +136,7 @@ pub struct PyCommandInfo {
     pub type_: PyCommandType,
     /// Endpoint of the command in 3D space, if applicable.
     #[pyo3(get)]
-    pub end: Option<Point3D>,
+    pub end: Option<(f64, f64, f64)>,
     /// Extra axis positions, if any.
     #[pyo3(get)]
     pub extra_axes: Option<Py<PyDict>>,
@@ -142,19 +145,19 @@ pub struct PyCommandInfo {
     pub state: Option<Py<PyState>>,
     /// Arc centre offset from start point, if an arc command.
     #[pyo3(get)]
-    pub center_offset: Option<Point>,
+    pub center_offset: Option<(f64, f64)>,
     /// Whether an arc is clockwise, if an arc command.
     #[pyo3(get)]
     pub clockwise: Option<bool>,
     /// First cubic-Bezier control point, if a Bezier command.
     #[pyo3(get)]
-    pub control1: Option<Point3D>,
+    pub control1: Option<(f64, f64, f64)>,
     /// Second cubic-Bezier control point, if a Bezier command.
     #[pyo3(get)]
-    pub control2: Option<Point3D>,
+    pub control2: Option<(f64, f64, f64)>,
     /// Quadratic-Bezier control point, if a quad. Bezier command.
     #[pyo3(get)]
-    pub control: Option<Point3D>,
+    pub control: Option<(f64, f64, f64)>,
     /// Per-step power byte values for scan-to commands.
     #[pyo3(get)]
     pub power_values: Option<Py<PyBytes>>,
@@ -512,8 +515,8 @@ impl PyOps {
             match last_point {
                 None => 0.0,
                 Some(lp) => {
-                    let dx = end.0 - lp.0;
-                    let dy = end.1 - lp.1;
+                    let dx = end.x - lp.0;
+                    let dy = end.y - lp.1;
                     (dx * dx + dy * dy).sqrt()
                 }
             }
@@ -561,9 +564,9 @@ impl PyOps {
     /// :param idx: Command index (negative = from end).
     /// :returns: ``(x, y, z)`` tuple.
     /// :complexity: O(1) time, O(1) space
-    fn endpoint(&self, idx: isize) -> PyResult<Point3D> {
+    fn endpoint(&self, idx: isize) -> PyResult<(f64, f64, f64)> {
         let idx = normalize_index(idx, self.inner.len())?;
-        Ok(self.inner.commands[idx].end_point())
+        Ok(point3d_to_tuple(self.inner.commands[idx].end_point()))
     }
 
     /// Get the arc parameters (center offset i, j, and clockwise flag).
@@ -583,7 +586,7 @@ impl PyOps {
             ..
         } = &self.inner.commands[idx].category
         {
-            Ok((center.0, center.1, *cw))
+            Ok((center.x, center.y, *cw))
         } else {
             Err(PyErr::new::<pyo3::exceptions::PyTypeError, _>(
                 "Not an ArcToCommand",
@@ -598,7 +601,10 @@ impl PyOps {
     /// :raises TypeError: If the command is not a BezierTo.
     /// :complexity: O(1) time, O(1) space
     #[allow(clippy::type_complexity)]
-    fn bezier_params(&self, idx: usize) -> PyResult<(Point3D, Point3D)> {
+    fn bezier_params(
+        &self,
+        idx: usize,
+    ) -> PyResult<((f64, f64, f64), (f64, f64, f64))> {
         if idx >= self.inner.len() {
             return Err(PyErr::new::<pyo3::exceptions::PyIndexError, _>(
                 "index out of range",
@@ -609,7 +615,7 @@ impl PyOps {
             ..
         } = &self.inner.commands[idx].category
         {
-            Ok((*control1, *control2))
+            Ok((point3d_to_tuple(*control1), point3d_to_tuple(*control2)))
         } else {
             Err(PyErr::new::<pyo3::exceptions::PyTypeError, _>(
                 "Not a BezierToCommand",
@@ -623,7 +629,7 @@ impl PyOps {
     /// :returns: ``(cx, cy, cz)`` control point.
     /// :raises TypeError: If the command is not a QuadraticBezierTo.
     /// :complexity: O(1) time, O(1) space
-    fn quadratic_bezier_params(&self, idx: usize) -> PyResult<Point3D> {
+    fn quadratic_bezier_params(&self, idx: usize) -> PyResult<(f64, f64, f64)> {
         if idx >= self.inner.len() {
             return Err(PyErr::new::<pyo3::exceptions::PyIndexError, _>(
                 "index out of range",
@@ -634,7 +640,7 @@ impl PyOps {
             ..
         } = &self.inner.commands[idx].category
         {
-            Ok(*control)
+            Ok(point3d_to_tuple(*control))
         } else {
             Err(PyErr::new::<pyo3::exceptions::PyTypeError, _>(
                 "Not a QuadraticBezierToCommand",
@@ -1018,16 +1024,21 @@ impl PyOps {
     #[pyo3(signature = (control1, control2, end, extra=None))]
     fn bezier_to(
         &mut self,
-        control1: Point3D,
-        control2: Point3D,
-        end: Point3D,
+        control1: (f64, f64, f64),
+        control2: (f64, f64, f64),
+        end: (f64, f64, f64),
         extra: Option<Bound<'_, PyDict>>,
     ) -> PyResult<()> {
         let ea = match extra {
             Some(ref d) => Some(py_to_axis_map(d)?),
             None => None,
         };
-        self.inner.bezier_to(control1, control2, end, ea);
+        self.inner.bezier_to(
+            tuple_to_point3d(control1),
+            tuple_to_point3d(control2),
+            tuple_to_point3d(end),
+            ea,
+        );
         Ok(())
     }
 
@@ -1040,15 +1051,19 @@ impl PyOps {
     #[pyo3(signature = (control, end, extra=None))]
     fn quadratic_bezier_to(
         &mut self,
-        control: Point3D,
-        end: Point3D,
+        control: (f64, f64, f64),
+        end: (f64, f64, f64),
         extra: Option<Bound<'_, PyDict>>,
     ) -> PyResult<()> {
         let ea = match extra {
             Some(ref d) => Some(py_to_axis_map(d)?),
             None => None,
         };
-        self.inner.quadratic_bezier_to(control, end, ea);
+        self.inner.quadratic_bezier_to(
+            tuple_to_point3d(control),
+            tuple_to_point3d(end),
+            ea,
+        );
         Ok(())
     }
 
@@ -1450,7 +1465,7 @@ impl PyOps {
         };
 
         if inner.commands[idx].is_moving() {
-            info.end = Some(inner.commands[idx].end_point());
+            info.end = Some(point3d_to_tuple(inner.commands[idx].end_point()));
             if let Some(ea) = inner.commands[idx].extra_axes() {
                 let dict = PyDict::new(py);
                 for &(axis, val) in ea {
@@ -1467,15 +1482,15 @@ impl PyOps {
         match &inner.commands[idx].category {
             OpCategory::Moving { cmd, .. } => match cmd {
                 MoveCmd::ArcTo { center, cw } => {
-                    info.center_offset = Some(*center);
+                    info.center_offset = Some((center.x, center.y));
                     info.clockwise = Some(*cw);
                 }
                 MoveCmd::BezierTo { control1, control2 } => {
-                    info.control1 = Some(*control1);
-                    info.control2 = Some(*control2);
+                    info.control1 = Some(point3d_to_tuple(*control1));
+                    info.control2 = Some(point3d_to_tuple(*control2));
                 }
                 MoveCmd::QuadraticBezierTo { control } => {
-                    info.control = Some(*control);
+                    info.control = Some(point3d_to_tuple(*control));
                 }
                 MoveCmd::ScanLine { power_values } => {
                     info.power_values =
@@ -1594,7 +1609,11 @@ impl PyOps {
     ///
     /// :param regions: List of polygons, each being a list of ``(x, y)`` vertices.
     /// :complexity: O(n * m) time, O(n) space where m is the number of polygon vertices
-    fn subtract_regions(&mut self, regions: Vec<Vec<Point>>) -> PyResult<()> {
+    fn subtract_regions(
+        &mut self,
+        regions: Vec<Vec<(f64, f64)>>,
+    ) -> PyResult<()> {
+        let regions = polygons_from_tuples(regions);
         self.inner.subtract_regions(&regions);
         Ok(())
     }
@@ -1612,7 +1631,7 @@ impl PyOps {
     ) -> PyResult<()> {
         let regions: Vec<Vec<Point>> = regions
             .into_iter()
-            .map(|r| r.into_iter().map(|(x, y)| Point(x, y)).collect())
+            .map(|r| r.into_iter().map(|(x, y)| Point::new(x, y)).collect())
             .collect();
         self.inner.clip_to_regions(&regions, tolerance);
         Ok(())
@@ -1626,9 +1645,10 @@ impl PyOps {
     #[pyo3(signature = (regions, tolerance = 0.3))]
     fn clip_ops_to_regions(
         &mut self,
-        regions: Vec<Vec<Point>>,
+        regions: Vec<Vec<(f64, f64)>>,
         tolerance: f64,
     ) -> PyResult<()> {
+        let regions = polygons_from_tuples(regions);
         self.inner.clip_ops_to_regions(&regions, tolerance);
         Ok(())
     }
@@ -1757,7 +1777,7 @@ impl PyOps {
             }
 
             let end = self.inner.commands[i].end_point();
-            let end_list = vec![end.0, end.1, end.2];
+            let end_list = vec![end.x, end.y, end.z];
             let end_py_list = PyList::new(py, &end_list)?;
 
             let ea = self.inner.commands[i].extra_axes();
@@ -1773,7 +1793,7 @@ impl PyOps {
             if let OpCategory::Moving { end: ref mut e, .. } =
                 &mut self.inner.commands[i].category
             {
-                *e = Point3D(new_end[0], new_end[1], new_end[2]);
+                *e = Point3D::new(new_end[0], new_end[1], new_end[2]);
             }
 
             if !ea_arg.is_empty() {
@@ -1788,29 +1808,32 @@ impl PyOps {
                 {
                     match cmd {
                         MoveCmd::ArcTo { center, .. } => {
-                            let off_list = vec![center.0, center.1];
+                            let off_list = vec![center.x, center.y];
                             let off_py_list = PyList::new(py, &off_list)?;
                             aux_cb.call1(py, (&off_py_list,))?;
                             let new_off: Vec<f64> = off_py_list.extract()?;
-                            *center = Point(new_off[0], new_off[1]);
+                            *center = Point::new(new_off[0], new_off[1]);
                         }
                         MoveCmd::BezierTo {
                             control1, control2, ..
                         } => {
                             for cp in [control1, control2].iter_mut() {
-                                let cp_list = vec![cp.0, cp.1, cp.2];
+                                let cp_list = vec![cp.x, cp.y, cp.z];
                                 let cp_py_list = PyList::new(py, &cp_list)?;
                                 aux_cb.call1(py, (&cp_py_list,))?;
                                 let new_cp: Vec<f64> = cp_py_list.extract()?;
-                                **cp = Point3D(new_cp[0], new_cp[1], new_cp[2]);
+                                **cp = Point3D::new(
+                                    new_cp[0], new_cp[1], new_cp[2],
+                                );
                             }
                         }
                         MoveCmd::QuadraticBezierTo { control, .. } => {
-                            let cp_list = vec![control.0, control.1, control.2];
+                            let cp_list = vec![control.x, control.y, control.z];
                             let cp_py_list = PyList::new(py, &cp_list)?;
                             aux_cb.call1(py, (&cp_py_list,))?;
                             let new_cp: Vec<f64> = cp_py_list.extract()?;
-                            *control = Point3D(new_cp[0], new_cp[1], new_cp[2]);
+                            *control =
+                                Point3D::new(new_cp[0], new_cp[1], new_cp[2]);
                         }
                         _ => {}
                     }
@@ -1828,7 +1851,11 @@ impl PyOps {
     /// :returns: A new Ops containing the linearized sub-commands.
     /// :raises TypeError: If the command at idx is not a curve or line type.
     /// :complexity: O(n) time, O(n) space
-    fn linearize(&self, idx: usize, start_point: Point3D) -> PyResult<Self> {
+    fn linearize(
+        &self,
+        idx: usize,
+        start_point: (f64, f64, f64),
+    ) -> PyResult<Self> {
         let ct = self.inner.commands[idx].command_type();
         match ct {
             CommandType::ScanLine
@@ -1837,7 +1864,7 @@ impl PyOps {
             | CommandType::QuadraticBezierTo
             | CommandType::MoveTo
             | CommandType::LineTo => Ok(PyOps {
-                inner: self.inner.linearize(idx, start_point),
+                inner: self.inner.linearize(idx, tuple_to_point3d(start_point)),
             }),
             _ => Err(pyo3::exceptions::PyTypeError::new_err(format!(
                 "Cannot linearize command at index {}: {:?}",
@@ -1997,16 +2024,16 @@ impl PyOps {
     ///
     /// :complexity: O(1) time, O(1) space
     #[getter]
-    fn get_last_move_to(&self) -> Point3D {
-        self.inner.last_move_to
+    fn get_last_move_to(&self) -> (f64, f64, f64) {
+        point3d_to_tuple(self.inner.last_move_to)
     }
 
     /// Set the last move-to position.
     ///
     /// :complexity: O(1) time, O(1) space
     #[setter]
-    fn set_last_move_to(&mut self, val: Point3D) {
-        self.inner.last_move_to = val;
+    fn set_last_move_to(&mut self, val: (f64, f64, f64)) {
+        self.inner.last_move_to = tuple_to_point3d(val);
     }
 
     /// Serialize this Ops sequence to a dict suitable for JSON export.

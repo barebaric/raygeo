@@ -49,7 +49,7 @@ class CommandInfo:
         The type of this command (e.g. Move, Line, Arc, Bezier, ScanTo, …).
         """
     @property
-    def end(self) -> typing.Optional[tuple[float, float, float]]:
+    def end(self) -> typing.Optional[tuple[builtins.float, builtins.float, builtins.float]]:
         r"""
         Endpoint of the command in 3D space, if applicable.
         """
@@ -64,7 +64,7 @@ class CommandInfo:
         State snapshot at this command, if present.
         """
     @property
-    def center_offset(self) -> typing.Optional[tuple[float, float]]:
+    def center_offset(self) -> typing.Optional[tuple[builtins.float, builtins.float]]:
         r"""
         Arc centre offset from start point, if an arc command.
         """
@@ -74,17 +74,17 @@ class CommandInfo:
         Whether an arc is clockwise, if an arc command.
         """
     @property
-    def control1(self) -> typing.Optional[tuple[float, float, float]]:
+    def control1(self) -> typing.Optional[tuple[builtins.float, builtins.float, builtins.float]]:
         r"""
         First cubic-Bezier control point, if a Bezier command.
         """
     @property
-    def control2(self) -> typing.Optional[tuple[float, float, float]]:
+    def control2(self) -> typing.Optional[tuple[builtins.float, builtins.float, builtins.float]]:
         r"""
         Second cubic-Bezier control point, if a Bezier command.
         """
     @property
-    def control(self) -> typing.Optional[tuple[float, float, float]]:
+    def control(self) -> typing.Optional[tuple[builtins.float, builtins.float, builtins.float]]:
         r"""
         Quadratic-Bezier control point, if a quad. Bezier command.
         """
@@ -160,14 +160,14 @@ class Ops:
         :complexity: O(n) time, O(1) space
         """
     @property
-    def last_move_to(self) -> builtins.tuple[float, float, float]:
+    def last_move_to(self) -> tuple[builtins.float, builtins.float, builtins.float]:
         r"""
         The last ``(x, y, z)`` endpoint from a MoveTo command.
         
         :complexity: O(1) time, O(1) space
         """
     @last_move_to.setter
-    def last_move_to(self, value: builtins.tuple[float, float, float]) -> None:
+    def last_move_to(self, value: tuple[builtins.float, builtins.float, builtins.float]) -> None:
         r"""
         Set the last move-to position.
         
@@ -303,7 +303,7 @@ class Ops:
         
         :complexity: O(n) time, O(1) space
         """
-    def endpoint(self, idx: builtins.int) -> builtins.tuple[float, float, float]:
+    def endpoint(self, idx: builtins.int) -> tuple[builtins.float, builtins.float, builtins.float]:
         r"""
         Get the endpoint coordinates of a moving command.
         
@@ -320,7 +320,7 @@ class Ops:
         :raises TypeError: If the command is not an ArcTo.
         :complexity: O(1) time, O(1) space
         """
-    def bezier_params(self, idx: builtins.int) -> tuple[tuple[float, float, float], tuple[float, float, float]]:
+    def bezier_params(self, idx: builtins.int) -> tuple[tuple[builtins.float, builtins.float, builtins.float], tuple[builtins.float, builtins.float, builtins.float]]:
         r"""
         Get the cubic bezier control points.
         
@@ -329,7 +329,7 @@ class Ops:
         :raises TypeError: If the command is not a BezierTo.
         :complexity: O(1) time, O(1) space
         """
-    def quadratic_bezier_params(self, idx: builtins.int) -> builtins.tuple[float, float, float]:
+    def quadratic_bezier_params(self, idx: builtins.int) -> tuple[builtins.float, builtins.float, builtins.float]:
         r"""
         Get the quadratic bezier control point.
         
@@ -482,7 +482,7 @@ class Ops:
         :param extra: Optional dict of extra axis values.
         :complexity: O(1) time, O(1) space
         """
-    def bezier_to(self, control1: builtins.tuple[float, float, float], control2: builtins.tuple[float, float, float], end: builtins.tuple[float, float, float], extra: typing.Optional[dict] = None) -> None:
+    def bezier_to(self, control1: tuple[builtins.float, builtins.float, builtins.float], control2: tuple[builtins.float, builtins.float, builtins.float], end: tuple[builtins.float, builtins.float, builtins.float], extra: typing.Optional[dict] = None) -> None:
         r"""
         Add a cubic bezier curve to the given endpoint.
         
@@ -492,7 +492,7 @@ class Ops:
         :param extra: Optional dict of extra axis values.
         :complexity: O(1) time, O(1) space
         """
-    def quadratic_bezier_to(self, control: builtins.tuple[float, float, float], end: builtins.tuple[float, float, float], extra: typing.Optional[dict] = None) -> None:
+    def quadratic_bezier_to(self, control: tuple[builtins.float, builtins.float, builtins.float], end: tuple[builtins.float, builtins.float, builtins.float], extra: typing.Optional[dict] = None) -> None:
         r"""
         Add a quadratic bezier curve to the given endpoint.
         
@@ -814,7 +814,7 @@ class Ops:
         :returns: A new Ops sequence containing the clipped commands.
         :complexity: O(n) time, O(n) space
         """
-    def subtract_regions(self, regions: typing.Sequence[typing.Sequence[tuple[float, float]]]) -> None:
+    def subtract_regions(self, regions: typing.Sequence[typing.Sequence[tuple[builtins.float, builtins.float]]]) -> None:
         r"""
         Subtract polygonal regions from the cutting paths.
         
@@ -829,7 +829,7 @@ class Ops:
         :param tolerance: Approximation tolerance (default 0.3).
         :complexity: O(n * m) time, O(n) space where m is the number of polygon vertices
         """
-    def clip_ops_to_regions(self, regions: typing.Sequence[typing.Sequence[tuple[float, float]]], tolerance: builtins.float = 0.3) -> None:
+    def clip_ops_to_regions(self, regions: typing.Sequence[typing.Sequence[tuple[builtins.float, builtins.float]]], tolerance: builtins.float = 0.3) -> None:
         r"""
         Clip paths using polygonal regions as boundaries; keeps what is inside.
         
@@ -877,7 +877,7 @@ class Ops:
         :param on_aux_point: Optional callable ``(point,) -> None`` for curve control points.
         :complexity: O(n) time, O(1) space
         """
-    def linearize(self, idx: builtins.int, start_point: builtins.tuple[float, float, float]) -> Ops:
+    def linearize(self, idx: builtins.int, start_point: tuple[builtins.float, builtins.float, builtins.float]) -> Ops:
         r"""
         Decompose a curved command into linear segments.
         

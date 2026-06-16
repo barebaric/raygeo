@@ -33,9 +33,9 @@ fn points_to_geometry(
         return None;
     }
     let mut geo = crate::geo::geometry::Geometry::new();
-    geo.move_to(pts[0].0, pts[0].1, 0.0);
+    geo.move_to(pts[0].x, pts[0].y, 0.0);
     for p in &pts[1..] {
-        geo.line_to(p.0, p.1, 0.0);
+        geo.line_to(p.x, p.y, 0.0);
     }
     geo.close_path();
     Some(geo)

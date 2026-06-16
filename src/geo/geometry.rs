@@ -44,7 +44,7 @@ impl Geometry {
     pub fn new() -> Self {
         Geometry {
             data: Vec::new(),
-            last_move_to: Point3D(0.0, 0.0, 0.0),
+            last_move_to: Point3D::new(0.0, 0.0, 0.0),
             uniform_scalable: true,
         }
     }
@@ -52,9 +52,9 @@ impl Geometry {
     /// Moves the current position to the specified point.
     /// Starts a new subpath; subsequent commands will continue from this point.
     pub fn move_to(&mut self, x: f64, y: f64, z: f64) -> &mut Self {
-        self.last_move_to = Point3D(x, y, z);
+        self.last_move_to = Point3D::new(x, y, z);
         self.data.push(Command::Move {
-            end: Point3D(x, y, z),
+            end: Point3D::new(x, y, z),
         });
         self
     }
@@ -62,7 +62,7 @@ impl Geometry {
     /// Draws a straight line from the current position to the specified point.
     pub fn line_to(&mut self, x: f64, y: f64, z: f64) -> &mut Self {
         self.data.push(Command::Line {
-            end: Point3D(x, y, z),
+            end: Point3D::new(x, y, z),
         });
         self
     }
@@ -71,9 +71,9 @@ impl Geometry {
     /// The starting point is the position of the last `move_to` command.
     pub fn close_path(&mut self) -> &mut Self {
         self.line_to(
-            self.last_move_to.0,
-            self.last_move_to.1,
-            self.last_move_to.2,
+            self.last_move_to.x,
+            self.last_move_to.y,
+            self.last_move_to.z,
         );
         self
     }
@@ -95,12 +95,12 @@ impl Geometry {
     ) -> &mut Self {
         self.uniform_scalable = false;
         self.data.push(Command::Arc {
-            end: Point3D(x, y, z),
-            center_offset: Point3D(i, j, 0.0),
+            end: Point3D::new(x, y, z),
+            center_offset: Point3D::new(i, j, 0.0),
             normal: if clockwise {
-                Point3D(0.0, 0.0, -1.0)
+                Point3D::new(0.0, 0.0, -1.0)
             } else {
-                Point3D(0.0, 0.0, 1.0)
+                Point3D::new(0.0, 0.0, 1.0)
             },
         });
         self
@@ -122,9 +122,9 @@ impl Geometry {
     ) -> &mut Self {
         self.uniform_scalable = false;
         self.data.push(Command::Arc {
-            end: Point3D(x, y, z),
-            center_offset: Point3D(i, j, k),
-            normal: Point3D(nx, ny, nz),
+            end: Point3D::new(x, y, z),
+            center_offset: Point3D::new(i, j, k),
+            normal: Point3D::new(nx, ny, nz),
         });
         self
     }
@@ -160,9 +160,9 @@ impl Geometry {
         if points.is_empty() {
             return geo;
         }
-        geo.move_to(points[0].0, points[0].1, points[0].2);
+        geo.move_to(points[0].x, points[0].y, points[0].z);
         for &p in points.iter().skip(1) {
-            geo.line_to(p.0, p.1, p.2);
+            geo.line_to(p.x, p.y, p.z);
         }
         if close && points.len() > 1 {
             geo.close_path();
@@ -203,12 +203,12 @@ impl Geometry {
 
         let (sx, sy) = if index > 0 {
             let prev = self.data[index - 1].end_point();
-            (prev.0, prev.1)
+            (prev.x, prev.y)
         } else {
             (0.0, 0.0)
         };
 
-        cmd.bounding_box(Point(sx, sy))
+        cmd.bounding_box(Point::new(sx, sy))
     }
 
     /// Given a list of distances along the path, returns the corresponding
@@ -280,9 +280,9 @@ impl Geometry {
         }
         let start = self.data[0].end_point();
         let end = self.data[self.data.len() - 1].end_point();
-        let dist_sq = (start.0 - end.0).powi(2)
-            + (start.1 - end.1).powi(2)
-            + (start.2 - end.2).powi(2);
+        let dist_sq = (start.x - end.x).powi(2)
+            + (start.y - end.y).powi(2)
+            + (start.z - end.z).powi(2);
         dist_sq < tolerance * tolerance
     }
 
@@ -344,8 +344,8 @@ impl Geometry {
                         idx,
                         last_point,
                         *end,
-                        Point(center_offset.0, center_offset.1),
-                        normal.2 < 0.0,
+                        Point::new(center_offset.x, center_offset.y),
+                        normal.z < 0.0,
                     ));
                 }
                 last_point = cmd.end_point();
@@ -378,7 +378,7 @@ impl Geometry {
 
         let mut all_segments: Vec<Vec<Point3D>> = Vec::new();
         let mut current_segment: Vec<Point3D> = Vec::new();
-        let mut last_point: Point3D = Point3D(0.0, 0.0, 0.0);
+        let mut last_point: Point3D = Point3D::new(0.0, 0.0, 0.0);
 
         for cmd in &self.data {
             let end_point = cmd.end_point();

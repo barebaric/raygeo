@@ -17,8 +17,8 @@ pub fn get_circle_circle_intersections(
     c2: Point,
     r2: f64,
 ) -> Vec<Point> {
-    let dx = c2.0 - c1.0;
-    let dy = c2.1 - c1.1;
+    let dx = c2.x - c1.x;
+    let dy = c2.y - c1.y;
     let d_sq = dx * dx + dy * dy;
     let d = d_sq.sqrt();
 
@@ -30,11 +30,11 @@ pub fn get_circle_circle_intersections(
     let h_sq = (r1 * r1 - a * a).max(0.0);
     let h = h_sq.sqrt();
 
-    let x2 = c1.0 + a * dx / d;
-    let y2 = c1.1 + a * dy / d;
+    let x2 = c1.x + a * dx / d;
+    let y2 = c1.y + a * dy / d;
 
     if h < 1e-9 {
-        return vec![Point(x2, y2)];
+        return vec![Point::new(x2, y2)];
     }
 
     let x3_1 = x2 + h * dy / d;
@@ -42,7 +42,7 @@ pub fn get_circle_circle_intersections(
     let x3_2 = x2 - h * dy / d;
     let y3_2 = y2 + h * dx / d;
 
-    vec![Point(x3_1, y3_1), Point(x3_2, y3_2)]
+    vec![Point::new(x3_1, y3_1), Point::new(x3_2, y3_2)]
 }
 
 /// Projects a point onto a circle's circumference.
@@ -52,8 +52,8 @@ pub fn project_point_onto_circle(
     center: Point,
     radius: f64,
 ) -> Option<Point> {
-    let dx = point.0 - center.0;
-    let dy = point.1 - center.1;
+    let dx = point.x - center.x;
+    let dy = point.y - center.y;
     let dist = (dx * dx + dy * dy).sqrt();
 
     if dist < 1e-9 {
@@ -61,13 +61,13 @@ pub fn project_point_onto_circle(
     }
 
     let scale = radius / dist;
-    Some(Point(center.0 + dx * scale, center.1 + dy * scale))
+    Some(Point::new(center.x + dx * scale, center.y + dy * scale))
 }
 
 /// Tests if a circle is completely contained within an axis-aligned rectangle.
 pub fn is_circle_inside_rect(center: Point, radius: f64, rect: Rect) -> bool {
-    let cx = center.0;
-    let cy = center.1;
+    let cx = center.x;
+    let cy = center.y;
     let Rect(rx1, ry1, rx2, ry2) = rect;
     (cx - radius) >= rx1
         && (cy - radius) >= ry1
@@ -82,8 +82,8 @@ pub fn does_circle_intersect_rect(
     radius: f64,
     rect: Rect,
 ) -> bool {
-    let cx = center.0;
-    let cy = center.1;
+    let cx = center.x;
+    let cy = center.y;
     let Rect(rx1, ry1, rx2, ry2) = rect;
 
     // Fully contained circles don't intersect
@@ -121,10 +121,10 @@ pub fn get_line_circle_intersections(
     center: Point,
     radius: f64,
 ) -> Vec<Point> {
-    let dx = p2.0 - p1.0;
-    let dy = p2.1 - p1.1;
-    let fx = p1.0 - center.0;
-    let fy = p1.1 - center.1;
+    let dx = p2.x - p1.x;
+    let dy = p2.y - p1.y;
+    let fx = p1.x - center.x;
+    let fy = p1.y - center.y;
 
     let a = dx * dx + dy * dy;
     if a < 1e-20 {
@@ -147,14 +147,14 @@ pub fn get_line_circle_intersections(
 
     if sqrt_disc < 1e-10 {
         if (0.0..=1.0).contains(&t1) {
-            results.push(Point(p1.0 + t1 * dx, p1.1 + t1 * dy));
+            results.push(Point::new(p1.x + t1 * dx, p1.y + t1 * dy));
         }
     } else {
         if (0.0..=1.0).contains(&t1) {
-            results.push(Point(p1.0 + t1 * dx, p1.1 + t1 * dy));
+            results.push(Point::new(p1.x + t1 * dx, p1.y + t1 * dy));
         }
         if (0.0..=1.0).contains(&t2) {
-            results.push(Point(p1.0 + t2 * dx, p1.1 + t2 * dy));
+            results.push(Point::new(p1.x + t2 * dx, p1.y + t2 * dy));
         }
     }
 
@@ -169,6 +169,6 @@ pub fn line_segment_intersects_circle(
     radius: f64,
 ) -> bool {
     let (_, _, dist_sq) =
-        get_line_segment_closest_point(p1, p2, center.0, center.1);
+        get_line_segment_closest_point(p1, p2, center.x, center.y);
     dist_sq <= radius * radius
 }

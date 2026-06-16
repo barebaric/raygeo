@@ -32,11 +32,11 @@ pub fn nfp_convex_fast(
         return vec![];
     }
 
-    let x_shift = orbiting[0].0;
-    let y_shift = orbiting[0].1;
+    let x_shift = orbiting[0].x;
+    let y_shift = orbiting[0].y;
 
     let orbiting_negated: Polygon =
-        orbiting.iter().map(|p| Point(-p.0, -p.1)).collect();
+        orbiting.iter().map(|p| Point::new(-p.x, -p.y)).collect();
 
     let nfp_paths =
         get_polygon_minkowski_sum_convex(static_poly, &orbiting_negated);
@@ -46,7 +46,7 @@ pub fn nfp_convex_fast(
         if path.len() >= 3 {
             let shifted: Polygon = path
                 .iter()
-                .map(|p| Point(p.0 + x_shift, p.1 + y_shift))
+                .map(|p| Point::new(p.x + x_shift, p.y + y_shift))
                 .collect();
             results.push(shifted);
         }
@@ -62,11 +62,11 @@ pub fn nfp_minkowski(
         return vec![];
     }
 
-    let x_shift = orbiting[0].0;
-    let y_shift = orbiting[0].1;
+    let x_shift = orbiting[0].x;
+    let y_shift = orbiting[0].y;
 
     let orbiting_negated: Polygon =
-        orbiting.iter().map(|p| Point(-p.0, -p.1)).collect();
+        orbiting.iter().map(|p| Point::new(-p.x, -p.y)).collect();
 
     let mut subjects: Vec<Polygon> = Vec::new();
 
@@ -82,14 +82,14 @@ pub fn nfp_minkowski(
         let first_on = orbiting_negated[0];
         let shifted: Polygon = static_poly
             .iter()
-            .map(|p| Point(p.0 + first_on.0, p.1 + first_on.1))
+            .map(|p| Point::new(p.x + first_on.x, p.y + first_on.y))
             .collect();
         subjects.push(shifted);
 
         let first_s = static_poly[0];
         let neg_shifted: Polygon = orbiting_negated
             .iter()
-            .map(|p| Point(p.0 + first_s.0, p.1 + first_s.1))
+            .map(|p| Point::new(p.x + first_s.x, p.y + first_s.y))
             .collect();
         subjects.push(neg_shifted);
     }
@@ -105,7 +105,7 @@ pub fn nfp_minkowski(
         if poly.len() >= 3 {
             let shifted: Polygon = poly
                 .iter()
-                .map(|p| Point(p.0 + x_shift, p.1 + y_shift))
+                .map(|p| Point::new(p.x + x_shift, p.y + y_shift))
                 .collect();
 
             let area = get_polygon_signed_area(&shifted);
@@ -122,11 +122,11 @@ pub fn normalize_polygon(poly: &Polygon) -> (Polygon, f64, f64) {
     if poly.is_empty() {
         return (poly.clone(), 0.0, 0.0);
     }
-    let min_x = poly.iter().map(|p| p.0).fold(f64::INFINITY, f64::min);
-    let min_y = poly.iter().map(|p| p.1).fold(f64::INFINITY, f64::min);
+    let min_x = poly.iter().map(|p| p.x).fold(f64::INFINITY, f64::min);
+    let min_y = poly.iter().map(|p| p.y).fold(f64::INFINITY, f64::min);
     let normalized: Polygon = poly
         .iter()
-        .map(|p| Point(p.0 - min_x, p.1 - min_y))
+        .map(|p| Point::new(p.x - min_x, p.y - min_y))
         .collect();
     (normalized, min_x, min_y)
 }
@@ -135,8 +135,8 @@ pub fn polygon_to_key(poly: &Polygon) -> Vec<(i64, i64)> {
     poly.iter()
         .map(|p| {
             (
-                (p.0 * POLYGON_KEY_SCALE).round() as i64,
-                (p.1 * POLYGON_KEY_SCALE).round() as i64,
+                (p.x * POLYGON_KEY_SCALE).round() as i64,
+                (p.y * POLYGON_KEY_SCALE).round() as i64,
             )
         })
         .collect()

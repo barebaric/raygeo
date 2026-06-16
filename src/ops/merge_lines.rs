@@ -78,16 +78,16 @@ pub fn merge_overlapping_lines(ops: &mut Ops, tolerance: f64) {
 
                         if dist3d(machine_pos, start_pt) > 1e-5 {
                             new_ops.move_to(
-                                start_pt.0, start_pt.1, start_pt.2, None,
+                                start_pt.x, start_pt.y, start_pt.z, None,
                             );
                         }
-                        new_ops.line_to(end_pt.0, end_pt.1, end_pt.2, None);
+                        new_ops.line_to(end_pt.x, end_pt.y, end_pt.z, None);
                         machine_pos = Some(end_pt);
                     }
                 } else {
                     let p1 = seg.start;
                     if dist3d(machine_pos, p1) > 1e-5 {
-                        new_ops.move_to(p1.0, p1.1, p1.2, None);
+                        new_ops.move_to(p1.x, p1.y, p1.z, None);
                     }
                     new_ops.commands.push(ops.commands[idx].clone());
                     machine_pos = Some(ops.endpoint(idx));
@@ -101,7 +101,7 @@ pub fn merge_overlapping_lines(ops: &mut Ops, tolerance: f64) {
                 if is_cut {
                     if let Some(ep) = expected_pos {
                         if dist3d(machine_pos, ep) > 1e-5 {
-                            new_ops.move_to(ep.0, ep.1, ep.2, None);
+                            new_ops.move_to(ep.x, ep.y, ep.z, None);
                             machine_pos = Some(ep);
                         }
                     }
@@ -152,8 +152,8 @@ impl LineSegment {
         segment_index: usize,
         command_index: usize,
     ) -> Self {
-        let dx = end.0 - start.0;
-        let dy = end.1 - start.1;
+        let dx = end.x - start.x;
+        let dy = end.y - start.y;
         let length_sq = dx * dx + dy * dy;
         let length = length_sq.sqrt();
         let (dir_x, dir_y) = if length > 1e-9 {
@@ -161,10 +161,10 @@ impl LineSegment {
         } else {
             (0.0, 0.0)
         };
-        let min_x = start.0.min(end.0);
-        let max_x = start.0.max(end.0);
-        let min_y = start.1.min(end.1);
-        let max_y = start.1.max(end.1);
+        let min_x = start.x.min(end.x);
+        let max_x = start.x.max(end.x);
+        let min_y = start.y.min(end.y);
+        let max_y = start.y.max(end.y);
 
         LineSegment {
             start,
@@ -314,9 +314,9 @@ fn find_duplicates(line_segments: &mut [LineSegment], tolerance: f64) {
                 let d = coverer_end;
 
                 let t_c =
-                    ((c.0 - p1.0) * dx + (c.1 - p1.1) * dy) / coveree_l_sq;
+                    ((c.x - p1.x) * dx + (c.y - p1.y) * dy) / coveree_l_sq;
                 let t_d =
-                    ((d.0 - p1.0) * dx + (d.1 - p1.1) * dy) / coveree_l_sq;
+                    ((d.x - p1.x) * dx + (d.y - p1.y) * dy) / coveree_l_sq;
 
                 let t_min_raw = t_c.min(t_d);
                 let t_max_raw = t_c.max(t_d);
@@ -360,10 +360,10 @@ fn get_cell_keys(
 // ---------------------------------------------------------------------------
 
 fn z_overlap(seg1: &LineSegment, seg2: &LineSegment) -> bool {
-    let z1s = seg1.start.2;
-    let z1e = seg1.end.2;
-    let z2s = seg2.start.2;
-    let z2e = seg2.end.2;
+    let z1s = seg1.start.z;
+    let z1e = seg1.end.z;
+    let z2s = seg2.start.z;
+    let z2e = seg2.end.z;
     if z1s == 0.0 && z1e == 0.0 && z2s == 0.0 && z2e == 0.0 {
         return true;
     }
@@ -380,9 +380,9 @@ fn are_parallel(seg1: &LineSegment, seg2: &LineSegment) -> bool {
 }
 
 fn point_line_distance(point: Point3D, seg: &LineSegment) -> f64 {
-    let (x0, y0) = (point.0, point.1);
-    let (x1, y1) = (seg.start.0, seg.start.1);
-    let (x2, y2) = (seg.end.0, seg.end.1);
+    let (x0, y0) = (point.x, point.y);
+    let (x1, y1) = (seg.start.x, seg.start.y);
+    let (x2, y2) = (seg.end.x, seg.end.y);
     if seg.length_sq < 1e-12 {
         return (x0 - x1).hypot(y0 - y1);
     }
@@ -452,19 +452,19 @@ fn get_uncovered(intervals: &[(f64, f64)]) -> Vec<(f64, f64)> {
 // ---------------------------------------------------------------------------
 
 fn interpolate(p1: Point3D, p2: Point3D, t: f64) -> Point3D {
-    Point3D(
-        p1.0 + (p2.0 - p1.0) * t,
-        p1.1 + (p2.1 - p1.1) * t,
-        p1.2 + (p2.2 - p1.2) * t,
+    Point3D::new(
+        p1.x + (p2.x - p1.x) * t,
+        p1.y + (p2.y - p1.y) * t,
+        p1.z + (p2.z - p1.z) * t,
     )
 }
 
 fn dist3d(a: Option<Point3D>, b: Point3D) -> f64 {
     match a {
         Some(a) => {
-            let dx = b.0 - a.0;
-            let dy = b.1 - a.1;
-            let dz = b.2 - a.2;
+            let dx = b.x - a.x;
+            let dy = b.y - a.y;
+            let dz = b.z - a.z;
             (dx * dx + dy * dy + dz * dz).sqrt()
         }
         None => f64::INFINITY,

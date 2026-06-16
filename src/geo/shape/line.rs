@@ -8,29 +8,29 @@ use crate::types::{Point, Polygon, Rect};
 
 /// Computes the Euclidean length of a line segment.
 pub fn get_line_segment_length(p1: Point, p2: Point) -> f64 {
-    let dx = p2.0 - p1.0;
-    let dy = p2.1 - p1.1;
+    let dx = p2.x - p1.x;
+    let dy = p2.y - p1.y;
     dx.hypot(dy)
 }
 
 /// Checks if a point lies on a line segment using dot product projection
 /// and cross-product collinearity test.
 pub fn is_point_on_segment(pt: Point, p1: Point, p2: Point) -> bool {
-    let dx = p2.0 - p1.0;
-    let dy = p2.1 - p1.1;
+    let dx = p2.x - p1.x;
+    let dy = p2.y - p1.y;
     let len_sq = dx * dx + dy * dy;
 
     // Collinearity test: cross product magnitude squared
-    let cross = (pt.0 - p1.0) * dy - (pt.1 - p1.1) * dx;
+    let cross = (pt.x - p1.x) * dy - (pt.y - p1.y) * dx;
     if cross.abs() > 1e-9 * len_sq.max(1.0) {
         return false;
     }
 
-    let dot1 = (pt.0 - p1.0) * dx + (pt.1 - p1.1) * dy;
+    let dot1 = (pt.x - p1.x) * dx + (pt.y - p1.y) * dy;
     if dot1 < 0.0 {
         return false;
     }
-    let dot2 = (pt.0 - p2.0) * (-dx) + (pt.1 - p2.1) * (-dy);
+    let dot2 = (pt.x - p2.x) * (-dx) + (pt.y - p2.y) * (-dy);
     if dot2 < 0.0 {
         return false;
     }
@@ -45,14 +45,14 @@ pub fn get_line_line_intersection(
     p3: Point,
     p4: Point,
 ) -> Option<Point> {
-    let x1 = p1.0;
-    let y1 = p1.1;
-    let x2 = p2.0;
-    let y2 = p2.1;
-    let x3 = p3.0;
-    let y3 = p3.1;
-    let x4 = p4.0;
-    let y4 = p4.1;
+    let x1 = p1.x;
+    let y1 = p1.y;
+    let x2 = p2.x;
+    let y2 = p2.y;
+    let x3 = p3.x;
+    let y3 = p3.y;
+    let x4 = p4.x;
+    let y4 = p4.y;
 
     let denom = (y4 - y3) * (x2 - x1) - (x4 - x3) * (y2 - y1);
     if denom == 0.0 {
@@ -60,7 +60,7 @@ pub fn get_line_line_intersection(
     }
 
     let ua = ((x4 - x3) * (y1 - y3) - (y4 - y3) * (x1 - x3)) / denom;
-    Some(Point(x1 + ua * (x2 - x1), y1 + ua * (y2 - y1)))
+    Some(Point::new(x1 + ua * (x2 - x1), y1 + ua * (y2 - y1)))
 }
 
 /// Computes the intersection of two line segments.
@@ -72,14 +72,14 @@ pub fn get_line_segment_intersection(
     p3: Point,
     p4: Point,
 ) -> Option<Point> {
-    let x1 = p1.0;
-    let y1 = p1.1;
-    let x2 = p2.0;
-    let y2 = p2.1;
-    let x3 = p3.0;
-    let y3 = p3.1;
-    let x4 = p4.0;
-    let y4 = p4.1;
+    let x1 = p1.x;
+    let y1 = p1.y;
+    let x2 = p2.x;
+    let y2 = p2.y;
+    let x3 = p3.x;
+    let y3 = p3.y;
+    let x4 = p4.x;
+    let y4 = p4.y;
 
     let den = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4);
     if den.abs() < 1e-9 {
@@ -93,7 +93,7 @@ pub fn get_line_segment_intersection(
     let u = u_num / den;
 
     if (0.0..=1.0).contains(&t) && (0.0..=1.0).contains(&u) {
-        Some(Point(x1 + t * (x2 - x1), y1 + t * (y2 - y1)))
+        Some(Point::new(x1 + t * (x2 - x1), y1 + t * (y2 - y1)))
     } else {
         None
     }
@@ -102,10 +102,10 @@ pub fn get_line_segment_intersection(
 /// Finds the closest point on an infinite line to a given point.
 /// Uses projection to find the point, returns first endpoint if line is degenerate.
 pub fn get_line_closest_point(p1: Point, p2: Point, x: f64, y: f64) -> Point {
-    let dx = p2.0 - p1.0;
-    let dy = p2.1 - p1.1;
-    let px = x - p1.0;
-    let py = y - p1.1;
+    let dx = p2.x - p1.x;
+    let dy = p2.y - p1.y;
+    let px = x - p1.x;
+    let py = y - p1.y;
 
     let len_sq = dx * dx + dy * dy;
     if len_sq < 1e-12 {
@@ -113,7 +113,7 @@ pub fn get_line_closest_point(p1: Point, p2: Point, x: f64, y: f64) -> Point {
     }
 
     let t = (px * dx + py * dy) / len_sq;
-    Point(p1.0 + t * dx, p1.1 + t * dy)
+    Point::new(p1.x + t * dx, p1.y + t * dy)
 }
 
 /// Finds the closest point on a line segment to a given point.
@@ -125,23 +125,23 @@ pub fn get_line_segment_closest_point(
     x: f64,
     y: f64,
 ) -> (f64, Point, f64) {
-    let dx = p2.0 - p1.0;
-    let dy = p2.1 - p1.1;
+    let dx = p2.x - p1.x;
+    let dy = p2.y - p1.y;
     let len_sq = dx * dx + dy * dy;
 
     let t = if len_sq < 1e-12 {
         0.0
     } else {
-        ((x - p1.0) * dx + (y - p1.1) * dy) / len_sq
+        ((x - p1.x) * dx + (y - p1.y) * dy) / len_sq
     };
 
     let t = t.clamp(0.0, 1.0);
 
-    let closest_x = p1.0 + t * dx;
-    let closest_y = p1.1 + t * dy;
+    let closest_x = p1.x + t * dx;
+    let closest_y = p1.y + t * dy;
     let dist_sq = (x - closest_x).powi(2) + (y - closest_y).powi(2);
 
-    (t, Point(closest_x, closest_y), dist_sq)
+    (t, Point::new(closest_x, closest_y), dist_sq)
 }
 
 /// Perpendicular distance from a point to a line segment.
@@ -150,21 +150,21 @@ pub fn get_point_line_distance(
     line_start: Point,
     line_end: Point,
 ) -> f64 {
-    let line_vec = (line_end.0 - line_start.0, line_end.1 - line_start.1);
+    let line_vec = (line_end.x - line_start.x, line_end.y - line_start.y);
     let line_len = (line_vec.0 * line_vec.0 + line_vec.1 * line_vec.1).sqrt();
     if line_len < 1e-6 {
-        let dx = point.0 - line_start.0;
-        let dy = point.1 - line_start.1;
+        let dx = point.x - line_start.x;
+        let dy = point.y - line_start.y;
         return (dx * dx + dy * dy).sqrt();
     }
     let line_unit = (line_vec.0 / line_len, line_vec.1 / line_len);
-    let point_vec = (point.0 - line_start.0, point.1 - line_start.1);
+    let point_vec = (point.x - line_start.x, point.y - line_start.y);
     let mut proj_len = point_vec.0 * line_unit.0 + point_vec.1 * line_unit.1;
     proj_len = proj_len.max(0.0).min(line_len);
-    let closest_x = line_start.0 + proj_len * line_unit.0;
-    let closest_y = line_start.1 + proj_len * line_unit.1;
-    let dx = point.0 - closest_x;
-    let dy = point.1 - closest_y;
+    let closest_x = line_start.x + proj_len * line_unit.0;
+    let closest_y = line_start.y + proj_len * line_unit.1;
+    let dx = point.x - closest_x;
+    let dy = point.y - closest_y;
     (dx * dx + dy * dy).sqrt()
 }
 
@@ -201,19 +201,19 @@ pub fn get_line_segment_polygon_intersections_into(
             if let Some(intersection) =
                 get_line_segment_intersection(p1_2d, p2_2d, p3, p4)
             {
-                let ix = intersection.0;
-                let iy = intersection.1;
-                let seg_dx = p2_2d.0 - p1_2d.0;
-                let seg_dy = p2_2d.1 - p1_2d.1;
+                let ix = intersection.x;
+                let iy = intersection.y;
+                let seg_dx = p2_2d.x - p1_2d.x;
+                let seg_dy = p2_2d.y - p1_2d.y;
 
                 let t = if seg_dx.abs() > seg_dy.abs() {
                     if seg_dx != 0.0 {
-                        (ix - p1_2d.0) / seg_dx
+                        (ix - p1_2d.x) / seg_dx
                     } else {
                         0.0
                     }
                 } else if seg_dy != 0.0 {
-                    (iy - p1_2d.1) / seg_dy
+                    (iy - p1_2d.y) / seg_dy
                 } else {
                     0.0
                 };
@@ -230,8 +230,8 @@ pub fn get_line_segment_polygon_intersections_into(
 
 /// Tests if a 2D point is inside an axis-aligned rectangle.
 pub fn is_point_inside_rect(point: Point, rect: Rect) -> bool {
-    let x = point.0;
-    let y = point.1;
+    let x = point.x;
+    let y = point.y;
     let Rect(rx1, ry1, rx2, ry2) = rect;
     x >= rx1 && x <= rx2 && y >= ry1 && y <= ry2
 }
@@ -259,10 +259,10 @@ pub fn does_line_segment_intersect_rect(
 ) -> bool {
     let Rect(xmin, ymin, xmax, ymax) = rect;
 
-    if p1.0 >= xmin && p1.0 <= xmax && p1.1 >= ymin && p1.1 <= ymax {
+    if p1.x >= xmin && p1.x <= xmax && p1.y >= ymin && p1.y <= ymax {
         return true;
     }
-    if p2.0 >= xmin && p2.0 <= xmax && p2.1 >= ymin && p2.1 <= ymax {
+    if p2.x >= xmin && p2.x <= xmax && p2.y >= ymin && p2.y <= ymax {
         return true;
     }
 
@@ -270,26 +270,26 @@ pub fn does_line_segment_intersect_rect(
         get_line_segment_intersection(
             p1,
             p2,
-            Point(xmin, ymin),
-            Point(xmax, ymin),
+            Point::new(xmin, ymin),
+            Point::new(xmax, ymin),
         ),
         get_line_segment_intersection(
             p1,
             p2,
-            Point(xmax, ymin),
-            Point(xmax, ymax),
+            Point::new(xmax, ymin),
+            Point::new(xmax, ymax),
         ),
         get_line_segment_intersection(
             p1,
             p2,
-            Point(xmax, ymax),
-            Point(xmin, ymax),
+            Point::new(xmax, ymax),
+            Point::new(xmin, ymax),
         ),
         get_line_segment_intersection(
             p1,
             p2,
-            Point(xmin, ymax),
-            Point(xmin, ymin),
+            Point::new(xmin, ymax),
+            Point::new(xmin, ymin),
         ),
     ];
 
@@ -304,17 +304,17 @@ pub fn does_line_segment_intersect_circle(
     radius: f64,
 ) -> bool {
     let (_, _, dist_sq) =
-        get_line_segment_closest_point(p1, p2, center.0, center.1);
+        get_line_segment_closest_point(p1, p2, center.x, center.y);
     dist_sq <= radius * radius
 }
 
 /// Computes the interior angle at a vertex formed by three points.
 /// Returns the angle in radians between 0 and PI.
 pub fn get_angle_at_vertex(p0: Point, p1: Point, p2: Point) -> f64 {
-    let v1x = p0.0 - p1.0;
-    let v1y = p0.1 - p1.1;
-    let v2x = p2.0 - p1.0;
-    let v2y = p2.1 - p1.1;
+    let v1x = p0.x - p1.x;
+    let v1y = p0.y - p1.y;
+    let v2x = p2.x - p1.x;
+    let v2y = p2.y - p1.y;
 
     let mag_v1 = v1x.hypot(v1y);
     let mag_v2 = v2x.hypot(v2y);

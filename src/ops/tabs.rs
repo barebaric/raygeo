@@ -218,8 +218,8 @@ fn assign_clips_to_subpaths(
                     &geo.data, clip.x, clip.y,
                 )
             {
-                let dx = clip.x - pt.0;
-                let dy = clip.y - pt.1;
+                let dx = clip.x - pt.x;
+                let dy = clip.y - pt.y;
                 let d_sq = dx * dx + dy * dy;
                 if d_sq < best_dist_sq {
                     best_dist_sq = d_sq;
@@ -319,7 +319,7 @@ fn clip_subpath_with_gaps(sub_ops: &Ops, clips: &[ClipPoint]) -> Ops {
                     let last_end = get_last_moving_end(&result);
                     if let Some(le) = last_end {
                         if distance_2d(le, sub.0) > 1e-6 {
-                            result.move_to(sub.0 .0, sub.0 .1, sub.0 .2, None);
+                            result.move_to(sub.0.x, sub.0.y, sub.0.z, None);
                         }
                     }
                     result.bezier_to(sub.1, sub.2, sub.3, None);
@@ -335,17 +335,17 @@ fn clip_subpath_with_gaps(sub_ops: &Ops, clips: &[ClipPoint]) -> Ops {
                     if let Some(le) = last_end {
                         if distance_2d(le, start_pt_interp) > 1e-6 {
                             result.move_to(
-                                start_pt_interp.0,
-                                start_pt_interp.1,
-                                start_pt_interp.2,
+                                start_pt_interp.x,
+                                start_pt_interp.y,
+                                start_pt_interp.z,
                                 None,
                             );
                         }
                     }
                     result.line_to(
-                        end_pt_interp.0,
-                        end_pt_interp.1,
-                        end_pt_interp.2,
+                        end_pt_interp.x,
+                        end_pt_interp.y,
+                        end_pt_interp.z,
                         None,
                     );
                 }
@@ -372,7 +372,7 @@ fn clip_subpath_with_gaps(sub_ops: &Ops, clips: &[ClipPoint]) -> Ops {
                 .iter()
                 .any(|g| g.start <= total_len && g.end >= total_len);
             if !seam_gapped {
-                result.move_to(orig.0, orig.1, orig.2, None);
+                result.move_to(orig.x, orig.y, orig.z, None);
             }
         }
     }
@@ -538,7 +538,7 @@ fn insert_power_commands_curve_aware(
                 if *event_dist > seg_start + 1e-9 {
                     let t = (*event_dist - seg_start) / seg_len;
                     let split_pt = interpolate_point(start_pt, end_pt, t);
-                    result.line_to(split_pt.0, split_pt.1, split_pt.2, None);
+                    result.line_to(split_pt.x, split_pt.y, split_pt.z, None);
                 }
                 let target = match event_type {
                     EventType::Enter => tab_power,
@@ -634,8 +634,8 @@ fn compute_gap_regions_from_original(
             None => continue,
         };
 
-        let dx = clip.x - pt.0;
-        let dy = clip.y - pt.1;
+        let dx = clip.x - pt.x;
+        let dy = clip.y - pt.y;
         let dist_sq = dx * dx + dy * dy;
         if dist_sq > (clip.width * 2.0).powi(2) {
             continue;
@@ -699,8 +699,8 @@ fn compute_tab_regions_from_linearized(
             None => continue,
         };
 
-        let dx = clip.x - pt.0;
-        let dy = clip.y - pt.1;
+        let dx = clip.x - pt.x;
+        let dy = clip.y - pt.y;
         let dist_sq = dx * dx + dy * dy;
         if dist_sq > (clip.width * 2.0).powi(2) {
             continue;
@@ -924,7 +924,7 @@ fn process_segment_events(
         if *event_dist > last_dist + 1e-9 {
             let t = (*event_dist - seg_start) / seg_len;
             let split_pt = interpolate_point(p1, p2, t);
-            result.line_to(split_pt.0, split_pt.1, split_pt.2, None);
+            result.line_to(split_pt.x, split_pt.y, split_pt.z, None);
         }
 
         let target = match event_type {
@@ -961,8 +961,8 @@ pub fn bezier_arc_length_2d(
     for i in 1..=num_samples {
         let t = i as f64 / num_samples as f64;
         let pt = eval_bezier(p0, control1, control2, p1, t);
-        let dx = pt.0 - prev.0;
-        let dy = pt.1 - prev.1;
+        let dx = pt.x - prev.x;
+        let dy = pt.y - prev.y;
         length += (dx * dx + dy * dy).sqrt();
         prev = pt;
     }
@@ -983,8 +983,8 @@ pub fn bezier_distance_to_t(
     for i in 1..=num_samples {
         let t = i as f64 / num_samples as f64;
         let pt = eval_bezier(p0, control1, control2, p1, t);
-        let dx = pt.0 - prev.0;
-        let dy = pt.1 - prev.1;
+        let dx = pt.x - prev.x;
+        let dy = pt.y - prev.y;
         let seg_len = (dx * dx + dy * dy).sqrt();
         if accum + seg_len >= target_dist - 1e-9 {
             if seg_len < 1e-9 {
@@ -1059,19 +1059,19 @@ fn eval_bezier(
     let mt = 1.0 - t;
     let mt2 = mt * mt;
     let mt3 = mt2 * mt;
-    Point3D(
-        mt3 * p0.0
-            + 3.0 * mt2 * t * control1.0
-            + 3.0 * mt * t2 * control2.0
-            + t3 * p1.0,
-        mt3 * p0.1
-            + 3.0 * mt2 * t * control1.1
-            + 3.0 * mt * t2 * control2.1
-            + t3 * p1.1,
-        mt3 * p0.2
-            + 3.0 * mt2 * t * control1.2
-            + 3.0 * mt * t2 * control2.2
-            + t3 * p1.2,
+    Point3D::new(
+        mt3 * p0.x
+            + 3.0 * mt2 * t * control1.x
+            + 3.0 * mt * t2 * control2.x
+            + t3 * p1.x,
+        mt3 * p0.y
+            + 3.0 * mt2 * t * control1.y
+            + 3.0 * mt * t2 * control2.y
+            + t3 * p1.y,
+        mt3 * p0.z
+            + 3.0 * mt2 * t * control1.z
+            + 3.0 * mt * t2 * control2.z
+            + t3 * p1.z,
     )
 }
 
@@ -1080,24 +1080,24 @@ fn eval_bezier(
 // ---------------------------------------------------------------------------
 
 fn lerp_3d(a: Point3D, b: Point3D, t: f64) -> Point3D {
-    Point3D(
-        a.0 + t * (b.0 - a.0),
-        a.1 + t * (b.1 - a.1),
-        a.2 + t * (b.2 - a.2),
+    Point3D::new(
+        a.x + t * (b.x - a.x),
+        a.y + t * (b.y - a.y),
+        a.z + t * (b.z - a.z),
     )
 }
 
 fn interpolate_point(p1: Point3D, p2: Point3D, t: f64) -> Point3D {
-    Point3D(
-        p1.0 + t * (p2.0 - p1.0),
-        p1.1 + t * (p2.1 - p1.1),
-        p1.2 + t * (p2.2 - p1.2),
+    Point3D::new(
+        p1.x + t * (p2.x - p1.x),
+        p1.y + t * (p2.y - p1.y),
+        p1.z + t * (p2.z - p1.z),
     )
 }
 
 fn distance_2d(a: Point3D, b: Point3D) -> f64 {
-    let dx = b.0 - a.0;
-    let dy = b.1 - a.1;
+    let dx = b.x - a.x;
+    let dy = b.y - a.y;
     (dx * dx + dy * dy).sqrt()
 }
 
@@ -1109,7 +1109,7 @@ fn bezier_params(ops: &Ops, idx: usize) -> (Point3D, Point3D) {
     {
         (*control1, *control2)
     } else {
-        (Point3D(0.0, 0.0, 0.0), Point3D(0.0, 0.0, 0.0))
+        (Point3D::new(0.0, 0.0, 0.0), Point3D::new(0.0, 0.0, 0.0))
     }
 }
 

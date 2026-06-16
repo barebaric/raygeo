@@ -16,10 +16,10 @@ pub fn convolve_two_segments(
     b2: Point,
 ) -> Vec<Point> {
     vec![
-        Point(a1.0 + b2.0, a1.1 + b2.1),
-        Point(a1.0 + b1.0, a1.1 + b1.1),
-        Point(a2.0 + b1.0, a2.1 + b1.1),
-        Point(a2.0 + b2.0, a2.1 + b2.1),
+        Point::new(a1.x + b2.x, a1.y + b2.y),
+        Point::new(a1.x + b1.x, a1.y + b1.y),
+        Point::new(a2.x + b1.x, a2.y + b1.y),
+        Point::new(a2.x + b2.x, a2.y + b2.y),
     ]
 }
 
@@ -52,7 +52,7 @@ pub fn calculate_input_scale(polygons: &[Polygon], max_int: i64) -> f64 {
     let mut max_abs = 0.0f64;
     for poly in polygons {
         for p in poly {
-            max_abs = max_abs.max(p.0.abs()).max(p.1.abs());
+            max_abs = max_abs.max(p.x.abs()).max(p.y.abs());
         }
     }
     if max_abs < 1.0 {
@@ -71,7 +71,7 @@ pub fn get_polygon_minkowski_sum_convex(
     let mut all_points: Vec<Point> = Vec::new();
     for p1 in poly_a {
         for p2 in poly_b {
-            all_points.push(Point(p1.0 + p2.0, p1.1 + p2.1));
+            all_points.push(Point::new(p1.x + p2.x, p1.y + p2.y));
         }
     }
     let hull = get_polygon_convex_hull(&all_points);
@@ -92,7 +92,7 @@ pub fn get_no_fit_polygon(
         return vec![];
     }
     let orbiting_negated: Polygon =
-        orbiting.iter().map(|p| Point(-p.0, -p.1)).collect();
+        orbiting.iter().map(|p| Point::new(-p.x, -p.y)).collect();
     let nfp_paths =
         get_polygon_minkowski_sum_convex(stationary, &orbiting_negated);
     let mut results = Vec::new();
@@ -100,7 +100,7 @@ pub fn get_no_fit_polygon(
     for path in nfp_paths {
         let shifted: Polygon = path
             .iter()
-            .map(|p| Point(p.0 + first_pt.0, p.1 + first_pt.1))
+            .map(|p| Point::new(p.x + first_pt.x, p.y + first_pt.y))
             .collect();
         results.push(shifted);
     }
@@ -134,10 +134,10 @@ pub fn get_inner_fit_polygon(
         return vec![];
     }
     let ifp = vec![
-        Point(ifp_min_x, ifp_min_y),
-        Point(ifp_max_x, ifp_min_y),
-        Point(ifp_max_x, ifp_max_y),
-        Point(ifp_min_x, ifp_max_y),
+        Point::new(ifp_min_x, ifp_min_y),
+        Point::new(ifp_max_x, ifp_min_y),
+        Point::new(ifp_max_x, ifp_max_y),
+        Point::new(ifp_min_x, ifp_max_y),
     ];
     vec![ifp]
 }

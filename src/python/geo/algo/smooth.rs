@@ -8,7 +8,7 @@ smoothing with configurable corner angle thresholds to preserve
 sharp features.
 ";
 
-use super::super::flex_point::PyPoint3D;
+use super::super::flex_point::{points3d_to_tuples, PyPoint3D};
 use crate::geo::algo::smooth::{
     compute_gaussian_kernel, resample_polyline, smooth_circularly,
     smooth_polyline, smooth_sub_segment,
@@ -61,12 +61,12 @@ fn resample_polyline_py(
     points: Vec<PyPoint3D>,
     max_segment_length: f64,
     is_closed: bool,
-) -> Vec<Point3D> {
+) -> Vec<(f64, f64, f64)> {
     let pts: Vec<Point3D> =
-        points.iter().map(|p| Point3D(p.0, p.1, p.2)).collect();
+        points.iter().map(|p| Point3D::new(p.0, p.1, p.2)).collect();
     let mut out = Vec::new();
     resample_polyline(&pts, max_segment_length, is_closed, &mut out);
-    out
+    points3d_to_tuples(out)
 }
 
 #[gen_stub_pyfunction(
@@ -111,12 +111,12 @@ fn compute_gaussian_kernel_py(amount: i32) -> (Vec<f64>, f64) {
 fn smooth_circularly_py(
     points: Vec<PyPoint3D>,
     kernel: Vec<f64>,
-) -> Vec<Point3D> {
+) -> Vec<(f64, f64, f64)> {
     let pts: Vec<Point3D> =
-        points.iter().map(|p| Point3D(p.0, p.1, p.2)).collect();
+        points.iter().map(|p| Point3D::new(p.0, p.1, p.2)).collect();
     let mut out = Vec::new();
     smooth_circularly(&pts, &kernel, &mut out);
-    out
+    points3d_to_tuples(out)
 }
 
 #[gen_stub_pyfunction(
@@ -150,10 +150,15 @@ fn smooth_polyline_algo_py(
     amount: i32,
     corner_angle_threshold: f64,
     is_closed: Option<bool>,
-) -> Vec<Point3D> {
+) -> Vec<(f64, f64, f64)> {
     let pts: Vec<Point3D> =
-        points.iter().map(|p| Point3D(p.0, p.1, p.2)).collect();
-    smooth_polyline(&pts, amount, corner_angle_threshold, is_closed)
+        points.iter().map(|p| Point3D::new(p.0, p.1, p.2)).collect();
+    points3d_to_tuples(smooth_polyline(
+        &pts,
+        amount,
+        corner_angle_threshold,
+        is_closed,
+    ))
 }
 
 #[gen_stub_pyfunction(
@@ -179,10 +184,10 @@ fn smooth_polyline_algo_py(
 fn smooth_sub_segment_py(
     points: Vec<PyPoint3D>,
     kernel: Vec<f64>,
-) -> Vec<Point3D> {
+) -> Vec<(f64, f64, f64)> {
     let pts: Vec<Point3D> =
-        points.iter().map(|p| Point3D(p.0, p.1, p.2)).collect();
+        points.iter().map(|p| Point3D::new(p.0, p.1, p.2)).collect();
     let mut out = Vec::new();
     smooth_sub_segment(&pts, &kernel, &mut out);
-    out
+    points3d_to_tuples(out)
 }

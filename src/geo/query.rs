@@ -32,22 +32,22 @@ pub fn get_bounding_rect_from_array(data: &[Command]) -> Rect {
 
     for cmd in data {
         let end = cmd.end_point();
-        if end.0 < min_x {
-            min_x = end.0;
+        if end.x < min_x {
+            min_x = end.x;
         }
-        if end.0 > max_x {
-            max_x = end.0;
+        if end.x > max_x {
+            max_x = end.x;
         }
-        if end.1 < min_y {
-            min_y = end.1;
+        if end.y < min_y {
+            min_y = end.y;
         }
-        if end.1 > max_y {
-            max_y = end.1;
+        if end.y > max_y {
+            max_y = end.y;
         }
     }
 
     // Second pass: check arcs for potentially larger bounds
-    let mut last_point_2d: Point = Point(0.0, 0.0);
+    let mut last_point_2d: Point = Point::new(0.0, 0.0);
     for cmd in data {
         let end = cmd.end_point();
         if let Command::Arc {
@@ -56,11 +56,11 @@ pub fn get_bounding_rect_from_array(data: &[Command]) -> Rect {
             ..
         } = cmd
         {
-            let clockwise = normal.2 < 0.0;
+            let clockwise = normal.z < 0.0;
             let Rect(ax1, ay1, ax2, ay2) = get_arc_bounds(
                 last_point_2d,
-                Point(end.0, end.1),
-                Point(center_offset.0, center_offset.1),
+                Point::new(end.x, end.y),
+                Point::new(center_offset.x, center_offset.y),
                 clockwise,
             );
 
@@ -77,25 +77,25 @@ pub fn get_bounding_rect_from_array(data: &[Command]) -> Rect {
                 max_y = ay2;
             }
         }
-        last_point_2d = Point(end.0, end.1);
+        last_point_2d = Point::new(end.x, end.y);
     }
 
     // Third pass: compute Bezier curve extrema analytically
-    let mut last_point_3d: Point3D = Point3D(0.0, 0.0, 0.0);
+    let mut last_point_3d: Point3D = Point3D::new(0.0, 0.0, 0.0);
     for cmd in data {
         let end = cmd.end_point();
         if let Command::Bezier {
             control1, control2, ..
         } = cmd
         {
-            let p0_x = vec![last_point_3d.0];
-            let p0_y = vec![last_point_3d.1];
-            let p1_x = vec![control1.0];
-            let p1_y = vec![control1.1];
-            let p2_x = vec![control2.0];
-            let p2_y = vec![control2.1];
-            let p3_x = vec![end.0];
-            let p3_y = vec![end.1];
+            let p0_x = vec![last_point_3d.x];
+            let p0_y = vec![last_point_3d.y];
+            let p1_x = vec![control1.x];
+            let p1_y = vec![control1.y];
+            let p2_x = vec![control2.x];
+            let p2_y = vec![control2.y];
+            let p3_x = vec![end.x];
+            let p3_y = vec![end.y];
 
             let (bx_min, bx_max) =
                 compute_cubic_bezier_bounds_1d(&p0_x, &p1_x, &p2_x, &p3_x);
@@ -121,7 +121,7 @@ pub fn get_bounding_rect_from_array(data: &[Command]) -> Rect {
 /// - Returns: The cumulative path distance.
 pub fn get_total_distance_from_array(data: &[Command]) -> f64 {
     let mut total_dist = 0.0;
-    let mut last_point: Point3D = Point3D(0.0, 0.0, 0.0);
+    let mut last_point: Point3D = Point3D::new(0.0, 0.0, 0.0);
 
     for cmd in data {
         let end_point = cmd.end_point();
@@ -150,7 +150,7 @@ pub fn find_closest_point_on_path_from_array(
     let mut min_dist_sq = f64::INFINITY;
     let mut closest_info: Option<(usize, f64, Point)> = None;
 
-    let mut last_pos_3d: Point3D = Point3D(0.0, 0.0, 0.0);
+    let mut last_pos_3d: Point3D = Point3D::new(0.0, 0.0, 0.0);
 
     for (i, cmd) in data.iter().enumerate() {
         let end_point_3d = cmd.end_point();
@@ -243,7 +243,7 @@ pub fn get_positions_at_distances_from_array(
 
     let total = get_total_distance_from_array(data);
     let mut results = Vec::with_capacity(distances.len());
-    let mut last_point: Point3D = Point3D(0.0, 0.0, 0.0);
+    let mut last_point: Point3D = Point3D::new(0.0, 0.0, 0.0);
     let mut cumulative = 0.0;
     let mut di = 0;
 
@@ -274,8 +274,8 @@ pub fn get_positions_at_distances_from_array(
             let dist_into = (dist - cumulative).max(0.0);
             let t = (dist_into / seg_len).clamp(0.0, 1.0);
             let pt = match get_point_at_from_array(data, seg_idx, t) {
-                Some(p3) => Point(p3.0, p3.1),
-                None => Point(last_point.0, last_point.1),
+                Some(p3) => Point::new(p3.x, p3.y),
+                None => Point::new(last_point.x, last_point.y),
             };
             results.push((seg_idx, t, pt));
             di += 1;
@@ -289,7 +289,7 @@ pub fn get_positions_at_distances_from_array(
     while di < distances.len() {
         let last_seg = data.len() - 1;
         let last_pt = data[last_seg].end_point();
-        results.push((last_seg, 1.0, Point(last_pt.0, last_pt.1)));
+        results.push((last_seg, 1.0, Point::new(last_pt.x, last_pt.y)));
         di += 1;
     }
 

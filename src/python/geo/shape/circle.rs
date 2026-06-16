@@ -9,6 +9,7 @@ checks, line-segment-vs-circle intersection, and point projection onto a
 circle's circumference.
 ";
 
+use super::super::flex_point::{option_point_to_tuple, points_to_tuples};
 use crate::geo::shape::circle::{
     does_circle_intersect_rect, get_circle_circle_intersections,
     get_line_circle_intersections, is_circle_inside_rect,
@@ -61,12 +62,17 @@ pub fn register(shape_mod: &Bound<'_, PyModule>) -> PyResult<()> {
 )]
 #[pyfunction(name = "get_circle_circle_intersections")]
 fn get_circle_circle_intersections_py(
-    c1: Point,
+    c1: (f64, f64),
     r1: f64,
-    c2: Point,
+    c2: (f64, f64),
     r2: f64,
-) -> Vec<Point> {
-    get_circle_circle_intersections(c1, r1, c2, r2)
+) -> Vec<(f64, f64)> {
+    points_to_tuples(get_circle_circle_intersections(
+        Point::new(c1.0, c1.1),
+        r1,
+        Point::new(c2.0, c2.1),
+        r2,
+    ))
 }
 
 #[gen_stub_pyfunction(
@@ -93,12 +99,17 @@ fn get_circle_circle_intersections_py(
 )]
 #[pyfunction(name = "get_line_circle_intersections")]
 fn get_line_circle_intersections_py(
-    p1: Point,
-    p2: Point,
-    center: Point,
+    p1: (f64, f64),
+    p2: (f64, f64),
+    center: (f64, f64),
     radius: f64,
-) -> Vec<Point> {
-    get_line_circle_intersections(p1, p2, center, radius)
+) -> Vec<(f64, f64)> {
+    points_to_tuples(get_line_circle_intersections(
+        Point::new(p1.0, p1.1),
+        Point::new(p2.0, p2.1),
+        Point::new(center.0, center.1),
+        radius,
+    ))
 }
 
 #[gen_stub_pyfunction(
@@ -123,11 +134,15 @@ fn get_line_circle_intersections_py(
 )]
 #[pyfunction(name = "is_circle_inside_rect")]
 fn is_circle_inside_rect_py(
-    center: Point,
+    center: (f64, f64),
     radius: f64,
     rect: (f64, f64, f64, f64),
 ) -> bool {
-    is_circle_inside_rect(center, radius, Rect(rect.0, rect.1, rect.2, rect.3))
+    is_circle_inside_rect(
+        Point::new(center.0, center.1),
+        radius,
+        Rect(rect.0, rect.1, rect.2, rect.3),
+    )
 }
 
 #[gen_stub_pyfunction(
@@ -152,12 +167,12 @@ fn is_circle_inside_rect_py(
 )]
 #[pyfunction(name = "does_circle_intersect_rect")]
 fn does_circle_intersect_rect_py(
-    center: Point,
+    center: (f64, f64),
     radius: f64,
     rect: (f64, f64, f64, f64),
 ) -> bool {
     does_circle_intersect_rect(
-        center,
+        Point::new(center.0, center.1),
         radius,
         Rect(rect.0, rect.1, rect.2, rect.3),
     )
@@ -187,12 +202,17 @@ fn does_circle_intersect_rect_py(
 )]
 #[pyfunction(name = "line_segment_intersects_circle")]
 fn line_segment_intersects_circle_py(
-    p1: Point,
-    p2: Point,
-    circle_center: Point,
+    p1: (f64, f64),
+    p2: (f64, f64),
+    circle_center: (f64, f64),
     circle_radius: f64,
 ) -> bool {
-    line_segment_intersects_circle(p1, p2, circle_center, circle_radius)
+    line_segment_intersects_circle(
+        Point::new(p1.0, p1.1),
+        Point::new(p2.0, p2.1),
+        Point::new(circle_center.0, circle_center.1),
+        circle_radius,
+    )
 }
 
 #[gen_stub_pyfunction(
@@ -218,9 +238,13 @@ fn line_segment_intersects_circle_py(
 )]
 #[pyfunction(name = "project_point_onto_circle")]
 fn project_point_onto_circle_py(
-    point: Point,
-    center: Point,
+    point: (f64, f64),
+    center: (f64, f64),
     radius: f64,
-) -> Option<Point> {
-    project_point_onto_circle(point, center, radius)
+) -> Option<(f64, f64)> {
+    option_point_to_tuple(project_point_onto_circle(
+        Point::new(point.0, point.1),
+        Point::new(center.0, center.1),
+        radius,
+    ))
 }

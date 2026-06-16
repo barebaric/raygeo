@@ -43,27 +43,27 @@ pub fn is_almost_equal(a: f64, b: f64, tolerance: f64) -> bool {
 }
 
 pub fn polygon_to_path(polygon: &Polygon) -> ClipperPath {
-    let tuples: Vec<(f64, f64)> = polygon.iter().map(|p| (p.0, p.1)).collect();
+    let tuples: Vec<(f64, f64)> = polygon.iter().map(|p| (p.x, p.y)).collect();
     ClipperPath::from(tuples)
 }
 
 pub fn path_to_polygon(path: &ClipperPath) -> Polygon {
     let tuples: Vec<(f64, f64)> = Vec::from(path.clone());
-    tuples.iter().map(|(x, y)| Point(*x, *y)).collect()
+    tuples.iter().map(|(x, y)| Point::new(*x, *y)).collect()
 }
 
 pub fn paths_to_polygons(paths: &ClipperPaths) -> Vec<Polygon> {
     let tuples: Vec<Vec<(f64, f64)>> = Vec::from(paths.clone());
     tuples
         .iter()
-        .map(|path| path.iter().map(|(x, y)| Point(*x, *y)).collect())
+        .map(|path| path.iter().map(|(x, y)| Point::new(*x, *y)).collect())
         .collect()
 }
 
 pub fn polygons_to_paths(polygons: &[Polygon]) -> ClipperPaths {
     let v: Vec<Vec<(f64, f64)>> = polygons
         .iter()
-        .map(|poly| poly.iter().map(|p| (p.0, p.1)).collect())
+        .map(|poly| poly.iter().map(|p| (p.x, p.y)).collect())
         .collect();
     ClipperPaths::from(v)
 }
@@ -77,8 +77,8 @@ pub fn get_polygon_signed_area(polygon: &[Point]) -> f64 {
     let mut area = 0.0;
     for i in 0..n {
         let j = (i + 1) % n;
-        area += polygon[i].0 * polygon[j].1;
-        area -= polygon[j].0 * polygon[i].1;
+        area += polygon[i].x * polygon[j].y;
+        area -= polygon[j].x * polygon[i].y;
     }
     area / 2.0
 }
@@ -98,8 +98,8 @@ pub fn get_polygon_perimeter(polygon: &Polygon) -> f64 {
     for i in 0..n {
         let p1 = polygon[i];
         let p2 = polygon[(i + 1) % n];
-        let dx = p2.0 - p1.0;
-        let dy = p2.1 - p1.1;
+        let dx = p2.x - p1.x;
+        let dy = p2.y - p1.y;
         perimeter += (dx * dx + dy * dy).sqrt();
     }
     perimeter
@@ -111,21 +111,21 @@ pub fn point_line_distance(
     line_start: Point,
     line_end: Point,
 ) -> f64 {
-    let line_vec = (line_end.0 - line_start.0, line_end.1 - line_start.1);
+    let line_vec = (line_end.x - line_start.x, line_end.y - line_start.y);
     let line_len = (line_vec.0 * line_vec.0 + line_vec.1 * line_vec.1).sqrt();
     if line_len < 1e-6 {
-        let dx = point.0 - line_start.0;
-        let dy = point.1 - line_start.1;
+        let dx = point.x - line_start.x;
+        let dy = point.y - line_start.y;
         return (dx * dx + dy * dy).sqrt();
     }
     let line_unit = (line_vec.0 / line_len, line_vec.1 / line_len);
-    let point_vec = (point.0 - line_start.0, point.1 - line_start.1);
+    let point_vec = (point.x - line_start.x, point.y - line_start.y);
     let mut proj_len = point_vec.0 * line_unit.0 + point_vec.1 * line_unit.1;
     proj_len = proj_len.max(0.0).min(line_len);
-    let closest_x = line_start.0 + proj_len * line_unit.0;
-    let closest_y = line_start.1 + proj_len * line_unit.1;
-    let dx = point.0 - closest_x;
-    let dy = point.1 - closest_y;
+    let closest_x = line_start.x + proj_len * line_unit.0;
+    let closest_y = line_start.y + proj_len * line_unit.1;
+    let dx = point.x - closest_x;
+    let dy = point.y - closest_y;
     (dx * dx + dy * dy).sqrt()
 }
 
@@ -147,13 +147,13 @@ pub fn get_polygon_bounds(polygon: &Polygon) -> Rect {
     if polygon.is_empty() {
         return Rect(0.0, 0.0, 0.0, 0.0);
     }
-    let mut min_x = polygon[0].0;
-    let mut max_x = polygon[0].0;
-    let mut min_y = polygon[0].1;
-    let mut max_y = polygon[0].1;
+    let mut min_x = polygon[0].x;
+    let mut max_x = polygon[0].x;
+    let mut min_y = polygon[0].y;
+    let mut max_y = polygon[0].y;
     for p in polygon {
-        let x = p.0;
-        let y = p.1;
+        let x = p.x;
+        let y = p.y;
         if x < min_x {
             min_x = x;
         }
@@ -182,8 +182,8 @@ pub fn get_polygon_group_bounds(polygons: &[Polygon]) -> Rect {
     let mut has_points = false;
     for poly in polygons {
         for p in poly {
-            let x = p.0;
-            let y = p.1;
+            let x = p.x;
+            let y = p.y;
             if x < min_x {
                 min_x = x;
             }
@@ -219,8 +219,8 @@ pub fn normalize_polygons(polygons: &[Polygon]) -> (Vec<Polygon>, f64, f64) {
     let mut min_y = f64::MAX;
     for poly in polygons {
         for p in poly {
-            let x = p.0;
-            let y = p.1;
+            let x = p.x;
+            let y = p.y;
             if x < min_x {
                 min_x = x;
             }
@@ -244,9 +244,9 @@ pub fn flip_polygon(polygon: &Polygon, flip_h: bool, flip_v: bool) -> Polygon {
     polygon
         .iter()
         .map(|p| {
-            Point(
-                if flip_h { -p.0 } else { p.0 },
-                if flip_v { -p.1 } else { p.1 },
+            Point::new(
+                if flip_h { -p.x } else { p.x },
+                if flip_v { -p.y } else { p.y },
             )
         })
         .collect()
@@ -267,7 +267,7 @@ pub fn flip_polygons(
 /// Calculate the centroid of a polygon.
 pub fn get_polygon_centroid(polygon: &Polygon) -> Point {
     if polygon.is_empty() {
-        return Point(0.0, 0.0);
+        return Point::new(0.0, 0.0);
     }
     let n = polygon.len();
     let mut cx = 0.0;
@@ -275,20 +275,20 @@ pub fn get_polygon_centroid(polygon: &Polygon) -> Point {
     let mut signed_area = 0.0;
     for i in 0..n {
         let j = (i + 1) % n;
-        let cross = polygon[i].0 * polygon[j].1 - polygon[j].0 * polygon[i].1;
+        let cross = polygon[i].x * polygon[j].y - polygon[j].x * polygon[i].y;
         signed_area += cross;
-        cx += (polygon[i].0 + polygon[j].0) * cross;
-        cy += (polygon[i].1 + polygon[j].1) * cross;
+        cx += (polygon[i].x + polygon[j].x) * cross;
+        cy += (polygon[i].y + polygon[j].y) * cross;
     }
     signed_area /= 2.0;
     if signed_area.abs() < 1e-9 {
-        let sum_x: f64 = polygon.iter().map(|p| p.0).sum();
-        let sum_y: f64 = polygon.iter().map(|p| p.1).sum();
-        return Point(sum_x / n as f64, sum_y / n as f64);
+        let sum_x: f64 = polygon.iter().map(|p| p.x).sum();
+        let sum_y: f64 = polygon.iter().map(|p| p.y).sum();
+        return Point::new(sum_x / n as f64, sum_y / n as f64);
     }
     cx /= 6.0 * signed_area;
     cy /= 6.0 * signed_area;
-    Point(cx, cy)
+    Point::new(cx, cy)
 }
 
 /// Rotate a polygon around the origin.
@@ -301,7 +301,9 @@ pub fn rotate_polygon(polygon: &Polygon, angle_degrees: f64) -> Polygon {
     let sin_a = angle_rad.sin();
     polygon
         .iter()
-        .map(|p| Point(p.0 * cos_a - p.1 * sin_a, p.0 * sin_a + p.1 * cos_a))
+        .map(|p| {
+            Point::new(p.x * cos_a - p.y * sin_a, p.x * sin_a + p.y * cos_a)
+        })
         .collect()
 }
 
@@ -318,7 +320,10 @@ pub fn rotate_polygons(
 
 /// Translate a polygon by a given offset.
 pub fn translate_polygon(polygon: &Polygon, dx: f64, dy: f64) -> Polygon {
-    polygon.iter().map(|p| Point(p.0 + dx, p.1 + dy)).collect()
+    polygon
+        .iter()
+        .map(|p| Point::new(p.x + dx, p.y + dy))
+        .collect()
 }
 
 /// Translate multiple polygons by a given offset.
@@ -336,11 +341,14 @@ pub fn translate_polygons(
 /// Scale a polygon.
 pub fn scale_polygon(polygon: &Polygon, sx: f64, sy: Option<f64>) -> Polygon {
     let sy = sy.unwrap_or(sx);
-    polygon.iter().map(|p| Point(p.0 * sx, p.1 * sy)).collect()
+    polygon
+        .iter()
+        .map(|p| Point::new(p.x * sx, p.y * sy))
+        .collect()
 }
 
 fn cross(o: Point, a: Point, b: Point) -> f64 {
-    (a.0 - o.0) * (b.1 - o.1) - (a.1 - o.1) * (b.0 - o.0)
+    (a.x - o.x) * (b.y - o.y) - (a.y - o.y) * (b.x - o.x)
 }
 
 /// Check if a polygon is convex.
@@ -373,8 +381,13 @@ pub fn get_polygon_convex_hull(polygon: &Polygon) -> Polygon {
         return polygon.clone();
     }
     let mut sorted = polygon.clone();
-    sorted
-        .sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+    sorted.sort_by(|a, b| {
+        a.x.partial_cmp(&b.x)
+            .unwrap_or(std::cmp::Ordering::Equal)
+            .then_with(|| {
+                a.y.partial_cmp(&b.y).unwrap_or(std::cmp::Ordering::Equal)
+            })
+    });
     let mut lower: Vec<Point> = Vec::new();
     for &p in &sorted {
         while lower.len() >= 2
@@ -434,7 +447,7 @@ pub fn clean_polygon(polygon: &Polygon, tolerance: f64) -> Option<Polygon> {
     if result.len() > 1 {
         let first = result[0];
         let last = result[result.len() - 1];
-        if (first.0 - last.0).abs() < 1e-9 && (first.1 - last.1).abs() < 1e-9 {
+        if (first.x - last.x).abs() < 1e-9 && (first.y - last.y).abs() < 1e-9 {
             result.pop();
         }
     }
@@ -589,21 +602,21 @@ pub fn is_polygon_clockwise(points: &[Point]) -> bool {
 /// Uses a bounding box early-out for performance, and handles edge cases
 /// where the point lies exactly on a polygon edge.
 pub fn is_point_in_polygon(point: Point, polygon: &Polygon) -> bool {
-    let x = point.0;
-    let y = point.1;
+    let x = point.x;
+    let y = point.y;
     let n = polygon.len();
     if n < 3 {
         return false;
     }
 
-    let mut min_x = polygon[0].0;
-    let mut max_x = polygon[0].0;
-    let mut min_y = polygon[0].1;
-    let mut max_y = polygon[0].1;
+    let mut min_x = polygon[0].x;
+    let mut max_x = polygon[0].x;
+    let mut min_y = polygon[0].y;
+    let mut max_y = polygon[0].y;
 
     for p in polygon {
-        let px = p.0;
-        let py = p.1;
+        let px = p.x;
+        let py = p.y;
         if px < min_x {
             min_x = px;
         } else if px > max_x {
@@ -623,10 +636,10 @@ pub fn is_point_in_polygon(point: Point, polygon: &Polygon) -> bool {
     for i in 0..n {
         let p1 = polygon[i];
         let p2 = polygon[(i + 1) % n];
-        let p1x = p1.0;
-        let p1y = p1.1;
-        let p2x = p2.0;
-        let p2y = p2.1;
+        let p1x = p1.x;
+        let p1y = p1.y;
+        let p2x = p2.x;
+        let p2y = p2.y;
 
         let cross_product = (y - p1y) * (p2x - p1x) - (x - p1x) * (p2y - p1y);
         if cross_product.abs() < 1e-9
@@ -640,11 +653,11 @@ pub fn is_point_in_polygon(point: Point, polygon: &Polygon) -> bool {
     }
 
     let mut inside = false;
-    let mut p1x = polygon[0].0;
-    let mut p1y = polygon[0].1;
+    let mut p1x = polygon[0].x;
+    let mut p1y = polygon[0].y;
     for i in 0..=n {
-        let p2x = polygon[i % n].0;
-        let p2y = polygon[i % n].1;
+        let p2x = polygon[i % n].x;
+        let p2y = polygon[i % n].y;
         if (p1y > y) != (p2y > y) {
             let x_intersect = (y - p1y) * (p2x - p1x) / (p2y - p1y) + p1x;
             if x_intersect > x {
@@ -676,7 +689,7 @@ pub fn point_in_polygon_clipper(point: Point, polygon: &Polygon) -> bool {
         }
     }
     let path = polygon_to_path(polygon);
-    let geo_point = GeoPoint::<GeoScale>::new(point.0, point.1);
+    let geo_point = GeoPoint::<GeoScale>::new(point.x, point.y);
     path.is_point_inside(geo_point) == PointInPolygonResult::IsInside
 }
 

@@ -10,7 +10,7 @@ matrix to a single point.
 
 use glam::{DMat4, DVec4};
 
-use super::super::flex_point::PyPoint3D;
+use super::super::flex_point::{point3d_to_tuple, PyPoint3D};
 use crate::geo::shape::point::are_points_equal;
 use crate::geo::shape::point::midpoint;
 use crate::geo::shape::point::transform_point;
@@ -94,14 +94,14 @@ fn transform_point_py(
     x: f64,
     y: f64,
     z: f64,
-) -> Point3D {
+) -> (f64, f64, f64) {
     let mat = DMat4::from_cols(
         DVec4::new(matrix[0][0], matrix[1][0], matrix[2][0], matrix[3][0]),
         DVec4::new(matrix[0][1], matrix[1][1], matrix[2][1], matrix[3][1]),
         DVec4::new(matrix[0][2], matrix[1][2], matrix[2][2], matrix[3][2]),
         DVec4::new(matrix[0][3], matrix[1][3], matrix[2][3], matrix[3][3]),
     );
-    transform_point(mat, Point3D(x, y, z))
+    point3d_to_tuple(transform_point(mat, Point3D::new(x, y, z)))
 }
 
 #[gen_stub_pyfunction(
@@ -123,8 +123,8 @@ fn transform_point_py(
     module = "raygeo.geo.shape.point"
 )]
 #[pyfunction(name = "midpoint")]
-fn midpoint_py(p1: PyPoint3D, p2: PyPoint3D) -> Point3D {
-    let p1_3d = Point3D(p1.0, p1.1, p1.2);
-    let p2_3d = Point3D(p2.0, p2.1, p2.2);
-    midpoint(p1_3d, p2_3d)
+fn midpoint_py(p1: PyPoint3D, p2: PyPoint3D) -> (f64, f64, f64) {
+    let p1_3d = Point3D::new(p1.0, p1.1, p1.2);
+    let p2_3d = Point3D::new(p2.0, p2.1, p2.2);
+    point3d_to_tuple(midpoint(p1_3d, p2_3d))
 }

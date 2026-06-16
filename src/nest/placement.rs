@@ -107,21 +107,21 @@ pub fn generate_perimeter_candidates(
         let Rect(pb_min_x, pb_min_y, pb_max_x, pb_max_y) = b;
 
         candidates
-            .push(Point(pb_max_x + spacing - p_min_x, pb_min_y - p_min_y));
+            .push(Point::new(pb_max_x + spacing - p_min_x, pb_min_y - p_min_y));
         candidates
-            .push(Point(pb_max_x + spacing - p_min_x, pb_max_y - p_max_y));
+            .push(Point::new(pb_max_x + spacing - p_min_x, pb_max_y - p_max_y));
         candidates
-            .push(Point(pb_min_x - spacing - p_max_x, pb_min_y - p_min_y));
+            .push(Point::new(pb_min_x - spacing - p_max_x, pb_min_y - p_min_y));
         candidates
-            .push(Point(pb_min_x - spacing - p_max_x, pb_max_y - p_max_y));
+            .push(Point::new(pb_min_x - spacing - p_max_x, pb_max_y - p_max_y));
         candidates
-            .push(Point(pb_min_x - p_min_x, pb_max_y + spacing - p_min_y));
+            .push(Point::new(pb_min_x - p_min_x, pb_max_y + spacing - p_min_y));
         candidates
-            .push(Point(pb_max_x - p_max_x, pb_max_y + spacing - p_min_y));
+            .push(Point::new(pb_max_x - p_max_x, pb_max_y + spacing - p_min_y));
         candidates
-            .push(Point(pb_min_x - p_min_x, pb_min_y - spacing - p_max_y));
+            .push(Point::new(pb_min_x - p_min_x, pb_min_y - spacing - p_max_y));
         candidates
-            .push(Point(pb_max_x - p_max_x, pb_min_y - spacing - p_max_y));
+            .push(Point::new(pb_max_x - p_max_x, pb_min_y - spacing - p_max_y));
     }
 
     candidates
@@ -142,7 +142,7 @@ pub fn generate_bottom_left_candidates(
     while y + ph <= ifp_bounds.3 + 1e-6 {
         let mut x = ifp_bounds.0;
         while x + pw <= ifp_bounds.2 + 1e-6 {
-            cand.push(Point(x, y));
+            cand.push(Point::new(x, y));
             x += sx;
         }
         y += sy;
@@ -162,7 +162,7 @@ pub fn generate_grid_candidates(
     while y <= ifp_bounds.3 + 1e-6 {
         let mut x = ifp_bounds.0;
         while x <= ifp_bounds.2 + 1e-6 {
-            cand.push(Point(x, y));
+            cand.push(Point::new(x, y));
             x += step;
         }
         y += step;
@@ -183,8 +183,8 @@ pub fn filter_candidates_multi_resolution(
         std::collections::HashMap::new();
     let mut result = Vec::new();
     for p in candidates {
-        let x = p.0;
-        let y = p.1;
+        let x = p.x;
+        let y = p.y;
         let cx = (x / min_dist).floor() as i32;
         let cy = (y / min_dist).floor() as i32;
         let mut keep = true;
@@ -201,7 +201,7 @@ pub fn filter_candidates_multi_resolution(
         }
         if keep {
             grid.insert((cx, cy), (x, y));
-            result.push(Point(x, y));
+            result.push(Point::new(x, y));
         }
     }
     result
@@ -231,7 +231,7 @@ fn placed_vertex_candidates(
     for group in placed_polys_list {
         for poly in group {
             for p in poly {
-                out.push(Point(p.0 - part_bounds.0, p.1 - part_bounds.1));
+                out.push(Point::new(p.x - part_bounds.0, p.y - part_bounds.1));
             }
         }
     }
@@ -257,8 +257,8 @@ fn filter_dist(
     if result.is_empty() && !candidates.is_empty() {
         result = candidates.to_vec();
         result.sort_by(|a, b| {
-            score_position(a.0, a.1)
-                .partial_cmp(&score_position(b.0, b.1))
+            score_position(a.x, a.y)
+                .partial_cmp(&score_position(b.x, b.y))
                 .unwrap_or(std::cmp::Ordering::Less)
         });
     }
@@ -312,8 +312,8 @@ fn evaluate_candidates(
     let mut best_pos: Option<Point> = None;
 
     for p in candidates {
-        let x = p.0;
-        let y = p.1;
+        let x = p.x;
+        let y = p.y;
         let score = score_position(x, y);
         if score >= best_score {
             continue;
@@ -321,7 +321,7 @@ fn evaluate_candidates(
 
         let in_ifp = ifp_world
             .iter()
-            .any(|ifp| is_point_in_polygon(Point(x, y), ifp));
+            .any(|ifp| is_point_in_polygon(Point::new(x, y), ifp));
         if !in_ifp {
             continue;
         }
@@ -355,7 +355,7 @@ fn evaluate_candidates(
         }
 
         best_score = score;
-        best_pos = Some(Point(x, y));
+        best_pos = Some(Point::new(x, y));
     }
 
     best_pos
@@ -491,10 +491,10 @@ fn compute_nfp_clips_for_placed(
             let nfps = no_fit_polygon(placed_poly, part_poly);
             for nfp in nfps {
                 let origin =
-                    part_poly.first().copied().unwrap_or(Point(0.0, 0.0));
+                    part_poly.first().copied().unwrap_or(Point::new(0.0, 0.0));
                 let shifted: Polygon = nfp
                     .iter()
-                    .map(|p| Point(p.0 - origin.0, p.1 - origin.1))
+                    .map(|p| Point::new(p.x - origin.x, p.y - origin.y))
                     .collect();
 
                 if spacing > 0.0 {
@@ -570,19 +570,19 @@ fn build_nfp_candidates(
         let p_bounds = get_polygon_group_bounds(placed_polys);
 
         // Bounding-box corners
-        candidates.push(Point(
+        candidates.push(Point::new(
             p_bounds.0 - part_bounds.2 - spacing,
             p_bounds.1 - part_bounds.3 - spacing,
         ));
-        candidates.push(Point(
+        candidates.push(Point::new(
             p_bounds.2 - part_bounds.0 + spacing,
             p_bounds.1 - part_bounds.3 - spacing,
         ));
-        candidates.push(Point(
+        candidates.push(Point::new(
             p_bounds.2 - part_bounds.0 + spacing,
             p_bounds.3 - part_bounds.1 + spacing,
         ));
-        candidates.push(Point(
+        candidates.push(Point::new(
             p_bounds.0 - part_bounds.2 - spacing,
             p_bounds.3 - part_bounds.1 + spacing,
         ));
@@ -603,8 +603,8 @@ fn build_nfp_candidates(
     candidates.extend(ifp_vertex_candidates(ifp_world));
 
     candidates.sort_by(|a, b| {
-        score_position(a.0, a.1)
-            .partial_cmp(&score_position(b.0, b.1))
+        score_position(a.x, a.y)
+            .partial_cmp(&score_position(b.x, b.y))
             .unwrap_or(std::cmp::Ordering::Less)
     });
     candidates
@@ -854,12 +854,12 @@ fn apply_sheet_gravity(
     for (&idx, &(dx, dy)) in sheet_indices.iter().zip(adjustments.iter()) {
         let p = &mut all_placements[idx];
         if dx.abs() > 0.01 {
-            p.position.0 += dx;
+            p.position.x += dx;
             p.polygons = translate_polygons(&p.polygons, dx, 0.0);
             p.hulls = translate_polygons(&p.hulls, dx, 0.0);
         }
         if dy.abs() > 0.01 {
-            p.position.1 += dy;
+            p.position.y += dy;
             p.polygons = translate_polygons(&p.polygons, 0.0, dy);
             p.hulls = translate_polygons(&p.hulls, 0.0, dy);
         }
@@ -962,11 +962,11 @@ pub fn place_parts(
         {
             let placed_polys = translate_polygons(
                 &prepared.polygons,
-                world_pos.0,
-                world_pos.1,
+                world_pos.x,
+                world_pos.y,
             );
             let placed_hulls =
-                translate_polygons(&prepared.hulls, world_pos.0, world_pos.1);
+                translate_polygons(&prepared.hulls, world_pos.x, world_pos.y);
 
             all_placements.push(PlacedPart {
                 part_index: sorted_idx,
@@ -1063,8 +1063,8 @@ fn find_best_sheet(
             );
 
             if let Some(p) = pos {
-                let rel_x = p.0 - sheet.world_offset.0;
-                let rel_y = p.1 - sheet.world_offset.1;
+                let rel_x = p.x - sheet.world_offset.0;
+                let rel_y = p.y - sheet.world_offset.1;
                 let score = score_position(rel_x, rel_y);
                 if score < best_score {
                     best_score = score;

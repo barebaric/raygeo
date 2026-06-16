@@ -29,21 +29,21 @@ pub fn apply_overcut(geo: &Geometry, overcut: f64) -> Geometry {
         let end = cmd.end_point();
         match cmd {
             Command::Line { .. } => {
-                result.line_to(end.0, end.1, end.2);
+                result.line_to(end.x, end.y, end.z);
             }
             Command::Arc {
                 center_offset,
                 normal,
                 ..
             } => {
-                let clockwise = normal.2 < 0.0;
+                let clockwise = normal.z < 0.0;
                 result.arc_to(
-                    end.0,
-                    end.1,
-                    center_offset.0,
-                    center_offset.1,
+                    end.x,
+                    end.y,
+                    center_offset.x,
+                    center_offset.y,
                     clockwise,
-                    end.2,
+                    end.z,
                 );
             }
             Command::Bezier {

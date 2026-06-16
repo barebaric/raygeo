@@ -27,15 +27,15 @@ pub fn get_bezier_point_at(
     t: f64,
 ) -> Point {
     let complement = 1.0 - t;
-    let x = complement.powi(3) * p0.0
-        + 3.0 * complement.powi(2) * t * c1.0
-        + 3.0 * complement * t.powi(2) * c2.0
-        + t.powi(3) * p1.0;
-    let y = complement.powi(3) * p0.1
-        + 3.0 * complement.powi(2) * t * c1.1
-        + 3.0 * complement * t.powi(2) * c2.1
-        + t.powi(3) * p1.1;
-    Point(x, y)
+    let x = complement.powi(3) * p0.x
+        + 3.0 * complement.powi(2) * t * c1.x
+        + 3.0 * complement * t.powi(2) * c2.x
+        + t.powi(3) * p1.x;
+    let y = complement.powi(3) * p0.y
+        + 3.0 * complement.powi(2) * t * c1.y
+        + 3.0 * complement * t.powi(2) * c2.y
+        + t.powi(3) * p1.y;
+    Point::new(x, y)
 }
 
 /// Splits a Bezier curve into two sub-curves at parameter t.
@@ -62,10 +62,10 @@ pub fn split_bezier(
 /// Computes the axis-aligned bounding box of a Bezier curve.
 /// Finds extrema analytically by solving for points where the derivative is zero.
 pub fn get_bezier_bounds(p0: Point, c1: Point, c2: Point, p1: Point) -> Rect {
-    let mut candidates_x = vec![p0.0, p1.0];
-    let mut candidates_y = vec![p0.1, p1.1];
-    _add_axis_extrema(&mut candidates_x, p0.0, c1.0, c2.0, p1.0);
-    _add_axis_extrema(&mut candidates_y, p0.1, c1.1, c2.1, p1.1);
+    let mut candidates_x = vec![p0.x, p1.x];
+    let mut candidates_y = vec![p0.y, p1.y];
+    _add_axis_extrema(&mut candidates_x, p0.x, c1.x, c2.x, p1.x);
+    _add_axis_extrema(&mut candidates_y, p0.y, c1.y, c2.y, p1.y);
 
     Rect(
         candidates_x.iter().cloned().fold(f64::INFINITY, f64::min),
@@ -94,10 +94,10 @@ pub fn is_bezier_inside_polygons(
     let mid = get_bezier_point_at(start_pos, c1, c2, end_pos, 0.5);
 
     let sample_points: Vec<Point> = vec![
-        Point(bbox.0, bbox.1),
-        Point(bbox.2, bbox.1),
-        Point(bbox.2, bbox.3),
-        Point(bbox.0, bbox.3),
+        Point::new(bbox.0, bbox.1),
+        Point::new(bbox.2, bbox.1),
+        Point::new(bbox.2, bbox.3),
+        Point::new(bbox.0, bbox.3),
         start_pos,
         end_pos,
         mid,
@@ -129,10 +129,10 @@ pub fn get_bezier_rect_intersections(
         [(0, x_min), (0, x_max), (1, y_min), (1, y_max)];
 
     for (axis_idx, edge_val) in rect_edges {
-        let p0_coord = if axis_idx == 0 { p0.0 } else { p0.1 };
-        let c1_coord = if axis_idx == 0 { c1.0 } else { c1.1 };
-        let c2_coord = if axis_idx == 0 { c2.0 } else { c2.1 };
-        let p1_coord = if axis_idx == 0 { p1.0 } else { p1.1 };
+        let p0_coord = if axis_idx == 0 { p0.x } else { p0.y };
+        let c1_coord = if axis_idx == 0 { c1.x } else { c1.y };
+        let c2_coord = if axis_idx == 0 { c2.x } else { c2.y };
+        let p1_coord = if axis_idx == 0 { p1.x } else { p1.y };
 
         let poly_a = p0_coord;
         let poly_b = 3.0 * (c1_coord - p0_coord);
@@ -147,9 +147,9 @@ pub fn get_bezier_rect_intersections(
                     get_bezier_point_at(p0, c1, c2, p1, clamped);
                 let other_axis = 1 - axis_idx;
                 let other_coord = if other_axis == 1 {
-                    point_on_curve.1
+                    point_on_curve.y
                 } else {
-                    point_on_curve.0
+                    point_on_curve.x
                 };
                 let axis_lo = if other_axis == 1 { y_min } else { x_min };
                 let axis_hi = if other_axis == 1 { y_max } else { x_max };
@@ -203,10 +203,10 @@ pub fn clip_bezier_with_rect(
         let midpoint_pt = get_bezier_point_at(p0, c1, c2, p1, t_mid);
 
         // Check if midpoint is inside rect
-        if x_min - 1e-9 <= midpoint_pt.0
-            && midpoint_pt.0 <= x_max + 1e-9
-            && y_min - 1e-9 <= midpoint_pt.1
-            && midpoint_pt.1 <= y_max + 1e-9
+        if x_min - 1e-9 <= midpoint_pt.x
+            && midpoint_pt.x <= x_max + 1e-9
+            && y_min - 1e-9 <= midpoint_pt.y
+            && midpoint_pt.y <= y_max + 1e-9
         {
             let segment = _extract_subsegment(p0, c1, c2, p1, t_start, t_end);
             inside_segments.push(segment);
@@ -225,9 +225,9 @@ pub fn convert_cubic_bezier_to_quadratic(
     c2: Point,
     p1: Point,
 ) -> (Point, Point, Point) {
-    let quadratic_control = Point(
-        (3.0 * c1.0 + 3.0 * c2.0 - p0.0 - p1.0) / 4.0,
-        (3.0 * c1.1 + 3.0 * c2.1 - p0.1 - p1.1) / 4.0,
+    let quadratic_control = Point::new(
+        (3.0 * c1.x + 3.0 * c2.x - p0.x - p1.x) / 4.0,
+        (3.0 * c1.y + 3.0 * c2.y - p0.y - p1.y) / 4.0,
     );
     (p0, quadratic_control, p1)
 }
@@ -252,8 +252,8 @@ pub fn get_bezier_closest_point(
 
     for (seg_idx, (seg_start, seg_end)) in bezier_segments.iter().enumerate() {
         let t_sub = get_line_segment_closest_point(
-            Point(seg_start.0, seg_start.1),
-            Point(seg_end.0, seg_end.1),
+            Point::new(seg_start.x, seg_start.y),
+            Point::new(seg_end.x, seg_end.y),
             x,
             y,
         );
@@ -281,21 +281,21 @@ pub fn linearize_bezier_from_params(
 ) -> Vec<(Point3D, Point3D)> {
     let p0 = start_point;
     let p1 = end;
-    let c1_2d = Point(control1.0, control1.1);
-    let c2_2d = Point(control2.0, control2.1);
+    let c1_2d = Point::new(control1.x, control1.y);
+    let c2_2d = Point::new(control2.x, control2.y);
 
-    let z0 = p0.2;
-    let z1 = p1.2;
+    let z0 = p0.z;
+    let z1 = p1.z;
     // Linear interpolation of Z coordinate for control points
     let c1: Point3D =
-        Point3D(c1_2d.0, c1_2d.1, z0 * (2.0 / 3.0) + z1 * (1.0 / 3.0));
+        Point3D::new(c1_2d.x, c1_2d.y, z0 * (2.0 / 3.0) + z1 * (1.0 / 3.0));
     let c2: Point3D =
-        Point3D(c2_2d.0, c2_2d.1, z0 * (1.0 / 3.0) + z1 * (2.0 / 3.0));
+        Point3D::new(c2_2d.x, c2_2d.y, z0 * (1.0 / 3.0) + z1 * (2.0 / 3.0));
 
     // Estimate curve length using polygon approximation
-    let l01 = (p0.0 - c1.0).hypot(p0.1 - c1.1);
-    let l12 = (c1.0 - c2.0).hypot(c1.1 - c2.1);
-    let l23 = (c2.0 - p1.0).hypot(c2.1 - p1.1);
+    let l01 = (p0.x - c1.x).hypot(p0.y - c1.y);
+    let l12 = (c1.x - c2.x).hypot(c1.y - c2.y);
+    let l23 = (c2.x - p1.x).hypot(c2.y - p1.y);
     let estimated_len = l01 + l12 + l23;
     let num_steps = (estimated_len / resolution).ceil().max(2.0) as usize;
 
@@ -321,34 +321,34 @@ pub fn linearize_bezier(
         let t = i as f64 / step_f;
         let t_next = (i as f64 + 1.0) / step_f;
 
-        let p_start = Point3D(
-            (1.0 - t).powi(3) * p0.0
-                + 3.0 * (1.0 - t).powi(2) * t * c1.0
-                + 3.0 * (1.0 - t) * t.powi(2) * c2.0
-                + t.powi(3) * p1.0,
-            (1.0 - t).powi(3) * p0.1
-                + 3.0 * (1.0 - t).powi(2) * t * c1.1
-                + 3.0 * (1.0 - t) * t.powi(2) * c2.1
-                + t.powi(3) * p1.1,
-            (1.0 - t).powi(3) * p0.2
-                + 3.0 * (1.0 - t).powi(2) * t * c1.2
-                + 3.0 * (1.0 - t) * t.powi(2) * c2.2
-                + t.powi(3) * p1.2,
+        let p_start = Point3D::new(
+            (1.0 - t).powi(3) * p0.x
+                + 3.0 * (1.0 - t).powi(2) * t * c1.x
+                + 3.0 * (1.0 - t) * t.powi(2) * c2.x
+                + t.powi(3) * p1.x,
+            (1.0 - t).powi(3) * p0.y
+                + 3.0 * (1.0 - t).powi(2) * t * c1.y
+                + 3.0 * (1.0 - t) * t.powi(2) * c2.y
+                + t.powi(3) * p1.y,
+            (1.0 - t).powi(3) * p0.z
+                + 3.0 * (1.0 - t).powi(2) * t * c1.z
+                + 3.0 * (1.0 - t) * t.powi(2) * c2.z
+                + t.powi(3) * p1.z,
         );
 
-        let p_end = Point3D(
-            (1.0 - t_next).powi(3) * p0.0
-                + 3.0 * (1.0 - t_next).powi(2) * t_next * c1.0
-                + 3.0 * (1.0 - t_next) * t_next.powi(2) * c2.0
-                + t_next.powi(3) * p1.0,
-            (1.0 - t_next).powi(3) * p0.1
-                + 3.0 * (1.0 - t_next).powi(2) * t_next * c1.1
-                + 3.0 * (1.0 - t_next) * t_next.powi(2) * c2.1
-                + t_next.powi(3) * p1.1,
-            (1.0 - t_next).powi(3) * p0.2
-                + 3.0 * (1.0 - t_next).powi(2) * t_next * c1.2
-                + 3.0 * (1.0 - t_next) * t_next.powi(2) * c2.2
-                + t_next.powi(3) * p1.2,
+        let p_end = Point3D::new(
+            (1.0 - t_next).powi(3) * p0.x
+                + 3.0 * (1.0 - t_next).powi(2) * t_next * c1.x
+                + 3.0 * (1.0 - t_next) * t_next.powi(2) * c2.x
+                + t_next.powi(3) * p1.x,
+            (1.0 - t_next).powi(3) * p0.y
+                + 3.0 * (1.0 - t_next).powi(2) * t_next * c1.y
+                + 3.0 * (1.0 - t_next) * t_next.powi(2) * c2.y
+                + t_next.powi(3) * p1.y,
+            (1.0 - t_next).powi(3) * p0.z
+                + 3.0 * (1.0 - t_next).powi(2) * t_next * c1.z
+                + 3.0 * (1.0 - t_next) * t_next.powi(2) * c2.z
+                + t_next.powi(3) * p1.z,
         );
 
         result.push((p_start, p_end));
@@ -372,17 +372,17 @@ pub fn is_bezier_flat(
     p1: Point,
     tolerance_sq: f64,
 ) -> bool {
-    let vx = p1.0 - p0.0;
-    let vy = p1.1 - p0.1;
+    let vx = p1.x - p0.x;
+    let vy = p1.y - p0.y;
     let norm_sq = vx * vx + vy * vy;
 
     if norm_sq < 1e-9 {
-        let d1_sq = (c1.0 - p0.0).powi(2) + (c1.1 - p0.1).powi(2);
-        let d2_sq = (c2.0 - p0.0).powi(2) + (c2.1 - p0.1).powi(2);
+        let d1_sq = (c1.x - p0.x).powi(2) + (c1.y - p0.y).powi(2);
+        let d2_sq = (c2.x - p0.x).powi(2) + (c2.y - p0.y).powi(2);
         d1_sq <= tolerance_sq && d2_sq <= tolerance_sq
     } else {
-        let cross1 = vx * (c1.1 - p0.1) - vy * (c1.0 - p0.0);
-        let cross2 = vx * (c2.1 - p0.1) - vy * (c2.0 - p0.0);
+        let cross1 = vx * (c1.y - p0.y) - vy * (c1.x - p0.x);
+        let cross2 = vx * (c2.y - p0.y) - vy * (c2.x - p0.x);
         let dist1_sq = (cross1 * cross1) / norm_sq;
         let dist2_sq = (cross2 * cross2) / norm_sq;
         dist1_sq <= tolerance_sq && dist2_sq <= tolerance_sq
@@ -469,7 +469,7 @@ pub fn linearize_bezier_segment(
 }
 
 fn _lerp2(a: Point, b: Point, t: f64) -> Point {
-    Point(a.0 + (b.0 - a.0) * t, a.1 + (b.1 - a.1) * t)
+    Point::new(a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t)
 }
 
 fn _add_axis_extrema(
@@ -660,9 +660,9 @@ pub fn get_perpendicular_dist_sq(
     vz: f64,
     norm_sq: f64,
 ) -> f64 {
-    let px = pt.0 - origin.0;
-    let py = pt.1 - origin.1;
-    let pz = pt.2 - origin.2;
+    let px = pt.x - origin.x;
+    let py = pt.y - origin.y;
+    let pz = pt.z - origin.z;
     let cx = py * vz - pz * vy;
     let cy = pz * vx - px * vz;
     let cz = px * vy - py * vx;
@@ -675,16 +675,16 @@ pub fn get_bezier_flatness_sq(
     c: Point3D,
     d: Point3D,
 ) -> f64 {
-    let vx = d.0 - a.0;
-    let vy = d.1 - a.1;
-    let vz = d.2 - a.2;
+    let vx = d.x - a.x;
+    let vy = d.y - a.y;
+    let vz = d.z - a.z;
     let norm_sq = vx * vx + vy * vy + vz * vz;
 
     if norm_sq < 1e-9 {
         let d1 =
-            (b.0 - a.0).powi(2) + (b.1 - a.1).powi(2) + (b.2 - a.2).powi(2);
+            (b.x - a.x).powi(2) + (b.y - a.y).powi(2) + (b.z - a.z).powi(2);
         let d2 =
-            (c.0 - a.0).powi(2) + (c.1 - a.1).powi(2) + (c.2 - a.2).powi(2);
+            (c.x - a.x).powi(2) + (c.y - a.y).powi(2) + (c.z - a.z).powi(2);
         return d1.max(d2);
     }
 
@@ -696,9 +696,9 @@ pub fn get_bezier_flatness_sq(
 /// Computes the arc length of a cubic Bezier curve using adaptive
 /// step sizing based on the control polygon length.
 pub fn get_bezier_length(p0: Point, c1: Point, c2: Point, p1: Point) -> f64 {
-    let l01 = (p0.0 - c1.0).hypot(p0.1 - c1.1);
-    let l12 = (c1.0 - c2.0).hypot(c1.1 - c2.1);
-    let l23 = (c2.0 - p1.0).hypot(c2.1 - p1.1);
+    let l01 = (p0.x - c1.x).hypot(p0.y - c1.y);
+    let l12 = (c1.x - c2.x).hypot(c1.y - c2.y);
+    let l23 = (c2.x - p1.x).hypot(c2.y - p1.y);
     let estimated_len = l01 + l12 + l23;
     let num_steps = (estimated_len / 0.1).ceil().max(2.0) as usize;
     let step_f = num_steps as f64;
@@ -707,7 +707,7 @@ pub fn get_bezier_length(p0: Point, c1: Point, c2: Point, p1: Point) -> f64 {
     for i in 1..=num_steps {
         let t = i as f64 / step_f;
         let pt = get_bezier_point_at(p0, c1, c2, p1, t);
-        total += (pt.0 - prev.0).hypot(pt.1 - prev.1);
+        total += (pt.x - prev.x).hypot(pt.y - prev.y);
         prev = pt;
     }
     total

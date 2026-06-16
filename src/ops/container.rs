@@ -24,7 +24,7 @@ impl Ops {
     pub fn new() -> Self {
         Ops {
             commands: Vec::new(),
-            last_move_to: Point3D(0.0, 0.0, 0.0),
+            last_move_to: Point3D::new(0.0, 0.0, 0.0),
             time_dirty: true,
             cached_time: 0.0,
             time_params: None,
@@ -135,8 +135,8 @@ impl Ops {
             match last_point {
                 None => 0.0,
                 Some(lp) => {
-                    let dx = end.0 - lp.0;
-                    let dy = end.1 - lp.1;
+                    let dx = end.x - lp.x;
+                    let dy = end.y - lp.y;
                     (dx * dx + dy * dy).sqrt()
                 }
             }
@@ -151,8 +151,8 @@ impl Ops {
         for node in &self.commands {
             if let OpCategory::Moving { end, .. } = &node.category {
                 if let Some(lp) = last {
-                    let dx = end.0 - lp.0;
-                    let dy = end.1 - lp.1;
+                    let dx = end.x - lp.x;
+                    let dy = end.y - lp.y;
                     total += (dx * dx + dy * dy).sqrt();
                 }
                 last = Some(*end);
@@ -168,8 +168,8 @@ impl Ops {
             if let OpCategory::Moving { end, cmd } = &node.category {
                 if let Some(lp) = last {
                     if !matches!(cmd, MoveCmd::MoveTo) {
-                        let dx = end.0 - lp.0;
-                        let dy = end.1 - lp.1;
+                        let dx = end.x - lp.x;
+                        let dy = end.y - lp.y;
                         total += (dx * dx + dy * dy).sqrt();
                     }
                 }
@@ -188,7 +188,7 @@ impl Ops {
         z: f64,
         extra: Option<Vec<(Axis, f64)>>,
     ) {
-        self.last_move_to = Point3D(x, y, z);
+        self.last_move_to = Point3D::new(x, y, z);
         self.commands.push(OpNode::move_to(x, y, z, extra));
         self.invalidate_time_cache();
     }
@@ -206,9 +206,9 @@ impl Ops {
 
     pub fn close_path(&mut self) {
         self.line_to(
-            self.last_move_to.0,
-            self.last_move_to.1,
-            self.last_move_to.2,
+            self.last_move_to.x,
+            self.last_move_to.y,
+            self.last_move_to.z,
             None,
         );
     }
@@ -545,14 +545,14 @@ impl Ops {
             let ct = node.command_type();
             write!(out, "  [{}] {}", i, ct).unwrap();
             if let OpCategory::Moving { end, cmd } = &node.category {
-                write!(out, " end=({:.3},{:.3},{:.3})", end.0, end.1, end.2)
+                write!(out, " end=({:.3},{:.3},{:.3})", end.x, end.y, end.z)
                     .unwrap();
                 match cmd {
                     MoveCmd::ArcTo { center, cw } => {
                         write!(
                             out,
                             " arc=(i={:.3},j={:.3},cw={})",
-                            center.0, center.1, cw
+                            center.x, center.y, cw
                         )
                         .unwrap();
                     }
@@ -560,7 +560,7 @@ impl Ops {
                         write!(
                             out,
                             " bezier=(control1=({:.3},{:.3}),control2=({:.3},{:.3}))",
-                            control1.0, control1.1, control2.0, control2.1
+                            control1.x, control1.y, control2.x, control2.y
                         )
                         .unwrap();
                     }
@@ -608,7 +608,7 @@ impl Ops {
         acceleration: f64,
     ) -> Vec<f64> {
         let mut times = Vec::with_capacity(self.commands.len());
-        let mut last_point = Point3D(0.0, 0.0, 0.0);
+        let mut last_point = Point3D::new(0.0, 0.0, 0.0);
         let mut cut_speed = default_cut_speed;
         let mut travel_speed = default_travel_speed;
 
@@ -697,13 +697,13 @@ impl Ops {
         let mut curr_x = 0.0;
         let mut curr_y = 0.0;
         if include_travel {
-            curr_x = self.last_move_to.0;
-            curr_y = self.last_move_to.1;
+            curr_x = self.last_move_to.x;
+            curr_y = self.last_move_to.y;
         }
 
         for node in &self.commands {
             if let OpCategory::Moving { end, cmd } = &node.category {
-                let (end_x, end_y) = (end.0, end.1);
+                let (end_x, end_y) = (end.x, end.y);
 
                 if matches!(cmd, MoveCmd::MoveTo) {
                     if include_travel {
@@ -734,13 +734,13 @@ impl Ops {
 
                 if let MoveCmd::ArcTo { center, cw } = cmd {
                     let radius =
-                        (center.0 * center.0 + center.1 * center.1).sqrt();
+                        (center.x * center.x + center.y * center.y).sqrt();
                     if (curr_x - end_x).abs() < EPSILON_COLLINEAR
                         && (curr_y - end_y).abs() < EPSILON_COLLINEAR
                         && radius > EPSILON_COLLINEAR
                     {
-                        let cx = curr_x + center.0;
-                        let cy = curr_y + center.1;
+                        let cx = curr_x + center.x;
+                        let cy = curr_y + center.y;
                         Self::update_bounds(
                             &mut min_x,
                             &mut min_y,
@@ -759,9 +759,9 @@ impl Ops {
                         );
                     } else {
                         let abox = crate::geo::shape::arc::get_arc_bounds(
-                            Point(curr_x, curr_y),
-                            Point(end_x, end_y),
-                            Point(center.0, center.1),
+                            Point::new(curr_x, curr_y),
+                            Point::new(end_x, end_y),
+                            Point::new(center.x, center.y),
                             *cw,
                         );
                         Self::update_bounds(
@@ -829,24 +829,24 @@ impl Ops {
         for cmd in &geometry.data {
             match cmd {
                 crate::Command::Move { end } => {
-                    ops.move_to(end.0, end.1, end.2, None);
+                    ops.move_to(end.x, end.y, end.z, None);
                 }
                 crate::Command::Line { end } => {
-                    ops.line_to(end.0, end.1, end.2, None);
+                    ops.line_to(end.x, end.y, end.z, None);
                 }
                 crate::Command::Arc {
                     end,
                     center_offset,
                     normal,
                 } => {
-                    let clockwise = normal.2 < 0.0;
+                    let clockwise = normal.z < 0.0;
                     ops.arc_to(
-                        end.0,
-                        end.1,
-                        center_offset.0,
-                        center_offset.1,
+                        end.x,
+                        end.y,
+                        center_offset.x,
+                        center_offset.y,
                         clockwise,
-                        end.2,
+                        end.z,
                         None,
                     );
                 }
@@ -869,14 +869,14 @@ impl Ops {
             if let OpCategory::Moving { end, cmd } = &node.category {
                 match cmd {
                     MoveCmd::MoveTo => {
-                        geo.move_to(end.0, end.1, end.2);
+                        geo.move_to(end.x, end.y, end.z);
                     }
                     MoveCmd::LineTo => {
-                        geo.line_to(end.0, end.1, end.2);
+                        geo.line_to(end.x, end.y, end.z);
                     }
                     MoveCmd::ArcTo { center, cw } => {
                         geo.arc_to(
-                            end.0, end.1, center.0, center.1, *cw, end.2,
+                            end.x, end.y, center.x, center.y, *cw, end.z,
                         );
                     }
                     MoveCmd::BezierTo { control1, control2 } => {
@@ -893,32 +893,35 @@ impl Ops {
 fn move_distance(cmd: &MoveCmd, last_point: Point3D, end: Point3D) -> f64 {
     match cmd {
         MoveCmd::ArcTo { center, cw } => get_arc_length(
-            Point(last_point.0, last_point.1),
-            Point(end.0, end.1),
+            Point::new(last_point.x, last_point.y),
+            Point::new(end.x, end.y),
             *center,
             *cw,
         ),
         MoveCmd::BezierTo { control1, control2 } => get_bezier_length(
-            Point(last_point.0, last_point.1),
-            Point(control1.0, control1.1),
-            Point(control2.0, control2.1),
-            Point(end.0, end.1),
+            Point::new(last_point.x, last_point.y),
+            Point::new(control1.x, control1.y),
+            Point::new(control2.x, control2.y),
+            Point::new(end.x, end.y),
         ),
         MoveCmd::QuadraticBezierTo { control } => {
             let c = *control;
             get_bezier_length(
-                Point(last_point.0, last_point.1),
-                Point(
-                    (last_point.0 + 2.0 * c.0) / 3.0,
-                    (last_point.1 + 2.0 * c.1) / 3.0,
+                Point::new(last_point.x, last_point.y),
+                Point::new(
+                    (last_point.x + 2.0 * c.x) / 3.0,
+                    (last_point.y + 2.0 * c.y) / 3.0,
                 ),
-                Point((end.0 + 2.0 * c.0) / 3.0, (end.1 + 2.0 * c.1) / 3.0),
-                Point(end.0, end.1),
+                Point::new(
+                    (end.x + 2.0 * c.x) / 3.0,
+                    (end.y + 2.0 * c.y) / 3.0,
+                ),
+                Point::new(end.x, end.y),
             )
         }
         _ => get_line_segment_length(
-            Point(last_point.0, last_point.1),
-            Point(end.0, end.1),
+            Point::new(last_point.x, last_point.y),
+            Point::new(end.x, end.y),
         ),
     }
 }

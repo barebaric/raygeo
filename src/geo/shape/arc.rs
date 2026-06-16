@@ -19,7 +19,7 @@ use crate::geo::shape::polygon::is_point_inside_polygon;
 use crate::types::{Point, Point3D, Polygon, Rect};
 
 /// Normal for a CCW arc in the XY plane (G17 G03).
-pub const XY_NORMAL_CCW: Point3D = Point3D(0.0, 0.0, 1.0);
+pub const XY_NORMAL_CCW: Point3D = Point3D::new(0.0, 0.0, 1.0);
 
 /// Convert the legacy `clockwise: bool` to a 3D plane normal.
 ///
@@ -27,7 +27,7 @@ pub const XY_NORMAL_CCW: Point3D = Point3D(0.0, 0.0, 1.0);
 /// `clockwise = true`  (CW  in XY) → `(0, 0, -1)`.
 pub fn normal_from_clockwise(clockwise: bool) -> Point3D {
     if clockwise {
-        Point3D(0.0, 0.0, -1.0)
+        Point3D::new(0.0, 0.0, -1.0)
     } else {
         XY_NORMAL_CCW
     }
@@ -56,9 +56,11 @@ pub fn get_arc_length(
     center_offset: Point,
     clockwise: bool,
 ) -> f64 {
-    let center =
-        Point(start_pos.0 + center_offset.0, start_pos.1 + center_offset.1);
-    let radius = (start_pos.0 - center.0).hypot(start_pos.1 - center.1);
+    let center = Point::new(
+        start_pos.x + center_offset.x,
+        start_pos.y + center_offset.y,
+    );
+    let radius = (start_pos.x - center.x).hypot(start_pos.y - center.y);
     if radius < 1e-9 {
         return 0.0;
     }
@@ -96,8 +98,8 @@ pub fn get_arc_angles(
     center: Point,
     clockwise: bool,
 ) -> (f64, f64, f64) {
-    let start_angle = (start_pos.1 - center.1).atan2(start_pos.0 - center.0);
-    let end_angle = (end_pos.1 - center.1).atan2(end_pos.0 - center.0);
+    let start_angle = (start_pos.y - center.y).atan2(start_pos.x - center.x);
+    let end_angle = (end_pos.y - center.y).atan2(end_pos.x - center.x);
     let sweep = get_arc_sweep(start_angle, end_angle, clockwise);
     (start_angle, end_angle, sweep)
 }
@@ -112,10 +114,10 @@ pub fn get_arc_midpoint(
     let (start_a, _, sweep) =
         get_arc_angles(start_pos, end_pos, center, clockwise);
     let mid_angle = start_a + sweep / 2.0;
-    let radius = (start_pos.0 - center.0).hypot(start_pos.1 - center.1);
-    Point(
-        center.0 + radius * mid_angle.cos(),
-        center.1 + radius * mid_angle.sin(),
+    let radius = (start_pos.x - center.x).hypot(start_pos.y - center.y);
+    Point::new(
+        center.x + radius * mid_angle.cos(),
+        center.y + radius * mid_angle.sin(),
     )
 }
 
@@ -155,17 +157,17 @@ pub fn get_arc_bounds(
     center_offset: Point,
     clockwise: bool,
 ) -> Rect {
-    let center_x = start_pos.0 + center_offset.0;
-    let center_y = start_pos.1 + center_offset.1;
-    let radius = center_offset.0.hypot(center_offset.1);
+    let center_x = start_pos.x + center_offset.x;
+    let center_y = start_pos.y + center_offset.y;
+    let radius = center_offset.x.hypot(center_offset.y);
 
-    let mut min_x = start_pos.0.min(end_pos.0);
-    let mut min_y = start_pos.1.min(end_pos.1);
-    let mut max_x = start_pos.0.max(end_pos.0);
-    let mut max_y = start_pos.1.max(end_pos.1);
+    let mut min_x = start_pos.x.min(end_pos.x);
+    let mut min_y = start_pos.y.min(end_pos.y);
+    let mut max_x = start_pos.x.max(end_pos.x);
+    let mut max_y = start_pos.y.max(end_pos.y);
 
-    let start_angle = (start_pos.1 - center_y).atan2(start_pos.0 - center_x);
-    let end_angle = (end_pos.1 - center_y).atan2(end_pos.0 - center_x);
+    let start_angle = (start_pos.y - center_y).atan2(start_pos.x - center_x);
+    let end_angle = (end_pos.y - center_y).atan2(end_pos.x - center_x);
 
     if is_angle_between(0.0, start_angle, end_angle, clockwise) {
         max_x = max_x.max(center_x + radius);
@@ -187,10 +189,10 @@ pub fn get_arc_bounds(
 /// Uses cross product of vectors from center to determine if the reference is on
 /// the clockwise or counter-clockwise side. Used for interactive arc drawing.
 pub fn get_arc_direction(center: Point, start: Point, mouse: Point) -> bool {
-    let vec_s_x = start.0 - center.0;
-    let vec_s_y = start.1 - center.1;
-    let vec_m_x = mouse.0 - center.0;
-    let vec_m_y = mouse.1 - center.1;
+    let vec_s_x = start.x - center.x;
+    let vec_s_y = start.y - center.y;
+    let vec_m_x = mouse.x - center.x;
+    let vec_m_y = mouse.y - center.y;
 
     // Negative cross product indicates clockwise
     let det = vec_s_x * vec_m_y - vec_s_y * vec_m_x;
@@ -200,15 +202,15 @@ pub fn get_arc_direction(center: Point, start: Point, mouse: Point) -> bool {
 /// Determines if points along an arc traverse in clockwise direction relative to center.
 /// Uses cumulative cross product of successive radius vectors.
 pub fn is_arc_clockwise(points: &[Point], center: Point) -> bool {
-    let xc = center.0;
-    let yc = center.1;
+    let xc = center.x;
+    let yc = center.y;
     let mut cross_product_sum = 0.0;
 
     for i in 0..points.len() - 1 {
-        let x0 = points[i].0;
-        let y0 = points[i].1;
-        let x1 = points[i + 1].0;
-        let y1 = points[i + 1].1;
+        let x0 = points[i].x;
+        let y0 = points[i].y;
+        let x1 = points[i + 1].x;
+        let y1 = points[i + 1].y;
         let v0x = x0 - xc;
         let v0y = y0 - yc;
         let v1x = x1 - xc;
@@ -236,9 +238,9 @@ pub fn linearize_arc(
     out: &mut Vec<(Point3D, Point3D)>,
 ) {
     out.clear();
-    let p0 = DVec3::new(start_point.0, start_point.1, start_point.2);
-    let p1 = DVec3::new(end.0, end.1, end.2);
-    let n = DVec3::new(normal.0, normal.1, normal.2).normalize();
+    let p0 = DVec3::new(start_point.x, start_point.y, start_point.z);
+    let p1 = DVec3::new(end.x, end.y, end.z);
+    let n = DVec3::new(normal.x, normal.y, normal.z).normalize();
 
     // Reject zero-length normals — treat as degenerate (straight line)
     if n.length() < 1e-30 {
@@ -247,7 +249,7 @@ pub fn linearize_arc(
     }
 
     let center =
-        p0 + DVec3::new(center_offset.0, center_offset.1, center_offset.2);
+        p0 + DVec3::new(center_offset.x, center_offset.y, center_offset.z);
 
     let r0 = p0 - center;
     let r1 = p1 - center;
@@ -288,7 +290,7 @@ pub fn linearize_arc(
         let (s, c) = angle.sin_cos();
         let pt = center + u * (radius * c) + v * (radius * s);
         let z = z0 + (z1 - z0) * t;
-        let next_pt = Point3D(pt.x, pt.y, z);
+        let next_pt = Point3D::new(pt.x, pt.y, z);
         out.push((prev_pt, next_pt));
         prev_pt = next_pt;
     }
@@ -321,8 +323,8 @@ fn find_closest_on_linearized_arc(
 
     for (j, (p1_3d, p2_3d)) in arc_segments.iter().enumerate() {
         let t_sub = get_line_segment_closest_point(
-            Point(p1_3d.0, p1_3d.1),
-            Point(p2_3d.0, p2_3d.1),
+            Point::new(p1_3d.x, p1_3d.y),
+            Point::new(p2_3d.x, p2_3d.y),
             x,
             y,
         );
@@ -351,14 +353,14 @@ fn find_closest_point_on_arc_impl(
     //   normal.(0,0,+1) → CCW (clockwise=false)
     //   normal.(0,0,-1) → CW  (clockwise=true)
     // For non-Z normals the 2D projection is approximate.
-    let clockwise = normal.2 < 0.0;
+    let clockwise = normal.z < 0.0;
 
-    let p0 = Point(start_pos.0, start_pos.1);
-    let p1 = Point(end.0, end.1);
-    let center = Point(p0.0 + center_offset.0, p0.1 + center_offset.1);
+    let p0 = Point::new(start_pos.x, start_pos.y);
+    let p1 = Point::new(end.x, end.y);
+    let center = Point::new(p0.x + center_offset.x, p0.y + center_offset.y);
 
-    let radius_start = (p0.0 - center.0).hypot(p0.1 - center.1);
-    let radius_end = (p1.0 - center.0).hypot(p1.1 - center.1);
+    let radius_start = (p0.x - center.x).hypot(p0.y - center.y);
+    let radius_end = (p1.x - center.x).hypot(p1.y - center.y);
 
     if (radius_start - radius_end).abs() > 1e-9 {
         return find_closest_on_linearized_arc(
@@ -373,25 +375,25 @@ fn find_closest_point_on_arc_impl(
 
     let radius = radius_start;
     if radius < 1e-9 {
-        let dist_sq = (x - p0.0).powi(2) + (y - p0.1).powi(2);
+        let dist_sq = (x - p0.x).powi(2) + (y - p0.y).powi(2);
         return Some((0.0, p0, dist_sq));
     }
 
-    let vec_to_point = (x - center.0, y - center.1);
+    let vec_to_point = (x - center.x, y - center.y);
     let dist_to_center = vec_to_point.0.hypot(vec_to_point.1);
     let closest_on_circle = if dist_to_center < 1e-9 {
         p0
     } else {
-        Point(
-            center.0 + vec_to_point.0 / dist_to_center * radius,
-            center.1 + vec_to_point.1 / dist_to_center * radius,
+        Point::new(
+            center.x + vec_to_point.0 / dist_to_center * radius,
+            center.y + vec_to_point.1 / dist_to_center * radius,
         )
     };
 
-    let start_angle = (p0.1 - center.1).atan2(p0.0 - center.0);
-    let end_angle = (p1.1 - center.1).atan2(p1.0 - center.0);
+    let start_angle = (p0.y - center.y).atan2(p0.x - center.x);
+    let end_angle = (p1.y - center.y).atan2(p1.x - center.x);
     let point_angle =
-        (closest_on_circle.1 - center.1).atan2(closest_on_circle.0 - center.0);
+        (closest_on_circle.y - center.y).atan2(closest_on_circle.x - center.x);
 
     let mut angle_range = end_angle - start_angle;
     let mut angle_to_check = point_angle - start_angle;
@@ -428,8 +430,8 @@ fn find_closest_point_on_arc_impl(
             },
         )
     } else {
-        let dist_sq_p0 = (x - p0.0).powi(2) + (y - p0.1).powi(2);
-        let dist_sq_p1 = (x - p1.0).powi(2) + (y - p1.1).powi(2);
+        let dist_sq_p0 = (x - p0.x).powi(2) + (y - p0.y).powi(2);
+        let dist_sq_p1 = (x - p1.x).powi(2) + (y - p1.y).powi(2);
         if dist_sq_p0 <= dist_sq_p1 {
             (p0, 0.0)
         } else {
@@ -437,7 +439,7 @@ fn find_closest_point_on_arc_impl(
         }
     };
 
-    let dist_sq = (x - closest_point.0).powi(2) + (y - closest_point.1).powi(2);
+    let dist_sq = (x - closest_point.x).powi(2) + (y - closest_point.y).powi(2);
     let t = t.clamp(0.0, 1.0);
     Some((t, closest_point, dist_sq))
 }
@@ -470,7 +472,7 @@ pub fn does_arc_intersect_rect(
     let arc_box = get_arc_bounds(
         start_pos,
         end_pos,
-        Point(center.0 - start_pos.0, center.1 - start_pos.1),
+        Point::new(center.x - start_pos.x, center.y - start_pos.y),
         clockwise,
     );
     if arc_box.2 < rect.0
@@ -483,11 +485,11 @@ pub fn does_arc_intersect_rect(
 
     // Linearize and test each segment
     let offset_3d =
-        Point3D(center.0 - start_pos.0, center.1 - start_pos.1, 0.0);
+        Point3D::new(center.x - start_pos.x, center.y - start_pos.y, 0.0);
     let normal = normal_from_clockwise(clockwise);
-    let radius = (start_pos.0 - center.0).hypot(start_pos.1 - center.1);
-    let start_3d: Point3D = Point3D(start_pos.0, start_pos.1, 0.0);
-    let end_3d: Point3D = Point3D(end_pos.0, end_pos.1, 0.0);
+    let radius = (start_pos.x - center.x).hypot(start_pos.y - center.y);
+    let start_3d: Point3D = Point3D::new(start_pos.x, start_pos.y, 0.0);
+    let end_3d: Point3D = Point3D::new(end_pos.x, end_pos.y, 0.0);
 
     let mut segments = Vec::new();
     linearize_arc(
@@ -500,8 +502,8 @@ pub fn does_arc_intersect_rect(
     );
     for (p1_3d, p2_3d) in segments {
         if does_line_segment_intersect_rect(
-            Point(p1_3d.0, p1_3d.1),
-            Point(p2_3d.0, p2_3d.1),
+            Point::new(p1_3d.x, p1_3d.y),
+            Point::new(p2_3d.x, p2_3d.y),
             rect,
         ) {
             return true;
@@ -525,20 +527,20 @@ pub fn does_arc_intersect_circle(
 ) -> bool {
     use crate::geo::shape::circle::get_circle_circle_intersections;
 
-    let radius = (start_pos.0 - center.0).hypot(start_pos.1 - center.1);
+    let radius = (start_pos.x - center.x).hypot(start_pos.y - center.y);
     if radius < 1e-9 {
-        return (start_pos.0 - circle_center.0)
-            .hypot(start_pos.1 - circle_center.1)
+        return (start_pos.x - circle_center.x)
+            .hypot(start_pos.y - circle_center.y)
             <= circle_radius;
     }
 
     // Check if either endpoint is inside the circle
-    if (start_pos.0 - circle_center.0).hypot(start_pos.1 - circle_center.1)
+    if (start_pos.x - circle_center.x).hypot(start_pos.y - circle_center.y)
         <= circle_radius
     {
         return true;
     }
-    if (end_pos.0 - circle_center.0).hypot(end_pos.1 - circle_center.1)
+    if (end_pos.x - circle_center.x).hypot(end_pos.y - circle_center.y)
         <= circle_radius
     {
         return true;
@@ -553,10 +555,10 @@ pub fn does_arc_intersect_circle(
     );
     if !intersections.is_empty() {
         let start_angle =
-            (start_pos.1 - center.1).atan2(start_pos.0 - center.0);
-        let end_angle = (end_pos.1 - center.1).atan2(end_pos.0 - center.0);
+            (start_pos.y - center.y).atan2(start_pos.x - center.x);
+        let end_angle = (end_pos.y - center.y).atan2(end_pos.x - center.x);
         for pt in intersections {
-            let angle = (pt.1 - center.1).atan2(pt.0 - center.0);
+            let angle = (pt.y - center.y).atan2(pt.x - center.x);
             if is_angle_between(angle, start_angle, end_angle, clockwise) {
                 return true;
             }
@@ -565,7 +567,7 @@ pub fn does_arc_intersect_circle(
 
     // Check midpoint of arc as fallback
     let mid = get_arc_midpoint(start_pos, end_pos, center, clockwise);
-    if (mid.0 - circle_center.0).hypot(mid.1 - circle_center.1) <= circle_radius
+    if (mid.x - circle_center.x).hypot(mid.y - circle_center.y) <= circle_radius
     {
         return true;
     }
@@ -582,16 +584,18 @@ pub fn is_arc_inside_polygons(
     clockwise: bool,
     regions: &[Polygon],
 ) -> bool {
-    let center =
-        Point(start_pos.0 + center_offset.0, start_pos.1 + center_offset.1);
+    let center = Point::new(
+        start_pos.x + center_offset.x,
+        start_pos.y + center_offset.y,
+    );
     let bbox = get_arc_bounds(start_pos, end_pos, center_offset, clockwise);
     let mid = get_arc_midpoint(start_pos, end_pos, center, clockwise);
 
     let sample_points: Vec<Point> = vec![
-        Point(bbox.0, bbox.1),
-        Point(bbox.2, bbox.1),
-        Point(bbox.2, bbox.3),
-        Point(bbox.0, bbox.3),
+        Point::new(bbox.0, bbox.1),
+        Point::new(bbox.2, bbox.1),
+        Point::new(bbox.2, bbox.3),
+        Point::new(bbox.0, bbox.3),
         start_pos,
         end_pos,
         mid,
