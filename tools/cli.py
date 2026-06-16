@@ -6,9 +6,12 @@ import importlib
 import pkgutil
 import shutil
 import sys
+import tempfile
 from pathlib import Path
 
 import matplotlib
+import matplotlib.image as mpimg
+import numpy as np
 
 import tools.examples
 from tools import api_docs
@@ -421,19 +424,51 @@ def _collect_example_modules():
     return modules
 
 
+def _images_are_visually_identical(path_a: Path, path_b: Path) -> bool:
+    a = mpimg.imread(path_a)
+    b = mpimg.imread(path_b)
+    if a.shape != b.shape:
+        return False
+    h, w = a.shape[:2]
+    block = max(h, w) // 64
+    if block < 2:
+        return np.allclose(a, b, atol=1.0 / 255)
+    bh, bw = h // block * block, w // block * block
+    a_blocks = (
+        a[:bh, :bw]
+        .reshape(bh // block, block, bw // block, block, -1)
+        .mean(axis=(1, 3))
+    )
+    b_blocks = (
+        b[:bh, :bw]
+        .reshape(bh // block, block, bw // block, block, -1)
+        .mean(axis=(1, 3))
+    )
+    return np.allclose(a_blocks, b_blocks, atol=0.2)
+
+
 def _generate_images(images_dir: Path):
     matplotlib.use("Agg")
 
     images_dir.mkdir(parents=True, exist_ok=True)
-    for old in images_dir.glob("*.png"):
-        old.unlink()
     modules = _collect_example_modules()
 
-    for mod in modules:
-        if not hasattr(mod, "generate_examples"):
-            continue
-        print(f"  Generating {mod.__name__}...")
-        mod.generate_examples(images_dir)
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp_dir = Path(tmp)
+        for mod in modules:
+            if not hasattr(mod, "generate_examples"):
+                continue
+            print(f"  Generating {mod.__name__}...")
+            mod.generate_examples(tmp_dir)
+
+        for new_path in sorted(tmp_dir.glob("*.png")):
+            dest = images_dir / new_path.name
+            if dest.exists() and _images_are_visually_identical(
+                new_path, dest
+            ):
+                continue
+            shutil.copy2(new_path, dest)
+            print(f"    Updated {new_path.name}")
 
 
 def _inject_images_into_api(api_dir: Path, images_dir: Path):
