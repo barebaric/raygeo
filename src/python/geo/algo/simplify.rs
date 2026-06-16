@@ -11,7 +11,9 @@ Reduces the number of points in a polyline while preserving the overall
 shape within a given tolerance.
 ";
 
-use super::super::flex_point::{points_to_tuples, poly_to_points, PyPoint2D};
+use super::super::flex_point::{
+    points3d_to_tuples, points_to_tuples, poly_to_points, PyPoint2D, PyPoint3D,
+};
 use crate::geo::algo::simplify::simplify_polyline;
 use crate::types::{Point, Point3D};
 use pyo3::prelude::*;
@@ -22,7 +24,7 @@ pub fn register(algo_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     let m = PyModule::new(py, "simplify")?;
     m.setattr("__doc__", MODULE_DOC_SIMPLIFY)?;
 
-    register_functions!(m, simplify_polyline_py,);
+    register_functions!(m, simplify_polyline_py, simplify_polyline_3d_py,);
 
     algo_mod.add_submodule(&m)?;
     Ok(())
@@ -57,4 +59,39 @@ fn simplify_polyline_py(
         pts.iter().map(|p| Point3D::new(p.x, p.y, 0.0)).collect();
     let result = simplify_polyline(&points_3d, tolerance);
     points_to_tuples(result.iter().map(|p| Point::new(p.x, p.y)).collect())
+}
+
+#[gen_stub_pyfunction(
+    python = r#"
+    import collections.abc
+    import raygeo.geo.types
+
+    def simplify_polyline_3d(
+        points: collections.abc.Sequence[types.Point3D],
+        tolerance: float,
+    ) -> types.Polygon3D:
+        """Simplify a 3D polyline using the Ramer-Douglas-Peucker algorithm.
+
+        The simplification uses XY distance, but preserves Z coordinates
+        of kept points.
+
+        :param points: Sequence of (x, y, z) points.
+        :param tolerance: Simplification tolerance.
+        :returns: Simplified 3D point sequence.
+        :complexity: O(n log n) average time, O(n) space
+        """
+"#,
+    module = "raygeo.geo.algo.simplify"
+)]
+#[pyfunction(name = "simplify_polyline_3d")]
+fn simplify_polyline_3d_py(
+    points: Vec<PyPoint3D>,
+    tolerance: f64,
+) -> Vec<(f64, f64, f64)> {
+    let pts: Vec<Point3D> = points
+        .into_iter()
+        .map(|p| Point3D::new(p.0, p.1, p.2))
+        .collect();
+    let result = simplify_polyline(&pts, tolerance);
+    points3d_to_tuples(result)
 }

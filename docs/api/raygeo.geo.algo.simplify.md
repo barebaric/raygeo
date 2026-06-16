@@ -32,3 +32,27 @@ Simplify a polyline using the Ramer-Douglas-Peucker algorithm.
 ![Simplify and linearize](images/simplify.png)
 
 _Simplify and linearize_
+
+### `simplify_polyline_3d()`
+
+```python
+simplify_polyline_3d(
+    points: Sequence[types.Point3D],
+    tolerance: float,
+) -> types.Polygon3D
+```
+
+Simplify a 3D polyline using the Ramer-Douglas-Peucker algorithm.
+
+The simplification uses XY distance, but preserves Z coordinates of kept points.
+
+| Parameter    | Type                      | Description                         |
+| ------------ | ------------------------- | ----------------------------------- |
+| `points`     | `Sequence[types.Point3D]` | Sequence of (x, y, z) points.       |
+| `tolerance`  | `float`                   | Simplification tolerance.           |
+| _Returns_    | `types.Polygon3D`         | Simplified 3D point sequence.       |
+| _Complexity_ |                           | O(n log n) average time, O(n) space |
+
+![3D polyline simplification preserving Z coordinates](images/simplify-3d.png)
+
+_3D polyline simplification preserving Z coordinates_

@@ -11,6 +11,7 @@ import collections.abc
 from raygeo.geo import types
 __all__ = [
     "simplify_polyline",
+    "simplify_polyline_3d",
 ]
 
 def simplify_polyline(points: collections.abc.Sequence[types.Point], tolerance: float) -> types.Polygon:
@@ -20,6 +21,19 @@ def simplify_polyline(points: collections.abc.Sequence[types.Point], tolerance: 
     :param points: Sequence of (x, y) points.
     :param tolerance: Simplification tolerance.
     :returns: Simplified point sequence.
+    :complexity: O(n log n) average time, O(n) space
+    """
+
+def simplify_polyline_3d(points: collections.abc.Sequence[types.Point3D], tolerance: float) -> types.Polygon3D:
+    r"""
+    Simplify a 3D polyline using the Ramer-Douglas-Peucker algorithm.
+    
+    The simplification uses XY distance, but preserves Z coordinates
+    of kept points.
+    
+    :param points: Sequence of (x, y, z) points.
+    :param tolerance: Simplification tolerance.
+    :returns: Simplified 3D point sequence.
     :complexity: O(n log n) average time, O(n) space
     """
 

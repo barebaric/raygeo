@@ -1,4 +1,4 @@
-from raygeo.geo.algo.simplify import simplify_polyline
+from raygeo.geo.algo.simplify import simplify_polyline, simplify_polyline_3d
 
 
 def test_simplify_straight_line():
@@ -148,3 +148,72 @@ def test_simplify_vertical_line():
     assert len(result) == 2
     assert result[0] == (0, 0)
     assert result[1] == (0, 10)
+
+
+def test_simplify_3d_straight_line():
+    """3D: collinear points with varying Z preserve Z values."""
+    points = [(0, 0, 10), (1, 1, 20), (2, 2, 30), (3, 3, 40), (10, 10, 50)]
+
+    result = simplify_polyline_3d(points, tolerance=0.001)
+    assert len(result) == 2
+    assert result[0] == (0, 0, 10)
+    assert result[1] == (10, 10, 50)
+
+
+def test_simplify_3d_z_preserved_through_xy_simplification():
+    """3D: Z of corner kept when corner exceeds tolerance."""
+    points = [(0, 0, 1), (5, 5, 99), (10, 0, 2)]
+
+    result = simplify_polyline_3d(points, tolerance=0.5)
+    assert len(result) == 3
+    assert result[1] == (5, 5, 99)
+
+
+def test_simplify_3d_insignificant_xy_bump_drops_bump_z():
+    """3D: When a bump is removed in XY, its Z is also removed."""
+    points = [(0, 0, 1), (5, 0.1, 99), (10, 0, 2)]
+
+    result = simplify_polyline_3d(points, tolerance=0.5)
+    assert len(result) == 2
+    assert result[0] == (0, 0, 1)
+    assert result[1] == (10, 0, 2)
+
+
+def test_simplify_3d_empty():
+    """3D: empty input returns empty."""
+    result = simplify_polyline_3d([], tolerance=0.1)
+    assert result == []
+
+
+def test_simplify_3d_all_z():
+    """3D: 2-point polyline (minimal case) preserves Z."""
+    points = [(0, 0, 42), (10, 10, -5)]
+
+    result = simplify_polyline_3d(points, tolerance=100.0)
+    assert len(result) == 2
+    assert result[0] == (0, 0, 42)
+    assert result[1] == (10, 10, -5)
+
+
+def test_simplify_3d_mixed_z():
+    """3D: complex shape with varying Z values."""
+    points = [
+        (0, 0, 0),
+        (1, 0.1, 10),
+        (2, -0.1, 20),
+        (3, 0.05, 30),
+        (4, -0.05, 40),
+        (5, 5, 100),
+        (6, 5.1, 110),
+        (7, 4.9, 120),
+        (10, 0, 200),
+    ]
+
+    result = simplify_polyline_3d(points, tolerance=0.5)
+    assert len(result) == 6
+    assert result[0] == (0, 0, 0)
+    assert result[1] == (4, -0.05, 40)
+    assert result[2] == (5, 5, 100)
+    assert result[3] == (6, 5.1, 110)
+    assert result[4] == (7, 4.9, 120)
+    assert result[5] == (10, 0, 200)

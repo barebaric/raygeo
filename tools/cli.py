@@ -224,6 +224,11 @@ _INLINE_IMAGE_MAP = {
     ],
     "raygeo.geo.algo.simplify.md": [
         ("simplify_polyline", "simplify", "Simplify and linearize"),
+        (
+            "simplify_polyline_3d",
+            "simplify-3d",
+            "3D polyline simplification preserving Z coordinates",
+        ),
     ],
     "raygeo.geo.algo.smooth.md": [
         ("smooth_polyline", "smooth", "Gaussian smoothing"),

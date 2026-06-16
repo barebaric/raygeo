@@ -5,12 +5,16 @@ import math
 import matplotlib.pyplot as plt
 
 from raygeo.geo import Geometry
+from raygeo.geo.algo.simplify import simplify_polyline_3d
 from tools.plot import plot_geometry
 
 
 def generate_examples(output_dir):
     images = []
 
+    #
+    # 2D simplify + linearize example (existing)
+    #
     n = 100
     pts = [
         (
@@ -92,6 +96,38 @@ def generate_examples(output_dir):
         {
             "path": "simplify.png",
             "caption": "Geometry simplification and linearization",
+        }
+    )
+
+    #
+    # 3D simplify example
+    #
+    pts3d = [
+        (10 + t, 30 + 20 * math.sin(t / 8), 10 * math.sin(t / 4))
+        for t in [i * 0.0625 for i in range(1280)]
+    ]
+    result = simplify_polyline_3d(pts3d, tolerance=1.0)
+
+    fig3d = plt.figure(figsize=(10, 8))
+    ax3d = fig3d.add_subplot(111, projection="3d")
+    xs, ys, zs = zip(*pts3d)
+    rx, ry, rz = zip(*result)
+    ax3d.plot(xs, ys, zs, "b-", linewidth=1.5, alpha=0.4, label="Original")
+    ax3d.plot(rx, ry, rz, "r-o", linewidth=2, markersize=3, label="Simplified")
+    title = f"3D polyline simplification: {len(pts3d)} → {len(result)} pts"
+    ax3d.set_title(title)
+    ax3d.set_xlabel("X")
+    ax3d.set_ylabel("Y")
+    ax3d.set_zlabel("Z")
+    ax3d.legend()
+    fig3d.tight_layout()
+    path3d = output_dir / "simplify-3d.png"
+    fig3d.savefig(path3d, dpi=150)
+    plt.close(fig3d)
+    images.append(
+        {
+            "path": "simplify-3d.png",
+            "caption": "3D polyline simplification preserving Z coordinates",
         }
     )
 
