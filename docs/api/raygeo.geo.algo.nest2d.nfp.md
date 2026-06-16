@@ -11,24 +11,6 @@ general polygon pairs.
 
 ## Functions
 
-### `nfp_convex_fast()`
-
-```python
-nfp_convex_fast(
-    static_poly: Sequence[tuple[float, float]],
-    orbiting: Sequence[tuple[float, float]],
-) -> list[list[tuple[float, float]]]
-```
-
-Fast NFP for convex polygon pairs.
-
-| Parameter     | Type                              | Description                        |
-| ------------- | --------------------------------- | ---------------------------------- |
-| `static_poly` | `Sequence[tuple[float, float]]`   | Static polygon as points.          |
-| `orbiting`    | `Sequence[tuple[float, float]]`   | Orbiting polygon as points.        |
-| _Returns_     | `list[list[tuple[float, float]]]` | List of NFP polygons.              |
-| _Complexity_  |                                   | O(n + m) for convex polygon pairs. |
-
 ### `nfp_minkowski()`
 
 ```python

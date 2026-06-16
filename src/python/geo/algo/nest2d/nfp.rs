@@ -49,35 +49,6 @@ fn no_fit_polygon_py(
     python = r#"
     import collections.abc
 
-    def nfp_convex_fast(
-        static_poly: collections.abc.Sequence[tuple[float, float]],
-        orbiting: collections.abc.Sequence[tuple[float, float]],
-    ) -> list[list[tuple[float, float]]]:
-        """Fast NFP for convex polygon pairs.
-
-        :param static_poly: Static polygon as points.
-        :param orbiting: Orbiting polygon as points.
-        :returns: List of NFP polygons.
-        :complexity: O(n + m) for convex polygon pairs.
-        """
-"#,
-    module = "raygeo.geo.algo.nest2d.nfp"
-)]
-#[pyfunction(name = "nfp_convex_fast")]
-fn nfp_convex_fast_py(
-    static_poly: Vec<PyPoint2D>,
-    orbiting: Vec<PyPoint2D>,
-) -> Vec<Vec<(f64, f64)>> {
-    polygons_to_tuples(nfp::nfp_convex_fast(
-        &poly_to_points(static_poly),
-        &poly_to_points(orbiting),
-    ))
-}
-
-#[gen_stub_pyfunction(
-    python = r#"
-    import collections.abc
-
     def nfp_minkowski(
         static_poly: collections.abc.Sequence[tuple[float, float]],
         orbiting: collections.abc.Sequence[tuple[float, float]],
@@ -150,7 +121,6 @@ fn polygon_to_key_py(poly: Vec<PyPoint2D>) -> Vec<(i64, i64)> {
 
 pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(no_fit_polygon_py, m)?)?;
-    m.add_function(wrap_pyfunction!(nfp_convex_fast_py, m)?)?;
     m.add_function(wrap_pyfunction!(nfp_minkowski_py, m)?)?;
     m.add_function(wrap_pyfunction!(normalize_polygon_py, m)?)?;
     m.add_function(wrap_pyfunction!(polygon_to_key_py, m)?)?;

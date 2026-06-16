@@ -10,22 +10,11 @@ sums, both for convex and general polygon pairs.
 import collections.abc
 from raygeo.geo import types
 __all__ = [
-    "nfp_convex_fast",
     "nfp_minkowski",
     "no_fit_polygon",
     "normalize_polygon",
     "polygon_to_key",
 ]
-
-def nfp_convex_fast(static_poly: collections.abc.Sequence[tuple[float, float]], orbiting: collections.abc.Sequence[tuple[float, float]]) -> list[list[tuple[float, float]]]:
-    r"""
-    Fast NFP for convex polygon pairs.
-    
-    :param static_poly: Static polygon as points.
-    :param orbiting: Orbiting polygon as points.
-    :returns: List of NFP polygons.
-    :complexity: O(n + m) for convex polygon pairs.
-    """
 
 def nfp_minkowski(static_poly: collections.abc.Sequence[tuple[float, float]], orbiting: collections.abc.Sequence[tuple[float, float]]) -> list[list[tuple[float, float]]]:
     r"""

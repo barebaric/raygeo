@@ -88,7 +88,7 @@ pub fn get_no_fit_polygon(
     stationary: &Polygon,
     orbiting: &Polygon,
 ) -> Vec<Polygon> {
-    if stationary.is_empty() || orbiting.is_empty() {
+    if stationary.len() < 3 || orbiting.len() < 3 {
         return vec![];
     }
     let orbiting_negated: Polygon =
@@ -98,11 +98,13 @@ pub fn get_no_fit_polygon(
     let mut results = Vec::new();
     let first_pt = orbiting[0];
     for path in nfp_paths {
-        let shifted: Polygon = path
-            .iter()
-            .map(|p| Point::new(p.x + first_pt.x, p.y + first_pt.y))
-            .collect();
-        results.push(shifted);
+        if path.len() >= 3 {
+            let shifted: Polygon = path
+                .iter()
+                .map(|p| Point::new(p.x + first_pt.x, p.y + first_pt.y))
+                .collect();
+            results.push(shifted);
+        }
     }
     results
 }

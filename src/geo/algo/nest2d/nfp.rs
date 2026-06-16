@@ -1,5 +1,5 @@
 use crate::geo::algo::minkowski2d::{
-    convolve_point_sequences, get_polygon_minkowski_sum_convex,
+    convolve_point_sequences, get_no_fit_polygon as minkowski_no_fit_polygon,
 };
 use crate::geo::shape::polygon::{
     get_polygon_signed_area, get_polygons_union, is_polygon_convex,
@@ -18,40 +18,10 @@ pub fn no_fit_polygon(
     }
 
     if is_polygon_convex(static_poly) && is_polygon_convex(orbiting) {
-        nfp_convex_fast(static_poly, orbiting)
+        minkowski_no_fit_polygon(static_poly, orbiting)
     } else {
         nfp_minkowski(static_poly, orbiting)
     }
-}
-
-pub fn nfp_convex_fast(
-    static_poly: &Polygon,
-    orbiting: &Polygon,
-) -> Vec<Polygon> {
-    if static_poly.len() < 3 || orbiting.len() < 3 {
-        return vec![];
-    }
-
-    let x_shift = orbiting[0].x;
-    let y_shift = orbiting[0].y;
-
-    let orbiting_negated: Polygon =
-        orbiting.iter().map(|p| Point::new(-p.x, -p.y)).collect();
-
-    let nfp_paths =
-        get_polygon_minkowski_sum_convex(static_poly, &orbiting_negated);
-
-    let mut results = Vec::new();
-    for path in &nfp_paths {
-        if path.len() >= 3 {
-            let shifted: Polygon = path
-                .iter()
-                .map(|p| Point::new(p.x + x_shift, p.y + y_shift))
-                .collect();
-            results.push(shifted);
-        }
-    }
-    results
 }
 
 pub fn nfp_minkowski(

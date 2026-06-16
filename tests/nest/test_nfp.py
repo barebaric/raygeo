@@ -72,7 +72,7 @@ class TestNoFitPolygon:
 
 
 class TestNfpConvexFast:
-    """Tests for nfp_convex_fast function."""
+    """Tests for convex dispatch of no_fit_polygon."""
 
     def test_convex_rectangles(self):
         static = [
@@ -87,7 +87,7 @@ class TestNfpConvexFast:
             (10.0, 10.0),
             (0.0, 10.0),
         ]
-        result = nfp.nfp_convex_fast(static, orbiting)
+        result = nfp.no_fit_polygon(static, orbiting)
         assert len(result) >= 1
         for poly in result:
             assert len(poly) >= 3
