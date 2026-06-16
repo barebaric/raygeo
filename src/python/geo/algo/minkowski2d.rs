@@ -1,5 +1,5 @@
 pyo3_stub_gen::module_doc!(
-    "raygeo.geo.algo.minkowski",
+    "raygeo.geo.algo.minkowski2d",
     "{}",
     MODULE_DOC_MINKOWSKI
 );
@@ -15,7 +15,7 @@ used in nesting and packing algorithms.
 use super::super::flex_point::{
     extract_polygons, poly_to_points, polygons_to_tuples, PyPoint2D,
 };
-use crate::geo::algo::minkowski::{
+use crate::geo::algo::minkowski2d::{
     calculate_input_scale, convolve_point_sequences, convolve_two_segments,
     get_inner_fit_polygon, get_no_fit_polygon,
     get_polygon_minkowski_sum_convex,
@@ -26,7 +26,7 @@ use pyo3_stub_gen::derive::gen_stub_pyfunction;
 
 pub fn register(algo_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     let py = algo_mod.py();
-    let m = PyModule::new(py, "minkowski")?;
+    let m = PyModule::new(py, "minkowski2d")?;
     m.setattr("__doc__", MODULE_DOC_MINKOWSKI)?;
 
     register_functions!(
@@ -59,7 +59,7 @@ pub fn register(algo_mod: &Bound<'_, PyModule>) -> PyResult<()> {
         :complexity: O(n + m) time, O(n + m) space
         """
 "#,
-    module = "raygeo.geo.algo.minkowski"
+    module = "raygeo.geo.algo.minkowski2d"
 )]
 #[pyfunction(name = "get_polygon_minkowski_sum_convex")]
 fn minkowski_sum_convex_py(
@@ -93,7 +93,7 @@ fn minkowski_sum_convex_py(
         :complexity: O(n * m) time, O(n + m) space
         """
 "#,
-    module = "raygeo.geo.algo.minkowski"
+    module = "raygeo.geo.algo.minkowski2d"
 )]
 #[pyfunction(name = "get_inner_fit_polygon")]
 fn get_inner_fit_polygon_py(
@@ -123,7 +123,7 @@ fn get_inner_fit_polygon_py(
         :complexity: O(n * m) time, O(n + m) space
         """
 "#,
-    module = "raygeo.geo.algo.minkowski"
+    module = "raygeo.geo.algo.minkowski2d"
 )]
 #[pyfunction(name = "get_no_fit_polygon")]
 fn get_no_fit_polygon_py(
@@ -153,7 +153,7 @@ fn get_no_fit_polygon_py(
         :complexity: O(n) time, O(1) space
         """
 "#,
-    module = "raygeo.geo.algo.minkowski"
+    module = "raygeo.geo.algo.minkowski2d"
 )]
 #[pyfunction(name = "calculate_input_scale")]
 #[pyo3(signature = (polygons, max_int=2147483647))]
@@ -183,7 +183,7 @@ fn calculate_input_scale_py(
         :complexity: O(1) time, O(1) space
         """
 "#,
-    module = "raygeo.geo.algo.minkowski"
+    module = "raygeo.geo.algo.minkowski2d"
 )]
 #[pyfunction(name = "convolve_two_segments")]
 fn convolve_two_segments_py(
@@ -217,7 +217,7 @@ fn convolve_two_segments_py(
         :complexity: O(n * m) time, O(n * m) space
         """
 "#,
-    module = "raygeo.geo.algo.minkowski"
+    module = "raygeo.geo.algo.minkowski2d"
 )]
 #[pyfunction(name = "convolve_point_sequences")]
 fn convolve_point_sequences_py(

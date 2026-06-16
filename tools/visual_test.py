@@ -19,7 +19,11 @@ import raygeo.image as img
 from raygeo.geo import Arc, Bezier, Geometry, Line, Move
 from raygeo.geo.algo import hull
 from raygeo.geo.algo.analysis import get_area, get_path_winding_order
-from raygeo.geo.algo.minkowski import get_polygon_minkowski_sum_convex
+from raygeo.geo.algo.minkowski2d import get_polygon_minkowski_sum_convex
+from raygeo.geo.algo.nest2d.genetic import GeneticAlgorithm
+from raygeo.geo.algo.nest2d.gravity import apply_gravity
+from raygeo.geo.algo.nest2d.ifp import inner_fit_polygon
+from raygeo.geo.algo.nest2d.placement import place_parts
 from raygeo.geo.shape.arc import linearize_arc
 from raygeo.geo.shape.bezier import (
     flatten_bezier,
@@ -43,10 +47,6 @@ from raygeo.geo.shape.polygon import (
     get_polygons_union,
     offset_polygon,
 )
-from raygeo.nest.genetic import GeneticAlgorithm
-from raygeo.nest.gravity import apply_gravity
-from raygeo.nest.ifp import inner_fit_polygon
-from raygeo.nest.placement import place_parts
 from raygeo.ops import Ops
 from raygeo.ops.raster import (
     ScanMode,

@@ -1,11 +1,11 @@
-"""Tests for the Rust placement module (raygeo.nest.placement)."""
+"""Tests for the Rust placement module (raygeo.geo.algo.nest2d.placement)."""
 
 import math
 
 import numpy as np
 
-from raygeo.nest.collision import any_overlap, is_contained
-from raygeo.nest.placement import (
+from raygeo.geo.algo.nest2d.collision import any_overlap, is_contained
+from raygeo.geo.algo.nest2d.placement import (
     calculate_fitness,
     filter_candidates_multi_resolution,
     find_valid_position,
@@ -16,7 +16,7 @@ from raygeo.nest.placement import (
     generate_perimeter_candidates,
     place_parts,
 )
-from raygeo.nest.spatial_grid import SpatialGrid
+from raygeo.geo.algo.spatial_grid2d import SpatialGrid
 
 
 def _grid():

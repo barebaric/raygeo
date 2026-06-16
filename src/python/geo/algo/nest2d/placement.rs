@@ -3,15 +3,19 @@ use pyo3::prelude::*;
 use pyo3::types::PyDict;
 use pyo3_stub_gen::derive::gen_stub_pyfunction;
 
-use super::super::geo::flex_point::{
+use crate::geo::algo::nest2d::placement;
+use crate::python::geo::algo::spatial_grid2d::SpatialGrid as PySpatialGrid;
+use crate::python::geo::flex_point::{
     option_point_to_tuple, points_to_tuples, poly_to_points,
     polygons_to_tuples, tuples_to_points, PyPoint2D,
 };
-use super::spatial_grid::SpatialGrid as PySpatialGrid;
-use crate::nest::placement;
 use crate::types::{Point, Polygon, Rect};
 
-pyo3_stub_gen::module_doc!("raygeo.nest.placement", "{}", MODULE_DOC);
+pyo3_stub_gen::module_doc!(
+    "raygeo.geo.algo.nest2d.placement",
+    "{}",
+    MODULE_DOC
+);
 
 pub(crate) const MODULE_DOC: &str = "\
 Placement search for nesting algorithms.
@@ -50,7 +54,7 @@ fn polys_list_from_py(list: Vec<Vec<Vec<PyPoint2D>>>) -> Vec<Vec<Polygon>> {
         :complexity: O(n) where n = number of grid cells scanned.
         """
 "#,
-    module = "raygeo.nest.placement"
+    module = "raygeo.geo.algo.nest2d.placement"
 )]
 #[pyfunction(name = "generate_bottom_left_candidates")]
 fn generate_bottom_left_candidates_py(
@@ -85,7 +89,7 @@ fn generate_bottom_left_candidates_py(
         :complexity: O(n) where n = number of grid cells.
         """
 "#,
-    module = "raygeo.nest.placement"
+    module = "raygeo.geo.algo.nest2d.placement"
 )]
 #[pyfunction(name = "generate_grid_candidates")]
 fn generate_grid_candidates_py(
@@ -126,7 +130,7 @@ fn generate_grid_candidates_py(
         :complexity: O(n) where n = number of placed parts.
         """
 "#,
-    module = "raygeo.nest.placement"
+    module = "raygeo.geo.algo.nest2d.placement"
 )]
 #[pyfunction(name = "generate_perimeter_candidates")]
 fn generate_perimeter_candidates_py(
@@ -165,7 +169,7 @@ fn generate_perimeter_candidates_py(
         :complexity: O(n log n) for spatial distance filtering.
         """
 "#,
-    module = "raygeo.nest.placement"
+    module = "raygeo.geo.algo.nest2d.placement"
 )]
 #[pyfunction(name = "filter_candidates_multi_resolution")]
 fn filter_candidates_multi_resolution_py(
@@ -208,7 +212,7 @@ macro_rules! with_grid {
 #[gen_stub_pyfunction(
     python = r#"
     import collections.abc
-    import raygeo.nest.spatial_grid
+    import raygeo.geo.algo.spatial_grid2d
 
     def find_valid_position(
         ifp_polygons: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]],
@@ -216,7 +220,7 @@ macro_rules! with_grid {
         part_hulls: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]],
         placed_polys_list: collections.abc.Sequence[collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]]],
         placed_hulls_list: collections.abc.Sequence[collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]]],
-        grid: spatial_grid.SpatialGrid,
+        grid: spatial_grid2d.SpatialGrid,
         sheet_world_offset: tuple[float, float],
         spacing: float = 1.0,
         min_area: float = 1.0,
@@ -240,7 +244,7 @@ macro_rules! with_grid {
         :complexity: O(n * m) for candidate search with overlap checks.
         """
 "#,
-    module = "raygeo.nest.placement"
+    module = "raygeo.geo.algo.nest2d.placement"
 )]
 #[pyfunction(name = "find_valid_position")]
 #[pyo3(signature = (ifp_polygons, part_polygons, part_hulls, placed_polys_list, placed_hulls_list, grid, sheet_world_offset, spacing = 1.0, min_area = 1.0, curve_tolerance = 0.5))]
@@ -285,7 +289,7 @@ fn find_valid_position_py(
 #[gen_stub_pyfunction(
     python = r#"
     import collections.abc
-    import raygeo.nest.spatial_grid
+    import raygeo.geo.algo.spatial_grid2d
 
     def find_valid_position_scored(
         ifp_polygons: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]],
@@ -293,7 +297,7 @@ fn find_valid_position_py(
         part_hulls: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]],
         placed_polys_list: collections.abc.Sequence[collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]]],
         placed_hulls_list: collections.abc.Sequence[collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]]],
-        grid: spatial_grid.SpatialGrid,
+        grid: spatial_grid2d.SpatialGrid,
         sheet_world_offset: tuple[float, float],
         spacing: float = 1.0,
         min_area: float = 1.0,
@@ -319,7 +323,7 @@ fn find_valid_position_py(
         :complexity: O(n * m) for scored candidate search.
         """
 "#,
-    module = "raygeo.nest.placement"
+    module = "raygeo.geo.algo.nest2d.placement"
 )]
 #[pyfunction(name = "find_valid_position_scored")]
 #[pyo3(signature = (ifp_polygons, part_polygons, part_hulls, placed_polys_list, placed_hulls_list, grid, sheet_world_offset, spacing = 1.0, min_area = 1.0, curve_tolerance = 0.5))]
@@ -364,7 +368,7 @@ fn find_valid_position_scored_py(
 #[gen_stub_pyfunction(
     python = r#"
     import collections.abc
-    import raygeo.nest.spatial_grid
+    import raygeo.geo.algo.spatial_grid2d
 
     def find_valid_position_nfp(
         ifp_polygons: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]],
@@ -372,7 +376,7 @@ fn find_valid_position_scored_py(
         part_hulls: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]],
         placed_polys_list: collections.abc.Sequence[collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]]],
         placed_hulls_list: collections.abc.Sequence[collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]]],
-        grid: spatial_grid.SpatialGrid,
+        grid: spatial_grid2d.SpatialGrid,
         sheet_world_offset: tuple[float, float],
         spacing: float = 1.0,
         min_area: float = 1.0,
@@ -397,7 +401,7 @@ fn find_valid_position_scored_py(
         :complexity: O(n * m) for NFP construction per nearby placed part.
         """
 "#,
-    module = "raygeo.nest.placement"
+    module = "raygeo.geo.algo.nest2d.placement"
 )]
 #[pyfunction(name = "find_valid_position_nfp")]
 #[pyo3(signature = (ifp_polygons, part_polygons, part_hulls, placed_polys_list, placed_hulls_list, grid, sheet_world_offset, spacing = 1.0, min_area = 1.0, curve_tolerance = 0.5))]
@@ -480,7 +484,7 @@ fn find_valid_position_nfp_py(
         :complexity: O(p * s * n * m) where p = parts, s = sheets.
         """
 "#,
-    module = "raygeo.nest.placement"
+    module = "raygeo.geo.algo.nest2d.placement"
 )]
 #[pyfunction(name = "place_parts")]
 #[pyo3(signature = (part_polys, part_hulls, sheet_polys, sheet_offsets, rotations, flips_h, flips_v, spacing = 1.0, min_area = 1.0, curve_tolerance = 0.5))]
@@ -606,7 +610,7 @@ fn polygon_group_from_numpy_arrs(
         :complexity: O(n) where n = number of placements.
         """
 "#,
-    module = "raygeo.nest.placement"
+    module = "raygeo.geo.algo.nest2d.placement"
 )]
 #[pyfunction(name = "calculate_fitness")]
 #[pyo3(signature = (polygon_groups, rotations, sheet_indices, num_parts = 0))]

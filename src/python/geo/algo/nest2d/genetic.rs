@@ -2,9 +2,9 @@ use pyo3::prelude::*;
 use pyo3::types::PyDict;
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 
-use crate::nest::genetic;
+use crate::geo::algo::nest2d::genetic;
 
-pyo3_stub_gen::module_doc!("raygeo.nest.genetic", "{}", MODULE_DOC);
+pyo3_stub_gen::module_doc!("raygeo.geo.algo.nest2d.genetic", "{}", MODULE_DOC);
 
 pub(crate) const MODULE_DOC: &str = "\
 Genetic algorithm for nesting optimization.
@@ -18,7 +18,7 @@ via mutation, crossover, and selection.
 // GeneticAlgorithm class
 // ---------------------------------------------------------------------------
 
-#[gen_stub_pyclass(module = "raygeo.nest.genetic")]
+#[gen_stub_pyclass(module = "raygeo.geo.algo.nest2d.genetic")]
 #[pyclass]
 pub struct GeneticAlgorithm {
     inner: genetic::GeneticAlgorithm,

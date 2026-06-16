@@ -4,8 +4,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.colors import to_hex
 
+from raygeo.geo.algo.nest2d.placement import place_parts
 from raygeo.geo.shape.polygon import get_polygon_convex_hull
-from raygeo.nest.placement import place_parts
 
 
 def generate_examples(output_dir):

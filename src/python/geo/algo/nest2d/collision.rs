@@ -2,16 +2,20 @@ use numpy::{PyArray2, PyArrayMethods};
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::gen_stub_pyfunction;
 
-use super::super::geo::flex_point::{poly_to_points, PyPoint2D};
-use super::spatial_grid::SpatialGrid as PySpatialGrid;
+use crate::geo::algo::nest2d::collision;
 use crate::geo::shape::polygon::{
     get_polygon_group_bounds, polygons_intersect,
 };
-use crate::nest::collision;
+use crate::python::geo::algo::spatial_grid2d::SpatialGrid as PySpatialGrid;
+use crate::python::geo::flex_point::{poly_to_points, PyPoint2D};
 use crate::types::Point;
 use crate::types::{Polygon, Rect};
 
-pyo3_stub_gen::module_doc!("raygeo.nest.collision", "{}", MODULE_DOC);
+pyo3_stub_gen::module_doc!(
+    "raygeo.geo.algo.nest2d.collision",
+    "{}",
+    MODULE_DOC
+);
 
 pub(crate) const MODULE_DOC: &str = "\
 Collision detection for nesting algorithms.
@@ -105,7 +109,7 @@ fn rects_intersect(a: Rect, b: Rect) -> bool {
         :complexity: O(n * m) where n = inner polygons, m = outer polygon vertices.
         """
 "#,
-    module = "raygeo.nest.collision"
+    module = "raygeo.geo.algo.nest2d.collision"
 )]
 #[pyfunction(name = "is_contained")]
 fn is_contained_py(inner: Vec<Vec<PyPoint2D>>, outer: Vec<PyPoint2D>) -> bool {
@@ -138,7 +142,7 @@ fn is_contained_py(inner: Vec<Vec<PyPoint2D>>, outer: Vec<PyPoint2D>) -> bool {
         :complexity: O(n * m) where n = candidate vertices, m = placed polygon vertices.
         """
 "#,
-    module = "raygeo.nest.collision"
+    module = "raygeo.geo.algo.nest2d.collision"
 )]
 #[pyfunction(name = "any_overlap")]
 fn any_overlap_py(
@@ -179,7 +183,7 @@ fn any_overlap_py(
         :complexity: O(n * m) with bbox/hull early-exit acceleration.
         """
 "#,
-    module = "raygeo.nest.collision"
+    module = "raygeo.geo.algo.nest2d.collision"
 )]
 #[pyfunction(name = "any_overlap_hierarchical")]
 fn any_overlap_hierarchical_py(
@@ -254,14 +258,14 @@ fn any_overlap_hierarchical_py(
     python = r#"
     import collections.abc
     import numpy
-    import raygeo.nest.spatial_grid
+    import raygeo.geo.algo.spatial_grid2d
 
     def any_overlap_hierarchical_grid(
         candidate_polys: collections.abc.Sequence[numpy.ndarray],
         candidate_hulls: collections.abc.Sequence[numpy.ndarray],
         placed_polys_groups: collections.abc.Sequence[collections.abc.Sequence[numpy.ndarray]],
         placed_hulls_groups: collections.abc.Sequence[collections.abc.Sequence[numpy.ndarray]],
-        spatial_grid: spatial_grid.SpatialGrid,
+        spatial_grid: spatial_grid2d.SpatialGrid,
         candidate_bbox: tuple[float, float, float, float],
         min_area: float = 1.0,
     ) -> bool:
@@ -269,7 +273,7 @@ fn any_overlap_hierarchical_py(
         :complexity: O(n * m / k) where k = grid cell density factor.
         """
 "#,
-    module = "raygeo.nest.collision"
+    module = "raygeo.geo.algo.nest2d.collision"
 )]
 #[pyfunction(name = "any_overlap_hierarchical_grid")]
 fn any_overlap_hierarchical_grid_py(

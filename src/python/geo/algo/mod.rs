@@ -4,10 +4,12 @@ pub(crate) mod cylindrical;
 pub(crate) mod fitting;
 pub(crate) mod hull;
 pub(crate) mod interp;
-pub(crate) mod minkowski;
+pub(crate) mod minkowski2d;
+pub(crate) mod nest2d;
 pub(crate) mod overcut;
 pub(crate) mod simplify;
 pub(crate) mod smooth;
+pub(crate) mod spatial_grid2d;
 
 pyo3_stub_gen::module_doc!("raygeo.geo.algo", "{}", MODULE_DOC);
 
@@ -27,6 +29,9 @@ polyline linearization, and deviation analysis to evaluate fit quality.
 
 Minkowski sums — compute Minkowski sums, convolutions, and no-fit
 polygons for 2D toolpath generation, nesting, and packing algorithms.
+
+Nesting — 2D packing algorithms for sheet/plate layout (NFP, IFP,
+placement, gravity, genetic optimization).
 
 Simplification — reduce the number of points in a polyline while
 preserving shape within a tolerance (Ramer-Douglas-Peucker).
@@ -48,10 +53,12 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     fitting::register(&algo_mod)?;
     hull::register(&algo_mod)?;
     interp::register(&algo_mod)?;
-    minkowski::register(&algo_mod)?;
+    minkowski2d::register(&algo_mod)?;
+    nest2d::register(&algo_mod)?;
     overcut::register(&algo_mod)?;
     simplify::register(&algo_mod)?;
     smooth::register(&algo_mod)?;
+    spatial_grid2d::register(&algo_mod)?;
 
     m.add_submodule(&algo_mod)?;
 
@@ -67,15 +74,21 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     sys_modules
         .set_item("raygeo.geo.algo.interp", &algo_mod.getattr("interp")?)?;
     sys_modules.set_item(
-        "raygeo.geo.algo.minkowski",
-        &algo_mod.getattr("minkowski")?,
+        "raygeo.geo.algo.minkowski2d",
+        &algo_mod.getattr("minkowski2d")?,
     )?;
+    sys_modules
+        .set_item("raygeo.geo.algo.nest2d", &algo_mod.getattr("nest2d")?)?;
     sys_modules
         .set_item("raygeo.geo.algo.overcut", &algo_mod.getattr("overcut")?)?;
     sys_modules
         .set_item("raygeo.geo.algo.simplify", &algo_mod.getattr("simplify")?)?;
     sys_modules
         .set_item("raygeo.geo.algo.smooth", &algo_mod.getattr("smooth")?)?;
+    sys_modules.set_item(
+        "raygeo.geo.algo.spatial_grid2d",
+        &algo_mod.getattr("spatial_grid2d")?,
+    )?;
     sys_modules.set_item(
         "raygeo.geo.algo.cylindrical",
         &algo_mod.getattr("cylindrical")?,

@@ -28,7 +28,7 @@ pub use crate::geo::algo::clipping::{
 
 // ── Minkowski sums (2D) ──────────────────────────────────────────────
 
-pub use crate::geo::algo::minkowski::{
+pub use crate::geo::algo::minkowski2d::{
     convolve_point_sequences, convolve_two_segments, get_inner_fit_polygon,
     get_no_fit_polygon, get_polygon_minkowski_sum_convex,
 };

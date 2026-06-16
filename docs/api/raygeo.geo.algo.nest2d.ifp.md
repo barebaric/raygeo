@@ -1,7 +1,7 @@
 ---
-title: raygeo.nest.ifp
-sidebar_label: raygeo.nest.ifp
-sidebar_position: 28
+title: raygeo.geo.algo.nest2d.ifp
+sidebar_label: raygeo.geo.algo.nest2d.ifp
+sidebar_position: 15
 ---
 
 Inner-Fit Polygon (IFP) calculation for nesting algorithms.

@@ -2,7 +2,7 @@
 
 import matplotlib.pyplot as plt
 
-from raygeo.nest.ifp import inner_fit_polygon
+from raygeo.geo.algo.nest2d.ifp import inner_fit_polygon
 from tools.plot import plot_polygon
 
 

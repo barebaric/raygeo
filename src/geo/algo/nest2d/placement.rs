@@ -9,7 +9,7 @@ use super::collision::any_overlap_hierarchical_grid;
 use super::gravity::apply_gravity;
 use super::ifp::inner_fit_polygon;
 use super::nfp::no_fit_polygon;
-use super::spatial_grid::SpatialGrid;
+use crate::geo::algo::spatial_grid2d::SpatialGrid;
 
 /// Weight applied to the gravity penalty (distance from origin).
 /// A small value because gravity is a weak optimization signal —

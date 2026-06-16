@@ -8,10 +8,10 @@ from matplotlib.colors import to_hex
 
 from raygeo.geo import Geometry
 from raygeo.geo.algo import hull
+from raygeo.geo.algo.nest2d.placement import place_parts
 from raygeo.geo.algo.smooth import smooth_polyline
 from raygeo.geo.shape.bezier import linearize_bezier_adaptive
 from raygeo.geo.shape.polygon import get_polygon_convex_hull
-from raygeo.nest.placement import place_parts
 from raygeo.ops.raster import ScanMode, rasterize_power_modulation
 from raygeo.ops.types import CommandType
 from tools.plot import make_pattern, plot_geometry

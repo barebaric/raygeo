@@ -1,13 +1,13 @@
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::gen_stub_pyfunction;
 
-use super::super::geo::flex_point::{
+use crate::geo::algo::nest2d::ifp;
+use crate::python::geo::flex_point::{
     points_to_tuples, poly_to_points, polygons_to_tuples, PyPoint2D,
 };
-use crate::nest::ifp;
 use crate::types::Point;
 
-pyo3_stub_gen::module_doc!("raygeo.nest.ifp", "{}", MODULE_DOC);
+pyo3_stub_gen::module_doc!("raygeo.geo.algo.nest2d.ifp", "{}", MODULE_DOC);
 
 pub(crate) const MODULE_DOC: &str = "\
 Inner-Fit Polygon (IFP) calculation for nesting algorithms.
@@ -33,7 +33,7 @@ placement region for a part inside a bin.
         :complexity: O(n * m) where n, m = vertex counts of bin and part.
         """
 "#,
-    module = "raygeo.nest.ifp"
+    module = "raygeo.geo.algo.nest2d.ifp"
 )]
 #[pyfunction(name = "inner_fit_polygon")]
 fn inner_fit_polygon_py(
@@ -63,7 +63,7 @@ fn inner_fit_polygon_py(
         :complexity: O(n * m) where n, m = vertex counts.
         """
 "#,
-    module = "raygeo.nest.ifp"
+    module = "raygeo.geo.algo.nest2d.ifp"
 )]
 #[pyfunction(name = "build_no_go_zones")]
 fn build_no_go_zones_py(
@@ -95,7 +95,7 @@ fn build_no_go_zones_py(
         :complexity: O(n log n) for convex hull computation.
         """
 "#,
-    module = "raygeo.nest.ifp"
+    module = "raygeo.geo.algo.nest2d.ifp"
 )]
 #[pyfunction(name = "sweep_hull_for_edge")]
 fn sweep_hull_for_edge_py(

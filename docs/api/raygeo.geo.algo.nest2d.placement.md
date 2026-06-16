@@ -1,7 +1,7 @@
 ---
-title: raygeo.nest.placement
-sidebar_label: raygeo.nest.placement
-sidebar_position: 30
+title: raygeo.geo.algo.nest2d.placement
+sidebar_label: raygeo.geo.algo.nest2d.placement
+sidebar_position: 17
 ---
 
 Placement search for nesting algorithms.
@@ -65,7 +65,7 @@ find_valid_position(
     part_hulls: Sequence[Sequence[tuple[float, float]]],
     placed_polys_list: Sequence[Sequence[Sequence[tuple[float, float]]]],
     placed_hulls_list: Sequence[Sequence[Sequence[tuple[float, float]]]],
-    grid: spatial_grid.SpatialGrid,
+    grid: spatial_grid2d.SpatialGrid,
     sheet_world_offset: tuple[float, float],
     spacing: float = 1,
     min_area: float = 1,
@@ -84,7 +84,7 @@ Supports hull-based collision detection and sheet world offsets.
 | `part_hulls`         | `Sequence[Sequence[tuple[float, float]]]`           | Convex hulls for collision (may be empty).          |
 | `placed_polys_list`  | `Sequence[Sequence[Sequence[tuple[float, float]]]]` | Already-placed parts, each a list of polygons.      |
 | `placed_hulls_list`  | `Sequence[Sequence[Sequence[tuple[float, float]]]]` | Hulls of already-placed parts, each a list.         |
-| `grid`               | `spatial_grid.SpatialGrid`                          | SpatialGrid for fast neighbor lookup.               |
+| `grid`               | `spatial_grid2d.SpatialGrid`                        | SpatialGrid for fast neighbor lookup.               |
 | `sheet_world_offset` | `tuple[float, float]`                               | (offset_x, offset_y) for this sheet.                |
 | `spacing`            | `float = 1`                                         | Minimum spacing between parts.                      |
 | `min_area`           | `float = 1`                                         | Minimum overlap area (clipper coords).              |
@@ -101,7 +101,7 @@ find_valid_position_nfp(
     part_hulls: Sequence[Sequence[tuple[float, float]]],
     placed_polys_list: Sequence[Sequence[Sequence[tuple[float, float]]]],
     placed_hulls_list: Sequence[Sequence[Sequence[tuple[float, float]]]],
-    grid: spatial_grid.SpatialGrid,
+    grid: spatial_grid2d.SpatialGrid,
     sheet_world_offset: tuple[float, float],
     spacing: float = 1,
     min_area: float = 1,
@@ -121,7 +121,7 @@ placement regions.
 | `part_hulls`         | `Sequence[Sequence[tuple[float, float]]]`           | Convex hulls for collision (may be empty).             |
 | `placed_polys_list`  | `Sequence[Sequence[Sequence[tuple[float, float]]]]` | Already-placed parts, each a list of polygons.         |
 | `placed_hulls_list`  | `Sequence[Sequence[Sequence[tuple[float, float]]]]` | Hulls of already-placed parts, each a list.            |
-| `grid`               | `spatial_grid.SpatialGrid`                          | SpatialGrid for fast neighbor lookup.                  |
+| `grid`               | `spatial_grid2d.SpatialGrid`                        | SpatialGrid for fast neighbor lookup.                  |
 | `sheet_world_offset` | `tuple[float, float]`                               | (offset_x, offset_y) for this sheet.                   |
 | `spacing`            | `float = 1`                                         | Minimum spacing between parts.                         |
 | `min_area`           | `float = 1`                                         | Minimum overlap area (clipper coords).                 |
@@ -138,7 +138,7 @@ find_valid_position_scored(
     part_hulls: Sequence[Sequence[tuple[float, float]]],
     placed_polys_list: Sequence[Sequence[Sequence[tuple[float, float]]]],
     placed_hulls_list: Sequence[Sequence[Sequence[tuple[float, float]]]],
-    grid: spatial_grid.SpatialGrid,
+    grid: spatial_grid2d.SpatialGrid,
     sheet_world_offset: tuple[float, float],
     spacing: float = 1,
     min_area: float = 1,
@@ -158,7 +158,7 @@ back to NFP-region candidates. Scores candidates and picks the best valid one.
 | `part_hulls`         | `Sequence[Sequence[tuple[float, float]]]`           | Convex hulls for collision (may be empty).     |
 | `placed_polys_list`  | `Sequence[Sequence[Sequence[tuple[float, float]]]]` | Already-placed parts, each a list of polygons. |
 | `placed_hulls_list`  | `Sequence[Sequence[Sequence[tuple[float, float]]]]` | Hulls of already-placed parts, each a list.    |
-| `grid`               | `spatial_grid.SpatialGrid`                          | SpatialGrid for fast neighbor lookup.          |
+| `grid`               | `spatial_grid2d.SpatialGrid`                        | SpatialGrid for fast neighbor lookup.          |
 | `sheet_world_offset` | `tuple[float, float]`                               | (offset_x, offset_y) for this sheet.           |
 | `spacing`            | `float = 1`                                         | Minimum spacing between parts.                 |
 | `min_area`           | `float = 1`                                         | Minimum overlap area (clipper coords).         |

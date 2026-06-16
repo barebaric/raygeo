@@ -4,7 +4,7 @@ use crate::geo::shape::polygon::{
 };
 use crate::types::{Polygon, Rect};
 
-use super::spatial_grid::SpatialGrid;
+use crate::geo::algo::spatial_grid2d::SpatialGrid;
 
 /// Check whether `inner` polygons are fully contained within `outer`.
 ///

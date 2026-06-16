@@ -9,7 +9,7 @@ position search, and high-level nesting orchestration.
 
 import collections.abc
 import numpy
-from raygeo.nest import spatial_grid
+from raygeo.geo.algo import spatial_grid2d
 __all__ = [
     "calculate_fitness",
     "filter_candidates_multi_resolution",
@@ -47,7 +47,7 @@ def filter_candidates_multi_resolution(candidates: list[tuple[float, float]], if
     :complexity: O(n log n) for spatial distance filtering.
     """
 
-def find_valid_position(ifp_polygons: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]], part_polygons: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]], part_hulls: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]], placed_polys_list: collections.abc.Sequence[collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]]], placed_hulls_list: collections.abc.Sequence[collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]]], grid: spatial_grid.SpatialGrid, sheet_world_offset: tuple[float, float], spacing: float = 1, min_area: float = 1, curve_tolerance: float = 0.5) -> tuple[float, float] | None:
+def find_valid_position(ifp_polygons: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]], part_polygons: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]], part_hulls: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]], placed_polys_list: collections.abc.Sequence[collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]]], placed_hulls_list: collections.abc.Sequence[collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]]], grid: spatial_grid2d.SpatialGrid, sheet_world_offset: tuple[float, float], spacing: float = 1, min_area: float = 1, curve_tolerance: float = 0.5) -> tuple[float, float] | None:
     r"""
     Find a valid position: heuristic search first, NFP fallback second.
     
@@ -67,7 +67,7 @@ def find_valid_position(ifp_polygons: collections.abc.Sequence[collections.abc.S
     :complexity: O(n * m) for candidate search with overlap checks.
     """
 
-def find_valid_position_nfp(ifp_polygons: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]], part_polygons: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]], part_hulls: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]], placed_polys_list: collections.abc.Sequence[collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]]], placed_hulls_list: collections.abc.Sequence[collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]]], grid: spatial_grid.SpatialGrid, sheet_world_offset: tuple[float, float], spacing: float = 1, min_area: float = 1, curve_tolerance: float = 0.5) -> tuple[float, float] | None:
+def find_valid_position_nfp(ifp_polygons: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]], part_polygons: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]], part_hulls: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]], placed_polys_list: collections.abc.Sequence[collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]]], placed_hulls_list: collections.abc.Sequence[collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]]], grid: spatial_grid2d.SpatialGrid, sheet_world_offset: tuple[float, float], spacing: float = 1, min_area: float = 1, curve_tolerance: float = 0.5) -> tuple[float, float] | None:
     r"""
     Find a valid position using NFP-based region subtraction.
     
@@ -88,7 +88,7 @@ def find_valid_position_nfp(ifp_polygons: collections.abc.Sequence[collections.a
     :complexity: O(n * m) for NFP construction per nearby placed part.
     """
 
-def find_valid_position_scored(ifp_polygons: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]], part_polygons: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]], part_hulls: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]], placed_polys_list: collections.abc.Sequence[collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]]], placed_hulls_list: collections.abc.Sequence[collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]]], grid: spatial_grid.SpatialGrid, sheet_world_offset: tuple[float, float], spacing: float = 1, min_area: float = 1, curve_tolerance: float = 0.5) -> tuple[float, float] | None:
+def find_valid_position_scored(ifp_polygons: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]], part_polygons: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]], part_hulls: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]], placed_polys_list: collections.abc.Sequence[collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]]], placed_hulls_list: collections.abc.Sequence[collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]]], grid: spatial_grid2d.SpatialGrid, sheet_world_offset: tuple[float, float], spacing: float = 1, min_area: float = 1, curve_tolerance: float = 0.5) -> tuple[float, float] | None:
     r"""
     Find a valid position using heuristic candidate search.
     

@@ -305,28 +305,28 @@ _INLINE_IMAGE_MAP = {
             "Flat vertex pairs wrapped onto a cylinder surface",
         ),
     ],
-    "raygeo.geo.algo.minkowski.md": [
+    "raygeo.geo.algo.minkowski2d.md": [
         (
             "get_polygon_minkowski_sum_convex",
             "minkowski-sum",
             "Minkowski sum of two convex polygons",
         ),
     ],
-    "raygeo.nest.ifp.md": [
+    "raygeo.geo.algo.nest2d.ifp.md": [
         (
             "inner_fit_polygon",
             "inner-fit-polygon",
             "Inner Fit Polygon showing valid placement region",
         ),
     ],
-    "raygeo.nest.gravity.md": [
+    "raygeo.geo.algo.nest2d.gravity.md": [
         (
             "apply_gravity",
             "gravity",
             "Gravity tightening: before vs after",
         ),
     ],
-    "raygeo.nest.md": [
+    "raygeo.geo.algo.nest2d.md": [
         (None, "nesting", "Part nesting on a sheet"),
     ],
 }

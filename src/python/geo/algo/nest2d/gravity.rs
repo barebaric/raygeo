@@ -1,11 +1,11 @@
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::gen_stub_pyfunction;
 
-use super::super::geo::flex_point::{poly_to_points, PyPoint2D};
-use crate::nest::gravity;
+use crate::geo::algo::nest2d::gravity;
+use crate::python::geo::flex_point::{poly_to_points, PyPoint2D};
 use crate::types::{Polygon, Rect};
 
-pyo3_stub_gen::module_doc!("raygeo.nest.gravity", "{}", MODULE_DOC);
+pyo3_stub_gen::module_doc!("raygeo.geo.algo.nest2d.gravity", "{}", MODULE_DOC);
 
 pub(crate) const MODULE_DOC: &str = "\
 Gravity optimization for nesting layouts.
@@ -47,7 +47,7 @@ parts down and left as far as possible without overlapping.
         :complexity: O(log range * n * m) for binary search with overlap checks.
         """
 "#,
-    module = "raygeo.nest.gravity"
+    module = "raygeo.geo.algo.nest2d.gravity"
 )]
 #[pyfunction(name = "find_max_slide")]
 fn find_max_slide_py(
@@ -107,7 +107,7 @@ fn find_max_slide_py(
         :complexity: O(passes * n * m) where passes ≤ 10.
         """
 "#,
-    module = "raygeo.nest.gravity"
+    module = "raygeo.geo.algo.nest2d.gravity"
 )]
 #[pyfunction(name = "apply_gravity")]
 fn apply_gravity_py(

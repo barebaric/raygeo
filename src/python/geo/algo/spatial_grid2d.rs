@@ -1,10 +1,10 @@
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 
-use crate::nest::spatial_grid;
+use crate::geo::algo::spatial_grid2d;
 use crate::types::Rect;
 
-pyo3_stub_gen::module_doc!("raygeo.nest.spatial_grid", "{}", MODULE_DOC);
+pyo3_stub_gen::module_doc!("raygeo.geo.algo.spatial_grid2d", "{}", MODULE_DOC);
 
 pub(crate) const MODULE_DOC: &str = "\
 Grid-based spatial index for fast overlap queries.
@@ -21,10 +21,10 @@ inserted item with the cells its bounding box touches.
 ///
 /// Divides the 2D plane into fixed-size cells and indexes items by
 /// their bounding box for efficient overlap lookups.
-#[gen_stub_pyclass(module = "raygeo.nest.spatial_grid")]
+#[gen_stub_pyclass(module = "raygeo.geo.algo.spatial_grid2d")]
 #[pyclass]
 pub struct SpatialGrid {
-    pub(crate) inner: spatial_grid::SpatialGrid,
+    pub(crate) inner: spatial_grid2d::SpatialGrid,
 }
 
 #[gen_stub_pymethods]
@@ -36,7 +36,7 @@ impl SpatialGrid {
     #[new]
     pub fn new(cell_size: f64) -> Self {
         SpatialGrid {
-            inner: spatial_grid::SpatialGrid::new(cell_size),
+            inner: spatial_grid2d::SpatialGrid::new(cell_size),
         }
     }
 
@@ -75,7 +75,11 @@ impl SpatialGrid {
 // Register
 // ---------------------------------------------------------------------------
 
-pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
+pub fn register(algo_mod: &Bound<'_, PyModule>) -> PyResult<()> {
+    let py = algo_mod.py();
+    let m = PyModule::new(py, "spatial_grid2d")?;
+    m.setattr("__doc__", MODULE_DOC)?;
     m.add_class::<SpatialGrid>()?;
+    algo_mod.add_submodule(&m)?;
     Ok(())
 }

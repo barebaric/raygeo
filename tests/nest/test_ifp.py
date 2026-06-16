@@ -1,4 +1,4 @@
-from raygeo.nest.ifp import inner_fit_polygon
+from raygeo.geo.algo.nest2d.ifp import inner_fit_polygon
 
 
 class TestInnerFitPolygon:
@@ -61,7 +61,7 @@ class TestInnerFitPolygon:
 
 class TestBuildNoGoZones:
     def test_no_go_zones_produced(self):
-        from raygeo.nest.ifp import inner_fit_polygon as _ifp
+        from raygeo.geo.algo.nest2d.ifp import inner_fit_polygon as _ifp
 
         bin = [(0.0, 0.0), (100.0, 0.0), (100.0, 100.0), (0.0, 100.0)]
         part = [(0.0, 0.0), (10.0, 0.0), (10.0, 10.0), (0.0, 10.0)]

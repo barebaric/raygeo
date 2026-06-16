@@ -1,14 +1,14 @@
-"""Tests for the Rust collision module (raygeo.nest.collision)."""
+"""Tests for the Rust collision module (raygeo.geo.algo.nest2d.collision)."""
 
 import numpy as np
 
-from raygeo.nest.collision import (
+from raygeo.geo.algo.nest2d.collision import (
     any_overlap,
     any_overlap_hierarchical,
     any_overlap_hierarchical_grid,
     is_contained,
 )
-from raygeo.nest.spatial_grid import SpatialGrid
+from raygeo.geo.algo.spatial_grid2d import SpatialGrid
 
 PN = np.array
 

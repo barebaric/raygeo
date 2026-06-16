@@ -20,6 +20,9 @@ evaluate fit quality.
 Minkowski sums — compute Minkowski sums, convolutions, and no-fit polygons for 2D toolpath
 generation, nesting, and packing algorithms.
 
+Nesting — 2D packing algorithms for sheet/plate layout (NFP, IFP, placement, gravity, genetic
+optimization).
+
 Simplification — reduce the number of points in a polyline while preserving shape within a tolerance
 (Ramer-Douglas-Peucker).
 

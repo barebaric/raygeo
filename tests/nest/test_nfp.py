@@ -1,6 +1,6 @@
-"""Tests for the Rust NFP module (raygeo.nest.nfp)."""
+"""Tests for the Rust NFP module (raygeo.geo.algo.nest2d.nfp)."""
 
-from raygeo.nest import nfp
+from raygeo.geo.algo.nest2d import nfp
 
 
 class TestNoFitPolygon:

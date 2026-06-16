@@ -31,7 +31,6 @@ pub mod constants;
 pub mod error;
 pub mod geo;
 pub mod image;
-pub mod nest;
 pub mod ops;
 pub mod svg;
 pub mod types;
@@ -144,7 +143,7 @@ pub(crate) const MODULE_DOC: &str = concat!(
 fn raygeo(m: &Bound<'_, PyModule>) -> PyResult<()> {
     python::geo::register(m)?;
     python::image::register(m)?;
-    python::nest::register(m)?;
+
     python::ops::register(m)?;
     python::svg::register(m)?;
 

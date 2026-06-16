@@ -1,4 +1,4 @@
-from raygeo.nest.gravity import apply_gravity, find_max_slide
+from raygeo.geo.algo.nest2d.gravity import apply_gravity, find_max_slide
 
 
 class TestFindMaxSlide:

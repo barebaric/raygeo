@@ -9,8 +9,8 @@ polygon intersection, including hierarchical variants for performance.
 
 import collections.abc
 import numpy
+from raygeo.geo.algo import spatial_grid2d
 from raygeo.geo import types
-from raygeo.nest import spatial_grid
 __all__ = [
     "any_overlap",
     "any_overlap_hierarchical",
@@ -42,7 +42,7 @@ def any_overlap_hierarchical(candidate_polys: collections.abc.Sequence[numpy.nda
     :complexity: O(n * m) with bbox/hull early-exit acceleration.
     """
 
-def any_overlap_hierarchical_grid(candidate_polys: collections.abc.Sequence[numpy.ndarray], candidate_hulls: collections.abc.Sequence[numpy.ndarray], placed_polys_groups: collections.abc.Sequence[collections.abc.Sequence[numpy.ndarray]], placed_hulls_groups: collections.abc.Sequence[collections.abc.Sequence[numpy.ndarray]], spatial_grid: spatial_grid.SpatialGrid, candidate_bbox: tuple[float, float, float, float], min_area: float = 1) -> bool:
+def any_overlap_hierarchical_grid(candidate_polys: collections.abc.Sequence[numpy.ndarray], candidate_hulls: collections.abc.Sequence[numpy.ndarray], placed_polys_groups: collections.abc.Sequence[collections.abc.Sequence[numpy.ndarray]], placed_hulls_groups: collections.abc.Sequence[collections.abc.Sequence[numpy.ndarray]], spatial_grid: spatial_grid2d.SpatialGrid, candidate_bbox: tuple[float, float, float, float], min_area: float = 1) -> bool:
     r"""
     :param spatial_grid: SpatialGrid for fast neighbor lookup.
     :complexity: O(n * m / k) where k = grid cell density factor.

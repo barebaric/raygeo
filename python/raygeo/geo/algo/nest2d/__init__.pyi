@@ -7,7 +7,6 @@ from . import gravity
 from . import ifp
 from . import nfp
 from . import placement
-from . import spatial_grid
 __all__ = [
     "collision",
     "genetic",
@@ -15,6 +14,5 @@ __all__ = [
     "ifp",
     "nfp",
     "placement",
-    "spatial_grid",
 ]
 

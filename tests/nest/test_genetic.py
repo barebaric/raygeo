@@ -1,4 +1,4 @@
-from raygeo.nest.genetic import GeneticAlgorithm
+from raygeo.geo.algo.nest2d.genetic import GeneticAlgorithm
 
 
 class TestGeneticAlgorithm:

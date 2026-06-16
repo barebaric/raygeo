@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.colors import to_hex
 
-from raygeo.nest.gravity import apply_gravity
+from raygeo.geo.algo.nest2d.gravity import apply_gravity
 
 
 def _make_part(i, size, rng):

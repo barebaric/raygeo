@@ -2,7 +2,7 @@
 
 import matplotlib.pyplot as plt
 
-from raygeo.geo.algo.minkowski import get_polygon_minkowski_sum_convex
+from raygeo.geo.algo.minkowski2d import get_polygon_minkowski_sum_convex
 from tools.plot import plot_polygon
 
 

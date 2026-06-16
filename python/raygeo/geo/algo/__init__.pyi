@@ -17,6 +17,9 @@ polyline linearization, and deviation analysis to evaluate fit quality.
 Minkowski sums — compute Minkowski sums, convolutions, and no-fit
 polygons for 2D toolpath generation, nesting, and packing algorithms.
 
+Nesting — 2D packing algorithms for sheet/plate layout (NFP, IFP,
+placement, gravity, genetic optimization).
+
 Simplification — reduce the number of points in a polyline while
 preserving shape within a tolerance (Ramer-Douglas-Peucker).
 
@@ -30,10 +33,12 @@ from . import cylindrical
 from . import fitting
 from . import hull
 from . import interp
-from . import minkowski
+from . import minkowski2d
+from . import nest2d
 from . import overcut
 from . import simplify
 from . import smooth
+from . import spatial_grid2d
 __all__ = [
     "analysis",
     "clipping",
@@ -41,9 +46,11 @@ __all__ = [
     "fitting",
     "hull",
     "interp",
-    "minkowski",
+    "minkowski2d",
+    "nest2d",
     "overcut",
     "simplify",
     "smooth",
+    "spatial_grid2d",
 ]
 

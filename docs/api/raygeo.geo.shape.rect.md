@@ -1,7 +1,7 @@
 ---
 title: raygeo.geo.shape.rect
 sidebar_label: raygeo.geo.shape.rect
-sidebar_position: 21
+sidebar_position: 29
 ---
 
 Rectangle intersection and containment tests.

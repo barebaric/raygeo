@@ -1,6 +1,6 @@
 ---
-title: raygeo.geo.algo.minkowski
-sidebar_label: raygeo.geo.algo.minkowski
+title: raygeo.geo.algo.minkowski2d
+sidebar_label: raygeo.geo.algo.minkowski2d
 sidebar_position: 10
 ---
 

@@ -1,7 +1,7 @@
 ---
-title: raygeo.nest.collision
-sidebar_label: raygeo.nest.collision
-sidebar_position: 25
+title: raygeo.geo.algo.nest2d.collision
+sidebar_label: raygeo.geo.algo.nest2d.collision
+sidebar_position: 12
 ---
 
 Collision detection for nesting algorithms.
@@ -63,7 +63,7 @@ any_overlap_hierarchical_grid(
     candidate_hulls: Sequence[numpy.ndarray],
     placed_polys_groups: Sequence[Sequence[numpy.ndarray]],
     placed_hulls_groups: Sequence[Sequence[numpy.ndarray]],
-    spatial_grid: spatial_grid.SpatialGrid,
+    spatial_grid: spatial_grid2d.SpatialGrid,
     candidate_bbox: tuple[float, float, float, float],
     min_area: float = 1,
 ) -> bool
@@ -75,7 +75,7 @@ any_overlap_hierarchical_grid(
 | `candidate_hulls`     | `Sequence[numpy.ndarray]`           |                                                   |
 | `placed_polys_groups` | `Sequence[Sequence[numpy.ndarray]]` |                                                   |
 | `placed_hulls_groups` | `Sequence[Sequence[numpy.ndarray]]` |                                                   |
-| `spatial_grid`        | `spatial_grid.SpatialGrid`          | SpatialGrid for fast neighbor lookup.             |
+| `spatial_grid`        | `spatial_grid2d.SpatialGrid`        | SpatialGrid for fast neighbor lookup.             |
 | `candidate_bbox`      | `tuple[float, float, float, float]` |                                                   |
 | `min_area`            | `float = 1`                         |                                                   |
 | _Returns_             | `bool`                              |                                                   |

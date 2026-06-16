@@ -1,7 +1,7 @@
 //! Algo: Complex mathematical operations.
 //!
 //! This module provides advanced geometric algorithms including clipping,
-//! curve fitting, Minkowski sums, simplification, and smoothing.
+//! curve fitting, 2D Minkowski sums, simplification, and smoothing.
 
 pub mod analysis;
 pub mod cleanup;
@@ -11,13 +11,15 @@ pub mod fitting;
 pub mod hull;
 pub mod interp;
 pub mod intersect;
-pub mod minkowski;
+pub mod minkowski2d;
+pub mod nest2d;
 pub mod offset;
 pub mod overcut;
 pub mod planar;
 pub mod project;
 pub mod simplify;
 pub mod smooth;
+pub mod spatial_grid2d;
 pub mod topology;
 
 pub use analysis::{
@@ -56,7 +58,7 @@ pub use interp::{
 pub use intersect::{
     check_intersection_from_array, check_self_intersection_from_array,
 };
-pub use minkowski::{
+pub use minkowski2d::{
     calculate_input_scale, convolve_point_sequences, convolve_two_segments,
     get_inner_fit_polygon, get_no_fit_polygon,
     get_polygon_minkowski_sum_convex,

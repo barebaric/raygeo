@@ -1,4 +1,4 @@
-use crate::geo::algo::minkowski::{
+use crate::geo::algo::minkowski2d::{
     convolve_point_sequences, get_polygon_minkowski_sum_convex,
 };
 use crate::geo::shape::polygon::{

@@ -1,4 +1,4 @@
-from raygeo.nest.spatial_grid import SpatialGrid
+from raygeo.geo.algo.spatial_grid2d import SpatialGrid
 
 
 class TestSpatialGrid:
