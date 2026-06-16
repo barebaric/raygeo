@@ -19,6 +19,7 @@ __all__ = [
     "get_polygons_intersection_3d",
     "get_polygons_union_3d",
     "offset_polygon_3d",
+    "offset_polyline_3d",
     "rotate_polygon_3d",
     "rotate_polygons_3d",
     "scale_polygon_3d",
@@ -157,6 +158,27 @@ def offset_polygon_3d(polygon: typing.Any, offset: float) -> list[types.Polygon3
     :param polygon: Input 3D polygon.
     :param offset: Offset distance (positive = grow, negative = shrink).
     :returns: Offset polygons with Z from input.
+    """
+
+def offset_polyline_3d(polyline: collections.abc.Sequence[types.Point3D], distance: float, closed: bool = False) -> types.Polygon3D:
+    r"""
+    Offset a 3D polyline in true 3D (edge-plane miter).
+    
+    Unlike :func:`offset_polygon_3d` (which projects to XY, offsets, then
+    lifts back), this function offsets each vertex in the local plane of
+    its two adjacent edges.  This gives a *true 3D offset* suitable for
+    non-planar polylines.
+    
+    Positive distance offsets to the *left* of the traversal direction.
+    
+    :param polyline: Input 3D vertices as ``(x, y, z)`` points.
+    :param distance: Offset distance (positive = left, negative = right).
+    :param closed: When ``True``, the polyline is treated as a closed
+        ring (last vertex connects back to first).  When ``False``
+        (default), the first and last vertices are offset perpendicular
+        to their single edge.
+    :returns: Offset polyline with the same number of vertices.
+    :complexity: O(n)
     """
 
 def rotate_polygon_3d(polygon: collections.abc.Sequence[types.Point3D], angle: float) -> types.Polygon3D:

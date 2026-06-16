@@ -21,6 +21,7 @@ from raygeo.geo.shape.polygon3d import (
     get_polygons_intersection_3d,
     get_polygons_union_3d,
     offset_polygon_3d,
+    offset_polyline_3d,
     rotate_polygon_3d,
     rotate_polygons_3d,
     scale_polygon_3d,
@@ -438,3 +439,138 @@ class TestRotate3D:
         assert len(result) == 1
         for p in result[0]:
             assert p[2] == 5.0
+
+
+# ── offset_polyline_3d (true 3D offset) ──────────────────────────────
+
+
+def edge_vector(a, b):
+    return (b[0] - a[0], b[1] - a[1], b[2] - a[2])
+
+
+def dot3(u, v):
+    return u[0] * v[0] + u[1] * v[1] + u[2] * v[2]
+
+
+def vec_len3(v):
+    return (v[0] ** 2 + v[1] ** 2 + v[2] ** 2) ** 0.5
+
+
+def edge_distance_sq(a, b, p):
+    """Squared distance from point p to line segment (a,b)."""
+    ab = edge_vector(a, b)
+    ap = edge_vector(a, p)
+    ab_len_sq = dot3(ab, ab)
+    if ab_len_sq == 0:
+        return dot3(ap, ap)
+    t = dot3(ap, ab) / ab_len_sq
+    t = max(0.0, min(1.0, t))
+    proj = (
+        a[0] + t * ab[0],
+        a[1] + t * ab[1],
+        a[2] + t * ab[2],
+    )
+    return dot3(edge_vector(p, proj), edge_vector(p, proj))
+
+
+class TestOffsetPolyline3D:
+    def test_open_xy_preserves_z(self):
+        poly = P3((0, 0, 5), (10, 0, 5), (10, 10, 5))
+        result = offset_polyline_3d(poly, 1.0)
+        assert len(result) == 3
+        for p in result:
+            assert p[2] == 5.0
+
+    def test_open_xy_endpoints_perpendicular(self):
+        poly = P3((0, 0, 3), (10, 0, 3))
+        result = offset_polyline_3d(poly, 2.0)
+        assert len(result) == 2
+        # Both should be offset perpendicular to the edge (0,0,3)→(10,0,3)
+        # perpendicular in XY is (0, -1, 0) or (0, 1, 0)
+        assert result[0][0] == 0.0
+        assert result[0][2] == 3.0
+        assert result[1][0] == 10.0
+        assert result[1][2] == 3.0
+        # The Y offset should be uniform
+        assert abs(result[0][1] - result[1][1]) < 1e-9
+
+    def test_open_xy_vertex_miter(self):
+        """L-shape: verify the miter vertex is at the expected position."""
+        poly = P3((0, 0, 5), (10, 0, 5), (10, 10, 5))
+        result = offset_polyline_3d(poly, 1.0)
+        # Vertex 1 (miter): edge-plane normals (0,1,0) + (-1,0,0) = (-1,1,0)
+        assert abs(result[1][0] - 9.0) < 1e-9
+        assert abs(result[1][1] - 1.0) < 1e-9
+        assert result[1][2] == 5.0
+
+    def test_closed_xy_area_differs(self):
+        """A closed CCW square: positive offset = left = inward = smaller."""
+        poly = P3((0, 0, 5), (10, 0, 5), (10, 10, 5), (0, 10, 5))
+        pos = offset_polyline_3d(poly, 1.0, closed=True)
+        neg = offset_polyline_3d(poly, -1.0, closed=True)
+        assert len(pos) == 4
+        assert len(neg) == 4
+        for p in pos + neg:
+            assert p[2] == 5.0
+        # For CCW: left (positive) = inward (smaller area)
+        assert poly_area_xy(pos) < poly_area_xy(poly)
+        assert poly_area_xy(neg) > poly_area_xy(poly)
+
+    def test_nonplanar_open(self):
+        """A 3D polyline with varying Z gets a true 3D offset."""
+        poly = P3((0, 0, 0), (10, 0, 2), (10, 10, 5))
+        result = offset_polyline_3d(poly, 1.0)
+        assert len(result) == 3
+        # The middle vertex (internal, miter) should have a different Z
+        assert result[1][2] != poly[1][2]
+
+    def test_nonplanar_closed(self):
+        """A non-planar closed polygon gets miters at all vertices."""
+        poly = P3((0, 0, 0), (10, 0, 2), (10, 10, 5), (0, 10, 3))
+        result = offset_polyline_3d(poly, 1.0, closed=True)
+        assert len(result) == 4
+        # All Z values should differ (since the edges aren't horizontal)
+        for p in result:
+            assert p[0] != 0.0 or p[1] != 0.0 or p[2] != 0.0
+
+    def test_zero_distance(self):
+        poly = P3((0, 0, 0), (10, 0, 5), (10, 10, 10))
+        assert offset_polyline_3d(poly, 0.0) == poly
+
+    def test_single_point(self):
+        assert offset_polyline_3d([(1, 2, 3)], 0.5) == [(1, 2, 3)]
+
+    def test_empty(self):
+        assert offset_polyline_3d([], 1.0) == []
+
+    def test_two_points_closed(self):
+        """Two points with closed=True gives both endpoints miters."""
+        poly = P3((0, 0, 0), (10, 0, 0))
+        result = offset_polyline_3d(poly, 1.0, closed=True)
+        assert len(result) == 2
+        # For closed, both vertices get miters (though they'll be collinear)
+        for p in result:
+            assert p[2] == 0.0
+
+    def test_negative_distance(self):
+        """Negative distance offsets to the opposite side as positive."""
+        poly = P3((0, 0, 5), (10, 0, 5), (10, 10, 5))
+        pos = offset_polyline_3d(poly, 1.0)
+        neg = offset_polyline_3d(poly, -1.0)
+        # Positive and negative should be on opposite sides of the polyline
+        assert pos[0][1] * neg[0][1] < 0
+
+    def test_closed_collinear_z(self):
+        """Collinear points with varying Z get perpendicular offset."""
+        poly = P3((0, 0, 0), (10, 0, 5), (20, 0, 10))
+        result = offset_polyline_3d(poly, 1.0)
+        assert len(result) == 3
+        # The middle vertex should also be perpendicular perp to the line
+        for p in result:
+            assert p[0] != 0.0 or p[1] != 0.0 or p[2] != 0.0
+
+    def test_large_offset(self):
+        """Large offset still produces same vertex count."""
+        poly = P3((0, 0, 5), (10, 0, 5), (10, 10, 5))
+        result = offset_polyline_3d(poly, 100.0)
+        assert len(result) == 3

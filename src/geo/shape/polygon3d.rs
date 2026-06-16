@@ -497,3 +497,178 @@ pub fn rotate_polygons_3d(
         .map(|p| rotate_polygon_3d(p, angle_degrees))
         .collect()
 }
+
+// ── True 3D Offset (edge-plane miter) ────────────────────────────────
+
+/// Return a unit vector perpendicular to `v`.
+///
+/// Prefers the Z axis as reference to produce an XY-plane perpendicular
+/// for all non-Z-aligned vectors.  Falls back to the X axis when `v` is
+/// parallel to Z.
+fn perpendicular_3d(v: Point3D) -> Point3D {
+    // Z × v is the "left" perpendicular in XY (v × Z would be "right").
+    let perp = Point3D::Z.cross(v);
+    if perp.length_squared() > 1e-12 {
+        return perp.normalize();
+    }
+    // v is parallel to Z → use X as reference
+    Point3D::X.cross(v).normalize()
+}
+
+/// Offset a 3D polyline by `distance`, maintaining true 3D distance
+/// perpendicular to each edge within its local edge plane.
+///
+/// Unlike [`offset_polygon_3d`] (which projects to XY, offsets in 2D, and
+/// lifts back), this function offsets each vertex in the plane defined by
+/// its two adjacent edges, giving a *true 3D offset* that works for
+/// non-planar polylines.
+///
+/// **Algorithm** – for each internal vertex the displacement uses the
+/// standard 2D miter formula applied in the local edge plane:
+///
+/// ```text
+/// offset = P + distance · (n_in + n_out) / (1 + u_in · u_out)
+/// ```
+///
+/// where `u_in`/`u_out` are unit edge directions and `n_in`/`n_out` are
+/// the perpendicular (left) normals within the edge plane.  Endpoints of
+/// open polylines are offset perpendicular to their single edge.
+///
+/// # Parameters
+/// - `polyline` – input 3D vertices (distinct — no duplicated end vertex).
+/// - `distance` – offset distance (positive = left of traversal direction,
+///   negative = right).
+/// - `closed` – when `true` the last vertex is connected back to the first,
+///   giving every vertex a miter join.  When `false` the first and last
+///   vertices are offset perpendicular to their single edge.
+///
+/// # Returns
+/// Offset polyline with the same number of vertices as the input.
+///
+/// # Notes
+/// - For near-hairpin turns (edges almost opposite) the miter is clamped
+///   to avoid extreme displacement.
+pub fn offset_polyline_3d(
+    polyline: &[Point3D],
+    distance: f64,
+    closed: bool,
+) -> Vec<Point3D> {
+    if distance == 0.0 {
+        return polyline.to_vec();
+    }
+    let n = polyline.len();
+    if n < 2 {
+        return polyline.to_vec();
+    }
+
+    let mut result = Vec::with_capacity(n);
+
+    for i in 0..n {
+        let curr = polyline[i];
+
+        let prev_idx = if closed {
+            (i + n - 1) % n
+        } else if i > 0 {
+            i - 1
+        } else {
+            // endpoint with no prev → use edge-plane of first two edges
+            if n >= 3 {
+                let u0 = (polyline[1] - curr).normalize();
+                let u1 = (polyline[2] - polyline[1]).normalize();
+                let n_plane = u0.cross(u1);
+                if n_plane.length_squared() > 1e-12 {
+                    let n_hat = n_plane.normalize();
+                    let perp = n_hat.cross(u0);
+                    result.push(curr + perp * distance);
+                    continue;
+                }
+            }
+            let dir = (polyline[1] - curr).normalize();
+            let perp = perpendicular_3d(dir);
+            result.push(curr + perp * distance);
+            continue;
+        };
+
+        let next_idx = if closed {
+            (i + 1) % n
+        } else if i < n - 1 {
+            i + 1
+        } else {
+            // endpoint with no next → use edge-plane of last two edges
+            if n >= 3 {
+                let u1 = (curr - polyline[prev_idx]).normalize();
+                let u0 = (polyline[prev_idx]
+                    - polyline[prev_idx.saturating_sub(1)])
+                .normalize();
+                let n_plane = u0.cross(u1);
+                if n_plane.length_squared() > 1e-12 {
+                    let n_hat = n_plane.normalize();
+                    let perp = n_hat.cross(u1);
+                    result.push(curr + perp * distance);
+                    continue;
+                }
+            }
+            let dir = (curr - polyline[prev_idx]).normalize();
+            let perp = perpendicular_3d(dir);
+            result.push(curr + perp * distance);
+            continue;
+        };
+
+        let e_in = curr - polyline[prev_idx];
+        let e_out = polyline[next_idx] - curr;
+
+        let len_in = e_in.length();
+        let len_out = e_out.length();
+
+        if len_in < 1e-12 || len_out < 1e-12 {
+            let dir = if len_out >= 1e-12 {
+                e_out / len_out
+            } else if len_in >= 1e-12 {
+                -e_in / len_in
+            } else {
+                result.push(curr);
+                continue;
+            };
+            let perp = perpendicular_3d(dir);
+            result.push(curr + perp * distance);
+            continue;
+        }
+
+        let u_in = e_in / len_in;
+        let u_out = e_out / len_out;
+
+        // Edge-plane normal (cross product of the two unit edge directions)
+        let n_plane = u_in.cross(u_out);
+        let plane_len = n_plane.length();
+
+        if plane_len < 1e-10 {
+            // Collinear edges → simple perpendicular offset
+            let perp = perpendicular_3d(u_in);
+            result.push(curr + perp * distance);
+            continue;
+        }
+
+        let n_hat = n_plane / plane_len;
+
+        // Left normals in the edge plane
+        let n_in = n_hat.cross(u_in);
+        let n_out = n_hat.cross(u_out);
+
+        let dot = u_in.dot(u_out).clamp(-1.0, 1.0);
+        let denom = 1.0 + dot;
+
+        if denom < 1e-8 {
+            // Near-hairpin turn (edges almost opposite).
+            // Offset perpendicular to the bisector direction.
+            let bisector = (u_in + u_out).normalize();
+            let perp = n_hat.cross(bisector);
+            result.push(curr + perp * distance);
+            continue;
+        }
+
+        let offset = distance * (n_in + n_out) / denom;
+        result.push(curr + offset);
+    }
+
+    result
+}

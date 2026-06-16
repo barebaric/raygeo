@@ -267,6 +267,36 @@ Offset (inflate/deflate) a closed 3D polygon.
 
 _3D polygon offset — Z preserved from input_
 
+### `offset_polyline_3d()`
+
+```python
+offset_polyline_3d(
+    polyline: Sequence[types.Point3D],
+    distance: float,
+    closed: bool = False,
+) -> types.Polygon3D
+```
+
+Offset a 3D polyline in true 3D (edge-plane miter).
+
+Unlike **offset_polygon_3d** (which projects to XY, offsets, then lifts back), this function offsets
+each vertex in the local plane of its two adjacent edges. This gives a _true 3D offset_ suitable for
+non-planar polylines.
+
+Positive distance offsets to the _left_ of the traversal direction.
+
+| Parameter    | Type                      | Description                                                                                                                                                                                    |
+| ------------ | ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `polyline`   | `Sequence[types.Point3D]` | Input 3D vertices as `(x, y, z)` points.                                                                                                                                                       |
+| `distance`   | `float`                   | Offset distance (positive = left, negative = right).                                                                                                                                           |
+| `closed`     | `bool = False`            | When `True`, the polyline is treated as a closed ring (last vertex connects back to first). When `False` (default), the first and last vertices are offset perpendicular to their single edge. |
+| _Returns_    | `types.Polygon3D`         | Offset polyline with the same number of vertices.                                                                                                                                              |
+| _Complexity_ |                           | O(n)                                                                                                                                                                                           |
+
+![True 3D polyline offset (edge-plane miter)](images/polygon3d-true-offset.png)
+
+_True 3D polyline offset (edge-plane miter)_
+
 ### `rotate_polygon_3d()`
 
 ```python

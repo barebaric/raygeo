@@ -17,6 +17,7 @@ from raygeo.geo.shape.polygon3d import (
     get_polygons_intersection_3d,
     get_polygons_union_3d,
     offset_polygon_3d,
+    offset_polyline_3d,
     rotate_polygon_3d,
     scale_polygon_3d,
     translate_polygon_3d,
@@ -412,15 +413,78 @@ def generate_examples(output_dir):
         }
     )
 
+    # --- True 3D Offset (polyline) ---
+    # Planar tilted arc: quarter-circle on plane z = 6 - x/3 + y/3
+    # (planar → offset edges are exactly parallel to originals)
+    import math as _m
+
+    n = 16
+    curve = []
+    for i in range(n + 1):
+        t = i / n
+        a = t * _m.pi / 2
+        x = 6 * _m.cos(a)
+        y = 6 * _m.sin(a)
+        z = 6 - x / 3 + y / 3
+        curve.append((x, y, z))
+    off = offset_polyline_3d(curve, 1.2)
+    fig = plt.figure(figsize=(10, 8))
+    ax = fig.add_subplot(111, projection="3d")
+    ax.set_xlabel("X")
+    ax.set_ylabel("Y")
+    ax.set_zlabel("Z")
+    ax.set_title("True 3D Polyline Offset (edge-plane miter)", fontsize=14)
+    ax.set_xlim(-2, 8)
+    ax.set_ylim(-2, 8)
+    ax.set_zlim(0, 10)
+    ax.view_init(elev=25, azim=-55)
+    fig.tight_layout()
+    xs = [p[0] for p in curve]
+    ys = [p[1] for p in curve]
+    zs = [p[2] for p in curve]
+    ax.plot(xs, ys, zs, "o-", color="steelblue", linewidth=2, label="Original")
+    xs_o = [p[0] for p in off]
+    ys_o = [p[1] for p in off]
+    zs_o = [p[2] for p in off]
+    ax.plot(
+        xs_o,
+        ys_o,
+        zs_o,
+        "o-",
+        color="tomato",
+        linewidth=3,
+        label="Offset d=1.2",
+        alpha=0.8,
+    )
+    for i in range(0, len(curve), 3):
+        ax.plot(
+            [curve[i][0], off[i][0]],
+            [curve[i][1], off[i][1]],
+            [curve[i][2], off[i][2]],
+            color="gray",
+            linewidth=1,
+            linestyle=":",
+        )
+    ax.legend(loc="upper left")
+    path = output_dir / "polygon3d-true-offset.png"
+    fig.savefig(path, dpi=150)
+    plt.close(fig)
+    images.append(
+        {
+            "path": "polygon3d-true-offset.png",
+            "caption": "True 3D offset of a quarter-circle arc on a tilted "
+            "plane (z = 6 - x/3 + y/3) — offset edges stay parallel",
+        }
+    )
+
     return {
         "title": "3D Polygon Operations",
         "description": (
             "Boolean, offset, analytical, and transform operations on 3D "
-            "polygons. Boolean/offset operations project to XY, run the 2D "
-            "algorithm, then lift the result back to the input Z. "
-            "Analytical functions (perimeter, bounds, centroid, edges, convex "
-            "hull) compute meaningful 3D values. Transform functions "
-            "(translate, scale, flip, rotate) operate on all three axes."
+            "polygons/polylines. Boolean/offset operations project to XY, "
+            "run the 2D algorithm, then lift the result back to the input Z. "
+            "The true 3D offset (offset_polyline_3d) offsets each vertex in "
+            "its local edge plane — suitable for non-planar curves."
         ),
         "images": images,
     }

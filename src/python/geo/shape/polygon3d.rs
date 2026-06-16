@@ -9,9 +9,9 @@ use crate::geo::shape::polygon3d::{
     get_polygon_group_bounds_3d, get_polygon_perimeter_3d,
     get_polygons_difference_3d, get_polygons_group_difference_3d,
     get_polygons_group_intersection_3d, get_polygons_intersection_3d,
-    get_polygons_union_3d, offset_polygon_3d, rotate_polygon_3d,
-    rotate_polygons_3d, scale_polygon_3d, translate_polygon_3d,
-    translate_polygons_3d,
+    get_polygons_union_3d, offset_polygon_3d, offset_polyline_3d,
+    rotate_polygon_3d, rotate_polygons_3d, scale_polygon_3d,
+    translate_polygon_3d, translate_polygons_3d,
 };
 use crate::types::Point3D;
 use pyo3::prelude::*;
@@ -191,6 +191,51 @@ fn offset_polygon_3d_py(
     let poly = extract_polygon3d(polygon)?;
     let result = offset_polygon_3d(&poly, offset);
     Ok(result.into_iter().map(points3d_to_tuples).collect())
+}
+
+#[gen_stub_pyfunction(
+    python = r#"
+    import collections.abc
+    import raygeo.geo.types
+
+    def offset_polyline_3d(
+        polyline: collections.abc.Sequence[types.Point3D],
+        distance: float,
+        closed: bool = False,
+    ) -> types.Polygon3D:
+        """Offset a 3D polyline in true 3D (edge-plane miter).
+
+        Unlike :func:`offset_polygon_3d` (which projects to XY, offsets, then
+        lifts back), this function offsets each vertex in the local plane of
+        its two adjacent edges.  This gives a *true 3D offset* suitable for
+        non-planar polylines.
+
+        Positive distance offsets to the *left* of the traversal direction.
+
+        :param polyline: Input 3D vertices as ``(x, y, z)`` points.
+        :param distance: Offset distance (positive = left, negative = right).
+        :param closed: When ``True``, the polyline is treated as a closed
+            ring (last vertex connects back to first).  When ``False``
+            (default), the first and last vertices are offset perpendicular
+            to their single edge.
+        :returns: Offset polyline with the same number of vertices.
+        :complexity: O(n)
+        """
+"#,
+    module = "raygeo.geo.shape.polygon3d"
+)]
+#[pyfunction(name = "offset_polyline_3d")]
+#[pyo3(signature = (polyline, distance, closed=false))]
+fn offset_polyline_3d_py(
+    polyline: Vec<PyPoint3D>,
+    distance: f64,
+    closed: bool,
+) -> Vec<(f64, f64, f64)> {
+    points3d_to_tuples(offset_polyline_3d(
+        &poly3d_to_points(polyline),
+        distance,
+        closed,
+    ))
 }
 
 // ── 3D Analytical functions ──────────────────────────────────────────
@@ -604,6 +649,7 @@ pub fn register(shape_mod: &Bound<'_, PyModule>) -> PyResult<()> {
         get_polygons_group_intersection_3d_py,
         get_polygons_group_difference_3d_py,
         offset_polygon_3d_py,
+        offset_polyline_3d_py,
         get_polygon_perimeter_3d_py,
         get_polygon_bounds_3d_py,
         get_polygon_group_bounds_3d_py,

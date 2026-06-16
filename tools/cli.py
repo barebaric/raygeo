@@ -125,6 +125,11 @@ _INLINE_IMAGE_MAP = {
             "polygon3d-rotate",
             "3D polygon rotated around Z axis (Z preserved)",
         ),
+        (
+            "offset_polyline_3d",
+            "polygon3d-true-offset",
+            "True 3D polyline offset (edge-plane miter)",
+        ),
     ],
     "raygeo.image.md": [
         (
