@@ -1,7 +1,7 @@
 ---
 title: raygeo.ops
 sidebar_label: raygeo.ops
-sidebar_position: 32
+sidebar_position: 33
 ---
 
 Command sequence (Ops) manipulation for laser cutter motion control.

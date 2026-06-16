@@ -8,6 +8,7 @@ pub mod circle;
 pub mod line;
 pub mod point;
 pub mod polygon;
+pub mod polygon3d;
 pub mod rect;
 
 pub use arc::{
@@ -52,5 +53,10 @@ pub use polygon::{
     point_line_distance, polygon_to_path, polygons_to_paths, rotate_polygon,
     rotate_polygons, scale_polygon, translate_bounds, translate_polygon,
     translate_polygons, ClipperPath, ClipperPaths, GeoScale,
+};
+pub use polygon3d::{
+    get_polygons_difference_3d, get_polygons_group_difference_3d,
+    get_polygons_group_intersection_3d, get_polygons_intersection_3d,
+    get_polygons_union_3d, offset_polygon_3d,
 };
 pub use rect::{do_rects_intersect, get_combined_rect};

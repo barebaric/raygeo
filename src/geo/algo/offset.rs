@@ -5,8 +5,14 @@
 //! (taken from its first vertex) is preserved on the output — the operation
 //! is a 2D inflate of the XY outline at the source Z plane.
 //!
+//! For off-axis offsetting (e.g. on an arbitrary work plane in 5-axis CNC),
+//! use [`grow_geometry_on_plane`] which rotates the geometry so the target
+//! plane aligns with XY before offsetting.
+//!
 //! Handles containment hierarchies (holes within solids) correctly by
 //! offsetting solids and holes independently and subtracting holes from solids.
+
+use glam::{DMat4, DQuat, DVec3};
 
 use crate::geo::algo::intersect::check_intersection_from_array;
 use crate::geo::algo::topology::{
@@ -167,4 +173,42 @@ pub fn grow_geometry(geometry: &Geometry, offset: f64) -> Geometry {
         }
     }
     new_geo
+}
+
+/// Offsets geometry on an arbitrary plane defined by a normal vector.
+///
+/// The 3D geometry is rotated so that `plane_normal` aligns with the +Z
+/// axis, a 2D offset is performed in that plane, and the result is rotated
+/// back to the original coordinate frame.
+///
+/// This enables offsetting contours that lie on non-XY planes — useful for
+/// 5-axis CNC toolpath generation where features may sit on angled faces.
+///
+/// # Panics
+///
+/// Panics if `plane_normal` is a zero vector.
+pub fn grow_geometry_on_plane(
+    geometry: &Geometry,
+    offset: f64,
+    plane_normal: Point3D,
+) -> Geometry {
+    let normal = plane_normal.normalize();
+    assert!(
+        normal.length_squared() > 0.0,
+        "grow_geometry_on_plane: plane_normal must be non-zero"
+    );
+
+    // Rotation that maps plane_normal → (0,0,1).
+    let quat = DQuat::from_rotation_arc(normal, DVec3::Z);
+    let rot = DMat4::from_quat(quat);
+    let inv = DMat4::from_quat(quat.inverse());
+
+    let mut rotated = geometry.copy();
+    rotated.transform(&rot);
+
+    let offset_result = grow_geometry(&rotated, offset);
+
+    let mut result = offset_result;
+    result.transform(&inv);
+    result
 }

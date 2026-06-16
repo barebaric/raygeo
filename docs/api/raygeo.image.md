@@ -1,7 +1,7 @@
 ---
 title: raygeo.image
 sidebar_label: raygeo.image
-sidebar_position: 31
+sidebar_position: 32
 ---
 
 Image processing functions for laser cutting applications.

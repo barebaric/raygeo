@@ -6,6 +6,7 @@ pub(crate) mod circle;
 pub(crate) mod line;
 pub(crate) mod point;
 pub(crate) mod polygon;
+pub(crate) mod polygon3d;
 pub(crate) mod rect;
 
 pyo3_stub_gen::module_doc!("raygeo.geo.shape", "{}", MODULE_DOC);
@@ -31,6 +32,7 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     line::register(&shape_mod)?;
     point::register(&shape_mod)?;
     polygon::register(&shape_mod)?;
+    polygon3d::register(&shape_mod)?;
     rect::register(&shape_mod)?;
 
     m.add_submodule(&shape_mod)?;

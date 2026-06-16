@@ -63,7 +63,7 @@ pub use minkowski2d::{
     get_inner_fit_polygon, get_no_fit_polygon,
     get_polygon_minkowski_sum_convex,
 };
-pub use offset::grow_geometry;
+pub use offset::{grow_geometry, grow_geometry_on_plane};
 pub use overcut::apply_overcut;
 pub use project::{
     is_planar_in_z, lift_points_to_xy_plane, project_point_to_xy,
