@@ -1,10 +1,19 @@
-.PHONY: build dev stubs format format-rust format-python lint lint-rust lint-python test check visual doc docs
+.PHONY: build dev stubs format format-rust format-python lint lint-rust lint-python test check visual doc docs install-test-deps install-visual-deps install-docs-deps
 
 build:
 	maturin build --release --out dist
 
-dev:
+dev: install-test-deps
 	maturin develop
+
+install-test-deps:
+	pip install -e ".[test]" --quiet
+
+install-visual-deps:
+	pip install -e ".[visual]" --quiet
+
+install-docs-deps:
+	pip install -e ".[docs]" --quiet
 
 stubs:
 	cargo run --bin stub_gen
@@ -34,9 +43,9 @@ test:
 
 check: lint test
 
-visual:
+visual: install-visual-deps
 	streamlit run tools/visual_test.py
 
-doc docs:
+doc docs: install-docs-deps
 	python -m tools.cli all
 	npx prettier --write --prose-wrap always --print-width 100 "docs/**/*.md"
