@@ -209,6 +209,18 @@ _INLINE_IMAGE_MAP = {
             "Ops paths clipped to a rectangle",
         ),
     ],
+    "raygeo.ops.polyline.md": [
+        (
+            "polyline_to_ops",
+            "polyline-to-ops",
+            "polyline_to_ops with move_first=True vs move_first=False",
+        ),
+        (
+            "link_passes",
+            "polyline-link-passes",
+            "Three passes linked with StayDown vs Retract strategies",
+        ),
+    ],
     "raygeo.ops.raster.md": [
         (
             "rasterize_power_modulation",

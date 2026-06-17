@@ -20,6 +20,7 @@ use pyo3::prelude::*;
 pub(crate) mod axis;
 pub(crate) mod container;
 pub(crate) mod optimize;
+pub(crate) mod polyline;
 pub(crate) mod raster;
 mod serialize;
 pub(crate) mod state;
@@ -50,6 +51,9 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
 
     // Child submodule: raygeo.ops.algo.optimize
     optimize::register(&ops_mod)?;
+
+    // Child submodule: raygeo.ops.polyline
+    polyline::register(&ops_mod)?;
 
     // Child submodule: raygeo.ops.raster
     raster::register(&ops_mod)?;

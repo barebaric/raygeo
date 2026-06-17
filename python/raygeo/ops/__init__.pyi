@@ -21,6 +21,7 @@ import raygeo
 from raygeo import geo
 import typing
 from . import axis
+from . import polyline
 from . import raster
 from . import state
 from . import types
@@ -30,6 +31,7 @@ __all__ = [
     "OpsSection",
     "OpsSectionRange",
     "axis",
+    "polyline",
     "raster",
     "state",
     "types",
