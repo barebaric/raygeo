@@ -100,14 +100,14 @@ pyo3_stub_gen::module_doc!("raygeo", "{}", MODULE_DOC);
 /// Module documentation string used for Python `__doc__`.
 #[cfg_attr(not(feature = "python"), allow(dead_code))]
 pub(crate) const MODULE_DOC: &str = concat!(
-    "RayGeo — 2D/3D geometry engine for laser cutting and CAM applications.\n",
+    "RayGeo — 2D/3D geometry engine for CAD/CAM applications.\n",
     "\n",
     "Core features:\n",
     "- Geometry types: points, lines, arcs, circles, beziers, polygons, rectangles\n",
     "- Path analysis: length, area, bounding box, containment, intersection\n",
     "- Path manipulation: offset, clipping, fitting, simplification, smoothing\n",
     "- Minkowski sums for toolpath generation\n",
-    "- Command sequence (Ops) for laser cutter motion control\n",
+    "- Command sequence (Ops) for CNC motion control\n",
     "- Serialization to/from industry formats\n",
     "\n",
     "Submodules:\n",
@@ -130,7 +130,7 @@ pub(crate) const MODULE_DOC: &str = concat!(
     "\n",
     "    >>> from raygeo.ops import Ops, Command\n",
     "    >>> ops = Ops()\n",
-    "    >>> ops.set_speed(100)\n",
+    "    >>> ops.set_power(1.0)\n",
     "    >>> ops.move_to(0, 0)\n",
     "    >>> ops.line_to(100, 0)\n",
     "    >>> ops.travel_distance()\n",

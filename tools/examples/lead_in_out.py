@@ -103,8 +103,7 @@ def generate_examples(output_dir):
     return {
         "title": "Lead-In / Lead-Out",
         "description": (
-            "Add lead-in and lead-out paths to vector outlines for laser "
-            "cutting."
+            "Add lead-in and lead-out paths to vector outlines for cutting."
         ),
         "images": images,
     }

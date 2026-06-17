@@ -116,7 +116,7 @@ fn cmd_to_dict<'a>(
             StateCmd::SetPower(p) => {
                 d.set_item("power", *p)?;
             }
-            StateCmd::SetCutSpeed(s) | StateCmd::SetTravelSpeed(s) => {
+            StateCmd::SetFeedRate(s) | StateCmd::SetRapidRate(s) => {
                 d.set_item("speed", *s)?;
             }
             StateCmd::SetFrequency(f) => {
@@ -125,14 +125,14 @@ fn cmd_to_dict<'a>(
             StateCmd::SetPulseWidth(pw) => {
                 d.set_item("pulse_width", *pw)?;
             }
-            StateCmd::SetSpindleSpeed(s) => {
+            StateCmd::SetSpindleRpm(s) => {
                 d.set_item("spindle_speed", *s)?;
             }
             StateCmd::SetCoolant(mode) => {
                 d.set_item("coolant", format!("{:?}", mode))?;
             }
-            StateCmd::SetLaser(uid) => {
-                d.set_item("laser_uid", uid.to_string())?;
+            StateCmd::SetHead(uid) => {
+                d.set_item("head_uid", uid.to_string())?;
             }
         },
         OpCategory::Marker(cmd) => match cmd {
@@ -301,8 +301,7 @@ fn create_and_append_command(
             })?
             .extract()?;
         ops.set_power(p);
-    } else if ct == CommandType::SetCutSpeed
-        || ct == CommandType::SetTravelSpeed
+    } else if ct == CommandType::SetFeedRate || ct == CommandType::SetRapidRate
     {
         let s: i32 = cmd_data
             .get_item("speed")?
@@ -310,10 +309,10 @@ fn create_and_append_command(
                 pyo3::exceptions::PyKeyError::new_err("missing 'speed'")
             })?
             .extract()?;
-        if ct == CommandType::SetCutSpeed {
-            ops.set_cut_speed(s);
+        if ct == CommandType::SetFeedRate {
+            ops.set_feed_rate(s);
         } else {
-            ops.set_travel_speed(s);
+            ops.set_rapid_rate(s);
         }
     } else if ct == CommandType::SetFrequency {
         let f: i32 = cmd_data
@@ -331,14 +330,14 @@ fn create_and_append_command(
             })?
             .extract()?;
         ops.set_pulse_width(pw);
-    } else if ct == CommandType::SetSpindleSpeed {
+    } else if ct == CommandType::SetSpindleRpm {
         let s: u32 = cmd_data
             .get_item("spindle_speed")?
             .ok_or_else(|| {
                 pyo3::exceptions::PyKeyError::new_err("missing 'spindle_speed'")
             })?
             .extract()?;
-        ops.set_spindle_speed(s);
+        ops.set_spindle_rpm(s);
     } else if ct == CommandType::SetCoolant {
         let mode_str: String = cmd_data
             .get_item("coolant")?
@@ -353,14 +352,14 @@ fn create_and_append_command(
             _ => CoolantMode::Off,
         };
         ops.set_coolant(mode);
-    } else if ct == CommandType::SetLaser {
+    } else if ct == CommandType::SetHead {
         let uid: String = cmd_data
-            .get_item("laser_uid")?
+            .get_item("head_uid")?
             .ok_or_else(|| {
-                pyo3::exceptions::PyKeyError::new_err("missing 'laser_uid'")
+                pyo3::exceptions::PyKeyError::new_err("missing 'head_uid'")
             })?
             .extract()?;
-        ops.set_laser(&uid);
+        ops.set_head(&uid);
     } else if ct == CommandType::LayerStart || ct == CommandType::LayerEnd {
         let uid: String = cmd_data
             .get_item("layer_uid")?

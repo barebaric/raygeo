@@ -4,8 +4,8 @@ pub(crate) const MODULE_DOC_OVERCUT: &str = "\
 Overcut operations for closed contours.
 
 Extends closed contours past their start point to ensure complete
-cuts through the material, particularly useful in laser cutting
-where the laser may not fully penetrate at the start/end point.
+cuts through the material, particularly useful in cutting applications
+where the tool may not fully penetrate at the start/end point.
 ";
 
 use super::super::Geometry;
@@ -34,7 +34,7 @@ pub fn register(algo_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     ) -> geo.Geometry:
         """Extend a closed contour past its start point.
 
-        When laser-cutting closed contours, the laser slows down at
+        When cutting closed contours, the tool slows down at
         corners and may not cut through completely. This function
         extends the path by ``overcut`` distance past the start point
         to ensure a clean cut.

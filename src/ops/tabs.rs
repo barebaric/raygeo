@@ -1,10 +1,10 @@
 //! Tab operations: create holding tabs on toolpaths.
 //!
-//! When laser-cutting, holding tabs keep the cut piece in place. This
+//! When cutting closed contours, holding tabs keep the cut piece in place. This
 //! module supports two modes:
 //!
 //! - **Gap mode**: removes a section of the path at each tab location.
-//! - **Power mode**: reduces the laser power in the tab region instead
+//! - **Power mode**: reduces the cutting power in the tab region instead
 //!   of cutting a gap, so the material stays connected but weaker.
 //!
 //! The main entry points are [`apply_tab_gaps`] and [`apply_tab_power`].
@@ -113,7 +113,7 @@ pub fn apply_tab_gaps(ops: &mut Ops, clips: &[ClipPoint]) {
 
 /// Apply power-mode tabs to the given ops.
 ///
-/// Instead of cutting a gap, the laser power is reduced in the tab
+/// Instead of cutting a gap, the cutting power is reduced in the tab
 /// region to create a weaker connection that holds the piece in place.
 ///
 /// - `ops`: The input ops (will be replaced in-place).

@@ -198,9 +198,9 @@ def _plot_raster_power_modulation(ax):
             continue
         if ct in (
             CommandType.SET_POWER,
-            CommandType.SET_CUT_SPEED,
-            CommandType.SET_TRAVEL_SPEED,
-            CommandType.SET_LASER,
+            CommandType.SET_FEED_RATE,
+            CommandType.SET_RAPID_RATE,
+            CommandType.SET_HEAD,
             CommandType.SET_FREQUENCY,
             CommandType.SET_PULSE_WIDTH,
             CommandType.SET_COOLANT,

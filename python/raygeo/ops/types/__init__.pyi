@@ -4,7 +4,7 @@ r"""
 Core enumerations for the Ops command system.
 
 CommandType — identifies each command in a sequence (MoveTo, LineTo,
-ArcTo, BezierTo, SetPower, SetSpeed, JobStart, etc.).
+ArcTo, BezierTo, SetPower, SetFeedRate, JobStart, etc.).
 
 CommandCategory — classifies commands as MOVING (changes tool position),
 STATE (changes machine parameters), or MARKER (structural job boundaries).
@@ -72,12 +72,12 @@ class CommandType:
     BEZIER_TO: CommandType = CommandType.BEZIER_TO
     QUADRATIC_BEZIER_TO: CommandType = CommandType.QUADRATIC_BEZIER_TO
     SET_POWER: CommandType = CommandType.SET_POWER
-    SET_CUT_SPEED: CommandType = CommandType.SET_CUT_SPEED
-    SET_TRAVEL_SPEED: CommandType = CommandType.SET_TRAVEL_SPEED
-    SET_LASER: CommandType = CommandType.SET_LASER
+    SET_FEED_RATE: CommandType = CommandType.SET_FEED_RATE
+    SET_RAPID_RATE: CommandType = CommandType.SET_RAPID_RATE
+    SET_HEAD: CommandType = CommandType.SET_HEAD
     SET_FREQUENCY: CommandType = CommandType.SET_FREQUENCY
     SET_PULSE_WIDTH: CommandType = CommandType.SET_PULSE_WIDTH
-    SET_SPINDLE_SPEED: CommandType = CommandType.SET_SPINDLE_SPEED
+    SET_SPINDLE_RPM: CommandType = CommandType.SET_SPINDLE_RPM
     SET_COOLANT: CommandType = CommandType.SET_COOLANT
     JOB_START: CommandType = CommandType.JOB_START
     JOB_END: CommandType = CommandType.JOB_END

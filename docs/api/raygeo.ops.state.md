@@ -4,12 +4,12 @@ sidebar_label: raygeo.ops.state
 sidebar_position: 41
 ---
 
-Machine state tracking for laser cutting and CNC milling.
+Machine state tracking for CNC milling.
 
 Tracks the current or intended machine state at any point in a command sequence, including power
-level (0.0–1.0), coolant mode, cut speed and travel speed, active laser source UID, pulse frequency,
-and pulse width. State objects are used by Ops to associate machine parameters with moving commands
-and to detect rapid (non-power) state changes.
+level (0.0–1.0), coolant mode, feed rate and rapid rate, active head UID, pulse frequency, and pulse
+width. State objects are used by Ops to associate machine parameters with moving commands and to
+detect rapid (non-power) state changes.
 
 ## CoolantMode
 
@@ -31,18 +31,18 @@ value: int
 
 ## State
 
-The current state of a laser cutting or CNC milling machine.
+The current state of a CNC machine.
 
-Tracks power level, coolant mode, cut/travel speeds, active laser UID, frequency, pulse width,
-spindle speed, and coolant mode.
+Tracks power level, coolant mode, feed/rapid rates, active head UID, frequency, pulse width, spindle
+RPM, and coolant mode.
 
-### `active_laser_uid`
+### `active_head_uid`
 
 ```python
-active_laser_uid: Optional[str]
+active_head_uid: Optional[str]
 ```
 
-UID of the active laser source (if set).
+UID of the active head (if set).
 
 ### `coolant`
 
@@ -52,14 +52,6 @@ coolant: Optional[CoolantMode]
 
 Coolant mode (if set).
 
-### `cut_speed`
-
-```python
-cut_speed: Optional[int]
-```
-
-Cutting speed in mm/s (if set).
-
 ### `dwell_ms`
 
 ```python
@@ -67,6 +59,14 @@ dwell_ms: Optional[float]
 ```
 
 Dwell time in milliseconds (if set).
+
+### `feed_rate`
+
+```python
+feed_rate: Optional[int]
+```
+
+Cutting feed rate in mm/s (if set).
 
 ### `frequency`
 
@@ -92,21 +92,21 @@ pulse_width: Optional[float]
 
 Laser pulse width in microseconds (if set).
 
-### `spindle_speed`
+### `rapid_rate`
 
 ```python
-spindle_speed: Optional[int]
+rapid_rate: Optional[int]
 ```
 
-Spindle speed in RPM (if set).
+Rapid (traverse) rate in mm/s (if set).
 
-### `travel_speed`
+### `spindle_rpm`
 
 ```python
-travel_speed: Optional[int]
+spindle_rpm: Optional[int]
 ```
 
-Travel (rapid) speed in mm/s (if set).
+Spindle RPM (if set).
 
 ### `allow_rapid_change()`
 

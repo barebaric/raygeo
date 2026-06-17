@@ -1,11 +1,11 @@
-"""RayGeo — 2D/3D geometry engine for laser cutting and CAM applications.
+"""RayGeo — 2D/3D geometry engine for CAD/CAM applications.
 
 Core features:
 - Geometry types: points, lines, arcs, circles, beziers, polygons, rectangles
 - Path analysis: length, area, bounding box, containment, intersection
 - Path manipulation: offset, clipping, fitting, simplification, smoothing
 - Minkowski sums for toolpath generation
-- Command sequence (Ops) for laser cutter motion control
+- Command sequence (Ops) for CNC motion control
 - Serialization to/from industry formats
 
 Submodules:
@@ -28,7 +28,7 @@ Examples:
 
     >>> from raygeo.ops import Ops, Command
     >>> ops = Ops()
-    >>> ops.set_speed(100)
+    >>> ops.set_power(1.0)
     >>> ops.move_to(0, 0)
     >>> ops.line_to(100, 0)
     >>> ops.travel_distance()

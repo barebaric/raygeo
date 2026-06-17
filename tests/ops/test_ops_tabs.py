@@ -10,13 +10,13 @@ from raygeo.ops.types import CommandCategory, CommandType, SectionType
 # ---------------------------------------------------------------------------
 
 
-def make_rect_ops(x, y, w, h, power=1.0, speed=1000):
+def make_rect_ops(x, y, w, h, power=1.0, feed_rate=1000):
     """Build a simple rectangular contour wrapped in a VECTOR_OUTLINE
     section. The rectangle starts at (x, y) and goes clockwise."""
     ops = Ops()
     ops.ops_section_start(SectionType.VECTOR_OUTLINE, "wp1")
     ops.set_power(power)
-    ops.set_cut_speed(speed)
+    ops.set_feed_rate(feed_rate)
     ops.move_to(x, y, 0)
     ops.line_to(x + w, y, 0)
     ops.line_to(x + w, y + h, 0)
@@ -26,12 +26,12 @@ def make_rect_ops(x, y, w, h, power=1.0, speed=1000):
     return ops
 
 
-def make_circle_ops(cx, cy, r, n=64, power=1.0, speed=1000):
+def make_circle_ops(cx, cy, r, n=64, power=1.0, feed_rate=1000):
     """Build an approximated circle as a VECTOR_OUTLINE section."""
     ops = Ops()
     ops.ops_section_start(SectionType.VECTOR_OUTLINE, "wp1")
     ops.set_power(power)
-    ops.set_cut_speed(speed)
+    ops.set_feed_rate(feed_rate)
     ops.move_to(cx + r, cy, 0)
     for i in range(1, n + 1):
         a = 2 * math.pi * i / n
@@ -40,13 +40,13 @@ def make_circle_ops(cx, cy, r, n=64, power=1.0, speed=1000):
     return ops
 
 
-def make_bezier_rect_ops(x, y, w, h, power=1.0, speed=1000):
+def make_bezier_rect_ops(x, y, w, h, power=1.0, feed_rate=1000):
     """Build a rectangle with Bezier curves (rounded-ish corners)
     to exercise the Bezier-aware tab code path."""
     ops = Ops()
     ops.ops_section_start(SectionType.VECTOR_OUTLINE, "wp1")
     ops.set_power(power)
-    ops.set_cut_speed(speed)
+    ops.set_feed_rate(feed_rate)
     d = min(w, h) * 0.1
     ops.move_to(x + d, y, 0)
     # top-right corner as bezier

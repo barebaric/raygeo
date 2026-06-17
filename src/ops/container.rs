@@ -269,13 +269,13 @@ impl Ops {
         self.commands.push(OpNode::set_power(power));
     }
 
-    pub fn set_cut_speed(&mut self, speed: i32) {
-        self.commands.push(OpNode::set_cut_speed(speed));
+    pub fn set_feed_rate(&mut self, feed_rate: i32) {
+        self.commands.push(OpNode::set_feed_rate(feed_rate));
         self.invalidate_time_cache();
     }
 
-    pub fn set_travel_speed(&mut self, speed: i32) {
-        self.commands.push(OpNode::set_travel_speed(speed));
+    pub fn set_rapid_rate(&mut self, rapid_rate: i32) {
+        self.commands.push(OpNode::set_rapid_rate(rapid_rate));
         self.invalidate_time_cache();
     }
 
@@ -284,8 +284,8 @@ impl Ops {
         self.invalidate_time_cache();
     }
 
-    pub fn set_laser(&mut self, laser_uid: &str) {
-        self.commands.push(OpNode::set_laser(laser_uid));
+    pub fn set_head(&mut self, head_uid: &str) {
+        self.commands.push(OpNode::set_head(head_uid));
         self.invalidate_time_cache();
     }
 
@@ -299,8 +299,8 @@ impl Ops {
         self.invalidate_time_cache();
     }
 
-    pub fn set_spindle_speed(&mut self, speed: u32) {
-        self.commands.push(OpNode::set_spindle_speed(speed));
+    pub fn set_spindle_rpm(&mut self, rpm: u32) {
+        self.commands.push(OpNode::set_spindle_rpm(rpm));
         self.invalidate_time_cache();
     }
 
@@ -491,14 +491,14 @@ impl Ops {
         if let OpCategory::State(cmd) = &node.category {
             match cmd {
                 StateCmd::SetPower(p) => state.power = *p,
-                StateCmd::SetCutSpeed(s) => state.cut_speed = Some(*s),
-                StateCmd::SetTravelSpeed(s) => state.travel_speed = Some(*s),
-                StateCmd::SetLaser(uid) => {
-                    state.active_laser_uid = Some(uid.to_string())
+                StateCmd::SetFeedRate(s) => state.feed_rate = Some(*s),
+                StateCmd::SetRapidRate(s) => state.rapid_rate = Some(*s),
+                StateCmd::SetHead(uid) => {
+                    state.active_head_uid = Some(uid.to_string())
                 }
                 StateCmd::SetFrequency(f) => state.frequency = Some(*f),
                 StateCmd::SetPulseWidth(pw) => state.pulse_width = Some(*pw),
-                StateCmd::SetSpindleSpeed(s) => state.spindle_speed = Some(*s),
+                StateCmd::SetSpindleRpm(s) => state.spindle_rpm = Some(*s),
                 StateCmd::SetCoolant(mode) => state.coolant = Some(*mode),
                 StateCmd::Dwell(d) => state.dwell_ms = Some(*d),
             }
@@ -583,21 +583,21 @@ impl Ops {
 
     pub fn estimate_time(
         &mut self,
-        default_cut_speed: f64,
-        default_travel_speed: f64,
+        default_feed_rate: f64,
+        default_rapid_rate: f64,
         acceleration: f64,
     ) -> f64 {
         if self.commands.is_empty() {
             return 0.0;
         }
-        let params = (default_cut_speed, default_travel_speed, acceleration);
+        let params = (default_feed_rate, default_rapid_rate, acceleration);
         if !self.time_dirty && self.time_params == Some(params) {
             return self.cached_time;
         }
         let total = estimate_time_core(
             self,
-            default_cut_speed,
-            default_travel_speed,
+            default_feed_rate,
+            default_rapid_rate,
             acceleration,
         );
         self.cached_time = total;
@@ -608,23 +608,23 @@ impl Ops {
 
     pub fn estimate_command_times(
         &self,
-        default_cut_speed: f64,
-        default_travel_speed: f64,
+        default_feed_rate: f64,
+        default_rapid_rate: f64,
         acceleration: f64,
     ) -> Vec<f64> {
         let mut times = Vec::with_capacity(self.commands.len());
         let mut last_point = Point3D::new(0.0, 0.0, 0.0);
-        let mut cut_speed = default_cut_speed;
-        let mut travel_speed = default_travel_speed;
+        let mut feed_rate = default_feed_rate;
+        let mut rapid_rate = default_rapid_rate;
 
         for node in &self.commands {
             let cmd_time = match &node.category {
-                OpCategory::State(StateCmd::SetCutSpeed(s)) => {
-                    cut_speed = *s as f64;
+                OpCategory::State(StateCmd::SetFeedRate(s)) => {
+                    feed_rate = *s as f64;
                     0.0
                 }
-                OpCategory::State(StateCmd::SetTravelSpeed(s)) => {
-                    travel_speed = *s as f64;
+                OpCategory::State(StateCmd::SetRapidRate(s)) => {
+                    rapid_rate = *s as f64;
                     0.0
                 }
                 OpCategory::Moving { end, cmd } => {
@@ -635,9 +635,9 @@ impl Ops {
                         0.0
                     } else {
                         let speed = if matches!(cmd, MoveCmd::MoveTo) {
-                            travel_speed
+                            rapid_rate
                         } else {
-                            cut_speed
+                            feed_rate
                         };
 
                         let speed_mm_per_sec = speed / 60.0;
@@ -673,7 +673,11 @@ impl Ops {
         super::group::segment_indices(self)
     }
 
-    pub fn get_frame(&self, power: Option<f64>, speed: Option<f64>) -> Self {
+    pub fn get_frame(
+        &self,
+        power: Option<f64>,
+        feed_rate: Option<f64>,
+    ) -> Self {
         let Some(Rect(min_x, min_y, max_x, max_y)) = self.rect(false) else {
             return Ops::new();
         };
@@ -681,8 +685,8 @@ impl Ops {
         if let Some(p) = power {
             frame_ops.set_power(p);
         }
-        if let Some(s) = speed {
-            frame_ops.set_cut_speed(s as i32);
+        if let Some(f) = feed_rate {
+            frame_ops.set_feed_rate(f as i32);
         }
         frame_ops.move_to(min_x, min_y, 0.0, None);
         frame_ops.line_to(min_x, max_y, 0.0, None);
@@ -933,13 +937,13 @@ fn move_distance(cmd: &MoveCmd, last_point: Point3D, end: Point3D) -> f64 {
 
 fn estimate_time_core(
     ops: &Ops,
-    default_cut_speed: f64,
-    default_travel_speed: f64,
+    default_feed_rate: f64,
+    default_rapid_rate: f64,
     acceleration: f64,
 ) -> f64 {
     ops.estimate_command_times(
-        default_cut_speed,
-        default_travel_speed,
+        default_feed_rate,
+        default_rapid_rate,
         acceleration,
     )
     .into_iter()

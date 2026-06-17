@@ -1,18 +1,17 @@
 pyo3_stub_gen::module_doc!("raygeo.ops", "{}", MODULE_DOC);
 
 pub(crate) const MODULE_DOC: &str = "\
-Command sequence (Ops) manipulation for laser cutter motion control.
+Command sequence (Ops) manipulation for CNC motion control.
 
 Ops is a container of ordered commands (move, line, arc, bezier, state
-changes like power/speed) that defines a complete laser engraving or
-cutting job. It supports building sequences programmatically (move_to,
+changes like power/feed) that defines a complete machining job. It supports building sequences programmatically (move_to,
 line_to, arc_to, etc.), transforming them (translate, rotate, scale,
 transform with 4x4 matrices), clipping to rectangles or regions,
 linearizing curves, estimating processing time, and serializing to
 dict or numpy arrays for persistence.
 
 The module also provides command-type enumerations (CommandType,
-CommandCategory, SectionType), machine State tracking (power, speed,
+CommandCategory, SectionType), machine State tracking (power, feed,
 coolant, frequency), and an Axis bitflag for multi-axis machines.
 ";
 

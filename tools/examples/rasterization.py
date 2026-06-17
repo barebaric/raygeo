@@ -58,9 +58,9 @@ def _plot_raster_result(gray, ops, title, img_size, ppm):
             continue
         if ct in (
             CommandType.SET_POWER,
-            CommandType.SET_CUT_SPEED,
-            CommandType.SET_TRAVEL_SPEED,
-            CommandType.SET_LASER,
+            CommandType.SET_FEED_RATE,
+            CommandType.SET_RAPID_RATE,
+            CommandType.SET_HEAD,
             CommandType.SET_FREQUENCY,
             CommandType.SET_PULSE_WIDTH,
             CommandType.SET_COOLANT,
@@ -203,7 +203,7 @@ def generate_examples(output_dir):
     return {
         "title": "Rasterization",
         "description": (
-            "Rasterize images into laser control sequences using various "
+            "Rasterize images into CNC control sequences using various "
             "modes: power modulation, mask scan, mask lines, and multi-pass."
         ),
         "images": images,

@@ -6,8 +6,7 @@ sidebar_position: 1
 
 ![Various geometry shapes and operations](images/geometry-playground.png)
 
-_Various geometry shapes and operations_ RayGeo — 2D/3D geometry engine for laser cutting and CAM
-applications.
+_Various geometry shapes and operations_ RayGeo — 2D/3D geometry engine for CAD/CAM applications.
 
 Core features:
 
@@ -15,7 +14,7 @@ Core features:
 - Path analysis: length, area, bounding box, containment, intersection
 - Path manipulation: offset, clipping, fitting, simplification, smoothing
 - Minkowski sums for toolpath generation
-- Command sequence (Ops) for laser cutter motion control
+- Command sequence (Ops) for CNC motion control
 - Serialization to/from industry formats
 
 Submodules:
@@ -38,7 +37,7 @@ Examples: Creating and inspecting geometry:
 
     >>> from raygeo.ops import Ops, Command
     >>> ops = Ops()
-    >>> ops.set_speed(100)
+    >>> ops.set_power(1.0)
     >>> ops.move_to(0, 0)
     >>> ops.line_to(100, 0)
     >>> ops.travel_distance()

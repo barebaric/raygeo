@@ -4,16 +4,16 @@ sidebar_label: raygeo.ops
 sidebar_position: 37
 ---
 
-Command sequence (Ops) manipulation for laser cutter motion control.
+Command sequence (Ops) manipulation for CNC motion control.
 
-Ops is a container of ordered commands (move, line, arc, bezier, state changes like power/speed)
-that defines a complete laser engraving or cutting job. It supports building sequences
-programmatically (move_to, line_to, arc_to, etc.), transforming them (translate, rotate, scale,
-transform with 4x4 matrices), clipping to rectangles or regions, linearizing curves, estimating
-processing time, and serializing to dict or numpy arrays for persistence.
+Ops is a container of ordered commands (move, line, arc, bezier, state changes like power/feed) that
+defines a complete machining job. It supports building sequences programmatically (move_to, line_to,
+arc_to, etc.), transforming them (translate, rotate, scale, transform with 4x4 matrices), clipping
+to rectangles or regions, linearizing curves, estimating processing time, and serializing to dict or
+numpy arrays for persistence.
 
 The module also provides command-type enumerations (CommandType, CommandCategory, SectionType),
-machine State tracking (power, speed, coolant, frequency), and an Axis bitflag for multi-axis
+machine State tracking (power, feed, coolant, frequency), and an Axis bitflag for multi-axis
 machines.
 
 ## CommandInfo
@@ -95,6 +95,14 @@ extra_axes: Optional[dict]
 
 Extra axis positions, if any.
 
+### `feed_rate`
+
+```python
+feed_rate: Optional[int]
+```
+
+Feed rate setting, if a SetFeedRate command.
+
 ### `frequency`
 
 ```python
@@ -103,13 +111,13 @@ frequency: Optional[int]
 
 Laser frequency (Hz), if a frequency-setting command.
 
-### `laser_uid`
+### `head_uid`
 
 ```python
-laser_uid: Optional[str]
+head_uid: Optional[str]
 ```
 
-Unique identifier of the active laser, if a laser-setting command.
+Unique identifier of the active head, if a head-setting command.
 
 ### `layer_uid`
 
@@ -143,6 +151,14 @@ pulse_width: Optional[float]
 
 Laser pulse width (µs), if a pulse-width-setting command.
 
+### `rapid_rate`
+
+```python
+rapid_rate: Optional[int]
+```
+
+Rapid rate setting, if a SetRapidRate command.
+
 ### `section_type`
 
 ```python
@@ -151,21 +167,13 @@ section_type: Optional[str]
 
 Section type string (e.g. "VectorOutline", "RasterFill"), if a section marker.
 
-### `speed`
+### `spindle_rpm`
 
 ```python
-speed: Optional[int]
+spindle_rpm: Optional[int]
 ```
 
-Cut speed setting, if a speed-setting command.
-
-### `spindle_speed`
-
-```python
-spindle_speed: Optional[int]
-```
-
-Spindle speed in RPM, if a SetSpindleSpeed command.
+Spindle RPM, if a SetSpindleRpm command.
 
 ### `state`
 
@@ -193,11 +201,10 @@ Unique identifier of the active workpiece, if a workpiece-start command.
 
 ## Ops
 
-A sequence of laser cutting operations (commands).
+A sequence of machining operations (commands).
 
-`Ops` is a container of ordered commands that define a complete laser engraving or cutting job. It
-supports building command sequences programmatically, transforming them, clipping, serializing, and
-more.
+`Ops` is a container of ordered commands that define a complete machining job. It supports building
+command sequences programmatically, transforming them, clipping, serializing, and more.
 
 Use the builder methods (`move_to`, `line_to`, `arc_to`, etc.) to construct a sequence, or load from
 geometry/dict/numpy arrays.
@@ -292,10 +299,10 @@ apply_tab_power(
 ) -> None
 ```
 
-Apply holding tabs by reducing laser power in tab regions.
+Apply holding tabs by reducing power in tab regions.
 
-Instead of cutting a gap, the laser power is lowered in the tab area so the material stays connected
-but weaker. Only `VECTOR_OUTLINE` sections are modified.
+Instead of cutting a gap, the power is lowered in the tab area so the material stays connected but
+weaker. Only `VECTOR_OUTLINE` sections are modified.
 
 | Parameter        | Type                                   | Description                                                   |
 | ---------------- | -------------------------------------- | ------------------------------------------------------------- |
@@ -662,8 +669,8 @@ Get the endpoint coordinates of a moving command.
 
 ```python
 estimate_command_times(
-    default_cut_speed: float = 1000.0,
-    default_travel_speed: float = 3000.0,
+    default_feed_rate: float = 1000.0,
+    default_rapid_rate: float = 3000.0,
     acceleration: float = 1000.0,
 ) -> list[float]
 ```
@@ -673,33 +680,33 @@ Estimate the time of each individual command in the sequence.
 Returns a list with one entry per command. Moving commands (MoveTo, LineTo, ArcTo, etc.) yield their
 estimated execution time in seconds. Non-moving commands (state changes, markers) yield 0.0.
 
-| Parameter              | Type             | Description                                          |
-| ---------------------- | ---------------- | ---------------------------------------------------- |
-| `default_cut_speed`    | `float = 1000.0` | Default cutting speed (default 1000.0).              |
-| `default_travel_speed` | `float = 3000.0` | Default travel speed (default 3000.0).               |
-| `acceleration`         | `float = 1000.0` | Acceleration value (default 1000.0).                 |
-| _Returns_              | `list[float]`    | List of estimated times in seconds, one per command. |
-| _Complexity_           |                  | O(n) time, O(n) space                                |
+| Parameter            | Type             | Description                                          |
+| -------------------- | ---------------- | ---------------------------------------------------- |
+| `default_feed_rate`  | `float = 1000.0` | Default feed rate (default 1000.0).                  |
+| `default_rapid_rate` | `float = 3000.0` | Default rapid rate (default 3000.0).                 |
+| `acceleration`       | `float = 1000.0` | Acceleration value (default 1000.0).                 |
+| _Returns_            | `list[float]`    | List of estimated times in seconds, one per command. |
+| _Complexity_         |                  | O(n) time, O(n) space                                |
 
 ### `estimate_time()`
 
 ```python
 estimate_time(
-    default_cut_speed: float = 1000.0,
-    default_travel_speed: float = 3000.0,
+    default_feed_rate: float = 1000.0,
+    default_rapid_rate: float = 3000.0,
     acceleration: float = 1000.0,
 ) -> float
 ```
 
 Estimate the total processing time for this sequence.
 
-| Parameter              | Type             | Description                             |
-| ---------------------- | ---------------- | --------------------------------------- |
-| `default_cut_speed`    | `float = 1000.0` | Default cutting speed (default 1000.0). |
-| `default_travel_speed` | `float = 3000.0` | Default travel speed (default 3000.0).  |
-| `acceleration`         | `float = 1000.0` | Acceleration value (default 1000.0).    |
-| _Returns_              | `float`          | Estimated time in seconds.              |
-| _Complexity_           |                  | O(n) time, O(1) space                   |
+| Parameter            | Type             | Description                          |
+| -------------------- | ---------------- | ------------------------------------ |
+| `default_feed_rate`  | `float = 1000.0` | Default feed rate (default 1000.0).  |
+| `default_rapid_rate` | `float = 3000.0` | Default rapid rate (default 3000.0). |
+| `acceleration`       | `float = 1000.0` | Acceleration value (default 1000.0). |
+| _Returns_            | `float`          | Estimated time in seconds.           |
+| _Complexity_         |                  | O(n) time, O(1) space                |
 
 ### `extend()`
 
@@ -803,17 +810,20 @@ Create an Ops sequence from numpy arrays.
 ### `get_frame()`
 
 ```python
-get_frame(power: Optional[float] = None, speed: Optional[float] = None) -> Ops
+get_frame(
+    power: Optional[float] = None,
+    feed_rate: Optional[float] = None,
+) -> Ops
 ```
 
 Extract a frame (first and last endpoints) from the sequence.
 
-| Parameter    | Type                     | Description                                    |
-| ------------ | ------------------------ | ---------------------------------------------- |
-| `power`      | `Optional[float] = None` | Optional power to set on the frame commands.   |
-| `speed`      | `Optional[float] = None` | Optional speed to set on the frame commands.   |
-| _Returns_    | `Ops`                    | A new Ops containing only the frame endpoints. |
-| _Complexity_ |                          | O(n) time, O(n) space                          |
+| Parameter    | Type                     | Description                                      |
+| ------------ | ------------------------ | ------------------------------------------------ |
+| `power`      | `Optional[float] = None` |                                                  |
+| `feed_rate`  | `Optional[float] = None` | Optional feed rate to set on the frame commands. |
+| _Returns_    | `Ops`                    | A new Ops containing only the frame endpoints.   |
+| _Complexity_ |                          | O(n) time, O(n) space                            |
 
 ### `group_by_state_continuity()`
 
@@ -827,6 +837,22 @@ Group contiguous commands with the same state into separate Ops sequences.
 | ------------ | ----------- | ---------------------------------------------------- |
 | _Returns_    | `list[Ops]` | A list of Ops sequences grouped by state continuity. |
 | _Complexity_ |             | O(n) time, O(n) space                                |
+
+### `head_uid()`
+
+```python
+head_uid(idx: int) -> str
+```
+
+Get the head UID from a SetHead command.
+
+**Raises:** `TypeError` — If the command is not a SetHead.
+
+| Parameter    | Type  | Description           |
+| ------------ | ----- | --------------------- |
+| `idx`        | `int` | Command index.        |
+| _Returns_    | `str` | The head identifier.  |
+| _Complexity_ |       | O(1) time, O(1) space |
 
 ### `indices_of()`
 
@@ -964,22 +990,6 @@ Mark the start of a job.
 | ------------ | ------ | --------------------- |
 | _Returns_    | `None` |                       |
 | _Complexity_ |        | O(1) time, O(1) space |
-
-### `laser_uid()`
-
-```python
-laser_uid(idx: int) -> str
-```
-
-Get the laser UID from a SetLaser command.
-
-**Raises:** `TypeError` — If the command is not a SetLaser.
-
-| Parameter    | Type  | Description                  |
-| ------------ | ----- | ---------------------------- |
-| `idx`        | `int` | Command index.               |
-| _Returns_    | `str` | The laser source identifier. |
-| _Complexity_ |       | O(1) time, O(1) space        |
 
 ### `layer_end()`
 
@@ -1298,6 +1308,22 @@ Add a quadratic bezier curve to the given endpoint.
 | _Returns_    | `None`                       |                                     |
 | _Complexity_ |                              | O(1) time, O(1) space               |
 
+### `rate()`
+
+```python
+rate(idx: int) -> int
+```
+
+Get the feed/rapid rate from a SetFeedRate or SetRapidRate command.
+
+**Raises:** `TypeError` — If the command is not a rate command.
+
+| Parameter    | Type  | Description           |
+| ------------ | ----- | --------------------- |
+| `idx`        | `int` | Command index.        |
+| _Returns_    | `int` | Rate in mm/s.         |
+| _Complexity_ |       | O(1) time, O(1) space |
+
 ### `rect()`
 
 ```python
@@ -1484,19 +1510,19 @@ Set the coolant mode for subsequent commands.
 | _Returns_    | `None`              |                       |
 | _Complexity_ |                     | O(1) time, O(1) space |
 
-### `set_cut_speed()`
+### `set_feed_rate()`
 
 ```python
-set_cut_speed(speed: float) -> None
+set_feed_rate(feed_rate: float) -> None
 ```
 
-Set the cutting speed for subsequent commands.
+Set the feed rate for subsequent commands.
 
-| Parameter    | Type    | Description                        |
-| ------------ | ------- | ---------------------------------- |
-| `speed`      | `float` | Cutting speed in units per second. |
-| _Returns_    | `None`  |                                    |
-| _Complexity_ |         | O(1) time, O(1) space              |
+| Parameter    | Type    | Description                    |
+| ------------ | ------- | ------------------------------ |
+| `feed_rate`  | `float` | Feed rate in units per second. |
+| _Returns_    | `None`  |                                |
+| _Complexity_ |         | O(1) time, O(1) space          |
 
 ### `set_frequency()`
 
@@ -1512,17 +1538,17 @@ Set the laser pulse frequency.
 | _Returns_    | `None` |                       |
 | _Complexity_ |        | O(1) time, O(1) space |
 
-### `set_laser()`
+### `set_head()`
 
 ```python
-set_laser(laser_uid: str) -> None
+set_head(head_uid: str) -> None
 ```
 
-Switch to a specific laser by UID.
+Switch to a specific head by UID.
 
 | Parameter    | Type   | Description           |
 | ------------ | ------ | --------------------- |
-| `laser_uid`  | `str`  | The laser identifier. |
+| `head_uid`   | `str`  | The head identifier.  |
 | _Returns_    | `None` |                       |
 | _Complexity_ |        | O(1) time, O(1) space |
 
@@ -1532,7 +1558,7 @@ Switch to a specific laser by UID.
 set_power(power: float) -> None
 ```
 
-Set the laser power for subsequent commands.
+Set the cutting power for subsequent commands.
 
 | Parameter    | Type    | Description            |
 | ------------ | ------- | ---------------------- |
@@ -1554,17 +1580,31 @@ Set the laser pulse width.
 | _Returns_     | `None`  |                              |
 | _Complexity_  |         | O(1) time, O(1) space        |
 
-### `set_spindle_speed()`
+### `set_rapid_rate()`
 
 ```python
-set_spindle_speed(speed: int) -> None
+set_rapid_rate(rapid_rate: float) -> None
 ```
 
-Set the spindle speed for subsequent commands.
+Set the rapid (traverse) rate for subsequent commands.
+
+| Parameter    | Type    | Description                     |
+| ------------ | ------- | ------------------------------- |
+| `rapid_rate` | `float` | Rapid rate in units per second. |
+| _Returns_    | `None`  |                                 |
+| _Complexity_ |         | O(1) time, O(1) space           |
+
+### `set_spindle_rpm()`
+
+```python
+set_spindle_rpm(rpm: int) -> None
+```
+
+Set the spindle RPM for subsequent commands.
 
 | Parameter    | Type   | Description           |
 | ------------ | ------ | --------------------- |
-| `speed`      | `int`  | Spindle speed in RPM. |
+| `rpm`        | `int`  | Spindle RPM.          |
 | _Returns_    | `None` |                       |
 | _Complexity_ |        | O(1) time, O(1) space |
 
@@ -1597,50 +1637,20 @@ Apply a state to all moving commands without an explicit state.
 | _Returns_    | `None`        |                       |
 | _Complexity_ |               | O(n) time, O(1) space |
 
-### `set_travel_speed()`
+### `spindle_rpm()`
 
 ```python
-set_travel_speed(speed: float) -> None
+spindle_rpm(idx: int) -> int
 ```
 
-Set the travel (rapid) speed for subsequent commands.
+Get the spindle RPM from a SetSpindleRpm command.
 
-| Parameter    | Type    | Description                       |
-| ------------ | ------- | --------------------------------- |
-| `speed`      | `float` | Travel speed in units per second. |
-| _Returns_    | `None`  |                                   |
-| _Complexity_ |         | O(1) time, O(1) space             |
-
-### `speed()`
-
-```python
-speed(idx: int) -> int
-```
-
-Get the speed value from a SetCutSpeed or SetTravelSpeed command.
-
-**Raises:** `TypeError` — If the command is not a speed command.
+**Raises:** `TypeError` — If the command is not a SetSpindleRpm.
 
 | Parameter    | Type  | Description           |
 | ------------ | ----- | --------------------- |
 | `idx`        | `int` | Command index.        |
-| _Returns_    | `int` | Speed in mm/s.        |
-| _Complexity_ |       | O(1) time, O(1) space |
-
-### `spindle_speed()`
-
-```python
-spindle_speed(idx: int) -> int
-```
-
-Get the spindle speed from a SetSpindleSpeed command.
-
-**Raises:** `TypeError` — If the command is not a SetSpindleSpeed.
-
-| Parameter    | Type  | Description           |
-| ------------ | ----- | --------------------- |
-| `idx`        | `int` | Command index.        |
-| _Returns_    | `int` | Spindle speed in RPM. |
+| _Returns_    | `int` | Spindle RPM.          |
 | _Complexity_ |       | O(1) time, O(1) space |
 
 ### `split_into_subpaths()`

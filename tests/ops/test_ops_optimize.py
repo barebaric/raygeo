@@ -345,23 +345,23 @@ class TestOptimizeStateBoundaries:
 
     def test_cut_speed_boundary(self):
         ops = Ops()
-        ops.set_cut_speed(500)
+        ops.set_feed_rate(500)
         ops.move_to(0, 0)
         ops.line_to(10, 0)
-        ops.set_cut_speed(2000)
+        ops.set_feed_rate(2000)
         ops.move_to(100, 100)
         ops.line_to(110, 100)
         ops.optimize_travel()
         ops.preload_state()
-        speeds = set()
+        rates = set()
         for i in range(ops.len()):
             if ops.category(i) == CommandCategory.MOVING:
                 state = ops.state(i)
                 assert state is not None
-                if state.cut_speed is not None:
-                    speeds.add(state.cut_speed)
-        assert 500 in speeds
-        assert 2000 in speeds
+                if state.feed_rate is not None:
+                    rates.add(state.feed_rate)
+        assert 500 in rates
+        assert 2000 in rates
 
 
 class TestOptimizeMarkers:
@@ -508,7 +508,7 @@ class TestOptimizeScanline:
     def test_scanline_flip_preserves_state(self):
         ops = Ops()
         ops.set_power(0.85)
-        ops.set_cut_speed(1234)
+        ops.set_feed_rate(1234)
         ops.set_coolant(CoolantMode.AIR)
         ops.move_to(0, 0)
         ops.line_to(10, 0)
@@ -527,18 +527,18 @@ class TestOptimizeScanline:
         move_state = ops.state(move_idx)
         assert move_state is not None
         assert move_state.power == pytest.approx(0.85)
-        assert move_state.cut_speed == pytest.approx(1234)
+        assert move_state.feed_rate == pytest.approx(1234)
         assert move_state.coolant == CoolantMode.AIR
         scan_state = ops.state(scan_idx)
         assert scan_state is not None
         assert scan_state.power == pytest.approx(0.85)
-        assert scan_state.cut_speed == pytest.approx(1234)
+        assert scan_state.feed_rate == pytest.approx(1234)
         assert scan_state.coolant == CoolantMode.AIR
 
     def test_scanline_split_preserves_state(self):
         ops = Ops()
         ops.set_power(0.77)
-        ops.set_travel_speed(5678)
+        ops.set_rapid_rate(5678)
         ops.set_coolant(CoolantMode.OFF)
         ops.move_to(0, 0)
         ops.scan_to(10, 0, power_values=bytearray([50, 50, 0, 0, 60, 60]))
@@ -558,18 +558,18 @@ class TestOptimizeScanline:
             move_state = ops.state(move_idx)
             assert move_state is not None
             assert move_state.power == pytest.approx(0.77)
-            assert move_state.travel_speed == pytest.approx(5678)
+            assert move_state.rapid_rate == pytest.approx(5678)
             assert move_state.coolant == CoolantMode.OFF
             scan_state = ops.state(scan_idx)
             assert scan_state is not None
             assert scan_state.power == pytest.approx(0.77)
-            assert scan_state.travel_speed == pytest.approx(5678)
+            assert scan_state.rapid_rate == pytest.approx(5678)
             assert scan_state.coolant == CoolantMode.OFF
 
     def test_overscan_flip_preserves_state(self):
         ops = Ops()
         ops.set_power(0.66)
-        ops.set_cut_speed(2000)
+        ops.set_feed_rate(2000)
         ops.move_to(0, 0)
         ops.line_to(10, 10)
         start_pt = (35.0, 10.0, 0.0)
@@ -590,11 +590,11 @@ class TestOptimizeScanline:
         move_state = ops.state(move_idx)
         assert move_state is not None
         assert move_state.power == pytest.approx(0.66)
-        assert move_state.cut_speed == pytest.approx(2000)
+        assert move_state.feed_rate == pytest.approx(2000)
         scan_state = ops.state(flipped_scan_idx)
         assert scan_state is not None
         assert scan_state.power == pytest.approx(0.66)
-        assert scan_state.cut_speed == pytest.approx(2000)
+        assert scan_state.feed_rate == pytest.approx(2000)
         assert ops.endpoint(move_idx) == pytest.approx(end_pt)
         assert ops.endpoint(flipped_scan_idx) == pytest.approx(start_pt)
         assert (
@@ -848,31 +848,31 @@ class TestOptimizeStateSynchronization:
 
     def test_travel_speed_sync_after_reorder(self):
         ops = Ops()
-        ops.set_travel_speed(1000)
+        ops.set_rapid_rate(1000)
         ops.move_to(0, 0)
         ops.line_to(10, 0)
-        ops.set_travel_speed(5000)
+        ops.set_rapid_rate(5000)
         ops.move_to(100, 100)
         ops.line_to(110, 100)
         ops.optimize_travel()
         ops.preload_state()
-        speeds = set()
+        rates = set()
         for i in range(ops.len()):
             if ops.category(i) == CommandCategory.MOVING:
                 state = ops.state(i)
                 assert state is not None
-                if state.travel_speed is not None:
-                    speeds.add(state.travel_speed)
-        assert 1000 in speeds
-        assert 5000 in speeds
+                if state.rapid_rate is not None:
+                    rates.add(state.rapid_rate)
+        assert 1000 in rates
+        assert 5000 in rates
 
-    def test_laser_uid_sync_after_reorder(self):
+    def test_head_uid_sync_after_reorder(self):
         ops = Ops()
         ops.set_power(1.0)
-        ops.set_laser("laser-a")
+        ops.set_head("head-a")
         ops.move_to(0, 0)
         ops.line_to(10, 0)
-        ops.set_laser("laser-b")
+        ops.set_head("head-b")
         ops.move_to(100, 100)
         ops.line_to(110, 100)
         ops.optimize_travel()
@@ -882,10 +882,10 @@ class TestOptimizeStateSynchronization:
             if ops.category(i) == CommandCategory.MOVING:
                 state = ops.state(i)
                 assert state is not None
-                if state.active_laser_uid is not None:
-                    lasers.add(state.active_laser_uid)
-        assert "laser-a" in lasers
-        assert "laser-b" in lasers
+                if state.active_head_uid is not None:
+                    lasers.add(state.active_head_uid)
+        assert "head-a" in lasers
+        assert "head-b" in lasers
 
 
 class TestOptimizeTwoOptRefinement:
@@ -922,7 +922,7 @@ class TestOptimizeEdgeCases:
     def test_only_state_commands(self):
         ops = Ops()
         ops.set_power(1.0)
-        ops.set_cut_speed(500)
+        ops.set_feed_rate(500)
         ops.optimize_travel()
         move_count = sum(
             1

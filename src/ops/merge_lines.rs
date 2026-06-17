@@ -13,7 +13,7 @@ use crate::types::Point3D;
 /// Apply merge-lines to the given ops.
 ///
 /// For each pair of collinear, overlapping line segments, the shorter
-/// segment's covered portion is replaced with a travel move so the laser
+/// segment's covered portion is replaced with a travel move so the tool
 /// doesn't cut the same line twice.
 ///
 /// - `ops`: The input ops (will be replaced in-place).

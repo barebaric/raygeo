@@ -28,13 +28,13 @@ pub enum MoveCmd {
 #[derive(Clone, Debug)]
 pub enum StateCmd {
     SetPower(f64),
-    SetCutSpeed(i32),
-    SetTravelSpeed(i32),
+    SetFeedRate(i32),
+    SetRapidRate(i32),
     Dwell(f64),
-    SetLaser(Arc<str>),
+    SetHead(Arc<str>),
     SetFrequency(i32),
     SetPulseWidth(f64),
-    SetSpindleSpeed(u32),
+    SetSpindleRpm(u32),
     SetCoolant(CoolantMode),
 }
 
@@ -194,17 +194,17 @@ impl OpNode {
         }
     }
 
-    pub fn set_cut_speed(speed: i32) -> Self {
+    pub fn set_feed_rate(feed_rate: i32) -> Self {
         OpNode {
-            category: OpCategory::State(StateCmd::SetCutSpeed(speed)),
+            category: OpCategory::State(StateCmd::SetFeedRate(feed_rate)),
             state: None,
             extra_axes: None,
         }
     }
 
-    pub fn set_travel_speed(speed: i32) -> Self {
+    pub fn set_rapid_rate(rapid_rate: i32) -> Self {
         OpNode {
-            category: OpCategory::State(StateCmd::SetTravelSpeed(speed)),
+            category: OpCategory::State(StateCmd::SetRapidRate(rapid_rate)),
             state: None,
             extra_axes: None,
         }
@@ -218,11 +218,9 @@ impl OpNode {
         }
     }
 
-    pub fn set_laser(laser_uid: &str) -> Self {
+    pub fn set_head(head_uid: &str) -> Self {
         OpNode {
-            category: OpCategory::State(StateCmd::SetLaser(Arc::from(
-                laser_uid,
-            ))),
+            category: OpCategory::State(StateCmd::SetHead(Arc::from(head_uid))),
             state: None,
             extra_axes: None,
         }
@@ -244,9 +242,9 @@ impl OpNode {
         }
     }
 
-    pub fn set_spindle_speed(speed: u32) -> Self {
+    pub fn set_spindle_rpm(rpm: u32) -> Self {
         OpNode {
-            category: OpCategory::State(StateCmd::SetSpindleSpeed(speed)),
+            category: OpCategory::State(StateCmd::SetSpindleRpm(rpm)),
             state: None,
             extra_axes: None,
         }
@@ -355,13 +353,13 @@ impl OpNode {
             },
             OpCategory::State(cmd) => match cmd {
                 StateCmd::SetPower(_) => CommandType::SetPower,
-                StateCmd::SetCutSpeed(_) => CommandType::SetCutSpeed,
-                StateCmd::SetTravelSpeed(_) => CommandType::SetTravelSpeed,
+                StateCmd::SetFeedRate(_) => CommandType::SetFeedRate,
+                StateCmd::SetRapidRate(_) => CommandType::SetRapidRate,
                 StateCmd::Dwell(_) => CommandType::Dwell,
-                StateCmd::SetLaser(_) => CommandType::SetLaser,
+                StateCmd::SetHead(_) => CommandType::SetHead,
                 StateCmd::SetFrequency(_) => CommandType::SetFrequency,
                 StateCmd::SetPulseWidth(_) => CommandType::SetPulseWidth,
-                StateCmd::SetSpindleSpeed(_) => CommandType::SetSpindleSpeed,
+                StateCmd::SetSpindleRpm(_) => CommandType::SetSpindleRpm,
                 StateCmd::SetCoolant(_) => CommandType::SetCoolant,
             },
             OpCategory::Marker(cmd) => match cmd {

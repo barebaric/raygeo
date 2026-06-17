@@ -1,6 +1,6 @@
 //! Overcut: Extend closed contours past their start point.
 //!
-//! When laser-cutting closed contours, the laser slows down at corners and
+//! When cutting closed contours, the tool slows down at corners and
 //! may not cut through completely. Extending the path slightly past the
 //! starting point (overcut) ensures a clean cut through the full contour.
 

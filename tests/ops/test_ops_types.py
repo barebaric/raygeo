@@ -16,12 +16,12 @@ def test_command_type_values():
     assert CommandType.BEZIER_TO.value == 6
     assert CommandType.QUADRATIC_BEZIER_TO.value == 7
     assert CommandType.SET_POWER.value == 10
-    assert CommandType.SET_CUT_SPEED.value == 11
-    assert CommandType.SET_TRAVEL_SPEED.value == 12
-    assert CommandType.SET_LASER.value == 15
+    assert CommandType.SET_FEED_RATE.value == 11
+    assert CommandType.SET_RAPID_RATE.value == 12
+    assert CommandType.SET_HEAD.value == 15
     assert CommandType.SET_FREQUENCY.value == 16
     assert CommandType.SET_PULSE_WIDTH.value == 17
-    assert CommandType.SET_SPINDLE_SPEED.value == 18
+    assert CommandType.SET_SPINDLE_RPM.value == 18
     assert CommandType.SET_COOLANT.value == 20
     assert CommandType.JOB_START.value == 100
     assert CommandType.JOB_END.value == 101
@@ -49,12 +49,12 @@ def test_category_state():
     for ct in [
         CommandType.DWELL,
         CommandType.SET_POWER,
-        CommandType.SET_CUT_SPEED,
-        CommandType.SET_TRAVEL_SPEED,
+        CommandType.SET_FEED_RATE,
+        CommandType.SET_RAPID_RATE,
         CommandType.SET_FREQUENCY,
         CommandType.SET_PULSE_WIDTH,
-        CommandType.SET_LASER,
-        CommandType.SET_SPINDLE_SPEED,
+        CommandType.SET_HEAD,
+        CommandType.SET_SPINDLE_RPM,
         CommandType.SET_COOLANT,
     ]:
         assert category(ct) == CommandCategory.STATE

@@ -22,18 +22,18 @@ pub enum CommandType {
     QuadraticBezierTo = 7,
     #[strum(serialize = "SET_POWER")]
     SetPower = 10,
-    #[strum(serialize = "SET_CUT_SPEED")]
-    SetCutSpeed = 11,
-    #[strum(serialize = "SET_TRAVEL_SPEED")]
-    SetTravelSpeed = 12,
-    #[strum(serialize = "SET_LASER")]
-    SetLaser = 15,
+    #[strum(serialize = "SET_FEED_RATE")]
+    SetFeedRate = 11,
+    #[strum(serialize = "SET_RAPID_RATE")]
+    SetRapidRate = 12,
+    #[strum(serialize = "SET_HEAD")]
+    SetHead = 15,
     #[strum(serialize = "SET_FREQUENCY")]
     SetFrequency = 16,
     #[strum(serialize = "SET_PULSE_WIDTH")]
     SetPulseWidth = 17,
-    #[strum(serialize = "SET_SPINDLE_SPEED")]
-    SetSpindleSpeed = 18,
+    #[strum(serialize = "SET_SPINDLE_RPM")]
+    SetSpindleRpm = 18,
     #[strum(serialize = "SET_COOLANT")]
     SetCoolant = 20,
     #[strum(serialize = "JOB_START")]
@@ -69,12 +69,12 @@ impl CommandType {
             | CommandType::ScanLine => CommandCategory::Moving,
             CommandType::Dwell
             | CommandType::SetPower
-            | CommandType::SetCutSpeed
-            | CommandType::SetTravelSpeed
+            | CommandType::SetFeedRate
+            | CommandType::SetRapidRate
             | CommandType::SetFrequency
             | CommandType::SetPulseWidth
-            | CommandType::SetLaser
-            | CommandType::SetSpindleSpeed
+            | CommandType::SetHead
+            | CommandType::SetSpindleRpm
             | CommandType::SetCoolant => CommandCategory::State,
             CommandType::JobStart
             | CommandType::JobEnd

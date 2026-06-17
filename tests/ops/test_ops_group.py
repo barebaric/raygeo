@@ -162,7 +162,7 @@ def test_without_state():
     ops = Ops()
     ops.set_power(1.0)
     ops.move_to(0, 0)
-    ops.set_cut_speed(800)
+    ops.set_feed_rate(800)
     ops.line_to(10, 0)
     ops.set_coolant(CoolantMode.AIR)
 

@@ -204,7 +204,7 @@ def test_find_pass_exit_on_multi_subpath():
 def test_find_pass_entry_ignores_non_moving():
     """State-only commands should not interfere with entry lookup."""
     ops = ops_mod.Ops()
-    ops.set_cut_speed(100)
+    ops.set_feed_rate(100)
     ops.set_power(0.8)
     ops.move_to(10.0, 10.0, 0.0)
     ops.line_to(20.0, 10.0, 0.0)

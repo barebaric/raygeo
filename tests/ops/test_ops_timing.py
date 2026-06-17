@@ -37,21 +37,21 @@ class TestTiming:
         assert 0.6 < actual_time < 0.65
 
     def test_custom_speeds(self):
-        """Test timing estimation with custom speeds."""
+        """Test timing estimation with custom rates."""
         ops = Ops()
         ops.line_to(60, 0, 0)
         # Distance = 60mm
         # At 1200mm/min = 20mm/s, time = 60/20 = 3s + acceleration
-        actual_time = ops.estimate_time(default_cut_speed=1200.0)
+        actual_time = ops.estimate_time(default_feed_rate=1200.0)
         # Should be around 3.02s with acceleration
         assert 3.0 < actual_time < 3.05
 
     def test_speed_commands(self):
         """Test timing estimation with speed change commands."""
         ops = Ops()
-        ops.set_cut_speed(600)  # 10mm/s
+        ops.set_feed_rate(600)  # 10mm/s
         ops.line_to(50, 0, 0)  # 5s at 10mm/s
-        ops.set_travel_speed(1200)  # 20mm/s
+        ops.set_rapid_rate(1200)  # 20mm/s
         ops.move_to(50, 50, 0)  # 2.5s at 20mm/s
         actual_time = ops.estimate_time()
         # Should be around 7.53s with acceleration
@@ -134,7 +134,7 @@ class TestTiming:
     def test_estimate_time_does_not_mutate_commands(self):
         """Test that estimate_time does not set .state on commands."""
         ops = Ops()
-        ops.set_cut_speed(500)
+        ops.set_feed_rate(500)
         ops.line_to(10, 0, 0)
 
         for i in range(ops.len()):
@@ -196,8 +196,8 @@ class TestTiming:
         ops = Ops()
         ops.line_to(100, 0, 0)
 
-        time_fast = ops.estimate_time(default_cut_speed=2000.0)
-        time_slow = ops.estimate_time(default_cut_speed=500.0)
+        time_fast = ops.estimate_time(default_feed_rate=2000.0)
+        time_slow = ops.estimate_time(default_feed_rate=500.0)
         assert time_fast < time_slow
 
     def test_cache_preserved_on_copy(self):
@@ -244,7 +244,7 @@ class TestCommandTimes:
         """Test that result length equals number of commands."""
         ops = Ops()
         ops.move_to(10, 10, 0)
-        ops.set_cut_speed(500)
+        ops.set_feed_rate(500)
         ops.line_to(20, 0, 0)
         ops.set_power(0.5)
         ops.line_to(30, 0, 0)
@@ -255,9 +255,9 @@ class TestCommandTimes:
         """Test that sum of command times equals estimate_time()."""
         ops = Ops()
         ops.move_to(10, 10, 0)
-        ops.set_cut_speed(600)
+        ops.set_feed_rate(600)
         ops.line_to(50, 0, 0)
-        ops.set_travel_speed(1200)
+        ops.set_rapid_rate(1200)
         ops.move_to(50, 50, 0)
         ops.line_to(0, 0, 0)
         total = ops.estimate_time()
@@ -267,8 +267,8 @@ class TestCommandTimes:
     def test_state_commands_zero_time(self):
         """Test that state-setting commands have zero time."""
         ops = Ops()
-        ops.set_cut_speed(500)
-        ops.set_travel_speed(3000)
+        ops.set_feed_rate(500)
+        ops.set_rapid_rate(3000)
         ops.set_power(0.8)
         times = ops.estimate_command_times()
         assert all(t == 0.0 for t in times)
@@ -291,14 +291,14 @@ class TestCommandTimes:
         assert abs(times[0] - expected) < 0.01
 
     def test_speed_change_affects_subsequent(self):
-        """Test that set_cut_speed only affects later commands."""
+        """Test that set_feed_rate only affects later commands."""
         ops = Ops()
         ops.line_to(60, 0, 0)
-        ops.set_cut_speed(600)  # 10mm/s
+        ops.set_feed_rate(600)  # 10mm/s
         ops.line_to(120, 0, 0)
         times = ops.estimate_command_times(acceleration=0)
         assert len(times) == 3
-        assert times[1] == 0.0  # set_cut_speed is zero
+        assert times[1] == 0.0  # set_feed_rate is zero
         # First 60mm at default 1000mm/min, second 60mm at 600mm/min
         assert times[0] < times[2]
 
@@ -309,7 +309,7 @@ class TestCommandTimes:
         ops.line_to(200, 0, 0)
         times = ops.estimate_command_times(acceleration=0)
         assert len(times) == 2
-        # travel_speed=3000 is 3x faster than cut_speed=1000
+        # rapid_rate=3000 is 3x faster than feed_rate=1000
         assert abs(times[0] - 2.0) < 0.01  # 100/(3000/60)=2s
         assert abs(times[1] - 6.0) < 0.01  # 100/(1000/60)=6s
 
@@ -318,7 +318,7 @@ class TestCommandTimes:
         ops = Ops()
         ops.line_to(60, 0, 0)
         times = ops.estimate_command_times(
-            default_cut_speed=1200.0, acceleration=0
+            default_feed_rate=1200.0, acceleration=0
         )
         assert len(times) == 1
         expected = 3.0  # 60mm / (1200mm/min / 60) = 3s
@@ -364,7 +364,7 @@ class TestCommandTimes:
     def test_does_not_mutate_commands(self):
         """Test that estimate_command_times does not set .state."""
         ops = Ops()
-        ops.set_cut_speed(500)
+        ops.set_feed_rate(500)
         ops.line_to(10, 0, 0)
 
         for i in range(ops.len()):
@@ -381,22 +381,22 @@ class TestCommandTimes:
         """Test sum equality with speed changes, multiple moves."""
         ops = Ops()
         ops.move_to(0, 0)
-        ops.set_cut_speed(500)
+        ops.set_feed_rate(500)
         ops.line_to(50, 0)
         ops.set_power(0.8)
         ops.line_to(50, 50)
-        ops.set_travel_speed(2000)
+        ops.set_rapid_rate(2000)
         ops.move_to(0, 0)
-        ops.set_cut_speed(1000)
+        ops.set_feed_rate(1000)
         ops.line_to(100, 100)
         total = ops.estimate_time(
-            default_cut_speed=1000.0,
-            default_travel_speed=3000.0,
+            default_feed_rate=1000.0,
+            default_rapid_rate=3000.0,
             acceleration=500.0,
         )
         times = ops.estimate_command_times(
-            default_cut_speed=1000.0,
-            default_travel_speed=3000.0,
+            default_feed_rate=1000.0,
+            default_rapid_rate=3000.0,
             acceleration=500.0,
         )
         assert len(times) == ops.len()

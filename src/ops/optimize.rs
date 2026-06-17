@@ -561,16 +561,16 @@ fn sync_state_commands(ops: &mut Ops, state: &State, prev: &State) -> State {
         ops.set_power(state.power);
         prev.power = state.power;
     }
-    if let Some(cs) = state.cut_speed {
-        if prev.cut_speed != Some(cs) {
-            ops.set_cut_speed(cs);
-            prev.cut_speed = Some(cs);
+    if let Some(cs) = state.feed_rate {
+        if prev.feed_rate != Some(cs) {
+            ops.set_feed_rate(cs);
+            prev.feed_rate = Some(cs);
         }
     }
-    if let Some(ts) = state.travel_speed {
-        if prev.travel_speed != Some(ts) {
-            ops.set_travel_speed(ts);
-            prev.travel_speed = Some(ts);
+    if let Some(ts) = state.rapid_rate {
+        if prev.rapid_rate != Some(ts) {
+            ops.set_rapid_rate(ts);
+            prev.rapid_rate = Some(ts);
         }
     }
     if state.coolant != prev.coolant {
@@ -579,10 +579,10 @@ fn sync_state_commands(ops: &mut Ops, state: &State, prev: &State) -> State {
         }
         prev.coolant = state.coolant;
     }
-    if let Some(ref uid) = state.active_laser_uid {
-        if prev.active_laser_uid.as_deref() != Some(uid.as_str()) {
-            ops.set_laser(uid);
-            prev.active_laser_uid = Some(uid.clone());
+    if let Some(ref uid) = state.active_head_uid {
+        if prev.active_head_uid.as_deref() != Some(uid.as_str()) {
+            ops.set_head(uid);
+            prev.active_head_uid = Some(uid.clone());
         }
     }
     prev

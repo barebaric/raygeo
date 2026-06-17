@@ -4,7 +4,7 @@ sidebar_label: raygeo.image
 sidebar_position: 36
 ---
 
-Image processing functions for laser cutting applications.
+Image processing functions for CNC engraving applications.
 
 Provides sRGB/linear color space conversions, RGBA-to-grayscale/binary conversions with alpha
 unpremultiplication, grayscale normalization with auto-levels, dithering algorithms

@@ -10,7 +10,7 @@ mod srgb;
 pyo3_stub_gen::module_doc!("raygeo.image", "{}", MODULE_DOC);
 
 pub(crate) const MODULE_DOC: &str = "\
-Image processing functions for laser cutting applications.
+Image processing functions for CNC engraving applications.
 
 Provides sRGB/linear color space conversions, RGBA-to-grayscale/binary \
 conversions with alpha unpremultiplication, grayscale normalization \

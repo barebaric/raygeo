@@ -7,7 +7,7 @@ sidebar_position: 42
 Core enumerations for the Ops command system.
 
 CommandType — identifies each command in a sequence (MoveTo, LineTo, ArcTo, BezierTo, SetPower,
-SetSpeed, JobStart, etc.).
+SetFeedRate, JobStart, etc.).
 
 CommandCategory — classifies commands as MOVING (changes tool position), STATE (changes machine
 parameters), or MARKER (structural job boundaries).

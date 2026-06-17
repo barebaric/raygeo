@@ -7,7 +7,8 @@ sidebar_position: 20
 Overcut operations for closed contours.
 
 Extends closed contours past their start point to ensure complete cuts through the material,
-particularly useful in laser cutting where the laser may not fully penetrate at the start/end point.
+particularly useful in cutting applications where the tool may not fully penetrate at the start/end
+point.
 
 ## Functions
 
@@ -19,9 +20,8 @@ apply_overcut(geometry: geo.Geometry, overcut: float) -> geo.Geometry
 
 Extend a closed contour past its start point.
 
-When laser-cutting closed contours, the laser slows down at corners and may not cut through
-completely. This function extends the path by `overcut` distance past the start point to ensure a
-clean cut.
+When cutting closed contours, the tool slows down at corners and may not cut through completely.
+This function extends the path by `overcut` distance past the start point to ensure a clean cut.
 
 If the geometry is not closed, empty, or overcut is <= 0, the geometry is returned unchanged.
 

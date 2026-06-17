@@ -10,7 +10,7 @@ pub(crate) const MODULE_DOC: &str = "\
 Core enumerations for the Ops command system.
 
 CommandType — identifies each command in a sequence (MoveTo, LineTo,
-ArcTo, BezierTo, SetPower, SetSpeed, JobStart, etc.).
+ArcTo, BezierTo, SetPower, SetFeedRate, JobStart, etc.).
 
 CommandCategory — classifies commands as MOVING (changes tool position),
 STATE (changes machine parameters), or MARKER (structural job boundaries).
@@ -66,13 +66,13 @@ impl PyCommandType {
     #[classattr]
     pub const SET_POWER: PyCommandType = PyCommandType(CommandType::SetPower);
     #[classattr]
-    pub const SET_CUT_SPEED: PyCommandType =
-        PyCommandType(CommandType::SetCutSpeed);
+    pub const SET_FEED_RATE: PyCommandType =
+        PyCommandType(CommandType::SetFeedRate);
     #[classattr]
-    pub const SET_TRAVEL_SPEED: PyCommandType =
-        PyCommandType(CommandType::SetTravelSpeed);
+    pub const SET_RAPID_RATE: PyCommandType =
+        PyCommandType(CommandType::SetRapidRate);
     #[classattr]
-    pub const SET_LASER: PyCommandType = PyCommandType(CommandType::SetLaser);
+    pub const SET_HEAD: PyCommandType = PyCommandType(CommandType::SetHead);
     #[classattr]
     pub const SET_FREQUENCY: PyCommandType =
         PyCommandType(CommandType::SetFrequency);
@@ -80,8 +80,8 @@ impl PyCommandType {
     pub const SET_PULSE_WIDTH: PyCommandType =
         PyCommandType(CommandType::SetPulseWidth);
     #[classattr]
-    pub const SET_SPINDLE_SPEED: PyCommandType =
-        PyCommandType(CommandType::SetSpindleSpeed);
+    pub const SET_SPINDLE_RPM: PyCommandType =
+        PyCommandType(CommandType::SetSpindleRpm);
     #[classattr]
     pub const SET_COOLANT: PyCommandType =
         PyCommandType(CommandType::SetCoolant);

@@ -164,21 +164,24 @@ pub struct PyCommandInfo {
     /// Power level (0–1), if a power-setting command.
     #[pyo3(get)]
     pub power: Option<f64>,
-    /// Cut speed setting, if a speed-setting command.
+    /// Feed rate setting, if a SetFeedRate command.
     #[pyo3(get)]
-    pub speed: Option<i32>,
+    pub feed_rate: Option<i32>,
+    /// Rapid rate setting, if a SetRapidRate command.
+    #[pyo3(get)]
+    pub rapid_rate: Option<i32>,
     /// Laser frequency (Hz), if a frequency-setting command.
     #[pyo3(get)]
     pub frequency: Option<i32>,
     /// Laser pulse width (µs), if a pulse-width-setting command.
     #[pyo3(get)]
     pub pulse_width: Option<f64>,
-    /// Unique identifier of the active laser, if a laser-setting command.
+    /// Unique identifier of the active head, if a head-setting command.
     #[pyo3(get)]
-    pub laser_uid: Option<String>,
-    /// Spindle speed in RPM, if a SetSpindleSpeed command.
+    pub head_uid: Option<String>,
+    /// Spindle RPM, if a SetSpindleRpm command.
     #[pyo3(get)]
-    pub spindle_speed: Option<u32>,
+    pub spindle_rpm: Option<u32>,
     /// Coolant mode string, if a SetCoolant command.
     #[pyo3(get)]
     pub coolant: Option<String>,
@@ -229,7 +232,10 @@ impl PyCommandInfo {
             if self.power != other_info.power {
                 return Ok(false);
             }
-            if self.speed != other_info.speed {
+            if self.feed_rate != other_info.feed_rate {
+                return Ok(false);
+            }
+            if self.rapid_rate != other_info.rapid_rate {
                 return Ok(false);
             }
             if self.frequency != other_info.frequency {
@@ -238,10 +244,10 @@ impl PyCommandInfo {
             if self.pulse_width != other_info.pulse_width {
                 return Ok(false);
             }
-            if self.laser_uid != other_info.laser_uid {
+            if self.head_uid != other_info.head_uid {
                 return Ok(false);
             }
-            if self.spindle_speed != other_info.spindle_speed {
+            if self.spindle_rpm != other_info.spindle_rpm {
                 return Ok(false);
             }
             if self.coolant != other_info.coolant {
@@ -300,10 +306,10 @@ fn py_pyany_eq<T: pyo3::PyTypeInfo>(
     }
 }
 
-/// A sequence of laser cutting operations (commands).
+/// A sequence of machining operations (commands).
 ///
 /// ``Ops`` is a container of ordered commands that define a complete
-/// laser engraving or cutting job. It supports building command sequences
+/// machining job. It supports building command sequences
 /// programmatically, transforming them, clipping, serializing, and more.
 ///
 /// Use the builder methods (``move_to``, ``line_to``, ``arc_to``, etc.)
@@ -734,23 +740,23 @@ impl PyOps {
         }
     }
 
-    /// Get the speed value from a SetCutSpeed or SetTravelSpeed command.
+    /// Get the feed/rapid rate from a SetFeedRate or SetRapidRate command.
     ///
     /// :param idx: Command index.
-    /// :returns: Speed in mm/s.
-    /// :raises TypeError: If the command is not a speed command.
+    /// :returns: Rate in mm/s.
+    /// :raises TypeError: If the command is not a rate command.
     /// :complexity: O(1) time, O(1) space
-    fn speed(&self, idx: usize) -> PyResult<i32> {
+    fn rate(&self, idx: usize) -> PyResult<i32> {
         if idx >= self.inner.len() {
             return Err(PyErr::new::<pyo3::exceptions::PyIndexError, _>(
                 "index out of range",
             ));
         }
         match &self.inner.commands[idx].category {
-            OpCategory::State(StateCmd::SetCutSpeed(s))
-            | OpCategory::State(StateCmd::SetTravelSpeed(s)) => Ok(*s),
+            OpCategory::State(StateCmd::SetFeedRate(s))
+            | OpCategory::State(StateCmd::SetRapidRate(s)) => Ok(*s),
             _ => Err(PyErr::new::<pyo3::exceptions::PyTypeError, _>(
-                "Not a speed command",
+                "Not a rate command",
             )),
         }
     }
@@ -801,25 +807,25 @@ impl PyOps {
         }
     }
 
-    /// Get the spindle speed from a SetSpindleSpeed command.
+    /// Get the spindle RPM from a SetSpindleRpm command.
     ///
     /// :param idx: Command index.
-    /// :returns: Spindle speed in RPM.
-    /// :raises TypeError: If the command is not a SetSpindleSpeed.
+    /// :returns: Spindle RPM.
+    /// :raises TypeError: If the command is not a SetSpindleRpm.
     /// :complexity: O(1) time, O(1) space
-    fn spindle_speed(&self, idx: usize) -> PyResult<u32> {
+    fn spindle_rpm(&self, idx: usize) -> PyResult<u32> {
         if idx >= self.inner.len() {
             return Err(PyErr::new::<pyo3::exceptions::PyIndexError, _>(
                 "index out of range",
             ));
         }
-        if let OpCategory::State(StateCmd::SetSpindleSpeed(s)) =
+        if let OpCategory::State(StateCmd::SetSpindleRpm(s)) =
             &self.inner.commands[idx].category
         {
             Ok(*s)
         } else {
             Err(PyErr::new::<pyo3::exceptions::PyTypeError, _>(
-                "Not a SetSpindleSpeedCommand",
+                "Not a SetSpindleRpmCommand",
             ))
         }
     }
@@ -847,25 +853,25 @@ impl PyOps {
         }
     }
 
-    /// Get the laser UID from a SetLaser command.
+    /// Get the head UID from a SetHead command.
     ///
     /// :param idx: Command index.
-    /// :returns: The laser source identifier.
-    /// :raises TypeError: If the command is not a SetLaser.
+    /// :returns: The head identifier.
+    /// :raises TypeError: If the command is not a SetHead.
     /// :complexity: O(1) time, O(1) space
-    fn laser_uid(&self, idx: usize) -> PyResult<String> {
+    fn head_uid(&self, idx: usize) -> PyResult<String> {
         if idx >= self.inner.len() {
             return Err(PyErr::new::<pyo3::exceptions::PyIndexError, _>(
                 "index out of range",
             ));
         }
-        if let OpCategory::State(StateCmd::SetLaser(uid)) =
+        if let OpCategory::State(StateCmd::SetHead(uid)) =
             &self.inner.commands[idx].category
         {
             Ok(uid.to_string())
         } else {
             Err(PyErr::new::<pyo3::exceptions::PyTypeError, _>(
-                "Not a SetLaserCommand",
+                "Not a SetHeadCommand",
             ))
         }
     }
@@ -1125,7 +1131,7 @@ impl PyOps {
         Ok(())
     }
 
-    /// Set the laser power for subsequent commands.
+    /// Set the cutting power for subsequent commands.
     ///
     /// :param power: Power level (0.0–1.0).
     /// :complexity: O(1) time, O(1) space
@@ -1133,20 +1139,20 @@ impl PyOps {
         self.inner.set_power(power);
     }
 
-    /// Set the cutting speed for subsequent commands.
+    /// Set the feed rate for subsequent commands.
     ///
-    /// :param speed: Cutting speed in units per second.
+    /// :param feed_rate: Feed rate in units per second.
     /// :complexity: O(1) time, O(1) space
-    fn set_cut_speed(&mut self, speed: f64) {
-        self.inner.set_cut_speed(speed as i32);
+    fn set_feed_rate(&mut self, feed_rate: f64) {
+        self.inner.set_feed_rate(feed_rate as i32);
     }
 
-    /// Set the travel (rapid) speed for subsequent commands.
+    /// Set the rapid (traverse) rate for subsequent commands.
     ///
-    /// :param speed: Travel speed in units per second.
+    /// :param rapid_rate: Rapid rate in units per second.
     /// :complexity: O(1) time, O(1) space
-    fn set_travel_speed(&mut self, speed: f64) {
-        self.inner.set_travel_speed(speed as i32);
+    fn set_rapid_rate(&mut self, rapid_rate: f64) {
+        self.inner.set_rapid_rate(rapid_rate as i32);
     }
 
     /// Pause execution for a given duration.
@@ -1157,12 +1163,12 @@ impl PyOps {
         self.inner.dwell(duration_ms);
     }
 
-    /// Switch to a specific laser by UID.
+    /// Switch to a specific head by UID.
     ///
-    /// :param laser_uid: The laser identifier.
+    /// :param head_uid: The head identifier.
     /// :complexity: O(1) time, O(1) space
-    fn set_laser(&mut self, laser_uid: &str) {
-        self.inner.set_laser(laser_uid);
+    fn set_head(&mut self, head_uid: &str) {
+        self.inner.set_head(head_uid);
     }
 
     /// Set the laser pulse frequency.
@@ -1181,12 +1187,12 @@ impl PyOps {
         self.inner.set_pulse_width(pulse_width);
     }
 
-    /// Set the spindle speed for subsequent commands.
+    /// Set the spindle RPM for subsequent commands.
     ///
-    /// :param speed: Spindle speed in RPM.
+    /// :param rpm: Spindle RPM.
     /// :complexity: O(1) time, O(1) space
-    fn set_spindle_speed(&mut self, speed: u32) {
-        self.inner.set_spindle_speed(speed);
+    fn set_spindle_rpm(&mut self, rpm: u32) {
+        self.inner.set_spindle_rpm(rpm);
     }
 
     /// Set the coolant mode for subsequent commands.
@@ -1519,11 +1525,12 @@ impl PyOps {
             control: None,
             power_values: None,
             power: None,
-            speed: None,
+            feed_rate: None,
+            rapid_rate: None,
             frequency: None,
             pulse_width: None,
-            laser_uid: None,
-            spindle_speed: None,
+            head_uid: None,
+            spindle_rpm: None,
             coolant: None,
             duration_ms: None,
             layer_uid: None,
@@ -1567,18 +1574,15 @@ impl PyOps {
             },
             OpCategory::State(cmd) => match cmd {
                 StateCmd::SetPower(p) => info.power = Some(*p),
-                StateCmd::SetCutSpeed(s) | StateCmd::SetTravelSpeed(s) => {
-                    info.speed = Some(*s)
-                }
+                StateCmd::SetFeedRate(s) => info.feed_rate = Some(*s),
+                StateCmd::SetRapidRate(s) => info.rapid_rate = Some(*s),
                 StateCmd::SetFrequency(f) => info.frequency = Some(*f),
                 StateCmd::SetPulseWidth(pw) => info.pulse_width = Some(*pw),
-                StateCmd::SetSpindleSpeed(s) => info.spindle_speed = Some(*s),
+                StateCmd::SetSpindleRpm(s) => info.spindle_rpm = Some(*s),
                 StateCmd::SetCoolant(mode) => {
                     info.coolant = Some(format!("{:?}", mode))
                 }
-                StateCmd::SetLaser(uid) => {
-                    info.laser_uid = Some(uid.to_string())
-                }
+                StateCmd::SetHead(uid) => info.head_uid = Some(uid.to_string()),
                 StateCmd::Dwell(d) => info.duration_ms = Some(*d),
             },
             OpCategory::Marker(cmd) => match cmd {
@@ -2030,34 +2034,33 @@ impl PyOps {
 
     /// Extract a frame (first and last endpoints) from the sequence.
     ///
-    /// :param power: Optional power to set on the frame commands.
-    /// :param speed: Optional speed to set on the frame commands.
+    /// :param feed_rate: Optional feed rate to set on the frame commands.
     /// :returns: A new Ops containing only the frame endpoints.
     /// :complexity: O(n) time, O(n) space
-    #[pyo3(signature = (power = None, speed = None))]
-    fn get_frame(&self, power: Option<f64>, speed: Option<f64>) -> PyOps {
+    #[pyo3(signature = (power = None, feed_rate = None))]
+    fn get_frame(&self, power: Option<f64>, feed_rate: Option<f64>) -> PyOps {
         PyOps {
-            inner: self.inner.get_frame(power, speed),
+            inner: self.inner.get_frame(power, feed_rate),
         }
     }
 
     /// Estimate the total processing time for this sequence.
     ///
-    /// :param default_cut_speed: Default cutting speed (default 1000.0).
-    /// :param default_travel_speed: Default travel speed (default 3000.0).
+    /// :param default_feed_rate: Default feed rate (default 1000.0).
+    /// :param default_rapid_rate: Default rapid rate (default 3000.0).
     /// :param acceleration: Acceleration value (default 1000.0).
     /// :returns: Estimated time in seconds.
     /// :complexity: O(n) time, O(1) space
-    #[pyo3(signature = (default_cut_speed = 1000.0, default_travel_speed = 3000.0, acceleration = 1000.0))]
+    #[pyo3(signature = (default_feed_rate = 1000.0, default_rapid_rate = 3000.0, acceleration = 1000.0))]
     fn estimate_time(
         &mut self,
-        default_cut_speed: f64,
-        default_travel_speed: f64,
+        default_feed_rate: f64,
+        default_rapid_rate: f64,
         acceleration: f64,
     ) -> f64 {
         self.inner.estimate_time(
-            default_cut_speed,
-            default_travel_speed,
+            default_feed_rate,
+            default_rapid_rate,
             acceleration,
         )
     }
@@ -2069,21 +2072,21 @@ impl PyOps {
     /// time in seconds. Non-moving commands (state changes, markers)
     /// yield 0.0.
     ///
-    /// :param default_cut_speed: Default cutting speed (default 1000.0).
-    /// :param default_travel_speed: Default travel speed (default 3000.0).
+    /// :param default_feed_rate: Default feed rate (default 1000.0).
+    /// :param default_rapid_rate: Default rapid rate (default 3000.0).
     /// :param acceleration: Acceleration value (default 1000.0).
     /// :returns: List of estimated times in seconds, one per command.
     /// :complexity: O(n) time, O(n) space
-    #[pyo3(signature = (default_cut_speed = 1000.0, default_travel_speed = 3000.0, acceleration = 1000.0))]
+    #[pyo3(signature = (default_feed_rate = 1000.0, default_rapid_rate = 3000.0, acceleration = 1000.0))]
     fn estimate_command_times(
         &mut self,
-        default_cut_speed: f64,
-        default_travel_speed: f64,
+        default_feed_rate: f64,
+        default_rapid_rate: f64,
         acceleration: f64,
     ) -> Vec<f64> {
         self.inner.estimate_command_times(
-            default_cut_speed,
-            default_travel_speed,
+            default_feed_rate,
+            default_rapid_rate,
             acceleration,
         )
     }
@@ -2185,9 +2188,9 @@ impl PyOps {
         crate::ops::tabs::apply_tab_gaps(&mut self.inner, &clip_points);
     }
 
-    /// Apply holding tabs by reducing laser power in tab regions.
+    /// Apply holding tabs by reducing power in tab regions.
     ///
-    /// Instead of cutting a gap, the laser power is lowered in the tab
+    /// Instead of cutting a gap, the power is lowered in the tab
     /// area so the material stays connected but weaker. Only
     /// ``VECTOR_OUTLINE`` sections are modified.
     ///
