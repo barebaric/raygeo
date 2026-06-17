@@ -1,7 +1,7 @@
 ---
 title: raygeo.geo.algo.hull
 sidebar_label: raygeo.geo.algo.hull
-sidebar_position: 8
+sidebar_position: 9
 ---
 
 Hull computation from binary images.

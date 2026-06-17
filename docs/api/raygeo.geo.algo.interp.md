@@ -1,7 +1,7 @@
 ---
 title: raygeo.geo.algo.interp
 sidebar_label: raygeo.geo.algo.interp
-sidebar_position: 9
+sidebar_position: 10
 ---
 
 Segment interpolation utilities for parameter-based point projection, clipping, and scanline data

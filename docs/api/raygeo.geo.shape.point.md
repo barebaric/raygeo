@@ -1,7 +1,7 @@
 ---
 title: raygeo.geo.shape.point
 sidebar_label: raygeo.geo.shape.point
-sidebar_position: 27
+sidebar_position: 31
 ---
 
 Individual point operations.

@@ -1,0 +1,117 @@
+use crate::types::{Point, Point3D};
+
+/// Options for trochoidal path generation along a carrier polyline.
+#[derive(Clone, Debug)]
+pub struct TrochoidOptions {
+    pub tool_diameter: f64,
+    pub engagement_angle_deg: f64,
+    pub step_over_ratio: f64,
+    pub min_loop_radius: f64,
+    pub z: f64,
+}
+
+/// Produce a trochoidal 3D polyline that follows `carrier` (a 2D polyline).
+///
+/// The trochoid is generated as a sinusoidal offset perpendicular to the
+/// carrier path. The lateral oscillation frequency is determined by the
+/// step-over distance (one full oscillation per step_over), and the
+/// amplitude (loop radius) is derived from the engagement angle.
+///
+/// Returns the cutting path as a sequence of 3D points at the given Z.
+pub fn trochoid_along(
+    carrier: &[Point],
+    opts: &TrochoidOptions,
+) -> Vec<Point3D> {
+    if carrier.len() < 2 {
+        return vec![];
+    }
+
+    let step_over = opts.tool_diameter * opts.step_over_ratio;
+    if step_over < 1e-12 || opts.tool_diameter < 1e-12 {
+        return vec![];
+    }
+
+    // Compute loop radius from engagement angle.
+    // For a target engagement angle α, with step_over as the radial depth:
+    //   loop_radius = step_over / (2 * sin(α/2))
+    let engagement_rad = opts.engagement_angle_deg.to_radians();
+    let loop_radius =
+        if engagement_rad > 0.0 && engagement_rad < std::f64::consts::PI {
+            (step_over / (2.0 * (engagement_rad / 2.0).sin()))
+                .max(opts.min_loop_radius)
+        } else {
+            step_over / 2.0
+        };
+    let loop_radius = loop_radius.max(opts.min_loop_radius);
+
+    // Compute cumulative segment lengths and total arc length.
+    let n_segs = carrier.len() - 1;
+    let mut seg_lengths = vec![0.0; n_segs];
+    let total_length: f64 = carrier
+        .windows(2)
+        .enumerate()
+        .map(|(i, w)| {
+            let d = (w[1] - w[0]).length();
+            seg_lengths[i] = d;
+            d
+        })
+        .sum();
+
+    if total_length < 1e-12 {
+        return vec![];
+    }
+
+    // Resolution: we emit points so that the angular resolution along the
+    // trochoid is at most ~0.1 rad per point.
+    let angular_resolution = 0.1;
+    let n_cycles = total_length / step_over;
+    let n_points = (n_cycles
+        * (2.0 * std::f64::consts::PI / angular_resolution))
+        .ceil()
+        .max(2.0) as usize;
+
+    let mut result = Vec::with_capacity(n_points + 1);
+    for i in 0..=n_points {
+        let s = (i as f64 / n_points as f64) * total_length;
+        let theta = 2.0 * std::f64::consts::PI * s / step_over;
+        let lateral = loop_radius * theta.cos();
+
+        // Find position on carrier at distance s.
+        let mut accum = 0.0;
+        let (seg_idx, local_t) = {
+            let mut idx = n_segs - 1;
+            let mut lt = 1.0;
+            for (j, &len) in seg_lengths.iter().enumerate() {
+                if accum + len >= s - 1e-12 {
+                    lt = if len > 1e-12 {
+                        ((s - accum) / len).min(1.0)
+                    } else {
+                        0.0
+                    };
+                    idx = j;
+                    break;
+                }
+                accum += len;
+            }
+            (idx, lt)
+        };
+
+        let p0 = carrier[seg_idx];
+        let p1 = carrier[seg_idx + 1];
+        let pos = p0 + (p1 - p0) * local_t;
+
+        // Tangent and normal at this point.
+        let tangent = if seg_lengths[seg_idx] > 1e-12 {
+            (p1 - p0) / seg_lengths[seg_idx]
+        } else {
+            Point::new(1.0, 0.0)
+        };
+        let normal = Point::new(-tangent.y, tangent.x);
+
+        let x = pos.x + lateral * normal.x;
+        let y = pos.y + lateral * normal.y;
+        result.push(Point3D::new(x, y, opts.z));
+    }
+
+    result
+}

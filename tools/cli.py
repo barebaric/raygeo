@@ -294,8 +294,22 @@ _INLINE_IMAGE_MAP = {
             "Circle center projected onto the perpendicular bisector",
         ),
     ],
+    "raygeo.geo.algo.offset.md": [
+        (
+            "concentric_offsets",
+            "concentric-offsets",
+            "Concentric inward offsets for adaptive clearing / pocketing",
+        ),
+    ],
     "raygeo.geo.algo.overcut.md": [
         ("apply_overcut", "overcut", "Overcut on closed contour"),
+    ],
+    "raygeo.geo.algo.ramp.md": [
+        (
+            "generate_ramp",
+            "ramp-linear-zigzag",
+            "Linear (left) and ZigZag (right) ramp entry paths",
+        ),
     ],
     "raygeo.geo.algo.simplify.md": [
         ("simplify_polyline", "simplify", "Simplify and linearize"),
@@ -326,6 +340,18 @@ _INLINE_IMAGE_MAP = {
             "smooth_sub_segment",
             "smooth-sub-segment",
             "Sub-segment smoothing",
+        ),
+    ],
+    "raygeo.geo.algo.trochoid.md": [
+        (
+            "trochoid_along",
+            "trochoid-straight",
+            "Trochoidal toolpath along a straight carrier — 60° vs 120°",
+        ),
+        (
+            "trochoid_along",
+            "trochoid-l-shaped",
+            "Trochoidal toolpath around an L-shaped corner",
         ),
     ],
     "raygeo.geo.shape.arc.md": [
@@ -383,6 +409,13 @@ _INLINE_IMAGE_MAP = {
             "transform_to_cylinder",
             "cylindrical-transform",
             "Flat vertex pairs wrapped onto a cylinder surface",
+        ),
+    ],
+    "raygeo.geo.algo.helix.md": [
+        (
+            "generate_helix",
+            "helix-cylindrical-conical",
+            "Cylindrical (CCW) and conical-expand (CW) helical paths",
         ),
     ],
     "raygeo.geo.algo.minkowski2d.md": [

@@ -8,6 +8,7 @@ pub mod cleanup;
 pub mod clipping;
 pub mod cylindrical;
 pub mod fitting;
+pub mod helix;
 pub mod hull;
 pub mod interp;
 pub mod intersect;
@@ -17,10 +18,12 @@ pub mod offset;
 pub mod overcut;
 pub mod planar;
 pub mod project;
+pub mod ramp;
 pub mod simplify;
 pub mod smooth;
 pub mod spatial_grid2d;
 pub mod topology;
+pub mod trochoid;
 
 pub use analysis::{
     does_enclose, get_area_from_array, get_outward_normal_at_from_array,
@@ -47,6 +50,7 @@ pub use fitting::{
     get_polyline_line_deviation, linearize_data, linearize_geometry,
     optimize_path_from_array, project_circle_center_to_bisector,
 };
+pub use helix::{generate_helix, HelixDirection, HelixOptions};
 pub use hull::{
     find_external_contours, get_concave_hull, get_enclosing_hull,
     get_hulls_from_image,
@@ -63,12 +67,13 @@ pub use minkowski2d::{
     get_inner_fit_polygon, get_no_fit_polygon,
     get_polygon_minkowski_sum_convex,
 };
-pub use offset::{grow_geometry, grow_geometry_on_plane};
+pub use offset::{concentric_offsets, grow_geometry, grow_geometry_on_plane};
 pub use overcut::apply_overcut;
 pub use project::{
     is_planar_in_z, lift_points_to_xy_plane, project_point_to_xy,
     project_points_to_xy,
 };
+pub use ramp::{generate_ramp, RampOptions, RampStyle};
 pub use simplify::{simplify_data, simplify_polyline};
 pub use smooth::{
     compute_gaussian_kernel, resample_polyline, smooth_circularly,
@@ -80,3 +85,4 @@ pub use topology::{
     remove_inner_edges, reverse_contour, split_inner_and_outer_contours,
     split_into_components, split_into_contours, ContourHierarchy, ContourInfo,
 };
+pub use trochoid::{trochoid_along, TrochoidOptions};

@@ -2,14 +2,18 @@ pub(crate) mod analysis;
 pub(crate) mod clipping;
 pub(crate) mod cylindrical;
 pub(crate) mod fitting;
+pub(crate) mod helix;
 pub(crate) mod hull;
 pub(crate) mod interp;
 pub(crate) mod minkowski2d;
 pub(crate) mod nest2d;
+pub(crate) mod offset;
 pub(crate) mod overcut;
+pub(crate) mod ramp;
 pub(crate) mod simplify;
 pub(crate) mod smooth;
 pub(crate) mod spatial_grid2d;
+pub(crate) mod trochoid;
 
 pyo3_stub_gen::module_doc!("raygeo.geo.algo", "{}", MODULE_DOC);
 
@@ -51,14 +55,18 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     clipping::register(&algo_mod)?;
     cylindrical::register(&algo_mod)?;
     fitting::register(&algo_mod)?;
+    helix::register(&algo_mod)?;
     hull::register(&algo_mod)?;
     interp::register(&algo_mod)?;
     minkowski2d::register(&algo_mod)?;
     nest2d::register(&algo_mod)?;
+    offset::register(&algo_mod)?;
     overcut::register(&algo_mod)?;
+    ramp::register(&algo_mod)?;
     simplify::register(&algo_mod)?;
     smooth::register(&algo_mod)?;
     spatial_grid2d::register(&algo_mod)?;
+    trochoid::register(&algo_mod)?;
 
     m.add_submodule(&algo_mod)?;
 
@@ -80,6 +88,8 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     sys_modules
         .set_item("raygeo.geo.algo.nest2d", &algo_mod.getattr("nest2d")?)?;
     sys_modules
+        .set_item("raygeo.geo.algo.offset", &algo_mod.getattr("offset")?)?;
+    sys_modules
         .set_item("raygeo.geo.algo.overcut", &algo_mod.getattr("overcut")?)?;
     sys_modules
         .set_item("raygeo.geo.algo.simplify", &algo_mod.getattr("simplify")?)?;
@@ -93,6 +103,11 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
         "raygeo.geo.algo.cylindrical",
         &algo_mod.getattr("cylindrical")?,
     )?;
+    sys_modules
+        .set_item("raygeo.geo.algo.helix", &algo_mod.getattr("helix")?)?;
+    sys_modules.set_item("raygeo.geo.algo.ramp", &algo_mod.getattr("ramp")?)?;
+    sys_modules
+        .set_item("raygeo.geo.algo.trochoid", &algo_mod.getattr("trochoid")?)?;
 
     Ok(())
 }

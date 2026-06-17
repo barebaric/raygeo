@@ -31,26 +31,34 @@ from . import analysis
 from . import clipping
 from . import cylindrical
 from . import fitting
+from . import helix
 from . import hull
 from . import interp
 from . import minkowski2d
 from . import nest2d
+from . import offset
 from . import overcut
+from . import ramp
 from . import simplify
 from . import smooth
 from . import spatial_grid2d
+from . import trochoid
 __all__ = [
     "analysis",
     "clipping",
     "cylindrical",
     "fitting",
+    "helix",
     "hull",
     "interp",
     "minkowski2d",
     "nest2d",
+    "offset",
     "overcut",
+    "ramp",
     "simplify",
     "smooth",
     "spatial_grid2d",
+    "trochoid",
 ]
 

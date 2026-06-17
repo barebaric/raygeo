@@ -1,7 +1,7 @@
 ---
 title: raygeo.geo.algo.overcut
 sidebar_label: raygeo.geo.algo.overcut
-sidebar_position: 18
+sidebar_position: 20
 ---
 
 Overcut operations for closed contours.

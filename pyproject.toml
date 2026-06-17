@@ -23,9 +23,11 @@ dependencies = [
 
 [project.optional-dependencies]
 test = [
+    "matplotlib",
     "pycairo",
     "pytest",
     "pytest-mock",
+    "streamlit",
 ]
 visual = [
     "streamlit",

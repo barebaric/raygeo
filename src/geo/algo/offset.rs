@@ -187,6 +187,35 @@ pub fn grow_geometry(geometry: &Geometry, offset: f64) -> Geometry {
 /// # Panics
 ///
 /// Panics if `plane_normal` is a zero vector.
+/// Generate up to `max_passes` concentric inward offsets of `geom`,
+/// spaced `step` apart (in current units). Stops early when an offset
+/// collapses (enclosed area drops below `min_area`). Returns offsets
+/// outermost-first. Each returned Geometry preserves the source Z.
+///
+/// The first offset shrinks the input boundary by `step`; each subsequent
+/// offset shrinks the previous result by the same amount.
+pub fn concentric_offsets(
+    geom: &Geometry,
+    step: f64,
+    max_passes: usize,
+    min_area: f64,
+) -> Vec<Geometry> {
+    if max_passes == 0 || step <= 0.0 {
+        return vec![];
+    }
+    let mut result = Vec::new();
+    let mut current = geom.copy();
+    for _ in 0..max_passes {
+        let next = grow_geometry(&current, -step);
+        if next.is_empty() || next.area() < min_area {
+            break;
+        }
+        result.push(next.clone());
+        current = next;
+    }
+    result
+}
+
 pub fn grow_geometry_on_plane(
     geometry: &Geometry,
     offset: f64,

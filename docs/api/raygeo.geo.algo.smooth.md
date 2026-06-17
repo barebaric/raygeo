@@ -1,7 +1,7 @@
 ---
 title: raygeo.geo.algo.smooth
 sidebar_label: raygeo.geo.algo.smooth
-sidebar_position: 20
+sidebar_position: 23
 ---
 
 Polyline smoothing using Gaussian kernels.
