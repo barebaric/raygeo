@@ -9,6 +9,7 @@ use rstar::{PointDistance, RTree, RTreeObject, AABB};
 
 use super::container::Ops;
 use super::enums::{CommandCategory, CommandType};
+use super::polyline::{find_pass_entry, find_pass_exit};
 use super::state::State;
 use crate::types::Point3D;
 
@@ -87,29 +88,6 @@ fn dist_2d(p1: Point3D, p2: Point3D) -> f64 {
     dx.hypot(dy)
 }
 
-fn get_entry_point(ops: &Ops) -> Option<Point3D> {
-    for i in 0..ops.len() {
-        if ops.is_travel(i) {
-            return Some(ops.endpoint(i));
-        }
-    }
-    for i in 0..ops.len() {
-        if ops.category(i) == CommandCategory::Moving {
-            return Some(ops.endpoint(i));
-        }
-    }
-    None
-}
-
-fn get_exit_point(ops: &Ops) -> Option<Point3D> {
-    for i in (0..ops.len()).rev() {
-        if ops.category(i) == CommandCategory::Moving {
-            return Some(ops.endpoint(i));
-        }
-    }
-    None
-}
-
 fn can_flip(ops: &Ops) -> bool {
     for i in 0..ops.len() {
         if ops.is_cutting(i) {
@@ -155,8 +133,8 @@ fn extract_workpiece_meta(uid: &str, ops: &Ops) -> Option<WorkpieceMeta> {
         return None;
     }
 
-    let entry_point = get_entry_point(ops)?;
-    let exit_point = get_exit_point(ops)?;
+    let entry_point = find_pass_entry(ops)?;
+    let exit_point = find_pass_exit(ops)?;
 
     Some(WorkpieceMeta {
         uid: uid.to_string(),

@@ -8,6 +8,40 @@ sidebar_position: 39
 
 ## Functions
 
+### `find_pass_entry()`
+
+```python
+find_pass_entry(ops: ops.Ops) -> tuple[float, float, float] | None
+```
+
+Find the entry point of an Ops sequence.
+
+Scans for the first travel (MoveTo) endpoint, falling back to the first moving command endpoint.
+
+| Parameter | Type                                     | Description                                        |
+| --------- | ---------------------------------------- | -------------------------------------------------- |
+| `ops`     | `ops.Ops`                                | An **~raygeo.ops.Ops** container.                  |
+| _Returns_ | `tuple[float, float, float] &#124; None` | `(x, y, z)` or `None` if no moving commands exist. |
+
+![Entry and exit points from find_pass_entry / find_pass_exit](images/polyline-pass-entry-exit.png)
+
+_Entry and exit points from find_pass_entry / find_pass_exit_
+
+### `find_pass_exit()`
+
+```python
+find_pass_exit(ops: ops.Ops) -> tuple[float, float, float] | None
+```
+
+Find the exit point of an Ops sequence.
+
+Scans backwards for the last moving command endpoint.
+
+| Parameter | Type                                     | Description                                        |
+| --------- | ---------------------------------------- | -------------------------------------------------- |
+| `ops`     | `ops.Ops`                                | An **~raygeo.ops.Ops** container.                  |
+| _Returns_ | `tuple[float, float, float] &#124; None` | `(x, y, z)` or `None` if no moving commands exist. |
+
 ### `link_passes()`
 
 ```python

@@ -1,7 +1,13 @@
 import pytest
 
 import raygeo.ops as ops_mod
-from raygeo.ops.polyline import LinkStrategy, link_passes, polyline_to_ops
+from raygeo.ops.polyline import (
+    LinkStrategy,
+    find_pass_entry,
+    find_pass_exit,
+    link_passes,
+    polyline_to_ops,
+)
 
 # Type aliases for readability
 _MoveTo = ops_mod.types.CommandType.MOVE_TO
@@ -125,3 +131,84 @@ def test_link_passes_invalid_strategy():
 def test_link_strategy_constants():
     assert LinkStrategy.RETRACT == "retract"
     assert LinkStrategy.STAY_DOWN == "stay_down"
+
+
+# ── find_pass_entry / find_pass_exit ──
+
+
+def test_find_pass_entry_exit_empty():
+    ops = ops_mod.Ops()
+    assert find_pass_entry(ops) is None
+    assert find_pass_exit(ops) is None
+
+
+def test_find_pass_entry_exit_only_state():
+    ops = ops_mod.Ops()
+    ops.set_power(0.5)
+    assert find_pass_entry(ops) is None
+    assert find_pass_exit(ops) is None
+
+
+def test_find_pass_entry_exit_single_moveto():
+    ops = ops_mod.Ops()
+    ops.move_to(10.0, 20.0, 5.0)
+    entry = find_pass_entry(ops)
+    assert entry == pytest.approx((10.0, 20.0, 5.0))
+    exit_ = find_pass_exit(ops)
+    assert exit_ == pytest.approx((10.0, 20.0, 5.0))
+
+
+def test_find_pass_entry_exit_single_lineto():
+    """No MoveTo — entry falls back to the first moving command."""
+    ops = ops_mod.Ops()
+    ops.line_to(10.0, 20.0, 5.0)
+    entry = find_pass_entry(ops)
+    assert entry == pytest.approx((10.0, 20.0, 5.0))
+    exit_ = find_pass_exit(ops)
+    assert exit_ == pytest.approx((10.0, 20.0, 5.0))
+
+
+def test_find_pass_entry_exit_full_path():
+    ops = ops_mod.Ops()
+    ops.move_to(0.0, 0.0, 0.0)
+    ops.line_to(10.0, 0.0, 0.0)
+    ops.line_to(10.0, 10.0, -2.0)
+    ops.line_to(0.0, 10.0, -2.0)
+    entry = find_pass_entry(ops)
+    assert entry == pytest.approx((0.0, 0.0, 0.0))
+    exit_ = find_pass_exit(ops)
+    assert exit_ == pytest.approx((0.0, 10.0, -2.0))
+
+
+def test_find_pass_entry_prefers_travel():
+    """Entry should return the MoveTo endpoint over a LineTo endpoint."""
+    ops = ops_mod.Ops()
+    ops.move_to(5.0, 5.0, 0.0)
+    ops.line_to(10.0, 10.0, 0.0)
+    entry = find_pass_entry(ops)
+    assert entry == pytest.approx((5.0, 5.0, 0.0))
+
+
+def test_find_pass_exit_on_multi_subpath():
+    """Exit should return the last moving endpoint across subpaths."""
+    ops = ops_mod.Ops()
+    ops.move_to(0.0, 0.0, 0.0)
+    ops.line_to(10.0, 0.0, 0.0)
+    ops.move_to(0.0, 10.0, 0.0)
+    ops.line_to(10.0, 10.0, 0.0)
+    ops.line_to(15.0, 10.0, 0.0)
+    exit_ = find_pass_exit(ops)
+    assert exit_ == pytest.approx((15.0, 10.0, 0.0))
+
+
+def test_find_pass_entry_ignores_non_moving():
+    """State-only commands should not interfere with entry lookup."""
+    ops = ops_mod.Ops()
+    ops.set_cut_speed(100)
+    ops.set_power(0.8)
+    ops.move_to(10.0, 10.0, 0.0)
+    ops.line_to(20.0, 10.0, 0.0)
+    entry = find_pass_entry(ops)
+    assert entry == pytest.approx((10.0, 10.0, 0.0))
+    exit_ = find_pass_exit(ops)
+    assert exit_ == pytest.approx((20.0, 10.0, 0.0))

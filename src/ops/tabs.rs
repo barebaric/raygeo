@@ -12,6 +12,7 @@
 use super::clip::clip_subpath_linear;
 use super::container::Ops;
 use super::enums::{CommandCategory, CommandType, SectionType};
+use super::polyline::find_pass_exit;
 use super::types::{MoveCmd, OpCategory};
 use crate::types::Point3D;
 
@@ -316,7 +317,7 @@ fn clip_subpath_with_gaps(sub_ops: &Ops, clips: &[ClipPoint]) -> Ops {
                         start_pt, control1, control2, end_pt, t_start, t_end,
                     );
 
-                    let last_end = get_last_moving_end(&result);
+                    let last_end = find_pass_exit(&result);
                     if let Some(le) = last_end {
                         if distance_2d(le, sub.0) > 1e-6 {
                             result.move_to(sub.0.x, sub.0.y, sub.0.z, None);
@@ -331,7 +332,7 @@ fn clip_subpath_with_gaps(sub_ops: &Ops, clips: &[ClipPoint]) -> Ops {
                     let end_pt_interp =
                         interpolate_point(start_pt, end_pt, t_e);
 
-                    let last_end = get_last_moving_end(&result);
+                    let last_end = find_pass_exit(&result);
                     if let Some(le) = last_end {
                         if distance_2d(le, start_pt_interp) > 1e-6 {
                             result.move_to(
@@ -358,9 +359,9 @@ fn clip_subpath_with_gaps(sub_ops: &Ops, clips: &[ClipPoint]) -> Ops {
         last_pos = Some(end_pt);
     }
 
-    let orig_endpoint = get_last_moving_end(sub_ops);
+    let orig_endpoint = find_pass_exit(sub_ops);
     if let Some(orig) = orig_endpoint {
-        let last_end = get_last_moving_end(&result);
+        let last_end = find_pass_exit(&result);
         if last_end.is_none_or(|end| distance_2d(end, orig) > 1e-6) {
             // When a gap wraps around the seam of a closed path the
             // endpoint falls inside a gap region — don't add a travel
@@ -1111,15 +1112,6 @@ fn bezier_params(ops: &Ops, idx: usize) -> (Point3D, Point3D) {
     } else {
         (Point3D::new(0.0, 0.0, 0.0), Point3D::new(0.0, 0.0, 0.0))
     }
-}
-
-fn get_last_moving_end(ops: &Ops) -> Option<Point3D> {
-    for i in (0..ops.len()).rev() {
-        if ops.commands[i].is_moving() {
-            return Some(ops.commands[i].end_point());
-        }
-    }
-    None
 }
 
 fn compute_kept_ranges(

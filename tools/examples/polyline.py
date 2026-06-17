@@ -2,7 +2,14 @@
 
 import matplotlib.pyplot as plt
 
-from raygeo.ops.polyline import LinkStrategy, link_passes, polyline_to_ops
+import raygeo.ops as ops_mod
+from raygeo.ops.polyline import (
+    LinkStrategy,
+    find_pass_entry,
+    find_pass_exit,
+    link_passes,
+    polyline_to_ops,
+)
 from raygeo.ops.types import CommandType
 
 
@@ -231,6 +238,60 @@ def generate_examples(output_dir):
                 "Three rectangular passes linked with StayDown (left) vs "
                 "Retract (right). StayDown moves directly between passes; "
                 "Retract lifts to safe_z, traverses XY, then descends."
+            ),
+        }
+    )
+
+    # ── find_pass_entry / find_pass_exit ──
+    fig, ax = plt.subplots(figsize=(8, 5))
+
+    ops = ops_mod.Ops()
+    ops.move_to(10.0, 10.0, 0.0)
+    ops.line_to(50.0, 10.0, 0.0)
+    ops.line_to(50.0, 40.0, -2.0)
+    ops.line_to(10.0, 40.0, -2.0)
+
+    _plot_ops_2d(ax, ops, linewidth=2)
+    entry = find_pass_entry(ops)
+    if entry:
+        ax.scatter(
+            entry[0], entry[1], c="forestgreen", s=120, zorder=6, label="Entry"
+        )
+    exit_ = find_pass_exit(ops)
+    if exit_:
+        ax.scatter(
+            exit_[0], exit_[1], c="crimson", s=120, zorder=6, label="Exit"
+        )
+
+    ax.plot([], [], color="steelblue", linewidth=2, label="Cut (LineTo)")
+    ax.plot(
+        [],
+        [],
+        color="darkorange",
+        linewidth=1.2,
+        linestyle="--",
+        label="Travel (MoveTo)",
+    )
+    ax.set_aspect("equal")
+    ax.set_xlim(0, 65)
+    ax.set_ylim(0, 55)
+    ax.set_title("find_pass_entry / find_pass_exit")
+    ax.set_xlabel("X")
+    ax.set_ylabel("Y")
+    ax.grid(True, alpha=0.3)
+    ax.legend(fontsize=8, loc="lower right")
+
+    fig.tight_layout()
+    path = output_dir / "polyline-pass-entry-exit.png"
+    fig.savefig(path, dpi=150)
+    plt.close(fig)
+    images.append(
+        {
+            "path": "polyline-pass-entry-exit.png",
+            "caption": (
+                "A single pass with the entry point (green, found by "
+                "find_pass_entry) and exit point (red, found by "
+                "find_pass_exit) highlighted."
             ),
         }
     )

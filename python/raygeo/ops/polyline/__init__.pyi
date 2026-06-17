@@ -6,6 +6,8 @@ from raygeo import ops
 import typing
 __all__ = [
     "LinkStrategy",
+    "find_pass_entry",
+    "find_pass_exit",
     "link_passes",
     "polyline_to_ops",
 ]
@@ -14,6 +16,27 @@ __all__ = [
 class LinkStrategy:
     RETRACT: builtins.str = 'retract'
     STAY_DOWN: builtins.str = 'stay_down'
+
+def find_pass_entry(ops: ops.Ops) -> tuple[float, float, float] | None:
+    r"""
+    Find the entry point of an Ops sequence.
+    
+    Scans for the first travel (MoveTo) endpoint, falling back to
+    the first moving command endpoint.
+    
+    :param ops: An :class:`~raygeo.ops.Ops` container.
+    :returns: ``(x, y, z)`` or ``None`` if no moving commands exist.
+    """
+
+def find_pass_exit(ops: ops.Ops) -> tuple[float, float, float] | None:
+    r"""
+    Find the exit point of an Ops sequence.
+    
+    Scans backwards for the last moving command endpoint.
+    
+    :param ops: An :class:`~raygeo.ops.Ops` container.
+    :returns: ``(x, y, z)`` or ``None`` if no moving commands exist.
+    """
 
 def link_passes(passes: list[ops.Ops], safe_z: float, strategy: str | LinkStrategy) -> ops.Ops:
     r"""

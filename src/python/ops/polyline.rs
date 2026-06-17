@@ -4,7 +4,9 @@ use pyo3_stub_gen::derive::{
     gen_stub_pyclass, gen_stub_pyfunction, gen_stub_pymethods,
 };
 
-use crate::ops::polyline::{link_passes, polyline_to_ops, LinkStrategy};
+use crate::ops::polyline::{
+    find_pass_entry, find_pass_exit, link_passes, polyline_to_ops, LinkStrategy,
+};
 use crate::python::ops::PyOps;
 
 pub(crate) fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
@@ -15,6 +17,12 @@ pub(crate) fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     )?)?;
     poly_mod
         .add_function(wrap_pyfunction!(link_passes_py, poly_mod.clone())?)?;
+    poly_mod.add_function(wrap_pyfunction!(
+        find_pass_entry_py,
+        poly_mod.clone()
+    )?)?;
+    poly_mod
+        .add_function(wrap_pyfunction!(find_pass_exit_py, poly_mod.clone())?)?;
     poly_mod.add_class::<PyLinkStrategy>()?;
     m.add_submodule(&poly_mod)?;
 
@@ -117,6 +125,63 @@ fn link_passes_py(
 
     let ops = link_passes(&opss, safe_z, strategy_enum);
     Ok(PyOps { inner: ops })
+}
+
+#[gen_stub_pyfunction(
+    python = r#"
+    from raygeo.ops import Ops
+
+    def find_pass_entry(
+        ops: ops.Ops,
+    ) -> tuple[float, float, float] | None:
+        """Find the entry point of an Ops sequence.
+
+        Scans for the first travel (MoveTo) endpoint, falling back to
+        the first moving command endpoint.
+
+        :param ops: An :class:`~raygeo.ops.Ops` container.
+        :returns: ``(x, y, z)`` or ``None`` if no moving commands exist.
+        """
+    "#,
+    module = "raygeo.ops.polyline"
+)]
+#[pyfunction(name = "find_pass_entry")]
+fn find_pass_entry_py(
+    ops: &Bound<'_, PyOps>,
+) -> PyResult<Option<(f64, f64, f64)>> {
+    let inner = ops.borrow();
+    match find_pass_entry(&inner.inner) {
+        Some(pt) => Ok(Some((pt.x, pt.y, pt.z))),
+        None => Ok(None),
+    }
+}
+
+#[gen_stub_pyfunction(
+    python = r#"
+    from raygeo.ops import Ops
+
+    def find_pass_exit(
+        ops: ops.Ops,
+    ) -> tuple[float, float, float] | None:
+        """Find the exit point of an Ops sequence.
+
+        Scans backwards for the last moving command endpoint.
+
+        :param ops: An :class:`~raygeo.ops.Ops` container.
+        :returns: ``(x, y, z)`` or ``None`` if no moving commands exist.
+        """
+    "#,
+    module = "raygeo.ops.polyline"
+)]
+#[pyfunction(name = "find_pass_exit")]
+fn find_pass_exit_py(
+    ops: &Bound<'_, PyOps>,
+) -> PyResult<Option<(f64, f64, f64)>> {
+    let inner = ops.borrow();
+    match find_pass_exit(&inner.inner) {
+        Some(pt) => Ok(Some((pt.x, pt.y, pt.z))),
+        None => Ok(None),
+    }
 }
 
 #[gen_stub_pyclass]

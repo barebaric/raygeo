@@ -220,6 +220,11 @@ _INLINE_IMAGE_MAP = {
             "polyline-link-passes",
             "Three passes linked with StayDown vs Retract strategies",
         ),
+        (
+            "find_pass_entry",
+            "polyline-pass-entry-exit",
+            "Entry and exit points from find_pass_entry / find_pass_exit",
+        ),
     ],
     "raygeo.ops.raster.md": [
         (
