@@ -13,7 +13,7 @@ dict or numpy arrays for persistence.
 
 The module also provides command-type enumerations (CommandType,
 CommandCategory, SectionType), machine State tracking (power, speed,
-air assist, frequency), and an Axis bitflag for multi-axis machines.
+coolant, frequency), and an Axis bitflag for multi-axis machines.
 """
 
 import builtins
@@ -119,6 +119,16 @@ class CommandInfo:
     def laser_uid(self) -> typing.Optional[builtins.str]:
         r"""
         Unique identifier of the active laser, if a laser-setting command.
+        """
+    @property
+    def spindle_speed(self) -> typing.Optional[builtins.int]:
+        r"""
+        Spindle speed in RPM, if a SetSpindleSpeed command.
+        """
+    @property
+    def coolant(self) -> typing.Optional[builtins.str]:
+        r"""
+        Coolant mode string, if a SetCoolant command.
         """
     @property
     def duration_ms(self) -> typing.Optional[builtins.float]:
@@ -393,6 +403,24 @@ class Ops:
         :raises TypeError: If the command is not a SetPulseWidth.
         :complexity: O(1) time, O(1) space
         """
+    def spindle_speed(self, idx: builtins.int) -> builtins.int:
+        r"""
+        Get the spindle speed from a SetSpindleSpeed command.
+        
+        :param idx: Command index.
+        :returns: Spindle speed in RPM.
+        :raises TypeError: If the command is not a SetSpindleSpeed.
+        :complexity: O(1) time, O(1) space
+        """
+    def coolant(self, idx: builtins.int) -> builtins.str:
+        r"""
+        Get the coolant mode from a SetCoolant command.
+        
+        :param idx: Command index.
+        :returns: Coolant mode string (e.g. "Off", "Flood", "Mist", "Air").
+        :raises TypeError: If the command is not a SetCoolant.
+        :complexity: O(1) time, O(1) space
+        """
     def laser_uid(self, idx: builtins.int) -> builtins.str:
         r"""
         Get the laser UID from a SetLaser command.
@@ -531,13 +559,6 @@ class Ops:
         :param duration_ms: Dwell duration in milliseconds.
         :complexity: O(1) time, O(1) space
         """
-    def enable_air_assist(self, enabled: builtins.bool = True) -> None:
-        r"""
-        Enable air assist for subsequent cutting.
-        
-        :param enabled: Whether to enable air assist (default True).
-        :complexity: O(1) time, O(1) space
-        """
     def set_laser(self, laser_uid: builtins.str) -> None:
         r"""
         Switch to a specific laser by UID.
@@ -557,6 +578,20 @@ class Ops:
         Set the laser pulse width.
         
         :param pulse_width: Pulse width in microseconds.
+        :complexity: O(1) time, O(1) space
+        """
+    def set_spindle_speed(self, speed: builtins.int) -> None:
+        r"""
+        Set the spindle speed for subsequent commands.
+        
+        :param speed: Spindle speed in RPM.
+        :complexity: O(1) time, O(1) space
+        """
+    def set_coolant(self, mode: state.CoolantMode) -> None:
+        r"""
+        Set the coolant mode for subsequent commands.
+        
+        :param mode: Coolant mode.
         :complexity: O(1) time, O(1) space
         """
     def scan_to(self, x: builtins.float, y: builtins.float, z: builtins.float = 0.0, power_values: typing.Optional[typing.Sequence[builtins.int]] = None, extra: typing.Optional[dict] = None) -> None:

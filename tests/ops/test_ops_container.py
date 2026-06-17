@@ -11,7 +11,7 @@ from raygeo.ops import (
     Ops,
 )
 from raygeo.ops.axis import Axis
-from raygeo.ops.state import State
+from raygeo.ops.state import CoolantMode, State
 from raygeo.ops.types import CommandCategory, CommandType, SectionType
 
 
@@ -26,7 +26,7 @@ def sample_ops():
     ops.move_to(0, 0)
     ops.line_to(10, 10)
     ops.set_power(0.5)
-    ops.enable_air_assist()
+    ops.set_coolant(CoolantMode.AIR)
     return ops
 
 
@@ -248,18 +248,62 @@ def test_set_pulse_width():
     assert ops.inspect(last_idx).pulse_width == 5.0
 
 
-def test_enable_air_assist(empty_ops):
-    empty_ops.enable_air_assist()
-    assert (
-        empty_ops.command_type(empty_ops.len() - 1)
-        == CommandType.ENABLE_AIR_ASSIST
-    )
+def test_set_spindle_speed():
+    ops = Ops()
+    ops.set_spindle_speed(12000)
+    assert ops.command_type(0) == CommandType.SET_SPINDLE_SPEED
+    assert ops.spindle_speed(0) == 12000
 
-    empty_ops.enable_air_assist(False)
-    assert (
-        empty_ops.command_type(empty_ops.len() - 1)
-        == CommandType.DISABLE_AIR_ASSIST
-    )
+
+def test_set_coolant():
+    ops = Ops()
+    ops.set_coolant(CoolantMode.FLOOD)
+    assert ops.command_type(0) == CommandType.SET_COOLANT
+    assert ops.coolant(0) == "Flood"
+
+
+def test_spindle_speed_and_coolant_inspect():
+    ops = Ops()
+    ops.set_spindle_speed(8000)
+    ops.set_coolant(CoolantMode.MIST)
+    si = ops.inspect(0)
+    assert si.type_ == CommandType.SET_SPINDLE_SPEED
+    assert si.spindle_speed == 8000
+    assert si.coolant is None
+    ci = ops.inspect(1)
+    assert ci.type_ == CommandType.SET_COOLANT
+    assert ci.coolant == "Mist"
+    assert ci.spindle_speed is None
+
+
+def test_spindle_speed_and_coolant_are_state():
+    ops = Ops()
+    ops.set_spindle_speed(5000)
+    assert ops.is_state(0)
+    ops.set_coolant(CoolantMode.AIR)
+    assert ops.is_state(1)
+
+
+def test_default_spindle_speed_and_coolant():
+    ops = Ops()
+    with pytest.raises(IndexError):
+        ops.spindle_speed(0)
+    with pytest.raises(IndexError):
+        ops.coolant(0)
+
+
+def test_spindle_speed_type_error():
+    ops = Ops()
+    ops.move_to(0, 0, 0)
+    with pytest.raises(TypeError):
+        ops.spindle_speed(0)
+
+
+def test_coolant_type_error():
+    ops = Ops()
+    ops.move_to(0, 0, 0)
+    with pytest.raises(TypeError):
+        ops.coolant(0)
 
 
 def test_scan_to(empty_ops):
@@ -1148,7 +1192,7 @@ def test_serialization_deserialization_all_types():
     ops.set_travel_speed(5000)
     ops.set_cut_speed(1000)
     ops.set_power(0.8)
-    ops.enable_air_assist()
+    ops.set_coolant(CoolantMode.AIR)
     ops.set_laser("laser-2")
     ops.move_to(1, 1, 1)
     ops.line_to(2, 2, 2)
@@ -1502,7 +1546,7 @@ def test_estimate_time_ignores_state_commands():
     ops.move_to(0, 0)
     ops.set_power(0.5)  # State command
     ops.set_cut_speed(1000)  # State command
-    ops.enable_air_assist()  # State command
+    ops.set_coolant(CoolantMode.AIR)  # State command
     ops.line_to(60, 0)  # 60mm cut
 
     # Disable acceleration for simpler calculation
@@ -1575,7 +1619,7 @@ def test_numpy_serialization_round_trip_all_commands():
     ops.set_travel_speed(6000)  # State with data
     ops.set_cut_speed(1500)  # State with data
     ops.set_power(0.75)  # State with data
-    ops.enable_air_assist()  # State
+    ops.set_coolant(CoolantMode.AIR)  # State
     ops.set_laser("laser-xyz")  # State with data
     ops.move_to(1, 2, 3)  # Geometric
     ops.line_to(4, 5, 6)  # Geometric
@@ -1586,7 +1630,7 @@ def test_numpy_serialization_round_trip_all_commands():
         end=(10.0, 11.0, 12.0),
     )
     ops.scan_to(10, 11, 12, bytearray([10, 20, 30]))  # Geometric
-    ops.enable_air_assist(False)  # State
+    ops.set_coolant(CoolantMode.OFF)  # State
     ops.layer_end("layer-1")  # Marker with data
     ops.job_end()  # Marker
 
@@ -2362,13 +2406,13 @@ def test_state_at():
     ops = Ops()
     ops.set_power(0.5)
     ops.set_cut_speed(800)
-    ops.enable_air_assist()
+    ops.set_coolant(CoolantMode.AIR)
     ops.move_to(0, 0)
 
     state = ops.state_at(3)
     assert state.power == 0.5
     assert state.cut_speed == 800
-    assert state.air_assist is True
+    assert state.coolant == CoolantMode.AIR
 
 
 def test_state_at_no_state_commands():
@@ -2376,7 +2420,7 @@ def test_state_at_no_state_commands():
     ops.move_to(0, 0)
     state = ops.state_at(0)
     assert state.power == 0.0
-    assert state.air_assist is False
+    assert state.coolant is None
 
 
 def test_state_at_mid_sequence():
@@ -2590,7 +2634,7 @@ def test_without_state():
     ops.move_to(0, 0)
     ops.set_cut_speed(800)
     ops.line_to(10, 0)
-    ops.enable_air_assist()
+    ops.set_coolant(CoolantMode.AIR)
 
     filtered = ops.without_state()
     assert filtered.len() == 2

@@ -1,18 +1,28 @@
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
+pub enum CoolantMode {
+    #[default]
+    Off,
+    Flood,
+    Mist,
+    Air,
+}
+
 #[derive(Clone, Debug, Default)]
 pub struct State {
     pub power: f64,
-    pub air_assist: bool,
     pub cut_speed: Option<i32>,
     pub travel_speed: Option<i32>,
     pub active_laser_uid: Option<String>,
     pub frequency: Option<i32>,
     pub pulse_width: Option<f64>,
     pub dwell_ms: Option<f64>,
+    pub spindle_speed: Option<u32>,
+    pub coolant: Option<CoolantMode>,
 }
 
 impl State {
     pub fn allow_rapid_change(&self, target: &State) -> bool {
-        self.air_assist == target.air_assist
+        self.coolant == target.coolant
     }
 }
 
@@ -24,7 +34,6 @@ mod tests {
     fn test_state_default() {
         let s = State::default();
         assert_eq!(s.power, 0.0);
-        assert!(!s.air_assist);
         assert!(s.cut_speed.is_none());
         assert!(s.travel_speed.is_none());
         assert!(s.active_laser_uid.is_none());
@@ -33,13 +42,13 @@ mod tests {
     }
 
     #[test]
-    fn test_allow_rapid_change_same_air_assist() {
+    fn test_allow_rapid_change_same_coolant() {
         let a = State {
-            air_assist: true,
+            coolant: Some(CoolantMode::Air),
             ..Default::default()
         };
         let b = State {
-            air_assist: true,
+            coolant: Some(CoolantMode::Air),
             power: 50.0,
             ..Default::default()
         };
@@ -47,13 +56,13 @@ mod tests {
     }
 
     #[test]
-    fn test_allow_rapid_change_different_air_assist() {
+    fn test_allow_rapid_change_different_coolant() {
         let a = State {
-            air_assist: true,
+            coolant: Some(CoolantMode::Air),
             ..Default::default()
         };
         let b = State {
-            air_assist: false,
+            coolant: Some(CoolantMode::Flood),
             ..Default::default()
         };
         assert!(!a.allow_rapid_change(&b));

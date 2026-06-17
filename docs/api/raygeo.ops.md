@@ -13,7 +13,7 @@ transform with 4x4 matrices), clipping to rectangles or regions, linearizing cur
 processing time, and serializing to dict or numpy arrays for persistence.
 
 The module also provides command-type enumerations (CommandType, CommandCategory, SectionType),
-machine State tracking (power, speed, air assist, frequency), and an Axis bitflag for multi-axis
+machine State tracking (power, speed, coolant, frequency), and an Axis bitflag for multi-axis
 machines.
 
 ## CommandInfo
@@ -62,6 +62,14 @@ control2: Optional[tuple[float, float, float]]
 ```
 
 Second cubic-Bezier control point, if a Bezier command.
+
+### `coolant`
+
+```python
+coolant: Optional[str]
+```
+
+Coolant mode string, if a SetCoolant command.
 
 ### `duration_ms`
 
@@ -150,6 +158,14 @@ speed: Optional[int]
 ```
 
 Cut speed setting, if a speed-setting command.
+
+### `spindle_speed`
+
+```python
+spindle_speed: Optional[int]
+```
+
+Spindle speed in RPM, if a SetSpindleSpeed command.
 
 ### `state`
 
@@ -497,6 +513,22 @@ Get the **CommandType** at the given index.
 | _Returns_    | `types.CommandType` | The \*\*CommandType\*\* of the command. |
 | _Complexity_ |                     | O(1) time, O(1) space                   |
 
+### `coolant()`
+
+```python
+coolant(idx: int) -> str
+```
+
+Get the coolant mode from a SetCoolant command.
+
+**Raises:** `TypeError` — If the command is not a SetCoolant.
+
+| Parameter    | Type  | Description                                               |
+| ------------ | ----- | --------------------------------------------------------- |
+| `idx`        | `int` | Command index.                                            |
+| _Returns_    | `str` | Coolant mode string (e.g. "Off", "Flood", "Mist", "Air"). |
+| _Complexity_ |       | O(1) time, O(1) space                                     |
+
 ### `copy()`
 
 ```python
@@ -611,20 +643,6 @@ Get the duration (milliseconds) of a Dwell command.
 | `idx`        | `int`   | Command index.            |
 | _Returns_    | `float` | Duration in milliseconds. |
 | _Complexity_ |         | O(1) time, O(1) space     |
-
-### `enable_air_assist()`
-
-```python
-enable_air_assist(enabled: bool = True) -> None
-```
-
-Enable air assist for subsequent cutting.
-
-| Parameter    | Type          | Description                                  |
-| ------------ | ------------- | -------------------------------------------- |
-| `enabled`    | `bool = True` | Whether to enable air assist (default True). |
-| _Returns_    | `None`        |                                              |
-| _Complexity_ |               | O(1) time, O(1) space                        |
 
 ### `endpoint()`
 
@@ -1452,6 +1470,20 @@ Return index ranges for each contiguous cutting segment.
 | _Returns_    | `list[list[int]]` | A list of index lists, one per segment. |
 | _Complexity_ |                   | O(n) time, O(n) space                   |
 
+### `set_coolant()`
+
+```python
+set_coolant(mode: state.CoolantMode) -> None
+```
+
+Set the coolant mode for subsequent commands.
+
+| Parameter    | Type                | Description           |
+| ------------ | ------------------- | --------------------- |
+| `mode`       | `state.CoolantMode` | Coolant mode.         |
+| _Returns_    | `None`              |                       |
+| _Complexity_ |                     | O(1) time, O(1) space |
+
 ### `set_cut_speed()`
 
 ```python
@@ -1522,6 +1554,20 @@ Set the laser pulse width.
 | _Returns_     | `None`  |                              |
 | _Complexity_  |         | O(1) time, O(1) space        |
 
+### `set_spindle_speed()`
+
+```python
+set_spindle_speed(speed: int) -> None
+```
+
+Set the spindle speed for subsequent commands.
+
+| Parameter    | Type   | Description           |
+| ------------ | ------ | --------------------- |
+| `speed`      | `int`  | Spindle speed in RPM. |
+| _Returns_    | `None` |                       |
+| _Complexity_ |        | O(1) time, O(1) space |
+
 ### `set_state_at()`
 
 ```python
@@ -1579,6 +1625,22 @@ Get the speed value from a SetCutSpeed or SetTravelSpeed command.
 | ------------ | ----- | --------------------- |
 | `idx`        | `int` | Command index.        |
 | _Returns_    | `int` | Speed in mm/s.        |
+| _Complexity_ |       | O(1) time, O(1) space |
+
+### `spindle_speed()`
+
+```python
+spindle_speed(idx: int) -> int
+```
+
+Get the spindle speed from a SetSpindleSpeed command.
+
+**Raises:** `TypeError` — If the command is not a SetSpindleSpeed.
+
+| Parameter    | Type  | Description           |
+| ------------ | ----- | --------------------- |
+| `idx`        | `int` | Command index.        |
+| _Returns_    | `int` | Spindle speed in RPM. |
 | _Complexity_ |       | O(1) time, O(1) space |
 
 ### `split_into_subpaths()`

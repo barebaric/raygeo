@@ -2,8 +2,8 @@ use pyo3::prelude::*;
 use pyo3::types::{PyBytes, PyDict, PyList, PySlice, PyString};
 
 use crate::ops::{
-    Axis, CommandCategory, CommandType, MarkerCmd, MoveCmd, OpCategory,
-    StateCmd,
+    Axis, CommandCategory, CommandType, CoolantMode, MarkerCmd, MoveCmd,
+    OpCategory, StateCmd,
 };
 
 use super::axis::PyAxis;
@@ -125,10 +125,15 @@ fn cmd_to_dict<'a>(
             StateCmd::SetPulseWidth(pw) => {
                 d.set_item("pulse_width", *pw)?;
             }
+            StateCmd::SetSpindleSpeed(s) => {
+                d.set_item("spindle_speed", *s)?;
+            }
+            StateCmd::SetCoolant(mode) => {
+                d.set_item("coolant", format!("{:?}", mode))?;
+            }
             StateCmd::SetLaser(uid) => {
                 d.set_item("laser_uid", uid.to_string())?;
             }
-            _ => {}
         },
         OpCategory::Marker(cmd) => match cmd {
             MarkerCmd::LayerStart(uid) | MarkerCmd::LayerEnd(uid) => {
@@ -326,6 +331,28 @@ fn create_and_append_command(
             })?
             .extract()?;
         ops.set_pulse_width(pw);
+    } else if ct == CommandType::SetSpindleSpeed {
+        let s: u32 = cmd_data
+            .get_item("spindle_speed")?
+            .ok_or_else(|| {
+                pyo3::exceptions::PyKeyError::new_err("missing 'spindle_speed'")
+            })?
+            .extract()?;
+        ops.set_spindle_speed(s);
+    } else if ct == CommandType::SetCoolant {
+        let mode_str: String = cmd_data
+            .get_item("coolant")?
+            .ok_or_else(|| {
+                pyo3::exceptions::PyKeyError::new_err("missing 'coolant'")
+            })?
+            .extract()?;
+        let mode = match mode_str.as_str() {
+            "Flood" => CoolantMode::Flood,
+            "Mist" => CoolantMode::Mist,
+            "Air" => CoolantMode::Air,
+            _ => CoolantMode::Off,
+        };
+        ops.set_coolant(mode);
     } else if ct == CommandType::SetLaser {
         let uid: String = cmd_data
             .get_item("laser_uid")?
@@ -334,10 +361,6 @@ fn create_and_append_command(
             })?
             .extract()?;
         ops.set_laser(&uid);
-    } else if ct == CommandType::EnableAirAssist {
-        ops.enable_air_assist(true);
-    } else if ct == CommandType::DisableAirAssist {
-        ops.enable_air_assist(false);
     } else if ct == CommandType::LayerStart || ct == CommandType::LayerEnd {
         let uid: String = cmd_data
             .get_item("layer_uid")?

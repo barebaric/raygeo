@@ -26,16 +26,16 @@ pub enum CommandType {
     SetCutSpeed = 11,
     #[strum(serialize = "SET_TRAVEL_SPEED")]
     SetTravelSpeed = 12,
-    #[strum(serialize = "ENABLE_AIR_ASSIST")]
-    EnableAirAssist = 13,
-    #[strum(serialize = "DISABLE_AIR_ASSIST")]
-    DisableAirAssist = 14,
     #[strum(serialize = "SET_LASER")]
     SetLaser = 15,
     #[strum(serialize = "SET_FREQUENCY")]
     SetFrequency = 16,
     #[strum(serialize = "SET_PULSE_WIDTH")]
     SetPulseWidth = 17,
+    #[strum(serialize = "SET_SPINDLE_SPEED")]
+    SetSpindleSpeed = 18,
+    #[strum(serialize = "SET_COOLANT")]
+    SetCoolant = 20,
     #[strum(serialize = "JOB_START")]
     JobStart = 100,
     #[strum(serialize = "JOB_END")]
@@ -73,9 +73,9 @@ impl CommandType {
             | CommandType::SetTravelSpeed
             | CommandType::SetFrequency
             | CommandType::SetPulseWidth
-            | CommandType::EnableAirAssist
-            | CommandType::DisableAirAssist
-            | CommandType::SetLaser => CommandCategory::State,
+            | CommandType::SetLaser
+            | CommandType::SetSpindleSpeed
+            | CommandType::SetCoolant => CommandCategory::State,
             CommandType::JobStart
             | CommandType::JobEnd
             | CommandType::LayerStart

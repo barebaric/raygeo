@@ -74,11 +74,11 @@ class CommandType:
     SET_POWER: CommandType = CommandType.SET_POWER
     SET_CUT_SPEED: CommandType = CommandType.SET_CUT_SPEED
     SET_TRAVEL_SPEED: CommandType = CommandType.SET_TRAVEL_SPEED
-    ENABLE_AIR_ASSIST: CommandType = CommandType.ENABLE_AIR_ASSIST
-    DISABLE_AIR_ASSIST: CommandType = CommandType.DISABLE_AIR_ASSIST
     SET_LASER: CommandType = CommandType.SET_LASER
     SET_FREQUENCY: CommandType = CommandType.SET_FREQUENCY
     SET_PULSE_WIDTH: CommandType = CommandType.SET_PULSE_WIDTH
+    SET_SPINDLE_SPEED: CommandType = CommandType.SET_SPINDLE_SPEED
+    SET_COOLANT: CommandType = CommandType.SET_COOLANT
     JOB_START: CommandType = CommandType.JOB_START
     JOB_END: CommandType = CommandType.JOB_END
     LAYER_START: CommandType = CommandType.LAYER_START

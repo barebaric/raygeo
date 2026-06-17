@@ -1,7 +1,7 @@
 from typing import List
 
 from raygeo.ops import Ops
-from raygeo.ops.state import State
+from raygeo.ops.state import CoolantMode, State
 from raygeo.ops.types import CommandType
 
 
@@ -45,7 +45,7 @@ def test_group_by_command_type_state_commands():
     ops.set_power(1.0)
     ops.move_to(0, 0)
     ops.line_to(1, 0)
-    ops.enable_air_assist(False)
+    ops.set_coolant(CoolantMode.OFF)
     indices = list(ops.segment_indices())
     assert len(indices) == 3
     assert ops.is_state(indices[0][0])
@@ -54,7 +54,7 @@ def test_group_by_command_type_state_commands():
 
 
 def _create_ops_with_states(states_config: List[bool]) -> Ops:
-    """Helper to create ops with specified air_assist states."""
+    """Helper to create ops with specified coolant states."""
     ops = Ops()
     for i, air_on in enumerate(states_config):
         ops.line_to(float(i), float(i))
@@ -63,7 +63,7 @@ def _create_ops_with_states(states_config: List[bool]) -> Ops:
             i,
             State(
                 power=1.0,
-                air_assist=air_on,
+                coolant=CoolantMode.AIR if air_on else CoolantMode.OFF,
             ),
         )
     return ops
@@ -107,14 +107,14 @@ def test_group_by_state_continuity():
         0,
         State(
             power=1.0,
-            air_assist=True,
+            coolant=CoolantMode.AIR,
         ),
     )
     ops_marker.set_state_at(
         2,
         State(
             power=1.0,
-            air_assist=True,
+            coolant=CoolantMode.AIR,
         ),
     )
     groups_m = ops_marker.group_by_state_continuity()
@@ -150,7 +150,7 @@ def test_segments():
     ops.move_to(0, 0)
     ops.line_to(10, 10)
     ops.set_power(0.5)
-    ops.enable_air_assist()
+    ops.set_coolant(CoolantMode.AIR)
     ops.move_to(5, 5)
     segments = list(ops.segment_indices())
     assert len(segments) > 0
@@ -164,7 +164,7 @@ def test_without_state():
     ops.move_to(0, 0)
     ops.set_cut_speed(800)
     ops.line_to(10, 0)
-    ops.enable_air_assist()
+    ops.set_coolant(CoolantMode.AIR)
 
     filtered = ops.without_state()
     assert filtered.len() == 2

@@ -34,6 +34,6 @@ pub use lead_in_out::apply_lead_in_out;
 pub use merge_lines::merge_overlapping_lines;
 pub use overscan::apply_overscan;
 pub use polyline::{link_passes, polyline_to_ops, LinkStrategy};
-pub use state::State;
+pub use state::{CoolantMode, State};
 pub use tabs::{apply_tab_gaps, apply_tab_power, ClipPoint};
 pub use types::{MarkerCmd, MoveCmd, OpCategory, OpNode, StateCmd};

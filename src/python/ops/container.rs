@@ -17,7 +17,7 @@ use crate::python::geo::flex_point::{
 use crate::types::{Point, Point3D, Rect};
 
 use super::axis::PyAxis;
-use super::state::PyState;
+use super::state::{PyCoolantMode, PyState};
 use super::types::{PyCommandCategory, PyCommandType, PySectionType};
 use crate::python::geo::geometry::Geometry as PyGeometry;
 
@@ -176,6 +176,12 @@ pub struct PyCommandInfo {
     /// Unique identifier of the active laser, if a laser-setting command.
     #[pyo3(get)]
     pub laser_uid: Option<String>,
+    /// Spindle speed in RPM, if a SetSpindleSpeed command.
+    #[pyo3(get)]
+    pub spindle_speed: Option<u32>,
+    /// Coolant mode string, if a SetCoolant command.
+    #[pyo3(get)]
+    pub coolant: Option<String>,
     /// Dwell duration in ms, if a dwell command.
     #[pyo3(get)]
     pub duration_ms: Option<f64>,
@@ -233,6 +239,12 @@ impl PyCommandInfo {
                 return Ok(false);
             }
             if self.laser_uid != other_info.laser_uid {
+                return Ok(false);
+            }
+            if self.spindle_speed != other_info.spindle_speed {
+                return Ok(false);
+            }
+            if self.coolant != other_info.coolant {
                 return Ok(false);
             }
             if self.duration_ms != other_info.duration_ms {
@@ -789,6 +801,52 @@ impl PyOps {
         }
     }
 
+    /// Get the spindle speed from a SetSpindleSpeed command.
+    ///
+    /// :param idx: Command index.
+    /// :returns: Spindle speed in RPM.
+    /// :raises TypeError: If the command is not a SetSpindleSpeed.
+    /// :complexity: O(1) time, O(1) space
+    fn spindle_speed(&self, idx: usize) -> PyResult<u32> {
+        if idx >= self.inner.len() {
+            return Err(PyErr::new::<pyo3::exceptions::PyIndexError, _>(
+                "index out of range",
+            ));
+        }
+        if let OpCategory::State(StateCmd::SetSpindleSpeed(s)) =
+            &self.inner.commands[idx].category
+        {
+            Ok(*s)
+        } else {
+            Err(PyErr::new::<pyo3::exceptions::PyTypeError, _>(
+                "Not a SetSpindleSpeedCommand",
+            ))
+        }
+    }
+
+    /// Get the coolant mode from a SetCoolant command.
+    ///
+    /// :param idx: Command index.
+    /// :returns: Coolant mode string (e.g. "Off", "Flood", "Mist", "Air").
+    /// :raises TypeError: If the command is not a SetCoolant.
+    /// :complexity: O(1) time, O(1) space
+    fn coolant(&self, idx: usize) -> PyResult<String> {
+        if idx >= self.inner.len() {
+            return Err(PyErr::new::<pyo3::exceptions::PyIndexError, _>(
+                "index out of range",
+            ));
+        }
+        if let OpCategory::State(StateCmd::SetCoolant(mode)) =
+            &self.inner.commands[idx].category
+        {
+            Ok(format!("{:?}", mode))
+        } else {
+            Err(PyErr::new::<pyo3::exceptions::PyTypeError, _>(
+                "Not a SetCoolantCommand",
+            ))
+        }
+    }
+
     /// Get the laser UID from a SetLaser command.
     ///
     /// :param idx: Command index.
@@ -1099,15 +1157,6 @@ impl PyOps {
         self.inner.dwell(duration_ms);
     }
 
-    /// Enable air assist for subsequent cutting.
-    ///
-    /// :param enabled: Whether to enable air assist (default True).
-    /// :complexity: O(1) time, O(1) space
-    #[pyo3(signature = (enabled = true))]
-    fn enable_air_assist(&mut self, enabled: bool) {
-        self.inner.enable_air_assist(enabled);
-    }
-
     /// Switch to a specific laser by UID.
     ///
     /// :param laser_uid: The laser identifier.
@@ -1130,6 +1179,22 @@ impl PyOps {
     /// :complexity: O(1) time, O(1) space
     fn set_pulse_width(&mut self, pulse_width: f64) {
         self.inner.set_pulse_width(pulse_width);
+    }
+
+    /// Set the spindle speed for subsequent commands.
+    ///
+    /// :param speed: Spindle speed in RPM.
+    /// :complexity: O(1) time, O(1) space
+    fn set_spindle_speed(&mut self, speed: u32) {
+        self.inner.set_spindle_speed(speed);
+    }
+
+    /// Set the coolant mode for subsequent commands.
+    ///
+    /// :param mode: Coolant mode.
+    /// :complexity: O(1) time, O(1) space
+    fn set_coolant(&mut self, mode: &PyCoolantMode) {
+        self.inner.set_coolant(mode.0);
     }
 
     /// Add a scan-line move with per-pixel power values.
@@ -1458,6 +1523,8 @@ impl PyOps {
             frequency: None,
             pulse_width: None,
             laser_uid: None,
+            spindle_speed: None,
+            coolant: None,
             duration_ms: None,
             layer_uid: None,
             workpiece_uid: None,
@@ -1505,11 +1572,14 @@ impl PyOps {
                 }
                 StateCmd::SetFrequency(f) => info.frequency = Some(*f),
                 StateCmd::SetPulseWidth(pw) => info.pulse_width = Some(*pw),
+                StateCmd::SetSpindleSpeed(s) => info.spindle_speed = Some(*s),
+                StateCmd::SetCoolant(mode) => {
+                    info.coolant = Some(format!("{:?}", mode))
+                }
                 StateCmd::SetLaser(uid) => {
                     info.laser_uid = Some(uid.to_string())
                 }
                 StateCmd::Dwell(d) => info.duration_ms = Some(*d),
-                _ => {}
             },
             OpCategory::Marker(cmd) => match cmd {
                 MarkerCmd::LayerStart(uid) | MarkerCmd::LayerEnd(uid) => {

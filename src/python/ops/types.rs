@@ -72,12 +72,6 @@ impl PyCommandType {
     pub const SET_TRAVEL_SPEED: PyCommandType =
         PyCommandType(CommandType::SetTravelSpeed);
     #[classattr]
-    pub const ENABLE_AIR_ASSIST: PyCommandType =
-        PyCommandType(CommandType::EnableAirAssist);
-    #[classattr]
-    pub const DISABLE_AIR_ASSIST: PyCommandType =
-        PyCommandType(CommandType::DisableAirAssist);
-    #[classattr]
     pub const SET_LASER: PyCommandType = PyCommandType(CommandType::SetLaser);
     #[classattr]
     pub const SET_FREQUENCY: PyCommandType =
@@ -85,6 +79,12 @@ impl PyCommandType {
     #[classattr]
     pub const SET_PULSE_WIDTH: PyCommandType =
         PyCommandType(CommandType::SetPulseWidth);
+    #[classattr]
+    pub const SET_SPINDLE_SPEED: PyCommandType =
+        PyCommandType(CommandType::SetSpindleSpeed);
+    #[classattr]
+    pub const SET_COOLANT: PyCommandType =
+        PyCommandType(CommandType::SetCoolant);
     #[classattr]
     pub const JOB_START: PyCommandType = PyCommandType(CommandType::JobStart);
     #[classattr]

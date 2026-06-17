@@ -4,18 +4,37 @@ sidebar_label: raygeo.ops.state
 sidebar_position: 41
 ---
 
-Machine state tracking for laser cutting.
+Machine state tracking for laser cutting and CNC milling.
 
 Tracks the current or intended machine state at any point in a command sequence, including power
-level (0.0–1.0), air assist on/off, cut speed and travel speed, active laser source UID, pulse
-frequency, and pulse width. State objects are used by Ops to associate machine parameters with
-moving commands and to detect rapid (non-power) state changes.
+level (0.0–1.0), coolant mode, cut speed and travel speed, active laser source UID, pulse frequency,
+and pulse width. State objects are used by Ops to associate machine parameters with moving commands
+and to detect rapid (non-power) state changes.
+
+## CoolantMode
+
+Coolant mode for CNC milling operations.
+
+Controls the coolant state: `Off`, `Flood`, `Mist`, or `Air`.
+
+### `name`
+
+```python
+name: str
+```
+
+### `value`
+
+```python
+value: int
+```
 
 ## State
 
-The current state of a laser cutting job.
+The current state of a laser cutting or CNC milling machine.
 
-Tracks power level, air assist, cut/travel speeds, active laser UID, frequency, and pulse width.
+Tracks power level, coolant mode, cut/travel speeds, active laser UID, frequency, pulse width,
+spindle speed, and coolant mode.
 
 ### `active_laser_uid`
 
@@ -25,13 +44,13 @@ active_laser_uid: Optional[str]
 
 UID of the active laser source (if set).
 
-### `air_assist`
+### `coolant`
 
 ```python
-air_assist: bool
+coolant: Optional[CoolantMode]
 ```
 
-Whether air assist is enabled.
+Coolant mode (if set).
 
 ### `cut_speed`
 
@@ -72,6 +91,14 @@ pulse_width: Optional[float]
 ```
 
 Laser pulse width in microseconds (if set).
+
+### `spindle_speed`
+
+```python
+spindle_speed: Optional[int]
+```
+
+Spindle speed in RPM (if set).
 
 ### `travel_speed`
 

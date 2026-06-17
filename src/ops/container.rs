@@ -7,7 +7,7 @@ use crate::geo::shape::line::get_line_segment_length;
 
 use super::axis::Axis;
 use super::enums::{CommandCategory, CommandType, SectionType};
-use super::state::State;
+use super::state::{CoolantMode, State};
 use super::types::{MarkerCmd, MoveCmd, OpCategory, OpNode, StateCmd};
 use crate::types::{Point, Point3D, Rect};
 
@@ -284,11 +284,6 @@ impl Ops {
         self.invalidate_time_cache();
     }
 
-    pub fn enable_air_assist(&mut self, enabled: bool) {
-        self.commands.push(OpNode::enable_air_assist(enabled));
-        self.invalidate_time_cache();
-    }
-
     pub fn set_laser(&mut self, laser_uid: &str) {
         self.commands.push(OpNode::set_laser(laser_uid));
         self.invalidate_time_cache();
@@ -301,6 +296,16 @@ impl Ops {
 
     pub fn set_pulse_width(&mut self, pulse_width: f64) {
         self.commands.push(OpNode::set_pulse_width(pulse_width));
+        self.invalidate_time_cache();
+    }
+
+    pub fn set_spindle_speed(&mut self, speed: u32) {
+        self.commands.push(OpNode::set_spindle_speed(speed));
+        self.invalidate_time_cache();
+    }
+
+    pub fn set_coolant(&mut self, mode: CoolantMode) {
+        self.commands.push(OpNode::set_coolant(mode));
         self.invalidate_time_cache();
     }
 
@@ -488,13 +493,13 @@ impl Ops {
                 StateCmd::SetPower(p) => state.power = *p,
                 StateCmd::SetCutSpeed(s) => state.cut_speed = Some(*s),
                 StateCmd::SetTravelSpeed(s) => state.travel_speed = Some(*s),
-                StateCmd::EnableAirAssist => state.air_assist = true,
-                StateCmd::DisableAirAssist => state.air_assist = false,
                 StateCmd::SetLaser(uid) => {
                     state.active_laser_uid = Some(uid.to_string())
                 }
                 StateCmd::SetFrequency(f) => state.frequency = Some(*f),
                 StateCmd::SetPulseWidth(pw) => state.pulse_width = Some(*pw),
+                StateCmd::SetSpindleSpeed(s) => state.spindle_speed = Some(*s),
+                StateCmd::SetCoolant(mode) => state.coolant = Some(*mode),
                 StateCmd::Dwell(d) => state.dwell_ms = Some(*d),
             }
         }

@@ -203,8 +203,7 @@ def _plot_raster_power_modulation(ax):
             CommandType.SET_LASER,
             CommandType.SET_FREQUENCY,
             CommandType.SET_PULSE_WIDTH,
-            CommandType.ENABLE_AIR_ASSIST,
-            CommandType.DISABLE_AIR_ASSIST,
+            CommandType.SET_COOLANT,
         ):
             continue
         st = ops.state(i)

@@ -1,3 +1,4 @@
+from raygeo.ops.state import CoolantMode
 from raygeo.ops.types import (
     CommandCategory,
     CommandType,
@@ -17,11 +18,11 @@ def test_command_type_values():
     assert CommandType.SET_POWER.value == 10
     assert CommandType.SET_CUT_SPEED.value == 11
     assert CommandType.SET_TRAVEL_SPEED.value == 12
-    assert CommandType.ENABLE_AIR_ASSIST.value == 13
-    assert CommandType.DISABLE_AIR_ASSIST.value == 14
     assert CommandType.SET_LASER.value == 15
     assert CommandType.SET_FREQUENCY.value == 16
     assert CommandType.SET_PULSE_WIDTH.value == 17
+    assert CommandType.SET_SPINDLE_SPEED.value == 18
+    assert CommandType.SET_COOLANT.value == 20
     assert CommandType.JOB_START.value == 100
     assert CommandType.JOB_END.value == 101
     assert CommandType.LAYER_START.value == 102
@@ -52,9 +53,9 @@ def test_category_state():
         CommandType.SET_TRAVEL_SPEED,
         CommandType.SET_FREQUENCY,
         CommandType.SET_PULSE_WIDTH,
-        CommandType.ENABLE_AIR_ASSIST,
-        CommandType.DISABLE_AIR_ASSIST,
         CommandType.SET_LASER,
+        CommandType.SET_SPINDLE_SPEED,
+        CommandType.SET_COOLANT,
     ]:
         assert category(ct) == CommandCategory.STATE
 
@@ -92,3 +93,19 @@ def test_command_category_values():
     assert CommandCategory.MOVING.value == 0
     assert CommandCategory.STATE.value == 1
     assert CommandCategory.MARKER.value == 2
+
+
+def test_coolant_mode_constants():
+    assert CoolantMode.OFF.name == "OFF"
+    assert CoolantMode.FLOOD.name == "FLOOD"
+    assert CoolantMode.MIST.name == "MIST"
+    assert CoolantMode.AIR.name == "AIR"
+    assert CoolantMode.OFF.value == 0
+    assert CoolantMode.FLOOD.value == 1
+    assert CoolantMode.MIST.value == 2
+    assert CoolantMode.AIR.value == 3
+
+
+def test_coolant_mode_repr():
+    assert repr(CoolantMode.OFF) == "CoolantMode.OFF"
+    assert repr(CoolantMode.FLOOD) == "CoolantMode.FLOOD"

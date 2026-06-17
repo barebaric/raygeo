@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use super::axis::Axis;
 use super::enums::{CommandType, SectionType};
-use super::state::State;
+use super::state::{CoolantMode, State};
 use crate::types::{Point, Point3D};
 
 #[derive(Clone, Debug)]
@@ -31,11 +31,11 @@ pub enum StateCmd {
     SetCutSpeed(i32),
     SetTravelSpeed(i32),
     Dwell(f64),
-    EnableAirAssist,
-    DisableAirAssist,
     SetLaser(Arc<str>),
     SetFrequency(i32),
     SetPulseWidth(f64),
+    SetSpindleSpeed(u32),
+    SetCoolant(CoolantMode),
 }
 
 #[derive(Clone, Debug)]
@@ -218,18 +218,6 @@ impl OpNode {
         }
     }
 
-    pub fn enable_air_assist(enabled: bool) -> Self {
-        OpNode {
-            category: OpCategory::State(if enabled {
-                StateCmd::EnableAirAssist
-            } else {
-                StateCmd::DisableAirAssist
-            }),
-            state: None,
-            extra_axes: None,
-        }
-    }
-
     pub fn set_laser(laser_uid: &str) -> Self {
         OpNode {
             category: OpCategory::State(StateCmd::SetLaser(Arc::from(
@@ -251,6 +239,22 @@ impl OpNode {
     pub fn set_pulse_width(pulse_width: f64) -> Self {
         OpNode {
             category: OpCategory::State(StateCmd::SetPulseWidth(pulse_width)),
+            state: None,
+            extra_axes: None,
+        }
+    }
+
+    pub fn set_spindle_speed(speed: u32) -> Self {
+        OpNode {
+            category: OpCategory::State(StateCmd::SetSpindleSpeed(speed)),
+            state: None,
+            extra_axes: None,
+        }
+    }
+
+    pub fn set_coolant(mode: CoolantMode) -> Self {
+        OpNode {
+            category: OpCategory::State(StateCmd::SetCoolant(mode)),
             state: None,
             extra_axes: None,
         }
@@ -354,11 +358,11 @@ impl OpNode {
                 StateCmd::SetCutSpeed(_) => CommandType::SetCutSpeed,
                 StateCmd::SetTravelSpeed(_) => CommandType::SetTravelSpeed,
                 StateCmd::Dwell(_) => CommandType::Dwell,
-                StateCmd::EnableAirAssist => CommandType::EnableAirAssist,
-                StateCmd::DisableAirAssist => CommandType::DisableAirAssist,
                 StateCmd::SetLaser(_) => CommandType::SetLaser,
                 StateCmd::SetFrequency(_) => CommandType::SetFrequency,
                 StateCmd::SetPulseWidth(_) => CommandType::SetPulseWidth,
+                StateCmd::SetSpindleSpeed(_) => CommandType::SetSpindleSpeed,
+                StateCmd::SetCoolant(_) => CommandType::SetCoolant,
             },
             OpCategory::Marker(cmd) => match cmd {
                 MarkerCmd::JobStart => CommandType::JobStart,

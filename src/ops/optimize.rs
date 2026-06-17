@@ -573,9 +573,11 @@ fn sync_state_commands(ops: &mut Ops, state: &State, prev: &State) -> State {
             prev.travel_speed = Some(ts);
         }
     }
-    if state.air_assist != prev.air_assist {
-        ops.enable_air_assist(state.air_assist);
-        prev.air_assist = state.air_assist;
+    if state.coolant != prev.coolant {
+        if let Some(mode) = state.coolant {
+            ops.set_coolant(mode);
+        }
+        prev.coolant = state.coolant;
     }
     if let Some(ref uid) = state.active_laser_uid {
         if prev.active_laser_uid.as_deref() != Some(uid.as_str()) {
