@@ -8,10 +8,13 @@ from matplotlib.colors import to_hex
 
 from raygeo.geo import Geometry
 from raygeo.geo.algo import hull
+from raygeo.geo.algo.cylindrical import transform_to_cylinder
+from raygeo.geo.algo.helix import HelixDirection, generate_helix
 from raygeo.geo.algo.nest2d.placement import place_parts
 from raygeo.geo.algo.smooth import smooth_polyline
 from raygeo.geo.shape.bezier import linearize_bezier_adaptive
 from raygeo.geo.shape.polygon import get_polygon_convex_hull
+from raygeo.geo.shape.polygon3d import offset_polyline_3d
 from raygeo.ops.raster import ScanMode, rasterize_power_modulation
 from raygeo.ops.types import CommandType
 from tools.plot import make_pattern, plot_geometry
@@ -324,19 +327,123 @@ def _plot_linearization(ax):
     ax.set_title("Linearization", fontsize=10)
 
 
+def _plot_cylindrical(ax):
+    diameter = 20.0
+    radius = diameter / 2.0
+
+    verts = []
+    for x in range(10, 50, 5):
+        verts.extend([(x, -80, 0), (x, 80, 0)])
+    for y in range(-60, 70, 20):
+        verts.extend([(10, y, 0), (45, y, 0)])
+
+    verts_np = np.array(verts, dtype=np.float32)
+    transformed, _, _ = transform_to_cylinder(
+        verts_np, diameter, colors=None, degrees_input=True
+    )
+    t = transformed.reshape(-1, 3)
+
+    theta = np.linspace(-np.pi, np.pi, 32)
+    z_cyl = np.linspace(5, 50, 20)
+    th, zz = np.meshgrid(theta, z_cyl)
+    xx = zz
+    yy = radius * np.sin(th)
+    zz2 = radius * np.cos(th)
+    ax.plot_surface(
+        xx, yy, zz2, alpha=0.1, color="gray", edgecolors="gray", linewidth=0.25
+    )
+
+    for i in range(0, len(t), 2):
+        ax.plot(
+            t[i : i + 2, 0], t[i : i + 2, 1], t[i : i + 2, 2],
+            "tomato", linewidth=1.5,
+        )
+
+    ax.set_xlabel("X")
+    ax.set_ylabel("Y")
+    ax.set_zlabel("Z")
+    ax.set_title("Cylindrical Transform", fontsize=10)
+    ax.view_init(elev=25, azim=-65)
+    ax.set_box_aspect((1.5, 1, 1))
+
+
+def _plot_conical_helix(ax):
+    pts = generate_helix(
+        center=(0, 0),
+        start_radius=10,
+        end_radius=30,
+        z_start=0,
+        z_end=-30,
+        pitch=10,
+        direction=HelixDirection.Cw,
+        angular_step=0.05,
+        min_revolutions=3,
+    )
+    xs, ys, zs = zip(*pts)
+    ax.plot(xs, ys, zs, "crimson", linewidth=2)
+    ax.set_xlabel("X")
+    ax.set_ylabel("Y")
+    ax.set_zlabel("Z")
+    ax.set_title("Conical Helix", fontsize=10)
+    ax.view_init(elev=25, azim=-60)
+
+
+def _plot_3d_offset(ax):
+    n = 16
+    curve = []
+    for i in range(n + 1):
+        t = i / n
+        a = t * math.pi / 2
+        x = 6 * math.cos(a)
+        y = 6 * math.sin(a)
+        z = 6 - x / 3 + y / 3
+        curve.append((x, y, z))
+    off = offset_polyline_3d(curve, 1.2)
+
+    xs, ys, zs = zip(*curve)
+    ax.plot(xs, ys, zs, "o-", color="steelblue", linewidth=2, label="Original")
+    xs_o, ys_o, zs_o = zip(*off)
+    ax.plot(
+        xs_o, ys_o, zs_o, "o-", color="tomato", linewidth=3,
+        label="Offset", alpha=0.8,
+    )
+    for i in range(0, len(curve), 3):
+        ax.plot(
+            [curve[i][0], off[i][0]],
+            [curve[i][1], off[i][1]],
+            [curve[i][2], off[i][2]],
+            color="gray", linewidth=1, linestyle=":",
+        )
+    ax.set_xlabel("X")
+    ax.set_ylabel("Y")
+    ax.set_zlabel("Z")
+    ax.set_title("3D Polyline Offset", fontsize=10)
+    ax.view_init(elev=25, azim=-55)
+    ax.legend(fontsize=8)
+
+
 def generate_examples(output_dir):
-    fig, axes = plt.subplots(2, 3, figsize=(18, 12))
+    fig = plt.figure(figsize=(18, 16), layout="constrained")
 
-    _plot_concave_hull(axes[0, 0])
-    _plot_arc_fitting(axes[0, 1])
-    _plot_nesting(axes[0, 2])
-    _plot_raster_power_modulation(axes[1, 0])
-    _plot_smooth(axes[1, 1])
-    _plot_linearization(axes[1, 2])
+    axs = [
+        [fig.add_subplot(3, 3, 1), fig.add_subplot(3, 3, 2), fig.add_subplot(3, 3, 3)],
+        [fig.add_subplot(3, 3, 4), fig.add_subplot(3, 3, 5), fig.add_subplot(3, 3, 6)],
+        [fig.add_subplot(3, 3, 7, projection="3d"),
+         fig.add_subplot(3, 3, 8, projection="3d"),
+         fig.add_subplot(3, 3, 9, projection="3d")],
+    ]
 
-    fig.tight_layout()
-    path = output_dir / "showcase.png"
-    fig.savefig(path, dpi=150, bbox_inches="tight")
+    _plot_concave_hull(axs[0][0])
+    _plot_arc_fitting(axs[0][1])
+    _plot_nesting(axs[0][2])
+    _plot_raster_power_modulation(axs[1][0])
+    _plot_smooth(axs[1][1])
+    _plot_linearization(axs[1][2])
+    _plot_cylindrical(axs[2][0])
+    _plot_conical_helix(axs[2][1])
+    _plot_3d_offset(axs[2][2])
+
+    fig.savefig(output_dir / "showcase.png", dpi=150, bbox_inches="tight")
     plt.close(fig)
 
     return {
@@ -346,7 +453,8 @@ def generate_examples(output_dir):
             {
                 "path": "showcase.png",
                 "caption": "Concave hull, arc fitting, nesting, raster power"
-                " modulation, smoothing, and linearization",
+                " modulation, smoothing, linearization, cylindrical transform,"
+                " conical helix, and 3D polyline offset",
             }
         ],
     }

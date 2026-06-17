@@ -11,7 +11,7 @@ Rust extension.
 
 ![Showcase](docs/api/images/showcase.png)
 
-*Concave hull, arc fitting, nesting, and raster power modulation*
+*Concave hull, arc fitting, nesting, raster power modulation, smoothing, linearization, cylindrical transform, conical helix, and 3D polyline offset*
 
 ## Installation
 
@@ -109,8 +109,8 @@ from raygeo.geo import Geometry
 g = Geometry.from_points([(0, 0), (10, 0), (10, 10), (0, 10)])
 
 # Offset (grow/shrink) — mutates in place
-g.grow(2.0)   # offset outward by 2 units
-print(g.area())  # 144.0
+g.grow(1.0)   # offset outward by 1 unit (each side moves by the amount)
+print(g.area())  # 144.0 — 12×12
 
 # Use .copy() to preserve the original
 original = Geometry.from_points([(0, 0), (10, 0), (10, 10), (0, 10)])
