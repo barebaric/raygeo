@@ -58,7 +58,10 @@ pub use fitting::{
     optimize_path_from_array, project_circle_center_to_bisector,
 };
 pub use helix::{generate_helix, HelixDirection, HelixOptions};
-pub use hsm::{adaptive_entry,  AdaptiveEntryOptions, AdaptiveEntryResult};
+pub use hsm::{
+    adaptive_entry, adaptive_wavefronts, AdaptiveEntryOptions,
+    AdaptiveEntryResult, AdaptiveWavefrontOptions, AdaptiveWavefrontResult,
+};
 pub use hull::{
     find_external_contours, get_concave_hull, get_enclosing_hull,
     get_hulls_from_image,

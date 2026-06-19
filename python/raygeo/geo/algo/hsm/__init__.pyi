@@ -5,11 +5,17 @@ HSM (High-Speed Machining) adaptive clearing.
 
 * ``adaptive_entry`` — find the optimal entry pole, then helix + spiral
   (wide area) or zigzag ramp (tight slot).
+* ``adaptive_wavefronts`` — inside-out expansion loop: each iteration
+  expands the cleared boundary outward by ``step_over``, clips to the
+  valid tool area, applies a minimum-curvature filter, and updates the
+  cleared state until convergence.
 """
 
 import collections.abc
+import raygeo
 __all__ = [
     "adaptive_entry",
+    "adaptive_wavefronts",
 ]
 
 def adaptive_entry(pocket_boundary: collections.abc.Sequence[tuple[float, float]], islands: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]] = [], tool_radius: float = 3, step_over: float = 2, safe_z: float = 2, target_z: float = -5, plunge_pitch: float = 1, safe_margin: float = 1, angular_step: float = 0.1) -> tuple[list[tuple[float, float, float]], list[list[tuple[float, float]]]]:
@@ -38,5 +44,26 @@ def adaptive_entry(pocket_boundary: collections.abc.Sequence[tuple[float, float]
               ``ClearedArea``.
     :complexity: O(n) for the spiral/helix generation, O(m log m) for
                  ``find_largest_circle`` where m is the polygon vertex count.
+    """
+
+def adaptive_wavefronts(cleared: raygeo.geo.algo.cleared_area.ClearedArea, pocket_boundary: collections.abc.Sequence[tuple[float, float]], islands: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]] = [], tool_radius: float = 3, step_over: float = 2, z: float = 0, area_tolerance: float = 1) -> list[list[tuple[float, float, float]]]:
+    r"""
+    Inside-out adaptive wavefronts.
+    
+    Starting from the *cleared* state, each iteration expands the
+    cleared boundary outward by *step_over*, clips to the valid tool
+    area (pocket boundary offset inward by *tool_radius*, with
+    islands excluded), and adds the result back to *cleared*.
+    The loop terminates when the newly added area drops below
+    *area_tolerance*.
+    
+    :param cleared: ``ClearedArea`` instance (mutated in place).
+    :param pocket_boundary: Outer boundary of the pocket.
+    :param islands: List of island (hole) polygons (default []).
+    :param tool_radius: Tool radius in mm (default 3.0).
+    :param step_over: Radial expansion per iteration (default 2.0).
+    :param z: Z height for generated toolpath points (default 0.0).
+    :param area_tolerance: Minimum area increase to continue (default 1.0).
+    :returns: List of toolpaths — one ``list[(x, y, z)]`` per iteration.
     """
 

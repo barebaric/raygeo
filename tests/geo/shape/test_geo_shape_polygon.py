@@ -581,6 +581,34 @@ class TestCleanPolygon:
     def test_two_points(self):
         assert clean_polygon(P((0, 0), (1, 1))) is None
 
+    def test_area_preserved_within_tolerance(self):
+        """clean_polygon must preserve the polygon area within tolerance."""
+        polygon = P((0, 0), (10, 0), (10, 10), (0, 10))
+        cleaned = clean_polygon(polygon, tolerance=0.01)
+        assert cleaned is not None
+        original_area = abs(get_polygon_signed_area(polygon))
+        cleaned_area = abs(get_polygon_signed_area(cleaned))
+        assert abs(original_area - cleaned_area) < 0.01
+
+    def test_colinear_points_removed_shape_preserved(self):
+        """Removing redundant colinear bumps preserves the overall shape."""
+        polygon = P(
+            (0, 0),
+            (5, 5),
+            (10, 0),
+            (15, 8),
+            (20, 0),
+            (20, 10),
+            (0, 10),
+        )
+        cleaned = clean_polygon(polygon, tolerance=0.5)
+        assert cleaned is not None
+        assert len(cleaned) >= 4
+        # Area must not change significantly
+        original_area = abs(get_polygon_signed_area(polygon))
+        cleaned_area = abs(get_polygon_signed_area(cleaned))
+        assert abs(original_area - cleaned_area) < 0.5
+
 
 class TestPolygonOffset:
     def test_expand(self):

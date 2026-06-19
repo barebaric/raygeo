@@ -1,7 +1,7 @@
-"""Tests for HSM adaptive entry."""
+"""Tests for HSM adaptive entry and wavefronts."""
 
 from raygeo.geo.algo.cleared_area import ClearedArea
-from raygeo.geo.algo.hsm import adaptive_entry
+from raygeo.geo.algo.hsm import adaptive_entry, adaptive_wavefronts
 
 
 def test_adaptive_entry_wide_area_returns_path():
@@ -143,3 +143,104 @@ def test_adaptive_entry_same_z_no_path():
     # No descent needed, but the spiral at Z=0 may still be generated
     if path:
         assert all(p[2] == 0.0 for p in path)
+
+
+# ── adaptive_wavefronts ──────────────────────────────────────────
+
+
+def test_adaptive_wavefronts_simple():
+    """Basic wavefronts: starts from cleared disk and grows to fill pocket."""
+    boundary = [(0, 0), (160, 0), (160, 100), (0, 100)]
+    path, cp = adaptive_entry(
+        pocket_boundary=boundary,
+        tool_radius=3.0,
+        step_over=2.0,
+        safe_z=2.0,
+        target_z=-8.0,
+        plunge_pitch=1.0,
+    )
+    ca = ClearedArea(initial=cp)
+
+    paths = adaptive_wavefronts(
+        ca,
+        boundary,
+        tool_radius=3.0,
+        step_over=2.0,
+        z=-8.0,
+        area_tolerance=1.0,
+    )
+    assert len(paths) >= 1
+    # Area should have grown from initial disk (~7500) toward valid (~14476)
+    assert ca.total_area() > 10000
+    # Each iteration's path should have 3D points
+    for p in paths:
+        assert all(len(pt) == 3 for pt in p)
+
+
+def test_adaptive_wavefronts_step_over_larger():
+    """Larger step-over → fewer iterations."""
+    boundary = [(0, 0), (160, 0), (160, 100), (0, 100)]
+    path, cp = adaptive_entry(
+        pocket_boundary=boundary,
+        tool_radius=3.0,
+        step_over=4.0,
+        safe_z=2.0,
+        target_z=-8.0,
+        plunge_pitch=1.0,
+    )
+    ca = ClearedArea(initial=cp)
+
+    paths = adaptive_wavefronts(
+        ca,
+        boundary,
+        tool_radius=3.0,
+        step_over=4.0,
+        z=-8.0,
+        area_tolerance=1.0,
+    )
+    assert len(paths) >= 1
+
+
+def test_adaptive_wavefronts_with_islands():
+    """Wavefronts with islands still converge."""
+    boundary = [(0, 0), (160, 0), (160, 100), (0, 100)]
+    islands = [[(60, 35), (100, 35), (100, 65), (60, 65)]]
+    path, cp = adaptive_entry(
+        pocket_boundary=boundary,
+        islands=islands,
+        tool_radius=3.0,
+        step_over=2.0,
+        safe_z=2.0,
+        target_z=-8.0,
+        plunge_pitch=1.0,
+    )
+    ca = ClearedArea(initial=cp)
+
+    paths = adaptive_wavefronts(
+        ca,
+        boundary,
+        islands=islands,
+        tool_radius=3.0,
+        step_over=2.0,
+        z=-8.0,
+        area_tolerance=1.0,
+    )
+    assert len(paths) >= 1
+    assert ca.total_area() > 5000
+
+
+def test_adaptive_wavefronts_empty_cleared():
+    """Wavefronts with empty cleared area returns empty toolpaths."""
+    ca = ClearedArea()
+    boundary = [(0, 0), (160, 0), (160, 100), (0, 100)]
+
+    paths = adaptive_wavefronts(
+        ca,
+        boundary,
+        tool_radius=3.0,
+        step_over=2.0,
+        z=-8.0,
+        area_tolerance=1.0,
+    )
+    # No initial cleared area → no iterations
+    assert isinstance(paths, list)

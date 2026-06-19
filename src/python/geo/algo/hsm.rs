@@ -5,9 +5,14 @@ HSM (High-Speed Machining) adaptive clearing.
 
 * ``adaptive_entry`` — find the optimal entry pole, then helix + spiral
   (wide area) or zigzag ramp (tight slot).
+* ``adaptive_wavefronts`` — inside-out expansion loop: each iteration
+  expands the cleared boundary outward by ``step_over``, clips to the
+  valid tool area, applies a minimum-curvature filter, and updates the
+  cleared state until convergence.
 ";
 
 use crate::geo::algo::hsm;
+use crate::python::geo::algo::cleared_area::ClearedArea as PyClearedArea;
 use crate::types::Point;
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::gen_stub_pyfunction;
@@ -128,4 +133,86 @@ fn adaptive_entry_py(
         .collect();
 
     (toolpath, cleared_polys)
+}
+
+#[gen_stub_pyfunction(
+    python = r#"
+    import collections.abc
+    import raygeo
+
+    def adaptive_wavefronts(
+        cleared: raygeo.geo.algo.cleared_area.ClearedArea,
+        pocket_boundary: collections.abc.Sequence[tuple[float, float]],
+        islands: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]] = [],
+        tool_radius: float = 3.0,
+        step_over: float = 2.0,
+        z: float = 0.0,
+        area_tolerance: float = 1.0,
+    ) -> list[list[tuple[float, float, float]]]:
+        """Inside-out adaptive wavefronts.
+
+        Starting from the *cleared* state, each iteration expands the
+        cleared boundary outward by *step_over*, clips to the valid tool
+        area (pocket boundary offset inward by *tool_radius*, with
+        islands excluded), and adds the result back to *cleared*.
+        The loop terminates when the newly added area drops below
+        *area_tolerance*.
+
+        :param cleared: ``ClearedArea`` instance (mutated in place).
+        :param pocket_boundary: Outer boundary of the pocket.
+        :param islands: List of island (hole) polygons (default []).
+        :param tool_radius: Tool radius in mm (default 3.0).
+        :param step_over: Radial expansion per iteration (default 2.0).
+        :param z: Z height for generated toolpath points (default 0.0).
+        :param area_tolerance: Minimum area increase to continue (default 1.0).
+        :returns: List of toolpaths — one ``list[(x, y, z)]`` per iteration.
+        """
+"#,
+    module = "raygeo.geo.algo.hsm"
+)]
+#[pyfunction(name = "adaptive_wavefronts")]
+#[pyo3(signature = (
+    cleared,
+    pocket_boundary,
+    islands = None,
+    tool_radius = 3.0,
+    step_over = 2.0,
+    z = 0.0,
+    area_tolerance = 1.0,
+))]
+fn adaptive_wavefronts_py(
+    cleared: &mut PyClearedArea,
+    pocket_boundary: Vec<(f64, f64)>,
+    islands: Option<Vec<Vec<(f64, f64)>>>,
+    tool_radius: f64,
+    step_over: f64,
+    z: f64,
+    area_tolerance: f64,
+) -> Vec<Vec<(f64, f64, f64)>> {
+    let boundary: Vec<Point> = pocket_boundary
+        .into_iter()
+        .map(|(x, y)| Point::new(x, y))
+        .collect();
+    let islands_pts: Vec<Vec<Point>> = islands
+        .unwrap_or_default()
+        .into_iter()
+        .map(|h| h.into_iter().map(|(x, y)| Point::new(x, y)).collect())
+        .collect();
+
+    let opts = hsm::AdaptiveWavefrontOptions {
+        pocket_boundary: boundary,
+        islands: islands_pts,
+        tool_radius,
+        step_over,
+        z,
+        area_tolerance,
+    };
+
+    let result = hsm::adaptive_wavefronts(&mut cleared.inner, &opts);
+
+    result
+        .toolpaths
+        .into_iter()
+        .map(|path| path.into_iter().map(|p| (p.x, p.y, p.z)).collect())
+        .collect()
 }

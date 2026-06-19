@@ -32,6 +32,7 @@ pub mod error;
 pub mod geo;
 pub mod image;
 pub mod ops;
+pub mod prof;
 pub mod svg;
 pub mod types;
 
