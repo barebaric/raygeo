@@ -42,6 +42,7 @@ from . import offset
 from . import overcut
 from . import pde_mesh
 from . import pde_spiral
+from . import polylabel
 from . import ramp
 from . import simplify
 from . import smooth
@@ -64,6 +65,7 @@ __all__ = [
     "overcut",
     "pde_mesh",
     "pde_spiral",
+    "polylabel",
     "ramp",
     "simplify",
     "smooth",

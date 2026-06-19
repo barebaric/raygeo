@@ -20,6 +20,7 @@ pub mod overcut;
 pub mod pde_mesh;
 pub mod pde_spiral;
 pub mod planar;
+pub mod polylabel;
 pub mod project;
 pub mod ramp;
 pub mod simplify;
@@ -80,6 +81,7 @@ pub use offset::{
 };
 pub use overcut::apply_overcut;
 pub use pde_spiral::trace_spiral;
+pub use polylabel::polylabel;
 pub use project::{
     is_planar_in_z, lift_points_to_xy_plane, project_point_to_xy,
     project_points_to_xy,

@@ -13,6 +13,7 @@ pub(crate) mod offset;
 pub(crate) mod overcut;
 pub(crate) mod pde_mesh;
 pub(crate) mod pde_spiral;
+pub(crate) mod polylabel;
 pub(crate) mod ramp;
 pub(crate) mod simplify;
 pub(crate) mod smooth;
@@ -71,6 +72,7 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     overcut::register(&algo_mod)?;
     pde_mesh::register(&algo_mod)?;
     pde_spiral::register(&algo_mod)?;
+    polylabel::register(&algo_mod)?;
     ramp::register(&algo_mod)?;
     simplify::register(&algo_mod)?;
     smooth::register(&algo_mod)?;
@@ -129,6 +131,10 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     )?;
     sys_modules
         .set_item("raygeo.geo.algo.helix", &algo_mod.getattr("helix")?)?;
+    sys_modules.set_item(
+        "raygeo.geo.algo.polylabel",
+        &algo_mod.getattr("polylabel")?,
+    )?;
     sys_modules.set_item("raygeo.geo.algo.ramp", &algo_mod.getattr("ramp")?)?;
     sys_modules
         .set_item("raygeo.geo.algo.spiral", &algo_mod.getattr("spiral")?)?;

@@ -1,7 +1,7 @@
 ---
 title: raygeo.geo.algo.ramp
 sidebar_label: raygeo.geo.algo.ramp
-sidebar_position: 25
+sidebar_position: 26
 ---
 
 Ramp entry path generation for milling.
