@@ -1,5 +1,14 @@
 """Generate geometry playground example images."""
 
+__images__ = [
+    {
+        "stem": "geometry-playground",
+        "caption": "Various geometry shapes and operations",
+        "doc": ["raygeo.md", "raygeo.geo.md"],
+        "heading": None,
+    },
+]
+
 import math
 
 import matplotlib.pyplot as plt

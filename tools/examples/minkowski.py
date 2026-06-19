@@ -1,5 +1,14 @@
 """Generate Minkowski sum example images."""
 
+__images__ = [
+    {
+        "stem": "minkowski-sum",
+        "caption": "Minkowski sum of two convex polygons",
+        "doc": "raygeo.geo.algo.minkowski2d.md",
+        "heading": "get_polygon_minkowski_sum_convex",
+    },
+]
+
 import matplotlib.pyplot as plt
 
 from raygeo.geo.algo.minkowski2d import get_polygon_minkowski_sum_convex

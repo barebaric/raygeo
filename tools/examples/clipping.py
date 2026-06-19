@@ -1,5 +1,26 @@
 """Generate clipping example images."""
 
+__images__ = [
+    {
+        "stem": "clipping-rect",
+        "caption": "Line clipped to rectangle",
+        "doc": "raygeo.geo.algo.clipping.md",
+        "heading": "clip_line_segment_with_rect",
+    },
+    {
+        "stem": "clipping-polygon",
+        "caption": "Line clipped to polygon",
+        "doc": "raygeo.geo.algo.clipping.md",
+        "heading": "clip_line_segment_with_polygons",
+    },
+    {
+        "stem": "clipping-subtract",
+        "caption": "Subtract polygon from line",
+        "doc": "raygeo.geo.algo.clipping.md",
+        "heading": "subtract_polygons_from_line_segment",
+    },
+]
+
 import math
 
 import matplotlib.pyplot as plt

@@ -1,5 +1,14 @@
 """Generate overcut example images."""
 
+__images__ = [
+    {
+        "stem": "overcut",
+        "caption": "Overcut on closed contour",
+        "doc": "raygeo.geo.algo.overcut.md",
+        "heading": "apply_overcut",
+    },
+]
+
 import math
 
 import matplotlib.pyplot as plt

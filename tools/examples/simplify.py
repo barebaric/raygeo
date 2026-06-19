@@ -1,5 +1,20 @@
 """Generate simplify example images."""
 
+__images__ = [
+    {
+        "stem": "simplify",
+        "caption": "Simplify and linearize",
+        "doc": "raygeo.geo.algo.simplify.md",
+        "heading": "simplify_polyline",
+    },
+    {
+        "stem": "simplify-3d",
+        "caption": "3D polyline simplification preserving Z coordinates",
+        "doc": "raygeo.geo.algo.simplify.md",
+        "heading": "simplify_polyline_3d",
+    },
+]
+
 import math
 
 import matplotlib.pyplot as plt

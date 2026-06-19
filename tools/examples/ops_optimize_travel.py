@@ -1,5 +1,14 @@
 """Generate ops travel optimization example images."""
 
+__images__ = [
+    {
+        "stem": "ops-optimize-travel",
+        "caption": "Travel path before and after optimization",
+        "doc": "raygeo.ops.md",
+        "heading": "optimize_travel",
+    },
+]
+
 import matplotlib.pyplot as plt
 
 from raygeo.ops import Ops

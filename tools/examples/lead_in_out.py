@@ -1,5 +1,14 @@
 """Generate lead-in/lead-out example images."""
 
+__images__ = [
+    {
+        "stem": "lead-in-out",
+        "caption": "Lead-in and lead-out paths",
+        "doc": "raygeo.ops.md",
+        "heading": "apply_lead_in_out",
+    },
+]
+
 import matplotlib.pyplot as plt
 
 from raygeo.ops import Ops

@@ -1,5 +1,26 @@
 """Generate image processing example images."""
 
+__images__ = [
+    {
+        "stem": "image-processing-srgb",
+        "caption": "sRGB to linear round-trip",
+        "doc": "raygeo.image.md",
+        "heading": "srgb_to_linear",
+    },
+    {
+        "stem": "image-processing-dither-floyd",
+        "caption": "Floyd-Steinberg dithering",
+        "doc": "raygeo.image.md",
+        "heading": "apply_floyd_steinberg_dither",
+    },
+    {
+        "stem": "image-processing-dither-bayer",
+        "caption": "Bayer 4x4 ordered dithering",
+        "doc": "raygeo.image.md",
+        "heading": "apply_bayer_dither",
+    },
+]
+
 import matplotlib.pyplot as plt
 import numpy as np
 

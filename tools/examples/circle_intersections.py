@@ -1,5 +1,14 @@
 """Generate circle intersection example images."""
 
+__images__ = [
+    {
+        "stem": "circle-intersections",
+        "caption": "Circle-circle and line-circle intersection points",
+        "doc": "raygeo.geo.shape.circle.md",
+        "heading": "get_circle_circle_intersections",
+    },
+]
+
 import matplotlib.pyplot as plt
 from matplotlib.patches import Circle as MplCircle
 

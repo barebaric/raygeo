@@ -1,5 +1,14 @@
 """Generate arc linearization example images."""
 
+__images__ = [
+    {
+        "stem": "arc-linearize",
+        "caption": "Arc linearization: coarse and fine resolution",
+        "doc": "raygeo.geo.shape.arc.md",
+        "heading": "linearize_arc",
+    },
+]
+
 import math
 
 import matplotlib.pyplot as plt

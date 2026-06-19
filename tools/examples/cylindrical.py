@@ -1,5 +1,14 @@
 """Generate cylindrical transform example images."""
 
+__images__ = [
+    {
+        "stem": "cylindrical-transform",
+        "caption": "Flat vertex pairs wrapped onto a cylinder surface",
+        "doc": "raygeo.geo.algo.cylindrical.md",
+        "heading": "transform_to_cylinder",
+    },
+]
+
 import matplotlib.pyplot as plt
 import numpy as np
 

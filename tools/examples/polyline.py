@@ -1,5 +1,28 @@
 """Generate polyline (motion assembly) example images."""
 
+__images__ = [
+    {
+        "stem": "polyline-to-ops",
+        "caption": "polyline_to_ops with move_first=True vs move_first=False",
+        "doc": "raygeo.ops.polyline.md",
+        "heading": "polyline_to_ops",
+    },
+    {
+        "stem": "polyline-link-passes",
+        "caption": "Three passes linked with StayDown vs Retract strategies",
+        "doc": "raygeo.ops.polyline.md",
+        "heading": "link_passes",
+    },
+    {
+        "stem": "polyline-pass-entry-exit",
+        "caption": (
+            "Entry and exit points from find_pass_entry / find_pass_exit"
+        ),
+        "doc": "raygeo.ops.polyline.md",
+        "heading": "find_pass_entry",
+    },
+]
+
 import matplotlib.pyplot as plt
 
 import raygeo.ops as ops_mod

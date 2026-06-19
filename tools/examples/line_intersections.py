@@ -1,5 +1,20 @@
 """Generate line intersection example images."""
 
+__images__ = [
+    {
+        "stem": "line-intersections",
+        "caption": "Line-line and segment intersection",
+        "doc": "raygeo.geo.shape.line.md",
+        "heading": "get_line_line_intersection",
+    },
+    {
+        "stem": "line-point-distance",
+        "caption": "Perpendicular distance from a point to a line",
+        "doc": "raygeo.geo.shape.line.md",
+        "heading": "get_point_line_distance",
+    },
+]
+
 import matplotlib.pyplot as plt
 
 from raygeo.geo.shape.line import (

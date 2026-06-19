@@ -1,5 +1,14 @@
 """Generate concave hull example images."""
 
+__images__ = [
+    {
+        "stem": "concave-hull",
+        "caption": "Concave vs convex hull",
+        "doc": "raygeo.geo.algo.hull.md",
+        "heading": "get_concave_hull",
+    },
+]
+
 import matplotlib.pyplot as plt
 import numpy as np
 

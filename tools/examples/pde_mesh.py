@@ -1,5 +1,33 @@
 """Generate PDE mesh example images."""
 
+__images__ = [
+    {
+        "stem": "pde-mesh-triangulation",
+        "caption": "CDT triangulation of a square pocket with centred hole",
+        "doc": "raygeo.geo.algo.pde_mesh.md",
+        "heading": "build_triangle_mesh",
+    },
+    {
+        "stem": "pde-mesh-l-shape",
+        "caption": "CDT triangulation of an L-shaped pocket",
+        "doc": "raygeo.geo.algo.pde_mesh.md",
+        "heading": "build_triangle_mesh",
+    },
+    {
+        "stem": "pde-mesh-laplace",
+        "caption": "Laplace solution — contours morph smoothly from hole to"
+        " boundary",
+        "doc": "raygeo.geo.algo.pde_mesh.md",
+        "heading": "solve_laplace",
+    },
+    {
+        "stem": "pde-mesh-l-shape-solution",
+        "caption": "Laplace solution on an L-shaped domain",
+        "doc": "raygeo.geo.algo.pde_mesh.md",
+        "heading": "solve_laplace",
+    },
+]
+
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.collections import LineCollection
@@ -14,7 +42,9 @@ def _plot_mesh_wireframe(ax, mesh, edge_color="gray", edge_alpha=0.5):
         segments.append((verts[a], verts[b]))
         segments.append((verts[b], verts[c]))
         segments.append((verts[c], verts[a]))
-    lc = LineCollection(segments, colors=edge_color, linewidths=0.4, alpha=edge_alpha)
+    lc = LineCollection(
+        segments, colors=edge_color, linewidths=0.4, alpha=edge_alpha
+    )
     ax.add_collection(lc)
 
 
@@ -27,7 +57,10 @@ def _plot_boundary(ax, mesh, tag, color, lw):
             if mesh.adjacency[ti * 3 + ei] == -1:
                 a = mesh.triangles[ti][ei]
                 b = mesh.triangles[ti][(ei + 1) % 3]
-                if mesh.boundary_tags[a] == tag and mesh.boundary_tags[b] == tag:
+                if (
+                    mesh.boundary_tags[a] == tag
+                    and mesh.boundary_tags[b] == tag
+                ):
                     boundary_edges.add((min(a, b), max(a, b)))
     for a, b in boundary_edges:
         ax.plot(
@@ -60,8 +93,20 @@ def generate_examples(output_dir):
     ax.fill(xs_o, ys_o, alpha=0.04, color="crimson")
     xs_h, ys_h = zip(*hole)
     ax.fill(xs_h, ys_h, alpha=0.08, color="royalblue")
-    ax.plot(list(xs_o) + [xs_o[0]], list(ys_o) + [ys_o[0]], color="crimson", linewidth=2.5, label="Outer boundary (u=1)")
-    ax.plot(list(xs_h) + [xs_h[0]], list(ys_h) + [ys_h[0]], color="royalblue", linewidth=2.5, label="Hole boundary (u=0)")
+    ax.plot(
+        list(xs_o) + [xs_o[0]],
+        list(ys_o) + [ys_o[0]],
+        color="crimson",
+        linewidth=2.5,
+        label="Outer boundary (u=1)",
+    )
+    ax.plot(
+        list(xs_h) + [xs_h[0]],
+        list(ys_h) + [ys_h[0]],
+        color="royalblue",
+        linewidth=2.5,
+        label="Hole boundary (u=0)",
+    )
 
     ax.set_title(
         f"Constrained Delaunay triangulation\n"
@@ -94,21 +139,44 @@ def generate_examples(output_dir):
     ax2.set_xlim(-5, 105)
     ax2.set_ylim(-5, 105)
 
-    tcf = ax2.tripcolor(x_vals, y_vals, tris, u, cmap="coolwarm", shading="gouraud")
+    tcf = ax2.tripcolor(
+        x_vals, y_vals, tris, u, cmap="coolwarm", shading="gouraud"
+    )
     cbar = fig2.colorbar(tcf, ax=ax2, shrink=0.8)
     cbar.set_label("Scalar field u(x,y)", fontsize=10)
 
     # Overlay outer/hole boundaries
-    ax2.plot(list(xs_o) + [xs_o[0]], list(ys_o) + [ys_o[0]], color="darkred", linewidth=2, label="Outer (u=1)")
-    ax2.plot(list(xs_h) + [xs_h[0]], list(ys_h) + [ys_h[0]], color="darkblue", linewidth=2, label="Hole (u=0)")
+    ax2.plot(
+        list(xs_o) + [xs_o[0]],
+        list(ys_o) + [ys_o[0]],
+        color="darkred",
+        linewidth=2,
+        label="Outer (u=1)",
+    )
+    ax2.plot(
+        list(xs_h) + [xs_h[0]],
+        list(ys_h) + [ys_h[0]],
+        color="darkblue",
+        linewidth=2,
+        label="Hole (u=0)",
+    )
 
     # Draw a few contour lines
     levels = np.linspace(0, 1, 11)
-    ax2.tricontour(x_vals, y_vals, tris, u, levels=levels, colors="black", linewidths=0.5, alpha=0.3)
+    ax2.tricontour(
+        x_vals,
+        y_vals,
+        tris,
+        u,
+        levels=levels,
+        colors="black",
+        linewidths=0.5,
+        alpha=0.3,
+    )
 
     ax2.set_title(
-        f"Laplace solution Δu = 0 via linear FEM\n"
-        f"(u=0 on hole, u=1 on outer boundary)",
+        "Laplace solution Δu = 0 via linear FEM\n"
+        "(u=0 on hole, u=1 on outer boundary)",
         fontsize=12,
     )
     ax2.legend(fontsize=10, loc="upper right")
@@ -141,7 +209,13 @@ def generate_examples(output_dir):
 
     xs_l, ys_l = zip(*l_outer)
     ax3.fill(xs_l, ys_l, alpha=0.04, color="crimson")
-    ax3.plot(list(xs_l) + [xs_l[0]], list(ys_l) + [ys_l[0]], color="crimson", linewidth=2.5, label="Outer boundary (u=1)")
+    ax3.plot(
+        list(xs_l) + [xs_l[0]],
+        list(ys_l) + [ys_l[0]],
+        color="crimson",
+        linewidth=2.5,
+        label="Outer boundary (u=1)",
+    )
 
     ax3.set_title(
         f"CDT triangulation of an L-shaped pocket\n"
@@ -176,17 +250,33 @@ def generate_examples(output_dir):
     ax4.set_xlim(-5, 85)
     ax4.set_ylim(-5, 85)
 
-    tcf4 = ax4.tripcolor(lx, ly, ltris, l_u, cmap="coolwarm", shading="gouraud")
+    tcf4 = ax4.tripcolor(
+        lx, ly, ltris, l_u, cmap="coolwarm", shading="gouraud"
+    )
     cbar4 = fig4.colorbar(tcf4, ax=ax4, shrink=0.8)
     cbar4.set_label("Scalar field u(x,y)", fontsize=10)
 
-    ax4.plot(list(xs_l) + [xs_l[0]], list(ys_l) + [ys_l[0]], color="darkred", linewidth=2, label="Outer (u=1)")
+    ax4.plot(
+        list(xs_l) + [xs_l[0]],
+        list(ys_l) + [ys_l[0]],
+        color="darkred",
+        linewidth=2,
+        label="Outer (u=1)",
+    )
     levels_l = np.linspace(0, 1, 11)
-    ax4.tricontour(lx, ly, ltris, l_u, levels=levels_l, colors="black", linewidths=0.5, alpha=0.3)
+    ax4.tricontour(
+        lx,
+        ly,
+        ltris,
+        l_u,
+        levels=levels_l,
+        colors="black",
+        linewidths=0.5,
+        alpha=0.3,
+    )
 
     ax4.set_title(
-        f"Laplace solution Δu = 0 on L-shaped pocket\n"
-        f"(u=1 on outer boundary)",
+        "Laplace solution Δu = 0 on L-shaped pocket\n(u=1 on outer boundary)",
         fontsize=12,
     )
     ax4.legend(fontsize=10, loc="upper right")

@@ -1,5 +1,16 @@
 """Generate concentric offset example images."""
 
+__images__ = [
+    {
+        "stem": "concentric-offsets",
+        "caption": (
+            "Concentric inward offsets for adaptive clearing / pocketing"
+        ),
+        "doc": "raygeo.geo.algo.offset.md",
+        "heading": "concentric_offsets",
+    },
+]
+
 import matplotlib.pyplot as plt
 
 from raygeo.geo import Geometry

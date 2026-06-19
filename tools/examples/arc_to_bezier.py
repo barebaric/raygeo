@@ -1,7 +1,14 @@
 """Generate arc-to-bezier conversion example images."""
 
-import matplotlib.lines as mlines
-import matplotlib.patches as mpatches
+__images__ = [
+    {
+        "stem": "arc-to-bezier-overlay",
+        "caption": "Overlay showing Bezier curves matching the original arcs",
+        "doc": "raygeo.geo.md",
+        "heading": "convert_arcs_to_beziers",
+    },
+]
+
 import matplotlib.pyplot as plt
 
 from raygeo.geo import Bezier, Geometry
@@ -88,80 +95,6 @@ def generate_examples(output_dir):
     circle = _make_circle()
     circle_beziers = circle.copy()
     circle_beziers.convert_arcs_to_beziers()
-
-    # ── 2×2 grid: before/after for each shape ─────────────────────────
-    fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=(16, 14))
-
-    for ax in (ax1, ax2):
-        ax.set_xlim(-22, 22)
-        ax.set_ylim(-27, 5)
-    for ax in (ax3, ax4):
-        ax.set_xlim(-15, 15)
-        ax.set_ylim(20, 40)
-
-    plot_geometry(ax1, arch, color="steelblue", linewidth=2.5)
-    ax1.set_aspect("equal")
-    ax1.grid(True, alpha=0.3)
-    ax1.set_title("Before: arc commands (arch)", fontsize=14)
-
-    plot_geometry(ax2, arch_beziers, color="crimson", linewidth=2.5)
-    _plot_bezier_controls(ax2, arch_beziers, color="crimson")
-    ax2.set_aspect("equal")
-    ax2.grid(True, alpha=0.3)
-    ax2.set_title("After: convert_arcs_to_beziers()", fontsize=14)
-
-    plot_geometry(ax3, circle, color="steelblue", linewidth=2.5)
-    ax3.set_aspect("equal")
-    ax3.grid(True, alpha=0.3)
-    ax3.set_title("Before: arc commands (circle)", fontsize=14)
-
-    plot_geometry(ax4, circle_beziers, color="crimson", linewidth=2.5)
-    _plot_bezier_controls(ax4, circle_beziers, color="crimson")
-    ax4.set_aspect("equal")
-    ax4.grid(True, alpha=0.3)
-    ax4.set_title("After: convert_arcs_to_beziers() (circle)", fontsize=14)
-
-    legend_elements = [
-        mpatches.Patch(color="steelblue", label="Original"),
-        mpatches.Patch(color="crimson", label="Bezier conversion"),
-        mlines.Line2D(
-            [0], [0], color="crimson", linestyle=":", label="Handle line"
-        ),
-        mlines.Line2D(
-            [0],
-            [0],
-            color="crimson",
-            marker="o",
-            linestyle="",
-            markersize=5,
-            label="Curve point",
-        ),
-        mlines.Line2D(
-            [0],
-            [0],
-            color="crimson",
-            marker="x",
-            linestyle="",
-            markersize=6,
-            label="Control point",
-        ),
-    ]
-    fig.legend(
-        handles=legend_elements, loc="lower center", ncol=4, fontsize=11
-    )
-    fig.tight_layout(rect=(0, 0.02, 1, 1))
-
-    path = output_dir / "arc-to-bezier.png"
-    fig.savefig(path, dpi=150)
-    plt.close(fig)
-    images.append(
-        {
-            "path": "arc-to-bezier.png",
-            "caption": (
-                "Arc commands converted to Bezier curve approximations"
-            ),
-        }
-    )
 
     # ── Overlay comparison with controls ────────────────────────────
     fig2, (ax_a, ax_b) = plt.subplots(1, 2, figsize=(16, 7))

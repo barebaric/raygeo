@@ -1,5 +1,14 @@
 """Generate Inner Fit Polygon example images."""
 
+__images__ = [
+    {
+        "stem": "inner-fit-polygon",
+        "caption": "Inner Fit Polygon showing valid placement region",
+        "doc": "raygeo.geo.algo.nest2d.ifp.md",
+        "heading": "inner_fit_polygon",
+    },
+]
+
 import matplotlib.pyplot as plt
 
 from raygeo.geo.algo.nest2d.ifp import inner_fit_polygon

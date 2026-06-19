@@ -295,13 +295,9 @@ After this call, the geometry will only contain Move, Line, and Bezier commands.
 | _Returns_    | `None` |                                                    |
 | _Complexity_ |        | O(n) time, O(n) space where n = number of commands |
 
-![Overlay showing Bezier curves closely matching the original arcs](images/arc-to-bezier-overlay.png)
+![Overlay showing Bezier curves matching the original arcs](images/arc-to-bezier-overlay.png)
 
-_Overlay showing Bezier curves closely matching the original arcs_
-
-![Arc commands converted to Bezier curve approximations](images/arc-to-bezier.png)
-
-_Arc commands converted to Bezier curve approximations_
+_Overlay showing Bezier curves matching the original arcs_
 
 ### `copy()`
 

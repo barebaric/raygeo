@@ -1,5 +1,14 @@
 """Generate ops clipping example images."""
 
+__images__ = [
+    {
+        "stem": "ops-clip-rect",
+        "caption": "Ops paths clipped to a rectangle",
+        "doc": "raygeo.ops.md",
+        "heading": "clip_rect",
+    },
+]
+
 import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle
 

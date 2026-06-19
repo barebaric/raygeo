@@ -1,5 +1,14 @@
 """Generate helix example images."""
 
+__images__ = [
+    {
+        "stem": "helix-cylindrical-conical",
+        "caption": "Cylindrical (CCW) and conical-expand (CW) helical paths",
+        "doc": "raygeo.geo.algo.helix.md",
+        "heading": "generate_helix",
+    },
+]
+
 import matplotlib.pyplot as plt
 
 from raygeo.geo.algo.helix import HelixDirection, generate_helix

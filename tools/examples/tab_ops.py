@@ -1,5 +1,14 @@
 """Generate tab operations example images."""
 
+__images__ = [
+    {
+        "stem": "tab-operations",
+        "caption": "Tab operations on a rectangle",
+        "doc": "raygeo.ops.md",
+        "heading": "apply_tab_gaps",
+    },
+]
+
 import math
 
 import matplotlib.patches as mpatches

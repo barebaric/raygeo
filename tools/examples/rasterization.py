@@ -1,5 +1,32 @@
 """Generate rasterization example images."""
 
+__images__ = [
+    {
+        "stem": "rasterization-power-modulation",
+        "caption": "Rasterization: Power Modulation",
+        "doc": "raygeo.ops.raster.md",
+        "heading": "rasterize_power_modulation",
+    },
+    {
+        "stem": "rasterization-mask-scan",
+        "caption": "Rasterization: Mask Scan",
+        "doc": "raygeo.ops.raster.md",
+        "heading": "rasterize_mask_scan",
+    },
+    {
+        "stem": "rasterization-mask-lines",
+        "caption": "Rasterization: Mask Lines",
+        "doc": "raygeo.ops.raster.md",
+        "heading": "rasterize_mask_lines",
+    },
+    {
+        "stem": "rasterization-multi-pass",
+        "caption": "Rasterization: Multi-Pass",
+        "doc": "raygeo.ops.raster.md",
+        "heading": "rasterize_multi_pass",
+    },
+]
+
 import matplotlib.pyplot as plt
 import numpy as np
 

@@ -1,5 +1,14 @@
 """Generate rasterize-scanlines example images."""
 
+__images__ = [
+    {
+        "stem": "rasterize-scanlines",
+        "caption": "Scanline ops rasterized into a 2D power-map buffer",
+        "doc": "raygeo.image.md",
+        "heading": "rasterize_scanlines",
+    },
+]
+
 import matplotlib.pyplot as plt
 import numpy as np
 

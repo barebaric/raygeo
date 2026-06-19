@@ -1,5 +1,38 @@
 """Generate smoothing example images."""
 
+__images__ = [
+    {
+        "stem": "smooth",
+        "caption": "Gaussian smoothing",
+        "doc": "raygeo.geo.algo.smooth.md",
+        "heading": "smooth_polyline",
+    },
+    {
+        "stem": "smooth-gaussian-kernel",
+        "caption": "Gaussian kernel weights",
+        "doc": "raygeo.geo.algo.smooth.md",
+        "heading": "compute_gaussian_kernel",
+    },
+    {
+        "stem": "smooth-resample",
+        "caption": "Polyline resampling",
+        "doc": "raygeo.geo.algo.smooth.md",
+        "heading": "resample_polyline",
+    },
+    {
+        "stem": "smooth-circular",
+        "caption": "Circular smoothing",
+        "doc": "raygeo.geo.algo.smooth.md",
+        "heading": "smooth_circularly",
+    },
+    {
+        "stem": "smooth-sub-segment",
+        "caption": "Sub-segment smoothing",
+        "doc": "raygeo.geo.algo.smooth.md",
+        "heading": "smooth_sub_segment",
+    },
+]
+
 import math
 
 import matplotlib.pyplot as plt

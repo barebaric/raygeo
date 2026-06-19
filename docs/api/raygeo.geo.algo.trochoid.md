@@ -37,10 +37,10 @@ Generate a trochoidal cutting path along a carrier polyline.
 | _Returns_              | `list[tuple[float, float, float]]` | List of (x, y, z) points forming the trochoidal path.                |
 | _Complexity_           |                                    | O(n) time, O(n) space where n is proportional to path length / step  |
 
-![Trochoidal toolpath around an L-shaped corner](images/trochoid-l-shaped.png)
-
-_Trochoidal toolpath around an L-shaped corner_
-
 ![Trochoidal toolpath along a straight carrier — 60° vs 120°](images/trochoid-straight.png)
 
 _Trochoidal toolpath along a straight carrier — 60° vs 120°_
+
+![Trochoidal toolpath around an L-shaped corner](images/trochoid-l-shaped.png)
+
+_Trochoidal toolpath around an L-shaped corner_

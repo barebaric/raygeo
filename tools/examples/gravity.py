@@ -1,5 +1,14 @@
 """Generate gravity nesting example images."""
 
+__images__ = [
+    {
+        "stem": "gravity",
+        "caption": "Gravity tightening: before vs after",
+        "doc": "raygeo.geo.algo.nest2d.gravity.md",
+        "heading": "apply_gravity",
+    },
+]
+
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.colors import to_hex

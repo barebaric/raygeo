@@ -1,5 +1,26 @@
 """Generate bezier curve example images."""
 
+__images__ = [
+    {
+        "stem": "bezier-split",
+        "caption": "Bezier split at parameter t",
+        "doc": "raygeo.geo.shape.bezier.md",
+        "heading": "split_bezier",
+    },
+    {
+        "stem": "bezier-point-at",
+        "caption": "Bezier point evaluation at parameter t",
+        "doc": "raygeo.geo.shape.bezier.md",
+        "heading": "get_bezier_point_at",
+    },
+    {
+        "stem": "bezier-flatten",
+        "caption": "Bezier flattening via adaptive subdivision",
+        "doc": "raygeo.geo.shape.bezier.md",
+        "heading": "flatten_bezier",
+    },
+]
+
 import matplotlib.pyplot as plt
 import numpy as np
 

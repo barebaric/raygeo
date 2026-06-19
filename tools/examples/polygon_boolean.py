@@ -1,5 +1,26 @@
 """Generate polygon boolean operation example images."""
 
+__images__ = [
+    {
+        "stem": "polygon-boolean-union",
+        "caption": "Polygon union",
+        "doc": "raygeo.geo.shape.polygon.md",
+        "heading": "get_polygons_union",
+    },
+    {
+        "stem": "polygon-boolean-intersection",
+        "caption": "Polygon intersection",
+        "doc": "raygeo.geo.shape.polygon.md",
+        "heading": "get_polygons_intersection",
+    },
+    {
+        "stem": "polygon-boolean-difference",
+        "caption": "Polygon difference",
+        "doc": "raygeo.geo.shape.polygon.md",
+        "heading": "get_polygons_difference",
+    },
+]
+
 import math
 
 import matplotlib.pyplot as plt

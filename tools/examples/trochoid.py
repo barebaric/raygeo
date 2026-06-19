@@ -1,5 +1,22 @@
 """Generate trochoid example images."""
 
+__images__ = [
+    {
+        "stem": "trochoid-straight",
+        "caption": (
+            "Trochoidal toolpath along a straight carrier — 60° vs 120°"
+        ),
+        "doc": "raygeo.geo.algo.trochoid.md",
+        "heading": "trochoid_along",
+    },
+    {
+        "stem": "trochoid-l-shaped",
+        "caption": "Trochoidal toolpath around an L-shaped corner",
+        "doc": "raygeo.geo.algo.trochoid.md",
+        "heading": "trochoid_along",
+    },
+]
+
 import matplotlib.pyplot as plt
 
 from raygeo.geo.algo.trochoid import trochoid_along

@@ -16,7 +16,7 @@ install-docs-deps:
 	pip install -e ".[docs]" --quiet
 
 stubs:
-	cargo run --bin stub_gen
+	cargo clean -p raygeo && cargo run --bin stub_gen
 
 format: format-rust format-python
 

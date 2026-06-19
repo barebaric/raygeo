@@ -1,5 +1,14 @@
 """Generate ramp example images."""
 
+__images__ = [
+    {
+        "stem": "ramp-linear-zigzag",
+        "caption": "Linear (left) and ZigZag (right) ramp entry paths",
+        "doc": "raygeo.geo.algo.ramp.md",
+        "heading": "generate_ramp",
+    },
+]
+
 import matplotlib.pyplot as plt
 
 from raygeo.geo.algo.ramp import RampStyle, generate_ramp

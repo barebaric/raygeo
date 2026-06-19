@@ -16,472 +16,24 @@ import numpy as np
 import tools.examples
 from tools import api_docs
 
-# Each entry maps a doc file to a list of (section_heading, stem, caption).
-# section_heading is the function name to find the `### \`func()\`` heading,
-# or None to place the image at the top of the page content.
-_INLINE_IMAGE_MAP = {
-    "raygeo.md": [
-        (
-            None,
-            "geometry-playground",
-            "Various geometry shapes and operations",
-        ),
-    ],
-    "raygeo.geo.md": [
-        (
-            None,
-            "geometry-playground",
-            "Various geometry shapes and operations",
-        ),
-        (
-            "convert_arcs_to_beziers",
-            "arc-to-bezier",
-            "Arc commands converted to Bezier curve approximations",
-        ),
-        (
-            "convert_arcs_to_beziers",
-            "arc-to-bezier-overlay",
-            "Overlay showing Bezier curves closely matching the original arcs",
-        ),
-    ],
-    "raygeo.geo.shape.polygon.md": [
-        (
-            "get_polygons_union",
-            "polygon-boolean-union",
-            "Polygon union",
-        ),
-        (
-            "get_polygons_intersection",
-            "polygon-boolean-intersection",
-            "Polygon intersection",
-        ),
-        (
-            "get_polygons_difference",
-            "polygon-boolean-difference",
-            "Polygon difference",
-        ),
-        ("offset_polygon", "polygon-offset", "Polygon offset (outward)"),
-    ],
-    "raygeo.geo.shape.polygon3d.md": [
-        (
-            "get_polygons_union_3d",
-            "polygon3d-boolean-union",
-            "3D polygon union — Z from first polygon",
-        ),
-        (
-            "get_polygons_intersection_3d",
-            "polygon3d-boolean-intersection",
-            "3D polygon intersection — Z from first polygon",
-        ),
-        (
-            "get_polygons_difference_3d",
-            "polygon3d-boolean-difference",
-            "3D polygon difference (A − B) — Z from A",
-        ),
-        (
-            "offset_polygon_3d",
-            "polygon3d-offset",
-            "3D polygon offset — Z preserved from input",
-        ),
-        (
-            "get_polygon_perimeter_3d",
-            "polygon3d-perimeter",
-            "3D polygon perimeter using full 3D edge lengths",
-        ),
-        (
-            "get_polygon_bounds_3d",
-            "polygon3d-bounds",
-            "3D bounding box (Rect3D)",
-        ),
-        (
-            "get_polygon_centroid_3d",
-            "polygon3d-centroid",
-            "3D centroid – XY via shoelace, Z as average",
-        ),
-        (
-            "get_polygon_edges_3d",
-            "polygon3d-edges",
-            "3D polygon edges as (start, end) pairs",
-        ),
-        (
-            "get_polygon_convex_hull_3d",
-            "polygon3d-convex-hull",
-            "3D convex hull (XY-plane, Z from first hull vertex)",
-        ),
-        (
-            "translate_polygon_3d",
-            "polygon3d-translate",
-            "3D polygon translated by dx, dy, dz",
-        ),
-        (
-            "scale_polygon_3d",
-            "polygon3d-scale",
-            "3D polygon scaled uniformly",
-        ),
-        (
-            "flip_polygon_3d",
-            "polygon3d-flip",
-            "3D polygon flipped horizontally and along Z",
-        ),
-        (
-            "rotate_polygon_3d",
-            "polygon3d-rotate",
-            "3D polygon rotated around Z axis (Z preserved)",
-        ),
-        (
-            "offset_polyline_3d",
-            "polygon3d-true-offset",
-            "True 3D polyline offset (edge-plane miter)",
-        ),
-    ],
-    "raygeo.image.md": [
-        (
-            "rasterize_scanlines",
-            "rasterize-scanlines",
-            "Scanline ops rasterized into a 2D power-map buffer",
-        ),
-        (
-            "srgb_to_linear",
-            "image-processing-srgb",
-            "sRGB to linear round-trip",
-        ),
-        (
-            "apply_floyd_steinberg_dither",
-            "image-processing-dither-floyd",
-            "Floyd-Steinberg dithering",
-        ),
-        (
-            "apply_bayer_dither",
-            "image-processing-dither-bayer",
-            "Bayer 4x4 ordered dithering",
-        ),
-        (
-            "grayscale_to_binary",
-            "image-processing-otsu",
-            "Grayscale to binary via Otsu and fixed threshold",
-        ),
-        (
-            "get_component_areas",
-            "image-processing-component-areas",
-            "Connected component areas sorted ascending",
-        ),
-        (
-            "filter_components",
-            "image-processing-filter-components",
-            "Component filtering by minimum area",
-        ),
-        (
-            "denoise_binary",
-            "image-processing-denoise-binary",
-            "Binary image denoised via adaptive thresholding",
-        ),
-        (
-            "compute_adaptive_threshold",
-            "image-processing-adaptive-threshold",
-            "Adaptive threshold from component area distribution",
-        ),
-        (
-            "apply_minimum_run_length",
-            "image-processing-min-run-len",
-            "Minimum run length applied to binary image",
-        ),
-    ],
-    "raygeo.svg.md": [
-        (None, "svg-parsing", "SVG path data parsed into geometries"),
-    ],
-    "raygeo.ops.md": [
-        ("apply_tab_gaps", "tab-operations", "Tab operations on a rectangle"),
-        (
-            "merge_overlapping_lines",
-            "merge-lines",
-            "Line merging before and after",
-        ),
-        ("apply_overscan", "overscan", "Overscan applied to raster lines"),
-        ("apply_lead_in_out", "lead-in-out", "Lead-in and lead-out paths"),
-        (
-            "optimize_travel",
-            "ops-optimize-travel",
-            "Travel path before and after optimization",
-        ),
-        (
-            "clip_rect",
-            "ops-clip-rect",
-            "Ops paths clipped to a rectangle",
-        ),
-    ],
-    "raygeo.ops.polyline.md": [
-        (
-            "polyline_to_ops",
-            "polyline-to-ops",
-            "polyline_to_ops with move_first=True vs move_first=False",
-        ),
-        (
-            "link_passes",
-            "polyline-link-passes",
-            "Three passes linked with StayDown vs Retract strategies",
-        ),
-        (
-            "find_pass_entry",
-            "polyline-pass-entry-exit",
-            "Entry and exit points from find_pass_entry / find_pass_exit",
-        ),
-    ],
-    "raygeo.ops.raster.md": [
-        (
-            "rasterize_power_modulation",
-            "rasterization-power-modulation",
-            "Rasterization: Power Modulation",
-        ),
-        (
-            "rasterize_mask_scan",
-            "rasterization-mask-scan",
-            "Rasterization: Mask Scan",
-        ),
-        (
-            "rasterize_mask_lines",
-            "rasterization-mask-lines",
-            "Rasterization: Mask Lines",
-        ),
-        (
-            "rasterize_multi_pass",
-            "rasterization-multi-pass",
-            "Rasterization: Multi-Pass",
-        ),
-        (
-            "extract_zero_power_segments",
-            "zero-power-segments",
-            "Zero-power segment extraction",
-        ),
-    ],
-    "raygeo.geo.algo.hull.md": [
-        ("get_concave_hull", "concave-hull", "Concave vs convex hull"),
-    ],
-    "raygeo.geo.algo.clipping.md": [
-        (
-            "clip_line_segment_with_rect",
-            "clipping-rect",
-            "Line clipped to rectangle",
-        ),
-        (
-            "clip_line_segment_with_polygons",
-            "clipping-polygon",
-            "Line clipped to polygon",
-        ),
-        (
-            "subtract_polygons_from_line_segment",
-            "clipping-subtract",
-            "Subtract polygon from line",
-        ),
-    ],
-    "raygeo.geo.algo.fitting.md": [
-        ("fit_circle_to_points", "fitting-circle", "Circle fitted to points"),
-        (
-            "fit_points_with_primitives",
-            "fitting-primitives",
-            "Fitted primitives",
-        ),
-        (
-            "fit_circle_to_3_points",
-            "fitting-3-points",
-            "Circle fitted to three points",
-        ),
-        (
-            "flatten_to_points",
-            "fitting-flatten",
-            "Arc curve flattened to dense line segments",
-        ),
-        (
-            "linearize_geometry",
-            "fitting-linearize",
-            "Arc curve linearized with RDP simplification",
-        ),
-        (
-            "get_polyline_arc_deviation",
-            "fitting-arc-deviation",
-            "Maximum deviation from a reference arc",
-        ),
-        (
-            "get_polyline_line_deviation",
-            "fitting-line-deviation",
-            "Maximum deviation from a chord",
-        ),
-        (
-            "project_circle_center_to_bisector",
-            "fitting-project-bisector",
-            "Circle center projected onto the perpendicular bisector",
-        ),
-    ],
-    "raygeo.geo.algo.offset.md": [
-        (
-            "concentric_offsets",
-            "concentric-offsets",
-            "Concentric inward offsets for adaptive clearing / pocketing",
-        ),
-    ],
-    "raygeo.geo.algo.overcut.md": [
-        ("apply_overcut", "overcut", "Overcut on closed contour"),
-    ],
-    "raygeo.geo.algo.pde_mesh.md": [
-        (
-            "build_triangle_mesh",
-            "pde-mesh-triangulation",
-            "CDT triangulation of a square pocket with centred hole",
-        ),
-        (
-            "build_triangle_mesh",
-            "pde-mesh-l-shape",
-            "CDT triangulation of an L-shaped pocket",
-        ),
-        (
-            "solve_laplace",
-            "pde-mesh-laplace",
-            "Laplace solution — contours morph smoothly from hole to boundary",
-        ),
-        (
-            "solve_laplace",
-            "pde-mesh-l-shape-solution",
-            "Laplace solution on an L-shaped domain",
-        ),
-    ],
-    "raygeo.geo.algo.ramp.md": [
-        (
-            "generate_ramp",
-            "ramp-linear-zigzag",
-            "Linear (left) and ZigZag (right) ramp entry paths",
-        ),
-    ],
-    "raygeo.geo.algo.simplify.md": [
-        ("simplify_polyline", "simplify", "Simplify and linearize"),
-        (
-            "simplify_polyline_3d",
-            "simplify-3d",
-            "3D polyline simplification preserving Z coordinates",
-        ),
-    ],
-    "raygeo.geo.algo.smooth.md": [
-        ("smooth_polyline", "smooth", "Gaussian smoothing"),
-        (
-            "compute_gaussian_kernel",
-            "smooth-gaussian-kernel",
-            "Gaussian kernel weights",
-        ),
-        (
-            "resample_polyline",
-            "smooth-resample",
-            "Polyline resampling",
-        ),
-        (
-            "smooth_circularly",
-            "smooth-circular",
-            "Circular smoothing",
-        ),
-        (
-            "smooth_sub_segment",
-            "smooth-sub-segment",
-            "Sub-segment smoothing",
-        ),
-    ],
-    "raygeo.geo.algo.trochoid.md": [
-        (
-            "trochoid_along",
-            "trochoid-straight",
-            "Trochoidal toolpath along a straight carrier — 60° vs 120°",
-        ),
-        (
-            "trochoid_along",
-            "trochoid-l-shaped",
-            "Trochoidal toolpath around an L-shaped corner",
-        ),
-    ],
-    "raygeo.geo.shape.arc.md": [
-        (
-            "linearize_arc",
-            "arc-linearize",
-            "Arc linearization: coarse and fine resolution",
-        ),
-    ],
-    "raygeo.geo.shape.bezier.md": [
-        (
-            "split_bezier",
-            "bezier-split",
-            "Bezier split at parameter t",
-        ),
-        (
-            "get_bezier_point_at",
-            "bezier-point-at",
-            "Bezier point evaluation at parameter t",
-        ),
-        (
-            "flatten_bezier",
-            "bezier-flatten",
-            "Bezier flattening via adaptive subdivision",
-        ),
-    ],
-    "raygeo.geo.shape.circle.md": [
-        (
-            "get_circle_circle_intersections",
-            "circle-intersections",
-            "Circle-circle and line-circle intersection points",
-        ),
-    ],
-    "raygeo.geo.shape.line.md": [
-        (
-            "get_line_line_intersection",
-            "line-intersections",
-            "Line-line and segment intersection",
-        ),
-        (
-            "get_point_line_distance",
-            "line-point-distance",
-            "Perpendicular distance from a point to a line",
-        ),
-    ],
-    "raygeo.geo.algo.analysis.md": [
-        (
-            "get_area",
-            "analysis-area-winding",
-            "Polygon area and winding order analysis",
-        ),
-    ],
-    "raygeo.geo.algo.cylindrical.md": [
-        (
-            "transform_to_cylinder",
-            "cylindrical-transform",
-            "Flat vertex pairs wrapped onto a cylinder surface",
-        ),
-    ],
-    "raygeo.geo.algo.helix.md": [
-        (
-            "generate_helix",
-            "helix-cylindrical-conical",
-            "Cylindrical (CCW) and conical-expand (CW) helical paths",
-        ),
-    ],
-    "raygeo.geo.algo.minkowski2d.md": [
-        (
-            "get_polygon_minkowski_sum_convex",
-            "minkowski-sum",
-            "Minkowski sum of two convex polygons",
-        ),
-    ],
-    "raygeo.geo.algo.nest2d.ifp.md": [
-        (
-            "inner_fit_polygon",
-            "inner-fit-polygon",
-            "Inner Fit Polygon showing valid placement region",
-        ),
-    ],
-    "raygeo.geo.algo.nest2d.gravity.md": [
-        (
-            "apply_gravity",
-            "gravity",
-            "Gravity tightening: before vs after",
-        ),
-    ],
-    "raygeo.geo.algo.nest2d.md": [
-        (None, "nesting", "Part nesting on a sheet"),
-    ],
-}
+
+def _build_inline_image_map():
+    mapping = {}
+    for mod in _collect_example_modules():
+        images = getattr(mod, "__images__", None)
+        if not images:
+            continue
+        for img in images:
+            doc_files = img.get("doc")
+            if not doc_files:
+                continue
+            if isinstance(doc_files, str):
+                doc_files = [doc_files]
+            for doc in doc_files:
+                mapping.setdefault(doc, []).append(
+                    (img.get("heading"), img["stem"], img["caption"])
+                )
+    return mapping
 
 
 def _collect_example_modules():
@@ -519,6 +71,35 @@ def _images_are_visually_identical(path_a: Path, path_b: Path) -> bool:
     return np.allclose(a_blocks, b_blocks, atol=0.2)
 
 
+def _module_output_stems(mod):
+    images = getattr(mod, "__images__", None)
+    if images:
+        return [img["stem"] for img in images]
+    return getattr(mod, "__outputs__", None) or []
+
+
+def _module_is_up_to_date(mod, images_dir: Path) -> bool:
+    stems = _module_output_stems(mod)
+    if not stems:
+        return False
+    if not images_dir.is_dir():
+        return False
+    try:
+        mod_mtime = Path(mod.__file__).stat().st_mtime
+    except (OSError, TypeError):
+        return False
+    for stem in stems:
+        img = images_dir / f"{stem}.png"
+        if not img.exists():
+            return False
+        try:
+            if img.stat().st_mtime < mod_mtime:
+                return False
+        except OSError:
+            return False
+    return True
+
+
 def _generate_images(images_dir: Path):
     matplotlib.use("Agg")
 
@@ -529,6 +110,9 @@ def _generate_images(images_dir: Path):
         tmp_dir = Path(tmp)
         for mod in modules:
             if not hasattr(mod, "generate_examples"):
+                continue
+            if _module_is_up_to_date(mod, images_dir):
+                print(f"  Skipping {mod.__name__} (up to date)")
                 continue
             print(f"  Generating {mod.__name__}...")
             mod.generate_examples(tmp_dir)
@@ -544,7 +128,8 @@ def _generate_images(images_dir: Path):
 
 
 def _inject_images_into_api(api_dir: Path, images_dir: Path):
-    for md_file, image_list in _INLINE_IMAGE_MAP.items():
+    inline_map = _build_inline_image_map()
+    for md_file, image_list in inline_map.items():
         path = api_dir / md_file
         if not path.exists():
             continue
@@ -585,6 +170,16 @@ def _inject_images_into_api(api_dir: Path, images_dir: Path):
 
         if not insertions:
             continue
+
+        # Reverse same-position groups so first entry in the list
+        # ends up first in the rendered output.
+        i = 0
+        while i < len(insertions):
+            j = i + 1
+            while j < len(insertions) and insertions[j][0] == insertions[i][0]:
+                j += 1
+            insertions[i:j] = reversed(insertions[i:j])
+            i = j
 
         for pos, block in sorted(insertions, key=lambda x: -x[0]):
             content = content[:pos] + "\n" + block + content[pos:]

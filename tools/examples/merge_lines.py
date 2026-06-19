@@ -1,5 +1,14 @@
 """Generate merge lines example images."""
 
+__images__ = [
+    {
+        "stem": "merge-lines",
+        "caption": "Line merging before and after",
+        "doc": "raygeo.ops.md",
+        "heading": "merge_overlapping_lines",
+    },
+]
+
 import matplotlib.pyplot as plt
 
 from raygeo.ops import Ops

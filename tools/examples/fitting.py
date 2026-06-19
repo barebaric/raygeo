@@ -1,5 +1,56 @@
 """Generate fitting example images."""
 
+__images__ = [
+    {
+        "stem": "fitting-circle",
+        "caption": "Circle fitted to points",
+        "doc": "raygeo.geo.algo.fitting.md",
+        "heading": "fit_circle_to_points",
+    },
+    {
+        "stem": "fitting-primitives",
+        "caption": "Fitted primitives",
+        "doc": "raygeo.geo.algo.fitting.md",
+        "heading": "fit_points_with_primitives",
+    },
+    {
+        "stem": "fitting-3-points",
+        "caption": "Circle fitted to three points",
+        "doc": "raygeo.geo.algo.fitting.md",
+        "heading": "fit_circle_to_3_points",
+    },
+    {
+        "stem": "fitting-flatten",
+        "caption": "Arc curve flattened to dense line segments",
+        "doc": "raygeo.geo.algo.fitting.md",
+        "heading": "flatten_to_points",
+    },
+    {
+        "stem": "fitting-linearize",
+        "caption": "Arc curve linearized with RDP simplification",
+        "doc": "raygeo.geo.algo.fitting.md",
+        "heading": "linearize_geometry",
+    },
+    {
+        "stem": "fitting-arc-deviation",
+        "caption": "Maximum deviation from a reference arc",
+        "doc": "raygeo.geo.algo.fitting.md",
+        "heading": "get_polyline_arc_deviation",
+    },
+    {
+        "stem": "fitting-line-deviation",
+        "caption": "Maximum deviation from a chord",
+        "doc": "raygeo.geo.algo.fitting.md",
+        "heading": "get_polyline_line_deviation",
+    },
+    {
+        "stem": "fitting-project-bisector",
+        "caption": "Circle center projected onto the perpendicular bisector",
+        "doc": "raygeo.geo.algo.fitting.md",
+        "heading": "project_circle_center_to_bisector",
+    },
+]
+
 import math
 
 import matplotlib.pyplot as plt

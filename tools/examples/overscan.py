@@ -1,5 +1,14 @@
 """Generate overscan example images."""
 
+__images__ = [
+    {
+        "stem": "overscan",
+        "caption": "Overscan applied to raster lines",
+        "doc": "raygeo.ops.md",
+        "heading": "apply_overscan",
+    },
+]
+
 import matplotlib.pyplot as plt
 
 from raygeo.ops import Ops

@@ -1,5 +1,92 @@
 """Generate 3D polygon operation example images."""
 
+__images__ = [
+    {
+        "stem": "polygon3d-boolean-union",
+        "caption": "3D polygon union — Z from first polygon",
+        "doc": "raygeo.geo.shape.polygon3d.md",
+        "heading": "get_polygons_union_3d",
+    },
+    {
+        "stem": "polygon3d-boolean-intersection",
+        "caption": "3D polygon intersection — Z from first polygon",
+        "doc": "raygeo.geo.shape.polygon3d.md",
+        "heading": "get_polygons_intersection_3d",
+    },
+    {
+        "stem": "polygon3d-boolean-difference",
+        "caption": "3D polygon difference (A − B) — Z from A",
+        "doc": "raygeo.geo.shape.polygon3d.md",
+        "heading": "get_polygons_difference_3d",
+    },
+    {
+        "stem": "polygon3d-offset",
+        "caption": "3D polygon offset — Z preserved from input",
+        "doc": "raygeo.geo.shape.polygon3d.md",
+        "heading": "offset_polygon_3d",
+    },
+    {
+        "stem": "polygon3d-perimeter",
+        "caption": "3D polygon perimeter using full 3D edge lengths",
+        "doc": "raygeo.geo.shape.polygon3d.md",
+        "heading": "get_polygon_perimeter_3d",
+    },
+    {
+        "stem": "polygon3d-bounds",
+        "caption": "3D bounding box (Rect3D)",
+        "doc": "raygeo.geo.shape.polygon3d.md",
+        "heading": "get_polygon_bounds_3d",
+    },
+    {
+        "stem": "polygon3d-centroid",
+        "caption": "3D centroid – XY via shoelace, Z as average",
+        "doc": "raygeo.geo.shape.polygon3d.md",
+        "heading": "get_polygon_centroid_3d",
+    },
+    {
+        "stem": "polygon3d-edges",
+        "caption": "3D polygon edges as (start, end) pairs",
+        "doc": "raygeo.geo.shape.polygon3d.md",
+        "heading": "get_polygon_edges_3d",
+    },
+    {
+        "stem": "polygon3d-convex-hull",
+        "caption": "3D convex hull (XY-plane, Z from first hull vertex)",
+        "doc": "raygeo.geo.shape.polygon3d.md",
+        "heading": "get_polygon_convex_hull_3d",
+    },
+    {
+        "stem": "polygon3d-translate",
+        "caption": "3D polygon translated by dx, dy, dz",
+        "doc": "raygeo.geo.shape.polygon3d.md",
+        "heading": "translate_polygon_3d",
+    },
+    {
+        "stem": "polygon3d-scale",
+        "caption": "3D polygon scaled uniformly",
+        "doc": "raygeo.geo.shape.polygon3d.md",
+        "heading": "scale_polygon_3d",
+    },
+    {
+        "stem": "polygon3d-flip",
+        "caption": "3D polygon flipped horizontally and along Z",
+        "doc": "raygeo.geo.shape.polygon3d.md",
+        "heading": "flip_polygon_3d",
+    },
+    {
+        "stem": "polygon3d-rotate",
+        "caption": "3D polygon rotated around Z axis (Z preserved)",
+        "doc": "raygeo.geo.shape.polygon3d.md",
+        "heading": "rotate_polygon_3d",
+    },
+    {
+        "stem": "polygon3d-true-offset",
+        "caption": "True 3D polyline offset (edge-plane miter)",
+        "doc": "raygeo.geo.shape.polygon3d.md",
+        "heading": "offset_polyline_3d",
+    },
+]
+
 import math
 
 import matplotlib.patches as mpatches

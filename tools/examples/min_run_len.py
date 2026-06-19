@@ -1,5 +1,14 @@
 """Generate minimum run length example images."""
 
+__images__ = [
+    {
+        "stem": "image-processing-min-run-len",
+        "caption": "Minimum run length applied to binary image",
+        "doc": "raygeo.image.md",
+        "heading": "apply_minimum_run_length",
+    },
+]
+
 import matplotlib.pyplot as plt
 import numpy as np
 

@@ -1,5 +1,12 @@
 """Generate a composite showcase image for the README."""
 
+__images__ = [
+    {
+        "stem": "showcase",
+        "caption": "Composite showcase of key raygeo features",
+    },
+]
+
 import math
 
 import matplotlib.pyplot as plt

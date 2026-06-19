@@ -1,5 +1,38 @@
 """Generate image preprocess example images."""
 
+__images__ = [
+    {
+        "stem": "image-processing-otsu",
+        "caption": "Grayscale to binary via Otsu and fixed threshold",
+        "doc": "raygeo.image.md",
+        "heading": "grayscale_to_binary",
+    },
+    {
+        "stem": "image-processing-component-areas",
+        "caption": "Connected component areas sorted ascending",
+        "doc": "raygeo.image.md",
+        "heading": "get_component_areas",
+    },
+    {
+        "stem": "image-processing-filter-components",
+        "caption": "Component filtering by minimum area",
+        "doc": "raygeo.image.md",
+        "heading": "filter_components",
+    },
+    {
+        "stem": "image-processing-denoise-binary",
+        "caption": "Binary image denoised via adaptive thresholding",
+        "doc": "raygeo.image.md",
+        "heading": "denoise_binary",
+    },
+    {
+        "stem": "image-processing-adaptive-threshold",
+        "caption": "Adaptive threshold from component area distribution",
+        "doc": "raygeo.image.md",
+        "heading": "compute_adaptive_threshold",
+    },
+]
+
 from collections import Counter
 
 import matplotlib.pyplot as plt

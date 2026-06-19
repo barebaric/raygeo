@@ -1,5 +1,14 @@
 """Generate extract_zero_power_segments example image."""
 
+__images__ = [
+    {
+        "stem": "zero-power-segments",
+        "caption": "Zero-power segment extraction",
+        "doc": "raygeo.ops.raster.md",
+        "heading": "extract_zero_power_segments",
+    },
+]
+
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.colors import Normalize

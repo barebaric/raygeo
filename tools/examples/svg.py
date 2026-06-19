@@ -1,5 +1,14 @@
 """Generate SVG parsing example images."""
 
+__images__ = [
+    {
+        "stem": "svg-parsing",
+        "caption": "SVG path data parsed into geometries",
+        "doc": "raygeo.svg.md",
+        "heading": None,
+    },
+]
+
 import math
 
 import matplotlib.pyplot as plt

@@ -1,5 +1,14 @@
 """Generate polygon offset example images."""
 
+__images__ = [
+    {
+        "stem": "polygon-offset",
+        "caption": "Polygon offset (outward)",
+        "doc": "raygeo.geo.shape.polygon.md",
+        "heading": "offset_polygon",
+    },
+]
+
 import math
 
 import matplotlib.pyplot as plt

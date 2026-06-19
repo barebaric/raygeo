@@ -1,5 +1,14 @@
 """Generate nesting example images."""
 
+__images__ = [
+    {
+        "stem": "nesting",
+        "caption": "Part nesting on a sheet",
+        "doc": "raygeo.geo.algo.nest2d.md",
+        "heading": None,
+    },
+]
+
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.colors import to_hex
