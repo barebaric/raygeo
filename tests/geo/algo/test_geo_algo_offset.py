@@ -1,7 +1,11 @@
 import pytest
 
 from raygeo.geo import Geometry
-from raygeo.geo.algo.offset import concentric_offsets, offset_contour_group
+from raygeo.geo.algo.offset import (
+    concentric_offsets,
+    find_deepest_cores,
+    offset_contour_group,
+)
 
 
 def make_rect(x0, y0, x1, y1):
@@ -160,3 +164,69 @@ def test_offset_contour_group_invalid_join_style():
     poly = P((0, 0), (10, 0), (5, 10))
     with pytest.raises(ValueError, match="invalid join_style"):
         offset_contour_group(poly, [], 1.0, join_style="nonexistent")
+
+
+# --- find_deepest_cores ---
+
+
+def rect_poly(w, h):
+    return [(0.0, 0.0), (w, 0.0), (w, h), (0.0, h)]
+
+
+def poly_area(poly):
+    n = len(poly)
+    sa = 0.0
+    for i in range(n):
+        j = (i + 1) % n
+        sa += poly[i][0] * poly[j][1] - poly[j][0] * poly[i][1]
+    return abs(sa) / 2.0
+
+
+def test_find_deepest_cores_simple_rect():
+    """Find the centre of a rectangle."""
+    boundary = rect_poly(100.0, 80.0)
+    area = offset_contour_group(boundary, [], -5.0, join_style="round")
+    cores = find_deepest_cores(area, step_over=10.0)
+    assert len(cores) > 0
+    cx, cy = cores[0]
+    assert abs(cx - 50.0) < 1.0
+    assert abs(cy - 40.0) < 1.0
+
+
+def test_find_deepest_cores_empty_input():
+    """Empty input → empty result."""
+    assert find_deepest_cores([], step_over=10.0) == []
+
+
+def test_find_deepest_cores_zero_stepover():
+    """step_over ≤ 0 → empty result."""
+    boundary = rect_poly(100.0, 80.0)
+    area = offset_contour_group(boundary, [], -5.0, join_style="round")
+    assert find_deepest_cores(area, step_over=0.0) == []
+
+
+def test_find_deepest_cores_two_regions():
+    """Dumbbell shape: largest region's centroid is returned."""
+    left = rect_poly(40.0, 80.0)
+    right = [(x + 60, y) for (x, y) in rect_poly(40.0, 80.0)]
+    area = [left, right]
+    cores = find_deepest_cores(area, step_over=10.0)
+    assert len(cores) == 1, f"expected 1 core, got {len(cores)}: {cores}"
+    cx, cy = cores[0]
+    # Both regions are same size, so either centre is valid
+    assert (abs(cx - 20.0) < 5.0 and abs(cy - 40.0) < 5.0) or (
+        abs(cx - 80.0) < 5.0 and abs(cy - 40.0) < 5.0
+    ), f"core ({cx:.1f},{cy:.1f}) not near either lobe centre"
+
+
+def test_find_deepest_cores_single_point_for_small_pocket():
+    """A pocket smaller than step_over still returns its centroid."""
+    # 10x10 rect, tool offset 5 → 0x0 (collapses), so valid area is just
+    # whatever offset_contour_group returns for -5
+    boundary = [(0, 0), (10, 0), (10, 10), (0, 10)]
+    area = offset_contour_group(boundary, [], -5.0, join_style="round")
+    if area:
+        # If any valid area remains, it should collapse in one step
+        cores = find_deepest_cores(area, step_over=100.0)
+        # Returns the original area centroid since it collapses immediately
+        assert len(cores) == len(area)

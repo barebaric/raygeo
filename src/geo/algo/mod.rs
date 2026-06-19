@@ -75,8 +75,8 @@ pub use minkowski2d::{
     get_polygon_minkowski_sum_convex,
 };
 pub use offset::{
-    concentric_offsets, grow_geometry, grow_geometry_on_plane,
-    offset_contour_group,
+    concentric_offsets, find_deepest_cores, grow_geometry,
+    grow_geometry_on_plane, offset_contour_group,
 };
 pub use overcut::apply_overcut;
 pub use pde_spiral::trace_spiral;

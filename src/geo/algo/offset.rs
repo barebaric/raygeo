@@ -249,3 +249,96 @@ pub fn grow_geometry_on_plane(
     result.transform(&inv);
     result
 }
+
+/// Find the single deepest (most open) region of a pocket.
+///
+/// For each polygon in `valid_tool_area`, uses binary search to find the
+/// largest offset that does NOT collapse that polygon, then returns the
+/// centroid of the **largest surviving fragment across all polygons**.
+///
+/// This gives the single best helical-entry point for the entire pocket,
+/// regardless of how many disconnected regions or islands it contains.
+///
+/// Returns an empty vec when the input is empty or `step_over` ≤ 0.
+///
+/// **Planar (XY-plane only).** Z is not modeled.
+pub fn find_deepest_cores(
+    valid_tool_area: &[Polygon],
+    step_over: f64,
+) -> Vec<Point> {
+    if valid_tool_area.is_empty() || step_over <= 0.0 {
+        return vec![];
+    }
+
+    use crate::geo::shape::polygon::{get_polygon_area, get_polygon_centroid};
+
+    let mut best_fragment: Option<Polygon> = None;
+    let mut best_area = 0.0_f64;
+
+    for poly in valid_tool_area {
+        if poly.len() < 3 {
+            continue;
+        }
+
+        // Bounding-box of the starting polygon.
+        let (mut x_min, mut x_max) = (f64::MAX, f64::MIN);
+        let (mut y_min, mut y_max) = (f64::MAX, f64::MIN);
+        for p in poly {
+            if p.x < x_min {
+                x_min = p.x;
+            }
+            if p.x > x_max {
+                x_max = p.x;
+            }
+            if p.y < y_min {
+                y_min = p.y;
+            }
+            if p.y > y_max {
+                y_max = p.y;
+            }
+        }
+        let w = x_max - x_min;
+        let h = y_max - y_min;
+        if w <= 0.0 || h <= 0.0 {
+            continue;
+        }
+
+        let half_min = w.min(h) * 0.5;
+        let mut low = 0.0;
+        let mut high = half_min;
+        let mut best: Vec<Polygon> = vec![poly.clone()];
+        let tol = 1e-4;
+
+        // Binary search: at the end, `low` is the largest offset that
+        // still yields a non-empty polygon.
+        while high - low > tol {
+            let mid = (low + high) * 0.5;
+            let result =
+                offset_polygon_with_style(poly, -mid, JoinStyle::Miter);
+            let valid: Vec<Polygon> = result
+                .into_iter()
+                .filter(|p| p.len() >= 3 && get_polygon_area(p) > 1e-9)
+                .collect();
+
+            if valid.is_empty() {
+                high = mid; // mid was too large
+            } else {
+                low = mid;
+                best = valid;
+            }
+        }
+
+        // Keep the single largest fragment across all polygons.
+        for p in best {
+            let a = get_polygon_area(&p);
+            if a > best_area {
+                best_area = a;
+                best_fragment = Some(p);
+            }
+        }
+    }
+
+    best_fragment
+        .map(|p| vec![get_polygon_centroid(&p)])
+        .unwrap_or_default()
+}

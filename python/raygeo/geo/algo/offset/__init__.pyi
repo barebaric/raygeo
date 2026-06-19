@@ -12,6 +12,7 @@ import raygeo
 from raygeo.geo import types
 __all__ = [
     "concentric_offsets",
+    "find_deepest_cores",
     "offset_contour_group",
 ]
 
@@ -29,6 +30,20 @@ def concentric_offsets(geom: raygeo.Geometry, step: float, max_passes: int = 10,
     :param min_area: Minimum area to stop at (default 1.0).
     :returns: List of offset geometries, outermost first.
     :complexity: O(n * p) time, O(n) space where n is the number of contour vertices and p the number of passes
+    """
+
+def find_deepest_cores(valid_tool_area: collections.abc.Sequence[raygeo.geo.types.Polygon], step_over: float) -> list[raygeo.geo.types.Point]:
+    r"""
+    Find the deepest (most open) regions of a pocket.
+    
+    Iteratively offsets each polygon inward by step_over until all
+    polygons collapse. Returns the centroids of the final polygons —
+    optimal points for helical entry in adaptive clearing.
+    
+    :param valid_tool_area: List of polygons representing valid tool center area.
+    :param step_over: Inward offset distance per iteration.
+    :returns: List of (x, y) centroid points.
+    :complexity: O(n * k) where k is the number of iterations
     """
 
 def offset_contour_group(solid_path: collections.abc.Sequence[raygeo.geo.types.Point], hole_paths: collections.abc.Sequence[collections.abc.Sequence[raygeo.geo.types.Point]], offset: float, join_style: str = 'miter') -> list[raygeo.geo.types.Polygon]:

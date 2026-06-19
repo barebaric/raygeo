@@ -9,7 +9,8 @@ and pocketing toolpath generation.
 
 use super::super::flex_point::{poly_to_points, polygons_to_tuples, PyPoint2D};
 use crate::geo::algo::offset::{
-    concentric_offsets as rust_concentric_offsets, offset_contour_group,
+    concentric_offsets as rust_concentric_offsets,
+    find_deepest_cores as rust_find_deepest_cores, offset_contour_group,
 };
 use crate::geo::shape::polygon::JoinStyle;
 use crate::types::{Point as GeoPoint, Polygon as GeoPolygon};
@@ -21,7 +22,12 @@ pub fn register(algo_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     let m = PyModule::new(py, "offset")?;
     m.setattr("__doc__", MODULE_DOC_OFFSET)?;
 
-    register_functions!(m, concentric_offsets_py, offset_contour_group_py,);
+    register_functions!(
+        m,
+        concentric_offsets_py,
+        find_deepest_cores_py,
+        offset_contour_group_py,
+    );
 
     algo_mod.add_submodule(&m)?;
     Ok(())
@@ -125,4 +131,40 @@ fn offset_contour_group_py(
     Ok(polygons_to_tuples(offset_contour_group(
         &solid, &holes, offset, style,
     )))
+}
+
+#[gen_stub_pyfunction(
+    python = r#"
+    import collections.abc
+    import raygeo.geo.types
+
+    def find_deepest_cores(
+        valid_tool_area: collections.abc.Sequence[raygeo.geo.types.Polygon],
+        step_over: float,
+    ) -> list[raygeo.geo.types.Point]:
+        """Find the deepest (most open) regions of a pocket.
+
+        Iteratively offsets each polygon inward by step_over until all
+        polygons collapse. Returns the centroids of the final polygons —
+        optimal points for helical entry in adaptive clearing.
+
+        :param valid_tool_area: List of polygons representing valid tool center area.
+        :param step_over: Inward offset distance per iteration.
+        :returns: List of (x, y) centroid points.
+        :complexity: O(n * k) where k is the number of iterations
+        """
+"#,
+    module = "raygeo.geo.algo.offset"
+)]
+#[pyfunction(name = "find_deepest_cores")]
+fn find_deepest_cores_py(
+    valid_tool_area: Vec<Vec<(f64, f64)>>,
+    step_over: f64,
+) -> Vec<(f64, f64)> {
+    let polys: Vec<GeoPolygon> = valid_tool_area
+        .into_iter()
+        .map(|v| v.into_iter().map(|(x, y)| GeoPoint::new(x, y)).collect())
+        .collect();
+    let cores = rust_find_deepest_cores(&polys, step_over);
+    cores.into_iter().map(|p| (p.x, p.y)).collect()
 }

@@ -40,6 +40,42 @@ below `min_area` or `max_passes` is reached. Returns offsets outermost-first.
 
 _Concentric inward offsets for adaptive clearing / pocketing_
 
+### `find_deepest_cores()`
+
+```python
+find_deepest_cores(
+    valid_tool_area: Sequence[geo.types.Polygon],
+    step_over: float,
+) -> list[geo.types.Point]
+```
+
+Find the deepest (most open) regions of a pocket.
+
+Iteratively offsets each polygon inward by step_over until all polygons collapse. Returns the
+centroids of the final polygons — optimal points for helical entry in adaptive clearing.
+
+| Parameter         | Type                          | Description                                           |
+| ----------------- | ----------------------------- | ----------------------------------------------------- |
+| `valid_tool_area` | `Sequence[geo.types.Polygon]` | List of polygons representing valid tool center area. |
+| `step_over`       | `float`                       | Inward offset distance per iteration.                 |
+| _Returns_         | `list[geo.types.Point]`       | List of (x, y) centroid points.                       |
+| _Complexity_      |                               | O(n \* k) where k is the number of iterations         |
+
+![Deepest-core detection: binary search finds the largest offset that does NOT collapse the pocket, then returns the centroid of the largest surviving fragment](images/deepest-cores.png)
+
+_Deepest-core detection: binary search finds the largest offset that does NOT collapse the pocket,
+then returns the centroid of the largest surviving fragment_
+
+![Multi-island pocket: the valid tool area splits into multiple regions; `find_deepest_cores` returns the single centroid of the largest surviving fragment](images/deepest-cores-multi-island.png)
+
+_Multi-island pocket: the valid tool area splits into multiple regions; `find_deepest_cores` returns
+the single centroid of the largest surviving fragment_
+
+![Central-island pocket (annular): the island creates a ring of valid tool area; the deepest core sits at the centre of the ring](images/deepest-cores-central-island.png)
+
+_Central-island pocket (annular): the island creates a ring of valid tool area; the deepest core
+sits at the centre of the ring_
+
 ### `offset_contour_group()`
 
 ```python
