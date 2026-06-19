@@ -1,7 +1,7 @@
 ---
 title: raygeo.geo.algo.offset
 sidebar_label: raygeo.geo.algo.offset
-sidebar_position: 19
+sidebar_position: 20
 ---
 
 Polygon offsetting operations for geometry data.

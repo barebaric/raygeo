@@ -1,7 +1,7 @@
 ---
 title: raygeo.ops.raster
 sidebar_label: raygeo.ops.raster
-sidebar_position: 41
+sidebar_position: 42
 ---
 
 ## ScanLine

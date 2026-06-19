@@ -5,6 +5,7 @@
 
 pub mod analysis;
 pub mod cleanup;
+pub mod cleared_area;
 pub mod clipping;
 pub mod cylindrical;
 pub mod fitting;
@@ -37,6 +38,7 @@ pub use cleanup::{
     are_segments_equal, close_geometry_gaps_from_array, get_segment_key,
     remove_duplicate_segments,
 };
+pub use cleared_area::ClearedArea;
 pub use clipping::{
     clip_line_segment_with_polygons, clip_line_segment_with_polygons_2d,
     clip_line_segment_with_rect, clip_line_segment_with_rect_2d,

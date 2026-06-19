@@ -1,7 +1,7 @@
 ---
 title: raygeo.geo.algo.nest2d.nfp
 sidebar_label: raygeo.geo.algo.nest2d.nfp
-sidebar_position: 17
+sidebar_position: 18
 ---
 
 No-Fit Polygon calculation for nesting algorithms.

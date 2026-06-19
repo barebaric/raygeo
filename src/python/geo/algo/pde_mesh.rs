@@ -95,14 +95,13 @@ impl TriangleMesh {
     import collections.abc
     import typing
     import raygeo.geo.types
-    import raygeo.geo.algo.pde_mesh
 
     def build_triangle_mesh(
         outer: collections.abc.Sequence[types.Point],
         holes: collections.abc.Sequence[collections.abc.Sequence[types.Point]] = (),
         tool_radius: float = 0.0,
         min_angle: float = 20.0,
-    ) -> pde_mesh.TriangleMesh:
+    ) -> TriangleMesh:
         """Build a constrained Delaunay triangle mesh from polygon boundaries.
 
         :param outer: Outer boundary polygon vertices as (x, y) tuples.
@@ -142,10 +141,9 @@ fn build_triangle_mesh_py(
 #[gen_stub_pyfunction(
     python = r#"
     import collections.abc
-    import raygeo.geo.algo.pde_mesh
 
     def solve_laplace(
-        mesh: pde_mesh.TriangleMesh,
+        mesh: TriangleMesh,
         max_iter: int = 1000,
         tolerance: float = 1e-8,
     ) -> list[float]:

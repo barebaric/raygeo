@@ -31,6 +31,7 @@ __images__ = [
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.collections import LineCollection
+from matplotlib.tri import Triangulation
 
 from raygeo.geo.algo.pde_mesh import build_triangle_mesh, solve_laplace
 
@@ -132,18 +133,18 @@ def generate_examples(output_dir):
     u = solve_laplace(mesh, max_iter=2000, tolerance=1e-10)
 
     verts = mesh.vertices
-    x_vals = [v[0] for v in verts]
-    y_vals = [v[1] for v in verts]
-    tris = mesh.triangles
+    x_vals = np.asarray([v[0] for v in verts])
+    y_vals = np.asarray([v[1] for v in verts])
+    tris = np.asarray(mesh.triangles)
+    u_arr = np.asarray(u)
+    triang = Triangulation(x_vals, y_vals, tris)
 
     fig2, ax2 = plt.subplots(figsize=(7, 7))
     ax2.set_aspect("equal")
     ax2.set_xlim(-5, 105)
     ax2.set_ylim(-5, 105)
 
-    tcf = ax2.tripcolor(
-        x_vals, y_vals, tris, u, cmap="coolwarm", shading="gouraud"
-    )
+    tcf = ax2.tripcolor(triang, u_arr, cmap="coolwarm", shading="gouraud")
     cbar = fig2.colorbar(tcf, ax=ax2, shrink=0.8)
     cbar.set_label("Scalar field u(x,y)", fontsize=10)
 
@@ -166,10 +167,8 @@ def generate_examples(output_dir):
     # Draw a few contour lines
     levels = np.linspace(0, 1, 11)
     ax2.tricontour(
-        x_vals,
-        y_vals,
-        tris,
-        u,
+        triang,
+        u_arr,
         levels=levels,
         colors="black",
         linewidths=0.5,
@@ -244,18 +243,18 @@ def generate_examples(output_dir):
     # ── Example 4: L-shape Laplace solution ───────────────────────────────
     l_u = solve_laplace(l_mesh, max_iter=2000, tolerance=1e-10)
 
-    lx = [v[0] for v in l_mesh.vertices]
-    ly = [v[1] for v in l_mesh.vertices]
-    ltris = l_mesh.triangles
+    lx = np.asarray([v[0] for v in l_mesh.vertices])
+    ly = np.asarray([v[1] for v in l_mesh.vertices])
+    ltris = np.asarray(l_mesh.triangles)
+    l_u_arr = np.asarray(l_u)
+    l_triang = Triangulation(lx, ly, ltris)
 
     fig4, ax4 = plt.subplots(figsize=(7, 7))
     ax4.set_aspect("equal")
     ax4.set_xlim(-5, 85)
     ax4.set_ylim(-5, 85)
 
-    tcf4 = ax4.tripcolor(
-        lx, ly, ltris, l_u, cmap="coolwarm", shading="gouraud"
-    )
+    tcf4 = ax4.tripcolor(l_triang, l_u_arr, cmap="coolwarm", shading="gouraud")
     cbar4 = fig4.colorbar(tcf4, ax=ax4, shrink=0.8)
     cbar4.set_label("Scalar field u(x,y)", fontsize=10)
 
@@ -268,10 +267,8 @@ def generate_examples(output_dir):
     )
     levels_l = np.linspace(0, 1, 11)
     ax4.tricontour(
-        lx,
-        ly,
-        ltris,
-        l_u,
+        l_triang,
+        l_u_arr,
         levels=levels_l,
         colors="black",
         linewidths=0.5,
