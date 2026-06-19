@@ -4,6 +4,7 @@ pub(crate) mod clipping;
 pub(crate) mod cylindrical;
 pub(crate) mod fitting;
 pub(crate) mod helix;
+pub(crate) mod hsm;
 pub(crate) mod hull;
 pub(crate) mod interp;
 pub(crate) mod intersect;
@@ -63,6 +64,7 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     cylindrical::register(&algo_mod)?;
     fitting::register(&algo_mod)?;
     helix::register(&algo_mod)?;
+    hsm::register(&algo_mod)?;
     hull::register(&algo_mod)?;
     interp::register(&algo_mod)?;
     intersect::register(&algo_mod)?;
@@ -131,6 +133,7 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     )?;
     sys_modules
         .set_item("raygeo.geo.algo.helix", &algo_mod.getattr("helix")?)?;
+    sys_modules.set_item("raygeo.geo.algo.hsm", &algo_mod.getattr("hsm")?)?;
     sys_modules.set_item(
         "raygeo.geo.algo.polylabel",
         &algo_mod.getattr("polylabel")?,

@@ -1,7 +1,7 @@
 ---
 title: raygeo.geo.algo.nest2d
 sidebar_label: raygeo.geo.algo.nest2d
-sidebar_position: 14
+sidebar_position: 15
 ---
 
 ![Part nesting on a sheet](images/nesting.png)

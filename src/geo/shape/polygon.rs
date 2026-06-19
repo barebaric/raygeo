@@ -274,6 +274,43 @@ pub fn flip_polygons(
         .collect()
 }
 
+/// Approximate a circle as an n-gon polygon.
+pub fn get_circle_polygon(center: Point, radius: f64, n: usize) -> Polygon {
+    let mut poly = Vec::with_capacity(n);
+    for i in 0..n {
+        let a = 2.0 * std::f64::consts::PI * i as f64 / n as f64;
+        poly.push(Point::new(
+            center.x + radius * a.cos(),
+            center.y + radius * a.sin(),
+        ));
+    }
+    poly
+}
+
+/// Compute the swept-area polygons of a line segment with a given radius.
+///
+/// Returns a rectangle (the Minkowski sum of the segment with a disk of
+/// *radius*) plus two disks at the endpoints.
+pub fn get_segment_swept_polygon(
+    a: Point,
+    b: Point,
+    radius: f64,
+) -> Vec<Polygon> {
+    let dir = b - a;
+    let len = dir.length();
+    if len < 1e-12 {
+        return vec![get_circle_polygon(a, radius, 64)];
+    }
+    let dir = dir / len;
+    let perp = Point::new(-dir.y, dir.x);
+    let rp = perp * radius;
+    vec![
+        vec![a - rp, b - rp, b + rp, a + rp],
+        get_circle_polygon(a, radius, 64),
+        get_circle_polygon(b, radius, 64),
+    ]
+}
+
 /// Calculate the centroid of a polygon.
 pub fn get_polygon_centroid(polygon: &Polygon) -> Point {
     if polygon.is_empty() {

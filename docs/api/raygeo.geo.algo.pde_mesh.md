@@ -1,7 +1,7 @@
 ---
 title: raygeo.geo.algo.pde_mesh
 sidebar_label: raygeo.geo.algo.pde_mesh
-sidebar_position: 23
+sidebar_position: 24
 ---
 
 PDE mesh generation and Laplace solving for scalar field generation.

@@ -7,11 +7,12 @@ use super::super::flex_point::{
 use super::super::types::NormalizePolygonsResult;
 use crate::geo::shape::polygon::{
     apply_minimum_curvature, clean_polygon, flip_polygon, flip_polygons,
-    get_polygon_bounds, get_polygon_centroid, get_polygon_closest_point,
-    get_polygon_convex_hull, get_polygon_edges, get_polygon_group_bounds,
-    get_polygon_perimeter, get_polygon_signed_area, get_polygons_difference,
-    get_polygons_group_difference, get_polygons_group_intersection,
-    get_polygons_intersection, get_polygons_union, is_almost_equal,
+    get_circle_polygon, get_polygon_bounds, get_polygon_centroid,
+    get_polygon_closest_point, get_polygon_convex_hull, get_polygon_edges,
+    get_polygon_group_bounds, get_polygon_perimeter, get_polygon_signed_area,
+    get_polygons_difference, get_polygons_group_difference,
+    get_polygons_group_intersection, get_polygons_intersection,
+    get_polygons_union, get_segment_swept_polygon, is_almost_equal,
     is_point_inside_polygon, is_polygon_clockwise, is_polygon_convex,
     normalize_polygons, offset_polygon_with_style, point_line_distance,
     polygons_intersect, rotate_polygon, rotate_polygons, scale_polygon,
@@ -71,9 +72,11 @@ pub fn register(shape_mod: &Bound<'_, PyModule>) -> PyResult<()> {
         flip_polygons_numpy_py,
         flip_polygons_py,
         get_polygon_area_py,
+        get_circle_polygon_py,
         get_polygon_bounds_py,
         get_polygon_centroid_py,
         get_polygon_closest_point_py,
+        get_segment_swept_polygon_py,
         get_polygon_convex_hull_py,
         get_polygon_edges_py,
         get_polygon_group_bounds_py,
@@ -451,6 +454,79 @@ fn get_polygon_closest_point_py(
     let pts = poly_to_points(polygon);
     get_polygon_closest_point(&pts, x, y)
         .map(|(t, pt, d2)| (t, (pt.x, pt.y), d2))
+}
+
+#[gen_stub_pyfunction(
+    python = r#"
+    import collections.abc
+    import raygeo.geo.types
+
+    def get_circle_polygon(
+        center: types.Point,
+        radius: float,
+        n: int = 64,
+    ) -> types.Polygon:
+        """Approximate a circle as an n-gon polygon.
+
+        :param center: Centre point (x, y).
+        :param radius: Circle radius.
+        :param n: Number of sides (default 64).
+        :returns: Polygon as list of (x, y) points.
+        :complexity: O(n)
+        """
+"#,
+    module = "raygeo.geo.shape.polygon"
+)]
+#[pyfunction(name = "get_circle_polygon")]
+#[pyo3(signature = (center, radius, n = 64))]
+fn get_circle_polygon_py(
+    center: (f64, f64),
+    radius: f64,
+    n: usize,
+) -> Vec<(f64, f64)> {
+    points_to_tuples(get_circle_polygon(
+        Point::new(center.0, center.1),
+        radius,
+        n,
+    ))
+}
+
+#[gen_stub_pyfunction(
+    python = r#"
+    import collections.abc
+    import raygeo.geo.types
+
+    def get_segment_swept_polygon(
+        a: types.Point,
+        b: types.Point,
+        radius: float,
+    ) -> list[types.Polygon]:
+        """Compute the swept area of a line segment with a given radius.
+
+        Returns a rectangle (the Minkowski sum of the segment with a disk
+        of *radius*) plus two disks at the endpoints.  Useful for toolpath
+        clearance tracking and roughing simulation.
+
+        :param a: Start point (x, y).
+        :param b: End point (x, y).
+        :param radius: Offset radius.
+        :returns: List of polygons (rectangle + two end-caps).
+        :complexity: O(n)
+        """
+"#,
+    module = "raygeo.geo.shape.polygon"
+)]
+#[pyfunction(name = "get_segment_swept_polygon")]
+fn get_segment_swept_polygon_py(
+    a: (f64, f64),
+    b: (f64, f64),
+    radius: f64,
+) -> Vec<Vec<(f64, f64)>> {
+    polygons_to_tuples(get_segment_swept_polygon(
+        Point::new(a.0, a.1),
+        Point::new(b.0, b.1),
+        radius,
+    ))
 }
 
 #[gen_stub_pyfunction(

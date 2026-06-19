@@ -1,7 +1,7 @@
 ---
 title: raygeo.geo.algo.pde_spiral
 sidebar_label: raygeo.geo.algo.pde_spiral
-sidebar_position: 24
+sidebar_position: 25
 ---
 
 PDE-based spiral path tracing.

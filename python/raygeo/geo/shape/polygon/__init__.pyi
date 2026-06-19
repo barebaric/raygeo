@@ -12,6 +12,7 @@ __all__ = [
     "flip_polygon_numpy",
     "flip_polygons",
     "flip_polygons_numpy",
+    "get_circle_polygon",
     "get_polygon_area",
     "get_polygon_bounds",
     "get_polygon_centroid",
@@ -26,6 +27,7 @@ __all__ = [
     "get_polygons_group_intersection",
     "get_polygons_intersection",
     "get_polygons_union",
+    "get_segment_swept_polygon",
     "is_almost_equal",
     "is_point_inside_polygon",
     "is_polygon_clockwise",
@@ -121,6 +123,17 @@ def flip_polygons_numpy(polygons: list, flip_h: bool, flip_v: bool) -> typing.An
     :param flip_v: Whether to flip vertically.
     :returns: List of flipped numpy arrays.
     :complexity: O(n * m)
+    """
+
+def get_circle_polygon(center: types.Point, radius: float, n: int = 64) -> types.Polygon:
+    r"""
+    Approximate a circle as an n-gon polygon.
+    
+    :param center: Centre point (x, y).
+    :param radius: Circle radius.
+    :param n: Number of sides (default 64).
+    :returns: Polygon as list of (x, y) points.
+    :complexity: O(n)
     """
 
 def get_polygon_area(polygon: collections.abc.Sequence[types.Point]) -> float:
@@ -252,6 +265,21 @@ def get_polygons_union(polygons: typing.Any) -> list[types.Polygon]:
     :param polygons: List of polygons to union.
     :returns: Union polygon(s).
     :complexity: O(n log n)
+    """
+
+def get_segment_swept_polygon(a: types.Point, b: types.Point, radius: float) -> list[types.Polygon]:
+    r"""
+    Compute the swept area of a line segment with a given radius.
+    
+    Returns a rectangle (the Minkowski sum of the segment with a disk
+    of *radius*) plus two disks at the endpoints.  Useful for toolpath
+    clearance tracking and roughing simulation.
+    
+    :param a: Start point (x, y).
+    :param b: End point (x, y).
+    :param radius: Offset radius.
+    :returns: List of polygons (rectangle + two end-caps).
+    :complexity: O(n)
     """
 
 def is_almost_equal(a: float, b: float, tolerance: typing.Optional[float] = None) -> bool:

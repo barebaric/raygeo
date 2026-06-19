@@ -33,6 +33,7 @@ from . import clipping
 from . import cylindrical
 from . import fitting
 from . import helix
+from . import hsm
 from . import hull
 from . import interp
 from . import intersect
@@ -56,6 +57,7 @@ __all__ = [
     "cylindrical",
     "fitting",
     "helix",
+    "hsm",
     "hull",
     "interp",
     "intersect",

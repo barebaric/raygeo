@@ -1,7 +1,7 @@
 ---
 title: raygeo.geo.shape.polygon
 sidebar_label: raygeo.geo.shape.polygon
-sidebar_position: 38
+sidebar_position: 39
 ---
 
 ## Functions
@@ -116,6 +116,30 @@ Flip polygons from numpy arrays.
 | `flip_v`     | `bool` | Whether to flip vertically.   |
 | _Returns_    | `Any`  | List of flipped numpy arrays. |
 | _Complexity_ |        | O(n \* m)                     |
+
+### `get_circle_polygon()`
+
+```python
+get_circle_polygon(
+    center: types.Point,
+    radius: float,
+    n: int = 64,
+) -> types.Polygon
+```
+
+Approximate a circle as an n-gon polygon.
+
+| Parameter    | Type            | Description                       |
+| ------------ | --------------- | --------------------------------- |
+| `center`     | `types.Point`   | Centre point (x, y).              |
+| `radius`     | `float`         | Circle radius.                    |
+| `n`          | `int = 64`      | Number of sides (default 64).     |
+| _Returns_    | `types.Polygon` | Polygon as list of (x, y) points. |
+| _Complexity_ |                 | O(n)                              |
+
+![``get_circle_polygon`` approximates a circle as an n-sided polygon](images/polygon-circle-polygon.png)
+
+_`get_circle_polygon` approximates a circle as an n-sided polygon_
 
 ### `get_polygon_area()`
 
@@ -347,6 +371,33 @@ Get the union of multiple polygons.
 ![Polygon union](images/polygon-boolean-union.png)
 
 _Polygon union_
+
+### `get_segment_swept_polygon()`
+
+```python
+get_segment_swept_polygon(
+    a: types.Point,
+    b: types.Point,
+    radius: float,
+) -> list[types.Polygon]
+```
+
+Compute the swept area of a line segment with a given radius.
+
+Returns a rectangle (the Minkowski sum of the segment with a disk of _radius_) plus two disks at the
+endpoints. Useful for toolpath clearance tracking and roughing simulation.
+
+| Parameter    | Type                  | Description                                  |
+| ------------ | --------------------- | -------------------------------------------- |
+| `a`          | `types.Point`         | Start point (x, y).                          |
+| `b`          | `types.Point`         | End point (x, y).                            |
+| `radius`     | `float`               | Offset radius.                               |
+| _Returns_    | `list[types.Polygon]` | List of polygons (rectangle + two end-caps). |
+| _Complexity_ |                       | O(n)                                         |
+
+![``get_segment_swept_polygon`` computes the swept area of a line segment with a given radius](images/polygon-segment-swept.png)
+
+_`get_segment_swept_polygon` computes the swept area of a line segment with a given radius_
 
 ### `is_almost_equal()`
 

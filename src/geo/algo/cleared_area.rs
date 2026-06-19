@@ -1,37 +1,7 @@
 use crate::geo::algo::spatial_grid2d::SpatialGrid;
 use crate::geo::shape::polygon::get_polygons_union;
+use crate::geo::shape::polygon::get_segment_swept_polygon;
 use crate::types::{Point, Polygon, Rect};
-
-const TOOL_CIRCLE_SEGMENTS: usize = 64;
-
-fn tool_disk_polygon(center: Point, radius: f64, n: usize) -> Polygon {
-    let mut poly = Vec::with_capacity(n);
-    for i in 0..n {
-        let a = 2.0 * std::f64::consts::PI * i as f64 / n as f64;
-        poly.push(Point::new(
-            center.x + radius * a.cos(),
-            center.y + radius * a.sin(),
-        ));
-    }
-    poly
-}
-
-fn tool_segment_swept(a: Point, b: Point, radius: f64) -> Vec<Polygon> {
-    let dir = b - a;
-    let len = dir.length();
-    if len < 1e-12 {
-        return vec![tool_disk_polygon(a, radius, TOOL_CIRCLE_SEGMENTS)];
-    }
-    let dir = dir / len;
-    let perp = Point::new(-dir.y, dir.x);
-    let rp = perp * radius;
-
-    vec![
-        vec![a - rp, b - rp, b + rp, a + rp],
-        tool_disk_polygon(a, radius, TOOL_CIRCLE_SEGMENTS),
-        tool_disk_polygon(b, radius, TOOL_CIRCLE_SEGMENTS),
-    ]
-}
 
 pub struct ClearedArea {
     fragments: Vec<Polygon>,
@@ -76,7 +46,7 @@ impl ClearedArea {
         }
         let mut swept_polys: Vec<Polygon> = Vec::new();
         for window in tool_path.windows(2) {
-            swept_polys.extend(tool_segment_swept(
+            swept_polys.extend(get_segment_swept_polygon(
                 window[0],
                 window[1],
                 tool_radius,
@@ -92,7 +62,7 @@ impl ClearedArea {
     }
 
     pub fn expand_step(&mut self, prev: Point, next: Point, tool_radius: f64) {
-        let swept = tool_segment_swept(prev, next, tool_radius);
+        let swept = get_segment_swept_polygon(prev, next, tool_radius);
         let mut all_polys = self.fragments.clone();
         all_polys.extend(swept);
         let merged = get_polygons_union(&all_polys);
