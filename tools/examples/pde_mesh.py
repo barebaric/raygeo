@@ -122,7 +122,9 @@ def generate_examples(output_dir):
     images.append(
         {
             "path": "pde-mesh-triangulation.png",
-            "caption": "CDT triangulation of a square pocket with centred hole",
+            "caption": (
+                "CDT triangulation of a square pocket with centred hole"
+            ),
         }
     )
 
@@ -219,7 +221,8 @@ def generate_examples(output_dir):
 
     ax3.set_title(
         f"CDT triangulation of an L-shaped pocket\n"
-        f"({len(l_mesh.vertices)} vertices, {len(l_mesh.triangles)} triangles)",
+        f"({len(l_mesh.vertices)} vertices,"
+        f" {len(l_mesh.triangles)} triangles)",
         fontsize=12,
     )
     ax3.legend(fontsize=10, loc="upper right")
