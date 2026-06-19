@@ -44,6 +44,6 @@ the same line.
 | _Returns_            | `list[tuple[float, float, float]]` | List of (x, y, z) points along the ramp.                     |
 | _Complexity_         |                                    | O(n) time, O(n) space where n is proportional to path length |
 
-![Linear (left) and ZigZag (right) ramp entry paths](images/ramp-linear-zigzag.png)
+![Linear (left) and ZigZag (right) ramp entry paths](images/geo-algo-ramp-linear-zigzag.png)
 
 _Linear (left) and ZigZag (right) ramp entry paths_

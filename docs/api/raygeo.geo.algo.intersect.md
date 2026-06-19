@@ -37,6 +37,6 @@ None if there is no intersection.
 | _Returns_    | `tuple[float, float] &#124; None` | Intersection point (x, y), or None. |
 | _Complexity_ |                                   | O(1) time, O(1) space               |
 
-![Ray–line segment intersection: the ray from origin O hits segments S₁ and S₂ (marked), misses S₃](images/intersect-ray-line.png)
+![Ray–line segment intersection: the ray from origin O hits segments S₁ and S₂ (marked), misses S₃](images/geo-algo-intersect-ray-line.png)
 
 _Ray–line segment intersection: the ray from origin O hits segments S₁ and S₂ (marked), misses S₃_

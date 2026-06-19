@@ -29,7 +29,7 @@ Compute a concave (shrink-wrap) hull with Bézier gravity.
 | _Returns_       | `Geometry &#124; None` | Concave hull as Geometry in pixel coords, or None.                                                                                               |
 | _Complexity_    |                        | O(w\*h + n log n + n \* g) time, O(n) space where w\*h is the image size, n the number of contour points, and g the number of gravity iterations |
 
-![Concave vs convex hull](images/concave-hull.png)
+![Concave vs convex hull](images/geo-algo-hull-concave.png)
 
 _Concave vs convex hull_
 

@@ -34,6 +34,6 @@ interior.
 | _Returns_       | `tuple[numpy.NDArray[numpy.float32], numpy.NDArray[numpy.float32] &#124; None, numpy.NDArray[numpy.int32]]` | Tuple of (transformed_vertices, expanded_colors, cum_subs). cum_subs is a cumulative subdivision count array.                              |
 | _Complexity_    |                                                                                                             | O(N \* subdivisions)                                                                                                                       |
 
-![Flat vertex pairs wrapped onto a cylinder surface](images/cylindrical-transform.png)
+![Flat vertex pairs wrapped onto a cylinder surface](images/geo-algo-cylindrical-cylindrical-transform.png)
 
 _Flat vertex pairs wrapped onto a cylinder surface_

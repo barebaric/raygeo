@@ -1,14 +1,5 @@
 """Mesh remesh example images."""
 
-__images__ = [
-    {
-        "stem": "mesh-remesh-overview",
-        "caption": "Initial mesh (left) vs refined mesh (right) after remesh.",
-        "doc": "raygeo.mesh.remesh.md",
-        "heading": None,
-    },
-]
-
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -16,9 +7,7 @@ from raygeo.mesh.build import build_triangle_mesh
 from raygeo.mesh.remesh import remesh
 
 
-def generate_examples(output_dir):
-    images = []
-
+def generate_overview():
     boundary = [(0, 0), (160, 0), (160, 100), (0, 100)]
     rm_mesh = build_triangle_mesh(boundary, [], 3.0, 20.0)
     rm_refined = remesh(rm_mesh, boundary, max_edge_len=10.0)
@@ -40,16 +29,13 @@ def generate_examples(output_dir):
         ax.axis("off")
 
     fig_rm.tight_layout()
-    p = output_dir / "mesh-remesh-overview.png"
-    fig_rm.savefig(p, dpi=150)
-    plt.close(fig_rm)
-    images.append(
-        {
-            "path": "mesh-remesh-overview.png",
-            "caption": (
-                "Initial mesh (left) vs refined mesh (right) after remesh."
-            ),
-        }
-    )
+    return fig_rm
 
-    return {"images": images}
+
+__images__ = [
+    {
+        "heading": None,
+        "caption": "Initial mesh (left) vs refined mesh (right) after remesh.",
+        "function": generate_overview,
+    },
+]

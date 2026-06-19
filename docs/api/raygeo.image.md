@@ -35,7 +35,7 @@ Apply ordered (Bayer) dithering using a threshold matrix.
 | _Returns_      | `numpy.NDArray[numpy.uint8]`   | 2D binary uint8 array (values 0 or 1). |
 | _Complexity_   |                                | O(w\*h)                                |
 
-![Bayer 4x4 ordered dithering](images/image-processing-dither-bayer.png)
+![Bayer 4x4 ordered dithering](images/image-dither-bayer.png)
 
 _Bayer 4x4 ordered dithering_
 
@@ -57,7 +57,7 @@ Apply Floyd-Steinberg error-diffusion dithering.
 | _Returns_    | `numpy.NDArray[numpy.uint8]` | 2D binary uint8 array (values 0 or 1).         |
 | _Complexity_ |                              | O(w\*h)                                        |
 
-![Floyd-Steinberg dithering](images/image-processing-dither-floyd.png)
+![Floyd-Steinberg dithering](images/image-dither-floyd.png)
 
 _Floyd-Steinberg dithering_
 
@@ -79,7 +79,7 @@ Remove binary runs shorter than the given minimum.
 | _Returns_        | `numpy.NDArray[numpy.uint8]` | 2D binary uint8 array with short runs removed. |
 | _Complexity_     |                              | O(w\*h)                                        |
 
-![Minimum run length applied to binary image](images/image-processing-min-run-len.png)
+![Minimum run length applied to binary image](images/image-min-run-len.png)
 
 _Minimum run length applied to binary image_
 
@@ -100,7 +100,7 @@ threshold that separates noise (small components) from meaningful content.
 | _Returns_    | `int`       | Adaptive threshold value (minimum area to keep). |
 | _Complexity_ |             | O(n) where n = number of unique area values      |
 
-![Adaptive threshold from component area distribution](images/image-processing-adaptive-threshold.png)
+![Adaptive threshold from component area distribution](images/image-adaptive-threshold.png)
 
 _Adaptive threshold from component area distribution_
 
@@ -142,7 +142,7 @@ noise from content, and removes small components. Uses the same algorithm as the
 | _Returns_    | `numpy.NDArray[numpy.uint8]` | 2D binary uint8 array with noise removed. |
 | _Complexity_ |                              | O(w\*h)                                   |
 
-![Binary image denoised via adaptive thresholding](images/image-processing-denoise-binary.png)
+![Binary image denoised via adaptive thresholding](images/image-denoise-binary.png)
 
 _Binary image denoised via adaptive thresholding_
 
@@ -166,7 +166,7 @@ Uses 8-connectivity for component detection.
 | _Returns_    | `numpy.NDArray[numpy.uint8]` | 2D binary uint8 array (values 0 or 1).   |
 | _Complexity_ |                              | O(w\*h)                                  |
 
-![Component filtering by minimum area](images/image-processing-filter-components.png)
+![Component filtering by minimum area](images/image-filter-components.png)
 
 _Component filtering by minimum area_
 
@@ -186,7 +186,7 @@ Uses 8-connectivity. Areas are returned sorted ascending. Background (0-valued p
 | _Returns_    | `list[int]`                  | Sorted list of component pixel areas.  |
 | _Complexity_ |                              | O(w\*h)                                |
 
-![Connected component areas sorted ascending](images/image-processing-component-areas.png)
+![Connected component areas sorted ascending](images/image-component-areas.png)
 
 _Connected component areas sorted ascending_
 
@@ -215,7 +215,7 @@ True.
 | _Returns_        | `numpy.NDArray[numpy.uint8]` | 2D binary uint8 array (values 0 or 1).                           |
 | _Complexity_     |                              | O(w\*h)                                                          |
 
-![Grayscale to binary via Otsu and fixed threshold](images/image-processing-otsu.png)
+![Grayscale to binary via Otsu and fixed threshold](images/image-otsu.png)
 
 _Grayscale to binary via Otsu and fixed threshold_
 
@@ -286,7 +286,7 @@ _px_per_mm_, and returns a uint8 array where each pixel holds the maximum power 
 | _Returns_    | `numpy.NDArray[numpy.uint8]`   | 2D uint8 array of shape (height_px, width_px).     |
 | _Complexity_ |                                | O(scanline_pixels)                                 |
 
-![Scanline ops rasterized into a 2D power-map buffer](images/rasterize-scanlines.png)
+![Scanline ops rasterized into a 2D power-map buffer](images/image-rasterize-scanlines.png)
 
 _Scanline ops rasterized into a 2D power-map buffer_
 
@@ -384,6 +384,6 @@ Convert sRGB pixel values to linear light values.
 | _Returns_    | `numpy.NDArray[numpy.float32]` | Array of linear float32 values with the same shape. |
 | _Complexity_ |                                | O(n) where n = number of pixels                     |
 
-![sRGB to linear round-trip](images/image-processing-srgb.png)
+![sRGB to linear round-trip](images/image-srgb.png)
 
 _sRGB to linear round-trip_

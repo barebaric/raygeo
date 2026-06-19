@@ -25,7 +25,7 @@ Compute a Gaussian kernel of the given size.
 | _Returns_    | `tuple[list[float], float]` | Tuple of (kernel_values, sigma). |
 | _Complexity_ |                             | O(k) time, O(k) space            |
 
-![Gaussian kernel weights](images/smooth-gaussian-kernel.png)
+![Gaussian kernel weights](images/geo-algo-smooth-gaussian-kernel.png)
 
 _Gaussian kernel weights_
 
@@ -49,7 +49,7 @@ Resample a polyline with a maximum segment length.
 | _Returns_            | `list[types.Point3D]`     | Resampled points.               |
 | _Complexity_         |                           | O(n) time, O(n) space           |
 
-![Polyline resampling](images/smooth-resample.png)
+![Polyline resampling](images/geo-algo-smooth-resample.png)
 
 _Polyline resampling_
 
@@ -71,7 +71,7 @@ Smooth a closed polyline circularly.
 | _Returns_    | `list[types.Point3D]`     | Smoothed points.                                                                 |
 | _Complexity_ |                           | O(n \* k) time, O(n) space where k is the kernel size and n the number of points |
 
-![Circular smoothing](images/smooth-circular.png)
+![Circular smoothing](images/geo-algo-smooth-circular.png)
 
 _Circular smoothing_
 
@@ -97,7 +97,7 @@ Smooth a polyline using Gaussian smoothing.
 | _Returns_                | `list[types.Point3D]`     | Smoothed points.                                                                 |
 | _Complexity_             |                           | O(n \* k) time, O(n) space where k is the kernel size and n the number of points |
 
-![Gaussian smoothing](images/smooth.png)
+![Gaussian smoothing](images/geo-algo-smooth-overview.png)
 
 _Gaussian smoothing_
 
@@ -119,6 +119,6 @@ Smooth a sub-segment of a polyline.
 | _Returns_    | `list[types.Point3D]`     | Smoothed points.                                                                 |
 | _Complexity_ |                           | O(n \* k) time, O(n) space where k is the kernel size and n the number of points |
 
-![Sub-segment smoothing](images/smooth-sub-segment.png)
+![Sub-segment smoothing](images/geo-algo-smooth-sub-segment.png)
 
 _Sub-segment smoothing_

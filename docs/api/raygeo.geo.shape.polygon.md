@@ -27,7 +27,7 @@ filter — sharp corners are rounded to exactly `r_min` while the overall shape 
 | _Returns_    | `list[types.Polygon]`   | Filleted polygon(s).              |
 | _Complexity_ |                         | O(n)                              |
 
-![Minimum curvature fillet applied to a triangle](images/polygon-min-curvature.png)
+![Minimum curvature fillet applied to a triangle](images/geo-shape-polygon-min-curvature.png)
 
 _Minimum curvature fillet applied to a triangle_
 
@@ -137,7 +137,7 @@ Approximate a circle as an n-gon polygon.
 | _Returns_    | `types.Polygon` | Polygon as list of (x, y) points. |
 | _Complexity_ |                 | O(n)                              |
 
-![``get_circle_polygon`` approximates a circle as an n-sided polygon](images/polygon-circle-polygon.png)
+![``get_circle_polygon`` approximates a circle as an n-sided polygon](images/geo-shape-polygon-circle-polygon.png)
 
 _`get_circle_polygon` approximates a circle as an n-sided polygon_
 
@@ -292,7 +292,7 @@ Get the difference of two polygons.
 | _Returns_    | `list[types.Polygon]`   | Difference polygon(s).          |
 | _Complexity_ |                         | O(n log n)                      |
 
-![Polygon difference](images/polygon-boolean-difference.png)
+![Polygon difference](images/geo-shape-polygon-boolean-difference.png)
 
 _Polygon difference_
 
@@ -350,7 +350,7 @@ Get the intersection of two polygons.
 | _Returns_    | `list[types.Polygon]`   | Intersection polygon(s).         |
 | _Complexity_ |                         | O(n log n)                       |
 
-![Polygon intersection](images/polygon-boolean-intersection.png)
+![Polygon intersection](images/geo-shape-polygon-boolean-intersection.png)
 
 _Polygon intersection_
 
@@ -368,7 +368,7 @@ Get the union of multiple polygons.
 | _Returns_    | `list[types.Polygon]` | Union polygon(s).          |
 | _Complexity_ |                       | O(n log n)                 |
 
-![Polygon union](images/polygon-boolean-union.png)
+![Polygon union](images/geo-shape-polygon-boolean-union.png)
 
 _Polygon union_
 
@@ -395,7 +395,7 @@ endpoints. Useful for toolpath clearance tracking and roughing simulation.
 | _Returns_    | `list[types.Polygon]` | List of polygons (rectangle + two end-caps). |
 | _Complexity_ |                       | O(n)                                         |
 
-![``get_segment_swept_polygon`` computes the swept area of a line segment with a given radius](images/polygon-segment-swept.png)
+![``get_segment_swept_polygon`` computes the swept area of a line segment with a given radius](images/geo-shape-polygon-segment-swept.png)
 
 _`get_segment_swept_polygon` computes the swept area of a line segment with a given radius_
 
@@ -511,7 +511,7 @@ Offset (inflate/deflate) a polygon.
 | _Returns_    | `list[types.Polygon]`   | Offset polygon(s).                                                |
 | _Complexity_ |                         | O(n log n)                                                        |
 
-![Polygon offset — miter vs round vs square join styles](images/polygon-offset.png)
+![Polygon offset — miter vs round vs square join styles](images/geo-shape-polygon-offset.png)
 
 _Polygon offset — miter vs round vs square join styles_
 

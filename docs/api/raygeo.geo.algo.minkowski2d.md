@@ -123,6 +123,6 @@ Compute the Minkowski sum of two convex polygons.
 | _Returns_    | `list[list[tuple[float, float]]]` | Minkowski sum as list of polygons. |
 | _Complexity_ |                                   | O(n + m) time, O(n + m) space      |
 
-![Minkowski sum of two convex polygons](images/minkowski-sum.png)
+![Minkowski sum of two convex polygons](images/geo-algo-minkowski2d-minkowski-sum.png)
 
 _Minkowski sum of two convex polygons_

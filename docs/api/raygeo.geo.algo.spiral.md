@@ -43,6 +43,6 @@ revolutions.
 | _Returns_      | `list[tuple[float, float, float]]` | List of (x, y, z) points approximating the spiral.         |
 | _Complexity_   |                                    | O(n) time, O(n) space where n = total_angle / angular_step |
 
-![Outward (CCW) and inward (CW) flat Archimedean spirals](images/spiral-inward-outward.png)
+![Outward (CCW) and inward (CW) flat Archimedean spirals](images/geo-algo-spiral-inward-outward.png)
 
 _Outward (CCW) and inward (CW) flat Archimedean spirals_

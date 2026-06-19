@@ -31,7 +31,7 @@ Clip line segments that fall within polygon regions.
 | _Returns_    | `list[tuple[types.Point3D, types.Point3D]]` | List of clipped segments.                                                                    |
 | _Complexity_ |                                             | O(n \* m) time, O(n) space where n is the number of regions and m their average vertex count |
 
-![Line clipped to polygon](images/clipping-polygon.png)
+![Line clipped to polygon](images/geo-algo-clipping-polygon.png)
 
 _Line clipped to polygon_
 
@@ -75,7 +75,7 @@ Clip a line segment with a rectangle.
 | _Returns_    | `Optional[tuple[types.Point3D, types.Point3D]]` | Clipped segment or None if fully outside.        |
 | _Complexity_ |                                                 | O(1) time, O(1) space                            |
 
-![Line clipped to rectangle](images/clipping-rect.png)
+![Line clipped to rectangle](images/geo-algo-clipping-rect.png)
 
 _Line clipped to rectangle_
 
@@ -133,7 +133,7 @@ Subtract polygon regions from a line segment.
 | _Returns_    | `list[tuple[types.Point3D, types.Point3D]]` | List of remaining segments after subtraction.                                                |
 | _Complexity_ |                                             | O(n \* m) time, O(n) space where n is the number of regions and m their average vertex count |
 
-![Subtract polygon from line](images/clipping-subtract.png)
+![Subtract polygon from line](images/geo-algo-clipping-subtract.png)
 
 _Subtract polygon from line_
 

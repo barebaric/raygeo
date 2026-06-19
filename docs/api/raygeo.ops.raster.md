@@ -152,7 +152,7 @@ linear interpolation along the scanline segment from _start_ to _end_.
 | _Returns_      | `list[float]`                | Flat list of `[sx, sy, sz, ex, ey, ez, ...]` segments. |
 | _Complexity_   |                              | O(n) where n = number of steps                         |
 
-![Zero-power segment extraction](images/zero-power-segments.png)
+![Zero-power segment extraction](images/ops-raster-zero-power-segments.png)
 
 _Zero-power segment extraction_
 
@@ -308,7 +308,7 @@ scan-to with power values. Useful for simple contour or hatch patterns.
 | `scan_mode`        | `ScanMode = ScanMode.Segmented` | `ScanMode.Segmented` or `ScanMode.FullSweep`. |
 | _Returns_          | `ops.Ops`                       | An \*\*~raygeo.ops.Ops\*\* container.         |
 
-![Rasterization: Mask Lines](images/rasterization-mask-lines.png)
+![Rasterization: Mask Lines](images/ops-raster-mask-lines.png)
 
 _Rasterization: Mask Lines_
 
@@ -344,7 +344,7 @@ move-to/scan-to commands for each non-zero segment (or the full sweep).
 | `scan_mode`        | `ScanMode = ScanMode.Segmented` | `ScanMode.Segmented` or `ScanMode.FullSweep`. |
 | _Returns_          | `ops.Ops`                       | An \*\*~raygeo.ops.Ops\*\* container.         |
 
-![Rasterization: Mask Scan](images/rasterization-mask-scan.png)
+![Rasterization: Mask Scan](images/ops-raster-mask-scan.png)
 
 _Rasterization: Mask Scan_
 
@@ -384,7 +384,7 @@ layer with a progressive Z offset and optional per-pass angle increment.
 | `scan_mode`        | `ScanMode = ScanMode.Segmented` | `ScanMode.Segmented` or `ScanMode.FullSweep`. |
 | _Returns_          | `ops.Ops`                       | An \*\*~raygeo.ops.Ops\*\* container.         |
 
-![Rasterization: Multi-Pass](images/rasterization-multi-pass.png)
+![Rasterization: Multi-Pass](images/ops-raster-multi-pass.png)
 
 _Rasterization: Multi-Pass_
 
@@ -430,7 +430,7 @@ and alpha channel, then emits move-to/scan-to commands with the modulated power.
 | `scan_mode`          | `ScanMode = ScanMode.Segmented` | `ScanMode.Segmented` or `ScanMode.FullSweep`. |
 | _Returns_            | `ops.Ops`                       | An \*\*~raygeo.ops.Ops\*\* container.         |
 
-![Rasterization: Power Modulation](images/rasterization-power-modulation.png)
+![Rasterization: Power Modulation](images/ops-raster-power-modulation.png)
 
 _Rasterization: Power Modulation_
 

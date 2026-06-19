@@ -25,7 +25,7 @@ Find the centre and radius of the largest inscribed circle.
 | `precision` | `float = 0.5`                                   | Desired precision (default 0.5).                  |
 | _Returns_   | `tuple[tuple[float, float], float] &#124; None` | ((x, y), radius) or None for degenerate polygons. |
 
-![find_largest_circle returns the centre and radius of the largest inscribed circle — the entry point and its clearance for helical versus ramp decisions](images/find-largest-circle.png)
+![find_largest_circle returns the centre and radius of the largest inscribed circle — the entry point and its clearance for helical versus ramp decisions](images/geo-algo-polylabel-largest-circle.png)
 
 _find_largest_circle returns the centre and radius of the largest inscribed circle — the entry point
 and its clearance for helical versus ramp decisions_
@@ -53,16 +53,16 @@ the cell radius drops below _precision_.
 | _Returns_    | `tuple[float, float] &#124; None`              | (x, y) of the most interior point, or None for degenerate polygons. |
 | _Complexity_ |                                                | O(n log n) where n is the number of cells explored.                 |
 
-![Polylabel: priority-queue cell refinement finds the point farthest from the boundary — the pole of inaccessibility](images/polylabel-rect-lshape.png)
+![Polylabel: priority-queue cell refinement finds the point farthest from the boundary — the pole of inaccessibility](images/geo-algo-polylabel-rect-lshape.png)
 
 _Polylabel: priority-queue cell refinement finds the point farthest from the boundary — the pole of
 inaccessibility_
 
-![Multi-island pocket: the pole of inaccessibility sits in the largest valid region, farthest from all boundaries](images/polylabel-multi-island.png)
+![Multi-island pocket: the pole of inaccessibility sits in the largest valid region, farthest from all boundaries](images/geo-algo-polylabel-multi-island.png)
 
 _Multi-island pocket: the pole of inaccessibility sits in the largest valid region, farthest from
 all boundaries_
 
-![Central-island pocket (annular): the pole of inaccessibility sits at the centre of the ring](images/polylabel-central-island.png)
+![Central-island pocket (annular): the pole of inaccessibility sits at the centre of the ring](images/geo-algo-polylabel-central-island.png)
 
 _Central-island pocket (annular): the pole of inaccessibility sits at the centre of the ring_

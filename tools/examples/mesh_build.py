@@ -1,36 +1,5 @@
 """Mesh build example images — uniform mesh, CDT triangulations."""
 
-__images__ = [
-    {
-        "stem": "mesh-build-uniform",
-        "caption": (
-            "Uniform mesh (top) and Laplace gradient field (bottom)"
-            " from build_uniform_mesh."
-        ),
-        "doc": "raygeo.mesh.build.md",
-        "heading": None,
-    },
-    {
-        "stem": "mesh-build-triangulation",
-        "caption": "CDT triangulation of a square pocket with centred hole",
-        "doc": "raygeo.mesh.build.md",
-        "heading": "build_triangle_mesh",
-    },
-    {
-        "stem": "mesh-build-l-shape",
-        "caption": "CDT triangulation of an L-shaped pocket",
-        "doc": "raygeo.mesh.build.md",
-        "heading": "build_triangle_mesh",
-    },
-    {
-        "stem": "mesh-build-multi-island",
-        "caption": "CDT triangulation of a square pocket with multiple"
-        " islands",
-        "doc": "raygeo.mesh.build.md",
-        "heading": "build_triangle_mesh",
-    },
-]
-
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.collections import LineCollection
@@ -75,10 +44,8 @@ def _plot_boundary(ax, mesh, tag, color, lw):
         )
 
 
-def generate_examples(output_dir):
-    images = []
-
-    # ── Uniform mesh + gradient (existing) ─────────────────────────────
+def generate_uniform():
+    """Uniform mesh."""
     boundary = [(0, 0), (160, 0), (160, 100), (0, 100)]
 
     ug_mesh = build_uniform_mesh(boundary, [], 3.0, target_edge_len=5.0)
@@ -127,17 +94,11 @@ def generate_examples(output_dir):
     ax_b.axis("off")
 
     fig_ug.tight_layout()
-    p = output_dir / "mesh-build-uniform.png"
-    fig_ug.savefig(p, dpi=150)
-    plt.close(fig_ug)
-    images.append(
-        {
-            "path": "mesh-build-uniform.png",
-            "caption": "Uniform mesh and Laplace gradient field.",
-        }
-    )
+    return fig_ug
 
-    # ── CDT: square with hole triangulation ───────────────────────────
+
+def generate_triangulation():
+    """CDT square with hole."""
     outer = [(0, 0), (100, 0), (100, 100), (0, 100)]
     hole = [(30, 30), (70, 30), (70, 70), (30, 70)]
     mesh = build_triangle_mesh(outer, [hole], tool_radius=0.0, min_angle=20.0)
@@ -177,19 +138,11 @@ def generate_examples(output_dir):
     ax.legend(fontsize=10, loc="upper right")
     ax.grid(True, alpha=0.2)
     fig.tight_layout()
-    path = output_dir / "mesh-build-triangulation.png"
-    fig.savefig(path, dpi=150)
-    plt.close(fig)
-    images.append(
-        {
-            "path": "mesh-build-triangulation.png",
-            "caption": (
-                "CDT triangulation of a square pocket with centred hole"
-            ),
-        }
-    )
+    return fig
 
-    # ── CDT: L-shape triangulation ─────────────────────────────────────
+
+def generate_l_shape():
+    """CDT L-shape."""
     l_outer = [(0, 0), (80, 0), (80, 20), (20, 20), (20, 80), (0, 80)]
     l_mesh = build_triangle_mesh(l_outer, [], tool_radius=0.0, min_angle=20.0)
 
@@ -219,20 +172,11 @@ def generate_examples(output_dir):
     ax3.legend(fontsize=10, loc="upper right")
     ax3.grid(True, alpha=0.2)
     fig3.tight_layout()
-    path3 = output_dir / "mesh-build-l-shape.png"
-    fig3.savefig(path3, dpi=150)
-    plt.close(fig3)
-    images.append(
-        {
-            "path": "mesh-build-l-shape.png",
-            "caption": (
-                "CDT triangulation of an L-shaped pocket — the constrained"
-                " edges preserve the re-entrant corner"
-            ),
-        }
-    )
+    return fig3
 
-    # ── CDT: multi-island triangulation ────────────────────────────────
+
+def generate_multi_island():
+    """CDT multi-island."""
     outer_mi = [(0, 0), (100, 0), (100, 100), (0, 100)]
     holes_mi = [
         [(10, 60), (30, 60), (30, 80), (10, 80)],
@@ -282,25 +226,32 @@ def generate_examples(output_dir):
     ax8.legend(fontsize=10, loc="upper right")
     ax8.grid(True, alpha=0.2)
     fig8.tight_layout()
-    path8 = output_dir / "mesh-build-multi-island.png"
-    fig8.savefig(path8, dpi=150)
-    plt.close(fig8)
-    images.append(
-        {
-            "path": "mesh-build-multi-island.png",
-            "caption": (
-                "CDT triangulation of a square pocket with four inner"
-                " islands — each island is treated as an inner boundary"
-                " (u=0)"
-            ),
-        }
-    )
+    return fig8
 
-    return {
-        "title": "Mesh Build",
-        "description": (
-            "Uniform mesh generation and constrained Delaunay"
-            " triangulation (CDT) of 2D polygon domains."
+
+__images__ = [
+    {
+        "heading": None,
+        "caption": (
+            "Uniform mesh (top) and Laplace gradient field (bottom)"
+            " from build_uniform_mesh."
         ),
-        "images": images,
-    }
+        "function": generate_uniform,
+    },
+    {
+        "heading": "build_triangle_mesh",
+        "caption": "CDT triangulation of a square pocket with centred hole",
+        "function": generate_triangulation,
+    },
+    {
+        "heading": "build_triangle_mesh",
+        "caption": "CDT triangulation of an L-shaped pocket",
+        "function": generate_l_shape,
+    },
+    {
+        "heading": "build_triangle_mesh",
+        "caption": "CDT triangulation of a square pocket with multiple"
+        " islands",
+        "function": generate_multi_island,
+    },
+]

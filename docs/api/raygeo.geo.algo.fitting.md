@@ -50,7 +50,7 @@ Fit a circle to three points.
 | _Returns_    | `Optional[tuple[types.Point, float]]` | Tuple of (center, radius) or None. |
 | _Complexity_ |                                       | O(1) time, O(1) space              |
 
-![Circle fitted to three points](images/fitting-3-points.png)
+![Circle fitted to three points](images/geo-algo-fitting-3-points.png)
 
 _Circle fitted to three points_
 
@@ -70,7 +70,7 @@ Fit a circle to a set of points.
 | _Returns_    | `Optional[tuple[types.Point, float, float]]` | Tuple of (center, radius, error) or None. |
 | _Complexity_ |                                              | O(n) time, O(1) space                     |
 
-![Circle fitted to points](images/fitting-circle.png)
+![Circle fitted to points](images/geo-algo-fitting-circle.png)
 
 _Circle fitted to points_
 
@@ -114,7 +114,7 @@ Fit a polyline of points with arc and line primitives.
 | _Returns_    | `geo.Geometry`            | Geometry of fitted commands.        |
 | _Complexity_ |                           | O(n log n) average time, O(n) space |
 
-![Fitted primitives](images/fitting-primitives.png)
+![Fitted primitives](images/geo-algo-fitting-primitives.png)
 
 _Fitted primitives_
 
@@ -136,7 +136,7 @@ Flatten curves into linear segments.
 | _Returns_    | `list[list[types.Point3D]]` | List of flattened point segments.                                                             |
 | _Complexity_ |                             | O(n + m) time, O(m) space where n is the number of commands and m the number of output points |
 
-![Arc curve flattened to dense line segments](images/fitting-flatten.png)
+![Arc curve flattened to dense line segments](images/geo-algo-fitting-flatten.png)
 
 _Arc curve flattened to dense line segments_
 
@@ -160,7 +160,7 @@ Get the maximum arc deviation for a set of points.
 | _Returns_    | `float`                   | Maximum deviation from the arc. |
 | _Complexity_ |                           | O(n) time, O(1) space           |
 
-![Maximum deviation from a reference arc](images/fitting-arc-deviation.png)
+![Maximum deviation from a reference arc](images/geo-algo-fitting-arc-deviation.png)
 
 _Maximum deviation from a reference arc_
 
@@ -184,7 +184,7 @@ Get the maximum line deviation for a segment of a polyline.
 | _Returns_    | `tuple[float, int]`       | Tuple of (max_deviation, index_of_max). |
 | _Complexity_ |                           | O(n) time, O(1) space                   |
 
-![Maximum deviation from a chord](images/fitting-line-deviation.png)
+![Maximum deviation from a chord](images/geo-algo-fitting-line-deviation.png)
 
 _Maximum deviation from a chord_
 
@@ -203,7 +203,7 @@ Linearize geometry data into line segments.
 | _Returns_    | `geo.Geometry` | Linearized Geometry.                                                                            |
 | _Complexity_ |                | O(n + m) time, O(m) space where n is the number of commands and m the number of output segments |
 
-![Arc curve linearized with RDP simplification](images/fitting-linearize.png)
+![Arc curve linearized with RDP simplification](images/geo-algo-fitting-linearize.png)
 
 _Arc curve linearized with RDP simplification_
 
@@ -227,6 +227,6 @@ Project a circle center onto the perpendicular bisector of two points.
 | _Returns_    | `types.Point`       | Projected center point (x, y).    |
 | _Complexity_ |                     | O(1) time, O(1) space             |
 
-![Circle center projected onto the perpendicular bisector](images/fitting-project-bisector.png)
+![Circle center projected onto the perpendicular bisector](images/geo-algo-fitting-project-bisector.png)
 
 _Circle center projected onto the perpendicular bisector_

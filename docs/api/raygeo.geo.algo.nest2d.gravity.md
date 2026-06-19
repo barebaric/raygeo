@@ -34,7 +34,7 @@ for each input group in order.
 | _Returns_          | `list[tuple[float, float]]`         | List of `(dx, dy)` adjustments, one per group.  |
 | _Complexity_       |                                     | O(passes \* n \* m) where passes ≤ 10.          |
 
-![Gravity tightening: before vs after](images/gravity.png)
+![Gravity tightening: before vs after](images/geo-algo-nest2d-gravity-overview.png)
 
 _Gravity tightening: before vs after_
 

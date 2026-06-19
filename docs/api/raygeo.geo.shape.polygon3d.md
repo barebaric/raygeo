@@ -28,7 +28,7 @@ Flip a 3D polygon horizontally, vertically, and/or along Z.
 | _Returns_    | `types.Polygon3D`         | Flipped polygon.                         |
 | _Complexity_ |                           | O(n)                                     |
 
-![3D polygon flipped horizontally and along Z](images/polygon3d-flip.png)
+![3D polygon flipped horizontally and along Z](images/geo-shape-polygon3d-flip.png)
 
 _3D polygon flipped horizontally and along Z_
 
@@ -68,7 +68,7 @@ Get the 3D bounding box of a polygon.
 | _Returns_    | `types.Rect3D`            | Bounding box as (x_min, y_min, x_max, y_max, z_min, z_max). |
 | _Complexity_ |                           | O(n)                                                        |
 
-![3D bounding box (Rect3D)](images/polygon3d-bounds.png)
+![3D bounding box (Rect3D)](images/geo-shape-polygon3d-bounds.png)
 
 _3D bounding box (Rect3D)_
 
@@ -88,9 +88,9 @@ XY centroid from shoelace formula, Z from average.
 | _Returns_    | `types.Point3D`           | Centroid point (x, y, z).    |
 | _Complexity_ |                           | O(n)                         |
 
-![3D centroid – XY via shoelace, Z as average](images/polygon3d-centroid.png)
+![3D centroid - XY via shoelace, Z as average](images/geo-shape-polygon3d-centroid.png)
 
-_3D centroid – XY via shoelace, Z as average_
+_3D centroid - XY via shoelace, Z as average_
 
 ### `get_polygon_convex_hull_3d()`
 
@@ -106,7 +106,7 @@ Get the convex hull of a 3D polygon (XY-plane, Z from first vertex).
 | _Returns_    | `types.Polygon3D`         | Convex hull as list of (x, y, z) points. |
 | _Complexity_ |                           | O(n log n)                               |
 
-![3D convex hull (XY-plane, Z from first hull vertex)](images/polygon3d-convex-hull.png)
+![3D convex hull (XY-plane, Z from first hull vertex)](images/geo-shape-polygon3d-convex-hull.png)
 
 _3D convex hull (XY-plane, Z from first hull vertex)_
 
@@ -126,7 +126,7 @@ Get the edges of a 3D polygon.
 | _Returns_    | `list[tuple[types.Point3D, types.Point3D]]` | List of ((x1, y1, z1), (x2, y2, z2)) edges. |
 | _Complexity_ |                                             | O(n)                                        |
 
-![3D polygon edges as (start, end) pairs](images/polygon3d-edges.png)
+![3D polygon edges as (start, end) pairs](images/geo-shape-polygon3d-edges.png)
 
 _3D polygon edges as (start, end) pairs_
 
@@ -158,7 +158,7 @@ Get the perimeter of a 3D polygon using full 3D edge lengths.
 | _Returns_    | `float`                   | Perimeter length.            |
 | _Complexity_ |                           | O(n)                         |
 
-![3D polygon perimeter using full 3D edge lengths](images/polygon3d-perimeter.png)
+![3D polygon perimeter using full 3D edge lengths](images/geo-shape-polygon3d-perimeter.png)
 
 _3D polygon perimeter using full 3D edge lengths_
 
@@ -176,9 +176,9 @@ Compute the difference of two 3D polygons (poly1 - poly2).
 | `poly2`   | `Any`                   | Clip 3D polygon.                             |
 | _Returns_ | `list[types.Polygon3D]` | Difference result with Z from first polygon. |
 
-![3D polygon difference (A − B) — Z from A](images/polygon3d-boolean-difference.png)
+![3D polygon difference (A - B) — Z from A](images/geo-shape-polygon3d-boolean-difference.png)
 
-_3D polygon difference (A − B) — Z from A_
+_3D polygon difference (A - B) — Z from A_
 
 ### `get_polygons_group_difference_3d()`
 
@@ -228,7 +228,7 @@ Compute the intersection of two 3D polygons (XY-plane, Z preserved).
 | `poly2`   | `Any`                   | Second 3D polygon.                             |
 | _Returns_ | `list[types.Polygon3D]` | Intersection result with Z from first polygon. |
 
-![3D polygon intersection — Z from first polygon](images/polygon3d-boolean-intersection.png)
+![3D polygon intersection — Z from first polygon](images/geo-shape-polygon3d-boolean-intersection.png)
 
 _3D polygon intersection — Z from first polygon_
 
@@ -245,7 +245,7 @@ Compute the union of 3D polygons (XY-plane, Z preserved).
 | `polygons` | `Any`                   | List of 3D polygons.                    |
 | _Returns_  | `list[types.Polygon3D]` | Union result with Z from first polygon. |
 
-![3D polygon union — Z from first polygon](images/polygon3d-boolean-union.png)
+![3D polygon union — Z from first polygon](images/geo-shape-polygon3d-boolean-union.png)
 
 _3D polygon union — Z from first polygon_
 
@@ -263,7 +263,7 @@ Offset (inflate/deflate) a closed 3D polygon.
 | `offset`  | `float`                 | Offset distance (positive = grow, negative = shrink). |
 | _Returns_ | `list[types.Polygon3D]` | Offset polygons with Z from input.                    |
 
-![3D polygon offset — Z preserved from input](images/polygon3d-offset.png)
+![3D polygon offset — Z preserved from input](images/geo-shape-polygon3d-offset.png)
 
 _3D polygon offset — Z preserved from input_
 
@@ -293,7 +293,7 @@ Positive distance offsets to the _left_ of the traversal direction.
 | _Returns_    | `types.Polygon3D`         | Offset polyline with the same number of vertices.                                                                                                                                              |
 | _Complexity_ |                           | O(n)                                                                                                                                                                                           |
 
-![True 3D polyline offset (edge-plane miter)](images/polygon3d-true-offset.png)
+![True 3D polyline offset (edge-plane miter)](images/geo-shape-polygon3d-true-offset.png)
 
 _True 3D polyline offset (edge-plane miter)_
 
@@ -315,7 +315,7 @@ Rotate a 3D polygon around the Z axis (XY rotation, Z preserved).
 | _Returns_    | `types.Polygon3D`         | Rotated polygon.             |
 | _Complexity_ |                           | O(n)                         |
 
-![3D polygon rotated around Z axis (Z preserved)](images/polygon3d-rotate.png)
+![3D polygon rotated around Z axis (Z preserved)](images/geo-shape-polygon3d-rotate.png)
 
 _3D polygon rotated around Z axis (Z preserved)_
 
@@ -356,7 +356,7 @@ Scale a 3D polygon.
 | _Returns_    | `types.Polygon3D`         | Scaled polygon.                                       |
 | _Complexity_ |                           | O(n)                                                  |
 
-![3D polygon scaled uniformly](images/polygon3d-scale.png)
+![3D polygon scaled uniformly](images/geo-shape-polygon3d-scale.png)
 
 _3D polygon scaled uniformly_
 
@@ -382,7 +382,7 @@ Translate a 3D polygon.
 | _Returns_    | `types.Polygon3D`         | Translated polygon.          |
 | _Complexity_ |                           | O(n)                         |
 
-![3D polygon translated by dx, dy, dz](images/polygon3d-translate.png)
+![3D polygon translated by dx, dy, dz](images/geo-shape-polygon3d-translate.png)
 
 _3D polygon translated by dx, dy, dz_
 

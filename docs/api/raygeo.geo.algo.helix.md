@@ -45,6 +45,6 @@ Generate a 3D helical polyline.
 | _Returns_         | `list[tuple[float, float, float]]` | List of (x, y, z) points approximating the helix.          |
 | _Complexity_      |                                    | O(n) time, O(n) space where n = total_angle / angular_step |
 
-![Cylindrical (CCW) and conical-expand (CW) helical paths](images/helix-cylindrical-conical.png)
+![Cylindrical (CCW) and conical-expand (CW) helical paths](images/geo-algo-helix-helical.png)
 
 _Cylindrical (CCW) and conical-expand (CW) helical paths_

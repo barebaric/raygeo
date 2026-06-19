@@ -243,7 +243,7 @@ lead-out segments along the tangent direction at the path start and end.
 | _Returns_     | `None`  |                                   |
 | _Complexity_  |         | O(n) time, O(n) space             |
 
-![Lead-in and lead-out paths](images/lead-in-out.png)
+![Lead-in and lead-out paths](images/ops-lead-in-out.png)
 
 _Lead-in and lead-out paths_
 
@@ -264,7 +264,7 @@ lead-in and lead-out segments for constant engraving velocity.
 | _Returns_     | `None`  |                                   |
 | _Complexity_  |         | O(n) time, O(n) space             |
 
-![Overscan applied to raster lines](images/overscan.png)
+![Overscan applied to raster lines](images/ops-overscan.png)
 
 _Overscan applied to raster lines_
 
@@ -285,7 +285,7 @@ nearest point on the path. Only `VECTOR_OUTLINE` sections are modified.
 | _Returns_    | `None`                                 |                                                               |
 | _Complexity_ |                                        | O(n \* k) time, O(1) space where k is the number of tab clips |
 
-![Tab operations on a rectangle](images/tab-operations.png)
+![Tab operations on a rectangle](images/ops-tab-operations.png)
 
 _Tab operations on a rectangle_
 
@@ -1143,7 +1143,7 @@ travel moves to avoid cutting the same line twice.
 | _Returns_    | `None`  |                                                   |
 | _Complexity_ |         | O(n log n) average time, O(n) space               |
 
-![Line merging before and after](images/merge-lines.png)
+![Line merging before and after](images/ops-merge-lines.png)
 
 _Line merging before and after_
 

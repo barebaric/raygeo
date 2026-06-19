@@ -1,46 +1,5 @@
 """Mesh Laplace example images — Laplace solver visualisations."""
 
-__images__ = [
-    {
-        "stem": "mesh-laplace-overview",
-        "caption": (
-            "Laplace solution — contours morph smoothly from hole to boundary"
-        ),
-        "doc": "raygeo.mesh.laplace.md",
-        "heading": "solve_laplace",
-    },
-    {
-        "stem": "mesh-laplace-l-shape-solution",
-        "caption": "Laplace solution on an L-shaped domain",
-        "doc": "raygeo.mesh.laplace.md",
-        "heading": "solve_laplace",
-    },
-    {
-        "stem": "mesh-laplace-convergence",
-        "caption": "Conjugate gradient convergence — residual norm per"
-        " iteration",
-        "doc": "raygeo.mesh.laplace.md",
-        "heading": "solve_laplace_with_history",
-    },
-    {
-        "stem": "mesh-laplace-stiffness-spy",
-        "caption": (
-            "Stiffness matrix edge weights on the mesh — line"
-            " thickness ∝ |Kᵢⱼ|"
-        ),
-        "doc": "raygeo.mesh.laplace.md",
-        "heading": "solve_laplace",
-    },
-    {
-        "stem": "mesh-laplace-multi-island",
-        "caption": "Laplace solution on a multi-island domain — contour"
-        " lines morph smoothly between four inner islands and the outer"
-        " boundary",
-        "doc": "raygeo.mesh.laplace.md",
-        "heading": "solve_laplace",
-    },
-]
-
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.collections import LineCollection
@@ -85,9 +44,8 @@ def _plot_boundary(ax, mesh, tag, color, lw):
         )
 
 
-def generate_examples(output_dir):
-    images = []
-
+def generate_overview():
+    """Laplace overview."""
     outer = [(0, 0), (100, 0), (100, 100), (0, 100)]
     hole = [(30, 30), (70, 30), (70, 70), (30, 70)]
     mesh = build_triangle_mesh(outer, [hole], tool_radius=0.0, min_angle=20.0)
@@ -95,7 +53,6 @@ def generate_examples(output_dir):
     xs_o, ys_o = zip(*outer)
     xs_h, ys_h = zip(*hole)
 
-    # ── Laplace solution as filled contour ─────────────────────────────
     u = solve_laplace(mesh, max_iter=2000, tolerance=1e-10)
 
     verts = mesh.vertices
@@ -145,20 +102,11 @@ def generate_examples(output_dir):
     ax.legend(fontsize=10, loc="upper right")
     ax.grid(True, alpha=0.2)
     fig.tight_layout()
-    path = output_dir / "mesh-laplace-overview.png"
-    fig.savefig(path, dpi=150)
-    plt.close(fig)
-    images.append(
-        {
-            "path": "mesh-laplace-overview.png",
-            "caption": (
-                "Laplace solution on triangle mesh — contours morph smoothly"
-                " from the inner hole (u=0) to the outer boundary (u=1)"
-            ),
-        }
-    )
+    return fig
 
-    # ── L-shape Laplace solution ────────────────────────────────────────
+
+def generate_l_shape_solution():
+    """L-shape laplace."""
     l_outer = [(0, 0), (80, 0), (80, 20), (20, 20), (20, 80), (0, 80)]
     l_mesh = build_triangle_mesh(l_outer, [], tool_radius=0.0, min_angle=20.0)
     l_u = solve_laplace(l_mesh, max_iter=2000, tolerance=1e-10)
@@ -202,20 +150,15 @@ def generate_examples(output_dir):
     ax4.legend(fontsize=10, loc="upper right")
     ax4.grid(True, alpha=0.2)
     fig4.tight_layout()
-    path4 = output_dir / "mesh-laplace-l-shape-solution.png"
-    fig4.savefig(path4, dpi=150)
-    plt.close(fig4)
-    images.append(
-        {
-            "path": "mesh-laplace-l-shape-solution.png",
-            "caption": (
-                "Laplace solution on an L-shaped mesh — the scalar field"
-                " captures the re-entrant geometry naturally"
-            ),
-        }
-    )
+    return fig4
 
-    # ── Convergence plot ────────────────────────────────────────────────
+
+def generate_convergence():
+    """Convergence."""
+    outer = [(0, 0), (100, 0), (100, 100), (0, 100)]
+    hole = [(30, 30), (70, 30), (70, 70), (30, 70)]
+    mesh = build_triangle_mesh(outer, [hole], tool_radius=0.0, min_angle=20.0)
+
     _, residuals = solve_laplace_with_history(
         mesh, max_iter=500, tolerance=1e-12
     )
@@ -232,20 +175,23 @@ def generate_examples(output_dir):
     )
     ax6.grid(True, alpha=0.3)
     fig6.tight_layout()
-    path6 = output_dir / "mesh-laplace-convergence.png"
-    fig6.savefig(path6, dpi=150)
-    plt.close(fig6)
-    images.append(
-        {
-            "path": "mesh-laplace-convergence.png",
-            "caption": (
-                "Conjugate gradient convergence — residual norm decreases"
-                " exponentially as the solver progresses"
-            ),
-        }
-    )
+    return fig6
 
-    # ── Stiffness matrix edge weights ──────────────────────────────────
+
+def generate_stiffness_spy():
+    """Stiffness spy."""
+    outer = [(0, 0), (100, 0), (100, 100), (0, 100)]
+    hole = [(30, 30), (70, 30), (70, 70), (30, 70)]
+    mesh = build_triangle_mesh(outer, [hole], tool_radius=0.0, min_angle=20.0)
+
+    verts = mesh.vertices
+    x_vals = np.asarray([v[0] for v in verts])
+    y_vals = np.asarray([v[1] for v in verts])
+    tris = np.asarray(mesh.triangles)
+    u = solve_laplace(mesh, max_iter=2000, tolerance=1e-10)
+    u_arr = np.asarray(u)
+    triang = Triangulation(x_vals, y_vals, tris)
+
     edge_stiffness = {}
     for ti, (a, b, c) in enumerate(mesh.triangles):
         vi = verts[a]
@@ -283,6 +229,9 @@ def generate_examples(output_dir):
     cbar7 = fig7.colorbar(tcf7, ax=ax7, shrink=0.8)
     cbar7.set_label("Scalar field u(x,y)", fontsize=10)
 
+    xs_o, ys_o = zip(*outer)
+    xs_h, ys_h = zip(*hole)
+
     for (a, b), w in edge_stiffness.items():
         frac = (w - emin) / (emax - emin + 1e-30)
         lw = 0.3 + 3.5 * frac
@@ -318,22 +267,11 @@ def generate_examples(output_dir):
     ax7.legend(fontsize=10, loc="upper right")
     ax7.grid(True, alpha=0.2)
     fig7.tight_layout()
-    path7 = output_dir / "mesh-laplace-stiffness-spy.png"
-    fig7.savefig(path7, dpi=150)
-    plt.close(fig7)
-    images.append(
-        {
-            "path": "mesh-laplace-stiffness-spy.png",
-            "caption": (
-                "Stiffness matrix visualised directly on the mesh — edge"
-                " thickness is proportional to |Kᵢⱼ|. Shorter edges (in"
-                " denser regions) produce larger stiffness values, driving"
-                " the Laplace solution's smoothness."
-            ),
-        }
-    )
+    return fig7
 
-    # ── Multi-island Laplace solution ───────────────────────────────────
+
+def generate_multi_island():
+    """Multi-island laplace."""
     outer_mi = [(0, 0), (100, 0), (100, 100), (0, 100)]
     holes_mi = [
         [(10, 60), (30, 60), (30, 80), (10, 80)],
@@ -400,25 +338,41 @@ def generate_examples(output_dir):
     ax9.legend(fontsize=10, loc="upper right")
     ax9.grid(True, alpha=0.2)
     fig9.tight_layout()
-    path9 = output_dir / "mesh-laplace-multi-island.png"
-    fig9.savefig(path9, dpi=150)
-    plt.close(fig9)
-    images.append(
-        {
-            "path": "mesh-laplace-multi-island.png",
-            "caption": (
-                "Laplace solution on a triangle mesh with four inner"
-                " islands — the scalar field smoothly transitions from"
-                " u=0 on each island to u=1 on the outer boundary"
-            ),
-        }
-    )
+    return fig9
 
-    return {
-        "title": "Mesh Laplace",
-        "description": (
-            "FEM Laplace equation solving on triangle meshes for scalar"
-            " field generation."
+
+__images__ = [
+    {
+        "heading": "solve_laplace",
+        "caption": (
+            "Laplace solution — contours morph smoothly from hole to boundary"
         ),
-        "images": images,
-    }
+        "function": generate_overview,
+    },
+    {
+        "heading": "solve_laplace",
+        "caption": "Laplace solution on an L-shaped domain",
+        "function": generate_l_shape_solution,
+    },
+    {
+        "heading": "solve_laplace_with_history",
+        "caption": "Conjugate gradient convergence — residual norm per"
+        " iteration",
+        "function": generate_convergence,
+    },
+    {
+        "heading": "solve_laplace",
+        "caption": (
+            "Stiffness matrix edge weights on the mesh — line"
+            " thickness ∝ |Kᵢⱼ|"
+        ),
+        "function": generate_stiffness_spy,
+    },
+    {
+        "heading": "solve_laplace",
+        "caption": "Laplace solution on a multi-island domain — contour"
+        " lines morph smoothly between four inner islands and the outer"
+        " boundary",
+        "function": generate_multi_island,
+    },
+]

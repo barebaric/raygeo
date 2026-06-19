@@ -47,7 +47,7 @@ Compute the Inner-Fit Polygon (IFP) for a part inside a bin.
 | _Returns_    | `list[types.Polygon]`   | List of IFP polygons.                                 |
 | _Complexity_ |                         | O(n \* m) where n, m = vertex counts of bin and part. |
 
-![Inner Fit Polygon showing valid placement region](images/inner-fit-polygon.png)
+![Inner Fit Polygon showing valid placement region](images/geo-algo-nest2d-ifp-inner-fit.png)
 
 _Inner Fit Polygon showing valid placement region_
 

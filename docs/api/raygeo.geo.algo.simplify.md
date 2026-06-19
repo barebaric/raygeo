@@ -29,7 +29,7 @@ Simplify a polyline using the Ramer-Douglas-Peucker algorithm.
 | _Returns_    | `types.Polygon`         | Simplified point sequence.          |
 | _Complexity_ |                         | O(n log n) average time, O(n) space |
 
-![Simplify and linearize](images/simplify.png)
+![Simplify and linearize](images/geo-algo-simplify-overview.png)
 
 _Simplify and linearize_
 
@@ -53,6 +53,6 @@ The simplification uses XY distance, but preserves Z coordinates of kept points.
 | _Returns_    | `types.Polygon3D`         | Simplified 3D point sequence.       |
 | _Complexity_ |                           | O(n log n) average time, O(n) space |
 
-![3D polyline simplification preserving Z coordinates](images/simplify-3d.png)
+![3D polyline simplification preserving Z coordinates](images/geo-algo-simplify-3d.png)
 
 _3D polyline simplification preserving Z coordinates_

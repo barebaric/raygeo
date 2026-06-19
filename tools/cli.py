@@ -6,34 +6,33 @@ import importlib
 import pkgutil
 import shutil
 import sys
-import tempfile
 from pathlib import Path
 
 import matplotlib
 import matplotlib.image as mpimg
+import matplotlib.pyplot as plt
 import numpy as np
 
 import tools.examples
 from tools import api_docs
 
 
-def _build_inline_image_map():
-    mapping = {}
-    for mod in _collect_example_modules():
-        images = getattr(mod, "__images__", None)
-        if not images:
-            continue
-        for img in images:
-            doc_files = img.get("doc")
-            if not doc_files:
-                continue
-            if isinstance(doc_files, str):
-                doc_files = [doc_files]
-            for doc in doc_files:
-                mapping.setdefault(doc, []).append(
-                    (img.get("heading"), img["stem"], img["caption"])
-                )
-    return mapping
+def _module_to_doc(mod_name: str) -> list[str]:
+    known_compound = {"cleared_area", "spatial_grid2d"}
+    parts = mod_name.split("_")
+    result_parts = []
+    i = 0
+    while i < len(parts):
+        for n in range(len(parts), i, -1):
+            candidate = "_".join(parts[i:n])
+            if candidate in known_compound or n == i + 1:
+                result_parts.append(candidate)
+                i = n
+                break
+    base = "raygeo." + ".".join(result_parts) + ".md"
+    if mod_name == "geo":
+        return ["raygeo.md", base]
+    return [base]
 
 
 def _collect_example_modules():
@@ -71,64 +70,52 @@ def _images_are_visually_identical(path_a: Path, path_b: Path) -> bool:
     return np.allclose(a_blocks, b_blocks, atol=0.2)
 
 
-def _module_output_stems(mod):
-    images = getattr(mod, "__images__", None)
-    if images:
-        return [img["stem"] for img in images]
-    return getattr(mod, "__outputs__", None) or []
-
-
-def _module_is_up_to_date(mod, images_dir: Path) -> bool:
-    stems = _module_output_stems(mod)
-    if not stems:
-        return False
-    if not images_dir.is_dir():
-        return False
-    try:
-        mod_mtime = Path(mod.__file__).stat().st_mtime
-    except (OSError, TypeError):
-        return False
-    for stem in stems:
-        img = images_dir / f"{stem}.png"
-        if not img.exists():
-            return False
-        try:
-            if img.stat().st_mtime < mod_mtime:
-                return False
-        except OSError:
-            return False
-    return True
-
-
-def _generate_images(images_dir: Path):
+def _generate_images(images_dir: Path) -> dict[str, list]:
     matplotlib.use("Agg")
-
     images_dir.mkdir(parents=True, exist_ok=True)
     modules = _collect_example_modules()
 
-    with tempfile.TemporaryDirectory() as tmp:
-        tmp_dir = Path(tmp)
-        for mod in modules:
-            if not hasattr(mod, "generate_examples"):
-                continue
-            if _module_is_up_to_date(mod, images_dir):
-                print(f"  Skipping {mod.__name__} (up to date)")
-                continue
-            print(f"  Generating {mod.__name__}...")
-            mod.generate_examples(tmp_dir)
+    inline_map: dict[str, list] = {}
 
-        for new_path in sorted(tmp_dir.glob("*.png")):
-            dest = images_dir / new_path.name
-            if dest.exists() and _images_are_visually_identical(
-                new_path, dest
-            ):
+    for mod in modules:
+        images = getattr(mod, "__images__", None) or []
+        if not images:
+            continue
+        mod_name = mod.__name__
+        if not mod_name.startswith("tools.examples."):
+            continue
+        short = mod_name[len("tools.examples.") :]
+        docs = _module_to_doc(short)
+        stem_base = short.replace("_", "-")
+
+        print(f"  Generating {mod.__name__}...")
+        for img in images:
+            func = img.get("function")
+            if not func:
                 continue
-            shutil.copy2(new_path, dest)
-            print(f"    Updated {new_path.name}")
+            name = func.__name__
+            sub = (
+                name[len("generate_") :]
+                if name.startswith("generate_")
+                else name
+            )
+            stem = f"{stem_base}-{sub.replace('_', '-')}"
+            result = func()
+            if hasattr(result, "savefig"):
+                fig = result
+                fig.savefig(images_dir / f"{stem}.png", dpi=150)
+                plt.close(fig)
+            else:
+                continue
+            for doc in docs:
+                inline_map.setdefault(doc, []).append(
+                    (img.get("heading"), stem, img.get("caption"))
+                )
+
+    return inline_map
 
 
-def _inject_images_into_api(api_dir: Path, images_dir: Path):
-    inline_map = _build_inline_image_map()
+def _inject_images_into_api(api_dir: Path, images_dir: Path, inline_map: dict):
     for md_file, image_list in inline_map.items():
         path = api_dir / md_file
         if not path.exists():
@@ -171,8 +158,6 @@ def _inject_images_into_api(api_dir: Path, images_dir: Path):
         if not insertions:
             continue
 
-        # Reverse same-position groups so first entry in the list
-        # ends up first in the rendered output.
         i = 0
         while i < len(insertions):
             j = i + 1
@@ -212,10 +197,10 @@ def cmd_all(args):
     cmd_api(args)
 
     print("Generating visual example images...")
-    _generate_images(images_dir)
+    inline_map = _generate_images(images_dir)
 
     print("Injecting images into API docs...")
-    _inject_images_into_api(api_dir, images_dir)
+    _inject_images_into_api(api_dir, images_dir, inline_map)
 
 
 def cmd_clean(args):

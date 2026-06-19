@@ -1,14 +1,5 @@
 """Generate SVG parsing example images."""
 
-__images__ = [
-    {
-        "stem": "svg-parsing",
-        "caption": "SVG path data parsed into geometries",
-        "doc": "raygeo.svg.md",
-        "heading": None,
-    },
-]
-
 import math
 
 import matplotlib.pyplot as plt
@@ -18,9 +9,7 @@ from raygeo.svg import parse_svg_path_data
 from tools.plot import auto_limits, plot_geometry
 
 
-def generate_examples(output_dir):
-    images = []
-
+def generate_parsing():
     n_circle = 48
     circle_pts = " ".join(
         f"L {50 + 20 * math.cos(2 * math.pi * i / n_circle):.1f}"
@@ -61,20 +50,13 @@ def generate_examples(output_dir):
         ax.set_title(title)
 
     fig.tight_layout()
-    path = output_dir / "svg-parsing.png"
-    fig.savefig(path, dpi=150)
-    plt.close(fig)
-    images.append(
-        {
-            "path": "svg-parsing.png",
-            "caption": "SVG path data parsing into geometries",
-        }
-    )
+    return fig
 
-    return {
-        "title": "SVG Parsing",
-        "description": (
-            "Parse SVG path data strings into raygeo Geometry objects."
-        ),
-        "images": images,
-    }
+
+__images__ = [
+    {
+        "heading": None,
+        "caption": "SVG path data parsed into geometries",
+        "function": generate_parsing,
+    },
+]

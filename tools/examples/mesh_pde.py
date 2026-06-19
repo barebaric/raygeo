@@ -1,24 +1,5 @@
 """Mesh PDE spiral example images."""
 
-__images__ = [
-    {
-        "stem": "mesh-pde-spiral-path",
-        "caption": (
-            "Spiral toolpath traced on the Laplace solution — path"
-            " morphs smoothly from the inner hole outward"
-        ),
-        "doc": "raygeo.mesh.pde.md",
-        "heading": "trace_spiral",
-    },
-    {
-        "stem": "mesh-pde-spiral-multi-island",
-        "caption": "Spiral toolpath traced on a multi-island Laplace"
-        " solution — path navigates around four inner islands",
-        "doc": "raygeo.mesh.pde.md",
-        "heading": "trace_spiral",
-    },
-]
-
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.tri import Triangulation
@@ -28,9 +9,7 @@ from raygeo.mesh.laplace import solve_laplace
 from raygeo.mesh.pde import trace_spiral
 
 
-def generate_examples(output_dir):
-    images = []
-
+def generate_spiral_path():
     # ── Spiral path on Laplace solution ────────────────────────────────
     outer = [(0, 0), (100, 0), (100, 100), (0, 100)]
     hole = [(30, 30), (70, 30), (70, 70), (30, 70)]
@@ -94,20 +73,10 @@ def generate_examples(output_dir):
     ax.legend(fontsize=9, loc="upper right")
     ax.grid(True, alpha=0.2)
     fig.tight_layout()
-    fig_path = output_dir / "mesh-pde-spiral-path.png"
-    fig.savefig(fig_path, dpi=150)
-    plt.close(fig)
-    images.append(
-        {
-            "path": "mesh-pde-spiral-path.png",
-            "caption": (
-                "PDE spiral toolpath on the Laplace solution — starts on"
-                " the inner hole boundary (green dot) and spirals outward"
-                " to the outer boundary (orange square)"
-            ),
-        }
-    )
+    return fig
 
+
+def generate_spiral_multi_island():
     # ── Multi-island spiral path ─────────────────────────────────────────
     outer_mi = [(0, 0), (100, 0), (100, 100), (0, 100)]
     holes_mi = [
@@ -181,24 +150,22 @@ def generate_examples(output_dir):
     ax2.legend(fontsize=9, loc="upper right")
     ax2.grid(True, alpha=0.2)
     fig2.tight_layout()
-    fig2_path = output_dir / "mesh-pde-spiral-multi-island.png"
-    fig2.savefig(fig2_path, dpi=150)
-    plt.close(fig2)
-    images.append(
-        {
-            "path": "mesh-pde-spiral-multi-island.png",
-            "caption": (
-                "PDE spiral toolpath on a multi-island Laplace solution"
-                " — the spiral navigates around four inner islands from"
-                " u=0 to u=1"
-            ),
-        }
-    )
+    return fig2
 
-    return {
-        "title": "PDE Spiral",
-        "description": (
-            "Spiral toolpath tracing on a triangulated Laplace solution."
+
+__images__ = [
+    {
+        "heading": "trace_spiral",
+        "caption": (
+            "Spiral toolpath traced on the Laplace solution — path"
+            " morphs smoothly from the inner hole outward"
         ),
-        "images": images,
-    }
+        "function": generate_spiral_path,
+    },
+    {
+        "heading": "trace_spiral",
+        "caption": "Spiral toolpath traced on a multi-island Laplace"
+        " solution — path navigates around four inner islands",
+        "function": generate_spiral_multi_island,
+    },
+]

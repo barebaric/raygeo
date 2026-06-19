@@ -54,7 +54,7 @@ Get intersection points of two circles.
 | _Returns_    | `types.Polygon` | List of intersection points (x, y). |
 | _Complexity_ |                 | O(1) time, O(1) space               |
 
-![Circle-circle and line-circle intersection points](images/circle-intersections.png)
+![Circle-circle and line-circle intersection points](images/geo-shape-circle-intersections.png)
 
 _Circle-circle and line-circle intersection points_
 

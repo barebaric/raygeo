@@ -1,22 +1,5 @@
 """Mesh gradient example images — gradient field visualisations."""
 
-__images__ = [
-    {
-        "stem": "mesh-gradient-field",
-        "caption": "Gradient field ∇u (red) and perpendicular flow ∇u⊥ (blue)"
-        " on the Laplace solution",
-        "doc": "raygeo.mesh.gradient.md",
-        "heading": "compute_gradient_field",
-    },
-    {
-        "stem": "mesh-gradient-multi-island",
-        "caption": "Gradient field ∇u (red) and perpendicular flow ∇u⊥"
-        " (blue) on a multi-island domain",
-        "doc": "raygeo.mesh.gradient.md",
-        "heading": "compute_gradient_field",
-    },
-]
-
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.tri import Triangulation
@@ -26,9 +9,7 @@ from raygeo.mesh.gradient import compute_gradient_field
 from raygeo.mesh.laplace import solve_laplace
 
 
-def generate_examples(output_dir):
-    images = []
-
+def generate_field():
     outer = [(0, 0), (100, 0), (100, 100), (0, 100)]
     hole = [(30, 30), (70, 30), (70, 70), (30, 70)]
     mesh = build_triangle_mesh(outer, [hole], tool_radius=0.0, min_angle=20.0)
@@ -115,19 +96,10 @@ def generate_examples(output_dir):
     ax.legend(fontsize=10, loc="upper right")
     ax.grid(True, alpha=0.2)
     fig.tight_layout()
-    path = output_dir / "mesh-gradient-field.png"
-    fig.savefig(path, dpi=150)
-    plt.close(fig)
-    images.append(
-        {
-            "path": "mesh-gradient-field.png",
-            "caption": (
-                "Gradient field ∇u (red) and perpendicular flow ∇u⊥"
-                " (blue) on the FEM Laplace solution"
-            ),
-        }
-    )
+    return fig
 
+
+def generate_multi_island():
     # ── Multi-island gradient field ─────────────────────────────────────
     outer_mi = [(0, 0), (100, 0), (100, 100), (0, 100)]
     holes_mi = [
@@ -220,25 +192,20 @@ def generate_examples(output_dir):
     ax10.legend(fontsize=10, loc="upper right")
     ax10.grid(True, alpha=0.2)
     fig10.tight_layout()
-    path10 = output_dir / "mesh-gradient-multi-island.png"
-    fig10.savefig(path10, dpi=150)
-    plt.close(fig10)
-    images.append(
-        {
-            "path": "mesh-gradient-multi-island.png",
-            "caption": (
-                "Gradient field on a multi-island Laplace solution —"
-                " the vector fields flow between the four inner islands"
-                " and the outer boundary"
-            ),
-        }
-    )
+    return fig10
 
-    return {
-        "title": "Mesh Gradient",
-        "description": (
-            "Gradient field computation on triangle-mesh Laplace"
-            " solutions for vector-field visualisation."
-        ),
-        "images": images,
-    }
+
+__images__ = [
+    {
+        "heading": "compute_gradient_field",
+        "caption": "Gradient field ∇u (red) and perpendicular flow ∇u⊥ (blue)"
+        " on the Laplace solution",
+        "function": generate_field,
+    },
+    {
+        "heading": "compute_gradient_field",
+        "caption": "Gradient field ∇u (red) and perpendicular flow ∇u⊥"
+        " (blue) on a multi-island domain",
+        "function": generate_multi_island,
+    },
+]

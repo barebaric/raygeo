@@ -1,12 +1,5 @@
 """Generate a composite showcase image for the README."""
 
-__images__ = [
-    {
-        "stem": "showcase",
-        "caption": "Composite showcase of key raygeo features",
-    },
-]
-
 import math
 
 import matplotlib.pyplot as plt
@@ -440,7 +433,7 @@ def _plot_3d_offset(ax):
     ax.legend(fontsize=8)
 
 
-def generate_examples(output_dir):
+def generate_showcase():
     fig = plt.figure(figsize=(18, 16), layout="constrained")
 
     axs = [
@@ -471,18 +464,12 @@ def generate_examples(output_dir):
     _plot_conical_helix(axs[2][1])
     _plot_3d_offset(axs[2][2])
 
-    fig.savefig(output_dir / "showcase.png", dpi=150, bbox_inches="tight")
-    plt.close(fig)
+    return fig
 
-    return {
-        "title": "Showcase",
-        "description": "Composite showcase of key raygeo features",
-        "images": [
-            {
-                "path": "showcase.png",
-                "caption": "Concave hull, arc fitting, nesting, raster power"
-                " modulation, smoothing, linearization, cylindrical transform,"
-                " conical helix, and 3D polyline offset",
-            }
-        ],
-    }
+
+__images__ = [
+    {
+        "caption": "Composite showcase of key raygeo features",
+        "function": generate_showcase,
+    },
+]

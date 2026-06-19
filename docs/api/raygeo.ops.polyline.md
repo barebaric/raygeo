@@ -23,7 +23,7 @@ Scans for the first travel (MoveTo) endpoint, falling back to the first moving c
 | `ops`     | `ops.Ops`                                | An **~raygeo.ops.Ops** container.                  |
 | _Returns_ | `tuple[float, float, float] &#124; None` | `(x, y, z)` or `None` if no moving commands exist. |
 
-![Entry and exit points from find_pass_entry / find_pass_exit](images/polyline-pass-entry-exit.png)
+![Entry and exit points from find_pass_entry / find_pass_exit](images/ops-polyline-pass-entry-exit.png)
 
 _Entry and exit points from find_pass_entry / find_pass_exit_
 
@@ -69,7 +69,7 @@ _strategy_:
 | `strategy` | `str &#124; LinkStrategy` | Linking strategy.                           |
 | _Returns_  | `ops.Ops`                 | A single \*\*~raygeo.ops.Ops\*\* container. |
 
-![Three passes linked with StayDown vs Retract strategies](images/polyline-link-passes.png)
+![Three passes linked with StayDown vs Retract strategies](images/ops-polyline-link-passes.png)
 
 _Three passes linked with StayDown vs Retract strategies_
 
@@ -94,6 +94,6 @@ an in-progress cut).
 | `move_first` | `bool = True`                      | Whether to emit the first point as a MoveTo. |
 | _Returns_    | `ops.Ops`                          | An \*\*~raygeo.ops.Ops\*\* container.        |
 
-![polyline_to_ops with move_first=True vs move_first=False](images/polyline-to-ops.png)
+![polyline_to_ops with move_first=True vs move_first=False](images/ops-polyline-to-ops.png)
 
 _polyline_to_ops with move_first=True vs move_first=False_

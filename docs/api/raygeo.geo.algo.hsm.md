@@ -4,15 +4,15 @@ sidebar_label: raygeo.geo.algo.hsm
 sidebar_position: 10
 ---
 
-![Adaptive clearing — Helix → Spiral in a pocket with three islands](images/hsm-entry-multi.png)
+![Adaptive clearing — Helix → Spiral in a pocket with three islands](images/geo-algo-hsm-entry-multi.png)
 
 _Adaptive clearing — Helix → Spiral in a pocket with three islands_
 
-![Adaptive clearing — Helix → Spiral in an L-shaped pocket](images/hsm-entry-lshape.png)
+![Adaptive clearing — Helix → Spiral in an L-shaped pocket](images/geo-algo-hsm-entry-lshape.png)
 
 _Adaptive clearing — Helix → Spiral in an L-shaped pocket_
 
-![Adaptive clearing — ZigZag Ramp in a tight slot](images/hsm-entry-tight.png)
+![Adaptive clearing — ZigZag Ramp in a tight slot](images/geo-algo-hsm-entry-tight.png)
 
 _Adaptive clearing — ZigZag Ramp in a tight slot_ HSM (High-Speed Machining) adaptive clearing.
 
@@ -95,16 +95,16 @@ area drops below _area_tolerance_.
 | `area_tolerance`  | `float = 1`                                    | Minimum area increase to continue (default 1.0).         |
 | _Returns_         | `list[list[tuple[float, float, float]]]`       | List of toolpaths — one `list[(x, y, z)]` per iteration. |
 
-![Adaptive wavefronts expanding outward from the initial cleared disk (blue) to fill the pocket boundary (black)](images/hsm-wavefront-rect.png)
+![Adaptive wavefronts expanding outward from the initial cleared disk (blue) to fill the pocket boundary (black)](images/geo-algo-hsm-wavefront-rect.png)
 
 _Adaptive wavefronts expanding outward from the initial cleared disk (blue) to fill the pocket
 boundary (black)_
 
-![Adaptive wavefronts in a pocket with three islands — contours wrap around each island as they expand](images/hsm-wavefront-multi.png)
+![Adaptive wavefronts in a pocket with three islands — contours wrap around each island as they expand](images/geo-algo-hsm-wavefront-multi.png)
 
 _Adaptive wavefronts in a pocket with three islands — contours wrap around each island as they
 expand_
 
-![Adaptive wavefronts in a Y-shaped channel — contours split and propagate along each branch](images/hsm-wavefront-yshape.png)
+![Adaptive wavefronts in a Y-shaped channel — contours split and propagate along each branch](images/geo-algo-hsm-wavefront-yshape.png)
 
 _Adaptive wavefronts in a Y-shaped channel — contours split and propagate along each branch_

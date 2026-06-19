@@ -115,7 +115,7 @@ Get the intersection of two infinite lines.
 | _Returns_    | `Optional[types.Point]` | Intersection point (x, y) or None. |
 | _Complexity_ |                         | O(1) time, O(1) space              |
 
-![Line-line and segment intersection](images/line-intersections.png)
+![Line-line and segment intersection](images/geo-shape-line-intersections.png)
 
 _Line-line and segment intersection_
 
@@ -219,7 +219,7 @@ distance is measured to the nearest endpoint when the perpendicular falls outsid
 | _Returns_    | `float`       | Distance (clamped to segment). |
 | _Complexity_ |               | O(1) time, O(1) space          |
 
-![Perpendicular distance from a point to a line](images/line-point-distance.png)
+![Perpendicular distance from a point to a line](images/geo-shape-line-point-distance.png)
 
 _Perpendicular distance from a point to a line_
 

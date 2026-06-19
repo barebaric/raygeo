@@ -36,7 +36,7 @@ below `min_area` or `max_passes` is reached. Returns offsets outermost-first.
 | _Returns_    | `list[Geometry]` | List of offset geometries, outermost first.                                                     |
 | _Complexity_ |                  | O(n \* p) time, O(n) space where n is the number of contour vertices and p the number of passes |
 
-![Concentric inward offsets for adaptive clearing / pocketing](images/concentric-offsets.png)
+![Concentric inward offsets for adaptive clearing / pocketing](images/geo-algo-offset-concentric.png)
 
 _Concentric inward offsets for adaptive clearing / pocketing_
 
@@ -61,17 +61,17 @@ centroids of the final polygons — optimal points for helical entry in adaptive
 | _Returns_         | `list[geo.types.Point]`       | List of (x, y) centroid points.                       |
 | _Complexity_      |                               | O(n \* k) where k is the number of iterations         |
 
-![Deepest-core detection: binary search finds the largest offset that does NOT collapse the pocket, then returns the centroid of the largest surviving fragment](images/deepest-cores.png)
+![Deepest-core detection: binary search finds the largest offset that does NOT collapse the pocket, then returns the centroid of the largest surviving fragment](images/geo-algo-offset-deepest-cores.png)
 
 _Deepest-core detection: binary search finds the largest offset that does NOT collapse the pocket,
 then returns the centroid of the largest surviving fragment_
 
-![Multi-island pocket: the valid tool area splits into multiple regions; `find_deepest_cores` returns the single centroid of the largest surviving fragment](images/deepest-cores-multi-island.png)
+![Multi-island pocket: the valid tool area splits into multiple regions; `find_deepest_cores` returns the single centroid of the largest surviving fragment](images/geo-algo-offset-deepest-cores-multi.png)
 
 _Multi-island pocket: the valid tool area splits into multiple regions; `find_deepest_cores` returns
 the single centroid of the largest surviving fragment_
 
-![Central-island pocket (annular): the island creates a ring of valid tool area; the deepest core sits at the centre of the ring](images/deepest-cores-central-island.png)
+![Central-island pocket (annular): the island creates a ring of valid tool area; the deepest core sits at the centre of the ring](images/geo-algo-offset-deepest-cores-central.png)
 
 _Central-island pocket (annular): the island creates a ring of valid tool area; the deepest core
 sits at the centre of the ring_

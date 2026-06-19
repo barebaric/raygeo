@@ -294,7 +294,7 @@ Linearize an arc into line segments.
 | _Returns_     | `list[tuple[types.Point3D, types.Point3D]]` | List of (p1, p2) segment pairs.         |
 | _Complexity_  |                                             | O(n) time, O(n) space                   |
 
-![Arc linearization: coarse and fine resolution](images/arc-linearize.png)
+![Arc linearization: coarse and fine resolution](images/geo-shape-arc-linearize.png)
 
 _Arc linearization: coarse and fine resolution_
 

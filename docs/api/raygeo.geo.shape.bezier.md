@@ -87,9 +87,9 @@ Flatten a bezier curve into points.
 | _Returns_          | `None`          |                                  |
 | _Complexity_       |                 | O(n)                             |
 
-![Bezier flattening via adaptive subdivision](images/bezier-flatten.png)
+![Bezier flattening: adaptive subdivision at varied tolerances](images/geo-shape-bezier-flatten.png)
 
-_Bezier flattening via adaptive subdivision_
+_Bezier flattening: adaptive subdivision at varied tolerances_
 
 ### `get_bezier_bounds()`
 
@@ -181,7 +181,7 @@ Get a point on a cubic bezier at parameter t.
 | _Returns_    | `types.Point` | Point on the bezier curve (x, y). |
 | _Complexity_ |               | O(1)                              |
 
-![Bezier point evaluation at parameter t](images/bezier-point-at.png)
+![Bezier point evaluation at parameter t](images/geo-shape-bezier-point-at.png)
 
 _Bezier point evaluation at parameter t_
 
@@ -385,6 +385,6 @@ Split a cubic bezier at parameter t.
 | _Returns_    | `tuple[tuple[types.Point, types.Point, types.Point, types.Point], tuple[types.Point, types.Point, types.Point, types.Point]]` | Two bezier curves (left, right). |
 | _Complexity_ |                                                                                                                               | O(1)                             |
 
-![Bezier split at parameter t](images/bezier-split.png)
+![Bezier split at parameter t](images/geo-shape-bezier-split.png)
 
 _Bezier split at parameter t_

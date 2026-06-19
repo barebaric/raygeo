@@ -32,6 +32,6 @@ If the geometry is not closed, empty, or overcut is <= 0, the geometry is return
 | _Returns_    | `geo.Geometry` | A new geometry with the overcut applied. |
 | _Complexity_ |                | O(n) time, O(n) space                    |
 
-![Overcut on closed contour](images/overcut.png)
+![Overcut on closed contour](images/geo-algo-overcut-overcut.png)
 
 _Overcut on closed contour_

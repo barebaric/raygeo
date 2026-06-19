@@ -4,7 +4,7 @@ sidebar_label: raygeo.geo
 sidebar_position: 2
 ---
 
-![Various geometry shapes and operations](images/geometry-playground.png)
+![Various geometry shapes and operations](images/geo-playground.png)
 
 _Various geometry shapes and operations_ Geometry types and operations for 2D/3D path data.
 
@@ -295,9 +295,9 @@ After this call, the geometry will only contain Move, Line, and Bezier commands.
 | _Returns_    | `None` |                                                    |
 | _Complexity_ |        | O(n) time, O(n) space where n = number of commands |
 
-![Overlay showing Bezier curves matching the original arcs](images/arc-to-bezier-overlay.png)
+![Overlay showing Bezier curves (with control points) closely matching the original arcs](images/geo-arc-to-bezier.png)
 
-_Overlay showing Bezier curves matching the original arcs_
+_Overlay showing Bezier curves (with control points) closely matching the original arcs_
 
 ### `copy()`
 
