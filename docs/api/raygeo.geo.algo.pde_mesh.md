@@ -1,10 +1,10 @@
 ---
 title: raygeo.geo.algo.pde_mesh
 sidebar_label: raygeo.geo.algo.pde_mesh
-sidebar_position: 22
+sidebar_position: 23
 ---
 
-PDE mesh generation and Laplace solving for HSM toolpath planning.
+PDE mesh generation and Laplace solving for scalar field generation.
 
 Provides a TriangleMesh class for constrained Delaunay triangulation of 2D polygon domains, and a
 solve_laplace function that solves the Laplace equation Δu=0 using linear finite elements.

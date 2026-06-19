@@ -1,7 +1,7 @@
 ---
 title: raygeo.geo.algo.nest2d.collision
 sidebar_label: raygeo.geo.algo.nest2d.collision
-sidebar_position: 14
+sidebar_position: 15
 ---
 
 Collision detection for nesting algorithms.

@@ -5,7 +5,7 @@ pyo3_stub_gen::module_doc!(
 );
 
 pub(crate) const MODULE_DOC_PDE_MESH: &str = "\
-PDE mesh generation and Laplace solving for HSM toolpath planning.
+PDE mesh generation and Laplace solving for scalar field generation.
 
 Provides a TriangleMesh class for constrained Delaunay triangulation of
 2D polygon domains, and a solve_laplace function that solves the Laplace
@@ -28,7 +28,7 @@ use crate::types::Point;
 #[gen_stub_pyclass]
 #[pyclass(module = "raygeo.geo.algo.pde_mesh", name = "TriangleMesh")]
 pub struct TriangleMesh {
-    inner: RustMesh,
+    pub(crate) inner: RustMesh,
 }
 
 #[gen_stub_pymethods]

@@ -6,11 +6,13 @@ pub(crate) mod fitting;
 pub(crate) mod helix;
 pub(crate) mod hull;
 pub(crate) mod interp;
+pub(crate) mod intersect;
 pub(crate) mod minkowski2d;
 pub(crate) mod nest2d;
 pub(crate) mod offset;
 pub(crate) mod overcut;
 pub(crate) mod pde_mesh;
+pub(crate) mod pde_spiral;
 pub(crate) mod ramp;
 pub(crate) mod simplify;
 pub(crate) mod smooth;
@@ -61,11 +63,13 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     helix::register(&algo_mod)?;
     hull::register(&algo_mod)?;
     interp::register(&algo_mod)?;
+    intersect::register(&algo_mod)?;
     minkowski2d::register(&algo_mod)?;
     nest2d::register(&algo_mod)?;
     offset::register(&algo_mod)?;
     overcut::register(&algo_mod)?;
     pde_mesh::register(&algo_mod)?;
+    pde_spiral::register(&algo_mod)?;
     ramp::register(&algo_mod)?;
     simplify::register(&algo_mod)?;
     smooth::register(&algo_mod)?;
@@ -90,6 +94,10 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     sys_modules
         .set_item("raygeo.geo.algo.interp", &algo_mod.getattr("interp")?)?;
     sys_modules.set_item(
+        "raygeo.geo.algo.intersect",
+        &algo_mod.getattr("intersect")?,
+    )?;
+    sys_modules.set_item(
         "raygeo.geo.algo.minkowski2d",
         &algo_mod.getattr("minkowski2d")?,
     )?;
@@ -113,6 +121,10 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     )?;
     sys_modules
         .set_item("raygeo.geo.algo.pde_mesh", &algo_mod.getattr("pde_mesh")?)?;
+    sys_modules.set_item(
+        "raygeo.geo.algo.pde_spiral",
+        &algo_mod.getattr("pde_spiral")?,
+    )?;
     sys_modules
         .set_item("raygeo.geo.algo.helix", &algo_mod.getattr("helix")?)?;
     sys_modules.set_item("raygeo.geo.algo.ramp", &algo_mod.getattr("ramp")?)?;

@@ -200,6 +200,49 @@ pub fn check_self_intersection_from_array(
     false
 }
 
+/// Intersect a ray with a line segment.
+///
+/// Given a ray starting at `origin` in direction `dir`, and a line segment
+/// from `a` to `b`, returns the intersection point if the ray hits the
+/// segment (including endpoints) in the forward direction.
+pub fn ray_line_intersection(
+    origin: Point,
+    dir: Point,
+    a: Point,
+    b: Point,
+) -> Option<Point> {
+    let ex = b.x - a.x;
+    let ey = b.y - a.y;
+    let len2 = ex * ex + ey * ey;
+    if len2 < 1e-24 {
+        return None;
+    }
+
+    let nx = ey;
+    let ny = -ex;
+    let ndotd = nx * dir.x + ny * dir.y;
+    if ndotd.abs() < 1e-24 {
+        return None;
+    }
+
+    let dx = a.x - origin.x;
+    let dy = a.y - origin.y;
+    let t = (nx * dx + ny * dy) / ndotd;
+    if t <= 1e-12 {
+        return None;
+    }
+
+    let ix = origin.x + t * dir.x;
+    let iy = origin.y + t * dir.y;
+
+    let proj = ((ix - a.x) * ex + (iy - a.y) * ey) / len2;
+    if !(-1e-12..=1.0 + 1e-12).contains(&proj) {
+        return None;
+    }
+
+    Some(Point::new(ix, iy))
+}
+
 /// Check if two geometry data arrays intersect each other.
 pub fn check_intersection_from_array(
     data1: &[Command],

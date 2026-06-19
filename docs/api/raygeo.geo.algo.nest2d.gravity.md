@@ -1,7 +1,7 @@
 ---
 title: raygeo.geo.algo.nest2d.gravity
 sidebar_label: raygeo.geo.algo.nest2d.gravity
-sidebar_position: 16
+sidebar_position: 17
 ---
 
 Gravity optimization for nesting layouts.

@@ -1,10 +1,11 @@
 //! Interp: Interpolation helpers and generic math utilities.
 //!
 //! Provides reusable helpers for segment parameter projection, scanline
-//! slicing, and quadratic equation solving.
+//! slicing, quadratic equation solving, and barycentric interpolation on
+//! triangles.
 
 use crate::constants::EPSILON_COLLINEAR;
-use crate::types::Point3D;
+use crate::types::{Point, Point3D};
 
 pub struct SegmentDelta {
     pub dx: f64,
@@ -79,6 +80,74 @@ pub fn slice_scanline_data(data: &[u8], t_start: f64, t_end: f64) -> Vec<u8> {
     let idx_start = (num_values as f64 * t_start) as usize;
     let idx_end = (num_values as f64 * t_end) as usize;
     data[idx_start..idx_end].to_vec()
+}
+
+/// Compute raw barycentric coordinates `(r, s, t)` for point `p`
+/// relative to triangle `(va, vb, vc)`.
+///
+/// Returns `(r, s, t)` where:
+/// - `r` is the weight for vertex `va`
+/// - `s` is the weight for vertex `vb`
+/// - `t` is the weight for vertex `vc`
+///
+/// The weights are unclamped — a point outside the triangle will have
+/// one or more negative weights. The point is inside (or on the boundary
+/// of) the triangle iff all three weights are in `[-ε, 1+ε]`.
+pub fn barycentric_weights(
+    p: Point,
+    va: Point,
+    vb: Point,
+    vc: Point,
+) -> (f64, f64, f64) {
+    let v0x = vc.x - va.x;
+    let v0y = vc.y - va.y;
+    let v1x = vb.x - va.x;
+    let v1y = vb.y - va.y;
+    let v2x = p.x - va.x;
+    let v2y = p.y - va.y;
+
+    let d00 = v0x * v0x + v0y * v0y;
+    let d01 = v0x * v1x + v0y * v1y;
+    let d11 = v1x * v1x + v1y * v1y;
+    let d20 = v2x * v0x + v2y * v0y;
+    let d21 = v2x * v1x + v2y * v1y;
+
+    let denom = d00 * d11 - d01 * d01;
+    if denom.abs() < 1e-24 {
+        return (0.0, 0.0, 0.0);
+    }
+    let inv = 1.0 / denom;
+    let s = (d00 * d21 - d01 * d20) * inv;
+    let t = (d11 * d20 - d01 * d21) * inv;
+    let r = 1.0 - s - t;
+    (r, s, t)
+}
+
+/// Interpolate a scalar field at a point inside a triangle using
+/// barycentric coordinates.
+///
+/// Given triangle vertices `(va, vb, vc)` with scalar values `(ua, ub, uc)`,
+/// returns the linearly interpolated value at point `p`. The function
+/// works for any point in the plane but values outside the triangle are
+/// clamped to the [0,1] barycentric range.
+pub fn barycentric_interpolate(
+    p: Point,
+    va: Point,
+    vb: Point,
+    vc: Point,
+    ua: f64,
+    ub: f64,
+    uc: f64,
+) -> f64 {
+    let (mut r, mut s, mut t) = barycentric_weights(p, va, vb, vc);
+    let sum = r + s + t;
+    if sum.abs() < 1e-24 {
+        return (ua + ub + uc) / 3.0;
+    }
+    r = r.clamp(0.0, 1.0);
+    s = s.clamp(0.0, 1.0);
+    t = t.clamp(0.0, 1.0);
+    (r * ua + s * ub + t * uc) / (r + s + t).max(1e-24)
 }
 
 /// Solve the quadratic equation `a x² + b x + c = 0`.

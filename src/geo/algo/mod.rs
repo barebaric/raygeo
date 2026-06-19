@@ -18,6 +18,7 @@ pub mod nest2d;
 pub mod offset;
 pub mod overcut;
 pub mod pde_mesh;
+pub mod pde_spiral;
 pub mod planar;
 pub mod project;
 pub mod ramp;
@@ -59,11 +60,13 @@ pub use hull::{
     get_hulls_from_image,
 };
 pub use interp::{
-    compute_segment_delta, compute_t_range, project_t_along_segment,
-    slice_scanline_data, solve_quadratic, SegmentDelta,
+    barycentric_interpolate, barycentric_weights, compute_segment_delta,
+    compute_t_range, project_t_along_segment, slice_scanline_data,
+    solve_quadratic, SegmentDelta,
 };
 pub use intersect::{
     check_intersection_from_array, check_self_intersection_from_array,
+    ray_line_intersection,
 };
 pub use minkowski2d::{
     calculate_input_scale, convolve_point_sequences, convolve_two_segments,
@@ -72,6 +75,7 @@ pub use minkowski2d::{
 };
 pub use offset::{concentric_offsets, grow_geometry, grow_geometry_on_plane};
 pub use overcut::apply_overcut;
+pub use pde_spiral::trace_spiral;
 pub use project::{
     is_planar_in_z, lift_points_to_xy_plane, project_point_to_xy,
     project_points_to_xy,

@@ -2,6 +2,7 @@ import numpy as np
 import pytest
 
 from raygeo.geo import Geometry
+from raygeo.geo.algo.intersect import ray_line_intersection
 
 
 @pytest.fixture
@@ -186,3 +187,90 @@ def test_no_intersection_bounding_box_overlap():
     geo2 = Geometry.from_points([(2, 2), (9, 2), (9, 9), (2, 9)], close=False)
     assert not geo1.intersects_with(geo2)
     assert not geo2.intersects_with(geo1)
+
+
+class TestRayLineIntersection:
+    def test_hits_midpoint(self):
+        pt = ray_line_intersection(
+            (0.0, 0.0), (1.0, 0.0), (5.0, -1.0), (5.0, 1.0)
+        )
+        assert pt is not None
+        assert pt[0] == pytest.approx(5.0)
+        assert pt[1] == pytest.approx(0.0)
+
+    def test_hits_endpoint(self):
+        pt = ray_line_intersection(
+            (0.0, 0.0), (1.0, 0.0), (10.0, 0.0), (20.0, 10.0)
+        )
+        assert pt is not None
+        assert pt[0] == pytest.approx(10.0)
+        assert pt[1] == pytest.approx(0.0)
+
+    def test_misses_parallel(self):
+        pt = ray_line_intersection(
+            (0.0, 0.0), (1.0, 0.0), (1.0, 1.0), (3.0, 1.0)
+        )
+        assert pt is None
+
+    def test_misses_ray_away(self):
+        pt = ray_line_intersection(
+            (1.0, 1.0), (1.0, 0.0), (0.0, 0.0), (10.0, 0.0)
+        )
+        assert pt is None
+
+    def test_misses_segment_behind(self):
+        pt = ray_line_intersection(
+            (5.0, 0.0), (1.0, 0.0), (0.0, 0.0), (3.0, 0.0)
+        )
+        assert pt is None
+
+    def test_diagonal(self):
+        pt = ray_line_intersection(
+            (0.0, 0.0), (1.0, 1.0), (10.0, 0.0), (0.0, 10.0)
+        )
+        assert pt is not None
+        assert pt[0] == pytest.approx(5.0)
+        assert pt[1] == pytest.approx(5.0)
+
+    def test_vertical_ray_horizontal_segment(self):
+        pt = ray_line_intersection(
+            (3.0, 0.0), (0.0, 1.0), (0.0, 5.0), (10.0, 5.0)
+        )
+        assert pt is not None
+        assert pt[0] == pytest.approx(3.0)
+        assert pt[1] == pytest.approx(5.0)
+
+    def test_degenerate_segment_returns_none(self):
+        pt = ray_line_intersection(
+            (0.0, 0.0), (1.0, 0.0), (5.0, 5.0), (5.0, 5.0)
+        )
+        assert pt is None
+
+    def test_zero_direction_returns_none(self):
+        pt = ray_line_intersection(
+            (0.0, 0.0), (0.0, 0.0), (1.0, -1.0), (1.0, 1.0)
+        )
+        assert pt is None
+
+    def test_origin_on_segment_returns_none(self):
+        pt = ray_line_intersection(
+            (2.0, 0.0), (1.0, 0.0), (0.0, 0.0), (5.0, 0.0)
+        )
+        assert pt is None
+
+    def test_collinear_ray_returns_none(self):
+        pt = ray_line_intersection(
+            (0.0, 0.0), (1.0, 0.0), (5.0, 0.0), (10.0, 0.0)
+        )
+        assert pt is None
+
+    def test_multiple_segments_first_hit(self):
+        a = ray_line_intersection(
+            (0.0, 0.0), (1.0, 1.0), (10.0, 0.0), (0.0, 10.0)
+        )
+        b = ray_line_intersection(
+            (0.0, 0.0), (1.0, 1.0), (15.0, 15.0), (15.0, 25.0)
+        )
+        assert a is not None
+        assert b is not None
+        assert a[0] < b[0]

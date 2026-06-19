@@ -9,6 +9,62 @@ slicing along 3D line segments.
 
 ## Functions
 
+### `barycentric_interpolate()`
+
+```python
+barycentric_interpolate(
+    p: tuple[float, float],
+    va: tuple[float, float],
+    vb: tuple[float, float],
+    vc: tuple[float, float],
+    ua: float,
+    ub: float,
+    uc: float,
+) -> float
+```
+
+Interpolate a scalar field at a point inside a triangle.
+
+Given triangle vertices (va, vb, vc) with scalar values (ua, ub, uc), returns the linearly
+interpolated value at point p using barycentric coordinates.
+
+| Parameter    | Type                  | Description                                                                                         |
+| ------------ | --------------------- | --------------------------------------------------------------------------------------------------- |
+| `p`          | `tuple[float, float]` | Query point (x, y).                                                                                 |
+| `va`         | `tuple[float, float]` | First triangle vertex (x, y).                                                                       |
+| `vb`         | `tuple[float, float]` | Second triangle vertex (x, y).                                                                      |
+| `vc`         | `tuple[float, float]` | Third triangle vertex (x, y).                                                                       |
+| `ua`         | `float`               | Scalar value at vertex a.                                                                           |
+| `ub`         | `float`               | Scalar value at vertex b.                                                                           |
+| `uc`         | `float`               | Scalar value at vertex c.                                                                           |
+| _Returns_    | `float`               | Interpolated scalar value. Outside the triangle, the barycentric coordinates are clamped to [0, 1]. |
+| _Complexity_ |                       | O(1) time, O(1) space                                                                               |
+
+### `barycentric_weights()`
+
+```python
+barycentric_weights(
+    p: tuple[float, float],
+    va: tuple[float, float],
+    vb: tuple[float, float],
+    vc: tuple[float, float],
+) -> tuple[float, float, float]
+```
+
+Compute raw barycentric coordinates for a point in a triangle.
+
+Returns (r, s, t) where r is the weight for va, s for vb, t for vc. Weights are unclamped — the
+point is strictly inside (or on the boundary of) the triangle iff all three are in [0, 1].
+
+| Parameter    | Type                         | Description                                     |
+| ------------ | ---------------------------- | ----------------------------------------------- |
+| `p`          | `tuple[float, float]`        | Query point (x, y).                             |
+| `va`         | `tuple[float, float]`        | First triangle vertex (x, y).                   |
+| `vb`         | `tuple[float, float]`        | Second triangle vertex (x, y).                  |
+| `vc`         | `tuple[float, float]`        | Third triangle vertex (x, y).                   |
+| _Returns_    | `tuple[float, float, float]` | Tuple (r, s, t) of raw barycentric coordinates. |
+| _Complexity_ |                              | O(1) time, O(1) space                           |
+
 ### `compute_segment_delta()`
 
 ```python

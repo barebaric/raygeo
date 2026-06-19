@@ -1,7 +1,7 @@
 ---
 title: raygeo.geo.algo.nest2d.genetic
 sidebar_label: raygeo.geo.algo.nest2d.genetic
-sidebar_position: 15
+sidebar_position: 16
 ---
 
 Genetic algorithm for nesting optimization.

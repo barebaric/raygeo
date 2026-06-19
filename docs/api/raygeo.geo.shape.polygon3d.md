@@ -1,7 +1,7 @@
 ---
 title: raygeo.geo.shape.polygon3d
 sidebar_label: raygeo.geo.shape.polygon3d
-sidebar_position: 35
+sidebar_position: 37
 ---
 
 ## Functions

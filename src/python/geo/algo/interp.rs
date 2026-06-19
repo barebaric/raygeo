@@ -6,8 +6,9 @@ clipping, and scanline data slicing along 3D line segments.
 ";
 
 use crate::geo::algo::interp::{
-    compute_segment_delta, compute_t_range, project_t_along_segment,
-    slice_scanline_data, solve_quadratic,
+    barycentric_interpolate, barycentric_weights, compute_segment_delta,
+    compute_t_range, project_t_along_segment, slice_scanline_data,
+    solve_quadratic,
 };
 use crate::python::geo::flex_point::tuple_to_point3d;
 use pyo3::prelude::*;
@@ -24,6 +25,8 @@ pub fn register(algo_mod: &Bound<'_, PyModule>) -> PyResult<()> {
         compute_t_range_py,
         slice_scanline_data_py,
         solve_quadratic_py,
+        barycentric_interpolate_py,
+        barycentric_weights_py,
     );
 
     algo_mod.add_submodule(&m)?;
@@ -181,4 +184,97 @@ fn slice_scanline_data_py(data: Vec<u8>, t_start: f64, t_end: f64) -> Vec<i32> {
 #[pyfunction(name = "solve_quadratic")]
 fn solve_quadratic_py(a: f64, b: f64, c: f64) -> (Option<f64>, Option<f64>) {
     solve_quadratic(a, b, c)
+}
+
+#[gen_stub_pyfunction(
+    python = r#"
+    def barycentric_interpolate(
+        p: tuple[float, float],
+        va: tuple[float, float],
+        vb: tuple[float, float],
+        vc: tuple[float, float],
+        ua: float,
+        ub: float,
+        uc: float,
+    ) -> float:
+        """Interpolate a scalar field at a point inside a triangle.
+
+        Given triangle vertices (va, vb, vc) with scalar values
+        (ua, ub, uc), returns the linearly interpolated value at point p
+        using barycentric coordinates.
+
+        :param p: Query point (x, y).
+        :param va: First triangle vertex (x, y).
+        :param vb: Second triangle vertex (x, y).
+        :param vc: Third triangle vertex (x, y).
+        :param ua: Scalar value at vertex a.
+        :param ub: Scalar value at vertex b.
+        :param uc: Scalar value at vertex c.
+        :returns: Interpolated scalar value. Outside the triangle, the
+            barycentric coordinates are clamped to [0, 1].
+        :complexity: O(1) time, O(1) space
+        """
+"#,
+    module = "raygeo.geo.algo.interp"
+)]
+#[pyfunction(name = "barycentric_interpolate")]
+#[pyo3(signature = (p, va, vb, vc, ua, ub, uc))]
+fn barycentric_interpolate_py(
+    p: (f64, f64),
+    va: (f64, f64),
+    vb: (f64, f64),
+    vc: (f64, f64),
+    ua: f64,
+    ub: f64,
+    uc: f64,
+) -> f64 {
+    barycentric_interpolate(
+        crate::types::Point::new(p.0, p.1),
+        crate::types::Point::new(va.0, va.1),
+        crate::types::Point::new(vb.0, vb.1),
+        crate::types::Point::new(vc.0, vc.1),
+        ua,
+        ub,
+        uc,
+    )
+}
+
+#[gen_stub_pyfunction(
+    python = r#"
+    def barycentric_weights(
+        p: tuple[float, float],
+        va: tuple[float, float],
+        vb: tuple[float, float],
+        vc: tuple[float, float],
+    ) -> tuple[float, float, float]:
+        """Compute raw barycentric coordinates for a point in a triangle.
+
+        Returns (r, s, t) where r is the weight for va, s for vb, t for vc.
+        Weights are unclamped — the point is strictly inside (or on the
+        boundary of) the triangle iff all three are in [0, 1].
+
+        :param p: Query point (x, y).
+        :param va: First triangle vertex (x, y).
+        :param vb: Second triangle vertex (x, y).
+        :param vc: Third triangle vertex (x, y).
+        :returns: Tuple (r, s, t) of raw barycentric coordinates.
+        :complexity: O(1) time, O(1) space
+        """
+"#,
+    module = "raygeo.geo.algo.interp"
+)]
+#[pyfunction(name = "barycentric_weights")]
+#[pyo3(signature = (p, va, vb, vc))]
+fn barycentric_weights_py(
+    p: (f64, f64),
+    va: (f64, f64),
+    vb: (f64, f64),
+    vc: (f64, f64),
+) -> (f64, f64, f64) {
+    barycentric_weights(
+        crate::types::Point::new(p.0, p.1),
+        crate::types::Point::new(va.0, va.1),
+        crate::types::Point::new(vb.0, vb.1),
+        crate::types::Point::new(vc.0, vc.1),
+    )
 }

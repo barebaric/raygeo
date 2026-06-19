@@ -35,11 +35,13 @@ from . import fitting
 from . import helix
 from . import hull
 from . import interp
+from . import intersect
 from . import minkowski2d
 from . import nest2d
 from . import offset
 from . import overcut
 from . import pde_mesh
+from . import pde_spiral
 from . import ramp
 from . import simplify
 from . import smooth
@@ -54,11 +56,13 @@ __all__ = [
     "helix",
     "hull",
     "interp",
+    "intersect",
     "minkowski2d",
     "nest2d",
     "offset",
     "overcut",
     "pde_mesh",
+    "pde_spiral",
     "ramp",
     "simplify",
     "smooth",

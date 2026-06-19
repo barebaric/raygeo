@@ -1,6 +1,7 @@
 import pytest
 
 from raygeo.geo.algo.interp import (
+    barycentric_interpolate,
     compute_segment_delta,
     compute_t_range,
     project_t_along_segment,
@@ -116,3 +117,120 @@ class TestSolveQuadratic:
         r1, r2 = solve_quadratic(1.0, -2.0, 1.0)
         assert r1 == pytest.approx(1.0)
         assert r2 == pytest.approx(1.0)
+
+
+class TestBarycentricInterpolate:
+    def test_vertex_a(self):
+        v = barycentric_interpolate(
+            (0.0, 0.0), (0, 0), (1, 0), (0, 1), 10.0, 20.0, 30.0
+        )
+        assert v == pytest.approx(10.0)
+
+    def test_vertex_b(self):
+        v = barycentric_interpolate(
+            (1.0, 0.0), (0, 0), (1, 0), (0, 1), 10.0, 20.0, 30.0
+        )
+        assert v == pytest.approx(20.0)
+
+    def test_vertex_c(self):
+        v = barycentric_interpolate(
+            (0.0, 1.0), (0, 0), (1, 0), (0, 1), 10.0, 20.0, 30.0
+        )
+        assert v == pytest.approx(30.0)
+
+    def test_centroid(self):
+        v = barycentric_interpolate(
+            (1.0 / 3.0, 1.0 / 3.0),
+            (0, 0),
+            (1, 0),
+            (0, 1),
+            10.0,
+            20.0,
+            30.0,
+        )
+        assert v == pytest.approx(20.0)
+
+    def test_midpoint_ab(self):
+        v = barycentric_interpolate(
+            (0.5, 0.0), (0, 0), (1, 0), (0, 1), 10.0, 20.0, 30.0
+        )
+        assert v == pytest.approx(15.0)
+
+    def test_linear_field_x(self):
+        va = (0, 0)
+        vb = (2, 0)
+        vc = (0, 2)
+        ua, ub, uc = 0.0, 1.0, 0.0
+        v = barycentric_interpolate(
+            (0.5, 0.0),
+            va,
+            vb,
+            vc,
+            ua,
+            ub,
+            uc,
+        )
+        assert v == pytest.approx(0.25)
+
+    def test_linear_field_y(self):
+        va = (0, 0)
+        vb = (1, 0)
+        vc = (0, 3)
+        ua, ub, uc = 0.0, 0.0, 1.0
+        v = barycentric_interpolate(
+            (0.0, 1.5),
+            va,
+            vb,
+            vc,
+            ua,
+            ub,
+            uc,
+        )
+        assert v == pytest.approx(0.5)
+
+    def test_outside_point_clamped(self):
+        v = barycentric_interpolate(
+            (10.0, 10.0), (0, 0), (1, 0), (0, 1), 10.0, 20.0, 30.0
+        )
+        assert 10.0 <= v <= 30.0
+
+    def test_negative_point_clamped(self):
+        v = barycentric_interpolate(
+            (-1.0, -1.0), (0, 0), (1, 0), (0, 1), 10.0, 20.0, 30.0
+        )
+        assert 10.0 <= v <= 30.0
+
+    def test_collapsed_triangle(self):
+        v = barycentric_interpolate(
+            (0.5, 0.5), (0, 0), (0, 0), (1, 1), 10.0, 20.0, 30.0
+        )
+        assert v == pytest.approx(20.0)
+
+    def test_large_coordinates(self):
+        v = barycentric_interpolate(
+            (5000.0, 5000.0),
+            (0, 0),
+            (10000, 0),
+            (0, 10000),
+            0.0,
+            100.0,
+            200.0,
+        )
+        assert v == pytest.approx(150.0)
+
+    def test_non_unit_triangle(self):
+        v = barycentric_interpolate(
+            (2.5, 2.5), (2, 2), (4, 2), (2, 4), 10.0, 20.0, 30.0
+        )
+        assert v == pytest.approx(17.5)
+
+    def test_scalar_field_identity(self):
+        """For a field u=x+y on triangle (0,0),(1,0),(0,1),
+        at (0.2, 0.3) we expect 0.5."""
+        va, vb, vc = (0, 0), (1, 0), (0, 1)
+        x, y = 0.2, 0.3
+        ua = va[0] + va[1]
+        ub = vb[0] + vb[1]
+        uc = vc[0] + vc[1]
+        v = barycentric_interpolate((x, y), va, vb, vc, ua, ub, uc)
+        assert v == pytest.approx(x + y)

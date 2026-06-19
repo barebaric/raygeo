@@ -6,12 +6,50 @@ clipping, and scanline data slicing along 3D line segments.
 """
 
 __all__ = [
+    "barycentric_interpolate",
+    "barycentric_weights",
     "compute_segment_delta",
     "compute_t_range",
     "project_t_along_segment",
     "slice_scanline_data",
     "solve_quadratic",
 ]
+
+def barycentric_interpolate(p: tuple[float, float], va: tuple[float, float], vb: tuple[float, float], vc: tuple[float, float], ua: float, ub: float, uc: float) -> float:
+    r"""
+    Interpolate a scalar field at a point inside a triangle.
+    
+    Given triangle vertices (va, vb, vc) with scalar values
+    (ua, ub, uc), returns the linearly interpolated value at point p
+    using barycentric coordinates.
+    
+    :param p: Query point (x, y).
+    :param va: First triangle vertex (x, y).
+    :param vb: Second triangle vertex (x, y).
+    :param vc: Third triangle vertex (x, y).
+    :param ua: Scalar value at vertex a.
+    :param ub: Scalar value at vertex b.
+    :param uc: Scalar value at vertex c.
+    :returns: Interpolated scalar value. Outside the triangle, the
+        barycentric coordinates are clamped to [0, 1].
+    :complexity: O(1) time, O(1) space
+    """
+
+def barycentric_weights(p: tuple[float, float], va: tuple[float, float], vb: tuple[float, float], vc: tuple[float, float]) -> tuple[float, float, float]:
+    r"""
+    Compute raw barycentric coordinates for a point in a triangle.
+    
+    Returns (r, s, t) where r is the weight for va, s for vb, t for vc.
+    Weights are unclamped — the point is strictly inside (or on the
+    boundary of) the triangle iff all three are in [0, 1].
+    
+    :param p: Query point (x, y).
+    :param va: First triangle vertex (x, y).
+    :param vb: Second triangle vertex (x, y).
+    :param vc: Third triangle vertex (x, y).
+    :returns: Tuple (r, s, t) of raw barycentric coordinates.
+    :complexity: O(1) time, O(1) space
+    """
 
 def compute_segment_delta(start: tuple[float, float, float], end: tuple[float, float, float]) -> tuple[float, float, float, float]:
     r"""
