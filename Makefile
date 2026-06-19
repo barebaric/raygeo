@@ -1,4 +1,4 @@
-.PHONY: build dev stubs format format-rust format-python lint lint-rust lint-python test check visual doc docs install-test-deps install-visual-deps install-docs-deps
+.PHONY: build dev stubs format format-rust format-python lint lint-rust lint-python test check visual doc docs install-test-deps install-visual-deps install-docs-deps venv
 
 build:
 	maturin build --release --out dist
@@ -14,6 +14,10 @@ install-visual-deps:
 
 install-docs-deps:
 	pip install -e ".[docs]" --quiet
+
+venv:
+	python3 -m venv .venv
+	@echo "Run 'source .venv/bin/activate' to activate the virtual environment."
 
 stubs:
 	cargo clean -p raygeo && cargo run --bin stub_gen
