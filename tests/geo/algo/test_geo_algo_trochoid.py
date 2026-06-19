@@ -16,15 +16,13 @@ def test_trochoid_straight_segment():
         z=0,
     )
     assert len(pts) >= 10
-    # All points at z=0
     for p in pts:
         assert approx_eq(p[2], 0, 1e-12)
-    # Should have lateral oscillation
     max_y = max(abs(p[1]) for p in pts)
     assert max_y > 0.5, f"expected lateral oscillation, max_y={max_y}"
-    # Ends should be near the carrier endpoints
-    assert abs(pts[0][0]) < 1.0
-    assert abs(pts[-1][0] - 100) < 1.0
+    # True trochoid may end offset from carrier endpoint (up to ~2*loop_radius)
+    assert abs(pts[0][0]) < 5.0
+    assert abs(pts[-1][0] - 100) < 5.0
 
 
 def test_trochoid_empty_carrier():
@@ -95,9 +93,8 @@ def test_trochoid_min_loop_radius():
 def test_trochoid_l_shaped():
     """L-shaped carrier with corner.
 
-    The trochoid oscillates laterally, so the path endpoint differs from
-    the carrier endpoint by up to ~loop_radius. We check that the point
-    lands within a reasonable band around the end.
+    With true trochoidal oscillation in both tangent and normal directions,
+    the endpoint can differ from the carrier endpoint by up to ~2*loop_radius.
     """
     pts = trochoid_along(
         [(0, 0), (50, 0), (50, 50)],
@@ -106,8 +103,7 @@ def test_trochoid_l_shaped():
         step_over_ratio=0.2,
     )
     assert len(pts) >= 10
-    # End should be near (50, 50) — within the max lateral amplitude
-    max_dev = 10.0  # generous bound given lateral oscillation
+    max_dev = 10.0
     assert abs(pts[-1][0] - 50) < max_dev
     assert abs(pts[-1][1] - 50) < max_dev
 
@@ -150,6 +146,6 @@ def test_trochoid_diagonal_segment():
         step_over_ratio=0.2,
     )
     assert len(pts) >= 10
-    # End near (100, 100)
-    assert abs(pts[-1][0] - 100) < 1.0
-    assert abs(pts[-1][1] - 100) < 1.0
+    # True trochoid may end offset from carrier endpoint (up to ~2*loop_radius)
+    assert abs(pts[-1][0] - 100) < 5.0
+    assert abs(pts[-1][1] - 100) < 5.0
