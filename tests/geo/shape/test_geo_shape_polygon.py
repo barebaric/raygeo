@@ -16,6 +16,7 @@ from raygeo.geo.shape.polygon import (
     get_polygon_area,
     get_polygon_bounds,
     get_polygon_centroid,
+    get_polygon_closest_point,
     get_polygon_convex_hull,
     get_polygon_edges,
     get_polygon_group_bounds,
@@ -1362,3 +1363,41 @@ def test_resample_polyline_closed_path():
     assert resampled[0] == (0.0, 0.0, 2.0)
     assert resampled[-1] != resampled[0]
     assert (5.0, 0.0, 2.0) in resampled
+
+
+# --- get_polygon_closest_point ---
+
+
+def test_closest_point_on_rect():
+    """Closest point to centre of a rectangle is on an edge midpoint."""
+    poly = [(0, 0), (100, 0), (100, 80), (0, 80)]
+    res = get_polygon_closest_point(poly, 50.0, 40.0)
+    assert res is not None
+    _t, (cx, cy), d2 = res
+    assert abs(cy) < 1e-9 or abs(cy - 80.0) < 1e-9
+    assert abs(cx - 50.0) < 1e-9
+
+
+def test_closest_point_at_vertex():
+    """Closest point exactly at a vertex returns distance 0."""
+    poly = [(0, 0), (100, 0), (100, 80), (0, 80)]
+    res = get_polygon_closest_point(poly, 0.0, 0.0)
+    assert res is not None
+    _t, (_cx, _cy), d2 = res
+    assert d2 < 1e-12
+
+
+def test_closest_point_outside():
+    """Point outside still returns the closest boundary point."""
+    poly = [(0, 0), (100, 0), (100, 80), (0, 80)]
+    res = get_polygon_closest_point(poly, 200.0, 40.0)
+    assert res is not None
+    _t, (cx, cy), d2 = res
+    assert abs(cx - 100.0) < 1e-9
+    assert abs(cy - 40.0) < 1e-9
+
+
+def test_closest_point_degenerate():
+    """Degenerate polygon returns None."""
+    assert get_polygon_closest_point([], 0.0, 0.0) is None
+    assert get_polygon_closest_point([(0, 0)], 0.0, 0.0) is None

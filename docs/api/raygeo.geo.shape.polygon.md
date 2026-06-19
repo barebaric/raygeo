@@ -159,6 +159,25 @@ Get the centroid of a polygon.
 | _Returns_    | `types.Point`           | Centroid point (x, y).    |
 | _Complexity_ |                         | O(n)                      |
 
+### `get_polygon_closest_point()`
+
+```python
+get_polygon_closest_point(
+    polygon: Sequence[types.Point],
+    x: float,
+    y: float,
+) -> tuple[float, tuple[float, float], float] | None
+```
+
+Find the closest point on a polygon boundary to (x, y).
+
+| Parameter | Type                                                   | Description                                            |
+| --------- | ------------------------------------------------------ | ------------------------------------------------------ |
+| `polygon` | `Sequence[types.Point]`                                | Polygon as (x, y) points.                              |
+| `x`       | `float`                                                | X coordinate.                                          |
+| `y`       | `float`                                                | Y coordinate.                                          |
+| _Returns_ | `tuple[float, tuple[float, float], float] &#124; None` | (t, (cx, cy), distance_squared) or None if degenerate. |
+
 ### `get_polygon_convex_hull()`
 
 ```python

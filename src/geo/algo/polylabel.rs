@@ -7,7 +7,9 @@
 
 use std::collections::BinaryHeap;
 
-use crate::geo::shape::polygon::{is_point_in_polygon, point_line_distance};
+use crate::geo::shape::polygon::{
+    get_polygon_closest_point, is_point_in_polygon, point_line_distance,
+};
 use crate::types::{Point, Polygon};
 
 /// A square cell used during the priority-queue search.
@@ -188,4 +190,35 @@ pub fn polylabel(
     }
 
     None
+}
+
+/// Convenience wrapper: find the centre **and** radius of the largest
+/// inscribed circle of a polygon (with optional holes).
+///
+/// The radius is the minimum distance from the pole to any boundary
+/// edge (shell or holes).  Returns `None` when the polygon is
+/// degenerate or no interior point exists above `precision`.
+pub fn find_largest_circle(
+    shell: &Polygon,
+    holes: &[Polygon],
+    precision: f64,
+) -> Option<(Point, f64)> {
+    let centre = polylabel(shell, holes, precision)?;
+
+    let mut radius = f64::MAX;
+    let consider = |poly: &Polygon, r: &mut f64| {
+        if let Some((_, _, d2)) =
+            get_polygon_closest_point(poly, centre.x, centre.y)
+        {
+            if d2 < *r {
+                *r = d2;
+            }
+        }
+    };
+    consider(shell, &mut radius);
+    for h in holes {
+        consider(h, &mut radius);
+    }
+
+    Some((centre, radius.sqrt()))
 }

@@ -81,7 +81,7 @@ pub use offset::{
 };
 pub use overcut::apply_overcut;
 pub use pde_spiral::trace_spiral;
-pub use polylabel::polylabel;
+pub use polylabel::{find_largest_circle, polylabel};
 pub use project::{
     is_planar_in_z, lift_points_to_xy_plane, project_point_to_xy,
     project_points_to_xy,

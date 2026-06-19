@@ -22,6 +22,7 @@ use clipper2::{
     PointInPolygonResult, PointScaler,
 };
 
+use crate::geo::shape::line::get_line_segment_closest_point;
 use crate::types::{Edge, Point, Polygon, Rect};
 
 /// Join style for offset operations, matching clipper2 semantics.
@@ -298,6 +299,35 @@ pub fn get_polygon_centroid(polygon: &Polygon) -> Point {
     cx /= 6.0 * signed_area;
     cy /= 6.0 * signed_area;
     Point::new(cx, cy)
+}
+
+/// Find the closest point on a polygon's boundary to a given point.
+///
+/// Returns `(t, closest_point, distance_squared)` where `t` is the
+/// parametric position along the edge (0–1), `closest_point` is the
+/// nearest point on the boundary, and `distance_squared` is the
+/// squared Euclidean distance from `(x, y)` to that point.
+///
+/// Returns `None` when the polygon has fewer than 2 vertices.
+pub fn get_polygon_closest_point(
+    polygon: &Polygon,
+    x: f64,
+    y: f64,
+) -> Option<(f64, Point, f64)> {
+    let n = polygon.len();
+    if n < 2 {
+        return None;
+    }
+    let mut best: Option<(f64, Point, f64)> = None;
+    for i in 0..n {
+        let j = (i + 1) % n;
+        let (t, pt, d2) =
+            get_line_segment_closest_point(polygon[i], polygon[j], x, y);
+        if best.is_none() || d2 < best.unwrap().2 {
+            best = Some((t, pt, d2));
+        }
+    }
+    best
 }
 
 /// Rotate a polygon around the origin.

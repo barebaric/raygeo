@@ -3,8 +3,19 @@
 
 import collections.abc
 __all__ = [
+    "find_largest_circle",
     "polylabel",
 ]
+
+def find_largest_circle(shell: collections.abc.Sequence[tuple[float, float]], holes: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]] = [], precision: float = 0.5) -> tuple[tuple[float, float], float] | None:
+    r"""
+    Find the centre and radius of the largest inscribed circle.
+    
+    :param shell: Outer boundary polygon.
+    :param holes: List of hole polygons to exclude (default []).
+    :param precision: Desired precision (default 0.5).
+    :returns: ((x, y), radius) or None for degenerate polygons.
+    """
 
 def polylabel(shell: collections.abc.Sequence[tuple[float, float]], holes: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]] = [], precision: float = 0.5) -> tuple[float, float] | None:
     r"""

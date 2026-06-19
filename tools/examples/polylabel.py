@@ -28,16 +28,37 @@ __images__ = [
         "doc": "raygeo.geo.algo.polylabel.md",
         "heading": "polylabel",
     },
+    {
+        "stem": "find-largest-circle",
+        "caption": (
+            "find_largest_circle returns the centre and radius of the"
+            " largest inscribed circle — the entry point and its"
+            " clearance for helical versus ramp decisions"
+        ),
+        "doc": "raygeo.geo.algo.polylabel.md",
+        "heading": "find_largest_circle",
+    },
+    {
+        "stem": "polygon-closest-point",
+        "caption": (
+            "get_polygon_closest_point finds the nearest boundary"
+            " point to a given coordinate — used by find_largest_circle"
+            " to compute the inscribed radius"
+        ),
+        "doc": "raygeo.geo.algo.polylabel.md",
+        "heading": "get_polygon_closest_point",
+    },
 ]
 
 import math
 
 import matplotlib.pyplot as plt
-from matplotlib.patches import Rectangle
+from matplotlib.patches import Circle, Rectangle
 
 from raygeo.geo.algo.offset import offset_contour_group
-from raygeo.geo.algo.polylabel import polylabel
+from raygeo.geo.algo.polylabel import find_largest_circle, polylabel
 from raygeo.geo.shape.polygon import (
+    get_polygon_closest_point,
     get_polygon_signed_area,
     is_point_inside_polygon,
     point_line_distance,
@@ -243,22 +264,8 @@ def generate_examples(output_dir):
     # ----------------------------------------------------------------
     cb = [(0, 0), (100, 0), (100, 100), (0, 100)]
     cisl = [(35, 35), (65, 35), (65, 65), (35, 65)]
-    c_area = offset_contour_group(cb, [cisl], -5.0, join_style="round")
-
-    # Separate shell (CCW, positive area) from holes (CW, negative area)
-    c_shell = None
-    c_holes = []
-    for p in c_area:
-        sa = get_polygon_signed_area(p)
-        if sa >= 0:
-            c_shell = p
-        else:
-            c_holes.append(p)
-    c_pole = (
-        polylabel(c_shell, holes=c_holes, precision=0.5)
-        if c_shell is not None
-        else None
-    )
+    c_pole = polylabel(cb, holes=[cisl], precision=0.5)
+    c_circle = find_largest_circle(cb, holes=[cisl], precision=0.5)
 
     fig3, ax = plt.subplots(figsize=(7, 6))
 
@@ -272,16 +279,6 @@ def generate_examples(output_dir):
         linewidth=1.5,
         label="Island",
     )
-    for poly in c_area:
-        arr = list(poly) + [poly[0]]
-        ax.plot(
-            *zip(*arr),
-            "--",
-            color="steelblue",
-            alpha=0.7,
-            linewidth=1.5,
-            label="Valid area" if poly is c_area[0] else None,
-        )
     if c_pole:
         ax.plot(c_pole[0], c_pole[1], "r*", markersize=18, label="Pole")
     ax.set_title("Central Island — Pole of Inaccessibility")
@@ -302,6 +299,144 @@ def generate_examples(output_dir):
                 "A central island creates an annular valid tool area."
                 " The pole of inaccessibility sits at the centre of the"
                 " ring — the single deepest accessible point."
+            ),
+        }
+    )
+
+    # ----------------------------------------------------------------
+    # Figure 4: largest inscribed circle on all pocket types
+    # ----------------------------------------------------------------
+    r_circle = find_largest_circle(rect, holes=[], precision=0.1)
+    l_circle = find_largest_circle(l_shape, holes=[], precision=0.5)
+
+    m_circle = find_largest_circle(mb, holes=[isl1, isl2], precision=0.5)
+
+    c_circle = find_largest_circle(cb, holes=[cisl], precision=0.5)
+
+    fig4, ((ax7, ax8), (ax9, ax10)) = plt.subplots(2, 2, figsize=(14, 12))
+
+    def draw_circle(ax, poly, circle_data, title, holes=None, islands=None):
+        if (
+            isinstance(poly, list)
+            and len(poly) > 0
+            and isinstance(poly[0], tuple)
+        ):
+            arr = list(poly) + [poly[0]]
+            ax.plot(*zip(*arr), "k-", linewidth=2, label="Boundary")
+        if islands:
+            for isl in islands:
+                iarr = list(isl) + [isl[0]]
+                ax.fill(
+                    *zip(*iarr),
+                    facecolor="#ddd",
+                    edgecolor="#999",
+                    linewidth=1.5,
+                )
+        if holes:
+            for h in holes:
+                harr = list(h) + [h[0]]
+                ax.fill(
+                    *zip(*harr),
+                    facecolor="#ddd",
+                    edgecolor="#999",
+                    linewidth=1.5,
+                )
+        if circle_data:
+            (cx, cy), rad = circle_data
+            c = Circle(
+                (cx, cy),
+                rad,
+                fill=False,
+                edgecolor="crimson",
+                linewidth=2,
+                linestyle="-",
+                label="Inscribed circle",
+            )
+            ax.add_patch(c)
+            ax.plot(cx, cy, "r*", markersize=18, label="Centre")
+        ax.set_title(title)
+        ax.set_xlabel("X")
+        ax.set_ylabel("Y")
+        ax.set_aspect("equal")
+        ax.legend(fontsize=8)
+        ax.grid(True, alpha=0.3)
+
+    draw_circle(ax7, rect, r_circle, "Rectangle")
+    draw_circle(ax8, l_shape, l_circle, "L-Shape")
+    draw_circle(
+        ax9,
+        mb,
+        m_circle,
+        "Multi-Island Pocket",
+        islands=[isl1, isl2],
+    )
+    draw_circle(ax10, cb, c_circle, "Central-Island Pocket", holes=[cisl])
+
+    fig4.tight_layout()
+    path4 = output_dir / "find-largest-circle.png"
+    fig4.savefig(path4, dpi=150)
+    plt.close(fig4)
+    images.append(
+        {
+            "path": "find-largest-circle.png",
+            "caption": (
+                "The inscribed circle (crimson) shows the largest safe"
+                " entry zone for each pocket type.  If its radius exceeds"
+                " 1.1 × tool_radius a helical entry is feasible; otherwise"
+                " a ramp is needed.  Multi-island and central-island pockets"
+                " are handled via the holes parameter."
+            ),
+        }
+    )
+
+    # ----------------------------------------------------------------
+    # Figure 5: get_polygon_closest_point visualisation
+    # ----------------------------------------------------------------
+    poly = [(10, 10), (90, 10), (90, 70), (10, 70)]
+    test_points = [(50, 60), (30, 20), (120, 40), (50, 40), (120, 80)]
+
+    fig5, ax9 = plt.subplots(figsize=(7, 6))
+
+    arr = list(poly) + [poly[0]]
+    ax9.plot(*zip(*arr), "k-", linewidth=2, label="Polygon")
+    ax9.fill(*zip(*arr), facecolor="#eef", alpha=0.3)
+
+    for pt in test_points:
+        res = get_polygon_closest_point(poly, pt[0], pt[1])
+        ax9.plot(pt[0], pt[1], "o", color="steelblue", markersize=8)
+        if res:
+            _t, (cx, cy), _d2 = res
+            ax9.plot(cx, cy, "r*", markersize=10)
+            ax9.plot(
+                [pt[0], cx],
+                [pt[1], cy],
+                "-",
+                color="crimson",
+                alpha=0.5,
+                linewidth=1,
+            )
+
+    ax9.plot([], [], "o", color="steelblue", label="Query point")
+    ax9.plot([], [], "r*", markersize=10, label="Closest boundary point")
+    ax9.plot([], [], "-", color="crimson", alpha=0.5, label="Distance")
+    ax9.set_title("get_polygon_closest_point — Boundary Distance")
+    ax9.set_xlabel("X")
+    ax9.set_ylabel("Y")
+    ax9.set_aspect("equal")
+    ax9.legend(fontsize=8)
+    ax9.grid(True, alpha=0.3)
+
+    fig5.tight_layout()
+    path5 = output_dir / "polygon-closest-point.png"
+    fig5.savefig(path5, dpi=150)
+    plt.close(fig5)
+    images.append(
+        {
+            "path": "polygon-closest-point.png",
+            "caption": (
+                "For each query point (blue dot) the function returns"
+                " the nearest point on the polygon boundary (red star)"
+                " and its squared distance."
             ),
         }
     )

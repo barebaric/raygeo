@@ -11,7 +11,7 @@ pub fn register(algo_mod: &Bound<'_, PyModule>) -> PyResult<()> {
         "Pole-of-inaccessibility computation via Polylabel.",
     )?;
 
-    register_functions!(m, polylabel_py,);
+    register_functions!(m, find_largest_circle_py, polylabel_py,);
 
     algo_mod.add_submodule(&m)?;
     Ok(())
@@ -63,4 +63,47 @@ fn polylabel_py(
         })
         .collect();
     polylabel::polylabel(&shell_pts, &holes_pts, precision).map(|p| (p.x, p.y))
+}
+
+#[gen_stub_pyfunction(
+    python = r#"
+    import collections.abc
+
+    def find_largest_circle(
+        shell: collections.abc.Sequence[tuple[float, float]],
+        holes: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]] = [],
+        precision: float = 0.5,
+    ) -> tuple[tuple[float, float], float] | None:
+        """Find the centre and radius of the largest inscribed circle.
+
+        :param shell: Outer boundary polygon.
+        :param holes: List of hole polygons to exclude (default []).
+        :param precision: Desired precision (default 0.5).
+        :returns: ((x, y), radius) or None for degenerate polygons.
+        """
+"#,
+    module = "raygeo.geo.algo.polylabel"
+)]
+#[pyfunction(name = "find_largest_circle")]
+#[pyo3(signature = (shell, holes = None, precision = 0.5))]
+fn find_largest_circle_py(
+    shell: Vec<(f64, f64)>,
+    holes: Option<Vec<Vec<(f64, f64)>>>,
+    precision: f64,
+) -> Option<((f64, f64), f64)> {
+    let shell_pts: Vec<crate::types::Point> = shell
+        .into_iter()
+        .map(|(x, y)| crate::types::Point::new(x, y))
+        .collect();
+    let holes_pts: Vec<Vec<crate::types::Point>> = holes
+        .unwrap_or_default()
+        .into_iter()
+        .map(|h| {
+            h.into_iter()
+                .map(|(x, y)| crate::types::Point::new(x, y))
+                .collect()
+        })
+        .collect();
+    polylabel::find_largest_circle(&shell_pts, &holes_pts, precision)
+        .map(|(p, r)| ((p.x, p.y), r))
 }

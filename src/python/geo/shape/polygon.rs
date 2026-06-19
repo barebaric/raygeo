@@ -7,9 +7,9 @@ use super::super::flex_point::{
 use super::super::types::NormalizePolygonsResult;
 use crate::geo::shape::polygon::{
     apply_minimum_curvature, clean_polygon, flip_polygon, flip_polygons,
-    get_polygon_bounds, get_polygon_centroid, get_polygon_convex_hull,
-    get_polygon_edges, get_polygon_group_bounds, get_polygon_perimeter,
-    get_polygon_signed_area, get_polygons_difference,
+    get_polygon_bounds, get_polygon_centroid, get_polygon_closest_point,
+    get_polygon_convex_hull, get_polygon_edges, get_polygon_group_bounds,
+    get_polygon_perimeter, get_polygon_signed_area, get_polygons_difference,
     get_polygons_group_difference, get_polygons_group_intersection,
     get_polygons_intersection, get_polygons_union, is_almost_equal,
     is_point_inside_polygon, is_polygon_clockwise, is_polygon_convex,
@@ -73,6 +73,7 @@ pub fn register(shape_mod: &Bound<'_, PyModule>) -> PyResult<()> {
         get_polygon_area_py,
         get_polygon_bounds_py,
         get_polygon_centroid_py,
+        get_polygon_closest_point_py,
         get_polygon_convex_hull_py,
         get_polygon_edges_py,
         get_polygon_group_bounds_py,
@@ -419,6 +420,37 @@ fn get_polygon_group_bounds_py(
 #[pyfunction(name = "get_polygon_centroid")]
 fn get_polygon_centroid_py(polygon: Vec<PyPoint2D>) -> (f64, f64) {
     point_to_tuple(get_polygon_centroid(&poly_to_points(polygon)))
+}
+
+#[gen_stub_pyfunction(
+    python = r#"
+    import collections.abc
+    import raygeo.geo.types
+
+    def get_polygon_closest_point(
+        polygon: collections.abc.Sequence[types.Point],
+        x: float,
+        y: float,
+    ) -> tuple[float, tuple[float, float], float] | None:
+        """Find the closest point on a polygon boundary to (x, y).
+
+        :param polygon: Polygon as (x, y) points.
+        :param x: X coordinate.
+        :param y: Y coordinate.
+        :returns: (t, (cx, cy), distance_squared) or None if degenerate.
+        """
+"#,
+    module = "raygeo.geo.shape.polygon"
+)]
+#[pyfunction(name = "get_polygon_closest_point")]
+fn get_polygon_closest_point_py(
+    polygon: Vec<PyPoint2D>,
+    x: f64,
+    y: f64,
+) -> Option<(f64, (f64, f64), f64)> {
+    let pts = poly_to_points(polygon);
+    get_polygon_closest_point(&pts, x, y)
+        .map(|(t, pt, d2)| (t, (pt.x, pt.y), d2))
 }
 
 #[gen_stub_pyfunction(

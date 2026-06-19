@@ -6,6 +6,30 @@ sidebar_position: 25
 
 ## Functions
 
+### `find_largest_circle()`
+
+```python
+find_largest_circle(
+    shell: Sequence[tuple[float, float]],
+    holes: Sequence[Sequence[tuple[float, float]]] = [],
+    precision: float = 0.5,
+) -> tuple[tuple[float, float], float] | None
+```
+
+Find the centre and radius of the largest inscribed circle.
+
+| Parameter   | Type                                            | Description                                       |
+| ----------- | ----------------------------------------------- | ------------------------------------------------- |
+| `shell`     | `Sequence[tuple[float, float]]`                 | Outer boundary polygon.                           |
+| `holes`     | `Sequence[Sequence[tuple[float, float]]] = []`  | List of hole polygons to exclude (default []).    |
+| `precision` | `float = 0.5`                                   | Desired precision (default 0.5).                  |
+| _Returns_   | `tuple[tuple[float, float], float] &#124; None` | ((x, y), radius) or None for degenerate polygons. |
+
+![find_largest_circle returns the centre and radius of the largest inscribed circle — the entry point and its clearance for helical versus ramp decisions](images/find-largest-circle.png)
+
+_find_largest_circle returns the centre and radius of the largest inscribed circle — the entry point
+and its clearance for helical versus ramp decisions_
+
 ### `polylabel()`
 
 ```python

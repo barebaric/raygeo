@@ -15,6 +15,7 @@ __all__ = [
     "get_polygon_area",
     "get_polygon_bounds",
     "get_polygon_centroid",
+    "get_polygon_closest_point",
     "get_polygon_convex_hull",
     "get_polygon_edges",
     "get_polygon_group_bounds",
@@ -147,6 +148,16 @@ def get_polygon_centroid(polygon: collections.abc.Sequence[types.Point]) -> type
     :param polygon: Polygon as (x, y) points.
     :returns: Centroid point (x, y).
     :complexity: O(n)
+    """
+
+def get_polygon_closest_point(polygon: collections.abc.Sequence[types.Point], x: float, y: float) -> tuple[float, tuple[float, float], float] | None:
+    r"""
+    Find the closest point on a polygon boundary to (x, y).
+    
+    :param polygon: Polygon as (x, y) points.
+    :param x: X coordinate.
+    :param y: Y coordinate.
+    :returns: (t, (cx, cy), distance_squared) or None if degenerate.
     """
 
 def get_polygon_convex_hull(polygon: collections.abc.Sequence[types.Point]) -> types.Polygon:
