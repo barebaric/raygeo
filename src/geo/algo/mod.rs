@@ -16,6 +16,7 @@ pub mod minkowski2d;
 pub mod nest2d;
 pub mod offset;
 pub mod overcut;
+pub mod pde_mesh;
 pub mod planar;
 pub mod project;
 pub mod ramp;

@@ -38,6 +38,7 @@ from . import minkowski2d
 from . import nest2d
 from . import offset
 from . import overcut
+from . import pde_mesh
 from . import ramp
 from . import simplify
 from . import smooth
@@ -55,6 +56,7 @@ __all__ = [
     "nest2d",
     "offset",
     "overcut",
+    "pde_mesh",
     "ramp",
     "simplify",
     "smooth",

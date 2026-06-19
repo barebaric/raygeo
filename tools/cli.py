@@ -321,6 +321,28 @@ _INLINE_IMAGE_MAP = {
     "raygeo.geo.algo.overcut.md": [
         ("apply_overcut", "overcut", "Overcut on closed contour"),
     ],
+    "raygeo.geo.algo.pde_mesh.md": [
+        (
+            "build_triangle_mesh",
+            "pde-mesh-triangulation",
+            "CDT triangulation of a square pocket with centred hole",
+        ),
+        (
+            "build_triangle_mesh",
+            "pde-mesh-l-shape",
+            "CDT triangulation of an L-shaped pocket",
+        ),
+        (
+            "solve_laplace",
+            "pde-mesh-laplace",
+            "Laplace solution — contours morph smoothly from hole to boundary",
+        ),
+        (
+            "solve_laplace",
+            "pde-mesh-l-shape-solution",
+            "Laplace solution on an L-shaped domain",
+        ),
+    ],
     "raygeo.geo.algo.ramp.md": [
         (
             "generate_ramp",

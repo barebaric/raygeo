@@ -355,8 +355,11 @@ def _plot_cylindrical(ax):
 
     for i in range(0, len(t), 2):
         ax.plot(
-            t[i : i + 2, 0], t[i : i + 2, 1], t[i : i + 2, 2],
-            "tomato", linewidth=1.5,
+            t[i : i + 2, 0],
+            t[i : i + 2, 1],
+            t[i : i + 2, 2],
+            "tomato",
+            linewidth=1.5,
         )
 
     ax.set_xlabel("X")
@@ -404,15 +407,23 @@ def _plot_3d_offset(ax):
     ax.plot(xs, ys, zs, "o-", color="steelblue", linewidth=2, label="Original")
     xs_o, ys_o, zs_o = zip(*off)
     ax.plot(
-        xs_o, ys_o, zs_o, "o-", color="tomato", linewidth=3,
-        label="Offset", alpha=0.8,
+        xs_o,
+        ys_o,
+        zs_o,
+        "o-",
+        color="tomato",
+        linewidth=3,
+        label="Offset",
+        alpha=0.8,
     )
     for i in range(0, len(curve), 3):
         ax.plot(
             [curve[i][0], off[i][0]],
             [curve[i][1], off[i][1]],
             [curve[i][2], off[i][2]],
-            color="gray", linewidth=1, linestyle=":",
+            color="gray",
+            linewidth=1,
+            linestyle=":",
         )
     ax.set_xlabel("X")
     ax.set_ylabel("Y")
@@ -426,11 +437,21 @@ def generate_examples(output_dir):
     fig = plt.figure(figsize=(18, 16), layout="constrained")
 
     axs = [
-        [fig.add_subplot(3, 3, 1), fig.add_subplot(3, 3, 2), fig.add_subplot(3, 3, 3)],
-        [fig.add_subplot(3, 3, 4), fig.add_subplot(3, 3, 5), fig.add_subplot(3, 3, 6)],
-        [fig.add_subplot(3, 3, 7, projection="3d"),
-         fig.add_subplot(3, 3, 8, projection="3d"),
-         fig.add_subplot(3, 3, 9, projection="3d")],
+        [
+            fig.add_subplot(3, 3, 1),
+            fig.add_subplot(3, 3, 2),
+            fig.add_subplot(3, 3, 3),
+        ],
+        [
+            fig.add_subplot(3, 3, 4),
+            fig.add_subplot(3, 3, 5),
+            fig.add_subplot(3, 3, 6),
+        ],
+        [
+            fig.add_subplot(3, 3, 7, projection="3d"),
+            fig.add_subplot(3, 3, 8, projection="3d"),
+            fig.add_subplot(3, 3, 9, projection="3d"),
+        ],
     ]
 
     _plot_concave_hull(axs[0][0])
