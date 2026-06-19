@@ -49,6 +49,10 @@ Clean a polygon by removing near-duplicate points.
 | _Returns_    | `Optional[types.Polygon]` | Cleaned polygon or None.              |
 | _Complexity_ |                           | O(n)                                  |
 
+![``clean_polygon`` removes near-duplicate vertices within tolerance](images/geo-shape-polygon-clean-polygon.png)
+
+_`clean_polygon` removes near-duplicate vertices within tolerance_
+
 ### `flip_polygon()`
 
 ```python
@@ -195,6 +199,10 @@ Get the centroid of a polygon.
 | _Returns_    | `types.Point`           | Centroid point (x, y).    |
 | _Complexity_ |                         | O(n)                      |
 
+![``get_polygon_centroid`` computes the geometric center of a polygon](images/geo-shape-polygon-centroid.png)
+
+_`get_polygon_centroid` computes the geometric center of a polygon_
+
 ### `get_polygon_closest_point()`
 
 ```python
@@ -228,6 +236,10 @@ Get the convex hull of a polygon.
 | _Returns_    | `types.Polygon`         | Convex hull as list of points. |
 | _Complexity_ |                         | O(n log n)                     |
 
+![``get_polygon_convex_hull`` wraps a concave polygon in its minimal convex boundary](images/geo-shape-polygon-convex-hull.png)
+
+_`get_polygon_convex_hull` wraps a concave polygon in its minimal convex boundary_
+
 ### `get_polygon_edges()`
 
 ```python
@@ -257,6 +269,10 @@ Get the bounding rectangle of a group of polygons.
 | `polygons`   | `Sequence[types.Polygon]` | List of polygons.                                   |
 | _Returns_    | `types.Rect`              | Bounding rectangle as (x_min, y_min, x_max, y_max). |
 | _Complexity_ |                           | O(n \* m)                                           |
+
+![``get_polygon_group_bounds`` finds the bounding rectangle enclosing all given polygons](images/geo-shape-polygon-group-bounds.png)
+
+_`get_polygon_group_bounds` finds the bounding rectangle enclosing all given polygons_
 
 ### `get_polygon_perimeter()`
 

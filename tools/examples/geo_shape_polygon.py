@@ -8,7 +8,11 @@ from matplotlib.patches import Circle as CirclePatch
 
 from raygeo.geo.shape.polygon import (
     apply_minimum_curvature,
+    clean_polygon,
     get_circle_polygon,
+    get_polygon_centroid,
+    get_polygon_convex_hull,
+    get_polygon_group_bounds,
     get_polygons_difference,
     get_polygons_intersection,
     get_polygons_union,
@@ -187,6 +191,144 @@ def generate_min_curvature():
     return fig7
 
 
+def generate_clean_polygon():
+    """Polygon cleaning."""
+    noisy = [
+        (0, 0),
+        (10, 0),
+        (10, 0.001),
+        (10.001, 0),
+        (20, 0),
+        (20, 10),
+        (19.999, 10),
+        (20, 20),
+        (10, 20),
+        (0, 20),
+    ]
+    cleaned = clean_polygon(noisy, tolerance=0.01)
+
+    fig8, (ax8a, ax8b) = plt.subplots(1, 2, figsize=(10, 5))
+    for ax, pts, title in [
+        (ax8a, noisy, "Original (duplicates)"),
+        (ax8b, cleaned, "Cleaned"),
+    ]:
+        arr = np.array(pts)
+        ax.plot(*np.vstack([arr, arr[0:1]]).T, "b-", linewidth=2)
+        ax.plot(arr[:, 0], arr[:, 1], "ro", markersize=4, label="Vertices")
+        ax.set_aspect("equal")
+        ax.grid(True, alpha=0.3)
+        ax.legend(fontsize=9)
+        ax.set_title(title)
+    fig8.tight_layout()
+    return fig8
+
+
+def generate_centroid():
+    """Polygon centroid."""
+    base = _make_circle(10.0, 64, ox=0.0, oy=0.0)
+    poly = list(base)
+    for i in range(20, 44):
+        t = (i - 20) / 24
+        weight = 0.5 * (1 - math.cos(2 * math.pi * t))
+        r = 10.0 - 3.0 * weight
+        angle = 2 * math.pi * i / 64
+        poly[i] = (r * math.cos(angle), r * math.sin(angle))
+    cx, cy = get_polygon_centroid(poly)
+    fig9, ax9 = plt.subplots(figsize=(6, 6))
+    arr = np.array(poly)
+    ax9.fill(*arr.T, alpha=0.15, color="steelblue")
+    ax9.plot(*np.vstack([arr, arr[0:1]]).T, "b-", linewidth=2, label="Polygon")
+    ax9.plot(
+        cx,
+        cy,
+        "o",
+        color="limegreen",
+        markersize=10,
+        label=f"Centroid ({cx:.2f}, {cy:.2f})",
+    )
+    ax9.plot(cx, cy, "k+", markersize=8)
+    ax9.set_aspect("equal")
+    ax9.grid(True, alpha=0.3)
+    ax9.legend(fontsize=9)
+    ax9.set_title("get_polygon_centroid")
+    fig9.tight_layout()
+    return fig9
+
+
+def generate_convex_hull():
+    """Polygon convex hull."""
+    star = [
+        (10, 0),
+        (13, 7),
+        (20, 7),
+        (14, 12),
+        (16, 20),
+        (10, 15),
+        (4, 20),
+        (6, 12),
+        (0, 7),
+        (7, 7),
+    ]
+    hull = get_polygon_convex_hull(star)
+    fig10, ax10 = plt.subplots(figsize=(6, 6))
+    s_arr = np.array(star)
+    ax10.fill(*s_arr.T, alpha=0.1, color="steelblue")
+    ax10.plot(
+        *np.vstack([s_arr, s_arr[0:1]]).T, "b-", linewidth=2, label="Original"
+    )
+    ax10.plot(s_arr[:, 0], s_arr[:, 1], "bo", markersize=4)
+    h_arr = np.array(hull)
+    ax10.plot(
+        *np.vstack([h_arr, h_arr[0:1]]).T,
+        "r-",
+        linewidth=2.5,
+        label="Convex Hull",
+    )
+    ax10.fill(*h_arr.T, alpha=0.2, color="tomato")
+    ax10.set_aspect("equal")
+    ax10.grid(True, alpha=0.3)
+    ax10.legend(fontsize=9)
+    ax10.set_title("get_polygon_convex_hull")
+    fig10.tight_layout()
+    return fig10
+
+
+def generate_group_bounds():
+    """Polygon group bounds."""
+    polys = [
+        _make_circle(4.0, 32, ox=4, oy=4),
+        _make_square(5.0, ox=14, oy=10),
+        _make_circle(3.0, 32, ox=8, oy=16),
+    ]
+    x_min, y_min, x_max, y_max = get_polygon_group_bounds(polys)
+    fig11, ax11 = plt.subplots(figsize=(7, 7))
+    colors = ["steelblue", "tomato", "limegreen"]
+    for poly, color in zip(polys, colors):
+        arr = np.array(poly)
+        ax11.fill(*arr.T, alpha=0.2, color=color)
+        ax11.plot(*np.vstack([arr, arr[0:1]]).T, "-", linewidth=2, color=color)
+    rect = np.array(
+        [
+            [x_min, y_min],
+            [x_max, y_min],
+            [x_max, y_max],
+            [x_min, y_max],
+        ]
+    )
+    ax11.plot(
+        *np.vstack([rect, rect[0:1]]).T,
+        "r--",
+        linewidth=2.5,
+        label="Group bounds",
+    )
+    ax11.set_aspect("equal")
+    ax11.grid(True, alpha=0.3)
+    ax11.legend(fontsize=9)
+    ax11.set_title("get_polygon_group_bounds")
+    fig11.tight_layout()
+    return fig11
+
+
 __images__ = [
     {
         "heading": "get_circle_polygon",
@@ -228,5 +370,25 @@ __images__ = [
         "heading": "apply_minimum_curvature",
         "caption": "Minimum curvature fillet applied to a triangle",
         "function": generate_min_curvature,
+    },
+    {
+        "heading": "clean_polygon",
+        "caption": "``clean_polygon`` removes near-duplicate vertices",
+        "function": generate_clean_polygon,
+    },
+    {
+        "heading": "get_polygon_centroid",
+        "caption": "``get_polygon_centroid`` computes the geometric center",
+        "function": generate_centroid,
+    },
+    {
+        "heading": "get_polygon_convex_hull",
+        "caption": "``get_polygon_convex_hull`` wraps polygon in convex hull",
+        "function": generate_convex_hull,
+    },
+    {
+        "heading": "get_polygon_group_bounds",
+        "caption": "``get_polygon_group_bounds`` all polygons within a rect",
+        "function": generate_group_bounds,
     },
 ]
