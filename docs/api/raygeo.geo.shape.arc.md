@@ -1,7 +1,7 @@
 ---
 title: raygeo.geo.shape.arc
 sidebar_label: raygeo.geo.shape.arc
-sidebar_position: 31
+sidebar_position: 32
 ---
 
 Arc geometry queries and conversions.

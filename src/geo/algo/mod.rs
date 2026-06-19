@@ -25,6 +25,7 @@ pub mod ramp;
 pub mod simplify;
 pub mod smooth;
 pub mod spatial_grid2d;
+pub mod spiral;
 pub mod topology;
 pub mod trochoid;
 
@@ -89,6 +90,7 @@ pub use smooth::{
     compute_gaussian_kernel, resample_polyline, smooth_circularly,
     smooth_polyline, smooth_sub_segment,
 };
+pub use spiral::{generate_spiral, SpiralOptions};
 pub use topology::{
     build_hierarchy, close_all_contours, filter_to_external_contours,
     get_valid_contours_data, group_solids_and_holes, normalize_winding_orders,

@@ -1,7 +1,7 @@
 ---
 title: raygeo.geo.shape.bezier
 sidebar_label: raygeo.geo.shape.bezier
-sidebar_position: 32
+sidebar_position: 33
 ---
 
 Cubic bezier curve queries and conversions.

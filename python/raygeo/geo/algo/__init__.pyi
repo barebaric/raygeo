@@ -46,6 +46,7 @@ from . import ramp
 from . import simplify
 from . import smooth
 from . import spatial_grid2d
+from . import spiral
 from . import trochoid
 __all__ = [
     "analysis",
@@ -67,6 +68,7 @@ __all__ = [
     "simplify",
     "smooth",
     "spatial_grid2d",
+    "spiral",
     "trochoid",
 ]
 

@@ -17,6 +17,7 @@ pub(crate) mod ramp;
 pub(crate) mod simplify;
 pub(crate) mod smooth;
 pub(crate) mod spatial_grid2d;
+pub(crate) mod spiral;
 pub(crate) mod trochoid;
 
 pyo3_stub_gen::module_doc!("raygeo.geo.algo", "{}", MODULE_DOC);
@@ -74,6 +75,7 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     simplify::register(&algo_mod)?;
     smooth::register(&algo_mod)?;
     spatial_grid2d::register(&algo_mod)?;
+    spiral::register(&algo_mod)?;
     trochoid::register(&algo_mod)?;
 
     m.add_submodule(&algo_mod)?;
@@ -128,6 +130,8 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     sys_modules
         .set_item("raygeo.geo.algo.helix", &algo_mod.getattr("helix")?)?;
     sys_modules.set_item("raygeo.geo.algo.ramp", &algo_mod.getattr("ramp")?)?;
+    sys_modules
+        .set_item("raygeo.geo.algo.spiral", &algo_mod.getattr("spiral")?)?;
     sys_modules
         .set_item("raygeo.geo.algo.trochoid", &algo_mod.getattr("trochoid")?)?;
 
