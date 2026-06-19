@@ -4,12 +4,31 @@ sidebar_label: raygeo.geo.algo.cleared_area
 sidebar_position: 5
 ---
 
-Incremental cleared-area tracker for adaptive clearing.
+![ClearedArea tracking a simulated raster toolpath — cleared fragments shown in blue, remaining area in red](images/cleared-area-raster.png)
+
+_ClearedArea tracking a simulated raster toolpath — cleared fragments shown in blue, remaining area
+in red_ Incremental cleared-area tracker for adaptive clearing.
 
 Maintains a union of tool-swept polygons and provides a spatial-indexed windowed query for efficient
 engagement computation.
 
 ## ClearedArea
+
+### `add_cleared_polygons()`
+
+```python
+add_cleared_polygons(polygons: Sequence[Sequence[tuple[float, float]]]) -> None
+```
+
+| Parameter  | Type                                      | Description |
+| ---------- | ----------------------------------------- | ----------- |
+| `polygons` | `Sequence[Sequence[tuple[float, float]]]` |             |
+| _Returns_  | `None`                                    |             |
+
+![ClearedArea with bulk polygon insertion via ``add_cleared_polygons`` — cleared region in blue, remaining area in red](images/cleared-area-bulk.png)
+
+_ClearedArea with bulk polygon insertion via `add_cleared_polygons` — cleared region in blue,
+remaining area in red_
 
 ### `expand()`
 

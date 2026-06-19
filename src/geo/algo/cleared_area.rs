@@ -147,6 +147,19 @@ impl ClearedArea {
         self.fragments.is_empty()
     }
 
+    /// Directly insert known cleared polygons (e.g., the swept footprint
+    /// of a bulk spiral). This avoids the overhead of sweeping thousands
+    /// of individual line segments.
+    pub fn add_cleared_polygons(&mut self, polygons: &[Polygon]) {
+        if polygons.is_empty() {
+            return;
+        }
+        let mut all_polys = self.fragments.clone();
+        all_polys.extend(polygons.iter().cloned());
+        self.fragments = get_polygons_union(&all_polys);
+        self.rebuild_grid();
+    }
+
     fn rebuild_grid(&mut self) {
         self.grid = SpatialGrid::new(self.cell_size);
         self.bboxes.clear();

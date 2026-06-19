@@ -53,6 +53,18 @@ impl ClearedArea {
         self.inner.expand(&path, tool_radius);
     }
 
+    pub fn add_cleared_polygons(&mut self, polygons: Vec<Vec<(f64, f64)>>) {
+        let polys: Vec<crate::types::Polygon> = polygons
+            .into_iter()
+            .map(|v| {
+                v.into_iter()
+                    .map(|(x, y)| crate::types::Point::new(x, y))
+                    .collect()
+            })
+            .collect();
+        self.inner.add_cleared_polygons(&polys);
+    }
+
     pub fn query_window(
         &self,
         bbox: (f64, f64, f64, f64),

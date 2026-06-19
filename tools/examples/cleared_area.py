@@ -8,7 +8,17 @@ __images__ = [
             "cleared fragments shown in blue, remaining area in red"
         ),
         "doc": "raygeo.geo.algo.cleared_area.md",
-        "heading": "ClearedArea",
+        "heading": None,
+    },
+    {
+        "stem": "cleared-area-bulk",
+        "caption": (
+            "ClearedArea with bulk polygon insertion via "
+            "``add_cleared_polygons`` — cleared region in blue, "
+            "remaining area in red"
+        ),
+        "doc": "raygeo.geo.algo.cleared_area.md",
+        "heading": "add_cleared_polygons",
     },
 ]
 
@@ -82,6 +92,63 @@ def generate_examples(output_dir):
                 "ClearedArea tracking vertical raster toolpath passes "
                 "inside an 80x80 mm pocket. Blue = already cleared, "
                 "red = remaining uncleared."
+            ),
+        }
+    )
+
+    # ── add_cleared_polygons: bulk polygon insertion ──────────────────────
+    ca2 = ClearedArea()
+    # L-shaped pocket
+    pocket = [(0, 0), (100, 0), (100, 100), (60, 100), (60, 40), (0, 40)]
+    # Bulk cleared region (a large rectangle inside the pocket)
+    cleared_bulk = [(10, 10), (90, 10), (90, 90), (10, 90)]
+    ca2.add_cleared_polygons([cleared_bulk])
+    remaining2 = ca2.remaining([pocket])
+
+    fig2, ax2 = plt.subplots(figsize=(7, 7))
+
+    # Cleared bulk
+    cx, cy = zip(*(cleared_bulk + [cleared_bulk[0]]))
+    ax2.fill(cx, cy, "steelblue", alpha=0.3, label="Cleared (bulk)")
+    ax2.plot(cx, cy, "steelblue", linewidth=1.5)
+
+    # Remaining
+    for poly in remaining2:
+        px, py = zip(*(poly + [poly[0]]))
+        ax2.fill(
+            px,
+            py,
+            "tomato",
+            alpha=0.4,
+            label="Remaining" if poly is remaining2[0] else None,
+        )
+        ax2.plot(px, py, "tomato", linewidth=1.5)
+
+    # Boundary
+    bx2, by2 = zip(*(pocket + [pocket[0]]))
+    ax2.plot(bx2, by2, "k-", linewidth=2, label="Pocket boundary")
+
+    ax2.set_aspect("equal")
+    ax2.set_xlim(-5, 105)
+    ax2.set_ylim(-5, 105)
+    ax2.grid(True, alpha=0.3)
+    ax2.legend(fontsize=9)
+    ax2.set_title(
+        f"ClearedArea.add_cleared_polygons: "
+        f"{ca2.total_area():.0f} mm\u00b2 cleared"
+    )
+
+    fig2.tight_layout()
+    path2 = output_dir / "cleared-area-bulk.png"
+    fig2.savefig(path2, dpi=150)
+    plt.close(fig2)
+    images.append(
+        {
+            "path": "cleared-area-bulk.png",
+            "caption": (
+                "Bulk polygon insertion via add_cleared_polygons: "
+                "a large rectangle is registered as cleared inside "
+                "an L-shaped pocket; remaining material in red."
             ),
         }
     )
