@@ -1,7 +1,7 @@
 ---
 title: raygeo.ops.axis
 sidebar_label: raygeo.ops.axis
-sidebar_position: 45
+sidebar_position: 50
 ---
 
 Axis bitflag for multi-axis machines.

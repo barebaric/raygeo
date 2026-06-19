@@ -1,7 +1,7 @@
 ---
 title: raygeo.geo.algo.spiral
 sidebar_label: raygeo.geo.algo.spiral
-sidebar_position: 31
+sidebar_position: 29
 ---
 
 Flat Archimedean spiral path generation.

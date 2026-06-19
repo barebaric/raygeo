@@ -1,7 +1,7 @@
 ---
 title: raygeo.geo.algo.trochoid
 sidebar_label: raygeo.geo.algo.trochoid
-sidebar_position: 32
+sidebar_position: 30
 ---
 
 Trochoidal path generation for constant-engagement milling.

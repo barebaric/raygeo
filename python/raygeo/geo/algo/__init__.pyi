@@ -41,8 +41,6 @@ from . import minkowski2d
 from . import nest2d
 from . import offset
 from . import overcut
-from . import pde_mesh
-from . import pde_spiral
 from . import polylabel
 from . import ramp
 from . import simplify
@@ -65,8 +63,6 @@ __all__ = [
     "nest2d",
     "offset",
     "overcut",
-    "pde_mesh",
-    "pde_spiral",
     "polylabel",
     "ramp",
     "simplify",

@@ -18,8 +18,6 @@ pub mod minkowski2d;
 pub mod nest2d;
 pub mod offset;
 pub mod overcut;
-pub mod pde_mesh;
-pub mod pde_spiral;
 pub mod planar;
 pub mod polylabel;
 pub mod project;
@@ -85,7 +83,6 @@ pub use offset::{
     grow_geometry_on_plane, offset_contour_group,
 };
 pub use overcut::apply_overcut;
-pub use pde_spiral::trace_spiral;
 pub use polylabel::{find_largest_circle, polylabel};
 pub use project::{
     is_planar_in_z, lift_points_to_xy_plane, project_point_to_xy,
