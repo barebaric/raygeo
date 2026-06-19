@@ -497,6 +497,26 @@ pub fn offset_polygon_with_style(
     output
 }
 
+/// Enforce a minimum internal curvature radius on a polygon.
+///
+/// Performs a morphological opening: offsets inward by `r_min` using Miter
+/// joins, then outward by `r_min` using Round joins. This acts as a
+/// high-pass curvature filter — tight internal corners are filleted to
+/// exactly `r_min`, while the overall shape is preserved.
+///
+/// **Planar (XY-plane only).** Z is not modeled.
+pub fn apply_minimum_curvature(polygon: &Polygon, r_min: f64) -> Vec<Polygon> {
+    if polygon.len() < 3 || r_min <= 0.0 {
+        return vec![polygon.clone()];
+    }
+    let inward = offset_polygon_with_style(polygon, -r_min, JoinStyle::Miter);
+    let mut result = Vec::new();
+    for p in inward {
+        result.extend(offset_polygon_with_style(&p, r_min, JoinStyle::Round));
+    }
+    result
+}
+
 /// Compute the union of multiple polygons.
 ///
 /// **Planar (XY-plane only).** Uses Clipper2. Z is not modeled.

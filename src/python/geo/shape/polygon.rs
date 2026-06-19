@@ -6,16 +6,16 @@ use super::super::flex_point::{
 };
 use super::super::types::NormalizePolygonsResult;
 use crate::geo::shape::polygon::{
-    clean_polygon, flip_polygon, flip_polygons, get_polygon_bounds,
-    get_polygon_centroid, get_polygon_convex_hull, get_polygon_edges,
-    get_polygon_group_bounds, get_polygon_perimeter, get_polygon_signed_area,
-    get_polygons_difference, get_polygons_group_difference,
-    get_polygons_group_intersection, get_polygons_intersection,
-    get_polygons_union, is_almost_equal, is_point_inside_polygon,
-    is_polygon_clockwise, is_polygon_convex, normalize_polygons,
-    offset_polygon_with_style, point_line_distance, polygons_intersect,
-    rotate_polygon, rotate_polygons, scale_polygon, translate_bounds,
-    translate_polygon, translate_polygons, JoinStyle,
+    apply_minimum_curvature, clean_polygon, flip_polygon, flip_polygons,
+    get_polygon_bounds, get_polygon_centroid, get_polygon_convex_hull,
+    get_polygon_edges, get_polygon_group_bounds, get_polygon_perimeter,
+    get_polygon_signed_area, get_polygons_difference,
+    get_polygons_group_difference, get_polygons_group_intersection,
+    get_polygons_intersection, get_polygons_union, is_almost_equal,
+    is_point_inside_polygon, is_polygon_clockwise, is_polygon_convex,
+    normalize_polygons, offset_polygon_with_style, point_line_distance,
+    polygons_intersect, rotate_polygon, rotate_polygons, scale_polygon,
+    translate_bounds, translate_polygon, translate_polygons, JoinStyle,
 };
 use crate::types::{Point, Rect};
 use numpy::{PyArray2, PyArrayMethods};
@@ -64,6 +64,7 @@ pub fn register(shape_mod: &Bound<'_, PyModule>) -> PyResult<()> {
 
     register_functions!(
         m,
+        apply_minimum_curvature_py,
         clean_polygon_py,
         flip_polygon_numpy_py,
         flip_polygon_py,
@@ -562,6 +563,38 @@ fn offset_polygon_py(
         offset,
         style,
     )))
+}
+
+#[gen_stub_pyfunction(
+    python = r#"
+    import collections.abc
+    import raygeo.geo.types
+
+    def apply_minimum_curvature(
+        polygon: collections.abc.Sequence[types.Point],
+        r_min: float,
+    ) -> list[types.Polygon]:
+        """Fillet tight internal corners to a minimum radius.
+
+        Offsets inward by ``r_min`` (Miter), then outward by ``r_min``
+        (Round). Acts as a high-pass curvature filter — sharp corners
+        are rounded to exactly ``r_min`` while the overall shape is
+        preserved.
+
+        :param polygon: Polygon as (x, y) points.
+        :param r_min: Minimum allowed curvature radius.
+        :returns: Filleted polygon(s).
+        :complexity: O(n)
+        """
+"#,
+    module = "raygeo.geo.shape.polygon"
+)]
+#[pyfunction(name = "apply_minimum_curvature")]
+fn apply_minimum_curvature_py(
+    polygon: Vec<PyPoint2D>,
+    r_min: f64,
+) -> Vec<Vec<(f64, f64)>> {
+    polygons_to_tuples(apply_minimum_curvature(&poly_to_points(polygon), r_min))
 }
 
 #[gen_stub_pyfunction(

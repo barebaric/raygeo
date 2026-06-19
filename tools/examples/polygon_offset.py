@@ -7,11 +7,17 @@ __images__ = [
         "doc": "raygeo.geo.shape.polygon.md",
         "heading": "offset_polygon",
     },
+    {
+        "stem": "polygon-min-curvature",
+        "caption": "Minimum curvature fillet applied to a triangle",
+        "doc": "raygeo.geo.shape.polygon.md",
+        "heading": "apply_minimum_curvature",
+    },
 ]
 
 import matplotlib.pyplot as plt
 
-from raygeo.geo.shape.polygon import offset_polygon
+from raygeo.geo.shape.polygon import apply_minimum_curvature, offset_polygon
 from tools.plot import plot_polygon
 
 
@@ -19,6 +25,7 @@ def generate_examples(output_dir):
     images = []
     triangle = [(0, 0), (20, 0), (10, 18)]
 
+    # ── offset_polygon: miter vs round vs square join styles ────────────
     styles = [("miter", "Miter"), ("round", "Round"), ("square", "Square")]
     colors = ["limegreen", "tomato", "dodgerblue"]
 
@@ -42,6 +49,29 @@ def generate_examples(output_dir):
         {
             "path": "polygon-offset.png",
             "caption": "Polygon offset — miter vs round vs square join styles",
+        }
+    )
+
+    # ── apply_minimum_curvature ──────────────────────────────────────────
+    fig2, ax2 = plt.subplots(figsize=(7, 7))
+    sharp = [(0, 0), (20, 0), (10, 18)]
+    plot_polygon(ax2, sharp, "steelblue", "Original", linewidth=2)
+    filleted = apply_minimum_curvature(sharp, 2.0)
+    for poly in filleted:
+        plot_polygon(ax2, poly, "tomato", "Filleted (r_min=2)", linewidth=2.5)
+    ax2.set_aspect("equal")
+    ax2.grid(True, alpha=0.3)
+    ax2.legend(fontsize=10)
+    ax2.set_title("apply_minimum_curvature", fontsize=11, fontweight="bold")
+
+    fig2.tight_layout()
+    path2 = output_dir / "polygon-min-curvature.png"
+    fig2.savefig(path2, dpi=150)
+    plt.close(fig2)
+    images.append(
+        {
+            "path": "polygon-min-curvature.png",
+            "caption": "Minimum curvature fillet applied to a triangle",
         }
     )
 

@@ -9,6 +9,7 @@ import pytest
 
 from raygeo.geo.algo.smooth import resample_polyline
 from raygeo.geo.shape.polygon import (
+    apply_minimum_curvature,
     clean_polygon,
     flip_polygon_numpy,
     flip_polygons_numpy,
@@ -635,6 +636,36 @@ class TestPolygonOffset:
         polygon = P((0, 0), (10, 0), (5, 10))
         with pytest.raises(ValueError, match="invalid join_style"):
             offset_polygon(polygon, 1.0, join_style="nonexistent")
+
+
+class TestApplyMinimumCurvature:
+    def test_basic_fillet(self):
+        """Triangle with sharp corner gets filleted (more points after)."""
+        poly = P((0, 0), (10, 0), (5, 10))
+        result = apply_minimum_curvature(poly, 1.0)
+        assert len(result) >= 1
+        assert len(result[0]) > 3
+
+    def test_positive_r_min(self):
+        """r_min=0 returns the polygon unchanged (no offset)."""
+        poly = P((0, 0), (10, 0), (5, 10))
+        result = apply_minimum_curvature(poly, 0.0)
+        assert len(result) == 1
+        assert result[0] == poly
+
+    def test_negative_r_min(self):
+        """Negative r_min is clamped; same as zero."""
+        poly = P((0, 0), (10, 0), (5, 10))
+        result = apply_minimum_curvature(poly, -1.0)
+        assert len(result) == 1
+        assert result[0] == poly
+
+    def test_degenerate(self):
+        """Very large r_min can collapse the polygon."""
+        poly = P((0, 0), (10, 0), (5, 10))
+        result = apply_minimum_curvature(poly, 100.0)
+        # May collapse to empty
+        assert isinstance(result, list)
 
 
 class TestPolygonBooleanOps:

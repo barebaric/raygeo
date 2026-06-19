@@ -6,6 +6,7 @@ import numpy.typing
 from raygeo.geo import types
 import typing
 __all__ = [
+    "apply_minimum_curvature",
     "clean_polygon",
     "flip_polygon",
     "flip_polygon_numpy",
@@ -51,6 +52,21 @@ __all__ = [
     "translate_polygons",
     "translate_polygons_numpy",
 ]
+
+def apply_minimum_curvature(polygon: collections.abc.Sequence[types.Point], r_min: float) -> list[types.Polygon]:
+    r"""
+    Fillet tight internal corners to a minimum radius.
+    
+    Offsets inward by ``r_min`` (Miter), then outward by ``r_min``
+    (Round). Acts as a high-pass curvature filter — sharp corners
+    are rounded to exactly ``r_min`` while the overall shape is
+    preserved.
+    
+    :param polygon: Polygon as (x, y) points.
+    :param r_min: Minimum allowed curvature radius.
+    :returns: Filleted polygon(s).
+    :complexity: O(n)
+    """
 
 def clean_polygon(polygon: collections.abc.Sequence[types.Point], tolerance: typing.Optional[float] = None) -> typing.Optional[types.Polygon]:
     r"""

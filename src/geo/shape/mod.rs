@@ -42,10 +42,10 @@ pub use line::{
 };
 pub use point::{are_points_equal, midpoint, transform_point};
 pub use polygon::{
-    clean_polygon, flip_polygon, flip_polygons, get_polygon_area,
-    get_polygon_bounds, get_polygon_centroid, get_polygon_convex_hull,
-    get_polygon_edges, get_polygon_group_bounds, get_polygon_perimeter,
-    get_polygon_signed_area, get_polygons_difference,
+    apply_minimum_curvature, clean_polygon, flip_polygon, flip_polygons,
+    get_polygon_area, get_polygon_bounds, get_polygon_centroid,
+    get_polygon_convex_hull, get_polygon_edges, get_polygon_group_bounds,
+    get_polygon_perimeter, get_polygon_signed_area, get_polygons_difference,
     get_polygons_group_difference, get_polygons_group_intersection,
     get_polygons_intersection, get_polygons_union, is_almost_equal,
     is_point_in_polygon, is_polygon_clockwise, is_polygon_convex,

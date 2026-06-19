@@ -6,6 +6,31 @@ sidebar_position: 36
 
 ## Functions
 
+### `apply_minimum_curvature()`
+
+```python
+apply_minimum_curvature(
+    polygon: Sequence[types.Point],
+    r_min: float,
+) -> list[types.Polygon]
+```
+
+Fillet tight internal corners to a minimum radius.
+
+Offsets inward by `r_min` (Miter), then outward by `r_min` (Round). Acts as a high-pass curvature
+filter — sharp corners are rounded to exactly `r_min` while the overall shape is preserved.
+
+| Parameter    | Type                    | Description                       |
+| ------------ | ----------------------- | --------------------------------- |
+| `polygon`    | `Sequence[types.Point]` | Polygon as (x, y) points.         |
+| `r_min`      | `float`                 | Minimum allowed curvature radius. |
+| _Returns_    | `list[types.Polygon]`   | Filleted polygon(s).              |
+| _Complexity_ |                         | O(n)                              |
+
+![Minimum curvature fillet applied to a triangle](images/polygon-min-curvature.png)
+
+_Minimum curvature fillet applied to a triangle_
+
 ### `clean_polygon()`
 
 ```python
@@ -416,9 +441,9 @@ Offset (inflate/deflate) a polygon.
 | _Returns_    | `list[types.Polygon]`   | Offset polygon(s).                                                |
 | _Complexity_ |                         | O(n log n)                                                        |
 
-![Polygon offset (outward)](images/polygon-offset.png)
+![Polygon offset — miter vs round vs square join styles](images/polygon-offset.png)
 
-_Polygon offset (outward)_
+_Polygon offset — miter vs round vs square join styles_
 
 ### `point_in_polygon_numpy()`
 
