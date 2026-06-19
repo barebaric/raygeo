@@ -48,10 +48,11 @@ fn poly3d_to_points(poly: Vec<PyPoint3D>) -> Vec<Point3D> {
 
 #[gen_stub_pyfunction(
     python = r#"
+    import collections.abc
     import typing
     import raygeo.geo.types
 
-    def get_polygons_union_3d(polygons: typing.Any) -> list[types.Polygon3D]:
+    def get_polygons_union_3d(polygons: collections.abc.Sequence[types.Polygon3D]) -> list[types.Polygon3D]:
         """Compute the union of 3D polygons (XY-plane, Z preserved).
 
         :param polygons: List of 3D polygons.
@@ -71,9 +72,10 @@ fn get_polygons_union_3d_py(
 
 #[gen_stub_pyfunction(
     python = r#"
+    import collections.abc
     import raygeo.geo.types
 
-    def get_polygons_intersection_3d(poly1: typing.Any, poly2: typing.Any) -> list[types.Polygon3D]:
+    def get_polygons_intersection_3d(poly1: collections.abc.Sequence[types.Point3D], poly2: collections.abc.Sequence[types.Point3D]) -> list[types.Polygon3D]:
         """Compute the intersection of two 3D polygons (XY-plane, Z preserved).
 
         :param poly1: First 3D polygon.
@@ -96,9 +98,10 @@ fn get_polygons_intersection_3d_py(
 
 #[gen_stub_pyfunction(
     python = r#"
+    import collections.abc
     import raygeo.geo.types
 
-    def get_polygons_difference_3d(poly1: typing.Any, poly2: typing.Any) -> list[types.Polygon3D]:
+    def get_polygons_difference_3d(poly1: collections.abc.Sequence[types.Point3D], poly2: collections.abc.Sequence[types.Point3D]) -> list[types.Polygon3D]:
         """Compute the difference of two 3D polygons (poly1 - poly2).
 
         :param poly1: Subject 3D polygon.
@@ -121,9 +124,10 @@ fn get_polygons_difference_3d_py(
 
 #[gen_stub_pyfunction(
     python = r#"
+    import collections.abc
     import raygeo.geo.types
 
-    def get_polygons_group_intersection_3d(subject: typing.Any, clip: typing.Any) -> list[types.Polygon3D]:
+    def get_polygons_group_intersection_3d(subject: collections.abc.Sequence[types.Polygon3D], clip: collections.abc.Sequence[types.Polygon3D]) -> list[types.Polygon3D]:
         """Group intersection of 3D polygons (subject ∩ clip).
 
         :param subject: Subject group of 3D polygons.
@@ -146,9 +150,10 @@ fn get_polygons_group_intersection_3d_py(
 
 #[gen_stub_pyfunction(
     python = r#"
+    import collections.abc
     import raygeo.geo.types
 
-    def get_polygons_group_difference_3d(subject: typing.Any, clip: typing.Any) -> list[types.Polygon3D]:
+    def get_polygons_group_difference_3d(subject: collections.abc.Sequence[types.Polygon3D], clip: collections.abc.Sequence[types.Polygon3D]) -> list[types.Polygon3D]:
         """Group difference of 3D polygons (subject - clip).
 
         :param subject: Subject group of 3D polygons.
@@ -171,9 +176,10 @@ fn get_polygons_group_difference_3d_py(
 
 #[gen_stub_pyfunction(
     python = r#"
+    import collections.abc
     import raygeo.geo.types
 
-    def offset_polygon_3d(polygon: typing.Any, offset: float) -> list[types.Polygon3D]:
+    def offset_polygon_3d(polygon: collections.abc.Sequence[types.Point3D], offset: float) -> list[types.Polygon3D]:
         """Offset (inflate/deflate) a closed 3D polygon.
 
         :param polygon: Input 3D polygon.
@@ -289,11 +295,12 @@ fn get_polygon_bounds_3d_py(
 
 #[gen_stub_pyfunction(
     python = r#"
+    import collections.abc
     import typing
     import raygeo.geo.types
 
     def get_polygon_group_bounds_3d(
-        polygons: typing.Any,
+        polygons: collections.abc.Sequence[types.Polygon3D],
     ) -> types.Rect3D:
         """Get the 3D bounding box of a group of polygons.
 
@@ -426,11 +433,12 @@ fn translate_polygon_3d_py(
 
 #[gen_stub_pyfunction(
     python = r#"
+    import collections.abc
     import typing
     import raygeo.geo.types
 
     def translate_polygons_3d(
-        polygons: typing.Any,
+        polygons: collections.abc.Sequence[types.Polygon3D],
         dx: float,
         dy: float,
         dz: float = 0.0,
@@ -543,11 +551,12 @@ fn flip_polygon_3d_py(
 
 #[gen_stub_pyfunction(
     python = r#"
+    import collections.abc
     import typing
     import raygeo.geo.types
 
     def flip_polygons_3d(
-        polygons: typing.Any,
+        polygons: collections.abc.Sequence[types.Polygon3D],
         flip_h: bool = False,
         flip_v: bool = False,
         flip_z: bool = False,
@@ -608,11 +617,12 @@ fn rotate_polygon_3d_py(
 
 #[gen_stub_pyfunction(
     python = r#"
+    import collections.abc
     import typing
     import raygeo.geo.types
 
     def rotate_polygons_3d(
-        polygons: typing.Any,
+        polygons: collections.abc.Sequence[types.Polygon3D],
         angle: float,
     ) -> list[types.Polygon3D]:
         """Rotate multiple 3D polygons around the Z axis.

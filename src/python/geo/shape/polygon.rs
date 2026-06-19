@@ -180,7 +180,7 @@ fn is_almost_equal_py(a: f64, b: f64, tolerance: Option<f64>) -> bool {
     import typing
     import raygeo.geo.types
 
-    def normalize_polygons(polygons: typing.Any) -> tuple[list[types.Polygon], float, float]:
+    def normalize_polygons(polygons: collections.abc.Sequence[types.Polygon]) -> tuple[list[types.Polygon], float, float]:
         """Normalize polygons (outer CCW, inner CW).
 
         :param polygons: List of polygons to normalize.
@@ -235,7 +235,7 @@ fn translate_bounds_py(
     import typing
     import raygeo.geo.types
 
-    def translate_polygons(polygons: typing.Any, dx: float, dy: float) -> list[types.Polygon]:
+    def translate_polygons(polygons: collections.abc.Sequence[types.Polygon], dx: float, dy: float) -> list[types.Polygon]:
         """Translate a list of polygons.
 
         :param polygons: List of polygons to translate.
@@ -383,7 +383,7 @@ fn get_polygon_bounds_py(polygon: Vec<PyPoint2D>) -> (f64, f64, f64, f64) {
     import raygeo.geo.types
 
     def get_polygon_group_bounds(
-        polygons: typing.Any,
+        polygons: collections.abc.Sequence[types.Polygon],
     ) -> types.Rect:
         """Get the bounding rectangle of a group of polygons.
 
@@ -710,7 +710,7 @@ fn apply_minimum_curvature_py(
     import typing
     import raygeo.geo.types
 
-    def get_polygons_union(polygons: typing.Any) -> list[types.Polygon]:
+    def get_polygons_union(polygons: collections.abc.Sequence[types.Polygon]) -> list[types.Polygon]:
         """Get the union of multiple polygons.
 
         :param polygons: List of polygons to union.
@@ -919,7 +919,7 @@ fn flip_polygon_py(
     import raygeo.geo.types
 
     def flip_polygons(
-        polygons: typing.Any,
+        polygons: collections.abc.Sequence[types.Polygon],
         flip_h: bool,
         flip_v: bool,
     ) -> list[types.Polygon]:
@@ -973,7 +973,7 @@ fn rotate_polygon_py(polygon: Vec<PyPoint2D>, angle: f64) -> Vec<(f64, f64)> {
     import typing
     import raygeo.geo.types
 
-    def rotate_polygons(polygons: typing.Any, angle: float) -> list[types.Polygon]:
+    def rotate_polygons(polygons: collections.abc.Sequence[types.Polygon], angle: float) -> list[types.Polygon]:
         """Rotate multiple polygons by an angle.
 
         :param polygons: List of polygons to rotate.
@@ -1159,7 +1159,7 @@ fn polygon_group_bounds_numpy_py(
         polygon: numpy.typing.NDArray,
         flip_h: bool,
         flip_v: bool,
-    ) -> typing.Any:
+    ) -> numpy.typing.NDArray:
         """Flip a polygon from numpy array.
 
         :param polygon: Polygon as a 2D numpy array.
@@ -1187,7 +1187,7 @@ fn flip_polygon_numpy_py(
     python = r#"
     import typing
 
-    def flip_polygons_numpy(polygons: list, flip_h: bool, flip_v: bool) -> typing.Any:
+    def flip_polygons_numpy(polygons: collections.abc.Sequence[numpy.typing.NDArray], flip_h: bool, flip_v: bool) -> list[numpy.typing.NDArray]:
         """Flip polygons from numpy arrays.
 
         :param polygons: List of 2D numpy arrays.
@@ -1315,7 +1315,7 @@ fn polygons_intersect_numpy_py(
     def rotate_polygon_numpy(
         polygon: numpy.typing.NDArray,
         angle: float,
-    ) -> typing.Any:
+    ) -> numpy.typing.NDArray:
         """Rotate a polygon from numpy array.
 
         :param polygon: Polygon as a 2D numpy array.
@@ -1345,7 +1345,7 @@ fn rotate_polygon_numpy_py(
     def rotate_polygons_numpy(
         polygons: collections.abc.Sequence[numpy.typing.NDArray],
         angle: float,
-    ) -> typing.Any:
+    ) -> list[numpy.typing.NDArray]:
         """Rotate polygons from numpy arrays.
 
         :param polygons: Sequence of 2D numpy arrays.
@@ -1375,7 +1375,7 @@ fn rotate_polygons_numpy_py(
         polygon: numpy.typing.NDArray,
         dx: float,
         dy: float,
-    ) -> typing.Any:
+    ) -> numpy.typing.NDArray:
         """Translate a polygon from numpy array.
 
         :param polygon: Polygon as a 2D numpy array.
@@ -1408,7 +1408,7 @@ fn translate_polygon_numpy_py(
         polygons: collections.abc.Sequence[numpy.typing.NDArray],
         dx: float,
         dy: float,
-    ) -> typing.Any:
+    ) -> list[numpy.typing.NDArray]:
         """Translate polygons from numpy arrays.
 
         :param polygons: Sequence of 2D numpy arrays.

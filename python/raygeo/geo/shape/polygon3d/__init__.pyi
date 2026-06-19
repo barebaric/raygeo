@@ -39,7 +39,7 @@ def flip_polygon_3d(polygon: collections.abc.Sequence[types.Point3D], flip_h: bo
     :complexity: O(n)
     """
 
-def flip_polygons_3d(polygons: typing.Any, flip_h: bool = False, flip_v: bool = False, flip_z: bool = False) -> list[types.Polygon3D]:
+def flip_polygons_3d(polygons: collections.abc.Sequence[types.Polygon3D], flip_h: bool = False, flip_v: bool = False, flip_z: bool = False) -> list[types.Polygon3D]:
     r"""
     Flip multiple 3D polygons.
     
@@ -89,7 +89,7 @@ def get_polygon_edges_3d(polygon: collections.abc.Sequence[types.Point3D]) -> li
     :complexity: O(n)
     """
 
-def get_polygon_group_bounds_3d(polygons: typing.Any) -> types.Rect3D:
+def get_polygon_group_bounds_3d(polygons: collections.abc.Sequence[types.Polygon3D]) -> types.Rect3D:
     r"""
     Get the 3D bounding box of a group of polygons.
     
@@ -107,7 +107,7 @@ def get_polygon_perimeter_3d(polygon: collections.abc.Sequence[types.Point3D]) -
     :complexity: O(n)
     """
 
-def get_polygons_difference_3d(poly1: typing.Any, poly2: typing.Any) -> list[types.Polygon3D]:
+def get_polygons_difference_3d(poly1: collections.abc.Sequence[types.Point3D], poly2: collections.abc.Sequence[types.Point3D]) -> list[types.Polygon3D]:
     r"""
     Compute the difference of two 3D polygons (poly1 - poly2).
     
@@ -116,7 +116,7 @@ def get_polygons_difference_3d(poly1: typing.Any, poly2: typing.Any) -> list[typ
     :returns: Difference result with Z from first polygon.
     """
 
-def get_polygons_group_difference_3d(subject: typing.Any, clip: typing.Any) -> list[types.Polygon3D]:
+def get_polygons_group_difference_3d(subject: collections.abc.Sequence[types.Polygon3D], clip: collections.abc.Sequence[types.Polygon3D]) -> list[types.Polygon3D]:
     r"""
     Group difference of 3D polygons (subject - clip).
     
@@ -125,7 +125,7 @@ def get_polygons_group_difference_3d(subject: typing.Any, clip: typing.Any) -> l
     :returns: Difference result with Z from first subject polygon.
     """
 
-def get_polygons_group_intersection_3d(subject: typing.Any, clip: typing.Any) -> list[types.Polygon3D]:
+def get_polygons_group_intersection_3d(subject: collections.abc.Sequence[types.Polygon3D], clip: collections.abc.Sequence[types.Polygon3D]) -> list[types.Polygon3D]:
     r"""
     Group intersection of 3D polygons (subject ∩ clip).
     
@@ -134,7 +134,7 @@ def get_polygons_group_intersection_3d(subject: typing.Any, clip: typing.Any) ->
     :returns: Intersection result with Z from first subject polygon.
     """
 
-def get_polygons_intersection_3d(poly1: typing.Any, poly2: typing.Any) -> list[types.Polygon3D]:
+def get_polygons_intersection_3d(poly1: collections.abc.Sequence[types.Point3D], poly2: collections.abc.Sequence[types.Point3D]) -> list[types.Polygon3D]:
     r"""
     Compute the intersection of two 3D polygons (XY-plane, Z preserved).
     
@@ -143,7 +143,7 @@ def get_polygons_intersection_3d(poly1: typing.Any, poly2: typing.Any) -> list[t
     :returns: Intersection result with Z from first polygon.
     """
 
-def get_polygons_union_3d(polygons: typing.Any) -> list[types.Polygon3D]:
+def get_polygons_union_3d(polygons: collections.abc.Sequence[types.Polygon3D]) -> list[types.Polygon3D]:
     r"""
     Compute the union of 3D polygons (XY-plane, Z preserved).
     
@@ -151,7 +151,7 @@ def get_polygons_union_3d(polygons: typing.Any) -> list[types.Polygon3D]:
     :returns: Union result with Z from first polygon.
     """
 
-def offset_polygon_3d(polygon: typing.Any, offset: float) -> list[types.Polygon3D]:
+def offset_polygon_3d(polygon: collections.abc.Sequence[types.Point3D], offset: float) -> list[types.Polygon3D]:
     r"""
     Offset (inflate/deflate) a closed 3D polygon.
     
@@ -191,7 +191,7 @@ def rotate_polygon_3d(polygon: collections.abc.Sequence[types.Point3D], angle: f
     :complexity: O(n)
     """
 
-def rotate_polygons_3d(polygons: typing.Any, angle: float) -> list[types.Polygon3D]:
+def rotate_polygons_3d(polygons: collections.abc.Sequence[types.Polygon3D], angle: float) -> list[types.Polygon3D]:
     r"""
     Rotate multiple 3D polygons around the Z axis.
     
@@ -225,7 +225,7 @@ def translate_polygon_3d(polygon: collections.abc.Sequence[types.Point3D], dx: f
     :complexity: O(n)
     """
 
-def translate_polygons_3d(polygons: typing.Any, dx: float, dy: float, dz: float = 0) -> list[types.Polygon3D]:
+def translate_polygons_3d(polygons: collections.abc.Sequence[types.Polygon3D], dx: float, dy: float, dz: float = 0) -> list[types.Polygon3D]:
     r"""
     Translate a list of 3D polygons.
     

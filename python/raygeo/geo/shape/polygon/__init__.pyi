@@ -92,7 +92,7 @@ def flip_polygon(polygon: collections.abc.Sequence[types.Point], flip_h: bool, f
     :complexity: O(n)
     """
 
-def flip_polygon_numpy(polygon: numpy.typing.NDArray, flip_h: bool, flip_v: bool) -> typing.Any:
+def flip_polygon_numpy(polygon: numpy.typing.NDArray, flip_h: bool, flip_v: bool) -> numpy.typing.NDArray:
     r"""
     Flip a polygon from numpy array.
     
@@ -103,7 +103,7 @@ def flip_polygon_numpy(polygon: numpy.typing.NDArray, flip_h: bool, flip_v: bool
     :complexity: O(n)
     """
 
-def flip_polygons(polygons: typing.Any, flip_h: bool, flip_v: bool) -> list[types.Polygon]:
+def flip_polygons(polygons: collections.abc.Sequence[types.Polygon], flip_h: bool, flip_v: bool) -> list[types.Polygon]:
     r"""
     Flip multiple polygons.
     
@@ -114,7 +114,7 @@ def flip_polygons(polygons: typing.Any, flip_h: bool, flip_v: bool) -> list[type
     :complexity: O(n * m)
     """
 
-def flip_polygons_numpy(polygons: list, flip_h: bool, flip_v: bool) -> typing.Any:
+def flip_polygons_numpy(polygons: collections.abc.Sequence[numpy.typing.NDArray], flip_h: bool, flip_v: bool) -> list[numpy.typing.NDArray]:
     r"""
     Flip polygons from numpy arrays.
     
@@ -191,7 +191,7 @@ def get_polygon_edges(polygon: collections.abc.Sequence[types.Point]) -> list[tu
     :complexity: O(n)
     """
 
-def get_polygon_group_bounds(polygons: typing.Any) -> types.Rect:
+def get_polygon_group_bounds(polygons: collections.abc.Sequence[types.Polygon]) -> types.Rect:
     r"""
     Get the bounding rectangle of a group of polygons.
     
@@ -258,7 +258,7 @@ def get_polygons_intersection(poly1: collections.abc.Sequence[types.Point], poly
     :complexity: O(n log n)
     """
 
-def get_polygons_union(polygons: typing.Any) -> list[types.Polygon]:
+def get_polygons_union(polygons: collections.abc.Sequence[types.Polygon]) -> list[types.Polygon]:
     r"""
     Get the union of multiple polygons.
     
@@ -321,7 +321,7 @@ def is_polygon_convex(polygon: collections.abc.Sequence[types.Point]) -> bool:
     :complexity: O(n)
     """
 
-def normalize_polygons(polygons: typing.Any) -> tuple[list[types.Polygon], float, float]:
+def normalize_polygons(polygons: collections.abc.Sequence[types.Polygon]) -> tuple[list[types.Polygon], float, float]:
     r"""
     Normalize polygons (outer CCW, inner CW).
     
@@ -439,7 +439,7 @@ def rotate_polygon(polygon: collections.abc.Sequence[types.Point], angle: float)
     :complexity: O(n)
     """
 
-def rotate_polygon_numpy(polygon: numpy.typing.NDArray, angle: float) -> typing.Any:
+def rotate_polygon_numpy(polygon: numpy.typing.NDArray, angle: float) -> numpy.typing.NDArray:
     r"""
     Rotate a polygon from numpy array.
     
@@ -449,7 +449,7 @@ def rotate_polygon_numpy(polygon: numpy.typing.NDArray, angle: float) -> typing.
     :complexity: O(n)
     """
 
-def rotate_polygons(polygons: typing.Any, angle: float) -> list[types.Polygon]:
+def rotate_polygons(polygons: collections.abc.Sequence[types.Polygon], angle: float) -> list[types.Polygon]:
     r"""
     Rotate multiple polygons by an angle.
     
@@ -459,7 +459,7 @@ def rotate_polygons(polygons: typing.Any, angle: float) -> list[types.Polygon]:
     :complexity: O(n * m)
     """
 
-def rotate_polygons_numpy(polygons: collections.abc.Sequence[numpy.typing.NDArray], angle: float) -> typing.Any:
+def rotate_polygons_numpy(polygons: collections.abc.Sequence[numpy.typing.NDArray], angle: float) -> list[numpy.typing.NDArray]:
     r"""
     Rotate polygons from numpy arrays.
     
@@ -511,7 +511,7 @@ def translate_polygon(polygon: collections.abc.Sequence[types.Point], dx: float,
     :complexity: O(n)
     """
 
-def translate_polygon_numpy(polygon: numpy.typing.NDArray, dx: float, dy: float) -> typing.Any:
+def translate_polygon_numpy(polygon: numpy.typing.NDArray, dx: float, dy: float) -> numpy.typing.NDArray:
     r"""
     Translate a polygon from numpy array.
     
@@ -522,7 +522,7 @@ def translate_polygon_numpy(polygon: numpy.typing.NDArray, dx: float, dy: float)
     :complexity: O(n)
     """
 
-def translate_polygons(polygons: typing.Any, dx: float, dy: float) -> list[types.Polygon]:
+def translate_polygons(polygons: collections.abc.Sequence[types.Polygon], dx: float, dy: float) -> list[types.Polygon]:
     r"""
     Translate a list of polygons.
     
@@ -533,7 +533,7 @@ def translate_polygons(polygons: typing.Any, dx: float, dy: float) -> list[types
     :complexity: O(n * m)
     """
 
-def translate_polygons_numpy(polygons: collections.abc.Sequence[numpy.typing.NDArray], dx: float, dy: float) -> typing.Any:
+def translate_polygons_numpy(polygons: collections.abc.Sequence[numpy.typing.NDArray], dx: float, dy: float) -> list[numpy.typing.NDArray]:
     r"""
     Translate polygons from numpy arrays.
     

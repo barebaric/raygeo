@@ -127,8 +127,8 @@ def generate_segment_swept():
 def generate_boolean_union():
     """Boolean union."""
     n_seg = 64
-    union_a = _make_circle(10, n_seg)
-    union_b = [(-4, 0), (12, 0), (12, 8), (-4, 8)]
+    union_a = _make_circle(10.0, n_seg)
+    union_b = [(-4.0, 0.0), (12.0, 0.0), (12.0, 8.0), (-4.0, 8.0)]
     union_result = get_polygons_union([union_a, union_b])
     return _plot_boolean(union_a, union_b, union_result, "Union")
 
@@ -136,8 +136,8 @@ def generate_boolean_union():
 def generate_boolean_intersection():
     """Boolean intersection."""
     n_seg = 64
-    union_a = _make_circle(10, n_seg)
-    union_b = [(-4, 0), (12, 0), (12, 8), (-4, 8)]
+    union_a = _make_circle(10.0, n_seg)
+    union_b = [(-4.0, 0.0), (12.0, 0.0), (12.0, 8.0), (-4.0, 8.0)]
     inter_result = get_polygons_intersection(union_a, union_b)
     return _plot_boolean(union_a, union_b, inter_result, "Intersection")
 
@@ -145,15 +145,15 @@ def generate_boolean_intersection():
 def generate_boolean_difference():
     """Boolean difference."""
     n_seg = 64
-    union_a = _make_circle(10, n_seg)
-    union_b = [(-4, 0), (12, 0), (12, 8), (-4, 8)]
+    union_a = _make_circle(10.0, n_seg)
+    union_b = [(-4.0, 0.0), (12.0, 0.0), (12.0, 8.0), (-4.0, 8.0)]
     diff_result = get_polygons_difference(union_a, union_b)
     return _plot_boolean(union_a, union_b, diff_result, "Difference")
 
 
 def generate_offset():
     """Polygon offset."""
-    triangle = [(0, 0), (20, 0), (10, 18)]
+    triangle = [(0.0, 0.0), (20.0, 0.0), (10.0, 18.0)]
     styles = [("miter", "Miter"), ("round", "Round"), ("square", "Square")]
     style_colors = ["limegreen", "tomato", "dodgerblue"]
 

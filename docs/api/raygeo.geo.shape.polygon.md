@@ -72,7 +72,11 @@ Flip a polygon horizontally and/or vertically.
 ### `flip_polygon_numpy()`
 
 ```python
-flip_polygon_numpy(polygon: numpy.NDArray, flip_h: bool, flip_v: bool) -> Any
+flip_polygon_numpy(
+    polygon: numpy.NDArray,
+    flip_h: bool,
+    flip_v: bool,
+) -> numpy.NDArray
 ```
 
 Flip a polygon from numpy array.
@@ -82,40 +86,48 @@ Flip a polygon from numpy array.
 | `polygon`    | `numpy.NDArray` | Polygon as a 2D numpy array.    |
 | `flip_h`     | `bool`          | Whether to flip horizontally.   |
 | `flip_v`     | `bool`          | Whether to flip vertically.     |
-| _Returns_    | `Any`           | Flipped polygon as numpy array. |
+| _Returns_    | `numpy.NDArray` | Flipped polygon as numpy array. |
 | _Complexity_ |                 | O(n)                            |
 
 ### `flip_polygons()`
 
 ```python
-flip_polygons(polygons: Any, flip_h: bool, flip_v: bool) -> list[types.Polygon]
+flip_polygons(
+    polygons: Sequence[types.Polygon],
+    flip_h: bool,
+    flip_v: bool,
+) -> list[types.Polygon]
 ```
 
 Flip multiple polygons.
 
-| Parameter    | Type                  | Description                   |
-| ------------ | --------------------- | ----------------------------- |
-| `polygons`   | `Any`                 | List of polygons to flip.     |
-| `flip_h`     | `bool`                | Whether to flip horizontally. |
-| `flip_v`     | `bool`                | Whether to flip vertically.   |
-| _Returns_    | `list[types.Polygon]` | Flipped polygons.             |
-| _Complexity_ |                       | O(n \* m)                     |
+| Parameter    | Type                      | Description                   |
+| ------------ | ------------------------- | ----------------------------- |
+| `polygons`   | `Sequence[types.Polygon]` | List of polygons to flip.     |
+| `flip_h`     | `bool`                    | Whether to flip horizontally. |
+| `flip_v`     | `bool`                    | Whether to flip vertically.   |
+| _Returns_    | `list[types.Polygon]`     | Flipped polygons.             |
+| _Complexity_ |                           | O(n \* m)                     |
 
 ### `flip_polygons_numpy()`
 
 ```python
-flip_polygons_numpy(polygons: list, flip_h: bool, flip_v: bool) -> Any
+flip_polygons_numpy(
+    polygons: Sequence[numpy.NDArray],
+    flip_h: bool,
+    flip_v: bool,
+) -> list[numpy.NDArray]
 ```
 
 Flip polygons from numpy arrays.
 
-| Parameter    | Type   | Description                   |
-| ------------ | ------ | ----------------------------- |
-| `polygons`   | `list` | List of 2D numpy arrays.      |
-| `flip_h`     | `bool` | Whether to flip horizontally. |
-| `flip_v`     | `bool` | Whether to flip vertically.   |
-| _Returns_    | `Any`  | List of flipped numpy arrays. |
-| _Complexity_ |        | O(n \* m)                     |
+| Parameter    | Type                      | Description                   |
+| ------------ | ------------------------- | ----------------------------- |
+| `polygons`   | `Sequence[numpy.NDArray]` | List of 2D numpy arrays.      |
+| `flip_h`     | `bool`                    | Whether to flip horizontally. |
+| `flip_v`     | `bool`                    | Whether to flip vertically.   |
+| _Returns_    | `list[numpy.NDArray]`     | List of flipped numpy arrays. |
+| _Complexity_ |                           | O(n \* m)                     |
 
 ### `get_circle_polygon()`
 
@@ -235,16 +247,16 @@ Get the edges of a polygon.
 ### `get_polygon_group_bounds()`
 
 ```python
-get_polygon_group_bounds(polygons: Any) -> types.Rect
+get_polygon_group_bounds(polygons: Sequence[types.Polygon]) -> types.Rect
 ```
 
 Get the bounding rectangle of a group of polygons.
 
-| Parameter    | Type         | Description                                         |
-| ------------ | ------------ | --------------------------------------------------- |
-| `polygons`   | `Any`        | List of polygons.                                   |
-| _Returns_    | `types.Rect` | Bounding rectangle as (x_min, y_min, x_max, y_max). |
-| _Complexity_ |              | O(n \* m)                                           |
+| Parameter    | Type                      | Description                                         |
+| ------------ | ------------------------- | --------------------------------------------------- |
+| `polygons`   | `Sequence[types.Polygon]` | List of polygons.                                   |
+| _Returns_    | `types.Rect`              | Bounding rectangle as (x_min, y_min, x_max, y_max). |
+| _Complexity_ |                           | O(n \* m)                                           |
 
 ### `get_polygon_perimeter()`
 
@@ -357,16 +369,16 @@ _Polygon intersection_
 ### `get_polygons_union()`
 
 ```python
-get_polygons_union(polygons: Any) -> list[types.Polygon]
+get_polygons_union(polygons: Sequence[types.Polygon]) -> list[types.Polygon]
 ```
 
 Get the union of multiple polygons.
 
-| Parameter    | Type                  | Description                |
-| ------------ | --------------------- | -------------------------- |
-| `polygons`   | `Any`                 | List of polygons to union. |
-| _Returns_    | `list[types.Polygon]` | Union polygon(s).          |
-| _Complexity_ |                       | O(n log n)                 |
+| Parameter    | Type                      | Description                |
+| ------------ | ------------------------- | -------------------------- |
+| `polygons`   | `Sequence[types.Polygon]` | List of polygons to union. |
+| _Returns_    | `list[types.Polygon]`     | Union polygon(s).          |
+| _Complexity_ |                           | O(n log n)                 |
 
 ![Polygon union](images/geo-shape-polygon-boolean-union.png)
 
@@ -464,14 +476,16 @@ Check if a polygon is convex.
 ### `normalize_polygons()`
 
 ```python
-normalize_polygons(polygons: Any) -> tuple[list[types.Polygon], float, float]
+normalize_polygons(
+    polygons: Sequence[types.Polygon],
+) -> tuple[list[types.Polygon], float, float]
 ```
 
 Normalize polygons (outer CCW, inner CW).
 
 | Parameter    | Type                                       | Description                                   |
 | ------------ | ------------------------------------------ | --------------------------------------------- |
-| `polygons`   | `Any`                                      | List of polygons to normalize.                |
+| `polygons`   | `Sequence[types.Polygon]`                  | List of polygons to normalize.                |
 | _Returns_    | `tuple[list[types.Polygon], float, float]` | Tuple of (normalized_polygons, min_x, min_y). |
 | _Complexity_ |                                            | O(n log n)                                    |
 
@@ -664,7 +678,7 @@ Rotate a polygon by an angle.
 ### `rotate_polygon_numpy()`
 
 ```python
-rotate_polygon_numpy(polygon: numpy.NDArray, angle: float) -> Any
+rotate_polygon_numpy(polygon: numpy.NDArray, angle: float) -> numpy.NDArray
 ```
 
 Rotate a polygon from numpy array.
@@ -673,28 +687,34 @@ Rotate a polygon from numpy array.
 | ------------ | --------------- | ------------------------------- |
 | `polygon`    | `numpy.NDArray` | Polygon as a 2D numpy array.    |
 | `angle`      | `float`         | Rotation angle in degrees.      |
-| _Returns_    | `Any`           | Rotated polygon as numpy array. |
+| _Returns_    | `numpy.NDArray` | Rotated polygon as numpy array. |
 | _Complexity_ |                 | O(n)                            |
 
 ### `rotate_polygons()`
 
 ```python
-rotate_polygons(polygons: Any, angle: float) -> list[types.Polygon]
+rotate_polygons(
+    polygons: Sequence[types.Polygon],
+    angle: float,
+) -> list[types.Polygon]
 ```
 
 Rotate multiple polygons by an angle.
 
-| Parameter    | Type                  | Description                 |
-| ------------ | --------------------- | --------------------------- |
-| `polygons`   | `Any`                 | List of polygons to rotate. |
-| `angle`      | `float`               | Rotation angle in degrees.  |
-| _Returns_    | `list[types.Polygon]` | Rotated polygons.           |
-| _Complexity_ |                       | O(n \* m)                   |
+| Parameter    | Type                      | Description                 |
+| ------------ | ------------------------- | --------------------------- |
+| `polygons`   | `Sequence[types.Polygon]` | List of polygons to rotate. |
+| `angle`      | `float`                   | Rotation angle in degrees.  |
+| _Returns_    | `list[types.Polygon]`     | Rotated polygons.           |
+| _Complexity_ |                           | O(n \* m)                   |
 
 ### `rotate_polygons_numpy()`
 
 ```python
-rotate_polygons_numpy(polygons: Sequence[numpy.NDArray], angle: float) -> Any
+rotate_polygons_numpy(
+    polygons: Sequence[numpy.NDArray],
+    angle: float,
+) -> list[numpy.NDArray]
 ```
 
 Rotate polygons from numpy arrays.
@@ -703,7 +723,7 @@ Rotate polygons from numpy arrays.
 | ------------ | ------------------------- | ----------------------------- |
 | `polygons`   | `Sequence[numpy.NDArray]` | Sequence of 2D numpy arrays.  |
 | `angle`      | `float`                   | Rotation angle in degrees.    |
-| _Returns_    | `Any`                     | List of rotated numpy arrays. |
+| _Returns_    | `list[numpy.NDArray]`     | List of rotated numpy arrays. |
 | _Complexity_ |                           | O(n \* m)                     |
 
 ### `scale_polygon()`
@@ -779,7 +799,11 @@ Translate a polygon.
 ### `translate_polygon_numpy()`
 
 ```python
-translate_polygon_numpy(polygon: numpy.NDArray, dx: float, dy: float) -> Any
+translate_polygon_numpy(
+    polygon: numpy.NDArray,
+    dx: float,
+    dy: float,
+) -> numpy.NDArray
 ```
 
 Translate a polygon from numpy array.
@@ -789,24 +813,28 @@ Translate a polygon from numpy array.
 | `polygon`    | `numpy.NDArray` | Polygon as a 2D numpy array.       |
 | `dx`         | `float`         | X translation.                     |
 | `dy`         | `float`         | Y translation.                     |
-| _Returns_    | `Any`           | Translated polygon as numpy array. |
+| _Returns_    | `numpy.NDArray` | Translated polygon as numpy array. |
 | _Complexity_ |                 | O(n)                               |
 
 ### `translate_polygons()`
 
 ```python
-translate_polygons(polygons: Any, dx: float, dy: float) -> list[types.Polygon]
+translate_polygons(
+    polygons: Sequence[types.Polygon],
+    dx: float,
+    dy: float,
+) -> list[types.Polygon]
 ```
 
 Translate a list of polygons.
 
-| Parameter    | Type                  | Description                    |
-| ------------ | --------------------- | ------------------------------ |
-| `polygons`   | `Any`                 | List of polygons to translate. |
-| `dx`         | `float`               | X translation.                 |
-| `dy`         | `float`               | Y translation.                 |
-| _Returns_    | `list[types.Polygon]` | Translated polygons.           |
-| _Complexity_ |                       | O(n \* m)                      |
+| Parameter    | Type                      | Description                    |
+| ------------ | ------------------------- | ------------------------------ |
+| `polygons`   | `Sequence[types.Polygon]` | List of polygons to translate. |
+| `dx`         | `float`                   | X translation.                 |
+| `dy`         | `float`                   | Y translation.                 |
+| _Returns_    | `list[types.Polygon]`     | Translated polygons.           |
+| _Complexity_ |                           | O(n \* m)                      |
 
 ### `translate_polygons_numpy()`
 
@@ -815,7 +843,7 @@ translate_polygons_numpy(
     polygons: Sequence[numpy.NDArray],
     dx: float,
     dy: float,
-) -> Any
+) -> list[numpy.NDArray]
 ```
 
 Translate polygons from numpy arrays.
@@ -825,5 +853,5 @@ Translate polygons from numpy arrays.
 | `polygons`   | `Sequence[numpy.NDArray]` | Sequence of 2D numpy arrays.     |
 | `dx`         | `float`                   | X translation.                   |
 | `dy`         | `float`                   | Y translation.                   |
-| _Returns_    | `Any`                     | List of translated numpy arrays. |
+| _Returns_    | `list[numpy.NDArray]`     | List of translated numpy arrays. |
 | _Complexity_ |                           | O(n \* m)                        |

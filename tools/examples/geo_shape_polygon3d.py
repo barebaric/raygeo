@@ -44,7 +44,7 @@ def _make_square(r, ox=0.0, oy=0.0):
 
 
 def _lift(poly, z):
-    return [(x, y, z) for x, y in poly]
+    return [(x, y, float(z)) for x, y in poly]
 
 
 def _draw_polygon3d(ax, poly3d, color, label, linewidth=2, alpha=0.3):
@@ -92,10 +92,10 @@ def generate_boolean_union():
     """3D polygon union."""
     n_seg = 64
     r = 12
-    a_xy = _make_circle(r, n_seg, ox=-2, oy=0)
-    b_xy = _make_square(r, ox=2, oy=0)
-    a = _lift(a_xy, 3)
-    b = _lift(b_xy, 7)
+    a_xy = _make_circle(float(r), n_seg, ox=-2.0, oy=0.0)
+    b_xy = _make_square(float(r), ox=2.0, oy=0.0)
+    a = _lift(a_xy, 3.0)
+    b = _lift(b_xy, 7.0)
     result = get_polygons_union_3d([a, b])
     return _plot_3d_boolean(a, b, result, "3D Union (Z from A)")
 
