@@ -49,6 +49,28 @@ __images__ = [
         "doc": "raygeo.geo.algo.pde_mesh.md",
         "heading": "solve_laplace",
     },
+    {
+        "stem": "pde-mesh-multi-island",
+        "caption": "CDT triangulation of a square pocket with multiple"
+        " islands",
+        "doc": "raygeo.geo.algo.pde_mesh.md",
+        "heading": "build_triangle_mesh",
+    },
+    {
+        "stem": "pde-mesh-multi-island-laplace",
+        "caption": "Laplace solution on a multi-island domain — contour"
+        " lines morph smoothly between four inner islands and the outer"
+        " boundary",
+        "doc": "raygeo.geo.algo.pde_mesh.md",
+        "heading": "solve_laplace",
+    },
+    {
+        "stem": "pde-mesh-multi-island-gradient",
+        "caption": "Gradient field ∇u (red) and perpendicular flow ∇u⊥"
+        " (blue) on a multi-island domain",
+        "doc": "raygeo.geo.algo.pde_mesh.md",
+        "heading": "compute_gradient_field",
+    },
 ]
 
 import matplotlib.pyplot as plt
@@ -528,6 +550,230 @@ def generate_examples(output_dir):
                 " thickness is proportional to |K\u1d62\u2c7c|. Shorter"
                 " edges (in denser regions) produce larger stiffness values,"
                 " driving the Laplace solution\u2019s smoothness."
+            ),
+        }
+    )
+
+    # ── Example 8: Multi-island triangulation ────────────────────────────
+    outer_mi = [(0, 0), (100, 0), (100, 100), (0, 100)]
+    holes_mi = [
+        [(10, 60), (30, 60), (30, 80), (10, 80)],
+        [(60, 55), (85, 55), (85, 85), (60, 85)],
+        [(10, 10), (35, 10), (35, 30), (10, 30)],
+        [(60, 15), (75, 15), (75, 35), (60, 35)],
+    ]
+    mi_mesh = build_triangle_mesh(
+        outer_mi, holes_mi, tool_radius=0.0, min_angle=20.0
+    )
+
+    fig8, ax8 = plt.subplots(figsize=(7, 7))
+    ax8.set_aspect("equal")
+    ax8.set_xlim(-5, 105)
+    ax8.set_ylim(-5, 105)
+
+    _plot_mesh_wireframe(ax8, mi_mesh)
+    _plot_boundary(ax8, mi_mesh, "outer", "crimson", 2.0)
+    _plot_boundary(ax8, mi_mesh, "inner", "royalblue", 2.0)
+
+    xs_mo, ys_mo = zip(*outer_mi)
+    ax8.fill(xs_mo, ys_mo, alpha=0.04, color="crimson")
+    ax8.plot(
+        list(xs_mo) + [xs_mo[0]],
+        list(ys_mo) + [ys_mo[0]],
+        color="crimson",
+        linewidth=2.5,
+        label="Outer boundary (u=1)",
+    )
+    for hi, hole in enumerate(holes_mi):
+        xs_h, ys_h = zip(*hole)
+        label = "Inner boundaries (u=0)" if hi == 0 else None
+        ax8.fill(xs_h, ys_h, alpha=0.08, color="royalblue")
+        ax8.plot(
+            list(xs_h) + [xs_h[0]],
+            list(ys_h) + [ys_h[0]],
+            color="royalblue",
+            linewidth=2.5,
+            label=label,
+        )
+
+    ax8.set_title(
+        f"CDT triangulation with multiple islands\n"
+        f"({len(mi_mesh.vertices)} vertices,"
+        f" {len(mi_mesh.triangles)} triangles)",
+        fontsize=12,
+    )
+    ax8.legend(fontsize=10, loc="upper right")
+    ax8.grid(True, alpha=0.2)
+    fig8.tight_layout()
+    path8 = output_dir / "pde-mesh-multi-island.png"
+    fig8.savefig(path8, dpi=150)
+    plt.close(fig8)
+    images.append(
+        {
+            "path": "pde-mesh-multi-island.png",
+            "caption": (
+                "CDT triangulation of a square pocket with four inner"
+                " islands — each island is treated as an inner boundary"
+                " (u=0)"
+            ),
+        }
+    )
+
+    # ── Example 9: Multi-island Laplace solution ─────────────────────────
+    mi_u = solve_laplace(mi_mesh, max_iter=2000, tolerance=1e-10)
+
+    mi_verts = mi_mesh.vertices
+    mi_x = np.asarray([v[0] for v in mi_verts])
+    mi_y = np.asarray([v[1] for v in mi_verts])
+    mi_tris = np.asarray(mi_mesh.triangles)
+    mi_u_arr = np.asarray(mi_u)
+    mi_triang = Triangulation(mi_x, mi_y, mi_tris)
+
+    fig9, ax9 = plt.subplots(figsize=(7, 7))
+    ax9.set_aspect("equal")
+    ax9.set_xlim(-5, 105)
+    ax9.set_ylim(-5, 105)
+
+    tcf9 = ax9.tripcolor(
+        mi_triang, mi_u_arr, cmap="coolwarm", shading="gouraud"
+    )
+    cbar9 = fig9.colorbar(tcf9, ax=ax9, shrink=0.8)
+    cbar9.set_label("Scalar field u(x,y)", fontsize=10)
+
+    ax9.plot(
+        list(xs_mo) + [xs_mo[0]],
+        list(ys_mo) + [ys_mo[0]],
+        color="darkred",
+        linewidth=2,
+        label="Outer (u=1)",
+    )
+    for hi, hole in enumerate(holes_mi):
+        xs_h, ys_h = zip(*hole)
+        label = "Inners (u=0)" if hi == 0 else None
+        ax9.plot(
+            list(xs_h) + [xs_h[0]],
+            list(ys_h) + [ys_h[0]],
+            color="darkblue",
+            linewidth=2,
+            label=label,
+        )
+
+    levels_mi = np.linspace(0, 1, 9)
+    ax9.tricontour(
+        mi_triang,
+        mi_u_arr,
+        levels=levels_mi,
+        colors="black",
+        linewidths=0.5,
+        alpha=0.3,
+    )
+
+    ax9.set_title(
+        "Laplace solution Δu = 0 on multi-island domain\n"
+        "(u=0 on islands, u=1 on outer boundary)",
+        fontsize=12,
+    )
+    ax9.legend(fontsize=10, loc="upper right")
+    ax9.grid(True, alpha=0.2)
+    fig9.tight_layout()
+    path9 = output_dir / "pde-mesh-multi-island-laplace.png"
+    fig9.savefig(path9, dpi=150)
+    plt.close(fig9)
+    images.append(
+        {
+            "path": "pde-mesh-multi-island-laplace.png",
+            "caption": (
+                "Laplace solution on a triangle mesh with four inner"
+                " islands — the scalar field smoothly transitions from"
+                " u=0 on each island to u=1 on the outer boundary"
+            ),
+        }
+    )
+
+    # ── Example 10: Multi-island gradient field ──────────────────────────
+    mi_grad = compute_gradient_field(mi_mesh, mi_u)
+
+    mi_cx = np.empty(len(mi_mesh.triangles))
+    mi_cy = np.empty(len(mi_mesh.triangles))
+    mi_gx = np.empty(len(mi_mesh.triangles))
+    mi_gy = np.empty(len(mi_mesh.triangles))
+    for ti, (a, b, c) in enumerate(mi_mesh.triangles):
+        mi_cx[ti] = (mi_verts[a][0] + mi_verts[b][0] + mi_verts[c][0]) / 3.0
+        mi_cy[ti] = (mi_verts[a][1] + mi_verts[b][1] + mi_verts[c][1]) / 3.0
+        mi_gx[ti], mi_gy[ti] = mi_grad[ti]
+
+    mi_mag = np.hypot(mi_gx, mi_gy)
+    mi_valid = mi_mag > 1e-10
+    mi_qx = np.where(mi_valid, mi_gx / mi_mag, 0.0)
+    mi_qy = np.where(mi_valid, mi_gy / mi_mag, 0.0)
+    mi_px = np.where(mi_valid, -mi_gy / mi_mag, 0.0)
+    mi_py = np.where(mi_valid, mi_gx / mi_mag, 0.0)
+
+    fig10, ax10 = plt.subplots(figsize=(7, 7))
+    ax10.set_aspect("equal")
+    ax10.set_xlim(-5, 105)
+    ax10.set_ylim(-5, 105)
+
+    tcf10 = ax10.tripcolor(
+        mi_triang, mi_u_arr, cmap="coolwarm", shading="gouraud"
+    )
+    ax10.quiver(
+        mi_cx[mi_valid],
+        mi_cy[mi_valid],
+        mi_qx[mi_valid],
+        mi_qy[mi_valid],
+        color="darkred",
+        alpha=0.7,
+        scale=25,
+        width=0.002,
+        label=r"$\nabla u$",
+    )
+    ax10.quiver(
+        mi_cx[mi_valid],
+        mi_cy[mi_valid],
+        mi_px[mi_valid],
+        mi_py[mi_valid],
+        color="darkblue",
+        alpha=0.5,
+        scale=25,
+        width=0.002,
+        label=r"$\nabla u^\perp$",
+    )
+    ax10.plot(
+        list(xs_mo) + [xs_mo[0]],
+        list(ys_mo) + [ys_mo[0]],
+        color="black",
+        linewidth=1.5,
+    )
+    for hole in holes_mi:
+        xs_h, ys_h = zip(*hole)
+        ax10.plot(
+            list(xs_h) + [xs_h[0]],
+            list(ys_h) + [ys_h[0]],
+            color="black",
+            linewidth=1.5,
+        )
+
+    cbar10 = fig10.colorbar(tcf10, ax=ax10, shrink=0.8)
+    cbar10.set_label("u(x,y)", fontsize=10)
+    ax10.set_title(
+        "Gradient field on multi-island Laplace solution\n"
+        r"$\nabla u$ (red), $\nabla u^\perp$ (blue)",
+        fontsize=12,
+    )
+    ax10.legend(fontsize=10, loc="upper right")
+    ax10.grid(True, alpha=0.2)
+    fig10.tight_layout()
+    path10 = output_dir / "pde-mesh-multi-island-gradient.png"
+    fig10.savefig(path10, dpi=150)
+    plt.close(fig10)
+    images.append(
+        {
+            "path": "pde-mesh-multi-island-gradient.png",
+            "caption": (
+                "Gradient field on a multi-island Laplace solution —"
+                " the vector fields flow between the four inner islands"
+                " and the outer boundary"
             ),
         }
     )

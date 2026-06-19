@@ -62,6 +62,10 @@ Build a constrained Delaunay triangle mesh from polygon boundaries.
 | _Returns_     | `TriangleMesh`                         | TriangleMesh with boundary tags.                       |
 | _Complexity_  |                                        | O(n log n) time, O(n) space                            |
 
+![CDT triangulation of a square pocket with multiple islands](images/pde-mesh-multi-island.png)
+
+_CDT triangulation of a square pocket with multiple islands_
+
 ![CDT triangulation of a square pocket with centred hole](images/pde-mesh-triangulation.png)
 
 _CDT triangulation of a square pocket with centred hole_
@@ -91,6 +95,10 @@ triangle of the mesh (piecewise constant).
 | _Returns_    | `list[tuple[float, float]]` | List of (gx, gy) pairs, one per triangle in mesh order. |
 | _Complexity_ |                             | O(t) time where t is the number of triangles            |
 
+![Gradient field ∇u (red) and perpendicular flow ∇u⊥ (blue) on a multi-island domain](images/pde-mesh-multi-island-gradient.png)
+
+_Gradient field ∇u (red) and perpendicular flow ∇u⊥ (blue) on a multi-island domain_
+
 ![Gradient field ∇u (red) and perpendicular flow ∇u⊥ (blue) on the Laplace solution](images/pde-mesh-gradient-field.png)
 
 _Gradient field ∇u (red) and perpendicular flow ∇u⊥ (blue) on the Laplace solution_
@@ -117,6 +125,11 @@ inner boundary vertices to u=0.0.
 | `tolerance`  | `float = 1e-08` | Convergence tolerance for CG residual.                |
 | _Returns_    | `list[float]`   | List of scalar u values, one per vertex.              |
 | _Complexity_ |                 | O(k \* n) time where k is the number of CG iterations |
+
+![Laplace solution on a multi-island domain — contour lines morph smoothly between four inner islands and the outer boundary](images/pde-mesh-multi-island-laplace.png)
+
+_Laplace solution on a multi-island domain — contour lines morph smoothly between four inner islands
+and the outer boundary_
 
 ![Stiffness matrix edge weights on the mesh — line thickness ∝ |Kᵢⱼ|](images/pde-mesh-stiffness-spy.png)
 

@@ -42,3 +42,8 @@ the inner boundary (u=0) to the outer boundary (u=1) without self-intersections.
 ![Spiral toolpath traced on the Laplace solution — path morphs smoothly from the inner hole outward](images/pde-spiral-path.png)
 
 _Spiral toolpath traced on the Laplace solution — path morphs smoothly from the inner hole outward_
+
+![Spiral toolpath traced on a multi-island Laplace solution — path navigates around four inner islands](images/pde-spiral-multi-island.png)
+
+_Spiral toolpath traced on a multi-island Laplace solution — path navigates around four inner
+islands_
