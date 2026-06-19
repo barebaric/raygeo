@@ -7,7 +7,12 @@ Provides concentric inward offset generation for adaptive clearing
 and pocketing toolpath generation.
 ";
 
-use crate::geo::algo::offset::concentric_offsets as rust_concentric_offsets;
+use super::super::flex_point::{poly_to_points, polygons_to_tuples, PyPoint2D};
+use crate::geo::algo::offset::{
+    concentric_offsets as rust_concentric_offsets, offset_contour_group,
+};
+use crate::geo::shape::polygon::JoinStyle;
+use crate::types::{Point as GeoPoint, Polygon as GeoPolygon};
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::gen_stub_pyfunction;
 
@@ -16,7 +21,7 @@ pub fn register(algo_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     let m = PyModule::new(py, "offset")?;
     m.setattr("__doc__", MODULE_DOC_OFFSET)?;
 
-    register_functions!(m, concentric_offsets_py,);
+    register_functions!(m, concentric_offsets_py, offset_contour_group_py,);
 
     algo_mod.add_submodule(&m)?;
     Ok(())
@@ -64,4 +69,60 @@ fn concentric_offsets_py(
         .into_iter()
         .map(|g| super::super::Geometry { inner: g })
         .collect()
+}
+
+#[gen_stub_pyfunction(
+    python = r#"
+    import collections.abc
+    import raygeo.geo.types
+
+    def offset_contour_group(
+        solid_path: collections.abc.Sequence[raygeo.geo.types.Point],
+        hole_paths: collections.abc.Sequence[collections.abc.Sequence[raygeo.geo.types.Point]],
+        offset: float,
+        join_style: str = "miter",
+    ) -> list[raygeo.geo.types.Polygon]:
+        """Offset a solid contour with its hole contours.
+
+        Offsets the solid outward (or inward for negative offset) while
+        offsetting holes in the opposite direction and subtracting them
+        from the solid result.
+
+        :param solid_path: Outer boundary polygon as (x, y) points.
+        :param hole_paths: List of hole polygons.
+        :param offset: Offset distance (positive to inflate, negative to deflate).
+        :param join_style: Corner join style: ``"miter"`` (default), ``"round"``, or ``"square"``.
+        :returns: Offset polygon(s) with holes subtracted.
+        :complexity: O(n log n)
+        """
+"#,
+    module = "raygeo.geo.algo.offset"
+)]
+#[pyfunction(name = "offset_contour_group")]
+#[pyo3(signature = (solid_path, hole_paths, offset, join_style = "miter"))]
+fn offset_contour_group_py(
+    solid_path: Vec<PyPoint2D>,
+    hole_paths: Vec<Vec<(f64, f64)>>,
+    offset: f64,
+    join_style: &str,
+) -> PyResult<Vec<Vec<(f64, f64)>>> {
+    let style = match join_style {
+        "miter" => JoinStyle::Miter,
+        "round" => JoinStyle::Round,
+        "square" => JoinStyle::Square,
+        other => {
+            return Err(pyo3::exceptions::PyValueError::new_err(format!(
+                "invalid join_style '{}': expected 'miter', 'round', or 'square'",
+                other
+            )));
+        }
+    };
+    let solid = poly_to_points(solid_path);
+    let holes: Vec<GeoPolygon> = hole_paths
+        .into_iter()
+        .map(|h| h.into_iter().map(|(x, y)| GeoPoint::new(x, y)).collect())
+        .collect();
+    Ok(polygons_to_tuples(offset_contour_group(
+        &solid, &holes, offset, style,
+    )))
 }

@@ -402,17 +402,19 @@ Normalize polygons from numpy arrays.
 offset_polygon(
     polygon: Sequence[types.Point],
     offset: float,
+    join_style: str = 'miter',
 ) -> list[types.Polygon]
 ```
 
 Offset (inflate/deflate) a polygon.
 
-| Parameter    | Type                    | Description                                                 |
-| ------------ | ----------------------- | ----------------------------------------------------------- |
-| `polygon`    | `Sequence[types.Point]` | Polygon as (x, y) points.                                   |
-| `offset`     | `float`                 | Offset distance (positive to inflate, negative to deflate). |
-| _Returns_    | `list[types.Polygon]`   | Offset polygon(s).                                          |
-| _Complexity_ |                         | O(n log n)                                                  |
+| Parameter    | Type                    | Description                                                       |
+| ------------ | ----------------------- | ----------------------------------------------------------------- |
+| `polygon`    | `Sequence[types.Point]` | Polygon as (x, y) points.                                         |
+| `offset`     | `float`                 | Offset distance (positive to inflate, negative to deflate).       |
+| `join_style` | `str = 'miter'`         | Corner join style: `"miter"` (default), `"round"`, or `"square"`. |
+| _Returns_    | `list[types.Polygon]`   | Offset polygon(s).                                                |
+| _Complexity_ |                         | O(n log n)                                                        |
 
 ![Polygon offset (outward)](images/polygon-offset.png)
 

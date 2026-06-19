@@ -49,10 +49,11 @@ pub use polygon::{
     get_polygons_group_difference, get_polygons_group_intersection,
     get_polygons_intersection, get_polygons_union, is_almost_equal,
     is_point_in_polygon, is_polygon_clockwise, is_polygon_convex,
-    normalize_polygons, offset_polygon, path_to_polygon, paths_to_polygons,
-    point_line_distance, polygon_to_path, polygons_to_paths, rotate_polygon,
-    rotate_polygons, scale_polygon, translate_bounds, translate_polygon,
-    translate_polygons, ClipperPath, ClipperPaths, GeoScale,
+    normalize_polygons, offset_polygon_with_style, path_to_polygon,
+    paths_to_polygons, point_line_distance, polygon_to_path, polygons_to_paths,
+    rotate_polygon, rotate_polygons, scale_polygon, translate_bounds,
+    translate_polygon, translate_polygons, ClipperPath, ClipperPaths, GeoScale,
+    JoinStyle,
 };
 pub use polygon3d::{
     flip_polygon_3d, flip_polygons_3d, get_polygon_bounds_3d,

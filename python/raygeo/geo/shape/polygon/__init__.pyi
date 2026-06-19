@@ -284,12 +284,13 @@ def normalize_polygons_numpy(polygons: collections.abc.Sequence[numpy.typing.NDA
     :complexity: O(n log n)
     """
 
-def offset_polygon(polygon: collections.abc.Sequence[types.Point], offset: float) -> list[types.Polygon]:
+def offset_polygon(polygon: collections.abc.Sequence[types.Point], offset: float, join_style: str = 'miter') -> list[types.Polygon]:
     r"""
     Offset (inflate/deflate) a polygon.
     
     :param polygon: Polygon as (x, y) points.
     :param offset: Offset distance (positive to inflate, negative to deflate).
+    :param join_style: Corner join style: ``"miter"`` (default), ``"round"``, or ``"square"``.
     :returns: Offset polygon(s).
     :complexity: O(n log n)
     """

@@ -8,7 +8,7 @@ use nalgebra_sparse::coo::CooMatrix;
 use nalgebra_sparse::csr::CsrMatrix;
 
 use crate::geo::shape::polygon::{
-    is_point_in_polygon, offset_polygon as offset_poly,
+    is_point_in_polygon, offset_polygon_with_style as offset_poly, JoinStyle,
 };
 use crate::types::Point;
 
@@ -51,7 +51,7 @@ pub fn build_triangle_mesh(
     }
 
     let offset_result = if tool_radius.abs() > 1e-12 {
-        offset_poly(&outer.to_vec(), -tool_radius)
+        offset_poly(&outer.to_vec(), -tool_radius, JoinStyle::Miter)
     } else {
         Vec::new()
     };

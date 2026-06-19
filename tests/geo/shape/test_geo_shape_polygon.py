@@ -609,6 +609,33 @@ class TestPolygonOffset:
     def test_degenerate_less_than_3_points(self):
         assert offset_polygon(P((0, 0), (1, 0)), 0.1) == []
 
+    def test_join_style_default_miter(self):
+        """offset_polygon defaults to miter join style (backward compat)."""
+        polygon = P((0, 0), (10, 0), (5, 10))
+        miter = offset_polygon(polygon, 1.0)
+        explicit = offset_polygon(polygon, 1.0, join_style="miter")
+        assert miter == explicit
+
+    def test_join_style_round(self):
+        """Round join style produces different geometry from miter."""
+        polygon = P((0, 0), (10, 0), (5, 10))
+        miter = offset_polygon(polygon, 1.0, join_style="miter")
+        round_ = offset_polygon(polygon, 1.0, join_style="round")
+        # Round joins should produce more points than miter joins
+        assert len(round_[0]) > len(miter[0])
+
+    def test_join_style_square(self):
+        """Square join style should succeed without error."""
+        polygon = P((0, 0), (10, 0), (5, 10))
+        result = offset_polygon(polygon, 1.0, join_style="square")
+        assert len(result) >= 1
+
+    def test_join_style_invalid(self):
+        """Invalid join_style should raise ValueError."""
+        polygon = P((0, 0), (10, 0), (5, 10))
+        with pytest.raises(ValueError, match="invalid join_style"):
+            offset_polygon(polygon, 1.0, join_style="nonexistent")
+
 
 class TestPolygonBooleanOps:
     def test_union(self):

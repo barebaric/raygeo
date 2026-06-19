@@ -9,8 +9,10 @@ and pocketing toolpath generation.
 
 import collections.abc
 import raygeo
+from raygeo.geo import types
 __all__ = [
     "concentric_offsets",
+    "offset_contour_group",
 ]
 
 def concentric_offsets(geom: raygeo.Geometry, step: float, max_passes: int = 10, min_area: float = 1) -> list[raygeo.Geometry]:
@@ -27,5 +29,21 @@ def concentric_offsets(geom: raygeo.Geometry, step: float, max_passes: int = 10,
     :param min_area: Minimum area to stop at (default 1.0).
     :returns: List of offset geometries, outermost first.
     :complexity: O(n * p) time, O(n) space where n is the number of contour vertices and p the number of passes
+    """
+
+def offset_contour_group(solid_path: collections.abc.Sequence[raygeo.geo.types.Point], hole_paths: collections.abc.Sequence[collections.abc.Sequence[raygeo.geo.types.Point]], offset: float, join_style: str = 'miter') -> list[raygeo.geo.types.Polygon]:
+    r"""
+    Offset a solid contour with its hole contours.
+    
+    Offsets the solid outward (or inward for negative offset) while
+    offsetting holes in the opposite direction and subtracting them
+    from the solid result.
+    
+    :param solid_path: Outer boundary polygon as (x, y) points.
+    :param hole_paths: List of hole polygons.
+    :param offset: Offset distance (positive to inflate, negative to deflate).
+    :param join_style: Corner join style: ``"miter"`` (default), ``"round"``, or ``"square"``.
+    :returns: Offset polygon(s) with holes subtracted.
+    :complexity: O(n log n)
     """
 

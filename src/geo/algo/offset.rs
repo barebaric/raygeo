@@ -20,7 +20,9 @@ use crate::geo::algo::topology::{
     split_into_contours,
 };
 use crate::geo::geometry::Geometry;
-use crate::geo::shape::polygon::{get_polygons_difference, offset_polygon};
+use crate::geo::shape::polygon::{
+    get_polygons_difference, offset_polygon_with_style, JoinStyle,
+};
 use crate::types::{Point, Point3D, Polygon};
 
 #[derive(Clone, Debug)]
@@ -71,25 +73,27 @@ fn prepare_contour_items(
     items
 }
 
-fn offset_contour_group(
+pub fn offset_contour_group(
     solid_path: &Polygon,
     hole_paths: &[Polygon],
     offset: f64,
+    join_style: JoinStyle,
 ) -> Vec<Polygon> {
     if solid_path.len() < 3 {
         return vec![];
     }
     if hole_paths.is_empty() {
-        return offset_polygon(solid_path, offset);
+        return offset_polygon_with_style(solid_path, offset, join_style);
     }
     // Offset solid and holes separately, then subtract holes from solid.
     // For positive offset (grow): solid expands outward, hole contracts (inward).
     // For negative offset (shrink): solid contracts, hole expands.
     // The hole offset direction is always opposite to the solid offset.
-    let offset_solids = offset_polygon(solid_path, offset);
+    let offset_solids =
+        offset_polygon_with_style(solid_path, offset, join_style);
     let mut final_polys = offset_solids;
     for hole in hole_paths {
-        let offset_holes = offset_polygon(hole, -offset);
+        let offset_holes = offset_polygon_with_style(hole, -offset, join_style);
         for offset_hole in &offset_holes {
             let mut new_result = Vec::new();
             for poly in final_polys.drain(..) {
@@ -158,8 +162,12 @@ pub fn grow_geometry(geometry: &Geometry, offset: f64) -> Geometry {
                     .map(|&idx| closed_items[idx].path.clone())
             })
             .collect();
-        let offset_contours =
-            offset_contour_group(&solid_item.path, &hole_paths, offset);
+        let offset_contours = offset_contour_group(
+            &solid_item.path,
+            &hole_paths,
+            offset,
+            JoinStyle::Miter,
+        );
         for new_vertices in offset_contours {
             let z = solid_item.z;
             let points: Vec<Point3D> = new_vertices

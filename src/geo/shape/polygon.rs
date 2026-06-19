@@ -2,7 +2,7 @@
 //!
 //! # Planar-only (XY-plane) operations
 //!
-//! All Boolean functions in this module (`offset_polygon`,
+//! All Boolean functions in this module (`offset_polygon_with_style`,
 //! `get_polygons_union`, `get_polygons_intersection`,
 //! `get_polygons_difference`, `get_polygons_group_intersection`,
 //! `get_polygons_group_difference`) are **strictly 2D** — they operate on
@@ -23,6 +23,15 @@ use clipper2::{
 };
 
 use crate::types::{Edge, Point, Polygon, Rect};
+
+/// Join style for offset operations, matching clipper2 semantics.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
+pub enum JoinStyle {
+    #[default]
+    Miter,
+    Round,
+    Square,
+}
 
 /// Custom point scaler matching Python's CLIPPER_SCALE = 10^7.
 #[derive(Debug, Default, Clone, Copy, PartialEq, Hash)]
@@ -457,19 +466,27 @@ pub fn clean_polygon(polygon: &Polygon, tolerance: f64) -> Option<Polygon> {
     Some(result)
 }
 
-/// Offset (inflate/deflate) a polygon.
-/// Offset (inflate/deflate) a closed polygon using Clipper2.
+/// Offset (inflate/deflate) a polygon with a specific join style.
 ///
 /// **Planar (XY-plane only).** Z is not modeled.
-pub fn offset_polygon(polygon: &Polygon, offset: f64) -> Vec<Polygon> {
+pub fn offset_polygon_with_style(
+    polygon: &Polygon,
+    offset: f64,
+    join_style: JoinStyle,
+) -> Vec<Polygon> {
     if polygon.len() < 3 {
         return vec![];
     }
     if offset.abs() < 1e-9 {
         return vec![polygon.clone()];
     }
+    let clipper_join = match join_style {
+        JoinStyle::Miter => JoinType::Miter,
+        JoinStyle::Round => JoinType::Round,
+        JoinStyle::Square => JoinType::Square,
+    };
     let path = polygon_to_path(polygon);
-    let result = path.inflate(offset, JoinType::Miter, EndType::Polygon, 2.0);
+    let result = path.inflate(offset, clipper_join, EndType::Polygon, 2.0);
     let mut output = Vec::new();
     for p in result.iter() {
         let poly = path_to_polygon(p);

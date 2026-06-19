@@ -1,5 +1,7 @@
+import pytest
+
 from raygeo.geo import Geometry
-from raygeo.geo.algo.offset import concentric_offsets
+from raygeo.geo.algo.offset import concentric_offsets, offset_contour_group
 
 
 def make_rect(x0, y0, x1, y1):
@@ -109,3 +111,52 @@ def test_concentric_z_preserved():
     for off in offsets:
         cmd = off.data[0]
         assert cmd.end[2] == -5, f"expected z=-5, got {cmd.end[2]}"
+
+
+def P(*pts):
+    """Shorthand: list of (x, y) tuples."""
+    return list(pts)
+
+
+def test_offset_contour_group_basic():
+    """Offset a solid without holes."""
+    poly = P((0, 0), (10, 0), (5, 10))
+    result = offset_contour_group(poly, [], 1.0)
+    assert len(result) >= 1
+
+
+def test_offset_contour_group_with_hole():
+    """Offset a solid with a hole."""
+    outer = P((0, 0), (100, 0), (100, 100), (0, 100))
+    hole = P((30, 30), (70, 30), (70, 70), (30, 70))
+    result = offset_contour_group(outer, [hole], 5.0)
+    assert len(result) >= 1
+
+
+def test_offset_contour_group_shrink():
+    """Negative offset (shrink) works."""
+    poly = P((0, 0), (10, 0), (5, 10))
+    result = offset_contour_group(poly, [], -0.5)
+    assert len(result) >= 1
+
+
+def test_offset_contour_group_join_style_round():
+    """Round join style produces distinct geometry from miter."""
+    poly = P((0, 0), (10, 0), (5, 10))
+    miter = offset_contour_group(poly, [], 1.0, join_style="miter")
+    round_ = offset_contour_group(poly, [], 1.0, join_style="round")
+    assert len(round_[0]) > len(miter[0])
+
+
+def test_offset_contour_group_join_style_square():
+    """Square join style should succeed without error."""
+    poly = P((0, 0), (10, 0), (5, 10))
+    result = offset_contour_group(poly, [], 1.0, join_style="square")
+    assert len(result) >= 1
+
+
+def test_offset_contour_group_invalid_join_style():
+    """Invalid join_style should raise ValueError."""
+    poly = P((0, 0), (10, 0), (5, 10))
+    with pytest.raises(ValueError, match="invalid join_style"):
+        offset_contour_group(poly, [], 1.0, join_style="nonexistent")
