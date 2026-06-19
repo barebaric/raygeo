@@ -26,6 +26,29 @@ __images__ = [
         "doc": "raygeo.geo.algo.pde_mesh.md",
         "heading": "solve_laplace",
     },
+    {
+        "stem": "pde-mesh-gradient-field",
+        "caption": "Gradient field ∇u (red) and perpendicular flow ∇u⊥ (blue)"
+        " on the Laplace solution",
+        "doc": "raygeo.geo.algo.pde_mesh.md",
+        "heading": "compute_gradient_field",
+    },
+    {
+        "stem": "pde-mesh-convergence",
+        "caption": "Conjugate gradient convergence — residual norm per"
+        " iteration",
+        "doc": "raygeo.geo.algo.pde_mesh.md",
+        "heading": "solve_laplace_with_history",
+    },
+    {
+        "stem": "pde-mesh-stiffness-spy",
+        "caption": (
+            "Stiffness matrix edge weights on the mesh — line"
+            " thickness ∝ |Kᵢⱼ|"
+        ),
+        "doc": "raygeo.geo.algo.pde_mesh.md",
+        "heading": "solve_laplace",
+    },
 ]
 
 import matplotlib.pyplot as plt
@@ -33,7 +56,12 @@ import numpy as np
 from matplotlib.collections import LineCollection
 from matplotlib.tri import Triangulation
 
-from raygeo.geo.algo.pde_mesh import build_triangle_mesh, solve_laplace
+from raygeo.geo.algo.pde_mesh import (
+    build_triangle_mesh,
+    compute_gradient_field,
+    solve_laplace,
+    solve_laplace_with_history,
+)
 
 
 def _plot_mesh_wireframe(ax, mesh, edge_color="gray", edge_alpha=0.5):
@@ -291,6 +319,215 @@ def generate_examples(output_dir):
             "caption": (
                 "Laplace solution on an L-shaped mesh — the scalar field"
                 " captures the re-entrant geometry naturally"
+            ),
+        }
+    )
+
+    # ── Example 5: Gradient field quiver plot ────────────────────────────
+    # Use the hole mesh + Laplace solution from example 2
+    grad = compute_gradient_field(mesh, u)
+
+    # Triangle centroids and gradient vectors
+    cx_arr = np.empty(len(mesh.triangles))
+    cy_arr = np.empty(len(mesh.triangles))
+    gx_arr = np.empty(len(mesh.triangles))
+    gy_arr = np.empty(len(mesh.triangles))
+    for ti, (a, b, c) in enumerate(mesh.triangles):
+        cx_arr[ti] = (verts[a][0] + verts[b][0] + verts[c][0]) / 3.0
+        cy_arr[ti] = (verts[a][1] + verts[b][1] + verts[c][1]) / 3.0
+        gx_arr[ti], gy_arr[ti] = grad[ti]
+
+    # Normalize for quiver — skip zero-length vectors
+    mag = np.hypot(gx_arr, gy_arr)
+    valid = mag > 1e-10
+    qx = np.where(valid, gx_arr / mag, 0.0)
+    qy = np.where(valid, gy_arr / mag, 0.0)
+    # Perpendicular (rotated 90° CCW)
+    px = np.where(valid, -gy_arr / mag, 0.0)
+    py = np.where(valid, gx_arr / mag, 0.0)
+
+    fig5, ax5 = plt.subplots(figsize=(7, 7))
+    ax5.set_aspect("equal")
+    ax5.set_xlim(-5, 105)
+    ax5.set_ylim(-5, 105)
+
+    tcf5 = ax5.tripcolor(triang, u_arr, cmap="coolwarm", shading="gouraud")
+    ax5.quiver(
+        cx_arr[valid],
+        cy_arr[valid],
+        qx[valid],
+        qy[valid],
+        color="darkred",
+        alpha=0.7,
+        scale=25,
+        width=0.002,
+        label=r"$\nabla u$",
+    )
+    ax5.quiver(
+        cx_arr[valid],
+        cy_arr[valid],
+        px[valid],
+        py[valid],
+        color="darkblue",
+        alpha=0.5,
+        scale=25,
+        width=0.002,
+        label=r"$\nabla u^\perp$",
+    )
+    ax5.plot(
+        list(xs_o) + [xs_o[0]],
+        list(ys_o) + [ys_o[0]],
+        color="black",
+        linewidth=1.5,
+    )
+    ax5.plot(
+        list(xs_h) + [xs_h[0]],
+        list(ys_h) + [ys_h[0]],
+        color="black",
+        linewidth=1.5,
+    )
+    cbar5 = fig5.colorbar(tcf5, ax=ax5, shrink=0.8)
+    cbar5.set_label("u(x,y)", fontsize=10)
+    ax5.set_title(
+        "Gradient field on Laplace solution\n"
+        r"$\nabla u$ (red, normal to contours), "
+        r"$\nabla u^\perp$ (blue, along contours)",
+        fontsize=12,
+    )
+    ax5.legend(fontsize=10, loc="upper right")
+    ax5.grid(True, alpha=0.2)
+    fig5.tight_layout()
+    path5 = output_dir / "pde-mesh-gradient-field.png"
+    fig5.savefig(path5, dpi=150)
+    plt.close(fig5)
+    images.append(
+        {
+            "path": "pde-mesh-gradient-field.png",
+            "caption": (
+                "Gradient field ∇u (red) and perpendicular flow ∇u⊥"
+                " (blue) on the FEM Laplace solution"
+            ),
+        }
+    )
+
+    # ── Example 6: Convergence plot ─────────────────────────────────────
+    _, residuals = solve_laplace_with_history(
+        mesh, max_iter=500, tolerance=1e-12
+    )
+
+    fig6, ax6 = plt.subplots(figsize=(7, 4))
+    ax6.semilogy(residuals, "b.-", markersize=3, linewidth=1.0)
+    ax6.set_xlabel("CG iteration", fontsize=11)
+    ax6.set_ylabel(r"Residual norm $\|r\|_2$", fontsize=11)
+    ax6.set_title(
+        f"Conjugate gradient convergence\n"
+        f"({len(mesh.vertices)} vertices, {len(mesh.triangles)} triangles, "
+        f"{len(residuals)} iterations)",
+        fontsize=12,
+    )
+    ax6.grid(True, alpha=0.3)
+    fig6.tight_layout()
+    path6 = output_dir / "pde-mesh-convergence.png"
+    fig6.savefig(path6, dpi=150)
+    plt.close(fig6)
+    images.append(
+        {
+            "path": "pde-mesh-convergence.png",
+            "caption": (
+                "Conjugate gradient convergence — residual norm decreases"
+                " exponentially as the solver progresses"
+            ),
+        }
+    )
+
+    # ── Example 7: Stiffness matrix edge weights ────────────────────────
+    # Re-use the hole mesh from example 2. Compute the local stiffness
+    # matrix per triangle and accumulate off-diagonal magnitudes onto mesh
+    # edges. Thicker edges = larger |Kᵢⱼ| contribution.
+    edge_stiffness = {}
+    for ti, (a, b, c) in enumerate(mesh.triangles):
+        vi = verts[a]
+        vj = verts[b]
+        vk = verts[c]
+        bi = vj[1] - vk[1]
+        ci = vk[0] - vj[0]
+        bj = vk[1] - vi[1]
+        cj = vi[0] - vk[0]
+        bk = vi[1] - vj[1]
+        ck = vj[0] - vi[0]
+        area2 = bi * cj - bj * ci
+        if area2 < 1e-30:
+            continue
+        inv_a = 0.5 / area2
+        k_ab = abs((bi * bj + ci * cj) * inv_a)
+        k_bc = abs((bj * bk + cj * ck) * inv_a)
+        k_ca = abs((bk * bi + ck * ci) * inv_a)
+        for (p, q), w in [
+            ((min(a, b), max(a, b)), k_ab),
+            ((min(b, c), max(b, c)), k_bc),
+            ((min(c, a), max(c, a)), k_ca),
+        ]:
+            edge_stiffness[(p, q)] = edge_stiffness.get((p, q), 0.0) + w
+
+    edge_vals = list(edge_stiffness.values())
+    emin, emax = min(edge_vals), max(edge_vals) if edge_vals else (0.0, 1.0)
+
+    fig7, ax7 = plt.subplots(figsize=(7, 7))
+    ax7.set_aspect("equal")
+    ax7.set_xlim(-5, 105)
+    ax7.set_ylim(-5, 105)
+
+    tcf7 = ax7.tripcolor(triang, u_arr, cmap="coolwarm", shading="gouraud")
+    cbar7 = fig7.colorbar(tcf7, ax=ax7, shrink=0.8)
+    cbar7.set_label("Scalar field u(x,y)", fontsize=10)
+
+    for (a, b), w in edge_stiffness.items():
+        frac = (w - emin) / (emax - emin + 1e-30)
+        lw = 0.3 + 3.5 * frac
+        alpha = 0.15 + 0.85 * frac
+        ax7.plot(
+            [verts[a][0], verts[b][0]],
+            [verts[a][1], verts[b][1]],
+            color="black",
+            linewidth=lw,
+            alpha=alpha,
+        )
+
+    ax7.plot(
+        list(xs_o) + [xs_o[0]],
+        list(ys_o) + [ys_o[0]],
+        color="darkred",
+        linewidth=2,
+        label="Outer (u=1)",
+    )
+    ax7.plot(
+        list(xs_h) + [xs_h[0]],
+        list(ys_h) + [ys_h[0]],
+        color="darkblue",
+        linewidth=2,
+        label="Hole (u=0)",
+    )
+
+    ax7.set_title(
+        "Stiffness matrix edge weights on the mesh\n"
+        "Line thickness ∝ |K\u1d62\u2c7c| — thicker edges contribute"
+        " more to the Laplacian",
+        fontsize=12,
+    )
+    ax7.legend(fontsize=10, loc="upper right")
+    ax7.grid(True, alpha=0.2)
+    fig7.tight_layout()
+    path7 = output_dir / "pde-mesh-stiffness-spy.png"
+    fig7.savefig(path7, dpi=150)
+    plt.close(fig7)
+    images.append(
+        {
+            "path": "pde-mesh-stiffness-spy.png",
+            "caption": (
+                "Stiffness matrix visualised directly on the mesh — edge"
+                " thickness is proportional to |K\u1d62\u2c7c|. Shorter"
+                " edges (in denser regions) produce larger stiffness values,"
+                " driving the Laplace solution\u2019s smoothness."
             ),
         }
     )

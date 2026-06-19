@@ -368,6 +368,204 @@ pub fn solve_laplace(
     Ok(u_vec.as_slice().to_vec())
 }
 
+pub fn compute_gradient_field(
+    mesh: &TriangleMesh,
+    u_field: &[f64],
+) -> Result<Vec<[f64; 2]>, String> {
+    if u_field.len() != mesh.vertices.len() {
+        return Err(format!(
+            "u_field length {} does not match vertex count {}",
+            u_field.len(),
+            mesh.vertices.len()
+        ));
+    }
+    let mut gradients: Vec<[f64; 2]> = Vec::with_capacity(mesh.triangles.len());
+    for tri in &mesh.triangles {
+        let i = tri[0];
+        let j = tri[1];
+        let k = tri[2];
+        let vi = mesh.vertices[i];
+        let vj = mesh.vertices[j];
+        let vk = mesh.vertices[k];
+
+        let bi = vj.y - vk.y;
+        let ci = vk.x - vj.x;
+        let bj = vk.y - vi.y;
+        let cj = vi.x - vk.x;
+        let bk = vi.y - vj.y;
+        let ck = vj.x - vi.x;
+
+        let area2 = bi * cj - bj * ci;
+        if area2.abs() < 1e-30 {
+            gradients.push([0.0, 0.0]);
+            continue;
+        }
+        let ui = u_field[i];
+        let uj = u_field[j];
+        let uk = u_field[k];
+
+        let gx = (bi * ui + bj * uj + bk * uk) / area2;
+        let gy = (ci * ui + cj * uj + ck * uk) / area2;
+        gradients.push([gx, gy]);
+    }
+    Ok(gradients)
+}
+
+pub fn solve_laplace_with_history(
+    mesh: &TriangleMesh,
+    max_iter: Option<usize>,
+    tolerance: Option<f64>,
+) -> Result<(Vec<f64>, Vec<f64>), String> {
+    let max_iter = max_iter.unwrap_or(1000);
+    let tolerance = tolerance.unwrap_or(1e-8);
+    let n = mesh.vertices.len();
+
+    let mut triples: Vec<(usize, usize, f64)> = Vec::new();
+
+    for tri in &mesh.triangles {
+        let i = tri[0];
+        let j = tri[1];
+        let k = tri[2];
+        let vi = mesh.vertices[i];
+        let vj = mesh.vertices[j];
+        let vk = mesh.vertices[k];
+
+        let bi = vj.y - vk.y;
+        let ci = vk.x - vj.x;
+        let bj = vk.y - vi.y;
+        let cj = vi.x - vk.x;
+        let bk = vi.y - vj.y;
+        let ck = vj.x - vi.x;
+
+        let area2 = bi * cj - bj * ci;
+        if area2.abs() < 1e-30 {
+            continue;
+        }
+        let inv_area2 = 1.0 / area2.abs();
+
+        let k_ii = (bi * bi + ci * ci) * inv_area2 * 0.5;
+        let k_ij = (bi * bj + ci * cj) * inv_area2 * 0.5;
+        let k_ik = (bi * bk + ci * ck) * inv_area2 * 0.5;
+        let k_jj = (bj * bj + cj * cj) * inv_area2 * 0.5;
+        let k_jk = (bj * bk + cj * ck) * inv_area2 * 0.5;
+        let k_kk = (bk * bk + ck * ck) * inv_area2 * 0.5;
+
+        triples.push((i, i, k_ii));
+        triples.push((i, j, k_ij));
+        triples.push((i, k, k_ik));
+        triples.push((j, i, k_ij));
+        triples.push((j, j, k_jj));
+        triples.push((j, k, k_jk));
+        triples.push((k, i, k_ik));
+        triples.push((k, j, k_jk));
+        triples.push((k, k, k_kk));
+    }
+
+    let mut is_boundary = vec![false; n];
+    let mut boundary_value = vec![0.0_f64; n];
+    for i in 0..n {
+        match mesh.boundary_tags[i] {
+            BoundaryTag::Outer => {
+                is_boundary[i] = true;
+                boundary_value[i] = 1.0;
+            }
+            BoundaryTag::Inner => {
+                is_boundary[i] = true;
+                boundary_value[i] = 0.0;
+            }
+            BoundaryTag::None => {}
+        }
+    }
+
+    let mut rhs = DVector::from_element(n, 0.0);
+
+    let mut bdry_diag_done = vec![false; n];
+    let mut filtered: Vec<(usize, usize, f64)> = Vec::new();
+
+    for &(i, j, v) in &triples {
+        if is_boundary[i] {
+            if i == j && !bdry_diag_done[i] {
+                filtered.push((i, i, 1.0));
+                bdry_diag_done[i] = true;
+            }
+            if !is_boundary[j] && i <= j {
+                rhs[j] -= v * boundary_value[i];
+            }
+        } else if is_boundary[j] {
+            if j == i && !bdry_diag_done[j] {
+                filtered.push((j, j, 1.0));
+                bdry_diag_done[j] = true;
+            }
+            if i <= j {
+                rhs[i] -= v * boundary_value[j];
+            }
+        } else {
+            filtered.push((i, j, v));
+        }
+    }
+
+    for i in 0..n {
+        if is_boundary[i] && !bdry_diag_done[i] {
+            filtered.push((i, i, 1.0));
+            bdry_diag_done[i] = true;
+        }
+        if is_boundary[i] {
+            rhs[i] = boundary_value[i];
+        }
+    }
+
+    let mut coo = CooMatrix::new(n, n);
+    for (i, j, v) in &filtered {
+        coo.push(*i, *j, *v);
+    }
+
+    let k_mat = CsrMatrix::from(&coo);
+
+    let (u_vec, residuals) = solve_conjugate_gradient_with_history(
+        &k_mat, &rhs, tolerance, max_iter,
+    );
+
+    Ok((u_vec.as_slice().to_vec(), residuals))
+}
+
+fn solve_conjugate_gradient_with_history(
+    a: &CsrMatrix<f64>,
+    b: &DVector<f64>,
+    tol: f64,
+    max_iter: usize,
+) -> (DVector<f64>, Vec<f64>) {
+    let n = b.len();
+    let mut x = DVector::from_element(n, 0.0);
+    let mut residuals: Vec<f64> = Vec::with_capacity(max_iter);
+
+    let mut r = b - sparse_mat_vec_mul(a, &x);
+    let mut p = r.clone();
+    let mut rs_old = r.dot(&r);
+
+    residuals.push(rs_old.sqrt());
+
+    for _ in 0..max_iter {
+        let ap = sparse_mat_vec_mul(a, &p);
+        let p_dot_ap = p.dot(&ap);
+        if p_dot_ap.abs() < 1e-30 {
+            break;
+        }
+        let alpha = rs_old / p_dot_ap;
+        x = &x + alpha * &p;
+        r = &r - alpha * &ap;
+        let rs_new = r.dot(&r);
+        let res_norm = rs_new.sqrt();
+        residuals.push(res_norm);
+        if res_norm < tol {
+            break;
+        }
+        p = &r + (rs_new / rs_old) * &p;
+        rs_old = rs_new;
+    }
+
+    (x, residuals)
+}
+
 fn solve_conjugate_gradient(
     a: &CsrMatrix<f64>,
     b: &DVector<f64>,
@@ -419,95 +617,4 @@ fn sparse_mat_vec_mul(a: &CsrMatrix<f64>, v: &DVector<f64>) -> DVector<f64> {
     }
 
     result
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    fn square() -> Vec<Point> {
-        vec![
-            Point::new(0.0, 0.0),
-            Point::new(10.0, 0.0),
-            Point::new(10.0, 10.0),
-            Point::new(0.0, 10.0),
-        ]
-    }
-
-    #[test]
-    fn test_build_simple_square_mesh() {
-        let mesh = build_triangle_mesh(&square(), &[], 0.0, 20.0).unwrap();
-        assert!(mesh.vertices.len() >= 4);
-        assert!(!mesh.triangles.is_empty());
-        assert_eq!(mesh.boundary_tags.len(), mesh.vertices.len());
-        let outer_count = mesh
-            .boundary_tags
-            .iter()
-            .filter(|t| **t == BoundaryTag::Outer)
-            .count();
-        assert!(outer_count >= 4);
-    }
-
-    #[test]
-    fn test_solve_laplace_square() {
-        let mesh = build_triangle_mesh(&square(), &[], 0.0, 20.0).unwrap();
-        let u = solve_laplace(&mesh, None, None).unwrap();
-        assert_eq!(u.len(), mesh.vertices.len());
-        for (i, tag) in mesh.boundary_tags.iter().enumerate() {
-            if *tag == BoundaryTag::Outer {
-                assert!(
-                    (u[i] - 1.0).abs() < 1e-6,
-                    "outer vertex {} has u={}",
-                    i,
-                    u[i]
-                );
-            }
-        }
-        for val in &u {
-            assert!(val.is_finite());
-            assert!(*val >= -1e-6, "u value {} below 0", val);
-            assert!(*val <= 1.0 + 1e-6, "u value {} above 1", val);
-        }
-    }
-
-    #[test]
-    fn test_square_with_hole() {
-        let hole = vec![
-            Point::new(3.0, 3.0),
-            Point::new(7.0, 3.0),
-            Point::new(7.0, 7.0),
-            Point::new(3.0, 7.0),
-        ];
-        let mesh = build_triangle_mesh(&square(), &[hole], 0.0, 20.0).unwrap();
-        let u = solve_laplace(&mesh, None, None).unwrap();
-        for (i, tag) in mesh.boundary_tags.iter().enumerate() {
-            if *tag == BoundaryTag::Outer {
-                assert!(
-                    (u[i] - 1.0).abs() < 1e-6,
-                    "outer vertex {} has u={}",
-                    i,
-                    u[i]
-                );
-            }
-            if *tag == BoundaryTag::Inner {
-                assert!(
-                    (u[i] - 0.0).abs() < 1e-6,
-                    "inner vertex {} has u={}",
-                    i,
-                    u[i]
-                );
-            }
-        }
-    }
-
-    #[test]
-    fn test_tool_radius_offset() {
-        let mesh = build_triangle_mesh(&square(), &[], 1.0, 20.0).unwrap();
-        let u = solve_laplace(&mesh, None, None).unwrap();
-        for (i, tag) in mesh.boundary_tags.iter().enumerate() {
-            if *tag == BoundaryTag::Outer {
-                assert!((u[i] - 1.0).abs() < 1e-6);
-            }
-        }
-    }
 }

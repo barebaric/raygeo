@@ -20,7 +20,9 @@ import typing
 __all__ = [
     "TriangleMesh",
     "build_triangle_mesh",
+    "compute_gradient_field",
     "solve_laplace",
+    "solve_laplace_with_history",
 ]
 
 @typing.final
@@ -48,6 +50,19 @@ def build_triangle_mesh(outer: collections.abc.Sequence[types.Point], holes: col
     :complexity: O(n log n) time, O(n) space
     """
 
+def compute_gradient_field(mesh: TriangleMesh, u_field: collections.abc.Sequence[float]) -> list[tuple[float, float]]:
+    r"""
+    Compute the gradient of the scalar field on each triangle.
+    
+    Given the solution u to the Laplace equation, computes ∇u = (∂u/∂x, ∂u/∂y)
+    in the interior of each triangle of the mesh (piecewise constant).
+    
+    :param mesh: TriangleMesh with the same vertex count as u_field.
+    :param u_field: Scalar field values, one per vertex.
+    :returns: List of (gx, gy) pairs, one per triangle in mesh order.
+    :complexity: O(t) time where t is the number of triangles
+    """
+
 def solve_laplace(mesh: TriangleMesh, max_iter: int = 1000, tolerance: float = 0.00000001) -> list[float]:
     r"""
     Solve the Laplace equation Δu=0 on a triangle mesh.
@@ -59,6 +74,21 @@ def solve_laplace(mesh: TriangleMesh, max_iter: int = 1000, tolerance: float = 0
     :param max_iter: Maximum conjugate gradient iterations.
     :param tolerance: Convergence tolerance for CG residual.
     :returns: List of scalar u values, one per vertex.
+    :complexity: O(k * n) time where k is the number of CG iterations
+    """
+
+def solve_laplace_with_history(mesh: TriangleMesh, max_iter: int = 1000, tolerance: float = 0.00000001) -> tuple[list[float], list[float]]:
+    r"""
+    Solve the Laplace equation and return convergence history.
+    
+    Identical to solve_laplace() but also returns the residual norm after
+    each conjugate gradient iteration for convergence analysis.
+    
+    :param mesh: TriangleMesh with boundary tags.
+    :param max_iter: Maximum conjugate gradient iterations.
+    :param tolerance: Convergence tolerance for CG residual.
+    :returns: Tuple of (solution, residuals) — solution is one value per
+        vertex, residuals is the L2 residual norm after each iteration.
     :complexity: O(k * n) time where k is the number of CG iterations
     """
 
