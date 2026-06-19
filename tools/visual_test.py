@@ -10,30 +10,30 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import streamlit as st
 
-from tools.visual_test.adaptive_clearing import page_adaptive_clearing
-from tools.visual_test.analysis import page_analysis
-from tools.visual_test.arc_linearize import page_arc_linearize
-from tools.visual_test.bezier_curves import page_bezier_curves
-from tools.visual_test.circle_intersections import page_circle_intersections
-from tools.visual_test.concave_hull import page_concave_hull
-from tools.visual_test.geometry import page_geometry
-from tools.visual_test.gravity import page_gravity
+from tools.visual_test.geo import page_geometry
+from tools.visual_test.geo_algo_analysis import page_analysis
+from tools.visual_test.geo_algo_cleared_area import page_adaptive_clearing
+from tools.visual_test.geo_algo_hull import page_concave_hull
+from tools.visual_test.geo_algo_minkowski2d import page_minkowski
+from tools.visual_test.geo_algo_nest2d import page_nesting
+from tools.visual_test.geo_algo_nest2d_gravity import page_gravity
+from tools.visual_test.geo_algo_nest2d_ifp import page_inner_fit_polygon
+from tools.visual_test.geo_shape_arc import page_arc_linearize
+from tools.visual_test.geo_shape_bezier import page_bezier_curves
+from tools.visual_test.geo_shape_circle import page_circle_intersections
+from tools.visual_test.geo_shape_line import page_line_intersections
+from tools.visual_test.geo_shape_polygon3d import page_polygon3d
+from tools.visual_test.geo_shape_polygon_boolean import page_polygon_boolean
+from tools.visual_test.geo_shape_polygon_offset import page_offset
 from tools.visual_test.image import page_image
-from tools.visual_test.inner_fit_polygon import page_inner_fit_polygon
-from tools.visual_test.lead_in_out import page_lead_in_out
-from tools.visual_test.line_intersections import page_line_intersections
-from tools.visual_test.merge_lines import page_merge_lines
-from tools.visual_test.minkowski import page_minkowski
-from tools.visual_test.nesting import page_nesting
 from tools.visual_test.ops_clip import page_ops_clip
+from tools.visual_test.ops_lead_in_out import page_lead_in_out
+from tools.visual_test.ops_merge_lines import page_merge_lines
 from tools.visual_test.ops_optimize_travel import page_ops_optimize_travel
-from tools.visual_test.overscan import page_overscan
-from tools.visual_test.polygon3d import page_polygon3d
-from tools.visual_test.polygon_boolean import page_polygon_boolean
-from tools.visual_test.polygon_offset import page_offset
-from tools.visual_test.rasterization import page_rasterization
+from tools.visual_test.ops_overscan import page_overscan
+from tools.visual_test.ops_raster import page_rasterization
+from tools.visual_test.ops_tabs import page_tabs
 from tools.visual_test.svg import page_svg
-from tools.visual_test.tabs import page_tabs
 
 st.set_page_config(layout="wide", page_title="raygeo visual test")
 st.title("raygeo Visual Test")

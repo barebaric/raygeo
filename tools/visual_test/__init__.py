@@ -1,24 +1,25 @@
-from .adaptive_clearing import page_adaptive_clearing  # noqa: F401
-from .analysis import page_analysis  # noqa: F401
-from .arc_linearize import page_arc_linearize  # noqa: F401
-from .bezier_curves import page_bezier_curves  # noqa: F401
-from .circle_intersections import page_circle_intersections  # noqa: F401
-from .concave_hull import page_concave_hull  # noqa: F401
-from .geometry import page_geometry  # noqa: F401
-from .gravity import page_gravity  # noqa: F401
-from .image import page_image  # noqa: F401
-from .inner_fit_polygon import page_inner_fit_polygon  # noqa: F401
-from .lead_in_out import page_lead_in_out  # noqa: F401
-from .line_intersections import page_line_intersections  # noqa: F401
-from .merge_lines import page_merge_lines  # noqa: F401
-from .minkowski import page_minkowski  # noqa: F401
-from .nesting import page_nesting  # noqa: F401
-from .ops_clip import page_ops_clip  # noqa: F401
-from .ops_optimize_travel import page_ops_optimize_travel  # noqa: F401
-from .overscan import page_overscan  # noqa: F401
-from .polygon3d import page_polygon3d  # noqa: F401
-from .polygon_boolean import page_polygon_boolean  # noqa: F401
-from .polygon_offset import page_offset  # noqa: F401
-from .rasterization import page_rasterization  # noqa: F401
-from .svg import page_svg  # noqa: F401
-from .tabs import page_tabs  # noqa: F401
+# ruff: noqa: F401
+from .geo import page_geometry
+from .geo_algo_analysis import page_analysis
+from .geo_algo_cleared_area import page_adaptive_clearing
+from .geo_algo_hull import page_concave_hull
+from .geo_algo_minkowski2d import page_minkowski
+from .geo_algo_nest2d import page_nesting
+from .geo_algo_nest2d_gravity import page_gravity
+from .geo_algo_nest2d_ifp import page_inner_fit_polygon
+from .geo_shape_arc import page_arc_linearize
+from .geo_shape_bezier import page_bezier_curves
+from .geo_shape_circle import page_circle_intersections
+from .geo_shape_line import page_line_intersections
+from .geo_shape_polygon3d import page_polygon3d
+from .geo_shape_polygon_boolean import page_polygon_boolean
+from .geo_shape_polygon_offset import page_offset
+from .image import page_image
+from .ops_clip import page_ops_clip
+from .ops_lead_in_out import page_lead_in_out
+from .ops_merge_lines import page_merge_lines
+from .ops_optimize_travel import page_ops_optimize_travel
+from .ops_overscan import page_overscan
+from .ops_raster import page_rasterization
+from .ops_tabs import page_tabs
+from .svg import page_svg
