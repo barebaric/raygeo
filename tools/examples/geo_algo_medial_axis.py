@@ -113,6 +113,7 @@ def generate_mat_yshape():
     return fig
 
 
+__docs_target__ = ["raygeo.geo.algo.medial_axis.md"]
 __images__ = [
     {
         "heading": None,

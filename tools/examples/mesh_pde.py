@@ -153,6 +153,7 @@ def generate_spiral_multi_island():
     return fig2
 
 
+__docs_target__ = ["raygeo.mesh.pde.md"]
 __images__ = [
     {
         "heading": "trace_spiral",

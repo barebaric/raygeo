@@ -298,6 +298,7 @@ def generate_wavefront_yshape():
     )
 
 
+__docs_target__ = ["raygeo.geo.algo.hsm.md"]
 __images__ = [
     {
         "heading": None,

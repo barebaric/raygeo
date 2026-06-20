@@ -88,6 +88,7 @@ def generate_overview():
     return fig
 
 
+__docs_target__ = ["raygeo.geo.algo.nest2d.md"]
 __images__ = [
     {
         "heading": None,

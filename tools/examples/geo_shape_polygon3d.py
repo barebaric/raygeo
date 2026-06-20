@@ -393,6 +393,7 @@ def generate_true_offset():
     return fig
 
 
+__docs_target__ = ["raygeo.geo.shape.polygon3d.md"]
 __images__ = [
     {
         "heading": "get_polygons_union_3d",

@@ -334,6 +334,7 @@ def generate_deepest_cores_central():
     return fig3
 
 
+__docs_target__ = ["raygeo.geo.algo.offset.md"]
 __images__ = [
     {
         "heading": "concentric_offsets",

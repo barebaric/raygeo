@@ -9,32 +9,10 @@ import sys
 from pathlib import Path
 
 import matplotlib
-import matplotlib.image as mpimg
 import matplotlib.pyplot as plt
-import numpy as np
 
 import tools.examples
 from tools import api_docs
-
-
-def _module_to_doc(mod_name: str) -> list[str]:
-    known_compound = {
-        "cleared_area", "spatial_grid2d", "medial_axis", "morph_spiral"
-    }
-    parts = mod_name.split("_")
-    result_parts = []
-    i = 0
-    while i < len(parts):
-        for n in range(len(parts), i, -1):
-            candidate = "_".join(parts[i:n])
-            if candidate in known_compound or n == i + 1:
-                result_parts.append(candidate)
-                i = n
-                break
-    base = "raygeo." + ".".join(result_parts) + ".md"
-    if mod_name == "geo":
-        return ["raygeo.md", base]
-    return [base]
 
 
 def _collect_example_modules():
@@ -47,29 +25,6 @@ def _collect_example_modules():
                 importlib.import_module(f"tools.examples.{modname}")
             )
     return modules
-
-
-def _images_are_visually_identical(path_a: Path, path_b: Path) -> bool:
-    a = mpimg.imread(path_a)
-    b = mpimg.imread(path_b)
-    if a.shape != b.shape:
-        return False
-    h, w = a.shape[:2]
-    block = max(h, w) // 64
-    if block < 2:
-        return np.allclose(a, b, atol=1.0 / 255)
-    bh, bw = h // block * block, w // block * block
-    a_blocks = (
-        a[:bh, :bw]
-        .reshape(bh // block, block, bw // block, block, -1)
-        .mean(axis=(1, 3))
-    )
-    b_blocks = (
-        b[:bh, :bw]
-        .reshape(bh // block, block, bw // block, block, -1)
-        .mean(axis=(1, 3))
-    )
-    return np.allclose(a_blocks, b_blocks, atol=0.2)
 
 
 def _generate_images(images_dir: Path) -> dict[str, list]:
@@ -86,9 +41,8 @@ def _generate_images(images_dir: Path) -> dict[str, list]:
         mod_name = mod.__name__
         if not mod_name.startswith("tools.examples."):
             continue
-        short = mod_name[len("tools.examples.") :]
-        docs = _module_to_doc(short)
-        stem_base = short.replace("_", "-")
+        docs = mod.__docs_target__
+        stem_base = mod_name.removeprefix("tools.examples.").replace("_", "-")
 
         print(f"  Generating {mod.__name__}...")
         for img in images:

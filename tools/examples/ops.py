@@ -525,6 +525,7 @@ def generate_tab_operations():
     return fig6
 
 
+__docs_target__ = ["raygeo.ops.md"]
 __images__ = [
     {
         "heading": "clip_rect",

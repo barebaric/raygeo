@@ -229,6 +229,7 @@ def generate_multi_island():
     return fig8
 
 
+__docs_target__ = ["raygeo.mesh.build.md"]
 __images__ = [
     {
         "heading": None,

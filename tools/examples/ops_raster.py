@@ -285,6 +285,7 @@ def generate_zero_power_segments():
     return fig2
 
 
+__docs_target__ = ["raygeo.ops.raster.md"]
 __images__ = [
     {
         "heading": "rasterize_power_modulation",

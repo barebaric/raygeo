@@ -76,6 +76,7 @@ def generate_l_shaped():
     return fig
 
 
+__docs_target__ = ["raygeo.geo.algo.trochoid.md"]
 __images__ = [
     {
         "heading": "trochoid_along",

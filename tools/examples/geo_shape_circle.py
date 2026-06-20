@@ -62,6 +62,7 @@ def generate_intersections():
     return fig
 
 
+__docs_target__ = ["raygeo.geo.shape.circle.md"]
 __images__ = [
     {
         "heading": "get_circle_circle_intersections",

@@ -329,6 +329,7 @@ def generate_group_bounds():
     return fig11
 
 
+__docs_target__ = ["raygeo.geo.shape.polygon.md"]
 __images__ = [
     {
         "heading": "get_circle_polygon",

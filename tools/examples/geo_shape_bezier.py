@@ -142,6 +142,7 @@ def generate_flatten():
     return fig2
 
 
+__docs_target__ = ["raygeo.geo.shape.bezier.md"]
 __images__ = [
     {
         "heading": "split_bezier",

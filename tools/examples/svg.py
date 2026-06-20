@@ -53,6 +53,7 @@ def generate_parsing():
     return fig
 
 
+__docs_target__ = ["raygeo.svg.md"]
 __images__ = [
     {
         "heading": None,

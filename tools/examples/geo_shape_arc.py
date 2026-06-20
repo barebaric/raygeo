@@ -66,6 +66,7 @@ def generate_linearize():
     return fig
 
 
+__docs_target__ = ["raygeo.geo.shape.arc.md"]
 __images__ = [
     {
         "heading": "linearize_arc",

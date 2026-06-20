@@ -58,6 +58,7 @@ def generate_helical():
     return fig
 
 
+__docs_target__ = ["raygeo.geo.algo.helix.md"]
 __images__ = [
     {
         "heading": "generate_helix",

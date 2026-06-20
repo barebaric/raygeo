@@ -331,6 +331,7 @@ def generate_closest_point():
     return fig5
 
 
+__docs_target__ = ["raygeo.geo.algo.polylabel.md"]
 __images__ = [
     {
         "heading": "polylabel",

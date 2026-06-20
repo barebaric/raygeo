@@ -51,6 +51,7 @@ def generate_linear_zigzag():
     return fig
 
 
+__docs_target__ = ["raygeo.geo.algo.ramp.md"]
 __images__ = [
     {
         "heading": "generate_ramp",

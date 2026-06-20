@@ -54,6 +54,7 @@ def generate_inward_outward():
     return fig
 
 
+__docs_target__ = ["raygeo.geo.algo.spiral.md"]
 __images__ = [
     {
         "heading": "generate_spiral",

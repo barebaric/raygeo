@@ -133,6 +133,7 @@ def generate_subtract():
     return fig3
 
 
+__docs_target__ = ["raygeo.geo.algo.clipping.md"]
 __images__ = [
     {
         "heading": "clip_line_segment_with_rect",

@@ -109,6 +109,7 @@ def generate_bulk():
     return fig2
 
 
+__docs_target__ = ["raygeo.geo.algo.cleared_area.md"]
 __images__ = [
     {
         "heading": None,

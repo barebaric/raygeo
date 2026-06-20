@@ -341,6 +341,7 @@ def generate_multi_island():
     return fig9
 
 
+__docs_target__ = ["raygeo.mesh.laplace.md"]
 __images__ = [
     {
         "heading": "solve_laplace",

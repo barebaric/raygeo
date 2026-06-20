@@ -78,6 +78,7 @@ def generate_ray_line():
     return fig
 
 
+__docs_target__ = ["raygeo.geo.algo.intersect.md"]
 __images__ = [
     {
         "heading": "ray_line_intersection",

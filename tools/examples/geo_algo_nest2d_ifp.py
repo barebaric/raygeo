@@ -40,6 +40,7 @@ def generate_inner_fit():
     return fig
 
 
+__docs_target__ = ["raygeo.geo.algo.nest2d.ifp.md"]
 __images__ = [
     {
         "heading": "inner_fit_polygon",

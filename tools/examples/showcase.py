@@ -467,6 +467,7 @@ def generate_showcase():
     return fig
 
 
+__docs_target__ = ["raygeo.showcase.md"]
 __images__ = [
     {
         "caption": "Composite showcase of key raygeo features",

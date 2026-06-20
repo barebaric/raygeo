@@ -32,6 +32,7 @@ def generate_overview():
     return fig_rm
 
 
+__docs_target__ = ["raygeo.mesh.remesh.md"]
 __images__ = [
     {
         "heading": None,

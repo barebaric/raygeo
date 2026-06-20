@@ -29,6 +29,7 @@ def generate_minkowski_sum():
     return fig
 
 
+__docs_target__ = ["raygeo.geo.algo.minkowski2d.md"]
 __images__ = [
     {
         "heading": "get_polygon_minkowski_sum_convex",

@@ -216,6 +216,7 @@ def _make_circle_geom():
     return g
 
 
+__docs_target__ = ["raygeo.md", "raygeo.geo.md"]
 __images__ = [
     # geometry.py
     {

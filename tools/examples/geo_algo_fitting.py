@@ -552,6 +552,7 @@ def generate_project_bisector():
     return fig_b
 
 
+__docs_target__ = ["raygeo.geo.algo.fitting.md"]
 __images__ = [
     {
         "heading": "fit_circle_to_points",

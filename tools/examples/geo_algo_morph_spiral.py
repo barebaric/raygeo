@@ -209,6 +209,7 @@ def generate_spiral_from_branch():
     return fig
 
 
+__docs_target__ = ["raygeo.geo.algo.morph_spiral.md"]
 __images__ = [
     {
         "heading": "morph_spiral_from_branch",

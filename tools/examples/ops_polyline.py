@@ -263,6 +263,7 @@ def generate_pass_entry_exit():
     return fig
 
 
+__docs_target__ = ["raygeo.ops.polyline.md"]
 __images__ = [
     {
         "heading": "polyline_to_ops",

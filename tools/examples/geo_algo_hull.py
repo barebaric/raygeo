@@ -88,6 +88,7 @@ def _make_three_dots(h, w):
     return img
 
 
+__docs_target__ = ["raygeo.geo.algo.hull.md"]
 __images__ = [
     {
         "heading": "get_concave_hull",

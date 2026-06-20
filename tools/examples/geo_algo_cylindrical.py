@@ -73,6 +73,7 @@ def generate_cylindrical_transform():
     return fig
 
 
+__docs_target__ = ["raygeo.geo.algo.cylindrical.md"]
 __images__ = [
     {
         "heading": "transform_to_cylinder",

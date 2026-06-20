@@ -116,6 +116,7 @@ def generate_3d():
     return fig3d
 
 
+__docs_target__ = ["raygeo.geo.algo.simplify.md"]
 __images__ = [
     {
         "heading": "simplify_polyline",

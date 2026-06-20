@@ -329,6 +329,7 @@ def generate_rasterize_scanlines():
     return fig7
 
 
+__docs_target__ = ["raygeo.image.md"]
 __images__ = [
     {
         "heading": "srgb_to_linear",

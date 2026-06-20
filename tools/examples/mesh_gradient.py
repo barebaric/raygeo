@@ -195,6 +195,7 @@ def generate_multi_island():
     return fig10
 
 
+__docs_target__ = ["raygeo.mesh.gradient.md"]
 __images__ = [
     {
         "heading": "compute_gradient_field",

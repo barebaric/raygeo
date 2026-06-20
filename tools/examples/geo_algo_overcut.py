@@ -72,6 +72,7 @@ def generate_overcut():
     return fig
 
 
+__docs_target__ = ["raygeo.geo.algo.overcut.md"]
 __images__ = [
     {
         "heading": "apply_overcut",

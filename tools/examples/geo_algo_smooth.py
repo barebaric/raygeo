@@ -248,6 +248,7 @@ def generate_sub_segment():
     return fig_sub
 
 
+__docs_target__ = ["raygeo.geo.algo.smooth.md"]
 __images__ = [
     {
         "heading": "smooth_polyline",

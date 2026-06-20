@@ -167,6 +167,7 @@ def generate_point_distance():
     return fig2
 
 
+__docs_target__ = ["raygeo.geo.shape.line.md"]
 __images__ = [
     {
         "heading": "get_line_line_intersection",
