@@ -16,14 +16,14 @@ use super::super::flex_point::{
 };
 use super::super::types::{CubicBezier2D, Edge3D};
 use crate::geo::shape::bezier::{
-    clip_bezier_with_rect, convert_cubic_bezier_to_quadratic, flatten_bezier,
-    get_bezier_bounds, get_bezier_flatness_sq, get_bezier_length,
-    get_bezier_point_at, get_bezier_rect_intersections,
+    clip_bezier_with_rect, convert_cubic_bezier_to_quadratic, fit_cubic_bezier,
+    flatten_bezier, get_bezier_bounds, get_bezier_flatness_sq,
+    get_bezier_length, get_bezier_point_at, get_bezier_rect_intersections,
     get_perpendicular_dist_sq, is_bezier_flat, is_bezier_inside_polygons,
     linearize_bezier, linearize_bezier_adaptive, linearize_bezier_segment,
-    split_bezier,
+    nearest_tangent_circle_on_bezier, split_bezier,
 };
-use crate::types::{Point, Point3D, Rect};
+use crate::types::{CubicBezier, Point, Point3D, Rect};
 use pyo3::prelude::*;
 use pyo3::types::PyList;
 use pyo3_stub_gen::derive::gen_stub_pyfunction;
@@ -50,6 +50,8 @@ pub fn register(shape_mod: &Bound<'_, PyModule>) -> PyResult<()> {
         get_bezier_flatness_sq_py,
         get_perpendicular_dist_sq_py,
         get_bezier_length_py,
+        fit_cubic_bezier_py,
+        nearest_tangent_circle_on_bezier_py,
     );
 
     shape_mod.add_submodule(&m)?;
@@ -721,4 +723,74 @@ fn get_bezier_length_py(
         Point::new(c2.0, c2.1),
         Point::new(p1.0, p1.1),
     )
+}
+
+#[gen_stub_pyfunction(
+    python = r#"
+    import typing
+    import raygeo.geo.types
+
+    def fit_cubic_bezier(
+        points: list[tuple[float, float]],
+    ) -> typing.Optional[types.CubicBezier]:
+        """Fit a cubic Bezier curve to a sequence of points (least-squares).
+
+        :param points: List of (x, y) points.
+        :returns: ``(p0, c1, c2, p3)`` or None if fewer than 2 points.
+        """
+"#,
+    module = "raygeo.geo.shape.bezier"
+)]
+#[pyfunction(name = "fit_cubic_bezier")]
+#[allow(clippy::type_complexity)]
+fn fit_cubic_bezier_py(
+    points: Vec<(f64, f64)>,
+) -> Option<((f64, f64), (f64, f64), (f64, f64), (f64, f64))> {
+    let pts: Vec<Point> =
+        points.into_iter().map(|(x, y)| Point::new(x, y)).collect();
+    fit_cubic_bezier(&pts).map(|b| {
+        (
+            (b.0.x, b.0.y),
+            (b.1.x, b.1.y),
+            (b.2.x, b.2.y),
+            (b.3.x, b.3.y),
+        )
+    })
+}
+
+#[gen_stub_pyfunction(
+    python = r#"
+    import typing
+    import raygeo.geo.types
+
+    def nearest_tangent_circle_on_bezier(
+        point: types.Point,
+        bezier: types.CubicBezier,
+        radius: float,
+    ) -> typing.Optional[tuple[types.Point, types.Point, float]]:
+        """Circle through *point* tangent to a cubic Bezier.
+
+        :param point: Point the circle must pass through.
+        :param bezier: ``(p0, c1, c2, p3)`` control points.
+        :param radius: Circle radius.
+        :returns: ``(centre, tangent_point, t)`` or None.
+        """
+"#,
+    module = "raygeo.geo.shape.bezier"
+)]
+#[pyfunction(name = "nearest_tangent_circle_on_bezier")]
+#[allow(clippy::type_complexity)]
+fn nearest_tangent_circle_on_bezier_py(
+    point: (f64, f64),
+    bezier: ((f64, f64), (f64, f64), (f64, f64), (f64, f64)),
+    radius: f64,
+) -> Option<((f64, f64), (f64, f64), f64)> {
+    let bz = CubicBezier(
+        Point::new(bezier.0 .0, bezier.0 .1),
+        Point::new(bezier.1 .0, bezier.1 .1),
+        Point::new(bezier.2 .0, bezier.2 .1),
+        Point::new(bezier.3 .0, bezier.3 .1),
+    );
+    nearest_tangent_circle_on_bezier(Point::new(point.0, point.1), &bz, radius)
+        .map(|(c, t, tp)| ((c.x, c.y), (t.x, t.y), tp))
 }

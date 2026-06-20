@@ -1,9 +1,12 @@
 """Generate bezier curve example images."""
 
+import math
+
 import matplotlib.pyplot as plt
 import numpy as np
 
 from raygeo.geo.shape.bezier import (
+    fit_cubic_bezier,
     get_bezier_point_at,
     linearize_bezier_adaptive,
     split_bezier,
@@ -142,6 +145,100 @@ def generate_flatten():
     return fig2
 
 
+def generate_fit_cutline():
+    """Fit cubic Beziers to sample point sequences.
+
+    Demonstrates :py:func:`fit_cubic_bezier` on several synthetic
+    curves — a sine arc, a cosine hump, a circular arc, and a shallow
+    wave — showing how the fitted curve (solid line) matches the
+    input points (scatter).
+    """
+
+    # Several point sequences to fit.
+    def _points_along(f, xs):
+        return [(x, f(x)) for x in xs]
+
+    sequences = [
+        (
+            "Sine",
+            _points_along(
+                lambda x: 10 + 8 * math.sin(x * 0.25),
+                [float(i) for i in range(30)],
+            ),
+        ),
+        (
+            "Cosine hump",
+            _points_along(
+                lambda x: 10 + 12 * (1 - math.cos(x * 0.1)),
+                [float(i) for i in range(30)],
+            ),
+        ),
+        (
+            "Quarter circle",
+            _points_along(
+                lambda x: 10 + math.sqrt(max(0.0, 600.0 - (x - 25.0) ** 2)),
+                [float(5 * i) for i in range(12)],
+            ),
+        ),
+        (
+            "Shallow wave",
+            _points_along(
+                lambda x: 10 + 3 * math.sin(x * 0.3),
+                [float(i) for i in range(30)],
+            ),
+        ),
+    ]
+
+    fig, axes = plt.subplots(2, 2, figsize=(12, 10))
+    colors = ["#e41a1c", "#377eb8", "#4daf4a", "#984ea3"]
+
+    for ax, (name, pts), color in zip(axes.flat, sequences, colors):
+        # fit Bezier
+        bz = fit_cubic_bezier(pts)
+        if bz is None:
+            continue
+
+        # linearize for plotting
+        curve = []
+        for i in range(201):
+            t = i / 200
+            curve.append(get_bezier_point_at(bz[0], bz[1], bz[2], bz[3], t))
+        cx = [p[0] for p in curve]
+        cy = [p[1] for p in curve]
+
+        ax.plot(cx, cy, color=color, linewidth=2.5, label="Bezier fit")
+        ax.scatter(
+            [p[0] for p in pts],
+            [p[1] for p in pts],
+            color=color,
+            s=20,
+            alpha=0.6,
+            zorder=5,
+            label="Input points",
+        )
+        # control polygon
+        cpx = [bz[0][0], bz[1][0], bz[2][0], bz[3][0]]
+        cpy = [bz[0][1], bz[1][1], bz[2][1], bz[3][1]]
+        ax.plot(
+            cpx,
+            cpy,
+            color=color,
+            linewidth=0.8,
+            linestyle="--",
+            alpha=0.5,
+            label="Control poly",
+        )
+        ax.plot(bz[0][0], bz[0][1], "o", color=color, markersize=6)
+        ax.plot(bz[3][0], bz[3][1], "o", color=color, markersize=6)
+
+        ax.set_aspect("equal")
+        ax.set_title(name)
+        ax.legend(fontsize=8)
+
+    fig.tight_layout()
+    return fig
+
+
 __docs_target__ = ["raygeo.geo.shape.bezier.md"]
 __images__ = [
     {
@@ -160,5 +257,13 @@ __images__ = [
             "Bezier flattening: adaptive subdivision at varied tolerances"
         ),
         "function": generate_flatten,
+    },
+    {
+        "heading": "fit_cubic_bezier",
+        "caption": (
+            "Cubic Bezier curves fitted to sample point sequences"
+            " — sine, cosine hump, quarter-circle, and shallow wave"
+        ),
+        "function": generate_fit_cutline,
     },
 ]

@@ -15,6 +15,7 @@ import typing
 __all__ = [
     "clip_bezier_with_rect",
     "convert_cubic_bezier_to_quadratic",
+    "fit_cubic_bezier",
     "flatten_bezier",
     "get_bezier_bounds",
     "get_bezier_flatness_sq",
@@ -27,6 +28,7 @@ __all__ = [
     "linearize_bezier",
     "linearize_bezier_adaptive",
     "linearize_bezier_segment",
+    "nearest_tangent_circle_on_bezier",
     "split_bezier",
 ]
 
@@ -53,6 +55,14 @@ def convert_cubic_bezier_to_quadratic(p0: types.Point, p1: types.Point, p2: type
     :param p3: End control point (x, y).
     :returns: Quadratic bezier (p0, p1, p2).
     :complexity: O(1)
+    """
+
+def fit_cubic_bezier(points: list[tuple[float, float]]) -> typing.Optional[types.CubicBezier]:
+    r"""
+    Fit a cubic Bezier curve to a sequence of points (least-squares).
+    
+    :param points: List of (x, y) points.
+    :returns: ``(p0, c1, c2, p3)`` or None if fewer than 2 points.
     """
 
 def flatten_bezier(p0: types.Point3D, p1: types.Point3D, p2: types.Point3D, p3: types.Point3D, tolerance: float, max_subdivisions: int, pts: list) -> None:
@@ -214,6 +224,16 @@ def linearize_bezier_segment(p0: types.Point3D, p1: types.Point3D, p2: types.Poi
     :param tolerance: Linearization tolerance.
     :returns: List of linearized points (x, y, z).
     :complexity: O(n)
+    """
+
+def nearest_tangent_circle_on_bezier(point: types.Point, bezier: types.CubicBezier, radius: float) -> typing.Optional[tuple[types.Point, types.Point, float]]:
+    r"""
+    Circle through *point* tangent to a cubic Bezier.
+    
+    :param point: Point the circle must pass through.
+    :param bezier: ``(p0, c1, c2, p3)`` control points.
+    :param radius: Circle radius.
+    :returns: ``(centre, tangent_point, t)`` or None.
     """
 
 def split_bezier(p0: types.Point, p1: types.Point, p2: types.Point, p3: types.Point, t: float) -> tuple[tuple[types.Point, types.Point, types.Point, types.Point], tuple[types.Point, types.Point, types.Point, types.Point]]:

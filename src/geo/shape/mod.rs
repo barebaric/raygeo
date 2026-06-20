@@ -19,12 +19,13 @@ pub use arc::{
 };
 pub use bezier::{
     clip_bezier_with_rect, compute_cubic_bezier_bounds_1d,
-    convert_cubic_bezier_to_quadratic, evaluate_cubic, flatten_bezier,
-    get_bezier_bounds, get_bezier_closest_point, get_bezier_flatness_sq,
-    get_bezier_length, get_bezier_point_at, get_bezier_rect_intersections,
-    get_perpendicular_dist_sq, is_bezier_flat, is_bezier_inside_polygons,
-    linearize_bezier, linearize_bezier_adaptive, linearize_bezier_from_params,
-    linearize_bezier_segment, split_bezier,
+    convert_cubic_bezier_to_quadratic, evaluate_cubic, fit_cubic_bezier,
+    flatten_bezier, get_bezier_bounds, get_bezier_closest_point,
+    get_bezier_flatness_sq, get_bezier_length, get_bezier_point_at,
+    get_bezier_rect_intersections, get_perpendicular_dist_sq, is_bezier_flat,
+    is_bezier_inside_polygons, linearize_bezier, linearize_bezier_adaptive,
+    linearize_bezier_from_params, linearize_bezier_segment,
+    nearest_tangent_circle_on_bezier, split_bezier,
 };
 pub use circle::{
     does_circle_intersect_rect, find_tangent_circle_centers,

@@ -714,3 +714,148 @@ pub fn get_bezier_length(p0: Point, c1: Point, c2: Point, p1: Point) -> f64 {
     }
     total
 }
+
+/// Fit a cubic Bezier curve to a sequence of 2D points using least-squares.
+///
+/// The endpoints are fixed to the first and last point.  Returns `None`
+/// when fewer than 2 points are given.
+pub fn fit_cubic_bezier(points: &[Point]) -> Option<CubicBezier> {
+    let n = points.len();
+    if n < 2 {
+        return None;
+    }
+    let p0 = points[0];
+    let p3 = points[n - 1];
+
+    if n == 2 {
+        return Some(CubicBezier(p0, p0, p3, p3));
+    }
+
+    // Parameterise by cumulative chord length, normalised to [0, 1].
+    let mut chords = vec![0.0f64; n];
+    for i in 1..n {
+        chords[i] = chords[i - 1] + points[i].distance(points[i - 1]);
+    }
+    let total = chords[n - 1];
+    if total < 1e-12 {
+        return Some(CubicBezier(p0, p0, p3, p3));
+    }
+    for c in &mut chords {
+        *c /= total;
+    }
+
+    // Set up the least-squares system for the two interior control points.
+    // For each data point Q_j at parameter t_j:
+    //   w1_j * C1 + w2_j * C2 = R_j
+    // where w1_j = 3*(1-t_j)^2*t_j, w2_j = 3*(1-t_j)*t_j^2
+    // and   R_j = Q_j - (1-t_j)^3*P0 - t_j^3*P3
+    let mut a11 = 0.0f64;
+    let mut a12 = 0.0f64;
+    let mut a22 = 0.0f64;
+    let mut b1x = 0.0f64;
+    let mut b1y = 0.0f64;
+    let mut b2x = 0.0f64;
+    let mut b2y = 0.0f64;
+
+    for j in 0..n {
+        let t = chords[j];
+        let mt = 1.0 - t;
+        let w1 = 3.0 * mt * mt * t;
+        let w2 = 3.0 * mt * t * t;
+        let rx = points[j].x - mt.powi(3) * p0.x - t.powi(3) * p3.x;
+        let ry = points[j].y - mt.powi(3) * p0.y - t.powi(3) * p3.y;
+
+        a11 += w1 * w1;
+        a12 += w1 * w2;
+        a22 += w2 * w2;
+        b1x += w1 * rx;
+        b1y += w1 * ry;
+        b2x += w2 * rx;
+        b2y += w2 * ry;
+    }
+
+    // Solve the 2×2 system [a11 a12; a12 a22] * [c1; c2] = [b1; b2].
+    let det = a11 * a22 - a12 * a12;
+    if det.abs() < 1e-18 {
+        // Degenerate — place control points evenly along the chord.
+        return Some(CubicBezier(
+            p0,
+            p0.lerp(p3, 1.0 / 3.0),
+            p0.lerp(p3, 2.0 / 3.0),
+            p3,
+        ));
+    }
+    let inv = 1.0 / det;
+    let c1x = (a22 * b1x - a12 * b2x) * inv;
+    let c1y = (a22 * b1y - a12 * b2y) * inv;
+    let c2x = (a11 * b2x - a12 * b1x) * inv;
+    let c2y = (a11 * b2y - a12 * b1y) * inv;
+
+    Some(CubicBezier(
+        p0,
+        Point::new(c1x, c1y),
+        Point::new(c2x, c2y),
+        p3,
+    ))
+}
+
+/// Find the circle of `radius` that passes through `point` and is tangent
+/// to a cubic Bezier curve.
+///
+/// Samples the Bezier and its analytic derivative at `N_SAMPLES` points,
+/// computes the two candidate centres (one per normal direction) at each
+/// sample, and returns the centre whose distance to `point` is closest
+/// to `radius`.
+///
+/// Returns `(centre, tangent_point, t_parameter)` or `None` when no valid
+/// circle is found within tolerance.
+pub fn nearest_tangent_circle_on_bezier(
+    point: Point,
+    bezier: &CubicBezier,
+    radius: f64,
+) -> Option<(Point, Point, f64)> {
+    let CubicBezier(p0, c1, c2, p3) = *bezier;
+
+    const N_SAMPLES: usize = 200;
+    let mut best_t = -1.0;
+    let mut best_center = Point::ZERO;
+    let mut best_tangent = Point::ZERO;
+    let mut best_err = f64::MAX;
+
+    for i in 0..=N_SAMPLES {
+        let t = i as f64 / N_SAMPLES as f64;
+        let mt = 1.0 - t;
+
+        // Bezier point B(t).
+        let bt = get_bezier_point_at(p0, c1, c2, p3, t);
+
+        // Derivative B'(t) = 3*(1-t)^2*(C1-P0) + 6*(1-t)*t*(C2-C1) + 3*t^2*(P3-C2)
+        let deriv = 3.0 * mt * mt * (c1 - p0)
+            + 6.0 * mt * t * (c2 - c1)
+            + 3.0 * t * t * (p3 - c2);
+        let dl = deriv.length();
+        if dl < 1e-12 {
+            continue;
+        }
+
+        // Unit normal (perp of tangent).
+        let n = Point::new(-deriv.y / dl, deriv.x / dl);
+
+        for &side in &[1.0, -1.0] {
+            let center = bt + side * radius * n;
+            let err = (center.distance(point) - radius).abs();
+            if err < best_err {
+                best_err = err;
+                best_t = t;
+                best_center = center;
+                best_tangent = bt;
+            }
+        }
+    }
+
+    if best_err < radius * 0.3 {
+        Some((best_center, best_tangent, best_t))
+    } else {
+        None
+    }
+}

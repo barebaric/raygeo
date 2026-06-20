@@ -5,6 +5,7 @@ import pytest
 from raygeo.geo.shape.bezier import (
     clip_bezier_with_rect,
     convert_cubic_bezier_to_quadratic,
+    fit_cubic_bezier,
     flatten_bezier,
     get_bezier_bounds,
     get_bezier_flatness_sq,
@@ -16,6 +17,7 @@ from raygeo.geo.shape.bezier import (
     linearize_bezier,
     linearize_bezier_adaptive,
     linearize_bezier_segment,
+    nearest_tangent_circle_on_bezier,
     split_bezier,
 )
 
@@ -562,3 +564,143 @@ class TestIsBezierFullyInsideRegions:
         region = self._square(0, 0, 10)
         p0, c1, c2, p1 = (1, 5), (3, 5), (5, 5), (7, 5)
         assert is_bezier_inside_polygons(p0, c1, c2, p1, [region])
+
+
+class TestFitCubicBezier:
+    def test_two_points_returns_degenerate(self):
+        pts = [(0.0, 0.0), (10.0, 0.0)]
+        bz = fit_cubic_bezier(pts)
+        assert bz is not None
+        assert bz[0] == approx_pt((0.0, 0.0))
+        assert bz[3] == approx_pt((10.0, 0.0))
+
+    def test_three_collinear_points(self):
+        pts = [(0.0, 0.0), (5.0, 0.0), (10.0, 0.0)]
+        bz = fit_cubic_bezier(pts)
+        assert bz is not None
+        assert bz[0] == approx_pt((0.0, 0.0))
+        assert bz[3] == approx_pt((10.0, 0.0))
+        # interior points should be near the line
+        for t in [0.25, 0.5, 0.75]:
+            pt = get_bezier_point_at(bz[0], bz[1], bz[2], bz[3], t)
+            assert abs(pt[1]) < 1e-9
+
+    def test_sine_arc(self):
+        xs = [float(i) for i in range(30)]
+        pts = [(x, 10 + 8 * math.sin(x * 0.25)) for x in xs]
+        bz = fit_cubic_bezier(pts)
+        assert bz is not None
+        assert bz[0] == approx_pt(pts[0])
+        assert bz[3] == approx_pt(pts[-1])
+        # fit should be reasonable — max error under 4.0 (a single cubic
+        # bezier cannot perfectly match a multi-period sine wave)
+        errs = []
+        for tx, (ex, ey) in zip(xs, pts):
+            t = tx / xs[-1]
+            bx, by = get_bezier_point_at(bz[0], bz[1], bz[2], bz[3], t)
+            errs.append(math.hypot(bx - ex, by - ey))
+        assert max(errs) < 4.0
+
+    def test_quarter_circle(self):
+        def _y(x):
+            return 10 + math.sqrt(max(0.0, 400.0 - (x - 25.0) ** 2))
+
+        pts = [(float(5 * i), _y(float(5 * i))) for i in range(12)]
+        bz = fit_cubic_bezier(pts)
+        assert bz is not None
+        assert bz[0] == approx_pt(pts[0])
+        assert bz[3] == approx_pt(pts[-1])
+
+    def test_fewer_than_two_returns_none(self):
+        assert fit_cubic_bezier([(0.0, 0.0)]) is None
+        assert fit_cubic_bezier([]) is None
+
+    def test_all_coincident(self):
+        pts = [(3.0, 3.0)] * 5
+        bz = fit_cubic_bezier(pts)
+        assert bz is not None
+        for p in [bz[0], bz[1], bz[2], bz[3]]:
+            assert p == approx_pt((3.0, 3.0))
+
+
+class TestNearestTangentCircleOnBezier:
+    def _eval(self, bz, t):
+        return get_bezier_point_at(bz[0], bz[1], bz[2], bz[3], t)
+
+    def test_straight_line_bezier(self):
+        """Circle tangent to a horizontal line Bezier, passing through
+        a point above the line.  The centre should be directly above the
+        tangent point at distance r."""
+        bz = ((0.0, 0.0), (5.0, 0.0), (15.0, 0.0), (20.0, 0.0))
+        radius = 5.0
+        point = (10.0, 8.0)
+        result = nearest_tangent_circle_on_bezier(point, bz, radius)
+        assert result is not None, "should find a valid circle"
+        center, tangent, t = result
+        d = math.hypot(center[0] - point[0], center[1] - point[1])
+        assert d == pytest.approx(radius, rel=1e-2)
+        d = math.hypot(center[0] - tangent[0], center[1] - tangent[1])
+        assert d == pytest.approx(radius, rel=1e-2)
+        # tangent point on the Bezier
+        on_curve = self._eval(bz, t)
+        assert on_curve == approx_pt(tangent)
+        # centre should be above the line (y > 0)
+        assert center[1] > 0.0
+
+    def test_circular_arc_bezier(self):
+        """Bezier approximating a quarter circle.  The tangent circle should
+        contact the curve smoothly."""
+        # quarter-circle: (10, 0) → (0, 10) with centre at (0, 0)
+        bz = ((10.0, 0.0), (10.0, 4.0), (4.0, 10.0), (0.0, 10.0))
+        radius = 2.0
+        point = (12.0, 5.0)
+        result = nearest_tangent_circle_on_bezier(point, bz, radius)
+        assert result is not None, "should find a valid circle"
+        center, tangent, t = result
+        d = math.hypot(center[0] - point[0], center[1] - point[1])
+        assert d == pytest.approx(radius, rel=1e-2)
+        d = math.hypot(center[0] - tangent[0], center[1] - tangent[1])
+        assert d == pytest.approx(radius, rel=1e-2)
+        on_curve = self._eval(bz, t)
+        assert on_curve == approx_pt(tangent)
+
+    def test_point_on_curve(self):
+        """When the point IS on the Bezier, the circle should be tangent
+        at that point with centre at distance r along the normal."""
+        bz = ((0.0, 0.0), (3.0, 6.0), (7.0, 6.0), (10.0, 0.0))
+        tangent = self._eval(bz, 0.3)
+        r = 3.0
+        point = (tangent[0], tangent[1] + r)
+        result = nearest_tangent_circle_on_bezier(point, bz, r)
+        assert result is not None
+        center, _, _ = result
+        d = math.hypot(center[0] - point[0], center[1] - point[1])
+        assert d == pytest.approx(r, rel=2e-2)
+
+    def test_too_small_radius_returns_none(self):
+        bz = ((0.0, 0.0), (5.0, 0.0), (15.0, 0.0), (20.0, 0.0))
+        point = (10.0, 100.0)
+        result = nearest_tangent_circle_on_bezier(point, bz, 1.0)
+        assert result is None
+
+    def test_negative_radius_returns_none(self):
+        bz = ((0.0, 0.0), (5.0, 0.0), (15.0, 0.0), (20.0, 0.0))
+        point = (10.0, 10.0)
+        result = nearest_tangent_circle_on_bezier(point, bz, -1.0)
+        assert result is None
+
+    def test_symmetric_case(self):
+        """Symmetric Bezier with point directly above the peak."""
+        bz = ((0.0, 0.0), (5.0, 10.0), (15.0, 10.0), (20.0, 0.0))
+        tangent = self._eval(bz, 0.5)  # peak at (10, 7.5)
+        r = 3.0
+        # point is 2r above the curve peak
+        point = (tangent[0], tangent[1] + 2.0 * r)
+        result = nearest_tangent_circle_on_bezier(point, bz, r)
+        assert result is not None
+        center, tangent_pt, t = result
+        d = math.hypot(center[0] - point[0], center[1] - point[1])
+        assert d == pytest.approx(r, rel=2e-2)
+        d = math.hypot(center[0] - tangent_pt[0], center[1] - tangent_pt[1])
+        assert d == pytest.approx(r, rel=2e-2)
+        assert 0.0 < t < 1.0

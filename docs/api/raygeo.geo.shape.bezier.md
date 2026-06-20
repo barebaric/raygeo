@@ -59,6 +59,26 @@ Convert a cubic bezier to a quadratic bezier.
 | _Returns_    | `tuple[types.Point, types.Point, types.Point]` | Quadratic bezier (p0, p1, p2). |
 | _Complexity_ |                                                | O(1)                           |
 
+### `fit_cubic_bezier()`
+
+```python
+fit_cubic_bezier(
+    points: list[tuple[float, float]],
+) -> Optional[types.CubicBezier]
+```
+
+Fit a cubic Bezier curve to a sequence of points (least-squares).
+
+| Parameter | Type                          | Description                                        |
+| --------- | ----------------------------- | -------------------------------------------------- |
+| `points`  | `list[tuple[float, float]]`   | List of (x, y) points.                             |
+| _Returns_ | `Optional[types.CubicBezier]` | `(p0, c1, c2, p3)` or None if fewer than 2 points. |
+
+![Cubic Bezier curves fitted to sample point sequences — sine, cosine hump, quarter-circle, and shallow wave](images/geo-shape-bezier-fit-cutline.png)
+
+_Cubic Bezier curves fitted to sample point sequences — sine, cosine hump, quarter-circle, and
+shallow wave_
+
 ### `flatten_bezier()`
 
 ```python
@@ -360,6 +380,25 @@ Linearize a single bezier segment.
 | `tolerance`  | `float = 0.1`         | Linearization tolerance.             |
 | _Returns_    | `list[types.Point3D]` | List of linearized points (x, y, z). |
 | _Complexity_ |                       | O(n)                                 |
+
+### `nearest_tangent_circle_on_bezier()`
+
+```python
+nearest_tangent_circle_on_bezier(
+    point: types.Point,
+    bezier: types.CubicBezier,
+    radius: float,
+) -> Optional[tuple[types.Point, types.Point, float]]
+```
+
+Circle through _point_ tangent to a cubic Bezier.
+
+| Parameter | Type                                               | Description                           |
+| --------- | -------------------------------------------------- | ------------------------------------- |
+| `point`   | `types.Point`                                      | Point the circle must pass through.   |
+| `bezier`  | `types.CubicBezier`                                | `(p0, c1, c2, p3)` control points.    |
+| `radius`  | `float`                                            | Circle radius.                        |
+| _Returns_ | `Optional[tuple[types.Point, types.Point, float]]` | `(centre, tangent_point, t)` or None. |
 
 ### `split_bezier()`
 
