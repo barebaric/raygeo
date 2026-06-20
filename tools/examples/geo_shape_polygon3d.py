@@ -16,6 +16,7 @@ from raygeo.geo.shape.polygon3d import (
     get_polygons_difference_3d,
     get_polygons_intersection_3d,
     get_polygons_union_3d,
+    get_polyline_end_tangent_3d,
     offset_polygon_3d,
     offset_polyline_3d,
     rotate_polygon_3d,
@@ -393,6 +394,63 @@ def generate_true_offset():
     return fig
 
 
+def generate_end_tangent():
+    """End tangent."""
+    poly = [
+        (2.0, 2.0, 0.0),
+        (5.0, 1.0, 0.0),
+        (8.0, 3.0, 0.0),
+        (10.0, 8.0, 0.0),
+    ]
+    dx, dy = get_polyline_end_tangent_3d(poly)
+
+    fig, ax = plt.subplots(figsize=(7, 7))
+    xs = [p[0] for p in poly]
+    ys = [p[1] for p in poly]
+    ax.plot(
+        xs,
+        ys,
+        "o-",
+        color="steelblue",
+        linewidth=2,
+        markersize=6,
+        label="Polyline",
+    )
+    # Arrow at the last point showing the tangent direction
+    last = poly[-1]
+    arrow_len = 2.0
+    ax.arrow(
+        last[0],
+        last[1],
+        dx * arrow_len,
+        dy * arrow_len,
+        head_width=0.4,
+        head_length=0.4,
+        fc="tomato",
+        ec="tomato",
+        linewidth=2,
+        label=f"End tangent ({dx:.3f}, {dy:.3f})",
+    )
+    # Label points
+    for i, (x, y, _) in enumerate(poly):
+        ax.annotate(
+            str(i),
+            (x, y),
+            textcoords="offset points",
+            xytext=(4, 4),
+            fontsize=10,
+            color="k",
+        )
+    ax.set_aspect("equal")
+    ax.set_xlim(0, 12)
+    ax.set_ylim(0, 12)
+    ax.grid(True, alpha=0.3)
+    ax.legend(fontsize=10)
+    ax.set_title("Polyline end tangent direction", fontsize=12)
+    fig.tight_layout()
+    return fig
+
+
 __docs_target__ = ["raygeo.geo.shape.polygon3d.md"]
 __images__ = [
     {
@@ -464,5 +522,10 @@ __images__ = [
         "heading": "offset_polyline_3d",
         "caption": "True 3D polyline offset (edge-plane miter)",
         "function": generate_true_offset,
+    },
+    {
+        "heading": "get_polyline_end_tangent_3d",
+        "caption": "Normalised end tangent direction of a 3D polyline",
+        "function": generate_end_tangent,
     },
 ]

@@ -259,6 +259,27 @@ Compute the union of 3D polygons (XY-plane, Z preserved).
 
 _3D polygon union — Z from first polygon_
 
+### `get_polyline_end_tangent_3d()`
+
+```python
+get_polyline_end_tangent_3d(polyline: Sequence[types.Point3D]) -> types.Point
+```
+
+Normalised tangent direction at the last point of a 3D polyline.
+
+Returns the normalised XY direction from the second-to-last point to the last point. Falls back to
+`(1.0, 0.0)` when the polyline has fewer than 2 points or the last edge has zero length.
+
+| Parameter    | Type                      | Description                            |
+| ------------ | ------------------------- | -------------------------------------- |
+| `polyline`   | `Sequence[types.Point3D]` | Polyline as (x, y, z) points.          |
+| _Returns_    | `types.Point`             | Normalised (dx, dy) tangent direction. |
+| _Complexity_ |                           | O(1)                                   |
+
+![Normalised end tangent direction of a 3D polyline](images/geo-shape-polygon3d-end-tangent.png)
+
+_Normalised end tangent direction of a 3D polyline_
+
 ### `offset_polygon_3d()`
 
 ```python

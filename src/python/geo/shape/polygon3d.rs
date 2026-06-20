@@ -9,9 +9,9 @@ use crate::geo::shape::polygon3d::{
     get_polygon_group_bounds_3d, get_polygon_perimeter_3d,
     get_polygons_difference_3d, get_polygons_group_difference_3d,
     get_polygons_group_intersection_3d, get_polygons_intersection_3d,
-    get_polygons_union_3d, offset_polygon_3d, offset_polyline_3d,
-    rotate_polygon_3d, rotate_polygons_3d, scale_polygon_3d,
-    translate_polygon_3d, translate_polygons_3d,
+    get_polygons_union_3d, get_polyline_end_tangent_3d, offset_polygon_3d,
+    offset_polyline_3d, rotate_polygon_3d, rotate_polygons_3d,
+    scale_polygon_3d, translate_polygon_3d, translate_polygons_3d,
 };
 use crate::types::Point3D;
 use pyo3::prelude::*;
@@ -390,6 +390,33 @@ fn get_polygon_convex_hull_3d_py(
     points3d_to_tuples(get_polygon_convex_hull_3d(&poly3d_to_points(polygon)))
 }
 
+#[gen_stub_pyfunction(
+    python = r#"
+    import collections.abc
+    import raygeo.geo.types
+
+    def get_polyline_end_tangent_3d(
+        polyline: collections.abc.Sequence[types.Point3D],
+    ) -> types.Point:
+        """Normalised tangent direction at the last point of a 3D polyline.
+
+        Returns the normalised XY direction from the second-to-last point to
+        the last point.  Falls back to ``(1.0, 0.0)`` when the polyline has
+        fewer than 2 points or the last edge has zero length.
+
+        :param polyline: Polyline as (x, y, z) points.
+        :returns: Normalised (dx, dy) tangent direction.
+        :complexity: O(1)
+        """
+"#,
+    module = "raygeo.geo.shape.polygon3d"
+)]
+#[pyfunction(name = "get_polyline_end_tangent_3d")]
+fn get_polyline_end_tangent_3d_py(polyline: Vec<PyPoint3D>) -> (f64, f64) {
+    let pt = get_polyline_end_tangent_3d(&poly3d_to_points(polyline));
+    (pt.x, pt.y)
+}
+
 // ── 3D Transform functions ───────────────────────────────────────────
 
 #[gen_stub_pyfunction(
@@ -666,6 +693,7 @@ pub fn register(shape_mod: &Bound<'_, PyModule>) -> PyResult<()> {
         get_polygon_centroid_3d_py,
         get_polygon_edges_3d_py,
         get_polygon_convex_hull_3d_py,
+        get_polyline_end_tangent_3d_py,
         translate_polygon_3d_py,
         translate_polygons_3d_py,
         scale_polygon_3d_py,

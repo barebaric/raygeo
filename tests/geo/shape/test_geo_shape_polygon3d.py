@@ -4,6 +4,7 @@ Tests for 3D polygon boolean and offset operations.
 Verifies Z preservation through all boolean and offset operations.
 """
 
+import math
 from typing import List, Tuple
 
 from raygeo.geo.shape.polygon3d import (
@@ -20,6 +21,7 @@ from raygeo.geo.shape.polygon3d import (
     get_polygons_group_intersection_3d,
     get_polygons_intersection_3d,
     get_polygons_union_3d,
+    get_polyline_end_tangent_3d,
     offset_polygon_3d,
     offset_polyline_3d,
     rotate_polygon_3d,
@@ -574,3 +576,56 @@ class TestOffsetPolyline3D:
         poly = P3((0, 0, 5), (10, 0, 5), (10, 10, 5))
         result = offset_polyline_3d(poly, 100.0)
         assert len(result) == 3
+
+
+# ── get_polyline_end_tangent_3d ──────────────────────────────────────
+
+
+class TestEndTangent3D:
+    def test_horizontal_line(self):
+        poly = P3((0, 0, 0), (10, 0, 0))
+        dx, dy = get_polyline_end_tangent_3d(poly)
+        assert abs(dx - 1.0) < 1e-9
+        assert abs(dy - 0.0) < 1e-9
+
+    def test_vertical_line(self):
+        poly = P3((0, 0, 0), (0, 10, 0))
+        dx, dy = get_polyline_end_tangent_3d(poly)
+        assert abs(dx - 0.0) < 1e-9
+        assert abs(dy - 1.0) < 1e-9
+
+    def test_diagonal(self):
+        poly = P3((0, 0, 0), (3, 4, 0))
+        dx, dy = get_polyline_end_tangent_3d(poly)
+        assert abs(dx - 0.6) < 1e-9
+        assert abs(dy - 0.8) < 1e-9
+
+    def test_normalised(self):
+        poly = P3((0, 0, 0), (5, 12, 0))
+        dx, dy = get_polyline_end_tangent_3d(poly)
+        length = math.sqrt(dx * dx + dy * dy)
+        assert abs(length - 1.0) < 1e-9
+
+    def test_lookback_uses_last_segment(self):
+        poly = P3((0, 0, 0), (10, 0, 0), (10, 10, 0))
+        dx, dy = get_polyline_end_tangent_3d(poly)
+        # Last segment is (10,0) -> (10,10), direction = (0, 1)
+        assert abs(dx - 0.0) < 1e-9
+        assert abs(dy - 1.0) < 1e-9
+
+    def test_single_point_returns_default(self):
+        poly = P3((5, 5, 0))
+        dx, dy = get_polyline_end_tangent_3d(poly)
+        assert abs(dx - 1.0) < 1e-9
+        assert abs(dy - 0.0) < 1e-9
+
+    def test_empty_returns_default(self):
+        dx, dy = get_polyline_end_tangent_3d([])
+        assert abs(dx - 1.0) < 1e-9
+        assert abs(dy - 0.0) < 1e-9
+
+    def test_zero_length_last_edge(self):
+        poly = P3((0, 0, 0), (5, 0, 0), (5, 0, 0))
+        dx, dy = get_polyline_end_tangent_3d(poly)
+        assert abs(dx - 1.0) < 1e-9
+        assert abs(dy - 0.0) < 1e-9

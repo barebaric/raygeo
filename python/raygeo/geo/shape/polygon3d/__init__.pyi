@@ -18,6 +18,7 @@ __all__ = [
     "get_polygons_group_intersection_3d",
     "get_polygons_intersection_3d",
     "get_polygons_union_3d",
+    "get_polyline_end_tangent_3d",
     "offset_polygon_3d",
     "offset_polyline_3d",
     "rotate_polygon_3d",
@@ -149,6 +150,19 @@ def get_polygons_union_3d(polygons: collections.abc.Sequence[types.Polygon3D]) -
     
     :param polygons: List of 3D polygons.
     :returns: Union result with Z from first polygon.
+    """
+
+def get_polyline_end_tangent_3d(polyline: collections.abc.Sequence[types.Point3D]) -> types.Point:
+    r"""
+    Normalised tangent direction at the last point of a 3D polyline.
+    
+    Returns the normalised XY direction from the second-to-last point to
+    the last point.  Falls back to ``(1.0, 0.0)`` when the polyline has
+    fewer than 2 points or the last edge has zero length.
+    
+    :param polyline: Polyline as (x, y, z) points.
+    :returns: Normalised (dx, dy) tangent direction.
+    :complexity: O(1)
     """
 
 def offset_polygon_3d(polygon: collections.abc.Sequence[types.Point3D], offset: float) -> list[types.Polygon3D]:

@@ -627,3 +627,19 @@ pub fn offset_polyline_3d(
 
     result
 }
+
+/// Normalised tangent direction at the last point of a 3D polyline.
+pub fn get_polyline_end_tangent_3d(poly: &[Point3D]) -> Point {
+    if poly.len() < 2 {
+        return Point::new(1.0, 0.0);
+    }
+    let a = poly[poly.len() - 2];
+    let b = poly[poly.len() - 1];
+    let d = Point::new(b.x - a.x, b.y - a.y);
+    let len = d.length();
+    if len < 1e-12 {
+        Point::new(1.0, 0.0)
+    } else {
+        d / len
+    }
+}
