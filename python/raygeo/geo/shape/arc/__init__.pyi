@@ -13,6 +13,7 @@ import collections.abc
 from raygeo.geo import types
 import typing
 __all__ = [
+    "arc_through_point",
     "does_arc_intersect_circle",
     "does_arc_intersect_rect",
     "get_arc_angles",
@@ -28,6 +29,22 @@ __all__ = [
     "linearize_arc",
     "normalize_angle",
 ]
+
+def arc_through_point(t_start: types.Point, t_end: types.Point, t_mid: types.Point, center: types.Point, radius: float) -> types.Polygon:
+    r"""
+    Build a circular arc through three points around a centre.
+    
+    Returns a polyline approximation of the arc from *t_start* to
+    *t_end* that passes through *t_mid*, with the given centre and
+    radius.
+    
+    :param t_start: Arc start point (x, y).
+    :param t_end: Arc end point (x, y).
+    :param t_mid: Point the arc must pass through (x, y).
+    :param center: Arc centre (x, y).
+    :param radius: Arc radius.
+    :returns: Polyline approximation as list of (x, y) points.
+    """
 
 def does_arc_intersect_circle(arc_start: types.Point, arc_end: types.Point, arc_center: types.Point, clockwise: bool, circle_center: types.Point, circle_radius: float) -> bool:
     r"""

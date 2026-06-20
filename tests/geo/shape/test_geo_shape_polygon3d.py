@@ -21,6 +21,7 @@ from raygeo.geo.shape.polygon3d import (
     get_polygon_group_bounds_3d,
     get_polygon_perimeter_3d,
     get_polygon_signed_area_3d,
+    get_polygons_closest_point_3d,
     get_polygons_difference_3d,
     get_polygons_group_difference_3d,
     get_polygons_group_intersection_3d,
@@ -1280,3 +1281,44 @@ class TestWalkAlongPolygon3D:
         # point = (10 + 0.553*(5-10), 0 + 0.553*(10-0)) ≈ (7.236, 5.528)
         assert abs(result[0] - 7.23606797749979) < 1e-9
         assert abs(result[1] - 5.52786404500042) < 1e-9
+
+
+# ── get_polygons_closest_point_3d ─────────────────────────────────────
+
+
+class TestPolygonsClosestPoint3D:
+    def test_single_polygon(self):
+        """Single 3D polygon in list returns its closest point."""
+        polys = [P3((0, 0, 5), (10, 0, 5), (10, 10, 5), (0, 10, 5))]
+        result = get_polygons_closest_point_3d(polys, 5.0, 15.0, 5.0)
+        assert result is not None
+        pi, t, pt, d2 = result
+        assert pi == 0
+        assert pt == (5.0, 10.0, 5.0)
+
+    def test_two_polygons_picks_closest(self):
+        """Two 3D polygons: picks the one with the closer boundary."""
+        polys = [
+            P3((0, 0, 5), (10, 0, 5), (10, 10, 5), (0, 10, 5)),
+            P3((100, 100, 5), (110, 100, 5), (110, 110, 5), (100, 110, 5)),
+        ]
+        result = get_polygons_closest_point_3d(polys, 105.0, 105.0, 5.0)
+        assert result is not None
+        assert result[0] == 1
+
+    def test_empty_polygons(self):
+        """Empty list returns None."""
+        assert get_polygons_closest_point_3d([], 0.0, 0.0, 0.0) is None
+
+    def test_all_degenerate(self):
+        """All degenerate 3D polygons return None."""
+        polys = [P3((0, 0, 0)), []]
+        assert get_polygons_closest_point_3d(polys, 5.0, 5.0, 0.0) is None
+
+    def test_z_preserved(self):
+        """The closest point has the Z coordinate from the polygon edge."""
+        polys = [P3((0, 0, 10), (10, 0, 10), (10, 10, 10), (0, 10, 10))]
+        result = get_polygons_closest_point_3d(polys, 5.0, 5.0, 0.0)
+        assert result is not None
+        pt = result[2]
+        assert pt[2] == 10.0  # Z from polygon

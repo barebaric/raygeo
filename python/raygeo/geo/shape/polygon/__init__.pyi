@@ -22,6 +22,7 @@ __all__ = [
     "get_polygon_group_bounds",
     "get_polygon_perimeter",
     "get_polygon_signed_area",
+    "get_polygons_closest_point",
     "get_polygons_difference",
     "get_polygons_group_difference",
     "get_polygons_group_intersection",
@@ -216,6 +217,16 @@ def get_polygon_signed_area(polygon: collections.abc.Sequence[types.Point]) -> f
     :param polygon: Polygon as (x, y) points.
     :returns: Signed area (positive for CCW, negative for CW).
     :complexity: O(n)
+    """
+
+def get_polygons_closest_point(polygons: collections.abc.Sequence[types.Polygon], x: float, y: float) -> tuple[int, float, tuple[float, float], float] | None:
+    r"""
+    Find the closest point on any polygon in a list to (x, y).
+    
+    :param polygons: List of polygons as (x, y) points.
+    :param x: X coordinate.
+    :param y: Y coordinate.
+    :returns: (polygon_index, t, (cx, cy), distance_squared) or None.
     """
 
 def get_polygons_difference(poly1: collections.abc.Sequence[types.Point], poly2: collections.abc.Sequence[types.Point]) -> list[types.Polygon]:

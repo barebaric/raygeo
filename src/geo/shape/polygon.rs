@@ -364,6 +364,31 @@ pub fn get_polygon_closest_point(
     best
 }
 
+/// Find the closest point on any polygon in `polygons` to the given
+/// `point`.  Returns `(polygon_index, t, closest_point, distance_squared)`
+/// where `polygon_index` is the index into `polygons`, `t` is the
+/// parametric position along the closest edge (0–1), `closest_point` is
+/// the nearest point on the boundary, and `distance_squared` is the
+/// squared Euclidean distance.
+///
+/// Returns `None` when all polygons have fewer than 2 vertices.
+pub fn get_polygons_closest_point(
+    polygons: &[Polygon],
+    point: Point,
+) -> Option<(usize, f64, Point, f64)> {
+    let mut best: Option<(usize, f64, Point, f64)> = None;
+    for (pi, poly) in polygons.iter().enumerate() {
+        if let Some((t, pt, d2)) =
+            get_polygon_closest_point(poly, point.x, point.y)
+        {
+            if best.is_none() || d2 < best.unwrap().3 {
+                best = Some((pi, t, pt, d2));
+            }
+        }
+    }
+    best
+}
+
 /// Rotate a polygon around the origin.
 pub fn rotate_polygon(polygon: &Polygon, angle_degrees: f64) -> Polygon {
     if polygon.is_empty() {

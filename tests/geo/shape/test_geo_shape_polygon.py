@@ -23,6 +23,7 @@ from raygeo.geo.shape.polygon import (
     get_polygon_group_bounds,
     get_polygon_perimeter,
     get_polygon_signed_area,
+    get_polygons_closest_point,
     get_polygons_difference,
     get_polygons_group_difference,
     get_polygons_group_intersection,
@@ -1428,3 +1429,56 @@ def test_closest_point_degenerate():
     """Degenerate polygon returns None."""
     assert get_polygon_closest_point([], 0.0, 0.0) is None
     assert get_polygon_closest_point([(0, 0)], 0.0, 0.0) is None
+
+
+class TestPolygonsClosestPoint:
+    def test_single_polygon(self):
+        """Single polygon in list behaves like singular version."""
+        polys = [[(0.0, 0.0), (10.0, 0.0), (10.0, 10.0), (0.0, 10.0)]]
+        result = get_polygons_closest_point(polys, 5.0, 15.0)
+        assert result is not None
+        pi, t, pt, d2 = result
+        assert pi == 0
+        assert pt == (5.0, 10.0)
+
+    def test_two_polygons_picks_closest(self):
+        """Two polygons: picks the one with the closer boundary."""
+        polys = [
+            [(0.0, 0.0), (10.0, 0.0), (10.0, 10.0), (0.0, 10.0)],
+            [(100.0, 100.0), (110.0, 100.0), (110.0, 110.0), (100.0, 110.0)],
+        ]
+        result = get_polygons_closest_point(polys, 5.0, 5.0)
+        assert result is not None
+        pi, t, pt, d2 = result
+        assert pi == 0
+        # (5,5) is inside polygon 0; closest boundary point is (5,0)
+        assert pt == (5.0, 0.0)
+
+    def test_far_polygon_selected(self):
+        """Point closer to a far polygon → that polygon is selected."""
+        polys = [
+            [(0.0, 0.0), (10.0, 0.0), (10.0, 10.0), (0.0, 10.0)],
+            [(100.0, 100.0), (110.0, 100.0), (110.0, 110.0), (100.0, 110.0)],
+        ]
+        result = get_polygons_closest_point(polys, 105.0, 105.0)
+        assert result is not None
+        assert result[0] == 1
+
+    def test_empty_polygons(self):
+        """Empty list returns None."""
+        assert get_polygons_closest_point([], 0.0, 0.0) is None
+
+    def test_all_degenerate(self):
+        """All degenerate polygons (fewer than 2 pts) return None."""
+        polys = [[(0.0, 0.0)], []]
+        assert get_polygons_closest_point(polys, 5.0, 5.0) is None
+
+    def test_mixed_degenerate_and_valid(self):
+        """Degenerate polygons are skipped; valid one is picked."""
+        polys = [
+            [(0.0, 0.0)],  # degenerate
+            [(0.0, 0.0), (10.0, 0.0), (10.0, 10.0), (0.0, 10.0)],  # valid
+        ]
+        result = get_polygons_closest_point(polys, 5.0, 15.0)
+        assert result is not None
+        assert result[0] == 1

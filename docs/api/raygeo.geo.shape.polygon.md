@@ -302,6 +302,29 @@ Get the signed area of a polygon.
 | _Returns_    | `float`                 | Signed area (positive for CCW, negative for CW). |
 | _Complexity_ |                         | O(n)                                             |
 
+### `get_polygons_closest_point()`
+
+```python
+get_polygons_closest_point(
+    polygons: Sequence[types.Polygon],
+    x: float,
+    y: float,
+) -> tuple[int, float, tuple[float, float], float] | None
+```
+
+Find the closest point on any polygon in a list to (x, y).
+
+| Parameter  | Type                                                        | Description                                             |
+| ---------- | ----------------------------------------------------------- | ------------------------------------------------------- |
+| `polygons` | `Sequence[types.Polygon]`                                   | List of polygons as (x, y) points.                      |
+| `x`        | `float`                                                     | X coordinate.                                           |
+| `y`        | `float`                                                     | Y coordinate.                                           |
+| _Returns_  | `tuple[int, float, tuple[float, float], float] &#124; None` | (polygon_index, t, (cx, cy), distance_squared) or None. |
+
+![Closest point on multiple polygons](images/geo-shape-polygon-closest-point.png)
+
+_Closest point on multiple polygons_
+
 ### `get_polygons_difference()`
 
 ```python

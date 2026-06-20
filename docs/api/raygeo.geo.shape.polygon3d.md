@@ -243,6 +243,31 @@ Positive for CCW winding, negative for CW.
 
 _Signed XY-projected area — positive = CCW, negative = CW_
 
+### `get_polygons_closest_point_3d()`
+
+```python
+get_polygons_closest_point_3d(
+    polygons: Sequence[types.Polygon3D],
+    x: float,
+    y: float,
+    z: float,
+) -> tuple[int, float, tuple[float, float, float], float] | None
+```
+
+Find the closest point on any 3D polygon in a list to (x, y, z).
+
+| Parameter  | Type                                                               | Description                                                 |
+| ---------- | ------------------------------------------------------------------ | ----------------------------------------------------------- |
+| `polygons` | `Sequence[types.Polygon3D]`                                        | List of 3D polygons as (x, y, z) points.                    |
+| `x`        | `float`                                                            | X coordinate.                                               |
+| `y`        | `float`                                                            | Y coordinate.                                               |
+| `z`        | `float`                                                            | Z coordinate.                                               |
+| _Returns_  | `tuple[int, float, tuple[float, float, float], float] &#124; None` | (polygon_index, t, (cx, cy, cz), distance_squared) or None. |
+
+![Closest point on multiple 3D polygons](images/geo-shape-polygon3d-closest-point-3d.png)
+
+_Closest point on multiple 3D polygons_
+
 ### `get_polygons_difference_3d()`
 
 ```python

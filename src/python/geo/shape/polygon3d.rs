@@ -8,13 +8,13 @@ use crate::geo::shape::polygon3d::{
     flip_polygons_3d, get_polygon_area_3d, get_polygon_bounds_3d,
     get_polygon_centroid_3d, get_polygon_convex_hull_3d, get_polygon_edges_3d,
     get_polygon_group_bounds_3d, get_polygon_perimeter_3d,
-    get_polygon_signed_area_3d, get_polygons_difference_3d,
-    get_polygons_group_difference_3d, get_polygons_group_intersection_3d,
-    get_polygons_intersection_3d, get_polygons_union_3d,
-    get_polyline_end_tangent_3d, offset_polygon_3d, offset_polyline_3d,
-    rotate_polygon_3d, rotate_polygons_3d, scale_polygon_3d,
-    translate_polygon_3d, translate_polygons_3d, walk_along_polygon_3d,
-    walk_along_polyline_3d,
+    get_polygon_signed_area_3d, get_polygons_closest_point_3d,
+    get_polygons_difference_3d, get_polygons_group_difference_3d,
+    get_polygons_group_intersection_3d, get_polygons_intersection_3d,
+    get_polygons_union_3d, get_polyline_end_tangent_3d, offset_polygon_3d,
+    offset_polyline_3d, rotate_polygon_3d, rotate_polygons_3d,
+    scale_polygon_3d, translate_polygon_3d, translate_polygons_3d,
+    walk_along_polygon_3d, walk_along_polyline_3d,
 };
 use crate::types::Point3D;
 use pyo3::prelude::*;
@@ -551,6 +551,42 @@ fn walk_along_polygon_3d_py(
     ))
 }
 
+#[allow(clippy::type_complexity)]
+#[gen_stub_pyfunction(
+    python = r#"
+    import collections.abc
+    import raygeo.geo.types
+
+    def get_polygons_closest_point_3d(
+        polygons: collections.abc.Sequence[types.Polygon3D],
+        x: float,
+        y: float,
+        z: float,
+    ) -> tuple[int, float, tuple[float, float, float], float] | None:
+        """Find the closest point on any 3D polygon in a list to (x, y, z).
+
+        :param polygons: List of 3D polygons as (x, y, z) points.
+        :param x: X coordinate.
+        :param y: Y coordinate.
+        :param z: Z coordinate.
+        :returns: (polygon_index, t, (cx, cy, cz), distance_squared) or None.
+        """
+"#,
+    module = "raygeo.geo.shape.polygon3d"
+)]
+#[pyfunction(name = "get_polygons_closest_point_3d")]
+fn get_polygons_closest_point_3d_py(
+    polygons: &Bound<'_, PyAny>,
+    x: f64,
+    y: f64,
+    z: f64,
+) -> PyResult<Option<(usize, f64, (f64, f64, f64), f64)>> {
+    let polys = extract_polygons3d(polygons)?;
+    let point = Point3D::new(x, y, z);
+    Ok(get_polygons_closest_point_3d(&polys, point)
+        .map(|(pi, t, pt, d2)| (pi, t, (pt.x, pt.y, pt.z), d2)))
+}
+
 #[gen_stub_pyfunction(
     python = r#"
     import collections.abc
@@ -875,6 +911,7 @@ pub fn register(shape_mod: &Bound<'_, PyModule>) -> PyResult<()> {
         m,
         deduplicate_polyline_3d_py,
         fillet_polyline_3d_py,
+        get_polygons_closest_point_3d_py,
         get_polygons_union_3d_py,
         walk_along_polygon_3d_py,
         walk_along_polyline_3d_py,

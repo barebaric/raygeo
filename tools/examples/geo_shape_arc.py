@@ -5,7 +5,7 @@ import math
 import matplotlib.pyplot as plt
 
 from raygeo.geo import Arc, Geometry
-from raygeo.geo.shape.arc import linearize_arc
+from raygeo.geo.shape.arc import arc_through_point, linearize_arc
 from tools.plot import plot_geometry
 
 
@@ -66,8 +66,65 @@ def generate_linearize():
     return fig
 
 
+def generate_arc_through_point():
+    """Construct an arc through three points around a centre."""
+    r = 5.0
+    t_start = (r, 0.0)
+    t_end = (0.0, r)
+    t_mid = (r * 0.7071, r * 0.7071)
+    center = (0.0, 0.0)
+    arc = arc_through_point(t_start, t_end, t_mid, center, r)
+
+    fig, ax = plt.subplots(figsize=(7, 7))
+    xs = [p[0] for p in arc]
+    ys = [p[1] for p in arc]
+    ax.plot(
+        xs,
+        ys,
+        "-o",
+        color="steelblue",
+        lw=2.5,
+        markerfacecolor="lightblue",
+        markeredgecolor="steelblue",
+        markersize=4,
+        label="Arc",
+    )
+
+    ax.plot(
+        center[0], center[1], "x", color="gray", markersize=10, label="Centre"
+    )
+    ax.plot(
+        t_start[0], t_start[1], "o", color="k", markersize=10, label="Start"
+    )
+    ax.plot(
+        t_end[0], t_end[1], "s", color="tomato", markersize=10, label="End"
+    )
+    ax.plot(
+        t_mid[0],
+        t_mid[1],
+        "*",
+        color="gold",
+        markersize=14,
+        label="Mid (pass-through)",
+    )
+
+    ax.set_aspect("equal")
+    ax.grid(True, alpha=0.3)
+    ax.set_xlim(-r * 1.3, r * 1.3)
+    ax.set_ylim(-r * 1.3, r * 1.3)
+    ax.set_title(f"Arc through point (r={r})", fontsize=14)
+    ax.legend(fontsize=11)
+    fig.tight_layout()
+    return fig
+
+
 __docs_target__ = ["raygeo.geo.shape.arc.md"]
 __images__ = [
+    {
+        "heading": "arc_through_point",
+        "caption": "Construct a circular arc through a given point",
+        "function": generate_arc_through_point,
+    },
     {
         "heading": "linearize_arc",
         "caption": "Arc linearization: coarse and fine resolution",

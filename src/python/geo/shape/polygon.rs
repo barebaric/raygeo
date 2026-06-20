@@ -10,13 +10,14 @@ use crate::geo::shape::polygon::{
     get_circle_polygon, get_polygon_bounds, get_polygon_centroid,
     get_polygon_closest_point, get_polygon_convex_hull, get_polygon_edges,
     get_polygon_group_bounds, get_polygon_perimeter, get_polygon_signed_area,
-    get_polygons_difference, get_polygons_group_difference,
-    get_polygons_group_intersection, get_polygons_intersection,
-    get_polygons_union, get_segment_swept_polygon, is_almost_equal,
-    is_point_inside_polygon, is_polygon_clockwise, is_polygon_convex,
-    normalize_polygons, offset_polygon_with_style, point_line_distance,
-    polygons_intersect, rotate_polygon, rotate_polygons, scale_polygon,
-    translate_bounds, translate_polygon, translate_polygons, JoinStyle,
+    get_polygons_closest_point, get_polygons_difference,
+    get_polygons_group_difference, get_polygons_group_intersection,
+    get_polygons_intersection, get_polygons_union, get_segment_swept_polygon,
+    is_almost_equal, is_point_inside_polygon, is_polygon_clockwise,
+    is_polygon_convex, normalize_polygons, offset_polygon_with_style,
+    point_line_distance, polygons_intersect, rotate_polygon, rotate_polygons,
+    scale_polygon, translate_bounds, translate_polygon, translate_polygons,
+    JoinStyle,
 };
 use crate::types::{Point, Rect};
 use numpy::{PyArray2, PyArrayMethods};
@@ -76,6 +77,7 @@ pub fn register(shape_mod: &Bound<'_, PyModule>) -> PyResult<()> {
         get_polygon_bounds_py,
         get_polygon_centroid_py,
         get_polygon_closest_point_py,
+        get_polygons_closest_point_py,
         get_segment_swept_polygon_py,
         get_polygon_convex_hull_py,
         get_polygon_edges_py,
@@ -457,6 +459,38 @@ fn get_polygon_closest_point_py(
     let pts = poly_to_points(polygon);
     get_polygon_closest_point(&pts, x, y)
         .map(|(t, pt, d2)| (t, (pt.x, pt.y), d2))
+}
+
+#[gen_stub_pyfunction(
+    python = r#"
+    import collections.abc
+    import raygeo.geo.types
+
+    def get_polygons_closest_point(
+        polygons: collections.abc.Sequence[types.Polygon],
+        x: float,
+        y: float,
+    ) -> tuple[int, float, tuple[float, float], float] | None:
+        """Find the closest point on any polygon in a list to (x, y).
+
+        :param polygons: List of polygons as (x, y) points.
+        :param x: X coordinate.
+        :param y: Y coordinate.
+        :returns: (polygon_index, t, (cx, cy), distance_squared) or None.
+        """
+"#,
+    module = "raygeo.geo.shape.polygon"
+)]
+#[allow(clippy::type_complexity)]
+#[pyfunction(name = "get_polygons_closest_point")]
+fn get_polygons_closest_point_py(
+    polygons: &Bound<'_, PyAny>,
+    x: f64,
+    y: f64,
+) -> PyResult<Option<(usize, f64, (f64, f64), f64)>> {
+    let polys = extract_polygons(polygons)?;
+    Ok(get_polygons_closest_point(&polys, Point::new(x, y))
+        .map(|(pi, t, pt, d2)| (pi, t, (pt.x, pt.y), d2)))
 }
 
 #[gen_stub_pyfunction(

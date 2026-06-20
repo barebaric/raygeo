@@ -17,6 +17,7 @@ __all__ = [
     "get_polygon_group_bounds_3d",
     "get_polygon_perimeter_3d",
     "get_polygon_signed_area_3d",
+    "get_polygons_closest_point_3d",
     "get_polygons_difference_3d",
     "get_polygons_group_difference_3d",
     "get_polygons_group_intersection_3d",
@@ -157,6 +158,17 @@ def get_polygon_signed_area_3d(polygon: collections.abc.Sequence[types.Point3D])
     :param polygon: Polygon as (x, y, z) points.
     :returns: Signed XY-projected area.
     :complexity: O(n)
+    """
+
+def get_polygons_closest_point_3d(polygons: collections.abc.Sequence[types.Polygon3D], x: float, y: float, z: float) -> tuple[int, float, tuple[float, float, float], float] | None:
+    r"""
+    Find the closest point on any 3D polygon in a list to (x, y, z).
+    
+    :param polygons: List of 3D polygons as (x, y, z) points.
+    :param x: X coordinate.
+    :param y: Y coordinate.
+    :param z: Z coordinate.
+    :returns: (polygon_index, t, (cx, cy, cz), distance_squared) or None.
     """
 
 def get_polygons_difference_3d(poly1: collections.abc.Sequence[types.Point3D], poly2: collections.abc.Sequence[types.Point3D]) -> list[types.Polygon3D]:

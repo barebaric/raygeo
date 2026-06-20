@@ -12,9 +12,9 @@ pub mod polygon3d;
 pub mod rect;
 
 pub use arc::{
-    does_arc_intersect_circle, does_arc_intersect_rect, get_arc_angles,
-    get_arc_bounds, get_arc_closest_point, get_arc_direction, get_arc_length,
-    get_arc_midpoint, is_angle_between, is_arc_clockwise,
+    arc_through_point, does_arc_intersect_circle, does_arc_intersect_rect,
+    get_arc_angles, get_arc_bounds, get_arc_closest_point, get_arc_direction,
+    get_arc_length, get_arc_midpoint, is_angle_between, is_arc_clockwise,
     is_arc_inside_polygons, linearize_arc, normalize_angle,
 };
 pub use bezier::{
@@ -47,26 +47,28 @@ pub use polygon::{
     get_circle_polygon, get_polygon_area, get_polygon_bounds,
     get_polygon_centroid, get_polygon_closest_point, get_polygon_convex_hull,
     get_polygon_edges, get_polygon_group_bounds, get_polygon_perimeter,
-    get_polygon_signed_area, get_polygons_difference,
-    get_polygons_group_difference, get_polygons_group_intersection,
-    get_polygons_intersection, get_polygons_union, get_segment_swept_polygon,
-    is_almost_equal, is_point_in_polygon, is_polygon_clockwise,
-    is_polygon_convex, normalize_polygons, offset_polygon_with_style,
-    path_to_polygon, paths_to_polygons, point_line_distance, polygon_to_path,
-    polygons_to_paths, rotate_polygon, rotate_polygons, scale_polygon,
-    translate_bounds, translate_polygon, translate_polygons, ClipperPath,
-    ClipperPaths, GeoScale, JoinStyle,
+    get_polygon_signed_area, get_polygons_closest_point,
+    get_polygons_difference, get_polygons_group_difference,
+    get_polygons_group_intersection, get_polygons_intersection,
+    get_polygons_union, get_segment_swept_polygon, is_almost_equal,
+    is_point_in_polygon, is_polygon_clockwise, is_polygon_convex,
+    normalize_polygons, offset_polygon_with_style, path_to_polygon,
+    paths_to_polygons, point_line_distance, polygon_to_path, polygons_to_paths,
+    rotate_polygon, rotate_polygons, scale_polygon, translate_bounds,
+    translate_polygon, translate_polygons, ClipperPath, ClipperPaths, GeoScale,
+    JoinStyle,
 };
 pub use polygon3d::{
     deduplicate_polyline_3d, fillet_polyline_3d, flip_polygon_3d,
     flip_polygons_3d, get_polygon_area_3d, get_polygon_bounds_3d,
-    get_polygon_centroid_3d, get_polygon_convex_hull_3d, get_polygon_edges_3d,
+    get_polygon_centroid_3d, get_polygon_closest_point_3d,
+    get_polygon_convex_hull_3d, get_polygon_edges_3d,
     get_polygon_group_bounds_3d, get_polygon_perimeter_3d,
     get_polygon_signed_area_3d, get_polygons_difference_3d,
     get_polygons_group_difference_3d, get_polygons_group_intersection_3d,
     get_polygons_intersection_3d, get_polygons_union_3d,
     get_polyline_end_tangent_3d, offset_polygon_3d, offset_polyline_3d,
     rotate_polygon_3d, rotate_polygons_3d, scale_polygon_3d,
-    translate_polygon_3d, translate_polygons_3d,
+    translate_polygon_3d, translate_polygons_3d, walk_along_polygon_3d,
 };
 pub use rect::{do_rects_intersect, get_combined_rect};

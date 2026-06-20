@@ -358,6 +358,66 @@ pub fn get_polygon_convex_hull_3d(polygon: &[Point3D]) -> Vec<Point3D> {
     lift_single(hull_2d, first_z(polygon))
 }
 
+/// Find the closest point on a closed 3D polygon to `point`.
+///
+/// Returns `(t, closest_point, distance_squared)` where `t` is the
+/// parametric position along the closest edge (0–1), `closest_point` is
+/// the nearest point on the boundary, and `distance_squared` is the
+/// squared Euclidean distance.
+///
+/// Returns `None` when the polygon has fewer than 2 vertices.
+pub fn get_polygon_closest_point_3d(
+    polygon: &[Point3D],
+    point: Point3D,
+) -> Option<(f64, Point3D, f64)> {
+    let n = polygon.len();
+    if n < 2 {
+        return None;
+    }
+    let mut best: Option<(f64, Point3D, f64)> = None;
+    for i in 0..n {
+        let a = polygon[i];
+        let b = polygon[(i + 1) % n];
+        let ab = b - a;
+        let len_sq = ab.length_squared();
+        let (t, pt) = if len_sq < 1e-18 {
+            (0.0, a)
+        } else {
+            let t = ((point - a).dot(ab) / len_sq).clamp(0.0, 1.0);
+            (t, a + ab * t)
+        };
+        let d2 = point.distance_squared(pt);
+        if best.is_none() || d2 < best.unwrap().2 {
+            best = Some((t, pt, d2));
+        }
+    }
+    best
+}
+
+/// Find the closest point on any 3D polygon in `polygons` to `point`.
+///
+/// Returns `(polygon_index, t, closest_point, distance_squared)` where
+/// `polygon_index` is the index into `polygons`, `t` is the parametric
+/// position along the closest edge (0–1), `closest_point` is the nearest
+/// point on the boundary, and `distance_squared` is the squared Euclidean
+/// distance.
+///
+/// Returns `None` when all polygons have fewer than 2 vertices.
+pub fn get_polygons_closest_point_3d(
+    polygons: &[Polygon3D],
+    point: Point3D,
+) -> Option<(usize, f64, Point3D, f64)> {
+    let mut best: Option<(usize, f64, Point3D, f64)> = None;
+    for (pi, poly) in polygons.iter().enumerate() {
+        if let Some((t, pt, d2)) = get_polygon_closest_point_3d(poly, point) {
+            if best.is_none() || d2 < best.unwrap().3 {
+                best = Some((pi, t, pt, d2));
+            }
+        }
+    }
+    best
+}
+
 /// Walk along a closed 3D polygon by a given arc length from a starting point.
 ///
 /// Given a closed polygon and a starting point that lies on it, walk along

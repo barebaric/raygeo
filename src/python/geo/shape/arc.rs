@@ -15,14 +15,61 @@ use super::super::flex_point::{
 };
 use super::super::types::{ArcClosestResult, Edge3D};
 use crate::geo::shape::arc::{
-    does_arc_intersect_circle, does_arc_intersect_rect, get_arc_angles,
-    get_arc_bounds, get_arc_closest_point, get_arc_direction, get_arc_length,
-    get_arc_midpoint, get_arc_sweep, is_angle_between, is_arc_clockwise,
-    is_arc_inside_polygons, linearize_arc, normalize_angle,
+    arc_through_point, does_arc_intersect_circle, does_arc_intersect_rect,
+    get_arc_angles, get_arc_bounds, get_arc_closest_point, get_arc_direction,
+    get_arc_length, get_arc_midpoint, get_arc_sweep, is_angle_between,
+    is_arc_clockwise, is_arc_inside_polygons, linearize_arc, normalize_angle,
 };
 use crate::types::{Point, Point3D, Rect};
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::gen_stub_pyfunction;
+
+#[gen_stub_pyfunction(
+    python = r#"
+    import raygeo.geo.types
+
+    def arc_through_point(
+        t_start: types.Point,
+        t_end: types.Point,
+        t_mid: types.Point,
+        center: types.Point,
+        radius: float,
+    ) -> types.Polygon:
+        """Build a circular arc through three points around a centre.
+
+        Returns a polyline approximation of the arc from *t_start* to
+        *t_end* that passes through *t_mid*, with the given centre and
+        radius.
+
+        :param t_start: Arc start point (x, y).
+        :param t_end: Arc end point (x, y).
+        :param t_mid: Point the arc must pass through (x, y).
+        :param center: Arc centre (x, y).
+        :param radius: Arc radius.
+        :returns: Polyline approximation as list of (x, y) points.
+        """
+"#,
+    module = "raygeo.geo.shape.arc"
+)]
+#[pyfunction(name = "arc_through_point")]
+fn arc_through_point_py(
+    t_start: (f64, f64),
+    t_end: (f64, f64),
+    t_mid: (f64, f64),
+    center: (f64, f64),
+    radius: f64,
+) -> Vec<(f64, f64)> {
+    arc_through_point(
+        Point::new(t_start.0, t_start.1),
+        Point::new(t_end.0, t_end.1),
+        Point::new(t_mid.0, t_mid.1),
+        Point::new(center.0, center.1),
+        radius,
+    )
+    .into_iter()
+    .map(|p| (p.x, p.y))
+    .collect()
+}
 
 pub fn register(shape_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     let py = shape_mod.py();
@@ -31,6 +78,7 @@ pub fn register(shape_mod: &Bound<'_, PyModule>) -> PyResult<()> {
 
     register_functions!(
         m,
+        arc_through_point_py,
         get_arc_bounds_py,
         get_arc_direction_py,
         get_arc_closest_point_py,

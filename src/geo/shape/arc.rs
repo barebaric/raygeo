@@ -602,3 +602,37 @@ pub fn is_arc_inside_polygons(
     }
     true
 }
+
+/// Build a circular arc from `t_start` to `t_end` around `center` (radius
+/// `r`), choosing the sweep direction so the arc passes through `t_mid`.
+pub fn arc_through_point(
+    t_start: Point,
+    t_end: Point,
+    t_mid: Point,
+    center: Point,
+    r: f64,
+) -> Vec<Point> {
+    let a1 = (t_start - center).y.atan2((t_start - center).x);
+    let a2 = (t_end - center).y.atan2((t_end - center).x);
+    let am = (t_mid - center).y.atan2((t_mid - center).x);
+
+    let two_pi = 2.0 * PI;
+    let sweep_ccw = (a2 - a1 + two_pi) % two_pi;
+    let mid_ccw = (am - a1 + two_pi) % two_pi;
+
+    let sweep = if mid_ccw <= sweep_ccw {
+        sweep_ccw
+    } else {
+        -(two_pi - sweep_ccw)
+    };
+
+    let n_arc = (sweep.abs() * 4.0).ceil().clamp(4.0, 64.0) as usize;
+    let mut arc = vec![t_start];
+    for j in 1..n_arc {
+        let t = j as f64 / n_arc as f64;
+        let a = a1 + sweep * t;
+        arc.push(center + Point::new(r * a.cos(), r * a.sin()));
+    }
+    arc.push(t_end);
+    arc
+}

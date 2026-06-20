@@ -16,6 +16,7 @@ from raygeo.geo.shape.polygon3d import (
     get_polygon_edges_3d,
     get_polygon_perimeter_3d,
     get_polygon_signed_area_3d,
+    get_polygons_closest_point_3d,
     get_polygons_difference_3d,
     get_polygons_intersection_3d,
     get_polygons_union_3d,
@@ -703,6 +704,60 @@ def generate_walk_along_polygon():
     return fig
 
 
+def generate_closest_point_3d():
+    """Closest point on multiple 3D polygons."""
+    polys = [
+        _lift([(2.0, 2.0), (8.0, 2.0), (8.0, 8.0), (2.0, 8.0)], 3.0),
+        _lift([(12.0, 2.0), (18.0, 2.0), (18.0, 8.0), (12.0, 8.0)], 7.0),
+    ]
+    query = (15.0, 15.0, 8.0)
+
+    fig, ax = _make_3d_ax("get_polygons_closest_point_3d", zlim=(0, 10))
+    colors = ["steelblue", "tomato"]
+    for poly, color in zip(polys, colors):
+        _draw_polygon3d(ax, poly, color, "", alpha=0.15)
+
+    ax.plot(
+        [query[0]],
+        [query[1]],
+        [query[2]],
+        "o",
+        color="k",
+        markersize=10,
+        label="Query",
+    )
+
+    result = get_polygons_closest_point_3d(polys, query[0], query[1], query[2])
+    if result is not None:
+        pi, t, pt, d2 = result
+        ax.plot(
+            [pt[0]],
+            [pt[1]],
+            [pt[2]],
+            "*",
+            color="gold",
+            markersize=16,
+            label=f"Closest (poly {pi})",
+        )
+        ax.plot(
+            [query[0], pt[0]],
+            [query[1], pt[1]],
+            [query[2], pt[2]],
+            color="gray",
+            lw=1.5,
+            ls="--",
+        )
+        ax.set_title(
+            f"Closest point on polygon {pi}, d²={d2:.2f}", fontsize=13
+        )
+    else:
+        ax.set_title("No closest point found", fontsize=13)
+
+    ax.legend(loc="upper left")
+    ax.view_init(elev=20, azim=-40)
+    return fig
+
+
 __docs_target__ = ["raygeo.geo.shape.polygon3d.md"]
 __images__ = [
     {
@@ -804,5 +859,10 @@ __images__ = [
         "heading": "walk_along_polyline_3d",
         "caption": "Walk along a 3D polyline by a given arc length",
         "function": generate_walk_along,
+    },
+    {
+        "heading": "get_polygons_closest_point_3d",
+        "caption": "Closest point on multiple 3D polygons",
+        "function": generate_closest_point_3d,
     },
 ]

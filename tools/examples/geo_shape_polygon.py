@@ -13,6 +13,7 @@ from raygeo.geo.shape.polygon import (
     get_polygon_centroid,
     get_polygon_convex_hull,
     get_polygon_group_bounds,
+    get_polygons_closest_point,
     get_polygons_difference,
     get_polygons_intersection,
     get_polygons_union,
@@ -329,6 +330,52 @@ def generate_group_bounds():
     return fig11
 
 
+def generate_closest_point():
+    """Closest point on multiple polygons."""
+    polys = [
+        [(2.0, 2.0), (8.0, 2.0), (8.0, 8.0), (2.0, 8.0)],
+        [(12.0, 2.0), (18.0, 2.0), (18.0, 8.0), (12.0, 8.0)],
+    ]
+    query = (10.0, 15.0)
+
+    fig, ax = plt.subplots(figsize=(8, 8))
+    colors = ["steelblue", "tomato"]
+    for poly, color in zip(polys, colors):
+        arr = np.array(poly)
+        ax.fill(*arr.T, alpha=0.15, color=color)
+        ax.plot(*np.vstack([arr, arr[0:1]]).T, "-", linewidth=2, color=color)
+
+    ax.plot(query[0], query[1], "o", color="k", markersize=10, label="Query")
+
+    result = get_polygons_closest_point(polys, query[0], query[1])
+    if result is not None:
+        pi, t, pt, d2 = result
+        ax.plot(
+            pt[0],
+            pt[1],
+            "*",
+            color="gold",
+            markersize=16,
+            label=f"Closest (poly {pi})",
+        )
+        ax.plot(
+            [query[0], pt[0]], [query[1], pt[1]], color="gray", lw=1.5, ls="--"
+        )
+        ax.set_title(
+            f"Closest point on polygon {pi}, d²={d2:.2f}", fontsize=13
+        )
+    else:
+        ax.set_title("No closest point found", fontsize=13)
+
+    ax.set_aspect("equal")
+    ax.grid(True, alpha=0.3)
+    ax.set_xlim(-1, 22)
+    ax.set_ylim(-1, 18)
+    ax.legend(fontsize=11)
+    fig.tight_layout()
+    return fig
+
+
 __docs_target__ = ["raygeo.geo.shape.polygon.md"]
 __images__ = [
     {
@@ -391,5 +438,10 @@ __images__ = [
         "heading": "get_polygon_group_bounds",
         "caption": "``get_polygon_group_bounds`` all polygons within a rect",
         "function": generate_group_bounds,
+    },
+    {
+        "heading": "get_polygons_closest_point",
+        "caption": "Closest point on multiple polygons",
+        "function": generate_closest_point,
     },
 ]

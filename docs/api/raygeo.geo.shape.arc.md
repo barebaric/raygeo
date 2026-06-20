@@ -12,6 +12,36 @@ arc linearization into line segments for rendering or further processing, angle 
 
 ## Functions
 
+### `arc_through_point()`
+
+```python
+arc_through_point(
+    t_start: types.Point,
+    t_end: types.Point,
+    t_mid: types.Point,
+    center: types.Point,
+    radius: float,
+) -> types.Polygon
+```
+
+Build a circular arc through three points around a centre.
+
+Returns a polyline approximation of the arc from _t_start_ to _t_end_ that passes through _t_mid_,
+with the given centre and radius.
+
+| Parameter | Type            | Description                                      |
+| --------- | --------------- | ------------------------------------------------ |
+| `t_start` | `types.Point`   | Arc start point (x, y).                          |
+| `t_end`   | `types.Point`   | Arc end point (x, y).                            |
+| `t_mid`   | `types.Point`   | Point the arc must pass through (x, y).          |
+| `center`  | `types.Point`   | Arc centre (x, y).                               |
+| `radius`  | `float`         | Arc radius.                                      |
+| _Returns_ | `types.Polygon` | Polyline approximation as list of (x, y) points. |
+
+![Construct a circular arc through a given point](images/geo-shape-arc-arc-through-point.png)
+
+_Construct a circular arc through a given point_
+
 ### `does_arc_intersect_circle()`
 
 ```python
