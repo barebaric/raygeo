@@ -14,7 +14,9 @@ pub mod hsm;
 pub mod hull;
 pub mod interp;
 pub mod intersect;
+pub mod medial_axis;
 pub mod minkowski2d;
+pub mod morph_spiral;
 pub mod nest2d;
 pub mod offset;
 pub mod overcut;
@@ -73,10 +75,15 @@ pub use intersect::{
     check_intersection_from_array, check_self_intersection_from_array,
     ray_line_intersection,
 };
+pub use medial_axis::{compute_medial_axis, MaBranch, MaNode, MedialAxis};
 pub use minkowski2d::{
     calculate_input_scale, convolve_point_sequences, convolve_two_segments,
     get_inner_fit_polygon, get_no_fit_polygon,
     get_polygon_minkowski_sum_convex,
+};
+pub use morph_spiral::{
+    morph_spiral, morph_spiral_from_branch, MorphSpiralOptions,
+    MorphSpiralResult,
 };
 pub use offset::{
     concentric_offsets, find_deepest_cores, grow_geometry,

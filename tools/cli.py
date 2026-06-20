@@ -18,7 +18,9 @@ from tools import api_docs
 
 
 def _module_to_doc(mod_name: str) -> list[str]:
-    known_compound = {"cleared_area", "spatial_grid2d"}
+    known_compound = {
+        "cleared_area", "spatial_grid2d", "medial_axis", "morph_spiral"
+    }
     parts = mod_name.split("_")
     result_parts = []
     i = 0
