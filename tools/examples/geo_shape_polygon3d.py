@@ -25,6 +25,7 @@ from raygeo.geo.shape.polygon3d import (
     rotate_polygon_3d,
     scale_polygon_3d,
     translate_polygon_3d,
+    walk_along_polyline_3d,
 )
 
 
@@ -553,6 +554,86 @@ def generate_signed_area():
     return fig
 
 
+def generate_walk_along():
+    """Walk along a 3D arc-like polyline."""
+    n = 10
+    poly = [
+        (10 * math.cos(t), 10 * math.sin(t), 5.0)
+        for t in [i / n * math.pi for i in range(n + 1)]
+    ]
+    # cumul distance at each vertex
+    cumul = [0.0]
+    for i in range(len(poly) - 1):
+        cumul.append(cumul[-1] + math.dist(poly[i], poly[i + 1]))
+    # start on the polyline between two interior vertices
+    i0, i1 = 4, 5
+    start = (
+        (poly[i0][0] + poly[i1][0]) / 2,
+        (poly[i0][1] + poly[i1][1]) / 2,
+        (poly[i0][2] + poly[i1][2]) / 2,
+    )
+    target = walk_along_polyline_3d(poly, start, forward=True, distance=8.0)
+    fig, ax = _make_3d_ax(
+        "walk_along_polyline_3d: start (black circle)"
+        " → 8 mm forward (red star)"
+    )
+    xs = [p[0] for p in poly]
+    ys = [p[1] for p in poly]
+    zs = [p[2] for p in poly]
+    ax.plot(
+        xs,
+        ys,
+        zs,
+        "-o",
+        color="steelblue",
+        linewidth=2,
+        markerfacecolor="lightblue",
+        markeredgecolor="steelblue",
+        markersize=6,
+        label="Arc polyline (Z=5)",
+    )
+    for i, (x, y, z) in enumerate(poly):
+        ax.text(
+            x,
+            y,
+            z,
+            f"{cumul[i]:.1f}",
+            fontsize=8,
+            ha="left",
+            va="top",
+            color="steelblue",
+        )
+    ax.plot(
+        [start[0]],
+        [start[1]],
+        [start[2]],
+        "o",
+        color="k",
+        markersize=10,
+        label="Start point",
+    )
+    ax.plot(
+        [target[0]],
+        [target[1]],
+        [target[2]],
+        "*",
+        color="tomato",
+        markersize=14,
+        label="Target (8 mm)",
+    )
+    ax.text(
+        target[0],
+        target[1],
+        target[2],
+        "8 mm",
+        fontsize=10,
+        ha="center",
+        va="bottom",
+    )
+    ax.legend(loc="upper left")
+    return fig
+
+
 __docs_target__ = ["raygeo.geo.shape.polygon3d.md"]
 __images__ = [
     {
@@ -644,5 +725,10 @@ __images__ = [
         "heading": "get_polygon_signed_area_3d",
         "caption": "Signed XY-projected area — positive = CCW, negative = CW",
         "function": generate_signed_area,
+    },
+    {
+        "heading": "walk_along_polyline_3d",
+        "caption": "Walk along a 3D polyline by a given arc length",
+        "function": generate_walk_along,
     },
 ]

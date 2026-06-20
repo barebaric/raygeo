@@ -358,6 +358,140 @@ pub fn get_polygon_convex_hull_3d(polygon: &[Point3D]) -> Vec<Point3D> {
     lift_single(hull_2d, first_z(polygon))
 }
 
+/// Walk along an open 3D polyline by a given arc length from a starting point.
+///
+/// Given an open polyline and a starting point that lies on it, walk along
+/// the polyline segments in the specified direction and return the point at
+/// exactly `distance` units from the start.  When the walk would exceed an
+/// endpoint the result is clamped to that endpoint.
+///
+/// # Parameters
+/// - `polyline` — open polyline (no implicit closing segment).
+/// - `start` — a point on the polyline.
+/// - `forward` — `true` to walk in the order of the vertex array (increasing
+///   index), `false` to walk in the opposite direction (decreasing index).
+/// - `distance` — the arc length to walk along the polyline.
+///
+/// # Returns
+/// The point on the polyline at the given distance from `start`, clamped to
+/// the nearest endpoint if the distance exceeds the available length.
+///
+/// # Panics
+/// Panics if `start` is not within 1e-9 units of the polyline, or if the
+/// polyline has fewer than 2 vertices.
+pub fn walk_along_polyline_3d(
+    polyline: &[Point3D],
+    start: &Point3D,
+    forward: bool,
+    distance: f64,
+) -> Point3D {
+    let n = polyline.len();
+    assert!(n >= 2, "polyline must have at least 2 vertices");
+
+    // Find the segment containing the start point
+    let mut seg_idx = 0usize;
+    let mut t = 0.0f64;
+    let mut found = false;
+
+    for i in 0..n - 1 {
+        let a = polyline[i];
+        let b = polyline[i + 1];
+        let ab = b - a;
+        let len_sq = ab.length_squared();
+        if len_sq < 1e-12 {
+            continue;
+        }
+        let ap = *start - a;
+        let tt = ap.dot(ab) / len_sq;
+        let tt_clamped = tt.clamp(0.0, 1.0);
+        let closest = a + ab * tt_clamped;
+        if closest.distance_squared(*start) < 1e-18 {
+            seg_idx = i;
+            t = tt_clamped;
+            found = true;
+            break;
+        }
+    }
+
+    assert!(found, "start point must lie on the polyline");
+
+    let mut remaining = distance;
+    let mut idx = seg_idx;
+
+    if forward {
+        // Walk from t toward the end of the current segment
+        let a = polyline[idx];
+        let b = polyline[idx + 1];
+        let edge_len = (b - a).length();
+        let dist_to_end = edge_len * (1.0 - t);
+
+        if distance <= dist_to_end {
+            return a.lerp(b, t + distance / edge_len);
+        }
+        remaining -= dist_to_end;
+        idx += 1;
+
+        // Continue through subsequent segments
+        while remaining > 1e-12 && idx < n - 1 {
+            let a = polyline[idx];
+            let b = polyline[idx + 1];
+            let edge_len = (b - a).length();
+            if edge_len < 1e-12 {
+                idx += 1;
+                continue;
+            }
+            if remaining <= edge_len {
+                return a.lerp(b, remaining / edge_len);
+            }
+            remaining -= edge_len;
+            idx += 1;
+        }
+
+        // Ran out of segments — clamp to the last point
+        return polyline[n - 1];
+    }
+
+    // Walk backward from t toward the start of the current segment
+    let a = polyline[idx];
+    let b = polyline[idx + 1];
+    let edge_len = (b - a).length();
+    let dist_to_start = t * edge_len;
+
+    if distance <= dist_to_start {
+        return a.lerp(b, t - distance / edge_len);
+    }
+    remaining -= dist_to_start;
+
+    if idx == 0 {
+        return polyline[0];
+    }
+    idx -= 1;
+
+    while remaining > 1e-12 {
+        let a = polyline[idx];
+        let b = polyline[idx + 1];
+        let edge_len = (b - a).length();
+        if edge_len < 1e-12 {
+            if idx == 0 {
+                return polyline[0];
+            }
+            idx -= 1;
+            continue;
+        }
+        if remaining <= edge_len {
+            // Traverse from end (t=1) backward
+            return a.lerp(b, 1.0 - remaining / edge_len);
+        }
+        remaining -= edge_len;
+        if idx == 0 {
+            return polyline[0];
+        }
+        idx -= 1;
+    }
+
+    *start
+}
+
 /// Lift a single 2D polygon to 3D at the given Z.
 fn lift_single(poly: Polygon, z: f64) -> Vec<Point3D> {
     poly.into_iter()

@@ -523,3 +523,33 @@ Translate a list of 3D polygons.
 | `dz`         | `float = 0`                 | Z translation.       |
 | _Returns_    | `list[types.Polygon3D]`     | Translated polygons. |
 | _Complexity_ |                             | O(n \* m)            |
+
+### `walk_along_polyline_3d()`
+
+```python
+walk_along_polyline_3d(
+    polyline: Sequence[types.Point3D],
+    start: tuple[float, float, float],
+    forward: bool,
+    distance: float,
+) -> types.Point3D
+```
+
+Walk along an open 3D polyline by a given arc length from a starting point.
+
+Given an open polyline and a starting point on it, walk along the polyline segments and return the
+point at exactly `distance` units away. Clamps to the nearest endpoint when the walk would exceed
+it.
+
+| Parameter    | Type                         | Description                                                   |
+| ------------ | ---------------------------- | ------------------------------------------------------------- |
+| `polyline`   | `Sequence[types.Point3D]`    | Open polyline as (x, y, z) points.                            |
+| `start`      | `tuple[float, float, float]` | Starting point on the polyline.                               |
+| `forward`    | `bool`                       | Walk forward (along vertex order) if True, backward if False. |
+| `distance`   | `float`                      | Arc length to walk.                                           |
+| _Returns_    | `types.Point3D`              | Point (x, y, z) at the given distance.                        |
+| _Complexity_ |                              | O(n)                                                          |
+
+![Walk along a 3D polyline by a given arc length](images/geo-shape-polygon3d-walk-along.png)
+
+_Walk along a 3D polyline by a given arc length_

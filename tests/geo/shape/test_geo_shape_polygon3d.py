@@ -33,6 +33,7 @@ from raygeo.geo.shape.polygon3d import (
     scale_polygon_3d,
     translate_polygon_3d,
     translate_polygons_3d,
+    walk_along_polyline_3d,
 )
 
 Polygon3D = List[Tuple[float, float, float]]
@@ -865,3 +866,169 @@ class TestFilletPolyline3D:
         for p in result:
             d = dot(n, sub(p, prev))
             assert abs(d) < 1e-9, f"arc point {p} not in edge plane (d={d})"
+
+
+# ── walk_along_polyline_3d ────────────────────────────────────────────
+
+
+class TestWalkAlongPolyline3D:
+    def test_forward_partial_segment(self):
+        """Walk forward part way along the first segment."""
+        poly = P3((0, 0, 5), (10, 0, 5), (10, 10, 5))
+        result = walk_along_polyline_3d(
+            poly, (2, 0, 5), forward=True, distance=3.0
+        )
+        assert result == (5, 0, 5)
+
+    def test_forward_to_next_vertex(self):
+        """Walk forward exactly one full segment."""
+        poly = P3((0, 0, 5), (10, 0, 5), (10, 10, 5))
+        result = walk_along_polyline_3d(
+            poly, (0, 0, 5), forward=True, distance=10.0
+        )
+        assert result == (10, 0, 5)
+
+    def test_forward_crosses_segment_boundary(self):
+        """Walk forward across a vertex into the next segment."""
+        poly = P3((0, 0, 5), (10, 0, 5), (10, 10, 5))
+        result = walk_along_polyline_3d(
+            poly, (0, 0, 5), forward=True, distance=15.0
+        )
+        assert result == (10, 5, 5)
+
+    def test_forward_clamps_at_end(self):
+        """Walk forward past the last point clamps to the last point."""
+        poly = P3((0, 0, 5), (10, 0, 5), (10, 10, 5))
+        result = walk_along_polyline_3d(
+            poly, (0, 0, 5), forward=True, distance=1000.0
+        )
+        assert result == (10, 10, 5)
+
+    def test_forward_from_last_point_stays(self):
+        """Walking forward from the last point stays at the last point."""
+        poly = P3((0, 0, 5), (10, 0, 5), (10, 10, 5))
+        result = walk_along_polyline_3d(
+            poly, (10, 10, 5), forward=True, distance=5.0
+        )
+        assert result == (10, 10, 5)
+
+    def test_backward_partial_segment(self):
+        """Walk backward part way along a segment."""
+        poly = P3((0, 0, 5), (10, 0, 5), (10, 10, 5))
+        result = walk_along_polyline_3d(
+            poly, (2, 0, 5), forward=False, distance=1.0
+        )
+        assert result == (1, 0, 5)
+
+    def test_backward_to_prev_vertex(self):
+        """Walk backward exactly one full segment."""
+        poly = P3((0, 0, 5), (10, 0, 5), (10, 10, 5))
+        result = walk_along_polyline_3d(
+            poly, (10, 0, 5), forward=False, distance=10.0
+        )
+        assert result == (0, 0, 5)
+
+    def test_backward_crosses_segment_boundary(self):
+        """Walk backward across a vertex into the previous segment."""
+        poly = P3((0, 0, 5), (10, 0, 5), (10, 10, 5))
+        result = walk_along_polyline_3d(
+            poly, (10, 0, 5), forward=False, distance=15.0
+        )
+        assert result == (0, 0, 5)
+
+    def test_backward_clamps_at_start(self):
+        """Walk backward past the first point clamps to the first point."""
+        poly = P3((0, 0, 5), (10, 0, 5), (10, 10, 5))
+        result = walk_along_polyline_3d(
+            poly, (10, 0, 5), forward=False, distance=1000.0
+        )
+        assert result == (0, 0, 5)
+
+    def test_backward_from_first_point_stays(self):
+        """Walking backward from the first point stays at the first point."""
+        poly = P3((0, 0, 5), (10, 0, 5), (10, 10, 5))
+        result = walk_along_polyline_3d(
+            poly, (0, 0, 5), forward=False, distance=5.0
+        )
+        assert result == (0, 0, 5)
+
+    def test_forward_and_backward_cancel(self):
+        """Walking forward then backward the same distance returns to start."""
+        poly = P3((0, 0, 5), (10, 0, 5), (10, 10, 5))
+        start = (5, 0, 5)
+        mid = walk_along_polyline_3d(poly, start, forward=True, distance=10.0)
+        back = walk_along_polyline_3d(poly, mid, forward=False, distance=10.0)
+        for a, b in zip(back, start):
+            assert abs(a - b) < 1e-12
+
+    def test_zero_distance_returns_start(self):
+        """Zero distance returns the start point unchanged."""
+        poly = P3((0, 0, 5), (10, 0, 5), (10, 10, 5))
+        start = (3, 0, 5)
+        result = walk_along_polyline_3d(
+            poly, start, forward=True, distance=0.0
+        )
+        assert result == start
+
+    def test_z_preserved(self):
+        """The result point has the same Z value as the polyline."""
+        poly = P3((0, 0, 7), (10, 0, 7), (10, 10, 7))
+        start = (0, 0, 7)
+        result = walk_along_polyline_3d(
+            poly, start, forward=True, distance=5.0
+        )
+        assert result[2] == 7.0
+
+    def test_result_lies_on_polyline(self):
+        """The result point always lies on some segment of the polyline."""
+        poly = P3((0, 0, 0), (10, 0, 0), (10, 10, 0), (5, 5, 0))
+        for start in [(0, 0, 0), (3, 0, 0), (10, 5, 0)]:
+            for d in [0.0, 2.0, 10.0, 100.0]:
+                result = walk_along_polyline_3d(
+                    poly, start, forward=True, distance=d
+                )
+                on_seg = False
+                for i in range(len(poly) - 1):
+                    a = poly[i]
+                    b = poly[i + 1]
+                    ab = (b[0] - a[0], b[1] - a[1])
+                    ap = (result[0] - a[0], result[1] - a[1])
+                    ab_len_sq = ab[0] ** 2 + ab[1] ** 2
+                    if ab_len_sq < 1e-12:
+                        continue
+                    t = (ap[0] * ab[0] + ap[1] * ab[1]) / ab_len_sq
+                    if t < -1e-9 or t > 1.0 + 1e-9:
+                        continue
+                    closest = (a[0] + t * ab[0], a[1] + t * ab[1])
+                    dsq = (result[0] - closest[0]) ** 2 + (
+                        result[1] - closest[1]
+                    ) ** 2
+                    if dsq < 1e-18:
+                        on_seg = True
+                        break
+                assert on_seg, f"Result {result} not on polyline for d={d}"
+
+    def test_3d_diagonal_segment(self):
+        """Walk along a 3D diagonal segment with non-zero Z."""
+        poly = P3((0, 0, 0), (3, 4, 12), (10, 0, 5))
+        start = (0, 0, 0)
+        edge_len = 13.0  # sqrt(3^2 + 4^2 + 12^2)
+        result = walk_along_polyline_3d(
+            poly, start, forward=True, distance=edge_len
+        )
+        assert abs(result[0] - 3.0) < 1e-9
+        assert abs(result[1] - 4.0) < 1e-9
+        assert abs(result[2] - 12.0) < 1e-9
+
+    def test_2_point_polyline(self):
+        """A 2-vertex polyline works."""
+        poly = P3((0, 0, 0), (10, 0, 0))
+        start = (0, 0, 0)
+        result = walk_along_polyline_3d(
+            poly, start, forward=True, distance=5.0
+        )
+        assert result == (5, 0, 0)
+        result = walk_along_polyline_3d(
+            poly, start, forward=True, distance=10.0
+        )
+        assert result == (10, 0, 0)
