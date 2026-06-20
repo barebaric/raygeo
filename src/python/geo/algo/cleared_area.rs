@@ -166,6 +166,24 @@ impl ClearedArea {
         self.inner.total_area()
     }
 
+    /// Return the union of all polygons currently tracked as cleared.
+    ///
+    /// Each fragment is a closed polygon (list of ``(x, y)`` vertices)
+    /// representing an area that has already been cut.  The fragment set
+    /// grows as ``incorporate`` or ``add_cleared_polygons`` are called.
+    ///
+    /// This is useful for determining which parts of a bite polygon
+    /// lie outside the cleared area (i.e. the cutting arc), for example
+    /// when used with :py:func:`raygeo.geo.algo.hsm.find_cutting_arc`.
+    /// :complexity: O(m) where m = number of fragments
+    pub fn fragments(&self) -> Vec<Vec<(f64, f64)>> {
+        self.inner
+            .fragments()
+            .iter()
+            .map(|poly| poly.iter().map(|p| (p.x, p.y)).collect())
+            .collect()
+    }
+
     fn __repr__(&self) -> String {
         format!("ClearedArea({} fragments)", self.inner.len())
     }

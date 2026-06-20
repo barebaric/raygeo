@@ -70,6 +70,25 @@ expand(tool_path: Sequence[tuple[float, float]], tool_radius: float) -> None
 | _Returns_     | `None`                          |                                      |
 | _Complexity_  |                                 | O(n) where n = number of path points |
 
+### `fragments()`
+
+```python
+fragments() -> list[list[tuple[float, float]]]
+```
+
+Return the union of all polygons currently tracked as cleared.
+
+Each fragment is a closed polygon (list of `(x, y)` vertices) representing an area that has already
+been cut. The fragment set grows as `incorporate` or `add_cleared_polygons` are called.
+
+This is useful for determining which parts of a bite polygon lie outside the cleared area (i.e. the
+cutting arc), for example when used with **raygeo.geo.algo.hsm.find_cutting_arc**.
+
+| Parameter    | Type                              | Description                        |
+| ------------ | --------------------------------- | ---------------------------------- |
+| _Returns_    | `list[list[tuple[float, float]]]` |                                    |
+| _Complexity_ |                                   | O(m) where m = number of fragments |
+
 ### `frontier()`
 
 ```python

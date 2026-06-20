@@ -41,6 +41,91 @@ def test_add_cleared_polygons_remaining():
     assert len(remaining) >= 1
 
 
+# --- fragments ---
+
+
+def test_fragments_empty():
+    ca = ClearedArea()
+    assert ca.fragments() == []
+
+
+def test_fragments_after_single_polygon():
+    ca = ClearedArea()
+    poly = P((0, 0), (10, 0), (10, 10), (0, 10))
+    ca.add_cleared_polygons([poly])
+    frags = ca.fragments()
+    assert len(frags) == 1
+    assert len(frags[0]) >= 4
+
+
+def test_fragments_after_multiple_disjoint():
+    ca = ClearedArea()
+    poly1 = P((0, 0), (10, 0), (10, 10), (0, 10))
+    poly2 = P((100, 100), (110, 100), (110, 110), (100, 110))
+    ca.add_cleared_polygons([poly1, poly2])
+    frags = ca.fragments()
+    assert len(frags) == 2
+
+
+def test_fragments_merges_overlapping_add():
+    """Overlapping polygons passed to add_cleared_polygons are merged."""
+    ca = ClearedArea()
+    poly1 = P((0, 0), (10, 0), (10, 10), (0, 10))
+    poly2 = P((5, 5), (15, 5), (15, 15), (5, 15))
+    ca.add_cleared_polygons([poly1, poly2])
+    frags = ca.fragments()
+    # overlapping squares union into a single fragment
+    assert len(frags) == 1
+
+
+def test_fragments_after_incorporate_disjoint():
+    """Disjoint incorporate appends without merging."""
+    ca = ClearedArea()
+    ca.incorporate([P((0, 0), (10, 0), (10, 10), (0, 10))])
+    ca.incorporate([P((100, 100), (110, 100), (110, 110), (100, 110))])
+    assert len(ca.fragments()) == 2
+
+
+def test_fragments_after_incorporate_overlapping():
+    """Overlapping incorporate triggers a merge."""
+    ca = ClearedArea()
+    poly = P((0, 0), (10, 0), (10, 10), (0, 10))
+    ca.incorporate([poly])
+    larger = P((-2, -2), (12, -2), (12, 12), (-2, 12))
+    ca.incorporate([larger])
+    frags = ca.fragments()
+    assert len(frags) == 1
+
+
+def test_fragments_mixed_add_and_incorporate():
+    """Fragments reflect total state after both add and incorporate."""
+    ca = ClearedArea()
+    ca.add_cleared_polygons([P((0, 0), (10, 0), (10, 10), (0, 10))])
+    ca.incorporate([P((100, 100), (110, 100), (110, 110), (100, 110))])
+    assert len(ca.fragments()) == 2
+
+
+def test_fragments_vertices_format():
+    """Each fragment vertex is an (x, y) pair of floats."""
+    ca = ClearedArea()
+    ca.add_cleared_polygons([P((0, 0), (10, 0), (10, 10), (0, 10))])
+    frags = ca.fragments()
+    for frag in frags:
+        for v in frag:
+            assert len(v) == 2
+            assert isinstance(v[0], (int, float))
+            assert isinstance(v[1], (int, float))
+
+
+def test_fragments_min_vertex_count():
+    """Each fragment polygon has at least 4 vertices."""
+    ca = ClearedArea()
+    ca.add_cleared_polygons([P((0, 0), (10, 0), (10, 10), (0, 10))])
+    frags = ca.fragments()
+    for frag in frags:
+        assert len(frag) >= 4
+
+
 # --- incorporate ---
 
 
