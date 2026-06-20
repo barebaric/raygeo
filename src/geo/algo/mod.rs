@@ -50,10 +50,11 @@ pub use clipping::{
     subtract_polygons_from_line_segment_2d,
 };
 pub use fitting::{
-    are_points_collinear, convert_arc_to_beziers_from_array,
-    convert_arcs_to_beziers, fit_arcs, fit_circle_to_3_points,
-    fit_circle_to_points, fit_curves, fit_points_recursive,
-    fit_points_with_primitives, flatten_to_points, get_polyline_arc_deviation,
+    arc_between_two_points, are_points_collinear,
+    convert_arc_to_beziers_from_array, convert_arcs_to_beziers, fit_arcs,
+    fit_circle_to_3_points, fit_circle_to_points, fit_curves,
+    fit_points_recursive, fit_points_with_primitives, flatten_to_points,
+    generate_linking_arc, get_polyline_arc_deviation,
     get_polyline_line_deviation, linearize_data, linearize_geometry,
     optimize_path_from_array, project_circle_center_to_bisector,
 };

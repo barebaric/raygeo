@@ -19,6 +19,8 @@ __all__ = [
     "fit_points_recursive",
     "fit_points_with_primitives",
     "flatten_to_points",
+    "generate_arc_between_two_points",
+    "generate_linking_arc",
     "get_polyline_arc_deviation",
     "get_polyline_line_deviation",
     "linearize_geometry",
@@ -85,6 +87,40 @@ def flatten_to_points(geometry: geo.Geometry, tolerance: float) -> list[list[typ
     :param tolerance: Flattening tolerance.
     :returns: List of flattened point segments.
     :complexity: O(n + m) time, O(m) space where n is the number of commands and m the number of output points
+    """
+
+def generate_arc_between_two_points(p0: tuple[float, float], p1: tuple[float, float], offset: float, min_radius: float, z: float, resolution: float) -> typing.Optional[list[tuple[float, float, float]]]:
+    r"""
+    Fit a circular arc through two points with a perpendicular offset.
+    
+    Uses a third point offset perpendicularly from the chord midpoint to
+    define the arc shape.  Returns a linearized arc polyline, or None if
+    the radius would be below min_radius or the geometry is degenerate.
+    
+    :param p0: Start point (x, y).
+    :param p1: End point (x, y).
+    :param offset: Perpendicular offset from the chord midpoint.
+    :param min_radius: Minimum allowed arc radius.
+    :param z: Z-coordinate for all output points.
+    :param resolution: Arc linearization resolution.
+    :returns: List of 3D points forming the arc, or None.
+    :complexity: O(n) time, O(n) space where n depends on arc length and resolution
+    """
+
+def generate_linking_arc(start: tuple[float, float, float], end: tuple[float, float, float], min_radius: float, z: float) -> list[tuple[float, float, float]]:
+    r"""
+    Generate a smooth linking arc between two points.
+    
+    Uses generate_arc_between_two_points internally with an offset derived from
+    min_radius.  Falls back to a straight-line interpolation if no valid
+    arc can be fit.
+    
+    :param start: Start 3D point (x, y, z).
+    :param end: End 3D point (x, y, z).
+    :param min_radius: Minimum allowed arc radius.
+    :param z: Z-coordinate for all output points (overrides start.z / end.z).
+    :returns: List of 3D points forming the linking arc.
+    :complexity: O(n) time, O(n) space where n scales with chord_length / min_radius
     """
 
 def get_polyline_arc_deviation(points: collections.abc.Sequence[types.Point3D], center: types.Point, radius: float) -> float:

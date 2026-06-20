@@ -140,6 +140,69 @@ Flatten curves into linear segments.
 
 _Arc curve flattened to dense line segments_
 
+### `generate_arc_between_two_points()`
+
+```python
+generate_arc_between_two_points(
+    p0: tuple[float, float],
+    p1: tuple[float, float],
+    offset: float,
+    min_radius: float,
+    z: float,
+    resolution: float,
+) -> Optional[list[tuple[float, float, float]]]
+```
+
+Fit a circular arc through two points with a perpendicular offset.
+
+Uses a third point offset perpendicularly from the chord midpoint to define the arc shape. Returns a
+linearized arc polyline, or None if the radius would be below min_radius or the geometry is
+degenerate.
+
+| Parameter    | Type                                         | Description                                                        |
+| ------------ | -------------------------------------------- | ------------------------------------------------------------------ |
+| `p0`         | `tuple[float, float]`                        | Start point (x, y).                                                |
+| `p1`         | `tuple[float, float]`                        | End point (x, y).                                                  |
+| `offset`     | `float`                                      | Perpendicular offset from the chord midpoint.                      |
+| `min_radius` | `float`                                      | Minimum allowed arc radius.                                        |
+| `z`          | `float`                                      | Z-coordinate for all output points.                                |
+| `resolution` | `float`                                      | Arc linearization resolution.                                      |
+| _Returns_    | `Optional[list[tuple[float, float, float]]]` | List of 3D points forming the arc, or None.                        |
+| _Complexity_ |                                              | O(n) time, O(n) space where n depends on arc length and resolution |
+
+![Arc through two points with + and - perpendicular offset](images/geo-algo-fitting-arc-between.png)
+
+_Arc through two points with + and - perpendicular offset_
+
+### `generate_linking_arc()`
+
+```python
+generate_linking_arc(
+    start: tuple[float, float, float],
+    end: tuple[float, float, float],
+    min_radius: float,
+    z: float,
+) -> list[tuple[float, float, float]]
+```
+
+Generate a smooth linking arc between two points.
+
+Uses generate_arc_between_two_points internally with an offset derived from min_radius. Falls back
+to a straight-line interpolation if no valid arc can be fit.
+
+| Parameter    | Type                               | Description                                                         |
+| ------------ | ---------------------------------- | ------------------------------------------------------------------- |
+| `start`      | `tuple[float, float, float]`       | Start 3D point (x, y, z).                                           |
+| `end`        | `tuple[float, float, float]`       | End 3D point (x, y, z).                                             |
+| `min_radius` | `float`                            | Minimum allowed arc radius.                                         |
+| `z`          | `float`                            | Z-coordinate for all output points (overrides start.z / end.z).     |
+| _Returns_    | `list[tuple[float, float, float]]` | List of 3D points forming the linking arc.                          |
+| _Complexity_ |                                    | O(n) time, O(n) space where n scales with chord_length / min_radius |
+
+![Linking arc with varying minimum radius constraints](images/geo-algo-fitting-linking.png)
+
+_Linking arc with varying minimum radius constraints_
+
 ### `get_polyline_arc_deviation()`
 
 ```python

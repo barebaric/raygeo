@@ -11,6 +11,8 @@ from raygeo.geo.algo.fitting import (
     fit_circle_to_3_points,
     fit_circle_to_points,
     flatten_to_points,
+    generate_arc_between_two_points,
+    generate_linking_arc,
     get_polyline_arc_deviation,
     get_polyline_line_deviation,
     linearize_geometry,
@@ -552,6 +554,136 @@ def generate_project_bisector():
     return fig_b
 
 
+def generate_arc_between():
+    """Arc between two points."""
+    p0 = (15.0, 50.0)
+    p1 = (85.0, 50.0)
+    z = 0.0
+
+    fig_ab, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 6))
+
+    for idx, (offset, ax, title) in enumerate(
+        [
+            (10.0, ax1, "Arc: offset=+10"),
+            (-10.0, ax2, "Arc: offset=-10"),
+        ]
+    ):
+        result = generate_arc_between_two_points(p0, p1, offset, 1.0, z, 0.5)
+        ax.set_aspect("equal")
+        ax.set_xlim(0, 100)
+        ax.set_ylim(0, 100)
+        ax.grid(True, alpha=0.3)
+
+        # Chord
+        ax.plot(
+            [p0[0], p1[0]],
+            [p0[1], p1[1]],
+            "--",
+            color="gray",
+            linewidth=1.5,
+            label="Chord",
+        )
+        # Endpoints
+        ax.scatter(*p0, color="tomato", s=80, zorder=5)
+        ax.scatter(*p1, color="tomato", s=80, zorder=5)
+        for label, pt in [("p0", p0), ("p1", p1)]:
+            ax.annotate(
+                label,
+                pt,
+                textcoords="offset points",
+                xytext=(-10, 8),
+                fontsize=11,
+                fontweight="bold",
+            )
+
+        if result:
+            xs = [pt[0] for pt in result]
+            ys = [pt[1] for pt in result]
+            ax.plot(
+                xs,
+                ys,
+                color="forestgreen",
+                linewidth=2.5,
+                label=f"Arc ({len(result)} pts)",
+            )
+            # Midpoint offset marker
+            mid = ((p0[0] + p1[0]) / 2, (p0[1] + p1[1]) / 2)
+            perp = (-(p1[1] - p0[1]), p1[0] - p0[0])
+            perp_len = math.hypot(*perp)
+            perp = (perp[0] / perp_len, perp[1] / perp_len)
+            off_pt = (mid[0] + perp[0] * offset, mid[1] + perp[1] * offset)
+            ax.scatter(*off_pt, color="dodgerblue", s=50, zorder=4, marker="s")
+            ax.plot(
+                [mid[0], off_pt[0]],
+                [mid[1], off_pt[1]],
+                ":",
+                color="dodgerblue",
+                linewidth=1.2,
+                label=f"Offset={offset}",
+            )
+
+        ax.legend(fontsize=9)
+        ax.set_title(title, fontsize=12)
+
+    fig_ab.tight_layout()
+    return fig_ab
+
+
+def generate_linking():
+    """Generate linking arc."""
+    fig_lk, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 6))
+
+    for idx, (start, end, mr, zval, ax, title) in enumerate(
+        [
+            ((10, 20, 0), (90, 80, 0), 8.0, 0.0, ax1, "Linking arc (R_min=8)"),
+            ((10, 80, 0), (90, 20, 0), 5.0, 0.0, ax2, "Linking arc (R_min=5)"),
+        ]
+    ):
+        result = generate_linking_arc(start, end, mr, zval)
+        ax.set_aspect("equal")
+        ax.set_xlim(0, 100)
+        ax.set_ylim(0, 100)
+        ax.grid(True, alpha=0.3)
+
+        # Chord
+        ax.plot(
+            [start[0], end[0]],
+            [start[1], end[1]],
+            "--",
+            color="gray",
+            linewidth=1.5,
+            label="Chord",
+        )
+        # Endpoints
+        for label, pt in [("Start", start), ("End", end)]:
+            ax.scatter(*pt[:2], color="tomato", s=80, zorder=5)
+            ax.annotate(
+                label,
+                pt[:2],
+                textcoords="offset points",
+                xytext=(-12, 8),
+                fontsize=11,
+                fontweight="bold",
+            )
+
+        if result:
+            xs = [pt[0] for pt in result]
+            ys = [pt[1] for pt in result]
+            ax.plot(
+                xs,
+                ys,
+                color="forestgreen",
+                linewidth=2.5,
+                label=f"Linking arc ({len(result)} pts)",
+            )
+
+        ax.legend(fontsize=9)
+        ax.set_title(title, fontsize=12)
+
+    fig_lk.tight_layout()
+    return fig_lk
+
+
 __docs_target__ = ["raygeo.geo.algo.fitting.md"]
 __images__ = [
     {
@@ -593,5 +725,15 @@ __images__ = [
         "heading": "project_circle_center_to_bisector",
         "caption": "Circle center projected onto the perpendicular bisector",
         "function": generate_project_bisector,
+    },
+    {
+        "heading": "generate_arc_between_two_points",
+        "caption": "Arc through two points with + and - perpendicular offset",
+        "function": generate_arc_between,
+    },
+    {
+        "heading": "generate_linking_arc",
+        "caption": "Linking arc with varying minimum radius constraints",
+        "function": generate_linking,
     },
 ]

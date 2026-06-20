@@ -862,3 +862,111 @@ pub fn optimize_path_from_array(
 pub fn fit_arcs(data: &[Command], tolerance: f64) -> Vec<Command> {
     fit_curves(data, tolerance, false, true, None)
 }
+
+/// Fit a circular arc through two endpoints, using a third point offset
+/// perpendicularly from the chord midpoint to define the arc shape.
+///
+/// Returns a linearized arc polyline, or `None` if the radius would be below
+/// `min_radius` or if the geometry is degenerate.
+pub fn arc_between_two_points(
+    p0: Point,
+    p1: Point,
+    offset: f64,
+    min_radius: f64,
+    z: f64,
+    resolution: f64,
+) -> Option<Vec<Point3D>> {
+    let dp = p1 - p0;
+    let len = dp.length();
+    if len < 1e-12 {
+        return None;
+    }
+    let mid = Point::new((p0.x + p1.x) / 2.0, (p0.y + p1.y) / 2.0);
+    let perp = Point::new(-dp.y, dp.x);
+    let perp_len = perp.length();
+    if perp_len < 1e-12 {
+        return None;
+    }
+    let perp = perp / perp_len;
+    let clamped = offset.min(len * 0.5);
+
+    let p_mid = Point::new(mid.x + perp.x * clamped, mid.y + perp.y * clamped);
+
+    let pt0 = Point3D::new(p0.x, p0.y, z);
+    let pt_mid = Point3D::new(p_mid.x, p_mid.y, z);
+    let pt1 = Point3D::new(p1.x, p1.y, z);
+
+    let (center, radius) = fit_circle_to_3_points(pt0, pt_mid, pt1)?;
+    if radius < min_radius {
+        return None;
+    }
+
+    let pts = [p0, p_mid, p1];
+    let clockwise = is_arc_clockwise(&pts, center);
+    let start_pt = Point3D::new(p0.x, p0.y, z);
+    let end_pt = Point3D::new(p1.x, p1.y, z);
+    let center_offset = Point3D::new(center.x - p0.x, center.y - p0.y, 0.0);
+    let normal = if clockwise {
+        Point3D::new(0.0, 0.0, -1.0)
+    } else {
+        Point3D::new(0.0, 0.0, 1.0)
+    };
+    let mut segs = Vec::new();
+    linearize_arc(
+        end_pt,
+        center_offset,
+        normal,
+        start_pt,
+        resolution,
+        &mut segs,
+    );
+    let segment: Vec<Point3D> = segs.into_iter().map(|(_, end)| end).collect();
+    if segment.is_empty() {
+        None
+    } else {
+        Some(segment)
+    }
+}
+
+/// Generate a smooth linking arc between two points with a minimum radius
+/// constraint, using `arc_between_two_points`.
+pub fn generate_linking_arc(
+    from: Point3D,
+    to: Point3D,
+    min_radius: f64,
+    z: f64,
+) -> Vec<Point3D> {
+    if min_radius < 1e-12 {
+        return vec![];
+    }
+
+    let p0 = Point::new(from.x, from.y);
+    let p1 = Point::new(to.x, to.y);
+    let chord_len = p1.distance(p0);
+    if chord_len < 1e-12 {
+        return vec![];
+    }
+
+    let offset = (min_radius * 0.3).min(chord_len * 0.4);
+    let res = (min_radius * 0.3).max(0.01);
+
+    if let Some(arc) =
+        arc_between_two_points(p0, p1, offset, min_radius, z, res)
+    {
+        return arc;
+    }
+    if let Some(arc) =
+        arc_between_two_points(p0, p1, -offset, min_radius, z, res)
+    {
+        return arc;
+    }
+
+    let dp = p1 - p0;
+    let n_steps = (chord_len / min_radius * 3.0).ceil().max(2.0) as usize;
+    (1..=n_steps)
+        .map(|i| {
+            let t = i as f64 / n_steps as f64;
+            Point3D::new(p0.x + t * dp.x, p0.y + t * dp.y, z)
+        })
+        .collect()
+}

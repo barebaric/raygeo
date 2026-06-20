@@ -10,6 +10,8 @@ from raygeo.geo.algo.fitting import (
     fit_circle_to_points,
     fit_points_recursive,
     fit_points_with_primitives,
+    generate_arc_between_two_points,
+    generate_linking_arc,
     get_polyline_arc_deviation,
     get_polyline_line_deviation,
     project_circle_center_to_bisector,
@@ -656,3 +658,114 @@ def test_fit_curves_backwards_compat():
     for old_cmd, new_cmd in zip(result_old.data, result_new.data):
         assert type(old_cmd) is type(new_cmd)
         assert old_cmd.end == new_cmd.end
+
+
+def test_generate_arc_between_two_points_basic():
+    """Test basic arc generation between two points."""
+    result = generate_arc_between_two_points(
+        (0.0, 0.0), (10.0, 0.0), 5.0, 1.0, 0.0, 0.5
+    )
+    assert result is not None
+    assert len(result) > 2
+    # Ends at p1 (approximately)
+    assert result[-1][0] == pytest.approx(10.0, abs=0.01)
+    assert result[-1][1] == pytest.approx(0.0, abs=0.01)
+    # All points should be above the chord (positive offset)
+    for pt in result:
+        assert pt[1] >= -0.01
+
+
+def test_generate_arc_between_two_points_negative_offset():
+    """Test arc with negative offset (arc below chord)."""
+    result = generate_arc_between_two_points(
+        (0.0, 0.0), (10.0, 0.0), -5.0, 1.0, 0.0, 0.5
+    )
+    assert result is not None
+    assert len(result) > 2
+    # Arc should be below the chord (negative offset)
+    for pt in result:
+        assert pt[1] <= 0.01
+
+
+def test_generate_arc_between_two_points_min_radius_too_large():
+    """Test that too-large min_radius returns None."""
+    result = generate_arc_between_two_points(
+        (0.0, 0.0), (10.0, 0.0), 5.0, 100.0, 0.0, 0.5
+    )
+    assert result is None
+
+
+def test_generate_arc_between_two_points_coincident():
+    """Test with coincident points returns None."""
+    result = generate_arc_between_two_points(
+        (5.0, 5.0), (5.0, 5.0), 2.0, 1.0, 0.0, 0.5
+    )
+    assert result is None
+
+
+def test_generate_arc_between_two_points_z_coord():
+    """Test that z coordinate is correctly applied."""
+    result = generate_arc_between_two_points(
+        (0.0, 0.0), (10.0, 0.0), 5.0, 1.0, 42.0, 0.5
+    )
+    assert result is not None
+    for pt in result:
+        assert pt[2] == pytest.approx(42.0)
+
+
+def test_generate_arc_between_two_points_different_resolutions():
+    """Test that higher resolution produces more points."""
+    coarse = generate_arc_between_two_points(
+        (0.0, 0.0), (10.0, 0.0), 5.0, 1.0, 0.0, 2.0
+    )
+    fine = generate_arc_between_two_points(
+        (0.0, 0.0), (10.0, 0.0), 5.0, 1.0, 0.0, 0.1
+    )
+    assert coarse is not None and fine is not None
+    assert len(fine) > len(coarse)
+
+
+def test_generate_linking_arc_basic():
+    """Test basic linking arc generation."""
+    result = generate_linking_arc((0.0, 0.0, 0.0), (10.0, 0.0, 0.0), 2.0, 0.0)
+    assert len(result) > 2
+    # Ends at p1 (approximately)
+    assert result[-1][0] == pytest.approx(10.0, abs=0.01)
+    assert result[-1][1] == pytest.approx(0.0, abs=0.01)
+
+
+def test_generate_linking_arc_too_close():
+    """Test linking arc with very close points."""
+    result = generate_linking_arc((5.0, 5.0, 0.0), (5.0, 5.0, 0.0), 2.0, 0.0)
+    # Should return empty for coincident points
+    assert len(result) == 0
+
+
+def test_generate_linking_arc_min_radius_zero():
+    """Test linking arc with zero min_radius returns empty."""
+    result = generate_linking_arc((0.0, 0.0, 0.0), (10.0, 0.0, 0.0), 0.0, 0.0)
+    assert len(result) == 0
+
+
+def test_generate_linking_arc_vertical():
+    """Test linking arc between vertically separated points."""
+    result = generate_linking_arc((0.0, 0.0, 0.0), (0.0, 10.0, 0.0), 3.0, 0.0)
+    assert len(result) > 2
+    assert result[-1][0] == pytest.approx(0.0, abs=0.01)
+    assert result[-1][1] == pytest.approx(10.0, abs=0.01)
+
+
+def test_generate_linking_arc_z_coord():
+    """Test that z coordinate is properly applied."""
+    result = generate_linking_arc((0.0, 0.0, 0.0), (10.0, 0.0, 0.0), 2.0, 99.0)
+    assert len(result) > 2
+    for pt in result:
+        assert pt[2] == pytest.approx(99.0)
+
+
+def test_generate_linking_arc_diagonal():
+    """Test linking arc between diagonal points."""
+    result = generate_linking_arc((0.0, 0.0, 0.0), (10.0, 10.0, 0.0), 5.0, 0.0)
+    assert len(result) > 2
+    assert result[-1][0] == pytest.approx(10.0, abs=0.01)
+    assert result[-1][1] == pytest.approx(10.0, abs=0.01)

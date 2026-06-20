@@ -8,13 +8,16 @@ point sequences. Includes recursive fitting with primitives, polyline
 linearization, and evaluating fitting quality (line and arc deviation).
 ";
 
-use super::super::flex_point::{point_to_tuple, points3d_to_tuples, PyPoint3D};
+use super::super::flex_point::{
+    point_to_tuple, points3d_to_tuples, PyPoint2D, PyPoint3D,
+};
 use super::super::Geometry;
 use crate::geo::algo::fitting::{
-    are_points_collinear, fit_circle_to_3_points, fit_circle_to_points,
-    fit_points_recursive, fit_points_with_primitives, flatten_to_points,
-    get_polyline_arc_deviation, get_polyline_line_deviation,
-    linearize_geometry, project_circle_center_to_bisector,
+    arc_between_two_points, are_points_collinear, fit_circle_to_3_points,
+    fit_circle_to_points, fit_points_recursive, fit_points_with_primitives,
+    flatten_to_points, generate_linking_arc, get_polyline_arc_deviation,
+    get_polyline_line_deviation, linearize_geometry,
+    project_circle_center_to_bisector,
 };
 use crate::geo::geometry::Geometry as CoreGeometry;
 use crate::types::{Point, Point3D};
@@ -38,6 +41,8 @@ pub fn register(algo_mod: &Bound<'_, PyModule>) -> PyResult<()> {
         fit_points_with_primitives_py,
         get_polyline_line_deviation_py,
         get_polyline_arc_deviation_py,
+        arc_between_two_points_py,
+        generate_linking_arc_py,
     );
 
     algo_mod.add_submodule(&m)?;
@@ -365,4 +370,95 @@ fn get_polyline_arc_deviation_py(
     let pts: Vec<Point3D> =
         points.iter().map(|p| Point3D::new(p.0, p.1, p.2)).collect();
     get_polyline_arc_deviation(&pts, Point::new(center.0, center.1), radius)
+}
+
+#[gen_stub_pyfunction(
+    python = r#"
+    import typing
+
+    def generate_arc_between_two_points(
+        p0: tuple[float, float],
+        p1: tuple[float, float],
+        offset: float,
+        min_radius: float,
+        z: float,
+        resolution: float,
+    ) -> typing.Optional[list[tuple[float, float, float]]]:
+        """Fit a circular arc through two points with a perpendicular offset.
+
+        Uses a third point offset perpendicularly from the chord midpoint to
+        define the arc shape.  Returns a linearized arc polyline, or None if
+        the radius would be below min_radius or the geometry is degenerate.
+
+        :param p0: Start point (x, y).
+        :param p1: End point (x, y).
+        :param offset: Perpendicular offset from the chord midpoint.
+        :param min_radius: Minimum allowed arc radius.
+        :param z: Z-coordinate for all output points.
+        :param resolution: Arc linearization resolution.
+        :returns: List of 3D points forming the arc, or None.
+        :complexity: O(n) time, O(n) space where n depends on arc length and resolution
+        """
+"#,
+    module = "raygeo.geo.algo.fitting"
+)]
+#[pyfunction(name = "generate_arc_between_two_points")]
+#[pyo3(signature = (p0, p1, offset, min_radius, z, resolution))]
+fn arc_between_two_points_py(
+    p0: PyPoint2D,
+    p1: PyPoint2D,
+    offset: f64,
+    min_radius: f64,
+    z: f64,
+    resolution: f64,
+) -> Option<Vec<(f64, f64, f64)>> {
+    arc_between_two_points(
+        Point::new(p0.0, p0.1),
+        Point::new(p1.0, p1.1),
+        offset,
+        min_radius,
+        z,
+        resolution,
+    )
+    .map(points3d_to_tuples)
+}
+
+#[gen_stub_pyfunction(
+    python = r#"
+    def generate_linking_arc(
+        start: tuple[float, float, float],
+        end: tuple[float, float, float],
+        min_radius: float,
+        z: float,
+    ) -> list[tuple[float, float, float]]:
+        """Generate a smooth linking arc between two points.
+
+        Uses generate_arc_between_two_points internally with an offset derived from
+        min_radius.  Falls back to a straight-line interpolation if no valid
+        arc can be fit.
+
+        :param start: Start 3D point (x, y, z).
+        :param end: End 3D point (x, y, z).
+        :param min_radius: Minimum allowed arc radius.
+        :param z: Z-coordinate for all output points (overrides start.z / end.z).
+        :returns: List of 3D points forming the linking arc.
+        :complexity: O(n) time, O(n) space where n scales with chord_length / min_radius
+        """
+"#,
+    module = "raygeo.geo.algo.fitting"
+)]
+#[pyfunction(name = "generate_linking_arc")]
+#[pyo3(signature = (start, end, min_radius, z))]
+fn generate_linking_arc_py(
+    start: PyPoint3D,
+    end: PyPoint3D,
+    min_radius: f64,
+    z: f64,
+) -> Vec<(f64, f64, f64)> {
+    points3d_to_tuples(generate_linking_arc(
+        Point3D::new(start.0, start.1, start.2),
+        Point3D::new(end.0, end.1, end.2),
+        min_radius,
+        z,
+    ))
 }
