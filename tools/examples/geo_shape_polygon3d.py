@@ -25,6 +25,7 @@ from raygeo.geo.shape.polygon3d import (
     rotate_polygon_3d,
     scale_polygon_3d,
     translate_polygon_3d,
+    walk_along_polygon_3d,
     walk_along_polyline_3d,
 )
 
@@ -634,6 +635,74 @@ def generate_walk_along():
     return fig
 
 
+def generate_walk_along_polygon():
+    """Walk along a closed 3D polygon (pentagon)."""
+    n = 5
+    poly = [
+        (
+            8 * math.cos(2 * math.pi * i / n),
+            8 * math.sin(2 * math.pi * i / n),
+            5.0,
+        )
+        for i in range(n)
+    ]
+    start = walk_along_polygon_3d(poly, poly[0], forward=True, distance=5.0)
+    targets = {
+        d: walk_along_polygon_3d(poly, start, forward=True, distance=d)
+        for d in [5, 10, 20]
+    }
+    fig, ax = _make_3d_ax(
+        "walk_along_polygon_3d: start (black circle)"
+        " → targets at +5, +10, +20 mm"
+    )
+    xs = [p[0] for p in poly] + [poly[0][0]]
+    ys = [p[1] for p in poly] + [poly[0][1]]
+    zs = [p[2] for p in poly] + [poly[0][2]]
+    ax.plot(
+        xs,
+        ys,
+        zs,
+        "-o",
+        color="steelblue",
+        linewidth=2,
+        markerfacecolor="lightblue",
+        markeredgecolor="steelblue",
+        markersize=6,
+        label="Pentagon (Z=5)",
+    )
+    ax.plot(
+        [start[0]],
+        [start[1]],
+        [start[2]],
+        "o",
+        color="k",
+        markersize=10,
+        label="Start (5 mm from vertex 0)",
+    )
+    colors = {5: "gold", 10: "tomato", 20: "limegreen"}
+    for d, pt in targets.items():
+        ax.plot(
+            [pt[0]],
+            [pt[1]],
+            [pt[2]],
+            "*",
+            color=colors[d],
+            markersize=14,
+            label=f"+{d} mm",
+        )
+        ax.text(
+            pt[0],
+            pt[1],
+            pt[2],
+            f"+{d} mm",
+            fontsize=10,
+            ha="center",
+            va="bottom",
+        )
+    ax.legend(loc="upper left")
+    return fig
+
+
 __docs_target__ = ["raygeo.geo.shape.polygon3d.md"]
 __images__ = [
     {
@@ -725,6 +794,11 @@ __images__ = [
         "heading": "get_polygon_signed_area_3d",
         "caption": "Signed XY-projected area — positive = CCW, negative = CW",
         "function": generate_signed_area,
+    },
+    {
+        "heading": "walk_along_polygon_3d",
+        "caption": "Walk along a closed 3D polygon (wraps around)",
+        "function": generate_walk_along_polygon,
     },
     {
         "heading": "walk_along_polyline_3d",

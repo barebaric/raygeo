@@ -524,6 +524,36 @@ Translate a list of 3D polygons.
 | _Returns_    | `list[types.Polygon3D]`     | Translated polygons. |
 | _Complexity_ |                             | O(n \* m)            |
 
+### `walk_along_polygon_3d()`
+
+```python
+walk_along_polygon_3d(
+    polygon: Sequence[types.Point3D],
+    start: tuple[float, float, float],
+    forward: bool,
+    distance: float,
+) -> types.Point3D
+```
+
+Walk along a closed 3D polygon by a given arc length from a starting point.
+
+Given a closed polygon and a starting point on it, walk along the polygon edges and return the point
+at exactly `distance` units away. The walk wraps around the polygon (unlike
+**walk_along_polyline_3d** which clamps at endpoints).
+
+| Parameter    | Type                         | Description                                                   |
+| ------------ | ---------------------------- | ------------------------------------------------------------- |
+| `polygon`    | `Sequence[types.Point3D]`    | Closed polygon as (x, y, z) points.                           |
+| `start`      | `tuple[float, float, float]` | Starting point on the polygon.                                |
+| `forward`    | `bool`                       | Walk forward (along vertex order) if True, backward if False. |
+| `distance`   | `float`                      | Arc length to walk.                                           |
+| _Returns_    | `types.Point3D`              | Point (x, y, z) at the given distance.                        |
+| _Complexity_ |                              | O(n)                                                          |
+
+![Walk along a closed 3D polygon (wraps around)](images/geo-shape-polygon3d-walk-along-polygon.png)
+
+_Walk along a closed 3D polygon (wraps around)_
+
 ### `walk_along_polyline_3d()`
 
 ```python

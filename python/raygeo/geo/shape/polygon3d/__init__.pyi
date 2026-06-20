@@ -30,6 +30,7 @@ __all__ = [
     "scale_polygon_3d",
     "translate_polygon_3d",
     "translate_polygons_3d",
+    "walk_along_polygon_3d",
     "walk_along_polyline_3d",
 ]
 
@@ -299,6 +300,23 @@ def translate_polygons_3d(polygons: collections.abc.Sequence[types.Polygon3D], d
     :param dz: Z translation.
     :returns: Translated polygons.
     :complexity: O(n * m)
+    """
+
+def walk_along_polygon_3d(polygon: collections.abc.Sequence[types.Point3D], start: tuple[float, float, float], forward: bool, distance: float) -> types.Point3D:
+    r"""
+    Walk along a closed 3D polygon by a given arc length from a starting point.
+    
+    Given a closed polygon and a starting point on it, walk along the
+    polygon edges and return the point at exactly ``distance`` units
+    away.  The walk wraps around the polygon (unlike
+    :func:`walk_along_polyline_3d` which clamps at endpoints).
+    
+    :param polygon: Closed polygon as (x, y, z) points.
+    :param start: Starting point on the polygon.
+    :param forward: Walk forward (along vertex order) if True, backward if False.
+    :param distance: Arc length to walk.
+    :returns: Point (x, y, z) at the given distance.
+    :complexity: O(n)
     """
 
 def walk_along_polyline_3d(polyline: collections.abc.Sequence[types.Point3D], start: tuple[float, float, float], forward: bool, distance: float) -> types.Point3D:

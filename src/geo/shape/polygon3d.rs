@@ -358,6 +358,139 @@ pub fn get_polygon_convex_hull_3d(polygon: &[Point3D]) -> Vec<Point3D> {
     lift_single(hull_2d, first_z(polygon))
 }
 
+/// Walk along a closed 3D polygon by a given arc length from a starting point.
+///
+/// Given a closed polygon and a starting point that lies on it, walk along
+/// the polygon edges in the specified direction and return the point at
+/// exactly `distance` units from the start.  The walk wraps around the
+/// polygon (unlike [`walk_along_polyline_3d`] which clamps at endpoints).
+///
+/// # Parameters
+/// - `polygon` — closed polygon (implicit closing segment from last to
+///   first vertex).
+/// - `start` — a point on the polygon.
+/// - `forward` — `true` to walk in the order of the vertex array (increasing
+///   index), `false` to walk in the opposite direction (decreasing index).
+/// - `distance` — the arc length to walk along the polygon.
+///
+/// # Returns
+/// The point on the polygon at the given distance from `start`, wrapping
+/// around the polygon as needed.
+///
+/// # Panics
+/// Panics if `start` is not within 1e-9 units of the polygon, or if the
+/// polygon has fewer than 3 vertices.
+pub fn walk_along_polygon_3d(
+    polygon: &[Point3D],
+    start: &Point3D,
+    forward: bool,
+    distance: f64,
+) -> Point3D {
+    let n = polygon.len();
+    assert!(n >= 3, "polygon must have at least 3 vertices");
+
+    // Build edge lengths (n edges for a closed polygon)
+    let mut edge_lens = vec![0.0f64; n];
+    let mut total_perimeter = 0.0;
+    for i in 0..n {
+        let a = polygon[i];
+        let b = polygon[(i + 1) % n];
+        let len = a.distance(b);
+        edge_lens[i] = len;
+        total_perimeter += len;
+    }
+
+    // Find the segment containing the start point
+    let mut seg_idx = 0usize;
+    let mut t = 0.0f64;
+    let mut found = false;
+
+    for i in 0..n {
+        let a = polygon[i];
+        let b = polygon[(i + 1) % n];
+        let ab = b - a;
+        let len_sq = ab.length_squared();
+        if len_sq < 1e-12 {
+            continue;
+        }
+        let ap = *start - a;
+        let tt = ap.dot(ab) / len_sq;
+        let tt_clamped = tt.clamp(0.0, 1.0);
+        let closest = a + ab * tt_clamped;
+        if closest.distance_squared(*start) < 1e-18 {
+            seg_idx = i;
+            t = tt_clamped;
+            found = true;
+            break;
+        }
+    }
+
+    assert!(found, "start point must lie on the polygon");
+
+    if total_perimeter < 1e-12 {
+        return *start;
+    }
+
+    // Reduce distance modulo perimeter so we never walk more than one full loop
+    let mut remaining = distance % total_perimeter;
+
+    if forward {
+        let edge_len = edge_lens[seg_idx];
+        let dist_to_end = edge_len * (1.0 - t);
+
+        if remaining <= dist_to_end {
+            let a = polygon[seg_idx];
+            let b = polygon[(seg_idx + 1) % n];
+            return a.lerp(b, t + remaining / edge_len);
+        }
+        remaining -= dist_to_end;
+        let mut idx = (seg_idx + 1) % n;
+
+        while remaining > 1e-12 {
+            let edge_len = edge_lens[idx];
+            if edge_len < 1e-12 {
+                idx = (idx + 1) % n;
+                continue;
+            }
+            if remaining <= edge_len {
+                let a = polygon[idx];
+                let b = polygon[(idx + 1) % n];
+                return a.lerp(b, remaining / edge_len);
+            }
+            remaining -= edge_len;
+            idx = (idx + 1) % n;
+        }
+    } else {
+        let edge_len = edge_lens[seg_idx];
+        let dist_to_start = t * edge_len;
+
+        if remaining <= dist_to_start {
+            let a = polygon[seg_idx];
+            let b = polygon[(seg_idx + 1) % n];
+            return a.lerp(b, t - remaining / edge_len);
+        }
+        remaining -= dist_to_start;
+        let mut idx = (seg_idx + n - 1) % n;
+
+        while remaining > 1e-12 {
+            let edge_len = edge_lens[idx];
+            if edge_len < 1e-12 {
+                idx = (idx + n - 1) % n;
+                continue;
+            }
+            if remaining <= edge_len {
+                let a = polygon[idx];
+                let b = polygon[(idx + 1) % n];
+                return a.lerp(b, 1.0 - remaining / edge_len);
+            }
+            remaining -= edge_len;
+            idx = (idx + n - 1) % n;
+        }
+    }
+
+    *start
+}
+
 /// Walk along an open 3D polyline by a given arc length from a starting point.
 ///
 /// Given an open polyline and a starting point that lies on it, walk along

@@ -20,6 +20,7 @@ from raygeo.geo.shape.polygon3d import (
     get_polygon_edges_3d,
     get_polygon_group_bounds_3d,
     get_polygon_perimeter_3d,
+    get_polygon_signed_area_3d,
     get_polygons_difference_3d,
     get_polygons_group_difference_3d,
     get_polygons_group_intersection_3d,
@@ -33,6 +34,7 @@ from raygeo.geo.shape.polygon3d import (
     scale_polygon_3d,
     translate_polygon_3d,
     translate_polygons_3d,
+    walk_along_polygon_3d,
     walk_along_polyline_3d,
 )
 
@@ -242,6 +244,63 @@ class TestPerimeter3D:
 
     def test_single_point(self):
         assert get_polygon_perimeter_3d([(1, 2, 3)]) == 0.0
+
+
+class TestSignedArea3D:
+    def test_ccw_square_positive(self):
+        """CCW winding gives positive signed area."""
+        poly = P3((0, 0, 0), (10, 0, 0), (10, 10, 0), (0, 10, 0))
+        assert get_polygon_signed_area_3d(poly) == 100.0
+
+    def test_cw_square_negative(self):
+        """CW winding gives negative signed area."""
+        poly = P3((0, 0, 0), (0, 10, 0), (10, 10, 0), (10, 0, 0))
+        assert get_polygon_signed_area_3d(poly) == -100.0
+
+    def test_reversed_sign(self):
+        """Reversing a polygon flips the sign."""
+        ccw = P3((0, 0, 0), (10, 0, 0), (10, 10, 0), (0, 10, 0))
+        cw = ccw[::-1]
+        sa_ccw = get_polygon_signed_area_3d(ccw)
+        sa_cw = get_polygon_signed_area_3d(cw)
+        assert abs(sa_ccw - (-sa_cw)) < 1e-9
+
+    def test_unsigned_area_matches(self):
+        """Absolute signed area equals unsigned area for CCW."""
+        ccw = P3((0, 0, 0), (10, 0, 0), (10, 10, 0), (0, 10, 0))
+        assert (
+            abs(get_polygon_signed_area_3d(ccw) - get_polygon_area_3d(ccw))
+            < 1e-9
+        )
+
+    def test_triangle(self):
+        """Triangle with known signed area."""
+        poly = P3((0, 0, 0), (10, 0, 0), (0, 10, 0))
+        assert get_polygon_signed_area_3d(poly) == 50.0
+
+    def test_degenerate_collinear(self):
+        """Collinear points produce zero area."""
+        poly = P3((0, 0, 0), (5, 0, 0), (10, 0, 0))
+        assert get_polygon_signed_area_3d(poly) == 0.0
+
+    def test_z_ignored(self):
+        """Z coordinate does not affect XY signed area."""
+        poly_2d = P3((0, 0, 0), (10, 0, 0), (10, 10, 0), (0, 10, 0))
+        poly_3d = P3((0, 0, 5), (10, 0, 5), (10, 10, 5), (0, 10, 5))
+        assert (
+            abs(
+                get_polygon_signed_area_3d(poly_2d)
+                - get_polygon_signed_area_3d(poly_3d)
+            )
+            < 1e-9
+        )
+
+    def test_empty(self):
+        assert get_polygon_signed_area_3d([]) == 0.0
+
+    def test_less_than_3_points(self):
+        assert get_polygon_signed_area_3d([(1, 2, 3)]) == 0.0
+        assert get_polygon_signed_area_3d([(1, 2, 3), (4, 5, 6)]) == 0.0
 
 
 class TestBounds3D:
@@ -1032,3 +1091,192 @@ class TestWalkAlongPolyline3D:
             poly, start, forward=True, distance=10.0
         )
         assert result == (10, 0, 0)
+
+
+# ── walk_along_polygon_3d ─────────────────────────────────────────────
+
+
+class TestWalkAlongPolygon3D:
+    def test_forward_partial_segment(self):
+        """Walk forward part way along the first edge."""
+        poly = P3((0, 0, 5), (10, 0, 5), (10, 10, 5), (0, 10, 5))
+        result = walk_along_polygon_3d(
+            poly, (2, 0, 5), forward=True, distance=3.0
+        )
+        assert result == (5, 0, 5)
+
+    def test_forward_to_next_vertex(self):
+        """Walk forward exactly one full edge."""
+        poly = P3((0, 0, 5), (10, 0, 5), (10, 10, 5), (0, 10, 5))
+        result = walk_along_polygon_3d(
+            poly, (0, 0, 5), forward=True, distance=10.0
+        )
+        assert result == (10, 0, 5)
+
+    def test_forward_crosses_segment_boundary(self):
+        """Walk forward across a vertex into the next edge."""
+        poly = P3((0, 0, 5), (10, 0, 5), (10, 10, 5), (0, 10, 5))
+        result = walk_along_polygon_3d(
+            poly, (0, 0, 5), forward=True, distance=15.0
+        )
+        assert result == (10, 5, 5)
+
+    def test_forward_wraps_around(self):
+        """Walk forward past the last vertex wraps to the first edge."""
+        poly = P3((0, 0, 5), (10, 0, 5), (10, 10, 5), (0, 10, 5))
+        # perimeter = 10+10+10+10 = 40
+        # walk 45 from (0,0,5) → wraps around and ends 5 into edge 0
+        result = walk_along_polygon_3d(
+            poly, (0, 0, 5), forward=True, distance=45.0
+        )
+        assert result == (5, 0, 5)
+
+    def test_forward_full_perimeter_returns_to_start(self):
+        """Walking exactly one full perimeter returns to the start."""
+        poly = P3((0, 0, 5), (10, 0, 5), (10, 10, 5), (0, 10, 5))
+        perim = get_polygon_perimeter_3d(poly)
+        result = walk_along_polygon_3d(
+            poly, (3, 0, 5), forward=True, distance=perim
+        )
+        assert result[0] == 3.0
+        assert result[2] == 5.0
+
+    def test_forward_multiple_perimeters(self):
+        """Walking several full perimeters lands at the same place."""
+        poly = P3((0, 0, 5), (10, 0, 5), (10, 10, 5), (0, 10, 5))
+        perim = get_polygon_perimeter_3d(poly)
+        start = (3, 0, 5)
+        d1 = walk_along_polygon_3d(
+            poly, start, forward=True, distance=perim + 7.0
+        )
+        d2 = walk_along_polygon_3d(poly, start, forward=True, distance=7.0)
+        for a, b in zip(d1, d2):
+            assert abs(a - b) < 1e-12
+
+    def test_backward_partial_segment(self):
+        """Walk backward part way along an edge."""
+        poly = P3((0, 0, 5), (10, 0, 5), (10, 10, 5), (0, 10, 5))
+        result = walk_along_polygon_3d(
+            poly, (2, 0, 5), forward=False, distance=1.0
+        )
+        assert result == (1, 0, 5)
+
+    def test_backward_to_prev_vertex(self):
+        """Walk backward exactly one full edge."""
+        poly = P3((0, 0, 5), (10, 0, 5), (10, 10, 5), (0, 10, 5))
+        result = walk_along_polygon_3d(
+            poly, (10, 0, 5), forward=False, distance=10.0
+        )
+        assert result == (0, 0, 5)
+
+    def test_backward_crosses_segment_boundary(self):
+        """Walk backward across a vertex into the previous edge."""
+        poly = P3((0, 0, 5), (10, 0, 5), (10, 10, 5), (0, 10, 5))
+        # From (10,0,5): 10 units back along edge 0 → (0,0), then 5 units
+        # back along edge 3 ((0,10)→(0,0) direction = toward (0,10))
+        result = walk_along_polygon_3d(
+            poly, (10, 0, 5), forward=False, distance=15.0
+        )
+        assert result == (0, 5, 5)
+
+    def test_backward_wraps_around(self):
+        """Walk backward past the first vertex wraps to the last edge."""
+        poly = P3((0, 0, 5), (10, 0, 5), (10, 10, 5), (0, 10, 5))
+        # 45 % 40 = 5. From (0,0,5), walk 5 backward along edge 3
+        # ((0,10)→(0,0) direction = toward (0,10))
+        result = walk_along_polygon_3d(
+            poly, (0, 0, 5), forward=False, distance=45.0
+        )
+        assert result == (0, 5, 5)
+
+    def test_backward_full_perimeter_returns_to_start(self):
+        """Walking backward one full perimeter returns to the start."""
+        poly = P3((0, 0, 5), (10, 0, 5), (10, 10, 5), (0, 10, 5))
+        perim = get_polygon_perimeter_3d(poly)
+        start = (3, 0, 5)
+        result = walk_along_polygon_3d(
+            poly, start, forward=False, distance=perim
+        )
+        for a, b in zip(result, start):
+            assert abs(a - b) < 1e-12
+
+    def test_forward_and_backward_cancel(self):
+        """Walking forward then backward the same distance returns to start."""
+        poly = P3((0, 0, 5), (10, 0, 5), (10, 10, 5), (0, 10, 5))
+        start = (5, 0, 5)
+        mid = walk_along_polygon_3d(poly, start, forward=True, distance=10.0)
+        back = walk_along_polygon_3d(poly, mid, forward=False, distance=10.0)
+        for a, b in zip(back, start):
+            assert abs(a - b) < 1e-12
+
+    def test_zero_distance_returns_start(self):
+        """Zero distance returns the start point unchanged."""
+        poly = P3((0, 0, 5), (10, 0, 5), (10, 10, 5), (0, 10, 5))
+        start = (3, 0, 5)
+        result = walk_along_polygon_3d(poly, start, forward=True, distance=0.0)
+        assert result == start
+
+    def test_z_preserved(self):
+        """Result point has the same Z as the polygon."""
+        poly = P3((0, 0, 7), (10, 0, 7), (10, 10, 7), (0, 10, 7))
+        result = walk_along_polygon_3d(
+            poly, (0, 0, 7), forward=True, distance=5.0
+        )
+        assert result[2] == 7.0
+
+    def test_result_lies_on_polygon(self):
+        """Result always lies on some edge of the polygon."""
+        poly = P3((0, 0, 0), (10, 0, 0), (10, 10, 0), (5, 5, 0))
+        n = len(poly)
+        for start in [(0, 0, 0), (3, 0, 0), (10, 5, 0)]:
+            for d in [0.0, 2.0, 10.0, 42.0, 100.0]:
+                result = walk_along_polygon_3d(
+                    poly, start, forward=True, distance=d
+                )
+                on_seg = False
+                for i in range(n):
+                    a = poly[i]
+                    b = poly[(i + 1) % n]
+                    ab = (b[0] - a[0], b[1] - a[1])
+                    ap = (result[0] - a[0], result[1] - a[1])
+                    ab_len_sq = ab[0] ** 2 + ab[1] ** 2
+                    if ab_len_sq < 1e-12:
+                        continue
+                    t = (ap[0] * ab[0] + ap[1] * ab[1]) / ab_len_sq
+                    if t < -1e-9 or t > 1.0 + 1e-9:
+                        continue
+                    closest = (a[0] + t * ab[0], a[1] + t * ab[1])
+                    dsq = (result[0] - closest[0]) ** 2 + (
+                        result[1] - closest[1]
+                    ) ** 2
+                    if dsq < 1e-18:
+                        on_seg = True
+                        break
+                assert on_seg, f"Result {result} not on polygon for d={d}"
+
+    def test_3d_diagonal_segment(self):
+        """Walk along a 3D diagonal edge."""
+        poly = P3((0, 0, 0), (3, 4, 12), (10, 0, 5), (0, 10, 5))
+        start = (0, 0, 0)
+        edge_len = 13.0  # sqrt(3^2 + 4^2 + 12^2)
+        result = walk_along_polygon_3d(
+            poly, start, forward=True, distance=edge_len
+        )
+        assert abs(result[0] - 3.0) < 1e-9
+        assert abs(result[1] - 4.0) < 1e-9
+        assert abs(result[2] - 12.0) < 1e-9
+
+    def test_triangle(self):
+        """A 3-vertex triangle works."""
+        poly = P3((0, 0, 0), (10, 0, 0), (5, 10, 0))
+        perim = get_polygon_perimeter_3d(poly)
+        result = walk_along_polygon_3d(
+            poly, (0, 0, 0), forward=True, distance=perim / 2
+        )
+        # perimeter = 10 + 2*sqrt(125) ≈ 32.361, half ≈ 16.180
+        # Edge 0 length = 10, so remaining ≈ 6.180 into edge 1
+        # Edge 1 (10,0)→(5,10), length = sqrt(125) ≈ 11.180
+        # t = 6.180 / 11.180 ≈ 0.553
+        # point = (10 + 0.553*(5-10), 0 + 0.553*(10-0)) ≈ (7.236, 5.528)
+        assert abs(result[0] - 7.23606797749979) < 1e-9
+        assert abs(result[1] - 5.52786404500042) < 1e-9

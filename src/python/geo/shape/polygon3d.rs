@@ -13,7 +13,8 @@ use crate::geo::shape::polygon3d::{
     get_polygons_intersection_3d, get_polygons_union_3d,
     get_polyline_end_tangent_3d, offset_polygon_3d, offset_polyline_3d,
     rotate_polygon_3d, rotate_polygons_3d, scale_polygon_3d,
-    translate_polygon_3d, translate_polygons_3d, walk_along_polyline_3d,
+    translate_polygon_3d, translate_polygons_3d, walk_along_polygon_3d,
+    walk_along_polyline_3d,
 };
 use crate::types::Point3D;
 use pyo3::prelude::*;
@@ -512,6 +513,49 @@ fn walk_along_polyline_3d_py(
     import collections.abc
     import raygeo.geo.types
 
+    def walk_along_polygon_3d(
+        polygon: collections.abc.Sequence[types.Point3D],
+        start: tuple[float, float, float],
+        forward: bool,
+        distance: float,
+    ) -> types.Point3D:
+        """Walk along a closed 3D polygon by a given arc length from a starting point.
+
+        Given a closed polygon and a starting point on it, walk along the
+        polygon edges and return the point at exactly ``distance`` units
+        away.  The walk wraps around the polygon (unlike
+        :func:`walk_along_polyline_3d` which clamps at endpoints).
+
+        :param polygon: Closed polygon as (x, y, z) points.
+        :param start: Starting point on the polygon.
+        :param forward: Walk forward (along vertex order) if True, backward if False.
+        :param distance: Arc length to walk.
+        :returns: Point (x, y, z) at the given distance.
+        :complexity: O(n)
+        """
+"#,
+    module = "raygeo.geo.shape.polygon3d"
+)]
+#[pyfunction(name = "walk_along_polygon_3d")]
+fn walk_along_polygon_3d_py(
+    polygon: Vec<PyPoint3D>,
+    start: (f64, f64, f64),
+    forward: bool,
+    distance: f64,
+) -> (f64, f64, f64) {
+    point3d_to_tuple(walk_along_polygon_3d(
+        &poly3d_to_points(polygon),
+        &Point3D::new(start.0, start.1, start.2),
+        forward,
+        distance,
+    ))
+}
+
+#[gen_stub_pyfunction(
+    python = r#"
+    import collections.abc
+    import raygeo.geo.types
+
     def deduplicate_polyline_3d(
         polyline: collections.abc.Sequence[types.Point3D],
     ) -> types.Polygon3D:
@@ -832,6 +876,7 @@ pub fn register(shape_mod: &Bound<'_, PyModule>) -> PyResult<()> {
         deduplicate_polyline_3d_py,
         fillet_polyline_3d_py,
         get_polygons_union_3d_py,
+        walk_along_polygon_3d_py,
         walk_along_polyline_3d_py,
         get_polygons_intersection_3d_py,
         get_polygons_difference_3d_py,
