@@ -84,16 +84,19 @@ _step_over_, clips to the valid tool area (pocket boundary offset inward by _too
 islands excluded), and adds the result back to _cleared_. The loop terminates when the newly added
 area drops below _area_tolerance_.
 
-| Parameter         | Type                                           | Description                                              |
-| ----------------- | ---------------------------------------------- | -------------------------------------------------------- |
-| `cleared`         | `geo.algo.cleared_area.ClearedArea`            | `ClearedArea` instance (mutated in place).               |
-| `pocket_boundary` | `Sequence[tuple[float, float]]`                | Outer boundary of the pocket.                            |
-| `islands`         | `Sequence[Sequence[tuple[float, float]]] = []` | List of island (hole) polygons (default []).             |
-| `tool_radius`     | `float = 3`                                    | Tool radius in mm (default 3.0).                         |
-| `step_over`       | `float = 2`                                    | Radial expansion per iteration (default 2.0).            |
-| `z`               | `float = 0`                                    | Z height for generated toolpath points (default 0.0).    |
-| `area_tolerance`  | `float = 1`                                    | Minimum area increase to continue (default 1.0).         |
-| _Returns_         | `list[list[tuple[float, float, float]]]`       | List of toolpaths — one `list[(x, y, z)]` per iteration. |
+    vertices, m = cleared fragments, p = polygon vertices
+
+| Parameter         | Type                                           | Description                                                   |
+| ----------------- | ---------------------------------------------- | ------------------------------------------------------------- |
+| `cleared`         | `geo.algo.cleared_area.ClearedArea`            | `ClearedArea` instance (mutated in place).                    |
+| `pocket_boundary` | `Sequence[tuple[float, float]]`                | Outer boundary of the pocket.                                 |
+| `islands`         | `Sequence[Sequence[tuple[float, float]]] = []` | List of island (hole) polygons (default []).                  |
+| `tool_radius`     | `float = 3`                                    | Tool radius in mm (default 3.0).                              |
+| `step_over`       | `float = 2`                                    | Radial expansion per iteration (default 2.0).                 |
+| `z`               | `float = 0`                                    | Z height for generated toolpath points (default 0.0).         |
+| `area_tolerance`  | `float = 1`                                    | Minimum area increase to continue (default 1.0).              |
+| _Returns_         | `list[list[tuple[float, float, float]]]`       | List of toolpaths — one `list[(x, y, z)]` per iteration.      |
+| _Complexity_      |                                                | O(i \* (n \* m + p log p)) where i = iterations, n = boundary |
 
 ![Adaptive wavefronts expanding outward from the initial cleared disk (blue) to fill the pocket boundary (black)](images/geo-algo-hsm-wavefront-rect.png)
 

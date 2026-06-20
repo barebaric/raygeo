@@ -29,6 +29,7 @@ the inner boundary (u=0) to the outer boundary (u=1) without self-intersections.
 | `step_over`   | `float`                                  | Desired radial step-over distance between spiral turns.   |
 | `start_point` | `tuple[float, float] &#124; None = None` | Optional explicit start point (x,y).                      |
 | _Returns_     | `Sequence[tuple[float, float, float]]`   | List of (x, y, z) points forming the spiral polyline.     |
+| _Complexity_  |                                          | O(n \* s) where n = triangles, s = spiral steps           |
 
 ![Spiral toolpath traced on the Laplace solution — path morphs smoothly from the inner hole outward](images/mesh-pde-spiral-path.png)
 

@@ -17,6 +17,7 @@ def build_triangle_mesh(outer: collections.abc.Sequence[tuple[float, float]], ho
     :param tool_radius: Tool radius for offsetting the outer boundary inwards.
     :param min_angle: Minimum triangle angle for Steiner point refinement.
     :returns: TriangleMesh with boundary tags.
+    :complexity: O(n log n) where n = number of Steiner points
     """
 
 def build_uniform_mesh(outer: collections.abc.Sequence[tuple[float, float]], holes: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]] = (), tool_radius: float = 0, target_edge_len: float = 1) -> types.TriangleMesh:
@@ -31,5 +32,6 @@ def build_uniform_mesh(outer: collections.abc.Sequence[tuple[float, float]], hol
     :param tool_radius: Offsets outer boundary inward.
     :param target_edge_len: Desired edge length.
     :returns: TriangleMesh with uniform-sized elements.
+    :complexity: O(n log n) where n = number of Steiner points
     """
 

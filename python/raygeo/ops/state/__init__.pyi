@@ -120,5 +120,6 @@ class State:
         
         :param target: The target state to compare against.
         :returns: True if the change is a rapid (non-power) change.
+        :complexity: O(1)
         """
 

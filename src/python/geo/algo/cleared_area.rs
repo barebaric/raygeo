@@ -45,6 +45,7 @@ impl ClearedArea {
         }
     }
 
+    /// :complexity: O(n) where n = number of path points
     pub fn expand(&mut self, tool_path: Vec<(f64, f64)>, tool_radius: f64) {
         let path: Vec<crate::types::Point> = tool_path
             .into_iter()
@@ -53,6 +54,7 @@ impl ClearedArea {
         self.inner.expand(&path, tool_radius);
     }
 
+    /// :complexity: O(n) where n = total vertices across all polygons
     pub fn add_cleared_polygons(&mut self, polygons: Vec<Vec<(f64, f64)>>) {
         let polys: Vec<crate::types::Polygon> = polygons
             .into_iter()
@@ -65,6 +67,7 @@ impl ClearedArea {
         self.inner.add_cleared_polygons(&polys);
     }
 
+    /// :complexity: O(m + k) where m = number of fragments, k = output vertices
     pub fn query_window(
         &self,
         bbox: (f64, f64, f64, f64),
@@ -77,6 +80,7 @@ impl ClearedArea {
             .collect()
     }
 
+    /// :complexity: O(n * m) where n = bounds vertices, m = fragments
     pub fn remaining(
         &self,
         bounds: Vec<Vec<(f64, f64)>>,
@@ -96,6 +100,7 @@ impl ClearedArea {
             .collect()
     }
 
+    /// :complexity: O(1)
     pub fn total_area(&self) -> f64 {
         self.inner.total_area()
     }

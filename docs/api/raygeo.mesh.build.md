@@ -30,6 +30,7 @@ Build a constrained Delaunay triangle mesh from polygon boundaries.
 | `tool_radius` | `float = 0`                                    | Tool radius for offsetting the outer boundary inwards. |
 | `min_angle`   | `float = 20`                                   | Minimum triangle angle for Steiner point refinement.   |
 | _Returns_     | `types.TriangleMesh`                           | TriangleMesh with boundary tags.                       |
+| _Complexity_  |                                                | O(n log n) where n = number of Steiner points          |
 
 ![CDT triangulation of a square pocket with centred hole](images/mesh-build-triangulation.png)
 
@@ -59,10 +60,11 @@ Build a triangle mesh with approximately uniform edge length.
 Computes the Steiner point density needed to achieve _target_edge_len_ and delegates to
 `build_triangle_mesh`.
 
-| Parameter         | Type                                           | Description                               |
-| ----------------- | ---------------------------------------------- | ----------------------------------------- |
-| `outer`           | `Sequence[tuple[float, float]]`                | Outer boundary polygon.                   |
-| `holes`           | `Sequence[Sequence[tuple[float, float]]] = ()` | List of hole/island polygons.             |
-| `tool_radius`     | `float = 0`                                    | Offsets outer boundary inward.            |
-| `target_edge_len` | `float = 1`                                    | Desired edge length.                      |
-| _Returns_         | `types.TriangleMesh`                           | TriangleMesh with uniform-sized elements. |
+| Parameter         | Type                                           | Description                                   |
+| ----------------- | ---------------------------------------------- | --------------------------------------------- |
+| `outer`           | `Sequence[tuple[float, float]]`                | Outer boundary polygon.                       |
+| `holes`           | `Sequence[Sequence[tuple[float, float]]] = ()` | List of hole/island polygons.                 |
+| `tool_radius`     | `float = 0`                                    | Offsets outer boundary inward.                |
+| `target_edge_len` | `float = 1`                                    | Desired edge length.                          |
+| _Returns_         | `types.TriangleMesh`                           | TriangleMesh with uniform-sized elements.     |
+| _Complexity_      |                                                | O(n log n) where n = number of Steiner points |

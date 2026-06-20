@@ -342,6 +342,7 @@ impl SvgMetadata {
     /// Convert the document width to millimetres.
     ///
     /// :param dpi: Pixels-per-inch for px/unitless conversion (default 96).
+    /// :complexity: O(1)
     #[pyo3(signature = (dpi=96.0))]
     fn width_mm(&self, dpi: f64) -> Option<f64> {
         self.inner.width.map(|w| {
@@ -356,6 +357,7 @@ impl SvgMetadata {
     /// Convert the document height to millimetres.
     ///
     /// :param dpi: Pixels-per-inch for px/unitless conversion (default 96).
+    /// :complexity: O(1)
     #[pyo3(signature = (dpi=96.0))]
     fn height_mm(&self, dpi: f64) -> Option<f64> {
         self.inner.height.map(|h| {
@@ -370,6 +372,7 @@ impl SvgMetadata {
     /// Convert the document width to pixels.
     ///
     /// :param dpi: Pixels-per-inch for conversion (default 96).
+    /// :complexity: O(1)
     #[pyo3(signature = (dpi=96.0))]
     fn width_px(&self, dpi: f64) -> Option<f64> {
         self.inner.width.map(|w| {
@@ -384,6 +387,7 @@ impl SvgMetadata {
     /// Convert the document height to pixels.
     ///
     /// :param dpi: Pixels-per-inch for conversion (default 96).
+    /// :complexity: O(1)
     #[pyo3(signature = (dpi=96.0))]
     fn height_px(&self, dpi: f64) -> Option<f64> {
         self.inner.height.map(|h| {

@@ -18,10 +18,11 @@ Find the entry point of an Ops sequence.
 
 Scans for the first travel (MoveTo) endpoint, falling back to the first moving command endpoint.
 
-| Parameter | Type                                     | Description                                        |
-| --------- | ---------------------------------------- | -------------------------------------------------- |
-| `ops`     | `ops.Ops`                                | An **~raygeo.ops.Ops** container.                  |
-| _Returns_ | `tuple[float, float, float] &#124; None` | `(x, y, z)` or `None` if no moving commands exist. |
+| Parameter    | Type                                     | Description                                        |
+| ------------ | ---------------------------------------- | -------------------------------------------------- |
+| `ops`        | `ops.Ops`                                | An **~raygeo.ops.Ops** container.                  |
+| _Returns_    | `tuple[float, float, float] &#124; None` | `(x, y, z)` or `None` if no moving commands exist. |
+| _Complexity_ |                                          | O(n) where n = number of commands                  |
 
 ![Entry and exit points from find_pass_entry / find_pass_exit](images/ops-polyline-pass-entry-exit.png)
 
@@ -37,10 +38,11 @@ Find the exit point of an Ops sequence.
 
 Scans backwards for the last moving command endpoint.
 
-| Parameter | Type                                     | Description                                        |
-| --------- | ---------------------------------------- | -------------------------------------------------- |
-| `ops`     | `ops.Ops`                                | An **~raygeo.ops.Ops** container.                  |
-| _Returns_ | `tuple[float, float, float] &#124; None` | `(x, y, z)` or `None` if no moving commands exist. |
+| Parameter    | Type                                     | Description                                        |
+| ------------ | ---------------------------------------- | -------------------------------------------------- |
+| `ops`        | `ops.Ops`                                | An **~raygeo.ops.Ops** container.                  |
+| _Returns_    | `tuple[float, float, float] &#124; None` | `(x, y, z)` or `None` if no moving commands exist. |
+| _Complexity_ |                                          | O(n) where n = number of commands                  |
 
 ### `link_passes()`
 
@@ -62,12 +64,13 @@ _strategy_:
 - `"stay_down"` / `LinkStrategy.STAY_DOWN` — move directly from the previous pass end to the next
   pass start without retracting.
 
-| Parameter  | Type                      | Description                                 |
-| ---------- | ------------------------- | ------------------------------------------- |
-| `passes`   | `list[ops.Ops]`           | Ordered list of **~raygeo.ops.Ops** passes. |
-| `safe_z`   | `float`                   | Z height for retract moves (mm).            |
-| `strategy` | `str &#124; LinkStrategy` | Linking strategy.                           |
-| _Returns_  | `ops.Ops`                 | A single \*\*~raygeo.ops.Ops\*\* container. |
+| Parameter    | Type                      | Description                                     |
+| ------------ | ------------------------- | ----------------------------------------------- |
+| `passes`     | `list[ops.Ops]`           | Ordered list of **~raygeo.ops.Ops** passes.     |
+| `safe_z`     | `float`                   | Z height for retract moves (mm).                |
+| `strategy`   | `str &#124; LinkStrategy` | Linking strategy.                               |
+| _Returns_    | `ops.Ops`                 | A single \*\*~raygeo.ops.Ops\*\* container.     |
+| _Complexity_ |                           | O(n) where n = total commands across all passes |
 
 ![Three passes linked with StayDown vs Retract strategies](images/ops-polyline-link-passes.png)
 
@@ -93,6 +96,7 @@ an in-progress cut).
 | `points`     | `list[tuple[float, float, float]]` | List of `(x, y, z)` tuples.                  |
 | `move_first` | `bool = True`                      | Whether to emit the first point as a MoveTo. |
 | _Returns_    | `ops.Ops`                          | An \*\*~raygeo.ops.Ops\*\* container.        |
+| _Complexity_ |                                    | O(n) where n = number of points              |
 
 ![polyline_to_ops with move_first=True vs move_first=False](images/ops-polyline-to-ops.png)
 

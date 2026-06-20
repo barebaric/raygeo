@@ -20,10 +20,11 @@ engagement computation.
 add_cleared_polygons(polygons: Sequence[Sequence[tuple[float, float]]]) -> None
 ```
 
-| Parameter  | Type                                      | Description |
-| ---------- | ----------------------------------------- | ----------- |
-| `polygons` | `Sequence[Sequence[tuple[float, float]]]` |             |
-| _Returns_  | `None`                                    |             |
+| Parameter    | Type                                      | Description                                       |
+| ------------ | ----------------------------------------- | ------------------------------------------------- |
+| `polygons`   | `Sequence[Sequence[tuple[float, float]]]` |                                                   |
+| _Returns_    | `None`                                    |                                                   |
+| _Complexity_ |                                           | O(n) where n = total vertices across all polygons |
 
 ![ClearedArea with bulk polygon insertion via ``add_cleared_polygons`` — cleared region in blue, remaining area in red](images/geo-algo-cleared-area-bulk.png)
 
@@ -36,11 +37,12 @@ remaining area in red_
 expand(tool_path: Sequence[tuple[float, float]], tool_radius: float) -> None
 ```
 
-| Parameter     | Type                            | Description |
-| ------------- | ------------------------------- | ----------- |
-| `tool_path`   | `Sequence[tuple[float, float]]` |             |
-| `tool_radius` | `float`                         |             |
-| _Returns_     | `None`                          |             |
+| Parameter     | Type                            | Description                          |
+| ------------- | ------------------------------- | ------------------------------------ |
+| `tool_path`   | `Sequence[tuple[float, float]]` |                                      |
+| `tool_radius` | `float`                         |                                      |
+| _Returns_     | `None`                          |                                      |
+| _Complexity_  |                                 | O(n) where n = number of path points |
 
 ### `query_window()`
 
@@ -50,10 +52,11 @@ query_window(
 ) -> list[list[tuple[float, float]]]
 ```
 
-| Parameter | Type                                | Description |
-| --------- | ----------------------------------- | ----------- |
-| `bbox`    | `tuple[float, float, float, float]` |             |
-| _Returns_ | `list[list[tuple[float, float]]]`   |             |
+| Parameter    | Type                                | Description                                                 |
+| ------------ | ----------------------------------- | ----------------------------------------------------------- |
+| `bbox`       | `tuple[float, float, float, float]` |                                                             |
+| _Returns_    | `list[list[tuple[float, float]]]`   |                                                             |
+| _Complexity_ |                                     | O(m + k) where m = number of fragments, k = output vertices |
 
 ### `remaining()`
 
@@ -63,10 +66,11 @@ remaining(
 ) -> list[list[tuple[float, float]]]
 ```
 
-| Parameter | Type                                      | Description |
-| --------- | ----------------------------------------- | ----------- |
-| `bounds`  | `Sequence[Sequence[tuple[float, float]]]` |             |
-| _Returns_ | `list[list[tuple[float, float]]]`         |             |
+| Parameter    | Type                                      | Description                                        |
+| ------------ | ----------------------------------------- | -------------------------------------------------- |
+| `bounds`     | `Sequence[Sequence[tuple[float, float]]]` |                                                    |
+| _Returns_    | `list[list[tuple[float, float]]]`         |                                                    |
+| _Complexity_ |                                           | O(n \* m) where n = bounds vertices, m = fragments |
 
 ### `total_area()`
 
@@ -74,6 +78,7 @@ remaining(
 total_area() -> float
 ```
 
-| Parameter | Type    | Description |
-| --------- | ------- | ----------- |
-| _Returns_ | `float` |             |
+| Parameter    | Type    | Description |
+| ------------ | ------- | ----------- |
+| _Returns_    | `float` |             |
+| _Complexity_ |         | O(1)        |

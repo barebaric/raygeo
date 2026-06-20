@@ -21,12 +21,13 @@ Solve the Laplace equation Δu=0 on a triangle mesh.
 Returns a scalar field with one value per vertex. Outer boundary vertices are fixed to u=1.0 and
 inner boundary vertices to u=0.0.
 
-| Parameter   | Type                 | Description                              |
-| ----------- | -------------------- | ---------------------------------------- |
-| `mesh`      | `types.TriangleMesh` | TriangleMesh with boundary tags.         |
-| `max_iter`  | `int = 1000`         | Maximum conjugate gradient iterations.   |
-| `tolerance` | `float = 1e-08`      | Convergence tolerance for CG residual.   |
-| _Returns_   | `Sequence[float]`    | List of scalar u values, one per vertex. |
+| Parameter    | Type                 | Description                                          |
+| ------------ | -------------------- | ---------------------------------------------------- |
+| `mesh`       | `types.TriangleMesh` | TriangleMesh with boundary tags.                     |
+| `max_iter`   | `int = 1000`         | Maximum conjugate gradient iterations.               |
+| `tolerance`  | `float = 1e-08`      | Convergence tolerance for CG residual.               |
+| _Returns_    | `Sequence[float]`    | List of scalar u values, one per vertex.             |
+| _Complexity_ |                      | O(i \* n) where i = CG iterations, n = mesh vertices |
 
 ![Stiffness matrix edge weights on the mesh — line thickness ∝ |Kᵢⱼ|](images/mesh-laplace-stiffness-spy.png)
 
@@ -60,12 +61,13 @@ Solve the Laplace equation and return convergence history.
 Identical to solve_laplace() but also returns the residual norm after each conjugate gradient
 iteration for convergence analysis.
 
-| Parameter   | Type                                      | Description                            |
-| ----------- | ----------------------------------------- | -------------------------------------- |
-| `mesh`      | `types.TriangleMesh`                      | TriangleMesh with boundary tags.       |
-| `max_iter`  | `int = 1000`                              | Maximum conjugate gradient iterations. |
-| `tolerance` | `float = 1e-08`                           | Convergence tolerance for CG residual. |
-| _Returns_   | `tuple[Sequence[float], Sequence[float]]` | Tuple of (solution, residuals).        |
+| Parameter    | Type                                      | Description                                          |
+| ------------ | ----------------------------------------- | ---------------------------------------------------- |
+| `mesh`       | `types.TriangleMesh`                      | TriangleMesh with boundary tags.                     |
+| `max_iter`   | `int = 1000`                              | Maximum conjugate gradient iterations.               |
+| `tolerance`  | `float = 1e-08`                           | Convergence tolerance for CG residual.               |
+| _Returns_    | `tuple[Sequence[float], Sequence[float]]` | Tuple of (solution, residuals).                      |
+| _Complexity_ |                                           | O(i \* n) where i = CG iterations, n = mesh vertices |
 
 ![Conjugate gradient convergence — residual norm per iteration](images/mesh-laplace-convergence.png)
 

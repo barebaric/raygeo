@@ -24,6 +24,7 @@ use crate::mesh::remesh::remesh as rust_remesh;
         :param max_edge_len: Maximum allowed edge length (default 1.0).
         :returns: A refined TriangleMesh.
         :raises RuntimeError: If retriangulation fails.
+        :complexity: O(n log n) where n = number of edges
         """
 "#,
     module = "raygeo.mesh.remesh"

@@ -24,6 +24,7 @@ use super::types::TriangleMesh;
         :param max_iter: Maximum conjugate gradient iterations.
         :param tolerance: Convergence tolerance for CG residual.
         :returns: List of scalar u values, one per vertex.
+        :complexity: O(i * n) where i = CG iterations, n = mesh vertices
         """
 "#,
     module = "raygeo.mesh.laplace"
@@ -58,6 +59,7 @@ fn solve_laplace_py(
         :param max_iter: Maximum conjugate gradient iterations.
         :param tolerance: Convergence tolerance for CG residual.
         :returns: Tuple of (solution, residuals).
+        :complexity: O(i * n) where i = CG iterations, n = mesh vertices
         """
 "#,
     module = "raygeo.mesh.laplace"

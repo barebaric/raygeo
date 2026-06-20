@@ -50,6 +50,7 @@ pub(crate) fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
         :param points: List of ``(x, y, z)`` tuples.
         :param move_first: Whether to emit the first point as a MoveTo.
         :returns: An :class:`~raygeo.ops.Ops` container.
+        :complexity: O(n) where n = number of points
         """
     "#,
     module = "raygeo.ops.polyline"
@@ -94,6 +95,7 @@ fn polyline_to_ops_py(
         :param safe_z: Z height for retract moves (mm).
         :param strategy: Linking strategy.
         :returns: A single :class:`~raygeo.ops.Ops` container.
+        :complexity: O(n) where n = total commands across all passes
         """
     "#,
     module = "raygeo.ops.polyline"
@@ -141,6 +143,7 @@ fn link_passes_py(
 
         :param ops: An :class:`~raygeo.ops.Ops` container.
         :returns: ``(x, y, z)`` or ``None`` if no moving commands exist.
+        :complexity: O(n) where n = number of commands
         """
     "#,
     module = "raygeo.ops.polyline"
@@ -169,6 +172,7 @@ fn find_pass_entry_py(
 
         :param ops: An :class:`~raygeo.ops.Ops` container.
         :returns: ``(x, y, z)`` or ``None`` if no moving commands exist.
+        :complexity: O(n) where n = number of commands
         """
     "#,
     module = "raygeo.ops.polyline"

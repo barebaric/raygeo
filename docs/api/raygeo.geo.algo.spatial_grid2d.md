@@ -24,9 +24,10 @@ clear() -> None
 
 Remove all items from the grid.
 
-| Parameter | Type   | Description |
-| --------- | ------ | ----------- |
-| _Returns_ | `None` |             |
+| Parameter    | Type   | Description                    |
+| ------------ | ------ | ------------------------------ |
+| _Returns_    | `None` |                                |
+| _Complexity_ |        | O(n) where n = number of items |
 
 ### `insert()`
 
@@ -36,11 +37,12 @@ insert(index: int, bbox: Sequence[float]) -> None
 
 Insert an item into the grid by its bounding box.
 
-| Parameter | Type              | Description                                  |
-| --------- | ----------------- | -------------------------------------------- |
-| `index`   | `int`             | Unique identifier for the item.              |
-| `bbox`    | `Sequence[float]` | `[x_min, y_min, x_max, y_max]` bounding box. |
-| _Returns_ | `None`            |                                              |
+| Parameter    | Type              | Description                                  |
+| ------------ | ----------------- | -------------------------------------------- |
+| `index`      | `int`             | Unique identifier for the item.              |
+| `bbox`       | `Sequence[float]` | `[x_min, y_min, x_max, y_max]` bounding box. |
+| _Returns_    | `None`            |                                              |
+| _Complexity_ |                   | O(1) amortised                               |
 
 ### `query()`
 
@@ -50,7 +52,8 @@ query(bbox: Sequence[float]) -> list[int]
 
 Query all items whose bounding box overlaps _bbox_.
 
-| Parameter | Type              | Description                                  |
-| --------- | ----------------- | -------------------------------------------- |
-| `bbox`    | `Sequence[float]` | `[x_min, y_min, x_max, y_max]` query region. |
-| _Returns_ | `list[int]`       | Sorted list of matching item indices.        |
+| Parameter    | Type              | Description                                     |
+| ------------ | ----------------- | ----------------------------------------------- |
+| `bbox`       | `Sequence[float]` | `[x_min, y_min, x_max, y_max]` query region.    |
+| _Returns_    | `list[int]`       | Sorted list of matching item indices.           |
+| _Complexity_ |                   | O(cells + k) where k = number of matching items |

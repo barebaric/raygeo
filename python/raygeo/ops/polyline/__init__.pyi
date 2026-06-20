@@ -26,6 +26,7 @@ def find_pass_entry(ops: ops.Ops) -> tuple[float, float, float] | None:
     
     :param ops: An :class:`~raygeo.ops.Ops` container.
     :returns: ``(x, y, z)`` or ``None`` if no moving commands exist.
+    :complexity: O(n) where n = number of commands
     """
 
 def find_pass_exit(ops: ops.Ops) -> tuple[float, float, float] | None:
@@ -36,6 +37,7 @@ def find_pass_exit(ops: ops.Ops) -> tuple[float, float, float] | None:
     
     :param ops: An :class:`~raygeo.ops.Ops` container.
     :returns: ``(x, y, z)`` or ``None`` if no moving commands exist.
+    :complexity: O(n) where n = number of commands
     """
 
 def link_passes(passes: list[ops.Ops], safe_z: float, strategy: str | LinkStrategy) -> ops.Ops:
@@ -56,6 +58,7 @@ def link_passes(passes: list[ops.Ops], safe_z: float, strategy: str | LinkStrate
     :param safe_z: Z height for retract moves (mm).
     :param strategy: Linking strategy.
     :returns: A single :class:`~raygeo.ops.Ops` container.
+    :complexity: O(n) where n = total commands across all passes
     """
 
 def polyline_to_ops(points: list[tuple[float, float, float]], move_first: bool = True) -> ops.Ops:
@@ -70,5 +73,6 @@ def polyline_to_ops(points: list[tuple[float, float, float]], move_first: bool =
     :param points: List of ``(x, y, z)`` tuples.
     :param move_first: Whether to emit the first point as a MoveTo.
     :returns: An :class:`~raygeo.ops.Ops` container.
+    :complexity: O(n) where n = number of points
     """
 

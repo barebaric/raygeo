@@ -44,6 +44,7 @@ impl SpatialGrid {
     ///
     /// :param index: Unique identifier for the item.
     /// :param bbox: ``[x_min, y_min, x_max, y_max]`` bounding box.
+    /// :complexity: O(1) amortised
     pub fn insert(&mut self, index: usize, bbox: Vec<f64>) {
         let b = Rect(bbox[0], bbox[1], bbox[2], bbox[3]);
         self.inner.insert(index, b);
@@ -53,6 +54,7 @@ impl SpatialGrid {
     ///
     /// :param bbox: ``[x_min, y_min, x_max, y_max]`` query region.
     /// :returns: Sorted list of matching item indices.
+    /// :complexity: O(cells + k) where k = number of matching items
     pub fn query(&self, bbox: Vec<f64>) -> Vec<usize> {
         let b = Rect(bbox[0], bbox[1], bbox[2], bbox[3]);
         let result = self.inner.query(b);
@@ -62,6 +64,8 @@ impl SpatialGrid {
     }
 
     /// Remove all items from the grid.
+    ///
+    /// :complexity: O(n) where n = number of items
     pub fn clear(&mut self) {
         self.inner.clear();
     }

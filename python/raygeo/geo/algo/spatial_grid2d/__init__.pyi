@@ -33,6 +33,7 @@ class SpatialGrid:
         
         :param index: Unique identifier for the item.
         :param bbox: ``[x_min, y_min, x_max, y_max]`` bounding box.
+        :complexity: O(1) amortised
         """
     def query(self, bbox: typing.Sequence[builtins.float]) -> builtins.list[builtins.int]:
         r"""
@@ -40,10 +41,13 @@ class SpatialGrid:
         
         :param bbox: ``[x_min, y_min, x_max, y_max]`` query region.
         :returns: Sorted list of matching item indices.
+        :complexity: O(cells + k) where k = number of matching items
         """
     def clear(self) -> None:
         r"""
         Remove all items from the grid.
+        
+        :complexity: O(n) where n = number of items
         """
     def __repr__(self) -> builtins.str: ...
 

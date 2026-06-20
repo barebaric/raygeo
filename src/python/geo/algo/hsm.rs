@@ -166,6 +166,8 @@ fn adaptive_entry_py(
         :param z: Z height for generated toolpath points (default 0.0).
         :param area_tolerance: Minimum area increase to continue (default 1.0).
         :returns: List of toolpaths — one ``list[(x, y, z)]`` per iteration.
+        :complexity: O(i * (n * m + p log p)) where i = iterations, n = boundary
+            vertices, m = cleared fragments, p = polygon vertices
         """
 "#,
     module = "raygeo.geo.algo.hsm"

@@ -33,3 +33,4 @@ subdivided.
 | `outer`        | `Sequence[tuple[float, float]]` | Outer boundary polygon (for retriangulation). |
 | `max_edge_len` | `float = 1`                     | Maximum allowed edge length (default 1.0).    |
 | _Returns_      | `types.TriangleMesh`            | A refined TriangleMesh.                       |
+| _Complexity_   |                                 | O(n log n) where n = number of edges          |

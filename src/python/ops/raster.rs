@@ -127,6 +127,8 @@ impl PyScanLine {
     }
 
     /// Compute the length of this scan line in mm.
+    ///
+    /// :complexity: O(1)
     fn length_mm(&self) -> f64 {
         let dx = self.end_mm.0 - self.start_mm.0;
         let dy = self.end_mm.1 - self.start_mm.1;
@@ -136,6 +138,7 @@ impl PyScanLine {
     /// Normalised direction vector from start to end in mm space.
     ///
     /// :returns: ``(dx, dy)`` unit vector.
+    /// :complexity: O(1)
     fn direction(&self) -> (f64, f64) {
         let length = self.length_mm();
         if length < 1e-9 {
@@ -153,6 +156,7 @@ impl PyScanLine {
     /// :param py: Y pixel coordinate.
     /// :param pixels_per_mm: ``(x, y)`` pixel density in px/mm.
     /// :returns: ``(x, y)`` position in mm, projected onto the scan line.
+    /// :complexity: O(1)
     fn pixel_to_mm(
         &self,
         px: i32,
@@ -567,6 +571,7 @@ fn py_extract_zero_power_segments(
         :param angle: Scan angle in degrees.
         :param scan_mode: ``ScanMode.Segmented`` or ``ScanMode.FullSweep``.
         :returns: An :class:`~raygeo.ops.Ops` container.
+        :complexity: O(h * w + n * p) where h, w = image dimensions, n = scan lines, p = pixels per line
         """
 "#,
     module = "raygeo.ops.raster"
@@ -646,6 +651,7 @@ fn py_rasterize_power_modulation(
         :param angle: Scan angle in degrees.
         :param scan_mode: ``ScanMode.Segmented`` or ``ScanMode.FullSweep``.
         :returns: An :class:`~raygeo.ops.Ops` container.
+        :complexity: O(h * w + n * p) where h, w = image dimensions, n = scan lines, p = pixels per line
         """
 "#,
     module = "raygeo.ops.raster"
@@ -712,6 +718,7 @@ fn py_rasterize_mask_scan(
         :param angle: Scan angle in degrees.
         :param scan_mode: ``ScanMode.Segmented`` or ``ScanMode.FullSweep``.
         :returns: An :class:`~raygeo.ops.Ops` container.
+        :complexity: O(h * w + n * p) where h, w = image dimensions, n = scan lines, p = pixels per line
         """
 "#,
     module = "raygeo.ops.raster"
@@ -782,6 +789,7 @@ fn py_rasterize_mask_lines(
         :param angle_increment: Angle added per depth layer in degrees.
         :param scan_mode: ``ScanMode.Segmented`` or ``ScanMode.FullSweep``.
         :returns: An :class:`~raygeo.ops.Ops` container.
+        :complexity: O(d * (h * w + n * p)) where d = depth levels, h, w = image dims, n = scan lines, p = pixels per line
         """
 "#,
     module = "raygeo.ops.raster"

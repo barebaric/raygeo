@@ -20,5 +20,6 @@ def remesh(mesh: types.TriangleMesh, outer: collections.abc.Sequence[tuple[float
     :param max_edge_len: Maximum allowed edge length (default 1.0).
     :returns: A refined TriangleMesh.
     :raises RuntimeError: If retriangulation fails.
+    :complexity: O(n log n) where n = number of edges
     """
 

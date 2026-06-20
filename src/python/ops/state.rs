@@ -125,6 +125,7 @@ impl PyState {
     ///
     /// :param target: The target state to compare against.
     /// :returns: True if the change is a rapid (non-power) change.
+    /// :complexity: O(1)
     fn allow_rapid_change(&self, target: &PyState) -> bool {
         self.0.allow_rapid_change(&target.0)
     }

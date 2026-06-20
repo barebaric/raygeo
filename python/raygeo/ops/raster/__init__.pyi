@@ -65,12 +65,15 @@ class ScanLine:
     def length_mm(self) -> builtins.float:
         r"""
         Compute the length of this scan line in mm.
+        
+        :complexity: O(1)
         """
     def direction(self) -> tuple[builtins.float, builtins.float]:
         r"""
         Normalised direction vector from start to end in mm space.
         
         :returns: ``(dx, dy)`` unit vector.
+        :complexity: O(1)
         """
     def pixel_to_mm(self, px: builtins.int, py: builtins.int, pixels_per_mm: tuple[builtins.float, builtins.float]) -> tuple[builtins.float, builtins.float]:
         r"""
@@ -80,6 +83,7 @@ class ScanLine:
         :param py: Y pixel coordinate.
         :param pixels_per_mm: ``(x, y)`` pixel density in px/mm.
         :returns: ``(x, y)`` position in mm, projected onto the scan line.
+        :complexity: O(1)
         """
 
 @typing.final
@@ -222,6 +226,7 @@ def rasterize_mask_lines(mask: numpy.typing.NDArray[numpy.uint8], pixels_per_mm:
     :param angle: Scan angle in degrees.
     :param scan_mode: ``ScanMode.Segmented`` or ``ScanMode.FullSweep``.
     :returns: An :class:`~raygeo.ops.Ops` container.
+    :complexity: O(h * w + n * p) where h, w = image dimensions, n = scan lines, p = pixels per line
     """
 
 def rasterize_mask_scan(mask: numpy.typing.NDArray[numpy.uint8], pixels_per_mm: tuple[float, float], offset_x_mm: float, offset_y_mm: float, line_interval_mm: float, step_power: float = 1, angle: float = 0, scan_mode: ScanMode = ScanMode.Segmented) -> ops.Ops:
@@ -241,6 +246,7 @@ def rasterize_mask_scan(mask: numpy.typing.NDArray[numpy.uint8], pixels_per_mm: 
     :param angle: Scan angle in degrees.
     :param scan_mode: ``ScanMode.Segmented`` or ``ScanMode.FullSweep``.
     :returns: An :class:`~raygeo.ops.Ops` container.
+    :complexity: O(h * w + n * p) where h, w = image dimensions, n = scan lines, p = pixels per line
     """
 
 def rasterize_multi_pass(gray_image: numpy.typing.NDArray[numpy.uint8], pixels_per_mm: tuple[float, float], offset_x_mm: float, offset_y_mm: float, line_interval_mm: float, num_depth_levels: int, z_step_down: float, angle: float = 0, angle_increment: float = 0, scan_mode: ScanMode = ScanMode.Segmented) -> ops.Ops:
@@ -262,6 +268,7 @@ def rasterize_multi_pass(gray_image: numpy.typing.NDArray[numpy.uint8], pixels_p
     :param angle_increment: Angle added per depth layer in degrees.
     :param scan_mode: ``ScanMode.Segmented`` or ``ScanMode.FullSweep``.
     :returns: An :class:`~raygeo.ops.Ops` container.
+    :complexity: O(d * (h * w + n * p)) where d = depth levels, h, w = image dims, n = scan lines, p = pixels per line
     """
 
 def rasterize_power_modulation(gray_image: numpy.typing.NDArray[numpy.uint8], alpha: numpy.typing.NDArray[numpy.uint8], pixels_per_mm: tuple[float, float], offset_x_mm: float, offset_y_mm: float, line_interval_mm: float, sample_interval_mm: float, min_power: float = 0, max_power: float = 1, step_power: float = 1, num_power_levels: int = 256, angle: float = 0, scan_mode: ScanMode = ScanMode.Segmented) -> ops.Ops:
@@ -286,6 +293,7 @@ def rasterize_power_modulation(gray_image: numpy.typing.NDArray[numpy.uint8], al
     :param angle: Scan angle in degrees.
     :param scan_mode: ``ScanMode.Segmented`` or ``ScanMode.FullSweep``.
     :returns: An :class:`~raygeo.ops.Ops` container.
+    :complexity: O(h * w + n * p) where h, w = image dimensions, n = scan lines, p = pixels per line
     """
 
 def resample_rows(image: numpy.typing.NDArray[numpy.uint8], y_coords_px: numpy.ndarray) -> numpy.typing.NDArray[numpy.uint8]:

@@ -28,6 +28,7 @@ use super::types::TriangleMesh;
         :param step_over: Desired radial step-over distance between spiral turns.
         :param start_point: Optional explicit start point (x,y).
         :returns: List of (x, y, z) points forming the spiral polyline.
+        :complexity: O(n * s) where n = triangles, s = spiral steps
         """
 "#,
     module = "raygeo.mesh.pde"

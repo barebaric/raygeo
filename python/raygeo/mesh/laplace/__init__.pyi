@@ -19,6 +19,7 @@ def solve_laplace(mesh: types.TriangleMesh, max_iter: int = 1000, tolerance: flo
     :param max_iter: Maximum conjugate gradient iterations.
     :param tolerance: Convergence tolerance for CG residual.
     :returns: List of scalar u values, one per vertex.
+    :complexity: O(i * n) where i = CG iterations, n = mesh vertices
     """
 
 def solve_laplace_with_history(mesh: types.TriangleMesh, max_iter: int = 1000, tolerance: float = 0.00000001) -> tuple[collections.abc.Sequence[float], collections.abc.Sequence[float]]:
@@ -32,5 +33,6 @@ def solve_laplace_with_history(mesh: types.TriangleMesh, max_iter: int = 1000, t
     :param max_iter: Maximum conjugate gradient iterations.
     :param tolerance: Convergence tolerance for CG residual.
     :returns: Tuple of (solution, residuals).
+    :complexity: O(i * n) where i = CG iterations, n = mesh vertices
     """
 

@@ -22,6 +22,7 @@ use super::types::TriangleMesh;
         :param mesh: TriangleMesh with the same vertex count as u_field.
         :param u_field: Scalar field values, one per vertex.
         :returns: List of (gx, gy) pairs, one per triangle in mesh order.
+        :complexity: O(n) where n = number of triangles
         """
 "#,
     module = "raygeo.mesh.gradient"

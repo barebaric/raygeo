@@ -16,10 +16,25 @@ __all__ = [
 @typing.final
 class ClearedArea:
     def __new__(cls, initial: typing.Optional[typing.Sequence[typing.Sequence[tuple[builtins.float, builtins.float]]]] = None) -> ClearedArea: ...
-    def expand(self, tool_path: typing.Sequence[tuple[builtins.float, builtins.float]], tool_radius: builtins.float) -> None: ...
-    def add_cleared_polygons(self, polygons: typing.Sequence[typing.Sequence[tuple[builtins.float, builtins.float]]]) -> None: ...
-    def query_window(self, bbox: tuple[builtins.float, builtins.float, builtins.float, builtins.float]) -> builtins.list[builtins.list[tuple[builtins.float, builtins.float]]]: ...
-    def remaining(self, bounds: typing.Sequence[typing.Sequence[tuple[builtins.float, builtins.float]]]) -> builtins.list[builtins.list[tuple[builtins.float, builtins.float]]]: ...
-    def total_area(self) -> builtins.float: ...
+    def expand(self, tool_path: typing.Sequence[tuple[builtins.float, builtins.float]], tool_radius: builtins.float) -> None:
+        r"""
+        :complexity: O(n) where n = number of path points
+        """
+    def add_cleared_polygons(self, polygons: typing.Sequence[typing.Sequence[tuple[builtins.float, builtins.float]]]) -> None:
+        r"""
+        :complexity: O(n) where n = total vertices across all polygons
+        """
+    def query_window(self, bbox: tuple[builtins.float, builtins.float, builtins.float, builtins.float]) -> builtins.list[builtins.list[tuple[builtins.float, builtins.float]]]:
+        r"""
+        :complexity: O(m + k) where m = number of fragments, k = output vertices
+        """
+    def remaining(self, bounds: typing.Sequence[typing.Sequence[tuple[builtins.float, builtins.float]]]) -> builtins.list[builtins.list[tuple[builtins.float, builtins.float]]]:
+        r"""
+        :complexity: O(n * m) where n = bounds vertices, m = fragments
+        """
+    def total_area(self) -> builtins.float:
+        r"""
+        :complexity: O(1)
+        """
     def __repr__(self) -> builtins.str: ...
 

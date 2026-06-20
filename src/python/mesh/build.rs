@@ -24,6 +24,7 @@ use super::types::TriangleMesh;
         :param tool_radius: Tool radius for offsetting the outer boundary inwards.
         :param min_angle: Minimum triangle angle for Steiner point refinement.
         :returns: TriangleMesh with boundary tags.
+        :complexity: O(n log n) where n = number of Steiner points
         """
 "#,
     module = "raygeo.mesh.build"
@@ -72,6 +73,7 @@ fn build_triangle_mesh_py(
         :param tool_radius: Offsets outer boundary inward.
         :param target_edge_len: Desired edge length.
         :returns: TriangleMesh with uniform-sized elements.
+        :complexity: O(n log n) where n = number of Steiner points
         """
 "#,
     module = "raygeo.mesh.build"
