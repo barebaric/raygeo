@@ -39,7 +39,6 @@ from . import interp
 from . import intersect
 from . import medial_axis
 from . import minkowski2d
-from . import morph_spiral
 from . import nest2d
 from . import offset
 from . import overcut
@@ -63,7 +62,6 @@ __all__ = [
     "intersect",
     "medial_axis",
     "minkowski2d",
-    "morph_spiral",
     "nest2d",
     "offset",
     "overcut",

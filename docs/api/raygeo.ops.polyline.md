@@ -1,7 +1,7 @@
 ---
 title: raygeo.ops.polyline
 sidebar_label: raygeo.ops.polyline
-sidebar_position: 53
+sidebar_position: 52
 ---
 
 ## LinkStrategy

@@ -10,7 +10,6 @@ pub(crate) mod interp;
 pub(crate) mod intersect;
 pub(crate) mod medial_axis;
 pub(crate) mod minkowski2d;
-pub(crate) mod morph_spiral;
 pub(crate) mod nest2d;
 pub(crate) mod offset;
 pub(crate) mod overcut;
@@ -67,7 +66,6 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     hsm::register(&algo_mod)?;
     hull::register(&algo_mod)?;
     medial_axis::register(&algo_mod)?;
-    morph_spiral::register(&algo_mod)?;
     interp::register(&algo_mod)?;
     intersect::register(&algo_mod)?;
     minkowski2d::register(&algo_mod)?;
@@ -131,10 +129,6 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     sys_modules.set_item(
         "raygeo.geo.algo.medial_axis",
         &algo_mod.getattr("medial_axis")?,
-    )?;
-    sys_modules.set_item(
-        "raygeo.geo.algo.morph_spiral",
-        &algo_mod.getattr("morph_spiral")?,
     )?;
     sys_modules.set_item(
         "raygeo.geo.algo.polylabel",

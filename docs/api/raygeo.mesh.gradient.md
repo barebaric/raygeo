@@ -1,7 +1,7 @@
 ---
 title: raygeo.mesh.gradient
 sidebar_label: raygeo.mesh.gradient
-sidebar_position: 46
+sidebar_position: 45
 ---
 
 ## Functions
