@@ -18,6 +18,7 @@ from tools.visual_test.geo_algo_minkowski2d import page_minkowski
 from tools.visual_test.geo_algo_nest2d import page_nesting
 from tools.visual_test.geo_algo_nest2d_gravity import page_gravity
 from tools.visual_test.geo_algo_nest2d_ifp import page_inner_fit_polygon
+from tools.visual_test.geo_algo_smooth import page_smoothing
 from tools.visual_test.geo_shape_arc import page_arc_linearize
 from tools.visual_test.geo_shape_bezier import page_bezier_curves
 from tools.visual_test.geo_shape_circle import page_circle_intersections
@@ -62,6 +63,7 @@ page = st.sidebar.radio(
         "Polygon Boolean",
         "Polygon Offset",
         "Rasterization",
+        "Smoothing",
         "SVG Parsing",
         "Tab Operations",
         "Travel Optimization",
@@ -110,6 +112,8 @@ elif page == "Polygon Offset":
     page_offset()
 elif page == "Rasterization":
     page_rasterization()
+elif page == "Smoothing":
+    page_smoothing()
 elif page == "SVG Parsing":
     page_svg()
 elif page == "Tab Operations":

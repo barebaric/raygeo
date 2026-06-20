@@ -121,6 +121,7 @@ def page_analysis():
             cw.line_to(2, 10, 0)
             cw.line_to(10, 10, 0)
             cw.line_to(10, 2, 0)
+            cw.line_to(2, 2, 0)
             fig2, ax2 = plt.subplots(figsize=(5, 5))
             plot_geometry(ax2, cw, color="tomato", linewidth=2.5)
             w2 = get_path_winding_order(cw, 0)
