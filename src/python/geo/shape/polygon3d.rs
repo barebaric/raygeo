@@ -4,14 +4,15 @@ use super::super::flex_point::{
     edge_pairs3d_to_tuples, point3d_to_tuple, points3d_to_tuples, PyPoint3D,
 };
 use crate::geo::shape::polygon3d::{
-    flip_polygon_3d, flip_polygons_3d, get_polygon_bounds_3d,
-    get_polygon_centroid_3d, get_polygon_convex_hull_3d, get_polygon_edges_3d,
-    get_polygon_group_bounds_3d, get_polygon_perimeter_3d,
-    get_polygons_difference_3d, get_polygons_group_difference_3d,
-    get_polygons_group_intersection_3d, get_polygons_intersection_3d,
-    get_polygons_union_3d, get_polyline_end_tangent_3d, offset_polygon_3d,
-    offset_polyline_3d, rotate_polygon_3d, rotate_polygons_3d,
-    scale_polygon_3d, translate_polygon_3d, translate_polygons_3d,
+    deduplicate_polyline_3d, flip_polygon_3d, flip_polygons_3d,
+    get_polygon_bounds_3d, get_polygon_centroid_3d, get_polygon_convex_hull_3d,
+    get_polygon_edges_3d, get_polygon_group_bounds_3d,
+    get_polygon_perimeter_3d, get_polygons_difference_3d,
+    get_polygons_group_difference_3d, get_polygons_group_intersection_3d,
+    get_polygons_intersection_3d, get_polygons_union_3d,
+    get_polyline_end_tangent_3d, offset_polygon_3d, offset_polyline_3d,
+    rotate_polygon_3d, rotate_polygons_3d, scale_polygon_3d,
+    translate_polygon_3d, translate_polygons_3d,
 };
 use crate::types::Point3D;
 use pyo3::prelude::*;
@@ -417,6 +418,34 @@ fn get_polyline_end_tangent_3d_py(polyline: Vec<PyPoint3D>) -> (f64, f64) {
     (pt.x, pt.y)
 }
 
+#[gen_stub_pyfunction(
+    python = r#"
+    import collections.abc
+    import raygeo.geo.types
+
+    def deduplicate_polyline_3d(
+        polyline: collections.abc.Sequence[types.Point3D],
+    ) -> types.Polygon3D:
+        """Remove consecutive near-identical points from a 3D polyline.
+
+        Points whose squared distance is less than 1e-12 are collapsed.
+
+        :param polyline: Polyline as (x, y, z) points.
+        :returns: Deduplicated polyline.
+        :complexity: O(n)
+        """
+"#,
+    module = "raygeo.geo.shape.polygon3d"
+)]
+#[pyfunction(name = "deduplicate_polyline_3d")]
+fn deduplicate_polyline_3d_py(
+    polyline: Vec<PyPoint3D>,
+) -> Vec<(f64, f64, f64)> {
+    let mut pts = poly3d_to_points(polyline);
+    deduplicate_polyline_3d(&mut pts);
+    points3d_to_tuples(pts)
+}
+
 // ── 3D Transform functions ───────────────────────────────────────────
 
 #[gen_stub_pyfunction(
@@ -680,6 +709,7 @@ pub fn register(shape_mod: &Bound<'_, PyModule>) -> PyResult<()> {
 
     register_functions!(
         m,
+        deduplicate_polyline_3d_py,
         get_polygons_union_3d_py,
         get_polygons_intersection_3d_py,
         get_polygons_difference_3d_py,

@@ -5,6 +5,7 @@ import collections.abc
 from raygeo.geo import types
 import typing
 __all__ = [
+    "deduplicate_polyline_3d",
     "flip_polygon_3d",
     "flip_polygons_3d",
     "get_polygon_bounds_3d",
@@ -27,6 +28,17 @@ __all__ = [
     "translate_polygon_3d",
     "translate_polygons_3d",
 ]
+
+def deduplicate_polyline_3d(polyline: collections.abc.Sequence[types.Point3D]) -> types.Polygon3D:
+    r"""
+    Remove consecutive near-identical points from a 3D polyline.
+    
+    Points whose squared distance is less than 1e-12 are collapsed.
+    
+    :param polyline: Polyline as (x, y, z) points.
+    :returns: Deduplicated polyline.
+    :complexity: O(n)
+    """
 
 def flip_polygon_3d(polygon: collections.abc.Sequence[types.Point3D], flip_h: bool = False, flip_v: bool = False, flip_z: bool = False) -> types.Polygon3D:
     r"""

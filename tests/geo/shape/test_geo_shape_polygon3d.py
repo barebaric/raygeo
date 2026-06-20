@@ -8,6 +8,7 @@ import math
 from typing import List, Tuple
 
 from raygeo.geo.shape.polygon3d import (
+    deduplicate_polyline_3d,
     flip_polygon_3d,
     flip_polygons_3d,
     get_polygon_bounds_3d,
@@ -629,3 +630,58 @@ class TestEndTangent3D:
         dx, dy = get_polyline_end_tangent_3d(poly)
         assert abs(dx - 1.0) < 1e-9
         assert abs(dy - 0.0) < 1e-9
+
+
+# ── deduplicate_polyline_3d ────────────────────────────────────────────
+
+
+class TestDeduplicatePolyline3D:
+    def test_no_duplicates(self):
+        poly = P3((0, 0, 0), (10, 0, 0), (10, 10, 0))
+        result = deduplicate_polyline_3d(poly)
+        assert result == poly
+
+    def test_exact_consecutive_duplicates(self):
+        poly = P3((0, 0, 0), (0, 0, 0), (10, 0, 0), (10, 10, 0))
+        result = deduplicate_polyline_3d(poly)
+        assert result == P3((0, 0, 0), (10, 0, 0), (10, 10, 0))
+
+    def test_near_duplicates_within_tolerance(self):
+        tol = 1e-9
+        poly = P3((0, 0, 0), (tol, 0, 0), (10, 0, 0))
+        result = deduplicate_polyline_3d(poly)
+        assert len(result) == 2
+
+    def test_barely_beyond_tolerance(self):
+        tol = 1.1e-6
+        poly = P3((0, 0, 0), (tol, 0, 0), (10, 0, 0))
+        result = deduplicate_polyline_3d(poly)
+        assert len(result) == 3  # sqrt(1.21e-12) > 1e-12 threshold
+
+    def test_three_consecutive_duplicates(self):
+        poly = P3((0, 0, 0), (0, 0, 0), (0, 0, 0), (5, 5, 5))
+        result = deduplicate_polyline_3d(poly)
+        assert result == P3((0, 0, 0), (5, 5, 5))
+
+    def test_z_preserved(self):
+        poly = P3((0, 0, 5), (0, 0, 5), (10, 0, 5), (10, 10, 5))
+        result = deduplicate_polyline_3d(poly)
+        for p in result:
+            assert p[2] == 5.0
+
+    def test_empty(self):
+        assert deduplicate_polyline_3d([]) == []
+
+    def test_single_point(self):
+        assert deduplicate_polyline_3d([(1, 2, 3)]) == [(1, 2, 3)]
+
+    def test_all_duplicates(self):
+        poly = P3((1, 2, 3), (1, 2, 3), (1, 2, 3))
+        result = deduplicate_polyline_3d(poly)
+        assert result == [(1.0, 2.0, 3.0)]
+
+    def test_input_not_mutated(self):
+        original = P3((0, 0, 0), (0, 0, 0), (10, 0, 0))
+        copy = list(original)
+        deduplicate_polyline_3d(original)
+        assert original == copy  # original untouched in Python

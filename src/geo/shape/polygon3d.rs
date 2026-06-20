@@ -628,6 +628,11 @@ pub fn offset_polyline_3d(
     result
 }
 
+/// Remove consecutive points in a 3D polyline that are within 1e-12 of each other.
+pub fn deduplicate_polyline_3d(pts: &mut Vec<Point3D>) {
+    pts.dedup_by(|a, b| a.distance_squared(*b) < 1e-12);
+}
+
 /// Normalised tangent direction at the last point of a 3D polyline.
 pub fn get_polyline_end_tangent_3d(poly: &[Point3D]) -> Point {
     if poly.len() < 2 {

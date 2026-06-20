@@ -6,6 +6,22 @@ sidebar_position: 39
 
 ## Functions
 
+### `deduplicate_polyline_3d()`
+
+```python
+deduplicate_polyline_3d(polyline: Sequence[types.Point3D]) -> types.Polygon3D
+```
+
+Remove consecutive near-identical points from a 3D polyline.
+
+Points whose squared distance is less than 1e-12 are collapsed.
+
+| Parameter    | Type                      | Description                   |
+| ------------ | ------------------------- | ----------------------------- |
+| `polyline`   | `Sequence[types.Point3D]` | Polyline as (x, y, z) points. |
+| _Returns_    | `types.Polygon3D`         | Deduplicated polyline.        |
+| _Complexity_ |                           | O(n)                          |
+
 ### `flip_polygon_3d()`
 
 ```python
