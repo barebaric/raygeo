@@ -100,6 +100,67 @@ impl ClearedArea {
             .collect()
     }
 
+    /// Add polygons, returning only the newly-added portion.
+    /// Faster than add_cleared_polygons when inputs don't overlap
+    /// existing fragments (skips the full union).
+    /// :complexity: O(n log n) worst case when union required,
+    ///              O(n) when inputs are disjoint from existing fragments
+    pub fn incorporate(
+        &mut self,
+        polygons: Vec<Vec<(f64, f64)>>,
+    ) -> Vec<Vec<(f64, f64)>> {
+        let polys: Vec<crate::types::Polygon> = polygons
+            .into_iter()
+            .map(|v| {
+                v.into_iter()
+                    .map(|(x, y)| crate::types::Point::new(x, y))
+                    .collect()
+            })
+            .collect();
+        let new = self.inner.incorporate(&polys);
+        new.into_iter()
+            .map(|poly| poly.into_iter().map(|p| (p.x, p.y)).collect())
+            .collect()
+    }
+
+    /// Return a unioned, simplified snapshot of the current outer boundary.
+    /// :param simplify_tol: tolerance in mm for polyline simplification
+    /// :complexity: O(n log n)
+    pub fn frontier(&self, simplify_tol: f64) -> Vec<Vec<(f64, f64)>> {
+        let f = self.inner.frontier(simplify_tol);
+        f.into_iter()
+            .map(|poly| poly.into_iter().map(|p| (p.x, p.y)).collect())
+            .collect()
+    }
+
+    /// Compute the "bites" — new material reachable by expanding the
+    /// current frontier outward by step_over, clipping to valid_area,
+    /// and subtracting already-cleared portions.
+    /// :param step_over: lateral step-over in mm
+    /// :param valid_area: list of polygons defining the valid tool-centre region
+    /// :param simplify_tol: tolerance in mm for frontier simplification
+    /// :complexity: O(n log n)
+    pub fn bites(
+        &self,
+        step_over: f64,
+        valid_area: Vec<Vec<(f64, f64)>>,
+        simplify_tol: f64,
+    ) -> Vec<Vec<(f64, f64)>> {
+        let valid: Vec<crate::types::Polygon> = valid_area
+            .into_iter()
+            .map(|v| {
+                v.into_iter()
+                    .map(|(x, y)| crate::types::Point::new(x, y))
+                    .collect()
+            })
+            .collect();
+        let bites = self.inner.bites(step_over, &valid, simplify_tol);
+        bites
+            .into_iter()
+            .map(|poly| poly.into_iter().map(|p| (p.x, p.y)).collect())
+            .collect()
+    }
+
     /// :complexity: O(1)
     pub fn total_area(&self) -> f64 {
         self.inner.total_area()

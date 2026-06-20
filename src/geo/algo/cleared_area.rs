@@ -1,9 +1,13 @@
+use crate::geo::algo::simplify::simplify_polyline;
 use crate::geo::algo::spatial_grid2d::SpatialGrid;
 use crate::geo::shape::polygon::get_polygon_area;
 use crate::geo::shape::polygon::get_polygons_group_difference;
+use crate::geo::shape::polygon::get_polygons_group_intersection;
 use crate::geo::shape::polygon::get_polygons_union;
 use crate::geo::shape::polygon::get_segment_swept_polygon;
-use crate::types::{Point, Polygon, Rect};
+use crate::geo::shape::polygon::offset_polygon_with_style;
+use crate::geo::shape::polygon::JoinStyle;
+use crate::types::{Point, Point3D, Polygon, Rect};
 
 pub struct ClearedArea {
     fragments: Vec<Polygon>,
@@ -128,6 +132,107 @@ impl ClearedArea {
         all_polys.extend(polygons.iter().cloned());
         self.fragments = get_polygons_union(&all_polys);
         self.rebuild_grid();
+    }
+
+    /// Add polygons and return only the newly-added portion (input minus
+    /// already-cleared area).  When none of the inputs overlap any existing
+    /// fragment the union is skipped and they are appended directly for
+    /// better performance.
+    pub fn incorporate(&mut self, polys: &[Polygon]) -> Vec<Polygon> {
+        if polys.is_empty() {
+            return vec![];
+        }
+        let new = self.remaining(polys);
+        if new.is_empty() {
+            return new;
+        }
+        if self.any_overlap(&new) {
+            let mut all = self.fragments.clone();
+            all.extend(new.iter().cloned());
+            self.fragments = get_polygons_union(&all);
+            self.rebuild_grid();
+        } else {
+            for poly in &new {
+                if poly.len() >= 3 {
+                    let idx = self.fragments.len();
+                    let bb = poly_bbox(poly);
+                    self.fragments.push(poly.clone());
+                    self.bboxes.push(bb);
+                    self.grid.insert(idx, bb);
+                }
+            }
+        }
+        new
+    }
+
+    /// Return a unioned, simplified snapshot of the current outer boundary.
+    ///
+    /// This is the "frontier" that wavefront / peeling algorithms expand
+    /// from — the outer perimeter of the cleared region after merging
+    /// overlapping fragments and removing degenerate slivers.
+    pub fn frontier(&self, simplify_tol: f64) -> Vec<Polygon> {
+        let unioned = get_polygons_union(&self.fragments);
+        unioned
+            .into_iter()
+            .filter_map(|p| {
+                let pts3d: Vec<Point3D> =
+                    p.iter().map(|q| Point3D::new(q.x, q.y, 0.0)).collect();
+                let simplified = simplify_polyline(&pts3d, simplify_tol);
+                if simplified.len() < 3 {
+                    None
+                } else {
+                    Some(
+                        simplified
+                            .iter()
+                            .map(|q| Point::new(q.x, q.y))
+                            .collect(),
+                    )
+                }
+            })
+            .collect()
+    }
+
+    /// Expand the current frontier by `step_over`, clip to `valid_area`,
+    /// subtract already-cleared space, and return the resulting "bites" of
+    /// material to be machined.
+    ///
+    /// This is the shared core primitive used by both the current inside-out
+    /// wavefront tracer and the future D-bite peeling strategy.
+    pub fn bites(
+        &self,
+        step_over: f64,
+        valid_area: &[Polygon],
+        simplify_tol: f64,
+    ) -> Vec<Polygon> {
+        let f = self.frontier(simplify_tol);
+        if f.is_empty() {
+            return vec![];
+        }
+        let expanded: Vec<Polygon> = f
+            .iter()
+            .flat_map(|p| {
+                offset_polygon_with_style(p, step_over, JoinStyle::Round)
+            })
+            .collect();
+        if expanded.is_empty() {
+            return vec![];
+        }
+        let material = self.remaining(&expanded);
+        get_polygons_group_intersection(&material, valid_area)
+    }
+
+    /// True when any polygon in `polys` overlaps an existing fragment.
+    fn any_overlap(&self, polys: &[Polygon]) -> bool {
+        for poly in polys {
+            if poly.len() < 3 {
+                continue;
+            }
+            let bb = poly_bbox(poly);
+            if !self.grid.query(bb).is_empty() {
+                return true;
+            }
+        }
+        false
     }
 
     fn rebuild_grid(&mut self) {

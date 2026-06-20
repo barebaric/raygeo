@@ -32,6 +32,30 @@ class ClearedArea:
         r"""
         :complexity: O(n * m) where n = bounds vertices, m = fragments
         """
+    def incorporate(self, polygons: typing.Sequence[typing.Sequence[tuple[builtins.float, builtins.float]]]) -> builtins.list[builtins.list[tuple[builtins.float, builtins.float]]]:
+        r"""
+        Add polygons, returning only the newly-added portion.
+        Faster than add_cleared_polygons when inputs don't overlap
+        existing fragments (skips the full union).
+        :complexity: O(n log n) worst case when union required,
+                     O(n) when inputs are disjoint from existing fragments
+        """
+    def frontier(self, simplify_tol: builtins.float) -> builtins.list[builtins.list[tuple[builtins.float, builtins.float]]]:
+        r"""
+        Return a unioned, simplified snapshot of the current outer boundary.
+        :param simplify_tol: tolerance in mm for polyline simplification
+        :complexity: O(n log n)
+        """
+    def bites(self, step_over: builtins.float, valid_area: typing.Sequence[typing.Sequence[tuple[builtins.float, builtins.float]]], simplify_tol: builtins.float) -> builtins.list[builtins.list[tuple[builtins.float, builtins.float]]]:
+        r"""
+        Compute the "bites" — new material reachable by expanding the
+        current frontier outward by step_over, clipping to valid_area,
+        and subtracting already-cleared portions.
+        :param step_over: lateral step-over in mm
+        :param valid_area: list of polygons defining the valid tool-centre region
+        :param simplify_tol: tolerance in mm for frontier simplification
+        :complexity: O(n log n)
+        """
     def total_area(self) -> builtins.float:
         r"""
         :complexity: O(1)

@@ -109,6 +109,160 @@ def generate_bulk():
     return fig2
 
 
+def generate_incorporate():
+    """incorporate returns only the newly-added portion."""
+    ca = ClearedArea()
+    # Start with a square cleared area
+    initial = [(10, 10), (90, 10), (90, 90), (10, 90)]
+    ca.add_cleared_polygons([initial])
+
+    # Incorporate a larger square — only the outer ring is new
+    larger = [(0, 0), (100, 0), (100, 100), (0, 100)]
+    new_ring = ca.incorporate([larger])
+
+    fig, ax = plt.subplots(figsize=(7, 7))
+
+    # Draw initial cleared region
+    ix, iy = zip(*(initial + [initial[0]]))
+    ax.fill(ix, iy, "steelblue", alpha=0.3, label="Existing cleared")
+    ax.plot(ix, iy, "steelblue", linewidth=1.5)
+
+    # Draw newly-incorporated ring
+    for poly in new_ring:
+        px, py = zip(*(poly + [poly[0]]))
+        ax.fill(
+            px,
+            py,
+            "limegreen",
+            alpha=0.4,
+            label="New (incorporate)" if poly is new_ring[0] else None,
+        )
+        ax.plot(px, py, "limegreen", linewidth=2)
+
+    ax.set_aspect("equal")
+    ax.set_xlim(-5, 105)
+    ax.set_ylim(-5, 105)
+    ax.grid(True, alpha=0.3)
+    ax.legend(fontsize=9)
+    ax.set_title(f"incorporate: {len(new_ring)} new fragment(s)")
+
+    fig.tight_layout()
+    return fig
+
+
+def generate_frontier():
+    """frontier returns a simplified outer boundary."""
+    ca = ClearedArea()
+    # Two overlapping squares that should be merged
+    poly1 = [(10, 10), (60, 10), (60, 60), (10, 60)]
+    poly2 = [(40, 40), (90, 40), (90, 90), (40, 90)]
+    ca.add_cleared_polygons([poly1, poly2])
+
+    f = ca.frontier(0.5)
+
+    fig, ax = plt.subplots(figsize=(7, 7))
+
+    # Draw fragments
+    for poly in ca.query_window((-10, -10, 110, 110)):
+        px, py = zip(
+            *([(p[0], p[1]) for p in poly] + [(poly[0][0], poly[0][1])])
+        )
+        ax.fill(px, py, "steelblue", alpha=0.2)
+        ax.plot(px, py, "steelblue", linewidth=1, alpha=0.5)
+
+    # Draw frontier in bold
+    for poly in f:
+        fx, fy = zip(*(poly + [poly[0]]))
+        ax.plot(
+            fx,
+            fy,
+            "crimson",
+            linewidth=3,
+            label="Frontier" if poly is f[0] else None,
+        )
+
+    ax.set_aspect("equal")
+    ax.set_xlim(0, 100)
+    ax.set_ylim(0, 100)
+    ax.grid(True, alpha=0.3)
+    ax.legend(fontsize=9)
+    ax.set_title(
+        f"frontier: {len(f)} polygon(s), merged from 2 overlapping fragments"
+    )
+
+    fig.tight_layout()
+    return fig
+
+
+def generate_bites():
+    """bites across 3 sequential expansion steps."""
+    import math
+
+    cx, cy = 50.0, 50.0
+    step_over = 8.0
+    pocket = [(20, 20), (80, 20), (80, 80), (20, 80)]
+
+    def octagon(r):
+        return [
+            (
+                cx + r * math.cos(2 * math.pi * i / 8),
+                cy + r * math.sin(2 * math.pi * i / 8),
+            )
+            for i in range(8)
+        ]
+
+    ca = ClearedArea()
+    init = octagon(12.0)
+    ca.add_cleared_polygons([init])
+
+    # Run 3 sequential bite steps, snapshotting before each
+    cleared_snapshots = [ca.frontier(0.5)]
+    bite_sets = []
+    for _ in range(3):
+        b = ca.bites(step_over, [pocket], 1.0)
+        bite_sets.append(b)
+        ca.incorporate(b)
+        cleared_snapshots.append(ca.frontier(0.5))
+
+    fig, axes = plt.subplots(1, 3, figsize=(18, 6))
+    colors = ["#fdbe85", "#fd8d3c", "#d94701"]
+
+    for step in range(3):
+        ax = axes[step]
+
+        # Pocket boundary
+        bx, by = zip(*(pocket + [pocket[0]]))
+        ax.plot(bx, by, "k-", linewidth=2, label="Pocket boundary")
+
+        # Cleared area before this step
+        for poly in cleared_snapshots[step]:
+            px, py = zip(*(poly + [poly[0]]))
+            ax.fill(px, py, "steelblue", alpha=0.25)
+            ax.plot(px, py, "steelblue", linewidth=1, alpha=0.5)
+
+        # Bites for this step
+        label = "Bite" if step == 0 else None
+        for poly in bite_sets[step]:
+            px, py = zip(*(poly + [poly[0]]))
+            ax.fill(px, py, colors[step], alpha=0.6, label=label)
+            ax.plot(px, py, color=colors[step], linewidth=2)
+
+        ax.set_aspect("equal")
+        ax.set_xlim(10, 90)
+        ax.set_ylim(10, 90)
+        ax.grid(True, alpha=0.3)
+        ax.set_title(f"Step {step + 1}: {len(bite_sets[step])} bite(s)")
+        if step == 0:
+            ax.legend(fontsize=8)
+
+    fig.suptitle(
+        "bites: 3 sequential expansions, each clipped to pocket boundary",
+        fontsize=13,
+    )
+    fig.tight_layout()
+    return fig
+
+
 __docs_target__ = ["raygeo.geo.algo.cleared_area.md"]
 __images__ = [
     {
@@ -127,5 +281,30 @@ __images__ = [
             "remaining area in red"
         ),
         "function": generate_bulk,
+    },
+    {
+        "heading": "incorporate",
+        "caption": (
+            "``incorporate`` adds polygons to the cleared state while "
+            "returning only the newly-covered region (shown in green)."
+        ),
+        "function": generate_incorporate,
+    },
+    {
+        "heading": "frontier",
+        "caption": (
+            "``frontier`` returns the outer boundary of the cleared area "
+            "after merging overlapping fragments — shown in crimson."
+        ),
+        "function": generate_frontier,
+    },
+    {
+        "heading": "bites",
+        "caption": (
+            "``bites`` computes the expansible material — the crescent-shaped "
+            "regions of uncut material reachable by expanding the frontier "
+            "by ``step_over``."
+        ),
+        "function": generate_bites,
     },
 ]
