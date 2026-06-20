@@ -23,7 +23,7 @@ pub fn compute_segment_delta(start: Point3D, end: Point3D) -> SegmentDelta {
     let dx = end.x - start.x;
     let dy = end.y - start.y;
     let dz = end.z - start.z;
-    let len_sq = dx * dx + dy * dy + dz * dz;
+    let len_sq = end.distance_squared(start);
     SegmentDelta { dx, dy, dz, len_sq }
 }
 
@@ -41,9 +41,7 @@ pub fn project_t_along_segment(
     if delta.len_sq <= EPSILON_COLLINEAR {
         return 0.0;
     }
-    let t = ((point.x - origin.x) * delta.dx
-        + (point.y - origin.y) * delta.dy
-        + (point.z - origin.z) * delta.dz)
+    let t = (point - origin).dot(Point3D::new(delta.dx, delta.dy, delta.dz))
         / delta.len_sq;
     t.clamp(0.0, 1.0)
 }
@@ -99,18 +97,15 @@ pub fn barycentric_weights(
     vb: Point,
     vc: Point,
 ) -> (f64, f64, f64) {
-    let v0x = vc.x - va.x;
-    let v0y = vc.y - va.y;
-    let v1x = vb.x - va.x;
-    let v1y = vb.y - va.y;
-    let v2x = p.x - va.x;
-    let v2y = p.y - va.y;
+    let v0 = vc - va;
+    let v1 = vb - va;
+    let v2 = p - va;
 
-    let d00 = v0x * v0x + v0y * v0y;
-    let d01 = v0x * v1x + v0y * v1y;
-    let d11 = v1x * v1x + v1y * v1y;
-    let d20 = v2x * v0x + v2y * v0y;
-    let d21 = v2x * v1x + v2y * v1y;
+    let d00 = v0.length_squared();
+    let d01 = v0.dot(v1);
+    let d11 = v1.length_squared();
+    let d20 = v2.dot(v0);
+    let d21 = v2.dot(v1);
 
     let denom = d00 * d11 - d01 * d01;
     if denom.abs() < 1e-24 {

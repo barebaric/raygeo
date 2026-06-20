@@ -8,6 +8,7 @@
 use crate::constants::EPSILON_INTERSECT;
 use crate::geo::shape::line::get_line_segment_intersection;
 use crate::types::{Command, Point, Point3D};
+use glam::DVec2;
 use rstar::{PointDistance, RTree, RTreeObject, AABB};
 
 /// Returns a list of linearized line segments for a given command index.
@@ -53,7 +54,7 @@ impl PointDistance for RowSegments {
     fn distance_2(&self, point: &[f64; 2]) -> f64 {
         let dx = point[0].clamp(self.bbox.0, self.bbox.2) - point[0];
         let dy = point[1].clamp(self.bbox.1, self.bbox.3) - point[1];
-        dx * dx + dy * dy
+        Point::new(dx, dy).length_squared()
     }
 }
 
@@ -130,26 +131,28 @@ fn data_intersect(
                     if let Some(pt) = intersection {
                         if is_self_check && ri2.index == ri1.index + 1 {
                             let shared_vertex = data1[ri1.index].end_point();
-                            let dsq = (pt.x - shared_vertex.x).powi(2)
-                                + (pt.y - shared_vertex.y).powi(2);
+                            let dsq = pt.distance_squared(Point::new(
+                                shared_vertex.x,
+                                shared_vertex.y,
+                            ));
                             if dsq < EPSILON_INTERSECT {
                                 continue;
                             }
                             return true;
                         }
 
-                        let at_end1 = (pt.x - seg1_p1.x).powi(2)
-                            + (pt.y - seg1_p1.y).powi(2)
+                        let at_end1 = pt
+                            .distance_squared(Point::new(seg1_p1.x, seg1_p1.y))
                             < EPSILON_INTERSECT
-                            || (pt.x - seg1_p2.x).powi(2)
-                                + (pt.y - seg1_p2.y).powi(2)
-                                < EPSILON_INTERSECT;
-                        let at_end2 = (pt.x - seg2_p1.x).powi(2)
-                            + (pt.y - seg2_p1.y).powi(2)
+                            || pt.distance_squared(Point::new(
+                                seg1_p2.x, seg1_p2.y,
+                            )) < EPSILON_INTERSECT;
+                        let at_end2 = pt
+                            .distance_squared(Point::new(seg2_p1.x, seg2_p1.y))
                             < EPSILON_INTERSECT
-                            || (pt.x - seg2_p2.x).powi(2)
-                                + (pt.y - seg2_p2.y).powi(2)
-                                < EPSILON_INTERSECT;
+                            || pt.distance_squared(Point::new(
+                                seg2_p2.x, seg2_p2.y,
+                            )) < EPSILON_INTERSECT;
 
                         if is_self_check
                             && (at_end1 || at_end2)
@@ -213,21 +216,21 @@ pub fn ray_line_intersection(
 ) -> Option<Point> {
     let ex = b.x - a.x;
     let ey = b.y - a.y;
-    let len2 = ex * ex + ey * ey;
+    let len2 = Point::new(ex, ey).length_squared();
     if len2 < 1e-24 {
         return None;
     }
 
     let nx = ey;
     let ny = -ex;
-    let ndotd = nx * dir.x + ny * dir.y;
+    let ndotd = DVec2::new(nx, ny).dot(dir);
     if ndotd.abs() < 1e-24 {
         return None;
     }
 
     let dx = a.x - origin.x;
     let dy = a.y - origin.y;
-    let t = (nx * dx + ny * dy) / ndotd;
+    let t = DVec2::new(nx, ny).dot(DVec2::new(dx, dy)) / ndotd;
     if t <= 1e-12 {
         return None;
     }
@@ -235,7 +238,7 @@ pub fn ray_line_intersection(
     let ix = origin.x + t * dir.x;
     let iy = origin.y + t * dir.y;
 
-    let proj = ((ix - a.x) * ex + (iy - a.y) * ey) / len2;
+    let proj = (Point::new(ix, iy) - a).dot(Point::new(ex, ey)) / len2;
     if !(-1e-12..=1.0 + 1e-12).contains(&proj) {
         return None;
     }

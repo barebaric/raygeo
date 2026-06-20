@@ -2,7 +2,7 @@
 //!
 //! This module provides basic point manipulation functions.
 
-use glam::{DMat4, DVec3};
+use glam::DMat4;
 
 use crate::types::Point3D;
 
@@ -14,8 +14,7 @@ pub fn midpoint(a: Point3D, b: Point3D) -> Point3D {
 /// Apply an affine transformation matrix to a 3D point.
 /// Returns the transformed point `(x, y, z)`.
 pub fn transform_point(matrix: DMat4, p: Point3D) -> Point3D {
-    let r = matrix.transform_point3(DVec3::new(p.x, p.y, p.z));
-    Point3D::new(r.x, r.y, r.z)
+    matrix.transform_point3(p)
 }
 
 /// Check if two points (as 3-element arrays) are equal within a tolerance.

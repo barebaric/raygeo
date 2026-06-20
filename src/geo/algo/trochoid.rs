@@ -98,7 +98,7 @@ pub fn trochoid_along(
 
         let p0 = carrier[seg_idx];
         let p1 = carrier[seg_idx + 1];
-        let pos = p0 + (p1 - p0) * local_t;
+        let pos = p0.lerp(p1, local_t);
 
         // Tangent and normal at this point.
         let tangent = if seg_lengths[seg_idx] > 1e-12 {

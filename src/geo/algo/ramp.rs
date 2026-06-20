@@ -30,9 +30,7 @@ const RAMP_POINT_SPACING: f64 = 0.1;
 /// extended in both directions (along the same line) so the descent satisfies
 /// the angle constraint.
 pub fn generate_ramp(opts: &RampOptions) -> Vec<Point3D> {
-    let dx = opts.end.x - opts.start.x;
-    let dy = opts.end.y - opts.start.y;
-    let xy_dist = (dx * dx + dy * dy).sqrt();
+    let xy_dist = opts.start.distance(opts.end);
     let z_drop = opts.z_start - opts.z_end;
 
     if xy_dist < 1e-12 || z_drop <= 0.0 {
@@ -49,7 +47,7 @@ pub fn generate_ramp(opts: &RampOptions) -> Vec<Point3D> {
         let needed_xy = z_drop / max_angle_rad.tan();
         let capped_xy = needed_xy.min(xy_dist * MAX_EXTENSION_FACTOR);
         let extra = capped_xy - xy_dist;
-        let dir = Point::new(dx / xy_dist, dy / xy_dist);
+        let dir = (opts.end - opts.start).normalize();
         let es = opts.start - dir * (extra / 2.0);
         let ee = opts.end + dir * (extra / 2.0);
         (es, ee, capped_xy)
@@ -65,18 +63,16 @@ pub fn generate_ramp(opts: &RampOptions) -> Vec<Point3D> {
             let mut points = Vec::with_capacity(n_points + 1);
             for i in 0..=n_points {
                 let t = i as f64 / n_points as f64;
-                let x = ext_start.x + (ext_end.x - ext_start.x) * t;
-                let y = ext_start.y + (ext_end.y - ext_start.y) * t;
+                let p = ext_start.lerp(ext_end, t);
+                let x = p.x;
+                let y = p.y;
                 let z = opts.z_start - z_drop * t;
                 points.push(Point3D::new(x, y, z));
             }
             points
         }
         RampStyle::ZigZag => {
-            let dir = Point::new(
-                (ext_end.x - ext_start.x) / ext_xy_dist,
-                (ext_end.y - ext_start.y) / ext_xy_dist,
-            );
+            let dir = (ext_end - ext_start).normalize();
             let norm = Point::new(-dir.y, dir.x);
             let amp = opts.lateral_amplitude.max(0.0);
 
@@ -88,12 +84,9 @@ pub fn generate_ramp(opts: &RampOptions) -> Vec<Point3D> {
                 let period = (ext_xy_dist / 4.0).max(1e-12);
                 let lateral_offset =
                     amp * (2.0 * std::f64::consts::PI * s / period).sin();
-                let x = ext_start.x
-                    + (ext_end.x - ext_start.x) * t
-                    + lateral_offset * norm.x;
-                let y = ext_start.y
-                    + (ext_end.y - ext_start.y) * t
-                    + lateral_offset * norm.y;
+                let base = ext_start.lerp(ext_end, t);
+                let x = base.x + lateral_offset * norm.x;
+                let y = base.y + lateral_offset * norm.y;
                 let z = opts.z_start - z_drop * t;
                 points.push(Point3D::new(x, y, z));
             }

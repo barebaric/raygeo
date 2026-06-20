@@ -208,18 +208,19 @@ pub fn are_points_collinear(points: &[Point3D], tolerance: f64) -> bool {
     let p2 = points[points.len() - 1];
     let dx = p2.x - p1.x;
     let dy = p2.y - p1.y;
-    let line_length = dx.hypot(dy);
+    let line_length = Point::new(dx, dy).length();
 
     if line_length < 1e-9 {
-        return points
-            .iter()
-            .all(|p| (p.x - p1.x).hypot(p.y - p1.y) < tolerance);
+        return points.iter().all(|p| {
+            Point::new(p.x, p.y).distance(Point::new(p1.x, p1.y)) < tolerance
+        });
     }
 
     for p in points.iter().skip(1).take(points.len() - 2) {
         let vx = p.x - p1.x;
         let vy = p.y - p1.y;
-        let dist = (vx * dy - vy * dx).abs() / line_length;
+        let dist =
+            DVec2::new(vx, vy).perp_dot(DVec2::new(dx, dy)).abs() / line_length;
         if dist > tolerance {
             return false;
         }
@@ -242,7 +243,8 @@ pub fn fit_circle_to_3_points(
         return None;
     }
 
-    let d12 = 2.0 * ((y2 - y1) * (x3 - x2) - (y3 - y2) * (x2 - x1));
+    let d12 = 2.0
+        * DVec2::new(x2 - x1, y2 - y1).perp_dot(DVec2::new(x3 - x2, y3 - y2));
     if d12.abs() < 1e-9 {
         return None;
     }
@@ -255,11 +257,11 @@ pub fn fit_circle_to_3_points(
     let yc = ((x2 - x1) * (sq2 - sq3) - (x3 - x2) * (sq1 - sq2)) / d12;
 
     let center = Point::new(xc, yc);
-    let radius = (x1 - xc).hypot(y1 - yc);
+    let radius = Point::new(x1, y1).distance(Point::new(xc, yc));
     Some((center, radius))
 }
 
-use glam::{DMat3, DVec3};
+use glam::{DMat3, DVec2, DVec3};
 
 fn solve_3x3(ata: DMat3, atb: DVec3) -> Option<DVec3> {
     let det = ata.determinant();
@@ -319,7 +321,7 @@ pub fn fit_circle_to_points(points: &[Point3D]) -> Option<(Point, f64, f64)> {
 
     let mut max_err = 0.0;
     for p in points {
-        let dist = (p.x - xc).hypot(p.y - yc);
+        let dist = Point::new(p.x, p.y).distance(Point::new(xc, yc));
         let err = (dist - r).abs();
         if err > max_err {
             max_err = err;
@@ -342,7 +344,7 @@ pub fn project_circle_center_to_bisector(
 
     let dx = x2 - x1;
     let dy = y2 - y1;
-    let chord_len_sq = dx * dx + dy * dy;
+    let chord_len_sq = DVec2::new(dx, dy).length_squared();
 
     if chord_len_sq < 1e-12 {
         return center;
@@ -352,7 +354,7 @@ pub fn project_circle_center_to_bisector(
     let my = (y1 + y2) / 2.0;
     let vx = cx - mx;
     let vy = cy - my;
-    let dot = vx * dx + vy * dy;
+    let dot = DVec2::new(vx, vy).dot(DVec2::new(dx, dy));
     let proj_factor = dot / chord_len_sq;
     let proj_x = dx * proj_factor;
     let proj_y = dy * proj_factor;
@@ -381,16 +383,18 @@ pub fn get_polyline_arc_deviation(
         let (x2, y2) = (p2.x, p2.y);
         let dx = x2 - x1;
         let dy = y2 - y1;
-        let seg_len = dx.hypot(dy);
+        let seg_len = Point::new(dx, dy).length();
 
         if seg_len < 1e-9 {
-            let dev = ((x1 - xc).hypot(y1 - yc) - radius).abs();
+            let dev = (Point::new(x1, y1).distance(Point::new(xc, yc))
+                - radius)
+                .abs();
             max_deviation = max_deviation.max(dev);
             continue;
         }
 
-        let d1 = (x1 - xc).hypot(y1 - yc);
-        let d2 = (x2 - xc).hypot(y2 - yc);
+        let d1 = Point::new(x1, y1).distance(Point::new(xc, yc));
+        let d2 = Point::new(x2, y2).distance(Point::new(xc, yc));
 
         if seg_len > 2.0 * radius {
             let dev = (d1 - radius).abs().max((d2 - radius).abs());
@@ -400,9 +404,9 @@ pub fn get_polyline_arc_deviation(
             let v1y = y1 - yc;
             let v2x = x2 - xc;
             let v2y = y2 - yc;
-            let dot = v1x * v2x + v1y * v2y;
-            let mag1 = v1x.hypot(v1y);
-            let mag2 = v2x.hypot(v2y);
+            let dot = DVec2::new(v1x, v1y).dot(DVec2::new(v2x, v2y));
+            let mag1 = DVec2::new(v1x, v1y).length();
+            let mag2 = DVec2::new(v2x, v2y).length();
 
             let sagitta = if mag1 < 1e-9 || mag2 < 1e-9 {
                 0.0
@@ -432,15 +436,15 @@ pub fn convert_arc_to_beziers_from_array(
 
     let center =
         Point::new(p0_2d.x + center_offset.x, p0_2d.y + center_offset.y);
-    let radius = center_offset.x.hypot(center_offset.y);
-    let radius_end = (p_end_2d.x - center.x).hypot(p_end_2d.y - center.y);
+    let radius = center_offset.length();
+    let radius_end = p_end_2d.distance(center);
 
     if radius < 1e-9 {
         return vec![];
     }
 
-    let is_coincident = (start_point.x - end_point.x).abs() < 1e-12
-        && (start_point.y - end_point.y).abs() < 1e-12;
+    let is_coincident =
+        start_point.truncate().distance(end_point.truncate()) < 1e-12;
 
     let (start_angle, total_sweep) = if is_coincident {
         let sa = (p0_2d.y - center.y).atan2(p0_2d.x - center.x);
@@ -526,14 +530,15 @@ pub fn get_polyline_line_deviation(
     let p_end = points[end];
     let dx = p_end.x - p_start.x;
     let dy = p_end.y - p_start.y;
-    let line_len_sq = dx * dx + dy * dy;
+    let line_len_sq = DVec2::new(dx, dy).length_squared();
 
     let mut max_dist_sq = 0.0;
     let mut max_idx = start;
 
     if line_len_sq < 1e-12 {
         for (i, p) in points.iter().enumerate().take(end).skip(start + 1) {
-            let d_sq = (p.x - p_start.x).powi(2) + (p.y - p_start.y).powi(2);
+            let d_sq = Point::new(p.x, p.y)
+                .distance_squared(Point::new(p_start.x, p_start.y));
             if d_sq > max_dist_sq {
                 max_dist_sq = d_sq;
                 max_idx = i;
@@ -543,7 +548,8 @@ pub fn get_polyline_line_deviation(
     }
 
     for (i, p) in points.iter().enumerate().take(end).skip(start + 1) {
-        let cross = (p.x - p_start.x) * dy - (p.y - p_start.y) * dx;
+        let cross = (Point::new(p.x, p.y) - Point::new(p_start.x, p_start.y))
+            .perp_dot(Point::new(dx, dy));
         let d_sq = (cross * cross) / line_len_sq;
         if d_sq > max_dist_sq {
             max_dist_sq = d_sq;
@@ -578,10 +584,11 @@ pub fn fit_points_recursive(
         let dy1 = p_curr.y - p_prev.y;
         let dx2 = p_next.x - p_curr.x;
         let dy2 = p_next.y - p_curr.y;
-        let len1 = dx1.hypot(dy1);
-        let len2 = dx2.hypot(dy2);
+        let len1 = Point::new(dx1, dy1).length();
+        let len2 = Point::new(dx2, dy2).length();
         if len1 > 1e-9 && len2 > 1e-9 {
-            let dot = (dx1 * dx2 + dy1 * dy2) / (len1 * len2);
+            let dot =
+                DVec2::new(dx1, dy1).dot(DVec2::new(dx2, dy2)) / (len1 * len2);
             dot < 0.5
         } else {
             false
@@ -593,7 +600,7 @@ pub fn fit_points_recursive(
     let is_closed_range = {
         let sp = points[start];
         let ep = points[end];
-        (sp.x - ep.x).abs() < 1e-6 && (sp.y - ep.y).abs() < 1e-6
+        sp.truncate().distance(ep.truncate()) < 1e-6
     };
 
     if !is_sharp && !is_closed_range && end - start == 2 {
@@ -602,7 +609,7 @@ pub fn fit_points_recursive(
         let p3 = points[end];
         if let Some((center, _radius)) = fit_circle_to_3_points(p1, p2, p3) {
             let center = project_circle_center_to_bisector(p1, p3, center);
-            let radius = (p1.x - center.x).hypot(p1.y - center.y);
+            let radius = Point::new(p1.x, p1.y).distance(center);
             let three = [p1, p2, p3];
             let arc_dev =
                 get_polyline_arc_deviation(three.as_slice(), center, radius);
@@ -639,7 +646,7 @@ pub fn fit_points_recursive(
                 center,
             );
             let radius =
-                (points[start].x - center.x).hypot(points[start].y - center.y);
+                Point::new(points[start].x, points[start].y).distance(center);
             let arc_dev = get_polyline_arc_deviation(&subset, center, radius);
             if arc_dev < tolerance {
                 let is_cw = {

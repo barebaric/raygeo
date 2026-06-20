@@ -125,15 +125,14 @@ pub fn clip_line_segment_with_rect(
     let clipped_2d = clip_line_segment_with_rect_2d(p1_2d, p2_2d, rect)?;
 
     let dz = p2.z - p1.z;
-    let dx = p2.x - p1.x;
-    let dy = p2.y - p1.y;
-    let len_sq = dx * dx + dy * dy;
+    let delta_2d = p2_2d - p1_2d;
+    let len_sq = delta_2d.length_squared();
 
     let interpolate_z = |pt: Point| -> f64 {
         if len_sq < 1e-30 {
             p1.z
         } else {
-            let t = ((pt.x - p1_2d.x) * dx + (pt.y - p1_2d.y) * dy) / len_sq;
+            let t = (pt - p1_2d).dot(delta_2d) / len_sq;
             p1.z + t * dz
         }
     };
@@ -174,10 +173,7 @@ fn compute_kept_t_ranges(
         }
 
         let mid_t = (t1 + t2) / 2.0;
-        let mid_p = Point::new(
-            p1.x + (p2.x - p1.x) * mid_t,
-            p1.y + (p2.y - p1.y) * mid_t,
-        );
+        let mid_p = p1.lerp(p2, mid_t);
 
         let is_inside =
             regions.iter().any(|r| is_point_inside_polygon(mid_p, r));
@@ -202,18 +198,7 @@ pub fn clip_line_segment_with_polygons_2d(
     let ranges = compute_kept_t_ranges(p1, p2, regions, true);
     ranges
         .into_iter()
-        .map(|(t1, t2)| {
-            (
-                Point::new(
-                    p1.x + (p2.x - p1.x) * t1,
-                    p1.y + (p2.y - p1.y) * t1,
-                ),
-                Point::new(
-                    p1.x + (p2.x - p1.x) * t2,
-                    p1.y + (p2.y - p1.y) * t2,
-                ),
-            )
-        })
+        .map(|(t1, t2)| (p1.lerp(p2, t1), p1.lerp(p2, t2)))
         .collect()
 }
 
@@ -229,18 +214,7 @@ pub fn subtract_polygons_from_line_segment_2d(
     let ranges = compute_kept_t_ranges(p1, p2, regions, false);
     ranges
         .into_iter()
-        .map(|(t1, t2)| {
-            (
-                Point::new(
-                    p1.x + (p2.x - p1.x) * t1,
-                    p1.y + (p2.y - p1.y) * t1,
-                ),
-                Point::new(
-                    p1.x + (p2.x - p1.x) * t2,
-                    p1.y + (p2.y - p1.y) * t2,
-                ),
-            )
-        })
+        .map(|(t1, t2)| (p1.lerp(p2, t1), p1.lerp(p2, t2)))
         .collect()
 }
 
@@ -262,20 +236,7 @@ pub fn clip_line_segment_with_polygons(
     let ranges = compute_kept_t_ranges(p1_2d, p2_2d, regions, true);
     ranges
         .into_iter()
-        .map(|(t1, t2)| {
-            (
-                Point3D::new(
-                    p1.x + (p2.x - p1.x) * t1,
-                    p1.y + (p2.y - p1.y) * t1,
-                    p1.z + (p2.z - p1.z) * t1,
-                ),
-                Point3D::new(
-                    p1.x + (p2.x - p1.x) * t2,
-                    p1.y + (p2.y - p1.y) * t2,
-                    p1.z + (p2.z - p1.z) * t2,
-                ),
-            )
-        })
+        .map(|(t1, t2)| (p1.lerp(p2, t1), p1.lerp(p2, t2)))
         .collect()
 }
 
@@ -295,19 +256,6 @@ pub fn subtract_polygons_from_line_segment(
     let ranges = compute_kept_t_ranges(p1_2d, p2_2d, regions, false);
     ranges
         .into_iter()
-        .map(|(t1, t2)| {
-            (
-                Point3D::new(
-                    p1.x + (p2.x - p1.x) * t1,
-                    p1.y + (p2.y - p1.y) * t1,
-                    p1.z + (p2.z - p1.z) * t1,
-                ),
-                Point3D::new(
-                    p1.x + (p2.x - p1.x) * t2,
-                    p1.y + (p2.y - p1.y) * t2,
-                    p1.z + (p2.z - p1.z) * t2,
-                ),
-            )
-        })
+        .map(|(t1, t2)| (p1.lerp(p2, t1), p1.lerp(p2, t2)))
         .collect()
 }

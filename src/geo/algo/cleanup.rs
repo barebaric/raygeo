@@ -3,66 +3,72 @@
 //! Provides functions for cleaning geometry command arrays by removing
 //! duplicate segments and closing small gaps between connected paths.
 
-use crate::geo::shape::point::are_points_equal;
+use glam::{DVec3, DVec4};
+
 use crate::types::{Command, Point3D};
 
 /// Extract a hashable key for a segment. Returns None for MOVE commands.
-pub fn get_segment_key(cmd: &Command) -> Option<(u32, [f64; 3], [f64; 4])> {
+pub fn get_segment_key(cmd: &Command) -> Option<(u32, DVec3, DVec4)> {
     match cmd {
         Command::Move { .. } => None,
-        Command::Line { end } => Some((2, [end.x, end.y, end.z], [0.0; 4])),
+        Command::Line { end } => {
+            Some((2, DVec3::new(end.x, end.y, end.z), DVec4::ZERO))
+        }
         Command::Arc {
             end,
             center_offset,
             normal,
         } => {
             let clockwise = normal.z < 0.0;
-            let params = [
-                center_offset.x,
-                center_offset.y,
-                if clockwise { 1.0 } else { 0.0 },
-                0.0,
-            ];
-            Some((3, [end.x, end.y, end.z], params))
+            Some((
+                3,
+                DVec3::new(end.x, end.y, end.z),
+                DVec4::new(
+                    center_offset.x,
+                    center_offset.y,
+                    if clockwise { 1.0 } else { 0.0 },
+                    0.0,
+                ),
+            ))
         }
         Command::Bezier {
             end,
             control1,
             control2,
-        } => {
-            let params = [control1.x, control1.y, control2.x, control2.y];
-            Some((4, [end.x, end.y, end.z], params))
-        }
+        } => Some((
+            4,
+            DVec3::new(end.x, end.y, end.z),
+            DVec4::new(control1.x, control1.y, control2.x, control2.y),
+        )),
     }
 }
 
 /// Check if two segment keys represent identical segments within tolerance.
 pub fn are_segments_equal(
-    k1: &(u32, [f64; 3], [f64; 4]),
-    k2: &(u32, [f64; 3], [f64; 4]),
+    k1: &(u32, DVec3, DVec4),
+    k2: &(u32, DVec3, DVec4),
     tolerance: f64,
 ) -> bool {
     if k1.0 != k2.0 {
         return false;
     }
-    if !are_points_equal(&k1.1, &k2.1, tolerance) {
+    if k1.1.distance(k2.1) > tolerance {
         return false;
     }
     if k1.0 == 2 {
         return true;
     }
     if k1.0 == 3 {
-        return are_points_equal(
-            &[k1.2[0], k1.2[1], 0.0],
-            &[k2.2[0], k2.2[1], 0.0],
-            tolerance,
-        ) && (k1.2[2] - k2.2[2]).abs() < tolerance;
+        return DVec3::new(k1.2.x, k1.2.y, 0.0)
+            .distance(DVec3::new(k2.2.x, k2.2.y, 0.0))
+            <= tolerance
+            && (k1.2.z - k2.2.z).abs() < tolerance;
     }
     if k1.0 == 4 {
-        let p1 = [k1.2[0], k1.2[1], k1.2[2]];
-        let p2 = [k2.2[0], k2.2[1], k2.2[2]];
-        return are_points_equal(&p1, &p2, tolerance)
-            && (k1.2[3] - k2.2[3]).abs() < tolerance;
+        return DVec3::new(k1.2.x, k1.2.y, k1.2.z)
+            .distance(DVec3::new(k2.2.x, k2.2.y, k2.2.z))
+            <= tolerance
+            && (k1.2.w - k2.2.w).abs() < tolerance;
     }
     false
 }
@@ -77,7 +83,7 @@ pub fn remove_duplicate_segments(
     }
 
     let mut result: Vec<Command> = Vec::new();
-    let mut seen_segments: Vec<(u32, [f64; 3], [f64; 4])> = Vec::new();
+    let mut seen_segments: Vec<(u32, DVec3, DVec4)> = Vec::new();
 
     for cmd in data {
         if matches!(cmd, Command::Move { .. }) {
@@ -139,8 +145,7 @@ pub fn close_geometry_gaps_from_array(
             let s = modified[start].end_point();
             let e_cmd = &modified[end - 1];
             let e = e_cmd.end_point();
-            let dsq =
-                (s.x - e.x).powi(2) + (s.y - e.y).powi(2) + (s.z - e.z).powi(2);
+            let dsq = s.distance_squared(e);
             if dsq < tol_sq {
                 let new_cmd = match e_cmd {
                     Command::Move { .. } => Command::Move { end: s },
@@ -175,9 +180,7 @@ pub fn close_geometry_gaps_from_array(
 
         if matches!(cmd, Command::Move { .. }) {
             if let Some(prev) = last_end {
-                let dsq = (end_pt.x - prev.x).powi(2)
-                    + (end_pt.y - prev.y).powi(2)
-                    + (end_pt.z - prev.z).powi(2);
+                let dsq = end_pt.distance_squared(prev);
                 if dsq < tol_sq {
                     final_rows.push(Command::Line { end: prev });
                 } else {

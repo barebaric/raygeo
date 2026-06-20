@@ -179,12 +179,7 @@ pub fn get_concave_hull(
 
         let closest = find_closest_point(&all_contour_points, midpoint);
 
-        let target_sag = Point::new(
-            midpoint.x * (1.0 - effective_gravity)
-                + closest.x * effective_gravity,
-            midpoint.y * (1.0 - effective_gravity)
-                + closest.y * effective_gravity,
-        );
+        let target_sag = midpoint.lerp(closest, effective_gravity);
 
         let control = Point::new(
             midpoint.x + 2.0 * (target_sag.x - midpoint.x),

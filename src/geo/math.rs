@@ -32,7 +32,6 @@ fn transform_array_uniform(data: &[Command], matrix: DMat4) -> Vec<Command> {
     for cmd in data {
         let end_pt = cmd.end_point();
         let p = transform_point(matrix, end_pt);
-        let (nx, ny, nz) = (p.x, p.y, p.z);
 
         let transformed = match cmd {
             Command::Arc {
@@ -50,7 +49,7 @@ fn transform_array_uniform(data: &[Command], matrix: DMat4) -> Vec<Command> {
                     normal.z < 0.0
                 };
                 Command::Arc {
-                    end: Point3D::new(nx, ny, nz),
+                    end: p,
                     center_offset: Point3D::new(vi, vj, 0.0),
                     normal: if cw {
                         Point3D::new(0.0, 0.0, -1.0)
@@ -63,21 +62,15 @@ fn transform_array_uniform(data: &[Command], matrix: DMat4) -> Vec<Command> {
                 control1, control2, ..
             } => {
                 let c1_t = transform_point(matrix, *control1);
-                let (c1x, c1y, c1z) = (c1_t.x, c1_t.y, c1_t.z);
                 let c2_t = transform_point(matrix, *control2);
-                let (c2x, c2y, c2z) = (c2_t.x, c2_t.y, c2_t.z);
                 Command::Bezier {
-                    end: Point3D::new(nx, ny, nz),
-                    control1: Point3D::new(c1x, c1y, c1z),
-                    control2: Point3D::new(c2x, c2y, c2z),
+                    end: p,
+                    control1: c1_t,
+                    control2: c2_t,
                 }
             }
-            Command::Move { .. } => Command::Move {
-                end: Point3D::new(nx, ny, nz),
-            },
-            Command::Line { .. } => Command::Line {
-                end: Point3D::new(nx, ny, nz),
-            },
+            Command::Move { .. } => Command::Move { end: p },
+            Command::Line { .. } => Command::Line { end: p },
         };
 
         result.push(transformed);
@@ -114,40 +107,28 @@ fn transform_array_non_uniform(
                 );
                 for (_, p2) in arc_buf.drain(..) {
                     let pt = transform_point(matrix, p2);
-                    let (tx, ty, tz) = (pt.x, pt.y, pt.z);
-                    result.push(Command::Line {
-                        end: Point3D::new(tx, ty, tz),
-                    });
+                    result.push(Command::Line { end: pt });
                 }
             }
             Command::Bezier {
                 control1, control2, ..
             } => {
                 let p_t = transform_point(matrix, original_end);
-                let (nx, ny, nz) = (p_t.x, p_t.y, p_t.z);
                 let c1_t = transform_point(matrix, *control1);
-                let (c1x, c1y, c1z) = (c1_t.x, c1_t.y, c1_t.z);
                 let c2_t = transform_point(matrix, *control2);
-                let (c2x, c2y, c2z) = (c2_t.x, c2_t.y, c2_t.z);
                 result.push(Command::Bezier {
-                    end: Point3D::new(nx, ny, nz),
-                    control1: Point3D::new(c1x, c1y, c1z),
-                    control2: Point3D::new(c2x, c2y, c2z),
+                    end: p_t,
+                    control1: c1_t,
+                    control2: c2_t,
                 });
             }
             Command::Move { .. } => {
                 let p_t = transform_point(matrix, original_end);
-                let (nx, ny, nz) = (p_t.x, p_t.y, p_t.z);
-                result.push(Command::Move {
-                    end: Point3D::new(nx, ny, nz),
-                });
+                result.push(Command::Move { end: p_t });
             }
             Command::Line { .. } => {
                 let p_t = transform_point(matrix, original_end);
-                let (nx, ny, nz) = (p_t.x, p_t.y, p_t.z);
-                result.push(Command::Line {
-                    end: Point3D::new(nx, ny, nz),
-                });
+                result.push(Command::Line { end: p_t });
             }
         }
 

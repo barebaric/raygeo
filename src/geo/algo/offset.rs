@@ -58,8 +58,7 @@ fn prepare_contour_items(
         let n = verts.len();
         for j in 0..n {
             let k = (j + 1) % n;
-            area += verts[j].x * verts[k].y;
-            area -= verts[k].x * verts[j].y;
+            area += verts[j].perp_dot(verts[k]);
         }
         area = area.abs() / 2.0;
         // Preserve Z from the source geometry's first point (Move command).

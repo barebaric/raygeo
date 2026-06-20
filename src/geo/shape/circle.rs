@@ -19,7 +19,7 @@ pub fn get_circle_circle_intersections(
 ) -> Vec<Point> {
     let dx = c2.x - c1.x;
     let dy = c2.y - c1.y;
-    let d_sq = dx * dx + dy * dy;
+    let d_sq = Point::new(dx, dy).length_squared();
     let d = d_sq.sqrt();
 
     if d < 1e-9 || d > r1 + r2 || d < (r1 - r2).abs() {
@@ -30,19 +30,15 @@ pub fn get_circle_circle_intersections(
     let h_sq = (r1 * r1 - a * a).max(0.0);
     let h = h_sq.sqrt();
 
-    let x2 = c1.x + a * dx / d;
-    let y2 = c1.y + a * dy / d;
+    let mid = c1 + Point::new(dx, dy) * (a / d);
 
     if h < 1e-9 {
-        return vec![Point::new(x2, y2)];
+        return vec![mid];
     }
 
-    let x3_1 = x2 + h * dy / d;
-    let y3_1 = y2 - h * dx / d;
-    let x3_2 = x2 - h * dy / d;
-    let y3_2 = y2 + h * dx / d;
+    let offset = Point::new(h * dy / d, -h * dx / d);
 
-    vec![Point::new(x3_1, y3_1), Point::new(x3_2, y3_2)]
+    vec![mid + offset, mid - offset]
 }
 
 /// Projects a point onto a circle's circumference.
@@ -54,14 +50,14 @@ pub fn project_point_onto_circle(
 ) -> Option<Point> {
     let dx = point.x - center.x;
     let dy = point.y - center.y;
-    let dist = (dx * dx + dy * dy).sqrt();
+    let dist = Point::new(dx, dy).length();
 
     if dist < 1e-9 {
         return None;
     }
 
     let scale = radius / dist;
-    Some(Point::new(center.x + dx * scale, center.y + dy * scale))
+    Some(center + Point::new(dx, dy) * scale)
 }
 
 /// Tests if a circle is completely contained within an axis-aligned rectangle.
@@ -94,7 +90,8 @@ pub fn does_circle_intersect_rect(
     // Check if circle's closest point to rect is within radius
     let closest_x = rx1.max(cx.min(rx2));
     let closest_y = ry1.max(cy.min(ry2));
-    let dist_sq_closest = (closest_x - cx).powi(2) + (closest_y - cy).powi(2);
+    let dist_sq_closest =
+        Point::new(closest_x, closest_y).distance_squared(center);
     if dist_sq_closest > radius * radius {
         return false;
     }
@@ -126,13 +123,13 @@ pub fn get_line_circle_intersections(
     let fx = p1.x - center.x;
     let fy = p1.y - center.y;
 
-    let a = dx * dx + dy * dy;
+    let a = Point::new(dx, dy).length_squared();
     if a < 1e-20 {
         return vec![];
     }
 
-    let b = 2.0 * (fx * dx + fy * dy);
-    let c = fx * fx + fy * fy - radius * radius;
+    let b = 2.0 * Point::new(fx, fy).dot(Point::new(dx, dy));
+    let c = Point::new(fx, fy).length_squared() - radius * radius;
 
     let discriminant = b * b - 4.0 * a * c;
     if discriminant < 0.0 {
@@ -144,17 +141,18 @@ pub fn get_line_circle_intersections(
     let t2 = (-b + sqrt_disc) / (2.0 * a);
 
     let mut results = Vec::new();
+    let dir = Point::new(dx, dy);
 
     if sqrt_disc < 1e-10 {
         if (0.0..=1.0).contains(&t1) {
-            results.push(Point::new(p1.x + t1 * dx, p1.y + t1 * dy));
+            results.push(p1 + dir * t1);
         }
     } else {
         if (0.0..=1.0).contains(&t1) {
-            results.push(Point::new(p1.x + t1 * dx, p1.y + t1 * dy));
+            results.push(p1 + dir * t1);
         }
         if (0.0..=1.0).contains(&t2) {
-            results.push(Point::new(p1.x + t2 * dx, p1.y + t2 * dy));
+            results.push(p1 + dir * t2);
         }
     }
 

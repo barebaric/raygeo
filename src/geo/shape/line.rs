@@ -8,9 +8,7 @@ use crate::types::{Point, Polygon, Rect};
 
 /// Computes the Euclidean length of a line segment.
 pub fn get_line_segment_length(p1: Point, p2: Point) -> f64 {
-    let dx = p2.x - p1.x;
-    let dy = p2.y - p1.y;
-    dx.hypot(dy)
+    p1.distance(p2)
 }
 
 /// Checks if a point lies on a line segment using dot product projection
@@ -18,19 +16,19 @@ pub fn get_line_segment_length(p1: Point, p2: Point) -> f64 {
 pub fn is_point_on_segment(pt: Point, p1: Point, p2: Point) -> bool {
     let dx = p2.x - p1.x;
     let dy = p2.y - p1.y;
-    let len_sq = dx * dx + dy * dy;
+    let len_sq = Point::new(dx, dy).length_squared();
 
     // Collinearity test: cross product magnitude squared
-    let cross = (pt.x - p1.x) * dy - (pt.y - p1.y) * dx;
+    let cross = (pt - p1).perp_dot(Point::new(dx, dy));
     if cross.abs() > 1e-9 * len_sq.max(1.0) {
         return false;
     }
 
-    let dot1 = (pt.x - p1.x) * dx + (pt.y - p1.y) * dy;
+    let dot1 = (pt - p1).dot(Point::new(dx, dy));
     if dot1 < 0.0 {
         return false;
     }
-    let dot2 = (pt.x - p2.x) * (-dx) + (pt.y - p2.y) * (-dy);
+    let dot2 = (pt - p2).dot(Point::new(-dx, -dy));
     if dot2 < 0.0 {
         return false;
     }
@@ -54,13 +52,14 @@ pub fn get_line_line_intersection(
     let x4 = p4.x;
     let y4 = p4.y;
 
-    let denom = (y4 - y3) * (x2 - x1) - (x4 - x3) * (y2 - y1);
+    let denom =
+        Point::new(x2 - x1, y2 - y1).perp_dot(Point::new(x4 - x3, y4 - y3));
     if denom == 0.0 {
         return None;
     }
 
-    let ua = ((x4 - x3) * (y1 - y3) - (y4 - y3) * (x1 - x3)) / denom;
-    Some(Point::new(x1 + ua * (x2 - x1), y1 + ua * (y2 - y1)))
+    let ua = Point::new(x4 - x3, y4 - y3).perp_dot(p1 - p3) / denom;
+    Some(p1 + (p2 - p1) * ua)
 }
 
 /// Computes the intersection of two line segments.
@@ -81,19 +80,22 @@ pub fn get_line_segment_intersection(
     let x4 = p4.x;
     let y4 = p4.y;
 
-    let den = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4);
+    let den =
+        Point::new(x1 - x2, y1 - y2).perp_dot(Point::new(x3 - x4, y3 - y4));
     if den.abs() < 1e-9 {
         return None;
     }
 
-    let t_num = (x1 - x3) * (y3 - y4) - (y1 - y3) * (x3 - x4);
-    let u_num = -((x1 - x2) * (y1 - y3) - (y1 - y2) * (x1 - x3));
+    let t_num =
+        Point::new(x1 - x3, y1 - y3).perp_dot(Point::new(x3 - x4, y3 - y4));
+    let u_num =
+        -Point::new(x1 - x2, y1 - y2).perp_dot(Point::new(x1 - x3, y1 - y3));
 
     let t = t_num / den;
     let u = u_num / den;
 
     if (0.0..=1.0).contains(&t) && (0.0..=1.0).contains(&u) {
-        Some(Point::new(x1 + t * (x2 - x1), y1 + t * (y2 - y1)))
+        Some(p1 + (p2 - p1) * t)
     } else {
         None
     }
@@ -107,13 +109,13 @@ pub fn get_line_closest_point(p1: Point, p2: Point, x: f64, y: f64) -> Point {
     let px = x - p1.x;
     let py = y - p1.y;
 
-    let len_sq = dx * dx + dy * dy;
+    let len_sq = Point::new(dx, dy).length_squared();
     if len_sq < 1e-12 {
         return p1;
     }
 
-    let t = (px * dx + py * dy) / len_sq;
-    Point::new(p1.x + t * dx, p1.y + t * dy)
+    let t = Point::new(px, py).dot(Point::new(dx, dy)) / len_sq;
+    p1 + Point::new(dx, dy) * t
 }
 
 /// Finds the closest point on a line segment to a given point.
@@ -127,21 +129,20 @@ pub fn get_line_segment_closest_point(
 ) -> (f64, Point, f64) {
     let dx = p2.x - p1.x;
     let dy = p2.y - p1.y;
-    let len_sq = dx * dx + dy * dy;
+    let len_sq = Point::new(dx, dy).length_squared();
 
     let t = if len_sq < 1e-12 {
         0.0
     } else {
-        ((x - p1.x) * dx + (y - p1.y) * dy) / len_sq
+        (Point::new(x, y) - p1).dot(Point::new(dx, dy)) / len_sq
     };
 
     let t = t.clamp(0.0, 1.0);
 
-    let closest_x = p1.x + t * dx;
-    let closest_y = p1.y + t * dy;
-    let dist_sq = (x - closest_x).powi(2) + (y - closest_y).powi(2);
+    let closest = p1 + Point::new(dx, dy) * t;
+    let dist_sq = Point::new(x, y).distance_squared(closest);
 
-    (t, Point::new(closest_x, closest_y), dist_sq)
+    (t, closest, dist_sq)
 }
 
 /// Perpendicular distance from a point to a line segment.
@@ -150,22 +151,18 @@ pub fn get_point_line_distance(
     line_start: Point,
     line_end: Point,
 ) -> f64 {
-    let line_vec = (line_end.x - line_start.x, line_end.y - line_start.y);
-    let line_len = (line_vec.0 * line_vec.0 + line_vec.1 * line_vec.1).sqrt();
+    let line_vec =
+        Point::new(line_end.x - line_start.x, line_end.y - line_start.y);
+    let line_len = line_vec.length();
     if line_len < 1e-6 {
-        let dx = point.x - line_start.x;
-        let dy = point.y - line_start.y;
-        return (dx * dx + dy * dy).sqrt();
+        return (point - line_start).length();
     }
-    let line_unit = (line_vec.0 / line_len, line_vec.1 / line_len);
-    let point_vec = (point.x - line_start.x, point.y - line_start.y);
-    let mut proj_len = point_vec.0 * line_unit.0 + point_vec.1 * line_unit.1;
+    let line_unit = line_vec.normalize();
+    let point_vec = point - line_start;
+    let mut proj_len = point_vec.dot(line_unit);
     proj_len = proj_len.max(0.0).min(line_len);
-    let closest_x = line_start.x + proj_len * line_unit.0;
-    let closest_y = line_start.y + proj_len * line_unit.1;
-    let dx = point.x - closest_x;
-    let dy = point.y - closest_y;
-    (dx * dx + dy * dy).sqrt()
+    let closest = line_start + line_unit * proj_len;
+    (point - closest).length()
 }
 
 /// Finds all intersection parameters along a line segment with multiple polygons.
@@ -316,15 +313,15 @@ pub fn get_angle_at_vertex(p0: Point, p1: Point, p2: Point) -> f64 {
     let v2x = p2.x - p1.x;
     let v2y = p2.y - p1.y;
 
-    let mag_v1 = v1x.hypot(v1y);
-    let mag_v2 = v2x.hypot(v2y);
+    let mag_v1 = Point::new(v1x, v1y).length();
+    let mag_v2 = Point::new(v2x, v2y).length();
     let mag_prod = mag_v1 * mag_v2;
 
     if mag_prod < 1e-9 {
         return PI;
     }
 
-    let dot = v1x * v2x + v1y * v2y;
+    let dot = Point::new(v1x, v1y).dot(Point::new(v2x, v2y));
     let cos_theta = (-1.0_f64).max(1.0_f64).min(dot / mag_prod);
 
     cos_theta.acos()

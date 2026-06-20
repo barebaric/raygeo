@@ -87,8 +87,7 @@ pub fn get_polygon_signed_area(polygon: &[Point]) -> f64 {
     let mut area = 0.0;
     for i in 0..n {
         let j = (i + 1) % n;
-        area += polygon[i].x * polygon[j].y;
-        area -= polygon[j].x * polygon[i].y;
+        area += polygon[i].perp_dot(polygon[j]);
     }
     area / 2.0
 }
@@ -108,9 +107,7 @@ pub fn get_polygon_perimeter(polygon: &Polygon) -> f64 {
     for i in 0..n {
         let p1 = polygon[i];
         let p2 = polygon[(i + 1) % n];
-        let dx = p2.x - p1.x;
-        let dy = p2.y - p1.y;
-        perimeter += (dx * dx + dy * dy).sqrt();
+        perimeter += p1.distance(p2);
     }
     perimeter
 }
@@ -121,22 +118,17 @@ pub fn point_line_distance(
     line_start: Point,
     line_end: Point,
 ) -> f64 {
-    let line_vec = (line_end.x - line_start.x, line_end.y - line_start.y);
-    let line_len = (line_vec.0 * line_vec.0 + line_vec.1 * line_vec.1).sqrt();
+    let line_vec = line_end - line_start;
+    let line_len = line_vec.length();
     if line_len < 1e-6 {
-        let dx = point.x - line_start.x;
-        let dy = point.y - line_start.y;
-        return (dx * dx + dy * dy).sqrt();
+        return point.distance(line_start);
     }
-    let line_unit = (line_vec.0 / line_len, line_vec.1 / line_len);
-    let point_vec = (point.x - line_start.x, point.y - line_start.y);
-    let mut proj_len = point_vec.0 * line_unit.0 + point_vec.1 * line_unit.1;
+    let line_unit = line_vec.normalize();
+    let point_vec = point - line_start;
+    let mut proj_len = point_vec.dot(line_unit);
     proj_len = proj_len.max(0.0).min(line_len);
-    let closest_x = line_start.x + proj_len * line_unit.0;
-    let closest_y = line_start.y + proj_len * line_unit.1;
-    let dx = point.x - closest_x;
-    let dy = point.y - closest_y;
-    (dx * dx + dy * dy).sqrt()
+    let closest = line_start + line_unit * proj_len;
+    point.distance(closest)
 }
 
 /// Extract all edges from a polygon as (start, end) point pairs.
@@ -322,7 +314,7 @@ pub fn get_polygon_centroid(polygon: &Polygon) -> Point {
     let mut signed_area = 0.0;
     for i in 0..n {
         let j = (i + 1) % n;
-        let cross = polygon[i].x * polygon[j].y - polygon[j].x * polygon[i].y;
+        let cross = polygon[i].perp_dot(polygon[j]);
         signed_area += cross;
         cx += (polygon[i].x + polygon[j].x) * cross;
         cy += (polygon[i].y + polygon[j].y) * cross;
@@ -424,7 +416,7 @@ pub fn scale_polygon(polygon: &Polygon, sx: f64, sy: Option<f64>) -> Polygon {
 }
 
 fn cross(o: Point, a: Point, b: Point) -> f64 {
-    (a.x - o.x) * (b.y - o.y) - (a.y - o.y) * (b.x - o.x)
+    (a - o).perp_dot(b - o)
 }
 
 /// Check if a polygon is convex.
@@ -745,7 +737,7 @@ pub fn is_point_in_polygon(point: Point, polygon: &Polygon) -> bool {
         let p2x = p2.x;
         let p2y = p2.y;
 
-        let cross_product = (y - p1y) * (p2x - p1x) - (x - p1x) * (p2y - p1y);
+        let cross_product = (Point::new(x, y) - p1).perp_dot(p2 - p1);
         if cross_product.abs() < 1e-9
             && p1x.min(p2x) <= x
             && x <= p1x.max(p2x)

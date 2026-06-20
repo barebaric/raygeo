@@ -11,6 +11,8 @@
 
 use std::f64::consts::PI;
 
+use glam::{DVec2, DVec3};
+
 use crate::constants::EPSILON_INTERSECT;
 use crate::geo::algo::interp::solve_quadratic;
 use crate::geo::shape::line::get_line_segment_closest_point;
@@ -293,9 +295,9 @@ pub fn linearize_bezier_from_params(
         Point3D::new(c2_2d.x, c2_2d.y, z0 * (1.0 / 3.0) + z1 * (2.0 / 3.0));
 
     // Estimate curve length using polygon approximation
-    let l01 = (p0.x - c1.x).hypot(p0.y - c1.y);
-    let l12 = (c1.x - c2.x).hypot(c1.y - c2.y);
-    let l23 = (c2.x - p1.x).hypot(c2.y - p1.y);
+    let l01 = p0.distance(c1);
+    let l12 = c1.distance(c2);
+    let l23 = c2.distance(p1);
     let estimated_len = l01 + l12 + l23;
     let num_steps = (estimated_len / resolution).ceil().max(2.0) as usize;
 
@@ -374,15 +376,15 @@ pub fn is_bezier_flat(
 ) -> bool {
     let vx = p1.x - p0.x;
     let vy = p1.y - p0.y;
-    let norm_sq = vx * vx + vy * vy;
+    let norm_sq = DVec2::new(vx, vy).length_squared();
 
     if norm_sq < 1e-9 {
-        let d1_sq = (c1.x - p0.x).powi(2) + (c1.y - p0.y).powi(2);
-        let d2_sq = (c2.x - p0.x).powi(2) + (c2.y - p0.y).powi(2);
+        let d1_sq = c1.distance_squared(p0);
+        let d2_sq = c2.distance_squared(p0);
         d1_sq <= tolerance_sq && d2_sq <= tolerance_sq
     } else {
-        let cross1 = vx * (c1.y - p0.y) - vy * (c1.x - p0.x);
-        let cross2 = vx * (c2.y - p0.y) - vy * (c2.x - p0.x);
+        let cross1 = DVec2::new(vx, vy).perp_dot(c1 - p0);
+        let cross2 = DVec2::new(vx, vy).perp_dot(c2 - p0);
         let dist1_sq = (cross1 * cross1) / norm_sq;
         let dist2_sq = (cross2 * cross2) / norm_sq;
         dist1_sq <= tolerance_sq && dist2_sq <= tolerance_sq
@@ -469,7 +471,7 @@ pub fn linearize_bezier_segment(
 }
 
 fn _lerp2(a: Point, b: Point, t: f64) -> Point {
-    Point::new(a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t)
+    a.lerp(b, t)
 }
 
 fn _add_axis_extrema(
@@ -660,13 +662,9 @@ pub fn get_perpendicular_dist_sq(
     vz: f64,
     norm_sq: f64,
 ) -> f64 {
-    let px = pt.x - origin.x;
-    let py = pt.y - origin.y;
-    let pz = pt.z - origin.z;
-    let cx = py * vz - pz * vy;
-    let cy = pz * vx - px * vz;
-    let cz = px * vy - py * vx;
-    (cx * cx + cy * cy + cz * cz) / norm_sq
+    let p = pt - origin;
+    let cross = p.cross(DVec3::new(vx, vy, vz));
+    cross.length_squared() / norm_sq
 }
 
 pub fn get_bezier_flatness_sq(
@@ -675,30 +673,24 @@ pub fn get_bezier_flatness_sq(
     c: Point3D,
     d: Point3D,
 ) -> f64 {
-    let vx = d.x - a.x;
-    let vy = d.y - a.y;
-    let vz = d.z - a.z;
-    let norm_sq = vx * vx + vy * vy + vz * vz;
+    let v = d - a;
+    let norm_sq = v.length_squared();
 
     if norm_sq < 1e-9 {
-        let d1 =
-            (b.x - a.x).powi(2) + (b.y - a.y).powi(2) + (b.z - a.z).powi(2);
-        let d2 =
-            (c.x - a.x).powi(2) + (c.y - a.y).powi(2) + (c.z - a.z).powi(2);
-        return d1.max(d2);
+        return (b - a).length_squared().max((c - a).length_squared());
     }
 
-    let dist_b = get_perpendicular_dist_sq(b, a, vx, vy, vz, norm_sq);
-    let dist_c = get_perpendicular_dist_sq(c, a, vx, vy, vz, norm_sq);
+    let dist_b = get_perpendicular_dist_sq(b, a, v.x, v.y, v.z, norm_sq);
+    let dist_c = get_perpendicular_dist_sq(c, a, v.x, v.y, v.z, norm_sq);
     dist_b.max(dist_c)
 }
 
 /// Computes the arc length of a cubic Bezier curve using adaptive
 /// step sizing based on the control polygon length.
 pub fn get_bezier_length(p0: Point, c1: Point, c2: Point, p1: Point) -> f64 {
-    let l01 = (p0.x - c1.x).hypot(p0.y - c1.y);
-    let l12 = (c1.x - c2.x).hypot(c1.y - c2.y);
-    let l23 = (c2.x - p1.x).hypot(c2.y - p1.y);
+    let l01 = p0.distance(c1);
+    let l12 = c1.distance(c2);
+    let l23 = c2.distance(p1);
     let estimated_len = l01 + l12 + l23;
     let num_steps = (estimated_len / 0.1).ceil().max(2.0) as usize;
     let step_f = num_steps as f64;
@@ -707,7 +699,7 @@ pub fn get_bezier_length(p0: Point, c1: Point, c2: Point, p1: Point) -> f64 {
     for i in 1..=num_steps {
         let t = i as f64 / step_f;
         let pt = get_bezier_point_at(p0, c1, c2, p1, t);
-        total += (pt.x - prev.x).hypot(pt.y - prev.y);
+        total += pt.distance(prev);
         prev = pt;
     }
     total

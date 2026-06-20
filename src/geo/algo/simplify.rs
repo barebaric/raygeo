@@ -1,4 +1,4 @@
-use crate::types::{Command, Point3D};
+use crate::types::{Command, Point, Point3D};
 
 /// Simplify a sequence of 3D points using the Ramer-Douglas-Peucker algorithm.
 pub fn simplify_polyline(points: &[Point3D], tolerance: f64) -> Vec<Point3D> {
@@ -39,8 +39,9 @@ pub fn simplify_polyline(points: &[Point3D], tolerance: f64) -> Vec<Point3D> {
             }
         } else {
             for (i, p) in points.iter().enumerate().take(end).skip(start + 1) {
-                let cross = (p.x - p_start.0) * chord_vec.1
-                    - (p.y - p_start.1) * chord_vec.0;
+                let cross = (Point::new(p.x, p.y)
+                    - Point::new(p_start.0, p_start.1))
+                .perp_dot(Point::new(chord_vec.0, chord_vec.1));
                 let d_sq = (cross * cross) / chord_len_sq;
                 if d_sq > max_dist_sq {
                     max_dist_sq = d_sq;
@@ -120,8 +121,9 @@ pub fn simplify_data(data: &[Command], tolerance: f64) -> Vec<Command> {
                     continue;
                 }
                 let p = cmd.end_point();
-                let cross = (p.x - p_start.x) * (p_end.y - p_start.y)
-                    - (p.y - p_start.y) * (p_end.x - p_start.x);
+                let cross = (Point::new(p.x, p.y)
+                    - Point::new(p_start.x, p_start.y))
+                .perp_dot(Point::new(p_end.x - p_start.x, p_end.y - p_start.y));
                 let d_sq = (cross * cross) / chord_len_sq_val;
                 if d_sq > max_dist_sq {
                     max_dist_sq = d_sq;

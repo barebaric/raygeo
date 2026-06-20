@@ -207,10 +207,7 @@ pub fn get_polygon_perimeter_3d(polygon: &[Point3D]) -> f64 {
     for i in 0..n {
         let p1 = polygon[i];
         let p2 = polygon[(i + 1) % n];
-        let dx = p2.x - p1.x;
-        let dy = p2.y - p1.y;
-        let dz = p2.z - p1.z;
-        perimeter += (dx * dx + dy * dy + dz * dz).sqrt();
+        perimeter += p1.distance(p2);
     }
     perimeter
 }
@@ -336,7 +333,7 @@ pub fn get_polygon_centroid_3d(polygon: &[Point3D]) -> Point3D {
     let mut signed_area = 0.0;
     for i in 0..n {
         let j = (i + 1) % n;
-        let cross = polygon[i].x * polygon[j].y - polygon[j].x * polygon[i].y;
+        let cross = polygon[i].truncate().perp_dot(polygon[j].truncate());
         signed_area += cross;
         cx += (polygon[i].x + polygon[j].x) * cross;
         cy += (polygon[i].y + polygon[j].y) * cross;
@@ -623,9 +620,9 @@ pub fn offset_polyline_3d(
 
         if len_in < 1e-12 || len_out < 1e-12 {
             let dir = if len_out >= 1e-12 {
-                e_out / len_out
+                e_out.normalize()
             } else if len_in >= 1e-12 {
-                -e_in / len_in
+                (-e_in).normalize()
             } else {
                 result.push(curr);
                 continue;

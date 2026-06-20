@@ -125,17 +125,14 @@ pub fn resample_polyline(
     for i in 0..num_segments {
         let p1 = points[i];
         let p2 = points[(i + 1) % points.len()];
-        let dx = p2.x - p1.x;
-        let dy = p2.y - p1.y;
-        let dist = dx.hypot(dy);
+        let dist = p1.distance(p2);
 
         if dist > max_segment_length {
             let num_sub = (dist / max_segment_length).ceil() as i32;
             for j in 1..num_sub {
                 let t = j as f64 / num_sub as f64;
-                let px = p1.x * (1.0 - t) + p2.x * t;
-                let py = p1.y * (1.0 - t) + p2.y * t;
-                out.push(Point3D::new(px, py, p1.z));
+                let pt = p1.lerp(p2, t);
+                out.push(Point3D::new(pt.x, pt.y, p1.z));
             }
         }
 
@@ -169,9 +166,7 @@ pub fn smooth_polyline(
     let is_closed = is_closed.unwrap_or_else(|| {
         if points.len() >= 3 {
             let tol = 1e-6;
-            (points[0].x - points[points.len() - 1].x)
-                .hypot(points[0].y - points[points.len() - 1].y)
-                < tol
+            points[0].distance(points[points.len() - 1]) < tol
         } else {
             false
         }
