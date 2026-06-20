@@ -1,9 +1,11 @@
 """Generate circle intersection example images."""
 
 import matplotlib.pyplot as plt
+from matplotlib.lines import Line2D
 from matplotlib.patches import Circle as MplCircle
 
 from raygeo.geo.shape.circle import (
+    find_tangent_circle_centers,
     get_circle_circle_intersections,
     get_line_circle_intersections,
 )
@@ -62,11 +64,116 @@ def generate_intersections():
     return fig
 
 
+def generate_tangent_circles():
+    """Find circles tangent to a segment through a point."""
+    seg_a, seg_b = (2.0, 0.0), (10.0, 0.0)
+    pass_through = (6.0, 5.0)
+    radius = 3.0
+    results = find_tangent_circle_centers(pass_through, seg_a, seg_b, radius)
+
+    fig, ax = plt.subplots(figsize=(8, 8))
+
+    ax.plot(
+        [seg_a[0], seg_b[0]],
+        [seg_a[1], seg_b[1]],
+        color="steelblue",
+        linewidth=3,
+        label="Segment",
+    )
+    ax.plot(
+        pass_through[0],
+        pass_through[1],
+        "o",
+        color="k",
+        markersize=10,
+        label="Pass-through point",
+    )
+    colors = ["tomato", "limegreen", "gold", "mediumpurple"]
+    for i, (center, tangent) in enumerate(results):
+        c = colors[i % len(colors)]
+        circle = MplCircle(
+            center,
+            radius,
+            fill=False,
+            edgecolor=c,
+            linewidth=2,
+            linestyle="--",
+        )
+        ax.add_patch(circle)
+        ax.plot(
+            center[0],
+            center[1],
+            "s",
+            color=c,
+            markersize=8,
+            label=f"Centre {i + 1}" if i == 0 else None,
+        )
+        ax.plot(
+            tangent[0],
+            tangent[1],
+            "*",
+            color=c,
+            markersize=12,
+            label=f"Tangent {i + 1}" if i == 0 else None,
+        )
+
+    ax.set_aspect("equal")
+    ax.grid(True, alpha=0.3)
+    ax.set_xlim(-2, 14)
+    ax.set_ylim(-6, 10)
+    ax.set_title(
+        f"Circles r={radius} tangent to segment through point", fontsize=14
+    )
+    handles = [
+        Line2D([], [], color="steelblue", linewidth=3, label="Segment"),
+        Line2D(
+            [],
+            [],
+            marker="o",
+            color="k",
+            linestyle="None",
+            markersize=10,
+            label="Pass-through point",
+        ),
+    ]
+    if results:
+        handles.append(
+            Line2D(
+                [],
+                [],
+                marker="s",
+                color=colors[0],
+                linestyle="None",
+                markersize=8,
+                label="Center",
+            )
+        )
+        handles.append(
+            Line2D(
+                [],
+                [],
+                marker="*",
+                color=colors[0],
+                linestyle="None",
+                markersize=12,
+                label="Tangent point",
+            )
+        )
+    ax.legend(handles=handles, fontsize=11)
+    fig.tight_layout()
+    return fig
+
+
 __docs_target__ = ["raygeo.geo.shape.circle.md"]
 __images__ = [
     {
         "heading": "get_circle_circle_intersections",
         "caption": "Circle-circle and line-circle intersection points",
         "function": generate_intersections,
+    },
+    {
+        "heading": "find_tangent_circle_centers",
+        "caption": "Find circles tangent to a segment through a given point",
+        "function": generate_tangent_circles,
     },
 ]

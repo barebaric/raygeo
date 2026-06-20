@@ -27,9 +27,10 @@ pub use bezier::{
     linearize_bezier_segment, split_bezier,
 };
 pub use circle::{
-    does_circle_intersect_rect, get_circle_circle_intersections,
-    get_line_circle_intersections, is_circle_inside_rect,
-    line_segment_intersects_circle, project_point_onto_circle,
+    does_circle_intersect_rect, find_tangent_circle_centers,
+    get_circle_circle_intersections, get_line_circle_intersections,
+    is_circle_inside_rect, line_segment_intersects_circle,
+    project_point_onto_circle,
 };
 pub use line::{
     does_line_segment_intersect_circle, does_line_segment_intersect_rect,

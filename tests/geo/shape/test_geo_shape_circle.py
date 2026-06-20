@@ -4,6 +4,7 @@ import pytest
 
 from raygeo.geo.shape.circle import (
     does_circle_intersect_rect,
+    find_tangent_circle_centers,
     get_circle_circle_intersections,
     get_line_circle_intersections,
     is_circle_inside_rect,
@@ -238,3 +239,103 @@ class TestGetLineCircleIntersections:
         assert len(results) == 2
         sorted_pts = sorted(results)
         assert sorted_pts == pytest.approx([(-1, 0), (1, 0)])
+
+
+def _dist(p, q):
+    return math.hypot(p[0] - q[0], p[1] - q[1])
+
+
+class TestFindTangentCircleCenters:
+    def test_two_solutions_perpendicular(self):
+        """Point perpendicular to segment midpoint → two circles."""
+        results = find_tangent_circle_centers((5, 3), (0, 0), (10, 0), 2.0)
+        assert len(results) == 2
+        for center, tangent in results:
+            assert _dist(center, (5, 3)) == pytest.approx(2.0)
+            assert _dist(center, tangent) == pytest.approx(2.0)
+            assert 0.0 <= tangent[0] <= 10.0
+            assert tangent[1] == pytest.approx(0.0)
+
+    def test_solutions_on_opposite_sides(self):
+        """Point between the two offset lines yields one circle per side."""
+        results = find_tangent_circle_centers((5, 3), (0, 0), (10, 0), 2.0)
+        assert len(results) == 2
+        for center, tangent in results:
+            assert _dist(center, (5, 3)) == pytest.approx(2.0)
+            assert _dist(center, tangent) == pytest.approx(2.0)
+            assert tangent[1] == pytest.approx(0.0)
+            assert 0.0 <= tangent[0] <= 10.0
+
+    def test_four_results_point_on_segment(self):
+        """Point on the segment gives 4 entries (2 per side, duplicated)."""
+        results = find_tangent_circle_centers((5, 0), (0, 0), (10, 0), 3.0)
+        assert len(results) == 4
+        for center, tangent in results:
+            assert _dist(center, (5, 0)) == pytest.approx(3.0)
+            assert _dist(center, tangent) == pytest.approx(3.0)
+            assert tangent == (5.0, 0.0)
+
+    def test_one_solution_tangent(self):
+        """Point at distance exactly 2r → one circle per side (tangent)."""
+        results = find_tangent_circle_centers((5, 10), (0, 0), (10, 0), 5.0)
+        assert len(results) == 2
+        for center, tangent in results:
+            assert _dist(center, (5, 10)) == pytest.approx(5.0)
+            assert _dist(center, tangent) == pytest.approx(5.0)
+
+    def test_no_solution_radius_too_small(self):
+        """Point too far from line to be reached with given radius."""
+        results = find_tangent_circle_centers((5, 20), (0, 0), (10, 0), 5.0)
+        assert results == []
+
+    def test_point_at_segment_endpoint(self):
+        """Point at seg_a yields 4 entries (2 per side, duplicated)."""
+        results = find_tangent_circle_centers((0, 0), (0, 0), (10, 0), 4.0)
+        assert len(results) == 4
+        for center, tangent in results:
+            assert _dist(center, (0, 0)) == pytest.approx(4.0)
+            assert _dist(center, tangent) == pytest.approx(4.0)
+            assert 0.0 <= tangent[0] <= 10.0
+            assert tangent[1] == pytest.approx(0.0)
+
+    def test_no_solution_beyond_endpoint(self):
+        """Tangent point would fall outside the segment → filtered out."""
+        results = find_tangent_circle_centers((-10, 10), (0, 0), (10, 0), 5.0)
+        # All candidate tangent points likely fall outside [0, 10]
+        assert results == []
+
+    def test_vertical_segment(self):
+        """Vertical segment still works."""
+        results = find_tangent_circle_centers((3, 5), (0, 0), (0, 10), 2.0)
+        assert len(results) == 2
+        for center, tangent in results:
+            assert _dist(center, (3, 5)) == pytest.approx(2.0)
+            assert _dist(center, tangent) == pytest.approx(2.0)
+            assert tangent[0] == pytest.approx(0.0)
+            assert 0.0 <= tangent[1] <= 10.0
+
+    def test_zero_length_segment(self):
+        """Zero-length segment returns empty."""
+        assert find_tangent_circle_centers((0, 0), (5, 0), (5, 0), 2.0) == []
+
+    def test_non_positive_radius(self):
+        """Zero or negative radius returns empty."""
+        assert find_tangent_circle_centers((0, 0), (0, 0), (10, 0), 0.0) == []
+        assert find_tangent_circle_centers((0, 0), (0, 0), (10, 0), -1.0) == []
+        assert (
+            find_tangent_circle_centers((0, 0), (0, 0), (10, 0), -0.001) == []
+        )
+
+    def test_all_results_unique(self):
+        """All returned (center, tangent) pairs should be distinct."""
+        results = find_tangent_circle_centers((5, 6), (0, 0), (10, 0), 4.0)
+        pairs = [
+            (
+                round(c[0], 10),
+                round(c[1], 10),
+                round(t[0], 10),
+                round(t[1], 10),
+            )
+            for c, t in results
+        ]
+        assert len(set(pairs)) == len(pairs)

@@ -32,6 +32,32 @@ Check if a circle intersects a rectangle.
 | _Returns_    | `bool`        | True if the circle intersects the rectangle. |
 | _Complexity_ |               | O(1) time, O(1) space                        |
 
+### `find_tangent_circle_centers()`
+
+```python
+find_tangent_circle_centers(
+    pass_through: types.Point,
+    seg_a: types.Point,
+    seg_b: types.Point,
+    radius: float,
+) -> list[tuple[types.Point, types.Point]]
+```
+
+Find circle centres that pass through a point and are tangent to a segment.
+
+| Parameter      | Type                                    | Description                                |
+| -------------- | --------------------------------------- | ------------------------------------------ |
+| `pass_through` | `types.Point`                           | Point the circle must pass through (x, y). |
+| `seg_a`        | `types.Point`                           | Start of the tangent segment (x, y).       |
+| `seg_b`        | `types.Point`                           | End of the tangent segment (x, y).         |
+| `radius`       | `float`                                 | Circle radius.                             |
+| _Returns_      | `list[tuple[types.Point, types.Point]]` | List of (centre, tangent_point) pairs.     |
+| _Complexity_   |                                         | O(1) time, O(1) space                      |
+
+![Find circles tangent to a segment through a given point](images/geo-shape-circle-tangent-circles.png)
+
+_Find circles tangent to a segment through a given point_
+
 ### `get_circle_circle_intersections()`
 
 ```python

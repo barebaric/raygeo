@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import streamlit as st
 
 from raygeo.geo.shape.circle import (
+    find_tangent_circle_centers,
     get_circle_circle_intersections,
     get_line_circle_intersections,
 )
@@ -12,7 +13,9 @@ def page_circle_intersections():
     st.header("Circle Intersections")
     st.write("Find intersection points between circles and lines.")
 
-    tab_cc, tab_lc = st.tabs(["Circle-Circle", "Line-Circle"])
+    tab_cc, tab_lc, tab_tc = st.tabs(
+        ["Circle-Circle", "Line-Circle", "Tangent Circles"]
+    )
 
     with tab_cc:
         c1, c2 = st.columns(2)
@@ -113,4 +116,117 @@ def page_circle_intersections():
             st.success(f"Found {len(pts)} intersection point(s)")
         else:
             st.info("No intersections")
+        st.pyplot(fig)
+
+    with tab_tc:
+        st.header("Tangent Circles")
+        st.write(
+            "Find circles of a given radius that pass through a point "
+            "and are tangent to a segment."
+        )
+
+        c1, c2 = st.columns(2)
+        with c1:
+            pt_x = st.number_input(
+                "Pass-through X", -100.0, 100.0, 6.0, key="tc_ptx"
+            )
+            pt_y = st.number_input(
+                "Pass-through Y", -100.0, 100.0, 5.0, key="tc_pty"
+            )
+        with c2:
+            radius = st.number_input("Radius", 0.01, 100.0, 3.0, key="tc_r")
+
+        st.subheader("Segment")
+        cc1, cc2 = st.columns(2)
+        with cc1:
+            ax1 = st.number_input("A X", -100.0, 100.0, 2.0, key="tc_ax")
+            ay1 = st.number_input("A Y", -100.0, 100.0, 0.0, key="tc_ay")
+        with cc2:
+            bx1 = st.number_input("B X", -100.0, 100.0, 10.0, key="tc_bx")
+            by1 = st.number_input("B Y", -100.0, 100.0, 0.0, key="tc_by")
+
+        results = find_tangent_circle_centers(
+            (pt_x, pt_y), (ax1, ay1), (bx1, by1), radius
+        )
+
+        fig, ax = plt.subplots(figsize=(9, 8))
+        ax.plot(
+            [ax1, bx1],
+            [ay1, by1],
+            color="steelblue",
+            lw=3,
+            label="Segment",
+        )
+        ax.plot(
+            pt_x,
+            pt_y,
+            "o",
+            color="k",
+            markersize=10,
+            label="Pass-through",
+        )
+
+        colors = ["tomato", "limegreen", "gold", "mediumpurple"]
+        for i, (center, tangent) in enumerate(results):
+            c = colors[i % len(colors)]
+            circ = mpatches.Circle(
+                center,
+                radius,
+                fill=False,
+                edgecolor=c,
+                lw=2,
+                linestyle="--",
+            )
+            ax.add_patch(circ)
+            ax.plot(
+                center[0],
+                center[1],
+                "s",
+                color=c,
+                markersize=8,
+            )
+            ax.plot(
+                tangent[0],
+                tangent[1],
+                "*",
+                color=c,
+                markersize=12,
+            )
+
+        ax.set_aspect("equal")
+        ax.grid(True, alpha=0.3)
+        all_xs = (
+            [pt_x, ax1, bx1]
+            + [c[0] - radius for c, _ in results]
+            + [c[0] + radius for c, _ in results]
+        )
+        all_ys = (
+            [pt_y, ay1, by1]
+            + [c[1] - radius for c, _ in results]
+            + [c[1] + radius for c, _ in results]
+        )
+        if all_xs:
+            margin = (
+                max(
+                    max(all_xs) - min(all_xs),
+                    max(all_ys) - min(all_ys),
+                    radius,
+                )
+                * 0.3
+                + 1
+            )
+            ax.set_xlim(min(all_xs) - margin, max(all_xs) + margin)
+            ax.set_ylim(min(all_ys) - margin, max(all_ys) + margin)
+        ax.set_title(
+            f"Tangent Circles: {len(results)} result(s), r={radius}",
+            fontsize=13,
+        )
+        ax.legend(fontsize=10)
+        if results:
+            st.success(f"Found {len(results)} tangent circle(s)")
+        else:
+            st.info(
+                "No tangent circles — radius too small or point/segment "
+                "geometry doesn't allow it"
+            )
         st.pyplot(fig)

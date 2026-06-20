@@ -167,3 +167,52 @@ pub fn line_segment_intersects_circle(
         get_line_segment_closest_point(p1, p2, center.x, center.y);
     dist_sq <= radius * radius
 }
+
+/// Find centres of circles with the given `radius` that pass through
+/// `pass_through` and are tangent to the segment `[seg_a, seg_b]`.
+///
+/// Returns `(centre, tangent_point)` pairs.  The `tangent_point` is the
+/// point on the segment where the circle touches, guaranteed to lie within
+/// the segment (parameter in `[0, 1]`).
+///
+/// The centre is at distance `radius` from both `pass_through` and the
+/// segment (perpendicular distance).  For each side of the segment there
+/// are 0, 1, or 2 candidate centres, giving up to 4 results total.
+pub fn find_tangent_circle_centers(
+    pass_through: Point,
+    seg_a: Point,
+    seg_b: Point,
+    radius: f64,
+) -> Vec<(Point, Point)> {
+    let d = seg_b - seg_a;
+    let seg_len = d.length();
+    if seg_len < 1e-12 || radius <= 0.0 {
+        return vec![];
+    }
+    let d_unit = d / seg_len;
+    let n = Point::new(-d_unit.y, d_unit.x);
+
+    let mut results = Vec::new();
+
+    for &side in &[1.0, -1.0] {
+        // Offset line: parallel to the segment at perpendicular distance r.
+        let offset_origin = seg_a + n * (side * radius);
+        let f = offset_origin - pass_through;
+        let fd = f.dot(d_unit);
+        let disc = fd * fd - f.length_squared() + radius * radius;
+        if disc < 0.0 {
+            continue;
+        }
+        let sq = disc.sqrt();
+        for t in [(-fd - sq), (-fd + sq)] {
+            if t < 0.0 || t > seg_len {
+                continue;
+            }
+            let center = offset_origin + d_unit * t;
+            let tangent = seg_a + d_unit * t;
+            results.push((center, tangent));
+        }
+    }
+
+    results
+}

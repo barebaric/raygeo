@@ -11,9 +11,10 @@ circle's circumference.
 
 use super::super::flex_point::{option_point_to_tuple, points_to_tuples};
 use crate::geo::shape::circle::{
-    does_circle_intersect_rect, get_circle_circle_intersections,
-    get_line_circle_intersections, is_circle_inside_rect,
-    line_segment_intersects_circle, project_point_onto_circle,
+    does_circle_intersect_rect, find_tangent_circle_centers,
+    get_circle_circle_intersections, get_line_circle_intersections,
+    is_circle_inside_rect, line_segment_intersects_circle,
+    project_point_onto_circle,
 };
 use crate::types::{Point, Rect};
 use pyo3::prelude::*;
@@ -32,6 +33,7 @@ pub fn register(shape_mod: &Bound<'_, PyModule>) -> PyResult<()> {
         does_circle_intersect_rect_py,
         line_segment_intersects_circle_py,
         project_point_onto_circle_py,
+        find_tangent_circle_centers_py,
     );
 
     shape_mod.add_submodule(&m)?;
@@ -247,4 +249,44 @@ fn project_point_onto_circle_py(
         Point::new(center.0, center.1),
         radius,
     ))
+}
+
+#[gen_stub_pyfunction(
+    python = r#"
+    import raygeo.geo.types
+
+    def find_tangent_circle_centers(
+        pass_through: types.Point,
+        seg_a: types.Point,
+        seg_b: types.Point,
+        radius: float,
+    ) -> list[tuple[types.Point, types.Point]]:
+        """Find circle centres that pass through a point and are tangent to a segment.
+
+        :param pass_through: Point the circle must pass through (x, y).
+        :param seg_a: Start of the tangent segment (x, y).
+        :param seg_b: End of the tangent segment (x, y).
+        :param radius: Circle radius.
+        :returns: List of (centre, tangent_point) pairs.
+        :complexity: O(1) time, O(1) space
+        """
+"#,
+    module = "raygeo.geo.shape.circle"
+)]
+#[pyfunction(name = "find_tangent_circle_centers")]
+fn find_tangent_circle_centers_py(
+    pass_through: (f64, f64),
+    seg_a: (f64, f64),
+    seg_b: (f64, f64),
+    radius: f64,
+) -> Vec<((f64, f64), (f64, f64))> {
+    find_tangent_circle_centers(
+        Point::new(pass_through.0, pass_through.1),
+        Point::new(seg_a.0, seg_a.1),
+        Point::new(seg_b.0, seg_b.1),
+        radius,
+    )
+    .into_iter()
+    .map(|(c, t)| ((c.x, c.y), (t.x, t.y)))
+    .collect()
 }

@@ -13,6 +13,7 @@ from raygeo.geo import types
 import typing
 __all__ = [
     "does_circle_intersect_rect",
+    "find_tangent_circle_centers",
     "get_circle_circle_intersections",
     "get_line_circle_intersections",
     "is_circle_inside_rect",
@@ -28,6 +29,18 @@ def does_circle_intersect_rect(center: types.Point, radius: float, rect: types.R
     :param radius: Circle radius.
     :param rect: Rectangle (x_min, y_min, x_max, y_max).
     :returns: True if the circle intersects the rectangle.
+    :complexity: O(1) time, O(1) space
+    """
+
+def find_tangent_circle_centers(pass_through: types.Point, seg_a: types.Point, seg_b: types.Point, radius: float) -> list[tuple[types.Point, types.Point]]:
+    r"""
+    Find circle centres that pass through a point and are tangent to a segment.
+    
+    :param pass_through: Point the circle must pass through (x, y).
+    :param seg_a: Start of the tangent segment (x, y).
+    :param seg_b: End of the tangent segment (x, y).
+    :param radius: Circle radius.
+    :returns: List of (centre, tangent_point) pairs.
     :complexity: O(1) time, O(1) space
     """
 
