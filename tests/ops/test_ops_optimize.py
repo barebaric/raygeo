@@ -1,3 +1,5 @@
+import importlib
+
 import pytest
 
 from raygeo.ops import Ops
@@ -990,8 +992,6 @@ class TestOptimizeBothAPIs:
         assert _count_cuts(ops) == 2
 
     def test_module_function_api(self):
-        import importlib
-
         mod = importlib.import_module("raygeo.ops.algo.optimize")
         optimize_travel = mod.optimize_travel
 
@@ -1005,8 +1005,6 @@ class TestOptimizeBothAPIs:
         assert _count_cuts(ops) == 2
 
     def test_both_apis_produce_same_result(self):
-        import importlib
-
         mod = importlib.import_module("raygeo.ops.algo.optimize")
         optimize_fn = mod.optimize_travel
 

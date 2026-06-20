@@ -1,5 +1,5 @@
 use pyo3::prelude::*;
-use pyo3::types::{PyBytes, PyDict, PyList, PySlice, PyString};
+use pyo3::types::{PyByteArray, PyBytes, PyDict, PyList, PySlice, PyString};
 
 use crate::ops::{
     Axis, CommandCategory, CommandType, CoolantMode, MarkerCmd, MoveCmd,
@@ -493,8 +493,6 @@ pub fn ops_to_numpy_arrays(
     py: Python<'_>,
     ops: &crate::ops::Ops,
 ) -> PyResult<Py<PyDict>> {
-    use pyo3::types::PyByteArray;
-
     let num_cmds = ops.len();
 
     let num_arcs: usize = (0..num_cmds)

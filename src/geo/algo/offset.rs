@@ -21,7 +21,8 @@ use crate::geo::algo::topology::{
 };
 use crate::geo::geometry::Geometry;
 use crate::geo::shape::polygon::{
-    get_polygons_difference, offset_polygon_with_style, JoinStyle,
+    get_polygon_area, get_polygon_centroid, get_polygons_difference,
+    offset_polygon_with_style, JoinStyle,
 };
 use crate::types::{Point, Point3D, Polygon};
 
@@ -269,8 +270,6 @@ pub fn find_deepest_cores(
     if valid_tool_area.is_empty() || step_over <= 0.0 {
         return vec![];
     }
-
-    use crate::geo::shape::polygon::{get_polygon_area, get_polygon_centroid};
 
     let mut best_fragment: Option<Polygon> = None;
     let mut best_area = 0.0_f64;

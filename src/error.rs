@@ -2,6 +2,9 @@ use std::fmt;
 
 use thiserror::Error;
 
+#[cfg(feature = "python")]
+use pyo3::exceptions::{PyRuntimeError, PyTypeError, PyValueError};
+
 /// Error type for all RayGeo operations.
 #[derive(Error, Debug)]
 pub enum RaygeoError {
@@ -100,7 +103,6 @@ pub type RaygeoResult<T> = Result<T, RaygeoError>;
 #[cfg(feature = "python")]
 impl From<RaygeoError> for pyo3::PyErr {
     fn from(err: RaygeoError) -> Self {
-        use pyo3::exceptions::{PyRuntimeError, PyTypeError, PyValueError};
         match &err {
             RaygeoError::SvgParseError(_)
             | RaygeoError::SvgInvalidPath(_)

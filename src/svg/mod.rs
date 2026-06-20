@@ -1,7 +1,10 @@
 use std::f64::consts::PI;
 
+use svgtypes::PathSegment;
+
 use crate::error::{RaygeoError, RaygeoResult};
 use crate::geo::geometry::Geometry;
+use crate::geo::shape::arc::get_arc_sweep;
 use glam::{DMat3, DVec3};
 
 use crate::geo::math::{mat3_det2x2, mat3_transform};
@@ -587,8 +590,6 @@ pub fn parse_svg_path_data(
     scale_x: f64,
     scale_y: f64,
 ) -> RaygeoResult<Vec<Geometry>> {
-    use svgtypes::PathSegment;
-
     let mut ctx = PathBuildContext::new(transform, scale_x, scale_y);
     let mut has_valid = false;
     let mut parse_error = false;
@@ -1250,8 +1251,6 @@ pub fn geometry_to_svg_path(
     width: i32,
     height: i32,
 ) -> String {
-    use crate::geo::shape::arc::get_arc_sweep;
-
     let data = geometry.data();
     if data.is_empty() {
         return String::new();

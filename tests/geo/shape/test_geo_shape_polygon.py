@@ -2,6 +2,7 @@
 Tests for raygeo.polygon module.
 """
 
+import math
 from typing import List, cast
 
 import numpy as np
@@ -553,8 +554,6 @@ class TestIsConvex:
         assert is_polygon_convex(polygon) is True
 
     def test_hexagon(self):
-        import math
-
         angle = 0
         polygon = []
         for i in range(6):

@@ -12,6 +12,7 @@ use std::f64::consts::PI;
 use glam::DVec3;
 
 use crate::constants::EPSILON_COLLINEAR;
+use crate::geo::shape::circle::get_circle_circle_intersections;
 use crate::geo::shape::line::{
     does_line_segment_intersect_rect, get_line_segment_closest_point,
 };
@@ -525,8 +526,6 @@ pub fn does_arc_intersect_circle(
     circle_center: Point,
     circle_radius: f64,
 ) -> bool {
-    use crate::geo::shape::circle::get_circle_circle_intersections;
-
     let radius = (start_pos.x - center.x).hypot(start_pos.y - center.y);
     if radius < 1e-9 {
         return (start_pos.x - circle_center.x)

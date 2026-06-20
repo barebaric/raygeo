@@ -1,4 +1,6 @@
 use crate::geo::algo::spatial_grid2d::SpatialGrid;
+use crate::geo::shape::polygon::get_polygon_area;
+use crate::geo::shape::polygon::get_polygons_group_difference;
 use crate::geo::shape::polygon::get_polygons_union;
 use crate::geo::shape::polygon::get_segment_swept_polygon;
 use crate::types::{Point, Polygon, Rect};
@@ -96,12 +98,10 @@ impl ClearedArea {
         if bounds.is_empty() {
             return vec![];
         }
-        use crate::geo::shape::polygon::get_polygons_group_difference;
         get_polygons_group_difference(bounds, &self.fragments)
     }
 
     pub fn total_area(&self) -> f64 {
-        use crate::geo::shape::polygon::get_polygon_area;
         self.fragments.iter().map(get_polygon_area).sum()
     }
 

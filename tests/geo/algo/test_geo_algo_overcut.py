@@ -2,6 +2,7 @@ import math
 
 import pytest
 
+import raygeo.geo.algo.overcut as overcut_mod
 from raygeo.geo import Geometry
 from raygeo.geo.algo.overcut import apply_overcut
 
@@ -220,11 +221,7 @@ class TestOvercutExactValues:
 
 class TestOvercutImport:
     def test_import_from_algo(self):
-        from raygeo.geo.algo.overcut import apply_overcut as fn
-
-        assert callable(fn)
+        assert callable(apply_overcut)
 
     def test_import_from_algo_module(self):
-        import raygeo.geo.algo.overcut as overcut_mod
-
         assert hasattr(overcut_mod, "apply_overcut")

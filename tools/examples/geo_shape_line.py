@@ -3,6 +3,7 @@
 import matplotlib.pyplot as plt
 
 from raygeo.geo.shape.line import (
+    get_line_closest_point,
     get_line_line_intersection,
     get_line_segment_intersection,
     get_point_line_distance,
@@ -122,8 +123,6 @@ def generate_point_distance():
     line_pt1, line_pt2 = (2.0, 1.0), (10.0, 7.0)
     test_point = (4.0, 6.0)
     dist = get_point_line_distance(test_point, line_pt1, line_pt2)
-
-    from raygeo.geo.shape.line import get_line_closest_point
 
     closest = get_line_closest_point(
         line_pt1, line_pt2, test_point[0], test_point[1]

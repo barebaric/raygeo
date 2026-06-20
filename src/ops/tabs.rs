@@ -9,6 +9,8 @@
 //!
 //! The main entry points are [`apply_tab_gaps`] and [`apply_tab_power`].
 
+use std::collections::HashMap;
+
 use super::clip::clip_subpath_linear;
 use super::container::Ops;
 use super::enums::{CommandCategory, CommandType, SectionType};
@@ -185,8 +187,6 @@ fn assign_clips_to_subpaths(
     section_ranges: &[super::group::OpsSectionRange],
     clips: &[ClipPoint],
 ) -> std::collections::HashMap<SubpathKey, Vec<ClipPoint>> {
-    use std::collections::HashMap;
-
     let mut all_subpaths: Vec<(SubpathKey, Ops)> = Vec::new();
     for (sec_idx, sec_range) in section_ranges.iter().enumerate() {
         if sec_range.section_type != Some(SectionType::VectorOutline) {

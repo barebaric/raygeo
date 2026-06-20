@@ -342,15 +342,13 @@ def generate_rotate():
 
 def generate_true_offset():
     """True 3D polyline offset."""
-    import math as _m
-
     n = 16
     curve = []
     for i in range(n + 1):
         t = i / n
-        a = t * _m.pi / 2
-        x = 6 * _m.cos(a)
-        y = 6 * _m.sin(a)
+        a = t * math.pi / 2
+        x = 6 * math.cos(a)
+        y = 6 * math.sin(a)
         z = 6 - x / 3 + y / 3
         curve.append((x, y, z))
     off = offset_polyline_3d(curve, 1.2)

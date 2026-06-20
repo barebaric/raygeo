@@ -1,6 +1,7 @@
 import numpy as np
 import pytest
 
+import raygeo.ops.raster as raster_mod
 from raygeo.ops.raster import (
     ScanLine,
     ScanMode,
@@ -407,15 +408,13 @@ class TestIntegration:
 
 class TestModuleImport:
     def test_import_from_raster(self):
-        import raygeo.ops.raster as mod
-
-        assert hasattr(mod, "ScanLine")
-        assert hasattr(mod, "find_mask_bounding_box")
-        assert hasattr(mod, "find_segments")
-        assert hasattr(mod, "generate_horizontal_scan_positions")
-        assert hasattr(mod, "generate_scan_lines")
-        assert hasattr(mod, "line_pixels")
-        assert hasattr(mod, "resample_rows")
+        assert hasattr(raster_mod, "ScanLine")
+        assert hasattr(raster_mod, "find_mask_bounding_box")
+        assert hasattr(raster_mod, "find_segments")
+        assert hasattr(raster_mod, "generate_horizontal_scan_positions")
+        assert hasattr(raster_mod, "generate_scan_lines")
+        assert hasattr(raster_mod, "line_pixels")
+        assert hasattr(raster_mod, "resample_rows")
 
     def test_scanline_is_class(self):
         sl = ScanLine(0, (0.0, 0.0), (1.0, 1.0), [(0, 0), (1, 1)], 0.1)

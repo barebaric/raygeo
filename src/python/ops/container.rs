@@ -7,6 +7,7 @@ use pyo3_stub_gen::derive::{
 };
 use pyo3_stub_gen::inventory::submit;
 
+use crate::ops::optimize::ProgressCallback;
 use crate::ops::{
     Axis, CommandType, MarkerCmd, MoveCmd, OpCategory, OpsSection,
     OpsSectionRange, StateCmd,
@@ -2279,8 +2280,6 @@ impl PyOps {
         preserve_order: Vec<String>,
         progress_cb: Option<&Bound<'_, PyAny>>,
     ) -> PyResult<()> {
-        use crate::ops::optimize::ProgressCallback;
-
         struct PyProgress<'py> {
             cb: Option<&'py Bound<'py, PyAny>>,
         }

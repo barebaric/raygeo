@@ -8,6 +8,9 @@ use pyo3_stub_gen::{PyStubType, TypeInfo};
 
 use glam::{DMat4, DVec4};
 
+use std::collections::hash_map::DefaultHasher;
+use std::hash::{Hash, Hasher};
+
 use crate::geo::algo::analysis::{
     get_outward_normal_at_from_array, get_point_at_from_array,
     get_tangent_at_from_array,
@@ -383,8 +386,6 @@ impl Geometry {
     ///
     /// :complexity: O(n) time, O(1) space
     fn __hash__(&self) -> u64 {
-        use std::collections::hash_map::DefaultHasher;
-        use std::hash::{Hash, Hasher};
         let mut hasher = DefaultHasher::new();
         for cmd in self.inner.data() {
             std::mem::discriminant(cmd).hash(&mut hasher);

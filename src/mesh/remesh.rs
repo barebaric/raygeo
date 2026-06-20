@@ -1,8 +1,11 @@
 //! Mesh refinement.
 
+use crate::geo::shape::polygon::is_point_in_polygon;
 use crate::mesh::build::build_adjacency;
 use crate::mesh::types::{BoundaryTag, TriangleMesh};
 use crate::types::Point;
+use spade::handles::FixedVertexHandle;
+use spade::{ConstrainedDelaunayTriangulation, Point2, Triangulation as _};
 use std::collections::HashMap;
 
 /// Refine *mesh* so that no interior edge exceeds `max_edge_len`.
@@ -69,10 +72,6 @@ fn rebuild_with_insertions(
     outer: &[Point],
     new_points: &[Point],
 ) -> Result<TriangleMesh, String> {
-    use crate::geo::shape::polygon::is_point_in_polygon;
-    use spade::handles::FixedVertexHandle;
-    use spade::{ConstrainedDelaunayTriangulation, Point2, Triangulation as _};
-
     type Cdt = ConstrainedDelaunayTriangulation<Point2<f64>>;
     let mut cdt = Cdt::new();
     let mut vidx_map: HashMap<FixedVertexHandle, usize> = HashMap::new();
