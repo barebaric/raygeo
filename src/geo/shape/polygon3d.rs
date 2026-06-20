@@ -215,111 +215,68 @@ pub fn get_polygon_perimeter_3d(polygon: &[Point3D]) -> f64 {
 /// Get the 3D bounding box of a polygon (includes Z extents).
 pub fn get_polygon_bounds_3d(polygon: &[Point3D]) -> Rect3D {
     if polygon.is_empty() {
-        return Rect3D {
-            x_min: 0.0,
-            x_max: 0.0,
-            y_min: 0.0,
-            y_max: 0.0,
-            z_min: 0.0,
-            z_max: 0.0,
-        };
+        return Rect3D::default();
     }
-    let mut x_min = polygon[0].x;
-    let mut x_max = polygon[0].x;
-    let mut y_min = polygon[0].y;
-    let mut y_max = polygon[0].y;
-    let mut z_min = polygon[0].z;
-    let mut z_max = polygon[0].z;
+    let mut min = polygon[0];
+    let mut max = polygon[0];
     for p in polygon {
-        if p.x < x_min {
-            x_min = p.x;
+        if p.x < min.x {
+            min.x = p.x;
         }
-        if p.x > x_max {
-            x_max = p.x;
+        if p.x > max.x {
+            max.x = p.x;
         }
-        if p.y < y_min {
-            y_min = p.y;
+        if p.y < min.y {
+            min.y = p.y;
         }
-        if p.y > y_max {
-            y_max = p.y;
+        if p.y > max.y {
+            max.y = p.y;
         }
-        if p.z < z_min {
-            z_min = p.z;
+        if p.z < min.z {
+            min.z = p.z;
         }
-        if p.z > z_max {
-            z_max = p.z;
+        if p.z > max.z {
+            max.z = p.z;
         }
     }
-    Rect3D {
-        x_min,
-        x_max,
-        y_min,
-        y_max,
-        z_min,
-        z_max,
-    }
+    Rect3D::new(min, max)
 }
 
 /// Get the 3D bounding box of multiple polygons (includes Z extents).
 pub fn get_polygon_group_bounds_3d(polygons: &[Polygon3D]) -> Rect3D {
     if polygons.is_empty() {
-        return Rect3D {
-            x_min: 0.0,
-            x_max: 0.0,
-            y_min: 0.0,
-            y_max: 0.0,
-            z_min: 0.0,
-            z_max: 0.0,
-        };
+        return Rect3D::default();
     }
-    let mut x_min = f64::MAX;
-    let mut x_max = f64::MIN;
-    let mut y_min = f64::MAX;
-    let mut y_max = f64::MIN;
-    let mut z_min = f64::MAX;
-    let mut z_max = f64::MIN;
+    let mut min = Point3D::splat(f64::MAX);
+    let mut max = Point3D::splat(f64::MIN);
     let mut has_points = false;
     for poly in polygons {
         for p in poly {
-            if p.x < x_min {
-                x_min = p.x;
+            if p.x < min.x {
+                min.x = p.x;
             }
-            if p.x > x_max {
-                x_max = p.x;
+            if p.x > max.x {
+                max.x = p.x;
             }
-            if p.y < y_min {
-                y_min = p.y;
+            if p.y < min.y {
+                min.y = p.y;
             }
-            if p.y > y_max {
-                y_max = p.y;
+            if p.y > max.y {
+                max.y = p.y;
             }
-            if p.z < z_min {
-                z_min = p.z;
+            if p.z < min.z {
+                min.z = p.z;
             }
-            if p.z > z_max {
-                z_max = p.z;
+            if p.z > max.z {
+                max.z = p.z;
             }
             has_points = true;
         }
     }
     if !has_points {
-        return Rect3D {
-            x_min: 0.0,
-            x_max: 0.0,
-            y_min: 0.0,
-            y_max: 0.0,
-            z_min: 0.0,
-            z_max: 0.0,
-        };
+        return Rect3D::default();
     }
-    Rect3D {
-        x_min,
-        x_max,
-        y_min,
-        y_max,
-        z_min,
-        z_max,
-    }
+    Rect3D::new(min, max)
 }
 
 /// Compute the centroid of a 3D polygon (XY via shoelace, Z as average).

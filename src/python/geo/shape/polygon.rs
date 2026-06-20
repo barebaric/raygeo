@@ -225,9 +225,12 @@ fn translate_bounds_py(
     dx: f64,
     dy: f64,
 ) -> (f64, f64, f64, f64) {
-    let r =
-        translate_bounds(Rect(bounds.0, bounds.1, bounds.2, bounds.3), dx, dy);
-    (r.0, r.1, r.2, r.3)
+    let r = translate_bounds(
+        Rect::new(bounds.0, bounds.1, bounds.2, bounds.3),
+        dx,
+        dy,
+    );
+    (r.min.x, r.min.y, r.max.x, r.max.y)
 }
 
 #[gen_stub_pyfunction(
@@ -374,12 +377,12 @@ fn get_polygon_perimeter_py(polygon: Vec<PyPoint2D>) -> f64 {
 #[pyfunction(name = "get_polygon_bounds")]
 fn get_polygon_bounds_py(polygon: Vec<PyPoint2D>) -> (f64, f64, f64, f64) {
     let r = get_polygon_bounds(&poly_to_points(polygon));
-    (r.0, r.1, r.2, r.3)
+    (r.min.x, r.min.y, r.max.x, r.max.y)
 }
 
 #[gen_stub_pyfunction(
     python = r#"
-    import typing
+    import collections.abc
     import raygeo.geo.types
 
     def get_polygon_group_bounds(
@@ -400,7 +403,7 @@ fn get_polygon_group_bounds_py(
 ) -> PyResult<(f64, f64, f64, f64)> {
     let p = extract_polygons(polygons)?;
     let r = get_polygon_group_bounds(&p);
-    Ok((r.0, r.1, r.2, r.3))
+    Ok((r.min.x, r.min.y, r.max.x, r.max.y))
 }
 
 #[gen_stub_pyfunction(
@@ -1100,7 +1103,7 @@ fn polygon_bounds_numpy_py(
 ) -> (f64, f64, f64, f64) {
     let p = _polygon_from_numpy(&polygon);
     let r = get_polygon_bounds(&p);
-    (r.0, r.1, r.2, r.3)
+    (r.min.x, r.min.y, r.max.x, r.max.y)
 }
 
 #[gen_stub_pyfunction(
@@ -1147,7 +1150,7 @@ fn polygon_group_bounds_numpy_py(
 ) -> (f64, f64, f64, f64) {
     let p = _polygons_from_numpy_list(polygons);
     let r = get_polygon_group_bounds(&p);
-    (r.0, r.1, r.2, r.3)
+    (r.min.x, r.min.y, r.max.x, r.max.y)
 }
 
 #[gen_stub_pyfunction(

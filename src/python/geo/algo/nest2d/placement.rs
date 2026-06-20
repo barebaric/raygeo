@@ -63,8 +63,8 @@ fn generate_bottom_left_candidates_py(
     spacing: f64,
 ) -> Vec<(f64, f64)> {
     points_to_tuples(placement::generate_bottom_left_candidates(
-        Rect(ifp_bounds.0, ifp_bounds.1, ifp_bounds.2, ifp_bounds.3),
-        Rect(part_bounds.0, part_bounds.1, part_bounds.2, part_bounds.3),
+        Rect::new(ifp_bounds.0, ifp_bounds.1, ifp_bounds.2, ifp_bounds.3),
+        Rect::new(part_bounds.0, part_bounds.1, part_bounds.2, part_bounds.3),
         spacing,
     ))
 }
@@ -98,8 +98,8 @@ fn generate_grid_candidates_py(
     spacing: f64,
 ) -> Vec<(f64, f64)> {
     points_to_tuples(placement::generate_grid_candidates(
-        Rect(ifp_bounds.0, ifp_bounds.1, ifp_bounds.2, ifp_bounds.3),
-        Rect(part_bounds.0, part_bounds.1, part_bounds.2, part_bounds.3),
+        Rect::new(ifp_bounds.0, ifp_bounds.1, ifp_bounds.2, ifp_bounds.3),
+        Rect::new(part_bounds.0, part_bounds.1, part_bounds.2, part_bounds.3),
         spacing,
     ))
 }
@@ -144,7 +144,7 @@ fn generate_perimeter_candidates_py(
         .collect();
     points_to_tuples(placement::generate_perimeter_candidates(
         &groups,
-        Rect(part_bounds.0, part_bounds.1, part_bounds.2, part_bounds.3),
+        Rect::new(part_bounds.0, part_bounds.1, part_bounds.2, part_bounds.3),
         spacing,
     ))
 }
@@ -180,7 +180,7 @@ fn filter_candidates_multi_resolution_py(
     let candidates = tuples_to_points(candidates);
     points_to_tuples(placement::filter_candidates_multi_resolution(
         &candidates,
-        Rect(ifp_bounds.0, ifp_bounds.1, ifp_bounds.2, ifp_bounds.3),
+        Rect::new(ifp_bounds.0, ifp_bounds.1, ifp_bounds.2, ifp_bounds.3),
         min_dist,
     ))
 }

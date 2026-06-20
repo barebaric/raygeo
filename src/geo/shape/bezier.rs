@@ -69,7 +69,7 @@ pub fn get_bezier_bounds(p0: Point, c1: Point, c2: Point, p1: Point) -> Rect {
     _add_axis_extrema(&mut candidates_x, p0.x, c1.x, c2.x, p1.x);
     _add_axis_extrema(&mut candidates_y, p0.y, c1.y, c2.y, p1.y);
 
-    Rect(
+    Rect::new(
         candidates_x.iter().cloned().fold(f64::INFINITY, f64::min),
         candidates_y.iter().cloned().fold(f64::INFINITY, f64::min),
         candidates_x
@@ -96,10 +96,10 @@ pub fn is_bezier_inside_polygons(
     let mid = get_bezier_point_at(start_pos, c1, c2, end_pos, 0.5);
 
     let sample_points: Vec<Point> = vec![
-        Point::new(bbox.0, bbox.1),
-        Point::new(bbox.2, bbox.1),
-        Point::new(bbox.2, bbox.3),
-        Point::new(bbox.0, bbox.3),
+        bbox.min,
+        Point::new(bbox.max.x, bbox.min.y),
+        bbox.max,
+        Point::new(bbox.min.x, bbox.max.y),
         start_pos,
         end_pos,
         mid,
@@ -125,10 +125,13 @@ pub fn get_bezier_rect_intersections(
     p1: Point,
     rect: Rect,
 ) -> Vec<f64> {
-    let Rect(x_min, y_min, x_max, y_max) = rect;
     let mut t_crossings: Vec<f64> = Vec::new();
-    let rect_edges: [(usize, f64); 4] =
-        [(0, x_min), (0, x_max), (1, y_min), (1, y_max)];
+    let rect_edges: [(usize, f64); 4] = [
+        (0, rect.min.x),
+        (0, rect.max.x),
+        (1, rect.min.y),
+        (1, rect.max.y),
+    ];
 
     for (axis_idx, edge_val) in rect_edges {
         let p0_coord = if axis_idx == 0 { p0.x } else { p0.y };
@@ -153,8 +156,16 @@ pub fn get_bezier_rect_intersections(
                 } else {
                     point_on_curve.x
                 };
-                let axis_lo = if other_axis == 1 { y_min } else { x_min };
-                let axis_hi = if other_axis == 1 { y_max } else { x_max };
+                let axis_lo = if other_axis == 1 {
+                    rect.min.y
+                } else {
+                    rect.min.x
+                };
+                let axis_hi = if other_axis == 1 {
+                    rect.max.y
+                } else {
+                    rect.max.x
+                };
                 if axis_lo - 1e-9 <= other_coord
                     && other_coord <= axis_hi + 1e-9
                 {
@@ -186,7 +197,6 @@ pub fn clip_bezier_with_rect(
     p1: Point,
     rect: Rect,
 ) -> Vec<CubicBezier> {
-    let Rect(x_min, y_min, x_max, y_max) = rect;
     let crossing_params = get_bezier_rect_intersections(p0, c1, c2, p1, rect);
     if crossing_params.len() < 2 {
         return vec![];
@@ -205,10 +215,10 @@ pub fn clip_bezier_with_rect(
         let midpoint_pt = get_bezier_point_at(p0, c1, c2, p1, t_mid);
 
         // Check if midpoint is inside rect
-        if x_min - 1e-9 <= midpoint_pt.x
-            && midpoint_pt.x <= x_max + 1e-9
-            && y_min - 1e-9 <= midpoint_pt.y
-            && midpoint_pt.y <= y_max + 1e-9
+        if rect.min.x - 1e-9 <= midpoint_pt.x
+            && midpoint_pt.x <= rect.max.x + 1e-9
+            && rect.min.y - 1e-9 <= midpoint_pt.y
+            && midpoint_pt.y <= rect.max.y + 1e-9
         {
             let segment = _extract_subsegment(p0, c1, c2, p1, t_start, t_end);
             inside_segments.push(segment);

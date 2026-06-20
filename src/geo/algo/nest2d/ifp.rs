@@ -22,10 +22,10 @@ pub fn inner_fit_polygon(bin: &Polygon, part: &Polygon) -> Vec<Polygon> {
     // Quick bounding-box reject
     let bin_bounds = get_polygon_bounds(bin);
     let part_bounds = get_polygon_bounds(part);
-    let bin_width = bin_bounds.2 - bin_bounds.0;
-    let bin_height = bin_bounds.3 - bin_bounds.1;
-    let part_width = part_bounds.2 - part_bounds.0;
-    let part_height = part_bounds.3 - part_bounds.1;
+    let bin_width = bin_bounds.max.x - bin_bounds.min.x;
+    let bin_height = bin_bounds.max.y - bin_bounds.min.y;
+    let part_width = part_bounds.max.x - part_bounds.min.x;
+    let part_height = part_bounds.max.y - part_bounds.min.y;
     if part_width > bin_width + 1e-4 || part_height > bin_height + 1e-4 {
         return vec![];
     }

@@ -241,10 +241,10 @@ pub fn does_enclose(container: &Geometry, content: &Geometry) -> bool {
 
     let cont_rect = container.rect();
     let other_rect = content.rect();
-    if !(cont_rect.0 <= other_rect.0
-        && cont_rect.1 <= other_rect.1
-        && cont_rect.2 >= other_rect.2
-        && cont_rect.3 >= other_rect.3)
+    if !(cont_rect.min.x <= other_rect.min.x
+        && cont_rect.min.y <= other_rect.min.y
+        && cont_rect.max.x >= other_rect.max.x
+        && cont_rect.max.y >= other_rect.max.y)
     {
         return false;
     }

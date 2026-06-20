@@ -59,7 +59,7 @@ fn is_point_inside_rect_py(
 ) -> bool {
     is_point_inside_rect(
         Point::new(point.0, point.1),
-        Rect(rect.0, rect.1, rect.2, rect.3),
+        Rect::new(rect.0, rect.1, rect.2, rect.3),
     )
 }
 
@@ -87,8 +87,8 @@ fn does_rect_contain_rect_py(
     inner: (f64, f64, f64, f64),
 ) -> bool {
     does_rect_contain_rect(
-        Rect(outer.0, outer.1, outer.2, outer.3),
-        Rect(inner.0, inner.1, inner.2, inner.3),
+        Rect::new(outer.0, outer.1, outer.2, outer.3),
+        Rect::new(inner.0, inner.1, inner.2, inner.3),
     )
 }
 
@@ -116,8 +116,8 @@ fn does_rect_intersect_rect_py(
     r2: (f64, f64, f64, f64),
 ) -> bool {
     does_rect_intersect_rect(
-        Rect(r1.0, r1.1, r1.2, r1.3),
-        Rect(r2.0, r2.1, r2.2, r2.3),
+        Rect::new(r1.0, r1.1, r1.2, r1.3),
+        Rect::new(r2.0, r2.1, r2.2, r2.3),
     )
 }
 
@@ -145,8 +145,8 @@ fn do_rects_intersect_py(
     r2: (f64, f64, f64, f64),
 ) -> bool {
     do_rects_intersect(
-        Rect(r1.0, r1.1, r1.2, r1.3),
-        Rect(r2.0, r2.1, r2.2, r2.3),
+        Rect::new(r1.0, r1.1, r1.2, r1.3),
+        Rect::new(r2.0, r2.1, r2.2, r2.3),
     )
 }
 
@@ -184,11 +184,11 @@ fn get_combined_rect_py(
                     e
                 ))
             })?;
-        let Rect(gx0, gy0, gx1, gy1) = geo.borrow().inner.rect();
-        min_x = min_x.min(gx0);
-        min_y = min_y.min(gy0);
-        max_x = max_x.max(gx1);
-        max_y = max_y.max(gy1);
+        let r = geo.borrow().inner.rect();
+        min_x = min_x.min(r.min.x);
+        min_y = min_y.min(r.min.y);
+        max_x = max_x.max(r.max.x);
+        max_y = max_y.max(r.max.y);
     }
     if min_x.is_infinite() {
         return Ok((0.0, 0.0, 0.0, 0.0));

@@ -678,9 +678,11 @@ impl Ops {
         power: Option<f64>,
         feed_rate: Option<f64>,
     ) -> Self {
-        let Some(Rect(min_x, min_y, max_x, max_y)) = self.rect(false) else {
+        let Some(rect) = self.rect(false) else {
             return Ops::new();
         };
+        let (min_x, min_y, max_x, max_y) =
+            (rect.min.x, rect.min.y, rect.max.x, rect.max.y);
         let mut frame_ops = Ops::new();
         if let Some(p) = power {
             frame_ops.set_power(p);
@@ -775,11 +777,11 @@ impl Ops {
                         );
                         Self::update_bounds(
                             &mut min_x, &mut min_y, &mut max_x, &mut max_y,
-                            abox.0, abox.1,
+                            abox.min.x, abox.min.y,
                         );
                         Self::update_bounds(
                             &mut min_x, &mut min_y, &mut max_x, &mut max_y,
-                            abox.2, abox.3,
+                            abox.max.x, abox.max.y,
                         );
                     }
                 }
@@ -790,7 +792,7 @@ impl Ops {
         }
 
         if has_content {
-            Some(Rect(min_x, min_y, max_x, max_y))
+            Some(Rect::new(min_x, min_y, max_x, max_y))
         } else {
             None
         }

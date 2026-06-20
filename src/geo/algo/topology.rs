@@ -66,12 +66,10 @@ impl ContourHierarchy {
                         if self.nesting_depths[j] < 0 {
                             continue;
                         }
-                        let Rect(o_min_x, o_min_y, o_max_x, o_max_y) =
-                            other.rect;
-                        if tx < o_min_x
-                            || tx > o_max_x
-                            || ty < o_min_y
-                            || ty > o_max_y
+                        if tx < other.rect.min.x
+                            || tx > other.rect.max.x
+                            || ty < other.rect.min.y
+                            || ty > other.rect.max.y
                         {
                             continue;
                         }
@@ -84,8 +82,9 @@ impl ContourHierarchy {
                         if !should_keep(i, j) {
                             continue;
                         }
-                        let other_bbox_area =
-                            (o_max_x - o_min_x) * (o_max_y - o_min_y);
+                        let other_bbox_area = (other.rect.max.x
+                            - other.rect.min.x)
+                            * (other.rect.max.y - other.rect.min.y);
                         if other_bbox_area < best_parent_area {
                             best_parent_area = other_bbox_area;
                             best_parent = j as isize;
@@ -183,14 +182,18 @@ pub fn build_hierarchy(contours: &[&Geometry]) -> ContourHierarchy {
                 None => continue,
             };
 
-            let Rect(o_min_x, o_min_y, o_max_x, o_max_y) = other.rect;
-            if tx < o_min_x || tx > o_max_x || ty < o_min_y || ty > o_max_y {
+            if tx < other.rect.min.x
+                || tx > other.rect.max.x
+                || ty < other.rect.min.y
+                || ty > other.rect.max.y
+            {
                 continue;
             }
 
             if is_point_inside_polygon(current.test_point, &other.vertices) {
                 depth += 1;
-                let other_bbox_area = (o_max_x - o_min_x) * (o_max_y - o_min_y);
+                let other_bbox_area = (other.rect.max.x - other.rect.min.x)
+                    * (other.rect.max.y - other.rect.min.y);
                 if other_bbox_area < best_parent_area {
                     best_parent_area = other_bbox_area;
                     best_parent = j as isize;
@@ -331,7 +334,7 @@ pub fn get_valid_contours_data(
 
         let closed = geo.is_closed(1e-6);
         let bbox = geo.rect();
-        let bbox_area = (bbox.2 - bbox.0) * (bbox.3 - bbox.1);
+        let bbox_area = (bbox.max.x - bbox.min.x) * (bbox.max.y - bbox.min.y);
         let is_closed_flag = closed && bbox_area > 1e-9;
 
         if !is_closed_flag {

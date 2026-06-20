@@ -42,9 +42,23 @@ pub fn is_planar_in_z(points: &[Point3D], tol: f64) -> Option<f64> {
 /// A 3D point represented as (x, y, z) coordinates.
 pub type Point3D = glam::DVec3;
 
-/// A 2D axis-aligned bounding box represented as (x_min, y_min, x_max, y_max).
+/// A 2D axis-aligned bounding box with min/max corners.
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
-pub struct Rect(pub f64, pub f64, pub f64, pub f64);
+pub struct Rect {
+    /// Minimum corner (x_min, y_min).
+    pub min: Point,
+    /// Maximum corner (x_max, y_max).
+    pub max: Point,
+}
+
+impl Rect {
+    pub const fn new(x1: f64, y1: f64, x2: f64, y2: f64) -> Self {
+        Self {
+            min: Point::new(x1, y1),
+            max: Point::new(x2, y2),
+        }
+    }
+}
 
 /// A cubic Bezier curve defined by four control points: (p0, c1, c2, p1).
 /// - p0: Start point
@@ -525,7 +539,7 @@ impl Command {
         let p1 = Point::new(end.x, end.y);
         match self {
             Command::Move { .. } => None,
-            Command::Line { .. } => Some(Rect(
+            Command::Line { .. } => Some(Rect::new(
                 start.x.min(p1.x),
                 start.y.min(p1.y),
                 start.x.max(p1.x),
@@ -556,21 +570,19 @@ impl Command {
     }
 }
 
-/// A 3D axis-aligned bounding box with separate min/max bounds for each axis.
-#[derive(Clone, Debug, Default)]
+/// A 3D axis-aligned bounding box with min/max corners.
+#[derive(Clone, Copy, Debug, Default)]
 pub struct Rect3D {
-    /// Minimum x coordinate (left face).
-    pub x_min: f64,
-    /// Maximum x coordinate (right face).
-    pub x_max: f64,
-    /// Minimum y coordinate (bottom face).
-    pub y_min: f64,
-    /// Maximum y coordinate (top face).
-    pub y_max: f64,
-    /// Minimum z coordinate (front face).
-    pub z_min: f64,
-    /// Maximum z coordinate (back face).
-    pub z_max: f64,
+    /// Minimum corner (x_min, y_min, z_min).
+    pub min: Point3D,
+    /// Maximum corner (x_max, y_max, z_max).
+    pub max: Point3D,
+}
+
+impl Rect3D {
+    pub const fn new(min: Point3D, max: Point3D) -> Self {
+        Self { min, max }
+    }
 }
 
 /// The winding order of a closed polygon or path.

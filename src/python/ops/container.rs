@@ -1676,7 +1676,9 @@ impl PyOps {
     /// :complexity: O(n) time, O(n) space
     fn clip_rect(&self, rect: (f64, f64, f64, f64)) -> PyOps {
         PyOps {
-            inner: self.inner.clip_rect(Rect(rect.0, rect.1, rect.2, rect.3)),
+            inner: self
+                .inner
+                .clip_rect(Rect::new(rect.0, rect.1, rect.2, rect.3)),
         }
     }
 
@@ -2028,7 +2030,7 @@ impl PyOps {
     #[pyo3(signature = (include_travel = false))]
     fn rect(&self, include_travel: bool) -> (f64, f64, f64, f64) {
         match self.inner.rect(include_travel) {
-            Some(r) => (r.0, r.1, r.2, r.3),
+            Some(r) => (r.min.x, r.min.y, r.max.x, r.max.y),
             None => (0.0, 0.0, 0.0, 0.0),
         }
     }

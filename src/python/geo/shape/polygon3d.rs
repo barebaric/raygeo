@@ -290,7 +290,7 @@ fn get_polygon_bounds_3d_py(
     polygon: Vec<PyPoint3D>,
 ) -> (f64, f64, f64, f64, f64, f64) {
     let r = get_polygon_bounds_3d(&poly3d_to_points(polygon));
-    (r.x_min, r.y_min, r.x_max, r.y_max, r.z_min, r.z_max)
+    (r.min.x, r.min.y, r.max.x, r.max.y, r.min.z, r.max.z)
 }
 
 #[gen_stub_pyfunction(
@@ -317,7 +317,7 @@ fn get_polygon_group_bounds_3d_py(
 ) -> PyResult<(f64, f64, f64, f64, f64, f64)> {
     let p = extract_polygons3d(polygons)?;
     let r = get_polygon_group_bounds_3d(&p);
-    Ok((r.x_min, r.y_min, r.x_max, r.y_max, r.z_min, r.z_max))
+    Ok((r.min.x, r.min.y, r.max.x, r.max.y, r.min.z, r.max.z))
 }
 
 #[gen_stub_pyfunction(

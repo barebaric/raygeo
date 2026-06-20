@@ -183,7 +183,7 @@ pub fn get_arc_bounds(
         min_y = min_y.min(center_y - radius);
     }
 
-    Rect(min_x, min_y, max_x, max_y)
+    Rect::new(min_x, min_y, max_x, max_y)
 }
 
 /// Determines arc direction based on center, start point, and a third reference point.
@@ -475,10 +475,10 @@ pub fn does_arc_intersect_rect(
         Point::new(center.x - start_pos.x, center.y - start_pos.y),
         clockwise,
     );
-    if arc_box.2 < rect.0
-        || arc_box.0 > rect.2
-        || arc_box.3 < rect.1
-        || arc_box.1 > rect.3
+    if arc_box.max.x < rect.min.x
+        || arc_box.min.x > rect.max.x
+        || arc_box.max.y < rect.min.y
+        || arc_box.min.y > rect.max.y
     {
         return false;
     }
@@ -583,10 +583,10 @@ pub fn is_arc_inside_polygons(
     let mid = get_arc_midpoint(start_pos, end_pos, center, clockwise);
 
     let sample_points: Vec<Point> = vec![
-        Point::new(bbox.0, bbox.1),
-        Point::new(bbox.2, bbox.1),
-        Point::new(bbox.2, bbox.3),
-        Point::new(bbox.0, bbox.3),
+        bbox.min,
+        Point::new(bbox.max.x, bbox.min.y),
+        bbox.max,
+        Point::new(bbox.min.x, bbox.max.y),
         start_pos,
         end_pos,
         mid,

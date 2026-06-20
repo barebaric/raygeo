@@ -15,10 +15,10 @@ pub fn is_contained(inner: &[Polygon], outer: &Polygon) -> bool {
     }
     let inner_bounds = get_polygon_group_bounds(inner);
     let outer_bounds = get_polygon_bounds(outer);
-    if inner_bounds.0 < outer_bounds.0 - 1e-6
-        || inner_bounds.1 < outer_bounds.1 - 1e-6
-        || inner_bounds.2 > outer_bounds.2 + 1e-6
-        || inner_bounds.3 > outer_bounds.3 + 1e-6
+    if inner_bounds.min.x < outer_bounds.min.x - 1e-6
+        || inner_bounds.min.y < outer_bounds.min.y - 1e-6
+        || inner_bounds.max.x > outer_bounds.max.x + 1e-6
+        || inner_bounds.max.y > outer_bounds.max.y + 1e-6
     {
         return false;
     }
@@ -51,10 +51,10 @@ pub fn any_overlap(
             continue;
         }
         let p_bounds = get_polygon_bounds(p);
-        if c_bounds.0 > p_bounds.2
-            || c_bounds.2 < p_bounds.0
-            || c_bounds.1 > p_bounds.3
-            || c_bounds.3 < p_bounds.1
+        if c_bounds.min.x > p_bounds.max.x
+            || c_bounds.max.x < p_bounds.min.x
+            || c_bounds.min.y > p_bounds.max.y
+            || c_bounds.max.y < p_bounds.min.y
         {
             continue;
         }
@@ -87,10 +87,10 @@ pub fn any_overlap_with_grid(
             continue;
         }
         let p_bounds = get_polygon_bounds(p);
-        if c_bounds.0 > p_bounds.2
-            || c_bounds.2 < p_bounds.0
-            || c_bounds.1 > p_bounds.3
-            || c_bounds.3 < p_bounds.1
+        if c_bounds.min.x > p_bounds.max.x
+            || c_bounds.max.x < p_bounds.min.x
+            || c_bounds.min.y > p_bounds.max.y
+            || c_bounds.max.y < p_bounds.min.y
         {
             continue;
         }
@@ -129,10 +129,10 @@ pub fn any_overlap_hierarchical(
         let placed_bbox = get_polygon_group_bounds(placed_polys);
 
         // 1. Bounding box reject
-        if cand_bbox.0 > placed_bbox.2
-            || cand_bbox.2 < placed_bbox.0
-            || cand_bbox.1 > placed_bbox.3
-            || cand_bbox.3 < placed_bbox.1
+        if cand_bbox.min.x > placed_bbox.max.x
+            || cand_bbox.max.x < placed_bbox.min.x
+            || cand_bbox.min.y > placed_bbox.max.y
+            || cand_bbox.max.y < placed_bbox.min.y
         {
             continue;
         }
@@ -182,7 +182,7 @@ pub fn any_overlap_hierarchical_grid(
     if candidate_polys.is_empty() {
         return false;
     }
-    let cand_bbox = if candidate_bbox.0.is_finite() {
+    let cand_bbox = if candidate_bbox.min.x.is_finite() {
         candidate_bbox
     } else {
         get_polygon_group_bounds(candidate_polys)
@@ -201,10 +201,10 @@ pub fn any_overlap_hierarchical_grid(
         let placed_bbox = get_polygon_group_bounds(placed_polys);
 
         // 1. Bounding box reject
-        if cand_bbox.0 > placed_bbox.2
-            || cand_bbox.2 < placed_bbox.0
-            || cand_bbox.1 > placed_bbox.3
-            || cand_bbox.3 < placed_bbox.1
+        if cand_bbox.min.x > placed_bbox.max.x
+            || cand_bbox.max.x < placed_bbox.min.x
+            || cand_bbox.min.y > placed_bbox.max.y
+            || cand_bbox.max.y < placed_bbox.min.y
         {
             continue;
         }

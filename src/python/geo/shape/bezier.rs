@@ -194,7 +194,7 @@ fn get_bezier_bounds_py(
         Point::new(p2.0, p2.1),
         Point::new(p3.0, p3.1),
     );
-    (r.0, r.1, r.2, r.3)
+    (r.min.x, r.min.y, r.max.x, r.max.y)
 }
 
 #[gen_stub_pyfunction(
@@ -234,7 +234,7 @@ fn get_bezier_rect_intersections_py(
         Point::new(p1.0, p1.1),
         Point::new(p2.0, p2.1),
         Point::new(p3.0, p3.1),
-        Rect(rect.0, rect.1, rect.2, rect.3),
+        Rect::new(rect.0, rect.1, rect.2, rect.3),
     )
 }
 
@@ -275,7 +275,7 @@ fn clip_bezier_with_rect_py(
         Point::new(p1.0, p1.1),
         Point::new(p2.0, p2.1),
         Point::new(p3.0, p3.1),
-        Rect(rect.0, rect.1, rect.2, rect.3),
+        Rect::new(rect.0, rect.1, rect.2, rect.3),
     )
     .into_iter()
     .map(|c| {

@@ -10,22 +10,22 @@ pub fn get_combined_rect(geometries: &[Geometry]) -> Rect {
     let mut max_y = f64::NEG_INFINITY;
 
     for geo in geometries {
-        let Rect(gx0, gy0, gx1, gy1) = geo.rect();
-        min_x = min_x.min(gx0);
-        min_y = min_y.min(gy0);
-        max_x = max_x.max(gx1);
-        max_y = max_y.max(gy1);
+        let r = geo.rect();
+        min_x = min_x.min(r.min.x);
+        min_y = min_y.min(r.min.y);
+        max_x = max_x.max(r.max.x);
+        max_y = max_y.max(r.max.y);
     }
 
     if min_x.is_infinite() {
-        return Rect(0.0, 0.0, 0.0, 0.0);
+        return Rect::default();
     }
-    Rect(min_x, min_y, max_x, max_y)
+    Rect::new(min_x, min_y, max_x, max_y)
 }
 
 pub fn do_rects_intersect(bbox1: Rect, bbox2: Rect) -> bool {
-    let Rect(ax1, ay1, ax2, ay2) = bbox1;
-    let Rect(bx1, by1, bx2, by2) = bbox2;
-
-    !(ax2 < bx1 || ax1 > bx2 || ay2 < by1 || ay1 > by2)
+    !(bbox1.max.x < bbox2.min.x
+        || bbox1.min.x > bbox2.max.x
+        || bbox1.max.y < bbox2.min.y
+        || bbox1.min.y > bbox2.max.y)
 }

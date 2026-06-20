@@ -116,7 +116,7 @@ fn get_arc_bounds_py(
         Point::new(center.0, center.1),
         clockwise,
     );
-    (r.0, r.1, r.2, r.3)
+    (r.min.x, r.min.y, r.max.x, r.max.y)
 }
 
 #[gen_stub_pyfunction(
@@ -366,7 +366,7 @@ fn does_arc_intersect_rect_py(
         Point::new(arc_end.0, arc_end.1),
         Point::new(arc_center.0, arc_center.1),
         clockwise,
-        Rect(rect.0, rect.1, rect.2, rect.3),
+        Rect::new(rect.0, rect.1, rect.2, rect.3),
     )
 }
 

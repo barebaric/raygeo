@@ -229,22 +229,23 @@ pub fn get_line_segment_polygon_intersections_into(
 pub fn is_point_inside_rect(point: Point, rect: Rect) -> bool {
     let x = point.x;
     let y = point.y;
-    let Rect(rx1, ry1, rx2, ry2) = rect;
-    x >= rx1 && x <= rx2 && y >= ry1 && y <= ry2
+    x >= rect.min.x && x <= rect.max.x && y >= rect.min.y && y <= rect.max.y
 }
 
 /// Tests if rect_b is completely contained within rect_a.
 pub fn does_rect_contain_rect(rect_a: Rect, rect_b: Rect) -> bool {
-    let Rect(ax1, ay1, ax2, ay2) = rect_a;
-    let Rect(bx1, by1, bx2, by2) = rect_b;
-    bx1 >= ax1 && by1 >= ay1 && bx2 <= ax2 && by2 <= ay2
+    rect_b.min.x >= rect_a.min.x
+        && rect_b.min.y >= rect_a.min.y
+        && rect_b.max.x <= rect_a.max.x
+        && rect_b.max.y <= rect_a.max.y
 }
 
 /// Tests if two rectangles intersect.
 pub fn does_rect_intersect_rect(rect_a: Rect, rect_b: Rect) -> bool {
-    let Rect(ax1, ay1, ax2, ay2) = rect_a;
-    let Rect(bx1, by1, bx2, by2) = rect_b;
-    !(ax2 < bx1 || ax1 > bx2 || ay2 < by1 || ay1 > by2)
+    !(rect_a.max.x < rect_b.min.x
+        || rect_a.min.x > rect_b.max.x
+        || rect_a.max.y < rect_b.min.y
+        || rect_a.min.y > rect_b.max.y)
 }
 
 /// Tests if a line segment intersects an axis-aligned rectangle.
@@ -254,12 +255,18 @@ pub fn does_line_segment_intersect_rect(
     p2: Point,
     rect: Rect,
 ) -> bool {
-    let Rect(xmin, ymin, xmax, ymax) = rect;
-
-    if p1.x >= xmin && p1.x <= xmax && p1.y >= ymin && p1.y <= ymax {
+    if p1.x >= rect.min.x
+        && p1.x <= rect.max.x
+        && p1.y >= rect.min.y
+        && p1.y <= rect.max.y
+    {
         return true;
     }
-    if p2.x >= xmin && p2.x <= xmax && p2.y >= ymin && p2.y <= ymax {
+    if p2.x >= rect.min.x
+        && p2.x <= rect.max.x
+        && p2.y >= rect.min.y
+        && p2.y <= rect.max.y
+    {
         return true;
     }
 
@@ -267,26 +274,26 @@ pub fn does_line_segment_intersect_rect(
         get_line_segment_intersection(
             p1,
             p2,
-            Point::new(xmin, ymin),
-            Point::new(xmax, ymin),
+            Point::new(rect.min.x, rect.min.y),
+            Point::new(rect.max.x, rect.min.y),
         ),
         get_line_segment_intersection(
             p1,
             p2,
-            Point::new(xmax, ymin),
-            Point::new(xmax, ymax),
+            Point::new(rect.max.x, rect.min.y),
+            Point::new(rect.max.x, rect.max.y),
         ),
         get_line_segment_intersection(
             p1,
             p2,
-            Point::new(xmax, ymax),
-            Point::new(xmin, ymax),
+            Point::new(rect.max.x, rect.max.y),
+            Point::new(rect.min.x, rect.max.y),
         ),
         get_line_segment_intersection(
             p1,
             p2,
-            Point::new(xmin, ymax),
-            Point::new(xmin, ymin),
+            Point::new(rect.min.x, rect.max.y),
+            Point::new(rect.min.x, rect.min.y),
         ),
     ];
 

@@ -22,11 +22,10 @@ impl SpatialGrid {
     }
 
     pub fn insert(&mut self, index: usize, bbox: Rect) {
-        let Rect(min_x, min_y, max_x, max_y) = bbox;
-        let cell_min_x = (min_x / self.cell_size).floor() as i32;
-        let cell_max_x = (max_x / self.cell_size).floor() as i32;
-        let cell_min_y = (min_y / self.cell_size).floor() as i32;
-        let cell_max_y = (max_y / self.cell_size).floor() as i32;
+        let cell_min_x = (bbox.min.x / self.cell_size).floor() as i32;
+        let cell_max_x = (bbox.max.x / self.cell_size).floor() as i32;
+        let cell_min_y = (bbox.min.y / self.cell_size).floor() as i32;
+        let cell_max_y = (bbox.max.y / self.cell_size).floor() as i32;
         for cx in cell_min_x..=cell_max_x {
             for cy in cell_min_y..=cell_max_y {
                 self.cells.entry((cx, cy)).or_default().push(index);
@@ -35,11 +34,10 @@ impl SpatialGrid {
     }
 
     pub fn query(&self, bbox: Rect) -> HashSet<usize> {
-        let Rect(min_x, min_y, max_x, max_y) = bbox;
-        let cell_min_x = (min_x / self.cell_size).floor() as i32;
-        let cell_max_x = (max_x / self.cell_size).floor() as i32;
-        let cell_min_y = (min_y / self.cell_size).floor() as i32;
-        let cell_max_y = (max_y / self.cell_size).floor() as i32;
+        let cell_min_x = (bbox.min.x / self.cell_size).floor() as i32;
+        let cell_max_x = (bbox.max.x / self.cell_size).floor() as i32;
+        let cell_min_y = (bbox.min.y / self.cell_size).floor() as i32;
+        let cell_max_y = (bbox.max.y / self.cell_size).floor() as i32;
         let mut result = HashSet::new();
         for cx in cell_min_x..=cell_max_x {
             for cy in cell_min_y..=cell_max_y {

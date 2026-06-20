@@ -67,7 +67,7 @@ fn find_max_slide_py(
     gravity::find_max_slide(
         &parts,
         &others,
-        Rect(
+        Rect::new(
             sheet_bounds.0,
             sheet_bounds.1,
             sheet_bounds.2,

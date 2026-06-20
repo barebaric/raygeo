@@ -72,7 +72,7 @@ impl ClearedArea {
         &self,
         bbox: (f64, f64, f64, f64),
     ) -> Vec<Vec<(f64, f64)>> {
-        let rect = Rect(bbox.0, bbox.1, bbox.2, bbox.3);
+        let rect = Rect::new(bbox.0, bbox.1, bbox.2, bbox.3);
         let frags = self.inner.query_window(rect);
         frags
             .into_iter()

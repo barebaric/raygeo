@@ -299,12 +299,11 @@ pub fn adaptive_wavefronts(
 /// Find a line segment through `pt` that spans the bounding box,
 /// choosing the longest axis.
 fn longest_line_through_point(pt: Point, bbox: Rect) -> (Point, Point) {
-    let Rect(xmin, ymin, xmax, ymax) = bbox;
-    let w = xmax - xmin;
-    let h = ymax - ymin;
+    let w = bbox.max.x - bbox.min.x;
+    let h = bbox.max.y - bbox.min.y;
     if w >= h {
-        (Point::new(xmin, pt.y), Point::new(xmax, pt.y))
+        (Point::new(bbox.min.x, pt.y), Point::new(bbox.max.x, pt.y))
     } else {
-        (Point::new(pt.x, ymin), Point::new(pt.x, ymax))
+        (Point::new(pt.x, bbox.min.y), Point::new(pt.x, bbox.max.y))
     }
 }

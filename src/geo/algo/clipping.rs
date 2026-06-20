@@ -20,16 +20,15 @@ const BOTTOM: i32 = 4;
 const TOP: i32 = 8;
 
 fn compute_outcode_2d(x: f64, y: f64, rect: Rect) -> i32 {
-    let Rect(x_min, y_min, x_max, y_max) = rect;
     let mut code = INSIDE;
-    if x < x_min {
+    if x < rect.min.x {
         code |= LEFT;
-    } else if x > x_max {
+    } else if x > rect.max.x {
         code |= RIGHT;
     }
-    if y < y_min {
+    if y < rect.min.y {
         code |= BOTTOM;
-    } else if y > y_max {
+    } else if y > rect.max.y {
         code |= TOP;
     }
     code
@@ -46,10 +45,11 @@ pub fn clip_line_segment_with_rect_2d(
     p2: Point,
     rect: Rect,
 ) -> Option<(Point, Point)> {
-    let Rect(x_min, y_min, x_max, y_max) = rect;
     let (mut x1, mut y1) = (p1.x, p1.y);
     let (mut x2, mut y2) = (p2.x, p2.y);
     let (dx, dy) = (x2 - x1, y2 - y1);
+    let (x_min, y_min, x_max, y_max) =
+        (rect.min.x, rect.min.y, rect.max.x, rect.max.y);
 
     let mut outcode1 = compute_outcode_2d(x1, y1, rect);
     let mut outcode2 = compute_outcode_2d(x2, y2, rect);

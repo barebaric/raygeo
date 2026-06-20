@@ -166,5 +166,5 @@ fn poly_bbox(poly: &Polygon) -> Rect {
             y_max = p.y;
         }
     }
-    Rect(x_min, y_min, x_max, y_max)
+    Rect::new(x_min, y_min, x_max, y_max)
 }

@@ -243,7 +243,7 @@ pub fn fit_circle_to_3_points(
         return None;
     }
 
-    let d12 = 2.0
+    let d12 = -2.0
         * DVec2::new(x2 - x1, y2 - y1).perp_dot(DVec2::new(x3 - x2, y3 - y2));
     if d12.abs() < 1e-9 {
         return None;

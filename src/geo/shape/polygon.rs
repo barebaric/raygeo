@@ -147,7 +147,7 @@ pub fn get_polygon_edges(polygon: &Polygon) -> Vec<Edge> {
 /// Get the bounding box of a polygon as (min_x, min_y, max_x, max_y).
 pub fn get_polygon_bounds(polygon: &Polygon) -> Rect {
     if polygon.is_empty() {
-        return Rect(0.0, 0.0, 0.0, 0.0);
+        return Rect::default();
     }
     let mut min_x = polygon[0].x;
     let mut max_x = polygon[0].x;
@@ -169,13 +169,13 @@ pub fn get_polygon_bounds(polygon: &Polygon) -> Rect {
             max_y = y;
         }
     }
-    Rect(min_x, min_y, max_x, max_y)
+    Rect::new(min_x, min_y, max_x, max_y)
 }
 
 /// Get the bounding box of multiple polygons.
 pub fn get_polygon_group_bounds(polygons: &[Polygon]) -> Rect {
     if polygons.is_empty() {
-        return Rect(0.0, 0.0, 0.0, 0.0);
+        return Rect::default();
     }
     let mut min_x = f64::MAX;
     let mut max_x = f64::MIN;
@@ -202,14 +202,19 @@ pub fn get_polygon_group_bounds(polygons: &[Polygon]) -> Rect {
         }
     }
     if !has_points {
-        return Rect(0.0, 0.0, 0.0, 0.0);
+        return Rect::default();
     }
-    Rect(min_x, min_y, max_x, max_y)
+    Rect::new(min_x, min_y, max_x, max_y)
 }
 
 /// Translate a bounding box by a given offset.
 pub fn translate_bounds(bounds: Rect, dx: f64, dy: f64) -> Rect {
-    Rect(bounds.0 + dx, bounds.1 + dy, bounds.2 + dx, bounds.3 + dy)
+    Rect::new(
+        bounds.min.x + dx,
+        bounds.min.y + dy,
+        bounds.max.x + dx,
+        bounds.max.y + dy,
+    )
 }
 
 /// Normalize polygons so their minimum corner is at the origin.

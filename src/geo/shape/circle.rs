@@ -64,11 +64,10 @@ pub fn project_point_onto_circle(
 pub fn is_circle_inside_rect(center: Point, radius: f64, rect: Rect) -> bool {
     let cx = center.x;
     let cy = center.y;
-    let Rect(rx1, ry1, rx2, ry2) = rect;
-    (cx - radius) >= rx1
-        && (cy - radius) >= ry1
-        && (cx + radius) <= rx2
-        && (cy + radius) <= ry2
+    (cx - radius) >= rect.min.x
+        && (cy - radius) >= rect.min.y
+        && (cx + radius) <= rect.max.x
+        && (cy + radius) <= rect.max.y
 }
 
 /// Tests if a circle intersects an axis-aligned rectangle.
@@ -80,16 +79,14 @@ pub fn does_circle_intersect_rect(
 ) -> bool {
     let cx = center.x;
     let cy = center.y;
-    let Rect(rx1, ry1, rx2, ry2) = rect;
-
     // Fully contained circles don't intersect
     if is_circle_inside_rect(center, radius, rect) {
         return false;
     }
 
     // Check if circle's closest point to rect is within radius
-    let closest_x = rx1.max(cx.min(rx2));
-    let closest_y = ry1.max(cy.min(ry2));
+    let closest_x = rect.min.x.max(cx.min(rect.max.x));
+    let closest_y = rect.min.y.max(cy.min(rect.max.y));
     let dist_sq_closest =
         Point::new(closest_x, closest_y).distance_squared(center);
     if dist_sq_closest > radius * radius {
@@ -97,8 +94,8 @@ pub fn does_circle_intersect_rect(
     }
 
     // Check if circle's farthest point from rect center is outside radius
-    let dx_far = (rx1 - cx).abs().max((rx2 - cx).abs());
-    let dy_far = (ry1 - cy).abs().max((ry2 - cy).abs());
+    let dx_far = (rect.min.x - cx).abs().max((rect.max.x - cx).abs());
+    let dy_far = (rect.min.y - cy).abs().max((rect.max.y - cy).abs());
     let dist_sq_farthest = dx_far * dx_far + dy_far * dy_far;
     if dist_sq_farthest < radius * radius {
         return false;

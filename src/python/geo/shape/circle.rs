@@ -141,7 +141,7 @@ fn is_circle_inside_rect_py(
     is_circle_inside_rect(
         Point::new(center.0, center.1),
         radius,
-        Rect(rect.0, rect.1, rect.2, rect.3),
+        Rect::new(rect.0, rect.1, rect.2, rect.3),
     )
 }
 
@@ -174,7 +174,7 @@ fn does_circle_intersect_rect_py(
     does_circle_intersect_rect(
         Point::new(center.0, center.1),
         radius,
-        Rect(rect.0, rect.1, rect.2, rect.3),
+        Rect::new(rect.0, rect.1, rect.2, rect.3),
     )
 }
 

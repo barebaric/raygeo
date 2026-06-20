@@ -78,7 +78,7 @@ fn clip_line_segment_py(
     clip_line_segment_with_rect(
         tuple_to_point3d(p1),
         tuple_to_point3d(p2),
-        Rect(rect.0, rect.1, rect.2, rect.3),
+        Rect::new(rect.0, rect.1, rect.2, rect.3),
     )
     .map(|(a, b)| (point3d_to_tuple(a), point3d_to_tuple(b)))
 }
@@ -182,8 +182,12 @@ fn clip_line_segment_with_rect_2d_py(
 ) -> Option<Edge2D> {
     let p1 = Point::new(p1.0, p1.1);
     let p2 = Point::new(p2.0, p2.1);
-    clip_line_segment_with_rect_2d(p1, p2, Rect(rect.0, rect.1, rect.2, rect.3))
-        .map(|(a, b)| ((a.x, a.y), (b.x, b.y)))
+    clip_line_segment_with_rect_2d(
+        p1,
+        p2,
+        Rect::new(rect.0, rect.1, rect.2, rect.3),
+    )
+    .map(|(a, b)| ((a.x, a.y), (b.x, b.y)))
 }
 
 #[gen_stub_pyfunction(

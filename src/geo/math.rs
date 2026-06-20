@@ -9,7 +9,7 @@ use glam::{DMat3, DMat4, DVec2, DVec3, DVec4};
 use crate::geo::geometry::Geometry;
 use crate::geo::shape::arc::linearize_arc;
 use crate::geo::shape::point::transform_point;
-use crate::types::{Command, Point, Point3D, Rect};
+use crate::types::{Command, Point, Point3D};
 
 /// Transform a 2D point by a 3x3 affine matrix (homogeneous coordinates).
 pub fn mat3_transform(m: DMat3, x: f64, y: f64) -> (f64, f64) {
@@ -177,12 +177,12 @@ pub fn map_geometry_to_frame(
         return Geometry::new();
     }
 
-    let Rect(min_x, min_y, max_x, max_y) = geometry.rect();
-    let src_width = stable_src_width.unwrap_or(max_x - min_x);
-    let src_height = stable_src_height.unwrap_or(max_y - min_y);
+    let r = geometry.rect();
+    let src_width = stable_src_width.unwrap_or(r.max.x - r.min.x);
+    let src_height = stable_src_height.unwrap_or(r.max.y - r.min.y);
 
-    let anchor_x_value = anchor_x.unwrap_or(min_x);
-    let anchor_y_value = anchor_y.unwrap_or(min_y);
+    let anchor_x_value = anchor_x.unwrap_or(r.min.x);
+    let anchor_y_value = anchor_y.unwrap_or(r.min.y);
 
     if src_width < 1e-9 || src_height < 1e-9 {
         return Geometry::new();

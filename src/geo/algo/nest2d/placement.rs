@@ -96,7 +96,10 @@ pub fn generate_perimeter_candidates(
     part_bounds: Rect,
     spacing: f64,
 ) -> Vec<Point> {
-    let Rect(p_min_x, p_min_y, p_max_x, p_max_y) = part_bounds;
+    let p_min_x = part_bounds.min.x;
+    let p_min_y = part_bounds.min.y;
+    let p_max_x = part_bounds.max.x;
+    let p_max_y = part_bounds.max.y;
     let mut candidates = Vec::with_capacity(placed_groups.len() * 8);
 
     for group in placed_groups {
@@ -104,7 +107,10 @@ pub fn generate_perimeter_candidates(
             continue;
         }
         let b = crate::geo::shape::polygon::get_polygon_group_bounds(group);
-        let Rect(pb_min_x, pb_min_y, pb_max_x, pb_max_y) = b;
+        let pb_min_x = b.min.x;
+        let pb_min_y = b.min.y;
+        let pb_max_x = b.max.x;
+        let pb_max_y = b.max.y;
 
         candidates
             .push(Point::new(pb_max_x + spacing - p_min_x, pb_min_y - p_min_y));
@@ -133,15 +139,15 @@ pub fn generate_bottom_left_candidates(
     part_bounds: Rect,
     spacing: f64,
 ) -> Vec<Point> {
-    let pw = part_bounds.2 - part_bounds.0;
-    let ph = part_bounds.3 - part_bounds.1;
+    let pw = part_bounds.max.x - part_bounds.min.x;
+    let ph = part_bounds.max.y - part_bounds.min.y;
     let sx = (pw + spacing).max(spacing);
     let sy = (ph + spacing).max(spacing);
     let mut cand = Vec::new();
-    let mut y = ifp_bounds.1;
-    while y + ph <= ifp_bounds.3 + 1e-6 {
-        let mut x = ifp_bounds.0;
-        while x + pw <= ifp_bounds.2 + 1e-6 {
+    let mut y = ifp_bounds.min.y;
+    while y + ph <= ifp_bounds.max.y + 1e-6 {
+        let mut x = ifp_bounds.min.x;
+        while x + pw <= ifp_bounds.max.x + 1e-6 {
             cand.push(Point::new(x, y));
             x += sx;
         }
@@ -158,10 +164,10 @@ pub fn generate_grid_candidates(
 ) -> Vec<Point> {
     let step = spacing.max(1.0);
     let mut cand = Vec::new();
-    let mut y = ifp_bounds.1;
-    while y <= ifp_bounds.3 + 1e-6 {
-        let mut x = ifp_bounds.0;
-        while x <= ifp_bounds.2 + 1e-6 {
+    let mut y = ifp_bounds.min.y;
+    while y <= ifp_bounds.max.y + 1e-6 {
+        let mut x = ifp_bounds.min.x;
+        while x <= ifp_bounds.max.x + 1e-6 {
             cand.push(Point::new(x, y));
             x += step;
         }
@@ -231,7 +237,10 @@ fn placed_vertex_candidates(
     for group in placed_polys_list {
         for poly in group {
             for p in poly {
-                out.push(Point::new(p.x - part_bounds.0, p.y - part_bounds.1));
+                out.push(Point::new(
+                    p.x - part_bounds.min.x,
+                    p.y - part_bounds.min.y,
+                ));
             }
         }
     }
@@ -243,7 +252,10 @@ fn translate_polygons(polys: &[Polygon], dx: f64, dy: f64) -> Vec<Polygon> {
 }
 
 fn bbox_overlaps(a: Rect, b: Rect) -> bool {
-    !(a.0 > b.2 || a.2 < b.0 || a.1 > b.3 || a.3 < b.1)
+    !(a.min.x > b.max.x
+        || a.max.x < b.min.x
+        || a.min.y > b.max.y
+        || a.max.y < b.min.y)
 }
 
 fn filter_dist(
@@ -326,8 +338,8 @@ fn evaluate_candidates(
             continue;
         }
 
-        let dx = x - part_bounds.0;
-        let dy = y - part_bounds.1;
+        let dx = x - part_bounds.min.x;
+        let dy = y - part_bounds.min.y;
         let test_polys = translate_polygons(part_polygons, dx, dy);
         let test_hulls = if !part_hulls.is_empty() {
             translate_polygons(part_hulls, dx, dy)
@@ -335,11 +347,11 @@ fn evaluate_candidates(
             Vec::new()
         };
 
-        let cand_bbox = Rect(
-            x + part_bounds.0,
-            y + part_bounds.1,
-            x + part_bounds.2,
-            y + part_bounds.3,
+        let cand_bbox = Rect::new(
+            x + part_bounds.min.x,
+            y + part_bounds.min.y,
+            x + part_bounds.max.x,
+            y + part_bounds.max.y,
         );
 
         if any_overlap_hierarchical_grid(
@@ -374,8 +386,8 @@ fn build_fast_candidates(
     spacing: f64,
 ) -> Vec<Point> {
     let ifp_bounds = get_polygon_group_bounds(ifp_world);
-    let pw = part_bounds.2 - part_bounds.0;
-    let ph = part_bounds.3 - part_bounds.1;
+    let pw = part_bounds.max.x - part_bounds.min.x;
+    let ph = part_bounds.max.y - part_bounds.min.y;
 
     let mut candidates = ifp_vertex_candidates(ifp_world);
     candidates.extend(generate_bottom_left_candidates(
@@ -389,11 +401,11 @@ fn build_fast_candidates(
         candidates
             .extend(placed_vertex_candidates(placed_polys_list, part_bounds));
 
-        let query_bbox = Rect(
-            ifp_bounds.0 - pw - spacing,
-            ifp_bounds.1 - ph - spacing,
-            ifp_bounds.2 + pw + spacing,
-            ifp_bounds.3 + ph + spacing,
+        let query_bbox = Rect::new(
+            ifp_bounds.min.x - pw - spacing,
+            ifp_bounds.min.y - ph - spacing,
+            ifp_bounds.max.x + pw + spacing,
+            ifp_bounds.max.y + ph + spacing,
         );
         let nearby = get_nearby_parts(placed_polys_list, grid, query_bbox);
         if !nearby.is_empty() {
@@ -474,14 +486,14 @@ fn compute_nfp_clips_for_placed(
         for part_poly in part_polygons {
             let part_bbox =
                 get_polygon_group_bounds(std::slice::from_ref(part_poly));
-            let pw = part_bbox.2 - part_bbox.0;
-            let ph = part_bbox.3 - part_bbox.1;
+            let pw = part_bbox.max.x - part_bbox.min.x;
+            let ph = part_bbox.max.y - part_bbox.min.y;
 
-            let expanded = Rect(
-                placed_bbox.0 - pw - spacing,
-                placed_bbox.1 - ph - spacing,
-                placed_bbox.2 + pw + spacing,
-                placed_bbox.3 + ph + spacing,
+            let expanded = Rect::new(
+                placed_bbox.min.x - pw - spacing,
+                placed_bbox.min.y - ph - spacing,
+                placed_bbox.max.x + pw + spacing,
+                placed_bbox.max.y + ph + spacing,
             );
 
             if !bbox_overlaps(expanded, ifp_bounds) {
@@ -554,14 +566,14 @@ fn build_nfp_candidates(
     spacing: f64,
 ) -> Vec<Point> {
     let ifp_bounds = get_polygon_group_bounds(ifp_world);
-    let pw = part_bounds.2 - part_bounds.0;
-    let ph = part_bounds.3 - part_bounds.1;
+    let pw = part_bounds.max.x - part_bounds.min.x;
+    let ph = part_bounds.max.y - part_bounds.min.y;
 
-    let query_bbox = Rect(
-        ifp_bounds.0 - pw - spacing,
-        ifp_bounds.1 - ph - spacing,
-        ifp_bounds.2 + pw + spacing,
-        ifp_bounds.3 + ph + spacing,
+    let query_bbox = Rect::new(
+        ifp_bounds.min.x - pw - spacing,
+        ifp_bounds.min.y - ph - spacing,
+        ifp_bounds.max.x + pw + spacing,
+        ifp_bounds.max.y + ph + spacing,
     );
     let nearby_indices =
         query_nearby_indices(placed_polys_list, grid, query_bbox);
@@ -575,20 +587,20 @@ fn build_nfp_candidates(
 
         // Bounding-box corners
         candidates.push(Point::new(
-            p_bounds.0 - part_bounds.2 - spacing,
-            p_bounds.1 - part_bounds.3 - spacing,
+            p_bounds.min.x - part_bounds.max.x - spacing,
+            p_bounds.min.y - part_bounds.max.y - spacing,
         ));
         candidates.push(Point::new(
-            p_bounds.2 - part_bounds.0 + spacing,
-            p_bounds.1 - part_bounds.3 - spacing,
+            p_bounds.max.x - part_bounds.min.x + spacing,
+            p_bounds.min.y - part_bounds.max.y - spacing,
         ));
         candidates.push(Point::new(
-            p_bounds.2 - part_bounds.0 + spacing,
-            p_bounds.3 - part_bounds.1 + spacing,
+            p_bounds.max.x - part_bounds.min.x + spacing,
+            p_bounds.max.y - part_bounds.min.y + spacing,
         ));
         candidates.push(Point::new(
-            p_bounds.0 - part_bounds.2 - spacing,
-            p_bounds.3 - part_bounds.1 + spacing,
+            p_bounds.min.x - part_bounds.max.x - spacing,
+            p_bounds.max.y - part_bounds.min.y + spacing,
         ));
 
         nfp_clips.extend(compute_nfp_clips_for_placed(
@@ -782,17 +794,17 @@ fn prepare_part(
 
     // Flips are handled in Python — just use rotated directly
     let norm_bounds = get_polygon_group_bounds(&rotated);
-    let ox = norm_bounds.0;
-    let oy = norm_bounds.1;
+    let ox = norm_bounds.min.x;
+    let oy = norm_bounds.min.y;
 
     PreparedPart {
         polygons: translate_polygons(&rotated, -ox, -oy),
         hulls: translate_polygons(&rotated_hulls, -ox, -oy),
-        part_bounds: Rect(
+        part_bounds: Rect::new(
             0.0,
             0.0,
-            norm_bounds.2 - norm_bounds.0,
-            norm_bounds.3 - norm_bounds.1,
+            norm_bounds.max.x - norm_bounds.min.x,
+            norm_bounds.max.y - norm_bounds.min.y,
         ),
     }
 }
@@ -1030,8 +1042,8 @@ fn find_best_sheet(
     sheet_states: &[SheetState],
     config: &PlacementConfig,
 ) -> Option<(Point, usize)> {
-    let part_width = prepared.part_bounds.2 - prepared.part_bounds.0;
-    let part_height = prepared.part_bounds.3 - prepared.part_bounds.1;
+    let part_width = prepared.part_bounds.max.x - prepared.part_bounds.min.x;
+    let part_height = prepared.part_bounds.max.y - prepared.part_bounds.min.y;
 
     let mut best_pos: Option<(Point, usize)> = None;
     let mut best_score = f64::INFINITY;
@@ -1039,8 +1051,8 @@ fn find_best_sheet(
     for (si, sheet) in sheets.iter().enumerate() {
         let sheet_bounds =
             get_polygon_group_bounds(std::slice::from_ref(&sheet.polygon));
-        let sheet_width = sheet_bounds.2 - sheet_bounds.0;
-        let sheet_height = sheet_bounds.3 - sheet_bounds.1;
+        let sheet_width = sheet_bounds.max.x - sheet_bounds.min.x;
+        let sheet_height = sheet_bounds.max.y - sheet_bounds.min.y;
 
         if part_width > sheet_width || part_height > sheet_height {
             continue;
@@ -1125,12 +1137,12 @@ pub fn calculate_fitness(
         }
         let b = get_polygon_group_bounds(polys);
         let entry = &mut sheet_bounds[si];
-        entry.0 = entry.0.min(b.0);
-        entry.1 = entry.1.min(b.1);
-        entry.2 = entry.2.max(b.2);
-        entry.3 = entry.3.max(b.3);
-        entry.4 += b.0;
-        entry.5 += b.1;
+        entry.0 = entry.0.min(b.min.x);
+        entry.1 = entry.1.min(b.min.y);
+        entry.2 = entry.2.max(b.max.x);
+        entry.3 = entry.3.max(b.max.y);
+        entry.4 += b.min.x;
+        entry.5 += b.min.y;
         entry.6 += 1;
     }
 

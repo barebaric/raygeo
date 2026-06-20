@@ -191,7 +191,7 @@ impl Geometry {
     /// Returns (0, 0, 0, 0) if the geometry is empty.
     pub fn rect(&self) -> Rect {
         if self.data.is_empty() {
-            return Rect(0.0, 0.0, 0.0, 0.0);
+            return Rect::default();
         }
         crate::geo::query::get_bounding_rect_from_array(&self.data)
     }
@@ -239,10 +239,10 @@ impl Geometry {
         let mut result = Vec::new();
         for idx in 0..self.data.len() {
             if let Some(bbox) = self.segment_bounds(idx) {
-                if bbox.2 >= fmin_x
-                    && bbox.0 <= fmax_x
-                    && bbox.3 >= fmin_y
-                    && bbox.1 <= fmax_y
+                if bbox.max.x >= fmin_x
+                    && bbox.min.x <= fmax_x
+                    && bbox.max.y >= fmin_y
+                    && bbox.min.y <= fmax_y
                 {
                     result.push(idx);
                 }

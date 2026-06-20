@@ -295,7 +295,7 @@ fn does_line_segment_intersect_rect_py(
     does_line_segment_intersect_rect(
         Point::new(p1.0, p1.1),
         Point::new(p2.0, p2.1),
-        Rect(rect.0, rect.1, rect.2, rect.3),
+        Rect::new(rect.0, rect.1, rect.2, rect.3),
     )
 }
 

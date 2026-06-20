@@ -121,17 +121,17 @@ pub fn get_inner_fit_polygon(
     }
     let c_rect = get_polygon_bounds(container);
     let p_rect = get_polygon_bounds(part);
-    let p_width = p_rect.2 - p_rect.0;
-    let p_height = p_rect.3 - p_rect.1;
-    let c_width = c_rect.2 - c_rect.0;
-    let c_height = c_rect.3 - c_rect.1;
+    let p_width = p_rect.max.x - p_rect.min.x;
+    let p_height = p_rect.max.y - p_rect.min.y;
+    let c_width = c_rect.max.x - c_rect.min.x;
+    let c_height = c_rect.max.y - c_rect.min.y;
     if p_width > c_width + 1e-9 || p_height > c_height + 1e-9 {
         return vec![];
     }
-    let ifp_min_x = c_rect.0 - p_rect.0;
-    let ifp_max_x = c_rect.2 - p_rect.2;
-    let ifp_min_y = c_rect.1 - p_rect.1;
-    let ifp_max_y = c_rect.3 - p_rect.3;
+    let ifp_min_x = c_rect.min.x - p_rect.min.x;
+    let ifp_max_x = c_rect.max.x - p_rect.max.x;
+    let ifp_min_y = c_rect.min.y - p_rect.min.y;
+    let ifp_max_y = c_rect.max.y - p_rect.max.y;
     if ifp_min_x > ifp_max_x || ifp_min_y > ifp_max_y {
         return vec![];
     }

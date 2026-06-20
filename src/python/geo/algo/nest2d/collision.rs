@@ -58,7 +58,7 @@ fn numpy_bbox(arr: &Bound<'_, PyArray2<f64>>) -> Rect {
             ymax = y;
         }
     }
-    Rect(xmin, ymin, xmax, ymax)
+    Rect::new(xmin, ymin, xmax, ymax)
 }
 
 /// Compute the group bounding box from an array of numpy polygons, also
@@ -67,7 +67,11 @@ fn numpy_group_bbox(polys: &[Bound<'_, PyArray2<f64>>]) -> Rect {
     let (mut xmin, mut ymin) = (f64::MAX, f64::MAX);
     let (mut xmax, mut ymax) = (f64::MIN, f64::MIN);
     for p in polys {
-        let Rect(pxmin, pylow, pxmax, pyhigh) = numpy_bbox(p);
+        let r = numpy_bbox(p);
+        let pxmin = r.min.x;
+        let pylow = r.min.y;
+        let pxmax = r.max.x;
+        let pyhigh = r.max.y;
         if pxmin < xmin {
             xmin = pxmin;
         }
@@ -81,11 +85,14 @@ fn numpy_group_bbox(polys: &[Bound<'_, PyArray2<f64>>]) -> Rect {
             ymax = pyhigh;
         }
     }
-    Rect(xmin, ymin, xmax, ymax)
+    Rect::new(xmin, ymin, xmax, ymax)
 }
 
 fn rects_intersect(a: Rect, b: Rect) -> bool {
-    a.0 <= b.2 && a.2 >= b.0 && a.1 <= b.3 && a.3 >= b.1
+    a.min.x <= b.max.x
+        && a.max.x >= b.min.x
+        && a.min.y <= b.max.y
+        && a.max.y >= b.min.y
 }
 
 // ---------------------------------------------------------------------------
@@ -285,7 +292,7 @@ fn any_overlap_hierarchical_grid_py(
     candidate_bbox: (f64, f64, f64, f64),
     min_area: f64,
 ) -> bool {
-    let candidate_bbox = Rect(
+    let candidate_bbox = Rect::new(
         candidate_bbox.0,
         candidate_bbox.1,
         candidate_bbox.2,
@@ -304,7 +311,7 @@ fn any_overlap_hierarchical_grid_py(
     if cand_polys.is_empty() {
         return false;
     }
-    let cand_bbox = if candidate_bbox.0.is_finite() {
+    let cand_bbox = if candidate_bbox.min.x.is_finite() {
         candidate_bbox
     } else {
         get_polygon_group_bounds(&cand_polys)

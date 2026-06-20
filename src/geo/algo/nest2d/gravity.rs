@@ -18,7 +18,8 @@ pub fn find_max_slide(
     axis: &str,
     spacing: f64,
 ) -> f64 {
-    let Rect(sheet_min_x, sheet_min_y, _, _) = sheet_bounds;
+    let sheet_min_x = sheet_bounds.min.x;
+    let sheet_min_y = sheet_bounds.min.y;
 
     let bounds = get_polygon_group_bounds(polys);
     let limit = if axis == "x" {
@@ -26,7 +27,11 @@ pub fn find_max_slide(
     } else {
         sheet_min_y + spacing
     };
-    let current_min = if axis == "x" { bounds.0 } else { bounds.1 };
+    let current_min = if axis == "x" {
+        bounds.min.x
+    } else {
+        bounds.min.y
+    };
 
     let max_slide = current_min - limit;
     if max_slide < MIN_SLIDE {
@@ -107,7 +112,10 @@ pub fn apply_gravity(
         y_order.sort_by(|&a, &b| {
             let ba = get_polygon_group_bounds(&groups[a]);
             let bb = get_polygon_group_bounds(&groups[b]);
-            ba.1.partial_cmp(&bb.1).unwrap_or(std::cmp::Ordering::Equal)
+            ba.min
+                .y
+                .partial_cmp(&bb.min.y)
+                .unwrap_or(std::cmp::Ordering::Equal)
         });
 
         for &idx in &y_order {
@@ -141,7 +149,10 @@ pub fn apply_gravity(
         x_order.sort_by(|&a, &b| {
             let ba = get_polygon_group_bounds(&groups[a]);
             let bb = get_polygon_group_bounds(&groups[b]);
-            ba.0.partial_cmp(&bb.0).unwrap_or(std::cmp::Ordering::Equal)
+            ba.min
+                .x
+                .partial_cmp(&bb.min.x)
+                .unwrap_or(std::cmp::Ordering::Equal)
         });
 
         for &idx in &x_order {
