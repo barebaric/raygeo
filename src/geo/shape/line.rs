@@ -4,7 +4,7 @@
 
 use std::f64::consts::PI;
 
-use crate::types::{Point, Polygon, Rect};
+use crate::types::{Point, Point3D, Polygon, Rect};
 
 /// Computes the Euclidean length of a line segment.
 pub fn get_line_segment_length(p1: Point, p2: Point) -> f64 {
@@ -332,4 +332,25 @@ pub fn get_angle_at_vertex(p0: Point, p1: Point, p2: Point) -> f64 {
     let cos_theta = (-1.0_f64).max(1.0_f64).min(dot / mag_prod);
 
     cos_theta.acos()
+}
+
+/// Generate `n` linearly interpolated 3D points from `from` to `to` at
+/// height `z`.  Returns `n` points spanning `t ∈ [1/n, 1]` — the start
+/// point `from` is **not** included, the end point `to` *is* included.
+///
+/// When `n == 0` an empty vec is returned.
+pub fn interpolated_segment_3d(
+    from: Point,
+    to: Point,
+    z: f64,
+    n: usize,
+) -> Vec<Point3D> {
+    let mut out = Vec::with_capacity(n);
+    for i in 1..=n {
+        let t = i as f64 / n as f64;
+        let x = from.x + (to.x - from.x) * t;
+        let y = from.y + (to.y - from.y) * t;
+        out.push(Point3D::new(x, y, z));
+    }
+    out
 }

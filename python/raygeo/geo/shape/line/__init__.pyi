@@ -22,6 +22,7 @@ __all__ = [
     "get_line_segment_length",
     "get_line_segment_polygon_intersections",
     "get_point_line_distance",
+    "interpolated_segment_3d",
     "is_point_on_line_segment",
 ]
 
@@ -140,6 +141,23 @@ def get_point_line_distance(point: types.Point, line_p1: types.Point, line_p2: t
     :param line_p2: Second point on the segment.
     :returns: Distance (clamped to segment).
     :complexity: O(1) time, O(1) space
+    """
+
+def interpolated_segment_3d(from_x: float, from_y: float, to_x: float, to_y: float, z: float, n: int) -> list[tuple[float, float, float]]:
+    r"""
+    Generate linearly interpolated 3D points along a 2D segment.
+    
+    Returns *n* points from *from* to *to* at height *z*.  The start is
+    **not** included; the end *is* included.
+    
+    :param from_x: X coordinate of the start.
+    :param from_y: Y coordinate of the start.
+    :param to_x: X coordinate of the end.
+    :param to_y: Y coordinate of the end.
+    :param z: Z height for all points.
+    :param n: Number of points to generate.
+    :returns: List of ``(x, y, z)`` points.
+    :complexity: O(n) time, O(1) space
     """
 
 def is_point_on_line_segment(point: types.Point, seg_p1: types.Point, seg_p2: types.Point) -> bool:

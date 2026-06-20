@@ -10,18 +10,65 @@ containment checks, and angle-at-vertex computation.
 ";
 
 use super::super::flex_point::{
-    option_point_to_tuple, point_to_tuple, polygons_from_tuples,
+    option_point_to_tuple, point_to_tuple, points3d_to_tuples,
+    polygons_from_tuples,
 };
 use crate::geo::shape::line::{
     does_line_segment_intersect_circle, does_line_segment_intersect_rect,
     get_angle_at_vertex, get_line_closest_point, get_line_line_intersection,
     get_line_segment_closest_point, get_line_segment_intersection,
     get_line_segment_length, get_line_segment_polygon_intersections,
-    get_point_line_distance, is_point_on_segment,
+    get_point_line_distance, interpolated_segment_3d, is_point_on_segment,
 };
 use crate::types::{Point, Rect};
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::gen_stub_pyfunction;
+
+#[gen_stub_pyfunction(
+    python = r#"
+    import raygeo.geo.types
+
+    def interpolated_segment_3d(
+        from_x: float,
+        from_y: float,
+        to_x: float,
+        to_y: float,
+        z: float,
+        n: int,
+    ) -> list[tuple[float, float, float]]:
+        """Generate linearly interpolated 3D points along a 2D segment.
+
+        Returns *n* points from *from* to *to* at height *z*.  The start is
+        **not** included; the end *is* included.
+
+        :param from_x: X coordinate of the start.
+        :param from_y: Y coordinate of the start.
+        :param to_x: X coordinate of the end.
+        :param to_y: Y coordinate of the end.
+        :param z: Z height for all points.
+        :param n: Number of points to generate.
+        :returns: List of ``(x, y, z)`` points.
+        :complexity: O(n) time, O(1) space
+        """
+"#,
+    module = "raygeo.geo.shape.line"
+)]
+#[pyfunction(name = "interpolated_segment_3d")]
+fn interpolated_segment_3d_py(
+    from_x: f64,
+    from_y: f64,
+    to_x: f64,
+    to_y: f64,
+    z: f64,
+    n: usize,
+) -> Vec<(f64, f64, f64)> {
+    points3d_to_tuples(interpolated_segment_3d(
+        Point::new(from_x, from_y),
+        Point::new(to_x, to_y),
+        z,
+        n,
+    ))
+}
 
 pub fn register(shape_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     let py = shape_mod.py();
@@ -41,6 +88,7 @@ pub fn register(shape_mod: &Bound<'_, PyModule>) -> PyResult<()> {
         get_line_segment_polygon_intersections_py,
         get_angle_at_vertex_py,
         get_line_segment_length_py,
+        interpolated_segment_3d_py,
     );
 
     shape_mod.add_submodule(&m)?;

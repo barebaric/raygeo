@@ -223,6 +223,39 @@ distance is measured to the nearest endpoint when the perpendicular falls outsid
 
 _Perpendicular distance from a point to a line_
 
+### `interpolated_segment_3d()`
+
+```python
+interpolated_segment_3d(
+    from_x: float,
+    from_y: float,
+    to_x: float,
+    to_y: float,
+    z: float,
+    n: int,
+) -> list[tuple[float, float, float]]
+```
+
+Generate linearly interpolated 3D points along a 2D segment.
+
+Returns _n_ points from _from_ to _to_ at height _z_. The start is **not** included; the end _is_
+included.
+
+| Parameter    | Type                               | Description                   |
+| ------------ | ---------------------------------- | ----------------------------- |
+| `from_x`     | `float`                            | X coordinate of the start.    |
+| `from_y`     | `float`                            | Y coordinate of the start.    |
+| `to_x`       | `float`                            | X coordinate of the end.      |
+| `to_y`       | `float`                            | Y coordinate of the end.      |
+| `z`          | `float`                            | Z height for all points.      |
+| `n`          | `int`                              | Number of points to generate. |
+| _Returns_    | `list[tuple[float, float, float]]` | List of `(x, y, z)` points.   |
+| _Complexity_ |                                    | O(n) time, O(1) space         |
+
+![Linearly interpolated 3D points along a 2D segment](images/geo-shape-line-interpolated-segment.png)
+
+_Linearly interpolated 3D points along a 2D segment_
+
 ### `is_point_on_line_segment()`
 
 ```python

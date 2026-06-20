@@ -10,6 +10,7 @@ from raygeo.geo.shape.line import (
     get_line_segment_length,
     get_line_segment_polygon_intersections,
     get_point_line_distance,
+    interpolated_segment_3d,
     is_point_on_line_segment,
 )
 from raygeo.geo.shape.point import midpoint, transform_point
@@ -273,3 +274,38 @@ def test_transform_point():
     scale_mat = [[2, 0, 0, 0], [0, 3, 0, 0], [0, 0, 4, 0], [0, 0, 0, 1]]
     result = transform_point(scale_mat, 1, 2, 3)
     assert result == (2.0, 6.0, 12.0)
+
+
+class TestInterpolatedSegment3D:
+    def test_n_equals_1(self):
+        """n=1 returns just the end point."""
+        pts = interpolated_segment_3d(0.0, 0.0, 10.0, 0.0, 5.0, 1)
+        assert len(pts) == 1
+        assert pts[0] == (10.0, 0.0, 5.0)
+
+    def test_n_equals_5(self):
+        """n=5 returns evenly spaced points, ending at `to`."""
+        pts = interpolated_segment_3d(0.0, 0.0, 10.0, 0.0, 3.0, 5)
+        assert len(pts) == 5
+        assert pts[0] == (2.0, 0.0, 3.0)
+        assert pts[1] == (4.0, 0.0, 3.0)
+        assert pts[2] == (6.0, 0.0, 3.0)
+        assert pts[3] == (8.0, 0.0, 3.0)
+        assert pts[4] == (10.0, 0.0, 3.0)
+
+    def test_n_equals_0(self):
+        """n=0 returns empty list."""
+        assert interpolated_segment_3d(0.0, 0.0, 10.0, 0.0, 5.0, 0) == []
+
+    def test_diagonal_interpolation(self):
+        """Diagonal segment produces correct XY and Z."""
+        pts = interpolated_segment_3d(0.0, 0.0, 6.0, 8.0, 10.0, 2)
+        assert len(pts) == 2
+        assert pts[0] == (3.0, 4.0, 10.0)
+        assert pts[1] == (6.0, 8.0, 10.0)
+
+    def test_z_preserved(self):
+        """All points share the same Z."""
+        pts = interpolated_segment_3d(1.0, 2.0, 3.0, 4.0, 7.0, 10)
+        for pt in pts:
+            assert pt[2] == 7.0

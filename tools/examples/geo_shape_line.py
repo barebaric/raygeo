@@ -7,6 +7,7 @@ from raygeo.geo.shape.line import (
     get_line_line_intersection,
     get_line_segment_intersection,
     get_point_line_distance,
+    interpolated_segment_3d,
 )
 
 
@@ -167,6 +168,51 @@ def generate_point_distance():
     return fig2
 
 
+def generate_interpolated_segment():
+    """Interpolated 3D segment."""
+    from_pt, to_pt = (2.0, 2.0), (10.0, 8.0)
+    z, n = 5.0, 8
+    pts = interpolated_segment_3d(
+        from_pt[0], from_pt[1], to_pt[0], to_pt[1], z, n
+    )
+
+    fig, ax = plt.subplots(figsize=(7, 7))
+    ax.plot(
+        [from_pt[0], to_pt[0]],
+        [from_pt[1], to_pt[1]],
+        color="steelblue",
+        lw=2,
+        label="Segment (XY)",
+    )
+    ax.plot(
+        [p[0] for p in pts],
+        [p[1] for p in pts],
+        "o",
+        color="tomato",
+        markersize=8,
+        label=f"Interpolated ({n} pts, Z={z})",
+    )
+    for i, p in enumerate(pts):
+        ax.annotate(
+            str(i),
+            (p[0], p[1]),
+            xytext=(4, 4),
+            textcoords="offset points",
+            fontsize=8,
+            color="tomato",
+        )
+    ax.plot(from_pt[0], from_pt[1], "o", color="k", markersize=8, label="From")
+    ax.plot(to_pt[0], to_pt[1], "s", color="k", markersize=8, label="To")
+    ax.set_aspect("equal")
+    ax.grid(True, alpha=0.3)
+    ax.set_xlim(0, 12)
+    ax.set_ylim(0, 10)
+    ax.set_title(f"Interpolated segment 3D (n={n}, z={z})", fontsize=14)
+    ax.legend(fontsize=10)
+    fig.tight_layout()
+    return fig
+
+
 __docs_target__ = ["raygeo.geo.shape.line.md"]
 __images__ = [
     {
@@ -178,5 +224,10 @@ __images__ = [
         "heading": "get_point_line_distance",
         "caption": "Perpendicular distance from a point to a line",
         "function": generate_point_distance,
+    },
+    {
+        "heading": "interpolated_segment_3d",
+        "caption": "Linearly interpolated 3D points along a 2D segment",
+        "function": generate_interpolated_segment,
     },
 ]

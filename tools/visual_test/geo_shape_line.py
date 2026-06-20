@@ -6,6 +6,7 @@ from raygeo.geo.shape.line import (
     get_line_line_intersection,
     get_line_segment_intersection,
     get_point_line_distance,
+    interpolated_segment_3d,
 )
 
 
@@ -15,8 +16,13 @@ def page_line_intersections():
         "Find intersections between lines and segments, and measure distances."
     )
 
-    tab_ll, tab_ss, tab_dist = st.tabs(
-        ["Line-Line", "Segment-Segment", "Point-Line Distance"]
+    tab_ll, tab_ss, tab_dist, tab_interp = st.tabs(
+        [
+            "Line-Line",
+            "Segment-Segment",
+            "Point-Line Distance",
+            "Interpolated Segment",
+        ]
     )
 
     with tab_ll:
@@ -240,4 +246,63 @@ def page_line_intersections():
         ax.set_xlim(min(all_xs) - margin, max(all_xs) + margin)
         ax.set_ylim(min(all_ys) - margin, max(all_ys) + margin)
         ax.set_title(f"Perpendicular distance: {dist:.3f}", fontsize=13)
+        st.pyplot(fig)
+
+    with tab_interp:
+        st.header("Interpolated Segment 3D")
+        st.write(
+            "Generate evenly-spaced 3D points along a 2D line segment "
+            "at a fixed Z height."
+        )
+
+        c1, c2 = st.columns(2)
+        with c1:
+            fx = st.number_input("From X", -50.0, 50.0, 2.0, key="ip_fx")
+            fy = st.number_input("From Y", -50.0, 50.0, 2.0, key="ip_fy")
+        with c2:
+            tx = st.number_input("To X", -50.0, 50.0, 10.0, key="ip_tx")
+            ty = st.number_input("To Y", -50.0, 50.0, 8.0, key="ip_ty")
+        z = st.number_input("Z height", -50.0, 50.0, 5.0, key="ip_z")
+        n = st.slider("Number of points", 1, 50, 8, key="ip_n")
+
+        pts = interpolated_segment_3d(fx, fy, tx, ty, z, n)
+
+        fig, ax = plt.subplots(figsize=(8, 7))
+        ax.plot(
+            [fx, tx],
+            [fy, ty],
+            color="steelblue",
+            lw=2,
+            label="Segment (XY)",
+        )
+        ax.plot(
+            [p[0] for p in pts],
+            [p[1] for p in pts],
+            "o",
+            color="tomato",
+            markersize=8,
+            label=f"Interpolated ({n} pts, Z={z})",
+        )
+        ax.plot(fx, fy, "o", color="k", markersize=8, label="From")
+        ax.plot(tx, ty, "s", color="k", markersize=8, label="To")
+
+        ax.set_aspect("equal")
+        ax.grid(True, alpha=0.3)
+        ax.legend(fontsize=11)
+        margin = 2
+        all_xs = [fx, tx] + [p[0] for p in pts]
+        all_ys = [fy, ty] + [p[1] for p in pts]
+        ax.set_xlim(min(all_xs) - margin, max(all_xs) + margin)
+        ax.set_ylim(min(all_ys) - margin, max(all_ys) + margin)
+        ax.set_title(f"Interpolated segment: {n} point(s), Z={z}", fontsize=13)
+        if pts:
+            st.success(
+                f"Generated {len(pts)} point(s): "
+                f"from ({pts[0][0]:.2f}, {pts[0][1]:.2f}, "
+                f"{pts[0][2]:.2f}) "
+                f"to ({pts[-1][0]:.2f}, {pts[-1][1]:.2f}, "
+                f"{pts[-1][2]:.2f})"
+            )
+        else:
+            st.info("No points generated")
         st.pyplot(fig)
