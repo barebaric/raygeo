@@ -4,14 +4,16 @@ r"""
 Individual point operations.
 
 Provides equality testing within a configurable tolerance, midpoint
-computation between two points, and applying a 4x4 affine transformation
-matrix to a single point.
+computation between two points, circumcenter of three points, and
+applying a 4x4 affine transformation matrix to a single point.
 """
 
 import collections.abc
 from raygeo.geo import types
+import typing
 __all__ = [
     "are_points_equal",
+    "circumcenter",
     "midpoint",
     "transform_point",
 ]
@@ -24,6 +26,20 @@ def are_points_equal(p1: types.Point3D, p2: types.Point3D, tolerance: float) -> 
     :param p2: Second point (x, y, z).
     :param tolerance: Maximum allowed difference.
     :returns: True if points are equal within tolerance.
+    :complexity: O(1) time, O(1) space
+    """
+
+def circumcenter(a: types.Point3D, b: types.Point3D, c: types.Point3D) -> typing.Optional[types.Point3D]:
+    r"""
+    Compute the circumcenter of three 3D points.
+    
+    Returns the center of the unique circle passing through all three
+    points.  Returns ``None`` when the points are collinear.
+    
+    :param a: First point (x, y, z).
+    :param b: Second point (x, y, z).
+    :param c: Third point (x, y, z).
+    :returns: Circumcenter (x, y, z) or ``None`` if collinear.
     :complexity: O(1) time, O(1) space
     """
 

@@ -7,10 +7,13 @@ Verifies Z preservation through all boolean and offset operations.
 import math
 from typing import List, Tuple
 
+from raygeo.geo.shape.point import circumcenter
 from raygeo.geo.shape.polygon3d import (
     deduplicate_polyline_3d,
+    fillet_polyline_3d,
     flip_polygon_3d,
     flip_polygons_3d,
+    get_polygon_area_3d,
     get_polygon_bounds_3d,
     get_polygon_centroid_3d,
     get_polygon_convex_hull_3d,
@@ -40,19 +43,6 @@ def P3(*points: Tuple[float, float, float]) -> Polygon3D:
     return [(float(x), float(y), float(z)) for x, y, z in points]
 
 
-def poly_area_xy(poly: Polygon3D) -> float:
-    """Shoelace area of the XY projection (ignoring Z)."""
-    n = len(poly)
-    if n < 3:
-        return 0.0
-    s = 0.0
-    for i in range(n):
-        j = (i + 1) % n
-        s += poly[i][0] * poly[j][1]
-        s -= poly[j][0] * poly[i][1]
-    return abs(s) / 2.0
-
-
 # ── offset_polygon_3d ──────────────────────────────────────────────────
 
 
@@ -75,13 +65,13 @@ class TestOffsetPolygon3D:
         poly = P3((0, 0, 0), (10, 0, 0), (5, 10, 0))
         expanded = offset_polygon_3d(poly, 1.0)
         assert len(expanded) >= 1
-        assert poly_area_xy(expanded[0]) > poly_area_xy(poly)
+        assert get_polygon_area_3d(expanded[0]) > get_polygon_area_3d(poly)
 
     def test_area_decreases_with_negative_offset(self):
         poly = P3((0, 0, 0), (10, 0, 0), (5, 10, 0))
         shrunk = offset_polygon_3d(poly, -0.5)
         assert len(shrunk) >= 1
-        assert poly_area_xy(shrunk[0]) < poly_area_xy(poly)
+        assert get_polygon_area_3d(shrunk[0]) < get_polygon_area_3d(poly)
 
     def test_zero_offset(self):
         poly = P3((0, 0, 7), (10, 0, 7), (10, 10, 7), (0, 10, 7))
@@ -146,7 +136,7 @@ class TestIntersection3D:
         assert len(result) >= 1
         for p in result[0]:
             assert p[2] == 5.0
-        area = poly_area_xy(result[0])
+        area = get_polygon_area_3d(result[0])
         assert abs(area - 25.0) < 0.1
 
     def test_no_intersection(self):
@@ -192,7 +182,7 @@ class TestGroupIntersection3D:
         clip = [P3((5, 5, 4), (15, 5, 4), (15, 15, 4), (5, 15, 4))]
         result = get_polygons_group_intersection_3d(subject, clip)
         assert len(result) >= 1
-        area = sum(poly_area_xy(p) for p in result)
+        area = sum(get_polygon_area_3d(p) for p in result)
         assert abs(area - 25.0) < 0.1
         for p in result[0]:
             assert p[2] == 4.0
@@ -516,8 +506,8 @@ class TestOffsetPolyline3D:
         for p in pos + neg:
             assert p[2] == 5.0
         # For CCW: left (positive) = inward (smaller area)
-        assert poly_area_xy(pos) < poly_area_xy(poly)
-        assert poly_area_xy(neg) > poly_area_xy(poly)
+        assert get_polygon_area_3d(pos) < get_polygon_area_3d(poly)
+        assert get_polygon_area_3d(neg) > get_polygon_area_3d(poly)
 
     def test_nonplanar_open(self):
         """A 3D polyline with varying Z gets a true 3D offset."""
@@ -685,3 +675,193 @@ class TestDeduplicatePolyline3D:
         copy = list(original)
         deduplicate_polyline_3d(original)
         assert original == copy  # original untouched in Python
+
+
+# ── fillet_polyline_3d ──────────────────────────────────────────────────
+
+
+class TestFilletPolyline3D:
+    def test_right_angle_90_deg(self):
+        """L-shape: (0,0)→(10,0)→(10,10) with radius 2 → arc at (10,0)."""
+        poly = P3((0, 0, 0), (10, 0, 0), (10, 10, 0))
+        result = fillet_polyline_3d(poly, 2.0)
+        assert len(result) > 3
+        # First and last points must be preserved
+        assert result[0] == (0.0, 0.0, 0.0)
+        assert result[-1] == (10.0, 10.0, 0.0)
+        # Tangent point on the horizontal leg (first inserted arc point)
+        assert abs(result[1][0] - 8.0) < 1e-9
+        assert abs(result[1][1] - 0.0) < 1e-9
+        # Tangent point on the vertical leg (last inserted arc point)
+        assert abs(result[-2][0] - 10.0) < 1e-9
+        assert abs(result[-2][1] - 2.0) < 1e-9
+        # Z must be preserved
+        for p in result:
+            assert p[2] == 0.0
+        # Arc points should lie on a circle of radius 2 centered at (8, 2)
+        cx, cy = 8.0, 2.0
+        for p in result[1:-1]:
+            d = ((p[0] - cx) ** 2 + (p[1] - cy) ** 2) ** 0.5
+            assert abs(d - 2.0) < 1e-6
+
+    def test_left_hand_corner(self):
+        """Reversed L: (10,10)→(10,0)→(0,0) with radius 2."""
+        poly = P3((10, 10, 0), (10, 0, 0), (0, 0, 0))
+        result = fillet_polyline_3d(poly, 2.0)
+        assert len(result) > 3
+        assert result[0] == (10.0, 10.0, 0.0)
+        assert result[-1] == (0.0, 0.0, 0.0)
+        # Tangent on vertical leg: (10, -2) but clamped to (10,2) since
+        # we go down from 10 to 0, then left.  The tangent point on the
+        # outgoing edge (going left) is at (8,0).
+        # tangent offset d = 2/tan45° = 2
+        # t_in = curr + u_in * d = (10,0) + (0,-1)*2 = (10, -2) ... wait
+        # u_in = prev - curr = (0,10), normalized = (0,1)
+        # t_in = (10,0) + (0,1)*2 = (10, 2)
+        assert abs(result[1][0] - 10.0) < 1e-9
+        assert abs(result[1][1] - 2.0) < 1e-9
+        # Tangent on horizontal outgoing: (8, 0)
+        assert abs(result[-2][0] - 8.0) < 1e-9
+        assert abs(result[-2][1] - 0.0) < 1e-9
+        for p in result:
+            assert p[2] == 0.0
+
+    def test_very_short_segment_skips_fillet(self):
+        """When tan_off exceeds segment length, corner is kept sharp."""
+        poly = P3((0, 0, 0), (1, 0, 0), (1, 10, 0))
+        result = fillet_polyline_3d(poly, 5.0)
+        # Fillet radius is too large for the 1-unit segment → unchanged
+        assert len(result) == 3
+        assert result == poly
+
+    def test_radius_too_large_skips_fillet(self):
+        poly = P3((0, 0, 0), (10, 0, 0), (10, 10, 0))
+        result = fillet_polyline_3d(poly, 100.0)
+        assert len(result) == 3
+        assert result == poly
+
+    def test_zero_radius_returns_unchanged(self):
+        poly = P3((0, 0, 0), (10, 0, 0), (10, 10, 0))
+        result = fillet_polyline_3d(poly, 0.0)
+        assert result == poly
+
+    def test_negative_radius_returns_unchanged(self):
+        poly = P3((0, 0, 0), (10, 0, 0), (10, 10, 0))
+        result = fillet_polyline_3d(poly, -1.0)
+        assert result == poly
+
+    def test_empty_returns_empty(self):
+        assert fillet_polyline_3d([], 2.0) == []
+
+    def test_single_point(self):
+        assert fillet_polyline_3d([(1, 2, 3)], 2.0) == [(1, 2, 3)]
+
+    def test_two_points(self):
+        poly = P3((0, 0, 0), (10, 0, 0))
+        assert fillet_polyline_3d(poly, 2.0) == poly
+
+    def test_z_preserved(self):
+        poly = P3((0, 0, 5), (10, 0, 5), (10, 10, 5))
+        result = fillet_polyline_3d(poly, 2.0)
+        for p in result:
+            assert p[2] == 5.0
+
+    def test_acute_angle(self):
+        """A sharp corner still gets filleted if segments are long enough."""
+        # (0,0)→(20,0)→(18,2) — a ~5.7° turn, segments long enough
+        poly = P3((0, 0, 0), (20, 0, 0), (18, 2, 0))
+        result = fillet_polyline_3d(poly, 1.0)
+        assert len(result) > 3
+        for p in result:
+            assert p[2] == 0.0
+
+    def test_multiple_corners(self):
+        """Four-corner polyline, each corner gets filleted if possible."""
+        poly = P3(
+            (0, 0, 0),
+            (10, 0, 0),
+            (10, 10, 0),
+            (20, 10, 0),
+            (20, 20, 0),
+        )
+        result = fillet_polyline_3d(poly, 1.0)
+        # Each of the 3 internal corners gets filleted (≥2 pts each)
+        assert len(result) >= 3 + 3 * 2
+        # First and last preserved
+        assert result[0] == (0.0, 0.0, 0.0)
+        assert result[-1] == (20.0, 20.0, 0.0)
+        for p in result:
+            assert p[2] == 0.0
+
+    def test_non_planar_true_3d_fillet(self):
+        """Non-planar polyline: arc lies in each corner's edge plane.
+
+        Regression test for the bug where t_in/t_out were computed with 3D
+        edge vectors but the arc was drawn in the XY plane at Z=curr.z,
+        producing Z jumps at t_in and XY discontinuities at t_out.
+        """
+        prev, curr, next_ = (0.0, 0.0, 0.0), (8.0, 0.0, 0.0), (8.0, 6.0, 3.0)
+        poly = P3(prev, curr, next_)
+        result = fillet_polyline_3d(poly, 1.5)
+        assert len(result) > 3
+        # Endpoints preserved
+        assert result[0] == prev
+        assert result[-1] == next_
+
+        t_in = result[1]
+        t_out = result[-2]
+        arc_pts = result[2:-2]
+
+        # t_in must lie exactly on the incoming edge prev->curr (Z=0 here).
+        assert abs(t_in[2] - 0.0) < 1e-9
+        assert abs(t_in[1] - 0.0) < 1e-9
+        # t_out must lie on the outgoing edge curr->next, whose direction
+        # is (0, 6, 3). At distance tan_off=1.5 from curr the Z step is
+        # 1.5 * 3/sqrt(45) ≈ 0.671 — definitely nonzero, proving the arc
+        # is not clamped to curr.z.
+        assert abs(t_out[0] - 8.0) < 1e-9
+        assert abs(t_out[2] - (3.0 * 1.5 / math.sqrt(45.0))) < 1e-9
+
+        # All arc points + t_in + t_out are co-circular: recover the center
+        # as the point equidistant from t_in, t_out and the midpoint arc
+        # point, then verify every arc point is at distance `radius`.
+        def dist(p, q):
+            return math.sqrt(
+                (p[0] - q[0]) ** 2 + (p[1] - q[1]) ** 2 + (p[2] - q[2]) ** 2
+            )
+
+        assert len(arc_pts) >= 1
+        mid = arc_pts[len(arc_pts) // 2]
+        center = circumcenter(t_in, mid, t_out)
+        assert center is not None, "arc points are collinear"
+        for p in result[1:-1]:
+            assert abs(dist(p, center) - 1.5) < 1e-6, (
+                f"point {p} not on fillet circle (d={dist(p, center)})"
+            )
+
+    def test_arc_lies_in_edge_plane(self):
+        """For a non-planar corner, every arc point must lie in the plane
+        defined by prev, curr, next (the edge plane)."""
+        prev, curr, next_ = (0.0, 0.0, 0.0), (8.0, 0.0, 0.0), (8.0, 6.0, 3.0)
+        poly = P3(prev, curr, next_)
+        result = fillet_polyline_3d(poly, 1.5)
+
+        def cross(ax, ay, az, bx, by, bz):
+            return (
+                ay * bz - az * by,
+                az * bx - ax * bz,
+                ax * by - ay * bx,
+            )
+
+        def sub(a, b):
+            return (a[0] - b[0], a[1] - b[1], a[2] - b[2])
+
+        def dot(a, b):
+            return a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
+
+        # Plane normal from the two edge vectors.
+        n = cross(*sub(curr, prev), *sub(next_, curr))
+        # Every arc point P must satisfy n . (P - prev) ≈ 0.
+        for p in result:
+            d = dot(n, sub(p, prev))
+            assert abs(d) < 1e-9, f"arc point {p} not in edge plane (d={d})"

@@ -22,6 +22,31 @@ Points whose squared distance is less than 1e-12 are collapsed.
 | _Returns_    | `types.Polygon3D`         | Deduplicated polyline.        |
 | _Complexity_ |                           | O(n)                          |
 
+### `fillet_polyline_3d()`
+
+```python
+fillet_polyline_3d(
+    polyline: Sequence[types.Point3D],
+    radius: float,
+) -> types.Polygon3D
+```
+
+Fillet corners of a 3D polyline with circular arcs.
+
+Each internal vertex with enough room on both adjacent edges is replaced by a circular arc of the
+given radius tangent to both edges.
+
+| Parameter    | Type                      | Description                                          |
+| ------------ | ------------------------- | ---------------------------------------------------- |
+| `polyline`   | `Sequence[types.Point3D]` | Input polyline as (x, y, z) points.                  |
+| `radius`     | `float`                   | Fillet radius (must be > 0).                         |
+| _Returns_    | `types.Polygon3D`         | Filleted polyline (first and last points preserved). |
+| _Complexity_ |                           | O(n)                                                 |
+
+![Fillet corners of a 3D polyline with circular arcs](images/geo-shape-polygon3d-fillet-polyline-3d.png)
+
+_Fillet corners of a 3D polyline with circular arcs_
+
 ### `flip_polygon_3d()`
 
 ```python
@@ -69,6 +94,24 @@ Flip multiple 3D polygons.
 | `flip_z`     | `bool = False`              | Whether to flip along Z (negate Z).      |
 | _Returns_    | `list[types.Polygon3D]`     | Flipped polygons.                        |
 | _Complexity_ |                             | O(n \* m)                                |
+
+### `get_polygon_area_3d()`
+
+```python
+get_polygon_area_3d(polygon: Sequence[types.Point3D]) -> float
+```
+
+XY-projected area of a 3D polygon (absolute shoelace area).
+
+| Parameter    | Type                      | Description                  |
+| ------------ | ------------------------- | ---------------------------- |
+| `polygon`    | `Sequence[types.Point3D]` | Polygon as (x, y, z) points. |
+| _Returns_    | `float`                   | XY-projected area.           |
+| _Complexity_ |                           | O(n)                         |
+
+![XY-projected (unsigned) area of a 3D polygon](images/geo-shape-polygon3d-area.png)
+
+_XY-projected (unsigned) area of a 3D polygon_
 
 ### `get_polygon_bounds_3d()`
 
@@ -179,6 +222,26 @@ Get the perimeter of a 3D polygon using full 3D edge lengths.
 ![3D polygon perimeter using full 3D edge lengths](images/geo-shape-polygon3d-perimeter.png)
 
 _3D polygon perimeter using full 3D edge lengths_
+
+### `get_polygon_signed_area_3d()`
+
+```python
+get_polygon_signed_area_3d(polygon: Sequence[types.Point3D]) -> float
+```
+
+Signed XY-projected area of a 3D polygon (shoelace formula).
+
+Positive for CCW winding, negative for CW.
+
+| Parameter    | Type                      | Description                  |
+| ------------ | ------------------------- | ---------------------------- |
+| `polygon`    | `Sequence[types.Point3D]` | Polygon as (x, y, z) points. |
+| _Returns_    | `float`                   | Signed XY-projected area.    |
+| _Complexity_ |                           | O(n)                         |
+
+![Signed XY-projected area — positive = CCW, negative = CW](images/geo-shape-polygon3d-signed-area.png)
+
+_Signed XY-projected area — positive = CCW, negative = CW_
 
 ### `get_polygons_difference_3d()`
 

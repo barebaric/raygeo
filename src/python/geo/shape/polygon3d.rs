@@ -4,10 +4,11 @@ use super::super::flex_point::{
     edge_pairs3d_to_tuples, point3d_to_tuple, points3d_to_tuples, PyPoint3D,
 };
 use crate::geo::shape::polygon3d::{
-    deduplicate_polyline_3d, flip_polygon_3d, flip_polygons_3d,
-    get_polygon_bounds_3d, get_polygon_centroid_3d, get_polygon_convex_hull_3d,
-    get_polygon_edges_3d, get_polygon_group_bounds_3d,
-    get_polygon_perimeter_3d, get_polygons_difference_3d,
+    deduplicate_polyline_3d, fillet_polyline_3d, flip_polygon_3d,
+    flip_polygons_3d, get_polygon_area_3d, get_polygon_bounds_3d,
+    get_polygon_centroid_3d, get_polygon_convex_hull_3d, get_polygon_edges_3d,
+    get_polygon_group_bounds_3d, get_polygon_perimeter_3d,
+    get_polygon_signed_area_3d, get_polygons_difference_3d,
     get_polygons_group_difference_3d, get_polygons_group_intersection_3d,
     get_polygons_intersection_3d, get_polygons_union_3d,
     get_polyline_end_tangent_3d, offset_polygon_3d, offset_polyline_3d,
@@ -274,6 +275,52 @@ fn get_polygon_perimeter_3d_py(polygon: Vec<PyPoint3D>) -> f64 {
     import collections.abc
     import raygeo.geo.types
 
+    def get_polygon_area_3d(
+        polygon: collections.abc.Sequence[types.Point3D],
+    ) -> float:
+        """XY-projected area of a 3D polygon (absolute shoelace area).
+
+        :param polygon: Polygon as (x, y, z) points.
+        :returns: XY-projected area.
+        :complexity: O(n)
+        """
+"#,
+    module = "raygeo.geo.shape.polygon3d"
+)]
+#[pyfunction(name = "get_polygon_area_3d")]
+fn get_polygon_area_3d_py(polygon: Vec<PyPoint3D>) -> f64 {
+    get_polygon_area_3d(&poly3d_to_points(polygon))
+}
+
+#[gen_stub_pyfunction(
+    python = r#"
+    import collections.abc
+    import raygeo.geo.types
+
+    def get_polygon_signed_area_3d(
+        polygon: collections.abc.Sequence[types.Point3D],
+    ) -> float:
+        """Signed XY-projected area of a 3D polygon (shoelace formula).
+
+        Positive for CCW winding, negative for CW.
+
+        :param polygon: Polygon as (x, y, z) points.
+        :returns: Signed XY-projected area.
+        :complexity: O(n)
+        """
+"#,
+    module = "raygeo.geo.shape.polygon3d"
+)]
+#[pyfunction(name = "get_polygon_signed_area_3d")]
+fn get_polygon_signed_area_3d_py(polygon: Vec<PyPoint3D>) -> f64 {
+    get_polygon_signed_area_3d(&poly3d_to_points(polygon))
+}
+
+#[gen_stub_pyfunction(
+    python = r#"
+    import collections.abc
+    import raygeo.geo.types
+
     def get_polygon_bounds_3d(
         polygon: collections.abc.Sequence[types.Point3D],
     ) -> types.Rect3D:
@@ -444,6 +491,37 @@ fn deduplicate_polyline_3d_py(
     let mut pts = poly3d_to_points(polyline);
     deduplicate_polyline_3d(&mut pts);
     points3d_to_tuples(pts)
+}
+
+#[gen_stub_pyfunction(
+    python = r#"
+    import collections.abc
+    import raygeo.geo.types
+
+    def fillet_polyline_3d(
+        polyline: collections.abc.Sequence[types.Point3D],
+        radius: float,
+    ) -> types.Polygon3D:
+        """Fillet corners of a 3D polyline with circular arcs.
+
+        Each internal vertex with enough room on both adjacent edges is
+        replaced by a circular arc of the given radius tangent to both
+        edges.
+
+        :param polyline: Input polyline as (x, y, z) points.
+        :param radius: Fillet radius (must be > 0).
+        :returns: Filleted polyline (first and last points preserved).
+        :complexity: O(n)
+        """
+"#,
+    module = "raygeo.geo.shape.polygon3d"
+)]
+#[pyfunction(name = "fillet_polyline_3d")]
+fn fillet_polyline_3d_py(
+    polyline: Vec<PyPoint3D>,
+    radius: f64,
+) -> Vec<(f64, f64, f64)> {
+    points3d_to_tuples(fillet_polyline_3d(&poly3d_to_points(polyline), radius))
 }
 
 // ── 3D Transform functions ───────────────────────────────────────────
@@ -710,6 +788,7 @@ pub fn register(shape_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     register_functions!(
         m,
         deduplicate_polyline_3d_py,
+        fillet_polyline_3d_py,
         get_polygons_union_3d_py,
         get_polygons_intersection_3d_py,
         get_polygons_difference_3d_py,
@@ -718,6 +797,8 @@ pub fn register(shape_mod: &Bound<'_, PyModule>) -> PyResult<()> {
         offset_polygon_3d_py,
         offset_polyline_3d_py,
         get_polygon_perimeter_3d_py,
+        get_polygon_area_3d_py,
+        get_polygon_signed_area_3d_py,
         get_polygon_bounds_3d_py,
         get_polygon_group_bounds_3d_py,
         get_polygon_centroid_3d_py,

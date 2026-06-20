@@ -4,14 +4,15 @@ pub(crate) const MODULE_DOC_POINT: &str = "\
 Individual point operations.
 
 Provides equality testing within a configurable tolerance, midpoint
-computation between two points, and applying a 4x4 affine transformation
-matrix to a single point.
+computation between two points, circumcenter of three points, and
+applying a 4x4 affine transformation matrix to a single point.
 ";
 
 use glam::{DMat4, DVec4};
 
 use super::super::flex_point::{point3d_to_tuple, PyPoint3D};
 use crate::geo::shape::point::are_points_equal;
+use crate::geo::shape::point::circumcenter;
 use crate::geo::shape::point::midpoint;
 use crate::geo::shape::point::transform_point;
 use crate::types::Point3D;
@@ -28,6 +29,7 @@ pub fn register(shape_mod: &Bound<'_, PyModule>) -> PyResult<()> {
         midpoint_py,
         are_points_equal_py,
         transform_point_py,
+        circumcenter_py,
     );
 
     shape_mod.add_submodule(&m)?;
@@ -102,6 +104,42 @@ fn transform_point_py(
         DVec4::new(matrix[0][3], matrix[1][3], matrix[2][3], matrix[3][3]),
     );
     point3d_to_tuple(transform_point(mat, Point3D::new(x, y, z)))
+}
+
+#[gen_stub_pyfunction(
+    python = r#"
+    import typing
+    import raygeo.geo.types
+
+    def circumcenter(
+        a: types.Point3D,
+        b: types.Point3D,
+        c: types.Point3D,
+    ) -> typing.Optional[types.Point3D]:
+        """Compute the circumcenter of three 3D points.
+
+        Returns the center of the unique circle passing through all three
+        points.  Returns ``None`` when the points are collinear.
+
+        :param a: First point (x, y, z).
+        :param b: Second point (x, y, z).
+        :param c: Third point (x, y, z).
+        :returns: Circumcenter (x, y, z) or ``None`` if collinear.
+        :complexity: O(1) time, O(1) space
+        """
+"#,
+    module = "raygeo.geo.shape.point"
+)]
+#[pyfunction(name = "circumcenter")]
+fn circumcenter_py(
+    a: PyPoint3D,
+    b: PyPoint3D,
+    c: PyPoint3D,
+) -> Option<(f64, f64, f64)> {
+    let a3 = Point3D::new(a.0, a.1, a.2);
+    let b3 = Point3D::new(b.0, b.1, b.2);
+    let c3 = Point3D::new(c.0, c.1, c.2);
+    circumcenter(a3, b3, c3).map(point3d_to_tuple)
 }
 
 #[gen_stub_pyfunction(

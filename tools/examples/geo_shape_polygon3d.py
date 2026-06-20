@@ -7,12 +7,15 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import art3d
 
 from raygeo.geo.shape.polygon3d import (
+    fillet_polyline_3d,
     flip_polygon_3d,
+    get_polygon_area_3d,
     get_polygon_bounds_3d,
     get_polygon_centroid_3d,
     get_polygon_convex_hull_3d,
     get_polygon_edges_3d,
     get_polygon_perimeter_3d,
+    get_polygon_signed_area_3d,
     get_polygons_difference_3d,
     get_polygons_intersection_3d,
     get_polygons_union_3d,
@@ -451,6 +454,105 @@ def generate_end_tangent():
     return fig
 
 
+def generate_fillet_polyline_3d():
+    """Fillet corners on a 3D polyline."""
+    poly = [
+        (0.0, 0.0, 0.0),
+        (8.0, 0.0, 0.0),
+        (8.0, 6.0, 3.0),
+        (2.0, 6.0, 3.0),
+        (2.0, 0.0, 6.0),
+        (10.0, 0.0, 6.0),
+    ]
+    radius = 1.5
+    result = fillet_polyline_3d(poly, radius)
+
+    fig = plt.figure(figsize=(10, 8))
+    ax = fig.add_subplot(111, projection="3d")
+    ax.set_xlabel("X")
+    ax.set_ylabel("Y")
+    ax.set_zlabel("Z")
+    ax.set_title(f"3D Polyline Fillet (radius = {radius})", fontsize=14)
+    ax.set_xlim(-1, 12)
+    ax.set_ylim(-1, 8)
+    ax.set_zlim(-1, 8)
+    ax.view_init(elev=25, azim=-65)
+    fig.tight_layout()
+
+    xs = [p[0] for p in poly]
+    ys = [p[1] for p in poly]
+    zs = [p[2] for p in poly]
+    ax.plot(xs, ys, zs, "o-", color="steelblue", linewidth=2, label="Original")
+
+    xs_r = [p[0] for p in result]
+    ys_r = [p[1] for p in result]
+    zs_r = [p[2] for p in result]
+    ax.plot(
+        xs_r,
+        ys_r,
+        zs_r,
+        "o-",
+        color="tomato",
+        linewidth=3,
+        alpha=0.85,
+        label=f"Filleted (r={radius})",
+    )
+
+    # Highlight fillet arcs with a different marker
+    if len(result) > len(poly):
+        ax.plot(
+            xs_r,
+            ys_r,
+            zs_r,
+            "o",
+            color="tomato",
+            markersize=4,
+            alpha=0.85,
+        )
+
+    ax.legend(loc="upper left")
+    return fig
+
+
+def generate_area():
+    """XY-projected area of a 3D polygon."""
+    poly = [(0, 0, 2), (6, 0, 2), (6, 6, 5), (0, 6, 5)]
+    area = get_polygon_area_3d(poly)
+    signed = get_polygon_signed_area_3d(poly)
+    fig, ax = _make_3d_ax(
+        f"3D Polygon Area (XY-projected) = {area:.1f}, signed = {signed:.1f}",
+        zlim=(0, 8),
+    )
+    _draw_polygon3d(ax, poly, "steelblue", "Polygon (CCW)", alpha=0.25)
+    return fig
+
+
+def generate_signed_area():
+    """Signed XY-projected area shows winding direction."""
+    cw = [(0, 0, 2), (0, 6, 2), (6, 6, 5), (6, 0, 5)]
+    sa_cw = get_polygon_signed_area_3d(cw)
+    sa_ccw = get_polygon_signed_area_3d(cw[::-1])  # reversed = CCW
+    fig = plt.figure(figsize=(10, 8))
+    ax = fig.add_subplot(111, projection="3d")
+    ax.set_xlabel("X")
+    ax.set_ylabel("Y")
+    ax.set_zlabel("Z")
+    ax.set_title("Signed Area: CW = red, CCW = green", fontsize=14)
+    ax.set_zlim(0, 8)
+    ax.view_init(elev=25, azim=-65)
+    fig.tight_layout()
+    _draw_polygon3d(ax, cw, "tomato", f"CW (signed = {sa_cw:.1f})", alpha=0.2)
+    _draw_polygon3d(
+        ax,
+        cw[::-1],
+        "limegreen",
+        f"CCW (signed = {sa_ccw:.1f})",
+        alpha=0.2,
+    )
+    ax.legend(loc="upper left")
+    return fig
+
+
 __docs_target__ = ["raygeo.geo.shape.polygon3d.md"]
 __images__ = [
     {
@@ -527,5 +629,20 @@ __images__ = [
         "heading": "get_polyline_end_tangent_3d",
         "caption": "Normalised end tangent direction of a 3D polyline",
         "function": generate_end_tangent,
+    },
+    {
+        "heading": "fillet_polyline_3d",
+        "caption": "Fillet corners of a 3D polyline with circular arcs",
+        "function": generate_fillet_polyline_3d,
+    },
+    {
+        "heading": "get_polygon_area_3d",
+        "caption": "XY-projected (unsigned) area of a 3D polygon",
+        "function": generate_area,
+    },
+    {
+        "heading": "get_polygon_signed_area_3d",
+        "caption": "Signed XY-projected area — positive = CCW, negative = CW",
+        "function": generate_signed_area,
     },
 ]

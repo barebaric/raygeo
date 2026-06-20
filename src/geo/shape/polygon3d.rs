@@ -212,6 +212,27 @@ pub fn get_polygon_perimeter_3d(polygon: &[Point3D]) -> f64 {
     perimeter
 }
 
+/// Signed XY-projected area of a 3D polygon (shoelace formula).
+///
+/// Positive for CCW winding, negative for CW.
+pub fn get_polygon_signed_area_3d(polygon: &[Point3D]) -> f64 {
+    if polygon.len() < 3 {
+        return 0.0;
+    }
+    let n = polygon.len();
+    let mut area = 0.0;
+    for i in 0..n {
+        let j = (i + 1) % n;
+        area += polygon[i].truncate().perp_dot(polygon[j].truncate());
+    }
+    area / 2.0
+}
+
+/// XY-projected area of a 3D polygon (absolute shoelace area).
+pub fn get_polygon_area_3d(polygon: &[Point3D]) -> f64 {
+    get_polygon_signed_area_3d(polygon).abs()
+}
+
 /// Get the 3D bounding box of a polygon (includes Z extents).
 pub fn get_polygon_bounds_3d(polygon: &[Point3D]) -> Rect3D {
     if polygon.is_empty() {
@@ -631,6 +652,111 @@ pub fn offset_polyline_3d(
 /// Remove consecutive points in a 3D polyline that are within 1e-12 of each other.
 pub fn deduplicate_polyline_3d(pts: &mut Vec<Point3D>) {
     pts.dedup_by(|a, b| a.distance_squared(*b) < 1e-12);
+}
+
+/// Fillet (round) corners of a 3D polyline with circular arcs of a given radius.
+///
+/// For each internal vertex, the corner is replaced with a circular arc of
+/// `radius` that is tangent to both adjacent edges.  The arc lies in the
+/// plane spanned by the two adjacent edges (the *edge plane* of the corner),
+/// so this is a **true 3D fillet** that works correctly for non-planar
+/// polylines — each corner is rounded in its own local plane.
+///
+/// If either adjacent segment is too short to accommodate the required tangent
+/// offset, the corner is left sharp (the vertex is preserved unchanged).
+///
+/// # Parameters
+/// - `points` — the input polyline (open; first and last points are kept).
+/// - `radius` — the fillet radius (must be > 0).
+///
+/// # Returns
+/// A new polyline with filleted corners.  The output has at least as many
+/// points as the input (additional points are inserted for each fillet arc).
+pub fn fillet_polyline_3d(points: &[Point3D], radius: f64) -> Vec<Point3D> {
+    if points.len() < 3 || radius <= 0.0 {
+        return points.to_vec();
+    }
+
+    let n = points.len();
+    let mut result = Vec::with_capacity(n + 16);
+    result.push(points[0]);
+
+    for i in 1..n - 1 {
+        let prev = points[i - 1];
+        let curr = points[i];
+        let next = points[i + 1];
+
+        let e_in = prev - curr;
+        let e_out = next - curr;
+
+        let len_in = e_in.length();
+        let len_out = e_out.length();
+
+        if len_in < 1e-12 || len_out < 1e-12 {
+            result.push(curr);
+            continue;
+        }
+
+        let u_in = e_in / len_in;
+        let u_out = e_out / len_out;
+
+        let dot = u_in.dot(u_out).clamp(-1.0, 1.0);
+        let angle = dot.acos();
+
+        // Skip near-straight corners (no rounding needed) and near-hairpins
+        // (would require a degenerate, near-full-circle arc).
+        if (angle - std::f64::consts::PI).abs() < 1e-6 || angle < 1e-6 {
+            result.push(curr);
+            continue;
+        }
+
+        let half_theta = angle / 2.0;
+        let tan_off = radius / half_theta.tan();
+
+        if tan_off > len_in || tan_off > len_out {
+            // Not enough room on at least one edge — leave the corner sharp.
+            result.push(curr);
+            continue;
+        }
+
+        // Tangent points on each edge (true 3D points along the edges).
+        let t_in = curr + u_in * tan_off;
+        let t_out = curr + u_out * tan_off;
+
+        // Arc center: on the open-side bisector at distance r/sin(θ/2).
+        // The bisector (u_in + u_out) points away from the elbow, into the
+        // open side of the angle, which is where the fillet circle lives.
+        let bisector = (u_in + u_out).normalize();
+        let center_dist = radius / half_theta.sin();
+        let center = curr + bisector * center_dist;
+
+        // The arc lies in the edge plane and goes from t_in to t_out around
+        // `center`.  Both radius vectors have length `radius` and enclose an
+        // angle equal to the turn (π − θ).  We sweep between them with a
+        // SLERP-like formula, which traces the short arc on the side of
+        // `curr` (i.e. the inside of the elbow) — exactly the fillet we want.
+        let v_in = t_in - center;
+        let v_out = t_out - center;
+        let sweep = std::f64::consts::PI - angle;
+        let sin_sweep = sweep.sin();
+        let n_arc = ((sweep * 4.0).ceil().max(4.0) as usize).min(64);
+
+        result.push(t_in);
+
+        if sin_sweep.abs() > 1e-10 {
+            for j in 1..n_arc {
+                let t = j as f64 / n_arc as f64;
+                let w_in = ((1.0 - t) * sweep).sin() / sin_sweep;
+                let w_out = (t * sweep).sin() / sin_sweep;
+                result.push(center + v_in * w_in + v_out * w_out);
+            }
+        }
+
+        result.push(t_out);
+    }
+
+    result.push(points[n - 1]);
+    result
 }
 
 /// Normalised tangent direction at the last point of a 3D polyline.

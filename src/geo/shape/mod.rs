@@ -40,7 +40,7 @@ pub use line::{
     get_line_segment_polygon_intersections_into, get_point_line_distance,
     is_point_inside_rect, is_point_on_segment,
 };
-pub use point::{are_points_equal, midpoint, transform_point};
+pub use point::{are_points_equal, circumcenter, midpoint, transform_point};
 pub use polygon::{
     apply_minimum_curvature, clean_polygon, flip_polygon, flip_polygons,
     get_circle_polygon, get_polygon_area, get_polygon_bounds,
@@ -57,10 +57,11 @@ pub use polygon::{
     ClipperPaths, GeoScale, JoinStyle,
 };
 pub use polygon3d::{
-    deduplicate_polyline_3d, flip_polygon_3d, flip_polygons_3d,
-    get_polygon_bounds_3d, get_polygon_centroid_3d, get_polygon_convex_hull_3d,
-    get_polygon_edges_3d, get_polygon_group_bounds_3d,
-    get_polygon_perimeter_3d, get_polygons_difference_3d,
+    deduplicate_polyline_3d, fillet_polyline_3d, flip_polygon_3d,
+    flip_polygons_3d, get_polygon_area_3d, get_polygon_bounds_3d,
+    get_polygon_centroid_3d, get_polygon_convex_hull_3d, get_polygon_edges_3d,
+    get_polygon_group_bounds_3d, get_polygon_perimeter_3d,
+    get_polygon_signed_area_3d, get_polygons_difference_3d,
     get_polygons_group_difference_3d, get_polygons_group_intersection_3d,
     get_polygons_intersection_3d, get_polygons_union_3d,
     get_polyline_end_tangent_3d, offset_polygon_3d, offset_polyline_3d,

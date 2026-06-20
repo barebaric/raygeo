@@ -6,14 +6,17 @@ from raygeo.geo import types
 import typing
 __all__ = [
     "deduplicate_polyline_3d",
+    "fillet_polyline_3d",
     "flip_polygon_3d",
     "flip_polygons_3d",
+    "get_polygon_area_3d",
     "get_polygon_bounds_3d",
     "get_polygon_centroid_3d",
     "get_polygon_convex_hull_3d",
     "get_polygon_edges_3d",
     "get_polygon_group_bounds_3d",
     "get_polygon_perimeter_3d",
+    "get_polygon_signed_area_3d",
     "get_polygons_difference_3d",
     "get_polygons_group_difference_3d",
     "get_polygons_group_intersection_3d",
@@ -40,6 +43,20 @@ def deduplicate_polyline_3d(polyline: collections.abc.Sequence[types.Point3D]) -
     :complexity: O(n)
     """
 
+def fillet_polyline_3d(polyline: collections.abc.Sequence[types.Point3D], radius: float) -> types.Polygon3D:
+    r"""
+    Fillet corners of a 3D polyline with circular arcs.
+    
+    Each internal vertex with enough room on both adjacent edges is
+    replaced by a circular arc of the given radius tangent to both
+    edges.
+    
+    :param polyline: Input polyline as (x, y, z) points.
+    :param radius: Fillet radius (must be > 0).
+    :returns: Filleted polyline (first and last points preserved).
+    :complexity: O(n)
+    """
+
 def flip_polygon_3d(polygon: collections.abc.Sequence[types.Point3D], flip_h: bool = False, flip_v: bool = False, flip_z: bool = False) -> types.Polygon3D:
     r"""
     Flip a 3D polygon horizontally, vertically, and/or along Z.
@@ -62,6 +79,15 @@ def flip_polygons_3d(polygons: collections.abc.Sequence[types.Polygon3D], flip_h
     :param flip_z: Whether to flip along Z (negate Z).
     :returns: Flipped polygons.
     :complexity: O(n * m)
+    """
+
+def get_polygon_area_3d(polygon: collections.abc.Sequence[types.Point3D]) -> float:
+    r"""
+    XY-projected area of a 3D polygon (absolute shoelace area).
+    
+    :param polygon: Polygon as (x, y, z) points.
+    :returns: XY-projected area.
+    :complexity: O(n)
     """
 
 def get_polygon_bounds_3d(polygon: collections.abc.Sequence[types.Point3D]) -> types.Rect3D:
@@ -117,6 +143,17 @@ def get_polygon_perimeter_3d(polygon: collections.abc.Sequence[types.Point3D]) -
     
     :param polygon: Polygon as (x, y, z) points.
     :returns: Perimeter length.
+    :complexity: O(n)
+    """
+
+def get_polygon_signed_area_3d(polygon: collections.abc.Sequence[types.Point3D]) -> float:
+    r"""
+    Signed XY-projected area of a 3D polygon (shoelace formula).
+    
+    Positive for CCW winding, negative for CW.
+    
+    :param polygon: Polygon as (x, y, z) points.
+    :returns: Signed XY-projected area.
     :complexity: O(n)
     """
 
