@@ -6,6 +6,7 @@ from raygeo.geo.shape.circle import (
     find_tangent_circle_centers,
     get_circle_circle_intersections,
     get_line_circle_intersections,
+    nearest_tangent_circle_on_polyline,
 )
 
 
@@ -13,8 +14,13 @@ def page_circle_intersections():
     st.header("Circle Intersections")
     st.write("Find intersection points between circles and lines.")
 
-    tab_cc, tab_lc, tab_tc = st.tabs(
-        ["Circle-Circle", "Line-Circle", "Tangent Circles"]
+    tab_cc, tab_lc, tab_tc, tab_np = st.tabs(
+        [
+            "Circle-Circle",
+            "Line-Circle",
+            "Tangent Circles",
+            "Nearest on Polyline",
+        ]
     )
 
     with tab_cc:
@@ -229,4 +235,161 @@ def page_circle_intersections():
                 "No tangent circles — radius too small or point/segment "
                 "geometry doesn't allow it"
             )
+        st.pyplot(fig)
+
+    with tab_np:
+        st.header("Nearest Tangent Circle on Polyline")
+        st.write(
+            "Find a circle tangent to a polyline, passing through a point, "
+            "with centre inside a containment polygon."
+        )
+
+        c1, c2 = st.columns(2)
+        with c1:
+            pt_x = st.number_input("Point X", -100.0, 100.0, 6.0, key="np_ptx")
+            pt_y = st.number_input("Point Y", -100.0, 100.0, 6.0, key="np_pty")
+            radius = st.number_input("Radius", 0.01, 100.0, 3.0, key="np_r")
+            from_end = st.checkbox("Search from end", value=False, key="np_fe")
+        with c2:
+            st.subheader("Polyline vertices")
+            n_verts = st.number_input("Vertex count", 2, 10, 3, key="np_nv")
+            poly_pts = []
+            for vi in range(n_verts):
+                cc = st.columns(2)
+                x = cc[0].number_input(
+                    f"V{vi} X",
+                    -100.0,
+                    100.0,
+                    2.0 + 8.0 * vi / max(n_verts - 1, 1),
+                    key=f"np_vx{vi}",
+                )
+                y = cc[1].number_input(
+                    f"V{vi} Y",
+                    -100.0,
+                    100.0,
+                    2.0 if vi % 2 == 0 else -2.0,
+                    key=f"np_vy{vi}",
+                )
+                poly_pts.append((x, y))
+
+        st.subheader("Containment polygon")
+        c_pts_input = st.text_input(
+            "Vertices as x1,y1 x2,y2 ...",
+            value="0,-5 14,-5 14,12 0,12",
+            key="np_cont",
+        )
+        cont_pts = []
+        for token in c_pts_input.strip().split():
+            parts = token.split(",")
+            if len(parts) == 2:
+                try:
+                    cont_pts.append((float(parts[0]), float(parts[1])))
+                except ValueError:
+                    pass
+
+        result = nearest_tangent_circle_on_polyline(
+            (pt_x, pt_y), poly_pts, radius, from_end, cont_pts
+        )
+
+        fig, ax = plt.subplots(figsize=(9, 8))
+        xs = [p[0] for p in poly_pts]
+        ys = [p[1] for p in poly_pts]
+        ax.plot(
+            xs,
+            ys,
+            "-o",
+            color="steelblue",
+            lw=2.5,
+            markerfacecolor="lightblue",
+            markeredgecolor="steelblue",
+            markersize=7,
+            label="Polyline",
+        )
+
+        if len(cont_pts) >= 3:
+            cxs = [p[0] for p in cont_pts] + [cont_pts[0][0]]
+            cys = [p[1] for p in cont_pts] + [cont_pts[0][1]]
+            ax.plot(
+                cxs, cys, color="gray", lw=1.5, ls="--", label="Containment"
+            )
+            ax.fill(cxs, cys, color="gray", alpha=0.08)
+
+        ax.plot(pt_x, pt_y, "o", color="k", markersize=10, label="Point")
+
+        if result is not None:
+            center, tangent, idx = result
+            circ = mpatches.Circle(
+                center,
+                radius,
+                fill=False,
+                edgecolor="tomato",
+                lw=2,
+                linestyle="--",
+            )
+            ax.add_patch(circ)
+            ax.plot(
+                center[0],
+                center[1],
+                "s",
+                color="tomato",
+                markersize=9,
+                label="Centre",
+            )
+            ax.plot(
+                tangent[0],
+                tangent[1],
+                "*",
+                color="gold",
+                markersize=16,
+                label="Tangent",
+            )
+            ax.plot(
+                [center[0], pt_x],
+                [center[1], pt_y],
+                color="gray",
+                lw=1,
+                ls=":",
+            )
+            ax.plot(
+                [center[0], tangent[0]],
+                [center[1], tangent[1]],
+                color="gray",
+                lw=1,
+                ls=":",
+            )
+            dir_label = "from end" if from_end else "from start"
+            st.success(
+                f"Found: centre ({center[0]:.3f}, {center[1]:.3f}), "
+                f"tangent ({tangent[0]:.3f}, {tangent[1]:.3f}), "
+                f"segment {idx} ({dir_label})"
+            )
+        else:
+            st.info("No valid tangent circle found")
+
+        ax.set_aspect("equal")
+        ax.grid(True, alpha=0.3)
+        cx_min = cx_max = pt_x
+        cy_min = cy_max = pt_y
+        if result is not None:
+            center, _tangent, _idx = result
+            cx_min = cx_max = center[0]
+            cy_min = cy_max = center[1]
+        margin = max(radius, 5)
+        all_xs = xs + [pt_x, cx_min - radius, cx_max + radius]
+        for cp in cont_pts:
+            all_xs.append(cp[0])
+        all_ys = ys + [pt_y, cy_min - radius, cy_max + radius]
+        for cp in cont_pts:
+            all_ys.append(cp[1])
+        x_range = max(all_xs) - min(all_xs) if all_xs else 20
+        y_range = max(all_ys) - min(all_ys) if all_ys else 20
+        pad = max(x_range, y_range, 10) * 0.2 + 1
+        ax.set_xlim(min(all_xs) - pad, max(all_xs) + pad)
+        ax.set_ylim(min(all_ys) - pad, max(all_ys) + pad)
+        ax.set_title(
+            f"Nearest tangent circle (r={radius}) — "
+            f"{'from end' if from_end else 'from start'}",
+            fontsize=13,
+        )
+        ax.legend(fontsize=10)
         st.pyplot(fig)

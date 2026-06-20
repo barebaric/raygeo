@@ -18,6 +18,7 @@ __all__ = [
     "get_line_circle_intersections",
     "is_circle_inside_rect",
     "line_segment_intersects_circle",
+    "nearest_tangent_circle_on_polyline",
     "project_point_onto_circle",
 ]
 
@@ -89,6 +90,23 @@ def line_segment_intersects_circle(p1: types.Point, p2: types.Point, circle_cent
     :param circle_radius: Circle radius.
     :returns: True if the line segment intersects the circle.
     :complexity: O(1) time, O(1) space
+    """
+
+def nearest_tangent_circle_on_polyline(point: types.Point, polyline: types.Polygon, radius: float, from_end: bool, containment: types.Polygon) -> typing.Optional[tuple[types.Point, types.Point, int]]:
+    r"""
+    Find nearest circle through a point tangent to a polyline.
+    
+    Searches segments of *polyline* for a circle of *radius* that
+    passes through *point*, is tangent to a segment, and has its
+    centre inside *containment*.  Returns the one whose tangent point
+    is closest to the searched end.
+    
+    :param point: Point the circle must pass through (x, y).
+    :param polyline: Polyline segments to search.
+    :param radius: Circle radius.
+    :param from_end: True to search from last vertex; False from first.
+    :param containment: Centre must be inside this polygon.
+    :returns: (centre, tangent_point, segment_index) or None.
     """
 
 def project_point_onto_circle(point: types.Point, center: types.Point, radius: float) -> typing.Optional[types.Point]:

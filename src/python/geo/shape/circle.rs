@@ -14,9 +14,9 @@ use crate::geo::shape::circle::{
     does_circle_intersect_rect, find_tangent_circle_centers,
     get_circle_circle_intersections, get_line_circle_intersections,
     is_circle_inside_rect, line_segment_intersects_circle,
-    project_point_onto_circle,
+    nearest_tangent_circle_on_polyline, project_point_onto_circle,
 };
-use crate::types::{Point, Rect};
+use crate::types::{Point, Polygon, Rect};
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::gen_stub_pyfunction;
 
@@ -34,6 +34,7 @@ pub fn register(shape_mod: &Bound<'_, PyModule>) -> PyResult<()> {
         line_segment_intersects_circle_py,
         project_point_onto_circle_py,
         find_tangent_circle_centers_py,
+        nearest_tangent_circle_on_polyline_py,
     );
 
     shape_mod.add_submodule(&m)?;
@@ -289,4 +290,58 @@ fn find_tangent_circle_centers_py(
     .into_iter()
     .map(|(c, t)| ((c.x, c.y), (t.x, t.y)))
     .collect()
+}
+
+#[gen_stub_pyfunction(
+    python = r#"
+    import typing
+    import raygeo.geo.types
+
+    def nearest_tangent_circle_on_polyline(
+        point: types.Point,
+        polyline: types.Polygon,
+        radius: float,
+        from_end: bool,
+        containment: types.Polygon,
+    ) -> typing.Optional[tuple[types.Point, types.Point, int]]:
+        """Find nearest circle through a point tangent to a polyline.
+
+        Searches segments of *polyline* for a circle of *radius* that
+        passes through *point*, is tangent to a segment, and has its
+        centre inside *containment*.  Returns the one whose tangent point
+        is closest to the searched end.
+
+        :param point: Point the circle must pass through (x, y).
+        :param polyline: Polyline segments to search.
+        :param radius: Circle radius.
+        :param from_end: True to search from last vertex; False from first.
+        :param containment: Centre must be inside this polygon.
+        :returns: (centre, tangent_point, segment_index) or None.
+        """
+"#,
+    module = "raygeo.geo.shape.circle"
+)]
+#[pyfunction(name = "nearest_tangent_circle_on_polyline")]
+#[allow(clippy::type_complexity)]
+fn nearest_tangent_circle_on_polyline_py(
+    point: (f64, f64),
+    polyline: Vec<(f64, f64)>,
+    radius: f64,
+    from_end: bool,
+    containment: Vec<(f64, f64)>,
+) -> Option<((f64, f64), (f64, f64), usize)> {
+    let poly: Vec<Point> =
+        polyline.into_iter().map(|p| Point::new(p.0, p.1)).collect();
+    let cont: Polygon = containment
+        .into_iter()
+        .map(|p| Point::new(p.0, p.1))
+        .collect();
+    nearest_tangent_circle_on_polyline(
+        Point::new(point.0, point.1),
+        &poly,
+        radius,
+        from_end,
+        &cont,
+    )
+    .map(|(c, t, i)| ((c.x, c.y), (t.x, t.y), i))
 }

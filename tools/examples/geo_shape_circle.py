@@ -8,6 +8,7 @@ from raygeo.geo.shape.circle import (
     find_tangent_circle_centers,
     get_circle_circle_intersections,
     get_line_circle_intersections,
+    nearest_tangent_circle_on_polyline,
 )
 
 
@@ -164,6 +165,100 @@ def generate_tangent_circles():
     return fig
 
 
+def generate_nearest_tangent():
+    """Nearest tangent circle on a polyline."""
+    polyline = [(2.0, 0.0), (10.0, 0.0), (10.0, 8.0)]
+    point = (6.0, 6.0)
+    radius = 3.0
+    containment = [(0.0, -5.0), (14.0, -5.0), (14.0, 12.0), (0.0, 12.0)]
+
+    fig, axes = plt.subplots(1, 2, figsize=(14, 7))
+
+    for ax, from_end, title in [
+        (axes[0], False, "Search from start"),
+        (axes[1], True, "Search from end"),
+    ]:
+        result = nearest_tangent_circle_on_polyline(
+            point, polyline, radius, from_end, containment
+        )
+
+        xs = [p[0] for p in polyline]
+        ys = [p[1] for p in polyline]
+        ax.plot(
+            xs,
+            ys,
+            "-o",
+            color="steelblue",
+            lw=2.5,
+            markerfacecolor="lightblue",
+            markeredgecolor="steelblue",
+            markersize=7,
+            label="Polyline",
+        )
+        ax.plot(
+            point[0], point[1], "o", color="k", markersize=9, label="Point"
+        )
+
+        if result:
+            center, tangent, idx = result
+            circ = MplCircle(
+                center,
+                radius,
+                fill=False,
+                edgecolor="tomato",
+                lw=2,
+                linestyle="--",
+            )
+            ax.add_patch(circ)
+            ax.plot(
+                center[0],
+                center[1],
+                "s",
+                color="tomato",
+                markersize=8,
+                label="Centre",
+            )
+            ax.plot(
+                tangent[0],
+                tangent[1],
+                "*",
+                color="gold",
+                markersize=14,
+                label="Tangent",
+            )
+            ax.plot(
+                [center[0], point[0]],
+                [center[1], point[1]],
+                color="gray",
+                lw=1,
+                ls=":",
+            )
+            ax.plot(
+                [center[0], tangent[0]],
+                [center[1], tangent[1]],
+                color="gray",
+                lw=1,
+                ls=":",
+            )
+            ax.set_title(f"{title} (seg {idx})", fontsize=13)
+        else:
+            ax.set_title(f"{title} — no solution", fontsize=13)
+
+        ax.set_aspect("equal")
+        ax.grid(True, alpha=0.3)
+        ax.set_xlim(0, 13)
+        ax.set_ylim(-2, 10)
+        ax.legend(fontsize=9)
+
+    fig.suptitle(
+        f"Nearest tangent circle (r={radius}) on polyline",
+        fontsize=14,
+        y=1.02,
+    )
+    fig.tight_layout()
+    return fig
+
+
 __docs_target__ = ["raygeo.geo.shape.circle.md"]
 __images__ = [
     {
@@ -175,5 +270,10 @@ __images__ = [
         "heading": "find_tangent_circle_centers",
         "caption": "Find circles tangent to a segment through a given point",
         "function": generate_tangent_circles,
+    },
+    {
+        "heading": "nearest_tangent_circle_on_polyline",
+        "caption": "Nearest tangent circle on a polyline",
+        "function": generate_nearest_tangent,
     },
 ]

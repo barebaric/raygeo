@@ -7,7 +7,8 @@
 //! - Line segment intersection with circles
 
 use crate::geo::shape::line::get_line_segment_closest_point;
-use crate::types::{Point, Rect};
+use crate::geo::shape::polygon::is_point_inside_polygon;
+use crate::types::{Point, Polygon, Rect};
 
 /// Computes the intersection points between two circles.
 /// Uses the geometry of intersecting circles to find 0, 1, or 2 points.
@@ -215,4 +216,77 @@ pub fn find_tangent_circle_centers(
     }
 
     results
+}
+
+/// Find the circle of `radius` that passes through `point`, is tangent to
+/// a segment of `polyline`, has its centre inside `containment`, and whose
+/// tangent point is closest to the searched end of the polyline.
+///
+/// When `from_end` is true the search starts at the last segment and moves
+/// backward (tangent point nearest the last vertex is preferred); when
+/// false it starts at the first segment and moves forward (nearest the
+/// first vertex).
+///
+/// Returns `(centre, tangent_point, segment_index)` or `None` if no valid
+/// circle exists.
+pub fn nearest_tangent_circle_on_polyline(
+    point: Point,
+    polyline: &[Point],
+    radius: f64,
+    from_end: bool,
+    containment: &Polygon,
+) -> Option<(Point, Point, usize)> {
+    let n = polyline.len();
+    if n < 2 || radius <= 0.0 {
+        return None;
+    }
+
+    let reference = if from_end {
+        polyline[n - 1]
+    } else {
+        polyline[0]
+    };
+
+    let seg_indices: Vec<usize> = if from_end {
+        (0..n - 1).rev().collect()
+    } else {
+        (0..n - 1).collect()
+    };
+
+    let mut best: Option<(Point, Point, usize)> = None;
+    let mut best_dist_sq = f64::MAX;
+
+    for i in seg_indices {
+        let seg_a = polyline[i];
+        let seg_b = polyline[i + 1];
+
+        let candidates =
+            find_tangent_circle_centers(point, seg_a, seg_b, radius);
+
+        for (center, tangent) in candidates {
+            if !is_point_inside_polygon(center, containment) {
+                continue;
+            }
+            let dist_sq = tangent.distance_squared(reference);
+            if dist_sq < best_dist_sq {
+                best_dist_sq = dist_sq;
+                best = Some((center, tangent, i));
+            }
+        }
+
+        if best.is_some() {
+            let seg_ref = if from_end {
+                polyline[i]
+            } else {
+                polyline[i + 1]
+            };
+            if seg_ref.distance_squared(reference)
+                > best_dist_sq + radius * radius
+            {
+                break;
+            }
+        }
+    }
+
+    best
 }

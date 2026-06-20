@@ -148,6 +148,37 @@ Check if a line segment intersects a circle.
 | _Returns_       | `bool`        | True if the line segment intersects the circle. |
 | _Complexity_    |               | O(1) time, O(1) space                           |
 
+### `nearest_tangent_circle_on_polyline()`
+
+```python
+nearest_tangent_circle_on_polyline(
+    point: types.Point,
+    polyline: types.Polygon,
+    radius: float,
+    from_end: bool,
+    containment: types.Polygon,
+) -> Optional[tuple[types.Point, types.Point, int]]
+```
+
+Find nearest circle through a point tangent to a polyline.
+
+Searches segments of _polyline_ for a circle of _radius_ that passes through _point_, is tangent to
+a segment, and has its centre inside _containment_. Returns the one whose tangent point is closest
+to the searched end.
+
+| Parameter     | Type                                             | Description                                        |
+| ------------- | ------------------------------------------------ | -------------------------------------------------- |
+| `point`       | `types.Point`                                    | Point the circle must pass through (x, y).         |
+| `polyline`    | `types.Polygon`                                  | Polyline segments to search.                       |
+| `radius`      | `float`                                          | Circle radius.                                     |
+| `from_end`    | `bool`                                           | True to search from last vertex; False from first. |
+| `containment` | `types.Polygon`                                  | Centre must be inside this polygon.                |
+| _Returns_     | `Optional[tuple[types.Point, types.Point, int]]` | (centre, tangent_point, segment_index) or None.    |
+
+![Nearest tangent circle on a polyline](images/geo-shape-circle-nearest-tangent.png)
+
+_Nearest tangent circle on a polyline_
+
 ### `project_point_onto_circle()`
 
 ```python
