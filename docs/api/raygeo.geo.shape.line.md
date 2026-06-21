@@ -251,6 +251,33 @@ distance is measured to the nearest endpoint when the perpendicular falls outsid
 
 _Perpendicular distance from a point to a line_
 
+### `get_segment_segment_distance()`
+
+```python
+get_segment_segment_distance(
+    a: tuple[float, float],
+    b: tuple[float, float],
+    c: tuple[float, float],
+    d: tuple[float, float],
+) -> float
+```
+
+Minimum Euclidean distance between two line segments.
+
+| Parameter    | Type                  | Description                                |
+| ------------ | --------------------- | ------------------------------------------ |
+| `a`          | `tuple[float, float]` | Start of segment 1.                        |
+| `b`          | `tuple[float, float]` | End of segment 1.                          |
+| `c`          | `tuple[float, float]` | Start of segment 2.                        |
+| `d`          | `tuple[float, float]` | End of segment 2.                          |
+| _Returns_    | `float`               | Minimum distance between the two segments. |
+| _Complexity_ |                       | O(1) time, O(1) space                      |
+
+![Minimum Euclidean distance between two line segments. Left: crossing segments (distance 0). Centre: parallel separated segments. Right: skew (non-parallel) segments.](images/geo-shape-line-segment-distance.png)
+
+_Minimum Euclidean distance between two line segments. Left: crossing segments (distance 0). Centre:
+parallel separated segments. Right: skew (non-parallel) segments._
+
 ### `interpolated_segment_3d()`
 
 ```python

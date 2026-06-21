@@ -23,6 +23,7 @@ __all__ = [
     "get_line_segment_length",
     "get_line_segment_polygon_intersections",
     "get_point_line_distance",
+    "get_segment_segment_distance",
     "interpolated_segment_3d",
     "is_point_on_line_segment",
     "longest_line_through_point",
@@ -157,6 +158,18 @@ def get_point_line_distance(point: types.Point, line_p1: types.Point, line_p2: t
     :param line_p1: First point on the segment.
     :param line_p2: Second point on the segment.
     :returns: Distance (clamped to segment).
+    :complexity: O(1) time, O(1) space
+    """
+
+def get_segment_segment_distance(a: tuple[float, float], b: tuple[float, float], c: tuple[float, float], d: tuple[float, float]) -> float:
+    r"""
+    Minimum Euclidean distance between two line segments.
+    
+    :param a: Start of segment 1.
+    :param b: End of segment 1.
+    :param c: Start of segment 2.
+    :param d: End of segment 2.
+    :returns: Minimum distance between the two segments.
     :complexity: O(1) time, O(1) space
     """
 

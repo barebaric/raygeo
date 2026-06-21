@@ -2,6 +2,7 @@
 
 from raygeo.geo.shape.line import (
     does_line_cross_polygon,
+    get_segment_segment_distance,
     longest_line_through_point,
 )
 
@@ -112,3 +113,83 @@ class TestLongestLineThroughPoint:
         # Wider than tall — horizontal
         assert abs(x1 - 2.0) < 1e-9
         assert abs(x2 - 12.0) < 1e-9
+
+
+class TestGetSegmentSegmentDistance:
+    def test_intersecting_segments(self):
+        """Crossing segments have distance 0."""
+        d = get_segment_segment_distance(
+            (0.0, 0.0), (10.0, 10.0), (0.0, 10.0), (10.0, 0.0)
+        )
+        assert d == 0.0
+
+    def test_parallel_separated(self):
+        """Parallel segments separated by 3 units."""
+        d = get_segment_segment_distance(
+            (0.0, 0.0), (10.0, 0.0), (0.0, 3.0), (10.0, 3.0)
+        )
+        assert abs(d - 3.0) < 1e-9
+
+    def test_non_overlapping_parallel(self):
+        """Parallel segments that don't overlap along the axis."""
+        d = get_segment_segment_distance(
+            (0.0, 0.0), (5.0, 0.0), (10.0, 3.0), (15.0, 3.0)
+        )
+        expected = ((5.0 - 10.0) ** 2 + (0.0 - 3.0) ** 2) ** 0.5
+        assert abs(d - expected) < 1e-9
+
+    def test_skew_segments(self):
+        """Skew (non-parallel, non-intersecting) segments."""
+        d = get_segment_segment_distance(
+            (0.0, 0.0), (10.0, 0.0), (5.0, 5.0), (5.0, 15.0)
+        )
+        assert abs(d - 5.0) < 1e-9
+
+    def test_touching_at_endpoint(self):
+        """Segments meeting at an endpoint have distance 0."""
+        d = get_segment_segment_distance(
+            (0.0, 0.0), (5.0, 5.0), (5.0, 5.0), (10.0, 0.0)
+        )
+        assert d == 0.0
+
+    def test_degenerate_first_segment(self):
+        """First segment is a single point."""
+        d = get_segment_segment_distance(
+            (3.0, 4.0), (3.0, 4.0), (0.0, 0.0), (10.0, 0.0)
+        )
+        assert abs(d - 4.0) < 1e-9
+
+    def test_degenerate_second_segment(self):
+        """Second segment is a single point."""
+        d = get_segment_segment_distance(
+            (0.0, 0.0), (10.0, 0.0), (3.0, 4.0), (3.0, 4.0)
+        )
+        assert abs(d - 4.0) < 1e-9
+
+    def test_collinear_overlapping(self):
+        """Collinear overlapping segments have distance 0."""
+        d = get_segment_segment_distance(
+            (0.0, 0.0), (10.0, 0.0), (3.0, 0.0), (7.0, 0.0)
+        )
+        assert d == 0.0
+
+    def test_collinear_non_overlapping(self):
+        """Collinear non-overlapping segments."""
+        d = get_segment_segment_distance(
+            (0.0, 0.0), (5.0, 0.0), (10.0, 0.0), (15.0, 0.0)
+        )
+        assert abs(d - 5.0) < 1e-9
+
+    def test_endpoint_to_interior(self):
+        """Endpoint-to-interior (both analytic params out of bounds)."""
+        d = get_segment_segment_distance(
+            (0.0, 0.0), (10.0, 0.0), (1.0, 4.0), (9.0, 1.0)
+        )
+        assert abs(d - 1.0) < 1e-6, f"expected 1.0, got {d}"
+
+    def test_endpoint_to_interior_reversed(self):
+        """Endpoint-to-interior with swapped segment order."""
+        d = get_segment_segment_distance(
+            (1.0, 4.0), (9.0, 1.0), (0.0, 0.0), (10.0, 0.0)
+        )
+        assert abs(d - 1.0) < 1e-6, f"expected 1.0, got {d}"

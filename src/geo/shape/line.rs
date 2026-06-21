@@ -367,6 +367,70 @@ pub fn interpolated_segment_3d(
     out
 }
 
+/// Minimum distance between two line segments `(a, b)` and `(c, d)`.
+///
+/// Degenerate (zero-length) segments are handled as point-to-segment
+/// queries.  Parallel segments are evaluated via all four endpoint
+/// distances.  Returns the Euclidean distance.
+pub fn get_segment_segment_distance(
+    a: Point,
+    b: Point,
+    c: Point,
+    d: Point,
+) -> f64 {
+    let ab = b - a;
+    let cd = d - c;
+    let ab_len2 = ab.length_squared();
+    let cd_len2 = cd.length_squared();
+
+    // Degenerate: point-to-segment
+    if ab_len2 < 1e-24 {
+        let (_, _, d2) = get_line_segment_closest_point(c, d, a.x, a.y);
+        return d2.sqrt();
+    }
+    if cd_len2 < 1e-24 {
+        let (_, _, d2) = get_line_segment_closest_point(a, b, c.x, c.y);
+        return d2.sqrt();
+    }
+
+    let ac = c - a;
+    let denom = ab.x * cd.y - ab.y * cd.x;
+    let denom2 = denom * denom;
+
+    // Parallel segments: check all four endpoint distances
+    if denom2 < 1e-24 {
+        let (_, _, d2) = get_line_segment_closest_point(a, b, c.x, c.y);
+        let (_, _, d2b) = get_line_segment_closest_point(a, b, d.x, d.y);
+        let (_, _, d2c) = get_line_segment_closest_point(c, d, a.x, a.y);
+        let (_, _, d2d) = get_line_segment_closest_point(c, d, b.x, b.y);
+        return d2.min(d2b).min(d2c).min(d2d).sqrt();
+    }
+
+    // Closest points on infinite lines, clamped to segment bounds
+    let t = (ac.x * ab.y - ac.y * ab.x) / denom;
+    let t_clamped = t.clamp(0.0, 1.0);
+    let s = (ac.x * cd.y - ac.y * cd.x) / denom;
+    let s_clamped = s.clamp(0.0, 1.0);
+
+    let p = a + ab * s_clamped;
+    let q = c + cd * t_clamped;
+    let mut best_d2 = (p - q).length_squared();
+
+    // When the analytic closest points fall outside both segments
+    // the clamped result may overestimate.  Check all four
+    // endpoint-to-other-segment distances to cover that case.
+    let (_, _, d2) = get_line_segment_closest_point(a, b, c.x, c.y);
+    best_d2 = best_d2.min(d2);
+    let (_, _, d2) = get_line_segment_closest_point(a, b, d.x, d.y);
+    best_d2 = best_d2.min(d2);
+    let (_, _, d2) = get_line_segment_closest_point(c, d, a.x, a.y);
+    best_d2 = best_d2.min(d2);
+    let (_, _, d2) = get_line_segment_closest_point(c, d, b.x, b.y);
+    best_d2 = best_d2.min(d2);
+
+    best_d2.sqrt()
+}
+
 /// Find the longest axis-aligned line through a point within a rectangle.
 ///
 /// Returns `(start, end)` — a horizontal line spanning the full width

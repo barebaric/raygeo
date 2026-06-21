@@ -8,6 +8,7 @@ from raygeo.geo.shape.line import (
     get_line_line_intersection,
     get_line_segment_intersection,
     get_point_line_distance,
+    get_segment_segment_distance,
     interpolated_segment_3d,
     longest_line_through_point,
 )
@@ -350,6 +351,75 @@ def generate_longest_line():
     return fig
 
 
+def generate_segment_distance():
+    """Minimum distance between two line segments."""
+    fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(18, 5))
+
+    # Crossing segments — distance 0
+    ax1.plot([0, 10], [0, 10], "steelblue", linewidth=2.5, label="Seg 1")
+    ax1.plot([0, 10], [10, 0], "tomato", linewidth=2.5, label="Seg 2")
+    ax1.plot(5, 5, "*", color="gold", markersize=16, zorder=6)
+    ax1.annotate(
+        "intersect → d=0",
+        (5, 5),
+        xytext=(5, 8),
+        textcoords="offset points",
+        fontsize=11,
+        ha="center",
+    )
+    ax1.set_title("Crossing segments (d=0)", fontsize=13)
+    ax1.set_aspect("equal")
+    ax1.legend(fontsize=10)
+    ax1.grid(True, alpha=0.3)
+    ax1.set_xlim(-1, 11)
+    ax1.set_ylim(-1, 11)
+
+    # Parallel separated segments
+    d = get_segment_segment_distance(
+        (0.0, 1.0), (8.0, 1.0), (2.0, 5.0), (10.0, 5.0)
+    )
+    ax2.plot([0, 8], [1, 1], "steelblue", linewidth=2.5, label="Seg 1")
+    ax2.plot([2, 10], [5, 5], "tomato", linewidth=2.5, label="Seg 2")
+    ax2.annotate(
+        "",
+        (4, 1),
+        (4, 5),
+        arrowprops=dict(arrowstyle="<->", color="forestgreen", lw=2),
+    )
+    ax2.text(4.3, 2.8, f"d={d:.1f}", fontsize=12, color="forestgreen")
+    ax2.set_title("Parallel separated segments", fontsize=13)
+    ax2.set_aspect("equal")
+    ax2.legend(fontsize=10)
+    ax2.grid(True, alpha=0.3)
+    ax2.set_xlim(-1, 11)
+    ax2.set_ylim(-1, 7)
+
+    # Skew (non-parallel, non-intersecting) segments
+    # Seg1: (0,0)→(10,0) along bottom.  Seg2: (1,4)→(9,1) slopes down
+    # toward seg1's right end.  Closest approach: (9,0)↔(9,1) = 1.0
+    d3 = get_segment_segment_distance(
+        (0.0, 0.0), (10.0, 0.0), (1.0, 4.0), (9.0, 1.0)
+    )
+    ax3.plot([0, 10], [0, 0], "steelblue", linewidth=2.5, label="Seg 1")
+    ax3.plot([1, 9], [4, 1], "tomato", linewidth=2.5, label="Seg 2")
+    ax3.annotate(
+        "",
+        (9, 0),
+        (9, 1),
+        arrowprops=dict(arrowstyle="<->", color="forestgreen", lw=2),
+    )
+    ax3.text(9.3, 0.4, f"d={d3:.1f}", fontsize=12, color="forestgreen")
+    ax3.set_title("Skew segments (non-parallel)", fontsize=13)
+    ax3.set_aspect("equal")
+    ax3.legend(fontsize=10)
+    ax3.grid(True, alpha=0.3)
+    ax3.set_xlim(-1, 11)
+    ax3.set_ylim(-1, 7)
+
+    fig.tight_layout()
+    return fig
+
+
 __docs_target__ = ["raygeo.geo.shape.line.md"]
 __images__ = [
     {
@@ -384,5 +454,15 @@ __images__ = [
             " Right: taller box gives a vertical line."
         ),
         "function": generate_longest_line,
+    },
+    {
+        "heading": "get_segment_segment_distance",
+        "caption": (
+            "Minimum Euclidean distance between two line segments."
+            " Left: crossing segments (distance 0)."
+            " Centre: parallel separated segments."
+            " Right: skew (non-parallel) segments."
+        ),
+        "function": generate_segment_distance,
     },
 ]

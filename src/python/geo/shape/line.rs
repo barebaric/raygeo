@@ -19,8 +19,8 @@ use crate::geo::shape::line::{
     get_line_closest_point, get_line_line_intersection,
     get_line_segment_closest_point, get_line_segment_intersection,
     get_line_segment_length, get_line_segment_polygon_intersections,
-    get_point_line_distance, interpolated_segment_3d, is_point_on_segment,
-    longest_line_through_point,
+    get_point_line_distance, get_segment_segment_distance,
+    interpolated_segment_3d, is_point_on_segment, longest_line_through_point,
 };
 use crate::types::{Point, Rect};
 use pyo3::prelude::*;
@@ -84,6 +84,7 @@ pub fn register(shape_mod: &Bound<'_, PyModule>) -> PyResult<()> {
         get_line_closest_point_py,
         get_line_segment_closest_point_py,
         get_point_line_distance_py,
+        get_segment_segment_distance_py,
         is_point_on_line_segment_py,
         does_line_segment_intersect_rect_py,
         does_line_segment_intersect_circle_py,
@@ -509,6 +510,43 @@ fn get_angle_at_vertex_py(
 "#,
     module = "raygeo.geo.shape.line"
 )]
+#[gen_stub_pyfunction(
+    python = r#"
+    import raygeo.geo.types
+
+    def get_segment_segment_distance(
+        a: tuple[float, float],
+        b: tuple[float, float],
+        c: tuple[float, float],
+        d: tuple[float, float],
+    ) -> float:
+        """Minimum Euclidean distance between two line segments.
+
+        :param a: Start of segment 1.
+        :param b: End of segment 1.
+        :param c: Start of segment 2.
+        :param d: End of segment 2.
+        :returns: Minimum distance between the two segments.
+        :complexity: O(1) time, O(1) space
+        """
+"#,
+    module = "raygeo.geo.shape.line"
+)]
+#[pyfunction(name = "get_segment_segment_distance")]
+fn get_segment_segment_distance_py(
+    a: (f64, f64),
+    b: (f64, f64),
+    c: (f64, f64),
+    d: (f64, f64),
+) -> f64 {
+    get_segment_segment_distance(
+        Point::new(a.0, a.1),
+        Point::new(b.0, b.1),
+        Point::new(c.0, c.1),
+        Point::new(d.0, d.1),
+    )
+}
+
 #[pyfunction(name = "get_line_segment_length")]
 fn get_line_segment_length_py(p1: (f64, f64), p2: (f64, f64)) -> f64 {
     get_line_segment_length(Point::new(p1.0, p1.1), Point::new(p2.0, p2.1))
