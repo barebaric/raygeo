@@ -450,6 +450,20 @@ Get the union of multiple polygons.
 
 _Polygon union_
 
+### `get_polyline_bounds()`
+
+```python
+get_polyline_bounds(polyline: Sequence[types.Point]) -> types.Rect
+```
+
+Get the bounding rectangle of an open polyline.
+
+| Parameter    | Type                    | Description                                         |
+| ------------ | ----------------------- | --------------------------------------------------- |
+| `polyline`   | `Sequence[types.Point]` | Polyline as (x, y) points.                          |
+| _Returns_    | `types.Rect`            | Bounding rectangle as (x_min, y_min, x_max, y_max). |
+| _Complexity_ |                         | O(n)                                                |
+
 ### `get_polyline_closest_point()`
 
 ```python

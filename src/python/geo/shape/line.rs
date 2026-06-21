@@ -15,7 +15,7 @@ use super::super::flex_point::{
 };
 use crate::geo::shape::line::{
     does_line_cross_polygon, does_line_segment_intersect_circle,
-    does_line_segment_intersect_rect, get_angle_at_vertex,
+    does_line_segment_intersect_rect, get_angle_at_vertex, get_interior_angle,
     get_line_closest_point, get_line_line_intersection,
     get_line_segment_closest_point, get_line_segment_intersection,
     get_line_segment_length, get_line_segment_polygon_intersections,
@@ -91,6 +91,7 @@ pub fn register(shape_mod: &Bound<'_, PyModule>) -> PyResult<()> {
         get_line_segment_polygon_intersections_py,
         does_line_cross_polygon_py,
         get_angle_at_vertex_py,
+        get_interior_angle_py,
         get_line_segment_length_py,
         interpolated_segment_3d_py,
         longest_line_through_point_py,
@@ -486,6 +487,41 @@ fn get_angle_at_vertex_py(
     p2: (f64, f64),
 ) -> f64 {
     get_angle_at_vertex(
+        Point::new(p0.0, p0.1),
+        Point::new(p1.0, p1.1),
+        Point::new(p2.0, p2.1),
+    )
+}
+
+#[gen_stub_pyfunction(
+    python = r#"
+    import raygeo.geo.types
+
+    def get_interior_angle(
+        p0: types.Point,
+        p1: types.Point,
+        p2: types.Point,
+    ) -> float:
+        """Interior angle at vertex ``p1`` formed by edges ``p0→p1`` and ``p1→p2``.
+
+        Returns 0.0 when any two adjacent points coincide (degenerate input).
+
+        :param p0: Previous point.
+        :param p1: Vertex point.
+        :param p2: Next point.
+        :returns: Angle in radians in ``[0, π]``.
+        :complexity: O(1) time, O(1) space
+        """
+"#,
+    module = "raygeo.geo.shape.line"
+)]
+#[pyfunction(name = "get_interior_angle")]
+fn get_interior_angle_py(
+    p0: (f64, f64),
+    p1: (f64, f64),
+    p2: (f64, f64),
+) -> f64 {
+    get_interior_angle(
         Point::new(p0.0, p0.1),
         Point::new(p1.0, p1.1),
         Point::new(p2.0, p2.1),

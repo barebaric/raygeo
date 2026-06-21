@@ -13,13 +13,14 @@ use crate::geo::algo::smooth::smooth_path;
 use crate::geo::algo::spiral::{generate_spiral, SpiralOptions};
 use crate::geo::shape::arc::get_polyline_turn_sign;
 use crate::geo::shape::line::{
-    does_line_cross_polygon, get_segment_segment_distance,
+    does_line_cross_polygon, get_interior_angle, get_segment_segment_distance,
     longest_line_through_point,
 };
 use crate::geo::shape::polygon::{
     does_path_sweep_intersect_polygon, get_circle_polygon, get_polygon_area,
     get_polygon_bounds, get_polygon_centroid, get_polygon_closest_point,
-    get_polygons_group_difference, get_segment_swept_polygon, trim_polyline_at,
+    get_polygons_group_difference, get_polyline_bounds,
+    get_segment_swept_polygon, trim_polyline_at,
 };
 use crate::types::{Point, Point3D, Polygon};
 
@@ -316,17 +317,6 @@ pub fn find_cutting_arc(
         return None;
     }
 
-    // Interior angle at `curr` formed by edges `prev→curr` and `curr→next`.
-    fn interior_angle(curr: Point, prev: Point, next: Point) -> f64 {
-        let v1 = prev - curr;
-        let v2 = next - curr;
-        let d2 = v1.length_squared() * v2.length_squared();
-        if d2 < 1e-18 {
-            return 0.0;
-        }
-        (v1.dot(v2) / d2.sqrt()).clamp(-1.0, 1.0).acos()
-    }
-
     // Trim vertices from the ends where the interior angle changes
     // abruptly — these are the transition vertices at the tips where the
     // outer arc meets the inner arc.  We compare each candidate vertex
@@ -341,8 +331,8 @@ pub fn find_cutting_arc(
         let b = bite[first];
         let c = bite[(first + 1) % n];
         let d = bite[(first + 2) % n];
-        let angle_curr = interior_angle(b, bite[(first + n - 1) % n], c);
-        let angle_next = interior_angle(c, b, d);
+        let angle_curr = get_interior_angle(bite[(first + n - 1) % n], b, c);
+        let angle_next = get_interior_angle(b, c, d);
         if angle_curr + DERIV_THRESHOLD < angle_next {
             cut_start = (cut_start + 1) % n;
             cut_len -= 1;
@@ -353,8 +343,8 @@ pub fn find_cutting_arc(
         let b = bite[last];
         let c = bite[(last + 1) % n];
         let a_prev = bite[(last + n - 2) % n];
-        let angle_curr = interior_angle(b, a, c);
-        let angle_prev = interior_angle(a, a_prev, b);
+        let angle_curr = get_interior_angle(a, b, c);
+        let angle_prev = get_interior_angle(a_prev, a, b);
         if angle_curr + DERIV_THRESHOLD < angle_prev {
             cut_len -= 1;
             trimmed = true;
@@ -787,19 +777,8 @@ fn link_cutting_arcs(
             if arc.len() < 3 {
                 return None;
             }
-            let xs = arc.iter().map(|p| p.x);
-            let ys = arc.iter().map(|p| p.y);
-            let (xmin, xmax) = xs
-                .clone()
-                .min_by(|a, b| a.partial_cmp(b).unwrap())
-                .zip(xs.max_by(|a, b| a.partial_cmp(b).unwrap()))
-                .unwrap_or((0.0, 0.0));
-            let (ymin, ymax) = ys
-                .clone()
-                .min_by(|a, b| a.partial_cmp(b).unwrap())
-                .zip(ys.max_by(|a, b| a.partial_cmp(b).unwrap()))
-                .unwrap_or((0.0, 0.0));
-            let span = (xmax - xmin).max(ymax - ymin);
+            let b = get_polyline_bounds(arc);
+            let span = (b.max.x - b.min.x).max(b.max.y - b.min.y);
             if span < min_span {
                 return None;
             }

@@ -1,7 +1,10 @@
 """Tests for raygeo.geo.shape.line functions."""
 
+import math
+
 from raygeo.geo.shape.line import (
     does_line_cross_polygon,
+    get_interior_angle,
     get_segment_segment_distance,
     longest_line_through_point,
 )
@@ -193,3 +196,30 @@ class TestGetSegmentSegmentDistance:
             (1.0, 4.0), (9.0, 1.0), (0.0, 0.0), (10.0, 0.0)
         )
         assert abs(d - 1.0) < 1e-6, f"expected 1.0, got {d}"
+
+
+class TestGetInteriorAngle:
+    def test_right_angle(self):
+        angle = get_interior_angle((0.0, 0.0), (0.0, 1.0), (1.0, 1.0))
+        assert abs(angle - math.pi / 2) < 1e-12
+
+    def test_acute_45(self):
+        a = math.pi / 4
+        c = (math.cos(a), math.sin(a))
+        angle = get_interior_angle((1.0, 0.0), (0.0, 0.0), c)
+        assert abs(angle - a) < 1e-12
+
+    def test_obtuse_135(self):
+        a = 3 * math.pi / 4
+        c = (math.cos(a), math.sin(a))
+        angle = get_interior_angle((1.0, 0.0), (0.0, 0.0), c)
+        assert abs(angle - a) < 1e-12
+
+    def test_straight_line(self):
+        angle = get_interior_angle((0.0, 0.0), (1.0, 0.0), (2.0, 0.0))
+        assert abs(angle - math.pi) < 1e-12
+
+    def test_degenerate_coincident(self):
+        """Returns 0.0 when p0 == p1 (zero-length edge)."""
+        angle = get_interior_angle((0.0, 0.0), (0.0, 0.0), (1.0, 0.0))
+        assert angle == 0.0

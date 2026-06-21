@@ -30,6 +30,7 @@ from raygeo.geo.shape.polygon import (
     get_polygons_group_intersection,
     get_polygons_intersection,
     get_polygons_union,
+    get_polyline_bounds,
     get_polyline_closest_point,
     is_almost_equal,
     is_point_inside_polygon,
@@ -1738,3 +1739,30 @@ class TestDoesPathSweepIntersectPolygon:
         path = [(0.0, 0.0), (10.0, 0.0)]
         obstacle = P((5, 1), (5, 5), (10, 5), (10, 1))
         assert not does_path_sweep_intersect_polygon(path, 0.0, [obstacle])
+
+
+class TestGetPolylineBounds:
+    def test_simple_rectangle(self):
+        pts = [(1.0, 2.0), (5.0, 3.0), (3.0, 7.0), (0.0, 5.0)]
+        min_x, min_y, max_x, max_y = get_polyline_bounds(pts)
+        assert min_x == 0.0
+        assert min_y == 2.0
+        assert max_x == 5.0
+        assert max_y == 7.0
+
+    def test_single_point(self):
+        min_x, min_y, max_x, max_y = get_polyline_bounds([(5.0, 10.0)])
+        assert min_x == max_x == 5.0
+        assert min_y == max_y == 10.0
+
+    def test_two_points(self):
+        min_x, min_y, max_x, max_y = get_polyline_bounds(
+            [(0.0, 0.0), (10.0, 20.0)]
+        )
+        assert min_x == 0.0
+        assert min_y == 0.0
+        assert max_x == 10.0
+        assert max_y == 20.0
+
+    def test_empty(self):
+        assert get_polyline_bounds([]) == (0.0, 0.0, 0.0, 0.0)

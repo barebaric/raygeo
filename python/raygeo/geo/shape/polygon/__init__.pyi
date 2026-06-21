@@ -29,6 +29,7 @@ __all__ = [
     "get_polygons_group_intersection",
     "get_polygons_intersection",
     "get_polygons_union",
+    "get_polyline_bounds",
     "get_polyline_closest_point",
     "get_segment_swept_polygon",
     "is_almost_equal",
@@ -293,6 +294,15 @@ def get_polygons_union(polygons: collections.abc.Sequence[types.Polygon]) -> lis
     :param polygons: List of polygons to union.
     :returns: Union polygon(s).
     :complexity: O(n log n)
+    """
+
+def get_polyline_bounds(polyline: collections.abc.Sequence[types.Point]) -> types.Rect:
+    r"""
+    Get the bounding rectangle of an open polyline.
+    
+    :param polyline: Polyline as (x, y) points.
+    :returns: Bounding rectangle as (x_min, y_min, x_max, y_max).
+    :complexity: O(n)
     """
 
 def get_polyline_closest_point(polyline: collections.abc.Sequence[tuple[float, float]], point: tuple[float, float]) -> tuple[int, float] | None:

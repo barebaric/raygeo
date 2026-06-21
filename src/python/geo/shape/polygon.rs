@@ -13,12 +13,12 @@ use crate::geo::shape::polygon::{
     get_polygon_signed_area, get_polygons_closest_point,
     get_polygons_difference, get_polygons_group_difference,
     get_polygons_group_intersection, get_polygons_intersection,
-    get_polygons_union, get_polyline_closest_point, get_segment_swept_polygon,
-    is_almost_equal, is_point_inside_polygon, is_polygon_clockwise,
-    is_polygon_convex, normalize_polygons, offset_polygon_with_style,
-    point_line_distance, polygons_intersect, rotate_polygon, rotate_polygons,
-    scale_polygon, translate_bounds, translate_polygon, translate_polygons,
-    trim_polyline_at, JoinStyle,
+    get_polygons_union, get_polyline_bounds, get_polyline_closest_point,
+    get_segment_swept_polygon, is_almost_equal, is_point_inside_polygon,
+    is_polygon_clockwise, is_polygon_convex, normalize_polygons,
+    offset_polygon_with_style, point_line_distance, polygons_intersect,
+    rotate_polygon, rotate_polygons, scale_polygon, translate_bounds,
+    translate_polygon, translate_polygons, trim_polyline_at, JoinStyle,
 };
 use crate::types::{Point, Rect};
 use numpy::{PyArray2, PyArrayMethods};
@@ -78,6 +78,7 @@ pub fn register(shape_mod: &Bound<'_, PyModule>) -> PyResult<()> {
         get_circle_polygon_py,
         get_polygon_bounds_py,
         get_polygon_centroid_py,
+        get_polyline_bounds_py,
         get_polygon_closest_point_py,
         get_polygons_closest_point_py,
         get_segment_swept_polygon_py,
@@ -383,6 +384,29 @@ fn get_polygon_perimeter_py(polygon: Vec<PyPoint2D>) -> f64 {
 #[pyfunction(name = "get_polygon_bounds")]
 fn get_polygon_bounds_py(polygon: Vec<PyPoint2D>) -> (f64, f64, f64, f64) {
     let r = get_polygon_bounds(&poly_to_points(polygon));
+    (r.min.x, r.min.y, r.max.x, r.max.y)
+}
+
+#[gen_stub_pyfunction(
+    python = r#"
+    import collections.abc
+    import raygeo.geo.types
+
+    def get_polyline_bounds(
+        polyline: collections.abc.Sequence[types.Point],
+    ) -> types.Rect:
+        """Get the bounding rectangle of an open polyline.
+
+        :param polyline: Polyline as (x, y) points.
+        :returns: Bounding rectangle as (x_min, y_min, x_max, y_max).
+        :complexity: O(n)
+        """
+"#,
+    module = "raygeo.geo.shape.polygon"
+)]
+#[pyfunction(name = "get_polyline_bounds")]
+fn get_polyline_bounds_py(polyline: Vec<PyPoint2D>) -> (f64, f64, f64, f64) {
+    let r = get_polyline_bounds(&poly_to_points(polyline));
     (r.min.x, r.min.y, r.max.x, r.max.y)
 }
 

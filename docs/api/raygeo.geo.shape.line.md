@@ -98,6 +98,24 @@ Compute the angle at vertex p1.
 | _Returns_    | `float`       | Angle in radians.     |
 | _Complexity_ |               | O(1) time, O(1) space |
 
+### `get_interior_angle()`
+
+```python
+get_interior_angle(p0: types.Point, p1: types.Point, p2: types.Point) -> float
+```
+
+Interior angle at vertex `p1` formed by edges `p0→p1` and `p1→p2`.
+
+Returns 0.0 when any two adjacent points coincide (degenerate input).
+
+| Parameter    | Type          | Description                   |
+| ------------ | ------------- | ----------------------------- |
+| `p0`         | `types.Point` | Previous point.               |
+| `p1`         | `types.Point` | Vertex point.                 |
+| `p2`         | `types.Point` | Next point.                   |
+| _Returns_    | `float`       | Angle in radians in `[0, π]`. |
+| _Complexity_ |               | O(1) time, O(1) space         |
+
 ### `get_line_closest_point()`
 
 ```python

@@ -334,6 +334,20 @@ pub fn get_angle_at_vertex(p0: Point, p1: Point, p2: Point) -> f64 {
     cos_theta.acos()
 }
 
+/// Interior angle at `p1` formed by `p0→p1` and `p1→p2`.
+///
+/// Returns 0.0 when any two adjacent points coincide (degenerate input)
+/// so callers can distinguish a collapsed corner from a straight line.
+pub fn get_interior_angle(p0: Point, p1: Point, p2: Point) -> f64 {
+    let v1 = p0 - p1;
+    let v2 = p2 - p1;
+    let d2 = v1.length_squared() * v2.length_squared();
+    if d2 < 1e-18 {
+        return 0.0;
+    }
+    (v1.dot(v2) / d2.sqrt()).clamp(-1.0, 1.0).acos()
+}
+
 /// Return `true` when the line segment `(a, b)` crosses the interior of
 /// `polygon` (an intersection strictly between the endpoints — touching
 /// a vertex or grazing an edge at the endpoints is not a crossing).

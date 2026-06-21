@@ -173,6 +173,36 @@ pub fn get_polygon_bounds(polygon: &Polygon) -> Rect {
     Rect::new(min_x, min_y, max_x, max_y)
 }
 
+/// Get the bounding box of an open polyline.
+///
+/// Returns `Rect::default()` when the polyline is empty.
+pub fn get_polyline_bounds(pts: &[Point]) -> Rect {
+    if pts.is_empty() {
+        return Rect::default();
+    }
+    let mut min_x = pts[0].x;
+    let mut max_x = pts[0].x;
+    let mut min_y = pts[0].y;
+    let mut max_y = pts[0].y;
+    for p in pts {
+        let x = p.x;
+        let y = p.y;
+        if x < min_x {
+            min_x = x;
+        }
+        if x > max_x {
+            max_x = x;
+        }
+        if y < min_y {
+            min_y = y;
+        }
+        if y > max_y {
+            max_y = y;
+        }
+    }
+    Rect::new(min_x, min_y, max_x, max_y)
+}
+
 /// Get the bounding box of multiple polygons.
 pub fn get_polygon_group_bounds(polygons: &[Polygon]) -> Rect {
     if polygons.is_empty() {

@@ -16,6 +16,7 @@ __all__ = [
     "does_line_segment_intersect_circle",
     "does_line_segment_intersect_rect",
     "get_angle_at_vertex",
+    "get_interior_angle",
     "get_line_closest_point",
     "get_line_line_intersection",
     "get_line_segment_closest_point",
@@ -75,6 +76,19 @@ def get_angle_at_vertex(p0: types.Point, p1: types.Point, p2: types.Point) -> fl
     :param p1: Vertex point.
     :param p2: Next point.
     :returns: Angle in radians.
+    :complexity: O(1) time, O(1) space
+    """
+
+def get_interior_angle(p0: types.Point, p1: types.Point, p2: types.Point) -> float:
+    r"""
+    Interior angle at vertex ``p1`` formed by edges ``p0→p1`` and ``p1→p2``.
+    
+    Returns 0.0 when any two adjacent points coincide (degenerate input).
+    
+    :param p0: Previous point.
+    :param p1: Vertex point.
+    :param p2: Next point.
+    :returns: Angle in radians in ``[0, π]``.
     :complexity: O(1) time, O(1) space
     """
 
