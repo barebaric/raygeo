@@ -334,6 +334,18 @@ pub fn get_angle_at_vertex(p0: Point, p1: Point, p2: Point) -> f64 {
     cos_theta.acos()
 }
 
+/// Return `true` when the line segment `(a, b)` crosses the interior of
+/// `polygon` (an intersection strictly between the endpoints — touching
+/// a vertex or grazing an edge at the endpoints is not a crossing).
+pub fn does_line_cross_polygon(a: Point, b: Point, polygon: &Polygon) -> bool {
+    let ts = get_line_segment_polygon_intersections(
+        a,
+        b,
+        std::slice::from_ref(polygon),
+    );
+    ts.iter().any(|&t| t > 1e-12 && t < 1.0 - 1e-12)
+}
+
 /// Generate `n` linearly interpolated 3D points from `from` to `to` at
 /// height `z`.  Returns `n` points spanning `t ∈ [1/n, 1]` — the start
 /// point `from` is **not** included, the end point `to` *is* included.

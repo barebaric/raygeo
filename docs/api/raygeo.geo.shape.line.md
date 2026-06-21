@@ -12,6 +12,34 @@ point-in-rectangle tests, rectangle containment checks, and angle-at-vertex comp
 
 ## Functions
 
+### `does_line_cross_polygon()`
+
+```python
+does_line_cross_polygon(
+    a: types.Point,
+    b: types.Point,
+    polygon: list[types.Point],
+) -> bool
+```
+
+Check if a line segment crosses the interior of a polygon.
+
+Returns `True` when the segment _strictly_ crosses the polygon boundary — touching a vertex or
+grazing an edge at an endpoint is **not** considered a crossing.
+
+| Parameter    | Type                | Description                                         |
+| ------------ | ------------------- | --------------------------------------------------- |
+| `a`          | `types.Point`       | Segment start point (x, y).                         |
+| `b`          | `types.Point`       | Segment end point (x, y).                           |
+| `polygon`    | `list[types.Point]` | Polygon vertices [(x1, y1), (x2, y2), ...].         |
+| _Returns_    | `bool`              | `True` if the segment crosses the polygon interior. |
+| _Complexity_ |                     | O(n) time, O(1) space                               |
+
+![Check whether a line segment crosses the interior of a polygon. Left: crossing segment (red). Right: segment that only touches the boundary (gray, no cross).](images/geo-shape-line-line-crosses-polygon.png)
+
+_Check whether a line segment crosses the interior of a polygon. Left: crossing segment (red).
+Right: segment that only touches the boundary (gray, no cross)._
+
 ### `does_line_segment_intersect_circle()`
 
 ```python

@@ -12,6 +12,7 @@ containment checks, and angle-at-vertex computation.
 from raygeo.geo import types
 import typing
 __all__ = [
+    "does_line_cross_polygon",
     "does_line_segment_intersect_circle",
     "does_line_segment_intersect_rect",
     "get_angle_at_vertex",
@@ -25,6 +26,21 @@ __all__ = [
     "interpolated_segment_3d",
     "is_point_on_line_segment",
 ]
+
+def does_line_cross_polygon(a: types.Point, b: types.Point, polygon: list[types.Point]) -> bool:
+    r"""
+    Check if a line segment crosses the interior of a polygon.
+    
+    Returns ``True`` when the segment *strictly* crosses the polygon
+    boundary — touching a vertex or grazing an edge at an endpoint is
+    **not** considered a crossing.
+    
+    :param a: Segment start point (x, y).
+    :param b: Segment end point (x, y).
+    :param polygon: Polygon vertices [(x1, y1), (x2, y2), ...].
+    :returns: ``True`` if the segment crosses the polygon interior.
+    :complexity: O(n) time, O(1) space
+    """
 
 def does_line_segment_intersect_circle(p1: types.Point, p2: types.Point, circle_center: types.Point, circle_radius: float) -> bool:
     r"""

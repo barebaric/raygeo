@@ -14,8 +14,9 @@ use super::super::flex_point::{
     polygons_from_tuples,
 };
 use crate::geo::shape::line::{
-    does_line_segment_intersect_circle, does_line_segment_intersect_rect,
-    get_angle_at_vertex, get_line_closest_point, get_line_line_intersection,
+    does_line_cross_polygon, does_line_segment_intersect_circle,
+    does_line_segment_intersect_rect, get_angle_at_vertex,
+    get_line_closest_point, get_line_line_intersection,
     get_line_segment_closest_point, get_line_segment_intersection,
     get_line_segment_length, get_line_segment_polygon_intersections,
     get_point_line_distance, interpolated_segment_3d, is_point_on_segment,
@@ -86,6 +87,7 @@ pub fn register(shape_mod: &Bound<'_, PyModule>) -> PyResult<()> {
         does_line_segment_intersect_rect_py,
         does_line_segment_intersect_circle_py,
         get_line_segment_polygon_intersections_py,
+        does_line_cross_polygon_py,
         get_angle_at_vertex_py,
         get_line_segment_length_py,
         interpolated_segment_3d_py,
@@ -417,6 +419,41 @@ fn get_line_segment_polygon_intersections_py(
         Point::new(p2.0, p2.1),
         &poly,
     )
+}
+
+#[gen_stub_pyfunction(
+    python = r#"
+    import raygeo.geo.types
+
+    def does_line_cross_polygon(
+        a: types.Point,
+        b: types.Point,
+        polygon: list[types.Point],
+    ) -> bool:
+        """Check if a line segment crosses the interior of a polygon.
+
+        Returns ``True`` when the segment *strictly* crosses the polygon
+        boundary — touching a vertex or grazing an edge at an endpoint is
+        **not** considered a crossing.
+
+        :param a: Segment start point (x, y).
+        :param b: Segment end point (x, y).
+        :param polygon: Polygon vertices [(x1, y1), (x2, y2), ...].
+        :returns: ``True`` if the segment crosses the polygon interior.
+        :complexity: O(n) time, O(1) space
+        """
+"#,
+    module = "raygeo.geo.shape.line"
+)]
+#[pyfunction(name = "does_line_cross_polygon")]
+fn does_line_cross_polygon_py(
+    a: (f64, f64),
+    b: (f64, f64),
+    polygon: Vec<(f64, f64)>,
+) -> bool {
+    let pts: Vec<Point> =
+        polygon.into_iter().map(|(x, y)| Point::new(x, y)).collect();
+    does_line_cross_polygon(Point::new(a.0, a.1), Point::new(b.0, b.1), &pts)
 }
 
 #[gen_stub_pyfunction(

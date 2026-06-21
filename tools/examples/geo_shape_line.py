@@ -3,6 +3,7 @@
 import matplotlib.pyplot as plt
 
 from raygeo.geo.shape.line import (
+    does_line_cross_polygon,
     get_line_closest_point,
     get_line_line_intersection,
     get_line_segment_intersection,
@@ -213,6 +214,73 @@ def generate_interpolated_segment():
     return fig
 
 
+def generate_line_crosses_polygon():
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
+
+    polygon = [(2.0, 2.0), (8.0, 2.0), (8.0, 8.0), (2.0, 8.0)]
+    poly_xs = [p[0] for p in polygon] + [polygon[0][0]]
+    poly_ys = [p[1] for p in polygon] + [polygon[0][1]]
+
+    crossing_a, crossing_b = (0.0, 5.0), (10.0, 5.0)
+    crosses = does_line_cross_polygon(crossing_a, crossing_b, polygon)
+
+    ax1.fill(
+        poly_xs,
+        poly_ys,
+        facecolor="lightblue",
+        alpha=0.4,
+        edgecolor="steelblue",
+        linewidth=2,
+        label="Polygon",
+    )
+    ax1.plot(
+        [crossing_a[0], crossing_b[0]],
+        [crossing_a[1], crossing_b[1]],
+        "tomato",
+        linewidth=2.5,
+        label=f"Crosses = {crosses}",
+    )
+    ax1.plot(crossing_a[0], crossing_a[1], "o", color="tomato", markersize=6)
+    ax1.plot(crossing_b[0], crossing_b[1], "o", color="tomato", markersize=6)
+    ax1.set_title("Line segment crosses polygon", fontsize=13)
+
+    touching_a, touching_b = (2.0, 2.0), (0.0, 0.0)
+    touches = does_line_cross_polygon(touching_a, touching_b, polygon)
+
+    ax2.fill(
+        poly_xs,
+        poly_ys,
+        facecolor="lightblue",
+        alpha=0.4,
+        edgecolor="steelblue",
+        linewidth=2,
+        label="Polygon",
+    )
+    ax2.plot(
+        [touching_a[0], touching_b[0]],
+        [touching_a[1], touching_b[1]],
+        "gray",
+        linewidth=2.5,
+        linestyle="--",
+        label=f"Crosses = {touches}",
+    )
+    ax2.plot(touching_a[0], touching_a[1], "o", color="gray", markersize=6)
+    ax2.plot(touching_b[0], touching_b[1], "o", color="gray", markersize=6)
+    ax2.set_title("Line segment touches vertex (no cross)", fontsize=13)
+
+    ax1.set_xlim(-1, 11)
+    ax1.set_ylim(0, 10)
+    ax2.set_xlim(-1, 11)
+    ax2.set_ylim(-1, 10)
+    for ax in (ax1, ax2):
+        ax.set_aspect("equal")
+        ax.legend(fontsize=10)
+        ax.grid(True, alpha=0.2)
+
+    fig.tight_layout()
+    return fig
+
+
 __docs_target__ = ["raygeo.geo.shape.line.md"]
 __images__ = [
     {
@@ -229,5 +297,14 @@ __images__ = [
         "heading": "interpolated_segment_3d",
         "caption": "Linearly interpolated 3D points along a 2D segment",
         "function": generate_interpolated_segment,
+    },
+    {
+        "heading": "does_line_cross_polygon",
+        "caption": (
+            "Check whether a line segment crosses the interior of a polygon."
+            " Left: crossing segment (red). Right: segment that only touches"
+            " the boundary (gray, no cross)."
+        ),
+        "function": generate_line_crosses_polygon,
     },
 ]

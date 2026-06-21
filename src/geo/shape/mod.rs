@@ -34,11 +34,12 @@ pub use circle::{
     nearest_tangent_circle_on_polyline, project_point_onto_circle,
 };
 pub use line::{
-    does_line_segment_intersect_circle, does_line_segment_intersect_rect,
-    does_rect_contain_rect, does_rect_intersect_rect, get_angle_at_vertex,
-    get_line_closest_point, get_line_line_intersection,
-    get_line_segment_closest_point, get_line_segment_intersection,
-    get_line_segment_length, get_line_segment_polygon_intersections,
+    does_line_cross_polygon, does_line_segment_intersect_circle,
+    does_line_segment_intersect_rect, does_rect_contain_rect,
+    does_rect_intersect_rect, get_angle_at_vertex, get_line_closest_point,
+    get_line_line_intersection, get_line_segment_closest_point,
+    get_line_segment_intersection, get_line_segment_length,
+    get_line_segment_polygon_intersections,
     get_line_segment_polygon_intersections_into, get_point_line_distance,
     interpolated_segment_3d, is_point_inside_rect, is_point_on_segment,
 };
