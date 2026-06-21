@@ -7,9 +7,9 @@ from raygeo.geo.algo.hsm import (
     adaptive_entry,
     adaptive_peeling,
     adaptive_wavefronts,
-    compute_valid_tool_area,
     find_cutting_arc,
 )
+from raygeo.geo.algo.offset import compute_inset_region
 from raygeo.geo.shape.line import get_line_segment_polygon_intersections
 
 
@@ -533,7 +533,7 @@ def test_find_cutting_arc_angle_at_tip():
         plunge_pitch=1.0,
     )
     ca = ClearedArea(initial=cp)
-    va, _total = compute_valid_tool_area(boundary, tool_r, islands)
+    va, _total = compute_inset_region(boundary, tool_r, islands)
 
     bad = []
     for iteration in range(10):

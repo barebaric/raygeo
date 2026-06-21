@@ -2,9 +2,11 @@
 
 use crate::geo::algo::cleared_area::ClearedArea;
 use crate::geo::algo::helix::{generate_helix, HelixDirection, HelixOptions};
+use crate::geo::algo::offset::compute_inset_region;
 use crate::geo::algo::polylabel::find_largest_circle;
 use crate::geo::algo::ramp::{generate_ramp, RampOptions, RampStyle};
 use crate::geo::algo::spiral::{generate_spiral, SpiralOptions};
+use crate::geo::shape::line::longest_line_through_point;
 use crate::geo::shape::polygon::{
     get_circle_polygon, get_polygon_area, get_polygon_bounds,
     get_polygon_centroid, get_polygons_group_difference,
@@ -128,30 +130,6 @@ pub fn adaptive_entry(opts: &AdaptiveEntryOptions) -> AdaptiveEntryResult {
 
 const MAX_WAVEFRONT_ITERATIONS: usize = 1000;
 
-/// Compute the valid tool-centre area: pocket boundary inset by
-/// `tool_radius`, minus island buffers.  Returns `(polygons, total_area)`.
-pub fn compute_valid_tool_area(
-    boundary: &Polygon,
-    tool_radius: f64,
-    islands: &[Polygon],
-) -> (Vec<Polygon>, f64) {
-    let mut valid =
-        offset_polygon_with_style(boundary, -tool_radius, JoinStyle::Miter);
-    if !valid.is_empty() && !islands.is_empty() {
-        let island_buf: Vec<Polygon> = islands
-            .iter()
-            .flat_map(|isl| {
-                offset_polygon_with_style(isl, tool_radius, JoinStyle::Miter)
-            })
-            .collect();
-        if !island_buf.is_empty() {
-            valid = get_polygons_group_difference(&valid, &island_buf);
-        }
-    }
-    let total_area: f64 = valid.iter().map(get_polygon_area).sum();
-    (valid, total_area)
-}
-
 /// Options for [`adaptive_wavefronts`].
 #[derive(Clone, Debug)]
 pub struct AdaptiveWavefrontOptions {
@@ -182,7 +160,7 @@ pub fn adaptive_wavefronts(
     cleared: &mut ClearedArea,
     opts: &AdaptiveWavefrontOptions,
 ) -> AdaptiveWavefrontResult {
-    let (valid_tool_area, valid_total_area) = compute_valid_tool_area(
+    let (valid_tool_area, valid_total_area) = compute_inset_region(
         &opts.pocket_boundary,
         opts.tool_radius,
         &opts.islands,
@@ -245,16 +223,4 @@ fn trace_ring(ring: &[Polygon], z: f64) -> Vec<Point3D> {
         }
     }
     path
-}
-
-/// Find a line segment through `pt` that spans the bounding box,
-/// choosing the longest axis.
-fn longest_line_through_point(pt: Point, bbox: Rect) -> (Point, Point) {
-    let w = bbox.max.x - bbox.min.x;
-    let h = bbox.max.y - bbox.min.y;
-    if w >= h {
-        (Point::new(bbox.min.x, pt.y), Point::new(bbox.max.x, pt.y))
-    } else {
-        (Point::new(pt.x, bbox.min.y), Point::new(pt.x, bbox.max.y))
-    }
 }

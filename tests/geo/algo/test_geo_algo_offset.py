@@ -281,12 +281,6 @@ def test_compute_inset_region_multiple_obstacles():
     region, area = compute_inset_region(boundary, 5.0, [obs1, obs2])
     assert len(region) >= 1
     assert area > 0
-    # Same result as the original compute_valid_tool_area
-    from raygeo.geo.algo.hsm import compute_valid_tool_area
-
-    old_reg, old_area = compute_valid_tool_area(boundary, 5.0, [obs1, obs2])
-    assert abs(area - old_area) < 0.01
-    assert len(region) == len(old_reg)
 
 
 def test_compute_inset_region_empty_boundary():
@@ -304,19 +298,8 @@ def test_compute_inset_region_negative_radius():
     assert area > orig, f"expanded area {area:.1f} should be > {orig:.1f}"
 
 
-def test_compute_inset_region_matches_original():
-    """Match compute_valid_tool_area results."""
-    from raygeo.geo.algo.hsm import compute_valid_tool_area
-
-    boundary = [(0, 0), (160, 0), (160, 100), (0, 100)]
-    island = [(60, 35), (100, 35), (100, 65), (60, 65)]
-
-    r1, a1 = compute_inset_region(boundary, 3.0, [island])
-    r2, a2 = compute_valid_tool_area(boundary, 3.0, [island])
-    assert abs(a1 - a2) < 0.01
-    assert len(r1) == len(r2)
-
-    r1b, a1b = compute_inset_region(boundary, 3.0, [])
-    r2b, a2b = compute_valid_tool_area(boundary, 3.0, [])
-    assert abs(a1b - a2b) < 0.01
-    assert len(r1b) == len(r2b)
+def test_compute_inset_region_rejects_collapsed():
+    """Radius larger than half the minimum bbox extent returns empty."""
+    boundary = [(0, 0), (100, 0), (100, 80), (0, 80)]
+    region, area = compute_inset_region(boundary, 200.0, [])
+    assert area == 0.0

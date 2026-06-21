@@ -5,7 +5,8 @@ import math
 import matplotlib.pyplot as plt
 
 from raygeo.geo.algo.cleared_area import ClearedArea
-from raygeo.geo.algo.hsm import adaptive_entry, compute_valid_tool_area
+from raygeo.geo.algo.hsm import adaptive_entry
+from raygeo.geo.algo.offset import compute_inset_region
 
 
 def generate_raster():
@@ -293,7 +294,7 @@ def generate_bite_in_direction():
         plunge_pitch=1.0,
     )
     ca = ClearedArea(initial=cp)
-    va, total = compute_valid_tool_area(boundary, tool_radius, islands)
+    va, total = compute_inset_region(boundary, tool_radius, islands)
 
     directions = {
         "east": (200, 60),
