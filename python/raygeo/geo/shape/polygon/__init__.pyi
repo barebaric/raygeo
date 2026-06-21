@@ -60,6 +60,7 @@ __all__ = [
     "translate_polygon_numpy",
     "translate_polygons",
     "translate_polygons_numpy",
+    "trim_polyline_angular_ends",
     "trim_polyline_at",
 ]
 
@@ -609,6 +610,23 @@ def translate_polygons_numpy(polygons: collections.abc.Sequence[numpy.typing.NDA
     :param dy: Y translation.
     :returns: List of translated numpy arrays.
     :complexity: O(n * m)
+    """
+
+def trim_polyline_angular_ends(polygon: collections.abc.Sequence[tuple[float, float]], start: int, length: int, angle_threshold_rad: float) -> tuple[int, int]:
+    r"""
+    Trim vertices from both ends of a contiguous subsequence where the
+    interior angle jumps sharply.
+    
+    Detects "transition" vertices at the boundary between two differently-
+    curved regions of a closed polygon.  The function iteratively trims
+    such vertices from the start and end of the subsequence until no more
+    trimming occurs or the sequence is too short.
+    
+    :param polygon: Closed polygon as (x, y) points.
+    :param start: Start index of the subsequence.
+    :param length: Length of the subsequence.
+    :param angle_threshold_rad: Angle threshold in radians.
+    :returns: ``(new_start, new_length)`` within the original polygon.
     """
 
 def trim_polyline_at(polyline: collections.abc.Sequence[tuple[float, float]], a: tuple[float, float], b: tuple[float, float]) -> list[tuple[float, float]]:

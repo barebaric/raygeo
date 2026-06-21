@@ -4,8 +4,9 @@
 //! Fillet operations (create, append, trim-to-safe) live in
 //! [`super::fillet`]; this module only contains the bite-to-arc logic.
 
-use crate::geo::shape::line::get_interior_angle;
-use crate::geo::shape::polygon::get_polygon_closest_point;
+use crate::geo::shape::polygon::{
+    get_polygon_closest_point, trim_polyline_angular_ends,
+};
 use crate::types::{Point, Polygon};
 
 /// Extract the cutting-arc (outer) vertices from a bite polygon.
@@ -74,39 +75,11 @@ pub fn find_cutting_arc(
         return None;
     }
 
-    // Trim vertices from the ends where the interior angle changes
-    // abruptly — these are the transition vertices at the tips where the
-    // outer arc meets the inner arc.  We compare each candidate vertex
-    // against its inward neighbour: if the angle drops sharply (≥ 25°)
-    // the vertex is a tip transition and gets trimmed.  This avoids
-    // trimming gradual curves that have steadily tightening angles.
+    // Trim transition vertices at the tips where the outer arc meets
+    // the inner arc by detecting sharp jumps in interior angle.
     const DERIV_THRESHOLD: f64 = 0.436_332_312_998_582_4; // 25° in radians
-    let mut trimmed = true;
-    while trimmed && cut_len > 3 {
-        trimmed = false;
-        let first = (cut_start + 1) % n;
-        let b = bite[first];
-        let c = bite[(first + 1) % n];
-        let d = bite[(first + 2) % n];
-        let angle_curr = get_interior_angle(bite[(first + n - 1) % n], b, c);
-        let angle_next = get_interior_angle(b, c, d);
-        if angle_curr + DERIV_THRESHOLD < angle_next {
-            cut_start = (cut_start + 1) % n;
-            cut_len -= 1;
-            trimmed = true;
-        }
-        let last = (cut_start + cut_len - 2) % n;
-        let a = bite[(last + n - 1) % n];
-        let b = bite[last];
-        let c = bite[(last + 1) % n];
-        let a_prev = bite[(last + n - 2) % n];
-        let angle_curr = get_interior_angle(a, b, c);
-        let angle_prev = get_interior_angle(a_prev, a, b);
-        if angle_curr + DERIV_THRESHOLD < angle_prev {
-            cut_len -= 1;
-            trimmed = true;
-        }
-    }
+    (cut_start, cut_len) =
+        trim_polyline_angular_ends(bite, cut_start, cut_len, DERIV_THRESHOLD);
 
     if cut_len < 3 {
         return None;

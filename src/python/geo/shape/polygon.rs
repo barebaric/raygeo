@@ -18,7 +18,8 @@ use crate::geo::shape::polygon::{
     is_polygon_clockwise, is_polygon_convex, normalize_polygons,
     offset_polygon, point_line_distance, polygons_intersect, rotate_polygon,
     rotate_polygons, scale_polygon, translate_bounds, translate_polygon,
-    translate_polygons, trim_polyline_at, JoinStyle,
+    translate_polygons, trim_polyline_angular_ends, trim_polyline_at,
+    JoinStyle,
 };
 use crate::types::{Point, Rect};
 use numpy::{PyArray2, PyArrayMethods};
@@ -158,6 +159,7 @@ pub fn register(shape_mod: &Bound<'_, PyModule>) -> PyResult<()> {
         rotate_polygons_py,
         scale_polygon_py,
         get_polyline_closest_point_py,
+        trim_polyline_angular_ends_py,
         trim_polyline_at_py,
         to_clipper_numpy_py,
         translate_bounds_py,
@@ -1690,4 +1692,43 @@ fn trim_polyline_at_py(
         .into_iter()
         .map(|p| (p.x, p.y))
         .collect()
+}
+
+#[gen_stub_pyfunction(
+    python = r#"
+    import collections.abc
+
+    def trim_polyline_angular_ends(
+        polygon: collections.abc.Sequence[tuple[float, float]],
+        start: int,
+        length: int,
+        angle_threshold_rad: float,
+    ) -> tuple[int, int]:
+        """Trim vertices from both ends of a contiguous subsequence where the
+        interior angle jumps sharply.
+
+        Detects "transition" vertices at the boundary between two differently-
+        curved regions of a closed polygon.  The function iteratively trims
+        such vertices from the start and end of the subsequence until no more
+        trimming occurs or the sequence is too short.
+
+        :param polygon: Closed polygon as (x, y) points.
+        :param start: Start index of the subsequence.
+        :param length: Length of the subsequence.
+        :param angle_threshold_rad: Angle threshold in radians.
+        :returns: ``(new_start, new_length)`` within the original polygon.
+        """
+    "#,
+    module = "raygeo.geo.shape.polygon"
+)]
+#[pyfunction(name = "trim_polyline_angular_ends")]
+fn trim_polyline_angular_ends_py(
+    polygon: Vec<(f64, f64)>,
+    start: usize,
+    length: usize,
+    angle_threshold_rad: f64,
+) -> (usize, usize) {
+    let pts: Vec<Point> =
+        polygon.iter().map(|&(x, y)| Point::new(x, y)).collect();
+    trim_polyline_angular_ends(&pts, start, length, angle_threshold_rad)
 }

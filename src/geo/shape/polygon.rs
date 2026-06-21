@@ -22,6 +22,7 @@ use clipper2::{
     PointInPolygonResult, PointScaler,
 };
 
+use crate::geo::shape::line::get_interior_angle;
 use crate::geo::shape::line::get_line_segment_closest_point;
 use crate::geo::shape::line::get_segment_segment_distance;
 use crate::types::{Edge, Point, Polygon, Rect};
@@ -966,6 +967,60 @@ pub fn trim_polyline_at(polyline: &[Point], a: Point, b: Point) -> Vec<Point> {
     result.push(end);
     result.dedup_by(|a, b| a.distance_squared(*b) < 1e-12);
     result
+}
+
+/// Trim vertices from both ends of a contiguous subsequence of a closed
+/// polygon where the interior angle jumps sharply (≥ `threshold_rad`)
+/// compared to the adjacent vertex further inward.
+///
+/// This detects "transition" vertices at the boundary between two
+/// differently-curved regions of the polygon (e.g., where an outer arc
+/// meets an inner arc).  The function iteratively trims such vertices
+/// from the start and end of the subsequence until no more trimming
+/// occurs or the sequence is too short.
+///
+/// Returns the adjusted `(start, length)` within the original polygon.
+/// The caller should check whether the result is still useful (at least
+/// 3 vertices).
+pub fn trim_polyline_angular_ends(
+    polygon: &[Point],
+    start: usize,
+    length: usize,
+    threshold_rad: f64,
+) -> (usize, usize) {
+    let n = polygon.len();
+    if n < 3 || length < 3 {
+        return (start, length);
+    }
+    let mut cut_start = start % n;
+    let mut cut_len = length;
+    let mut trimmed = true;
+    while trimmed && cut_len > 3 {
+        trimmed = false;
+        let first = (cut_start + 1) % n;
+        let b = polygon[first];
+        let c = polygon[(first + 1) % n];
+        let d = polygon[(first + 2) % n];
+        let angle_curr = get_interior_angle(polygon[(first + n - 1) % n], b, c);
+        let angle_next = get_interior_angle(b, c, d);
+        if angle_curr + threshold_rad < angle_next {
+            cut_start = (cut_start + 1) % n;
+            cut_len -= 1;
+            trimmed = true;
+        }
+        let last = (cut_start + cut_len - 2) % n;
+        let a = polygon[(last + n - 1) % n];
+        let b = polygon[last];
+        let c = polygon[(last + 1) % n];
+        let a_prev = polygon[(last + n - 2) % n];
+        let angle_curr = get_interior_angle(a, b, c);
+        let angle_prev = get_interior_angle(a_prev, a, b);
+        if angle_curr + threshold_rad < angle_prev {
+            cut_len -= 1;
+            trimmed = true;
+        }
+    }
+    (cut_start, cut_len)
 }
 
 pub fn polygons_intersect(

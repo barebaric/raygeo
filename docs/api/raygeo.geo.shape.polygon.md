@@ -969,6 +969,37 @@ Translate polygons from numpy arrays.
 | _Returns_    | `list[numpy.NDArray]`     | List of translated numpy arrays. |
 | _Complexity_ |                           | O(n \* m)                        |
 
+### `trim_polyline_angular_ends()`
+
+```python
+trim_polyline_angular_ends(
+    polygon: Sequence[tuple[float, float]],
+    start: int,
+    length: int,
+    angle_threshold_rad: float,
+) -> tuple[int, int]
+```
+
+Trim vertices from both ends of a contiguous subsequence where the interior angle jumps sharply.
+
+Detects "transition" vertices at the boundary between two differently- curved regions of a closed
+polygon. The function iteratively trims such vertices from the start and end of the subsequence
+until no more trimming occurs or the sequence is too short.
+
+| Parameter             | Type                            | Description                                            |
+| --------------------- | ------------------------------- | ------------------------------------------------------ |
+| `polygon`             | `Sequence[tuple[float, float]]` | Closed polygon as (x, y) points.                       |
+| `start`               | `int`                           | Start index of the subsequence.                        |
+| `length`              | `int`                           | Length of the subsequence.                             |
+| `angle_threshold_rad` | `float`                         | Angle threshold in radians.                            |
+| _Returns_             | `tuple[int, int]`               | `(new_start, new_length)` within the original polygon. |
+
+![``trim_polyline_angular_ends`` removes transition vertices from both ends of a contiguous subsequence where the interior angle jumps sharply.  Here a 10-vertex cut (indices 1–10) with angles ranging 59°→180°→59° is trimmed to 8 vertices using a 25° threshold.](images/geo-shape-polygon-trim-polyline-angular-ends.png)
+
+_`trim_polyline_angular_ends` removes transition vertices from both ends of a contiguous subsequence
+where the interior angle jumps sharply. Here a 10-vertex cut (indices 1–10) with angles ranging
+59°→180°→59° is trimmed to 8 vertices using a 25° threshold._
+
 ### `trim_polyline_at()`
 
 ```python

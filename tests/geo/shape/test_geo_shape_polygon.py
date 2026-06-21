@@ -57,6 +57,7 @@ from raygeo.geo.shape.polygon import (
     translate_polygon_numpy,
     translate_polygons,
     translate_polygons_numpy,
+    trim_polyline_angular_ends,
     trim_polyline_at,
 )
 from raygeo.geo.types import Polygon
@@ -1761,3 +1762,107 @@ class TestGetPolylineBounds:
 
     def test_empty(self):
         assert get_polyline_bounds([]) == (0.0, 0.0, 0.0, 0.0)
+
+
+# --- trim_polyline_angular_ends ---
+
+
+class TestTrimPolylineAngularEnds:
+    """Tests for trim_polyline_angular_ends."""
+
+    def test_no_trimming_equal_angles(self):
+        """Square — all interior angles 90°, no trim with 25° threshold."""
+        poly = P((0, 0), (10, 0), (10, 10), (0, 10))
+        result = trim_polyline_angular_ends(poly, 0, 4, math.radians(25))
+        assert result == (0, 4)
+
+    def test_trim_start_only(self):
+        """Only the start vertex of the subsequence gets trimmed."""
+        poly = [
+            (0.0, 4.0),
+            (0.0, 0.0),
+            (10.0, 0.0),
+            (10.0, 1.0),
+            (5.0, 4.0),
+            (0.0, 4.0),
+        ]
+        # Subsequence indices 1..4: (0,0), (10,0), (10,1), (5,4)
+        # Angle at (10,0) = 90°, at (10,1) = 121° — opens up → trim start
+        # Angle at (10,1) = 121°, at (10,0) = 90° — tightens → no end trim
+        result = trim_polyline_angular_ends(poly, 1, 4, math.radians(25))
+        assert result == (2, 3)
+
+    def test_trim_end_only(self):
+        """Only the end vertex of the subsequence gets trimmed."""
+        poly = [
+            (0.0, 0.0),
+            (0.0, 1.0),
+            (5.0, 0.0),
+            (10.0, 0.0),
+            (10.0, 4.0),
+            (0.0, 4.0),
+        ]
+        # Subsequence indices 1..4: (0,1), (5,0), (10,0), (10,4)
+        # Angle at (10,0) = 90°, at (5,0) = 168.7° — tightens → trim end
+        # Angle at (5,0) = 168.7°, at (10,0) = 90° — tightens → no start trim
+        result = trim_polyline_angular_ends(poly, 1, 4, math.radians(25))
+        assert result == (1, 3)
+
+    def test_trim_both_ends(self):
+        """Both ends of the subsequence get trimmed in one iteration."""
+        poly = [
+            (0.0, -5.0),
+            (2.0, 1.0),
+            (1.0, 0.0),
+            (10.0, 0.0),
+            (19.0, 0.0),
+            (18.0, 1.0),
+        ]
+        # Subsequence indices 1..5: (2,1), (1,0), (10,0), (19,0), (18,1)
+        # Indices 2→3: angle 45°→180° (opens up) → trim start
+        # Indices 3→4: angle 180°→45° (tightens) → trim end
+        result = trim_polyline_angular_ends(poly, 1, 5, math.radians(25))
+        assert result == (2, 3)
+
+    def test_minimum_length_preserved(self):
+        """Length-3 subsequence is never trimmed."""
+        poly = P((0, 0), (10, 0), (10, 10), (0, 10))
+        result = trim_polyline_angular_ends(poly, 0, 3, math.radians(25))
+        assert result == (0, 3)
+
+    def test_short_subsequence(self):
+        """Length-2 subsequence is never trimmed."""
+        poly = P((0, 0), (10, 0), (10, 10), (0, 10))
+        result = trim_polyline_angular_ends(poly, 0, 2, math.radians(25))
+        assert result == (0, 2)
+
+    def test_zero_threshold_trims_everything(self):
+        """Threshold of 0 trims down to minimum length (3)."""
+        poly = P((0, 0), (10, 0), (10, 10), (0, 10))
+        result = trim_polyline_angular_ends(poly, 0, 4, 0.0)
+        # All angles equal at 90° (1.571 rad), so angle_curr + 0 < angle_next
+        # is false (1.571 < 1.571 is false). No trimming.
+        assert result == (0, 4)
+
+    def test_large_threshold_no_trimming(self):
+        """Very large threshold prevents trimming."""
+        poly = [
+            (0.0, 4.0),
+            (0.0, 0.0),
+            (10.0, 0.0),
+            (10.0, 1.0),
+            (5.0, 4.0),
+            (0.0, 4.0),
+        ]
+        result = trim_polyline_angular_ends(poly, 1, 4, math.radians(180))
+        assert result == (1, 4)
+
+    def test_regular_pentagon_no_trim(self):
+        """Regular pentagon — all interior angles equal, no trimming."""
+        n = 5
+        poly = [
+            (math.cos(2 * math.pi * i / n), math.sin(2 * math.pi * i / n))
+            for i in range(n)
+        ]
+        result = trim_polyline_angular_ends(poly, 0, n, math.radians(25))
+        assert result == (0, n)

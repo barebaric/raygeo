@@ -58,8 +58,8 @@ pub use polygon::{
     is_polygon_convex, normalize_polygons, offset_polygon, path_to_polygon,
     paths_to_polygons, point_line_distance, polygon_to_path, polygons_to_paths,
     rotate_polygon, rotate_polygons, scale_polygon, translate_bounds,
-    translate_polygon, translate_polygons, ClipperPath, ClipperPaths, GeoScale,
-    JoinStyle,
+    translate_polygon, translate_polygons, trim_polyline_angular_ends,
+    ClipperPath, ClipperPaths, GeoScale, JoinStyle,
 };
 pub use polygon3d::{
     deduplicate_polyline_3d, fillet_polyline_3d, flip_polygon_3d,

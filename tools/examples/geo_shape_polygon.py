@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.patches import Circle as CirclePatch
 
+from raygeo.geo.shape.line import get_interior_angle
 from raygeo.geo.shape.polygon import (
     JoinStyle,
     apply_minimum_curvature,
@@ -22,6 +23,7 @@ from raygeo.geo.shape.polygon import (
     get_polyline_closest_point,
     get_segment_swept_polygon,
     offset_polygon,
+    trim_polyline_angular_ends,
     trim_polyline_at,
 )
 from raygeo.geo.types import Polygon
@@ -531,6 +533,233 @@ def generate_trim_polyline():
     return fig
 
 
+def generate_trim_polyline_angular_ends():
+    """Trim transition vertices from the ends of a subsequence."""
+    # 13-point polyline: hook → opens up → straight → tightens → hook.
+    # Cut indices 1..10 (length 10).  The 25° threshold detects both
+    # transitions → P1 and P10 get trimmed, leaving indices 2..9.
+    poly = [
+        (0.0, 8.0),
+        (0.0, 0.0),
+        (2.5, 1.5),
+        (5.0, 0.3),
+        (7.5, 0.0),
+        (10.0, 0.0),
+        (12.5, 0.0),
+        (15.0, 0.0),
+        (17.5, 0.0),
+        (20.0, -0.3),
+        (22.5, 1.5),
+        (25.0, 0.0),
+        (25.0, 8.0),
+    ]
+    n = len(poly)
+    idxs = list(range(n))
+    threshold_rad = math.radians(25)
+    threshold_deg = 25
+
+    cut_start_in = 1
+    cut_len_in = n - 3  # indices 1..10 (length 10)
+
+    (new_start, new_len) = trim_polyline_angular_ends(
+        poly,
+        cut_start_in,
+        cut_len_in,
+        threshold_rad,
+    )
+
+    cut_before = list(range(cut_start_in, cut_start_in + cut_len_in))
+    cut_after = list(range(new_start, new_start + new_len))
+    trimmed = [i for i in cut_before if i not in cut_after]
+
+    angles = [
+        math.degrees(
+            get_interior_angle(poly[(i - 1) % n], poly[i], poly[(i + 1) % n])
+        )
+        for i in range(n)
+    ]
+
+    # ── figure layout ──
+    fig = plt.figure(figsize=(12, 8))
+    gs = fig.add_gridspec(1, 2, width_ratios=[1, 1], wspace=0.3)
+    ax1 = fig.add_subplot(gs[0])
+    ax2 = fig.add_subplot(gs[1])
+
+    # ── draw one subplot ──
+    def draw_panel(ax, ids, label_drop, title_text):
+        arr = np.array(poly)
+
+        # full polygon outline (thin)
+        closed = np.vstack([arr, arr[0:1]])
+        ax.plot(closed[:, 0], closed[:, 1], "-", color="#ccc", lw=1, zorder=1)
+        ax.plot(arr[:, 0], arr[:, 1], "o", color="#ccc", ms=4, zorder=2)
+
+        # highlight the cut
+        for k in range(len(ids) - 1):
+            a = poly[ids[k]]
+            b = poly[ids[k + 1]]
+            ax.plot(
+                [a[0], b[0]],
+                [a[1], b[1]],
+                "-",
+                color="#d62728",
+                lw=3.5,
+                zorder=3,
+            )
+        cut_pts = np.array([poly[i] for i in ids])
+        ax.plot(
+            cut_pts[:, 0],
+            cut_pts[:, 1],
+            "o",
+            color="#d62728",
+            ms=8,
+            zorder=4,
+        )
+
+        # trimmed vertices  (only in Before panel)
+        for i in label_drop:
+            p = poly[i]
+            ax.plot(p[0], p[1], "x", color="#888", ms=10, mew=2.5, zorder=5)
+            ax.annotate(
+                "trimmed",
+                xy=(p[0], p[1]),
+                xytext=(p[0] + (1.5 if i > 3 else -1.5), p[1] - 1.8),
+                fontsize=8,
+                color="#666",
+                ha="center",
+                arrowprops=dict(arrowstyle="->", color="#888", lw=0.8),
+            )
+
+        # ── angle annotations ──
+        for i in idxs:
+            p = poly[i]
+            ang = angles[i]
+            inside = i in ids
+            clr = "#d62728" if inside else "#aaa"
+            # offset: left (x<3), right (x>17), centre; above/below y
+            ox = -2.8 if p[0] < 3 else (2.2 if p[0] > 17 else 0.6)
+            oy = 1.6 if p[1] >= 0 else -2.2
+            ax.annotate(
+                f"{ang:.0f}°",
+                xy=p,
+                xytext=(p[0] + ox, p[1] + oy),
+                fontsize=9,
+                color=clr,
+                fontweight="bold" if inside else "normal",
+                bbox=dict(
+                    boxstyle="round,pad=0.15",
+                    fc="white" if inside else "none",
+                    ec="none",
+                    alpha=0.85,
+                ),
+            )
+
+        # ── highlight the angular jumps ──
+        # start jump: from second → third vertex of the cut
+        if len(ids) >= 3:
+            i2, i3 = ids[1], ids[2]
+            mid = (
+                (poly[i2][0] + poly[i3][0]) / 2,
+                (poly[i2][1] + poly[i3][1]) / 2,
+            )
+            ax.annotate(
+                f"Δ {abs(angles[i3] - angles[i2]):.0f}°",
+                xy=mid,
+                xytext=(mid[0], mid[1] + (2.0 if poly[i2][1] >= 0 else -2.0)),
+                fontsize=8,
+                color="#d62728",
+                ha="center",
+                fontweight="bold",
+                arrowprops=dict(
+                    arrowstyle="->",
+                    color="#d62728",
+                    lw=1.2,
+                    connectionstyle="arc3,rad=0",
+                ),
+            )
+            # end jump: from third-to-last → second-to-last of the cut
+            i_a, i_b = ids[-3], ids[-2]
+            mid2 = (
+                (poly[i_a][0] + poly[i_b][0]) / 2,
+                (poly[i_a][1] + poly[i_b][1]) / 2,
+            )
+            ax.annotate(
+                f"Δ {abs(angles[i_b] - angles[i_a]):.0f}°",
+                xy=mid2,
+                xytext=(
+                    mid2[0],
+                    mid2[1] + (2.0 if poly[i_b][1] >= 0 else -2.0),
+                ),
+                fontsize=8,
+                color="#d62728",
+                ha="center",
+                fontweight="bold",
+                arrowprops=dict(
+                    arrowstyle="->",
+                    color="#d62728",
+                    lw=1.2,
+                    connectionstyle="arc3,rad=0",
+                ),
+            )
+
+        # ── labels ──
+        ax.set_aspect("equal")
+        ax.set_ylim(-6, 12)
+        ax.set_xlim(-3, 28)
+        ax.grid(True, alpha=0.15, ls=":")
+        ax.set_title(title_text, fontsize=12, fontweight="bold")
+        ax.set_xlabel("x")
+        ax.set_ylabel("y")
+
+    draw_panel(
+        ax1,
+        cut_before,
+        trimmed,
+        "Before:  cut = vertices 1…10",
+    )
+    draw_panel(
+        ax2,
+        cut_after,
+        [],
+        "After:  trimmed cut = vertices 2…9",
+    )
+
+    # ── panel annotations ──
+    ax1.annotate(
+        f"threshold = {threshold_deg}°",
+        xy=(0.96, 0.96),
+        xycoords="axes fraction",
+        va="top",
+        ha="right",
+        fontsize=9,
+        bbox=dict(boxstyle="round,pad=0.3", fc="#fff9c4", ec="#f9a825"),
+    )
+    annot_after = (
+        f"cut index {cut_start_in}→{new_start}\n"
+        f"cut length {cut_len_in}→{new_len}\n"
+        f"dropped vertices: {trimmed}"
+    )
+    ax2.annotate(
+        annot_after,
+        xy=(0.96, 0.96),
+        xycoords="axes fraction",
+        va="top",
+        ha="right",
+        fontsize=9,
+        family="monospace",
+        bbox=dict(boxstyle="round,pad=0.3", fc="#e8f5e9", ec="#43a047"),
+    )
+
+    fig.suptitle(
+        "trim_polyline_angular_ends",
+        fontsize=14,
+        fontweight="bold",
+        y=1.02,
+    )
+    fig.subplots_adjust(left=0.05, right=0.98, bottom=0.06, top=0.93)
+    return fig
+
+
 __docs_target__ = ["raygeo.geo.shape.polygon.md"]
 __images__ = [
     {
@@ -620,5 +849,16 @@ __images__ = [
         "heading": "trim_polyline_at",
         "caption": "``trim_polyline_at`` trims a polyline between two points",
         "function": generate_trim_polyline,
+    },
+    {
+        "heading": "trim_polyline_angular_ends",
+        "caption": (
+            "``trim_polyline_angular_ends`` removes transition vertices from"
+            " both ends of a contiguous subsequence where the interior angle"
+            " jumps sharply.  Here a 10-vertex cut (indices 1–10) with"
+            " angles ranging 59°→180°→59° is trimmed to 8 vertices"
+            " using a 25° threshold."
+        ),
+        "function": generate_trim_polyline_angular_ends,
     },
 ]
