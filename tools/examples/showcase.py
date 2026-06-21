@@ -8,13 +8,16 @@ from matplotlib.colors import to_hex
 
 from raygeo.geo import Geometry
 from raygeo.geo.algo import hull
+from raygeo.geo.algo.cleared_area import ClearedArea
 from raygeo.geo.algo.cylindrical import transform_to_cylinder
 from raygeo.geo.algo.helix import HelixDirection, generate_helix
+from raygeo.geo.algo.hsm import adaptive_entry, adaptive_peeling
 from raygeo.geo.algo.nest2d.placement import place_parts
+from raygeo.geo.algo.offset import compute_inset_region
 from raygeo.geo.algo.smooth import smooth_polyline
 from raygeo.geo.shape.bezier import linearize_bezier_adaptive
 from raygeo.geo.shape.polygon import get_polygon_convex_hull
-from raygeo.geo.shape.polygon3d import offset_polyline_3d
+from raygeo.geo.shape.polygon3d import fillet_polyline_3d, offset_polyline_3d
 from raygeo.ops.raster import ScanMode, rasterize_power_modulation
 from raygeo.ops.types import CommandType
 from tools.plot import make_pattern, plot_geometry
@@ -433,36 +436,243 @@ def _plot_3d_offset(ax):
     ax.legend(fontsize=8)
 
 
+def _plot_bite_in_direction(ax):
+    boundary = [(0, 0), (180, 0), (180, 120), (0, 120)]
+    islands = [
+        [(15, 15), (35, 15), (35, 35), (15, 35)],
+        [
+            (
+                80 + 10 * math.cos(2 * math.pi * i / 32),
+                50 + 10 * math.sin(2 * math.pi * i / 32),
+            )
+            for i in range(32)
+        ],
+        [(130, 80), (160, 80), (160, 105), (130, 105)],
+    ]
+    tool_radius = 3.0
+    step_over = 2.0
+
+    _, cp = adaptive_entry(
+        pocket_boundary=boundary,
+        islands=islands,
+        tool_radius=tool_radius,
+        step_over=step_over,
+        safe_z=2.0,
+        target_z=-5.0,
+        plunge_pitch=1.0,
+    )
+    ca = ClearedArea(initial=cp)
+    va, total = compute_inset_region(boundary, tool_radius, islands)
+
+    directions = {
+        "east": (200, 60),
+        "north": (90, 140),
+        "west": (-20, 60),
+        "south": (90, -20),
+    }
+    all_bites = []
+
+    for label, target in directions.items():
+        for _ in range(20):
+            bites = ca.bite_in_direction(
+                step_over,
+                va,
+                0.01,
+                target,
+                math.pi / 3,
+            )
+            if not bites:
+                break
+            for b in bites:
+                all_bites.append((b, label))
+            ca.incorporate(bites)
+
+    bx = [p[0] for p in boundary] + [boundary[0][0]]
+    by = [p[1] for p in boundary] + [boundary[0][1]]
+    ax.plot(bx, by, "k-", linewidth=1.5, alpha=0.3, label="Boundary")
+
+    for isl in islands:
+        ix = [p[0] for p in isl] + [isl[0][0]]
+        iy = [p[1] for p in isl] + [isl[0][1]]
+        ax.fill(
+            ix,
+            iy,
+            facecolor="lightgray",
+            edgecolor="gray",
+            hatch="///",
+            linewidth=1,
+        )
+
+    n = len(all_bites)
+    for idx, (bite, label) in enumerate(all_bites):
+        t = idx / max(n - 1, 1)
+        r = 0.9 - 0.6 * t
+        g = 0.2 + 0.5 * t
+        color = (r, g, 0.2)
+        xs = [p[0] for p in bite] + [bite[0][0]]
+        ys = [p[1] for p in bite] + [bite[0][1]]
+        ax.fill(
+            xs, ys, facecolor=color, alpha=0.3, edgecolor=color, linewidth=0.5
+        )
+
+    ax.set_aspect("equal")
+    ax.grid(True, alpha=0.3)
+    ax.set_title("Directional Bites", fontsize=10)
+
+
+def _plot_peeling_multi(ax):
+    boundary = [(0, 0), (180, 0), (180, 120), (0, 120)]
+    islands = [
+        [(15, 15), (35, 15), (35, 35), (15, 35)],
+        [
+            (
+                80 + 10 * math.cos(2 * math.pi * i / 32),
+                50 + 10 * math.sin(2 * math.pi * i / 32),
+            )
+            for i in range(32)
+        ],
+        [(130, 80), (160, 80), (160, 105), (130, 105)],
+    ]
+    path, cp = adaptive_entry(
+        pocket_boundary=boundary,
+        islands=islands,
+        tool_radius=3.0,
+        step_over=2.0,
+        safe_z=2.0,
+        target_z=-5.0,
+        plunge_pitch=1.0,
+    )
+    ca = ClearedArea(initial=cp)
+    tp = adaptive_peeling(
+        ca,
+        boundary,
+        islands=islands,
+        tool_radius=3.0,
+        step_over=2.0,
+        z=-5.0,
+        safe_z=5.0,
+        area_tolerance=1.0,
+    )
+
+    pts = np.array(tp)
+    if len(pts):
+        seg_x, seg_y, z_last = [], [], 0.0
+        for p in pts:
+            if seg_x and abs(p[2] - z_last) > 0.1:
+                if len(seg_x) >= 2:
+                    color = "#2ca02c" if z_last > 0.1 else "#e41a1c"
+                    ls = "--" if z_last > 0.1 else "-"
+                    ax.plot(
+                        seg_x, seg_y, color=color, linewidth=0.7, linestyle=ls
+                    )
+                seg_x, seg_y = [], []
+            if not math.isnan(p[0]):
+                if not seg_x:
+                    z_last = p[2]
+                seg_x.append(p[0])
+                seg_y.append(p[1])
+        if len(seg_x) >= 2:
+            color = "#2ca02c" if z_last > 0.1 else "#e41a1c"
+            ls = "--" if z_last > 0.1 else "-"
+            ax.plot(seg_x, seg_y, color=color, linewidth=0.7, linestyle=ls)
+
+    bnd = np.array(list(boundary) + [boundary[0]])
+    ax.plot(bnd[:, 0], bnd[:, 1], "k-", linewidth=2, label="Boundary")
+    for isl in islands:
+        isl_arr = np.array(list(isl) + [isl[0]])
+        ax.fill(
+            isl_arr[:, 0],
+            isl_arr[:, 1],
+            facecolor="#ccc",
+            edgecolor="#999",
+            linewidth=1.5,
+            label="Island" if isl is islands[0] else None,
+        )
+    ax.set_aspect("equal")
+    ax.grid(True, alpha=0.3)
+    ax.set_title("HSM Peeling (Multi)", fontsize=10)
+
+
+def _plot_fillet_polyline_3d(ax):
+    poly = [
+        (0.0, 0.0, 0.0),
+        (8.0, 0.0, 0.0),
+        (8.0, 6.0, 3.0),
+        (2.0, 6.0, 3.0),
+        (2.0, 0.0, 6.0),
+        (10.0, 0.0, 6.0),
+    ]
+    radius = 1.5
+    result = fillet_polyline_3d(poly, radius)
+
+    xs = [p[0] for p in poly]
+    ys = [p[1] for p in poly]
+    zs = [p[2] for p in poly]
+    ax.plot(xs, ys, zs, "o-", color="steelblue", linewidth=2, label="Original")
+
+    xs_r = [p[0] for p in result]
+    ys_r = [p[1] for p in result]
+    zs_r = [p[2] for p in result]
+    ax.plot(
+        xs_r,
+        ys_r,
+        zs_r,
+        "o-",
+        color="tomato",
+        linewidth=3,
+        alpha=0.85,
+        label=f"Filleted (r={radius})",
+    )
+
+    if len(result) > len(poly):
+        ax.plot(
+            xs_r, ys_r, zs_r, "o", color="tomato", markersize=4, alpha=0.85
+        )
+
+    ax.set_xlabel("X")
+    ax.set_ylabel("Y")
+    ax.set_zlabel("Z")
+    ax.set_title("3D Fillet Polyline", fontsize=10)
+    ax.view_init(elev=25, azim=-65)
+    ax.legend(fontsize=8)
+
+
 def generate_showcase():
-    fig = plt.figure(figsize=(18, 16), layout="constrained")
+    fig = plt.figure(figsize=(24, 16), layout="constrained")
 
     axs = [
         [
-            fig.add_subplot(3, 3, 1),
-            fig.add_subplot(3, 3, 2),
-            fig.add_subplot(3, 3, 3),
+            fig.add_subplot(3, 4, 1),
+            fig.add_subplot(3, 4, 2),
+            fig.add_subplot(3, 4, 3),
+            fig.add_subplot(3, 4, 4),
         ],
         [
-            fig.add_subplot(3, 3, 4),
-            fig.add_subplot(3, 3, 5),
-            fig.add_subplot(3, 3, 6),
+            fig.add_subplot(3, 4, 5),
+            fig.add_subplot(3, 4, 6),
+            fig.add_subplot(3, 4, 7),
+            fig.add_subplot(3, 4, 8),
         ],
         [
-            fig.add_subplot(3, 3, 7, projection="3d"),
-            fig.add_subplot(3, 3, 8, projection="3d"),
-            fig.add_subplot(3, 3, 9, projection="3d"),
+            fig.add_subplot(3, 4, 9, projection="3d"),
+            fig.add_subplot(3, 4, 10, projection="3d"),
+            fig.add_subplot(3, 4, 11, projection="3d"),
+            fig.add_subplot(3, 4, 12, projection="3d"),
         ],
     ]
 
     _plot_concave_hull(axs[0][0])
     _plot_arc_fitting(axs[0][1])
     _plot_nesting(axs[0][2])
+    _plot_bite_in_direction(axs[0][3])
     _plot_raster_power_modulation(axs[1][0])
     _plot_smooth(axs[1][1])
     _plot_linearization(axs[1][2])
+    _plot_peeling_multi(axs[1][3])
     _plot_cylindrical(axs[2][0])
     _plot_conical_helix(axs[2][1])
     _plot_3d_offset(axs[2][2])
+    _plot_fillet_polyline_3d(axs[2][3])
 
     return fig
 
