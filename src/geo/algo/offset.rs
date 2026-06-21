@@ -30,8 +30,6 @@ use crate::types::{Point, Point3D, Polygon};
 #[derive(Clone, Debug)]
 struct ContourItem {
     path: Polygon,
-    #[allow(dead_code)]
-    area: f64,
     id: usize,
     /// The Z height of this contour (from its first vertex).
     /// Preserved from the source 3D geometry so offset output keeps Z.
@@ -55,18 +53,10 @@ fn prepare_contour_items(
         if verts.len() < 3 {
             continue;
         }
-        let mut area = 0.0;
-        let n = verts.len();
-        for j in 0..n {
-            let k = (j + 1) % n;
-            area += verts[j].perp_dot(verts[k]);
-        }
-        area = area.abs() / 2.0;
         // Preserve Z from the source geometry's first point (Move command).
         let z = geo.data.first().map(|cmd| cmd.end_point().z).unwrap_or(0.0);
         items.push(ContourItem {
             path: verts,
-            area,
             id: i,
             z,
         });

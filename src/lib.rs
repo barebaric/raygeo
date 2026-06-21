@@ -100,7 +100,7 @@ pyo3_stub_gen::reexport_module_members!("raygeo" from "raygeo.ops"; "Ops");
 pyo3_stub_gen::module_doc!("raygeo", "{}", MODULE_DOC);
 
 /// Module documentation string used for Python `__doc__`.
-#[cfg_attr(not(feature = "python"), allow(dead_code))]
+#[cfg(feature = "python")]
 pub(crate) const MODULE_DOC: &str = concat!(
     "RayGeo — 2D/3D geometry engine for CAD/CAM applications.\n",
     "\n",
