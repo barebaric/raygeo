@@ -491,24 +491,28 @@ fn finish_peeling(
             if span < min_span {
                 return None;
             }
-            let (enter, exit) = trim_to_safe_fillet_span(
+            let fa = if let Some((enter, exit)) = trim_to_safe_fillet_span(
                 arc,
                 pocket_boundary,
                 islands,
                 tool_radius,
                 wall_margin,
-            )?;
-            let trimmed = trim_polyline_at(arc, enter, exit);
-            if trimmed.len() < 3 {
-                return None;
-            }
-            let side = get_polyline_turn_sign(arc);
-            let fa = append_end_fillets(
-                &trimmed,
-                tool_radius,
-                std::f64::consts::FRAC_PI_2,
-                side,
-            );
+            ) {
+                let trimmed = trim_polyline_at(arc, enter, exit);
+                if trimmed.len() < 3 {
+                    arc.to_vec()
+                } else {
+                    let side = get_polyline_turn_sign(arc);
+                    append_end_fillets(
+                        &trimmed,
+                        tool_radius,
+                        std::f64::consts::FRAC_PI_2,
+                        side,
+                    )
+                }
+            } else {
+                arc.to_vec()
+            };
             if fa.len() >= 3 {
                 Some(fa)
             } else {
