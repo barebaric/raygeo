@@ -5,7 +5,7 @@
 //! (taken from its first vertex) is preserved on the output — the operation
 //! is a 2D inflate of the XY outline at the source Z plane.
 //!
-//! For off-axis offsetting (e.g. on an arbitrary work plane in 5-axis CNC),
+//! For off-axis offsetting (e.g. on an arbitrary work plane),
 //! use [`grow_geometry_on_plane`] which rotates the geometry so the target
 //! plane aligns with XY before offsetting.
 //!
@@ -15,14 +15,15 @@
 use glam::{DMat4, DQuat, DVec3};
 
 use crate::geo::algo::intersect::check_intersection_from_array;
+use crate::geo::algo::polylabel::find_largest_circle;
 use crate::geo::algo::topology::{
     build_hierarchy, get_valid_contours_data, group_solids_and_holes,
     split_into_contours,
 };
 use crate::geo::geometry::Geometry;
 use crate::geo::shape::polygon::{
-    get_polygon_area, get_polygon_centroid, get_polygons_difference,
-    get_polygons_group_difference, offset_polygon_with_style, JoinStyle,
+    get_polygon_area, get_polygon_centroid, get_polygons_group_difference,
+    is_point_in_polygon, offset_polygon_with_style, JoinStyle,
 };
 use crate::types::{Point, Point3D, Polygon};
 
@@ -85,24 +86,29 @@ pub fn offset_contour_group(
     if hole_paths.is_empty() {
         return offset_polygon_with_style(solid_path, offset, join_style);
     }
-    // Offset solid and holes separately, then subtract holes from solid.
-    // For positive offset (grow): solid expands outward, hole contracts (inward).
-    // For negative offset (shrink): solid contracts, hole expands.
-    // The hole offset direction is always opposite to the solid offset.
+    // Offset solid and holes separately, then subtract all holes from the
+    // solid in a single Clipper2 difference operation.
+    //
+    // For positive offset (grow): solid expands outward, hole contracts
+    // (inward).  For negative offset (shrink): solid contracts, hole
+    // expands.  The hole offset direction is always opposite to the solid
+    // offset.
+    //
+    // Subtracting all holes at once (rather than one at a time) lets
+    // Clipper2 assign consistent orientations to every resulting contour:
+    // outer boundaries CCW, holes CW.  Sequential subtraction corrupts the
+    // orientation of earlier holes when later holes are processed, because
+    // each intermediate polygon is treated as a standalone subject.
     let offset_solids =
         offset_polygon_with_style(solid_path, offset, join_style);
-    let mut final_polys = offset_solids;
-    for hole in hole_paths {
-        let offset_holes = offset_polygon_with_style(hole, -offset, join_style);
-        for offset_hole in &offset_holes {
-            let mut new_result = Vec::new();
-            for poly in final_polys.drain(..) {
-                new_result.extend(get_polygons_difference(&poly, offset_hole));
-            }
-            final_polys = new_result;
-        }
+    let offset_holes: Vec<Polygon> = hole_paths
+        .iter()
+        .flat_map(|hole| offset_polygon_with_style(hole, -offset, join_style))
+        .collect();
+    if offset_holes.is_empty() {
+        return offset_solids;
     }
-    final_polys
+    get_polygons_group_difference(&offset_solids, &offset_holes)
 }
 
 /// Offsets the closed contours of a Geometry object by a given amount.
@@ -110,10 +116,10 @@ pub fn offset_contour_group(
 /// This function grows (positive offset) or shrinks (negative offset) the
 /// area enclosed by closed paths.
 ///
-/// This implementation processes logically distinct shapes (islands)
+/// This implementation processes logically distinct contours
 /// independently. Holes are associated with their enclosing solids and
 /// offset together. Adjacent or overlapping solids remain separate, preserving
-/// distinct toolpaths.
+/// distinct outlines.
 pub fn grow_geometry(geometry: &Geometry, offset: f64) -> Geometry {
     let raw_contours = split_into_contours(geometry);
     if raw_contours.is_empty() {
@@ -189,8 +195,8 @@ pub fn grow_geometry(geometry: &Geometry, offset: f64) -> Geometry {
 /// axis, a 2D offset is performed in that plane, and the result is rotated
 /// back to the original coordinate frame.
 ///
-/// This enables offsetting contours that lie on non-XY planes — useful for
-/// 5-axis CNC toolpath generation where features may sit on angled faces.
+/// This enables offsetting contours that lie on non-XY planes — useful
+/// when features sit on angled faces.
 ///
 /// # Panics
 ///
@@ -250,14 +256,22 @@ pub fn grow_geometry_on_plane(
     result
 }
 
-/// Find the single deepest (most open) region of a pocket.
+/// Find the single most interior point of a compound polygon region.
 ///
-/// For each polygon in `valid_tool_area`, uses binary search to find the
-/// largest offset that does NOT collapse that polygon, then returns the
-/// centroid of the **largest surviving fragment across all polygons**.
+/// Returns the point whose minimum distance to any boundary (outer
+/// contour *or* hole) is greatest — the *pole of inaccessibility*.
 ///
-/// This gives the single best helical-entry point for the entire pocket,
-/// regardless of how many disconnected regions or islands it contains.
+/// Holes are detected by **spatial containment**: any input polygon
+/// whose first vertex lies inside another is treated as a hole of that
+/// polygon.  This is more robust than winding-based detection and works
+/// correctly even when polygon orientations are inconsistent.  When
+/// holes are present the core is found via
+/// [`find_largest_circle`], which is guaranteed to lie inside the
+/// filled area — never inside a hole.
+///
+/// For inputs without holes (a flat list of disconnected regions) the
+/// legacy binary-search path is used: it returns the centroid of the
+/// last surviving inward-offset fragment of the largest region.
 ///
 /// Returns an empty vec when the input is empty or `step_over` ≤ 0.
 ///
@@ -270,6 +284,91 @@ pub fn find_deepest_cores(
         return vec![];
     }
 
+    // Classify input polygons as solids or holes using spatial
+    // containment.  A polygon whose first vertex lies inside another
+    // input polygon is a hole; the rest are solids.  We pick the
+    // *smallest* containing polygon (by area) as the parent so that
+    // nested contours associate with their immediate enclosing contour.
+    let n = valid_tool_area.len();
+    let mut parent: Vec<Option<usize>> = vec![None; n];
+    for (i, poly_i) in valid_tool_area.iter().enumerate() {
+        if poly_i.len() < 3 {
+            continue;
+        }
+        let probe = poly_i[0];
+        let mut best: Option<usize> = None;
+        let mut best_area = f64::MAX;
+        for (j, poly_j) in valid_tool_area.iter().enumerate() {
+            if i == j || poly_j.len() < 3 {
+                continue;
+            }
+            if is_point_in_polygon(probe, poly_j) {
+                let area = get_polygon_area(poly_j);
+                if area < best_area {
+                    best_area = area;
+                    best = Some(j);
+                }
+            }
+        }
+        parent[i] = best;
+    }
+
+    let solid_indices: Vec<usize> = (0..n)
+        .filter(|&i| valid_tool_area[i].len() >= 3 && parent[i].is_none())
+        .collect();
+    let hole_indices: Vec<usize> = (0..n)
+        .filter(|&i| valid_tool_area[i].len() >= 3 && parent[i].is_some())
+        .collect();
+
+    // No holes (or no recognised solids): use the legacy binary-search
+    // path.  It returns the centroid of the last surviving inward-offset
+    // fragment, which matches existing behaviour for simple regions and
+    // for callers that pass a flat list of disconnected regions.
+    if hole_indices.is_empty() || solid_indices.is_empty() {
+        return find_deepest_cores_by_offset(valid_tool_area);
+    }
+
+    // Holes present: find the pole of inaccessibility per solid so the
+    // returned core always lies in the filled area, even for annular
+    // regions with central holes where a centroid-based approach would
+    // land inside the hole.
+    let mut best_point: Option<Point> = None;
+    let mut best_radius = -1.0_f64;
+
+    for &solid_idx in &solid_indices {
+        let solid = &valid_tool_area[solid_idx];
+
+        // Collect the holes that belong to this solid: any hole whose
+        // first vertex lies inside the solid.
+        let associated_holes: Vec<Polygon> = hole_indices
+            .iter()
+            .filter_map(|&h_idx| {
+                let hole = &valid_tool_area[h_idx];
+                hole.first()
+                    .filter(|&&p| is_point_in_polygon(p, solid))
+                    .map(|_| hole.clone())
+            })
+            .collect();
+
+        if let Some((centre, radius)) =
+            find_largest_circle(solid, &associated_holes, 0.5)
+        {
+            if radius > best_radius {
+                best_radius = radius;
+                best_point = Some(centre);
+            }
+        }
+    }
+
+    best_point.map(|p| vec![p]).unwrap_or_default()
+}
+
+/// Legacy core finder: binary-searches the largest inward offset that
+/// keeps each polygon alive and returns the centroid of the single
+/// largest surviving fragment across all inputs.
+///
+/// Used by [`find_deepest_cores`] for inputs without holes.
+fn find_deepest_cores_by_offset(valid_tool_area: &[Polygon]) -> Vec<Point> {
     let mut best_fragment: Option<Polygon> = None;
     let mut best_area = 0.0_f64;
 
@@ -341,8 +440,8 @@ pub fn find_deepest_cores(
         .unwrap_or_default()
 }
 
-/// Compute the region reachable by a circular tool of given radius
-/// moving inside a boundary while avoiding obstacles.
+/// Compute the region swept by a circle of given radius whose centre
+/// moves inside a boundary while avoiding obstacles.
 ///
 /// The boundary is inset (shrunk) by `radius`, and each obstacle is
 /// expanded (grown) by `radius` and subtracted from the inset

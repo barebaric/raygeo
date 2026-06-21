@@ -91,20 +91,20 @@ centroids of the final polygons — optimal points for helical entry in adaptive
 | _Returns_         | `list[geo.types.Point]`       | List of (x, y) centroid points.                       |
 | _Complexity_      |                               | O(n \* k) where k is the number of iterations         |
 
-![Deepest-core detection: binary search finds the largest offset that does NOT collapse the pocket, then returns the centroid of the largest surviving fragment](images/geo-algo-offset-deepest-cores.png)
+![Deepest-core detection: finds the point of maximum clearance inside the valid tool area — the best helical-entry point for the pocket](images/geo-algo-offset-deepest-cores.png)
 
-_Deepest-core detection: binary search finds the largest offset that does NOT collapse the pocket,
-then returns the centroid of the largest surviving fragment_
+_Deepest-core detection: finds the point of maximum clearance inside the valid tool area — the best
+helical-entry point for the pocket_
 
-![Multi-island pocket: the valid tool area splits into multiple regions; `find_deepest_cores` returns the single centroid of the largest surviving fragment](images/geo-algo-offset-deepest-cores-multi.png)
+![Multi-island pocket: islands are detected by orientation (clockwise contours) and excluded; the core is the pole of inaccessibility of the largest valid region](images/geo-algo-offset-deepest-cores-multi.png)
 
-_Multi-island pocket: the valid tool area splits into multiple regions; `find_deepest_cores` returns
-the single centroid of the largest surviving fragment_
+_Multi-island pocket: islands are detected by orientation (clockwise contours) and excluded; the
+core is the pole of inaccessibility of the largest valid region_
 
-![Central-island pocket (annular): the island creates a ring of valid tool area; the deepest core sits at the centre of the ring](images/geo-algo-offset-deepest-cores-central.png)
+![Central-island pocket (annular): the island creates a ring of valid tool area; the deepest core is the point of maximum clearance in the ring — never inside the island](images/geo-algo-offset-deepest-cores-central.png)
 
-_Central-island pocket (annular): the island creates a ring of valid tool area; the deepest core
-sits at the centre of the ring_
+_Central-island pocket (annular): the island creates a ring of valid tool area; the deepest core is
+the point of maximum clearance in the ring — never inside the island_
 
 ### `offset_contour_group()`
 

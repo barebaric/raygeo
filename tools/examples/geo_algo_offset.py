@@ -446,18 +446,18 @@ __images__ = [
     {
         "heading": "find_deepest_cores",
         "caption": (
-            "Deepest-core detection: binary search finds the largest"
-            " offset that does NOT collapse the pocket, then returns"
-            " the centroid of the largest surviving fragment"
+            "Deepest-core detection: finds the point of maximum clearance"
+            " inside the valid tool area — the best helical-entry point"
+            " for the pocket"
         ),
         "function": generate_deepest_cores,
     },
     {
         "heading": "find_deepest_cores",
         "caption": (
-            "Multi-island pocket: the valid tool area splits into"
-            " multiple regions; `find_deepest_cores` returns the single"
-            " centroid of the largest surviving fragment"
+            "Multi-island pocket: islands are detected by orientation"
+            " (clockwise contours) and excluded; the core is the pole of"
+            " inaccessibility of the largest valid region"
         ),
         "function": generate_deepest_cores_multi,
     },
@@ -465,8 +465,8 @@ __images__ = [
         "heading": "find_deepest_cores",
         "caption": (
             "Central-island pocket (annular): the island creates a ring"
-            " of valid tool area; the deepest core sits at the centre"
-            " of the ring"
+            " of valid tool area; the deepest core is the point of"
+            " maximum clearance in the ring — never inside the island"
         ),
         "function": generate_deepest_cores_central,
     },
