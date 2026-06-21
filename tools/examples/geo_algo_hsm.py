@@ -855,16 +855,15 @@ def generate_link_arcs():
     va, total = compute_inset_region(boundary, tool_radius, islands)
 
     filleted_arcs = []
-    for _ in range(55):
+    for _ in range(80):
         bites = ca.bites(step_over, va, 0.01)
         if not bites:
             break
         for bite in bites:
             arc = find_cutting_arc(bite, ca.fragments())
             if arc and len(arc) >= 3:
-                safe = find_safe_sweep_end(arc, boundary, islands, tool_radius)
-                if safe:
-                    fa = fillet_arc_ends(arc, boundary, islands, tool_radius)
+                fa = fillet_arc_ends(arc, boundary, islands, tool_radius)
+                if len(fa) >= 3:
                     filleted_arcs.append(fa)
         ca.incorporate(bites)
         if ca.total_area() >= total - 0.1:

@@ -9,6 +9,7 @@ use crate::geo::algo::medial_axis::{
 use crate::geo::algo::offset::compute_inset_region;
 use crate::geo::algo::polylabel::find_largest_circle;
 use crate::geo::algo::ramp::{generate_ramp, RampOptions, RampStyle};
+use crate::geo::algo::smooth::smooth_path;
 use crate::geo::algo::spiral::{generate_spiral, SpiralOptions};
 use crate::geo::shape::arc::get_polyline_turn_sign;
 use crate::geo::shape::line::{
@@ -155,6 +156,10 @@ pub struct AdaptiveWavefrontOptions {
     /// cutting arcs.  `0.0` lets the sweep touch the wall; larger values
     /// leave a sliver of safety margin.
     pub wall_margin: f64,
+    /// Gaussian smoothing amount (0–200) applied to MAT-routed travel
+    /// segments.  `0` disables smoothing (shortcut only).  See
+    /// [`smooth_path`].
+    pub travel_smoothing: i32,
     /// Optional pre-computed Medial Axis.  If `None` the peeler will
     /// compute it internally.  After the call this field holds the
     /// (computed or provided) MAT, which can be extracted for use in
@@ -455,6 +460,7 @@ pub fn fillet_arc_ends(
 /// of) any polygon in `uncleared`, the connection uses `mat` (the
 /// Medial Axis) to route around obstacles.  Falls back to a direct
 /// line when MAT routing is unavailable or no path exists.
+#[allow(clippy::too_many_arguments)]
 pub fn link_filleted_arcs(
     arcs: &[Vec<Point>],
     uncleared: &[Polygon],
@@ -463,6 +469,7 @@ pub fn link_filleted_arcs(
     mat: Option<&MedialAxis>,
     preserve_order: bool,
     safe_margin: f64,
+    smoothing_amount: i32,
 ) -> Vec<Point3D> {
     let mut result: Vec<Point3D> = Vec::new();
 
@@ -559,7 +566,7 @@ pub fn link_filleted_arcs(
                     if (full.last().unwrap() - first).length_squared() > 1e-12 {
                         full.push(first);
                     }
-                    full
+                    smooth_path(&full, uncleared, safe_margin, smoothing_amount)
                 }
             } else {
                 vec![last, first]
@@ -823,6 +830,7 @@ fn link_cutting_arcs(
         opts.mat.as_ref(),
         true,
         opts.tool_radius,
+        opts.travel_smoothing,
     )
 }
 

@@ -98,7 +98,7 @@ pub use project::{
 pub use ramp::{generate_ramp, RampOptions, RampStyle};
 pub use simplify::{simplify_data, simplify_polyline};
 pub use smooth::{
-    compute_gaussian_kernel, resample_polyline, smooth_circularly,
+    compute_gaussian_kernel, resample_polyline, smooth_circularly, smooth_path,
     smooth_polyline, smooth_sub_segment,
 };
 pub use spiral::{generate_spiral, SpiralOptions};

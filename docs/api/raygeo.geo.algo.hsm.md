@@ -79,6 +79,7 @@ adaptive_peeling(
     safe_z: float | None = None,
     area_tolerance: float = 1,
     wall_margin: float = 0,
+    travel_smoothing: int = 50,
 ) -> list[tuple[float, float, float]]
 ```
 
@@ -90,18 +91,19 @@ for each bite. The individual passes are linked into a single continuous toolpat
 at _z_ followed by a travel segment at _safe_z_ to the next cut. The Medial Axis of the pocket is
 used to route travel around obstacles.
 
-| Parameter         | Type                                           | Description                                                                                                                                     |
-| ----------------- | ---------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
-| `cleared`         | `geo.algo.cleared_area.ClearedArea`            | `ClearedArea` instance (mutated in place).                                                                                                      |
-| `pocket_boundary` | `Sequence[tuple[float, float]]`                | Outer boundary of the pocket.                                                                                                                   |
-| `islands`         | `Sequence[Sequence[tuple[float, float]]] = []` | List of island (hole) polygons (default []).                                                                                                    |
-| `tool_radius`     | `float = 3`                                    | Tool radius in mm (default 3.0).                                                                                                                |
-| `step_over`       | `float = 2`                                    | Radial expansion per iteration (default 2.0).                                                                                                   |
-| `z`               | `float = 0`                                    | Cutting Z height (default 0.0).                                                                                                                 |
-| `safe_z`          | `float &#124; None = None`                     | Retract Z height for travel segments (defaults to _z_, meaning no lift).                                                                        |
-| `area_tolerance`  | `float = 1`                                    | Minimum area increase to continue (default 1.0).                                                                                                |
-| `wall_margin`     | `float = 0`                                    | Extra clearance (mm) kept between the tool sweep and the pocket wall / islands when trimming cutting arcs. `0.0` allows tangency (default 0.0). |
-| _Returns_         | `list[tuple[float, float, float]]`             | Single continuous toolpath `list[(x, y, z)]` with cutting arcs at \*z\* and travel at \*safe_z\*.                                               |
+| Parameter          | Type                                           | Description                                                                                                                                     |
+| ------------------ | ---------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `cleared`          | `geo.algo.cleared_area.ClearedArea`            | `ClearedArea` instance (mutated in place).                                                                                                      |
+| `pocket_boundary`  | `Sequence[tuple[float, float]]`                | Outer boundary of the pocket.                                                                                                                   |
+| `islands`          | `Sequence[Sequence[tuple[float, float]]] = []` | List of island (hole) polygons (default []).                                                                                                    |
+| `tool_radius`      | `float = 3`                                    | Tool radius in mm (default 3.0).                                                                                                                |
+| `step_over`        | `float = 2`                                    | Radial expansion per iteration (default 2.0).                                                                                                   |
+| `z`                | `float = 0`                                    | Cutting Z height (default 0.0).                                                                                                                 |
+| `safe_z`           | `float &#124; None = None`                     | Retract Z height for travel segments (defaults to _z_, meaning no lift).                                                                        |
+| `area_tolerance`   | `float = 1`                                    | Minimum area increase to continue (default 1.0).                                                                                                |
+| `wall_margin`      | `float = 0`                                    | Extra clearance (mm) kept between the tool sweep and the pocket wall / islands when trimming cutting arcs. `0.0` allows tangency (default 0.0). |
+| `travel_smoothing` | `int = 50`                                     | Gaussian smoothing amount (0–200) applied to MAT-routed travel segments (default 50).                                                           |
+| _Returns_          | `list[tuple[float, float, float]]`             | Single continuous toolpath `list[(x, y, z)]` with cutting arcs at \*z\* and travel at \*safe_z\*.                                               |
 
 ![Adaptive peeling (D-biting) in a rectangular pocket — outer (cutting) arc at depth and inner (return) arc at lift Z form the characteristic D-shape](images/geo-algo-hsm-peeling-rect-2d.png)
 
@@ -272,6 +274,7 @@ link_filleted_arcs(
     safe_z: float = 2,
     mat: tuple[list[tuple[float, float]], list[tuple[int, int]]] | None = None,
     safe_margin: float = 0,
+    smoothing_amount: int = 50,
 ) -> list[tuple[float, float, float]]
 ```
 
@@ -279,17 +282,18 @@ Link filleted arcs into a continuous 3-D polyline.
 
 Consecutive arcs are joined by a straight segment at _safe_z_. When the direct line would cross (or
 pass within _safe_margin_ of) any polygon in _uncleared_, the connection uses the Medial Axis to
-route around obstacles.
+route around obstacles, then smoothed by **~raygeo.geo.algo.smooth.smooth_path**.
 
-| Parameter     | Type                                                                         | Description                                                                                                                                                  |
-| ------------- | ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `arcs`        | `Sequence[Sequence[tuple[float, float]]]`                                    | Sequence of filleted arcs (each a list of (x, y) points).                                                                                                    |
-| `uncleared`   | `Sequence[Sequence[tuple[float, float]]]`                                    | Areas to avoid during travel.                                                                                                                                |
-| `z`           | `float = 0`                                                                  | Cutting height (default 0).                                                                                                                                  |
-| `safe_z`      | `float = 2`                                                                  | Safe (rapid) height (default 2).                                                                                                                             |
-| `mat`         | `tuple[list[tuple[float, float]], list[tuple[int, int]]] &#124; None = None` | Optional `(nodes, edges)` tuple from `compute_medial_axis`. When provided, blocked travel segments are routed through the MAT graph.                         |
-| `safe_margin` | `float = 0`                                                                  | Minimum distance from uncleared polygons for a direct travel line to be considered safe (default 0 = no check). Set to _tool_radius_ to prevent near-misses. |
-| _Returns_     | `list[tuple[float, float, float]]`                                           | Single continuous 3-D polyline.                                                                                                                              |
+| Parameter          | Type                                                                         | Description                                                                                                                                                  |
+| ------------------ | ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `arcs`             | `Sequence[Sequence[tuple[float, float]]]`                                    | Sequence of filleted arcs (each a list of (x, y) points).                                                                                                    |
+| `uncleared`        | `Sequence[Sequence[tuple[float, float]]]`                                    | Areas to avoid during travel.                                                                                                                                |
+| `z`                | `float = 0`                                                                  | Cutting height (default 0).                                                                                                                                  |
+| `safe_z`           | `float = 2`                                                                  | Safe (rapid) height (default 2).                                                                                                                             |
+| `mat`              | `tuple[list[tuple[float, float]], list[tuple[int, int]]] &#124; None = None` | Optional `(nodes, edges)` tuple from `compute_medial_axis`. When provided, blocked travel segments are routed through the MAT graph.                         |
+| `safe_margin`      | `float = 0`                                                                  | Minimum distance from uncleared polygons for a direct travel line to be considered safe (default 0 = no check). Set to _tool_radius_ to prevent near-misses. |
+| `smoothing_amount` | `int = 50`                                                                   | Gaussian smoothing amount (0–200) applied to MAT-routed travel (default 50).                                                                                 |
+| _Returns_          | `list[tuple[float, float, float]]`                                           | Single continuous 3-D polyline.                                                                                                                              |
 
 ![Filleted cutting arcs linked end-to-start into a single continuous polyline](images/geo-algo-hsm-link-arcs.png)
 

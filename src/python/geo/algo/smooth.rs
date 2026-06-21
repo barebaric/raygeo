@@ -10,10 +10,10 @@ sharp features.
 
 use super::super::flex_point::{points3d_to_tuples, PyPoint3D};
 use crate::geo::algo::smooth::{
-    compute_gaussian_kernel, resample_polyline, smooth_circularly,
+    compute_gaussian_kernel, resample_polyline, smooth_circularly, smooth_path,
     smooth_polyline, smooth_sub_segment,
 };
-use crate::types::Point3D;
+use crate::types::{Point, Point3D};
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::gen_stub_pyfunction;
 
@@ -29,6 +29,7 @@ pub fn register(algo_mod: &Bound<'_, PyModule>) -> PyResult<()> {
         smooth_circularly_py,
         smooth_polyline_algo_py,
         smooth_sub_segment_py,
+        smooth_path_py,
     );
 
     algo_mod.add_submodule(&m)?;
@@ -190,4 +191,57 @@ fn smooth_sub_segment_py(
     let mut out = Vec::new();
     smooth_sub_segment(&pts, &kernel, &mut out);
     points3d_to_tuples(out)
+}
+
+#[gen_stub_pyfunction(
+    python = r#"
+    import collections.abc
+
+    def smooth_path(
+        points: collections.abc.Sequence[tuple[float, float]],
+        obstacles: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]],
+        clearance: float,
+        smoothing_amount: int = 50,
+    ) -> list[tuple[float, float]]:
+        """Smooth a polyline while avoiding obstacles.
+
+        Two-phase constrained smoothing:
+
+        1. **Shortcut** – greedily removes intermediate waypoints whose
+           direct connection stays clear of all *obstacles* by at least
+           *clearance*.
+        2. **Gaussian relaxation** – iteratively applies Gaussian smoothing,
+           reverting any point whose smoothed position would violate the
+           clearance constraint.
+
+        Endpoints are always preserved.
+
+        :param points: Polyline as a list of (x, y) tuples.
+        :param obstacles: List of obstacle polygons (each a list of (x, y)).
+        :param clearance: Minimum distance the path must keep from obstacles.
+        :param smoothing_amount: Gaussian smoothing amount 0–200 (default 50).
+                                 0 applies shortcut only.
+        :returns: Smoothed polyline as a list of (x, y) tuples.
+        """
+"#,
+    module = "raygeo.geo.algo.smooth"
+)]
+#[pyfunction(name = "smooth_path")]
+#[pyo3(signature = (points, obstacles, clearance, smoothing_amount = 50))]
+fn smooth_path_py(
+    points: Vec<(f64, f64)>,
+    obstacles: Vec<Vec<(f64, f64)>>,
+    clearance: f64,
+    smoothing_amount: i32,
+) -> Vec<(f64, f64)> {
+    let pts: Vec<Point> =
+        points.into_iter().map(|(x, y)| Point::new(x, y)).collect();
+    let obs: Vec<Vec<Point>> = obstacles
+        .into_iter()
+        .map(|poly| poly.into_iter().map(|(x, y)| Point::new(x, y)).collect())
+        .collect();
+    smooth_path(&pts, &obs, clearance, smoothing_amount)
+        .into_iter()
+        .map(|p| (p.x, p.y))
+        .collect()
 }

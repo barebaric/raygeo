@@ -55,7 +55,7 @@ def adaptive_entry(pocket_boundary: collections.abc.Sequence[tuple[float, float]
                  ``find_largest_circle`` where m is the polygon vertex count.
     """
 
-def adaptive_peeling(cleared: raygeo.geo.algo.cleared_area.ClearedArea, pocket_boundary: collections.abc.Sequence[tuple[float, float]], islands: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]] = [], tool_radius: float = 3, step_over: float = 2, z: float = 0, safe_z: float | None = None, area_tolerance: float = 1, wall_margin: float = 0) -> list[tuple[float, float, float]]:
+def adaptive_peeling(cleared: raygeo.geo.algo.cleared_area.ClearedArea, pocket_boundary: collections.abc.Sequence[tuple[float, float]], islands: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]] = [], tool_radius: float = 3, step_over: float = 2, z: float = 0, safe_z: float | None = None, area_tolerance: float = 1, wall_margin: float = 0, travel_smoothing: int = 50) -> list[tuple[float, float, float]]:
     r"""
     Inside-out adaptive peeling (D-biting).
     
@@ -80,6 +80,8 @@ def adaptive_peeling(cleared: raygeo.geo.algo.cleared_area.ClearedArea, pocket_b
                         and the pocket wall / islands when trimming
                         cutting arcs.  ``0.0`` allows tangency
                         (default 0.0).
+    :param travel_smoothing: Gaussian smoothing amount (0–200) applied
+                              to MAT-routed travel segments (default 50).
     :returns: Single continuous toolpath ``list[(x, y, z)]`` with
               cutting arcs at *z* and travel at *safe_z*.
     """
@@ -153,14 +155,15 @@ def find_safe_sweep_end(arc: collections.abc.Sequence[tuple[float, float]], pock
     :param wall_margin: Extra clearance past tangency (default 0.0).
     """
 
-def link_filleted_arcs(arcs: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]], uncleared: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]], z: float = 0, safe_z: float = 2, mat: tuple[list[tuple[float, float]], list[tuple[int, int]]] | None = None, safe_margin: float = 0) -> list[tuple[float, float, float]]:
+def link_filleted_arcs(arcs: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]], uncleared: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]], z: float = 0, safe_z: float = 2, mat: tuple[list[tuple[float, float]], list[tuple[int, int]]] | None = None, safe_margin: float = 0, smoothing_amount: int = 50) -> list[tuple[float, float, float]]:
     r"""
     Link filleted arcs into a continuous 3-D polyline.
     
     Consecutive arcs are joined by a straight segment at *safe_z*.
     When the direct line would cross (or pass within *safe_margin*
     of) any polygon in *uncleared*, the connection uses the Medial
-    Axis to route around obstacles.
+    Axis to route around obstacles, then smoothed by
+    :func:`~raygeo.geo.algo.smooth.smooth_path`.
     
     :param arcs: Sequence of filleted arcs (each a list of (x, y) points).
     :param uncleared: Areas to avoid during travel.
@@ -173,6 +176,8 @@ def link_filleted_arcs(arcs: collections.abc.Sequence[collections.abc.Sequence[t
                         a direct travel line to be considered safe
                         (default 0 = no check).  Set to *tool_radius*
                         to prevent near-misses.
+    :param smoothing_amount: Gaussian smoothing amount (0–200) applied
+                              to MAT-routed travel (default 50).
     :returns: Single continuous 3-D polyline.
     """
 

@@ -223,6 +223,7 @@ fn adaptive_wavefronts_py(
         area_tolerance,
         safe_z: z,
         wall_margin: 0.0,
+        travel_smoothing: 50,
         mat: None,
     };
 
@@ -250,6 +251,7 @@ fn adaptive_wavefronts_py(
         safe_z: float | None = None,
         area_tolerance: float = 1.0,
         wall_margin: float = 0.0,
+        travel_smoothing: int = 50,
     ) -> list[tuple[float, float, float]]:
         """Inside-out adaptive peeling (D-biting).
 
@@ -274,6 +276,8 @@ fn adaptive_wavefronts_py(
                             and the pocket wall / islands when trimming
                             cutting arcs.  ``0.0`` allows tangency
                             (default 0.0).
+        :param travel_smoothing: Gaussian smoothing amount (0–200) applied
+                                  to MAT-routed travel segments (default 50).
         :returns: Single continuous toolpath ``list[(x, y, z)]`` with
                   cutting arcs at *z* and travel at *safe_z*.
         """
@@ -291,6 +295,7 @@ fn adaptive_wavefronts_py(
     safe_z = None,
     area_tolerance = 1.0,
     wall_margin = 0.0,
+    travel_smoothing = 50,
 ))]
 #[allow(clippy::type_complexity, clippy::too_many_arguments)]
 fn adaptive_peeling_py(
@@ -303,6 +308,7 @@ fn adaptive_peeling_py(
     safe_z: Option<f64>,
     area_tolerance: f64,
     wall_margin: f64,
+    travel_smoothing: i32,
 ) -> Vec<(f64, f64, f64)> {
     let boundary: Vec<Point> = pocket_boundary
         .into_iter()
@@ -323,6 +329,7 @@ fn adaptive_peeling_py(
         safe_z: safe_z.unwrap_or(z),
         area_tolerance,
         wall_margin,
+        travel_smoothing,
         mat: None,
     };
 
@@ -494,13 +501,15 @@ fn find_safe_sweep_end_py(
         safe_z: float = 2.0,
         mat: tuple[list[tuple[float, float]], list[tuple[int, int]]] | None = None,
         safe_margin: float = 0.0,
+        smoothing_amount: int = 50,
     ) -> list[tuple[float, float, float]]:
         """Link filleted arcs into a continuous 3-D polyline.
 
         Consecutive arcs are joined by a straight segment at *safe_z*.
         When the direct line would cross (or pass within *safe_margin*
         of) any polygon in *uncleared*, the connection uses the Medial
-        Axis to route around obstacles.
+        Axis to route around obstacles, then smoothed by
+        :func:`~raygeo.geo.algo.smooth.smooth_path`.
 
         :param arcs: Sequence of filleted arcs (each a list of (x, y) points).
         :param uncleared: Areas to avoid during travel.
@@ -513,13 +522,15 @@ fn find_safe_sweep_end_py(
                             a direct travel line to be considered safe
                             (default 0 = no check).  Set to *tool_radius*
                             to prevent near-misses.
+        :param smoothing_amount: Gaussian smoothing amount (0–200) applied
+                                  to MAT-routed travel (default 50).
         :returns: Single continuous 3-D polyline.
         """
 "#,
     module = "raygeo.geo.algo.hsm"
 )]
 #[pyfunction(name = "link_filleted_arcs")]
-#[pyo3(signature = (arcs, uncleared, z = 0.0, safe_z = 2.0, mat = None, safe_margin = 0.0))]
+#[pyo3(signature = (arcs, uncleared, z = 0.0, safe_z = 2.0, mat = None, safe_margin = 0.0, smoothing_amount = 50))]
 #[allow(clippy::type_complexity)]
 fn link_filleted_arcs_py(
     arcs: Vec<Vec<(f64, f64)>>,
@@ -528,6 +539,7 @@ fn link_filleted_arcs_py(
     safe_z: f64,
     mat: Option<(Vec<(f64, f64)>, Vec<(usize, usize)>)>,
     safe_margin: f64,
+    smoothing_amount: i32,
 ) -> Vec<(f64, f64, f64)> {
     use crate::geo::algo::medial_axis::{MaNode, MedialAxis};
 
@@ -564,6 +576,7 @@ fn link_filleted_arcs_py(
         mat_opt.as_ref(),
         false,
         safe_margin,
+        smoothing_amount,
     )
     .into_iter()
     .map(|p| (p.x, p.y, p.z))

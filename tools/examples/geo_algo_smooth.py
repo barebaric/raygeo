@@ -8,6 +8,7 @@ from raygeo.geo.algo.smooth import (
     compute_gaussian_kernel,
     resample_polyline,
     smooth_circularly,
+    smooth_path,
     smooth_polyline,
     smooth_sub_segment,
 )
@@ -248,6 +249,65 @@ def generate_sub_segment():
     return fig_sub
 
 
+def generate_smooth_path():
+    """Constrained path smoothing around obstacles."""
+    obstacle = [(35, 30), (55, 30), (55, 55), (35, 55)]
+
+    raw_path = [
+        (5, 45),
+        (20, 45),
+        (25, 45),
+        (30, 45),
+        (45, 75),
+        (60, 75),
+        (70, 45),
+        (75, 45),
+        (80, 45),
+        (95, 45),
+    ]
+
+    clearance = 3.0
+    amounts = [0, 30, 80]
+
+    fig_sp, axes_sp = plt.subplots(
+        1, len(amounts) + 1, figsize=(5 * (len(amounts) + 1), 5)
+    )
+
+    def draw_panel(ax, path, title):
+        obs_x = [p[0] for p in obstacle] + [obstacle[0][0]]
+        obs_y = [p[1] for p in obstacle] + [obstacle[0][1]]
+        ax.fill(obs_x, obs_y, color="dimgray", alpha=0.3, zorder=1)
+        ax.plot(obs_x, obs_y, color="dimgray", linewidth=1.5, zorder=2)
+
+        px = [p[0] for p in path]
+        py = [p[1] for p in path]
+        ax.plot(
+            px, py, "o-", color="crimson", linewidth=2, markersize=3, zorder=3
+        )
+
+        ax.set_title(title, fontsize=11)
+        ax.set_aspect("equal")
+        ax.set_xlim(0, 100)
+        ax.set_ylim(20, 90)
+        ax.grid(True, alpha=0.3)
+
+    draw_panel(axes_sp[0], raw_path, f"Original ({len(raw_path)} pts)")
+
+    for idx, amt in enumerate(amounts):
+        smoothed = smooth_path(raw_path, [obstacle], clearance, amt)
+        draw_panel(
+            axes_sp[idx + 1],
+            smoothed,
+            f"amount={amt} ({len(smoothed)} pts)",
+        )
+
+    fig_sp.suptitle(
+        "Constrained smoothing — path avoids obstacle", fontsize=13
+    )
+    fig_sp.tight_layout()
+    return fig_sp
+
+
 __docs_target__ = ["raygeo.geo.algo.smooth.md"]
 __images__ = [
     {
@@ -274,5 +334,10 @@ __images__ = [
         "heading": "smooth_sub_segment",
         "caption": "Sub-segment smoothing",
         "function": generate_sub_segment,
+    },
+    {
+        "heading": "smooth_path",
+        "caption": "Constrained path smoothing",
+        "function": generate_smooth_path,
     },
 ]

@@ -75,6 +75,40 @@ Smooth a closed polyline circularly.
 
 _Circular smoothing_
 
+### `smooth_path()`
+
+```python
+smooth_path(
+    points: Sequence[tuple[float, float]],
+    obstacles: Sequence[Sequence[tuple[float, float]]],
+    clearance: float,
+    smoothing_amount: int = 50,
+) -> list[tuple[float, float]]
+```
+
+Smooth a polyline while avoiding obstacles.
+
+Two-phase constrained smoothing:
+
+1. **Shortcut** – greedily removes intermediate waypoints whose direct connection stays clear of all
+   _obstacles_ by at least _clearance_.
+2. **Gaussian relaxation** – iteratively applies Gaussian smoothing, reverting any point whose
+   smoothed position would violate the clearance constraint.
+
+Endpoints are always preserved.
+
+| Parameter          | Type                                      | Description                                                            |
+| ------------------ | ----------------------------------------- | ---------------------------------------------------------------------- |
+| `points`           | `Sequence[tuple[float, float]]`           | Polyline as a list of (x, y) tuples.                                   |
+| `obstacles`        | `Sequence[Sequence[tuple[float, float]]]` | List of obstacle polygons (each a list of (x, y)).                     |
+| `clearance`        | `float`                                   | Minimum distance the path must keep from obstacles.                    |
+| `smoothing_amount` | `int = 50`                                | Gaussian smoothing amount 0–200 (default 50). 0 applies shortcut only. |
+| _Returns_          | `list[tuple[float, float]]`               | Smoothed polyline as a list of (x, y) tuples.                          |
+
+![Constrained path smoothing](images/geo-algo-smooth-smooth-path.png)
+
+_Constrained path smoothing_
+
 ### `smooth_polyline()`
 
 ```python

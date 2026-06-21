@@ -3,8 +3,9 @@
 //! Provides functions for computing Gaussian kernels and applying them
 //! to open or closed polylines with optional corner preservation.
 
+use crate::geo::shape::does_path_sweep_intersect_polygon;
 use crate::geo::shape::line::get_angle_at_vertex;
-use crate::types::{Point, Point3D};
+use crate::types::{Point, Point3D, Polygon};
 
 /// Compute a normalized Gaussian kernel based on smoothing amount.
 ///
@@ -266,6 +267,126 @@ pub fn smooth_polyline(
         final_points.push(prepared[num_points - 1]);
         final_points
     }
+}
+
+/// Iteratively reduce a polyline to the fewest waypoints whose direct
+/// connections stay clear of all obstacles by at least `clearance`.
+///
+/// From each waypoint the scan jumps to the **farthest** reachable
+/// waypoint (scanning backward from the end) whose direct segment does
+/// not collide.  Endpoints are always preserved.
+fn shortcut_path(
+    points: &[Point],
+    obstacles: &[Polygon],
+    clearance: f64,
+) -> Vec<Point> {
+    let n = points.len();
+    if n <= 2 {
+        return points.to_vec();
+    }
+
+    let mut result = vec![points[0]];
+    let mut i = 0;
+    while i < n - 1 {
+        let mut farthest = i + 1;
+        for j in (i + 2..n).rev() {
+            let seg = [points[i], points[j]];
+            if !does_path_sweep_intersect_polygon(&seg, clearance, obstacles) {
+                farthest = j;
+                break;
+            }
+        }
+        result.push(points[farthest]);
+        i = farthest;
+    }
+    result
+}
+
+/// Smooth a polyline while maintaining a minimum clearance from
+/// obstacle polygons.
+///
+/// The function operates in two phases:
+///
+/// 1. **Shortcut** – greedily remove intermediate waypoints whose direct
+///    connection is collision-free, producing a minimal-hop path.
+///
+/// 2. **Constrained Gaussian relaxation** – resample the shortcut path
+///    for kernel coverage, then iteratively apply Gaussian smoothing
+///    ([`smooth_sub_segment`]).  After each smoothing pass, any point
+///    whose smoothed position would violate the clearance constraint is
+///    reverted to its pre-smoothing location.  Iteration continues until
+///    the path stabilises or `max_iterations` (10) is reached.
+///
+/// `smoothing_amount` uses the same 0–200 scale as
+/// [`smooth_polyline`].  Pass `0` to apply shortcut only.
+///
+/// Endpoints are always preserved.
+pub fn smooth_path(
+    points: &[Point],
+    obstacles: &[Polygon],
+    clearance: f64,
+    smoothing_amount: i32,
+) -> Vec<Point> {
+    let n = points.len();
+    if n <= 2 {
+        return points.to_vec();
+    }
+
+    // Phase 1: shortcut.
+    let shortcut = shortcut_path(points, obstacles, clearance);
+
+    if shortcut.len() < 3 || smoothing_amount == 0 {
+        return shortcut;
+    }
+
+    // Phase 2: constrained Gaussian relaxation.
+    let (kernel, sigma) = compute_gaussian_kernel(smoothing_amount);
+    if kernel.len() <= 1 {
+        return shortcut;
+    }
+
+    let max_len = (0.1_f64).max(sigma / 4.0);
+
+    let pts_3d: Vec<Point3D> = shortcut
+        .iter()
+        .map(|p| Point3D::new(p.x, p.y, 0.0))
+        .collect();
+    let mut prepared: Vec<Point3D> = Vec::new();
+    resample_polyline(&pts_3d, max_len, false, &mut prepared);
+
+    let num = prepared.len();
+    if num < 3 {
+        return shortcut;
+    }
+
+    let mut current = prepared.clone();
+    let mut smoothed: Vec<Point3D> = Vec::with_capacity(num);
+
+    for _ in 0..10 {
+        smooth_sub_segment(&current, &kernel, &mut smoothed);
+
+        let mut moved = false;
+        for i in 1..num - 1 {
+            let prev = Point::new(current[i - 1].x, current[i - 1].y);
+            let next = Point::new(current[i + 1].x, current[i + 1].y);
+            let candidate = Point::new(smoothed[i].x, smoothed[i].y);
+            let tri = [prev, candidate, next];
+            if !does_path_sweep_intersect_polygon(&tri, clearance, obstacles) {
+                let dx = smoothed[i].x - current[i].x;
+                let dy = smoothed[i].y - current[i].y;
+                if dx * dx + dy * dy > 1e-4 {
+                    moved = true;
+                }
+                current[i] = smoothed[i];
+            }
+        }
+
+        if !moved {
+            break;
+        }
+    }
+
+    current.iter().map(|p| Point::new(p.x, p.y)).collect()
 }
 
 fn approx_equal(a: f64, b: f64) -> bool {

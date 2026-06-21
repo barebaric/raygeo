@@ -1,8 +1,11 @@
 import math
 
+import pytest
+
 from raygeo.geo.algo.smooth import (
     compute_gaussian_kernel,
     smooth_circularly,
+    smooth_path,
     smooth_polyline,
     smooth_sub_segment,
 )
@@ -189,3 +192,112 @@ class TestSmoothPolyline:
         result = smooth_polyline(points, 50, 45, is_closed=False)
         for point in result:
             assert abs(point[2] - 7.0) < 1e-10
+
+
+class TestSmoothPath:
+    """Tests for smooth_path (constrained shortcut + relaxation)."""
+
+    def test_short_path_unchanged(self):
+        """Paths with <= 2 points should be returned as-is."""
+        result = smooth_path([(0, 0), (10, 10)], [], 1.0)
+        assert result == [(0, 0), (10, 10)]
+
+    def test_single_point(self):
+        """Single point should be returned as-is."""
+        result = smooth_path([(5, 5)], [], 1.0)
+        assert result == [(5, 5)]
+
+    def test_endpoints_preserved(self):
+        """First and last points must always be preserved."""
+        obstacle = [(45, 45), (55, 45), (55, 55), (45, 55)]
+        path = [(0, 50), (30, 50), (50, 80), (70, 50), (100, 50)]
+        result = smooth_path(path, [obstacle], 3.0, 50)
+        assert result[0] == pytest.approx(path[0])
+        assert result[-1] == pytest.approx(path[-1])
+
+    def test_no_obstacles_collapses_to_direct(self):
+        """With no obstacles, shortcut should collapse to a direct line."""
+        path = [(0, 0), (25, 10), (50, 20), (75, 10), (100, 0)]
+        result = smooth_path(path, [], 1.0, 50)
+        assert len(result) == 2
+        assert result[0] == pytest.approx(path[0])
+        assert result[-1] == pytest.approx(path[-1])
+
+    def test_obstacle_avoidance(self):
+        """Smoothed path must maintain clearance from obstacles."""
+        obstacle: list[tuple[float, float]] = [
+            (45.0, 45.0),
+            (55.0, 45.0),
+            (55.0, 55.0),
+            (45.0, 55.0),
+        ]
+        path = [(0, 50), (30, 50), (50, 80), (70, 50), (100, 50)]
+        clearance = 3.0
+        result = smooth_path(path, [obstacle], clearance, 50)
+        from raygeo.geo.shape.polygon import (
+            does_path_sweep_intersect_polygon,
+        )
+
+        assert not does_path_sweep_intersect_polygon(
+            result, clearance, [obstacle]
+        )
+
+    def test_clearance_zero_shortcut_only(self):
+        """With clearance=0 and smoothing=0, shortcut should still work."""
+        obstacle = [(45, 45), (55, 45), (55, 55), (45, 55)]
+        path = [(0, 50), (30, 50), (50, 80), (70, 50), (100, 50)]
+        result = smooth_path(path, [obstacle], 0.0, 0)
+        assert len(result) >= 2
+        assert result[0] == pytest.approx(path[0])
+        assert result[-1] == pytest.approx(path[-1])
+
+    def test_smoothing_amount_zero_shortcut_only(self):
+        """smoothing_amount=0 should apply shortcut phase only."""
+        path = [(0, 0), (25, 10), (50, 0), (75, 10), (100, 0)]
+        result = smooth_path(path, [], 1.0, 0)
+        assert len(result) == 2
+
+    def test_shortcut_reduces_redundant_waypoints(self):
+        """Collinear intermediate points should be removed by shortcut."""
+        path = [(0, 0), (10, 0), (20, 0), (30, 0), (40, 0)]
+        result = smooth_path(path, [], 0.0, 50)
+        assert len(result) <= 2
+
+    def test_result_is_shorter_or_equal(self):
+        """Smoothed path length should not exceed original."""
+        obstacle = [(45, 30), (55, 30), (55, 60), (45, 60)]
+        path = [(0, 50), (30, 50), (50, 80), (70, 50), (100, 50)]
+        result = smooth_path(path, [obstacle], 3.0, 50)
+
+        orig_len = sum(
+            math.dist(path[i], path[i + 1]) for i in range(len(path) - 1)
+        )
+        result_len = sum(
+            math.dist(result[i], result[i + 1]) for i in range(len(result) - 1)
+        )
+        assert result_len <= orig_len + 1e-6
+
+    def test_multiple_obstacles(self):
+        """Multiple obstacles should all be avoided."""
+        obs1: list[tuple[float, float]] = [
+            (30.0, 40.0),
+            (35.0, 40.0),
+            (35.0, 60.0),
+            (30.0, 60.0),
+        ]
+        obs2: list[tuple[float, float]] = [
+            (65.0, 40.0),
+            (70.0, 40.0),
+            (70.0, 60.0),
+            (65.0, 60.0),
+        ]
+        path = [(0, 50), (20, 50), (50, 80), (80, 50), (100, 50)]
+        clearance = 2.0
+        result = smooth_path(path, [obs1, obs2], clearance, 50)
+        from raygeo.geo.shape.polygon import (
+            does_path_sweep_intersect_polygon,
+        )
+
+        assert not does_path_sweep_intersect_polygon(
+            result, clearance, [obs1, obs2]
+        )

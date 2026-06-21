@@ -15,6 +15,7 @@ __all__ = [
     "compute_gaussian_kernel",
     "resample_polyline",
     "smooth_circularly",
+    "smooth_path",
     "smooth_polyline",
     "smooth_sub_segment",
 ]
@@ -47,6 +48,29 @@ def smooth_circularly(points: collections.abc.Sequence[types.Point3D], kernel: c
     :param kernel: Gaussian kernel values.
     :returns: Smoothed points.
     :complexity: O(n * k) time, O(n) space where k is the kernel size and n the number of points
+    """
+
+def smooth_path(points: collections.abc.Sequence[tuple[float, float]], obstacles: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]], clearance: float, smoothing_amount: int = 50) -> list[tuple[float, float]]:
+    r"""
+    Smooth a polyline while avoiding obstacles.
+    
+    Two-phase constrained smoothing:
+    
+    1. **Shortcut** – greedily removes intermediate waypoints whose
+       direct connection stays clear of all *obstacles* by at least
+       *clearance*.
+    2. **Gaussian relaxation** – iteratively applies Gaussian smoothing,
+       reverting any point whose smoothed position would violate the
+       clearance constraint.
+    
+    Endpoints are always preserved.
+    
+    :param points: Polyline as a list of (x, y) tuples.
+    :param obstacles: List of obstacle polygons (each a list of (x, y)).
+    :param clearance: Minimum distance the path must keep from obstacles.
+    :param smoothing_amount: Gaussian smoothing amount 0–200 (default 50).
+                             0 applies shortcut only.
+    :returns: Smoothed polyline as a list of (x, y) tuples.
     """
 
 def smooth_polyline(points: collections.abc.Sequence[types.Point3D], amount: int, corner_angle_threshold: float, is_closed: typing.Optional[bool] = None) -> list[types.Point3D]:
