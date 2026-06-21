@@ -9,13 +9,22 @@ HSM (High-Speed Machining) adaptive clearing.
   expands the cleared boundary outward by ``step_over``, clips to the
   valid tool area, applies a minimum-curvature filter, and updates the
   cleared state until convergence.
+* ``adaptive_peeling`` — inside-out D-biting (peeling): each iteration
+  expands the cleared boundary, clips to the valid tool area, computes
+  crescent-shaped ``bites``, and traces the full perimeter of each bite
+  before incorporating it into the cleared state.
 """
 
 import collections.abc
 import raygeo
 __all__ = [
     "adaptive_entry",
+    "adaptive_peeling",
     "adaptive_wavefronts",
+    "fillet_arc_ends",
+    "find_cutting_arc",
+    "find_safe_sweep_end",
+    "link_filleted_arcs",
 ]
 
 def adaptive_entry(pocket_boundary: collections.abc.Sequence[tuple[float, float]], islands: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]] = [], tool_radius: float = 3, step_over: float = 2, safe_z: float = 2, target_z: float = -5, plunge_pitch: float = 1, safe_margin: float = 1, angular_step: float = 0.1) -> tuple[list[tuple[float, float, float]], list[list[tuple[float, float]]]]:
@@ -46,6 +55,35 @@ def adaptive_entry(pocket_boundary: collections.abc.Sequence[tuple[float, float]
                  ``find_largest_circle`` where m is the polygon vertex count.
     """
 
+def adaptive_peeling(cleared: raygeo.geo.algo.cleared_area.ClearedArea, pocket_boundary: collections.abc.Sequence[tuple[float, float]], islands: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]] = [], tool_radius: float = 3, step_over: float = 2, z: float = 0, safe_z: float | None = None, area_tolerance: float = 1, wall_margin: float = 0) -> list[tuple[float, float, float]]:
+    r"""
+    Inside-out adaptive peeling (D-biting).
+    
+    Starting from the *cleared* state, each iteration expands the
+    cleared boundary outward by *step_over*, clips to the valid tool
+    area, computes crescent-shaped "bites", and generates a D-cut
+    for each bite.  The individual passes are linked into a single
+    continuous toolpath: each cutting arc at *z* followed by a travel
+    segment at *safe_z* to the next cut.  The Medial Axis of the
+    pocket is used to route travel around obstacles.
+    
+    :param cleared: ``ClearedArea`` instance (mutated in place).
+    :param pocket_boundary: Outer boundary of the pocket.
+    :param islands: List of island (hole) polygons (default []).
+    :param tool_radius: Tool radius in mm (default 3.0).
+    :param step_over: Radial expansion per iteration (default 2.0).
+    :param z: Cutting Z height (default 0.0).
+    :param safe_z: Retract Z height for travel segments (defaults to *z*,
+                   meaning no lift).
+    :param area_tolerance: Minimum area increase to continue (default 1.0).
+    :param wall_margin: Extra clearance (mm) kept between the tool sweep
+                        and the pocket wall / islands when trimming
+                        cutting arcs.  ``0.0`` allows tangency
+                        (default 0.0).
+    :returns: Single continuous toolpath ``list[(x, y, z)]`` with
+              cutting arcs at *z* and travel at *safe_z*.
+    """
+
 def adaptive_wavefronts(cleared: raygeo.geo.algo.cleared_area.ClearedArea, pocket_boundary: collections.abc.Sequence[tuple[float, float]], islands: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]] = [], tool_radius: float = 3, step_over: float = 2, z: float = 0, area_tolerance: float = 1) -> list[list[tuple[float, float, float]]]:
     r"""
     Inside-out adaptive wavefronts.
@@ -67,5 +105,74 @@ def adaptive_wavefronts(cleared: raygeo.geo.algo.cleared_area.ClearedArea, pocke
     :returns: List of toolpaths — one ``list[(x, y, z)]`` per iteration.
     :complexity: O(i * (n * m + p log p)) where i = iterations, n = boundary
         vertices, m = cleared fragments, p = polygon vertices
+    """
+
+def fillet_arc_ends(arc: collections.abc.Sequence[tuple[float, float]], pocket_boundary: collections.abc.Sequence[tuple[float, float]], islands: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]] = [], tool_radius: float = 3, wall_margin: float = 0) -> list[tuple[float, float]]:
+    r"""
+    Round both ends of a cutting arc with quarter-circle fillets.
+    
+    The arc is trimmed to the longest sub-arc whose tool sweep
+    (arc + end fillets of *tool_radius*) does not collide with
+    *pocket_boundary* or *islands*.  A 90° fillet of *tool_radius*
+    is then appended at each end.
+    
+    :param arc: Cutting arc vertices (open polyline).
+    :param pocket_boundary: Outer boundary of the pocket.
+    :param islands: List of island (hole) polygons (default []).
+    :param tool_radius: Tool / fillet radius in mm (default 3.0).
+    :param wall_margin: Extra clearance past tangency (default 0.0).
+    :returns: Filleted arc as an open polyline.
+    """
+
+def find_cutting_arc(bite: collections.abc.Sequence[tuple[float, float]], cleared_fragments: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]]) -> list[tuple[float, float]] | None:
+    r"""
+    Extract the cutting arc (outer) vertices from a bite polygon.
+    
+    The cutting arc is the longest contiguous run of bite vertices
+    that lie *outside* all cleared fragments.
+    
+    :param bite: Bite polygon vertices.
+    :param cleared_fragments: List of cleared-area polygons.
+    :returns: The cutting arc polyline, or None if degenerate.
+    """
+
+def find_safe_sweep_end(arc: collections.abc.Sequence[tuple[float, float]], pocket_boundary: collections.abc.Sequence[tuple[float, float]], islands: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]] = [], tool_radius: float = 3, wall_margin: float = 0) -> tuple[tuple[float, float], tuple[float, float]] | None:
+    r"""
+    Find the longest safe sub-arc by iterative sweep shortening.
+    
+    Returns the two points ``(enter, exit)`` delimiting the longest
+    sub-arc of *arc* whose tool sweep (arc + end fillets of
+    *tool_radius*) does not collide with *pocket_boundary* or
+    *islands*.  Shortens from each end until the sweep is clear.
+    Returns ``None`` when no usable safe sub-arc remains.
+    
+    :param arc: Cutting arc vertices (open polyline).
+    :param pocket_boundary: Outer boundary of the pocket.
+    :param islands: List of island (hole) polygons (default []).
+    :param tool_radius: Tool radius in mm (default 3.0).
+    :param wall_margin: Extra clearance past tangency (default 0.0).
+    """
+
+def link_filleted_arcs(arcs: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]], uncleared: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]], z: float = 0, safe_z: float = 2, mat: tuple[list[tuple[float, float]], list[tuple[int, int]]] | None = None, safe_margin: float = 0) -> list[tuple[float, float, float]]:
+    r"""
+    Link filleted arcs into a continuous 3-D polyline.
+    
+    Consecutive arcs are joined by a straight segment at *safe_z*.
+    When the direct line would cross (or pass within *safe_margin*
+    of) any polygon in *uncleared*, the connection uses the Medial
+    Axis to route around obstacles.
+    
+    :param arcs: Sequence of filleted arcs (each a list of (x, y) points).
+    :param uncleared: Areas to avoid during travel.
+    :param z: Cutting height (default 0).
+    :param safe_z: Safe (rapid) height (default 2).
+    :param mat: Optional ``(nodes, edges)`` tuple from
+                ``compute_medial_axis``.  When provided, blocked
+                travel segments are routed through the MAT graph.
+    :param safe_margin: Minimum distance from uncleared polygons for
+                        a direct travel line to be considered safe
+                        (default 0 = no check).  Set to *tool_radius*
+                        to prevent near-misses.
+    :returns: Single continuous 3-D polyline.
     """
 

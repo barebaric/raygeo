@@ -60,8 +60,9 @@ pub use fitting::{
 };
 pub use helix::{generate_helix, HelixDirection, HelixOptions};
 pub use hsm::{
-    adaptive_entry, adaptive_wavefronts, AdaptiveEntryOptions,
-    AdaptiveEntryResult, AdaptiveWavefrontOptions, AdaptiveWavefrontResult,
+    adaptive_entry, adaptive_peeling, adaptive_wavefronts,
+    AdaptiveEntryOptions, AdaptiveEntryResult, AdaptiveWavefrontOptions,
+    AdaptiveWavefrontResult,
 };
 pub use hull::{
     find_external_contours, get_concave_hull, get_enclosing_hull,

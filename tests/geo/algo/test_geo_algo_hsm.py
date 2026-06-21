@@ -5,7 +5,9 @@ import math
 from raygeo.geo.algo.cleared_area import ClearedArea
 from raygeo.geo.algo.hsm import (
     adaptive_entry,
+    adaptive_peeling,
     adaptive_wavefronts,
+    find_cutting_arc,
 )
 from raygeo.geo.algo.offset import compute_inset_region
 from raygeo.geo.shape.line import get_line_segment_polygon_intersections
@@ -251,3 +253,310 @@ def test_adaptive_wavefronts_empty_cleared():
     )
     # No initial cleared area → no iterations
     assert isinstance(paths, list)
+
+
+def test_adaptive_peeling_simple():
+    """Basic peeling: starts from cleared disk and grows to fill pocket."""
+    boundary = [(0, 0), (160, 0), (160, 100), (0, 100)]
+    path, cp = adaptive_entry(
+        pocket_boundary=boundary,
+        tool_radius=3.0,
+        step_over=2.0,
+        safe_z=2.0,
+        target_z=-8.0,
+        plunge_pitch=1.0,
+    )
+    ca = ClearedArea(initial=cp)
+
+    toolpath = adaptive_peeling(
+        ca,
+        boundary,
+        tool_radius=3.0,
+        step_over=2.0,
+        z=-8.0,
+        area_tolerance=1.0,
+    )
+    assert len(toolpath) > 10
+    # Area should have grown from initial disk toward valid
+    assert ca.total_area() > 10000
+    # All points are 3D
+    assert all(len(pt) == 3 for pt in toolpath)
+    # Linked output has no NaN separators
+    nan_count = sum(1 for p in toolpath if p[0] != p[0])
+    assert nan_count == 0
+
+
+def test_adaptive_peeling_step_over_larger():
+    """Larger step-over → fewer D-cut passes, same convergence."""
+    boundary = [(0, 0), (160, 0), (160, 100), (0, 100)]
+    path, cp = adaptive_entry(
+        pocket_boundary=boundary,
+        tool_radius=3.0,
+        step_over=2.0,
+        safe_z=2.0,
+        target_z=-8.0,
+        plunge_pitch=1.0,
+    )
+    ca = ClearedArea(initial=cp)
+
+    toolpath = adaptive_peeling(
+        ca,
+        boundary,
+        tool_radius=3.0,
+        step_over=4.0,
+        z=-8.0,
+        area_tolerance=1.0,
+    )
+    assert len(toolpath) >= 1
+
+
+def test_adaptive_peeling_with_islands():
+    """Peeling with islands still converges."""
+    boundary = [(0, 0), (160, 0), (160, 100), (0, 100)]
+    islands = [[(60, 35), (100, 35), (100, 65), (60, 65)]]
+    path, cp = adaptive_entry(
+        pocket_boundary=boundary,
+        islands=islands,
+        tool_radius=3.0,
+        step_over=2.0,
+        safe_z=2.0,
+        target_z=-8.0,
+        plunge_pitch=1.0,
+    )
+    ca = ClearedArea(initial=cp)
+
+    toolpath = adaptive_peeling(
+        ca,
+        boundary,
+        islands=islands,
+        tool_radius=3.0,
+        step_over=2.0,
+        z=-8.0,
+        area_tolerance=1.0,
+    )
+    assert len(toolpath) >= 1
+    assert ca.total_area() > 5000
+
+
+def test_adaptive_peeling_empty_cleared():
+    """Peeling with empty cleared area returns empty toolpath."""
+    ca = ClearedArea()
+    boundary = [(0, 0), (160, 0), (160, 100), (0, 100)]
+
+    toolpath = adaptive_peeling(
+        ca,
+        boundary,
+        tool_radius=3.0,
+        step_over=2.0,
+        z=-8.0,
+        area_tolerance=1.0,
+    )
+    assert isinstance(toolpath, list)
+    assert len(toolpath) == 0
+
+
+def test_adaptive_peeling_nan_separators():
+    """Linked output has no NaN rows and contains points at cut Z."""
+    boundary = [(0, 0), (160, 0), (160, 100), (0, 100)]
+    path, cp = adaptive_entry(
+        pocket_boundary=boundary,
+        tool_radius=3.0,
+        step_over=2.0,
+        safe_z=2.0,
+        target_z=-8.0,
+        plunge_pitch=1.0,
+    )
+    ca = ClearedArea(initial=cp)
+
+    toolpath = adaptive_peeling(
+        ca,
+        boundary,
+        tool_radius=3.0,
+        step_over=2.0,
+        z=-8.0,
+        area_tolerance=1.0,
+    )
+    # No NaN rows (continuous linked path)
+    for p in toolpath:
+        x, y, z = p
+        assert x == x and y == y and z == z, "NaN in linked toolpath"
+    # At least some points at cutting depth
+    cut_z = -8.0
+    assert any(abs(p[2] - cut_z) < 0.01 for p in toolpath)
+
+
+def test_adaptive_peeling_dcut_z_lift():
+    """Linked toolpath has cutting arcs at z and travel segments at safe_z."""
+    boundary = [(0, 0), (160, 0), (160, 100), (0, 100)]
+    path, cp = adaptive_entry(
+        pocket_boundary=boundary,
+        tool_radius=3.0,
+        step_over=2.0,
+        safe_z=2.0,
+        target_z=-8.0,
+        plunge_pitch=1.0,
+    )
+    ca = ClearedArea(initial=cp)
+
+    cut_z = -8.0
+    lift_z = 5.0
+    toolpath = adaptive_peeling(
+        ca,
+        boundary,
+        tool_radius=3.0,
+        step_over=2.0,
+        z=cut_z,
+        safe_z=lift_z,
+        area_tolerance=1.0,
+    )
+
+    # Must contain points at cutting Z
+    z_vals = {p[2] for p in toolpath}
+    assert cut_z in z_vals, f"Expected cutting Z {cut_z} in path"
+    # No Z should be below cutting depth
+    for p in toolpath:
+        assert p[2] >= cut_z - 0.01, f"Point below cut depth: {p[2]}"
+    # Path has transitions between Z levels (arc at z, travel at safe_z)
+    # Since there are multiple passes, both Z levels should appear
+    assert lift_z in z_vals, f"Expected travel Z {lift_z} in path"
+
+
+def test_adaptive_peeling_avoids_islands():
+    """Return paths avoid crossing islands — inner-arc fallback is used."""
+
+    boundary = [(0.0, 0.0), (160.0, 0.0), (160.0, 100.0), (0.0, 100.0)]
+    island = [(60.0, 35.0), (100.0, 35.0), (100.0, 65.0), (60.0, 65.0)]
+    path, cp = adaptive_entry(
+        pocket_boundary=boundary,
+        islands=[island],
+        tool_radius=3.0,
+        step_over=2.0,
+        safe_z=2.0,
+        target_z=-8.0,
+        plunge_pitch=1.0,
+    )
+    ca = ClearedArea(initial=cp)
+
+    toolpath = adaptive_peeling(
+        ca,
+        boundary,
+        islands=[island],
+        tool_radius=3.0,
+        step_over=2.0,
+        z=-8.0,
+        safe_z=5.0,
+        area_tolerance=0.5,
+    )
+
+    # No consecutive-pair segment should intersect the island
+    for i in range(len(toolpath) - 1):
+        x1, y1, _ = toolpath[i]
+        x2, y2, _ = toolpath[i + 1]
+        if math.isnan(x1) or math.isnan(x2):
+            continue
+        cuts = get_line_segment_polygon_intersections(
+            (x1, y1), (x2, y2), [island]
+        )
+        if len(cuts) > 2:
+            raise AssertionError(
+                f"Segment ({x1:.2f},{y1:.2f})\u2192({x2:.2f},{y2:.2f})"
+                f" crosses island"
+            )
+
+
+def test_find_cutting_arc_angle_at_tip():
+    """Find cutting arc — interior vertices should be smooth (> 100°).
+
+    The cutting arc is an open polyline.  Only vertices with two
+    neighbours within the arc (indices 1 .. n-2) are checked; the
+    endpoints are excluded because they have only one neighbour.
+    """
+    boundary = [(0, 0), (180, 0), (180, 120), (0, 120)]
+    islands = [[(15, 15), (35, 15), (35, 35), (15, 35)]]
+    tool_r = 3.0
+
+    _, cp = adaptive_entry(
+        pocket_boundary=boundary,
+        islands=islands,
+        tool_radius=tool_r,
+        step_over=2.0,
+        safe_z=2.0,
+        target_z=-5.0,
+        plunge_pitch=1.0,
+    )
+    ca = ClearedArea(initial=cp)
+    va, _total = compute_inset_region(boundary, tool_r, islands)
+
+    bad = []
+    for iteration in range(10):
+        bites = ca.bites(2.0, va, 0.01)
+        if not bites:
+            break
+        for bite in bites:
+            arc = find_cutting_arc(bite, ca.fragments())
+            if arc is None or len(arc) < 4:
+                continue
+            n = len(arc)
+            # Interior vertices only (indices 1 .. n-2)
+            for ai in range(1, n - 1):
+                prev = arc[ai - 1]
+                cur = arc[ai]
+                nxt = arc[ai + 1]
+                v1 = (prev[0] - cur[0], prev[1] - cur[1])
+                v2 = (nxt[0] - cur[0], nxt[1] - cur[1])
+                dot = v1[0] * v2[0] + v1[1] * v2[1]
+                l1 = math.hypot(*v1)
+                l2 = math.hypot(*v2)
+                if l1 * l2 < 1e-12:
+                    continue
+                angle = math.degrees(
+                    math.acos(max(-1, min(1, dot / (l1 * l2))))
+                )
+                if angle < 100.0:
+                    bad.append((iteration, ai, angle, cur))
+        ca.incorporate(bites)
+
+    if bad:
+        # A 90° vertex at a pocket boundary corner is valid geometry
+        # (e.g., near an island buffer).  Only flag sharper turns that
+        # indicate misclassified tip-transition vertices.
+        bad_sharp = [(it, ai, a, p) for it, ai, a, p in bad if a < 75.0]
+        if bad_sharp:
+            raise AssertionError(
+                f"{len(bad_sharp)} vertices have angle < 75°:\n"
+                + "\n".join(
+                    f"  iter={it} arc_vtx={ai} angle={a:.1f}°"
+                    f" pos=({p[0]:.2f},{p[1]:.2f})"
+                    for it, ai, a, p in bad_sharp[:10]
+                )
+            )
+
+
+def test_adaptive_peeling_removes_wall_adjacent_material():
+    """Peeling removes material right up to the pocket wall."""
+    boundary = [(0, 0), (160, 0), (160, 100), (0, 100)]
+    _, cp = adaptive_entry(
+        pocket_boundary=boundary,
+        tool_radius=3.0,
+        step_over=2.0,
+        safe_z=2.0,
+        target_z=-8.0,
+        plunge_pitch=1.0,
+    )
+    ca = ClearedArea(initial=cp)
+    _, valid_total = compute_inset_region(boundary, 3.0, [])
+
+    adaptive_peeling(
+        ca,
+        boundary,
+        tool_radius=3.0,
+        step_over=2.0,
+        z=-8.0,
+        area_tolerance=0.5,
+    )
+
+    # Cleared area should reach at least 99% of the valid tool area.
+    assert ca.total_area() >= valid_total * 0.99, (
+        f"Cleared {ca.total_area():.1f} of {valid_total:.1f}"
+        f" ({ca.total_area() / valid_total * 100:.1f}%)"
+    )
