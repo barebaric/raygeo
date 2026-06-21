@@ -4,7 +4,7 @@ use pyo3_stub_gen::derive::{
     gen_stub_pyclass, gen_stub_pyfunction, gen_stub_pymethods,
 };
 
-use crate::ops::polyline::{
+use crate::ops::assembly::polyline::{
     find_pass_entry, find_pass_exit, link_passes, polyline_to_ops, LinkStrategy,
 };
 use crate::python::ops::PyOps;

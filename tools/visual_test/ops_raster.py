@@ -80,7 +80,9 @@ def page_rasterization():
                 "Z step down", 0.1, 2.0, 0.5, 0.1, key="rast_zstep"
             )
 
-    sm = ScanMode.Segmented if scan_mode == "Segmented" else ScanMode.FullSweep
+    sm = (
+        ScanMode.SEGMENTED if scan_mode == "Segmented" else ScanMode.FULL_SWEEP
+    )
 
     gray = make_pattern(img_size, img_size, pattern)
 

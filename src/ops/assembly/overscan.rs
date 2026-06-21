@@ -1,6 +1,6 @@
-use super::container::Ops;
-use super::enums::{CommandCategory, CommandType, SectionType};
-use super::types::{MarkerCmd, OpCategory};
+use crate::ops::container::Ops;
+use crate::ops::enums::{CommandCategory, CommandType, SectionType};
+use crate::ops::types::{MarkerCmd, OpCategory};
 use crate::types::Point3D;
 
 pub fn apply_overscan(ops: &mut Ops, distance_mm: f64) {

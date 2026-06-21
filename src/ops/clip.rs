@@ -945,7 +945,7 @@ fn build_clipped_subpath(temp_ops: &Ops, gaps: &[(f64, f64)]) -> Ops {
 /// gapped path via `build_clipped_subpath`.
 pub fn clip_subpath_linear(
     sub_ops: &Ops,
-    clips: &[super::tabs::ClipPoint],
+    clips: &[super::assembly::tabs::ClipPoint],
 ) -> Ops {
     let mut temp = sub_ops.copy();
     temp.linearize_all();

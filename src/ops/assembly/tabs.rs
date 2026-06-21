@@ -11,11 +11,11 @@
 
 use std::collections::HashMap;
 
-use super::clip::clip_subpath_linear;
-use super::container::Ops;
-use super::enums::{CommandCategory, CommandType, SectionType};
 use super::polyline::find_pass_exit;
-use super::types::{MoveCmd, OpCategory};
+use crate::ops::clip::clip_subpath_linear;
+use crate::ops::container::Ops;
+use crate::ops::enums::{CommandCategory, CommandType, SectionType};
+use crate::ops::types::{MoveCmd, OpCategory};
 use crate::types::Point3D;
 
 /// A clip point: the center and width of a tab on the toolpath.
@@ -184,7 +184,7 @@ pub fn apply_tab_power(
 
 fn assign_clips_to_subpaths(
     ops: &Ops,
-    section_ranges: &[super::group::OpsSectionRange],
+    section_ranges: &[crate::ops::group::OpsSectionRange],
     clips: &[ClipPoint],
 ) -> std::collections::HashMap<SubpathKey, Vec<ClipPoint>> {
     let mut all_subpaths: Vec<(SubpathKey, Ops)> = Vec::new();

@@ -189,7 +189,7 @@ def _plot_raster_power_modulation(ax):
         min_power=0.0,
         max_power=1.0,
         angle=0,
-        scan_mode=ScanMode.Segmented,
+        scan_mode=ScanMode.SEGMENTED,
     )
 
     max_mm = img_size / ppm

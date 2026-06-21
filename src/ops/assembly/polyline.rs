@@ -3,8 +3,8 @@
 //! Bridges Tier-1 pure geometry (polylines as `Vec<Point3D>`) and the
 //! [`Ops`] container. Domain-neutral — no `Tool`, no machine state.
 
-use super::container::Ops;
-use super::enums::CommandCategory;
+use crate::ops::container::Ops;
+use crate::ops::enums::CommandCategory;
 use crate::types::Point3D;
 
 /// Strategy for linking consecutive machining passes.
@@ -21,8 +21,8 @@ pub enum LinkStrategy {
 /// Convert a 3D polyline into an [`Ops`] command sequence.
 ///
 /// When `move_first` is `true` the first point is emitted as a
-/// [`MoveTo`][super::enums::CommandType::MoveTo] and subsequent points
-/// as [`LineTo`][super::enums::CommandType::LineTo] (the normal case for
+/// [`MoveTo`][crate::ops::enums::CommandType::MoveTo] and subsequent points
+/// as [`LineTo`][crate::ops::enums::CommandType::LineTo] (the normal case for
 /// starting a new cutting path).
 ///
 /// When `move_first` is `false` every point is emitted as a `LineTo`,

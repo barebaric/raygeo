@@ -151,7 +151,7 @@ def generate_power_modulation():
         min_power=0.0,
         max_power=1.0,
         angle=0,
-        scan_mode=ScanMode.Segmented,
+        scan_mode=ScanMode.SEGMENTED,
     )
     return _plot_raster_result(
         gray, ops, "Raster: Power Modulation", img_size, ppm
@@ -173,7 +173,7 @@ def generate_mask_scan():
         0.0,
         line_interval,
         angle=0,
-        scan_mode=ScanMode.Segmented,
+        scan_mode=ScanMode.SEGMENTED,
     )
     return _plot_raster_result(gray, ops, "Raster: Mask Scan", img_size, ppm)
 
@@ -193,7 +193,7 @@ def generate_mask_lines():
         0.0,
         line_interval,
         angle=0,
-        scan_mode=ScanMode.Segmented,
+        scan_mode=ScanMode.SEGMENTED,
     )
     return _plot_raster_result(gray, ops, "Raster: Mask Lines", img_size, ppm)
 
@@ -214,7 +214,7 @@ def generate_multi_pass():
         3,
         0.5,
         angle=0,
-        scan_mode=ScanMode.Segmented,
+        scan_mode=ScanMode.SEGMENTED,
     )
     return _plot_raster_result(gray, ops, "Raster: Multi-Pass", img_size, ppm)
 

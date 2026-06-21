@@ -2196,11 +2196,18 @@ impl PyOps {
     /// :param clips: List of ``(x, y, width)`` tuples defining tab positions.
     /// :complexity: O(n * k) time, O(1) space where k is the number of tab clips
     fn apply_tab_gaps(&mut self, clips: Vec<(f64, f64, f64)>) {
-        let clip_points: Vec<crate::ops::tabs::ClipPoint> = clips
+        let clip_points: Vec<crate::ops::assembly::tabs::ClipPoint> = clips
             .into_iter()
-            .map(|(x, y, width)| crate::ops::tabs::ClipPoint { x, y, width })
+            .map(|(x, y, width)| crate::ops::assembly::tabs::ClipPoint {
+                x,
+                y,
+                width,
+            })
             .collect();
-        crate::ops::tabs::apply_tab_gaps(&mut self.inner, &clip_points);
+        crate::ops::assembly::tabs::apply_tab_gaps(
+            &mut self.inner,
+            &clip_points,
+        );
     }
 
     /// Apply holding tabs by reducing power in tab regions.
@@ -2219,11 +2226,15 @@ impl PyOps {
         tab_power: f64,
         original_power: f64,
     ) {
-        let clip_points: Vec<crate::ops::tabs::ClipPoint> = clips
+        let clip_points: Vec<crate::ops::assembly::tabs::ClipPoint> = clips
             .into_iter()
-            .map(|(x, y, width)| crate::ops::tabs::ClipPoint { x, y, width })
+            .map(|(x, y, width)| crate::ops::assembly::tabs::ClipPoint {
+                x,
+                y,
+                width,
+            })
             .collect();
-        crate::ops::tabs::apply_tab_power(
+        crate::ops::assembly::tabs::apply_tab_power(
             &mut self.inner,
             &clip_points,
             tab_power,
@@ -2255,7 +2266,10 @@ impl PyOps {
     /// :param distance_mm: Overscan distance in millimeters.
     /// :complexity: O(n) time, O(n) space
     fn apply_overscan(&mut self, distance_mm: f64) {
-        crate::ops::overscan::apply_overscan(&mut self.inner, distance_mm);
+        crate::ops::assembly::overscan::apply_overscan(
+            &mut self.inner,
+            distance_mm,
+        );
     }
 
     /// Apply lead-in and lead-out to vector contour paths.
@@ -2268,7 +2282,7 @@ impl PyOps {
     /// :param lead_out_mm: Lead-out distance in millimeters.
     /// :complexity: O(n) time, O(n) space
     fn apply_lead_in_out(&mut self, lead_in_mm: f64, lead_out_mm: f64) {
-        crate::ops::lead_in_out::apply_lead_in_out(
+        crate::ops::assembly::lead_in_out::apply_lead_in_out(
             &mut self.inner,
             lead_in_mm,
             lead_out_mm,

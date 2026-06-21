@@ -1,7 +1,7 @@
-use super::container::Ops;
-use super::enums::{CommandCategory, CommandType, SectionType};
-use super::types::{MarkerCmd, OpCategory};
 use crate::geo::algo::analysis::get_tangent_at_from_array;
+use crate::ops::container::Ops;
+use crate::ops::enums::{CommandCategory, CommandType, SectionType};
+use crate::ops::types::{MarkerCmd, OpCategory};
 use crate::types::Point3D;
 
 pub fn apply_lead_in_out(ops: &mut Ops, lead_in_mm: f64, lead_out_mm: f64) {

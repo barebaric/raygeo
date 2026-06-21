@@ -5,11 +5,11 @@ use pyo3_stub_gen::derive::{
     gen_stub_pymethods,
 };
 
-use crate::ops::raster::rasterize::{
+use crate::ops::assembly::raster::rasterize::{
     rasterize_mask_lines, rasterize_mask_scan, rasterize_multi_pass,
     rasterize_power_modulation, ScanMode as RustScanMode,
 };
-use crate::ops::raster::scan::{
+use crate::ops::assembly::raster::scan::{
     self, downsample_power_values, find_mask_bounding_box,
     generate_horizontal_scan_positions, generate_scan_lines, line_pixels,
     resample_rows,
@@ -18,13 +18,15 @@ use crate::python::ops::container::PyOps;
 
 /// Scan mode for raster operations.
 ///
-/// ``Segmented`` skips zero-power gaps within a scan line.
-/// ``FullSweep`` emits the full line with power values (zeros included).
+/// ``SEGMENTED`` skips zero-power gaps within a scan line.
+/// ``FULL_SWEEP`` emits the full line with power values (zeros included).
 #[gen_stub_pyclass_enum]
 #[pyclass(module = "raygeo.ops.raster", name = "ScanMode", from_py_object)]
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum PyScanMode {
+    #[pyo3(name = "SEGMENTED")]
     Segmented,
+    #[pyo3(name = "FULL_SWEEP")]
     FullSweep,
 }
 
@@ -41,8 +43,8 @@ impl From<PyScanMode> for RustScanMode {
 impl PyScanMode {
     fn __repr__(&self) -> String {
         match self {
-            PyScanMode::Segmented => "ScanMode.Segmented".to_string(),
-            PyScanMode::FullSweep => "ScanMode.FullSweep".to_string(),
+            PyScanMode::Segmented => "ScanMode.SEGMENTED".to_string(),
+            PyScanMode::FullSweep => "ScanMode.FULL_SWEEP".to_string(),
         }
     }
 
@@ -53,8 +55,8 @@ impl PyScanMode {
     #[getter]
     fn name(&self) -> &str {
         match self {
-            PyScanMode::Segmented => "Segmented",
-            PyScanMode::FullSweep => "FullSweep",
+            PyScanMode::Segmented => "SEGMENTED",
+            PyScanMode::FullSweep => "FULL_SWEEP",
         }
     }
 }
@@ -549,7 +551,7 @@ fn py_extract_zero_power_segments(
         step_power: float = 1.0,
         num_power_levels: int = 256,
         angle: float = 0.0,
-        scan_mode: ScanMode = ScanMode.Segmented,
+        scan_mode: ScanMode = ScanMode.SEGMENTED,
     ) -> ops.Ops:
         """Rasterise a grayscale image with power-modulated scans.
 
@@ -569,7 +571,7 @@ fn py_extract_zero_power_segments(
         :param step_power: Global power multiplier.
         :param num_power_levels: Number of quantised power levels.
         :param angle: Scan angle in degrees.
-        :param scan_mode: ``ScanMode.Segmented`` or ``ScanMode.FullSweep``.
+        :param scan_mode: ``ScanMode.SEGMENTED`` or ``ScanMode.FULL_SWEEP``.
         :returns: An :class:`~raygeo.ops.Ops` container.
         :complexity: O(h * w + n * p) where h, w = image dimensions, n = scan lines, p = pixels per line
         """
@@ -634,7 +636,7 @@ fn py_rasterize_power_modulation(
         line_interval_mm: float,
         step_power: float = 1.0,
         angle: float = 0.0,
-        scan_mode: ScanMode = ScanMode.Segmented,
+        scan_mode: ScanMode = ScanMode.SEGMENTED,
     ) -> ops.Ops:
         """Rasterise a binary mask into scan-to commands.
 
@@ -649,7 +651,7 @@ fn py_rasterize_power_modulation(
         :param line_interval_mm: Spacing between scan lines in mm.
         :param step_power: Power value (0-1) for exposed pixels.
         :param angle: Scan angle in degrees.
-        :param scan_mode: ``ScanMode.Segmented`` or ``ScanMode.FullSweep``.
+        :param scan_mode: ``ScanMode.SEGMENTED`` or ``ScanMode.FULL_SWEEP``.
         :returns: An :class:`~raygeo.ops.Ops` container.
         :complexity: O(h * w + n * p) where h, w = image dimensions, n = scan lines, p = pixels per line
         """
@@ -701,7 +703,7 @@ fn py_rasterize_mask_scan(
         line_interval_mm: float,
         z: float = 0.0,
         angle: float = 0.0,
-        scan_mode: ScanMode = ScanMode.Segmented,
+        scan_mode: ScanMode = ScanMode.SEGMENTED,
     ) -> ops.Ops:
         """Rasterise a binary mask into line-to commands (no power).
 
@@ -716,7 +718,7 @@ fn py_rasterize_mask_scan(
         :param line_interval_mm: Spacing between scan lines in mm.
         :param z: Z offset for the lines in mm.
         :param angle: Scan angle in degrees.
-        :param scan_mode: ``ScanMode.Segmented`` or ``ScanMode.FullSweep``.
+        :param scan_mode: ``ScanMode.SEGMENTED`` or ``ScanMode.FULL_SWEEP``.
         :returns: An :class:`~raygeo.ops.Ops` container.
         :complexity: O(h * w + n * p) where h, w = image dimensions, n = scan lines, p = pixels per line
         """
@@ -770,7 +772,7 @@ fn py_rasterize_mask_lines(
         z_step_down: float,
         angle: float = 0.0,
         angle_increment: float = 0.0,
-        scan_mode: ScanMode = ScanMode.Segmented,
+        scan_mode: ScanMode = ScanMode.SEGMENTED,
     ) -> ops.Ops:
         """Rasterise a grayscale image as multiple Z-depth passes.
 
@@ -787,7 +789,7 @@ fn py_rasterize_mask_lines(
         :param z_step_down: Z decrement per depth layer in mm.
         :param angle: Initial scan angle in degrees.
         :param angle_increment: Angle added per depth layer in degrees.
-        :param scan_mode: ``ScanMode.Segmented`` or ``ScanMode.FullSweep``.
+        :param scan_mode: ``ScanMode.SEGMENTED`` or ``ScanMode.FULL_SWEEP``.
         :returns: An :class:`~raygeo.ops.Ops` container.
         :complexity: O(d * (h * w + n * p)) where d = depth levels, h, w = image dims, n = scan lines, p = pixels per line
         """

@@ -18,3 +18,19 @@
 - You are strictly forbidden from editing stubs manually. They are only to be edited using "make stubs".
 - You should never edit markdown docs. They are auto-generated.
 - Use make commands when available - avoid calling the underlying tools directly.
+
+# Layering Rules Specification
+
+The crate is split into three layers that depend only downward:
+`geo` → `ops` → `cnc`. Never import upward.
+
+- `src/geo/` — pure geometry. Points, paths, offsets, algorithms. Knows
+  nothing about machining, motion commands, or tools.
+- `src/ops/` — the `Ops` command container and domain-neutral motion assembly
+  (raster, lead-in/out, polyline, …). Holds the generic `State` representation
+  (`feed_rate`, `spindle_rpm`, `coolant`, … as optional fields) so `Ops` can
+  carry any machine's state, but contains no domain logic that fills those
+  fields.
+- `src/cnc/` — the CNC domain: Operation orchestration: sequences operations
+  (e.g. entry + clear + finish), resolves tool-aware `State` via `StateStrategy`,
+  drives `geo`/`ops` primitives.

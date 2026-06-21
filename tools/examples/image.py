@@ -269,7 +269,7 @@ def generate_rasterize_scanlines():
         min_power=0.0,
         max_power=1.0,
         angle=0,
-        scan_mode=ScanMode.Segmented,
+        scan_mode=ScanMode.SEGMENTED,
     )
 
     rasterized = rasterize_scanlines(

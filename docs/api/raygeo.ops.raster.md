@@ -101,7 +101,7 @@ Convert pixel coordinates to mm space, projected onto this scan line.
 
 Scan mode for raster operations.
 
-`Segmented` skips zero-power gaps within a scan line. `FullSweep` emits the full line with power
+`SEGMENTED` skips zero-power gaps within a scan line. `FULL_SWEEP` emits the full line with power
 values (zeros included).
 
 ## Functions
@@ -290,7 +290,7 @@ rasterize_mask_lines(
     line_interval_mm: float,
     z: float = 0,
     angle: float = 0,
-    scan_mode: ScanMode = ScanMode.Segmented,
+    scan_mode: ScanMode = ScanMode.SEGMENTED,
 ) -> ops.Ops
 ```
 
@@ -308,7 +308,7 @@ scan-to with power values. Useful for simple contour or hatch patterns.
 | `line_interval_mm` | `float`                         | Spacing between scan lines in mm.                                                     |
 | `z`                | `float = 0`                     | Z offset for the lines in mm.                                                         |
 | `angle`            | `float = 0`                     | Scan angle in degrees.                                                                |
-| `scan_mode`        | `ScanMode = ScanMode.Segmented` | `ScanMode.Segmented` or `ScanMode.FullSweep`.                                         |
+| `scan_mode`        | `ScanMode = ScanMode.SEGMENTED` | `ScanMode.SEGMENTED` or `ScanMode.FULL_SWEEP`.                                        |
 | _Returns_          | `ops.Ops`                       | An \*\*~raygeo.ops.Ops\*\* container.                                                 |
 | _Complexity_       |                                 | O(h \* w + n \* p) where h, w = image dimensions, n = scan lines, p = pixels per line |
 
@@ -327,7 +327,7 @@ rasterize_mask_scan(
     line_interval_mm: float,
     step_power: float = 1,
     angle: float = 0,
-    scan_mode: ScanMode = ScanMode.Segmented,
+    scan_mode: ScanMode = ScanMode.SEGMENTED,
 ) -> ops.Ops
 ```
 
@@ -345,7 +345,7 @@ move-to/scan-to commands for each non-zero segment (or the full sweep).
 | `line_interval_mm` | `float`                         | Spacing between scan lines in mm.                                                     |
 | `step_power`       | `float = 1`                     | Power value (0-1) for exposed pixels.                                                 |
 | `angle`            | `float = 0`                     | Scan angle in degrees.                                                                |
-| `scan_mode`        | `ScanMode = ScanMode.Segmented` | `ScanMode.Segmented` or `ScanMode.FullSweep`.                                         |
+| `scan_mode`        | `ScanMode = ScanMode.SEGMENTED` | `ScanMode.SEGMENTED` or `ScanMode.FULL_SWEEP`.                                        |
 | _Returns_          | `ops.Ops`                       | An \*\*~raygeo.ops.Ops\*\* container.                                                 |
 | _Complexity_       |                                 | O(h \* w + n \* p) where h, w = image dimensions, n = scan lines, p = pixels per line |
 
@@ -366,7 +366,7 @@ rasterize_multi_pass(
     z_step_down: float,
     angle: float = 0,
     angle_increment: float = 0,
-    scan_mode: ScanMode = ScanMode.Segmented,
+    scan_mode: ScanMode = ScanMode.SEGMENTED,
 ) -> ops.Ops
 ```
 
@@ -386,7 +386,7 @@ layer with a progressive Z offset and optional per-pass angle increment.
 | `z_step_down`      | `float`                         | Z decrement per depth layer in mm.                                                                       |
 | `angle`            | `float = 0`                     | Initial scan angle in degrees.                                                                           |
 | `angle_increment`  | `float = 0`                     | Angle added per depth layer in degrees.                                                                  |
-| `scan_mode`        | `ScanMode = ScanMode.Segmented` | `ScanMode.Segmented` or `ScanMode.FullSweep`.                                                            |
+| `scan_mode`        | `ScanMode = ScanMode.SEGMENTED` | `ScanMode.SEGMENTED` or `ScanMode.FULL_SWEEP`.                                                           |
 | _Returns_          | `ops.Ops`                       | An \*\*~raygeo.ops.Ops\*\* container.                                                                    |
 | _Complexity_       |                                 | O(d \* (h \* w + n \* p)) where d = depth levels, h, w = image dims, n = scan lines, p = pixels per line |
 
@@ -410,7 +410,7 @@ rasterize_power_modulation(
     step_power: float = 1,
     num_power_levels: int = 256,
     angle: float = 0,
-    scan_mode: ScanMode = ScanMode.Segmented,
+    scan_mode: ScanMode = ScanMode.SEGMENTED,
 ) -> ops.Ops
 ```
 
@@ -433,7 +433,7 @@ and alpha channel, then emits move-to/scan-to commands with the modulated power.
 | `step_power`         | `float = 1`                     | Global power multiplier.                                                              |
 | `num_power_levels`   | `int = 256`                     | Number of quantised power levels.                                                     |
 | `angle`              | `float = 0`                     | Scan angle in degrees.                                                                |
-| `scan_mode`          | `ScanMode = ScanMode.Segmented` | `ScanMode.Segmented` or `ScanMode.FullSweep`.                                         |
+| `scan_mode`          | `ScanMode = ScanMode.SEGMENTED` | `ScanMode.SEGMENTED` or `ScanMode.FULL_SWEEP`.                                        |
 | _Returns_            | `ops.Ops`                       | An \*\*~raygeo.ops.Ops\*\* container.                                                 |
 | _Complexity_         |                                 | O(h \* w + n \* p) where h, w = image dimensions, n = scan lines, p = pixels per line |
 

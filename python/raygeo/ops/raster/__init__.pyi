@@ -91,11 +91,11 @@ class ScanMode(enum.Enum):
     r"""
     Scan mode for raster operations.
     
-    ``Segmented`` skips zero-power gaps within a scan line.
-    ``FullSweep`` emits the full line with power values (zeros included).
+    ``SEGMENTED`` skips zero-power gaps within a scan line.
+    ``FULL_SWEEP`` emits the full line with power values (zeros included).
     """
-    Segmented = ...
-    FullSweep = ...
+    SEGMENTED = ...
+    FULL_SWEEP = ...
 
 def downsample_power_values(power_values: numpy.ndarray, start_mm: tuple[float, float], end_mm: tuple[float, float], sample_interval_mm: float) -> tuple[numpy.ndarray, numpy.ndarray, numpy.ndarray]:
     r"""
@@ -209,7 +209,7 @@ def line_pixels(start: tuple[float, float], end: tuple[float, float], width: int
     :complexity: O(n) where n = number of pixels on the line
     """
 
-def rasterize_mask_lines(mask: numpy.typing.NDArray[numpy.uint8], pixels_per_mm: tuple[float, float], offset_x_mm: float, offset_y_mm: float, line_interval_mm: float, z: float = 0, angle: float = 0, scan_mode: ScanMode = ScanMode.Segmented) -> ops.Ops:
+def rasterize_mask_lines(mask: numpy.typing.NDArray[numpy.uint8], pixels_per_mm: tuple[float, float], offset_x_mm: float, offset_y_mm: float, line_interval_mm: float, z: float = 0, angle: float = 0, scan_mode: ScanMode = ScanMode.SEGMENTED) -> ops.Ops:
     r"""
     Rasterise a binary mask into line-to commands (no power).
     
@@ -224,12 +224,12 @@ def rasterize_mask_lines(mask: numpy.typing.NDArray[numpy.uint8], pixels_per_mm:
     :param line_interval_mm: Spacing between scan lines in mm.
     :param z: Z offset for the lines in mm.
     :param angle: Scan angle in degrees.
-    :param scan_mode: ``ScanMode.Segmented`` or ``ScanMode.FullSweep``.
+    :param scan_mode: ``ScanMode.SEGMENTED`` or ``ScanMode.FULL_SWEEP``.
     :returns: An :class:`~raygeo.ops.Ops` container.
     :complexity: O(h * w + n * p) where h, w = image dimensions, n = scan lines, p = pixels per line
     """
 
-def rasterize_mask_scan(mask: numpy.typing.NDArray[numpy.uint8], pixels_per_mm: tuple[float, float], offset_x_mm: float, offset_y_mm: float, line_interval_mm: float, step_power: float = 1, angle: float = 0, scan_mode: ScanMode = ScanMode.Segmented) -> ops.Ops:
+def rasterize_mask_scan(mask: numpy.typing.NDArray[numpy.uint8], pixels_per_mm: tuple[float, float], offset_x_mm: float, offset_y_mm: float, line_interval_mm: float, step_power: float = 1, angle: float = 0, scan_mode: ScanMode = ScanMode.SEGMENTED) -> ops.Ops:
     r"""
     Rasterise a binary mask into scan-to commands.
     
@@ -244,12 +244,12 @@ def rasterize_mask_scan(mask: numpy.typing.NDArray[numpy.uint8], pixels_per_mm: 
     :param line_interval_mm: Spacing between scan lines in mm.
     :param step_power: Power value (0-1) for exposed pixels.
     :param angle: Scan angle in degrees.
-    :param scan_mode: ``ScanMode.Segmented`` or ``ScanMode.FullSweep``.
+    :param scan_mode: ``ScanMode.SEGMENTED`` or ``ScanMode.FULL_SWEEP``.
     :returns: An :class:`~raygeo.ops.Ops` container.
     :complexity: O(h * w + n * p) where h, w = image dimensions, n = scan lines, p = pixels per line
     """
 
-def rasterize_multi_pass(gray_image: numpy.typing.NDArray[numpy.uint8], pixels_per_mm: tuple[float, float], offset_x_mm: float, offset_y_mm: float, line_interval_mm: float, num_depth_levels: int, z_step_down: float, angle: float = 0, angle_increment: float = 0, scan_mode: ScanMode = ScanMode.Segmented) -> ops.Ops:
+def rasterize_multi_pass(gray_image: numpy.typing.NDArray[numpy.uint8], pixels_per_mm: tuple[float, float], offset_x_mm: float, offset_y_mm: float, line_interval_mm: float, num_depth_levels: int, z_step_down: float, angle: float = 0, angle_increment: float = 0, scan_mode: ScanMode = ScanMode.SEGMENTED) -> ops.Ops:
     r"""
     Rasterise a grayscale image as multiple Z-depth passes.
     
@@ -266,12 +266,12 @@ def rasterize_multi_pass(gray_image: numpy.typing.NDArray[numpy.uint8], pixels_p
     :param z_step_down: Z decrement per depth layer in mm.
     :param angle: Initial scan angle in degrees.
     :param angle_increment: Angle added per depth layer in degrees.
-    :param scan_mode: ``ScanMode.Segmented`` or ``ScanMode.FullSweep``.
+    :param scan_mode: ``ScanMode.SEGMENTED`` or ``ScanMode.FULL_SWEEP``.
     :returns: An :class:`~raygeo.ops.Ops` container.
     :complexity: O(d * (h * w + n * p)) where d = depth levels, h, w = image dims, n = scan lines, p = pixels per line
     """
 
-def rasterize_power_modulation(gray_image: numpy.typing.NDArray[numpy.uint8], alpha: numpy.typing.NDArray[numpy.uint8], pixels_per_mm: tuple[float, float], offset_x_mm: float, offset_y_mm: float, line_interval_mm: float, sample_interval_mm: float, min_power: float = 0, max_power: float = 1, step_power: float = 1, num_power_levels: int = 256, angle: float = 0, scan_mode: ScanMode = ScanMode.Segmented) -> ops.Ops:
+def rasterize_power_modulation(gray_image: numpy.typing.NDArray[numpy.uint8], alpha: numpy.typing.NDArray[numpy.uint8], pixels_per_mm: tuple[float, float], offset_x_mm: float, offset_y_mm: float, line_interval_mm: float, sample_interval_mm: float, min_power: float = 0, max_power: float = 1, step_power: float = 1, num_power_levels: int = 256, angle: float = 0, scan_mode: ScanMode = ScanMode.SEGMENTED) -> ops.Ops:
     r"""
     Rasterise a grayscale image with power-modulated scans.
     
@@ -291,7 +291,7 @@ def rasterize_power_modulation(gray_image: numpy.typing.NDArray[numpy.uint8], al
     :param step_power: Global power multiplier.
     :param num_power_levels: Number of quantised power levels.
     :param angle: Scan angle in degrees.
-    :param scan_mode: ``ScanMode.Segmented`` or ``ScanMode.FullSweep``.
+    :param scan_mode: ``ScanMode.SEGMENTED`` or ``ScanMode.FULL_SWEEP``.
     :returns: An :class:`~raygeo.ops.Ops` container.
     :complexity: O(h * w + n * p) where h, w = image dimensions, n = scan lines, p = pixels per line
     """

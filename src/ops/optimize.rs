@@ -7,9 +7,9 @@ use std::collections::HashSet;
 
 use rstar::{PointDistance, RTree, RTreeObject, AABB};
 
+use super::assembly::polyline::{find_pass_entry, find_pass_exit};
 use super::container::Ops;
 use super::enums::{CommandCategory, CommandType};
-use super::polyline::{find_pass_entry, find_pass_exit};
 use super::state::State;
 use crate::types::Point3D;
 
