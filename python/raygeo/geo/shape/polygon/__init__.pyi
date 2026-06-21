@@ -28,6 +28,7 @@ __all__ = [
     "get_polygons_group_intersection",
     "get_polygons_intersection",
     "get_polygons_union",
+    "get_polyline_closest_point",
     "get_segment_swept_polygon",
     "is_almost_equal",
     "is_point_inside_polygon",
@@ -55,6 +56,7 @@ __all__ = [
     "translate_polygon_numpy",
     "translate_polygons",
     "translate_polygons_numpy",
+    "trim_polyline_at",
 ]
 
 def apply_minimum_curvature(polygon: collections.abc.Sequence[types.Point], r_min: float) -> list[types.Polygon]:
@@ -276,6 +278,20 @@ def get_polygons_union(polygons: collections.abc.Sequence[types.Polygon]) -> lis
     :param polygons: List of polygons to union.
     :returns: Union polygon(s).
     :complexity: O(n log n)
+    """
+
+def get_polyline_closest_point(polyline: collections.abc.Sequence[tuple[float, float]], point: tuple[float, float]) -> tuple[int, float] | None:
+    r"""
+    Find the closest edge and parametric position on an open polyline.
+    
+    Each edge of the polyline is tested, and the closest one is
+    returned as ``(edge_index, t)`` where ``t`` in [0, 1] is the
+    parametric position along that edge.
+    
+    :param polyline: Open polyline as (x, y) points.
+    :param point: Query point (x, y).
+    :returns: ``(edge_index, t)`` or None if the polyline has fewer
+              than 2 points.
     """
 
 def get_segment_swept_polygon(a: types.Point, b: types.Point, radius: float) -> list[types.Polygon]:
@@ -553,5 +569,19 @@ def translate_polygons_numpy(polygons: collections.abc.Sequence[numpy.typing.NDA
     :param dy: Y translation.
     :returns: List of translated numpy arrays.
     :complexity: O(n * m)
+    """
+
+def trim_polyline_at(polyline: collections.abc.Sequence[tuple[float, float]], a: tuple[float, float], b: tuple[float, float]) -> list[tuple[float, float]]:
+    r"""
+    Trim a polyline to the portion between two points.
+    
+    Each point is projected onto the nearest edge of the polyline.
+    The returned polyline goes from the projection of *a* to the
+    projection of *b*, preserving intermediate vertices.
+    
+    :param polyline: Open polyline as (x, y) points.
+    :param a: Start point to trim at.
+    :param b: End point to trim at.
+    :returns: Trimmed polyline.
     """
 

@@ -17,8 +17,10 @@ from raygeo.geo.shape.polygon import (
     get_polygons_difference,
     get_polygons_intersection,
     get_polygons_union,
+    get_polyline_closest_point,
     get_segment_swept_polygon,
     offset_polygon,
+    trim_polyline_at,
 )
 from tools.plot import plot_polygon
 
@@ -376,6 +378,108 @@ def generate_closest_point():
     return fig
 
 
+def generate_polyline_closest_point():
+    """Show closest point on an open polyline."""
+    polyline = [
+        (2.0, 12.0),
+        (5.0, 14.0),
+        (8.0, 10.0),
+        (11.0, 13.0),
+        (14.0, 10.0),
+        (17.0, 14.0),
+    ]
+    queries = [
+        (4.0, 12.5),
+        (10.0, 11.0),
+        (15.0, 13.0),
+    ]
+
+    fig, ax = plt.subplots(figsize=(8, 6))
+    arr = np.array(polyline)
+    ax.plot(
+        arr[:, 0],
+        arr[:, 1],
+        "-o",
+        color="gray",
+        lw=2,
+        alpha=0.6,
+        label="Polyline",
+    )
+
+    for q in queries:
+        res = get_polyline_closest_point(polyline, q)
+        if res is None:
+            continue
+        ei, t = res
+        p1 = np.array(polyline[ei])
+        p2 = np.array(polyline[ei + 1])
+        cp = p1 + (p2 - p1) * t
+
+        ax.plot(q[0], q[1], "o", color="steelblue", ms=8)
+        ax.plot(cp[0], cp[1], "r*", ms=12)
+        ax.plot([q[0], cp[0]], [q[1], cp[1]], "-", color="crimson", alpha=0.5)
+
+    ax.plot([], [], "o", color="steelblue", label="Query point")
+    ax.plot([], [], "r*", ms=12, label="Closest point on polyline")
+    ax.plot([], [], "-", color="crimson", alpha=0.5, label="Distance")
+
+    ax.set_aspect("equal")
+    ax.grid(True, alpha=0.3)
+    ax.legend(fontsize=11)
+    ax.set_title("get_polyline_closest_point — Open polyline", fontsize=13)
+    fig.tight_layout()
+    return fig
+
+
+def generate_trim_polyline():
+    """Trim a polyline between two points."""
+    polyline = [
+        (2.0, 12.0),
+        (5.0, 14.0),
+        (8.0, 10.0),
+        (11.0, 13.0),
+        (14.0, 10.0),
+        (17.0, 14.0),
+    ]
+    a = (4.0, 13.0)
+    b = (15.0, 11.5)
+
+    trimmed = trim_polyline_at(polyline, a, b)
+
+    fig, ax = plt.subplots(figsize=(8, 6))
+    arr = np.array(polyline)
+    ax.plot(
+        arr[:, 0],
+        arr[:, 1],
+        "-o",
+        color="gray",
+        lw=1.5,
+        alpha=0.5,
+        label="Original",
+    )
+    ax.plot(*arr.T, "o", color="gray", ms=4, alpha=0.5)
+
+    trimmed_arr = np.array(trimmed)
+    ax.plot(
+        trimmed_arr[:, 0],
+        trimmed_arr[:, 1],
+        "-o",
+        color="#e41a1c",
+        lw=2.5,
+        label="Trimmed",
+    )
+
+    ax.plot(a[0], a[1], "s", color="green", ms=10, label="A")
+    ax.plot(b[0], b[1], "s", color="blue", ms=10, label="B")
+
+    ax.set_aspect("equal")
+    ax.grid(True, alpha=0.3)
+    ax.legend(fontsize=11)
+    ax.set_title("trim_polyline_at", fontsize=13)
+    fig.tight_layout()
+    return fig
+
+
 __docs_target__ = ["raygeo.geo.shape.polygon.md"]
 __images__ = [
     {
@@ -443,5 +547,19 @@ __images__ = [
         "heading": "get_polygons_closest_point",
         "caption": "Closest point on multiple polygons",
         "function": generate_closest_point,
+    },
+    {
+        "heading": "get_polyline_closest_point",
+        "caption": (
+            "``get_polyline_closest_point`` finds the closest point on an open"
+            " polyline to a query point, returning the edge index and"
+            " parametric position"
+        ),
+        "function": generate_polyline_closest_point,
+    },
+    {
+        "heading": "trim_polyline_at",
+        "caption": "``trim_polyline_at`` trims a polyline between two points",
+        "function": generate_trim_polyline,
     },
 ]

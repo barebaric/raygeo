@@ -29,6 +29,7 @@ from raygeo.geo.shape.polygon import (
     get_polygons_group_intersection,
     get_polygons_intersection,
     get_polygons_union,
+    get_polyline_closest_point,
     is_almost_equal,
     is_point_inside_polygon,
     is_polygon_convex,
@@ -53,6 +54,7 @@ from raygeo.geo.shape.polygon import (
     translate_polygon_numpy,
     translate_polygons,
     translate_polygons_numpy,
+    trim_polyline_at,
 )
 from raygeo.geo.types import Polygon
 
@@ -1482,3 +1484,170 @@ class TestPolygonsClosestPoint:
         result = get_polygons_closest_point(polys, 5.0, 15.0)
         assert result is not None
         assert result[0] == 1
+
+
+# --- get_polyline_closest_point ---
+
+
+class TestPolylineClosestPoint:
+    def test_midpoint_of_single_edge(self):
+        """Closest point to the midpoint of a single-edge polyline."""
+        polyline = [(0.0, 0.0), (10.0, 0.0)]
+        res = get_polyline_closest_point(polyline, (5.0, 5.0))
+        assert res is not None
+        edge_idx, t = res
+        assert edge_idx == 0
+        assert abs(t - 0.5) < 1e-9
+
+    def test_at_vertex(self):
+        """Closest point exactly at a vertex."""
+        polyline = [(0.0, 0.0), (5.0, 5.0), (10.0, 0.0)]
+        res = get_polyline_closest_point(polyline, (5.0, 5.0))
+        assert res is not None
+        edge_idx, t = res
+        assert edge_idx == 0
+        assert abs(t - 1.0) < 1e-9
+
+    def test_closer_to_second_edge(self):
+        """Point closer to the second edge returns that edge index."""
+        polyline = [(0.0, 0.0), (5.0, 0.0), (10.0, 0.0)]
+        res = get_polyline_closest_point(polyline, (7.5, 5.0))
+        assert res is not None
+        edge_idx, t = res
+        assert edge_idx == 1
+        assert abs(t - 0.5) < 1e-9
+
+    def test_off_the_end_beyond_first_vertex(self):
+        """Point beyond the polyline projects to the nearest endpoint."""
+        polyline = [(0.0, 0.0), (10.0, 0.0)]
+        res = get_polyline_closest_point(polyline, (20.0, 5.0))
+        assert res is not None
+        edge_idx, t = res
+        # closest is the far end of the single edge
+        assert edge_idx == 0
+        assert abs(t - 1.0) < 1e-9
+
+    def test_degenerate_single_point(self):
+        """Single-point polyline returns None."""
+        res = get_polyline_closest_point([(5.0, 5.0)], (0.0, 0.0))
+        assert res is None
+
+    def test_degenerate_empty(self):
+        """Empty polyline returns None."""
+        res = get_polyline_closest_point([], (0.0, 0.0))
+        assert res is None
+
+    def test_three_edge_polyline(self):
+        """Closest point on a polyline with three edges."""
+        polyline = [(0.0, 0.0), (5.0, 0.0), (5.0, 5.0), (10.0, 5.0)]
+        # Point closest to the middle of the second (vertical) edge
+        res = get_polyline_closest_point(polyline, (7.0, 2.5))
+        assert res is not None
+        edge_idx, t = res
+        assert edge_idx == 1
+        assert abs(t - 0.5) < 1e-9
+
+
+# --- trim_polyline_at ---
+
+
+class TestTrimPolyline:
+    def test_trim_on_different_edges(self):
+        """Trim between points on two different edges."""
+        polyline = [(0.0, 0.0), (10.0, 0.0), (10.0, 10.0)]
+        result = trim_polyline_at(polyline, (2.0, 1.0), (12.0, 5.0))
+        assert len(result) == 3
+        assert result[0] == pytest.approx((2.0, 0.0))
+        assert result[1] == (10.0, 0.0)
+        assert result[2] == pytest.approx((10.0, 5.0))
+
+    def test_trim_on_same_edge(self):
+        """Both points on the same edge — no intermediate vertices."""
+        polyline = [(0.0, 0.0), (10.0, 0.0)]
+        result = trim_polyline_at(polyline, (2.0, 1.0), (8.0, -1.0))
+        assert len(result) == 2
+        assert result[0] == pytest.approx((2.0, 0.0))
+        assert result[1] == pytest.approx((8.0, 0.0))
+
+    def test_trim_a_after_b_reversed(self):
+        """a is further along than b — result goes a→b (reversed)."""
+        polyline = [
+            (0.0, 0.0),
+            (10.0, 0.0),
+            (10.0, 10.0),
+            (20.0, 10.0),
+        ]
+        result = trim_polyline_at(polyline, (15.0, 12.0), (5.0, -2.0))
+        assert len(result) == 4
+        assert result[0] == pytest.approx((5.0, 0.0))
+        assert result[1] == (10.0, 0.0)
+        assert result[2] == (10.0, 10.0)
+        assert result[3] == pytest.approx((15.0, 10.0))
+
+    def test_trim_at_vertices(self):
+        """Points exactly at existing vertices."""
+        polyline = [(0.0, 0.0), (5.0, 5.0), (10.0, 0.0)]
+        result = trim_polyline_at(polyline, (0.0, 0.0), (10.0, 0.0))
+        assert result == [(0.0, 0.0), (5.0, 5.0), (10.0, 0.0)]
+
+    def test_trim_preserves_intermediate_vertices(self):
+        """Intermediate vertices between a and b are preserved."""
+        polyline = [(0.0, 0.0), (3.0, 3.0), (7.0, 3.0), (10.0, 0.0)]
+        result = trim_polyline_at(polyline, (1.0, 1.0), (9.0, 1.0))
+        assert len(result) == 4
+        assert result[0] == pytest.approx((1.0, 1.0))
+        assert result[1] == (3.0, 3.0)
+        assert result[2] == (7.0, 3.0)
+        assert result[3] == pytest.approx((9.0, 1.0))
+
+    def test_trim_same_point(self):
+        """a and b at the same location — result is a single point."""
+        polyline = [(0.0, 0.0), (10.0, 0.0)]
+        result = trim_polyline_at(polyline, (5.0, 1.0), (5.0, 1.0))
+        assert len(result) == 1
+        assert result[0] == pytest.approx((5.0, 0.0))
+
+    def test_trim_degenerate_single_point(self):
+        """Degenerate polyline with a single point returns itself."""
+        polyline = [(5.0, 5.0)]
+        result = trim_polyline_at(polyline, (0.0, 0.0), (10.0, 10.0))
+        assert result == [(5.0, 5.0)]
+
+    def test_trim_empty(self):
+        """Empty polyline returns empty list."""
+        polyline: list[tuple[float, float]] = []
+        result = trim_polyline_at(polyline, (0.0, 0.0), (1.0, 1.0))
+        assert result == []
+
+    def test_trim_removes_adjacent_duplicates(self):
+        """Adjacent near-duplicate points are removed."""
+        polyline = [(0.0, 0.0), (10.0, 0.0)]
+        result = trim_polyline_at(polyline, (0.0, 0.0), (10.0, 0.0))
+        assert result == [(0.0, 0.0), (10.0, 0.0)]
+
+    def test_trim_three_edge_polyline(self):
+        """Trim across three edges preserves both intermediate vertices."""
+        polyline = [(0.0, 0.0), (5.0, 0.0), (5.0, 5.0), (10.0, 5.0)]
+        result = trim_polyline_at(polyline, (2.5, -1.0), (7.5, 6.0))
+        assert len(result) == 4
+        assert result[0] == pytest.approx((2.5, 0.0))
+        assert result[1] == (5.0, 0.0)
+        assert result[2] == (5.0, 5.0)
+        assert result[3] == pytest.approx((7.5, 5.0))
+
+    def test_trim_a_at_vertex_b_on_edge(self):
+        """Point a at a vertex, point b mid-edge."""
+        polyline = [(0.0, 0.0), (10.0, 0.0), (10.0, 10.0)]
+        result = trim_polyline_at(polyline, (10.0, 0.0), (12.0, 5.0))
+        assert len(result) == 2
+        assert result[0] == (10.0, 0.0)
+        assert result[1] == pytest.approx((10.0, 5.0))
+
+    def test_trim_a_on_edge_b_at_vertex(self):
+        """Point a mid-edge, point b at a vertex."""
+        polyline = [(0.0, 0.0), (10.0, 0.0), (10.0, 10.0)]
+        result = trim_polyline_at(polyline, (2.0, 1.0), (10.0, 10.0))
+        assert len(result) == 3
+        assert result[0] == pytest.approx((2.0, 0.0))
+        assert result[1] == (10.0, 0.0)
+        assert result[2] == (10.0, 10.0)

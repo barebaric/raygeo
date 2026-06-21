@@ -12,12 +12,12 @@ use crate::geo::shape::polygon::{
     get_polygon_group_bounds, get_polygon_perimeter, get_polygon_signed_area,
     get_polygons_closest_point, get_polygons_difference,
     get_polygons_group_difference, get_polygons_group_intersection,
-    get_polygons_intersection, get_polygons_union, get_segment_swept_polygon,
-    is_almost_equal, is_point_inside_polygon, is_polygon_clockwise,
-    is_polygon_convex, normalize_polygons, offset_polygon_with_style,
-    point_line_distance, polygons_intersect, rotate_polygon, rotate_polygons,
-    scale_polygon, translate_bounds, translate_polygon, translate_polygons,
-    JoinStyle,
+    get_polygons_intersection, get_polygons_union, get_polyline_closest_point,
+    get_segment_swept_polygon, is_almost_equal, is_point_inside_polygon,
+    is_polygon_clockwise, is_polygon_convex, normalize_polygons,
+    offset_polygon_with_style, point_line_distance, polygons_intersect,
+    rotate_polygon, rotate_polygons, scale_polygon, translate_bounds,
+    translate_polygon, translate_polygons, trim_polyline_at, JoinStyle,
 };
 use crate::types::{Point, Rect};
 use numpy::{PyArray2, PyArrayMethods};
@@ -109,6 +109,8 @@ pub fn register(shape_mod: &Bound<'_, PyModule>) -> PyResult<()> {
         rotate_polygons_numpy_py,
         rotate_polygons_py,
         scale_polygon_py,
+        get_polyline_closest_point_py,
+        trim_polyline_at_py,
         to_clipper_numpy_py,
         translate_bounds_py,
         translate_polygon_numpy_py,
@@ -1523,4 +1525,73 @@ fn is_polygon_clockwise_py(points: Vec<PyPoint2D>) -> bool {
     let points_2d: Vec<Point> =
         points.iter().map(|p| Point::new(p.0, p.1)).collect();
     is_polygon_clockwise(&points_2d)
+}
+
+#[gen_stub_pyfunction(
+    python = r#"
+    import collections.abc
+
+    def get_polyline_closest_point(
+        polyline: collections.abc.Sequence[tuple[float, float]],
+        point: tuple[float, float],
+    ) -> tuple[int, float] | None:
+        """Find the closest edge and parametric position on an open polyline.
+
+        Each edge of the polyline is tested, and the closest one is
+        returned as ``(edge_index, t)`` where ``t`` in [0, 1] is the
+        parametric position along that edge.
+
+        :param polyline: Open polyline as (x, y) points.
+        :param point: Query point (x, y).
+        :returns: ``(edge_index, t)`` or None if the polyline has fewer
+                  than 2 points.
+        """
+    "#,
+    module = "raygeo.geo.shape.polygon"
+)]
+#[pyfunction(name = "get_polyline_closest_point")]
+fn get_polyline_closest_point_py(
+    polyline: Vec<(f64, f64)>,
+    point: (f64, f64),
+) -> Option<(usize, f64)> {
+    let pts: Vec<Point> =
+        polyline.iter().map(|&(x, y)| Point::new(x, y)).collect();
+    get_polyline_closest_point(&pts, Point::new(point.0, point.1))
+}
+
+#[gen_stub_pyfunction(
+    python = r#"
+    import collections.abc
+
+    def trim_polyline_at(
+        polyline: collections.abc.Sequence[tuple[float, float]],
+        a: tuple[float, float],
+        b: tuple[float, float],
+    ) -> list[tuple[float, float]]:
+        """Trim a polyline to the portion between two points.
+
+        Each point is projected onto the nearest edge of the polyline.
+        The returned polyline goes from the projection of *a* to the
+        projection of *b*, preserving intermediate vertices.
+
+        :param polyline: Open polyline as (x, y) points.
+        :param a: Start point to trim at.
+        :param b: End point to trim at.
+        :returns: Trimmed polyline.
+        """
+"#,
+    module = "raygeo.geo.shape.polygon"
+)]
+#[pyfunction(name = "trim_polyline_at")]
+fn trim_polyline_at_py(
+    polyline: Vec<(f64, f64)>,
+    a: (f64, f64),
+    b: (f64, f64),
+) -> Vec<(f64, f64)> {
+    let pts: Vec<Point> =
+        polyline.iter().map(|&(x, y)| Point::new(x, y)).collect();
+    trim_polyline_at(&pts, Point::new(a.0, a.1), Point::new(b.0, b.1))
+        .into_iter()
+        .map(|p| (p.x, p.y))
+        .collect()
 }

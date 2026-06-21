@@ -423,6 +423,31 @@ Get the union of multiple polygons.
 
 _Polygon union_
 
+### `get_polyline_closest_point()`
+
+```python
+get_polyline_closest_point(
+    polyline: Sequence[tuple[float, float]],
+    point: tuple[float, float],
+) -> tuple[int, float] | None
+```
+
+Find the closest edge and parametric position on an open polyline.
+
+Each edge of the polyline is tested, and the closest one is returned as `(edge_index, t)` where `t`
+in [0, 1] is the parametric position along that edge.
+
+| Parameter  | Type                            | Description                                                        |
+| ---------- | ------------------------------- | ------------------------------------------------------------------ |
+| `polyline` | `Sequence[tuple[float, float]]` | Open polyline as (x, y) points.                                    |
+| `point`    | `tuple[float, float]`           | Query point (x, y).                                                |
+| _Returns_  | `tuple[int, float] &#124; None` | `(edge_index, t)` or None if the polyline has fewer than 2 points. |
+
+![``get_polyline_closest_point`` finds the closest point on an open polyline to a query point, returning the edge index and parametric position](images/geo-shape-polygon-polyline-closest-point.png)
+
+_`get_polyline_closest_point` finds the closest point on an open polyline to a query point,
+returning the edge index and parametric position_
+
 ### `get_segment_swept_polygon()`
 
 ```python
@@ -894,3 +919,29 @@ Translate polygons from numpy arrays.
 | `dy`         | `float`                   | Y translation.                   |
 | _Returns_    | `list[numpy.NDArray]`     | List of translated numpy arrays. |
 | _Complexity_ |                           | O(n \* m)                        |
+
+### `trim_polyline_at()`
+
+```python
+trim_polyline_at(
+    polyline: Sequence[tuple[float, float]],
+    a: tuple[float, float],
+    b: tuple[float, float],
+) -> list[tuple[float, float]]
+```
+
+Trim a polyline to the portion between two points.
+
+Each point is projected onto the nearest edge of the polyline. The returned polyline goes from the
+projection of _a_ to the projection of _b_, preserving intermediate vertices.
+
+| Parameter  | Type                            | Description                     |
+| ---------- | ------------------------------- | ------------------------------- |
+| `polyline` | `Sequence[tuple[float, float]]` | Open polyline as (x, y) points. |
+| `a`        | `tuple[float, float]`           | Start point to trim at.         |
+| `b`        | `tuple[float, float]`           | End point to trim at.           |
+| _Returns_  | `list[tuple[float, float]]`     | Trimmed polyline.               |
+
+![``trim_polyline_at`` trims a polyline between two points](images/geo-shape-polygon-trim-polyline.png)
+
+_`trim_polyline_at` trims a polyline between two points_

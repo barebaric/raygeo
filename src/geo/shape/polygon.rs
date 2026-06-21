@@ -819,7 +819,68 @@ pub fn point_in_polygon_clipper(point: Point, polygon: &Polygon) -> bool {
     path.is_point_inside(geo_point) == PointInPolygonResult::IsInside
 }
 
-/// Check if two polygons intersect.
+/// Return the edge index and parametric position of the closest point
+/// on an open polyline.
+pub fn get_polyline_closest_point(
+    polyline: &[Point],
+    p: Point,
+) -> Option<(usize, f64)> {
+    let n = polyline.len();
+    if n < 2 {
+        return None;
+    }
+    let mut best_i = 0usize;
+    let mut best_t = 0.0;
+    let mut best_d2 = f64::MAX;
+    for i in 0..n - 1 {
+        let (t, _, d2) = get_line_segment_closest_point(
+            polyline[i],
+            polyline[i + 1],
+            p.x,
+            p.y,
+        );
+        if d2 < best_d2 {
+            best_d2 = d2;
+            best_i = i;
+            best_t = t;
+        }
+    }
+    Some((best_i, best_t))
+}
+
+/// Trim an open polyline to the portion between two points.
+///
+/// Each point is projected onto the nearest edge of the polyline. The
+/// returned polyline goes from the projection of `a` to the projection
+/// of `b`, preserving intermediate vertices.  Adjacent duplicates are
+/// removed.
+pub fn trim_polyline_at(polyline: &[Point], a: Point, b: Point) -> Vec<Point> {
+    let Some((ai, at)) = get_polyline_closest_point(polyline, a) else {
+        return polyline.to_vec();
+    };
+    let Some((bi, bt)) = get_polyline_closest_point(polyline, b) else {
+        return polyline.to_vec();
+    };
+
+    let (start_i, start_t, end_i, end_t) = if ai < bi || (ai == bi && at <= bt)
+    {
+        (ai, at, bi, bt)
+    } else {
+        (bi, bt, ai, at)
+    };
+
+    let sa = polyline[start_i];
+    let start = sa + (polyline[start_i + 1] - sa) * start_t;
+    let sb = polyline[end_i];
+    let end = sb + (polyline[end_i + 1] - sb) * end_t;
+
+    let mut result = vec![start];
+    result.extend(polyline.iter().take(end_i + 1).skip(start_i + 1).copied());
+    result.push(end);
+    result.dedup_by(|a, b| a.distance_squared(*b) < 1e-12);
+    result
+}
+
 pub fn polygons_intersect(
     poly1: &Polygon,
     poly2: &Polygon,
