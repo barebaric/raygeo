@@ -14,8 +14,8 @@ pub mod rect;
 pub use arc::{
     arc_through_point, does_arc_intersect_circle, does_arc_intersect_rect,
     get_arc_angles, get_arc_bounds, get_arc_closest_point, get_arc_direction,
-    get_arc_length, get_arc_midpoint, is_angle_between, is_arc_clockwise,
-    is_arc_inside_polygons, linearize_arc, normalize_angle,
+    get_arc_length, get_arc_midpoint, get_polyline_turn_sign, is_angle_between,
+    is_arc_clockwise, is_arc_inside_polygons, linearize_arc, normalize_angle,
 };
 pub use bezier::{
     clip_bezier_with_rect, compute_cubic_bezier_bounds_1d,
@@ -46,11 +46,11 @@ pub use line::{
 };
 pub use point::{are_points_equal, circumcenter, midpoint, transform_point};
 pub use polygon::{
-    apply_minimum_curvature, clean_polygon, flip_polygon, flip_polygons,
-    get_circle_polygon, get_polygon_area, get_polygon_bounds,
-    get_polygon_centroid, get_polygon_closest_point, get_polygon_convex_hull,
-    get_polygon_edges, get_polygon_group_bounds, get_polygon_perimeter,
-    get_polygon_signed_area, get_polygons_closest_point,
+    apply_minimum_curvature, clean_polygon, does_path_sweep_intersect_polygon,
+    flip_polygon, flip_polygons, get_circle_polygon, get_polygon_area,
+    get_polygon_bounds, get_polygon_centroid, get_polygon_closest_point,
+    get_polygon_convex_hull, get_polygon_edges, get_polygon_group_bounds,
+    get_polygon_perimeter, get_polygon_signed_area, get_polygons_closest_point,
     get_polygons_difference, get_polygons_group_difference,
     get_polygons_group_intersection, get_polygons_intersection,
     get_polygons_union, get_segment_swept_polygon, is_almost_equal,

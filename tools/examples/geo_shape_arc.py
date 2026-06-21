@@ -5,7 +5,11 @@ import math
 import matplotlib.pyplot as plt
 
 from raygeo.geo import Arc, Geometry
-from raygeo.geo.shape.arc import arc_through_point, linearize_arc
+from raygeo.geo.shape.arc import (
+    arc_through_point,
+    get_polyline_turn_sign,
+    linearize_arc,
+)
 from tools.plot import plot_geometry
 
 
@@ -118,6 +122,36 @@ def generate_arc_through_point():
     return fig
 
 
+def generate_polyline_turn_sign():
+    """Polyline turn sign."""
+    ccw = [(10, 50), (50, 10), (90, 50)]
+    cw = [(10, 30), (50, 70), (90, 30)]
+
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
+
+    for ax, polyline, title, expected in [
+        (ax1, ccw, "CCW (left turn)", 1.0),
+        (ax2, cw, "CW (right turn)", -1.0),
+    ]:
+        arr = [(float(x), float(y)) for x, y in polyline]
+        xs = [p[0] for p in arr]
+        ys = [p[1] for p in arr]
+
+        ax.plot(xs, ys, "-o", color="steelblue", lw=2.5, ms=8)
+        ax.plot(xs[0], ys[0], "o", color="green", ms=10, label="Start")
+        ax.plot(xs[-1], ys[-1], "s", color="tomato", ms=10, label="End")
+
+        sign = get_polyline_turn_sign(arr)
+        arrow = "←" if sign < 0 else "→"
+        ax.set_title(f"{title}  ({arrow} {sign:+.0f})", fontsize=13)
+        ax.set_aspect("equal")
+        ax.grid(True, alpha=0.3)
+        ax.legend(fontsize=10)
+
+    fig.tight_layout()
+    return fig
+
+
 __docs_target__ = ["raygeo.geo.shape.arc.md"]
 __images__ = [
     {
@@ -129,5 +163,12 @@ __images__ = [
         "heading": "linearize_arc",
         "caption": "Arc linearization: coarse and fine resolution",
         "function": generate_linearize,
+    },
+    {
+        "heading": "get_polyline_turn_sign",
+        "caption": (
+            "Determine turn direction of a polyline at its midpoint vertex"
+        ),
+        "function": generate_polyline_turn_sign,
     },
 ]

@@ -23,6 +23,7 @@ __all__ = [
     "get_arc_length",
     "get_arc_midpoint",
     "get_arc_sweep",
+    "get_polyline_turn_sign",
     "is_angle_between",
     "is_arc_clockwise",
     "is_arc_inside_polygons",
@@ -154,6 +155,20 @@ def get_arc_sweep(start_angle: float, end_angle: float, clockwise: bool) -> floa
     :param end_angle: End angle in radians.
     :param clockwise: Whether the arc is clockwise.
     :returns: Signed sweep angle in radians.
+    :complexity: O(1) time, O(1) space
+    """
+
+def get_polyline_turn_sign(polyline: collections.abc.Sequence[types.Point]) -> float:
+    r"""
+    Determine the turn direction of a polyline at its midpoint.
+    
+    Computes the cross product of the edge vectors just before and
+    just after the midpoint vertex.  Returns ``+1.0`` for a
+    counter-clockwise (left) turn and ``-1.0`` for a clockwise
+    (right) turn.
+    
+    :param polyline: Open polyline as (x, y) points.
+    :returns: ``+1.0`` (CCW) or ``-1.0`` (CW).
     :complexity: O(1) time, O(1) space
     """
 

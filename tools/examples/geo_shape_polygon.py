@@ -9,6 +9,7 @@ from matplotlib.patches import Circle as CirclePatch
 from raygeo.geo.shape.polygon import (
     apply_minimum_curvature,
     clean_polygon,
+    does_path_sweep_intersect_polygon,
     get_circle_polygon,
     get_polygon_centroid,
     get_polygon_convex_hull,
@@ -22,6 +23,7 @@ from raygeo.geo.shape.polygon import (
     offset_polygon,
     trim_polyline_at,
 )
+from raygeo.geo.types import Polygon
 from tools.plot import plot_polygon
 
 
@@ -129,6 +131,49 @@ def generate_segment_swept():
     ax2.grid(True, alpha=0.3)
     fig2.tight_layout()
     return fig2
+
+
+def generate_path_sweep_intersect():
+    """Path sweep intersect."""
+    path = [(10, 30), (40, 30), (60, 60)]
+    radius = 12.0
+    obstacles: list[Polygon] = [
+        [(35.0, 10.0), (50.0, 10.0), (50.0, 25.0), (35.0, 25.0)],
+    ]
+    result = does_path_sweep_intersect_polygon(path, radius, obstacles)
+
+    fig, ax = plt.subplots(figsize=(7, 6))
+
+    path_arr = np.array(path)
+    ax.plot(
+        path_arr[:, 0],
+        path_arr[:, 1],
+        "-o",
+        color="k",
+        lw=2,
+        ms=6,
+        label="Path",
+    )
+
+    for i, (a, b) in enumerate(zip(path, path[1:])):
+        swept = get_segment_swept_polygon(a, b, radius)
+        for poly in swept:
+            arr = np.array(poly)
+            ax.fill(*np.vstack([arr, arr[0:1]]).T, alpha=0.2, color="#4ecdc4")
+
+    for obs in obstacles:
+        plot_polygon(ax, obs, "tomato", None, linewidth=2.5)
+        ax.fill(*np.array(obs + obs[:1]).T, alpha=0.15, color="tomato")
+
+    status = "intersects" if result else "does NOT intersect"
+    ax.set_title(f"Path sweep ({status})", fontsize=13)
+    ax.set_aspect("equal")
+    ax.set_xlim(0, 90)
+    ax.set_ylim(0, 80)
+    ax.legend(fontsize=9)
+    ax.grid(True, alpha=0.3)
+    fig.tight_layout()
+    return fig
 
 
 def generate_boolean_union():
@@ -497,6 +542,14 @@ __images__ = [
             "segment with a given radius"
         ),
         "function": generate_segment_swept,
+    },
+    {
+        "heading": "does_path_sweep_intersect_polygon",
+        "caption": (
+            "Tests whether the Minkowski sweep of a disk along a polyline"
+            " intersects any obstacle polygon"
+        ),
+        "function": generate_path_sweep_intersect,
     },
     {
         "heading": "get_polygons_union",

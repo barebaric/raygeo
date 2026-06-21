@@ -636,3 +636,32 @@ pub fn arc_through_point(
     arc.push(t_end);
     arc
 }
+
+/// Sign of the overall turning direction of a polyline, sampled at its
+/// midpoint.
+///
+/// Computes the 2-D cross product of the edge vectors just before and
+/// just after the midpoint vertex.  Returns `+1.0` when the polyline
+/// turns counter-clockwise (left turn, centre of curvature on the left)
+/// and `-1.0` when it turns clockwise (right turn).  Degenerate inputs
+/// (fewer than 3 points, or a midpoint with no neighbours) default to
+/// `+1.0`.
+pub fn get_polyline_turn_sign(polyline: &[Point]) -> f64 {
+    let n = polyline.len();
+    if n < 3 {
+        return 1.0;
+    }
+    let mid = n / 2;
+    let prev = mid.saturating_sub(1);
+    let next = (mid + 1).min(n - 1);
+    if prev == next {
+        return 1.0;
+    }
+    let d0 = polyline[mid] - polyline[prev];
+    let d1 = polyline[next] - polyline[mid];
+    if d0.x * d1.y - d0.y * d1.x >= 0.0 {
+        1.0
+    } else {
+        -1.0
+    }
+}

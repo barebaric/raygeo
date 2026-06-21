@@ -53,6 +53,33 @@ Clean a polygon by removing near-duplicate points.
 
 _`clean_polygon` removes near-duplicate vertices_
 
+### `does_path_sweep_intersect_polygon()`
+
+```python
+does_path_sweep_intersect_polygon(
+    path: Sequence[types.Point],
+    radius: float,
+    obstacles: Sequence[types.Polygon],
+) -> bool
+```
+
+Check if a disk swept along a path intersects any obstacle polygon.
+
+Returns True when the Minkowski sweep of a disk of _radius_ along _path_ intersects any polygon in
+_obstacles_.
+
+| Parameter    | Type                      | Description                                |
+| ------------ | ------------------------- | ------------------------------------------ |
+| `path`       | `Sequence[types.Point]`   | Open polyline as (x, y) points.            |
+| `radius`     | `float`                   | Disk radius.                               |
+| `obstacles`  | `Sequence[types.Polygon]` | List of obstacle polygons.                 |
+| _Returns_    | `bool`                    | True if any obstacle intersects the sweep. |
+| _Complexity_ |                           | O(n \* m)                                  |
+
+![Tests whether the Minkowski sweep of a disk along a polyline intersects any obstacle polygon](images/geo-shape-polygon-path-sweep-intersect.png)
+
+_Tests whether the Minkowski sweep of a disk along a polyline intersects any obstacle polygon_
+
 ### `flip_polygon()`
 
 ```python

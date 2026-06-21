@@ -14,6 +14,7 @@ from raygeo.geo.shape.arc import (
     get_arc_direction,
     get_arc_midpoint,
     get_arc_sweep,
+    get_polyline_turn_sign,
     is_angle_between,
     is_arc_inside_polygons,
     linearize_arc,
@@ -780,3 +781,55 @@ class TestArcThroughPoint:
             assert math.hypot(pt[0] - cx, pt[1] - cy) == pytest.approx(
                 r, abs=1e-6
             )
+
+
+# --- get_polyline_turn_sign ---
+
+
+class TestGetPolylineTurnSign:
+    def test_ccw_turn(self):
+        """Three points making a left (CCW) turn."""
+        polyline = [(0.0, 0.0), (10.0, 0.0), (10.0, 10.0)]
+        assert get_polyline_turn_sign(polyline) == 1.0
+
+    def test_cw_turn(self):
+        """Three points making a right (CW) turn."""
+        polyline = [(0.0, 0.0), (10.0, 0.0), (10.0, -10.0)]
+        assert get_polyline_turn_sign(polyline) == -1.0
+
+    def test_straight_line(self):
+        """Collinear points — cross product is zero, returns +1.0."""
+        polyline = [(0.0, 0.0), (5.0, 0.0), (10.0, 0.0)]
+        assert get_polyline_turn_sign(polyline) == 1.0
+
+    def test_fewer_than_three_points(self):
+        """Degenerate: fewer than 3 points returns +1.0."""
+        assert get_polyline_turn_sign([(0.0, 0.0)]) == 1.0
+        assert get_polyline_turn_sign([(0.0, 0.0), (1.0, 1.0)]) == 1.0
+
+    def test_empty_polyline(self):
+        """Empty polyline returns +1.0."""
+        assert get_polyline_turn_sign([]) == 1.0
+
+    def test_long_polyline_midpoint_turn(self):
+        """Uses the midpoint vertex for the turn sign."""
+        polyline = [
+            (0.0, 0.0),
+            (10.0, 0.0),
+            (20.0, 0.0),
+            (30.0, 0.0),
+            (30.0, 10.0),
+        ]
+        # Midpoint is at index 2 (20,0). Edges: (10,0)→(20,0) and
+        # (20,0)→(30,0) are collinear → cross = 0 → returns +1.0
+        assert get_polyline_turn_sign(polyline) == 1.0
+
+    def test_negative_coordinates(self):
+        """Turn sign works with negative coordinates.
+
+        Going from (0,0)→(-10,0)→(-10,-10): direction changes from
+        west (-10,0) to south (0,-10), a CCW +90° left turn
+        (cross = (-10)·(-10) - 0·0 = 100 > 0).
+        """
+        polyline = [(0.0, 0.0), (-10.0, 0.0), (-10.0, -10.0)]
+        assert get_polyline_turn_sign(polyline) == 1.0

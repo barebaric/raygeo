@@ -8,6 +8,7 @@ import typing
 __all__ = [
     "apply_minimum_curvature",
     "clean_polygon",
+    "does_path_sweep_intersect_polygon",
     "flip_polygon",
     "flip_polygon_numpy",
     "flip_polygons",
@@ -82,6 +83,20 @@ def clean_polygon(polygon: collections.abc.Sequence[types.Point], tolerance: typ
     :param tolerance: Distance tolerance for deduplication.
     :returns: Cleaned polygon or None.
     :complexity: O(n)
+    """
+
+def does_path_sweep_intersect_polygon(path: collections.abc.Sequence[types.Point], radius: float, obstacles: collections.abc.Sequence[types.Polygon]) -> bool:
+    r"""
+    Check if a disk swept along a path intersects any obstacle polygon.
+    
+    Returns True when the Minkowski sweep of a disk of *radius* along
+    *path* intersects any polygon in *obstacles*.
+    
+    :param path: Open polyline as (x, y) points.
+    :param radius: Disk radius.
+    :param obstacles: List of obstacle polygons.
+    :returns: True if any obstacle intersects the sweep.
+    :complexity: O(n * m)
     """
 
 def flip_polygon(polygon: collections.abc.Sequence[types.Point], flip_h: bool, flip_v: bool) -> types.Polygon:

@@ -240,6 +240,27 @@ Handles direction (CW/CCW) and full-circle detection.
 | _Returns_     | `float` | Signed sweep angle in radians. |
 | _Complexity_  |         | O(1) time, O(1) space          |
 
+### `get_polyline_turn_sign()`
+
+```python
+get_polyline_turn_sign(polyline: Sequence[types.Point]) -> float
+```
+
+Determine the turn direction of a polyline at its midpoint.
+
+Computes the cross product of the edge vectors just before and just after the midpoint vertex.
+Returns `+1.0` for a counter-clockwise (left) turn and `-1.0` for a clockwise (right) turn.
+
+| Parameter    | Type                    | Description                     |
+| ------------ | ----------------------- | ------------------------------- |
+| `polyline`   | `Sequence[types.Point]` | Open polyline as (x, y) points. |
+| _Returns_    | `float`                 | `+1.0` (CCW) or `-1.0` (CW).    |
+| _Complexity_ |                         | O(1) time, O(1) space           |
+
+![Determine turn direction of a polyline at its midpoint vertex](images/geo-shape-arc-polyline-turn-sign.png)
+
+_Determine turn direction of a polyline at its midpoint vertex_
+
 ### `is_angle_between()`
 
 ```python

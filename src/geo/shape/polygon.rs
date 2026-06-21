@@ -23,6 +23,7 @@ use clipper2::{
 };
 
 use crate::geo::shape::line::get_line_segment_closest_point;
+use crate::geo::shape::line::get_segment_segment_distance;
 use crate::types::{Edge, Point, Polygon, Rect};
 
 /// Join style for offset operations, matching clipper2 semantics.
@@ -306,6 +307,62 @@ pub fn get_segment_swept_polygon(
         get_circle_polygon(a, radius, 64),
         get_circle_polygon(b, radius, 64),
     ]
+}
+
+/// True if the sweep of a disk of `radius` moving along `path` intersects
+/// any polygon in `obstacles`. The sweep is the union of capsules
+/// (rectangles capped with half-disks) one per segment, plus a disk at
+/// each vertex — exactly `get_segment_swept_polygon` per segment.
+pub fn does_path_sweep_intersect_polygon(
+    path: &[Point],
+    radius: f64,
+    obstacles: &[Polygon],
+) -> bool {
+    if path.len() < 2 {
+        return false;
+    }
+
+    for obstacle in obstacles {
+        if obstacle.len() < 3 {
+            continue;
+        }
+
+        let obs_bounds = get_polygon_bounds(obstacle);
+
+        for i in 0..path.len() - 1 {
+            let a = path[i];
+            let b = path[i + 1];
+
+            let seg_min_x = a.x.min(b.x) - radius;
+            let seg_min_y = a.y.min(b.y) - radius;
+            let seg_max_x = a.x.max(b.x) + radius;
+            let seg_max_y = a.y.max(b.y) + radius;
+            if seg_max_x < obs_bounds.min.x
+                || seg_min_x > obs_bounds.max.x
+                || seg_max_y < obs_bounds.min.y
+                || seg_min_y > obs_bounds.max.y
+            {
+                continue;
+            }
+
+            if is_point_in_polygon(a, obstacle)
+                || is_point_in_polygon(b, obstacle)
+            {
+                return true;
+            }
+
+            let n = obstacle.len();
+            for j in 0..n {
+                let c = obstacle[j];
+                let d = obstacle[(j + 1) % n];
+                if get_segment_segment_distance(a, b, c, d) < radius {
+                    return true;
+                }
+            }
+        }
+    }
+
+    false
 }
 
 /// Calculate the centroid of a polygon.

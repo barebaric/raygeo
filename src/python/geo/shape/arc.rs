@@ -17,8 +17,9 @@ use super::super::types::{ArcClosestResult, Edge3D};
 use crate::geo::shape::arc::{
     arc_through_point, does_arc_intersect_circle, does_arc_intersect_rect,
     get_arc_angles, get_arc_bounds, get_arc_closest_point, get_arc_direction,
-    get_arc_length, get_arc_midpoint, get_arc_sweep, is_angle_between,
-    is_arc_clockwise, is_arc_inside_polygons, linearize_arc, normalize_angle,
+    get_arc_length, get_arc_midpoint, get_arc_sweep, get_polyline_turn_sign,
+    is_angle_between, is_arc_clockwise, is_arc_inside_polygons, linearize_arc,
+    normalize_angle,
 };
 use crate::types::{Point, Point3D, Rect};
 use pyo3::prelude::*;
@@ -93,6 +94,7 @@ pub fn register(shape_mod: &Bound<'_, PyModule>) -> PyResult<()> {
         linearize_arc_py,
         get_arc_length_py,
         get_arc_sweep_py,
+        get_polyline_turn_sign_py,
     );
 
     shape_mod.add_submodule(&m)?;
@@ -621,4 +623,33 @@ fn linearize_arc_py(
         &mut segments,
     );
     Ok(edge_pairs3d_to_tuples(segments))
+}
+
+#[gen_stub_pyfunction(
+    python = r#"
+    import collections.abc
+    import raygeo.geo.types
+
+    def get_polyline_turn_sign(
+        polyline: collections.abc.Sequence[types.Point],
+    ) -> float:
+        """Determine the turn direction of a polyline at its midpoint.
+
+        Computes the cross product of the edge vectors just before and
+        just after the midpoint vertex.  Returns ``+1.0`` for a
+        counter-clockwise (left) turn and ``-1.0`` for a clockwise
+        (right) turn.
+
+        :param polyline: Open polyline as (x, y) points.
+        :returns: ``+1.0`` (CCW) or ``-1.0`` (CW).
+        :complexity: O(1) time, O(1) space
+        """
+"#,
+    module = "raygeo.geo.shape.arc"
+)]
+#[pyfunction(name = "get_polyline_turn_sign")]
+fn get_polyline_turn_sign_py(polyline: Vec<(f64, f64)>) -> f64 {
+    let pts: Vec<Point> =
+        polyline.iter().map(|&(x, y)| Point::new(x, y)).collect();
+    get_polyline_turn_sign(&pts)
 }

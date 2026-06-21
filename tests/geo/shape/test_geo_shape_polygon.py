@@ -12,6 +12,7 @@ from raygeo.geo.algo.smooth import resample_polyline
 from raygeo.geo.shape.polygon import (
     apply_minimum_curvature,
     clean_polygon,
+    does_path_sweep_intersect_polygon,
     flip_polygon_numpy,
     flip_polygons_numpy,
     get_polygon_area,
@@ -1651,3 +1652,89 @@ class TestTrimPolyline:
         assert result[0] == pytest.approx((2.0, 0.0))
         assert result[1] == (10.0, 0.0)
         assert result[2] == (10.0, 10.0)
+
+
+# --- does_path_sweep_intersect_polygon ---
+
+
+class TestDoesPathSweepIntersectPolygon:
+    def test_path_far_from_obstacle(self):
+        """Path well away from any obstacle."""
+        path = [(0.0, 0.0), (10.0, 0.0)]
+        obstacle = P((20, 20), (30, 20), (30, 30), (20, 30))
+        assert not does_path_sweep_intersect_polygon(path, 5.0, [obstacle])
+
+    def test_path_intersects_obstacle_edge(self):
+        """Segment passes within radius of an obstacle edge."""
+        path = [(0.0, 0.0), (20.0, 0.0)]
+        obstacle = P((10, -2), (10, 5), (15, 5), (15, -2))
+        assert does_path_sweep_intersect_polygon(path, 3.0, [obstacle])
+
+    def test_path_near_but_not_intersecting(self):
+        """Segment passes close but outside radius."""
+        path = [(0.0, 0.0), (20.0, 0.0)]
+        obstacle = P((10, 5), (10, 10), (15, 10), (15, 5))
+        assert not does_path_sweep_intersect_polygon(path, 3.0, [obstacle])
+
+    def test_vertex_inside_disk(self):
+        """Obstacle vertex within radius of a path endpoint."""
+        path = [(0.0, 0.0), (10.0, 0.0)]
+        obstacle = P((2, 1), (2, 2), (3, 2), (3, 1))
+        assert does_path_sweep_intersect_polygon(path, 2.0, [obstacle])
+
+    def test_path_vertex_inside_obstacle(self):
+        """Path endpoint lies inside an obstacle polygon."""
+        path = [(0.0, 0.0), (15.0, 0.0)]
+        obstacle = P((5, -5), (5, 5), (10, 5), (10, -5))
+        assert does_path_sweep_intersect_polygon(path, 1.0, [obstacle])
+
+    def test_empty_path(self):
+        """No segments — always false."""
+        box = P((0, 0), (10, 0), (10, 10), (0, 10))
+        assert not does_path_sweep_intersect_polygon([], 5.0, [box])
+
+    def test_single_point_path(self):
+        """Single point — no segments."""
+        box = P((0, 0), (10, 0), (10, 10), (0, 10))
+        assert not does_path_sweep_intersect_polygon([(5.0, 5.0)], 5.0, [box])
+
+    def test_empty_obstacles(self):
+        """No obstacles — always false."""
+        assert not does_path_sweep_intersect_polygon(
+            [(0.0, 0.0), (10.0, 0.0)],
+            5.0,
+            [],
+        )
+
+    def test_degenerate_obstacle(self):
+        """Degenerate obstacle (< 3 vertices) is skipped."""
+        assert not does_path_sweep_intersect_polygon(
+            [(0.0, 0.0), (10.0, 0.0)],
+            5.0,
+            [[(5.0, 0.0), (5.0, 1.0)]],
+        )
+
+    def test_multi_segment_path(self):
+        """Path with multiple segments — hits on second segment."""
+        path = [(0.0, 0.0), (10.0, 0.0), (10.0, 20.0)]
+        obstacle = P((8, 15), (15, 15), (15, 22), (8, 22))
+        assert does_path_sweep_intersect_polygon(path, 3.0, [obstacle])
+
+    def test_multi_segment_path_bbox_skip(self):
+        """Second segment misses obstacle bbox — skipped."""
+        path = [(0.0, 0.0), (10.0, 0.0), (100.0, 100.0)]
+        obstacle = P((20, 0), (25, 0), (25, 5), (20, 5))
+        assert not does_path_sweep_intersect_polygon(path, 2.0, [obstacle])
+
+    def test_multiple_obstacles_hit_second(self):
+        """First obstacle skipped by bbox, second intersects."""
+        path = [(0.0, 0.0), (50.0, 0.0)]
+        far = P((100, 100), (110, 100), (110, 110), (100, 110))
+        near = P((20, -3), (20, 3), (30, 3), (30, -3))
+        assert does_path_sweep_intersect_polygon(path, 5.0, [far, near])
+
+    def test_zero_radius(self):
+        """Zero radius — only exact boundary touch counts."""
+        path = [(0.0, 0.0), (10.0, 0.0)]
+        obstacle = P((5, 1), (5, 5), (10, 5), (10, 1))
+        assert not does_path_sweep_intersect_polygon(path, 0.0, [obstacle])

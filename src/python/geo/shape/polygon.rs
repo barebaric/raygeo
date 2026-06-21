@@ -6,18 +6,19 @@ use super::super::flex_point::{
 };
 use super::super::types::NormalizePolygonsResult;
 use crate::geo::shape::polygon::{
-    apply_minimum_curvature, clean_polygon, flip_polygon, flip_polygons,
-    get_circle_polygon, get_polygon_bounds, get_polygon_centroid,
-    get_polygon_closest_point, get_polygon_convex_hull, get_polygon_edges,
-    get_polygon_group_bounds, get_polygon_perimeter, get_polygon_signed_area,
-    get_polygons_closest_point, get_polygons_difference,
-    get_polygons_group_difference, get_polygons_group_intersection,
-    get_polygons_intersection, get_polygons_union, get_polyline_closest_point,
-    get_segment_swept_polygon, is_almost_equal, is_point_inside_polygon,
-    is_polygon_clockwise, is_polygon_convex, normalize_polygons,
-    offset_polygon_with_style, point_line_distance, polygons_intersect,
-    rotate_polygon, rotate_polygons, scale_polygon, translate_bounds,
-    translate_polygon, translate_polygons, trim_polyline_at, JoinStyle,
+    apply_minimum_curvature, clean_polygon, does_path_sweep_intersect_polygon,
+    flip_polygon, flip_polygons, get_circle_polygon, get_polygon_bounds,
+    get_polygon_centroid, get_polygon_closest_point, get_polygon_convex_hull,
+    get_polygon_edges, get_polygon_group_bounds, get_polygon_perimeter,
+    get_polygon_signed_area, get_polygons_closest_point,
+    get_polygons_difference, get_polygons_group_difference,
+    get_polygons_group_intersection, get_polygons_intersection,
+    get_polygons_union, get_polyline_closest_point, get_segment_swept_polygon,
+    is_almost_equal, is_point_inside_polygon, is_polygon_clockwise,
+    is_polygon_convex, normalize_polygons, offset_polygon_with_style,
+    point_line_distance, polygons_intersect, rotate_polygon, rotate_polygons,
+    scale_polygon, translate_bounds, translate_polygon, translate_polygons,
+    trim_polyline_at, JoinStyle,
 };
 use crate::types::{Point, Rect};
 use numpy::{PyArray2, PyArrayMethods};
@@ -68,6 +69,7 @@ pub fn register(shape_mod: &Bound<'_, PyModule>) -> PyResult<()> {
         m,
         apply_minimum_curvature_py,
         clean_polygon_py,
+        does_path_sweep_intersect_polygon_py,
         flip_polygon_numpy_py,
         flip_polygon_py,
         flip_polygons_numpy_py,
@@ -566,6 +568,42 @@ fn get_segment_swept_polygon_py(
         Point::new(b.0, b.1),
         radius,
     ))
+}
+
+#[gen_stub_pyfunction(
+    python = r#"
+    import collections.abc
+    import raygeo.geo.types
+
+    def does_path_sweep_intersect_polygon(
+        path: collections.abc.Sequence[types.Point],
+        radius: float,
+        obstacles: collections.abc.Sequence[types.Polygon],
+    ) -> bool:
+        """Check if a disk swept along a path intersects any obstacle polygon.
+
+        Returns True when the Minkowski sweep of a disk of *radius* along
+        *path* intersects any polygon in *obstacles*.
+
+        :param path: Open polyline as (x, y) points.
+        :param radius: Disk radius.
+        :param obstacles: List of obstacle polygons.
+        :returns: True if any obstacle intersects the sweep.
+        :complexity: O(n * m)
+        """
+"#,
+    module = "raygeo.geo.shape.polygon"
+)]
+#[pyfunction(name = "does_path_sweep_intersect_polygon")]
+fn does_path_sweep_intersect_polygon_py(
+    path: Vec<(f64, f64)>,
+    radius: f64,
+    obstacles: &Bound<'_, PyAny>,
+) -> PyResult<bool> {
+    let path_pts: Vec<Point> =
+        path.iter().map(|&(x, y)| Point::new(x, y)).collect();
+    let obs = extract_polygons(obstacles)?;
+    Ok(does_path_sweep_intersect_polygon(&path_pts, radius, &obs))
 }
 
 #[gen_stub_pyfunction(
