@@ -56,6 +56,19 @@ class ClearedArea:
         :param simplify_tol: tolerance in mm for frontier simplification
         :complexity: O(n log n)
         """
+    def bite_in_direction(self, step_over: builtins.float, valid_area: typing.Sequence[typing.Sequence[tuple[builtins.float, builtins.float]]], simplify_tol: builtins.float, target: tuple[builtins.float, builtins.float], max_angle: builtins.float) -> builtins.list[builtins.list[tuple[builtins.float, builtins.float]]]:
+        r"""
+        Like :py:meth:`bites` but filters to only the bites whose centroid
+        lies within *max_angle* radians of the direction from the current
+        cleared region's centre toward *target*.
+        useful for steering the clearing direction along a MAT branch.
+        :param step_over: lateral step-over in mm
+        :param valid_area: list of polygons defining the valid tool-centre region
+        :param simplify_tol: tolerance in mm for frontier simplification
+        :param target: (x, y) target point to steer toward
+        :param max_angle: maximum deviation from the target direction (radians)
+        :complexity: O(n log n)
+        """
     def total_area(self) -> builtins.float:
         r"""
         :complexity: O(1)

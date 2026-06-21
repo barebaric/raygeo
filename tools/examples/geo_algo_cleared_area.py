@@ -1,8 +1,11 @@
 """Generate ClearedArea example images."""
 
+import math
+
 import matplotlib.pyplot as plt
 
 from raygeo.geo.algo.cleared_area import ClearedArea
+from raygeo.geo.algo.hsm import adaptive_entry, compute_valid_tool_area
 
 
 def generate_raster():
@@ -263,6 +266,108 @@ def generate_bites():
     return fig
 
 
+def generate_bite_in_direction():
+    """Show directional bites coloured by pass order."""
+    boundary = [(0, 0), (180, 0), (180, 120), (0, 120)]
+    islands = [
+        [(15, 15), (35, 15), (35, 35), (15, 35)],
+        [
+            (
+                80 + 10 * math.cos(2 * math.pi * i / 32),
+                50 + 10 * math.sin(2 * math.pi * i / 32),
+            )
+            for i in range(32)
+        ],
+        [(130, 80), (160, 80), (160, 105), (130, 105)],
+    ]
+    tool_radius = 3.0
+    step_over = 2.0
+
+    _, cp = adaptive_entry(
+        pocket_boundary=boundary,
+        islands=islands,
+        tool_radius=tool_radius,
+        step_over=step_over,
+        safe_z=2.0,
+        target_z=-5.0,
+        plunge_pitch=1.0,
+    )
+    ca = ClearedArea(initial=cp)
+    va, total = compute_valid_tool_area(boundary, tool_radius, islands)
+
+    directions = {
+        "east": (200, 60),
+        "north": (90, 140),
+        "west": (-20, 60),
+        "south": (90, -20),
+    }
+    all_bites = []
+
+    for label, target in directions.items():
+        for _ in range(20):
+            bites = ca.bite_in_direction(
+                step_over,
+                va,
+                0.01,
+                target,
+                math.pi / 3,
+            )
+            if not bites:
+                break
+            for b in bites:
+                all_bites.append((b, label))
+            ca.incorporate(bites)
+
+    fig, ax = plt.subplots(figsize=(7, 6))
+    ax.set_aspect("equal")
+
+    bx = [p[0] for p in boundary] + [boundary[0][0]]
+    by = [p[1] for p in boundary] + [boundary[0][1]]
+    ax.plot(bx, by, "k-", linewidth=1.5, alpha=0.3, label="Boundary")
+
+    for isl in islands:
+        ix = [p[0] for p in isl] + [isl[0][0]]
+        iy = [p[1] for p in isl] + [isl[0][1]]
+        ax.fill(
+            ix,
+            iy,
+            facecolor="lightgray",
+            edgecolor="gray",
+            hatch="///",
+            linewidth=1,
+        )
+
+    n = len(all_bites)
+    for idx, (bite, label) in enumerate(all_bites):
+        t = idx / max(n - 1, 1)
+        r = 0.9 - 0.6 * t
+        g = 0.2 + 0.5 * t
+        color = (r, g, 0.2)
+        xs = [p[0] for p in bite] + [bite[0][0]]
+        ys = [p[1] for p in bite] + [bite[0][1]]
+        ax.fill(
+            xs, ys, facecolor=color, alpha=0.3, edgecolor=color, linewidth=0.5
+        )
+
+    ax.set_title(f"Directional bites ({n} passes)")
+
+    import matplotlib.colors as mcolors
+
+    cmap = mcolors.LinearSegmentedColormap.from_list(
+        "order",
+        [(0, (0.9, 0.2, 0.2)), (1, (0.3, 0.7, 0.2))],
+    )
+    sm = plt.cm.ScalarMappable(cmap=cmap, norm=mcolors.Normalize(0, n))
+    sm.set_array([])
+    cbar = fig.colorbar(
+        sm, ax=ax, orientation="vertical", pad=0.02, shrink=0.7
+    )
+    cbar.set_label("Pass index")
+
+    fig.tight_layout()
+    return fig
+
+
 __docs_target__ = ["raygeo.geo.algo.cleared_area.md"]
 __images__ = [
     {
@@ -306,5 +411,13 @@ __images__ = [
             "by ``step_over``."
         ),
         "function": generate_bites,
+    },
+    {
+        "heading": "bite_in_direction",
+        "caption": (
+            "Directional bites coloured by pass order"
+            " (first = dark, later = pale)"
+        ),
+        "function": generate_bite_in_direction,
     },
 ]

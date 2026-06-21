@@ -1,6 +1,7 @@
 use crate::geo::algo::simplify::simplify_polyline;
 use crate::geo::algo::spatial_grid2d::SpatialGrid;
 use crate::geo::shape::polygon::get_polygon_area;
+use crate::geo::shape::polygon::get_polygon_centroid;
 use crate::geo::shape::polygon::get_polygons_group_difference;
 use crate::geo::shape::polygon::get_polygons_group_intersection;
 use crate::geo::shape::polygon::get_polygons_union;
@@ -219,6 +220,59 @@ impl ClearedArea {
         }
         let material = self.remaining(&expanded);
         get_polygons_group_intersection(&material, valid_area)
+    }
+
+    /// Like [`bites`](Self::bites) but only returns the bites whose
+    /// centroid lies within `max_angle` radians of the direction from
+    /// this area's centre toward `target`.
+    ///
+    /// When the cleared area is empty the direction-filter is skipped
+    /// and all bites are returned.
+    pub fn bite_in_direction(
+        &self,
+        step_over: f64,
+        valid_area: &[Polygon],
+        simplify_tol: f64,
+        target: Point,
+        max_angle: f64,
+    ) -> Vec<Polygon> {
+        let all = self.bites(step_over, valid_area, simplify_tol);
+        if all.is_empty()
+            || self.fragments.is_empty()
+            || max_angle >= std::f64::consts::PI
+        {
+            return all;
+        }
+
+        // Compute centre of current cleared area.
+        let mut cx = 0.0;
+        let mut cy = 0.0;
+        let mut count = 0usize;
+        for frag in &self.fragments {
+            for p in frag {
+                cx += p.x;
+                cy += p.y;
+                count += 1;
+            }
+        }
+        let centre = Point::new(cx / count as f64, cy / count as f64);
+        let dir = target - centre;
+        let dir_len = dir.length();
+        if dir_len < 1e-12 {
+            return all;
+        }
+        let dir = dir / dir_len;
+
+        let cos_max = max_angle.cos();
+
+        all.into_iter()
+            .filter(|bite| {
+                let bc = get_polygon_centroid(bite);
+                let to_bite = bc - centre;
+                let len = to_bite.length();
+                len > 1e-12 && dir.dot(to_bite / len) >= cos_max
+            })
+            .collect()
     }
 
     /// True when any polygon in `polys` overlaps an existing fragment.

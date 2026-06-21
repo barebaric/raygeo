@@ -161,6 +161,45 @@ impl ClearedArea {
             .collect()
     }
 
+    /// Like :py:meth:`bites` but filters to only the bites whose centroid
+    /// lies within *max_angle* radians of the direction from the current
+    /// cleared region's centre toward *target*.
+    /// useful for steering the clearing direction along a MAT branch.
+    /// :param step_over: lateral step-over in mm
+    /// :param valid_area: list of polygons defining the valid tool-centre region
+    /// :param simplify_tol: tolerance in mm for frontier simplification
+    /// :param target: (x, y) target point to steer toward
+    /// :param max_angle: maximum deviation from the target direction (radians)
+    /// :complexity: O(n log n)
+    pub fn bite_in_direction(
+        &self,
+        step_over: f64,
+        valid_area: Vec<Vec<(f64, f64)>>,
+        simplify_tol: f64,
+        target: (f64, f64),
+        max_angle: f64,
+    ) -> Vec<Vec<(f64, f64)>> {
+        let valid: Vec<crate::types::Polygon> = valid_area
+            .into_iter()
+            .map(|v| {
+                v.into_iter()
+                    .map(|(x, y)| crate::types::Point::new(x, y))
+                    .collect()
+            })
+            .collect();
+        let bites = self.inner.bite_in_direction(
+            step_over,
+            &valid,
+            simplify_tol,
+            crate::types::Point::new(target.0, target.1),
+            max_angle,
+        );
+        bites
+            .into_iter()
+            .map(|poly| poly.into_iter().map(|p| (p.x, p.y)).collect())
+            .collect()
+    }
+
     /// :complexity: O(1)
     pub fn total_area(&self) -> f64 {
         self.inner.total_area()

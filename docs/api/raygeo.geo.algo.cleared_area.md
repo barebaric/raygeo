@@ -31,6 +31,36 @@ add_cleared_polygons(polygons: Sequence[Sequence[tuple[float, float]]]) -> None
 _ClearedArea with bulk polygon insertion via `add_cleared_polygons` — cleared region in blue,
 remaining area in red_
 
+### `bite_in_direction()`
+
+```python
+bite_in_direction(
+    step_over: float,
+    valid_area: Sequence[Sequence[tuple[float, float]]],
+    simplify_tol: float,
+    target: tuple[float, float],
+    max_angle: float,
+) -> list[list[tuple[float, float]]]
+```
+
+Like **bites** but filters to only the bites whose centroid lies within _max_angle_ radians of the
+direction from the current cleared region's centre toward _target_. useful for steering the clearing
+direction along a MAT branch.
+
+| Parameter      | Type                                      | Description                                            |
+| -------------- | ----------------------------------------- | ------------------------------------------------------ |
+| `step_over`    | `float`                                   | lateral step-over in mm                                |
+| `valid_area`   | `Sequence[Sequence[tuple[float, float]]]` | list of polygons defining the valid tool-centre region |
+| `simplify_tol` | `float`                                   | tolerance in mm for frontier simplification            |
+| `target`       | `tuple[float, float]`                     | (x, y) target point to steer toward                    |
+| `max_angle`    | `float`                                   | maximum deviation from the target direction (radians)  |
+| _Returns_      | `list[list[tuple[float, float]]]`         |                                                        |
+| _Complexity_   |                                           | O(n log n)                                             |
+
+![Directional bites coloured by pass order (first = dark, later = pale)](images/geo-algo-cleared-area-bite-in-direction.png)
+
+_Directional bites coloured by pass order (first = dark, later = pale)_
+
 ### `bites()`
 
 ```python

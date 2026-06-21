@@ -1,5 +1,7 @@
 """Tests for ClearedArea."""
 
+import math
+
 from raygeo.geo.algo.cleared_area import ClearedArea
 
 
@@ -228,3 +230,48 @@ def test_bites_clipped_to_valid_area():
     valid = [P((0, 0), (10, 0), (10, 10), (0, 10))]
     b = ca.bites(5.0, valid, 0.01)
     assert b == []
+
+
+# --- bite_in_direction ---
+
+
+def test_bite_in_direction_empty_cleared():
+    """No cleared area — returns all bites (no filtering)."""
+    ca = ClearedArea()
+    valid = [P((-50, -50), (50, -50), (50, 50), (-50, 50))]
+    b = ca.bite_in_direction(5.0, valid, 0.01, (0, 0), 0.5)
+    assert b == []
+
+
+def test_bite_in_direction_filters_some():
+    """Direction filter removes bites pointing away from target."""
+    ca = ClearedArea()
+    ca.add_cleared_polygons([P((0, 0), (10, 0), (10, 10), (0, 10))])
+    valid = [P((-50, -50), (50, -50), (50, 50), (-50, 50))]
+
+    all_bites = ca.bites(5.0, valid, 0.01)
+    dir_bites = ca.bite_in_direction(5.0, valid, 0.01, (100, 0), 0.8)
+
+    assert len(dir_bites) <= len(all_bites)
+
+
+def test_bite_in_direction_wide_angle_returns_all():
+    """max_angle >= π returns all bites (no filtering)."""
+    ca = ClearedArea()
+    ca.add_cleared_polygons([P((0, 0), (10, 0), (10, 10), (0, 10))])
+    valid = [P((-50, -50), (50, -50), (50, 50), (-50, 50))]
+
+    all_bites = ca.bites(5.0, valid, 0.01)
+    dir_bites = ca.bite_in_direction(5.0, valid, 0.01, (100, 0), math.pi)
+
+    assert len(dir_bites) == len(all_bites)
+
+
+def test_bite_in_direction_narrow_angle():
+    """Very narrow angle may return zero bites."""
+    ca = ClearedArea()
+    ca.add_cleared_polygons([P((0, 0), (10, 0), (10, 10), (0, 10))])
+    valid = [P((-50, -50), (50, -50), (50, 50), (-50, 50))]
+
+    dir_bites = ca.bite_in_direction(5.0, valid, 0.01, (100, 0), 0.01)
+    assert isinstance(dir_bites, list)
