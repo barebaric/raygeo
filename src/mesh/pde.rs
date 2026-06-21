@@ -1,5 +1,5 @@
 use crate::geo::algo::interp::barycentric_interpolate;
-use crate::geo::algo::intersect::ray_line_intersection;
+use crate::geo::algo::intersect::get_ray_line_intersection;
 use crate::types::{Point, Point3D};
 
 use super::gradient::compute_gradient_field;
@@ -226,7 +226,7 @@ fn find_exit_edge(
         }
         let pa = verts[ei];
         let pb = verts[(ei + 1) % 3];
-        if let Some(pt) = ray_line_intersection(pos, *dir, pa, pb) {
+        if let Some(pt) = get_ray_line_intersection(pos, *dir, pa, pb) {
             let dx = pt.x - pos.x;
             let dy = pt.y - pos.y;
             let t = (dx * dx + dy * dy).sqrt();

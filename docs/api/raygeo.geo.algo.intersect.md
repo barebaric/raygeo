@@ -11,10 +11,10 @@ self-intersection and cross-intersection checks on geometry command arrays.
 
 ## Functions
 
-### `ray_line_intersection()`
+### `get_ray_line_intersection()`
 
 ```python
-ray_line_intersection(
+get_ray_line_intersection(
     origin: tuple[float, float],
     direction: tuple[float, float],
     a: tuple[float, float],
@@ -40,3 +40,32 @@ None if there is no intersection.
 ![Ray–line segment intersection: the ray from origin O hits segments S₁ and S₂ (marked), misses S₃](images/geo-algo-intersect-ray-line.png)
 
 _Ray–line segment intersection: the ray from origin O hits segments S₁ and S₂ (marked), misses S₃_
+
+### `get_ray_polygon_intersection()`
+
+```python
+get_ray_polygon_intersection(
+    origin: tuple[float, float],
+    direction: tuple[float, float],
+    polygon: list[tuple[float, float]],
+) -> tuple[float, float] | None
+```
+
+Intersect a ray with a polygon boundary.
+
+Given a ray starting at origin in the given direction, and a closed polygon defined by a list of
+vertices, returns the closest intersection point with any edge of the polygon (including edge
+endpoints), or None if the ray does not hit the polygon in the forward direction.
+
+| Parameter    | Type                              | Description                                         |
+| ------------ | --------------------------------- | --------------------------------------------------- |
+| `origin`     | `tuple[float, float]`             | Ray start point (x, y).                             |
+| `direction`  | `tuple[float, float]`             | Ray direction vector (dx, dy).                      |
+| `polygon`    | `list[tuple[float, float]]`       | List of polygon vertices [(x1, y1), (x2, y2), ...]. |
+| _Returns_    | `tuple[float, float] &#124; None` | Closest intersection point (x, y), or None.         |
+| _Complexity_ |                                   | O(N) time, O(1) space                               |
+
+![Ray–polygon intersection: the ray from origin O hits the polygon boundary at the closest intersection point along the ray direction.](images/geo-algo-intersect-ray-polygon.png)
+
+_Ray–polygon intersection: the ray from origin O hits the polygon boundary at the closest
+intersection point along the ray direction._

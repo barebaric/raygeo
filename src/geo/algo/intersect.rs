@@ -208,7 +208,7 @@ pub fn check_self_intersection_from_array(
 /// Given a ray starting at `origin` in direction `dir`, and a line segment
 /// from `a` to `b`, returns the intersection point if the ray hits the
 /// segment (including endpoints) in the forward direction.
-pub fn ray_line_intersection(
+pub fn get_ray_line_intersection(
     origin: Point,
     dir: Point,
     a: Point,
@@ -244,6 +244,29 @@ pub fn ray_line_intersection(
     }
 
     Some(Point::new(ix, iy))
+}
+
+/// Cast a ray from `origin` in `direction` and return the closest
+/// intersection with any edge of `polygon` (or `None`).
+pub fn get_ray_polygon_intersection(
+    origin: Point,
+    dir: Point,
+    polygon: &[Point],
+) -> Option<Point> {
+    let mut best: Option<Point> = None;
+    let mut best_t = f64::MAX;
+    for i in 0..polygon.len() {
+        let a = polygon[i];
+        let b = polygon[(i + 1) % polygon.len()];
+        if let Some(pt) = get_ray_line_intersection(origin, dir, a, b) {
+            let t = (pt - origin).length_squared();
+            if t > 1e-12 && t < best_t {
+                best_t = t;
+                best = Some(pt);
+            }
+        }
+    }
+    best
 }
 
 /// Check if two geometry data arrays intersect each other.

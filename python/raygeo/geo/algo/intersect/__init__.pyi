@@ -9,10 +9,11 @@ on geometry command arrays.
 """
 
 __all__ = [
-    "ray_line_intersection",
+    "get_ray_line_intersection",
+    "get_ray_polygon_intersection",
 ]
 
-def ray_line_intersection(origin: tuple[float, float], direction: tuple[float, float], a: tuple[float, float], b: tuple[float, float]) -> tuple[float, float] | None:
+def get_ray_line_intersection(origin: tuple[float, float], direction: tuple[float, float], a: tuple[float, float], b: tuple[float, float]) -> tuple[float, float] | None:
     r"""
     Intersect a ray with a line segment.
     
@@ -27,5 +28,21 @@ def ray_line_intersection(origin: tuple[float, float], direction: tuple[float, f
     :param b: Line segment end point (x, y).
     :returns: Intersection point (x, y), or None.
     :complexity: O(1) time, O(1) space
+    """
+
+def get_ray_polygon_intersection(origin: tuple[float, float], direction: tuple[float, float], polygon: list[tuple[float, float]]) -> tuple[float, float] | None:
+    r"""
+    Intersect a ray with a polygon boundary.
+    
+    Given a ray starting at origin in the given direction, and a closed
+    polygon defined by a list of vertices, returns the closest intersection
+    point with any edge of the polygon (including edge endpoints), or None
+    if the ray does not hit the polygon in the forward direction.
+    
+    :param origin: Ray start point (x, y).
+    :param direction: Ray direction vector (dx, dy).
+    :param polygon: List of polygon vertices [(x1, y1), (x2, y2), ...].
+    :returns: Closest intersection point (x, y), or None.
+    :complexity: O(N) time, O(1) space
     """
 

@@ -15,11 +15,52 @@ on geometry command arrays.
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::gen_stub_pyfunction;
 
-use crate::geo::algo::intersect::ray_line_intersection as rust_ray_line_intersection;
+use crate::geo::algo::intersect;
 
 #[gen_stub_pyfunction(
     python = r#"
-    def ray_line_intersection(
+    def get_ray_polygon_intersection(
+        origin: tuple[float, float],
+        direction: tuple[float, float],
+        polygon: list[tuple[float, float]],
+    ) -> tuple[float, float] | None:
+        """Intersect a ray with a polygon boundary.
+
+        Given a ray starting at origin in the given direction, and a closed
+        polygon defined by a list of vertices, returns the closest intersection
+        point with any edge of the polygon (including edge endpoints), or None
+        if the ray does not hit the polygon in the forward direction.
+
+        :param origin: Ray start point (x, y).
+        :param direction: Ray direction vector (dx, dy).
+        :param polygon: List of polygon vertices [(x1, y1), (x2, y2), ...].
+        :returns: Closest intersection point (x, y), or None.
+        :complexity: O(N) time, O(1) space
+        """
+"#,
+    module = "raygeo.geo.algo.intersect"
+)]
+#[pyfunction(name = "get_ray_polygon_intersection")]
+fn ray_polygon_intersection_py(
+    origin: (f64, f64),
+    direction: (f64, f64),
+    polygon: Vec<(f64, f64)>,
+) -> Option<(f64, f64)> {
+    let pts: Vec<crate::types::Point> = polygon
+        .into_iter()
+        .map(|(x, y)| crate::types::Point::new(x, y))
+        .collect();
+    intersect::get_ray_polygon_intersection(
+        crate::types::Point::new(origin.0, origin.1),
+        crate::types::Point::new(direction.0, direction.1),
+        &pts,
+    )
+    .map(|p| (p.x, p.y))
+}
+
+#[gen_stub_pyfunction(
+    python = r#"
+    def get_ray_line_intersection(
         origin: tuple[float, float],
         direction: tuple[float, float],
         a: tuple[float, float],
@@ -42,14 +83,14 @@ use crate::geo::algo::intersect::ray_line_intersection as rust_ray_line_intersec
 "#,
     module = "raygeo.geo.algo.intersect"
 )]
-#[pyfunction(name = "ray_line_intersection")]
+#[pyfunction(name = "get_ray_line_intersection")]
 fn ray_line_intersection_py(
     origin: (f64, f64),
     direction: (f64, f64),
     a: (f64, f64),
     b: (f64, f64),
 ) -> Option<(f64, f64)> {
-    rust_ray_line_intersection(
+    intersect::get_ray_line_intersection(
         crate::types::Point::new(origin.0, origin.1),
         crate::types::Point::new(direction.0, direction.1),
         crate::types::Point::new(a.0, a.1),
@@ -63,7 +104,11 @@ pub fn register(algo_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     let m = PyModule::new(py, "intersect")?;
     m.setattr("__doc__", MODULE_DOC_INTERSECT)?;
 
-    register_functions!(m, ray_line_intersection_py);
+    register_functions!(
+        m,
+        ray_line_intersection_py,
+        ray_polygon_intersection_py
+    );
 
     algo_mod.add_submodule(&m)?;
     Ok(())

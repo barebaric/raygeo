@@ -2,7 +2,10 @@ import numpy as np
 import pytest
 
 from raygeo.geo import Geometry
-from raygeo.geo.algo.intersect import ray_line_intersection
+from raygeo.geo.algo.intersect import (
+    get_ray_line_intersection,
+    get_ray_polygon_intersection,
+)
 
 
 @pytest.fixture
@@ -191,7 +194,7 @@ def test_no_intersection_bounding_box_overlap():
 
 class TestRayLineIntersection:
     def test_hits_midpoint(self):
-        pt = ray_line_intersection(
+        pt = get_ray_line_intersection(
             (0.0, 0.0), (1.0, 0.0), (5.0, -1.0), (5.0, 1.0)
         )
         assert pt is not None
@@ -199,7 +202,7 @@ class TestRayLineIntersection:
         assert pt[1] == pytest.approx(0.0)
 
     def test_hits_endpoint(self):
-        pt = ray_line_intersection(
+        pt = get_ray_line_intersection(
             (0.0, 0.0), (1.0, 0.0), (10.0, 0.0), (20.0, 10.0)
         )
         assert pt is not None
@@ -207,25 +210,25 @@ class TestRayLineIntersection:
         assert pt[1] == pytest.approx(0.0)
 
     def test_misses_parallel(self):
-        pt = ray_line_intersection(
+        pt = get_ray_line_intersection(
             (0.0, 0.0), (1.0, 0.0), (1.0, 1.0), (3.0, 1.0)
         )
         assert pt is None
 
     def test_misses_ray_away(self):
-        pt = ray_line_intersection(
+        pt = get_ray_line_intersection(
             (1.0, 1.0), (1.0, 0.0), (0.0, 0.0), (10.0, 0.0)
         )
         assert pt is None
 
     def test_misses_segment_behind(self):
-        pt = ray_line_intersection(
+        pt = get_ray_line_intersection(
             (5.0, 0.0), (1.0, 0.0), (0.0, 0.0), (3.0, 0.0)
         )
         assert pt is None
 
     def test_diagonal(self):
-        pt = ray_line_intersection(
+        pt = get_ray_line_intersection(
             (0.0, 0.0), (1.0, 1.0), (10.0, 0.0), (0.0, 10.0)
         )
         assert pt is not None
@@ -233,7 +236,7 @@ class TestRayLineIntersection:
         assert pt[1] == pytest.approx(5.0)
 
     def test_vertical_ray_horizontal_segment(self):
-        pt = ray_line_intersection(
+        pt = get_ray_line_intersection(
             (3.0, 0.0), (0.0, 1.0), (0.0, 5.0), (10.0, 5.0)
         )
         assert pt is not None
@@ -241,36 +244,126 @@ class TestRayLineIntersection:
         assert pt[1] == pytest.approx(5.0)
 
     def test_degenerate_segment_returns_none(self):
-        pt = ray_line_intersection(
+        pt = get_ray_line_intersection(
             (0.0, 0.0), (1.0, 0.0), (5.0, 5.0), (5.0, 5.0)
         )
         assert pt is None
 
     def test_zero_direction_returns_none(self):
-        pt = ray_line_intersection(
+        pt = get_ray_line_intersection(
             (0.0, 0.0), (0.0, 0.0), (1.0, -1.0), (1.0, 1.0)
         )
         assert pt is None
 
     def test_origin_on_segment_returns_none(self):
-        pt = ray_line_intersection(
+        pt = get_ray_line_intersection(
             (2.0, 0.0), (1.0, 0.0), (0.0, 0.0), (5.0, 0.0)
         )
         assert pt is None
 
     def test_collinear_ray_returns_none(self):
-        pt = ray_line_intersection(
+        pt = get_ray_line_intersection(
             (0.0, 0.0), (1.0, 0.0), (5.0, 0.0), (10.0, 0.0)
         )
         assert pt is None
 
     def test_multiple_segments_first_hit(self):
-        a = ray_line_intersection(
+        a = get_ray_line_intersection(
             (0.0, 0.0), (1.0, 1.0), (10.0, 0.0), (0.0, 10.0)
         )
-        b = ray_line_intersection(
+        b = get_ray_line_intersection(
             (0.0, 0.0), (1.0, 1.0), (15.0, 15.0), (15.0, 25.0)
         )
         assert a is not None
         assert b is not None
         assert a[0] < b[0]
+
+
+class TestRayPolygonIntersection:
+    def test_hits_square_from_left(self):
+        pt = get_ray_polygon_intersection(
+            (-1.0, 5.0), (1.0, 0.0), [(0, 0), (10, 0), (10, 10), (0, 10)]
+        )
+        assert pt is not None
+        assert pt[0] == pytest.approx(0.0)
+        assert pt[1] == pytest.approx(5.0)
+
+    def test_hits_square_from_below(self):
+        pt = get_ray_polygon_intersection(
+            (5.0, -1.0), (0.0, 1.0), [(0, 0), (10, 0), (10, 10), (0, 10)]
+        )
+        assert pt is not None
+        assert pt[0] == pytest.approx(5.0)
+        assert pt[1] == pytest.approx(0.0)
+
+    def test_hits_vertex(self):
+        pt = get_ray_polygon_intersection(
+            (-1.0, -1.0), (1.0, 1.0), [(0, 0), (10, 0), (10, 10), (0, 10)]
+        )
+        assert pt is not None
+        assert pt[0] == pytest.approx(0.0)
+        assert pt[1] == pytest.approx(0.0)
+
+    def test_misses_parallel_ray(self):
+        pt = get_ray_polygon_intersection(
+            (5.0, 20.0), (1.0, 0.0), [(0, 0), (10, 0), (10, 10), (0, 10)]
+        )
+        assert pt is None
+
+    def test_misses_ray_away(self):
+        pt = get_ray_polygon_intersection(
+            (5.0, 5.0), (-1.0, 0.0), [(10, 0), (20, 0), (20, 10), (10, 10)]
+        )
+        assert pt is None
+
+    def test_origin_inside_polygon(self):
+        pt = get_ray_polygon_intersection(
+            (5.0, 5.0), (1.0, 0.0), [(0, 0), (10, 0), (10, 10), (0, 10)]
+        )
+        assert pt is not None
+        assert pt[0] == pytest.approx(10.0)
+        assert pt[1] == pytest.approx(5.0)
+
+    def test_triangle(self):
+        pt = get_ray_polygon_intersection(
+            (0.0, 0.0), (1.0, 0.0), [(5, 0), (10, 10), (0, 10)]
+        )
+        assert pt is not None
+        assert pt[0] == pytest.approx(5.0)
+        assert pt[1] == pytest.approx(0.0)
+
+    def test_empty_polygon_returns_none(self):
+        pt = get_ray_polygon_intersection((0.0, 0.0), (1.0, 0.0), [])
+        assert pt is None
+
+    def test_single_point_polygon_returns_none(self):
+        pt = get_ray_polygon_intersection((0.0, 0.0), (1.0, 0.0), [(5, 5)])
+        assert pt is None
+
+    def test_two_point_polygon_returns_intersection(self):
+        pt = get_ray_polygon_intersection(
+            (0.0, 0.0), (1.0, 0.0), [(5, 0), (5, 10)]
+        )
+        assert pt is not None
+        assert pt[0] == pytest.approx(5.0)
+        assert pt[1] == pytest.approx(0.0)
+
+    def test_picks_closest_edge(self):
+        pt = get_ray_polygon_intersection(
+            (-5.0, 5.0), (1.0, 0.0), [(0, 0), (20, 0), (20, 10), (0, 10)]
+        )
+        assert pt is not None
+        assert pt[0] == pytest.approx(0.0)
+        assert pt[1] == pytest.approx(5.0)
+
+    def test_diagonal_polygon(self):
+        pt = get_ray_polygon_intersection(
+            (0.0, 0.0), (1.0, 1.0), [(0, 10), (10, 10), (10, 0)]
+        )
+        assert pt is not None
+
+    def test_direction_matters(self):
+        pt = get_ray_polygon_intersection(
+            (-5.0, 5.0), (-1.0, 0.0), [(0, 0), (10, 0), (10, 10), (0, 10)]
+        )
+        assert pt is None
