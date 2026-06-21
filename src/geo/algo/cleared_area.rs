@@ -1,3 +1,4 @@
+use crate::geo::algo::offset::compute_inset_region;
 use crate::geo::algo::simplify::simplify_polyline;
 use crate::geo::algo::spatial_grid2d::SpatialGrid;
 use crate::geo::shape::polygon::get_polygon_area;
@@ -104,6 +105,25 @@ impl ClearedArea {
             return vec![];
         }
         get_polygons_group_difference(bounds, &self.fragments)
+    }
+
+    /// Compute the inset region of `boundary` by `radius` (excluding
+    /// `obstacles`), then return the portions of that region not covered
+    /// by stored fragments, together with the original obstacle polygons.
+    pub fn remaining_in_inset(
+        &self,
+        boundary: &Polygon,
+        obstacles: &[Polygon],
+        radius: f64,
+    ) -> Vec<Polygon> {
+        let (inset_region, _) =
+            compute_inset_region(boundary, radius, obstacles);
+        let mut result = obstacles.to_vec();
+        result.extend(get_polygons_group_difference(
+            &inset_region,
+            self.fragments(),
+        ));
+        result
     }
 
     pub fn total_area(&self) -> f64 {

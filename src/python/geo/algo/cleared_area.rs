@@ -223,6 +223,47 @@ impl ClearedArea {
             .collect()
     }
 
+    /// Compute the inset region of *boundary* by *radius* (excluding
+    /// *obstacles*), then return the portions of that region not covered
+    /// by stored fragments, together with the original obstacle polygons.
+    ///
+    /// :param boundary: Outer boundary polygon.
+    /// :param obstacles: Obstacle (hole) polygons to exclude.
+    /// :param radius: Inset distance applied to *boundary* and *obstacles*.
+    /// :returns: List of polygons — the obstacles plus the uncovered
+    ///           portion of the inset region.
+    /// :complexity: O(n log n) for the inset and difference operations.
+    #[pyo3(signature = (boundary, obstacles = None, radius = 3.0))]
+    pub fn remaining_in_inset(
+        &self,
+        boundary: Vec<(f64, f64)>,
+        obstacles: Option<Vec<Vec<(f64, f64)>>>,
+        radius: f64,
+    ) -> Vec<Vec<(f64, f64)>> {
+        let boundary_poly: crate::types::Polygon = boundary
+            .into_iter()
+            .map(|(x, y)| crate::types::Point::new(x, y))
+            .collect();
+        let obstacles_polys: Vec<crate::types::Polygon> = obstacles
+            .unwrap_or_default()
+            .into_iter()
+            .map(|v| {
+                v.into_iter()
+                    .map(|(x, y)| crate::types::Point::new(x, y))
+                    .collect()
+            })
+            .collect();
+        let result = self.inner.remaining_in_inset(
+            &boundary_poly,
+            &obstacles_polys,
+            radius,
+        );
+        result
+            .into_iter()
+            .map(|poly| poly.into_iter().map(|p| (p.x, p.y)).collect())
+            .collect()
+    }
+
     fn __repr__(&self) -> String {
         format!("ClearedArea({} fragments)", self.inner.len())
     }

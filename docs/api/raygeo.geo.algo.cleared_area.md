@@ -189,6 +189,27 @@ remaining(
 | _Returns_    | `list[list[tuple[float, float]]]`         |                                                    |
 | _Complexity_ |                                           | O(n \* m) where n = bounds vertices, m = fragments |
 
+### `remaining_in_inset()`
+
+```python
+remaining_in_inset(
+    boundary: Sequence[tuple[float, float]],
+    obstacles: Optional[Sequence[Sequence[tuple[float, float]]]] = None,
+    radius: float = 3.0,
+) -> list[list[tuple[float, float]]]
+```
+
+Compute the inset region of _boundary_ by _radius_ (excluding _obstacles_), then return the portions
+of that region not covered by stored fragments, together with the original obstacle polygons.
+
+| Parameter    | Type                                                       | Description                                                                      |
+| ------------ | ---------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| `boundary`   | `Sequence[tuple[float, float]]`                            | Outer boundary polygon.                                                          |
+| `obstacles`  | `Optional[Sequence[Sequence[tuple[float, float]]]] = None` | Obstacle (hole) polygons to exclude.                                             |
+| `radius`     | `float = 3.0`                                              | Inset distance applied to _boundary_ and _obstacles_.                            |
+| _Returns_    | `list[list[tuple[float, float]]]`                          | List of polygons — the obstacles plus the uncovered portion of the inset region. |
+| _Complexity_ |                                                            | O(n log n) for the inset and difference operations.                              |
+
 ### `total_area()`
 
 ```python

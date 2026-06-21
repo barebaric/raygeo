@@ -275,3 +275,60 @@ def test_bite_in_direction_narrow_angle():
 
     dir_bites = ca.bite_in_direction(5.0, valid, 0.01, (100, 0), 0.01)
     assert isinstance(dir_bites, list)
+
+
+# --- remaining_in_inset ---
+
+
+def test_remaining_in_inset_empty_cleared():
+    """Empty stored fragments returns the full inset region."""
+    ca = ClearedArea()
+    boundary = P((0, 0), (20, 0), (20, 20), (0, 20))
+    result = ca.remaining_in_inset(boundary, [], 2.0)
+    assert len(result) >= 1
+
+
+def test_remaining_in_inset_with_stored_interior():
+    """A central stored polygon leaves an uncovered ring around it."""
+    ca = ClearedArea()
+    stored = P((8, 8), (12, 8), (12, 12), (8, 12))
+    ca.add_cleared_polygons([stored])
+    boundary = P((0, 0), (20, 0), (20, 20), (0, 20))
+    result = ca.remaining_in_inset(boundary, [], 2.0)
+    assert len(result) >= 1
+
+
+def test_remaining_in_inset_fully_covered():
+    """When the entire inset region is covered, result has near-zero area."""
+    ca = ClearedArea()
+    boundary = P((0, 0), (20, 0), (20, 20), (0, 20))
+    covered = P((-1, -1), (21, -1), (21, 21), (-1, 21))
+    ca.add_cleared_polygons([covered])
+    result = ca.remaining_in_inset(boundary, [], 2.0)
+    total_area = 0.0
+    for poly in result:
+        n = len(poly)
+        for i in range(n):
+            x1, y1 = poly[i]
+            x2, y2 = poly[(i + 1) % n]
+            total_area += x1 * y2 - x2 * y1
+    total_area = abs(total_area) / 2.0
+    assert total_area < 5.0
+
+
+def test_remaining_in_inset_includes_obstacles():
+    """Obstacle polygons are included in the result."""
+    ca = ClearedArea()
+    boundary = P((0, 0), (30, 0), (30, 30), (0, 30))
+    obstacles = [P((10, 10), (20, 10), (20, 20), (10, 20))]
+    result = ca.remaining_in_inset(boundary, obstacles, 3.0)
+    assert len(result) >= 1
+    total_area = 0.0
+    for poly in result:
+        n = len(poly)
+        for i in range(n):
+            x1, y1 = poly[i]
+            x2, y2 = poly[(i + 1) % n]
+            total_area += x1 * y2 - x2 * y1
+    total_area = abs(total_area) / 2.0
+    assert total_area > 10.0

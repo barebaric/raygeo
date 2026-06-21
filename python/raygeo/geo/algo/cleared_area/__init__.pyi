@@ -86,5 +86,18 @@ class ClearedArea:
         when used with :py:func:`raygeo.geo.algo.hsm.find_cutting_arc`.
         :complexity: O(m) where m = number of fragments
         """
+    def remaining_in_inset(self, boundary: typing.Sequence[tuple[builtins.float, builtins.float]], obstacles: typing.Optional[typing.Sequence[typing.Sequence[tuple[builtins.float, builtins.float]]]] = None, radius: builtins.float = 3.0) -> builtins.list[builtins.list[tuple[builtins.float, builtins.float]]]:
+        r"""
+        Compute the inset region of *boundary* by *radius* (excluding
+        *obstacles*), then return the portions of that region not covered
+        by stored fragments, together with the original obstacle polygons.
+        
+        :param boundary: Outer boundary polygon.
+        :param obstacles: Obstacle (hole) polygons to exclude.
+        :param radius: Inset distance applied to *boundary* and *obstacles*.
+        :returns: List of polygons — the obstacles plus the uncovered
+                  portion of the inset region.
+        :complexity: O(n log n) for the inset and difference operations.
+        """
     def __repr__(self) -> builtins.str: ...
 
