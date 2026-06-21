@@ -14,6 +14,7 @@ pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
         adaptive_wavefronts_py,
         link_arcs_to_ops_py,
         adaptive_peeling_py,
+        find_cutting_arc_py,
     );
     assembly_mod.add_submodule(&hsm_mod)?;
 
@@ -463,4 +464,39 @@ fn adaptive_peeling_py(
     );
 
     PyOps { inner: ops }
+}
+
+#[gen_stub_pyfunction(
+    python = r#"
+    import collections.abc
+
+    def find_cutting_arc(
+        bite: collections.abc.Sequence[tuple[float, float]],
+        cleared_fragments: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]],
+    ) -> list[tuple[float, float]] | None:
+        """Extract the cutting arc (outer) vertices from a bite polygon.
+
+        The cutting arc is the longest contiguous run of bite vertices
+        that lie *outside* all cleared fragments.
+
+        :param bite: Bite polygon vertices.
+        :param cleared_fragments: List of cleared-area polygons.
+        :returns: The cutting arc polyline, or None if degenerate.
+        """
+"#,
+    module = "raygeo.ops.assembly.hsm"
+)]
+#[pyfunction(name = "find_cutting_arc")]
+fn find_cutting_arc_py(
+    bite: Vec<(f64, f64)>,
+    cleared_fragments: Vec<Vec<(f64, f64)>>,
+) -> Option<Vec<(f64, f64)>> {
+    let bite_pts: Vec<Point> =
+        bite.into_iter().map(|(x, y)| Point::new(x, y)).collect();
+    let cleared: Vec<Vec<Point>> = cleared_fragments
+        .into_iter()
+        .map(|poly| poly.into_iter().map(|(x, y)| Point::new(x, y)).collect())
+        .collect();
+    hsm::find_cutting_arc(&bite_pts, &cleared)
+        .map(|(arc, _, _)| arc.into_iter().map(|p| (p.x, p.y)).collect())
 }

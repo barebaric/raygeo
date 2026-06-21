@@ -1,7 +1,7 @@
 ---
 title: raygeo.ops.assembly.hsm
 sidebar_label: raygeo.ops.assembly.hsm
-sidebar_position: 54
+sidebar_position: 53
 ---
 
 ## Functions
@@ -161,6 +161,35 @@ expand_
 ![Adaptive wavefronts in a Y-shaped channel — contours split and propagate along each branch](images/ops-assembly-hsm-wavefront-yshape.png)
 
 _Adaptive wavefronts in a Y-shaped channel — contours split and propagate along each branch_
+
+### `find_cutting_arc()`
+
+```python
+find_cutting_arc(
+    bite: Sequence[tuple[float, float]],
+    cleared_fragments: Sequence[Sequence[tuple[float, float]]],
+) -> list[tuple[float, float]] | None
+```
+
+Extract the cutting arc (outer) vertices from a bite polygon.
+
+The cutting arc is the longest contiguous run of bite vertices that lie _outside_ all cleared
+fragments.
+
+| Parameter           | Type                                      | Description                                      |
+| ------------------- | ----------------------------------------- | ------------------------------------------------ |
+| `bite`              | `Sequence[tuple[float, float]]`           | Bite polygon vertices.                           |
+| `cleared_fragments` | `Sequence[Sequence[tuple[float, float]]]` | List of cleared-area polygons.                   |
+| _Returns_           | `list[tuple[float, float]] &#124; None`   | The cutting arc polyline, or None if degenerate. |
+
+![Cutting arcs from peeling passes in a pocket with three islands — each arc is the outer edge of a bite polygon](images/ops-assembly-hsm-find-cutting-arc.png)
+
+_Cutting arcs from peeling passes in a pocket with three islands — each arc is the outer edge of a
+bite polygon_
+
+![Cutting arcs from passes without islands](images/ops-assembly-hsm-find-cutting-arc-simple.png)
+
+_Cutting arcs from passes without islands_
 
 ### `link_arcs_to_ops()`
 

@@ -83,7 +83,7 @@ class ClearedArea:
         
         This is useful for determining which parts of a bite polygon
         lie outside the cleared area (i.e. the cutting arc), for example
-        when used with :py:func:`raygeo.geo.algo.hsm.find_cutting_arc`.
+        when used with :py:func:`raygeo.ops.assembly.hsm.find_cutting_arc`.
         :complexity: O(m) where m = number of fragments
         """
     def remaining_in_inset(self, boundary: typing.Sequence[tuple[builtins.float, builtins.float]], obstacles: typing.Optional[typing.Sequence[typing.Sequence[tuple[builtins.float, builtins.float]]]] = None, radius: builtins.float = 3.0) -> builtins.list[builtins.list[tuple[builtins.float, builtins.float]]]:

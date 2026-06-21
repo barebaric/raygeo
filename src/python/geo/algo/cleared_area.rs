@@ -213,7 +213,7 @@ impl ClearedArea {
     ///
     /// This is useful for determining which parts of a bite polygon
     /// lie outside the cleared area (i.e. the cutting arc), for example
-    /// when used with :py:func:`raygeo.geo.algo.hsm.find_cutting_arc`.
+    /// when used with :py:func:`raygeo.ops.assembly.hsm.find_cutting_arc`.
     /// :complexity: O(m) where m = number of fragments
     pub fn fragments(&self) -> Vec<Vec<(f64, f64)>> {
         self.inner

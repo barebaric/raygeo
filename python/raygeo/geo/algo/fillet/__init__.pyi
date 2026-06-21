@@ -15,6 +15,8 @@ import collections.abc
 __all__ = [
     "append_end_fillets",
     "create_fillet_polyline",
+    "fillet_arc_ends",
+    "find_safe_sweep_end",
     "trim_to_safe_fillet_span",
 ]
 
@@ -46,6 +48,40 @@ def create_fillet_polyline(p: tuple[float, float], dir: tuple[float, float], rad
     :param side: Offset side (+1 left, -1 right).
     :param reverse: Whether the arc is reversed.
     :returns: ``(center, polyline)`` — arc centre and fillet vertices.
+    """
+
+def fillet_arc_ends(arc: collections.abc.Sequence[tuple[float, float]], pocket_boundary: collections.abc.Sequence[tuple[float, float]], islands: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]] = [], tool_radius: float = 3, wall_margin: float = 0) -> list[tuple[float, float]]:
+    r"""
+    Round both ends of a cutting arc with quarter-circle fillets.
+    
+    The arc is trimmed to the longest sub-arc whose tool sweep
+    (arc + end fillets of *tool_radius*) does not collide with
+    *pocket_boundary* or *islands*.  A 90° fillet of *tool_radius*
+    is then appended at each end.
+    
+    :param arc: Cutting arc vertices (open polyline).
+    :param pocket_boundary: Outer boundary of the pocket.
+    :param islands: List of island (hole) polygons (default []).
+    :param tool_radius: Tool / fillet radius in mm (default 3.0).
+    :param wall_margin: Extra clearance past tangency (default 0.0).
+    :returns: Filleted arc as an open polyline.
+    """
+
+def find_safe_sweep_end(arc: collections.abc.Sequence[tuple[float, float]], pocket_boundary: collections.abc.Sequence[tuple[float, float]], islands: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]] = [], tool_radius: float = 3, wall_margin: float = 0) -> tuple[tuple[float, float], tuple[float, float]] | None:
+    r"""
+    Find the longest safe sub-arc by iterative sweep shortening.
+    
+    Returns the two points ``(enter, exit)`` delimiting the longest
+    sub-arc of *arc* whose tool sweep (arc + end fillets of
+    *tool_radius*) does not collide with *pocket_boundary* or
+    *islands*.  Shortens from each end until the sweep is clear.
+    Returns ``None`` when no usable safe sub-arc remains.
+    
+    :param arc: Cutting arc vertices (open polyline).
+    :param pocket_boundary: Outer boundary of the pocket.
+    :param islands: List of island (hole) polygons (default []).
+    :param tool_radius: Tool radius in mm (default 3.0).
+    :param wall_margin: Extra clearance past tangency (default 0.0).
     """
 
 def trim_to_safe_fillet_span(polyline: collections.abc.Sequence[tuple[float, float]], outer_boundary: collections.abc.Sequence[tuple[float, float]], inner_obstacles: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]] = [], radius: float = 3, margin: float = 0) -> tuple[tuple[float, float], tuple[float, float]] | None:

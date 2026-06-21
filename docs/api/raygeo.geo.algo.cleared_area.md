@@ -112,7 +112,7 @@ Each fragment is a closed polygon (list of `(x, y)` vertices) representing an ar
 been cut. The fragment set grows as `incorporate` or `add_cleared_polygons` are called.
 
 This is useful for determining which parts of a bite polygon lie outside the cleared area (i.e. the
-cutting arc), for example when used with **raygeo.geo.algo.hsm.find_cutting_arc**.
+cutting arc), for example when used with **raygeo.ops.assembly.hsm.find_cutting_arc**.
 
 | Parameter    | Type                              | Description                        |
 | ------------ | --------------------------------- | ---------------------------------- |

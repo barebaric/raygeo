@@ -1,7 +1,7 @@
 ---
 title: raygeo.mesh.remesh
 sidebar_label: raygeo.mesh.remesh
-sidebar_position: 50
+sidebar_position: 49
 ---
 
 ![Initial mesh (left) vs refined mesh (right) after remesh.](images/mesh-remesh-overview.png)

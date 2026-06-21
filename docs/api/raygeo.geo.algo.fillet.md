@@ -81,6 +81,60 @@ direction at a point_
 
 _`create_fillet_polyline` with `side=+1` (left) and `side=-1` (right) of the direction vector_
 
+### `fillet_arc_ends()`
+
+```python
+fillet_arc_ends(
+    arc: Sequence[tuple[float, float]],
+    pocket_boundary: Sequence[tuple[float, float]],
+    islands: Sequence[Sequence[tuple[float, float]]] = [],
+    tool_radius: float = 3,
+    wall_margin: float = 0,
+) -> list[tuple[float, float]]
+```
+
+Round both ends of a cutting arc with quarter-circle fillets.
+
+The arc is trimmed to the longest sub-arc whose tool sweep (arc + end fillets of _tool_radius_) does
+not collide with _pocket_boundary_ or _islands_. A 90° fillet of _tool_radius_ is then appended at
+each end.
+
+| Parameter         | Type                                           | Description                                  |
+| ----------------- | ---------------------------------------------- | -------------------------------------------- |
+| `arc`             | `Sequence[tuple[float, float]]`                | Cutting arc vertices (open polyline).        |
+| `pocket_boundary` | `Sequence[tuple[float, float]]`                | Outer boundary of the pocket.                |
+| `islands`         | `Sequence[Sequence[tuple[float, float]]] = []` | List of island (hole) polygons (default []). |
+| `tool_radius`     | `float = 3`                                    | Tool / fillet radius in mm (default 3.0).    |
+| `wall_margin`     | `float = 0`                                    | Extra clearance past tangency (default 0.0). |
+| _Returns_         | `list[tuple[float, float]]`                    | Filleted arc as an open polyline.            |
+
+### `find_safe_sweep_end()`
+
+```python
+find_safe_sweep_end(
+    arc: Sequence[tuple[float, float]],
+    pocket_boundary: Sequence[tuple[float, float]],
+    islands: Sequence[Sequence[tuple[float, float]]] = [],
+    tool_radius: float = 3,
+    wall_margin: float = 0,
+) -> tuple[tuple[float, float], tuple[float, float]] | None
+```
+
+Find the longest safe sub-arc by iterative sweep shortening.
+
+Returns the two points `(enter, exit)` delimiting the longest sub-arc of _arc_ whose tool sweep
+(arc + end fillets of _tool_radius_) does not collide with _pocket_boundary_ or _islands_. Shortens
+from each end until the sweep is clear. Returns `None` when no usable safe sub-arc remains.
+
+| Parameter         | Type                                                          | Description                                  |
+| ----------------- | ------------------------------------------------------------- | -------------------------------------------- |
+| `arc`             | `Sequence[tuple[float, float]]`                               | Cutting arc vertices (open polyline).        |
+| `pocket_boundary` | `Sequence[tuple[float, float]]`                               | Outer boundary of the pocket.                |
+| `islands`         | `Sequence[Sequence[tuple[float, float]]] = []`                | List of island (hole) polygons (default []). |
+| `tool_radius`     | `float = 3`                                                   | Tool radius in mm (default 3.0).             |
+| `wall_margin`     | `float = 0`                                                   | Extra clearance past tangency (default 0.0). |
+| _Returns_         | `tuple[tuple[float, float], tuple[float, float]] &#124; None` |                                              |
+
 ### `trim_to_safe_fillet_span()`
 
 ```python

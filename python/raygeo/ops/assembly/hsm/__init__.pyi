@@ -7,6 +7,7 @@ __all__ = [
     "adaptive_entry",
     "adaptive_peeling",
     "adaptive_wavefronts",
+    "find_cutting_arc",
     "link_arcs_to_ops",
 ]
 
@@ -90,6 +91,18 @@ def adaptive_wavefronts(cleared: raygeo.geo.algo.cleared_area.ClearedArea, pocke
     :param area_tolerance: Minimum area increase to continue (default 1.0).
     :param cut_feed_rate: Feed rate for cutting moves (default 1200).
     :returns: Ops with wavefront cutting commands.
+    """
+
+def find_cutting_arc(bite: collections.abc.Sequence[tuple[float, float]], cleared_fragments: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]]) -> list[tuple[float, float]] | None:
+    r"""
+    Extract the cutting arc (outer) vertices from a bite polygon.
+    
+    The cutting arc is the longest contiguous run of bite vertices
+    that lie *outside* all cleared fragments.
+    
+    :param bite: Bite polygon vertices.
+    :param cleared_fragments: List of cleared-area polygons.
+    :returns: The cutting arc polyline, or None if degenerate.
     """
 
 def link_arcs_to_ops(arcs: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]], uncleared: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]] = [], cut_z: float = -1, safe_z: float = 5, mat: tuple[list[tuple[float, float]], list[tuple[int, int]]] | None = None, safe_margin: float = 0, smoothing_amount: int = 50, preserve_order: bool = False, cut_feed_rate: int = 1200, travel_rapid_rate: int = 8000) -> raygeo.ops.Ops:

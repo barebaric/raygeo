@@ -35,7 +35,6 @@ from . import cylindrical
 from . import fillet
 from . import fitting
 from . import helix
-from . import hsm
 from . import hull
 from . import interp
 from . import intersect
@@ -60,7 +59,6 @@ __all__ = [
     "fillet",
     "fitting",
     "helix",
-    "hsm",
     "hull",
     "interp",
     "intersect",

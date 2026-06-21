@@ -12,7 +12,6 @@ pub mod cylindrical;
 pub mod fillet;
 pub mod fitting;
 pub mod helix;
-pub mod hsm;
 pub mod hull;
 pub mod interp;
 pub mod intersect;

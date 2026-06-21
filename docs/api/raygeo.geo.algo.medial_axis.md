@@ -1,7 +1,7 @@
 ---
 title: raygeo.geo.algo.medial_axis
 sidebar_label: raygeo.geo.algo.medial_axis
-sidebar_position: 16
+sidebar_position: 15
 ---
 
 ![Medial axis of a rectangular pocket — skeleton from center to corners.](images/geo-algo-medial-axis-mat-rect.png)
