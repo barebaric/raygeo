@@ -1,7 +1,7 @@
 ---
 title: raygeo.geo.algo.helix
 sidebar_label: raygeo.geo.algo.helix
-sidebar_position: 9
+sidebar_position: 10
 ---
 
 Helical and conical helical path generation.

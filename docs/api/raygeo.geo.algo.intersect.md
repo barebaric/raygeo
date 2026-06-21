@@ -1,7 +1,7 @@
 ---
 title: raygeo.geo.algo.intersect
 sidebar_label: raygeo.geo.algo.intersect
-sidebar_position: 13
+sidebar_position: 14
 ---
 
 Geometry intersection utilities.

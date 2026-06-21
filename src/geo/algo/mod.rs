@@ -4,6 +4,7 @@
 //! curve fitting, 2D Minkowski sums, simplification, and smoothing.
 
 pub mod analysis;
+pub mod astar;
 pub mod cleanup;
 pub mod cleared_area;
 pub mod clipping;

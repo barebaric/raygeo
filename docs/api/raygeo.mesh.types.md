@@ -1,7 +1,7 @@
 ---
 title: raygeo.mesh.types
 sidebar_label: raygeo.mesh.types
-sidebar_position: 49
+sidebar_position: 50
 ---
 
 ## TriangleMesh

@@ -1,7 +1,7 @@
 ---
 title: raygeo.geo.algo.hsm
 sidebar_label: raygeo.geo.algo.hsm
-sidebar_position: 10
+sidebar_position: 11
 ---
 
 ![Adaptive clearing — Helix → Spiral in a pocket with three islands](images/geo-algo-hsm-entry-multi.png)

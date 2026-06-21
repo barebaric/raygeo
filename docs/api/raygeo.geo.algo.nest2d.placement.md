@@ -1,7 +1,7 @@
 ---
 title: raygeo.geo.algo.nest2d.placement
 sidebar_label: raygeo.geo.algo.nest2d.placement
-sidebar_position: 22
+sidebar_position: 23
 ---
 
 Placement search for nesting algorithms.

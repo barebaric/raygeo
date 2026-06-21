@@ -1,7 +1,7 @@
 ---
 title: raygeo.geo.algo.cleared_area
 sidebar_label: raygeo.geo.algo.cleared_area
-sidebar_position: 5
+sidebar_position: 6
 ---
 
 ![ClearedArea tracking a simulated raster toolpath — cleared fragments shown in blue, remaining area in red](images/geo-algo-cleared-area-raster.png)
