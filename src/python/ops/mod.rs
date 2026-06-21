@@ -16,6 +16,7 @@ coolant, frequency), and an Axis bitflag for multi-axis machines.
 ";
 
 use pyo3::prelude::*;
+pub(crate) mod assembly;
 pub(crate) mod axis;
 pub(crate) mod container;
 pub(crate) mod optimize;
@@ -50,6 +51,9 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
 
     // Child submodule: raygeo.ops.algo.optimize
     optimize::register(&ops_mod)?;
+
+    // Child submodule: raygeo.ops.assembly
+    assembly::register(&ops_mod)?;
 
     // Child submodule: raygeo.ops.polyline
     polyline::register(&ops_mod)?;

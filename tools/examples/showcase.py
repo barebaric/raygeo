@@ -11,13 +11,13 @@ from raygeo.geo.algo import hull
 from raygeo.geo.algo.cleared_area import ClearedArea
 from raygeo.geo.algo.cylindrical import transform_to_cylinder
 from raygeo.geo.algo.helix import HelixDirection, generate_helix
-from raygeo.geo.algo.hsm import adaptive_entry, adaptive_peeling
 from raygeo.geo.algo.nest2d.placement import place_parts
 from raygeo.geo.algo.offset import compute_inset_region
 from raygeo.geo.algo.smooth import smooth_polyline
 from raygeo.geo.shape.bezier import linearize_bezier_adaptive
 from raygeo.geo.shape.polygon import get_polygon_convex_hull
 from raygeo.geo.shape.polygon3d import fillet_polyline_3d, offset_polyline_3d
+from raygeo.ops.assembly.hsm import adaptive_entry, adaptive_peeling
 from raygeo.ops.raster import ScanMode, rasterize_power_modulation
 from raygeo.ops.types import CommandType
 from tools.plot import make_pattern, plot_geometry
@@ -533,7 +533,7 @@ def _plot_peeling_multi(ax):
         ],
         [(130, 80), (160, 80), (160, 105), (130, 105)],
     ]
-    path, cp = adaptive_entry(
+    _, cp = adaptive_entry(
         pocket_boundary=boundary,
         islands=islands,
         tool_radius=3.0,
@@ -543,38 +543,52 @@ def _plot_peeling_multi(ax):
         plunge_pitch=1.0,
     )
     ca = ClearedArea(initial=cp)
-    tp = adaptive_peeling(
-        ca,
-        boundary,
+    ops = adaptive_peeling(
+        cleared=ca,
+        pocket_boundary=boundary,
         islands=islands,
         tool_radius=3.0,
         step_over=2.0,
-        z=-5.0,
+        cut_z=-5.0,
         safe_z=5.0,
         area_tolerance=1.0,
     )
 
-    pts = np.array(tp)
-    if len(pts):
-        seg_x, seg_y, z_last = [], [], 0.0
-        for p in pts:
-            if seg_x and abs(p[2] - z_last) > 0.1:
+    pts = []
+    for i in range(ops.len()):
+        if ops.is_travel(i) or ops.is_cutting(i):
+            ep = ops.endpoint(i)
+            pts.append((ep[0], ep[1], ep[2], ops.is_travel(i)))
+
+    if pts:
+        seg_x, seg_y, is_travel = [], [], False
+        for x, y, z, travel in pts:
+            if seg_x and travel != is_travel:
                 if len(seg_x) >= 2:
-                    color = "#2ca02c" if z_last > 0.1 else "#e41a1c"
-                    ls = "--" if z_last > 0.1 else "-"
+                    color = "#2ca02c" if is_travel else "#e41a1c"
+                    ls = "--" if is_travel else "-"
                     ax.plot(
-                        seg_x, seg_y, color=color, linewidth=0.7, linestyle=ls
+                        seg_x,
+                        seg_y,
+                        color=color,
+                        linewidth=0.7,
+                        linestyle=ls,
                     )
                 seg_x, seg_y = [], []
-            if not math.isnan(p[0]):
-                if not seg_x:
-                    z_last = p[2]
-                seg_x.append(p[0])
-                seg_y.append(p[1])
+            if not seg_x:
+                is_travel = travel
+            seg_x.append(x)
+            seg_y.append(y)
         if len(seg_x) >= 2:
-            color = "#2ca02c" if z_last > 0.1 else "#e41a1c"
-            ls = "--" if z_last > 0.1 else "-"
-            ax.plot(seg_x, seg_y, color=color, linewidth=0.7, linestyle=ls)
+            color = "#2ca02c" if is_travel else "#e41a1c"
+            ls = "--" if is_travel else "-"
+            ax.plot(
+                seg_x,
+                seg_y,
+                color=color,
+                linewidth=0.7,
+                linestyle=ls,
+            )
 
     bnd = np.array(list(boundary) + [boundary[0]])
     ax.plot(bnd[:, 0], bnd[:, 1], "k-", linewidth=2, label="Boundary")

@@ -18,6 +18,7 @@ pub mod state;
 pub mod transform;
 pub mod types;
 
+pub use assembly::hsm::{adaptive_peeling, link_arcs_to_ops};
 pub use assembly::lead_in_out::apply_lead_in_out;
 pub use assembly::overscan::apply_overscan;
 pub use assembly::polyline::{link_passes, polyline_to_ops, LinkStrategy};

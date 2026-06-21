@@ -19,6 +19,7 @@ import builtins
 import raygeo
 from raygeo import geo
 import typing
+from . import assembly
 from . import axis
 from . import polyline
 from . import raster
@@ -29,6 +30,7 @@ __all__ = [
     "Ops",
     "OpsSection",
     "OpsSectionRange",
+    "assembly",
     "axis",
     "polyline",
     "raster",

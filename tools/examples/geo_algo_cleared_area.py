@@ -5,8 +5,8 @@ import math
 import matplotlib.pyplot as plt
 
 from raygeo.geo.algo.cleared_area import ClearedArea
-from raygeo.geo.algo.hsm import adaptive_entry
 from raygeo.geo.algo.offset import compute_inset_region
+from raygeo.ops.assembly.hsm import adaptive_entry
 
 
 def generate_raster():

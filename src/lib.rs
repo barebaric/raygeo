@@ -1,15 +1,51 @@
 //! # RayForge Geometry Library
 //!
-//! A 2D/3D geometry library for CAD/CAM applications. Provides structures and functions
-//! for creating, manipulating, and analyzing geometric shapes including lines, arcs,
-//! Bezier curves, polygons, and complex paths.
+//! A 2D/3D geometry library for CAD/CAM applications. Provides
+//! structures and functions for creating, manipulating, and analyzing
+//! geometric shapes including lines, arcs, Bezier curves, polygons, and
+//! complex paths.
+//!
+//! ## Layered architecture
+//!
+//! The crate is split into two layers that depend only downward:
+//!
+//! ```text
+//! geo  →  ops      (never import upward)
+//! ```
+//!
+//! **[`geo`]** — Pure geometry.
+//! Primitives & geometric algorithms: points, paths, offsets, medial
+//! axes, clearing-state tracking, adaptive entry/wavefront generation.
+//! Knows nothing about machining, motion commands, tools, or feed
+//! rates.
+//!
+//! **[`ops`]** — Motion assembly.
+//! Turns geometric primitives into [`Ops`] command sequences: linking,
+//! classification (cut vs travel), lead-in/out, overscan, raster fill,
+//! peeling strategy.  Holds the generic [`State`] representation
+//! (feed_rate, rapid_rate, …) but does NOT decide what values to use —
+//! those are passed in by the caller.
+//!
+//! ### Key constraint
+//!
+//! Ops-layer assemblers **must produce and consume [`Ops`]** — never
+//! raw polygon/polyline lists or Z-encoded point arrays.  Motion
+//! classification is encoded as `MoveTo` (rapid/travel) vs `LineTo`
+//! (feed/cut) at the command level.  `State` values are passed in by
+//! the caller; assemblers apply them via [`Ops::apply_state`] but never
+//! compute them.
+//!
+//! When adding new functionality, ask: *does this decide what to cut,
+//! in what order, or how fast?*  If yes, it belongs in `ops`.  If it
+//! only computes shapes, distances, or geometric relationships, it
+//! belongs in `geo`.
 //!
 //! ## Core Concepts
 //!
-//! - **Geometry**: A path-based geometric structure supporting Move, Line, Arc, and Bezier commands
-//! - **Primitives**: Basic geometric operations like point-in-polygon, line intersections
-//! - **Analysis**: Path analysis including area calculation, winding order, and tangents
-//! - **Query**: Path queries for bounding boxes, distances, and closest points
+//! - **Geometry**: path-based structure with Move/Line/Arc/Bezier
+//! - **Primitives**: point-in-polygon, line intersections
+//! - **Analysis**: area, winding order, tangents
+//! - **Query**: bounding boxes, distances, closest points
 //!
 //! ## Usage
 //!
@@ -104,19 +140,47 @@ pyo3_stub_gen::module_doc!("raygeo", "{}", MODULE_DOC);
 pub(crate) const MODULE_DOC: &str = concat!(
     "RayGeo — 2D/3D geometry engine for CAD/CAM applications.\n",
     "\n",
-    "Core features:\n",
-    "- Geometry types: points, lines, arcs, circles, beziers, polygons, rectangles\n",
+    "Layered architecture\n",
+    "--------------------\n",
+    "\n",
+    "The crate is split into two layers that depend only downward::\n",
+    "\n",
+    "    geo  →  ops      (never import upward)\n",
+    "\n",
+    "``geo`` — Pure geometry.\n",
+    "    Primitives & geometric algorithms: points, paths, offsets,\n",
+    "    medial axes, clearing-state tracking, adaptive entry/wavefront\n",
+    "    generation.  Knows nothing about machining, motion commands,\n",
+    "    tools, or feed rates.\n",
+    "\n",
+    "``ops`` — Motion assembly.\n",
+    "    Turns geometric primitives into ``Ops`` command sequences.\n",
+    "    Linking, classification (cut vs travel), lead-in/out, overscan,\n",
+    "    raster fill, peeling strategy.  Holds the generic ``State``\n",
+    "    representation (feed_rate, rapid_rate, …) but does NOT decide\n",
+    "    what values to use — those are passed in by the caller.\n",
+    "\n",
+    "Key constraint: ops-layer assemblers always produce/consume ``Ops``\n",
+    "objects, never raw polygon or polyline lists.  Motion classification\n",
+    "is encoded as ``MoveTo`` (travel) vs ``LineTo`` (cut) at the command\n",
+    "level.\n",
+    "\n",
+    "Core features\n",
+    "-------------\n",
+    "- Geometry types: points, lines, arcs, circles, beziers, polygons\n",
     "- Path analysis: length, area, bounding box, containment, intersection\n",
     "- Path manipulation: offset, clipping, fitting, simplification, smoothing\n",
     "- Minkowski sums for toolpath generation\n",
     "- Command sequence (Ops) for CNC motion control\n",
     "- Serialization to/from industry formats\n",
     "\n",
-    "Submodules:\n",
+    "Submodules\n",
+    "----------\n",
     "- raygeo.geo — Geometry and path/shape/algo operations\n",
-    "- raygeo.ops — Command sequence (Ops) manipulation\n",
+    "- raygeo.ops — Command sequence (Ops) manipulation and motion assembly\n",
     "\n",
-    "Examples:\n",
+    "Examples\n",
+    "--------\n",
     "    Creating and inspecting geometry:\n",
     "\n",
     "    >>> from raygeo.geo import Geometry\n",
@@ -130,12 +194,12 @@ pub(crate) const MODULE_DOC: &str = concat!(
     "\n",
     "    Manipulating command sequences:\n",
     "\n",
-    "    >>> from raygeo.ops import Ops, Command\n",
+    "    >>> from raygeo.ops import Ops\n",
     "    >>> ops = Ops()\n",
     "    >>> ops.set_power(1.0)\n",
-    "    >>> ops.move_to(0, 0)\n",
-    "    >>> ops.line_to(100, 0)\n",
-    "    >>> ops.travel_distance()\n",
+    "    >>> ops.move_to(0, 0, 0)\n",
+    "    >>> ops.line_to(100, 0, 0)\n",
+    "    >>> ops.distance()\n",
     "    100.0",
 );
 
