@@ -11,10 +11,23 @@ import collections.abc
 import raygeo
 from raygeo.geo import types
 __all__ = [
+    "compute_inset_region",
     "concentric_offsets",
     "find_deepest_cores",
     "offset_contour_group",
 ]
+
+def compute_inset_region(boundary: collections.abc.Sequence[tuple[float, float]], radius: float, obstacles: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]] = []) -> tuple[list[list[tuple[float, float]]], float]:
+    r"""
+    Compute the inset region: boundary shrunk by *radius*, minus
+    obstacle buffers (each obstacle expanded by *radius*).
+    
+    :param boundary: Outer boundary polygon as a list of ``(x, y)`` points.
+    :param radius: Inset / expansion radius.
+    :param obstacles: List of obstacle polygons (default []).
+    :returns: ``(region_polygons, total_area)``.
+    :complexity: O((n + m) log(n + m)) where n and m are boundary and obstacle point counts
+    """
 
 def concentric_offsets(geom: raygeo.Geometry, step: float, max_passes: int = 10, min_area: float = 1) -> list[raygeo.Geometry]:
     r"""

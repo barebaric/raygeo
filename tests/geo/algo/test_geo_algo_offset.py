@@ -2,6 +2,7 @@ import pytest
 
 from raygeo.geo import Geometry
 from raygeo.geo.algo.offset import (
+    compute_inset_region,
     concentric_offsets,
     find_deepest_cores,
     offset_contour_group,
@@ -230,3 +231,92 @@ def test_find_deepest_cores_single_point_for_small_pocket():
         cores = find_deepest_cores(area, step_over=100.0)
         # Returns the original area centroid since it collapses immediately
         assert len(cores) == len(area)
+
+
+# ── compute_inset_region ──────────────────────────────────────────
+
+
+def test_compute_inset_region_simple():
+    """Boundary inset by radius produces a smaller region."""
+    boundary = [(0, 0), (100, 0), (100, 80), (0, 80)]
+    region, area = compute_inset_region(boundary, 5.0, [])
+    assert len(region) >= 1
+    assert area > 0
+    orig_area = poly_area(boundary)
+    assert area < orig_area, (
+        f"inset area {area:.1f} should be < {orig_area:.1f}"
+    )
+
+
+def test_compute_inset_region_with_obstacle():
+    """An obstacle changes the region — at least one polygon returned."""
+    boundary = [(0, 0), (100, 0), (100, 80), (0, 80)]
+    obstacle = [(40, 30), (60, 30), (60, 50), (40, 50)]
+    region_w_obs, area_w_obs = compute_inset_region(boundary, 5.0, [obstacle])
+    assert len(region_w_obs) >= 1
+    assert area_w_obs > 0
+
+
+def test_compute_inset_region_large_radius_collapses():
+    """A radius larger than half the boundary extent collapses the region."""
+    boundary = [(0, 0), (100, 0), (100, 80), (0, 80)]
+    region, area = compute_inset_region(boundary, 200.0, [])
+    assert area == 0.0
+
+
+def test_compute_inset_region_zero_radius():
+    """Zero radius returns the original boundary."""
+    boundary = [(0, 0), (100, 0), (100, 80), (0, 80)]
+    region, area = compute_inset_region(boundary, 0.0, [])
+    assert len(region) >= 1
+    orig = poly_area(boundary)
+    assert abs(area - orig) < 1.0
+
+
+def test_compute_inset_region_multiple_obstacles():
+    """Multiple obstacles produce valid regions."""
+    boundary = [(0, 0), (160, 0), (160, 100), (0, 100)]
+    obs1 = [(20, 20), (40, 20), (40, 40), (20, 40)]
+    obs2 = [(120, 60), (140, 60), (140, 80), (120, 80)]
+    region, area = compute_inset_region(boundary, 5.0, [obs1, obs2])
+    assert len(region) >= 1
+    assert area > 0
+    # Same result as the original compute_valid_tool_area
+    from raygeo.geo.algo.hsm import compute_valid_tool_area
+
+    old_reg, old_area = compute_valid_tool_area(boundary, 5.0, [obs1, obs2])
+    assert abs(area - old_area) < 0.01
+    assert len(region) == len(old_reg)
+
+
+def test_compute_inset_region_empty_boundary():
+    """Empty boundary produces zero area."""
+    region, area = compute_inset_region([], 5.0, [])
+    assert area == 0.0
+
+
+def test_compute_inset_region_negative_radius():
+    """Negative radius (expansion) works — area increases."""
+    boundary = [(0, 0), (10, 0), (10, 10), (0, 10)]
+    region, area = compute_inset_region(boundary, -2.0, [])
+    assert len(region) >= 1
+    orig = poly_area(boundary)
+    assert area > orig, f"expanded area {area:.1f} should be > {orig:.1f}"
+
+
+def test_compute_inset_region_matches_original():
+    """Match compute_valid_tool_area results."""
+    from raygeo.geo.algo.hsm import compute_valid_tool_area
+
+    boundary = [(0, 0), (160, 0), (160, 100), (0, 100)]
+    island = [(60, 35), (100, 35), (100, 65), (60, 65)]
+
+    r1, a1 = compute_inset_region(boundary, 3.0, [island])
+    r2, a2 = compute_valid_tool_area(boundary, 3.0, [island])
+    assert abs(a1 - a2) < 0.01
+    assert len(r1) == len(r2)
+
+    r1b, a1b = compute_inset_region(boundary, 3.0, [])
+    r2b, a2b = compute_valid_tool_area(boundary, 3.0, [])
+    assert abs(a1b - a2b) < 0.01
+    assert len(r1b) == len(r2b)

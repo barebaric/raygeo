@@ -22,7 +22,7 @@ use crate::geo::algo::topology::{
 use crate::geo::geometry::Geometry;
 use crate::geo::shape::polygon::{
     get_polygon_area, get_polygon_centroid, get_polygons_difference,
-    offset_polygon_with_style, JoinStyle,
+    get_polygons_group_difference, offset_polygon_with_style, JoinStyle,
 };
 use crate::types::{Point, Point3D, Polygon};
 
@@ -339,4 +339,32 @@ pub fn find_deepest_cores(
     best_fragment
         .map(|p| vec![get_polygon_centroid(&p)])
         .unwrap_or_default()
+}
+
+/// Compute the region reachable by a circular tool of given radius
+/// moving inside a boundary while avoiding obstacles.
+///
+/// The boundary is inset (shrunk) by `radius`, and each obstacle is
+/// expanded (grown) by `radius` and subtracted from the inset
+/// boundary.  Returns `(region_polygons, total_area)`.
+pub fn compute_inset_region(
+    boundary: &Polygon,
+    radius: f64,
+    obstacles: &[Polygon],
+) -> (Vec<Polygon>, f64) {
+    let mut region =
+        offset_polygon_with_style(boundary, -radius, JoinStyle::Miter);
+    if !region.is_empty() && !obstacles.is_empty() {
+        let obstacle_bufs: Vec<Polygon> = obstacles
+            .iter()
+            .flat_map(|obs| {
+                offset_polygon_with_style(obs, radius, JoinStyle::Miter)
+            })
+            .collect();
+        if !obstacle_bufs.is_empty() {
+            region = get_polygons_group_difference(&region, &obstacle_bufs);
+        }
+    }
+    let total_area: f64 = region.iter().map(get_polygon_area).sum();
+    (region, total_area)
 }

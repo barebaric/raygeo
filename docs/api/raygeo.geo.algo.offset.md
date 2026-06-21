@@ -11,6 +11,36 @@ generation.
 
 ## Functions
 
+### `compute_inset_region()`
+
+```python
+compute_inset_region(
+    boundary: Sequence[tuple[float, float]],
+    radius: float,
+    obstacles: Sequence[Sequence[tuple[float, float]]] = [],
+) -> tuple[list[list[tuple[float, float]]], float]
+```
+
+Compute the inset region: boundary shrunk by _radius_, minus obstacle buffers (each obstacle
+expanded by _radius_).
+
+| Parameter    | Type                                            | Description                                                                |
+| ------------ | ----------------------------------------------- | -------------------------------------------------------------------------- |
+| `boundary`   | `Sequence[tuple[float, float]]`                 | Outer boundary polygon as a list of `(x, y)` points.                       |
+| `radius`     | `float`                                         | Inset / expansion radius.                                                  |
+| `obstacles`  | `Sequence[Sequence[tuple[float, float]]] = []`  | List of obstacle polygons (default []).                                    |
+| _Returns_    | `tuple[list[list[tuple[float, float]]], float]` | `(region_polygons, total_area)`.                                           |
+| _Complexity_ |                                                 | O((n + m) log(n + m)) where n and m are boundary and obstacle point counts |
+
+![Inset region: boundary shrunk by radius, obstacles subtracted. Left: simple inset. Right: inset with a central obstacle.](images/geo-algo-offset-inset-region.png)
+
+_Inset region: boundary shrunk by radius, obstacles subtracted. Left: simple inset. Right: inset
+with a central obstacle._
+
+![Multi-obstacle inset: the region splits into multiple disconnected polygons.](images/geo-algo-offset-inset-region-multi-obstacle.png)
+
+_Multi-obstacle inset: the region splits into multiple disconnected polygons._
+
 ### `concentric_offsets()`
 
 ```python

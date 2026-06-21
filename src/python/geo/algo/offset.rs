@@ -9,6 +9,7 @@ and pocketing toolpath generation.
 
 use super::super::flex_point::{poly_to_points, polygons_to_tuples, PyPoint2D};
 use crate::geo::algo::offset::{
+    compute_inset_region as rust_compute_inset_region,
     concentric_offsets as rust_concentric_offsets,
     find_deepest_cores as rust_find_deepest_cores, offset_contour_group,
 };
@@ -27,6 +28,7 @@ pub fn register(algo_mod: &Bound<'_, PyModule>) -> PyResult<()> {
         concentric_offsets_py,
         find_deepest_cores_py,
         offset_contour_group_py,
+        compute_inset_region_py,
     );
 
     algo_mod.add_submodule(&m)?;
@@ -167,4 +169,43 @@ fn find_deepest_cores_py(
         .collect();
     let cores = rust_find_deepest_cores(&polys, step_over);
     cores.into_iter().map(|p| (p.x, p.y)).collect()
+}
+
+#[gen_stub_pyfunction(
+    python = r#"
+    import collections.abc
+
+    def compute_inset_region(
+        boundary: collections.abc.Sequence[tuple[float, float]],
+        radius: float,
+        obstacles: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]] = [],
+    ) -> tuple[list[list[tuple[float, float]]], float]:
+        """Compute the inset region: boundary shrunk by *radius*, minus
+        obstacle buffers (each obstacle expanded by *radius*).
+
+        :param boundary: Outer boundary polygon as a list of ``(x, y)`` points.
+        :param radius: Inset / expansion radius.
+        :param obstacles: List of obstacle polygons (default []).
+        :returns: ``(region_polygons, total_area)``.
+        :complexity: O((n + m) log(n + m)) where n and m are boundary and obstacle point counts
+        """
+"#,
+    module = "raygeo.geo.algo.offset"
+)]
+#[pyfunction(name = "compute_inset_region")]
+fn compute_inset_region_py(
+    boundary: Vec<(f64, f64)>,
+    radius: f64,
+    obstacles: Vec<Vec<(f64, f64)>>,
+) -> (Vec<Vec<(f64, f64)>>, f64) {
+    let bnd: Vec<GeoPoint> = boundary
+        .into_iter()
+        .map(|(x, y)| GeoPoint::new(x, y))
+        .collect();
+    let obs: Vec<Vec<GeoPoint>> = obstacles
+        .into_iter()
+        .map(|o| o.into_iter().map(|(x, y)| GeoPoint::new(x, y)).collect())
+        .collect();
+    let (region, total) = rust_compute_inset_region(&bnd, radius, &obs);
+    (polygons_to_tuples(region), total)
 }

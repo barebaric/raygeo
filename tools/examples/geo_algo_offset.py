@@ -6,6 +6,7 @@ from matplotlib.lines import Line2D
 
 from raygeo.geo import Geometry
 from raygeo.geo.algo.offset import (
+    compute_inset_region,
     concentric_offsets,
     find_deepest_cores,
     offset_contour_group,
@@ -334,6 +335,105 @@ def generate_deepest_cores_central():
     return fig3
 
 
+def generate_inset_region():
+    """Inset region — boundary shrunk by radius, obstacles subtracted."""
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 6))
+
+    # Simple inset
+    boundary = [(0, 0), (100, 0), (100, 80), (0, 80)]
+    region, area = compute_inset_region(boundary, 8.0, [])
+
+    bnd_arr = list(boundary) + [boundary[0]]
+    ax1.plot(*zip(*bnd_arr), "k-", linewidth=2, label="Boundary")
+    for i, poly in enumerate(region):
+        arr = list(poly) + [poly[0]]
+        ax1.plot(
+            *zip(*arr),
+            "steelblue",
+            linewidth=2.5,
+            label=f"Inset (area={area:.0f})" if i == 0 else None,
+        )
+    ax1.set_title(f"Simple inset (radius=8, area={area:.0f})", fontsize=13)
+    ax1.set_aspect("equal")
+    ax1.legend(fontsize=10)
+    ax1.grid(True, alpha=0.3)
+    ax1.set_xlim(-10, 110)
+    ax1.set_ylim(-10, 90)
+
+    # Inset with obstacle
+    obstacle = [(35, 25), (65, 25), (65, 55), (35, 55)]
+    region2, area2 = compute_inset_region(boundary, 8.0, [obstacle])
+
+    bnd_arr2 = list(boundary) + [boundary[0]]
+    ax2.plot(*zip(*bnd_arr2), "k-", linewidth=2, label="Boundary")
+    obs_arr = list(obstacle) + [obstacle[0]]
+    ax2.fill(
+        *zip(*obs_arr),
+        facecolor="#ddd",
+        edgecolor="#999",
+        linewidth=1.5,
+        label="Obstacle",
+    )
+    for i, poly in enumerate(region2):
+        arr = list(poly) + [poly[0]]
+        ax2.plot(
+            *zip(*arr),
+            "tomato",
+            linewidth=2.5,
+            label=f"Inset (area={area2:.0f})" if i == 0 else None,
+        )
+    ax2.set_title(
+        f"Inset with obstacle (radius=8, area={area2:.0f})", fontsize=13
+    )
+    ax2.set_aspect("equal")
+    ax2.legend(fontsize=10)
+    ax2.grid(True, alpha=0.3)
+    ax2.set_xlim(-10, 110)
+    ax2.set_ylim(-10, 90)
+
+    fig.tight_layout()
+    return fig
+
+
+def generate_inset_region_multi_obstacle():
+    """Inset region with multiple obstacles — area splits into pieces."""
+    boundary = [(0, 0), (160, 0), (160, 100), (0, 100)]
+    obs1 = [(20, 20), (40, 20), (40, 40), (20, 40)]
+    obs2 = [(120, 60), (140, 60), (140, 80), (120, 80)]
+    region, area = compute_inset_region(boundary, 6.0, [obs1, obs2])
+
+    fig, ax = plt.subplots(figsize=(8, 6))
+
+    bnd_arr = list(boundary) + [boundary[0]]
+    ax.plot(*zip(*bnd_arr), "k-", linewidth=2, label="Boundary")
+    for j, (obs, clr) in enumerate([(obs1, "#ddd"), (obs2, "#ddd")]):
+        arr = list(obs) + [obs[0]]
+        ax.fill(
+            *zip(*arr),
+            facecolor=clr,
+            edgecolor="#999",
+            linewidth=1.5,
+            label="Obstacle" if j == 0 else None,
+        )
+    colors = plt.cm.plasma(
+        [i / max(len(region), 1) for i in range(len(region))]
+    )
+    for i, poly in enumerate(region):
+        arr = list(poly) + [poly[0]]
+        ax.plot(
+            *zip(*arr), color=colors[i], linewidth=2.5, label=f"Region {i + 1}"
+        )
+    ax.set_title(f"Multi-obstacle inset (total area={area:.0f})", fontsize=13)
+    ax.set_aspect("equal")
+    ax.legend(fontsize=9)
+    ax.grid(True, alpha=0.3)
+    ax.set_xlim(-10, 170)
+    ax.set_ylim(-10, 110)
+
+    fig.tight_layout()
+    return fig
+
+
 __docs_target__ = ["raygeo.geo.algo.offset.md"]
 __images__ = [
     {
@@ -369,5 +469,21 @@ __images__ = [
             " of the ring"
         ),
         "function": generate_deepest_cores_central,
+    },
+    {
+        "heading": "compute_inset_region",
+        "caption": (
+            "Inset region: boundary shrunk by radius, obstacles subtracted."
+            " Left: simple inset. Right: inset with a central obstacle."
+        ),
+        "function": generate_inset_region,
+    },
+    {
+        "heading": "compute_inset_region",
+        "caption": (
+            "Multi-obstacle inset: the region splits into multiple"
+            " disconnected polygons."
+        ),
+        "function": generate_inset_region_multi_obstacle,
     },
 ]

@@ -85,8 +85,8 @@ pub use minkowski2d::{
     get_polygon_minkowski_sum_convex,
 };
 pub use offset::{
-    concentric_offsets, find_deepest_cores, grow_geometry,
-    grow_geometry_on_plane, offset_contour_group,
+    compute_inset_region, concentric_offsets, find_deepest_cores,
+    grow_geometry, grow_geometry_on_plane, offset_contour_group,
 };
 pub use overcut::apply_overcut;
 pub use polylabel::{find_largest_circle, polylabel};
