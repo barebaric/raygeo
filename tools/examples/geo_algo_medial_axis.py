@@ -3,7 +3,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
-from raygeo.geo.algo.medial_axis import compute_medial_axis
+from raygeo.geo.algo.medial_axis import compute_medial_axis, mat_path
 
 
 def _plot_ma_2d(nodes, edges, root, boundary, islands, ax, title):
@@ -113,6 +113,67 @@ def generate_mat_yshape():
     return fig
 
 
+def generate_mat_path():
+    """MAT path routing around an island."""
+    fig, ax = plt.subplots(figsize=(6, 5))
+    boundary = [(0, 0), (100, 0), (100, 80), (0, 80)]
+    island = [(35, 20), (65, 20), (65, 60), (35, 60)]
+
+    nodes, clearances, edges, root, branches = compute_medial_axis(
+        boundary, holes=[island], tool_radius=1.0, sampling_spacing=6.0
+    )
+
+    from_pt, to_pt = (10, 10), (90, 70)
+    path = mat_path(
+        boundary,
+        from_pt,
+        to_pt,
+        holes=[island],
+        tool_radius=1.0,
+        sampling_spacing=6.0,
+    )
+
+    _plot_ma_2d(
+        nodes,
+        edges,
+        root,
+        boundary,
+        [island],
+        ax,
+        "MAT Path — with island",
+    )
+
+    if path:
+        path_arr = np.array(path)
+        ax.plot(
+            path_arr[:, 0],
+            path_arr[:, 1],
+            "g-",
+            linewidth=3,
+            label="MAT Path",
+        )
+        ax.plot(
+            from_pt[0],
+            from_pt[1],
+            "go",
+            markersize=10,
+            zorder=5,
+        )
+        ax.plot(
+            to_pt[0],
+            to_pt[1],
+            "gs",
+            markersize=10,
+            zorder=5,
+        )
+        ax.annotate("From", from_pt, xytext=(4, 4), textcoords="offset points")
+        ax.annotate("To", to_pt, xytext=(4, 4), textcoords="offset points")
+
+    ax.legend(fontsize=8)
+    fig.tight_layout()
+    return fig
+
+
 __docs_target__ = ["raygeo.geo.algo.medial_axis.md"]
 __images__ = [
     {
@@ -138,5 +199,14 @@ __images__ = [
             " the branching topology."
         ),
         "function": generate_mat_yshape,
+    },
+    {
+        "heading": "mat_path",
+        "caption": (
+            "MAT path routing: a path between two points (green) along"
+            " the medial axis skeleton (red). The path avoids the island"
+            " by following the skeleton topology."
+        ),
+        "function": generate_mat_path,
     },
 ]

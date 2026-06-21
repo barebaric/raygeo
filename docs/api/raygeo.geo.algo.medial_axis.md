@@ -54,3 +54,36 @@ _Medial axis with three rectangular islands — skeleton branches around each ob
 ![Medial axis of a Y-shaped channel — skeleton follows the branching topology.](images/geo-algo-medial-axis-mat-yshape.png)
 
 _Medial axis of a Y-shaped channel — skeleton follows the branching topology._
+
+### `mat_path()`
+
+```python
+mat_path(
+    outer: Sequence[tuple[float, float]],
+    from_pt: tuple[float, float],
+    to_pt: tuple[float, float],
+    holes: Sequence[Sequence[tuple[float, float]]] = [],
+    tool_radius: float = 1,
+    sampling_spacing: float = 1,
+) -> list[tuple[float, float]] | None
+```
+
+Find a path between two points using the Medial Axis.
+
+Computes the MAT of the pocket defined by _outer_ and _holes_, then finds the shortest-topology path
+between _from_pt_ and _to_pt_ along the medial axis graph.
+
+| Parameter          | Type                                           | Description                                       |
+| ------------------ | ---------------------------------------------- | ------------------------------------------------- |
+| `outer`            | `Sequence[tuple[float, float]]`                | Outer boundary polygon (CCW).                     |
+| `from_pt`          | `tuple[float, float]`                          | Start point (x, y).                               |
+| `to_pt`            | `tuple[float, float]`                          | End point (x, y).                                 |
+| `holes`            | `Sequence[Sequence[tuple[float, float]]] = []` | List of hole polygons (CW). Defaults to [].       |
+| `tool_radius`      | `float = 1`                                    | Minimum clearance for MAT pruning.                |
+| `sampling_spacing` | `float = 1`                                    | Boundary sampling density.                        |
+| _Returns_          | `list[tuple[float, float]] &#124; None`        | List of (x, y) waypoints along the path, or None. |
+
+![MAT path routing: a path between two points (green) along the medial axis skeleton (red). The path avoids the island by following the skeleton topology.](images/geo-algo-medial-axis-mat-path.png)
+
+_MAT path routing: a path between two points (green) along the medial axis skeleton (red). The path
+avoids the island by following the skeleton topology._

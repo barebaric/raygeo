@@ -13,6 +13,7 @@ extraction from a constrained triangulation of the pocket boundary.
 import collections.abc
 __all__ = [
     "compute_medial_axis",
+    "mat_path",
 ]
 
 def compute_medial_axis(outer: collections.abc.Sequence[tuple[float, float]], holes: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]] = [], tool_radius: float = 1, sampling_spacing: float = 1) -> tuple[list[tuple[float, float]], list[float], list[tuple[int, int]], int, list[list[int]]]:
@@ -36,5 +37,22 @@ def compute_medial_axis(outer: collections.abc.Sequence[tuple[float, float]], ho
         * **root** — ``int`` index of the maximum-clearance node.
         * **branches** — ``list[list[int]]`` each branch is a node-index path
           from a junction to another junction or leaf.
+    """
+
+def mat_path(outer: collections.abc.Sequence[tuple[float, float]], from_pt: tuple[float, float], to_pt: tuple[float, float], holes: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]] = [], tool_radius: float = 1, sampling_spacing: float = 1) -> list[tuple[float, float]] | None:
+    r"""
+    Find a path between two points using the Medial Axis.
+    
+    Computes the MAT of the pocket defined by *outer* and *holes*,
+    then finds the shortest-topology path between *from_pt* and
+    *to_pt* along the medial axis graph.
+    
+    :param outer: Outer boundary polygon (CCW).
+    :param from_pt: Start point (x, y).
+    :param to_pt: End point (x, y).
+    :param holes: List of hole polygons (CW). Defaults to [].
+    :param tool_radius: Minimum clearance for MAT pruning.
+    :param sampling_spacing: Boundary sampling density.
+    :returns: List of (x, y) waypoints along the path, or None.
     """
 

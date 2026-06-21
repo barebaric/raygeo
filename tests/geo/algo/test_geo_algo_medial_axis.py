@@ -2,7 +2,7 @@
 
 import pytest
 
-from raygeo.geo.algo.medial_axis import compute_medial_axis
+from raygeo.geo.algo.medial_axis import compute_medial_axis, mat_path
 
 
 def _rect(w, h):
@@ -144,3 +144,88 @@ class TestComputeMedialAxis:
         )
         for nx, ny in nodes:
             assert not (30 <= nx <= 50 and 30 <= ny <= 50)
+
+
+class TestMatPath:
+    def test_path_between_corners(self):
+        outer = _rect(100, 80)
+        path = mat_path(
+            outer,
+            (5, 5),
+            (95, 5),
+            tool_radius=1.0,
+            sampling_spacing=6.0,
+        )
+        assert path is not None
+        assert len(path) >= 2
+
+    def test_path_between_opposite_corners(self):
+        outer = _rect(100, 80)
+        path = mat_path(
+            outer, (5, 5), (95, 75), tool_radius=1.0, sampling_spacing=6.0
+        )
+        assert path is not None
+        assert len(path) >= 2
+
+    def test_path_with_island(self):
+        outer = _rect(100, 80)
+        island = [(30, 30), (50, 30), (50, 50), (30, 50)]
+        path = mat_path(
+            outer,
+            (5, 5),
+            (95, 75),
+            holes=[island],
+            tool_radius=1.0,
+            sampling_spacing=6.0,
+        )
+        assert path is not None
+        assert len(path) >= 2
+
+    def test_same_point_returns_single(self):
+        outer = _rect(100, 80)
+        path = mat_path(
+            outer,
+            (25, 25),
+            (25, 25),
+            tool_radius=1.0,
+            sampling_spacing=6.0,
+        )
+        assert path is not None
+        assert len(path) >= 1
+
+    def test_path_stays_within_boundary(self):
+        outer = _rect(100, 80)
+        path = mat_path(
+            outer,
+            (5, 5),
+            (95, 75),
+            tool_radius=1.0,
+            sampling_spacing=6.0,
+        )
+        assert path is not None
+        for x, y in path:
+            assert -1 <= x <= 101
+            assert -1 <= y <= 81
+
+    def test_too_narrow_pocket_errors(self):
+        outer = [(0, 0), (10, 0), (10, 10), (0, 10)]
+        with pytest.raises(RuntimeError, match="no valid medial axis"):
+            mat_path(
+                outer,
+                (1, 1),
+                (9, 9),
+                tool_radius=10.0,
+                sampling_spacing=1.0,
+            )
+
+    def test_l_shape_path(self):
+        outer = [(0, 0), (10, 0), (10, 3), (3, 3), (3, 10), (0, 10)]
+        path = mat_path(
+            outer,
+            (1, 1),
+            (1, 9),
+            tool_radius=0.5,
+            sampling_spacing=3.0,
+        )
+        assert path is not None
+        assert len(path) >= 2

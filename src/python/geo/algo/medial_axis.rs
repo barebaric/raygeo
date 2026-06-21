@@ -33,7 +33,7 @@ pub fn register(algo_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     let m = PyModule::new(py, "medial_axis")?;
     m.setattr("__doc__", MODULE_DOC_MEDIAL_AXIS)?;
 
-    register_functions!(m, compute_medial_axis_py);
+    register_functions!(m, compute_medial_axis_py, mat_path_py);
 
     algo_mod.add_submodule(&m)?;
     Ok(())
@@ -116,4 +116,75 @@ fn compute_medial_axis_py(
         ma.branches.iter().map(|b| b.nodes.clone()).collect();
 
     Ok((nodes, clearances, edges, ma.root, branches))
+}
+
+#[gen_stub_pyfunction(
+    python = r#"
+    import collections.abc
+
+    def mat_path(
+        outer: collections.abc.Sequence[tuple[float, float]],
+        from_pt: tuple[float, float],
+        to_pt: tuple[float, float],
+        holes: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]] = [],
+        tool_radius: float = 1.0,
+        sampling_spacing: float = 1.0,
+    ) -> list[tuple[float, float]] | None:
+        """Find a path between two points using the Medial Axis.
+
+        Computes the MAT of the pocket defined by *outer* and *holes*,
+        then finds the shortest-topology path between *from_pt* and
+        *to_pt* along the medial axis graph.
+
+        :param outer: Outer boundary polygon (CCW).
+        :param from_pt: Start point (x, y).
+        :param to_pt: End point (x, y).
+        :param holes: List of hole polygons (CW). Defaults to [].
+        :param tool_radius: Minimum clearance for MAT pruning.
+        :param sampling_spacing: Boundary sampling density.
+        :returns: List of (x, y) waypoints along the path, or None.
+        """  # noqa: E501
+    "#,
+    module = "raygeo.geo.algo.medial_axis"
+)]
+#[pyfunction(name = "mat_path")]
+#[pyo3(signature = (
+    outer,
+    from_pt,
+    to_pt,
+    holes = None,
+    tool_radius = 1.0,
+    sampling_spacing = 1.0,
+))]
+fn mat_path_py(
+    outer: Vec<(f64, f64)>,
+    from_pt: (f64, f64),
+    to_pt: (f64, f64),
+    holes: Option<Vec<Vec<(f64, f64)>>>,
+    tool_radius: f64,
+    sampling_spacing: f64,
+) -> PyResult<Option<Vec<(f64, f64)>>> {
+    let outer_pts: Vec<Point> =
+        outer.into_iter().map(|(x, y)| Point::new(x, y)).collect();
+    let holes_pts: Vec<Vec<Point>> = holes
+        .unwrap_or_default()
+        .into_iter()
+        .map(|h| h.into_iter().map(|(x, y)| Point::new(x, y)).collect())
+        .collect();
+
+    let ma = rust_ma::compute_medial_axis(
+        &outer_pts,
+        &holes_pts,
+        tool_radius,
+        sampling_spacing,
+    )
+    .map_err(pyo3::exceptions::PyRuntimeError::new_err)?;
+
+    let path = rust_ma::mat_path(
+        &ma,
+        Point::new(from_pt.0, from_pt.1),
+        Point::new(to_pt.0, to_pt.1),
+    );
+
+    Ok(path.map(|pts| pts.into_iter().map(|p| (p.x, p.y)).collect()))
 }

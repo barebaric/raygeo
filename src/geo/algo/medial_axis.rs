@@ -382,3 +382,81 @@ fn contract_to_branches(
 
     branches
 }
+
+/// Find a path between `from` and `to` using the Medial Axis graph.
+///
+/// Returns the node positions along the shortest-topology path
+/// (fewest edges), or `None` when the two points lie in disconnected
+/// regions of the MAT.
+pub fn mat_path(
+    mat: &MedialAxis,
+    from: Point,
+    to: Point,
+) -> Option<Vec<Point>> {
+    if mat.nodes.is_empty() {
+        return None;
+    }
+
+    let nearest = |pt: Point| -> Option<usize> {
+        mat.nodes
+            .iter()
+            .enumerate()
+            .min_by(|(_, a), (_, b)| {
+                let da = (a.point - pt).length_squared();
+                let db = (b.point - pt).length_squared();
+                da.partial_cmp(&db).unwrap_or(std::cmp::Ordering::Equal)
+            })
+            .map(|(i, _)| i)
+    };
+
+    let from_idx = nearest(from)?;
+    let to_idx = nearest(to)?;
+
+    if from_idx == to_idx {
+        return Some(vec![mat.nodes[from_idx].point]);
+    }
+
+    // Build adjacency from edges.
+    let mut adj: HashMap<usize, Vec<usize>> = HashMap::new();
+    for &(a, b) in &mat.edges {
+        adj.entry(a).or_default().push(b);
+        adj.entry(b).or_default().push(a);
+    }
+
+    // BFS.
+    let mut prev: HashMap<usize, usize> = HashMap::new();
+    let mut visited: HashSet<usize> = HashSet::new();
+    let mut queue: VecDeque<usize> = VecDeque::new();
+    visited.insert(from_idx);
+    queue.push_back(from_idx);
+
+    while let Some(cur) = queue.pop_front() {
+        if cur == to_idx {
+            break;
+        }
+        if let Some(neighbors) = adj.get(&cur) {
+            for &nb in neighbors {
+                if visited.insert(nb) {
+                    prev.insert(nb, cur);
+                    queue.push_back(nb);
+                }
+            }
+        }
+    }
+
+    if !visited.contains(&to_idx) {
+        return None;
+    }
+
+    // Reconstruct.
+    let mut path_idx: Vec<usize> = Vec::new();
+    let mut cur = to_idx;
+    path_idx.push(cur);
+    while let Some(&p) = prev.get(&cur) {
+        path_idx.push(p);
+        cur = p;
+    }
+    path_idx.reverse();
+
+    Some(path_idx.into_iter().map(|i| mat.nodes[i].point).collect())
+}

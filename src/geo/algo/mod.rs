@@ -76,7 +76,9 @@ pub use intersect::{
     check_intersection_from_array, check_self_intersection_from_array,
     get_ray_line_intersection, get_ray_polygon_intersection,
 };
-pub use medial_axis::{compute_medial_axis, MaBranch, MaNode, MedialAxis};
+pub use medial_axis::{
+    compute_medial_axis, mat_path, MaBranch, MaNode, MedialAxis,
+};
 pub use minkowski2d::{
     calculate_input_scale, convolve_point_sequences, convolve_two_segments,
     get_inner_fit_polygon, get_no_fit_polygon,
