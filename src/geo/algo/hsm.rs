@@ -9,10 +9,10 @@ use crate::geo::algo::spiral::{generate_spiral, SpiralOptions};
 use crate::geo::shape::line::longest_line_through_point;
 use crate::geo::shape::polygon::{
     get_circle_polygon, get_polygon_area, get_polygon_bounds,
-    get_polygon_centroid, get_polygons_group_difference,
-    get_segment_swept_polygon, offset_polygon_with_style, JoinStyle,
+    get_polygon_centroid,
+    get_segment_swept_polygon,
 };
-use crate::types::{Point, Point3D, Polygon, Rect};
+use crate::types::{Point3D, Polygon};
 
 /// Options for [`adaptive_entry`].
 #[derive(Clone, Debug)]

@@ -167,10 +167,6 @@ impl ClearedArea {
     }
 
     /// Return a unioned, simplified snapshot of the current outer boundary.
-    ///
-    /// This is the "frontier" that wavefront / peeling algorithms expand
-    /// from — the outer perimeter of the cleared region after merging
-    /// overlapping fragments and removing degenerate slivers.
     pub fn frontier(&self, simplify_tol: f64) -> Vec<Polygon> {
         let unioned = get_polygons_union(&self.fragments);
         unioned
@@ -196,9 +192,6 @@ impl ClearedArea {
     /// Expand the current frontier by `step_over`, clip to `valid_area`,
     /// subtract already-cleared space, and return the resulting "bites" of
     /// material to be machined.
-    ///
-    /// This is the shared core primitive used by both the current inside-out
-    /// wavefront tracer and the future D-bite peeling strategy.
     pub fn bites(
         &self,
         step_over: f64,
