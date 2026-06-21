@@ -20,6 +20,7 @@ use crate::geo::shape::line::{
     get_line_segment_closest_point, get_line_segment_intersection,
     get_line_segment_length, get_line_segment_polygon_intersections,
     get_point_line_distance, interpolated_segment_3d, is_point_on_segment,
+    longest_line_through_point,
 };
 use crate::types::{Point, Rect};
 use pyo3::prelude::*;
@@ -91,6 +92,7 @@ pub fn register(shape_mod: &Bound<'_, PyModule>) -> PyResult<()> {
         get_angle_at_vertex_py,
         get_line_segment_length_py,
         interpolated_segment_3d_py,
+        longest_line_through_point_py,
     );
 
     shape_mod.add_submodule(&m)?;
@@ -510,4 +512,37 @@ fn get_angle_at_vertex_py(
 #[pyfunction(name = "get_line_segment_length")]
 fn get_line_segment_length_py(p1: (f64, f64), p2: (f64, f64)) -> f64 {
     get_line_segment_length(Point::new(p1.0, p1.1), Point::new(p2.0, p2.1))
+}
+
+#[gen_stub_pyfunction(
+    python = r#"
+    import raygeo.geo.types
+
+    def longest_line_through_point(
+        pt: tuple[float, float],
+        bbox: tuple[float, float, float, float],
+    ) -> tuple[tuple[float, float], tuple[float, float]]:
+        """Find the longest axis-aligned line through a point within a rectangle.
+
+        Returns ``(start, end)`` — a horizontal line when the bounding box
+        is wider than tall, otherwise a vertical line.
+
+        :param pt: ``(x, y)`` point.
+        :param bbox: ``(x_min, y_min, x_max, y_max)`` rectangle.
+        :returns: ``((x1, y1), (x2, y2))`` start and end of the line.
+        :complexity: O(1) time, O(1) space
+        """
+"#,
+    module = "raygeo.geo.shape.line"
+)]
+#[pyfunction(name = "longest_line_through_point")]
+fn longest_line_through_point_py(
+    pt: (f64, f64),
+    bbox: (f64, f64, f64, f64),
+) -> ((f64, f64), (f64, f64)) {
+    let (start, end) = longest_line_through_point(
+        Point::new(pt.0, pt.1),
+        Rect::new(bbox.0, bbox.1, bbox.2, bbox.3),
+    );
+    ((start.x, start.y), (end.x, end.y))
 }

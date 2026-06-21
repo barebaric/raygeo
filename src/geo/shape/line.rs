@@ -366,3 +366,18 @@ pub fn interpolated_segment_3d(
     }
     out
 }
+
+/// Find the longest axis-aligned line through a point within a rectangle.
+///
+/// Returns `(start, end)` — a horizontal line spanning the full width
+/// when the bounding box is wider than tall, otherwise a vertical line
+/// spanning the full height.
+pub fn longest_line_through_point(pt: Point, bbox: Rect) -> (Point, Point) {
+    let w = bbox.max.x - bbox.min.x;
+    let h = bbox.max.y - bbox.min.y;
+    if w >= h {
+        (Point::new(bbox.min.x, pt.y), Point::new(bbox.max.x, pt.y))
+    } else {
+        (Point::new(pt.x, bbox.min.y), Point::new(pt.x, bbox.max.y))
+    }
+}

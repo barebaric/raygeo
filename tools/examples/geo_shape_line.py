@@ -9,6 +9,7 @@ from raygeo.geo.shape.line import (
     get_line_segment_intersection,
     get_point_line_distance,
     interpolated_segment_3d,
+    longest_line_through_point,
 )
 
 
@@ -281,6 +282,74 @@ def generate_line_crosses_polygon():
     return fig
 
 
+def generate_longest_line():
+    """Longest axis-aligned line through a point within a bounding box."""
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
+
+    bbox = (0.0, 0.0, 10.0, 6.0)
+    pt = (4.0, 3.0)
+    (sx, sy), (ex, ey) = longest_line_through_point(pt, bbox)
+
+    ax1.plot(
+        [bbox[0], bbox[2], bbox[2], bbox[0], bbox[0]],
+        [bbox[1], bbox[1], bbox[3], bbox[3], bbox[1]],
+        "k-",
+        linewidth=2,
+        label="Bounding box",
+    )
+    ax1.plot(
+        pt[0],
+        pt[1],
+        "o",
+        color="tomato",
+        markersize=10,
+        zorder=5,
+        label="Point",
+    )
+    ax1.plot(
+        [sx, ex], [sy, ey], "steelblue", linewidth=3, label="Longest line"
+    )
+    ax1.set_title("Wider bbox → horizontal line", fontsize=13)
+    ax1.set_aspect("equal")
+    ax1.legend(fontsize=10)
+    ax1.grid(True, alpha=0.3)
+    ax1.set_xlim(-1, 11)
+    ax1.set_ylim(-1, 7)
+
+    bbox2 = (0.0, 0.0, 6.0, 10.0)
+    pt2 = (3.0, 5.0)
+    (sx2, sy2), (ex2, ey2) = longest_line_through_point(pt2, bbox2)
+
+    ax2.plot(
+        [bbox2[0], bbox2[2], bbox2[2], bbox2[0], bbox2[0]],
+        [bbox2[1], bbox2[1], bbox2[3], bbox2[3], bbox2[1]],
+        "k-",
+        linewidth=2,
+        label="Bounding box",
+    )
+    ax2.plot(
+        pt2[0],
+        pt2[1],
+        "o",
+        color="tomato",
+        markersize=10,
+        zorder=5,
+        label="Point",
+    )
+    ax2.plot(
+        [sx2, ex2], [sy2, ey2], "steelblue", linewidth=3, label="Longest line"
+    )
+    ax2.set_title("Taller bbox → vertical line", fontsize=13)
+    ax2.set_aspect("equal")
+    ax2.legend(fontsize=10)
+    ax2.grid(True, alpha=0.3)
+    ax2.set_xlim(-1, 7)
+    ax2.set_ylim(-1, 11)
+
+    fig.tight_layout()
+    return fig
+
+
 __docs_target__ = ["raygeo.geo.shape.line.md"]
 __images__ = [
     {
@@ -306,5 +375,14 @@ __images__ = [
             " the boundary (gray, no cross)."
         ),
         "function": generate_line_crosses_polygon,
+    },
+    {
+        "heading": "longest_line_through_point",
+        "caption": (
+            "Find the longest axis-aligned line through a point within a"
+            " bounding box. Left: wider box gives a horizontal line."
+            " Right: taller box gives a vertical line."
+        ),
+        "function": generate_longest_line,
     },
 ]

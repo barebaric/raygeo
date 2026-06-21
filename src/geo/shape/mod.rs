@@ -42,6 +42,7 @@ pub use line::{
     get_line_segment_polygon_intersections,
     get_line_segment_polygon_intersections_into, get_point_line_distance,
     interpolated_segment_3d, is_point_inside_rect, is_point_on_segment,
+    longest_line_through_point,
 };
 pub use point::{are_points_equal, circumcenter, midpoint, transform_point};
 pub use polygon::{

@@ -303,3 +303,29 @@ Check if a point is on a line segment.
 | `seg_p2`     | `types.Point` | End of the line segment.               |
 | _Returns_    | `bool`        | True if the point lies on the segment. |
 | _Complexity_ |               | O(1) time, O(1) space                  |
+
+### `longest_line_through_point()`
+
+```python
+longest_line_through_point(
+    pt: tuple[float, float],
+    bbox: tuple[float, float, float, float],
+) -> tuple[tuple[float, float], tuple[float, float]]
+```
+
+Find the longest axis-aligned line through a point within a rectangle.
+
+Returns `(start, end)` — a horizontal line when the bounding box is wider than tall, otherwise a
+vertical line.
+
+| Parameter    | Type                                              | Description                                       |
+| ------------ | ------------------------------------------------- | ------------------------------------------------- |
+| `pt`         | `tuple[float, float]`                             | `(x, y)` point.                                   |
+| `bbox`       | `tuple[float, float, float, float]`               | `(x_min, y_min, x_max, y_max)` rectangle.         |
+| _Returns_    | `tuple[tuple[float, float], tuple[float, float]]` | `((x1, y1), (x2, y2))` start and end of the line. |
+| _Complexity_ |                                                   | O(1) time, O(1) space                             |
+
+![Find the longest axis-aligned line through a point within a bounding box. Left: wider box gives a horizontal line. Right: taller box gives a vertical line.](images/geo-shape-line-longest-line.png)
+
+_Find the longest axis-aligned line through a point within a bounding box. Left: wider box gives a
+horizontal line. Right: taller box gives a vertical line._

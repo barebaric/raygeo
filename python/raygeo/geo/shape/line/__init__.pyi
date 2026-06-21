@@ -25,6 +25,7 @@ __all__ = [
     "get_point_line_distance",
     "interpolated_segment_3d",
     "is_point_on_line_segment",
+    "longest_line_through_point",
 ]
 
 def does_line_cross_polygon(a: types.Point, b: types.Point, polygon: list[types.Point]) -> bool:
@@ -184,6 +185,19 @@ def is_point_on_line_segment(point: types.Point, seg_p1: types.Point, seg_p2: ty
     :param seg_p1: Start of the line segment.
     :param seg_p2: End of the line segment.
     :returns: True if the point lies on the segment.
+    :complexity: O(1) time, O(1) space
+    """
+
+def longest_line_through_point(pt: tuple[float, float], bbox: tuple[float, float, float, float]) -> tuple[tuple[float, float], tuple[float, float]]:
+    r"""
+    Find the longest axis-aligned line through a point within a rectangle.
+    
+    Returns ``(start, end)`` — a horizontal line when the bounding box
+    is wider than tall, otherwise a vertical line.
+    
+    :param pt: ``(x, y)`` point.
+    :param bbox: ``(x_min, y_min, x_max, y_max)`` rectangle.
+    :returns: ``((x1, y1), (x2, y2))`` start and end of the line.
     :complexity: O(1) time, O(1) space
     """
 
