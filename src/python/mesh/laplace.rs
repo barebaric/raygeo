@@ -1,7 +1,7 @@
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::gen_stub_pyfunction;
 
-use crate::mesh::laplace as rust_laplace;
+use crate::mesh::laplace;
 
 use super::types::TriangleMesh;
 
@@ -36,7 +36,7 @@ fn solve_laplace_py(
     max_iter: usize,
     tolerance: f64,
 ) -> PyResult<Vec<f64>> {
-    rust_laplace::solve_laplace(&mesh.inner, Some(max_iter), Some(tolerance))
+    laplace::solve_laplace(&mesh.inner, Some(max_iter), Some(tolerance))
         .map_err(pyo3::exceptions::PyRuntimeError::new_err)
 }
 
@@ -71,7 +71,7 @@ fn solve_laplace_with_history_py(
     max_iter: usize,
     tolerance: f64,
 ) -> PyResult<(Vec<f64>, Vec<f64>)> {
-    rust_laplace::solve_laplace_with_history(
+    laplace::solve_laplace_with_history(
         &mesh.inner,
         Some(max_iter),
         Some(tolerance),

@@ -9,9 +9,8 @@ and pocketing toolpath generation.
 
 use super::super::flex_point::{poly_to_points, polygons_to_tuples, PyPoint2D};
 use crate::geo::algo::offset::{
-    compute_inset_region as rust_compute_inset_region,
-    concentric_offsets as rust_concentric_offsets,
-    find_deepest_cores as rust_find_deepest_cores, offset_contour_group,
+    compute_inset_region, concentric_offsets, find_deepest_cores,
+    offset_contour_group,
 };
 use crate::geo::shape::polygon::JoinStyle;
 use crate::types::{Point as GeoPoint, Polygon as GeoPolygon};
@@ -72,7 +71,7 @@ fn concentric_offsets_py(
     min_area: f64,
 ) -> Vec<super::super::Geometry> {
     let inner = geom.borrow(py).inner.clone();
-    let results = rust_concentric_offsets(&inner, step, max_passes, min_area);
+    let results = concentric_offsets(&inner, step, max_passes, min_area);
     results
         .into_iter()
         .map(|g| super::super::Geometry { inner: g })
@@ -167,7 +166,7 @@ fn find_deepest_cores_py(
         .into_iter()
         .map(|v| v.into_iter().map(|(x, y)| GeoPoint::new(x, y)).collect())
         .collect();
-    let cores = rust_find_deepest_cores(&polys, step_over);
+    let cores = find_deepest_cores(&polys, step_over);
     cores.into_iter().map(|p| (p.x, p.y)).collect()
 }
 
@@ -206,6 +205,6 @@ fn compute_inset_region_py(
         .into_iter()
         .map(|o| o.into_iter().map(|(x, y)| GeoPoint::new(x, y)).collect())
         .collect();
-    let (region, total) = rust_compute_inset_region(&bnd, radius, &obs);
+    let (region, total) = compute_inset_region(&bnd, radius, &obs);
     (polygons_to_tuples(region), total)
 }

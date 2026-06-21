@@ -1,7 +1,7 @@
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::gen_stub_pyfunction;
 
-use crate::mesh::pde as rust_pde;
+use crate::mesh::pde;
 use crate::types::Point;
 
 use super::types::TriangleMesh;
@@ -42,7 +42,7 @@ fn trace_spiral_py(
     start_point: Option<(f64, f64)>,
 ) -> PyResult<Vec<(f64, f64, f64)>> {
     let start = start_point.map(|(x, y)| Point::new(x, y));
-    let path = rust_pde::trace_spiral(&mesh.inner, &u_field, step_over, start)
+    let path = pde::trace_spiral(&mesh.inner, &u_field, step_over, start)
         .map_err(pyo3::exceptions::PyRuntimeError::new_err)?;
     Ok(path.into_iter().map(|p| (p.x, p.y, p.z)).collect())
 }

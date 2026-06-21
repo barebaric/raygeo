@@ -3,7 +3,7 @@ use pyo3::prelude::*;
 use pyo3::types::PyTuple;
 use pyo3_stub_gen::derive::gen_stub_pyfunction;
 
-use crate::image::convert as rust_convert;
+use crate::image::convert;
 
 #[gen_stub_pyfunction(
     python = r#"
@@ -51,7 +51,7 @@ fn py_rgba_to_grayscale(
     let mut gray = vec![0u8; npix];
     let mut alpha = vec![0.0f32; npix];
 
-    rust_convert::rgba_to_grayscale(
+    convert::rgba_to_grayscale(
         &flat, width, height, stride, &mut gray, &mut alpha,
     );
 
@@ -114,7 +114,7 @@ fn py_rgba_to_binary(
         .extract()?;
 
     let mut output = vec![0u8; width * height];
-    rust_convert::rgba_to_binary(
+    convert::rgba_to_binary(
         &flat,
         width,
         height,
@@ -171,7 +171,7 @@ fn py_rgba_to_grayscale_inplace(
         .extract()?;
 
     let mut buf = flat;
-    rust_convert::rgba_to_grayscale_inplace(&mut buf, width, height, stride);
+    convert::rgba_to_grayscale_inplace(&mut buf, width, height, stride);
 
     let src = buf.into_pyarray(py);
     numpy.call_method("copyto", (arr, src), None)?;

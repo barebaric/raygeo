@@ -502,7 +502,7 @@ fn place_parts_py<'py>(
     min_area: f64,
     curve_tolerance: f64,
 ) -> Vec<Bound<'py, PyDict>> {
-    let parts_rust: Vec<placement::PartDesc> = part_polys
+    let parts: Vec<placement::PartDesc> = part_polys
         .into_iter()
         .zip(part_hulls)
         .map(|(polys, hulls)| placement::PartDesc {
@@ -511,7 +511,7 @@ fn place_parts_py<'py>(
         })
         .collect();
 
-    let sheets_rust: Vec<placement::SheetDesc> = sheet_polys
+    let sheets: Vec<placement::SheetDesc> = sheet_polys
         .into_iter()
         .zip(sheet_offsets)
         .map(|(poly, offset)| placement::SheetDesc {
@@ -527,12 +527,7 @@ fn place_parts_py<'py>(
     };
 
     let results = placement::place_parts(
-        &parts_rust,
-        &sheets_rust,
-        &rotations,
-        &config,
-        &flips_h,
-        &flips_v,
+        &parts, &sheets, &rotations, &config, &flips_h, &flips_v,
     );
 
     let mut py_results: Vec<Bound<'py, PyDict>> = Vec::new();

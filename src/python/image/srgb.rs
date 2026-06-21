@@ -2,7 +2,7 @@ use numpy::IntoPyArray;
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::gen_stub_pyfunction;
 
-use crate::image::srgb as rust_srgb;
+use crate::image::srgb;
 
 #[gen_stub_pyfunction(
     python = r#"
@@ -34,7 +34,7 @@ fn py_srgb_to_linear(
         .extract()?;
 
     let mut output = vec![0.0f32; flat.len()];
-    rust_srgb::srgb_to_linear(&flat, &mut output);
+    srgb::srgb_to_linear(&flat, &mut output);
 
     let shape = arr.getattr("shape")?.extract::<Vec<usize>>()?;
     let result = output.into_pyarray(py);
@@ -83,9 +83,9 @@ fn py_linear_to_srgb(
             .call_method("uniform", (-0.5_f32, 0.5_f32, flat.len()), None)?
             .call_method0("tolist")?
             .extract()?;
-        rust_srgb::linear_to_srgb_dithered(&flat, &mut output, &noise);
+        srgb::linear_to_srgb_dithered(&flat, &mut output, &noise);
     } else {
-        rust_srgb::linear_to_srgb(&flat, &mut output);
+        srgb::linear_to_srgb(&flat, &mut output);
     }
 
     let shape = arr.getattr("shape")?.extract::<Vec<usize>>()?;

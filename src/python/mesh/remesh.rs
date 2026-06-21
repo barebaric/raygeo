@@ -1,7 +1,7 @@
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::gen_stub_pyfunction;
 
-use crate::mesh::remesh::remesh as rust_remesh;
+use crate::mesh::remesh::remesh;
 
 #[gen_stub_pyfunction(
     python = r#"
@@ -41,7 +41,7 @@ fn remesh_py(
         .map(|(x, y)| crate::types::Point::new(x, y))
         .collect();
 
-    let result = rust_remesh(&mesh.inner, &boundary, max_edge_len)
+    let result = remesh(&mesh.inner, &boundary, max_edge_len)
         .map_err(pyo3::exceptions::PyRuntimeError::new_err)?;
 
     Ok(crate::python::mesh::types::TriangleMesh { inner: result })

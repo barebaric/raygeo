@@ -2,7 +2,7 @@ use numpy::IntoPyArray;
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::gen_stub_pyfunction;
 
-use crate::image::rasterize as rust_rasterize;
+use crate::image::rasterize;
 use crate::python::ops::container::PyOps;
 
 #[gen_stub_pyfunction(
@@ -45,7 +45,7 @@ fn py_rasterize_scanlines(
     px_per_mm: (f64, f64),
     origin_mm: (f64, f64),
 ) -> PyResult<Py<PyAny>> {
-    let buffer = rust_rasterize::rasterize_scanlines(
+    let buffer = rasterize::rasterize_scanlines(
         &ops.inner, width_px, height_px, px_per_mm, origin_mm,
     );
 

@@ -17,7 +17,7 @@ extraction from a constrained triangulation of the pocket boundary.
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::gen_stub_pyfunction;
 
-use crate::geo::algo::medial_axis as rust_ma;
+use crate::geo::algo::medial_axis as ma;
 use crate::types::Point;
 
 type PyMaResult = (
@@ -99,7 +99,7 @@ fn compute_medial_axis_py(
         .map(|h| h.into_iter().map(|(x, y)| Point::new(x, y)).collect())
         .collect();
 
-    let ma = rust_ma::compute_medial_axis(
+    let ma = ma::compute_medial_axis(
         &outer_pts,
         &holes_pts,
         tool_radius,
@@ -172,7 +172,7 @@ fn mat_path_py(
         .map(|h| h.into_iter().map(|(x, y)| Point::new(x, y)).collect())
         .collect();
 
-    let ma = rust_ma::compute_medial_axis(
+    let ma = ma::compute_medial_axis(
         &outer_pts,
         &holes_pts,
         tool_radius,
@@ -180,7 +180,7 @@ fn mat_path_py(
     )
     .map_err(pyo3::exceptions::PyRuntimeError::new_err)?;
 
-    let path = rust_ma::mat_path(
+    let path = ma::mat_path(
         &ma,
         Point::new(from_pt.0, from_pt.1),
         Point::new(to_pt.0, to_pt.1),

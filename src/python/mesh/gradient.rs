@@ -1,7 +1,7 @@
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::gen_stub_pyfunction;
 
-use crate::mesh::gradient as rust_gradient;
+use crate::mesh::gradient;
 
 use super::types::TriangleMesh;
 
@@ -33,7 +33,7 @@ fn compute_gradient_field_py(
     mesh: &TriangleMesh,
     u_field: Vec<f64>,
 ) -> PyResult<Vec<(f64, f64)>> {
-    let grad = rust_gradient::compute_gradient_field(&mesh.inner, &u_field)
+    let grad = gradient::compute_gradient_field(&mesh.inner, &u_field)
         .map_err(pyo3::exceptions::PyValueError::new_err)?;
     Ok(grad.into_iter().map(|g| (g[0], g[1])).collect())
 }

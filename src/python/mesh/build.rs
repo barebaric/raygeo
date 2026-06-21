@@ -1,7 +1,7 @@
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::gen_stub_pyfunction;
 
-use crate::mesh::build as rust_build;
+use crate::mesh::build;
 use crate::types::Point;
 
 use super::types::TriangleMesh;
@@ -43,7 +43,7 @@ fn build_triangle_mesh_py(
         .iter()
         .map(|h| h.iter().map(|p| Point::new(p.0, p.1)).collect())
         .collect();
-    let mesh = rust_build::build_triangle_mesh(
+    let mesh = build::build_triangle_mesh(
         &outer_pts,
         &hole_polys,
         tool_radius,
@@ -92,7 +92,7 @@ fn build_uniform_mesh_py(
         .iter()
         .map(|h| h.iter().map(|p| Point::new(p.0, p.1)).collect())
         .collect();
-    let mesh = rust_build::build_uniform_mesh(
+    let mesh = build::build_uniform_mesh(
         &outer_pts,
         &hole_polys,
         tool_radius,

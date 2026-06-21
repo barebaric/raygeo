@@ -1753,7 +1753,7 @@ impl PyOps {
         default_offset: (f64, f64, f64),
         layer_offsets: Option<&Bound<'_, PyDict>>,
     ) -> PyResult<()> {
-        let layer_offsets_rust: Option<Vec<(String, (f64, f64, f64))>> =
+        let parsed_layer_offsets: Option<Vec<(String, (f64, f64, f64))>> =
             if let Some(dict) = layer_offsets {
                 let mut v = Vec::new();
                 for item in dict.iter() {
@@ -1767,7 +1767,7 @@ impl PyOps {
                 None
             };
         self.inner
-            .translate_layers(default_offset, layer_offsets_rust.as_deref());
+            .translate_layers(default_offset, parsed_layer_offsets.as_deref());
         Ok(())
     }
 

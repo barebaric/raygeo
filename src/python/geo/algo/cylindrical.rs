@@ -3,7 +3,7 @@ use pyo3::prelude::*;
 use pyo3::types::PyTuple;
 use pyo3_stub_gen::derive::gen_stub_pyfunction;
 
-use crate::geo::algo::cylindrical as rust_cylindrical;
+use crate::geo::algo::cylindrical;
 
 #[gen_stub_pyfunction(
     python = r#"
@@ -76,7 +76,7 @@ fn py_transform_to_cylinder(
     };
 
     let (result_verts, result_colors, cum_subs) =
-        rust_cylindrical::transform_to_cylinder(
+        cylindrical::transform_to_cylinder(
             &vert_flat,
             diameter,
             col_flat.as_deref(),

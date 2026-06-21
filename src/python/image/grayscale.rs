@@ -2,7 +2,7 @@ use numpy::IntoPyArray;
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::gen_stub_pyfunction;
 
-use crate::image::grayscale as rust_grayscale;
+use crate::image::grayscale;
 
 #[gen_stub_pyfunction(
     python = r#"
@@ -36,7 +36,7 @@ fn py_compute_auto_levels(
         .call_method0("flatten")?
         .call_method0("tolist")?
         .extract()?;
-    Ok(rust_grayscale::compute_auto_levels(&flat, clip_percent))
+    Ok(grayscale::compute_auto_levels(&flat, clip_percent))
 }
 
 #[gen_stub_pyfunction(
@@ -83,7 +83,7 @@ fn py_normalize_grayscale(
         .extract()?;
 
     let mut output = vec![0u8; flat.len()];
-    rust_grayscale::normalize_grayscale(
+    grayscale::normalize_grayscale(
         &flat,
         black_point,
         white_point,

@@ -2,7 +2,7 @@ use numpy::IntoPyArray;
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::gen_stub_pyfunction;
 
-use crate::image::preprocess as rust_preprocess;
+use crate::image::preprocess;
 
 #[gen_stub_pyfunction(
     python = r#"
@@ -51,7 +51,7 @@ fn py_grayscale_to_binary(
 
     let thr_u8 = (threshold.clamp(0.0, 1.0) * 255.0) as u8;
 
-    let output = rust_preprocess::grayscale_to_binary(
+    let output = preprocess::grayscale_to_binary(
         &flat,
         width,
         height,
@@ -100,7 +100,7 @@ fn py_get_component_areas(
         .call_method0("tolist")?
         .extract()?;
 
-    Ok(rust_preprocess::get_component_areas(&flat, width, height))
+    Ok(preprocess::get_component_areas(&flat, width, height))
 }
 
 #[gen_stub_pyfunction(
@@ -140,8 +140,7 @@ fn py_filter_components(
         .call_method0("tolist")?
         .extract()?;
 
-    let output =
-        rust_preprocess::filter_components(&flat, width, height, min_area);
+    let output = preprocess::filter_components(&flat, width, height, min_area);
 
     let result = output.into_pyarray(py);
     let reshaped = result.call_method1("reshape", (height, width))?;
@@ -184,7 +183,7 @@ fn py_denoise_binary(
         .call_method0("tolist")?
         .extract()?;
 
-    let output = rust_preprocess::denoise_binary(&flat, width, height);
+    let output = preprocess::denoise_binary(&flat, width, height);
 
     let result = output.into_pyarray(py);
     let reshaped = result.call_method1("reshape", (height, width))?;
@@ -211,7 +210,7 @@ fn py_denoise_binary(
 )]
 #[pyfunction(name = "compute_adaptive_threshold")]
 fn py_compute_adaptive_threshold(areas: Vec<u32>) -> usize {
-    rust_preprocess::compute_adaptive_threshold(&areas)
+    preprocess::compute_adaptive_threshold(&areas)
 }
 
 pub(crate) fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {

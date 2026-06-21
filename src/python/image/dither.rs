@@ -2,7 +2,7 @@ use numpy::IntoPyArray;
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::gen_stub_pyfunction;
 
-use crate::image::dither as rust_dither;
+use crate::image::dither;
 
 #[gen_stub_pyfunction(
     python = r#"
@@ -40,7 +40,7 @@ fn py_apply_floyd_steinberg_dither(
         .extract()?;
 
     let mut output = vec![0u8; height * width];
-    rust_dither::apply_floyd_steinberg_dither(
+    dither::apply_floyd_steinberg_dither(
         &flat,
         width,
         height,
@@ -88,12 +88,7 @@ fn py_apply_minimum_run_length(
         .call_method0("flatten")?
         .call_method0("tolist")?
         .extract()?;
-    rust_dither::apply_minimum_run_length(
-        &mut flat,
-        width,
-        height,
-        min_run_length,
-    );
+    dither::apply_minimum_run_length(&mut flat, width, height, min_run_length);
 
     let result = flat.into_pyarray(py);
     let reshaped = result.call_method1("reshape", (height, width))?;
@@ -153,7 +148,7 @@ fn py_apply_bayer_dither(
         .extract()?;
 
     let mut output = vec![0u8; height * width];
-    rust_dither::apply_bayer_dither(
+    dither::apply_bayer_dither(
         &gs_flat,
         width,
         height,
