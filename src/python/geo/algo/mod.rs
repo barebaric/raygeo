@@ -3,6 +3,7 @@ pub(crate) mod astar;
 pub(crate) mod cleared_area;
 pub(crate) mod clipping;
 pub(crate) mod cylindrical;
+pub(crate) mod fillet;
 pub(crate) mod fitting;
 pub(crate) mod helix;
 pub(crate) mod hsm;
@@ -63,6 +64,7 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     cleared_area::register(&algo_mod)?;
     clipping::register(&algo_mod)?;
     cylindrical::register(&algo_mod)?;
+    fillet::register(&algo_mod)?;
     fitting::register(&algo_mod)?;
     helix::register(&algo_mod)?;
     hsm::register(&algo_mod)?;
@@ -96,6 +98,8 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     )?;
     sys_modules
         .set_item("raygeo.geo.algo.clipping", &algo_mod.getattr("clipping")?)?;
+    sys_modules
+        .set_item("raygeo.geo.algo.fillet", &algo_mod.getattr("fillet")?)?;
     sys_modules
         .set_item("raygeo.geo.algo.fitting", &algo_mod.getattr("fitting")?)?;
     sys_modules.set_item("raygeo.geo.algo.hull", &algo_mod.getattr("hull")?)?;

@@ -7,10 +7,15 @@ import numpy as np
 from matplotlib.colors import Normalize
 
 from raygeo.geo.algo.cleared_area import ClearedArea
-from raygeo.geo.algo.hsm import fillet_arc_ends, find_cutting_arc
+from raygeo.geo.algo.fillet import append_end_fillets, trim_to_safe_fillet_span
+from raygeo.geo.algo.hsm import find_cutting_arc
 from raygeo.geo.algo.medial_axis import compute_medial_axis
 from raygeo.geo.algo.offset import compute_inset_region
-from raygeo.geo.shape.polygon import get_polygons_group_difference
+from raygeo.geo.shape.arc import get_polyline_turn_sign
+from raygeo.geo.shape.polygon import (
+    get_polygons_group_difference,
+    trim_polyline_at,
+)
 from raygeo.ops.assembly.hsm import (
     adaptive_entry,
     adaptive_peeling,
@@ -280,9 +285,19 @@ def generate_link_arcs():
         for bite in bites:
             arc = find_cutting_arc(bite, ca.fragments())
             if arc and len(arc) >= 3:
-                fa = fillet_arc_ends(arc, boundary, islands, tool_radius)
-                if len(fa) >= 3:
-                    filleted_arcs.append(fa)
+                safe = trim_to_safe_fillet_span(
+                    arc, boundary, islands, tool_radius, 0.0
+                )
+                if safe:
+                    enter, exit_pt = safe
+                    trimmed = trim_polyline_at(arc, enter, exit_pt)
+                    if len(trimmed) >= 3:
+                        side = get_polyline_turn_sign(arc)
+                        fa = append_end_fillets(
+                            trimmed, tool_radius, math.pi / 2, side
+                        )
+                        if len(fa) >= 3:
+                            filleted_arcs.append(fa)
         ca.incorporate(bites)
         if ca.total_area() >= total - 0.1:
             break

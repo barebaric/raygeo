@@ -1,7 +1,7 @@
 ---
 title: raygeo.geo.algo.hsm
 sidebar_label: raygeo.geo.algo.hsm
-sidebar_position: 11
+sidebar_position: 12
 ---
 
 HSM cutting-arc geometry primitives.
@@ -43,14 +43,6 @@ each end.
 | `tool_radius`     | `float = 3`                                    | Tool / fillet radius in mm (default 3.0).    |
 | `wall_margin`     | `float = 0`                                    | Extra clearance past tangency (default 0.0). |
 | _Returns_         | `list[tuple[float, float]]`                    | Filleted arc as an open polyline.            |
-
-![Cutting arcs (blue) with their ends rounded (red) to flow tangentially into the frontier](images/geo-algo-hsm-fillet-arc-ends.png)
-
-_Cutting arcs (blue) with their ends rounded (red) to flow tangentially into the frontier_
-
-![Filleted cutting arcs without islands](images/geo-algo-hsm-fillet-arc-ends-simple.png)
-
-_Filleted cutting arcs without islands_
 
 ### `find_cutting_arc()`
 
@@ -107,8 +99,3 @@ from each end until the sweep is clear. Returns `None` when no usable safe sub-a
 | `tool_radius`     | `float = 3`                                                   | Tool radius in mm (default 3.0).             |
 | `wall_margin`     | `float = 0`                                                   | Extra clearance past tangency (default 0.0). |
 | _Returns_         | `tuple[tuple[float, float], tuple[float, float]] &#124; None` |                                              |
-
-![Cutting arcs trimmed (red) by iterative sweep shortening until the tool sweep no longer collides with the boundary or islands — original arc shown in blue](images/geo-algo-hsm-find-safe-sweep-end.png)
-
-_Cutting arcs trimmed (red) by iterative sweep shortening until the tool sweep no longer collides
-with the boundary or islands — original arc shown in blue_

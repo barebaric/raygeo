@@ -9,6 +9,7 @@ pub mod cleanup;
 pub mod cleared_area;
 pub mod clipping;
 pub mod cylindrical;
+pub mod fillet;
 pub mod fitting;
 pub mod helix;
 pub mod hsm;
@@ -48,6 +49,9 @@ pub use clipping::{
     clip_line_segment_with_rect, clip_line_segment_with_rect_2d,
     subtract_polygons_from_line_segment,
     subtract_polygons_from_line_segment_2d,
+};
+pub use fillet::{
+    append_end_fillets, create_fillet_polyline, trim_to_safe_fillet_span,
 };
 pub use fitting::{
     arc_between_two_points, are_points_collinear,

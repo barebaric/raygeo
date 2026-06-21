@@ -1,7 +1,7 @@
 ---
 title: raygeo.ops.state
 sidebar_label: raygeo.ops.state
-sidebar_position: 57
+sidebar_position: 58
 ---
 
 Machine state tracking for CNC milling.

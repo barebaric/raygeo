@@ -32,6 +32,7 @@ from . import astar
 from . import cleared_area
 from . import clipping
 from . import cylindrical
+from . import fillet
 from . import fitting
 from . import helix
 from . import hsm
@@ -56,6 +57,7 @@ __all__ = [
     "cleared_area",
     "clipping",
     "cylindrical",
+    "fillet",
     "fitting",
     "helix",
     "hsm",

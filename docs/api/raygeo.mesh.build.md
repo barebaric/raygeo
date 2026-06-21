@@ -1,7 +1,7 @@
 ---
 title: raygeo.mesh.build
 sidebar_label: raygeo.mesh.build
-sidebar_position: 45
+sidebar_position: 46
 ---
 
 ![Uniform mesh (top) and Laplace gradient field (bottom) from build_uniform_mesh.](images/mesh-build-uniform.png)

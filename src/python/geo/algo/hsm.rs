@@ -13,7 +13,10 @@ For motion assembly (entry strategy, wavefront expansion, peeling,
 arc linking) see ``raygeo.ops.assembly.hsm``.
 ";
 
+use crate::geo::algo::fillet::{append_end_fillets, trim_to_safe_fillet_span};
 use crate::geo::algo::hsm;
+use crate::geo::shape::arc::get_polyline_turn_sign;
+use crate::geo::shape::polygon::trim_polyline_at;
 use crate::types::Point;
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::gen_stub_pyfunction;
@@ -107,7 +110,7 @@ fn fillet_arc_ends_py(
     wall_margin: f64,
 ) -> Vec<(f64, f64)> {
     let arc_pts: Vec<Point> =
-        arc.into_iter().map(|(x, y)| Point::new(x, y)).collect();
+        arc.iter().map(|&(x, y)| Point::new(x, y)).collect();
     let boundary: Vec<Point> = pocket_boundary
         .into_iter()
         .map(|(x, y)| Point::new(x, y))
@@ -117,16 +120,24 @@ fn fillet_arc_ends_py(
         .into_iter()
         .map(|h| h.into_iter().map(|(x, y)| Point::new(x, y)).collect())
         .collect();
-    hsm::fillet_arc_ends(
+    let Some((enter, exit)) = trim_to_safe_fillet_span(
         &arc_pts,
         &boundary,
         &islands_pts,
         tool_radius,
         wall_margin,
-    )
-    .into_iter()
-    .map(|p| (p.x, p.y))
-    .collect()
+    ) else {
+        return arc;
+    };
+    let trimmed = trim_polyline_at(&arc_pts, enter, exit);
+    if trimmed.len() < 3 {
+        return arc;
+    }
+    let side = get_polyline_turn_sign(&arc_pts);
+    append_end_fillets(&trimmed, tool_radius, std::f64::consts::FRAC_PI_2, side)
+        .into_iter()
+        .map(|p| (p.x, p.y))
+        .collect()
 }
 
 #[gen_stub_pyfunction(
@@ -177,7 +188,7 @@ fn find_safe_sweep_end_py(
         .into_iter()
         .map(|h| h.into_iter().map(|(x, y)| Point::new(x, y)).collect())
         .collect();
-    hsm::find_safe_sweep_end(
+    trim_to_safe_fillet_span(
         &arc_pts,
         &boundary,
         &islands_pts,

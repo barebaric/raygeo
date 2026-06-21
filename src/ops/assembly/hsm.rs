@@ -11,8 +11,9 @@
 //! and how to traverse it.
 
 use crate::geo::algo::cleared_area::ClearedArea;
+use crate::geo::algo::fillet::{append_end_fillets, trim_to_safe_fillet_span};
 use crate::geo::algo::helix::{generate_helix, HelixDirection, HelixOptions};
-use crate::geo::algo::hsm::{fillet_arc_ends, find_cutting_arc};
+use crate::geo::algo::hsm::find_cutting_arc;
 use crate::geo::algo::intersect::get_ray_polygon_intersection;
 use crate::geo::algo::medial_axis::{
     compute_medial_axis, mat_path, MedialAxis,
@@ -22,6 +23,7 @@ use crate::geo::algo::polylabel::find_largest_circle;
 use crate::geo::algo::ramp::{generate_ramp, RampOptions, RampStyle};
 use crate::geo::algo::smooth::smooth_path;
 use crate::geo::algo::spiral::{generate_spiral, SpiralOptions};
+use crate::geo::shape::arc::get_polyline_turn_sign;
 use crate::geo::shape::line::{
     does_line_cross_polygon, get_segment_segment_distance,
     longest_line_through_point,
@@ -29,7 +31,7 @@ use crate::geo::shape::line::{
 use crate::geo::shape::polygon::{
     get_circle_polygon, get_polygon_area, get_polygon_bounds,
     get_polygon_centroid, get_polygons_group_difference, get_polyline_bounds,
-    get_segment_swept_polygon,
+    get_segment_swept_polygon, trim_polyline_at,
 };
 use crate::ops::container::Ops;
 use crate::ops::state::State;
@@ -489,12 +491,23 @@ fn finish_peeling(
             if span < min_span {
                 return None;
             }
-            let fa = fillet_arc_ends(
+            let (enter, exit) = trim_to_safe_fillet_span(
                 arc,
                 pocket_boundary,
                 islands,
                 tool_radius,
                 wall_margin,
+            )?;
+            let trimmed = trim_polyline_at(arc, enter, exit);
+            if trimmed.len() < 3 {
+                return None;
+            }
+            let side = get_polyline_turn_sign(arc);
+            let fa = append_end_fillets(
+                &trimmed,
+                tool_radius,
+                std::f64::consts::FRAC_PI_2,
+                side,
             );
             if fa.len() >= 3 {
                 Some(fa)
