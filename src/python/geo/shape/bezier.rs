@@ -127,17 +127,13 @@ fn get_bezier_point_at_py(
     module = "raygeo.geo.shape.bezier"
 )]
 #[pyfunction(name = "split_bezier")]
-#[allow(clippy::type_complexity)]
 fn split_bezier_py(
     p0: PyPoint2D,
     p1: PyPoint2D,
     p2: PyPoint2D,
     p3: PyPoint2D,
     t: f64,
-) -> (
-    ((f64, f64), (f64, f64), (f64, f64), (f64, f64)),
-    ((f64, f64), (f64, f64), (f64, f64), (f64, f64)),
-) {
+) -> (CubicBezier2D, CubicBezier2D) {
     let (left, right) = split_bezier(
         Point::new(p0.0, p0.1),
         Point::new(p1.0, p1.1),
@@ -742,10 +738,7 @@ fn get_bezier_length_py(
     module = "raygeo.geo.shape.bezier"
 )]
 #[pyfunction(name = "fit_cubic_bezier")]
-#[allow(clippy::type_complexity)]
-fn fit_cubic_bezier_py(
-    points: Vec<(f64, f64)>,
-) -> Option<((f64, f64), (f64, f64), (f64, f64), (f64, f64))> {
+fn fit_cubic_bezier_py(points: Vec<(f64, f64)>) -> Option<CubicBezier2D> {
     let pts: Vec<Point> =
         points.into_iter().map(|(x, y)| Point::new(x, y)).collect();
     fit_cubic_bezier(&pts).map(|b| {
@@ -782,7 +775,7 @@ fn fit_cubic_bezier_py(
 #[allow(clippy::type_complexity)]
 fn nearest_tangent_circle_on_bezier_py(
     point: (f64, f64),
-    bezier: ((f64, f64), (f64, f64), (f64, f64), (f64, f64)),
+    bezier: CubicBezier2D,
     radius: f64,
 ) -> Option<((f64, f64), (f64, f64), f64)> {
     let bz = CubicBezier(

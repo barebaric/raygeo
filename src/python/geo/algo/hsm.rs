@@ -297,7 +297,7 @@ fn adaptive_wavefronts_py(
     wall_margin = 0.0,
     travel_smoothing = 50,
 ))]
-#[allow(clippy::type_complexity, clippy::too_many_arguments)]
+#[allow(clippy::too_many_arguments)]
 fn adaptive_peeling_py(
     cleared: &mut PyClearedArea,
     pocket_boundary: Vec<(f64, f64)>,

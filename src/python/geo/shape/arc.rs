@@ -101,7 +101,6 @@ pub fn register(shape_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     Ok(())
 }
 
-#[allow(clippy::type_complexity)]
 fn _arc_params_from_any(
     arc_cmd: &Bound<'_, PyAny>,
 ) -> PyResult<(Point3D, Point3D, Point3D)> {

@@ -264,7 +264,7 @@ impl Geometry {
         py: Python<'py>,
     ) -> PyResult<Bound<'py, pyo3::types::PyTuple>> {
         let _ = protocol;
-        let mut borrowed = slf.borrow_mut();
+        let borrowed = slf.borrow();
         let data = borrowed.to_dict(py)?;
         let from_dict = slf.get_type().getattr("from_dict")?;
         pyo3::types::PyTuple::new(
@@ -718,11 +718,7 @@ impl Geometry {
     /// Serialize the geometry to a dictionary.
     ///
     /// :complexity: O(n) time, O(n) space
-    #[allow(clippy::wrong_self_convention)]
-    fn to_dict<'py>(
-        &mut self,
-        py: Python<'py>,
-    ) -> PyResult<Bound<'py, PyDict>> {
+    fn to_dict<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyDict>> {
         let last_move_to = self.inner.last_move_to;
         let uniform_scalable = self.inner.uniform_scalable;
         let dict = PyDict::new(py);
