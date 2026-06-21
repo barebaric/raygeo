@@ -55,11 +55,11 @@ pub use polygon::{
     get_polygons_group_intersection, get_polygons_intersection,
     get_polygons_union, get_polyline_bounds, get_segment_swept_polygon,
     is_almost_equal, is_point_in_polygon, is_polygon_clockwise,
-    is_polygon_convex, normalize_polygons, offset_polygon_with_style,
-    path_to_polygon, paths_to_polygons, point_line_distance, polygon_to_path,
-    polygons_to_paths, rotate_polygon, rotate_polygons, scale_polygon,
-    translate_bounds, translate_polygon, translate_polygons, ClipperPath,
-    ClipperPaths, GeoScale, JoinStyle,
+    is_polygon_convex, normalize_polygons, offset_polygon, path_to_polygon,
+    paths_to_polygons, point_line_distance, polygon_to_path, polygons_to_paths,
+    rotate_polygon, rotate_polygons, scale_polygon, translate_bounds,
+    translate_polygon, translate_polygons, ClipperPath, ClipperPaths, GeoScale,
+    JoinStyle,
 };
 pub use polygon3d::{
     deduplicate_polyline_3d, fillet_polyline_3d, flip_polygon_3d,

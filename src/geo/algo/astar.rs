@@ -7,8 +7,8 @@
 use std::collections::BinaryHeap;
 
 use crate::geo::shape::polygon::{
-    get_polygon_group_bounds, is_point_inside_polygon,
-    offset_polygon_with_style, JoinStyle,
+    get_polygon_group_bounds, is_point_inside_polygon, offset_polygon,
+    JoinStyle,
 };
 use crate::types::{Point, Polygon};
 
@@ -79,8 +79,7 @@ pub fn find_path(
     let dilated: Vec<Polygon> = obstacles
         .iter()
         .filter_map(|poly| {
-            let result =
-                offset_polygon_with_style(poly, margin, JoinStyle::Round);
+            let result = offset_polygon(poly, margin, JoinStyle::Round);
             if result.is_empty() {
                 None
             } else {

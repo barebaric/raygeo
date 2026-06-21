@@ -1,7 +1,7 @@
 use crate::geo::shape::polygon::{
     get_polygon_area, get_polygon_group_bounds, get_polygons_group_difference,
-    get_polygons_group_intersection, is_point_in_polygon,
-    offset_polygon_with_style, rotate_polygon, translate_polygon, JoinStyle,
+    get_polygons_group_intersection, is_point_in_polygon, offset_polygon,
+    rotate_polygon, translate_polygon, JoinStyle,
 };
 use crate::types::{Point, Polygon, Rect};
 
@@ -510,11 +510,8 @@ fn compute_nfp_clips_for_placed(
                     .collect();
 
                 if spacing > 0.0 {
-                    for e in offset_polygon_with_style(
-                        &shifted,
-                        spacing,
-                        JoinStyle::Miter,
-                    ) {
+                    for e in offset_polygon(&shifted, spacing, JoinStyle::Miter)
+                    {
                         if e.len() >= 3 {
                             clips.push(e);
                         }

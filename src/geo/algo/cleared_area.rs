@@ -6,7 +6,7 @@ use crate::geo::shape::polygon::get_polygons_group_difference;
 use crate::geo::shape::polygon::get_polygons_group_intersection;
 use crate::geo::shape::polygon::get_polygons_union;
 use crate::geo::shape::polygon::get_segment_swept_polygon;
-use crate::geo::shape::polygon::offset_polygon_with_style;
+use crate::geo::shape::polygon::offset_polygon;
 use crate::geo::shape::polygon::JoinStyle;
 use crate::types::{Point, Point3D, Polygon, Rect};
 
@@ -204,9 +204,7 @@ impl ClearedArea {
         }
         let expanded: Vec<Polygon> = f
             .iter()
-            .flat_map(|p| {
-                offset_polygon_with_style(p, step_over, JoinStyle::Round)
-            })
+            .flat_map(|p| offset_polygon(p, step_over, JoinStyle::Round))
             .collect();
         if expanded.is_empty() {
             return vec![];

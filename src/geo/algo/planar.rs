@@ -16,7 +16,7 @@
 pub use crate::geo::shape::polygon::{
     get_polygons_difference, get_polygons_group_difference,
     get_polygons_group_intersection, get_polygons_intersection,
-    get_polygons_union, offset_polygon_with_style,
+    get_polygons_union, offset_polygon,
 };
 
 // ── Clipping (2D-only cores) ─────────────────────────────────────────

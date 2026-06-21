@@ -23,7 +23,7 @@ use crate::geo::algo::topology::{
 use crate::geo::geometry::Geometry;
 use crate::geo::shape::polygon::{
     get_polygon_area, get_polygon_centroid, get_polygons_group_difference,
-    is_point_in_polygon, offset_polygon_with_style, JoinStyle,
+    is_point_in_polygon, offset_polygon, JoinStyle,
 };
 use crate::types::{Point, Point3D, Polygon};
 
@@ -74,7 +74,7 @@ pub fn offset_contour_group(
         return vec![];
     }
     if hole_paths.is_empty() {
-        return offset_polygon_with_style(solid_path, offset, join_style);
+        return offset_polygon(solid_path, offset, join_style);
     }
     // Offset solid and holes separately, then subtract all holes from the
     // solid in a single Clipper2 difference operation.
@@ -89,11 +89,10 @@ pub fn offset_contour_group(
     // outer boundaries CCW, holes CW.  Sequential subtraction corrupts the
     // orientation of earlier holes when later holes are processed, because
     // each intermediate polygon is treated as a standalone subject.
-    let offset_solids =
-        offset_polygon_with_style(solid_path, offset, join_style);
+    let offset_solids = offset_polygon(solid_path, offset, join_style);
     let offset_holes: Vec<Polygon> = hole_paths
         .iter()
-        .flat_map(|hole| offset_polygon_with_style(hole, -offset, join_style))
+        .flat_map(|hole| offset_polygon(hole, -offset, join_style))
         .collect();
     if offset_holes.is_empty() {
         return offset_solids;
@@ -400,8 +399,7 @@ fn find_deepest_cores_by_offset(valid_tool_area: &[Polygon]) -> Vec<Point> {
         // still yields a non-empty polygon.
         while high - low > tol {
             let mid = (low + high) * 0.5;
-            let result =
-                offset_polygon_with_style(poly, -mid, JoinStyle::Miter);
+            let result = offset_polygon(poly, -mid, JoinStyle::Miter);
             let valid: Vec<Polygon> = result
                 .into_iter()
                 .filter(|p| p.len() >= 3 && get_polygon_area(p) > 1e-9)
@@ -441,14 +439,11 @@ pub fn compute_inset_region(
     radius: f64,
     obstacles: &[Polygon],
 ) -> (Vec<Polygon>, f64) {
-    let mut region =
-        offset_polygon_with_style(boundary, -radius, JoinStyle::Miter);
+    let mut region = offset_polygon(boundary, -radius, JoinStyle::Miter);
     if !region.is_empty() && !obstacles.is_empty() {
         let obstacle_bufs: Vec<Polygon> = obstacles
             .iter()
-            .flat_map(|obs| {
-                offset_polygon_with_style(obs, radius, JoinStyle::Miter)
-            })
+            .flat_map(|obs| offset_polygon(obs, radius, JoinStyle::Miter))
             .collect();
         if !obstacle_bufs.is_empty() {
             region = get_polygons_group_difference(&region, &obstacle_bufs);

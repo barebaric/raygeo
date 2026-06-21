@@ -8,11 +8,11 @@ and pocketing toolpath generation.
 ";
 
 use super::super::flex_point::{poly_to_points, polygons_to_tuples, PyPoint2D};
+use super::super::shape::polygon::PyJoinStyle;
 use crate::geo::algo::offset::{
     compute_inset_region, concentric_offsets, find_deepest_cores,
     offset_contour_group,
 };
-use crate::geo::shape::polygon::JoinStyle;
 use crate::types::{Point as GeoPoint, Polygon as GeoPolygon};
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::gen_stub_pyfunction;
@@ -87,7 +87,7 @@ fn concentric_offsets_py(
         solid_path: collections.abc.Sequence[raygeo.geo.types.Point],
         hole_paths: collections.abc.Sequence[collections.abc.Sequence[raygeo.geo.types.Point]],
         offset: float,
-        join_style: str = "miter",
+        join_style: raygeo.geo.shape.polygon.JoinStyle = raygeo.geo.shape.polygon.JoinStyle.Miter,
     ) -> list[raygeo.geo.types.Polygon]:
         """Offset a solid contour with its hole contours.
 
@@ -98,7 +98,7 @@ fn concentric_offsets_py(
         :param solid_path: Outer boundary polygon as (x, y) points.
         :param hole_paths: List of hole polygons.
         :param offset: Offset distance (positive to inflate, negative to deflate).
-        :param join_style: Corner join style: ``"miter"`` (default), ``"round"``, or ``"square"``.
+        :param join_style: Corner join style (default: ``JoinStyle.Miter``).
         :returns: Offset polygon(s) with holes subtracted.
         :complexity: O(n log n)
         """
@@ -106,32 +106,24 @@ fn concentric_offsets_py(
     module = "raygeo.geo.algo.offset"
 )]
 #[pyfunction(name = "offset_contour_group")]
-#[pyo3(signature = (solid_path, hole_paths, offset, join_style = "miter"))]
+#[pyo3(signature = (solid_path, hole_paths, offset, join_style = PyJoinStyle::Miter))]
 fn offset_contour_group_py(
     solid_path: Vec<PyPoint2D>,
     hole_paths: Vec<Vec<(f64, f64)>>,
     offset: f64,
-    join_style: &str,
-) -> PyResult<Vec<Vec<(f64, f64)>>> {
-    let style = match join_style {
-        "miter" => JoinStyle::Miter,
-        "round" => JoinStyle::Round,
-        "square" => JoinStyle::Square,
-        other => {
-            return Err(pyo3::exceptions::PyValueError::new_err(format!(
-                "invalid join_style '{}': expected 'miter', 'round', or 'square'",
-                other
-            )));
-        }
-    };
+    join_style: PyJoinStyle,
+) -> Vec<Vec<(f64, f64)>> {
     let solid = poly_to_points(solid_path);
     let holes: Vec<GeoPolygon> = hole_paths
         .into_iter()
         .map(|h| h.into_iter().map(|(x, y)| GeoPoint::new(x, y)).collect())
         .collect();
-    Ok(polygons_to_tuples(offset_contour_group(
-        &solid, &holes, offset, style,
-    )))
+    polygons_to_tuples(offset_contour_group(
+        &solid,
+        &holes,
+        offset,
+        join_style.into(),
+    ))
 }
 
 #[gen_stub_pyfunction(

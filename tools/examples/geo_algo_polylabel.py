@@ -8,6 +8,7 @@ from matplotlib.patches import Circle, Rectangle
 from raygeo.geo.algo.offset import offset_contour_group
 from raygeo.geo.algo.polylabel import find_largest_circle, polylabel
 from raygeo.geo.shape.polygon import (
+    JoinStyle,
     get_polygon_closest_point,
     get_polygon_signed_area,
     is_point_inside_polygon,
@@ -133,7 +134,9 @@ def generate_multi_island():
     mb = [(0, 0), (160, 0), (160, 100), (0, 100)]
     isl1 = [(30, 20), (50, 20), (50, 40), (30, 40)]
     isl2 = [(110, 60), (130, 60), (130, 80), (110, 80)]
-    m_area = offset_contour_group(mb, [isl1, isl2], -5.0, join_style="round")
+    m_area = offset_contour_group(
+        mb, [isl1, isl2], -5.0, join_style=JoinStyle.Round
+    )
 
     # Union all valid-area fragments so holes are properly subtracted
     # Take the largest valid region by absolute area

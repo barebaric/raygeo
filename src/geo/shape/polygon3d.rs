@@ -36,8 +36,7 @@ use super::polygon::{
     get_polygon_convex_hull as get_polygon_convex_hull_2d,
     get_polygons_difference, get_polygons_group_difference,
     get_polygons_group_intersection, get_polygons_intersection,
-    get_polygons_union as get_polygons_union_2d, offset_polygon_with_style,
-    JoinStyle,
+    get_polygons_union as get_polygons_union_2d, offset_polygon, JoinStyle,
 };
 
 // ── internal helpers ──────────────────────────────────────────────────
@@ -190,8 +189,7 @@ pub fn offset_polygon_3d(polygon: &Polygon3D, offset: f64) -> Vec<Polygon3D> {
         return vec![];
     }
     let (z, projected) = project(polygon);
-    let result =
-        offset_polygon_with_style(&projected, offset, JoinStyle::Miter);
+    let result = offset_polygon(&projected, offset, JoinStyle::Miter);
     lift(result, z)
 }
 

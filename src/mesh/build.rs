@@ -4,7 +4,7 @@ use spade::handles::FixedVertexHandle;
 use spade::{ConstrainedDelaunayTriangulation, Point2, Triangulation};
 
 use crate::geo::shape::polygon::{
-    is_point_in_polygon, offset_polygon_with_style as offset_poly, JoinStyle,
+    is_point_in_polygon, offset_polygon as offset_poly, JoinStyle,
 };
 use crate::types::Point;
 

@@ -7,6 +7,7 @@ import numpy as np
 from matplotlib.patches import Circle as CirclePatch
 
 from raygeo.geo.shape.polygon import (
+    JoinStyle,
     apply_minimum_curvature,
     clean_polygon,
     does_path_sweep_intersect_polygon,
@@ -205,8 +206,13 @@ def generate_boolean_difference():
 
 def generate_offset():
     """Polygon offset."""
+
     triangle = [(0.0, 0.0), (20.0, 0.0), (10.0, 18.0)]
-    styles = [("miter", "Miter"), ("round", "Round"), ("square", "Square")]
+    styles = [
+        (JoinStyle.Miter, "Miter"),
+        (JoinStyle.Round, "Round"),
+        (JoinStyle.Square, "Square"),
+    ]
     style_colors = ["limegreen", "tomato", "dodgerblue"]
 
     fig6, axes = plt.subplots(1, 3, figsize=(14, 4.5))

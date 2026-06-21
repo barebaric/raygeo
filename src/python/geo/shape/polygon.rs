@@ -16,15 +16,15 @@ use crate::geo::shape::polygon::{
     get_polygons_union, get_polyline_bounds, get_polyline_closest_point,
     get_segment_swept_polygon, is_almost_equal, is_point_inside_polygon,
     is_polygon_clockwise, is_polygon_convex, normalize_polygons,
-    offset_polygon_with_style, point_line_distance, polygons_intersect,
-    rotate_polygon, rotate_polygons, scale_polygon, translate_bounds,
-    translate_polygon, translate_polygons, trim_polyline_at, JoinStyle,
+    offset_polygon, point_line_distance, polygons_intersect, rotate_polygon,
+    rotate_polygons, scale_polygon, translate_bounds, translate_polygon,
+    translate_polygons, trim_polyline_at, JoinStyle,
 };
 use crate::types::{Point, Rect};
 use numpy::{PyArray2, PyArrayMethods};
 use pyo3::prelude::*;
 use pyo3::types::{PyAny, PyList};
-use pyo3_stub_gen::derive::gen_stub_pyfunction;
+use pyo3_stub_gen::derive::{gen_stub_pyclass_enum, gen_stub_pyfunction};
 
 // -- numpy wrapper helpers --
 
@@ -61,9 +61,54 @@ fn _polygons_to_numpy_list(
         .collect()
 }
 
+#[gen_stub_pyclass_enum]
+#[pyclass(
+    module = "raygeo.geo.shape.polygon",
+    name = "JoinStyle",
+    from_py_object
+)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+/// Corner join style for polygon offset operations.
+///
+/// - ``JoinStyle.Miter``: Extends edges until they meet (default).
+/// - ``JoinStyle.Round``: Adds a circular arc at the corner.
+/// - ``JoinStyle.Square``: Extends edges by the offset distance.
+pub enum PyJoinStyle {
+    Miter,
+    Round,
+    Square,
+}
+
+impl From<PyJoinStyle> for JoinStyle {
+    fn from(s: PyJoinStyle) -> Self {
+        match s {
+            PyJoinStyle::Miter => JoinStyle::Miter,
+            PyJoinStyle::Round => JoinStyle::Round,
+            PyJoinStyle::Square => JoinStyle::Square,
+        }
+    }
+}
+
+#[pymethods]
+impl PyJoinStyle {
+    fn __repr__(&self) -> String {
+        match self {
+            PyJoinStyle::Miter => "JoinStyle.Miter".to_string(),
+            PyJoinStyle::Round => "JoinStyle.Round".to_string(),
+            PyJoinStyle::Square => "JoinStyle.Square".to_string(),
+        }
+    }
+
+    fn __str__(&self) -> String {
+        self.__repr__()
+    }
+}
+
 pub fn register(shape_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     let py = shape_mod.py();
     let m = PyModule::new(py, "polygon")?;
+
+    m.add_class::<PyJoinStyle>()?;
 
     register_functions!(
         m,
@@ -736,13 +781,13 @@ fn is_point_inside_polygon_py(
     def offset_polygon(
         polygon: collections.abc.Sequence[types.Point],
         offset: float,
-        join_style: str = "miter",
+        join_style: JoinStyle = JoinStyle.Miter,
     ) -> list[types.Polygon]:
         """Offset (inflate/deflate) a polygon.
 
         :param polygon: Polygon as (x, y) points.
         :param offset: Offset distance (positive to inflate, negative to deflate).
-        :param join_style: Corner join style: ``"miter"`` (default), ``"round"``, or ``"square"``.
+        :param join_style: Corner join style (default: ``JoinStyle.Miter``).
         :returns: Offset polygon(s).
         :complexity: O(n log n)
         """
@@ -750,28 +795,17 @@ fn is_point_inside_polygon_py(
     module = "raygeo.geo.shape.polygon"
 )]
 #[pyfunction(name = "offset_polygon")]
-#[pyo3(signature = (polygon, offset, join_style = "miter"))]
+#[pyo3(signature = (polygon, offset, join_style = PyJoinStyle::Miter))]
 fn offset_polygon_py(
     polygon: Vec<PyPoint2D>,
     offset: f64,
-    join_style: &str,
-) -> PyResult<Vec<Vec<(f64, f64)>>> {
-    let style = match join_style {
-        "miter" => JoinStyle::Miter,
-        "round" => JoinStyle::Round,
-        "square" => JoinStyle::Square,
-        other => {
-            return Err(pyo3::exceptions::PyValueError::new_err(format!(
-                "invalid join_style '{}': expected 'miter', 'round', or 'square'",
-                other
-            )));
-        }
-    };
-    Ok(polygons_to_tuples(offset_polygon_with_style(
+    join_style: PyJoinStyle,
+) -> Vec<Vec<(f64, f64)>> {
+    polygons_to_tuples(offset_polygon(
         &poly_to_points(polygon),
         offset,
-        style,
-    )))
+        join_style.into(),
+    ))
 }
 
 #[gen_stub_pyfunction(

@@ -113,7 +113,7 @@ offset_contour_group(
     solid_path: Sequence[geo.types.Point],
     hole_paths: Sequence[Sequence[geo.types.Point]],
     offset: float,
-    join_style: str = 'miter',
+    join_style: geo.shape.polygon.JoinStyle = raygeo.geo.shape.polygon.JoinStyle.Miter,
 ) -> list[geo.types.Polygon]
 ```
 
@@ -122,11 +122,11 @@ Offset a solid contour with its hole contours.
 Offsets the solid outward (or inward for negative offset) while offsetting holes in the opposite
 direction and subtracting them from the solid result.
 
-| Parameter    | Type                                  | Description                                                       |
-| ------------ | ------------------------------------- | ----------------------------------------------------------------- |
-| `solid_path` | `Sequence[geo.types.Point]`           | Outer boundary polygon as (x, y) points.                          |
-| `hole_paths` | `Sequence[Sequence[geo.types.Point]]` | List of hole polygons.                                            |
-| `offset`     | `float`                               | Offset distance (positive to inflate, negative to deflate).       |
-| `join_style` | `str = 'miter'`                       | Corner join style: `"miter"` (default), `"round"`, or `"square"`. |
-| _Returns_    | `list[geo.types.Polygon]`             | Offset polygon(s) with holes subtracted.                          |
-| _Complexity_ |                                       | O(n log n)                                                        |
+| Parameter    | Type                                                                     | Description                                                 |
+| ------------ | ------------------------------------------------------------------------ | ----------------------------------------------------------- |
+| `solid_path` | `Sequence[geo.types.Point]`                                              | Outer boundary polygon as (x, y) points.                    |
+| `hole_paths` | `Sequence[Sequence[geo.types.Point]]`                                    | List of hole polygons.                                      |
+| `offset`     | `float`                                                                  | Offset distance (positive to inflate, negative to deflate). |
+| `join_style` | `geo.shape.polygon.JoinStyle = raygeo.geo.shape.polygon.JoinStyle.Miter` | Corner join style (default: `JoinStyle.Miter`).             |
+| _Returns_    | `list[geo.types.Polygon]`                                                | Offset polygon(s) with holes subtracted.                    |
+| _Complexity_ |                                                                          | O(n log n)                                                  |

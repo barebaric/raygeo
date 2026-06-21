@@ -2,10 +2,12 @@
 # ruff: noqa: E501, F401, F403, F405
 
 import collections.abc
+import enum
 import numpy.typing
 from raygeo.geo import types
 import typing
 __all__ = [
+    "JoinStyle",
     "apply_minimum_curvature",
     "clean_polygon",
     "does_path_sweep_intersect_polygon",
@@ -60,6 +62,19 @@ __all__ = [
     "translate_polygons_numpy",
     "trim_polyline_at",
 ]
+
+@typing.final
+class JoinStyle(enum.Enum):
+    r"""
+    Corner join style for polygon offset operations.
+    
+    - ``JoinStyle.Miter``: Extends edges until they meet (default).
+    - ``JoinStyle.Round``: Adds a circular arc at the corner.
+    - ``JoinStyle.Square``: Extends edges by the offset distance.
+    """
+    Miter = ...
+    Round = ...
+    Square = ...
 
 def apply_minimum_curvature(polygon: collections.abc.Sequence[types.Point], r_min: float) -> list[types.Polygon]:
     r"""
@@ -391,13 +406,13 @@ def normalize_polygons_numpy(polygons: collections.abc.Sequence[numpy.typing.NDA
     :complexity: O(n log n)
     """
 
-def offset_polygon(polygon: collections.abc.Sequence[types.Point], offset: float, join_style: str = 'miter') -> list[types.Polygon]:
+def offset_polygon(polygon: collections.abc.Sequence[types.Point], offset: float, join_style: JoinStyle = JoinStyle.Miter) -> list[types.Polygon]:
     r"""
     Offset (inflate/deflate) a polygon.
     
     :param polygon: Polygon as (x, y) points.
     :param offset: Offset distance (positive to inflate, negative to deflate).
-    :param join_style: Corner join style: ``"miter"`` (default), ``"round"``, or ``"square"``.
+    :param join_style: Corner join style (default: ``JoinStyle.Miter``).
     :returns: Offset polygon(s).
     :complexity: O(n log n)
     """

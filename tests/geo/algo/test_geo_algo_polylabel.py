@@ -2,7 +2,7 @@
 
 from raygeo.geo.algo.offset import offset_contour_group
 from raygeo.geo.algo.polylabel import polylabel
-from raygeo.geo.shape.polygon import get_polygon_signed_area
+from raygeo.geo.shape.polygon import JoinStyle, get_polygon_signed_area
 
 
 def test_rectangle_centre():
@@ -71,7 +71,7 @@ def test_central_island():
     """Central-island pocket — pole in the ring, not in the island."""
     cb = [(0, 0), (100, 0), (100, 100), (0, 100)]
     cisl = [(35, 35), (65, 35), (65, 65), (35, 65)]
-    area = offset_contour_group(cb, [cisl], -5.0, join_style="round")
+    area = offset_contour_group(cb, [cisl], -5.0, join_style=JoinStyle.Round)
 
     shell = None
     holes = []
@@ -96,7 +96,7 @@ def test_multi_island_pocket():
     isl1 = [(30, 20), (50, 20), (50, 40), (30, 40)]
     isl2 = [(110, 60), (130, 60), (130, 80), (110, 80)]
     area = offset_contour_group(
-        boundary, [isl1, isl2], -5.0, join_style="round"
+        boundary, [isl1, isl2], -5.0, join_style=JoinStyle.Round
     )
 
     assert area

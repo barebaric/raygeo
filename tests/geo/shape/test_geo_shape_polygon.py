@@ -10,6 +10,7 @@ import pytest
 
 from raygeo.geo.algo.smooth import resample_polyline
 from raygeo.geo.shape.polygon import (
+    JoinStyle,
     apply_minimum_curvature,
     clean_polygon,
     does_path_sweep_intersect_polygon,
@@ -647,28 +648,22 @@ class TestPolygonOffset:
         """offset_polygon defaults to miter join style (backward compat)."""
         polygon = P((0, 0), (10, 0), (5, 10))
         miter = offset_polygon(polygon, 1.0)
-        explicit = offset_polygon(polygon, 1.0, join_style="miter")
+        explicit = offset_polygon(polygon, 1.0, join_style=JoinStyle.Miter)
         assert miter == explicit
 
     def test_join_style_round(self):
         """Round join style produces different geometry from miter."""
         polygon = P((0, 0), (10, 0), (5, 10))
-        miter = offset_polygon(polygon, 1.0, join_style="miter")
-        round_ = offset_polygon(polygon, 1.0, join_style="round")
+        miter = offset_polygon(polygon, 1.0, join_style=JoinStyle.Miter)
+        round_ = offset_polygon(polygon, 1.0, join_style=JoinStyle.Round)
         # Round joins should produce more points than miter joins
         assert len(round_[0]) > len(miter[0])
 
     def test_join_style_square(self):
         """Square join style should succeed without error."""
         polygon = P((0, 0), (10, 0), (5, 10))
-        result = offset_polygon(polygon, 1.0, join_style="square")
+        result = offset_polygon(polygon, 1.0, join_style=JoinStyle.Square)
         assert len(result) >= 1
-
-    def test_join_style_invalid(self):
-        """Invalid join_style should raise ValueError."""
-        polygon = P((0, 0), (10, 0), (5, 10))
-        with pytest.raises(ValueError, match="invalid join_style"):
-            offset_polygon(polygon, 1.0, join_style="nonexistent")
 
 
 class TestApplyMinimumCurvature:

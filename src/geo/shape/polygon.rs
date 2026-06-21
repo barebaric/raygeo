@@ -2,7 +2,7 @@
 //!
 //! # Planar-only (XY-plane) operations
 //!
-//! All Boolean functions in this module (`offset_polygon_with_style`,
+//! All Boolean functions in this module (`offset_polygon`,
 //! `get_polygons_union`, `get_polygons_intersection`,
 //! `get_polygons_difference`, `get_polygons_group_intersection`,
 //! `get_polygons_group_difference`) are **strictly 2D** — they operate on
@@ -645,7 +645,7 @@ pub fn clean_polygon(polygon: &Polygon, tolerance: f64) -> Option<Polygon> {
 /// Offset (inflate/deflate) a polygon with a specific join style.
 ///
 /// **Planar (XY-plane only).** Z is not modeled.
-pub fn offset_polygon_with_style(
+pub fn offset_polygon(
     polygon: &Polygon,
     offset: f64,
     join_style: JoinStyle,
@@ -685,10 +685,10 @@ pub fn apply_minimum_curvature(polygon: &Polygon, r_min: f64) -> Vec<Polygon> {
     if polygon.len() < 3 || r_min <= 0.0 {
         return vec![polygon.clone()];
     }
-    let inward = offset_polygon_with_style(polygon, -r_min, JoinStyle::Miter);
+    let inward = offset_polygon(polygon, -r_min, JoinStyle::Miter);
     let mut result = Vec::new();
     for p in inward {
-        result.extend(offset_polygon_with_style(&p, r_min, JoinStyle::Round));
+        result.extend(offset_polygon(&p, r_min, JoinStyle::Round));
     }
     result
 }

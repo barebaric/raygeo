@@ -11,6 +11,7 @@ from raygeo.geo.algo.offset import (
     find_deepest_cores,
     offset_contour_group,
 )
+from raygeo.geo.shape.polygon import JoinStyle
 from tools.plot import plot_geometry
 
 
@@ -31,7 +32,7 @@ def _offset_sequence(boundary, step_over):
         next_polys = []
         for poly in current:
             off = offset_contour_group(
-                poly, [], -step_over, join_style="miter"
+                poly, [], -step_over, join_style=JoinStyle.Miter
             )
             next_polys.extend(off)
         next_polys = [
@@ -85,7 +86,7 @@ def generate_concentric():
 def generate_deepest_cores():
     """Deepest cores simple."""
     boundary = [(0, 0), (100, 0), (100, 80), (0, 80)]
-    area = offset_contour_group(boundary, [], -5.0, join_style="round")
+    area = offset_contour_group(boundary, [], -5.0, join_style=JoinStyle.Round)
     cores = find_deepest_cores(area, step_over=10.0)
 
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 6))
@@ -107,7 +108,9 @@ def generate_deepest_cores():
     ax1.grid(True, alpha=0.3)
 
     l_shape = [(0, 0), (100, 0), (100, 40), (40, 40), (40, 80), (0, 80)]
-    l_area = offset_contour_group(l_shape, [], -5.0, join_style="round")
+    l_area = offset_contour_group(
+        l_shape, [], -5.0, join_style=JoinStyle.Round
+    )
     l_cores = find_deepest_cores(l_area, step_over=10.0)
 
     l_arr = list(l_shape) + [l_shape[0]]
@@ -158,7 +161,9 @@ def generate_deepest_cores_multi():
     mb = [(0, 0), (160, 0), (160, 100), (0, 100)]
     isl1 = [(30, 20), (50, 20), (50, 40), (30, 40)]
     isl2 = [(110, 60), (130, 60), (130, 80), (110, 80)]
-    m_area = offset_contour_group(mb, [isl1, isl2], -5.0, join_style="round")
+    m_area = offset_contour_group(
+        mb, [isl1, isl2], -5.0, join_style=JoinStyle.Round
+    )
     m_cores = find_deepest_cores(m_area, step_over=10.0)
 
     fig2, (ax3, ax4) = plt.subplots(1, 2, figsize=(14, 6))
@@ -250,7 +255,7 @@ def generate_deepest_cores_central():
     """Deepest cores central island."""
     cb = [(0, 0), (100, 0), (100, 100), (0, 100)]
     cisl = [(35, 35), (65, 35), (65, 65), (35, 65)]
-    c_area = offset_contour_group(cb, [cisl], -5.0, join_style="round")
+    c_area = offset_contour_group(cb, [cisl], -5.0, join_style=JoinStyle.Round)
     c_cores = find_deepest_cores(c_area, step_over=10.0)
 
     fig3, (ax5, ax6) = plt.subplots(1, 2, figsize=(14, 6))
