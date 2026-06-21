@@ -2654,3 +2654,75 @@ def test_without_state_no_state_commands():
     ops.line_to(10, 0)
     filtered = ops.without_state()
     assert filtered.len() == 2
+
+
+# --- apply_state ---
+
+
+def test_apply_state_full():
+    """All set fields are emitted as state commands."""
+    ops = Ops()
+    state = State(
+        power=0.7,
+        feed_rate=1200,
+        rapid_rate=4000,
+        spindle_rpm=18000,
+        coolant=CoolantMode.FLOOD,
+        frequency=5000,
+        pulse_width=12.5,
+        active_head_uid="head-1",
+    )
+    ops.apply_state(state)
+    assert ops.len() == 8
+    assert ops.power(0) == pytest.approx(0.7)
+    assert ops.rate(1) == 1200
+    assert ops.rate(2) == 4000
+    assert ops.spindle_rpm(3) == 18000
+    assert ops.coolant(4) == "Flood"
+    assert ops.frequency(5) == 5000
+    assert ops.pulse_width(6) == pytest.approx(12.5)
+    assert ops.head_uid(7) == "head-1"
+
+
+def test_apply_state_default():
+    """Default State (power=0.0, rest None) emits only SetPower."""
+    ops = Ops()
+    state = State()
+    ops.apply_state(state)
+    assert ops.len() == 1
+    assert ops.command_type(0) == CommandType.SET_POWER
+    assert ops.power(0) == 0.0
+
+
+def test_apply_state_power_always_emitted():
+    """Power is emitted even when 0.0 (it has no Option wrapper)."""
+    ops = Ops()
+    state = State(power=0.0)
+    ops.apply_state(state)
+    assert ops.len() == 1
+    assert ops.power(0) == 0.0
+
+
+def test_apply_state_partial():
+    """Only set fields are emitted; None fields produce no command."""
+    ops = Ops()
+    state = State(power=0.3, feed_rate=600, coolant=CoolantMode.MIST)
+    ops.apply_state(state)
+    assert ops.len() == 3
+    assert ops.power(0) == pytest.approx(0.3)
+    assert ops.rate(1) == 600
+    assert ops.coolant(2) == "Mist"
+
+
+def test_apply_state_accumulates():
+    """apply_state appends; existing commands are preserved."""
+    ops = Ops()
+    ops.move_to(0, 0)
+    ops.line_to(5, 5)
+    state = State(power=1.0, feed_rate=1000)
+    ops.apply_state(state)
+    assert ops.len() == 4
+    assert ops.command_type(0) == CommandType.MOVE_TO
+    assert ops.command_type(1) == CommandType.LINE_TO
+    assert ops.power(2) == pytest.approx(1.0)
+    assert ops.rate(3) == 1000

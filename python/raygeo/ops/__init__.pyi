@@ -598,6 +598,17 @@ class Ops:
         :param mode: Coolant mode.
         :complexity: O(1) time, O(1) space
         """
+    def apply_state(self, state: state.State) -> None:
+        r"""
+        Emit the state commands needed to reach *state*.
+        
+        Power is always emitted (default 0.0). All other fields are
+        emitted only when set (non-None). Domain-neutral: does not
+        decide what values to use, just emits them.
+        
+        :param state: The target state to apply.
+        :complexity: O(k) time where k = number of set fields, O(k) space
+        """
     def scan_to(self, x: builtins.float, y: builtins.float, z: builtins.float = 0.0, power_values: typing.Optional[typing.Sequence[builtins.int]] = None, extra: typing.Optional[dict] = None) -> None:
         r"""
         Add a scan-line move with per-pixel power values.

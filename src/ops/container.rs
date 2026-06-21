@@ -309,6 +309,37 @@ impl Ops {
         self.invalidate_time_cache();
     }
 
+    /// Emit the state commands needed to reach *state*.
+    ///
+    /// Power is always emitted (default 0.0). All other fields are
+    /// emitted only when ``Some``. Domain-neutral: does not decide
+    /// what values to use, just emits them. The caller (cnc layer)
+    /// computes the ``State``.
+    pub fn apply_state(&mut self, state: &State) {
+        self.set_power(state.power);
+        if let Some(fr) = state.feed_rate {
+            self.set_feed_rate(fr);
+        }
+        if let Some(rr) = state.rapid_rate {
+            self.set_rapid_rate(rr);
+        }
+        if let Some(rpm) = state.spindle_rpm {
+            self.set_spindle_rpm(rpm);
+        }
+        if let Some(c) = state.coolant {
+            self.set_coolant(c);
+        }
+        if let Some(f) = state.frequency {
+            self.set_frequency(f);
+        }
+        if let Some(pw) = state.pulse_width {
+            self.set_pulse_width(pw);
+        }
+        if let Some(ref h) = state.active_head_uid {
+            self.set_head(h);
+        }
+    }
+
     pub fn job_start(&mut self) {
         self.commands.push(OpNode::job_start());
         self.invalidate_time_cache();

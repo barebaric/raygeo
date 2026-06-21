@@ -1204,6 +1204,18 @@ impl PyOps {
         self.inner.set_coolant(mode.0);
     }
 
+    /// Emit the state commands needed to reach *state*.
+    ///
+    /// Power is always emitted (default 0.0). All other fields are
+    /// emitted only when set (non-None). Domain-neutral: does not
+    /// decide what values to use, just emits them.
+    ///
+    /// :param state: The target state to apply.
+    /// :complexity: O(k) time where k = number of set fields, O(k) space
+    fn apply_state(&mut self, state: &PyState) {
+        self.inner.apply_state(&state.0);
+    }
+
     /// Add a scan-line move with per-pixel power values.
     ///
     /// :param x: End X coordinate.

@@ -268,6 +268,23 @@ lead-in and lead-out segments for constant engraving velocity.
 
 _Overscan applied to raster lines_
 
+### `apply_state()`
+
+```python
+apply_state(state: state.State) -> None
+```
+
+Emit the state commands needed to reach _state_.
+
+Power is always emitted (default 0.0). All other fields are emitted only when set (non-None).
+Domain-neutral: does not decide what values to use, just emits them.
+
+| Parameter    | Type          | Description                                          |
+| ------------ | ------------- | ---------------------------------------------------- |
+| `state`      | `state.State` | The target state to apply.                           |
+| _Returns_    | `None`        |                                                      |
+| _Complexity_ |               | O(k) time where k = number of set fields, O(k) space |
+
 ### `apply_tab_gaps()`
 
 ```python
