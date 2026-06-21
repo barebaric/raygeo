@@ -128,6 +128,30 @@ pub fn adaptive_entry(opts: &AdaptiveEntryOptions) -> AdaptiveEntryResult {
 
 const MAX_WAVEFRONT_ITERATIONS: usize = 1000;
 
+/// Compute the valid tool-centre area: pocket boundary inset by
+/// `tool_radius`, minus island buffers.  Returns `(polygons, total_area)`.
+pub fn compute_valid_tool_area(
+    boundary: &Polygon,
+    tool_radius: f64,
+    islands: &[Polygon],
+) -> (Vec<Polygon>, f64) {
+    let mut valid =
+        offset_polygon_with_style(boundary, -tool_radius, JoinStyle::Miter);
+    if !valid.is_empty() && !islands.is_empty() {
+        let island_buf: Vec<Polygon> = islands
+            .iter()
+            .flat_map(|isl| {
+                offset_polygon_with_style(isl, tool_radius, JoinStyle::Miter)
+            })
+            .collect();
+        if !island_buf.is_empty() {
+            valid = get_polygons_group_difference(&valid, &island_buf);
+        }
+    }
+    let total_area: f64 = valid.iter().map(get_polygon_area).sum();
+    (valid, total_area)
+}
+
 /// Options for [`adaptive_wavefronts`].
 #[derive(Clone, Debug)]
 pub struct AdaptiveWavefrontOptions {
@@ -158,31 +182,11 @@ pub fn adaptive_wavefronts(
     cleared: &mut ClearedArea,
     opts: &AdaptiveWavefrontOptions,
 ) -> AdaptiveWavefrontResult {
-    // Compute valid tool centre area = boundary inset minus island buffers.
-    let mut valid_tool_area = offset_polygon_with_style(
+    let (valid_tool_area, valid_total_area) = compute_valid_tool_area(
         &opts.pocket_boundary,
-        -opts.tool_radius,
-        JoinStyle::Miter,
+        opts.tool_radius,
+        &opts.islands,
     );
-    if !valid_tool_area.is_empty() && !opts.islands.is_empty() {
-        let island_buf: Vec<Polygon> = opts
-            .islands
-            .iter()
-            .flat_map(|isl| {
-                offset_polygon_with_style(
-                    isl,
-                    opts.tool_radius,
-                    JoinStyle::Miter,
-                )
-            })
-            .collect();
-        if !island_buf.is_empty() {
-            valid_tool_area =
-                get_polygons_group_difference(&valid_tool_area, &island_buf);
-        }
-    }
-    let valid_total_area: f64 =
-        valid_tool_area.iter().map(get_polygon_area).sum();
 
     let mut toolpaths = Vec::new();
 
