@@ -108,6 +108,11 @@ each end.
 | `wall_margin`     | `float = 0`                                    | Extra clearance past tangency (default 0.0). |
 | _Returns_         | `list[tuple[float, float]]`                    | Filleted arc as an open polyline.            |
 
+![``fillet_arc_ends`` trims the arc to the longest safe sub-arc and appends quarter-circle fillets at each end](images/geo-algo-fillet-fillet-arc-ends.png)
+
+_`fillet_arc_ends` trims the arc to the longest safe sub-arc and appends quarter-circle fillets at
+each end_
+
 ### `find_safe_sweep_end()`
 
 ```python
@@ -134,6 +139,11 @@ from each end until the sweep is clear. Returns `None` when no usable safe sub-a
 | `tool_radius`     | `float = 3`                                                   | Tool radius in mm (default 3.0).             |
 | `wall_margin`     | `float = 0`                                                   | Extra clearance past tangency (default 0.0). |
 | _Returns_         | `tuple[tuple[float, float], tuple[float, float]] &#124; None` |                                              |
+
+![``find_safe_sweep_end`` returns the ``(enter, exit)`` points delimiting the longest sub-arc whose tool sweep avoids islands](images/geo-algo-fillet-find-safe-sweep-end.png)
+
+_`find_safe_sweep_end` returns the `(enter, exit)` points delimiting the longest sub-arc whose tool
+sweep avoids islands_
 
 ### `trim_to_safe_fillet_span()`
 

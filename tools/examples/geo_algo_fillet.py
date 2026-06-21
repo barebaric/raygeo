@@ -7,6 +7,8 @@ import matplotlib.pyplot as plt
 from raygeo.geo.algo.fillet import (
     append_end_fillets,
     create_fillet_polyline,
+    fillet_arc_ends,
+    find_safe_sweep_end,
     trim_to_safe_fillet_span,
 )
 from raygeo.geo.shape.polygon import trim_polyline_at
@@ -231,6 +233,156 @@ def generate_trim_to_safe_fillet_span():
     return fig
 
 
+def generate_fillet_arc_ends():
+    """Filleted arc inside a pocket with an obstacle."""
+    arc = [(20, 20), (50, 50), (80, 20)]
+    pocket = [(0, 0), (100, 0), (100, 80), (0, 80)]
+    islands = [[(5, 5), (28, 5), (28, 38), (5, 38)]]
+    tool_radius = 8.0
+
+    result = fillet_arc_ends(arc, pocket, islands, tool_radius, 0.0)
+
+    fig, ax = plt.subplots(figsize=(7, 5))
+
+    # pocket boundary
+    px = [pt[0] for pt in pocket] + [pocket[0][0]]
+    py = [pt[1] for pt in pocket] + [pocket[0][1]]
+    ax.plot(
+        px, py, "-", color="lightgray", linewidth=1, label="Pocket boundary"
+    )
+
+    # islands
+    for obs in islands:
+        ox = [pt[0] for pt in obs] + [obs[0][0]]
+        oy = [pt[1] for pt in obs] + [obs[0][1]]
+        ax.fill(
+            ox,
+            oy,
+            facecolor="gold",
+            alpha=0.3,
+            edgecolor="gold",
+            label="Island",
+        )
+
+    # original polyline
+    ax.plot(
+        [pt[0] for pt in arc],
+        [pt[1] for pt in arc],
+        "-",
+        color="#e41a1c",
+        linewidth=3.0,
+        alpha=0.5,
+        label="Original",
+    )
+
+    # filleted result
+    if result is not None:
+        ax.plot(
+            [pt[0] for pt in result],
+            [pt[1] for pt in result],
+            "-",
+            color="#377eb8",
+            linewidth=2.5,
+            alpha=0.9,
+            label="Filleted",
+        )
+
+    ax.set_xlim(-5, 105)
+    ax.set_ylim(-5, 85)
+    ax.set_aspect("equal")
+    ax.set_title("fillet_arc_ends — trimmed path with quarter-circle fillets")
+    ax.set_xlabel("X")
+    ax.set_ylabel("Y")
+    ax.legend(fontsize=8)
+    ax.grid(True, alpha=0.3)
+    fig.tight_layout()
+    return fig
+
+
+def generate_find_safe_sweep_end():
+    """Safe sweep end points inside a pocket with an obstacle."""
+    arc = [(20, 20), (50, 50), (80, 20)]
+    pocket = [(0, 0), (100, 0), (100, 80), (0, 80)]
+    islands = [[(5, 5), (28, 5), (28, 38), (5, 38)]]
+    tool_radius = 8.0
+
+    result = find_safe_sweep_end(arc, pocket, islands, tool_radius, 0.0)
+
+    fig, ax = plt.subplots(figsize=(7, 5))
+
+    # pocket boundary
+    px = [pt[0] for pt in pocket] + [pocket[0][0]]
+    py = [pt[1] for pt in pocket] + [pocket[0][1]]
+    ax.plot(
+        px, py, "-", color="lightgray", linewidth=1, label="Pocket boundary"
+    )
+
+    # islands
+    for obs in islands:
+        ox = [pt[0] for pt in obs] + [obs[0][0]]
+        oy = [pt[1] for pt in obs] + [obs[0][1]]
+        ax.fill(
+            ox,
+            oy,
+            facecolor="gold",
+            alpha=0.3,
+            edgecolor="gold",
+            label="Island",
+        )
+
+    # original polyline
+    ax.plot(
+        [pt[0] for pt in arc],
+        [pt[1] for pt in arc],
+        "-",
+        color="#e41a1c",
+        linewidth=3.0,
+        alpha=0.5,
+        label="Original",
+    )
+
+    if result is not None:
+        enter, exit_ = result
+        # trimmed arc
+        trimmed = trim_polyline_at(arc, enter, exit_)
+        ax.plot(
+            [pt[0] for pt in trimmed],
+            [pt[1] for pt in trimmed],
+            "-",
+            color="#377eb8",
+            linewidth=2.5,
+            alpha=0.9,
+            label="Safe sub-span",
+        )
+        ax.plot(
+            enter[0],
+            enter[1],
+            "o",
+            color="#4daf4a",
+            markersize=8,
+            label="Enter",
+        )
+        ax.plot(
+            exit_[0],
+            exit_[1],
+            "s",
+            color="#e41a1c",
+            markersize=8,
+            label="Exit",
+        )
+
+    ax.set_xlim(-5, 105)
+    ax.set_ylim(-5, 85)
+    ax.set_aspect("equal")
+    ax.set_title("find_safe_sweep_end — longest collision-free sub-arc")
+    ax.set_xlabel("X")
+    ax.set_ylabel("Y")
+    ax.legend(fontsize=8)
+    ax.grid(True, alpha=0.3)
+    fig.tight_layout()
+    return fig
+
+
 __docs_target__ = ["raygeo.geo.algo.fillet.md"]
 __images__ = [
     {
@@ -264,5 +416,21 @@ __images__ = [
             " end fillets do not collide with obstacles (red)"
         ),
         "function": generate_trim_to_safe_fillet_span,
+    },
+    {
+        "heading": "fillet_arc_ends",
+        "caption": (
+            "``fillet_arc_ends`` trims the arc to the longest safe sub-arc"
+            " and appends quarter-circle fillets at each end"
+        ),
+        "function": generate_fillet_arc_ends,
+    },
+    {
+        "heading": "find_safe_sweep_end",
+        "caption": (
+            "``find_safe_sweep_end`` returns the ``(enter, exit)`` points"
+            " delimiting the longest sub-arc whose tool sweep avoids islands"
+        ),
+        "function": generate_find_safe_sweep_end,
     },
 ]
