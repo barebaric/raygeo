@@ -4,7 +4,7 @@
 
 use glam::DMat4;
 
-use crate::types::Point3D;
+use crate::types::{Point, Point3D};
 
 /// Computes the midpoint between two 3D points.
 pub fn midpoint(a: Point3D, b: Point3D) -> Point3D {
@@ -44,4 +44,23 @@ pub fn circumcenter(a: Point3D, b: Point3D, c: Point3D) -> Option<Point3D> {
     let alpha = (ab2 * ac2 - ab_ac * ac2) / denom;
     let beta = (ab2 * ac2 - ab2 * ab_ac) / denom;
     Some(a + ab * alpha + ac * beta)
+}
+
+/// Compute the circumcenter and radius of three 2D points.
+///
+/// Returns `(center, radius)`. Returns a zero center and negative radius
+/// if the points are collinear (degenerate).
+pub fn circumcenter_2d(a: Point, b: Point, c: Point) -> (Point, f64) {
+    let d = 2.0 * (a.x * (b.y - c.y) + b.x * (c.y - a.y) + c.x * (a.y - b.y));
+    if d.abs() < 1e-30 {
+        return (Point::new(0.0, 0.0), -1.0);
+    }
+    let a2 = a.x * a.x + a.y * a.y;
+    let b2 = b.x * b.x + b.y * b.y;
+    let c2 = c.x * c.x + c.y * c.y;
+    let ux = (a2 * (b.y - c.y) + b2 * (c.y - a.y) + c2 * (a.y - b.y)) / d;
+    let uy = (a2 * (c.x - b.x) + b2 * (a.x - c.x) + c2 * (b.x - a.x)) / d;
+    let center = Point::new(ux, uy);
+    let r = ((center.x - a.x).powi(2) + (center.y - a.y).powi(2)).sqrt();
+    (center, r)
 }

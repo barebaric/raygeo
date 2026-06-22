@@ -44,7 +44,9 @@ pub use line::{
     get_segment_segment_distance, interpolated_segment_3d,
     is_point_inside_rect, is_point_on_segment, longest_line_through_point,
 };
-pub use point::{are_points_equal, circumcenter, midpoint, transform_point};
+pub use point::{
+    are_points_equal, circumcenter, circumcenter_2d, midpoint, transform_point,
+};
 pub use polygon::{
     apply_minimum_curvature, clean_polygon, does_path_sweep_intersect_polygon,
     flip_polygon, flip_polygons, get_circle_polygon, get_polygon_area,

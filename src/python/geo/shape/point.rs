@@ -4,18 +4,21 @@ pub(crate) const MODULE_DOC_POINT: &str = "\
 Individual point operations.
 
 Provides equality testing within a configurable tolerance, midpoint
-computation between two points, circumcenter of three points, and
+computation between two points, 2D/3D circumcenter of three points, and
 applying a 4x4 affine transformation matrix to a single point.
 ";
 
 use glam::{DMat4, DVec4};
 
-use super::super::flex_point::{point3d_to_tuple, PyPoint3D};
+use super::super::flex_point::{
+    point3d_to_tuple, point_to_tuple, PyPoint2D, PyPoint3D,
+};
 use crate::geo::shape::point::are_points_equal;
 use crate::geo::shape::point::circumcenter;
+use crate::geo::shape::point::circumcenter_2d;
 use crate::geo::shape::point::midpoint;
 use crate::geo::shape::point::transform_point;
-use crate::types::Point3D;
+use crate::types::{Point, Point3D};
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::gen_stub_pyfunction;
 
@@ -30,6 +33,7 @@ pub fn register(shape_mod: &Bound<'_, PyModule>) -> PyResult<()> {
         are_points_equal_py,
         transform_point_py,
         circumcenter_py,
+        circumcenter_2d_py,
     );
 
     shape_mod.add_submodule(&m)?;
@@ -140,6 +144,44 @@ fn circumcenter_py(
     let b3 = Point3D::new(b.0, b.1, b.2);
     let c3 = Point3D::new(c.0, c.1, c.2);
     circumcenter(a3, b3, c3).map(point3d_to_tuple)
+}
+
+#[gen_stub_pyfunction(
+    python = r#"
+    import typing
+    import raygeo.geo.types
+
+    def circumcenter_2d(
+        a: types.Point,
+        b: types.Point,
+        c: types.Point,
+    ) -> tuple[types.Point, float]:
+        """Compute the circumcenter and radius of three 2D points.
+
+        Returns the center of the unique circle passing through all three
+        points along with its radius. Returns ``((0.0, 0.0), -1.0)`` when
+        the points are collinear.
+
+        :param a: First point (x, y).
+        :param b: Second point (x, y).
+        :param c: Third point (x, y).
+        :returns: ``(center, radius)`` where center is ``(x, y)``.
+        :complexity: O(1) time, O(1) space
+        """
+"#,
+    module = "raygeo.geo.shape.point"
+)]
+#[pyfunction(name = "circumcenter_2d")]
+fn circumcenter_2d_py(
+    a: PyPoint2D,
+    b: PyPoint2D,
+    c: PyPoint2D,
+) -> ((f64, f64), f64) {
+    let pa = Point::new(a.0, a.1);
+    let pb = Point::new(b.0, b.1);
+    let pc = Point::new(c.0, c.1);
+    let (center, radius) = circumcenter_2d(pa, pb, pc);
+    (point_to_tuple(center), radius)
 }
 
 #[gen_stub_pyfunction(

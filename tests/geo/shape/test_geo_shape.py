@@ -13,7 +13,7 @@ from raygeo.geo.shape.line import (
     interpolated_segment_3d,
     is_point_on_line_segment,
 )
-from raygeo.geo.shape.point import midpoint, transform_point
+from raygeo.geo.shape.point import circumcenter_2d, midpoint, transform_point
 from raygeo.geo.shape.polygon import is_point_inside_polygon
 from raygeo.geo.shape.rect import (
     does_rect_contain_rect,
@@ -274,6 +274,34 @@ def test_transform_point():
     scale_mat = [[2, 0, 0, 0], [0, 3, 0, 0], [0, 0, 4, 0], [0, 0, 0, 1]]
     result = transform_point(scale_mat, 1, 2, 3)
     assert result == (2.0, 6.0, 12.0)
+
+
+class TestCircumcenter2D:
+    def test_right_triangle(self):
+        # 3-4-5 right triangle: circumcenter is midpoint of hypotenuse
+        center, radius = circumcenter_2d((0, 0), (4, 0), (0, 3))
+        assert center == pytest.approx((2.0, 1.5))
+        assert radius == pytest.approx(2.5)
+
+    def test_equilateral_triangle(self):
+        center, radius = circumcenter_2d((0, 0), (2, 0), (1, 3**0.5))
+        assert center == pytest.approx((1.0, 3**0.5 / 3))
+        assert radius == pytest.approx(2 * 3**0.5 / 3)
+
+    def test_collinear_returns_negative_radius(self):
+        center, radius = circumcenter_2d((0, 0), (1, 1), (2, 2))
+        assert center == (0.0, 0.0)
+        assert radius == -1.0
+
+    def test_center_is_equidistant(self):
+        a, b, c = (1, 7), (-3, 2), (5, -1)
+        center, radius = circumcenter_2d(a, b, c)
+        d1 = ((center[0] - a[0]) ** 2 + (center[1] - a[1]) ** 2) ** 0.5
+        d2 = ((center[0] - b[0]) ** 2 + (center[1] - b[1]) ** 2) ** 0.5
+        d3 = ((center[0] - c[0]) ** 2 + (center[1] - c[1]) ** 2) ** 0.5
+        assert d1 == pytest.approx(d2)
+        assert d2 == pytest.approx(d3)
+        assert d1 == pytest.approx(radius)
 
 
 class TestInterpolatedSegment3D:

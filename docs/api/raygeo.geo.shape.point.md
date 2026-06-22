@@ -7,7 +7,8 @@ sidebar_position: 38
 Individual point operations.
 
 Provides equality testing within a configurable tolerance, midpoint computation between two points,
-circumcenter of three points, and applying a 4x4 affine transformation matrix to a single point.
+2D/3D circumcenter of three points, and applying a 4x4 affine transformation matrix to a single
+point.
 
 ## Functions
 
@@ -57,6 +58,29 @@ points are collinear.
 ![Circumcenter of three 3D points with circumcircle](images/geo-shape-point-circumcenter.png)
 
 _Circumcenter of three 3D points with circumcircle_
+
+### `circumcenter_2d()`
+
+```python
+circumcenter_2d(
+    a: types.Point,
+    b: types.Point,
+    c: types.Point,
+) -> tuple[types.Point, float]
+```
+
+Compute the circumcenter and radius of three 2D points.
+
+Returns the center of the unique circle passing through all three points along with its radius.
+Returns `((0.0, 0.0), -1.0)` when the points are collinear.
+
+| Parameter    | Type                        | Description                                  |
+| ------------ | --------------------------- | -------------------------------------------- |
+| `a`          | `types.Point`               | First point (x, y).                          |
+| `b`          | `types.Point`               | Second point (x, y).                         |
+| `c`          | `types.Point`               | Third point (x, y).                          |
+| _Returns_    | `tuple[types.Point, float]` | `(center, radius)` where center is `(x, y)`. |
+| _Complexity_ |                             | O(1) time, O(1) space                        |
 
 ### `midpoint()`
 
