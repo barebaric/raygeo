@@ -7,17 +7,18 @@ use super::super::flex_point::{
 use super::super::types::NormalizePolygonsResult;
 use crate::geo::shape::polygon::{
     apply_minimum_curvature, clean_polygon, does_path_sweep_intersect_polygon,
-    flip_polygon, flip_polygons, get_circle_polygon, get_polygon_bounds,
-    get_polygon_centroid, get_polygon_closest_point, get_polygon_convex_hull,
-    get_polygon_edges, get_polygon_group_bounds, get_polygon_perimeter,
-    get_polygon_signed_area, get_polygons_closest_point,
+    flip_polygon, flip_polygons, get_circle_polygon,
+    get_polygon_boundary_distance, get_polygon_bounds, get_polygon_centroid,
+    get_polygon_closest_point, get_polygon_convex_hull, get_polygon_edges,
+    get_polygon_group_bounds, get_polygon_perimeter, get_polygon_signed_area,
+    get_polygon_vertex_centroid, get_polygons_closest_point,
     get_polygons_difference, get_polygons_group_difference,
     get_polygons_group_intersection, get_polygons_intersection,
     get_polygons_union, get_polyline_bounds, get_polyline_closest_point,
     get_segment_swept_polygon, is_almost_equal, is_point_inside_polygon,
     is_polygon_clockwise, is_polygon_convex, normalize_polygons,
-    offset_polygon, point_line_distance, polygons_intersect,
-    resample_polygon, rotate_polygon, rotate_polygons, scale_polygon,
+    offset_polygon, point_line_distance, polygons_intersect, resample_polygon,
+    resample_polyline, rotate_polygon, rotate_polygons, scale_polygon,
     split_polyline_at_v_junctions, translate_bounds, translate_polygon,
     translate_polygons, trim_polyline_angular_ends, trim_polyline_at,
     JoinStyle,
@@ -124,7 +125,9 @@ pub fn register(shape_mod: &Bound<'_, PyModule>) -> PyResult<()> {
         get_polygon_area_py,
         get_circle_polygon_py,
         get_polygon_bounds_py,
+        get_polygon_boundary_distance_py,
         get_polygon_centroid_py,
+        get_polygon_vertex_centroid_py,
         get_polyline_bounds_py,
         get_polygon_closest_point_py,
         get_polygons_closest_point_py,
@@ -155,6 +158,7 @@ pub fn register(shape_mod: &Bound<'_, PyModule>) -> PyResult<()> {
         polygons_intersect_numpy_py,
         polygons_intersect_py,
         resample_polygon_py,
+        resample_polyline_py,
         rotate_polygon_numpy_py,
         rotate_polygon_py,
         rotate_polygons_numpy_py,
@@ -1734,6 +1738,98 @@ fn trim_polyline_angular_ends_py(
     let pts: Vec<Point> =
         polygon.iter().map(|&(x, y)| Point::new(x, y)).collect();
     trim_polyline_angular_ends(&pts, start, length, angle_threshold_rad)
+}
+
+#[gen_stub_pyfunction(
+    python = r#"
+    import collections.abc
+
+    def get_polygon_vertex_centroid(
+        polygon: collections.abc.Sequence[tuple[float, float]],
+    ) -> tuple[float, float]:
+        """Arithmetic mean of polygon vertices (vertex-average centroid).
+
+        Unlike :func:`get_polygon_centroid` (area-weighted shoelace centroid),
+        this is useful for concave polygons where the area centroid lies
+        outside the boundary.
+
+        :param polygon: Polygon as (x, y) points.
+        :returns: Vertex-average centroid (x, y).
+        :complexity: O(n)
+        """
+"#,
+    module = "raygeo.geo.shape.polygon"
+)]
+#[pyfunction(name = "get_polygon_vertex_centroid")]
+fn get_polygon_vertex_centroid_py(polygon: Vec<PyPoint2D>) -> (f64, f64) {
+    let pts = poly_to_points(polygon);
+    let c = get_polygon_vertex_centroid(&pts);
+    (c.x, c.y)
+}
+
+#[gen_stub_pyfunction(
+    python = r#"
+    import collections.abc
+
+    def get_polygon_boundary_distance(
+        a: collections.abc.Sequence[tuple[float, float]],
+        b: collections.abc.Sequence[tuple[float, float]],
+    ) -> float:
+        """Minimum midpoint-to-segment distance between the boundaries of
+        two polygons.
+
+        Uses segment midpoints rather than raw segment-segment distance
+        to avoid false positives from polygons that merely touch at a
+        shared vertex.
+
+        :param a: First polygon as (x, y) points.
+        :param b: Second polygon as (x, y) points.
+        :returns: Minimum boundary distance.
+        :complexity: O(n * m)
+        """
+"#,
+    module = "raygeo.geo.shape.polygon"
+)]
+#[pyfunction(name = "get_polygon_boundary_distance")]
+fn get_polygon_boundary_distance_py(
+    a: Vec<PyPoint2D>,
+    b: Vec<PyPoint2D>,
+) -> f64 {
+    let pts_a = poly_to_points(a);
+    let pts_b = poly_to_points(b);
+    get_polygon_boundary_distance(&pts_a, &pts_b)
+}
+
+#[gen_stub_pyfunction(
+    python = r#"
+    import collections.abc
+
+    def resample_polyline(
+        polyline: collections.abc.Sequence[tuple[float, float]],
+        max_len: float,
+    ) -> list[tuple[float, float]]:
+        """Resample an open 2D polyline so consecutive points are at most
+        *max_len* apart.
+
+        New points are linearly interpolated along each segment that
+        exceeds the threshold.  The first and last points are always
+        preserved.
+
+        :param polyline: Open polyline as (x, y) points.
+        :param max_len: Maximum allowed segment length.
+        :returns: Resampled polyline.
+        :complexity: O(n * m)
+        """
+"#,
+    module = "raygeo.geo.shape.polygon"
+)]
+#[pyfunction(name = "resample_polyline")]
+fn resample_polyline_py(
+    polyline: Vec<PyPoint2D>,
+    max_len: f64,
+) -> Vec<(f64, f64)> {
+    let pts = poly_to_points(polyline);
+    points_to_tuples(resample_polyline(&pts, max_len))
 }
 
 #[gen_stub_pyfunction(

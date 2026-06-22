@@ -206,6 +206,27 @@ Get the unsigned area of a polygon.
 | _Returns_    | `float`                 | Unsigned area.            |
 | _Complexity_ |                         | O(n)                      |
 
+### `get_polygon_boundary_distance()`
+
+```python
+get_polygon_boundary_distance(
+    a: Sequence[tuple[float, float]],
+    b: Sequence[tuple[float, float]],
+) -> float
+```
+
+Minimum midpoint-to-segment distance between the boundaries of two polygons.
+
+Uses segment midpoints rather than raw segment-segment distance to avoid false positives from
+polygons that merely touch at a shared vertex.
+
+| Parameter    | Type                            | Description                      |
+| ------------ | ------------------------------- | -------------------------------- |
+| `a`          | `Sequence[tuple[float, float]]` | First polygon as (x, y) points.  |
+| `b`          | `Sequence[tuple[float, float]]` | Second polygon as (x, y) points. |
+| _Returns_    | `float`                         | Minimum boundary distance.       |
+| _Complexity_ |                                 | O(n \* m)                        |
+
 ### `get_polygon_bounds()`
 
 ```python
@@ -336,6 +357,25 @@ Get the signed area of a polygon.
 | `polygon`    | `Sequence[types.Point]` | Polygon as (x, y) points.                        |
 | _Returns_    | `float`                 | Signed area (positive for CCW, negative for CW). |
 | _Complexity_ |                         | O(n)                                             |
+
+### `get_polygon_vertex_centroid()`
+
+```python
+get_polygon_vertex_centroid(
+    polygon: Sequence[tuple[float, float]],
+) -> tuple[float, float]
+```
+
+Arithmetic mean of polygon vertices (vertex-average centroid).
+
+Unlike **get_polygon_centroid** (area-weighted shoelace centroid), this is useful for concave
+polygons where the area centroid lies outside the boundary.
+
+| Parameter    | Type                            | Description                     |
+| ------------ | ------------------------------- | ------------------------------- |
+| `polygon`    | `Sequence[tuple[float, float]]` | Polygon as (x, y) points.       |
+| _Returns_    | `tuple[float, float]`           | Vertex-average centroid (x, y). |
+| _Complexity_ |                                 | O(n)                            |
 
 ### `get_polygons_closest_point()`
 
@@ -794,6 +834,27 @@ duplicated).
 | `spacing`    | `float`                         | Maximum allowed segment length.             |
 | _Returns_    | `list[tuple[float, float]]`     | Resampled polygon as list of (x, y) points. |
 | _Complexity_ |                                 | O(n \* m)                                   |
+
+### `resample_polyline()`
+
+```python
+resample_polyline(
+    polyline: Sequence[tuple[float, float]],
+    max_len: float,
+) -> list[tuple[float, float]]
+```
+
+Resample an open 2D polyline so consecutive points are at most _max_len_ apart.
+
+New points are linearly interpolated along each segment that exceeds the threshold. The first and
+last points are always preserved.
+
+| Parameter    | Type                            | Description                     |
+| ------------ | ------------------------------- | ------------------------------- |
+| `polyline`   | `Sequence[tuple[float, float]]` | Open polyline as (x, y) points. |
+| `max_len`    | `float`                         | Maximum allowed segment length. |
+| _Returns_    | `list[tuple[float, float]]`     | Resampled polyline.             |
+| _Complexity_ |                                 | O(n \* m)                       |
 
 ### `rotate_polygon()`
 

@@ -999,6 +999,100 @@ pub fn resample_polygon(poly: &[Point], spacing: f64) -> Vec<Point> {
     result
 }
 
+/// Arithmetic mean of polygon vertices (simple vertex-average centroid).
+///
+/// This differs from [`get_polygon_centroid`] which uses the area-weighted
+/// (shoelace) centroid.  The vertex average is useful when the spatial
+/// *arrangement* of vertices matters (e.g. finding the middle of a
+/// concave polygon whose area centroid would lie outside the boundary).
+pub fn get_polygon_vertex_centroid(poly: &[Point]) -> Point {
+    if poly.is_empty() {
+        return Point::new(0.0, 0.0);
+    }
+    let mut cx = 0.0;
+    let mut cy = 0.0;
+    for p in poly {
+        cx += p.x;
+        cy += p.y;
+    }
+    Point::new(cx / poly.len() as f64, cy / poly.len() as f64)
+}
+
+/// Minimum midpoint-to-segment distance between the boundaries of two
+/// polygons.
+///
+/// Uses segment **midpoints** rather than raw segment-segment distance
+/// to avoid false positives from polygons that merely touch at a shared
+/// vertex (where endpoint-to-endpoint distance is 0 but no boundary
+/// edge is actually shared).
+pub fn get_polygon_boundary_distance(a: &[Point], b: &[Point]) -> f64 {
+    if a.len() < 2 || b.len() < 2 {
+        return f64::MAX;
+    }
+    let na = a.len();
+    let nb = b.len();
+    let mut min_d = f64::MAX;
+
+    for i in 0..na {
+        let ai = (i + 1) % na;
+        let mid =
+            Point::new((a[i].x + a[ai].x) * 0.5, (a[i].y + a[ai].y) * 0.5);
+        for j in 0..nb {
+            let bj = (j + 1) % nb;
+            let (_, _, d2) =
+                get_line_segment_closest_point(b[j], b[bj], mid.x, mid.y);
+            if d2 < min_d {
+                min_d = d2;
+            }
+        }
+    }
+
+    for j in 0..nb {
+        let bj = (j + 1) % nb;
+        let mid =
+            Point::new((b[j].x + b[bj].x) * 0.5, (b[j].y + b[bj].y) * 0.5);
+        for i in 0..na {
+            let ai = (i + 1) % na;
+            let (_, _, d2) =
+                get_line_segment_closest_point(a[i], a[ai], mid.x, mid.y);
+            if d2 < min_d {
+                min_d = d2;
+            }
+        }
+    }
+
+    min_d.sqrt()
+}
+
+/// Resample an open 2D polyline so that consecutive points are at most
+/// `max_len` apart.
+///
+/// New points are linearly interpolated along each segment that exceeds
+/// the threshold.  The first and last points are always preserved.
+pub fn resample_polyline(points: &[Point], max_len: f64) -> Vec<Point> {
+    if points.len() < 2 || max_len <= 0.0 {
+        return points.to_vec();
+    }
+    let mut out = vec![points[0]];
+    for i in 0..points.len() - 1 {
+        let a = points[i];
+        let b = points[i + 1];
+        let dist = ((b.x - a.x).powi(2) + (b.y - a.y).powi(2)).sqrt();
+        if dist > max_len {
+            let n = (dist / max_len).ceil() as usize;
+            for j in 1..n {
+                let t = j as f64 / n as f64;
+                out.push(Point::new(
+                    a.x + (b.x - a.x) * t,
+                    a.y + (b.y - a.y) * t,
+                ));
+            }
+        }
+        out.push(b);
+    }
+    out
+}
+
 /// Trim vertices from both ends of a contiguous subsequence of a closed
 /// polygon where the interior angle jumps sharply (≥ `threshold_rad`)
 /// compared to the adjacent vertex further inward.

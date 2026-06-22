@@ -17,6 +17,7 @@ from raygeo.geo.shape.polygon import (
     flip_polygon_numpy,
     flip_polygons_numpy,
     get_polygon_area,
+    get_polygon_boundary_distance,
     get_polygon_bounds,
     get_polygon_centroid,
     get_polygon_closest_point,
@@ -25,6 +26,7 @@ from raygeo.geo.shape.polygon import (
     get_polygon_group_bounds,
     get_polygon_perimeter,
     get_polygon_signed_area,
+    get_polygon_vertex_centroid,
     get_polygons_closest_point,
     get_polygons_difference,
     get_polygons_group_difference,
@@ -60,6 +62,9 @@ from raygeo.geo.shape.polygon import (
     translate_polygons_numpy,
     trim_polyline_angular_ends,
     trim_polyline_at,
+)
+from raygeo.geo.shape.polygon import (
+    resample_polyline as resample_polyline_2d,
 )
 from raygeo.geo.types import Polygon
 
@@ -1902,3 +1907,86 @@ class TestResamplePolygon:
         assert (0.0, 0.0) in result
         assert (5.0, 0.0) in result
         assert (10.0, 0.0) in result
+
+
+class TestGetPolygonVertexCentroid:
+    def test_empty(self):
+        assert get_polygon_vertex_centroid([]) == (0.0, 0.0)
+
+    def test_square(self):
+        poly = P((0, 0), (10, 0), (10, 10), (0, 10))
+        cx, cy = get_polygon_vertex_centroid(poly)
+        assert (cx, cy) == (5.0, 5.0)
+
+    def test_differs_from_area_centroid(self):
+        """Vertex centroid differs from area-weighted centroid for
+        non-uniformly-distributed vertices."""
+        # A concave shape: vertex centroid is pulled toward the dense
+        # cluster of vertices along the notch, while area centroid
+        # weights the empty interior differently.
+        poly = P((0, 0), (10, 0), (10, 10), (5, 10), (5, 5), (0, 5))
+        vx, vy = get_polygon_vertex_centroid(poly)
+        cx, cy = get_polygon_centroid(poly)
+        assert (vx, vy) != pytest.approx((cx, cy))
+
+
+class TestGetPolygonBoundaryDistance:
+    def test_touching_polygons(self):
+        """Squares sharing an edge — midpoints at (10, 5) → distance 0."""
+        a = P((0, 0), (10, 0), (10, 10), (0, 10))
+        b = P((10, 0), (20, 0), (20, 10), (10, 10))
+        assert get_polygon_boundary_distance(a, b) == 0.0
+
+    def test_overlapping_distance(self):
+        """Inner square fully inside outer — min boundary distance = 2."""
+        a = P((0, 0), (10, 0), (10, 10), (0, 10))
+        b = P((2, 2), (8, 2), (8, 8), (2, 8))
+        d = get_polygon_boundary_distance(a, b)
+        assert abs(d - 2.0) < 0.01
+
+    def test_separated_polygons(self):
+        """Two disjoint squares — min boundary distance from (10,5)→(20,20)."""
+        a = P((0, 0), (10, 0), (10, 10), (0, 10))
+        b = P((20, 20), (30, 20), (30, 30), (20, 30))
+        d = get_polygon_boundary_distance(a, b)
+        expected = math.sqrt((10.0 - 20.0) ** 2 + (5.0 - 20.0) ** 2)
+        assert abs(d - expected) < 0.01
+
+    def test_degenerate(self):
+        """Degenerate polygons return f64::MAX (~1.8e308)."""
+        d = get_polygon_boundary_distance([(0, 0)], P((0, 0), (1, 0)))
+        assert d > 1e100
+
+
+class TestResamplePolyline:
+    def test_empty(self):
+        assert resample_polyline_2d([], 1.0) == []
+
+    def test_single_point(self):
+        assert resample_polyline_2d([(5.0, 5.0)], 1.0) == [(5.0, 5.0)]
+
+    def test_two_points_no_resample(self):
+        points = [(0.0, 0.0), (10.0, 0.0)]
+        result = resample_polyline_2d(points, 10.0)
+        assert result == points
+
+    def test_fine_spacing_adds_points(self):
+        points = [(0.0, 0.0), (10.0, 0.0)]
+        result = resample_polyline_2d(points, 2.0)
+        assert len(result) == 6
+        assert result[0] == (0.0, 0.0)
+        assert result[-1] == (10.0, 0.0)
+        assert (2.0, 0.0) in result
+        assert (4.0, 0.0) in result
+        assert (6.0, 0.0) in result
+        assert (8.0, 0.0) in result
+
+    def test_negative_spacing_returns_original(self):
+        points = [(0.0, 0.0), (10.0, 0.0)]
+        result = resample_polyline_2d(points, -1.0)
+        assert result == points
+
+    def test_multi_segment(self):
+        points = [(0.0, 0.0), (5.0, 0.0), (5.0, 5.0)]
+        result = resample_polyline_2d(points, 2.0)
+        assert len(result) > 3

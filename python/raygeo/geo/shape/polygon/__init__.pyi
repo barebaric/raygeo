@@ -17,6 +17,7 @@ __all__ = [
     "flip_polygons_numpy",
     "get_circle_polygon",
     "get_polygon_area",
+    "get_polygon_boundary_distance",
     "get_polygon_bounds",
     "get_polygon_centroid",
     "get_polygon_closest_point",
@@ -25,6 +26,7 @@ __all__ = [
     "get_polygon_group_bounds",
     "get_polygon_perimeter",
     "get_polygon_signed_area",
+    "get_polygon_vertex_centroid",
     "get_polygons_closest_point",
     "get_polygons_difference",
     "get_polygons_group_difference",
@@ -50,6 +52,7 @@ __all__ = [
     "polygons_intersect",
     "polygons_intersect_numpy",
     "resample_polygon",
+    "resample_polyline",
     "rotate_polygon",
     "rotate_polygon_numpy",
     "rotate_polygons",
@@ -182,6 +185,21 @@ def get_polygon_area(polygon: collections.abc.Sequence[types.Point]) -> float:
     :complexity: O(n)
     """
 
+def get_polygon_boundary_distance(a: collections.abc.Sequence[tuple[float, float]], b: collections.abc.Sequence[tuple[float, float]]) -> float:
+    r"""
+    Minimum midpoint-to-segment distance between the boundaries of
+    two polygons.
+    
+    Uses segment midpoints rather than raw segment-segment distance
+    to avoid false positives from polygons that merely touch at a
+    shared vertex.
+    
+    :param a: First polygon as (x, y) points.
+    :param b: Second polygon as (x, y) points.
+    :returns: Minimum boundary distance.
+    :complexity: O(n * m)
+    """
+
 def get_polygon_bounds(polygon: collections.abc.Sequence[types.Point]) -> types.Rect:
     r"""
     Get the bounding rectangle of a polygon.
@@ -252,6 +270,19 @@ def get_polygon_signed_area(polygon: collections.abc.Sequence[types.Point]) -> f
     
     :param polygon: Polygon as (x, y) points.
     :returns: Signed area (positive for CCW, negative for CW).
+    :complexity: O(n)
+    """
+
+def get_polygon_vertex_centroid(polygon: collections.abc.Sequence[tuple[float, float]]) -> tuple[float, float]:
+    r"""
+    Arithmetic mean of polygon vertices (vertex-average centroid).
+    
+    Unlike :func:`get_polygon_centroid` (area-weighted shoelace centroid),
+    this is useful for concave polygons where the area centroid lies
+    outside the boundary.
+    
+    :param polygon: Polygon as (x, y) points.
+    :returns: Vertex-average centroid (x, y).
     :complexity: O(n)
     """
 
@@ -510,6 +541,21 @@ def resample_polygon(polygon: collections.abc.Sequence[tuple[float, float]], spa
     :param polygon: Polygon as (x, y) points.
     :param spacing: Maximum allowed segment length.
     :returns: Resampled polygon as list of (x, y) points.
+    :complexity: O(n * m)
+    """
+
+def resample_polyline(polyline: collections.abc.Sequence[tuple[float, float]], max_len: float) -> list[tuple[float, float]]:
+    r"""
+    Resample an open 2D polyline so consecutive points are at most
+    *max_len* apart.
+    
+    New points are linearly interpolated along each segment that
+    exceeds the threshold.  The first and last points are always
+    preserved.
+    
+    :param polyline: Open polyline as (x, y) points.
+    :param max_len: Maximum allowed segment length.
+    :returns: Resampled polyline.
     :complexity: O(n * m)
     """
 
