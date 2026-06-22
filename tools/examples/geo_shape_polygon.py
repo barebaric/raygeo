@@ -23,6 +23,7 @@ from raygeo.geo.shape.polygon import (
     get_polyline_closest_point,
     get_segment_swept_polygon,
     offset_polygon,
+    split_polyline_at_v_junctions,
     trim_polyline_angular_ends,
     trim_polyline_at,
 )
@@ -760,6 +761,88 @@ def generate_trim_polyline_angular_ends():
     return fig
 
 
+def generate_split_v_junctions():
+    #
+    # Three high-resolution semi-arcs (hills) meeting at V-junctions
+    #
+    n = 25  # points per hill
+
+    def semi_arc(x0, y0, x1, y1, n):
+        pts = []
+        cx = (x0 + x1) / 2
+        r = abs(x1 - x0) / 2
+        amp = r * 0.2
+        for i in range(n):
+            t = i / (n - 1)
+            a = math.pi * t
+            x = cx - r * math.cos(a)
+            y = y0 + amp * math.sin(a)
+            pts.append((x, round(y, 6)))
+        return pts
+
+    hill1 = semi_arc(10, 30, 40, 30, n)
+    hill2 = semi_arc(40, 30, 70, 30, n)
+    hill3 = semi_arc(70, 30, 100, 30, n)
+
+    polyline = hill1 + hill2[1:] + hill3[1:]
+    vj1_idx = len(hill1)
+    vj2_idx = len(hill1) + len(hill2) - 1
+
+    angle_thresh = math.radians(25)
+    segments = split_polyline_at_v_junctions(polyline, angle_thresh)
+
+    fig, axes = plt.subplots(1, 2, figsize=(12, 5))
+
+    xs = [p[0] for p in polyline]
+    ys = [p[1] for p in polyline]
+    axes[0].plot(xs, ys, "-", color="steelblue", linewidth=2, alpha=0.7)
+    axes[0].plot(xs, ys, "o", color="steelblue", markersize=2)
+    for idx, label in [(vj1_idx, "V₁"), (vj2_idx, "V₂")]:
+        axes[0].plot(
+            xs[idx], ys[idx], "v", color="red", markersize=12, zorder=5
+        )
+        axes[0].annotate(
+            label,
+            (xs[idx], ys[idx]),
+            xytext=(0, -18),
+            textcoords="offset points",
+            ha="center",
+            fontsize=11,
+            fontweight="bold",
+            color="red",
+        )
+    axes[0].set_title(
+        f"Original polyline — {len(polyline)} pts, 2 V-junctions (▼)"
+    )
+    axes[0].set_aspect("equal")
+    axes[0].set_xlim(5, 105)
+    axes[0].set_ylim(25, 50)
+    axes[0].grid(True, alpha=0.3)
+
+    cmap = plt.get_cmap("tab10")
+    for si, seg in enumerate(segments):
+        xs = [p[0] for p in seg]
+        ys = [p[1] for p in seg]
+        axes[1].plot(
+            xs,
+            ys,
+            "o-",
+            color=cmap(si % 10),
+            linewidth=2.5,
+            markersize=4,
+            label=f"Segment {si + 1}",
+        )
+    axes[1].set_title(f"After split — {len(segments)} segments")
+    axes[1].set_aspect("equal")
+    axes[1].set_xlim(5, 105)
+    axes[1].set_ylim(25, 50)
+    axes[1].grid(True, alpha=0.3)
+    axes[1].legend(fontsize=9)
+
+    fig.tight_layout()
+    return fig
+
+
 __docs_target__ = ["raygeo.geo.shape.polygon.md"]
 __images__ = [
     {
@@ -860,5 +943,14 @@ __images__ = [
             " using a 25° threshold."
         ),
         "function": generate_trim_polyline_angular_ends,
+    },
+    {
+        "heading": "split_polyline_at_v_junctions",
+        "caption": (
+            "Three semi-arcs (hills) form two V-junctions where they meet."
+            " The function splits the polyline at those points and trims"
+            " each segment's angular ends."
+        ),
+        "function": generate_split_v_junctions,
     },
 ]

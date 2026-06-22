@@ -859,6 +859,32 @@ Scale a polygon.
 | _Returns_    | `types.Polygon`          | Scaled polygon.                            |
 | _Complexity_ |                          | O(n)                                       |
 
+### `split_polyline_at_v_junctions()`
+
+```python
+split_polyline_at_v_junctions(
+    polyline: Sequence[tuple[float, float]],
+    angle_threshold: float,
+) -> list[list[tuple[float, float]]]
+```
+
+Split a polyline at V-junction vertices where the interior angle is much sharper than both
+neighbours.
+
+Each resulting sub-polyline is trimmed with `trim_polyline_angular_ends`.
+
+| Parameter         | Type                              | Description                 |
+| ----------------- | --------------------------------- | --------------------------- |
+| `polyline`        | `Sequence[tuple[float, float]]`   | Sequence of (x, y) points.  |
+| `angle_threshold` | `float`                           | Angle threshold in radians. |
+| _Returns_         | `list[list[tuple[float, float]]]` | List of sub-polylines.      |
+| _Complexity_      |                                   | O(n) time, O(n) space       |
+
+![Three semi-arcs (hills) form two V-junctions where they meet. The function splits the polyline at those points and trims each segment's angular ends.](images/geo-shape-polygon-split-v-junctions.png)
+
+_Three semi-arcs (hills) form two V-junctions where they meet. The function splits the polyline at
+those points and trims each segment's angular ends._
+
 ### `to_clipper_numpy()`
 
 ```python

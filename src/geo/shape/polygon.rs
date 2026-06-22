@@ -1023,6 +1023,77 @@ pub fn trim_polyline_angular_ends(
     (cut_start, cut_len)
 }
 
+/// Split a polyline at internal vertices where the interior angle is much
+/// sharper than both neighbours (a V-junction), then trim each sub-polyline's
+/// angular ends.
+///
+/// A vertex at index `i` is considered a V-junction when:
+///
+/// ```text
+/// angle_curr + angle_threshold < angle_prev
+///     && angle_curr + angle_threshold < angle_next
+/// ```
+///
+/// where `angle_curr` is the interior angle at `polyline[i]`, and
+/// `angle_prev` / `angle_next` are the angles at the adjacent vertices.
+///
+/// Each resulting sub-polyline is further cleaned with
+/// [`trim_polyline_angular_ends`] using the same threshold.
+///
+/// Returns one or more sub-polylines.  When no split point is found the entire
+/// input is returned as a single segment.
+pub fn split_polyline_at_v_junctions(
+    polyline: &[Point],
+    angle_threshold: f64,
+) -> Vec<Vec<Point>> {
+    if polyline.len() < 5 {
+        return vec![polyline.to_vec()];
+    }
+
+    let mut split_pts: Vec<usize> = Vec::new();
+    for i in 2..polyline.len() - 2 {
+        let angle_curr =
+            get_interior_angle(polyline[i - 1], polyline[i], polyline[i + 1]);
+        let angle_prev =
+            get_interior_angle(polyline[i - 2], polyline[i - 1], polyline[i]);
+        let angle_next =
+            get_interior_angle(polyline[i], polyline[i + 1], polyline[i + 2]);
+        if angle_curr + angle_threshold < angle_prev
+            && angle_curr + angle_threshold < angle_next
+        {
+            split_pts.push(i);
+        }
+    }
+
+    if split_pts.is_empty() {
+        return vec![polyline.to_vec()];
+    }
+
+    let mut result = Vec::new();
+    let mut start = 0;
+    for &sp in &split_pts {
+        let seg = &polyline[start..=sp];
+        let (s, l) =
+            trim_polyline_angular_ends(seg, 0, seg.len(), angle_threshold);
+        if l >= 3 {
+            result.push(seg[s..s + l].to_vec());
+        }
+        start = sp;
+    }
+    let tail = &polyline[start..];
+    let (s, l) =
+        trim_polyline_angular_ends(tail, 0, tail.len(), angle_threshold);
+    if l >= 3 {
+        result.push(tail[s..s + l].to_vec());
+    }
+
+    if result.is_empty() {
+        vec![polyline.to_vec()]
+    } else {
+        result
+    }
+}
+
 pub fn polygons_intersect(
     poly1: &Polygon,
     poly2: &Polygon,
@@ -1048,4 +1119,99 @@ pub fn polygons_intersect(
         }
     }
     false
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn v(x: f64, y: f64) -> Point {
+        Point::new(x, y)
+    }
+
+    #[test]
+    fn test_split_no_split_on_smooth_arc() {
+        let pts: Vec<Point> = (0..20)
+            .map(|i| {
+                let a = std::f64::consts::FRAC_PI_2 * i as f64 / 19.0;
+                v(50.0 + 30.0 * a.cos(), 50.0 + 30.0 * a.sin())
+            })
+            .collect();
+        let result = split_polyline_at_v_junctions(&pts, 0.436);
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0].len(), pts.len());
+    }
+
+    #[test]
+    fn test_split_no_split_on_line() {
+        let pts = vec![v(0.0, 0.0), v(10.0, 0.0), v(20.0, 0.0), v(30.0, 0.0)];
+        let result = split_polyline_at_v_junctions(&pts, 0.436);
+        assert_eq!(result.len(), 1);
+    }
+
+    #[test]
+    fn test_split_at_sharp_v() {
+        let pts = vec![
+            v(0.0, 0.0),
+            v(5.0, 0.0),
+            v(10.0, 0.0),
+            v(10.0, 5.0),
+            v(10.0, 10.0),
+        ];
+        let result = split_polyline_at_v_junctions(&pts, 0.1);
+        assert!(
+            result.len() >= 2,
+            "sharp V should split, got {} segments",
+            result.len()
+        );
+    }
+
+    #[test]
+    fn test_split_small_input() {
+        let pts = vec![v(0.0, 0.0), v(1.0, 0.0), v(1.0, 1.0)];
+        let result = split_polyline_at_v_junctions(&pts, 0.1);
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0].len(), 3);
+    }
+
+    #[test]
+    fn test_split_empty_input() {
+        let result = split_polyline_at_v_junctions(&[], 0.1);
+        assert_eq!(result.len(), 1);
+        assert!(result[0].is_empty());
+    }
+
+    #[test]
+    fn test_split_high_threshold_no_split() {
+        let pts = vec![
+            v(0.0, 0.0),
+            v(5.0, 0.0),
+            v(10.0, 0.0),
+            v(10.0, 5.0),
+            v(10.0, 10.0),
+        ];
+        let result = split_polyline_at_v_junctions(&pts, 100.0);
+        assert_eq!(result.len(), 1);
+    }
+
+    #[test]
+    fn test_split_multiple_splits() {
+        let pts = vec![
+            v(0.0, 0.0),
+            v(5.0, 0.0),
+            v(10.0, 0.0),
+            v(10.0, 5.0),
+            v(10.0, 10.0),
+            v(5.0, 10.0),
+            v(0.0, 10.0),
+            v(0.0, 5.0),
+            v(0.0, 0.0),
+        ];
+        let result = split_polyline_at_v_junctions(&pts, 0.1);
+        assert!(
+            result.len() >= 3,
+            "expected at least 3 segments, got {}",
+            result.len()
+        );
+    }
 }

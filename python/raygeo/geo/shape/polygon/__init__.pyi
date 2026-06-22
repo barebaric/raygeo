@@ -54,6 +54,7 @@ __all__ = [
     "rotate_polygons",
     "rotate_polygons_numpy",
     "scale_polygon",
+    "split_polyline_at_v_junctions",
     "to_clipper_numpy",
     "translate_bounds",
     "translate_polygon",
@@ -546,6 +547,20 @@ def scale_polygon(polygon: collections.abc.Sequence[types.Point], scale: float, 
     :param scale_y: Y scale factor (optional).
     :returns: Scaled polygon.
     :complexity: O(n)
+    """
+
+def split_polyline_at_v_junctions(polyline: collections.abc.Sequence[tuple[float, float]], angle_threshold: float) -> list[list[tuple[float, float]]]:
+    r"""
+    Split a polyline at V-junction vertices where the interior
+    angle is much sharper than both neighbours.
+    
+    Each resulting sub-polyline is trimmed with
+    ``trim_polyline_angular_ends``.
+    
+    :param polyline: Sequence of (x, y) points.
+    :param angle_threshold: Angle threshold in radians.
+    :returns: List of sub-polylines.
+    :complexity: O(n) time, O(n) space
     """
 
 def to_clipper_numpy(polygon: collections.abc.Sequence[numpy.typing.NDArray]) -> list[tuple[int, int]]:

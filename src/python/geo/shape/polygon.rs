@@ -17,9 +17,9 @@ use crate::geo::shape::polygon::{
     get_segment_swept_polygon, is_almost_equal, is_point_inside_polygon,
     is_polygon_clockwise, is_polygon_convex, normalize_polygons,
     offset_polygon, point_line_distance, polygons_intersect, rotate_polygon,
-    rotate_polygons, scale_polygon, translate_bounds, translate_polygon,
-    translate_polygons, trim_polyline_angular_ends, trim_polyline_at,
-    JoinStyle,
+    rotate_polygons, scale_polygon, split_polyline_at_v_junctions,
+    translate_bounds, translate_polygon, translate_polygons,
+    trim_polyline_angular_ends, trim_polyline_at, JoinStyle,
 };
 use crate::types::{Point, Rect};
 use numpy::{PyArray2, PyArrayMethods};
@@ -158,6 +158,7 @@ pub fn register(shape_mod: &Bound<'_, PyModule>) -> PyResult<()> {
         rotate_polygons_numpy_py,
         rotate_polygons_py,
         scale_polygon_py,
+        split_polyline_at_v_junctions_py,
         get_polyline_closest_point_py,
         trim_polyline_angular_ends_py,
         trim_polyline_at_py,
@@ -1731,4 +1732,36 @@ fn trim_polyline_angular_ends_py(
     let pts: Vec<Point> =
         polygon.iter().map(|&(x, y)| Point::new(x, y)).collect();
     trim_polyline_angular_ends(&pts, start, length, angle_threshold_rad)
+}
+
+#[gen_stub_pyfunction(
+    python = r#"
+    import collections.abc
+
+    def split_polyline_at_v_junctions(
+        polyline: collections.abc.Sequence[tuple[float, float]],
+        angle_threshold: float,
+    ) -> list[list[tuple[float, float]]]:
+        """Split a polyline at V-junction vertices where the interior
+        angle is much sharper than both neighbours.
+
+        Each resulting sub-polyline is trimmed with
+        ``trim_polyline_angular_ends``.
+
+        :param polyline: Sequence of (x, y) points.
+        :param angle_threshold: Angle threshold in radians.
+        :returns: List of sub-polylines.
+        :complexity: O(n) time, O(n) space
+        """
+"#,
+    module = "raygeo.geo.shape.polygon"
+)]
+#[pyfunction(name = "split_polyline_at_v_junctions")]
+fn split_polyline_at_v_junctions_py(
+    polyline: Vec<PyPoint2D>,
+    angle_threshold: f64,
+) -> Vec<Vec<(f64, f64)>> {
+    let pts = poly_to_points(polyline);
+    let result = split_polyline_at_v_junctions(&pts, angle_threshold);
+    polygons_to_tuples(result)
 }
