@@ -53,6 +53,31 @@ Resample a polyline with a maximum segment length.
 
 _Polyline resampling_
 
+### `shortcut_path()`
+
+```python
+shortcut_path(
+    points: Sequence[tuple[float, float]],
+    obstacles: Sequence[Sequence[tuple[float, float]]],
+    clearance: float,
+) -> list[tuple[float, float]]
+```
+
+Iteratively remove interior waypoints whose direct connection (prev → next) is collision-free,
+repeating until no more points can be removed. Endpoints are always preserved.
+
+| Parameter    | Type                                      | Description                                         |
+| ------------ | ----------------------------------------- | --------------------------------------------------- |
+| `points`     | `Sequence[tuple[float, float]]`           | Polyline as a list of (x, y) tuples.                |
+| `obstacles`  | `Sequence[Sequence[tuple[float, float]]]` | List of obstacle polygons (each a list of (x, y)).  |
+| `clearance`  | `float`                                   | Minimum distance the path must keep from obstacles. |
+| _Returns_    | `list[tuple[float, float]]`               | Shortcutted polyline as a list of (x, y) tuples.    |
+| _Complexity_ |                                           | O(n²) worst-case time, O(n) space                   |
+
+![Iterative waypoint removal](images/geo-algo-smooth-shortcut-path.png)
+
+_Iterative waypoint removal_
+
 ### `smooth_circularly()`
 
 ```python

@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 from raygeo.geo.algo.smooth import (
     compute_gaussian_kernel,
     resample_polyline,
+    shortcut_path,
     smooth_circularly,
     smooth_path,
     smooth_polyline,
@@ -308,6 +309,47 @@ def generate_smooth_path():
     return fig_sp
 
 
+def generate_shortcut_path():
+    """Shortcut path: iterative collision-free waypoint removal.
+
+    The input path goes around a tall obstacle by dropping below it,
+    with many redundant waypoints on the straight sections.  Shortcutting
+    removes the redundant waypoints while preserving the dip that clears
+    the obstacle.
+    """
+    obstacle = [(40, 20), (60, 20), (60, 80), (40, 80)]
+    raw_path = [
+        (10, 50),
+        (20, 50),
+        (30, 50),
+        (30, 5),
+        (50, 5),
+        (70, 5),
+        (70, 50),
+        (80, 50),
+        (90, 50),
+    ]
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10, 4))
+
+    def draw(ax, pts, title):
+        xs, ys = zip(*pts)
+        ax.plot(xs, ys, "-o", color="tab:blue", lw=2, markersize=5)
+        ox, oy = zip(*(obstacle + [obstacle[0]]))
+        ax.fill(ox, oy, alpha=0.3, color="tab:red", label="obstacle")
+        ax.set_xlim(0, 100)
+        ax.set_ylim(-5, 90)
+        ax.set_aspect("equal")
+        ax.grid(True, alpha=0.3)
+        ax.legend(fontsize=9)
+        ax.set_title(title, fontsize=11)
+
+    draw(ax1, raw_path, f"Before ({len(raw_path)} pts)")
+    result = shortcut_path(raw_path, [obstacle], 1.0)
+    draw(ax2, result, f"After ({len(result)} pts)")
+    fig.tight_layout()
+    return fig
+
+
 __docs_target__ = ["raygeo.geo.algo.smooth.md"]
 __images__ = [
     {
@@ -339,5 +381,10 @@ __images__ = [
         "heading": "smooth_path",
         "caption": "Constrained path smoothing",
         "function": generate_smooth_path,
+    },
+    {
+        "heading": "shortcut_path",
+        "caption": "Iterative waypoint removal",
+        "function": generate_shortcut_path,
     },
 ]

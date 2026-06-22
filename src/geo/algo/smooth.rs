@@ -269,37 +269,35 @@ pub fn smooth_polyline(
     }
 }
 
-/// Iteratively reduce a polyline to the fewest waypoints whose direct
-/// connections stay clear of all obstacles by at least `clearance`.
-///
-/// From each waypoint the scan jumps to the **farthest** reachable
-/// waypoint (scanning backward from the end) whose direct segment does
-/// not collide.  Endpoints are always preserved.
-fn shortcut_path(
+/// Iteratively remove interior waypoints whose direct connection
+/// (prev → next) is collision-free, repeating until no more points
+/// can be removed.  Endpoints are always preserved.
+pub(crate) fn shortcut_path(
     points: &[Point],
     obstacles: &[Polygon],
     clearance: f64,
 ) -> Vec<Point> {
-    let n = points.len();
-    if n <= 2 {
+    if points.len() <= 2 {
         return points.to_vec();
     }
-
-    let mut result = vec![points[0]];
-    let mut i = 0;
-    while i < n - 1 {
-        let mut farthest = i + 1;
-        for j in (i + 2..n).rev() {
-            let seg = [points[i], points[j]];
+    let mut current = points.to_vec();
+    let mut changed = true;
+    while changed {
+        changed = false;
+        let mut i = 1;
+        while i < current.len() - 1 {
+            let prev = current[i - 1];
+            let next = current[i + 1];
+            let seg = [prev, next];
             if !does_path_sweep_intersect_polygon(&seg, clearance, obstacles) {
-                farthest = j;
-                break;
+                current.remove(i);
+                changed = true;
+            } else {
+                i += 1;
             }
         }
-        result.push(points[farthest]);
-        i = farthest;
     }
-    result
+    current
 }
 
 /// Smooth a polyline while maintaining a minimum clearance from

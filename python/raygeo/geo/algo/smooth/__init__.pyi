@@ -14,6 +14,7 @@ import typing
 __all__ = [
     "compute_gaussian_kernel",
     "resample_polyline",
+    "shortcut_path",
     "smooth_circularly",
     "smooth_path",
     "smooth_polyline",
@@ -38,6 +39,19 @@ def resample_polyline(points: collections.abc.Sequence[types.Point3D], max_segme
     :param is_closed: Whether the polyline is closed.
     :returns: Resampled points.
     :complexity: O(n) time, O(n) space
+    """
+
+def shortcut_path(points: collections.abc.Sequence[tuple[float, float]], obstacles: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]], clearance: float) -> list[tuple[float, float]]:
+    r"""
+    Iteratively remove interior waypoints whose direct connection
+    (prev → next) is collision-free, repeating until no more points
+    can be removed.  Endpoints are always preserved.
+    
+    :param points: Polyline as a list of (x, y) tuples.
+    :param obstacles: List of obstacle polygons (each a list of (x, y)).
+    :param clearance: Minimum distance the path must keep from obstacles.
+    :returns: Shortcutted polyline as a list of (x, y) tuples.
+    :complexity: O(n²) worst-case time, O(n) space
     """
 
 def smooth_circularly(points: collections.abc.Sequence[types.Point3D], kernel: collections.abc.Sequence[float]) -> list[types.Point3D]:

@@ -4,6 +4,7 @@ import pytest
 
 from raygeo.geo.algo.smooth import (
     compute_gaussian_kernel,
+    shortcut_path,
     smooth_circularly,
     smooth_path,
     smooth_polyline,
@@ -301,3 +302,52 @@ class TestSmoothPath:
         assert not does_path_sweep_intersect_polygon(
             result, clearance, [obs1, obs2]
         )
+
+
+class TestShortcutPath:
+    """Tests for shortcut_path (iterative waypoint removal)."""
+
+    def test_shortcut_straight_line(self):
+        """Three collinear points → middle point removed."""
+        result = shortcut_path([(0, 0), (50, 0), (100, 0)], [], 1.0)
+        assert result == [(0.0, 0.0), (100.0, 0.0)]
+
+    def test_shortcut_around_obstacle(self):
+        """Waypoint that avoids an obstacle is preserved."""
+        obstacle = [(30, -10), (30, 10), (70, 10), (70, -10)]
+        path = [(0, 0), (50, 0), (100, 0)]
+        result = shortcut_path(path, [obstacle], 1.0)
+        # (0,0) → (100,0) crosses obstacle, so (50,0) is preserved
+        assert result == [(0.0, 0.0), (50.0, 0.0), (100.0, 0.0)]
+
+    def test_shortcut_no_obstacles_long_path(self):
+        """All intermediate points removable with no obstacles."""
+        path = [(0, 0), (10, 0), (20, 0), (30, 0), (40, 0), (50, 0)]
+        result = shortcut_path(path, [], 1.0)
+        assert result == [(0.0, 0.0), (50.0, 0.0)]
+
+    def test_shortcut_zigzag_clear(self):
+        """Zigzag with no obstacles → collapsed to endpoints."""
+        path = [(0, 0), (25, 10), (50, 0), (75, 10), (100, 0)]
+        result = shortcut_path(path, [], 1.0)
+        assert result == [(0.0, 0.0), (100.0, 0.0)]
+
+    def test_shortcut_two_points(self):
+        """Two points → unchanged."""
+        result = shortcut_path([(0, 0), (100, 0)], [], 1.0)
+        assert result == [(0.0, 0.0), (100.0, 0.0)]
+
+    def test_shortcut_one_point(self):
+        """Single point → unchanged."""
+        result = shortcut_path([(42, 42)], [], 1.0)
+        assert result == [(42.0, 42.0)]
+
+    def test_preserves_clearance_from_multiple_obstacles(self):
+        """Multiple obstacles prevent removal of critical waypoints."""
+        obs1 = [(10, -10), (10, 10), (30, 10), (30, -10)]
+        obs2 = [(70, -10), (70, 10), (90, 10), (90, -10)]
+        path = [(0, 0), (20, 0), (50, 0), (80, 0), (100, 0)]
+        result = shortcut_path(path, [obs1, obs2], 1.0)
+        # All direct connections skip over at least one obstacle,
+        # so no interior point can be removed.
+        assert len(result) == 5

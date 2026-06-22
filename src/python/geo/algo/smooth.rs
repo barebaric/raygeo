@@ -10,8 +10,8 @@ sharp features.
 
 use super::super::flex_point::{points3d_to_tuples, PyPoint3D};
 use crate::geo::algo::smooth::{
-    compute_gaussian_kernel, resample_polyline, smooth_circularly, smooth_path,
-    smooth_polyline, smooth_sub_segment,
+    compute_gaussian_kernel, resample_polyline, shortcut_path,
+    smooth_circularly, smooth_path, smooth_polyline, smooth_sub_segment,
 };
 use crate::types::{Point, Point3D};
 use pyo3::prelude::*;
@@ -26,6 +26,7 @@ pub fn register(algo_mod: &Bound<'_, PyModule>) -> PyResult<()> {
         m,
         resample_polyline_py,
         compute_gaussian_kernel_py,
+        shortcut_path_py,
         smooth_circularly_py,
         smooth_polyline_algo_py,
         smooth_sub_segment_py,
@@ -87,6 +88,46 @@ fn resample_polyline_py(
 #[pyfunction(name = "compute_gaussian_kernel")]
 fn compute_gaussian_kernel_py(amount: i32) -> (Vec<f64>, f64) {
     compute_gaussian_kernel(amount)
+}
+
+#[gen_stub_pyfunction(
+    python = r#"
+    import collections.abc
+
+    def shortcut_path(
+        points: collections.abc.Sequence[tuple[float, float]],
+        obstacles: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]],
+        clearance: float,
+    ) -> list[tuple[float, float]]:
+        """Iteratively remove interior waypoints whose direct connection
+        (prev → next) is collision-free, repeating until no more points
+        can be removed.  Endpoints are always preserved.
+
+        :param points: Polyline as a list of (x, y) tuples.
+        :param obstacles: List of obstacle polygons (each a list of (x, y)).
+        :param clearance: Minimum distance the path must keep from obstacles.
+        :returns: Shortcutted polyline as a list of (x, y) tuples.
+        :complexity: O(n²) worst-case time, O(n) space
+        """
+"#,
+    module = "raygeo.geo.algo.smooth"
+)]
+#[pyfunction(name = "shortcut_path")]
+fn shortcut_path_py(
+    points: Vec<(f64, f64)>,
+    obstacles: Vec<Vec<(f64, f64)>>,
+    clearance: f64,
+) -> Vec<(f64, f64)> {
+    let pts: Vec<Point> =
+        points.into_iter().map(|(x, y)| Point::new(x, y)).collect();
+    let obs: Vec<Vec<Point>> = obstacles
+        .into_iter()
+        .map(|poly| poly.into_iter().map(|(x, y)| Point::new(x, y)).collect())
+        .collect();
+    shortcut_path(&pts, &obs, clearance)
+        .into_iter()
+        .map(|p| (p.x, p.y))
+        .collect()
 }
 
 #[gen_stub_pyfunction(
