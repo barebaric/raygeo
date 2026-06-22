@@ -7,52 +7,60 @@ The MAT is the skeleton of a 2D domain — the set of points equidistant
 to two or more boundary features.  It is computed via Delaunay-circumcenter
 extraction from a constrained triangulation of the pocket boundary.
 
-* ``compute_medial_axis`` — compute the MAT of a pocket (with optional islands).
+* ``MedialAxis.compute`` — compute the MAT of a pocket (with optional islands).
+* ``MedialAxis.path_between`` — find a path between two points along the skeleton.
+* ``MedialAxis.trim_to_polygons`` — filter nodes to those inside given polygons.
 """
 
-import collections.abc
+import builtins
+import typing
 __all__ = [
-    "compute_medial_axis",
-    "mat_path",
+    "MedialAxis",
 ]
 
-def compute_medial_axis(outer: collections.abc.Sequence[tuple[float, float]], holes: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]] = [], tool_radius: float = 1, sampling_spacing: float = 1) -> tuple[list[tuple[float, float]], list[float], list[tuple[int, int]], int, list[list[int]]]:
+@typing.final
+class MedialAxis:
     r"""
-    Compute the Medial Axis Transform of a planar domain.
+    Medial Axis Transform of a planar domain.
     
-    Returns ``(nodes, clearances, edges, root, branches)``.
+    The MAT is the set of points equidistant to two or more boundary
+    features, forming the skeleton of the free space.
     
-    :param outer: Outer boundary polygon (CCW).
-    :param holes: List of hole polygons (CW). Defaults to [].
-    :param tool_radius: Minimum clearance; narrower branches are pruned.
-    :param sampling_spacing: Sampling density for boundary + Steiner grid.
-                            Smaller = finer MAT.
+    **Usage**:
     
-    :returns:
-        ``(nodes, clearances, edges, root, branches)`` where
+    .. code-block:: python
     
-        * **nodes** — ``list[(x, y)]`` of medial axis vertex positions.
-        * **clearances** — ``list[float]`` inscribed circle radius per node.
-        * **edges** — ``list[(int, int)]`` tree edges (parent, child).
-        * **root** — ``int`` index of the maximum-clearance node.
-        * **branches** — ``list[list[int]]`` each branch is a node-index path
-          from a junction to another junction or leaf.
+        axis = MedialAxis.compute(outer, holes)
+        path = axis.path_between((x1, y1), (x2, y2))
+        trimmed = axis.trim_to_polygons(polygons)
+        nodes = axis.nodes
+        clearances = axis.clearances
+        edges = axis.edges
+        root = axis.root
+        branches = axis.branches
     """
-
-def mat_path(outer: collections.abc.Sequence[tuple[float, float]], from_pt: tuple[float, float], to_pt: tuple[float, float], holes: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]] = [], tool_radius: float = 1, sampling_spacing: float = 1) -> list[tuple[float, float]] | None:
-    r"""
-    Find a path between two points using the Medial Axis.
-    
-    Computes the MAT of the pocket defined by *outer* and *holes*,
-    then finds the shortest-topology path between *from_pt* and
-    *to_pt* along the medial axis graph.
-    
-    :param outer: Outer boundary polygon (CCW).
-    :param from_pt: Start point (x, y).
-    :param to_pt: End point (x, y).
-    :param holes: List of hole polygons (CW). Defaults to [].
-    :param tool_radius: Minimum clearance for MAT pruning.
-    :param sampling_spacing: Boundary sampling density.
-    :returns: List of (x, y) waypoints along the path, or None.
-    """
+    @property
+    def nodes(self) -> builtins.list[tuple[builtins.float, builtins.float]]: ...
+    @property
+    def clearances(self) -> builtins.list[builtins.float]: ...
+    @property
+    def edges(self) -> builtins.list[tuple[builtins.int, builtins.int]]: ...
+    @property
+    def root(self) -> builtins.int: ...
+    @property
+    def branches(self) -> builtins.list[builtins.list[builtins.int]]: ...
+    @staticmethod
+    def compute(outer: typing.Sequence[tuple[builtins.float, builtins.float]], holes: typing.Optional[typing.Sequence[typing.Sequence[tuple[builtins.float, builtins.float]]]] = None, tool_radius: builtins.float = 1.0, sampling_spacing: builtins.float = 1.0) -> MedialAxis:
+        r"""
+        Compute the Medial Axis Transform of a planar domain.
+        """
+    def path_between(self, from_pt: tuple[builtins.float, builtins.float], to_pt: tuple[builtins.float, builtins.float]) -> typing.Optional[builtins.list[tuple[builtins.float, builtins.float]]]:
+        r"""
+        Find a path between two points along the medial axis skeleton.
+        """
+    def trim_to_polygons(self, polygons: typing.Sequence[typing.Sequence[tuple[builtins.float, builtins.float]]]) -> MedialAxis:
+        r"""
+        Return a new ``MedialAxis`` containing only nodes whose
+        positions fall inside at least one of the given polygons.
+        """
 

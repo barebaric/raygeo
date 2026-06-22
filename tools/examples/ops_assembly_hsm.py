@@ -8,10 +8,11 @@ from matplotlib.colors import Normalize
 
 from raygeo.geo.algo.cleared_area import ClearedArea
 from raygeo.geo.algo.fillet import append_end_fillets, trim_to_safe_fillet_span
-from raygeo.geo.algo.medial_axis import compute_medial_axis
+from raygeo.geo.algo.medial_axis import MedialAxis
 from raygeo.geo.algo.offset import compute_inset_region
 from raygeo.geo.shape.arc import get_polyline_turn_sign
 from raygeo.geo.shape.polygon import (
+    get_polygon_centroid,
     get_polygons_group_difference,
     trim_polyline_at,
 )
@@ -21,6 +22,7 @@ from raygeo.ops.assembly.hsm import (
     adaptive_wavefronts,
     find_cutting_arc,
     link_arcs_to_ops,
+    split_ordered_wavefronts,
 )
 
 
@@ -41,35 +43,38 @@ def _plot_ops_2d(ops, boundary, islands, title, cut_z=-5.0, safe_z=5.0):
     pts = _ops_to_points(ops)
     if pts:
         seg_x, seg_y, is_travel = [], [], False
+        labeled = {}
         for x, y, z, travel in pts:
             if seg_x and travel != is_travel:
                 if len(seg_x) >= 2:
-                    color = "#ff7f0e" if is_travel else "#1f77b4"
-                    ls = "--" if is_travel else "-"
+                    key = "travel" if is_travel else "cut"
                     ax.plot(
                         seg_x,
                         seg_y,
-                        color=color,
-                        linewidth=0.6,
-                        linestyle=ls,
+                        color="#ff7f0e" if is_travel else "#1f77b4",
+                        linewidth=2.0 if is_travel else 0.6,
+                        linestyle="--" if is_travel else "-",
                         alpha=0.8,
+                        label=key if key not in labeled else "",
                     )
+                    labeled[key] = True
                 seg_x, seg_y = [], []
             if not seg_x:
                 is_travel = travel
             seg_x.append(x)
             seg_y.append(y)
         if len(seg_x) >= 2:
-            color = "#ff7f0e" if is_travel else "#1f77b4"
-            ls = "--" if is_travel else "-"
+            key = "travel" if is_travel else "cut"
             ax.plot(
                 seg_x,
                 seg_y,
-                color=color,
-                linewidth=0.6,
-                linestyle=ls,
+                color="#ff7f0e" if is_travel else "#1f77b4",
+                linewidth=2.0 if is_travel else 0.6,
+                linestyle="--" if is_travel else "-",
                 alpha=0.8,
+                label=key if key not in labeled else "",
             )
+            labeled[key] = True
 
     bnd = np.array(list(boundary) + [boundary[0]])
     ax.plot(bnd[:, 0], bnd[:, 1], "k-", linewidth=2, label="Boundary")
@@ -163,7 +168,6 @@ def generate_adaptive_peeling_2d():
         step_over=2.0,
         cut_z=-5.0,
         safe_z=5.0,
-        area_tolerance=1.0,
     )
     return _plot_ops_2d(
         ops,
@@ -194,7 +198,6 @@ def generate_adaptive_peeling_3d():
         step_over=2.0,
         cut_z=cut_z,
         safe_z=safe_z,
-        area_tolerance=1.0,
     )
     return _plot_ops_3d(
         ops,
@@ -207,7 +210,7 @@ def generate_adaptive_peeling_3d():
 
 
 def generate_adaptive_peeling_multi():
-    """adaptive_peeling on a multi-island pocket."""
+    """adaptive_peeling on a multi-island pocket with directed bite graph."""
     boundary = [(0, 0), (180, 0), (180, 120), (0, 120)]
     islands = [
         [(15, 15), (35, 15), (35, 35), (15, 35)],
@@ -220,32 +223,233 @@ def generate_adaptive_peeling_multi():
         ],
         [(130, 80), (160, 80), (160, 105), (130, 105)],
     ]
+    tool_radius = 3.0
+    step_over = 2.0
+
     _, cp = adaptive_entry(
         pocket_boundary=boundary,
         islands=islands,
-        tool_radius=3.0,
-        step_over=2.0,
+        tool_radius=tool_radius,
+        step_over=step_over,
         safe_z=2.0,
         target_z=-5.0,
         plunge_pitch=1.0,
     )
-    ca = ClearedArea(initial=cp)
+    va, _total = compute_inset_region(boundary, tool_radius, islands)
+
+    if cp:
+        centre = get_polygon_centroid(cp[0])
+    else:
+        centre = get_polygon_centroid(boundary)
+
+    graph = split_ordered_wavefronts(
+        ClearedArea(initial=cp), step_over, va, 0.01, centre
+    )
     ops = adaptive_peeling(
-        cleared=ca,
+        cleared=ClearedArea(initial=cp),
         pocket_boundary=boundary,
         islands=islands,
-        tool_radius=3.0,
-        step_over=2.0,
+        tool_radius=tool_radius,
+        step_over=step_over,
         cut_z=-5.0,
         safe_z=5.0,
-        area_tolerance=1.0,
     )
-    return _plot_ops_2d(
-        ops,
-        boundary,
-        islands,
-        "adaptive_peeling — Multi-Island Pocket",
+
+    n_passes = len(graph.bite_polys)
+    total_bites = len(graph.parent)
+
+    # Map global bite index to pass.
+    def _bite_pass(bi: int) -> int:
+        for pi, off in enumerate(graph.bite_offsets):
+            nxt = (
+                graph.bite_offsets[pi + 1]
+                if pi + 1 < n_passes
+                else total_bites
+            )
+            if off <= bi < nxt:
+                return pi
+        return 0
+
+    # Per-bite node position: first arc's spatial midpoint,
+    # falling back to polygon centroid when the bite has no arcs.
+    arc_mids: list[tuple[float, float]] = []
+    for arc in graph.arcs:
+        if len(arc) == 1:
+            arc_mids.append((arc[0][0], arc[0][1]))
+            continue
+        seg_lens = []
+        total_len = 0.0
+        for i in range(len(arc) - 1):
+            dl = math.hypot(
+                arc[i + 1][0] - arc[i][0], arc[i + 1][1] - arc[i][1]
+            )
+            seg_lens.append(dl)
+            total_len += dl
+        if total_len < 1e-12:
+            arc_mids.append((arc[0][0], arc[0][1]))
+            continue
+        half = total_len / 2.0
+        acc = 0.0
+        mid_pt = (arc[-1][0], arc[-1][1])
+        for i, dl in enumerate(seg_lens):
+            if acc + dl >= half:
+                t = (half - acc) / dl if dl > 1e-12 else 0.0
+                mid_pt = (
+                    arc[i][0] + t * (arc[i + 1][0] - arc[i][0]),
+                    arc[i][1] + t * (arc[i + 1][1] - arc[i][1]),
+                )
+                break
+            acc += dl
+        arc_mids.append(mid_pt)
+
+    node_pos: list[tuple[float, float]] = []
+    node_has_arc: list[bool] = []
+    for bi in range(total_bites):
+        dfs_arcs = graph.bite_arcs[bi]
+        if dfs_arcs:
+            node_pos.append(arc_mids[dfs_arcs[0]])
+            node_has_arc.append(True)
+        else:
+            pi = _bite_pass(bi)
+            local = bi - graph.bite_offsets[pi]
+            poly = graph.bite_polys[pi][local]
+            cx = sum(p[0] for p in poly) / len(poly)
+            cy = sum(p[1] for p in poly) / len(poly)
+            node_pos.append((cx, cy))
+            node_has_arc.append(False)
+
+    grad_cmap = plt.colormaps["turbo"]
+
+    def _draw_common(ax, show_graph, show_ops):
+        ax.set_aspect("equal")
+
+        bnd = np.array(list(boundary) + [boundary[0]])
+        ax.plot(bnd[:, 0], bnd[:, 1], "k-", linewidth=2, label="Boundary")
+        for isl in islands:
+            isl_arr = np.array(list(isl) + [isl[0]])
+            ax.fill(
+                isl_arr[:, 0],
+                isl_arr[:, 1],
+                facecolor="#ccc",
+                edgecolor="#999",
+                linewidth=1.5,
+            )
+
+        if show_graph:
+            # Directed edges: parent -> child (tree, one parent each).
+            for child, p in enumerate(graph.parent):
+                if p is None:
+                    continue
+                px, py = node_pos[p]
+                cx, cy = node_pos[child]
+                ax.plot(
+                    [px, cx],
+                    [py, cy],
+                    color="#2ca02c",
+                    linewidth=0.4,
+                    alpha=0.35,
+                    zorder=1,
+                )
+
+            # Node markers coloured by pass (turbo), arc-bearing only.
+            arc_node_pos = [
+                node_pos[bi] for bi in range(total_bites) if node_has_arc[bi]
+            ]
+            if arc_node_pos:
+                arc_pass_vals = [
+                    _bite_pass(bi)
+                    for bi in range(total_bites)
+                    if node_has_arc[bi]
+                ]
+                ax.scatter(
+                    [c[0] for c in arc_node_pos],
+                    [c[1] for c in arc_node_pos],
+                    c=arc_pass_vals,
+                    cmap=grad_cmap,
+                    s=6,
+                    alpha=0.4,
+                    zorder=2,
+                )
+
+            # Arcs in turbo by pass index.
+            for ai, arc in enumerate(graph.arcs):
+                pi = graph.arc_passes[ai]
+                colour = grad_cmap(pi / max(n_passes - 1, 1))
+                ax.plot(
+                    [p[0] for p in arc],
+                    [p[1] for p in arc],
+                    color=colour,
+                    linewidth=2.0,
+                    alpha=0.7,
+                    zorder=3,
+                )
+
+        if show_ops:
+            pts = _ops_to_points(ops)
+            if pts:
+                seg_x, seg_y, is_travel = [], [], False
+                for x, y, z, travel in pts:
+                    if seg_x and travel != is_travel:
+                        if len(seg_x) >= 2:
+                            color = "#ff7f0e" if is_travel else "#1f77b4"
+                            ls = "--" if is_travel else "-"
+                            ax.plot(
+                                seg_x,
+                                seg_y,
+                                color=color,
+                                linewidth=0.6,
+                                linestyle=ls,
+                                alpha=0.8,
+                                zorder=4,
+                            )
+                        seg_x, seg_y = [], []
+                    if not seg_x:
+                        is_travel = travel
+                    seg_x.append(x)
+                    seg_y.append(y)
+                if len(seg_x) >= 2:
+                    color = "#ff7f0e" if is_travel else "#1f77b4"
+                    ls = "--" if is_travel else "-"
+                    ax.plot(
+                        seg_x,
+                        seg_y,
+                        color=color,
+                        linewidth=0.6,
+                        linestyle=ls,
+                        alpha=0.8,
+                        zorder=4,
+                    )
+
+        ax.set_xlabel("X")
+        ax.set_ylabel("Y")
+        ax.grid(True, alpha=0.3)
+
+    fig, (ax1, ax2) = plt.subplots(
+        1, 2, figsize=(18, 8), constrained_layout=True
     )
+
+    _draw_common(ax1, show_graph=True, show_ops=False)
+    ax1.set_title(
+        f"Directed bite graph — {total_bites} bites, {n_passes} passes"
+    )
+
+    _draw_common(ax2, show_graph=False, show_ops=True)
+    ax2.set_title("Ops toolpath (cut blue, travel orange dashed)")
+
+    sm = plt.cm.ScalarMappable(
+        cmap=grad_cmap, norm=Normalize(0, max(n_passes - 1, 1))
+    )
+    sm.set_array([])
+    cbar = fig.colorbar(
+        sm,
+        ax=[ax1, ax2],
+        orientation="vertical",
+        pad=0.02,
+        shrink=0.7,
+    )
+    cbar.set_label("Pass index")
+
+    return fig
 
 
 def generate_link_arcs():
@@ -307,13 +511,13 @@ def generate_link_arcs():
 
     mat_data = None
     try:
-        mat = compute_medial_axis(
+        mat = MedialAxis.compute(
             boundary,
             islands,
             tool_radius,
-            sampling_spacing=step_over * 0.5,
+            step_over * 0.5,
         )
-        mat_data = (mat[0], mat[2])
+        mat_data = (mat.nodes, mat.edges)
     except Exception:
         pass
 
@@ -324,6 +528,7 @@ def generate_link_arcs():
         safe_z=2.0,
         mat=mat_data,
         safe_margin=tool_radius,
+        cleared=ca.fragments(),
     )
 
     fig, ax = plt.subplots(figsize=(7, 6))
@@ -818,6 +1023,214 @@ def generate_find_cutting_arc_simple():
     return fig
 
 
+def generate_split_ordered_wavefronts():
+    """Visualize the directed bite graph from split_ordered_wavefronts()."""
+    boundary = [(0, 0), (180, 0), (180, 120), (0, 120)]
+    islands = [
+        [(15, 15), (35, 15), (35, 35), (15, 35)],
+        [
+            (
+                80 + 10 * math.cos(2 * math.pi * i / 32),
+                50 + 10 * math.sin(2 * math.pi * i / 32),
+            )
+            for i in range(32)
+        ],
+        [(130, 80), (160, 80), (160, 105), (130, 105)],
+    ]
+    tool_radius = 3.0
+    step_over = 2.0
+
+    _, cp = adaptive_entry(
+        pocket_boundary=boundary,
+        islands=islands,
+        tool_radius=tool_radius,
+        step_over=step_over,
+        safe_z=2.0,
+        target_z=-5.0,
+        plunge_pitch=1.0,
+    )
+    va, _total = compute_inset_region(boundary, tool_radius, islands)
+
+    if cp:
+        centre = get_polygon_centroid(cp[0])
+    else:
+        centre = get_polygon_centroid(boundary)
+
+    ca = ClearedArea(initial=cp)
+    graph = split_ordered_wavefronts(ca, step_over, va, 0.01, centre)
+
+    n_passes = len(graph.bite_polys)
+    total_bites = len(graph.parent)
+    n_arcs = len(graph.arcs)
+
+    # Colour by pass index (outward gradient).
+    arc_cmap = plt.colormaps["turbo"]
+    arc_norm = Normalize(vmin=0, vmax=max(n_passes - 1, 1))
+
+    def _bite_pass(gb: int) -> int:
+        for pi, off in enumerate(graph.bite_offsets):
+            nxt = (
+                graph.bite_offsets[pi + 1]
+                if pi + 1 < n_passes
+                else total_bites
+            )
+            if off <= gb < nxt:
+                return pi
+        return 0
+
+    # Spatial midpoint along each arc (for number placement).
+    arc_mids: list[tuple[float, float]] = []
+    for arc in graph.arcs:
+        if len(arc) == 1:
+            arc_mids.append((arc[0][0], arc[0][1]))
+            continue
+        seg_lens = []
+        total_len = 0.0
+        for i in range(len(arc) - 1):
+            dl = math.hypot(
+                arc[i + 1][0] - arc[i][0], arc[i + 1][1] - arc[i][1]
+            )
+            seg_lens.append(dl)
+            total_len += dl
+        if total_len < 1e-12:
+            arc_mids.append((arc[0][0], arc[0][1]))
+            continue
+        half = total_len / 2.0
+        acc = 0.0
+        mid_pt = (arc[-1][0], arc[-1][1])
+        for i, dl in enumerate(seg_lens):
+            if acc + dl >= half:
+                t = (half - acc) / dl if dl > 1e-12 else 0.0
+                mid_pt = (
+                    arc[i][0] + t * (arc[i + 1][0] - arc[i][0]),
+                    arc[i][1] + t * (arc[i + 1][1] - arc[i][1]),
+                )
+                break
+            acc += dl
+        arc_mids.append(mid_pt)
+
+    # Per-bite node position = first arc's spatial midpoint (so it
+    # coincides with a numbered arc).  Falls back to polygon centroid
+    # when the bite has no arcs.
+    node_pos: list[tuple[float, float]] = []
+    node_has_arc: list[bool] = []
+    for bi in range(total_bites):
+        dfs_arcs = graph.bite_arcs[bi]
+        if dfs_arcs:
+            node_pos.append(arc_mids[dfs_arcs[0]])
+            node_has_arc.append(True)
+        else:
+            pi = _bite_pass(bi)
+            local = bi - graph.bite_offsets[pi]
+            poly = graph.bite_polys[pi][local]
+            cx = sum(p[0] for p in poly) / len(poly)
+            cy = sum(p[1] for p in poly) / len(poly)
+            node_pos.append((cx, cy))
+            node_has_arc.append(False)
+
+    fig, ax = plt.subplots(figsize=(12, 8))
+    ax.set_aspect("equal")
+
+    # Boundary + islands.
+    bnd = np.array(list(boundary) + [boundary[0]])
+    ax.plot(bnd[:, 0], bnd[:, 1], "k-", linewidth=2, label="Boundary")
+    for isl in islands:
+        isl_arr = np.array(list(isl) + [isl[0]])
+        ax.fill(
+            isl_arr[:, 0],
+            isl_arr[:, 1],
+            facecolor="#ddd",
+            edgecolor="#999",
+            linewidth=1,
+        )
+
+    # Initial cleared area.
+    for fidx, frag in enumerate(cp):
+        fx = [p[0] for p in frag] + [frag[0][0]]
+        fy = [p[1] for p in frag] + [frag[0][1]]
+        ax.fill(
+            fx,
+            fy,
+            color="#4488dd",
+            alpha=0.2,
+            label="Initial" if fidx == 0 else "",
+        )
+
+    # Directed edges: parent -> child (tree, one parent each).
+    for child, p in enumerate(graph.parent):
+        if p is None:
+            continue
+        px, py = node_pos[p]
+        cx, cy = node_pos[child]
+        ax.annotate(
+            "",
+            xy=(cx, cy),
+            xytext=(px, py),
+            arrowprops=dict(
+                arrowstyle="->",
+                color="#444",
+                lw=0.6,
+                alpha=0.7,
+                shrinkA=6,
+                shrinkB=6,
+            ),
+        )
+
+    # Node markers at arc-bearing bites only.
+    arc_node_pos = [
+        node_pos[bi] for bi in range(total_bites) if node_has_arc[bi]
+    ]
+    if arc_node_pos:
+        ax.scatter(
+            [p[0] for p in arc_node_pos],
+            [p[1] for p in arc_node_pos],
+            s=4,
+            c="#333",
+            alpha=0.3,
+            zorder=3,
+        )
+
+    # Cutting arcs coloured by pass index.
+    for ai, arc in enumerate(graph.arcs):
+        pi = graph.arc_passes[ai]
+        colour = arc_cmap(arc_norm(pi))
+        xs = [p[0] for p in arc]
+        ys = [p[1] for p in arc]
+        ax.plot(xs, ys, color=colour, linewidth=1.2, alpha=0.85)
+
+    # Number each arc at its spatial midpoint.
+    for ai, mid in enumerate(arc_mids):
+        ax.text(
+            mid[0],
+            mid[1],
+            str(ai),
+            fontsize=5,
+            ha="center",
+            va="center",
+            zorder=5,
+            bbox=dict(
+                boxstyle="circle,pad=0.12",
+                facecolor="white",
+                alpha=0.7,
+                edgecolor="none",
+            ),
+        )
+
+    sm = plt.cm.ScalarMappable(cmap=arc_cmap, norm=arc_norm)
+    sm.set_array([])
+    fig.colorbar(sm, ax=ax, label="Pass index", fraction=0.04, pad=0.02)
+
+    ax.set_title(
+        f"split_ordered_wavefronts() - {total_bites} bites,"
+        f" {n_passes} passes, {n_arcs} arcs"
+    )
+    ax.set_xlabel("X")
+    ax.set_ylabel("Y")
+    ax.legend(loc="upper right", fontsize=8)
+    fig.tight_layout()
+    return fig
+
+
 __docs_target__ = ["raygeo.ops.assembly.hsm.md"]
 
 __images__ = [
@@ -897,8 +1310,10 @@ __images__ = [
     {
         "heading": "adaptive_peeling",
         "caption": (
-            "adaptive_peeling on a pocket with three islands —"
-            " travel links route around obstacles"
+            "adaptive_peeling on a three-island pocket — left: directed"
+            " bite graph (green parent→child edges, node markers at bite"
+            " centroids coloured by pass, arcs in turbo); right:"
+            " resulting Ops toolpath (cut blue, travel orange dashed)"
         ),
         "function": generate_adaptive_peeling_multi,
     },
@@ -909,5 +1324,14 @@ __images__ = [
             " MAT-routed travel segments"
         ),
         "function": generate_link_arcs,
+    },
+    {
+        "heading": "split_ordered_wavefronts",
+        "caption": (
+            "Cutting arcs from split_ordered_wavefronts() coloured by"
+            " pass (turbo), with parent→child edges (grey arrows) and"
+            " numbered labels at each arc midpoint"
+        ),
+        "function": generate_split_ordered_wavefronts,
     },
 ]

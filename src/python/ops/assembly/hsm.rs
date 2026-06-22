@@ -4,7 +4,7 @@ use crate::python::geo::algo::cleared_area::ClearedArea as PyClearedArea;
 use crate::python::ops::PyOps;
 use crate::types::Point;
 use pyo3::prelude::*;
-use pyo3_stub_gen::derive::gen_stub_pyfunction;
+use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pyfunction};
 
 pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     let hsm_mod = PyModule::new(assembly_mod.py(), "hsm")?;
@@ -12,16 +12,86 @@ pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
         hsm_mod,
         adaptive_entry_py,
         adaptive_wavefronts_py,
+        split_ordered_wavefronts_py,
         link_arcs_to_ops_py,
         adaptive_peeling_py,
         find_cutting_arc_py,
     );
+    hsm_mod.add_class::<PyWavefrontGraph>()?;
     assembly_mod.add_submodule(&hsm_mod)?;
 
     let sys_modules = assembly_mod.py().import("sys")?.getattr("modules")?;
     sys_modules.set_item("raygeo.ops.assembly.hsm", &hsm_mod)?;
 
     Ok(())
+}
+
+/// Parent tree returned by [`split_ordered_wavefronts`].
+///
+/// Nodes are individual bite polygons, identified by a *global index*
+/// computed from `bite_offsets`:
+///
+/// ```text
+/// global = bite_offsets[pass] + local_index_within_pass
+/// ```
+///
+/// Each bite has exactly one parent (the nearest previous-pass bite
+/// sharing boundary), forming a tree.  `visit_order` lists global bite
+/// indices in DFS traversal order.
+#[gen_stub_pyclass(module = "raygeo.ops.assembly.hsm")]
+#[pyclass(skip_from_py_object)]
+#[derive(Debug, Clone)]
+struct PyWavefrontGraph {
+    /// Cutting arcs in DFS visit order.
+    #[pyo3(get)]
+    arcs: Vec<Vec<(f64, f64)>>,
+    /// Pass index for each arc in `arcs` (same length, same order).
+    #[pyo3(get)]
+    arc_passes: Vec<usize>,
+    /// Per-pass bite polygons: `bite_polys[pass][local]`.
+    #[pyo3(get)]
+    bite_polys: Vec<Vec<Vec<(f64, f64)>>>,
+    /// Per-bite arc indices into `arcs` (DFS order):
+    /// `bite_arcs[global_bite] = [arc_idx, ...]`.
+    #[pyo3(get)]
+    bite_arcs: Vec<Vec<usize>>,
+    /// `parent[global]` = parent bite index, or `None` for roots.
+    #[pyo3(get)]
+    parent: Vec<Option<usize>>,
+    /// Pass start offsets for global↔local conversion.
+    #[pyo3(get)]
+    bite_offsets: Vec<usize>,
+    /// Global bite indices in the order visited by DFS.
+    #[pyo3(get)]
+    visit_order: Vec<usize>,
+}
+
+impl From<hsm::WavefrontGraph> for PyWavefrontGraph {
+    fn from(g: hsm::WavefrontGraph) -> Self {
+        let arcs = g
+            .arcs
+            .into_iter()
+            .map(|arc| arc.into_iter().map(|p| (p.x, p.y)).collect())
+            .collect();
+        let bite_polys = g
+            .bite_polys
+            .into_iter()
+            .map(|pass| {
+                pass.into_iter()
+                    .map(|poly| poly.into_iter().map(|p| (p.x, p.y)).collect())
+                    .collect()
+            })
+            .collect();
+        PyWavefrontGraph {
+            arcs,
+            arc_passes: g.arc_passes,
+            bite_polys,
+            bite_arcs: g.bite_arcs,
+            parent: g.parent,
+            bite_offsets: g.bite_offsets,
+            visit_order: g.visit_order,
+        }
+    }
 }
 
 #[gen_stub_pyfunction(
@@ -238,6 +308,7 @@ fn adaptive_wavefronts_py(
         preserve_order: bool = False,
         cut_feed_rate: int = 1200,
         travel_rapid_rate: int = 8000,
+        cleared: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]] | None = None,
     ) -> raygeo.ops.Ops:
         """Link filleted arcs into an Ops with MAT-routed travel.
 
@@ -265,6 +336,10 @@ fn adaptive_wavefronts_py(
                                nearest-neighbour reordering (default False).
         :param cut_feed_rate: Feed rate for cutting moves (default 1200).
         :param travel_rapid_rate: Rapid rate for travel moves (default 8000).
+        :param cleared: Cleared-area polygons.  When provided the MAT is
+                        trimmed to these polygons before routing, ensuring
+                        travel only goes through already-machined territory
+                        (default None = no trimming).
         :returns: Ops with cutting LineTo and travel MoveTo commands.
         """
 "#,
@@ -282,6 +357,7 @@ fn adaptive_wavefronts_py(
     preserve_order = false,
     cut_feed_rate = 1200,
     travel_rapid_rate = 8000,
+    cleared = None,
 ))]
 #[allow(clippy::type_complexity, clippy::too_many_arguments)]
 fn link_arcs_to_ops_py(
@@ -295,6 +371,7 @@ fn link_arcs_to_ops_py(
     preserve_order: bool,
     cut_feed_rate: i32,
     travel_rapid_rate: i32,
+    cleared: Option<Vec<Vec<(f64, f64)>>>,
 ) -> PyOps {
     use crate::geo::algo::medial_axis::{MaNode, MedialAxis};
 
@@ -303,6 +380,11 @@ fn link_arcs_to_ops_py(
         .map(|a| a.into_iter().map(|(x, y)| Point::new(x, y)).collect())
         .collect();
     let uncleared_pts: Vec<Vec<Point>> = uncleared
+        .unwrap_or_default()
+        .into_iter()
+        .map(|p| p.into_iter().map(|(x, y)| Point::new(x, y)).collect())
+        .collect();
+    let cleared_pts: Vec<Vec<Point>> = cleared
         .unwrap_or_default()
         .into_iter()
         .map(|p| p.into_iter().map(|(x, y)| Point::new(x, y)).collect())
@@ -333,10 +415,17 @@ fn link_arcs_to_ops_py(
         ..Default::default()
     };
 
+    let cleared_ref: Option<&[Vec<Point>]> = if cleared_pts.is_empty() {
+        None
+    } else {
+        Some(&cleared_pts)
+    };
+
     let ops = hsm::link_arcs_to_ops(
         &arcs_pts,
         &uncleared_pts,
         mat_opt.as_ref(),
+        cleared_ref,
         cut_z,
         safe_z,
         safe_margin,
@@ -347,6 +436,57 @@ fn link_arcs_to_ops_py(
     );
 
     PyOps { inner: ops }
+}
+
+#[gen_stub_pyfunction(
+    python = r#"
+    import collections.abc
+
+    def split_ordered_wavefronts(
+        cleared: raygeo.geo.algo.cleared_area.ClearedArea,
+        step_over: float,
+        valid_area: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]],
+        simplify_tol: float,
+        entry: tuple[float, float],
+    ) -> raygeo.ops.assembly.hsm.PyWavefrontGraph:
+        """Generate, split, and order cutting arcs in one pass.
+
+        Builds a directed bite graph during the clearing loop: each
+        bite from pass N+1 that shares boundary with a pass-N bite
+        becomes its child.  DFS with merge constraints produces the
+        processing order.
+
+        :param cleared: ``ClearedArea`` instance (mutated in place).
+        :param step_over: Lateral step-over in mm.
+        :param valid_area: Valid tool-centre region polygons.
+        :param simplify_tol: Tolerance for frontier simplification.
+        :param entry: Entry point (cleared centroid).
+        :returns: ``PyWavefrontGraph`` carrying the ordered arcs and
+                  the underlying directed bite graph.
+        """
+    "#,
+    module = "raygeo.ops.assembly.hsm"
+)]
+#[pyfunction(name = "split_ordered_wavefronts")]
+fn split_ordered_wavefronts_py(
+    cleared: &mut PyClearedArea,
+    step_over: f64,
+    valid_area: Vec<Vec<(f64, f64)>>,
+    simplify_tol: f64,
+    entry: (f64, f64),
+) -> PyWavefrontGraph {
+    let valid: Vec<Vec<Point>> = valid_area
+        .into_iter()
+        .map(|v| v.into_iter().map(|(x, y)| Point::new(x, y)).collect())
+        .collect();
+    let graph = hsm::split_ordered_wavefronts(
+        &mut cleared.inner,
+        step_over,
+        &valid,
+        simplify_tol,
+        Point::new(entry.0, entry.1),
+    );
+    graph.into()
 }
 
 #[gen_stub_pyfunction(
@@ -364,20 +504,14 @@ fn link_arcs_to_ops_py(
         safe_z: float = 2.0,
         wall_margin: float = 0.0,
         travel_smoothing: int = 50,
-        area_tolerance: float = 1.0,
         cut_feed_rate: int = 1200,
         travel_rapid_rate: int = 8000,
     ) -> raygeo.ops.Ops:
-        """Run the peeling (D-cut) clearing strategy and return an Ops.
+        """Run the peeling clearing strategy and return an Ops.
 
-        Starting from the *cleared* state (mutated in place), each
-        iteration expands the cleared boundary outward by *step_over*,
-        clips to the valid tool area, computes crescent-shaped "bites",
-        and generates a D-cut for each bite.  The individual passes are
-        linked into a single Ops: each cutting arc at *cut_z* (LineTo
-        with *cut_feed_rate*) followed by a travel segment at *safe_z*
-        (MoveTo with *travel_rapid_rate*).  The Medial Axis of the
-        pocket is used to route travel around obstacles.
+        Generates, splits, and orders cutting arcs via a directed bite
+        graph, then fillets and links them into Ops with MAT-routed
+        travel segments.
 
         :param cleared: ``ClearedArea`` instance (mutated in place).
         :param pocket_boundary: Outer boundary of the pocket.
@@ -390,13 +524,11 @@ fn link_arcs_to_ops_py(
                              (default 0.0).
         :param travel_smoothing: Gaussian smoothing for MAT-routed travel
                                   (default 50).
-        :param area_tolerance: Convergence tolerance in square mm
-                                (default 1.0).
         :param cut_feed_rate: Feed rate for cutting moves (default 1200).
         :param travel_rapid_rate: Rapid rate for travel moves (default 8000).
         :returns: Ops with cutting and travel commands.
         """
-"#,
+    "#,
     module = "raygeo.ops.assembly.hsm"
 )]
 #[pyfunction(name = "adaptive_peeling")]
@@ -410,7 +542,6 @@ fn link_arcs_to_ops_py(
     safe_z = 2.0,
     wall_margin = 0.0,
     travel_smoothing = 50,
-    area_tolerance = 1.0,
     cut_feed_rate = 1200,
     travel_rapid_rate = 8000,
 ))]
@@ -425,7 +556,6 @@ fn adaptive_peeling_py(
     safe_z: f64,
     wall_margin: f64,
     travel_smoothing: i32,
-    area_tolerance: f64,
     cut_feed_rate: i32,
     travel_rapid_rate: i32,
 ) -> PyOps {
@@ -458,7 +588,6 @@ fn adaptive_peeling_py(
         safe_z,
         wall_margin,
         travel_smoothing,
-        area_tolerance,
         &cut_state,
         &travel_state,
     );

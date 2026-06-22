@@ -1,9 +1,14 @@
 """Generate 2D visualisation of Medial Axis Transform."""
 
+import math
+
 import matplotlib.pyplot as plt
 import numpy as np
 
-from raygeo.geo.algo.medial_axis import compute_medial_axis, mat_path
+from raygeo.geo.algo.cleared_area import ClearedArea
+from raygeo.geo.algo.medial_axis import MedialAxis
+from raygeo.geo.algo.offset import compute_inset_region
+from raygeo.ops.assembly.hsm import adaptive_entry
 
 
 def _plot_ma_2d(nodes, edges, root, boundary, islands, ax, title):
@@ -56,11 +61,17 @@ def generate_mat_rect():
     """Medial axis of a rectangular pocket."""
     fig, ax = plt.subplots(figsize=(6, 5))
     boundary = [(0, 0), (100, 0), (100, 80), (0, 80)]
-    nodes, clearances, edges, root, branches = compute_medial_axis(
+    axis = MedialAxis.compute(
         boundary, holes=[], tool_radius=1.0, sampling_spacing=6.0
     )
     _plot_ma_2d(
-        nodes, edges, root, boundary, None, ax, "Medial Axis — Rectangle"
+        axis.nodes,
+        axis.edges,
+        axis.root,
+        boundary,
+        None,
+        ax,
+        "Medial Axis — Rectangle",
     )
     fig.tight_layout()
     return fig
@@ -75,13 +86,13 @@ def generate_mat_multi():
         [(70, 40), (90, 40), (90, 60), (70, 60)],
         [(130, 80), (160, 80), (160, 105), (130, 105)],
     ]
-    nodes, clearances, edges, root, branches = compute_medial_axis(
+    axis = MedialAxis.compute(
         boundary, holes=islands, tool_radius=1.0, sampling_spacing=8.0
     )
     _plot_ma_2d(
-        nodes,
-        edges,
-        root,
+        axis.nodes,
+        axis.edges,
+        axis.root,
         boundary,
         islands,
         ax,
@@ -105,10 +116,18 @@ def generate_mat_yshape():
         (10, 110),
         (45, 40),
     ]
-    nodes, clearances, edges, root, branches = compute_medial_axis(
+    axis = MedialAxis.compute(
         yshape, holes=[], tool_radius=1.0, sampling_spacing=6.0
     )
-    _plot_ma_2d(nodes, edges, root, yshape, None, ax, "Medial Axis — Y-Shape")
+    _plot_ma_2d(
+        axis.nodes,
+        axis.edges,
+        axis.root,
+        yshape,
+        None,
+        ax,
+        "Medial Axis — Y-Shape",
+    )
     fig.tight_layout()
     return fig
 
@@ -119,24 +138,17 @@ def generate_mat_path():
     boundary = [(0, 0), (100, 0), (100, 80), (0, 80)]
     island = [(35, 20), (65, 20), (65, 60), (35, 60)]
 
-    nodes, clearances, edges, root, branches = compute_medial_axis(
+    axis = MedialAxis.compute(
         boundary, holes=[island], tool_radius=1.0, sampling_spacing=6.0
     )
 
     from_pt, to_pt = (10, 10), (90, 70)
-    path = mat_path(
-        boundary,
-        from_pt,
-        to_pt,
-        holes=[island],
-        tool_radius=1.0,
-        sampling_spacing=6.0,
-    )
+    path = axis.path_between(from_pt, to_pt)
 
     _plot_ma_2d(
-        nodes,
-        edges,
-        root,
+        axis.nodes,
+        axis.edges,
+        axis.root,
         boundary,
         [island],
         ax,
@@ -174,6 +186,111 @@ def generate_mat_path():
     return fig
 
 
+def generate_mat_trimming():
+    """Visualise how the Medial Axis is trimmed to the cleared area
+    for travel routing.
+
+    Uses a pocket with three islands.  Only the first 10 passes of
+    adaptive clearing are applied, leaving most of the pocket
+    unmachined.  The full MAT skeleton (gray) spans the whole pocket,
+    while the trimmed nodes (blue) are the subset usable for travel
+    routing through already-cleared territory (green).
+    """
+    boundary = [(0, 0), (180, 0), (180, 120), (0, 120)]
+    islands = [
+        [(15, 15), (35, 15), (35, 35), (15, 35)],
+        [
+            (
+                80 + 10 * math.cos(2 * math.pi * i / 32),
+                50 + 10 * math.sin(2 * math.pi * i / 32),
+            )
+            for i in range(32)
+        ],
+        [(130, 80), (160, 80), (160, 105), (130, 105)],
+    ]
+    tool_radius = 3.0
+    step_over = 2.0
+
+    _, cp = adaptive_entry(
+        pocket_boundary=boundary,
+        islands=islands,
+        tool_radius=tool_radius,
+        step_over=step_over,
+        safe_z=2.0,
+        target_z=-5.0,
+        plunge_pitch=1.0,
+    )
+    va, _ = compute_inset_region(boundary, tool_radius, islands)
+
+    ca = ClearedArea(initial=cp)
+    for _ in range(10):
+        bites = ca.bites(step_over, va, 0.01)
+        if not bites:
+            break
+        ca.incorporate(bites)
+    frags = ca.fragments()
+
+    holes = [list(h) for h in islands]
+    axis = MedialAxis.compute(boundary, holes, tool_radius, step_over * 0.5)
+    trimmed_axis = MedialAxis.compute(
+        boundary, holes, tool_radius, step_over * 0.5
+    ).trim_to_polygons(frags)
+
+    fig, ax = plt.subplots(figsize=(7, 6))
+    ax.set_aspect("equal")
+    ax.set_title("MAT skeleton trimmed to cleared area", fontsize=10)
+
+    bnd = np.array(boundary + [boundary[0]])
+    ax.plot(bnd[:, 0], bnd[:, 1], "k-", linewidth=1.5, label="Pocket")
+    for isl in islands:
+        ia = np.array(isl + [isl[0]])
+        ax.fill(
+            ia[:, 0],
+            ia[:, 1],
+            facecolor="#ddd",
+            edgecolor="#999",
+            linewidth=1,
+        )
+
+    for i, frag in enumerate(frags):
+        fa = np.array(frag + [frag[0]])
+        ax.fill(
+            fa[:, 0],
+            fa[:, 1],
+            color="#2ca02c",
+            alpha=0.15,
+            label="Cleared area" if i == 0 else "",
+        )
+
+    full_mat_labeled = False
+    for a, b in axis.edges:
+        ax.plot(
+            [axis.nodes[a][0], axis.nodes[b][0]],
+            [axis.nodes[a][1], axis.nodes[b][1]],
+            color="#bbb",
+            linewidth=0.3,
+            alpha=0.5,
+            label="Full MAT" if not full_mat_labeled else None,
+        )
+        full_mat_labeled = True
+
+    ax.scatter(
+        [n[0] for n in trimmed_axis.nodes],
+        [n[1] for n in trimmed_axis.nodes],
+        s=4,
+        c="#1f77b4",
+        alpha=0.7,
+        label=f"Trimmed ({len(trimmed_axis.nodes)})",
+    )
+
+    ax.legend(fontsize=7, loc="upper right")
+    ax.set_xlabel("X")
+    ax.set_ylabel("Y")
+
+    fig.tight_layout()
+    return fig
+
+
 __docs_target__ = ["raygeo.geo.algo.medial_axis.md"]
 __images__ = [
     {
@@ -185,7 +302,7 @@ __images__ = [
         "function": generate_mat_rect,
     },
     {
-        "heading": "compute_medial_axis",
+        "heading": "compute",
         "caption": (
             "Medial axis with three rectangular islands — skeleton"
             " branches around each obstacle."
@@ -193,7 +310,7 @@ __images__ = [
         "function": generate_mat_multi,
     },
     {
-        "heading": "compute_medial_axis",
+        "heading": "compute",
         "caption": (
             "Medial axis of a Y-shaped channel — skeleton follows"
             " the branching topology."
@@ -201,12 +318,23 @@ __images__ = [
         "function": generate_mat_yshape,
     },
     {
-        "heading": "mat_path",
+        "heading": "path_between",
         "caption": (
             "MAT path routing: a path between two points (green) along"
             " the medial axis skeleton (red). The path avoids the island"
             " by following the skeleton topology."
         ),
         "function": generate_mat_path,
+    },
+    {
+        "heading": "trim_to_polygons",
+        "caption": (
+            "MAT trimming to cleared area — left: original MAT over"
+            " cleared fragments (green fill); right: trimmed MAT with"
+            " kept nodes (blue) and removed nodes (red x).  Only 10"
+            " clearing passes were run, so most MAT nodes lie outside"
+            " the cleared area and are discarded."
+        ),
+        "function": generate_mat_trimming,
     },
 ]

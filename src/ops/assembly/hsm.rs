@@ -11,27 +11,30 @@
 //! and how to traverse it.
 
 use crate::geo::algo::cleared_area::ClearedArea;
-use crate::geo::algo::fillet::{append_end_fillets, trim_to_safe_fillet_span};
-use crate::geo::algo::helix::{generate_helix, HelixDirection, HelixOptions};
-use crate::geo::algo::intersect::get_ray_polygon_intersection;
-use crate::geo::algo::medial_axis::{
-    compute_medial_axis, mat_path, MedialAxis,
+use crate::geo::algo::fillet::{
+    append_end_fillets, create_fillet_polyline, trim_to_safe_fillet_span,
 };
+use crate::geo::algo::helix::{generate_helix, HelixDirection, HelixOptions};
+use crate::geo::algo::medial_axis::MedialAxis;
 use crate::geo::algo::offset::compute_inset_region;
 use crate::geo::algo::polylabel::find_largest_circle;
 use crate::geo::algo::ramp::{generate_ramp, RampOptions, RampStyle};
-use crate::geo::algo::smooth::smooth_path;
+use crate::geo::algo::smooth::{
+    compute_gaussian_kernel, resample_polyline as resample_polyline_3d,
+    shortcut_path, smooth_sub_segment,
+};
 use crate::geo::algo::spiral::{generate_spiral, SpiralOptions};
 use crate::geo::shape::arc::get_polyline_turn_sign;
 use crate::geo::shape::line::{
-    does_line_cross_polygon, get_segment_segment_distance,
-    longest_line_through_point,
+    get_segment_segment_distance, longest_line_through_point,
 };
 use crate::geo::shape::polygon::{
-    get_circle_polygon, get_polygon_area, get_polygon_bounds,
-    get_polygon_centroid, get_polygon_closest_point,
+    does_path_sweep_intersect_polygon, get_circle_polygon, get_polygon_area,
+    get_polygon_boundary_distance, get_polygon_bounds, get_polygon_centroid,
+    get_polygon_closest_point, get_polygon_vertex_centroid,
     get_polygons_group_difference, get_polyline_bounds,
-    get_segment_swept_polygon, trim_polyline_angular_ends, trim_polyline_at,
+    get_segment_swept_polygon, resample_polyline, trim_polyline_angular_ends,
+    trim_polyline_at,
 };
 use crate::ops::container::Ops;
 use crate::ops::state::State;
@@ -386,6 +389,7 @@ pub fn link_arcs_to_ops(
     arcs: &[Vec<Point>],
     uncleared: &[Polygon],
     mat: Option<&MedialAxis>,
+    cleared: Option<&[Polygon]>,
     cut_z: f64,
     safe_z: f64,
     safe_margin: f64,
@@ -398,6 +402,7 @@ pub fn link_arcs_to_ops(
         arcs,
         uncleared,
         mat,
+        cleared,
         cut_z,
         safe_z,
         safe_margin,
@@ -407,18 +412,332 @@ pub fn link_arcs_to_ops(
     segments_to_ops(&segments, cut_state, travel_state)
 }
 
-/// Run the peeling (D-cut) clearing strategy and return an [`Ops`].
+/// Directed bite graph produced by [`split_ordered_wavefronts`].
 ///
-/// All geometric work is delegated to geo primitives; this function
-/// is the orchestrator that decides what to cut, in what order, and
-/// how to traverse it.
+/// Nodes are individual bite polygons, identified by a *global index*
+/// computed from `bite_offsets`:
 ///
-/// The algorithm:
+/// ```text
+/// global = bite_offsets[pass] + local_index_within_pass
+/// ```
 ///
-/// 1. Compute the Medial Axis to guide clearing directions.
-/// 2. Directional phase: clear toward each MAT branch endpoint (60° cone).
-/// 3. Fallback isotropic phase for any remaining material.
-/// 4. Filter, fillet, and link cutting arcs into Ops.
+/// Each bite has exactly one parent (the nearest previous-pass bite
+/// sharing boundary), forming a tree.  Branches split when an island
+/// separates the frontier and merge back when the island is cleared.
+/// `visit_order` lists global bite indices in DFS traversal order.
+#[derive(Debug, Clone)]
+pub struct WavefrontGraph {
+    /// Cutting arcs in DFS visit order.
+    pub arcs: Vec<Vec<Point>>,
+    /// Pass index for each arc in `arcs` (same length, same order).
+    pub arc_passes: Vec<usize>,
+    /// Per-pass bite polygons: `bite_polys[pass][local]`.
+    pub bite_polys: Vec<Vec<Polygon>>,
+    /// Per-bite arc indices into `arcs` (DFS order):
+    /// `bite_arcs[global_bite] = [arc_idx, ...]`.
+    pub bite_arcs: Vec<Vec<usize>>,
+    /// `parent[global]` = parent bite index, or `None` for roots.
+    pub parent: Vec<Option<usize>>,
+    /// Pass start offsets for global↔local conversion.
+    pub bite_offsets: Vec<usize>,
+    /// Global bite indices in the order visited by DFS.
+    pub visit_order: Vec<usize>,
+}
+
+/// Run the peeling clearing strategy, ordering arcs in one pass.
+///
+/// The ordering is derived from a **parent tree** built during the
+/// clearing loop:
+///
+/// 1. Each pass saves its bite polygons.
+/// 2. Each bite is assigned ONE parent — the nearest previous-pass
+///    bite sharing boundary (midpoint-segment distance ≈ 0).
+/// 3. DFS from pass-0 roots produces the processing order: follow
+///    one branch outward, backtrack, continue.
+///
+/// Branches split when an island separates the frontier and merge
+/// back into a single branch when the island is cleared.
+pub fn split_ordered_wavefronts(
+    cleared: &mut ClearedArea,
+    step_over: f64,
+    valid_area: &[Polygon],
+    simplify_tol: f64,
+    entry: Point,
+) -> WavefrontGraph {
+    if cleared.fragments().is_empty() {
+        return WavefrontGraph {
+            arcs: Vec::new(),
+            arc_passes: Vec::new(),
+            bite_polys: Vec::new(),
+            bite_arcs: Vec::new(),
+            parent: Vec::new(),
+            bite_offsets: Vec::new(),
+            visit_order: Vec::new(),
+        };
+    }
+
+    let mut bite_polys_per_pass: Vec<Vec<Polygon>> = Vec::new();
+    let mut bite_arcs_per_pass: Vec<Vec<Vec<usize>>> = Vec::new();
+    let mut all_arcs: Vec<Vec<Point>> = Vec::new();
+    // Pass index for each arc in `all_arcs`.
+    let mut all_arc_pass: Vec<usize> = Vec::new();
+
+    loop {
+        let pass_idx = bite_polys_per_pass.len();
+        let bites = cleared.bites(step_over, valid_area, simplify_tol);
+        if bites.is_empty() {
+            break;
+        }
+
+        let mut bite_arcs: Vec<Vec<usize>> = Vec::with_capacity(bites.len());
+        for bite in &bites {
+            let mut arcs = Vec::new();
+            if let Some((ref arc, _, _)) =
+                find_cutting_arc(bite, cleared.fragments())
+            {
+                if arc.len() >= 3 {
+                    arcs.push(all_arcs.len());
+                    all_arcs.push(arc.clone());
+                    all_arc_pass.push(pass_idx);
+                }
+            }
+            bite_arcs.push(arcs);
+        }
+
+        bite_polys_per_pass.push(bites.clone());
+        bite_arcs_per_pass.push(bite_arcs);
+
+        cleared.incorporate(bite_polys_per_pass.last().unwrap());
+    }
+
+    let n_passes = bite_polys_per_pass.len();
+    if n_passes == 0 {
+        return WavefrontGraph {
+            arcs: all_arcs,
+            arc_passes: Vec::new(),
+            bite_polys: bite_polys_per_pass,
+            bite_arcs: Vec::new(),
+            parent: Vec::new(),
+            bite_offsets: Vec::new(),
+            visit_order: Vec::new(),
+        };
+    }
+
+    // Global bite index = offset for its pass + index within pass.
+    // parent[global_bite] = Some(parent_index) or None for roots.
+    let mut bite_offsets: Vec<usize> = Vec::with_capacity(n_passes);
+    let mut off = 0;
+    for pass in &bite_polys_per_pass {
+        bite_offsets.push(off);
+        off += pass.len();
+    }
+    let total_bites = off;
+
+    let mut parent: Vec<Option<usize>> = vec![None; total_bites];
+
+    // Tree property: each bite gets exactly ONE parent — the nearest
+    // previous-pass bite that shares boundary with it.  Branches split
+    // when an island separates the frontier and merge back into a
+    // single branch when the island is cleared.
+    for pi in 1..n_passes {
+        let prev_polys = &bite_polys_per_pass[pi - 1];
+        let curr_polys = &bite_polys_per_pass[pi];
+        let prev_off = bite_offsets[pi - 1];
+        let curr_off = bite_offsets[pi];
+
+        for (ci, curr_bite) in curr_polys.iter().enumerate() {
+            let curr_c = get_polygon_vertex_centroid(curr_bite);
+            let mut best: Option<usize> = None;
+            let mut best_dist = f64::MAX;
+            for (pi2, prev_bite) in prev_polys.iter().enumerate() {
+                if get_polygon_boundary_distance(curr_bite, prev_bite) < 1e-6 {
+                    let d = (get_polygon_vertex_centroid(prev_bite) - curr_c)
+                        .length_squared();
+                    if d < best_dist {
+                        best_dist = d;
+                        best = Some(prev_off + pi2);
+                    }
+                }
+            }
+            parent[curr_off + ci] = best;
+        }
+    }
+
+    // Each bite has at most one parent (tree property).
+    // Start from pass-0 roots (nearest to entry first).
+    // Follow one child as deep as possible before backtracking.
+    let mut visited = vec![false; total_bites];
+
+    let mut result: Vec<Vec<Point>> = Vec::with_capacity(all_arcs.len());
+    let mut arc_passes: Vec<usize> = Vec::with_capacity(all_arcs.len());
+    let mut bite_arcs: Vec<Vec<usize>> = vec![Vec::new(); total_bites];
+    let mut visit_order: Vec<usize> = Vec::with_capacity(total_bites);
+
+    // Helper: recursive DFS
+    #[allow(clippy::too_many_arguments)]
+    fn dfs(
+        bite: usize,
+        entry: Point,
+        parent: &[Option<usize>],
+        bite_offsets: &[usize],
+        bite_polys: &[Vec<Polygon>],
+        bite_arcs_per_pass: &[Vec<Vec<usize>>],
+        all_arcs: &[Vec<Point>],
+        all_arc_pass: &[usize],
+        visited: &mut [bool],
+        result: &mut Vec<Vec<Point>>,
+        arc_passes: &mut Vec<usize>,
+        bite_arcs: &mut [Vec<usize>],
+        visit_order: &mut Vec<usize>,
+    ) {
+        if visited[bite] {
+            return;
+        }
+        // Tree constraint: parent must be visited first.
+        if let Some(p) = parent[bite] {
+            if !visited[p] {
+                return;
+            }
+        }
+        visited[bite] = true;
+        visit_order.push(bite);
+
+        // Emit this bite's arcs.
+        let (pass_idx, local) = global_to_local(bite, bite_offsets);
+        for &arc_idx in &bite_arcs_per_pass[pass_idx][local] {
+            result.push(all_arcs[arc_idx].clone());
+            arc_passes.push(all_arc_pass[arc_idx]);
+            bite_arcs[bite].push(result.len() - 1);
+        }
+
+        // Visit children (bites whose parent is this one).
+        // Process in distance-from-entry order for travel efficiency.
+        let mut children: Vec<(usize, f64)> = Vec::new();
+        for ci in bite + 1..parent.len() {
+            if parent[ci] == Some(bite) && !visited[ci] {
+                let (cp, cl) = global_to_local(ci, bite_offsets);
+                let c = get_polygon_vertex_centroid(&bite_polys[cp][cl]);
+                let d = (c - entry).length_squared();
+                children.push((ci, d));
+            }
+        }
+        children.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap());
+        for (ci, _) in children {
+            dfs(
+                ci,
+                entry,
+                parent,
+                bite_offsets,
+                bite_polys,
+                bite_arcs_per_pass,
+                all_arcs,
+                all_arc_pass,
+                visited,
+                result,
+                arc_passes,
+                bite_arcs,
+                visit_order,
+            );
+        }
+    }
+
+    // Start DFS from pass-0 roots, ordered by distance from entry.
+    let mut roots: Vec<(usize, f64)> = Vec::new();
+    for (bi, bite) in bite_polys_per_pass[0].iter().enumerate() {
+        let c = get_polygon_vertex_centroid(bite);
+        roots.push((bi, (c - entry).length_squared()));
+    }
+    roots.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap());
+
+    for &(root, _) in &roots {
+        dfs(
+            root,
+            entry,
+            &parent,
+            &bite_offsets,
+            &bite_polys_per_pass,
+            &bite_arcs_per_pass,
+            &all_arcs,
+            &all_arc_pass,
+            &mut visited,
+            &mut result,
+            &mut arc_passes,
+            &mut bite_arcs,
+            &mut visit_order,
+        );
+    }
+
+    // Pick up any unvisited bites whose parent is visited or None.
+    loop {
+        let mut progress = false;
+        for bi in 0..total_bites {
+            let parent_visited = parent[bi].is_none_or(|p| visited[p]);
+            if !visited[bi] && parent_visited {
+                dfs(
+                    bi,
+                    entry,
+                    &parent,
+                    &bite_offsets,
+                    &bite_polys_per_pass,
+                    &bite_arcs_per_pass,
+                    &all_arcs,
+                    &all_arc_pass,
+                    &mut visited,
+                    &mut result,
+                    &mut arc_passes,
+                    &mut bite_arcs,
+                    &mut visit_order,
+                );
+                progress = true;
+            }
+        }
+        if !progress {
+            break;
+        }
+    }
+    // Remaining unvisited: emit in index order.
+    for (bi, &v) in visited.iter().enumerate().take(total_bites) {
+        if !v {
+            visit_order.push(bi);
+            let (pass_idx, local) = global_to_local(bi, &bite_offsets);
+            for &arc_idx in &bite_arcs_per_pass[pass_idx][local] {
+                result.push(all_arcs[arc_idx].clone());
+                arc_passes.push(all_arc_pass[arc_idx]);
+                bite_arcs[bi].push(result.len() - 1);
+            }
+        }
+    }
+
+    WavefrontGraph {
+        arcs: result,
+        arc_passes,
+        bite_polys: bite_polys_per_pass,
+        bite_arcs,
+        parent,
+        bite_offsets,
+        visit_order,
+    }
+}
+
+/// Convert a global bite index to (pass_index, bite_index_within_pass).
+fn global_to_local(global: usize, offsets: &[usize]) -> (usize, usize) {
+    for (pass, &off) in offsets.iter().enumerate() {
+        let next = if pass + 1 < offsets.len() {
+            offsets[pass + 1]
+        } else {
+            usize::MAX
+        };
+        if global >= off && global < next {
+            return (pass, global - off);
+        }
+    }
+    (0, global)
+}
+
+/// Run the peeling clearing strategy and return an [`Ops`].
+///
+/// Generates, splits, and orders cutting arcs via
+/// [`split_ordered_wavefronts`], then fillets and links them into Ops.
 #[allow(clippy::too_many_arguments)]
 pub fn adaptive_peeling(
     cleared: &mut ClearedArea,
@@ -430,15 +749,14 @@ pub fn adaptive_peeling(
     safe_z: f64,
     wall_margin: f64,
     travel_smoothing: i32,
-    area_tolerance: f64,
     cut_state: &State,
     travel_state: &State,
 ) -> Ops {
-    let (valid_tool_area, valid_total_area) =
+    let (valid_tool_area, _valid_total_area) =
         compute_inset_region(pocket_boundary, tool_radius, islands);
 
     let holes: Vec<Vec<Point>> = islands.iter().map(|h| h.to_vec()).collect();
-    let mat = compute_medial_axis(
+    let mat = MedialAxis::compute(
         pocket_boundary,
         &holes,
         tool_radius,
@@ -446,110 +764,27 @@ pub fn adaptive_peeling(
     )
     .ok();
 
-    let centre = get_polygon_centroid(pocket_boundary);
-    let mut targets: Vec<Point> = Vec::new();
-    if let Some(ref ma) = mat {
-        let mut branches: Vec<usize> = (0..ma.branches.len()).collect();
-        branches.sort_by(|&a, &b| {
-            let ca = ma.branches[a]
-                .clearances
-                .iter()
-                .cloned()
-                .fold(f64::MIN, f64::max);
-            let cb = ma.branches[b]
-                .clearances
-                .iter()
-                .cloned()
-                .fold(f64::MIN, f64::max);
-            cb.partial_cmp(&ca).unwrap_or(std::cmp::Ordering::Equal)
-        });
-        for &bi in &branches {
-            let branch = &ma.branches[bi];
-            let mut best_idx = 0usize;
-            let mut best_cl = f64::MIN;
-            for (j, &cl) in branch.clearances.iter().enumerate() {
-                if cl > best_cl {
-                    best_cl = cl;
-                    best_idx = j;
-                }
-            }
-            let mat_pt = branch.points[best_idx];
-            let dir = (mat_pt - centre).normalize();
-            let boundary_pt =
-                get_ray_polygon_intersection(centre, dir, pocket_boundary)
-                    .unwrap_or(mat_pt);
-            targets.push(boundary_pt);
-        }
-    }
+    let centre = cleared
+        .fragments()
+        .iter()
+        .max_by(|a, b| {
+            let aa = get_polygon_area(a);
+            let ab = get_polygon_area(b);
+            ab.partial_cmp(&aa).unwrap_or(std::cmp::Ordering::Equal)
+        })
+        .map(get_polygon_centroid)
+        .unwrap_or_else(|| get_polygon_centroid(pocket_boundary));
 
-    let mut cut_arcs: Vec<Vec<Point>> = Vec::new();
-
-    let max_angle = std::f64::consts::FRAC_PI_3;
-    for &target in &targets {
-        for _ in 0..MAX_WAVEFRONT_ITERATIONS {
-            let bites = cleared.bite_in_direction(
-                step_over,
-                &valid_tool_area,
-                0.01,
-                target,
-                max_angle,
-            );
-            if bites.is_empty() {
-                break;
-            }
-            for bite in &bites {
-                if let Some((ref arc, _, _)) =
-                    find_cutting_arc(bite, cleared.fragments())
-                {
-                    if arc.len() >= 3 {
-                        cut_arcs.push(arc.clone());
-                    }
-                }
-            }
-            cleared.incorporate(&bites);
-            if cleared.total_area() >= valid_total_area - area_tolerance {
-                return finish_peeling(
-                    cut_arcs,
-                    &valid_tool_area,
-                    pocket_boundary,
-                    islands,
-                    cleared,
-                    mat.as_ref(),
-                    cut_z,
-                    safe_z,
-                    tool_radius,
-                    wall_margin,
-                    travel_smoothing,
-                    step_over,
-                    cut_state,
-                    travel_state,
-                );
-            }
-        }
-    }
-
-    for _ in 0..MAX_WAVEFRONT_ITERATIONS {
-        let bites = cleared.bites(step_over, &valid_tool_area, 0.01);
-        if bites.is_empty() {
-            break;
-        }
-        for bite in &bites {
-            if let Some((ref arc, _, _)) =
-                find_cutting_arc(bite, cleared.fragments())
-            {
-                if arc.len() >= 3 {
-                    cut_arcs.push(arc.clone());
-                }
-            }
-        }
-        cleared.incorporate(&bites);
-        if cleared.total_area() >= valid_total_area - area_tolerance {
-            break;
-        }
-    }
+    let cut_arcs = split_ordered_wavefronts(
+        cleared,
+        step_over,
+        &valid_tool_area,
+        0.01,
+        centre,
+    );
 
     finish_peeling(
-        cut_arcs,
+        cut_arcs.arcs,
         &valid_tool_area,
         pocket_boundary,
         islands,
@@ -567,6 +802,87 @@ pub fn adaptive_peeling(
 }
 
 // ── Internal helpers ───────────────────────────────────────────
+
+/// Order MAT branches via BFS from the entry point, returning
+/// `(branch_index, target)` pairs in processing order.
+///
+/// Each branch is processed only after the branch that connects
+/// it to the entry point has been cleared.  The target is at the
+/// branch's far endpoint (the end away from the entry), projected
+/// to the boundary in the branch's tip direction.
+/// Try to add a fillet at just one end of the arc when
+/// [`trim_to_safe_fillet_span`] could not fit both.
+///
+/// Tests the enter (start) fillet first, then the exit (end) fillet,
+/// and returns the first that does not collide with the boundary or
+/// islands.  Falls back to the original arc if neither fits.
+fn try_single_end_fillet(
+    arc: &[Point],
+    outer_boundary: &[Point],
+    inner_obstacles: &[Polygon],
+    radius: f64,
+    margin: f64,
+) -> Vec<Point> {
+    if arc.len() < 2 {
+        return arc.to_vec();
+    }
+    let side = get_polyline_turn_sign(arc);
+    let radius_eff = radius + margin;
+    let last = arc.len() - 1;
+
+    let fillet_ok = |farc: &[Point]| -> bool {
+        if farc.len() < 2 {
+            return true;
+        }
+        if !inner_obstacles.is_empty()
+            && does_path_sweep_intersect_polygon(
+                farc,
+                radius_eff,
+                inner_obstacles,
+            )
+        {
+            return false;
+        }
+        let pn = outer_boundary.len();
+        if pn >= 3 {
+            for w in farc.windows(2) {
+                for j in 0..pn {
+                    let c = outer_boundary[j];
+                    let d = outer_boundary[(j + 1) % pn];
+                    if get_segment_segment_distance(w[0], w[1], c, d)
+                        < radius_eff
+                    {
+                        return false;
+                    }
+                }
+            }
+        }
+        true
+    };
+
+    let sweep = std::f64::consts::FRAC_PI_2;
+
+    let start_dir = arc[1] - arc[0];
+    let (_, start_arc) =
+        create_fillet_polyline(arc[0], start_dir, radius, sweep, side, true);
+    if fillet_ok(&start_arc) {
+        let mut path = Vec::new();
+        path.extend(start_arc.iter().rev().copied());
+        path.extend(arc.iter().skip(1).copied());
+        return path;
+    }
+
+    let end_dir = arc[last] - arc[last - 1];
+    let (_, end_arc) =
+        create_fillet_polyline(arc[last], end_dir, radius, sweep, side, false);
+    if fillet_ok(&end_arc) {
+        let mut path = arc.to_vec();
+        path.extend(end_arc.iter().skip(1).copied());
+        return path;
+    }
+
+    arc.to_vec()
+}
 
 /// Filter, fillet, and link cutting arcs into Ops.
 #[allow(clippy::too_many_arguments)]
@@ -623,7 +939,13 @@ fn finish_peeling(
                     )
                 }
             } else {
-                arc.to_vec()
+                try_single_end_fillet(
+                    arc,
+                    pocket_boundary,
+                    islands,
+                    tool_radius,
+                    wall_margin,
+                )
             };
             if fa.len() >= 3 {
                 Some(fa)
@@ -647,6 +969,7 @@ fn finish_peeling(
         &filleted,
         &uncleared,
         mat,
+        Some(cleared.fragments()),
         cut_z,
         safe_z,
         tool_radius,
@@ -657,6 +980,146 @@ fn finish_peeling(
     )
 }
 
+/// Round sharp corners in a travel path using Chaikin corner cutting
+/// with collision checking.  Corners sharper than 45° are cut;
+/// gently curving sections are left untouched.
+fn round_travel_corners(
+    points: &[Point],
+    obstacles: &[Polygon],
+    clearance: f64,
+    iterations: usize,
+) -> Vec<Point> {
+    if points.len() < 3 {
+        return points.to_vec();
+    }
+    let mut current = points.to_vec();
+    for _ in 0..iterations {
+        if current.len() < 3 {
+            break;
+        }
+        let mut next: Vec<Point> = vec![current[0]];
+        for i in 1..current.len() - 1 {
+            let prev = current[i - 1];
+            let curr = current[i];
+            let after = current[i + 1];
+            let v1x = curr.x - prev.x;
+            let v1y = curr.y - prev.y;
+            let v2x = after.x - curr.x;
+            let v2y = after.y - curr.y;
+            let l1 = (v1x * v1x + v1y * v1y).sqrt();
+            let l2 = (v2x * v2x + v2y * v2y).sqrt();
+            if l1 < 1e-12 || l2 < 1e-12 {
+                next.push(curr);
+                continue;
+            }
+            let dot = (v1x * v2x + v1y * v2y) / (l1 * l2);
+            if dot < 0.707 {
+                let q_back = Point::new(
+                    curr.x * 0.75 + prev.x * 0.25,
+                    curr.y * 0.75 + prev.y * 0.25,
+                );
+                let q_fwd = Point::new(
+                    curr.x * 0.75 + after.x * 0.25,
+                    curr.y * 0.75 + after.y * 0.25,
+                );
+                let tri = [prev, q_back, q_fwd, after];
+                if !does_path_sweep_intersect_polygon(
+                    &tri, clearance, obstacles,
+                ) {
+                    next.push(q_back);
+                    next.push(q_fwd);
+                } else {
+                    next.push(curr);
+                }
+            } else {
+                next.push(curr);
+            }
+        }
+        next.push(*current.last().unwrap());
+        current = next;
+    }
+    current
+}
+
+/// Build a smooth travel link from `last` to `first` via the MAT path.
+///
+/// Pipeline:
+/// 1. Resample the MAT path for point density.
+/// 2. Iteratively shortcut removable waypoints (collision-checked).
+/// 3. Multi-scale resampling: alternate coarse / fine arc-length
+///    resampling with light Gaussian smoothing.  Each coarse pass
+///    at a different interval may skip V-vertices, progressively
+///    diluting sharp corners into gentler curves.
+/// 4. Final Gaussian smoothing pass.
+fn build_travel_link(
+    last: Point,
+    first: Point,
+    mat_link: &[Point],
+    uncleared: &[Polygon],
+    clearance: f64,
+    smoothing_amount: i32,
+) -> Vec<Point> {
+    // 1. Full path — prepend last / append first because path_between
+    //    only returns MAT node positions, not the actual endpoints.
+    let link: Vec<Point> = if mat_link.len() < 2 {
+        vec![last, first]
+    } else {
+        let mut full = Vec::with_capacity(mat_link.len() + 2);
+        full.push(last);
+        full.extend_from_slice(mat_link);
+        full.push(first);
+        full
+    };
+    if link.len() < 3 {
+        return link;
+    }
+
+    // 2. Resample, shortcut, re-resample.
+    let max_seg = clearance.max(0.5) * 0.5;
+    let mut link = resample_polyline(&link, max_seg);
+    link = shortcut_path(&link, uncleared, clearance);
+    link = resample_polyline(&link, max_seg);
+    if link.len() < 3 {
+        return link;
+    }
+
+    // 3. Aggressive Gaussian smoothing with PER-POINT collision
+    //    checking.  Each point is individually tested: if its smoothed
+    //    position maintains clearance, it is accepted; otherwise it
+    //    stays put.  This allows V-shapes in open areas to be fully
+    //    rounded while points near walls are preserved.
+    let amt = smoothing_amount.max(120);
+    let (kernel, sigma) = compute_gaussian_kernel(amt);
+    if kernel.len() > 1 {
+        let max_len = 0.1_f64.max(sigma / 4.0);
+        let pts_3d: Vec<Point3D> =
+            link.iter().map(|p| Point3D::new(p.x, p.y, 0.0)).collect();
+        let mut current: Vec<Point3D> = Vec::new();
+        resample_polyline_3d(&pts_3d, max_len, false, &mut current);
+        let n = current.len();
+        if n >= 3 {
+            let mut buf: Vec<Point3D> = Vec::with_capacity(n);
+            for _ in 0..100 {
+                smooth_sub_segment(&current, &kernel, &mut buf);
+                for i in 1..n - 1 {
+                    let prev = Point::new(current[i - 1].x, current[i - 1].y);
+                    let next = Point::new(current[i + 1].x, current[i + 1].y);
+                    let candidate = Point::new(buf[i].x, buf[i].y);
+                    let tri = [prev, candidate, next];
+                    if !does_path_sweep_intersect_polygon(
+                        &tri, clearance, uncleared,
+                    ) {
+                        current[i] = buf[i];
+                    }
+                }
+            }
+            link = current.iter().map(|p| Point::new(p.x, p.y)).collect();
+        }
+    }
+
+    link
+}
+
 /// Build motion segments from arcs using NN ordering, MAT routing, and
 /// smoothing — the same algorithm as the former geo `link_filleted_arcs`.
 #[allow(clippy::too_many_arguments)]
@@ -664,12 +1127,18 @@ fn build_link_segments(
     arcs: &[Vec<Point>],
     uncleared: &[Polygon],
     mat: Option<&MedialAxis>,
+    cleared: Option<&[Polygon]>,
     cut_z: f64,
     safe_z: f64,
     safe_margin: f64,
     smoothing_amount: i32,
     preserve_order: bool,
 ) -> Vec<MotionSegment> {
+    // Trim MAT to cleared area so travel routing only uses
+    // already-machined territory.
+    let mat_trimmed: Option<MedialAxis> =
+        mat.and_then(|m| cleared.map(|c| m.trim_to_polygons(c)));
+    let mat_ref: Option<&MedialAxis> = mat_trimmed.as_ref().or(mat);
     let mut segments: Vec<MotionSegment> = Vec::new();
 
     let order: Vec<usize> = if preserve_order || arcs.is_empty() {
@@ -726,46 +1195,121 @@ fn build_link_segments(
             };
             let first: Point = arc[0];
 
-            let blocked = if safe_margin > 0.0 {
-                let margin2 = safe_margin * safe_margin;
-                uncleared.iter().any(|poly| {
-                    if does_line_cross_polygon(last, first, poly) {
-                        return true;
-                    }
-                    for i in 0..poly.len() {
-                        let a = poly[i];
-                        let b = poly[(i + 1) % poly.len()];
-                        let d = get_segment_segment_distance(last, first, a, b);
-                        if d * d < margin2 {
-                            return true;
-                        }
-                    }
-                    false
-                })
-            } else {
-                uncleared
-                    .iter()
-                    .any(|poly| does_line_cross_polygon(last, first, poly))
-            };
+            let direct_seg = [last, first];
+            let blocked = does_path_sweep_intersect_polygon(
+                &direct_seg,
+                safe_margin,
+                uncleared,
+            );
 
             let link: Vec<Point> = if blocked {
-                let mat_link = mat
-                    .and_then(|ma| mat_path(ma, last, first))
+                let mat_link = mat_ref
+                    .and_then(|ma| ma.path_between(last, first))
                     .unwrap_or_else(|| vec![last, first]);
                 if mat_link.len() < 2 {
                     vec![last, first]
                 } else {
-                    let mut full = Vec::with_capacity(mat_link.len() + 2);
-                    full.push(last);
-                    full.extend(mat_link);
-                    if (full.last().unwrap() - first).length_squared() > 1e-12 {
-                        full.push(first);
-                    }
-                    smooth_path(&full, uncleared, safe_margin, smoothing_amount)
+                    build_travel_link(
+                        last,
+                        first,
+                        &mat_link,
+                        uncleared,
+                        safe_margin,
+                        smoothing_amount,
+                    )
                 }
             } else {
                 vec![last, first]
             };
+
+            // Tangent extensions: insert points along the cut tangent
+            // direction at both ends of the travel link.  This makes
+            // the travel exit/enter the arc tangentially (0° angle at
+            // the junction).  The original sharp angle moves to the
+            // tangent extension point where round_travel_corners can
+            // round it.
+            let mut link = link;
+
+            // Start junction: extend the previous cut's tangent.
+            if link.len() >= 2 && !segments.is_empty() {
+                let prev_cut = &segments.last().unwrap().points;
+                if prev_cut.len() >= 2 {
+                    let prev_pt = prev_cut[prev_cut.len() - 2];
+                    let curr = link[0];
+                    let nxt = link[1];
+                    let tx = curr.x - prev_pt.x;
+                    let ty = curr.y - prev_pt.y;
+                    let tlen = (tx * tx + ty * ty).sqrt();
+                    let dx = nxt.x - curr.x;
+                    let dy = nxt.y - curr.y;
+                    let dlen = (dx * dx + dy * dy).sqrt();
+                    if tlen > 1e-12 && dlen > 1e-12 {
+                        let dot = (tx * dx + ty * dy) / (tlen * dlen);
+                        if dot < 0.9 {
+                            let d = safe_margin.max(2.0).min(dlen * 0.4);
+                            link.insert(
+                                1,
+                                Point::new(
+                                    curr.x + tx / tlen * d,
+                                    curr.y + ty / tlen * d,
+                                ),
+                            );
+                        }
+                    }
+                }
+            }
+
+            // End junction: extend the next cut's tangent backward.
+            if link.len() >= 2 && arc.len() >= 2 {
+                let prev = link[link.len() - 2];
+                let curr = link[link.len() - 1];
+                let next = arc[1];
+                let tx = next.x - curr.x;
+                let ty = next.y - curr.y;
+                let tlen = (tx * tx + ty * ty).sqrt();
+                let dx = curr.x - prev.x;
+                let dy = curr.y - prev.y;
+                let dlen = (dx * dx + dy * dy).sqrt();
+                if tlen > 1e-12 && dlen > 1e-12 {
+                    let dot = (tx * dx + ty * dy) / (tlen * dlen);
+                    if dot < 0.9 {
+                        let d = safe_margin.max(2.0).min(dlen * 0.4);
+                        let last_idx = link.len() - 1;
+                        link.insert(
+                            last_idx,
+                            Point::new(
+                                curr.x - tx / tlen * d,
+                                curr.y - ty / tlen * d,
+                            ),
+                        );
+                    }
+                }
+            }
+
+            // Round any remaining sharp corners (including the angles
+            // at the tangent extension points).
+            link = round_travel_corners(&link, uncleared, safe_margin, 6);
+
+            // Safety net: if any post-processing introduced a
+            // collision, fall back to the verified-safe path.
+            if does_path_sweep_intersect_polygon(&link, safe_margin, uncleared)
+            {
+                if !blocked {
+                    link = vec![last, first];
+                } else {
+                    let raw = mat_ref
+                        .and_then(|ma| ma.path_between(last, first))
+                        .unwrap_or_else(|| vec![last, first]);
+                    link = build_travel_link(
+                        last,
+                        first,
+                        &raw,
+                        uncleared,
+                        safe_margin,
+                        smoothing_amount,
+                    );
+                }
+            }
 
             let travel_pts: Vec<Point3D> = link
                 .iter()
@@ -776,14 +1320,8 @@ fn build_link_segments(
                 points: travel_pts,
             });
 
-            let skip_start =
-                (arc[0] - *link.last().unwrap()).length_squared() < 1e-12;
-            let cut_pts: Vec<Point3D> = arc
-                .iter()
-                .enumerate()
-                .filter(|(i, _)| !(*i == 0 && skip_start))
-                .map(|(_, p)| Point3D::new(p.x, p.y, cut_z))
-                .collect();
+            let cut_pts: Vec<Point3D> =
+                arc.iter().map(|p| Point3D::new(p.x, p.y, cut_z)).collect();
             if !cut_pts.is_empty() {
                 segments.push(MotionSegment {
                     role: MotionRole::Cut,

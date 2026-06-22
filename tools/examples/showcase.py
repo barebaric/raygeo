@@ -551,7 +551,6 @@ def _plot_peeling_multi(ax):
         step_over=2.0,
         cut_z=-5.0,
         safe_z=5.0,
-        area_tolerance=1.0,
     )
 
     pts = []

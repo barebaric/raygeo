@@ -4,6 +4,75 @@ sidebar_label: raygeo.ops.assembly.hsm
 sidebar_position: 53
 ---
 
+## PyWavefrontGraph
+
+Parent tree returned by [`split_ordered_wavefronts`].
+
+Nodes are individual bite polygons, identified by a _global index_ computed from `bite_offsets`:
+
+```text
+global = bite_offsets[pass] + local_index_within_pass
+```
+
+Each bite has exactly one parent (the nearest previous-pass bite sharing boundary), forming a tree.
+`visit_order` lists global bite indices in DFS traversal order.
+
+### `arc_passes`
+
+```python
+arc_passes: list[int]
+```
+
+Pass index for each arc in `arcs` (same length, same order).
+
+### `arcs`
+
+```python
+arcs: list[list[tuple[float, float]]]
+```
+
+Cutting arcs in DFS visit order.
+
+### `bite_arcs`
+
+```python
+bite_arcs: list[list[int]]
+```
+
+Per-bite arc indices into `arcs` (DFS order): `bite_arcs[global_bite] = [arc_idx, ...]`.
+
+### `bite_offsets`
+
+```python
+bite_offsets: list[int]
+```
+
+Pass start offsets for global↔local conversion.
+
+### `bite_polys`
+
+```python
+bite_polys: list[list[list[tuple[float, float]]]]
+```
+
+Per-pass bite polygons: `bite_polys[pass][local]`.
+
+### `parent`
+
+```python
+parent: list[Optional[int]]
+```
+
+`parent[global]` = parent bite index, or `None` for roots.
+
+### `visit_order`
+
+```python
+visit_order: list[int]
+```
+
+Global bite indices in the order visited by DFS.
+
 ## Functions
 
 ### `adaptive_entry()`
@@ -69,19 +138,15 @@ adaptive_peeling(
     safe_z: float = 2,
     wall_margin: float = 0,
     travel_smoothing: int = 50,
-    area_tolerance: float = 1,
     cut_feed_rate: int = 1200,
     travel_rapid_rate: int = 8000,
 ) -> ops.Ops
 ```
 
-Run the peeling (D-cut) clearing strategy and return an Ops.
+Run the peeling clearing strategy and return an Ops.
 
-Starting from the _cleared_ state (mutated in place), each iteration expands the cleared boundary
-outward by _step_over_, clips to the valid tool area, computes crescent-shaped "bites", and
-generates a D-cut for each bite. The individual passes are linked into a single Ops: each cutting
-arc at _cut_z_ (LineTo with _cut_feed_rate_) followed by a travel segment at _safe_z_ (MoveTo with
-_travel_rapid_rate_). The Medial Axis of the pocket is used to route travel around obstacles.
+Generates, splits, and orders cutting arcs via a directed bite graph, then fillets and links them
+into Ops with MAT-routed travel segments.
 
 | Parameter           | Type                                           | Description                                                 |
 | ------------------- | ---------------------------------------------- | ----------------------------------------------------------- |
@@ -94,7 +159,6 @@ _travel_rapid_rate_). The Medial Axis of the pocket is used to route travel arou
 | `safe_z`            | `float = 2`                                    | Retract Z height for travel segments (default 2.0).         |
 | `wall_margin`       | `float = 0`                                    | Extra clearance between tool sweep and walls (default 0.0). |
 | `travel_smoothing`  | `int = 50`                                     | Gaussian smoothing for MAT-routed travel (default 50).      |
-| `area_tolerance`    | `float = 1`                                    | Convergence tolerance in square mm (default 1.0).           |
 | `cut_feed_rate`     | `int = 1200`                                   | Feed rate for cutting moves (default 1200).                 |
 | `travel_rapid_rate` | `int = 8000`                                   | Rapid rate for travel moves (default 8000).                 |
 | _Returns_           | `ops.Ops`                                      | Ops with cutting and travel commands.                       |
@@ -108,9 +172,11 @@ _adaptive_peeling on a rectangular pocket — cutting arcs (blue, solid) at cut 
 
 _adaptive_peeling (3-D) — Z colouring shows cutting depth (blue) vs travel height (red)_
 
-![adaptive_peeling on a pocket with three islands — travel links route around obstacles](images/ops-assembly-hsm-adaptive-peeling-multi.png)
+![adaptive_peeling on a three-island pocket — left: directed bite graph (green parent→child edges, node markers at bite centroids coloured by pass, arcs in turbo); right: resulting Ops toolpath (cut blue, travel orange dashed)](images/ops-assembly-hsm-adaptive-peeling-multi.png)
 
-_adaptive_peeling on a pocket with three islands — travel links route around obstacles_
+_adaptive_peeling on a three-island pocket — left: directed bite graph (green parent→child edges,
+node markers at bite centroids coloured by pass, arcs in turbo); right: resulting Ops toolpath (cut
+blue, travel orange dashed)_
 
 ### `adaptive_wavefronts()`
 
@@ -205,6 +271,7 @@ link_arcs_to_ops(
     preserve_order: bool = False,
     cut_feed_rate: int = 1200,
     travel_rapid_rate: int = 8000,
+    cleared: Sequence[Sequence[tuple[float, float]]] | None = None,
 ) -> ops.Ops
 ```
 
@@ -217,20 +284,52 @@ Axis to route around obstacles, then smoothed.
 Cutting arcs are emitted as LineTo at _cut_z_ with _cut_feed_rate_; travel links as MoveTo at
 _safe_z_ with _travel_rapid_rate_.
 
-| Parameter           | Type                                                                         | Description                                                                                                            |
-| ------------------- | ---------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| `arcs`              | `Sequence[Sequence[tuple[float, float]]]`                                    | Sequence of arcs (each a list of (x, y) points).                                                                       |
-| `uncleared`         | `Sequence[Sequence[tuple[float, float]]] = []`                               | Areas to avoid during travel (default []).                                                                             |
-| `cut_z`             | `float = -1`                                                                 | Cutting Z height (default -1.0).                                                                                       |
-| `safe_z`            | `float = 5`                                                                  | Safe (rapid) Z height (default 5.0).                                                                                   |
-| `mat`               | `tuple[list[tuple[float, float]], list[tuple[int, int]]] &#124; None = None` | Optional `(nodes, edges)` tuple from `compute_medial_axis` for obstacle-aware routing.                                 |
-| `safe_margin`       | `float = 0`                                                                  | Minimum distance from uncleared polygons for a direct travel line to be considered safe (default 0 = no margin check). |
-| `smoothing_amount`  | `int = 50`                                                                   | Gaussian smoothing amount (0-200) applied to MAT-routed travel (default 50).                                           |
-| `preserve_order`    | `bool = False`                                                               | Keep arc order as given instead of nearest-neighbour reordering (default False).                                       |
-| `cut_feed_rate`     | `int = 1200`                                                                 | Feed rate for cutting moves (default 1200).                                                                            |
-| `travel_rapid_rate` | `int = 8000`                                                                 | Rapid rate for travel moves (default 8000).                                                                            |
-| _Returns_           | `ops.Ops`                                                                    | Ops with cutting LineTo and travel MoveTo commands.                                                                    |
+| Parameter           | Type                                                                         | Description                                                                                                                                                                          |
+| ------------------- | ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `arcs`              | `Sequence[Sequence[tuple[float, float]]]`                                    | Sequence of arcs (each a list of (x, y) points).                                                                                                                                     |
+| `uncleared`         | `Sequence[Sequence[tuple[float, float]]] = []`                               | Areas to avoid during travel (default []).                                                                                                                                           |
+| `cut_z`             | `float = -1`                                                                 | Cutting Z height (default -1.0).                                                                                                                                                     |
+| `safe_z`            | `float = 5`                                                                  | Safe (rapid) Z height (default 5.0).                                                                                                                                                 |
+| `mat`               | `tuple[list[tuple[float, float]], list[tuple[int, int]]] &#124; None = None` | Optional `(nodes, edges)` tuple from `compute_medial_axis` for obstacle-aware routing.                                                                                               |
+| `safe_margin`       | `float = 0`                                                                  | Minimum distance from uncleared polygons for a direct travel line to be considered safe (default 0 = no margin check).                                                               |
+| `smoothing_amount`  | `int = 50`                                                                   | Gaussian smoothing amount (0-200) applied to MAT-routed travel (default 50).                                                                                                         |
+| `preserve_order`    | `bool = False`                                                               | Keep arc order as given instead of nearest-neighbour reordering (default False).                                                                                                     |
+| `cut_feed_rate`     | `int = 1200`                                                                 | Feed rate for cutting moves (default 1200).                                                                                                                                          |
+| `travel_rapid_rate` | `int = 8000`                                                                 | Rapid rate for travel moves (default 8000).                                                                                                                                          |
+| `cleared`           | `Sequence[Sequence[tuple[float, float]]] &#124; None = None`                 | Cleared-area polygons. When provided the MAT is trimmed to these polygons before routing, ensuring travel only goes through already-machined territory (default None = no trimming). |
+| _Returns_           | `ops.Ops`                                                                    | Ops with cutting LineTo and travel MoveTo commands.                                                                                                                                  |
 
 ![Pre-computed filleted arcs linked into an Ops with MAT-routed travel segments](images/ops-assembly-hsm-link-arcs.png)
 
 _Pre-computed filleted arcs linked into an Ops with MAT-routed travel segments_
+
+### `split_ordered_wavefronts()`
+
+```python
+split_ordered_wavefronts(
+    cleared: geo.algo.cleared_area.ClearedArea,
+    step_over: float,
+    valid_area: Sequence[Sequence[tuple[float, float]]],
+    simplify_tol: float,
+    entry: tuple[float, float],
+) -> ops.assembly.hsm.PyWavefrontGraph
+```
+
+Generate, split, and order cutting arcs in one pass.
+
+Builds a directed bite graph during the clearing loop: each bite from pass N+1 that shares boundary
+with a pass-N bite becomes its child. DFS with merge constraints produces the processing order.
+
+| Parameter      | Type                                      | Description                                                                          |
+| -------------- | ----------------------------------------- | ------------------------------------------------------------------------------------ |
+| `cleared`      | `geo.algo.cleared_area.ClearedArea`       | `ClearedArea` instance (mutated in place).                                           |
+| `step_over`    | `float`                                   | Lateral step-over in mm.                                                             |
+| `valid_area`   | `Sequence[Sequence[tuple[float, float]]]` | Valid tool-centre region polygons.                                                   |
+| `simplify_tol` | `float`                                   | Tolerance for frontier simplification.                                               |
+| `entry`        | `tuple[float, float]`                     | Entry point (cleared centroid).                                                      |
+| _Returns_      | `ops.assembly.hsm.PyWavefrontGraph`       | `PyWavefrontGraph` carrying the ordered arcs and the underlying directed bite graph. |
+
+![Cutting arcs from split_ordered_wavefronts() coloured by pass (turbo), with parent→child edges (grey arrows) and numbered labels at each arc midpoint](images/ops-assembly-hsm-split-ordered-wavefronts.png)
+
+_Cutting arcs from split_ordered_wavefronts() coloured by pass (turbo), with parent→child edges
+(grey arrows) and numbered labels at each arc midpoint_
