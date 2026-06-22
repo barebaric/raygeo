@@ -15,7 +15,7 @@ __all__ = [
     "generate_spiral",
 ]
 
-def generate_spiral(center: tuple[float, float], z: float, start_radius: float, end_radius: float, revolutions: float, direction: helix.HelixDirection, angular_step: float = 0.1) -> list[tuple[float, float, float]]:
+def generate_spiral(center: tuple[float, float], z: float, start_radius: float, end_radius: float, revolutions: float, direction: helix.HelixDirection, angular_step: float = 0.1, start_angle: float = 0) -> list[tuple[float, float, float]]:
     r"""
     Generate a flat Archimedean spiral at constant Z.
     
@@ -29,6 +29,7 @@ def generate_spiral(center: tuple[float, float], z: float, start_radius: float, 
     :param revolutions: Total turns (may be fractional).
     :param direction: CW or CCW revolution.
     :param angular_step: Angular step in radians per vertex (default 0.1).
+    :param start_angle: Starting angle in radians, 0 = +X axis (default 0.0).
     :returns: List of (x, y, z) points approximating the spiral.
     :complexity: O(n) time, O(n) space where n = total_angle / angular_step
     """

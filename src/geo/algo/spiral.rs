@@ -13,6 +13,8 @@ pub struct SpiralOptions {
     pub direction: HelixDirection,
     /// Angular step in radians per vertex.
     pub angular_step: f64,
+    /// Starting angle in radians (0 = +X axis).
+    pub start_angle: f64,
 }
 
 /// Emit a (poly)line approximating a flat Archimedean spiral at constant
@@ -39,7 +41,7 @@ pub fn generate_spiral(opts: &SpiralOptions) -> Vec<Point3D> {
     let mut points = Vec::with_capacity(n_steps + 1);
     for i in 0..=n_steps {
         let t = i as f64 / n_steps as f64;
-        let angle = total_angle * t * dir_sign;
+        let angle = opts.start_angle + total_angle * t * dir_sign;
         let radius =
             opts.start_radius + (opts.end_radius - opts.start_radius) * t;
         let x = opts.center.x + radius * angle.cos();

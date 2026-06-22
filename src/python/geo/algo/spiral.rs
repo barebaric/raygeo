@@ -38,6 +38,7 @@ pub fn register(algo_mod: &Bound<'_, PyModule>) -> PyResult<()> {
         revolutions: float,
         direction: helix.HelixDirection,
         angular_step: float = 0.1,
+        start_angle: float = 0.0,
     ) -> list[tuple[float, float, float]]:
         """Generate a flat Archimedean spiral at constant Z.
 
@@ -51,6 +52,7 @@ pub fn register(algo_mod: &Bound<'_, PyModule>) -> PyResult<()> {
         :param revolutions: Total turns (may be fractional).
         :param direction: CW or CCW revolution.
         :param angular_step: Angular step in radians per vertex (default 0.1).
+        :param start_angle: Starting angle in radians, 0 = +X axis (default 0.0).
         :returns: List of (x, y, z) points approximating the spiral.
         :complexity: O(n) time, O(n) space where n = total_angle / angular_step
         """
@@ -66,7 +68,9 @@ pub fn register(algo_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     revolutions,
     direction,
     angular_step = 0.1,
+    start_angle = 0.0,
 ))]
+#[allow(clippy::too_many_arguments)]
 fn generate_spiral_py(
     center: (f64, f64),
     z: f64,
@@ -75,6 +79,7 @@ fn generate_spiral_py(
     revolutions: f64,
     direction: crate::python::geo::algo::helix::PyHelixDirection,
     angular_step: f64,
+    start_angle: f64,
 ) -> Vec<(f64, f64, f64)> {
     let opts = spiral::SpiralOptions {
         center: Point::new(center.0, center.1),
@@ -84,6 +89,7 @@ fn generate_spiral_py(
         revolutions,
         direction: direction.into(),
         angular_step,
+        start_angle,
     };
     let pts = spiral::generate_spiral(&opts);
     pts.into_iter().map(|p| (p.x, p.y, p.z)).collect()

@@ -23,6 +23,7 @@ generate_spiral(
     revolutions: float,
     direction: helix.HelixDirection,
     angular_step: float = 0.1,
+    start_angle: float = 0,
 ) -> list[tuple[float, float, float]]
 ```
 
@@ -40,6 +41,7 @@ revolutions.
 | `revolutions`  | `float`                            | Total turns (may be fractional).                           |
 | `direction`    | `helix.HelixDirection`             | CW or CCW revolution.                                      |
 | `angular_step` | `float = 0.1`                      | Angular step in radians per vertex (default 0.1).          |
+| `start_angle`  | `float = 0`                        | Starting angle in radians, 0 = +X axis (default 0.0).      |
 | _Returns_      | `list[tuple[float, float, float]]` | List of (x, y, z) points approximating the spiral.         |
 | _Complexity_   |                                    | O(n) time, O(n) space where n = total_angle / angular_step |
 
