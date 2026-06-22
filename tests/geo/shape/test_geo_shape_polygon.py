@@ -47,6 +47,7 @@ from raygeo.geo.shape.polygon import (
     polygon_perimeter_numpy,
     polygons_intersect,
     polygons_intersect_numpy,
+    resample_polygon,
     rotate_polygon,
     rotate_polygon_numpy,
     rotate_polygons,
@@ -1866,3 +1867,38 @@ class TestTrimPolylineAngularEnds:
         ]
         result = trim_polyline_angular_ends(poly, 0, n, math.radians(25))
         assert result == (0, n)
+
+
+class TestResamplePolygon:
+    def test_empty(self):
+        assert resample_polygon([], 1.0) == []
+
+    def test_uniform_spacing(self):
+        poly = P((0, 0), (10, 0), (10, 10), (0, 10))
+        result = resample_polygon(poly, 10.0)
+        assert len(result) == 4
+        for p in poly:
+            assert p in result
+
+    def test_spacing_larger_than_edge(self):
+        poly = P((0, 0), (10, 0), (10, 10), (0, 10))
+        result = resample_polygon(poly, 100.0)
+        assert len(result) == 4
+        for p in poly:
+            assert p in result
+
+    def test_fine_spacing_adds_points(self):
+        poly = P((0, 0), (10, 0), (10, 10), (0, 10))
+        result = resample_polygon(poly, 1.0)
+        assert len(result) > 10
+        # All original vertices are present
+        for p in poly:
+            assert p in result
+
+    def test_spacing_half_edge_length(self):
+        poly = P((0, 0), (10, 0))
+        result = resample_polygon(poly, 5.0)
+        assert len(result) == 4
+        assert (0.0, 0.0) in result
+        assert (5.0, 0.0) in result
+        assert (10.0, 0.0) in result

@@ -16,10 +16,11 @@ use crate::geo::shape::polygon::{
     get_polygons_union, get_polyline_bounds, get_polyline_closest_point,
     get_segment_swept_polygon, is_almost_equal, is_point_inside_polygon,
     is_polygon_clockwise, is_polygon_convex, normalize_polygons,
-    offset_polygon, point_line_distance, polygons_intersect, rotate_polygon,
-    rotate_polygons, scale_polygon, split_polyline_at_v_junctions,
-    translate_bounds, translate_polygon, translate_polygons,
-    trim_polyline_angular_ends, trim_polyline_at, JoinStyle,
+    offset_polygon, point_line_distance, polygons_intersect,
+    resample_polygon, rotate_polygon, rotate_polygons, scale_polygon,
+    split_polyline_at_v_junctions, translate_bounds, translate_polygon,
+    translate_polygons, trim_polyline_angular_ends, trim_polyline_at,
+    JoinStyle,
 };
 use crate::types::{Point, Rect};
 use numpy::{PyArray2, PyArrayMethods};
@@ -153,6 +154,7 @@ pub fn register(shape_mod: &Bound<'_, PyModule>) -> PyResult<()> {
         polygon_perimeter_numpy_py,
         polygons_intersect_numpy_py,
         polygons_intersect_py,
+        resample_polygon_py,
         rotate_polygon_numpy_py,
         rotate_polygon_py,
         rotate_polygons_numpy_py,
@@ -1732,6 +1734,37 @@ fn trim_polyline_angular_ends_py(
     let pts: Vec<Point> =
         polygon.iter().map(|&(x, y)| Point::new(x, y)).collect();
     trim_polyline_angular_ends(&pts, start, length, angle_threshold_rad)
+}
+
+#[gen_stub_pyfunction(
+    python = r#"
+    import collections.abc
+
+    def resample_polygon(
+        polygon: collections.abc.Sequence[tuple[float, float]],
+        spacing: float,
+    ) -> list[tuple[float, float]]:
+        """Resample a closed polygon by inserting evenly-spaced points along each
+        edge so that no segment is longer than *spacing*.
+
+        The result is a closed polyline (last point connects back to first
+        conceptually, but is not duplicated).
+
+        :param polygon: Polygon as (x, y) points.
+        :param spacing: Maximum allowed segment length.
+        :returns: Resampled polygon as list of (x, y) points.
+        :complexity: O(n * m)
+        """
+"#,
+    module = "raygeo.geo.shape.polygon"
+)]
+#[pyfunction(name = "resample_polygon")]
+fn resample_polygon_py(
+    polygon: Vec<PyPoint2D>,
+    spacing: f64,
+) -> Vec<(f64, f64)> {
+    let pts = poly_to_points(polygon);
+    points_to_tuples(resample_polygon(&pts, spacing))
 }
 
 #[gen_stub_pyfunction(

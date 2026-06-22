@@ -49,6 +49,7 @@ __all__ = [
     "polygon_perimeter_numpy",
     "polygons_intersect",
     "polygons_intersect_numpy",
+    "resample_polygon",
     "rotate_polygon",
     "rotate_polygon_numpy",
     "rotate_polygons",
@@ -495,6 +496,20 @@ def polygons_intersect_numpy(poly1: numpy.typing.NDArray, poly2: numpy.typing.ND
     :param poly2: Second polygon as a 2D numpy array.
     :param min_area: Minimum intersection area threshold.
     :returns: True if polygons intersect.
+    :complexity: O(n * m)
+    """
+
+def resample_polygon(polygon: collections.abc.Sequence[tuple[float, float]], spacing: float) -> list[tuple[float, float]]:
+    r"""
+    Resample a closed polygon by inserting evenly-spaced points along each
+    edge so that no segment is longer than *spacing*.
+    
+    The result is a closed polyline (last point connects back to first
+    conceptually, but is not duplicated).
+    
+    :param polygon: Polygon as (x, y) points.
+    :param spacing: Maximum allowed segment length.
+    :returns: Resampled polygon as list of (x, y) points.
     :complexity: O(n * m)
     """
 

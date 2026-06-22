@@ -3,7 +3,7 @@ use std::collections::{HashMap, HashSet, VecDeque};
 use spade::handles::FixedVertexHandle;
 use spade::{ConstrainedDelaunayTriangulation, Point2, Triangulation};
 
-use crate::geo::shape::polygon::is_point_in_polygon;
+use crate::geo::shape::polygon::{is_point_in_polygon, resample_polygon};
 use crate::types::Point;
 
 type Cdt = ConstrainedDelaunayTriangulation<Point2<f64>>;
@@ -209,7 +209,7 @@ fn build_sampled_cdt(
     };
 
     // Sample outer boundary densely and insert as constraint
-    let outer_samples = sample_polygon(outer, spacing);
+    let outer_samples = resample_polygon(outer, spacing);
     let outer_handles: Vec<_> = outer_samples
         .iter()
         .map(|p| insert_pt(&mut cdt, &mut vidx_map, &mut vertices, *p))
@@ -224,7 +224,7 @@ fn build_sampled_cdt(
         if hole.len() < 3 {
             continue;
         }
-        let hole_samples = sample_polygon(hole, spacing);
+        let hole_samples = resample_polygon(hole, spacing);
         let hole_handles: Vec<_> = hole_samples
             .iter()
             .map(|p| insert_pt(&mut cdt, &mut vidx_map, &mut vertices, *p))
@@ -269,29 +269,6 @@ fn build_sampled_cdt(
     }
 
     Ok((triangles, vertices))
-}
-
-fn sample_polygon(poly: &[Point], spacing: f64) -> Vec<Point> {
-    if poly.is_empty() {
-        return vec![];
-    }
-    let mut result = Vec::new();
-    for i in 0..poly.len() {
-        let j = (i + 1) % poly.len();
-        let dx = poly[j].x - poly[i].x;
-        let dy = poly[j].y - poly[i].y;
-        let len = (dx * dx + dy * dy).sqrt();
-        if len < 1e-12 {
-            result.push(poly[i]);
-            continue;
-        }
-        let n = (len / spacing).ceil() as usize;
-        for k in 0..n {
-            let t = k as f64 / n as f64;
-            result.push(Point::new(poly[i].x + t * dx, poly[i].y + t * dy));
-        }
-    }
-    result
 }
 
 fn contract_to_branches(

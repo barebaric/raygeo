@@ -969,6 +969,36 @@ pub fn trim_polyline_at(polyline: &[Point], a: Point, b: Point) -> Vec<Point> {
     result
 }
 
+/// Resample a closed polygon by inserting evenly-spaced points along each
+/// edge so that no segment is longer than `spacing`.
+///
+/// The result is a closed polyline (last point connects back to first
+/// conceptually, but is not duplicated).  Useful for preparing boundary
+/// data for algorithms like the medial-axis transform that require dense,
+/// uniform sampling.
+pub fn resample_polygon(poly: &[Point], spacing: f64) -> Vec<Point> {
+    if poly.is_empty() {
+        return vec![];
+    }
+    let mut result = Vec::new();
+    for i in 0..poly.len() {
+        let j = (i + 1) % poly.len();
+        let dx = poly[j].x - poly[i].x;
+        let dy = poly[j].y - poly[i].y;
+        let len = (dx * dx + dy * dy).sqrt();
+        if len < 1e-12 {
+            result.push(poly[i]);
+            continue;
+        }
+        let n = (len / spacing).ceil() as usize;
+        for k in 0..n {
+            let t = k as f64 / n as f64;
+            result.push(Point::new(poly[i].x + t * dx, poly[i].y + t * dy));
+        }
+    }
+    result
+}
+
 /// Trim vertices from both ends of a contiguous subsequence of a closed
 /// polygon where the interior angle jumps sharply (≥ `threshold_rad`)
 /// compared to the adjacent vertex further inward.

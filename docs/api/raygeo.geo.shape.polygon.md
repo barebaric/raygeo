@@ -773,6 +773,28 @@ Check if polygons intersect from numpy arrays.
 | _Returns_    | `bool`          | True if polygons intersect.          |
 | _Complexity_ |                 | O(n \* m)                            |
 
+### `resample_polygon()`
+
+```python
+resample_polygon(
+    polygon: Sequence[tuple[float, float]],
+    spacing: float,
+) -> list[tuple[float, float]]
+```
+
+Resample a closed polygon by inserting evenly-spaced points along each edge so that no segment is
+longer than _spacing_.
+
+The result is a closed polyline (last point connects back to first conceptually, but is not
+duplicated).
+
+| Parameter    | Type                            | Description                                 |
+| ------------ | ------------------------------- | ------------------------------------------- |
+| `polygon`    | `Sequence[tuple[float, float]]` | Polygon as (x, y) points.                   |
+| `spacing`    | `float`                         | Maximum allowed segment length.             |
+| _Returns_    | `list[tuple[float, float]]`     | Resampled polygon as list of (x, y) points. |
+| _Complexity_ |                                 | O(n \* m)                                   |
+
 ### `rotate_polygon()`
 
 ```python

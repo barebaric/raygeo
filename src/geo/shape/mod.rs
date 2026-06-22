@@ -57,9 +57,10 @@ pub use polygon::{
     is_almost_equal, is_point_in_polygon, is_polygon_clockwise,
     is_polygon_convex, normalize_polygons, offset_polygon, path_to_polygon,
     paths_to_polygons, point_line_distance, polygon_to_path, polygons_to_paths,
-    rotate_polygon, rotate_polygons, scale_polygon, translate_bounds,
-    translate_polygon, translate_polygons, trim_polyline_angular_ends,
-    ClipperPath, ClipperPaths, GeoScale, JoinStyle,
+    resample_polygon, rotate_polygon, rotate_polygons, scale_polygon,
+    split_polyline_at_v_junctions, translate_bounds, translate_polygon,
+    translate_polygons, trim_polyline_angular_ends, ClipperPath, ClipperPaths,
+    GeoScale, JoinStyle,
 };
 pub use polygon3d::{
     deduplicate_polyline_3d, fillet_polyline_3d, flip_polygon_3d,
