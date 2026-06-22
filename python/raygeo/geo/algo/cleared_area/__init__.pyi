@@ -69,6 +69,18 @@ class ClearedArea:
         :param max_angle: maximum deviation from the target direction (radians)
         :complexity: O(n log n)
         """
+    def all_bites(self, step_over: builtins.float, valid_area: typing.Sequence[typing.Sequence[tuple[builtins.float, builtins.float]]], simplify_tol: builtins.float) -> builtins.list[builtins.list[builtins.list[tuple[builtins.float, builtins.float]]]]:
+        r"""
+        Iteratively call :py:meth:`bites` + :py:meth:`incorporate` until
+        the valid area is fully cleared.
+        
+        Returns all passes, each pass being a list of bite polygons.
+        The cleared area is fully cleared after this call.
+        :param step_over: lateral step-over in mm
+        :param valid_area: list of polygons defining the valid tool-centre region
+        :param simplify_tol: tolerance in mm for frontier simplification
+        :complexity: O(k n log n) where k = number of passes
+        """
     def total_area(self) -> builtins.float:
         r"""
         :complexity: O(1)

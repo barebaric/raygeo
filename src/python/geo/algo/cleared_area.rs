@@ -200,6 +200,40 @@ impl ClearedArea {
             .collect()
     }
 
+    /// Iteratively call :py:meth:`bites` + :py:meth:`incorporate` until
+    /// the valid area is fully cleared.
+    ///
+    /// Returns all passes, each pass being a list of bite polygons.
+    /// The cleared area is fully cleared after this call.
+    /// :param step_over: lateral step-over in mm
+    /// :param valid_area: list of polygons defining the valid tool-centre region
+    /// :param simplify_tol: tolerance in mm for frontier simplification
+    /// :complexity: O(k n log n) where k = number of passes
+    pub fn all_bites(
+        &mut self,
+        step_over: f64,
+        valid_area: Vec<Vec<(f64, f64)>>,
+        simplify_tol: f64,
+    ) -> Vec<Vec<Vec<(f64, f64)>>> {
+        let valid: Vec<crate::types::Polygon> = valid_area
+            .into_iter()
+            .map(|v| {
+                v.into_iter()
+                    .map(|(x, y)| crate::types::Point::new(x, y))
+                    .collect()
+            })
+            .collect();
+        let passes = self.inner.all_bites(step_over, &valid, simplify_tol);
+        passes
+            .into_iter()
+            .map(|pass| {
+                pass.into_iter()
+                    .map(|poly| poly.into_iter().map(|p| (p.x, p.y)).collect())
+                    .collect()
+            })
+            .collect()
+    }
+
     /// :complexity: O(1)
     pub fn total_area(&self) -> f64 {
         self.inner.total_area()

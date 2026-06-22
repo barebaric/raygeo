@@ -31,6 +31,29 @@ add_cleared_polygons(polygons: Sequence[Sequence[tuple[float, float]]]) -> None
 _ClearedArea with bulk polygon insertion via `add_cleared_polygons` — cleared region in blue,
 remaining area in red_
 
+### `all_bites()`
+
+```python
+all_bites(
+    step_over: float,
+    valid_area: Sequence[Sequence[tuple[float, float]]],
+    simplify_tol: float,
+) -> list[list[list[tuple[float, float]]]]
+```
+
+Iteratively call **bites** + **incorporate** until the valid area is fully cleared.
+
+Returns all passes, each pass being a list of bite polygons. The cleared area is fully cleared after
+this call.
+
+| Parameter      | Type                                      | Description                                            |
+| -------------- | ----------------------------------------- | ------------------------------------------------------ |
+| `step_over`    | `float`                                   | lateral step-over in mm                                |
+| `valid_area`   | `Sequence[Sequence[tuple[float, float]]]` | list of polygons defining the valid tool-centre region |
+| `simplify_tol` | `float`                                   | tolerance in mm for frontier simplification            |
+| _Returns_      | `list[list[list[tuple[float, float]]]]`   |                                                        |
+| _Complexity_   |                                           | O(k n log n) where k = number of passes                |
+
 ### `bite_in_direction()`
 
 ```python

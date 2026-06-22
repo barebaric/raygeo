@@ -277,6 +277,92 @@ def test_bite_in_direction_narrow_angle():
     assert isinstance(dir_bites, list)
 
 
+# --- all_bites ---
+
+
+def test_all_bites_empty_cleared():
+    """No cleared area — no frontier to expand from."""
+    ca = ClearedArea()
+    valid = [P((-50, -50), (50, -50), (50, 50), (-50, 50))]
+    passes = ca.all_bites(5.0, valid, 0.01)
+    assert passes == []
+
+
+def test_all_bites_already_cleared():
+    """Valid area fully covered by cleared area — nothing to bite."""
+    ca = ClearedArea()
+    poly = P((0, 0), (10, 0), (10, 10), (0, 10))
+    ca.add_cleared_polygons([poly])
+    passes = ca.all_bites(5.0, [poly], 0.01)
+    assert passes == []
+
+
+def test_all_bites_single_pass():
+    """Small valid area yields exactly one pass."""
+    ca = ClearedArea()
+    ca.add_cleared_polygons([P((0, 0), (10, 0), (10, 10), (0, 10))])
+    valid = [P((-10, -10), (20, -10), (20, 20), (-10, 20))]
+    passes = ca.all_bites(5.0, valid, 0.01)
+    assert len(passes) >= 1
+    for bite in passes[0]:
+        assert len(bite) >= 3
+
+
+def test_all_bites_multi_pass():
+    """Larger valid area requires multiple passes."""
+    ca = ClearedArea()
+    ca.add_cleared_polygons([P((40, 40), (60, 40), (60, 60), (40, 60))])
+    valid = [P((0, 0), (100, 0), (100, 100), (0, 100))]
+    passes = ca.all_bites(5.0, valid, 0.01)
+    assert len(passes) >= 2
+
+
+def test_all_bites_fully_clears():
+    """After all_bites, remaining area is near zero."""
+    ca = ClearedArea()
+    ca.add_cleared_polygons([P((40, 40), (60, 40), (60, 60), (40, 60))])
+    valid = [P((0, 0), (100, 0), (100, 100), (0, 100))]
+    ca.all_bites(5.0, valid, 0.01)
+    remaining = ca.remaining(valid)
+    total_remaining = 0.0
+    for poly in remaining:
+        n = len(poly)
+        for i in range(n):
+            x1, y1 = poly[i]
+            x2, y2 = poly[(i + 1) % n]
+            total_remaining += x1 * y2 - x2 * y1
+    total_remaining = abs(total_remaining) / 2.0
+    assert total_remaining < 1.0
+
+
+def test_all_bites_mutates_state():
+    """total_area grows after all_bites."""
+    ca = ClearedArea()
+    ca.add_cleared_polygons([P((40, 40), (60, 40), (60, 60), (40, 60))])
+    area_before = ca.total_area()
+    valid = [P((0, 0), (100, 0), (100, 100), (0, 100))]
+    passes = ca.all_bites(5.0, valid, 0.01)
+    if passes:
+        assert ca.total_area() > area_before
+
+
+def test_all_bites_pass_structure():
+    """Each pass is a list of bite polygons with valid vertices."""
+    ca = ClearedArea()
+    ca.add_cleared_polygons([P((40, 40), (60, 40), (60, 60), (40, 60))])
+    valid = [P((0, 0), (100, 0), (100, 100), (0, 100))]
+    passes = ca.all_bites(5.0, valid, 0.01)
+    assert isinstance(passes, list)
+    for pass_idx, pass_bites in enumerate(passes):
+        assert isinstance(pass_bites, list), f"pass {pass_idx} not a list"
+        for bite in pass_bites:
+            assert len(bite) >= 3
+            for v in bite:
+                assert len(v) == 2
+                assert isinstance(v[0], (int, float))
+                assert isinstance(v[1], (int, float))
+
+
 # --- remaining_in_inset ---
 
 

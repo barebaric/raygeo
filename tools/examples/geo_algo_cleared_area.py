@@ -2,6 +2,7 @@
 
 import math
 
+import matplotlib.colors as mcolors
 import matplotlib.pyplot as plt
 
 from raygeo.geo.algo.cleared_area import ClearedArea
@@ -200,8 +201,6 @@ def generate_frontier():
 
 def generate_bites():
     """bites across 3 sequential expansion steps."""
-    import math
-
     cx, cy = 50.0, 50.0
     step_over = 8.0
     pocket = [(20, 20), (80, 20), (80, 80), (20, 80)]
@@ -305,7 +304,7 @@ def generate_bite_in_direction():
     all_bites = []
 
     for label, target in directions.items():
-        for _ in range(20):
+        for _ in range(40):
             bites = ca.bite_in_direction(
                 step_over,
                 va,
@@ -338,6 +337,12 @@ def generate_bite_in_direction():
             linewidth=1,
         )
 
+    for poly in cp:
+        px = [p[0] for p in poly] + [poly[0][0]]
+        py = [p[1] for p in poly] + [poly[0][1]]
+        ax.fill(px, py, "white", zorder=2)
+        ax.plot(px, py, "steelblue", linewidth=1, alpha=0.4, zorder=2)
+
     n = len(all_bites)
     for idx, (bite, label) in enumerate(all_bites):
         t = idx / max(n - 1, 1)
@@ -351,8 +356,6 @@ def generate_bite_in_direction():
         )
 
     ax.set_title(f"Directional bites ({n} passes)")
-
-    import matplotlib.colors as mcolors
 
     cmap = mcolors.LinearSegmentedColormap.from_list(
         "order",

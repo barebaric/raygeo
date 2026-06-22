@@ -281,9 +281,33 @@ impl ClearedArea {
                 let bc = get_polygon_centroid(bite);
                 let to_bite = bc - centre;
                 let len = to_bite.length();
-                len > 1e-12 && dir.dot(to_bite / len) >= cos_max
+                len <= step_over || dir.dot(to_bite / len) >= cos_max
             })
             .collect()
+    }
+
+    /// Return all passes of isotropic bites needed to fully clear the
+    /// valid area.
+    ///
+    /// Each inner `Vec` is one pass (all bites generated from the same
+    /// frontier).  Passes are ordered from the centre of the cleared area
+    /// outward.  The cleared area is fully cleared after this call.
+    pub fn all_bites(
+        &mut self,
+        step_over: f64,
+        valid_area: &[Polygon],
+        simplify_tol: f64,
+    ) -> Vec<Vec<Polygon>> {
+        let mut passes = Vec::new();
+        loop {
+            let bites = self.bites(step_over, valid_area, simplify_tol);
+            if bites.is_empty() {
+                break;
+            }
+            passes.push(bites);
+            self.incorporate(passes.last().unwrap());
+        }
+        passes
     }
 
     /// True when any polygon in `polys` overlaps an existing fragment.
