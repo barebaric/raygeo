@@ -693,6 +693,9 @@ pub fn get_polygons_union(polygons: &[Polygon]) -> Vec<Polygon> {
     if polygons.is_empty() {
         return vec![];
     }
+    if polygons.len() == 1 && polygons[0].len() >= 3 {
+        return vec![polygons[0].clone()];
+    }
     let clipper_paths = polygons_to_paths(polygons);
     if clipper_paths.is_empty() {
         return vec![];

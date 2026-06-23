@@ -91,6 +91,15 @@ impl ClearedArea {
         ca
     }
 
+    /// Replace all stored fragments with a new set (e.g., the new frontier
+    /// after a wavefront advance).  This is O(m) in the new fragment count
+    /// and avoids the O(n·m) accumulation of
+    /// [`add_cleared_polygons`](Self::add_cleared_polygons).
+    pub fn replace_fragments(&mut self, fragments: Vec<Polygon>) {
+        self.fragments = fragments;
+        self.rebuild_grid();
+    }
+
     /// Return the squared distance from `(x, y)` to the nearest edge of
     /// any cleared fragment.
     ///
@@ -290,6 +299,73 @@ impl ClearedArea {
             .collect()
     }
 
+    /// Expand the current frontier outward by `step_over`, clip to
+    /// `valid_area`, and return the newly-exposed region (the
+    /// difference between the expanded frontier and the stored
+    /// fragments).  Does NOT modify the stored fragments — the caller
+    /// is responsible for calling
+    /// [`absorb_frontier`](Self::absorb_frontier) afterwards.
+    #[prof]
+    pub fn compute_bites(
+        &self,
+        step_over: f64,
+        valid_area: &[Polygon],
+        simplify_tol: f64,
+    ) -> Vec<Polygon> {
+        if self.fragments.is_empty() {
+            return vec![];
+        }
+        let offset_src: Vec<Polygon> = get_polygons_union(&self.fragments)
+            .into_iter()
+            .filter_map(|p| {
+                if p.len() < 3 {
+                    return None;
+                }
+                let pts3d: Vec<Point3D> =
+                    p.iter().map(|q| Point3D::new(q.x, q.y, 0.0)).collect();
+                let simplified = simplify_polyline_3d(&pts3d, simplify_tol);
+                if simplified.len() < 3 {
+                    None
+                } else {
+                    Some(
+                        simplified
+                            .iter()
+                            .map(|q| Point::new(q.x, q.y))
+                            .collect(),
+                    )
+                }
+            })
+            .collect();
+        if offset_src.is_empty() {
+            return vec![];
+        }
+        let expanded: Vec<Polygon> = offset_src
+            .iter()
+            .flat_map(|p| offset_polygon(p, step_over, JoinStyle::Round))
+            .collect();
+        if expanded.is_empty() {
+            return vec![];
+        }
+        let mut region =
+            get_polygons_group_difference(&expanded, &self.fragments);
+        region = get_polygons_group_intersection(&region, valid_area);
+        region
+    }
+
+    /// Absorb a set of polygons (e.g. the output of
+    /// [`compute_bites`](Self::compute_bites)) into the stored
+    /// fragments by unioning them, without accumulating historical
+    /// fragments.
+    #[prof]
+    pub fn absorb_frontier(&mut self, region: &[Polygon]) {
+        if region.is_empty() {
+            return;
+        }
+        let mut both = self.fragments.clone();
+        both.extend(region.iter().cloned());
+        self.replace_fragments(get_polygons_union(&both));
+    }
+
     /// Expand the current frontier by `step_over`, clip to `valid_area`,
     /// subtract already-cleared space, and return the resulting "bites" of
     /// material to be machined.
@@ -374,6 +450,12 @@ impl ClearedArea {
     /// Each inner `Vec` is one pass (all bites generated from the same
     /// frontier).  Passes are ordered from the centre of the cleared area
     /// outward.  The cleared area is fully cleared after this call.
+    ///
+    /// Note: this method uses the older accumulation-based approach
+    /// ([`bites`] + [`incorporate`]).  For better performance on large
+    /// pockets, use [`compute_bites`](Self::compute_bites) /
+    /// [`absorb_frontier`](Self::absorb_frontier) in a
+    /// caller-managed loop.
     pub fn all_bites(
         &mut self,
         step_over: f64,

@@ -634,7 +634,10 @@ struct BiteOrderCtx<'a> {
 
 /// Accumulate bites and cutting arcs from wavefront expansion.
 ///
-/// Each iteration expands the frontier and extracts cutting arcs.
+/// Each iteration computes bites via
+/// [`ClearedArea::compute_bites`], extracts cutting arcs against the
+/// current (unchanged) frontier, then absorbs the bites into the
+/// frontier via [`ClearedArea::absorb_frontier`].
 /// Returns per-pass data, arc data, and pass indices for each arc.
 #[prof]
 fn collect_bites(
@@ -668,7 +671,7 @@ fn collect_bites(
         }
 
         let pass_idx = bite_polys_per_pass.len();
-        let bites = cleared.bites(step_over, valid_area, simplify_tol);
+        let bites = cleared.compute_bites(step_over, valid_area, simplify_tol);
         if bites.is_empty() {
             break;
         }
@@ -699,10 +702,12 @@ fn collect_bites(
             bite_arcs.push(arcs);
         }
 
+        // Absorb bites AFTER arc extraction so that
+        // closest_boundary_distance_sq still queries the old frontier.
+        cleared.absorb_frontier(&bites);
+
         bite_polys_per_pass.push(bites);
         bite_arcs_per_pass.push(bite_arcs);
-
-        cleared.add_cleared_polygons(bite_polys_per_pass.last().unwrap());
 
         // If no bite in this pass produced a cutting arc, all remaining
         // bites are Clipper2 slivers — real corners always have at least
