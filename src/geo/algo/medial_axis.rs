@@ -378,6 +378,11 @@ fn build_sampled_cdt(
     Ok((triangles, vertices))
 }
 
+/// Contract the medial-axis tree into a list of branches.
+///
+/// A *branch* is a maximal path whose internal nodes all have degree 2
+/// (i.e. it runs between two junctions, or between a junction and a leaf).
+/// Each branch is oriented so that clearances are non-decreasing along it.
 fn contract_to_branches(
     adj: &[Vec<usize>],
     parent: &[usize],
