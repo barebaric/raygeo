@@ -519,6 +519,104 @@ pub fn split_ordered_wavefronts(
         };
     }
 
+    let (bite_polys_per_pass, bite_arcs_per_pass, all_arcs, all_arc_pass) =
+        collect_bites(cleared, step_over, valid_area, simplify_tol);
+
+    if bite_polys_per_pass.is_empty() {
+        return WavefrontGraph {
+            arcs: Vec::new(),
+            arc_passes: Vec::new(),
+            bite_polys: Vec::new(),
+            bite_arcs: Vec::new(),
+            parent: Vec::new(),
+            bite_offsets: Vec::new(),
+            visit_order: Vec::new(),
+            segments: Vec::new(),
+            segment_directions: Vec::new(),
+            arc_segments: Vec::new(),
+        };
+    }
+
+    let (bite_offsets, total_bites) =
+        compute_bite_offsets(&bite_polys_per_pass);
+    let parent = build_parent_tree(&bite_polys_per_pass, &bite_offsets);
+
+    let ctx = BiteOrderCtx {
+        entry,
+        parent: &parent,
+        bite_offsets: &bite_offsets,
+        bite_polys_per_pass: &bite_polys_per_pass,
+        bite_arcs_per_pass: &bite_arcs_per_pass,
+        all_arcs: &all_arcs,
+        all_arc_pass: &all_arc_pass,
+    };
+    let (arcs, arc_passes, bite_arcs, visit_order) =
+        order_bites_dfs(&ctx, total_bites);
+
+    let (segments, segment_directions, arc_segments) =
+        split_arcs_at_v_junctions(&arcs, entry);
+
+    WavefrontGraph {
+        arcs,
+        arc_passes,
+        bite_polys: bite_polys_per_pass,
+        bite_arcs,
+        parent,
+        bite_offsets,
+        visit_order,
+        segments,
+        segment_directions,
+        arc_segments,
+    }
+}
+
+/// Convert a global bite index to (pass_index, bite_index_within_pass).
+fn global_to_local(global: usize, offsets: &[usize]) -> (usize, usize) {
+    for (pass, &off) in offsets.iter().enumerate() {
+        let next = if pass + 1 < offsets.len() {
+            offsets[pass + 1]
+        } else {
+            usize::MAX
+        };
+        if global >= off && global < next {
+            return (pass, global - off);
+        }
+    }
+    (0, global)
+}
+
+type CollectedBites = (
+    Vec<Vec<Polygon>>,
+    Vec<Vec<Vec<usize>>>,
+    Vec<Vec<Point>>,
+    Vec<usize>,
+);
+
+type OrderedBites = (Vec<Vec<Point>>, Vec<usize>, Vec<Vec<usize>>, Vec<usize>);
+
+/// Read-only context shared by bite ordering and DFS.
+struct BiteOrderCtx<'a> {
+    entry: Point,
+    parent: &'a [Option<usize>],
+    bite_offsets: &'a [usize],
+    bite_polys_per_pass: &'a [Vec<Polygon>],
+    bite_arcs_per_pass: &'a [Vec<Vec<usize>>],
+    all_arcs: &'a [Vec<Point>],
+    all_arc_pass: &'a [usize],
+}
+
+// ── Helpers for split_ordered_wavefronts ────────────────────────
+
+/// Accumulate bites and cutting arcs from wavefront expansion.
+///
+/// Each iteration expands the frontier and extracts cutting arcs.
+/// Returns per-pass data, arc data, and pass indices for each arc.
+fn collect_bites(
+    cleared: &mut ClearedArea,
+    step_over: f64,
+    valid_area: &[Polygon],
+    simplify_tol: f64,
+) -> CollectedBites {
     let mut bite_polys_per_pass: Vec<Vec<Polygon>> = Vec::new();
     let mut bite_arcs_per_pass: Vec<Vec<Vec<usize>>> = Vec::new();
     let mut all_arcs: Vec<Vec<Point>> = Vec::new();
@@ -571,45 +669,50 @@ pub fn split_ordered_wavefronts(
             bite_arcs.push(arcs);
         }
 
-        bite_polys_per_pass.push(bites.clone());
+        bite_polys_per_pass.push(bites);
         bite_arcs_per_pass.push(bite_arcs);
 
         cleared.add_cleared_polygons(bite_polys_per_pass.last().unwrap());
     }
 
-    let n_passes = bite_polys_per_pass.len();
-    if n_passes == 0 {
-        return WavefrontGraph {
-            arcs: all_arcs,
-            arc_passes: Vec::new(),
-            bite_polys: bite_polys_per_pass,
-            bite_arcs: Vec::new(),
-            parent: Vec::new(),
-            bite_offsets: Vec::new(),
-            visit_order: Vec::new(),
-            segments: Vec::new(),
-            segment_directions: Vec::new(),
-            arc_segments: Vec::new(),
-        };
-    }
+    (
+        bite_polys_per_pass,
+        bite_arcs_per_pass,
+        all_arcs,
+        all_arc_pass,
+    )
+}
 
-    // Global bite index = offset for its pass + index within pass.
-    // parent[global_bite] = Some(parent_index) or None for roots.
-    let mut bite_offsets: Vec<usize> = Vec::with_capacity(n_passes);
+/// Compute global bite offsets and total bite count from per-pass data.
+fn compute_bite_offsets(
+    bite_polys_per_pass: &[Vec<Polygon>],
+) -> (Vec<usize>, usize) {
+    let mut bite_offsets = Vec::with_capacity(bite_polys_per_pass.len());
     let mut off = 0;
-    for pass in &bite_polys_per_pass {
+    for pass in bite_polys_per_pass {
         bite_offsets.push(off);
         off += pass.len();
     }
-    let total_bites = off;
+    (bite_offsets, off)
+}
 
+/// Build parent tree from bite polygons.
+///
+/// Each bite in pass N+1 is assigned its nearest boundary-sharing
+/// bite in pass N as its parent, forming a forest.
+fn build_parent_tree(
+    bite_polys_per_pass: &[Vec<Polygon>],
+    bite_offsets: &[usize],
+) -> Vec<Option<usize>> {
+    let total_bites = bite_offsets.last().copied().unwrap_or(0)
+        + bite_polys_per_pass.last().map_or(0, Vec::len);
     let mut parent: Vec<Option<usize>> = vec![None; total_bites];
 
     // Tree property: each bite gets exactly ONE parent — the nearest
     // previous-pass bite that shares boundary with it.  Branches split
     // when an island separates the frontier and merge back into a
     // single branch when the island is cleared.
-    for pi in 1..n_passes {
+    for pi in 1..bite_polys_per_pass.len() {
         let prev_polys = &bite_polys_per_pass[pi - 1];
         let curr_polys = &bite_polys_per_pass[pi];
         let prev_off = bite_offsets[pi - 1];
@@ -633,102 +736,34 @@ pub fn split_ordered_wavefronts(
         }
     }
 
+    parent
+}
+
+/// Order bites via DFS traversal of the parent tree.
+///
+/// Starts from pass-0 roots nearest to `entry`, follows children in
+/// distance-from-entry order, then picks up stragglers.
+fn order_bites_dfs(ctx: &BiteOrderCtx, total_bites: usize) -> OrderedBites {
     // Each bite has at most one parent (tree property).
     // Start from pass-0 roots (nearest to entry first).
     // Follow one child as deep as possible before backtracking.
     let mut visited = vec![false; total_bites];
-
-    let mut result: Vec<Vec<Point>> = Vec::with_capacity(all_arcs.len());
-    let mut arc_passes: Vec<usize> = Vec::with_capacity(all_arcs.len());
+    let mut result: Vec<Vec<Point>> = Vec::with_capacity(ctx.all_arcs.len());
+    let mut arc_passes: Vec<usize> = Vec::with_capacity(ctx.all_arcs.len());
     let mut bite_arcs: Vec<Vec<usize>> = vec![Vec::new(); total_bites];
     let mut visit_order: Vec<usize> = Vec::with_capacity(total_bites);
 
-    // Helper: recursive DFS
-    #[allow(clippy::too_many_arguments)]
-    fn dfs(
-        bite: usize,
-        entry: Point,
-        parent: &[Option<usize>],
-        bite_offsets: &[usize],
-        bite_polys: &[Vec<Polygon>],
-        bite_arcs_per_pass: &[Vec<Vec<usize>>],
-        all_arcs: &[Vec<Point>],
-        all_arc_pass: &[usize],
-        visited: &mut [bool],
-        result: &mut Vec<Vec<Point>>,
-        arc_passes: &mut Vec<usize>,
-        bite_arcs: &mut [Vec<usize>],
-        visit_order: &mut Vec<usize>,
-    ) {
-        if visited[bite] {
-            return;
-        }
-        // Tree constraint: parent must be visited first.
-        if let Some(p) = parent[bite] {
-            if !visited[p] {
-                return;
-            }
-        }
-        visited[bite] = true;
-        visit_order.push(bite);
-
-        // Emit this bite's arcs.
-        let (pass_idx, local) = global_to_local(bite, bite_offsets);
-        for &arc_idx in &bite_arcs_per_pass[pass_idx][local] {
-            result.push(all_arcs[arc_idx].clone());
-            arc_passes.push(all_arc_pass[arc_idx]);
-            bite_arcs[bite].push(result.len() - 1);
-        }
-
-        // Visit children (bites whose parent is this one).
-        // Process in distance-from-entry order for travel efficiency.
-        let mut children: Vec<(usize, f64)> = Vec::new();
-        for ci in bite + 1..parent.len() {
-            if parent[ci] == Some(bite) && !visited[ci] {
-                let (cp, cl) = global_to_local(ci, bite_offsets);
-                let c = get_polygon_vertex_centroid(&bite_polys[cp][cl]);
-                let d = (c - entry).length_squared();
-                children.push((ci, d));
-            }
-        }
-        children.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap());
-        for (ci, _) in children {
-            dfs(
-                ci,
-                entry,
-                parent,
-                bite_offsets,
-                bite_polys,
-                bite_arcs_per_pass,
-                all_arcs,
-                all_arc_pass,
-                visited,
-                result,
-                arc_passes,
-                bite_arcs,
-                visit_order,
-            );
-        }
-    }
-
-    // Start DFS from pass-0 roots, ordered by distance from entry.
     let mut roots: Vec<(usize, f64)> = Vec::new();
-    for (bi, bite) in bite_polys_per_pass[0].iter().enumerate() {
+    for (bi, bite) in ctx.bite_polys_per_pass[0].iter().enumerate() {
         let c = get_polygon_vertex_centroid(bite);
-        roots.push((bi, (c - entry).length_squared()));
+        roots.push((bi, (c - ctx.entry).length_squared()));
     }
     roots.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap());
 
     for &(root, _) in &roots {
         dfs(
+            ctx,
             root,
-            entry,
-            &parent,
-            &bite_offsets,
-            &bite_polys_per_pass,
-            &bite_arcs_per_pass,
-            &all_arcs,
-            &all_arc_pass,
             &mut visited,
             &mut result,
             &mut arc_passes,
@@ -741,17 +776,11 @@ pub fn split_ordered_wavefronts(
     loop {
         let mut progress = false;
         for bi in 0..total_bites {
-            let parent_visited = parent[bi].is_none_or(|p| visited[p]);
+            let parent_visited = ctx.parent[bi].is_none_or(|p| visited[p]);
             if !visited[bi] && parent_visited {
                 dfs(
+                    ctx,
                     bi,
-                    entry,
-                    &parent,
-                    &bite_offsets,
-                    &bite_polys_per_pass,
-                    &bite_arcs_per_pass,
-                    &all_arcs,
-                    &all_arc_pass,
                     &mut visited,
                     &mut result,
                     &mut arc_passes,
@@ -765,23 +794,85 @@ pub fn split_ordered_wavefronts(
             break;
         }
     }
+
     // Remaining unvisited: emit in index order.
     for (bi, &v) in visited.iter().enumerate().take(total_bites) {
         if !v {
             visit_order.push(bi);
-            let (pass_idx, local) = global_to_local(bi, &bite_offsets);
-            for &arc_idx in &bite_arcs_per_pass[pass_idx][local] {
-                result.push(all_arcs[arc_idx].clone());
-                arc_passes.push(all_arc_pass[arc_idx]);
+            let (pass_idx, local) = global_to_local(bi, ctx.bite_offsets);
+            for &arc_idx in &ctx.bite_arcs_per_pass[pass_idx][local] {
+                result.push(ctx.all_arcs[arc_idx].clone());
+                arc_passes.push(ctx.all_arc_pass[arc_idx]);
                 bite_arcs[bi].push(result.len() - 1);
             }
         }
     }
 
+    (result, arc_passes, bite_arcs, visit_order)
+}
+
+/// Recursive DFS for bite ordering.
+///
+/// Emits arcs for the current bite, then visits children
+/// in distance-from-entry order.
+#[allow(clippy::needless_range_loop)]
+fn dfs(
+    ctx: &BiteOrderCtx,
+    bite: usize,
+    visited: &mut [bool],
+    result: &mut Vec<Vec<Point>>,
+    arc_passes: &mut Vec<usize>,
+    bite_arcs: &mut [Vec<usize>],
+    visit_order: &mut Vec<usize>,
+) {
+    if visited[bite] {
+        return;
+    }
+    // Tree constraint: parent must be visited first.
+    if let Some(p) = ctx.parent[bite] {
+        if !visited[p] {
+            return;
+        }
+    }
+    visited[bite] = true;
+    visit_order.push(bite);
+
+    // Emit this bite's arcs.
+    let (pass_idx, local) = global_to_local(bite, ctx.bite_offsets);
+    for &arc_idx in &ctx.bite_arcs_per_pass[pass_idx][local] {
+        result.push(ctx.all_arcs[arc_idx].clone());
+        arc_passes.push(ctx.all_arc_pass[arc_idx]);
+        bite_arcs[bite].push(result.len() - 1);
+    }
+
+    // Visit children (bites whose parent is this one).
+    // Process in distance-from-entry order for travel efficiency.
+    let mut children: Vec<(usize, f64)> = Vec::new();
+    for ci in bite + 1..ctx.parent.len() {
+        if ctx.parent[ci] == Some(bite) && !visited[ci] {
+            let (cp, cl) = global_to_local(ci, ctx.bite_offsets);
+            let c =
+                get_polygon_vertex_centroid(&ctx.bite_polys_per_pass[cp][cl]);
+            let d = (c - ctx.entry).length_squared();
+            children.push((ci, d));
+        }
+    }
+    children.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap());
+    for (ci, _) in children {
+        dfs(ctx, ci, visited, result, arc_passes, bite_arcs, visit_order);
+    }
+}
+
+/// Split arcs at V-junctions and compute segment outward normals.
+fn split_arcs_at_v_junctions(
+    arcs: &[Vec<Point>],
+    entry: Point,
+) -> (Vec<Vec<Point>>, Vec<Point>, Vec<Vec<usize>>) {
     let mut segments: Vec<Vec<Point>> = Vec::new();
     let mut segment_directions: Vec<Point> = Vec::new();
-    let mut arc_segments: Vec<Vec<usize>> = Vec::with_capacity(result.len());
-    for arc in &result {
+    let mut arc_segments: Vec<Vec<usize>> = Vec::with_capacity(arcs.len());
+
+    for arc in arcs {
         let comps = split_polyline_at_v_junctions(arc, V_JUNCTION_THRESHOLD);
         let mut idxs = Vec::with_capacity(comps.len());
         for seg in &comps {
@@ -816,33 +907,7 @@ pub fn split_ordered_wavefronts(
         arc_segments.push(idxs);
     }
 
-    WavefrontGraph {
-        arcs: result,
-        arc_passes,
-        bite_polys: bite_polys_per_pass,
-        bite_arcs,
-        parent,
-        bite_offsets,
-        visit_order,
-        segments,
-        segment_directions,
-        arc_segments,
-    }
-}
-
-/// Convert a global bite index to (pass_index, bite_index_within_pass).
-fn global_to_local(global: usize, offsets: &[usize]) -> (usize, usize) {
-    for (pass, &off) in offsets.iter().enumerate() {
-        let next = if pass + 1 < offsets.len() {
-            offsets[pass + 1]
-        } else {
-            usize::MAX
-        };
-        if global >= off && global < next {
-            return (pass, global - off);
-        }
-    }
-    (0, global)
+    (segments, segment_directions, arc_segments)
 }
 
 /// Run the peeling clearing strategy and return an [`Ops`].
