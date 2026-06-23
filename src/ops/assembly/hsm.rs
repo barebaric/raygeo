@@ -484,7 +484,11 @@ pub fn split_ordered_wavefronts(
     // Pass index for each arc in `all_arcs`.
     let mut all_arc_pass: Vec<usize> = Vec::new();
 
+    let max_stall = 5usize;
+    let mut stall_count = 0usize;
     loop {
+        let area_before = cleared.total_area();
+
         let pass_idx = bite_polys_per_pass.len();
         let bites = cleared.bites(step_over, valid_area, simplify_tol);
         if bites.is_empty() {
@@ -510,6 +514,16 @@ pub fn split_ordered_wavefronts(
         bite_arcs_per_pass.push(bite_arcs);
 
         cleared.incorporate(bite_polys_per_pass.last().unwrap());
+
+        let area_after = cleared.total_area();
+        if area_after - area_before < 1e-9 {
+            stall_count += 1;
+            if stall_count >= max_stall {
+                break;
+            }
+        } else {
+            stall_count = 0;
+        }
     }
 
     let n_passes = bite_polys_per_pass.len();

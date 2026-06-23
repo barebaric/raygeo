@@ -8,7 +8,6 @@ from mpl_toolkits.mplot3d import art3d
 
 from raygeo.geo.shape.polygon3d import (
     fillet_polyline_3d,
-    resample_polyline_3d,
     flip_polygon_3d,
     get_polygon_area_3d,
     get_polygon_bounds_3d,
@@ -24,6 +23,7 @@ from raygeo.geo.shape.polygon3d import (
     get_polyline_end_tangent_3d,
     offset_polygon_3d,
     offset_polyline_3d,
+    resample_polyline_3d,
     rotate_polygon_3d,
     scale_polygon_3d,
     translate_polygon_3d,

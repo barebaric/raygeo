@@ -1,10 +1,13 @@
 use std::collections::{HashMap, HashSet, VecDeque};
+use std::panic::{self, AssertUnwindSafe};
 
 use spade::handles::FixedVertexHandle;
 use spade::{ConstrainedDelaunayTriangulation, Point2, Triangulation};
 
 use crate::geo::shape::point::circumcenter;
-use crate::geo::shape::polygon::{is_point_in_polygon, resample_polygon};
+use crate::geo::shape::polygon::{
+    clean_polygon, is_point_in_polygon, resample_polygon,
+};
 use crate::types::Point;
 
 type Cdt = ConstrainedDelaunayTriangulation<Point2<f64>>;
@@ -300,82 +303,121 @@ fn build_sampled_cdt(
     holes: &[Vec<Point>],
     spacing: f64,
 ) -> Result<(Vec<[usize; 3]>, Vec<Point>), String> {
-    let mut cdt = Cdt::new();
-    let mut vertices: Vec<Point> = Vec::new();
-    let mut vidx_map: HashMap<FixedVertexHandle, usize> = HashMap::new();
+    // Clean outer boundary with clipper to resolve self-intersections
+    let outer_vec: Vec<Point> = outer.to_vec();
+    let cleaned_outer = clean_polygon(&outer_vec, 0.0)
+        .ok_or_else(|| "failed to clean outer boundary".to_string())?;
+    let outer_samples = resample_polygon(&cleaned_outer, spacing);
 
-    let insert_pt = |cdt: &mut Cdt,
-                     vidx_map: &mut HashMap<FixedVertexHandle, usize>,
-                     vertices: &mut Vec<Point>,
-                     p: Point|
-     -> FixedVertexHandle {
-        let h = cdt.insert(Point2::new(p.x, p.y)).unwrap();
-        vidx_map.insert(h, vertices.len());
-        vertices.push(p);
-        h
-    };
-
-    // Sample outer boundary densely and insert as constraint
-    let outer_samples = resample_polygon(outer, spacing);
-    let outer_handles: Vec<_> = outer_samples
-        .iter()
-        .map(|p| insert_pt(&mut cdt, &mut vidx_map, &mut vertices, *p))
-        .collect();
-    for i in 0..outer_handles.len() {
-        let j = (i + 1) % outer_handles.len();
-        cdt.add_constraint(outer_handles[i], outer_handles[j]);
-    }
-
-    // Sample holes and insert as constraints
+    // Clean holes and discard any that extend outside the outer boundary or
+    // fail to clean.
+    let mut cleaned_holes: Vec<Vec<Point>> = Vec::new();
     for hole in holes {
         if hole.len() < 3 {
             continue;
         }
-        let hole_samples = resample_polygon(hole, spacing);
-        let hole_handles: Vec<_> = hole_samples
+        let hole_vec: Vec<Point> = hole.to_vec();
+        let cleaned = match clean_polygon(&hole_vec, 0.0) {
+            Some(p) if p.len() >= 3 => p,
+            _ => continue,
+        };
+        let samples = resample_polygon(&cleaned, spacing);
+        // Skip holes whose vertices lie outside the outer boundary
+        if samples
             .iter()
-            .map(|p| insert_pt(&mut cdt, &mut vidx_map, &mut vertices, *p))
-            .collect();
-        for i in 0..hole_handles.len() {
-            let j = (i + 1) % hole_handles.len();
-            cdt.add_constraint(hole_handles[i], hole_handles[j]);
+            .all(|p| is_point_in_polygon(*p, &cleaned_outer))
+        {
+            cleaned_holes.push(samples);
         }
     }
 
-    // NO interior Steiner points — the MAT requires every triangle vertex
-    // to lie on the boundary (circumradius = distance to boundary).
+    // Build the CDT inside a panic-safe boundary so that degenerate
+    // geometry (edge intersections, zero-length constraints) is caught
+    // and falls back to a hole-less triangulation.
+    let (triangles, vertices) =
+        match try_build_cdt(&outer_samples, &cleaned_holes) {
+            Ok(result) => result,
+            Err(err) => {
+                eprintln!(
+                "raygeo: CDT with {} holes failed ({}), retrying without holes",
+                cleaned_holes.len(),
+                err
+            );
+                try_build_cdt(&outer_samples, &[])?
+            }
+        };
 
-    let mut triangles: Vec<[usize; 3]> = Vec::new();
-    for face in cdt.inner_faces() {
-        let vs = face.vertices();
-        let h0 = vs[0].fix();
-        let h1 = vs[1].fix();
-        let h2 = vs[2].fix();
-        let i0 = vidx_map.get(&h0).copied();
-        let i1 = vidx_map.get(&h1).copied();
-        let i2 = vidx_map.get(&h2).copied();
-        if let (Some(a), Some(b), Some(c)) = (i0, i1, i2) {
-            let cx = (vertices[a].x + vertices[b].x + vertices[c].x) / 3.0;
-            let cy = (vertices[a].y + vertices[b].y + vertices[c].y) / 3.0;
-            let centroid = Point::new(cx, cy);
-            if !is_point_in_polygon(centroid, &outer.to_vec()) {
-                continue;
-            }
-            let mut inside_hole = false;
-            for hole in holes {
-                if is_point_in_polygon(centroid, &hole.to_vec()) {
-                    inside_hole = true;
-                    break;
-                }
-            }
-            if inside_hole {
-                continue;
-            }
-            triangles.push([a, b, c]);
-        }
+    if triangles.is_empty() {
+        return Err("CDT produced no triangles".into());
     }
-
     Ok((triangles, vertices))
+}
+
+/// Build a constrained Delaunay triangulation from outer and hole samples.
+/// Catches panics from spade and returns an error instead.
+fn try_build_cdt(
+    outer_samples: &[Point],
+    cleaned_holes: &[Vec<Point>],
+) -> Result<(Vec<[usize; 3]>, Vec<Point>), String> {
+    let mut cdt = Cdt::new();
+    let mut vertices: Vec<Point> = Vec::new();
+    // Maps from FixedVertexHandle → vertex index in `vertices`.
+    let mut vidx_map: HashMap<FixedVertexHandle, usize> = HashMap::new();
+    // Reverse: vertex index → FixedVertexHandle.
+    let mut handles: Vec<FixedVertexHandle> = Vec::new();
+
+    let result = panic::catch_unwind(AssertUnwindSafe(|| {
+        // Insert outer boundary samples
+        for p in outer_samples {
+            let h = cdt.insert(Point2::new(p.x, p.y)).unwrap();
+            vidx_map.insert(h, vertices.len());
+            handles.push(h);
+            vertices.push(*p);
+        }
+        // Constrain outer boundary edges
+        for i in 0..outer_samples.len() {
+            let j = (i + 1) % outer_samples.len();
+            cdt.add_constraint(handles[i], handles[j]);
+        }
+
+        // Insert and constrain holes
+        for hole_samples in cleaned_holes {
+            let start = handles.len();
+            for p in hole_samples {
+                let h = cdt.insert(Point2::new(p.x, p.y)).unwrap();
+                vidx_map.insert(h, vertices.len());
+                handles.push(h);
+                vertices.push(*p);
+            }
+            for li in 0..hole_samples.len() {
+                let lj = (li + 1) % hole_samples.len();
+                cdt.add_constraint(handles[start + li], handles[start + lj]);
+            }
+        }
+
+        // NO interior Steiner points — the MAT requires every triangle
+        // vertex to lie on the boundary.
+
+        let mut triangles: Vec<[usize; 3]> = Vec::new();
+        for face in cdt.inner_faces() {
+            let vs = face.vertices();
+            let h0 = vs[0].fix();
+            let h1 = vs[1].fix();
+            let h2 = vs[2].fix();
+            let i0 = vidx_map.get(&h0).copied();
+            let i1 = vidx_map.get(&h1).copied();
+            let i2 = vidx_map.get(&h2).copied();
+            if let (Some(a), Some(b), Some(c)) = (i0, i1, i2) {
+                triangles.push([a, b, c]);
+            }
+        }
+        (triangles, vertices)
+    }));
+
+    match result {
+        Ok(ok) => Ok(ok),
+        Err(_) => Err("CDT construction panicked".into()),
+    }
 }
 
 /// Contract the medial-axis tree into a list of branches.
