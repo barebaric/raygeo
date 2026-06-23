@@ -6,6 +6,7 @@ from raygeo.geo.algo.fillet import (
     append_end_fillets,
     create_fillet_polyline,
     trim_to_safe_fillet_span,
+    try_fillet_one_end,
 )
 
 
@@ -219,3 +220,48 @@ class TestTrimToSafeFilletSpan:
         polyline = [(0.0, 0.0), (50.0, 0.0), (100.0, 0.0)]
         result = trim_to_safe_fillet_span(polyline, [], [], 0.0, 0.0)
         assert result is None
+
+
+class TestTryFilletOneEnd:
+    """Tests for try_fillet_one_end function."""
+
+    def test_short_arc_unchanged(self):
+        """Arc with < 2 points returned as-is."""
+        result = try_fillet_one_end([(0, 0)], [], [], 5.0, 0.0)
+        assert result == [(0, 0)]
+
+    def test_fillet_adds_points(self):
+        """Fillet adds points to the arc."""
+        arc = [(0.0, 0.0), (50.0, 0.0), (100.0, 0.0)]
+        result = try_fillet_one_end(arc, [], [], 5.0, 0.0)
+        assert len(result) > len(arc)
+        # Start point is extended backward by the fillet
+        assert result[0][0] < arc[0][0]
+        assert result[-1] == arc[-1]
+
+    def test_no_obstacles_adds_fillet(self):
+        """Without obstacles, a fillet is added (extends start)."""
+        arc = [(0.0, 0.0), (50.0, 0.0), (100.0, 0.0)]
+        result = try_fillet_one_end(arc, [], [], 5.0, 0.0)
+        assert len(result) > len(arc)
+        # Start is extended left, end point preserved
+        assert result[0][0] < 0.0
+        assert result[-1] == arc[-1]
+
+    def test_obstacle_blocks_start_fillet(self):
+        """When start fillet collides, exit fillet is used instead."""
+        arc = [(0.0, 0.0), (50.0, 0.0), (100.0, 0.0)]
+        outer = [(-10.0, -10.0), (110.0, -10.0), (110.0, 10.0), (-10.0, 10.0)]
+        obstacles = [[(0.0, -5.0), (5.0, -5.0), (5.0, 5.0), (0.0, 5.0)]]
+        result = try_fillet_one_end(arc, outer, obstacles, 5.0, 0.0)
+        # Start fillet is blocked, but end fillet should be added
+        assert len(result) > len(arc)
+        assert result[-1][0] > 100.0
+
+    def test_both_blocked_returns_original(self):
+        """When both fillets blocked, original arc returned."""
+        arc = [(0.0, 0.0), (50.0, 0.0), (100.0, 0.0)]
+        outer = [(0.0, -5.0), (100.0, -5.0), (100.0, 5.0), (0.0, 5.0)]
+        obstacles = [[(0.0, -5.0), (5.0, -5.0), (5.0, 5.0), (0.0, 5.0)]]
+        result = try_fillet_one_end(arc, outer, obstacles, 10.0, 0.0)
+        assert result == arc

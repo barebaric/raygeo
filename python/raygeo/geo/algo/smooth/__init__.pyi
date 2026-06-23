@@ -12,6 +12,8 @@ import collections.abc
 from raygeo.geo import types
 import typing
 __all__ = [
+    "build_smoothed_path",
+    "chaikin_corner_cut",
     "compute_gaussian_kernel",
     "resample_polyline",
     "shortcut_path",
@@ -20,6 +22,43 @@ __all__ = [
     "smooth_polyline",
     "smooth_sub_segment",
 ]
+
+def build_smoothed_path(last: tuple[float, float], first: tuple[float, float], waypoints: collections.abc.Sequence[tuple[float, float]] = [], uncleared: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]] = [], clearance: float = 1, smoothing_amount: int = 120) -> list[tuple[float, float]]:
+    r"""
+    Build a smooth path between two points via multi-stage processing.
+    
+    Pipeline:
+    1. Prepends *last* and appends *first* to *waypoints*.
+    2. Resamples for point density.
+    3. Iteratively shortcuts removable waypoints (collision-checked).
+    4. Applies aggressive Gaussian smoothing with per-point collision
+       checking so points near obstacles are preserved while open
+       areas are fully rounded.
+    
+    :param last: Start point (x, y).
+    :param first: End point (x, y).
+    :param waypoints: Intermediate waypoints between *last* and *first*.
+    :param uncleared: Obstacle polygons to avoid.
+    :param clearance: Minimum distance from obstacles.
+    :param smoothing_amount: Gaussian smoothing amount (0-200, default 120).
+    :returns: Smoothed path as a list of (x, y) tuples.
+    """
+
+def chaikin_corner_cut(points: collections.abc.Sequence[tuple[float, float]], obstacles: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]] = [], clearance: float = 1, iterations: int = 6) -> list[tuple[float, float]]:
+    r"""
+    Round sharp corners using Chaikin corner cutting with collision checking.
+    
+    Corners sharper than 45° are cut; gently curving sections are left
+    untouched.  Each cut point is collision-tested against *obstacles*
+    at *clearance* distance; if the cut would collide, the original
+    corner is preserved.
+    
+    :param points: Polyline as a list of (x, y) tuples.
+    :param obstacles: List of obstacle polygons (each a list of (x, y)).
+    :param clearance: Minimum distance from obstacles (default 1.0).
+    :param iterations: Number of Chaikin cutting passes (default 6).
+    :returns: Corner-smoothed polyline as a list of (x, y) tuples.
+    """
 
 def compute_gaussian_kernel(amount: int) -> tuple[list[float], float]:
     r"""

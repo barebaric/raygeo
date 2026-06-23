@@ -51,6 +51,7 @@ pub use clipping::{
 };
 pub use fillet::{
     append_end_fillets, create_fillet_polyline, trim_to_safe_fillet_span,
+    try_fillet_one_end,
 };
 pub use fitting::{
     arc_between_two_points, are_points_collinear,
@@ -94,8 +95,9 @@ pub use project::{
 pub use ramp::{generate_ramp, RampOptions, RampStyle};
 pub use simplify::{simplify_data, simplify_polyline};
 pub use smooth::{
-    compute_gaussian_kernel, resample_polyline, smooth_circularly, smooth_path,
-    smooth_polyline, smooth_sub_segment,
+    build_smoothed_path, chaikin_corner_cut, compute_gaussian_kernel,
+    resample_polyline, smooth_circularly, smooth_path, smooth_polyline,
+    smooth_sub_segment,
 };
 pub use spiral::{generate_spiral, SpiralOptions};
 pub use topology::{

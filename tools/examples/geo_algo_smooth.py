@@ -5,6 +5,8 @@ import math
 import matplotlib.pyplot as plt
 
 from raygeo.geo.algo.smooth import (
+    build_smoothed_path,
+    chaikin_corner_cut,
     compute_gaussian_kernel,
     resample_polyline,
     shortcut_path,
@@ -350,8 +352,107 @@ def generate_shortcut_path():
     return fig
 
 
+def generate_chaikin_corner_cut():
+    """Chaikin corner cutting on a stair-step polyline.
+
+    The obstacle sits inside the corner at (40, 40).  Without the
+    obstacle every sharp corner is rounded; with it, that corner is
+    preserved because the rounded sweep would cut into the obstacle.
+    """
+    pts = [(10, 70), (40, 70), (40, 40), (70, 40), (70, 10), (90, 10)]
+    obstacle = [(43, 43), (48, 43), (48, 48), (43, 48)]
+
+    fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(15, 5))
+
+    def draw(ax, points, title, show_obs):
+        xs, ys = zip(*points)
+        ax.plot(xs, ys, "-o", color="tab:blue", lw=2, markersize=5)
+        if show_obs:
+            ox, oy = zip(*(obstacle + [obstacle[0]]))
+            ax.fill(ox, oy, alpha=0.3, color="tab:red", label="Obstacle")
+            ax.legend(fontsize=8)
+        ax.set_xlim(0, 100)
+        ax.set_ylim(0, 80)
+        ax.set_aspect("equal")
+        ax.grid(True, alpha=0.3)
+        ax.set_title(title, fontsize=11)
+
+    draw(ax1, pts, f"Original ({len(pts)} pts)", show_obs=False)
+    result = chaikin_corner_cut(pts, [], 1.0, 3)
+    draw(ax2, result, f"No obstacles ({len(result)} pts)", show_obs=False)
+    result_safe = chaikin_corner_cut(pts, [obstacle], 1.0, 3)
+    draw(
+        ax3,
+        result_safe,
+        f"With obstacle ({len(result_safe)} pts)",
+        show_obs=True,
+    )
+
+    fig.suptitle(
+        "chaikin_corner_cut — collision-aware corner rounding", fontsize=13
+    )
+    fig.tight_layout()
+    return fig
+
+
+def generate_build_smoothed_path():
+    """Multi-stage smooth path construction.
+
+    Path routes from bottom-left to bottom-right, detouring up and
+    around a central obstacle.  Smoothing rounds the corners while
+    respecting clearance.
+    """
+    last = (10, 50)
+    first = (90, 50)
+    waypoints = [(30, 50), (30, 85), (70, 85), (70, 50)]
+    obstacle = [(35, 30), (65, 30), (65, 75), (35, 75)]
+
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
+
+    def draw(ax, pts, title):
+        xs, ys = zip(*pts)
+        ax.plot(xs, ys, "-o", color="tab:blue", lw=2, markersize=4)
+        ox, oy = zip(*(obstacle + [obstacle[0]]))
+        ax.fill(ox, oy, alpha=0.3, color="tab:red", label="Obstacle")
+        ax.plot(last[0], last[1], "s", color="green", ms=8, label="Start")
+        ax.plot(first[0], first[1], "D", color="purple", ms=8, label="End")
+        ax.set_xlim(-5, 105)
+        ax.set_ylim(15, 95)
+        ax.set_aspect("equal")
+        ax.grid(True, alpha=0.3)
+        ax.legend(fontsize=8)
+        ax.set_title(title, fontsize=11)
+
+    draw(
+        ax1, [last] + waypoints + [first], f"Input ({len(waypoints) + 2} pts)"
+    )
+    result = build_smoothed_path(last, first, waypoints, [obstacle], 3.0, 80)
+    draw(ax2, result, f"Smoothed ({len(result)} pts)")
+
+    fig.suptitle("build_smoothed_path — multi-stage smooth path", fontsize=13)
+    fig.tight_layout()
+    return fig
+
+
 __docs_target__ = ["raygeo.geo.algo.smooth.md"]
 __images__ = [
+    {
+        "heading": "chaikin_corner_cut",
+        "caption": (
+            "``chaikin_corner_cut`` rounds sharp corners (>45°) using"
+            " Chaikin corner cutting, respecting obstacle clearance"
+        ),
+        "function": generate_chaikin_corner_cut,
+    },
+    {
+        "heading": "build_smoothed_path",
+        "caption": (
+            "``build_smoothed_path`` constructs a smooth path from a"
+            " start point, end point, and medial-axis waypoints via"
+            " resample → shortcut → Gaussian relaxation"
+        ),
+        "function": generate_build_smoothed_path,
+    },
     {
         "heading": "smooth_polyline",
         "caption": "Gaussian smoothing",

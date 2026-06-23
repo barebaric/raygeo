@@ -5,6 +5,7 @@
 
 use crate::geo::shape::does_path_sweep_intersect_polygon;
 use crate::geo::shape::line::get_angle_at_vertex;
+use crate::geo::shape::polygon::resample_polyline as resample_polyline_2d;
 use crate::types::{Point, Point3D, Polygon};
 
 /// Compute a normalized Gaussian kernel based on smoothing amount.
@@ -385,6 +386,145 @@ pub fn smooth_path(
     }
 
     current.iter().map(|p| Point::new(p.x, p.y)).collect()
+}
+
+/// Round sharp corners in a path using Chaikin corner cutting with
+/// collision checking.  Corners sharper than 45° are cut;
+/// gently curving sections are left untouched.
+pub fn chaikin_corner_cut(
+    points: &[Point],
+    obstacles: &[Polygon],
+    clearance: f64,
+    iterations: usize,
+) -> Vec<Point> {
+    if points.len() < 3 {
+        return points.to_vec();
+    }
+    let mut current = points.to_vec();
+    for _ in 0..iterations {
+        if current.len() < 3 {
+            break;
+        }
+        let mut next: Vec<Point> = vec![current[0]];
+        for i in 1..current.len() - 1 {
+            let prev = current[i - 1];
+            let curr = current[i];
+            let after = current[i + 1];
+            let v1x = curr.x - prev.x;
+            let v1y = curr.y - prev.y;
+            let v2x = after.x - curr.x;
+            let v2y = after.y - curr.y;
+            let l1 = (v1x * v1x + v1y * v1y).sqrt();
+            let l2 = (v2x * v2x + v2y * v2y).sqrt();
+            if l1 < 1e-12 || l2 < 1e-12 {
+                next.push(curr);
+                continue;
+            }
+            let dot = (v1x * v2x + v1y * v2y) / (l1 * l2);
+            if dot < 0.707 {
+                let q_back = Point::new(
+                    curr.x * 0.75 + prev.x * 0.25,
+                    curr.y * 0.75 + prev.y * 0.25,
+                );
+                let q_fwd = Point::new(
+                    curr.x * 0.75 + after.x * 0.25,
+                    curr.y * 0.75 + after.y * 0.25,
+                );
+                let tri = [prev, q_back, q_fwd, after];
+                if !does_path_sweep_intersect_polygon(
+                    &tri, clearance, obstacles,
+                ) {
+                    next.push(q_back);
+                    next.push(q_fwd);
+                } else {
+                    next.push(curr);
+                }
+            } else {
+                next.push(curr);
+            }
+        }
+        next.push(*current.last().unwrap());
+        current = next;
+    }
+    current
+}
+
+/// Build a smooth path between two points using multi-stage processing.
+///
+/// Pipeline:
+/// 1. Resample the base path for point density.
+/// 2. Iteratively shortcut removable waypoints (collision-checked).
+/// 3. Multi-scale resampling: alternate coarse / fine arc-length
+///    resampling with light Gaussian smoothing.  Each coarse pass
+///    at a different interval may skip V-vertices, progressively
+///    diluting sharp corners into gentler curves.
+/// 4. Final Gaussian smoothing pass.
+pub fn build_smoothed_path(
+    last: Point,
+    first: Point,
+    waypoints: &[Point],
+    uncleared: &[Polygon],
+    clearance: f64,
+    smoothing_amount: i32,
+) -> Vec<Point> {
+    // 1. Full path — prepend last / append first.
+    let link: Vec<Point> = if waypoints.len() < 2 {
+        vec![last, first]
+    } else {
+        let mut full = Vec::with_capacity(waypoints.len() + 2);
+        full.push(last);
+        full.extend_from_slice(waypoints);
+        full.push(first);
+        full
+    };
+    if link.len() < 3 {
+        return link;
+    }
+
+    // 2. Resample, shortcut, re-resample.
+    let max_seg = clearance.max(0.5) * 0.5;
+    let mut link = resample_polyline_2d(&link, max_seg);
+    link = shortcut_path(&link, uncleared, clearance);
+    link = resample_polyline_2d(&link, max_seg);
+    if link.len() < 3 {
+        return link;
+    }
+
+    // 3. Aggressive Gaussian smoothing with PER-POINT collision
+    //    checking.  Each point is individually tested: if its smoothed
+    //    position maintains clearance, it is accepted; otherwise it
+    //    stays put.  This allows V-shapes in open areas to be fully
+    //    rounded while points near walls are preserved.
+    let amt = smoothing_amount.max(120);
+    let (kernel, sigma) = compute_gaussian_kernel(amt);
+    if kernel.len() > 1 {
+        let max_len = 0.1_f64.max(sigma / 4.0);
+        let pts_3d: Vec<Point3D> =
+            link.iter().map(|p| Point3D::new(p.x, p.y, 0.0)).collect();
+        let mut current: Vec<Point3D> = Vec::new();
+        resample_polyline(&pts_3d, max_len, false, &mut current);
+        let n = current.len();
+        if n >= 3 {
+            let mut buf: Vec<Point3D> = Vec::with_capacity(n);
+            for _ in 0..100 {
+                smooth_sub_segment(&current, &kernel, &mut buf);
+                for i in 1..n - 1 {
+                    let prev = Point::new(current[i - 1].x, current[i - 1].y);
+                    let next = Point::new(current[i + 1].x, current[i + 1].y);
+                    let candidate = Point::new(buf[i].x, buf[i].y);
+                    let tri = [prev, candidate, next];
+                    if !does_path_sweep_intersect_polygon(
+                        &tri, clearance, uncleared,
+                    ) {
+                        current[i] = buf[i];
+                    }
+                }
+            }
+            link = current.iter().map(|p| Point::new(p.x, p.y)).collect();
+        }
+    }
+
+    link
 }
 
 fn approx_equal(a: f64, b: f64) -> bool {

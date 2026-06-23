@@ -18,6 +18,7 @@ __all__ = [
     "fillet_arc_ends",
     "find_safe_sweep_end",
     "trim_to_safe_fillet_span",
+    "try_fillet_one_end",
 ]
 
 def append_end_fillets(polyline: collections.abc.Sequence[tuple[float, float]], radius: float, sweep_angle: float, side: float) -> list[tuple[float, float]]:
@@ -96,5 +97,21 @@ def trim_to_safe_fillet_span(polyline: collections.abc.Sequence[tuple[float, flo
     :param inner_obstacles: List of obstacle polygons (default []).
     :param radius: Fillet radius (default 3.0).
     :param margin: Extra clearance past tangency (default 0.0).
+    """
+
+def try_fillet_one_end(arc: collections.abc.Sequence[tuple[float, float]], outer_boundary: collections.abc.Sequence[tuple[float, float]], inner_obstacles: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]] = [], radius: float = 3, margin: float = 0) -> list[tuple[float, float]]:
+    r"""
+    Try a fillet at just one end of an arc when both ends don't fit.
+    
+    Tests the enter (start) fillet first, then the exit (end) fillet,
+    and returns the first that does not collide with the boundary or
+    obstacles.  Falls back to the original arc if neither fits.
+    
+    :param arc: Cutting arc vertices (open polyline).
+    :param outer_boundary: Outer boundary polygon.
+    :param inner_obstacles: List of obstacle polygons (default []).
+    :param radius: Fillet radius (default 3.0).
+    :param margin: Extra clearance past tangency (default 0.0).
+    :returns: Arc with optional single-end fillet, or original arc.
     """
 

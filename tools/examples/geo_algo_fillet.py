@@ -10,7 +10,9 @@ from raygeo.geo.algo.fillet import (
     fillet_arc_ends,
     find_safe_sweep_end,
     trim_to_safe_fillet_span,
+    try_fillet_one_end,
 )
+from raygeo.geo.shape.arc import get_polyline_turn_sign
 from raygeo.geo.shape.polygon import trim_polyline_at
 
 
@@ -383,6 +385,78 @@ def generate_find_safe_sweep_end():
     return fig
 
 
+def generate_try_fillet_one_end():
+    """Single-end fillet fallback when the start fillet would collide.
+
+    The obstacle sits below-left of the start point — the original arc
+    never enters it, but the start fillet (which curls backward) would
+    sweep through it.  The function rejects the start fillet and falls
+    back to the end fillet instead.
+    """
+    arc = [(20, 50), (50, 80), (80, 50)]
+    outer = [(0, 0), (100, 0), (100, 100), (0, 100)]
+    obstacle = [(12, 32), (24, 32), (24, 47), (12, 47)]
+    obstacles = [obstacle]
+    radius = 10.0
+
+    result = try_fillet_one_end(arc, outer, obstacles, radius, 0.0)
+
+    # Ghost: what the start fillet would have been (blocked by obstacle)
+    side = get_polyline_turn_sign(arc)
+    start_dir = (arc[1][0] - arc[0][0], arc[1][1] - arc[0][1])
+    _, ghost_start = create_fillet_polyline(
+        arc[0], start_dir, radius, math.pi / 2, side, True
+    )
+
+    fig, ax = plt.subplots(figsize=(8, 6))
+
+    ox = [pt[0] for pt in outer] + [outer[0][0]]
+    oy = [pt[1] for pt in outer] + [outer[0][1]]
+    ax.plot(ox, oy, "-", color="lightgray", linewidth=1, label="Boundary")
+
+    obsx = [pt[0] for pt in obstacle] + [obstacle[0][0]]
+    obsy = [pt[1] for pt in obstacle] + [obstacle[0][1]]
+    ax.fill(obsx, obsy, facecolor="tomato", alpha=0.3, edgecolor="tomato")
+
+    ax.plot(
+        [pt[0] for pt in ghost_start],
+        [pt[1] for pt in ghost_start],
+        "--",
+        color="gray",
+        linewidth=1.5,
+        alpha=0.6,
+        label="Start fillet (blocked)",
+    )
+
+    ax.plot(
+        [pt[0] for pt in arc],
+        [pt[1] for pt in arc],
+        "-",
+        color="#e41a1c",
+        linewidth=3.0,
+        alpha=0.5,
+        label="Original",
+    )
+    ax.plot(
+        [pt[0] for pt in result],
+        [pt[1] for pt in result],
+        "-",
+        color="#377eb8",
+        linewidth=2.5,
+        alpha=0.9,
+        label="Result (end fillet only)",
+    )
+
+    ax.set_xlim(-5, 105)
+    ax.set_ylim(20, 95)
+    ax.set_aspect("equal")
+    ax.set_title("try_fillet_one_end — start fillet blocked, end fillet used")
+    ax.legend(fontsize=9, loc="upper center")
+    ax.grid(True, alpha=0.3)
+    fig.tight_layout()
+    return fig
+
+
 __docs_target__ = ["raygeo.geo.algo.fillet.md"]
 __images__ = [
     {
@@ -432,5 +506,13 @@ __images__ = [
             " delimiting the longest sub-arc whose tool sweep avoids islands"
         ),
         "function": generate_find_safe_sweep_end,
+    },
+    {
+        "heading": "try_fillet_one_end",
+        "caption": (
+            "``try_fillet_one_end`` tests the start fillet first; when it"
+            " collides with the obstacle (red), falls back to the end fillet"
+        ),
+        "function": generate_try_fillet_one_end,
     },
 ]

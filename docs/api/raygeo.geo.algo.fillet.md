@@ -174,3 +174,34 @@ Shortens from each end until the sweep is clear. Returns `(enter, exit)` or `Non
 
 _`trim_to_safe_fillet_span` finds the longest sub-span whose end fillets do not collide with
 obstacles (red)_
+
+### `try_fillet_one_end()`
+
+```python
+try_fillet_one_end(
+    arc: Sequence[tuple[float, float]],
+    outer_boundary: Sequence[tuple[float, float]],
+    inner_obstacles: Sequence[Sequence[tuple[float, float]]] = [],
+    radius: float = 3,
+    margin: float = 0,
+) -> list[tuple[float, float]]
+```
+
+Try a fillet at just one end of an arc when both ends don't fit.
+
+Tests the enter (start) fillet first, then the exit (end) fillet, and returns the first that does
+not collide with the boundary or obstacles. Falls back to the original arc if neither fits.
+
+| Parameter         | Type                                           | Description                                           |
+| ----------------- | ---------------------------------------------- | ----------------------------------------------------- |
+| `arc`             | `Sequence[tuple[float, float]]`                | Cutting arc vertices (open polyline).                 |
+| `outer_boundary`  | `Sequence[tuple[float, float]]`                | Outer boundary polygon.                               |
+| `inner_obstacles` | `Sequence[Sequence[tuple[float, float]]] = []` | List of obstacle polygons (default []).               |
+| `radius`          | `float = 3`                                    | Fillet radius (default 3.0).                          |
+| `margin`          | `float = 0`                                    | Extra clearance past tangency (default 0.0).          |
+| _Returns_         | `list[tuple[float, float]]`                    | Arc with optional single-end fillet, or original arc. |
+
+![``try_fillet_one_end`` tests the start fillet first; when it collides with the obstacle (red), falls back to the end fillet](images/geo-algo-fillet-try-fillet-one-end.png)
+
+_`try_fillet_one_end` tests the start fillet first; when it collides with the obstacle (red), falls
+back to the end fillet_

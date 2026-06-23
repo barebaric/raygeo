@@ -30,6 +30,7 @@ pub fn register(algo_mod: &Bound<'_, PyModule>) -> PyResult<()> {
         trim_to_safe_fillet_span_py,
         fillet_arc_ends_py,
         find_safe_sweep_end_py,
+        try_fillet_one_end_py,
     );
 
     algo_mod.add_submodule(&m)?;
@@ -311,4 +312,57 @@ fn find_safe_sweep_end_py(
         wall_margin,
     )
     .map(|(a, b)| ((a.x, a.y), (b.x, b.y)))
+}
+
+#[gen_stub_pyfunction(
+    python = r#"
+    import collections.abc
+
+    def try_fillet_one_end(
+        arc: collections.abc.Sequence[tuple[float, float]],
+        outer_boundary: collections.abc.Sequence[tuple[float, float]],
+        inner_obstacles: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]] = [],
+        radius: float = 3.0,
+        margin: float = 0.0,
+    ) -> list[tuple[float, float]]:
+        """Try a fillet at just one end of an arc when both ends don't fit.
+
+        Tests the enter (start) fillet first, then the exit (end) fillet,
+        and returns the first that does not collide with the boundary or
+        obstacles.  Falls back to the original arc if neither fits.
+
+        :param arc: Cutting arc vertices (open polyline).
+        :param outer_boundary: Outer boundary polygon.
+        :param inner_obstacles: List of obstacle polygons (default []).
+        :param radius: Fillet radius (default 3.0).
+        :param margin: Extra clearance past tangency (default 0.0).
+        :returns: Arc with optional single-end fillet, or original arc.
+        """
+"#,
+    module = "raygeo.geo.algo.fillet"
+)]
+#[pyfunction(name = "try_fillet_one_end")]
+#[pyo3(signature = (arc, outer_boundary, inner_obstacles = None, radius = 3.0, margin = 0.0))]
+fn try_fillet_one_end_py(
+    arc: Vec<(f64, f64)>,
+    outer_boundary: Vec<(f64, f64)>,
+    inner_obstacles: Option<Vec<Vec<(f64, f64)>>>,
+    radius: f64,
+    margin: f64,
+) -> Vec<(f64, f64)> {
+    let arc_pts: Vec<Point> =
+        arc.into_iter().map(|(x, y)| Point::new(x, y)).collect();
+    let boundary: Vec<Point> = outer_boundary
+        .into_iter()
+        .map(|(x, y)| Point::new(x, y))
+        .collect();
+    let obstacles: Vec<Vec<Point>> = inner_obstacles
+        .unwrap_or_default()
+        .into_iter()
+        .map(|h| h.into_iter().map(|(x, y)| Point::new(x, y)).collect())
+        .collect();
+    fillet::try_fillet_one_end(&arc_pts, &boundary, &obstacles, radius, margin)
+        .into_iter()
+        .map(|p| (p.x, p.y))
+        .collect()
 }

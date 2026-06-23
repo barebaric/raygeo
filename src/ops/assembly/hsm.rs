@@ -12,29 +12,23 @@
 
 use crate::geo::algo::cleared_area::ClearedArea;
 use crate::geo::algo::fillet::{
-    append_end_fillets, create_fillet_polyline, trim_to_safe_fillet_span,
+    append_end_fillets, trim_to_safe_fillet_span, try_fillet_one_end,
 };
 use crate::geo::algo::helix::{generate_helix, HelixDirection, HelixOptions};
 use crate::geo::algo::medial_axis::MedialAxis;
 use crate::geo::algo::offset::compute_inset_region;
 use crate::geo::algo::polylabel::find_largest_circle;
 use crate::geo::algo::ramp::{generate_ramp, RampOptions, RampStyle};
-use crate::geo::algo::smooth::{
-    compute_gaussian_kernel, resample_polyline as resample_polyline_3d,
-    shortcut_path, smooth_sub_segment,
-};
+use crate::geo::algo::smooth::{build_smoothed_path, chaikin_corner_cut};
 use crate::geo::algo::spiral::{generate_spiral, SpiralOptions};
 use crate::geo::shape::arc::get_polyline_turn_sign;
-use crate::geo::shape::line::{
-    get_segment_segment_distance, longest_line_through_point,
-};
+use crate::geo::shape::line::longest_line_through_point;
 use crate::geo::shape::polygon::{
     does_path_sweep_intersect_polygon, get_circle_polygon, get_polygon_area,
     get_polygon_boundary_distance, get_polygon_bounds, get_polygon_centroid,
     get_polygon_closest_point, get_polygon_vertex_centroid,
     get_polygons_group_difference, get_polyline_bounds,
-    get_segment_swept_polygon, resample_polyline, trim_polyline_angular_ends,
-    trim_polyline_at,
+    get_segment_swept_polygon, trim_polyline_angular_ends, trim_polyline_at,
 };
 use crate::ops::container::Ops;
 use crate::ops::state::State;
@@ -803,87 +797,6 @@ pub fn adaptive_peeling(
 
 // ── Internal helpers ───────────────────────────────────────────
 
-/// Order MAT branches via BFS from the entry point, returning
-/// `(branch_index, target)` pairs in processing order.
-///
-/// Each branch is processed only after the branch that connects
-/// it to the entry point has been cleared.  The target is at the
-/// branch's far endpoint (the end away from the entry), projected
-/// to the boundary in the branch's tip direction.
-/// Try to add a fillet at just one end of the arc when
-/// [`trim_to_safe_fillet_span`] could not fit both.
-///
-/// Tests the enter (start) fillet first, then the exit (end) fillet,
-/// and returns the first that does not collide with the boundary or
-/// islands.  Falls back to the original arc if neither fits.
-fn try_single_end_fillet(
-    arc: &[Point],
-    outer_boundary: &[Point],
-    inner_obstacles: &[Polygon],
-    radius: f64,
-    margin: f64,
-) -> Vec<Point> {
-    if arc.len() < 2 {
-        return arc.to_vec();
-    }
-    let side = get_polyline_turn_sign(arc);
-    let radius_eff = radius + margin;
-    let last = arc.len() - 1;
-
-    let fillet_ok = |farc: &[Point]| -> bool {
-        if farc.len() < 2 {
-            return true;
-        }
-        if !inner_obstacles.is_empty()
-            && does_path_sweep_intersect_polygon(
-                farc,
-                radius_eff,
-                inner_obstacles,
-            )
-        {
-            return false;
-        }
-        let pn = outer_boundary.len();
-        if pn >= 3 {
-            for w in farc.windows(2) {
-                for j in 0..pn {
-                    let c = outer_boundary[j];
-                    let d = outer_boundary[(j + 1) % pn];
-                    if get_segment_segment_distance(w[0], w[1], c, d)
-                        < radius_eff
-                    {
-                        return false;
-                    }
-                }
-            }
-        }
-        true
-    };
-
-    let sweep = std::f64::consts::FRAC_PI_2;
-
-    let start_dir = arc[1] - arc[0];
-    let (_, start_arc) =
-        create_fillet_polyline(arc[0], start_dir, radius, sweep, side, true);
-    if fillet_ok(&start_arc) {
-        let mut path = Vec::new();
-        path.extend(start_arc.iter().rev().copied());
-        path.extend(arc.iter().skip(1).copied());
-        return path;
-    }
-
-    let end_dir = arc[last] - arc[last - 1];
-    let (_, end_arc) =
-        create_fillet_polyline(arc[last], end_dir, radius, sweep, side, false);
-    if fillet_ok(&end_arc) {
-        let mut path = arc.to_vec();
-        path.extend(end_arc.iter().skip(1).copied());
-        return path;
-    }
-
-    arc.to_vec()
-}
-
 /// Filter, fillet, and link cutting arcs into Ops.
 #[allow(clippy::too_many_arguments)]
 fn finish_peeling(
@@ -939,7 +852,7 @@ fn finish_peeling(
                     )
                 }
             } else {
-                try_single_end_fillet(
+                try_fillet_one_end(
                     arc,
                     pocket_boundary,
                     islands,
@@ -978,146 +891,6 @@ fn finish_peeling(
         cut_state,
         travel_state,
     )
-}
-
-/// Round sharp corners in a travel path using Chaikin corner cutting
-/// with collision checking.  Corners sharper than 45° are cut;
-/// gently curving sections are left untouched.
-fn round_travel_corners(
-    points: &[Point],
-    obstacles: &[Polygon],
-    clearance: f64,
-    iterations: usize,
-) -> Vec<Point> {
-    if points.len() < 3 {
-        return points.to_vec();
-    }
-    let mut current = points.to_vec();
-    for _ in 0..iterations {
-        if current.len() < 3 {
-            break;
-        }
-        let mut next: Vec<Point> = vec![current[0]];
-        for i in 1..current.len() - 1 {
-            let prev = current[i - 1];
-            let curr = current[i];
-            let after = current[i + 1];
-            let v1x = curr.x - prev.x;
-            let v1y = curr.y - prev.y;
-            let v2x = after.x - curr.x;
-            let v2y = after.y - curr.y;
-            let l1 = (v1x * v1x + v1y * v1y).sqrt();
-            let l2 = (v2x * v2x + v2y * v2y).sqrt();
-            if l1 < 1e-12 || l2 < 1e-12 {
-                next.push(curr);
-                continue;
-            }
-            let dot = (v1x * v2x + v1y * v2y) / (l1 * l2);
-            if dot < 0.707 {
-                let q_back = Point::new(
-                    curr.x * 0.75 + prev.x * 0.25,
-                    curr.y * 0.75 + prev.y * 0.25,
-                );
-                let q_fwd = Point::new(
-                    curr.x * 0.75 + after.x * 0.25,
-                    curr.y * 0.75 + after.y * 0.25,
-                );
-                let tri = [prev, q_back, q_fwd, after];
-                if !does_path_sweep_intersect_polygon(
-                    &tri, clearance, obstacles,
-                ) {
-                    next.push(q_back);
-                    next.push(q_fwd);
-                } else {
-                    next.push(curr);
-                }
-            } else {
-                next.push(curr);
-            }
-        }
-        next.push(*current.last().unwrap());
-        current = next;
-    }
-    current
-}
-
-/// Build a smooth travel link from `last` to `first` via the MAT path.
-///
-/// Pipeline:
-/// 1. Resample the MAT path for point density.
-/// 2. Iteratively shortcut removable waypoints (collision-checked).
-/// 3. Multi-scale resampling: alternate coarse / fine arc-length
-///    resampling with light Gaussian smoothing.  Each coarse pass
-///    at a different interval may skip V-vertices, progressively
-///    diluting sharp corners into gentler curves.
-/// 4. Final Gaussian smoothing pass.
-fn build_travel_link(
-    last: Point,
-    first: Point,
-    mat_link: &[Point],
-    uncleared: &[Polygon],
-    clearance: f64,
-    smoothing_amount: i32,
-) -> Vec<Point> {
-    // 1. Full path — prepend last / append first because path_between
-    //    only returns MAT node positions, not the actual endpoints.
-    let link: Vec<Point> = if mat_link.len() < 2 {
-        vec![last, first]
-    } else {
-        let mut full = Vec::with_capacity(mat_link.len() + 2);
-        full.push(last);
-        full.extend_from_slice(mat_link);
-        full.push(first);
-        full
-    };
-    if link.len() < 3 {
-        return link;
-    }
-
-    // 2. Resample, shortcut, re-resample.
-    let max_seg = clearance.max(0.5) * 0.5;
-    let mut link = resample_polyline(&link, max_seg);
-    link = shortcut_path(&link, uncleared, clearance);
-    link = resample_polyline(&link, max_seg);
-    if link.len() < 3 {
-        return link;
-    }
-
-    // 3. Aggressive Gaussian smoothing with PER-POINT collision
-    //    checking.  Each point is individually tested: if its smoothed
-    //    position maintains clearance, it is accepted; otherwise it
-    //    stays put.  This allows V-shapes in open areas to be fully
-    //    rounded while points near walls are preserved.
-    let amt = smoothing_amount.max(120);
-    let (kernel, sigma) = compute_gaussian_kernel(amt);
-    if kernel.len() > 1 {
-        let max_len = 0.1_f64.max(sigma / 4.0);
-        let pts_3d: Vec<Point3D> =
-            link.iter().map(|p| Point3D::new(p.x, p.y, 0.0)).collect();
-        let mut current: Vec<Point3D> = Vec::new();
-        resample_polyline_3d(&pts_3d, max_len, false, &mut current);
-        let n = current.len();
-        if n >= 3 {
-            let mut buf: Vec<Point3D> = Vec::with_capacity(n);
-            for _ in 0..100 {
-                smooth_sub_segment(&current, &kernel, &mut buf);
-                for i in 1..n - 1 {
-                    let prev = Point::new(current[i - 1].x, current[i - 1].y);
-                    let next = Point::new(current[i + 1].x, current[i + 1].y);
-                    let candidate = Point::new(buf[i].x, buf[i].y);
-                    let tri = [prev, candidate, next];
-                    if !does_path_sweep_intersect_polygon(
-                        &tri, clearance, uncleared,
-                    ) {
-                        current[i] = buf[i];
-                    }
-                }
-            }
-            link = current.iter().map(|p| Point::new(p.x, p.y)).collect();
-        }
-    }
-
-    link
 }
 
 /// Build motion segments from arcs using NN ordering, MAT routing, and
@@ -1209,7 +982,7 @@ fn build_link_segments(
                 if mat_link.len() < 2 {
                     vec![last, first]
                 } else {
-                    build_travel_link(
+                    build_smoothed_path(
                         last,
                         first,
                         &mat_link,
@@ -1288,7 +1061,7 @@ fn build_link_segments(
 
             // Round any remaining sharp corners (including the angles
             // at the tangent extension points).
-            link = round_travel_corners(&link, uncleared, safe_margin, 6);
+            link = chaikin_corner_cut(&link, uncleared, safe_margin, 6);
 
             // Safety net: if any post-processing introduced a
             // collision, fall back to the verified-safe path.
@@ -1300,7 +1073,7 @@ fn build_link_segments(
                     let raw = mat_ref
                         .and_then(|ma| ma.path_between(last, first))
                         .unwrap_or_else(|| vec![last, first]);
-                    link = build_travel_link(
+                    link = build_smoothed_path(
                         last,
                         first,
                         &raw,

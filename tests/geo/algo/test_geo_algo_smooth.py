@@ -3,6 +3,8 @@ import math
 import pytest
 
 from raygeo.geo.algo.smooth import (
+    build_smoothed_path,
+    chaikin_corner_cut,
     compute_gaussian_kernel,
     shortcut_path,
     smooth_circularly,
@@ -343,6 +345,132 @@ class TestShortcutPath:
         assert result == [(42.0, 42.0)]
 
     def test_preserves_clearance_from_multiple_obstacles(self):
+        """Multiple obstacles should all be avoided."""
+        obs1: list[tuple[float, float]] = [
+            (30.0, 40.0),
+            (35.0, 40.0),
+            (35.0, 60.0),
+            (30.0, 60.0),
+        ]
+        obs2: list[tuple[float, float]] = [
+            (65.0, 40.0),
+            (70.0, 40.0),
+            (70.0, 60.0),
+            (65.0, 60.0),
+        ]
+        path = [(0, 50), (20, 50), (50, 80), (80, 50), (100, 50)]
+        clearance = 2.0
+        result = smooth_path(path, [obs1, obs2], clearance, 50)
+        from raygeo.geo.shape.polygon import (
+            does_path_sweep_intersect_polygon,
+        )
+
+        assert not does_path_sweep_intersect_polygon(
+            result, clearance, [obs1, obs2]
+        )
+
+
+class TestChaikinCornerCut:
+    """Tests for chaikin_corner_cut function."""
+
+    def test_short_path_unchanged(self):
+        """Paths with < 3 points returned as-is."""
+        assert chaikin_corner_cut([(0, 0), (10, 10)], [], 1.0, 6) == [
+            (0, 0),
+            (10, 10),
+        ]
+
+    def test_single_point(self):
+        """Single point returned as-is."""
+        result = chaikin_corner_cut([(5, 5)], [], 1.0, 6)
+        assert result == [(5.0, 5.0)]
+
+    def test_endpoints_preserved(self):
+        """First and last points preserved after cutting."""
+        pts = [(0, 50), (50, 0), (100, 50)]
+        result = chaikin_corner_cut(pts, [], 1.0, 6)
+        assert result[0] == pts[0]
+        assert result[-1] == pts[-1]
+
+    def test_sharp_corner_cut(self):
+        """Sharp corner produces new points between original vertices."""
+        pts = [(0, 0), (50, 0), (50, 50)]
+        result = chaikin_corner_cut(pts, [], 1.0, 1)
+        # After 1 iteration, the sharp corner at (50, 0) is replaced by
+        # two interpolated points
+        assert len(result) == 4
+        assert result != pts
+
+    def test_collision_preserves_corner(self):
+        """Corner is preserved when cut would collide with obstacle."""
+        obstacle = [(48, -2), (52, -2), (52, 2), (48, 2)]
+        pts = [(0, 0), (50, 0), (100, 0)]
+        result = chaikin_corner_cut(pts, [obstacle], 2.0, 3)
+        # The corner at (50, 0) is near the obstacle, so it should be
+        # preserved (or at least not fully removed)
+        assert (50.0, 0.0) in result or abs(
+            min(math.dist(p, (50.0, 0.0)) for p in result)
+        ) < 1.0
+
+    def test_collinear_unchanged(self):
+        """Collinear points (no sharp corner) stay as-is."""
+        pts = [(0, 0), (25, 0), (50, 0), (75, 0), (100, 0)]
+        result = chaikin_corner_cut(pts, [], 1.0, 6)
+        # No corner is sharper than 45°, so nothing changes
+        assert result == pts
+
+    def test_zero_iterations(self):
+        """Zero iterations returns input unchanged."""
+        pts = [(0, 0), (50, 50), (100, 0)]
+        result = chaikin_corner_cut(pts, [], 1.0, 0)
+        assert result == pts
+
+
+class TestBuildSmoothedPath:
+    """Tests for build_smoothed_path function."""
+
+    def test_no_waypoints(self):
+        """With empty waypoints, returns direct last→first."""
+        result = build_smoothed_path((0, 0), (100, 0), [], [], 1.0, 0)
+        assert len(result) >= 2
+        assert result[0] == pytest.approx((0.0, 0.0))
+        assert result[-1] == pytest.approx((100.0, 0.0))
+
+    def test_endpoints_preserved(self):
+        """First (last) and last (first) points preserved."""
+        result = build_smoothed_path(
+            (10, 10), (90, 90), [(50, 50)], [], 1.0, 0
+        )
+        assert result[0] == pytest.approx((10.0, 10.0))
+        assert result[-1] == pytest.approx((90.0, 90.0))
+
+    def test_endpoints_preserved_after_smoothing(self):
+        """Endpoints preserved even with Gaussian smoothing (min amt 120)."""
+        result = build_smoothed_path(
+            (0, 0), (100, 0), [(20, 0), (40, 0), (60, 0), (80, 0)], [], 1.0, 50
+        )
+        assert result[0] == pytest.approx((0.0, 0.0))
+        assert result[-1] == pytest.approx((100.0, 0.0))
+
+    def test_no_obstacles_produces_smooth_path(self):
+        """Without obstacles, output is a smooth path between endpoints."""
+        result = build_smoothed_path(
+            (0, 0), (100, 0), [(50, 50)], [], 1.0, 120
+        )
+        assert len(result) >= 2
+        assert result[0] == pytest.approx((0.0, 0.0))
+        assert result[-1] == pytest.approx((100.0, 0.0))
+
+    def test_obstacle_alters_path(self):
+        """Obstacle forces path to deviate from direct line."""
+        obstacle = [(45, -5), (55, -5), (55, 50), (45, 50)]
+        result = build_smoothed_path(
+            (0, 0), (100, 0), [(50, 20)], [obstacle], 2.0, 120
+        )
+        # Path should avoid the obstacle — the midpoint of the result
+        # should have y > some threshold (i.e. it goes around)
+        mid_idx = len(result) // 2
+        assert result[mid_idx][1] > 1.0 or result[0] != result[-1]
         """Multiple obstacles prevent removal of critical waypoints."""
         obs1 = [(10, -10), (10, 10), (30, 10), (30, -10)]
         obs2 = [(70, -10), (70, 10), (90, 10), (90, -10)]

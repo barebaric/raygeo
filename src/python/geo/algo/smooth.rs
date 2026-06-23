@@ -10,8 +10,9 @@ sharp features.
 
 use super::super::flex_point::{points3d_to_tuples, PyPoint3D};
 use crate::geo::algo::smooth::{
-    compute_gaussian_kernel, resample_polyline, shortcut_path,
-    smooth_circularly, smooth_path, smooth_polyline, smooth_sub_segment,
+    build_smoothed_path, chaikin_corner_cut, compute_gaussian_kernel,
+    resample_polyline, shortcut_path, smooth_circularly, smooth_path,
+    smooth_polyline, smooth_sub_segment,
 };
 use crate::types::{Point, Point3D};
 use pyo3::prelude::*;
@@ -31,6 +32,8 @@ pub fn register(algo_mod: &Bound<'_, PyModule>) -> PyResult<()> {
         smooth_polyline_algo_py,
         smooth_sub_segment_py,
         smooth_path_py,
+        chaikin_corner_cut_py,
+        build_smoothed_path_py,
     );
 
     algo_mod.add_submodule(&m)?;
@@ -285,4 +288,117 @@ fn smooth_path_py(
         .into_iter()
         .map(|p| (p.x, p.y))
         .collect()
+}
+
+#[gen_stub_pyfunction(
+    python = r#"
+    import collections.abc
+
+    def chaikin_corner_cut(
+        points: collections.abc.Sequence[tuple[float, float]],
+        obstacles: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]] = [],
+        clearance: float = 1.0,
+        iterations: int = 6,
+    ) -> list[tuple[float, float]]:
+        """Round sharp corners using Chaikin corner cutting with collision checking.
+
+        Corners sharper than 45° are cut; gently curving sections are left
+        untouched.  Each cut point is collision-tested against *obstacles*
+        at *clearance* distance; if the cut would collide, the original
+        corner is preserved.
+
+        :param points: Polyline as a list of (x, y) tuples.
+        :param obstacles: List of obstacle polygons (each a list of (x, y)).
+        :param clearance: Minimum distance from obstacles (default 1.0).
+        :param iterations: Number of Chaikin cutting passes (default 6).
+        :returns: Corner-smoothed polyline as a list of (x, y) tuples.
+        """
+"#,
+    module = "raygeo.geo.algo.smooth"
+)]
+#[pyfunction(name = "chaikin_corner_cut")]
+#[pyo3(signature = (points, obstacles = None, clearance = 1.0, iterations = 6))]
+fn chaikin_corner_cut_py(
+    points: Vec<(f64, f64)>,
+    obstacles: Option<Vec<Vec<(f64, f64)>>>,
+    clearance: f64,
+    iterations: usize,
+) -> Vec<(f64, f64)> {
+    let pts: Vec<Point> =
+        points.into_iter().map(|(x, y)| Point::new(x, y)).collect();
+    let obs: Vec<Vec<Point>> = obstacles
+        .unwrap_or_default()
+        .into_iter()
+        .map(|poly| poly.into_iter().map(|(x, y)| Point::new(x, y)).collect())
+        .collect();
+    chaikin_corner_cut(&pts, &obs, clearance, iterations)
+        .into_iter()
+        .map(|p| (p.x, p.y))
+        .collect()
+}
+
+#[gen_stub_pyfunction(
+    python = r#"
+    import collections.abc
+
+    def build_smoothed_path(
+        last: tuple[float, float],
+        first: tuple[float, float],
+        waypoints: collections.abc.Sequence[tuple[float, float]] = [],
+        uncleared: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]] = [],
+        clearance: float = 1.0,
+        smoothing_amount: int = 120,
+    ) -> list[tuple[float, float]]:
+        """Build a smooth path between two points via multi-stage processing.
+
+        Pipeline:
+        1. Prepends *last* and appends *first* to *waypoints*.
+        2. Resamples for point density.
+        3. Iteratively shortcuts removable waypoints (collision-checked).
+        4. Applies aggressive Gaussian smoothing with per-point collision
+           checking so points near obstacles are preserved while open
+           areas are fully rounded.
+
+        :param last: Start point (x, y).
+        :param first: End point (x, y).
+        :param waypoints: Intermediate waypoints between *last* and *first*.
+        :param uncleared: Obstacle polygons to avoid.
+        :param clearance: Minimum distance from obstacles.
+        :param smoothing_amount: Gaussian smoothing amount (0-200, default 120).
+        :returns: Smoothed path as a list of (x, y) tuples.
+        """
+"#,
+    module = "raygeo.geo.algo.smooth"
+)]
+#[pyfunction(name = "build_smoothed_path")]
+#[pyo3(signature = (last, first, waypoints = None, uncleared = None, clearance = 1.0, smoothing_amount = 120))]
+fn build_smoothed_path_py(
+    last: (f64, f64),
+    first: (f64, f64),
+    waypoints: Option<Vec<(f64, f64)>>,
+    uncleared: Option<Vec<Vec<(f64, f64)>>>,
+    clearance: f64,
+    smoothing_amount: i32,
+) -> Vec<(f64, f64)> {
+    let wp: Vec<Point> = waypoints
+        .unwrap_or_default()
+        .into_iter()
+        .map(|(x, y)| Point::new(x, y))
+        .collect();
+    let obs: Vec<Vec<Point>> = uncleared
+        .unwrap_or_default()
+        .into_iter()
+        .map(|poly| poly.into_iter().map(|(x, y)| Point::new(x, y)).collect())
+        .collect();
+    build_smoothed_path(
+        Point::new(last.0, last.1),
+        Point::new(first.0, first.1),
+        &wp,
+        &obs,
+        clearance,
+        smoothing_amount,
+    )
+    .into_iter()
+    .map(|p| (p.x, p.y))
+    .collect()
 }

@@ -10,7 +10,7 @@ use std::f64::consts::FRAC_PI_2;
 use crate::geo::shape::arc::get_polyline_turn_sign;
 use crate::geo::shape::line::get_segment_segment_distance;
 use crate::geo::shape::polygon::does_path_sweep_intersect_polygon;
-use crate::types::Point;
+use crate::types::{Point, Polygon};
 
 /// Create a circular fillet polyline tangent to `dir` at `p`.
 ///
@@ -276,4 +276,78 @@ pub fn trim_to_safe_fillet_span(
         return None;
     }
     Some((enter, exit))
+}
+
+/// Try to add a fillet at just one end of the arc when
+/// [`trim_to_safe_fillet_span`] could not fit both.
+///
+/// Tests the enter (start) fillet first, then the exit (end) fillet,
+/// and returns the first that does not collide with the boundary or
+/// islands.  Falls back to the original arc if neither fits.
+pub fn try_fillet_one_end(
+    arc: &[Point],
+    outer_boundary: &[Point],
+    inner_obstacles: &[Polygon],
+    radius: f64,
+    margin: f64,
+) -> Vec<Point> {
+    if arc.len() < 2 {
+        return arc.to_vec();
+    }
+    let side = get_polyline_turn_sign(arc);
+    let radius_eff = radius + margin;
+    let last = arc.len() - 1;
+
+    let fillet_ok = |farc: &[Point]| -> bool {
+        if farc.len() < 2 {
+            return true;
+        }
+        if !inner_obstacles.is_empty()
+            && does_path_sweep_intersect_polygon(
+                farc,
+                radius_eff,
+                inner_obstacles,
+            )
+        {
+            return false;
+        }
+        let pn = outer_boundary.len();
+        if pn >= 3 {
+            for w in farc.windows(2) {
+                for j in 0..pn {
+                    let c = outer_boundary[j];
+                    let d = outer_boundary[(j + 1) % pn];
+                    if get_segment_segment_distance(w[0], w[1], c, d)
+                        < radius_eff
+                    {
+                        return false;
+                    }
+                }
+            }
+        }
+        true
+    };
+
+    let sweep = std::f64::consts::FRAC_PI_2;
+
+    let start_dir = arc[1] - arc[0];
+    let (_, start_arc) =
+        create_fillet_polyline(arc[0], start_dir, radius, sweep, side, true);
+    if fillet_ok(&start_arc) {
+        let mut path = Vec::new();
+        path.extend(start_arc.iter().rev().copied());
+        path.extend(arc.iter().skip(1).copied());
+        return path;
+    }
+
+    let end_dir = arc[last] - arc[last - 1];
+    let (_, end_arc) =
+        create_fillet_polyline(arc[last], end_dir, radius, sweep, side, false);
+    if fillet_ok(&end_arc) {
+        let mut path = arc.to_vec();
+        path.extend(end_arc.iter().skip(1).copied());
+        return path;
+    }
+
+    arc.to_vec()
 }

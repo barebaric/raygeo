@@ -11,6 +11,74 @@ angle thresholds to preserve sharp features.
 
 ## Functions
 
+### `build_smoothed_path()`
+
+```python
+build_smoothed_path(
+    last: tuple[float, float],
+    first: tuple[float, float],
+    waypoints: Sequence[tuple[float, float]] = [],
+    uncleared: Sequence[Sequence[tuple[float, float]]] = [],
+    clearance: float = 1,
+    smoothing_amount: int = 120,
+) -> list[tuple[float, float]]
+```
+
+Build a smooth path between two points via multi-stage processing.
+
+Pipeline:
+
+1. Prepends _last_ and appends _first_ to _waypoints_.
+2. Resamples for point density.
+3. Iteratively shortcuts removable waypoints (collision-checked).
+4. Applies aggressive Gaussian smoothing with per-point collision checking so points near obstacles
+   are preserved while open areas are fully rounded.
+
+| Parameter          | Type                                           | Description                                        |
+| ------------------ | ---------------------------------------------- | -------------------------------------------------- |
+| `last`             | `tuple[float, float]`                          | Start point (x, y).                                |
+| `first`            | `tuple[float, float]`                          | End point (x, y).                                  |
+| `waypoints`        | `Sequence[tuple[float, float]] = []`           | Intermediate waypoints between _last_ and _first_. |
+| `uncleared`        | `Sequence[Sequence[tuple[float, float]]] = []` | Obstacle polygons to avoid.                        |
+| `clearance`        | `float = 1`                                    | Minimum distance from obstacles.                   |
+| `smoothing_amount` | `int = 120`                                    | Gaussian smoothing amount (0-200, default 120).    |
+| _Returns_          | `list[tuple[float, float]]`                    | Smoothed path as a list of (x, y) tuples.          |
+
+![``build_smoothed_path`` constructs a smooth path from a start point, end point, and medial-axis waypoints via resample → shortcut → Gaussian relaxation](images/geo-algo-smooth-build-smoothed-path.png)
+
+_`build_smoothed_path` constructs a smooth path from a start point, end point, and medial-axis
+waypoints via resample → shortcut → Gaussian relaxation_
+
+### `chaikin_corner_cut()`
+
+```python
+chaikin_corner_cut(
+    points: Sequence[tuple[float, float]],
+    obstacles: Sequence[Sequence[tuple[float, float]]] = [],
+    clearance: float = 1,
+    iterations: int = 6,
+) -> list[tuple[float, float]]
+```
+
+Round sharp corners using Chaikin corner cutting with collision checking.
+
+Corners sharper than 45° are cut; gently curving sections are left untouched. Each cut point is
+collision-tested against _obstacles_ at _clearance_ distance; if the cut would collide, the original
+corner is preserved.
+
+| Parameter    | Type                                           | Description                                          |
+| ------------ | ---------------------------------------------- | ---------------------------------------------------- |
+| `points`     | `Sequence[tuple[float, float]]`                | Polyline as a list of (x, y) tuples.                 |
+| `obstacles`  | `Sequence[Sequence[tuple[float, float]]] = []` | List of obstacle polygons (each a list of (x, y)).   |
+| `clearance`  | `float = 1`                                    | Minimum distance from obstacles (default 1.0).       |
+| `iterations` | `int = 6`                                      | Number of Chaikin cutting passes (default 6).        |
+| _Returns_    | `list[tuple[float, float]]`                    | Corner-smoothed polyline as a list of (x, y) tuples. |
+
+![``chaikin_corner_cut`` rounds sharp corners (>45°) using Chaikin corner cutting, respecting obstacle clearance](images/geo-algo-smooth-chaikin-corner-cut.png)
+
+_`chaikin_corner_cut` rounds sharp corners (>45°) using Chaikin corner cutting, respecting obstacle
+clearance_
+
 ### `compute_gaussian_kernel()`
 
 ```python
