@@ -1,7 +1,7 @@
 import math
 
 from raygeo.geo.algo.helix import HelixDirection
-from raygeo.geo.algo.spiral import generate_spiral
+from raygeo.geo.algo.spiral import generate_spiral_3d
 
 
 def approx_eq(a, b, tol=1e-9):
@@ -10,7 +10,7 @@ def approx_eq(a, b, tol=1e-9):
 
 def test_spiral_outward():
     """Outward spiral: radius increases from 5 to 30."""
-    pts = generate_spiral(
+    pts = generate_spiral_3d(
         center=(0, 0),
         z=0,
         start_radius=5,
@@ -32,7 +32,7 @@ def test_spiral_outward():
 
 def test_spiral_inward():
     """Inward spiral: radius decreases from 30 to 5."""
-    pts = generate_spiral(
+    pts = generate_spiral_3d(
         center=(0, 0),
         z=0,
         start_radius=30,
@@ -53,7 +53,7 @@ def test_spiral_inward():
 
 def test_spiral_constant_z():
     """All points should have the same Z."""
-    pts = generate_spiral(
+    pts = generate_spiral_3d(
         center=(0, 0),
         z=42.5,
         start_radius=5,
@@ -68,7 +68,7 @@ def test_spiral_constant_z():
 
 def test_spiral_cw_vs_ccw():
     """CW and CCW should turn in opposite directions."""
-    cw = generate_spiral(
+    cw = generate_spiral_3d(
         center=(0, 0),
         z=0,
         start_radius=10,
@@ -77,7 +77,7 @@ def test_spiral_cw_vs_ccw():
         direction=HelixDirection.Cw,
         angular_step=math.pi / 2,
     )
-    ccw = generate_spiral(
+    ccw = generate_spiral_3d(
         center=(0, 0),
         z=0,
         start_radius=10,
@@ -94,7 +94,7 @@ def test_spiral_cw_vs_ccw():
 
 def test_spiral_equal_radii():
     """start_radius == end_radius -> empty."""
-    pts = generate_spiral(
+    pts = generate_spiral_3d(
         center=(0, 0),
         z=0,
         start_radius=10,
@@ -108,7 +108,7 @@ def test_spiral_equal_radii():
 
 def test_spiral_zero_revolutions():
     """revolutions <= 0 -> empty."""
-    pts = generate_spiral(
+    pts = generate_spiral_3d(
         center=(0, 0),
         z=0,
         start_radius=5,
@@ -122,7 +122,7 @@ def test_spiral_zero_revolutions():
 
 def test_spiral_zero_angular_step():
     """angular_step <= 0 -> empty."""
-    pts = generate_spiral(
+    pts = generate_spiral_3d(
         center=(0, 0),
         z=0,
         start_radius=5,
@@ -136,7 +136,7 @@ def test_spiral_zero_angular_step():
 
 def test_spiral_non_origin_center():
     """Spiral centered at (-10, 20)."""
-    pts = generate_spiral(
+    pts = generate_spiral_3d(
         center=(-10, 20),
         z=5,
         start_radius=5,
@@ -153,7 +153,7 @@ def test_spiral_non_origin_center():
 
 def test_spiral_fractional_revolution():
     """Half-turn spiral should work."""
-    pts = generate_spiral(
+    pts = generate_spiral_3d(
         center=(0, 0),
         z=0,
         start_radius=10,
@@ -171,7 +171,7 @@ def test_spiral_fractional_revolution():
 
 def test_spiral_angular_step_controls_resolution():
     """Larger angular_step => fewer points."""
-    coarse = generate_spiral(
+    coarse = generate_spiral_3d(
         center=(0, 0),
         z=0,
         start_radius=5,
@@ -180,7 +180,7 @@ def test_spiral_angular_step_controls_resolution():
         direction=HelixDirection.Ccw,
         angular_step=2.0,
     )
-    fine = generate_spiral(
+    fine = generate_spiral_3d(
         center=(0, 0),
         z=0,
         start_radius=5,

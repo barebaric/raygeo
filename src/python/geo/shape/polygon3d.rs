@@ -12,9 +12,9 @@ use crate::geo::shape::polygon3d::{
     get_polygons_difference_3d, get_polygons_group_difference_3d,
     get_polygons_group_intersection_3d, get_polygons_intersection_3d,
     get_polygons_union_3d, get_polyline_end_tangent_3d, offset_polygon_3d,
-    offset_polyline_3d, rotate_polygon_3d, rotate_polygons_3d,
-    scale_polygon_3d, translate_polygon_3d, translate_polygons_3d,
-    walk_along_polygon_3d, walk_along_polyline_3d,
+    offset_polyline_3d, resample_polyline_3d, rotate_polygon_3d,
+    rotate_polygons_3d, scale_polygon_3d, translate_polygon_3d,
+    translate_polygons_3d, walk_along_polygon_3d, walk_along_polyline_3d,
 };
 use crate::types::Point3D;
 use pyo3::prelude::*;
@@ -903,6 +903,40 @@ fn rotate_polygons_3d_py(
         .collect())
 }
 
+#[gen_stub_pyfunction(
+    python = r#"
+    import collections.abc
+    import raygeo.geo.types
+
+    def resample_polyline_3d(
+        points: collections.abc.Sequence[types.Point3D],
+        max_segment_length: float,
+        is_closed: bool,
+    ) -> list[types.Point3D]:
+        """Resample a 3D polyline with a maximum segment length.
+
+        :param points: Sequence of 3D points.
+        :param max_segment_length: Maximum allowed segment length.
+        :param is_closed: Whether the polyline is closed.
+        :returns: Resampled 3D points.
+        :complexity: O(n) time, O(n) space
+        """
+"#,
+    module = "raygeo.geo.shape.polygon3d"
+)]
+#[pyfunction(name = "resample_polyline_3d")]
+fn resample_polyline_3d_py(
+    points: Vec<PyPoint3D>,
+    max_segment_length: f64,
+    is_closed: bool,
+) -> Vec<(f64, f64, f64)> {
+    let pts: Vec<Point3D> =
+        points.iter().map(|p| Point3D::new(p.0, p.1, p.2)).collect();
+    let mut out = Vec::new();
+    resample_polyline_3d(&pts, max_segment_length, is_closed, &mut out);
+    points3d_to_tuples(out)
+}
+
 pub fn register(shape_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     let py = shape_mod.py();
     let m = PyModule::new(py, "polygon3d")?;
@@ -937,6 +971,7 @@ pub fn register(shape_mod: &Bound<'_, PyModule>) -> PyResult<()> {
         flip_polygons_3d_py,
         rotate_polygon_3d_py,
         rotate_polygons_3d_py,
+        resample_polyline_3d_py,
     );
 
     shape_mod.add_submodule(&m)?;

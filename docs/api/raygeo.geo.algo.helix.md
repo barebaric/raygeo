@@ -13,10 +13,10 @@ Provides generation of 3D helical polylines (cylindrical or conical) with config
 
 ## Functions
 
-### `generate_helix()`
+### `generate_helix_3d()`
 
 ```python
-generate_helix(
+generate_helix_3d(
     center: tuple[float, float],
     start_radius: float,
     end_radius: float,

@@ -5,11 +5,11 @@ import streamlit as st
 
 from raygeo.geo.algo.smooth import (
     compute_gaussian_kernel,
-    resample_polyline,
     smooth_circularly,
-    smooth_polyline,
+    smooth_polyline_3d,
     smooth_sub_segment,
 )
+from raygeo.geo.shape.polygon3d import resample_polyline_3d
 
 
 def page_smoothing():
@@ -46,7 +46,7 @@ def page_smoothing():
             (12, 0, 0),
         ]
 
-        smoothed = smooth_polyline(
+        smoothed = smooth_polyline_3d(
             [(x, y, 0) for x, y, z in pts],
             amount,
             math.radians(corner_thresh),
@@ -168,7 +168,7 @@ def page_smoothing():
         max_seg_len = st.slider(
             "Max segment length", 0.1, 5.0, 1.0, key="resample_len"
         )
-        resampled = resample_polyline(zigzag, max_seg_len, is_closed=False)
+        resampled = resample_polyline_3d(zigzag, max_seg_len, is_closed=False)
 
         fig4, ax4 = plt.subplots(figsize=(10, 6))
         ax4.plot(

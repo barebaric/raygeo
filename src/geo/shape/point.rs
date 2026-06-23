@@ -7,13 +7,13 @@ use glam::DMat4;
 use crate::types::{Point, Point3D};
 
 /// Computes the midpoint between two 3D points.
-pub fn midpoint(a: Point3D, b: Point3D) -> Point3D {
+pub fn midpoint_3d(a: Point3D, b: Point3D) -> Point3D {
     (a + b) / 2.0
 }
 
 /// Apply an affine transformation matrix to a 3D point.
 /// Returns the transformed point `(x, y, z)`.
-pub fn transform_point(matrix: DMat4, p: Point3D) -> Point3D {
+pub fn transform_point_3d(matrix: DMat4, p: Point3D) -> Point3D {
     matrix.transform_point3(p)
 }
 
@@ -31,7 +31,7 @@ pub fn are_points_equal(p1: &[f64; 3], p2: &[f64; 3], tolerance: f64) -> bool {
 ///
 /// Returns the center of the unique circle passing through all three points.
 /// Returns `None` if the points are collinear (degenerate).
-pub fn circumcenter(a: Point3D, b: Point3D, c: Point3D) -> Option<Point3D> {
+pub fn circumcenter_3d(a: Point3D, b: Point3D, c: Point3D) -> Option<Point3D> {
     let ab = b - a;
     let ac = c - a;
     let ab2 = ab.length_squared();
@@ -50,7 +50,7 @@ pub fn circumcenter(a: Point3D, b: Point3D, c: Point3D) -> Option<Point3D> {
 ///
 /// Returns `(center, radius)`. Returns a zero center and negative radius
 /// if the points are collinear (degenerate).
-pub fn circumcenter_2d(a: Point, b: Point, c: Point) -> (Point, f64) {
+pub fn circumcenter(a: Point, b: Point, c: Point) -> (Point, f64) {
     let d = 2.0 * (a.x * (b.y - c.y) + b.x * (c.y - a.y) + c.x * (a.y - b.y));
     if d.abs() < 1e-30 {
         return (Point::new(0.0, 0.0), -1.0);

@@ -15,7 +15,7 @@ use super::super::Geometry;
 use crate::geo::algo::fitting::{
     arc_between_two_points, are_points_collinear, fit_circle_to_3_points,
     fit_circle_to_points, fit_points_recursive, fit_points_with_primitives,
-    flatten_to_points, generate_linking_arc, get_polyline_arc_deviation,
+    flatten_to_points_3d, generate_linking_arc, get_polyline_arc_deviation,
     get_polyline_line_deviation, linearize_geometry,
     project_circle_center_to_bisector,
 };
@@ -181,7 +181,7 @@ fn project_circle_center_to_bisector_py(
     import raygeo.geo
     import raygeo.geo.types
 
-    def flatten_to_points(
+    def flatten_to_points_3d(
         geometry: geo.Geometry,
         tolerance: float,
     ) -> list[list[types.Point3D]]:
@@ -195,12 +195,12 @@ fn project_circle_center_to_bisector_py(
 "#,
     module = "raygeo.geo.algo.fitting"
 )]
-#[pyfunction(name = "flatten_to_points")]
+#[pyfunction(name = "flatten_to_points_3d")]
 fn flatten_to_points_py(
     geometry: &Geometry,
     tolerance: f64,
 ) -> Vec<Vec<(f64, f64, f64)>> {
-    flatten_to_points(geometry.inner.data(), tolerance)
+    flatten_to_points_3d(geometry.inner.data(), tolerance)
         .into_iter()
         .map(points3d_to_tuples)
         .collect()

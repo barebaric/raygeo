@@ -2,7 +2,7 @@
 
 import matplotlib.pyplot as plt
 
-from raygeo.geo.algo.ramp import RampStyle, generate_ramp
+from raygeo.geo.algo.ramp import RampStyle, generate_ramp_3d
 
 
 def _extract(pts):
@@ -13,7 +13,7 @@ def generate_linear_zigzag():
     fig = plt.figure(figsize=(16, 7))
 
     ax1 = fig.add_subplot(121, projection="3d")
-    pts = generate_ramp(
+    pts = generate_ramp_3d(
         start=(0, 0),
         end=(50, 0),
         z_start=0,
@@ -30,7 +30,7 @@ def generate_linear_zigzag():
     ax1.view_init(elev=30, azim=-50)
 
     ax2 = fig.add_subplot(122, projection="3d")
-    pts = generate_ramp(
+    pts = generate_ramp_3d(
         start=(0, 0),
         end=(50, 0),
         z_start=0,
@@ -54,7 +54,7 @@ def generate_linear_zigzag():
 __docs_target__ = ["raygeo.geo.algo.ramp.md"]
 __images__ = [
     {
-        "heading": "generate_ramp",
+        "heading": "generate_ramp_3d",
         "caption": "Linear (left) and ZigZag (right) ramp entry paths",
         "function": generate_linear_zigzag,
     },

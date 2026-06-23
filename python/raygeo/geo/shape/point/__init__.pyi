@@ -14,9 +14,9 @@ import typing
 __all__ = [
     "are_points_equal",
     "circumcenter",
-    "circumcenter_2d",
-    "midpoint",
-    "transform_point",
+    "circumcenter_3d",
+    "midpoint_3d",
+    "transform_point_3d",
 ]
 
 def are_points_equal(p1: types.Point3D, p2: types.Point3D, tolerance: float) -> bool:
@@ -30,21 +30,7 @@ def are_points_equal(p1: types.Point3D, p2: types.Point3D, tolerance: float) -> 
     :complexity: O(1) time, O(1) space
     """
 
-def circumcenter(a: types.Point3D, b: types.Point3D, c: types.Point3D) -> typing.Optional[types.Point3D]:
-    r"""
-    Compute the circumcenter of three 3D points.
-    
-    Returns the center of the unique circle passing through all three
-    points.  Returns ``None`` when the points are collinear.
-    
-    :param a: First point (x, y, z).
-    :param b: Second point (x, y, z).
-    :param c: Third point (x, y, z).
-    :returns: Circumcenter (x, y, z) or ``None`` if collinear.
-    :complexity: O(1) time, O(1) space
-    """
-
-def circumcenter_2d(a: types.Point, b: types.Point, c: types.Point) -> tuple[types.Point, float]:
+def circumcenter(a: types.Point, b: types.Point, c: types.Point) -> tuple[types.Point, float]:
     r"""
     Compute the circumcenter and radius of three 2D points.
     
@@ -59,7 +45,21 @@ def circumcenter_2d(a: types.Point, b: types.Point, c: types.Point) -> tuple[typ
     :complexity: O(1) time, O(1) space
     """
 
-def midpoint(p1: types.Point3D, p2: types.Point3D) -> types.Point3D:
+def circumcenter_3d(a: types.Point3D, b: types.Point3D, c: types.Point3D) -> typing.Optional[types.Point3D]:
+    r"""
+    Compute the circumcenter of three 3D points.
+    
+    Returns the center of the unique circle passing through all three
+    points.  Returns ``None`` when the points are collinear.
+    
+    :param a: First point (x, y, z).
+    :param b: Second point (x, y, z).
+    :param c: Third point (x, y, z).
+    :returns: Circumcenter (x, y, z) or ``None`` if collinear.
+    :complexity: O(1) time, O(1) space
+    """
+
+def midpoint_3d(p1: types.Point3D, p2: types.Point3D) -> types.Point3D:
     r"""
     Get the midpoint between two 3D points.
     
@@ -69,7 +69,7 @@ def midpoint(p1: types.Point3D, p2: types.Point3D) -> types.Point3D:
     :complexity: O(1) time, O(1) space
     """
 
-def transform_point(matrix: collections.abc.Sequence[collections.abc.Sequence[float]], x: float, y: float, z: float) -> types.Point3D:
+def transform_point_3d(matrix: collections.abc.Sequence[collections.abc.Sequence[float]], x: float, y: float, z: float) -> types.Point3D:
     r"""
     Apply an affine transformation matrix to a 3D point.
     

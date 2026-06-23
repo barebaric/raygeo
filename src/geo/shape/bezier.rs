@@ -16,7 +16,7 @@ use glam::{DVec2, DVec3};
 use crate::constants::EPSILON_INTERSECT;
 use crate::geo::algo::interp::solve_quadratic;
 use crate::geo::shape::line::get_line_segment_closest_point;
-use crate::geo::shape::point::midpoint;
+use crate::geo::shape::point::midpoint_3d;
 use crate::geo::shape::polygon::is_point_inside_polygon;
 use crate::types::{CubicBezier, Point, Point3D, Polygon, Polygon3D, Rect};
 
@@ -449,12 +449,12 @@ pub fn flatten_bezier(
         return;
     }
 
-    let m01 = midpoint(a, b);
-    let m12 = midpoint(b, c);
-    let m23 = midpoint(c, d);
-    let q01 = midpoint(m01, m12);
-    let q12 = midpoint(m12, m23);
-    let r = midpoint(q01, q12);
+    let m01 = midpoint_3d(a, b);
+    let m12 = midpoint_3d(b, c);
+    let m23 = midpoint_3d(c, d);
+    let q01 = midpoint_3d(m01, m12);
+    let q12 = midpoint_3d(m12, m23);
+    let r = midpoint_3d(q01, q12);
 
     flatten_bezier(a, m01, q01, r, tolerance_sq, depth + 1, points);
     flatten_bezier(r, q12, m23, d, tolerance_sq, depth + 1, points);

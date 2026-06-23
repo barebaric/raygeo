@@ -60,7 +60,7 @@ impl PyRampStyle {
     import collections.abc
     import raygeo.geo.types
 
-    def generate_ramp(
+    def generate_ramp_3d(
         start: tuple[float, float],
         end: tuple[float, float],
         z_start: float,
@@ -87,7 +87,7 @@ impl PyRampStyle {
 "#,
     module = "raygeo.geo.algo.ramp"
 )]
-#[pyfunction(name = "generate_ramp")]
+#[pyfunction(name = "generate_ramp_3d")]
 #[pyo3(signature = (
     start,
     end,
@@ -115,6 +115,6 @@ fn generate_ramp_py(
         style: style.into(),
         lateral_amplitude,
     };
-    let pts = ramp::generate_ramp(&opts);
+    let pts = ramp::generate_ramp_3d(&opts);
     pts.into_iter().map(|p| (p.x, p.y, p.z)).collect()
 }

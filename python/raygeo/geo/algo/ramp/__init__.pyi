@@ -13,7 +13,7 @@ from raygeo.geo import types
 import typing
 __all__ = [
     "RampStyle",
-    "generate_ramp",
+    "generate_ramp_3d",
 ]
 
 @typing.final
@@ -21,7 +21,7 @@ class RampStyle(enum.Enum):
     Linear = ...
     ZigZag = ...
 
-def generate_ramp(start: tuple[float, float], end: tuple[float, float], z_start: float, z_end: float, max_ramp_angle_deg: float = 45, style: RampStyle = RampStyle.Linear, lateral_amplitude: float = 1) -> list[tuple[float, float, float]]:
+def generate_ramp_3d(start: tuple[float, float], end: tuple[float, float], z_start: float, z_end: float, max_ramp_angle_deg: float = 45, style: RampStyle = RampStyle.Linear, lateral_amplitude: float = 1) -> list[tuple[float, float, float]]:
     r"""
     Generate a ramp entry polyline.
     

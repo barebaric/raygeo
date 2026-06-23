@@ -1,7 +1,7 @@
 use glam::{DMat4, DVec2, DVec3, DVec4};
 
 use crate::constants::EPSILON_COLLINEAR;
-use crate::geo::shape::point::transform_point;
+use crate::geo::shape::point::transform_point_3d;
 
 use super::container::Ops;
 use super::types::{MoveCmd, OpCategory, OpNode};
@@ -28,7 +28,7 @@ impl Ops {
             match &node.category {
                 OpCategory::Moving { end, cmd } => {
                     original_cmd_end = Some(*end);
-                    let new_end = transform_point(matrix, *end);
+                    let new_end = transform_point_3d(matrix, *end);
 
                     let new_cmd = match cmd {
                         MoveCmd::ArcTo { center, cw } if is_non_uniform => {
@@ -53,7 +53,7 @@ impl Ops {
                             let extra =
                                 node.extra_axes.as_deref().map(|e| e.to_vec());
                             for (_, p2) in &arc_buf {
-                                let tv = transform_point(matrix, *p2);
+                                let tv = transform_point_3d(matrix, *p2);
                                 let mut lcmd = OpNode::line_to(
                                     tv.x,
                                     tv.y,
@@ -79,13 +79,13 @@ impl Ops {
                         }
                         MoveCmd::BezierTo { control1, control2 } => {
                             MoveCmd::BezierTo {
-                                control1: transform_point(matrix, *control1),
-                                control2: transform_point(matrix, *control2),
+                                control1: transform_point_3d(matrix, *control1),
+                                control2: transform_point_3d(matrix, *control2),
                             }
                         }
                         MoveCmd::QuadraticBezierTo { control } => {
                             MoveCmd::QuadraticBezierTo {
-                                control: transform_point(matrix, *control),
+                                control: transform_point_3d(matrix, *control),
                             }
                         }
                         MoveCmd::MoveTo => MoveCmd::MoveTo,
@@ -115,7 +115,7 @@ impl Ops {
 
         self.commands = new_cmds;
         self.invalidate_time_cache();
-        self.last_move_to = transform_point(matrix, self.last_move_to);
+        self.last_move_to = transform_point_3d(matrix, self.last_move_to);
         self
     }
 

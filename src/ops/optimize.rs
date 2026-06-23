@@ -82,7 +82,7 @@ impl PointDistance for SegmentPoint {
     }
 }
 
-fn dist_2d(p1: Point3D, p2: Point3D) -> f64 {
+fn dist_xy(p1: Point3D, p2: Point3D) -> f64 {
     let dx = p1.x - p2.x;
     let dy = p1.y - p2.y;
     dx.hypot(dy)
@@ -246,12 +246,12 @@ fn two_opt_workpieces(ordered: &mut [WorkpieceMeta]) {
                 let (curr_cost, new_cost) = if j < n - 1 {
                     let f_entry = ordered[j + 1].entry_point;
                     let curr =
-                        dist_2d(a_exit, b_entry) + dist_2d(e_exit, f_entry);
+                        dist_xy(a_exit, b_entry) + dist_xy(e_exit, f_entry);
                     let new_ =
-                        dist_2d(a_exit, e_exit) + dist_2d(b_entry, f_entry);
+                        dist_xy(a_exit, e_exit) + dist_xy(b_entry, f_entry);
                     (curr, new_)
                 } else {
-                    (dist_2d(a_exit, b_entry), dist_2d(a_exit, e_exit))
+                    (dist_xy(a_exit, b_entry), dist_xy(a_exit, e_exit))
                 };
 
                 if new_cost < curr_cost {
@@ -448,12 +448,12 @@ fn two_opt(ordered: &mut [Ops], allow_flip: bool) {
                 let (curr_cost, new_cost) = if j < n - 1 {
                     let f_start = ordered[j + 1].endpoint(0);
                     let curr =
-                        dist_2d(a_end, b_start) + dist_2d(e_end, f_start);
+                        dist_xy(a_end, b_start) + dist_xy(e_end, f_start);
                     let new_ =
-                        dist_2d(a_end, e_end) + dist_2d(b_start, f_start);
+                        dist_xy(a_end, e_end) + dist_xy(b_start, f_start);
                     (curr, new_)
                 } else {
-                    (dist_2d(a_end, b_start), dist_2d(a_end, e_end))
+                    (dist_xy(a_end, b_start), dist_xy(a_end, e_end))
                 };
 
                 if new_cost < curr_cost {

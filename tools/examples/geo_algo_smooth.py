@@ -9,13 +9,13 @@ from raygeo.geo.algo.smooth import (
     build_smoothed_path,
     chaikin_corner_cut,
     compute_gaussian_kernel,
-    resample_polyline,
     shortcut_path,
     smooth_circularly,
     smooth_path,
-    smooth_polyline,
+    smooth_polyline_3d,
     smooth_sub_segment,
 )
+from raygeo.geo.shape.polygon3d import resample_polyline_3d
 
 
 def generate_overview():
@@ -53,7 +53,7 @@ def generate_overview():
     draw(axes[1, 0], pts, "Original", "gray")
 
     for col, amount in enumerate(amounts, 1):
-        smoothed_no_preserve = smooth_polyline(pts_3d, amount, 0.0, True)
+        smoothed_no_preserve = smooth_polyline_3d(pts_3d, amount, 0.0, True)
         draw(
             axes[0, col],
             smoothed_no_preserve,
@@ -61,7 +61,7 @@ def generate_overview():
             "tomato",
         )
 
-        smoothed_preserve = smooth_polyline(pts_3d, amount, 120.0, True)
+        smoothed_preserve = smooth_polyline_3d(pts_3d, amount, 120.0, True)
         draw(
             axes[1, col],
             smoothed_preserve,
@@ -97,7 +97,7 @@ def generate_resample():
     zigzag = [(10.0, 20.0), (40.0, 70.0), (70.0, 25.0), (90.0, 65.0)]
     zigzag_3d = [(x, y, 0.0) for x, y in zigzag]
 
-    resampled = resample_polyline(zigzag_3d, 8.0, False)
+    resampled = resample_polyline_3d(zigzag_3d, 8.0, False)
 
     fig_rs, (ax_rs1, ax_rs2) = plt.subplots(1, 2, figsize=(12, 5))
     for ax in [ax_rs1, ax_rs2]:
@@ -137,7 +137,7 @@ def generate_resample():
         markersize=3,
         label=f"Resampled ({len(resampled)} pts)",
     )
-    ax_rs2.set_title("After resample_polyline(max_seg=8.0)", fontsize=11)
+    ax_rs2.set_title("After resample_polyline_3d(max_seg=8.0)", fontsize=11)
 
     fig_rs.tight_layout()
     return fig_rs
@@ -516,7 +516,7 @@ __images__ = [
         "function": generate_build_smoothed_path,
     },
     {
-        "heading": "smooth_polyline",
+        "heading": "smooth_polyline_3d",
         "caption": "Gaussian smoothing",
         "function": generate_overview,
     },
@@ -526,7 +526,7 @@ __images__ = [
         "function": generate_gaussian_kernel,
     },
     {
-        "heading": "resample_polyline",
+        "heading": "resample_polyline_3d",
         "caption": "Polyline resampling",
         "function": generate_resample,
     },

@@ -1,8 +1,11 @@
 //! Clipping: Line segment clipping and region operations.
 //!
-//! Functions with a `_2d` suffix operate in the **pure XY plane** (no Z).
-//! Functions without the suffix are **2.5D wrappers** — the clip is performed
-//! in XY and Z is linearly interpolated from the input points.
+//! # Convention exception
+//!
+//! Unlike the rest of the codebase where `bare` = 2D and `_3d` = 3D, this
+//! module uses the `_2d` suffix to mean "pure XY plane (no Z)". Functions
+//! without the suffix are **2.5D wrappers** — the clip is performed in XY
+//! and Z is linearly interpolated from the input points.
 //!
 //! Callers of the 2D cores must explicitly project 3D data before calling;
 //! see [`crate::types`] (or [`super::project`]) for helpers.

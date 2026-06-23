@@ -14,8 +14,8 @@ from raygeo.geo.shape.arc import get_polyline_turn_sign
 from raygeo.geo.shape.polygon import (
     get_polygon_centroid,
     get_polygons_group_difference,
-    trim_polyline_at,
 )
+from raygeo.geo.shape.polyline import trim_polyline_at
 from raygeo.ops.assembly.hsm import (
     adaptive_entry,
     adaptive_peeling,

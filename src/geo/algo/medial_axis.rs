@@ -3,7 +3,7 @@ use std::collections::{HashMap, HashSet, VecDeque};
 use spade::handles::FixedVertexHandle;
 use spade::{ConstrainedDelaunayTriangulation, Point2, Triangulation};
 
-use crate::geo::shape::point::circumcenter_2d;
+use crate::geo::shape::point::circumcenter;
 use crate::geo::shape::polygon::{is_point_in_polygon, resample_polygon};
 use crate::types::Point;
 
@@ -66,7 +66,7 @@ impl MedialAxis {
         for (ti, tri) in triangles.iter().enumerate() {
             let pts = [vertices[tri[0]], vertices[tri[1]], vertices[tri[2]]];
 
-            let (center, radius) = circumcenter_2d(pts[0], pts[1], pts[2]);
+            let (center, radius) = circumcenter(pts[0], pts[1], pts[2]);
             if radius < 0.0 {
                 continue;
             }

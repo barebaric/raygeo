@@ -34,7 +34,7 @@ pub fn register(algo_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     import collections.abc
     import raygeo.geo.types
 
-    def trochoid_along(
+    def trochoid_along_3d(
         carrier: collections.abc.Sequence[tuple[float, float]],
         tool_diameter: float,
         engagement_angle_deg: float = 90.0,
@@ -56,7 +56,7 @@ pub fn register(algo_mod: &Bound<'_, PyModule>) -> PyResult<()> {
 "#,
     module = "raygeo.geo.algo.trochoid"
 )]
-#[pyfunction(name = "trochoid_along")]
+#[pyfunction(name = "trochoid_along_3d")]
 #[pyo3(signature = (
     carrier,
     tool_diameter,
@@ -82,6 +82,6 @@ fn trochoid_along_py(
         min_loop_radius,
         z,
     };
-    let pts = trochoid::trochoid_along(&carrier_pts, &opts);
+    let pts = trochoid::trochoid_along_3d(&carrier_pts, &opts);
     pts.into_iter().map(|p| (p.x, p.y, p.z)).collect()
 }

@@ -22,18 +22,18 @@ blend_tangent(
 ) -> list[tuple[float, float]]
 ```
 
-Insert tangent extension points at both ends of a travel link.
+Insert tangent extension points at both ends of a connecting polyline.
 
-Returns a new link with points inserted to ensure the travel segment enters/exits the adjacent
-segments tangentially (G1 continuity).
+Returns a new polyline with points inserted to ensure it meets the adjacent polylines tangentially
+(G1 continuity).
 
-| Parameter   | Type                            | Description                                           |
-| ----------- | ------------------------------- | ----------------------------------------------------- |
-| `link`      | `Sequence[tuple[float, float]]` | Travel link path as a list of (x, y) tuples.          |
-| `prev_tail` | `Sequence[tuple[float, float]]` | Last 2+ points of the preceding cut.                  |
-| `next_head` | `Sequence[tuple[float, float]]` | First 2+ points of the following cut.                 |
-| `margin`    | `float`                         | Extension distance along the tangent direction.       |
-| _Returns_   | `list[tuple[float, float]]`     | Modified link with tangent extension points inserted. |
+| Parameter   | Type                            | Description                                               |
+| ----------- | ------------------------------- | --------------------------------------------------------- |
+| `link`      | `Sequence[tuple[float, float]]` | Connecting polyline as a list of (x, y) tuples.           |
+| `prev_tail` | `Sequence[tuple[float, float]]` | Last 2+ points of the preceding polyline.                 |
+| `next_head` | `Sequence[tuple[float, float]]` | First 2+ points of the following polyline.                |
+| `margin`    | `float`                         | Extension distance along the tangent direction.           |
+| _Returns_   | `list[tuple[float, float]]`     | Modified polyline with tangent extension points inserted. |
 
 ![``blend_tangent`` inserts tangent extension points at both ends of a travel link to ensure G1 continuity at cut–travel junctions](images/geo-algo-smooth-blend-tangent.png)
 
@@ -126,30 +126,6 @@ Compute a Gaussian kernel of the given size.
 
 _Gaussian kernel weights_
 
-### `resample_polyline()`
-
-```python
-resample_polyline(
-    points: Sequence[types.Point3D],
-    max_segment_length: float,
-    is_closed: bool,
-) -> list[types.Point3D]
-```
-
-Resample a polyline with a maximum segment length.
-
-| Parameter            | Type                      | Description                     |
-| -------------------- | ------------------------- | ------------------------------- |
-| `points`             | `Sequence[types.Point3D]` | Sequence of 3D points.          |
-| `max_segment_length` | `float`                   | Maximum allowed segment length. |
-| `is_closed`          | `bool`                    | Whether the polyline is closed. |
-| _Returns_            | `list[types.Point3D]`     | Resampled points.               |
-| _Complexity_         |                           | O(n) time, O(n) space           |
-
-![Polyline resampling](images/geo-algo-smooth-resample.png)
-
-_Polyline resampling_
-
 ### `shortcut_path()`
 
 ```python
@@ -231,10 +207,10 @@ Endpoints are always preserved.
 
 _Constrained path smoothing_
 
-### `smooth_polyline()`
+### `smooth_polyline_3d()`
 
 ```python
-smooth_polyline(
+smooth_polyline_3d(
     points: Sequence[types.Point3D],
     amount: int,
     corner_angle_threshold: float,
@@ -242,7 +218,7 @@ smooth_polyline(
 ) -> list[types.Point3D]
 ```
 
-Smooth a polyline using Gaussian smoothing.
+Smooth a 3D polyline using Gaussian smoothing.
 
 | Parameter                | Type                      | Description                                                                      |
 | ------------------------ | ------------------------- | -------------------------------------------------------------------------------- |
@@ -250,7 +226,7 @@ Smooth a polyline using Gaussian smoothing.
 | `amount`                 | `int`                     | Smoothing amount (kernel size).                                                  |
 | `corner_angle_threshold` | `float`                   | Angle threshold for preserving corners.                                          |
 | `is_closed`              | `Optional[bool] = None`   | Whether the polyline is closed.                                                  |
-| _Returns_                | `list[types.Point3D]`     | Smoothed points.                                                                 |
+| _Returns_                | `list[types.Point3D]`     | Smoothed 3D points.                                                              |
 | _Complexity_             |                           | O(n \* k) time, O(n) space where k is the kernel size and n the number of points |
 
 ![Gaussian smoothing](images/geo-algo-smooth-overview.png)

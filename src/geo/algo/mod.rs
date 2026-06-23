@@ -58,12 +58,12 @@ pub use fitting::{
     arc_between_two_points, are_points_collinear,
     convert_arc_to_beziers_from_array, convert_arcs_to_beziers, fit_arcs,
     fit_circle_to_3_points, fit_circle_to_points, fit_curves,
-    fit_points_recursive, fit_points_with_primitives, flatten_to_points,
+    fit_points_recursive, fit_points_with_primitives, flatten_to_points_3d,
     generate_linking_arc, get_polyline_arc_deviation,
     get_polyline_line_deviation, linearize_data, linearize_geometry,
     optimize_path_from_array, project_circle_center_to_bisector,
 };
-pub use helix::{generate_helix, HelixDirection, HelixOptions};
+pub use helix::{generate_helix_3d, HelixDirection, HelixOptions};
 pub use hull::{
     find_external_contours, get_concave_hull, get_enclosing_hull,
     get_hulls_from_image,
@@ -94,18 +94,18 @@ pub use project::{
     is_planar_in_z, lift_points_to_xy_plane, project_point_to_xy,
     project_points_to_xy,
 };
-pub use ramp::{generate_ramp, RampOptions, RampStyle};
-pub use simplify::{simplify_data, simplify_polyline};
+pub use ramp::{generate_ramp_3d, RampOptions, RampStyle};
+pub use simplify::{simplify_data, simplify_polyline_3d};
 pub use smooth::{
     blend_tangent, build_smoothed_path, chaikin_corner_cut,
-    compute_gaussian_kernel, resample_polyline, smooth_circularly, smooth_path,
-    smooth_polyline, smooth_sub_segment,
+    compute_gaussian_kernel, smooth_circularly, smooth_path,
+    smooth_polyline_3d, smooth_sub_segment,
 };
-pub use spiral::{generate_spiral, SpiralOptions};
+pub use spiral::{generate_spiral_3d, SpiralOptions};
 pub use topology::{
     build_hierarchy, close_all_contours, filter_to_external_contours,
     get_valid_contours_data, group_solids_and_holes, normalize_winding_orders,
     remove_inner_edges, reverse_contour, split_inner_and_outer_contours,
     split_into_components, split_into_contours, ContourHierarchy, ContourInfo,
 };
-pub use trochoid::{trochoid_along, TrochoidOptions};
+pub use trochoid::{trochoid_along_3d, TrochoidOptions};

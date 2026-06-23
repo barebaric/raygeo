@@ -15,6 +15,7 @@ from . import line
 from . import point
 from . import polygon
 from . import polygon3d
+from . import polyline
 from . import rect
 __all__ = [
     "arc",
@@ -24,6 +25,7 @@ __all__ = [
     "point",
     "polygon",
     "polygon3d",
+    "polyline",
     "rect",
 ]
 

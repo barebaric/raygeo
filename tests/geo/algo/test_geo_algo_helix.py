@@ -1,6 +1,6 @@
 import math
 
-from raygeo.geo.algo.helix import HelixDirection, generate_helix
+from raygeo.geo.algo.helix import HelixDirection, generate_helix_3d
 
 
 def approx_eq(a, b, tol=1e-9):
@@ -9,7 +9,7 @@ def approx_eq(a, b, tol=1e-9):
 
 def test_helix_cylindrical():
     """Constant-radius helix over 2 revolutions."""
-    pts = generate_helix(
+    pts = generate_helix_3d(
         center=(0, 0),
         start_radius=10,
         end_radius=10,
@@ -41,7 +41,7 @@ def test_helix_cylindrical():
 
 def test_helix_conical_expand():
     """Helix with expanding radius (conical)."""
-    pts = generate_helix(
+    pts = generate_helix_3d(
         center=(0, 0),
         start_radius=5,
         end_radius=15,
@@ -65,7 +65,7 @@ def test_helix_conical_expand():
 
 def test_helix_conical_reduce():
     """Helix with reducing radius."""
-    pts = generate_helix(
+    pts = generate_helix_3d(
         center=(0, 0),
         start_radius=15,
         end_radius=5,
@@ -83,7 +83,7 @@ def test_helix_conical_reduce():
 
 def test_helix_cw_direction():
     """CW should go -Y at first quarter, CCW should go +Y."""
-    cw = generate_helix(
+    cw = generate_helix_3d(
         center=(0, 0),
         start_radius=10,
         end_radius=10,
@@ -93,7 +93,7 @@ def test_helix_cw_direction():
         direction=HelixDirection.Cw,
         angular_step=math.pi / 2,
     )
-    ccw = generate_helix(
+    ccw = generate_helix_3d(
         center=(0, 0),
         start_radius=10,
         end_radius=10,
@@ -111,7 +111,7 @@ def test_helix_cw_direction():
 
 def test_helix_min_revolutions():
     """Short Z drop with min_revolutions forcing more turns."""
-    pts = generate_helix(
+    pts = generate_helix_3d(
         center=(0, 0),
         start_radius=10,
         end_radius=10,
@@ -127,7 +127,7 @@ def test_helix_min_revolutions():
 
 def test_helix_no_descent():
     """z_end > z_start → empty."""
-    pts = generate_helix(
+    pts = generate_helix_3d(
         center=(0, 0),
         start_radius=10,
         end_radius=10,
@@ -142,7 +142,7 @@ def test_helix_no_descent():
 
 def test_helix_zero_pitch():
     """Zero pitch → empty."""
-    pts = generate_helix(
+    pts = generate_helix_3d(
         center=(0, 0),
         start_radius=10,
         end_radius=10,
@@ -157,7 +157,7 @@ def test_helix_zero_pitch():
 
 def test_helix_non_origin_center():
     """Helix centered at (5, 10)."""
-    pts = generate_helix(
+    pts = generate_helix_3d(
         center=(5, 10),
         start_radius=10,
         end_radius=10,
@@ -175,7 +175,7 @@ def test_helix_non_origin_center():
 
 def test_helix_angular_step_controls_resolution():
     """Larger angular_step should produce fewer points."""
-    coarse = generate_helix(
+    coarse = generate_helix_3d(
         center=(0, 0),
         start_radius=10,
         end_radius=10,
@@ -185,7 +185,7 @@ def test_helix_angular_step_controls_resolution():
         direction=HelixDirection.Ccw,
         angular_step=2.0,
     )
-    fine = generate_helix(
+    fine = generate_helix_3d(
         center=(0, 0),
         start_radius=10,
         end_radius=10,
@@ -200,7 +200,7 @@ def test_helix_angular_step_controls_resolution():
 
 def test_helix_z_end_exact():
     """Last point Z should exactly equal z_end."""
-    pts = generate_helix(
+    pts = generate_helix_3d(
         center=(0, 0),
         start_radius=10,
         end_radius=10,

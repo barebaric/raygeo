@@ -284,9 +284,9 @@ fn clip_subpath_with_gaps(sub_ops: &Ops, clips: &[ClipPoint]) -> Ops {
 
         let seg_len = if ct == CommandType::BezierTo {
             let (control1, control2) = bezier_params(sub_ops, i);
-            bezier_arc_length_2d(start_pt, control1, control2, end_pt)
+            bezier_arc_length_xy(start_pt, control1, control2, end_pt)
         } else {
-            distance_2d(start_pt, end_pt)
+            distance_xy(start_pt, end_pt)
         };
 
         let seg_start = accum_dist;
@@ -319,7 +319,7 @@ fn clip_subpath_with_gaps(sub_ops: &Ops, clips: &[ClipPoint]) -> Ops {
 
                     let last_end = find_pass_exit(&result);
                     if let Some(le) = last_end {
-                        if distance_2d(le, sub.0) > 1e-6 {
+                        if distance_xy(le, sub.0) > 1e-6 {
                             result.move_to(sub.0.x, sub.0.y, sub.0.z, None);
                         }
                     }
@@ -334,7 +334,7 @@ fn clip_subpath_with_gaps(sub_ops: &Ops, clips: &[ClipPoint]) -> Ops {
 
                     let last_end = find_pass_exit(&result);
                     if let Some(le) = last_end {
-                        if distance_2d(le, start_pt_interp) > 1e-6 {
+                        if distance_xy(le, start_pt_interp) > 1e-6 {
                             result.move_to(
                                 start_pt_interp.x,
                                 start_pt_interp.y,
@@ -362,7 +362,7 @@ fn clip_subpath_with_gaps(sub_ops: &Ops, clips: &[ClipPoint]) -> Ops {
     let orig_endpoint = find_pass_exit(sub_ops);
     if let Some(orig) = orig_endpoint {
         let last_end = find_pass_exit(&result);
-        if last_end.is_none_or(|end| distance_2d(end, orig) > 1e-6) {
+        if last_end.is_none_or(|end| distance_xy(end, orig) > 1e-6) {
             // When a gap wraps around the seam of a closed path the
             // endpoint falls inside a gap region — don't add a travel
             // move back to it.
@@ -502,9 +502,9 @@ fn insert_power_commands_curve_aware(
 
         let seg_len = if ct == CommandType::BezierTo {
             let (control1, control2) = bezier_params(sub_ops, i);
-            bezier_arc_length_2d(start_pt, control1, control2, end_pt)
+            bezier_arc_length_xy(start_pt, control1, control2, end_pt)
         } else {
-            distance_2d(start_pt, end_pt)
+            distance_xy(start_pt, end_pt)
         };
 
         let seg_start = accum_dist;
@@ -761,9 +761,9 @@ fn compute_hit_distance_original(
 
         let seg_len = if ct == CommandType::BezierTo {
             let (control1, control2) = bezier_params(sub_ops, i);
-            bezier_arc_length_2d(start, control1, control2, end_pt)
+            bezier_arc_length_xy(start, control1, control2, end_pt)
         } else {
-            distance_2d(start, end_pt)
+            distance_xy(start, end_pt)
         };
 
         if geo_idx == target_geo_idx {
@@ -797,7 +797,7 @@ fn compute_hit_distance_linearized(
             last_pos = temp_ops.endpoint(idx);
         } else if ct == CommandType::LineTo {
             let end = temp_ops.endpoint(idx);
-            hit_dist += distance_2d(last_pos, end);
+            hit_dist += distance_xy(last_pos, end);
             last_pos = end;
         }
     }
@@ -805,7 +805,7 @@ fn compute_hit_distance_linearized(
     let hit_idx = geo_indices[segment_idx];
     if temp_ops.command_type(hit_idx) == CommandType::LineTo {
         let end = temp_ops.endpoint(hit_idx);
-        let dist = distance_2d(last_pos, end);
+        let dist = distance_xy(last_pos, end);
         hit_dist += t * dist;
         return Some(hit_dist);
     }
@@ -835,7 +835,7 @@ fn build_commands_with_power(
         let ct = temp_ops.command_type(i);
         if ct == CommandType::LineTo {
             let p2 = temp_ops.endpoint(i);
-            let seg_len = distance_2d(last_pos, p2);
+            let seg_len = distance_xy(last_pos, p2);
 
             if seg_len < 1e-9 {
                 last_pos = p2;
@@ -950,7 +950,7 @@ fn process_segment_events(
 // ---------------------------------------------------------------------------
 
 /// Approximate the arc length of a cubic Bezier curve.
-pub fn bezier_arc_length_2d(
+pub fn bezier_arc_length_xy(
     p0: Point3D,
     control1: Point3D,
     control2: Point3D,
@@ -1096,7 +1096,7 @@ fn interpolate_point(p1: Point3D, p2: Point3D, t: f64) -> Point3D {
     )
 }
 
-fn distance_2d(a: Point3D, b: Point3D) -> f64 {
+fn distance_xy(a: Point3D, b: Point3D) -> f64 {
     let dx = b.x - a.x;
     let dy = b.y - a.y;
     (dx * dx + dy * dy).sqrt()

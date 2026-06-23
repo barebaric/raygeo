@@ -2,7 +2,7 @@
 
 import matplotlib.pyplot as plt
 
-from raygeo.geo.algo.trochoid import trochoid_along
+from raygeo.geo.algo.trochoid import trochoid_along_3d
 
 
 def generate_straight():
@@ -14,7 +14,7 @@ def generate_straight():
     for ax, label, eng_deg in zip(
         axes, ["Engagement 60°", "Engagement 120°"], [60, 120]
     ):
-        pts = trochoid_along(
+        pts = trochoid_along_3d(
             carrier,
             tool_diameter=10,
             engagement_angle_deg=eng_deg,
@@ -47,7 +47,7 @@ def generate_straight():
 
 def generate_l_shaped():
     carrier_l = [(0, 0), (50, 0), (50, 50)]
-    pts = trochoid_along(
+    pts = trochoid_along_3d(
         carrier_l,
         tool_diameter=10,
         engagement_angle_deg=90,
@@ -79,14 +79,14 @@ def generate_l_shaped():
 __docs_target__ = ["raygeo.geo.algo.trochoid.md"]
 __images__ = [
     {
-        "heading": "trochoid_along",
+        "heading": "trochoid_along_3d",
         "caption": (
             "Trochoidal toolpath along a straight carrier — 60° vs 120°"
         ),
         "function": generate_straight,
     },
     {
-        "heading": "trochoid_along",
+        "heading": "trochoid_along_3d",
         "caption": "Trochoidal toolpath around an L-shaped corner",
         "function": generate_l_shaped,
     },

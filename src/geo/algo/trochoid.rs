@@ -18,7 +18,7 @@ pub struct TrochoidOptions {
 /// chip evacuation, unlike a simple sine-wave offset.
 ///
 /// Returns the cutting path as a sequence of 3D points at the given Z.
-pub fn trochoid_along(
+pub fn trochoid_along_3d(
     carrier: &[Point],
     opts: &TrochoidOptions,
 ) -> Vec<Point3D> {

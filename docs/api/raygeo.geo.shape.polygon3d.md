@@ -435,6 +435,26 @@ Positive distance offsets to the _left_ of the traversal direction.
 
 _True 3D polyline offset (edge-plane miter)_
 
+### `resample_polyline_3d()`
+
+```python
+resample_polyline_3d(
+    points: Sequence[types.Point3D],
+    max_segment_length: float,
+    is_closed: bool,
+) -> list[types.Point3D]
+```
+
+Resample a 3D polyline with a maximum segment length.
+
+| Parameter            | Type                      | Description                     |
+| -------------------- | ------------------------- | ------------------------------- |
+| `points`             | `Sequence[types.Point3D]` | Sequence of 3D points.          |
+| `max_segment_length` | `float`                   | Maximum allowed segment length. |
+| `is_closed`          | `bool`                    | Whether the polyline is closed. |
+| _Returns_            | `list[types.Point3D]`     | Resampled 3D points.            |
+| _Complexity_         |                           | O(n) time, O(n) space           |
+
 ### `rotate_polygon_3d()`
 
 ```python

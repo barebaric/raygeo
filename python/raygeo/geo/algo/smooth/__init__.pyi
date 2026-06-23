@@ -16,26 +16,25 @@ __all__ = [
     "build_smoothed_path",
     "chaikin_corner_cut",
     "compute_gaussian_kernel",
-    "resample_polyline",
     "shortcut_path",
     "smooth_circularly",
     "smooth_path",
-    "smooth_polyline",
+    "smooth_polyline_3d",
     "smooth_sub_segment",
 ]
 
 def blend_tangent(link: collections.abc.Sequence[tuple[float, float]], prev_tail: collections.abc.Sequence[tuple[float, float]], next_head: collections.abc.Sequence[tuple[float, float]], margin: float) -> list[tuple[float, float]]:
     r"""
-    Insert tangent extension points at both ends of a travel link.
+    Insert tangent extension points at both ends of a connecting polyline.
     
-    Returns a new link with points inserted to ensure the travel segment
-    enters/exits the adjacent segments tangentially (G1 continuity).
+    Returns a new polyline with points inserted to ensure it meets
+    the adjacent polylines tangentially (G1 continuity).
     
-    :param link: Travel link path as a list of (x, y) tuples.
-    :param prev_tail: Last 2+ points of the preceding cut.
-    :param next_head: First 2+ points of the following cut.
+    :param link: Connecting polyline as a list of (x, y) tuples.
+    :param prev_tail: Last 2+ points of the preceding polyline.
+    :param next_head: First 2+ points of the following polyline.
     :param margin: Extension distance along the tangent direction.
-    :returns: Modified link with tangent extension points inserted.
+    :returns: Modified polyline with tangent extension points inserted.
     """
 
 def build_smoothed_path(last: tuple[float, float], first: tuple[float, float], waypoints: collections.abc.Sequence[tuple[float, float]] = [], uncleared: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]] = [], clearance: float = 1, smoothing_amount: int = 120) -> list[tuple[float, float]]:
@@ -84,17 +83,6 @@ def compute_gaussian_kernel(amount: int) -> tuple[list[float], float]:
     :complexity: O(k) time, O(k) space
     """
 
-def resample_polyline(points: collections.abc.Sequence[types.Point3D], max_segment_length: float, is_closed: bool) -> list[types.Point3D]:
-    r"""
-    Resample a polyline with a maximum segment length.
-    
-    :param points: Sequence of 3D points.
-    :param max_segment_length: Maximum allowed segment length.
-    :param is_closed: Whether the polyline is closed.
-    :returns: Resampled points.
-    :complexity: O(n) time, O(n) space
-    """
-
 def shortcut_path(points: collections.abc.Sequence[tuple[float, float]], obstacles: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]], clearance: float) -> list[tuple[float, float]]:
     r"""
     Iteratively remove interior waypoints whose direct connection
@@ -141,15 +129,15 @@ def smooth_path(points: collections.abc.Sequence[tuple[float, float]], obstacles
     :returns: Smoothed polyline as a list of (x, y) tuples.
     """
 
-def smooth_polyline(points: collections.abc.Sequence[types.Point3D], amount: int, corner_angle_threshold: float, is_closed: typing.Optional[bool] = None) -> list[types.Point3D]:
+def smooth_polyline_3d(points: collections.abc.Sequence[types.Point3D], amount: int, corner_angle_threshold: float, is_closed: typing.Optional[bool] = None) -> list[types.Point3D]:
     r"""
-    Smooth a polyline using Gaussian smoothing.
+    Smooth a 3D polyline using Gaussian smoothing.
     
     :param points: Sequence of 3D points to smooth.
     :param amount: Smoothing amount (kernel size).
     :param corner_angle_threshold: Angle threshold for preserving corners.
     :param is_closed: Whether the polyline is closed.
-    :returns: Smoothed points.
+    :returns: Smoothed 3D points.
     :complexity: O(n * k) time, O(n) space where k is the kernel size and n the number of points
     """
 

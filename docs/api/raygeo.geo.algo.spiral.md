@@ -12,10 +12,10 @@ expand_to_diameter).
 
 ## Functions
 
-### `generate_spiral()`
+### `generate_spiral_3d()`
 
 ```python
-generate_spiral(
+generate_spiral_3d(
     center: tuple[float, float],
     z: float,
     start_radius: float,

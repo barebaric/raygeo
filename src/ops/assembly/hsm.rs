@@ -14,24 +14,28 @@ use crate::geo::algo::cleared_area::ClearedArea;
 use crate::geo::algo::fillet::{
     append_end_fillets, trim_to_safe_fillet_span, try_fillet_one_end,
 };
-use crate::geo::algo::helix::{generate_helix, HelixDirection, HelixOptions};
+use crate::geo::algo::helix::{
+    generate_helix_3d, HelixDirection, HelixOptions,
+};
 use crate::geo::algo::medial_axis::MedialAxis;
 use crate::geo::algo::offset::compute_inset_region;
 use crate::geo::algo::ordering::order_nearest_neighbor;
 use crate::geo::algo::polylabel::find_largest_circle;
-use crate::geo::algo::ramp::{generate_ramp, RampOptions, RampStyle};
+use crate::geo::algo::ramp::{generate_ramp_3d, RampOptions, RampStyle};
 use crate::geo::algo::smooth::{
     blend_tangent, build_smoothed_path, chaikin_corner_cut,
 };
-use crate::geo::algo::spiral::{generate_spiral, SpiralOptions};
+use crate::geo::algo::spiral::{generate_spiral_3d, SpiralOptions};
 use crate::geo::shape::arc::get_polyline_turn_sign;
 use crate::geo::shape::line::longest_line_through_point;
 use crate::geo::shape::polygon::{
     does_path_sweep_intersect_polygon, get_circle_polygon, get_polygon_area,
     get_polygon_boundary_distance, get_polygon_bounds, get_polygon_centroid,
     get_polygon_closest_point, get_polygon_vertex_centroid,
-    get_polygons_group_difference, get_polyline_bounds,
-    get_segment_swept_polygon, trim_polyline_angular_ends, trim_polyline_at,
+    get_polygons_group_difference, get_segment_swept_polygon,
+};
+use crate::geo::shape::polyline::{
+    get_polyline_bounds, trim_polyline_angular_ends, trim_polyline_at,
 };
 use crate::ops::container::Ops;
 use crate::ops::state::State;
@@ -174,7 +178,7 @@ pub fn adaptive_entry(
         let helix_r = (opts.tool_radius * 0.8).min(r_max * 0.5);
 
         if opts.target_z < opts.safe_z {
-            let hp = generate_helix(&HelixOptions {
+            let hp = generate_helix_3d(&HelixOptions {
                 center: entry_pt,
                 start_radius: helix_r,
                 end_radius: helix_r,
@@ -201,7 +205,7 @@ pub fn adaptive_entry(
                 0.0
             };
 
-            let sp = generate_spiral(&SpiralOptions {
+            let sp = generate_spiral_3d(&SpiralOptions {
                 center: entry_pt,
                 z: opts.target_z,
                 start_radius: helix_r,
@@ -248,7 +252,7 @@ pub fn adaptive_entry(
         let lateral_amplitude = opts.tool_radius * 0.8;
 
         if opts.target_z < opts.safe_z {
-            let rp = generate_ramp(&RampOptions {
+            let rp = generate_ramp_3d(&RampOptions {
                 start,
                 end,
                 z_start: opts.safe_z,

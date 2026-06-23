@@ -13,7 +13,7 @@ from raygeo.geo.algo.fillet import (
     try_fillet_one_end,
 )
 from raygeo.geo.shape.arc import get_polyline_turn_sign
-from raygeo.geo.shape.polygon import trim_polyline_at
+from raygeo.geo.shape.polyline import trim_polyline_at
 
 
 def generate_create_fillet_polyline():

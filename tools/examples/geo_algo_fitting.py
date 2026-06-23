@@ -10,7 +10,7 @@ from raygeo.geo import Geometry
 from raygeo.geo.algo.fitting import (
     fit_circle_to_3_points,
     fit_circle_to_points,
-    flatten_to_points,
+    flatten_to_points_3d,
     generate_arc_between_two_points,
     generate_linking_arc,
     get_polyline_arc_deviation,
@@ -81,7 +81,7 @@ def generate_primitives():
     raw_geom = Geometry.from_points(arc_pts, close=False)
     fit_geom = raw_geom.fit_curves(3.0, arcs=True, beziers=False)
 
-    fit_flat = flatten_to_points(fit_geom, 0.5)
+    fit_flat = flatten_to_points_3d(fit_geom, 0.5)
     fit_pts = fit_flat[0] if fit_flat else []
 
     fig2, axes2 = plt.subplots(1, 2, figsize=(14, 6))
@@ -194,10 +194,10 @@ def generate_flatten():
     ]
     arc_raw = Geometry.from_points(arc_seed, close=False)
     arc_fitted = arc_raw.fit_curves(1.0, arcs=True, beziers=False)
-    flat_pts = flatten_to_points(arc_fitted, 2.0)
+    flat_pts = flatten_to_points_3d(arc_fitted, 2.0)
     flat_pts = flat_pts[0] if flat_pts else []
 
-    fine_flat = flatten_to_points(arc_fitted, 0.1)
+    fine_flat = flatten_to_points_3d(arc_fitted, 0.1)
     fine_pts = fine_flat[0] if fine_flat else []
 
     fig_fl, (ax_fl1, ax_fl2) = plt.subplots(1, 2, figsize=(14, 6))
@@ -235,7 +235,7 @@ def generate_flatten():
             markersize=3,
             label=f"Flattened ({len(flat_pts)} pts)",
         )
-    ax_fl2.set_title("After: flatten_to_points(tol=2.0)", fontsize=12)
+    ax_fl2.set_title("After: flatten_to_points_3d(tol=2.0)", fontsize=12)
 
     fig_fl.tight_layout()
     return fig_fl
@@ -254,10 +254,10 @@ def generate_linearize():
     lin_fitted = lin_raw.fit_curves(1.0, arcs=True, beziers=False)
     linearized = linearize_geometry(lin_fitted, 3.0)
 
-    lin_flat = flatten_to_points(linearized, 0.5)
+    lin_flat = flatten_to_points_3d(linearized, 0.5)
     lin_pts = lin_flat[0] if lin_flat else []
 
-    fine_flat = flatten_to_points(lin_fitted, 0.1)
+    fine_flat = flatten_to_points_3d(lin_fitted, 0.1)
     fine_pts = fine_flat[0] if fine_flat else []
 
     fig_lin, (ax_lin1, ax_lin2) = plt.subplots(1, 2, figsize=(14, 6))
@@ -702,7 +702,7 @@ __images__ = [
         "function": generate_3_points,
     },
     {
-        "heading": "flatten_to_points",
+        "heading": "flatten_to_points_3d",
         "caption": "Arc curve flattened to dense line segments",
         "function": generate_flatten,
     },

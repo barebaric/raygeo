@@ -10,10 +10,10 @@ from raygeo.geo import Geometry
 from raygeo.geo.algo import hull
 from raygeo.geo.algo.cleared_area import ClearedArea
 from raygeo.geo.algo.cylindrical import transform_to_cylinder
-from raygeo.geo.algo.helix import HelixDirection, generate_helix
+from raygeo.geo.algo.helix import HelixDirection, generate_helix_3d
 from raygeo.geo.algo.nest2d.placement import place_parts
 from raygeo.geo.algo.offset import compute_inset_region
-from raygeo.geo.algo.smooth import smooth_polyline
+from raygeo.geo.algo.smooth import smooth_polyline_3d
 from raygeo.geo.shape.bezier import linearize_bezier_adaptive
 from raygeo.geo.shape.polygon import get_polygon_convex_hull
 from raygeo.geo.shape.polygon3d import fillet_polyline_3d, offset_polyline_3d
@@ -260,7 +260,7 @@ def _plot_smooth(ax):
         for i in range(n)
     ]
     pts_3d = [(x, y, 0.0) for x, y in pts]
-    smoothed = smooth_polyline(pts_3d, 100, 0.0, True)
+    smoothed = smooth_polyline_3d(pts_3d, 100, 0.0, True)
 
     sx, sy = zip(*pts)
     ax.plot(
@@ -374,7 +374,7 @@ def _plot_cylindrical(ax):
 
 
 def _plot_conical_helix(ax):
-    pts = generate_helix(
+    pts = generate_helix_3d(
         center=(0, 0),
         start_radius=10,
         end_radius=30,

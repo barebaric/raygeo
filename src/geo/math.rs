@@ -8,7 +8,7 @@ use glam::{DMat3, DMat4, DVec2, DVec3, DVec4};
 
 use crate::geo::geometry::Geometry;
 use crate::geo::shape::arc::linearize_arc;
-use crate::geo::shape::point::transform_point;
+use crate::geo::shape::point::transform_point_3d;
 use crate::types::{Command, Point, Point3D};
 
 /// Transform a 2D point by a 3x3 affine matrix (homogeneous coordinates).
@@ -31,7 +31,7 @@ fn transform_array_uniform(data: &[Command], matrix: DMat4) -> Vec<Command> {
     let mut result: Vec<Command> = Vec::with_capacity(data.len());
     for cmd in data {
         let end_pt = cmd.end_point();
-        let p = transform_point(matrix, end_pt);
+        let p = transform_point_3d(matrix, end_pt);
 
         let transformed = match cmd {
             Command::Arc {
@@ -61,8 +61,8 @@ fn transform_array_uniform(data: &[Command], matrix: DMat4) -> Vec<Command> {
             Command::Bezier {
                 control1, control2, ..
             } => {
-                let c1_t = transform_point(matrix, *control1);
-                let c2_t = transform_point(matrix, *control2);
+                let c1_t = transform_point_3d(matrix, *control1);
+                let c2_t = transform_point_3d(matrix, *control2);
                 Command::Bezier {
                     end: p,
                     control1: c1_t,
@@ -106,16 +106,16 @@ fn transform_array_non_uniform(
                     &mut arc_buf,
                 );
                 for (_, p2) in arc_buf.drain(..) {
-                    let pt = transform_point(matrix, p2);
+                    let pt = transform_point_3d(matrix, p2);
                     result.push(Command::Line { end: pt });
                 }
             }
             Command::Bezier {
                 control1, control2, ..
             } => {
-                let p_t = transform_point(matrix, original_end);
-                let c1_t = transform_point(matrix, *control1);
-                let c2_t = transform_point(matrix, *control2);
+                let p_t = transform_point_3d(matrix, original_end);
+                let c1_t = transform_point_3d(matrix, *control1);
+                let c2_t = transform_point_3d(matrix, *control2);
                 result.push(Command::Bezier {
                     end: p_t,
                     control1: c1_t,
@@ -123,11 +123,11 @@ fn transform_array_non_uniform(
                 });
             }
             Command::Move { .. } => {
-                let p_t = transform_point(matrix, original_end);
+                let p_t = transform_point_3d(matrix, original_end);
                 result.push(Command::Move { end: p_t });
             }
             Command::Line { .. } => {
-                let p_t = transform_point(matrix, original_end);
+                let p_t = transform_point_3d(matrix, original_end);
                 result.push(Command::Line { end: p_t });
             }
         }

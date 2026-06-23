@@ -1,4 +1,4 @@
-from raygeo.geo.algo.ramp import RampStyle, generate_ramp
+from raygeo.geo.algo.ramp import RampStyle, generate_ramp_3d
 
 
 def approx_eq(a, b, tol=1e-9):
@@ -7,7 +7,7 @@ def approx_eq(a, b, tol=1e-9):
 
 def test_ramp_linear_basic():
     """Basic horizontal linear ramp."""
-    pts = generate_ramp(
+    pts = generate_ramp_3d(
         start=(0, 0),
         end=(50, 0),
         z_start=0,
@@ -29,7 +29,7 @@ def test_ramp_linear_basic():
 
 def test_ramp_linear_steep_extension():
     """Steep ramp should be extended to satisfy max_angle."""
-    pts = generate_ramp(
+    pts = generate_ramp_3d(
         start=(0, 0),
         end=(50, 0),
         z_start=0,
@@ -49,7 +49,7 @@ def test_ramp_linear_steep_extension():
 
 def test_ramp_zigzag():
     """ZigZag ramp should oscillate laterally."""
-    pts = generate_ramp(
+    pts = generate_ramp_3d(
         start=(0, 0),
         end=(50, 0),
         z_start=0,
@@ -69,7 +69,7 @@ def test_ramp_zigzag():
 
 def test_ramp_zigzag_zero_amplitude():
     """Zero lateral amplitude → same as linear."""
-    pts = generate_ramp(
+    pts = generate_ramp_3d(
         start=(0, 0),
         end=(50, 0),
         z_start=0,
@@ -84,7 +84,7 @@ def test_ramp_zigzag_zero_amplitude():
 
 def test_ramp_no_descent():
     """z_end > z_start → empty."""
-    pts = generate_ramp(
+    pts = generate_ramp_3d(
         start=(0, 0),
         end=(50, 0),
         z_start=0,
@@ -97,7 +97,7 @@ def test_ramp_no_descent():
 
 def test_ramp_no_xy_motion():
     """Same XY → empty (no ramp possible)."""
-    pts = generate_ramp(
+    pts = generate_ramp_3d(
         start=(0, 0),
         end=(0, 0),
         z_start=0,
@@ -110,7 +110,7 @@ def test_ramp_no_xy_motion():
 
 def test_ramp_non_axial():
     """Ramp along a diagonal."""
-    pts = generate_ramp(
+    pts = generate_ramp_3d(
         start=(10, 20),
         end=(30, 60),
         z_start=0,
@@ -128,7 +128,7 @@ def test_ramp_non_axial():
 
 def test_ramp_very_shallow():
     """Very shallow angle should not extend ramp significantly."""
-    pts = generate_ramp(
+    pts = generate_ramp_3d(
         start=(0, 0),
         end=(500, 0),
         z_start=0,
@@ -143,7 +143,7 @@ def test_ramp_very_shallow():
 
 def test_ramp_zero_max_angle():
     """Zero max angle → effectively infinite extension."""
-    pts = generate_ramp(
+    pts = generate_ramp_3d(
         start=(0, 0),
         end=(50, 0),
         z_start=0,

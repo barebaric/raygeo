@@ -9,6 +9,7 @@ pub mod line;
 pub mod point;
 pub mod polygon;
 pub mod polygon3d;
+pub mod polyline;
 pub mod rect;
 
 pub use arc::{
@@ -45,7 +46,8 @@ pub use line::{
     is_point_inside_rect, is_point_on_segment, longest_line_through_point,
 };
 pub use point::{
-    are_points_equal, circumcenter, circumcenter_2d, midpoint, transform_point,
+    are_points_equal, circumcenter, circumcenter_3d, midpoint_3d,
+    transform_point_3d,
 };
 pub use polygon::{
     apply_minimum_curvature, clean_polygon, does_path_sweep_intersect_polygon,
@@ -56,14 +58,13 @@ pub use polygon::{
     get_polygon_vertex_centroid, get_polygons_closest_point,
     get_polygons_difference, get_polygons_group_difference,
     get_polygons_group_intersection, get_polygons_intersection,
-    get_polygons_union, get_polyline_bounds, get_segment_swept_polygon,
-    is_almost_equal, is_point_in_polygon, is_polygon_clockwise,
-    is_polygon_convex, normalize_polygons, offset_polygon, path_to_polygon,
-    paths_to_polygons, point_line_distance, polygon_to_path, polygons_to_paths,
-    resample_polygon, resample_polyline, rotate_polygon, rotate_polygons,
-    scale_polygon, split_polyline_at_v_junctions, translate_bounds,
-    translate_polygon, translate_polygons, trim_polyline_angular_ends,
-    trim_polyline_at, ClipperPath, ClipperPaths, GeoScale, JoinStyle,
+    get_polygons_union, get_segment_swept_polygon, is_almost_equal,
+    is_point_in_polygon, is_polygon_clockwise, is_polygon_convex,
+    normalize_polygons, offset_polygon, path_to_polygon, paths_to_polygons,
+    point_line_distance, polygon_to_path, polygons_to_paths, resample_polygon,
+    rotate_polygon, rotate_polygons, scale_polygon, translate_bounds,
+    translate_polygon, translate_polygons, ClipperPath, ClipperPaths, GeoScale,
+    JoinStyle,
 };
 pub use polygon3d::{
     deduplicate_polyline_3d, fillet_polyline_3d, flip_polygon_3d,
@@ -75,7 +76,13 @@ pub use polygon3d::{
     get_polygons_group_difference_3d, get_polygons_group_intersection_3d,
     get_polygons_intersection_3d, get_polygons_union_3d,
     get_polyline_end_tangent_3d, offset_polygon_3d, offset_polyline_3d,
-    rotate_polygon_3d, rotate_polygons_3d, scale_polygon_3d,
-    translate_polygon_3d, translate_polygons_3d, walk_along_polygon_3d,
+    resample_polyline_3d, rotate_polygon_3d, rotate_polygons_3d,
+    scale_polygon_3d, translate_polygon_3d, translate_polygons_3d,
+    walk_along_polygon_3d,
+};
+pub use polyline::{
+    get_polyline_bounds, get_polyline_closest_point, resample_polyline,
+    split_polyline_at_v_junctions, trim_polyline_angular_ends,
+    trim_polyline_at,
 };
 pub use rect::{do_rects_intersect, get_combined_rect};

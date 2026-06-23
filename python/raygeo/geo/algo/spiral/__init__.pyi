@@ -12,10 +12,10 @@ import collections.abc
 from raygeo.geo.algo import helix
 from raygeo.geo import types
 __all__ = [
-    "generate_spiral",
+    "generate_spiral_3d",
 ]
 
-def generate_spiral(center: tuple[float, float], z: float, start_radius: float, end_radius: float, revolutions: float, direction: helix.HelixDirection, angular_step: float = 0.1, start_angle: float = 0) -> list[tuple[float, float, float]]:
+def generate_spiral_3d(center: tuple[float, float], z: float, start_radius: float, end_radius: float, revolutions: float, direction: helix.HelixDirection, angular_step: float = 0.1, start_angle: float = 0) -> list[tuple[float, float, float]]:
     r"""
     Generate a flat Archimedean spiral at constant Z.
     

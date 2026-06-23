@@ -3,7 +3,7 @@
 import matplotlib.pyplot as plt
 
 from raygeo.geo.algo.helix import HelixDirection
-from raygeo.geo.algo.spiral import generate_spiral
+from raygeo.geo.algo.spiral import generate_spiral_3d
 
 
 def _extract(pts):
@@ -11,7 +11,7 @@ def _extract(pts):
 
 
 def generate_inward_outward():
-    pts = generate_spiral(
+    pts = generate_spiral_3d(
         center=(0, 0),
         z=0,
         start_radius=5,
@@ -32,7 +32,7 @@ def generate_inward_outward():
     ax1.set_zlabel("Z")
     ax1.view_init(elev=25, azim=-60)
 
-    pts2 = generate_spiral(
+    pts2 = generate_spiral_3d(
         center=(0, 0),
         z=0,
         start_radius=30,
@@ -57,7 +57,7 @@ def generate_inward_outward():
 __docs_target__ = ["raygeo.geo.algo.spiral.md"]
 __images__ = [
     {
-        "heading": "generate_spiral",
+        "heading": "generate_spiral_3d",
         "caption": "Outward (CCW) and inward (CW) flat Archimedean spirals",
         "function": generate_inward_outward,
     },

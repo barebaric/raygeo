@@ -10,7 +10,7 @@ from raygeo.geo.algo.smooth import (
     shortcut_path,
     smooth_circularly,
     smooth_path,
-    smooth_polyline,
+    smooth_polyline_3d,
     smooth_sub_segment,
 )
 from raygeo.geo.types import Point3D
@@ -106,18 +106,18 @@ class TestSmoothCircularly:
 
 
 class TestSmoothPolyline:
-    """Tests for smooth_polyline function."""
+    """Tests for smooth_polyline_3d function."""
 
     def test_zero_amount_returns_input(self):
         """Zero amount should return input unchanged."""
         points: list[Point3D] = [(0, 0, 0), (10, 0, 0), (20, 10, 0)]
-        result = smooth_polyline(points, 0, 45)
+        result = smooth_polyline_3d(points, 0, 45)
         assert result == points
 
     def test_short_input_returns_unchanged(self):
         """Less than 3 points should return input unchanged."""
         points: list[Point3D] = [(0, 0, 0), (10, 0, 0)]
-        result = smooth_polyline(points, 50, 45)
+        result = smooth_polyline_3d(points, 50, 45)
         assert result == points
 
     def test_preserves_open_path_endpoints(self):
@@ -129,7 +129,7 @@ class TestSmoothPolyline:
             (30, 0, 0),
             (40, 0, 0),
         ]
-        result = smooth_polyline(points, 50, 45, is_closed=False)
+        result = smooth_polyline_3d(points, 50, 45, is_closed=False)
         assert result[0] == points[0]
         assert result[-1] == points[-1]
 
@@ -142,7 +142,7 @@ class TestSmoothPolyline:
             (0, 10, 0),
             (0, 0, 0),
         ]
-        result = smooth_polyline(points, 30, 120, is_closed=None)
+        result = smooth_polyline_3d(points, 30, 120, is_closed=None)
         assert result[0] == result[-1]
 
     def test_sharp_corner_preserved(self):
@@ -152,7 +152,7 @@ class TestSmoothPolyline:
             (50, 0, 0),
             (100, 50, 0),
         ]
-        result = smooth_polyline(points, 30, 95, is_closed=False)
+        result = smooth_polyline_3d(points, 30, 95, is_closed=False)
         corner_point = (50, 0, 0)
         closest = min(result, key=lambda p: math.dist(p, corner_point))
         dist = math.dist(closest, corner_point)
@@ -166,7 +166,7 @@ class TestSmoothPolyline:
             (100, 50, 0),
             (150, 50, 0),
         ]
-        result = smooth_polyline(points, 40, 95, is_closed=False)
+        result = smooth_polyline_3d(points, 40, 95, is_closed=False)
         dull_corner = (100, 50, 0)
         closest = min(result, key=lambda p: math.dist(p, dull_corner))
         dist = math.dist(closest, dull_corner)
@@ -180,7 +180,7 @@ class TestSmoothPolyline:
             (10, 10, 0),
             (0, 10, 0),
         ]
-        result = smooth_polyline(points, 50, 45, is_closed=True)
+        result = smooth_polyline_3d(points, 50, 45, is_closed=True)
         assert len(result) >= 3
         assert result[0] == result[-1]
 
@@ -193,7 +193,7 @@ class TestSmoothPolyline:
             (30, 0, 7),
             (40, 0, 7),
         ]
-        result = smooth_polyline(points, 50, 45, is_closed=False)
+        result = smooth_polyline_3d(points, 50, 45, is_closed=False)
         for point in result:
             assert abs(point[2] - 7.0) < 1e-10
 

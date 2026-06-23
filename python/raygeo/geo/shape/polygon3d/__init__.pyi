@@ -26,6 +26,7 @@ __all__ = [
     "get_polyline_end_tangent_3d",
     "offset_polygon_3d",
     "offset_polyline_3d",
+    "resample_polyline_3d",
     "rotate_polygon_3d",
     "rotate_polygons_3d",
     "scale_polygon_3d",
@@ -256,6 +257,17 @@ def offset_polyline_3d(polyline: collections.abc.Sequence[types.Point3D], distan
         to their single edge.
     :returns: Offset polyline with the same number of vertices.
     :complexity: O(n)
+    """
+
+def resample_polyline_3d(points: collections.abc.Sequence[types.Point3D], max_segment_length: float, is_closed: bool) -> list[types.Point3D]:
+    r"""
+    Resample a 3D polyline with a maximum segment length.
+    
+    :param points: Sequence of 3D points.
+    :param max_segment_length: Maximum allowed segment length.
+    :param is_closed: Whether the polyline is closed.
+    :returns: Resampled 3D points.
+    :complexity: O(n) time, O(n) space
     """
 
 def rotate_polygon_3d(polygon: collections.abc.Sequence[types.Point3D], angle: float) -> types.Polygon3D:

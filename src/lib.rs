@@ -94,7 +94,7 @@ pub use ops::state::State;
 pub use ops::types::{MarkerCmd, MoveCmd, OpCategory, OpNode, StateCmd};
 pub use types::{
     BezierControls, BezierSplit, Command, ContourData, CubicBezier, Edge,
-    GeometryPair, Point, Point3D, Polygon, Polygon3D, Rect3D, Segment3D,
+    GeometryPair, Point, Point3D, Polygon, Polygon3D, Rect, Rect3D, Segment3D,
     WindingOrder,
 };
 

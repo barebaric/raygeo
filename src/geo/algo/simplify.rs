@@ -1,7 +1,10 @@
 use crate::types::{Command, Point, Point3D};
 
 /// Simplify a sequence of 3D points using the Ramer-Douglas-Peucker algorithm.
-pub fn simplify_polyline(points: &[Point3D], tolerance: f64) -> Vec<Point3D> {
+pub fn simplify_polyline_3d(
+    points: &[Point3D],
+    tolerance: f64,
+) -> Vec<Point3D> {
     let n = points.len();
     if n < 3 {
         return points.to_vec();

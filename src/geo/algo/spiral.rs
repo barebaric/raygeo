@@ -22,7 +22,7 @@ pub struct SpiralOptions {
 ///
 /// Returns an empty vec when `start_radius == end_radius`,
 /// `revolutions <= 0`, or `angular_step <= 0`.
-pub fn generate_spiral(opts: &SpiralOptions) -> Vec<Point3D> {
+pub fn generate_spiral_3d(opts: &SpiralOptions) -> Vec<Point3D> {
     if (opts.start_radius - opts.end_radius).abs() < 1e-12
         || opts.revolutions <= 0.0
         || opts.angular_step <= 0.0

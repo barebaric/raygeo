@@ -11,28 +11,6 @@ tolerance.
 
 ## Functions
 
-### `simplify_polyline()`
-
-```python
-simplify_polyline(
-    points: Sequence[types.Point],
-    tolerance: float,
-) -> types.Polygon
-```
-
-Simplify a polyline using the Ramer-Douglas-Peucker algorithm.
-
-| Parameter    | Type                    | Description                         |
-| ------------ | ----------------------- | ----------------------------------- |
-| `points`     | `Sequence[types.Point]` | Sequence of (x, y) points.          |
-| `tolerance`  | `float`                 | Simplification tolerance.           |
-| _Returns_    | `types.Polygon`         | Simplified point sequence.          |
-| _Complexity_ |                         | O(n log n) average time, O(n) space |
-
-![Simplify and linearize](images/geo-algo-simplify-overview.png)
-
-_Simplify and linearize_
-
 ### `simplify_polyline_3d()`
 
 ```python
@@ -52,6 +30,10 @@ The simplification uses XY distance, but preserves Z coordinates of kept points.
 | `tolerance`  | `float`                   | Simplification tolerance.           |
 | _Returns_    | `types.Polygon3D`         | Simplified 3D point sequence.       |
 | _Complexity_ |                           | O(n log n) average time, O(n) space |
+
+![Simplify and linearize](images/geo-algo-simplify-overview.png)
+
+_Simplify and linearize_
 
 ![3D polyline simplification preserving Z coordinates](images/geo-algo-simplify-3d.png)
 

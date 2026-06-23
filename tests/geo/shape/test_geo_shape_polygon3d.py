@@ -7,7 +7,7 @@ Verifies Z preservation through all boolean and offset operations.
 import math
 from typing import List, Tuple
 
-from raygeo.geo.shape.point import circumcenter
+from raygeo.geo.shape.point import circumcenter_3d
 from raygeo.geo.shape.polygon3d import (
     deduplicate_polyline_3d,
     fillet_polyline_3d,
@@ -893,7 +893,7 @@ class TestFilletPolyline3D:
 
         assert len(arc_pts) >= 1
         mid = arc_pts[len(arc_pts) // 2]
-        center = circumcenter(t_in, mid, t_out)
+        center = circumcenter_3d(t_in, mid, t_out)
         assert center is not None, "arc points are collinear"
         for p in result[1:-1]:
             assert abs(dist(p, center) - 1.5) < 1e-6, (

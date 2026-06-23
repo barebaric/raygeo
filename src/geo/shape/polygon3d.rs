@@ -1099,3 +1099,45 @@ pub fn get_polyline_end_tangent_3d(poly: &[Point3D]) -> Point {
         d / len
     }
 }
+
+/// Resample a 3D polyline so that no segment is longer than
+/// `max_segment_length`.  New points are added by linear interpolation
+/// along existing segments.  Writes into a caller-provided buffer to
+/// reuse allocations across calls.
+pub fn resample_polyline_3d(
+    points: &[Point3D],
+    max_segment_length: f64,
+    is_closed: bool,
+    out: &mut Vec<Point3D>,
+) {
+    out.clear();
+    if points.is_empty() {
+        return;
+    }
+
+    out.push(points[0]);
+    let num_segments = if is_closed {
+        points.len()
+    } else {
+        points.len() - 1
+    };
+
+    for i in 0..num_segments {
+        let p1 = points[i];
+        let p2 = points[(i + 1) % points.len()];
+        let dist = p1.distance(p2);
+
+        if dist > max_segment_length {
+            let num_sub = (dist / max_segment_length).ceil() as i32;
+            for j in 1..num_sub {
+                let t = j as f64 / num_sub as f64;
+                let pt = p1.lerp(p2, t);
+                out.push(Point3D::new(pt.x, pt.y, p1.z));
+            }
+        }
+
+        if !(is_closed && i == num_segments - 1) {
+            out.push(p2);
+        }
+    }
+}

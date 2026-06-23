@@ -118,10 +118,10 @@ Fit a polyline of points with arc and line primitives.
 
 _Fitted primitives_
 
-### `flatten_to_points()`
+### `flatten_to_points_3d()`
 
 ```python
-flatten_to_points(
+flatten_to_points_3d(
     geometry: geo.Geometry,
     tolerance: float,
 ) -> list[list[types.Point3D]]

@@ -1,6 +1,6 @@
 use std::f64::consts::PI;
 
-use crate::geo::algo::simplify::simplify_polyline;
+use crate::geo::algo::simplify::simplify_polyline_3d;
 use crate::geo::shape::arc::is_arc_clockwise;
 use crate::geo::shape::arc::{get_arc_angles, linearize_arc};
 use crate::geo::shape::bezier::linearize_bezier_from_params;
@@ -96,7 +96,7 @@ pub fn linearize_data(data: &[Command], tolerance: f64) -> Vec<Command> {
 /// sampling arcs and beziers into line segments at the given resolution.
 /// No vertex reduction is performed; use [`linearize_geometry`] for a
 /// simplified polyline approximation.
-pub fn flatten_to_points(
+pub fn flatten_to_points_3d(
     data: &[Command],
     resolution: f64,
 ) -> Vec<Vec<Point3D>> {
@@ -167,7 +167,7 @@ pub fn flatten_to_points(
 }
 
 /// Converts geometry commands to a line-only polyline approximation by first
-/// densely sampling curves via [`flatten_to_points`] (at `tolerance * 0.25`),
+/// densely sampling curves via [`flatten_to_points_3d`] (at `tolerance * 0.25`),
 /// then reducing vertices with the Ramer-Douglas-Peucker algorithm.
 pub fn linearize_geometry(data: &[Command], tolerance: f64) -> Vec<Command> {
     if data.is_empty() {
@@ -175,7 +175,7 @@ pub fn linearize_geometry(data: &[Command], tolerance: f64) -> Vec<Command> {
     }
 
     let resolution = tolerance * 0.25;
-    let subpaths_points = flatten_to_points(data, resolution);
+    let subpaths_points = flatten_to_points_3d(data, resolution);
 
     let mut new_cmds: Vec<Command> = Vec::new();
     for points in &subpaths_points {
@@ -183,7 +183,7 @@ pub fn linearize_geometry(data: &[Command], tolerance: f64) -> Vec<Command> {
             continue;
         }
 
-        let simplified = simplify_polyline(points, tolerance);
+        let simplified = simplify_polyline_3d(points, tolerance);
 
         if !simplified.is_empty() {
             let p0 = simplified[0];
@@ -714,7 +714,7 @@ pub fn fit_curves(
 
     let flush_chain = |chain: &mut Vec<Point3D>, cmds: &mut Vec<Command>| {
         if chain.len() > 1 {
-            let simplified = simplify_polyline(chain, tolerance);
+            let simplified = simplify_polyline_3d(chain, tolerance);
             let primitives = fit_points_with_primitives(&simplified, tolerance);
             cmds.extend(primitives);
         }
@@ -825,7 +825,7 @@ pub fn optimize_path_from_array(
                 let primitives = fit_points_with_primitives(chain, tolerance);
                 cmds.extend(primitives);
             } else {
-                let simplified = simplify_polyline(chain, tolerance);
+                let simplified = simplify_polyline_3d(chain, tolerance);
                 for p in simplified.iter().skip(1) {
                     cmds.push(Command::Line { end: *p });
                 }

@@ -13,7 +13,7 @@ from raygeo.geo import types
 import typing
 __all__ = [
     "HelixDirection",
-    "generate_helix",
+    "generate_helix_3d",
 ]
 
 @typing.final
@@ -21,7 +21,7 @@ class HelixDirection(enum.Enum):
     Cw = ...
     Ccw = ...
 
-def generate_helix(center: tuple[float, float], start_radius: float, end_radius: float, z_start: float, z_end: float, pitch: float, direction: HelixDirection, angular_step: float = 0.1, min_revolutions: int | None = None) -> list[tuple[float, float, float]]:
+def generate_helix_3d(center: tuple[float, float], start_radius: float, end_radius: float, z_start: float, z_end: float, pitch: float, direction: HelixDirection, angular_step: float = 0.1, min_revolutions: int | None = None) -> list[tuple[float, float, float]]:
     r"""
     Generate a 3D helical polyline.
     

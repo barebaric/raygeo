@@ -18,7 +18,7 @@ __all__ = [
     "fit_circle_to_points",
     "fit_points_recursive",
     "fit_points_with_primitives",
-    "flatten_to_points",
+    "flatten_to_points_3d",
     "generate_arc_between_two_points",
     "generate_linking_arc",
     "get_polyline_arc_deviation",
@@ -79,7 +79,7 @@ def fit_points_with_primitives(points: collections.abc.Sequence[types.Point3D], 
     :complexity: O(n log n) average time, O(n) space
     """
 
-def flatten_to_points(geometry: geo.Geometry, tolerance: float) -> list[list[types.Point3D]]:
+def flatten_to_points_3d(geometry: geo.Geometry, tolerance: float) -> list[list[types.Point3D]]:
     r"""
     Flatten curves into linear segments.
     

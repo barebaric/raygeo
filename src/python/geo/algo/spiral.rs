@@ -30,7 +30,7 @@ pub fn register(algo_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     import raygeo.geo.types
     import raygeo.geo.algo.helix as helix
 
-    def generate_spiral(
+    def generate_spiral_3d(
         center: tuple[float, float],
         z: float,
         start_radius: float,
@@ -59,7 +59,7 @@ pub fn register(algo_mod: &Bound<'_, PyModule>) -> PyResult<()> {
 "#,
     module = "raygeo.geo.algo.spiral"
 )]
-#[pyfunction(name = "generate_spiral")]
+#[pyfunction(name = "generate_spiral_3d")]
 #[pyo3(signature = (
     center,
     z,
@@ -91,6 +91,6 @@ fn generate_spiral_py(
         angular_step,
         start_angle,
     };
-    let pts = spiral::generate_spiral(&opts);
+    let pts = spiral::generate_spiral_3d(&opts);
     pts.into_iter().map(|p| (p.x, p.y, p.z)).collect()
 }

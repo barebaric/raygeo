@@ -7,6 +7,7 @@ pub(crate) mod line;
 pub(crate) mod point;
 pub(crate) mod polygon;
 pub(crate) mod polygon3d;
+pub(crate) mod polyline;
 pub(crate) mod rect;
 
 pyo3_stub_gen::module_doc!("raygeo.geo.shape", "{}", MODULE_DOC);
@@ -33,6 +34,7 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     point::register(&shape_mod)?;
     polygon::register(&shape_mod)?;
     polygon3d::register(&shape_mod)?;
+    polyline::register(&shape_mod)?;
     rect::register(&shape_mod)?;
 
     m.add_submodule(&shape_mod)?;
@@ -46,6 +48,10 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
         .set_item("raygeo.geo.shape.circle", &shape_mod.getattr("circle")?)?;
     sys_modules
         .set_item("raygeo.geo.shape.polygon", &shape_mod.getattr("polygon")?)?;
+    sys_modules.set_item(
+        "raygeo.geo.shape.polyline",
+        &shape_mod.getattr("polyline")?,
+    )?;
     sys_modules
         .set_item("raygeo.geo.shape.line", &shape_mod.getattr("line")?)?;
     sys_modules
@@ -60,6 +66,8 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
         .set_item("raygeo.shape.circle", &shape_mod.getattr("circle")?)?;
     sys_modules
         .set_item("raygeo.shape.polygon", &shape_mod.getattr("polygon")?)?;
+    sys_modules
+        .set_item("raygeo.shape.polyline", &shape_mod.getattr("polyline")?)?;
     sys_modules.set_item("raygeo.shape.line", &shape_mod.getattr("line")?)?;
     sys_modules.set_item("raygeo.shape.rect", &shape_mod.getattr("rect")?)?;
     sys_modules.set_item("raygeo.shape.point", &shape_mod.getattr("point")?)?;

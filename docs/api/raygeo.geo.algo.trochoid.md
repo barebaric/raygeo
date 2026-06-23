@@ -11,10 +11,10 @@ diameter, engagement angle, and step-over ratio.
 
 ## Functions
 
-### `trochoid_along()`
+### `trochoid_along_3d()`
 
 ```python
-trochoid_along(
+trochoid_along_3d(
     carrier: Sequence[tuple[float, float]],
     tool_diameter: float,
     engagement_angle_deg: float = 90,

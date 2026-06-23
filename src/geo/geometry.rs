@@ -304,7 +304,7 @@ impl Geometry {
         self.data = crate::geo::math::apply_affine_transform_to_array(
             &self.data, *matrix,
         );
-        self.last_move_to = crate::geo::shape::point::transform_point(
+        self.last_move_to = crate::geo::shape::point::transform_point_3d(
             *matrix,
             self.last_move_to,
         );

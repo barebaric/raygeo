@@ -13,10 +13,10 @@ when the ramp angle exceeds the maximum.
 
 ## Functions
 
-### `generate_ramp()`
+### `generate_ramp_3d()`
 
 ```python
-generate_ramp(
+generate_ramp_3d(
     start: tuple[float, float],
     end: tuple[float, float],
     z_start: float,

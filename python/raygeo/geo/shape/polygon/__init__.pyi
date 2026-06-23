@@ -33,8 +33,6 @@ __all__ = [
     "get_polygons_group_intersection",
     "get_polygons_intersection",
     "get_polygons_union",
-    "get_polyline_bounds",
-    "get_polyline_closest_point",
     "get_segment_swept_polygon",
     "is_almost_equal",
     "is_point_inside_polygon",
@@ -52,21 +50,17 @@ __all__ = [
     "polygons_intersect",
     "polygons_intersect_numpy",
     "resample_polygon",
-    "resample_polyline",
     "rotate_polygon",
     "rotate_polygon_numpy",
     "rotate_polygons",
     "rotate_polygons_numpy",
     "scale_polygon",
-    "split_polyline_at_v_junctions",
     "to_clipper_numpy",
     "translate_bounds",
     "translate_polygon",
     "translate_polygon_numpy",
     "translate_polygons",
     "translate_polygons_numpy",
-    "trim_polyline_angular_ends",
-    "trim_polyline_at",
 ]
 
 @typing.final
@@ -345,29 +339,6 @@ def get_polygons_union(polygons: collections.abc.Sequence[types.Polygon]) -> lis
     :complexity: O(n log n)
     """
 
-def get_polyline_bounds(polyline: collections.abc.Sequence[types.Point]) -> types.Rect:
-    r"""
-    Get the bounding rectangle of an open polyline.
-    
-    :param polyline: Polyline as (x, y) points.
-    :returns: Bounding rectangle as (x_min, y_min, x_max, y_max).
-    :complexity: O(n)
-    """
-
-def get_polyline_closest_point(polyline: collections.abc.Sequence[tuple[float, float]], point: tuple[float, float]) -> tuple[int, float] | None:
-    r"""
-    Find the closest edge and parametric position on an open polyline.
-    
-    Each edge of the polyline is tested, and the closest one is
-    returned as ``(edge_index, t)`` where ``t`` in [0, 1] is the
-    parametric position along that edge.
-    
-    :param polyline: Open polyline as (x, y) points.
-    :param point: Query point (x, y).
-    :returns: ``(edge_index, t)`` or None if the polyline has fewer
-              than 2 points.
-    """
-
 def get_segment_swept_polygon(a: types.Point, b: types.Point, radius: float) -> list[types.Polygon]:
     r"""
     Compute the swept area of a line segment with a given radius.
@@ -544,21 +515,6 @@ def resample_polygon(polygon: collections.abc.Sequence[tuple[float, float]], spa
     :complexity: O(n * m)
     """
 
-def resample_polyline(polyline: collections.abc.Sequence[tuple[float, float]], max_len: float) -> list[tuple[float, float]]:
-    r"""
-    Resample an open 2D polyline so consecutive points are at most
-    *max_len* apart.
-    
-    New points are linearly interpolated along each segment that
-    exceeds the threshold.  The first and last points are always
-    preserved.
-    
-    :param polyline: Open polyline as (x, y) points.
-    :param max_len: Maximum allowed segment length.
-    :returns: Resampled polyline.
-    :complexity: O(n * m)
-    """
-
 def rotate_polygon(polygon: collections.abc.Sequence[types.Point], angle: float) -> types.Polygon:
     r"""
     Rotate a polygon by an angle.
@@ -608,20 +564,6 @@ def scale_polygon(polygon: collections.abc.Sequence[types.Point], scale: float, 
     :param scale_y: Y scale factor (optional).
     :returns: Scaled polygon.
     :complexity: O(n)
-    """
-
-def split_polyline_at_v_junctions(polyline: collections.abc.Sequence[tuple[float, float]], angle_threshold: float) -> list[list[tuple[float, float]]]:
-    r"""
-    Split a polyline at V-junction vertices where the interior
-    angle is much sharper than both neighbours.
-    
-    Each resulting sub-polyline is trimmed with
-    ``trim_polyline_angular_ends``.
-    
-    :param polyline: Sequence of (x, y) points.
-    :param angle_threshold: Angle threshold in radians.
-    :returns: List of sub-polylines.
-    :complexity: O(n) time, O(n) space
     """
 
 def to_clipper_numpy(polygon: collections.abc.Sequence[numpy.typing.NDArray]) -> list[tuple[int, int]]:
@@ -686,36 +628,5 @@ def translate_polygons_numpy(polygons: collections.abc.Sequence[numpy.typing.NDA
     :param dy: Y translation.
     :returns: List of translated numpy arrays.
     :complexity: O(n * m)
-    """
-
-def trim_polyline_angular_ends(polygon: collections.abc.Sequence[tuple[float, float]], start: int, length: int, angle_threshold_rad: float) -> tuple[int, int]:
-    r"""
-    Trim vertices from both ends of a contiguous subsequence where the
-    interior angle jumps sharply.
-    
-    Detects "transition" vertices at the boundary between two differently-
-    curved regions of a closed polygon.  The function iteratively trims
-    such vertices from the start and end of the subsequence until no more
-    trimming occurs or the sequence is too short.
-    
-    :param polygon: Closed polygon as (x, y) points.
-    :param start: Start index of the subsequence.
-    :param length: Length of the subsequence.
-    :param angle_threshold_rad: Angle threshold in radians.
-    :returns: ``(new_start, new_length)`` within the original polygon.
-    """
-
-def trim_polyline_at(polyline: collections.abc.Sequence[tuple[float, float]], a: tuple[float, float], b: tuple[float, float]) -> list[tuple[float, float]]:
-    r"""
-    Trim a polyline to the portion between two points.
-    
-    Each point is projected onto the nearest edge of the polyline.
-    The returned polyline goes from the projection of *a* to the
-    projection of *b*, preserving intermediate vertices.
-    
-    :param polyline: Open polyline as (x, y) points.
-    :param a: Start point to trim at.
-    :param b: End point to trim at.
-    :returns: Trimmed polyline.
     """
 

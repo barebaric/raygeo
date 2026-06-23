@@ -25,7 +25,7 @@ pub struct HelixOptions {
 ///
 /// Radius is interpolated linearly between start and end (conical helix when
 /// they differ). Returns an empty vec when `z_start <= z_end` (no descent).
-pub fn generate_helix(opts: &HelixOptions) -> Vec<Point3D> {
+pub fn generate_helix_3d(opts: &HelixOptions) -> Vec<Point3D> {
     let z_descent = opts.z_start - opts.z_end;
     if z_descent <= 0.0 || opts.pitch <= 0.0 || opts.angular_step <= 0.0 {
         return vec![];

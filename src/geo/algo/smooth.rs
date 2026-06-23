@@ -5,7 +5,8 @@
 
 use crate::geo::shape::does_path_sweep_intersect_polygon;
 use crate::geo::shape::line::get_angle_at_vertex;
-use crate::geo::shape::polygon::resample_polyline as resample_polyline_2d;
+use crate::geo::shape::polygon3d::resample_polyline_3d;
+use crate::geo::shape::polyline::resample_polyline as resample_polyline_2d;
 use crate::types::{Point, Point3D, Polygon};
 
 /// Compute a normalized Gaussian kernel based on smoothing amount.
@@ -103,53 +104,12 @@ pub fn smooth_circularly(
     }
 }
 
-/// Resample a polyline so that no segment is longer than `max_segment_length`.
-/// New points are added by linear interpolation along existing segments.
-/// Writes into a caller-provided buffer to reuse allocations across calls.
-pub fn resample_polyline(
-    points: &[Point3D],
-    max_segment_length: f64,
-    is_closed: bool,
-    out: &mut Vec<Point3D>,
-) {
-    out.clear();
-    if points.is_empty() {
-        return;
-    }
-
-    out.push(points[0]);
-    let num_segments = if is_closed {
-        points.len()
-    } else {
-        points.len() - 1
-    };
-
-    for i in 0..num_segments {
-        let p1 = points[i];
-        let p2 = points[(i + 1) % points.len()];
-        let dist = p1.distance(p2);
-
-        if dist > max_segment_length {
-            let num_sub = (dist / max_segment_length).ceil() as i32;
-            for j in 1..num_sub {
-                let t = j as f64 / num_sub as f64;
-                let pt = p1.lerp(p2, t);
-                out.push(Point3D::new(pt.x, pt.y, p1.z));
-            }
-        }
-
-        if !(is_closed && i == num_segments - 1) {
-            out.push(p2);
-        }
-    }
-}
-
 /// Smooth a polyline using Gaussian filtering with optional corner preservation.
 ///
 /// Angles sharper than `corner_angle_threshold` are preserved as anchors
 /// and not smoothed. The polyline is first resampled to ensure sufficient
 /// point density for the Gaussian kernel.
-pub fn smooth_polyline(
+pub fn smooth_polyline_3d(
     points: &[Point3D],
     amount: i32,
     corner_angle_threshold: f64,
@@ -182,7 +142,7 @@ pub fn smooth_polyline(
     };
     let max_len = (0.1_f64).max(sigma / 4.0);
     let mut prepared = Vec::new();
-    resample_polyline(work_points, max_len, is_closed, &mut prepared);
+    resample_polyline_3d(work_points, max_len, is_closed, &mut prepared);
     let num_points = prepared.len();
 
     if num_points < 3 {
@@ -351,7 +311,7 @@ pub fn smooth_path(
         .map(|p| Point3D::new(p.x, p.y, 0.0))
         .collect();
     let mut prepared: Vec<Point3D> = Vec::new();
-    resample_polyline(&pts_3d, max_len, false, &mut prepared);
+    resample_polyline_3d(&pts_3d, max_len, false, &mut prepared);
 
     let num = prepared.len();
     if num < 3 {
@@ -502,7 +462,7 @@ pub fn build_smoothed_path(
         let pts_3d: Vec<Point3D> =
             link.iter().map(|p| Point3D::new(p.x, p.y, 0.0)).collect();
         let mut current: Vec<Point3D> = Vec::new();
-        resample_polyline(&pts_3d, max_len, false, &mut current);
+        resample_polyline_3d(&pts_3d, max_len, false, &mut current);
         let n = current.len();
         if n >= 3 {
             let mut buf: Vec<Point3D> = Vec::with_capacity(n);

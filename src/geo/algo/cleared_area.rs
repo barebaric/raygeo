@@ -1,5 +1,5 @@
 use crate::geo::algo::offset::compute_inset_region;
-use crate::geo::algo::simplify::simplify_polyline;
+use crate::geo::algo::simplify::simplify_polyline_3d;
 use crate::geo::algo::spatial_grid2d::SpatialGrid;
 use crate::geo::shape::polygon::get_polygon_area;
 use crate::geo::shape::polygon::get_polygon_centroid;
@@ -194,7 +194,7 @@ impl ClearedArea {
             .filter_map(|p| {
                 let pts3d: Vec<Point3D> =
                     p.iter().map(|q| Point3D::new(q.x, q.y, 0.0)).collect();
-                let simplified = simplify_polyline(&pts3d, simplify_tol);
+                let simplified = simplify_polyline_3d(&pts3d, simplify_tol);
                 if simplified.len() < 3 {
                     None
                 } else {

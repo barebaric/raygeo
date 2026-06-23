@@ -64,7 +64,7 @@ impl PyHelixDirection {
     import collections.abc
     import raygeo.geo.types
 
-    def generate_helix(
+    def generate_helix_3d(
         center: tuple[float, float],
         start_radius: float,
         end_radius: float,
@@ -92,7 +92,7 @@ impl PyHelixDirection {
 "#,
     module = "raygeo.geo.algo.helix"
 )]
-#[pyfunction(name = "generate_helix")]
+#[pyfunction(name = "generate_helix_3d")]
 #[pyo3(signature = (
     center,
     start_radius,
@@ -127,6 +127,6 @@ fn generate_helix_py(
         angular_step,
         min_revolutions,
     };
-    let pts = helix::generate_helix(&opts);
+    let pts = helix::generate_helix_3d(&opts);
     pts.into_iter().map(|p| (p.x, p.y, p.z)).collect()
 }

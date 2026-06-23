@@ -29,7 +29,7 @@ const RAMP_POINT_SPACING: f64 = 0.1;
 /// If the angle of the direct ramp exceeds `max_ramp_angle_deg`, the ramp is
 /// extended in both directions (along the same line) so the descent satisfies
 /// the angle constraint.
-pub fn generate_ramp(opts: &RampOptions) -> Vec<Point3D> {
+pub fn generate_ramp_3d(opts: &RampOptions) -> Vec<Point3D> {
     let xy_dist = opts.start.distance(opts.end);
     let z_drop = opts.z_start - opts.z_end;
 

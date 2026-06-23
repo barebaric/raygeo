@@ -1,167 +1,157 @@
-from raygeo.geo.algo.simplify import simplify_polyline, simplify_polyline_3d
+from raygeo.geo.algo.simplify import simplify_polyline_3d
 
 
 def test_simplify_straight_line():
-    """Tests that collinear points on a straight line are removed."""
-    points = [(0, 0), (1, 1), (2, 2), (3, 3), (10, 10)]
+    """Collinear points on a straight line are removed."""
+    points = [(0, 0, 0), (1, 1, 0), (2, 2, 0), (3, 3, 0), (10, 10, 0)]
 
-    result = simplify_polyline(points, tolerance=0.001)
+    result = simplify_polyline_3d(points, tolerance=0.001)
     assert len(result) == 2
-    assert result[0] == (0, 0)
-    assert result[1] == (10, 10)
+    assert result[0] == (0, 0, 0)
+    assert result[1] == (10, 10, 0)
 
 
 def test_simplify_significant_corner():
-    """Tests that points forming a corner > tolerance are kept."""
-    points = [(0, 0), (5, 5), (10, 0)]
+    """Points forming a corner > tolerance are kept."""
+    points = [(0, 0, 0), (5, 5, 0), (10, 0, 0)]
 
-    result = simplify_polyline(points, tolerance=1.0)
+    result = simplify_polyline_3d(points, tolerance=1.0)
     assert len(result) == 3
-    assert result[1] == (5, 5)
+    assert result[1] == (5, 5, 0)
 
 
 def test_simplify_insignificant_bump():
-    """Tests that a small bump within tolerance is removed."""
-    points = [(0, 0), (5, 0.1), (10, 0)]
+    """A small bump within tolerance is removed."""
+    points = [(0, 0, 0), (5, 0.1, 0), (10, 0, 0)]
 
-    result = simplify_polyline(points, tolerance=0.5)
+    result = simplify_polyline_3d(points, tolerance=0.5)
     assert len(result) == 2
-    assert result[1] == (10, 0)
+    assert result[1] == (10, 0, 0)
 
 
 def test_simplify_zigzag_removal():
-    """Tests removal of high frequency zigzag noise within tolerance."""
-    points: list[tuple[float, float]] = [(0, 0)]
+    """High frequency zigzag noise within tolerance is removed."""
+    points: list[tuple[float, float, float]] = [(0, 0, 0)]
     for x in range(1, 10):
         y = 0.05 if x % 2 else -0.05
-        points.append((float(x), y))
-    points.append((10.0, 0.0))
+        points.append((float(x), y, 0.0))
+    points.append((10.0, 0.0, 0.0))
 
-    result = simplify_polyline(points, tolerance=0.1)
+    result = simplify_polyline_3d(points, tolerance=0.1)
     assert len(result) == 2
-    assert result[0] == (0, 0)
-    assert result[1] == (10, 0)
+    assert result[0] == (0, 0, 0)
+    assert result[1] == (10, 0, 0)
 
 
 def test_simplify_duplicate_points():
-    """Tests that consecutive duplicate points are removed/handled."""
-    points = [(0, 0), (0, 0), (10, 10), (10, 10)]
+    """Consecutive duplicate points are removed/handled."""
+    points = [(0, 0, 0), (0, 0, 0), (10, 10, 0), (10, 10, 0)]
 
-    result = simplify_polyline(points, tolerance=0.001)
+    result = simplify_polyline_3d(points, tolerance=0.001)
     assert len(result) == 2
-    assert result[0] == (0, 0)
-    assert result[1] == (10, 10)
+    assert result[0] == (0, 0, 0)
+    assert result[1] == (10, 10, 0)
 
 
-def test_simplify_empty_points():
-    """Tests that an empty point list is handled gracefully."""
-    result = simplify_polyline([], tolerance=0.1)
+def test_simplify_empty():
+    """Empty point list is handled gracefully."""
+    result = simplify_polyline_3d([], tolerance=0.1)
     assert result == []
 
 
 def test_simplify_single_segment():
-    """Tests that a single segment (2 points) is not reduced."""
-    points = [(0, 0), (10, 10)]
+    """A single segment (2 points) is not reduced."""
+    points = [(0, 0, 0), (10, 10, 0)]
 
-    result = simplify_polyline(points, tolerance=100.0)
+    result = simplify_polyline_3d(points, tolerance=100.0)
     assert len(result) == 2
-    assert result[0] == (0, 0)
-    assert result[1] == (10, 10)
+    assert result[0] == (0, 0, 0)
+    assert result[1] == (10, 10, 0)
 
 
 def test_simplify_three_points_all_kept():
-    """Tests that all 3 points are kept when deviation > tolerance."""
-    points = [(0, 0), (5, 5), (10, 0)]
+    """All 3 points are kept when deviation > tolerance."""
+    points = [(0, 0, 0), (5, 5, 0), (10, 0, 0)]
 
-    result = simplify_polyline(points, tolerance=0.1)
+    result = simplify_polyline_3d(points, tolerance=0.1)
     assert len(result) == 3
-    assert result[0] == (0, 0)
-    assert result[1] == (5, 5)
-    assert result[2] == (10, 0)
+    assert result[0] == (0, 0, 0)
+    assert result[1] == (5, 5, 0)
+    assert result[2] == (10, 0, 0)
 
 
 def test_simplify_three_points_middle_removed():
-    """Tests that middle point is removed when deviation < tolerance."""
-    points = [(0, 0), (5, 0.01), (10, 0)]
+    """Middle point is removed when deviation < tolerance."""
+    points = [(0, 0, 0), (5, 0.01, 0), (10, 0, 0)]
 
-    result = simplify_polyline(points, tolerance=0.1)
+    result = simplify_polyline_3d(points, tolerance=0.1)
     assert len(result) == 2
-    assert result[0] == (0, 0)
-    assert result[1] == (10, 0)
+    assert result[0] == (0, 0, 0)
+    assert result[1] == (10, 0, 0)
 
 
 def test_simplify_complex_shape():
-    """Tests simplification on a more complex point sequence."""
+    """Simplification on a more complex point sequence."""
     points = [
-        (0, 0),
-        (1, 0.1),
-        (2, -0.1),
-        (3, 0.05),
-        (4, -0.05),
-        (5, 5),
-        (6, 5.1),
-        (7, 4.9),
-        (10, 0),
+        (0, 0, 0),
+        (1, 0.1, 0),
+        (2, -0.1, 0),
+        (3, 0.05, 0),
+        (4, -0.05, 0),
+        (5, 5, 0),
+        (6, 5.1, 0),
+        (7, 4.9, 0),
+        (10, 0, 0),
     ]
 
-    result = simplify_polyline(points, tolerance=0.5)
+    result = simplify_polyline_3d(points, tolerance=0.5)
     assert len(result) == 6
-    assert result[0] == (0, 0)
-    assert result[1] == (4, -0.05)
-    assert result[2] == (5, 5)
-    assert result[3] == (6, 5.1)
-    assert result[4] == (7, 4.9)
-    assert result[5] == (10, 0)
+    assert result[0] == (0, 0, 0)
+    assert result[1] == (4, -0.05, 0)
+    assert result[2] == (5, 5, 0)
+    assert result[3] == (6, 5.1, 0)
+    assert result[4] == (7, 4.9, 0)
+    assert result[5] == (10, 0, 0)
 
 
 def test_simplify_zero_tolerance():
-    """Tests that zero tolerance keeps all points."""
-    points = [(0, 0), (5, 5), (10, 0)]
+    """Zero tolerance keeps all points."""
+    points = [(0, 0, 0), (5, 5, 0), (10, 0, 0)]
 
-    result = simplify_polyline(points, tolerance=0.0)
+    result = simplify_polyline_3d(points, tolerance=0.0)
     assert len(result) == 3
 
 
 def test_simplify_negative_tolerance():
-    """Tests that negative tolerance is treated as zero."""
-    points = [(0, 0), (5, 5), (10, 0)]
+    """Negative tolerance is treated as zero."""
+    points = [(0, 0, 0), (5, 5, 0), (10, 0, 0)]
 
-    result = simplify_polyline(points, tolerance=-1.0)
+    result = simplify_polyline_3d(points, tolerance=-1.0)
     assert len(result) == 3
 
 
 def test_simplify_large_tolerance():
-    """Tests that very large tolerance reduces to endpoints only."""
-    points = [(0, 0), (1, 1), (2, 2), (3, 3), (10, 10)]
+    """Very large tolerance reduces to endpoints only."""
+    points = [(0, 0, 0), (1, 1, 0), (2, 2, 0), (3, 3, 0), (10, 10, 0)]
 
-    result = simplify_polyline(points, tolerance=1000.0)
+    result = simplify_polyline_3d(points, tolerance=1000.0)
     assert len(result) == 2
-    assert result[0] == (0, 0)
-    assert result[1] == (10, 10)
+    assert result[0] == (0, 0, 0)
+    assert result[1] == (10, 10, 0)
 
 
 def test_simplify_vertical_line():
-    """Tests simplification on a vertical line."""
-    points = [(0, 0), (0, 1), (0, 2), (0, 3), (0, 10)]
-
-    result = simplify_polyline(points, tolerance=0.001)
-    assert len(result) == 2
-    assert result[0] == (0, 0)
-    assert result[1] == (0, 10)
-
-
-def test_simplify_3d_straight_line():
-    """3D: collinear points with varying Z preserve Z values."""
-    points = [(0, 0, 10), (1, 1, 20), (2, 2, 30), (3, 3, 40), (10, 10, 50)]
+    """A vertical line simplifies correctly."""
+    points = [(0, 0, 0), (0, 1, 0), (0, 2, 0), (0, 3, 0), (0, 10, 0)]
 
     result = simplify_polyline_3d(points, tolerance=0.001)
     assert len(result) == 2
-    assert result[0] == (0, 0, 10)
-    assert result[1] == (10, 10, 50)
+    assert result[0] == (0, 0, 0)
+    assert result[1] == (0, 10, 0)
 
 
-def test_simplify_3d_z_preserved_through_xy_simplification():
-    """3D: Z of corner kept when corner exceeds tolerance."""
+def test_simplify_z_preserved():
+    """Z of corner kept when corner exceeds tolerance."""
     points = [(0, 0, 1), (5, 5, 99), (10, 0, 2)]
 
     result = simplify_polyline_3d(points, tolerance=0.5)
@@ -169,8 +159,8 @@ def test_simplify_3d_z_preserved_through_xy_simplification():
     assert result[1] == (5, 5, 99)
 
 
-def test_simplify_3d_insignificant_xy_bump_drops_bump_z():
-    """3D: When a bump is removed in XY, its Z is also removed."""
+def test_simplify_xy_bump_drops_bump_z():
+    """When a bump is removed in XY, its Z is also removed."""
     points = [(0, 0, 1), (5, 0.1, 99), (10, 0, 2)]
 
     result = simplify_polyline_3d(points, tolerance=0.5)
@@ -179,14 +169,18 @@ def test_simplify_3d_insignificant_xy_bump_drops_bump_z():
     assert result[1] == (10, 0, 2)
 
 
-def test_simplify_3d_empty():
-    """3D: empty input returns empty."""
-    result = simplify_polyline_3d([], tolerance=0.1)
-    assert result == []
+def test_simplify_three_points_collinear_with_z():
+    """Collinear points with varying Z preserve Z values."""
+    points = [(0, 0, 10), (1, 1, 20), (2, 2, 30), (3, 3, 40), (10, 10, 50)]
+
+    result = simplify_polyline_3d(points, tolerance=0.001)
+    assert len(result) == 2
+    assert result[0] == (0, 0, 10)
+    assert result[1] == (10, 10, 50)
 
 
-def test_simplify_3d_all_z():
-    """3D: 2-point polyline (minimal case) preserves Z."""
+def test_simplify_two_points_z():
+    """2-point polyline (minimal case) preserves Z."""
     points = [(0, 0, 42), (10, 10, -5)]
 
     result = simplify_polyline_3d(points, tolerance=100.0)
@@ -195,8 +189,8 @@ def test_simplify_3d_all_z():
     assert result[1] == (10, 10, -5)
 
 
-def test_simplify_3d_mixed_z():
-    """3D: complex shape with varying Z values."""
+def test_simplify_mixed_z():
+    """Complex shape with varying Z values."""
     points = [
         (0, 0, 0),
         (1, 0.1, 10),
