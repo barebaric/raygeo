@@ -5,6 +5,7 @@ import math
 import matplotlib.pyplot as plt
 
 from raygeo.geo.algo.smooth import (
+    blend_tangent,
     build_smoothed_path,
     chaikin_corner_cut,
     compute_gaussian_kernel,
@@ -434,6 +435,67 @@ def generate_build_smoothed_path():
     return fig
 
 
+def generate_blend_tangent():
+    """Show blend_tangent inserting G1 extension points."""
+    link = [(0.0, 0.0), (100.0, 0.0)]
+    prev_tail = [(-20.0, 30.0), (0.0, 0.0)]
+    next_head = [(100.0, 0.0), (120.0, 30.0)]
+
+    result = blend_tangent(link, prev_tail, next_head, 10.0)
+
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
+
+    # Left: before blending
+    ax1.set_title("Before blend_tangent")
+    ax1.set_aspect("equal")
+    # Previous cut
+    px, py = zip(*prev_tail)
+    ax1.plot(px, py, "o-", color="blue", linewidth=2, label="Prev cut")
+    # Link (travel segment)
+    lx, ly = zip(*link)
+    ax1.plot(lx, ly, "s--", color="orange", linewidth=2.5, label="Link")
+    # Next cut
+    nx, ny = zip(*next_head)
+    ax1.plot(nx, ny, "o-", color="green", linewidth=2, label="Next cut")
+    # Mark the sharp junctions
+    ax1.plot(link[0][0], link[0][1], "ro", markersize=8, zorder=5)
+    ax1.plot(link[-1][0], link[-1][1], "ro", markersize=8, zorder=5)
+    ax1.legend(fontsize=8)
+    ax1.grid(True, alpha=0.3)
+
+    # Right: after blending
+    ax2.set_title("After blend_tangent")
+    ax2.set_aspect("equal")
+    px2, py2 = zip(*prev_tail)
+    ax2.plot(
+        px2, py2, "o-", color="blue", linewidth=2, alpha=0.4, label="Prev cut"
+    )
+    rx, ry = zip(*result)
+    ax2.plot(rx, ry, "s-", color="orange", linewidth=2.5, label="Blended link")
+    ax2.plot(result[0][0], result[0][1], "ro", markersize=8, zorder=5)
+    ax2.plot(result[-1][0], result[-1][1], "ro", markersize=8, zorder=5)
+    nx2, ny2 = zip(*next_head)
+    ax2.plot(
+        nx2, ny2, "o-", color="green", linewidth=2, alpha=0.4, label="Next cut"
+    )
+
+    # Highlight inserted points
+    if len(result) > 2:
+        interior = result[1:-1]
+        ix, iy = zip(*interior)
+        ax2.scatter(ix, iy, color="red", s=40, zorder=6, label="Extension pts")
+
+    ax2.legend(fontsize=8)
+    ax2.grid(True, alpha=0.3)
+
+    fig.suptitle(
+        f"blend_tangent — inserts {len(result) - 2} G1 extension points",
+        fontsize=12,
+    )
+    fig.tight_layout()
+    return fig
+
+
 __docs_target__ = ["raygeo.geo.algo.smooth.md"]
 __images__ = [
     {
@@ -487,5 +549,13 @@ __images__ = [
         "heading": "shortcut_path",
         "caption": "Iterative waypoint removal",
         "function": generate_shortcut_path,
+    },
+    {
+        "heading": "blend_tangent",
+        "caption": (
+            "``blend_tangent`` inserts tangent extension points at both ends"
+            " of a travel link to ensure G1 continuity at cut–travel junctions"
+        ),
+        "function": generate_blend_tangent,
     },
 ]

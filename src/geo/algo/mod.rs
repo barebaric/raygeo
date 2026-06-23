@@ -19,6 +19,7 @@ pub mod medial_axis;
 pub mod minkowski2d;
 pub mod nest2d;
 pub mod offset;
+pub mod ordering;
 pub mod overcut;
 pub mod planar;
 pub mod polylabel;
@@ -86,6 +87,7 @@ pub use offset::{
     compute_inset_region, concentric_offsets, find_deepest_cores,
     grow_geometry, grow_geometry_on_plane, offset_contour_group,
 };
+pub use ordering::order_nearest_neighbor;
 pub use overcut::apply_overcut;
 pub use polylabel::{find_largest_circle, polylabel};
 pub use project::{
@@ -95,9 +97,9 @@ pub use project::{
 pub use ramp::{generate_ramp, RampOptions, RampStyle};
 pub use simplify::{simplify_data, simplify_polyline};
 pub use smooth::{
-    build_smoothed_path, chaikin_corner_cut, compute_gaussian_kernel,
-    resample_polyline, smooth_circularly, smooth_path, smooth_polyline,
-    smooth_sub_segment,
+    blend_tangent, build_smoothed_path, chaikin_corner_cut,
+    compute_gaussian_kernel, resample_polyline, smooth_circularly, smooth_path,
+    smooth_polyline, smooth_sub_segment,
 };
 pub use spiral::{generate_spiral, SpiralOptions};
 pub use topology::{

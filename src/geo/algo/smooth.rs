@@ -527,6 +527,78 @@ pub fn build_smoothed_path(
     link
 }
 
+/// Insert tangent extension points at both ends of a connecting polyline
+/// to ensure it meets the adjacent polylines tangentially (G1 continuity
+/// at the junctions).
+///
+/// `prev_tail` — the last 2+ points of the preceding polyline (used to
+///   compute the exit tangent direction).
+/// `next_head` — the first 2+ points of the following polyline (used to
+///   compute the entry tangent direction).
+/// `margin` — controls how far the extension points are placed along
+///   the tangent direction (clamped to a fraction of the adjacent
+///   segment length).
+///
+/// Each end is processed independently: if the angle between the
+/// tangent direction and the polyline direction at the junction exceeds
+/// ≈ 25° (dot < 0.9), an intermediate point is inserted along the
+/// tangent to move the angle discontinuity away from the junction.
+pub fn blend_tangent(
+    link: &mut Vec<Point>,
+    prev_tail: &[Point],
+    next_head: &[Point],
+    margin: f64,
+) {
+    // Start junction: extend the previous polyline's tangent forward
+    // into the connecting polyline.
+    if link.len() >= 2 && prev_tail.len() >= 2 {
+        let prev_pt = prev_tail[prev_tail.len() - 2];
+        let curr = link[0];
+        let nxt = link[1];
+        let tx = curr.x - prev_pt.x;
+        let ty = curr.y - prev_pt.y;
+        let tlen = (tx * tx + ty * ty).sqrt();
+        let dx = nxt.x - curr.x;
+        let dy = nxt.y - curr.y;
+        let dlen = (dx * dx + dy * dy).sqrt();
+        if tlen > 1e-12 && dlen > 1e-12 {
+            let dot = (tx * dx + ty * dy) / (tlen * dlen);
+            if dot < 0.9 {
+                let d = margin.max(2.0).min(dlen * 0.4);
+                link.insert(
+                    1,
+                    Point::new(curr.x + tx / tlen * d, curr.y + ty / tlen * d),
+                );
+            }
+        }
+    }
+
+    // End junction: extend the next polyline's tangent backward into
+    // the connecting polyline.
+    if link.len() >= 2 && next_head.len() >= 2 {
+        let prev = link[link.len() - 2];
+        let curr = link[link.len() - 1];
+        let next = next_head[1];
+        let tx = next.x - curr.x;
+        let ty = next.y - curr.y;
+        let tlen = (tx * tx + ty * ty).sqrt();
+        let dx = curr.x - prev.x;
+        let dy = curr.y - prev.y;
+        let dlen = (dx * dx + dy * dy).sqrt();
+        if tlen > 1e-12 && dlen > 1e-12 {
+            let dot = (tx * dx + ty * dy) / (tlen * dlen);
+            if dot < 0.9 {
+                let d = margin.max(2.0).min(dlen * 0.4);
+                let last_idx = link.len() - 1;
+                link.insert(
+                    last_idx,
+                    Point::new(curr.x - tx / tlen * d, curr.y - ty / tlen * d),
+                );
+            }
+        }
+    }
+}
+
 fn approx_equal(a: f64, b: f64) -> bool {
     (a - b).abs() < 1e-12
 }

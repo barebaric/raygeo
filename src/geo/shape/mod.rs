@@ -63,7 +63,7 @@ pub use polygon::{
     resample_polygon, resample_polyline, rotate_polygon, rotate_polygons,
     scale_polygon, split_polyline_at_v_junctions, translate_bounds,
     translate_polygon, translate_polygons, trim_polyline_angular_ends,
-    ClipperPath, ClipperPaths, GeoScale, JoinStyle,
+    trim_polyline_at, ClipperPath, ClipperPaths, GeoScale, JoinStyle,
 };
 pub use polygon3d::{
     deduplicate_polyline_3d, fillet_polyline_3d, flip_polygon_3d,

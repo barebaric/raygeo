@@ -1,7 +1,7 @@
 ---
 title: raygeo.geo.algo.smooth
 sidebar_label: raygeo.geo.algo.smooth
-sidebar_position: 29
+sidebar_position: 30
 ---
 
 Polyline smoothing using Gaussian kernels.
@@ -10,6 +10,35 @@ Provides Gaussian kernel computation and circular/linear polyline smoothing with
 angle thresholds to preserve sharp features.
 
 ## Functions
+
+### `blend_tangent()`
+
+```python
+blend_tangent(
+    link: Sequence[tuple[float, float]],
+    prev_tail: Sequence[tuple[float, float]],
+    next_head: Sequence[tuple[float, float]],
+    margin: float,
+) -> list[tuple[float, float]]
+```
+
+Insert tangent extension points at both ends of a travel link.
+
+Returns a new link with points inserted to ensure the travel segment enters/exits the adjacent
+segments tangentially (G1 continuity).
+
+| Parameter   | Type                            | Description                                           |
+| ----------- | ------------------------------- | ----------------------------------------------------- |
+| `link`      | `Sequence[tuple[float, float]]` | Travel link path as a list of (x, y) tuples.          |
+| `prev_tail` | `Sequence[tuple[float, float]]` | Last 2+ points of the preceding cut.                  |
+| `next_head` | `Sequence[tuple[float, float]]` | First 2+ points of the following cut.                 |
+| `margin`    | `float`                         | Extension distance along the tangent direction.       |
+| _Returns_   | `list[tuple[float, float]]`     | Modified link with tangent extension points inserted. |
+
+![``blend_tangent`` inserts tangent extension points at both ends of a travel link to ensure G1 continuity at cut–travel junctions](images/geo-algo-smooth-blend-tangent.png)
+
+_`blend_tangent` inserts tangent extension points at both ends of a travel link to ensure G1
+continuity at cut–travel junctions_
 
 ### `build_smoothed_path()`
 

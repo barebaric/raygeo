@@ -10,9 +10,9 @@ sharp features.
 
 use super::super::flex_point::{points3d_to_tuples, PyPoint3D};
 use crate::geo::algo::smooth::{
-    build_smoothed_path, chaikin_corner_cut, compute_gaussian_kernel,
-    resample_polyline, shortcut_path, smooth_circularly, smooth_path,
-    smooth_polyline, smooth_sub_segment,
+    blend_tangent, build_smoothed_path, chaikin_corner_cut,
+    compute_gaussian_kernel, resample_polyline, shortcut_path,
+    smooth_circularly, smooth_path, smooth_polyline, smooth_sub_segment,
 };
 use crate::types::{Point, Point3D};
 use pyo3::prelude::*;
@@ -34,6 +34,7 @@ pub fn register(algo_mod: &Bound<'_, PyModule>) -> PyResult<()> {
         smooth_path_py,
         chaikin_corner_cut_py,
         build_smoothed_path_py,
+        blend_tangent_py,
     );
 
     algo_mod.add_submodule(&m)?;
@@ -401,4 +402,49 @@ fn build_smoothed_path_py(
     .into_iter()
     .map(|p| (p.x, p.y))
     .collect()
+}
+
+#[gen_stub_pyfunction(
+    python = r#"
+    import collections.abc
+
+    def blend_tangent(
+        link: collections.abc.Sequence[tuple[float, float]],
+        prev_tail: collections.abc.Sequence[tuple[float, float]],
+        next_head: collections.abc.Sequence[tuple[float, float]],
+        margin: float,
+    ) -> list[tuple[float, float]]:
+        """Insert tangent extension points at both ends of a connecting polyline.
+
+        Returns a new polyline with points inserted to ensure it meets
+        the adjacent polylines tangentially (G1 continuity).
+
+        :param link: Connecting polyline as a list of (x, y) tuples.
+        :param prev_tail: Last 2+ points of the preceding polyline.
+        :param next_head: First 2+ points of the following polyline.
+        :param margin: Extension distance along the tangent direction.
+        :returns: Modified polyline with tangent extension points inserted.
+        """
+"#,
+    module = "raygeo.geo.algo.smooth"
+)]
+#[pyfunction(name = "blend_tangent")]
+fn blend_tangent_py(
+    link: Vec<(f64, f64)>,
+    prev_tail: Vec<(f64, f64)>,
+    next_head: Vec<(f64, f64)>,
+    margin: f64,
+) -> Vec<(f64, f64)> {
+    let mut link_pts: Vec<Point> =
+        link.iter().map(|&(x, y)| Point::new(x, y)).collect();
+    let prev: Vec<Point> = prev_tail
+        .into_iter()
+        .map(|(x, y)| Point::new(x, y))
+        .collect();
+    let next: Vec<Point> = next_head
+        .into_iter()
+        .map(|(x, y)| Point::new(x, y))
+        .collect();
+    blend_tangent(&mut link_pts, &prev, &next, margin);
+    link_pts.into_iter().map(|p| (p.x, p.y)).collect()
 }

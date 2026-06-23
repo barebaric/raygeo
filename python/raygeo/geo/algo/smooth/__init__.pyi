@@ -12,6 +12,7 @@ import collections.abc
 from raygeo.geo import types
 import typing
 __all__ = [
+    "blend_tangent",
     "build_smoothed_path",
     "chaikin_corner_cut",
     "compute_gaussian_kernel",
@@ -22,6 +23,20 @@ __all__ = [
     "smooth_polyline",
     "smooth_sub_segment",
 ]
+
+def blend_tangent(link: collections.abc.Sequence[tuple[float, float]], prev_tail: collections.abc.Sequence[tuple[float, float]], next_head: collections.abc.Sequence[tuple[float, float]], margin: float) -> list[tuple[float, float]]:
+    r"""
+    Insert tangent extension points at both ends of a travel link.
+    
+    Returns a new link with points inserted to ensure the travel segment
+    enters/exits the adjacent segments tangentially (G1 continuity).
+    
+    :param link: Travel link path as a list of (x, y) tuples.
+    :param prev_tail: Last 2+ points of the preceding cut.
+    :param next_head: First 2+ points of the following cut.
+    :param margin: Extension distance along the tangent direction.
+    :returns: Modified link with tangent extension points inserted.
+    """
 
 def build_smoothed_path(last: tuple[float, float], first: tuple[float, float], waypoints: collections.abc.Sequence[tuple[float, float]] = [], uncleared: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]] = [], clearance: float = 1, smoothing_amount: int = 120) -> list[tuple[float, float]]:
     r"""

@@ -13,6 +13,7 @@ pub(crate) mod medial_axis;
 pub(crate) mod minkowski2d;
 pub(crate) mod nest2d;
 pub(crate) mod offset;
+pub(crate) mod ordering;
 pub(crate) mod overcut;
 pub(crate) mod polylabel;
 pub(crate) mod ramp;
@@ -73,6 +74,7 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     minkowski2d::register(&algo_mod)?;
     nest2d::register(&algo_mod)?;
     offset::register(&algo_mod)?;
+    ordering::register(&algo_mod)?;
     overcut::register(&algo_mod)?;
     polylabel::register(&algo_mod)?;
     ramp::register(&algo_mod)?;
@@ -107,14 +109,12 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
         "raygeo.geo.algo.intersect",
         &algo_mod.getattr("intersect")?,
     )?;
-    sys_modules.set_item(
-        "raygeo.geo.algo.minkowski2d",
-        &algo_mod.getattr("minkowski2d")?,
-    )?;
     sys_modules
         .set_item("raygeo.geo.algo.nest2d", &algo_mod.getattr("nest2d")?)?;
     sys_modules
         .set_item("raygeo.geo.algo.offset", &algo_mod.getattr("offset")?)?;
+    sys_modules
+        .set_item("raygeo.geo.algo.ordering", &algo_mod.getattr("ordering")?)?;
     sys_modules
         .set_item("raygeo.geo.algo.overcut", &algo_mod.getattr("overcut")?)?;
     sys_modules
@@ -134,6 +134,10 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     sys_modules.set_item(
         "raygeo.geo.algo.medial_axis",
         &algo_mod.getattr("medial_axis")?,
+    )?;
+    sys_modules.set_item(
+        "raygeo.geo.algo.minkowski2d",
+        &algo_mod.getattr("minkowski2d")?,
     )?;
     sys_modules.set_item(
         "raygeo.geo.algo.polylabel",

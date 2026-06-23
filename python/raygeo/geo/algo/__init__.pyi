@@ -42,6 +42,7 @@ from . import medial_axis
 from . import minkowski2d
 from . import nest2d
 from . import offset
+from . import ordering
 from . import overcut
 from . import polylabel
 from . import ramp
@@ -66,6 +67,7 @@ __all__ = [
     "minkowski2d",
     "nest2d",
     "offset",
+    "ordering",
     "overcut",
     "polylabel",
     "ramp",

@@ -3,6 +3,7 @@ import math
 import pytest
 
 from raygeo.geo.algo.smooth import (
+    blend_tangent,
     build_smoothed_path,
     chaikin_corner_cut,
     compute_gaussian_kernel,
@@ -479,3 +480,64 @@ class TestBuildSmoothedPath:
         # All direct connections skip over at least one obstacle,
         # so no interior point can be removed.
         assert len(result) == 5
+
+
+class TestBlendTangent:
+    """Tests for blend_tangent function."""
+
+    def test_sharp_angle_inserts_points(self):
+        """Sharp angle between polylines should insert extension points."""
+        link = [(0.0, 0.0), (100.0, 0.0)]
+        prev_tail = [(0.0, 50.0), (0.0, 0.0)]
+        next_head = [(100.0, 0.0), (100.0, 50.0)]
+        result = blend_tangent(link, prev_tail, next_head, 5.0)
+        assert len(result) > len(link)
+        assert result[0] == (0.0, 0.0)
+        assert result[1][1] < 0
+        assert result[-1] == (100.0, 0.0)
+        assert result[-2][1] < 0
+
+    def test_gentle_angle_unchanged(self):
+        """Gentle angle (dot >= 0.9) should leave link unchanged."""
+        link = [(0.0, 0.0), (100.0, 0.0)]
+        prev_tail = [(-100.0, 0.0), (0.0, 0.0)]
+        next_head = [(100.0, 0.0), (200.0, 0.0)]
+        result = blend_tangent(link, prev_tail, next_head, 5.0)
+        assert result == link
+
+    def test_empty_prev_tail(self):
+        """Empty prev_tail should only process end junction."""
+        link = [(0.0, 0.0), (100.0, 0.0)]
+        prev_tail: list[tuple[float, float]] = []
+        next_head = [(100.0, 0.0), (100.0, 50.0)]
+        result = blend_tangent(link, prev_tail, next_head, 5.0)
+        assert len(result) > len(link)
+        assert result[0] == (0.0, 0.0)
+        assert result[-1] == (100.0, 0.0)
+
+    def test_short_link_two_points(self):
+        """Link with exactly 2 points still works."""
+        link = [(0.0, 0.0), (100.0, 0.0)]
+        prev_tail = [(0.0, 50.0), (0.0, 0.0)]
+        next_head = [(100.0, 0.0), (100.0, 50.0)]
+        result = blend_tangent(link, prev_tail, next_head, 5.0)
+        assert len(result) >= 2
+        assert result[0] == (0.0, 0.0)
+        assert result[-1] == (100.0, 0.0)
+
+    def test_margin_value_affects_extension_distance(self):
+        """Larger margin should place extension points further out."""
+        link = [(0.0, 0.0), (100.0, 0.0)]
+        prev_tail = [(0.0, 50.0), (0.0, 0.0)]
+        next_head = [(100.0, 0.0), (100.0, 50.0)]
+
+        result_small = blend_tangent(link[:], prev_tail, next_head, 2.0)
+        result_large = blend_tangent(link[:], prev_tail, next_head, 10.0)
+
+        # Both should have inserted extension points
+        assert len(result_small) > 2
+        assert len(result_large) > 2
+        # The tangent extension at start should differ
+        ext_small = abs(result_small[1][1])
+        ext_large = abs(result_large[1][1])
+        assert ext_large > ext_small

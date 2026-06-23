@@ -17,9 +17,12 @@ use crate::geo::algo::fillet::{
 use crate::geo::algo::helix::{generate_helix, HelixDirection, HelixOptions};
 use crate::geo::algo::medial_axis::MedialAxis;
 use crate::geo::algo::offset::compute_inset_region;
+use crate::geo::algo::ordering::order_nearest_neighbor;
 use crate::geo::algo::polylabel::find_largest_circle;
 use crate::geo::algo::ramp::{generate_ramp, RampOptions, RampStyle};
-use crate::geo::algo::smooth::{build_smoothed_path, chaikin_corner_cut};
+use crate::geo::algo::smooth::{
+    blend_tangent, build_smoothed_path, chaikin_corner_cut,
+};
 use crate::geo::algo::spiral::{generate_spiral, SpiralOptions};
 use crate::geo::shape::arc::get_polyline_turn_sign;
 use crate::geo::shape::line::longest_line_through_point;
@@ -917,35 +920,7 @@ fn build_link_segments(
     let order: Vec<usize> = if preserve_order || arcs.is_empty() {
         (0..arcs.len()).collect()
     } else {
-        let mut used = vec![false; arcs.len()];
-        let mut o = Vec::with_capacity(arcs.len());
-        let start_idx = (0..arcs.len())
-            .max_by(|&i, &j| arcs[i].len().cmp(&arcs[j].len()))
-            .unwrap_or(0);
-        o.push(start_idx);
-        used[start_idx] = true;
-        while o.len() < arcs.len() {
-            let last_end = *arcs[*o.last().unwrap()].last().unwrap();
-            let mut best = None;
-            let mut best_d2 = f64::MAX;
-            for (i, arc) in arcs.iter().enumerate() {
-                if used[i] || arc.len() < 2 {
-                    continue;
-                }
-                let d2 = (arc[0] - last_end).length_squared();
-                if d2 < best_d2 {
-                    best_d2 = d2;
-                    best = Some(i);
-                }
-            }
-            if let Some(i) = best {
-                o.push(i);
-                used[i] = true;
-            } else {
-                break;
-            }
-        }
-        o
+        order_nearest_neighbor(arcs)
     };
 
     for &oi in &order {
@@ -995,68 +970,16 @@ fn build_link_segments(
                 vec![last, first]
             };
 
-            // Tangent extensions: insert points along the cut tangent
-            // direction at both ends of the travel link.  This makes
-            // the travel exit/enter the arc tangentially (0° angle at
-            // the junction).  The original sharp angle moves to the
-            // tangent extension point where round_travel_corners can
-            // round it.
+            // Tangent extensions for G1 continuity at junctions.
             let mut link = link;
-
-            // Start junction: extend the previous cut's tangent.
-            if link.len() >= 2 && !segments.is_empty() {
+            let next_head: Vec<Point> = arc.to_vec();
+            if !segments.is_empty() {
                 let prev_cut = &segments.last().unwrap().points;
-                if prev_cut.len() >= 2 {
-                    let prev_pt = prev_cut[prev_cut.len() - 2];
-                    let curr = link[0];
-                    let nxt = link[1];
-                    let tx = curr.x - prev_pt.x;
-                    let ty = curr.y - prev_pt.y;
-                    let tlen = (tx * tx + ty * ty).sqrt();
-                    let dx = nxt.x - curr.x;
-                    let dy = nxt.y - curr.y;
-                    let dlen = (dx * dx + dy * dy).sqrt();
-                    if tlen > 1e-12 && dlen > 1e-12 {
-                        let dot = (tx * dx + ty * dy) / (tlen * dlen);
-                        if dot < 0.9 {
-                            let d = safe_margin.max(2.0).min(dlen * 0.4);
-                            link.insert(
-                                1,
-                                Point::new(
-                                    curr.x + tx / tlen * d,
-                                    curr.y + ty / tlen * d,
-                                ),
-                            );
-                        }
-                    }
-                }
-            }
-
-            // End junction: extend the next cut's tangent backward.
-            if link.len() >= 2 && arc.len() >= 2 {
-                let prev = link[link.len() - 2];
-                let curr = link[link.len() - 1];
-                let next = arc[1];
-                let tx = next.x - curr.x;
-                let ty = next.y - curr.y;
-                let tlen = (tx * tx + ty * ty).sqrt();
-                let dx = curr.x - prev.x;
-                let dy = curr.y - prev.y;
-                let dlen = (dx * dx + dy * dy).sqrt();
-                if tlen > 1e-12 && dlen > 1e-12 {
-                    let dot = (tx * dx + ty * dy) / (tlen * dlen);
-                    if dot < 0.9 {
-                        let d = safe_margin.max(2.0).min(dlen * 0.4);
-                        let last_idx = link.len() - 1;
-                        link.insert(
-                            last_idx,
-                            Point::new(
-                                curr.x - tx / tlen * d,
-                                curr.y - ty / tlen * d,
-                            ),
-                        );
-                    }
-                }
+                let prev_tail: Vec<Point> =
+                    prev_cut.iter().map(|p| Point::new(p.x, p.y)).collect();
+                blend_tangent(&mut link, &prev_tail, &next_head, safe_margin);
+            } else {
+                blend_tangent(&mut link, &[], &next_head, safe_margin);
             }
 
             // Round any remaining sharp corners (including the angles
