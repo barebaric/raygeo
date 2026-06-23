@@ -4,9 +4,7 @@ sidebar_label: raygeo
 sidebar_position: 1
 ---
 
-![Various geometry shapes and operations](images/geo-playground.png)
-
-_Various geometry shapes and operations_ RayGeo — 2D/3D geometry engine for CAD/CAM applications.
+RayGeo — 2D/3D geometry engine for CAD/CAM applications.
 
 ## Layered architecture
 

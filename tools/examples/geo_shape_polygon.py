@@ -13,6 +13,7 @@ from raygeo.geo.shape.polygon import (
     does_path_sweep_intersect_polygon,
     get_circle_polygon,
     get_polygon_centroid,
+    get_polygon_closest_point,
     get_polygon_convex_hull,
     get_polygon_group_bounds,
     get_polygons_closest_point,
@@ -381,6 +382,46 @@ def generate_group_bounds():
     return fig11
 
 
+def generate_polygon_closest_point():
+    """Closest point on a single polygon."""
+    poly = [(10, 10), (90, 10), (90, 70), (10, 70)]
+    test_points = [(50, 60), (30, 20), (120, 40), (50, 40), (120, 80)]
+
+    fig, ax = plt.subplots(figsize=(7, 6))
+
+    arr = list(poly) + [poly[0]]
+    ax.plot(*zip(*arr), "k-", linewidth=2, label="Polygon")
+    ax.fill(*zip(*arr), facecolor="#eef", alpha=0.3)
+
+    for pt in test_points:
+        res = get_polygon_closest_point(poly, pt[0], pt[1])
+        ax.plot(pt[0], pt[1], "o", color="steelblue", markersize=8)
+        if res:
+            _t, (cx, cy), _d2 = res
+            ax.plot(cx, cy, "r*", markersize=10)
+            ax.plot(
+                [pt[0], cx],
+                [pt[1], cy],
+                "-",
+                color="crimson",
+                alpha=0.5,
+                linewidth=1,
+            )
+
+    ax.plot([], [], "o", color="steelblue", label="Query point")
+    ax.plot([], [], "r*", markersize=10, label="Closest boundary point")
+    ax.plot([], [], "-", color="crimson", alpha=0.5, label="Distance")
+    ax.set_title("get_polygon_closest_point — Boundary Distance")
+    ax.set_xlabel("X")
+    ax.set_ylabel("Y")
+    ax.set_aspect("equal")
+    ax.legend(fontsize=8)
+    ax.grid(True, alpha=0.3)
+
+    fig.tight_layout()
+    return fig
+
+
 def generate_closest_point():
     """Closest point on multiple polygons."""
     polys = [
@@ -492,6 +533,14 @@ __images__ = [
         "heading": "get_polygon_convex_hull",
         "caption": "``get_polygon_convex_hull`` wraps polygon in convex hull",
         "function": generate_convex_hull,
+    },
+    {
+        "heading": "get_polygon_closest_point",
+        "caption": (
+            "``get_polygon_closest_point`` finds the nearest boundary"
+            " point to a given coordinate"
+        ),
+        "function": generate_polygon_closest_point,
     },
     {
         "heading": "get_polygon_group_bounds",

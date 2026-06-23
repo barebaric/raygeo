@@ -8,6 +8,7 @@ from mpl_toolkits.mplot3d import art3d
 
 from raygeo.geo.shape.polygon3d import (
     fillet_polyline_3d,
+    resample_polyline_3d,
     flip_polygon_3d,
     get_polygon_area_3d,
     get_polygon_bounds_3d,
@@ -704,6 +705,57 @@ def generate_walk_along_polygon():
     return fig
 
 
+def generate_resample():
+    """Resample a 3D polyline with a maximum segment length."""
+    zigzag = [(10.0, 20.0), (40.0, 70.0), (70.0, 25.0), (90.0, 65.0)]
+    zigzag_3d = [(x, y, 0.0) for x, y in zigzag]
+
+    resampled = resample_polyline_3d(zigzag_3d, 8.0, False)
+
+    fig_rs, (ax_rs1, ax_rs2) = plt.subplots(1, 2, figsize=(12, 5))
+    for ax in [ax_rs1, ax_rs2]:
+        ax.set_aspect("equal")
+        ax.set_xlim(0, 100)
+        ax.set_ylim(0, 100)
+        ax.grid(True, alpha=0.3)
+
+    zx, zy = zip(*zigzag)
+    ax_rs1.plot(
+        zx,
+        zy,
+        "o-",
+        color="tomato",
+        linewidth=2,
+        markersize=7,
+        label=f"Original ({len(zigzag)} pts)",
+    )
+    for i, (x, y) in enumerate(zigzag):
+        ax_rs1.annotate(
+            str(i),
+            (x, y),
+            textcoords="offset points",
+            xytext=(5, 5),
+            fontsize=9,
+        )
+    ax_rs1.set_title("Original polyline (long segments)", fontsize=11)
+
+    rx = [p[0] for p in resampled]
+    ry = [p[1] for p in resampled]
+    ax_rs2.plot(
+        rx,
+        ry,
+        "o-",
+        color="forestgreen",
+        linewidth=2,
+        markersize=3,
+        label=f"Resampled ({len(resampled)} pts)",
+    )
+    ax_rs2.set_title("After resample_polyline_3d(max_seg=8.0)", fontsize=11)
+
+    fig_rs.tight_layout()
+    return fig_rs
+
+
 def generate_closest_point_3d():
     """Closest point on multiple 3D polygons."""
     polys = [
@@ -859,6 +911,11 @@ __images__ = [
         "heading": "walk_along_polyline_3d",
         "caption": "Walk along a 3D polyline by a given arc length",
         "function": generate_walk_along,
+    },
+    {
+        "heading": "resample_polyline_3d",
+        "caption": "Resample a 3D polyline with a max segment length",
+        "function": generate_resample,
     },
     {
         "heading": "get_polygons_closest_point_3d",

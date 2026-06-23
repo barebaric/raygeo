@@ -278,6 +278,10 @@ Find the closest point on a polygon boundary to (x, y).
 | `y`       | `float`                                                | Y coordinate.                                          |
 | _Returns_ | `tuple[float, tuple[float, float], float] &#124; None` | (t, (cx, cy), distance_squared) or None if degenerate. |
 
+![``get_polygon_closest_point`` finds the nearest boundary point to a given coordinate](images/geo-shape-polygon-polygon-closest-point.png)
+
+_`get_polygon_closest_point` finds the nearest boundary point to a given coordinate_
+
 ### `get_polygon_convex_hull()`
 
 ```python

@@ -9,7 +9,6 @@ from raygeo.geo.algo.offset import offset_contour_group
 from raygeo.geo.algo.polylabel import find_largest_circle, polylabel
 from raygeo.geo.shape.polygon import (
     JoinStyle,
-    get_polygon_closest_point,
     get_polygon_signed_area,
     is_point_inside_polygon,
     point_line_distance,
@@ -294,45 +293,6 @@ def generate_largest_circle():
     return fig4
 
 
-def generate_closest_point():
-    """Polygon closest point."""
-    poly = [(10, 10), (90, 10), (90, 70), (10, 70)]
-    test_points = [(50, 60), (30, 20), (120, 40), (50, 40), (120, 80)]
-
-    fig5, ax9 = plt.subplots(figsize=(7, 6))
-
-    arr = list(poly) + [poly[0]]
-    ax9.plot(*zip(*arr), "k-", linewidth=2, label="Polygon")
-    ax9.fill(*zip(*arr), facecolor="#eef", alpha=0.3)
-
-    for pt in test_points:
-        res = get_polygon_closest_point(poly, pt[0], pt[1])
-        ax9.plot(pt[0], pt[1], "o", color="steelblue", markersize=8)
-        if res:
-            _t, (cx, cy), _d2 = res
-            ax9.plot(cx, cy, "r*", markersize=10)
-            ax9.plot(
-                [pt[0], cx],
-                [pt[1], cy],
-                "-",
-                color="crimson",
-                alpha=0.5,
-                linewidth=1,
-            )
-
-    ax9.plot([], [], "o", color="steelblue", label="Query point")
-    ax9.plot([], [], "r*", markersize=10, label="Closest boundary point")
-    ax9.plot([], [], "-", color="crimson", alpha=0.5, label="Distance")
-    ax9.set_title("get_polygon_closest_point — Boundary Distance")
-    ax9.set_xlabel("X")
-    ax9.set_ylabel("Y")
-    ax9.set_aspect("equal")
-    ax9.legend(fontsize=8)
-    ax9.grid(True, alpha=0.3)
-
-    fig5.tight_layout()
-    return fig5
-
 
 __docs_target__ = ["raygeo.geo.algo.polylabel.md"]
 __images__ = [
@@ -369,13 +329,5 @@ __images__ = [
         ),
         "function": generate_largest_circle,
     },
-    {
-        "heading": "get_polygon_closest_point",
-        "caption": (
-            "get_polygon_closest_point finds the nearest boundary"
-            " point to a given coordinate — used by find_largest_circle"
-            " to compute the inscribed radius"
-        ),
-        "function": generate_closest_point,
-    },
+
 ]

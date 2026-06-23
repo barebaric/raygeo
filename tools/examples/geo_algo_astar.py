@@ -231,7 +231,7 @@ __images__ = [
         "function": generate_multiple_obstacles,
     },
     {
-        "heading": "obstacle_margin",
+        "heading": "find_path",
         "caption": (
             "Increasing the obstacle margin (right) pushes the path"
             " further from obstacles compared to no margin (left)"

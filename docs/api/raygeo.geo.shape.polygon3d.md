@@ -455,6 +455,10 @@ Resample a 3D polyline with a maximum segment length.
 | _Returns_            | `list[types.Point3D]`     | Resampled 3D points.            |
 | _Complexity_         |                           | O(n) time, O(n) space           |
 
+![Resample a 3D polyline with a max segment length](images/geo-shape-polygon3d-resample.png)
+
+_Resample a 3D polyline with a max segment length_
+
 ### `rotate_polygon_3d()`
 
 ```python

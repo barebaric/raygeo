@@ -15,8 +15,6 @@ from raygeo.geo.algo.smooth import (
     smooth_polyline_3d,
     smooth_sub_segment,
 )
-from raygeo.geo.shape.polygon3d import resample_polyline_3d
-
 
 def generate_overview():
     """Smooth overview."""
@@ -91,56 +89,6 @@ def generate_gaussian_kernel():
     fig_k.tight_layout()
     return fig_k
 
-
-def generate_resample():
-    """Resample."""
-    zigzag = [(10.0, 20.0), (40.0, 70.0), (70.0, 25.0), (90.0, 65.0)]
-    zigzag_3d = [(x, y, 0.0) for x, y in zigzag]
-
-    resampled = resample_polyline_3d(zigzag_3d, 8.0, False)
-
-    fig_rs, (ax_rs1, ax_rs2) = plt.subplots(1, 2, figsize=(12, 5))
-    for ax in [ax_rs1, ax_rs2]:
-        ax.set_aspect("equal")
-        ax.set_xlim(0, 100)
-        ax.set_ylim(0, 100)
-        ax.grid(True, alpha=0.3)
-
-    zx, zy = zip(*zigzag)
-    ax_rs1.plot(
-        zx,
-        zy,
-        "o-",
-        color="tomato",
-        linewidth=2,
-        markersize=7,
-        label=f"Original ({len(zigzag)} pts)",
-    )
-    for i, (x, y) in enumerate(zigzag):
-        ax_rs1.annotate(
-            str(i),
-            (x, y),
-            textcoords="offset points",
-            xytext=(5, 5),
-            fontsize=9,
-        )
-    ax_rs1.set_title("Original polyline (long segments)", fontsize=11)
-
-    rx = [p[0] for p in resampled]
-    ry = [p[1] for p in resampled]
-    ax_rs2.plot(
-        rx,
-        ry,
-        "o-",
-        color="forestgreen",
-        linewidth=2,
-        markersize=3,
-        label=f"Resampled ({len(resampled)} pts)",
-    )
-    ax_rs2.set_title("After resample_polyline_3d(max_seg=8.0)", fontsize=11)
-
-    fig_rs.tight_layout()
-    return fig_rs
 
 
 def generate_circular():
@@ -524,11 +472,6 @@ __images__ = [
         "heading": "compute_gaussian_kernel",
         "caption": "Gaussian kernel weights",
         "function": generate_gaussian_kernel,
-    },
-    {
-        "heading": "resample_polyline_3d",
-        "caption": "Polyline resampling",
-        "function": generate_resample,
     },
     {
         "heading": "smooth_circularly",

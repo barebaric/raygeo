@@ -66,3 +66,8 @@ _A_ finds a path around a central obstacle when the direct route is blocked\*
 
 _A_ threading a path between multiple disconnected obstacles — the algorithm explores the free cells
 and finds an optimal route\*
+
+![Increasing the obstacle margin (right) pushes the path further from obstacles compared to no margin (left)](images/geo-algo-astar-obstacle-margin.png)
+
+_Increasing the obstacle margin (right) pushes the path further from obstacles compared to no margin
+(left)_

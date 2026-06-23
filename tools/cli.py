@@ -103,7 +103,11 @@ def _inject_images_into_api(api_dir: Path, images_dir: Path, inline_map: dict):
                 section_pattern = f"### `{heading}()`"
                 pos = content.find(section_pattern)
                 if pos == -1:
-                    continue
+                    raise ValueError(
+                        f"Heading '{heading}()' not found in {md_file}. "
+                        "Check that the heading matches a function or "
+                        "property name in the API docs."
+                    )
                 section_end = content.find(
                     "\n### ", pos + len(section_pattern)
                 )
