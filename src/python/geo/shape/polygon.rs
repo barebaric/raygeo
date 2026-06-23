@@ -6,17 +6,17 @@ use super::super::flex_point::{
 };
 use super::super::types::NormalizePolygonsResult;
 use crate::geo::shape::polygon::{
-    apply_minimum_curvature, clean_polygon, does_path_sweep_intersect_polygon,
-    flip_polygon, flip_polygons, get_circle_polygon,
-    get_polygon_boundary_distance, get_polygon_bounds, get_polygon_centroid,
-    get_polygon_closest_point, get_polygon_convex_hull, get_polygon_edges,
-    get_polygon_group_bounds, get_polygon_perimeter, get_polygon_signed_area,
-    get_polygon_vertex_centroid, get_polygons_closest_point,
-    get_polygons_difference, get_polygons_group_difference,
-    get_polygons_group_intersection, get_polygons_intersection,
-    get_polygons_union, get_segment_swept_polygon, is_almost_equal,
-    is_point_inside_polygon, is_polygon_clockwise, is_polygon_convex,
-    normalize_polygons, offset_polygon, point_line_distance,
+    apply_minimum_curvature, clean_polygon, compute_polygon_bounds,
+    does_path_sweep_intersect_polygon, flip_polygon, flip_polygons,
+    get_circle_polygon, get_polygon_boundary_distance, get_polygon_bounds,
+    get_polygon_centroid, get_polygon_closest_point, get_polygon_convex_hull,
+    get_polygon_edges, get_polygon_group_bounds, get_polygon_perimeter,
+    get_polygon_signed_area, get_polygon_vertex_centroid,
+    get_polygons_closest_point, get_polygons_difference,
+    get_polygons_group_difference, get_polygons_group_intersection,
+    get_polygons_intersection, get_polygons_union, get_segment_swept_polygon,
+    is_almost_equal, is_point_inside_polygon, is_polygon_clockwise,
+    is_polygon_convex, normalize_polygons, offset_polygon, point_line_distance,
     polygons_intersect, resample_polygon, rotate_polygon, rotate_polygons,
     scale_polygon, translate_bounds, translate_polygon, translate_polygons,
     JoinStyle,
@@ -650,7 +650,13 @@ fn does_path_sweep_intersect_polygon_py(
     let path_pts: Vec<Point> =
         path.iter().map(|&(x, y)| Point::new(x, y)).collect();
     let obs = extract_polygons(obstacles)?;
-    Ok(does_path_sweep_intersect_polygon(&path_pts, radius, &obs))
+    let obs_bounds = compute_polygon_bounds(&obs);
+    Ok(does_path_sweep_intersect_polygon(
+        &path_pts,
+        radius,
+        &obs,
+        &obs_bounds,
+    ))
 }
 
 #[gen_stub_pyfunction(

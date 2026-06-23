@@ -12,6 +12,8 @@
 //! Handles containment hierarchies (holes within solids) correctly by
 //! offsetting solids and holes independently and subtracting holes from solids.
 
+use prof_macros::prof;
+
 use glam::{DMat4, DQuat, DVec3};
 
 use crate::geo::algo::intersect::check_intersection_from_array;
@@ -434,6 +436,7 @@ fn find_deepest_cores_by_offset(valid_tool_area: &[Polygon]) -> Vec<Point> {
 /// The boundary is inset (shrunk) by `radius`, and each obstacle is
 /// expanded (grown) by `radius` and subtracted from the inset
 /// boundary.  Returns `(region_polygons, total_area)`.
+#[prof]
 pub fn compute_inset_region(
     boundary: &Polygon,
     radius: f64,

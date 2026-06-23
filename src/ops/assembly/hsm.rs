@@ -10,7 +10,11 @@
 //! module is the orchestrator that decides what to cut, in what order,
 //! and how to traverse it.
 
+use crate::prof::prof_report;
+use prof_macros::prof;
+
 use crate::geo::algo::cleared_area::ClearedArea;
+
 use crate::geo::algo::fillet::descending_radius_fillet;
 use crate::geo::algo::helix::{
     generate_helix_3d, HelixDirection, HelixOptions,
@@ -26,11 +30,11 @@ use crate::geo::algo::smooth::{
 use crate::geo::algo::spiral::{generate_spiral_3d, SpiralOptions};
 use crate::geo::shape::line::longest_line_through_point;
 use crate::geo::shape::polygon::{
-    does_path_sweep_intersect_polygon, get_circle_polygon, get_polygon_area,
-    get_polygon_boundary_distance, get_polygon_bounds, get_polygon_centroid,
-    get_polygon_closest_point, get_polygon_group_bounds,
-    get_polygon_vertex_centroid, get_polygons_group_difference,
-    get_segment_swept_polygon,
+    compute_polygon_bounds, does_path_sweep_intersect_polygon,
+    get_circle_polygon, get_polygon_area, get_polygon_boundary_distance,
+    get_polygon_bounds, get_polygon_centroid, get_polygon_closest_point,
+    get_polygon_group_bounds, get_polygon_vertex_centroid,
+    get_polygons_group_difference, get_segment_swept_polygon,
 };
 use crate::geo::shape::polyline::{
     get_polyline_bounds, split_polyline_at_v_junctions,
@@ -38,7 +42,7 @@ use crate::geo::shape::polyline::{
 };
 use crate::ops::container::Ops;
 use crate::ops::state::State;
-use crate::types::{Point, Point3D, Polygon};
+use crate::types::{Point, Point3D, Polygon, Rect};
 
 const MAX_WAVEFRONT_ITERATIONS: usize = 1000;
 const DERIV_THRESHOLD: f64 = 0.436_332_312_998_582_4;
@@ -46,49 +50,19 @@ const V_JUNCTION_THRESHOLD: f64 = 0.1; // upstream processes MUST provide higher
 
 // ── Cutting-arc extraction ─────────────────────────────────────
 
-/// Extract the outer (cutting) arc from a bite polygon.
+/// Find the longest contiguous run of outer vertices from pre-computed
+/// boundary distances.
 ///
-/// The bite is a crescent between the cleared frontier and the expanded
-/// boundary.  The cutting arc is the longest contiguous run of bite
-/// vertices that lie *outside* all cleared fragments.
+/// `n` is `bite.len()`, `dists` has length `n` with the squared distance
+/// from each bite vertex to the nearest cleared boundary.
 ///
-/// Uses a static distance threshold (1e-4).  When no vertex clears that
-/// threshold the function falls back to a relative threshold (30 % of
-/// the maximum distance) so that the outermost ridge of even a tight
-/// sliver is identified.
-///
-/// Returns `(arc_vertices, cut_start, cut_len)` where `arc_vertices` is
-/// the contiguous slice of `bite` forming the outer arc, `cut_start`
-/// is the index into `bite`, and `cut_len` is the number of vertices
-/// in the arc.  Returns `None` when the bite is degenerate (no outer
-/// arc found).
-pub fn find_cutting_arc(
-    bite: &Polygon,
-    cleared_fragments: &[Polygon],
+/// Returns `(arc_vertices, cut_start, cut_len)` — see
+/// [`find_cutting_arc`] for details.
+fn find_cutting_arc_from_dists(
+    bite: &[Point],
+    n: usize,
+    dists: &[f64],
 ) -> Option<(Vec<Point>, usize, usize)> {
-    let n = bite.len();
-    if n < 3 {
-        return None;
-    }
-
-    // Compute actual distances from each bite vertex to the nearest
-    // cleared fragment boundary.
-    let dists: Vec<f64> = bite
-        .iter()
-        .map(|p| {
-            cleared_fragments
-                .iter()
-                .filter_map(|frag| {
-                    get_polygon_closest_point(frag, p.x, p.y)
-                        .map(|(_, _, d2)| d2)
-                })
-                .fold(f64::MAX, f64::min)
-        })
-        .collect();
-
-    // Determine the threshold: prefer the static 1e-4, but if no
-    // vertex passes it, relax to 30 % of the maximum distance so
-    // that the outermost ridge of a tight sliver is still found.
     let max_d = dists.iter().copied().fold(0.0, f64::max);
     let threshold = if dists.iter().any(|d| *d > 1e-4) {
         1e-4
@@ -157,6 +131,52 @@ pub fn find_cutting_arc(
 
     let len = vertices.len();
     Some((vertices, cut_start, len))
+}
+
+/// Extract the outer (cutting) arc from a bite polygon, computing
+/// each vertex's distance from the cleared boundary via `dist_fn`.
+fn find_cutting_arc_with(
+    bite: &[Point],
+    n: usize,
+    dist_fn: impl Fn(f64, f64) -> f64,
+) -> Option<(Vec<Point>, usize, usize)> {
+    if n < 3 {
+        return None;
+    }
+    let dists: Vec<f64> = bite.iter().map(|p| dist_fn(p.x, p.y)).collect();
+    find_cutting_arc_from_dists(bite, n, &dists)
+}
+
+/// Extract the outer (cutting) arc from a bite polygon.
+///
+/// The bite is a crescent between the cleared frontier and the expanded
+/// boundary.  The cutting arc is the longest contiguous run of bite
+/// vertices that lie *outside* all cleared fragments.
+///
+/// Uses a static distance threshold (1e-4).  When no vertex clears that
+/// threshold the function falls back to a relative threshold (30 % of
+/// the maximum distance) so that the outermost ridge of even a tight
+/// sliver is identified.
+///
+/// Returns `(arc_vertices, cut_start, cut_len)` where `arc_vertices` is
+/// the contiguous slice of `bite` forming the outer arc, `cut_start`
+/// is the index into `bite`, and `cut_len` is the number of vertices
+/// in the arc.  Returns `None` when the bite is degenerate (no outer
+/// arc found).
+#[prof]
+pub fn find_cutting_arc(
+    bite: &Polygon,
+    cleared_fragments: &[Polygon],
+) -> Option<(Vec<Point>, usize, usize)> {
+    let n = bite.len();
+    find_cutting_arc_with(bite, n, |x, y| {
+        cleared_fragments
+            .iter()
+            .filter_map(|frag| {
+                get_polygon_closest_point(frag, x, y).map(|(_, _, d2)| d2)
+            })
+            .fold(f64::MAX, f64::min)
+    })
 }
 
 // ── Entry strategy ─────────────────────────────────────────────
@@ -328,6 +348,7 @@ pub struct AdaptiveWavefrontOptions {
 ///
 /// Each ring fragment is emitted as `MoveTo` (first point) + `LineTo`
 /// (rest), all at height `z`, with `cut_state` applied.
+#[prof]
 pub fn adaptive_wavefronts(
     cleared: &mut ClearedArea,
     opts: &AdaptiveWavefrontOptions,
@@ -380,6 +401,7 @@ pub fn adaptive_wavefronts(
 
 /// Build Ops from a 3-D polyline: apply state, MoveTo first point,
 /// LineTo the rest.
+#[prof]
 fn points_to_ops(path: &[Point3D], cut_state: &State) -> Ops {
     let mut ops = Ops::new();
     if path.is_empty() {
@@ -419,6 +441,7 @@ struct MotionSegment {
 /// and `MoveTo` commands (at `safe_z`) for travel, with `cut_state` and
 /// `travel_state` applied respectively.
 #[allow(clippy::too_many_arguments)]
+#[prof]
 pub fn link_arcs_to_ops(
     arcs: &[Vec<Point>],
     uncleared: &[Polygon],
@@ -497,6 +520,7 @@ pub struct WavefrontGraph {
 ///
 /// Branches split when an island separates the frontier and merge
 /// back into a single branch when the island is cleared.
+#[prof]
 pub fn split_ordered_wavefronts(
     cleared: &mut ClearedArea,
     step_over: f64,
@@ -571,6 +595,7 @@ pub fn split_ordered_wavefronts(
 }
 
 /// Convert a global bite index to (pass_index, bite_index_within_pass).
+#[prof]
 fn global_to_local(global: usize, offsets: &[usize]) -> (usize, usize) {
     for (pass, &off) in offsets.iter().enumerate() {
         let next = if pass + 1 < offsets.len() {
@@ -611,6 +636,7 @@ struct BiteOrderCtx<'a> {
 ///
 /// Each iteration expands the frontier and extracts cutting arcs.
 /// Returns per-pass data, arc data, and pass indices for each arc.
+#[prof]
 fn collect_bites(
     cleared: &mut ClearedArea,
     step_over: f64,
@@ -647,19 +673,23 @@ fn collect_bites(
             break;
         }
 
+        let mut any_arc = false;
         let mut bite_arcs: Vec<Vec<usize>> = Vec::with_capacity(bites.len());
         for bite in &bites {
             let mut arcs = Vec::new();
             if let Some((ref arc, _, _)) =
-                find_cutting_arc(bite, cleared.fragments())
+                find_cutting_arc_with(bite, bite.len(), |x, y| {
+                    cleared.closest_boundary_distance_sq(x, y)
+                })
             {
                 if arc.len() >= 3 {
+                    any_arc = true;
                     arcs.push(all_arcs.len());
                     all_arcs.push(arc.clone());
                     all_arc_pass.push(pass_idx);
                 }
             }
-            // When find_cutting_arc returns None the bite is either
+            // When no arc is found the bite is either
             // fully inside the cleared area (all vertices at distance
             // zero) or has too few outer vertices (< 3).  In both
             // cases the material is still tracked via
@@ -673,6 +703,13 @@ fn collect_bites(
         bite_arcs_per_pass.push(bite_arcs);
 
         cleared.add_cleared_polygons(bite_polys_per_pass.last().unwrap());
+
+        // If no bite in this pass produced a cutting arc, all remaining
+        // bites are Clipper2 slivers — real corners always have at least
+        // one outer vertex.  Stop to avoid processing phantom passes.
+        if !any_arc {
+            break;
+        }
     }
 
     (
@@ -684,6 +721,7 @@ fn collect_bites(
 }
 
 /// Compute global bite offsets and total bite count from per-pass data.
+#[prof]
 fn compute_bite_offsets(
     bite_polys_per_pass: &[Vec<Polygon>],
 ) -> (Vec<usize>, usize) {
@@ -700,6 +738,7 @@ fn compute_bite_offsets(
 ///
 /// Each bite in pass N+1 is assigned its nearest boundary-sharing
 /// bite in pass N as its parent, forming a forest.
+#[prof]
 fn build_parent_tree(
     bite_polys_per_pass: &[Vec<Polygon>],
     bite_offsets: &[usize],
@@ -743,6 +782,7 @@ fn build_parent_tree(
 ///
 /// Starts from pass-0 roots nearest to `entry`, follows children in
 /// distance-from-entry order, then picks up stragglers.
+#[prof]
 fn order_bites_dfs(ctx: &BiteOrderCtx, total_bites: usize) -> OrderedBites {
     // Each bite has at most one parent (tree property).
     // Start from pass-0 roots (nearest to entry first).
@@ -816,6 +856,7 @@ fn order_bites_dfs(ctx: &BiteOrderCtx, total_bites: usize) -> OrderedBites {
 /// Emits arcs for the current bite, then visits children
 /// in distance-from-entry order.
 #[allow(clippy::needless_range_loop)]
+#[prof]
 fn dfs(
     ctx: &BiteOrderCtx,
     bite: usize,
@@ -864,6 +905,7 @@ fn dfs(
 }
 
 /// Split arcs at V-junctions and compute segment outward normals.
+#[prof]
 fn split_arcs_at_v_junctions(
     arcs: &[Vec<Point>],
     entry: Point,
@@ -915,6 +957,7 @@ fn split_arcs_at_v_junctions(
 /// Generates, splits, and orders cutting arcs via
 /// [`split_ordered_wavefronts`], then fillets and links them into Ops.
 #[allow(clippy::too_many_arguments)]
+#[prof]
 pub fn adaptive_peeling(
     cleared: &mut ClearedArea,
     pocket_boundary: &Polygon,
@@ -959,7 +1002,7 @@ pub fn adaptive_peeling(
         centre,
     );
 
-    finish_peeling(
+    let result = finish_peeling(
         &cut_arcs,
         &valid_tool_area,
         pocket_boundary,
@@ -974,13 +1017,16 @@ pub fn adaptive_peeling(
         step_over,
         cut_state,
         travel_state,
-    )
+    );
+    prof_report();
+    result
 }
 
 // ── Internal helpers ───────────────────────────────────────────
 
 /// Filter, fillet, and link cutting arcs into Ops.
 #[allow(clippy::too_many_arguments)]
+#[prof]
 fn finish_peeling(
     graph: &WavefrontGraph,
     valid_tool_area: &[Polygon],
@@ -1082,6 +1128,7 @@ fn finish_peeling(
 /// The fillet arcs opposite of the outer flag, i.e. toward the inner
 /// (cleared) side.  The arc is kept whole so no fillet is inserted at
 /// merged wave junctions.
+#[prof]
 fn fillet_sides_from_directions(
     graph: &WavefrontGraph,
     seg_idxs: &[usize],
@@ -1117,6 +1164,7 @@ fn fillet_sides_from_directions(
 /// Build motion segments from arcs using NN ordering, MAT routing, and
 /// smoothing — the same algorithm as the former geo `link_filleted_arcs`.
 #[allow(clippy::too_many_arguments)]
+#[prof]
 fn build_link_segments(
     arcs: &[Vec<Point>],
     uncleared: &[Polygon],
@@ -1134,6 +1182,10 @@ fn build_link_segments(
         mat.and_then(|m| cleared.map(|c| m.trim_to_polygons(c)));
     let mat_ref: Option<&MedialAxis> = mat_trimmed.as_ref().or(mat);
     let mut segments: Vec<MotionSegment> = Vec::new();
+
+    // Pre-compute obstacle bounds — these are reused across many
+    // collision checks inside the smoothing / corner-cutting pipeline.
+    let obstacle_bounds: Vec<Rect> = compute_polygon_bounds(uncleared);
 
     let order: Vec<usize> = if preserve_order || arcs.is_empty() {
         (0..arcs.len()).collect()
@@ -1166,6 +1218,7 @@ fn build_link_segments(
                 &direct_seg,
                 safe_margin,
                 uncleared,
+                &obstacle_bounds,
             );
 
             let link: Vec<Point> = if blocked {
@@ -1180,6 +1233,7 @@ fn build_link_segments(
                         first,
                         &mat_link,
                         uncleared,
+                        &obstacle_bounds,
                         safe_margin,
                         smoothing_amount,
                     )
@@ -1202,12 +1256,22 @@ fn build_link_segments(
 
             // Round any remaining sharp corners (including the angles
             // at the tangent extension points).
-            link = chaikin_corner_cut(&link, uncleared, safe_margin, 6);
+            link = chaikin_corner_cut(
+                &link,
+                uncleared,
+                &obstacle_bounds,
+                safe_margin,
+                6,
+            );
 
             // Safety net: if any post-processing introduced a
             // collision, fall back to the verified-safe path.
-            if does_path_sweep_intersect_polygon(&link, safe_margin, uncleared)
-            {
+            if does_path_sweep_intersect_polygon(
+                &link,
+                safe_margin,
+                uncleared,
+                &obstacle_bounds,
+            ) {
                 if !blocked {
                     link = vec![last, first];
                 } else {
@@ -1219,6 +1283,7 @@ fn build_link_segments(
                         first,
                         &raw,
                         uncleared,
+                        &obstacle_bounds,
                         safe_margin,
                         smoothing_amount,
                     );
@@ -1249,6 +1314,7 @@ fn build_link_segments(
 }
 
 /// Convert motion segments to Ops with state application on role change.
+#[prof]
 fn segments_to_ops(
     segments: &[MotionSegment],
     cut_state: &State,

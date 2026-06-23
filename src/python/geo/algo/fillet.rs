@@ -14,6 +14,7 @@ appending them to polylines, and trimming to safe spans.
 
 use crate::geo::algo::fillet;
 use crate::geo::shape::arc::get_polyline_turn_sign;
+use crate::geo::shape::polygon::compute_polygon_bounds;
 use crate::geo::shape::polyline::trim_polyline_at;
 use crate::types::Point;
 use pyo3::prelude::*;
@@ -239,10 +240,12 @@ fn trim_to_safe_fillet_span_py(
         .map(|h| h.into_iter().map(|(x, y)| Point::new(x, y)).collect())
         .collect();
     let side = get_polyline_turn_sign(&polyline_pts);
+    let obstacle_bounds = compute_polygon_bounds(&obstacles);
     fillet::trim_to_safe_fillet_span(
         &polyline_pts,
         &boundary_pts,
         &obstacles,
+        &obstacle_bounds,
         radius,
         margin,
         side,
@@ -300,10 +303,12 @@ fn fillet_arc_ends_py(
         .map(|h| h.into_iter().map(|(x, y)| Point::new(x, y)).collect())
         .collect();
     let side = get_polyline_turn_sign(&arc_pts);
+    let island_bounds = compute_polygon_bounds(&islands_pts);
     let Some((enter, exit)) = fillet::trim_to_safe_fillet_span(
         &arc_pts,
         &boundary,
         &islands_pts,
+        &island_bounds,
         tool_radius,
         wall_margin,
         side,
@@ -376,10 +381,12 @@ fn find_safe_sweep_end_py(
         .map(|h| h.into_iter().map(|(x, y)| Point::new(x, y)).collect())
         .collect();
     let side = get_polyline_turn_sign(&arc_pts);
+    let island_bounds = compute_polygon_bounds(&islands_pts);
     fillet::trim_to_safe_fillet_span(
         &arc_pts,
         &boundary,
         &islands_pts,
+        &island_bounds,
         tool_radius,
         wall_margin,
         side,
@@ -436,8 +443,16 @@ fn try_fillet_one_end_py(
         .map(|h| h.into_iter().map(|(x, y)| Point::new(x, y)).collect())
         .collect();
     let side = get_polyline_turn_sign(&arc_pts);
+    let obstacle_bounds = compute_polygon_bounds(&obstacles);
     fillet::try_fillet_one_end(
-        &arc_pts, &boundary, &obstacles, radius, margin, side, side,
+        &arc_pts,
+        &boundary,
+        &obstacles,
+        &obstacle_bounds,
+        radius,
+        margin,
+        side,
+        side,
     )
     .into_iter()
     .map(|p| (p.x, p.y))

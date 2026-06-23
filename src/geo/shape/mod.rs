@@ -50,11 +50,12 @@ pub use point::{
     transform_point_3d,
 };
 pub use polygon::{
-    apply_minimum_curvature, clean_polygon, does_path_sweep_intersect_polygon,
-    flip_polygon, flip_polygons, get_circle_polygon, get_polygon_area,
-    get_polygon_boundary_distance, get_polygon_bounds, get_polygon_centroid,
-    get_polygon_closest_point, get_polygon_convex_hull, get_polygon_edges,
-    get_polygon_group_bounds, get_polygon_perimeter, get_polygon_signed_area,
+    apply_minimum_curvature, clean_polygon, compute_polygon_bounds,
+    does_path_sweep_intersect_polygon, flip_polygon, flip_polygons,
+    get_circle_polygon, get_polygon_area, get_polygon_boundary_distance,
+    get_polygon_bounds, get_polygon_centroid, get_polygon_closest_point,
+    get_polygon_convex_hull, get_polygon_edges, get_polygon_group_bounds,
+    get_polygon_perimeter, get_polygon_signed_area,
     get_polygon_vertex_centroid, get_polygons_closest_point,
     get_polygons_difference, get_polygons_group_difference,
     get_polygons_group_intersection, get_polygons_intersection,

@@ -434,11 +434,16 @@ fn link_arcs_to_ops_py(
                 clearance: 0.0,
             })
             .collect();
+        let n = nodes_vec.len();
+        let parent = vec![usize::MAX; n];
+        let (depth, up) = MedialAxis::build_lca_cache(&parent, 0);
         MedialAxis {
             nodes: nodes_vec,
             edges,
             root: 0,
             branches: Vec::new(),
+            depth,
+            up,
         }
     });
 

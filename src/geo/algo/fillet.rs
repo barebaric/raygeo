@@ -5,12 +5,15 @@
 //! No CNC or machining concepts — terms like "pocket", "island",
 //! and "tool" belong in higher layers.
 
+use prof_macros::prof;
 use std::f64::consts::FRAC_PI_2;
 
 use crate::geo::shape::line::get_segment_segment_distance;
-use crate::geo::shape::polygon::does_path_sweep_intersect_polygon;
+use crate::geo::shape::polygon::{
+    compute_polygon_bounds, does_path_sweep_intersect_polygon,
+};
 use crate::geo::shape::polyline::trim_polyline_at;
-use crate::types::{Point, Polygon};
+use crate::types::{Point, Polygon, Rect};
 
 /// Create a circular fillet polyline tangent to `dir` at `p`.
 ///
@@ -109,10 +112,12 @@ pub fn append_end_fillets(
 /// and `end_side` for the exit (end) fillet.  Returns `(enter, exit)`
 /// — the first and last points of the safe sub-span, or `None` when
 /// no usable safe span remains.
+#[allow(clippy::too_many_arguments)]
 pub fn trim_to_safe_fillet_span(
     polyline: &[Point],
     outer_boundary: &[Point],
     inner_obstacles: &[Vec<Point>],
+    inner_obstacle_bounds: &[Rect],
     radius: f64,
     margin: f64,
     start_side: f64,
@@ -129,6 +134,7 @@ pub fn trim_to_safe_fillet_span(
         farc: &[Point],
         outer_boundary: &[Point],
         inner_obstacles: &[Vec<Point>],
+        inner_obstacle_bounds: &[Rect],
         radius_eff: f64,
     ) -> bool {
         if farc.len() < 2 {
@@ -139,6 +145,7 @@ pub fn trim_to_safe_fillet_span(
                 farc,
                 radius_eff,
                 inner_obstacles,
+                inner_obstacle_bounds,
             )
         {
             return true;
@@ -172,7 +179,13 @@ pub fn trim_to_safe_fillet_span(
             start_side,
             true,
         );
-        if !fillet_collides(&f0, outer_boundary, inner_obstacles, radius_eff) {
+        if !fillet_collides(
+            &f0,
+            outer_boundary,
+            inner_obstacles,
+            inner_obstacle_bounds,
+            radius_eff,
+        ) {
             return Some(polyline[0]);
         }
         for lo in 1..last {
@@ -185,8 +198,13 @@ pub fn trim_to_safe_fillet_span(
                 start_side,
                 true,
             );
-            if !fillet_collides(&f, outer_boundary, inner_obstacles, radius_eff)
-            {
+            if !fillet_collides(
+                &f,
+                outer_boundary,
+                inner_obstacles,
+                inner_obstacle_bounds,
+                radius_eff,
+            ) {
                 // Binary-search edge (lo-1, lo) for the crossing.
                 let a = polyline[lo - 1];
                 let b = polyline[lo];
@@ -204,6 +222,7 @@ pub fn trim_to_safe_fillet_span(
                         &f,
                         outer_boundary,
                         inner_obstacles,
+                        inner_obstacle_bounds,
                         radius_eff,
                     ) {
                         hi_t = mid_t;
@@ -229,7 +248,13 @@ pub fn trim_to_safe_fillet_span(
             end_side,
             false,
         );
-        if !fillet_collides(&f0, outer_boundary, inner_obstacles, radius_eff) {
+        if !fillet_collides(
+            &f0,
+            outer_boundary,
+            inner_obstacles,
+            inner_obstacle_bounds,
+            radius_eff,
+        ) {
             return Some(polyline[last]);
         }
         for hi in (1..last).rev() {
@@ -242,8 +267,13 @@ pub fn trim_to_safe_fillet_span(
                 end_side,
                 false,
             );
-            if !fillet_collides(&f, outer_boundary, inner_obstacles, radius_eff)
-            {
+            if !fillet_collides(
+                &f,
+                outer_boundary,
+                inner_obstacles,
+                inner_obstacle_bounds,
+                radius_eff,
+            ) {
                 // Binary-search edge (hi, hi+1) for the crossing.
                 let a = polyline[hi];
                 let b = polyline[hi + 1];
@@ -261,6 +291,7 @@ pub fn trim_to_safe_fillet_span(
                         &f,
                         outer_boundary,
                         inner_obstacles,
+                        inner_obstacle_bounds,
                         radius_eff,
                     ) {
                         lo_t = mid_t;
@@ -289,10 +320,12 @@ pub fn trim_to_safe_fillet_span(
 /// the exit (end) fillet (using `end_side`), and returns the first
 /// that does not collide with the boundary or islands.  Falls back
 /// to the original arc if neither fits.
+#[allow(clippy::too_many_arguments)]
 pub fn try_fillet_one_end(
     arc: &[Point],
     outer_boundary: &[Point],
     inner_obstacles: &[Polygon],
+    inner_obstacle_bounds: &[Rect],
     radius: f64,
     margin: f64,
     start_side: f64,
@@ -313,6 +346,7 @@ pub fn try_fillet_one_end(
                 farc,
                 radius_eff,
                 inner_obstacles,
+                inner_obstacle_bounds,
             )
         {
             return false;
@@ -367,6 +401,7 @@ pub fn try_fillet_one_end(
 /// When the radius gets too small the arc is removed entirely.
 const MIN_RADIUS: f64 = 0.1;
 
+#[prof]
 pub fn descending_radius_fillet(
     arc: &[Point],
     outer_boundary: &[Point],
@@ -378,6 +413,7 @@ pub fn descending_radius_fillet(
 ) -> Vec<Point> {
     let arc_len = arc.len();
     let effective_margin = radius + margin;
+    let inner_bounds = compute_polygon_bounds(inner_obstacles);
     let mut r = radius;
     loop {
         // The safety distance (= r + adjusted_margin) must stay fixed
@@ -387,6 +423,7 @@ pub fn descending_radius_fillet(
             arc,
             outer_boundary,
             inner_obstacles,
+            &inner_bounds,
             r,
             adjusted_margin,
             start_side,
@@ -403,6 +440,7 @@ pub fn descending_radius_fillet(
             arc,
             outer_boundary,
             inner_obstacles,
+            &inner_bounds,
             r,
             adjusted_margin,
             start_side,

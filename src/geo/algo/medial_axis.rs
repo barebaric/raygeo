@@ -1,3 +1,5 @@
+use prof_macros::prof;
+
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::panic::{self, AssertUnwindSafe};
 
@@ -31,9 +33,66 @@ pub struct MedialAxis {
     pub edges: Vec<(usize, usize)>,
     pub root: usize,
     pub branches: Vec<MaBranch>,
+    /// Depth of each node from `root` (root has depth 0).
+    pub(crate) depth: Vec<u32>,
+    /// Binary-lifting ancestor table: `up[k][i]` = 2^k-th ancestor of node `i`.
+    /// `up[0][i]` is the parent, `up[k][i] = i` when 2^k ≥ depth[i].
+    pub(crate) up: Vec<Vec<u32>>,
 }
 
 impl MedialAxis {
+    /// Build depth and binary-lifting ancestor table from a parent array.
+    pub(crate) fn build_lca_cache(
+        parent_idx: &[usize],
+        root: usize,
+    ) -> (Vec<u32>, Vec<Vec<u32>>) {
+        let n = parent_idx.len();
+        let mut depth = vec![0u32; n];
+        for i in 0..n {
+            if i == root || parent_idx[i] == usize::MAX {
+                continue;
+            }
+            // Walk up to compute depth, caching as we go.
+            let mut cur = i;
+            let mut d = 0u32;
+            while cur != root && depth[cur] == 0 {
+                if parent_idx[cur] == usize::MAX {
+                    break;
+                }
+                cur = parent_idx[cur];
+                d += 1;
+            }
+            d += depth[cur];
+            // Fill depths along the path we walked.
+            cur = i;
+            while cur != root && depth[cur] == 0 {
+                depth[cur] = d;
+                d = d.wrapping_sub(1);
+                cur = parent_idx[cur];
+                if cur == usize::MAX {
+                    break;
+                }
+            }
+        }
+
+        let max_k = (usize::BITS - n.leading_zeros()) as usize;
+        let mut up = vec![vec![root as u32; n]; max_k];
+        for i in 0..n {
+            up[0][i] = if parent_idx[i] == usize::MAX || i == root {
+                i as u32
+            } else {
+                parent_idx[i] as u32
+            };
+        }
+        for k in 1..max_k {
+            for i in 0..n {
+                up[k][i] = up[k - 1][up[k - 1][i] as usize];
+            }
+        }
+
+        (depth, up)
+    }
+
     /// Compute the Medial Axis Transform of a planar domain via Delaunay
     /// circumcenters.
     ///
@@ -44,6 +103,7 @@ impl MedialAxis {
     /// * `sampling_spacing` — target spacing for boundary-sampling and
     ///   Steiner grid.  Smaller values = denser mesh = finer MAT ≈
     ///   `step_over × 0.5`.
+    #[prof]
     pub fn compute(
         outer: &[Point],
         holes: &[Vec<Point>],
@@ -167,86 +227,126 @@ impl MedialAxis {
 
         let branches = contract_to_branches(&adj, &parent, root, &nodes);
 
+        let (depth, up) = Self::build_lca_cache(&parent, root);
+
         Ok(MedialAxis {
             nodes,
             edges,
             root,
             branches,
+            depth,
+            up,
         })
     }
 
-    /// Find a path between `from` and `to` using the Medial Axis graph.
-    ///
-    /// Returns the node positions along the shortest-topology path
-    /// (fewest edges), or `None` when the two points lie in disconnected
-    /// regions of the MAT.
-    pub fn path_between(&self, from: Point, to: Point) -> Option<Vec<Point>> {
-        if self.nodes.is_empty() {
-            return None;
-        }
-
-        let nearest = |pt: Point| -> Option<usize> {
-            self.nodes
-                .iter()
-                .enumerate()
-                .min_by(|(_, a), (_, b)| {
-                    let da = (a.point - pt).length_squared();
-                    let db = (b.point - pt).length_squared();
-                    da.partial_cmp(&db).unwrap_or(std::cmp::Ordering::Equal)
-                })
-                .map(|(i, _)| i)
-        };
-
-        let from_idx = nearest(from)?;
-        let to_idx = nearest(to)?;
-
+    /// Find a path between two nodes using binary-lifting LCA.
+    pub fn path_between_indices(
+        &self,
+        from_idx: usize,
+        to_idx: usize,
+    ) -> Option<Vec<Point>> {
         if from_idx == to_idx {
             return Some(vec![self.nodes[from_idx].point]);
         }
 
-        // Build adjacency from edges.
-        let mut adj: HashMap<usize, Vec<usize>> = HashMap::new();
-        for &(a, b) in &self.edges {
-            adj.entry(a).or_default().push(b);
-            adj.entry(b).or_default().push(a);
+        let max_k = self.up.len();
+        let mut a = from_idx;
+        let mut b = to_idx;
+
+        // Lift deeper node up to the same depth.  If a node's depth is 0
+        // (disconnected component) the binary lifting below naturally
+        // handles it since up[k][x] == x for such nodes.
+        if self.depth[a] > self.depth[b] {
+            let mut diff = self.depth[a] - self.depth[b];
+            let mut k = 0;
+            while diff > 0 {
+                if diff & 1 != 0 {
+                    a = self.up[k][a] as usize;
+                }
+                diff >>= 1;
+                k += 1;
+            }
+        } else {
+            let mut diff = self.depth[b].wrapping_sub(self.depth[a]);
+            let mut k = 0;
+            while diff > 0 {
+                if diff & 1 != 0 {
+                    b = self.up[k][b] as usize;
+                }
+                diff >>= 1;
+                k += 1;
+            }
         }
 
-        // BFS.
-        let mut prev: HashMap<usize, usize> = HashMap::new();
-        let mut visited: HashSet<usize> = HashSet::new();
-        let mut queue: VecDeque<usize> = VecDeque::new();
-        visited.insert(from_idx);
-        queue.push_back(from_idx);
-
-        while let Some(cur) = queue.pop_front() {
-            if cur == to_idx {
-                break;
-            }
-            if let Some(neighbors) = adj.get(&cur) {
-                for &nb in neighbors {
-                    if visited.insert(nb) {
-                        prev.insert(nb, cur);
-                        queue.push_back(nb);
-                    }
+        // Binary search for LCA.  Self-looped (disconnected) nodes
+        // stay in place and will mismatch — we detect that below.
+        if a != b {
+            for k in (0..max_k).rev() {
+                if self.up[k][a] != self.up[k][b] {
+                    a = self.up[k][a] as usize;
+                    b = self.up[k][b] as usize;
                 }
             }
+            a = self.up[0][a] as usize;
+        }
+        let lca = a;
+
+        // Walk from `from_idx` up to LCA, collecting nodes.
+        let mut from_to_lca: Vec<usize> = Vec::new();
+        let mut cur = from_idx;
+        while cur != lca {
+            from_to_lca.push(cur);
+            cur = self.up[0][cur] as usize;
+            if cur == from_to_lca[from_to_lca.len() - 1] {
+                // Self-loop — reached top of a disconnected component
+                // without meeting the other node.
+                return None;
+            }
+        }
+        from_to_lca.push(lca);
+
+        // Walk from `to_idx` up to LCA (excluding LCA, it's already added).
+        let mut to_rev: Vec<usize> = Vec::new();
+        cur = to_idx;
+        while cur != lca {
+            to_rev.push(cur);
+            cur = self.up[0][cur] as usize;
+            if cur == to_rev[to_rev.len() - 1] {
+                return None;
+            }
         }
 
-        if !visited.contains(&to_idx) {
+        from_to_lca.extend(to_rev.into_iter().rev());
+        Some(
+            from_to_lca
+                .into_iter()
+                .map(|i| self.nodes[i].point)
+                .collect(),
+        )
+    }
+
+    /// Find the nearest MAT node index to a point via linear scan.
+    pub fn nearest_node(&self, pt: Point) -> Option<usize> {
+        if self.nodes.is_empty() {
             return None;
         }
+        self.nodes
+            .iter()
+            .enumerate()
+            .min_by(|(_, a), (_, b)| {
+                let da = (a.point - pt).length_squared();
+                let db = (b.point - pt).length_squared();
+                da.partial_cmp(&db).unwrap_or(std::cmp::Ordering::Equal)
+            })
+            .map(|(i, _)| i)
+    }
 
-        // Reconstruct.
-        let mut path_idx: Vec<usize> = Vec::new();
-        let mut cur = to_idx;
-        path_idx.push(cur);
-        while let Some(&p) = prev.get(&cur) {
-            path_idx.push(p);
-            cur = p;
-        }
-        path_idx.reverse();
-
-        Some(path_idx.into_iter().map(|i| self.nodes[i].point).collect())
+    /// Find a path between `from` and `to` using the Medial Axis tree.
+    #[prof]
+    pub fn path_between(&self, from: Point, to: Point) -> Option<Vec<Point>> {
+        let from_idx = self.nearest_node(from)?;
+        let to_idx = self.nearest_node(to)?;
+        self.path_between_indices(from_idx, to_idx)
     }
 
     /// Return a new `MedialAxis` containing only nodes whose positions
@@ -255,6 +355,7 @@ impl MedialAxis {
     /// Branches are discarded (not needed for routing).  Routing through
     /// a trimmed MAT ensures travel paths only go through already-cleared
     /// territory.
+    #[prof]
     pub fn trim_to_polygons(&self, polygons: &[Vec<Point>]) -> MedialAxis {
         let mut old_to_new: Vec<Option<usize>> = vec![None; self.nodes.len()];
         let mut new_nodes: Vec<MaNode> = Vec::new();
@@ -289,11 +390,36 @@ impl MedialAxis {
             .map(|(i, _)| i)
             .unwrap_or(0);
 
+        // Build adjacency from new_edges, then BFS from root to produce a
+        // proper parent array (avoiding nodes whose ancestor chain was
+        // truncated by trimming).
+        let mut adj: Vec<Vec<usize>> = vec![Vec::new(); new_nodes.len()];
+        for &(a, b) in &new_edges {
+            adj[a].push(b);
+            adj[b].push(a);
+        }
+        let mut parent_idx = vec![usize::MAX; new_nodes.len()];
+        let mut queue = VecDeque::new();
+        parent_idx[root] = root; // temporary — makes visited work
+        queue.push_back(root);
+        while let Some(u) = queue.pop_front() {
+            for &v in &adj[u] {
+                if parent_idx[v] == usize::MAX {
+                    parent_idx[v] = u;
+                    queue.push_back(v);
+                }
+            }
+        }
+        parent_idx[root] = usize::MAX;
+        let (depth, up) = Self::build_lca_cache(&parent_idx, root);
+
         MedialAxis {
             nodes: new_nodes,
             edges: new_edges,
             root,
             branches: Vec::new(),
+            depth,
+            up,
         }
     }
 }

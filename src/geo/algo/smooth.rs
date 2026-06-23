@@ -3,11 +3,13 @@
 //! Provides functions for computing Gaussian kernels and applying them
 //! to open or closed polylines with optional corner preservation.
 
+use prof_macros::prof;
+
 use crate::geo::shape::does_path_sweep_intersect_polygon;
 use crate::geo::shape::line::get_angle_at_vertex;
 use crate::geo::shape::polygon3d::resample_polyline_3d;
 use crate::geo::shape::polyline::resample_polyline as resample_polyline_2d;
-use crate::types::{Point, Point3D, Polygon};
+use crate::types::{Point, Point3D, Polygon, Rect};
 
 /// Compute a normalized Gaussian kernel based on smoothing amount.
 ///
@@ -236,6 +238,7 @@ pub fn smooth_polyline_3d(
 pub(crate) fn shortcut_path(
     points: &[Point],
     obstacles: &[Polygon],
+    obstacle_bounds: &[Rect],
     clearance: f64,
 ) -> Vec<Point> {
     if points.len() <= 2 {
@@ -250,7 +253,12 @@ pub(crate) fn shortcut_path(
             let prev = current[i - 1];
             let next = current[i + 1];
             let seg = [prev, next];
-            if !does_path_sweep_intersect_polygon(&seg, clearance, obstacles) {
+            if !does_path_sweep_intersect_polygon(
+                &seg,
+                clearance,
+                obstacles,
+                obstacle_bounds,
+            ) {
                 current.remove(i);
                 changed = true;
             } else {
@@ -292,7 +300,9 @@ pub fn smooth_path(
     }
 
     // Phase 1: shortcut.
-    let shortcut = shortcut_path(points, obstacles, clearance);
+    let obs_bounds =
+        crate::geo::shape::polygon::compute_polygon_bounds(obstacles);
+    let shortcut = shortcut_path(points, obstacles, &obs_bounds, clearance);
 
     if shortcut.len() < 3 || smoothing_amount == 0 {
         return shortcut;
@@ -330,7 +340,12 @@ pub fn smooth_path(
             let next = Point::new(current[i + 1].x, current[i + 1].y);
             let candidate = Point::new(smoothed[i].x, smoothed[i].y);
             let tri = [prev, candidate, next];
-            if !does_path_sweep_intersect_polygon(&tri, clearance, obstacles) {
+            if !does_path_sweep_intersect_polygon(
+                &tri,
+                clearance,
+                obstacles,
+                &obs_bounds,
+            ) {
                 let dx = smoothed[i].x - current[i].x;
                 let dy = smoothed[i].y - current[i].y;
                 if dx * dx + dy * dy > 1e-4 {
@@ -351,9 +366,11 @@ pub fn smooth_path(
 /// Round sharp corners in a path using Chaikin corner cutting with
 /// collision checking.  Corners sharper than 45° are cut;
 /// gently curving sections are left untouched.
+#[prof]
 pub fn chaikin_corner_cut(
     points: &[Point],
     obstacles: &[Polygon],
+    obstacle_bounds: &[Rect],
     clearance: f64,
     iterations: usize,
 ) -> Vec<Point> {
@@ -392,7 +409,10 @@ pub fn chaikin_corner_cut(
                 );
                 let tri = [prev, q_back, q_fwd, after];
                 if !does_path_sweep_intersect_polygon(
-                    &tri, clearance, obstacles,
+                    &tri,
+                    clearance,
+                    obstacles,
+                    obstacle_bounds,
                 ) {
                     next.push(q_back);
                     next.push(q_fwd);
@@ -419,11 +439,13 @@ pub fn chaikin_corner_cut(
 ///    at a different interval may skip V-vertices, progressively
 ///    diluting sharp corners into gentler curves.
 /// 4. Final Gaussian smoothing pass.
+#[prof]
 pub fn build_smoothed_path(
     last: Point,
     first: Point,
     waypoints: &[Point],
     uncleared: &[Polygon],
+    obstacle_bounds: &[Rect],
     clearance: f64,
     smoothing_amount: i32,
 ) -> Vec<Point> {
@@ -444,7 +466,7 @@ pub fn build_smoothed_path(
     // 2. Resample, shortcut, re-resample.
     let max_seg = clearance.max(0.5) * 0.5;
     let mut link = resample_polyline_2d(&link, max_seg);
-    link = shortcut_path(&link, uncleared, clearance);
+    link = shortcut_path(&link, uncleared, obstacle_bounds, clearance);
     link = resample_polyline_2d(&link, max_seg);
     if link.len() < 3 {
         return link;
@@ -468,16 +490,28 @@ pub fn build_smoothed_path(
             let mut buf: Vec<Point3D> = Vec::with_capacity(n);
             for _ in 0..100 {
                 smooth_sub_segment(&current, &kernel, &mut buf);
+                let mut moved = false;
                 for i in 1..n - 1 {
                     let prev = Point::new(current[i - 1].x, current[i - 1].y);
                     let next = Point::new(current[i + 1].x, current[i + 1].y);
                     let candidate = Point::new(buf[i].x, buf[i].y);
                     let tri = [prev, candidate, next];
                     if !does_path_sweep_intersect_polygon(
-                        &tri, clearance, uncleared,
+                        &tri,
+                        clearance,
+                        uncleared,
+                        obstacle_bounds,
                     ) {
+                        let dx = buf[i].x - current[i].x;
+                        let dy = buf[i].y - current[i].y;
+                        if dx * dx + dy * dy > 1e-4 {
+                            moved = true;
+                        }
                         current[i] = buf[i];
                     }
+                }
+                if !moved {
+                    break;
                 }
             }
             link = current.iter().map(|p| Point::new(p.x, p.y)).collect();
@@ -503,6 +537,7 @@ pub fn build_smoothed_path(
 /// tangent direction and the polyline direction at the junction exceeds
 /// ≈ 25° (dot < 0.9), an intermediate point is inserted along the
 /// tangent to move the angle discontinuity away from the junction.
+#[prof]
 pub fn blend_tangent(
     link: &mut Vec<Point>,
     prev_tail: &[Point],

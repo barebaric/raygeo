@@ -3,6 +3,8 @@
 //! These functions operate on open polylines (`Vec<Point>`), as distinct
 //! from closed polygons.
 
+use prof_macros::prof;
+
 use crate::geo::shape::line::get_interior_angle;
 use crate::geo::shape::line::get_line_segment_closest_point;
 use crate::types::{Point, Rect};
@@ -10,6 +12,7 @@ use crate::types::{Point, Rect};
 /// Get the bounding box of an open polyline.
 ///
 /// Returns `Rect::default()` when the polyline is empty.
+#[prof]
 pub fn get_polyline_bounds(pts: &[Point]) -> Rect {
     if pts.is_empty() {
         return Rect::default();
@@ -141,6 +144,7 @@ pub fn resample_polyline(points: &[Point], max_len: f64) -> Vec<Point> {
 /// Returns the adjusted `(start, length)` within the original polygon.
 /// The caller should check whether the result is still useful (at least
 /// 3 vertices).
+#[prof]
 pub fn trim_polyline_angular_ends(
     polygon: &[Point],
     start: usize,
@@ -201,6 +205,7 @@ pub fn trim_polyline_angular_ends(
 ///
 /// Returns one or more sub-polylines.  When no split point is found the entire
 /// input is returned as a single segment.
+#[prof]
 pub fn split_polyline_at_v_junctions(
     polyline: &[Point],
     angle_threshold: f64,

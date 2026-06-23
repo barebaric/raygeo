@@ -695,6 +695,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "prof-macros"
+version = "0.1.0"
+dependencies = [
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "pyo3"
 version = "0.28.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -884,6 +892,7 @@ dependencies = [
  "nalgebra-sparse",
  "num_enum",
  "numpy",
+ "prof-macros",
  "pyo3",
  "pyo3-stub-gen",
  "rand 0.9.4",

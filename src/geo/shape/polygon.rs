@@ -25,6 +25,7 @@ use clipper2::{
 use crate::geo::shape::line::get_line_segment_closest_point;
 use crate::geo::shape::line::get_segment_segment_distance;
 use crate::types::{Edge, Point, Polygon, Rect};
+use prof_macros::prof;
 
 /// Join style for offset operations, matching clipper2 semantics.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
@@ -94,6 +95,7 @@ pub fn get_polygon_signed_area(polygon: &[Point]) -> f64 {
 }
 
 /// Calculate the absolute area of a polygon.
+#[prof]
 pub fn get_polygon_area(polygon: &Polygon) -> f64 {
     get_polygon_signed_area(polygon).abs()
 }
@@ -146,6 +148,7 @@ pub fn get_polygon_edges(polygon: &Polygon) -> Vec<Edge> {
 }
 
 /// Get the bounding box of a polygon as (min_x, min_y, max_x, max_y).
+#[prof]
 pub fn get_polygon_bounds(polygon: &Polygon) -> Rect {
     if polygon.is_empty() {
         return Rect::default();
@@ -174,6 +177,7 @@ pub fn get_polygon_bounds(polygon: &Polygon) -> Rect {
 }
 
 /// Get the bounding box of multiple polygons.
+#[prof]
 pub fn get_polygon_group_bounds(polygons: &[Polygon]) -> Rect {
     if polygons.is_empty() {
         return Rect::default();
@@ -273,6 +277,7 @@ pub fn flip_polygons(
 }
 
 /// Approximate a circle as an n-gon polygon.
+#[prof]
 pub fn get_circle_polygon(center: Point, radius: f64, n: usize) -> Polygon {
     let mut poly = Vec::with_capacity(n);
     for i in 0..n {
@@ -289,6 +294,7 @@ pub fn get_circle_polygon(center: Point, radius: f64, n: usize) -> Polygon {
 ///
 /// Returns a rectangle (the Minkowski sum of the segment with a disk of
 /// *radius*) plus two disks at the endpoints.
+#[prof]
 pub fn get_segment_swept_polygon(
     a: Point,
     b: Point,
@@ -309,25 +315,40 @@ pub fn get_segment_swept_polygon(
     ]
 }
 
+/// Pre-compute bounding boxes for a slice of polygons.
+///
+/// Returns a `Vec<Rect>` in the same order as `polygons`.
+/// Useful when calling [`does_path_sweep_intersect_polygon`]
+/// many times with the same obstacles — precompute once
+/// and pass the bounds.
+#[prof]
+pub fn compute_polygon_bounds(polygons: &[Polygon]) -> Vec<Rect> {
+    polygons.iter().map(get_polygon_bounds).collect()
+}
+
 /// True if the sweep of a disk of `radius` moving along `path` intersects
 /// any polygon in `obstacles`. The sweep is the union of capsules
 /// (rectangles capped with half-disks) one per segment, plus a disk at
 /// each vertex — exactly `get_segment_swept_polygon` per segment.
+///
+/// Uses pre-computed bounding boxes for the obstacles. When calling this
+/// function many times with the same obstacle set, precompute bounds
+/// once via [`compute_polygon_bounds`] and pass them here.
+#[prof]
 pub fn does_path_sweep_intersect_polygon(
     path: &[Point],
     radius: f64,
     obstacles: &[Polygon],
+    obstacle_bounds: &[Rect],
 ) -> bool {
     if path.len() < 2 {
         return false;
     }
 
-    for obstacle in obstacles {
+    for (obstacle, obs_bounds) in obstacles.iter().zip(obstacle_bounds) {
         if obstacle.len() < 3 {
             continue;
         }
-
-        let obs_bounds = get_polygon_bounds(obstacle);
 
         for i in 0..path.len() - 1 {
             let a = path[i];
@@ -366,6 +387,7 @@ pub fn does_path_sweep_intersect_polygon(
 }
 
 /// Calculate the centroid of a polygon.
+#[prof]
 pub fn get_polygon_centroid(polygon: &Polygon) -> Point {
     if polygon.is_empty() {
         return Point::new(0.0, 0.0);
@@ -400,6 +422,7 @@ pub fn get_polygon_centroid(polygon: &Polygon) -> Point {
 /// squared Euclidean distance from `(x, y)` to that point.
 ///
 /// Returns `None` when the polygon has fewer than 2 vertices.
+#[prof]
 pub fn get_polygon_closest_point(
     polygon: &Polygon,
     x: f64,
@@ -732,6 +755,7 @@ pub fn get_polygons_intersection(
 /// Equivalent to clipper CT_DIFFERENCE between two sets of paths.
 ///
 /// **Planar (XY-plane only).** Uses Clipper2. Z is not modeled.
+#[prof]
 pub fn get_polygons_group_difference(
     subject: &[Polygon],
     clip: &[Polygon],
@@ -912,6 +936,7 @@ pub fn resample_polygon(poly: &[Point], spacing: f64) -> Vec<Point> {
 /// (shoelace) centroid.  The vertex average is useful when the spatial
 /// *arrangement* of vertices matters (e.g. finding the middle of a
 /// concave polygon whose area centroid would lie outside the boundary).
+#[prof]
 pub fn get_polygon_vertex_centroid(poly: &[Point]) -> Point {
     if poly.is_empty() {
         return Point::new(0.0, 0.0);
@@ -932,6 +957,7 @@ pub fn get_polygon_vertex_centroid(poly: &[Point]) -> Point {
 /// to avoid false positives from polygons that merely touch at a shared
 /// vertex (where endpoint-to-endpoint distance is 0 but no boundary
 /// edge is actually shared).
+#[prof]
 pub fn get_polygon_boundary_distance(a: &[Point], b: &[Point]) -> f64 {
     if a.len() < 2 || b.len() < 2 {
         return f64::MAX;

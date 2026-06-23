@@ -14,6 +14,7 @@ use crate::geo::algo::smooth::{
     compute_gaussian_kernel, shortcut_path, smooth_circularly, smooth_path,
     smooth_polyline_3d, smooth_sub_segment,
 };
+use crate::geo::shape::polygon::compute_polygon_bounds;
 use crate::types::{Point, Point3D};
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::gen_stub_pyfunction;
@@ -93,7 +94,8 @@ fn shortcut_path_py(
         .into_iter()
         .map(|poly| poly.into_iter().map(|(x, y)| Point::new(x, y)).collect())
         .collect();
-    shortcut_path(&pts, &obs, clearance)
+    let obs_bounds = compute_polygon_bounds(&obs);
+    shortcut_path(&pts, &obs, &obs_bounds, clearance)
         .into_iter()
         .map(|p| (p.x, p.y))
         .collect()
@@ -297,7 +299,8 @@ fn chaikin_corner_cut_py(
         .into_iter()
         .map(|poly| poly.into_iter().map(|(x, y)| Point::new(x, y)).collect())
         .collect();
-    chaikin_corner_cut(&pts, &obs, clearance, iterations)
+    let obs_bounds = compute_polygon_bounds(&obs);
+    chaikin_corner_cut(&pts, &obs, &obs_bounds, clearance, iterations)
         .into_iter()
         .map(|p| (p.x, p.y))
         .collect()
@@ -356,11 +359,13 @@ fn build_smoothed_path_py(
         .into_iter()
         .map(|poly| poly.into_iter().map(|(x, y)| Point::new(x, y)).collect())
         .collect();
+    let obs_bounds = compute_polygon_bounds(&obs);
     build_smoothed_path(
         Point::new(last.0, last.1),
         Point::new(first.0, first.1),
         &wp,
         &obs,
+        &obs_bounds,
         clearance,
         smoothing_amount,
     )

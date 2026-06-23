@@ -1,6 +1,9 @@
+use prof_macros::prof;
+
 use crate::geo::algo::offset::compute_inset_region;
 use crate::geo::algo::simplify::simplify_polyline_3d;
 use crate::geo::algo::spatial_grid2d::SpatialGrid;
+use crate::geo::shape::line::get_line_segment_closest_point;
 use crate::geo::shape::polygon::get_polygon_area;
 use crate::geo::shape::polygon::get_polygon_centroid;
 use crate::geo::shape::polygon::get_polygons_group_difference;
@@ -16,26 +19,66 @@ pub struct ClearedArea {
     bboxes: Vec<Rect>,
     grid: SpatialGrid,
     cell_size: f64,
+    /// Flat list of all edges across all fragments, indexed by `edge_grid`.
+    edge_pts: Vec<(Point, Point)>,
+    /// Spatial grid over individual fragment edges for fast nearest-edge
+    /// queries from arbitrary query points.
+    edge_grid: SpatialGrid,
+    /// Cell size for the edge-level spatial grid (finer than the polygon
+    /// grid so that thin crescents are captured).
+    edge_cell_size: f64,
 }
 
 impl ClearedArea {
+    fn insert_poly_edges(
+        edge_pts: &mut Vec<(Point, Point)>,
+        edge_grid: &mut SpatialGrid,
+        poly: &[Point],
+    ) {
+        let m = poly.len();
+        for i in 0..m {
+            let j = (i + 1) % m;
+            let a = poly[i];
+            let b = poly[j];
+            let idx = edge_pts.len();
+            edge_pts.push((a, b));
+            edge_grid.insert(
+                idx,
+                Rect::new(
+                    a.x.min(b.x),
+                    a.y.min(b.y),
+                    a.x.max(b.x),
+                    a.y.max(b.y),
+                ),
+            );
+        }
+    }
+
     pub fn new() -> Self {
         let cell_size = 10.0;
+        let edge_cell_size = 5.0;
         ClearedArea {
             fragments: Vec::new(),
             bboxes: Vec::new(),
             grid: SpatialGrid::new(cell_size),
             cell_size,
+            edge_pts: Vec::new(),
+            edge_grid: SpatialGrid::new(edge_cell_size),
+            edge_cell_size,
         }
     }
 
     pub fn from_polygons(initial: &[Polygon]) -> Self {
         let cell_size = 10.0;
+        let edge_cell_size = 5.0;
         let mut ca = ClearedArea {
             fragments: Vec::new(),
             bboxes: Vec::new(),
             grid: SpatialGrid::new(cell_size),
             cell_size,
+            edge_pts: Vec::new(),
+            edge_grid: SpatialGrid::new(edge_cell_size),
+            edge_cell_size,
         };
         for poly in initial {
             if poly.len() >= 3 {
@@ -46,6 +89,35 @@ impl ClearedArea {
             }
         }
         ca
+    }
+
+    /// Return the squared distance from `(x, y)` to the nearest edge of
+    /// any cleared fragment.
+    ///
+    /// Uses the edge-level spatial grid so that only edges in nearby
+    /// grid cells are checked.  Returns `f64::MAX` when there are no
+    /// fragments.
+    pub fn closest_boundary_distance_sq(&self, x: f64, y: f64) -> f64 {
+        let cell_size = self.edge_cell_size;
+        let mut qbox = Rect::new(x, y, x, y);
+        qbox.min.x -= cell_size;
+        qbox.min.y -= cell_size;
+        qbox.max.x += cell_size;
+        qbox.max.y += cell_size;
+        let mut candidates = Vec::new();
+        self.edge_grid.query_into(qbox, &mut candidates);
+        if candidates.is_empty() {
+            return f64::MAX;
+        }
+        let mut best_d2 = f64::MAX;
+        for &ei in &candidates {
+            let (a, b) = self.edge_pts[ei];
+            let (_, _, d2) = get_line_segment_closest_point(a, b, x, y);
+            if d2 < best_d2 {
+                best_d2 = d2;
+            }
+        }
+        best_d2
     }
 
     pub fn expand(&mut self, tool_path: &[Point], tool_radius: f64) {
@@ -126,10 +198,12 @@ impl ClearedArea {
         result
     }
 
+    #[prof]
     pub fn total_area(&self) -> f64 {
         self.fragments.iter().map(get_polygon_area).sum()
     }
 
+    #[prof]
     pub fn fragments(&self) -> &[Polygon] {
         &self.fragments
     }
@@ -145,6 +219,7 @@ impl ClearedArea {
     /// Directly insert known cleared polygons (e.g., the swept footprint
     /// of a bulk spiral). This avoids the overhead of sweeping thousands
     /// of individual line segments.
+    #[prof]
     pub fn add_cleared_polygons(&mut self, polygons: &[Polygon]) {
         if polygons.is_empty() {
             return;
@@ -159,6 +234,7 @@ impl ClearedArea {
     /// already-cleared area).  When none of the inputs overlap any existing
     /// fragment the union is skipped and they are appended directly for
     /// better performance.
+    #[prof]
     pub fn incorporate(&mut self, polys: &[Polygon]) -> Vec<Polygon> {
         if polys.is_empty() {
             return vec![];
@@ -180,6 +256,11 @@ impl ClearedArea {
                     self.fragments.push(poly.clone());
                     self.bboxes.push(bb);
                     self.grid.insert(idx, bb);
+                    Self::insert_poly_edges(
+                        &mut self.edge_pts,
+                        &mut self.edge_grid,
+                        poly,
+                    );
                 }
             }
         }
@@ -212,6 +293,7 @@ impl ClearedArea {
     /// Expand the current frontier by `step_over`, clip to `valid_area`,
     /// subtract already-cleared space, and return the resulting "bites" of
     /// material to be machined.
+    #[prof]
     pub fn bites(
         &self,
         step_over: f64,
@@ -331,6 +413,18 @@ impl ClearedArea {
             let bbox = poly_bbox(poly);
             self.bboxes.push(bbox);
             self.grid.insert(idx, bbox);
+        }
+
+        self.edge_grid = SpatialGrid::new(self.edge_cell_size);
+        self.edge_pts.clear();
+        for poly in &self.fragments {
+            if poly.len() >= 2 {
+                Self::insert_poly_edges(
+                    &mut self.edge_pts,
+                    &mut self.edge_grid,
+                    poly,
+                );
+            }
         }
     }
 }

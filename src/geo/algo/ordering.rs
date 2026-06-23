@@ -3,6 +3,8 @@
 //! Pure-geometry combinatorial optimizations for sequencing paths
 //! (polylines, arcs) with no machining or CNC concepts.
 
+use prof_macros::prof;
+
 use crate::types::Point;
 
 /// Order paths by greedy nearest-neighbor starting from the longest path.
@@ -13,6 +15,7 @@ use crate::types::Point;
 /// into `paths` in visit order.
 ///
 /// This is a pure geometric optimization — no CNC or machining concepts.
+#[prof]
 pub fn order_nearest_neighbor(paths: &[Vec<Point>]) -> Vec<usize> {
     if paths.is_empty() {
         return Vec::new();
