@@ -17,7 +17,7 @@ class TestComputeMedialAxis:
     def test_rect_basic(self):
         outer = _rect(50, 40)
         axis = MedialAxis.compute(
-            outer, holes=[], tool_radius=1.0, sampling_spacing=5.0
+            outer, holes=[], min_clearance=1.0, sampling_spacing=5.0
         )
         assert len(axis.nodes) > 0
         assert len(axis.clearances) == len(axis.nodes)
@@ -29,7 +29,7 @@ class TestComputeMedialAxis:
         """For a rectangle the root should be near the center."""
         outer = _rect(50, 40)
         axis = MedialAxis.compute(
-            outer, holes=[], tool_radius=1.0, sampling_spacing=5.0
+            outer, holes=[], min_clearance=1.0, sampling_spacing=5.0
         )
         rx, ry = axis.nodes[axis.root]
         # Center of valid area ≈ (25, 20); allow ±5 mm
@@ -40,7 +40,7 @@ class TestComputeMedialAxis:
         """Max clearance should roughly equal half the shorter side."""
         outer = _rect(50, 40)
         axis = MedialAxis.compute(
-            outer, holes=[], tool_radius=1.0, sampling_spacing=5.0
+            outer, holes=[], min_clearance=1.0, sampling_spacing=5.0
         )
         # max clearance ≈ min(25, 20) = 20; allow ±1
         assert abs(axis.clearances[axis.root] - 20.0) < 2.0
@@ -48,7 +48,7 @@ class TestComputeMedialAxis:
     def test_clearances_non_negative(self):
         outer = _rect(100, 80)
         axis = MedialAxis.compute(
-            outer, holes=[], tool_radius=1.0, sampling_spacing=8.0
+            outer, holes=[], min_clearance=1.0, sampling_spacing=8.0
         )
         assert all(c >= 0.0 for c in axis.clearances)
 
@@ -56,7 +56,7 @@ class TestComputeMedialAxis:
         """With n nodes there should be exactly n-1 edges (a tree)."""
         outer = _rect(60, 50)
         axis = MedialAxis.compute(
-            outer, holes=[], tool_radius=1.0, sampling_spacing=6.0
+            outer, holes=[], min_clearance=1.0, sampling_spacing=6.0
         )
         assert len(axis.edges) == len(axis.nodes) - 1
 
@@ -64,7 +64,7 @@ class TestComputeMedialAxis:
         """Each branch should have root→leaf ordered nodes."""
         outer = _rect(60, 50)
         axis = MedialAxis.compute(
-            outer, holes=[], tool_radius=1.0, sampling_spacing=6.0
+            outer, holes=[], min_clearance=1.0, sampling_spacing=6.0
         )
         # nodes returned as (x,y); clearances not in branch struct
         # but the node indices in the branch should be contiguous
@@ -76,7 +76,7 @@ class TestComputeMedialAxis:
         outer = _rect(100, 80)
         island = [(30, 30), (50, 30), (50, 50), (30, 50)]
         axis = MedialAxis.compute(
-            outer, holes=[island], tool_radius=1.0, sampling_spacing=8.0
+            outer, holes=[island], min_clearance=1.0, sampling_spacing=8.0
         )
         assert len(axis.nodes) > 0
         assert axis.clearances[axis.root] == max(axis.clearances)
@@ -86,7 +86,7 @@ class TestComputeMedialAxis:
     def test_l_shape(self):
         outer = _ls()
         axis = MedialAxis.compute(
-            outer, holes=[], tool_radius=0.5, sampling_spacing=3.0
+            outer, holes=[], min_clearance=0.5, sampling_spacing=3.0
         )
         assert len(axis.nodes) > 0
         assert axis.clearances[axis.root] == max(axis.clearances)
@@ -95,23 +95,23 @@ class TestComputeMedialAxis:
     def test_empty_outer_errors(self):
         with pytest.raises(RuntimeError, match="at least 3 vertices"):
             MedialAxis.compute(
-                [(0, 0)], holes=[], tool_radius=1.0, sampling_spacing=1.0
+                [(0, 0)], holes=[], min_clearance=1.0, sampling_spacing=1.0
             )
 
     def test_too_narrow_pocket(self):
         outer = [(0, 0), (2, 0), (2, 2), (0, 2)]
         with pytest.raises(RuntimeError, match="no valid medial axis"):
             MedialAxis.compute(
-                outer, holes=[], tool_radius=5.0, sampling_spacing=1.0
+                outer, holes=[], min_clearance=5.0, sampling_spacing=1.0
             )
 
     def test_sampling_spacing_affects_node_count(self):
         outer = _rect(100, 80)
         axis1 = MedialAxis.compute(
-            outer, holes=[], tool_radius=1.0, sampling_spacing=4.0
+            outer, holes=[], min_clearance=1.0, sampling_spacing=4.0
         )
         axis2 = MedialAxis.compute(
-            outer, holes=[], tool_radius=1.0, sampling_spacing=10.0
+            outer, holes=[], min_clearance=1.0, sampling_spacing=10.0
         )
         # Denser sampling → more nodes (more triangles)
         assert len(axis1.nodes) > len(axis2.nodes)
@@ -120,7 +120,7 @@ class TestComputeMedialAxis:
         outer = _rect(50, 40)
         with pytest.raises(RuntimeError, match="sampling_spacing"):
             MedialAxis.compute(
-                outer, holes=[], tool_radius=1.0, sampling_spacing=-1.0
+                outer, holes=[], min_clearance=1.0, sampling_spacing=-1.0
             )
 
     def test_three_islands(self):
@@ -131,7 +131,7 @@ class TestComputeMedialAxis:
             [(130, 80), (160, 80), (160, 105), (130, 105)],
         ]
         axis = MedialAxis.compute(
-            outer, holes=islands, tool_radius=1.0, sampling_spacing=8.0
+            outer, holes=islands, min_clearance=1.0, sampling_spacing=8.0
         )
         assert len(axis.nodes) > 0
         assert len(axis.edges) == len(axis.nodes) - 1
@@ -140,7 +140,7 @@ class TestComputeMedialAxis:
         outer = _rect(100, 80)
         island = [(30, 30), (50, 30), (50, 50), (30, 50)]
         axis = MedialAxis.compute(
-            outer, holes=[island], tool_radius=1.0, sampling_spacing=6.0
+            outer, holes=[island], min_clearance=1.0, sampling_spacing=6.0
         )
         for nx, ny in axis.nodes:
             assert not (30 <= nx <= 50 and 30 <= ny <= 50)

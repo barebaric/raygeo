@@ -11,9 +11,9 @@ computation.
 
 The MAT is the skeleton of a 2D domain — the set of points equidistant to two or more boundary
 features. It is computed via Delaunay-circumcenter extraction from a constrained triangulation of
-the pocket boundary.
+the domain boundary.
 
-- `MedialAxis.compute` — compute the MAT of a pocket (with optional islands).
+- `MedialAxis.compute` — compute the MAT of a domain (with optional holes).
 - `MedialAxis.path_between` — find a path between two points along the skeleton.
 - `MedialAxis.trim_to_polygons` — filter nodes to those inside given polygons.
 
@@ -73,7 +73,7 @@ root: int
 compute(
     outer: Sequence[tuple[float, float]],
     holes: Optional[Sequence[Sequence[tuple[float, float]]]] = None,
-    tool_radius: float = 1.0,
+    min_clearance: float = 1.0,
     sampling_spacing: float = 1.0,
 ) -> MedialAxis
 ```
@@ -84,7 +84,7 @@ Compute the Medial Axis Transform of a planar domain.
 | ------------------ | ---------------------------------------------------------- | ----------- |
 | `outer`            | `Sequence[tuple[float, float]]`                            |             |
 | `holes`            | `Optional[Sequence[Sequence[tuple[float, float]]]] = None` |             |
-| `tool_radius`      | `float = 1.0`                                              |             |
+| `min_clearance`    | `float = 1.0`                                              |             |
 | `sampling_spacing` | `float = 1.0`                                              |             |
 | _Returns_          | `MedialAxis`                                               |             |
 

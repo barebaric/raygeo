@@ -2,8 +2,6 @@
 //!
 //! Domain-neutral utilities for creating circular fillet arcs,
 //! appending them to polylines, and trimming to safe spans.
-//! No CNC or machining concepts — terms like "pocket", "island",
-//! and "tool" belong in higher layers.
 
 use prof_macros::prof;
 use std::f64::consts::FRAC_PI_2;

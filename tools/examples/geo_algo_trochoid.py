@@ -16,7 +16,7 @@ def generate_straight():
     ):
         pts = trochoid_along_3d(
             carrier,
-            tool_diameter=10,
+            diameter=10,
             engagement_angle_deg=eng_deg,
             step_over_ratio=0.2,
             z=0,
@@ -49,7 +49,7 @@ def generate_l_shaped():
     carrier_l = [(0, 0), (50, 0), (50, 50)]
     pts = trochoid_along_3d(
         carrier_l,
-        tool_diameter=10,
+        diameter=10,
         engagement_angle_deg=90,
         step_over_ratio=0.2,
         z=0,

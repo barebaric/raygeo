@@ -9,9 +9,9 @@ Medial Axis Transform (MAT) computation.
 
 The MAT is the skeleton of a 2D domain — the set of points equidistant
 to two or more boundary features.  It is computed via Delaunay-circumcenter
-extraction from a constrained triangulation of the pocket boundary.
+extraction from a constrained triangulation of the domain boundary.
 
-* ``MedialAxis.compute`` — compute the MAT of a pocket (with optional islands).
+* ``MedialAxis.compute`` — compute the MAT of a domain (with optional holes).
 * ``MedialAxis.path_between`` — find a path between two points along the skeleton.
 * ``MedialAxis.trim_to_polygons`` — filter nodes to those inside given polygons.
 ";
@@ -54,13 +54,13 @@ impl PyMedialAxis {
     #[pyo3(signature = (
         outer,
         holes = None,
-        tool_radius = 1.0,
+        min_clearance = 1.0,
         sampling_spacing = 1.0,
     ))]
     fn compute(
         outer: Vec<(f64, f64)>,
         holes: Option<Vec<Vec<(f64, f64)>>>,
-        tool_radius: f64,
+        min_clearance: f64,
         sampling_spacing: f64,
     ) -> PyResult<PyMedialAxis> {
         let outer_pts: Vec<Point> =
@@ -74,7 +74,7 @@ impl PyMedialAxis {
         let inner = ma::MedialAxis::compute(
             &outer_pts,
             &holes_pts,
-            tool_radius,
+            min_clearance,
             sampling_spacing,
         )
         .map_err(pyo3::exceptions::PyRuntimeError::new_err)?;

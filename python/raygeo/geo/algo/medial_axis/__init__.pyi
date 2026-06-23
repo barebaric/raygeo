@@ -5,9 +5,9 @@ Medial Axis Transform (MAT) computation.
 
 The MAT is the skeleton of a 2D domain — the set of points equidistant
 to two or more boundary features.  It is computed via Delaunay-circumcenter
-extraction from a constrained triangulation of the pocket boundary.
+extraction from a constrained triangulation of the domain boundary.
 
-* ``MedialAxis.compute`` — compute the MAT of a pocket (with optional islands).
+* ``MedialAxis.compute`` — compute the MAT of a domain (with optional holes).
 * ``MedialAxis.path_between`` — find a path between two points along the skeleton.
 * ``MedialAxis.trim_to_polygons`` — filter nodes to those inside given polygons.
 """
@@ -50,7 +50,7 @@ class MedialAxis:
     @property
     def branches(self) -> builtins.list[builtins.list[builtins.int]]: ...
     @staticmethod
-    def compute(outer: typing.Sequence[tuple[builtins.float, builtins.float]], holes: typing.Optional[typing.Sequence[typing.Sequence[tuple[builtins.float, builtins.float]]]] = None, tool_radius: builtins.float = 1.0, sampling_spacing: builtins.float = 1.0) -> MedialAxis:
+    def compute(outer: typing.Sequence[tuple[builtins.float, builtins.float]], holes: typing.Optional[typing.Sequence[typing.Sequence[tuple[builtins.float, builtins.float]]]] = None, min_clearance: builtins.float = 1.0, sampling_spacing: builtins.float = 1.0) -> MedialAxis:
         r"""
         Compute the Medial Axis Transform of a planar domain.
         """

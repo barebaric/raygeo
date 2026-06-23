@@ -74,22 +74,22 @@ _Concentric inward offsets for adaptive clearing / pocketing_
 
 ```python
 find_deepest_cores(
-    valid_tool_area: Sequence[geo.types.Polygon],
+    regions: Sequence[geo.types.Polygon],
     step_over: float,
 ) -> list[geo.types.Point]
 ```
 
-Find the deepest (most open) regions of a pocket.
+Find the deepest (most open) regions of a polygon set.
 
 Iteratively offsets each polygon inward by step_over until all polygons collapse. Returns the
-centroids of the final polygons — optimal points for helical entry in adaptive clearing.
+centroids of the final polygons.
 
-| Parameter         | Type                          | Description                                           |
-| ----------------- | ----------------------------- | ----------------------------------------------------- |
-| `valid_tool_area` | `Sequence[geo.types.Polygon]` | List of polygons representing valid tool center area. |
-| `step_over`       | `float`                       | Inward offset distance per iteration.                 |
-| _Returns_         | `list[geo.types.Point]`       | List of (x, y) centroid points.                       |
-| _Complexity_      |                               | O(n \* k) where k is the number of iterations         |
+| Parameter    | Type                          | Description                                   |
+| ------------ | ----------------------------- | --------------------------------------------- |
+| `regions`    | `Sequence[geo.types.Polygon]` | List of polygons to search.                   |
+| `step_over`  | `float`                       | Inward offset distance per iteration.         |
+| _Returns_    | `list[geo.types.Point]`       | List of (x, y) centroid points.               |
+| _Complexity_ |                               | O(n \* k) where k is the number of iterations |
 
 ![Deepest-core detection: finds the point of maximum clearance inside the valid tool area — the best helical-entry point for the pocket](images/geo-algo-offset-deepest-cores.png)
 

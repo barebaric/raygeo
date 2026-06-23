@@ -9,7 +9,7 @@ def test_trochoid_straight_segment():
     """Basic trochoid along a straight horizontal segment."""
     pts = trochoid_along_3d(
         [(0, 0), (100, 0)],
-        tool_diameter=10,
+        diameter=10,
         engagement_angle_deg=90,
         step_over_ratio=0.2,
         min_loop_radius=0.5,
@@ -27,19 +27,19 @@ def test_trochoid_straight_segment():
 
 def test_trochoid_empty_carrier():
     """Single-point carrier → empty."""
-    assert trochoid_along_3d([(0, 0)], tool_diameter=10) == []
+    assert trochoid_along_3d([(0, 0)], diameter=10) == []
 
 
 def test_trochoid_two_points_no_length():
     """Same start/end → empty."""
-    assert trochoid_along_3d([(0, 0), (0, 0)], tool_diameter=10) == []
+    assert trochoid_along_3d([(0, 0), (0, 0)], diameter=10) == []
 
 
 def test_trochoid_zero_diameter():
-    """Zero tool_diameter → empty."""
+    """Zero diameter → empty."""
     pts = trochoid_along_3d(
         [(0, 0), (50, 0)],
-        tool_diameter=0,
+        diameter=0,
     )
     assert pts == []
 
@@ -48,7 +48,7 @@ def test_trochoid_zero_step_over():
     """Zero step_over ratio → empty."""
     pts = trochoid_along_3d(
         [(0, 0), (50, 0)],
-        tool_diameter=10,
+        diameter=10,
         step_over_ratio=0.0,
     )
     assert pts == []
@@ -59,13 +59,13 @@ def test_trochoid_engagement_effect():
     carrier = [(0, 0), (50, 0)]
     low = trochoid_along_3d(
         carrier,
-        tool_diameter=10,
+        diameter=10,
         engagement_angle_deg=30,
         step_over_ratio=0.2,
     )
     high = trochoid_along_3d(
         carrier,
-        tool_diameter=10,
+        diameter=10,
         engagement_angle_deg=150,
         step_over_ratio=0.2,
     )
@@ -81,7 +81,7 @@ def test_trochoid_min_loop_radius():
     """min_loop_radius should set a floor on amplitude."""
     pts = trochoid_along_3d(
         [(0, 0), (50, 0)],
-        tool_diameter=10,
+        diameter=10,
         engagement_angle_deg=90,
         step_over_ratio=0.2,
         min_loop_radius=5,
@@ -98,7 +98,7 @@ def test_trochoid_l_shaped():
     """
     pts = trochoid_along_3d(
         [(0, 0), (50, 0), (50, 50)],
-        tool_diameter=10,
+        diameter=10,
         engagement_angle_deg=90,
         step_over_ratio=0.2,
     )
@@ -112,7 +112,7 @@ def test_trochoid_z_passthrough():
     """All points should have the specified Z."""
     pts = trochoid_along_3d(
         [(0, 0), (30, 0)],
-        tool_diameter=8,
+        diameter=8,
         engagement_angle_deg=60,
         step_over_ratio=0.25,
         z=-5.0,
@@ -125,7 +125,7 @@ def test_trochoid_vertical_segment():
     """Trochoid along a vertical carrier."""
     pts = trochoid_along_3d(
         [(0, 0), (0, 100)],
-        tool_diameter=10,
+        diameter=10,
         engagement_angle_deg=90,
         step_over_ratio=0.2,
     )
@@ -141,7 +141,7 @@ def test_trochoid_diagonal_segment():
     """Trochoid along a diagonal carrier."""
     pts = trochoid_along_3d(
         [(0, 0), (100, 100)],
-        tool_diameter=10,
+        diameter=10,
         engagement_angle_deg=90,
         step_over_ratio=0.2,
     )

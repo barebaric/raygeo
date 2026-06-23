@@ -129,16 +129,14 @@ impl ClearedArea {
         best_d2
     }
 
-    pub fn expand(&mut self, tool_path: &[Point], tool_radius: f64) {
-        if tool_path.len() < 2 || tool_radius < 1e-12 {
+    pub fn expand(&mut self, path: &[Point], radius: f64) {
+        if path.len() < 2 || radius < 1e-12 {
             return;
         }
         let mut swept_polys: Vec<Polygon> = Vec::new();
-        for window in tool_path.windows(2) {
+        for window in path.windows(2) {
             swept_polys.extend(get_segment_swept_polygon(
-                window[0],
-                window[1],
-                tool_radius,
+                window[0], window[1], radius,
             ));
         }
 
@@ -150,8 +148,8 @@ impl ClearedArea {
         self.rebuild_grid();
     }
 
-    pub fn expand_step(&mut self, prev: Point, next: Point, tool_radius: f64) {
-        let swept = get_segment_swept_polygon(prev, next, tool_radius);
+    pub fn expand_step(&mut self, prev: Point, next: Point, radius: f64) {
+        let swept = get_segment_swept_polygon(prev, next, radius);
         let mut all_polys = self.fragments.clone();
         all_polys.extend(swept);
         let merged = get_polygons_union(&all_polys);
@@ -225,9 +223,8 @@ impl ClearedArea {
         self.fragments.is_empty()
     }
 
-    /// Directly insert known cleared polygons (e.g., the swept footprint
-    /// of a bulk spiral). This avoids the overhead of sweeping thousands
-    /// of individual line segments.
+    /// Directly insert known cleared polygons. This avoids the overhead
+    /// of sweeping thousands of individual line segments.
     #[prof]
     pub fn add_cleared_polygons(&mut self, polygons: &[Polygon]) {
         if polygons.is_empty() {
@@ -367,8 +364,7 @@ impl ClearedArea {
     }
 
     /// Expand the current frontier by `step_over`, clip to `valid_area`,
-    /// subtract already-cleared space, and return the resulting "bites" of
-    /// material to be machined.
+    /// subtract already-cleared space, and return the resulting "bites".
     #[prof]
     pub fn bites(
         &self,

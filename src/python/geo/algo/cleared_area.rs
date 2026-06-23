@@ -46,12 +46,12 @@ impl ClearedArea {
     }
 
     /// :complexity: O(n) where n = number of path points
-    pub fn expand(&mut self, tool_path: Vec<(f64, f64)>, tool_radius: f64) {
-        let path: Vec<crate::types::Point> = tool_path
+    pub fn expand(&mut self, path: Vec<(f64, f64)>, radius: f64) {
+        let path: Vec<crate::types::Point> = path
             .into_iter()
             .map(|(x, y)| crate::types::Point::new(x, y))
             .collect();
-        self.inner.expand(&path, tool_radius);
+        self.inner.expand(&path, radius);
     }
 
     /// :complexity: O(n) where n = total vertices across all polygons

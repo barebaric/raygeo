@@ -132,16 +132,15 @@ fn offset_contour_group_py(
     import raygeo.geo.types
 
     def find_deepest_cores(
-        valid_tool_area: collections.abc.Sequence[raygeo.geo.types.Polygon],
+        regions: collections.abc.Sequence[raygeo.geo.types.Polygon],
         step_over: float,
     ) -> list[raygeo.geo.types.Point]:
-        """Find the deepest (most open) regions of a pocket.
+        """Find the deepest (most open) regions of a polygon set.
 
         Iteratively offsets each polygon inward by step_over until all
-        polygons collapse. Returns the centroids of the final polygons —
-        optimal points for helical entry in adaptive clearing.
+        polygons collapse. Returns the centroids of the final polygons.
 
-        :param valid_tool_area: List of polygons representing valid tool center area.
+        :param regions: List of polygons to search.
         :param step_over: Inward offset distance per iteration.
         :returns: List of (x, y) centroid points.
         :complexity: O(n * k) where k is the number of iterations
@@ -151,10 +150,10 @@ fn offset_contour_group_py(
 )]
 #[pyfunction(name = "find_deepest_cores")]
 fn find_deepest_cores_py(
-    valid_tool_area: Vec<Vec<(f64, f64)>>,
+    regions: Vec<Vec<(f64, f64)>>,
     step_over: f64,
 ) -> Vec<(f64, f64)> {
-    let polys: Vec<GeoPolygon> = valid_tool_area
+    let polys: Vec<GeoPolygon> = regions
         .into_iter()
         .map(|v| v.into_iter().map(|(x, y)| GeoPoint::new(x, y)).collect())
         .collect();

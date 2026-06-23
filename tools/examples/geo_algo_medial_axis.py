@@ -62,7 +62,7 @@ def generate_mat_rect():
     fig, ax = plt.subplots(figsize=(6, 5))
     boundary = [(0, 0), (100, 0), (100, 80), (0, 80)]
     axis = MedialAxis.compute(
-        boundary, holes=[], tool_radius=1.0, sampling_spacing=6.0
+        boundary, holes=[], min_clearance=1.0, sampling_spacing=6.0
     )
     _plot_ma_2d(
         axis.nodes,
@@ -87,7 +87,7 @@ def generate_mat_multi():
         [(130, 80), (160, 80), (160, 105), (130, 105)],
     ]
     axis = MedialAxis.compute(
-        boundary, holes=islands, tool_radius=1.0, sampling_spacing=8.0
+        boundary, holes=islands, min_clearance=1.0, sampling_spacing=8.0
     )
     _plot_ma_2d(
         axis.nodes,
@@ -117,7 +117,7 @@ def generate_mat_yshape():
         (45, 40),
     ]
     axis = MedialAxis.compute(
-        yshape, holes=[], tool_radius=1.0, sampling_spacing=6.0
+        yshape, holes=[], min_clearance=1.0, sampling_spacing=6.0
     )
     _plot_ma_2d(
         axis.nodes,
@@ -139,7 +139,7 @@ def generate_mat_path():
     island = [(35, 20), (65, 20), (65, 60), (35, 60)]
 
     axis = MedialAxis.compute(
-        boundary, holes=[island], tool_radius=1.0, sampling_spacing=6.0
+        boundary, holes=[island], min_clearance=1.0, sampling_spacing=6.0
     )
 
     from_pt, to_pt = (10, 10), (90, 70)

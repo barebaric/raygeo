@@ -98,16 +98,15 @@ impl MedialAxis {
     ///
     /// * `outer` — outer boundary polygon (CCW).
     /// * `holes` — inner hole polygons (CW), may be empty.
-    /// * `tool_radius` — minimum clearance; nodes with smaller radius are
+    /// * `min_clearance` — minimum clearance; nodes with smaller radius are
     ///   pruned.
     /// * `sampling_spacing` — target spacing for boundary-sampling and
-    ///   Steiner grid.  Smaller values = denser mesh = finer MAT ≈
-    ///   `step_over × 0.5`.
+    ///   Steiner grid.  Smaller values = denser mesh ≈ finer MAT.
     #[prof]
     pub fn compute(
         outer: &[Point],
         holes: &[Vec<Point>],
-        tool_radius: f64,
+        min_clearance: f64,
         sampling_spacing: f64,
     ) -> Result<MedialAxis, String> {
         if outer.len() < 3 {
@@ -148,7 +147,7 @@ impl MedialAxis {
                 continue;
             }
 
-            if radius < tool_radius {
+            if radius < min_clearance {
                 continue;
             }
 
@@ -162,7 +161,7 @@ impl MedialAxis {
 
         if nodes.is_empty() {
             return Err("no valid medial axis nodes found — try smaller \
-                 sampling_spacing or larger tool_radius"
+                 sampling_spacing or smaller min_clearance"
                 .into());
         }
 

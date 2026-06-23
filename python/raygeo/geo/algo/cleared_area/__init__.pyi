@@ -16,7 +16,7 @@ __all__ = [
 @typing.final
 class ClearedArea:
     def __new__(cls, initial: typing.Optional[typing.Sequence[typing.Sequence[tuple[builtins.float, builtins.float]]]] = None) -> ClearedArea: ...
-    def expand(self, tool_path: typing.Sequence[tuple[builtins.float, builtins.float]], tool_radius: builtins.float) -> None:
+    def expand(self, path: typing.Sequence[tuple[builtins.float, builtins.float]], radius: builtins.float) -> None:
         r"""
         :complexity: O(n) where n = number of path points
         """

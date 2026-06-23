@@ -45,15 +45,14 @@ def concentric_offsets(geom: raygeo.Geometry, step: float, max_passes: int = 10,
     :complexity: O(n * p) time, O(n) space where n is the number of contour vertices and p the number of passes
     """
 
-def find_deepest_cores(valid_tool_area: collections.abc.Sequence[raygeo.geo.types.Polygon], step_over: float) -> list[raygeo.geo.types.Point]:
+def find_deepest_cores(regions: collections.abc.Sequence[raygeo.geo.types.Polygon], step_over: float) -> list[raygeo.geo.types.Point]:
     r"""
-    Find the deepest (most open) regions of a pocket.
+    Find the deepest (most open) regions of a polygon set.
     
     Iteratively offsets each polygon inward by step_over until all
-    polygons collapse. Returns the centroids of the final polygons —
-    optimal points for helical entry in adaptive clearing.
+    polygons collapse. Returns the centroids of the final polygons.
     
-    :param valid_tool_area: List of polygons representing valid tool center area.
+    :param regions: List of polygons to search.
     :param step_over: Inward offset distance per iteration.
     :returns: List of (x, y) centroid points.
     :complexity: O(n * k) where k is the number of iterations

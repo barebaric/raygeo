@@ -267,11 +267,8 @@ pub fn grow_geometry_on_plane(
 /// Returns an empty vec when the input is empty or `step_over` ≤ 0.
 ///
 /// **Planar (XY-plane only).** Z is not modeled.
-pub fn find_deepest_cores(
-    valid_tool_area: &[Polygon],
-    step_over: f64,
-) -> Vec<Point> {
-    if valid_tool_area.is_empty() || step_over <= 0.0 {
+pub fn find_deepest_cores(regions: &[Polygon], step_over: f64) -> Vec<Point> {
+    if regions.is_empty() || step_over <= 0.0 {
         return vec![];
     }
 
@@ -280,16 +277,16 @@ pub fn find_deepest_cores(
     // input polygon is a hole; the rest are solids.  We pick the
     // *smallest* containing polygon (by area) as the parent so that
     // nested contours associate with their immediate enclosing contour.
-    let n = valid_tool_area.len();
+    let n = regions.len();
     let mut parent: Vec<Option<usize>> = vec![None; n];
-    for (i, poly_i) in valid_tool_area.iter().enumerate() {
+    for (i, poly_i) in regions.iter().enumerate() {
         if poly_i.len() < 3 {
             continue;
         }
         let probe = poly_i[0];
         let mut best: Option<usize> = None;
         let mut best_area = f64::MAX;
-        for (j, poly_j) in valid_tool_area.iter().enumerate() {
+        for (j, poly_j) in regions.iter().enumerate() {
             if i == j || poly_j.len() < 3 {
                 continue;
             }
@@ -305,10 +302,10 @@ pub fn find_deepest_cores(
     }
 
     let solid_indices: Vec<usize> = (0..n)
-        .filter(|&i| valid_tool_area[i].len() >= 3 && parent[i].is_none())
+        .filter(|&i| regions[i].len() >= 3 && parent[i].is_none())
         .collect();
     let hole_indices: Vec<usize> = (0..n)
-        .filter(|&i| valid_tool_area[i].len() >= 3 && parent[i].is_some())
+        .filter(|&i| regions[i].len() >= 3 && parent[i].is_some())
         .collect();
 
     // No holes (or no recognised solids): use the legacy binary-search
@@ -316,7 +313,7 @@ pub fn find_deepest_cores(
     // fragment, which matches existing behaviour for simple regions and
     // for callers that pass a flat list of disconnected regions.
     if hole_indices.is_empty() || solid_indices.is_empty() {
-        return find_deepest_cores_by_offset(valid_tool_area);
+        return find_deepest_cores_by_offset(regions);
     }
 
     // Holes present: find the pole of inaccessibility per solid so the
@@ -327,14 +324,14 @@ pub fn find_deepest_cores(
     let mut best_radius = -1.0_f64;
 
     for &solid_idx in &solid_indices {
-        let solid = &valid_tool_area[solid_idx];
+        let solid = &regions[solid_idx];
 
         // Collect the holes that belong to this solid: any hole whose
         // first vertex lies inside the solid.
         let associated_holes: Vec<Polygon> = hole_indices
             .iter()
             .filter_map(|&h_idx| {
-                let hole = &valid_tool_area[h_idx];
+                let hole = &regions[h_idx];
                 hole.first()
                     .filter(|&&p| is_point_in_polygon(p, solid))
                     .map(|_| hole.clone())
@@ -359,11 +356,11 @@ pub fn find_deepest_cores(
 /// largest surviving fragment across all inputs.
 ///
 /// Used by [`find_deepest_cores`] for inputs without holes.
-fn find_deepest_cores_by_offset(valid_tool_area: &[Polygon]) -> Vec<Point> {
+fn find_deepest_cores_by_offset(regions: &[Polygon]) -> Vec<Point> {
     let mut best_fragment: Option<Polygon> = None;
     let mut best_area = 0.0_f64;
 
-    for poly in valid_tool_area {
+    for poly in regions {
         if poly.len() < 3 {
             continue;
         }

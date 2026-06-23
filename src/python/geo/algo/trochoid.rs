@@ -5,10 +5,10 @@ pyo3_stub_gen::module_doc!(
 );
 
 pub(crate) const MODULE_DOC_TROCHOID: &str = "\
-Trochoidal path generation for constant-engagement milling.
+Trochoidal path generation along a carrier polyline.
 
-Provides generation of trochoidal toolpaths along a carrier polyline,
-with configurable tool diameter, engagement angle, and step-over ratio.
+Provides generation of trochoidal paths with configurable diameter,
+engagement angle, and step-over ratio.
 ";
 
 use crate::geo::algo::trochoid::{
@@ -36,18 +36,18 @@ pub fn register(algo_mod: &Bound<'_, PyModule>) -> PyResult<()> {
 
     def trochoid_along_3d(
         carrier: collections.abc.Sequence[tuple[float, float]],
-        tool_diameter: float,
+        diameter: float,
         engagement_angle_deg: float = 90.0,
         step_over_ratio: float = 0.2,
         min_loop_radius: float = 0.5,
         z: float = 0.0,
     ) -> list[tuple[float, float, float]]:
-        """Generate a trochoidal cutting path along a carrier polyline.
+        """Generate a trochoidal path along a carrier polyline.
 
         :param carrier: Sequence of (x, y) points defining the centerline.
-        :param tool_diameter: Tool diameter in mm.
-        :param engagement_angle_deg: Target engagement angle in degrees (default 90).
-        :param step_over_ratio: Forward advance per loop as fraction of tool diameter (default 0.2).
+        :param diameter: Trochoid generating circle diameter.
+        :param engagement_angle_deg: Engagement angle in degrees (default 90).
+        :param step_over_ratio: Forward advance per loop as fraction of diameter (default 0.2).
         :param min_loop_radius: Minimum trochoid loop radius in mm (default 0.5).
         :param z: Z height for all points (default 0.0).
         :returns: List of (x, y, z) points forming the trochoidal path.
@@ -59,7 +59,7 @@ pub fn register(algo_mod: &Bound<'_, PyModule>) -> PyResult<()> {
 #[pyfunction(name = "trochoid_along_3d")]
 #[pyo3(signature = (
     carrier,
-    tool_diameter,
+    diameter,
     engagement_angle_deg = 90.0,
     step_over_ratio = 0.2,
     min_loop_radius = 0.5,
@@ -67,7 +67,7 @@ pub fn register(algo_mod: &Bound<'_, PyModule>) -> PyResult<()> {
 ))]
 fn trochoid_along_py(
     carrier: Vec<(f64, f64)>,
-    tool_diameter: f64,
+    diameter: f64,
     engagement_angle_deg: f64,
     step_over_ratio: f64,
     min_loop_radius: f64,
@@ -76,7 +76,7 @@ fn trochoid_along_py(
     let carrier_pts: Vec<Point> =
         carrier.into_iter().map(|(x, y)| Point::new(x, y)).collect();
     let opts = RustTrochoidOptions {
-        tool_diameter,
+        diameter,
         engagement_angle_deg,
         step_over_ratio,
         min_loop_radius,

@@ -113,15 +113,15 @@ by expanding the frontier by `step_over`._
 ### `expand()`
 
 ```python
-expand(tool_path: Sequence[tuple[float, float]], tool_radius: float) -> None
+expand(path: Sequence[tuple[float, float]], radius: float) -> None
 ```
 
-| Parameter     | Type                            | Description                          |
-| ------------- | ------------------------------- | ------------------------------------ |
-| `tool_path`   | `Sequence[tuple[float, float]]` |                                      |
-| `tool_radius` | `float`                         |                                      |
-| _Returns_     | `None`                          |                                      |
-| _Complexity_  |                                 | O(n) where n = number of path points |
+| Parameter    | Type                            | Description                          |
+| ------------ | ------------------------------- | ------------------------------------ |
+| `path`       | `Sequence[tuple[float, float]]` |                                      |
+| `radius`     | `float`                         |                                      |
+| _Returns_    | `None`                          |                                      |
+| _Complexity_ |                                 | O(n) where n = number of path points |
 
 ### `fragments()`
 
