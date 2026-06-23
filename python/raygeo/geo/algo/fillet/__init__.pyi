@@ -21,17 +21,19 @@ __all__ = [
     "try_fillet_one_end",
 ]
 
-def append_end_fillets(polyline: collections.abc.Sequence[tuple[float, float]], radius: float, sweep_angle: float, side: float) -> list[tuple[float, float]]:
+def append_end_fillets(polyline: collections.abc.Sequence[tuple[float, float]], radius: float, sweep_angle: float, start_side: float, end_side: float) -> list[tuple[float, float]]:
     r"""
     Append fillet arcs to both ends of an open polyline.
     
-    A reversed fillet is added at the start and a forward fillet at
-    the end, producing a smooth rounded path.
+    A reversed fillet is added at the start (using *start_side*) and a
+    forward fillet at the end (using *end_side*), producing a smooth
+    rounded path.
     
     :param polyline: Input open polyline.
     :param radius: Fillet radius.
     :param sweep_angle: Arc sweep angle in radians.
-    :param side: Offset side (+1 left, -1 right).
+    :param start_side: Offset side for the start fillet (+1 left, -1 right).
+    :param end_side: Offset side for the end fillet (+1 left, -1 right).
     :returns: Full polyline with fillets.
     """
 

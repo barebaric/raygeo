@@ -35,13 +35,15 @@ use crate::geo::shape::polygon::{
     get_polygons_group_difference, get_segment_swept_polygon,
 };
 use crate::geo::shape::polyline::{
-    get_polyline_bounds, trim_polyline_angular_ends, trim_polyline_at,
+    get_polyline_bounds, split_polyline_at_v_junctions,
+    trim_polyline_angular_ends, trim_polyline_at,
 };
 use crate::ops::container::Ops;
 use crate::ops::state::State;
 use crate::types::{Point, Point3D, Polygon};
 
 const MAX_WAVEFRONT_ITERATIONS: usize = 1000;
+const DERIV_THRESHOLD: f64 = 0.436_332_312_998_582_4;
 
 // ── Cutting-arc extraction ─────────────────────────────────────
 
@@ -113,7 +115,6 @@ pub fn find_cutting_arc(
 
     // Trim transition vertices at the tips where the outer arc meets
     // the inner arc by detecting sharp jumps in interior angle.
-    const DERIV_THRESHOLD: f64 = 0.436_332_312_998_582_4; // 25° in radians
     (cut_start, cut_len) =
         trim_polyline_angular_ends(bite, cut_start, cut_len, DERIV_THRESHOLD);
 
@@ -839,23 +840,44 @@ fn finish_peeling(
             if span < min_span {
                 return None;
             }
+            // Determine the fillet direction at each end independently
+            // by splitting at V-junctions.  When two shallow cut lines
+            // merge they look like a single arc whose overall turn sign
+            // (sampled at the midpoint) can point the wrong way.  The
+            // first component's sign is used for the enter fillet and
+            // the last component's sign for the exit fillet; the arc is
+            // kept as a single polyline so no fillet is inserted at the
+            // junction.
+            let components =
+                split_polyline_at_v_junctions(arc, DERIV_THRESHOLD);
+            let start_side = components
+                .first()
+                .map(|c| get_polyline_turn_sign(c))
+                .unwrap_or(1.0);
+            let end_side = components
+                .last()
+                .map(|c| get_polyline_turn_sign(c))
+                .unwrap_or(1.0);
+
             let fa = if let Some((enter, exit)) = trim_to_safe_fillet_span(
                 arc,
                 pocket_boundary,
                 islands,
                 tool_radius,
                 wall_margin,
+                start_side,
+                end_side,
             ) {
                 let trimmed = trim_polyline_at(arc, enter, exit);
                 if trimmed.len() < 3 {
                     arc.to_vec()
                 } else {
-                    let side = get_polyline_turn_sign(arc);
                     append_end_fillets(
                         &trimmed,
                         tool_radius,
                         std::f64::consts::FRAC_PI_2,
-                        side,
+                        start_side,
+                        end_side,
                     )
                 }
             } else {
@@ -865,6 +887,8 @@ fn finish_peeling(
                     islands,
                     tool_radius,
                     wall_margin,
+                    start_side,
+                    end_side,
                 )
             };
             if fa.len() >= 3 {

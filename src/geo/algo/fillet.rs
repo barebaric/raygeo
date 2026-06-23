@@ -7,7 +7,6 @@
 
 use std::f64::consts::FRAC_PI_2;
 
-use crate::geo::shape::arc::get_polyline_turn_sign;
 use crate::geo::shape::line::get_segment_segment_distance;
 use crate::geo::shape::polygon::does_path_sweep_intersect_polygon;
 use crate::types::{Point, Polygon};
@@ -54,14 +53,15 @@ pub fn create_fillet_polyline(
 
 /// Append fillet arcs to both ends of an open polyline.
 ///
-/// A reversed fillet is added at the start and a forward fillet at
-/// the end, producing a smooth rounded path.  Returns the full
-/// polyline with fillets in order.
+/// A reversed fillet is added at the start (using `start_side`) and a
+/// forward fillet at the end (using `end_side`), producing a smooth
+/// rounded path.  Returns the full polyline with fillets in order.
 pub fn append_end_fillets(
     polyline: &[Point],
     radius: f64,
     sweep_angle: f64,
-    side: f64,
+    start_side: f64,
+    end_side: f64,
 ) -> Vec<Point> {
     if polyline.len() < 2 {
         return polyline.to_vec();
@@ -75,7 +75,7 @@ pub fn append_end_fillets(
         start_dir,
         radius,
         sweep_angle,
-        side,
+        start_side,
         true,
     );
     let (_, end_arc) = create_fillet_polyline(
@@ -83,7 +83,7 @@ pub fn append_end_fillets(
         end_dir,
         radius,
         sweep_angle,
-        side,
+        end_side,
         false,
     );
 
@@ -104,21 +104,24 @@ pub fn append_end_fillets(
 /// precision.  `margin` adds extra clearance beyond tangency
 /// (`0.0` allows the sweep to touch the boundary).
 ///
-/// Returns `(enter, exit)` — the first and last points of the safe
-/// sub-span, or `None` when no usable safe span remains.
+/// `start_side` selects the offset side for the enter (start) fillet
+/// and `end_side` for the exit (end) fillet.  Returns `(enter, exit)`
+/// — the first and last points of the safe sub-span, or `None` when
+/// no usable safe span remains.
 pub fn trim_to_safe_fillet_span(
     polyline: &[Point],
     outer_boundary: &[Point],
     inner_obstacles: &[Vec<Point>],
     radius: f64,
     margin: f64,
+    start_side: f64,
+    end_side: f64,
 ) -> Option<(Point, Point)> {
     let n = polyline.len();
     if n < 3 || radius <= 0.0 {
         return None;
     }
     let radius_eff = radius + margin;
-    let side = get_polyline_turn_sign(polyline);
     let last = n - 1;
 
     fn fillet_collides(
@@ -165,7 +168,7 @@ pub fn trim_to_safe_fillet_span(
             dir0,
             radius,
             FRAC_PI_2,
-            side,
+            start_side,
             true,
         );
         if !fillet_collides(&f0, outer_boundary, inner_obstacles, radius_eff) {
@@ -178,7 +181,7 @@ pub fn trim_to_safe_fillet_span(
                 dir,
                 radius,
                 FRAC_PI_2,
-                side,
+                start_side,
                 true,
             );
             if !fillet_collides(&f, outer_boundary, inner_obstacles, radius_eff)
@@ -194,7 +197,7 @@ pub fn trim_to_safe_fillet_span(
                     let p = a + ab * mid_t;
                     let dir_p = b - p;
                     let (_, f) = create_fillet_polyline(
-                        p, dir_p, radius, FRAC_PI_2, side, true,
+                        p, dir_p, radius, FRAC_PI_2, start_side, true,
                     );
                     if !fillet_collides(
                         &f,
@@ -222,7 +225,7 @@ pub fn trim_to_safe_fillet_span(
             dir_last,
             radius,
             FRAC_PI_2,
-            side,
+            end_side,
             false,
         );
         if !fillet_collides(&f0, outer_boundary, inner_obstacles, radius_eff) {
@@ -235,7 +238,7 @@ pub fn trim_to_safe_fillet_span(
                 dir,
                 radius,
                 FRAC_PI_2,
-                side,
+                end_side,
                 false,
             );
             if !fillet_collides(&f, outer_boundary, inner_obstacles, radius_eff)
@@ -251,7 +254,7 @@ pub fn trim_to_safe_fillet_span(
                     let p = a + ab * mid_t;
                     let dir_p = p - polyline[hi - 1];
                     let (_, f) = create_fillet_polyline(
-                        p, dir_p, radius, FRAC_PI_2, side, false,
+                        p, dir_p, radius, FRAC_PI_2, end_side, false,
                     );
                     if !fillet_collides(
                         &f,
@@ -281,20 +284,22 @@ pub fn trim_to_safe_fillet_span(
 /// Try to add a fillet at just one end of the arc when
 /// [`trim_to_safe_fillet_span`] could not fit both.
 ///
-/// Tests the enter (start) fillet first, then the exit (end) fillet,
-/// and returns the first that does not collide with the boundary or
-/// islands.  Falls back to the original arc if neither fits.
+/// Tests the enter (start) fillet first (using `start_side`), then
+/// the exit (end) fillet (using `end_side`), and returns the first
+/// that does not collide with the boundary or islands.  Falls back
+/// to the original arc if neither fits.
 pub fn try_fillet_one_end(
     arc: &[Point],
     outer_boundary: &[Point],
     inner_obstacles: &[Polygon],
     radius: f64,
     margin: f64,
+    start_side: f64,
+    end_side: f64,
 ) -> Vec<Point> {
     if arc.len() < 2 {
         return arc.to_vec();
     }
-    let side = get_polyline_turn_sign(arc);
     let radius_eff = radius + margin;
     let last = arc.len() - 1;
 
@@ -331,8 +336,9 @@ pub fn try_fillet_one_end(
     let sweep = std::f64::consts::FRAC_PI_2;
 
     let start_dir = arc[1] - arc[0];
-    let (_, start_arc) =
-        create_fillet_polyline(arc[0], start_dir, radius, sweep, side, true);
+    let (_, start_arc) = create_fillet_polyline(
+        arc[0], start_dir, radius, sweep, start_side, true,
+    );
     if fillet_ok(&start_arc) {
         let mut path = Vec::new();
         path.extend(start_arc.iter().rev().copied());
@@ -341,8 +347,9 @@ pub fn try_fillet_one_end(
     }
 
     let end_dir = arc[last] - arc[last - 1];
-    let (_, end_arc) =
-        create_fillet_polyline(arc[last], end_dir, radius, sweep, side, false);
+    let (_, end_arc) = create_fillet_polyline(
+        arc[last], end_dir, radius, sweep, end_side, false,
+    );
     if fillet_ok(&end_arc) {
         let mut path = arc.to_vec();
         path.extend(end_arc.iter().skip(1).copied());

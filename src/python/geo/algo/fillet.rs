@@ -93,17 +93,20 @@ fn create_fillet_polyline_py(
         polyline: collections.abc.Sequence[tuple[float, float]],
         radius: float,
         sweep_angle: float,
-        side: float,
+        start_side: float,
+        end_side: float,
     ) -> list[tuple[float, float]]:
         """Append fillet arcs to both ends of an open polyline.
 
-        A reversed fillet is added at the start and a forward fillet at
-        the end, producing a smooth rounded path.
+        A reversed fillet is added at the start (using *start_side*) and a
+        forward fillet at the end (using *end_side*), producing a smooth
+        rounded path.
 
         :param polyline: Input open polyline.
         :param radius: Fillet radius.
         :param sweep_angle: Arc sweep angle in radians.
-        :param side: Offset side (+1 left, -1 right).
+        :param start_side: Offset side for the start fillet (+1 left, -1 right).
+        :param end_side: Offset side for the end fillet (+1 left, -1 right).
         :returns: Full polyline with fillets.
         """
 "#,
@@ -114,13 +117,14 @@ fn append_end_fillets_py(
     polyline: Vec<(f64, f64)>,
     radius: f64,
     sweep_angle: f64,
-    side: f64,
+    start_side: f64,
+    end_side: f64,
 ) -> Vec<(f64, f64)> {
     let pts: Vec<Point> = polyline
         .into_iter()
         .map(|(x, y)| Point::new(x, y))
         .collect();
-    fillet::append_end_fillets(&pts, radius, sweep_angle, side)
+    fillet::append_end_fillets(&pts, radius, sweep_angle, start_side, end_side)
         .into_iter()
         .map(|p| (p.x, p.y))
         .collect()
@@ -173,12 +177,15 @@ fn trim_to_safe_fillet_span_py(
         .into_iter()
         .map(|h| h.into_iter().map(|(x, y)| Point::new(x, y)).collect())
         .collect();
+    let side = get_polyline_turn_sign(&polyline_pts);
     fillet::trim_to_safe_fillet_span(
         &polyline_pts,
         &boundary_pts,
         &obstacles,
         radius,
         margin,
+        side,
+        side,
     )
     .map(|(a, b)| ((a.x, a.y), (b.x, b.y)))
 }
@@ -231,12 +238,15 @@ fn fillet_arc_ends_py(
         .into_iter()
         .map(|h| h.into_iter().map(|(x, y)| Point::new(x, y)).collect())
         .collect();
+    let side = get_polyline_turn_sign(&arc_pts);
     let Some((enter, exit)) = fillet::trim_to_safe_fillet_span(
         &arc_pts,
         &boundary,
         &islands_pts,
         tool_radius,
         wall_margin,
+        side,
+        side,
     ) else {
         return arc;
     };
@@ -244,11 +254,11 @@ fn fillet_arc_ends_py(
     if trimmed.len() < 3 {
         return arc;
     }
-    let side = get_polyline_turn_sign(&arc_pts);
     fillet::append_end_fillets(
         &trimmed,
         tool_radius,
         std::f64::consts::FRAC_PI_2,
+        side,
         side,
     )
     .into_iter()
@@ -304,12 +314,15 @@ fn find_safe_sweep_end_py(
         .into_iter()
         .map(|h| h.into_iter().map(|(x, y)| Point::new(x, y)).collect())
         .collect();
+    let side = get_polyline_turn_sign(&arc_pts);
     fillet::trim_to_safe_fillet_span(
         &arc_pts,
         &boundary,
         &islands_pts,
         tool_radius,
         wall_margin,
+        side,
+        side,
     )
     .map(|(a, b)| ((a.x, a.y), (b.x, b.y)))
 }
@@ -361,8 +374,11 @@ fn try_fillet_one_end_py(
         .into_iter()
         .map(|h| h.into_iter().map(|(x, y)| Point::new(x, y)).collect())
         .collect();
-    fillet::try_fillet_one_end(&arc_pts, &boundary, &obstacles, radius, margin)
-        .into_iter()
-        .map(|p| (p.x, p.y))
-        .collect()
+    let side = get_polyline_turn_sign(&arc_pts);
+    fillet::try_fillet_one_end(
+        &arc_pts, &boundary, &obstacles, radius, margin, side, side,
+    )
+    .into_iter()
+    .map(|p| (p.x, p.y))
+    .collect()
 }

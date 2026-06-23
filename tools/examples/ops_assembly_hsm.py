@@ -498,7 +498,7 @@ def generate_link_arcs():
                     if len(trimmed) >= 3:
                         side = get_polyline_turn_sign(arc)
                         fa = append_end_fillets(
-                            trimmed, tool_radius, math.pi / 2, side
+                            trimmed, tool_radius, math.pi / 2, side, side
                         )
                         if len(fa) >= 3:
                             filleted_arcs.append(fa)

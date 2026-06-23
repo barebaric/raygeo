@@ -4,6 +4,8 @@ import math
 
 from raygeo.geo.algo.cleared_area import ClearedArea
 from raygeo.geo.algo.offset import compute_inset_region
+from raygeo.geo.shape.arc import get_polyline_turn_sign
+from raygeo.geo.shape.polyline import split_polyline_at_v_junctions
 from raygeo.ops import Ops
 from raygeo.ops.assembly.hsm import (
     adaptive_entry,
@@ -229,6 +231,67 @@ def test_adaptive_peeling_feed_rate_applied():
             found_feed = True
             break
     assert found_feed
+
+
+def test_adaptive_peeling_v_junction_fillet_direction():
+    """Cutting arcs with V-junctions fillet in the correct direction.
+
+    When two shallow cut lines merge they form what looks like a single
+    arc with a V-junction in the middle.  The midpoint turn sign of the
+    combined polyline is unreliable; splitting at the V-junction first
+    lets each half get its own (correct) turning direction.
+    """
+    # Two shallow arcs of opposite curvature meeting at a sharp V peak.
+    pts = []
+    for i in range(6):
+        t = i / 5.0
+        pts.append(
+            (20.0 + 30.0 * t, 20.0 + 30.0 * t - 5.0 * math.sin(t * math.pi))
+        )
+    for i in range(1, 6):
+        t = i / 5.0
+        pts.append(
+            (50.0 + 30.0 * t, 50.0 - 30.0 * t + 5.0 * math.sin(t * math.pi))
+        )
+
+    components = split_polyline_at_v_junctions(pts, 0.436)
+    assert len(components) >= 2
+
+    signs = [get_polyline_turn_sign(c) for c in components]
+    # The two sides of the V curve in opposite directions.
+    assert signs[0] != signs[-1]
+    # The combined midpoint sign disagrees with at least one half — the
+    # exact condition that causes wrong-direction fillets without splitting.
+    combined = get_polyline_turn_sign(pts)
+    assert combined != signs[0] or combined != signs[-1]
+
+
+def test_adaptive_peeling_pinch_geometry():
+    """Adaptive peeling handles frontiers that pinch between islands.
+
+    Two islands separated by a narrow channel force the cleared frontier
+    to merge on the far side, producing cutting arcs with V-junctions.
+    """
+    boundary = _rect(50, 50, 100, 100)
+    islands = [_rect(30, 50, 30, 60), _rect(70, 50, 30, 60)]
+    ca = ClearedArea([_seed_circle(50, 10, 4)])
+    ops = adaptive_peeling(
+        cleared=ca,
+        pocket_boundary=boundary,
+        islands=islands,
+        tool_radius=3.0,
+        step_over=2.0,
+        cut_z=-5.0,
+        safe_z=2.0,
+    )
+    assert ops.len() > 0
+    assert ops.cut_distance() > 0
+    # No cut point inside either island.
+    for i in range(ops.len()):
+        if ops.is_cutting(i):
+            x, y, _ = ops.endpoint(i)
+            assert not (15 <= x <= 45 and 20 <= y <= 80)
+            assert not (55 <= x <= 85 and 20 <= y <= 80)
 
 
 # ── adaptive_entry ─────────────────────────────────────────────

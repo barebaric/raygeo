@@ -148,7 +148,7 @@ class TestAppendEndFillets:
         """Fillets added to a 3-point polyline produce a longer path."""
         polyline = [(0.0, 0.0), (50.0, 0.0), (100.0, 0.0)]
         radius = 5.0
-        result = append_end_fillets(polyline, radius, math.pi / 2, 1.0)
+        result = append_end_fillets(polyline, radius, math.pi / 2, 1.0, 1.0)
         assert len(result) > len(polyline)
         # start point should be filleted backward
         assert result[0][0] < 0.0  # reversed fillet goes left of start
@@ -158,7 +158,7 @@ class TestAppendEndFillets:
     def test_two_points(self):
         """Two-point polyline gets fillets at both ends (same direction)."""
         polyline = [(0.0, 0.0), (10.0, 0.0)]
-        result = append_end_fillets(polyline, 5.0, math.pi / 2, 1.0)
+        result = append_end_fillets(polyline, 5.0, math.pi / 2, 1.0, 1.0)
         assert len(result) > len(polyline)
         # reversed start fillet goes left of (0,0)
         assert result[0][0] < 0.0
@@ -168,13 +168,26 @@ class TestAppendEndFillets:
     def test_single_point(self):
         """Single-point polyline returns as-is."""
         polyline = [(0.0, 0.0)]
-        result = append_end_fillets(polyline, 5.0, math.pi / 2, 1.0)
+        result = append_end_fillets(polyline, 5.0, math.pi / 2, 1.0, 1.0)
         assert result == polyline
 
     def test_empty(self):
         """Empty polyline returns empty."""
-        result = append_end_fillets([], 5.0, math.pi / 2, 1.0)
+        result = append_end_fillets([], 5.0, math.pi / 2, 1.0, 1.0)
         assert result == []
+
+    def test_opposite_sides(self):
+        """Different start/end sides produce fillets on opposite sides."""
+        # S-shaped polyline: start curves up, end curves down
+        polyline = [
+            (0.0, 0.0),
+            (10.0, 5.0),
+            (20.0, 5.0),
+            (30.0, 0.0),
+            (40.0, -5.0),
+        ]
+        result = append_end_fillets(polyline, 5.0, math.pi / 2, 1.0, -1.0)
+        assert len(result) > len(polyline)
 
 
 class TestTrimToSafeFilletSpan:

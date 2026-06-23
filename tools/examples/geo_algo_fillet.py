@@ -110,7 +110,7 @@ def generate_append_end_fillets():
     polyline = [(20, 30), (50, 30), (80, 50), (100, 50)]
     radius = 8.0
     sweep = math.pi / 2
-    filleted = append_end_fillets(polyline, radius, sweep, 1.0)
+    filleted = append_end_fillets(polyline, radius, sweep, 1.0, 1.0)
 
     fig, ax = plt.subplots(figsize=(7, 5))
     # original polyline (thick and visible underneath)
@@ -194,7 +194,7 @@ def generate_trim_to_safe_fillet_span():
         enter, exit_ = result
         # trim the polyline to the safe span and add end fillets
         trimmed = trim_polyline_at(polyline, enter, exit_)
-        filleted = append_end_fillets(trimmed, radius, math.pi / 2, 1.0)
+        filleted = append_end_fillets(trimmed, radius, math.pi / 2, 1.0, 1.0)
         fx = [pt[0] for pt in filleted]
         fy = [pt[1] for pt in filleted]
         ax.plot(

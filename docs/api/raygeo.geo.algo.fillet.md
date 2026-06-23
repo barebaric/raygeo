@@ -22,22 +22,24 @@ append_end_fillets(
     polyline: Sequence[tuple[float, float]],
     radius: float,
     sweep_angle: float,
-    side: float,
+    start_side: float,
+    end_side: float,
 ) -> list[tuple[float, float]]
 ```
 
 Append fillet arcs to both ends of an open polyline.
 
-A reversed fillet is added at the start and a forward fillet at the end, producing a smooth rounded
-path.
+A reversed fillet is added at the start (using _start_side_) and a forward fillet at the end (using
+_end_side_), producing a smooth rounded path.
 
-| Parameter     | Type                            | Description                      |
-| ------------- | ------------------------------- | -------------------------------- |
-| `polyline`    | `Sequence[tuple[float, float]]` | Input open polyline.             |
-| `radius`      | `float`                         | Fillet radius.                   |
-| `sweep_angle` | `float`                         | Arc sweep angle in radians.      |
-| `side`        | `float`                         | Offset side (+1 left, -1 right). |
-| _Returns_     | `list[tuple[float, float]]`     | Full polyline with fillets.      |
+| Parameter     | Type                            | Description                                           |
+| ------------- | ------------------------------- | ----------------------------------------------------- |
+| `polyline`    | `Sequence[tuple[float, float]]` | Input open polyline.                                  |
+| `radius`      | `float`                         | Fillet radius.                                        |
+| `sweep_angle` | `float`                         | Arc sweep angle in radians.                           |
+| `start_side`  | `float`                         | Offset side for the start fillet (+1 left, -1 right). |
+| `end_side`    | `float`                         | Offset side for the end fillet (+1 left, -1 right).   |
+| _Returns_     | `list[tuple[float, float]]`     | Full polyline with fillets.                           |
 
 ![``append_end_fillets`` rounds both ends of an open polyline with reversed-start / forward-end fillet arcs](images/geo-algo-fillet-append-end-fillets.png)
 
