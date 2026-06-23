@@ -101,6 +101,25 @@ def test_link_arcs_feed_rate_applied():
     assert found_feed
 
 
+def test_link_arcs_cut_power_applied():
+    arcs = [[(0, 0), (10, 0)]]
+    ops = link_arcs_to_ops(
+        arcs=arcs,
+        uncleared=[],
+        cut_z=-1.0,
+        safe_z=5.0,
+        cut_feed_rate=1200,
+        cut_power=0.75,
+    )
+    found_power = False
+    for i in range(ops.len()):
+        if ops.is_cutting(i):
+            assert ops.state_at(i).power == 0.75
+            found_power = True
+            break
+    assert found_power
+
+
 # ── adaptive_peeling ─────────────────────────────────────────
 
 
@@ -233,6 +252,28 @@ def test_adaptive_peeling_feed_rate_applied():
     assert found_feed
 
 
+def test_adaptive_peeling_cut_power_applied():
+    boundary = _rect(15, 15, 30, 30)
+    ca = ClearedArea([_seed_circle(15, 15, 3)])
+    ops = adaptive_peeling(
+        cleared=ca,
+        pocket_boundary=boundary,
+        tool_radius=3.0,
+        step_over=2.0,
+        cut_z=-5.0,
+        safe_z=2.0,
+        cut_feed_rate=1200,
+        cut_power=0.65,
+    )
+    found_power = False
+    for i in range(ops.len()):
+        if ops.is_cutting(i):
+            assert ops.state_at(i).power == 0.65
+            found_power = True
+            break
+    assert found_power
+
+
 def test_adaptive_peeling_v_junction_fillet_direction():
     """Cutting arcs with V-junctions fillet in the correct direction.
 
@@ -361,6 +402,26 @@ def test_adaptive_entry_degenerate_pocket():
     assert isinstance(ops, Ops)
 
 
+def test_adaptive_entry_cut_power_applied():
+    boundary = [(0, 0), (160, 0), (160, 100), (0, 100)]
+    ops, _ = adaptive_entry(
+        pocket_boundary=boundary,
+        tool_radius=3.0,
+        step_over=2.0,
+        safe_z=2.0,
+        target_z=-8.0,
+        cut_feed_rate=1200,
+        cut_power=0.55,
+    )
+    found_power = False
+    for i in range(ops.len()):
+        if ops.is_cutting(i):
+            assert ops.state_at(i).power == 0.55
+            found_power = True
+            break
+    assert found_power
+
+
 def test_adaptive_entry_step_over_ratio():
     boundary = [(0, 0), (160, 0), (160, 100), (0, 100)]
     ops1, _ = adaptive_entry(
@@ -440,6 +501,34 @@ def test_adaptive_wavefronts_empty_cleared():
         area_tolerance=1.0,
     )
     assert isinstance(ops, Ops)
+
+
+def test_adaptive_wavefronts_cut_power_applied():
+    boundary = [(0, 0), (160, 0), (160, 100), (0, 100)]
+    _, cp = adaptive_entry(
+        pocket_boundary=boundary,
+        tool_radius=3.0,
+        step_over=2.0,
+        safe_z=2.0,
+        target_z=-8.0,
+    )
+    ca = ClearedArea(initial=cp)
+    ops = adaptive_wavefronts(
+        ca,
+        boundary,
+        step_over=2.0,
+        z=-8.0,
+        area_tolerance=1.0,
+        cut_feed_rate=1200,
+        cut_power=0.45,
+    )
+    found_power = False
+    for i in range(ops.len()):
+        if ops.is_cutting(i):
+            assert ops.state_at(i).power == 0.45
+            found_power = True
+            break
+    assert found_power
 
 
 def test_find_cutting_arc_angle_at_tip():

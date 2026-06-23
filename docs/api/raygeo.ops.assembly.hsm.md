@@ -89,6 +89,7 @@ adaptive_entry(
     safe_margin: float = 1,
     angular_step: float = 0.1,
     cut_feed_rate: int = 1200,
+    cut_power: float = 1,
 ) -> tuple[ops.Ops, list[list[tuple[float, float]]]]
 ```
 
@@ -111,6 +112,7 @@ The returned _cleared_polygons_ should be inserted into a `ClearedArea` via `add
 | `safe_margin`     | `float = 1`                                       | Extra margin from tool edge to boundary (default 1.0).                                                                                                  |
 | `angular_step`    | `float = 0.1`                                     | Angular step in radians for path vertices (default 0.1).                                                                                                |
 | `cut_feed_rate`   | `int = 1200`                                      | Feed rate for the entry path (default 1200).                                                                                                            |
+| `cut_power`       | `float = 1`                                       | Laser power for the entry path (0.0-1.0, default 1.0).                                                                                                  |
 | _Returns_         | `tuple[ops.Ops, list[list[tuple[float, float]]]]` | `(ops, cleared_polygons)` where \*ops\* is an `Ops` with the entry toolpath and \*cleared_polygons\* is a list of polygons to add to the `ClearedArea`. |
 
 ![Adaptive clearing — Helix → Spiral in a pocket with three islands](images/ops-assembly-hsm-entry-multi.png)
@@ -140,6 +142,7 @@ adaptive_peeling(
     travel_smoothing: int = 50,
     cut_feed_rate: int = 1200,
     travel_rapid_rate: int = 8000,
+    cut_power: float = 1,
 ) -> ops.Ops
 ```
 
@@ -161,6 +164,7 @@ into Ops with MAT-routed travel segments.
 | `travel_smoothing`  | `int = 50`                                     | Gaussian smoothing for MAT-routed travel (default 50).      |
 | `cut_feed_rate`     | `int = 1200`                                   | Feed rate for cutting moves (default 1200).                 |
 | `travel_rapid_rate` | `int = 8000`                                   | Rapid rate for travel moves (default 8000).                 |
+| `cut_power`         | `float = 1`                                    | Laser power for cutting moves (0.0-1.0, default 1.0).       |
 | _Returns_           | `ops.Ops`                                      | Ops with cutting and travel commands.                       |
 
 ![adaptive_peeling on a rectangular pocket — cutting arcs (blue, solid) at cut depth and travel links (orange, dashed) at safe Z](images/ops-assembly-hsm-adaptive-peeling-2d.png)
@@ -190,6 +194,7 @@ adaptive_wavefronts(
     z: float = 0,
     area_tolerance: float = 1,
     cut_feed_rate: int = 1200,
+    cut_power: float = 1,
 ) -> ops.Ops
 ```
 
@@ -202,17 +207,18 @@ area drops below _area_tolerance_.
 
 Each ring fragment is emitted as `MoveTo` + `LineTo` at height _z_ with _cut_feed_rate_ applied.
 
-| Parameter         | Type                                           | Description                                      |
-| ----------------- | ---------------------------------------------- | ------------------------------------------------ |
-| `cleared`         | `geo.algo.cleared_area.ClearedArea`            | `ClearedArea` instance (mutated in place).       |
-| `pocket_boundary` | `Sequence[tuple[float, float]]`                | Outer boundary of the pocket.                    |
-| `islands`         | `Sequence[Sequence[tuple[float, float]]] = []` | List of island (hole) polygons (default []).     |
-| `tool_radius`     | `float = 3`                                    | Tool radius in mm (default 3.0).                 |
-| `step_over`       | `float = 2`                                    | Radial expansion per iteration (default 2.0).    |
-| `z`               | `float = 0`                                    | Z height for generated commands (default 0.0).   |
-| `area_tolerance`  | `float = 1`                                    | Minimum area increase to continue (default 1.0). |
-| `cut_feed_rate`   | `int = 1200`                                   | Feed rate for cutting moves (default 1200).      |
-| _Returns_         | `ops.Ops`                                      | Ops with wavefront cutting commands.             |
+| Parameter         | Type                                           | Description                                           |
+| ----------------- | ---------------------------------------------- | ----------------------------------------------------- |
+| `cleared`         | `geo.algo.cleared_area.ClearedArea`            | `ClearedArea` instance (mutated in place).            |
+| `pocket_boundary` | `Sequence[tuple[float, float]]`                | Outer boundary of the pocket.                         |
+| `islands`         | `Sequence[Sequence[tuple[float, float]]] = []` | List of island (hole) polygons (default []).          |
+| `tool_radius`     | `float = 3`                                    | Tool radius in mm (default 3.0).                      |
+| `step_over`       | `float = 2`                                    | Radial expansion per iteration (default 2.0).         |
+| `z`               | `float = 0`                                    | Z height for generated commands (default 0.0).        |
+| `area_tolerance`  | `float = 1`                                    | Minimum area increase to continue (default 1.0).      |
+| `cut_feed_rate`   | `int = 1200`                                   | Feed rate for cutting moves (default 1200).           |
+| `cut_power`       | `float = 1`                                    | Laser power for cutting moves (0.0-1.0, default 1.0). |
+| _Returns_         | `ops.Ops`                                      | Ops with wavefront cutting commands.                  |
 
 ![Adaptive wavefronts expanding outward from the initial cleared disk (blue) to fill the pocket boundary (black)](images/ops-assembly-hsm-wavefront-rect.png)
 
@@ -271,6 +277,7 @@ link_arcs_to_ops(
     preserve_order: bool = False,
     cut_feed_rate: int = 1200,
     travel_rapid_rate: int = 8000,
+    cut_power: float = 1,
     cleared: Sequence[Sequence[tuple[float, float]]] | None = None,
 ) -> ops.Ops
 ```
@@ -296,6 +303,7 @@ _safe_z_ with _travel_rapid_rate_.
 | `preserve_order`    | `bool = False`                                                               | Keep arc order as given instead of nearest-neighbour reordering (default False).                                                                                                     |
 | `cut_feed_rate`     | `int = 1200`                                                                 | Feed rate for cutting moves (default 1200).                                                                                                                                          |
 | `travel_rapid_rate` | `int = 8000`                                                                 | Rapid rate for travel moves (default 8000).                                                                                                                                          |
+| `cut_power`         | `float = 1`                                                                  | Laser power for cutting moves (0.0-1.0, default 1.0).                                                                                                                                |
 | `cleared`           | `Sequence[Sequence[tuple[float, float]]] &#124; None = None`                 | Cleared-area polygons. When provided the MAT is trimmed to these polygons before routing, ensuring travel only goes through already-machined territory (default None = no trimming). |
 | _Returns_           | `ops.Ops`                                                                    | Ops with cutting LineTo and travel MoveTo commands.                                                                                                                                  |
 

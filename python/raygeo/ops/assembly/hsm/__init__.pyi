@@ -68,7 +68,7 @@ class PyWavefrontGraph:
         Global bite indices in the order visited by DFS.
         """
 
-def adaptive_entry(pocket_boundary: collections.abc.Sequence[tuple[float, float]], islands: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]] = [], tool_radius: float = 3, step_over: float = 2, safe_z: float = 2, target_z: float = -5, plunge_pitch: float = 1, safe_margin: float = 1, angular_step: float = 0.1, cut_feed_rate: int = 1200) -> tuple[raygeo.ops.Ops, list[list[tuple[float, float]]]]:
+def adaptive_entry(pocket_boundary: collections.abc.Sequence[tuple[float, float]], islands: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]] = [], tool_radius: float = 3, step_over: float = 2, safe_z: float = 2, target_z: float = -5, plunge_pitch: float = 1, safe_margin: float = 1, angular_step: float = 0.1, cut_feed_rate: int = 1200, cut_power: float = 1) -> tuple[raygeo.ops.Ops, list[list[tuple[float, float]]]]:
     r"""
     Fast central clearing entry.
     
@@ -89,12 +89,13 @@ def adaptive_entry(pocket_boundary: collections.abc.Sequence[tuple[float, float]
     :param safe_margin: Extra margin from tool edge to boundary (default 1.0).
     :param angular_step: Angular step in radians for path vertices (default 0.1).
     :param cut_feed_rate: Feed rate for the entry path (default 1200).
+    :param cut_power: Laser power for the entry path (0.0-1.0, default 1.0).
     :returns: ``(ops, cleared_polygons)`` where *ops* is an ``Ops``
               with the entry toolpath and *cleared_polygons* is a list
               of polygons to add to the ``ClearedArea``.
     """
 
-def adaptive_peeling(cleared: raygeo.geo.algo.cleared_area.ClearedArea, pocket_boundary: collections.abc.Sequence[tuple[float, float]], islands: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]] = [], tool_radius: float = 3, step_over: float = 2, cut_z: float = -5, safe_z: float = 2, wall_margin: float = 0, travel_smoothing: int = 50, cut_feed_rate: int = 1200, travel_rapid_rate: int = 8000) -> raygeo.ops.Ops:
+def adaptive_peeling(cleared: raygeo.geo.algo.cleared_area.ClearedArea, pocket_boundary: collections.abc.Sequence[tuple[float, float]], islands: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]] = [], tool_radius: float = 3, step_over: float = 2, cut_z: float = -5, safe_z: float = 2, wall_margin: float = 0, travel_smoothing: int = 50, cut_feed_rate: int = 1200, travel_rapid_rate: int = 8000, cut_power: float = 1) -> raygeo.ops.Ops:
     r"""
     Run the peeling clearing strategy and return an Ops.
     
@@ -110,15 +111,16 @@ def adaptive_peeling(cleared: raygeo.geo.algo.cleared_area.ClearedArea, pocket_b
     :param cut_z: Cutting Z height (default -5.0).
     :param safe_z: Retract Z height for travel segments (default 2.0).
     :param wall_margin: Extra clearance between tool sweep and walls
-                         (default 0.0).
+                          (default 0.0).
     :param travel_smoothing: Gaussian smoothing for MAT-routed travel
                               (default 50).
     :param cut_feed_rate: Feed rate for cutting moves (default 1200).
     :param travel_rapid_rate: Rapid rate for travel moves (default 8000).
+    :param cut_power: Laser power for cutting moves (0.0-1.0, default 1.0).
     :returns: Ops with cutting and travel commands.
     """
 
-def adaptive_wavefronts(cleared: raygeo.geo.algo.cleared_area.ClearedArea, pocket_boundary: collections.abc.Sequence[tuple[float, float]], islands: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]] = [], tool_radius: float = 3, step_over: float = 2, z: float = 0, area_tolerance: float = 1, cut_feed_rate: int = 1200) -> raygeo.ops.Ops:
+def adaptive_wavefronts(cleared: raygeo.geo.algo.cleared_area.ClearedArea, pocket_boundary: collections.abc.Sequence[tuple[float, float]], islands: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]] = [], tool_radius: float = 3, step_over: float = 2, z: float = 0, area_tolerance: float = 1, cut_feed_rate: int = 1200, cut_power: float = 1) -> raygeo.ops.Ops:
     r"""
     Inside-out adaptive wavefronts.
     
@@ -140,6 +142,7 @@ def adaptive_wavefronts(cleared: raygeo.geo.algo.cleared_area.ClearedArea, pocke
     :param z: Z height for generated commands (default 0.0).
     :param area_tolerance: Minimum area increase to continue (default 1.0).
     :param cut_feed_rate: Feed rate for cutting moves (default 1200).
+    :param cut_power: Laser power for cutting moves (0.0-1.0, default 1.0).
     :returns: Ops with wavefront cutting commands.
     """
 
@@ -155,7 +158,7 @@ def find_cutting_arc(bite: collections.abc.Sequence[tuple[float, float]], cleare
     :returns: The cutting arc polyline, or None if degenerate.
     """
 
-def link_arcs_to_ops(arcs: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]], uncleared: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]] = [], cut_z: float = -1, safe_z: float = 5, mat: tuple[list[tuple[float, float]], list[tuple[int, int]]] | None = None, safe_margin: float = 0, smoothing_amount: int = 50, preserve_order: bool = False, cut_feed_rate: int = 1200, travel_rapid_rate: int = 8000, cleared: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]] | None = None) -> raygeo.ops.Ops:
+def link_arcs_to_ops(arcs: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]], uncleared: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]] = [], cut_z: float = -1, safe_z: float = 5, mat: tuple[list[tuple[float, float]], list[tuple[int, int]]] | None = None, safe_margin: float = 0, smoothing_amount: int = 50, preserve_order: bool = False, cut_feed_rate: int = 1200, travel_rapid_rate: int = 8000, cut_power: float = 1, cleared: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]] | None = None) -> raygeo.ops.Ops:
     r"""
     Link filleted arcs into an Ops with MAT-routed travel.
     
@@ -183,6 +186,7 @@ def link_arcs_to_ops(arcs: collections.abc.Sequence[collections.abc.Sequence[tup
                            nearest-neighbour reordering (default False).
     :param cut_feed_rate: Feed rate for cutting moves (default 1200).
     :param travel_rapid_rate: Rapid rate for travel moves (default 8000).
+    :param cut_power: Laser power for cutting moves (0.0-1.0, default 1.0).
     :param cleared: Cleared-area polygons.  When provided the MAT is
                     trimmed to these polygons before routing, ensuring
                     travel only goes through already-machined territory

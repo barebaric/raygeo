@@ -110,6 +110,7 @@ impl From<hsm::WavefrontGraph> for PyWavefrontGraph {
         safe_margin: float = 1.0,
         angular_step: float = 0.1,
         cut_feed_rate: int = 1200,
+        cut_power: float = 1.0,
     ) -> tuple[raygeo.ops.Ops, list[list[tuple[float, float]]]]:
         """Fast central clearing entry.
 
@@ -130,6 +131,7 @@ impl From<hsm::WavefrontGraph> for PyWavefrontGraph {
         :param safe_margin: Extra margin from tool edge to boundary (default 1.0).
         :param angular_step: Angular step in radians for path vertices (default 0.1).
         :param cut_feed_rate: Feed rate for the entry path (default 1200).
+        :param cut_power: Laser power for the entry path (0.0-1.0, default 1.0).
         :returns: ``(ops, cleared_polygons)`` where *ops* is an ``Ops``
                   with the entry toolpath and *cleared_polygons* is a list
                   of polygons to add to the ``ClearedArea``.
@@ -149,6 +151,7 @@ impl From<hsm::WavefrontGraph> for PyWavefrontGraph {
     safe_margin = 1.0,
     angular_step = 0.1,
     cut_feed_rate = 1200,
+    cut_power = 1.0,
 ))]
 #[allow(clippy::type_complexity, clippy::too_many_arguments)]
 fn adaptive_entry_py(
@@ -162,6 +165,7 @@ fn adaptive_entry_py(
     safe_margin: f64,
     angular_step: f64,
     cut_feed_rate: i32,
+    cut_power: f64,
 ) -> (PyOps, Vec<Vec<(f64, f64)>>) {
     let boundary: Vec<Point> = pocket_boundary
         .into_iter()
@@ -186,6 +190,7 @@ fn adaptive_entry_py(
     };
 
     let cut_state = State {
+        power: cut_power,
         feed_rate: Some(cut_feed_rate),
         ..Default::default()
     };
@@ -215,6 +220,7 @@ fn adaptive_entry_py(
         z: float = 0.0,
         area_tolerance: float = 1.0,
         cut_feed_rate: int = 1200,
+        cut_power: float = 1.0,
     ) -> raygeo.ops.Ops:
         """Inside-out adaptive wavefronts.
 
@@ -236,6 +242,7 @@ fn adaptive_entry_py(
         :param z: Z height for generated commands (default 0.0).
         :param area_tolerance: Minimum area increase to continue (default 1.0).
         :param cut_feed_rate: Feed rate for cutting moves (default 1200).
+        :param cut_power: Laser power for cutting moves (0.0-1.0, default 1.0).
         :returns: Ops with wavefront cutting commands.
         """
 "#,
@@ -251,6 +258,7 @@ fn adaptive_entry_py(
     z = 0.0,
     area_tolerance = 1.0,
     cut_feed_rate = 1200,
+    cut_power = 1.0,
 ))]
 #[allow(clippy::too_many_arguments)]
 fn adaptive_wavefronts_py(
@@ -262,6 +270,7 @@ fn adaptive_wavefronts_py(
     z: f64,
     area_tolerance: f64,
     cut_feed_rate: i32,
+    cut_power: f64,
 ) -> PyOps {
     let boundary: Vec<Point> = pocket_boundary
         .into_iter()
@@ -283,6 +292,7 @@ fn adaptive_wavefronts_py(
     };
 
     let cut_state = State {
+        power: cut_power,
         feed_rate: Some(cut_feed_rate),
         ..Default::default()
     };
@@ -308,6 +318,7 @@ fn adaptive_wavefronts_py(
         preserve_order: bool = False,
         cut_feed_rate: int = 1200,
         travel_rapid_rate: int = 8000,
+        cut_power: float = 1.0,
         cleared: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]] | None = None,
     ) -> raygeo.ops.Ops:
         """Link filleted arcs into an Ops with MAT-routed travel.
@@ -336,6 +347,7 @@ fn adaptive_wavefronts_py(
                                nearest-neighbour reordering (default False).
         :param cut_feed_rate: Feed rate for cutting moves (default 1200).
         :param travel_rapid_rate: Rapid rate for travel moves (default 8000).
+        :param cut_power: Laser power for cutting moves (0.0-1.0, default 1.0).
         :param cleared: Cleared-area polygons.  When provided the MAT is
                         trimmed to these polygons before routing, ensuring
                         travel only goes through already-machined territory
@@ -357,6 +369,7 @@ fn adaptive_wavefronts_py(
     preserve_order = false,
     cut_feed_rate = 1200,
     travel_rapid_rate = 8000,
+    cut_power = 1.0,
     cleared = None,
 ))]
 #[allow(clippy::type_complexity, clippy::too_many_arguments)]
@@ -371,6 +384,7 @@ fn link_arcs_to_ops_py(
     preserve_order: bool,
     cut_feed_rate: i32,
     travel_rapid_rate: i32,
+    cut_power: f64,
     cleared: Option<Vec<Vec<(f64, f64)>>>,
 ) -> PyOps {
     use crate::geo::algo::medial_axis::{MaNode, MedialAxis};
@@ -407,6 +421,7 @@ fn link_arcs_to_ops_py(
     });
 
     let cut_state = State {
+        power: cut_power,
         feed_rate: Some(cut_feed_rate),
         ..Default::default()
     };
@@ -506,6 +521,7 @@ fn split_ordered_wavefronts_py(
         travel_smoothing: int = 50,
         cut_feed_rate: int = 1200,
         travel_rapid_rate: int = 8000,
+        cut_power: float = 1.0,
     ) -> raygeo.ops.Ops:
         """Run the peeling clearing strategy and return an Ops.
 
@@ -521,14 +537,15 @@ fn split_ordered_wavefronts_py(
         :param cut_z: Cutting Z height (default -5.0).
         :param safe_z: Retract Z height for travel segments (default 2.0).
         :param wall_margin: Extra clearance between tool sweep and walls
-                             (default 0.0).
+                              (default 0.0).
         :param travel_smoothing: Gaussian smoothing for MAT-routed travel
                                   (default 50).
         :param cut_feed_rate: Feed rate for cutting moves (default 1200).
         :param travel_rapid_rate: Rapid rate for travel moves (default 8000).
+        :param cut_power: Laser power for cutting moves (0.0-1.0, default 1.0).
         :returns: Ops with cutting and travel commands.
         """
-    "#,
+"#,
     module = "raygeo.ops.assembly.hsm"
 )]
 #[pyfunction(name = "adaptive_peeling")]
@@ -544,6 +561,7 @@ fn split_ordered_wavefronts_py(
     travel_smoothing = 50,
     cut_feed_rate = 1200,
     travel_rapid_rate = 8000,
+    cut_power = 1.0,
 ))]
 #[allow(clippy::too_many_arguments)]
 fn adaptive_peeling_py(
@@ -558,6 +576,7 @@ fn adaptive_peeling_py(
     travel_smoothing: i32,
     cut_feed_rate: i32,
     travel_rapid_rate: i32,
+    cut_power: f64,
 ) -> PyOps {
     let boundary: Vec<Point> = pocket_boundary
         .into_iter()
@@ -570,6 +589,7 @@ fn adaptive_peeling_py(
         .collect();
 
     let cut_state = State {
+        power: cut_power,
         feed_rate: Some(cut_feed_rate),
         ..Default::default()
     };
