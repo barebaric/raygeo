@@ -293,7 +293,6 @@ def generate_largest_circle():
     return fig4
 
 
-
 __docs_target__ = ["raygeo.geo.algo.polylabel.md"]
 __images__ = [
     {
@@ -329,5 +328,4 @@ __images__ = [
         ),
         "function": generate_largest_circle,
     },
-
 ]

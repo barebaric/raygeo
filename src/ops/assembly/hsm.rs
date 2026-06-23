@@ -31,8 +31,9 @@ use crate::geo::shape::line::longest_line_through_point;
 use crate::geo::shape::polygon::{
     does_path_sweep_intersect_polygon, get_circle_polygon, get_polygon_area,
     get_polygon_boundary_distance, get_polygon_bounds, get_polygon_centroid,
-    get_polygon_closest_point, get_polygon_vertex_centroid,
-    get_polygons_group_difference, get_segment_swept_polygon,
+    get_polygon_closest_point, get_polygon_group_bounds,
+    get_polygon_vertex_centroid, get_polygons_group_difference,
+    get_segment_swept_polygon,
 };
 use crate::geo::shape::polyline::{
     get_polyline_bounds, split_polyline_at_v_junctions,
@@ -74,7 +75,7 @@ pub fn find_cutting_arc(
                 let d2 = get_polygon_closest_point(frag, p.x, p.y)
                     .map(|(_, _, d2)| d2)
                     .unwrap_or(f64::MAX);
-                d2 < 1e-2
+                d2 < 1e-4
             })
         })
         .collect();
@@ -484,10 +485,23 @@ pub fn split_ordered_wavefronts(
     // Pass index for each arc in `all_arcs`.
     let mut all_arc_pass: Vec<usize> = Vec::new();
 
-    let max_stall = 5usize;
-    let mut stall_count = 0usize;
+    // Compute a max_passes cap from the pocket bounding box so that
+    // the loop always has enough iterations to finish naturally, while
+    // preventing hangs when bites stall (slivers that incorporate()
+    // can't absorb due to clipper precision).
+    let bbox = get_polygon_group_bounds(valid_area);
+    let diameter =
+        ((bbox.max.x - bbox.min.x) + (bbox.max.y - bbox.min.y)).max(0.0);
+    let max_passes = if step_over > 1e-9 {
+        ((diameter / step_over) * 2.0 + 100.0) as usize
+    } else {
+        10000
+    };
+
     loop {
-        let area_before = cleared.total_area();
+        if bite_polys_per_pass.len() >= max_passes {
+            break;
+        }
 
         let pass_idx = bite_polys_per_pass.len();
         let bites = cleared.bites(step_over, valid_area, simplify_tol);
@@ -507,23 +521,22 @@ pub fn split_ordered_wavefronts(
                     all_arc_pass.push(pass_idx);
                 }
             }
+            if arcs.is_empty() && bite.len() >= 3 {
+                let b = get_polyline_bounds(bite);
+                let span = (b.max.x - b.min.x).max(b.max.y - b.min.y);
+                if span >= step_over * 0.5 {
+                    arcs.push(all_arcs.len());
+                    all_arcs.push(bite.clone());
+                    all_arc_pass.push(pass_idx);
+                }
+            }
             bite_arcs.push(arcs);
         }
 
         bite_polys_per_pass.push(bites.clone());
         bite_arcs_per_pass.push(bite_arcs);
 
-        cleared.incorporate(bite_polys_per_pass.last().unwrap());
-
-        let area_after = cleared.total_area();
-        if area_after - area_before < 1e-9 {
-            stall_count += 1;
-            if stall_count >= max_stall {
-                break;
-            }
-        } else {
-            stall_count = 0;
-        }
+        cleared.add_cleared_polygons(bite_polys_per_pass.last().unwrap());
     }
 
     let n_passes = bite_polys_per_pass.len();

@@ -16,6 +16,7 @@ from raygeo.geo.algo.smooth import (
     smooth_sub_segment,
 )
 
+
 def generate_overview():
     """Smooth overview."""
     n = 30
@@ -88,7 +89,6 @@ def generate_gaussian_kernel():
     fig_k.suptitle("Gaussian kernels at different amounts", fontsize=13)
     fig_k.tight_layout()
     return fig_k
-
 
 
 def generate_circular():
