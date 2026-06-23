@@ -1181,11 +1181,10 @@ fn build_link_segments(
     smoothing_amount: i32,
     preserve_order: bool,
 ) -> Vec<MotionSegment> {
-    // Trim MAT to cleared area so travel routing only uses
-    // already-machined territory.
-    let mat_trimmed: Option<MedialAxis> =
-        mat.and_then(|m| cleared.map(|c| m.trim_to_polygons(c)));
-    let mat_ref: Option<&MedialAxis> = mat_trimmed.as_ref().or(mat);
+    // Lazy clearance: build a cleared mask once (no tree rebuild) and
+    // check it during path traversal so each node is tested only once.
+    let cleared_mask: Option<Vec<bool>> =
+        mat.and_then(|m| cleared.map(|c| m.build_cleared_mask(c)));
     let mut segments: Vec<MotionSegment> = Vec::new();
 
     // Pre-compute obstacle bounds — these are reused across many
@@ -1227,8 +1226,16 @@ fn build_link_segments(
             );
 
             let link: Vec<Point> = if blocked {
-                let mat_link = mat_ref
-                    .and_then(|ma| ma.path_between(last, first))
+                let mat_link = mat
+                    .and_then(|ma| {
+                        if let Some(ref mask) = cleared_mask {
+                            let fi = ma.nearest_node(last)?;
+                            let ti = ma.nearest_node(first)?;
+                            ma.path_between_indices_cleared(fi, ti, mask)
+                        } else {
+                            ma.path_between(last, first)
+                        }
+                    })
                     .unwrap_or_else(|| vec![last, first]);
                 if mat_link.len() < 2 {
                     vec![last, first]
@@ -1280,8 +1287,16 @@ fn build_link_segments(
                 if !blocked {
                     link = vec![last, first];
                 } else {
-                    let raw = mat_ref
-                        .and_then(|ma| ma.path_between(last, first))
+                    let raw = mat
+                        .and_then(|ma| {
+                            if let Some(ref mask) = cleared_mask {
+                                let fi = ma.nearest_node(last)?;
+                                let ti = ma.nearest_node(first)?;
+                                ma.path_between_indices_cleared(fi, ti, mask)
+                            } else {
+                                ma.path_between(last, first)
+                            }
+                        })
                         .unwrap_or_else(|| vec![last, first]);
                     link = build_smoothed_path(
                         last,

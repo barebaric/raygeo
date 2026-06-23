@@ -10,7 +10,7 @@ use crate::geo::shape::point::circumcenter;
 use crate::geo::shape::polygon::{
     clean_polygon, is_point_in_polygon, resample_polygon,
 };
-use crate::types::Point;
+use crate::types::{Point, Polygon};
 
 type Cdt = ConstrainedDelaunayTriangulation<Point2<f64>>;
 
@@ -239,19 +239,9 @@ impl MedialAxis {
         })
     }
 
-    /// Find a path between two nodes using binary-lifting LCA.
-    pub fn path_between_indices(
-        &self,
-        from_idx: usize,
-        to_idx: usize,
-    ) -> Option<Vec<Point>> {
-        if from_idx == to_idx {
-            return Some(vec![self.nodes[from_idx].point]);
-        }
-
+    /// Find the lowest common ancestor of two nodes using binary lifting.
+    pub fn find_lca(&self, mut a: usize, mut b: usize) -> usize {
         let max_k = self.up.len();
-        let mut a = from_idx;
-        let mut b = to_idx;
 
         // Lift deeper node up to the same depth.  If a node's depth is 0
         // (disconnected component) the binary lifting below naturally
@@ -289,7 +279,20 @@ impl MedialAxis {
             }
             a = self.up[0][a] as usize;
         }
-        let lca = a;
+        a
+    }
+
+    /// Find a path between two nodes using binary-lifting LCA.
+    pub fn path_between_indices(
+        &self,
+        from_idx: usize,
+        to_idx: usize,
+    ) -> Option<Vec<Point>> {
+        if from_idx == to_idx {
+            return Some(vec![self.nodes[from_idx].point]);
+        }
+
+        let lca = self.find_lca(from_idx, to_idx);
 
         // Walk from `from_idx` up to LCA, collecting nodes.
         let mut from_to_lca: Vec<usize> = Vec::new();
@@ -323,6 +326,127 @@ impl MedialAxis {
                 .map(|i| self.nodes[i].point)
                 .collect(),
         )
+    }
+
+    /// Build a cleared mask for all nodes.  Returns a `Vec<bool>` where
+    /// `cleared_mask[i]` is true iff `nodes[i]` lies inside at least one
+    /// polygon in `cleared`.  Pass this mask to
+    /// [`path_between_indices_cleared`] to avoid per-node per-polygon
+    /// iteration on every call.
+    #[prof]
+    pub fn build_cleared_mask(&self, cleared: &[Polygon]) -> Vec<bool> {
+        self.nodes
+            .iter()
+            .map(|n| {
+                cleared
+                    .iter()
+                    .any(|poly| is_point_in_polygon(n.point, poly))
+            })
+            .collect()
+    }
+
+    /// Walk up parent pointers from `idx` until a cleared node is found.
+    fn first_cleared_ancestor(
+        &self,
+        mut idx: usize,
+        is_cleared: &[bool],
+    ) -> Option<usize> {
+        while !is_cleared[idx] {
+            let parent = self.up[0][idx] as usize;
+            if parent == idx {
+                return None;
+            }
+            idx = parent;
+        }
+        Some(idx)
+    }
+
+    /// Collect node indices from `idx` up to `meeting`, skipping uncleared
+    /// nodes by jumping to the nearest cleared ancestor.
+    fn collect_cleared_path_to_meeting(
+        &self,
+        mut idx: usize,
+        meeting: usize,
+        is_cleared: &[bool],
+    ) -> Option<Vec<usize>> {
+        if idx == meeting {
+            return Some(vec![meeting]);
+        }
+        if !is_cleared[idx] {
+            idx = self.first_cleared_ancestor(idx, is_cleared)?;
+            if idx == meeting {
+                return Some(vec![meeting]);
+            }
+        }
+        let mut nodes = Vec::new();
+        loop {
+            let prev = idx;
+            nodes.push(idx);
+            idx = self.up[0][idx] as usize;
+            if idx == prev {
+                // Self-loop — disconnected component.
+                return None;
+            }
+            if idx == meeting {
+                break;
+            }
+            if !is_cleared[idx] {
+                idx = self.first_cleared_ancestor(idx, is_cleared)?;
+                if idx == meeting {
+                    nodes.push(idx);
+                    return Some(nodes);
+                }
+            }
+        }
+        nodes.push(meeting);
+        Some(nodes)
+    }
+
+    /// Find a path between two points, visiting only MAT nodes inside at
+    /// least one `cleared` polygon.  Uncleared nodes on the tree path are
+    /// skipped by walking up to the nearest cleared ancestor.  This avoids
+    /// the O(N·P) upfront cost of trimming the entire tree.
+    #[prof]
+    pub fn path_between_cleared(
+        &self,
+        from: Point,
+        to: Point,
+        cleared: &[Polygon],
+    ) -> Option<Vec<Point>> {
+        let from_idx = self.nearest_node(from)?;
+        let to_idx = self.nearest_node(to)?;
+        let mask = self.build_cleared_mask(cleared);
+        self.path_between_indices_cleared(from_idx, to_idx, &mask)
+    }
+
+    /// Like `path_between_indices` but only visits cleared nodes, using a
+    /// pre-computed [`build_cleared_mask`].
+    #[prof]
+    pub fn path_between_indices_cleared(
+        &self,
+        from_idx: usize,
+        to_idx: usize,
+        is_cleared: &[bool],
+    ) -> Option<Vec<Point>> {
+        if from_idx == to_idx {
+            if is_cleared[from_idx] {
+                return Some(vec![self.nodes[from_idx].point]);
+            }
+            return None;
+        }
+
+        let from = self.first_cleared_ancestor(from_idx, is_cleared)?;
+        let to = self.first_cleared_ancestor(to_idx, is_cleared)?;
+        let lca = self.find_lca(from, to);
+        let meeting = self.first_cleared_ancestor(lca, is_cleared)?;
+
+        let mut path =
+            self.collect_cleared_path_to_meeting(from, meeting, is_cleared)?;
+        let to_side =
+            self.collect_cleared_path_to_meeting(to, meeting, is_cleared)?;
+
+        path.extend(to_side.into_iter().rev().skip(1));
+        Some(path.into_iter().map(|i| self.nodes[i].point).collect())
     }
 
     /// Find the nearest MAT node index to a point via linear scan.

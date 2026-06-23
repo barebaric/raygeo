@@ -427,6 +427,8 @@ fn link_arcs_to_ops_py(
         .collect();
 
     let mat_opt: Option<MedialAxis> = mat.map(|(nodes, edges)| {
+        use std::collections::VecDeque;
+
         let nodes_vec: Vec<MaNode> = nodes
             .into_iter()
             .map(|(x, y)| MaNode {
@@ -435,12 +437,34 @@ fn link_arcs_to_ops_py(
             })
             .collect();
         let n = nodes_vec.len();
-        let parent = vec![usize::MAX; n];
-        let (depth, up) = MedialAxis::build_lca_cache(&parent, 0);
+        // Build adjacency from edges, then BFS to reconstruct the
+        // parent tree and LCA cache (edges carry the connectivity).
+        let mut adj: Vec<Vec<usize>> = vec![Vec::new(); n];
+        for &(a, b) in &edges {
+            if a < n && b < n {
+                adj[a].push(b);
+                adj[b].push(a);
+            }
+        }
+        let root = (0..n).max_by_key(|&i| adj[i].len()).unwrap_or(0);
+        let mut parent = vec![usize::MAX; n];
+        let mut queue = VecDeque::new();
+        parent[root] = root;
+        queue.push_back(root);
+        while let Some(u) = queue.pop_front() {
+            for &v in &adj[u] {
+                if parent[v] == usize::MAX {
+                    parent[v] = u;
+                    queue.push_back(v);
+                }
+            }
+        }
+        parent[root] = usize::MAX;
+        let (depth, up) = MedialAxis::build_lca_cache(&parent, root);
         MedialAxis {
             nodes: nodes_vec,
             edges,
-            root: 0,
+            root,
             branches: Vec::new(),
             depth,
             up,
