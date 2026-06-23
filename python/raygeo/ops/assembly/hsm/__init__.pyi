@@ -67,6 +67,21 @@ class PyWavefrontGraph:
         r"""
         Global bite indices in the order visited by DFS.
         """
+    @property
+    def segments(self) -> builtins.list[builtins.list[tuple[builtins.float, builtins.float]]]:
+        r"""
+        V-junction-split sub-segments from each arc, flattened in arc order.
+        """
+    @property
+    def segment_directions(self) -> builtins.list[tuple[builtins.float, builtins.float]]:
+        r"""
+        Outward normal (unit vector) for each segment in `segments`.
+        """
+    @property
+    def arc_segments(self) -> builtins.list[builtins.list[builtins.int]]:
+        r"""
+        For each arc in `arcs`, indices into `segments`.
+        """
 
 def adaptive_entry(pocket_boundary: collections.abc.Sequence[tuple[float, float]], islands: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]] = [], tool_radius: float = 3, step_over: float = 2, safe_z: float = 2, target_z: float = -5, plunge_pitch: float = 1, safe_margin: float = 1, angular_step: float = 0.1, cut_feed_rate: int = 1200, cut_power: float = 1) -> tuple[raygeo.ops.Ops, list[list[tuple[float, float]]]]:
     r"""

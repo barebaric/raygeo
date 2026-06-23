@@ -25,6 +25,14 @@ arc_passes: list[int]
 
 Pass index for each arc in `arcs` (same length, same order).
 
+### `arc_segments`
+
+```python
+arc_segments: list[list[int]]
+```
+
+For each arc in `arcs`, indices into `segments`.
+
 ### `arcs`
 
 ```python
@@ -64,6 +72,22 @@ parent: list[Optional[int]]
 ```
 
 `parent[global]` = parent bite index, or `None` for roots.
+
+### `segment_directions`
+
+```python
+segment_directions: list[tuple[float, float]]
+```
+
+Outward normal (unit vector) for each segment in `segments`.
+
+### `segments`
+
+```python
+segments: list[list[tuple[float, float]]]
+```
+
+V-junction-split sub-segments from each arc, flattened in arc order.
 
 ### `visit_order`
 

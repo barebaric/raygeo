@@ -52,7 +52,7 @@ def _plot_ops_2d(ops, boundary, islands, title, cut_z=-5.0, safe_z=5.0):
                         seg_x,
                         seg_y,
                         color="#ff7f0e" if is_travel else "#1f77b4",
-                        linewidth=2.0 if is_travel else 0.6,
+                        linewidth=0.6,
                         linestyle="--" if is_travel else "-",
                         alpha=0.8,
                         label=key if key not in labeled else "",
@@ -69,7 +69,7 @@ def _plot_ops_2d(ops, boundary, islands, title, cut_z=-5.0, safe_z=5.0):
                 seg_x,
                 seg_y,
                 color="#ff7f0e" if is_travel else "#1f77b4",
-                linewidth=2.0 if is_travel else 0.6,
+                linewidth=0.6,
                 linestyle="--" if is_travel else "-",
                 alpha=0.8,
                 label=key if key not in labeled else "",
@@ -1109,6 +1109,37 @@ def generate_split_ordered_wavefronts():
             acc += dl
         arc_mids.append(mid_pt)
 
+    # Spatial midpoint along each segment (for arrow placement).
+    seg_mids: list[tuple[float, float]] = []
+    for seg in graph.segments:
+        if len(seg) <= 1:
+            seg_mids.append((seg[0][0], seg[0][1]) if seg else (0.0, 0.0))
+            continue
+        seg_lens = []
+        total_len = 0.0
+        for i in range(len(seg) - 1):
+            dl = math.hypot(
+                seg[i + 1][0] - seg[i][0], seg[i + 1][1] - seg[i][1]
+            )
+            seg_lens.append(dl)
+            total_len += dl
+        if total_len < 1e-12:
+            seg_mids.append((seg[0][0], seg[0][1]))
+            continue
+        half = total_len / 2.0
+        acc = 0.0
+        mid_pt = (seg[-1][0], seg[-1][1])
+        for i, dl in enumerate(seg_lens):
+            if acc + dl >= half:
+                t = (half - acc) / dl if dl > 1e-12 else 0.0
+                mid_pt = (
+                    seg[i][0] + t * (seg[i + 1][0] - seg[i][0]),
+                    seg[i][1] + t * (seg[i + 1][1] - seg[i][1]),
+                )
+                break
+            acc += dl
+        seg_mids.append(mid_pt)
+
     # Per-bite node position = first arc's spatial midpoint (so it
     # coincides with a numbered arc).  Falls back to polygon centroid
     # when the bite has no arcs.
@@ -1133,7 +1164,14 @@ def generate_split_ordered_wavefronts():
 
     # Boundary + islands.
     bnd = np.array(list(boundary) + [boundary[0]])
-    ax.plot(bnd[:, 0], bnd[:, 1], "k-", linewidth=2, label="Boundary")
+    ax.plot(
+        bnd[:, 0],
+        bnd[:, 1],
+        color="#E07020",
+        linewidth=3,
+        alpha=0.85,
+        label="Boundary",
+    )
     for isl in islands:
         isl_arr = np.array(list(isl) + [isl[0]])
         ax.fill(
@@ -1162,18 +1200,13 @@ def generate_split_ordered_wavefronts():
             continue
         px, py = node_pos[p]
         cx, cy = node_pos[child]
-        ax.annotate(
-            "",
-            xy=(cx, cy),
-            xytext=(px, py),
-            arrowprops=dict(
-                arrowstyle="->",
-                color="#444",
-                lw=0.6,
-                alpha=0.7,
-                shrinkA=6,
-                shrinkB=6,
-            ),
+        ax.plot(
+            [px, cx],
+            [py, cy],
+            color="#E07020",
+            linewidth=3,
+            alpha=0.5,
+            solid_capstyle="round",
         )
 
     # Node markers at arc-bearing bites only.
@@ -1216,13 +1249,59 @@ def generate_split_ordered_wavefronts():
             ),
         )
 
+    # Segment endpoint markers (V-junction split points).
+    x_ends: list[float] = []
+    y_ends: list[float] = []
+    for seg in graph.segments:
+        if len(seg) >= 2:
+            x_ends.append(seg[0][0])
+            y_ends.append(seg[0][1])
+            x_ends.append(seg[-1][0])
+            y_ends.append(seg[-1][1])
+    if x_ends:
+        ax.scatter(
+            x_ends,
+            y_ends,
+            s=6,
+            c="red",
+            alpha=0.5,
+            zorder=4,
+            marker="o",
+        )
+
+    # Direction arrows at each segment midpoint.
+    arrow_scale = step_over * 1.2
+    for si, mid in enumerate(seg_mids):
+        dx, dy = graph.segment_directions[si]
+        mag_sq = dx * dx + dy * dy
+        if mag_sq < 1e-12:
+            continue
+        mag = math.sqrt(mag_sq)
+        ux = dx / mag
+        uy = dy / mag
+        ax.arrow(
+            mid[0],
+            mid[1],
+            ux * arrow_scale,
+            uy * arrow_scale,
+            head_width=arrow_scale * 0.3,
+            head_length=arrow_scale * 0.35,
+            fc="#2255aa",
+            ec="#2255aa",
+            alpha=0.6,
+            linewidth=0.6,
+            zorder=4,
+        )
+
     sm = plt.cm.ScalarMappable(cmap=arc_cmap, norm=arc_norm)
     sm.set_array([])
     fig.colorbar(sm, ax=ax, label="Pass index", fraction=0.04, pad=0.02)
 
     ax.set_title(
         f"split_ordered_wavefronts() - {total_bites} bites,"
-        f" {n_passes} passes, {n_arcs} arcs"
+        f" {n_passes} passes, {n_arcs} arcs,"
+        f" {len(graph.segments)} segments\n"
+        "red dots = V-junction splits, blue arrows = wave direction"
     )
     ax.set_xlabel("X")
     ax.set_ylabel("Y")

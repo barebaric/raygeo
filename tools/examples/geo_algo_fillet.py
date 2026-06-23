@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 from raygeo.geo.algo.fillet import (
     append_end_fillets,
     create_fillet_polyline,
+    descending_radius_fillet,
     fillet_arc_ends,
     find_safe_sweep_end,
     trim_to_safe_fillet_span,
@@ -457,6 +458,123 @@ def generate_try_fillet_one_end():
     return fig
 
 
+def generate_descending_radius_fillet():
+    """Descending radius fillet with constant safety distance.
+
+    A blocking obstacle near the arc start prevents the full-radius
+    fillet.  The function halves the fillet radius until both ends
+    fit, while keeping the safety distance (arc + margin) fixed.
+    """
+    arc = [(18, 30), (60, 30), (100, 30)]
+    outer = [(0, 0), (110, 0), (110, 70), (0, 70)]
+    obstacles = [[(0, 10), (12, 10), (12, 55), (0, 55)]]
+    radius = 16.0
+    margin = 4.0
+
+    result = descending_radius_fillet(arc, outer, obstacles, radius, margin)
+
+    # Ghost: what the full-radius fillet would have been (both ends)
+    _, ghost_start = create_fillet_polyline(
+        arc[0],
+        (arc[1][0] - arc[0][0], arc[1][1] - arc[0][1]),
+        radius,
+        math.pi / 2,
+        1.0,
+        True,
+    )
+    _, ghost_end = create_fillet_polyline(
+        arc[-1],
+        (arc[-1][0] - arc[-2][0], arc[-1][1] - arc[-2][1]),
+        radius,
+        math.pi / 2,
+        1.0,
+        False,
+    )
+
+    safe_d = radius + margin
+    safe_buf = [
+        (obstacles[0][0][0] - safe_d, obstacles[0][0][1] - safe_d),
+        (obstacles[0][2][0] + safe_d, obstacles[0][0][1] - safe_d),
+        (obstacles[0][2][0] + safe_d, obstacles[0][2][1] + safe_d),
+        (obstacles[0][0][0] - safe_d, obstacles[0][2][1] + safe_d),
+    ]
+
+    fig, ax = plt.subplots(figsize=(8, 5))
+
+    ox = [pt[0] for pt in outer] + [outer[0][0]]
+    oy = [pt[1] for pt in outer] + [outer[0][1]]
+    ax.plot(ox, oy, "-", color="lightgray", linewidth=1, label="Boundary")
+
+    # Safety clearance buffer
+    sbx = [pt[0] for pt in safe_buf] + [safe_buf[0][0]]
+    sby = [pt[1] for pt in safe_buf] + [safe_buf[0][1]]
+    ax.fill(sbx, sby, facecolor="royalblue", alpha=0.08)
+    ax.plot(
+        sbx,
+        sby,
+        "--",
+        color="royalblue",
+        linewidth=1,
+        alpha=0.5,
+        label=f"Safety clearance (r + margin = {safe_d:.0f})",
+    )
+
+    for obs in obstacles:
+        obx = [pt[0] for pt in obs] + [obs[0][0]]
+        oby = [pt[1] for pt in obs] + [obs[0][1]]
+        ax.fill(obx, oby, facecolor="tomato", alpha=0.4, edgecolor="tomato")
+        ax.plot(obx, oby, "-", color="tomato", linewidth=1, label="Obstacle")
+
+    ax.plot(
+        [pt[0] for pt in ghost_start],
+        [pt[1] for pt in ghost_start],
+        "--",
+        color="gray",
+        linewidth=1.5,
+        alpha=0.5,
+        label="Full-radius fillet (blocked)",
+    )
+    ax.plot(
+        [pt[0] for pt in ghost_end],
+        [pt[1] for pt in ghost_end],
+        "--",
+        color="gray",
+        linewidth=1.5,
+        alpha=0.5,
+    )
+
+    ax.plot(
+        [pt[0] for pt in arc],
+        [pt[1] for pt in arc],
+        "-",
+        color="#e41a1c",
+        linewidth=3.0,
+        alpha=0.5,
+        label="Original arc",
+    )
+    ax.plot(
+        [pt[0] for pt in result],
+        [pt[1] for pt in result],
+        "-",
+        color="#377eb8",
+        linewidth=2.5,
+        alpha=0.9,
+        label="Descending-radius result",
+    )
+
+    ax.set_xlim(-5, 115)
+    ax.set_ylim(-5, 75)
+    ax.set_aspect("equal")
+    ax.set_title(
+        "descending_radius_fillet — radius shrinks, safety distance\n"
+        f"(r + margin = {radius} + {margin} = {radius + margin}) stays fixed"
+    )
+    ax.legend(fontsize=8, loc="upper right")
+    ax.grid(True, alpha=0.3)
+    fig.tight_layout()
+    return fig
+
+
 __docs_target__ = ["raygeo.geo.algo.fillet.md"]
 __images__ = [
     {
@@ -514,5 +632,14 @@ __images__ = [
             " collides with the obstacle (red), falls back to the end fillet"
         ),
         "function": generate_try_fillet_one_end,
+    },
+    {
+        "heading": "descending_radius_fillet",
+        "caption": (
+            "``descending_radius_fillet`` halves the fillet radius until"
+            " both ends fit, while keeping the safety distance"
+            " (``radius + margin``) fixed"
+        ),
+        "function": generate_descending_radius_fillet,
     },
 ]

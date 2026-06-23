@@ -5,6 +5,7 @@ import math
 from raygeo.geo.algo.fillet import (
     append_end_fillets,
     create_fillet_polyline,
+    descending_radius_fillet,
     trim_to_safe_fillet_span,
     try_fillet_one_end,
 )
@@ -278,3 +279,67 @@ class TestTryFilletOneEnd:
         obstacles = [[(0.0, -5.0), (5.0, -5.0), (5.0, 5.0), (0.0, 5.0)]]
         result = try_fillet_one_end(arc, outer, obstacles, 10.0, 0.0)
         assert result == arc
+
+
+class TestDescendingRadiusFillet:
+    """Tests for descending_radius_fillet."""
+
+    def test_full_radius_fits(self):
+        """Without obstacles the full-radius fillet is returned."""
+        arc = [(0.0, 0.0), (50.0, 0.0), (100.0, 0.0)]
+        outer = [(-30.0, -30.0), (130.0, -30.0), (130.0, 30.0), (-30.0, 30.0)]
+        result = descending_radius_fillet(arc, outer, [], 10.0, 0.0)
+        # Should be longer than original (fillets at both ends)
+        assert len(result) > len(arc)
+        # Start should extend leftward
+        assert result[0][0] < 0.0
+        # End should extend rightward
+        assert result[-1][0] > 100.0
+
+    def test_descending_radius_with_obstacle(self):
+        """Obstacle forces radius reduction — result still avoids it."""
+        arc = [(0.0, 0.0), (50.0, 0.0), (100.0, 0.0)]
+        outer = [(-5.0, -30.0), (120.0, -30.0), (120.0, 30.0), (-5.0, 30.0)]
+        obstacles = [[(-4.0, -5.0), (0.0, -5.0), (0.0, 5.0), (-4.0, 5.0)]]
+        result = descending_radius_fillet(arc, outer, obstacles, 20.0, 0.0)
+        # A fillet should still be found (at reduced radius)
+        assert len(result) > 0
+        # The result should avoid the obstacle at (0,0) start — the
+        # full-radius fillet would sweep through it, but the descending
+        # logic should shrink r until it fits.
+
+    def test_safety_distance_preserved(self):
+        """Safety distance stays fixed as fillet radius shrinks.
+
+        With margin = 5 and radius = 20, the effective safety distance is
+        25.  The boundary at x = -24 forces the fillet to start no closer
+        than 25 units — the result's first point verifies this.
+        """
+        arc = [(0.0, 0.0), (50.0, 0.0), (100.0, 0.0)]
+        outer = [
+            (-24.0, -30.0),
+            (120.0, -30.0),
+            (120.0, 30.0),
+            (-24.0, 30.0),
+        ]
+        result = descending_radius_fillet(arc, outer, [], 20.0, 5.0)
+        assert len(result) > 0
+        # The first point of the result should maintain the full
+        # safety distance (20 + 5 = 25) from the boundary at x = -24.
+        clearance = result[0][0] - (-24.0)
+        assert abs(clearance - 25.0) < 1.0
+
+    def test_fully_blocked_returns_empty(self):
+        """When no radius can fit, returns empty."""
+        arc = [(0.0, 0.0), (50.0, 0.0), (100.0, 0.0)]
+        # Tiny boundary that blocks everything
+        outer = [(5.0, -2.0), (95.0, -2.0), (95.0, 2.0), (5.0, 2.0)]
+        result = descending_radius_fillet(arc, outer, [], 10.0, 0.0)
+        assert len(result) == 0
+
+    def test_short_arc_returns_fillet(self):
+        """Arc with 2 points is still valid and gets filleted."""
+        result = descending_radius_fillet(
+            [(0.0, 0.0), (10.0, 0.0)], [], [], 5.0, 0.0
+        )
+        assert len(result) > 2

@@ -9,6 +9,7 @@ appending them to polylines, and trimming to safe spans.
 * ``create_fillet_polyline`` — circular arc tangent to a direction.
 * ``append_end_fillets`` — fillet both ends of an open polyline.
 * ``trim_to_safe_fillet_span`` — longest sub-span whose end fillets avoid obstacles.
+* ``descending_radius_fillet`` — try fillets at descending radii until one fits.
 ";
 
 use crate::geo::algo::fillet;
@@ -31,6 +32,7 @@ pub fn register(algo_mod: &Bound<'_, PyModule>) -> PyResult<()> {
         fillet_arc_ends_py,
         find_safe_sweep_end_py,
         try_fillet_one_end_py,
+        descending_radius_fillet_py,
     );
 
     algo_mod.add_submodule(&m)?;
@@ -128,6 +130,65 @@ fn append_end_fillets_py(
         .into_iter()
         .map(|p| (p.x, p.y))
         .collect()
+}
+
+#[gen_stub_pyfunction(
+    python = r#"
+    import collections.abc
+
+    def descending_radius_fillet(
+        arc: collections.abc.Sequence[tuple[float, float]],
+        outer_boundary: collections.abc.Sequence[tuple[float, float]],
+        inner_obstacles: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]] = [],
+        radius: float = 3.0,
+        margin: float = 0.0,
+    ) -> list[tuple[float, float]]:
+        """Try fillets at descending radii until one fits.
+
+        Starts at *radius* and halves until either both (or one) end
+        fillet fits, or the radius drops below 0.1; returns the
+        filleted arc, or an empty list if none fits.
+
+        The safety distance (``radius + margin``) stays fixed as the
+        fillet radius shrinks, so the tool clearance remains constant.
+
+        :param arc: Cutting arc vertices (open polyline).
+        :param outer_boundary: Outer boundary polygon.
+        :param inner_obstacles: List of obstacle polygons (default []).
+        :param radius: Initial fillet radius in mm (default 3.0).
+        :param margin: Extra clearance past tangency (default 0.0).
+        :returns: Filleted arc or empty list.
+        """
+"#,
+    module = "raygeo.geo.algo.fillet"
+)]
+#[pyfunction(name = "descending_radius_fillet")]
+#[pyo3(signature = (arc, outer_boundary, inner_obstacles = None, radius = 3.0, margin = 0.0))]
+fn descending_radius_fillet_py(
+    arc: Vec<(f64, f64)>,
+    outer_boundary: Vec<(f64, f64)>,
+    inner_obstacles: Option<Vec<Vec<(f64, f64)>>>,
+    radius: f64,
+    margin: f64,
+) -> Vec<(f64, f64)> {
+    let arc_pts: Vec<Point> =
+        arc.into_iter().map(|(x, y)| Point::new(x, y)).collect();
+    let boundary: Vec<Point> = outer_boundary
+        .into_iter()
+        .map(|(x, y)| Point::new(x, y))
+        .collect();
+    let obstacles: Vec<Vec<Point>> = inner_obstacles
+        .unwrap_or_default()
+        .into_iter()
+        .map(|h| h.into_iter().map(|(x, y)| Point::new(x, y)).collect())
+        .collect();
+    let side = get_polyline_turn_sign(&arc_pts);
+    fillet::descending_radius_fillet(
+        &arc_pts, &boundary, &obstacles, radius, margin, side, side,
+    )
+    .into_iter()
+    .map(|p| (p.x, p.y))
+    .collect()
 }
 
 #[gen_stub_pyfunction(

@@ -9,12 +9,14 @@ appending them to polylines, and trimming to safe spans.
 * ``create_fillet_polyline`` — circular arc tangent to a direction.
 * ``append_end_fillets`` — fillet both ends of an open polyline.
 * ``trim_to_safe_fillet_span`` — longest sub-span whose end fillets avoid obstacles.
+* ``descending_radius_fillet`` — try fillets at descending radii until one fits.
 """
 
 import collections.abc
 __all__ = [
     "append_end_fillets",
     "create_fillet_polyline",
+    "descending_radius_fillet",
     "fillet_arc_ends",
     "find_safe_sweep_end",
     "trim_to_safe_fillet_span",
@@ -51,6 +53,25 @@ def create_fillet_polyline(p: tuple[float, float], dir: tuple[float, float], rad
     :param side: Offset side (+1 left, -1 right).
     :param reverse: Whether the arc is reversed.
     :returns: ``(center, polyline)`` — arc centre and fillet vertices.
+    """
+
+def descending_radius_fillet(arc: collections.abc.Sequence[tuple[float, float]], outer_boundary: collections.abc.Sequence[tuple[float, float]], inner_obstacles: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]] = [], radius: float = 3, margin: float = 0) -> list[tuple[float, float]]:
+    r"""
+    Try fillets at descending radii until one fits.
+    
+    Starts at *radius* and halves until either both (or one) end
+    fillet fits, or the radius drops below 0.1; returns the
+    filleted arc, or an empty list if none fits.
+    
+    The safety distance (``radius + margin``) stays fixed as the
+    fillet radius shrinks, so the tool clearance remains constant.
+    
+    :param arc: Cutting arc vertices (open polyline).
+    :param outer_boundary: Outer boundary polygon.
+    :param inner_obstacles: List of obstacle polygons (default []).
+    :param radius: Initial fillet radius in mm (default 3.0).
+    :param margin: Extra clearance past tangency (default 0.0).
+    :returns: Filleted arc or empty list.
     """
 
 def fillet_arc_ends(arc: collections.abc.Sequence[tuple[float, float]], pocket_boundary: collections.abc.Sequence[tuple[float, float]], islands: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]] = [], tool_radius: float = 3, wall_margin: float = 0) -> list[tuple[float, float]]:

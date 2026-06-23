@@ -64,6 +64,15 @@ struct PyWavefrontGraph {
     /// Global bite indices in the order visited by DFS.
     #[pyo3(get)]
     visit_order: Vec<usize>,
+    /// V-junction-split sub-segments from each arc, flattened in arc order.
+    #[pyo3(get)]
+    segments: Vec<Vec<(f64, f64)>>,
+    /// Outward normal (unit vector) for each segment in `segments`.
+    #[pyo3(get)]
+    segment_directions: Vec<(f64, f64)>,
+    /// For each arc in `arcs`, indices into `segments`.
+    #[pyo3(get)]
+    arc_segments: Vec<Vec<usize>>,
 }
 
 impl From<hsm::WavefrontGraph> for PyWavefrontGraph {
@@ -82,6 +91,16 @@ impl From<hsm::WavefrontGraph> for PyWavefrontGraph {
                     .collect()
             })
             .collect();
+        let segments = g
+            .segments
+            .into_iter()
+            .map(|seg| seg.into_iter().map(|p| (p.x, p.y)).collect())
+            .collect();
+        let segment_directions = g
+            .segment_directions
+            .into_iter()
+            .map(|v| (v.x, v.y))
+            .collect();
         PyWavefrontGraph {
             arcs,
             arc_passes: g.arc_passes,
@@ -90,6 +109,9 @@ impl From<hsm::WavefrontGraph> for PyWavefrontGraph {
             parent: g.parent,
             bite_offsets: g.bite_offsets,
             visit_order: g.visit_order,
+            segments,
+            segment_directions,
+            arc_segments: g.arc_segments,
         }
     }
 }

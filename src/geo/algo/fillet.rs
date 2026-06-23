@@ -9,6 +9,7 @@ use std::f64::consts::FRAC_PI_2;
 
 use crate::geo::shape::line::get_segment_segment_distance;
 use crate::geo::shape::polygon::does_path_sweep_intersect_polygon;
+use crate::geo::shape::polyline::trim_polyline_at;
 use crate::types::{Point, Polygon};
 
 /// Create a circular fillet polyline tangent to `dir` at `p`.
@@ -357,4 +358,62 @@ pub fn try_fillet_one_end(
     }
 
     arc.to_vec()
+}
+
+/// Try fillets at descending radii until one fits.
+///
+/// Starts at the given `radius` and halves until either a fillet fits
+/// (both ends, or one end), or the radius drops below `MIN_RADIUS`.
+/// When the radius gets too small the arc is removed entirely.
+const MIN_RADIUS: f64 = 0.1;
+
+pub fn descending_radius_fillet(
+    arc: &[Point],
+    outer_boundary: &[Point],
+    inner_obstacles: &[Polygon],
+    radius: f64,
+    margin: f64,
+    start_side: f64,
+    end_side: f64,
+) -> Vec<Point> {
+    let arc_len = arc.len();
+    let effective_margin = radius + margin;
+    let mut r = radius;
+    loop {
+        // The safety distance (= r + adjusted_margin) must stay fixed
+        // at the original radius + margin, even as r shrinks.
+        let adjusted_margin = effective_margin - r;
+        if let Some((enter, exit)) = trim_to_safe_fillet_span(
+            arc,
+            outer_boundary,
+            inner_obstacles,
+            r,
+            adjusted_margin,
+            start_side,
+            end_side,
+        ) {
+            let trimmed = trim_polyline_at(arc, enter, exit);
+            if trimmed.len() >= 3 {
+                return append_end_fillets(
+                    &trimmed, r, FRAC_PI_2, start_side, end_side,
+                );
+            }
+        }
+        let single = try_fillet_one_end(
+            arc,
+            outer_boundary,
+            inner_obstacles,
+            r,
+            adjusted_margin,
+            start_side,
+            end_side,
+        );
+        if single.len() != arc_len {
+            return single;
+        }
+        r *= 0.5;
+        if r < MIN_RADIUS {
+            return Vec::new();
+        }
+    }
 }

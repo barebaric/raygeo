@@ -12,6 +12,7 @@ trimming to safe spans.
 - `create_fillet_polyline` — circular arc tangent to a direction.
 - `append_end_fillets` — fillet both ends of an open polyline.
 - `trim_to_safe_fillet_span` — longest sub-span whose end fillets avoid obstacles.
+- `descending_radius_fillet` — try fillets at descending radii until one fits.
 
 ## Functions
 
@@ -82,6 +83,40 @@ direction at a point_
 ![``create_fillet_polyline`` with ``side=+1`` (left) and ``side=-1`` (right) of the direction vector](images/geo-algo-fillet-create-fillet-polyline-side.png)
 
 _`create_fillet_polyline` with `side=+1` (left) and `side=-1` (right) of the direction vector_
+
+### `descending_radius_fillet()`
+
+```python
+descending_radius_fillet(
+    arc: Sequence[tuple[float, float]],
+    outer_boundary: Sequence[tuple[float, float]],
+    inner_obstacles: Sequence[Sequence[tuple[float, float]]] = [],
+    radius: float = 3,
+    margin: float = 0,
+) -> list[tuple[float, float]]
+```
+
+Try fillets at descending radii until one fits.
+
+Starts at _radius_ and halves until either both (or one) end fillet fits, or the radius drops below
+0.1; returns the filleted arc, or an empty list if none fits.
+
+The safety distance (`radius + margin`) stays fixed as the fillet radius shrinks, so the tool
+clearance remains constant.
+
+| Parameter         | Type                                           | Description                                  |
+| ----------------- | ---------------------------------------------- | -------------------------------------------- |
+| `arc`             | `Sequence[tuple[float, float]]`                | Cutting arc vertices (open polyline).        |
+| `outer_boundary`  | `Sequence[tuple[float, float]]`                | Outer boundary polygon.                      |
+| `inner_obstacles` | `Sequence[Sequence[tuple[float, float]]] = []` | List of obstacle polygons (default []).      |
+| `radius`          | `float = 3`                                    | Initial fillet radius in mm (default 3.0).   |
+| `margin`          | `float = 0`                                    | Extra clearance past tangency (default 0.0). |
+| _Returns_         | `list[tuple[float, float]]`                    | Filleted arc or empty list.                  |
+
+![``descending_radius_fillet`` halves the fillet radius until both ends fit, while keeping the safety distance (``radius + margin``) fixed](images/geo-algo-fillet-descending-radius-fillet.png)
+
+_`descending_radius_fillet` halves the fillet radius until both ends fit, while keeping the safety
+distance (`radius + margin`) fixed_
 
 ### `fillet_arc_ends()`
 

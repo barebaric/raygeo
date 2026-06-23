@@ -11,9 +11,7 @@
 //! and how to traverse it.
 
 use crate::geo::algo::cleared_area::ClearedArea;
-use crate::geo::algo::fillet::{
-    append_end_fillets, trim_to_safe_fillet_span, try_fillet_one_end,
-};
+use crate::geo::algo::fillet::descending_radius_fillet;
 use crate::geo::algo::helix::{
     generate_helix_3d, HelixDirection, HelixOptions,
 };
@@ -26,7 +24,6 @@ use crate::geo::algo::smooth::{
     blend_tangent, build_smoothed_path, chaikin_corner_cut,
 };
 use crate::geo::algo::spiral::{generate_spiral_3d, SpiralOptions};
-use crate::geo::shape::arc::get_polyline_turn_sign;
 use crate::geo::shape::line::longest_line_through_point;
 use crate::geo::shape::polygon::{
     does_path_sweep_intersect_polygon, get_circle_polygon, get_polygon_area,
@@ -37,7 +34,7 @@ use crate::geo::shape::polygon::{
 };
 use crate::geo::shape::polyline::{
     get_polyline_bounds, split_polyline_at_v_junctions,
-    trim_polyline_angular_ends, trim_polyline_at,
+    trim_polyline_angular_ends,
 };
 use crate::ops::container::Ops;
 use crate::ops::state::State;
@@ -45,14 +42,20 @@ use crate::types::{Point, Point3D, Polygon};
 
 const MAX_WAVEFRONT_ITERATIONS: usize = 1000;
 const DERIV_THRESHOLD: f64 = 0.436_332_312_998_582_4;
+const V_JUNCTION_THRESHOLD: f64 = 0.1; // upstream processes MUST provide higher precision than this
 
 // ── Cutting-arc extraction ─────────────────────────────────────
 
-/// Extract the cutting-arc (outer) vertices from a bite polygon.
+/// Extract the outer (cutting) arc from a bite polygon.
 ///
 /// The bite is a crescent between the cleared frontier and the expanded
 /// boundary.  The cutting arc is the longest contiguous run of bite
 /// vertices that lie *outside* all cleared fragments.
+///
+/// Uses a static distance threshold (1e-4).  When no vertex clears that
+/// threshold the function falls back to a relative threshold (30 % of
+/// the maximum distance) so that the outermost ridge of even a tight
+/// sliver is identified.
 ///
 /// Returns `(arc_vertices, cut_start, cut_len)` where `arc_vertices` is
 /// the contiguous slice of `bite` forming the outer arc, `cut_start`
@@ -68,17 +71,34 @@ pub fn find_cutting_arc(
         return None;
     }
 
-    let is_outer: Vec<bool> = bite
+    // Compute actual distances from each bite vertex to the nearest
+    // cleared fragment boundary.
+    let dists: Vec<f64> = bite
         .iter()
         .map(|p| {
-            !cleared_fragments.iter().any(|frag| {
-                let d2 = get_polygon_closest_point(frag, p.x, p.y)
-                    .map(|(_, _, d2)| d2)
-                    .unwrap_or(f64::MAX);
-                d2 < 1e-4
-            })
+            cleared_fragments
+                .iter()
+                .filter_map(|frag| {
+                    get_polygon_closest_point(frag, p.x, p.y)
+                        .map(|(_, _, d2)| d2)
+                })
+                .fold(f64::MAX, f64::min)
         })
         .collect();
+
+    // Determine the threshold: prefer the static 1e-4, but if no
+    // vertex passes it, relax to 30 % of the maximum distance so
+    // that the outermost ridge of a tight sliver is still found.
+    let max_d = dists.iter().copied().fold(0.0, f64::max);
+    let threshold = if dists.iter().any(|d| *d > 1e-4) {
+        1e-4
+    } else if max_d > 1e-9 {
+        max_d * 0.3
+    } else {
+        return None;
+    };
+
+    let is_outer: Vec<bool> = dists.iter().map(|d| *d > threshold).collect();
 
     let extended: Vec<bool> = is_outer
         .iter()
@@ -110,22 +130,33 @@ pub fn find_cutting_arc(
         }
     }
 
-    if cut_len < 3 {
+    if cut_len < 2 {
         return None;
     }
 
     // Trim transition vertices at the tips where the outer arc meets
     // the inner arc by detecting sharp jumps in interior angle.
+    // Safe for cut_len < 3 (no-op).
     (cut_start, cut_len) =
         trim_polyline_angular_ends(bite, cut_start, cut_len, DERIV_THRESHOLD);
 
-    if cut_len < 3 {
+    if cut_len < 2 {
         return None;
     }
 
-    let vertices: Vec<Point> =
+    let mut vertices: Vec<Point> =
         (0..cut_len).map(|i| bite[(cut_start + i) % n]).collect();
-    Some((vertices, cut_start, cut_len))
+
+    // When only two outer vertices remain (e.g. a closing corner),
+    // interpolate a midpoint so the downstream code always sees an
+    // arc of at least three points.
+    if vertices.len() == 2 {
+        let mid = (vertices[0] + vertices[1]) * 0.5;
+        vertices.insert(1, mid);
+    }
+
+    let len = vertices.len();
+    Some((vertices, cut_start, len))
 }
 
 // ── Entry strategy ─────────────────────────────────────────────
@@ -445,6 +476,12 @@ pub struct WavefrontGraph {
     pub bite_offsets: Vec<usize>,
     /// Global bite indices in the order visited by DFS.
     pub visit_order: Vec<usize>,
+    /// V-junction-split sub-segments from each arc, flattened in arc order.
+    pub segments: Vec<Vec<Point>>,
+    /// Outward normal (unit vector) for each segment in `segments`.
+    pub segment_directions: Vec<Point>,
+    /// For each arc in `arcs`, indices into `segments`.
+    pub arc_segments: Vec<Vec<usize>>,
 }
 
 /// Run the peeling clearing strategy, ordering arcs in one pass.
@@ -476,6 +513,9 @@ pub fn split_ordered_wavefronts(
             parent: Vec::new(),
             bite_offsets: Vec::new(),
             visit_order: Vec::new(),
+            segments: Vec::new(),
+            segment_directions: Vec::new(),
+            arc_segments: Vec::new(),
         };
     }
 
@@ -521,15 +561,13 @@ pub fn split_ordered_wavefronts(
                     all_arc_pass.push(pass_idx);
                 }
             }
-            if arcs.is_empty() && bite.len() >= 3 {
-                let b = get_polyline_bounds(bite);
-                let span = (b.max.x - b.min.x).max(b.max.y - b.min.y);
-                if span >= step_over * 0.5 {
-                    arcs.push(all_arcs.len());
-                    all_arcs.push(bite.clone());
-                    all_arc_pass.push(pass_idx);
-                }
-            }
+            // When find_cutting_arc returns None the bite is either
+            // fully inside the cleared area (all vertices at distance
+            // zero) or has too few outer vertices (< 3).  In both
+            // cases the material is still tracked via
+            // add_cleared_polygons below; emitting a fallback arc
+            // would create duplicate cutlines because the bite
+            // includes shared inner vertices from the previous pass.
             bite_arcs.push(arcs);
         }
 
@@ -549,6 +587,9 @@ pub fn split_ordered_wavefronts(
             parent: Vec::new(),
             bite_offsets: Vec::new(),
             visit_order: Vec::new(),
+            segments: Vec::new(),
+            segment_directions: Vec::new(),
+            arc_segments: Vec::new(),
         };
     }
 
@@ -737,6 +778,44 @@ pub fn split_ordered_wavefronts(
         }
     }
 
+    let mut segments: Vec<Vec<Point>> = Vec::new();
+    let mut segment_directions: Vec<Point> = Vec::new();
+    let mut arc_segments: Vec<Vec<usize>> = Vec::with_capacity(result.len());
+    for arc in &result {
+        let comps = split_polyline_at_v_junctions(arc, V_JUNCTION_THRESHOLD);
+        let mut idxs = Vec::with_capacity(comps.len());
+        for seg in &comps {
+            idxs.push(segments.len());
+            // Compute outward normal at the segment midpoint.
+            let dir = if seg.len() >= 3 {
+                let mid = seg.len() / 2;
+                let d0 = seg[mid] - seg[mid.saturating_sub(1)];
+                let d1 = seg[(mid + 1).min(seg.len() - 1)] - seg[mid];
+                let tangent = ((d0 + d1) * 0.5).normalize_or_zero();
+                let n1 = Point::new(-tangent.y, tangent.x);
+                let n2 = Point::new(tangent.y, -tangent.x);
+                let midpoint = seg[mid];
+                let to_mid = midpoint - entry;
+                if n1.dot(to_mid) > n2.dot(to_mid) {
+                    if n1.length_squared() > 0.5 {
+                        n1
+                    } else {
+                        Point::ZERO
+                    }
+                } else if n2.length_squared() > 0.5 {
+                    n2
+                } else {
+                    Point::ZERO
+                }
+            } else {
+                Point::ZERO
+            };
+            segments.push(seg.clone());
+            segment_directions.push(dir);
+        }
+        arc_segments.push(idxs);
+    }
+
     WavefrontGraph {
         arcs: result,
         arc_passes,
@@ -745,6 +824,9 @@ pub fn split_ordered_wavefronts(
         parent,
         bite_offsets,
         visit_order,
+        segments,
+        segment_directions,
+        arc_segments,
     }
 }
 
@@ -813,7 +895,7 @@ pub fn adaptive_peeling(
     );
 
     finish_peeling(
-        cut_arcs.arcs,
+        &cut_arcs,
         &valid_tool_area,
         pocket_boundary,
         islands,
@@ -835,7 +917,7 @@ pub fn adaptive_peeling(
 /// Filter, fillet, and link cutting arcs into Ops.
 #[allow(clippy::too_many_arguments)]
 fn finish_peeling(
-    cut_arcs: Vec<Vec<Point>>,
+    graph: &WavefrontGraph,
     valid_tool_area: &[Polygon],
     pocket_boundary: &Polygon,
     islands: &[Polygon],
@@ -850,6 +932,7 @@ fn finish_peeling(
     cut_state: &State,
     travel_state: &State,
 ) -> Ops {
+    let cut_arcs = &graph.arcs;
     if cut_arcs.is_empty() {
         return Ops::new();
     }
@@ -858,7 +941,8 @@ fn finish_peeling(
 
     let filleted: Vec<Vec<Point>> = cut_arcs
         .iter()
-        .filter_map(|arc| {
+        .enumerate()
+        .filter_map(|(ai, arc)| {
             if arc.len() < 3 {
                 return None;
             }
@@ -867,26 +951,22 @@ fn finish_peeling(
             if span < min_span {
                 return None;
             }
-            // Determine the fillet direction at each end independently
-            // by splitting at V-junctions.  When two shallow cut lines
-            // merge they look like a single arc whose overall turn sign
-            // (sampled at the midpoint) can point the wrong way.  The
-            // first component's sign is used for the enter fillet and
-            // the last component's sign for the exit fillet; the arc is
-            // kept as a single polyline so no fillet is inserted at the
-            // junction.
-            let components =
-                split_polyline_at_v_junctions(arc, DERIV_THRESHOLD);
-            let start_side = components
-                .first()
-                .map(|c| get_polyline_turn_sign(c))
-                .unwrap_or(1.0);
-            let end_side = components
-                .last()
-                .map(|c| get_polyline_turn_sign(c))
-                .unwrap_or(1.0);
+            // Use pre-computed segment directions to determine fillet
+            // side.  The fillet arcs opposite to the wave direction
+            // (i.e. inward toward the cleared area).  The arc is kept
+            // whole so no fillet is inserted at merged wave junctions.
+            let (start_side, end_side) = if ai < graph.arc_segments.len() {
+                let seg_idxs = &graph.arc_segments[ai];
+                if !seg_idxs.is_empty() {
+                    fillet_sides_from_directions(graph, seg_idxs)
+                } else {
+                    (1.0, 1.0)
+                }
+            } else {
+                (1.0, 1.0)
+            };
 
-            let fa = if let Some((enter, exit)) = trim_to_safe_fillet_span(
+            let fa = descending_radius_fillet(
                 arc,
                 pocket_boundary,
                 islands,
@@ -894,30 +974,7 @@ fn finish_peeling(
                 wall_margin,
                 start_side,
                 end_side,
-            ) {
-                let trimmed = trim_polyline_at(arc, enter, exit);
-                if trimmed.len() < 3 {
-                    arc.to_vec()
-                } else {
-                    append_end_fillets(
-                        &trimmed,
-                        tool_radius,
-                        std::f64::consts::FRAC_PI_2,
-                        start_side,
-                        end_side,
-                    )
-                }
-            } else {
-                try_fillet_one_end(
-                    arc,
-                    pocket_boundary,
-                    islands,
-                    tool_radius,
-                    wall_margin,
-                    start_side,
-                    end_side,
-                )
-            };
+            );
             if fa.len() >= 3 {
                 Some(fa)
             } else {
@@ -949,6 +1006,47 @@ fn finish_peeling(
         cut_state,
         travel_state,
     )
+}
+
+/// Compute fillet enter/exit sides from pre-computed segment directions.
+///
+/// The outer flag (at the segment midpoint) is one of the two normals
+/// to the local tangent.  Comparing it with the left normal at the
+/// same midpoint tells us whether outer is LEFT or RIGHT of travel
+/// direction — a property that is invariant along the entire segment.
+/// The fillet arcs opposite of the outer flag, i.e. toward the inner
+/// (cleared) side.  The arc is kept whole so no fillet is inserted at
+/// merged wave junctions.
+fn fillet_sides_from_directions(
+    graph: &WavefrontGraph,
+    seg_idxs: &[usize],
+) -> (f64, f64) {
+    fn side_from_flag(seg: &[Point], flag: Point) -> f64 {
+        let mid = seg.len() / 2;
+        let d0 = seg[mid] - seg[mid.saturating_sub(1)];
+        let d1 = seg[(mid + 1).min(seg.len() - 1)] - seg[mid];
+        let t_mid = ((d0 + d1) * 0.5).normalize_or_zero();
+        // Left normal at the midpoint.  If the flag aligns with it
+        // then outer is LEFT (CW) → inner is RIGHT → side = -1.
+        // Otherwise outer is RIGHT (CCW) → inner is LEFT → side = +1.
+        let left_normal = Point::new(-t_mid.y, t_mid.x);
+        if left_normal.dot(flag) > 0.0 {
+            -1.0
+        } else {
+            1.0
+        }
+    }
+
+    let start_side = side_from_flag(
+        &graph.segments[seg_idxs[0]],
+        graph.segment_directions[seg_idxs[0]],
+    );
+    let end_side = side_from_flag(
+        &graph.segments[*seg_idxs.last().unwrap()],
+        graph.segment_directions[*seg_idxs.last().unwrap()],
+    );
+
+    (start_side, end_side)
 }
 
 /// Build motion segments from arcs using NN ordering, MAT routing, and
