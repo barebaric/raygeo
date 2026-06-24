@@ -1,7 +1,7 @@
 ---
 title: raygeo.geo.algo.polylabel
 sidebar_label: raygeo.geo.algo.polylabel
-sidebar_position: 27
+sidebar_position: 28
 ---
 
 ## Functions

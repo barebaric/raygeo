@@ -1,7 +1,7 @@
 ---
 title: raygeo.svg
 sidebar_label: raygeo.svg
-sidebar_position: 61
+sidebar_position: 63
 ---
 
 ![SVG path data parsed into geometries](images/svg-parsing.png)

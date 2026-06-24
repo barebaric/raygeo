@@ -1,7 +1,7 @@
 ---
 title: raygeo.geo.algo.trochoid
 sidebar_label: raygeo.geo.algo.trochoid
-sidebar_position: 33
+sidebar_position: 35
 ---
 
 Trochoidal path generation along a carrier polyline.

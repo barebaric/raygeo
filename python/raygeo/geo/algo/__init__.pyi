@@ -32,6 +32,7 @@ from . import astar
 from . import cleared_area
 from . import clipping
 from . import cylindrical
+from . import engagement
 from . import fillet
 from . import fitting
 from . import helix
@@ -46,6 +47,7 @@ from . import ordering
 from . import overcut
 from . import polylabel
 from . import ramp
+from . import rootfind
 from . import simplify
 from . import smooth
 from . import spatial_grid2d
@@ -57,6 +59,7 @@ __all__ = [
     "cleared_area",
     "clipping",
     "cylindrical",
+    "engagement",
     "fillet",
     "fitting",
     "helix",
@@ -71,6 +74,7 @@ __all__ = [
     "overcut",
     "polylabel",
     "ramp",
+    "rootfind",
     "simplify",
     "smooth",
     "spatial_grid2d",

@@ -1,7 +1,7 @@
 ---
 title: raygeo.ops.types
 sidebar_label: raygeo.ops.types
-sidebar_position: 60
+sidebar_position: 62
 ---
 
 Core enumerations for the Ops command system.

@@ -1,7 +1,7 @@
 ---
 title: raygeo.mesh.laplace
 sidebar_label: raygeo.mesh.laplace
-sidebar_position: 49
+sidebar_position: 51
 ---
 
 ## Functions

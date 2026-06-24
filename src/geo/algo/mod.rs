@@ -9,6 +9,7 @@ pub mod cleanup;
 pub mod cleared_area;
 pub mod clipping;
 pub mod cylindrical;
+pub mod engagement;
 pub mod fillet;
 pub mod fitting;
 pub mod helix;
@@ -25,6 +26,7 @@ pub mod planar;
 pub mod polylabel;
 pub mod project;
 pub mod ramp;
+pub mod rootfind;
 pub mod simplify;
 pub mod smooth;
 pub mod spatial_grid2d;
@@ -43,12 +45,20 @@ pub use cleanup::{
     are_segments_equal, close_geometry_gaps_from_array, get_segment_key,
     remove_duplicate_segments,
 };
+pub use cleared_area::target_engagement_from_advance;
 pub use cleared_area::ClearedArea;
+pub use cleared_area::ResumePoint;
+pub use cleared_area::StepResult;
+pub use cleared_area::StepStatus;
+pub use cleared_area::StepperOptions;
 pub use clipping::{
     clip_line_segment_with_polygons, clip_line_segment_with_polygons_2d,
     clip_line_segment_with_rect, clip_line_segment_with_rect_2d,
     subtract_polygons_from_line_segment,
     subtract_polygons_from_line_segment_2d,
+};
+pub use engagement::{
+    circle_polygon_intersection_area, compute_engagement, Engagement,
 };
 pub use fillet::{
     append_end_fillets, create_fillet_polyline, trim_to_safe_fillet_span,
@@ -95,6 +105,10 @@ pub use project::{
     project_points_to_xy,
 };
 pub use ramp::{generate_ramp_3d, RampOptions, RampStyle};
+pub use rootfind::{
+    bisect, bisect_tracked, illinois, illinois_tracked, secant, secant_tracked,
+    RootStatus,
+};
 pub use simplify::{simplify_data, simplify_polyline_3d};
 pub use smooth::{
     blend_tangent, build_smoothed_path, chaikin_corner_cut,

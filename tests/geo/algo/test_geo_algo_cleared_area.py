@@ -2,7 +2,13 @@
 
 import math
 
-from raygeo.geo.algo.cleared_area import ClearedArea
+from raygeo.geo.algo.cleared_area import (
+    ClearedArea,
+    StepperOptions,
+    StepStatus,
+    target_engagement_from_advance,
+)
+from raygeo.geo.algo.medial_axis import MedialAxis
 
 
 def P(*pts):
@@ -418,3 +424,356 @@ def test_remaining_in_inset_includes_obstacles():
             total_area += x1 * y2 - x2 * y1
     total_area = abs(total_area) / 2.0
     assert total_area > 10.0
+
+
+# ── Batch step expansion ──
+
+
+def test_begin_commit_step_batch_empty():
+    ca = ClearedArea()
+    ca.begin_step_batch()
+    ca.commit_step_batch()
+    assert ca.total_area() == 0.0
+
+
+def test_step_batch_single_segment():
+    """A single batched step should match the unbatched expand_step."""
+    ca1 = ClearedArea()
+    ca1.add_cleared_polygons([[(0, 0), (10, 0), (10, 10), (0, 10)]])
+    ca1.expand_step((5, 10), (5, 15), 3.0)
+
+    ca2 = ClearedArea()
+    ca2.add_cleared_polygons([[(0, 0), (10, 0), (10, 10), (0, 10)]])
+    ca2.begin_step_batch()
+    ca2.expand_step_batched((5, 10), (5, 15), 3.0)
+    ca2.commit_step_batch()
+
+    assert abs(ca1.total_area() - ca2.total_area()) < 0.01
+
+
+def test_step_batch_empty_commit_is_noop():
+    ca = ClearedArea()
+    ca.add_cleared_polygons([[(0, 0), (10, 0), (10, 10), (0, 10)]])
+    area_before = ca.total_area()
+    ca.begin_step_batch()
+    ca.commit_step_batch()
+    assert abs(ca.total_area() - area_before) < 0.01
+
+
+def test_step_batch_multiple_accumulates():
+    """Calling expand_step_batched 3 times then commit should be larger."""
+    ca = ClearedArea()
+    ca.add_cleared_polygons([[(0, 0), (10, 0), (10, 10), (0, 10)]])
+    ca.begin_step_batch()
+    ca.expand_step_batched((5, 10), (5, 12), 3.0)
+    ca.expand_step_batched((5, 12), (5, 14), 3.0)
+    ca.expand_step_batched((5, 14), (5, 16), 3.0)
+    ca.commit_step_batch()
+    assert ca.total_area() > 100.0 + 0.01
+
+
+# ── new / empty / len / is_empty / total_area ──
+
+
+def test_new_cleared_area_is_empty():
+    ca = ClearedArea()
+    assert ca.is_empty()
+    assert len(ca) == 0
+    assert ca.total_area() == 0.0
+
+
+def test_after_add_is_not_empty():
+    ca = ClearedArea()
+    ca.add_cleared_polygons([[(0, 0), (10, 0), (10, 10), (0, 10)]])
+    assert not ca.is_empty()
+    assert len(ca) >= 1
+    assert ca.total_area() > 0.0
+
+
+# ── signed_boundary_distance ──
+
+
+def test_signed_boundary_distance_inside():
+    ca = ClearedArea()
+    ca.add_cleared_polygons([[(0, 0), (10, 0), (10, 10), (0, 10)]])
+    d = ca.signed_boundary_distance(5, 5)
+    assert d < 0  # inside cleared
+
+
+def test_signed_boundary_distance_outside():
+    ca = ClearedArea()
+    ca.add_cleared_polygons([[(0, 0), (10, 0), (10, 10), (0, 10)]])
+    d = ca.signed_boundary_distance(50, 50)
+    assert d > 0  # outside cleared
+
+
+def test_signed_boundary_distance_on_boundary():
+    ca = ClearedArea()
+    ca.add_cleared_polygons([[(0, 0), (10, 0), (10, 10), (0, 10)]])
+    d = ca.signed_boundary_distance(0, 5)
+    assert abs(d) < 1e-6
+
+
+# ── remaining ──
+
+
+def test_remaining_empty_cleared():
+    ca = ClearedArea()
+    pocket = [(0, 0), (100, 0), (100, 100), (0, 100)]
+    r = ca.remaining([pocket])
+    assert len(r) == 1
+
+
+def test_remaining_partial():
+    ca = ClearedArea()
+    ca.add_cleared_polygons([[(10, 10), (90, 10), (90, 90), (10, 90)]])
+    pocket = [(0, 0), (100, 0), (100, 100), (0, 100)]
+    r = ca.remaining([pocket])
+    assert len(r) >= 1
+
+
+# ── expand ──
+
+
+def test_expand_increases_area():
+    ca = ClearedArea()
+    ca.add_cleared_polygons([[(0, 0), (10, 0), (10, 10), (0, 10)]])
+    area_before = ca.total_area()
+    ca.expand([(5, 10), (5, 20)], 2.0)
+    assert ca.total_area() > area_before
+
+
+# ── expand_step ──
+
+
+def test_expand_step_increases_area():
+    ca = ClearedArea()
+    ca.add_cleared_polygons([[(0, 0), (10, 0), (10, 10), (0, 10)]])
+    area_before = ca.total_area()
+    ca.expand_step((5, 10), (5, 15), 3.0)
+    assert ca.total_area() > area_before
+
+
+# ── query_window ──
+
+
+def test_query_window_returns_fragments():
+    ca = ClearedArea()
+    ca.add_cleared_polygons([[(0, 0), (10, 0), (10, 10), (0, 10)]])
+    frags = ca.query_window((-5, -5, 15, 15))
+    assert len(frags) >= 1
+
+
+def test_query_window_outside_bbox():
+    ca = ClearedArea()
+    ca.add_cleared_polygons([[(0, 0), (10, 0), (10, 10), (0, 10)]])
+    frags = ca.query_window((100, 100, 200, 200))
+    assert len(frags) == 0
+
+
+# ── point_engagement ──
+
+
+def test_point_engagement_inside_cleared():
+    ca = ClearedArea()
+    ca.add_cleared_polygons([[(0, 0), (10, 0), (10, 10), (0, 10)]])
+    angle, _, _ = ca.point_engagement((5, 5), 5.0)
+    assert angle < math.pi  # inside cleared → low engagement
+
+
+def test_point_engagement_outside_cleared():
+    ca = ClearedArea()
+    ca.add_cleared_polygons([[(0, 0), (10, 0), (10, 10), (0, 10)]])
+    angle, _, _ = ca.point_engagement((50, 50), 5.0)
+    assert angle > math.pi  # far outside → high engagement
+
+
+# ── path_engagement ──
+
+
+def test_path_engagement_empty():
+    ca = ClearedArea()
+    assert ca.path_engagement([], 5.0) == []
+
+
+def test_path_engagement_returns_results():
+    ca = ClearedArea()
+    ca.add_cleared_polygons([[(0, 0), (10, 0), (10, 10), (0, 10)]])
+    results = ca.path_engagement([(5, 5), (50, 50)], 5.0)
+    assert len(results) == 2
+    for angle, area, depth in results:
+        assert isinstance(angle, float)
+        assert isinstance(area, float)
+        assert isinstance(depth, float)
+
+
+# ── find_next_resume ──
+
+
+def test_find_next_resume_needs_mat():
+    boundary = [(0, 0), (100, 0), (100, 80), (0, 80)]
+    ca = ClearedArea()
+    n = 32
+    circle = [
+        (
+            50 + 15 * math.cos(2 * math.pi * i / n),
+            40 + 15 * math.sin(2 * math.pi * i / n),
+        )
+        for i in range(n)
+    ]
+    ca.add_cleared_polygons([circle])
+
+    mat = MedialAxis.compute(
+        boundary, holes=[], min_clearance=1.0, sampling_spacing=6.0
+    )
+
+    result = ca.find_next_resume(
+        mat=mat,
+        end_pos=(50.0, 55.0),
+        radius=3.0,
+        min_engagement=math.pi * 0.3,
+    )
+    if result is not None:
+        assert len(result.pos) == 2
+        assert isinstance(result.heading, float)
+        assert len(result.link_path) >= 1
+
+
+def _rect_wall():
+    """Cleared area with a horizontal top edge at y=40."""
+    ca = ClearedArea()
+    ca.add_cleared_polygons(
+        [[(-100, -100), (100, -100), (100, 40), (-100, 40)]]
+    )
+    return ca
+
+
+def test_stepper_options_default():
+    opts = StepperOptions()
+    assert opts.radius == 3.0
+    assert opts.step_length == 0.6
+    assert abs(opts.target_engagement - math.pi) < 1e-12
+    assert opts.engagement_tol == 0.01
+    assert abs(opts.max_deflection - math.pi / 6) < 1e-12
+    assert opts.max_solver_iters == 6
+
+
+def test_stepper_options_custom():
+    opts = StepperOptions(
+        radius=5.0,
+        step_length=1.0,
+        target_engagement=math.pi * 0.8,
+        max_solver_iters=10,
+    )
+    assert opts.radius == 5.0
+    assert opts.target_engagement == math.pi * 0.8
+    assert opts.max_solver_iters == 10
+
+
+def test_stepper_options_setters():
+    opts = StepperOptions()
+    opts.radius = 4.0
+    opts.step_length = 0.5
+    assert opts.radius == 4.0
+    assert opts.step_length == 0.5
+
+
+def test_step_parallel_to_wall():
+    """Stepping along a flat wall should maintain Ok status."""
+    ca = _rect_wall()
+    opts = StepperOptions(
+        radius=5.0,
+        step_length=1.0,
+        target_engagement=math.pi,
+    )
+    pos = (0.0, 40.0)
+    heading = 0.0  # right
+
+    for i in range(20):
+        result = ca.step(pos, heading, opts)
+        assert "Ok" in repr(result.status), (
+            f"step {i} failed: {result.status}, eng={result.iters}"
+        )
+        pos = result.next
+        heading = result.heading
+
+
+def test_step_heading_toward_wall_deflects():
+    """Steering toward the wall should deflect away."""
+    ca = _rect_wall()
+    opts = StepperOptions(
+        radius=5.0,
+        step_length=1.0,
+        target_engagement=math.pi,
+    )
+    result = ca.step((0.0, 40.0), math.pi / 2, opts)
+    # Heading should change away from pi/2.
+    assert abs(result.heading - math.pi / 2) > 0.01
+
+
+def test_step_lost_engagement():
+    """When fully inside cleared area, step returns LostEngagement."""
+    ca = ClearedArea()
+    ca.add_cleared_polygons([[(-50, -50), (50, -50), (50, 50), (-50, 50)]])
+    opts = StepperOptions(
+        radius=5.0,
+        step_length=1.0,
+        target_engagement=math.pi,
+    )
+    result = ca.step((0.0, 40.0), 0.0, opts)
+    assert "LostEngagement" in repr(result.status)
+
+
+def test_run_segment_returns_path():
+    ca = _rect_wall()
+    opts = StepperOptions(
+        radius=5.0,
+        step_length=1.0,
+        target_engagement=math.pi,
+    )
+    path, status = ca.run_segment((0.0, 40.0), 0.0, opts, 20)
+    assert len(path) >= 2
+    assert status == "Ok"
+
+
+def test_run_segment_determinism():
+    ca = _rect_wall()
+    opts = StepperOptions()
+    p1, _ = ca.run_segment((0.0, 40.0), 0.0, opts, 10)
+    p2, _ = ca.run_segment((0.0, 40.0), 0.0, opts, 10)
+    assert p1 == p2
+
+
+def test_target_engagement():
+    t = target_engagement_from_advance(1.25, 5.0)
+    assert t > 0.0
+    assert t <= 2.0 * math.pi
+
+
+def test_target_engagement_saturates():
+    t = target_engagement_from_advance(5.0, 5.0)
+    assert abs(t - math.pi) < 1e-12
+
+
+def test_target_engagement_zero():
+    t = target_engagement_from_advance(0.0, 5.0)
+    assert abs(t - math.pi) < 1e-12
+
+
+def test_step_status_repr():
+    s = StepStatus.ok()
+    assert "Ok" in repr(s)
+
+
+def test_step_result_attributes():
+    ca = _rect_wall()
+    opts = StepperOptions(
+        radius=5.0,
+        step_length=1.0,
+        target_engagement=math.pi,
+    )
+    r = ca.step((0.0, 40.0), 0.0, opts)
+    assert len(r.next) == 2
+    assert isinstance(r.heading, float)
+    assert isinstance(r.iters, int)
+    assert isinstance(r.status, StepStatus)

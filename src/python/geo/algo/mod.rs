@@ -3,6 +3,7 @@ pub(crate) mod astar;
 pub(crate) mod cleared_area;
 pub(crate) mod clipping;
 pub(crate) mod cylindrical;
+pub(crate) mod engagement;
 pub(crate) mod fillet;
 pub(crate) mod fitting;
 pub(crate) mod helix;
@@ -17,6 +18,7 @@ pub(crate) mod ordering;
 pub(crate) mod overcut;
 pub(crate) mod polylabel;
 pub(crate) mod ramp;
+pub(crate) mod rootfind;
 pub(crate) mod simplify;
 pub(crate) mod smooth;
 pub(crate) mod spatial_grid2d;
@@ -64,6 +66,7 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     cleared_area::register(&algo_mod)?;
     clipping::register(&algo_mod)?;
     cylindrical::register(&algo_mod)?;
+    engagement::register(&algo_mod)?;
     fillet::register(&algo_mod)?;
     fitting::register(&algo_mod)?;
     helix::register(&algo_mod)?;
@@ -78,6 +81,7 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     overcut::register(&algo_mod)?;
     polylabel::register(&algo_mod)?;
     ramp::register(&algo_mod)?;
+    rootfind::register(&algo_mod)?;
     simplify::register(&algo_mod)?;
     smooth::register(&algo_mod)?;
     spatial_grid2d::register(&algo_mod)?;
@@ -126,6 +130,10 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
         &algo_mod.getattr("spatial_grid2d")?,
     )?;
     sys_modules.set_item(
+        "raygeo.geo.algo.engagement",
+        &algo_mod.getattr("engagement")?,
+    )?;
+    sys_modules.set_item(
         "raygeo.geo.algo.cylindrical",
         &algo_mod.getattr("cylindrical")?,
     )?;
@@ -144,6 +152,8 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
         &algo_mod.getattr("polylabel")?,
     )?;
     sys_modules.set_item("raygeo.geo.algo.ramp", &algo_mod.getattr("ramp")?)?;
+    sys_modules
+        .set_item("raygeo.geo.algo.rootfind", &algo_mod.getattr("rootfind")?)?;
     sys_modules
         .set_item("raygeo.geo.algo.spiral", &algo_mod.getattr("spiral")?)?;
     sys_modules

@@ -1,7 +1,7 @@
 ---
 title: raygeo.geo.shape.polyline
 sidebar_label: raygeo.geo.shape.polyline
-sidebar_position: 42
+sidebar_position: 44
 ---
 
 ## Functions

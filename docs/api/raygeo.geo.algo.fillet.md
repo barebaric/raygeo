@@ -1,7 +1,7 @@
 ---
 title: raygeo.geo.algo.fillet
 sidebar_label: raygeo.geo.algo.fillet
-sidebar_position: 9
+sidebar_position: 10
 ---
 
 Pure-geometry fillet operations.

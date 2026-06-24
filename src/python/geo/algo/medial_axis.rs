@@ -42,8 +42,8 @@ use crate::types::Point;
 #[gen_stub_pyclass(module = "raygeo.geo.algo.medial_axis")]
 #[pyclass(skip_from_py_object, name = "MedialAxis")]
 #[derive(Debug, Clone)]
-struct PyMedialAxis {
-    inner: ma::MedialAxis,
+pub struct PyMedialAxis {
+    pub(crate) inner: ma::MedialAxis,
 }
 
 #[gen_stub_pymethods]

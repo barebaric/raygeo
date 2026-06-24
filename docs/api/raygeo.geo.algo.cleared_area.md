@@ -4,12 +4,16 @@ sidebar_label: raygeo.geo.algo.cleared_area
 sidebar_position: 6
 ---
 
+![Tool stepping parallel to a straight wall. Path colour = engagement (green = on target).](images/geo-algo-cleared-area-wall-following.png)
+
+_Tool stepping parallel to a straight wall. Path colour = engagement (green = on target)._
+
 ![ClearedArea tracking a simulated raster toolpath — cleared fragments shown in blue, remaining area in red](images/geo-algo-cleared-area-raster.png)
 
 _ClearedArea tracking a simulated raster toolpath — cleared fragments shown in blue, remaining area
-in red_ Incremental cleared-area tracker for adaptive clearing.
+in red_ Incremental cleared-area tracker.
 
-Maintains a union of tool-swept polygons and provides a spatial-indexed windowed query for efficient
+Maintains a union of swept-disk polygons and provides a spatial-indexed windowed query for efficient
 engagement computation.
 
 ## ClearedArea
@@ -53,6 +57,28 @@ this call.
 | `simplify_tol` | `float`                                   | tolerance in mm for frontier simplification            |
 | _Returns_      | `list[list[list[tuple[float, float]]]]`   |                                                        |
 | _Complexity_   |                                           | O(k n log n) where k = number of passes                |
+
+### `begin_step_batch()`
+
+```python
+begin_step_batch() -> None
+```
+
+Begin buffering single‑segment expansions.
+
+Subsequent calls to `expand_step_batched` are queued without a union. Call `commit_step_batch` to
+union all queued sweeps with the stored fragments in a single pass.
+
+Calling this while a batch is already active is a no‑op.
+
+| Parameter | Type   | Description |
+| --------- | ------ | ----------- |
+| _Returns_ | `None` |             |
+
+![Three segments queued via ``begin_step_batch`` / ``expand_step_batched`` then unioned in a single ``commit_step_batch`` pass.](images/geo-algo-cleared-area-step-batch.png)
+
+_Three segments queued via `begin_step_batch` / `expand_step_batched` then unioned in a single
+`commit_step_batch` pass._
 
 ### `bite_in_direction()`
 
@@ -110,6 +136,20 @@ clipping to valid_area, and subtracting already-cleared portions.
 _`bites` computes the expansible material — the crescent-shaped regions of uncut material reachable
 by expanding the frontier by `step_over`._
 
+### `commit_step_batch()`
+
+```python
+commit_step_batch() -> None
+```
+
+Union all buffered sweeps with stored fragments in a single pass, then rebuild the spatial grid.
+
+After this call the batch is closed (the caller may start a new one).
+
+| Parameter | Type   | Description |
+| --------- | ------ | ----------- |
+| _Returns_ | `None` |             |
+
 ### `expand()`
 
 ```python
@@ -122,6 +162,85 @@ expand(path: Sequence[tuple[float, float]], radius: float) -> None
 | `radius`     | `float`                         |                                      |
 | _Returns_    | `None`                          |                                      |
 | _Complexity_ |                                 | O(n) where n = number of path points |
+
+![``expand``: sweeping a disk along a multi-segment path enlarges the cleared area.](images/geo-algo-cleared-area-expand.png)
+
+_`expand`: sweeping a disk along a multi-segment path enlarges the cleared area._
+
+### `expand_step()`
+
+```python
+expand_step(
+    prev: tuple[float, float],
+    next: tuple[float, float],
+    radius: float,
+) -> None
+```
+
+Expand the cleared area by sweeping a disk of _radius_ along a single segment from _prev_ to _next_.
+
+| Parameter | Type                  | Description                          |
+| --------- | --------------------- | ------------------------------------ |
+| `prev`    | `tuple[float, float]` | Start point `(x, y)` of the segment. |
+| `next`    | `tuple[float, float]` | End point `(x, y)` of the segment.   |
+| `radius`  | `float`               | Disk radius (mm).                    |
+| _Returns_ | `None`                |                                      |
+
+![``expand_step``: sweeping a disk (dashed circle) of radius *radius* from *prev* to *next* (red arrow) enlarges the cleared area (right) vs the initial state (left).](images/geo-algo-cleared-area-expand-step.png)
+
+*`expand_step`: sweeping a disk (dashed circle) of radius *radius* from *prev* to *next* (red arrow)
+enlarges the cleared area (right) vs the initial state (left).*
+
+### `expand_step_batched()`
+
+```python
+expand_step_batched(
+    prev: tuple[float, float],
+    next: tuple[float, float],
+    radius: float,
+) -> None
+```
+
+Queue a single‑segment expansion into the current batch.
+
+The segment swept polygon is stored in the internal buffer. Does **not** perform a union until
+`commit_step_batch` is called.
+
+.. warning:: Panics if `begin_step_batch` was not called first.
+
+| Parameter | Type                  | Description                          |
+| --------- | --------------------- | ------------------------------------ |
+| `prev`    | `tuple[float, float]` | Start point `(x, y)` of the segment. |
+| `next`    | `tuple[float, float]` | End point `(x, y)` of the segment.   |
+| `radius`  | `float`               | Disk radius (mm).                    |
+| _Returns_ | `None`                |                                      |
+
+### `find_next_resume()`
+
+```python
+find_next_resume(
+    mat: medial_axis.MedialAxis,
+    end_pos: tuple[float, float],
+    radius: float,
+    min_engagement: float,
+) -> Optional[ResumePoint]
+```
+
+Walk the cleared-area frontier forward from a point near `end_pos` and return the first position
+where engagement ≥ `min_engagement`.
+
+| Parameter        | Type                     | Description                                          |
+| ---------------- | ------------------------ | ---------------------------------------------------- |
+| `mat`            | `medial_axis.MedialAxis` | Medial Axis of the domain (computed once per level). |
+| `end_pos`        | `tuple[float, float]`    | Current position where the path ended.               |
+| `radius`         | `float`                  | Disk radius (mm).                                    |
+| `min_engagement` | `float`                  | Minimum engagement angle (radians) required.         |
+| _Returns_        | `Optional[ResumePoint]`  | `ResumePoint` or `None`.                             |
+
+![``find_next_resume`` walks the cleared-area frontier from the end position (red triangle) and returns the first position with sufficient engagement (green star).](images/geo-algo-cleared-area-find-next-resume.png)
+
+_`find_next_resume` walks the cleared-area frontier from the end position (red triangle) and returns
+the first position with sufficient engagement (green star)._
 
 ### `fragments()`
 
@@ -184,6 +303,52 @@ fragments
 _`incorporate` adds polygons to the cleared state while returning only the newly-covered region
 (shown in green)._
 
+### `is_empty()`
+
+```python
+is_empty() -> bool
+```
+
+True when no fragments have been recorded.
+
+| Parameter | Type   | Description |
+| --------- | ------ | ----------- |
+| _Returns_ | `bool` |             |
+
+### `path_engagement()`
+
+```python
+path_engagement(
+    path: Sequence[tuple[float, float]],
+    radius: float,
+) -> list[tuple[float, float, float]]
+```
+
+Evaluate engagement along a polyline.
+
+| Parameter | Type                               | Description                                  |
+| --------- | ---------------------------------- | -------------------------------------------- |
+| `path`    | `Sequence[tuple[float, float]]`    | List of `(x, y)` points.                     |
+| `radius`  | `float`                            | Disk radius (mm).                            |
+| _Returns_ | `list[tuple[float, float, float]]` | List of `(angle, area, chord_depth)` tuples. |
+
+### `point_engagement()`
+
+```python
+point_engagement(
+    center: tuple[float, float],
+    radius: float,
+) -> tuple[float, float, float]
+```
+
+Evaluate engagement at a point using the signed distance to this cleared area's boundary.
+
+| Parameter | Type                         | Description                       |
+| --------- | ---------------------------- | --------------------------------- |
+| `center`  | `tuple[float, float]`        | Query point `(x, y)`.             |
+| `radius`  | `float`                      | Disk radius (mm).                 |
+| _Returns_ | `tuple[float, float, float]` | `(angle_rad, area, chord_depth)`. |
+
 ### `query_window()`
 
 ```python
@@ -198,6 +363,11 @@ query_window(
 | _Returns_    | `list[list[tuple[float, float]]]`   |                                                             |
 | _Complexity_ |                                     | O(m + k) where m = number of fragments, k = output vertices |
 
+![``query_window`` returns only the cleared fragments whose bounding box overlaps the query (green box).](images/geo-algo-cleared-area-query-window.png)
+
+_`query_window` returns only the cleared fragments whose bounding box overlaps the query (green
+box)._
+
 ### `remaining()`
 
 ```python
@@ -211,6 +381,11 @@ remaining(
 | `bounds`     | `Sequence[Sequence[tuple[float, float]]]` |                                                    |
 | _Returns_    | `list[list[tuple[float, float]]]`         |                                                    |
 | _Complexity_ |                                           | O(n \* m) where n = bounds vertices, m = fragments |
+
+![``remaining`` subtracts cleared fragments from the boundary polygon, returning the uncut region (red).](images/geo-algo-cleared-area-remaining.png)
+
+_`remaining` subtracts cleared fragments from the boundary polygon, returning the uncut region
+(red)._
 
 ### `remaining_in_inset()`
 
@@ -233,6 +408,81 @@ of that region not covered by stored fragments, together with the original obsta
 | _Returns_    | `list[list[tuple[float, float]]]`                          | List of polygons — the obstacles plus the uncovered portion of the inset region. |
 | _Complexity_ |                                                            | O(n log n) for the inset and difference operations.                              |
 
+### `run_segment()`
+
+```python
+run_segment(
+    start: tuple[float, float],
+    initial_heading: float,
+    opts: StepperOptions,
+    max_steps: int,
+) -> tuple[list[tuple[float, float]], str]
+```
+
+Drive the disk forward until a non-Ok status or _max_steps_.
+
+Does **not** modify the ClearedArea — the caller is responsible for committing swept polygons.
+
+| Parameter         | Type                                    | Description                              |
+| ----------------- | --------------------------------------- | ---------------------------------------- |
+| `start`           | `tuple[float, float]`                   | Starting position `(x, y)`.              |
+| `initial_heading` | `float`                                 | Initial heading angle (radians).         |
+| `opts`            | `StepperOptions`                        | `StepperOptions` controlling the solver. |
+| `max_steps`       | `int`                                   | Maximum number of steps.                 |
+| _Returns_         | `tuple[list[tuple[float, float]], str]` | `(path, status_string)`.                 |
+
+### `signed_boundary_distance()`
+
+```python
+signed_boundary_distance(x: float, y: float) -> float
+```
+
+Signed perpendicular distance to the nearest cleared boundary.
+
+Returns positive when the point is outside the cleared area (in uncut material), negative when
+inside.
+
+| Parameter | Type    | Description                                                 |
+| --------- | ------- | ----------------------------------------------------------- |
+| `x`       | `float` | X coordinate of the query point.                            |
+| `y`       | `float` | Y coordinate of the query point.                            |
+| _Returns_ | `float` | Signed distance in mm. `0.0` means exactly on the boundary. |
+
+![Signed boundary distance around a cleared square: green = inside cleared, red = outside.](images/geo-algo-cleared-area-signed-boundary-distance.png)
+
+_Signed boundary distance around a cleared square: green = inside cleared, red = outside._
+
+### `step()`
+
+```python
+step(
+    pos: tuple[float, float],
+    heading: float,
+    opts: StepperOptions,
+) -> StepResult
+```
+
+Perform one forward step.
+
+Starting from _pos_ with the given _heading_ (radians), proposes candidate positions and solves for
+the heading that maintains the target engagement.
+
+| Parameter | Type                  | Description                                              |
+| --------- | --------------------- | -------------------------------------------------------- |
+| `pos`     | `tuple[float, float]` | Current centre position `(x, y)`.                        |
+| `heading` | `float`               | Current heading angle in radians.                        |
+| `opts`    | `StepperOptions`      | `StepperOptions` controlling the solver.                 |
+| _Returns_ | `StepResult`          | `StepResult` with the next position and updated heading. |
+
+![90° corner: the solver deflects the heading to keep engagement constant around the turn.](images/geo-algo-cleared-area-pocket-corner.png)
+
+_90° corner: the solver deflects the heading to keep engagement constant around the turn._
+
+![Engagement histogram for 200 steps along a straight wall. Tight peak near target indicates stable behaviour.](images/geo-algo-cleared-area-engagement-histogram.png)
+
+_Engagement histogram for 200 steps along a straight wall. Tight peak near target indicates stable
+behaviour._
+
 ### `total_area()`
 
 ```python
@@ -243,3 +493,167 @@ total_area() -> float
 | ------------ | ------- | ----------- |
 | _Returns_    | `float` |             |
 | _Complexity_ |         | O(1)        |
+
+## ResumePoint
+
+A resume point found on the cleared-area frontier.
+
+### `heading`
+
+```python
+heading: float
+```
+
+Outward-normal heading (radians).
+
+### `link_path`
+
+```python
+link_path: list[tuple[float, float]]
+```
+
+Travel polyline through cleared territory.
+
+### `pos`
+
+```python
+pos: tuple[float, float]
+```
+
+Position on the frontier `(x, y)`.
+
+## StepResult
+
+Result of a single forward step.
+
+Contains the next centre position, updated heading, solver iteration count, and the final status.
+
+### `heading`
+
+```python
+heading: float
+```
+
+### `iters`
+
+```python
+iters: int
+```
+
+### `next`
+
+```python
+next: tuple[float, float]
+```
+
+### `status`
+
+```python
+status: StepStatus
+```
+
+## StepStatus
+
+Status of a single step or cut segment.
+
+One of `Ok` (normal), `BoundaryHit` (hit pocket boundary), `LostEngagement` (no uncut material), or
+`NoConvergence` (solver failed to converge).
+
+### `boundary_hit()`
+
+```python
+@classmethod boundary_hit() -> StepStatus
+```
+
+| Parameter | Type         | Description |
+| --------- | ------------ | ----------- |
+| _Returns_ | `StepStatus` |             |
+
+### `lost_engagement()`
+
+```python
+@classmethod lost_engagement() -> StepStatus
+```
+
+| Parameter | Type         | Description |
+| --------- | ------------ | ----------- |
+| _Returns_ | `StepStatus` |             |
+
+### `no_convergence()`
+
+```python
+@classmethod no_convergence() -> StepStatus
+```
+
+| Parameter | Type         | Description |
+| --------- | ------------ | ----------- |
+| _Returns_ | `StepStatus` |             |
+
+### `ok()`
+
+```python
+@classmethod ok() -> StepStatus
+```
+
+| Parameter | Type         | Description |
+| --------- | ------------ | ----------- |
+| _Returns_ | `StepStatus` |             |
+
+## StepperOptions
+
+Options for the stepping solver.
+
+Controls disk radius, step length, target engagement angle, solver tolerance, max steering
+deflection, and iteration budget.
+
+### `engagement_tol`
+
+```python
+engagement_tol: float
+```
+
+### `max_deflection`
+
+```python
+max_deflection: float
+```
+
+### `max_solver_iters`
+
+```python
+max_solver_iters: int
+```
+
+### `radius`
+
+```python
+radius: float
+```
+
+### `step_length`
+
+```python
+step_length: float
+```
+
+### `target_engagement`
+
+```python
+target_engagement: float
+```
+
+## Functions
+
+### `target_engagement_from_advance()`
+
+```python
+target_engagement_from_advance(advance: float, radius: float) -> float
+```
+
+Derive the target engagement angle from the advance ratio.
+
+| Parameter | Type    | Description                     |
+| --------- | ------- | ------------------------------- |
+| `advance` | `float` | Per-step forward distance (mm). |
+| `radius`  | `float` | Disk radius (mm).               |
+| _Returns_ | `float` | Engagement angle in radians.    |

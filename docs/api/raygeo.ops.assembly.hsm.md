@@ -1,7 +1,7 @@
 ---
 title: raygeo.ops.assembly.hsm
 sidebar_label: raygeo.ops.assembly.hsm
-sidebar_position: 55
+sidebar_position: 57
 ---
 
 ## PyWavefrontGraph

@@ -1,7 +1,7 @@
 ---
 title: raygeo.ops
 sidebar_label: raygeo.ops
-sidebar_position: 53
+sidebar_position: 55
 ---
 
 Command sequence (Ops) manipulation for CNC motion control.

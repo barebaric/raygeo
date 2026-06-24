@@ -1,7 +1,7 @@
 ---
 title: raygeo.geo.types
 sidebar_label: raygeo.geo.types
-sidebar_position: 44
+sidebar_position: 46
 ---
 
 Type aliases used throughout the raygeo API.

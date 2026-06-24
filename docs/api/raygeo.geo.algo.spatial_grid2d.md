@@ -1,7 +1,7 @@
 ---
 title: raygeo.geo.algo.spatial_grid2d
 sidebar_label: raygeo.geo.algo.spatial_grid2d
-sidebar_position: 31
+sidebar_position: 33
 ---
 
 Grid-based spatial index for fast overlap queries.

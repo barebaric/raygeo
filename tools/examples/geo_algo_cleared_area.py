@@ -4,8 +4,13 @@ import math
 
 import matplotlib.colors as mcolors
 import matplotlib.pyplot as plt
+import numpy as np
+from matplotlib.lines import Line2D
+from matplotlib.patches import Circle
 
-from raygeo.geo.algo.cleared_area import ClearedArea
+from raygeo.geo.algo.cleared_area import ClearedArea, StepperOptions
+from raygeo.geo.algo.engagement import compute_engagement
+from raygeo.geo.algo.medial_axis import MedialAxis
 from raygeo.geo.algo.offset import compute_inset_region
 from raygeo.ops.assembly.hsm import adaptive_entry
 
@@ -199,6 +204,69 @@ def generate_frontier():
     return fig
 
 
+def generate_expand_step():
+    """show a single expand_step: swept disk enlarges the cleared area."""
+    tool_radius = 5.0
+    prev = (10, 10)
+    nxt = (40, 40)
+
+    # Initial cleared area: a small square the segment does NOT fully cover.
+    initial_poly = [(15, 15), (25, 15), (25, 25), (15, 25)]
+
+    ca = ClearedArea()
+    ca.add_cleared_polygons([initial_poly])
+
+    ca_final = ClearedArea()
+    ca_final.add_cleared_polygons([initial_poly])
+    ca_final.expand_step(prev, nxt, tool_radius)
+
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
+
+    for ax, label, ca_state in [
+        (ax1, "Before expand_step", ca),
+        (ax2, "After expand_step", ca_final),
+    ]:
+        for frag in ca_state.query_window((-10, -10, 80, 80)):
+            fx = [p[0] for p in frag] + [frag[0][0]]
+            fy = [p[1] for p in frag] + [frag[0][1]]
+            ax.fill(fx, fy, "steelblue", alpha=0.3)
+            ax.plot(fx, fy, "steelblue", linewidth=1.5)
+
+        ax.set_aspect("equal")
+        ax.set_xlim(-5, 55)
+        ax.set_ylim(-5, 55)
+        ax.set_title(label)
+        ax.grid(True, alpha=0.3)
+
+    # Draw the segment and tool circles on both panels
+    for ax in (ax1, ax2):
+        ax.annotate(
+            "",
+            xy=nxt,
+            xytext=prev,
+            arrowprops=dict(arrowstyle="->", color="red", lw=2),
+        )
+        for pt in (prev, nxt):
+            c = Circle(
+                pt,
+                tool_radius,
+                fill=False,
+                edgecolor="red",
+                linewidth=1.5,
+                linestyle="--",
+            )
+            ax.add_patch(c)
+        ax.plot(prev[0], prev[1], "ro", markersize=6)
+        ax.plot(nxt[0], nxt[1], "ro", markersize=6)
+
+    fig.suptitle(
+        "expand_step: swept disk merges into the cleared area",
+        fontsize=11,
+    )
+    fig.tight_layout()
+    return fig
+
+
 def generate_bites():
     """bites across 3 sequential expansion steps."""
     cx, cy = 50.0, 50.0
@@ -372,6 +440,560 @@ def generate_bite_in_direction():
     return fig
 
 
+def generate_signed_boundary_distance():
+    """Heatmap of signed distance around a cleared rectangle."""
+    ca = ClearedArea()
+    ca.add_cleared_polygons([[(-20, -20), (20, -20), (20, 20), (-20, 20)]])
+
+    xs = np.linspace(-40, 40, 80)
+    ys = np.linspace(-40, 40, 80)
+    dists = np.zeros((80, 80))
+    for i, x in enumerate(xs):
+        for j, y in enumerate(ys):
+            dists[j, i] = ca.signed_boundary_distance(x, y)
+
+    fig, ax = plt.subplots(figsize=(8, 7))
+    im = ax.pcolormesh(xs, ys, dists, shading="auto", cmap="RdYlGn_r")
+    cbar = fig.colorbar(im, ax=ax)
+    cbar.set_label("Signed distance (mm)")
+
+    for frag in ca.query_window((-50, -50, 50, 50)):
+        fx = [p[0] for p in frag] + [frag[0][0]]
+        fy = [p[1] for p in frag] + [frag[0][1]]
+        ax.plot(fx, fy, "k-", linewidth=2, label="Boundary")
+
+    ax.set_aspect("equal")
+    ax.set_xlabel("X (mm)")
+    ax.set_ylabel("Y (mm)")
+    ax.set_title("Signed Boundary Distance (green = inside, red = outside)")
+    fig.tight_layout()
+    return fig
+
+
+def generate_find_next_resume():
+    """Resume point found by walking the cleared-area frontier."""
+    boundary = [(0, 0), (100, 0), (100, 80), (0, 80)]
+    radius = 3.0
+
+    n = 32
+    cx, cy = 50.0, 40.0
+    cr = 15.0
+    circle_poly = [
+        (
+            cx + cr * math.cos(2 * math.pi * i / n),
+            cy + cr * math.sin(2 * math.pi * i / n),
+        )
+        for i in range(n)
+    ]
+
+    ca = ClearedArea()
+    ca.add_cleared_polygons([circle_poly])
+
+    mat = MedialAxis.compute(
+        boundary, holes=[], min_clearance=1.0, sampling_spacing=6.0
+    )
+
+    end_pos = (50.0, 55.0)
+    result = ca.find_next_resume(
+        mat=mat,
+        end_pos=end_pos,
+        radius=radius,
+        min_engagement=math.pi * 0.3,
+    )
+
+    fig, ax = plt.subplots(figsize=(8, 6))
+
+    bx = [p[0] for p in boundary] + [boundary[0][0]]
+    by = [p[1] for p in boundary] + [boundary[0][1]]
+    ax.plot(bx, by, "k-", linewidth=1.5, label="Boundary")
+
+    for frag in ca.query_window((-10, -10, 120, 100)):
+        fx = [p[0] for p in frag] + [frag[0][0]]
+        fy = [p[1] for p in frag] + [frag[0][1]]
+        ax.fill(fx, fy, "steelblue", alpha=0.3)
+        ax.plot(fx, fy, "steelblue", linewidth=1.5, alpha=0.5)
+
+    ax.plot(end_pos[0], end_pos[1], "rv", markersize=10, label="End position")
+    c = Circle(
+        end_pos,
+        radius,
+        fill=False,
+        edgecolor="red",
+        linewidth=1.5,
+        linestyle="--",
+    )
+    ax.add_patch(c)
+
+    if result is not None:
+        ax.plot(
+            result.pos[0],
+            result.pos[1],
+            "g*",
+            markersize=14,
+            label="Resume point",
+        )
+        dx = math.cos(result.heading) * 12
+        dy = math.sin(result.heading) * 12
+        ax.annotate(
+            "",
+            xy=(result.pos[0] + dx, result.pos[1] + dy),
+            xytext=(result.pos[0], result.pos[1]),
+            arrowprops=dict(arrowstyle="->", color="green", lw=2),
+        )
+        lx = [p[0] for p in result.link_path]
+        ly = [p[1] for p in result.link_path]
+        ax.plot(lx, ly, "g-", linewidth=2, alpha=0.7)
+        ax.plot(lx, ly, "go", markersize=3, alpha=0.7)
+
+    ax.set_aspect("equal")
+    ax.set_xlim(0, 100)
+    ax.set_ylim(0, 80)
+    ax.set_xlabel("X (mm)")
+    ax.set_ylabel("Y (mm)")
+    ax.set_title("find_next_resume: Resume Point After Path Termination")
+    handles, labels = ax.get_legend_handles_labels()
+    handles.append(
+        Line2D(
+            [0, 1],
+            [0, 0],
+            color="green",
+            linewidth=2,
+            marker=">",
+            markersize=10,
+        )
+    )
+    labels.append("Heading")
+    ax.legend(handles, labels, fontsize=8)
+    ax.grid(True, alpha=0.3)
+    fig.tight_layout()
+    return fig
+
+
+def generate_step_batch():
+    """Visualise multiple segments batched then committed at once."""
+    ca = ClearedArea()
+    ca.add_cleared_polygons([[(15, 15), (25, 15), (25, 25), (15, 25)]])
+    ca.begin_step_batch()
+
+    # Queue three segments.
+    segments = [
+        ((10, 10), (20, 30)),
+        ((20, 30), (35, 35)),
+        ((35, 35), (45, 25)),
+    ]
+    r = 4.0
+    for prev, nxt in segments:
+        ca.expand_step_batched(prev, nxt, r)
+    ca.commit_step_batch()
+
+    fig, ax = plt.subplots(figsize=(8, 7))
+
+    for frag in ca.query_window((-10, -10, 70, 70)):
+        fx = [p[0] for p in frag] + [frag[0][0]]
+        fy = [p[1] for p in frag] + [frag[0][1]]
+        ax.fill(fx, fy, "steelblue", alpha=0.3)
+        ax.plot(fx, fy, "steelblue", linewidth=1.5)
+
+    # Draw the initial seed as a dashed outline.
+    ax.plot(
+        [15, 25, 25, 15, 15],
+        [15, 15, 25, 25, 15],
+        "k--",
+        linewidth=1.5,
+        alpha=0.5,
+        label="Initial seed",
+    )
+
+    for prev, nxt in segments:
+        ax.annotate(
+            "",
+            xy=nxt,
+            xytext=prev,
+            arrowprops=dict(arrowstyle="->", color="red", lw=2),
+        )
+        c = Circle(
+            nxt, r, fill=False, edgecolor="red", linewidth=1, linestyle=":"
+        )
+        ax.add_patch(c)
+
+    ax.set_aspect("equal")
+    ax.set_xlim(0, 60)
+    ax.set_ylim(0, 50)
+    ax.set_xlabel("X (mm)")
+    ax.set_ylabel("Y (mm)")
+    ax.set_title("step_batch: 3 Segments Queued → Single Union")
+    ax.legend(fontsize=8)
+    ax.grid(True, alpha=0.3)
+    fig.tight_layout()
+    return fig
+
+
+def generate_expand():
+    """Sweep a multi-segment path with a disk radius."""
+    path = [(10, 10), (20, 30), (40, 25), (55, 40)]
+    r = 4.0
+
+    ca = ClearedArea()
+    ca.add_cleared_polygons([[(15, 15), (25, 15), (25, 25), (15, 25)]])
+    ca.expand(path, r)
+
+    fig, ax = plt.subplots(figsize=(8, 7))
+
+    for frag in ca.query_window((-10, -10, 80, 80)):
+        fx = [p[0] for p in frag] + [frag[0][0]]
+        fy = [p[1] for p in frag] + [frag[0][1]]
+        ax.fill(fx, fy, "steelblue", alpha=0.3)
+        ax.plot(fx, fy, "steelblue", linewidth=1.5)
+
+    # Draw the path and disks.
+    for i in range(len(path) - 1):
+        p0, p1 = path[i], path[i + 1]
+        ax.annotate(
+            "",
+            xy=p1,
+            xytext=p0,
+            arrowprops=dict(arrowstyle="->", color="red", lw=2),
+        )
+    for pt in path:
+        c = Circle(
+            pt, r, fill=False, edgecolor="red", linewidth=1, linestyle=":"
+        )
+        ax.add_patch(c)
+
+    ax.plot([p[0] for p in path], [p[1] for p in path], "ro", markersize=4)
+
+    ax.set_aspect("equal")
+    ax.set_xlim(0, 70)
+    ax.set_ylim(0, 60)
+    ax.set_xlabel("X (mm)")
+    ax.set_ylabel("Y (mm)")
+    ax.set_title("expand: Sweep Disk Along a Polyline Path")
+    ax.grid(True, alpha=0.3)
+    fig.tight_layout()
+    return fig
+
+
+def generate_remaining():
+    """Show the remaining area after subtracting cleared fragments."""
+    pocket = [(0, 0), (100, 0), (100, 100), (0, 100)]
+    cleared = [(20, 20), (80, 20), (80, 80), (20, 80)]
+
+    ca = ClearedArea()
+    ca.add_cleared_polygons([cleared])
+    remaining = ca.remaining([pocket])
+
+    fig, ax = plt.subplots(figsize=(8, 7))
+
+    bx = [p[0] for p in pocket] + [pocket[0][0]]
+    by = [p[1] for p in pocket] + [pocket[0][1]]
+    ax.plot(bx, by, "k-", linewidth=2, label="Boundary")
+
+    # Fill the outer boundary (remaining area) in blue.
+    for i, poly in enumerate(remaining):
+        px = [p[0] for p in poly] + [poly[0][0]]
+        py = [p[1] for p in poly] + [poly[0][1]]
+        if i == 0:
+            ax.fill(px, py, "steelblue", alpha=0.25, label="Remaining")
+        ax.plot(px, py, "steelblue", linewidth=1.5)
+
+    # Draw subtracted (cleared) on top — opaque red with hatch
+    # so it fully covers the blue fill underneath.
+    subtracted_frags = ca.query_window((-10, -10, 110, 110))
+    for idx, frag in enumerate(subtracted_frags):
+        fx = [p[0] for p in frag] + [frag[0][0]]
+        fy = [p[1] for p in frag] + [frag[0][1]]
+        ax.fill(
+            fx,
+            fy,
+            facecolor="white",
+            zorder=3,
+        )
+        ax.fill(
+            fx,
+            fy,
+            facecolor="tomato",
+            edgecolor="tomato",
+            hatch="///",
+            alpha=0.3,
+            linewidth=0.5,
+            zorder=4,
+            label="Subtracted" if idx == 0 else "",
+        )
+
+    ax.set_aspect("equal")
+    ax.set_xlim(-5, 105)
+    ax.set_ylim(-5, 105)
+    ax.set_xlabel("X (mm)")
+    ax.set_ylabel("Y (mm)")
+    ax.set_title("remaining: Uncut Area After Subtraction")
+    ax.legend(fontsize=8)
+    ax.grid(True, alpha=0.3)
+    fig.tight_layout()
+    return fig
+
+
+def generate_query_window():
+    """Show fragments returned by query_window within a bbox."""
+    ca = ClearedArea()
+    ca.add_cleared_polygons(
+        [
+            [(10, 10), (40, 10), (40, 40), (10, 40)],
+            [(60, 60), (90, 60), (90, 90), (60, 90)],
+        ]
+    )
+    bbox = (0, 0, 50, 50)
+    result = ca.query_window(bbox)
+
+    fig, ax = plt.subplots(figsize=(8, 7))
+
+    # Draw all fragments.
+    for frag in ca.query_window((-10, -10, 110, 110)):
+        fx = [p[0] for p in frag] + [frag[0][0]]
+        fy = [p[1] for p in frag] + [frag[0][1]]
+        ax.fill(fx, fy, "steelblue", alpha=0.15)
+        ax.plot(fx, fy, "steelblue", linewidth=1, alpha=0.4)
+
+    # Draw the query bounding box.
+    bx = [bbox[0], bbox[2], bbox[2], bbox[0], bbox[0]]
+    by = [bbox[1], bbox[1], bbox[3], bbox[3], bbox[1]]
+    ax.plot(bx, by, "g-", linewidth=2, label="Query bbox")
+
+    # Highlight the returned fragments.
+    for frag in result:
+        fx = [p[0] for p in frag] + [frag[0][0]]
+        fy = [p[1] for p in frag] + [frag[0][1]]
+        first_qr = frag is result[0]
+        ax.fill(
+            fx,
+            fy,
+            "tomato",
+            alpha=0.4,
+            label="Query result" if first_qr else "",
+        )
+        ax.plot(fx, fy, "tomato", linewidth=2)
+
+    ax.set_aspect("equal")
+    ax.set_xlim(0, 100)
+    ax.set_ylim(0, 100)
+    ax.set_xlabel("X (mm)")
+    ax.set_ylabel("Y (mm)")
+    ax.set_title("query_window: Fragments Inside a Bounding Box")
+    ax.legend(fontsize=8)
+    ax.grid(True, alpha=0.3)
+    fig.tight_layout()
+    return fig
+
+
+def _engagement_at(pt, ca, tool_radius):
+    """Compute engagement by measuring signed distance to cleared boundary."""
+    d = ca.signed_boundary_distance(pt[0], pt[1])
+    angle, _, _ = compute_engagement(d, tool_radius)
+    return angle
+
+
+def generate_wall_following():
+    """Tool stepping along a curved wall, maintaining constant engagement."""
+    tool_radius = 3.0
+    step_len = 1.0
+    target_eng = math.pi
+
+    # Cleared area with a curved top edge (sine wave).
+    n = 100
+    poly = [(-100.0, -100.0), (100.0, -100.0), (100.0, 20.0)]
+    for i in range(n + 1):
+        x = 100.0 - 200.0 * i / n
+        y = 20.0 + 2.0 * math.sin(x * math.pi / 40.0)
+        poly.append((x, y))
+
+    ca = ClearedArea()
+    ca.add_cleared_polygons([poly])
+
+    opts = StepperOptions()
+    opts.radius = tool_radius
+    opts.step_length = step_len
+    opts.target_engagement = target_eng
+    opts.max_deflection = 0.8
+    path, _status = ca.run_segment((0, 20), 0.0, opts, 80)
+
+    fig, (ax1, ax2) = plt.subplots(
+        1, 2, figsize=(14, 5), gridspec_kw={"width_ratios": [3, 1]}
+    )
+
+    # ── Left: path overlaid on geometry ──
+    engagements = [_engagement_at(p, ca, tool_radius) for p in path]
+    max_eng = max(engagements) if engagements else 1.0
+    norm_eng = [e / max_eng for e in engagements]
+
+    for frag in ca.query_window((-110, -110, 110, 40)):
+        fx = [p[0] for p in frag] + [frag[0][0]]
+        fy = [p[1] for p in frag] + [frag[0][1]]
+        ax1.fill(fx, fy, "steelblue", alpha=0.2)
+        ax1.plot(fx, fy, "steelblue", linewidth=1, alpha=0.5)
+
+    for i in range(len(path) - 1):
+        seg_xs = [path[i][0], path[i + 1][0]]
+        seg_ys = [path[i][1], path[i + 1][1]]
+        c = plt.cm.RdYlGn(norm_eng[i])
+        ax1.plot(seg_xs, seg_ys, color=c, linewidth=2)
+
+    # Every 10th tool position.
+    for i in range(0, len(path), 10):
+        c = Circle(
+            path[i],
+            tool_radius,
+            fill=False,
+            edgecolor=plt.cm.RdYlGn(norm_eng[i]),
+            linewidth=1,
+            linestyle="--",
+        )
+        ax1.add_patch(c)
+
+    ax1.set_aspect("equal")
+    ax1.set_xlim(-10, 85)
+    ax1.set_ylim(12, 32)
+    ax1.set_xlabel("X (mm)")
+    ax1.set_ylabel("Y (mm)")
+    ax1.set_title(
+        "Wall Following: Curved Boundary\n"
+        "(path colour = engagement, green = on-target)"
+    )
+    ax1.grid(True, alpha=0.3)
+
+    # ── Right: engagement histogram ──
+    target_line_label = f"Target ({target_eng:.2f})"
+    ax2.hist(engagements, bins=20, color="steelblue", alpha=0.7)
+    ax2.axvline(
+        target_eng,
+        color="red",
+        linestyle="--",
+        linewidth=2,
+        label=target_line_label,
+    )
+    ax2.set_xlabel("Engagement angle (rad)")
+    ax2.set_ylabel("Count")
+    mean_eng = np.mean(engagements)
+    std_eng = np.std(engagements)
+    ax2.set_title(f"Engagement  |  μ = {mean_eng:.3f}  σ = {std_eng:.3f}")
+    ax2.legend(fontsize=8)
+    ax2.grid(True, alpha=0.3)
+
+    fig.tight_layout()
+    return fig
+
+    fig.tight_layout()
+    return fig
+
+
+def generate_pocket_corner():
+    """Stepping through a 90° corner, showing deflection."""
+    tool_radius = 3.0
+    step_len = 0.6
+    target_eng = math.pi * 0.85
+
+    # Cleared area: an L-shaped region.
+    ca = ClearedArea()
+    ca.add_cleared_polygons(
+        [
+            [
+                (-10, -10),
+                (30, -10),
+                (30, 20),
+                (10, 20),
+                (10, 30),
+                (-10, 30),
+            ]
+        ]
+    )
+
+    opts = StepperOptions()
+    opts.radius = tool_radius
+    opts.step_length = step_len
+    opts.target_engagement = target_eng
+    opts.max_deflection = 0.8
+    path, _status = ca.run_segment((25, 20), -math.pi / 2, opts, 60)
+
+    fig, ax = plt.subplots(figsize=(8, 7))
+
+    engagements = [_engagement_at(p, ca, tool_radius) for p in path]
+    max_eng = max(engagements) if engagements else 1.0
+    norm_eng = [e / max_eng for e in engagements]
+
+    for i in range(len(path) - 1):
+        seg_xs = [path[i][0], path[i + 1][0]]
+        seg_ys = [path[i][1], path[i + 1][1]]
+        c = plt.cm.RdYlGn(norm_eng[i])
+        ax.plot(seg_xs, seg_ys, color=c, linewidth=2)
+
+    frags = ca.query_window((-20, -20, 50, 50))
+    for frag in frags:
+        fx = [p[0] for p in frag] + [frag[0][0]]
+        fy = [p[1] for p in frag] + [frag[0][1]]
+        ax.fill(fx, fy, "steelblue", alpha=0.2)
+
+    ax.plot(path[0][0], path[0][1], "o", color="green", markersize=8, zorder=5)
+    ax.plot(path[-1][0], path[-1][1], "x", color="red", markersize=8, zorder=5)
+
+    ax.set_aspect("equal")
+    ax.set_xlim(-5, 35)
+    ax.set_ylim(-5, 35)
+    ax.set_xlabel("X (mm)")
+    ax.set_ylabel("Y (mm)")
+    ax.set_title("Corner Navigation: Solver Deflects to Maintain Engagement")
+    ax.grid(True, alpha=0.3)
+
+    fig.tight_layout()
+    return fig
+
+
+def generate_engagement_histogram():
+    """Histogram of engagement variance along a curved wall."""
+    tool_radius = 3.0
+    step_len = 0.5
+    target_eng = math.pi * 0.85
+
+    # Cleared area with a curved top edge (sine wave).
+    n = 100
+    poly = [(-100.0, -100.0), (100.0, -100.0), (100.0, 20.0)]
+    for i in range(n + 1):
+        t = i / n
+        x = 100.0 - 200.0 * t
+        y = 20.0 + 5.0 * math.sin(x * math.pi / 50.0)
+        poly.append((x, y))
+
+    ca = ClearedArea()
+    ca.add_cleared_polygons([poly])
+
+    opts = StepperOptions()
+    opts.radius = tool_radius
+    opts.step_length = step_len
+    opts.target_engagement = target_eng
+    opts.max_deflection = 0.8
+    path, _status = ca.run_segment((0, 20), 0.0, opts, 200)
+
+    engagements = [_engagement_at(p, ca, tool_radius) for p in path]
+
+    n_bins = min(30, len(set(round(e, 6) for e in engagements)))
+    fig, ax = plt.subplots(figsize=(8, 4))
+    ax.hist(engagements, bins=max(n_bins, 5), color="steelblue", alpha=0.7)
+    ax.axvline(
+        target_eng,
+        color="red",
+        linestyle="--",
+        linewidth=2,
+        label=f"Target ({target_eng:.2f} rad)",
+    )
+    ax.set_xlabel("Engagement angle (rad)")
+    ax.set_ylabel("Count")
+    ax.set_title(
+        f"Engagement Distribution: σ = {np.std(engagements):.3f} rad, "
+        f"mean = {np.mean(engagements):.3f} rad"
+    )
+    ax.legend(fontsize=9)
+    ax.grid(True, alpha=0.3)
+    fig.tight_layout()
+    return fig
+
+
 __docs_target__ = ["raygeo.geo.algo.cleared_area.md"]
 __images__ = [
     {
@@ -408,6 +1030,65 @@ __images__ = [
         "function": generate_frontier,
     },
     {
+        "heading": "signed_boundary_distance",
+        "caption": (
+            "Signed boundary distance around a cleared square: "
+            "green = inside cleared, red = outside."
+        ),
+        "function": generate_signed_boundary_distance,
+    },
+    {
+        "heading": "expand",
+        "caption": (
+            "``expand``: sweeping a disk along a multi-segment "
+            "path enlarges the cleared area."
+        ),
+        "function": generate_expand,
+    },
+    {
+        "heading": "remaining",
+        "caption": (
+            "``remaining`` subtracts cleared fragments from the "
+            "boundary polygon, returning the uncut region (red)."
+        ),
+        "function": generate_remaining,
+    },
+    {
+        "heading": "query_window",
+        "caption": (
+            "``query_window`` returns only the cleared fragments "
+            "whose bounding box overlaps the query (green box)."
+        ),
+        "function": generate_query_window,
+    },
+    {
+        "heading": "expand_step",
+        "caption": (
+            "``expand_step``: sweeping a disk (dashed circle) of radius "
+            "*radius* from *prev* to *next* (red arrow) enlarges "
+            "the cleared area (right) vs the initial state (left)."
+        ),
+        "function": generate_expand_step,
+    },
+    {
+        "heading": "find_next_resume",
+        "caption": (
+            "``find_next_resume`` walks the cleared-area frontier from "
+            "the end position (red triangle) and returns the first "
+            "position with sufficient engagement (green star)."
+        ),
+        "function": generate_find_next_resume,
+    },
+    {
+        "heading": "begin_step_batch",
+        "caption": (
+            "Three segments queued via ``begin_step_batch`` / "
+            "``expand_step_batched`` then unioned in a single "
+            "``commit_step_batch`` pass."
+        ),
+        "function": generate_step_batch,
+    },
+    {
         "heading": "bites",
         "caption": (
             "``bites`` computes the expansible material — the crescent-shaped "
@@ -423,5 +1104,23 @@ __images__ = [
             " (first = dark, later = pale)"
         ),
         "function": generate_bite_in_direction,
+    },
+    {
+        "heading": None,
+        "caption": "Tool stepping parallel to a straight wall. "
+        "Path colour = engagement (green = on target).",
+        "function": generate_wall_following,
+    },
+    {
+        "heading": "step",
+        "caption": "90° corner: the solver deflects the heading to keep "
+        "engagement constant around the turn.",
+        "function": generate_pocket_corner,
+    },
+    {
+        "heading": "step",
+        "caption": "Engagement histogram for 200 steps along a straight "
+        "wall. Tight peak near target indicates stable behaviour.",
+        "function": generate_engagement_histogram,
     },
 ]

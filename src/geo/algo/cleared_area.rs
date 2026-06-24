@@ -1,11 +1,16 @@
 use prof_macros::prof;
 
+use crate::geo::algo::engagement::compute_engagement;
+use crate::geo::algo::engagement::Engagement;
+use crate::geo::algo::medial_axis::MedialAxis;
 use crate::geo::algo::offset::compute_inset_region;
 use crate::geo::algo::simplify::simplify_polyline_3d;
 use crate::geo::algo::spatial_grid2d::SpatialGrid;
 use crate::geo::shape::line::get_line_segment_closest_point;
 use crate::geo::shape::polygon::get_polygon_area;
+use crate::geo::shape::polygon::get_polygon_bounds;
 use crate::geo::shape::polygon::get_polygon_centroid;
+use crate::geo::shape::polygon::get_polygons_closest_point;
 use crate::geo::shape::polygon::get_polygons_group_difference;
 use crate::geo::shape::polygon::get_polygons_group_intersection;
 use crate::geo::shape::polygon::get_polygons_union;
@@ -27,6 +32,245 @@ pub struct ClearedArea {
     /// Cell size for the edge-level spatial grid (finer than the polygon
     /// grid so that thin crescents are captured).
     edge_cell_size: f64,
+    // ── Batched step expansion ──
+    /// Buffer of swept polygons accumulated while a batch is open.
+    batch_buffer: Vec<Polygon>,
+    /// True when `begin_step_batch()` has been called.
+    batch_active: bool,
+}
+
+/// A resume point found on the cleared-area frontier.
+#[derive(Debug, Clone)]
+pub struct ResumePoint {
+    /// Position on the frontier.
+    pub pos: Point,
+    /// Outward-normal heading at the resume position (radians).
+    pub heading: f64,
+    /// Travel polyline through cleared territory, routed by the MAT.
+    pub link_path: Vec<Point>,
+}
+
+// ── Stepper types ──
+
+/// Options controlling the stepping solver.
+#[derive(Clone, Debug)]
+pub struct StepperOptions {
+    /// Disk radius (mm).
+    pub radius: f64,
+    /// Forward distance per step (mm).  Typical value: `radius × 0.2`.
+    pub step_length: f64,
+    /// Target overlap angle (radians).  Derived from the advance ratio:
+    /// `target_engagement = 2·π − 2·acos(advance / radius)`.
+    /// In `[0, 2π]`.
+    pub target_engagement: f64,
+    /// Solver tolerance on engagement angle (radians).  Default `0.01`.
+    pub engagement_tol: f64,
+    /// Maximum steering deflection per step (radians).  Default ~30°.
+    pub max_deflection: f64,
+    /// Maximum solver iterations per step.  Default `6` (usually converges
+    /// in 2–3 on smooth geometry).
+    pub max_solver_iters: usize,
+}
+
+impl Default for StepperOptions {
+    fn default() -> Self {
+        Self {
+            radius: 3.0,
+            step_length: 0.6,
+            target_engagement: std::f64::consts::PI,
+            engagement_tol: 0.01,
+            max_deflection: std::f64::consts::FRAC_PI_6,
+            max_solver_iters: 6,
+        }
+    }
+}
+
+/// Result of a single step.
+#[derive(Debug, Clone)]
+pub struct StepResult {
+    /// New centre position.
+    pub next: Point,
+    /// Updated heading (radians).
+    pub heading: f64,
+    /// Measured overlap angle at `next`.
+    pub engagement: Engagement,
+    /// Solver iterations consumed.
+    pub iters: usize,
+    /// Termination status.
+    pub status: StepStatus,
+}
+
+/// Status returned by a single step or a full segment.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum StepStatus {
+    /// The step converged normally.
+    Ok,
+    /// The disk reached or crossed the domain boundary.
+    BoundaryHit,
+    /// No valid overlap can be found (disk is in open space or fully
+    /// inside the cleared area).
+    LostEngagement,
+    /// The solver could not converge within the budget.
+    NoConvergence,
+}
+
+/// Derive the target engagement angle from the advance ratio.
+///
+/// When `advance >= radius` the angle saturates at `2π` (full
+/// overlap).  A typical advance is 10–40 % of radius,
+/// giving engagement angles roughly 145°–205°.
+pub fn target_engagement_from_advance(advance: f64, radius: f64) -> f64 {
+    if advance <= 0.0 || radius <= 0.0 {
+        return std::f64::consts::PI;
+    }
+    let ratio = (advance / radius).clamp(0.0, 1.0);
+    2.0 * std::f64::consts::PI - 2.0 * (1.0 - ratio).acos()
+}
+
+/// Try to find a steering angle via 7-sample grid with interpolation.
+fn try_bracket(
+    heading: f64,
+    opts: &StepperOptions,
+    engagement_at: &dyn Fn(f64) -> f64,
+) -> (f64, StepStatus, usize) {
+    let target = opts.target_engagement;
+    let max_def = opts.max_deflection;
+
+    let f0 = engagement_at(heading) - target;
+
+    let ratios = [-1.0, -0.6, -0.2, 0.0, 0.2, 0.6, 1.0];
+    let mut samples: [(f64, f64); 7] = [(0.0, 0.0); 7];
+    for (i, &r) in ratios.iter().enumerate() {
+        let phi = heading + max_def * r;
+        let err = if r == 0.0 {
+            f0
+        } else {
+            engagement_at(phi) - target
+        };
+        samples[i] = (phi, err);
+    }
+
+    for i in 0..samples.len() - 1 {
+        let (a, fa) = samples[i];
+        let (b, fb) = samples[i + 1];
+        if fa.is_finite() && fb.is_finite() && fa.signum() != fb.signum() {
+            let t = -fa / (fb - fa);
+            let root = a + t * (b - a);
+            return (root, StepStatus::Ok, 2);
+        }
+    }
+
+    let best = samples
+        .iter()
+        .min_by(|a, b| a.1.abs().partial_cmp(&b.1.abs()).unwrap())
+        .unwrap();
+    (best.0, StepStatus::Ok, samples.len())
+}
+
+impl ClearedArea {
+    /// Perform one forward step.
+    ///
+    /// Starting from `pos` with the given `heading` (radians), propose candidate
+    /// positions at `step_length` distance along trial deflection angles and
+    /// solve for the heading that maintains the target engagement.
+    pub fn step(
+        &self,
+        pos: Point,
+        heading: f64,
+        opts: &StepperOptions,
+    ) -> StepResult {
+        let cur_eng = self.point_engagement(pos, opts.radius);
+        if cur_eng.angle < opts.target_engagement * 0.05 {
+            return StepResult {
+                next: pos,
+                heading,
+                engagement: cur_eng,
+                iters: 0,
+                status: StepStatus::LostEngagement,
+            };
+        }
+
+        let engagement_at = |phi: f64| -> f64 {
+            let dir = Point::new(phi.cos(), phi.sin());
+            let candidate = pos + dir * opts.step_length;
+            let eng = self.point_engagement(candidate, opts.radius);
+            eng.angle
+        };
+
+        let (best_phi, step_status, iters) =
+            try_bracket(heading, opts, &engagement_at);
+
+        let mut step_len = opts.step_length;
+        if step_status == StepStatus::Ok {
+            let eng_at_best = engagement_at(best_phi);
+            let cur_err = cur_eng.angle - opts.target_engagement;
+            let best_err = eng_at_best - opts.target_engagement;
+            if cur_err * best_err < 0.0 && cur_err.abs() > opts.engagement_tol {
+                let t = cur_err / (cur_err - best_err);
+                step_len *= t.clamp(0.25, 1.0);
+            } else if best_err > opts.engagement_tol
+                && cur_err.abs() <= opts.engagement_tol
+            {
+                let t = (opts.target_engagement - cur_eng.angle)
+                    / (eng_at_best - cur_eng.angle);
+                step_len *= t.clamp(0.25, 0.5);
+            }
+        }
+
+        let dir = Point::new(best_phi.cos(), best_phi.sin());
+        let next_pos = pos + dir * step_len;
+        let eng = self.point_engagement(next_pos, opts.radius);
+
+        StepResult {
+            next: next_pos,
+            heading: best_phi,
+            engagement: eng,
+            iters,
+            status: step_status,
+        }
+    }
+
+    /// Drive the disk forward calling [`step`] until a non‑`Ok` status or
+    /// `max_steps` is reached.
+    ///
+    /// Returns the centre path and the final status.
+    /// Does **not** modify the `ClearedArea` — the caller is responsible for
+    /// committing swept polygons after the segment.
+    pub fn run_segment(
+        &self,
+        start: Point,
+        initial_heading: f64,
+        opts: &StepperOptions,
+        max_steps: usize,
+    ) -> (Vec<Point>, StepStatus) {
+        let mut path = Vec::with_capacity(max_steps.min(10000));
+        path.push(start);
+
+        let mut pos = start;
+        let mut heading = initial_heading;
+
+        for _ in 0..max_steps {
+            let result = self.step(pos, heading, opts);
+            match result.status {
+                StepStatus::Ok => {
+                    path.push(result.next);
+                    pos = result.next;
+                    heading = result.heading;
+                }
+                other => {
+                    return (path, other);
+                }
+            }
+        }
+
+        (path, StepStatus::Ok)
+    }
+}
+
+/// Internal: position + heading pair found on the frontier.
+struct FrontierCandidate {
+    pos: Point,
+    heading: f64,
 }
 
 impl ClearedArea {
@@ -65,6 +309,8 @@ impl ClearedArea {
             edge_pts: Vec::new(),
             edge_grid: SpatialGrid::new(edge_cell_size),
             edge_cell_size,
+            batch_buffer: Vec::new(),
+            batch_active: false,
         }
     }
 
@@ -79,13 +325,15 @@ impl ClearedArea {
             edge_pts: Vec::new(),
             edge_grid: SpatialGrid::new(edge_cell_size),
             edge_cell_size,
+            batch_buffer: Vec::new(),
+            batch_active: false,
         };
         for poly in initial {
             if poly.len() >= 3 {
                 let idx = ca.fragments.len();
                 ca.fragments.push(poly.clone());
-                ca.bboxes.push(poly_bbox(poly));
-                ca.grid.insert(idx, poly_bbox(poly));
+                ca.bboxes.push(get_polygon_bounds(poly));
+                ca.grid.insert(idx, get_polygon_bounds(poly));
             }
         }
         ca
@@ -105,7 +353,8 @@ impl ClearedArea {
     ///
     /// Uses the edge-level spatial grid so that only edges in nearby
     /// grid cells are checked.  Returns `f64::MAX` when there are no
-    /// fragments.
+    /// fragments **or** the point is too far from any edge to be found
+    /// in the local query window.
     pub fn closest_boundary_distance_sq(&self, x: f64, y: f64) -> f64 {
         let cell_size = self.edge_cell_size;
         let mut qbox = Rect::new(x, y, x, y);
@@ -127,6 +376,37 @@ impl ClearedArea {
             }
         }
         best_d2
+    }
+
+    /// Return the signed perpendicular distance from `(x, y)` to the
+    /// nearest cleared‑area boundary.
+    ///
+    /// * **Positive** — the point is **outside** the cleared area
+    ///   (in uncut material).
+    /// * **Negative** — the point is **inside** the cleared area (in
+    ///   the void).
+    /// * `0.0` — the point lies exactly on the boundary.
+    ///
+    /// Uses `get_polygons_closest_point` for the exact unsigned distance,
+    /// then checks point-in-polygon to determine the sign.
+    pub fn signed_boundary_distance(&self, x: f64, y: f64) -> f64 {
+        use crate::geo::shape::polygon::is_point_in_polygon;
+
+        let pt = Point::new(x, y);
+        let inside = self
+            .fragments
+            .iter()
+            .any(|frag| frag.len() >= 3 && is_point_in_polygon(pt, frag));
+
+        let d = get_polygons_closest_point(&self.fragments, pt)
+            .map(|(_, _, _, d2)| d2.sqrt())
+            .unwrap_or(f64::MAX);
+
+        if inside {
+            -d.abs()
+        } else {
+            d
+        }
     }
 
     pub fn expand(&mut self, path: &[Point], radius: f64) {
@@ -258,7 +538,7 @@ impl ClearedArea {
             for poly in &new {
                 if poly.len() >= 3 {
                     let idx = self.fragments.len();
-                    let bb = poly_bbox(poly);
+                    let bb = get_polygon_bounds(poly);
                     self.fragments.push(poly.clone());
                     self.bboxes.push(bb);
                     self.grid.insert(idx, bb);
@@ -466,13 +746,68 @@ impl ClearedArea {
         passes
     }
 
+    // ── Batched step expansion ──
+
+    /// Begin buffering single‑segment expansions.
+    ///
+    /// Subsequent calls to [`expand_step_batched`](Self::expand_step_batched)
+    /// will be queued without a union.  Call
+    /// [`commit_step_batch`](Self::commit_step_batch) to union all queued
+    /// sweeps with the stored fragments in a single pass.
+    ///
+    /// Calling this while a batch is already active is a no‑op.
+    pub fn begin_step_batch(&mut self) {
+        self.batch_active = true;
+    }
+
+    /// Queue a segment `(prev → next)` with a disk of `radius`.
+    ///
+    /// The swept polygon is stored in an internal buffer.  Does **not**
+    /// perform a union until [`commit_step_batch`](Self::commit_step_batch)
+    /// is called.
+    ///
+    /// # Panics
+    /// Panics if `begin_step_batch()` was not called first.
+    pub fn expand_step_batched(
+        &mut self,
+        prev: Point,
+        next: Point,
+        radius: f64,
+    ) {
+        assert!(
+            self.batch_active,
+            "expand_step_batched called without begin_step_batch"
+        );
+        if radius < 1e-12 {
+            return;
+        }
+        let swept = get_segment_swept_polygon(prev, next, radius);
+        self.batch_buffer.extend(swept);
+    }
+
+    /// Union all buffered sweeps with the stored fragments in a single pass,
+    /// then rebuild the spatial grid once.
+    ///
+    /// After this call the batch is closed (the caller may start a new one).
+    pub fn commit_step_batch(&mut self) {
+        if !self.batch_active || self.batch_buffer.is_empty() {
+            self.batch_active = false;
+            return;
+        }
+        let mut all_polys = self.fragments.clone();
+        all_polys.append(&mut self.batch_buffer);
+        self.fragments = get_polygons_union(&all_polys);
+        self.rebuild_grid();
+        self.batch_active = false;
+    }
+
     /// True when any polygon in `polys` overlaps an existing fragment.
     fn any_overlap(&self, polys: &[Polygon]) -> bool {
         for poly in polys {
             if poly.len() < 3 {
                 continue;
             }
-            let bb = poly_bbox(poly);
+            let bb = get_polygon_bounds(poly);
             if !self.grid.query(bb).is_empty() {
                 return true;
             }
@@ -484,7 +819,7 @@ impl ClearedArea {
         self.grid = SpatialGrid::new(self.cell_size);
         self.bboxes.clear();
         for (idx, poly) in self.fragments.iter().enumerate() {
-            let bbox = poly_bbox(poly);
+            let bbox = get_polygon_bounds(poly);
             self.bboxes.push(bbox);
             self.grid.insert(idx, bbox);
         }
@@ -501,32 +836,157 @@ impl ClearedArea {
             }
         }
     }
+
+    /// Evaluate engagement at `center` using the signed distance to this
+    /// cleared area's boundary.
+    pub fn point_engagement(&self, center: Point, radius: f64) -> Engagement {
+        let d = self.signed_boundary_distance(center.x, center.y);
+        compute_engagement(d, radius)
+    }
+
+    /// Evaluate engagement along a polyline for post-hoc analysis.
+    pub fn path_engagement(
+        &self,
+        path: &[Point],
+        radius: f64,
+    ) -> Vec<Engagement> {
+        path.iter()
+            .map(|&p| self.point_engagement(p, radius))
+            .collect()
+    }
+
+    /// Walk the cleared-area frontier forward from a point near `end_pos`
+    /// and return the first position where engagement ≥ `min_engagement`.
+    ///
+    /// The link path between `end_pos` and the resume position is routed
+    /// through the cleared area via MAT for collision‑free travel.
+    ///
+    /// Returns `None` when no valid resume point is found (fully cleared
+    /// or no MAT available).
+    pub fn find_next_resume(
+        &self,
+        mat: &MedialAxis,
+        end_pos: Point,
+        radius: f64,
+        min_engagement: f64,
+    ) -> Option<ResumePoint> {
+        if self.is_empty() {
+            return None;
+        }
+
+        let frontier = self.frontier(0.5);
+        if frontier.is_empty() {
+            return None;
+        }
+
+        // Find the closest point on the frontier to end_pos
+        // using the general polygon query.
+        let (closest_poly_idx, _t, closest_pt, _d2) =
+            get_polygons_closest_point(&frontier, end_pos)?;
+
+        // Build a FrontierCandidate from the closest point.
+        let poly = &frontier[closest_poly_idx];
+        let heading = frontier_heading_at(closest_pt, poly);
+        let start_candidate = FrontierCandidate {
+            pos: closest_pt,
+            heading,
+        };
+
+        // Walk the frontier forward, checking engagement.
+        let walk_candidates = walk_frontier_forward(
+            &start_candidate,
+            &frontier,
+            radius,
+            min_engagement,
+            self,
+        );
+
+        let resume_pt = walk_candidates.into_iter().next()?;
+
+        let link = mat
+            .path_between(end_pos, resume_pt.pos)
+            .unwrap_or_else(|| vec![end_pos, resume_pt.pos]);
+
+        Some(ResumePoint {
+            pos: resume_pt.pos,
+            heading: resume_pt.heading,
+            link_path: link,
+        })
+    }
+}
+
+/// Walk the frontier polygon forward from `start`, checking engagement at
+/// each vertex.  Returns candidates with engagement ≥ min_engagement.
+fn walk_frontier_forward(
+    start: &FrontierCandidate,
+    frontier: &[Vec<Point>],
+    radius: f64,
+    min_engagement: f64,
+    cleared: &ClearedArea,
+) -> Vec<FrontierCandidate> {
+    let mut candidates = Vec::new();
+
+    for poly in frontier {
+        if poly.len() < 3 {
+            continue;
+        }
+
+        // Find the nearest vertex index in this polygon.
+        let start_idx = poly.iter().enumerate().min_by(|(_, a), (_, b)| {
+            a.distance_squared(start.pos)
+                .partial_cmp(&b.distance_squared(start.pos))
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
+        let start_idx = match start_idx {
+            Some((i, _)) => i,
+            None => continue,
+        };
+
+        // Walk forward from start_idx (wrap around).
+        let n = poly.len();
+        for offset in 0..n {
+            let idx = (start_idx + offset) % n;
+            let pt = poly[idx];
+            let eng = cleared.point_engagement(pt, radius);
+            if eng.angle >= min_engagement {
+                let heading = frontier_heading_at(pt, poly);
+                candidates.push(FrontierCandidate { pos: pt, heading });
+                break;
+            }
+        }
+    }
+
+    candidates
+}
+
+/// Estimate the outward-normal heading at a vertex of a frontier polygon.
+fn frontier_heading_at(v: Point, poly: &[Point]) -> f64 {
+    if poly.len() < 3 {
+        return 0.0;
+    }
+    let idx = poly.iter().enumerate().min_by(|(_, a), (_, b)| {
+        a.distance_squared(v)
+            .partial_cmp(&b.distance_squared(v))
+            .unwrap_or(std::cmp::Ordering::Equal)
+    });
+    let idx = match idx {
+        Some((i, _)) => i,
+        None => return 0.0,
+    };
+    let n = poly.len();
+    let prev = poly[(idx + n - 1) % n];
+    let next = poly[(idx + 1) % n];
+    let tangent = next - prev;
+    if tangent.length_squared() < 1e-12 {
+        return 0.0;
+    }
+    let tangent = tangent.normalize();
+    let outward = Point::new(-tangent.y, tangent.x);
+    outward.y.atan2(outward.x)
 }
 
 impl Default for ClearedArea {
     fn default() -> Self {
         Self::new()
     }
-}
-
-fn poly_bbox(poly: &Polygon) -> Rect {
-    let mut x_min = f64::MAX;
-    let mut y_min = f64::MAX;
-    let mut x_max = f64::MIN;
-    let mut y_max = f64::MIN;
-    for p in poly {
-        if p.x < x_min {
-            x_min = p.x;
-        }
-        if p.y < y_min {
-            y_min = p.y;
-        }
-        if p.x > x_max {
-            x_max = p.x;
-        }
-        if p.y > y_max {
-            y_max = p.y;
-        }
-    }
-    Rect::new(x_min, y_min, x_max, y_max)
 }
