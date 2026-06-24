@@ -312,27 +312,23 @@ impl ClearedArea {
         if self.fragments.is_empty() {
             return vec![];
         }
-        let offset_src: Vec<Polygon> = get_polygons_union(&self.fragments)
-            .into_iter()
-            .filter_map(|p| {
-                if p.len() < 3 {
-                    return None;
-                }
-                let pts3d: Vec<Point3D> =
-                    p.iter().map(|q| Point3D::new(q.x, q.y, 0.0)).collect();
-                let simplified = simplify_polyline_3d(&pts3d, simplify_tol);
-                if simplified.len() < 3 {
-                    None
-                } else {
-                    Some(
-                        simplified
-                            .iter()
-                            .map(|q| Point::new(q.x, q.y))
-                            .collect(),
-                    )
-                }
-            })
-            .collect();
+        let simplify = |p: &Polygon| -> Option<Polygon> {
+            if p.len() < 3 {
+                return None;
+            }
+            let pts3d: Vec<Point3D> =
+                p.iter().map(|q| Point3D::new(q.x, q.y, 0.0)).collect();
+            let simplified = simplify_polyline_3d(&pts3d, simplify_tol);
+            if simplified.len() < 3 {
+                None
+            } else {
+                Some(simplified.iter().map(|q| Point::new(q.x, q.y)).collect())
+            }
+        };
+
+        let unioned = get_polygons_union(&self.fragments);
+        let offset_src: Vec<Polygon> =
+            unioned.iter().filter_map(simplify).collect();
         if offset_src.is_empty() {
             return vec![];
         }
@@ -358,9 +354,9 @@ impl ClearedArea {
         if region.is_empty() {
             return;
         }
-        let mut both = self.fragments.clone();
-        both.extend(region.iter().cloned());
-        self.replace_fragments(get_polygons_union(&both));
+        self.fragments.extend(region.iter().cloned());
+        let unioned = get_polygons_union(&self.fragments);
+        self.replace_fragments(unioned);
     }
 
     /// Expand the current frontier by `step_over`, clip to `valid_area`,

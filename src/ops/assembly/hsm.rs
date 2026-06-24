@@ -12,6 +12,7 @@
 
 use crate::prof::prof_report;
 use prof_macros::prof;
+use rayon::prelude::*;
 
 use crate::geo::algo::cleared_area::ClearedArea;
 
@@ -1181,14 +1182,8 @@ fn build_link_segments(
     smoothing_amount: i32,
     preserve_order: bool,
 ) -> Vec<MotionSegment> {
-    // Lazy clearance: build a cleared mask once (no tree rebuild) and
-    // check it during path traversal so each node is tested only once.
     let cleared_mask: Option<Vec<bool>> =
         mat.and_then(|m| cleared.map(|c| m.build_cleared_mask(c)));
-    let mut segments: Vec<MotionSegment> = Vec::new();
-
-    // Pre-compute obstacle bounds — these are reused across many
-    // collision checks inside the smoothing / corner-cutting pipeline.
     let obstacle_bounds: Vec<Rect> = compute_polygon_bounds(uncleared);
 
     let order: Vec<usize> = if preserve_order || arcs.is_empty() {
@@ -1197,25 +1192,55 @@ fn build_link_segments(
         order_nearest_neighbor(arcs)
     };
 
-    for &oi in &order {
-        let arc = &arcs[oi];
-        if arc.len() < 2 {
-            continue;
-        }
-        if segments.is_empty() {
-            let pts: Vec<Point3D> =
-                arc.iter().map(|p| Point3D::new(p.x, p.y, cut_z)).collect();
-            segments.push(MotionSegment {
-                role: MotionRole::Cut,
-                points: pts,
-            });
-        } else {
-            let last: Point = {
-                let last_seg = segments.last().unwrap();
-                let p = *last_seg.points.last().unwrap();
-                Point::new(p.x, p.y)
-            };
-            let first: Point = arc[0];
+    struct ArcInfo {
+        points: Vec<Point>,
+        start: Point,
+        end: Point,
+    }
+
+    let valid: Vec<ArcInfo> = order
+        .iter()
+        .filter_map(|&oi| {
+            let arc = &arcs[oi];
+            if arc.len() < 2 {
+                return None;
+            }
+            Some(ArcInfo {
+                points: arc.to_vec(),
+                start: arc[0],
+                end: *arc.last().unwrap(),
+            })
+        })
+        .collect();
+
+    if valid.is_empty() {
+        return Vec::new();
+    }
+
+    let mut segments: Vec<MotionSegment> = Vec::with_capacity(valid.len() * 2);
+
+    segments.push(MotionSegment {
+        role: MotionRole::Cut,
+        points: valid[0]
+            .points
+            .iter()
+            .map(|p| Point3D::new(p.x, p.y, cut_z))
+            .collect(),
+    });
+
+    if valid.len() == 1 {
+        return segments;
+    }
+
+    let cleared_mask_ref: Option<&[bool]> = cleared_mask.as_deref();
+
+    let link_paths: Vec<Vec<Point>> = (1..valid.len())
+        .into_par_iter()
+        .map(|j| {
+            let last = valid[j - 1].end;
+            let first = valid[j].start;
+            let prev_tail = &valid[j - 1].points;
+            let next_head = &valid[j].points;
 
             let direct_seg = [last, first];
             let blocked = does_path_sweep_intersect_polygon(
@@ -1225,10 +1250,10 @@ fn build_link_segments(
                 &obstacle_bounds,
             );
 
-            let link: Vec<Point> = if blocked {
+            let mut link: Vec<Point> = if blocked {
                 let mat_link = mat
                     .and_then(|ma| {
-                        if let Some(ref mask) = cleared_mask {
+                        if let Some(mask) = cleared_mask_ref {
                             let fi = ma.nearest_node(last)?;
                             let ti = ma.nearest_node(first)?;
                             ma.path_between_indices_cleared(fi, ti, mask)
@@ -1254,20 +1279,8 @@ fn build_link_segments(
                 vec![last, first]
             };
 
-            // Tangent extensions for G1 continuity at junctions.
-            let mut link = link;
-            let next_head: Vec<Point> = arc.to_vec();
-            if !segments.is_empty() {
-                let prev_cut = &segments.last().unwrap().points;
-                let prev_tail: Vec<Point> =
-                    prev_cut.iter().map(|p| Point::new(p.x, p.y)).collect();
-                blend_tangent(&mut link, &prev_tail, &next_head, safe_margin);
-            } else {
-                blend_tangent(&mut link, &[], &next_head, safe_margin);
-            }
+            blend_tangent(&mut link, prev_tail, next_head, safe_margin);
 
-            // Round any remaining sharp corners (including the angles
-            // at the tangent extension points).
             link = chaikin_corner_cut(
                 &link,
                 uncleared,
@@ -1276,8 +1289,6 @@ fn build_link_segments(
                 6,
             );
 
-            // Safety net: if any post-processing introduced a
-            // collision, fall back to the verified-safe path.
             if does_path_sweep_intersect_polygon(
                 &link,
                 safe_margin,
@@ -1289,7 +1300,7 @@ fn build_link_segments(
                 } else {
                     let raw = mat
                         .and_then(|ma| {
-                            if let Some(ref mask) = cleared_mask {
+                            if let Some(mask) = cleared_mask_ref {
                                 let fi = ma.nearest_node(last)?;
                                 let ti = ma.nearest_node(first)?;
                                 ma.path_between_indices_cleared(fi, ti, mask)
@@ -1310,23 +1321,31 @@ fn build_link_segments(
                 }
             }
 
-            let travel_pts: Vec<Point3D> = link
-                .iter()
-                .map(|p| Point3D::new(p.x, p.y, safe_z))
-                .collect();
-            segments.push(MotionSegment {
-                role: MotionRole::Travel,
-                points: travel_pts,
-            });
+            link
+        })
+        .collect();
 
-            let cut_pts: Vec<Point3D> =
-                arc.iter().map(|p| Point3D::new(p.x, p.y, cut_z)).collect();
-            if !cut_pts.is_empty() {
-                segments.push(MotionSegment {
-                    role: MotionRole::Cut,
-                    points: cut_pts,
-                });
-            }
+    for (j, link) in link_paths.into_iter().enumerate() {
+        let travel_pts: Vec<Point3D> = link
+            .iter()
+            .map(|p| Point3D::new(p.x, p.y, safe_z))
+            .collect();
+        segments.push(MotionSegment {
+            role: MotionRole::Travel,
+            points: travel_pts,
+        });
+
+        let j_arc = j + 1;
+        let cut_pts: Vec<Point3D> = valid[j_arc]
+            .points
+            .iter()
+            .map(|p| Point3D::new(p.x, p.y, cut_z))
+            .collect();
+        if !cut_pts.is_empty() {
+            segments.push(MotionSegment {
+                role: MotionRole::Cut,
+                points: cut_pts,
+            });
         }
     }
 

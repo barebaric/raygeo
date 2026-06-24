@@ -26,6 +26,7 @@ svgtypes = "0.14"
 spade = "2"
 nalgebra = "0.35"
 nalgebra-sparse = "0.12"
+rayon = "1"
 
 [dev-dependencies]
 approx = "0.5"
