@@ -22,9 +22,9 @@ import typing
 from . import assembly
 from . import axis
 from . import cleared_area
-from . import polyline
 from . import raster
 from . import state
+from . import transform
 from . import types
 __all__ = [
     "CommandInfo",
@@ -34,9 +34,9 @@ __all__ = [
     "assembly",
     "axis",
     "cleared_area",
-    "polyline",
     "raster",
     "state",
+    "transform",
     "types",
 ]
 

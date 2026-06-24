@@ -7,7 +7,7 @@ use pyo3_stub_gen::derive::{
 };
 use pyo3_stub_gen::inventory::submit;
 
-use crate::ops::optimize::ProgressCallback;
+use crate::ops::transform::optimize::ProgressCallback;
 use crate::ops::{
     Axis, CommandType, MarkerCmd, MoveCmd, OpCategory, OpsSection,
     OpsSectionRange, StateCmd,
@@ -2196,15 +2196,15 @@ impl PyOps {
     /// :param clips: List of ``(x, y, width)`` tuples defining tab positions.
     /// :complexity: O(n * k) time, O(1) space where k is the number of tab clips
     fn apply_tab_gaps(&mut self, clips: Vec<(f64, f64, f64)>) {
-        let clip_points: Vec<crate::ops::assembly::tabs::ClipPoint> = clips
+        let clip_points: Vec<crate::ops::transform::tabs::ClipPoint> = clips
             .into_iter()
-            .map(|(x, y, width)| crate::ops::assembly::tabs::ClipPoint {
+            .map(|(x, y, width)| crate::ops::transform::tabs::ClipPoint {
                 x,
                 y,
                 width,
             })
             .collect();
-        crate::ops::assembly::tabs::apply_tab_gaps(
+        crate::ops::transform::tabs::apply_tab_gaps(
             &mut self.inner,
             &clip_points,
         );
@@ -2226,15 +2226,15 @@ impl PyOps {
         tab_power: f64,
         original_power: f64,
     ) {
-        let clip_points: Vec<crate::ops::assembly::tabs::ClipPoint> = clips
+        let clip_points: Vec<crate::ops::transform::tabs::ClipPoint> = clips
             .into_iter()
-            .map(|(x, y, width)| crate::ops::assembly::tabs::ClipPoint {
+            .map(|(x, y, width)| crate::ops::transform::tabs::ClipPoint {
                 x,
                 y,
                 width,
             })
             .collect();
-        crate::ops::assembly::tabs::apply_tab_power(
+        crate::ops::transform::tabs::apply_tab_power(
             &mut self.inner,
             &clip_points,
             tab_power,
@@ -2251,7 +2251,7 @@ impl PyOps {
     /// :param tolerance: Maximum distance for considering lines collinear.
     /// :complexity: O(n log n) average time, O(n) space
     fn merge_overlapping_lines(&mut self, tolerance: f64) {
-        crate::ops::merge_lines::merge_overlapping_lines(
+        crate::ops::transform::merge_lines::merge_overlapping_lines(
             &mut self.inner,
             tolerance,
         );
@@ -2266,7 +2266,7 @@ impl PyOps {
     /// :param distance_mm: Overscan distance in millimeters.
     /// :complexity: O(n) time, O(n) space
     fn apply_overscan(&mut self, distance_mm: f64) {
-        crate::ops::assembly::overscan::apply_overscan(
+        crate::ops::transform::overscan::apply_overscan(
             &mut self.inner,
             distance_mm,
         );
@@ -2282,7 +2282,7 @@ impl PyOps {
     /// :param lead_out_mm: Lead-out distance in millimeters.
     /// :complexity: O(n) time, O(n) space
     fn apply_lead_in_out(&mut self, lead_in_mm: f64, lead_out_mm: f64) {
-        crate::ops::assembly::lead_in_out::apply_lead_in_out(
+        crate::ops::transform::lead_in_out::apply_lead_in_out(
             &mut self.inner,
             lead_in_mm,
             lead_out_mm,
@@ -2332,7 +2332,7 @@ impl PyOps {
         }
 
         let py_progress = PyProgress { cb: progress_cb };
-        crate::ops::optimize::optimize_travel(
+        crate::ops::transform::optimize::optimize_travel(
             &mut self.inner,
             allow_flip,
             preserve_first,

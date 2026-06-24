@@ -243,7 +243,7 @@ lead-out segments along the tangent direction at the path start and end.
 | _Returns_     | `None`  |                                   |
 | _Complexity_  |         | O(n) time, O(n) space             |
 
-![Lead-in and lead-out paths](images/ops-lead-in-out.png)
+![Lead-in and lead-out paths](images/ops-transform-lead-in-out-lead-in-out.png)
 
 _Lead-in and lead-out paths_
 
@@ -264,7 +264,7 @@ lead-in and lead-out segments for constant engraving velocity.
 | _Returns_     | `None`  |                                   |
 | _Complexity_  |         | O(n) time, O(n) space             |
 
-![Overscan applied to raster lines](images/ops-overscan.png)
+![Overscan applied to raster lines](images/ops-transform-overscan-overscan.png)
 
 _Overscan applied to raster lines_
 
@@ -302,7 +302,7 @@ nearest point on the path. Only `VECTOR_OUTLINE` sections are modified.
 | _Returns_    | `None`                                 |                                                               |
 | _Complexity_ |                                        | O(n \* k) time, O(1) space where k is the number of tab clips |
 
-![Tab operations on a rectangle](images/ops-tab-operations.png)
+![Tab operations on a rectangle](images/ops-transform-tabs-tab-operations.png)
 
 _Tab operations on a rectangle_
 
@@ -488,7 +488,7 @@ Clip this sequence to a rectangle, keeping only commands inside.
 | _Returns_    | `Ops`                               | A new Ops sequence containing the clipped commands. |
 | _Complexity_ |                                     | O(n) time, O(n) space                               |
 
-![Ops paths clipped to a rectangle](images/ops-clip-rect.png)
+![Ops paths clipped to a rectangle](images/ops-container-clip-clip-rect.png)
 
 _Ops paths clipped to a rectangle_
 
@@ -1160,7 +1160,7 @@ travel moves to avoid cutting the same line twice.
 | _Returns_    | `None`  |                                                   |
 | _Complexity_ |         | O(n log n) average time, O(n) space               |
 
-![Line merging before and after](images/ops-merge-lines.png)
+![Line merging before and after](images/ops-transform-merge-lines-merge-lines.png)
 
 _Line merging before and after_
 
@@ -1240,7 +1240,7 @@ segment-level nearest-neighbor + 2-opt refinement.
 | _Returns_        | `None`                 |                                         |
 | _Complexity_     |                        | O(n²) average time, O(n) space          |
 
-![Travel path before and after optimization](images/ops-optimize-travel.png)
+![Travel path before and after optimization](images/ops-transform-optimize-optimize-travel.png)
 
 _Travel path before and after optimization_
 

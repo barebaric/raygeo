@@ -1,0 +1,28 @@
+//! Transform: operations that take existing Ops and return modified Ops.
+//!
+//! Modules in this layer consume [`Ops`](crate::ops::Ops) sequences and
+//! produce new or mutated sequences — travel optimization, flipping,
+//! pass linking, lead-in/out, overscan, tabs, linearization, merging,
+//! grouping, and clipping.
+
+pub mod flip;
+pub mod group;
+pub mod lead_in_out;
+pub mod link;
+pub mod merge_lines;
+pub mod optimize;
+pub mod overscan;
+pub mod tabs;
+
+pub use flip::flip_ops;
+pub use group::{
+    group_by_state_continuity, iter_section_ranges, iter_sections,
+    segment_indices, split_into_subpaths, without_state, OpsSection,
+    OpsSectionRange,
+};
+pub use lead_in_out::apply_lead_in_out;
+pub use link::{link_passes, LinkStrategy};
+pub use merge_lines::merge_overlapping_lines;
+pub use optimize::optimize_travel;
+pub use overscan::apply_overscan;
+pub use tabs::{apply_tab_gaps, apply_tab_power, ClipPoint};

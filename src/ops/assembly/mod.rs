@@ -7,8 +7,5 @@
 //! belong to motion assembly rather than pure geometry.
 
 pub mod hsm;
-pub mod lead_in_out;
-pub mod overscan;
 pub mod polyline;
 pub mod raster;
-pub mod tabs;

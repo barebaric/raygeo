@@ -1,7 +1,7 @@
 ---
 title: raygeo.ops.cleared_area
 sidebar_label: raygeo.ops.cleared_area
-sidebar_position: 58
+sidebar_position: 59
 ---
 
 ![Tool stepping parallel to a straight wall. Path colour = engagement (green = on target).](images/ops-cleared-area-wall-following.png)

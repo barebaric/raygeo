@@ -20,11 +20,10 @@ pub(crate) mod assembly;
 pub(crate) mod axis;
 pub(crate) mod cleared_area;
 pub(crate) mod container;
-pub(crate) mod optimize;
-pub(crate) mod polyline;
 pub(crate) mod raster;
 mod serialize;
 pub(crate) mod state;
+pub(crate) mod transform;
 pub(crate) mod types;
 
 pub use container::{PyCommandInfo, PyOps, PyOpsSection, PyOpsSectionRange};
@@ -50,17 +49,14 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     state::register(&state_mod)?;
     ops_mod.add_submodule(&state_mod)?;
 
-    // Child submodule: raygeo.ops.algo.optimize
-    optimize::register(&ops_mod)?;
-
     // Child submodule: raygeo.ops.cleared_area
     cleared_area::register(&ops_mod)?;
 
+    // Child submodule: raygeo.ops.transform
+    transform::register(&ops_mod)?;
+
     // Child submodule: raygeo.ops.assembly
     assembly::register(&ops_mod)?;
-
-    // Child submodule: raygeo.ops.polyline
-    polyline::register(&ops_mod)?;
 
     // Child submodule: raygeo.ops.raster
     raster::register(&ops_mod)?;

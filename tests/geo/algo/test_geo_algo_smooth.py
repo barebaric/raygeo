@@ -13,6 +13,7 @@ from raygeo.geo.algo.smooth import (
     smooth_polyline_3d,
     smooth_sub_segment,
 )
+from raygeo.geo.shape.polygon import does_path_sweep_intersect_polygon
 from raygeo.geo.types import Point3D
 
 
@@ -238,9 +239,6 @@ class TestSmoothPath:
         path = [(0, 50), (30, 50), (50, 80), (70, 50), (100, 50)]
         clearance = 3.0
         result = smooth_path(path, [obstacle], clearance, 50)
-        from raygeo.geo.shape.polygon import (
-            does_path_sweep_intersect_polygon,
-        )
 
         assert not does_path_sweep_intersect_polygon(
             result, clearance, [obstacle]
@@ -298,9 +296,6 @@ class TestSmoothPath:
         path = [(0, 50), (20, 50), (50, 80), (80, 50), (100, 50)]
         clearance = 2.0
         result = smooth_path(path, [obs1, obs2], clearance, 50)
-        from raygeo.geo.shape.polygon import (
-            does_path_sweep_intersect_polygon,
-        )
 
         assert not does_path_sweep_intersect_polygon(
             result, clearance, [obs1, obs2]
@@ -362,9 +357,6 @@ class TestShortcutPath:
         path = [(0, 50), (20, 50), (50, 80), (80, 50), (100, 50)]
         clearance = 2.0
         result = smooth_path(path, [obs1, obs2], clearance, 50)
-        from raygeo.geo.shape.polygon import (
-            does_path_sweep_intersect_polygon,
-        )
 
         assert not does_path_sweep_intersect_polygon(
             result, clearance, [obs1, obs2]
