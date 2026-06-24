@@ -713,6 +713,7 @@ pub fn get_polygons_union(polygons: &[Polygon]) -> Vec<Polygon> {
 /// Equivalent to clipper CT_INTERSECTION between two sets of paths.
 ///
 /// **Planar (XY-plane only).** Uses Clipper2. Z is not modeled.
+#[prof]
 pub fn get_polygons_group_intersection(
     subject: &[Polygon],
     clip: &[Polygon],

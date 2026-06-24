@@ -23,11 +23,13 @@ engagement computation.
 add_cleared_polygons(polygons: Sequence[Sequence[tuple[float, float]]]) -> None
 ```
 
-| Parameter    | Type                                      | Description                                       |
-| ------------ | ----------------------------------------- | ------------------------------------------------- |
-| `polygons`   | `Sequence[Sequence[tuple[float, float]]]` |                                                   |
-| _Returns_    | `None`                                    |                                                   |
-| _Complexity_ |                                           | O(n) where n = total vertices across all polygons |
+Add pre‑computed polygons to the cleared set.
+
+| Parameter    | Type                                      | Description                                                 |
+| ------------ | ----------------------------------------- | ----------------------------------------------------------- |
+| `polygons`   | `Sequence[Sequence[tuple[float, float]]]` | List of polygons (each a list of `(x, y)` vertices) to add. |
+| _Returns_    | `None`                                    |                                                             |
+| _Complexity_ |                                           | O(n) where n = total vertices across all polygons           |
 
 ![ClearedArea with bulk polygon insertion via  — cleared region in blue, remaining area in red](images/ops-cleared-area-bulk.png)
 
@@ -49,13 +51,13 @@ Iteratively call **bites** + **incorporate** until the valid area is fully clear
 Returns all passes, each pass being a list of bite polygons. The cleared area is fully cleared after
 this call.
 
-| Parameter      | Type                                      | Description                                            |
-| -------------- | ----------------------------------------- | ------------------------------------------------------ |
-| `step_over`    | `float`                                   | lateral step-over in mm                                |
-| `valid_area`   | `Sequence[Sequence[tuple[float, float]]]` | list of polygons defining the valid tool-centre region |
-| `simplify_tol` | `float`                                   | tolerance in mm for frontier simplification            |
-| _Returns_      | `list[list[list[tuple[float, float]]]]`   |                                                        |
-| _Complexity_   |                                           | O(k n log n) where k = number of passes                |
+| Parameter      | Type                                      | Description                                              |
+| -------------- | ----------------------------------------- | -------------------------------------------------------- |
+| `step_over`    | `float`                                   | Lateral step-over in mm.                                 |
+| `valid_area`   | `Sequence[Sequence[tuple[float, float]]]` | List of polygons defining the valid tool-centre region.  |
+| `simplify_tol` | `float`                                   | Tolerance in mm for frontier simplification.             |
+| _Returns_      | `list[list[list[tuple[float, float]]]]`   | List of passes, each pass being a list of bite polygons. |
+| _Complexity_   |                                           | O(k n log n) where k = number of passes                  |
 
 ### `begin_step_batch()`
 
@@ -95,15 +97,15 @@ Like **bites** but filters to only the bites whose centroid lies within *max_ang
 direction from the current cleared region's centre toward *target*. useful for steering the clearing
 direction along a MAT branch.
 
-| Parameter      | Type                                      | Description                                            |
-| -------------- | ----------------------------------------- | ------------------------------------------------------ |
-| `step_over`    | `float`                                   | lateral step-over in mm                                |
-| `valid_area`   | `Sequence[Sequence[tuple[float, float]]]` | list of polygons defining the valid tool-centre region |
-| `simplify_tol` | `float`                                   | tolerance in mm for frontier simplification            |
-| `target`       | `tuple[float, float]`                     | (x, y) target point to steer toward                    |
-| `max_angle`    | `float`                                   | maximum deviation from the target direction (radians)  |
-| _Returns_      | `list[list[tuple[float, float]]]`         |                                                        |
-| _Complexity_   |                                           | O(n log n)                                             |
+| Parameter      | Type                                      | Description                                              |
+| -------------- | ----------------------------------------- | -------------------------------------------------------- |
+| `step_over`    | `float`                                   | Lateral step-over in mm.                                 |
+| `valid_area`   | `Sequence[Sequence[tuple[float, float]]]` | List of polygons defining the valid tool-centre region.  |
+| `simplify_tol` | `float`                                   | Tolerance in mm for frontier simplification.             |
+| `target`       | `tuple[float, float]`                     | `(x, y)` target point to steer toward.                   |
+| `max_angle`    | `float`                                   | Maximum deviation from the target direction (radians).   |
+| _Returns_      | `list[list[tuple[float, float]]]`         | List of polygons representing the filtered bite regions. |
+| _Complexity_   |                                           | O(n log n)                                               |
 
 ![Directional bites coloured by pass order (first = dark, later = pale)](images/ops-cleared-area-bite-in-direction.png)
 
@@ -122,13 +124,13 @@ bites(
 Compute the "bites" — new material reachable by expanding the current frontier outward by step_over,
 clipping to valid_area, and subtracting already-cleared portions.
 
-| Parameter      | Type                                      | Description                                            |
-| -------------- | ----------------------------------------- | ------------------------------------------------------ |
-| `step_over`    | `float`                                   | lateral step-over in mm                                |
-| `valid_area`   | `Sequence[Sequence[tuple[float, float]]]` | list of polygons defining the valid tool-centre region |
-| `simplify_tol` | `float`                                   | tolerance in mm for frontier simplification            |
-| _Returns_      | `list[list[tuple[float, float]]]`         |                                                        |
-| _Complexity_   |                                           | O(n log n)                                             |
+| Parameter      | Type                                      | Description                                             |
+| -------------- | ----------------------------------------- | ------------------------------------------------------- |
+| `step_over`    | `float`                                   | Lateral step-over in mm.                                |
+| `valid_area`   | `Sequence[Sequence[tuple[float, float]]]` | List of polygons defining the valid tool-centre region. |
+| `simplify_tol` | `float`                                   | Tolerance in mm for frontier simplification.            |
+| _Returns_      | `list[list[tuple[float, float]]]`         | List of polygons representing the bite regions.         |
+| _Complexity_   |                                           | O(n log n)                                              |
 
 ![ computes the expansible material — the crescent-shaped regions of uncut material reachable by expanding the frontier by .](images/ops-cleared-area-bites.png)
 
@@ -149,18 +151,47 @@ After this call the batch is closed (the caller may start a new one).
 | --------- | ------ | ----------- |
 | _Returns_ | `None` |             |
 
+### `compact_if_needed()`
+
+```python
+compact_if_needed(tol: float) -> None
+```
+
+Compact fragments if total vertex count exceeds the default threshold.
+
+| Parameter | Type    | Description                            |
+| --------- | ------- | -------------------------------------- |
+| `tol`     | `float` | Vertex simplification tolerance in mm. |
+| _Returns_ | `None`  |                                        |
+
+### `compact_if_needed_threshold()`
+
+```python
+compact_if_needed_threshold(tol: float, threshold: int) -> None
+```
+
+Compact with an explicit vertex-count threshold.
+
+| Parameter   | Type    | Description                                                 |
+| ----------- | ------- | ----------------------------------------------------------- |
+| `tol`       | `float` | Vertex simplification tolerance in mm.                      |
+| `threshold` | `int`   | Vertex count threshold above which compaction is triggered. |
+| _Returns_   | `None`  |                                                             |
+
 ### `expand()`
 
 ```python
 expand(path: Sequence[tuple[float, float]], radius: float) -> None
 ```
 
-| Parameter    | Type                            | Description                          |
-| ------------ | ------------------------------- | ------------------------------------ |
-| `path`       | `Sequence[tuple[float, float]]` |                                      |
-| `radius`     | `float`                         |                                      |
-| _Returns_    | `None`                          |                                      |
-| _Complexity_ |                                 | O(n) where n = number of path points |
+Sweep a disk along a polyline, adding the swept area to the cleared set.
+
+| Parameter    | Type                            | Description                                   |
+| ------------ | ------------------------------- | --------------------------------------------- |
+| `path`       | `Sequence[tuple[float, float]]` | List of `(x, y)` points forming the polyline. |
+| `radius`     | `float`                         | Disk radius (mm).                             |
+| _Returns_    | `None`                          |                                               |
+| _Complexity_ |                                 | O(n) where n = number of path points          |
 
 ![: sweeping a disk along a multi-segment path enlarges the cleared area.](images/ops-cleared-area-expand.png)
 
@@ -218,6 +249,25 @@ Panics if `begin_step_batch` was not called first.
 | `radius`  | `float`               | Disk radius (mm).                    |
 | _Returns_ | `None`                |                                      |
 
+### `expand_step_local()`
+
+```python
+expand_step_local(
+    prev: tuple[float, float],
+    next: tuple[float, float],
+    radius: float,
+) -> None
+```
+
+Single-step local expansion (only updates fragments whose bbox overlaps the segment).
+
+| Parameter | Type                  | Description                          |
+| --------- | --------------------- | ------------------------------------ |
+| `prev`    | `tuple[float, float]` | Start point `(x, y)` of the segment. |
+| `next`    | `tuple[float, float]` | End point `(x, y)` of the segment.   |
+| `radius`  | `float`               | Disk radius (mm).                    |
+| _Returns_ | `None`                |                                      |
+
 ### `find_next_resume()`
 
 ```python
@@ -259,10 +309,10 @@ been cut. The fragment set grows as `incorporate` or `add_cleared_polygons` are 
 This is useful for determining which parts of a bite polygon lie outside the cleared area (i.e. the
 cutting arc), for example when used with **raygeo.ops.assembly.hsm.find_cutting_arc**.
 
-| Parameter    | Type                              | Description                        |
-| ------------ | --------------------------------- | ---------------------------------- |
-| _Returns_    | `list[list[tuple[float, float]]]` |                                    |
-| _Complexity_ |                                   | O(m) where m = number of fragments |
+| Parameter    | Type                              | Description                                          |
+| ------------ | --------------------------------- | ---------------------------------------------------- |
+| _Returns_    | `list[list[tuple[float, float]]]` | List of polygons representing the cleared fragments. |
+| _Complexity_ |                                   | O(m) where m = number of fragments                   |
 
 ### `frontier()`
 
@@ -272,11 +322,11 @@ frontier(simplify_tol: float) -> list[list[tuple[float, float]]]
 
 Return a unioned, simplified snapshot of the current outer boundary.
 
-| Parameter      | Type                              | Description                                 |
-| -------------- | --------------------------------- | ------------------------------------------- |
-| `simplify_tol` | `float`                           | tolerance in mm for polyline simplification |
-| _Returns_      | `list[list[tuple[float, float]]]` |                                             |
-| _Complexity_   |                                   | O(n log n)                                  |
+| Parameter      | Type                              | Description                                       |
+| -------------- | --------------------------------- | ------------------------------------------------- |
+| `simplify_tol` | `float`                           | Tolerance in mm for polyline simplification.      |
+| _Returns_      | `list[list[tuple[float, float]]]` | List of polygons representing the outer boundary. |
+| _Complexity_   |                                   | O(n log n)                                        |
 
 ![ returns the outer boundary of the cleared area after merging overlapping fragments — shown in crimson.](images/ops-cleared-area-frontier.png)
 
@@ -291,23 +341,38 @@ incorporate(
 ) -> list[list[tuple[float, float]]]
 ```
 
-Add polygons, returning only the newly-added portion. Faster than add_cleared_polygons when inputs
+Add polygons, returning only the newly-added portion. Faster than `add_cleared_polygons` when inputs
 don't overlap existing fragments (skips the full union).
 
 ```
          O(n) when inputs are disjoint from existing fragments
 ```
 
-| Parameter    | Type                                      | Description                                |
-| ------------ | ----------------------------------------- | ------------------------------------------ |
-| `polygons`   | `Sequence[Sequence[tuple[float, float]]]` |                                            |
-| _Returns_    | `list[list[tuple[float, float]]]`         |                                            |
-| _Complexity_ |                                           | O(n log n) worst case when union required, |
+| Parameter    | Type                                      | Description                                            |
+| ------------ | ----------------------------------------- | ------------------------------------------------------ |
+| `polygons`   | `Sequence[Sequence[tuple[float, float]]]` | List of polygons to add.                               |
+| _Returns_    | `list[list[tuple[float, float]]]`         | List of polygons representing the newly-added portion. |
+| _Complexity_ |                                           | O(n log n) worst case when union required,             |
 
 ![ adds polygons to the cleared state while returning only the newly-covered region (shown in green).](images/ops-cleared-area-incorporate.png)
 
 *`incorporate` adds polygons to the cleared state while returning only the newly-covered region
 (shown in green).*
+
+### `incorporate_local()`
+
+```python
+incorporate_local(
+    polys: Sequence[Sequence[tuple[float, float]]],
+) -> list[list[tuple[float, float]]]
+```
+
+Local version of incorporate.
+
+| Parameter | Type                                      | Description                                            |
+| --------- | ----------------------------------------- | ------------------------------------------------------ |
+| `polys`   | `Sequence[Sequence[tuple[float, float]]]` | List of polygons to add.                               |
+| _Returns_ | `list[list[tuple[float, float]]]`         | List of polygons representing the newly-added portion. |
 
 ### `is_empty()`
 
@@ -317,9 +382,9 @@ is_empty() -> bool
 
 True when no fragments have been recorded.
 
-| Parameter | Type   | Description |
-| --------- | ------ | ----------- |
-| _Returns_ | `bool` |             |
+| Parameter | Type   | Description                                |
+| --------- | ------ | ------------------------------------------ |
+| _Returns_ | `bool` | `True` if no fragments have been recorded. |
 
 ### `path_engagement()`
 
@@ -363,10 +428,12 @@ query_window(
 ) -> list[list[tuple[float, float]]]
 ```
 
+Return fragments whose bounding box overlaps the query window.
+
 | Parameter    | Type                                | Description                                                 |
 | ------------ | ----------------------------------- | ----------------------------------------------------------- |
-| `bbox`       | `tuple[float, float, float, float]` |                                                             |
-| _Returns_    | `list[list[tuple[float, float]]]`   |                                                             |
+| `bbox`       | `tuple[float, float, float, float]` | Bounding box `(x_min, y_min, x_max, y_max)`.                |
+| _Returns_    | `list[list[tuple[float, float]]]`   | Fragments intersecting the bounding box.                    |
 | _Complexity_ |                                     | O(m + k) where m = number of fragments, k = output vertices |
 
 ![ returns only the cleared fragments whose bounding box overlaps the query (green box).](images/ops-cleared-area-query-window.png)
@@ -382,11 +449,13 @@ remaining(
 ) -> list[list[tuple[float, float]]]
 ```
 
-| Parameter    | Type                                      | Description                                       |
-| ------------ | ----------------------------------------- | ------------------------------------------------- |
-| `bounds`     | `Sequence[Sequence[tuple[float, float]]]` |                                                   |
-| _Returns_    | `list[list[tuple[float, float]]]`         |                                                   |
-| _Complexity_ |                                           | O(n * m) where n = bounds vertices, m = fragments |
+Subtract cleared fragments from the boundary polygons, returning the uncut region.
+
+| Parameter    | Type                                      | Description                                        |
+| ------------ | ----------------------------------------- | -------------------------------------------------- |
+| `bounds`     | `Sequence[Sequence[tuple[float, float]]]` | Boundary polygons defining the region of interest. |
+| _Returns_    | `list[list[tuple[float, float]]]`         | List of polygons representing the uncut portion.   |
+| _Complexity_ |                                           | O(n * m) where n = bounds vertices, m = fragments  |
 
 ![ subtracts cleared fragments from the boundary polygon, returning the uncut region (red).](images/ops-cleared-area-remaining.png)
 
@@ -436,6 +505,24 @@ Does **not** modify the ClearedArea — the caller is responsible for committing
 | `opts`            | `StepperOptions`                        | `StepperOptions` controlling the solver. |
 | `max_steps`       | `int`                                   | Maximum number of steps.                 |
 | _Returns_         | `tuple[list[tuple[float, float]], str]` | `(path, status_string)`.                 |
+
+### `set_update_strategy()`
+
+```python
+set_update_strategy(strategy: str) -> None
+```
+
+Switch between global and local fragment-merging strategies.
+
+| Parameter  | Type   | Description                     |
+| ---------- | ------ | ------------------------------- |
+| `strategy` | `str`  | Either `"global"` or `"local"`. |
+| _Returns_  | `None` |                                 |
+
+![Global vs Local update strategy — identical cleared area, but Local updates only the fragments whose bbox overlaps each new swept polygon.](images/ops-cleared-area-local-vs-global.png)
+
+*Global vs Local update strategy — identical cleared area, but Local updates only the fragments
+whose bbox overlaps each new swept polygon.*
 
 ### `signed_boundary_distance()`
 
@@ -495,10 +582,12 @@ behaviour.*
 total_area() -> float
 ```
 
-| Parameter    | Type    | Description |
-| ------------ | ------- | ----------- |
-| _Returns_    | `float` |             |
-| _Complexity_ |         | O(1)        |
+Total cleared area.
+
+| Parameter    | Type    | Description                |
+| ------------ | ------- | -------------------------- |
+| _Returns_    | `float` | Total cleared area in mm². |
+| _Complexity_ |         | O(1)                       |
 
 ## ResumePoint
 
@@ -540,11 +629,15 @@ Contains the next centre position, updated heading, solver iteration count, and 
 heading: float
 ```
 
+Updated heading angle in radians.
+
 ### `iters`
 
 ```python
 iters: int
 ```
+
+Number of solver iterations used.
 
 ### `next`
 
@@ -552,11 +645,15 @@ iters: int
 next: tuple[float, float]
 ```
 
+Next centre position `(x, y)`.
+
 ### `status`
 
 ```python
 status: StepStatus
 ```
+
+Step completion status.
 
 ## StepStatus
 
@@ -571,9 +668,11 @@ One of `Ok` (normal), `BoundaryHit` (hit pocket boundary), `LostEngagement` (no 
 @classmethod boundary_hit() -> StepStatus
 ```
 
-| Parameter | Type         | Description |
-| --------- | ------------ | ----------- |
-| _Returns_ | `StepStatus` |             |
+Hit pocket boundary.
+
+| Parameter | Type         | Description               |
+| --------- | ------------ | ------------------------- |
+| _Returns_ | `StepStatus` | `StepStatus.boundary_hit` |
 
 ### `lost_engagement()`
 
@@ -581,9 +680,11 @@ One of `Ok` (normal), `BoundaryHit` (hit pocket boundary), `LostEngagement` (no 
 @classmethod lost_engagement() -> StepStatus
 ```
 
-| Parameter | Type         | Description |
-| --------- | ------------ | ----------- |
-| _Returns_ | `StepStatus` |             |
+No uncut material found.
+
+| Parameter | Type         | Description                  |
+| --------- | ------------ | ---------------------------- |
+| _Returns_ | `StepStatus` | `StepStatus.lost_engagement` |
 
 ### `no_convergence()`
 
@@ -591,9 +692,11 @@ One of `Ok` (normal), `BoundaryHit` (hit pocket boundary), `LostEngagement` (no 
 @classmethod no_convergence() -> StepStatus
 ```
 
-| Parameter | Type         | Description |
-| --------- | ------------ | ----------- |
-| _Returns_ | `StepStatus` |             |
+Solver failed to converge.
+
+| Parameter | Type         | Description                 |
+| --------- | ------------ | --------------------------- |
+| _Returns_ | `StepStatus` | `StepStatus.no_convergence` |
 
 ### `ok()`
 
@@ -601,9 +704,11 @@ One of `Ok` (normal), `BoundaryHit` (hit pocket boundary), `LostEngagement` (no 
 @classmethod ok() -> StepStatus
 ```
 
-| Parameter | Type         | Description |
-| --------- | ------------ | ----------- |
-| _Returns_ | `StepStatus` |             |
+Normal step completion.
+
+| Parameter | Type         | Description     |
+| --------- | ------------ | --------------- |
+| _Returns_ | `StepStatus` | `StepStatus.ok` |
 
 ## StepperOptions
 
@@ -618,11 +723,15 @@ deflection, and iteration budget.
 engagement_tol: float
 ```
 
+Engagement tolerance in radians.
+
 ### `max_deflection`
 
 ```python
 max_deflection: float
 ```
+
+Maximum steering deflection per step in radians.
 
 ### `max_solver_iters`
 
@@ -630,11 +739,15 @@ max_deflection: float
 max_solver_iters: int
 ```
 
+Maximum solver iterations per step.
+
 ### `radius`
 
 ```python
 radius: float
 ```
+
+Disk radius in mm.
 
 ### `step_length`
 
@@ -642,11 +755,15 @@ radius: float
 step_length: float
 ```
 
+Forward step length in mm.
+
 ### `target_engagement`
 
 ```python
 target_engagement: float
 ```
+
+Target engagement angle in radians.
 
 ## Functions
 

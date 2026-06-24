@@ -10,14 +10,17 @@ use crate::geo::shape::line::get_line_segment_closest_point;
 use crate::geo::shape::polygon::get_polygon_area;
 use crate::geo::shape::polygon::get_polygon_bounds;
 use crate::geo::shape::polygon::get_polygon_centroid;
+use crate::geo::shape::polygon::get_polygon_signed_area;
 use crate::geo::shape::polygon::get_polygons_closest_point;
 use crate::geo::shape::polygon::get_polygons_group_difference;
 use crate::geo::shape::polygon::get_polygons_group_intersection;
 use crate::geo::shape::polygon::get_polygons_union;
 use crate::geo::shape::polygon::get_segment_swept_polygon;
+use crate::geo::shape::polygon::is_point_in_polygon;
 use crate::geo::shape::polygon::offset_polygon;
 use crate::geo::shape::polygon::JoinStyle;
 use crate::types::{Point, Point3D, Polygon, Rect};
+use std::collections::HashSet;
 
 pub struct ClearedArea {
     fragments: Vec<Polygon>,
@@ -37,6 +40,18 @@ pub struct ClearedArea {
     batch_buffer: Vec<Polygon>,
     /// True when `begin_step_batch()` has been called.
     batch_active: bool,
+    /// How fragment-merging unions are performed.
+    update_strategy: UpdateStrategy,
+}
+
+/// How the cleared area merges new swept polygons into stored fragments.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum UpdateStrategy {
+    /// Union ALL fragments with the new polygon(s) in one pass.
+    #[default]
+    Global,
+    /// Only union fragments whose bbox overlaps the new polygon.
+    Local,
 }
 
 /// A resume point found on the cleared-area frontier.
@@ -70,6 +85,11 @@ pub struct StepperOptions {
     /// Maximum solver iterations per step.  Default `6` (usually converges
     /// in 2–3 on smooth geometry).
     pub max_solver_iters: usize,
+    /// Optional set of polygons defining the valid tool-centre region.
+    /// When set, [`step`](ClearedArea::step) checks that candidate
+    /// positions stay inside this area and returns
+    /// [`BoundaryHit`](StepStatus::BoundaryHit) when the tool exits it.
+    pub valid_area: Option<Vec<Polygon>>,
 }
 
 impl Default for StepperOptions {
@@ -81,6 +101,7 @@ impl Default for StepperOptions {
             engagement_tol: 0.01,
             max_deflection: std::f64::consts::FRAC_PI_6,
             max_solver_iters: 6,
+            valid_area: None,
         }
     }
 }
@@ -173,26 +194,50 @@ impl ClearedArea {
     /// Starting from `pos` with the given `heading` (radians), propose candidate
     /// positions at `step_length` distance along trial deflection angles and
     /// solve for the heading that maintains the target engagement.
+    ///
+    /// When a candidate position falls outside the optional `valid_area`
+    /// its engagement is reported as infinite so the solver naturally
+    /// steers away from the boundary — the tool slides along the wall
+    /// instead of trying to cross it.
     pub fn step(
         &self,
         pos: Point,
         heading: f64,
         opts: &StepperOptions,
     ) -> StepResult {
-        let cur_eng = self.point_engagement(pos, opts.radius);
-        if cur_eng.angle < opts.target_engagement * 0.05 {
-            return StepResult {
-                next: pos,
-                heading,
-                engagement: cur_eng,
-                iters: 0,
-                status: StepStatus::LostEngagement,
+        // Helper: true when point is inside the valid tool-centre region.
+        let point_is_valid = |pt: Point| -> bool {
+            let Some(ref area) = opts.valid_area else {
+                return true;
             };
-        }
+            if area.is_empty() {
+                return false;
+            }
+            let mut inside_outer = false;
+            let mut inside_hole = false;
+            for poly in area {
+                if poly.len() < 3 {
+                    continue;
+                }
+                let is_ccw = get_polygon_signed_area(poly) > 0.0;
+                let inside = is_point_in_polygon(pt, poly);
+                if is_ccw && inside {
+                    inside_outer = true;
+                } else if !is_ccw && inside {
+                    inside_hole = true;
+                }
+            }
+            inside_outer && !inside_hole
+        };
 
         let engagement_at = |phi: f64| -> f64 {
             let dir = Point::new(phi.cos(), phi.sin());
             let candidate = pos + dir * opts.step_length;
+            if !point_is_valid(candidate) {
+                // Candidate outside valid area → report near-zero
+                // engagement so the solver steers back inside.
+                return 0.01;
+            }
             let eng = self.point_engagement(candidate, opts.radius);
             eng.angle
         };
@@ -200,9 +245,27 @@ impl ClearedArea {
         let (best_phi, step_status, iters) =
             try_bracket(heading, opts, &engagement_at);
 
+        // Check probes: if even the best probe has near-zero engagement,
+        // the tool has no material ahead (not just at the current pos).
+        let best_eng = engagement_at(best_phi);
+        if best_eng < opts.target_engagement * 0.05 {
+            return StepResult {
+                next: pos,
+                heading,
+                engagement: Engagement {
+                    angle: best_eng,
+                    area: 0.0,
+                    chord_depth: 0.0,
+                },
+                iters,
+                status: StepStatus::LostEngagement,
+            };
+        }
+
         let mut step_len = opts.step_length;
         if step_status == StepStatus::Ok {
-            let eng_at_best = engagement_at(best_phi);
+            let eng_at_best = best_eng;
+            let cur_eng = self.point_engagement(pos, opts.radius);
             let cur_err = cur_eng.angle - opts.target_engagement;
             let best_err = eng_at_best - opts.target_engagement;
             if cur_err * best_err < 0.0 && cur_err.abs() > opts.engagement_tol {
@@ -219,6 +282,14 @@ impl ClearedArea {
 
         let dir = Point::new(best_phi.cos(), best_phi.sin());
         let next_pos = pos + dir * step_len;
+
+        // Final valid-area check.
+        let status = if point_is_valid(next_pos) {
+            step_status
+        } else {
+            StepStatus::BoundaryHit
+        };
+
         let eng = self.point_engagement(next_pos, opts.radius);
 
         StepResult {
@@ -226,7 +297,7 @@ impl ClearedArea {
             heading: best_phi,
             engagement: eng,
             iters,
-            status: step_status,
+            status,
         }
     }
 
@@ -311,6 +382,7 @@ impl ClearedArea {
             edge_cell_size,
             batch_buffer: Vec::new(),
             batch_active: false,
+            update_strategy: UpdateStrategy::default(),
         }
     }
 
@@ -327,6 +399,7 @@ impl ClearedArea {
             edge_cell_size,
             batch_buffer: Vec::new(),
             batch_active: false,
+            update_strategy: UpdateStrategy::default(),
         };
         for poly in initial {
             if poly.len() >= 3 {
@@ -437,6 +510,7 @@ impl ClearedArea {
         self.rebuild_grid();
     }
 
+    #[prof]
     pub fn query_window(&self, bbox: Rect) -> Vec<&Polygon> {
         let indices = self.grid.query(bbox);
         let mut result: Vec<&Polygon> = indices
@@ -756,6 +830,7 @@ impl ClearedArea {
     /// sweeps with the stored fragments in a single pass.
     ///
     /// Calling this while a batch is already active is a no‑op.
+    #[prof]
     pub fn begin_step_batch(&mut self) {
         self.batch_active = true;
     }
@@ -768,6 +843,7 @@ impl ClearedArea {
     ///
     /// # Panics
     /// Panics if `begin_step_batch()` was not called first.
+    #[prof]
     pub fn expand_step_batched(
         &mut self,
         prev: Point,
@@ -789,16 +865,120 @@ impl ClearedArea {
     /// then rebuild the spatial grid once.
     ///
     /// After this call the batch is closed (the caller may start a new one).
+    #[prof]
     pub fn commit_step_batch(&mut self) {
         if !self.batch_active || self.batch_buffer.is_empty() {
             self.batch_active = false;
             return;
         }
-        let mut all_polys = self.fragments.clone();
-        all_polys.append(&mut self.batch_buffer);
-        self.fragments = get_polygons_union(&all_polys);
-        self.rebuild_grid();
+        let buf = std::mem::take(&mut self.batch_buffer);
+        match self.update_strategy {
+            UpdateStrategy::Global => {
+                let mut all_polys = self.fragments.clone();
+                all_polys.extend(buf);
+                self.fragments = get_polygons_union(&all_polys);
+                self.rebuild_grid();
+            }
+            UpdateStrategy::Local => {
+                for poly in buf {
+                    self.apply_local_merge(&poly);
+                }
+            }
+        }
         self.batch_active = false;
+    }
+
+    /// Set the fragment-merging strategy.
+    pub fn set_update_strategy(&mut self, strategy: UpdateStrategy) {
+        self.update_strategy = strategy;
+    }
+
+    /// Local union: merge `swept` only with fragments whose bbox overlaps it.
+    fn apply_local_merge(&mut self, swept: &Polygon) {
+        if swept.len() < 3 {
+            return;
+        }
+        let mut to_merge: Vec<Polygon> = vec![swept.clone()];
+        let mut removed: HashSet<usize> = HashSet::new();
+
+        for _cascade in 0..2 {
+            let bbox = get_polygon_bounds(to_merge.last().unwrap());
+            let margin = self.cell_size;
+            let qbox = Rect::new(
+                bbox.min.x - margin,
+                bbox.min.y - margin,
+                bbox.max.x + margin,
+                bbox.max.y + margin,
+            );
+            let candidates: Vec<usize> = self
+                .grid
+                .query(qbox)
+                .into_iter()
+                .filter(|i| !removed.contains(i))
+                .collect();
+            if candidates.is_empty() {
+                break;
+            }
+            for &ci in &candidates {
+                removed.insert(ci);
+                to_merge.push(self.fragments[ci].clone());
+            }
+            let merged = get_polygons_union(&to_merge);
+            to_merge = merged;
+        }
+
+        // Remove old fragments in descending index order so swap_remove
+        // never touches an already-processed position.
+        let mut sorted: Vec<usize> = removed.into_iter().collect();
+        sorted.sort_unstable_by(|a, b| b.cmp(a));
+        for &fi in &sorted {
+            self.fragments.swap_remove(fi);
+        }
+        // Add merged results.
+        for poly in to_merge {
+            if poly.len() >= 3 {
+                self.fragments.push(poly);
+            }
+        }
+        self.rebuild_grid();
+    }
+
+    /// Single-step local expansion — merges the swept disk segment via
+    /// local union.
+    pub fn expand_step_local(&mut self, prev: Point, next: Point, radius: f64) {
+        let swept = get_segment_swept_polygon(prev, next, radius);
+        for poly in swept {
+            self.apply_local_merge(&poly);
+        }
+    }
+
+    /// Local version of [`incorporate`](Self::incorporate).
+    pub fn incorporate_local(&mut self, polys: &[Polygon]) -> Vec<Polygon> {
+        let new = self.remaining(polys);
+        if new.is_empty() {
+            return new;
+        }
+        for poly in &new {
+            self.apply_local_merge(poly);
+        }
+        new
+    }
+
+    /// When total vertex count exceeds `threshold`, compact fragments by
+    /// replacing them with the simplified frontier.
+    pub fn compact_if_needed(&mut self, tol: f64) {
+        self.compact_if_needed_threshold(tol, 50_000)
+    }
+
+    /// Like [`compact_if_needed`](Self::compact_if_needed) but with an
+    /// explicit vertex-count threshold.
+    pub fn compact_if_needed_threshold(&mut self, tol: f64, threshold: usize) {
+        let total: usize = self.fragments.iter().map(|p| p.len()).sum();
+        if total < threshold {
+            return;
+        }
+        let frontier = self.frontier(tol);
+        self.replace_fragments(frontier);
     }
 
     /// True when any polygon in `polys` overlaps an existing fragment.
@@ -842,6 +1022,76 @@ impl ClearedArea {
     pub fn point_engagement(&self, center: Point, radius: f64) -> Engagement {
         let d = self.signed_boundary_distance(center.x, center.y);
         compute_engagement(d, radius)
+    }
+
+    /// Compute angular engagement by exact circle–polygon intersection.
+    ///
+    /// Creates a disk polygon at `center` with `radius`, intersects it
+    /// with all nearby cleared fragments, and returns the uncleled
+    /// angular extent in `[0, 2π]`.
+    #[prof]
+    pub fn angular_engagement(&self, center: Point, radius: f64) -> f64 {
+        use crate::geo::algo::engagement::circle_polygon_intersection_area;
+
+        let bb = Rect::new(
+            center.x - radius,
+            center.y - radius,
+            center.x + radius,
+            center.y + radius,
+        );
+        let nearby: Vec<Polygon> =
+            self.query_window(bb).into_iter().cloned().collect();
+
+        if nearby.is_empty() {
+            return std::f64::consts::TAU;
+        }
+
+        let cleared_area =
+            circle_polygon_intersection_area(center, radius, 32, &nearby);
+        let disk_area = std::f64::consts::PI * radius * radius;
+        let uncleled_area = (disk_area - cleared_area).max(0.0);
+        2.0 * uncleled_area / (radius * radius)
+    }
+
+    /// Compute the **incremental cut area** when the tool moves from
+    /// `c1` to `c2`: the area inside the disk at `c2` that is NOT
+    /// inside the disk at `c1` and NOT already cleared.
+    ///
+    /// This is the amount of *fresh* material the tool encounters by
+    /// stepping forward — the metric used for engagement calculation.
+    /// Unlike [`angular_engagement`](Self::angular_engagement) (which
+    /// measures total overlap), this naturally prevents runaway
+    /// outward drift because the crescent area is bounded by the step
+    /// length.
+    #[prof]
+    pub fn cut_area(&self, c1: Point, c2: Point, radius: f64) -> f64 {
+        use crate::geo::shape::polygon::get_circle_polygon;
+
+        let disk_c2 = get_circle_polygon(c2, radius, 32);
+        let disk_c1 = get_circle_polygon(c1, radius, 32);
+
+        // Crescent = disk(c2) − disk(c1)
+        let crescent = get_polygons_group_difference(&[disk_c2], &[disk_c1]);
+        if crescent.is_empty() {
+            return 0.0;
+        }
+
+        // Find nearby cleared fragments.
+        let bb = Rect::new(
+            c2.x - radius,
+            c2.y - radius,
+            c2.x + radius,
+            c2.y + radius,
+        );
+        let nearby: Vec<Polygon> =
+            self.query_window(bb).into_iter().cloned().collect();
+        if nearby.is_empty() {
+            return crescent.iter().map(get_polygon_area).sum();
+        }
+
+        // Fresh = crescent − cleared
+        let fresh = get_polygons_group_difference(&crescent, &nearby);
+        fresh.iter().map(get_polygon_area).sum()
     }
 
     /// Evaluate engagement along a polyline for post-hoc analysis.
@@ -964,24 +1214,27 @@ fn frontier_heading_at(v: Point, poly: &[Point]) -> f64 {
     if poly.len() < 3 {
         return 0.0;
     }
-    let idx = poly.iter().enumerate().min_by(|(_, a), (_, b)| {
-        a.distance_squared(v)
-            .partial_cmp(&b.distance_squared(v))
-            .unwrap_or(std::cmp::Ordering::Equal)
-    });
-    let idx = match idx {
-        Some((i, _)) => i,
-        None => return 0.0,
-    };
     let n = poly.len();
-    let prev = poly[(idx + n - 1) % n];
-    let next = poly[(idx + 1) % n];
-    let tangent = next - prev;
-    if tangent.length_squared() < 1e-12 {
+    // Find the edge whose perpendicular projection best matches v.
+    let mut best_edge = (0usize, 1usize);
+    let mut best_d2 = f64::MAX;
+    for i in 0..n {
+        let j = (i + 1) % n;
+        let a = poly[i];
+        let b = poly[j];
+        let (_, _, d2) = get_line_segment_closest_point(a, b, v.x, v.y);
+        if d2 < best_d2 {
+            best_d2 = d2;
+            best_edge = (i, j);
+        }
+    }
+    let (ei, ej) = best_edge;
+    let edge_dir = poly[ej] - poly[ei];
+    if edge_dir.length_squared() < 1e-12 {
         return 0.0;
     }
-    let tangent = tangent.normalize();
-    let outward = Point::new(-tangent.y, tangent.x);
+    // Right normal: for a CCW outer polygon this points outward.
+    let outward = Point::new(edge_dir.y, -edge_dir.x);
     outward.y.atan2(outward.x)
 }
 

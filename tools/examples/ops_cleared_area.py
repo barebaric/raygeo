@@ -510,7 +510,7 @@ def generate_find_next_resume():
     for frag in ca.query_window((-10, -10, 120, 100)):
         fx = [p[0] for p in frag] + [frag[0][0]]
         fy = [p[1] for p in frag] + [frag[0][1]]
-        ax.fill(fx, fy, "steelblue", alpha=0.3)
+        ax.fill(fx, fy, "steelblue", alpha=0.3, label="Cleared area")
         ax.plot(fx, fy, "steelblue", linewidth=1.5, alpha=0.5)
 
     ax.plot(end_pos[0], end_pos[1], "rv", markersize=10, label="End position")
@@ -994,6 +994,57 @@ def generate_engagement_histogram():
     return fig
 
 
+def generate_local_vs_global():
+    """Side-by-side: Global vs Local strategy produce identical clearing."""
+
+    def _spiral_segments(n):
+        segs = []
+        for i in range(n):
+            a = i * 0.5
+            r = 5.0 + a * 0.3
+            prev = (100 + r * math.cos(a), 100 + r * math.sin(a))
+            next = (
+                100 + (r + 1.0) * math.cos(a + 0.5),
+                100 + (r + 1.0) * math.sin(a + 0.5),
+            )
+            segs.append((prev, next, 3.0))
+        return segs
+
+    segs = _spiral_segments(500)
+
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 7))
+
+    # Global
+    cag = ClearedArea()
+    for prev, nxt, r in segs:
+        cag.expand_step(prev, nxt, r)
+    vg = sum(len(p) for p in cag.fragments())
+    # Draw fragments coloured by vertex count
+    for poly in cag.fragments():
+        xs = [p[0] for p in poly]
+        ys = [p[1] for p in poly]
+        ax1.fill(xs, ys, alpha=0.4, fc="#1f77b4", ec="#1f77b4", lw=0.3)
+    ax1.set_title(f"Global — {len(cag.fragments())} frags, {vg} verts")
+    ax1.set_aspect("equal")
+
+    # Local
+    cal = ClearedArea()
+    cal.set_update_strategy("local")
+    for prev, nxt, r in segs:
+        cal.expand_step_local(prev, nxt, r)
+    vl = sum(len(p) for p in cal.fragments())
+    for poly in cal.fragments():
+        xs = [p[0] for p in poly]
+        ys = [p[1] for p in poly]
+        ax2.fill(xs, ys, alpha=0.4, fc="#ff7f0e", ec="#ff7f0e", lw=0.3)
+    ax2.set_title(f"Local — {len(cal.fragments())} frags, {vl} verts")
+    ax2.set_aspect("equal")
+
+    fig.suptitle("Global vs Local strategy — identical area", fontsize=13)
+    fig.tight_layout()
+    return fig
+
+
 __docs_target__ = ["raygeo.ops.cleared_area.md"]
 __images__ = [
     {
@@ -1122,5 +1173,12 @@ __images__ = [
         "caption": "Engagement histogram for 200 steps along a straight "
         "wall. Tight peak near target indicates stable behaviour.",
         "function": generate_engagement_histogram,
+    },
+    {
+        "heading": "set_update_strategy",
+        "caption": "Global vs Local update strategy — identical cleared "
+        "area, but Local updates only the fragments whose bbox "
+        "overlaps each new swept polygon.",
+        "function": generate_local_vs_global,
     },
 ]

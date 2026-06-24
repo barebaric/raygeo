@@ -14,6 +14,7 @@ use pyo3_stub_gen::derive::{
 };
 
 use crate::ops::cleared_area::ClearedArea as RustClearedArea;
+use crate::ops::cleared_area::UpdateStrategy;
 use crate::python::geo::algo::medial_axis::PyMedialAxis;
 use crate::types::Point;
 use crate::types::Rect;
@@ -34,6 +35,12 @@ pub struct PyStepperOptions {
 #[gen_stub_pymethods]
 #[pymethods]
 impl PyStepperOptions {
+    /// :param radius: Disk radius in mm (default 3.0).
+    /// :param step_length: Forward step length in mm (default 0.6).
+    /// :param target_engagement: Target engagement angle in radians (default π).
+    /// :param engagement_tol: Engagement tolerance in radians (default 0.01).
+    /// :param max_deflection: Maximum steering deflection per step in radians (default π/6).
+    /// :param max_solver_iters: Maximum solver iterations per step (default 6).
     #[new]
     #[pyo3(signature = (
         radius = 3.0,
@@ -61,10 +68,12 @@ impl PyStepperOptions {
                 engagement_tol,
                 max_deflection: max_def,
                 max_solver_iters,
+                valid_area: None,
             },
         }
     }
 
+    /// Disk radius in mm.
     #[getter]
     pub fn get_radius(&self) -> f64 {
         self.inner.radius
@@ -73,6 +82,7 @@ impl PyStepperOptions {
     pub fn set_radius(&mut self, v: f64) {
         self.inner.radius = v;
     }
+    /// Forward step length in mm.
     #[getter]
     pub fn get_step_length(&self) -> f64 {
         self.inner.step_length
@@ -81,6 +91,7 @@ impl PyStepperOptions {
     pub fn set_step_length(&mut self, v: f64) {
         self.inner.step_length = v;
     }
+    /// Target engagement angle in radians.
     #[getter]
     pub fn get_target_engagement(&self) -> f64 {
         self.inner.target_engagement
@@ -89,6 +100,7 @@ impl PyStepperOptions {
     pub fn set_target_engagement(&mut self, v: f64) {
         self.inner.target_engagement = v;
     }
+    /// Engagement tolerance in radians.
     #[getter]
     pub fn get_engagement_tol(&self) -> f64 {
         self.inner.engagement_tol
@@ -97,6 +109,7 @@ impl PyStepperOptions {
     pub fn set_engagement_tol(&mut self, v: f64) {
         self.inner.engagement_tol = v;
     }
+    /// Maximum steering deflection per step in radians.
     #[getter]
     pub fn get_max_deflection(&self) -> f64 {
         self.inner.max_deflection
@@ -105,6 +118,7 @@ impl PyStepperOptions {
     pub fn set_max_deflection(&mut self, v: f64) {
         self.inner.max_deflection = v;
     }
+    /// Maximum solver iterations per step.
     #[getter]
     pub fn get_max_solver_iters(&self) -> usize {
         self.inner.max_solver_iters
@@ -141,24 +155,32 @@ pub struct PyStepStatus {
 #[gen_stub_pymethods]
 #[pymethods]
 impl PyStepStatus {
+    /// Normal step completion.
+    /// :returns: ``StepStatus.ok``
     #[classmethod]
     fn ok(_cls: &Bound<'_, PyType>) -> Self {
         PyStepStatus {
             inner: crate::ops::cleared_area::StepStatus::Ok,
         }
     }
+    /// Hit pocket boundary.
+    /// :returns: ``StepStatus.boundary_hit``
     #[classmethod]
     fn boundary_hit(_cls: &Bound<'_, PyType>) -> Self {
         PyStepStatus {
             inner: crate::ops::cleared_area::StepStatus::BoundaryHit,
         }
     }
+    /// No uncut material found.
+    /// :returns: ``StepStatus.lost_engagement``
     #[classmethod]
     fn lost_engagement(_cls: &Bound<'_, PyType>) -> Self {
         PyStepStatus {
             inner: crate::ops::cleared_area::StepStatus::LostEngagement,
         }
     }
+    /// Solver failed to converge.
+    /// :returns: ``StepStatus.no_convergence``
     #[classmethod]
     fn no_convergence(_cls: &Bound<'_, PyType>) -> Self {
         PyStepStatus {
@@ -179,12 +201,16 @@ impl PyStepStatus {
 #[pyclass(name = "StepResult", skip_from_py_object)]
 #[derive(Clone, Debug)]
 pub struct PyStepResult {
+    /// Next centre position ``(x, y)``.
     #[pyo3(get)]
     pub next: (f64, f64),
+    /// Updated heading angle in radians.
     #[pyo3(get)]
     pub heading: f64,
+    /// Number of solver iterations used.
     #[pyo3(get)]
     pub iters: usize,
+    /// Step completion status.
     #[pyo3(get)]
     pub status: PyStepStatus,
 }
@@ -234,6 +260,10 @@ impl ClearedArea {
         }
     }
 
+    /// Sweep a disk along a polyline, adding the swept area to the cleared set.
+    ///
+    /// :param path: List of ``(x, y)`` points forming the polyline.
+    /// :param radius: Disk radius (mm).
     /// :complexity: O(n) where n = number of path points
     pub fn expand(&mut self, path: Vec<(f64, f64)>, radius: f64) {
         let path: Vec<crate::types::Point> = path
@@ -274,6 +304,9 @@ impl ClearedArea {
         self.inner.signed_boundary_distance(x, y)
     }
 
+    /// Add pre‑computed polygons to the cleared set.
+    ///
+    /// :param polygons: List of polygons (each a list of ``(x, y)`` vertices) to add.
     /// :complexity: O(n) where n = total vertices across all polygons
     pub fn add_cleared_polygons(&mut self, polygons: Vec<Vec<(f64, f64)>>) {
         let polys: Vec<crate::types::Polygon> = polygons
@@ -287,6 +320,10 @@ impl ClearedArea {
         self.inner.add_cleared_polygons(&polys);
     }
 
+    /// Return fragments whose bounding box overlaps the query window.
+    ///
+    /// :param bbox: Bounding box ``(x_min, y_min, x_max, y_max)``.
+    /// :returns: Fragments intersecting the bounding box.
     /// :complexity: O(m + k) where m = number of fragments, k = output vertices
     pub fn query_window(
         &self,
@@ -300,6 +337,10 @@ impl ClearedArea {
             .collect()
     }
 
+    /// Subtract cleared fragments from the boundary polygons, returning the uncut region.
+    ///
+    /// :param bounds: Boundary polygons defining the region of interest.
+    /// :returns: List of polygons representing the uncut portion.
     /// :complexity: O(n * m) where n = bounds vertices, m = fragments
     pub fn remaining(
         &self,
@@ -321,8 +362,11 @@ impl ClearedArea {
     }
 
     /// Add polygons, returning only the newly-added portion.
-    /// Faster than add_cleared_polygons when inputs don't overlap
+    /// Faster than ``add_cleared_polygons`` when inputs don't overlap
     /// existing fragments (skips the full union).
+    ///
+    /// :param polygons: List of polygons to add.
+    /// :returns: List of polygons representing the newly-added portion.
     /// :complexity: O(n log n) worst case when union required,
     ///              O(n) when inputs are disjoint from existing fragments
     pub fn incorporate(
@@ -344,7 +388,9 @@ impl ClearedArea {
     }
 
     /// Return a unioned, simplified snapshot of the current outer boundary.
-    /// :param simplify_tol: tolerance in mm for polyline simplification
+    ///
+    /// :param simplify_tol: Tolerance in mm for polyline simplification.
+    /// :returns: List of polygons representing the outer boundary.
     /// :complexity: O(n log n)
     pub fn frontier(&self, simplify_tol: f64) -> Vec<Vec<(f64, f64)>> {
         let f = self.inner.frontier(simplify_tol);
@@ -356,9 +402,11 @@ impl ClearedArea {
     /// Compute the "bites" — new material reachable by expanding the
     /// current frontier outward by step_over, clipping to valid_area,
     /// and subtracting already-cleared portions.
-    /// :param step_over: lateral step-over in mm
-    /// :param valid_area: list of polygons defining the valid tool-centre region
-    /// :param simplify_tol: tolerance in mm for frontier simplification
+    ///
+    /// :param step_over: Lateral step-over in mm.
+    /// :param valid_area: List of polygons defining the valid tool-centre region.
+    /// :param simplify_tol: Tolerance in mm for frontier simplification.
+    /// :returns: List of polygons representing the bite regions.
     /// :complexity: O(n log n)
     pub fn bites(
         &self,
@@ -385,11 +433,13 @@ impl ClearedArea {
     /// lies within *max_angle* radians of the direction from the current
     /// cleared region's centre toward *target*.
     /// useful for steering the clearing direction along a MAT branch.
-    /// :param step_over: lateral step-over in mm
-    /// :param valid_area: list of polygons defining the valid tool-centre region
-    /// :param simplify_tol: tolerance in mm for frontier simplification
-    /// :param target: (x, y) target point to steer toward
-    /// :param max_angle: maximum deviation from the target direction (radians)
+    ///
+    /// :param step_over: Lateral step-over in mm.
+    /// :param valid_area: List of polygons defining the valid tool-centre region.
+    /// :param simplify_tol: Tolerance in mm for frontier simplification.
+    /// :param target: ``(x, y)`` target point to steer toward.
+    /// :param max_angle: Maximum deviation from the target direction (radians).
+    /// :returns: List of polygons representing the filtered bite regions.
     /// :complexity: O(n log n)
     pub fn bite_in_direction(
         &self,
@@ -425,9 +475,11 @@ impl ClearedArea {
     ///
     /// Returns all passes, each pass being a list of bite polygons.
     /// The cleared area is fully cleared after this call.
-    /// :param step_over: lateral step-over in mm
-    /// :param valid_area: list of polygons defining the valid tool-centre region
-    /// :param simplify_tol: tolerance in mm for frontier simplification
+    ///
+    /// :param step_over: Lateral step-over in mm.
+    /// :param valid_area: List of polygons defining the valid tool-centre region.
+    /// :param simplify_tol: Tolerance in mm for frontier simplification.
+    /// :returns: List of passes, each pass being a list of bite polygons.
     /// :complexity: O(k n log n) where k = number of passes
     pub fn all_bites(
         &mut self,
@@ -454,17 +506,24 @@ impl ClearedArea {
             .collect()
     }
 
+    /// Total cleared area.
+    ///
+    /// :returns: Total cleared area in mm².
     /// :complexity: O(1)
     pub fn total_area(&self) -> f64 {
         self.inner.total_area()
     }
 
     /// Number of cleared fragments.
+    ///
+    /// :returns: Fragment count.
     pub fn __len__(&self) -> usize {
         self.inner.len()
     }
 
     /// True when no fragments have been recorded.
+    ///
+    /// :returns: ``True`` if no fragments have been recorded.
     pub fn is_empty(&self) -> bool {
         self.inner.is_empty()
     }
@@ -478,6 +537,8 @@ impl ClearedArea {
     /// This is useful for determining which parts of a bite polygon
     /// lie outside the cleared area (i.e. the cutting arc), for example
     /// when used with :py:func:`raygeo.ops.assembly.hsm.find_cutting_arc`.
+    ///
+    /// :returns: List of polygons representing the cleared fragments.
     /// :complexity: O(m) where m = number of fragments
     pub fn fragments(&self) -> Vec<Vec<(f64, f64)>> {
         self.inner
@@ -697,6 +758,67 @@ impl ClearedArea {
             link_path: r.link_path.into_iter().map(|p| (p.x, p.y)).collect(),
         })
     }
+
+    /// Switch between global and local fragment-merging strategies.
+    ///
+    /// :param strategy: Either ``"global"`` or ``"local"``.
+    pub fn set_update_strategy(&mut self, strategy: &str) {
+        match strategy {
+            "local" => self.inner.set_update_strategy(UpdateStrategy::Local),
+            _ => self.inner.set_update_strategy(UpdateStrategy::Global),
+        }
+    }
+
+    /// Single-step local expansion (only updates fragments whose bbox overlaps the segment).
+    ///
+    /// :param prev: Start point ``(x, y)`` of the segment.
+    /// :param next: End point ``(x, y)`` of the segment.
+    /// :param radius: Disk radius (mm).
+    pub fn expand_step_local(
+        &mut self,
+        prev: (f64, f64),
+        next: (f64, f64),
+        radius: f64,
+    ) {
+        self.inner.expand_step_local(
+            Point::new(prev.0, prev.1),
+            Point::new(next.0, next.1),
+            radius,
+        );
+    }
+
+    /// Local version of incorporate.
+    ///
+    /// :param polys: List of polygons to add.
+    /// :returns: List of polygons representing the newly-added portion.
+    pub fn incorporate_local(
+        &mut self,
+        polys: Vec<Vec<(f64, f64)>>,
+    ) -> Vec<Vec<(f64, f64)>> {
+        let polygons: Vec<Vec<Point>> = polys
+            .into_iter()
+            .map(|v| v.into_iter().map(|(x, y)| Point::new(x, y)).collect())
+            .collect();
+        let new = self.inner.incorporate_local(&polygons);
+        new.into_iter()
+            .map(|poly| poly.into_iter().map(|p| (p.x, p.y)).collect())
+            .collect()
+    }
+
+    /// Compact fragments if total vertex count exceeds the default threshold.
+    ///
+    /// :param tol: Vertex simplification tolerance in mm.
+    pub fn compact_if_needed(&mut self, tol: f64) {
+        self.inner.compact_if_needed(tol);
+    }
+
+    /// Compact with an explicit vertex-count threshold.
+    ///
+    /// :param tol: Vertex simplification tolerance in mm.
+    /// :param threshold: Vertex count threshold above which compaction is triggered.
+    pub fn compact_if_needed_threshold(&mut self, tol: f64, threshold: usize) {
+        self.inner.compact_if_needed_threshold(tol, threshold);
+    }
 }
 
 /// A resume point found on the cleared-area frontier.
@@ -718,6 +840,9 @@ pub struct PyResumePoint {
 #[gen_stub_pymethods]
 #[pymethods]
 impl PyResumePoint {
+    /// :param pos: Position on the frontier ``(x, y)``.
+    /// :param heading: Outward-normal heading in radians.
+    /// :param link_path: Travel polyline through cleared territory.
     #[new]
     #[pyo3(signature = (pos, heading, link_path))]
     pub fn new(

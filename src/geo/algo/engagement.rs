@@ -8,6 +8,7 @@ use crate::geo::shape::polygon::get_circle_polygon;
 use crate::geo::shape::polygon::get_polygon_area;
 use crate::geo::shape::polygon::get_polygons_group_intersection;
 use crate::types::{Point, Polygon};
+use prof_macros::prof;
 
 /// All-in-one engagement result from a closest‑distance query.
 #[derive(Clone, Copy, Debug)]
@@ -68,6 +69,7 @@ pub fn compute_engagement(d_to_boundary: f64, radius: f64) -> Engagement {
 ///
 /// Intersects the circle (approximated as an `n`‑gon) with `polys`,
 /// then computes the area of the result.  Useful for commit‑time validation.
+#[prof]
 pub fn circle_polygon_intersection_area(
     center: Point,
     radius: f64,

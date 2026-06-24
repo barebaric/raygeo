@@ -24,6 +24,10 @@ class ClearedArea:
     def __new__(cls, initial: typing.Optional[typing.Sequence[typing.Sequence[tuple[builtins.float, builtins.float]]]] = None) -> ClearedArea: ...
     def expand(self, path: typing.Sequence[tuple[builtins.float, builtins.float]], radius: builtins.float) -> None:
         r"""
+        Sweep a disk along a polyline, adding the swept area to the cleared set.
+        
+        :param path: List of ``(x, y)`` points forming the polyline.
+        :param radius: Disk radius (mm).
         :complexity: O(n) where n = number of path points
         """
     def expand_step(self, prev: tuple[builtins.float, builtins.float], next: tuple[builtins.float, builtins.float], radius: builtins.float) -> None:
@@ -48,28 +52,44 @@ class ClearedArea:
         """
     def add_cleared_polygons(self, polygons: typing.Sequence[typing.Sequence[tuple[builtins.float, builtins.float]]]) -> None:
         r"""
+        Add pre‑computed polygons to the cleared set.
+        
+        :param polygons: List of polygons (each a list of ``(x, y)`` vertices) to add.
         :complexity: O(n) where n = total vertices across all polygons
         """
     def query_window(self, bbox: tuple[builtins.float, builtins.float, builtins.float, builtins.float]) -> builtins.list[builtins.list[tuple[builtins.float, builtins.float]]]:
         r"""
+        Return fragments whose bounding box overlaps the query window.
+        
+        :param bbox: Bounding box ``(x_min, y_min, x_max, y_max)``.
+        :returns: Fragments intersecting the bounding box.
         :complexity: O(m + k) where m = number of fragments, k = output vertices
         """
     def remaining(self, bounds: typing.Sequence[typing.Sequence[tuple[builtins.float, builtins.float]]]) -> builtins.list[builtins.list[tuple[builtins.float, builtins.float]]]:
         r"""
+        Subtract cleared fragments from the boundary polygons, returning the uncut region.
+        
+        :param bounds: Boundary polygons defining the region of interest.
+        :returns: List of polygons representing the uncut portion.
         :complexity: O(n * m) where n = bounds vertices, m = fragments
         """
     def incorporate(self, polygons: typing.Sequence[typing.Sequence[tuple[builtins.float, builtins.float]]]) -> builtins.list[builtins.list[tuple[builtins.float, builtins.float]]]:
         r"""
         Add polygons, returning only the newly-added portion.
-        Faster than add_cleared_polygons when inputs don't overlap
+        Faster than ``add_cleared_polygons`` when inputs don't overlap
         existing fragments (skips the full union).
+        
+        :param polygons: List of polygons to add.
+        :returns: List of polygons representing the newly-added portion.
         :complexity: O(n log n) worst case when union required,
                      O(n) when inputs are disjoint from existing fragments
         """
     def frontier(self, simplify_tol: builtins.float) -> builtins.list[builtins.list[tuple[builtins.float, builtins.float]]]:
         r"""
         Return a unioned, simplified snapshot of the current outer boundary.
-        :param simplify_tol: tolerance in mm for polyline simplification
+        
+        :param simplify_tol: Tolerance in mm for polyline simplification.
+        :returns: List of polygons representing the outer boundary.
         :complexity: O(n log n)
         """
     def bites(self, step_over: builtins.float, valid_area: typing.Sequence[typing.Sequence[tuple[builtins.float, builtins.float]]], simplify_tol: builtins.float) -> builtins.list[builtins.list[tuple[builtins.float, builtins.float]]]:
@@ -77,9 +97,11 @@ class ClearedArea:
         Compute the "bites" — new material reachable by expanding the
         current frontier outward by step_over, clipping to valid_area,
         and subtracting already-cleared portions.
-        :param step_over: lateral step-over in mm
-        :param valid_area: list of polygons defining the valid tool-centre region
-        :param simplify_tol: tolerance in mm for frontier simplification
+        
+        :param step_over: Lateral step-over in mm.
+        :param valid_area: List of polygons defining the valid tool-centre region.
+        :param simplify_tol: Tolerance in mm for frontier simplification.
+        :returns: List of polygons representing the bite regions.
         :complexity: O(n log n)
         """
     def bite_in_direction(self, step_over: builtins.float, valid_area: typing.Sequence[typing.Sequence[tuple[builtins.float, builtins.float]]], simplify_tol: builtins.float, target: tuple[builtins.float, builtins.float], max_angle: builtins.float) -> builtins.list[builtins.list[tuple[builtins.float, builtins.float]]]:
@@ -88,11 +110,13 @@ class ClearedArea:
         lies within *max_angle* radians of the direction from the current
         cleared region's centre toward *target*.
         useful for steering the clearing direction along a MAT branch.
-        :param step_over: lateral step-over in mm
-        :param valid_area: list of polygons defining the valid tool-centre region
-        :param simplify_tol: tolerance in mm for frontier simplification
-        :param target: (x, y) target point to steer toward
-        :param max_angle: maximum deviation from the target direction (radians)
+        
+        :param step_over: Lateral step-over in mm.
+        :param valid_area: List of polygons defining the valid tool-centre region.
+        :param simplify_tol: Tolerance in mm for frontier simplification.
+        :param target: ``(x, y)`` target point to steer toward.
+        :param max_angle: Maximum deviation from the target direction (radians).
+        :returns: List of polygons representing the filtered bite regions.
         :complexity: O(n log n)
         """
     def all_bites(self, step_over: builtins.float, valid_area: typing.Sequence[typing.Sequence[tuple[builtins.float, builtins.float]]], simplify_tol: builtins.float) -> builtins.list[builtins.list[builtins.list[tuple[builtins.float, builtins.float]]]]:
@@ -102,22 +126,31 @@ class ClearedArea:
         
         Returns all passes, each pass being a list of bite polygons.
         The cleared area is fully cleared after this call.
-        :param step_over: lateral step-over in mm
-        :param valid_area: list of polygons defining the valid tool-centre region
-        :param simplify_tol: tolerance in mm for frontier simplification
+        
+        :param step_over: Lateral step-over in mm.
+        :param valid_area: List of polygons defining the valid tool-centre region.
+        :param simplify_tol: Tolerance in mm for frontier simplification.
+        :returns: List of passes, each pass being a list of bite polygons.
         :complexity: O(k n log n) where k = number of passes
         """
     def total_area(self) -> builtins.float:
         r"""
+        Total cleared area.
+        
+        :returns: Total cleared area in mm².
         :complexity: O(1)
         """
     def __len__(self) -> builtins.int:
         r"""
         Number of cleared fragments.
+        
+        :returns: Fragment count.
         """
     def is_empty(self) -> builtins.bool:
         r"""
         True when no fragments have been recorded.
+        
+        :returns: ``True`` if no fragments have been recorded.
         """
     def fragments(self) -> builtins.list[builtins.list[tuple[builtins.float, builtins.float]]]:
         r"""
@@ -130,6 +163,8 @@ class ClearedArea:
         This is useful for determining which parts of a bite polygon
         lie outside the cleared area (i.e. the cutting arc), for example
         when used with :py:func:`raygeo.ops.assembly.hsm.find_cutting_arc`.
+        
+        :returns: List of polygons representing the cleared fragments.
         :complexity: O(m) where m = number of fragments
         """
     def remaining_in_inset(self, boundary: typing.Sequence[tuple[builtins.float, builtins.float]], obstacles: typing.Optional[typing.Sequence[typing.Sequence[tuple[builtins.float, builtins.float]]]] = None, radius: builtins.float = 3.0) -> builtins.list[builtins.list[tuple[builtins.float, builtins.float]]]:
@@ -231,6 +266,40 @@ class ClearedArea:
         :param min_engagement: Minimum engagement angle (radians) required.
         :returns: ``ResumePoint`` or ``None``.
         """
+    def set_update_strategy(self, strategy: builtins.str) -> None:
+        r"""
+        Switch between global and local fragment-merging strategies.
+        
+        :param strategy: Either ``"global"`` or ``"local"``.
+        """
+    def expand_step_local(self, prev: tuple[builtins.float, builtins.float], next: tuple[builtins.float, builtins.float], radius: builtins.float) -> None:
+        r"""
+        Single-step local expansion (only updates fragments whose bbox overlaps the segment).
+        
+        :param prev: Start point ``(x, y)`` of the segment.
+        :param next: End point ``(x, y)`` of the segment.
+        :param radius: Disk radius (mm).
+        """
+    def incorporate_local(self, polys: typing.Sequence[typing.Sequence[tuple[builtins.float, builtins.float]]]) -> builtins.list[builtins.list[tuple[builtins.float, builtins.float]]]:
+        r"""
+        Local version of incorporate.
+        
+        :param polys: List of polygons to add.
+        :returns: List of polygons representing the newly-added portion.
+        """
+    def compact_if_needed(self, tol: builtins.float) -> None:
+        r"""
+        Compact fragments if total vertex count exceeds the default threshold.
+        
+        :param tol: Vertex simplification tolerance in mm.
+        """
+    def compact_if_needed_threshold(self, tol: builtins.float, threshold: builtins.int) -> None:
+        r"""
+        Compact with an explicit vertex-count threshold.
+        
+        :param tol: Vertex simplification tolerance in mm.
+        :param threshold: Vertex count threshold above which compaction is triggered.
+        """
 
 @typing.final
 class ResumePoint:
@@ -252,7 +321,12 @@ class ResumePoint:
         r"""
         Travel polyline through cleared territory.
         """
-    def __new__(cls, pos: tuple[builtins.float, builtins.float], heading: builtins.float, link_path: typing.Sequence[tuple[builtins.float, builtins.float]]) -> ResumePoint: ...
+    def __new__(cls, pos: tuple[builtins.float, builtins.float], heading: builtins.float, link_path: typing.Sequence[tuple[builtins.float, builtins.float]]) -> ResumePoint:
+        r"""
+        :param pos: Position on the frontier ``(x, y)``.
+        :param heading: Outward-normal heading in radians.
+        :param link_path: Travel polyline through cleared territory.
+        """
     def __repr__(self) -> builtins.str: ...
 
 @typing.final
@@ -264,13 +338,25 @@ class StepResult:
     solver iteration count, and the final status.
     """
     @property
-    def next(self) -> tuple[builtins.float, builtins.float]: ...
+    def next(self) -> tuple[builtins.float, builtins.float]:
+        r"""
+        Next centre position ``(x, y)``.
+        """
     @property
-    def heading(self) -> builtins.float: ...
+    def heading(self) -> builtins.float:
+        r"""
+        Updated heading angle in radians.
+        """
     @property
-    def iters(self) -> builtins.int: ...
+    def iters(self) -> builtins.int:
+        r"""
+        Number of solver iterations used.
+        """
     @property
-    def status(self) -> StepStatus: ...
+    def status(self) -> StepStatus:
+        r"""
+        Step completion status.
+        """
     def __repr__(self) -> builtins.str: ...
 
 @typing.final
@@ -283,13 +369,29 @@ class StepStatus:
     (solver failed to converge).
     """
     @classmethod
-    def ok(cls) -> StepStatus: ...
+    def ok(cls) -> StepStatus:
+        r"""
+        Normal step completion.
+        :returns: ``StepStatus.ok``
+        """
     @classmethod
-    def boundary_hit(cls) -> StepStatus: ...
+    def boundary_hit(cls) -> StepStatus:
+        r"""
+        Hit pocket boundary.
+        :returns: ``StepStatus.boundary_hit``
+        """
     @classmethod
-    def lost_engagement(cls) -> StepStatus: ...
+    def lost_engagement(cls) -> StepStatus:
+        r"""
+        No uncut material found.
+        :returns: ``StepStatus.lost_engagement``
+        """
     @classmethod
-    def no_convergence(cls) -> StepStatus: ...
+    def no_convergence(cls) -> StepStatus:
+        r"""
+        Solver failed to converge.
+        :returns: ``StepStatus.no_convergence``
+        """
     def __repr__(self) -> builtins.str: ...
 
 @typing.final
@@ -301,30 +403,56 @@ class StepperOptions:
     solver tolerance, max steering deflection, and iteration budget.
     """
     @property
-    def radius(self) -> builtins.float: ...
+    def radius(self) -> builtins.float:
+        r"""
+        Disk radius in mm.
+        """
     @radius.setter
     def radius(self, value: builtins.float) -> None: ...
     @property
-    def step_length(self) -> builtins.float: ...
+    def step_length(self) -> builtins.float:
+        r"""
+        Forward step length in mm.
+        """
     @step_length.setter
     def step_length(self, value: builtins.float) -> None: ...
     @property
-    def target_engagement(self) -> builtins.float: ...
+    def target_engagement(self) -> builtins.float:
+        r"""
+        Target engagement angle in radians.
+        """
     @target_engagement.setter
     def target_engagement(self, value: builtins.float) -> None: ...
     @property
-    def engagement_tol(self) -> builtins.float: ...
+    def engagement_tol(self) -> builtins.float:
+        r"""
+        Engagement tolerance in radians.
+        """
     @engagement_tol.setter
     def engagement_tol(self, value: builtins.float) -> None: ...
     @property
-    def max_deflection(self) -> builtins.float: ...
+    def max_deflection(self) -> builtins.float:
+        r"""
+        Maximum steering deflection per step in radians.
+        """
     @max_deflection.setter
     def max_deflection(self, value: builtins.float) -> None: ...
     @property
-    def max_solver_iters(self) -> builtins.int: ...
+    def max_solver_iters(self) -> builtins.int:
+        r"""
+        Maximum solver iterations per step.
+        """
     @max_solver_iters.setter
     def max_solver_iters(self, value: builtins.int) -> None: ...
-    def __new__(cls, radius: builtins.float = 3.0, step_length: builtins.float = 0.6, target_engagement: typing.Optional[builtins.float] = None, engagement_tol: builtins.float = 0.01, max_deflection: typing.Optional[builtins.float] = None, max_solver_iters: builtins.int = 6) -> StepperOptions: ...
+    def __new__(cls, radius: builtins.float = 3.0, step_length: builtins.float = 0.6, target_engagement: typing.Optional[builtins.float] = None, engagement_tol: builtins.float = 0.01, max_deflection: typing.Optional[builtins.float] = None, max_solver_iters: builtins.int = 6) -> StepperOptions:
+        r"""
+        :param radius: Disk radius in mm (default 3.0).
+        :param step_length: Forward step length in mm (default 0.6).
+        :param target_engagement: Target engagement angle in radians (default π).
+        :param engagement_tol: Engagement tolerance in radians (default 0.01).
+        :param max_deflection: Maximum steering deflection per step in radians (default π/6).
+        :param max_solver_iters: Maximum solver iterations per step (default 6).
+        """
     def __repr__(self) -> builtins.str: ...
 
 def target_engagement_from_advance(advance: builtins.float, radius: builtins.float) -> builtins.float:

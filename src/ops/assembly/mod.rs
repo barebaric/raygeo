@@ -6,6 +6,7 @@
 //! strategy, lead-in/out, overscan, and tab insertion — concerns that
 //! belong to motion assembly rather than pure geometry.
 
+pub mod adaptive;
 pub mod hsm;
 pub mod polyline;
 pub mod raster;

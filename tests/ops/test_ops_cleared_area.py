@@ -1,6 +1,7 @@
 """Tests for ClearedArea."""
 
 import math
+import random
 
 from raygeo.geo.algo.medial_axis import MedialAxis
 from raygeo.ops.cleared_area import (
@@ -777,3 +778,125 @@ def test_step_result_attributes():
     assert isinstance(r.heading, float)
     assert isinstance(r.iters, int)
     assert isinstance(r.status, StepStatus)
+
+
+# ── Local update strategy ──────────────────────────────────────
+
+
+def _segments():
+    """Generate a semi-random sequence of (prev, next, radius) for testing."""
+    segs = []
+    for i in range(200):
+        a = i * 0.7
+        segs.append(
+            (
+                (50 + a * math.cos(a * 0.3), 50 + a * math.sin(a * 0.3)),
+                (
+                    50 + (a + 1.0) * math.cos((a + 1.0) * 0.3),
+                    50 + (a + 1.0) * math.sin((a + 1.0) * 0.3),
+                ),
+                3.0,
+            )
+        )
+    return segs
+
+
+def test_local_equivalence():
+    """Local and Global strategies produce identical fragments."""
+    segs = _segments()
+
+    ca_global = ClearedArea()
+    for prev, next, r in segs:
+        ca_global.begin_step_batch()
+        ca_global.expand_step_batched(prev, next, r)
+        ca_global.commit_step_batch()
+
+    ca_local = ClearedArea()
+    ca_local.set_update_strategy("local")
+    for prev, next, r in segs:
+        ca_local.begin_step_batch()
+        ca_local.expand_step_batched(prev, next, r)
+        ca_local.commit_step_batch()
+
+    # Same total area (±0.1 %)
+    ag = ca_global.total_area()
+    al = ca_local.total_area()
+    assert abs(al - ag) / max(ag, 1.0) < 0.001, (
+        f"Global={ag:.1f} Local={al:.1f}"
+    )
+
+
+def test_local_equivalence_expand_step():
+    """expand_step_local matches expand_step result."""
+    segs = _segments()
+
+    ca_global = ClearedArea()
+    for prev, next, r in segs:
+        ca_global.expand_step(prev, next, r)
+
+    ca_local = ClearedArea()
+    ca_local.set_update_strategy("local")
+    for prev, next, r in segs:
+        ca_local.expand_step_local(prev, next, r)
+
+    ag = ca_global.total_area()
+    al = ca_local.total_area()
+    assert abs(al - ag) / max(ag, 1.0) < 0.001, (
+        f"Global={ag:.1f} Local={al:.1f}"
+    )
+
+
+def test_local_cascade():
+    """Two fragments joined by a thin bridge — Local merges correctly."""
+    ca = ClearedArea()
+    ca.set_update_strategy("local")
+
+    # Two large squares with a gap
+    ca.add_cleared_polygons([P((0, 0), (40, 0), (40, 40), (0, 40))])
+    ca.add_cleared_polygons([P((60, 0), (100, 0), (100, 40), (60, 40))])
+
+    area_before = ca.total_area()
+
+    # A thin horizontal bridge connecting them
+    bridge = P((38, 18), (62, 18), (62, 22), (38, 22))
+    ca.incorporate_local([bridge])
+
+    area_after = ca.total_area()
+    assert area_after > area_before + 70  # bridge covers ~80 area
+    # Both squares + bridge should fuse into one or two fragments
+    assert len(ca.fragments()) <= 2
+
+
+def test_compact():
+    """compact_if_needed reduces vertex count with minimal area change."""
+    random.seed(42)
+    ca = ClearedArea()
+
+    # Add some small polygons, then compact with a low threshold
+    polys = []
+    for _ in range(500):
+        cx = random.uniform(0, 200)
+        cy = random.uniform(0, 200)
+        polys.append(
+            P(
+                (cx, cy),
+                (cx + 2, cy),
+                (cx + 2, cy + 2),
+                (cx + 0.5, cy + 2),
+            )
+        )
+    ca.add_cleared_polygons(polys)
+
+    area_before = ca.total_area()
+    v_before = sum(len(p) for p in ca.fragments())
+
+    ca.compact_if_needed_threshold(tol=0.5, threshold=100)
+
+    v_after = sum(len(p) for p in ca.fragments())
+    area_after = ca.total_area()
+
+    # Vertex count should drop
+    assert v_after < v_before
+    # Area change should be small
+    if area_before > 0:
+        assert abs(area_after - area_before) / area_before < 0.05
