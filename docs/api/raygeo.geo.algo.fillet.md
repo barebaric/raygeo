@@ -174,7 +174,7 @@ each end until the sweep is clear. Returns `None` when no usable safe sub-arc re
 | `islands`         | `Sequence[Sequence[tuple[float, float]]] = []`                | List of island (hole) polygons (default []). |
 | `tool_radius`     | `float = 3`                                                   | Tool radius in mm (default 3.0).             |
 | `wall_margin`     | `float = 0`                                                   | Extra clearance past tangency (default 0.0). |
-| _Returns_         | `tuple[tuple[float, float], tuple[float, float]] &#124; None` |                                              |
+| _Returns_         | `tuple[tuple[float, float], tuple[float, float]] &#124; None` | `(enter, exit)` or `None`.                   |
 
 ![ returns the  points delimiting the longest sub-arc whose tool sweep avoids islands](images/geo-algo-fillet-find-safe-sweep-end.png)
 
@@ -204,7 +204,7 @@ Shortens from each end until the sweep is clear. Returns `(enter, exit)` or `Non
 | `inner_obstacles` | `Sequence[Sequence[tuple[float, float]]] = []`                | List of obstacle polygons (default []).      |
 | `radius`          | `float = 3`                                                   | Fillet radius (default 3.0).                 |
 | `margin`          | `float = 0`                                                   | Extra clearance past tangency (default 0.0). |
-| _Returns_         | `tuple[tuple[float, float], tuple[float, float]] &#124; None` |                                              |
+| _Returns_         | `tuple[tuple[float, float], tuple[float, float]] &#124; None` | `(enter, exit)` or `None`.                   |
 
 ![ finds the longest sub-span whose end fillets do not collide with obstacles (red)](images/geo-algo-fillet-trim-to-safe-fillet-span.png)
 

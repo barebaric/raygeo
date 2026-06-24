@@ -106,6 +106,7 @@ def find_safe_sweep_end(arc: collections.abc.Sequence[tuple[float, float]], pock
     :param islands: List of island (hole) polygons (default []).
     :param tool_radius: Tool radius in mm (default 3.0).
     :param wall_margin: Extra clearance past tangency (default 0.0).
+    :returns: ``(enter, exit)`` or ``None``.
     """
 
 def trim_to_safe_fillet_span(polyline: collections.abc.Sequence[tuple[float, float]], outer_boundary: collections.abc.Sequence[tuple[float, float]], inner_obstacles: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]] = [], radius: float = 3, margin: float = 0) -> tuple[tuple[float, float], tuple[float, float]] | None:
@@ -120,6 +121,7 @@ def trim_to_safe_fillet_span(polyline: collections.abc.Sequence[tuple[float, flo
     :param inner_obstacles: List of obstacle polygons (default []).
     :param radius: Fillet radius (default 3.0).
     :param margin: Extra clearance past tangency (default 0.0).
+    :returns: ``(enter, exit)`` or ``None``.
     """
 
 def try_fillet_one_end(arc: collections.abc.Sequence[tuple[float, float]], outer_boundary: collections.abc.Sequence[tuple[float, float]], inner_obstacles: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]] = [], radius: float = 3, margin: float = 0) -> list[tuple[float, float]]:

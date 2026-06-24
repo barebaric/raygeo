@@ -22,36 +22,48 @@ class GeneticAlgorithm:
         r"""
         Returns (rotations, flips_h, flips_v, fitness) for individual at idx.
         
+        :param idx: Index of the individual.
+        :returns: ``(rotations, flips_h, flips_v, fitness)`` tuple.
         :complexity: O(1)
         """
     def set_fitness(self, idx: builtins.int, fitness: builtins.float) -> None:
         r"""
         Set the fitness for individual at idx.
         
+        :param idx: Index of the individual.
+        :param fitness: Fitness value to set.
         :complexity: O(1)
         """
     def get_fitness(self, idx: builtins.int) -> builtins.float:
         r"""
         Returns the fitness of individual at idx.
         
+        :param idx: Index of the individual.
+        :returns: Fitness value of the individual.
         :complexity: O(1)
         """
     def generation(self) -> None:
         r"""
         Evolve one generation.
         
+        :returns: The genetic algorithm state after one generation.
         :complexity: O(p * n) where p = population size, n = num_parts
         """
     def mutate(self, idx: builtins.int) -> tuple[builtins.list[builtins.float], builtins.list[builtins.bool], builtins.list[builtins.bool]]:
         r"""
         Mutate and return a copy of individual at idx.
         
+        :param idx: Index of the individual to mutate.
+        :returns: ``(rotations, flips_h, flips_v)`` of the mutated individual.
         :complexity: O(n) where n = num_parts
         """
     def mate(self, male_idx: builtins.int, female_idx: builtins.int) -> builtins.list[tuple[builtins.list[builtins.float], builtins.list[builtins.bool], builtins.list[builtins.bool]]]:
         r"""
         Mate two individuals and return the two children.
         
+        :param male_idx: Index of the male parent.
+        :param female_idx: Index of the female parent.
+        :returns: List of two child individuals.
         :complexity: O(n) where n = num_parts
         """
 

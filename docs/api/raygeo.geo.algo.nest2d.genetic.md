@@ -20,7 +20,7 @@ Evolve one generation.
 
 | Parameter    | Type   | Description                                       |
 | ------------ | ------ | ------------------------------------------------- |
-| _Returns_    | `None` |                                                   |
+| _Returns_    | `None` | The genetic algorithm state after one generation. |
 | _Complexity_ |        | O(p * n) where p = population size, n = num_parts |
 
 ### `get_fitness()`
@@ -31,11 +31,11 @@ get_fitness(idx: int) -> float
 
 Returns the fitness of individual at idx.
 
-| Parameter    | Type    | Description |
-| ------------ | ------- | ----------- |
-| `idx`        | `int`   |             |
-| _Returns_    | `float` |             |
-| _Complexity_ |         | O(1)        |
+| Parameter    | Type    | Description                      |
+| ------------ | ------- | -------------------------------- |
+| `idx`        | `int`   | Index of the individual.         |
+| _Returns_    | `float` | Fitness value of the individual. |
+| _Complexity_ |         | O(1)                             |
 
 ### `get_individual()`
 
@@ -45,11 +45,11 @@ get_individual(idx: int) -> tuple[list[float], list[bool], list[bool], float]
 
 Returns (rotations, flips_h, flips_v, fitness) for individual at idx.
 
-| Parameter    | Type                                                | Description |
-| ------------ | --------------------------------------------------- | ----------- |
-| `idx`        | `int`                                               |             |
-| _Returns_    | `tuple[list[float], list[bool], list[bool], float]` |             |
-| _Complexity_ |                                                     | O(1)        |
+| Parameter    | Type                                                | Description                                     |
+| ------------ | --------------------------------------------------- | ----------------------------------------------- |
+| `idx`        | `int`                                               | Index of the individual.                        |
+| _Returns_    | `tuple[list[float], list[bool], list[bool], float]` | `(rotations, flips_h, flips_v, fitness)` tuple. |
+| _Complexity_ |                                                     | O(1)                                            |
 
 ### `mate()`
 
@@ -62,12 +62,12 @@ mate(
 
 Mate two individuals and return the two children.
 
-| Parameter    | Type                                               | Description              |
-| ------------ | -------------------------------------------------- | ------------------------ |
-| `male_idx`   | `int`                                              |                          |
-| `female_idx` | `int`                                              |                          |
-| _Returns_    | `list[tuple[list[float], list[bool], list[bool]]]` |                          |
-| _Complexity_ |                                                    | O(n) where n = num_parts |
+| Parameter    | Type                                               | Description                    |
+| ------------ | -------------------------------------------------- | ------------------------------ |
+| `male_idx`   | `int`                                              | Index of the male parent.      |
+| `female_idx` | `int`                                              | Index of the female parent.    |
+| _Returns_    | `list[tuple[list[float], list[bool], list[bool]]]` | List of two child individuals. |
+| _Complexity_ |                                                    | O(n) where n = num_parts       |
 
 ### `mutate()`
 
@@ -77,11 +77,11 @@ mutate(idx: int) -> tuple[list[float], list[bool], list[bool]]
 
 Mutate and return a copy of individual at idx.
 
-| Parameter    | Type                                         | Description              |
-| ------------ | -------------------------------------------- | ------------------------ |
-| `idx`        | `int`                                        |                          |
-| _Returns_    | `tuple[list[float], list[bool], list[bool]]` |                          |
-| _Complexity_ |                                              | O(n) where n = num_parts |
+| Parameter    | Type                                         | Description                                                |
+| ------------ | -------------------------------------------- | ---------------------------------------------------------- |
+| `idx`        | `int`                                        | Index of the individual to mutate.                         |
+| _Returns_    | `tuple[list[float], list[bool], list[bool]]` | `(rotations, flips_h, flips_v)` of the mutated individual. |
+| _Complexity_ |                                              | O(n) where n = num_parts                                   |
 
 ### `set_fitness()`
 
@@ -91,9 +91,9 @@ set_fitness(idx: int, fitness: float) -> None
 
 Set the fitness for individual at idx.
 
-| Parameter    | Type    | Description |
-| ------------ | ------- | ----------- |
-| `idx`        | `int`   |             |
-| `fitness`    | `float` |             |
-| _Returns_    | `None`  |             |
-| _Complexity_ |         | O(1)        |
+| Parameter    | Type    | Description              |
+| ------------ | ------- | ------------------------ |
+| `idx`        | `int`   | Index of the individual. |
+| `fitness`    | `float` | Fitness value to set.    |
+| _Returns_    | `None`  |                          |
+| _Complexity_ |         | O(1)                     |

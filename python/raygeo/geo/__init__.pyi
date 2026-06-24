@@ -171,6 +171,7 @@ class Geometry:
         :param x: X coordinate.
         :param y: Y coordinate.
         :param z: Z coordinate (default 0.0).
+        :returns: The geometry (for method chaining).
         :complexity: O(1) time, O(1) space
         """
     def line_to(self, x: builtins.float, y: builtins.float, z: builtins.float = 0.0) -> Geometry:
@@ -180,12 +181,14 @@ class Geometry:
         :param x: X coordinate.
         :param y: Y coordinate.
         :param z: Z coordinate (default 0.0).
+        :returns: The geometry (for method chaining).
         :complexity: O(1) time, O(1) space
         """
     def close_path(self) -> Geometry:
         r"""
         Close the current sub-path.
         
+        :returns: The geometry (for method chaining).
         :complexity: O(1) time, O(1) space
         """
     def arc_to(self, x: builtins.float, y: builtins.float, i: builtins.float = 0.0, j: builtins.float = 0.0, clockwise: builtins.bool = True, z: builtins.float = 0.0) -> Geometry:
@@ -198,6 +201,7 @@ class Geometry:
         :param j: J offset from current point to center.
         :param clockwise: Whether the arc is clockwise.
         :param z: Z coordinate (default 0.0).
+        :returns: The geometry (for method chaining).
         :complexity: O(1) time, O(1) space
         """
     def bezier_to(self, x: builtins.float, y: builtins.float, c1x: builtins.float, c1y: builtins.float, c2x: builtins.float, c2y: builtins.float, *, c1z: builtins.float = 0.0, c2z: builtins.float = 0.0, z: builtins.float = 0.0) -> Geometry:
@@ -213,6 +217,7 @@ class Geometry:
         :param c2y: Second control point Y.
         :param c2z: Second control point Z (default 0.0).
         :param z: End Z coordinate (default 0.0).
+        :returns: The geometry (for method chaining).
         :complexity: O(1) time, O(1) space
         """
     def __len__(self) -> builtins.int:
@@ -231,24 +236,28 @@ class Geometry:
         r"""
         Check if the geometry has no commands.
         
+        :returns: ``True`` if the geometry has no commands.
         :complexity: O(1) time, O(1) space
         """
     def clear(self) -> Geometry:
         r"""
         Remove all commands from the geometry.
         
+        :returns: The geometry (for method chaining).
         :complexity: O(1) time, O(1) space
         """
     def copy(self) -> Geometry:
         r"""
         Return a deep copy of this geometry.
         
+        :returns: A deep copy of the geometry.
         :complexity: O(n) time, O(n) space
         """
     def get_last_point(self) -> tuple[builtins.float, builtins.float, builtins.float]:
         r"""
         Get the last point in the geometry.
         
+        :returns: The last point as ``(x, y, z)``, or ``(0, 0, 0)`` if empty.
         :complexity: O(1) time, O(1) space
         """
     def extend(self, other: Geometry) -> Geometry:
@@ -256,12 +265,14 @@ class Geometry:
         Append another geometry's commands to this one.
         
         :param other: The geometry to append.
+        :returns: The geometry (for method chaining).
         :complexity: O(n) time, O(n) space
         """
     def rect(self) -> tuple[builtins.float, builtins.float, builtins.float, builtins.float]:
         r"""
         Return the bounding rectangle (x_min, y_min, x_max, y_max).
         
+        :returns: (x_min, y_min, x_max, y_max).
         :complexity: O(n) time, O(1) space
         """
     def segment_bounds(self, index: builtins.int) -> typing.Optional[tuple[builtins.float, builtins.float, builtins.float, builtins.float]]:
@@ -300,12 +311,14 @@ class Geometry:
         r"""
         Return the total path distance.
         
+        :returns: The total path distance in mm.
         :complexity: O(n) time, O(1) space
         """
     def area(self) -> builtins.float:
         r"""
         Return the signed area of the geometry.
         
+        :returns: The signed area in mm².
         :complexity: O(n) time, O(1) space
         """
     def is_closed(self, tolerance: builtins.float = 1e-06) -> builtins.bool:
@@ -313,12 +326,14 @@ class Geometry:
         Check if the geometry forms a closed path.
         
         :param tolerance: Max gap between start and end point.
+        :returns: ``True`` if the geometry forms a closed path.
         :complexity: O(n) time, O(1) space
         """
     def segments(self) -> builtins.list[builtins.list[tuple[builtins.float, builtins.float, builtins.float]]]:
         r"""
         Return the geometry split into segments of connected commands.
         
+        :returns: List of segments, each a list of 3D points.
         :complexity: O(n) time, O(n) space
         """
     def get_command_at(self, index: builtins.int) -> typing.Optional[typing.Any]:
@@ -326,18 +341,21 @@ class Geometry:
         Get the command at the given index as a typed command object.
         
         :param index: Command index (negative returns None).
+        :returns: The typed command or ``None``.
         :complexity: O(1) time, O(1) space
         """
     def iter_commands(self) -> builtins.list[typing.Any]:
         r"""
         Iterate over all commands as typed command objects.
         
+        :returns: List of typed command objects.
         :complexity: O(n) time, O(n) space
         """
     def to_dict(self) -> dict:
         r"""
         Serialize the geometry to a dictionary.
         
+        :returns: A dictionary representation of the geometry.
         :complexity: O(n) time, O(n) space
         """
     @classmethod
@@ -347,6 +365,7 @@ class Geometry:
         
         :param data: A dictionary as produced by
             :meth:`to_dict`.
+        :returns: A new ``Geometry`` instance.
         :complexity: O(n) time, O(n) space
         """
     @classmethod
@@ -357,6 +376,7 @@ class Geometry:
         :param points: A sequence of (x, y) or
             (x, y, z) coordinate tuples.
         :param close: Whether to close the path.
+        :returns: A new ``Geometry`` instance.
         :complexity: O(n) time, O(n) space
         """
     def filter(self, indices: builtins.set[builtins.int]) -> Geometry:
@@ -373,6 +393,7 @@ class Geometry:
         Simplify the geometry using Ramer-Douglas-Peucker.
         
         :param tolerance: Maximum deviation from original.
+        :returns: The geometry (for method chaining).
         :complexity: O(n log n) average time, O(n) space
         """
     def linearize(self, tolerance: builtins.float) -> Geometry:
@@ -380,6 +401,7 @@ class Geometry:
         Convert all curves to line segments.
         
         :param tolerance: Maximum deviation from curves.
+        :returns: The geometry (for method chaining).
         :complexity: O(n) time, O(n) space
         """
     def fit_curves(self, tolerance: builtins.float, beziers: builtins.bool = True, arcs: builtins.bool = True, on_progress: typing.Optional[typing.Any] = None) -> Geometry:
@@ -390,6 +412,7 @@ class Geometry:
         :param beziers: Whether to fit bezier curves.
         :param arcs: Whether to fit arcs.
         :param on_progress: Optional progress callback called with ``(current, total)``.
+        :returns: The geometry (for method chaining).
         :complexity: O(n log n) average time, O(n) space
         """
     def fit_arcs(self, tolerance: builtins.float) -> Geometry:
@@ -397,12 +420,14 @@ class Geometry:
         Fit arcs only to the linearized geometry.
         
         :param tolerance: Maximum deviation.
+        :returns: The geometry (for method chaining).
         :complexity: O(n log n) average time, O(n) space
         """
     def upgrade_to_scalable(self) -> Geometry:
         r"""
         Convert all arcs to bezier curves for uniform scaling.
         
+        :returns: The geometry (for method chaining).
         :complexity: O(n) time, O(n) space
         """
     def close_gaps(self, tolerance: typing.Optional[builtins.float] = None) -> Geometry:
@@ -410,6 +435,7 @@ class Geometry:
         Close gaps between sub-paths.
         
         :param tolerance: Max gap to close.
+        :returns: The geometry (for method chaining).
         :complexity: O(n) time, O(n) space
         """
     def cleanup(self, tolerance: builtins.float) -> Geometry:
@@ -417,18 +443,21 @@ class Geometry:
         Remove duplicate segments from the geometry.
         
         :param tolerance: Maximum deviation for equality.
+        :returns: The geometry (for method chaining).
         :complexity: O(n log n) average time, O(n) space
         """
     def flip_x(self) -> Geometry:
         r"""
         Mirror the geometry along the X axis.
         
+        :returns: The geometry (for method chaining).
         :complexity: O(n) time, O(1) space
         """
     def flip_y(self) -> Geometry:
         r"""
         Mirror the geometry along the Y axis.
         
+        :returns: The geometry (for method chaining).
         :complexity: O(n) time, O(1) space
         """
     def find_closest_point(self, x: builtins.float, y: builtins.float) -> typing.Optional[tuple[builtins.int, builtins.float, tuple[builtins.float, builtins.float]]]:
@@ -477,6 +506,7 @@ class Geometry:
         :param j: J offset to center.
         :param clockwise: Arc direction.
         :param z: End Z coordinate.
+        :returns: The geometry (for method chaining).
         :complexity: O(1) time, O(1) space
         """
     def convert_arcs_to_beziers(self) -> None:
@@ -493,6 +523,7 @@ class Geometry:
         Check if the geometry has self-intersections.
         
         :param fail_on_t_junction: Whether to fail on T-junctions.
+        :returns: ``True`` if the geometry has self-intersections.
         :complexity: O(n²) worst-case time, O(1) space
         """
     def intersects_with(self, other: Geometry) -> builtins.bool:
@@ -500,6 +531,7 @@ class Geometry:
         Check if this geometry intersects with another.
         
         :param other: The other geometry.
+        :returns: ``True`` if the geometries intersect.
         :complexity: O(n * m) worst-case time, O(1) space where n and m are the number of segments in each geometry
         """
     def grow(self, amount: builtins.float) -> Geometry:
@@ -507,6 +539,7 @@ class Geometry:
         Offset (grow/shrink) the geometry by the given amount.
         
         :param amount: Positive to grow, negative to shrink.
+        :returns: The geometry (for method chaining).
         :complexity: O(n log n) average time, O(n) space
         """
     def encloses(self, other: Geometry) -> builtins.bool:
@@ -514,18 +547,21 @@ class Geometry:
         Check if this geometry encloses another.
         
         :param other: The potentially enclosed geometry.
+        :returns: ``True`` if this geometry encloses the other.
         :complexity: O(n log n) average time, O(n) space
         """
     def remove_inner_edges(self) -> Geometry:
         r"""
         Remove inner edges (shared between contours).
         
+        :returns: The geometry (for method chaining).
         :complexity: O(n) time, O(n) space
         """
     def split_inner_and_outer_contours(self) -> tuple[builtins.list[Geometry], builtins.list[Geometry]]:
         r"""
         Split contours into inner and outer groups.
         
+        :returns: Tuple of ``(inner_contours, outer_contours)``, each a list of Geometry.
         :complexity: O(n log n) average time, O(n) space
         """
     def map_to_frame(self, origin: tuple[builtins.float, builtins.float], p_width: tuple[builtins.float, builtins.float], p_height: tuple[builtins.float, builtins.float], anchor_y: typing.Optional[builtins.float] = None, stable_src_height: typing.Optional[builtins.float] = None, anchor_x: typing.Optional[builtins.float] = None, stable_src_width: typing.Optional[builtins.float] = None) -> Geometry:
@@ -539,18 +575,21 @@ class Geometry:
         :param stable_src_height: Stable source height for anchoring.
         :param anchor_x: X anchor position.
         :param stable_src_width: Stable source width for anchoring.
+        :returns: The geometry (for method chaining).
         :complexity: O(n) time, O(n) space
         """
     def split_into_contours(self) -> builtins.list[Geometry]:
         r"""
         Split the geometry into individual contours.
         
+        :returns: List of Geometry objects, one per contour.
         :complexity: O(n) time, O(n) space
         """
     def split_into_components(self) -> builtins.list[Geometry]:
         r"""
         Split the geometry into connected components.
         
+        :returns: List of Geometry objects, one per connected component.
         :complexity: O(n log n) average time, O(n) space
         """
     def to_polygons(self, tolerance: builtins.float = 0.01) -> builtins.list[builtins.list[tuple[builtins.float, builtins.float]]]:
@@ -558,30 +597,35 @@ class Geometry:
         Convert the geometry to a list of polygons.
         
         :param tolerance: Max deviation for linearization.
+        :returns: List of polygons, each a list of ``(x, y)`` vertices.
         :complexity: O(n) time, O(n) space
         """
     def reverse_contour(self) -> Geometry:
         r"""
         Reverse the winding direction of all contours.
         
+        :returns: The geometry (for method chaining).
         :complexity: O(n) time, O(n) space
         """
     def close_all_contours(self) -> Geometry:
         r"""
         Close all open contours in the geometry.
         
+        :returns: The geometry (for method chaining).
         :complexity: O(n) time, O(n) space
         """
     def normalize_winding_orders(self) -> Geometry:
         r"""
         Normalize winding orders (outer CCW, inner CW) of all contours.
         
+        :returns: The geometry (for method chaining).
         :complexity: O(n log n) average time, O(n) space
         """
     def filter_to_external_contours(self) -> Geometry:
         r"""
         Filter to only external (outermost) contours.
         
+        :returns: The geometry (for method chaining).
         :complexity: O(n log n) average time, O(n) space
         """
     def get_valid_contours_data(self) -> builtins.list[dict]:

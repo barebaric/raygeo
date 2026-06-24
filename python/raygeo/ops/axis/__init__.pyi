@@ -104,5 +104,6 @@ class Axis:
         Assert that this Axis represents exactly one axis (not a combination).
         
         :raises ValueError: If the axis mask contains multiple or zero bits set.
+        :returns: The single active axis.
         """
 

@@ -144,9 +144,14 @@ fn illinois_py(
     def bisect_tracked(
         f, lo: float, hi: float, tol: float = 1e-10, max_iter: int = 100
     ) -> tuple[float, str, int, list[float]]:
-        """Bisection with iteration history.
+        """Tracked bisection root-finding.
 
-        :returns: ``(root, status, iterations, [estimates])``
+        :param f: Function to find the root of.
+        :param lo: Lower bound of the search interval.
+        :param hi: Upper bound of the search interval.
+        :param tol: Convergence tolerance.
+        :param max_iter: Maximum number of iterations.
+        :returns: ``(root, status_string, iteration_count, history)``.
         """
     "#,
     module = "raygeo.geo.algo.rootfind"
@@ -169,9 +174,14 @@ fn bisect_tracked_py(
     def secant_tracked(
         f, x0: float, x1: float, tol: float = 1e-10, max_iter: int = 100
     ) -> tuple[float, str, int, list[float]]:
-        """Secant with iteration history.
+        """Tracked secant method root-finding.
 
-        :returns: ``(root, status, iterations, [estimates])``
+        :param f: Function to find the root of.
+        :param x0: First initial guess.
+        :param x1: Second initial guess.
+        :param tol: Convergence tolerance.
+        :param max_iter: Maximum number of iterations.
+        :returns: ``(root, status_string, iteration_count, history)``.
         """
     "#,
     module = "raygeo.geo.algo.rootfind"
@@ -194,9 +204,14 @@ fn secant_tracked_py(
     def illinois_tracked(
         f, lo: float, hi: float, tol: float = 1e-10, max_iter: int = 100
     ) -> tuple[float, str, int, list[float]]:
-        """Illinois with iteration history.
+        """Tracked Illinois method root-finding.
 
-        :returns: ``(root, status, iterations, [estimates])``
+        :param f: Function to find the root of.
+        :param lo: Lower bound of the search interval.
+        :param hi: Upper bound of the search interval.
+        :param tol: Convergence tolerance.
+        :param max_iter: Maximum number of iterations.
+        :returns: ``(root, status_string, iteration_count, history)``.
         """
     "#,
     module = "raygeo.geo.algo.rootfind"

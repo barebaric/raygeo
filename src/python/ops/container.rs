@@ -381,6 +381,7 @@ impl PyOps {
 
     /// Check if the ops sequence is empty.
     ///
+    /// :returns: ``True`` if the container is empty.
     /// :complexity: O(1) time, O(1) space
     fn is_empty(&self) -> bool {
         self.inner.is_empty()
@@ -388,6 +389,7 @@ impl PyOps {
 
     /// Return the number of commands.
     ///
+    /// :returns: Number of commands in the container.
     /// :complexity: O(1) time, O(1) space
     fn len(&self) -> usize {
         self.inner.len()
@@ -546,6 +548,7 @@ impl PyOps {
 
     /// Compute the total distance of all commands.
     ///
+    /// :returns: Total path distance in mm.
     /// :complexity: O(n) time, O(1) space
     fn distance(&self) -> f64 {
         self.inner.distance()
@@ -553,6 +556,7 @@ impl PyOps {
 
     /// Compute the total cutting distance (excluding travel moves).
     ///
+    /// :returns: Total cut distance in mm.
     /// :complexity: O(n) time, O(1) space
     fn cut_distance(&self) -> f64 {
         self.inner.cut_distance()
@@ -1313,6 +1317,7 @@ impl PyOps {
 
     /// Return a deep copy of this Ops sequence.
     ///
+    /// :returns: A new ``Ops`` instance.
     /// :complexity: O(n) time, O(n) space
     fn copy(&self) -> PyOps {
         PyOps {
@@ -1454,6 +1459,7 @@ impl PyOps {
     /// Create an Ops sequence from a Geometry.
     ///
     /// :param geometry: The geometry to convert.
+    /// :returns: A new ``Ops`` instance.
     /// :complexity: O(n) time, O(n) space
     #[classmethod]
     fn from_geometry(
@@ -2049,6 +2055,7 @@ impl PyOps {
 
     /// Extract a frame (first and last endpoints) from the sequence.
     ///
+    /// :param power: Laser power value (0.0 to 1.0).
     /// :param feed_rate: Optional feed rate to set on the frame commands.
     /// :returns: A new Ops containing only the frame endpoints.
     /// :complexity: O(n) time, O(n) space
@@ -2135,6 +2142,7 @@ impl PyOps {
     /// Create an Ops sequence from a dictionary.
     ///
     /// :param data: Dictionary as produced by to_dict.
+    /// :returns: A new ``Ops`` instance.
     /// :complexity: O(n) time, O(n) space
     #[classmethod]
     fn from_dict(
@@ -2156,6 +2164,7 @@ impl PyOps {
     /// Create an Ops sequence from numpy arrays.
     ///
     /// :param arrays: Dictionary as produced by to_numpy_arrays.
+    /// :returns: A new ``Ops`` instance.
     /// :complexity: O(n) time, O(n) space
     #[classmethod]
     fn from_numpy_arrays(

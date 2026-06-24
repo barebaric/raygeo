@@ -93,8 +93,8 @@ category(ct: CommandType) -> CommandCategory
 
 Get the category of a command type.
 
-| Parameter    | Type              | Description |
-| ------------ | ----------------- | ----------- |
-| `ct`         | `CommandType`     |             |
-| _Returns_    | `CommandCategory` |             |
-| _Complexity_ |                   | O(1)        |
+| Parameter    | Type              | Description                           |
+| ------------ | ----------------- | ------------------------------------- |
+| `ct`         | `CommandType`     | `CommandType` variant.                |
+| _Returns_    | `CommandCategory` | `CommandCategory` for the given type. |
+| _Complexity_ |                   | O(1)                                  |

@@ -569,9 +569,10 @@ fn linearize_bezier_segment_py(
         :param tolerance: Flattening tolerance.
         :param max_subdivisions: Maximum recursion depth.
         :param pts: Output list to append points to.
+        :returns: List of ``(x, y)`` points along the flattened bezier.
         :complexity: O(n)
         """
-"#,
+    "#,
     module = "raygeo.geo.shape.bezier"
 )]
 #[pyfunction(name = "flatten_bezier")]

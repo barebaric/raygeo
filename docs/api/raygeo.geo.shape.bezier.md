@@ -94,17 +94,17 @@ flatten_bezier(
 
 Flatten a bezier curve into points.
 
-| Parameter          | Type            | Description                      |
-| ------------------ | --------------- | -------------------------------- |
-| `p0`               | `types.Point3D` | Start control point (x, y, z).   |
-| `p1`               | `types.Point3D` | First control point (x, y, z).   |
-| `p2`               | `types.Point3D` | Second control point (x, y, z).  |
-| `p3`               | `types.Point3D` | End control point (x, y, z).     |
-| `tolerance`        | `float`         | Flattening tolerance.            |
-| `max_subdivisions` | `int`           | Maximum recursion depth.         |
-| `pts`              | `list`          | Output list to append points to. |
-| _Returns_          | `None`          |                                  |
-| _Complexity_       |                 | O(n)                             |
+| Parameter          | Type            | Description                                         |
+| ------------------ | --------------- | --------------------------------------------------- |
+| `p0`               | `types.Point3D` | Start control point (x, y, z).                      |
+| `p1`               | `types.Point3D` | First control point (x, y, z).                      |
+| `p2`               | `types.Point3D` | Second control point (x, y, z).                     |
+| `p3`               | `types.Point3D` | End control point (x, y, z).                        |
+| `tolerance`        | `float`         | Flattening tolerance.                               |
+| `max_subdivisions` | `int`           | Maximum recursion depth.                            |
+| `pts`              | `list`          | Output list to append points to.                    |
+| _Returns_          | `None`          | List of `(x, y)` points along the flattened bezier. |
+| _Complexity_       |                 | O(n)                                                |
 
 ![Bezier flattening: adaptive subdivision at varied tolerances](images/geo-shape-bezier-flatten.png)
 

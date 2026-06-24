@@ -130,6 +130,7 @@ impl PyScanLine {
 
     /// Compute the length of this scan line in mm.
     ///
+    /// :returns: Total path length in mm.
     /// :complexity: O(1)
     fn length_mm(&self) -> f64 {
         let dx = self.end_mm.0 - self.start_mm.0;

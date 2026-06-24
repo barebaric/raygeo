@@ -64,7 +64,7 @@ Convert the document height to millimetres.
 | Parameter    | Type              | Description                                              |
 | ------------ | ----------------- | -------------------------------------------------------- |
 | `dpi`        | `float = 96.0`    | Pixels-per-inch for px/unitless conversion (default 96). |
-| _Returns_    | `Optional[float]` |                                                          |
+| _Returns_    | `Optional[float]` | Height in millimetres, or `None` if not set.             |
 | _Complexity_ |                   | O(1)                                                     |
 
 ### `height_px()`
@@ -78,7 +78,7 @@ Convert the document height to pixels.
 | Parameter    | Type              | Description                                  |
 | ------------ | ----------------- | -------------------------------------------- |
 | `dpi`        | `float = 96.0`    | Pixels-per-inch for conversion (default 96). |
-| _Returns_    | `Optional[float]` |                                              |
+| _Returns_    | `Optional[float]` | Height in pixels, or `None` if not set.      |
 | _Complexity_ |                   | O(1)                                         |
 
 ### `width_mm()`
@@ -92,7 +92,7 @@ Convert the document width to millimetres.
 | Parameter    | Type              | Description                                              |
 | ------------ | ----------------- | -------------------------------------------------------- |
 | `dpi`        | `float = 96.0`    | Pixels-per-inch for px/unitless conversion (default 96). |
-| _Returns_    | `Optional[float]` |                                                          |
+| _Returns_    | `Optional[float]` | Width in millimetres, or `None` if not set.              |
 | _Complexity_ |                   | O(1)                                                     |
 
 ### `width_px()`
@@ -106,7 +106,7 @@ Convert the document width to pixels.
 | Parameter    | Type              | Description                                  |
 | ------------ | ----------------- | -------------------------------------------- |
 | `dpi`        | `float = 96.0`    | Pixels-per-inch for conversion (default 96). |
-| _Returns_    | `Optional[float]` |                                              |
+| _Returns_    | `Optional[float]` | Width in pixels, or `None` if not set.       |
 | _Complexity_ |                   | O(1)                                         |
 
 ## Functions

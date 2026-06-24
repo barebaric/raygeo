@@ -66,6 +66,7 @@ class ScanLine:
         r"""
         Compute the length of this scan line in mm.
         
+        :returns: Total path length in mm.
         :complexity: O(1)
         """
     def direction(self) -> tuple[builtins.float, builtins.float]:

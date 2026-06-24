@@ -213,8 +213,9 @@ fn descending_radius_fillet_py(
         :param inner_obstacles: List of obstacle polygons (default []).
         :param radius: Fillet radius (default 3.0).
         :param margin: Extra clearance past tangency (default 0.0).
+        :returns: ``(enter, exit)`` or ``None``.
         """
-"#,
+    "#,
     module = "raygeo.geo.algo.fillet"
 )]
 #[pyfunction(name = "trim_to_safe_fillet_span")]
@@ -356,8 +357,9 @@ fn fillet_arc_ends_py(
         :param islands: List of island (hole) polygons (default []).
         :param tool_radius: Tool radius in mm (default 3.0).
         :param wall_margin: Extra clearance past tangency (default 0.0).
+        :returns: ``(enter, exit)`` or ``None``.
         """
-"#,
+    "#,
     module = "raygeo.geo.algo.fillet"
 )]
 #[pyfunction(name = "find_safe_sweep_end")]

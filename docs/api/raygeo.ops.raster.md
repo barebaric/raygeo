@@ -71,10 +71,10 @@ length_mm() -> float
 
 Compute the length of this scan line in mm.
 
-| Parameter    | Type    | Description |
-| ------------ | ------- | ----------- |
-| _Returns_    | `float` |             |
-| _Complexity_ |         | O(1)        |
+| Parameter    | Type    | Description              |
+| ------------ | ------- | ------------------------ |
+| _Returns_    | `float` | Total path length in mm. |
+| _Complexity_ |         | O(1)                     |
 
 ### `pixel_to_mm()`
 

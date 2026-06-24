@@ -562,7 +562,7 @@ Return a deep copy of this Ops sequence.
 
 | Parameter    | Type  | Description           |
 | ------------ | ----- | --------------------- |
-| _Returns_    | `Ops` |                       |
+| _Returns_    | `Ops` | A new `Ops` instance. |
 | _Complexity_ |       | O(n) time, O(n) space |
 
 ### `copy_command_from()`
@@ -588,10 +588,10 @@ cut_distance() -> float
 
 Compute the total cutting distance (excluding travel moves).
 
-| Parameter    | Type    | Description           |
-| ------------ | ------- | --------------------- |
-| _Returns_    | `float` |                       |
-| _Complexity_ |         | O(n) time, O(1) space |
+| Parameter    | Type    | Description               |
+| ------------ | ------- | ------------------------- |
+| _Returns_    | `float` | Total cut distance in mm. |
+| _Complexity_ |         | O(n) time, O(1) space     |
 
 ### `distance()`
 
@@ -601,10 +601,10 @@ distance() -> float
 
 Compute the total distance of all commands.
 
-| Parameter    | Type    | Description           |
-| ------------ | ------- | --------------------- |
-| _Returns_    | `float` |                       |
-| _Complexity_ |         | O(n) time, O(1) space |
+| Parameter    | Type    | Description                |
+| ------------ | ------- | -------------------------- |
+| _Returns_    | `float` | Total path distance in mm. |
+| _Complexity_ |         | O(n) time, O(1) space      |
 
 ### `distance_at()`
 
@@ -792,7 +792,7 @@ Create an Ops sequence from a dictionary.
 | Parameter    | Type   | Description                        |
 | ------------ | ------ | ---------------------------------- |
 | `data`       | `dict` | Dictionary as produced by to_dict. |
-| _Returns_    | `Ops`  |                                    |
+| _Returns_    | `Ops`  | A new `Ops` instance.              |
 | _Complexity_ |        | O(n) time, O(n) space              |
 
 ### `from_geometry()`
@@ -806,7 +806,7 @@ Create an Ops sequence from a Geometry.
 | Parameter    | Type           | Description              |
 | ------------ | -------------- | ------------------------ |
 | `geometry`   | `geo.Geometry` | The geometry to convert. |
-| _Returns_    | `Ops`          |                          |
+| _Returns_    | `Ops`          | A new `Ops` instance.    |
 | _Complexity_ |                | O(n) time, O(n) space    |
 
 ### `from_numpy_arrays()`
@@ -820,7 +820,7 @@ Create an Ops sequence from numpy arrays.
 | Parameter    | Type   | Description                                |
 | ------------ | ------ | ------------------------------------------ |
 | `arrays`     | `dict` | Dictionary as produced by to_numpy_arrays. |
-| _Returns_    | `Ops`  |                                            |
+| _Returns_    | `Ops`  | A new `Ops` instance.                      |
 | _Complexity_ |        | O(n) time, O(n) space                      |
 
 ### `get_frame()`
@@ -836,7 +836,7 @@ Extract a frame (first and last endpoints) from the sequence.
 
 | Parameter    | Type                     | Description                                      |
 | ------------ | ------------------------ | ------------------------------------------------ |
-| `power`      | `Optional[float] = None` |                                                  |
+| `power`      | `Optional[float] = None` | Laser power value (0.0 to 1.0).                  |
 | `feed_rate`  | `Optional[float] = None` | Optional feed rate to set on the frame commands. |
 | _Returns_    | `Ops`                    | A new Ops containing only the frame endpoints.   |
 | _Complexity_ |                          | O(n) time, O(n) space                            |
@@ -920,10 +920,10 @@ is_empty() -> bool
 
 Check if the ops sequence is empty.
 
-| Parameter    | Type   | Description           |
-| ------------ | ------ | --------------------- |
-| _Returns_    | `bool` |                       |
-| _Complexity_ |        | O(1) time, O(1) space |
+| Parameter    | Type   | Description                       |
+| ------------ | ------ | --------------------------------- |
+| _Returns_    | `bool` | `True` if the container is empty. |
+| _Complexity_ |        | O(1) time, O(1) space             |
 
 ### `is_marker()`
 
@@ -1059,10 +1059,10 @@ len() -> int
 
 Return the number of commands.
 
-| Parameter    | Type  | Description           |
-| ------------ | ----- | --------------------- |
-| _Returns_    | `int` |                       |
-| _Complexity_ |       | O(1) time, O(1) space |
+| Parameter    | Type  | Description                          |
+| ------------ | ----- | ------------------------------------ |
+| _Returns_    | `int` | Number of commands in the container. |
+| _Complexity_ |       | O(1) time, O(1) space                |
 
 ### `line_to()`
 

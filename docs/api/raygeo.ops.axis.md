@@ -52,9 +52,9 @@ Assert that this Axis represents exactly one axis (not a combination).
 
 **Raises:** `ValueError` — If the axis mask contains multiple or zero bits set.
 
-| Parameter | Type   | Description |
-| --------- | ------ | ----------- |
-| _Returns_ | `None` |             |
+| Parameter | Type   | Description             |
+| --------- | ------ | ----------------------- |
+| _Returns_ | `None` | The single active axis. |
 
 ### `from_name()`
 

@@ -261,6 +261,15 @@ fn any_overlap_hierarchical_py(
 // any_overlap_hierarchical_grid
 // ---------------------------------------------------------------------------
 
+/// Hierarchical overlap with spatial grid: bbox -> hull -> detailed polygon.
+///
+/// :param candidate_polys: Candidate polygon vertices.
+/// :param candidate_hulls: Candidate convex hulls.
+/// :param placed_polys_groups: Groups of already-placed polygon vertices.
+/// :param placed_hulls_groups: Groups of already-placed convex hulls.
+/// :param candidate_bbox: Bounding box of the candidate.
+/// :param min_area: Minimum overlap area to consider.
+/// :returns: ``True`` if any overlap is detected.
 #[gen_stub_pyfunction(
     python = r#"
     import collections.abc
@@ -276,10 +285,19 @@ fn any_overlap_hierarchical_py(
         candidate_bbox: tuple[float, float, float, float],
         min_area: float = 1.0,
     ) -> bool:
-        """:param spatial_grid: SpatialGrid for fast neighbor lookup.
+        """Hierarchical overlap with spatial grid: bbox -> hull -> detailed polygon.
+
+        :param candidate_polys: Candidate polygon vertices.
+        :param candidate_hulls: Candidate convex hulls.
+        :param placed_polys_groups: Groups of already-placed polygon vertices.
+        :param placed_hulls_groups: Groups of already-placed convex hulls.
+        :param spatial_grid: SpatialGrid for fast neighbor lookup.
+        :param candidate_bbox: Bounding box of the candidate.
+        :param min_area: Minimum overlap area to consider.
+        :returns: ``True`` if any overlap is detected.
         :complexity: O(n * m / k) where k = grid cell density factor.
         """
-"#,
+    "#,
     module = "raygeo.geo.algo.nest2d.collision"
 )]
 #[pyfunction(name = "any_overlap_hierarchical_grid")]

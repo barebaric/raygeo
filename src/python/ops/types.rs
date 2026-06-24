@@ -242,6 +242,8 @@ impl PySectionType {
     def category(ct: CommandType) -> CommandCategory:
         """Get the category of a command type.
 
+        :param ct: ``CommandType`` variant.
+        :returns: ``CommandCategory`` for the given type.
         :complexity: O(1)
         """
     "#,

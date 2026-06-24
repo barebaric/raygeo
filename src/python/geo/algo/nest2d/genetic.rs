@@ -74,6 +74,8 @@ impl GeneticAlgorithm {
 
     /// Returns (rotations, flips_h, flips_v, fitness) for individual at idx.
     ///
+    /// :param idx: Index of the individual.
+    /// :returns: ``(rotations, flips_h, flips_v, fitness)`` tuple.
     /// :complexity: O(1)
     pub fn get_individual(
         &self,
@@ -90,6 +92,8 @@ impl GeneticAlgorithm {
 
     /// Set the fitness for individual at idx.
     ///
+    /// :param idx: Index of the individual.
+    /// :param fitness: Fitness value to set.
     /// :complexity: O(1)
     pub fn set_fitness(&mut self, idx: usize, fitness: f64) {
         if idx < self.inner.population.len() {
@@ -99,6 +103,8 @@ impl GeneticAlgorithm {
 
     /// Returns the fitness of individual at idx.
     ///
+    /// :param idx: Index of the individual.
+    /// :returns: Fitness value of the individual.
     /// :complexity: O(1)
     pub fn get_fitness(&self, idx: usize) -> f64 {
         self.inner.population[idx].fitness
@@ -106,6 +112,7 @@ impl GeneticAlgorithm {
 
     /// Evolve one generation.
     ///
+    /// :returns: The genetic algorithm state after one generation.
     /// :complexity: O(p * n) where p = population size, n = num_parts
     pub fn generation(&mut self) {
         self.inner.generation();
@@ -113,6 +120,8 @@ impl GeneticAlgorithm {
 
     /// Mutate and return a copy of individual at idx.
     ///
+    /// :param idx: Index of the individual to mutate.
+    /// :returns: ``(rotations, flips_h, flips_v)`` of the mutated individual.
     /// :complexity: O(n) where n = num_parts
     pub fn mutate(&self, idx: usize) -> (Vec<f64>, Vec<bool>, Vec<bool>) {
         let ind = self.inner.mutate(idx);
@@ -121,6 +130,9 @@ impl GeneticAlgorithm {
 
     /// Mate two individuals and return the two children.
     ///
+    /// :param male_idx: Index of the male parent.
+    /// :param female_idx: Index of the female parent.
+    /// :returns: List of two child individuals.
     /// :complexity: O(n) where n = num_parts
     pub fn mate(
         &self,

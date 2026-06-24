@@ -76,6 +76,7 @@ def flatten_bezier(p0: types.Point3D, p1: types.Point3D, p2: types.Point3D, p3: 
     :param tolerance: Flattening tolerance.
     :param max_subdivisions: Maximum recursion depth.
     :param pts: Output list to append points to.
+    :returns: List of ``(x, y)`` points along the flattened bezier.
     :complexity: O(n)
     """
 

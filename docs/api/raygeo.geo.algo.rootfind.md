@@ -53,16 +53,16 @@ bisect_tracked(
 ) -> tuple[float, str, int, list[float]]
 ```
 
-Bisection with iteration history.
+Tracked bisection root-finding.
 
-| Parameter  | Type                                  | Description                               |
-| ---------- | ------------------------------------- | ----------------------------------------- |
-| `f`        | `Any`                                 |                                           |
-| `lo`       | `float`                               |                                           |
-| `hi`       | `float`                               |                                           |
-| `tol`      | `float = 1e-10`                       |                                           |
-| `max_iter` | `int = 100`                           |                                           |
-| _Returns_  | `tuple[float, str, int, list[float]]` | `(root, status, iterations, [estimates])` |
+| Parameter  | Type                                  | Description                                        |
+| ---------- | ------------------------------------- | -------------------------------------------------- |
+| `f`        | `Any`                                 | Function to find the root of.                      |
+| `lo`       | `float`                               | Lower bound of the search interval.                |
+| `hi`       | `float`                               | Upper bound of the search interval.                |
+| `tol`      | `float = 1e-10`                       | Convergence tolerance.                             |
+| `max_iter` | `int = 100`                           | Maximum number of iterations.                      |
+| _Returns_  | `tuple[float, str, int, list[float]]` | `(root, status_string, iteration_count, history)`. |
 
 ### `illinois()`
 
@@ -99,16 +99,16 @@ illinois_tracked(
 ) -> tuple[float, str, int, list[float]]
 ```
 
-Illinois with iteration history.
+Tracked Illinois method root-finding.
 
-| Parameter  | Type                                  | Description                               |
-| ---------- | ------------------------------------- | ----------------------------------------- |
-| `f`        | `Any`                                 |                                           |
-| `lo`       | `float`                               |                                           |
-| `hi`       | `float`                               |                                           |
-| `tol`      | `float = 1e-10`                       |                                           |
-| `max_iter` | `int = 100`                           |                                           |
-| _Returns_  | `tuple[float, str, int, list[float]]` | `(root, status, iterations, [estimates])` |
+| Parameter  | Type                                  | Description                                        |
+| ---------- | ------------------------------------- | -------------------------------------------------- |
+| `f`        | `Any`                                 | Function to find the root of.                      |
+| `lo`       | `float`                               | Lower bound of the search interval.                |
+| `hi`       | `float`                               | Upper bound of the search interval.                |
+| `tol`      | `float = 1e-10`                       | Convergence tolerance.                             |
+| `max_iter` | `int = 100`                           | Maximum number of iterations.                      |
+| _Returns_  | `tuple[float, str, int, list[float]]` | `(root, status_string, iteration_count, history)`. |
 
 ### `secant()`
 
@@ -145,13 +145,13 @@ secant_tracked(
 ) -> tuple[float, str, int, list[float]]
 ```
 
-Secant with iteration history.
+Tracked secant method root-finding.
 
-| Parameter  | Type                                  | Description                               |
-| ---------- | ------------------------------------- | ----------------------------------------- |
-| `f`        | `Any`                                 |                                           |
-| `x0`       | `float`                               |                                           |
-| `x1`       | `float`                               |                                           |
-| `tol`      | `float = 1e-10`                       |                                           |
-| `max_iter` | `int = 100`                           |                                           |
-| _Returns_  | `tuple[float, str, int, list[float]]` | `(root, status, iterations, [estimates])` |
+| Parameter  | Type                                  | Description                                        |
+| ---------- | ------------------------------------- | -------------------------------------------------- |
+| `f`        | `Any`                                 | Function to find the root of.                      |
+| `x0`       | `float`                               | First initial guess.                               |
+| `x1`       | `float`                               | Second initial guess.                              |
+| `tol`      | `float = 1e-10`                       | Convergence tolerance.                             |
+| `max_iter` | `int = 100`                           | Maximum number of iterations.                      |
+| _Returns_  | `tuple[float, str, int, list[float]]` | `(root, status_string, iteration_count, history)`. |

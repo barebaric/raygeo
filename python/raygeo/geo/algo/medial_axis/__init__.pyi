@@ -53,14 +53,27 @@ class MedialAxis:
     def compute(outer: typing.Sequence[tuple[builtins.float, builtins.float]], holes: typing.Optional[typing.Sequence[typing.Sequence[tuple[builtins.float, builtins.float]]]] = None, min_clearance: builtins.float = 1.0, sampling_spacing: builtins.float = 1.0) -> MedialAxis:
         r"""
         Compute the Medial Axis Transform of a planar domain.
+        
+        :param outer: Outer boundary polygon (list of ``(x, y)`` vertices).
+        :param holes: List of hole polygons (each a list of ``(x, y)`` vertices).
+        :param min_clearance: Minimum clearance distance in mm.
+        :param sampling_spacing: Spacing between sampling points in mm.
+        :returns: ``MedialAxis`` object.
         """
     def path_between(self, from_pt: tuple[builtins.float, builtins.float], to_pt: tuple[builtins.float, builtins.float]) -> typing.Optional[builtins.list[tuple[builtins.float, builtins.float]]]:
         r"""
         Find a path between two points along the medial axis skeleton.
+        
+        :param from_pt: Start point ``(x, y)``.
+        :param to_pt: End point ``(x, y)``.
+        :returns: List of ``(x, y)`` waypoints along the medial axis.
         """
     def trim_to_polygons(self, polygons: typing.Sequence[typing.Sequence[tuple[builtins.float, builtins.float]]]) -> MedialAxis:
         r"""
         Return a new ``MedialAxis`` containing only nodes whose
         positions fall inside at least one of the given polygons.
+        
+        :param polygons: List of polygons to trim against.
+        :returns: Trimmed ``MedialAxis``.
         """
 

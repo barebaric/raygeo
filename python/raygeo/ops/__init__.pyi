@@ -230,12 +230,14 @@ class Ops:
         r"""
         Check if the ops sequence is empty.
         
+        :returns: ``True`` if the container is empty.
         :complexity: O(1) time, O(1) space
         """
     def len(self) -> builtins.int:
         r"""
         Return the number of commands.
         
+        :returns: Number of commands in the container.
         :complexity: O(1) time, O(1) space
         """
     def command_type(self, idx: builtins.int) -> types.CommandType:
@@ -315,12 +317,14 @@ class Ops:
         r"""
         Compute the total distance of all commands.
         
+        :returns: Total path distance in mm.
         :complexity: O(n) time, O(1) space
         """
     def cut_distance(self) -> builtins.float:
         r"""
         Compute the total cutting distance (excluding travel moves).
         
+        :returns: Total cut distance in mm.
         :complexity: O(n) time, O(1) space
         """
     def endpoint(self, idx: builtins.int) -> tuple[builtins.float, builtins.float, builtins.float]:
@@ -683,6 +687,7 @@ class Ops:
         r"""
         Return a deep copy of this Ops sequence.
         
+        :returns: A new ``Ops`` instance.
         :complexity: O(n) time, O(n) space
         """
     def __copy__(self) -> Ops:
@@ -791,6 +796,7 @@ class Ops:
         Create an Ops sequence from a Geometry.
         
         :param geometry: The geometry to convert.
+        :returns: A new ``Ops`` instance.
         :complexity: O(n) time, O(n) space
         """
     def to_geometry(self) -> geo.Geometry:
@@ -1008,6 +1014,7 @@ class Ops:
         r"""
         Extract a frame (first and last endpoints) from the sequence.
         
+        :param power: Laser power value (0.0 to 1.0).
         :param feed_rate: Optional feed rate to set on the frame commands.
         :returns: A new Ops containing only the frame endpoints.
         :complexity: O(n) time, O(n) space
@@ -1050,6 +1057,7 @@ class Ops:
         Create an Ops sequence from a dictionary.
         
         :param data: Dictionary as produced by to_dict.
+        :returns: A new ``Ops`` instance.
         :complexity: O(n) time, O(n) space
         """
     def to_numpy_arrays(self) -> dict:
@@ -1065,6 +1073,7 @@ class Ops:
         Create an Ops sequence from numpy arrays.
         
         :param arrays: Dictionary as produced by to_numpy_arrays.
+        :returns: A new ``Ops`` instance.
         :complexity: O(n) time, O(n) space
         """
     def apply_tab_gaps(self, clips: typing.Sequence[tuple[builtins.float, builtins.float, builtins.float]]) -> None:

@@ -50,6 +50,12 @@ pub struct PyMedialAxis {
 #[pymethods]
 impl PyMedialAxis {
     /// Compute the Medial Axis Transform of a planar domain.
+    ///
+    /// :param outer: Outer boundary polygon (list of ``(x, y)`` vertices).
+    /// :param holes: List of hole polygons (each a list of ``(x, y)`` vertices).
+    /// :param min_clearance: Minimum clearance distance in mm.
+    /// :param sampling_spacing: Spacing between sampling points in mm.
+    /// :returns: ``MedialAxis`` object.
     #[staticmethod]
     #[pyo3(signature = (
         outer,
@@ -83,6 +89,10 @@ impl PyMedialAxis {
     }
 
     /// Find a path between two points along the medial axis skeleton.
+    ///
+    /// :param from_pt: Start point ``(x, y)``.
+    /// :param to_pt: End point ``(x, y)``.
+    /// :returns: List of ``(x, y)`` waypoints along the medial axis.
     #[pyo3(signature = (from_pt, to_pt))]
     fn path_between(
         &self,
@@ -98,6 +108,9 @@ impl PyMedialAxis {
 
     /// Return a new ``MedialAxis`` containing only nodes whose
     /// positions fall inside at least one of the given polygons.
+    ///
+    /// :param polygons: List of polygons to trim against.
+    /// :returns: Trimmed ``MedialAxis``.
     #[pyo3(signature = (polygons,))]
     fn trim_to_polygons(&self, polygons: Vec<Vec<(f64, f64)>>) -> PyMedialAxis {
         let pts: Vec<Vec<Point>> = polygons

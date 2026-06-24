@@ -81,13 +81,13 @@ compute(
 
 Compute the Medial Axis Transform of a planar domain.
 
-| Parameter          | Type                                                       | Description |
-| ------------------ | ---------------------------------------------------------- | ----------- |
-| `outer`            | `Sequence[tuple[float, float]]`                            |             |
-| `holes`            | `Optional[Sequence[Sequence[tuple[float, float]]]] = None` |             |
-| `min_clearance`    | `float = 1.0`                                              |             |
-| `sampling_spacing` | `float = 1.0`                                              |             |
-| _Returns_          | `MedialAxis`                                               |             |
+| Parameter          | Type                                                       | Description                                               |
+| ------------------ | ---------------------------------------------------------- | --------------------------------------------------------- |
+| `outer`            | `Sequence[tuple[float, float]]`                            | Outer boundary polygon (list of `(x, y)` vertices).       |
+| `holes`            | `Optional[Sequence[Sequence[tuple[float, float]]]] = None` | List of hole polygons (each a list of `(x, y)` vertices). |
+| `min_clearance`    | `float = 1.0`                                              | Minimum clearance distance in mm.                         |
+| `sampling_spacing` | `float = 1.0`                                              | Spacing between sampling points in mm.                    |
+| _Returns_          | `MedialAxis`                                               | `MedialAxis` object.                                      |
 
 ![Medial axis with three rectangular islands — skeleton branches around each obstacle.](images/geo-algo-medial-axis-mat-multi.png)
 
@@ -108,11 +108,11 @@ path_between(
 
 Find a path between two points along the medial axis skeleton.
 
-| Parameter | Type                                  | Description |
-| --------- | ------------------------------------- | ----------- |
-| `from_pt` | `tuple[float, float]`                 |             |
-| `to_pt`   | `tuple[float, float]`                 |             |
-| _Returns_ | `Optional[list[tuple[float, float]]]` |             |
+| Parameter | Type                                  | Description                                       |
+| --------- | ------------------------------------- | ------------------------------------------------- |
+| `from_pt` | `tuple[float, float]`                 | Start point `(x, y)`.                             |
+| `to_pt`   | `tuple[float, float]`                 | End point `(x, y)`.                               |
+| _Returns_ | `Optional[list[tuple[float, float]]]` | List of `(x, y)` waypoints along the medial axis. |
 
 ![MAT path routing: a path between two points (green) along the medial axis skeleton (red). The path avoids the island by following the skeleton topology.](images/geo-algo-medial-axis-mat-path.png)
 
@@ -130,10 +130,10 @@ trim_to_polygons(
 Return a new `MedialAxis` containing only nodes whose positions fall inside at least one of the
 given polygons.
 
-| Parameter  | Type                                      | Description |
-| ---------- | ----------------------------------------- | ----------- |
-| `polygons` | `Sequence[Sequence[tuple[float, float]]]` |             |
-| _Returns_  | `MedialAxis`                              |             |
+| Parameter  | Type                                      | Description                       |
+| ---------- | ----------------------------------------- | --------------------------------- |
+| `polygons` | `Sequence[Sequence[tuple[float, float]]]` | List of polygons to trim against. |
+| _Returns_  | `MedialAxis`                              | Trimmed `MedialAxis`.             |
 
 ![MAT trimming to cleared area — left: original MAT over cleared fragments (green fill); right: trimmed MAT with kept nodes (blue) and removed nodes (red x).  Only 10 clearing passes were run, so most MAT nodes lie outside the cleared area and are discarded.](images/geo-algo-medial-axis-mat-trimming.png)
 

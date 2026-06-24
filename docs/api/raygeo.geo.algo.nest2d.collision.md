@@ -68,16 +68,18 @@ any_overlap_hierarchical_grid(
 ) -> bool
 ```
 
+Hierarchical overlap with spatial grid: bbox -> hull -> detailed polygon.
+
 | Parameter             | Type                                | Description                                      |
 | --------------------- | ----------------------------------- | ------------------------------------------------ |
-| `candidate_polys`     | `Sequence[numpy.ndarray]`           |                                                  |
-| `candidate_hulls`     | `Sequence[numpy.ndarray]`           |                                                  |
-| `placed_polys_groups` | `Sequence[Sequence[numpy.ndarray]]` |                                                  |
-| `placed_hulls_groups` | `Sequence[Sequence[numpy.ndarray]]` |                                                  |
+| `candidate_polys`     | `Sequence[numpy.ndarray]`           | Candidate polygon vertices.                      |
+| `candidate_hulls`     | `Sequence[numpy.ndarray]`           | Candidate convex hulls.                          |
+| `placed_polys_groups` | `Sequence[Sequence[numpy.ndarray]]` | Groups of already-placed polygon vertices.       |
+| `placed_hulls_groups` | `Sequence[Sequence[numpy.ndarray]]` | Groups of already-placed convex hulls.           |
 | `spatial_grid`        | `spatial_grid2d.SpatialGrid`        | SpatialGrid for fast neighbor lookup.            |
-| `candidate_bbox`      | `tuple[float, float, float, float]` |                                                  |
-| `min_area`            | `float = 1`                         |                                                  |
-| _Returns_             | `bool`                              |                                                  |
+| `candidate_bbox`      | `tuple[float, float, float, float]` | Bounding box of the candidate.                   |
+| `min_area`            | `float = 1`                         | Minimum overlap area to consider.                |
+| _Returns_             | `bool`                              | `True` if any overlap is detected.               |
 | _Complexity_          |                                     | O(n * m / k) where k = grid cell density factor. |
 
 ### `is_contained()`

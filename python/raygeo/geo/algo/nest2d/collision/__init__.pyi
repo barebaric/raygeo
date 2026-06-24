@@ -44,7 +44,16 @@ def any_overlap_hierarchical(candidate_polys: collections.abc.Sequence[numpy.nda
 
 def any_overlap_hierarchical_grid(candidate_polys: collections.abc.Sequence[numpy.ndarray], candidate_hulls: collections.abc.Sequence[numpy.ndarray], placed_polys_groups: collections.abc.Sequence[collections.abc.Sequence[numpy.ndarray]], placed_hulls_groups: collections.abc.Sequence[collections.abc.Sequence[numpy.ndarray]], spatial_grid: spatial_grid2d.SpatialGrid, candidate_bbox: tuple[float, float, float, float], min_area: float = 1) -> bool:
     r"""
+    Hierarchical overlap with spatial grid: bbox -> hull -> detailed polygon.
+    
+    :param candidate_polys: Candidate polygon vertices.
+    :param candidate_hulls: Candidate convex hulls.
+    :param placed_polys_groups: Groups of already-placed polygon vertices.
+    :param placed_hulls_groups: Groups of already-placed convex hulls.
     :param spatial_grid: SpatialGrid for fast neighbor lookup.
+    :param candidate_bbox: Bounding box of the candidate.
+    :param min_area: Minimum overlap area to consider.
+    :returns: ``True`` if any overlap is detected.
     :complexity: O(n * m / k) where k = grid cell density factor.
     """
 

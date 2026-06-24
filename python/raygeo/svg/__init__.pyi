@@ -60,6 +60,7 @@ class SvgMetadata:
         Convert the document width to millimetres.
         
         :param dpi: Pixels-per-inch for px/unitless conversion (default 96).
+        :returns: Width in millimetres, or ``None`` if not set.
         :complexity: O(1)
         """
     def height_mm(self, dpi: builtins.float = 96.0) -> typing.Optional[builtins.float]:
@@ -67,6 +68,7 @@ class SvgMetadata:
         Convert the document height to millimetres.
         
         :param dpi: Pixels-per-inch for px/unitless conversion (default 96).
+        :returns: Height in millimetres, or ``None`` if not set.
         :complexity: O(1)
         """
     def width_px(self, dpi: builtins.float = 96.0) -> typing.Optional[builtins.float]:
@@ -74,6 +76,7 @@ class SvgMetadata:
         Convert the document width to pixels.
         
         :param dpi: Pixels-per-inch for conversion (default 96).
+        :returns: Width in pixels, or ``None`` if not set.
         :complexity: O(1)
         """
     def height_px(self, dpi: builtins.float = 96.0) -> typing.Optional[builtins.float]:
@@ -81,6 +84,7 @@ class SvgMetadata:
         Convert the document height to pixels.
         
         :param dpi: Pixels-per-inch for conversion (default 96).
+        :returns: Height in pixels, or ``None`` if not set.
         :complexity: O(1)
         """
     def __repr__(self) -> builtins.str: ...

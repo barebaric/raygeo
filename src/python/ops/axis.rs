@@ -189,6 +189,7 @@ impl PyAxis {
     /// Assert that this Axis represents exactly one axis (not a combination).
     ///
     /// :raises ValueError: If the axis mask contains multiple or zero bits set.
+    /// :returns: The single active axis.
     fn assert_single_axis(&self) -> PyResult<()> {
         self.0
             .assert_single_axis()

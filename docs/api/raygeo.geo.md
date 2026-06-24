@@ -137,7 +137,7 @@ Draw an arc to the given coordinates.
 | `j`          | `float = 0.0` | J offset from current point to center. |
 | `clockwise`  | `bool = True` | Whether the arc is clockwise.          |
 | `z`          | `float = 0.0` | Z coordinate (default 0.0).            |
-| _Returns_    | `Geometry`    |                                        |
+| _Returns_    | `Geometry`    | The geometry (for method chaining).    |
 | _Complexity_ |               | O(1) time, O(1) space                  |
 
 ### `arc_to_as_bezier()`
@@ -155,16 +155,16 @@ arc_to_as_bezier(
 
 Draw an arc, converting it to bezier curves.
 
-| Parameter    | Type          | Description           |
-| ------------ | ------------- | --------------------- |
-| `x`          | `float`       | End X coordinate.     |
-| `y`          | `float`       | End Y coordinate.     |
-| `i`          | `float`       | I offset to center.   |
-| `j`          | `float`       | J offset to center.   |
-| `clockwise`  | `bool = True` | Arc direction.        |
-| `z`          | `float = 0.0` | End Z coordinate.     |
-| _Returns_    | `Geometry`    |                       |
-| _Complexity_ |               | O(1) time, O(1) space |
+| Parameter    | Type          | Description                         |
+| ------------ | ------------- | ----------------------------------- |
+| `x`          | `float`       | End X coordinate.                   |
+| `y`          | `float`       | End Y coordinate.                   |
+| `i`          | `float`       | I offset to center.                 |
+| `j`          | `float`       | J offset to center.                 |
+| `clockwise`  | `bool = True` | Arc direction.                      |
+| `z`          | `float = 0.0` | End Z coordinate.                   |
+| _Returns_    | `Geometry`    | The geometry (for method chaining). |
+| _Complexity_ |               | O(1) time, O(1) space               |
 
 ### `area()`
 
@@ -174,10 +174,10 @@ area() -> float
 
 Return the signed area of the geometry.
 
-| Parameter    | Type    | Description           |
-| ------------ | ------- | --------------------- |
-| _Returns_    | `float` |                       |
-| _Complexity_ |         | O(n) time, O(1) space |
+| Parameter    | Type    | Description             |
+| ------------ | ------- | ----------------------- |
+| _Returns_    | `float` | The signed area in mm². |
+| _Complexity_ |         | O(n) time, O(1) space   |
 
 ### `bezier_to()`
 
@@ -209,7 +209,7 @@ Draw a cubic bezier curve.
 | `c1z`        | `float`    | First control point Z (default 0.0).  |
 | `c2z`        | `float`    | Second control point Z (default 0.0). |
 | `z`          | `float`    | End Z coordinate (default 0.0).       |
-| _Returns_    | `Geometry` |                                       |
+| _Returns_    | `Geometry` | The geometry (for method chaining).   |
 | _Complexity_ |            | O(1) time, O(1) space                 |
 
 ### `cleanup()`
@@ -223,7 +223,7 @@ Remove duplicate segments from the geometry.
 | Parameter    | Type       | Description                         |
 | ------------ | ---------- | ----------------------------------- |
 | `tolerance`  | `float`    | Maximum deviation for equality.     |
-| _Returns_    | `Geometry` |                                     |
+| _Returns_    | `Geometry` | The geometry (for method chaining). |
 | _Complexity_ |            | O(n log n) average time, O(n) space |
 
 ### `clear()`
@@ -234,10 +234,10 @@ clear() -> Geometry
 
 Remove all commands from the geometry.
 
-| Parameter    | Type       | Description           |
-| ------------ | ---------- | --------------------- |
-| _Returns_    | `Geometry` |                       |
-| _Complexity_ |            | O(1) time, O(1) space |
+| Parameter    | Type       | Description                         |
+| ------------ | ---------- | ----------------------------------- |
+| _Returns_    | `Geometry` | The geometry (for method chaining). |
+| _Complexity_ |            | O(1) time, O(1) space               |
 
 ### `close_all_contours()`
 
@@ -247,10 +247,10 @@ close_all_contours() -> Geometry
 
 Close all open contours in the geometry.
 
-| Parameter    | Type       | Description           |
-| ------------ | ---------- | --------------------- |
-| _Returns_    | `Geometry` |                       |
-| _Complexity_ |            | O(n) time, O(n) space |
+| Parameter    | Type       | Description                         |
+| ------------ | ---------- | ----------------------------------- |
+| _Returns_    | `Geometry` | The geometry (for method chaining). |
+| _Complexity_ |            | O(n) time, O(n) space               |
 
 ### `close_gaps()`
 
@@ -260,11 +260,11 @@ close_gaps(tolerance: Optional[float] = None) -> Geometry
 
 Close gaps between sub-paths.
 
-| Parameter    | Type                     | Description           |
-| ------------ | ------------------------ | --------------------- |
-| `tolerance`  | `Optional[float] = None` | Max gap to close.     |
-| _Returns_    | `Geometry`               |                       |
-| _Complexity_ |                          | O(n) time, O(n) space |
+| Parameter    | Type                     | Description                         |
+| ------------ | ------------------------ | ----------------------------------- |
+| `tolerance`  | `Optional[float] = None` | Max gap to close.                   |
+| _Returns_    | `Geometry`               | The geometry (for method chaining). |
+| _Complexity_ |                          | O(n) time, O(n) space               |
 
 ### `close_path()`
 
@@ -274,10 +274,10 @@ close_path() -> Geometry
 
 Close the current sub-path.
 
-| Parameter    | Type       | Description           |
-| ------------ | ---------- | --------------------- |
-| _Returns_    | `Geometry` |                       |
-| _Complexity_ |            | O(1) time, O(1) space |
+| Parameter    | Type       | Description                         |
+| ------------ | ---------- | ----------------------------------- |
+| _Returns_    | `Geometry` | The geometry (for method chaining). |
+| _Complexity_ |            | O(1) time, O(1) space               |
 
 ### `convert_arcs_to_beziers()`
 
@@ -306,10 +306,10 @@ copy() -> Geometry
 
 Return a deep copy of this geometry.
 
-| Parameter    | Type       | Description           |
-| ------------ | ---------- | --------------------- |
-| _Returns_    | `Geometry` |                       |
-| _Complexity_ |            | O(n) time, O(n) space |
+| Parameter    | Type       | Description                  |
+| ------------ | ---------- | ---------------------------- |
+| _Returns_    | `Geometry` | A deep copy of the geometry. |
+| _Complexity_ |            | O(n) time, O(n) space        |
 
 ### `distance()`
 
@@ -319,10 +319,10 @@ distance() -> float
 
 Return the total path distance.
 
-| Parameter    | Type    | Description           |
-| ------------ | ------- | --------------------- |
-| _Returns_    | `float` |                       |
-| _Complexity_ |         | O(n) time, O(1) space |
+| Parameter    | Type    | Description                    |
+| ------------ | ------- | ------------------------------ |
+| _Returns_    | `float` | The total path distance in mm. |
+| _Complexity_ |         | O(n) time, O(1) space          |
 
 ### `encloses()`
 
@@ -332,11 +332,11 @@ encloses(other: Geometry) -> bool
 
 Check if this geometry encloses another.
 
-| Parameter    | Type       | Description                         |
-| ------------ | ---------- | ----------------------------------- |
-| `other`      | `Geometry` | The potentially enclosed geometry.  |
-| _Returns_    | `bool`     |                                     |
-| _Complexity_ |            | O(n log n) average time, O(n) space |
+| Parameter    | Type       | Description                                 |
+| ------------ | ---------- | ------------------------------------------- |
+| `other`      | `Geometry` | The potentially enclosed geometry.          |
+| _Returns_    | `bool`     | `True` if this geometry encloses the other. |
+| _Complexity_ |            | O(n log n) average time, O(n) space         |
 
 ### `extend()`
 
@@ -346,11 +346,11 @@ extend(other: Geometry) -> Geometry
 
 Append another geometry's commands to this one.
 
-| Parameter    | Type       | Description             |
-| ------------ | ---------- | ----------------------- |
-| `other`      | `Geometry` | The geometry to append. |
-| _Returns_    | `Geometry` |                         |
-| _Complexity_ |            | O(n) time, O(n) space   |
+| Parameter    | Type       | Description                         |
+| ------------ | ---------- | ----------------------------------- |
+| `other`      | `Geometry` | The geometry to append.             |
+| _Returns_    | `Geometry` | The geometry (for method chaining). |
+| _Complexity_ |            | O(n) time, O(n) space               |
 
 ### `filter()`
 
@@ -376,7 +376,7 @@ Filter to only external (outermost) contours.
 
 | Parameter    | Type       | Description                         |
 | ------------ | ---------- | ----------------------------------- |
-| _Returns_    | `Geometry` |                                     |
+| _Returns_    | `Geometry` | The geometry (for method chaining). |
 | _Complexity_ |            | O(n log n) average time, O(n) space |
 
 ### `find_closest_point()`
@@ -408,7 +408,7 @@ Fit arcs only to the linearized geometry.
 | Parameter    | Type       | Description                         |
 | ------------ | ---------- | ----------------------------------- |
 | `tolerance`  | `float`    | Maximum deviation.                  |
-| _Returns_    | `Geometry` |                                     |
+| _Returns_    | `Geometry` | The geometry (for method chaining). |
 | _Complexity_ |            | O(n log n) average time, O(n) space |
 
 ### `fit_curves()`
@@ -430,7 +430,7 @@ Fit curves (beziers and arcs) to the linearized geometry.
 | `beziers`     | `bool = True`          | Whether to fit bezier curves.                              |
 | `arcs`        | `bool = True`          | Whether to fit arcs.                                       |
 | `on_progress` | `Optional[Any] = None` | Optional progress callback called with `(current, total)`. |
-| _Returns_     | `Geometry`             |                                                            |
+| _Returns_     | `Geometry`             | The geometry (for method chaining).                        |
 | _Complexity_  |                        | O(n log n) average time, O(n) space                        |
 
 ### `flip_x()`
@@ -441,10 +441,10 @@ flip_x() -> Geometry
 
 Mirror the geometry along the X axis.
 
-| Parameter    | Type       | Description           |
-| ------------ | ---------- | --------------------- |
-| _Returns_    | `Geometry` |                       |
-| _Complexity_ |            | O(n) time, O(1) space |
+| Parameter    | Type       | Description                         |
+| ------------ | ---------- | ----------------------------------- |
+| _Returns_    | `Geometry` | The geometry (for method chaining). |
+| _Complexity_ |            | O(n) time, O(1) space               |
 
 ### `flip_y()`
 
@@ -454,10 +454,10 @@ flip_y() -> Geometry
 
 Mirror the geometry along the Y axis.
 
-| Parameter    | Type       | Description           |
-| ------------ | ---------- | --------------------- |
-| _Returns_    | `Geometry` |                       |
-| _Complexity_ |            | O(n) time, O(1) space |
+| Parameter    | Type       | Description                         |
+| ------------ | ---------- | ----------------------------------- |
+| _Returns_    | `Geometry` | The geometry (for method chaining). |
+| _Complexity_ |            | O(n) time, O(1) space               |
 
 ### `from_dict()`
 
@@ -470,7 +470,7 @@ Create a Geometry from a dictionary.
 | Parameter    | Type       | Description                              |
 | ------------ | ---------- | ---------------------------------------- |
 | `data`       | `dict`     | A dictionary as produced by **to_dict**. |
-| _Returns_    | `Geometry` |                                          |
+| _Returns_    | `Geometry` | A new `Geometry` instance.               |
 | _Complexity_ |            | O(n) time, O(n) space                    |
 
 ### `from_points()`
@@ -485,7 +485,7 @@ Create a Geometry from a sequence of points.
 | ------------ | ------------- | ---------------------------------------------------- |
 | `points`     | `Any`         | A sequence of (x, y) or (x, y, z) coordinate tuples. |
 | `close`      | `bool = True` | Whether to close the path.                           |
-| _Returns_    | `Geometry`    |                                                      |
+| _Returns_    | `Geometry`    | A new `Geometry` instance.                           |
 | _Complexity_ |               | O(n) time, O(n) space                                |
 
 ### `get_command_at()`
@@ -499,7 +499,7 @@ Get the command at the given index as a typed command object.
 | Parameter    | Type            | Description                            |
 | ------------ | --------------- | -------------------------------------- |
 | `index`      | `int`           | Command index (negative returns None). |
-| _Returns_    | `Optional[Any]` |                                        |
+| _Returns_    | `Optional[Any]` | The typed command or `None`.           |
 | _Complexity_ |                 | O(1) time, O(1) space                  |
 
 ### `get_last_point()`
@@ -510,10 +510,10 @@ get_last_point() -> tuple[float, float, float]
 
 Get the last point in the geometry.
 
-| Parameter    | Type                         | Description           |
-| ------------ | ---------------------------- | --------------------- |
-| _Returns_    | `tuple[float, float, float]` |                       |
-| _Complexity_ |                              | O(1) time, O(1) space |
+| Parameter    | Type                         | Description                                             |
+| ------------ | ---------------------------- | ------------------------------------------------------- |
+| _Returns_    | `tuple[float, float, float]` | The last point as `(x, y, z)`, or `(0, 0, 0)` if empty. |
+| _Complexity_ |                              | O(1) time, O(1) space                                   |
 
 ### `get_outward_normal_at()`
 
@@ -623,7 +623,7 @@ Offset (grow/shrink) the geometry by the given amount.
 | Parameter    | Type       | Description                           |
 | ------------ | ---------- | ------------------------------------- |
 | `amount`     | `float`    | Positive to grow, negative to shrink. |
-| _Returns_    | `Geometry` |                                       |
+| _Returns_    | `Geometry` | The geometry (for method chaining).   |
 | _Complexity_ |            | O(n log n) average time, O(n) space   |
 
 ### `has_self_intersections()`
@@ -634,11 +634,11 @@ has_self_intersections(fail_on_t_junction: bool = False) -> bool
 
 Check if the geometry has self-intersections.
 
-| Parameter            | Type           | Description                       |
-| -------------------- | -------------- | --------------------------------- |
-| `fail_on_t_junction` | `bool = False` | Whether to fail on T-junctions.   |
-| _Returns_            | `bool`         |                                   |
-| _Complexity_         |                | O(n²) worst-case time, O(1) space |
+| Parameter            | Type           | Description                                    |
+| -------------------- | -------------- | ---------------------------------------------- |
+| `fail_on_t_junction` | `bool = False` | Whether to fail on T-junctions.                |
+| _Returns_            | `bool`         | `True` if the geometry has self-intersections. |
+| _Complexity_         |                | O(n²) worst-case time, O(1) space              |
 
 ### `intersects_with()`
 
@@ -651,7 +651,7 @@ Check if this geometry intersects with another.
 | Parameter    | Type       | Description                                                                                    |
 | ------------ | ---------- | ---------------------------------------------------------------------------------------------- |
 | `other`      | `Geometry` | The other geometry.                                                                            |
-| _Returns_    | `bool`     |                                                                                                |
+| _Returns_    | `bool`     | `True` if the geometries intersect.                                                            |
 | _Complexity_ |            | O(n * m) worst-case time, O(1) space where n and m are the number of segments in each geometry |
 
 ### `is_closed()`
@@ -662,11 +662,11 @@ is_closed(tolerance: float = 1e-06) -> bool
 
 Check if the geometry forms a closed path.
 
-| Parameter    | Type            | Description                          |
-| ------------ | --------------- | ------------------------------------ |
-| `tolerance`  | `float = 1e-06` | Max gap between start and end point. |
-| _Returns_    | `bool`          |                                      |
-| _Complexity_ |                 | O(n) time, O(1) space                |
+| Parameter    | Type            | Description                                 |
+| ------------ | --------------- | ------------------------------------------- |
+| `tolerance`  | `float = 1e-06` | Max gap between start and end point.        |
+| _Returns_    | `bool`          | `True` if the geometry forms a closed path. |
+| _Complexity_ |                 | O(n) time, O(1) space                       |
 
 ### `is_empty()`
 
@@ -676,10 +676,10 @@ is_empty() -> bool
 
 Check if the geometry has no commands.
 
-| Parameter    | Type   | Description           |
-| ------------ | ------ | --------------------- |
-| _Returns_    | `bool` |                       |
-| _Complexity_ |        | O(1) time, O(1) space |
+| Parameter    | Type   | Description                             |
+| ------------ | ------ | --------------------------------------- |
+| _Returns_    | `bool` | `True` if the geometry has no commands. |
+| _Complexity_ |        | O(1) time, O(1) space                   |
 
 ### `iter_commands()`
 
@@ -689,10 +689,10 @@ iter_commands() -> list[Any]
 
 Iterate over all commands as typed command objects.
 
-| Parameter    | Type        | Description           |
-| ------------ | ----------- | --------------------- |
-| _Returns_    | `list[Any]` |                       |
-| _Complexity_ |             | O(n) time, O(n) space |
+| Parameter    | Type        | Description                    |
+| ------------ | ----------- | ------------------------------ |
+| _Returns_    | `list[Any]` | List of typed command objects. |
+| _Complexity_ |             | O(n) time, O(n) space          |
 
 ### `iter_typed_commands()`
 
@@ -715,13 +715,13 @@ line_to(x: float, y: float, z: float = 0.0) -> Geometry
 
 Draw a line to the given coordinates.
 
-| Parameter    | Type          | Description                 |
-| ------------ | ------------- | --------------------------- |
-| `x`          | `float`       | X coordinate.               |
-| `y`          | `float`       | Y coordinate.               |
-| `z`          | `float = 0.0` | Z coordinate (default 0.0). |
-| _Returns_    | `Geometry`    |                             |
-| _Complexity_ |               | O(1) time, O(1) space       |
+| Parameter    | Type          | Description                         |
+| ------------ | ------------- | ----------------------------------- |
+| `x`          | `float`       | X coordinate.                       |
+| `y`          | `float`       | Y coordinate.                       |
+| `z`          | `float = 0.0` | Z coordinate (default 0.0).         |
+| _Returns_    | `Geometry`    | The geometry (for method chaining). |
+| _Complexity_ |               | O(1) time, O(1) space               |
 
 ### `linearize()`
 
@@ -731,11 +731,11 @@ linearize(tolerance: float) -> Geometry
 
 Convert all curves to line segments.
 
-| Parameter    | Type       | Description                    |
-| ------------ | ---------- | ------------------------------ |
-| `tolerance`  | `float`    | Maximum deviation from curves. |
-| _Returns_    | `Geometry` |                                |
-| _Complexity_ |            | O(n) time, O(n) space          |
+| Parameter    | Type       | Description                         |
+| ------------ | ---------- | ----------------------------------- |
+| `tolerance`  | `float`    | Maximum deviation from curves.      |
+| _Returns_    | `Geometry` | The geometry (for method chaining). |
+| _Complexity_ |            | O(n) time, O(n) space               |
 
 ### `map_to_frame()`
 
@@ -762,7 +762,7 @@ Map the geometry into a rectangular frame.
 | `stable_src_height` | `Optional[float] = None` | Stable source height for anchoring. |
 | `anchor_x`          | `Optional[float] = None` | X anchor position.                  |
 | `stable_src_width`  | `Optional[float] = None` | Stable source width for anchoring.  |
-| _Returns_           | `Geometry`               |                                     |
+| _Returns_           | `Geometry`               | The geometry (for method chaining). |
 | _Complexity_        |                          | O(n) time, O(n) space               |
 
 ### `move_to()`
@@ -773,13 +773,13 @@ move_to(x: float, y: float, z: float = 0.0) -> Geometry
 
 Move the pen to the given coordinates.
 
-| Parameter    | Type          | Description                 |
-| ------------ | ------------- | --------------------------- |
-| `x`          | `float`       | X coordinate.               |
-| `y`          | `float`       | Y coordinate.               |
-| `z`          | `float = 0.0` | Z coordinate (default 0.0). |
-| _Returns_    | `Geometry`    |                             |
-| _Complexity_ |               | O(1) time, O(1) space       |
+| Parameter    | Type          | Description                         |
+| ------------ | ------------- | ----------------------------------- |
+| `x`          | `float`       | X coordinate.                       |
+| `y`          | `float`       | Y coordinate.                       |
+| `z`          | `float = 0.0` | Z coordinate (default 0.0).         |
+| _Returns_    | `Geometry`    | The geometry (for method chaining). |
+| _Complexity_ |               | O(1) time, O(1) space               |
 
 ### `normalize_winding_orders()`
 
@@ -791,7 +791,7 @@ Normalize winding orders (outer CCW, inner CW) of all contours.
 
 | Parameter    | Type       | Description                         |
 | ------------ | ---------- | ----------------------------------- |
-| _Returns_    | `Geometry` |                                     |
+| _Returns_    | `Geometry` | The geometry (for method chaining). |
 | _Complexity_ |            | O(n log n) average time, O(n) space |
 
 ### `rect()`
@@ -802,10 +802,10 @@ rect() -> tuple[float, float, float, float]
 
 Return the bounding rectangle (x_min, y_min, x_max, y_max).
 
-| Parameter    | Type                                | Description           |
-| ------------ | ----------------------------------- | --------------------- |
-| _Returns_    | `tuple[float, float, float, float]` |                       |
-| _Complexity_ |                                     | O(n) time, O(1) space |
+| Parameter    | Type                                | Description                   |
+| ------------ | ----------------------------------- | ----------------------------- |
+| _Returns_    | `tuple[float, float, float, float]` | (x_min, y_min, x_max, y_max). |
+| _Complexity_ |                                     | O(n) time, O(1) space         |
 
 ### `remove_inner_edges()`
 
@@ -815,10 +815,10 @@ remove_inner_edges() -> Geometry
 
 Remove inner edges (shared between contours).
 
-| Parameter    | Type       | Description           |
-| ------------ | ---------- | --------------------- |
-| _Returns_    | `Geometry` |                       |
-| _Complexity_ |            | O(n) time, O(n) space |
+| Parameter    | Type       | Description                         |
+| ------------ | ---------- | ----------------------------------- |
+| _Returns_    | `Geometry` | The geometry (for method chaining). |
+| _Complexity_ |            | O(n) time, O(n) space               |
 
 ### `reverse_contour()`
 
@@ -828,10 +828,10 @@ reverse_contour() -> Geometry
 
 Reverse the winding direction of all contours.
 
-| Parameter    | Type       | Description           |
-| ------------ | ---------- | --------------------- |
-| _Returns_    | `Geometry` |                       |
-| _Complexity_ |            | O(n) time, O(n) space |
+| Parameter    | Type       | Description                         |
+| ------------ | ---------- | ----------------------------------- |
+| _Returns_    | `Geometry` | The geometry (for method chaining). |
+| _Complexity_ |            | O(n) time, O(n) space               |
 
 ### `segment_bounds()`
 
@@ -856,10 +856,10 @@ segments() -> list[list[tuple[float, float, float]]]
 
 Return the geometry split into segments of connected commands.
 
-| Parameter    | Type                                     | Description           |
-| ------------ | ---------------------------------------- | --------------------- |
-| _Returns_    | `list[list[tuple[float, float, float]]]` |                       |
-| _Complexity_ |                                          | O(n) time, O(n) space |
+| Parameter    | Type                                     | Description                                 |
+| ------------ | ---------------------------------------- | ------------------------------------------- |
+| _Returns_    | `list[list[tuple[float, float, float]]]` | List of segments, each a list of 3D points. |
+| _Complexity_ |                                          | O(n) time, O(n) space                       |
 
 ### `segments_in_frame()`
 
@@ -890,7 +890,7 @@ Simplify the geometry using Ramer-Douglas-Peucker.
 | Parameter    | Type       | Description                         |
 | ------------ | ---------- | ----------------------------------- |
 | `tolerance`  | `float`    | Maximum deviation from original.    |
-| _Returns_    | `Geometry` |                                     |
+| _Returns_    | `Geometry` | The geometry (for method chaining). |
 | _Complexity_ |            | O(n log n) average time, O(n) space |
 
 ### `split_inner_and_outer_contours()`
@@ -901,10 +901,10 @@ split_inner_and_outer_contours() -> tuple[list[Geometry], list[Geometry]]
 
 Split contours into inner and outer groups.
 
-| Parameter    | Type                                    | Description                         |
-| ------------ | --------------------------------------- | ----------------------------------- |
-| _Returns_    | `tuple[list[Geometry], list[Geometry]]` |                                     |
-| _Complexity_ |                                         | O(n log n) average time, O(n) space |
+| Parameter    | Type                                    | Description                                                           |
+| ------------ | --------------------------------------- | --------------------------------------------------------------------- |
+| _Returns_    | `tuple[list[Geometry], list[Geometry]]` | Tuple of `(inner_contours, outer_contours)`, each a list of Geometry. |
+| _Complexity_ |                                         | O(n log n) average time, O(n) space                                   |
 
 ### `split_into_components()`
 
@@ -914,10 +914,10 @@ split_into_components() -> list[Geometry]
 
 Split the geometry into connected components.
 
-| Parameter    | Type             | Description                         |
-| ------------ | ---------------- | ----------------------------------- |
-| _Returns_    | `list[Geometry]` |                                     |
-| _Complexity_ |                  | O(n log n) average time, O(n) space |
+| Parameter    | Type             | Description                                            |
+| ------------ | ---------------- | ------------------------------------------------------ |
+| _Returns_    | `list[Geometry]` | List of Geometry objects, one per connected component. |
+| _Complexity_ |                  | O(n log n) average time, O(n) space                    |
 
 ### `split_into_contours()`
 
@@ -927,10 +927,10 @@ split_into_contours() -> list[Geometry]
 
 Split the geometry into individual contours.
 
-| Parameter    | Type             | Description           |
-| ------------ | ---------------- | --------------------- |
-| _Returns_    | `list[Geometry]` |                       |
-| _Complexity_ |                  | O(n) time, O(n) space |
+| Parameter    | Type             | Description                                |
+| ------------ | ---------------- | ------------------------------------------ |
+| _Returns_    | `list[Geometry]` | List of Geometry objects, one per contour. |
+| _Complexity_ |                  | O(n) time, O(n) space                      |
 
 ### `to_dict()`
 
@@ -940,10 +940,10 @@ to_dict() -> dict
 
 Serialize the geometry to a dictionary.
 
-| Parameter    | Type   | Description           |
-| ------------ | ------ | --------------------- |
-| _Returns_    | `dict` |                       |
-| _Complexity_ |        | O(n) time, O(n) space |
+| Parameter    | Type   | Description                                  |
+| ------------ | ------ | -------------------------------------------- |
+| _Returns_    | `dict` | A dictionary representation of the geometry. |
+| _Complexity_ |        | O(n) time, O(n) space                        |
 
 ### `to_polygons()`
 
@@ -953,11 +953,11 @@ to_polygons(tolerance: float = 0.01) -> list[list[tuple[float, float]]]
 
 Convert the geometry to a list of polygons.
 
-| Parameter    | Type                              | Description                      |
-| ------------ | --------------------------------- | -------------------------------- |
-| `tolerance`  | `float = 0.01`                    | Max deviation for linearization. |
-| _Returns_    | `list[list[tuple[float, float]]]` |                                  |
-| _Complexity_ |                                   | O(n) time, O(n) space            |
+| Parameter    | Type                              | Description                                         |
+| ------------ | --------------------------------- | --------------------------------------------------- |
+| `tolerance`  | `float = 0.01`                    | Max deviation for linearization.                    |
+| _Returns_    | `list[list[tuple[float, float]]]` | List of polygons, each a list of `(x, y)` vertices. |
+| _Complexity_ |                                   | O(n) time, O(n) space                               |
 
 ### `transform()`
 
@@ -983,10 +983,10 @@ upgrade_to_scalable() -> Geometry
 
 Convert all arcs to bezier curves for uniform scaling.
 
-| Parameter    | Type       | Description           |
-| ------------ | ---------- | --------------------- |
-| _Returns_    | `Geometry` |                       |
-| _Complexity_ |            | O(n) time, O(n) space |
+| Parameter    | Type       | Description                         |
+| ------------ | ---------- | ----------------------------------- |
+| _Returns_    | `Geometry` | The geometry (for method chaining). |
+| _Complexity_ |            | O(n) time, O(n) space               |
 
 ## Line
 

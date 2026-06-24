@@ -281,6 +281,7 @@ impl Geometry {
     /// :param x: X coordinate.
     /// :param y: Y coordinate.
     /// :param z: Z coordinate (default 0.0).
+    /// :returns: The geometry (for method chaining).
     /// :complexity: O(1) time, O(1) space
     #[pyo3(signature = (x, y, z=0.0))]
     fn move_to(
@@ -298,6 +299,7 @@ impl Geometry {
     /// :param x: X coordinate.
     /// :param y: Y coordinate.
     /// :param z: Z coordinate (default 0.0).
+    /// :returns: The geometry (for method chaining).
     /// :complexity: O(1) time, O(1) space
     #[pyo3(signature = (x, y, z=0.0))]
     fn line_to(
@@ -312,6 +314,7 @@ impl Geometry {
 
     /// Close the current sub-path.
     ///
+    /// :returns: The geometry (for method chaining).
     /// :complexity: O(1) time, O(1) space
     fn close_path(slf: Bound<'_, Self>) -> Bound<'_, Self> {
         slf.borrow_mut().inner.close_path();
@@ -326,6 +329,7 @@ impl Geometry {
     /// :param j: J offset from current point to center.
     /// :param clockwise: Whether the arc is clockwise.
     /// :param z: Z coordinate (default 0.0).
+    /// :returns: The geometry (for method chaining).
     /// :complexity: O(1) time, O(1) space
     #[pyo3(signature = (x, y, i=0.0, j=0.0, clockwise=true, z=0.0))]
     fn arc_to(
@@ -352,6 +356,7 @@ impl Geometry {
     /// :param c2y: Second control point Y.
     /// :param c2z: Second control point Z (default 0.0).
     /// :param z: End Z coordinate (default 0.0).
+    /// :returns: The geometry (for method chaining).
     /// :complexity: O(1) time, O(1) space
     #[pyo3(signature = (x, y, c1x, c1y, c2x, c2y, *, c1z=0.0, c2z=0.0, z=0.0))]
     #[allow(clippy::too_many_arguments)]
@@ -429,6 +434,7 @@ impl Geometry {
 
     /// Check if the geometry has no commands.
     ///
+    /// :returns: ``True`` if the geometry has no commands.
     /// :complexity: O(1) time, O(1) space
     fn is_empty(&self) -> bool {
         self.inner.is_empty()
@@ -436,6 +442,7 @@ impl Geometry {
 
     /// Remove all commands from the geometry.
     ///
+    /// :returns: The geometry (for method chaining).
     /// :complexity: O(1) time, O(1) space
     fn clear(slf: Bound<'_, Self>) -> Bound<'_, Self> {
         slf.borrow_mut().inner.clear();
@@ -476,6 +483,7 @@ impl Geometry {
 
     /// Return a deep copy of this geometry.
     ///
+    /// :returns: A deep copy of the geometry.
     /// :complexity: O(n) time, O(n) space
     fn copy(&self) -> Self {
         Geometry {
@@ -485,6 +493,7 @@ impl Geometry {
 
     /// Get the last point in the geometry.
     ///
+    /// :returns: The last point as ``(x, y, z)``, or ``(0, 0, 0)`` if empty.
     /// :complexity: O(1) time, O(1) space
     fn get_last_point(&self) -> (f64, f64, f64) {
         if let Some(last) = self.inner.data().last() {
@@ -538,6 +547,7 @@ impl Geometry {
     /// Append another geometry's commands to this one.
     ///
     /// :param other: The geometry to append.
+    /// :returns: The geometry (for method chaining).
     /// :complexity: O(n) time, O(n) space
     fn extend<'a>(
         slf: Bound<'a, Self>,
@@ -549,6 +559,7 @@ impl Geometry {
 
     /// Return the bounding rectangle (x_min, y_min, x_max, y_max).
     ///
+    /// :returns: (x_min, y_min, x_max, y_max).
     /// :complexity: O(n) time, O(1) space
     fn rect(&mut self) -> (f64, f64, f64, f64) {
         let r = self.inner.rect();
@@ -607,6 +618,7 @@ impl Geometry {
 
     /// Return the total path distance.
     ///
+    /// :returns: The total path distance in mm.
     /// :complexity: O(n) time, O(1) space
     fn distance(&mut self) -> f64 {
         self.inner.distance()
@@ -614,6 +626,7 @@ impl Geometry {
 
     /// Return the signed area of the geometry.
     ///
+    /// :returns: The signed area in mm².
     /// :complexity: O(n) time, O(1) space
     fn area(&mut self) -> f64 {
         self.inner.area()
@@ -622,6 +635,7 @@ impl Geometry {
     /// Check if the geometry forms a closed path.
     ///
     /// :param tolerance: Max gap between start and end point.
+    /// :returns: ``True`` if the geometry forms a closed path.
     /// :complexity: O(n) time, O(1) space
     #[pyo3(signature = (tolerance=1e-6))]
     fn is_closed(&mut self, tolerance: f64) -> bool {
@@ -630,6 +644,7 @@ impl Geometry {
 
     /// Return the geometry split into segments of connected commands.
     ///
+    /// :returns: List of segments, each a list of 3D points.
     /// :complexity: O(n) time, O(n) space
     fn segments(&mut self) -> Vec<Vec<(f64, f64, f64)>> {
         self.inner
@@ -654,6 +669,7 @@ impl Geometry {
     /// Get the command at the given index as a typed command object.
     ///
     /// :param index: Command index (negative returns None).
+    /// :returns: The typed command or ``None``.
     /// :complexity: O(1) time, O(1) space
     fn get_command_at(
         &mut self,
@@ -674,6 +690,7 @@ impl Geometry {
 
     /// Iterate over all commands as typed command objects.
     ///
+    /// :returns: List of typed command objects.
     /// :complexity: O(n) time, O(n) space
     fn iter_commands(&mut self, py: Python<'_>) -> PyResult<Vec<Py<PyAny>>> {
         let data = self.inner.data();
@@ -683,6 +700,8 @@ impl Geometry {
     }
 
     /// Iterate over all commands as typed PyCommand objects.
+    ///
+    /// :returns: List of typed command objects.
     #[gen_stub(skip)]
     fn iter_typed_commands(
         &mut self,
@@ -697,6 +716,7 @@ impl Geometry {
     /// Get the typed command at the given index.
     ///
     /// :param index: Command index.
+    /// :returns: The typed command or ``None``.
     #[gen_stub(skip)]
     fn get_typed_command_at(
         &mut self,
@@ -717,6 +737,7 @@ impl Geometry {
 
     /// Serialize the geometry to a dictionary.
     ///
+    /// :returns: A dictionary representation of the geometry.
     /// :complexity: O(n) time, O(n) space
     fn to_dict<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyDict>> {
         let last_move_to = self.inner.last_move_to;
@@ -786,6 +807,7 @@ impl Geometry {
     ///
     /// :param data: A dictionary as produced by
     ///     :meth:`to_dict`.
+    /// :returns: A new ``Geometry`` instance.
     /// :complexity: O(n) time, O(n) space
     #[classmethod]
     fn from_dict<'py>(
@@ -1043,6 +1065,7 @@ impl Geometry {
     /// :param points: A sequence of (x, y) or
     ///     (x, y, z) coordinate tuples.
     /// :param close: Whether to close the path.
+    /// :returns: A new ``Geometry`` instance.
     /// :complexity: O(n) time, O(n) space
     #[classmethod]
     #[pyo3(signature = (points, close=true))]
@@ -1098,6 +1121,7 @@ impl Geometry {
     /// Simplify the geometry using Ramer-Douglas-Peucker.
     ///
     /// :param tolerance: Maximum deviation from original.
+    /// :returns: The geometry (for method chaining).
     /// :complexity: O(n log n) average time, O(n) space
     fn simplify(slf: Bound<'_, Self>, tolerance: f64) -> Bound<'_, Self> {
         let mut geo = slf.borrow_mut();
@@ -1112,6 +1136,7 @@ impl Geometry {
     /// Convert all curves to line segments.
     ///
     /// :param tolerance: Maximum deviation from curves.
+    /// :returns: The geometry (for method chaining).
     /// :complexity: O(n) time, O(n) space
     fn linearize(slf: Bound<'_, Self>, tolerance: f64) -> Bound<'_, Self> {
         let mut geo = slf.borrow_mut();
@@ -1129,6 +1154,7 @@ impl Geometry {
     /// :param beziers: Whether to fit bezier curves.
     /// :param arcs: Whether to fit arcs.
     /// :param on_progress: Optional progress callback called with ``(current, total)``.
+    /// :returns: The geometry (for method chaining).
     /// :complexity: O(n log n) average time, O(n) space
     #[pyo3(signature = (tolerance, beziers=true, arcs=true, on_progress=None))]
     fn fit_curves(
@@ -1160,6 +1186,7 @@ impl Geometry {
     /// Fit arcs only to the linearized geometry.
     ///
     /// :param tolerance: Maximum deviation.
+    /// :returns: The geometry (for method chaining).
     /// :complexity: O(n log n) average time, O(n) space
     fn fit_arcs(slf: Bound<'_, Self>, tolerance: f64) -> Bound<'_, Self> {
         Self::fit_curves(slf, tolerance, false, true, None)
@@ -1167,6 +1194,7 @@ impl Geometry {
 
     /// Convert all arcs to bezier curves for uniform scaling.
     ///
+    /// :returns: The geometry (for method chaining).
     /// :complexity: O(n) time, O(n) space
     fn upgrade_to_scalable(slf: Bound<'_, Self>) -> Bound<'_, Self> {
         {
@@ -1183,6 +1211,7 @@ impl Geometry {
     /// Close gaps between sub-paths.
     ///
     /// :param tolerance: Max gap to close.
+    /// :returns: The geometry (for method chaining).
     /// :complexity: O(n) time, O(n) space
     #[pyo3(signature = (tolerance=None))]
     fn close_gaps(
@@ -1205,6 +1234,7 @@ impl Geometry {
     /// Remove duplicate segments from the geometry.
     ///
     /// :param tolerance: Maximum deviation for equality.
+    /// :returns: The geometry (for method chaining).
     /// :complexity: O(n log n) average time, O(n) space
     fn cleanup(slf: Bound<'_, Self>, tolerance: f64) -> Bound<'_, Self> {
         {
@@ -1223,6 +1253,7 @@ impl Geometry {
 
     /// Mirror the geometry along the X axis.
     ///
+    /// :returns: The geometry (for method chaining).
     /// :complexity: O(n) time, O(1) space
     fn flip_x(slf: Bound<'_, Self>) -> Bound<'_, Self> {
         {
@@ -1260,6 +1291,7 @@ impl Geometry {
 
     /// Mirror the geometry along the Y axis.
     ///
+    /// :returns: The geometry (for method chaining).
     /// :complexity: O(n) time, O(1) space
     fn flip_y(slf: Bound<'_, Self>) -> Bound<'_, Self> {
         {
@@ -1374,6 +1406,7 @@ impl Geometry {
     /// :param j: J offset to center.
     /// :param clockwise: Arc direction.
     /// :param z: End Z coordinate.
+    /// :returns: The geometry (for method chaining).
     /// :complexity: O(1) time, O(1) space
     #[pyo3(signature = (x, y, i, j, clockwise=true, z=0.0))]
     fn arc_to_as_bezier(
@@ -1419,6 +1452,7 @@ impl Geometry {
     /// Check if the geometry has self-intersections.
     ///
     /// :param fail_on_t_junction: Whether to fail on T-junctions.
+    /// :returns: ``True`` if the geometry has self-intersections.
     /// :complexity: O(n²) worst-case time, O(1) space
     #[pyo3(signature = (fail_on_t_junction=false))]
     fn has_self_intersections(&mut self, fail_on_t_junction: bool) -> bool {
@@ -1431,6 +1465,7 @@ impl Geometry {
     /// Check if this geometry intersects with another.
     ///
     /// :param other: The other geometry.
+    /// :returns: ``True`` if the geometries intersect.
     /// :complexity: O(n * m) worst-case time, O(1) space where n and m are the number of segments in each geometry
     fn intersects_with(&mut self, other: &mut Geometry) -> bool {
         if self.inner.data.is_empty() || other.inner.data.is_empty() {
@@ -1446,6 +1481,7 @@ impl Geometry {
     /// Offset (grow/shrink) the geometry by the given amount.
     ///
     /// :param amount: Positive to grow, negative to shrink.
+    /// :returns: The geometry (for method chaining).
     /// :complexity: O(n log n) average time, O(n) space
     #[pyo3(signature = (amount))]
     fn grow(slf: Bound<'_, Self>, amount: f64) -> Bound<'_, Self> {
@@ -1460,6 +1496,7 @@ impl Geometry {
     /// Check if this geometry encloses another.
     ///
     /// :param other: The potentially enclosed geometry.
+    /// :returns: ``True`` if this geometry encloses the other.
     /// :complexity: O(n log n) average time, O(n) space
     fn encloses(&mut self, other: &mut Geometry) -> PyResult<bool> {
         Ok(crate::geo::algo::analysis::does_enclose(
@@ -1470,6 +1507,7 @@ impl Geometry {
 
     /// Remove inner edges (shared between contours).
     ///
+    /// :returns: The geometry (for method chaining).
     /// :complexity: O(n) time, O(n) space
     fn remove_inner_edges(slf: Bound<'_, Self>) -> Bound<'_, Self> {
         let result = {
@@ -1482,6 +1520,7 @@ impl Geometry {
 
     /// Split contours into inner and outer groups.
     ///
+    /// :returns: Tuple of ``(inner_contours, outer_contours)``, each a list of Geometry.
     /// :complexity: O(n log n) average time, O(n) space
     fn split_inner_and_outer_contours(
         &mut self,
@@ -1515,6 +1554,7 @@ impl Geometry {
     /// :param stable_src_height: Stable source height for anchoring.
     /// :param anchor_x: X anchor position.
     /// :param stable_src_width: Stable source width for anchoring.
+    /// :returns: The geometry (for method chaining).
     /// :complexity: O(n) time, O(n) space
     #[pyo3(signature = (origin, p_width, p_height, anchor_y=None, stable_src_height=None, anchor_x=None, stable_src_width=None))]
     #[allow(clippy::too_many_arguments)]
@@ -1550,6 +1590,7 @@ impl Geometry {
 
     /// Split the geometry into individual contours.
     ///
+    /// :returns: List of Geometry objects, one per contour.
     /// :complexity: O(n) time, O(n) space
     fn split_into_contours(&mut self) -> Vec<Geometry> {
         split_into_contours(&self.inner)
@@ -1560,6 +1601,7 @@ impl Geometry {
 
     /// Split the geometry into connected components.
     ///
+    /// :returns: List of Geometry objects, one per connected component.
     /// :complexity: O(n log n) average time, O(n) space
     fn split_into_components(&mut self) -> Vec<Geometry> {
         split_into_components(&self.inner)
@@ -1571,6 +1613,7 @@ impl Geometry {
     /// Convert the geometry to a list of polygons.
     ///
     /// :param tolerance: Max deviation for linearization.
+    /// :returns: List of polygons, each a list of ``(x, y)`` vertices.
     /// :complexity: O(n) time, O(n) space
     #[pyo3(signature = (tolerance=0.01))]
     fn to_polygons(&self, tolerance: f64) -> Vec<Vec<(f64, f64)>> {
@@ -1601,6 +1644,7 @@ impl Geometry {
 
     /// Reverse the winding direction of all contours.
     ///
+    /// :returns: The geometry (for method chaining).
     /// :complexity: O(n) time, O(n) space
     fn reverse_contour(slf: Bound<'_, Self>) -> Bound<'_, Self> {
         let result = {
@@ -1613,6 +1657,7 @@ impl Geometry {
 
     /// Close all open contours in the geometry.
     ///
+    /// :returns: The geometry (for method chaining).
     /// :complexity: O(n) time, O(n) space
     fn close_all_contours(slf: Bound<'_, Self>) -> Bound<'_, Self> {
         let result = {
@@ -1625,6 +1670,7 @@ impl Geometry {
 
     /// Normalize winding orders (outer CCW, inner CW) of all contours.
     ///
+    /// :returns: The geometry (for method chaining).
     /// :complexity: O(n log n) average time, O(n) space
     fn normalize_winding_orders(slf: Bound<'_, Self>) -> Bound<'_, Self> {
         let normalized = {
@@ -1644,6 +1690,7 @@ impl Geometry {
 
     /// Filter to only external (outermost) contours.
     ///
+    /// :returns: The geometry (for method chaining).
     /// :complexity: O(n log n) average time, O(n) space
     fn filter_to_external_contours(slf: Bound<'_, Self>) -> Bound<'_, Self> {
         let external = {

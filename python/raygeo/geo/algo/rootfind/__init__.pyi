@@ -28,9 +28,14 @@ def bisect(f: typing.Callable[[float], float], lo: float, hi: float, tol: float 
 
 def bisect_tracked(f: typing.Any, lo: float, hi: float, tol: float = 0.0000000001, max_iter: int = 100) -> tuple[float, str, int, list[float]]:
     r"""
-    Bisection with iteration history.
+    Tracked bisection root-finding.
     
-    :returns: ``(root, status, iterations, [estimates])``
+    :param f: Function to find the root of.
+    :param lo: Lower bound of the search interval.
+    :param hi: Upper bound of the search interval.
+    :param tol: Convergence tolerance.
+    :param max_iter: Maximum number of iterations.
+    :returns: ``(root, status_string, iteration_count, history)``.
     """
 
 def illinois(f: typing.Callable[[float], float], lo: float, hi: float, tol: float = 0.0000000001, max_iter: int = 100) -> tuple[float, str, int]:
@@ -47,9 +52,14 @@ def illinois(f: typing.Callable[[float], float], lo: float, hi: float, tol: floa
 
 def illinois_tracked(f: typing.Any, lo: float, hi: float, tol: float = 0.0000000001, max_iter: int = 100) -> tuple[float, str, int, list[float]]:
     r"""
-    Illinois with iteration history.
+    Tracked Illinois method root-finding.
     
-    :returns: ``(root, status, iterations, [estimates])``
+    :param f: Function to find the root of.
+    :param lo: Lower bound of the search interval.
+    :param hi: Upper bound of the search interval.
+    :param tol: Convergence tolerance.
+    :param max_iter: Maximum number of iterations.
+    :returns: ``(root, status_string, iteration_count, history)``.
     """
 
 def secant(f: typing.Callable[[float], float], x0: float, x1: float, tol: float = 0.0000000001, max_iter: int = 100) -> tuple[float, str, int]:
@@ -66,8 +76,13 @@ def secant(f: typing.Callable[[float], float], x0: float, x1: float, tol: float 
 
 def secant_tracked(f: typing.Any, x0: float, x1: float, tol: float = 0.0000000001, max_iter: int = 100) -> tuple[float, str, int, list[float]]:
     r"""
-    Secant with iteration history.
+    Tracked secant method root-finding.
     
-    :returns: ``(root, status, iterations, [estimates])``
+    :param f: Function to find the root of.
+    :param x0: First initial guess.
+    :param x1: Second initial guess.
+    :param tol: Convergence tolerance.
+    :param max_iter: Maximum number of iterations.
+    :returns: ``(root, status_string, iteration_count, history)``.
     """
 
