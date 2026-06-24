@@ -14,7 +14,7 @@ use crate::prof::prof_report;
 use prof_macros::prof;
 use rayon::prelude::*;
 
-use crate::geo::algo::cleared_area::ClearedArea;
+use crate::ops::cleared_area::ClearedArea;
 
 use crate::geo::algo::fillet::descending_radius_fillet;
 use crate::geo::algo::helix::{

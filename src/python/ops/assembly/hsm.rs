@@ -1,6 +1,6 @@
 use crate::ops::assembly::hsm;
 use crate::ops::state::State;
-use crate::python::geo::algo::cleared_area::ClearedArea as PyClearedArea;
+use crate::python::ops::cleared_area::ClearedArea as PyClearedArea;
 use crate::python::ops::PyOps;
 use crate::types::Point;
 use pyo3::prelude::*;
@@ -234,7 +234,7 @@ fn adaptive_entry_py(
     import raygeo
 
     def adaptive_wavefronts(
-        cleared: raygeo.geo.algo.cleared_area.ClearedArea,
+        cleared: raygeo.ops.cleared_area.ClearedArea,
         pocket_boundary: collections.abc.Sequence[tuple[float, float]],
         islands: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]] = [],
         tool_radius: float = 3.0,
@@ -509,7 +509,7 @@ fn link_arcs_to_ops_py(
     import collections.abc
 
     def split_ordered_wavefronts(
-        cleared: raygeo.geo.algo.cleared_area.ClearedArea,
+        cleared: raygeo.ops.cleared_area.ClearedArea,
         step_over: float,
         valid_area: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]],
         simplify_tol: float,
@@ -561,7 +561,7 @@ fn split_ordered_wavefronts_py(
     import raygeo
 
     def adaptive_peeling(
-        cleared: raygeo.geo.algo.cleared_area.ClearedArea,
+        cleared: raygeo.ops.cleared_area.ClearedArea,
         pocket_boundary: collections.abc.Sequence[tuple[float, float]],
         islands: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]] = [],
         tool_radius: float = 3.0,

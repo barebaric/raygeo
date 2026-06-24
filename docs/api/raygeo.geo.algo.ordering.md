@@ -1,7 +1,7 @@
 ---
 title: raygeo.geo.algo.ordering
 sidebar_label: raygeo.geo.algo.ordering
-sidebar_position: 26
+sidebar_position: 25
 ---
 
 Path ordering algorithms.

@@ -110,7 +110,7 @@ def adaptive_entry(pocket_boundary: collections.abc.Sequence[tuple[float, float]
               of polygons to add to the ``ClearedArea``.
     """
 
-def adaptive_peeling(cleared: raygeo.geo.algo.cleared_area.ClearedArea, pocket_boundary: collections.abc.Sequence[tuple[float, float]], islands: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]] = [], tool_radius: float = 3, step_over: float = 2, cut_z: float = -5, safe_z: float = 2, wall_margin: float = 0, travel_smoothing: int = 50, cut_feed_rate: int = 1200, travel_rapid_rate: int = 8000, cut_power: float = 1) -> raygeo.ops.Ops:
+def adaptive_peeling(cleared: raygeo.ops.cleared_area.ClearedArea, pocket_boundary: collections.abc.Sequence[tuple[float, float]], islands: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]] = [], tool_radius: float = 3, step_over: float = 2, cut_z: float = -5, safe_z: float = 2, wall_margin: float = 0, travel_smoothing: int = 50, cut_feed_rate: int = 1200, travel_rapid_rate: int = 8000, cut_power: float = 1) -> raygeo.ops.Ops:
     r"""
     Run the peeling clearing strategy and return an Ops.
     
@@ -135,7 +135,7 @@ def adaptive_peeling(cleared: raygeo.geo.algo.cleared_area.ClearedArea, pocket_b
     :returns: Ops with cutting and travel commands.
     """
 
-def adaptive_wavefronts(cleared: raygeo.geo.algo.cleared_area.ClearedArea, pocket_boundary: collections.abc.Sequence[tuple[float, float]], islands: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]] = [], tool_radius: float = 3, step_over: float = 2, z: float = 0, area_tolerance: float = 1, cut_feed_rate: int = 1200, cut_power: float = 1) -> raygeo.ops.Ops:
+def adaptive_wavefronts(cleared: raygeo.ops.cleared_area.ClearedArea, pocket_boundary: collections.abc.Sequence[tuple[float, float]], islands: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]] = [], tool_radius: float = 3, step_over: float = 2, z: float = 0, area_tolerance: float = 1, cut_feed_rate: int = 1200, cut_power: float = 1) -> raygeo.ops.Ops:
     r"""
     Inside-out adaptive wavefronts.
     
@@ -209,7 +209,7 @@ def link_arcs_to_ops(arcs: collections.abc.Sequence[collections.abc.Sequence[tup
     :returns: Ops with cutting LineTo and travel MoveTo commands.
     """
 
-def split_ordered_wavefronts(cleared: raygeo.geo.algo.cleared_area.ClearedArea, step_over: float, valid_area: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]], simplify_tol: float, entry: tuple[float, float]) -> raygeo.ops.assembly.hsm.PyWavefrontGraph:
+def split_ordered_wavefronts(cleared: raygeo.ops.cleared_area.ClearedArea, step_over: float, valid_area: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]], simplify_tol: float, entry: tuple[float, float]) -> raygeo.ops.assembly.hsm.PyWavefrontGraph:
     r"""
     Generate, split, and order cutting arcs in one pass.
     

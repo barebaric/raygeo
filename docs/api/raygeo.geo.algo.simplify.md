@@ -1,7 +1,7 @@
 ---
 title: raygeo.geo.algo.simplify
 sidebar_label: raygeo.geo.algo.simplify
-sidebar_position: 31
+sidebar_position: 30
 ---
 
 Polyline simplification using the Ramer-Douglas-Peucker algorithm.

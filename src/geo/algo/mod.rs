@@ -6,7 +6,6 @@
 pub mod analysis;
 pub mod astar;
 pub mod cleanup;
-pub mod cleared_area;
 pub mod clipping;
 pub mod cylindrical;
 pub mod engagement;
@@ -45,12 +44,6 @@ pub use cleanup::{
     are_segments_equal, close_geometry_gaps_from_array, get_segment_key,
     remove_duplicate_segments,
 };
-pub use cleared_area::target_engagement_from_advance;
-pub use cleared_area::ClearedArea;
-pub use cleared_area::ResumePoint;
-pub use cleared_area::StepResult;
-pub use cleared_area::StepStatus;
-pub use cleared_area::StepperOptions;
 pub use clipping::{
     clip_line_segment_with_polygons, clip_line_segment_with_polygons_2d,
     clip_line_segment_with_rect, clip_line_segment_with_rect_2d,

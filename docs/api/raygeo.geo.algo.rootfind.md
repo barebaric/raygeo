@@ -1,7 +1,7 @@
 ---
 title: raygeo.geo.algo.rootfind
 sidebar_label: raygeo.geo.algo.rootfind
-sidebar_position: 30
+sidebar_position: 29
 ---
 
 ![Bisection, secant, and Illinois on $x^3 - 2x - 5$.](images/geo-algo-rootfind-rootfind.png)

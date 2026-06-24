@@ -1,14 +1,14 @@
 ---
-title: raygeo.geo.algo.cleared_area
-sidebar_label: raygeo.geo.algo.cleared_area
-sidebar_position: 6
+title: raygeo.ops.cleared_area
+sidebar_label: raygeo.ops.cleared_area
+sidebar_position: 58
 ---
 
-![Tool stepping parallel to a straight wall. Path colour = engagement (green = on target).](images/geo-algo-cleared-area-wall-following.png)
+![Tool stepping parallel to a straight wall. Path colour = engagement (green = on target).](images/ops-cleared-area-wall-following.png)
 
 _Tool stepping parallel to a straight wall. Path colour = engagement (green = on target)._
 
-![ClearedArea tracking a simulated raster toolpath — cleared fragments shown in blue, remaining area in red](images/geo-algo-cleared-area-raster.png)
+![ClearedArea tracking a simulated raster toolpath — cleared fragments shown in blue, remaining area in red](images/ops-cleared-area-raster.png)
 
 _ClearedArea tracking a simulated raster toolpath — cleared fragments shown in blue, remaining area
 in red_ Incremental cleared-area tracker.
@@ -30,7 +30,7 @@ add_cleared_polygons(polygons: Sequence[Sequence[tuple[float, float]]]) -> None
 | _Returns_    | `None`                                    |                                                   |
 | _Complexity_ |                                           | O(n) where n = total vertices across all polygons |
 
-![ClearedArea with bulk polygon insertion via ``add_cleared_polygons`` — cleared region in blue, remaining area in red](images/geo-algo-cleared-area-bulk.png)
+![ClearedArea with bulk polygon insertion via ``add_cleared_polygons`` — cleared region in blue, remaining area in red](images/ops-cleared-area-bulk.png)
 
 _ClearedArea with bulk polygon insertion via `add_cleared_polygons` — cleared region in blue,
 remaining area in red_
@@ -75,7 +75,7 @@ Calling this while a batch is already active is a no‑op.
 | --------- | ------ | ----------- |
 | _Returns_ | `None` |             |
 
-![Three segments queued via ``begin_step_batch`` / ``expand_step_batched`` then unioned in a single ``commit_step_batch`` pass.](images/geo-algo-cleared-area-step-batch.png)
+![Three segments queued via ``begin_step_batch`` / ``expand_step_batched`` then unioned in a single ``commit_step_batch`` pass.](images/ops-cleared-area-step-batch.png)
 
 _Three segments queued via `begin_step_batch` / `expand_step_batched` then unioned in a single
 `commit_step_batch` pass._
@@ -106,7 +106,7 @@ direction along a MAT branch.
 | _Returns_      | `list[list[tuple[float, float]]]`         |                                                        |
 | _Complexity_   |                                           | O(n log n)                                             |
 
-![Directional bites coloured by pass order (first = dark, later = pale)](images/geo-algo-cleared-area-bite-in-direction.png)
+![Directional bites coloured by pass order (first = dark, later = pale)](images/ops-cleared-area-bite-in-direction.png)
 
 _Directional bites coloured by pass order (first = dark, later = pale)_
 
@@ -131,7 +131,7 @@ clipping to valid_area, and subtracting already-cleared portions.
 | _Returns_      | `list[list[tuple[float, float]]]`         |                                                        |
 | _Complexity_   |                                           | O(n log n)                                             |
 
-![``bites`` computes the expansible material — the crescent-shaped regions of uncut material reachable by expanding the frontier by ``step_over``.](images/geo-algo-cleared-area-bites.png)
+![``bites`` computes the expansible material — the crescent-shaped regions of uncut material reachable by expanding the frontier by ``step_over``.](images/ops-cleared-area-bites.png)
 
 _`bites` computes the expansible material — the crescent-shaped regions of uncut material reachable
 by expanding the frontier by `step_over`._
@@ -163,7 +163,7 @@ expand(path: Sequence[tuple[float, float]], radius: float) -> None
 | _Returns_    | `None`                          |                                      |
 | _Complexity_ |                                 | O(n) where n = number of path points |
 
-![``expand``: sweeping a disk along a multi-segment path enlarges the cleared area.](images/geo-algo-cleared-area-expand.png)
+![``expand``: sweeping a disk along a multi-segment path enlarges the cleared area.](images/ops-cleared-area-expand.png)
 
 _`expand`: sweeping a disk along a multi-segment path enlarges the cleared area._
 
@@ -186,7 +186,7 @@ Expand the cleared area by sweeping a disk of _radius_ along a single segment fr
 | `radius`  | `float`               | Disk radius (mm).                    |
 | _Returns_ | `None`                |                                      |
 
-![``expand_step``: sweeping a disk (dashed circle) of radius *radius* from *prev* to *next* (red arrow) enlarges the cleared area (right) vs the initial state (left).](images/geo-algo-cleared-area-expand-step.png)
+![``expand_step``: sweeping a disk (dashed circle) of radius *radius* from *prev* to *next* (red arrow) enlarges the cleared area (right) vs the initial state (left).](images/ops-cleared-area-expand-step.png)
 
 *`expand_step`: sweeping a disk (dashed circle) of radius *radius* from *prev* to *next* (red arrow)
 enlarges the cleared area (right) vs the initial state (left).*
@@ -237,7 +237,7 @@ where engagement ≥ `min_engagement`.
 | `min_engagement` | `float`                  | Minimum engagement angle (radians) required.         |
 | _Returns_        | `Optional[ResumePoint]`  | `ResumePoint` or `None`.                             |
 
-![``find_next_resume`` walks the cleared-area frontier from the end position (red triangle) and returns the first position with sufficient engagement (green star).](images/geo-algo-cleared-area-find-next-resume.png)
+![``find_next_resume`` walks the cleared-area frontier from the end position (red triangle) and returns the first position with sufficient engagement (green star).](images/ops-cleared-area-find-next-resume.png)
 
 _`find_next_resume` walks the cleared-area frontier from the end position (red triangle) and returns
 the first position with sufficient engagement (green star)._
@@ -275,7 +275,7 @@ Return a unioned, simplified snapshot of the current outer boundary.
 | _Returns_      | `list[list[tuple[float, float]]]` |                                             |
 | _Complexity_   |                                   | O(n log n)                                  |
 
-![``frontier`` returns the outer boundary of the cleared area after merging overlapping fragments — shown in crimson.](images/geo-algo-cleared-area-frontier.png)
+![``frontier`` returns the outer boundary of the cleared area after merging overlapping fragments — shown in crimson.](images/ops-cleared-area-frontier.png)
 
 _`frontier` returns the outer boundary of the cleared area after merging overlapping fragments —
 shown in crimson._
@@ -298,7 +298,7 @@ fragments
 | _Returns_    | `list[list[tuple[float, float]]]`         |                                            |
 | _Complexity_ |                                           | O(n log n) worst case when union required, |
 
-![``incorporate`` adds polygons to the cleared state while returning only the newly-covered region (shown in green).](images/geo-algo-cleared-area-incorporate.png)
+![``incorporate`` adds polygons to the cleared state while returning only the newly-covered region (shown in green).](images/ops-cleared-area-incorporate.png)
 
 _`incorporate` adds polygons to the cleared state while returning only the newly-covered region
 (shown in green)._
@@ -363,7 +363,7 @@ query_window(
 | _Returns_    | `list[list[tuple[float, float]]]`   |                                                             |
 | _Complexity_ |                                     | O(m + k) where m = number of fragments, k = output vertices |
 
-![``query_window`` returns only the cleared fragments whose bounding box overlaps the query (green box).](images/geo-algo-cleared-area-query-window.png)
+![``query_window`` returns only the cleared fragments whose bounding box overlaps the query (green box).](images/ops-cleared-area-query-window.png)
 
 _`query_window` returns only the cleared fragments whose bounding box overlaps the query (green
 box)._
@@ -382,7 +382,7 @@ remaining(
 | _Returns_    | `list[list[tuple[float, float]]]`         |                                                    |
 | _Complexity_ |                                           | O(n \* m) where n = bounds vertices, m = fragments |
 
-![``remaining`` subtracts cleared fragments from the boundary polygon, returning the uncut region (red).](images/geo-algo-cleared-area-remaining.png)
+![``remaining`` subtracts cleared fragments from the boundary polygon, returning the uncut region (red).](images/ops-cleared-area-remaining.png)
 
 _`remaining` subtracts cleared fragments from the boundary polygon, returning the uncut region
 (red)._
@@ -448,7 +448,7 @@ inside.
 | `y`       | `float` | Y coordinate of the query point.                            |
 | _Returns_ | `float` | Signed distance in mm. `0.0` means exactly on the boundary. |
 
-![Signed boundary distance around a cleared square: green = inside cleared, red = outside.](images/geo-algo-cleared-area-signed-boundary-distance.png)
+![Signed boundary distance around a cleared square: green = inside cleared, red = outside.](images/ops-cleared-area-signed-boundary-distance.png)
 
 _Signed boundary distance around a cleared square: green = inside cleared, red = outside._
 
@@ -474,11 +474,11 @@ the heading that maintains the target engagement.
 | `opts`    | `StepperOptions`      | `StepperOptions` controlling the solver.                 |
 | _Returns_ | `StepResult`          | `StepResult` with the next position and updated heading. |
 
-![90° corner: the solver deflects the heading to keep engagement constant around the turn.](images/geo-algo-cleared-area-pocket-corner.png)
+![90° corner: the solver deflects the heading to keep engagement constant around the turn.](images/ops-cleared-area-pocket-corner.png)
 
 _90° corner: the solver deflects the heading to keep engagement constant around the turn._
 
-![Engagement histogram for 200 steps along a straight wall. Tight peak near target indicates stable behaviour.](images/geo-algo-cleared-area-engagement-histogram.png)
+![Engagement histogram for 200 steps along a straight wall. Tight peak near target indicates stable behaviour.](images/ops-cleared-area-engagement-histogram.png)
 
 _Engagement histogram for 200 steps along a straight wall. Tight peak near target indicates stable
 behaviour._

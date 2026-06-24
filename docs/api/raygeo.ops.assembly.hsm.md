@@ -1,7 +1,7 @@
 ---
 title: raygeo.ops.assembly.hsm
 sidebar_label: raygeo.ops.assembly.hsm
-sidebar_position: 57
+sidebar_position: 56
 ---
 
 ## PyWavefrontGraph
@@ -155,7 +155,7 @@ _Adaptive clearing — ZigZag Ramp in a tight slot_
 
 ```python
 adaptive_peeling(
-    cleared: geo.algo.cleared_area.ClearedArea,
+    cleared: ops.cleared_area.ClearedArea,
     pocket_boundary: Sequence[tuple[float, float]],
     islands: Sequence[Sequence[tuple[float, float]]] = [],
     tool_radius: float = 3,
@@ -177,7 +177,7 @@ into Ops with MAT-routed travel segments.
 
 | Parameter           | Type                                           | Description                                                 |
 | ------------------- | ---------------------------------------------- | ----------------------------------------------------------- |
-| `cleared`           | `geo.algo.cleared_area.ClearedArea`            | `ClearedArea` instance (mutated in place).                  |
+| `cleared`           | `ops.cleared_area.ClearedArea`                 | `ClearedArea` instance (mutated in place).                  |
 | `pocket_boundary`   | `Sequence[tuple[float, float]]`                | Outer boundary of the pocket.                               |
 | `islands`           | `Sequence[Sequence[tuple[float, float]]] = []` | List of island (hole) polygons (default []).                |
 | `tool_radius`       | `float = 3`                                    | Tool radius in mm (default 3.0).                            |
@@ -210,7 +210,7 @@ blue, travel orange dashed)_
 
 ```python
 adaptive_wavefronts(
-    cleared: geo.algo.cleared_area.ClearedArea,
+    cleared: ops.cleared_area.ClearedArea,
     pocket_boundary: Sequence[tuple[float, float]],
     islands: Sequence[Sequence[tuple[float, float]]] = [],
     tool_radius: float = 3,
@@ -233,7 +233,7 @@ Each ring fragment is emitted as `MoveTo` + `LineTo` at height _z_ with _cut_fee
 
 | Parameter         | Type                                           | Description                                           |
 | ----------------- | ---------------------------------------------- | ----------------------------------------------------- |
-| `cleared`         | `geo.algo.cleared_area.ClearedArea`            | `ClearedArea` instance (mutated in place).            |
+| `cleared`         | `ops.cleared_area.ClearedArea`                 | `ClearedArea` instance (mutated in place).            |
 | `pocket_boundary` | `Sequence[tuple[float, float]]`                | Outer boundary of the pocket.                         |
 | `islands`         | `Sequence[Sequence[tuple[float, float]]] = []` | List of island (hole) polygons (default []).          |
 | `tool_radius`     | `float = 3`                                    | Tool radius in mm (default 3.0).                      |
@@ -339,7 +339,7 @@ _Pre-computed filleted arcs linked into an Ops with MAT-routed travel segments_
 
 ```python
 split_ordered_wavefronts(
-    cleared: geo.algo.cleared_area.ClearedArea,
+    cleared: ops.cleared_area.ClearedArea,
     step_over: float,
     valid_area: Sequence[Sequence[tuple[float, float]]],
     simplify_tol: float,
@@ -354,7 +354,7 @@ with a pass-N bite becomes its child. DFS with merge constraints produces the pr
 
 | Parameter      | Type                                      | Description                                                                          |
 | -------------- | ----------------------------------------- | ------------------------------------------------------------------------------------ |
-| `cleared`      | `geo.algo.cleared_area.ClearedArea`       | `ClearedArea` instance (mutated in place).                                           |
+| `cleared`      | `ops.cleared_area.ClearedArea`            | `ClearedArea` instance (mutated in place).                                           |
 | `step_over`    | `float`                                   | Lateral step-over in mm.                                                             |
 | `valid_area`   | `Sequence[Sequence[tuple[float, float]]]` | Valid tool-centre region polygons.                                                   |
 | `simplify_tol` | `float`                                   | Tolerance for frontier simplification.                                               |

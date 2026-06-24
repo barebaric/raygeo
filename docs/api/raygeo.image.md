@@ -1,7 +1,7 @@
 ---
 title: raygeo.image
 sidebar_label: raygeo.image
-sidebar_position: 47
+sidebar_position: 46
 ---
 
 Image processing functions for CNC engraving applications.

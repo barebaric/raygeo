@@ -8,7 +8,6 @@ from matplotlib.colors import to_hex
 
 from raygeo.geo import Geometry
 from raygeo.geo.algo import hull
-from raygeo.geo.algo.cleared_area import ClearedArea
 from raygeo.geo.algo.cylindrical import transform_to_cylinder
 from raygeo.geo.algo.helix import HelixDirection, generate_helix_3d
 from raygeo.geo.algo.nest2d.placement import place_parts
@@ -18,6 +17,7 @@ from raygeo.geo.shape.bezier import linearize_bezier_adaptive
 from raygeo.geo.shape.polygon import get_polygon_convex_hull
 from raygeo.geo.shape.polygon3d import fillet_polyline_3d, offset_polyline_3d
 from raygeo.ops.assembly.hsm import adaptive_entry, adaptive_peeling
+from raygeo.ops.cleared_area import ClearedArea
 from raygeo.ops.raster import ScanMode, rasterize_power_modulation
 from raygeo.ops.types import CommandType
 from tools.plot import make_pattern, plot_geometry

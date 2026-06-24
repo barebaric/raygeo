@@ -1,7 +1,7 @@
 ---
 title: raygeo.geo.algo.engagement
 sidebar_label: raygeo.geo.algo.engagement
-sidebar_position: 9
+sidebar_position: 8
 ---
 
 ![Engagement angle, area, and chord depth as a function of signed distance from the cleared boundary.](images/geo-algo-engagement-engagement-vs-distance.png)

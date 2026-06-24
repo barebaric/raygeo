@@ -29,7 +29,6 @@ configurable corner-angle thresholds to preserve sharp features.
 
 from . import analysis
 from . import astar
-from . import cleared_area
 from . import clipping
 from . import cylindrical
 from . import engagement
@@ -56,7 +55,6 @@ from . import trochoid
 __all__ = [
     "analysis",
     "astar",
-    "cleared_area",
     "clipping",
     "cylindrical",
     "engagement",

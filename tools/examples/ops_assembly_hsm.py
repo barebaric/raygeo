@@ -6,7 +6,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.colors import Normalize
 
-from raygeo.geo.algo.cleared_area import ClearedArea
 from raygeo.geo.algo.fillet import append_end_fillets, trim_to_safe_fillet_span
 from raygeo.geo.algo.medial_axis import MedialAxis
 from raygeo.geo.algo.offset import compute_inset_region
@@ -24,6 +23,7 @@ from raygeo.ops.assembly.hsm import (
     link_arcs_to_ops,
     split_ordered_wavefronts,
 )
+from raygeo.ops.cleared_area import ClearedArea
 
 
 def _ops_to_points(ops):

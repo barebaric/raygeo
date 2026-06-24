@@ -21,6 +21,7 @@ from raygeo import geo
 import typing
 from . import assembly
 from . import axis
+from . import cleared_area
 from . import polyline
 from . import raster
 from . import state
@@ -32,6 +33,7 @@ __all__ = [
     "OpsSectionRange",
     "assembly",
     "axis",
+    "cleared_area",
     "polyline",
     "raster",
     "state",

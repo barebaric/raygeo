@@ -12,7 +12,6 @@ import streamlit as st
 
 from tools.visual_test.geo import page_geometry
 from tools.visual_test.geo_algo_analysis import page_analysis
-from tools.visual_test.geo_algo_cleared_area import page_adaptive_clearing
 from tools.visual_test.geo_algo_hull import page_concave_hull
 from tools.visual_test.geo_algo_minkowski2d import page_minkowski
 from tools.visual_test.geo_algo_nest2d import page_nesting
@@ -27,6 +26,7 @@ from tools.visual_test.geo_shape_polygon3d import page_polygon3d
 from tools.visual_test.geo_shape_polygon_boolean import page_polygon_boolean
 from tools.visual_test.geo_shape_polygon_offset import page_offset
 from tools.visual_test.image import page_image
+from tools.visual_test.ops_cleared_area import page_adaptive_clearing
 from tools.visual_test.ops_clip import page_ops_clip
 from tools.visual_test.ops_lead_in_out import page_lead_in_out
 from tools.visual_test.ops_merge_lines import page_merge_lines

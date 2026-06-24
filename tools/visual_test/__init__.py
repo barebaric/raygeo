@@ -1,7 +1,6 @@
 # ruff: noqa: F401
 from .geo import page_geometry
 from .geo_algo_analysis import page_analysis
-from .geo_algo_cleared_area import page_adaptive_clearing
 from .geo_algo_hull import page_concave_hull
 from .geo_algo_minkowski2d import page_minkowski
 from .geo_algo_nest2d import page_nesting
@@ -15,6 +14,7 @@ from .geo_shape_polygon3d import page_polygon3d
 from .geo_shape_polygon_boolean import page_polygon_boolean
 from .geo_shape_polygon_offset import page_offset
 from .image import page_image
+from .ops_cleared_area import page_adaptive_clearing
 from .ops_clip import page_ops_clip
 from .ops_lead_in_out import page_lead_in_out
 from .ops_merge_lines import page_merge_lines

@@ -1,4 +1,4 @@
-pyo3_stub_gen::module_doc!("raygeo.geo.algo.cleared_area", "{}", MODULE_DOC);
+pyo3_stub_gen::module_doc!("raygeo.ops.cleared_area", "{}", MODULE_DOC);
 
 pub(crate) const MODULE_DOC: &str = "\
 Incremental cleared-area tracker.
@@ -13,7 +13,7 @@ use pyo3_stub_gen::derive::{
     gen_stub_pyclass, gen_stub_pyfunction, gen_stub_pymethods,
 };
 
-use crate::geo::algo::cleared_area::ClearedArea as RustClearedArea;
+use crate::ops::cleared_area::ClearedArea as RustClearedArea;
 use crate::python::geo::algo::medial_axis::PyMedialAxis;
 use crate::types::Point;
 use crate::types::Rect;
@@ -24,11 +24,11 @@ use crate::types::Rect;
 ///
 /// Controls disk radius, step length, target engagement angle,
 /// solver tolerance, max steering deflection, and iteration budget.
-#[gen_stub_pyclass(module = "raygeo.geo.algo.cleared_area")]
+#[gen_stub_pyclass(module = "raygeo.ops.cleared_area")]
 #[pyclass(name = "StepperOptions", skip_from_py_object)]
 #[derive(Clone, Debug)]
 pub struct PyStepperOptions {
-    pub inner: crate::geo::algo::cleared_area::StepperOptions,
+    pub inner: crate::ops::cleared_area::StepperOptions,
 }
 
 #[gen_stub_pymethods]
@@ -54,7 +54,7 @@ impl PyStepperOptions {
         let target = target_engagement.unwrap_or(std::f64::consts::PI);
         let max_def = max_deflection.unwrap_or(std::f64::consts::FRAC_PI_6);
         PyStepperOptions {
-            inner: crate::geo::algo::cleared_area::StepperOptions {
+            inner: crate::ops::cleared_area::StepperOptions {
                 radius,
                 step_length,
                 target_engagement: target,
@@ -131,11 +131,11 @@ impl PyStepperOptions {
 /// One of ``Ok`` (normal), ``BoundaryHit`` (hit pocket boundary),
 /// ``LostEngagement`` (no uncut material), or ``NoConvergence``
 /// (solver failed to converge).
-#[gen_stub_pyclass(module = "raygeo.geo.algo.cleared_area")]
+#[gen_stub_pyclass(module = "raygeo.ops.cleared_area")]
 #[pyclass(name = "StepStatus", skip_from_py_object)]
 #[derive(Clone, Debug)]
 pub struct PyStepStatus {
-    pub inner: crate::geo::algo::cleared_area::StepStatus,
+    pub inner: crate::ops::cleared_area::StepStatus,
 }
 
 #[gen_stub_pymethods]
@@ -144,25 +144,25 @@ impl PyStepStatus {
     #[classmethod]
     fn ok(_cls: &Bound<'_, PyType>) -> Self {
         PyStepStatus {
-            inner: crate::geo::algo::cleared_area::StepStatus::Ok,
+            inner: crate::ops::cleared_area::StepStatus::Ok,
         }
     }
     #[classmethod]
     fn boundary_hit(_cls: &Bound<'_, PyType>) -> Self {
         PyStepStatus {
-            inner: crate::geo::algo::cleared_area::StepStatus::BoundaryHit,
+            inner: crate::ops::cleared_area::StepStatus::BoundaryHit,
         }
     }
     #[classmethod]
     fn lost_engagement(_cls: &Bound<'_, PyType>) -> Self {
         PyStepStatus {
-            inner: crate::geo::algo::cleared_area::StepStatus::LostEngagement,
+            inner: crate::ops::cleared_area::StepStatus::LostEngagement,
         }
     }
     #[classmethod]
     fn no_convergence(_cls: &Bound<'_, PyType>) -> Self {
         PyStepStatus {
-            inner: crate::geo::algo::cleared_area::StepStatus::NoConvergence,
+            inner: crate::ops::cleared_area::StepStatus::NoConvergence,
         }
     }
 
@@ -175,7 +175,7 @@ impl PyStepStatus {
 ///
 /// Contains the next centre position, updated heading,
 /// solver iteration count, and the final status.
-#[gen_stub_pyclass(module = "raygeo.geo.algo.cleared_area")]
+#[gen_stub_pyclass(module = "raygeo.ops.cleared_area")]
 #[pyclass(name = "StepResult", skip_from_py_object)]
 #[derive(Clone, Debug)]
 pub struct PyStepResult {
@@ -202,7 +202,7 @@ impl PyStepResult {
 
 // ── ClearedArea class ──
 
-#[gen_stub_pyclass(module = "raygeo.geo.algo.cleared_area")]
+#[gen_stub_pyclass(module = "raygeo.ops.cleared_area")]
 #[pyclass]
 pub struct ClearedArea {
     pub(crate) inner: RustClearedArea,
@@ -700,7 +700,7 @@ impl ClearedArea {
 }
 
 /// A resume point found on the cleared-area frontier.
-#[gen_stub_pyclass(module = "raygeo.geo.algo.cleared_area")]
+#[gen_stub_pyclass(module = "raygeo.ops.cleared_area")]
 #[pyclass(name = "ResumePoint", skip_from_py_object)]
 #[derive(Clone, Debug)]
 pub struct PyResumePoint {
@@ -766,10 +766,8 @@ pub fn register(algo_mod: &Bound<'_, PyModule>) -> PyResult<()> {
 /// :param advance: Per-step forward distance (mm).
 /// :param radius: Disk radius (mm).
 /// :returns: Engagement angle in radians.
-#[gen_stub_pyfunction(module = "raygeo.geo.algo.cleared_area")]
+#[gen_stub_pyfunction(module = "raygeo.ops.cleared_area")]
 #[pyfunction(name = "target_engagement_from_advance")]
 fn target_engagement_from_advance_py(advance: f64, radius: f64) -> f64 {
-    crate::geo::algo::cleared_area::target_engagement_from_advance(
-        advance, radius,
-    )
+    crate::ops::cleared_area::target_engagement_from_advance(advance, radius)
 }

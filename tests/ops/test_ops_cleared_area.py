@@ -2,13 +2,13 @@
 
 import math
 
-from raygeo.geo.algo.cleared_area import (
+from raygeo.geo.algo.medial_axis import MedialAxis
+from raygeo.ops.cleared_area import (
     ClearedArea,
     StepperOptions,
     StepStatus,
     target_engagement_from_advance,
 )
-from raygeo.geo.algo.medial_axis import MedialAxis
 
 
 def P(*pts):

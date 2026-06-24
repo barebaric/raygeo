@@ -1,7 +1,7 @@
 ---
 title: raygeo.geo.algo.fitting
 sidebar_label: raygeo.geo.algo.fitting
-sidebar_position: 11
+sidebar_position: 10
 ---
 
 Curve and primitive fitting algorithms.

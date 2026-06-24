@@ -1,6 +1,5 @@
 pub(crate) mod analysis;
 pub(crate) mod astar;
-pub(crate) mod cleared_area;
 pub(crate) mod clipping;
 pub(crate) mod cylindrical;
 pub(crate) mod engagement;
@@ -63,7 +62,6 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
 
     analysis::register(&algo_mod)?;
     astar::register(&algo_mod)?;
-    cleared_area::register(&algo_mod)?;
     clipping::register(&algo_mod)?;
     cylindrical::register(&algo_mod)?;
     engagement::register(&algo_mod)?;
@@ -96,10 +94,6 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
         .set_item("raygeo.geo.algo.analysis", &algo_mod.getattr("analysis")?)?;
     sys_modules
         .set_item("raygeo.geo.algo.astar", &algo_mod.getattr("astar")?)?;
-    sys_modules.set_item(
-        "raygeo.geo.algo.cleared_area",
-        &algo_mod.getattr("cleared_area")?,
-    )?;
     sys_modules
         .set_item("raygeo.geo.algo.clipping", &algo_mod.getattr("clipping")?)?;
     sys_modules

@@ -5,6 +5,7 @@
 
 pub mod assembly;
 pub mod axis;
+pub mod cleared_area;
 pub(crate) mod clip;
 pub mod container;
 pub mod enums;

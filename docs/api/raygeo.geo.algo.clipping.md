@@ -1,7 +1,7 @@
 ---
 title: raygeo.geo.algo.clipping
 sidebar_label: raygeo.geo.algo.clipping
-sidebar_position: 7
+sidebar_position: 6
 ---
 
 Line and polygon clipping operations.

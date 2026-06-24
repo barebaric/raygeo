@@ -2,7 +2,6 @@
 
 import math
 
-from raygeo.geo.algo.cleared_area import ClearedArea
 from raygeo.geo.algo.offset import compute_inset_region
 from raygeo.geo.shape.arc import get_polyline_turn_sign
 from raygeo.geo.shape.polyline import split_polyline_at_v_junctions
@@ -14,6 +13,7 @@ from raygeo.ops.assembly.hsm import (
     find_cutting_arc,
     link_arcs_to_ops,
 )
+from raygeo.ops.cleared_area import ClearedArea
 from raygeo.ops.types import CommandType
 
 

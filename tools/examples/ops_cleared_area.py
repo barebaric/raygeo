@@ -8,11 +8,11 @@ import numpy as np
 from matplotlib.lines import Line2D
 from matplotlib.patches import Circle
 
-from raygeo.geo.algo.cleared_area import ClearedArea, StepperOptions
 from raygeo.geo.algo.engagement import compute_engagement
 from raygeo.geo.algo.medial_axis import MedialAxis
 from raygeo.geo.algo.offset import compute_inset_region
 from raygeo.ops.assembly.hsm import adaptive_entry
+from raygeo.ops.cleared_area import ClearedArea, StepperOptions
 
 
 def generate_raster():
@@ -994,7 +994,7 @@ def generate_engagement_histogram():
     return fig
 
 
-__docs_target__ = ["raygeo.geo.algo.cleared_area.md"]
+__docs_target__ = ["raygeo.ops.cleared_area.md"]
 __images__ = [
     {
         "heading": None,

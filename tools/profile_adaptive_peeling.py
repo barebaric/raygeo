@@ -2,8 +2,8 @@
 
 import math
 
-from raygeo.geo.algo.cleared_area import ClearedArea
 from raygeo.ops.assembly.hsm import adaptive_entry, adaptive_peeling
+from raygeo.ops.cleared_area import ClearedArea
 
 boundary = [(0, 0), (180, 0), (180, 120), (0, 120)]
 islands = [
