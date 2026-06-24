@@ -1,7 +1,6 @@
 ---
 title: raygeo.geo.algo.spiral
 sidebar_label: raygeo.geo.algo.spiral
-sidebar_position: 33
 ---
 
 Flat Archimedean spiral path generation.
@@ -47,4 +46,4 @@ revolutions.
 
 ![Outward (CCW) and inward (CW) flat Archimedean spirals](images/geo-algo-spiral-inward-outward.png)
 
-_Outward (CCW) and inward (CW) flat Archimedean spirals_
+*Outward (CCW) and inward (CW) flat Archimedean spirals*

@@ -1,7 +1,6 @@
 ---
 title: raygeo.geo.algo
 sidebar_label: raygeo.geo.algo
-sidebar_position: 3
 ---
 
 Geometric algorithms for path processing.

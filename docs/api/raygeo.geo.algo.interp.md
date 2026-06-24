@@ -1,7 +1,6 @@
 ---
 title: raygeo.geo.algo.interp
 sidebar_label: raygeo.geo.algo.interp
-sidebar_position: 13
 ---
 
 Segment interpolation utilities for parameter-based point projection, clipping, and scanline data
@@ -131,7 +130,7 @@ Project a point onto a line segment, returning t in [0, 1].
 slice_scanline_data(data: list[int], t_start: float, t_end: float) -> list[int]
 ```
 
-Slice a scanline power array by parameter range [t_start, t_end).
+Slice a scanline power array by parameter range \[t_start, t_end).
 
 | Parameter    | Type        | Description                                                   |
 | ------------ | ----------- | ------------------------------------------------------------- |

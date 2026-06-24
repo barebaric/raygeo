@@ -403,6 +403,22 @@ def dedent_doc(text: str) -> str:
     return "\n".join(result)
 
 
+def _ensure_code_block_blank_lines(text: str) -> str:
+    """Add blank lines before indented code blocks lacking them."""
+    lines = text.split("\n")
+    result: list[str] = []
+    prev_blank = True
+    for line in lines:
+        is_indented = line.startswith("    ") and line.strip()
+        if is_indented and not prev_blank:
+            result.append("")
+            prev_blank = True
+        result.append(line)
+        if not is_indented:
+            prev_blank = not line.strip()
+    return "\n".join(result)
+
+
 def format_docstring(doc: str | None) -> tuple[str, dict[str, str], str, str]:
     if not doc:
         return "", {}, "", ""
@@ -411,7 +427,7 @@ def format_docstring(doc: str | None) -> tuple[str, dict[str, str], str, str]:
     text, param_docs, return_desc, complexity = convert_docstring_sections(
         text
     )
-    text = text.strip()
+    text = _ensure_code_block_blank_lines(text.strip())
     return text, param_docs, return_desc, complexity
 
 
@@ -745,11 +761,10 @@ def is_reexport_only(tree: ast.Module) -> bool:
     return not has_content
 
 
-def generate_page(mod: str, content: str, position: int = 10) -> str:
+def generate_page(mod: str, content: str) -> str:
     return f"""---
 title: {mod}
 sidebar_label: {mod}
-sidebar_position: {position}
 ---
 
 {content}
@@ -780,9 +795,6 @@ def render_members(members: dict, mod_doc: str | None) -> str:
     def _escape_table_pipe(text: str) -> str:
         return text.replace("|", "&#124;")
 
-    def _escape_md(text: str) -> str:
-        return text.replace("*", "\\*")
-
     def _render_params(
         params: list[dict],
         param_docs: dict[str, str],
@@ -802,12 +814,12 @@ def render_members(members: dict, mod_doc: str | None) -> str:
             lines.append(f"| `{p['name']}` | {ptype_md} | {desc} |")
         if "->" in signature:
             ret = signature.split("->", 1)[1].strip()
-            ret_desc = _escape_md(return_desc) if return_desc else ""
+            ret_desc = return_desc if return_desc else ""
             lines.append(
-                f"| *Returns* | `{_escape_table_pipe(ret)}` | {ret_desc} |"
+                f"| _Returns_ | `{_escape_table_pipe(ret)}` | {ret_desc} |"
             )
         if complexity:
-            lines.append(f"| *Complexity* | | {_escape_md(complexity)} |")
+            lines.append(f"| _Complexity_ | | {complexity} |")
         lines.append("")
 
     if has_alias:
@@ -1005,7 +1017,6 @@ def process_file(
     rel_path: str,
     filepath: Path,
     root_module: str,
-    position: int = 10,
 ) -> str:
     with open(filepath, encoding="utf-8") as f:
         source = f.read()
@@ -1022,7 +1033,7 @@ def process_file(
     members = collect_members(tree.body)
     content = render_members(members, mod_doc)
     mod = module_name_from_path(rel_path, root_module)
-    return generate_page(mod, content, position)
+    return generate_page(mod, content)
 
 
 def generate(
@@ -1081,7 +1092,7 @@ def generate(
     valid.sort(key=lambda x: ("" if x[2] == root_module else x[2], x[2]))
 
     for idx, (rel_path, filepath, mod) in enumerate(valid, start=1):
-        page = process_file(rel_path, filepath, root_module, idx)
+        page = process_file(rel_path, filepath, root_module)
         if not page.strip():
             continue
         out_path = output_path_from_rel(rel_path, output_dir, root_module)

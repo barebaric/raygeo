@@ -1,7 +1,6 @@
 ---
 title: raygeo.geo.algo.smooth
 sidebar_label: raygeo.geo.algo.smooth
-sidebar_position: 31
 ---
 
 Polyline smoothing using Gaussian kernels.
@@ -35,10 +34,10 @@ Returns a new polyline with points inserted to ensure it meets the adjacent poly
 | `margin`    | `float`                         | Extension distance along the tangent direction.           |
 | _Returns_   | `list[tuple[float, float]]`     | Modified polyline with tangent extension points inserted. |
 
-![``blend_tangent`` inserts tangent extension points at both ends of a travel link to ensure G1 continuity at cut–travel junctions](images/geo-algo-smooth-blend-tangent.png)
+![ inserts tangent extension points at both ends of a travel link to ensure G1 continuity at cut–travel junctions](images/geo-algo-smooth-blend-tangent.png)
 
-_`blend_tangent` inserts tangent extension points at both ends of a travel link to ensure G1
-continuity at cut–travel junctions_
+*`blend_tangent` inserts tangent extension points at both ends of a travel link to ensure G1
+continuity at cut–travel junctions*
 
 ### `build_smoothed_path()`
 
@@ -57,26 +56,26 @@ Build a smooth path between two points via multi-stage processing.
 
 Pipeline:
 
-1. Prepends _last_ and appends _first_ to _waypoints_.
-2. Resamples for point density.
-3. Iteratively shortcuts removable waypoints (collision-checked).
-4. Applies aggressive Gaussian smoothing with per-point collision checking so points near obstacles
+1. Prepends *last* and appends *first* to *waypoints*.
+1. Resamples for point density.
+1. Iteratively shortcuts removable waypoints (collision-checked).
+1. Applies aggressive Gaussian smoothing with per-point collision checking so points near obstacles
    are preserved while open areas are fully rounded.
 
 | Parameter          | Type                                           | Description                                        |
 | ------------------ | ---------------------------------------------- | -------------------------------------------------- |
 | `last`             | `tuple[float, float]`                          | Start point (x, y).                                |
 | `first`            | `tuple[float, float]`                          | End point (x, y).                                  |
-| `waypoints`        | `Sequence[tuple[float, float]] = []`           | Intermediate waypoints between _last_ and _first_. |
+| `waypoints`        | `Sequence[tuple[float, float]] = []`           | Intermediate waypoints between *last* and *first*. |
 | `uncleared`        | `Sequence[Sequence[tuple[float, float]]] = []` | Obstacle polygons to avoid.                        |
 | `clearance`        | `float = 1`                                    | Minimum distance from obstacles.                   |
 | `smoothing_amount` | `int = 120`                                    | Gaussian smoothing amount (0-200, default 120).    |
 | _Returns_          | `list[tuple[float, float]]`                    | Smoothed path as a list of (x, y) tuples.          |
 
-![``build_smoothed_path`` constructs a smooth path from a start point, end point, and medial-axis waypoints via resample → shortcut → Gaussian relaxation](images/geo-algo-smooth-build-smoothed-path.png)
+![ constructs a smooth path from a start point, end point, and medial-axis waypoints via resample → shortcut → Gaussian relaxation](images/geo-algo-smooth-build-smoothed-path.png)
 
-_`build_smoothed_path` constructs a smooth path from a start point, end point, and medial-axis
-waypoints via resample → shortcut → Gaussian relaxation_
+*`build_smoothed_path` constructs a smooth path from a start point, end point, and medial-axis
+waypoints via resample → shortcut → Gaussian relaxation*
 
 ### `chaikin_corner_cut()`
 
@@ -92,7 +91,7 @@ chaikin_corner_cut(
 Round sharp corners using Chaikin corner cutting with collision checking.
 
 Corners sharper than 45° are cut; gently curving sections are left untouched. Each cut point is
-collision-tested against _obstacles_ at _clearance_ distance; if the cut would collide, the original
+collision-tested against *obstacles* at *clearance* distance; if the cut would collide, the original
 corner is preserved.
 
 | Parameter    | Type                                           | Description                                          |
@@ -103,10 +102,10 @@ corner is preserved.
 | `iterations` | `int = 6`                                      | Number of Chaikin cutting passes (default 6).        |
 | _Returns_    | `list[tuple[float, float]]`                    | Corner-smoothed polyline as a list of (x, y) tuples. |
 
-![``chaikin_corner_cut`` rounds sharp corners (>45°) using Chaikin corner cutting, respecting obstacle clearance](images/geo-algo-smooth-chaikin-corner-cut.png)
+![ rounds sharp corners (>45°) using Chaikin corner cutting, respecting obstacle clearance](images/geo-algo-smooth-chaikin-corner-cut.png)
 
-_`chaikin_corner_cut` rounds sharp corners (>45°) using Chaikin corner cutting, respecting obstacle
-clearance_
+*`chaikin_corner_cut` rounds sharp corners (>45°) using Chaikin corner cutting, respecting obstacle
+clearance*
 
 ### `compute_gaussian_kernel()`
 
@@ -124,7 +123,7 @@ Compute a Gaussian kernel of the given size.
 
 ![Gaussian kernel weights](images/geo-algo-smooth-gaussian-kernel.png)
 
-_Gaussian kernel weights_
+*Gaussian kernel weights*
 
 ### `shortcut_path()`
 
@@ -149,7 +148,7 @@ repeating until no more points can be removed. Endpoints are always preserved.
 
 ![Iterative waypoint removal](images/geo-algo-smooth-shortcut-path.png)
 
-_Iterative waypoint removal_
+*Iterative waypoint removal*
 
 ### `smooth_circularly()`
 
@@ -162,16 +161,16 @@ smooth_circularly(
 
 Smooth a closed polyline circularly.
 
-| Parameter    | Type                      | Description                                                                      |
-| ------------ | ------------------------- | -------------------------------------------------------------------------------- |
-| `points`     | `Sequence[types.Point3D]` | Sequence of 3D points to smooth.                                                 |
-| `kernel`     | `Sequence[float]`         | Gaussian kernel values.                                                          |
-| _Returns_    | `list[types.Point3D]`     | Smoothed points.                                                                 |
-| _Complexity_ |                           | O(n \* k) time, O(n) space where k is the kernel size and n the number of points |
+| Parameter    | Type                      | Description                                                                     |
+| ------------ | ------------------------- | ------------------------------------------------------------------------------- |
+| `points`     | `Sequence[types.Point3D]` | Sequence of 3D points to smooth.                                                |
+| `kernel`     | `Sequence[float]`         | Gaussian kernel values.                                                         |
+| _Returns_    | `list[types.Point3D]`     | Smoothed points.                                                                |
+| _Complexity_ |                           | O(n * k) time, O(n) space where k is the kernel size and n the number of points |
 
 ![Circular smoothing](images/geo-algo-smooth-circular.png)
 
-_Circular smoothing_
+*Circular smoothing*
 
 ### `smooth_path()`
 
@@ -189,8 +188,8 @@ Smooth a polyline while avoiding obstacles.
 Two-phase constrained smoothing:
 
 1. **Shortcut** – greedily removes intermediate waypoints whose direct connection stays clear of all
-   _obstacles_ by at least _clearance_.
-2. **Gaussian relaxation** – iteratively applies Gaussian smoothing, reverting any point whose
+   *obstacles* by at least *clearance*.
+1. **Gaussian relaxation** – iteratively applies Gaussian smoothing, reverting any point whose
    smoothed position would violate the clearance constraint.
 
 Endpoints are always preserved.
@@ -205,7 +204,7 @@ Endpoints are always preserved.
 
 ![Constrained path smoothing](images/geo-algo-smooth-smooth-path.png)
 
-_Constrained path smoothing_
+*Constrained path smoothing*
 
 ### `smooth_polyline_3d()`
 
@@ -220,18 +219,18 @@ smooth_polyline_3d(
 
 Smooth a 3D polyline using Gaussian smoothing.
 
-| Parameter                | Type                      | Description                                                                      |
-| ------------------------ | ------------------------- | -------------------------------------------------------------------------------- |
-| `points`                 | `Sequence[types.Point3D]` | Sequence of 3D points to smooth.                                                 |
-| `amount`                 | `int`                     | Smoothing amount (kernel size).                                                  |
-| `corner_angle_threshold` | `float`                   | Angle threshold for preserving corners.                                          |
-| `is_closed`              | `Optional[bool] = None`   | Whether the polyline is closed.                                                  |
-| _Returns_                | `list[types.Point3D]`     | Smoothed 3D points.                                                              |
-| _Complexity_             |                           | O(n \* k) time, O(n) space where k is the kernel size and n the number of points |
+| Parameter                | Type                      | Description                                                                     |
+| ------------------------ | ------------------------- | ------------------------------------------------------------------------------- |
+| `points`                 | `Sequence[types.Point3D]` | Sequence of 3D points to smooth.                                                |
+| `amount`                 | `int`                     | Smoothing amount (kernel size).                                                 |
+| `corner_angle_threshold` | `float`                   | Angle threshold for preserving corners.                                         |
+| `is_closed`              | `Optional[bool] = None`   | Whether the polyline is closed.                                                 |
+| _Returns_                | `list[types.Point3D]`     | Smoothed 3D points.                                                             |
+| _Complexity_             |                           | O(n * k) time, O(n) space where k is the kernel size and n the number of points |
 
 ![Gaussian smoothing](images/geo-algo-smooth-overview.png)
 
-_Gaussian smoothing_
+*Gaussian smoothing*
 
 ### `smooth_sub_segment()`
 
@@ -244,13 +243,13 @@ smooth_sub_segment(
 
 Smooth a sub-segment of a polyline.
 
-| Parameter    | Type                      | Description                                                                      |
-| ------------ | ------------------------- | -------------------------------------------------------------------------------- |
-| `points`     | `Sequence[types.Point3D]` | Sequence of 3D points to smooth.                                                 |
-| `kernel`     | `Sequence[float]`         | Gaussian kernel values.                                                          |
-| _Returns_    | `list[types.Point3D]`     | Smoothed points.                                                                 |
-| _Complexity_ |                           | O(n \* k) time, O(n) space where k is the kernel size and n the number of points |
+| Parameter    | Type                      | Description                                                                     |
+| ------------ | ------------------------- | ------------------------------------------------------------------------------- |
+| `points`     | `Sequence[types.Point3D]` | Sequence of 3D points to smooth.                                                |
+| `kernel`     | `Sequence[float]`         | Gaussian kernel values.                                                         |
+| _Returns_    | `list[types.Point3D]`     | Smoothed points.                                                                |
+| _Complexity_ |                           | O(n * k) time, O(n) space where k is the kernel size and n the number of points |
 
 ![Sub-segment smoothing](images/geo-algo-smooth-sub-segment.png)
 
-_Sub-segment smoothing_
+*Sub-segment smoothing*

@@ -1,7 +1,6 @@
 ---
 title: raygeo.geo.algo.ordering
 sidebar_label: raygeo.geo.algo.ordering
-sidebar_position: 25
 ---
 
 Path ordering algorithms.
@@ -27,8 +26,8 @@ whose first endpoint is closest to the current path's last endpoint.
 | Parameter | Type                                      | Description                                  |
 | --------- | ----------------------------------------- | -------------------------------------------- |
 | `paths`   | `Sequence[Sequence[tuple[float, float]]]` | List of paths, each a list of (x, y) points. |
-| _Returns_ | `list[int]`                               | Indices into \*paths\* in visit order.       |
+| _Returns_ | `list[int]`                               | Indices into *paths* in visit order.         |
 
 ![Nearest-neighbor ordering of arc-like paths — starts with the longest, then chains by proximity](images/geo-algo-ordering-order-nearest-neighbor.png)
 
-_Nearest-neighbor ordering of arc-like paths — starts with the longest, then chains by proximity_
+*Nearest-neighbor ordering of arc-like paths — starts with the longest, then chains by proximity*

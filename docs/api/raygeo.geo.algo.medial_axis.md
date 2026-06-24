@@ -1,12 +1,11 @@
 ---
 title: raygeo.geo.algo.medial_axis
 sidebar_label: raygeo.geo.algo.medial_axis
-sidebar_position: 15
 ---
 
 ![Medial axis of a rectangular pocket — skeleton from center to corners.](images/geo-algo-medial-axis-mat-rect.png)
 
-_Medial axis of a rectangular pocket — skeleton from center to corners._ Medial Axis Transform (MAT)
+*Medial axis of a rectangular pocket — skeleton from center to corners.* Medial Axis Transform (MAT)
 computation.
 
 The MAT is the skeleton of a 2D domain — the set of points equidistant to two or more boundary
@@ -28,14 +27,16 @@ the free space.
 
 .. code-block:: python
 
-    axis = MedialAxis.compute(outer, holes)
-    path = axis.path_between((x1, y1), (x2, y2))
-    trimmed = axis.trim_to_polygons(polygons)
-    nodes = axis.nodes
-    clearances = axis.clearances
-    edges = axis.edges
-    root = axis.root
-    branches = axis.branches
+```
+axis = MedialAxis.compute(outer, holes)
+path = axis.path_between((x1, y1), (x2, y2))
+trimmed = axis.trim_to_polygons(polygons)
+nodes = axis.nodes
+clearances = axis.clearances
+edges = axis.edges
+root = axis.root
+branches = axis.branches
+```
 
 ### `branches`
 
@@ -90,11 +91,11 @@ Compute the Medial Axis Transform of a planar domain.
 
 ![Medial axis with three rectangular islands — skeleton branches around each obstacle.](images/geo-algo-medial-axis-mat-multi.png)
 
-_Medial axis with three rectangular islands — skeleton branches around each obstacle._
+*Medial axis with three rectangular islands — skeleton branches around each obstacle.*
 
 ![Medial axis of a Y-shaped channel — skeleton follows the branching topology.](images/geo-algo-medial-axis-mat-yshape.png)
 
-_Medial axis of a Y-shaped channel — skeleton follows the branching topology._
+*Medial axis of a Y-shaped channel — skeleton follows the branching topology.*
 
 ### `path_between()`
 
@@ -115,8 +116,8 @@ Find a path between two points along the medial axis skeleton.
 
 ![MAT path routing: a path between two points (green) along the medial axis skeleton (red). The path avoids the island by following the skeleton topology.](images/geo-algo-medial-axis-mat-path.png)
 
-_MAT path routing: a path between two points (green) along the medial axis skeleton (red). The path
-avoids the island by following the skeleton topology._
+*MAT path routing: a path between two points (green) along the medial axis skeleton (red). The path
+avoids the island by following the skeleton topology.*
 
 ### `trim_to_polygons()`
 
@@ -136,6 +137,6 @@ given polygons.
 
 ![MAT trimming to cleared area — left: original MAT over cleared fragments (green fill); right: trimmed MAT with kept nodes (blue) and removed nodes (red x).  Only 10 clearing passes were run, so most MAT nodes lie outside the cleared area and are discarded.](images/geo-algo-medial-axis-mat-trimming.png)
 
-_MAT trimming to cleared area — left: original MAT over cleared fragments (green fill); right:
+*MAT trimming to cleared area — left: original MAT over cleared fragments (green fill); right:
 trimmed MAT with kept nodes (blue) and removed nodes (red x). Only 10 clearing passes were run, so
-most MAT nodes lie outside the cleared area and are discarded._
+most MAT nodes lie outside the cleared area and are discarded.*

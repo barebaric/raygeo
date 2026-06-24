@@ -1,7 +1,6 @@
 ---
 title: raygeo.geo.algo.ramp
 sidebar_label: raygeo.geo.algo.ramp
-sidebar_position: 28
 ---
 
 Ramp entry path generation for milling.
@@ -46,4 +45,4 @@ the same line.
 
 ![Linear (left) and ZigZag (right) ramp entry paths](images/geo-algo-ramp-linear-zigzag.png)
 
-_Linear (left) and ZigZag (right) ramp entry paths_
+*Linear (left) and ZigZag (right) ramp entry paths*

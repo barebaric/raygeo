@@ -1,7 +1,6 @@
 ---
 title: raygeo.geo.shape.point
 sidebar_label: raygeo.geo.shape.point
-sidebar_position: 40
 ---
 
 Individual point operations.
@@ -80,7 +79,7 @@ points are collinear.
 
 ![Circumcenter of three 3D points with circumcircle](images/geo-shape-point-circumcenter-3d.png)
 
-_Circumcenter of three 3D points with circumcircle_
+*Circumcenter of three 3D points with circumcircle*
 
 ### `midpoint_3d()`
 
@@ -99,7 +98,7 @@ Get the midpoint between two 3D points.
 
 ![Midpoint of a 3D segment](images/geo-shape-point-midpoint-3d.png)
 
-_Midpoint of a 3D segment_
+*Midpoint of a 3D segment*
 
 ### `transform_point_3d()`
 

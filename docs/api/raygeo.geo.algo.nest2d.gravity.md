@@ -1,7 +1,6 @@
 ---
 title: raygeo.geo.algo.nest2d.gravity
 sidebar_label: raygeo.geo.algo.nest2d.gravity
-sidebar_position: 20
 ---
 
 Gravity optimization for nesting layouts.
@@ -32,11 +31,11 @@ for each input group in order.
 | `sheet_poly`       | `types.Polygon`                     | Sheet polygon.                                  |
 | `spacing`          | `float`                             | Minimum spacing between parts.                  |
 | _Returns_          | `list[tuple[float, float]]`         | List of `(dx, dy)` adjustments, one per group.  |
-| _Complexity_       |                                     | O(passes \* n \* m) where passes ≤ 10.          |
+| _Complexity_       |                                     | O(passes * n * m) where passes ≤ 10.            |
 
 ![Gravity tightening: before vs after](images/geo-algo-nest2d-gravity-overview.png)
 
-_Gravity tightening: before vs after_
+*Gravity tightening: before vs after*
 
 ### `find_max_slide()`
 
@@ -55,13 +54,13 @@ Find the maximum distance a part can slide in the negative axis direction.
 
 Uses binary search with polygon overlap and containment checks.
 
-| Parameter          | Type                                | Description                                                   |
-| ------------------ | ----------------------------------- | ------------------------------------------------------------- |
-| `polys`            | `Sequence[types.Polygon]`           | Polygons of the part to slide.                                |
-| `other_polys_list` | `Sequence[Sequence[types.Polygon]]` | Polygons of all other placed parts (grouped).                 |
-| `sheet_bounds`     | `tuple[float, float, float, float]` | Sheet bounding box (min_x, min_y, max_x, max_y).              |
-| `sheet_poly`       | `types.Polygon`                     | Sheet polygon.                                                |
-| `axis`             | `str`                               | `"x"` or `"y"` — axis to slide along.                         |
-| `spacing`          | `float`                             | Minimum spacing between parts.                                |
-| _Returns_          | `float`                             | Maximum slide distance.                                       |
-| _Complexity_       |                                     | O(log range \* n \* m) for binary search with overlap checks. |
+| Parameter          | Type                                | Description                                                 |
+| ------------------ | ----------------------------------- | ----------------------------------------------------------- |
+| `polys`            | `Sequence[types.Polygon]`           | Polygons of the part to slide.                              |
+| `other_polys_list` | `Sequence[Sequence[types.Polygon]]` | Polygons of all other placed parts (grouped).               |
+| `sheet_bounds`     | `tuple[float, float, float, float]` | Sheet bounding box (min_x, min_y, max_x, max_y).            |
+| `sheet_poly`       | `types.Polygon`                     | Sheet polygon.                                              |
+| `axis`             | `str`                               | `"x"` or `"y"` — axis to slide along.                       |
+| `spacing`          | `float`                             | Minimum spacing between parts.                              |
+| _Returns_          | `float`                             | Maximum slide distance.                                     |
+| _Complexity_       |                                     | O(log range * n * m) for binary search with overlap checks. |

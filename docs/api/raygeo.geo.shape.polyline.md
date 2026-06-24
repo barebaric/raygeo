@@ -1,7 +1,6 @@
 ---
 title: raygeo.geo.shape.polyline
 sidebar_label: raygeo.geo.shape.polyline
-sidebar_position: 43
 ---
 
 ## Functions
@@ -40,10 +39,10 @@ in [0, 1] is the parametric position along that edge.
 | `point`    | `tuple[float, float]`           | Query point (x, y).                                                |
 | _Returns_  | `tuple[int, float] &#124; None` | `(edge_index, t)` or None if the polyline has fewer than 2 points. |
 
-![``get_polyline_closest_point`` finds the closest point on an open polyline to a query point, returning the edge index and parametric position](images/geo-shape-polyline-polyline-closest-point.png)
+![ finds the closest point on an open polyline to a query point, returning the edge index and parametric position](images/geo-shape-polyline-polyline-closest-point.png)
 
-_`get_polyline_closest_point` finds the closest point on an open polyline to a query point,
-returning the edge index and parametric position_
+*`get_polyline_closest_point` finds the closest point on an open polyline to a query point,
+returning the edge index and parametric position*
 
 ### `resample_polyline()`
 
@@ -54,7 +53,7 @@ resample_polyline(
 ) -> list[tuple[float, float]]
 ```
 
-Resample an open 2D polyline so consecutive points are at most _max_len_ apart.
+Resample an open 2D polyline so consecutive points are at most *max_len* apart.
 
 New points are linearly interpolated along each segment that exceeds the threshold. The first and
 last points are always preserved.
@@ -64,7 +63,7 @@ last points are always preserved.
 | `polyline`   | `Sequence[tuple[float, float]]` | Open polyline as (x, y) points. |
 | `max_len`    | `float`                         | Maximum allowed segment length. |
 | _Returns_    | `list[tuple[float, float]]`     | Resampled polyline.             |
-| _Complexity_ |                                 | O(n \* m)                       |
+| _Complexity_ |                                 | O(n * m)                        |
 
 ### `split_polyline_at_v_junctions()`
 
@@ -89,8 +88,8 @@ Each resulting sub-polyline is trimmed with `trim_polyline_angular_ends`.
 
 ![Three semi-arcs (hills) form two V-junctions where they meet. The function splits the polyline at those points and trims each segment's angular ends.](images/geo-shape-polyline-split-v-junctions.png)
 
-_Three semi-arcs (hills) form two V-junctions where they meet. The function splits the polyline at
-those points and trims each segment's angular ends._
+*Three semi-arcs (hills) form two V-junctions where they meet. The function splits the polyline at
+those points and trims each segment's angular ends.*
 
 ### `trim_polyline_angular_ends()`
 
@@ -117,11 +116,11 @@ until no more trimming occurs or the sequence is too short.
 | `angle_threshold_rad` | `float`                         | Angle threshold in radians.                            |
 | _Returns_             | `tuple[int, int]`               | `(new_start, new_length)` within the original polygon. |
 
-![``trim_polyline_angular_ends`` removes transition vertices from both ends of a contiguous subsequence where the interior angle jumps sharply.  Here a 10-vertex cut (indices 1–10) with angles ranging 59°→180°→59° is trimmed to 8 vertices using a 25° threshold.](images/geo-shape-polyline-trim-polyline-angular-ends.png)
+![ removes transition vertices from both ends of a contiguous subsequence where the interior angle jumps sharply.  Here a 10-vertex cut (indices 1–10) with angles ranging 59°→180°→59° is trimmed to 8 vertices using a 25° threshold.](images/geo-shape-polyline-trim-polyline-angular-ends.png)
 
-_`trim_polyline_angular_ends` removes transition vertices from both ends of a contiguous subsequence
+*`trim_polyline_angular_ends` removes transition vertices from both ends of a contiguous subsequence
 where the interior angle jumps sharply. Here a 10-vertex cut (indices 1–10) with angles ranging
-59°→180°→59° is trimmed to 8 vertices using a 25° threshold._
+59°→180°→59° is trimmed to 8 vertices using a 25° threshold.*
 
 ### `trim_polyline_at()`
 
@@ -136,7 +135,7 @@ trim_polyline_at(
 Trim a polyline to the portion between two points.
 
 Each point is projected onto the nearest edge of the polyline. The returned polyline goes from the
-projection of _a_ to the projection of _b_, preserving intermediate vertices.
+projection of *a* to the projection of *b*, preserving intermediate vertices.
 
 | Parameter  | Type                            | Description                     |
 | ---------- | ------------------------------- | ------------------------------- |
@@ -145,6 +144,6 @@ projection of _a_ to the projection of _b_, preserving intermediate vertices.
 | `b`        | `tuple[float, float]`           | End point to trim at.           |
 | _Returns_  | `list[tuple[float, float]]`     | Trimmed polyline.               |
 
-![``trim_polyline_at`` trims a polyline between two points](images/geo-shape-polyline-trim-polyline.png)
+![ trims a polyline between two points](images/geo-shape-polyline-trim-polyline.png)
 
-_`trim_polyline_at` trims a polyline between two points_
+*`trim_polyline_at` trims a polyline between two points*

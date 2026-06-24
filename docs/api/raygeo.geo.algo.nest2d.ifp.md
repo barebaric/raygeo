@@ -1,7 +1,6 @@
 ---
 title: raygeo.geo.algo.nest2d.ifp
 sidebar_label: raygeo.geo.algo.nest2d.ifp
-sidebar_position: 21
 ---
 
 Inner-Fit Polygon (IFP) calculation for nesting algorithms.
@@ -27,7 +26,7 @@ Build the no-go zones for a bin-part pair.
 | `bin`        | `Sequence[types.Point]` | Bin polygon as (x, y) points.              |
 | `part_neg`   | `Sequence[types.Point]` | Orbiting polygon negated as (x, y) points. |
 | _Returns_    | `list[types.Polygon]`   | List of no-go zone polygons.               |
-| _Complexity_ |                         | O(n \* m) where n, m = vertex counts.      |
+| _Complexity_ |                         | O(n * m) where n, m = vertex counts.       |
 
 ### `inner_fit_polygon()`
 
@@ -40,16 +39,16 @@ inner_fit_polygon(
 
 Compute the Inner-Fit Polygon (IFP) for a part inside a bin.
 
-| Parameter    | Type                    | Description                                           |
-| ------------ | ----------------------- | ----------------------------------------------------- |
-| `bin`        | `Sequence[types.Point]` | Bin polygon as (x, y) points.                         |
-| `part`       | `Sequence[types.Point]` | Part polygon as (x, y) points.                        |
-| _Returns_    | `list[types.Polygon]`   | List of IFP polygons.                                 |
-| _Complexity_ |                         | O(n \* m) where n, m = vertex counts of bin and part. |
+| Parameter    | Type                    | Description                                          |
+| ------------ | ----------------------- | ---------------------------------------------------- |
+| `bin`        | `Sequence[types.Point]` | Bin polygon as (x, y) points.                        |
+| `part`       | `Sequence[types.Point]` | Part polygon as (x, y) points.                       |
+| _Returns_    | `list[types.Polygon]`   | List of IFP polygons.                                |
+| _Complexity_ |                         | O(n * m) where n, m = vertex counts of bin and part. |
 
 ![Inner Fit Polygon showing valid placement region](images/geo-algo-nest2d-ifp-inner-fit.png)
 
-_Inner Fit Polygon showing valid placement region_
+*Inner Fit Polygon showing valid placement region*
 
 ### `sweep_hull_for_edge()`
 

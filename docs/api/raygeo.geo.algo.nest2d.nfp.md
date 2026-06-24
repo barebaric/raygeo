@@ -1,7 +1,6 @@
 ---
 title: raygeo.geo.algo.nest2d.nfp
 sidebar_label: raygeo.geo.algo.nest2d.nfp
-sidebar_position: 22
 ---
 
 No-Fit Polygon calculation for nesting algorithms.
@@ -22,12 +21,12 @@ nfp_minkowski(
 
 General NFP using Minkowski sum with Clipper union.
 
-| Parameter     | Type                              | Description                           |
-| ------------- | --------------------------------- | ------------------------------------- |
-| `static_poly` | `Sequence[tuple[float, float]]`   | Static polygon as points.             |
-| `orbiting`    | `Sequence[tuple[float, float]]`   | Orbiting polygon as points.           |
-| _Returns_     | `list[list[tuple[float, float]]]` | List of NFP polygons.                 |
-| _Complexity_  |                                   | O(n \* m) where n, m = vertex counts. |
+| Parameter     | Type                              | Description                          |
+| ------------- | --------------------------------- | ------------------------------------ |
+| `static_poly` | `Sequence[tuple[float, float]]`   | Static polygon as points.            |
+| `orbiting`    | `Sequence[tuple[float, float]]`   | Orbiting polygon as points.          |
+| _Returns_     | `list[list[tuple[float, float]]]` | List of NFP polygons.                |
+| _Complexity_  |                                   | O(n * m) where n, m = vertex counts. |
 
 ### `no_fit_polygon()`
 
@@ -40,12 +39,12 @@ no_fit_polygon(
 
 Compute the No-Fit Polygon (NFP) for two polygons.
 
-| Parameter     | Type                    | Description                                             |
-| ------------- | ----------------------- | ------------------------------------------------------- |
-| `static_poly` | `Sequence[types.Point]` | Static polygon as (x, y) points.                        |
-| `orbiting`    | `Sequence[types.Point]` | Orbiting polygon as (x, y) points.                      |
-| _Returns_     | `list[types.Polygon]`   | List of NFP polygons.                                   |
-| _Complexity_  |                         | O(n \* m) where n, m = vertex counts of input polygons. |
+| Parameter     | Type                    | Description                                            |
+| ------------- | ----------------------- | ------------------------------------------------------ |
+| `static_poly` | `Sequence[types.Point]` | Static polygon as (x, y) points.                       |
+| `orbiting`    | `Sequence[types.Point]` | Orbiting polygon as (x, y) points.                     |
+| _Returns_     | `list[types.Polygon]`   | List of NFP polygons.                                  |
+| _Complexity_  |                         | O(n * m) where n, m = vertex counts of input polygons. |
 
 ### `normalize_polygon()`
 

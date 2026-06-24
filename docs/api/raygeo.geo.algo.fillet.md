@@ -1,7 +1,6 @@
 ---
 title: raygeo.geo.algo.fillet
 sidebar_label: raygeo.geo.algo.fillet
-sidebar_position: 9
 ---
 
 Pure-geometry fillet operations.
@@ -30,8 +29,8 @@ append_end_fillets(
 
 Append fillet arcs to both ends of an open polyline.
 
-A reversed fillet is added at the start (using _start_side_) and a forward fillet at the end (using
-_end_side_), producing a smooth rounded path.
+A reversed fillet is added at the start (using *start_side*) and a forward fillet at the end (using
+*end_side*), producing a smooth rounded path.
 
 | Parameter     | Type                            | Description                                           |
 | ------------- | ------------------------------- | ----------------------------------------------------- |
@@ -42,10 +41,10 @@ _end_side_), producing a smooth rounded path.
 | `end_side`    | `float`                         | Offset side for the end fillet (+1 left, -1 right).   |
 | _Returns_     | `list[tuple[float, float]]`     | Full polyline with fillets.                           |
 
-![``append_end_fillets`` rounds both ends of an open polyline with reversed-start / forward-end fillet arcs](images/geo-algo-fillet-append-end-fillets.png)
+![ rounds both ends of an open polyline with reversed-start / forward-end fillet arcs](images/geo-algo-fillet-append-end-fillets.png)
 
-_`append_end_fillets` rounds both ends of an open polyline with reversed-start / forward-end fillet
-arcs_
+*`append_end_fillets` rounds both ends of an open polyline with reversed-start / forward-end fillet
+arcs*
 
 ### `create_fillet_polyline()`
 
@@ -60,10 +59,10 @@ create_fillet_polyline(
 ) -> tuple[tuple[float, float], list[tuple[float, float]]]
 ```
 
-Create a circular fillet arc tangent to _dir_ at _p_.
+Create a circular fillet arc tangent to *dir* at *p*.
 
-`side` selects the offset side (+1 = left of _dir_, -1 = right). When `reverse` is `True` the arc
-curls back opposite to _dir_.
+`side` selects the offset side (+1 = left of *dir*, -1 = right). When `reverse` is `True` the arc
+curls back opposite to *dir*.
 
 | Parameter     | Type                                                    | Description                                            |
 | ------------- | ------------------------------------------------------- | ------------------------------------------------------ |
@@ -75,14 +74,14 @@ curls back opposite to _dir_.
 | `reverse`     | `bool`                                                  | Whether the arc is reversed.                           |
 | _Returns_     | `tuple[tuple[float, float], list[tuple[float, float]]]` | `(center, polyline)` — arc centre and fillet vertices. |
 
-![``create_fillet_polyline`` generates circular fillet arcs of arbitrary sweep angle, tangent to a direction at a point](images/geo-algo-fillet-create-fillet-polyline.png)
+![ generates circular fillet arcs of arbitrary sweep angle, tangent to a direction at a point](images/geo-algo-fillet-create-fillet-polyline.png)
 
-_`create_fillet_polyline` generates circular fillet arcs of arbitrary sweep angle, tangent to a
-direction at a point_
+*`create_fillet_polyline` generates circular fillet arcs of arbitrary sweep angle, tangent to a
+direction at a point*
 
-![``create_fillet_polyline`` with ``side=+1`` (left) and ``side=-1`` (right) of the direction vector](images/geo-algo-fillet-create-fillet-polyline-side.png)
+![ with  (left) and  (right) of the direction vector](images/geo-algo-fillet-create-fillet-polyline-side.png)
 
-_`create_fillet_polyline` with `side=+1` (left) and `side=-1` (right) of the direction vector_
+*`create_fillet_polyline` with `side=+1` (left) and `side=-1` (right) of the direction vector*
 
 ### `descending_radius_fillet()`
 
@@ -98,7 +97,7 @@ descending_radius_fillet(
 
 Try fillets at descending radii until one fits.
 
-Starts at _radius_ and halves until either both (or one) end fillet fits, or the radius drops below
+Starts at *radius* and halves until either both (or one) end fillet fits, or the radius drops below
 0.1; returns the filleted arc, or an empty list if none fits.
 
 The safety distance (`radius + margin`) stays fixed as the fillet radius shrinks, so the tool
@@ -113,10 +112,10 @@ clearance remains constant.
 | `margin`          | `float = 0`                                    | Extra clearance past tangency (default 0.0). |
 | _Returns_         | `list[tuple[float, float]]`                    | Filleted arc or empty list.                  |
 
-![``descending_radius_fillet`` halves the fillet radius until both ends fit, while keeping the safety distance (``radius + margin``) fixed](images/geo-algo-fillet-descending-radius-fillet.png)
+![ halves the fillet radius until both ends fit, while keeping the safety distance () fixed](images/geo-algo-fillet-descending-radius-fillet.png)
 
-_`descending_radius_fillet` halves the fillet radius until both ends fit, while keeping the safety
-distance (`radius + margin`) fixed_
+*`descending_radius_fillet` halves the fillet radius until both ends fit, while keeping the safety
+distance (`radius + margin`) fixed*
 
 ### `fillet_arc_ends()`
 
@@ -132,8 +131,8 @@ fillet_arc_ends(
 
 Round both ends of a cutting arc with quarter-circle fillets.
 
-The arc is trimmed to the longest sub-arc whose tool sweep (arc + end fillets of _tool_radius_) does
-not collide with _pocket_boundary_ or _islands_. A 90° fillet of _tool_radius_ is then appended at
+The arc is trimmed to the longest sub-arc whose tool sweep (arc + end fillets of *tool_radius*) does
+not collide with *pocket_boundary* or *islands*. A 90° fillet of *tool_radius* is then appended at
 each end.
 
 | Parameter         | Type                                           | Description                                  |
@@ -145,10 +144,10 @@ each end.
 | `wall_margin`     | `float = 0`                                    | Extra clearance past tangency (default 0.0). |
 | _Returns_         | `list[tuple[float, float]]`                    | Filleted arc as an open polyline.            |
 
-![``fillet_arc_ends`` trims the arc to the longest safe sub-arc and appends quarter-circle fillets at each end](images/geo-algo-fillet-fillet-arc-ends.png)
+![ trims the arc to the longest safe sub-arc and appends quarter-circle fillets at each end](images/geo-algo-fillet-fillet-arc-ends.png)
 
-_`fillet_arc_ends` trims the arc to the longest safe sub-arc and appends quarter-circle fillets at
-each end_
+*`fillet_arc_ends` trims the arc to the longest safe sub-arc and appends quarter-circle fillets at
+each end*
 
 ### `find_safe_sweep_end()`
 
@@ -164,9 +163,9 @@ find_safe_sweep_end(
 
 Find the longest safe sub-arc by iterative sweep shortening.
 
-Returns the two points `(enter, exit)` delimiting the longest sub-arc of _arc_ whose tool sweep
-(arc + end fillets of _tool_radius_) does not collide with _pocket_boundary_ or _islands_. Shortens
-from each end until the sweep is clear. Returns `None` when no usable safe sub-arc remains.
+Returns the two points `(enter, exit)` delimiting the longest sub-arc of *arc* whose tool sweep (arc
+\+ end fillets of *tool_radius*) does not collide with *pocket_boundary* or *islands*. Shortens from
+each end until the sweep is clear. Returns `None` when no usable safe sub-arc remains.
 
 | Parameter         | Type                                                          | Description                                  |
 | ----------------- | ------------------------------------------------------------- | -------------------------------------------- |
@@ -177,10 +176,10 @@ from each end until the sweep is clear. Returns `None` when no usable safe sub-a
 | `wall_margin`     | `float = 0`                                                   | Extra clearance past tangency (default 0.0). |
 | _Returns_         | `tuple[tuple[float, float], tuple[float, float]] &#124; None` |                                              |
 
-![``find_safe_sweep_end`` returns the ``(enter, exit)`` points delimiting the longest sub-arc whose tool sweep avoids islands](images/geo-algo-fillet-find-safe-sweep-end.png)
+![ returns the  points delimiting the longest sub-arc whose tool sweep avoids islands](images/geo-algo-fillet-find-safe-sweep-end.png)
 
-_`find_safe_sweep_end` returns the `(enter, exit)` points delimiting the longest sub-arc whose tool
-sweep avoids islands_
+*`find_safe_sweep_end` returns the `(enter, exit)` points delimiting the longest sub-arc whose tool
+sweep avoids islands*
 
 ### `trim_to_safe_fillet_span()`
 
@@ -207,10 +206,10 @@ Shortens from each end until the sweep is clear. Returns `(enter, exit)` or `Non
 | `margin`          | `float = 0`                                                   | Extra clearance past tangency (default 0.0). |
 | _Returns_         | `tuple[tuple[float, float], tuple[float, float]] &#124; None` |                                              |
 
-![``trim_to_safe_fillet_span`` finds the longest sub-span whose end fillets do not collide with obstacles (red)](images/geo-algo-fillet-trim-to-safe-fillet-span.png)
+![ finds the longest sub-span whose end fillets do not collide with obstacles (red)](images/geo-algo-fillet-trim-to-safe-fillet-span.png)
 
-_`trim_to_safe_fillet_span` finds the longest sub-span whose end fillets do not collide with
-obstacles (red)_
+*`trim_to_safe_fillet_span` finds the longest sub-span whose end fillets do not collide with
+obstacles (red)*
 
 ### `try_fillet_one_end()`
 
@@ -238,7 +237,7 @@ not collide with the boundary or obstacles. Falls back to the original arc if ne
 | `margin`          | `float = 0`                                    | Extra clearance past tangency (default 0.0).          |
 | _Returns_         | `list[tuple[float, float]]`                    | Arc with optional single-end fillet, or original arc. |
 
-![``try_fillet_one_end`` tests the start fillet first; when it collides with the obstacle (red), falls back to the end fillet](images/geo-algo-fillet-try-fillet-one-end.png)
+![ tests the start fillet first; when it collides with the obstacle (red), falls back to the end fillet](images/geo-algo-fillet-try-fillet-one-end.png)
 
-_`try_fillet_one_end` tests the start fillet first; when it collides with the obstacle (red), falls
-back to the end fillet_
+*`try_fillet_one_end` tests the start fillet first; when it collides with the obstacle (red), falls
+back to the end fillet*

@@ -1,7 +1,6 @@
 ---
 title: raygeo.geo.algo.trochoid
 sidebar_label: raygeo.geo.algo.trochoid
-sidebar_position: 34
 ---
 
 Trochoidal path generation along a carrier polyline.
@@ -39,8 +38,8 @@ Generate a trochoidal path along a carrier polyline.
 
 ![Trochoidal toolpath along a straight carrier — 60° vs 120°](images/geo-algo-trochoid-straight.png)
 
-_Trochoidal toolpath along a straight carrier — 60° vs 120°_
+*Trochoidal toolpath along a straight carrier — 60° vs 120°*
 
 ![Trochoidal toolpath around an L-shaped corner](images/geo-algo-trochoid-l-shaped.png)
 
-_Trochoidal toolpath around an L-shaped corner_
+*Trochoidal toolpath around an L-shaped corner*

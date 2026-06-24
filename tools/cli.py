@@ -2,6 +2,7 @@
 """CLI for generating raygeo docs (API reference + visual examples)."""
 
 import argparse
+import ast
 import importlib
 import pkgutil
 import shutil
@@ -10,9 +11,18 @@ from pathlib import Path
 
 import matplotlib
 import matplotlib.pyplot as plt
+import mdformat
 
 import tools.examples
 from tools import api_docs
+
+
+def _format_md(content: str) -> str:
+    return mdformat.text(
+        content,
+        extensions=["frontmatter", "tables"],
+        options={"wrap": 100},
+    )
 
 
 def _collect_example_modules():
@@ -27,22 +37,29 @@ def _collect_example_modules():
     return modules
 
 
-def _generate_images(images_dir: Path) -> dict[str, list]:
+def _generate_images(
+    images_dir: Path, doc_filter: str | None = None
+) -> tuple[dict[str, list], set[Path]]:
     matplotlib.use("Agg")
     images_dir.mkdir(parents=True, exist_ok=True)
     modules = _collect_example_modules()
 
     inline_map: dict[str, list] = {}
+    produced: set[Path] = set()
 
     for mod in modules:
+        docs: list[str] = getattr(mod, "__docs_target__", None) or []
+        if not docs:
+            continue
+        if doc_filter is not None and doc_filter not in docs:
+            continue
+
         images = getattr(mod, "__images__", None) or []
         if not images:
             continue
-        mod_name = mod.__name__
-        if not mod_name.startswith("tools.examples."):
-            continue
-        docs = mod.__docs_target__
-        stem_base = mod_name.removeprefix("tools.examples.").replace("_", "-")
+        stem_base = mod.__name__.removeprefix("tools.examples.").replace(
+            "_", "-"
+        )
 
         print(f"  Generating {mod.__name__}...")
         for img in images:
@@ -56,11 +73,13 @@ def _generate_images(images_dir: Path) -> dict[str, list]:
                 else name
             )
             stem = f"{stem_base}-{sub.replace('_', '-')}"
+            img_path = images_dir / f"{stem}.png"
             result = func()
             if hasattr(result, "savefig"):
                 fig = result
-                fig.savefig(images_dir / f"{stem}.png", dpi=150)
+                fig.savefig(img_path, dpi=150)
                 plt.close(fig)
+                produced.add(img_path)
             else:
                 continue
             for doc in docs:
@@ -68,7 +87,7 @@ def _generate_images(images_dir: Path) -> dict[str, list]:
                     (img.get("heading"), stem, img.get("caption"))
                 )
 
-    return inline_map
+    return inline_map, produced
 
 
 def _inject_images_into_api(api_dir: Path, images_dir: Path, inline_map: dict):
@@ -129,7 +148,8 @@ def _inject_images_into_api(api_dir: Path, images_dir: Path, inline_map: dict):
         for pos, block in sorted(insertions, key=lambda x: -x[0]):
             content = content[:pos] + "\n" + block + content[pos:]
 
-        path.write_text(content)
+        formatted = _format_md(content)
+        path.write_text(formatted)
         print(f"  Injected images into {md_file}")
 
 
@@ -141,26 +161,93 @@ def cmd_api(args):
     print(f"Generating API docs from {stubs_dir} -> {output_dir}")
     api_docs.generate(stubs_dir, output_dir, "raygeo")
 
+    for md_file in sorted(output_dir.glob("*.md")):
+        content = md_file.read_text()
+        formatted = _format_md(content)
+        md_file.write_text(formatted)
+
 
 def cmd_examples(args):
     images_dir = Path(args.output) / "api" / "images"
     images_dir.mkdir(parents=True, exist_ok=True)
     print(f"Generating visual examples -> {images_dir}")
-    _generate_images(images_dir)
+    inline_map, _ = _generate_images(images_dir)
 
 
 def cmd_all(args):
     output_dir = Path(args.output)
     api_dir = output_dir / "api"
     images_dir = api_dir / "images"
+    stubs_dir = Path(args.stubs)
 
-    cmd_api(args)
+    api_dir.mkdir(parents=True, exist_ok=True)
+    images_dir.mkdir(parents=True, exist_ok=True)
 
-    print("Generating visual example images...")
-    inline_map = _generate_images(images_dir)
+    files = api_docs.find_stub_files(stubs_dir)
+    if not files:
+        print("No .pyi stub files found.", file=sys.stderr)
+        sys.exit(1)
 
-    print("Injecting images into API docs...")
-    _inject_images_into_api(api_dir, images_dir, inline_map)
+    root_module = stubs_dir.name
+    all_mods = [
+        api_docs.module_name_from_path(rel, root_module) for rel, _ in files
+    ]
+
+    def has_children(mod: str) -> bool:
+        prefix = mod + "."
+        return any(m.startswith(prefix) for m in all_mods)
+
+    produced_docs: set[Path] = set()
+    produced_images: set[Path] = set()
+
+    all_doc_targets: set[str] = set()
+    for mod in _collect_example_modules():
+        for t in getattr(mod, "__docs_target__", None) or []:
+            all_doc_targets.add(t)
+
+    for rel_path, filepath in files:
+        mod = api_docs.module_name_from_path(rel_path, root_module)
+        if api_docs.is_reexport_only(
+            ast.parse(filepath.read_text())
+        ) and not has_children(mod):
+            print(f"  {mod} -> skipped (re-export only)")
+            continue
+
+        out_path = api_docs.output_path_from_rel(
+            rel_path, api_dir, root_module
+        )
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        page = api_docs.process_file(rel_path, filepath, root_module)
+        if not page.strip():
+            continue
+        page = _format_md(page)
+        out_path.write_text(page)
+        produced_docs.add(out_path)
+        print(f"  {mod} -> {out_path}")
+
+        doc_target = f"{mod}.md"
+        inline_map, imgs = _generate_images(images_dir, doc_filter=doc_target)
+        produced_images.update(imgs)
+        _inject_images_into_api(api_dir, images_dir, inline_map)
+
+    orphan_targets = all_doc_targets - {p.name for p in produced_docs}
+    for target in orphan_targets:
+        inline_map, imgs = _generate_images(images_dir, doc_filter=target)
+        produced_images.update(imgs)
+        _inject_images_into_api(api_dir, images_dir, inline_map)
+
+    for old in api_dir.glob("*.md"):
+        if old not in produced_docs:
+            old.unlink()
+            print(f"  Removed stale {old.name}")
+
+    for old in images_dir.glob("*.png"):
+        if old not in produced_images:
+            old.unlink()
+            print(f"  Removed stale {old.name}")
+
+    total = len(list(api_dir.glob("*.md")))
+    print(f"\nGenerated {total} API doc pages in {api_dir}")
 
 
 def cmd_clean(args):
@@ -170,6 +257,50 @@ def cmd_clean(args):
         shutil.rmtree(output_dir)
     else:
         print(f"{output_dir} does not exist, nothing to clean.")
+
+
+def cmd_doc(args):
+    output_dir = Path(args.output)
+    api_dir = output_dir / "api"
+    images_dir = api_dir / "images"
+    module = args.module
+
+    stubs_dir = Path(args.stubs)
+    files = api_docs.find_stub_files(stubs_dir)
+    root_module = stubs_dir.name
+
+    candidates = [module, f"{root_module}.{module}"]
+
+    matched_mod = None
+    for rel_path, filepath in files:
+        mod = api_docs.module_name_from_path(rel_path, root_module)
+        if mod in candidates:
+            matched_mod = mod
+            api_dir.mkdir(parents=True, exist_ok=True)
+            out_path = api_docs.output_path_from_rel(
+                rel_path, api_dir, root_module
+            )
+            out_path.parent.mkdir(parents=True, exist_ok=True)
+            page = api_docs.process_file(rel_path, filepath, root_module)
+            if page.strip():
+                page = _format_md(page)
+                out_path.write_text(page)
+                print(f"  {mod} -> {out_path}")
+            break
+
+    if matched_mod is None:
+        print(
+            f"Error: module '{module}' not found in stubs directory",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
+    doc_target = f"{matched_mod}.md"
+    print(f"Generating visual examples for {doc_target}...")
+    inline_map, _ = _generate_images(images_dir, doc_filter=doc_target)
+
+    print("Injecting images into API docs...")
+    _inject_images_into_api(api_dir, images_dir, inline_map)
 
 
 def main():
@@ -210,6 +341,17 @@ def main():
 
     p_clean = subparsers.add_parser("clean", help="Remove generated docs")
     p_clean.set_defaults(func=cmd_clean)
+
+    p_doc = subparsers.add_parser(
+        "doc",
+        help="Generate API doc + images for a single module",
+    )
+    p_doc.add_argument(
+        "module",
+        type=str,
+        help="Dotted module name (e.g. raygeo.geo.shape.circle)",
+    )
+    p_doc.set_defaults(func=cmd_doc)
 
     args = parser.parse_args()
 

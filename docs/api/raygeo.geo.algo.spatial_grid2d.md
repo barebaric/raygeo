@@ -1,7 +1,6 @@
 ---
 title: raygeo.geo.algo.spatial_grid2d
 sidebar_label: raygeo.geo.algo.spatial_grid2d
-sidebar_position: 32
 ---
 
 Grid-based spatial index for fast overlap queries.
@@ -50,7 +49,7 @@ Insert an item into the grid by its bounding box.
 query(bbox: Sequence[float]) -> list[int]
 ```
 
-Query all items whose bounding box overlaps _bbox_.
+Query all items whose bounding box overlaps *bbox*.
 
 | Parameter    | Type              | Description                                     |
 | ------------ | ----------------- | ----------------------------------------------- |

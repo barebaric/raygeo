@@ -1,7 +1,6 @@
 ---
 title: raygeo.geo.algo.helix
 sidebar_label: raygeo.geo.algo.helix
-sidebar_position: 11
 ---
 
 Helical and conical helical path generation.
@@ -47,4 +46,4 @@ Generate a 3D helical polyline.
 
 ![Cylindrical (CCW) and conical-expand (CW) helical paths](images/geo-algo-helix-helical.png)
 
-_Cylindrical (CCW) and conical-expand (CW) helical paths_
+*Cylindrical (CCW) and conical-expand (CW) helical paths*

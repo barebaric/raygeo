@@ -1,7 +1,6 @@
 ---
 title: raygeo.geo.algo.intersect
 sidebar_label: raygeo.geo.algo.intersect
-sidebar_position: 14
 ---
 
 Geometry intersection utilities.
@@ -39,7 +38,7 @@ None if there is no intersection.
 
 ![Ray–line segment intersection: the ray from origin O hits segments S₁ and S₂ (marked), misses S₃](images/geo-algo-intersect-ray-line.png)
 
-_Ray–line segment intersection: the ray from origin O hits segments S₁ and S₂ (marked), misses S₃_
+*Ray–line segment intersection: the ray from origin O hits segments S₁ and S₂ (marked), misses S₃*
 
 ### `get_ray_polygon_intersection()`
 
@@ -67,5 +66,5 @@ endpoints), or None if the ray does not hit the polygon in the forward direction
 
 ![Ray–polygon intersection: the ray from origin O hits the polygon boundary at the closest intersection point along the ray direction.](images/geo-algo-intersect-ray-polygon.png)
 
-_Ray–polygon intersection: the ray from origin O hits the polygon boundary at the closest
-intersection point along the ray direction._
+*Ray–polygon intersection: the ray from origin O hits the polygon boundary at the closest
+intersection point along the ray direction.*

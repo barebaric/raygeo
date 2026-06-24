@@ -1,7 +1,6 @@
 ---
 title: raygeo.ops.raster
 sidebar_label: raygeo.ops.raster
-sidebar_position: 60
 ---
 
 ## ScanLine
@@ -144,8 +143,8 @@ extract_zero_power_segments(
 
 Extract zero-power segment endpoints from scanline power data.
 
-Finds contiguous runs of zero values in _power_values_ and computes their 3D start/end points via
-linear interpolation along the scanline segment from _start_ to _end_.
+Finds contiguous runs of zero values in *power_values* and computes their 3D start/end points via
+linear interpolation along the scanline segment from *start* to *end*.
 
 | Parameter      | Type                         | Description                                            |
 | -------------- | ---------------------------- | ------------------------------------------------------ |
@@ -157,7 +156,7 @@ linear interpolation along the scanline segment from _start_ to _end_.
 
 ![Zero-power segment extraction](images/ops-raster-zero-power-segments.png)
 
-_Zero-power segment extraction_
+*Zero-power segment extraction*
 
 ### `find_mask_bounding_box()`
 
@@ -208,7 +207,7 @@ generate_horizontal_scan_positions(
 Compute Y positions for horizontal scan lines.
 
 Given a vertical pixel range, computes the mm and pixel Y coordinates of evenly-spaced scan lines
-(aligned to a global grid defined by _line_interval_mm_ and _offset_y_mm_).
+(aligned to a global grid defined by *line_interval_mm* and *offset_y_mm*).
 
 | Parameter          | Type                              | Description                                        |
 | ------------------ | --------------------------------- | -------------------------------------------------- |
@@ -251,8 +250,8 @@ region. Each line is rasterised to pixels and stored as a **ScanLine**.
 | `offset_x_mm`       | `float = 0`                              | Global X offset in mm.                                                |
 | `offset_y_mm`       | `float = 0`                              | Global Y offset in mm.                                                |
 | `global_center_mm`  | `tuple[float, float] &#124; None = None` | Optional rotation centre in mm; defaults to the bbox centre + offset. |
-| _Returns_           | `list[ScanLine]`                         | List of \*\*ScanLine\*\* objects.                                     |
-| _Complexity_        |                                          | O(n \* p) where n = number of lines, p = pixels per line              |
+| _Returns_           | `list[ScanLine]`                         | List of **ScanLine** objects.                                         |
+| _Complexity_        |                                          | O(n * p) where n = number of lines, p = pixels per line               |
 
 ### `line_pixels()`
 
@@ -268,7 +267,7 @@ line_pixels(
 Rasterise a line segment into pixel coordinates.
 
 Uses Bresenham's line algorithm to enumerate all integer pixel positions intersecting the line from
-_start_ to _end_, clipped to the image dimensions `(width, height)`.
+*start* to *end*, clipped to the image dimensions `(width, height)`.
 
 | Parameter    | Type                    | Description                                     |
 | ------------ | ----------------------- | ----------------------------------------------- |
@@ -299,22 +298,22 @@ Rasterise a binary mask into line-to commands (no power).
 Similar to **rasterize_mask_scan** but emits move-to/line-to commands with a Z offset instead of
 scan-to with power values. Useful for simple contour or hatch patterns.
 
-| Parameter          | Type                            | Description                                                                           |
-| ------------------ | ------------------------------- | ------------------------------------------------------------------------------------- |
-| `mask`             | `numpy.NDArray[numpy.uint8]`    | 2-D binary mask array.                                                                |
-| `pixels_per_mm`    | `tuple[float, float]`           | `(x, y)` pixel density in px/mm.                                                      |
-| `offset_x_mm`      | `float`                         | Global X offset in mm.                                                                |
-| `offset_y_mm`      | `float`                         | Global Y offset in mm.                                                                |
-| `line_interval_mm` | `float`                         | Spacing between scan lines in mm.                                                     |
-| `z`                | `float = 0`                     | Z offset for the lines in mm.                                                         |
-| `angle`            | `float = 0`                     | Scan angle in degrees.                                                                |
-| `scan_mode`        | `ScanMode = ScanMode.SEGMENTED` | `ScanMode.SEGMENTED` or `ScanMode.FULL_SWEEP`.                                        |
-| _Returns_          | `ops.Ops`                       | An \*\*~raygeo.ops.Ops\*\* container.                                                 |
-| _Complexity_       |                                 | O(h \* w + n \* p) where h, w = image dimensions, n = scan lines, p = pixels per line |
+| Parameter          | Type                            | Description                                                                         |
+| ------------------ | ------------------------------- | ----------------------------------------------------------------------------------- |
+| `mask`             | `numpy.NDArray[numpy.uint8]`    | 2-D binary mask array.                                                              |
+| `pixels_per_mm`    | `tuple[float, float]`           | `(x, y)` pixel density in px/mm.                                                    |
+| `offset_x_mm`      | `float`                         | Global X offset in mm.                                                              |
+| `offset_y_mm`      | `float`                         | Global Y offset in mm.                                                              |
+| `line_interval_mm` | `float`                         | Spacing between scan lines in mm.                                                   |
+| `z`                | `float = 0`                     | Z offset for the lines in mm.                                                       |
+| `angle`            | `float = 0`                     | Scan angle in degrees.                                                              |
+| `scan_mode`        | `ScanMode = ScanMode.SEGMENTED` | `ScanMode.SEGMENTED` or `ScanMode.FULL_SWEEP`.                                      |
+| _Returns_          | `ops.Ops`                       | An **~raygeo.ops.Ops** container.                                                   |
+| _Complexity_       |                                 | O(h * w + n * p) where h, w = image dimensions, n = scan lines, p = pixels per line |
 
 ![Rasterization: Mask Lines](images/ops-raster-mask-lines.png)
 
-_Rasterization: Mask Lines_
+*Rasterization: Mask Lines*
 
 ### `rasterize_mask_scan()`
 
@@ -336,22 +335,22 @@ Rasterise a binary mask into scan-to commands.
 Generates scan lines covering the mask's bounding box, samples the mask along each line, and emits
 move-to/scan-to commands for each non-zero segment (or the full sweep).
 
-| Parameter          | Type                            | Description                                                                           |
-| ------------------ | ------------------------------- | ------------------------------------------------------------------------------------- |
-| `mask`             | `numpy.NDArray[numpy.uint8]`    | 2-D binary mask array.                                                                |
-| `pixels_per_mm`    | `tuple[float, float]`           | `(x, y)` pixel density in px/mm.                                                      |
-| `offset_x_mm`      | `float`                         | Global X offset in mm.                                                                |
-| `offset_y_mm`      | `float`                         | Global Y offset in mm.                                                                |
-| `line_interval_mm` | `float`                         | Spacing between scan lines in mm.                                                     |
-| `step_power`       | `float = 1`                     | Power value (0-1) for exposed pixels.                                                 |
-| `angle`            | `float = 0`                     | Scan angle in degrees.                                                                |
-| `scan_mode`        | `ScanMode = ScanMode.SEGMENTED` | `ScanMode.SEGMENTED` or `ScanMode.FULL_SWEEP`.                                        |
-| _Returns_          | `ops.Ops`                       | An \*\*~raygeo.ops.Ops\*\* container.                                                 |
-| _Complexity_       |                                 | O(h \* w + n \* p) where h, w = image dimensions, n = scan lines, p = pixels per line |
+| Parameter          | Type                            | Description                                                                         |
+| ------------------ | ------------------------------- | ----------------------------------------------------------------------------------- |
+| `mask`             | `numpy.NDArray[numpy.uint8]`    | 2-D binary mask array.                                                              |
+| `pixels_per_mm`    | `tuple[float, float]`           | `(x, y)` pixel density in px/mm.                                                    |
+| `offset_x_mm`      | `float`                         | Global X offset in mm.                                                              |
+| `offset_y_mm`      | `float`                         | Global Y offset in mm.                                                              |
+| `line_interval_mm` | `float`                         | Spacing between scan lines in mm.                                                   |
+| `step_power`       | `float = 1`                     | Power value (0-1) for exposed pixels.                                               |
+| `angle`            | `float = 0`                     | Scan angle in degrees.                                                              |
+| `scan_mode`        | `ScanMode = ScanMode.SEGMENTED` | `ScanMode.SEGMENTED` or `ScanMode.FULL_SWEEP`.                                      |
+| _Returns_          | `ops.Ops`                       | An **~raygeo.ops.Ops** container.                                                   |
+| _Complexity_       |                                 | O(h * w + n * p) where h, w = image dimensions, n = scan lines, p = pixels per line |
 
 ![Rasterization: Mask Scan](images/ops-raster-mask-scan.png)
 
-_Rasterization: Mask Scan_
+*Rasterization: Mask Scan*
 
 ### `rasterize_multi_pass()`
 
@@ -372,27 +371,27 @@ rasterize_multi_pass(
 
 Rasterise a grayscale image as multiple Z-depth passes.
 
-Decomposes the grayscale image into _num_depth_levels_ layers by depth-slicing, then rasterises each
+Decomposes the grayscale image into *num_depth_levels* layers by depth-slicing, then rasterises each
 layer with a progressive Z offset and optional per-pass angle increment.
 
-| Parameter          | Type                            | Description                                                                                              |
-| ------------------ | ------------------------------- | -------------------------------------------------------------------------------------------------------- |
-| `gray_image`       | `numpy.NDArray[numpy.uint8]`    | 2-D grayscale image (0 = black, 255 = white).                                                            |
-| `pixels_per_mm`    | `tuple[float, float]`           | `(x, y)` pixel density in px/mm.                                                                         |
-| `offset_x_mm`      | `float`                         | Global X offset in mm.                                                                                   |
-| `offset_y_mm`      | `float`                         | Global Y offset in mm.                                                                                   |
-| `line_interval_mm` | `float`                         | Spacing between scan lines in mm.                                                                        |
-| `num_depth_levels` | `int`                           | Number of depth layers to produce.                                                                       |
-| `z_step_down`      | `float`                         | Z decrement per depth layer in mm.                                                                       |
-| `angle`            | `float = 0`                     | Initial scan angle in degrees.                                                                           |
-| `angle_increment`  | `float = 0`                     | Angle added per depth layer in degrees.                                                                  |
-| `scan_mode`        | `ScanMode = ScanMode.SEGMENTED` | `ScanMode.SEGMENTED` or `ScanMode.FULL_SWEEP`.                                                           |
-| _Returns_          | `ops.Ops`                       | An \*\*~raygeo.ops.Ops\*\* container.                                                                    |
-| _Complexity_       |                                 | O(d \* (h \* w + n \* p)) where d = depth levels, h, w = image dims, n = scan lines, p = pixels per line |
+| Parameter          | Type                            | Description                                                                                           |
+| ------------------ | ------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `gray_image`       | `numpy.NDArray[numpy.uint8]`    | 2-D grayscale image (0 = black, 255 = white).                                                         |
+| `pixels_per_mm`    | `tuple[float, float]`           | `(x, y)` pixel density in px/mm.                                                                      |
+| `offset_x_mm`      | `float`                         | Global X offset in mm.                                                                                |
+| `offset_y_mm`      | `float`                         | Global Y offset in mm.                                                                                |
+| `line_interval_mm` | `float`                         | Spacing between scan lines in mm.                                                                     |
+| `num_depth_levels` | `int`                           | Number of depth layers to produce.                                                                    |
+| `z_step_down`      | `float`                         | Z decrement per depth layer in mm.                                                                    |
+| `angle`            | `float = 0`                     | Initial scan angle in degrees.                                                                        |
+| `angle_increment`  | `float = 0`                     | Angle added per depth layer in degrees.                                                               |
+| `scan_mode`        | `ScanMode = ScanMode.SEGMENTED` | `ScanMode.SEGMENTED` or `ScanMode.FULL_SWEEP`.                                                        |
+| _Returns_          | `ops.Ops`                       | An **~raygeo.ops.Ops** container.                                                                     |
+| _Complexity_       |                                 | O(d * (h * w + n * p)) where d = depth levels, h, w = image dims, n = scan lines, p = pixels per line |
 
 ![Rasterization: Multi-Pass](images/ops-raster-multi-pass.png)
 
-_Rasterization: Multi-Pass_
+*Rasterization: Multi-Pass*
 
 ### `rasterize_power_modulation()`
 
@@ -419,27 +418,27 @@ Rasterise a grayscale image with power-modulated scans.
 Samples the image along scan lines and computes per-pixel power values from the grayscale intensity
 and alpha channel, then emits move-to/scan-to commands with the modulated power.
 
-| Parameter            | Type                            | Description                                                                           |
-| -------------------- | ------------------------------- | ------------------------------------------------------------------------------------- |
-| `gray_image`         | `numpy.NDArray[numpy.uint8]`    | 2-D grayscale image (0 = black, 255 = white).                                         |
-| `alpha`              | `numpy.NDArray[numpy.uint8]`    | 2-D alpha mask (0 = transparent/no emission).                                         |
-| `pixels_per_mm`      | `tuple[float, float]`           | `(x, y)` pixel density in px/mm.                                                      |
-| `offset_x_mm`        | `float`                         | Global X offset in mm.                                                                |
-| `offset_y_mm`        | `float`                         | Global Y offset in mm.                                                                |
-| `line_interval_mm`   | `float`                         | Spacing between scan lines in mm.                                                     |
-| `sample_interval_mm` | `float`                         | Output sample spacing in mm.                                                          |
-| `min_power`          | `float = 0`                     | Minimum power fraction (for white pixels).                                            |
-| `max_power`          | `float = 1`                     | Maximum power fraction (for black pixels).                                            |
-| `step_power`         | `float = 1`                     | Global power multiplier.                                                              |
-| `num_power_levels`   | `int = 256`                     | Number of quantised power levels.                                                     |
-| `angle`              | `float = 0`                     | Scan angle in degrees.                                                                |
-| `scan_mode`          | `ScanMode = ScanMode.SEGMENTED` | `ScanMode.SEGMENTED` or `ScanMode.FULL_SWEEP`.                                        |
-| _Returns_            | `ops.Ops`                       | An \*\*~raygeo.ops.Ops\*\* container.                                                 |
-| _Complexity_         |                                 | O(h \* w + n \* p) where h, w = image dimensions, n = scan lines, p = pixels per line |
+| Parameter            | Type                            | Description                                                                         |
+| -------------------- | ------------------------------- | ----------------------------------------------------------------------------------- |
+| `gray_image`         | `numpy.NDArray[numpy.uint8]`    | 2-D grayscale image (0 = black, 255 = white).                                       |
+| `alpha`              | `numpy.NDArray[numpy.uint8]`    | 2-D alpha mask (0 = transparent/no emission).                                       |
+| `pixels_per_mm`      | `tuple[float, float]`           | `(x, y)` pixel density in px/mm.                                                    |
+| `offset_x_mm`        | `float`                         | Global X offset in mm.                                                              |
+| `offset_y_mm`        | `float`                         | Global Y offset in mm.                                                              |
+| `line_interval_mm`   | `float`                         | Spacing between scan lines in mm.                                                   |
+| `sample_interval_mm` | `float`                         | Output sample spacing in mm.                                                        |
+| `min_power`          | `float = 0`                     | Minimum power fraction (for white pixels).                                          |
+| `max_power`          | `float = 1`                     | Maximum power fraction (for black pixels).                                          |
+| `step_power`         | `float = 1`                     | Global power multiplier.                                                            |
+| `num_power_levels`   | `int = 256`                     | Number of quantised power levels.                                                   |
+| `angle`              | `float = 0`                     | Scan angle in degrees.                                                              |
+| `scan_mode`          | `ScanMode = ScanMode.SEGMENTED` | `ScanMode.SEGMENTED` or `ScanMode.FULL_SWEEP`.                                      |
+| _Returns_            | `ops.Ops`                       | An **~raygeo.ops.Ops** container.                                                   |
+| _Complexity_         |                                 | O(h * w + n * p) where h, w = image dimensions, n = scan lines, p = pixels per line |
 
 ![Rasterization: Power Modulation](images/ops-raster-power-modulation.png)
 
-_Rasterization: Power Modulation_
+*Rasterization: Power Modulation*
 
 ### `resample_rows()`
 
@@ -460,4 +459,4 @@ fractional) Y positions.
 | `image`       | `numpy.NDArray[numpy.uint8]` | 2-D input image array.                            |
 | `y_coords_px` | `numpy.ndarray`              | 1-D array of Y pixel coordinates.                 |
 | _Returns_     | `numpy.NDArray[numpy.uint8]` | 2-D array with shape `(len(y_coords_px), width)`. |
-| _Complexity_  |                              | O(m \* w) where m = output rows, w = image width  |
+| _Complexity_  |                              | O(m * w) where m = output rows, w = image width   |

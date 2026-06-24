@@ -1,7 +1,6 @@
 ---
 title: raygeo.image
 sidebar_label: raygeo.image
-sidebar_position: 46
 ---
 
 Image processing functions for CNC engraving applications.
@@ -37,7 +36,7 @@ Apply ordered (Bayer) dithering using a threshold matrix.
 
 ![Bayer 4x4 ordered dithering](images/image-dither-bayer.png)
 
-_Bayer 4x4 ordered dithering_
+*Bayer 4x4 ordered dithering*
 
 ### `apply_floyd_steinberg_dither()`
 
@@ -59,7 +58,7 @@ Apply Floyd-Steinberg error-diffusion dithering.
 
 ![Floyd-Steinberg dithering](images/image-dither-floyd.png)
 
-_Floyd-Steinberg dithering_
+*Floyd-Steinberg dithering*
 
 ### `apply_minimum_run_length()`
 
@@ -81,7 +80,7 @@ Remove binary runs shorter than the given minimum.
 
 ![Minimum run length applied to binary image](images/image-min-run-len.png)
 
-_Minimum run length applied to binary image_
+*Minimum run length applied to binary image*
 
 ### `compute_adaptive_threshold()`
 
@@ -102,7 +101,7 @@ threshold that separates noise (small components) from meaningful content.
 
 ![Adaptive threshold from component area distribution](images/image-adaptive-threshold.png)
 
-_Adaptive threshold from component area distribution_
+*Adaptive threshold from component area distribution*
 
 ### `compute_auto_levels()`
 
@@ -144,7 +143,7 @@ noise from content, and removes small components. Uses the same algorithm as the
 
 ![Binary image denoised via adaptive thresholding](images/image-denoise-binary.png)
 
-_Binary image denoised via adaptive thresholding_
+*Binary image denoised via adaptive thresholding*
 
 ### `filter_components()`
 
@@ -168,7 +167,7 @@ Uses 8-connectivity for component detection.
 
 ![Component filtering by minimum area](images/image-filter-components.png)
 
-_Component filtering by minimum area_
+*Component filtering by minimum area*
 
 ### `get_component_areas()`
 
@@ -188,7 +187,7 @@ Uses 8-connectivity. Areas are returned sorted ascending. Background (0-valued p
 
 ![Connected component areas sorted ascending](images/image-component-areas.png)
 
-_Connected component areas sorted ascending_
+*Connected component areas sorted ascending*
 
 ### `grayscale_to_binary()`
 
@@ -217,7 +216,7 @@ True.
 
 ![Grayscale to binary via Otsu and fixed threshold](images/image-otsu.png)
 
-_Grayscale to binary via Otsu and fixed threshold_
+*Grayscale to binary via Otsu and fixed threshold*
 
 ### `linear_to_srgb()`
 
@@ -271,10 +270,10 @@ rasterize_scanlines(
 ) -> numpy.NDArray[numpy.uint8]
 ```
 
-Rasterize ScanLine commands from _ops_ into a 2D power-map buffer.
+Rasterize ScanLine commands from *ops* into a 2D power-map buffer.
 
-Iterates all scanline commands in _ops_, converts their mm coordinates to pixel space using
-_px_per_mm_, and returns a uint8 array where each pixel holds the maximum power value written to it.
+Iterates all scanline commands in *ops*, converts their mm coordinates to pixel space using
+*px_per_mm*, and returns a uint8 array where each pixel holds the maximum power value written to it.
 
 | Parameter    | Type                           | Description                                        |
 | ------------ | ------------------------------ | -------------------------------------------------- |
@@ -288,7 +287,7 @@ _px_per_mm_, and returns a uint8 array where each pixel holds the maximum power 
 
 ![Scanline ops rasterized into a 2D power-map buffer](images/image-rasterize-scanlines.png)
 
-_Scanline ops rasterized into a 2D power-map buffer_
+*Scanline ops rasterized into a 2D power-map buffer*
 
 ### `rgba_to_binary()`
 
@@ -309,7 +308,7 @@ Transparent pixels (alpha == 0) are always treated as white (0).
 
 | Parameter    | Type                         | Description                                                       |
 | ------------ | ---------------------------- | ----------------------------------------------------------------- |
-| `rgba`       | `numpy.NDArray[numpy.uint8]` | Flattened uint8 buffer of shape (stride _ height _ 4,).           |
+| `rgba`       | `numpy.NDArray[numpy.uint8]` | Flattened uint8 buffer of shape (stride * height * 4,).           |
 | `width`      | `int`                        | Image width in pixels.                                            |
 | `height`     | `int`                        | Image height in pixels.                                           |
 | `stride`     | `int`                        | Row stride in pixels.                                             |
@@ -336,7 +335,7 @@ calculation using BT.601 luminance weights.
 
 | Parameter    | Type                                                              | Description                                                             |
 | ------------ | ----------------------------------------------------------------- | ----------------------------------------------------------------------- |
-| `rgba`       | `numpy.NDArray[numpy.uint8]`                                      | Flattened uint8 buffer of shape (stride _ height _ 4,).                 |
+| `rgba`       | `numpy.NDArray[numpy.uint8]`                                      | Flattened uint8 buffer of shape (stride * height * 4,).                 |
 | `width`      | `int`                                                             | Image width in pixels.                                                  |
 | `height`     | `int`                                                             | Image height in pixels.                                                 |
 | `stride`     | `int`                                                             | Row stride in pixels (may be larger than width).                        |
@@ -361,7 +360,7 @@ channel.
 
 | Parameter    | Type                         | Description                                             |
 | ------------ | ---------------------------- | ------------------------------------------------------- |
-| `rgba`       | `numpy.NDArray[numpy.uint8]` | Flattened uint8 buffer of shape (stride _ height _ 4,). |
+| `rgba`       | `numpy.NDArray[numpy.uint8]` | Flattened uint8 buffer of shape (stride * height * 4,). |
 | `width`      | `int`                        | Image width in pixels.                                  |
 | `height`     | `int`                        | Image height in pixels.                                 |
 | `stride`     | `int`                        | Row stride in pixels.                                   |
@@ -386,4 +385,4 @@ Convert sRGB pixel values to linear light values.
 
 ![sRGB to linear round-trip](images/image-srgb.png)
 
-_sRGB to linear round-trip_
+*sRGB to linear round-trip*

@@ -52,4 +52,3 @@ visual: install-visual-deps
 
 doc docs: install-docs-deps
 	python -m tools.cli all
-	npx prettier --write --prose-wrap always --print-width 100 "docs/**/*.md"

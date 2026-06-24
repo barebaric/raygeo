@@ -1,7 +1,6 @@
 ---
 title: raygeo.geo.shape.bezier
 sidebar_label: raygeo.geo.shape.bezier
-sidebar_position: 37
 ---
 
 Cubic bezier curve queries and conversions.
@@ -76,8 +75,8 @@ Fit a cubic Bezier curve to a sequence of points (least-squares).
 
 ![Cubic Bezier curves fitted to sample point sequences — sine, cosine hump, quarter-circle, and shallow wave](images/geo-shape-bezier-fit-cutline.png)
 
-_Cubic Bezier curves fitted to sample point sequences — sine, cosine hump, quarter-circle, and
-shallow wave_
+*Cubic Bezier curves fitted to sample point sequences — sine, cosine hump, quarter-circle, and
+shallow wave*
 
 ### `flatten_bezier()`
 
@@ -109,7 +108,7 @@ Flatten a bezier curve into points.
 
 ![Bezier flattening: adaptive subdivision at varied tolerances](images/geo-shape-bezier-flatten.png)
 
-_Bezier flattening: adaptive subdivision at varied tolerances_
+*Bezier flattening: adaptive subdivision at varied tolerances*
 
 ### `get_bezier_bounds()`
 
@@ -203,7 +202,7 @@ Get a point on a cubic bezier at parameter t.
 
 ![Bezier point evaluation at parameter t](images/geo-shape-bezier-point-at.png)
 
-_Bezier point evaluation at parameter t_
+*Bezier point evaluation at parameter t*
 
 ### `get_bezier_rect_intersections()`
 
@@ -305,7 +304,7 @@ Check if a bezier curve is inside a set of polygons.
 | `p3`         | `types.Point` | End control point (x, y).                  |
 | `polygons`   | `Any`         | List of polygons to check against.         |
 | _Returns_    | `bool`        | True if the bezier is inside all polygons. |
-| _Complexity_ |               | O(n \* m)                                  |
+| _Complexity_ |               | O(n * m)                                   |
 
 ### `linearize_bezier()`
 
@@ -391,7 +390,7 @@ nearest_tangent_circle_on_bezier(
 ) -> Optional[tuple[types.Point, types.Point, float]]
 ```
 
-Circle through _point_ tangent to a cubic Bezier.
+Circle through *point* tangent to a cubic Bezier.
 
 | Parameter | Type                                               | Description                           |
 | --------- | -------------------------------------------------- | ------------------------------------- |
@@ -426,4 +425,4 @@ Split a cubic bezier at parameter t.
 
 ![Bezier split at parameter t](images/geo-shape-bezier-split.png)
 
-_Bezier split at parameter t_
+*Bezier split at parameter t*

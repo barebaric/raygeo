@@ -1,7 +1,6 @@
 ---
 title: raygeo.geo.shape.line
 sidebar_label: raygeo.geo.shape.line
-sidebar_position: 39
 ---
 
 Line segment geometry queries.
@@ -24,7 +23,7 @@ does_line_cross_polygon(
 
 Check if a line segment crosses the interior of a polygon.
 
-Returns `True` when the segment _strictly_ crosses the polygon boundary — touching a vertex or
+Returns `True` when the segment *strictly* crosses the polygon boundary — touching a vertex or
 grazing an edge at an endpoint is **not** considered a crossing.
 
 | Parameter    | Type                | Description                                         |
@@ -37,8 +36,8 @@ grazing an edge at an endpoint is **not** considered a crossing.
 
 ![Check whether a line segment crosses the interior of a polygon. Left: crossing segment (red). Right: segment that only touches the boundary (gray, no cross).](images/geo-shape-line-line-crosses-polygon.png)
 
-_Check whether a line segment crosses the interior of a polygon. Left: crossing segment (red).
-Right: segment that only touches the boundary (gray, no cross)._
+*Check whether a line segment crosses the interior of a polygon. Left: crossing segment (red).
+Right: segment that only touches the boundary (gray, no cross).*
 
 ### `does_line_segment_intersect_circle()`
 
@@ -163,7 +162,7 @@ Get the intersection of two infinite lines.
 
 ![Line-line and segment intersection](images/geo-shape-line-intersections.png)
 
-_Line-line and segment intersection_
+*Line-line and segment intersection*
 
 ### `get_line_segment_closest_point()`
 
@@ -267,7 +266,7 @@ distance is measured to the nearest endpoint when the perpendicular falls outsid
 
 ![Perpendicular distance from a point to a line](images/geo-shape-line-point-distance.png)
 
-_Perpendicular distance from a point to a line_
+*Perpendicular distance from a point to a line*
 
 ### `get_segment_segment_distance()`
 
@@ -293,8 +292,8 @@ Minimum Euclidean distance between two line segments.
 
 ![Minimum Euclidean distance between two line segments. Left: crossing segments (distance 0). Centre: parallel separated segments. Right: skew (non-parallel) segments.](images/geo-shape-line-segment-distance.png)
 
-_Minimum Euclidean distance between two line segments. Left: crossing segments (distance 0). Centre:
-parallel separated segments. Right: skew (non-parallel) segments._
+*Minimum Euclidean distance between two line segments. Left: crossing segments (distance 0). Centre:
+parallel separated segments. Right: skew (non-parallel) segments.*
 
 ### `interpolated_segment_3d()`
 
@@ -311,7 +310,7 @@ interpolated_segment_3d(
 
 Generate linearly interpolated 3D points along a 2D segment.
 
-Returns _n_ points from _from_ to _to_ at height _z_. The start is **not** included; the end _is_
+Returns *n* points from *from* to *to* at height *z*. The start is **not** included; the end *is*
 included.
 
 | Parameter    | Type                               | Description                   |
@@ -327,7 +326,7 @@ included.
 
 ![Linearly interpolated 3D points along a 2D segment](images/geo-shape-line-interpolated-segment.png)
 
-_Linearly interpolated 3D points along a 2D segment_
+*Linearly interpolated 3D points along a 2D segment*
 
 ### `is_point_on_line_segment()`
 
@@ -372,5 +371,5 @@ vertical line.
 
 ![Find the longest axis-aligned line through a point within a bounding box. Left: wider box gives a horizontal line. Right: taller box gives a vertical line.](images/geo-shape-line-longest-line.png)
 
-_Find the longest axis-aligned line through a point within a bounding box. Left: wider box gives a
-horizontal line. Right: taller box gives a vertical line._
+*Find the longest axis-aligned line through a point within a bounding box. Left: wider box gives a
+horizontal line. Right: taller box gives a vertical line.*

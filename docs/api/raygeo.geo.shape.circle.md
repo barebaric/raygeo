@@ -1,7 +1,6 @@
 ---
 title: raygeo.geo.shape.circle
 sidebar_label: raygeo.geo.shape.circle
-sidebar_position: 38
 ---
 
 Circle geometry queries.
@@ -56,7 +55,7 @@ Find circle centres that pass through a point and are tangent to a segment.
 
 ![Find circles tangent to a segment through a given point](images/geo-shape-circle-tangent-circles.png)
 
-_Find circles tangent to a segment through a given point_
+*Find circles tangent to a segment through a given point*
 
 ### `get_circle_circle_intersections()`
 
@@ -82,7 +81,7 @@ Get intersection points of two circles.
 
 ![Circle-circle and line-circle intersection points](images/geo-shape-circle-intersections.png)
 
-_Circle-circle and line-circle intersection points_
+*Circle-circle and line-circle intersection points*
 
 ### `get_line_circle_intersections()`
 
@@ -162,8 +161,8 @@ nearest_tangent_circle_on_polyline(
 
 Find nearest circle through a point tangent to a polyline.
 
-Searches segments of _polyline_ for a circle of _radius_ that passes through _point_, is tangent to
-a segment, and has its centre inside _containment_. Returns the one whose tangent point is closest
+Searches segments of *polyline* for a circle of *radius* that passes through *point*, is tangent to
+a segment, and has its centre inside *containment*. Returns the one whose tangent point is closest
 to the searched end.
 
 | Parameter     | Type                                             | Description                                        |
@@ -177,7 +176,7 @@ to the searched end.
 
 ![Nearest tangent circle on a polyline](images/geo-shape-circle-nearest-tangent.png)
 
-_Nearest tangent circle on a polyline_
+*Nearest tangent circle on a polyline*
 
 ### `project_point_onto_circle()`
 

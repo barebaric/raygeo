@@ -1,7 +1,6 @@
 ---
 title: raygeo.geo.algo.nest2d.placement
 sidebar_label: raygeo.geo.algo.nest2d.placement
-sidebar_position: 23
 ---
 
 Placement search for nesting algorithms.
@@ -77,20 +76,20 @@ Find a valid position: heuristic search first, NFP fallback second.
 
 Supports hull-based collision detection and sheet world offsets.
 
-| Parameter            | Type                                                | Description                                         |
-| -------------------- | --------------------------------------------------- | --------------------------------------------------- |
-| `ifp_polygons`       | `Sequence[Sequence[tuple[float, float]]]`           | IFP polygons (valid placement region).              |
-| `part_polygons`      | `Sequence[Sequence[tuple[float, float]]]`           | Part polygons to place.                             |
-| `part_hulls`         | `Sequence[Sequence[tuple[float, float]]]`           | Convex hulls for collision (may be empty).          |
-| `placed_polys_list`  | `Sequence[Sequence[Sequence[tuple[float, float]]]]` | Already-placed parts, each a list of polygons.      |
-| `placed_hulls_list`  | `Sequence[Sequence[Sequence[tuple[float, float]]]]` | Hulls of already-placed parts, each a list.         |
-| `grid`               | `spatial_grid2d.SpatialGrid`                        | SpatialGrid for fast neighbor lookup.               |
-| `sheet_world_offset` | `tuple[float, float]`                               | (offset_x, offset_y) for this sheet.                |
-| `spacing`            | `float = 1`                                         | Minimum spacing between parts.                      |
-| `min_area`           | `float = 1`                                         | Minimum overlap area (clipper coords).              |
-| `curve_tolerance`    | `float = 0.5`                                       | Curve tolerance for distance filtering.             |
-| _Returns_            | `tuple[float, float] &#124; None`                   | (x, y) position or None.                            |
-| _Complexity_         |                                                     | O(n \* m) for candidate search with overlap checks. |
+| Parameter            | Type                                                | Description                                        |
+| -------------------- | --------------------------------------------------- | -------------------------------------------------- |
+| `ifp_polygons`       | `Sequence[Sequence[tuple[float, float]]]`           | IFP polygons (valid placement region).             |
+| `part_polygons`      | `Sequence[Sequence[tuple[float, float]]]`           | Part polygons to place.                            |
+| `part_hulls`         | `Sequence[Sequence[tuple[float, float]]]`           | Convex hulls for collision (may be empty).         |
+| `placed_polys_list`  | `Sequence[Sequence[Sequence[tuple[float, float]]]]` | Already-placed parts, each a list of polygons.     |
+| `placed_hulls_list`  | `Sequence[Sequence[Sequence[tuple[float, float]]]]` | Hulls of already-placed parts, each a list.        |
+| `grid`               | `spatial_grid2d.SpatialGrid`                        | SpatialGrid for fast neighbor lookup.              |
+| `sheet_world_offset` | `tuple[float, float]`                               | (offset_x, offset_y) for this sheet.               |
+| `spacing`            | `float = 1`                                         | Minimum spacing between parts.                     |
+| `min_area`           | `float = 1`                                         | Minimum overlap area (clipper coords).             |
+| `curve_tolerance`    | `float = 0.5`                                       | Curve tolerance for distance filtering.            |
+| _Returns_            | `tuple[float, float] &#124; None`                   | (x, y) position or None.                           |
+| _Complexity_         |                                                     | O(n * m) for candidate search with overlap checks. |
 
 ### `find_valid_position_nfp()`
 
@@ -114,20 +113,20 @@ Find a valid position using NFP-based region subtraction.
 Computes No-Fit Polygons for nearby placed parts and subtracts them from the IFP to identify viable
 placement regions.
 
-| Parameter            | Type                                                | Description                                            |
-| -------------------- | --------------------------------------------------- | ------------------------------------------------------ |
-| `ifp_polygons`       | `Sequence[Sequence[tuple[float, float]]]`           | IFP polygons (valid placement region).                 |
-| `part_polygons`      | `Sequence[Sequence[tuple[float, float]]]`           | Part polygons to place.                                |
-| `part_hulls`         | `Sequence[Sequence[tuple[float, float]]]`           | Convex hulls for collision (may be empty).             |
-| `placed_polys_list`  | `Sequence[Sequence[Sequence[tuple[float, float]]]]` | Already-placed parts, each a list of polygons.         |
-| `placed_hulls_list`  | `Sequence[Sequence[Sequence[tuple[float, float]]]]` | Hulls of already-placed parts, each a list.            |
-| `grid`               | `spatial_grid2d.SpatialGrid`                        | SpatialGrid for fast neighbor lookup.                  |
-| `sheet_world_offset` | `tuple[float, float]`                               | (offset_x, offset_y) for this sheet.                   |
-| `spacing`            | `float = 1`                                         | Minimum spacing between parts.                         |
-| `min_area`           | `float = 1`                                         | Minimum overlap area (clipper coords).                 |
-| `curve_tolerance`    | `float = 0.5`                                       | Curve tolerance for distance filtering.                |
-| _Returns_            | `tuple[float, float] &#124; None`                   | (x, y) position or None.                               |
-| _Complexity_         |                                                     | O(n \* m) for NFP construction per nearby placed part. |
+| Parameter            | Type                                                | Description                                           |
+| -------------------- | --------------------------------------------------- | ----------------------------------------------------- |
+| `ifp_polygons`       | `Sequence[Sequence[tuple[float, float]]]`           | IFP polygons (valid placement region).                |
+| `part_polygons`      | `Sequence[Sequence[tuple[float, float]]]`           | Part polygons to place.                               |
+| `part_hulls`         | `Sequence[Sequence[tuple[float, float]]]`           | Convex hulls for collision (may be empty).            |
+| `placed_polys_list`  | `Sequence[Sequence[Sequence[tuple[float, float]]]]` | Already-placed parts, each a list of polygons.        |
+| `placed_hulls_list`  | `Sequence[Sequence[Sequence[tuple[float, float]]]]` | Hulls of already-placed parts, each a list.           |
+| `grid`               | `spatial_grid2d.SpatialGrid`                        | SpatialGrid for fast neighbor lookup.                 |
+| `sheet_world_offset` | `tuple[float, float]`                               | (offset_x, offset_y) for this sheet.                  |
+| `spacing`            | `float = 1`                                         | Minimum spacing between parts.                        |
+| `min_area`           | `float = 1`                                         | Minimum overlap area (clipper coords).                |
+| `curve_tolerance`    | `float = 0.5`                                       | Curve tolerance for distance filtering.               |
+| _Returns_            | `tuple[float, float] &#124; None`                   | (x, y) position or None.                              |
+| _Complexity_         |                                                     | O(n * m) for NFP construction per nearby placed part. |
 
 ### `find_valid_position_scored()`
 
@@ -164,7 +163,7 @@ back to NFP-region candidates. Scores candidates and picks the best valid one.
 | `min_area`           | `float = 1`                                         | Minimum overlap area (clipper coords).         |
 | `curve_tolerance`    | `float = 0.5`                                       | Curve tolerance for distance filtering.        |
 | _Returns_            | `tuple[float, float] &#124; None`                   | (x, y) position or None.                       |
-| _Complexity_         |                                                     | O(n \* m) for scored candidate search.         |
+| _Complexity_         |                                                     | O(n * m) for scored candidate search.          |
 
 ### `generate_bottom_left_candidates()`
 
@@ -267,4 +266,4 @@ After all parts are placed, gravity is applied per sheet.
 | `min_area`        | `float = 1`                                         | Minimum overlap area (clipper coords).                                                          |
 | `curve_tolerance` | `float = 0.5`                                       | Curve tolerance for distance filtering.                                                         |
 | _Returns_         | `list[dict]`                                        | List of dicts, one per sheet, with keys: placements, sheet_index, unused_part_indices, fitness. |
-| _Complexity_      |                                                     | O(p \* s \* n \* m) where p = parts, s = sheets.                                                |
+| _Complexity_      |                                                     | O(p * s * n * m) where p = parts, s = sheets.                                                   |

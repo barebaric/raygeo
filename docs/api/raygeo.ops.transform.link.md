@@ -1,7 +1,6 @@
 ---
 title: raygeo.ops.transform.link
 sidebar_label: raygeo.ops.transform.link
-sidebar_position: 63
 ---
 
 ## LinkStrategy
@@ -26,7 +25,7 @@ Scans for the first travel (MoveTo) endpoint, falling back to the first moving c
 
 ![Entry and exit points from find_pass_entry / find_pass_exit](images/ops-transform-link-pass-entry-exit.png)
 
-_Entry and exit points from find_pass_entry / find_pass_exit_
+*Entry and exit points from find_pass_entry / find_pass_exit*
 
 ### `find_pass_exit()`
 
@@ -57,9 +56,9 @@ link_passes(
 Join ordered machining passes into a single Ops sequence.
 
 The first pass is emitted as-is; subsequent passes are prefixed with travel moves according to
-_strategy_:
+*strategy*:
 
-- `"retract"` / `LinkStrategy.RETRACT` — retract to _safe_z_, move XY at that height, then descend
+- `"retract"` / `LinkStrategy.RETRACT` — retract to *safe_z*, move XY at that height, then descend
   to the next pass start Z.
 - `"stay_down"` / `LinkStrategy.STAY_DOWN` — move directly from the previous pass end to the next
   pass start without retracting.
@@ -69,9 +68,9 @@ _strategy_:
 | `passes`     | `list[ops.Ops]`           | Ordered list of **~raygeo.ops.Ops** passes.     |
 | `safe_z`     | `float`                   | Z height for retract moves (mm).                |
 | `strategy`   | `str &#124; LinkStrategy` | Linking strategy.                               |
-| _Returns_    | `ops.Ops`                 | A single \*\*~raygeo.ops.Ops\*\* container.     |
+| _Returns_    | `ops.Ops`                 | A single **~raygeo.ops.Ops** container.         |
 | _Complexity_ |                           | O(n) where n = total commands across all passes |
 
 ![Three passes linked with StayDown vs Retract strategies](images/ops-transform-link-link-passes.png)
 
-_Three passes linked with StayDown vs Retract strategies_
+*Three passes linked with StayDown vs Retract strategies*

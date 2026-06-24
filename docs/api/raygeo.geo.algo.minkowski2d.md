@@ -1,7 +1,6 @@
 ---
 title: raygeo.geo.algo.minkowski2d
 sidebar_label: raygeo.geo.algo.minkowski2d
-sidebar_position: 16
 ---
 
 Minkowski sum operations for 2D polygon toolpath generation.
@@ -40,12 +39,12 @@ convolve_point_sequences(
 
 Convolve two sequences of points.
 
-| Parameter    | Type                              | Description                     |
-| ------------ | --------------------------------- | ------------------------------- |
-| `seq_a`      | `Sequence[tuple[float, float]]`   | First sequence of points.       |
-| `seq_b`      | `Sequence[tuple[float, float]]`   | Second sequence of points.      |
-| _Returns_    | `list[list[tuple[float, float]]]` | Convolved point sequences.      |
-| _Complexity_ |                                   | O(n \* m) time, O(n \* m) space |
+| Parameter    | Type                              | Description                   |
+| ------------ | --------------------------------- | ----------------------------- |
+| `seq_a`      | `Sequence[tuple[float, float]]`   | First sequence of points.     |
+| `seq_b`      | `Sequence[tuple[float, float]]`   | Second sequence of points.    |
+| _Returns_    | `list[list[tuple[float, float]]]` | Convolved point sequences.    |
+| _Complexity_ |                                   | O(n * m) time, O(n * m) space |
 
 ### `convolve_two_segments()`
 
@@ -85,7 +84,7 @@ Compute the inner fit polygon (no-fit polygon for nesting).
 | `outer`      | `Sequence[types.Point]` | Outer polygon as (x, y) points. |
 | `inner`      | `Sequence[types.Point]` | Inner polygon as (x, y) points. |
 | _Returns_    | `list[types.Polygon]`   | Inner fit polygon.              |
-| _Complexity_ |                         | O(n \* m) time, O(n + m) space  |
+| _Complexity_ |                         | O(n * m) time, O(n + m) space   |
 
 ### `get_no_fit_polygon()`
 
@@ -103,7 +102,7 @@ Compute the no-fit polygon for two 2D polygons.
 | `subject`    | `Sequence[types.Point]` | Subject polygon as (x, y) points. |
 | `tool`       | `Sequence[types.Point]` | Tool polygon as (x, y) points.    |
 | _Returns_    | `list[types.Polygon]`   | No-fit polygon.                   |
-| _Complexity_ |                         | O(n \* m) time, O(n + m) space    |
+| _Complexity_ |                         | O(n * m) time, O(n + m) space     |
 
 ### `get_polygon_minkowski_sum_convex()`
 
@@ -125,4 +124,4 @@ Compute the Minkowski sum of two convex polygons.
 
 ![Minkowski sum of two convex polygons](images/geo-algo-minkowski2d-minkowski-sum.png)
 
-_Minkowski sum of two convex polygons_
+*Minkowski sum of two convex polygons*

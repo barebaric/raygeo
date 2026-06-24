@@ -1,7 +1,6 @@
 ---
 title: raygeo.geo.algo.fitting
 sidebar_label: raygeo.geo.algo.fitting
-sidebar_position: 10
 ---
 
 Curve and primitive fitting algorithms.
@@ -52,7 +51,7 @@ Fit a circle to three points.
 
 ![Circle fitted to three points](images/geo-algo-fitting-3-points.png)
 
-_Circle fitted to three points_
+*Circle fitted to three points*
 
 ### `fit_circle_to_points()`
 
@@ -72,7 +71,7 @@ Fit a circle to a set of points.
 
 ![Circle fitted to points](images/geo-algo-fitting-circle.png)
 
-_Circle fitted to points_
+*Circle fitted to points*
 
 ### `fit_points_recursive()`
 
@@ -116,7 +115,7 @@ Fit a polyline of points with arc and line primitives.
 
 ![Fitted primitives](images/geo-algo-fitting-primitives.png)
 
-_Fitted primitives_
+*Fitted primitives*
 
 ### `flatten_to_points_3d()`
 
@@ -138,7 +137,7 @@ Flatten curves into linear segments.
 
 ![Arc curve flattened to dense line segments](images/geo-algo-fitting-flatten.png)
 
-_Arc curve flattened to dense line segments_
+*Arc curve flattened to dense line segments*
 
 ### `generate_arc_between_two_points()`
 
@@ -172,7 +171,7 @@ degenerate.
 
 ![Arc through two points with + and - perpendicular offset](images/geo-algo-fitting-arc-between.png)
 
-_Arc through two points with + and - perpendicular offset_
+*Arc through two points with + and - perpendicular offset*
 
 ### `generate_linking_arc()`
 
@@ -201,7 +200,7 @@ to a straight-line interpolation if no valid arc can be fit.
 
 ![Linking arc with varying minimum radius constraints](images/geo-algo-fitting-linking.png)
 
-_Linking arc with varying minimum radius constraints_
+*Linking arc with varying minimum radius constraints*
 
 ### `get_polyline_arc_deviation()`
 
@@ -225,7 +224,7 @@ Get the maximum arc deviation for a set of points.
 
 ![Maximum deviation from a reference arc](images/geo-algo-fitting-arc-deviation.png)
 
-_Maximum deviation from a reference arc_
+*Maximum deviation from a reference arc*
 
 ### `get_polyline_line_deviation()`
 
@@ -249,7 +248,7 @@ Get the maximum line deviation for a segment of a polyline.
 
 ![Maximum deviation from a chord](images/geo-algo-fitting-line-deviation.png)
 
-_Maximum deviation from a chord_
+*Maximum deviation from a chord*
 
 ### `linearize_geometry()`
 
@@ -268,7 +267,7 @@ Linearize geometry data into line segments.
 
 ![Arc curve linearized with RDP simplification](images/geo-algo-fitting-linearize.png)
 
-_Arc curve linearized with RDP simplification_
+*Arc curve linearized with RDP simplification*
 
 ### `project_circle_center_to_bisector()`
 
@@ -292,4 +291,4 @@ Project a circle center onto the perpendicular bisector of two points.
 
 ![Circle center projected onto the perpendicular bisector](images/geo-algo-fitting-project-bisector.png)
 
-_Circle center projected onto the perpendicular bisector_
+*Circle center projected onto the perpendicular bisector*

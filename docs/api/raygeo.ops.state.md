@@ -1,7 +1,6 @@
 ---
 title: raygeo.ops.state
 sidebar_label: raygeo.ops.state
-sidebar_position: 61
 ---
 
 Machine state tracking for CNC milling.
@@ -114,7 +113,7 @@ Spindle RPM (if set).
 allow_rapid_change(target: State) -> bool
 ```
 
-Check whether the machine can transition from the current state to the _target_ state without a
+Check whether the machine can transition from the current state to the *target* state without a
 `SetPower` command.
 
 | Parameter    | Type    | Description                                       |

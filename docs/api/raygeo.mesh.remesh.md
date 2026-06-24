@@ -1,12 +1,11 @@
 ---
 title: raygeo.mesh.remesh
 sidebar_label: raygeo.mesh.remesh
-sidebar_position: 52
 ---
 
 ![Initial mesh (left) vs refined mesh (right) after remesh.](images/mesh-remesh-overview.png)
 
-_Initial mesh (left) vs refined mesh (right) after remesh._
+*Initial mesh (left) vs refined mesh (right) after remesh.*
 
 ## Functions
 
@@ -20,7 +19,7 @@ remesh(
 ) -> types.TriangleMesh
 ```
 
-Refine a triangle mesh so no interior edge exceeds _max_edge_len_.
+Refine a triangle mesh so no interior edge exceeds *max_edge_len*.
 
 Boundary edges are preserved; only edges with at least one free (non-boundary) vertex are
 subdivided.

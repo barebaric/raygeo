@@ -1,7 +1,6 @@
 ---
 title: raygeo.mesh.laplace
 sidebar_label: raygeo.mesh.laplace
-sidebar_position: 50
 ---
 
 ## Functions
@@ -21,30 +20,30 @@ Solve the Laplace equation Δu=0 on a triangle mesh.
 Returns a scalar field with one value per vertex. Outer boundary vertices are fixed to u=1.0 and
 inner boundary vertices to u=0.0.
 
-| Parameter    | Type                 | Description                                          |
-| ------------ | -------------------- | ---------------------------------------------------- |
-| `mesh`       | `types.TriangleMesh` | TriangleMesh with boundary tags.                     |
-| `max_iter`   | `int = 1000`         | Maximum conjugate gradient iterations.               |
-| `tolerance`  | `float = 1e-08`      | Convergence tolerance for CG residual.               |
-| _Returns_    | `Sequence[float]`    | List of scalar u values, one per vertex.             |
-| _Complexity_ |                      | O(i \* n) where i = CG iterations, n = mesh vertices |
+| Parameter    | Type                 | Description                                         |
+| ------------ | -------------------- | --------------------------------------------------- |
+| `mesh`       | `types.TriangleMesh` | TriangleMesh with boundary tags.                    |
+| `max_iter`   | `int = 1000`         | Maximum conjugate gradient iterations.              |
+| `tolerance`  | `float = 1e-08`      | Convergence tolerance for CG residual.              |
+| _Returns_    | `Sequence[float]`    | List of scalar u values, one per vertex.            |
+| _Complexity_ |                      | O(i * n) where i = CG iterations, n = mesh vertices |
 
 ![Stiffness matrix edge weights on the mesh — line thickness ∝ |Kᵢⱼ|](images/mesh-laplace-stiffness-spy.png)
 
-_Stiffness matrix edge weights on the mesh — line thickness ∝ |Kᵢⱼ|_
+*Stiffness matrix edge weights on the mesh — line thickness ∝ |Kᵢⱼ|*
 
 ![Laplace solution on a multi-island domain — contour lines morph smoothly between four inner islands and the outer boundary](images/mesh-laplace-multi-island.png)
 
-_Laplace solution on a multi-island domain — contour lines morph smoothly between four inner islands
-and the outer boundary_
+*Laplace solution on a multi-island domain — contour lines morph smoothly between four inner islands
+and the outer boundary*
 
 ![Laplace solution — contours morph smoothly from hole to boundary](images/mesh-laplace-overview.png)
 
-_Laplace solution — contours morph smoothly from hole to boundary_
+*Laplace solution — contours morph smoothly from hole to boundary*
 
 ![Laplace solution on an L-shaped domain](images/mesh-laplace-l-shape-solution.png)
 
-_Laplace solution on an L-shaped domain_
+*Laplace solution on an L-shaped domain*
 
 ### `solve_laplace_with_history()`
 
@@ -61,14 +60,14 @@ Solve the Laplace equation and return convergence history.
 Identical to solve_laplace() but also returns the residual norm after each conjugate gradient
 iteration for convergence analysis.
 
-| Parameter    | Type                                      | Description                                          |
-| ------------ | ----------------------------------------- | ---------------------------------------------------- |
-| `mesh`       | `types.TriangleMesh`                      | TriangleMesh with boundary tags.                     |
-| `max_iter`   | `int = 1000`                              | Maximum conjugate gradient iterations.               |
-| `tolerance`  | `float = 1e-08`                           | Convergence tolerance for CG residual.               |
-| _Returns_    | `tuple[Sequence[float], Sequence[float]]` | Tuple of (solution, residuals).                      |
-| _Complexity_ |                                           | O(i \* n) where i = CG iterations, n = mesh vertices |
+| Parameter    | Type                                      | Description                                         |
+| ------------ | ----------------------------------------- | --------------------------------------------------- |
+| `mesh`       | `types.TriangleMesh`                      | TriangleMesh with boundary tags.                    |
+| `max_iter`   | `int = 1000`                              | Maximum conjugate gradient iterations.              |
+| `tolerance`  | `float = 1e-08`                           | Convergence tolerance for CG residual.              |
+| _Returns_    | `tuple[Sequence[float], Sequence[float]]` | Tuple of (solution, residuals).                     |
+| _Complexity_ |                                           | O(i * n) where i = CG iterations, n = mesh vertices |
 
 ![Conjugate gradient convergence — residual norm per iteration](images/mesh-laplace-convergence.png)
 
-_Conjugate gradient convergence — residual norm per iteration_
+*Conjugate gradient convergence — residual norm per iteration*

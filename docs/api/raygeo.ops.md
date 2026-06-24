@@ -1,7 +1,6 @@
 ---
 title: raygeo.ops
 sidebar_label: raygeo.ops
-sidebar_position: 54
 ---
 
 Command sequence (Ops) manipulation for CNC motion control.
@@ -245,7 +244,7 @@ lead-out segments along the tangent direction at the path start and end.
 
 ![Lead-in and lead-out paths](images/ops-transform-lead-in-out-lead-in-out.png)
 
-_Lead-in and lead-out paths_
+*Lead-in and lead-out paths*
 
 ### `apply_overscan()`
 
@@ -266,7 +265,7 @@ lead-in and lead-out segments for constant engraving velocity.
 
 ![Overscan applied to raster lines](images/ops-transform-overscan-overscan.png)
 
-_Overscan applied to raster lines_
+*Overscan applied to raster lines*
 
 ### `apply_state()`
 
@@ -274,7 +273,7 @@ _Overscan applied to raster lines_
 apply_state(state: state.State) -> None
 ```
 
-Emit the state commands needed to reach _state_.
+Emit the state commands needed to reach *state*.
 
 Power is always emitted (default 0.0). All other fields are emitted only when set (non-None).
 Domain-neutral: does not decide what values to use, just emits them.
@@ -296,15 +295,15 @@ Apply holding tabs as gaps in the toolpath.
 For each clip point, the closest subpath is found and a gap of the specified width is cut at the
 nearest point on the path. Only `VECTOR_OUTLINE` sections are modified.
 
-| Parameter    | Type                                   | Description                                                   |
-| ------------ | -------------------------------------- | ------------------------------------------------------------- |
-| `clips`      | `Sequence[tuple[float, float, float]]` | List of `(x, y, width)` tuples defining tab positions.        |
-| _Returns_    | `None`                                 |                                                               |
-| _Complexity_ |                                        | O(n \* k) time, O(1) space where k is the number of tab clips |
+| Parameter    | Type                                   | Description                                                  |
+| ------------ | -------------------------------------- | ------------------------------------------------------------ |
+| `clips`      | `Sequence[tuple[float, float, float]]` | List of `(x, y, width)` tuples defining tab positions.       |
+| _Returns_    | `None`                                 |                                                              |
+| _Complexity_ |                                        | O(n * k) time, O(1) space where k is the number of tab clips |
 
 ![Tab operations on a rectangle](images/ops-transform-tabs-tab-operations.png)
 
-_Tab operations on a rectangle_
+*Tab operations on a rectangle*
 
 ### `apply_tab_power()`
 
@@ -321,13 +320,13 @@ Apply holding tabs by reducing power in tab regions.
 Instead of cutting a gap, the power is lowered in the tab area so the material stays connected but
 weaker. Only `VECTOR_OUTLINE` sections are modified.
 
-| Parameter        | Type                                   | Description                                                   |
-| ---------------- | -------------------------------------- | ------------------------------------------------------------- |
-| `clips`          | `Sequence[tuple[float, float, float]]` | List of `(x, y, width)` tuples defining tab positions.        |
-| `tab_power`      | `float`                                | Power level inside tab regions (0.0–1.0).                     |
-| `original_power` | `float`                                | Normal cutting power to restore after the tab.                |
-| _Returns_        | `None`                                 |                                                               |
-| _Complexity_     |                                        | O(n \* k) time, O(1) space where k is the number of tab clips |
+| Parameter        | Type                                   | Description                                                  |
+| ---------------- | -------------------------------------- | ------------------------------------------------------------ |
+| `clips`          | `Sequence[tuple[float, float, float]]` | List of `(x, y, width)` tuples defining tab positions.       |
+| `tab_power`      | `float`                                | Power level inside tab regions (0.0–1.0).                    |
+| `original_power` | `float`                                | Normal cutting power to restore after the tab.               |
+| _Returns_        | `None`                                 |                                                              |
+| _Complexity_     |                                        | O(n * k) time, O(1) space where k is the number of tab clips |
 
 ### `arc_params()`
 
@@ -467,12 +466,12 @@ clip_ops_to_regions(
 
 Clip paths using polygonal regions as boundaries; keeps what is inside.
 
-| Parameter    | Type                                      | Description                                                          |
-| ------------ | ----------------------------------------- | -------------------------------------------------------------------- |
-| `regions`    | `Sequence[Sequence[tuple[float, float]]]` | List of polygons, each being a list of `(x, y)` vertices.            |
-| `tolerance`  | `float = 0.3`                             | Approximation tolerance (default 0.3).                               |
-| _Returns_    | `None`                                    |                                                                      |
-| _Complexity_ |                                           | O(n \* m) time, O(n) space where m is the number of polygon vertices |
+| Parameter    | Type                                      | Description                                                         |
+| ------------ | ----------------------------------------- | ------------------------------------------------------------------- |
+| `regions`    | `Sequence[Sequence[tuple[float, float]]]` | List of polygons, each being a list of `(x, y)` vertices.           |
+| `tolerance`  | `float = 0.3`                             | Approximation tolerance (default 0.3).                              |
+| _Returns_    | `None`                                    |                                                                     |
+| _Complexity_ |                                           | O(n * m) time, O(n) space where m is the number of polygon vertices |
 
 ### `clip_rect()`
 
@@ -490,7 +489,7 @@ Clip this sequence to a rectangle, keeping only commands inside.
 
 ![Ops paths clipped to a rectangle](images/ops-container-clip-clip-rect.png)
 
-_Ops paths clipped to a rectangle_
+*Ops paths clipped to a rectangle*
 
 ### `clip_to_regions()`
 
@@ -503,12 +502,12 @@ clip_to_regions(
 
 Clip paths to the given polygonal regions, keeping only what is inside.
 
-| Parameter    | Type                                      | Description                                                          |
-| ------------ | ----------------------------------------- | -------------------------------------------------------------------- |
-| `regions`    | `Sequence[Sequence[tuple[float, float]]]` | List of polygons, each being a list of `(x, y)` vertices.            |
-| `tolerance`  | `float = 0.3`                             | Approximation tolerance (default 0.3).                               |
-| _Returns_    | `None`                                    |                                                                      |
-| _Complexity_ |                                           | O(n \* m) time, O(n) space where m is the number of polygon vertices |
+| Parameter    | Type                                      | Description                                                         |
+| ------------ | ----------------------------------------- | ------------------------------------------------------------------- |
+| `regions`    | `Sequence[Sequence[tuple[float, float]]]` | List of polygons, each being a list of `(x, y)` vertices.           |
+| `tolerance`  | `float = 0.3`                             | Approximation tolerance (default 0.3).                              |
+| _Returns_    | `None`                                    |                                                                     |
+| _Complexity_ |                                           | O(n * m) time, O(n) space where m is the number of polygon vertices |
 
 ### `close_path()`
 
@@ -531,11 +530,11 @@ command_type(idx: int) -> types.CommandType
 
 Get the **CommandType** at the given index.
 
-| Parameter    | Type                | Description                             |
-| ------------ | ------------------- | --------------------------------------- |
-| `idx`        | `int`               | Command index (negative = from end).    |
-| _Returns_    | `types.CommandType` | The \*\*CommandType\*\* of the command. |
-| _Complexity_ |                     | O(1) time, O(1) space                   |
+| Parameter    | Type                | Description                          |
+| ------------ | ------------------- | ------------------------------------ |
+| `idx`        | `int`               | Command index (negative = from end). |
+| _Returns_    | `types.CommandType` | The **CommandType** of the command.  |
+| _Complexity_ |                     | O(1) time, O(1) space                |
 
 ### `coolant()`
 
@@ -616,7 +615,7 @@ distance_at(
 ) -> float
 ```
 
-Compute the distance traveled up to command _idx_.
+Compute the distance traveled up to command *idx*.
 
 | Parameter    | Type                                          | Description                       |
 | ------------ | --------------------------------------------- | --------------------------------- |
@@ -877,7 +876,7 @@ Get the head UID from a SetHead command.
 indices_of(ct: types.CommandType) -> list[int]
 ```
 
-Return all indices where the command type matches _ct_.
+Return all indices where the command type matches *ct*.
 
 | Parameter    | Type                | Description                        |
 | ------------ | ------------------- | ---------------------------------- |
@@ -905,7 +904,7 @@ Return detailed information about a single command.
 is_cutting(idx: int) -> bool
 ```
 
-Check whether the command at _idx_ is a cutting move.
+Check whether the command at *idx* is a cutting move.
 
 | Parameter    | Type   | Description                            |
 | ------------ | ------ | -------------------------------------- |
@@ -932,7 +931,7 @@ Check if the ops sequence is empty.
 is_marker(idx: int) -> bool
 ```
 
-Check whether the command at _idx_ is a marker command.
+Check whether the command at *idx* is a marker command.
 
 | Parameter    | Type   | Description                                                              |
 | ------------ | ------ | ------------------------------------------------------------------------ |
@@ -946,7 +945,7 @@ Check whether the command at _idx_ is a marker command.
 is_scanline(idx: int) -> bool
 ```
 
-Check whether the command at _idx_ is a scanline command.
+Check whether the command at *idx* is a scanline command.
 
 | Parameter    | Type   | Description                                      |
 | ------------ | ------ | ------------------------------------------------ |
@@ -960,7 +959,7 @@ Check whether the command at _idx_ is a scanline command.
 is_state(idx: int) -> bool
 ```
 
-Check whether the command at _idx_ is a state command.
+Check whether the command at *idx* is a state command.
 
 | Parameter    | Type   | Description                                 |
 | ------------ | ------ | ------------------------------------------- |
@@ -974,7 +973,7 @@ Check whether the command at _idx_ is a state command.
 is_travel(idx: int) -> bool
 ```
 
-Check whether the command at _idx_ is a travel (non-cutting) move.
+Check whether the command at *idx* is a travel (non-cutting) move.
 
 | Parameter    | Type   | Description                           |
 | ------------ | ------ | ------------------------------------- |
@@ -1162,7 +1161,7 @@ travel moves to avoid cutting the same line twice.
 
 ![Line merging before and after](images/ops-transform-merge-lines-merge-lines.png)
 
-_Line merging before and after_
+*Line merging before and after*
 
 ### `move_to()`
 
@@ -1242,7 +1241,7 @@ segment-level nearest-neighbor + 2-opt refinement.
 
 ![Travel path before and after optimization](images/ops-transform-optimize-optimize-travel.png)
 
-_Travel path before and after optimization_
+*Travel path before and after optimization*
 
 ### `power()`
 
@@ -1691,11 +1690,11 @@ state(idx: int) -> Optional[state.State]
 
 Get the machine state stored on a command (if available).
 
-| Parameter    | Type                    | Description                               |
-| ------------ | ----------------------- | ----------------------------------------- |
-| `idx`        | `int`                   | Command index.                            |
-| _Returns_    | `Optional[state.State]` | The \*\*State\*\* at that index, or None. |
-| _Complexity_ |                         | O(1) time, O(1) space                     |
+| Parameter    | Type                    | Description                           |
+| ------------ | ----------------------- | ------------------------------------- |
+| `idx`        | `int`                   | Command index.                        |
+| _Returns_    | `Optional[state.State]` | The **State** at that index, or None. |
+| _Complexity_ |                         | O(1) time, O(1) space                 |
 
 ### `state_at()`
 
@@ -1748,11 +1747,11 @@ subtract_regions(regions: Sequence[Sequence[tuple[float, float]]]) -> None
 
 Subtract polygonal regions from the cutting paths.
 
-| Parameter    | Type                                      | Description                                                          |
-| ------------ | ----------------------------------------- | -------------------------------------------------------------------- |
-| `regions`    | `Sequence[Sequence[tuple[float, float]]]` | List of polygons, each being a list of `(x, y)` vertices.            |
-| _Returns_    | `None`                                    |                                                                      |
-| _Complexity_ |                                           | O(n \* m) time, O(n) space where m is the number of polygon vertices |
+| Parameter    | Type                                      | Description                                                         |
+| ------------ | ----------------------------------------- | ------------------------------------------------------------------- |
+| `regions`    | `Sequence[Sequence[tuple[float, float]]]` | List of polygons, each being a list of `(x, y)` vertices.           |
+| _Returns_    | `None`                                    |                                                                     |
+| _Complexity_ |                                           | O(n * m) time, O(n) space where m is the number of polygon vertices |
 
 ### `to_dict()`
 

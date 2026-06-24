@@ -1,7 +1,6 @@
 ---
 title: raygeo
 sidebar_label: raygeo
-sidebar_position: 1
 ---
 
 RayGeo — 2D/3D geometry engine for CAD/CAM applications.
@@ -10,7 +9,9 @@ RayGeo — 2D/3D geometry engine for CAD/CAM applications.
 
 The crate is split into two layers that depend only downward::
 
-    geo  →  ops      (never import upward)
+```
+geo  →  ops      (never import upward)
+```
 
 `geo` — Pure geometry. Primitives & geometric algorithms: points, paths, offsets, medial axes,
 clearing-state tracking, adaptive entry/wavefront generation. Knows nothing about machining, motion
@@ -41,26 +42,28 @@ command level.
 
 ## Examples
 
-    Creating and inspecting geometry:
+```
+Creating and inspecting geometry:
 
-    >>> from raygeo.geo import Geometry
-    >>> geom = Geometry()
-    >>> geom.add_rect(0, 0, 100, 50)
-    >>> geom.add_circle(50, 25, 10)
-    >>> geom.area()
-    5000.0 - 314.159...
-    >>> len(geom)
-    2
+>>> from raygeo.geo import Geometry
+>>> geom = Geometry()
+>>> geom.add_rect(0, 0, 100, 50)
+>>> geom.add_circle(50, 25, 10)
+>>> geom.area()
+5000.0 - 314.159...
+>>> len(geom)
+2
 
-    Manipulating command sequences:
+Manipulating command sequences:
 
-    >>> from raygeo.ops import Ops
-    >>> ops = Ops()
-    >>> ops.set_power(1.0)
-    >>> ops.move_to(0, 0, 0)
-    >>> ops.line_to(100, 0, 0)
-    >>> ops.distance()
-    100.0
+>>> from raygeo.ops import Ops
+>>> ops = Ops()
+>>> ops.set_power(1.0)
+>>> ops.move_to(0, 0, 0)
+>>> ops.line_to(100, 0, 0)
+>>> ops.distance()
+100.0
+```
 
 ## Re-exports
 

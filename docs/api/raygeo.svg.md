@@ -1,12 +1,11 @@
 ---
 title: raygeo.svg
 sidebar_label: raygeo.svg
-sidebar_position: 65
 ---
 
 ![SVG path data parsed into geometries](images/svg-parsing.png)
 
-_SVG path data parsed into geometries_
+*SVG path data parsed into geometries*
 
 ## SvgMetadata
 

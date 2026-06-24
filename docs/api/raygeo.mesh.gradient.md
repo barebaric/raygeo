@@ -1,7 +1,6 @@
 ---
 title: raygeo.mesh.gradient
 sidebar_label: raygeo.mesh.gradient
-sidebar_position: 49
 ---
 
 ## Functions
@@ -29,8 +28,8 @@ triangle of the mesh (piecewise constant).
 
 ![Gradient field ∇u (red) and perpendicular flow ∇u⊥ (blue) on the Laplace solution](images/mesh-gradient-field.png)
 
-_Gradient field ∇u (red) and perpendicular flow ∇u⊥ (blue) on the Laplace solution_
+*Gradient field ∇u (red) and perpendicular flow ∇u⊥ (blue) on the Laplace solution*
 
 ![Gradient field ∇u (red) and perpendicular flow ∇u⊥ (blue) on a multi-island domain](images/mesh-gradient-multi-island.png)
 
-_Gradient field ∇u (red) and perpendicular flow ∇u⊥ (blue) on a multi-island domain_
+*Gradient field ∇u (red) and perpendicular flow ∇u⊥ (blue) on a multi-island domain*

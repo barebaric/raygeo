@@ -1,7 +1,6 @@
 ---
 title: raygeo.geo.algo.simplify
 sidebar_label: raygeo.geo.algo.simplify
-sidebar_position: 30
 ---
 
 Polyline simplification using the Ramer-Douglas-Peucker algorithm.
@@ -33,8 +32,8 @@ The simplification uses XY distance, but preserves Z coordinates of kept points.
 
 ![Simplify and linearize](images/geo-algo-simplify-overview.png)
 
-_Simplify and linearize_
+*Simplify and linearize*
 
 ![3D polyline simplification preserving Z coordinates](images/geo-algo-simplify-3d.png)
 
-_3D polyline simplification preserving Z coordinates_
+*3D polyline simplification preserving Z coordinates*

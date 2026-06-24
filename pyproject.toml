@@ -35,6 +35,9 @@ visual = [
 ]
 docs = [
     "matplotlib",
+    "mdformat",
+    "mdformat-frontmatter",
+    "mdformat-tables",
     "Pillow",
 ]
 

@@ -1,12 +1,11 @@
 ---
 title: raygeo.mesh.build
 sidebar_label: raygeo.mesh.build
-sidebar_position: 48
 ---
 
 ![Uniform mesh (top) and Laplace gradient field (bottom) from build_uniform_mesh.](images/mesh-build-uniform.png)
 
-_Uniform mesh (top) and Laplace gradient field (bottom) from build_uniform_mesh._
+*Uniform mesh (top) and Laplace gradient field (bottom) from build_uniform_mesh.*
 
 ## Functions
 
@@ -34,15 +33,15 @@ Build a constrained Delaunay triangle mesh from polygon boundaries.
 
 ![CDT triangulation of a square pocket with centred hole](images/mesh-build-triangulation.png)
 
-_CDT triangulation of a square pocket with centred hole_
+*CDT triangulation of a square pocket with centred hole*
 
 ![CDT triangulation of an L-shaped pocket](images/mesh-build-l-shape.png)
 
-_CDT triangulation of an L-shaped pocket_
+*CDT triangulation of an L-shaped pocket*
 
 ![CDT triangulation of a square pocket with multiple islands](images/mesh-build-multi-island.png)
 
-_CDT triangulation of a square pocket with multiple islands_
+*CDT triangulation of a square pocket with multiple islands*
 
 ### `build_uniform_mesh()`
 
@@ -57,7 +56,7 @@ build_uniform_mesh(
 
 Build a triangle mesh with approximately uniform edge length.
 
-Computes the Steiner point density needed to achieve _target_edge_len_ and delegates to
+Computes the Steiner point density needed to achieve *target_edge_len* and delegates to
 `build_triangle_mesh`.
 
 | Parameter         | Type                                           | Description                                   |

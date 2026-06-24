@@ -1,7 +1,6 @@
 ---
 title: raygeo.geo.algo.analysis
 sidebar_label: raygeo.geo.algo.analysis
-sidebar_position: 4
 ---
 
 Path analysis utilities for inspecting and cleaning geometry data.

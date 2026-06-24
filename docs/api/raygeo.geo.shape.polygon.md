@@ -1,7 +1,6 @@
 ---
 title: raygeo.geo.shape.polygon
 sidebar_label: raygeo.geo.shape.polygon
-sidebar_position: 41
 ---
 
 ## JoinStyle
@@ -37,7 +36,7 @@ filter — sharp corners are rounded to exactly `r_min` while the overall shape 
 
 ![Minimum curvature fillet applied to a triangle](images/geo-shape-polygon-min-curvature.png)
 
-_Minimum curvature fillet applied to a triangle_
+*Minimum curvature fillet applied to a triangle*
 
 ### `clean_polygon()`
 
@@ -57,9 +56,9 @@ Clean a polygon by removing near-duplicate points.
 | _Returns_    | `Optional[types.Polygon]` | Cleaned polygon or None.              |
 | _Complexity_ |                           | O(n)                                  |
 
-![``clean_polygon`` removes near-duplicate vertices](images/geo-shape-polygon-clean-polygon.png)
+![ removes near-duplicate vertices](images/geo-shape-polygon-clean-polygon.png)
 
-_`clean_polygon` removes near-duplicate vertices_
+*`clean_polygon` removes near-duplicate vertices*
 
 ### `does_path_sweep_intersect_polygon()`
 
@@ -73,8 +72,8 @@ does_path_sweep_intersect_polygon(
 
 Check if a disk swept along a path intersects any obstacle polygon.
 
-Returns True when the Minkowski sweep of a disk of _radius_ along _path_ intersects any polygon in
-_obstacles_.
+Returns True when the Minkowski sweep of a disk of *radius* along *path* intersects any polygon in
+*obstacles*.
 
 | Parameter    | Type                      | Description                                |
 | ------------ | ------------------------- | ------------------------------------------ |
@@ -82,11 +81,11 @@ _obstacles_.
 | `radius`     | `float`                   | Disk radius.                               |
 | `obstacles`  | `Sequence[types.Polygon]` | List of obstacle polygons.                 |
 | _Returns_    | `bool`                    | True if any obstacle intersects the sweep. |
-| _Complexity_ |                           | O(n \* m)                                  |
+| _Complexity_ |                           | O(n * m)                                   |
 
 ![Tests whether the Minkowski sweep of a disk along a polyline intersects any obstacle polygon](images/geo-shape-polygon-path-sweep-intersect.png)
 
-_Tests whether the Minkowski sweep of a disk along a polyline intersects any obstacle polygon_
+*Tests whether the Minkowski sweep of a disk along a polyline intersects any obstacle polygon*
 
 ### `flip_polygon()`
 
@@ -146,7 +145,7 @@ Flip multiple polygons.
 | `flip_h`     | `bool`                    | Whether to flip horizontally. |
 | `flip_v`     | `bool`                    | Whether to flip vertically.   |
 | _Returns_    | `list[types.Polygon]`     | Flipped polygons.             |
-| _Complexity_ |                           | O(n \* m)                     |
+| _Complexity_ |                           | O(n * m)                      |
 
 ### `flip_polygons_numpy()`
 
@@ -166,7 +165,7 @@ Flip polygons from numpy arrays.
 | `flip_h`     | `bool`                    | Whether to flip horizontally. |
 | `flip_v`     | `bool`                    | Whether to flip vertically.   |
 | _Returns_    | `list[numpy.NDArray]`     | List of flipped numpy arrays. |
-| _Complexity_ |                           | O(n \* m)                     |
+| _Complexity_ |                           | O(n * m)                      |
 
 ### `get_circle_polygon()`
 
@@ -188,9 +187,9 @@ Approximate a circle as an n-gon polygon.
 | _Returns_    | `types.Polygon` | Polygon as list of (x, y) points. |
 | _Complexity_ |                 | O(n)                              |
 
-![``get_circle_polygon`` approximates a circle as an n-sided polygon](images/geo-shape-polygon-circle-polygon.png)
+![ approximates a circle as an n-sided polygon](images/geo-shape-polygon-circle-polygon.png)
 
-_`get_circle_polygon` approximates a circle as an n-sided polygon_
+*`get_circle_polygon` approximates a circle as an n-sided polygon*
 
 ### `get_polygon_area()`
 
@@ -225,7 +224,7 @@ polygons that merely touch at a shared vertex.
 | `a`          | `Sequence[tuple[float, float]]` | First polygon as (x, y) points.  |
 | `b`          | `Sequence[tuple[float, float]]` | Second polygon as (x, y) points. |
 | _Returns_    | `float`                         | Minimum boundary distance.       |
-| _Complexity_ |                                 | O(n \* m)                        |
+| _Complexity_ |                                 | O(n * m)                         |
 
 ### `get_polygon_bounds()`
 
@@ -255,9 +254,9 @@ Get the centroid of a polygon.
 | _Returns_    | `types.Point`           | Centroid point (x, y).    |
 | _Complexity_ |                         | O(n)                      |
 
-![``get_polygon_centroid`` computes the geometric center](images/geo-shape-polygon-centroid.png)
+![ computes the geometric center](images/geo-shape-polygon-centroid.png)
 
-_`get_polygon_centroid` computes the geometric center_
+*`get_polygon_centroid` computes the geometric center*
 
 ### `get_polygon_closest_point()`
 
@@ -278,9 +277,9 @@ Find the closest point on a polygon boundary to (x, y).
 | `y`       | `float`                                                | Y coordinate.                                          |
 | _Returns_ | `tuple[float, tuple[float, float], float] &#124; None` | (t, (cx, cy), distance_squared) or None if degenerate. |
 
-![``get_polygon_closest_point`` finds the nearest boundary point to a given coordinate](images/geo-shape-polygon-polygon-closest-point.png)
+![ finds the nearest boundary point to a given coordinate](images/geo-shape-polygon-polygon-closest-point.png)
 
-_`get_polygon_closest_point` finds the nearest boundary point to a given coordinate_
+*`get_polygon_closest_point` finds the nearest boundary point to a given coordinate*
 
 ### `get_polygon_convex_hull()`
 
@@ -296,9 +295,9 @@ Get the convex hull of a polygon.
 | _Returns_    | `types.Polygon`         | Convex hull as list of points. |
 | _Complexity_ |                         | O(n log n)                     |
 
-![``get_polygon_convex_hull`` wraps polygon in convex hull](images/geo-shape-polygon-convex-hull.png)
+![ wraps polygon in convex hull](images/geo-shape-polygon-convex-hull.png)
 
-_`get_polygon_convex_hull` wraps polygon in convex hull_
+*`get_polygon_convex_hull` wraps polygon in convex hull*
 
 ### `get_polygon_edges()`
 
@@ -328,11 +327,11 @@ Get the bounding rectangle of a group of polygons.
 | ------------ | ------------------------- | --------------------------------------------------- |
 | `polygons`   | `Sequence[types.Polygon]` | List of polygons.                                   |
 | _Returns_    | `types.Rect`              | Bounding rectangle as (x_min, y_min, x_max, y_max). |
-| _Complexity_ |                           | O(n \* m)                                           |
+| _Complexity_ |                           | O(n * m)                                            |
 
-![``get_polygon_group_bounds`` all polygons within a rect](images/geo-shape-polygon-group-bounds.png)
+![ all polygons within a rect](images/geo-shape-polygon-group-bounds.png)
 
-_`get_polygon_group_bounds` all polygons within a rect_
+*`get_polygon_group_bounds` all polygons within a rect*
 
 ### `get_polygon_perimeter()`
 
@@ -420,7 +419,7 @@ Get the difference of two polygons.
 
 ![Polygon difference](images/geo-shape-polygon-boolean-difference.png)
 
-_Polygon difference_
+*Polygon difference*
 
 ### `get_polygons_group_difference()`
 
@@ -478,7 +477,7 @@ Get the intersection of two polygons.
 
 ![Polygon intersection](images/geo-shape-polygon-boolean-intersection.png)
 
-_Polygon intersection_
+*Polygon intersection*
 
 ### `get_polygons_union()`
 
@@ -496,7 +495,7 @@ Get the union of multiple polygons.
 
 ![Polygon union](images/geo-shape-polygon-boolean-union.png)
 
-_Polygon union_
+*Polygon union*
 
 ### `get_segment_swept_polygon()`
 
@@ -510,7 +509,7 @@ get_segment_swept_polygon(
 
 Compute the swept area of a line segment with a given radius.
 
-Returns a rectangle (the Minkowski sum of the segment with a disk of _radius_) plus two disks at the
+Returns a rectangle (the Minkowski sum of the segment with a disk of *radius*) plus two disks at the
 endpoints. Useful for toolpath clearance tracking and roughing simulation.
 
 | Parameter    | Type                  | Description                                  |
@@ -521,9 +520,9 @@ endpoints. Useful for toolpath clearance tracking and roughing simulation.
 | _Returns_    | `list[types.Polygon]` | List of polygons (rectangle + two end-caps). |
 | _Complexity_ |                       | O(n)                                         |
 
-![``get_segment_swept_polygon`` computes the swept area of a line segment with a given radius](images/geo-shape-polygon-segment-swept.png)
+![ computes the swept area of a line segment with a given radius](images/geo-shape-polygon-segment-swept.png)
 
-_`get_segment_swept_polygon` computes the swept area of a line segment with a given radius_
+*`get_segment_swept_polygon` computes the swept area of a line segment with a given radius*
 
 ### `is_almost_equal()`
 
@@ -534,11 +533,11 @@ is_almost_equal(a: float, b: float, tolerance: Optional[float] = None) -> bool
 Check if two floats are almost equal.
 
 | Parameter    | Type                     | Description           |
-| ------------ | ------------------------ | --------------------- | ----- | ------------ |
+| ------------ | ------------------------ | --------------------- |
 | `a`          | `float`                  | First float.          |
 | `b`          | `float`                  | Second float.         |
 | `tolerance`  | `Optional[float] = None` | Comparison tolerance. |
-| _Returns_    | `bool`                   | True if               | a - b | < tolerance. |
+| _Returns_    | `bool`                   | True if               |
 | _Complexity_ |                          | O(1)                  |
 
 ### `is_point_inside_polygon()`
@@ -641,7 +640,7 @@ Offset (inflate/deflate) a polygon.
 
 ![Polygon offset — miter vs round vs square join styles](images/geo-shape-polygon-offset.png)
 
-_Polygon offset — miter vs round vs square join styles_
+*Polygon offset — miter vs round vs square join styles*
 
 ### `point_in_polygon_numpy()`
 
@@ -718,7 +717,7 @@ Get bounds of polygon group from numpy arrays.
 | ------------ | ------------------------- | --------------------------------------------------- |
 | `polygons`   | `Sequence[numpy.NDArray]` | Sequence of 2D numpy arrays.                        |
 | _Returns_    | `types.Rect`              | Bounding rectangle as (x_min, y_min, x_max, y_max). |
-| _Complexity_ |                           | O(n \* m)                                           |
+| _Complexity_ |                           | O(n * m)                                            |
 
 ### `polygon_perimeter_numpy()`
 
@@ -752,7 +751,7 @@ Check if two polygons intersect.
 | `p2`         | `Sequence[types.Point]` | Second polygon as (x, y) points.     |
 | `min_area`   | `float = 0`             | Minimum intersection area threshold. |
 | _Returns_    | `bool`                  | True if polygons intersect.          |
-| _Complexity_ |                         | O(n \* m)                            |
+| _Complexity_ |                         | O(n * m)                             |
 
 ### `polygons_intersect_numpy()`
 
@@ -772,7 +771,7 @@ Check if polygons intersect from numpy arrays.
 | `poly2`      | `numpy.NDArray` | Second polygon as a 2D numpy array.  |
 | `min_area`   | `float = 0`     | Minimum intersection area threshold. |
 | _Returns_    | `bool`          | True if polygons intersect.          |
-| _Complexity_ |                 | O(n \* m)                            |
+| _Complexity_ |                 | O(n * m)                             |
 
 ### `resample_polygon()`
 
@@ -784,7 +783,7 @@ resample_polygon(
 ```
 
 Resample a closed polygon by inserting evenly-spaced points along each edge so that no segment is
-longer than _spacing_.
+longer than *spacing*.
 
 The result is a closed polyline (last point connects back to first conceptually, but is not
 duplicated).
@@ -794,7 +793,7 @@ duplicated).
 | `polygon`    | `Sequence[tuple[float, float]]` | Polygon as (x, y) points.                   |
 | `spacing`    | `float`                         | Maximum allowed segment length.             |
 | _Returns_    | `list[tuple[float, float]]`     | Resampled polygon as list of (x, y) points. |
-| _Complexity_ |                                 | O(n \* m)                                   |
+| _Complexity_ |                                 | O(n * m)                                    |
 
 ### `rotate_polygon()`
 
@@ -842,7 +841,7 @@ Rotate multiple polygons by an angle.
 | `polygons`   | `Sequence[types.Polygon]` | List of polygons to rotate. |
 | `angle`      | `float`                   | Rotation angle in degrees.  |
 | _Returns_    | `list[types.Polygon]`     | Rotated polygons.           |
-| _Complexity_ |                           | O(n \* m)                   |
+| _Complexity_ |                           | O(n * m)                    |
 
 ### `rotate_polygons_numpy()`
 
@@ -860,7 +859,7 @@ Rotate polygons from numpy arrays.
 | `polygons`   | `Sequence[numpy.NDArray]` | Sequence of 2D numpy arrays.  |
 | `angle`      | `float`                   | Rotation angle in degrees.    |
 | _Returns_    | `list[numpy.NDArray]`     | List of rotated numpy arrays. |
-| _Complexity_ |                           | O(n \* m)                     |
+| _Complexity_ |                           | O(n * m)                      |
 
 ### `scale_polygon()`
 
@@ -894,7 +893,7 @@ Convert a numpy polygon to Clipper integer coordinates.
 | ------------ | ------------------------- | ------------------------------ |
 | `polygon`    | `Sequence[numpy.NDArray]` | Sequence of 2D numpy arrays.   |
 | _Returns_    | `list[tuple[int, int]]`   | List of (x, y) integer tuples. |
-| _Complexity_ |                           | O(n \* m)                      |
+| _Complexity_ |                           | O(n * m)                       |
 
 ### `translate_bounds()`
 
@@ -970,7 +969,7 @@ Translate a list of polygons.
 | `dx`         | `float`                   | X translation.                 |
 | `dy`         | `float`                   | Y translation.                 |
 | _Returns_    | `list[types.Polygon]`     | Translated polygons.           |
-| _Complexity_ |                           | O(n \* m)                      |
+| _Complexity_ |                           | O(n * m)                       |
 
 ### `translate_polygons_numpy()`
 
@@ -990,4 +989,4 @@ Translate polygons from numpy arrays.
 | `dx`         | `float`                   | X translation.                   |
 | `dy`         | `float`                   | Y translation.                   |
 | _Returns_    | `list[numpy.NDArray]`     | List of translated numpy arrays. |
-| _Complexity_ |                           | O(n \* m)                        |
+| _Complexity_ |                           | O(n * m)                         |

@@ -1,7 +1,6 @@
 ---
 title: raygeo.geo.shape
 sidebar_label: raygeo.geo.shape
-sidebar_position: 35
 ---
 
 Primitive shape operations — arc, bezier, circle, line, point, polygon, rect.

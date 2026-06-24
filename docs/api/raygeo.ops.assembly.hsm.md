@@ -1,14 +1,13 @@
 ---
 title: raygeo.ops.assembly.hsm
 sidebar_label: raygeo.ops.assembly.hsm
-sidebar_position: 56
 ---
 
 ## PyWavefrontGraph
 
-Parent tree returned by [`split_ordered_wavefronts`].
+Parent tree returned by \[`split_ordered_wavefronts`\].
 
-Nodes are individual bite polygons, identified by a _global index_ computed from `bite_offsets`:
+Nodes are individual bite polygons, identified by a *global index* computed from `bite_offsets`:
 
 ```text
 global = bite_offsets[pass] + local_index_within_pass
@@ -122,34 +121,34 @@ Fast central clearing entry.
 Finds the optimal entry pole using `find_largest_circle`, then generates either a helix->spiral
 (wide area) or zigzag ramp (tight slot).
 
-The returned _cleared_polygons_ should be inserted into a `ClearedArea` via `add_cleared_polygons`.
+The returned *cleared_polygons* should be inserted into a `ClearedArea` via `add_cleared_polygons`.
 
-| Parameter         | Type                                              | Description                                                                                                                                             |
-| ----------------- | ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `pocket_boundary` | `Sequence[tuple[float, float]]`                   | Outer boundary of the pocket.                                                                                                                           |
-| `islands`         | `Sequence[Sequence[tuple[float, float]]] = []`    | List of island (hole) polygons (default []).                                                                                                            |
-| `tool_radius`     | `float = 3`                                       | Tool radius in mm (default 3.0).                                                                                                                        |
-| `step_over`       | `float = 2`                                       | Radial step-over per spiral revolution (default 2.0).                                                                                                   |
-| `safe_z`          | `float = 2`                                       | Safe (retract) Z height (default 2.0).                                                                                                                  |
-| `target_z`        | `float = -5`                                      | Target cutting depth (default -5.0).                                                                                                                    |
-| `plunge_pitch`    | `float = 1`                                       | Vertical descent per helix revolution (default 1.0).                                                                                                    |
-| `safe_margin`     | `float = 1`                                       | Extra margin from tool edge to boundary (default 1.0).                                                                                                  |
-| `angular_step`    | `float = 0.1`                                     | Angular step in radians for path vertices (default 0.1).                                                                                                |
-| `cut_feed_rate`   | `int = 1200`                                      | Feed rate for the entry path (default 1200).                                                                                                            |
-| `cut_power`       | `float = 1`                                       | Laser power for the entry path (0.0-1.0, default 1.0).                                                                                                  |
-| _Returns_         | `tuple[ops.Ops, list[list[tuple[float, float]]]]` | `(ops, cleared_polygons)` where \*ops\* is an `Ops` with the entry toolpath and \*cleared_polygons\* is a list of polygons to add to the `ClearedArea`. |
+| Parameter         | Type                                              | Description                                                                                                                                         |
+| ----------------- | ------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pocket_boundary` | `Sequence[tuple[float, float]]`                   | Outer boundary of the pocket.                                                                                                                       |
+| `islands`         | `Sequence[Sequence[tuple[float, float]]] = []`    | List of island (hole) polygons (default []).                                                                                                        |
+| `tool_radius`     | `float = 3`                                       | Tool radius in mm (default 3.0).                                                                                                                    |
+| `step_over`       | `float = 2`                                       | Radial step-over per spiral revolution (default 2.0).                                                                                               |
+| `safe_z`          | `float = 2`                                       | Safe (retract) Z height (default 2.0).                                                                                                              |
+| `target_z`        | `float = -5`                                      | Target cutting depth (default -5.0).                                                                                                                |
+| `plunge_pitch`    | `float = 1`                                       | Vertical descent per helix revolution (default 1.0).                                                                                                |
+| `safe_margin`     | `float = 1`                                       | Extra margin from tool edge to boundary (default 1.0).                                                                                              |
+| `angular_step`    | `float = 0.1`                                     | Angular step in radians for path vertices (default 0.1).                                                                                            |
+| `cut_feed_rate`   | `int = 1200`                                      | Feed rate for the entry path (default 1200).                                                                                                        |
+| `cut_power`       | `float = 1`                                       | Laser power for the entry path (0.0-1.0, default 1.0).                                                                                              |
+| _Returns_         | `tuple[ops.Ops, list[list[tuple[float, float]]]]` | `(ops, cleared_polygons)` where *ops* is an `Ops` with the entry toolpath and *cleared_polygons* is a list of polygons to add to the `ClearedArea`. |
 
 ![Adaptive clearing — Helix → Spiral in a pocket with three islands](images/ops-assembly-hsm-entry-multi.png)
 
-_Adaptive clearing — Helix → Spiral in a pocket with three islands_
+*Adaptive clearing — Helix → Spiral in a pocket with three islands*
 
 ![Adaptive clearing — Helix → Spiral in an L-shaped pocket](images/ops-assembly-hsm-entry-lshape.png)
 
-_Adaptive clearing — Helix → Spiral in an L-shaped pocket_
+*Adaptive clearing — Helix → Spiral in an L-shaped pocket*
 
 ![Adaptive clearing — ZigZag Ramp in a tight slot](images/ops-assembly-hsm-entry-tight.png)
 
-_Adaptive clearing — ZigZag Ramp in a tight slot_
+*Adaptive clearing — ZigZag Ramp in a tight slot*
 
 ### `adaptive_peeling()`
 
@@ -193,18 +192,18 @@ into Ops with MAT-routed travel segments.
 
 ![adaptive_peeling on a rectangular pocket — cutting arcs (blue, solid) at cut depth and travel links (orange, dashed) at safe Z](images/ops-assembly-hsm-adaptive-peeling-2d.png)
 
-_adaptive_peeling on a rectangular pocket — cutting arcs (blue, solid) at cut depth and travel links
-(orange, dashed) at safe Z_
+*adaptive_peeling on a rectangular pocket — cutting arcs (blue, solid) at cut depth and travel links
+(orange, dashed) at safe Z*
 
 ![adaptive_peeling (3-D) — Z colouring shows cutting depth (blue) vs travel height (red)](images/ops-assembly-hsm-adaptive-peeling-3d.png)
 
-_adaptive_peeling (3-D) — Z colouring shows cutting depth (blue) vs travel height (red)_
+*adaptive_peeling (3-D) — Z colouring shows cutting depth (blue) vs travel height (red)*
 
 ![adaptive_peeling on a three-island pocket — left: directed bite graph (green parent→child edges, node markers at bite centroids coloured by pass, arcs in turbo); right: resulting Ops toolpath (cut blue, travel orange dashed)](images/ops-assembly-hsm-adaptive-peeling-multi.png)
 
-_adaptive_peeling on a three-island pocket — left: directed bite graph (green parent→child edges,
+*adaptive_peeling on a three-island pocket — left: directed bite graph (green parent→child edges,
 node markers at bite centroids coloured by pass, arcs in turbo); right: resulting Ops toolpath (cut
-blue, travel orange dashed)_
+blue, travel orange dashed)*
 
 ### `adaptive_wavefronts()`
 
@@ -224,12 +223,12 @@ adaptive_wavefronts(
 
 Inside-out adaptive wavefronts.
 
-Starting from the _cleared_ state, each iteration expands the cleared boundary outward by
-_step_over_, clips to the valid tool area (pocket boundary offset inward by _tool_radius_, with
-islands excluded), and adds the result back to _cleared_. The loop terminates when the newly added
-area drops below _area_tolerance_.
+Starting from the *cleared* state, each iteration expands the cleared boundary outward by
+*step_over*, clips to the valid tool area (pocket boundary offset inward by *tool_radius*, with
+islands excluded), and adds the result back to *cleared*. The loop terminates when the newly added
+area drops below *area_tolerance*.
 
-Each ring fragment is emitted as `MoveTo` + `LineTo` at height _z_ with _cut_feed_rate_ applied.
+Each ring fragment is emitted as `MoveTo` + `LineTo` at height *z* with *cut_feed_rate* applied.
 
 | Parameter         | Type                                           | Description                                           |
 | ----------------- | ---------------------------------------------- | ----------------------------------------------------- |
@@ -246,17 +245,17 @@ Each ring fragment is emitted as `MoveTo` + `LineTo` at height _z_ with _cut_fee
 
 ![Adaptive wavefronts expanding outward from the initial cleared disk (blue) to fill the pocket boundary (black)](images/ops-assembly-hsm-wavefront-rect.png)
 
-_Adaptive wavefronts expanding outward from the initial cleared disk (blue) to fill the pocket
-boundary (black)_
+*Adaptive wavefronts expanding outward from the initial cleared disk (blue) to fill the pocket
+boundary (black)*
 
 ![Adaptive wavefronts in a pocket with three islands — contours wrap around each island as they expand](images/ops-assembly-hsm-wavefront-multi.png)
 
-_Adaptive wavefronts in a pocket with three islands — contours wrap around each island as they
-expand_
+*Adaptive wavefronts in a pocket with three islands — contours wrap around each island as they
+expand*
 
 ![Adaptive wavefronts in a Y-shaped channel — contours split and propagate along each branch](images/ops-assembly-hsm-wavefront-yshape.png)
 
-_Adaptive wavefronts in a Y-shaped channel — contours split and propagate along each branch_
+*Adaptive wavefronts in a Y-shaped channel — contours split and propagate along each branch*
 
 ### `find_cutting_arc()`
 
@@ -269,7 +268,7 @@ find_cutting_arc(
 
 Extract the cutting arc (outer) vertices from a bite polygon.
 
-The cutting arc is the longest contiguous run of bite vertices that lie _outside_ all cleared
+The cutting arc is the longest contiguous run of bite vertices that lie *outside* all cleared
 fragments.
 
 | Parameter           | Type                                      | Description                                      |
@@ -280,12 +279,12 @@ fragments.
 
 ![Cutting arcs from peeling passes in a pocket with three islands — each arc is the outer edge of a bite polygon](images/ops-assembly-hsm-find-cutting-arc.png)
 
-_Cutting arcs from peeling passes in a pocket with three islands — each arc is the outer edge of a
-bite polygon_
+*Cutting arcs from peeling passes in a pocket with three islands — each arc is the outer edge of a
+bite polygon*
 
 ![Cutting arcs from passes without islands](images/ops-assembly-hsm-find-cutting-arc-simple.png)
 
-_Cutting arcs from passes without islands_
+*Cutting arcs from passes without islands*
 
 ### `link_arcs_to_ops()`
 
@@ -308,12 +307,12 @@ link_arcs_to_ops(
 
 Link filleted arcs into an Ops with MAT-routed travel.
 
-Consecutive arcs are joined by travel segments (MoveTo) at _safe_z_. When the direct line would
-cross (or pass within _safe_margin_ of) any polygon in _uncleared_, the connection uses the Medial
+Consecutive arcs are joined by travel segments (MoveTo) at *safe_z*. When the direct line would
+cross (or pass within *safe_margin* of) any polygon in *uncleared*, the connection uses the Medial
 Axis to route around obstacles, then smoothed.
 
-Cutting arcs are emitted as LineTo at _cut_z_ with _cut_feed_rate_; travel links as MoveTo at
-_safe_z_ with _travel_rapid_rate_.
+Cutting arcs are emitted as LineTo at *cut_z* with *cut_feed_rate*; travel links as MoveTo at
+*safe_z* with *travel_rapid_rate*.
 
 | Parameter           | Type                                                                         | Description                                                                                                                                                                          |
 | ------------------- | ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -333,7 +332,7 @@ _safe_z_ with _travel_rapid_rate_.
 
 ![Pre-computed filleted arcs linked into an Ops with MAT-routed travel segments](images/ops-assembly-hsm-link-arcs.png)
 
-_Pre-computed filleted arcs linked into an Ops with MAT-routed travel segments_
+*Pre-computed filleted arcs linked into an Ops with MAT-routed travel segments*
 
 ### `split_ordered_wavefronts()`
 
@@ -363,5 +362,5 @@ with a pass-N bite becomes its child. DFS with merge constraints produces the pr
 
 ![Cutting arcs from split_ordered_wavefronts() coloured by pass (turbo), with parent→child edges (grey arrows) and numbered labels at each arc midpoint](images/ops-assembly-hsm-split-ordered-wavefronts.png)
 
-_Cutting arcs from split_ordered_wavefronts() coloured by pass (turbo), with parent→child edges
-(grey arrows) and numbered labels at each arc midpoint_
+*Cutting arcs from split_ordered_wavefronts() coloured by pass (turbo), with parent→child edges
+(grey arrows) and numbered labels at each arc midpoint*

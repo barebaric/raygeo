@@ -1,7 +1,6 @@
 ---
 title: raygeo.geo.shape.arc
 sidebar_label: raygeo.geo.shape.arc
-sidebar_position: 36
 ---
 
 Arc geometry queries and conversions.
@@ -26,7 +25,7 @@ arc_through_point(
 
 Build a circular arc through three points around a centre.
 
-Returns a polyline approximation of the arc from _t_start_ to _t_end_ that passes through _t_mid_,
+Returns a polyline approximation of the arc from *t_start* to *t_end* that passes through *t_mid*,
 with the given centre and radius.
 
 | Parameter | Type            | Description                                      |
@@ -40,7 +39,7 @@ with the given centre and radius.
 
 ![Construct a circular arc through a given point](images/geo-shape-arc-arc-through-point.png)
 
-_Construct a circular arc through a given point_
+*Construct a circular arc through a given point*
 
 ### `does_arc_intersect_circle()`
 
@@ -259,7 +258,7 @@ Returns `+1.0` for a counter-clockwise (left) turn and `-1.0` for a clockwise (r
 
 ![Determine turn direction of a polyline at its midpoint vertex](images/geo-shape-arc-polyline-turn-sign.png)
 
-_Determine turn direction of a polyline at its midpoint vertex_
+*Determine turn direction of a polyline at its midpoint vertex*
 
 ### `is_angle_between()`
 
@@ -323,7 +322,7 @@ Check if an arc is inside a set of polygons.
 | `clockwise`  | `bool`        | Whether the arc is clockwise.           |
 | `polygons`   | `Any`         | List of polygons to check against.      |
 | _Returns_    | `bool`        | True if the arc is inside all polygons. |
-| _Complexity_ |               | O(n \* m) time, O(1) space              |
+| _Complexity_ |               | O(n * m) time, O(1) space               |
 
 ### `linearize_arc()`
 
@@ -347,7 +346,7 @@ Linearize an arc into line segments.
 
 ![Arc linearization: coarse and fine resolution](images/geo-shape-arc-linearize.png)
 
-_Arc linearization: coarse and fine resolution_
+*Arc linearization: coarse and fine resolution*
 
 ### `normalize_angle()`
 
@@ -355,10 +354,10 @@ _Arc linearization: coarse and fine resolution_
 normalize_angle(angle: float) -> float
 ```
 
-Normalize an angle to the range [0, 2\*pi).
+Normalize an angle to the range \[0, 2\*pi).
 
-| Parameter    | Type    | Description                     |
-| ------------ | ------- | ------------------------------- |
-| `angle`      | `float` | Angle in radians.               |
-| _Returns_    | `float` | Normalized angle in [0, 2\*pi). |
-| _Complexity_ |         | O(1) time, O(1) space           |
+| Parameter    | Type    | Description                      |
+| ------------ | ------- | -------------------------------- |
+| `angle`      | `float` | Angle in radians.                |
+| _Returns_    | `float` | Normalized angle in \[0, 2\*pi). |
+| _Complexity_ |         | O(1) time, O(1) space            |

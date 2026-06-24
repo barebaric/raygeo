@@ -1,7 +1,6 @@
 ---
 title: raygeo.geo.shape.polygon3d
 sidebar_label: raygeo.geo.shape.polygon3d
-sidebar_position: 42
 ---
 
 ## Functions
@@ -45,7 +44,7 @@ given radius tangent to both edges.
 
 ![Fillet corners of a 3D polyline with circular arcs](images/geo-shape-polygon3d-fillet-polyline-3d.png)
 
-_Fillet corners of a 3D polyline with circular arcs_
+*Fillet corners of a 3D polyline with circular arcs*
 
 ### `flip_polygon_3d()`
 
@@ -71,7 +70,7 @@ Flip a 3D polygon horizontally, vertically, and/or along Z.
 
 ![3D polygon flipped horizontally and along Z](images/geo-shape-polygon3d-flip.png)
 
-_3D polygon flipped horizontally and along Z_
+*3D polygon flipped horizontally and along Z*
 
 ### `flip_polygons_3d()`
 
@@ -93,7 +92,7 @@ Flip multiple 3D polygons.
 | `flip_v`     | `bool = False`              | Whether to flip vertically (negate Y).   |
 | `flip_z`     | `bool = False`              | Whether to flip along Z (negate Z).      |
 | _Returns_    | `list[types.Polygon3D]`     | Flipped polygons.                        |
-| _Complexity_ |                             | O(n \* m)                                |
+| _Complexity_ |                             | O(n * m)                                 |
 
 ### `get_polygon_area_3d()`
 
@@ -111,7 +110,7 @@ XY-projected area of a 3D polygon (absolute shoelace area).
 
 ![XY-projected (unsigned) area of a 3D polygon](images/geo-shape-polygon3d-area.png)
 
-_XY-projected (unsigned) area of a 3D polygon_
+*XY-projected (unsigned) area of a 3D polygon*
 
 ### `get_polygon_bounds_3d()`
 
@@ -129,7 +128,7 @@ Get the 3D bounding box of a polygon.
 
 ![3D bounding box (Rect3D)](images/geo-shape-polygon3d-bounds.png)
 
-_3D bounding box (Rect3D)_
+*3D bounding box (Rect3D)*
 
 ### `get_polygon_centroid_3d()`
 
@@ -149,7 +148,7 @@ XY centroid from shoelace formula, Z from average.
 
 ![3D centroid - XY via shoelace, Z as average](images/geo-shape-polygon3d-centroid.png)
 
-_3D centroid - XY via shoelace, Z as average_
+*3D centroid - XY via shoelace, Z as average*
 
 ### `get_polygon_convex_hull_3d()`
 
@@ -167,7 +166,7 @@ Get the convex hull of a 3D polygon (XY-plane, Z from first vertex).
 
 ![3D convex hull (XY-plane, Z from first hull vertex)](images/geo-shape-polygon3d-convex-hull.png)
 
-_3D convex hull (XY-plane, Z from first hull vertex)_
+*3D convex hull (XY-plane, Z from first hull vertex)*
 
 ### `get_polygon_edges_3d()`
 
@@ -187,7 +186,7 @@ Get the edges of a 3D polygon.
 
 ![3D polygon edges as (start, end) pairs](images/geo-shape-polygon3d-edges.png)
 
-_3D polygon edges as (start, end) pairs_
+*3D polygon edges as (start, end) pairs*
 
 ### `get_polygon_group_bounds_3d()`
 
@@ -203,7 +202,7 @@ Get the 3D bounding box of a group of polygons.
 | ------------ | --------------------------- | ----------------------------------------------------------- |
 | `polygons`   | `Sequence[types.Polygon3D]` | List of 3D polygons.                                        |
 | _Returns_    | `types.Rect3D`              | Bounding box as (x_min, y_min, x_max, y_max, z_min, z_max). |
-| _Complexity_ |                             | O(n \* m)                                                   |
+| _Complexity_ |                             | O(n * m)                                                    |
 
 ### `get_polygon_perimeter_3d()`
 
@@ -221,7 +220,7 @@ Get the perimeter of a 3D polygon using full 3D edge lengths.
 
 ![3D polygon perimeter using full 3D edge lengths](images/geo-shape-polygon3d-perimeter.png)
 
-_3D polygon perimeter using full 3D edge lengths_
+*3D polygon perimeter using full 3D edge lengths*
 
 ### `get_polygon_signed_area_3d()`
 
@@ -241,7 +240,7 @@ Positive for CCW winding, negative for CW.
 
 ![Signed XY-projected area — positive = CCW, negative = CW](images/geo-shape-polygon3d-signed-area.png)
 
-_Signed XY-projected area — positive = CCW, negative = CW_
+*Signed XY-projected area — positive = CCW, negative = CW*
 
 ### `get_polygons_closest_point_3d()`
 
@@ -266,7 +265,7 @@ Find the closest point on any 3D polygon in a list to (x, y, z).
 
 ![Closest point on multiple 3D polygons](images/geo-shape-polygon3d-closest-point-3d.png)
 
-_Closest point on multiple 3D polygons_
+*Closest point on multiple 3D polygons*
 
 ### `get_polygons_difference_3d()`
 
@@ -287,7 +286,7 @@ Compute the difference of two 3D polygons (poly1 - poly2).
 
 ![3D polygon difference (A - B) — Z from A](images/geo-shape-polygon3d-boolean-difference.png)
 
-_3D polygon difference (A - B) — Z from A_
+*3D polygon difference (A - B) — Z from A*
 
 ### `get_polygons_group_difference_3d()`
 
@@ -342,7 +341,7 @@ Compute the intersection of two 3D polygons (XY-plane, Z preserved).
 
 ![3D polygon intersection — Z from first polygon](images/geo-shape-polygon3d-boolean-intersection.png)
 
-_3D polygon intersection — Z from first polygon_
+*3D polygon intersection — Z from first polygon*
 
 ### `get_polygons_union_3d()`
 
@@ -361,7 +360,7 @@ Compute the union of 3D polygons (XY-plane, Z preserved).
 
 ![3D polygon union — Z from first polygon](images/geo-shape-polygon3d-boolean-union.png)
 
-_3D polygon union — Z from first polygon_
+*3D polygon union — Z from first polygon*
 
 ### `get_polyline_end_tangent_3d()`
 
@@ -382,7 +381,7 @@ Returns the normalised XY direction from the second-to-last point to the last po
 
 ![Normalised end tangent direction of a 3D polyline](images/geo-shape-polygon3d-end-tangent.png)
 
-_Normalised end tangent direction of a 3D polyline_
+*Normalised end tangent direction of a 3D polyline*
 
 ### `offset_polygon_3d()`
 
@@ -403,7 +402,7 @@ Offset (inflate/deflate) a closed 3D polygon.
 
 ![3D polygon offset — Z preserved from input](images/geo-shape-polygon3d-offset.png)
 
-_3D polygon offset — Z preserved from input_
+*3D polygon offset — Z preserved from input*
 
 ### `offset_polyline_3d()`
 
@@ -418,10 +417,10 @@ offset_polyline_3d(
 Offset a 3D polyline in true 3D (edge-plane miter).
 
 Unlike **offset_polygon_3d** (which projects to XY, offsets, then lifts back), this function offsets
-each vertex in the local plane of its two adjacent edges. This gives a _true 3D offset_ suitable for
+each vertex in the local plane of its two adjacent edges. This gives a *true 3D offset* suitable for
 non-planar polylines.
 
-Positive distance offsets to the _left_ of the traversal direction.
+Positive distance offsets to the *left* of the traversal direction.
 
 | Parameter    | Type                      | Description                                                                                                                                                                                    |
 | ------------ | ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -433,7 +432,7 @@ Positive distance offsets to the _left_ of the traversal direction.
 
 ![True 3D polyline offset (edge-plane miter)](images/geo-shape-polygon3d-true-offset.png)
 
-_True 3D polyline offset (edge-plane miter)_
+*True 3D polyline offset (edge-plane miter)*
 
 ### `resample_polyline_3d()`
 
@@ -457,7 +456,7 @@ Resample a 3D polyline with a maximum segment length.
 
 ![Resample a 3D polyline with a max segment length](images/geo-shape-polygon3d-resample.png)
 
-_Resample a 3D polyline with a max segment length_
+*Resample a 3D polyline with a max segment length*
 
 ### `rotate_polygon_3d()`
 
@@ -479,7 +478,7 @@ Rotate a 3D polygon around the Z axis (XY rotation, Z preserved).
 
 ![3D polygon rotated around Z axis (Z preserved)](images/geo-shape-polygon3d-rotate.png)
 
-_3D polygon rotated around Z axis (Z preserved)_
+*3D polygon rotated around Z axis (Z preserved)*
 
 ### `rotate_polygons_3d()`
 
@@ -497,7 +496,7 @@ Rotate multiple 3D polygons around the Z axis.
 | `polygons`   | `Sequence[types.Polygon3D]` | List of 3D polygons.       |
 | `angle`      | `float`                     | Rotation angle in degrees. |
 | _Returns_    | `list[types.Polygon3D]`     | Rotated polygons.          |
-| _Complexity_ |                             | O(n \* m)                  |
+| _Complexity_ |                             | O(n * m)                   |
 
 ### `scale_polygon_3d()`
 
@@ -523,7 +522,7 @@ Scale a 3D polygon.
 
 ![3D polygon scaled uniformly](images/geo-shape-polygon3d-scale.png)
 
-_3D polygon scaled uniformly_
+*3D polygon scaled uniformly*
 
 ### `translate_polygon_3d()`
 
@@ -549,7 +548,7 @@ Translate a 3D polygon.
 
 ![3D polygon translated by dx, dy, dz](images/geo-shape-polygon3d-translate.png)
 
-_3D polygon translated by dx, dy, dz_
+*3D polygon translated by dx, dy, dz*
 
 ### `translate_polygons_3d()`
 
@@ -571,7 +570,7 @@ Translate a list of 3D polygons.
 | `dy`         | `float`                     | Y translation.       |
 | `dz`         | `float = 0`                 | Z translation.       |
 | _Returns_    | `list[types.Polygon3D]`     | Translated polygons. |
-| _Complexity_ |                             | O(n \* m)            |
+| _Complexity_ |                             | O(n * m)             |
 
 ### `walk_along_polygon_3d()`
 
@@ -601,7 +600,7 @@ at exactly `distance` units away. The walk wraps around the polygon (unlike
 
 ![Walk along a closed 3D polygon (wraps around)](images/geo-shape-polygon3d-walk-along-polygon.png)
 
-_Walk along a closed 3D polygon (wraps around)_
+*Walk along a closed 3D polygon (wraps around)*
 
 ### `walk_along_polyline_3d()`
 
@@ -631,4 +630,4 @@ it.
 
 ![Walk along a 3D polyline by a given arc length](images/geo-shape-polygon3d-walk-along.png)
 
-_Walk along a 3D polyline by a given arc length_
+*Walk along a 3D polyline by a given arc length*

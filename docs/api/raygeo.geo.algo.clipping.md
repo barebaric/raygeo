@@ -1,7 +1,6 @@
 ---
 title: raygeo.geo.algo.clipping
 sidebar_label: raygeo.geo.algo.clipping
-sidebar_position: 6
 ---
 
 Line and polygon clipping operations.
@@ -23,17 +22,17 @@ clip_line_segment_with_polygons(
 
 Clip line segments that fall within polygon regions.
 
-| Parameter    | Type                                        | Description                                                                                  |
-| ------------ | ------------------------------------------- | -------------------------------------------------------------------------------------------- |
-| `p1`         | `types.Point3D`                             | Start point of the line segment.                                                             |
-| `p2`         | `types.Point3D`                             | End point of the line segment.                                                               |
-| `regions`    | `Sequence[Sequence[types.Point]]`           | Polygon regions to clip against.                                                             |
-| _Returns_    | `list[tuple[types.Point3D, types.Point3D]]` | List of clipped segments.                                                                    |
-| _Complexity_ |                                             | O(n \* m) time, O(n) space where n is the number of regions and m their average vertex count |
+| Parameter    | Type                                        | Description                                                                                 |
+| ------------ | ------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| `p1`         | `types.Point3D`                             | Start point of the line segment.                                                            |
+| `p2`         | `types.Point3D`                             | End point of the line segment.                                                              |
+| `regions`    | `Sequence[Sequence[types.Point]]`           | Polygon regions to clip against.                                                            |
+| _Returns_    | `list[tuple[types.Point3D, types.Point3D]]` | List of clipped segments.                                                                   |
+| _Complexity_ |                                             | O(n * m) time, O(n) space where n is the number of regions and m their average vertex count |
 
 ![Line clipped to polygon](images/geo-algo-clipping-polygon.png)
 
-_Line clipped to polygon_
+*Line clipped to polygon*
 
 ### `clip_line_segment_with_polygons_2d()`
 
@@ -47,13 +46,13 @@ clip_line_segment_with_polygons_2d(
 
 Clip 2D line segments that fall within polygon regions (XY-plane only).
 
-| Parameter    | Type                                    | Description                                                                                  |
-| ------------ | --------------------------------------- | -------------------------------------------------------------------------------------------- |
-| `p1`         | `types.Point`                           | Start point (x, y).                                                                          |
-| `p2`         | `types.Point`                           | End point (x, y).                                                                            |
-| `regions`    | `Sequence[Sequence[types.Point]]`       | Polygon regions to clip against.                                                             |
-| _Returns_    | `list[tuple[types.Point, types.Point]]` | List of clipped segments.                                                                    |
-| _Complexity_ |                                         | O(n \* m) time, O(n) space where n is the number of regions and m their average vertex count |
+| Parameter    | Type                                    | Description                                                                                 |
+| ------------ | --------------------------------------- | ------------------------------------------------------------------------------------------- |
+| `p1`         | `types.Point`                           | Start point (x, y).                                                                         |
+| `p2`         | `types.Point`                           | End point (x, y).                                                                           |
+| `regions`    | `Sequence[Sequence[types.Point]]`       | Polygon regions to clip against.                                                            |
+| _Returns_    | `list[tuple[types.Point, types.Point]]` | List of clipped segments.                                                                   |
+| _Complexity_ |                                         | O(n * m) time, O(n) space where n is the number of regions and m their average vertex count |
 
 ### `clip_line_segment_with_rect()`
 
@@ -77,7 +76,7 @@ Clip a line segment with a rectangle.
 
 ![Line clipped to rectangle](images/geo-algo-clipping-rect.png)
 
-_Line clipped to rectangle_
+*Line clipped to rectangle*
 
 ### `clip_line_segment_with_rect_2d()`
 
@@ -125,17 +124,17 @@ subtract_polygons_from_line_segment(
 
 Subtract polygon regions from a line segment.
 
-| Parameter    | Type                                        | Description                                                                                  |
-| ------------ | ------------------------------------------- | -------------------------------------------------------------------------------------------- |
-| `p1`         | `types.Point3D`                             | Start point of the line segment.                                                             |
-| `p2`         | `types.Point3D`                             | End point of the line segment.                                                               |
-| `regions`    | `Sequence[Sequence[types.Point]]`           | List of polygon regions to subtract.                                                         |
-| _Returns_    | `list[tuple[types.Point3D, types.Point3D]]` | List of remaining segments after subtraction.                                                |
-| _Complexity_ |                                             | O(n \* m) time, O(n) space where n is the number of regions and m their average vertex count |
+| Parameter    | Type                                        | Description                                                                                 |
+| ------------ | ------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| `p1`         | `types.Point3D`                             | Start point of the line segment.                                                            |
+| `p2`         | `types.Point3D`                             | End point of the line segment.                                                              |
+| `regions`    | `Sequence[Sequence[types.Point]]`           | List of polygon regions to subtract.                                                        |
+| _Returns_    | `list[tuple[types.Point3D, types.Point3D]]` | List of remaining segments after subtraction.                                               |
+| _Complexity_ |                                             | O(n * m) time, O(n) space where n is the number of regions and m their average vertex count |
 
 ![Subtract polygon from line](images/geo-algo-clipping-subtract.png)
 
-_Subtract polygon from line_
+*Subtract polygon from line*
 
 ### `subtract_polygons_from_line_segment_2d()`
 
@@ -149,13 +148,13 @@ subtract_polygons_from_line_segment_2d(
 
 Subtract polygon regions from a 2D line segment (XY-plane only).
 
-| Parameter    | Type                                    | Description                                                                                  |
-| ------------ | --------------------------------------- | -------------------------------------------------------------------------------------------- |
-| `p1`         | `types.Point`                           | Start point (x, y).                                                                          |
-| `p2`         | `types.Point`                           | End point (x, y).                                                                            |
-| `regions`    | `Sequence[Sequence[types.Point]]`       | List of polygon regions to subtract.                                                         |
-| _Returns_    | `list[tuple[types.Point, types.Point]]` | List of remaining segments after subtraction.                                                |
-| _Complexity_ |                                         | O(n \* m) time, O(n) space where n is the number of regions and m their average vertex count |
+| Parameter    | Type                                    | Description                                                                                 |
+| ------------ | --------------------------------------- | ------------------------------------------------------------------------------------------- |
+| `p1`         | `types.Point`                           | Start point (x, y).                                                                         |
+| `p2`         | `types.Point`                           | End point (x, y).                                                                           |
+| `regions`    | `Sequence[Sequence[types.Point]]`       | List of polygon regions to subtract.                                                        |
+| _Returns_    | `list[tuple[types.Point, types.Point]]` | List of remaining segments after subtraction.                                               |
+| _Complexity_ |                                         | O(n * m) time, O(n) space where n is the number of regions and m their average vertex count |
 
 ### `to_clipper()`
 

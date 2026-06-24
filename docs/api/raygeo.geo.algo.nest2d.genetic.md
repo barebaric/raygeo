@@ -1,7 +1,6 @@
 ---
 title: raygeo.geo.algo.nest2d.genetic
 sidebar_label: raygeo.geo.algo.nest2d.genetic
-sidebar_position: 19
 ---
 
 Genetic algorithm for nesting optimization.
@@ -19,10 +18,10 @@ generation() -> None
 
 Evolve one generation.
 
-| Parameter    | Type   | Description                                        |
-| ------------ | ------ | -------------------------------------------------- |
-| _Returns_    | `None` |                                                    |
-| _Complexity_ |        | O(p \* n) where p = population size, n = num_parts |
+| Parameter    | Type   | Description                                       |
+| ------------ | ------ | ------------------------------------------------- |
+| _Returns_    | `None` |                                                   |
+| _Complexity_ |        | O(p * n) where p = population size, n = num_parts |
 
 ### `get_fitness()`
 

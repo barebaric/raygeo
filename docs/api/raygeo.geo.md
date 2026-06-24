@@ -1,12 +1,11 @@
 ---
 title: raygeo.geo
 sidebar_label: raygeo.geo
-sidebar_position: 2
 ---
 
 ![Various geometry shapes and operations](images/geo-playground.png)
 
-_Various geometry shapes and operations_ Geometry types and operations for 2D/3D path data.
+*Various geometry shapes and operations* Geometry types and operations for 2D/3D path data.
 
 The central type is Geometry — a mutable sequence of drawing commands (move, line, arc, bezier) that
 represents one or more closed or open paths. Geometry supports construction (add_rect, add_circle,
@@ -297,7 +296,7 @@ After this call, the geometry will only contain Move, Line, and Bezier commands.
 
 ![Overlay showing Bezier curves (with control points) closely matching the original arcs](images/geo-arc-to-bezier.png)
 
-_Overlay showing Bezier curves (with control points) closely matching the original arcs_
+*Overlay showing Bezier curves (with control points) closely matching the original arcs*
 
 ### `copy()`
 
@@ -649,11 +648,11 @@ intersects_with(other: Geometry) -> bool
 
 Check if this geometry intersects with another.
 
-| Parameter    | Type       | Description                                                                                     |
-| ------------ | ---------- | ----------------------------------------------------------------------------------------------- |
-| `other`      | `Geometry` | The other geometry.                                                                             |
-| _Returns_    | `bool`     |                                                                                                 |
-| _Complexity_ |            | O(n \* m) worst-case time, O(1) space where n and m are the number of segments in each geometry |
+| Parameter    | Type       | Description                                                                                    |
+| ------------ | ---------- | ---------------------------------------------------------------------------------------------- |
+| `other`      | `Geometry` | The other geometry.                                                                            |
+| _Returns_    | `bool`     |                                                                                                |
+| _Complexity_ |            | O(n * m) worst-case time, O(1) space where n and m are the number of segments in each geometry |
 
 ### `is_closed()`
 

@@ -1,12 +1,11 @@
 ---
 title: raygeo.geo.algo.astar
 sidebar_label: raygeo.geo.algo.astar
-sidebar_position: 5
 ---
 
 ![A* pathfinding in an open rectangle — the shortest path is a straight line from start to goal](images/geo-algo-astar-simple-path.png)
 
-_A_ pathfinding in an open rectangle — the shortest path is a straight line from start to goal\*
+*A* pathfinding in an open rectangle — the shortest path is a straight line from start to goal\*
 
 ## AStarPath
 
@@ -43,10 +42,10 @@ find_path(
 ) -> AStarPath | None
 ```
 
-Find a path from _from\__ to _to_ inside _free_space_, avoiding _obstacles_.
+Find a path from *from\_* to *to* inside *free_space*, avoiding *obstacles*.
 
-The walkable area is rasterised at _cell_size_ resolution. Obstacles are dilated by
-_obstacle_margin_ before pathfinding.
+The walkable area is rasterised at *cell_size* resolution. Obstacles are dilated by
+*obstacle_margin* before pathfinding.
 
 | Parameter         | Type                                           | Description                                                   |
 | ----------------- | ---------------------------------------------- | ------------------------------------------------------------- |
@@ -60,14 +59,14 @@ _obstacle_margin_ before pathfinding.
 
 ![A* finds a path around a central obstacle when the direct route is blocked](images/geo-algo-astar-obstacle-detour.png)
 
-_A_ finds a path around a central obstacle when the direct route is blocked\*
+*A* finds a path around a central obstacle when the direct route is blocked\*
 
 ![A* threading a path between multiple disconnected obstacles — the algorithm explores the free cells and finds an optimal route](images/geo-algo-astar-multiple-obstacles.png)
 
-_A_ threading a path between multiple disconnected obstacles — the algorithm explores the free cells
+*A* threading a path between multiple disconnected obstacles — the algorithm explores the free cells
 and finds an optimal route\*
 
 ![Increasing the obstacle margin (right) pushes the path further from obstacles compared to no margin (left)](images/geo-algo-astar-obstacle-margin.png)
 
-_Increasing the obstacle margin (right) pushes the path further from obstacles compared to no margin
-(left)_
+*Increasing the obstacle margin (right) pushes the path further from obstacles compared to no margin
+(left)*

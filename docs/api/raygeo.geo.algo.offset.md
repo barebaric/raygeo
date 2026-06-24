@@ -1,7 +1,6 @@
 ---
 title: raygeo.geo.algo.offset
 sidebar_label: raygeo.geo.algo.offset
-sidebar_position: 24
 ---
 
 Polygon offsetting operations for geometry data.
@@ -21,8 +20,8 @@ compute_inset_region(
 ) -> tuple[list[list[tuple[float, float]]], float]
 ```
 
-Compute the inset region: boundary shrunk by _radius_, minus obstacle buffers (each obstacle
-expanded by _radius_).
+Compute the inset region: boundary shrunk by *radius*, minus obstacle buffers (each obstacle
+expanded by *radius*).
 
 | Parameter    | Type                                            | Description                                                                |
 | ------------ | ----------------------------------------------- | -------------------------------------------------------------------------- |
@@ -34,12 +33,12 @@ expanded by _radius_).
 
 ![Inset region: boundary shrunk by radius, obstacles subtracted. Left: simple inset. Right: inset with a central obstacle.](images/geo-algo-offset-inset-region.png)
 
-_Inset region: boundary shrunk by radius, obstacles subtracted. Left: simple inset. Right: inset
-with a central obstacle._
+*Inset region: boundary shrunk by radius, obstacles subtracted. Left: simple inset. Right: inset
+with a central obstacle.*
 
 ![Multi-obstacle inset: the region splits into multiple disconnected polygons.](images/geo-algo-offset-inset-region-multi-obstacle.png)
 
-_Multi-obstacle inset: the region splits into multiple disconnected polygons._
+*Multi-obstacle inset: the region splits into multiple disconnected polygons.*
 
 ### `concentric_offsets()`
 
@@ -57,18 +56,18 @@ Generate concentric inward offsets of a geometry.
 Each successive offset shrinks the boundary by `step`. Stops early when the enclosed area drops
 below `min_area` or `max_passes` is reached. Returns offsets outermost-first.
 
-| Parameter    | Type             | Description                                                                                     |
-| ------------ | ---------------- | ----------------------------------------------------------------------------------------------- |
-| `geom`       | `Geometry`       | A closed geometry.                                                                              |
-| `step`       | `float`          | Inward offset distance per pass.                                                                |
-| `max_passes` | `int = 10`       | Maximum number of offset passes (default 10).                                                   |
-| `min_area`   | `float = 1`      | Minimum area to stop at (default 1.0).                                                          |
-| _Returns_    | `list[Geometry]` | List of offset geometries, outermost first.                                                     |
-| _Complexity_ |                  | O(n \* p) time, O(n) space where n is the number of contour vertices and p the number of passes |
+| Parameter    | Type             | Description                                                                                    |
+| ------------ | ---------------- | ---------------------------------------------------------------------------------------------- |
+| `geom`       | `Geometry`       | A closed geometry.                                                                             |
+| `step`       | `float`          | Inward offset distance per pass.                                                               |
+| `max_passes` | `int = 10`       | Maximum number of offset passes (default 10).                                                  |
+| `min_area`   | `float = 1`      | Minimum area to stop at (default 1.0).                                                         |
+| _Returns_    | `list[Geometry]` | List of offset geometries, outermost first.                                                    |
+| _Complexity_ |                  | O(n * p) time, O(n) space where n is the number of contour vertices and p the number of passes |
 
 ![Concentric inward offsets for adaptive clearing / pocketing](images/geo-algo-offset-concentric.png)
 
-_Concentric inward offsets for adaptive clearing / pocketing_
+*Concentric inward offsets for adaptive clearing / pocketing*
 
 ### `find_deepest_cores()`
 
@@ -84,27 +83,27 @@ Find the deepest (most open) regions of a polygon set.
 Iteratively offsets each polygon inward by step_over until all polygons collapse. Returns the
 centroids of the final polygons.
 
-| Parameter    | Type                          | Description                                   |
-| ------------ | ----------------------------- | --------------------------------------------- |
-| `regions`    | `Sequence[geo.types.Polygon]` | List of polygons to search.                   |
-| `step_over`  | `float`                       | Inward offset distance per iteration.         |
-| _Returns_    | `list[geo.types.Point]`       | List of (x, y) centroid points.               |
-| _Complexity_ |                               | O(n \* k) where k is the number of iterations |
+| Parameter    | Type                          | Description                                  |
+| ------------ | ----------------------------- | -------------------------------------------- |
+| `regions`    | `Sequence[geo.types.Polygon]` | List of polygons to search.                  |
+| `step_over`  | `float`                       | Inward offset distance per iteration.        |
+| _Returns_    | `list[geo.types.Point]`       | List of (x, y) centroid points.              |
+| _Complexity_ |                               | O(n * k) where k is the number of iterations |
 
 ![Deepest-core detection: finds the point of maximum clearance inside the valid tool area — the best helical-entry point for the pocket](images/geo-algo-offset-deepest-cores.png)
 
-_Deepest-core detection: finds the point of maximum clearance inside the valid tool area — the best
-helical-entry point for the pocket_
+*Deepest-core detection: finds the point of maximum clearance inside the valid tool area — the best
+helical-entry point for the pocket*
 
 ![Multi-island pocket: islands are detected by orientation (clockwise contours) and excluded; the core is the pole of inaccessibility of the largest valid region](images/geo-algo-offset-deepest-cores-multi.png)
 
-_Multi-island pocket: islands are detected by orientation (clockwise contours) and excluded; the
-core is the pole of inaccessibility of the largest valid region_
+*Multi-island pocket: islands are detected by orientation (clockwise contours) and excluded; the
+core is the pole of inaccessibility of the largest valid region*
 
 ![Central-island pocket (annular): the island creates a ring of valid tool area; the deepest core is the point of maximum clearance in the ring — never inside the island](images/geo-algo-offset-deepest-cores-central.png)
 
-_Central-island pocket (annular): the island creates a ring of valid tool area; the deepest core is
-the point of maximum clearance in the ring — never inside the island_
+*Central-island pocket (annular): the island creates a ring of valid tool area; the deepest core is
+the point of maximum clearance in the ring — never inside the island*
 
 ### `offset_contour_group()`
 
