@@ -2,11 +2,13 @@
 # ruff: noqa: E501, F401, F403, F405
 
 from . import adaptive
-from . import hsm
+from . import entry
 from . import polyline
+from . import wavefront
 __all__ = [
     "adaptive",
-    "hsm",
+    "entry",
     "polyline",
+    "wavefront",
 ]
 

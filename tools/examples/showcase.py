@@ -16,7 +16,7 @@ from raygeo.geo.algo.smooth import smooth_polyline_3d
 from raygeo.geo.shape.bezier import linearize_bezier_adaptive
 from raygeo.geo.shape.polygon import get_polygon_convex_hull
 from raygeo.geo.shape.polygon3d import fillet_polyline_3d, offset_polyline_3d
-from raygeo.ops.assembly.hsm import adaptive_entry, adaptive_peeling
+from raygeo.ops.assembly.entry import adaptive_entry
 from raygeo.ops.cleared_area import ClearedArea
 from raygeo.ops.raster import ScanMode, rasterize_power_modulation
 from raygeo.ops.types import CommandType
@@ -521,89 +521,16 @@ def _plot_bite_in_direction(ax):
 
 
 def _plot_peeling_multi(ax):
-    boundary = [(0, 0), (180, 0), (180, 120), (0, 120)]
-    islands = [
-        [(15, 15), (35, 15), (35, 35), (15, 35)],
-        [
-            (
-                80 + 10 * math.cos(2 * math.pi * i / 32),
-                50 + 10 * math.sin(2 * math.pi * i / 32),
-            )
-            for i in range(32)
-        ],
-        [(130, 80), (160, 80), (160, 105), (130, 105)],
-    ]
-    _, cp = adaptive_entry(
-        pocket_boundary=boundary,
-        islands=islands,
-        tool_radius=3.0,
-        step_over=2.0,
-        safe_z=2.0,
-        target_z=-5.0,
-        plunge_pitch=1.0,
+    ax.text(
+        0.5,
+        0.5,
+        "(removed)",
+        ha="center",
+        va="center",
+        transform=ax.transAxes,
+        fontsize=10,
+        color="gray",
     )
-    ca = ClearedArea(initial=cp)
-    ops = adaptive_peeling(
-        cleared=ca,
-        pocket_boundary=boundary,
-        islands=islands,
-        tool_radius=3.0,
-        step_over=2.0,
-        cut_z=-5.0,
-        safe_z=5.0,
-    )
-
-    pts = []
-    for i in range(ops.len()):
-        if ops.is_travel(i) or ops.is_cutting(i):
-            ep = ops.endpoint(i)
-            pts.append((ep[0], ep[1], ep[2], ops.is_travel(i)))
-
-    if pts:
-        seg_x, seg_y, is_travel = [], [], False
-        for x, y, z, travel in pts:
-            if seg_x and travel != is_travel:
-                if len(seg_x) >= 2:
-                    color = "#2ca02c" if is_travel else "#e41a1c"
-                    ls = "--" if is_travel else "-"
-                    ax.plot(
-                        seg_x,
-                        seg_y,
-                        color=color,
-                        linewidth=0.7,
-                        linestyle=ls,
-                    )
-                seg_x, seg_y = [], []
-            if not seg_x:
-                is_travel = travel
-            seg_x.append(x)
-            seg_y.append(y)
-        if len(seg_x) >= 2:
-            color = "#2ca02c" if is_travel else "#e41a1c"
-            ls = "--" if is_travel else "-"
-            ax.plot(
-                seg_x,
-                seg_y,
-                color=color,
-                linewidth=0.7,
-                linestyle=ls,
-            )
-
-    bnd = np.array(list(boundary) + [boundary[0]])
-    ax.plot(bnd[:, 0], bnd[:, 1], "k-", linewidth=2, label="Boundary")
-    for isl in islands:
-        isl_arr = np.array(list(isl) + [isl[0]])
-        ax.fill(
-            isl_arr[:, 0],
-            isl_arr[:, 1],
-            facecolor="#ccc",
-            edgecolor="#999",
-            linewidth=1.5,
-            label="Island" if isl is islands[0] else None,
-        )
-    ax.set_aspect("equal")
-    ax.grid(True, alpha=0.3)
-    ax.set_title("HSM Peeling (Multi)", fontsize=10)
 
 
 def _plot_fillet_polyline_3d(ax):

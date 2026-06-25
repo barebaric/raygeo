@@ -12,7 +12,6 @@ pub mod state;
 pub mod transform;
 pub mod types;
 
-pub use assembly::hsm::{adaptive_peeling, link_arcs_to_ops};
 pub use assembly::polyline::polyline_to_ops;
 pub use axis::Axis;
 pub use container::Ops;

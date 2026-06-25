@@ -160,9 +160,7 @@ class ClearedArea:
         representing an area that has already been cut.  The fragment set
         grows as ``incorporate`` or ``add_cleared_polygons`` are called.
         
-        This is useful for determining which parts of a bite polygon
-        lie outside the cleared area (i.e. the cutting arc), for example
-        when used with :py:func:`raygeo.ops.assembly.hsm.find_cutting_arc`.
+        This is useful for inspecting which areas have been cleared.
         
         :returns: List of polygons representing the cleared fragments.
         :complexity: O(m) where m = number of fragments

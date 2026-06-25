@@ -1,16 +1,18 @@
 use pyo3::prelude::*;
 
 pub(crate) mod adaptive;
-pub(crate) mod hsm;
+pub(crate) mod entry;
 pub(crate) mod polyline;
+pub(crate) mod wavefront;
 
 pub(crate) fn register(ops_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     let py = ops_mod.py();
     let assembly_mod = PyModule::new(py, "assembly")?;
 
     adaptive::register(&assembly_mod)?;
-    hsm::register(&assembly_mod)?;
+    entry::register(&assembly_mod)?;
     polyline::register(&assembly_mod)?;
+    wavefront::register(&assembly_mod)?;
 
     ops_mod.add_submodule(&assembly_mod)?;
 

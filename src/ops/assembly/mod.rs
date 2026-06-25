@@ -7,6 +7,7 @@
 //! belong to motion assembly rather than pure geometry.
 
 pub mod adaptive;
-pub mod hsm;
+pub mod entry;
 pub mod polyline;
 pub mod raster;
+pub mod wavefront;
