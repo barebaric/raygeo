@@ -11,12 +11,12 @@ from raygeo.geo.algo import hull
 from raygeo.geo.algo.cylindrical import transform_to_cylinder
 from raygeo.geo.algo.helix import HelixDirection, generate_helix_3d
 from raygeo.geo.algo.nest2d.placement import place_parts
-from raygeo.geo.algo.offset import compute_inset_region
 from raygeo.geo.algo.smooth import smooth_polyline_3d
 from raygeo.geo.shape.bezier import linearize_bezier_adaptive
 from raygeo.geo.shape.polygon import get_polygon_convex_hull
 from raygeo.geo.shape.polygon3d import fillet_polyline_3d, offset_polyline_3d
 from raygeo.ops.assembly.entry import adaptive_entry
+from raygeo.ops.assembly.wavefront import adaptive_wavefronts
 from raygeo.ops.cleared_area import ClearedArea
 from raygeo.ops.raster import ScanMode, rasterize_power_modulation
 from raygeo.ops.types import CommandType
@@ -436,90 +436,6 @@ def _plot_3d_offset(ax):
     ax.legend(fontsize=8)
 
 
-def _plot_bite_in_direction(ax):
-    boundary = [(0, 0), (180, 0), (180, 120), (0, 120)]
-    islands = [
-        [(15, 15), (35, 15), (35, 35), (15, 35)],
-        [
-            (
-                80 + 10 * math.cos(2 * math.pi * i / 32),
-                50 + 10 * math.sin(2 * math.pi * i / 32),
-            )
-            for i in range(32)
-        ],
-        [(130, 80), (160, 80), (160, 105), (130, 105)],
-    ]
-    tool_radius = 3.0
-    step_over = 2.0
-
-    _, cp = adaptive_entry(
-        pocket_boundary=boundary,
-        islands=islands,
-        tool_radius=tool_radius,
-        step_over=step_over,
-        safe_z=2.0,
-        target_z=-5.0,
-        plunge_pitch=1.0,
-    )
-    ca = ClearedArea(initial=cp)
-    va, total = compute_inset_region(boundary, tool_radius, islands)
-
-    directions = {
-        "east": (200, 60),
-        "north": (90, 140),
-        "west": (-20, 60),
-        "south": (90, -20),
-    }
-    all_bites = []
-
-    for label, target in directions.items():
-        for _ in range(20):
-            bites = ca.bite_in_direction(
-                step_over,
-                va,
-                0.01,
-                target,
-                math.pi / 3,
-            )
-            if not bites:
-                break
-            for b in bites:
-                all_bites.append((b, label))
-            ca.incorporate(bites)
-
-    bx = [p[0] for p in boundary] + [boundary[0][0]]
-    by = [p[1] for p in boundary] + [boundary[0][1]]
-    ax.plot(bx, by, "k-", linewidth=1.5, alpha=0.3, label="Boundary")
-
-    for isl in islands:
-        ix = [p[0] for p in isl] + [isl[0][0]]
-        iy = [p[1] for p in isl] + [isl[0][1]]
-        ax.fill(
-            ix,
-            iy,
-            facecolor="lightgray",
-            edgecolor="gray",
-            hatch="///",
-            linewidth=1,
-        )
-
-    n = len(all_bites)
-    for idx, (bite, label) in enumerate(all_bites):
-        t = idx / max(n - 1, 1)
-        r = 0.9 - 0.6 * t
-        g = 0.2 + 0.5 * t
-        color = (r, g, 0.2)
-        xs = [p[0] for p in bite] + [bite[0][0]]
-        ys = [p[1] for p in bite] + [bite[0][1]]
-        ax.fill(
-            xs, ys, facecolor=color, alpha=0.3, edgecolor=color, linewidth=0.5
-        )
-
-    ax.set_aspect("equal")
-    ax.grid(True, alpha=0.3)
-    ax.set_title("Directional Bites", fontsize=10)
-
-
 def _plot_peeling_multi(ax):
     ax.text(
         0.5,
@@ -577,6 +493,80 @@ def _plot_fillet_polyline_3d(ax):
     ax.legend(fontsize=8)
 
 
+def _plot_adaptive_wavefronts(ax):
+    """Wavefront contours in a pocket with islands."""
+    boundary = [(0, 0), (180, 0), (180, 120), (0, 120)]
+    islands = [
+        [(15, 15), (35, 15), (35, 35), (15, 35)],
+        [
+            (
+                80 + 10 * math.cos(2 * math.pi * i / 32),
+                50 + 10 * math.sin(2 * math.pi * i / 32),
+            )
+            for i in range(32)
+        ],
+        [(130, 80), (160, 80), (160, 105), (130, 105)],
+    ]
+    _, cp = adaptive_entry(
+        pocket_boundary=boundary,
+        islands=islands,
+        tool_radius=3.0,
+        step_over=2.0,
+        safe_z=2.0,
+        target_z=-5.0,
+        plunge_pitch=1.0,
+    )
+    ca = ClearedArea(initial=cp)
+    ops = adaptive_wavefronts(
+        ca,
+        boundary,
+        islands=islands,
+        tool_radius=3.0,
+        step_over=2.0,
+        z=-5.0,
+        area_tolerance=1.0,
+    )
+
+    bx = [p[0] for p in boundary] + [boundary[0][0]]
+    by = [p[1] for p in boundary] + [boundary[0][1]]
+    ax.plot(bx, by, "k-", linewidth=1.5, alpha=0.3)
+
+    for isl in islands:
+        ix = [p[0] for p in isl] + [isl[0][0]]
+        iy = [p[1] for p in isl] + [isl[0][1]]
+        ax.fill(
+            ix,
+            iy,
+            facecolor="lightgray",
+            edgecolor="gray",
+            hatch="///",
+            linewidth=1,
+        )
+
+    for poly in cp:
+        px = [p[0] for p in poly] + [poly[0][0]]
+        py = [p[1] for p in poly] + [poly[0][1]]
+        ax.fill(px, py, "white", zorder=2)
+        ax.plot(px, py, "steelblue", linewidth=1, alpha=0.4, zorder=2)
+
+    subpaths = ops.split_into_subpaths()
+    n_wf = len(subpaths)
+    for i, sub in enumerate(subpaths):
+        t = i / max(n_wf - 1, 1)
+        color = (0.9 - 0.6 * t, 0.2 + 0.5 * t, 0.2)
+        pts = []
+        for j in range(sub.len()):
+            if sub.is_cutting(j):
+                ep = sub.endpoint(j)
+                pts.append((ep[0], ep[1]))
+        if len(pts) >= 2:
+            xs, ys = zip(*pts)
+            ax.plot(xs, ys, color=color, linewidth=0.7, alpha=0.8)
+
+    ax.set_aspect("equal")
+    ax.set_title("Adaptive Wavefronts", fontsize=10)
+
+
 def generate_showcase():
     fig = plt.figure(figsize=(24, 16), layout="constrained")
 
@@ -604,7 +594,7 @@ def generate_showcase():
     _plot_concave_hull(axs[0][0])
     _plot_arc_fitting(axs[0][1])
     _plot_nesting(axs[0][2])
-    _plot_bite_in_direction(axs[0][3])
+    _plot_adaptive_wavefronts(axs[0][3])
     _plot_raster_power_modulation(axs[1][0])
     _plot_smooth(axs[1][1])
     _plot_linearization(axs[1][2])

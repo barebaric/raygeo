@@ -36,29 +36,6 @@ Add pre‑computed polygons to the cleared set.
 *ClearedArea with bulk polygon insertion via `add_cleared_polygons` — cleared region in blue,
 remaining area in red*
 
-### `all_bites()`
-
-```python
-all_bites(
-    step_over: float,
-    valid_area: Sequence[Sequence[tuple[float, float]]],
-    simplify_tol: float,
-) -> list[list[list[tuple[float, float]]]]
-```
-
-Iteratively call **bites** + **incorporate** until the valid area is fully cleared.
-
-Returns all passes, each pass being a list of bite polygons. The cleared area is fully cleared after
-this call.
-
-| Parameter      | Type                                      | Description                                              |
-| -------------- | ----------------------------------------- | -------------------------------------------------------- |
-| `step_over`    | `float`                                   | Lateral step-over in mm.                                 |
-| `valid_area`   | `Sequence[Sequence[tuple[float, float]]]` | List of polygons defining the valid tool-centre region.  |
-| `simplify_tol` | `float`                                   | Tolerance in mm for frontier simplification.             |
-| _Returns_      | `list[list[list[tuple[float, float]]]]`   | List of passes, each pass being a list of bite polygons. |
-| _Complexity_   |                                           | O(k n log n) where k = number of passes                  |
-
 ### `begin_step_batch()`
 
 ```python
@@ -80,36 +57,6 @@ Calling this while a batch is already active is a no‑op.
 
 *Three segments queued via `begin_step_batch` / `expand_step_batched` then unioned in a single
 `commit_step_batch` pass.*
-
-### `bite_in_direction()`
-
-```python
-bite_in_direction(
-    step_over: float,
-    valid_area: Sequence[Sequence[tuple[float, float]]],
-    simplify_tol: float,
-    target: tuple[float, float],
-    max_angle: float,
-) -> list[list[tuple[float, float]]]
-```
-
-Like **bites** but filters to only the bites whose centroid lies within *max_angle* radians of the
-direction from the current cleared region's centre toward *target*. useful for steering the clearing
-direction along a MAT branch.
-
-| Parameter      | Type                                      | Description                                              |
-| -------------- | ----------------------------------------- | -------------------------------------------------------- |
-| `step_over`    | `float`                                   | Lateral step-over in mm.                                 |
-| `valid_area`   | `Sequence[Sequence[tuple[float, float]]]` | List of polygons defining the valid tool-centre region.  |
-| `simplify_tol` | `float`                                   | Tolerance in mm for frontier simplification.             |
-| `target`       | `tuple[float, float]`                     | `(x, y)` target point to steer toward.                   |
-| `max_angle`    | `float`                                   | Maximum deviation from the target direction (radians).   |
-| _Returns_      | `list[list[tuple[float, float]]]`         | List of polygons representing the filtered bite regions. |
-| _Complexity_   |                                           | O(n log n)                                               |
-
-![Directional bites coloured by pass order (first = dark, later = pale)](images/ops-cleared-area-bite-in-direction.png)
-
-*Directional bites coloured by pass order (first = dark, later = pale)*
 
 ### `bites()`
 
@@ -249,25 +196,6 @@ Panics if `begin_step_batch` was not called first.
 | `radius`  | `float`               | Disk radius (mm).                    |
 | _Returns_ | `None`                |                                      |
 
-### `expand_step_local()`
-
-```python
-expand_step_local(
-    prev: tuple[float, float],
-    next: tuple[float, float],
-    radius: float,
-) -> None
-```
-
-Single-step local expansion (only updates fragments whose bbox overlaps the segment).
-
-| Parameter | Type                  | Description                          |
-| --------- | --------------------- | ------------------------------------ |
-| `prev`    | `tuple[float, float]` | Start point `(x, y)` of the segment. |
-| `next`    | `tuple[float, float]` | End point `(x, y)` of the segment.   |
-| `radius`  | `float`               | Disk radius (mm).                    |
-| _Returns_ | `None`                |                                      |
-
 ### `find_next_resume()`
 
 ```python
@@ -358,21 +286,6 @@ don't overlap existing fragments (skips the full union).
 *`incorporate` adds polygons to the cleared state while returning only the newly-covered region
 (shown in green).*
 
-### `incorporate_local()`
-
-```python
-incorporate_local(
-    polys: Sequence[Sequence[tuple[float, float]]],
-) -> list[list[tuple[float, float]]]
-```
-
-Local version of incorporate.
-
-| Parameter | Type                                      | Description                                            |
-| --------- | ----------------------------------------- | ------------------------------------------------------ |
-| `polys`   | `Sequence[Sequence[tuple[float, float]]]` | List of polygons to add.                               |
-| _Returns_ | `list[list[tuple[float, float]]]`         | List of polygons representing the newly-added portion. |
-
 ### `is_empty()`
 
 ```python
@@ -460,27 +373,6 @@ Subtract cleared fragments from the boundary polygons, returning the uncut regio
 
 *`remaining` subtracts cleared fragments from the boundary polygon, returning the uncut region
 (red).*
-
-### `remaining_in_inset()`
-
-```python
-remaining_in_inset(
-    boundary: Sequence[tuple[float, float]],
-    obstacles: Optional[Sequence[Sequence[tuple[float, float]]]] = None,
-    radius: float = 3.0,
-) -> list[list[tuple[float, float]]]
-```
-
-Compute the inset region of *boundary* by *radius* (excluding *obstacles*), then return the portions
-of that region not covered by stored fragments, together with the original obstacle polygons.
-
-| Parameter    | Type                                                       | Description                                                                      |
-| ------------ | ---------------------------------------------------------- | -------------------------------------------------------------------------------- |
-| `boundary`   | `Sequence[tuple[float, float]]`                            | Outer boundary polygon.                                                          |
-| `obstacles`  | `Optional[Sequence[Sequence[tuple[float, float]]]] = None` | Obstacle (hole) polygons to exclude.                                             |
-| `radius`     | `float = 3.0`                                              | Inset distance applied to *boundary* and *obstacles*.                            |
-| _Returns_    | `list[list[tuple[float, float]]]`                          | List of polygons — the obstacles plus the uncovered portion of the inset region. |
-| _Complexity_ |                                                            | O(n log n) for the inset and difference operations.                              |
 
 ### `run_segment()`
 
@@ -580,6 +472,10 @@ behaviour.*
 ```python
 total_area() -> float
 ```
+
+Like **bites** but filters to only the bites whose centroid lies within *max_angle* radians of the
+direction from the current cleared region's centre toward *target*. useful for steering the clearing
+direction along a MAT branch.
 
 Total cleared area.
 

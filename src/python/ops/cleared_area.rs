@@ -437,75 +437,6 @@ impl ClearedArea {
     /// :param step_over: Lateral step-over in mm.
     /// :param valid_area: List of polygons defining the valid tool-centre region.
     /// :param simplify_tol: Tolerance in mm for frontier simplification.
-    /// :param target: ``(x, y)`` target point to steer toward.
-    /// :param max_angle: Maximum deviation from the target direction (radians).
-    /// :returns: List of polygons representing the filtered bite regions.
-    /// :complexity: O(n log n)
-    pub fn bite_in_direction(
-        &self,
-        step_over: f64,
-        valid_area: Vec<Vec<(f64, f64)>>,
-        simplify_tol: f64,
-        target: (f64, f64),
-        max_angle: f64,
-    ) -> Vec<Vec<(f64, f64)>> {
-        let valid: Vec<crate::types::Polygon> = valid_area
-            .into_iter()
-            .map(|v| {
-                v.into_iter()
-                    .map(|(x, y)| crate::types::Point::new(x, y))
-                    .collect()
-            })
-            .collect();
-        let bites = self.inner.bite_in_direction(
-            step_over,
-            &valid,
-            simplify_tol,
-            crate::types::Point::new(target.0, target.1),
-            max_angle,
-        );
-        bites
-            .into_iter()
-            .map(|poly| poly.into_iter().map(|p| (p.x, p.y)).collect())
-            .collect()
-    }
-
-    /// Iteratively call :py:meth:`bites` + :py:meth:`incorporate` until
-    /// the valid area is fully cleared.
-    ///
-    /// Returns all passes, each pass being a list of bite polygons.
-    /// The cleared area is fully cleared after this call.
-    ///
-    /// :param step_over: Lateral step-over in mm.
-    /// :param valid_area: List of polygons defining the valid tool-centre region.
-    /// :param simplify_tol: Tolerance in mm for frontier simplification.
-    /// :returns: List of passes, each pass being a list of bite polygons.
-    /// :complexity: O(k n log n) where k = number of passes
-    pub fn all_bites(
-        &mut self,
-        step_over: f64,
-        valid_area: Vec<Vec<(f64, f64)>>,
-        simplify_tol: f64,
-    ) -> Vec<Vec<Vec<(f64, f64)>>> {
-        let valid: Vec<crate::types::Polygon> = valid_area
-            .into_iter()
-            .map(|v| {
-                v.into_iter()
-                    .map(|(x, y)| crate::types::Point::new(x, y))
-                    .collect()
-            })
-            .collect();
-        let passes = self.inner.all_bites(step_over, &valid, simplify_tol);
-        passes
-            .into_iter()
-            .map(|pass| {
-                pass.into_iter()
-                    .map(|poly| poly.into_iter().map(|p| (p.x, p.y)).collect())
-                    .collect()
-            })
-            .collect()
-    }
-
     /// Total cleared area.
     ///
     /// :returns: Total cleared area in mm².
@@ -543,47 +474,6 @@ impl ClearedArea {
             .fragments()
             .iter()
             .map(|poly| poly.iter().map(|p| (p.x, p.y)).collect())
-            .collect()
-    }
-
-    /// Compute the inset region of *boundary* by *radius* (excluding
-    /// *obstacles*), then return the portions of that region not covered
-    /// by stored fragments, together with the original obstacle polygons.
-    ///
-    /// :param boundary: Outer boundary polygon.
-    /// :param obstacles: Obstacle (hole) polygons to exclude.
-    /// :param radius: Inset distance applied to *boundary* and *obstacles*.
-    /// :returns: List of polygons — the obstacles plus the uncovered
-    ///           portion of the inset region.
-    /// :complexity: O(n log n) for the inset and difference operations.
-    #[pyo3(signature = (boundary, obstacles = None, radius = 3.0))]
-    pub fn remaining_in_inset(
-        &self,
-        boundary: Vec<(f64, f64)>,
-        obstacles: Option<Vec<Vec<(f64, f64)>>>,
-        radius: f64,
-    ) -> Vec<Vec<(f64, f64)>> {
-        let boundary_poly: crate::types::Polygon = boundary
-            .into_iter()
-            .map(|(x, y)| crate::types::Point::new(x, y))
-            .collect();
-        let obstacles_polys: Vec<crate::types::Polygon> = obstacles
-            .unwrap_or_default()
-            .into_iter()
-            .map(|v| {
-                v.into_iter()
-                    .map(|(x, y)| crate::types::Point::new(x, y))
-                    .collect()
-            })
-            .collect();
-        let result = self.inner.remaining_in_inset(
-            &boundary_poly,
-            &obstacles_polys,
-            radius,
-        );
-        result
-            .into_iter()
-            .map(|poly| poly.into_iter().map(|p| (p.x, p.y)).collect())
             .collect()
     }
 
@@ -765,42 +655,6 @@ impl ClearedArea {
             "local" => self.inner.set_update_strategy(UpdateStrategy::Local),
             _ => self.inner.set_update_strategy(UpdateStrategy::Global),
         }
-    }
-
-    /// Single-step local expansion (only updates fragments whose bbox overlaps the segment).
-    ///
-    /// :param prev: Start point ``(x, y)`` of the segment.
-    /// :param next: End point ``(x, y)`` of the segment.
-    /// :param radius: Disk radius (mm).
-    pub fn expand_step_local(
-        &mut self,
-        prev: (f64, f64),
-        next: (f64, f64),
-        radius: f64,
-    ) {
-        self.inner.expand_step_local(
-            Point::new(prev.0, prev.1),
-            Point::new(next.0, next.1),
-            radius,
-        );
-    }
-
-    /// Local version of incorporate.
-    ///
-    /// :param polys: List of polygons to add.
-    /// :returns: List of polygons representing the newly-added portion.
-    pub fn incorporate_local(
-        &mut self,
-        polys: Vec<Vec<(f64, f64)>>,
-    ) -> Vec<Vec<(f64, f64)>> {
-        let polygons: Vec<Vec<Point>> = polys
-            .into_iter()
-            .map(|v| v.into_iter().map(|(x, y)| Point::new(x, y)).collect())
-            .collect();
-        let new = self.inner.incorporate_local(&polygons);
-        new.into_iter()
-            .map(|poly| poly.into_iter().map(|p| (p.x, p.y)).collect())
-            .collect()
     }
 
     /// Compact fragments if total vertex count exceeds the default threshold.

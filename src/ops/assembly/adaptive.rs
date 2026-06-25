@@ -44,6 +44,11 @@ pub struct AdaptiveClearingOptions {
     /// Initial tool heading in radians.  When `None`, the heading is
     /// auto-detected as the CCW tangent at the starting position.
     pub start_heading: Option<f64>,
+    /// How many steps to accumulate before committing cleared-area
+    /// expansions.  Larger values reduce per‑step overhead at the cost
+    /// of slightly stale engagement queries.  Leave at 1 (default) for
+    /// best path quality; increase to 5+ for faster roughing passes.
+    pub expansion_batch_size: usize,
 }
 
 impl Default for AdaptiveClearingOptions {
@@ -62,6 +67,7 @@ impl Default for AdaptiveClearingOptions {
             area_tolerance: 1.0,
             start_pos: None,
             start_heading: None,
+            expansion_batch_size: 1,
         }
     }
 }
@@ -151,6 +157,98 @@ impl Tool {
 
         if !found_crossing {
             // No crossing: pick sample with smallest weighted error.
+            best_phi = samples
+                .iter()
+                .min_by(|&(a_ang, a_err), &(b_ang, b_err)| {
+                    let a_w = a_err.abs()
+                        + angle_normalize(a_ang - self.heading).abs() * 0.01;
+                    let b_w = b_err.abs()
+                        + angle_normalize(b_ang - self.heading).abs() * 0.01;
+                    a_w.partial_cmp(&b_w).unwrap_or(std::cmp::Ordering::Equal)
+                })
+                .map(|s| s.0)
+                .unwrap_or(self.heading);
+        }
+
+        // ── Validate and commit ──
+        let dir = Point::new(best_phi.cos(), best_phi.sin());
+        let next_pos = self.pos + dir * step_length;
+
+        if !point_in_valid_area(next_pos, valid_area) {
+            return StepStatus::BoundaryHit;
+        }
+
+        let area = cleared.cut_area(self.pos, next_pos, self.radius);
+        if area < step_length * target_area_pd * 0.05 {
+            return StepStatus::LostEngagement;
+        }
+
+        self.pos = next_pos;
+        self.heading = best_phi;
+        StepStatus::Ok
+    }
+
+    /// Like [`step`](Self::step) but adds a directional bias to the
+    /// probe evaluation.  Probes closer to `bias_angle` get a bonus
+    /// of `bias_weight * cos(probe_angle - bias_angle)`, making the
+    /// solver prefer that direction when engagement is ambiguous.
+    #[allow(clippy::too_many_arguments)]
+    #[prof]
+    pub fn step_with_bias(
+        &mut self,
+        cleared: &ClearedArea,
+        target_area_pd: f64,
+        max_deflection: f64,
+        step_length: f64,
+        valid_area: &[Polygon],
+        bias_angle: f64,
+        bias_weight: f64,
+    ) -> StepStatus {
+        let ratios = [-1.0, -0.6, -0.2, 0.0, 0.2, 0.6, 1.0];
+
+        // ── Evaluate cut area at each probe angle ──
+        let mut samples: [(f64, f64); 7] = [(0.0, 0.0); 7];
+        for (i, &r) in ratios.iter().enumerate() {
+            let phi = self.heading + max_deflection * r;
+            let dir = Point::new(phi.cos(), phi.sin());
+            let candidate = self.pos + dir * step_length;
+
+            if !point_in_valid_area(candidate, valid_area) {
+                samples[i] = (phi, -target_area_pd);
+                continue;
+            }
+
+            let area = cleared.cut_area(self.pos, candidate, self.radius);
+            let area_pd = area / step_length;
+            let align = (phi - bias_angle).cos();
+            samples[i] = (phi, area_pd - target_area_pd + bias_weight * align);
+        }
+
+        // ── Pick best angle ──
+        let mut best_phi = self.heading;
+        let mut found_crossing = false;
+
+        for i in 0..samples.len() - 1 {
+            let (a, fa) = samples[i];
+            let (b, fb) = samples[i + 1];
+            if fa.is_finite() && fb.is_finite() && fa.signum() != fb.signum() {
+                let t = -fa / (fb - fa);
+                let root = a + t * (b - a);
+                if !found_crossing {
+                    best_phi = root;
+                    found_crossing = true;
+                } else {
+                    let prev_diff =
+                        angle_normalize(best_phi - self.heading).abs();
+                    let new_diff = angle_normalize(root - self.heading).abs();
+                    if new_diff < prev_diff {
+                        best_phi = root;
+                    }
+                }
+            }
+        }
+
+        if !found_crossing {
             best_phi = samples
                 .iter()
                 .min_by(|&(a_ang, a_err), &(b_ang, b_err)| {
@@ -276,6 +374,7 @@ pub fn adaptive_clearing(
     ops.move_to(tool.pos.x, tool.pos.y, opts.cut_z, None);
 
     let mut prev_pos = tool.pos;
+    let mut steps_since_batch: usize = 0;
 
     for _ in 0..MAX_TOTAL_STEPS {
         // Convergence.
@@ -292,18 +391,117 @@ pub fn adaptive_clearing(
         );
 
         if status != StepStatus::Ok {
+            if steps_since_batch > 0 {
+                cleared.commit_step_batch();
+                steps_since_batch = 0;
+            }
+
+            // Try stepping with an outside bias — probe directions
+            // toward uncut material get a preference bonus.
+            // Compute the bias direction by sampling 8 directions
+            // and picking the one with the most cut_area.
+            let mut best_area = 0.0f64;
+            let mut bias_angle = 0.0f64;
+            for si in 0..8 {
+                let a = std::f64::consts::TAU * si as f64 / 8.0;
+                let d = Point::new(a.cos(), a.sin());
+                let cand = tool.pos + d * opts.step_length;
+                if !point_in_valid_area(cand, &valid_tool_area) {
+                    continue;
+                }
+                let area = cleared.cut_area(tool.pos, cand, opts.radius);
+                if area > best_area {
+                    best_area = area;
+                    bias_angle = a;
+                }
+            }
+
+            if best_area > 0.0 {
+                // Shift heading toward the bias direction so the probes
+                // actually cover that angle range.
+                let diff = angle_normalize(bias_angle - tool.heading);
+                let clamped = diff.clamp(-max_def * 2.0, max_def * 2.0);
+                let biased_heading = angle_normalize(tool.heading + clamped);
+                let bias_weight = target_area_pd * 0.15;
+                let mut probe = Tool {
+                    pos: tool.pos,
+                    heading: biased_heading,
+                    radius: opts.radius,
+                };
+                let s = probe.step_with_bias(
+                    cleared,
+                    target_area_pd,
+                    max_def,
+                    opts.step_length,
+                    &valid_tool_area,
+                    bias_angle,
+                    bias_weight,
+                );
+                if s == StepStatus::Ok {
+                    tool.pos = probe.pos;
+                    tool.heading = probe.heading;
+                    prev_pos = tool.pos;
+                    continue;
+                }
+
+                // Bias still failed — try direct travel to the outside-
+                // biased position and resume stepping from there.
+                let cand = tool.pos
+                    + Point::new(bias_angle.cos(), bias_angle.sin())
+                        * (opts.radius * 0.5);
+                if point_in_valid_area(cand, &valid_tool_area) {
+                    let mut land = Tool {
+                        pos: cand,
+                        heading: bias_angle,
+                        radius: opts.radius,
+                    };
+                    if land.step(
+                        cleared,
+                        target_area_pd,
+                        max_def,
+                        opts.step_length,
+                        &valid_tool_area,
+                    ) == StepStatus::Ok
+                    {
+                        ops.apply_state(&State {
+                            rapid_rate: Some(8000),
+                            ..Default::default()
+                        });
+                        ops.move_to(tool.pos.x, tool.pos.y, opts.safe_z, None);
+                        ops.move_to(cand.x, cand.y, opts.safe_z, None);
+                        ops.apply_state(cut_state);
+                        ops.move_to(cand.x, cand.y, opts.cut_z, None);
+                        tool.pos = land.pos;
+                        tool.heading = land.heading;
+                        prev_pos = tool.pos;
+                        continue;
+                    }
+                }
+            }
             break;
         }
 
         // Emit cutting move.
         ops.line_to(tool.pos.x, tool.pos.y, opts.cut_z, None);
 
-        // Expand cleared area with this step's capsule.
-        cleared.begin_step_batch();
+        // Expand cleared area.
+        if steps_since_batch == 0 {
+            cleared.begin_step_batch();
+        }
         cleared.expand_step_batched(prev_pos, tool.pos, opts.radius);
-        cleared.commit_step_batch();
+        steps_since_batch += 1;
+
+        if steps_since_batch >= opts.expansion_batch_size {
+            cleared.commit_step_batch();
+            steps_since_batch = 0;
+        }
 
         prev_pos = tool.pos;
+    }
+
+    // Flush any remaining batch.
+    if steps_since_batch > 0 {
+        cleared.commit_step_batch();
     }
 
     ops

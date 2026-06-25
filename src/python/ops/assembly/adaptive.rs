@@ -41,6 +41,7 @@ pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
         cut_power: float = 1.0,
         start_pos: tuple[float, float] | None = None,
         start_heading: float | None = None,
+        expansion_batch_size: int = 1,
         profile: bool = False,
     ) -> raygeo.ops.Ops:
         """Run forward-stepping adaptive clearing.
@@ -74,6 +75,10 @@ pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
                           auto-detected from the cleared-area frontier.
         :param start_heading: Initial tool heading in radians.  When None,
                               auto-detected as the CCW tangent at start_pos.
+        :param expansion_batch_size: Batch cleared-area expansions every
+                                     N steps (default 1).  Larger values
+                                     improve performance but may slightly
+                                     reduce path quality.
         :param profile: Print a profiling report to stdout (default False).
         :returns: Ops with cutting commands (entry not included).
         """
@@ -99,6 +104,7 @@ pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     cut_power = 1.0,
     start_pos = None,
     start_heading = None,
+    expansion_batch_size = 1,
     profile = false,
 ))]
 #[allow(clippy::too_many_arguments)]
@@ -120,6 +126,7 @@ fn adaptive_clearing_py(
     cut_power: f64,
     start_pos: Option<(f64, f64)>,
     start_heading: Option<f64>,
+    expansion_batch_size: usize,
     profile: bool,
 ) -> PyOps {
     let boundary: Vec<Point> = pocket_boundary
@@ -146,6 +153,7 @@ fn adaptive_clearing_py(
         area_tolerance,
         start_pos: start_pos.map(|(x, y)| Point::new(x, y)),
         start_heading,
+        expansion_batch_size,
     };
 
     let cut_state = State {

@@ -104,7 +104,7 @@ class ClearedArea:
         :returns: List of polygons representing the bite regions.
         :complexity: O(n log n)
         """
-    def bite_in_direction(self, step_over: builtins.float, valid_area: typing.Sequence[typing.Sequence[tuple[builtins.float, builtins.float]]], simplify_tol: builtins.float, target: tuple[builtins.float, builtins.float], max_angle: builtins.float) -> builtins.list[builtins.list[tuple[builtins.float, builtins.float]]]:
+    def total_area(self) -> builtins.float:
         r"""
         Like :py:meth:`bites` but filters to only the bites whose centroid
         lies within *max_angle* radians of the direction from the current
@@ -114,27 +114,6 @@ class ClearedArea:
         :param step_over: Lateral step-over in mm.
         :param valid_area: List of polygons defining the valid tool-centre region.
         :param simplify_tol: Tolerance in mm for frontier simplification.
-        :param target: ``(x, y)`` target point to steer toward.
-        :param max_angle: Maximum deviation from the target direction (radians).
-        :returns: List of polygons representing the filtered bite regions.
-        :complexity: O(n log n)
-        """
-    def all_bites(self, step_over: builtins.float, valid_area: typing.Sequence[typing.Sequence[tuple[builtins.float, builtins.float]]], simplify_tol: builtins.float) -> builtins.list[builtins.list[builtins.list[tuple[builtins.float, builtins.float]]]]:
-        r"""
-        Iteratively call :py:meth:`bites` + :py:meth:`incorporate` until
-        the valid area is fully cleared.
-        
-        Returns all passes, each pass being a list of bite polygons.
-        The cleared area is fully cleared after this call.
-        
-        :param step_over: Lateral step-over in mm.
-        :param valid_area: List of polygons defining the valid tool-centre region.
-        :param simplify_tol: Tolerance in mm for frontier simplification.
-        :returns: List of passes, each pass being a list of bite polygons.
-        :complexity: O(k n log n) where k = number of passes
-        """
-    def total_area(self) -> builtins.float:
-        r"""
         Total cleared area.
         
         :returns: Total cleared area in mm².
@@ -164,19 +143,6 @@ class ClearedArea:
         
         :returns: List of polygons representing the cleared fragments.
         :complexity: O(m) where m = number of fragments
-        """
-    def remaining_in_inset(self, boundary: typing.Sequence[tuple[builtins.float, builtins.float]], obstacles: typing.Optional[typing.Sequence[typing.Sequence[tuple[builtins.float, builtins.float]]]] = None, radius: builtins.float = 3.0) -> builtins.list[builtins.list[tuple[builtins.float, builtins.float]]]:
-        r"""
-        Compute the inset region of *boundary* by *radius* (excluding
-        *obstacles*), then return the portions of that region not covered
-        by stored fragments, together with the original obstacle polygons.
-        
-        :param boundary: Outer boundary polygon.
-        :param obstacles: Obstacle (hole) polygons to exclude.
-        :param radius: Inset distance applied to *boundary* and *obstacles*.
-        :returns: List of polygons — the obstacles plus the uncovered
-                  portion of the inset region.
-        :complexity: O(n log n) for the inset and difference operations.
         """
     def __repr__(self) -> builtins.str: ...
     def step(self, pos: tuple[builtins.float, builtins.float], heading: builtins.float, opts: StepperOptions) -> StepResult:
@@ -269,21 +235,6 @@ class ClearedArea:
         Switch between global and local fragment-merging strategies.
         
         :param strategy: Either ``"global"`` or ``"local"``.
-        """
-    def expand_step_local(self, prev: tuple[builtins.float, builtins.float], next: tuple[builtins.float, builtins.float], radius: builtins.float) -> None:
-        r"""
-        Single-step local expansion (only updates fragments whose bbox overlaps the segment).
-        
-        :param prev: Start point ``(x, y)`` of the segment.
-        :param next: End point ``(x, y)`` of the segment.
-        :param radius: Disk radius (mm).
-        """
-    def incorporate_local(self, polys: typing.Sequence[typing.Sequence[tuple[builtins.float, builtins.float]]]) -> builtins.list[builtins.list[tuple[builtins.float, builtins.float]]]:
-        r"""
-        Local version of incorporate.
-        
-        :param polys: List of polygons to add.
-        :returns: List of polygons representing the newly-added portion.
         """
     def compact_if_needed(self, tol: builtins.float) -> None:
         r"""
