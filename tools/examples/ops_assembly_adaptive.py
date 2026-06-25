@@ -6,8 +6,8 @@ import matplotlib.pyplot as plt
 from matplotlib.collections import LineCollection
 from matplotlib.colors import Normalize
 
+from raygeo.ops.area import ClearedArea
 from raygeo.ops.assembly.adaptive import adaptive_clearing
-from raygeo.ops.cleared_area import ClearedArea
 
 
 def _rect(cx, cy, w, h):

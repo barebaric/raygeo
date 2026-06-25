@@ -15,9 +15,9 @@ from raygeo.geo.algo.smooth import smooth_polyline_3d
 from raygeo.geo.shape.bezier import linearize_bezier_adaptive
 from raygeo.geo.shape.polygon import get_polygon_convex_hull
 from raygeo.geo.shape.polygon3d import fillet_polyline_3d, offset_polyline_3d
+from raygeo.ops.area import ClearedArea
 from raygeo.ops.assembly.entry import adaptive_entry
 from raygeo.ops.assembly.wavefront import adaptive_wavefronts
-from raygeo.ops.cleared_area import ClearedArea
 from raygeo.ops.raster import ScanMode, rasterize_power_modulation
 from raygeo.ops.types import CommandType
 from tools.plot import make_pattern, plot_geometry

@@ -1,13 +1,13 @@
 ---
-title: raygeo.ops.cleared_area
-sidebar_label: raygeo.ops.cleared_area
+title: raygeo.ops.area
+sidebar_label: raygeo.ops.area
 ---
 
-![Tool stepping parallel to a straight wall. Path colour = engagement (green = on target).](images/ops-cleared-area-wall-following.png)
+![Tool stepping parallel to a straight wall. Path colour = engagement (green = on target).](images/ops-area-stepper-wall-following.png)
 
 *Tool stepping parallel to a straight wall. Path colour = engagement (green = on target).*
 
-![ClearedArea tracking a simulated raster toolpath — cleared fragments shown in blue, remaining area in red](images/ops-cleared-area-raster.png)
+![ClearedArea tracking a simulated raster toolpath — cleared fragments shown in blue, remaining area in red](images/ops-area-raster.png)
 
 *ClearedArea tracking a simulated raster toolpath — cleared fragments shown in blue, remaining area
 in red* Incremental cleared-area tracker.
@@ -31,7 +31,7 @@ Add pre‑computed polygons to the cleared set.
 | _Returns_    | `None`                                    |                                                             |
 | _Complexity_ |                                           | O(n) where n = total vertices across all polygons           |
 
-![ClearedArea with bulk polygon insertion via  — cleared region in blue, remaining area in red](images/ops-cleared-area-bulk.png)
+![ClearedArea with bulk polygon insertion via  — cleared region in blue, remaining area in red](images/ops-area-bulk.png)
 
 *ClearedArea with bulk polygon insertion via `add_cleared_polygons` — cleared region in blue,
 remaining area in red*
@@ -53,7 +53,7 @@ Calling this while a batch is already active is a no‑op.
 | --------- | ------ | ----------- |
 | _Returns_ | `None` |             |
 
-![Three segments queued via  /  then unioned in a single  pass.](images/ops-cleared-area-step-batch.png)
+![Three segments queued via  /  then unioned in a single  pass.](images/ops-area-step-batch.png)
 
 *Three segments queued via `begin_step_batch` / `expand_step_batched` then unioned in a single
 `commit_step_batch` pass.*
@@ -79,7 +79,7 @@ clipping to valid_area, and subtracting already-cleared portions.
 | _Returns_      | `list[list[tuple[float, float]]]`         | List of polygons representing the bite regions.         |
 | _Complexity_   |                                           | O(n log n)                                              |
 
-![ computes the expansible material — the crescent-shaped regions of uncut material reachable by expanding the frontier by .](images/ops-cleared-area-bites.png)
+![ computes the expansible material — the crescent-shaped regions of uncut material reachable by expanding the frontier by .](images/ops-area-bites.png)
 
 *`bites` computes the expansible material — the crescent-shaped regions of uncut material reachable
 by expanding the frontier by `step_over`.*
@@ -140,7 +140,7 @@ Sweep a disk along a polyline, adding the swept area to the cleared set.
 | _Returns_    | `None`                          |                                               |
 | _Complexity_ |                                 | O(n) where n = number of path points          |
 
-![: sweeping a disk along a multi-segment path enlarges the cleared area.](images/ops-cleared-area-expand.png)
+![: sweeping a disk along a multi-segment path enlarges the cleared area.](images/ops-area-expand.png)
 
 *`expand`: sweeping a disk along a multi-segment path enlarges the cleared area.*
 
@@ -163,7 +163,7 @@ Expand the cleared area by sweeping a disk of *radius* along a single segment fr
 | `radius`  | `float`               | Disk radius (mm).                    |
 | _Returns_ | `None`                |                                      |
 
-![: sweeping a disk (dashed circle) of radius radius from prev to next (red arrow) enlarges the cleared area (right) vs the initial state (left).](images/ops-cleared-area-expand-step.png)
+![: sweeping a disk (dashed circle) of radius radius from prev to next (red arrow) enlarges the cleared area (right) vs the initial state (left).](images/ops-area-expand-step.png)
 
 *`expand_step`: sweeping a disk (dashed circle) of radius *radius* from *prev* to *next* (red arrow)
 enlarges the cleared area (right) vs the initial state (left).*
@@ -218,7 +218,7 @@ where engagement ≥ `min_engagement`.
 | `min_engagement` | `float`                  | Minimum engagement angle (radians) required.         |
 | _Returns_        | `Optional[ResumePoint]`  | `ResumePoint` or `None`.                             |
 
-![ walks the cleared-area frontier from the end position (red triangle) and returns the first position with sufficient engagement (green star).](images/ops-cleared-area-find-next-resume.png)
+![ walks the cleared-area frontier from the end position (red triangle) and returns the first position with sufficient engagement (green star).](images/ops-area-find-next-resume.png)
 
 *`find_next_resume` walks the cleared-area frontier from the end position (red triangle) and returns
 the first position with sufficient engagement (green star).*
@@ -255,7 +255,7 @@ Return a unioned, simplified snapshot of the current outer boundary.
 | _Returns_      | `list[list[tuple[float, float]]]` | List of polygons representing the outer boundary. |
 | _Complexity_   |                                   | O(n log n)                                        |
 
-![ returns the outer boundary of the cleared area after merging overlapping fragments — shown in crimson.](images/ops-cleared-area-frontier.png)
+![ returns the outer boundary of the cleared area after merging overlapping fragments — shown in crimson.](images/ops-area-frontier.png)
 
 *`frontier` returns the outer boundary of the cleared area after merging overlapping fragments —
 shown in crimson.*
@@ -281,7 +281,7 @@ don't overlap existing fragments (skips the full union).
 | _Returns_    | `list[list[tuple[float, float]]]`         | List of polygons representing the newly-added portion. |
 | _Complexity_ |                                           | O(n log n) worst case when union required,             |
 
-![ adds polygons to the cleared state while returning only the newly-covered region (shown in green).](images/ops-cleared-area-incorporate.png)
+![ adds polygons to the cleared state while returning only the newly-covered region (shown in green).](images/ops-area-incorporate.png)
 
 *`incorporate` adds polygons to the cleared state while returning only the newly-covered region
 (shown in green).*
@@ -348,7 +348,7 @@ Return fragments whose bounding box overlaps the query window.
 | _Returns_    | `list[list[tuple[float, float]]]`   | Fragments intersecting the bounding box.                    |
 | _Complexity_ |                                     | O(m + k) where m = number of fragments, k = output vertices |
 
-![ returns only the cleared fragments whose bounding box overlaps the query (green box).](images/ops-cleared-area-query-window.png)
+![ returns only the cleared fragments whose bounding box overlaps the query (green box).](images/ops-area-query-window.png)
 
 *`query_window` returns only the cleared fragments whose bounding box overlaps the query (green
 box).*
@@ -369,7 +369,7 @@ Subtract cleared fragments from the boundary polygons, returning the uncut regio
 | _Returns_    | `list[list[tuple[float, float]]]`         | List of polygons representing the uncut portion.   |
 | _Complexity_ |                                           | O(n * m) where n = bounds vertices, m = fragments  |
 
-![ subtracts cleared fragments from the boundary polygon, returning the uncut region (red).](images/ops-cleared-area-remaining.png)
+![ subtracts cleared fragments from the boundary polygon, returning the uncut region (red).](images/ops-area-remaining.png)
 
 *`remaining` subtracts cleared fragments from the boundary polygon, returning the uncut region
 (red).*
@@ -410,7 +410,7 @@ Switch between global and local fragment-merging strategies.
 | `strategy` | `str`  | Either `"global"` or `"local"`. |
 | _Returns_  | `None` |                                 |
 
-![Global vs Local update strategy — identical cleared area, but Local updates only the fragments whose bbox overlaps each new swept polygon.](images/ops-cleared-area-local-vs-global.png)
+![Global vs Local update strategy — identical cleared area, but Local updates only the fragments whose bbox overlaps each new swept polygon.](images/ops-area-local-vs-global.png)
 
 *Global vs Local update strategy — identical cleared area, but Local updates only the fragments
 whose bbox overlaps each new swept polygon.*
@@ -432,7 +432,7 @@ inside.
 | `y`       | `float` | Y coordinate of the query point.                            |
 | _Returns_ | `float` | Signed distance in mm. `0.0` means exactly on the boundary. |
 
-![Signed boundary distance around a cleared square: green = inside cleared, red = outside.](images/ops-cleared-area-signed-boundary-distance.png)
+![Signed boundary distance around a cleared square: green = inside cleared, red = outside.](images/ops-area-signed-boundary-distance.png)
 
 *Signed boundary distance around a cleared square: green = inside cleared, red = outside.*
 
@@ -458,11 +458,11 @@ the heading that maintains the target engagement.
 | `opts`    | `StepperOptions`      | `StepperOptions` controlling the solver.                 |
 | _Returns_ | `StepResult`          | `StepResult` with the next position and updated heading. |
 
-![90° corner: the solver deflects the heading to keep engagement constant around the turn.](images/ops-cleared-area-pocket-corner.png)
+![90° corner: the solver deflects the heading to keep engagement constant around the turn.](images/ops-area-stepper-pocket-corner.png)
 
 *90° corner: the solver deflects the heading to keep engagement constant around the turn.*
 
-![Engagement histogram for 200 steps along a straight wall. Tight peak near target indicates stable behaviour.](images/ops-cleared-area-engagement-histogram.png)
+![Engagement histogram for 200 steps along a straight wall. Tight peak near target indicates stable behaviour.](images/ops-area-stepper-engagement-histogram.png)
 
 *Engagement histogram for 200 steps along a straight wall. Tight peak near target indicates stable
 behaviour.*

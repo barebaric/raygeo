@@ -7,8 +7,8 @@ import time
 
 sys.path.insert(0, "tools/examples")
 
+from raygeo.ops.area import ClearedArea
 from raygeo.ops.assembly.adaptive import adaptive_clearing
-from raygeo.ops.cleared_area import ClearedArea
 
 
 def _rect(cx, cy, w, h):

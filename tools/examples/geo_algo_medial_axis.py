@@ -7,8 +7,8 @@ import numpy as np
 
 from raygeo.geo.algo.medial_axis import MedialAxis
 from raygeo.geo.algo.offset import compute_inset_region
+from raygeo.ops.area import ClearedArea
 from raygeo.ops.assembly.entry import adaptive_entry
-from raygeo.ops.cleared_area import ClearedArea
 
 
 def _plot_ma_2d(nodes, edges, root, boundary, islands, ax, title):

@@ -12,10 +12,10 @@
 use crate::geo::algo::offset::compute_inset_region;
 use crate::geo::shape::polygon::is_point_in_polygon;
 use crate::geo::shape::polygon::{get_polygon_area, get_polygon_centroid};
-use crate::ops::cleared_area::target_engagement_from_advance;
-use crate::ops::cleared_area::ClearedArea;
-use crate::ops::cleared_area::StepStatus;
-use crate::ops::cleared_area::UpdateStrategy;
+use crate::ops::area::target_engagement_from_advance;
+use crate::ops::area::ClearedArea;
+use crate::ops::area::StepStatus;
+use crate::ops::area::UpdateStrategy;
 use crate::ops::container::Ops;
 use crate::ops::state::State;
 use crate::prof::prof_report;

@@ -16,9 +16,9 @@ coolant, frequency), and an Axis bitflag for multi-axis machines.
 ";
 
 use pyo3::prelude::*;
+pub(crate) mod area;
 pub(crate) mod assembly;
 pub(crate) mod axis;
-pub(crate) mod cleared_area;
 pub(crate) mod container;
 pub(crate) mod raster;
 mod serialize;
@@ -49,8 +49,8 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     state::register(&state_mod)?;
     ops_mod.add_submodule(&state_mod)?;
 
-    // Child submodule: raygeo.ops.cleared_area
-    cleared_area::register(&ops_mod)?;
+    // Child submodule: raygeo.ops.area
+    area::register(&ops_mod)?;
 
     // Child submodule: raygeo.ops.transform
     transform::register(&ops_mod)?;
@@ -71,10 +71,7 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
 
     let sys_modules = py.import("sys")?.getattr("modules")?;
     sys_modules.set_item("raygeo.ops", &ops_mod)?;
-    sys_modules.set_item(
-        "raygeo.ops.cleared_area",
-        &ops_mod.getattr("cleared_area")?,
-    )?;
+    sys_modules.set_item("raygeo.ops.area", &ops_mod.getattr("area")?)?;
     sys_modules.set_item("raygeo.ops.types", &types_mod)?;
     sys_modules.set_item("raygeo.ops.axis", &axis_mod)?;
     sys_modules.set_item("raygeo.ops.state", &state_mod)?;

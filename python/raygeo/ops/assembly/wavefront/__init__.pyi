@@ -7,7 +7,7 @@ __all__ = [
     "adaptive_wavefronts",
 ]
 
-def adaptive_wavefronts(cleared: raygeo.ops.cleared_area.ClearedArea, pocket_boundary: collections.abc.Sequence[tuple[float, float]], islands: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]] = [], tool_radius: float = 3, step_over: float = 2, z: float = 0, area_tolerance: float = 1, cut_feed_rate: int = 1200, cut_power: float = 1) -> raygeo.ops.Ops:
+def adaptive_wavefronts(cleared: raygeo.ops.area.ClearedArea, pocket_boundary: collections.abc.Sequence[tuple[float, float]], islands: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]] = [], tool_radius: float = 3, step_over: float = 2, z: float = 0, area_tolerance: float = 1, cut_feed_rate: int = 1200, cut_power: float = 1) -> raygeo.ops.Ops:
     r"""
     Inside-out adaptive wavefronts.
     

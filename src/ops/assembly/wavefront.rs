@@ -2,7 +2,7 @@
 
 use prof_macros::prof;
 
-use crate::ops::cleared_area::ClearedArea;
+use crate::ops::area::ClearedArea;
 
 use crate::geo::algo::offset::compute_inset_region;
 use crate::geo::shape::polygon::get_polygon_area;

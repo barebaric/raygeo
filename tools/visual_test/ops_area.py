@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 import streamlit as st
 
-from raygeo.ops.cleared_area import ClearedArea
+from raygeo.ops.area import ClearedArea
 
 
 def page_adaptive_clearing():

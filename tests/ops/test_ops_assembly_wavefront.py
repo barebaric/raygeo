@@ -1,9 +1,9 @@
 """Tests for wavefront assembly module."""
 
 from raygeo.ops import Ops
+from raygeo.ops.area import ClearedArea
 from raygeo.ops.assembly.entry import adaptive_entry
 from raygeo.ops.assembly.wavefront import adaptive_wavefronts
-from raygeo.ops.cleared_area import ClearedArea
 
 
 def test_adaptive_wavefronts_simple():

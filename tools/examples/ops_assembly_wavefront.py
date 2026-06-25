@@ -4,9 +4,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.colors import Normalize
 
+from raygeo.ops.area import ClearedArea
 from raygeo.ops.assembly.entry import adaptive_entry
 from raygeo.ops.assembly.wavefront import adaptive_wavefronts
-from raygeo.ops.cleared_area import ClearedArea
 
 
 def _ops_to_points(ops):

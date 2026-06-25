@@ -1,9 +1,9 @@
 """Tests for raygeo.ops.assembly.adaptive module."""
 
 from raygeo.ops import Ops
+from raygeo.ops.area import ClearedArea
 from raygeo.ops.assembly.adaptive import adaptive_clearing
 from raygeo.ops.assembly.entry import adaptive_entry
-from raygeo.ops.cleared_area import ClearedArea
 from raygeo.ops.types import CommandType
 
 

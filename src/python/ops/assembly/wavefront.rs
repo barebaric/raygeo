@@ -1,6 +1,6 @@
 use crate::ops::assembly::wavefront;
 use crate::ops::state::State;
-use crate::python::ops::cleared_area::ClearedArea as PyClearedArea;
+use crate::python::ops::area::ClearedArea as PyClearedArea;
 use crate::python::ops::PyOps;
 use crate::types::Point;
 use pyo3::prelude::*;
@@ -24,7 +24,7 @@ pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     import raygeo
 
     def adaptive_wavefronts(
-        cleared: raygeo.ops.cleared_area.ClearedArea,
+        cleared: raygeo.ops.area.ClearedArea,
         pocket_boundary: collections.abc.Sequence[tuple[float, float]],
         islands: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]] = [],
         tool_radius: float = 3.0,
