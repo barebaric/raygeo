@@ -21,6 +21,7 @@ from raygeo.geo.shape.polygon import (
     get_polygons_intersection,
     get_polygons_union,
     get_segment_swept_polygon,
+    get_signed_boundary_distance,
     offset_polygon,
 )
 from raygeo.geo.types import Polygon
@@ -468,6 +469,40 @@ def generate_closest_point():
     return fig
 
 
+# ── get_signed_boundary_distance ──────────────────────────────────
+
+
+def generate_signed_boundary_distance_field():
+    """Signed distance to a square polygon (heatmap + zero contour)."""
+    square = [(0.0, 0.0), (10.0, 0.0), (10.0, 10.0), (0.0, 10.0)]
+    r = 4.0
+    n = 80
+    xs = np.linspace(-r, 10 + r, n)
+    ys = np.linspace(-r, 10 + r, n)
+
+    field = np.zeros((n, n))
+    for i, x in enumerate(xs):
+        for j, y in enumerate(ys):
+            field[j, i] = get_signed_boundary_distance((x, y), [square])
+
+    fig, ax = plt.subplots(figsize=(7, 6))
+    im = ax.pcolormesh(xs, ys, field, shading="auto", cmap="RdBu_r")
+    cs = ax.contour(xs, ys, field, levels=[0], colors="k", linewidths=2)
+    ax.clabel(cs, fmt={0: "boundary"}, inline=True, fontsize=9)
+    cbar = fig.colorbar(im, ax=ax)
+    cbar.set_label("Signed distance (mm)")
+
+    sq = np.array(square + [square[0]])
+    ax.plot(sq[:, 0], sq[:, 1], "k-", linewidth=1.5, alpha=0.5)
+
+    ax.set_aspect("equal")
+    ax.set_xlabel("X (mm)")
+    ax.set_ylabel("Y (mm)")
+    ax.set_title("get_signed_boundary_distance — Square Polygon")
+    fig.tight_layout()
+    return fig
+
+
 __docs_target__ = ["raygeo.geo.shape.polygon.md"]
 __images__ = [
     {
@@ -546,5 +581,14 @@ __images__ = [
         "heading": "get_polygon_group_bounds",
         "caption": "``get_polygon_group_bounds`` all polygons within a rect",
         "function": generate_group_bounds,
+    },
+    {
+        "heading": "get_signed_boundary_distance",
+        "caption": (
+            "Signed distance field around a square polygon."
+            " Red = outside (positive), blue = inside (negative),"
+            " black contour marks the boundary."
+        ),
+        "function": generate_signed_boundary_distance_field,
     },
 ]

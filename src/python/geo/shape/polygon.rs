@@ -15,11 +15,11 @@ use crate::geo::shape::polygon::{
     get_polygons_closest_point, get_polygons_difference,
     get_polygons_group_difference, get_polygons_group_intersection,
     get_polygons_intersection, get_polygons_union, get_segment_swept_polygon,
-    is_almost_equal, is_point_inside_polygon, is_polygon_clockwise,
-    is_polygon_convex, normalize_polygons, offset_polygon, point_line_distance,
-    polygons_intersect, resample_polygon, rotate_polygon, rotate_polygons,
-    scale_polygon, translate_bounds, translate_polygon, translate_polygons,
-    JoinStyle,
+    get_signed_boundary_distance, is_almost_equal, is_point_inside_polygon,
+    is_polygon_clockwise, is_polygon_convex, normalize_polygons,
+    offset_polygon, point_line_distance, polygons_intersect, resample_polygon,
+    rotate_polygon, rotate_polygons, scale_polygon, translate_bounds,
+    translate_polygon, translate_polygons, JoinStyle,
 };
 use crate::types::{Point, Rect};
 use numpy::{PyArray2, PyArrayMethods};
@@ -139,6 +139,7 @@ pub fn register(shape_mod: &Bound<'_, PyModule>) -> PyResult<()> {
         get_polygons_group_intersection_py,
         get_polygons_intersection_py,
         get_polygons_union_py,
+        get_signed_boundary_distance_py,
         is_almost_equal_py,
         is_point_inside_polygon_py,
         is_polygon_clockwise_py,
@@ -542,6 +543,38 @@ fn get_polygons_closest_point_py(
     let polys = extract_polygons(polygons)?;
     Ok(get_polygons_closest_point(&polys, Point::new(x, y))
         .map(|(pi, t, pt, d2)| (pi, t, (pt.x, pt.y), d2)))
+}
+
+#[gen_stub_pyfunction(
+    python = r#"
+    import collections.abc
+
+    def get_signed_boundary_distance(
+        point: tuple[float, float],
+        polygons: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]],
+    ) -> float:
+        """Signed perpendicular distance from point to nearest polygon boundary.
+
+        Positive = outside all polygons, Negative = inside any polygon,
+        Zero = exactly on a boundary.
+
+        :param point: Query point ``(x, y)``.
+        :param polygons: List of polygons.
+        :returns: Signed distance (mm).
+        """
+    "#,
+    module = "raygeo.geo.shape.polygon"
+)]
+#[pyfunction(name = "get_signed_boundary_distance")]
+fn get_signed_boundary_distance_py(
+    point: (f64, f64),
+    polygons: Vec<Vec<(f64, f64)>>,
+) -> f64 {
+    let polys: Vec<Vec<Point>> = polygons
+        .into_iter()
+        .map(|v| v.into_iter().map(|(x, y)| Point::new(x, y)).collect())
+        .collect();
+    get_signed_boundary_distance(Point::new(point.0, point.1), &polys)
 }
 
 #[gen_stub_pyfunction(

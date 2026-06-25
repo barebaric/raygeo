@@ -524,6 +524,30 @@ endpoints. Useful for toolpath clearance tracking and roughing simulation.
 
 *`get_segment_swept_polygon` computes the swept area of a line segment with a given radius*
 
+### `get_signed_boundary_distance()`
+
+```python
+get_signed_boundary_distance(
+    point: tuple[float, float],
+    polygons: Sequence[Sequence[tuple[float, float]]],
+) -> float
+```
+
+Signed perpendicular distance from point to nearest polygon boundary.
+
+Positive = outside all polygons, Negative = inside any polygon, Zero = exactly on a boundary.
+
+| Parameter  | Type                                      | Description           |
+| ---------- | ----------------------------------------- | --------------------- |
+| `point`    | `tuple[float, float]`                     | Query point `(x, y)`. |
+| `polygons` | `Sequence[Sequence[tuple[float, float]]]` | List of polygons.     |
+| _Returns_  | `float`                                   | Signed distance (mm). |
+
+![Signed distance field around a square polygon. Red = outside (positive), blue = inside (negative), black contour marks the boundary.](images/geo-shape-polygon-signed-boundary-distance-field.png)
+
+*Signed distance field around a square polygon. Red = outside (positive), blue = inside (negative),
+black contour marks the boundary.*
+
 ### `is_almost_equal()`
 
 ```python

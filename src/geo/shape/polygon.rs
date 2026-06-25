@@ -469,6 +469,26 @@ pub fn get_polygons_closest_point(
     best
 }
 
+/// Signed perpendicular distance from a point to the nearest polygon boundary.
+///
+/// Positive means the point is *outside* all polygons, negative means *inside*
+/// any polygon, and zero means exactly on a boundary.
+pub fn get_signed_boundary_distance(point: Point, polygons: &[Polygon]) -> f64 {
+    let inside = polygons
+        .iter()
+        .any(|poly| poly.len() >= 3 && is_point_in_polygon(point, poly));
+
+    let d = get_polygons_closest_point(polygons, point)
+        .map(|(_, _, _, d2)| d2.sqrt())
+        .unwrap_or(f64::MAX);
+
+    if inside {
+        -d.abs()
+    } else {
+        d
+    }
+}
+
 /// Rotate a polygon around the origin.
 pub fn rotate_polygon(polygon: &Polygon, angle_degrees: f64) -> Polygon {
     if polygon.is_empty() {

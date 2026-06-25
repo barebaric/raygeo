@@ -10,6 +10,32 @@ boundary.* Circle-boundary overlap (engagement) metrics.
 
 ## Functions
 
+### `angular_engagement()`
+
+```python
+angular_engagement(
+    center: tuple[float, float],
+    radius: float,
+    fragments: list[list[tuple[float, float]]],
+) -> float
+```
+
+Angular engagement (exact circle–polygon intersection).
+
+Returns uncleared angular extent in `[0, 2π]`.
+
+| Parameter   | Type                              | Description                           |
+| ----------- | --------------------------------- | ------------------------------------- |
+| `center`    | `tuple[float, float]`             | Disk centre `(x, y)`.                 |
+| `radius`    | `float`                           | Disk radius (mm).                     |
+| `fragments` | `list[list[tuple[float, float]]]` | List of polygons (cleared fragments). |
+| _Returns_   | `float`                           | Angular engagement in radians.        |
+
+![Comparison of exact polygon-intersection angular engagement with the analytical signed-distance estimate along a scan line crossing the boundary.](images/geo-algo-engagement-angular-engagement-comparison.png)
+
+*Comparison of exact polygon-intersection angular engagement with the analytical signed-distance
+estimate along a scan line crossing the boundary.*
+
 ### `compute_engagement()`
 
 ```python
@@ -35,3 +61,55 @@ Compute engagement angle, area, and chord depth.
 ![Engagement heatmap around a circular cleared area. Green = low, red = high engagement.](images/geo-algo-engagement-engagement-heatmap.png)
 
 *Engagement heatmap around a circular cleared area. Green = low, red = high engagement.*
+
+### `cut_area()`
+
+```python
+cut_area(
+    c1: tuple[float, float],
+    c2: tuple[float, float],
+    radius: float,
+    fragments: list[list[tuple[float, float]]],
+) -> float
+```
+
+Incremental cut area when moving from c1 to c2.
+
+The crescent `disk(c2) − disk(c1)` is intersected against *fragments* and the fresh (uncleared) area
+is returned.
+
+| Parameter   | Type                              | Description                           |
+| ----------- | --------------------------------- | ------------------------------------- |
+| `c1`        | `tuple[float, float]`             | Previous centre `(x, y)`.             |
+| `c2`        | `tuple[float, float]`             | Next centre `(x, y)`.                 |
+| `radius`    | `float`                           | Disk radius (mm).                     |
+| `fragments` | `list[list[tuple[float, float]]]` | List of polygons (cleared fragments). |
+| _Returns_   | `float`                           | Fresh cut area (mm²).                 |
+
+![Crescent (in red) produced by stepping a disk from C1 to C2. Left panel shows the full crescent area; right panel shows the reduction when a cleared fragment (gray) occupies part of the crescent.](images/geo-algo-engagement-cut-area-crescent.png)
+
+*Crescent (in red) produced by stepping a disk from C1 to C2. Left panel shows the full crescent
+area; right panel shows the reduction when a cleared fragment (gray) occupies part of the crescent.*
+
+### `point_engagement()`
+
+```python
+point_engagement(
+    center: tuple[float, float],
+    radius: float,
+    fragments: list[list[tuple[float, float]]],
+) -> tuple[float, float, float]
+```
+
+Engagement angle, area, and chord depth at a disk centre.
+
+| Parameter   | Type                              | Description                           |
+| ----------- | --------------------------------- | ------------------------------------- |
+| `center`    | `tuple[float, float]`             | Disk centre `(x, y)`.                 |
+| `radius`    | `float`                           | Disk radius (mm).                     |
+| `fragments` | `list[list[tuple[float, float]]]` | List of polygons (cleared fragments). |
+| _Returns_   | `tuple[float, float, float]`      | `(angle_rad, area, chord_depth)`.     |
+
+![Engagement angle field around a square cleared area for a disk of radius 3 mm.](images/geo-algo-engagement-point-engagement-field.png)
+
+*Engagement angle field around a square cleared area for a disk of radius 3 mm.*

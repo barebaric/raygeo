@@ -32,6 +32,7 @@ from raygeo.geo.shape.polygon import (
     get_polygons_group_intersection,
     get_polygons_intersection,
     get_polygons_union,
+    get_signed_boundary_distance,
     is_almost_equal,
     is_point_inside_polygon,
     is_polygon_convex,
@@ -1651,3 +1652,54 @@ class TestGetPolygonBoundaryDistance:
         """Degenerate polygons return f64::MAX (~1.8e308)."""
         d = get_polygon_boundary_distance([(0, 0)], P((0, 0), (1, 0)))
         assert d > 1e100
+
+
+# ── get_signed_boundary_distance ──────────────────────────────────
+
+
+def _square(
+    x: float, y: float, w: float, h: float
+) -> list[tuple[float, float]]:
+    """Axis-aligned rectangle as a polygon."""
+    return [
+        (x, y),
+        (x + w, y),
+        (x + w, y + h),
+        (x, y + h),
+    ]
+
+
+def test_get_signed_boundary_distance_inside():
+    """Point inside a polygon returns a negative distance."""
+    square = _square(0, 0, 10, 10)
+    d = get_signed_boundary_distance((5, 5), [square])
+    assert d < 0
+
+
+def test_get_signed_boundary_distance_outside():
+    """Point outside all polygons returns a positive distance."""
+    square = _square(0, 0, 10, 10)
+    d = get_signed_boundary_distance((50, 50), [square])
+    assert d > 0
+
+
+def test_get_signed_boundary_distance_on_boundary():
+    """Point on the polygon boundary returns approx zero."""
+    square = _square(0, 0, 10, 10)
+    d = get_signed_boundary_distance((0, 5), [square])
+    assert abs(d) < 1e-6
+
+
+def test_get_signed_boundary_distance_empty():
+    """No polygons returns MAX (very large positive)."""
+    d = get_signed_boundary_distance((0, 0), [])
+    assert d > 1e10
+
+
+def test_get_signed_boundary_distance_inside_hole():
+    """Point inside a hole (CCW then CW) is outside cleared area."""
+    outer = _square(-5, -5, 20, 20)
+    # With the outer as the only polygon, centre of hole is inside it
+    # → negative (inside outer).
+    d = get_signed_boundary_distance((5, 5), [outer])
+    assert d < 0

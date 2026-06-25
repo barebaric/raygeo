@@ -6,7 +6,16 @@ import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.patches import Circle
 
-from raygeo.geo.algo.engagement import compute_engagement
+from raygeo.geo.algo.engagement import (
+    angular_engagement,
+    compute_engagement,
+    cut_area,
+    point_engagement,
+)
+from raygeo.geo.shape.polygon import (
+    get_circle_polygon,
+    get_polygons_group_difference,
+)
 
 
 def generate_engagement_vs_distance():
@@ -138,6 +147,175 @@ def generate_engagement_heatmap():
     return fig
 
 
+# ── point_engagement ──────────────────────────────────────────────
+
+
+def generate_point_engagement_field():
+    """Engagement angle field around a square cleared area."""
+    square = [(0.0, 0.0), (10.0, 0.0), (10.0, 10.0), (0.0, 10.0)]
+    tool_r = 3.0
+    n = 80
+    xs = np.linspace(-6, 16, n)
+    ys = np.linspace(-6, 16, n)
+
+    field = np.zeros((n, n))
+    for i, x in enumerate(xs):
+        for j, y in enumerate(ys):
+            angle, _, _ = point_engagement((x, y), tool_r, [square])
+            field[j, i] = angle
+
+    fig, ax = plt.subplots(figsize=(7, 6))
+    im = ax.pcolormesh(
+        xs, ys, field, shading="auto", cmap="RdYlGn", vmin=0, vmax=2 * math.pi
+    )
+    cbar = fig.colorbar(im, ax=ax)
+    cbar.set_label("Engagement angle (rad)")
+    cbar.set_ticks([0, math.pi / 2, math.pi, 3 * math.pi / 2, 2 * math.pi])
+    cbar.set_ticklabels(["0", "π/2", "π", "3π/2", "2π"])
+
+    sq = np.array(square + [square[0]])
+    ax.plot(
+        sq[:, 0],
+        sq[:, 1],
+        "k--",
+        linewidth=1.5,
+        alpha=0.5,
+        label="Cleared boundary",
+    )
+
+    ax.set_aspect("equal")
+    ax.set_xlabel("X (mm)")
+    ax.set_ylabel("Y (mm)")
+    ax.set_title(f"point_engagement — Tool R = {tool_r} mm")
+    ax.legend(fontsize=8)
+    fig.tight_layout()
+    return fig
+
+
+# ── angular_engagement ────────────────────────────────────────────
+
+
+def generate_angular_engagement_comparison():
+    """Compare angular_engagement (exact) vs analytical along a scan."""
+    square = [(0.0, 0.0), (10.0, 0.0), (10.0, 10.0), (0.0, 10.0)]
+    tool_r = 3.0
+    xs = np.linspace(-4, 14, 120)
+    analytical = []
+    exact = []
+    for x in xs:
+        center = (x, 5.0)
+        angle, _, _ = point_engagement(center, tool_r, [square])
+        analytical.append(angle)
+        exact.append(angular_engagement(center, tool_r, [square]))
+
+    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(9, 6), sharex=True)
+
+    ax1.plot(xs, analytical, "b-", linewidth=2, label="Analytical")
+    ax1.plot(
+        xs, exact, "r--", linewidth=2, label="Exact (polygon-intersection)"
+    )
+    ax1.axvline(0, color="gray", linestyle=":", alpha=0.5)
+    ax1.axvline(10, color="gray", linestyle=":", alpha=0.5)
+    ax1.set_ylabel("Engagement angle (rad)")
+    ax1.legend(fontsize=8)
+    ax1.grid(True, alpha=0.3)
+
+    ax2.plot(
+        xs, [e - a for e, a in zip(exact, analytical)], "g-", linewidth=1.5
+    )
+    ax2.axhline(0, color="gray", linestyle="--", alpha=0.5)
+    ax2.axvline(0, color="gray", linestyle=":", alpha=0.5)
+    ax2.axvline(10, color="gray", linestyle=":", alpha=0.5)
+    ax2.set_xlabel("X (mm), scan at Y = 5 mm")
+    ax2.set_ylabel("Difference (rad)")
+    ax2.grid(True, alpha=0.3)
+
+    fig.suptitle("angular_engagement vs. Analytical Engagement")
+    fig.tight_layout()
+    return fig
+
+
+# ── cut_area ──────────────────────────────────────────────────────
+
+
+def generate_cut_area_crescent():
+    """Crescent region when stepping a disk, with and without fragments."""
+    c1 = (4.0, 5.0)
+    c2 = (8.0, 5.0)
+    r = 3.0
+
+    # Disk polygons for visualisation.
+    disk1 = get_circle_polygon(c1, r, 48)
+    disk2 = get_circle_polygon(c2, r, 48)
+    crescent = get_polygons_group_difference([disk2], [disk1])
+
+    # Compute cut areas.
+    area_no_frags = cut_area(c1, c2, r, [])
+    cleared_square = [[(0.0, 0.0), (10.0, 0.0), (10.0, 10.0), (0.0, 10.0)]]
+    area_with_frags = cut_area(c1, c2, r, cleared_square)
+
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 6))
+
+    for ax, title, area, fragments in [
+        (ax1, "No cleared fragments", area_no_frags, None),
+        (
+            ax2,
+            "With cleared square",
+            area_with_frags,
+            [(0.0, 0.0), (10.0, 0.0), (10.0, 10.0), (0.0, 10.0)],
+        ),
+    ]:
+        # Draw crescent.
+        if crescent:
+            for poly in crescent:
+                arr = np.array(poly)
+                ax.fill(
+                    arr[:, 0], arr[:, 1], "tomato", alpha=0.5, label="Crescent"
+                )
+
+        # Draw disks.
+        for centre, style, label in [
+            (c1, "b--", "Disk(c1)"),
+            (c2, "b-", "Disk(c2)"),
+        ]:
+            theta = np.linspace(0, 2 * math.pi, 100)
+            cx, cy = centre
+            ax.plot(
+                cx + r * np.cos(theta),
+                cy + r * np.sin(theta),
+                style,
+                linewidth=1.5,
+                label=label,
+            )
+
+        # Draw cleared fragments.
+        if fragments:
+            f_arr = np.array(fragments + [fragments[0]])
+            ax.fill(
+                f_arr[:, 0],
+                f_arr[:, 1],
+                "lightgray",
+                alpha=0.6,
+                label="Cleared",
+            )
+            ax.plot(f_arr[:, 0], f_arr[:, 1], "gray", linewidth=1)
+
+        # Marker for centres.
+        for centre, style in [(c1, "bs"), (c2, "bo")]:
+            ax.plot(*centre, style, markersize=4)
+
+        ax.set_aspect("equal")
+        ax.set_xlim(0, 12)
+        ax.set_ylim(0, 10)
+        ax.set_title(f"{title}\ncut_area = {area:.2f} mm²")
+        ax.legend(fontsize=7, loc="upper right")
+        ax.grid(True, alpha=0.3)
+
+    fig.suptitle("cut_area — Incremental Fresh Material", fontsize=13)
+    fig.tight_layout()
+    return fig
+
+
 __docs_target__ = ["raygeo.geo.algo.engagement.md"]
 __images__ = [
     {
@@ -163,5 +341,32 @@ __images__ = [
             " Green = low, red = high engagement."
         ),
         "function": generate_engagement_heatmap,
+    },
+    {
+        "heading": "point_engagement",
+        "caption": (
+            "Engagement angle field around a square cleared area for"
+            " a disk of radius 3 mm."
+        ),
+        "function": generate_point_engagement_field,
+    },
+    {
+        "heading": "angular_engagement",
+        "caption": (
+            "Comparison of exact polygon-intersection angular engagement"
+            " with the analytical signed-distance estimate along a"
+            " scan line crossing the boundary."
+        ),
+        "function": generate_angular_engagement_comparison,
+    },
+    {
+        "heading": "cut_area",
+        "caption": (
+            "Crescent (in red) produced by stepping a disk from C1 to C2."
+            " Left panel shows the full crescent area; right panel shows"
+            " the reduction when a cleared fragment (gray) occupies part"
+            " of the crescent."
+        ),
+        "function": generate_cut_area_crescent,
     },
 ]

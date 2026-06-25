@@ -5,8 +5,23 @@ Circle-boundary overlap (engagement) metrics.
 """
 
 __all__ = [
+    "angular_engagement",
     "compute_engagement",
+    "cut_area",
+    "point_engagement",
 ]
+
+def angular_engagement(center: tuple[float, float], radius: float, fragments: list[list[tuple[float, float]]]) -> float:
+    r"""
+    Angular engagement (exact circle–polygon intersection).
+    
+    Returns uncleared angular extent in ``[0, 2π]``.
+    
+    :param center: Disk centre ``(x, y)``.
+    :param radius: Disk radius (mm).
+    :param fragments: List of polygons (cleared fragments).
+    :returns: Angular engagement in radians.
+    """
 
 def compute_engagement(d_to_boundary: float, radius: float) -> tuple[float, float, float]:
     r"""
@@ -15,6 +30,30 @@ def compute_engagement(d_to_boundary: float, radius: float) -> tuple[float, floa
     :param d_to_boundary: Signed distance from the point to the nearest boundary
         (mm).  Positive = outside the boundary.
     :param radius: Disk radius (mm).
+    :returns: ``(angle_rad, area, chord_depth)``.
+    """
+
+def cut_area(c1: tuple[float, float], c2: tuple[float, float], radius: float, fragments: list[list[tuple[float, float]]]) -> float:
+    r"""
+    Incremental cut area when moving from c1 to c2.
+    
+    The crescent ``disk(c2) − disk(c1)`` is intersected against
+    *fragments* and the fresh (uncleared) area is returned.
+    
+    :param c1: Previous centre ``(x, y)``.
+    :param c2: Next centre ``(x, y)``.
+    :param radius: Disk radius (mm).
+    :param fragments: List of polygons (cleared fragments).
+    :returns: Fresh cut area (mm²).
+    """
+
+def point_engagement(center: tuple[float, float], radius: float, fragments: list[list[tuple[float, float]]]) -> tuple[float, float, float]:
+    r"""
+    Engagement angle, area, and chord depth at a disk centre.
+    
+    :param center: Disk centre ``(x, y)``.
+    :param radius: Disk radius (mm).
+    :param fragments: List of polygons (cleared fragments).
     :returns: ``(angle_rad, area, chord_depth)``.
     """
 

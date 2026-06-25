@@ -34,6 +34,7 @@ __all__ = [
     "get_polygons_intersection",
     "get_polygons_union",
     "get_segment_swept_polygon",
+    "get_signed_boundary_distance",
     "is_almost_equal",
     "is_point_inside_polygon",
     "is_polygon_clockwise",
@@ -352,6 +353,18 @@ def get_segment_swept_polygon(a: types.Point, b: types.Point, radius: float) -> 
     :param radius: Offset radius.
     :returns: List of polygons (rectangle + two end-caps).
     :complexity: O(n)
+    """
+
+def get_signed_boundary_distance(point: tuple[float, float], polygons: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]]) -> float:
+    r"""
+    Signed perpendicular distance from point to nearest polygon boundary.
+    
+    Positive = outside all polygons, Negative = inside any polygon,
+    Zero = exactly on a boundary.
+    
+    :param point: Query point ``(x, y)``.
+    :param polygons: List of polygons.
+    :returns: Signed distance (mm).
     """
 
 def is_almost_equal(a: float, b: float, tolerance: typing.Optional[float] = None) -> bool:
