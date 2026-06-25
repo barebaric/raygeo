@@ -1,6 +1,6 @@
-use super::Ops;
 use crate::geo::shape::arc::linearize_arc;
 use crate::ops::axis::Axis;
+use crate::ops::container::Ops;
 use crate::ops::types::{MoveCmd, OpCategory, OpNode};
 use crate::types::Point3D;
 

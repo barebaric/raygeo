@@ -1394,6 +1394,48 @@ impl PyOps {
             .collect()
     }
 
+    /// Split the sequence at paired markers of the given type.
+    ///
+    /// Returns a list of ``Ops`` sequences. Each matched start/end marker pair
+    /// yields one ``Ops`` containing the markers and their content. Commands
+    /// that fall outside any pair are returned as additional ``Ops`` segments,
+    /// so concatenating all returned sequences reproduces the original.
+    ///
+    /// :param command_type: ``CommandType.LAYER_START``,
+    ///     ``WORKPIECE_START``, ``OPS_SECTION_START``, or ``JOB_START``.
+    /// :returns: A list of ``Ops`` sequences.
+    /// :raises ValueError: If ``command_type`` is not a supported start marker.
+    /// :complexity: O(n) time, O(n) space
+    fn split_at(
+        &self,
+        command_type: &Bound<'_, PyAny>,
+    ) -> PyResult<Vec<PyOps>> {
+        let raw: u8 = command_type.getattr("value")?.extract()?;
+        let ct = CommandType::try_from(raw).map_err(|_| {
+            pyo3::exceptions::PyValueError::new_err(format!(
+                "invalid CommandType value: {raw}"
+            ))
+        })?;
+        let valid = matches!(
+            ct,
+            CommandType::LayerStart
+                | CommandType::WorkpieceStart
+                | CommandType::OpsSectionStart
+                | CommandType::JobStart
+        );
+        if !valid {
+            return Err(pyo3::exceptions::PyValueError::new_err(format!(
+                "unsupported marker type: {ct}. Use LAYER_START, WORKPIECE_START, OPS_SECTION_START, or JOB_START"
+            )));
+        }
+        Ok(self
+            .inner
+            .split_at(ct)
+            .into_iter()
+            .map(|o| PyOps { inner: o })
+            .collect())
+    }
+
     /// Reverse the order of subpaths.
     ///
     /// :returns: A new Ops with subpath order reversed.

@@ -745,6 +745,21 @@ class Ops:
         :returns: A list of Ops sequences, one per subpath.
         :complexity: O(n) time, O(n) space
         """
+    def split_at(self, command_type: typing.Any) -> builtins.list[Ops]:
+        r"""
+        Split the sequence at paired markers of the given type.
+        
+        Returns a list of ``Ops`` sequences. Each matched start/end marker pair
+        yields one ``Ops`` containing the markers and their content. Commands
+        that fall outside any pair are returned as additional ``Ops`` segments,
+        so concatenating all returned sequences reproduces the original.
+        
+        :param command_type: ``CommandType.LAYER_START``,
+            ``WORKPIECE_START``, ``OPS_SECTION_START``, or ``JOB_START``.
+        :returns: A list of ``Ops`` sequences.
+        :raises ValueError: If ``command_type`` is not a supported start marker.
+        :complexity: O(n) time, O(n) space
+        """
     def flip_ops(self) -> Ops:
         r"""
         Reverse the order of subpaths.

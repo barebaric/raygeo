@@ -12,9 +12,9 @@
 use std::collections::HashMap;
 
 use super::link::find_pass_exit;
-use crate::ops::container::clip::clip_subpath_linear;
 use crate::ops::container::Ops;
 use crate::ops::enums::{CommandCategory, CommandType, SectionType};
+use crate::ops::transform::clip::clip_subpath_linear;
 use crate::ops::types::{MoveCmd, OpCategory};
 use crate::types::Point3D;
 
@@ -184,7 +184,7 @@ pub fn apply_tab_power(
 
 fn assign_clips_to_subpaths(
     ops: &Ops,
-    section_ranges: &[crate::ops::transform::group::OpsSectionRange],
+    section_ranges: &[crate::ops::container::structure::OpsSectionRange],
     clips: &[ClipPoint],
 ) -> std::collections::HashMap<SubpathKey, Vec<ClipPoint>> {
     let mut all_subpaths: Vec<(SubpathKey, Ops)> = Vec::new();

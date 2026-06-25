@@ -16,7 +16,7 @@ from .geo_shape_polygon3d import page_polygon3d
 from .image import page_image
 from .ops_area import page_adaptive_clearing
 from .ops_assembly_raster import page_rasterization
-from .ops_container_clip import page_ops_clip
+from .ops_transform_clip import page_ops_clip
 from .ops_transform_lead_in_out import page_lead_in_out
 from .ops_transform_merge_lines import page_merge_lines
 from .ops_transform_optimize import page_ops_optimize_travel

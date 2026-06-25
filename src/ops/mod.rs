@@ -14,14 +14,13 @@ pub mod types;
 
 pub use assembly::polyline::polyline_to_ops;
 pub use axis::Axis;
+pub use container::structure::{OpsSection, OpsSectionRange};
 pub use container::Ops;
 pub use enums::{CommandCategory, CommandType, SectionType};
 pub use state::{CoolantMode, State};
 pub use transform::{
     apply_lead_in_out, apply_overscan, apply_tab_gaps, apply_tab_power,
-    flip_ops, group_by_state_continuity, iter_section_ranges, iter_sections,
-    link_passes, merge_overlapping_lines, optimize_travel, segment_indices,
-    split_into_subpaths, without_state, ClipPoint, LinkStrategy, OpsSection,
-    OpsSectionRange,
+    flip_ops, group_by_state_continuity, link_passes, merge_overlapping_lines,
+    optimize_travel, without_state, ClipPoint, LinkStrategy,
 };
 pub use types::{MarkerCmd, MoveCmd, OpCategory, OpNode, StateCmd};

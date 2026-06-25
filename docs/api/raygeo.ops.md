@@ -487,7 +487,7 @@ Clip this sequence to a rectangle, keeping only commands inside.
 | _Returns_    | `Ops`                               | A new Ops sequence containing the clipped commands. |
 | _Complexity_ |                                     | O(n) time, O(n) space                               |
 
-![Ops paths clipped to a rectangle](images/ops-container-clip-clip-rect.png)
+![Ops paths clipped to a rectangle](images/ops-transform-clip-clip-rect.png)
 
 *Ops paths clipped to a rectangle*
 
@@ -1668,6 +1668,26 @@ Get the spindle RPM from a SetSpindleRpm command.
 | `idx`        | `int` | Command index.        |
 | _Returns_    | `int` | Spindle RPM.          |
 | _Complexity_ |       | O(1) time, O(1) space |
+
+### `split_at()`
+
+```python
+split_at(command_type: Any) -> list[Ops]
+```
+
+Split the sequence at paired markers of the given type.
+
+Returns a list of `Ops` sequences. Each matched start/end marker pair yields one `Ops` containing
+the markers and their content. Commands that fall outside any pair are returned as additional `Ops`
+segments, so concatenating all returned sequences reproduces the original.
+
+**Raises:** `ValueError` — If `command_type` is not a supported start marker.
+
+| Parameter      | Type        | Description                                                                        |
+| -------------- | ----------- | ---------------------------------------------------------------------------------- |
+| `command_type` | `Any`       | `CommandType.LAYER_START`, `WORKPIECE_START`, `OPS_SECTION_START`, or `JOB_START`. |
+| _Returns_      | `list[Ops]` | A list of `Ops` sequences.                                                         |
+| _Complexity_   |             | O(n) time, O(n) space                                                              |
 
 ### `split_into_subpaths()`
 

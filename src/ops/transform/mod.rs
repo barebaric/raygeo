@@ -5,21 +5,23 @@
 //! pass linking, lead-in/out, overscan, tabs, linearization, merging,
 //! grouping, and clipping.
 
+pub mod affine;
+pub mod clip;
 pub mod flip;
+pub mod frame;
 pub mod group;
+pub mod layer;
 pub mod lead_in_out;
+pub mod linearize;
 pub mod link;
 pub mod merge_lines;
 pub mod optimize;
 pub mod overscan;
+pub mod split;
 pub mod tabs;
 
 pub use flip::flip_ops;
-pub use group::{
-    group_by_state_continuity, iter_section_ranges, iter_sections,
-    segment_indices, split_into_subpaths, without_state, OpsSection,
-    OpsSectionRange,
-};
+pub use group::{group_by_state_continuity, without_state};
 pub use lead_in_out::apply_lead_in_out;
 pub use link::{link_passes, LinkStrategy};
 pub use merge_lines::merge_overlapping_lines;

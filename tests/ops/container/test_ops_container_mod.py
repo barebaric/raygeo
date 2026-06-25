@@ -344,50 +344,6 @@ def test_rect_includes_travel():
     assert (min_x, min_y, max_x, max_y) == (-20.0, -20.0, 100.0, 100.0)
 
 
-def test_get_frame(sample_ops):
-    frame = sample_ops.get_frame(power=1.0, feed_rate=500)
-    assert (
-        sum(
-            1
-            for i in range(frame.len())
-            if frame.category(i) == CommandCategory.MOVING
-            and frame.command_type(i) == CommandType.MOVE_TO
-        )
-        == 1
-    )  # move_to
-    assert (
-        sum(
-            1
-            for i in range(frame.len())
-            if frame.category(i) == CommandCategory.MOVING
-            and frame.command_type(i) == CommandType.LINE_TO
-        )
-        == 4
-    )  # line_to
-
-    min_x, min_y, max_x, max_y = sample_ops.rect()
-
-    expected_points = [
-        (min_x, min_y, 0.0),
-        (min_x, max_y, 0.0),
-        (max_x, max_y, 0.0),
-        (max_x, min_y, 0.0),
-        (min_x, min_y, 0.0),
-    ]
-
-    frame_points = [
-        frame.endpoint(i)
-        for i in range(frame.len())
-        if frame.category(i) == CommandCategory.MOVING
-    ]
-    assert frame_points == expected_points
-
-
-def test_get_frame_empty(empty_ops):
-    frame = empty_ops.get_frame()
-    assert len(frame) == 0
-
-
 def test_distance(sample_ops):
     sample_ops.move_to(20, 20, -5)  # Travel with Z change
     distance = sample_ops.distance()
@@ -898,52 +854,6 @@ def test_to_geometry_empty():
     ops = Ops()
     geo = ops.to_geometry()
     assert isinstance(geo, Geometry)
-
-
-def test_subpath_indices():
-    ops = Ops()
-    ops.move_to(0, 0)
-    ops.line_to(10, 0)
-    ops.line_to(10, 10)
-    ops.move_to(100, 100)
-    ops.line_to(110, 100)
-
-    result = ops.subpath_indices()
-    assert len(result) == 2
-    assert result[0] == [0, 1, 2]
-    assert result[1] == [3, 4]
-
-
-def test_subpath_indices_empty():
-    ops = Ops()
-    assert ops.subpath_indices() == []
-
-
-def test_subpath_indices_single():
-    ops = Ops()
-    ops.move_to(0, 0)
-    assert ops.subpath_indices() == [[0]]
-
-
-def test_sub_ops():
-    ops = Ops()
-    ops.move_to(0, 0)
-    ops.line_to(10, 0)
-    ops.line_to(20, 0)
-
-    sub = ops.sub_ops([0, 2])
-    assert sub.len() == 2
-    assert sub.command_type(0) == CommandType.MOVE_TO
-    assert sub.command_type(1) == CommandType.LINE_TO
-    assert sub.endpoint(1) == (20.0, 0.0, 0.0)
-
-
-def test_sub_ops_is_deep_copy():
-    ops = Ops()
-    ops.line_to(10, 0)
-    sub = ops.sub_ops([0])
-    sub.move_to(99, 99)
-    assert ops.len() == 1
 
 
 def test_is_scanline():

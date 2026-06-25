@@ -79,14 +79,14 @@ pub use constants::{
 };
 pub use error::{AxisRepr, RaygeoError, RaygeoResult};
 pub use ops::axis::Axis;
+pub use ops::container::structure::{OpsSection, OpsSectionRange};
 pub use ops::container::Ops;
 pub use ops::enums::{CommandCategory, CommandType, SectionType};
 pub use ops::state::State;
 pub use ops::transform::{
     apply_lead_in_out, apply_overscan, apply_tab_gaps, apply_tab_power,
-    group_by_state_continuity, iter_section_ranges, iter_sections,
-    merge_overlapping_lines, segment_indices, split_into_subpaths,
-    without_state, ClipPoint, OpsSection, OpsSectionRange,
+    group_by_state_continuity, merge_overlapping_lines, without_state,
+    ClipPoint,
 };
 pub use ops::types::{MarkerCmd, MoveCmd, OpCategory, OpNode, StateCmd};
 pub use types::{

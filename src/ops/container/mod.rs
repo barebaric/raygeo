@@ -1,7 +1,4 @@
-pub(crate) mod affine;
-pub(crate) mod clip;
-pub(crate) mod layer;
-pub(crate) mod linearize;
+pub(crate) mod structure;
 pub(crate) mod time;
 
 use std::fmt::Write;
@@ -423,16 +420,6 @@ impl Ops {
         }
     }
 
-    pub fn sub_ops(&self, indices: &[usize]) -> Self {
-        let mut result = Ops::new();
-        for &i in indices {
-            let cmd = self.commands[i].clone();
-            result.commands.push(cmd);
-        }
-        result.invalidate_time_cache();
-        result
-    }
-
     pub fn replace_all(&mut self, source: &Ops) {
         self.commands.clear();
         for cmd in &source.commands {
@@ -453,47 +440,6 @@ impl Ops {
     pub fn clear(&mut self) {
         self.commands.clear();
         self.invalidate_time_cache();
-    }
-
-    pub fn subpath_indices(&self) -> Vec<Vec<usize>> {
-        let mut subpaths: Vec<Vec<usize>> = Vec::new();
-        let mut current: Vec<usize> = Vec::new();
-        let mut has_move_to = false;
-        for (i, node) in self.commands.iter().enumerate() {
-            let is_move = matches!(
-                node.category,
-                OpCategory::Moving {
-                    cmd: MoveCmd::MoveTo,
-                    ..
-                }
-            );
-            if is_move && has_move_to {
-                subpaths.push(current);
-                current = Vec::new();
-            }
-            if is_move {
-                has_move_to = true;
-            }
-            current.push(i);
-        }
-        if !current.is_empty() {
-            subpaths.push(current);
-        }
-        subpaths
-    }
-
-    pub fn split_into_subpaths(&self) -> Vec<Ops> {
-        super::transform::group::split_into_subpaths(self)
-    }
-
-    pub fn iter_sections(&self) -> Vec<super::transform::group::OpsSection> {
-        super::transform::group::iter_sections(self)
-    }
-
-    pub fn iter_section_ranges(
-        &self,
-    ) -> Vec<super::transform::group::OpsSectionRange> {
-        super::transform::group::iter_section_ranges(self)
     }
 
     pub fn flip_ops(&self) -> Self {
@@ -611,35 +557,6 @@ impl Ops {
             writeln!(out).unwrap();
         }
         out
-    }
-
-    pub fn segment_indices(&self) -> Vec<Vec<usize>> {
-        super::transform::group::segment_indices(self)
-    }
-
-    pub fn get_frame(
-        &self,
-        power: Option<f64>,
-        feed_rate: Option<f64>,
-    ) -> Self {
-        let Some(rect) = self.rect(false) else {
-            return Ops::new();
-        };
-        let (min_x, min_y, max_x, max_y) =
-            (rect.min.x, rect.min.y, rect.max.x, rect.max.y);
-        let mut frame_ops = Ops::new();
-        if let Some(p) = power {
-            frame_ops.set_power(p);
-        }
-        if let Some(f) = feed_rate {
-            frame_ops.set_feed_rate(f as i32);
-        }
-        frame_ops.move_to(min_x, min_y, 0.0, None);
-        frame_ops.line_to(min_x, max_y, 0.0, None);
-        frame_ops.line_to(max_x, max_y, 0.0, None);
-        frame_ops.line_to(max_x, min_y, 0.0, None);
-        frame_ops.line_to(min_x, min_y, 0.0, None);
-        frame_ops
     }
 
     pub fn rect(&self, include_travel: bool) -> Option<Rect> {
