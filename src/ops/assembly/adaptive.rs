@@ -10,9 +10,9 @@
 //! entry polygons (e.g. via `adaptive_entry`).
 
 use crate::geo::algo::offset::compute_inset_region;
-use crate::geo::shape::polygon::is_point_in_polygon;
-use crate::geo::shape::polygon::{get_polygon_area, get_polygon_centroid};
-use crate::ops::area::target_engagement_from_advance;
+use crate::geo::shape::polygon::get_polygon_centroid;
+use crate::geo::shape::polygon::get_polygon_signed_area;
+use crate::geo::shape::polygon::{get_polygon_area, is_point_in_polygon};
 use crate::ops::area::ClearedArea;
 use crate::ops::area::StepStatus;
 use crate::ops::area::UpdateStrategy;
@@ -21,6 +21,31 @@ use crate::ops::state::State;
 use crate::prof::prof_report;
 use crate::types::{Point, Polygon};
 use prof_macros::prof;
+
+// ── Named constants ────────────────────────────────────────────────
+
+/// Floor fraction of target cut-area-per-distance below which we treat
+/// engagement as lost.
+const ENGAGEMENT_FLOOR_FRAC: f64 = 0.05;
+/// Bias weight applied as a fraction of `target_area_pd` when probing
+/// toward the bias direction during recovery.
+const BIAS_WEIGHT_FRAC: f64 = 0.15;
+/// Small heading-distance penalty used as tiebreaker when no zero-
+/// crossing is found (prevents direction reversal on symmetric
+/// engagement landscapes).
+const HEADING_TIEBREAK: f64 = 0.01;
+/// Number of directions sampled during the recovery bias search.
+const BIAS_PROBES: usize = 8;
+/// How many multiples of `max_deflection` the bias-sampled heading may
+/// be clamped away from the current heading.
+const BIAS_CLAMP_FACTOR: f64 = 2.0;
+/// Tool-radius fraction for the direct-jump distance in the second
+/// recovery attempt.
+const TRAVEL_JUMP_FRAC: f64 = 0.5;
+/// Rapid feed rate used for travel moves during recovery.
+const TRAVEL_RAPID_RATE: i32 = 8000;
+/// Maximum total steps before giving up (safety valve).
+const MAX_TOTAL_STEPS: usize = 50_000;
 
 // ── Options ──────────────────────────────────────────────────────────
 
@@ -35,7 +60,6 @@ pub struct AdaptiveClearingOptions {
     pub safe_z: f64,
     pub step_length: f64,
     pub max_deflection_deg: f64,
-    pub travel_smoothing: i32,
     pub wall_margin: f64,
     pub area_tolerance: f64,
     /// Initial tool position.  When `None`, the starting position is
@@ -62,7 +86,6 @@ impl Default for AdaptiveClearingOptions {
             safe_z: 2.0,
             step_length: 0.6,
             max_deflection_deg: 30.0,
-            travel_smoothing: 50,
             wall_margin: 0.0,
             area_tolerance: 1.0,
             start_pos: None,
@@ -71,9 +94,6 @@ impl Default for AdaptiveClearingOptions {
         }
     }
 }
-
-/// Maximum total steps before giving up (safety valve).
-const MAX_TOTAL_STEPS: usize = 50_000;
 
 // ── Tool ─────────────────────────────────────────────────────────────
 
@@ -99,9 +119,15 @@ impl Tool {
     /// [`cut_area`](ClearedArea::cut_area) at each, and picks the angle
     /// whose area-per-distance is closest to `target_area_pd`.
     ///
+    /// When `bias_angle` is `Some(...)`, probes closer to that direction
+    /// get a bonus of `bias_weight * cos(probe_angle - bias_angle)`,
+    /// making the solver prefer that direction when engagement is
+    /// ambiguous.
+    ///
     /// When multiple angles yield similar area (symmetric landscape),
     /// the one closest to `self.heading` wins — the velocity
     /// tie-breaker that prevents direction reversal.
+    #[allow(clippy::too_many_arguments)]
     #[prof]
     pub fn step(
         &mut self,
@@ -110,6 +136,8 @@ impl Tool {
         max_deflection: f64,
         step_length: f64,
         valid_area: &[Polygon],
+        bias_angle: Option<f64>,
+        bias_weight: f64,
     ) -> StepStatus {
         let ratios = [-1.0, -0.6, -0.2, 0.0, 0.2, 0.6, 1.0];
 
@@ -127,7 +155,11 @@ impl Tool {
 
             let area = cleared.cut_area(self.pos, candidate, self.radius);
             let area_pd = area / step_length;
-            samples[i] = (phi, area_pd - target_area_pd);
+            let mut err = area_pd - target_area_pd;
+            if let Some(ba) = bias_angle {
+                err += bias_weight * (phi - ba).cos();
+            }
+            samples[i] = (phi, err);
         }
 
         // ── Pick best angle ──
@@ -161,9 +193,11 @@ impl Tool {
                 .iter()
                 .min_by(|&(a_ang, a_err), &(b_ang, b_err)| {
                     let a_w = a_err.abs()
-                        + angle_normalize(a_ang - self.heading).abs() * 0.01;
+                        + angle_normalize(a_ang - self.heading).abs()
+                            * HEADING_TIEBREAK;
                     let b_w = b_err.abs()
-                        + angle_normalize(b_ang - self.heading).abs() * 0.01;
+                        + angle_normalize(b_ang - self.heading).abs()
+                            * HEADING_TIEBREAK;
                     a_w.partial_cmp(&b_w).unwrap_or(std::cmp::Ordering::Equal)
                 })
                 .map(|s| s.0)
@@ -179,99 +213,7 @@ impl Tool {
         }
 
         let area = cleared.cut_area(self.pos, next_pos, self.radius);
-        if area < step_length * target_area_pd * 0.05 {
-            return StepStatus::LostEngagement;
-        }
-
-        self.pos = next_pos;
-        self.heading = best_phi;
-        StepStatus::Ok
-    }
-
-    /// Like [`step`](Self::step) but adds a directional bias to the
-    /// probe evaluation.  Probes closer to `bias_angle` get a bonus
-    /// of `bias_weight * cos(probe_angle - bias_angle)`, making the
-    /// solver prefer that direction when engagement is ambiguous.
-    #[allow(clippy::too_many_arguments)]
-    #[prof]
-    pub fn step_with_bias(
-        &mut self,
-        cleared: &ClearedArea,
-        target_area_pd: f64,
-        max_deflection: f64,
-        step_length: f64,
-        valid_area: &[Polygon],
-        bias_angle: f64,
-        bias_weight: f64,
-    ) -> StepStatus {
-        let ratios = [-1.0, -0.6, -0.2, 0.0, 0.2, 0.6, 1.0];
-
-        // ── Evaluate cut area at each probe angle ──
-        let mut samples: [(f64, f64); 7] = [(0.0, 0.0); 7];
-        for (i, &r) in ratios.iter().enumerate() {
-            let phi = self.heading + max_deflection * r;
-            let dir = Point::new(phi.cos(), phi.sin());
-            let candidate = self.pos + dir * step_length;
-
-            if !point_in_valid_area(candidate, valid_area) {
-                samples[i] = (phi, -target_area_pd);
-                continue;
-            }
-
-            let area = cleared.cut_area(self.pos, candidate, self.radius);
-            let area_pd = area / step_length;
-            let align = (phi - bias_angle).cos();
-            samples[i] = (phi, area_pd - target_area_pd + bias_weight * align);
-        }
-
-        // ── Pick best angle ──
-        let mut best_phi = self.heading;
-        let mut found_crossing = false;
-
-        for i in 0..samples.len() - 1 {
-            let (a, fa) = samples[i];
-            let (b, fb) = samples[i + 1];
-            if fa.is_finite() && fb.is_finite() && fa.signum() != fb.signum() {
-                let t = -fa / (fb - fa);
-                let root = a + t * (b - a);
-                if !found_crossing {
-                    best_phi = root;
-                    found_crossing = true;
-                } else {
-                    let prev_diff =
-                        angle_normalize(best_phi - self.heading).abs();
-                    let new_diff = angle_normalize(root - self.heading).abs();
-                    if new_diff < prev_diff {
-                        best_phi = root;
-                    }
-                }
-            }
-        }
-
-        if !found_crossing {
-            best_phi = samples
-                .iter()
-                .min_by(|&(a_ang, a_err), &(b_ang, b_err)| {
-                    let a_w = a_err.abs()
-                        + angle_normalize(a_ang - self.heading).abs() * 0.01;
-                    let b_w = b_err.abs()
-                        + angle_normalize(b_ang - self.heading).abs() * 0.01;
-                    a_w.partial_cmp(&b_w).unwrap_or(std::cmp::Ordering::Equal)
-                })
-                .map(|s| s.0)
-                .unwrap_or(self.heading);
-        }
-
-        // ── Validate and commit ──
-        let dir = Point::new(best_phi.cos(), best_phi.sin());
-        let next_pos = self.pos + dir * step_length;
-
-        if !point_in_valid_area(next_pos, valid_area) {
-            return StepStatus::BoundaryHit;
-        }
-
-        let area = cleared.cut_area(self.pos, next_pos, self.radius);
-        if area < step_length * target_area_pd * 0.05 {
+        if area < step_length * target_area_pd * ENGAGEMENT_FLOOR_FRAC {
             return StepStatus::LostEngagement;
         }
 
@@ -294,17 +236,145 @@ fn angle_normalize(a: f64) -> f64 {
     a
 }
 
+/// Check whether a point lies inside the valid tool-centre region.
+///
+/// Uses polygon winding to distinguish outer boundaries (CCW) from holes
+/// (CW): a point must be inside at least one CCW polygon and outside all
+/// CW polygons.
 fn point_in_valid_area(pt: Point, area: &[Polygon]) -> bool {
+    if area.is_empty() {
+        return false;
+    }
     let mut inside_outer = false;
+    let mut inside_hole = false;
     for poly in area {
         if poly.len() < 3 {
             continue;
         }
-        if is_point_in_polygon(pt, poly) {
-            inside_outer = !inside_outer;
+        let is_ccw = get_polygon_signed_area(poly) > 0.0;
+        let inside = is_point_in_polygon(pt, poly);
+        if is_ccw && inside {
+            inside_outer = true;
+        } else if !is_ccw && inside {
+            inside_hole = true;
         }
     }
-    inside_outer
+    inside_outer && !inside_hole
+}
+
+/// Target cut-area per unit distance for the engagement solver.
+///
+/// Derived from the crescent-area formula for a step of `advance` and
+/// tool `radius`.
+fn target_area_per_distance(radius: f64, advance: f64) -> f64 {
+    let d_ref = radius * 0.5;
+    let overlap = 2.0 * radius * radius * (d_ref / (2.0 * radius)).acos()
+        - (d_ref / 2.0) * (4.0 * radius * radius - d_ref * d_ref).sqrt();
+    let reference_cut_area = std::f64::consts::PI * radius * radius - overlap;
+    let step_over_factor = advance / (2.0 * radius);
+    2.0 * step_over_factor * reference_cut_area / radius
+}
+
+/// The result of a local recovery attempt.
+struct Recovery {
+    pos: Point,
+    heading: f64,
+    /// When `true` the caller must retract to safe_z, travel to `pos`,
+    /// and plunge before resuming stepping.
+    requires_travel: bool,
+}
+
+/// Sample 8 directions around `tool.pos` and try to re-engage uncut
+/// material.
+///
+/// Returns `None` when every direction is either outside the valid area
+/// or has zero cut area.
+fn attempt_local_recovery(
+    cleared: &ClearedArea,
+    tool: &Tool,
+    target_area_pd: f64,
+    max_def: f64,
+    step_length: f64,
+    valid_tool_area: &[Polygon],
+) -> Option<Recovery> {
+    // Sample BIAS_PROBES directions and pick the one with most cut_area.
+    let mut best_area = 0.0f64;
+    let mut bias_angle = 0.0f64;
+    for si in 0..BIAS_PROBES {
+        let a = std::f64::consts::TAU * si as f64 / BIAS_PROBES as f64;
+        let d = Point::new(a.cos(), a.sin());
+        let cand = tool.pos + d * step_length;
+        if !point_in_valid_area(cand, valid_tool_area) {
+            continue;
+        }
+        let area = cleared.cut_area(tool.pos, cand, tool.radius);
+        if area > best_area {
+            best_area = area;
+            bias_angle = a;
+        }
+    }
+
+    if best_area <= 0.0 {
+        return None;
+    }
+
+    // Attempt 1: step with bias toward the best direction.
+    let diff = angle_normalize(bias_angle - tool.heading);
+    let clamped =
+        diff.clamp(-max_def * BIAS_CLAMP_FACTOR, max_def * BIAS_CLAMP_FACTOR);
+    let biased_heading = angle_normalize(tool.heading + clamped);
+    let bias_weight = target_area_pd * BIAS_WEIGHT_FRAC;
+    let mut probe = Tool {
+        pos: tool.pos,
+        heading: biased_heading,
+        radius: tool.radius,
+    };
+    let s = probe.step(
+        cleared,
+        target_area_pd,
+        max_def,
+        step_length,
+        valid_tool_area,
+        Some(bias_angle),
+        bias_weight,
+    );
+    if s == StepStatus::Ok {
+        return Some(Recovery {
+            pos: probe.pos,
+            heading: probe.heading,
+            requires_travel: false,
+        });
+    }
+
+    // Attempt 2: jump a short distance in the bias direction, then step.
+    let jump_dir = Point::new(bias_angle.cos(), bias_angle.sin());
+    let cand = tool.pos + jump_dir * (tool.radius * TRAVEL_JUMP_FRAC);
+    if !point_in_valid_area(cand, valid_tool_area) {
+        return None;
+    }
+    let mut land = Tool {
+        pos: cand,
+        heading: bias_angle,
+        radius: tool.radius,
+    };
+    if land.step(
+        cleared,
+        target_area_pd,
+        max_def,
+        step_length,
+        valid_tool_area,
+        None,
+        0.0,
+    ) == StepStatus::Ok
+    {
+        return Some(Recovery {
+            pos: land.pos,
+            heading: land.heading,
+            requires_travel: true,
+        });
+    }
+
+    None
 }
 
 // ── Main entry point ─────────────────────────────────────────────────
@@ -314,7 +384,6 @@ pub fn adaptive_clearing(
     cleared: &mut ClearedArea,
     opts: &AdaptiveClearingOptions,
     cut_state: &State,
-    _travel_state: &State,
 ) -> Ops {
     // ── 1. Pre-process ────────────────────────────────────────────
     let (valid_tool_area, valid_total) =
@@ -326,19 +395,8 @@ pub fn adaptive_clearing(
         return Ops::new();
     }
 
-    let _target_eng = target_engagement_from_advance(opts.advance, opts.radius);
     let max_def = opts.max_deflection_deg.to_radians();
-
-    // Target cut-area per unit distance (crescent formula).
-    // referenceCutArea = area of disk minus disk-offset-by-R/2 (crescent).
-    let r = opts.radius;
-    let d_ref = r * 0.5;
-    let overlap = 2.0 * r * r * (d_ref / (2.0 * r)).acos()
-        - (d_ref / 2.0) * (4.0 * r * r - d_ref * d_ref).sqrt();
-    let reference_cut_area = std::f64::consts::PI * r * r - overlap;
-    let step_over_factor = opts.advance / (2.0 * opts.radius);
-    let target_area_pd =
-        2.0 * step_over_factor * reference_cut_area / opts.radius;
+    let target_area_pd = target_area_per_distance(opts.radius, opts.advance);
 
     // ── 2. Initialise the tool ───────────────────────────────────
     let centre = cleared
@@ -388,6 +446,8 @@ pub fn adaptive_clearing(
             max_def,
             opts.step_length,
             &valid_tool_area,
+            None,
+            0.0,
         );
 
         if status != StepStatus::Ok {
@@ -396,87 +456,30 @@ pub fn adaptive_clearing(
                 steps_since_batch = 0;
             }
 
-            // Try stepping with an outside bias — probe directions
-            // toward uncut material get a preference bonus.
-            // Compute the bias direction by sampling 8 directions
-            // and picking the one with the most cut_area.
-            let mut best_area = 0.0f64;
-            let mut bias_angle = 0.0f64;
-            for si in 0..8 {
-                let a = std::f64::consts::TAU * si as f64 / 8.0;
-                let d = Point::new(a.cos(), a.sin());
-                let cand = tool.pos + d * opts.step_length;
-                if !point_in_valid_area(cand, &valid_tool_area) {
-                    continue;
-                }
-                let area = cleared.cut_area(tool.pos, cand, opts.radius);
-                if area > best_area {
-                    best_area = area;
-                    bias_angle = a;
-                }
-            }
+            let recovery = attempt_local_recovery(
+                cleared,
+                &tool,
+                target_area_pd,
+                max_def,
+                opts.step_length,
+                &valid_tool_area,
+            );
 
-            if best_area > 0.0 {
-                // Shift heading toward the bias direction so the probes
-                // actually cover that angle range.
-                let diff = angle_normalize(bias_angle - tool.heading);
-                let clamped = diff.clamp(-max_def * 2.0, max_def * 2.0);
-                let biased_heading = angle_normalize(tool.heading + clamped);
-                let bias_weight = target_area_pd * 0.15;
-                let mut probe = Tool {
-                    pos: tool.pos,
-                    heading: biased_heading,
-                    radius: opts.radius,
-                };
-                let s = probe.step_with_bias(
-                    cleared,
-                    target_area_pd,
-                    max_def,
-                    opts.step_length,
-                    &valid_tool_area,
-                    bias_angle,
-                    bias_weight,
-                );
-                if s == StepStatus::Ok {
-                    tool.pos = probe.pos;
-                    tool.heading = probe.heading;
-                    prev_pos = tool.pos;
-                    continue;
+            if let Some(r) = recovery {
+                if r.requires_travel {
+                    ops.apply_state(&State {
+                        rapid_rate: Some(TRAVEL_RAPID_RATE),
+                        ..Default::default()
+                    });
+                    ops.move_to(tool.pos.x, tool.pos.y, opts.safe_z, None);
+                    ops.move_to(r.pos.x, r.pos.y, opts.safe_z, None);
+                    ops.apply_state(cut_state);
+                    ops.move_to(r.pos.x, r.pos.y, opts.cut_z, None);
                 }
-
-                // Bias still failed — try direct travel to the outside-
-                // biased position and resume stepping from there.
-                let cand = tool.pos
-                    + Point::new(bias_angle.cos(), bias_angle.sin())
-                        * (opts.radius * 0.5);
-                if point_in_valid_area(cand, &valid_tool_area) {
-                    let mut land = Tool {
-                        pos: cand,
-                        heading: bias_angle,
-                        radius: opts.radius,
-                    };
-                    if land.step(
-                        cleared,
-                        target_area_pd,
-                        max_def,
-                        opts.step_length,
-                        &valid_tool_area,
-                    ) == StepStatus::Ok
-                    {
-                        ops.apply_state(&State {
-                            rapid_rate: Some(8000),
-                            ..Default::default()
-                        });
-                        ops.move_to(tool.pos.x, tool.pos.y, opts.safe_z, None);
-                        ops.move_to(cand.x, cand.y, opts.safe_z, None);
-                        ops.apply_state(cut_state);
-                        ops.move_to(cand.x, cand.y, opts.cut_z, None);
-                        tool.pos = land.pos;
-                        tool.heading = land.heading;
-                        prev_pos = tool.pos;
-                        continue;
-                    }
-                }
+                tool.pos = r.pos;
+                tool.heading = r.heading;
+                prev_pos = tool.pos;
+                continue;
             }
             break;
         }
@@ -515,10 +518,12 @@ pub fn adaptive_clearing_with_profile(
     cut_state: &State,
     travel_state: &State,
 ) -> Ops {
-    let result = adaptive_clearing(cleared, opts, cut_state, travel_state);
+    let result = adaptive_clearing(cleared, opts, cut_state);
     if std::env::var("RAYGEO_PROFILE").is_ok() {
         prof_report();
     }
+    // travel_state is accepted for API compatibility but unused.
+    let _ = travel_state;
     result
 }
 

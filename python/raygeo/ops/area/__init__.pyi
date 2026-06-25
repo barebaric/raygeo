@@ -8,7 +8,6 @@ windowed query for efficient engagement computation.
 """
 
 import builtins
-from raygeo.geo.algo import medial_axis
 import typing
 __all__ = [
     "ClearedArea",
@@ -219,15 +218,16 @@ class ClearedArea:
         :param radius: Disk radius (mm).
         :returns: List of ``(angle, area, chord_depth)`` tuples.
         """
-    def find_next_resume(self, mat: medial_axis.MedialAxis, end_pos: tuple[builtins.float, builtins.float], radius: builtins.float, min_engagement: builtins.float) -> typing.Optional[ResumePoint]:
+    def find_next_resume(self, end_pos: tuple[builtins.float, builtins.float], radius: builtins.float, step_length: builtins.float, min_cut_area: builtins.float) -> typing.Optional[ResumePoint]:
         r"""
         Walk the cleared-area frontier forward from a point near `end_pos`
-        and return the first position where engagement ≥ `min_engagement`.
+        and return the first position where the cut-area probe is ≥
+        `min_cut_area`.
         
-        :param mat: Medial Axis of the domain (computed once per level).
         :param end_pos: Current position where the path ended.
         :param radius: Disk radius (mm).
-        :param min_engagement: Minimum engagement angle (radians) required.
+        :param step_length: Forward step distance (mm) for the cut-area probe.
+        :param min_cut_area: Minimum cut area (mm²) required at the resume point.
         :returns: ``ResumePoint`` or ``None``.
         """
     def set_update_strategy(self, strategy: builtins.str) -> None:
@@ -265,16 +265,10 @@ class ResumePoint:
         r"""
         Outward-normal heading (radians).
         """
-    @property
-    def link_path(self) -> builtins.list[tuple[builtins.float, builtins.float]]:
-        r"""
-        Travel polyline through cleared territory.
-        """
-    def __new__(cls, pos: tuple[builtins.float, builtins.float], heading: builtins.float, link_path: typing.Sequence[tuple[builtins.float, builtins.float]]) -> ResumePoint:
+    def __new__(cls, pos: tuple[builtins.float, builtins.float], heading: builtins.float) -> ResumePoint:
         r"""
         :param pos: Position on the frontier ``(x, y)``.
         :param heading: Outward-normal heading in radians.
-        :param link_path: Travel polyline through cleared territory.
         """
     def __repr__(self) -> builtins.str: ...
 

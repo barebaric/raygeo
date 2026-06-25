@@ -7,8 +7,9 @@ import numpy as np
 from matplotlib.lines import Line2D
 from matplotlib.patches import Circle
 
-from raygeo.geo.algo.medial_axis import MedialAxis
+from raygeo.geo.algo.offset import compute_inset_region
 from raygeo.ops.area import ClearedArea
+from raygeo.ops.assembly.entry import adaptive_entry
 
 
 def generate_raster():
@@ -362,8 +363,11 @@ def generate_signed_boundary_distance():
 
 def generate_find_next_resume():
     """Resume point found by walking the cleared-area frontier."""
-    boundary = [(0, 0), (100, 0), (100, 80), (0, 80)]
     radius = 3.0
+    step_length = 0.6
+    min_cut_area = 0.1
+
+    boundary = [(0, 0), (100, 0), (100, 80), (0, 80)]
 
     n = 32
     cx, cy = 50.0, 40.0
@@ -379,16 +383,12 @@ def generate_find_next_resume():
     ca = ClearedArea()
     ca.add_cleared_polygons([circle_poly])
 
-    mat = MedialAxis.compute(
-        boundary, holes=[], min_clearance=1.0, sampling_spacing=6.0
-    )
-
     end_pos = (50.0, 55.0)
     result = ca.find_next_resume(
-        mat=mat,
         end_pos=end_pos,
         radius=radius,
-        min_engagement=math.pi * 0.3,
+        step_length=step_length,
+        min_cut_area=min_cut_area,
     )
 
     fig, ax = plt.subplots(figsize=(8, 6))
@@ -422,18 +422,15 @@ def generate_find_next_resume():
             markersize=14,
             label="Resume point",
         )
-        dx = math.cos(result.heading) * 12
-        dy = math.sin(result.heading) * 12
+        arrow_len = 18
+        dx = math.cos(result.heading) * arrow_len
+        dy = math.sin(result.heading) * arrow_len
         ax.annotate(
             "",
             xy=(result.pos[0] + dx, result.pos[1] + dy),
             xytext=(result.pos[0], result.pos[1]),
-            arrowprops=dict(arrowstyle="->", color="green", lw=2),
+            arrowprops=dict(arrowstyle="->", color="green", lw=2.5),
         )
-        lx = [p[0] for p in result.link_path]
-        ly = [p[1] for p in result.link_path]
-        ax.plot(lx, ly, "g-", linewidth=2, alpha=0.7)
-        ax.plot(lx, ly, "go", markersize=3, alpha=0.7)
 
     ax.set_aspect("equal")
     ax.set_xlim(0, 100)
@@ -724,6 +721,145 @@ def generate_local_vs_global():
     return fig
 
 
+def generate_find_next_resume_multi():
+    """Resume-point travel in a multi-island pocket.
+
+    Uses the same pocket geometry as the MAT-trimming example
+    (180×120 rectangle, three islands).  After 8 wavefront
+    expansions, several end positions on the frontier are shown
+    together with the resume point each would reach.
+    """
+    boundary = [(0, 0), (180, 0), (180, 120), (0, 120)]
+    islands = [
+        [(15, 15), (35, 15), (35, 35), (15, 35)],
+        [
+            (
+                80 + 10 * math.cos(2 * math.pi * i / 32),
+                50 + 10 * math.sin(2 * math.pi * i / 32),
+            )
+            for i in range(32)
+        ],
+        [(130, 80), (160, 80), (160, 105), (130, 105)],
+    ]
+    tool_radius = 3.0
+    step_over = 2.0
+
+    _, cp = adaptive_entry(
+        pocket_boundary=boundary,
+        islands=islands,
+        tool_radius=tool_radius,
+        step_over=step_over,
+        safe_z=2.0,
+        target_z=-5.0,
+        plunge_pitch=1.0,
+    )
+    va, _ = compute_inset_region(boundary, tool_radius, islands)
+
+    ca = ClearedArea(initial=cp)
+    for _ in range(8):
+        bites = ca.bites(step_over, va, 0.01)
+        if not bites:
+            break
+        ca.incorporate(bites)
+
+    centre = (90.0, 60.0)
+
+    frontier = ca.frontier(0.5)
+    end_positions = []
+    for poly in frontier:
+        if len(poly) < 4:
+            continue
+        for idx in (0, len(poly) // 3, 2 * len(poly) // 3):
+            fv = poly[idx]
+            ep = (
+                fv[0] + (centre[0] - fv[0]) * 0.4,
+                fv[1] + (centre[1] - fv[1]) * 0.4,
+            )
+            end_positions.append(ep)
+        break
+
+    resume_results = []
+    for ep in end_positions:
+        r = ca.find_next_resume(
+            end_pos=ep,
+            radius=tool_radius,
+            step_length=0.6,
+            min_cut_area=0.1,
+        )
+        resume_results.append(r)
+
+    fig, ax = plt.subplots(figsize=(8, 6))
+
+    bnd = np.array(boundary + [boundary[0]])
+    ax.plot(bnd[:, 0], bnd[:, 1], "k-", linewidth=1.5, label="Pocket")
+
+    for isl in islands:
+        ia = np.array(isl + [isl[0]])
+        ax.fill(
+            ia[:, 0],
+            ia[:, 1],
+            facecolor="#ddd",
+            edgecolor="#999",
+            linewidth=1,
+        )
+
+    for i, frag in enumerate(ca.fragments()):
+        fa = np.array(frag + [frag[0]])
+        ax.fill(
+            fa[:, 0],
+            fa[:, 1],
+            color="#2ca02c",
+            alpha=0.15,
+            label="Cleared area" if i == 0 else "",
+        )
+
+    colors = ["#d62728", "#1f77b4", "#ff7f0e"]
+    for j, (ep, rr) in enumerate(zip(end_positions, resume_results)):
+        ax.plot(ep[0], ep[1], "v", color=colors[j], markersize=10, zorder=5)
+        ax.annotate(
+            f"End {j + 1}",
+            ep,
+            xytext=(3, 6),
+            textcoords="offset points",
+            fontsize=7,
+            color=colors[j],
+        )
+
+        if rr is not None:
+            ax.plot(
+                rr.pos[0],
+                rr.pos[1],
+                "*",
+                color=colors[j],
+                markersize=14,
+                zorder=6,
+            )
+            dx = math.cos(rr.heading) * 10
+            dy = math.sin(rr.heading) * 10
+            ax.annotate(
+                "",
+                xy=(rr.pos[0] + dx, rr.pos[1] + dy),
+                xytext=(rr.pos[0], rr.pos[1]),
+                arrowprops=dict(
+                    arrowstyle="->", color=colors[j], lw=1.5, zorder=7
+                ),
+            )
+
+    ax.set_aspect("equal")
+    ax.set_xlim(-5, 185)
+    ax.set_ylim(-5, 125)
+    ax.set_xlabel("X (mm)")
+    ax.set_ylabel("Y (mm)")
+    ax.set_title(
+        "find_next_resume: Multi-Island Pocket — "
+        f"{len(end_positions)} End Positions"
+    )
+    ax.legend(fontsize=7, loc="upper right")
+    ax.grid(True, alpha=0.3)
+    fig.tight_layout()
+    return fig
+
+
 __docs_target__ = ["raygeo.ops.area.md"]
 __images__ = [
     {
@@ -808,6 +944,16 @@ __images__ = [
             "position with sufficient engagement (green star)."
         ),
         "function": generate_find_next_resume,
+    },
+    {
+        "heading": "find_next_resume",
+        "caption": (
+            "Resume-point travel in a multi-island pocket (three islands).  "
+            "Three end positions on the cleared frontier (colored triangles) "
+            "each yield a resume position (star) with an outward heading "
+            "(arrow) into uncut material."
+        ),
+        "function": generate_find_next_resume_multi,
     },
     {
         "heading": "begin_step_batch",

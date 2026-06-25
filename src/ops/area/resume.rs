@@ -1,4 +1,3 @@
-use crate::geo::algo::medial_axis::MedialAxis;
 use crate::geo::shape::line::get_line_segment_closest_point;
 use crate::geo::shape::polygon::get_polygons_closest_point;
 use crate::ops::area::ClearedArea;
@@ -11,8 +10,6 @@ pub struct ResumePoint {
     pub pos: Point,
     /// Outward-normal heading at the resume position (radians).
     pub heading: f64,
-    /// Travel polyline through cleared territory, routed by the MAT.
-    pub link_path: Vec<Point>,
 }
 
 /// Internal: position + heading pair found on the frontier.
@@ -23,19 +20,19 @@ struct FrontierCandidate {
 
 impl ClearedArea {
     /// Walk the cleared-area frontier forward from a point near `end_pos`
-    /// and return the first position where engagement ≥ `min_engagement`.
+    /// and return the first position where the cut-area probe is ≥
+    /// `min_cut_area`.
     ///
-    /// The link path between `end_pos` and the resume position is routed
-    /// through the cleared area via MAT for collision‑free travel.
-    ///
-    /// Returns `None` when no valid resume point is found (fully cleared
-    /// or no MAT available).
+    /// At each frontier vertex the function evaluates the incremental cut
+    /// area the tool would encounter by stepping outward in the normal
+    /// direction by `step_length`.  Returns `None` when no vertex meets
+    /// the threshold.
     pub fn find_next_resume(
         &self,
-        mat: &MedialAxis,
         end_pos: Point,
         radius: f64,
-        min_engagement: f64,
+        step_length: f64,
+        min_cut_area: f64,
     ) -> Option<ResumePoint> {
         if self.is_empty() {
             return None;
@@ -46,8 +43,7 @@ impl ClearedArea {
             return None;
         }
 
-        // Find the closest point on the frontier to end_pos
-        // using the general polygon query.
+        // Find the closest point on the frontier to end_pos.
         let (closest_poly_idx, _t, closest_pt, _d2) =
             get_polygons_closest_point(&frontier, end_pos)?;
 
@@ -59,36 +55,34 @@ impl ClearedArea {
             heading,
         };
 
-        // Walk the frontier forward, checking engagement.
+        // Walk the frontier forward, checking cut area at each vertex.
         let walk_candidates = walk_frontier_forward(
             &start_candidate,
             &frontier,
             radius,
-            min_engagement,
+            step_length,
+            min_cut_area,
             self,
         );
 
         let resume_pt = walk_candidates.into_iter().next()?;
 
-        let link = mat
-            .path_between(end_pos, resume_pt.pos)
-            .unwrap_or_else(|| vec![end_pos, resume_pt.pos]);
-
         Some(ResumePoint {
             pos: resume_pt.pos,
             heading: resume_pt.heading,
-            link_path: link,
         })
     }
 }
 
-/// Walk the frontier polygon forward from `start`, checking engagement at
-/// each vertex.  Returns candidates with engagement ≥ min_engagement.
+/// Walk the frontier polygon forward from `start`, evaluating cut area
+/// at each vertex.  Returns candidates where the outward cut-area probe
+/// is ≥ min_cut_area.
 fn walk_frontier_forward(
     start: &FrontierCandidate,
     frontier: &[Vec<Point>],
     radius: f64,
-    min_engagement: f64,
+    step_length: f64,
+    min_cut_area: f64,
     cleared: &ClearedArea,
 ) -> Vec<FrontierCandidate> {
     let mut candidates = Vec::new();
@@ -114,9 +108,11 @@ fn walk_frontier_forward(
         for offset in 0..n {
             let idx = (start_idx + offset) % n;
             let pt = poly[idx];
-            let eng = cleared.point_engagement(pt, radius);
-            if eng.angle >= min_engagement {
-                let heading = frontier_heading_at(pt, poly);
+            let heading = frontier_heading_at(pt, poly);
+            let normal = Point::new(heading.cos(), heading.sin());
+            let probe = pt + normal * step_length;
+            let area = cleared.cut_area(pt, probe, radius);
+            if area >= min_cut_area {
                 candidates.push(FrontierCandidate { pos: pt, heading });
                 break;
             }

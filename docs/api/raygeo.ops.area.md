@@ -200,28 +200,34 @@ Panics if `begin_step_batch` was not called first.
 
 ```python
 find_next_resume(
-    mat: medial_axis.MedialAxis,
     end_pos: tuple[float, float],
     radius: float,
-    min_engagement: float,
+    step_length: float,
+    min_cut_area: float,
 ) -> Optional[ResumePoint]
 ```
 
 Walk the cleared-area frontier forward from a point near `end_pos` and return the first position
-where engagement ≥ `min_engagement`.
+where the cut-area probe is ≥ `min_cut_area`.
 
-| Parameter        | Type                     | Description                                          |
-| ---------------- | ------------------------ | ---------------------------------------------------- |
-| `mat`            | `medial_axis.MedialAxis` | Medial Axis of the domain (computed once per level). |
-| `end_pos`        | `tuple[float, float]`    | Current position where the path ended.               |
-| `radius`         | `float`                  | Disk radius (mm).                                    |
-| `min_engagement` | `float`                  | Minimum engagement angle (radians) required.         |
-| _Returns_        | `Optional[ResumePoint]`  | `ResumePoint` or `None`.                             |
+| Parameter      | Type                    | Description                                          |
+| -------------- | ----------------------- | ---------------------------------------------------- |
+| `end_pos`      | `tuple[float, float]`   | Current position where the path ended.               |
+| `radius`       | `float`                 | Disk radius (mm).                                    |
+| `step_length`  | `float`                 | Forward step distance (mm) for the cut-area probe.   |
+| `min_cut_area` | `float`                 | Minimum cut area (mm²) required at the resume point. |
+| _Returns_      | `Optional[ResumePoint]` | `ResumePoint` or `None`.                             |
 
 ![ walks the cleared-area frontier from the end position (red triangle) and returns the first position with sufficient engagement (green star).](images/ops-area-find-next-resume.png)
 
 *`find_next_resume` walks the cleared-area frontier from the end position (red triangle) and returns
 the first position with sufficient engagement (green star).*
+
+![Resume-point travel in a multi-island pocket (three islands).  Three end positions on the cleared frontier (colored triangles) each yield a resume position (star) with an outward heading (arrow) into uncut material.](images/ops-area-find-next-resume-multi.png)
+
+*Resume-point travel in a multi-island pocket (three islands). Three end positions on the cleared
+frontier (colored triangles) each yield a resume position (star) with an outward heading (arrow)
+into uncut material.*
 
 ### `fragments()`
 
@@ -495,14 +501,6 @@ heading: float
 ```
 
 Outward-normal heading (radians).
-
-### `link_path`
-
-```python
-link_path: list[tuple[float, float]]
-```
-
-Travel polyline through cleared territory.
 
 ### `pos`
 

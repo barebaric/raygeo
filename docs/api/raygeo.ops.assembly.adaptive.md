@@ -18,11 +18,9 @@ adaptive_clearing(
     safe_z: float = 2,
     step_length: float = 0.6,
     max_deflection_deg: float = 30,
-    travel_smoothing: int = 50,
     wall_margin: float = 0,
     area_tolerance: float = 1,
     cut_feed_rate: int = 1200,
-    travel_rapid_rate: int = 8000,
     cut_power: float = 1,
     start_pos: tuple[float, float] | None = None,
     start_heading: float | None = None,
@@ -50,11 +48,9 @@ and prepending the entry Ops to the result.
 | `safe_z`               | `float = 2`                                    | Retract Z height for travel (default 2.0).                                                                                       |
 | `step_length`          | `float = 0.6`                                  | Forward distance per solver step (default 0.6).                                                                                  |
 | `max_deflection_deg`   | `float = 30`                                   | Maximum steering deflection per step in degrees (default 30).                                                                    |
-| `travel_smoothing`     | `int = 50`                                     | Reserved (default 50).                                                                                                           |
 | `wall_margin`          | `float = 0`                                    | Extra clearance between tool and boundary (default 0.0).                                                                         |
 | `area_tolerance`       | `float = 1`                                    | Stop when remaining uncut area drops below this threshold (default 1.0).                                                         |
 | `cut_feed_rate`        | `int = 1200`                                   | Feed rate for cutting moves (default 1200).                                                                                      |
-| `travel_rapid_rate`    | `int = 8000`                                   | Rapid rate for travel moves (default 8000).                                                                                      |
 | `cut_power`            | `float = 1`                                    | Laser power for cutting moves (0.0-1.0, default 1.0).                                                                            |
 | `start_pos`            | `tuple[float, float] &#124; None = None`       | Initial tool position (x, y). When None, auto-detected from the cleared-area frontier.                                           |
 | `start_heading`        | `float &#124; None = None`                     | Initial tool heading in radians. When None, auto-detected as the CCW tangent at start_pos.                                       |

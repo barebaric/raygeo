@@ -19,7 +19,6 @@ use self::resume::PyResumePoint;
 
 use crate::ops::area::ClearedArea as RustClearedArea;
 use crate::ops::area::UpdateStrategy;
-use crate::python::geo::algo::medial_axis::PyMedialAxis;
 use crate::types::Point;
 use crate::types::Rect;
 
@@ -624,30 +623,30 @@ impl ClearedArea {
     }
 
     /// Walk the cleared-area frontier forward from a point near `end_pos`
-    /// and return the first position where engagement ≥ `min_engagement`.
+    /// and return the first position where the cut-area probe is ≥
+    /// `min_cut_area`.
     ///
-    /// :param mat: Medial Axis of the domain (computed once per level).
     /// :param end_pos: Current position where the path ended.
     /// :param radius: Disk radius (mm).
-    /// :param min_engagement: Minimum engagement angle (radians) required.
+    /// :param step_length: Forward step distance (mm) for the cut-area probe.
+    /// :param min_cut_area: Minimum cut area (mm²) required at the resume point.
     /// :returns: ``ResumePoint`` or ``None``.
     pub fn find_next_resume(
         &self,
-        mat: &PyMedialAxis,
         end_pos: (f64, f64),
         radius: f64,
-        min_engagement: f64,
+        step_length: f64,
+        min_cut_area: f64,
     ) -> Option<PyResumePoint> {
         let r = self.inner.find_next_resume(
-            &mat.inner,
             Point::new(end_pos.0, end_pos.1),
             radius,
-            min_engagement,
+            step_length,
+            min_cut_area,
         )?;
         Some(PyResumePoint {
             pos: (r.pos.x, r.pos.y),
             heading: r.heading,
-            link_path: r.link_path.into_iter().map(|p| (p.x, p.y)).collect(),
         })
     }
 

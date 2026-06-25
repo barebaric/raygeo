@@ -7,7 +7,7 @@ __all__ = [
     "adaptive_clearing",
 ]
 
-def adaptive_clearing(cleared: raygeo.ops.area.ClearedArea, pocket_boundary: collections.abc.Sequence[tuple[float, float]], islands: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]] = [], radius: float = 3, advance: float = 1.5, cut_z: float = -5, safe_z: float = 2, step_length: float = 0.6, max_deflection_deg: float = 30, travel_smoothing: int = 50, wall_margin: float = 0, area_tolerance: float = 1, cut_feed_rate: int = 1200, travel_rapid_rate: int = 8000, cut_power: float = 1, start_pos: tuple[float, float] | None = None, start_heading: float | None = None, expansion_batch_size: int = 1, profile: bool = False) -> raygeo.ops.Ops:
+def adaptive_clearing(cleared: raygeo.ops.area.ClearedArea, pocket_boundary: collections.abc.Sequence[tuple[float, float]], islands: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]] = [], radius: float = 3, advance: float = 1.5, cut_z: float = -5, safe_z: float = 2, step_length: float = 0.6, max_deflection_deg: float = 30, wall_margin: float = 0, area_tolerance: float = 1, cut_feed_rate: int = 1200, cut_power: float = 1, start_pos: tuple[float, float] | None = None, start_heading: float | None = None, expansion_batch_size: int = 1, profile: bool = False) -> raygeo.ops.Ops:
     r"""
     Run forward-stepping adaptive clearing.
     
@@ -29,12 +29,10 @@ def adaptive_clearing(cleared: raygeo.ops.area.ClearedArea, pocket_boundary: col
     :param step_length: Forward distance per solver step (default 0.6).
     :param max_deflection_deg: Maximum steering deflection per step
                                in degrees (default 30).
-    :param travel_smoothing: Reserved (default 50).
     :param wall_margin: Extra clearance between tool and boundary (default 0.0).
     :param area_tolerance: Stop when remaining uncut area drops below
                            this threshold (default 1.0).
     :param cut_feed_rate: Feed rate for cutting moves (default 1200).
-    :param travel_rapid_rate: Rapid rate for travel moves (default 8000).
     :param cut_power: Laser power for cutting moves (0.0-1.0, default 1.0).
     :param start_pos: Initial tool position (x, y).  When None,
                       auto-detected from the cleared-area frontier.

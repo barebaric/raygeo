@@ -1,5 +1,13 @@
 """Tests for raygeo.ops.assembly.adaptive module."""
 
+import pytest
+
+from raygeo.geo.shape.polygon import (
+    JoinStyle,
+    get_polygon_area,
+    get_polygons_group_difference,
+    offset_polygon,
+)
 from raygeo.ops import Ops
 from raygeo.ops.area import ClearedArea
 from raygeo.ops.assembly.adaptive import adaptive_clearing
@@ -14,6 +22,34 @@ def _rect(cx, cy, w, h):
         (cx + w / 2, cy + h / 2),
         (cx - w / 2, cy + h / 2),
     ]
+
+
+def _valid_tool_area(boundary, islands, radius):
+    """Compute the valid tool-centre region (boundary inset
+    by radius, islands expanded by radius).
+
+    Returns (polygons, total_area).
+    """
+    inset = offset_polygon(boundary, -radius, JoinStyle.Miter)
+    if not inset:
+        return [], 0.0
+
+    if islands:
+        island_bufs = []
+        for island in islands:
+            island_bufs.extend(offset_polygon(island, radius, JoinStyle.Miter))
+        region = get_polygons_group_difference(inset, island_bufs)
+    else:
+        region = inset
+
+    total = sum(get_polygon_area(p) for p in region)
+    return region, total
+
+
+def _remaining_area(ca, valid_polys):
+    """Sum of remaining (uncut) area within the valid tool-centre region."""
+    remaining = ca.remaining(valid_polys)
+    return sum(get_polygon_area(p) for p in remaining)
 
 
 def test_adaptive_clearing_returns_ops():
@@ -249,3 +285,84 @@ def test_adaptive_clearing_degenerate_pocket():
         safe_z=2.0,
     )
     assert isinstance(ops, Ops)
+
+
+def test_adaptive_clearing_fully_clears_rect():
+    """After clearing a plain rectangle, remaining area is below tolerance.
+
+    Known failure — the current single-attempt recovery in adaptive_clearing
+    (lines 393-482) gives up on any stall (BoundaryHit / LostEngagement) and
+    breaks, even when cleared.total_area() ≪ valid_total.  The Phase 4 full
+    recovery loop (resume + connected-components) will fix this.
+    """
+    pytest.xfail("Phase 4 required — current recovery breaks on any stall")
+
+    boundary = _rect(0, 0, 60, 60)
+    tol = 1.0
+    valid_polys, valid_total = _valid_tool_area(boundary, [], 3.0)
+    assert valid_total > tol, "valid tool area too small for a meaningful test"
+
+    entry_ops, cp = adaptive_entry(
+        pocket_boundary=boundary,
+        tool_radius=3.0,
+        step_over=1.5,
+        safe_z=2.0,
+        target_z=-5.0,
+    )
+    ca = ClearedArea(initial=cp)
+    adaptive_clearing(
+        cleared=ca,
+        pocket_boundary=boundary,
+        radius=3.0,
+        advance=1.5,
+        cut_z=-5.0,
+        safe_z=2.0,
+        area_tolerance=tol,
+    )
+
+    remaining = _remaining_area(ca, valid_polys)
+    assert remaining < tol, (
+        f"expected remaining < {tol}, got {remaining:.2f} mm²"
+    )
+
+
+def test_adaptive_clearing_fully_clears_with_island():
+    """After clearing a pocket with an island, remaining
+    area is below tolerance.
+
+    Known failure — same stall-break issue as the plain-rect case, compounded
+    by the asymmetric island blocking the spiral.  The Phase 4 full recovery
+    loop (resume + connected-components) will fix this.
+    """
+    pytest.xfail("Phase 4 required — current recovery breaks on any stall")
+
+    boundary = _rect(0, 0, 60, 60)
+    islands = [_rect(5, 0, 10, 10)]
+    tol = 1.0
+    valid_polys, valid_total = _valid_tool_area(boundary, islands, 3.0)
+    assert valid_total > tol, "valid tool area too small for a meaningful test"
+
+    entry_ops, cp = adaptive_entry(
+        pocket_boundary=boundary,
+        islands=islands,
+        tool_radius=3.0,
+        step_over=1.5,
+        safe_z=2.0,
+        target_z=-5.0,
+    )
+    ca = ClearedArea(initial=cp)
+    adaptive_clearing(
+        cleared=ca,
+        pocket_boundary=boundary,
+        islands=islands,
+        radius=3.0,
+        advance=1.5,
+        cut_z=-5.0,
+        safe_z=2.0,
+        area_tolerance=tol,
+    )
+
+    remaining = _remaining_area(ca, valid_polys)
+    assert remaining < tol, (
+        f"expected remaining < {tol}, got {remaining:.2f} mm²"
+    )
