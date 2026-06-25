@@ -13,14 +13,14 @@ use std::collections::HashSet;
 use prof_macros::prof;
 
 use crate::geo::algo::engagement::Engagement;
-use crate::geo::algo::simplify::simplify_polyline_3d;
+use crate::geo::algo::simplify::simplify_polyline;
 use crate::geo::algo::spatial_grid2d::SpatialGrid;
 use crate::geo::shape::polygon::{
     get_polygon_area, get_polygon_bounds, get_polygons_group_difference,
     get_polygons_group_intersection, get_polygons_union,
     get_segment_swept_polygon, offset_polygon, JoinStyle,
 };
-use crate::types::{Point, Point3D, Polygon, Rect};
+use crate::types::{Point, Polygon, Rect};
 
 pub struct ClearedArea {
     fragments: Vec<Polygon>,
@@ -221,18 +221,11 @@ impl ClearedArea {
         unioned
             .into_iter()
             .filter_map(|p| {
-                let pts3d: Vec<Point3D> =
-                    p.iter().map(|q| Point3D::new(q.x, q.y, 0.0)).collect();
-                let simplified = simplify_polyline_3d(&pts3d, simplify_tol);
+                let simplified = simplify_polyline(&p, simplify_tol);
                 if simplified.len() < 3 {
                     None
                 } else {
-                    Some(
-                        simplified
-                            .iter()
-                            .map(|q| Point::new(q.x, q.y))
-                            .collect(),
-                    )
+                    Some(simplified)
                 }
             })
             .collect()

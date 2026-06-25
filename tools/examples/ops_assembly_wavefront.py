@@ -1,12 +1,19 @@
 """Generate visualisations of wavefront motion assembly."""
 
+import pathlib
+
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.colors import Normalize
 
+from raygeo.geo.shape.polygon import (
+    get_polygon_signed_area,
+    is_point_inside_polygon,
+)
 from raygeo.ops.area import ClearedArea
 from raygeo.ops.assembly.entry import adaptive_entry
 from raygeo.ops.assembly.wavefront import adaptive_wavefronts
+from raygeo.svg import svg_string_to_geometries
 
 
 def _ops_to_points(ops):
@@ -29,6 +36,7 @@ def _plot_wavefront_2d(ops, boundary, islands, title):
         color = cmap(i / max(n_wf - 1, 1))
         pts_list = _ops_to_points(sub)
         seg_x, seg_y = [], []
+        last_x = last_y = None
         last_was_travel = False
         for x, y, z, is_travel in pts_list:
             if seg_x and is_travel and not last_was_travel:
@@ -38,8 +46,14 @@ def _plot_wavefront_2d(ops, boundary, islands, title):
                     )
                 seg_x, seg_y = [], []
             if not is_travel:
+                # Include the preceding travel endpoint so every edge
+                # of the ring is drawn.
+                if not seg_x and last_was_travel and last_x is not None:
+                    seg_x.append(last_x)
+                    seg_y.append(last_y)
                 seg_x.append(x)
                 seg_y.append(y)
+            last_x, last_y = x, y
             last_was_travel = is_travel
         if len(seg_x) >= 2:
             ax.plot(seg_x, seg_y, color=color, linewidth=0.6, alpha=0.7)
@@ -171,6 +185,144 @@ def generate_wavefront_yshape():
     )
 
 
+def generate_wavefront_svg():
+    """Adaptive wavefront filling the letters of a complex SVG logo."""
+    svg_path = (
+        pathlib.Path(__file__).resolve().parent.parent.parent
+        / "tests"
+        / "svg"
+        / "raygeo.svg"
+    )
+    svg_str = svg_path.read_text()
+    geoms = svg_string_to_geometries(svg_str)
+
+    # Collect all polygon vertices (before any transform)
+    all_polys_raw = []
+    for g in geoms:
+        polys = g.to_polygons(tolerance=0.1)
+        all_polys_raw.extend(polys)
+
+    # Flip Y: SVG Y-down → math Y-up
+    all_y = [y for p in all_polys_raw for _, y in p]
+    y_min, y_max = min(all_y), max(all_y)
+    all_polys = []
+    for p in all_polys_raw:
+        flipped = [(x, y_min + y_max - y) for x, y in p]
+        all_polys.append(flipped)
+
+    # Separate outer (CW after flip) and inner (CCW after flip) by signed area
+    # After Y-flip, SVG outer (CCW in SVG) becomes CW → negative area
+    outer_polys = [p for p in all_polys if get_polygon_signed_area(p) < 0]
+    inner_polys = [p for p in all_polys if get_polygon_signed_area(p) >= 0]
+
+    # For each outer contour, find its associated holes
+    components = []
+    for boundary in outer_polys:
+        holes = [
+            inner
+            for inner in inner_polys
+            if is_point_inside_polygon(inner[0], boundary)
+        ]
+        components.append((boundary, holes))
+
+    # Run wavefront on every letter component independently
+    results = []
+    max_subpaths = 0
+    for boundary, islands in components:
+        _, cp = adaptive_entry(
+            pocket_boundary=boundary,
+            islands=islands,
+            tool_radius=1.5,
+            step_over=1.0,
+            safe_z=2.0,
+            target_z=-5.0,
+            plunge_pitch=1.0,
+        )
+        ca = ClearedArea(initial=cp)
+        ops = adaptive_wavefronts(
+            ca,
+            boundary,
+            islands=islands,
+            tool_radius=1.5,
+            step_over=0.5,
+            z=-5.0,
+            area_tolerance=0.2,
+        )
+        n_sub = len(ops.split_into_subpaths())
+        max_subpaths = max(max_subpaths, n_sub)
+        results.append((ops, boundary, islands))
+
+    # Plot everything
+    fig, ax = plt.subplots(figsize=(12, 6))
+    cmap = plt.colormaps["plasma"]
+
+    # Background: fill all letter shapes with holes punched out
+    for poly in outer_polys:
+        arr = np.array(list(poly) + [poly[0]])
+        ax.fill(
+            arr[:, 0],
+            arr[:, 1],
+            facecolor="#e8e8e8",
+            edgecolor="none",
+            zorder=0,
+        )
+    for poly in inner_polys:
+        arr = np.array(list(poly) + [poly[0]])
+        ax.fill(
+            arr[:, 0], arr[:, 1], facecolor="white", edgecolor="none", zorder=1
+        )
+
+    # Plot all wavefronts with a single consistent colormap
+    for ops, _boundary, _islands in results:
+        subpaths = ops.split_into_subpaths()
+        for i, sub in enumerate(subpaths):
+            color = cmap(i / max(max_subpaths - 1, 1))
+            pts_list = _ops_to_points(sub)
+            seg_x, seg_y = [], []
+            last_x = last_y = None
+            last_was_travel = False
+            for x, y, z, is_travel in pts_list:
+                if seg_x and is_travel and not last_was_travel:
+                    if len(seg_x) >= 2:
+                        ax.plot(
+                            seg_x,
+                            seg_y,
+                            color=color,
+                            linewidth=0.9,
+                            alpha=0.85,
+                        )
+                    seg_x, seg_y = [], []
+                if not is_travel:
+                    if not seg_x and last_was_travel and last_x is not None:
+                        seg_x.append(last_x)
+                        seg_y.append(last_y)
+                    seg_x.append(x)
+                    seg_y.append(y)
+                last_x, last_y = x, y
+                last_was_travel = is_travel
+            if len(seg_x) >= 2:
+                ax.plot(seg_x, seg_y, color=color, linewidth=0.9, alpha=0.85)
+
+    # Letter outlines (thin, dark)
+    for poly in outer_polys:
+        arr = np.array(list(poly) + [poly[0]])
+        ax.plot(arr[:, 0], arr[:, 1], color="#444", linewidth=0.8, zorder=2)
+    for poly in inner_polys:
+        arr = np.array(list(poly) + [poly[0]])
+        ax.plot(arr[:, 0], arr[:, 1], color="#444", linewidth=0.8, zorder=2)
+
+    ax.set_aspect("equal")
+    ax.set_title("Adaptive Wavefronts — Raygeo Logo")
+    ax.set_axis_off()
+
+    sm = plt.cm.ScalarMappable(cmap=cmap, norm=Normalize(0, max_subpaths - 1))
+    sm.set_array([])
+    fig.colorbar(sm, ax=ax, label="Iteration")
+
+    fig.tight_layout()
+    return fig
+
+
 __docs_target__ = ["raygeo.ops.assembly.wavefront.md"]
 
 __images__ = [
@@ -197,5 +349,14 @@ __images__ = [
             " and propagate along each branch"
         ),
         "function": generate_wavefront_yshape,
+    },
+    {
+        "heading": "adaptive_wavefronts",
+        "caption": (
+            "Adaptive wavefronts expanding within a complex shape loaded"
+            " from an SVG file — contours adapt to the irregular boundary"
+            " and wrap around internal islands"
+        ),
+        "function": generate_wavefront_svg,
     },
 ]

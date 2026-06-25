@@ -58,7 +58,9 @@ pub fn adaptive_wavefronts(
         }
 
         for frag in &new_ring {
-            if frag.len() < 2 {
+            // Skip fragments that are too small to be meaningful.
+            let frag_area = get_polygon_area(frag);
+            if frag_area < opts.area_tolerance {
                 continue;
             }
             if !state_applied {
@@ -69,6 +71,9 @@ pub fn adaptive_wavefronts(
             for p in &frag[1..] {
                 ops.line_to(p.x, p.y, opts.z, None);
             }
+            // Close the fragment ring so the rendering has no visible
+            // gap between the last point and the first.
+            ops.close_path();
         }
 
         let ring_area: f64 = new_ring.iter().map(get_polygon_area).sum();

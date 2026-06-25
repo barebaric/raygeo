@@ -102,7 +102,7 @@ pub use rootfind::{
     bisect, bisect_tracked, illinois, illinois_tracked, secant, secant_tracked,
     RootStatus,
 };
-pub use simplify::{simplify_data, simplify_polyline_3d};
+pub use simplify::{simplify_data, simplify_polyline, simplify_polyline_3d};
 pub use smooth::{
     blend_tangent, build_smoothed_path, chaikin_corner_cut,
     compute_gaussian_kernel, smooth_circularly, smooth_path,

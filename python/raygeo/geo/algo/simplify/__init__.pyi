@@ -10,8 +10,21 @@ shape within a given tolerance.
 import collections.abc
 from raygeo.geo import types
 __all__ = [
+    "simplify_polyline",
     "simplify_polyline_3d",
 ]
+
+def simplify_polyline(points: collections.abc.Sequence[types.Point], tolerance: float) -> types.Polygon:
+    r"""
+    Simplify a 2D polyline using the Ramer-Douglas-Peucker algorithm.
+    
+    Reduces the number of points while preserving shape within tolerance.
+    
+    :param points: Sequence of (x, y) points.
+    :param tolerance: Simplification tolerance.
+    :returns: Simplified 2D point sequence.
+    :complexity: O(n log n) average time, O(n) space
+    """
 
 def simplify_polyline_3d(points: collections.abc.Sequence[types.Point3D], tolerance: float) -> types.Polygon3D:
     r"""

@@ -1,5 +1,66 @@
 use crate::types::{Command, Point, Point3D};
 
+/// Simplify a sequence of 2D points using the Ramer-Douglas-Peucker algorithm.
+pub fn simplify_polyline(points: &[Point], tolerance: f64) -> Vec<Point> {
+    let n = points.len();
+    if n < 3 {
+        return points.to_vec();
+    }
+
+    let tol_sq = tolerance * tolerance;
+    let mut keep = vec![false; n];
+    keep[0] = true;
+    keep[n - 1] = true;
+
+    let mut stack: Vec<(usize, usize)> = vec![(0, n - 1)];
+
+    while let Some((start, end)) = stack.pop() {
+        if end - start < 2 {
+            continue;
+        }
+
+        let p_start = points[start];
+        let p_end = points[end];
+        let chord_vec = p_end - p_start;
+        let chord_len_sq = chord_vec.length_squared();
+
+        let mut max_dist_sq = 0.0_f64;
+        let mut max_idx = start;
+
+        if chord_len_sq < 1e-12 {
+            for (i, p) in points.iter().enumerate().take(end).skip(start + 1) {
+                let d_sq = (*p - p_start).length_squared();
+                if d_sq > max_dist_sq {
+                    max_dist_sq = d_sq;
+                    max_idx = i;
+                }
+            }
+        } else {
+            for (i, p) in points.iter().enumerate().take(end).skip(start + 1) {
+                let cross = (*p - p_start).perp_dot(chord_vec);
+                let d_sq = (cross * cross) / chord_len_sq;
+                if d_sq > max_dist_sq {
+                    max_dist_sq = d_sq;
+                    max_idx = i;
+                }
+            }
+        }
+
+        if max_dist_sq > tol_sq {
+            keep[max_idx] = true;
+            stack.push((start, max_idx));
+            stack.push((max_idx, end));
+        }
+    }
+
+    points
+        .iter()
+        .enumerate()
+        .filter(|(i, _)| keep[*i])
+        .map(|(_, p)| *p)
+        .collect()
+}
+
 /// Simplify a sequence of 3D points using the Ramer-Douglas-Peucker algorithm.
 pub fn simplify_polyline_3d(
     points: &[Point3D],

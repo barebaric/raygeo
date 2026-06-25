@@ -10,6 +10,26 @@ tolerance.
 
 ## Functions
 
+### `simplify_polyline()`
+
+```python
+simplify_polyline(
+    points: Sequence[types.Point],
+    tolerance: float,
+) -> types.Polygon
+```
+
+Simplify a 2D polyline using the Ramer-Douglas-Peucker algorithm.
+
+Reduces the number of points while preserving shape within tolerance.
+
+| Parameter    | Type                    | Description                         |
+| ------------ | ----------------------- | ----------------------------------- |
+| `points`     | `Sequence[types.Point]` | Sequence of (x, y) points.          |
+| `tolerance`  | `float`                 | Simplification tolerance.           |
+| _Returns_    | `types.Polygon`         | Simplified 2D point sequence.       |
+| _Complexity_ |                         | O(n log n) average time, O(n) space |
+
 ### `simplify_polyline_3d()`
 
 ```python

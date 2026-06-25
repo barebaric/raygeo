@@ -56,3 +56,8 @@ expand*
 ![Adaptive wavefronts in a Y-shaped channel — contours split and propagate along each branch](images/ops-assembly-wavefront-wavefront-yshape.png)
 
 *Adaptive wavefronts in a Y-shaped channel — contours split and propagate along each branch*
+
+![Adaptive wavefronts expanding within a complex shape loaded from an SVG file — contours adapt to the irregular boundary and wrap around internal islands](images/ops-assembly-wavefront-wavefront-svg.png)
+
+*Adaptive wavefronts expanding within a complex shape loaded from an SVG file — contours adapt to
+the irregular boundary and wrap around internal islands*
