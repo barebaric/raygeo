@@ -1047,3 +1047,126 @@ pub fn polygons_intersect(
     }
     false
 }
+
+/// Outward-facing heading angle (radians) at a point on a closed polygon.
+///
+/// Collects all polygon edges whose closest distance to `vertex` is within
+/// epsilon and averages their outward normals.  When `vertex` lies at a
+/// polygon corner this produces the **bisector** direction (the average of
+/// both incident edge normals), giving a smooth outward direction rather
+/// than snapping to a single edge.  At a collinear point the two normals
+/// are identical, so the result is unchanged.
+///
+/// Winding is detected via [`get_polygon_signed_area`]:
+///
+/// | Winding  | Outward normal       |
+/// |----------|----------------------|
+/// | CCW (>0) | right normal  (dy, -dx) |
+/// | CW  (<0) | left normal   (-dy, dx) |
+///
+/// For a CCW outer polygon this is the true outward (exterior-facing)
+/// direction.  For a CW hole it is also outward (away from the hole
+/// interior, i.e. into the surrounding material).
+///
+/// Returns `0.0` when the polygon has fewer than 3 vertices or the
+/// averaged normal is the zero vector.
+pub fn get_polygon_heading_at(polygon: &[Point], vertex: Point) -> f64 {
+    let n = polygon.len();
+    if n < 3 {
+        return 0.0;
+    }
+
+    const EPS: f64 = 1e-12;
+    let signed_area = get_polygon_signed_area(polygon);
+    let compute_outward = |edge_dir: Point| -> Point {
+        if signed_area >= 0.0 {
+            Point::new(edge_dir.y, -edge_dir.x)
+        } else {
+            Point::new(-edge_dir.y, edge_dir.x)
+        }
+    };
+
+    // Find all edges whose closest distance to vertex is within EPS
+    // and average their unit outward normals so each edge contributes
+    // equally regardless of length.
+    let mut normal_sum = Point::new(0.0, 0.0);
+    let mut count: usize = 0;
+
+    for i in 0..n {
+        let j = (i + 1) % n;
+        let (_, _, d2) = get_line_segment_closest_point(
+            polygon[i], polygon[j], vertex.x, vertex.y,
+        );
+        if d2 < EPS {
+            let edge_dir = polygon[j] - polygon[i];
+            let len_sq = edge_dir.length_squared();
+            if len_sq < EPS {
+                continue;
+            }
+            let outward = compute_outward(edge_dir);
+            let inv_len = 1.0 / len_sq.sqrt();
+            normal_sum += Point::new(outward.x * inv_len, outward.y * inv_len);
+            count += 1;
+        }
+    }
+
+    if count == 0 {
+        return 0.0;
+    }
+
+    let avg =
+        Point::new(normal_sum.x / count as f64, normal_sum.y / count as f64);
+    if avg.length_squared() < EPS {
+        return 0.0;
+    }
+    avg.y.atan2(avg.x)
+}
+
+/// Walk polygon vertices forward (in storage order, wrapping around),
+/// starting from the vertex closest to `start`.
+///
+/// For each vertex `visit(idx, &point)` is called.  The walk stops at the
+/// first invocation that returns `Some(result)` and that result is returned.
+/// If every call returns `None` the overall result is `None`.
+///
+/// # Direction
+///
+/// "Forward" means increasing vertex index with wrap-around:
+/// `closest, closest+1, …, n-1, 0, 1, …, closest-1`.
+/// This follows the polygon's natural storage order.
+///
+/// * For a **CCW outer polygon** (signed area > 0) forward walks
+///   **counter-clockwise** — the interior stays on the left.
+/// * For a **CW hole** (signed area < 0) forward walks **clockwise** —
+///   the interior (hole) stays on the right.
+///
+/// The direction never reverses; the walk covers all `n` vertices exactly
+/// once (unless the visit callback short-circuits).
+pub fn walk_polygon_from_point<T>(
+    polygon: &[Point],
+    start: Point,
+    mut visit: impl FnMut(usize, &Point) -> Option<T>,
+) -> Option<T> {
+    let n = polygon.len();
+    if n < 3 {
+        return None;
+    }
+
+    let start_idx = polygon
+        .iter()
+        .enumerate()
+        .min_by(|(_, a), (_, b)| {
+            a.distance_squared(start)
+                .partial_cmp(&b.distance_squared(start))
+                .unwrap_or(std::cmp::Ordering::Equal)
+        })
+        .map(|(i, _)| i)?;
+
+    for offset in 0..n {
+        let idx = (start_idx + offset) % n;
+        if let result @ Some(_) = visit(idx, &polygon[idx]) {
+            return result;
+        }
+    }
+    None
+}

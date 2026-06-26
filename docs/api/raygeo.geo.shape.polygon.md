@@ -333,6 +333,25 @@ Get the bounding rectangle of a group of polygons.
 
 *`get_polygon_group_bounds` all polygons within a rect*
 
+### `get_polygon_heading_at()`
+
+```python
+get_polygon_heading_at(
+    polygon: list[tuple[float, float]],
+    vertex: tuple[float, float],
+) -> float
+```
+
+| Parameter | Type                        | Description |
+| --------- | --------------------------- | ----------- |
+| `polygon` | `list[tuple[float, float]]` |             |
+| `vertex`  | `tuple[float, float]`       |             |
+| _Returns_ | `float`                     |             |
+
+![ draws outward-facing heading arrows at each vertex of a CCW polygon.](images/geo-shape-polygon-polygon-heading-at.png)
+
+*`get_polygon_heading_at` draws outward-facing heading arrows at each vertex of a CCW polygon.*
+
 ### `get_polygon_perimeter()`
 
 ```python
@@ -1014,3 +1033,23 @@ Translate polygons from numpy arrays.
 | `dy`         | `float`                   | Y translation.                   |
 | _Returns_    | `list[numpy.NDArray]`     | List of translated numpy arrays. |
 | _Complexity_ |                           | O(n * m)                         |
+
+### `walk_polygon_from_point()`
+
+```python
+walk_polygon_from_point(
+    polygon: list[tuple[float, float]],
+    start: tuple[float, float],
+) -> list[tuple[int, float, float]]
+```
+
+| Parameter | Type                             | Description |
+| --------- | -------------------------------- | ----------- |
+| `polygon` | `list[tuple[float, float]]`      |             |
+| `start`   | `tuple[float, float]`            |             |
+| _Returns_ | `list[tuple[int, float, float]]` |             |
+
+![ returns vertices in walk order starting from the vertex closest to a marker.](images/geo-shape-polygon-walk-polygon-from-point.png)
+
+*`walk_polygon_from_point` returns vertices in walk order starting from the vertex closest to a
+marker.*

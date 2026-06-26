@@ -10,11 +10,12 @@ use crate::geo::shape::polygon::{
     does_path_sweep_intersect_polygon, flip_polygon, flip_polygons,
     get_circle_polygon, get_polygon_boundary_distance, get_polygon_bounds,
     get_polygon_centroid, get_polygon_closest_point, get_polygon_convex_hull,
-    get_polygon_edges, get_polygon_group_bounds, get_polygon_perimeter,
-    get_polygon_signed_area, get_polygon_vertex_centroid,
-    get_polygons_closest_point, get_polygons_difference,
-    get_polygons_group_difference, get_polygons_group_intersection,
-    get_polygons_intersection, get_polygons_union, get_segment_swept_polygon,
+    get_polygon_edges, get_polygon_group_bounds, get_polygon_heading_at,
+    get_polygon_perimeter, get_polygon_signed_area,
+    get_polygon_vertex_centroid, get_polygons_closest_point,
+    get_polygons_difference, get_polygons_group_difference,
+    get_polygons_group_intersection, get_polygons_intersection,
+    get_polygons_union, get_segment_swept_polygon,
     get_signed_boundary_distance, is_almost_equal, is_point_inside_polygon,
     is_polygon_clockwise, is_polygon_convex, normalize_polygons,
     offset_polygon, point_line_distance, polygons_intersect, resample_polygon,
@@ -156,6 +157,8 @@ pub fn register(shape_mod: &Bound<'_, PyModule>) -> PyResult<()> {
         polygons_intersect_numpy_py,
         polygons_intersect_py,
         resample_polygon_py,
+        get_polygon_heading_at_py,
+        walk_polygon_from_point_py,
         rotate_polygon_numpy_py,
         rotate_polygon_py,
         rotate_polygons_numpy_py,
@@ -1729,4 +1732,89 @@ fn resample_polygon_py(
 ) -> Vec<(f64, f64)> {
     let pts = poly_to_points(polygon);
     points_to_tuples(resample_polygon(&pts, spacing))
+}
+
+/// Outward-facing heading angle (radians) at the vertex of a closed polygon.
+///
+/// Finds the polygon edge closest to the vertex, then returns the angle
+/// of the outward-facing normal via ``atan2``.
+///
+/// CCW winding → right normal (outward).
+/// CW winding  → left normal  (outward).
+///
+/// :param polygon: Closed polygon as a list of ``(x, y)`` vertices.
+/// :param vertex:  Query vertex ``(x, y)``.
+/// :returns: Heading angle in radians in ``[-π, π]``.
+#[gen_stub_pyfunction(
+    python = r#"
+    def get_polygon_heading_at(
+        polygon: list[tuple[float, float]],
+        vertex: tuple[float, float],
+    ) -> float:
+        ...
+    "#,
+    module = "raygeo.geo.shape.polygon"
+)]
+#[pyfunction(name = "get_polygon_heading_at")]
+fn get_polygon_heading_at_py(
+    polygon: Vec<PyPoint2D>,
+    vertex: (f64, f64),
+) -> f64 {
+    let poly = poly_to_points(polygon);
+    get_polygon_heading_at(&poly, Point::new(vertex.0, vertex.1))
+}
+
+/// Walk polygon vertices forward (in storage order, wrapping around),
+/// starting from the vertex closest to *start*.
+///
+/// Returns a list of ``(index, x, y)`` tuples for every vertex in walk
+/// order.  The caller can iterate and break when their predicate is met.
+///
+/// "Forward" follows storage order with wrap-around.
+/// For CCW polygons this walks counter-clockwise (interior on left).
+///
+/// :param polygon: Closed polygon as a list of ``(x, y)`` vertices.
+/// :param start:   Reference point — the closest vertex starts the walk.
+/// :returns: List of ``(index, x, y)`` tuples in walk order.
+#[gen_stub_pyfunction(
+    python = r#"
+    def walk_polygon_from_point(
+        polygon: list[tuple[float, float]],
+        start: tuple[float, float],
+    ) -> list[tuple[int, float, float]]:
+        ...
+    "#,
+    module = "raygeo.geo.shape.polygon"
+)]
+#[pyfunction(name = "walk_polygon_from_point")]
+fn walk_polygon_from_point_py(
+    polygon: Vec<PyPoint2D>,
+    start: (f64, f64),
+) -> Vec<(usize, f64, f64)> {
+    let poly = poly_to_points(polygon);
+    let start_pt = Point::new(start.0, start.1);
+
+    let n = poly.len();
+    if n < 3 {
+        return vec![];
+    }
+
+    let start_idx = poly
+        .iter()
+        .enumerate()
+        .min_by(|(_, a), (_, b)| {
+            a.distance_squared(start_pt)
+                .partial_cmp(&b.distance_squared(start_pt))
+                .unwrap_or(std::cmp::Ordering::Equal)
+        })
+        .map(|(i, _)| i)
+        .unwrap_or(0);
+
+    let mut result = Vec::with_capacity(n);
+    for offset in 0..n {
+        let idx = (start_idx + offset) % n;
+        let pt = &poly[idx];
+        result.push((idx, pt.x, pt.y));
+    }
+    result
 }

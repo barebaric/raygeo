@@ -16,6 +16,7 @@ from raygeo.geo.shape.polygon import (
     get_polygon_closest_point,
     get_polygon_convex_hull,
     get_polygon_group_bounds,
+    get_polygon_heading_at,
     get_polygons_closest_point,
     get_polygons_difference,
     get_polygons_intersection,
@@ -23,6 +24,7 @@ from raygeo.geo.shape.polygon import (
     get_segment_swept_polygon,
     get_signed_boundary_distance,
     offset_polygon,
+    walk_polygon_from_point,
 )
 from raygeo.geo.types import Polygon
 from tools.plot import plot_polygon
@@ -503,6 +505,228 @@ def generate_signed_boundary_distance_field():
     return fig
 
 
+# ── get_polygon_heading_at ──────────────────────────────────────────
+
+
+def generate_polygon_heading_at():
+    """Outward-pointing heading arrows on an L‑shaped polygon with
+    collinear and concave (reflex) vertices.
+
+    * **Collinear points** — four vertices along the bottom edge
+      *(0, 1, 2, 3)* — all have the same outward heading (downward).
+    * **Convex corners** — vertices *4, 7, 9* are standard 90° turns.
+    * **Concave (reflex) corners** — vertices *5 and 8* are the
+      notched corners where the outward heading points into the notch.
+    """
+    poly = [
+        (20.0, 10.0),  # 0  collinear start
+        (45.0, 10.0),  # 1  ┐ collinear
+        (65.0, 10.0),  # 2  ┘ collinear
+        (80.0, 10.0),  # 3  collinear end, convex corner
+        (80.0, 40.0),  # 4  convex — right shelf
+        (60.0, 40.0),  # 5  CONCAVE — notch-right (reflex)
+        (60.0, 30.0),  # 6  convex — notch inner
+        (40.0, 30.0),  # 7  convex — notch inner
+        (40.0, 40.0),  # 8  CONCAVE — notch-left (reflex)
+        (20.0, 40.0),  # 9  convex — left shelf
+    ]
+
+    fig, ax = plt.subplots(figsize=(8, 6))
+
+    arr = np.array(poly + [poly[0]])
+    ax.plot(arr[:, 0], arr[:, 1], "k-", linewidth=2, label="Polygon")
+    ax.fill(arr[:, 0], arr[:, 1], facecolor="#eef", alpha=0.3)
+
+    arrow_len = 9.0
+    for i, pt in enumerate(poly):
+        h = get_polygon_heading_at(poly, pt)
+        dx = arrow_len * math.cos(h)
+        dy = arrow_len * math.sin(h)
+        color = "crimson"
+        ax.arrow(
+            pt[0],
+            pt[1],
+            dx,
+            dy,
+            head_width=4,
+            head_length=4,
+            fc=color,
+            ec=color,
+            alpha=0.8,
+        )
+        ax.plot(pt[0], pt[1], "o", color=color, markersize=5)
+        ax.text(
+            pt[0] + 2,
+            pt[1] - 5,
+            str(i),
+            fontsize=7,
+            color="gray",
+            fontweight="bold",
+        )
+
+    # Legend markers.
+    ax.plot([], [], "o", color="crimson", label="Vertex + heading")
+    ax.plot(
+        [],
+        [],
+        "s",
+        color="none",
+        markeredgecolor="orange",
+        markeredgewidth=2,
+        markersize=10,
+        label="Collinear",
+    )
+    ax.plot(
+        [],
+        [],
+        "s",
+        color="none",
+        markeredgecolor="limegreen",
+        markeredgewidth=2,
+        markersize=10,
+        label="Concave (reflex)",
+    )
+
+    # Highlight special vertices.
+    for idx in (1, 2):
+        p = poly[idx]
+        ax.plot(
+            p[0],
+            p[1],
+            "s",
+            color="none",
+            markeredgecolor="orange",
+            markeredgewidth=2,
+            markersize=10,
+        )
+    for idx in (5, 8):
+        p = poly[idx]
+        ax.plot(
+            p[0],
+            p[1],
+            "s",
+            color="none",
+            markeredgecolor="limegreen",
+            markeredgewidth=2,
+            markersize=10,
+        )
+
+    ax.set_title("get_polygon_heading_at — Collinear & Concave Vertices")
+    ax.set_xlabel("X (mm)")
+    ax.set_ylabel("Y (mm)")
+    ax.set_aspect("equal")
+    ax.legend(fontsize=8, loc="upper left")
+    ax.grid(True, alpha=0.3)
+    fig.tight_layout()
+    return fig
+
+
+# ── walk_polygon_from_point ────────────────────────────────────────
+
+
+def _arrow_between(ax, a, b, color, lw=1.5):
+    """Draw an arrow from *a* to *b*."""
+    dx = b[0] - a[0]
+    dy = b[1] - a[1]
+    ax.arrow(
+        a[0],
+        a[1],
+        dx,
+        dy,
+        head_width=3,
+        head_length=3,
+        fc=color,
+        ec=color,
+        alpha=0.6,
+        lw=lw,
+        length_includes_head=True,
+    )
+
+
+def generate_walk_polygon_from_point():
+    """Walk order around an irregular polygon with a concave notch.
+    The start marker is placed closest to vertex *2*, and the walk
+    proceeds forward (CCW) from there.
+
+    The vertex indices in the walk sequence should form
+    ``[2, 3, 4, 5, 6, 7, 0, 1]`` — *2* is closest, then all others
+    in wrapping CCW order.
+    """
+    poly = [
+        (20.0, 10.0),  # 0  bottom-left
+        (80.0, 10.0),  # 1  bottom-right
+        (80.0, 55.0),  # 2  right-side start (closest to marker)
+        (50.0, 55.0),  # 3  notch-right (concave)
+        (50.0, 35.0),  # 4  notch-inner-right
+        (30.0, 35.0),  # 5  notch-inner-left
+        (30.0, 55.0),  # 6  notch-left (concave)
+        (20.0, 55.0),  # 7  left-side
+    ]
+    start = (85.0, 50.0)
+
+    fig, ax = plt.subplots(figsize=(8, 6))
+
+    arr = np.array(poly + [poly[0]])
+    ax.plot(arr[:, 0], arr[:, 1], "k-", linewidth=2, label="Polygon")
+    ax.fill(arr[:, 0], arr[:, 1], facecolor="#eef", alpha=0.3)
+
+    walk = walk_polygon_from_point(poly, start)
+
+    n = len(walk)
+    for rank, (idx, x, y) in enumerate(walk):
+        ax.plot(x, y, "o", color="steelblue", markersize=9, zorder=5)
+        ax.text(
+            x + 2,
+            y + 3,
+            str(rank + 1),
+            fontsize=11,
+            color="steelblue",
+            fontweight="bold",
+        )
+        ax.text(
+            x + 2,
+            y - 3,
+            f"v{idx}",
+            fontsize=6,
+            color="steelblue",
+            alpha=0.7,
+        )
+
+    # Arrows between consecutive walk vertices + wraparound.
+    for i in range(n - 1):
+        a = (walk[i][1], walk[i][2])
+        b = (walk[i + 1][1], walk[i + 1][2])
+        _arrow_between(ax, a, b, "gray")
+    _arrow_between(
+        ax, (walk[-1][1], walk[-1][2]), (walk[0][1], walk[0][2]), "gray", lw=1
+    )
+
+    # Mark the start point.
+    ax.plot(start[0], start[1], "r*", markersize=16, label="Start point")
+    ax.plot(
+        [start[0], walk[0][1]],
+        [start[1], walk[0][2]],
+        ":",
+        color="gray",
+        alpha=0.5,
+        label="Closest vertex",
+    )
+
+    ax.set_title(
+        "walk_polygon_from_point — Wrapping Walk from Closest Vertex\n"
+        "(numbered labels show walk step order)"
+    )
+    ax.set_xlabel("X (mm)")
+    ax.set_ylabel("Y (mm)")
+    ax.set_aspect("equal")
+    ax.legend(
+        fontsize=9, loc="lower center", bbox_to_anchor=(0.5, -0.2), ncol=3
+    )
+    ax.grid(True, alpha=0.3)
+    fig.subplots_adjust(bottom=0.18)
+    return fig
+
+
 __docs_target__ = ["raygeo.geo.shape.polygon.md"]
 __images__ = [
     {
@@ -590,5 +814,21 @@ __images__ = [
             " black contour marks the boundary."
         ),
         "function": generate_signed_boundary_distance_field,
+    },
+    {
+        "heading": "get_polygon_heading_at",
+        "caption": (
+            "``get_polygon_heading_at`` draws outward-facing heading arrows"
+            " at each vertex of a CCW polygon."
+        ),
+        "function": generate_polygon_heading_at,
+    },
+    {
+        "heading": "walk_polygon_from_point",
+        "caption": (
+            "``walk_polygon_from_point`` returns vertices in walk order"
+            " starting from the vertex closest to a marker."
+        ),
+        "function": generate_walk_polygon_from_point,
     },
 ]

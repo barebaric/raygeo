@@ -23,6 +23,7 @@ from raygeo.geo.shape.polygon import (
     get_polygon_convex_hull,
     get_polygon_edges,
     get_polygon_group_bounds,
+    get_polygon_heading_at,
     get_polygon_perimeter,
     get_polygon_signed_area,
     get_polygon_vertex_centroid,
@@ -58,6 +59,7 @@ from raygeo.geo.shape.polygon import (
     translate_polygon_numpy,
     translate_polygons,
     translate_polygons_numpy,
+    walk_polygon_from_point,
 )
 from raygeo.geo.shape.polygon3d import resample_polyline_3d
 from raygeo.geo.types import Polygon
@@ -1723,3 +1725,113 @@ def test_get_signed_boundary_distance_inside_hole():
     # → negative (inside outer).
     d = get_signed_boundary_distance((5, 5), [outer])
     assert d < 0
+
+
+# ── get_polygon_heading_at ───────────────────────────────────────
+
+
+def _ccw_square() -> list[tuple[float, float]]:
+    """4‑vertex CCW square from (0,0) to (10,10)."""
+    return [(0.0, 0.0), (10.0, 0.0), (10.0, 10.0), (0.0, 10.0)]
+
+
+def _cw_square() -> list[tuple[float, float]]:
+    """4‑vertex CW square from (0,0) to (10,10)."""
+    return [(0.0, 0.0), (0.0, 10.0), (10.0, 10.0), (10.0, 0.0)]
+
+
+def test_heading_short_polygon():
+    """Fewer than 3 vertices returns 0."""
+    assert get_polygon_heading_at([(0, 0)], (0, 0)) == 0.0
+    assert get_polygon_heading_at([(0, 0), (1, 0)], (0, 0)) == 0.0
+
+
+def test_heading_ccw_top_right():
+    """CCW square (10,10): bisector of right (0°) and up (90°) → 45°."""
+    h = get_polygon_heading_at(_ccw_square(), (10, 10))
+    assert abs(h - math.pi / 4) < 1e-6, f"expected π/4, got {h}"
+
+
+def test_heading_ccw_bottom_left():
+    """CCW square (0,0): bisector of down (-90°) and left (180°) → -135°."""
+    h = get_polygon_heading_at(_ccw_square(), (0, 0))
+    assert abs(h - (-3 * math.pi / 4)) < 1e-6, f"expected -3π/4, got {h}"
+
+
+def test_heading_ccw_top_left():
+    """CCW square (0,10): bisector of up (90°) and left (180°) → 135°."""
+    h = get_polygon_heading_at(_ccw_square(), (0, 10))
+    assert abs(h - 3 * math.pi / 4) < 1e-6, f"expected 3π/4, got {h}"
+
+
+def test_heading_cw_top_right():
+    """CW square (10,10): bisector of up (90°) and right (0°) → 45°."""
+    h = get_polygon_heading_at(_cw_square(), (10, 10))
+    assert abs(h - math.pi / 4) < 1e-6, f"expected π/4, got {h}"
+
+
+def test_heading_mid_edge():
+    """Point on the middle of an edge — only one edge at distance 0."""
+    h = get_polygon_heading_at(_ccw_square(), (10, 5))
+    assert abs(h) < 1e-6, f"expected 0 (right), got {h}"
+
+
+def test_heading_vertex_coincident():
+    """CCW square (10,0): bisector of right (0°) and down (-90°) → -45°."""
+    h = get_polygon_heading_at(_ccw_square(), (10, 0))
+    assert abs(h - (-math.pi / 4)) < 1e-6, f"expected -π/4, got {h}"
+
+
+# ── walk_polygon_from_point ──────────────────────────────────────
+
+
+def test_walk_starts_at_closest():
+    """Walk starts at the vertex closest to *start*."""
+    poly = _ccw_square()
+    # (10, 5) is closest to vertex (10, 0) at index 1
+    walk = walk_polygon_from_point(poly, (10, 5))
+    assert len(walk) == 4
+    assert walk[0] == (1, 10.0, 0.0), f"expected (1,10,0), got {walk[0]}"
+
+
+def test_walk_order():
+    """Vertices appear in forward (wrapping) order."""
+    walk = walk_polygon_from_point(_ccw_square(), (10, 5))
+    indices = [entry[0] for entry in walk]
+    assert indices == [1, 2, 3, 0], f"expected [1,2,3,0], got {indices}"
+
+
+def test_walk_empty():
+    """Empty polygon returns empty list."""
+    assert walk_polygon_from_point([], (0, 0)) == []
+
+
+def test_walk_short():
+    """Polygon with < 3 vertices returns empty list."""
+    assert walk_polygon_from_point([(0, 0), (1, 0)], (0, 0)) == []
+
+
+def test_walk_triangle():
+    """Triangle returns all 3 vertices in correct order."""
+    tri = [(0, 0), (5, 0), (2.5, 5)]
+    walk = walk_polygon_from_point(tri, (5, 1))
+    # (5, 1) closest to (5, 0) index 1
+    assert len(walk) == 3
+    assert walk[0][0] == 1
+
+
+def test_walk_all_vertices_present():
+    """Every vertex index appears exactly once."""
+    poly = [(0.0, 0.0), (10.0, 0.0), (10.0, 10.0), (5.0, 15.0), (0.0, 10.0)]
+    walk = walk_polygon_from_point(poly, (100, 100))
+    indices = [entry[0] for entry in walk]
+    assert sorted(indices) == [0, 1, 2, 3, 4]
+    assert len(walk) == 5
+
+
+def test_walk_coordinates_match_input():
+    """Returned (x, y) matches the input polygon vertices."""
+    poly = [(1.5, 2.5), (3.0, 4.0), (5.5, 6.0)]
+    walk = walk_polygon_from_point(poly, (3, 4))
+    for idx, x, y in walk:
+        assert (x, y) == poly[idx]

@@ -24,6 +24,7 @@ __all__ = [
     "get_polygon_convex_hull",
     "get_polygon_edges",
     "get_polygon_group_bounds",
+    "get_polygon_heading_at",
     "get_polygon_perimeter",
     "get_polygon_signed_area",
     "get_polygon_vertex_centroid",
@@ -62,6 +63,7 @@ __all__ = [
     "translate_polygon_numpy",
     "translate_polygons",
     "translate_polygons_numpy",
+    "walk_polygon_from_point",
 ]
 
 @typing.final
@@ -249,6 +251,8 @@ def get_polygon_group_bounds(polygons: collections.abc.Sequence[types.Polygon]) 
     :returns: Bounding rectangle as (x_min, y_min, x_max, y_max).
     :complexity: O(n * m)
     """
+
+def get_polygon_heading_at(polygon: list[tuple[float, float]], vertex: tuple[float, float]) -> float: ...
 
 def get_polygon_perimeter(polygon: collections.abc.Sequence[types.Point]) -> float:
     r"""
@@ -642,4 +646,6 @@ def translate_polygons_numpy(polygons: collections.abc.Sequence[numpy.typing.NDA
     :returns: List of translated numpy arrays.
     :complexity: O(n * m)
     """
+
+def walk_polygon_from_point(polygon: list[tuple[float, float]], start: tuple[float, float]) -> list[tuple[int, float, float]]: ...
 
