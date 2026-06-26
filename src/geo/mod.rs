@@ -5,6 +5,7 @@
 
 pub mod algo;
 pub mod geometry;
+pub use geometry::Geometry;
 pub mod math;
 pub mod query;
 pub mod shape;

@@ -6,6 +6,7 @@ import numpy as np
 from raygeo.geo.algo.rootfind import (
     bisect,
     bisect_tracked,
+    bracket_grid,
     illinois,
     illinois_tracked,
     secant,
@@ -143,6 +144,71 @@ def generate_precision():
     return fig
 
 
+def generate_bracket_grid():
+    """7-sample grid-search bracket: visualise samples and interpolation."""
+    heading = 2.0
+    max_def = 1.0
+    ratios = [-1.0, -0.6, -0.2, 0.0, 0.2, 0.6, 1.0]
+
+    def f(x):
+        return x**3 - 2 * x - 5
+
+    true_root = 2.0945514815423265
+
+    root, status, _ = bracket_grid(
+        lambda x: f(x), heading=heading, max_deflection=max_def
+    )
+
+    sample_x = [heading + max_def * r for r in ratios]
+    sample_y = [f(x) for x in sample_x]
+
+    fig, ax = plt.subplots(figsize=(9, 5))
+    xs = np.linspace(heading - max_def - 0.2, heading + max_def + 0.2, 300)
+    ax.plot(xs, f(xs), "k-", linewidth=2, label="f(x)")
+    ax.axhline(0, color="gray", linewidth=0.5)
+    ax.axvline(
+        heading,
+        color="blue",
+        linestyle="--",
+        linewidth=0.8,
+        alpha=0.5,
+        label="heading",
+    )
+    ax.plot(
+        sample_x,
+        sample_y,
+        "o",
+        color="darkorange",
+        markersize=8,
+        zorder=4,
+        label="7 samples",
+    )
+    ax.plot(
+        true_root,
+        0.0,
+        "g*",
+        markersize=16,
+        zorder=5,
+        label="True root",
+    )
+    ax.plot(
+        root,
+        f(root) if status == "Converged" else 0.0,
+        "rD",
+        markersize=10,
+        zorder=6,
+        label=f"bracket_grid -> {root:.3f}",
+    )
+
+    ax.set_xlabel("x")
+    ax.set_ylabel("f(x)")
+    ax.set_title(f"bracket_grid on $x^3 - 2x - 5$  (status: {status})")
+    ax.legend(fontsize=9)
+    ax.grid(True, alpha=0.3)
+    fig.tight_layout()
+    return fig
+
+
 __docs_target__ = ["raygeo.geo.algo.rootfind.md"]
 __images__ = [
     {
@@ -164,5 +230,14 @@ __images__ = [
             " secant needs far fewer than bisection."
         ),
         "function": generate_precision,
+    },
+    {
+        "heading": "bracket_grid",
+        "caption": (
+            "7-sample angular grid search with linear interpolation:"
+            " samples f(x) on a fan around *heading* and interpolates"
+            " across adjacent sign changes."
+        ),
+        "function": generate_bracket_grid,
     },
 ]

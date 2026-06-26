@@ -1,7 +1,7 @@
 use crate::ops::assembly::adaptive;
 use crate::ops::state::State;
 use crate::prof::prof_report;
-use crate::python::ops::area::ClearedArea as PyClearedArea;
+use crate::python::ops::cut::cleared_area::PyClearedArea;
 use crate::python::ops::PyOps;
 use crate::types::Point;
 use pyo3::prelude::*;
@@ -24,7 +24,7 @@ pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     import raygeo
 
     def adaptive_clearing(
-        cleared: raygeo.ops.area.ClearedArea,
+        cleared: raygeo.ops.cut.cleared_area.ClearedArea,
         pocket_boundary: collections.abc.Sequence[tuple[float, float]],
         islands: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]] = [],
         radius: float = 3.0,

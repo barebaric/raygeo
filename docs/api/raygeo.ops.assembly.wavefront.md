@@ -9,7 +9,7 @@ sidebar_label: raygeo.ops.assembly.wavefront
 
 ```python
 adaptive_wavefronts(
-    cleared: ops.area.ClearedArea,
+    cleared: ops.cut.cleared_area.ClearedArea,
     pocket_boundary: Sequence[tuple[float, float]],
     islands: Sequence[Sequence[tuple[float, float]]] = [],
     tool_radius: float = 3,
@@ -32,7 +32,7 @@ Each ring fragment is emitted as `MoveTo` + `LineTo` at height *z* with *cut_fee
 
 | Parameter         | Type                                           | Description                                           |
 | ----------------- | ---------------------------------------------- | ----------------------------------------------------- |
-| `cleared`         | `ops.area.ClearedArea`                         | `ClearedArea` instance (mutated in place).            |
+| `cleared`         | `ops.cut.cleared_area.ClearedArea`             | `ClearedArea` instance (mutated in place).            |
 | `pocket_boundary` | `Sequence[tuple[float, float]]`                | Outer boundary of the pocket.                         |
 | `islands`         | `Sequence[Sequence[tuple[float, float]]] = []` | List of island (hole) polygons (default []).          |
 | `tool_radius`     | `float = 3`                                    | Tool radius in mm (default 3.0).                      |

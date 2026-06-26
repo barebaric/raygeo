@@ -10,13 +10,15 @@
 //! entry polygons (e.g. via `adaptive_entry`).
 
 use crate::geo::algo::offset::compute_inset_region;
+use crate::geo::shape::arc::normalize_angle_signed;
+use crate::geo::shape::polygon::get_polygon_area;
 use crate::geo::shape::polygon::get_polygon_centroid;
-use crate::geo::shape::polygon::get_polygon_signed_area;
-use crate::geo::shape::polygon::{get_polygon_area, is_point_in_polygon};
-use crate::ops::area::ClearedArea;
-use crate::ops::area::StepStatus;
-use crate::ops::area::UpdateStrategy;
 use crate::ops::container::Ops;
+use crate::ops::cut::interp::point_in_valid_area;
+use crate::ops::cut::ClearedArea;
+use crate::ops::cut::StepStatus;
+use crate::ops::cut::ToolPose;
+use crate::ops::cut::{search_frontier_engagement, step_adaptive};
 use crate::ops::state::State;
 use crate::prof::prof_report;
 use crate::types::{Point, Polygon};
@@ -26,26 +28,20 @@ use prof_macros::prof;
 
 /// Floor fraction of target cut-area-per-distance below which we treat
 /// engagement as lost.
-const ENGAGEMENT_FLOOR_FRAC: f64 = 0.05;
-/// Bias weight applied as a fraction of `target_area_pd` when probing
-/// toward the bias direction during recovery.
-const BIAS_WEIGHT_FRAC: f64 = 0.15;
-/// Small heading-distance penalty used as tiebreaker when no zero-
-/// crossing is found (prevents direction reversal on symmetric
-/// engagement landscapes).
-const HEADING_TIEBREAK: f64 = 0.01;
-/// Number of directions sampled during the recovery bias search.
-const BIAS_PROBES: usize = 8;
-/// How many multiples of `max_deflection` the bias-sampled heading may
-/// be clamped away from the current heading.
-const BIAS_CLAMP_FACTOR: f64 = 2.0;
-/// Tool-radius fraction for the direct-jump distance in the second
-/// recovery attempt.
-const TRAVEL_JUMP_FRAC: f64 = 0.5;
-/// Rapid feed rate used for travel moves during recovery.
-const TRAVEL_RAPID_RATE: i32 = 8000;
+const ENGAGEMENT_FLOOR_FRAC: f64 = 0.005;
 /// Maximum total steps before giving up (safety valve).
-const MAX_TOTAL_STEPS: usize = 50_000;
+const MAX_TOTAL_STEPS: usize = 100_000;
+/// Number of recent direction vectors to average for heading smoothing.
+const GYRO_BUFFER_LEN: usize = 5;
+/// Number of recent iteration-angle deltas stored for the predictor.
+const ANGLE_HISTORY_LEN: usize = 4;
+/// Check progress every N successful steps.
+const STUCK_CHECK_INTERVAL: usize = 100;
+/// Minimum fraction of theoretical target cut-area throughput that the
+/// cleared area must grow by during a progress window.
+const STUCK_MIN_GROWTH_FACTOR: f64 = 0.15;
+/// Maximum number of resume / re-engagement attempts before giving up.
+const MAX_RESUMES: usize = 500;
 
 // ── Options ──────────────────────────────────────────────────────────
 
@@ -99,9 +95,9 @@ impl Default for AdaptiveClearingOptions {
 
 /// A cutting tool with persistent position and heading.
 ///
-/// The heading carries directional momentum: on symmetric engagement
-/// landscapes (e.g. circular boundaries) the solver prefers the
-/// direction closest to the current heading, preventing reversal.
+/// A short gyroscope buffer averages recent direction vectors so that
+/// small engagement wiggles do not jerk the tool path.  A separate
+/// history of recent solver deltas serves as a predictor.
 #[derive(Clone, Copy, Debug)]
 pub struct Tool {
     /// Tool centre position.
@@ -110,158 +106,92 @@ pub struct Tool {
     pub heading: f64,
     /// Tool radius.
     pub radius: f64,
+    /// Recent direction vectors used for heading smoothing.
+    gyro: [Point; GYRO_BUFFER_LEN],
+    /// Number of valid entries in `gyro` (0..GYRO_BUFFER_LEN).
+    gyro_count: usize,
+    /// Recent solver-angle deltas for the predictor (ring buffer).
+    angle_history: [f64; ANGLE_HISTORY_LEN],
+    /// Number of valid entries in `angle_history`.
+    angle_hist_count: usize,
 }
 
 impl Tool {
-    /// Perform one forward step using incremental cut-area engagement.
-    ///
-    /// Probes candidate angles around `self.heading`, evaluates
-    /// [`cut_area`](ClearedArea::cut_area) at each, and picks the angle
-    /// whose area-per-distance is closest to `target_area_pd`.
-    ///
-    /// When `bias_angle` is `Some(...)`, probes closer to that direction
-    /// get a bonus of `bias_weight * cos(probe_angle - bias_angle)`,
-    /// making the solver prefer that direction when engagement is
-    /// ambiguous.
-    ///
-    /// When multiple angles yield similar area (symmetric landscape),
-    /// the one closest to `self.heading` wins — the velocity
-    /// tie-breaker that prevents direction reversal.
-    #[allow(clippy::too_many_arguments)]
-    #[prof]
-    pub fn step(
-        &mut self,
-        cleared: &ClearedArea,
-        target_area_pd: f64,
-        max_deflection: f64,
-        step_length: f64,
-        valid_area: &[Polygon],
-        bias_angle: Option<f64>,
-        bias_weight: f64,
-    ) -> StepStatus {
-        let ratios = [-1.0, -0.6, -0.2, 0.0, 0.2, 0.6, 1.0];
-
-        // ── Evaluate cut area at each probe angle ──
-        let mut samples: [(f64, f64); 7] = [(0.0, 0.0); 7]; // (angle, error)
-        for (i, &r) in ratios.iter().enumerate() {
-            let phi = self.heading + max_deflection * r;
-            let dir = Point::new(phi.cos(), phi.sin());
-            let candidate = self.pos + dir * step_length;
-
-            if !point_in_valid_area(candidate, valid_area) {
-                samples[i] = (phi, -target_area_pd); // error: no area
-                continue;
-            }
-
-            let area = cleared.cut_area(self.pos, candidate, self.radius);
-            let area_pd = area / step_length;
-            let mut err = area_pd - target_area_pd;
-            if let Some(ba) = bias_angle {
-                err += bias_weight * (phi - ba).cos();
-            }
-            samples[i] = (phi, err);
+    /// Create a new tool, initializing the gyroscope with the initial
+    /// heading.
+    pub fn new(pos: Point, heading: f64, radius: f64) -> Self {
+        let dir = Point::new(heading.cos(), heading.sin());
+        Self {
+            pos,
+            heading,
+            radius,
+            gyro: [dir; GYRO_BUFFER_LEN],
+            gyro_count: GYRO_BUFFER_LEN,
+            angle_history: [0.0; ANGLE_HISTORY_LEN],
+            angle_hist_count: 0,
         }
+    }
 
-        // ── Pick best angle ──
-        // Among zero-crossings, prefer the one closest to heading.
-        let mut best_phi = self.heading;
-        let mut found_crossing = false;
-
-        for i in 0..samples.len() - 1 {
-            let (a, fa) = samples[i];
-            let (b, fb) = samples[i + 1];
-            if fa.is_finite() && fb.is_finite() && fa.signum() != fb.signum() {
-                let t = -fa / (fb - fa);
-                let root = a + t * (b - a);
-                if !found_crossing {
-                    best_phi = root;
-                    found_crossing = true;
-                } else {
-                    let prev_diff =
-                        angle_normalize(best_phi - self.heading).abs();
-                    let new_diff = angle_normalize(root - self.heading).abs();
-                    if new_diff < prev_diff {
-                        best_phi = root;
-                    }
-                }
-            }
+    fn smoothed_heading(&self) -> f64 {
+        if self.gyro_count == 0 {
+            return self.heading;
         }
-
-        if !found_crossing {
-            // No crossing: pick sample with smallest weighted error.
-            best_phi = samples
-                .iter()
-                .min_by(|&(a_ang, a_err), &(b_ang, b_err)| {
-                    let a_w = a_err.abs()
-                        + angle_normalize(a_ang - self.heading).abs()
-                            * HEADING_TIEBREAK;
-                    let b_w = b_err.abs()
-                        + angle_normalize(b_ang - self.heading).abs()
-                            * HEADING_TIEBREAK;
-                    a_w.partial_cmp(&b_w).unwrap_or(std::cmp::Ordering::Equal)
-                })
-                .map(|s| s.0)
-                .unwrap_or(self.heading);
+        let mut sum = Point::ZERO;
+        for i in 0..self.gyro_count {
+            sum += self.gyro[i];
         }
-
-        // ── Validate and commit ──
-        let dir = Point::new(best_phi.cos(), best_phi.sin());
-        let next_pos = self.pos + dir * step_length;
-
-        if !point_in_valid_area(next_pos, valid_area) {
-            return StepStatus::BoundaryHit;
+        let avg = sum / self.gyro_count as f64;
+        let len = avg.length();
+        if len < 1e-9 {
+            return self.heading;
         }
+        avg.y.atan2(avg.x)
+    }
 
-        let area = cleared.cut_area(self.pos, next_pos, self.radius);
-        if area < step_length * target_area_pd * ENGAGEMENT_FLOOR_FRAC {
-            return StepStatus::LostEngagement;
+    fn push_gyro(&mut self, dir: Point) {
+        if GYRO_BUFFER_LEN == 0 {
+            return;
         }
+        for i in (1..GYRO_BUFFER_LEN).rev() {
+            self.gyro[i] = self.gyro[i - 1];
+        }
+        self.gyro[0] = dir;
+        if self.gyro_count < GYRO_BUFFER_LEN {
+            self.gyro_count += 1;
+        }
+    }
 
-        self.pos = next_pos;
-        self.heading = best_phi;
-        StepStatus::Ok
+    fn reset_gyro(&mut self) {
+        let dir = Point::new(self.heading.cos(), self.heading.sin());
+        self.gyro = [dir; GYRO_BUFFER_LEN];
+        self.gyro_count = GYRO_BUFFER_LEN;
+        self.angle_history = [0.0; ANGLE_HISTORY_LEN];
+        self.angle_hist_count = 0;
+    }
+
+    fn push_angle(&mut self, delta: f64) {
+        for i in (1..ANGLE_HISTORY_LEN).rev() {
+            self.angle_history[i] = self.angle_history[i - 1];
+        }
+        self.angle_history[0] = delta;
+        if self.angle_hist_count < ANGLE_HISTORY_LEN {
+            self.angle_hist_count += 1;
+        }
+    }
+
+    fn predicted_angle(&self) -> f64 {
+        if self.angle_hist_count == 0 {
+            return 0.0;
+        }
+        let sum: f64 =
+            self.angle_history.iter().take(self.angle_hist_count).sum();
+        sum / self.angle_hist_count as f64
     }
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────
 
-fn angle_normalize(a: f64) -> f64 {
-    let mut a = a % (2.0 * std::f64::consts::PI);
-    if a >= std::f64::consts::PI {
-        a -= 2.0 * std::f64::consts::PI;
-    }
-    if a < -std::f64::consts::PI {
-        a += 2.0 * std::f64::consts::PI;
-    }
-    a
-}
-
 /// Check whether a point lies inside the valid tool-centre region.
-///
-/// Uses polygon winding to distinguish outer boundaries (CCW) from holes
-/// (CW): a point must be inside at least one CCW polygon and outside all
-/// CW polygons.
-fn point_in_valid_area(pt: Point, area: &[Polygon]) -> bool {
-    if area.is_empty() {
-        return false;
-    }
-    let mut inside_outer = false;
-    let mut inside_hole = false;
-    for poly in area {
-        if poly.len() < 3 {
-            continue;
-        }
-        let is_ccw = get_polygon_signed_area(poly) > 0.0;
-        let inside = is_point_in_polygon(pt, poly);
-        if is_ccw && inside {
-            inside_outer = true;
-        } else if !is_ccw && inside {
-            inside_hole = true;
-        }
-    }
-    inside_outer && !inside_hole
-}
-
 /// Target cut-area per unit distance for the engagement solver.
 ///
 /// Derived from the crescent-area formula for a step of `advance` and
@@ -275,106 +205,78 @@ fn target_area_per_distance(radius: f64, advance: f64) -> f64 {
     2.0 * step_over_factor * reference_cut_area / radius
 }
 
-/// The result of a local recovery attempt.
-struct Recovery {
-    pos: Point,
-    heading: f64,
-    /// When `true` the caller must retract to safe_z, travel to `pos`,
-    /// and plunge before resuming stepping.
-    requires_travel: bool,
-}
+// ── Resume helper ────────────────────────────────────────────────────
 
-/// Sample 8 directions around `tool.pos` and try to re-engage uncut
-/// material.
+/// Try to recover after the tool stalls or is detected as stuck.
 ///
-/// Returns `None` when every direction is either outside the valid area
-/// or has zero cut area.
-fn attempt_local_recovery(
-    cleared: &ClearedArea,
-    tool: &Tool,
-    target_area_pd: f64,
-    max_def: f64,
-    step_length: f64,
+/// 1. Backward wall-hugging resume via [`search_frontier_engagement`].
+/// 2. Fallback: travel to the nearest uncut frontier via
+///    [`ClearedArea::remaining`].
+///
+/// Returns `true` if the tool was repositioned (caller should update
+/// `prev_pos` and continue the main loop).
+#[allow(clippy::too_many_arguments)]
+fn try_resume(
+    cleared: &mut ClearedArea,
+    ops: &mut Ops,
+    tool: &mut Tool,
+    opts: &AdaptiveClearingOptions,
     valid_tool_area: &[Polygon],
-) -> Option<Recovery> {
-    // Sample BIAS_PROBES directions and pick the one with most cut_area.
-    let mut best_area = 0.0f64;
-    let mut bias_angle = 0.0f64;
-    for si in 0..BIAS_PROBES {
-        let a = std::f64::consts::TAU * si as f64 / BIAS_PROBES as f64;
-        let d = Point::new(a.cos(), a.sin());
-        let cand = tool.pos + d * step_length;
-        if !point_in_valid_area(cand, valid_tool_area) {
+    _target_area_pd: f64,
+    _max_def: f64,
+    _target_eng: f64,
+    min_cut_area: f64,
+) -> bool {
+    if let Some(rp) = search_frontier_engagement(
+        cleared,
+        ToolPose {
+            pos: tool.pos,
+            heading: tool.heading,
+        },
+        opts.radius,
+        opts.step_length,
+        min_cut_area,
+        f64::MAX,
+    ) {
+        ops.move_to(rp.pos.x, rp.pos.y, opts.cut_z, None);
+        tool.pos = rp.pos;
+        tool.heading = rp.heading;
+        tool.reset_gyro();
+        return true;
+    }
+
+    // Fallback: jump to the centroid of the nearest remaining
+    // (uncut) region.
+    let remaining = cleared.remaining();
+    let mut best_centroid: Option<(f64, Point)> = None;
+    for poly in &remaining {
+        if poly.len() < 3 {
             continue;
         }
-        let area = cleared.cut_area(tool.pos, cand, tool.radius);
-        if area > best_area {
-            best_area = area;
-            bias_angle = a;
+        let area = get_polygon_area(poly).abs();
+        if area < 0.3 {
+            continue;
+        }
+        let centroid = get_polygon_centroid(poly);
+        if !point_in_valid_area(centroid, valid_tool_area) {
+            continue;
+        }
+        let dist = (centroid.x - tool.pos.x).powi(2)
+            + (centroid.y - tool.pos.y).powi(2);
+        if best_centroid.is_none_or(|(bd, _)| dist < bd) {
+            best_centroid = Some((dist, centroid));
         }
     }
 
-    if best_area <= 0.0 {
-        return None;
+    if let Some((_, centroid)) = best_centroid {
+        ops.move_to(centroid.x, centroid.y, opts.cut_z, None);
+        tool.pos = centroid;
+        tool.heading = 0.0;
+        tool.reset_gyro();
+        return true;
     }
 
-    // Attempt 1: step with bias toward the best direction.
-    let diff = angle_normalize(bias_angle - tool.heading);
-    let clamped =
-        diff.clamp(-max_def * BIAS_CLAMP_FACTOR, max_def * BIAS_CLAMP_FACTOR);
-    let biased_heading = angle_normalize(tool.heading + clamped);
-    let bias_weight = target_area_pd * BIAS_WEIGHT_FRAC;
-    let mut probe = Tool {
-        pos: tool.pos,
-        heading: biased_heading,
-        radius: tool.radius,
-    };
-    let s = probe.step(
-        cleared,
-        target_area_pd,
-        max_def,
-        step_length,
-        valid_tool_area,
-        Some(bias_angle),
-        bias_weight,
-    );
-    if s == StepStatus::Ok {
-        return Some(Recovery {
-            pos: probe.pos,
-            heading: probe.heading,
-            requires_travel: false,
-        });
-    }
-
-    // Attempt 2: jump a short distance in the bias direction, then step.
-    let jump_dir = Point::new(bias_angle.cos(), bias_angle.sin());
-    let cand = tool.pos + jump_dir * (tool.radius * TRAVEL_JUMP_FRAC);
-    if !point_in_valid_area(cand, valid_tool_area) {
-        return None;
-    }
-    let mut land = Tool {
-        pos: cand,
-        heading: bias_angle,
-        radius: tool.radius,
-    };
-    if land.step(
-        cleared,
-        target_area_pd,
-        max_def,
-        step_length,
-        valid_tool_area,
-        None,
-        0.0,
-    ) == StepStatus::Ok
-    {
-        return Some(Recovery {
-            pos: land.pos,
-            heading: land.heading,
-            requires_travel: true,
-        });
-    }
-
-    None
+    false
 }
 
 // ── Main entry point ─────────────────────────────────────────────────
@@ -418,14 +320,9 @@ pub fn adaptive_clearing(
     let start_pos = opts.start_pos.unwrap_or(default_pos);
     let start_heading = opts.start_heading.unwrap_or(default_heading);
 
-    let mut tool = Tool {
-        pos: start_pos,
-        heading: start_heading,
-        radius: opts.radius,
-    };
+    let mut tool = Tool::new(start_pos, start_heading, opts.radius);
 
     // ── 3. Continuous spiral: step → expand → repeat ─────────────
-    cleared.set_update_strategy(UpdateStrategy::Local);
 
     let mut ops = Ops::new();
     ops.apply_state(cut_state);
@@ -434,53 +331,133 @@ pub fn adaptive_clearing(
     let mut prev_pos = tool.pos;
     let mut steps_since_batch: usize = 0;
 
+    // Stuck detection: every STUCK_CHECK_INTERVAL steps, verify the
+    // cleared area has grown by at least the expected amount.  If not,
+    // the solver is oscillating in a corner and we trigger resume /
+    // re-engagement.  Using area growth (rather than displacement)
+    // allows the initial inner contraction spiral to keep cutting.
+    let mut step_count: usize = 0;
+    let mut last_check_area: f64 = cleared.total_area();
+    let mut resume_count: usize = 0;
+
+    let target_eng =
+        2.0 * std::f64::consts::PI - 2.0 * (opts.advance / opts.radius).acos();
+    let min_cut_area =
+        opts.step_length * target_area_pd * ENGAGEMENT_FLOOR_FRAC;
+
     for _ in 0..MAX_TOTAL_STEPS {
-        // Convergence.
-        if cleared.total_area() >= valid_total - opts.area_tolerance {
+        // Convergence: check that remaining uncut area is below
+        // tolerance.  Use an inexpensive fragment-sum check first
+        // and only pay for the full union+diff when it looks close.
+        let frag_total = cleared.total_area();
+        if frag_total >= valid_total - opts.area_tolerance && {
+            let rem: f64 =
+                cleared.remaining().iter().map(get_polygon_area).sum();
+            rem < opts.area_tolerance
+        } {
             break;
         }
 
-        let status = tool.step(
+        let heading = tool.smoothed_heading();
+        let predicted = tool.predicted_angle();
+        let result = step_adaptive(
             cleared,
+            tool.pos,
+            heading,
+            predicted,
             target_area_pd,
-            max_def,
             opts.step_length,
+            opts.radius,
+            max_def,
             &valid_tool_area,
-            None,
-            0.0,
         );
+        let status = result.status;
+        if result.status == StepStatus::Ok {
+            let dir = Point::new(result.heading.cos(), result.heading.sin());
+            tool.pos = result.next;
+            tool.heading = result.heading;
+            tool.push_gyro(dir);
+            tool.push_angle(result.iteration_angle);
+        }
 
-        if status != StepStatus::Ok {
+        let stalled = status != StepStatus::Ok;
+
+        // Stuck detection: check every STUCK_CHECK_INTERVAL steps
+        // whether the tool is expanding the cleared pocket.  Area
+        // growth is more robust than displacement: a contracting
+        // inner spiral still removes material and should not be
+        // confused with wall oscillation.
+        if !stalled {
+            step_count += 1;
+            if step_count.is_multiple_of(STUCK_CHECK_INTERVAL) {
+                let current_area = cleared.total_area();
+                let growth = current_area - last_check_area;
+                last_check_area = current_area;
+                // Theoretical throughput: step_length * target_area_pd per step.
+                let expected = STUCK_CHECK_INTERVAL as f64
+                    * opts.step_length
+                    * target_area_pd
+                    * STUCK_MIN_GROWTH_FACTOR;
+                if growth < expected {
+                    // Tool is oscillating — force resume.
+                    if steps_since_batch > 0 {
+                        cleared.commit_batch_local();
+                        steps_since_batch = 0;
+                    }
+                    resume_count += 1;
+                    if resume_count > MAX_RESUMES {
+                        break;
+                    }
+                    if try_resume(
+                        cleared,
+                        &mut ops,
+                        &mut tool,
+                        opts,
+                        &valid_tool_area,
+                        target_area_pd,
+                        max_def,
+                        target_eng,
+                        min_cut_area,
+                    ) {
+                        prev_pos = tool.pos;
+                        last_check_area = cleared.total_area();
+                        step_count = 0;
+                        continue;
+                    }
+                    break;
+                }
+            }
+        }
+
+        if stalled {
             if steps_since_batch > 0 {
-                cleared.commit_step_batch();
+                cleared.commit_batch_local();
                 steps_since_batch = 0;
             }
 
-            let recovery = attempt_local_recovery(
+            resume_count += 1;
+            if resume_count > MAX_RESUMES {
+                eprintln!("max resumes reached");
+                break;
+            }
+
+            if try_resume(
                 cleared,
-                &tool,
+                &mut ops,
+                &mut tool,
+                opts,
+                &valid_tool_area,
                 target_area_pd,
                 max_def,
-                opts.step_length,
-                &valid_tool_area,
-            );
-
-            if let Some(r) = recovery {
-                if r.requires_travel {
-                    ops.apply_state(&State {
-                        rapid_rate: Some(TRAVEL_RAPID_RATE),
-                        ..Default::default()
-                    });
-                    ops.move_to(tool.pos.x, tool.pos.y, opts.safe_z, None);
-                    ops.move_to(r.pos.x, r.pos.y, opts.safe_z, None);
-                    ops.apply_state(cut_state);
-                    ops.move_to(r.pos.x, r.pos.y, opts.cut_z, None);
-                }
-                tool.pos = r.pos;
-                tool.heading = r.heading;
+                target_eng,
+                min_cut_area,
+            ) {
                 prev_pos = tool.pos;
+                last_check_area = cleared.total_area();
+                step_count = 0;
                 continue;
             }
+
             break;
         }
 
@@ -489,14 +466,15 @@ pub fn adaptive_clearing(
 
         // Expand cleared area.
         if steps_since_batch == 0 {
-            cleared.begin_step_batch();
+            cleared.begin_batch();
         }
-        cleared.expand_step_batched(prev_pos, tool.pos, opts.radius);
+        cleared.expand_batched(prev_pos, tool.pos, opts.radius);
         steps_since_batch += 1;
 
         if steps_since_batch >= opts.expansion_batch_size {
-            cleared.commit_step_batch();
+            cleared.commit_batch_local();
             steps_since_batch = 0;
+            cleared.compact_if_needed(0.5);
         }
 
         prev_pos = tool.pos;
@@ -504,7 +482,7 @@ pub fn adaptive_clearing(
 
     // Flush any remaining batch.
     if steps_since_batch > 0 {
-        cleared.commit_step_batch();
+        cleared.commit_batch_local();
     }
 
     ops
@@ -553,7 +531,7 @@ fn initial_pose(frontier: &[Polygon], centre: Point) -> (Point, f64) {
     let radial = pos - centre;
     let radial_angle = radial.y.atan2(radial.x);
     let tangent_angle =
-        angle_normalize(radial_angle + std::f64::consts::FRAC_PI_2);
+        normalize_angle_signed(radial_angle + std::f64::consts::FRAC_PI_2);
 
     (pos, tangent_angle)
 }

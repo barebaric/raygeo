@@ -161,6 +161,44 @@ pub fn illinois<F: Fn(f64) -> f64>(
     (root, RootStatus::MaxIter, max_iter)
 }
 
+/// 7-sample angular grid search with linear interpolation root-finding.
+///
+/// Samples `f` at `heading + max_deflection * ratio` for 7 ratios
+/// evenly spaced across `[-1, -0.6, -0.2, 0, 0.2, 0.6, 1.0]`.
+/// For each adjacent pair where the error changes sign, linearly
+/// interpolates to the root.  Returns the sample with smallest
+/// |error| if no sign change is found.
+pub fn bracket_grid<F: Fn(f64) -> f64>(
+    heading: f64,
+    max_deflection: f64,
+    f: F,
+) -> (f64, RootStatus, usize) {
+    let ratios = [-1.0, -0.6, -0.2, 0.0, 0.2, 0.6, 1.0];
+    let mut samples: [(f64, f64); 7] = [(0.0, 0.0); 7];
+    let f0 = f(heading);
+    for (i, &r) in ratios.iter().enumerate() {
+        let phi = heading + max_deflection * r;
+        let err = if r == 0.0 { f0 } else { f(phi) };
+        samples[i] = (phi, err);
+    }
+
+    for i in 0..samples.len() - 1 {
+        let (a, fa) = samples[i];
+        let (b, fb) = samples[i + 1];
+        if fa.is_finite() && fb.is_finite() && fa.signum() != fb.signum() {
+            let t = -fa / (fb - fa);
+            let root = a + t * (b - a);
+            return (root, RootStatus::Converged, samples.len());
+        }
+    }
+
+    let best = samples
+        .iter()
+        .min_by(|a, b| a.1.abs().partial_cmp(&b.1.abs()).unwrap())
+        .unwrap();
+    (best.0, RootStatus::NoBracket, samples.len())
+}
+
 /// Bisection with iteration history.  Returns `(root, status, iters, estimates)`
 /// where `estimates` contains the midpoint of each iteration.
 pub fn bisect_tracked<F: Fn(f64) -> f64>(

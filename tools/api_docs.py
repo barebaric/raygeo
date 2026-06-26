@@ -222,6 +222,20 @@ def convert_docstring_sections(
             i += 1
             continue
 
+        code_block_match = re.match(r"^\.\.\s+code-block::\s*(\w*)", stripped)
+        if code_block_match:
+            lang = code_block_match.group(1) or ""
+            result.append("")
+            result.append(f"```{lang}")
+            i += 1
+            while i < len(lines) and (lines[i].startswith("   ") or not lines[i].strip()):
+                if lines[i].strip():
+                    result.append(lines[i][3:])
+                i += 1
+            result.append("```")
+            result.append("")
+            continue
+
         if stripped == "Example::" or stripped.startswith("Example::"):
             in_example = True
             example_lines = []

@@ -64,6 +64,34 @@ Tracked bisection root-finding.
 | `max_iter` | `int = 100`                           | Maximum number of iterations.                      |
 | _Returns_  | `tuple[float, str, int, list[float]]` | `(root, status_string, iteration_count, history)`. |
 
+### `bracket_grid()`
+
+```python
+bracket_grid(
+    f: Callable[[float], float],
+    heading: float,
+    max_deflection: float,
+) -> tuple[float, str, int]
+```
+
+7-sample angular grid search with linear interpolation.
+
+Samples *f* at `heading + max_deflection * ratio` for 7 ratios evenly spaced across
+`[-1, -0.6, -0.2, 0, 0.2, 0.6, 1.0]`. When a sign change is found between adjacent samples the root
+is linearly interpolated. Falls back to the sample with smallest absolute error.
+
+| Parameter        | Type                       | Description                            |
+| ---------------- | -------------------------- | -------------------------------------- |
+| `f`              | `Callable[[float], float]` | Error function *f(angle) -> error*.    |
+| `heading`        | `float`                    | Centre angle in radians.               |
+| `max_deflection` | `float`                    | Maximum angular spread in radians.     |
+| _Returns_        | `tuple[float, str, int]`   | `(root, status_string, sample_count)`. |
+
+![7-sample angular grid search with linear interpolation: samples f(x) on a fan around heading and interpolates across adjacent sign changes.](images/geo-algo-rootfind-bracket-grid.png)
+
+*7-sample angular grid search with linear interpolation: samples f(x) on a fan around *heading* and
+interpolates across adjacent sign changes.*
+
 ### `illinois()`
 
 ```python

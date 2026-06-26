@@ -8,6 +8,7 @@ import typing
 __all__ = [
     "bisect",
     "bisect_tracked",
+    "bracket_grid",
     "illinois",
     "illinois_tracked",
     "secant",
@@ -36,6 +37,22 @@ def bisect_tracked(f: typing.Any, lo: float, hi: float, tol: float = 0.000000000
     :param tol: Convergence tolerance.
     :param max_iter: Maximum number of iterations.
     :returns: ``(root, status_string, iteration_count, history)``.
+    """
+
+def bracket_grid(f: typing.Callable[[float], float], heading: float, max_deflection: float) -> tuple[float, str, int]:
+    r"""
+    7-sample angular grid search with linear interpolation.
+    
+    Samples *f* at ``heading + max_deflection * ratio`` for
+    7 ratios evenly spaced across ``[-1, -0.6, -0.2, 0, 0.2, 0.6, 1.0]``.
+    When a sign change is found between adjacent samples the root is
+    linearly interpolated.  Falls back to the sample with smallest
+    absolute error.
+    
+    :param f: Error function *f(angle) -> error*.
+    :param heading: Centre angle in radians.
+    :param max_deflection: Maximum angular spread in radians.
+    :returns: ``(root, status_string, sample_count)``.
     """
 
 def illinois(f: typing.Callable[[float], float], lo: float, hi: float, tol: float = 0.0000000001, max_iter: int = 100) -> tuple[float, str, int]:

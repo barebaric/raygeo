@@ -26,8 +26,8 @@ from tools.visual_test.geo_shape_line import page_line_intersections
 from tools.visual_test.geo_shape_polygon import page_polygon_boolean
 from tools.visual_test.geo_shape_polygon3d import page_polygon3d
 from tools.visual_test.image import page_image
-from tools.visual_test.ops_area import page_adaptive_clearing
 from tools.visual_test.ops_assembly_raster import page_rasterization
+from tools.visual_test.ops_cut_cleared_area import page_adaptive_clearing
 from tools.visual_test.ops_transform_clip import page_ops_clip
 from tools.visual_test.ops_transform_lead_in_out import page_lead_in_out
 from tools.visual_test.ops_transform_merge_lines import page_merge_lines

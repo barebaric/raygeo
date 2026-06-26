@@ -1,9 +1,9 @@
 """Tests for wavefront assembly module."""
 
 from raygeo.ops import Ops
-from raygeo.ops.area import ClearedArea
 from raygeo.ops.assembly.entry import adaptive_entry
 from raygeo.ops.assembly.wavefront import adaptive_wavefronts
+from raygeo.ops.cut.cleared_area import ClearedArea
 
 
 def test_adaptive_wavefronts_simple():
@@ -15,7 +15,7 @@ def test_adaptive_wavefronts_simple():
         safe_z=2.0,
         target_z=-8.0,
     )
-    ca = ClearedArea(initial=cp)
+    ca = ClearedArea(boundary=boundary, initial=cp)
     ops = adaptive_wavefronts(
         ca,
         boundary,
@@ -38,7 +38,7 @@ def test_adaptive_wavefronts_with_islands():
         safe_z=2.0,
         target_z=-8.0,
     )
-    ca = ClearedArea(initial=cp)
+    ca = ClearedArea(boundary=boundary, initial=cp)
     ops = adaptive_wavefronts(
         ca,
         boundary,
@@ -53,7 +53,7 @@ def test_adaptive_wavefronts_with_islands():
 
 
 def test_adaptive_wavefronts_empty_cleared():
-    ca = ClearedArea()
+    ca = ClearedArea(boundary=[])
     boundary = [(0, 0), (160, 0), (160, 100), (0, 100)]
     ops = adaptive_wavefronts(
         ca,
@@ -74,7 +74,7 @@ def test_adaptive_wavefronts_cut_power_applied():
         safe_z=2.0,
         target_z=-8.0,
     )
-    ca = ClearedArea(initial=cp)
+    ca = ClearedArea(boundary=boundary, initial=cp)
     ops = adaptive_wavefronts(
         ca,
         boundary,

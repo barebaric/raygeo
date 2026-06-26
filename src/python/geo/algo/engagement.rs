@@ -20,7 +20,6 @@ pub fn register(algo_mod: &Bound<'_, PyModule>) -> PyResult<()> {
         compute_engagement_py,
         point_engagement_py,
         angular_engagement_py,
-        cut_area_py,
     );
     algo_mod.add_submodule(&m)?;
     Ok(())
@@ -108,44 +107,6 @@ fn angular_engagement_py(
     let frags = polygons_from_tuples(fragments);
     engagement::angular_engagement(
         Point::new(center.0, center.1),
-        radius,
-        &frags,
-    )
-}
-
-#[gen_stub_pyfunction(
-    python = r#"
-    def cut_area(
-        c1: tuple[float, float],
-        c2: tuple[float, float],
-        radius: float,
-        fragments: list[list[tuple[float, float]]],
-    ) -> float:
-        """Incremental cut area when moving from c1 to c2.
-
-        The crescent ``disk(c2) − disk(c1)`` is intersected against
-        *fragments* and the fresh (uncleared) area is returned.
-
-        :param c1: Previous centre ``(x, y)``.
-        :param c2: Next centre ``(x, y)``.
-        :param radius: Disk radius (mm).
-        :param fragments: List of polygons (cleared fragments).
-        :returns: Fresh cut area (mm²).
-        """
-    "#,
-    module = "raygeo.geo.algo.engagement"
-)]
-#[pyfunction(name = "cut_area")]
-fn cut_area_py(
-    c1: (f64, f64),
-    c2: (f64, f64),
-    radius: f64,
-    fragments: Vec<Vec<(f64, f64)>>,
-) -> f64 {
-    let frags = polygons_from_tuples(fragments);
-    engagement::cut_area(
-        Point::new(c1.0, c1.1),
-        Point::new(c2.0, c2.1),
         radius,
         &frags,
     )

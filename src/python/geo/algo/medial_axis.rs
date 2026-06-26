@@ -31,14 +31,14 @@ use crate::types::Point;
 ///
 /// .. code-block:: python
 ///
-///     axis = MedialAxis.compute(outer, holes)
-///     path = axis.path_between((x1, y1), (x2, y2))
-///     trimmed = axis.trim_to_polygons(polygons)
-///     nodes = axis.nodes
-///     clearances = axis.clearances
-///     edges = axis.edges
-///     root = axis.root
-///     branches = axis.branches
+///    axis = MedialAxis.compute(outer, holes)
+///    path = axis.path_between((x1, y1), (x2, y2))
+///    trimmed = axis.trim_to_polygons(polygons)
+///    nodes = axis.nodes
+///    clearances = axis.clearances
+///    edges = axis.edges
+///    root = axis.root
+///    branches = axis.branches
 #[gen_stub_pyclass(module = "raygeo.geo.algo.medial_axis")]
 #[pyclass(skip_from_py_object, name = "MedialAxis")]
 #[derive(Debug, Clone)]

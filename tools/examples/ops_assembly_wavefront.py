@@ -10,9 +10,9 @@ from raygeo.geo.shape.polygon import (
     get_polygon_signed_area,
     is_point_inside_polygon,
 )
-from raygeo.ops.area import ClearedArea
 from raygeo.ops.assembly.entry import adaptive_entry
 from raygeo.ops.assembly.wavefront import adaptive_wavefronts
+from raygeo.ops.cut.cleared_area import ClearedArea
 from raygeo.svg import svg_string_to_geometries
 
 
@@ -96,7 +96,7 @@ def generate_wavefront_rect():
         target_z=-5.0,
         plunge_pitch=1.0,
     )
-    wf_ca = ClearedArea(initial=wf_cp)
+    wf_ca = ClearedArea(boundary=wf_boundary, initial=wf_cp)
     wf_ops = adaptive_wavefronts(
         wf_ca,
         wf_boundary,
@@ -129,7 +129,9 @@ def generate_wavefront_multi():
         target_z=-5.0,
         plunge_pitch=1.0,
     )
-    mi_ca = ClearedArea(initial=mi_cp)
+    mi_ca = ClearedArea(
+        boundary=mi_boundary, islands=mi_islands, initial=mi_cp
+    )
     mi_ops = adaptive_wavefronts(
         mi_ca,
         mi_boundary,
@@ -168,7 +170,7 @@ def generate_wavefront_yshape():
         target_z=-5.0,
         plunge_pitch=1.0,
     )
-    ys_ca = ClearedArea(initial=ys_cp)
+    ys_ca = ClearedArea(boundary=yshape, initial=ys_cp)
     ys_ops = adaptive_wavefronts(
         ys_ca,
         yshape,
@@ -238,7 +240,7 @@ def generate_wavefront_svg():
             target_z=-5.0,
             plunge_pitch=1.0,
         )
-        ca = ClearedArea(initial=cp)
+        ca = ClearedArea(boundary=boundary, islands=islands, initial=cp)
         ops = adaptive_wavefronts(
             ca,
             boundary,

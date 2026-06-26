@@ -2,7 +2,7 @@
 
 use prof_macros::prof;
 
-use crate::ops::area::ClearedArea;
+use crate::ops::cut::ClearedArea;
 
 use crate::geo::algo::offset::compute_inset_region;
 use crate::geo::shape::polygon::get_polygon_area;
@@ -37,7 +37,7 @@ pub fn adaptive_wavefronts(
     opts: &AdaptiveWavefrontOptions,
     cut_state: &State,
 ) -> Ops {
-    let (valid_tool_area, valid_total_area) = compute_inset_region(
+    let (_, valid_total_area) = compute_inset_region(
         &opts.pocket_boundary,
         opts.tool_radius,
         &opts.islands,
@@ -47,12 +47,12 @@ pub fn adaptive_wavefronts(
     let mut state_applied = false;
 
     for _ in 0..MAX_WAVEFRONT_ITERATIONS {
-        let bounded = cleared.bites(opts.step_over, &valid_tool_area, 0.01);
+        let bounded = cleared.bites(opts.step_over, opts.tool_radius, 0.01);
         if bounded.is_empty() {
             break;
         }
 
-        let new_ring = cleared.incorporate(&bounded);
+        let new_ring = cleared.cut_fast(&bounded);
         if new_ring.is_empty() {
             continue;
         }

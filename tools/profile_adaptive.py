@@ -7,8 +7,8 @@ import time
 
 sys.path.insert(0, "tools/examples")
 
-from raygeo.ops.area import ClearedArea
 from raygeo.ops.assembly.adaptive import adaptive_clearing
+from raygeo.ops.cut.cleared_area import ClearedArea
 
 
 def _rect(cx, cy, w, h):
@@ -39,7 +39,7 @@ _AREA_TOLERANCE = 50.0
 
 def main():
     boundary = _rect(0, 0, _POCKET_SIZE, _POCKET_SIZE)
-    ca = ClearedArea(initial=[_seed_circle(0, 0, 20)])
+    ca = ClearedArea(boundary=boundary, initial=[_seed_circle(0, 0, 20)])
 
     t0 = time.perf_counter()
     ops = adaptive_clearing(

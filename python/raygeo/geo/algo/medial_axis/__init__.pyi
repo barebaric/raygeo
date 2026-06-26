@@ -30,14 +30,14 @@ class MedialAxis:
     
     .. code-block:: python
     
-        axis = MedialAxis.compute(outer, holes)
-        path = axis.path_between((x1, y1), (x2, y2))
-        trimmed = axis.trim_to_polygons(polygons)
-        nodes = axis.nodes
-        clearances = axis.clearances
-        edges = axis.edges
-        root = axis.root
-        branches = axis.branches
+       axis = MedialAxis.compute(outer, holes)
+       path = axis.path_between((x1, y1), (x2, y2))
+       trimmed = axis.trim_to_polygons(polygons)
+       nodes = axis.nodes
+       clearances = axis.clearances
+       edges = axis.edges
+       root = axis.root
+       branches = axis.branches
     """
     @property
     def nodes(self) -> builtins.list[tuple[builtins.float, builtins.float]]: ...

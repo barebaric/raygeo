@@ -25,9 +25,7 @@ the free space.
 
 **Usage**:
 
-.. code-block:: python
-
-```
+```python
 axis = MedialAxis.compute(outer, holes)
 path = axis.path_between((x1, y1), (x2, y2))
 trimmed = axis.trim_to_polygons(polygons)

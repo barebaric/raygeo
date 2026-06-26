@@ -5,7 +5,6 @@ import math
 from raygeo.geo.algo.engagement import (
     angular_engagement,
     compute_engagement,
-    cut_area,
     point_engagement,
 )
 
@@ -106,34 +105,3 @@ def test_angular_engagement_outside_cleared():
     square = _square(0, 0, 10, 10)
     e = angular_engagement((50, 50), 5.0, [square])
     assert abs(e - 2.0 * math.pi) < 0.5  # approximation tolerance
-
-
-# ── cut_area ──────────────────────────────────────────────────────
-
-
-def test_cut_area_no_movement():
-    """c1 == c2 yields zero cut area."""
-    square = _square(0, 0, 100, 100)
-    a = cut_area((5, 5), (5, 5), 3.0, [square])
-    assert a == 0.0
-
-
-def test_cut_area_from_cleared_to_outside():
-    """Moving from inside cleared to outside produces positive area."""
-    square = _square(0, 0, 100, 100)
-    # c1 inside cleared, c2 outside (beyond the wall)
-    a = cut_area((50, 50), (110, 50), 5.0, [square])
-    assert a > 0.0
-
-
-def test_cut_area_empty_fragments():
-    """No cleared fragments — crescent area is returned directly."""
-    a = cut_area((0, 0), (5, 0), 3.0, [])
-    assert a > 0.0
-
-
-def test_cut_area_fully_inside_cleared():
-    """Both points deep inside cleared → zero cut area."""
-    square = _square(0, 0, 100, 100)
-    a = cut_area((30, 30), (40, 30), 3.0, [square])
-    assert a == 0.0

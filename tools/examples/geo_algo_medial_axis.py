@@ -6,9 +6,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from raygeo.geo.algo.medial_axis import MedialAxis
-from raygeo.geo.algo.offset import compute_inset_region
-from raygeo.ops.area import ClearedArea
 from raygeo.ops.assembly.entry import adaptive_entry
+from raygeo.ops.cut.cleared_area import ClearedArea
 
 
 def _plot_ma_2d(nodes, edges, root, boundary, islands, ax, title):
@@ -220,14 +219,12 @@ def generate_mat_trimming():
         target_z=-5.0,
         plunge_pitch=1.0,
     )
-    va, _ = compute_inset_region(boundary, tool_radius, islands)
-
-    ca = ClearedArea(initial=cp)
+    ca = ClearedArea(boundary=boundary, islands=islands, initial=cp)
     for _ in range(10):
-        bites = ca.bites(step_over, va, 0.01)
+        bites = ca.bites(step_over, tool_radius, 0.01)
         if not bites:
             break
-        ca.incorporate(bites)
+        ca.cut_fast(bites)
     frags = ca.fragments()
 
     holes = [list(h) for h in islands]

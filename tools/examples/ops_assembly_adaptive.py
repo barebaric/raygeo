@@ -6,8 +6,8 @@ import matplotlib.pyplot as plt
 from matplotlib.collections import LineCollection
 from matplotlib.colors import Normalize
 
-from raygeo.ops.area import ClearedArea
 from raygeo.ops.assembly.adaptive import adaptive_clearing
+from raygeo.ops.cut.cleared_area import ClearedArea
 
 
 def _rect(cx, cy, w, h):
@@ -52,7 +52,7 @@ def _ops_to_segments(ops):
 def generate_adaptive_clearing_demo():
     """Toolpath demo with seed, cuts, and travel."""
     boundary = _rect(0, 0, 200, 200)
-    ca = ClearedArea(initial=[_seed_circle(0, 0, 20)])
+    ca = ClearedArea(boundary=boundary, initial=[_seed_circle(0, 0, 20)])
     ops = adaptive_clearing(
         cleared=ca,
         pocket_boundary=boundary,
@@ -61,7 +61,7 @@ def generate_adaptive_clearing_demo():
         cut_z=-5.0,
         safe_z=2.0,
         step_length=1.0,
-        max_deflection_deg=30.0,
+        max_deflection_deg=15.0,
         wall_margin=1.0,
         area_tolerance=50.0,
     )

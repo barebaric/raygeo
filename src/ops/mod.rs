@@ -3,10 +3,10 @@
 //! This module provides types for representing machine operations including
 //! command types, categories, axis flags, and machine state.
 
-pub mod area;
 pub mod assembly;
 pub mod axis;
 pub mod container;
+pub mod cut;
 pub mod enums;
 pub mod state;
 pub mod transform;

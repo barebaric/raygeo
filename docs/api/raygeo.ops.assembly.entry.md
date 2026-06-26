@@ -28,7 +28,7 @@ Fast central clearing entry.
 Finds the optimal entry pole using `find_largest_circle`, then generates either a helix->spiral
 (wide area) or zigzag ramp (tight slot).
 
-The returned *cleared_polygons* should be inserted into a `ClearedArea` via `add_cleared_polygons`.
+The returned *cleared_polygons* should be inserted into a `ClearedArea` via `cut`.
 
 | Parameter         | Type                                              | Description                                                                                                                                         |
 | ----------------- | ------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |

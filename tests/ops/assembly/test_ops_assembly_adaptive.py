@@ -9,9 +9,9 @@ from raygeo.geo.shape.polygon import (
     offset_polygon,
 )
 from raygeo.ops import Ops
-from raygeo.ops.area import ClearedArea
 from raygeo.ops.assembly.adaptive import adaptive_clearing
 from raygeo.ops.assembly.entry import adaptive_entry
+from raygeo.ops.cut.cleared_area import ClearedArea
 from raygeo.ops.types import CommandType
 
 
@@ -48,7 +48,7 @@ def _valid_tool_area(boundary, islands, radius):
 
 def _remaining_area(ca, valid_polys):
     """Sum of remaining (uncut) area within the valid tool-centre region."""
-    remaining = ca.remaining(valid_polys)
+    remaining = ca.remaining()
     return sum(get_polygon_area(p) for p in remaining)
 
 
@@ -62,7 +62,7 @@ def test_adaptive_clearing_returns_ops():
         safe_z=2.0,
         target_z=-5.0,
     )
-    ca = ClearedArea(initial=cp)
+    ca = ClearedArea(boundary=boundary, initial=cp)
     ops = adaptive_clearing(
         cleared=ca,
         pocket_boundary=boundary,
@@ -90,7 +90,7 @@ def test_adaptive_clearing_has_move_and_line():
         safe_z=2.0,
         target_z=-5.0,
     )
-    ca = ClearedArea(initial=cp)
+    ca = ClearedArea(boundary=boundary, initial=cp)
     ops = adaptive_clearing(
         cleared=ca,
         pocket_boundary=boundary,
@@ -117,7 +117,7 @@ def test_adaptive_clearing_endpoints_inside_pocket():
         safe_z=2.0,
         target_z=-5.0,
     )
-    ca = ClearedArea(initial=cp)
+    ca = ClearedArea(boundary=boundary, initial=cp)
     ops = adaptive_clearing(
         cleared=ca,
         pocket_boundary=boundary,
@@ -145,7 +145,7 @@ def test_adaptive_clearing_with_islands():
         safe_z=2.0,
         target_z=-5.0,
     )
-    ca = ClearedArea(initial=cp)
+    ca = ClearedArea(boundary=boundary, initial=cp)
     ops = adaptive_clearing(
         cleared=ca,
         pocket_boundary=boundary,
@@ -181,8 +181,8 @@ def test_adaptive_clearing_determinism():
         safe_z=2.0,
         target_z=-5.0,
     )
-    ca1 = ClearedArea(initial=cp1)
-    ca2 = ClearedArea(initial=cp2)
+    ca1 = ClearedArea(boundary=boundary, initial=cp1)
+    ca2 = ClearedArea(boundary=boundary, initial=cp2)
     ops1 = adaptive_clearing(
         cleared=ca1,
         pocket_boundary=boundary,
@@ -214,7 +214,7 @@ def test_adaptive_clearing_feed_rate_applied():
         target_z=-5.0,
         cut_feed_rate=1800,
     )
-    ca = ClearedArea(initial=cp)
+    ca = ClearedArea(boundary=boundary, initial=cp)
     ops = adaptive_clearing(
         cleared=ca,
         pocket_boundary=boundary,
@@ -245,7 +245,7 @@ def test_adaptive_clearing_cut_power_applied():
         cut_feed_rate=1200,
         cut_power=0.75,
     )
-    ca = ClearedArea(initial=cp)
+    ca = ClearedArea(boundary=boundary, initial=cp)
     ops = adaptive_clearing(
         cleared=ca,
         pocket_boundary=boundary,
@@ -275,7 +275,7 @@ def test_adaptive_clearing_degenerate_pocket():
         safe_z=2.0,
         target_z=-5.0,
     )
-    ca = ClearedArea(initial=cp)
+    ca = ClearedArea(boundary=boundary, initial=cp)
     ops = adaptive_clearing(
         cleared=ca,
         pocket_boundary=boundary,
@@ -309,7 +309,7 @@ def test_adaptive_clearing_fully_clears_rect():
         safe_z=2.0,
         target_z=-5.0,
     )
-    ca = ClearedArea(initial=cp)
+    ca = ClearedArea(boundary=boundary, initial=cp)
     adaptive_clearing(
         cleared=ca,
         pocket_boundary=boundary,
@@ -350,7 +350,7 @@ def test_adaptive_clearing_fully_clears_with_island():
         safe_z=2.0,
         target_z=-5.0,
     )
-    ca = ClearedArea(initial=cp)
+    ca = ClearedArea(boundary=boundary, initial=cp)
     adaptive_clearing(
         cleared=ca,
         pocket_boundary=boundary,

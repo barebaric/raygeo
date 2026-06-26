@@ -99,8 +99,8 @@ pub use project::{
 };
 pub use ramp::{generate_ramp_3d, RampOptions, RampStyle};
 pub use rootfind::{
-    bisect, bisect_tracked, illinois, illinois_tracked, secant, secant_tracked,
-    RootStatus,
+    bisect, bisect_tracked, bracket_grid, illinois, illinois_tracked, secant,
+    secant_tracked, RootStatus,
 };
 pub use simplify::{simplify_data, simplify_polyline, simplify_polyline_3d};
 pub use smooth::{

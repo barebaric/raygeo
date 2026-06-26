@@ -19,6 +19,7 @@ pub fn register(algo_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     register_functions!(
         m,
         bisect_py,
+        bracket_grid_py,
         secant_py,
         illinois_py,
         bisect_tracked_py,
@@ -227,4 +228,40 @@ fn illinois_tracked_py(
     let (r, s, i, e) =
         rootfind::illinois_tracked(|x| call_f(&f, x), lo, hi, tol, max_iter);
     Ok((r, format!("{s:?}"), i, e))
+}
+
+#[gen_stub_pyfunction(
+    python = r#"
+    import typing
+
+    def bracket_grid(
+        f: typing.Callable[[float], float],
+        heading: float,
+        max_deflection: float,
+    ) -> tuple[float, str, int]:
+        """7-sample angular grid search with linear interpolation.
+
+        Samples *f* at ``heading + max_deflection * ratio`` for
+        7 ratios evenly spaced across ``[-1, -0.6, -0.2, 0, 0.2, 0.6, 1.0]``.
+        When a sign change is found between adjacent samples the root is
+        linearly interpolated.  Falls back to the sample with smallest
+        absolute error.
+
+        :param f: Error function *f(angle) -> error*.
+        :param heading: Centre angle in radians.
+        :param max_deflection: Maximum angular spread in radians.
+        :returns: ``(root, status_string, sample_count)``.
+        """
+    "#,
+    module = "raygeo.geo.algo.rootfind"
+)]
+#[pyfunction(name = "bracket_grid")]
+fn bracket_grid_py(
+    f: Bound<'_, PyAny>,
+    heading: f64,
+    max_deflection: f64,
+) -> PyResult<(f64, String, usize)> {
+    let (r, s, i) =
+        rootfind::bracket_grid(heading, max_deflection, |x| call_f(&f, x));
+    Ok((r, format!("{s:?}"), i))
 }

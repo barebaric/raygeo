@@ -42,7 +42,7 @@ pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
         (tight slot).
 
         The returned *cleared_polygons* should be inserted into a
-        ``ClearedArea`` via ``add_cleared_polygons``.
+        ``ClearedArea`` via ``cut``.
 
         :param pocket_boundary: Outer boundary of the pocket.
         :param islands: List of island (hole) polygons (default []).

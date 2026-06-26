@@ -4,11 +4,10 @@
 //! closest-boundary distance, plus an exact polygon-intersection area
 //! for validation.
 
-use crate::geo::shape::polygon::get_circle_polygon;
-use crate::geo::shape::polygon::get_polygon_area;
-use crate::geo::shape::polygon::get_polygons_group_difference;
-use crate::geo::shape::polygon::get_polygons_group_intersection;
-use crate::geo::shape::polygon::get_signed_boundary_distance;
+use crate::geo::shape::polygon::{
+    get_circle_polygon, get_polygon_area, get_polygons_group_intersection,
+    get_signed_boundary_distance,
+};
 use crate::types::{Point, Polygon};
 use prof_macros::prof;
 
@@ -116,33 +115,4 @@ pub fn angular_engagement(
     let disk_area = std::f64::consts::PI * radius * radius;
     let uncleared_area = (disk_area - cleared_area).max(0.0);
     2.0 * uncleared_area / (radius * radius)
-}
-
-/// Incremental cut area when the tool moves from `c1` to `c2`.
-///
-/// The crescent `disk(c2) − disk(c1)` is intersected against `fragments` and the
-/// area of the fresh (uncleared) portion is returned.  This is the metric used
-/// by the forward-stepping solver.
-#[prof]
-pub fn cut_area(
-    c1: Point,
-    c2: Point,
-    radius: f64,
-    fragments: &[Polygon],
-) -> f64 {
-    let disk_c2 = get_circle_polygon(c2, radius, 32);
-    let disk_c1 = get_circle_polygon(c1, radius, 32);
-
-    // Crescent = disk(c2) − disk(c1)
-    let crescent = get_polygons_group_difference(&[disk_c2], &[disk_c1]);
-    if crescent.is_empty() {
-        return 0.0;
-    }
-    if fragments.is_empty() {
-        return crescent.iter().map(get_polygon_area).sum();
-    }
-
-    // Fresh = crescent − cleared
-    let fresh = get_polygons_group_difference(&crescent, fragments);
-    fresh.iter().map(get_polygon_area).sum()
 }

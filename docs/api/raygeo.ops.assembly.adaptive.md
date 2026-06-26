@@ -9,7 +9,7 @@ sidebar_label: raygeo.ops.assembly.adaptive
 
 ```python
 adaptive_clearing(
-    cleared: ops.area.ClearedArea,
+    cleared: ops.cut.cleared_area.ClearedArea,
     pocket_boundary: Sequence[tuple[float, float]],
     islands: Sequence[Sequence[tuple[float, float]]] = [],
     radius: float = 3,
@@ -39,7 +39,7 @@ and prepending the entry Ops to the result.
 
 | Parameter              | Type                                           | Description                                                                                                                      |
 | ---------------------- | ---------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| `cleared`              | `ops.area.ClearedArea`                         | `ClearedArea` instance (mutated in place).                                                                                       |
+| `cleared`              | `ops.cut.cleared_area.ClearedArea`             | `ClearedArea` instance (mutated in place).                                                                                       |
 | `pocket_boundary`      | `Sequence[tuple[float, float]]`                | Outer boundary of the pocket.                                                                                                    |
 | `islands`              | `Sequence[Sequence[tuple[float, float]]] = []` | List of island (hole) polygons (default []).                                                                                     |
 | `radius`               | `float = 3`                                    | Tool radius in mm (default 3.0).                                                                                                 |
