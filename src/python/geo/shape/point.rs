@@ -17,6 +17,7 @@ use crate::geo::shape::point::are_points_equal;
 use crate::geo::shape::point::circumcenter;
 use crate::geo::shape::point::circumcenter_3d;
 use crate::geo::shape::point::midpoint_3d;
+use crate::geo::shape::point::rotate_point;
 use crate::geo::shape::point::transform_point_3d;
 use crate::types::{Point, Point3D};
 use pyo3::prelude::*;
@@ -34,6 +35,7 @@ pub fn register(shape_mod: &Bound<'_, PyModule>) -> PyResult<()> {
         transform_point_py,
         circumcenter_py,
         circumcenter_3d_py,
+        rotate_point_py,
     );
 
     shape_mod.add_submodule(&m)?;
@@ -182,6 +184,29 @@ fn circumcenter_py(
     let pc = Point::new(c.0, c.1);
     let (center, radius) = circumcenter(pa, pb, pc);
     (point_to_tuple(center), radius)
+}
+
+#[gen_stub_pyfunction(
+    python = r#"
+    import raygeo.geo.types
+
+    def rotate_point(
+        point: types.Point,
+        angle: float,
+    ) -> types.Point:
+        """Rotate a 2D point around the origin.
+
+        :param point: Point (x, y) to rotate.
+        :param angle: Rotation angle in radians (counter-clockwise).
+        :returns: Rotated point (x, y).
+        :complexity: O(1) time, O(1) space
+        """
+"#,
+    module = "raygeo.geo.shape.point"
+)]
+#[pyfunction(name = "rotate_point")]
+fn rotate_point_py(point: PyPoint2D, angle: f64) -> (f64, f64) {
+    point_to_tuple(rotate_point(Point::new(point.0, point.1), angle))
 }
 
 #[gen_stub_pyfunction(

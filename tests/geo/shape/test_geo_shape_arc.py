@@ -19,6 +19,7 @@ from raygeo.geo.shape.arc import (
     is_arc_inside_polygons,
     linearize_arc,
     normalize_angle,
+    normalize_angle_signed,
 )
 
 
@@ -833,3 +834,61 @@ class TestGetPolylineTurnSign:
         """
         polyline = [(0.0, 0.0), (-10.0, 0.0), (-10.0, -10.0)]
         assert get_polyline_turn_sign(polyline) == 1.0
+
+
+class TestNormalizeAngleSigned:
+    def test_zero(self):
+        assert normalize_angle_signed(0.0) == 0.0
+
+    def test_positive_within_range(self):
+        assert normalize_angle_signed(1.0) == 1.0
+        assert normalize_angle_signed(math.pi - 0.1) == pytest.approx(
+            math.pi - 0.1
+        )
+
+    def test_negative_within_range(self):
+        assert normalize_angle_signed(-1.0) == -1.0
+        assert normalize_angle_signed(-math.pi + 0.1) == pytest.approx(
+            -math.pi + 0.1
+        )
+
+    def test_exactly_pi(self):
+        result = normalize_angle_signed(math.pi)
+        assert result == pytest.approx(-math.pi)
+
+    def test_exactly_negative_pi(self):
+        result = normalize_angle_signed(-math.pi)
+        assert result == pytest.approx(-math.pi)
+
+    def test_below_negative_pi(self):
+        result = normalize_angle_signed(-4.0)
+        assert -math.pi <= result < math.pi
+        assert result == pytest.approx(-4.0 + 2 * math.pi)
+
+    def test_above_pi(self):
+        result = normalize_angle_signed(4.0)
+        assert -math.pi <= result < math.pi
+        assert result == pytest.approx(4.0 - 2 * math.pi)
+
+    def test_large_positive_multiple(self):
+        result = normalize_angle_signed(7 * math.pi)
+        assert result == pytest.approx(-math.pi)
+
+    def test_large_negative_multiple(self):
+        result = normalize_angle_signed(-7 * math.pi)
+        assert result == pytest.approx(-math.pi)
+
+    @pytest.mark.parametrize(
+        "angle, expected",
+        [
+            (math.pi / 2, math.pi / 2),
+            (-math.pi / 2, -math.pi / 2),
+            (3 * math.pi / 2, -math.pi / 2),
+            (-3 * math.pi / 2, math.pi / 2),
+            (2 * math.pi, 0.0),
+            (-2 * math.pi, 0.0),
+            (math.pi + 0.1, -math.pi + 0.1),
+        ],
+    )
+    def test_parametrized(self, angle, expected):
+        assert normalize_angle_signed(angle) == pytest.approx(expected)

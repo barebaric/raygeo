@@ -16,6 +16,7 @@ __all__ = [
     "circumcenter",
     "circumcenter_3d",
     "midpoint_3d",
+    "rotate_point",
     "transform_point_3d",
 ]
 
@@ -66,6 +67,16 @@ def midpoint_3d(p1: types.Point3D, p2: types.Point3D) -> types.Point3D:
     :param p1: First point (x, y, z).
     :param p2: Second point (x, y, z).
     :returns: Midpoint (x, y, z).
+    :complexity: O(1) time, O(1) space
+    """
+
+def rotate_point(point: types.Point, angle: float) -> types.Point:
+    r"""
+    Rotate a 2D point around the origin.
+    
+    :param point: Point (x, y) to rotate.
+    :param angle: Rotation angle in radians (counter-clockwise).
+    :returns: Rotated point (x, y).
     :complexity: O(1) time, O(1) space
     """
 

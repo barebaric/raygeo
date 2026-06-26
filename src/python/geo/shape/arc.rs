@@ -19,7 +19,7 @@ use crate::geo::shape::arc::{
     get_arc_angles, get_arc_bounds, get_arc_closest_point, get_arc_direction,
     get_arc_length, get_arc_midpoint, get_arc_sweep, get_polyline_turn_sign,
     is_angle_between, is_arc_clockwise, is_arc_inside_polygons, linearize_arc,
-    normalize_angle,
+    normalize_angle, normalize_angle_signed,
 };
 use crate::types::{Point, Point3D, Rect};
 use pyo3::prelude::*;
@@ -91,6 +91,7 @@ pub fn register(shape_mod: &Bound<'_, PyModule>) -> PyResult<()> {
         is_arc_inside_polygons_py,
         is_angle_between_py,
         normalize_angle_py,
+        normalize_angle_signed_py,
         linearize_arc_py,
         get_arc_length_py,
         get_arc_sweep_py,
@@ -581,6 +582,23 @@ fn is_angle_between_py(
 #[pyfunction(name = "normalize_angle")]
 fn normalize_angle_py(angle: f64) -> f64 {
     normalize_angle(angle)
+}
+
+#[gen_stub_pyfunction(
+    python = r#"
+    def normalize_angle_signed(angle: float) -> float:
+        """Normalize an angle to the range [-pi, pi).
+
+        :param angle: Angle in radians.
+        :returns: Normalized angle in [-pi, pi).
+        :complexity: O(1) time, O(1) space
+        """
+"#,
+    module = "raygeo.geo.shape.arc"
+)]
+#[pyfunction(name = "normalize_angle_signed")]
+fn normalize_angle_signed_py(angle: f64) -> f64 {
+    normalize_angle_signed(angle)
 }
 
 #[gen_stub_pyfunction(

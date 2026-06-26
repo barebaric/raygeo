@@ -74,6 +74,18 @@ pub fn normalize_angle(angle: f64) -> f64 {
     ((angle % (2.0 * PI)) + 2.0 * PI) % (2.0 * PI)
 }
 
+/// Normalizes an angle to the range [-PI, PI).
+pub fn normalize_angle_signed(angle: f64) -> f64 {
+    let mut a = angle % (2.0 * PI);
+    if a >= PI {
+        a -= 2.0 * PI;
+    }
+    if a < -PI {
+        a += 2.0 * PI;
+    }
+    a
+}
+
 /// Compute the signed sweep angle for an arc, handling direction and
 /// full-circle detection when the start and end angles are nearly equal.
 pub fn get_arc_sweep(start_angle: f64, end_angle: f64, clockwise: bool) -> f64 {

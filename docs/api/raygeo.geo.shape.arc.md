@@ -361,3 +361,17 @@ Normalize an angle to the range \[0, 2\*pi).
 | `angle`      | `float` | Angle in radians.                |
 | _Returns_    | `float` | Normalized angle in \[0, 2\*pi). |
 | _Complexity_ |         | O(1) time, O(1) space            |
+
+### `normalize_angle_signed()`
+
+```python
+normalize_angle_signed(angle: float) -> float
+```
+
+Normalize an angle to the range \[-pi, pi).
+
+| Parameter    | Type    | Description                     |
+| ------------ | ------- | ------------------------------- |
+| `angle`      | `float` | Angle in radians.               |
+| _Returns_    | `float` | Normalized angle in \[-pi, pi). |
+| _Complexity_ |         | O(1) time, O(1) space           |

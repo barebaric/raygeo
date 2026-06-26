@@ -869,6 +869,26 @@ class TestPointInPolygon:
         polygon = P((0, 0), (100, 0), (100, 100), (0, 100))
         assert is_point_inside_polygon((50, 50), polygon) is True
 
+    def test_corners_inside(self):
+        polygon = P((0, 0), (10, 0), (10, 10), (0, 10))
+        assert is_point_inside_polygon((0, 0), polygon) is True
+        assert is_point_inside_polygon((10, 10), polygon) is True
+        assert is_point_inside_polygon((0.1, 0.1), polygon) is True
+
+    def test_outside_directions(self):
+        polygon = P((0, 0), (10, 0), (10, 10), (0, 10))
+        assert is_point_inside_polygon((15, 5), polygon) is False
+        assert is_point_inside_polygon((-5, 5), polygon) is False
+        assert is_point_inside_polygon((5, 15), polygon) is False
+        assert is_point_inside_polygon((5, -5), polygon) is False
+
+    def test_all_edges(self):
+        polygon = P((0, 0), (10, 0), (10, 10), (0, 10))
+        assert is_point_inside_polygon((5, 0), polygon) is True
+        assert is_point_inside_polygon((10, 5), polygon) is True
+        assert is_point_inside_polygon((5, 10), polygon) is True
+        assert is_point_inside_polygon((0, 5), polygon) is True
+
 
 class TestPointInPolygonNumpy:
     def test_inside(self):

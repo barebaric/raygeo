@@ -29,6 +29,7 @@ __all__ = [
     "is_arc_inside_polygons",
     "linearize_arc",
     "normalize_angle",
+    "normalize_angle_signed",
 ]
 
 def arc_through_point(t_start: types.Point, t_end: types.Point, t_mid: types.Point, center: types.Point, radius: float) -> types.Polygon:
@@ -224,6 +225,15 @@ def normalize_angle(angle: float) -> float:
     
     :param angle: Angle in radians.
     :returns: Normalized angle in [0, 2*pi).
+    :complexity: O(1) time, O(1) space
+    """
+
+def normalize_angle_signed(angle: float) -> float:
+    r"""
+    Normalize an angle to the range [-pi, pi).
+    
+    :param angle: Angle in radians.
+    :returns: Normalized angle in [-pi, pi).
     :complexity: O(1) time, O(1) space
     """
 

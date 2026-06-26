@@ -46,6 +46,13 @@ pub fn circumcenter_3d(a: Point3D, b: Point3D, c: Point3D) -> Option<Point3D> {
     Some(a + ab * alpha + ac * beta)
 }
 
+/// Rotate a 2D point around the origin by the given angle (radians).
+pub fn rotate_point(point: Point, angle: f64) -> Point {
+    let c = angle.cos();
+    let s = angle.sin();
+    Point::new(c * point.x - s * point.y, s * point.x + c * point.y)
+}
+
 /// Compute the circumcenter and radius of three 2D points.
 ///
 /// Returns `(center, radius)`. Returns a zero center and negative radius

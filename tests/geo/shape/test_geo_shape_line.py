@@ -2,10 +2,23 @@
 
 import math
 
+import pytest
+
 from raygeo.geo.shape.line import (
     does_line_cross_polygon,
+    does_line_segment_intersect_circle,
+    does_line_segment_intersect_rect,
     get_interior_angle,
+    get_line_closest_point,
+    get_line_line_intersection,
+    get_line_segment_closest_point,
+    get_line_segment_intersection,
+    get_line_segment_length,
+    get_line_segment_polygon_intersections,
+    get_point_line_distance,
     get_segment_segment_distance,
+    interpolated_segment_3d,
+    is_point_on_line_segment,
     longest_line_through_point,
 )
 
@@ -223,3 +236,226 @@ class TestGetInteriorAngle:
         """Returns 0.0 when p0 == p1 (zero-length edge)."""
         angle = get_interior_angle((0.0, 0.0), (0.0, 0.0), (1.0, 0.0))
         assert angle == 0.0
+
+
+class TestGetLineSegmentIntersection:
+    def test_crossing(self):
+        result = get_line_segment_intersection(
+            (0, 0), (10, 10), (0, 10), (10, 0)
+        )
+        assert result == pytest.approx((5, 5))
+
+    def test_t_junction(self):
+        result = get_line_segment_intersection(
+            (0, 0), (10, 0), (5, -5), (5, 5)
+        )
+        assert result == pytest.approx((5, 0))
+
+    def test_parallel_no_intersection(self):
+        result = get_line_segment_intersection(
+            (0, 0), (10, 0), (0, 5), (10, 5)
+        )
+        assert result is None
+
+    def test_non_parallel_no_intersection(self):
+        result = get_line_segment_intersection((0, 0), (1, 1), (0, 10), (1, 9))
+        assert result is None
+
+    def test_collinear_returns_none(self):
+        result = get_line_segment_intersection((0, 0), (5, 0), (3, 0), (8, 0))
+        assert result is None
+
+
+class TestGetLineSegmentPolygonIntersections:
+    def test_simple_crossing(self):
+        region = [(40.0, 45.0), (60.0, 45.0), (60.0, 55.0), (40.0, 55.0)]
+        result = get_line_segment_polygon_intersections(
+            (0.0, 50.0), (100.0, 50.0), [region]
+        )
+        assert result == pytest.approx([0.0, 0.4, 0.6, 1.0])
+
+    def test_fully_outside(self):
+        region = [(40.0, 45.0), (60.0, 45.0), (60.0, 55.0), (40.0, 55.0)]
+        result = get_line_segment_polygon_intersections(
+            (-20.0, 0.0), (-10.0, 0.0), [region]
+        )
+        assert result == pytest.approx([0.0, 1.0])
+
+
+class TestGetLineLineIntersection:
+    def test_intersecting(self):
+        result = get_line_line_intersection((0, 0), (10, 10), (0, 10), (10, 0))
+        assert result == pytest.approx((5, 5))
+
+    def test_parallel_returns_none(self):
+        result = get_line_line_intersection((0, 0), (10, 0), (0, 1), (10, 1))
+        assert result is None
+
+    def test_intersection_outside_segment(self):
+        result = get_line_line_intersection((0, 0), (1, 0), (0, 1), (0, 2))
+        assert result == pytest.approx((0, 0))
+
+
+class TestIsPointOnLineSegment:
+    def test_midpoint(self):
+        assert is_point_on_line_segment((5, 5), (0, 0), (10, 10)) is True
+
+    def test_startpoint(self):
+        assert is_point_on_line_segment((0, 0), (0, 0), (10, 10)) is True
+
+    def test_endpoint(self):
+        assert is_point_on_line_segment((10, 10), (0, 0), (10, 10)) is True
+
+    def test_beyond_start(self):
+        assert is_point_on_line_segment((-1, -1), (0, 0), (10, 10)) is False
+
+    def test_beyond_end(self):
+        assert is_point_on_line_segment((11, 11), (0, 0), (10, 10)) is False
+
+
+class TestGetLineClosestPoint:
+    def test_horizontal_line(self):
+        result = get_line_closest_point((0, 0), (10, 0), 5, 5)
+        assert result == pytest.approx((5, 0))
+
+    def test_vertical_line(self):
+        result = get_line_closest_point((0, 0), (0, 10), 5, 5)
+        assert result == pytest.approx((0, 5))
+
+    def test_diagonal_line(self):
+        result = get_line_closest_point((0, 0), (10, 10), 0, 10)
+        assert result == pytest.approx((5, 5))
+
+    def test_point_on_line(self):
+        result = get_line_closest_point((0, 0), (10, 10), 3, 3)
+        assert result == pytest.approx((3, 3))
+
+    def test_projection_beyond_segment(self):
+        result = get_line_closest_point((0, 0), (10, 0), 20, 5)
+        assert result == pytest.approx((20, 0))
+
+    def test_degenerate_single_point(self):
+        result = get_line_closest_point((5, 5), (5, 5), 10, 10)
+        assert result == pytest.approx((5, 5))
+
+
+class TestGetLineSegmentClosestPoint:
+    def test_projection_on_segment(self):
+        t, pt, d2 = get_line_segment_closest_point((0, 0), (10, 0), 5, 5)
+        assert t == pytest.approx(0.5)
+        assert pt == pytest.approx((5, 0))
+        assert d2 == pytest.approx(25)
+
+    def test_closest_is_p1(self):
+        t, pt, d2 = get_line_segment_closest_point((0, 0), (10, 0), -5, 5)
+        assert t == pytest.approx(0.0)
+        assert pt == pytest.approx((0, 0))
+        assert d2 == pytest.approx(50)
+
+    def test_closest_is_p2(self):
+        t, pt, d2 = get_line_segment_closest_point((0, 0), (10, 0), 15, 5)
+        assert t == pytest.approx(1.0)
+        assert pt == pytest.approx((10, 0))
+        assert d2 == pytest.approx(50)
+
+    def test_point_on_segment(self):
+        t, pt, d2 = get_line_segment_closest_point((0, 0), (10, 0), 7, 0)
+        assert t == pytest.approx(0.7)
+        assert pt == pytest.approx((7, 0))
+        assert d2 == pytest.approx(0)
+
+
+class TestDoesLineSegmentIntersectRect:
+    def test_fully_contained(self):
+        r = (10.0, 10.0, 50.0, 50.0)
+        assert does_line_segment_intersect_rect((20, 20), (40, 40), r)
+
+    def test_one_point_in(self):
+        r = (10.0, 10.0, 50.0, 50.0)
+        assert does_line_segment_intersect_rect((25, 25), (60, 60), r)
+
+    def test_crossing_through(self):
+        r = (10.0, 10.0, 50.0, 50.0)
+        assert does_line_segment_intersect_rect((0, 25), (60, 25), r)
+
+    def test_touching_edge(self):
+        r = (10.0, 10.0, 50.0, 50.0)
+        assert does_line_segment_intersect_rect((0, 10), (20, 10), r)
+
+    def test_fully_outside(self):
+        r = (10.0, 10.0, 50.0, 50.0)
+        assert not does_line_segment_intersect_rect((0, 0), (5, 5), r)
+
+    def test_diagonal_crossing_bbox_intersects(self):
+        r = (10.0, 10.0, 50.0, 50.0)
+        assert does_line_segment_intersect_rect((0, 60), (60, 0), r)
+
+
+class TestGetLineSegmentLength:
+    def test_3_4_5_triangle(self):
+        assert get_line_segment_length((0, 0), (3, 4)) == pytest.approx(5.0)
+
+    def test_zero_length(self):
+        assert get_line_segment_length((0, 0), (0, 0)) == pytest.approx(0.0)
+
+
+class TestGetPointLineDistance:
+    def test_point_above_horizontal(self):
+        d = get_point_line_distance((0, 1), (0, 0), (1, 0))
+        assert d == pytest.approx(1.0)
+
+    def test_point_on_line(self):
+        d = get_point_line_distance((0.5, 0), (0, 0), (1, 0))
+        assert d == pytest.approx(0.0)
+
+    def test_degenerate_line(self):
+        d = get_point_line_distance((1, 1), (0, 0), (0, 0))
+        assert d == pytest.approx(2**0.5)
+
+
+class TestDoesLineSegmentIntersectCircle:
+    def test_center_on_segment_intersects(self):
+        assert does_line_segment_intersect_circle((0, 0), (10, 0), (5, 0), 2)
+
+    def test_circle_above_segment_intersects(self):
+        assert does_line_segment_intersect_circle((0, 0), (10, 0), (5, 2), 2)
+
+    def test_circle_too_far_no_intersection(self):
+        assert not does_line_segment_intersect_circle(
+            (0, 5), (10, 5), (5, 0), 2
+        )
+
+
+class TestInterpolatedSegment3D:
+    def test_n_equals_1(self):
+        """n=1 returns just the end point."""
+        pts = interpolated_segment_3d(0.0, 0.0, 10.0, 0.0, 5.0, 1)
+        assert len(pts) == 1
+        assert pts[0] == (10.0, 0.0, 5.0)
+
+    def test_n_equals_5(self):
+        """n=5 returns evenly spaced points, ending at `to`."""
+        pts = interpolated_segment_3d(0.0, 0.0, 10.0, 0.0, 3.0, 5)
+        assert len(pts) == 5
+        assert pts[0] == (2.0, 0.0, 3.0)
+        assert pts[1] == (4.0, 0.0, 3.0)
+        assert pts[2] == (6.0, 0.0, 3.0)
+        assert pts[3] == (8.0, 0.0, 3.0)
+        assert pts[4] == (10.0, 0.0, 3.0)
+
+    def test_n_equals_0(self):
+        """n=0 returns empty list."""
+        assert interpolated_segment_3d(0.0, 0.0, 10.0, 0.0, 5.0, 0) == []
+
+    def test_diagonal_interpolation(self):
+        """Diagonal segment produces correct XY and Z."""
+        pts = interpolated_segment_3d(0.0, 0.0, 6.0, 8.0, 10.0, 2)
+        assert len(pts) == 2
+        assert pts[0] == (3.0, 4.0, 10.0)
+        assert pts[1] == (6.0, 8.0, 10.0)
+
+    def test_z_preserved(self):
+        """All points share the same Z."""
+        pts = interpolated_segment_3d(1.0, 2.0, 3.0, 4.0, 7.0, 10)
+        for pt in pts:
+            assert pt[2] == 7.0

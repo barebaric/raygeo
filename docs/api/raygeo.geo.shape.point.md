@@ -100,6 +100,21 @@ Get the midpoint between two 3D points.
 
 *Midpoint of a 3D segment*
 
+### `rotate_point()`
+
+```python
+rotate_point(point: types.Point, angle: float) -> types.Point
+```
+
+Rotate a 2D point around the origin.
+
+| Parameter    | Type          | Description                                    |
+| ------------ | ------------- | ---------------------------------------------- |
+| `point`      | `types.Point` | Point (x, y) to rotate.                        |
+| `angle`      | `float`       | Rotation angle in radians (counter-clockwise). |
+| _Returns_    | `types.Point` | Rotated point (x, y).                          |
+| _Complexity_ |               | O(1) time, O(1) space                          |
+
 ### `transform_point_3d()`
 
 ```python
