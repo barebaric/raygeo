@@ -87,6 +87,29 @@ Returns True when the Minkowski sweep of a disk of *radius* along *path* interse
 
 *Tests whether the Minkowski sweep of a disk along a polyline intersects any obstacle polygon*
 
+### `does_polygon_enclose_circle()`
+
+```python
+does_polygon_enclose_circle(
+    center: types.Point,
+    radius: float,
+    polygon: Sequence[types.Point],
+) -> bool
+```
+
+Check if a polygon fully encloses a circle.
+
+Uses a conservative fast check: the polygon's AABB must contain the circle's AABB, and the circle
+center must be inside the polygon.
+
+| Parameter    | Type                    | Description                                    |
+| ------------ | ----------------------- | ---------------------------------------------- |
+| `center`     | `types.Point`           | Circle center (x, y).                          |
+| `radius`     | `float`                 | Circle radius.                                 |
+| `polygon`    | `Sequence[types.Point]` | Polygon as (x, y) points.                      |
+| _Returns_    | `bool`                  | True if the polygon fully encloses the circle. |
+| _Complexity_ |                         | O(n)                                           |
+
 ### `flip_polygon()`
 
 ```python

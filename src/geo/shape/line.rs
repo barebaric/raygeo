@@ -232,22 +232,6 @@ pub fn is_point_inside_rect(point: Point, rect: Rect) -> bool {
     x >= rect.min.x && x <= rect.max.x && y >= rect.min.y && y <= rect.max.y
 }
 
-/// Tests if rect_b is completely contained within rect_a.
-pub fn does_rect_contain_rect(rect_a: Rect, rect_b: Rect) -> bool {
-    rect_b.min.x >= rect_a.min.x
-        && rect_b.min.y >= rect_a.min.y
-        && rect_b.max.x <= rect_a.max.x
-        && rect_b.max.y <= rect_a.max.y
-}
-
-/// Tests if two rectangles intersect.
-pub fn does_rect_intersect_rect(rect_a: Rect, rect_b: Rect) -> bool {
-    !(rect_a.max.x < rect_b.min.x
-        || rect_a.min.x > rect_b.max.x
-        || rect_a.max.y < rect_b.min.y
-        || rect_a.min.y > rect_b.max.y)
-}
-
 /// Tests if a line segment intersects an axis-aligned rectangle.
 /// Checks if either endpoint is inside the rect or if segment crosses any edge.
 pub fn does_line_segment_intersect_rect(

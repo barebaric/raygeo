@@ -7,15 +7,15 @@ use super::super::flex_point::{
 use super::super::types::NormalizePolygonsResult;
 use crate::geo::shape::polygon::{
     apply_minimum_curvature, clean_polygon, compute_polygon_bounds,
-    does_path_sweep_intersect_polygon, flip_polygon, flip_polygons,
-    get_circle_polygon, get_polygon_boundary_distance, get_polygon_bounds,
-    get_polygon_centroid, get_polygon_closest_point, get_polygon_convex_hull,
-    get_polygon_edges, get_polygon_group_bounds, get_polygon_heading_at,
-    get_polygon_perimeter, get_polygon_signed_area,
-    get_polygon_vertex_centroid, get_polygons_closest_point,
-    get_polygons_difference, get_polygons_group_difference,
-    get_polygons_group_intersection, get_polygons_intersection,
-    get_polygons_union, get_segment_swept_polygon,
+    does_path_sweep_intersect_polygon, does_polygon_enclose_circle,
+    flip_polygon, flip_polygons, get_circle_polygon,
+    get_polygon_boundary_distance, get_polygon_bounds, get_polygon_centroid,
+    get_polygon_closest_point, get_polygon_convex_hull, get_polygon_edges,
+    get_polygon_group_bounds, get_polygon_heading_at, get_polygon_perimeter,
+    get_polygon_signed_area, get_polygon_vertex_centroid,
+    get_polygons_closest_point, get_polygons_difference,
+    get_polygons_group_difference, get_polygons_group_intersection,
+    get_polygons_intersection, get_polygons_union, get_segment_swept_polygon,
     get_signed_boundary_distance, is_almost_equal, is_point_inside_polygon,
     is_polygon_clockwise, is_polygon_convex, normalize_polygons,
     offset_polygon, point_line_distance, polygons_intersect, resample_polygon,
@@ -117,6 +117,7 @@ pub fn register(shape_mod: &Bound<'_, PyModule>) -> PyResult<()> {
         apply_minimum_curvature_py,
         clean_polygon_py,
         does_path_sweep_intersect_polygon_py,
+        does_polygon_enclose_circle_py,
         flip_polygon_numpy_py,
         flip_polygon_py,
         flip_polygons_numpy_py,
@@ -789,6 +790,43 @@ fn is_point_inside_polygon_py(
 ) -> bool {
     is_point_inside_polygon(
         Point::new(point.0, point.1),
+        &poly_to_points(polygon),
+    )
+}
+
+#[gen_stub_pyfunction(
+    python = r#"
+    import collections.abc
+    import raygeo.geo.types
+
+    def does_polygon_enclose_circle(
+        center: types.Point,
+        radius: float,
+        polygon: collections.abc.Sequence[types.Point],
+    ) -> bool:
+        """Check if a polygon fully encloses a circle.
+
+        Uses a conservative fast check: the polygon's AABB must contain the
+        circle's AABB, and the circle center must be inside the polygon.
+
+        :param center: Circle center (x, y).
+        :param radius: Circle radius.
+        :param polygon: Polygon as (x, y) points.
+        :returns: True if the polygon fully encloses the circle.
+        :complexity: O(n)
+        """
+"#,
+    module = "raygeo.geo.shape.polygon"
+)]
+#[pyfunction(name = "does_polygon_enclose_circle")]
+fn does_polygon_enclose_circle_py(
+    center: (f64, f64),
+    radius: f64,
+    polygon: Vec<PyPoint2D>,
+) -> bool {
+    does_polygon_enclose_circle(
+        Point::new(center.0, center.1),
+        radius,
         &poly_to_points(polygon),
     )
 }

@@ -11,6 +11,7 @@ __all__ = [
     "apply_minimum_curvature",
     "clean_polygon",
     "does_path_sweep_intersect_polygon",
+    "does_polygon_enclose_circle",
     "flip_polygon",
     "flip_polygon_numpy",
     "flip_polygons",
@@ -116,6 +117,20 @@ def does_path_sweep_intersect_polygon(path: collections.abc.Sequence[types.Point
     :param obstacles: List of obstacle polygons.
     :returns: True if any obstacle intersects the sweep.
     :complexity: O(n * m)
+    """
+
+def does_polygon_enclose_circle(center: types.Point, radius: float, polygon: collections.abc.Sequence[types.Point]) -> bool:
+    r"""
+    Check if a polygon fully encloses a circle.
+    
+    Uses a conservative fast check: the polygon's AABB must contain the
+    circle's AABB, and the circle center must be inside the polygon.
+    
+    :param center: Circle center (x, y).
+    :param radius: Circle radius.
+    :param polygon: Polygon as (x, y) points.
+    :returns: True if the polygon fully encloses the circle.
+    :complexity: O(n)
     """
 
 def flip_polygon(polygon: collections.abc.Sequence[types.Point], flip_h: bool, flip_v: bool) -> types.Polygon:

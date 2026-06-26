@@ -41,21 +41,6 @@ Check if one rectangle contains another.
 | _Returns_    | `bool`       | True if outer fully contains inner.           |
 | _Complexity_ |              | O(1) time, O(1) space                         |
 
-### `does_rect_intersect_rect()`
-
-```python
-does_rect_intersect_rect(r1: types.Rect, r2: types.Rect) -> bool
-```
-
-Check if two rectangles intersect.
-
-| Parameter    | Type         | Description                                    |
-| ------------ | ------------ | ---------------------------------------------- |
-| `r1`         | `types.Rect` | First rectangle (x_min, y_min, x_max, y_max).  |
-| `r2`         | `types.Rect` | Second rectangle (x_min, y_min, x_max, y_max). |
-| _Returns_    | `bool`       | True if the rectangles intersect.              |
-| _Complexity_ |              | O(1) time, O(1) space                          |
-
 ### `get_combined_rect()`
 
 ```python

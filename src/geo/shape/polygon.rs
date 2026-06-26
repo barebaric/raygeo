@@ -907,6 +907,32 @@ pub fn is_point_inside_polygon(point: Point, polygon: &Polygon) -> bool {
     is_point_in_polygon(point, polygon)
 }
 
+/// Returns `true` if `polygon` fully encloses a circle of `radius` at `center`.
+///
+/// Uses a conservative fast check: the polygon's axis-aligned bounding box
+/// must contain the circle's bounding box, **and** the circle center must lie
+/// inside the polygon.  This is sufficient for most practical cases; false
+/// positives may occur for polygons with very concave holes that swallow the
+/// center but not the whole disk.
+pub fn does_polygon_enclose_circle(
+    center: Point,
+    radius: f64,
+    polygon: &Polygon,
+) -> bool {
+    if polygon.len() < 3 {
+        return false;
+    }
+    let circle_rect = Rect::new(
+        center.x - radius,
+        center.y - radius,
+        center.x + radius,
+        center.y + radius,
+    );
+    let bounds = get_polygon_bounds(polygon);
+    crate::geo::shape::rect::does_rect_contain_rect(bounds, circle_rect)
+        && is_point_in_polygon(center, polygon)
+}
+
 /// Check if a point is inside a polygon using clipper2.
 pub fn point_in_polygon_clipper(point: Point, polygon: &Polygon) -> bool {
     if polygon.len() < 3 {

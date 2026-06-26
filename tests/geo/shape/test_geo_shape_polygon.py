@@ -13,6 +13,7 @@ from raygeo.geo.shape.polygon import (
     apply_minimum_curvature,
     clean_polygon,
     does_path_sweep_intersect_polygon,
+    does_polygon_enclose_circle,
     flip_polygon_numpy,
     flip_polygons_numpy,
     get_polygon_area,
@@ -1835,3 +1836,56 @@ def test_walk_coordinates_match_input():
     walk = walk_polygon_from_point(poly, (3, 4))
     for idx, x, y in walk:
         assert (x, y) == poly[idx]
+
+
+# ── does_polygon_enclose_circle ─────────────────────────────────────
+
+
+def test_enclose_circle_square_contains():
+    """A big square fully encloses a small circle at its center."""
+    square = [(0, 0), (10, 0), (10, 10), (0, 10)]
+    assert does_polygon_enclose_circle((5, 5), 2.0, square)
+
+
+def test_enclose_circle_square_center_on_edge():
+    """A polygon whose center is near edge but disk fully inside."""
+    square = [(0, 0), (10, 0), (10, 10), (0, 10)]
+    # Disk radius 1 at (1, 1) — disk in [0,2]×[0,2] fully inside square
+    assert does_polygon_enclose_circle((1, 1), 0.99, square)
+    # Disk radius 1.01 at (1, 1) — disk extends beyond square
+    assert not does_polygon_enclose_circle((1, 1), 1.01, square)
+
+
+def test_enclose_circle_too_large():
+    """Circle bigger than the polygon should not be enclosed."""
+    square = [(0, 0), (10, 0), (10, 10), (0, 10)]
+    assert not does_polygon_enclose_circle((5, 5), 6.0, square)
+
+
+def test_enclose_circle_center_outside():
+    """Center outside polygon → not enclosed."""
+    square = [(0, 0), (10, 0), (10, 10), (0, 10)]
+    assert not does_polygon_enclose_circle((15, 5), 1.0, square)
+
+
+def test_enclose_circle_triangle_small():
+    """Triangle fully enclosing a tiny circle near its center."""
+    tri = [(0, 0), (10, 0), (5, 10)]
+    assert does_polygon_enclose_circle((5, 3), 1.0, tri)
+
+
+def test_enclose_circle_triangle_too_big():
+    """Circle too large for the triangle."""
+    tri = [(0, 0), (10, 0), (5, 10)]
+    # R=3.5 at (5,3) extends below y=0 → not enclosed
+    assert not does_polygon_enclose_circle((5, 3), 3.5, tri)
+
+
+def test_enclose_circle_empty_polygon():
+    """Empty polygon cannot enclose anything."""
+    assert not does_polygon_enclose_circle((0, 0), 1.0, [])
+
+
+def test_enclose_circle_short_polygon():
+    """Polygon with fewer than 3 vertices cannot enclose."""
+    assert not does_polygon_enclose_circle((0, 0), 1.0, [(0, 0), (1, 0)])

@@ -8,10 +8,9 @@ whether one rectangle fully contains another, and utilities for computing
 the union bounding rectangle of multiple geometries.
 ";
 
-use crate::geo::shape::line::does_rect_contain_rect;
-use crate::geo::shape::line::does_rect_intersect_rect;
 use crate::geo::shape::line::is_point_inside_rect;
 use crate::geo::shape::rect::do_rects_intersect;
+use crate::geo::shape::rect::does_rect_contain_rect;
 use crate::types::{Point, Rect};
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::gen_stub_pyfunction;
@@ -25,7 +24,6 @@ pub fn register(shape_mod: &Bound<'_, PyModule>) -> PyResult<()> {
         m,
         is_point_inside_rect_py,
         does_rect_contain_rect_py,
-        does_rect_intersect_rect_py,
         do_rects_intersect_py,
         get_combined_rect_py,
     );
@@ -89,35 +87,6 @@ fn does_rect_contain_rect_py(
     does_rect_contain_rect(
         Rect::new(outer.0, outer.1, outer.2, outer.3),
         Rect::new(inner.0, inner.1, inner.2, inner.3),
-    )
-}
-
-#[gen_stub_pyfunction(
-    python = r#"
-    import raygeo.geo.types
-
-    def does_rect_intersect_rect(
-        r1: types.Rect,
-        r2: types.Rect,
-    ) -> bool:
-        """Check if two rectangles intersect.
-
-        :param r1: First rectangle (x_min, y_min, x_max, y_max).
-        :param r2: Second rectangle (x_min, y_min, x_max, y_max).
-        :returns: True if the rectangles intersect.
-        :complexity: O(1) time, O(1) space
-        """
-"#,
-    module = "raygeo.geo.shape.rect"
-)]
-#[pyfunction(name = "does_rect_intersect_rect")]
-fn does_rect_intersect_rect_py(
-    r1: (f64, f64, f64, f64),
-    r2: (f64, f64, f64, f64),
-) -> bool {
-    does_rect_intersect_rect(
-        Rect::new(r1.0, r1.1, r1.2, r1.3),
-        Rect::new(r2.0, r2.1, r2.2, r2.3),
     )
 }
 

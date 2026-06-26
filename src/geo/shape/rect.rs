@@ -23,9 +23,18 @@ pub fn get_combined_rect(geometries: &[Geometry]) -> Rect {
     Rect::new(min_x, min_y, max_x, max_y)
 }
 
+/// Tests if two rectangles intersect.
 pub fn do_rects_intersect(bbox1: Rect, bbox2: Rect) -> bool {
     !(bbox1.max.x < bbox2.min.x
         || bbox1.min.x > bbox2.max.x
         || bbox1.max.y < bbox2.min.y
         || bbox1.min.y > bbox2.max.y)
+}
+
+/// Tests if `inner` is completely contained within `outer`.
+pub fn does_rect_contain_rect(outer: Rect, inner: Rect) -> bool {
+    inner.min.x >= outer.min.x
+        && inner.min.y >= outer.min.y
+        && inner.max.x <= outer.max.x
+        && inner.max.y <= outer.max.y
 }

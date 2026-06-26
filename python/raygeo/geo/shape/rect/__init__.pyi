@@ -13,7 +13,6 @@ from raygeo.geo import types
 __all__ = [
     "do_rects_intersect",
     "does_rect_contain_rect",
-    "does_rect_intersect_rect",
     "get_combined_rect",
     "is_point_inside_rect",
 ]
@@ -35,16 +34,6 @@ def does_rect_contain_rect(outer: types.Rect, inner: types.Rect) -> bool:
     :param outer: Outer rectangle (x_min, y_min, x_max, y_max).
     :param inner: Inner rectangle (x_min, y_min, x_max, y_max).
     :returns: True if outer fully contains inner.
-    :complexity: O(1) time, O(1) space
-    """
-
-def does_rect_intersect_rect(r1: types.Rect, r2: types.Rect) -> bool:
-    r"""
-    Check if two rectangles intersect.
-    
-    :param r1: First rectangle (x_min, y_min, x_max, y_max).
-    :param r2: Second rectangle (x_min, y_min, x_max, y_max).
-    :returns: True if the rectangles intersect.
     :complexity: O(1) time, O(1) space
     """
 

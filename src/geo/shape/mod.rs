@@ -36,8 +36,7 @@ pub use circle::{
 };
 pub use line::{
     does_line_cross_polygon, does_line_segment_intersect_circle,
-    does_line_segment_intersect_rect, does_rect_contain_rect,
-    does_rect_intersect_rect, get_angle_at_vertex, get_interior_angle,
+    does_line_segment_intersect_rect, get_angle_at_vertex, get_interior_angle,
     get_line_closest_point, get_line_line_intersection,
     get_line_segment_closest_point, get_line_segment_intersection,
     get_line_segment_length, get_line_segment_polygon_intersections,
@@ -51,11 +50,11 @@ pub use point::{
 };
 pub use polygon::{
     apply_minimum_curvature, clean_polygon, compute_polygon_bounds,
-    does_path_sweep_intersect_polygon, flip_polygon, flip_polygons,
-    get_circle_polygon, get_polygon_area, get_polygon_boundary_distance,
-    get_polygon_bounds, get_polygon_centroid, get_polygon_closest_point,
-    get_polygon_convex_hull, get_polygon_edges, get_polygon_group_bounds,
-    get_polygon_perimeter, get_polygon_signed_area,
+    does_path_sweep_intersect_polygon, does_polygon_enclose_circle,
+    flip_polygon, flip_polygons, get_circle_polygon, get_polygon_area,
+    get_polygon_boundary_distance, get_polygon_bounds, get_polygon_centroid,
+    get_polygon_closest_point, get_polygon_convex_hull, get_polygon_edges,
+    get_polygon_group_bounds, get_polygon_perimeter, get_polygon_signed_area,
     get_polygon_vertex_centroid, get_polygons_closest_point,
     get_polygons_difference, get_polygons_group_difference,
     get_polygons_group_intersection, get_polygons_intersection,
@@ -86,4 +85,4 @@ pub use polyline::{
     split_polyline_at_v_junctions, trim_polyline_angular_ends,
     trim_polyline_at,
 };
-pub use rect::{do_rects_intersect, get_combined_rect};
+pub use rect::{do_rects_intersect, does_rect_contain_rect, get_combined_rect};
