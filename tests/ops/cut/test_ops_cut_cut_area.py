@@ -1,6 +1,6 @@
 """Tests for cut_area crescent-area computation."""
 
-from raygeo.ops.cut import cut_area
+from raygeo.ops.cut.crescent import cut_area
 
 
 def test_cut_area_basic():

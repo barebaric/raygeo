@@ -228,7 +228,9 @@ def convert_docstring_sections(
             result.append("")
             result.append(f"```{lang}")
             i += 1
-            while i < len(lines) and (lines[i].startswith("   ") or not lines[i].strip()):
+            while i < len(lines) and (
+                lines[i].startswith("   ") or not lines[i].strip()
+            ):
                 if lines[i].strip():
                     result.append(lines[i][3:])
                 i += 1

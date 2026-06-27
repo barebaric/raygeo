@@ -7,31 +7,14 @@ Maintains a union of swept-disk polygons and provides a spatial-indexed
 windowed query for efficient engagement computation.
 """
 
-import builtins
-import typing
 from . import cleared_area
+from . import crescent
 from . import search
 from . import stepper
 __all__ = [
     "cleared_area",
-    "cut_area",
+    "crescent",
     "search",
     "stepper",
 ]
-
-def cut_area(c1: tuple[builtins.float, builtins.float], c2: tuple[builtins.float, builtins.float], radius: builtins.float, fragments: typing.Sequence[typing.Sequence[tuple[builtins.float, builtins.float]]], valid_area: typing.Sequence[typing.Sequence[tuple[builtins.float, builtins.float]]]) -> tuple[builtins.float, builtins.float]:
-    r"""
-    Area of ``disk(c2) − disk(c1) − fragments``, intersected with
-    *valid_area*.
-    
-    Returns ``(total, left)`` where *left* is the portion on the left
-    side of the step vector ``c1 → c2``.
-    
-    :param c1: Previous centre ``(x, y)``.
-    :param c2: Next centre ``(x, y)``.
-    :param radius: Disk radius (mm).
-    :param fragments: List of polygons (cleared fragments).
-    :param valid_area: Valid region polygons (intersection).
-    :returns: ``(total_area, left_area)`` (mm²).
-    """
 
