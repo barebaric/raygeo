@@ -51,7 +51,8 @@ pub use clipping::{
     subtract_polygons_from_line_segment_2d,
 };
 pub use engagement::{
-    circle_polygon_intersection_area, compute_engagement, Engagement,
+    circle_polygon_intersection_area, compute_engagement, disk_segment_area,
+    Engagement,
 };
 pub use fillet::{
     append_end_fillets, create_fillet_polyline, trim_to_safe_fillet_span,

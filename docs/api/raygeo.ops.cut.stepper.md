@@ -17,6 +17,14 @@ heading: float
 
 Updated heading angle in radians.
 
+### `iteration_angle`
+
+```python
+iteration_angle: float
+```
+
+Solver steering angle (radians). Non-zero for `step_adaptive`; always 0 for `step`.
+
 ### `iters`
 
 ```python
@@ -226,6 +234,40 @@ the heading that maintains the target engagement.
 
 *Engagement histogram for 200 steps along a straight wall. Tight peak near target indicates stable
 behaviour.*
+
+### `step_adaptive()`
+
+```python
+step_adaptive(
+    cleared: cleared_area.ClearedArea,
+    pos: tuple[float, float],
+    heading: float,
+    predicted_angle: float,
+    target_area_pd: float,
+    step_length: float,
+    radius: float,
+    max_deflection: float,
+    valid_area: Sequence[Sequence[tuple[float, float]]],
+) -> StepResult
+```
+
+Perform one forward step using the area-based adaptive solver.
+
+Like **step**, but targets **cut-area per unit distance** rather than an engagement angle. Used
+internally by `adaptive_clearing`.
+
+| Parameter         | Type                                      | Description                                              |
+| ----------------- | ----------------------------------------- | -------------------------------------------------------- |
+| `cleared`         | `cleared_area.ClearedArea`                | `ClearedArea` instance.                                  |
+| `pos`             | `tuple[float, float]`                     | Current centre position `(x, y)`.                        |
+| `heading`         | `float`                                   | Smoothed heading angle (radians).                        |
+| `predicted_angle` | `float`                                   | Predicted steering angle from history.                   |
+| `target_area_pd`  | `float`                                   | Target cut-area per unit distance.                       |
+| `step_length`     | `float`                                   | Forward step length in mm.                               |
+| `radius`          | `float`                                   | Disk radius in mm.                                       |
+| `max_deflection`  | `float`                                   | Max steering deflection in radians.                      |
+| `valid_area`      | `Sequence[Sequence[tuple[float, float]]]` | Valid tool-centre region polygons.                       |
+| _Returns_         | `StepResult`                              | `StepResult` with the next position and updated heading. |
 
 ### `target_engagement_from_advance()`
 

@@ -49,6 +49,7 @@ struct SweepContext {
 /// Returns `None` for any of the short-circuit cases that yield zero
 /// area (coincident centres, a fragment fully enclosing the disk, or a
 /// non-empty `valid_area` that misses the disk entirely).
+#[prof]
 fn prepare_sweep(
     c1: Point,
     c2: Point,
@@ -120,6 +121,7 @@ fn prepare_sweep(
 /// Build the sorted, de-duplicated set of x-coordinates at which the
 /// sweep topology can change: polygon vertices, every edge×circle and
 /// circle×circle intersection, and the `c2` disk extents.
+#[prof]
 fn build_xcoords(cx: &SweepContext) -> Vec<f64> {
     let c1 = cx.c1;
     let c2 = cx.c2;
@@ -172,6 +174,7 @@ type Crossing = (f64, usize, usize);
 /// Collect every boundary crossing at `xtest`, tagged by shape and part.
 /// Shapes are indexed as: fragments + valid polys (`0..total_polys`),
 /// then `c2`, then `c1`.
+#[prof]
 fn slab_crossings(cx: &SweepContext, xtest: f64) -> Vec<Crossing> {
     let c1 = cx.c1;
     let c2 = cx.c2;
@@ -218,6 +221,7 @@ fn edge_slab_area(p0: Point, p1: Point, x0: f64, x1: f64) -> f64 {
 
 /// Signed area contribution of a circular-arc slab between `x0..x1`
 /// around centre `c`.  `cs = +1` for the upper arc, `-1` for the lower.
+#[prof]
 fn arc_slab_area(c: Point, radius: f64, x0: f64, x1: f64, cs: f64) -> f64 {
     let clamp = |v: f64| v.clamp(-1.0, 1.0);
 
@@ -243,6 +247,7 @@ fn arc_slab_area(c: Point, radius: f64, x0: f64, x1: f64, cs: f64) -> f64 {
 
 /// Run the vertical sweep over the slabs defined by `xs`, accumulating
 /// `(total, left)` area where `left` is the portion with `x < c2.x`.
+#[prof]
 fn sweep_area(cx: &SweepContext, xs: &[f64]) -> (f64, f64) {
     let c2 = cx.c2;
     let num_frags = cx.num_frags;

@@ -38,10 +38,15 @@ impl PyToolPose {
 /// vertex.  Returns the first vertex whose outward cut-area probe
 /// falls in ``[min, max]``.
 ///
+/// The returned position is offset inward (into the cleared area)
+/// by ``radius - advance`` so the tool starts at the correct
+/// engagement depth.
+///
 /// :param cleared: ``ClearedArea`` instance.
-/// :param start_pos: Seed position ``(x, y)``.
+/// :param start: ``ToolPose`` seed.
 /// :param radius: Disk radius (mm).
 /// :param step_length: Forward step distance (mm) for the probe.
+/// :param advance: Stepover distance (mm) for inward offset.
 /// :param min_cut_area: Minimum cut area (mm²).
 /// :param max_cut_area: Maximum cut area (mm²), e.g. ``float("inf")``.
 /// :returns: ``ToolPose`` or ``None``.
@@ -52,6 +57,7 @@ fn search_frontier_engagement_py(
     start: &PyToolPose,
     radius: f64,
     step_length: f64,
+    advance: f64,
     min_cut_area: f64,
     max_cut_area: f64,
 ) -> Option<PyToolPose> {
@@ -63,6 +69,7 @@ fn search_frontier_engagement_py(
         },
         radius,
         step_length,
+        advance,
         min_cut_area,
         max_cut_area,
     )?;
@@ -76,11 +83,13 @@ fn search_frontier_engagement_py(
 /// vertex.  Returns the first vertex (going backward) whose outward
 /// cut-area probe is at least ``min_cut_area``.
 ///
+/// The returned position is offset inward by ``radius - advance``.
+///
 /// :param cleared: ``ClearedArea`` instance.
-/// :param start_pos: Seed position ``(x, y)``.
-/// :param heading: Current tool heading (radians).
+/// :param start: ``ToolPose`` seed.
 /// :param radius: Disk radius (mm).
 /// :param step_length: Forward step distance (mm).
+/// :param advance: Stepover distance (mm) for inward offset.
 /// :param min_cut_area: Minimum cut area (mm²).
 /// :returns: ``ToolPose`` or ``None``.
 #[gen_stub_pyfunction(module = "raygeo.ops.cut.search")]
@@ -90,6 +99,7 @@ fn search_reengagement_py(
     start: &PyToolPose,
     radius: f64,
     step_length: f64,
+    advance: f64,
     min_cut_area: f64,
 ) -> Option<PyToolPose> {
     let r = cut::search_reengagement(
@@ -100,6 +110,7 @@ fn search_reengagement_py(
         },
         radius,
         step_length,
+        advance,
         min_cut_area,
     )?;
     Some(PyToolPose {

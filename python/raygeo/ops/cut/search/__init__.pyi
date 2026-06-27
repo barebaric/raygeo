@@ -19,32 +19,39 @@ class ToolPose:
     def __new__(cls, pos: tuple[builtins.float, builtins.float], heading: builtins.float) -> ToolPose: ...
     def __repr__(self) -> builtins.str: ...
 
-def search_frontier_engagement(cleared: cleared_area.ClearedArea, start: ToolPose, radius: builtins.float, step_length: builtins.float, min_cut_area: builtins.float, max_cut_area: builtins.float) -> typing.Optional[ToolPose]:
+def search_frontier_engagement(cleared: cleared_area.ClearedArea, start: ToolPose, radius: builtins.float, step_length: builtins.float, advance: builtins.float, min_cut_area: builtins.float, max_cut_area: builtins.float) -> typing.Optional[ToolPose]:
     r"""
     Walk the frontier forward from ``start_pos``, skipping the closest
     vertex.  Returns the first vertex whose outward cut-area probe
     falls in ``[min, max]``.
     
+    The returned position is offset inward (into the cleared area)
+    by ``radius - advance`` so the tool starts at the correct
+    engagement depth.
+    
     :param cleared: ``ClearedArea`` instance.
-    :param start_pos: Seed position ``(x, y)``.
+    :param start: ``ToolPose`` seed.
     :param radius: Disk radius (mm).
     :param step_length: Forward step distance (mm) for the probe.
+    :param advance: Stepover distance (mm) for inward offset.
     :param min_cut_area: Minimum cut area (mm²).
     :param max_cut_area: Maximum cut area (mm²), e.g. ``float("inf")``.
     :returns: ``ToolPose`` or ``None``.
     """
 
-def search_reengagement(cleared: cleared_area.ClearedArea, start: ToolPose, radius: builtins.float, step_length: builtins.float, min_cut_area: builtins.float) -> typing.Optional[ToolPose]:
+def search_reengagement(cleared: cleared_area.ClearedArea, start: ToolPose, radius: builtins.float, step_length: builtins.float, advance: builtins.float, min_cut_area: builtins.float) -> typing.Optional[ToolPose]:
     r"""
     Walk the frontier backward from ``start_pos``, skipping the closest
     vertex.  Returns the first vertex (going backward) whose outward
     cut-area probe is at least ``min_cut_area``.
     
+    The returned position is offset inward by ``radius - advance``.
+    
     :param cleared: ``ClearedArea`` instance.
-    :param start_pos: Seed position ``(x, y)``.
-    :param heading: Current tool heading (radians).
+    :param start: ``ToolPose`` seed.
     :param radius: Disk radius (mm).
     :param step_length: Forward step distance (mm).
+    :param advance: Stepover distance (mm) for inward offset.
     :param min_cut_area: Minimum cut area (mm²).
     :returns: ``ToolPose`` or ``None``.
     """

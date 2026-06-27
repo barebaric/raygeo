@@ -1,5 +1,7 @@
 """Tests for raygeo.ops.assembly.adaptive module."""
 
+import math
+
 import pytest
 
 from raygeo.geo.shape.polygon import (
@@ -9,9 +11,13 @@ from raygeo.geo.shape.polygon import (
     offset_polygon,
 )
 from raygeo.ops import Ops
-from raygeo.ops.assembly.adaptive import adaptive_clearing
+from raygeo.ops.assembly.adaptive import (
+    adaptive_clearing,
+    target_area_per_distance,
+)
 from raygeo.ops.assembly.entry import adaptive_entry
 from raygeo.ops.cut.cleared_area import ClearedArea
+from raygeo.ops.cut.crescent import cut_area
 from raygeo.ops.types import CommandType
 
 
@@ -366,3 +372,94 @@ def test_adaptive_clearing_fully_clears_with_island():
     assert remaining < tol, (
         f"expected remaining < {tol}, got {remaining:.2f} mm²"
     )
+
+
+# ── target_area_per_distance ───────────────────────────────────────
+
+
+def _lens_area(d: float, R: float) -> float:
+    """Analytical lens (circle-circle intersection) area."""
+    if d >= 2.0 * R:
+        return 0.0
+    if d <= 0.0:
+        return math.pi * R * R
+    return 2.0 * R * R * math.acos(d / (2.0 * R)) - (d / 2.0) * math.sqrt(
+        4.0 * R * R - d * d
+    )
+
+
+def _crescent_area(d: float, R: float) -> float:
+    """Analytical crescent: disk(c2) minus overlap with disk(c1)."""
+    return math.pi * R * R - _lens_area(d, R)
+
+
+def _wall_fragment(wall_x: float, span: float) -> list[tuple[float, float]]:
+    """Rectangle covering everything to the left of ``wall_x``."""
+    return [
+        (wall_x - span, -span),
+        (wall_x, -span),
+        (wall_x, span),
+        (wall_x - span, span),
+    ]
+
+
+def test_target_area_pd_vs_cut_area_with_wall():
+    """target_area_per_distance matches actual cut_area when a straight
+    wall fragment simulates the ideal stepover geometry.
+
+    c1 = (0, 0), c2 = (0, step_length)  — step along +y.
+    Wall fragment covers x < (R - advance), leaving only the crescent
+    portion to the right as new area.
+    """
+    R = 5.0
+    step_length = 1.0
+    span = 3.0 * R
+    for advance in [1.0, 2.0, 3.0, 4.0]:
+        wall_x = R - advance
+        c1 = (0.0, 0.0)
+        c2 = (0.0, step_length)
+        wall = _wall_fragment(wall_x, span)
+        actual_total, _ = cut_area(c1, c2, R, [wall], [])
+        actual_apd = actual_total / step_length
+        formula = target_area_per_distance(R, advance, step_length)
+        rel_err = abs(formula - actual_apd) / max(actual_apd, 1e-9)
+        assert rel_err < 0.05, (
+            f"advance={advance}: formula={formula:.4f}, "
+            f"actual_apd={actual_apd:.4f}, rel_err={rel_err:.2%}"
+        )
+
+
+def test_target_area_pd_full_engagement():
+    """When advance = 2R (wall far left), target matches the full
+    crescent area divided by step_length."""
+    R = 5.0
+    step_length = 1.0
+    full_crescent = _crescent_area(step_length, R)
+    expected_apd = full_crescent / step_length
+    formula = target_area_per_distance(R, 2.0 * R, step_length)
+    rel_err = abs(formula - expected_apd) / max(expected_apd, 1e-9)
+    assert rel_err < 0.01, (
+        f"formula={formula:.4f}, expected={expected_apd:.4f}, "
+        f"rel_err={rel_err:.2%}"
+    )
+
+
+def test_target_area_pd_zero_advance():
+    """When advance = 0 (wall at x = R), no new area."""
+    R = 5.0
+    step_length = 1.0
+    assert abs(target_area_per_distance(R, 0.0, step_length)) < 1e-9
+
+
+def test_target_area_pd_monotonic_in_advance():
+    """Larger advance should produce larger target_area_per_distance."""
+    R = 5.0
+    step_length = 1.0
+    prev = 0.0
+    for advance in [0.5, 1.0, 2.0, 4.0, 8.0]:
+        val = target_area_per_distance(R, advance, step_length)
+        assert val > prev, (
+            f"Not monotonic at advance={advance}: "
+            f"val={val:.4f}, prev={prev:.4f}"
+        )
+        prev = val

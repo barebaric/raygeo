@@ -10,6 +10,7 @@ __all__ = [
     "StepperOptions",
     "run_segment",
     "step",
+    "step_adaptive",
     "target_engagement_from_advance",
 ]
 
@@ -35,6 +36,12 @@ class StepResult:
     def iters(self) -> builtins.int:
         r"""
         Number of solver iterations used.
+        """
+    @property
+    def iteration_angle(self) -> builtins.float:
+        r"""
+        Solver steering angle (radians). Non-zero for ``step_adaptive``;
+        always 0 for ``step``.
         """
     @property
     def status(self) -> StepStatus:
@@ -177,6 +184,26 @@ def step(cleared: cleared_area.ClearedArea, pos: tuple[builtins.float, builtins.
     :param pos: Current centre position ``(x, y)``.
     :param heading: Current heading angle in radians.
     :param opts: ``StepperOptions`` controlling the solver.
+    :returns: ``StepResult`` with the next position and updated heading.
+    """
+
+def step_adaptive(cleared: cleared_area.ClearedArea, pos: tuple[builtins.float, builtins.float], heading: builtins.float, predicted_angle: builtins.float, target_area_pd: builtins.float, step_length: builtins.float, radius: builtins.float, max_deflection: builtins.float, valid_area: typing.Sequence[typing.Sequence[tuple[builtins.float, builtins.float]]]) -> StepResult:
+    r"""
+    Perform one forward step using the area-based adaptive solver.
+    
+    Like :func:`step`, but targets **cut-area per unit distance**
+    rather than an engagement angle.  Used internally by
+    ``adaptive_clearing``.
+    
+    :param cleared: ``ClearedArea`` instance.
+    :param pos: Current centre position ``(x, y)``.
+    :param heading: Smoothed heading angle (radians).
+    :param predicted_angle: Predicted steering angle from history.
+    :param target_area_pd: Target cut-area per unit distance.
+    :param step_length: Forward step length in mm.
+    :param radius: Disk radius in mm.
+    :param max_deflection: Max steering deflection in radians.
+    :param valid_area: Valid tool-centre region polygons.
     :returns: ``StepResult`` with the next position and updated heading.
     """
 

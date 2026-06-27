@@ -1,8 +1,21 @@
+use prof_macros::prof;
+
 use crate::geo::algo::engagement::Engagement;
 use crate::geo::algo::rootfind::{self, RootStatus};
 use crate::ops::cut::interp::{point_in_valid_area, rotate, Interpolation};
 use crate::ops::cut::ClearedArea;
 use crate::types::{Point, Polygon};
+
+/// Set to `true` to enable verbose per-step debug logging.
+const ADAPTIVE_DEBUG: bool = false;
+
+macro_rules! dbg_log {
+    ($($arg:tt)*) => {
+        if ADAPTIVE_DEBUG {
+            eprintln!($($arg)*);
+        }
+    };
+}
 
 /// Which engagement metric the solver targets.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -99,6 +112,7 @@ pub fn target_engagement_from_advance(advance: f64, radius: f64) -> f64 {
 }
 
 /// Try to find a steering angle via 7-sample grid with interpolation.
+#[prof]
 pub(crate) fn try_bracket(
     heading: f64,
     max_deflection: f64,
@@ -121,6 +135,7 @@ pub(crate) fn try_bracket(
 /// Starting from `pos` with the given `heading` (radians), propose
 /// candidate positions at `step_length` distance along trial deflection
 /// angles and solve for the heading that maintains the target engagement.
+#[prof]
 pub fn step(
     cleared: &ClearedArea,
     pos: Point,
@@ -153,7 +168,11 @@ pub fn step(
             return 0.01;
         }
         let eng = cleared.point_engagement(candidate, opts.radius);
-        if use_area { eng.area } else { eng.angle }
+        if use_area {
+            eng.area
+        } else {
+            eng.angle
+        }
     };
 
     let (best_phi, step_status, iters) =
@@ -174,7 +193,11 @@ pub fn step(
     let mut step_len = opts.step_length;
     if step_status == StepStatus::Ok {
         let cur_eng = cleared.point_engagement(pos, opts.radius);
-        let cur_val = if use_area { cur_eng.area } else { cur_eng.angle };
+        let cur_val = if use_area {
+            cur_eng.area
+        } else {
+            cur_eng.angle
+        };
         let cur_err = cur_val - target_val;
         let best_err = best_val - target_val;
         if cur_err * best_err < 0.0 && cur_err.abs() > opts.engagement_tol {
@@ -215,6 +238,7 @@ pub fn step(
 /// Returns the centre path and the final status.
 /// Does **not** modify the `ClearedArea` — the caller is responsible for
 /// committing swept polygons after the segment.
+#[prof]
 pub fn run_segment(
     cleared: &ClearedArea,
     start: Point,
@@ -247,6 +271,7 @@ pub fn run_segment(
 
 /// Iterative bracketing step with cut-area engagement.
 #[allow(clippy::too_many_arguments)]
+#[prof]
 pub fn step_adaptive(
     cleared: &ClearedArea,
     pos: Point,
@@ -266,13 +291,29 @@ pub fn step_adaptive(
     let mut best_angle = 0.0;
     let mut best_dir = base_dir;
     let mut best_pos = pos;
+    let mut best_error: f64 = f64::MAX;
+    let mut last_angle = 0.0_f64;
     let mut iters = 0;
     let mut skip_count = 0;
+    let mut exit_reason = "max_iters";
 
     const MAX_IT: usize = 20;
+    dbg_log!(
+        "SA  pos=({:.3},{:.3})  heading={:.4}  pred={:.4}  \
+         target_apd={:.4}  step_len={:.3}  R={:.1}  max_def={:.2}",
+        pos.x,
+        pos.y,
+        heading,
+        predicted_angle,
+        target_area_pd,
+        step_length,
+        radius,
+        max_deflection,
+    );
     for iter in 0..MAX_IT {
         iters = iter + 1;
         if skip_count > 3 {
+            exit_reason = "skip_limit";
             break;
         }
         let (angle, is_not_interp) = match iter {
@@ -286,6 +327,7 @@ pub fn step_adaptive(
                 }
             }
             _ if !found_area => {
+                dbg_log!("  iter {}  LOST  (no area found)", iter);
                 return StepResult {
                     next: pos,
                     heading,
@@ -297,7 +339,7 @@ pub fn step_adaptive(
                     iters,
                     iteration_angle: 0.0,
                     status: StepStatus::LostEngagement,
-                }
+                };
             }
             _ => (interp.interpolate(), false),
         };
@@ -306,11 +348,19 @@ pub fn step_adaptive(
         let dir = rotate(base_dir, angle);
         let candidate = pos + dir * step_length;
         if !point_in_valid_area(candidate, valid_area) {
+            dbg_log!(
+                "  iter {}  SKIP  angle={:+.4}  reason=outside_valid",
+                iter, angle,
+            );
             continue;
         }
 
         if interp.has_pos(candidate) {
             skip_count += 1;
+            dbg_log!(
+                "  iter {}  SKIP  angle={:+.4}  reason=dup_pos",
+                iter, angle,
+            );
             continue;
         }
         skip_count = 0;
@@ -320,28 +370,65 @@ pub fn step_adaptive(
         let error = area_pd - target_area_pd;
         let is_conv = total > 0.0 && angle > 0.03;
 
+        let iter_kind = if is_not_interp { "SMPL" } else { "INTR" };
+        dbg_log!(
+            "  iter {:2} {}  angle={:+.4}  apd={:.4}  err={:+.4}  \
+             conv={}  |err|={:.4}  best|err|={:.4}",
+            iter,
+            iter_kind,
+            angle,
+            area_pd,
+            error,
+            is_conv as u8,
+            error.abs(),
+            best_error,
+        );
+
         if total > 0.0 {
             found_area = true;
         }
 
         interp.add(error, angle, candidate, is_not_interp, is_conv);
 
-        best_angle = angle;
-        best_dir = dir;
-        best_pos = candidate;
+        last_angle = angle;
+        if error.abs() < best_error {
+            best_error = error.abs();
+            best_angle = angle;
+            best_dir = dir;
+            best_pos = candidate;
+        }
 
-        if error.abs() < max_err && !is_conv {
+        if error.abs() < max_err {
+            exit_reason = "converged";
+            dbg_log!(
+                "  → ACCEPTED  angle={:+.4}  err={:+.4} < max_err={:.4}",
+                angle, error, max_err,
+            );
             break;
         }
     }
 
     let final_area = cleared.cut_area(pos, best_pos, radius);
-    let status = if final_area < step_length * target_area_pd * 0.005 {
+    let status = if final_area < step_length * target_area_pd * 0.01 {
         StepStatus::LostEngagement
     } else {
-        // FIXME: enable conventional check when cut_area sign fixed
         StepStatus::Ok
     };
+
+    dbg_log!(
+        "  RESULT  best_angle={:+.4}  last_angle={:+.4}  iters={}  \
+         reason={}  status={:?}{}",
+        best_angle,
+        last_angle,
+        iters,
+        exit_reason,
+        status,
+        if (best_angle - last_angle).abs() > 1e-6 {
+            "  ← MISMATCH (best ≠ last)"
+        } else {
+            ""
+        },
+    );
 
     let eng = cleared.point_engagement(best_pos, radius);
     StepResult {

@@ -11,6 +11,7 @@ use pyo3::prelude::*;
 
 pub(crate) mod cleared_area;
 pub(crate) mod crescent;
+pub(crate) mod interp;
 pub(crate) mod search;
 pub(crate) mod stepper;
 
@@ -21,6 +22,7 @@ pub fn register(ops_mod: &Bound<'_, PyModule>) -> PyResult<()> {
 
     cleared_area::register(&m)?;
     crescent::register(&m)?;
+    interp::register(&m)?;
     search::register(&m)?;
     stepper::register(&m)?;
 

@@ -6,6 +6,7 @@ use pyo3_stub_gen::derive::{
 
 use crate::ops::cut;
 use crate::ops::cut::stepper::EngagementMetric;
+use crate::python::geo::flex_point::polygons_from_tuples;
 use crate::python::ops::cut::cleared_area::PyClearedArea;
 use crate::types::Point;
 
@@ -220,6 +221,10 @@ pub struct PyStepResult {
     /// Number of solver iterations used.
     #[pyo3(get)]
     pub iters: usize,
+    /// Solver steering angle (radians). Non-zero for ``step_adaptive``;
+    /// always 0 for ``step``.
+    #[pyo3(get)]
+    pub iteration_angle: f64,
     /// Step completion status.
     #[pyo3(get)]
     pub status: PyStepStatus,
@@ -266,6 +271,58 @@ fn step_py(
         next: (r.next.x, r.next.y),
         heading: r.heading,
         iters: r.iters,
+        iteration_angle: r.iteration_angle,
+        status: PyStepStatus { inner: r.status },
+    }
+}
+
+/// Perform one forward step using the area-based adaptive solver.
+///
+/// Like :func:`step`, but targets **cut-area per unit distance**
+/// rather than an engagement angle.  Used internally by
+/// ``adaptive_clearing``.
+///
+/// :param cleared: ``ClearedArea`` instance.
+/// :param pos: Current centre position ``(x, y)``.
+/// :param heading: Smoothed heading angle (radians).
+/// :param predicted_angle: Predicted steering angle from history.
+/// :param target_area_pd: Target cut-area per unit distance.
+/// :param step_length: Forward step length in mm.
+/// :param radius: Disk radius in mm.
+/// :param max_deflection: Max steering deflection in radians.
+/// :param valid_area: Valid tool-centre region polygons.
+/// :returns: ``StepResult`` with the next position and updated heading.
+#[gen_stub_pyfunction(module = "raygeo.ops.cut.stepper")]
+#[pyfunction(name = "step_adaptive")]
+#[allow(clippy::too_many_arguments)]
+fn step_adaptive_py(
+    cleared: &PyClearedArea,
+    pos: (f64, f64),
+    heading: f64,
+    predicted_angle: f64,
+    target_area_pd: f64,
+    step_length: f64,
+    radius: f64,
+    max_deflection: f64,
+    valid_area: Vec<Vec<(f64, f64)>>,
+) -> PyStepResult {
+    let valid = polygons_from_tuples(valid_area);
+    let r = cut::stepper::step_adaptive(
+        &cleared.inner,
+        Point::new(pos.0, pos.1),
+        heading,
+        predicted_angle,
+        target_area_pd,
+        step_length,
+        radius,
+        max_deflection,
+        &valid,
+    );
+    PyStepResult {
+        next: (r.next.x, r.next.y),
+        heading: r.heading,
+        iters: r.iters,
+        iteration_angle: r.iteration_angle,
         status: PyStepStatus { inner: r.status },
     }
 }
@@ -321,6 +378,7 @@ pub fn register(cut_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyStepStatus>()?;
     m.add_class::<PyStepResult>()?;
     m.add_function(wrap_pyfunction!(step_py, &m)?)?;
+    m.add_function(wrap_pyfunction!(step_adaptive_py, &m)?)?;
     m.add_function(wrap_pyfunction!(run_segment_py, &m)?)?;
     m.add_function(wrap_pyfunction!(target_engagement_from_advance_py, &m)?)?;
 

@@ -38,7 +38,9 @@ def _collect_example_modules():
 
 
 def _generate_images(
-    images_dir: Path, doc_filter: str | None = None
+    images_dir: Path,
+    doc_filter: str | None = None,
+    func_filter: str | None = None,
 ) -> tuple[dict[str, list], set[Path]]:
     matplotlib.use("Agg")
     images_dir.mkdir(parents=True, exist_ok=True)
@@ -72,6 +74,8 @@ def _generate_images(
                 if name.startswith("generate_")
                 else name
             )
+            if func_filter is not None and sub != func_filter:
+                continue
             stem = f"{stem_base}-{sub.replace('_', '-')}"
             img_path = images_dir / f"{stem}.png"
             result = func()
@@ -269,24 +273,34 @@ def cmd_doc(args):
     files = api_docs.find_stub_files(stubs_dir)
     root_module = stubs_dir.name
 
+    # If module does not resolve, try splitting the last component as a
+    # generator function name (e.g. "ops.assembly.adaptive.target_area_curves"
+    # → module="ops.assembly.adaptive", func="target_area_curves").
     candidates = [module, f"{root_module}.{module}"]
+    func_filter = None
 
     matched_mod = None
+    matched_rel = None
+    matched_file = None
     for rel_path, filepath in files:
         mod = api_docs.module_name_from_path(rel_path, root_module)
         if mod in candidates:
             matched_mod = mod
-            api_dir.mkdir(parents=True, exist_ok=True)
-            out_path = api_docs.output_path_from_rel(
-                rel_path, api_dir, root_module
-            )
-            out_path.parent.mkdir(parents=True, exist_ok=True)
-            page = api_docs.process_file(rel_path, filepath, root_module)
-            if page.strip():
-                page = _format_md(page)
-                out_path.write_text(page)
-                print(f"  {mod} -> {out_path}")
+            matched_rel = rel_path
+            matched_file = filepath
             break
+
+    if matched_mod is None:
+        *parts, func_filter = module.split(".")
+        module_base = ".".join(parts)
+        candidates = [module_base, f"{root_module}.{module_base}"]
+        for rel_path, filepath in files:
+            mod = api_docs.module_name_from_path(rel_path, root_module)
+            if mod in candidates:
+                matched_mod = mod
+                matched_rel = rel_path
+                matched_file = filepath
+                break
 
     if matched_mod is None:
         print(
@@ -295,9 +309,24 @@ def cmd_doc(args):
         )
         sys.exit(1)
 
+    assert matched_rel is not None and matched_file is not None
+
+    api_dir.mkdir(parents=True, exist_ok=True)
+    out_path = api_docs.output_path_from_rel(matched_rel, api_dir, root_module)
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    page = api_docs.process_file(matched_rel, matched_file, root_module)
+    if page.strip():
+        page = _format_md(page)
+        out_path.write_text(page)
+        print(f"  {matched_mod} -> {out_path}")
+
     doc_target = f"{matched_mod}.md"
     print(f"Generating visual examples for {doc_target}...")
-    inline_map, _ = _generate_images(images_dir, doc_filter=doc_target)
+    inline_map, _ = _generate_images(
+        images_dir,
+        doc_filter=doc_target,
+        func_filter=func_filter,
+    )
 
     print("Injecting images into API docs...")
     _inject_images_into_api(api_dir, images_dir, inline_map)

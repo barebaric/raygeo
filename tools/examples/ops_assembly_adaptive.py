@@ -3,10 +3,19 @@
 import math
 
 import matplotlib.pyplot as plt
+import numpy as np
 from matplotlib.collections import LineCollection
 from matplotlib.colors import Normalize
 
-from raygeo.ops.assembly.adaptive import adaptive_clearing
+from raygeo.geo.shape.polygon import (
+    get_circle_polygon,
+    get_polygons_group_difference,
+    get_polygons_group_intersection,
+)
+from raygeo.ops.assembly.adaptive import (
+    adaptive_clearing,
+    target_area_per_distance,
+)
 from raygeo.ops.cut.cleared_area import ClearedArea
 
 
@@ -192,6 +201,149 @@ def _ops_to_points(ops):
     return out
 
 
+# ── target_area_per_distance ──────────────────────────────────────
+
+
+def generate_target_area_curves():
+    """Target area per distance as a function of advance and step length."""
+    R = 5.0
+
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 5))
+
+    # ── Left: area vs advance for multiple step lengths ──
+    step_lengths = [0.5, 1.0, 2.0, 4.0]
+    advances = np.linspace(0, 2.0 * R, 200)
+    for sl in step_lengths:
+        vals = [target_area_per_distance(R, a, sl) for a in advances]
+        ax1.plot(advances, vals, linewidth=2, label=f"step = {sl}")
+    ax1.axvline(R, color="gray", linestyle=":", alpha=0.4)
+    ax1.set_xlabel("Advance (mm)")
+    ax1.set_ylabel("Target area / distance (mm)")
+    ax1.set_title("target_area_per_distance vs Advance")
+    ax1.legend(fontsize=8, title="Step length")
+    ax1.grid(True, alpha=0.3)
+
+    # ── Right: area vs step length for multiple advances ──
+    advances2 = [1.0, 2.0, 3.0, 4.0]
+    step_vals = np.linspace(0.1, R * 1.5, 200)
+    for adv in advances2:
+        vals = [target_area_per_distance(R, adv, s) for s in step_vals]
+        ax2.plot(step_vals, vals, linewidth=2, label=f"adv = {adv}")
+    ax2.set_xlabel("Step length (mm)")
+    ax2.set_ylabel("Target area / distance (mm)")
+    ax2.set_title("target_area_per_distance vs Step Length")
+    ax2.legend(fontsize=8, title="Advance")
+    ax2.grid(True, alpha=0.3)
+
+    fig.tight_layout()
+    return fig
+
+
+def generate_target_area_geometry():
+    """Geometry of the wall-crescent model used by target_area_per_distance."""
+    R = 5.0
+    advance = 2.0
+    step_length = 1.0
+
+    wall_x = R - advance
+    c1 = (0.0, 0.0)
+    c2 = (0.0, step_length)
+
+    # Disks.
+    disk1 = get_circle_polygon(c1, R, 64)
+    disk2 = get_circle_polygon(c2, R, 64)
+    crescent = get_polygons_group_difference([disk2], [disk1])
+    wall_poly = [
+        [
+            (wall_x, -R * 1.5),
+            (wall_x + R * 2, -R * 1.5),
+            (wall_x + R * 2, R * 1.5),
+            (wall_x, R * 1.5),
+        ]
+    ]
+
+    # Fresh material = crescent ∩ region_right_of_wall.
+    fresh = get_polygons_group_intersection(crescent, wall_poly)
+
+    fig, ax = plt.subplots(figsize=(7, 7))
+    theta = np.linspace(0, 2 * math.pi, 100)
+
+    # Wall region (already cleared — left of wall).
+    wall_region = [
+        [
+            (wall_x - R * 2, -R * 1.5),
+            (wall_x, -R * 1.5),
+            (wall_x, R * 1.5),
+            (wall_x - R * 2, R * 1.5),
+        ]
+    ]
+    for poly in wall_region:
+        arr = np.array(poly + [poly[0]])
+        ax.fill(
+            arr[:, 0],
+            arr[:, 1],
+            "lightgray",
+            alpha=0.4,
+            label="Previous pass (wall region)",
+        )
+
+    # Wall line.
+    ax.axvline(
+        wall_x,
+        color="red",
+        linewidth=2,
+        linestyle="-",
+        label=f"Wall at x = {wall_x:.1f}",
+    )
+
+    # Full crescent faintly.
+    for poly in crescent:
+        arr = np.array(poly)
+        ax.fill(arr[:, 0], arr[:, 1], "tomato", alpha=0.2)
+
+    # Fresh material (crescent beyond the wall).
+    for poly in fresh:
+        arr = np.array(poly)
+        ax.fill(
+            arr[:, 0],
+            arr[:, 1],
+            "tomato",
+            alpha=0.7,
+            label="Fresh material (crescent ∩ right-of-wall)",
+        )
+
+    # Disks.
+    for centre, style, lbl in [
+        (c1, "b--", "Disk(c1) — prev pos"),
+        (c2, "b-", "Disk(c2) — current pos"),
+    ]:
+        ax.plot(
+            centre[0] + R * np.cos(theta),
+            centre[1] + R * np.sin(theta),
+            style,
+            linewidth=1.5,
+            label=lbl,
+        )
+    for pt, mk, lbl in [(c1, "bs", "c1"), (c2, "bo", "c2")]:
+        ax.plot(*pt, mk, markersize=5)
+
+    val = target_area_per_distance(R, advance, step_length)
+    apd = val * step_length
+    ax.set_title(
+        f"R={R}, advance={advance}, step={step_length}\n"
+        f"target_area_per_distance = {val:.3f} mm\n"
+        f"(crescent area beyond wall = {apd:.2f} mm²)"
+    )
+    ax.set_aspect("equal")
+    ax.set_xlim(-R * 1.3, R * 1.3)
+    ax.set_ylim(-R * 0.5, R * 1.5)
+    ax.legend(fontsize=7, loc="upper left")
+    ax.grid(True, alpha=0.3)
+
+    fig.tight_layout()
+    return fig
+
+
 __docs_target__ = ["raygeo.ops.assembly.adaptive.md"]
 __images__ = [
     {
@@ -203,5 +355,26 @@ __images__ = [
             "travel links (red dashed) between segments."
         ),
         "function": generate_adaptive_clearing_demo,
+    },
+    {
+        "heading": "target_area_per_distance",
+        "caption": (
+            "Left: target area per distance as a function of advance for"
+            " several step lengths. Right: target area per distance as a"
+            " function of step length for several advance values."
+        ),
+        "function": generate_target_area_curves,
+    },
+    {
+        "heading": "target_area_per_distance",
+        "caption": (
+            "Geometric model underlying ``target_area_per_distance``:"
+            " two disks offset by ``step_length`` along the travel"
+            " direction, with a vertical wall at ``x = R − advance``"
+            " representing the previous pass boundary. The fresh"
+            " material (dark red) is the portion of the crescent that"
+            " lies to the right of the wall."
+        ),
+        "function": generate_target_area_geometry,
     },
 ]

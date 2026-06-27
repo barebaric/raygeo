@@ -63,3 +63,33 @@ and prepending the entry Ops to the result.
 *Forward-stepping constant-engagement clearing cuts (coloured by progress via the full-spectrum
 turbo gradient) from a central seed clearing (green), with MAT-routed travel links (red dashed)
 between segments.*
+
+### `target_area_per_distance()`
+
+```python
+target_area_per_distance(
+    radius: float,
+    advance: float,
+    step_length: float,
+) -> float
+```
+
+Target cut-area per unit distance for the engagement solver.
+
+| Parameter     | Type    | Description                    |
+| ------------- | ------- | ------------------------------ |
+| `radius`      | `float` | Tool radius in mm.             |
+| `advance`     | `float` | Step-over distance in mm.      |
+| `step_length` | `float` | Forward step length in mm.     |
+| _Returns_     | `float` | Target area per distance (mm). |
+
+![Left: target area per distance as a function of advance for several step lengths. Right: target area per distance as a function of step length for several advance values.](images/ops-assembly-adaptive-target-area-curves.png)
+
+*Left: target area per distance as a function of advance for several step lengths. Right: target
+area per distance as a function of step length for several advance values.*
+
+![Geometric model underlying : two disks offset by  along the travel direction, with a vertical wall at  representing the previous pass boundary. The fresh material (dark red) is the portion of the crescent that lies to the right of the wall.](images/ops-assembly-adaptive-target-area-geometry.png)
+
+*Geometric model underlying `target_area_per_distance`: two disks offset by `step_length` along the
+travel direction, with a vertical wall at `x = R − advance` representing the previous pass boundary.
+The fresh material (dark red) is the portion of the crescent that lies to the right of the wall.*

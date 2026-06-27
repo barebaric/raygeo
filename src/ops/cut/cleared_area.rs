@@ -49,6 +49,7 @@ impl ClearedArea {
 
     /// Create a cleared area pre-seeded with `initial` polygons inside
     /// the given stock.  `initial` is **not** clipped.
+    #[prof]
     pub fn from_polygons(
         initial: &[Polygon],
         boundary: &Polygon,
@@ -77,6 +78,7 @@ impl ClearedArea {
     // ── Stock helpers ──────────────────────────────────────────────
 
     /// The stock shape: boundary ∖ islands.
+    #[prof]
     fn stock(&self) -> Vec<Polygon> {
         if self.boundary.len() < 3 {
             return vec![];
@@ -93,6 +95,7 @@ impl ClearedArea {
 
     /// The tool-centre envelope (inset of boundary by `tool_radius`,
     /// minus islands).
+    #[prof]
     pub fn envelope(&self, tool_radius: f64) -> Vec<Polygon> {
         compute_inset_region(&self.boundary, tool_radius, &self.islands).0
     }
@@ -103,6 +106,7 @@ impl ClearedArea {
     /// after a wavefront advance).  This is O(m) in the new fragment count
     /// and avoids the O(n·m) accumulation of
     /// [`cut`](Self::cut).
+    #[prof]
     pub fn replace_fragments(&mut self, fragments: Vec<Polygon>) {
         self.fragments = fragments;
         self.rebuild_grid();
@@ -126,6 +130,7 @@ impl ClearedArea {
         )
     }
 
+    #[prof]
     pub fn expand(&mut self, path: &[Point], radius: f64) {
         if path.len() < 2 || radius < 1e-12 {
             return;
@@ -145,6 +150,7 @@ impl ClearedArea {
         self.rebuild_grid();
     }
 
+    #[prof]
     pub fn expand_step(&mut self, prev: Point, next: Point, radius: f64) {
         let swept = get_segment_swept_polygon(prev, next, radius);
         let mut all_polys = self.fragments.clone();
@@ -175,6 +181,7 @@ impl ClearedArea {
     }
 
     /// Return the uncut stock: stock ∖ fragments.
+    #[prof]
     pub fn remaining(&self) -> Vec<Polygon> {
         let stock = self.stock();
         if self.fragments.is_empty() {
@@ -250,6 +257,7 @@ impl ClearedArea {
 
     /// Return a unioned, simplified snapshot of the current outer
     /// boundary, clipped to the stock.
+    #[prof]
     pub fn frontier(&self, simplify_tol: f64) -> Vec<Polygon> {
         let unioned = get_polygons_union(&self.fragments);
         let stock = self.stock();
@@ -356,6 +364,7 @@ impl ClearedArea {
     /// using the spatial grid to avoid touching distant fragments.
     ///
     /// After this call the batch is closed (the caller may start a new one).
+    #[prof]
     pub fn commit_batch_local(&mut self) {
         if !self.batch_active || self.batch_buffer.is_empty() {
             self.batch_active = false;
@@ -374,6 +383,7 @@ impl ClearedArea {
     }
 
     /// Local union: merge `swept` only with fragments whose bbox overlaps it.
+    #[prof]
     fn apply_local_merge(&mut self, swept: &Polygon) {
         if swept.len() < 3 {
             return;
@@ -425,12 +435,14 @@ impl ClearedArea {
 
     /// When total vertex count exceeds `threshold`, compact fragments by
     /// replacing them with the simplified frontier.
+    #[prof]
     pub fn compact_if_needed(&mut self, tol: f64) {
         self.compact_if_needed_threshold(tol, 50_000)
     }
 
     /// Like [`compact_if_needed`](Self::compact_if_needed) but with an
     /// explicit vertex-count threshold.
+    #[prof]
     pub fn compact_if_needed_threshold(&mut self, tol: f64, threshold: usize) {
         let total: usize = self.fragments.iter().map(|p| p.len()).sum();
         if total < threshold {
@@ -441,6 +453,7 @@ impl ClearedArea {
     }
 
     /// True when any polygon in `polys` overlaps an existing fragment.
+    #[prof]
     fn any_overlap(&self, polys: &[Polygon]) -> bool {
         for poly in polys {
             if poly.len() < 3 {
@@ -454,6 +467,7 @@ impl ClearedArea {
         false
     }
 
+    #[prof]
     fn rebuild_grid(&mut self) {
         self.grid = SpatialGrid::new(self.cell_size);
         for (idx, poly) in self.fragments.iter().enumerate() {

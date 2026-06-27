@@ -53,6 +53,7 @@ def _setup():
 
     tool_radius = 3.0
     step_length = 1.0
+    advance = 1.5
     min_cut_area = 0.1
 
     r_seed = 26.0
@@ -75,6 +76,7 @@ def _setup():
         heading,
         tool_radius,
         step_length,
+        advance,
         min_cut_area,
         r_seed,
     )
@@ -95,6 +97,7 @@ def generate_search_reengagement():
 
     tool_radius = 3.0
     step_length = 1.0
+    advance = 1.5
     min_cut_area = 0.1
 
     r_seed = 26.0
@@ -114,6 +117,7 @@ def generate_search_reengagement():
         start=ToolPose(pos=tool_pos, heading=heading),
         radius=tool_radius,
         step_length=step_length,
+        advance=advance,
         min_cut_area=min_cut_area,
     )
 
@@ -204,6 +208,7 @@ def generate_search_frontier_engagement():
         _heading,
         tool_radius,
         step_length,
+        advance,
         min_cut_area,
         _,
     ) = _setup()
@@ -217,6 +222,7 @@ def generate_search_frontier_engagement():
         start=ToolPose(pos=tool_pos, heading=start_h),
         radius=tool_radius,
         step_length=step_length,
+        advance=advance,
         min_cut_area=min_cut_area,
         max_cut_area=float("inf"),
     )
@@ -288,6 +294,7 @@ def generate_search_frontier_engagement():
         start=ToolPose(pos=left_pos, heading=left_h),
         radius=tool_radius,
         step_length=step_length,
+        advance=advance,
         min_cut_area=min_cut_area,
         max_cut_area=float("inf"),
     )
@@ -482,6 +489,7 @@ def generate_search_frontier_engagement_multi():
             start=ToolPose(pos=ep, heading=0.0),
             radius=tool_radius,
             step_length=0.6,
+            advance=1.5,
             min_cut_area=0.1,
             max_cut_area=float("inf"),
         )

@@ -1,3 +1,5 @@
+use prof_macros::prof;
+
 use crate::geo::shape::polygon::{
     get_polygon_heading_at, get_polygon_signed_area,
     get_polygons_closest_point, get_polygons_group_intersection,
@@ -7,6 +9,29 @@ use crate::ops::cut::ClearedArea;
 use crate::ops::cut::ToolPose;
 use crate::types::Point;
 
+/// Set to `true` to enable verbose search debug logging.
+const SEARCH_DEBUG: bool = false;
+
+macro_rules! dbg_log {
+    ($($arg:tt)*) => {
+        if SEARCH_DEBUG {
+            eprintln!($($arg)*);
+        }
+    };
+}
+
+/// Compute the inward offset position from a frontier vertex.
+///
+/// During normal cutting the tool centre sits at distance `radius -
+/// advance` inside the cleared area from the boundary.  Placing the
+/// tool directly on the frontier gives ~50% engagement instead of
+/// the target, causing the solver to waste iterations steering back
+/// to the correct depth.
+fn offset_inward(pt: Point, normal: Point, radius: f64, advance: f64) -> Point {
+    let offset = (radius - advance).max(0.0);
+    pt - normal * offset
+}
+
 /// Walk along the cleared-area frontier, clipped to the tool-centre
 /// envelope, returning the first vertex whose outward cut-area probe
 /// satisfies `accept`.
@@ -15,11 +40,18 @@ use crate::types::Point;
 /// to a global CCW/CW convention).  Use
 /// [`search_frontier_engagement`] which chooses the direction from the
 /// start heading.
+///
+/// The returned position is offset inward (into the cleared area)
+/// by `radius - advance` so the tool starts at the correct
+/// engagement depth rather than directly on the boundary.
+#[allow(clippy::too_many_arguments)]
+#[prof]
 fn walk_frontier(
     cleared: &ClearedArea,
     start_pos: Point,
     radius: f64,
     step_length: f64,
+    advance: f64,
     forward: bool,
     skip_closest: bool,
     mut accept: impl FnMut(f64) -> bool,
@@ -74,19 +106,43 @@ fn walk_frontier(
 
         let normal_heading = get_polygon_heading_at(poly, pt);
         let normal = Point::new(normal_heading.cos(), normal_heading.sin());
-        let probe = pt + normal * step_length;
-        let area = cleared.cut_area(pt, probe, radius);
+
+        // Compute the travel direction (tangent) at this vertex.
+        let prev_idx = if actual_forward {
+            (idx + n - 1) % n
+        } else {
+            (idx + 1) % n
+        };
+        let prev_pt = poly[prev_idx];
+        let heading = (pt.y - prev_pt.y).atan2(pt.x - prev_pt.x);
+        let tangent = Point::new(heading.cos(), heading.sin());
+
+        // Probe from the offset position along the travel direction,
+        // measuring the actual cut area the tool would experience on
+        // its first step.  This ensures the reengagement point has
+        // approximately the target engagement, not just "any" material.
+        let offset_pos = offset_inward(pt, normal, radius, advance);
+        let probe = offset_pos + tangent * step_length;
+        let area = cleared.cut_area(offset_pos, probe, radius);
         if accept(area) {
-            // Heading points in the travel direction: from the previous
-            // walk vertex (or start_idx when offset == first) to pt.
-            let prev_idx = if actual_forward {
-                (idx + n - 1) % n
-            } else {
-                (idx + 1) % n
-            };
-            let prev_pt = poly[prev_idx];
-            let heading = (pt.y - prev_pt.y).atan2(pt.x - prev_pt.x);
-            return Some(ToolPose { pos: pt, heading });
+            dbg_log!(
+                "  RESUME_SEARCH  frontier_pt=({:.3},{:.3})  \
+                 normal=({:.3},{:.3})  offset_pos=({:.3},{:.3})  \
+                 inward={:.3}  probe_area={:.4}  heading={:.4}",
+                pt.x,
+                pt.y,
+                normal.x,
+                normal.y,
+                offset_pos.x,
+                offset_pos.y,
+                (radius - advance).max(0.0),
+                area,
+                heading,
+            );
+            return Some(ToolPose {
+                pos: offset_pos,
+                heading,
+            });
         }
     }
     None
@@ -97,13 +153,16 @@ fn walk_frontier(
 ///
 /// Returns the first vertex whose outward cut-area probe by
 /// `step_length` falls in `[min_cut_area, max_cut_area]`.
+/// The returned position is offset inward by `radius - advance`.
 ///
 /// Set `max_cut_area` to `f64::MAX` when only a lower bound matters.
+#[prof]
 pub fn search_frontier_engagement(
     cleared: &ClearedArea,
     start: ToolPose,
     radius: f64,
     step_length: f64,
+    advance: f64,
     min_cut_area: f64,
     max_cut_area: f64,
 ) -> Option<ToolPose> {
@@ -152,6 +211,7 @@ pub fn search_frontier_engagement(
         start.pos,
         radius,
         step_length,
+        advance,
         forward,
         true,
         |a| a >= min_cut_area && a <= max_cut_area,
@@ -171,11 +231,15 @@ pub fn search_frontier_engagement(
 ///    is the disengagement point — return it with the heading
 ///    *flipped* (the forward/travel direction at the previous
 ///    engaged vertex plus π).
+///
+/// The returned position is offset inward by `radius - advance`.
+#[prof]
 pub fn search_reengagement(
     cleared: &ClearedArea,
     start: ToolPose,
     radius: f64,
     step_length: f64,
+    advance: f64,
     min_cut_area: f64,
 ) -> Option<ToolPose> {
     let frontier = cleared.frontier(0.1);
@@ -254,18 +318,29 @@ pub fn search_reengagement(
             let prev_pt = poly[prev_idx];
             let travel_heading = (pt.y - prev_pt.y).atan2(pt.x - prev_pt.x);
             last_engaged = Some((pt, travel_heading));
-        } else if let Some((_last_pos, travel_heading)) = last_engaged {
+        } else if let Some((last_pt, travel_heading)) = last_engaged {
             // We passed through an engaged region and now engagement
             // dropped — return the disengagement point with flipped
             // heading (the forward direction, opposite to travel).
             let flipped = travel_heading + std::f64::consts::PI;
+            let normal_h = get_polygon_heading_at(poly, last_pt);
+            let n_vec = Point::new(normal_h.cos(), normal_h.sin());
+            let offset_pos = offset_inward(last_pt, n_vec, radius, advance);
             return Some(ToolPose {
-                pos: pt,
+                pos: offset_pos,
                 heading: flipped,
             });
         }
     }
 
     // Entered engaged region but never left — return last engaged vertex.
-    last_engaged.map(|(pos, _)| ToolPose { pos, heading: 0.0 })
+    last_engaged.map(|(pos, _)| {
+        let normal_h = get_polygon_heading_at(poly, pos);
+        let n_vec = Point::new(normal_h.cos(), normal_h.sin());
+        let offset_pos = offset_inward(pos, n_vec, radius, advance);
+        ToolPose {
+            pos: offset_pos,
+            heading: 0.0,
+        }
+    })
 }

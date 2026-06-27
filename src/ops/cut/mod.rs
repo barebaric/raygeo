@@ -1,6 +1,6 @@
 pub mod cleared_area;
 pub(crate) mod crescent;
-pub(crate) mod interp;
+pub mod interp;
 pub mod search;
 pub mod stepper;
 mod types;

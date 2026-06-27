@@ -9,11 +9,13 @@ windowed query for efficient engagement computation.
 
 from . import cleared_area
 from . import crescent
+from . import interp
 from . import search
 from . import stepper
 __all__ = [
     "cleared_area",
     "crescent",
+    "interp",
     "search",
     "stepper",
 ]

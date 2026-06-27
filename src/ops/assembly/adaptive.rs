@@ -24,11 +24,22 @@ use crate::prof::prof_report;
 use crate::types::{Point, Polygon};
 use prof_macros::prof;
 
+/// Set to `true` to enable verbose adaptive clearing debug logging.
+const ADAPTIVE_DEBUG: bool = false;
+
+macro_rules! dbg_log {
+    ($($arg:tt)*) => {
+        if ADAPTIVE_DEBUG {
+            eprintln!($($arg)*);
+        }
+    };
+}
+
 // ── Named constants ────────────────────────────────────────────────
 
 /// Floor fraction of target cut-area-per-distance below which we treat
 /// engagement as lost.
-const ENGAGEMENT_FLOOR_FRAC: f64 = 0.005;
+const ENGAGEMENT_FLOOR_FRAC: f64 = 0.01;
 /// Maximum total steps before giving up (safety valve).
 const MAX_TOTAL_STEPS: usize = 100_000;
 /// Number of recent direction vectors to average for heading smoothing.
@@ -164,7 +175,7 @@ impl Tool {
     fn reset_gyro(&mut self) {
         let dir = Point::new(self.heading.cos(), self.heading.sin());
         self.gyro = [dir; GYRO_BUFFER_LEN];
-        self.gyro_count = GYRO_BUFFER_LEN;
+        self.gyro_count = 1;
         self.angle_history = [0.0; ANGLE_HISTORY_LEN];
         self.angle_hist_count = 0;
     }
@@ -191,18 +202,52 @@ impl Tool {
 
 // ── Helpers ──────────────────────────────────────────────────────────
 
-/// Check whether a point lies inside the valid tool-centre region.
 /// Target cut-area per unit distance for the engagement solver.
 ///
-/// Derived from the crescent-area formula for a step of `advance` and
-/// tool `radius`.
-fn target_area_per_distance(radius: f64, advance: f64) -> f64 {
-    let d_ref = radius * 0.5;
-    let overlap = 2.0 * radius * radius * (d_ref / (2.0 * radius)).acos()
-        - (d_ref / 2.0) * (4.0 * radius * radius - d_ref * d_ref).sqrt();
-    let reference_cut_area = std::f64::consts::PI * radius * radius - overlap;
-    let step_over_factor = advance / (2.0 * radius);
-    2.0 * step_over_factor * reference_cut_area / radius
+/// Computes the exact crescent area (`disk(c2) − disk(c1)`) that falls
+/// beyond a straight wall at `wall_x = radius − advance`, then divides
+/// by `step_length`.
+///
+/// The crescent height perpendicular to the step direction is:
+/// * `step_length` for `|x| ≤ x_trans` (the overlapping cap)
+/// * `2·sqrt(r²−x²)` for `|x| > x_trans` (the circular edges)
+///
+/// where `x_trans = sqrt(r² − step_length²/4)`.
+///
+/// Three cases arise depending on where `wall_x` sits relative to
+/// `±x_trans`; each is evaluated via [`disk_segment_area`].
+pub fn target_area_per_distance(
+    radius: f64,
+    advance: f64,
+    step_length: f64,
+) -> f64 {
+    if step_length <= 0.0 || radius <= 0.0 {
+        return advance.max(0.0);
+    }
+    let r = radius;
+    let s = step_length;
+    let wall_x = (r - advance).clamp(-r, r);
+    let x_trans = (r * r - s * s * 0.25).max(0.0).sqrt();
+
+    let area = if wall_x >= x_trans {
+        // Wall is past the overlap cap: only the right circular edge
+        // contributes.
+        crate::geo::algo::engagement::disk_segment_area(wall_x, r)
+    } else if wall_x >= -x_trans {
+        // Wall cuts through the overlap cap: constant-height middle
+        // plus right circular edge.
+        s * (x_trans - wall_x)
+            + crate::geo::algo::engagement::disk_segment_area(x_trans, r)
+    } else {
+        // Wall is in the left circular edge: left edge + middle + right.
+        let left = crate::geo::algo::engagement::disk_segment_area(wall_x, r)
+            - crate::geo::algo::engagement::disk_segment_area(-x_trans, r);
+        let middle = 2.0 * s * x_trans;
+        let right = crate::geo::algo::engagement::disk_segment_area(x_trans, r);
+        left + middle + right
+    };
+
+    area / s
 }
 
 // ── Resume helper ────────────────────────────────────────────────────
@@ -222,11 +267,23 @@ fn try_resume(
     tool: &mut Tool,
     opts: &AdaptiveClearingOptions,
     valid_tool_area: &[Polygon],
-    _target_area_pd: f64,
+    target_area_pd: f64,
     _max_def: f64,
     _target_eng: f64,
     min_cut_area: f64,
 ) -> bool {
+    let max_cut_area = opts.step_length * target_area_pd * 1.5;
+    dbg_log!(
+        "RESUME  from=({:.3},{:.3})  heading={:.4}  R={:.1}  \
+         advance={:.3}  step_len={:.3}  max_cut_area={:.4}",
+        tool.pos.x,
+        tool.pos.y,
+        tool.heading,
+        opts.radius,
+        opts.advance,
+        opts.step_length,
+        max_cut_area,
+    );
     if let Some(rp) = search_frontier_engagement(
         cleared,
         ToolPose {
@@ -235,15 +292,22 @@ fn try_resume(
         },
         opts.radius,
         opts.step_length,
+        opts.advance,
         min_cut_area,
-        f64::MAX,
+        max_cut_area,
     ) {
+        dbg_log!(
+            "  RESUME  path=search_frontier  → ({:.3},{:.3})  heading={:.4}",
+            rp.pos.x, rp.pos.y, rp.heading,
+        );
         ops.move_to(rp.pos.x, rp.pos.y, opts.cut_z, None);
         tool.pos = rp.pos;
         tool.heading = rp.heading;
         tool.reset_gyro();
         return true;
     }
+
+    dbg_log!("  RESUME  path=centroid_fallback");
 
     // Fallback: jump to the centroid of the nearest remaining
     // (uncut) region.
@@ -298,7 +362,8 @@ pub fn adaptive_clearing(
     }
 
     let max_def = opts.max_deflection_deg.to_radians();
-    let target_area_pd = target_area_per_distance(opts.radius, opts.advance);
+    let target_area_pd =
+        target_area_per_distance(opts.radius, opts.advance, opts.step_length);
 
     // ── 2. Initialise the tool ───────────────────────────────────
     let centre = cleared
@@ -437,7 +502,7 @@ pub fn adaptive_clearing(
 
             resume_count += 1;
             if resume_count > MAX_RESUMES {
-                eprintln!("max resumes reached");
+                dbg_log!("max resumes reached");
                 break;
             }
 

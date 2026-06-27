@@ -9,7 +9,11 @@ use pyo3_stub_gen::derive::gen_stub_pyfunction;
 
 pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     let adaptive_mod = PyModule::new(assembly_mod.py(), "adaptive")?;
-    register_functions!(adaptive_mod, adaptive_clearing_py,);
+    register_functions!(
+        adaptive_mod,
+        adaptive_clearing_py,
+        target_area_per_distance_py,
+    );
     assembly_mod.add_submodule(&adaptive_mod)?;
 
     let sys_modules = assembly_mod.py().import("sys")?.getattr("modules")?;
@@ -159,4 +163,20 @@ fn adaptive_clearing_py(
         prof_report();
     }
     PyOps { inner: ops }
+}
+
+/// Target cut-area per unit distance for the engagement solver.
+///
+/// :param radius: Tool radius in mm.
+/// :param advance: Step-over distance in mm.
+/// :param step_length: Forward step length in mm.
+/// :returns: Target area per distance (mm).
+#[gen_stub_pyfunction(module = "raygeo.ops.assembly.adaptive")]
+#[pyfunction(name = "target_area_per_distance")]
+fn target_area_per_distance_py(
+    radius: f64,
+    advance: f64,
+    step_length: f64,
+) -> f64 {
+    adaptive::target_area_per_distance(radius, advance, step_length)
 }
