@@ -7,6 +7,7 @@ Circle-boundary overlap (engagement) metrics.
 __all__ = [
     "angular_engagement",
     "compute_engagement",
+    "disk_segment_area",
     "point_engagement",
 ]
 
@@ -30,6 +31,19 @@ def compute_engagement(d_to_boundary: float, radius: float) -> tuple[float, floa
         (mm).  Positive = outside the boundary.
     :param radius: Disk radius (mm).
     :returns: ``(angle_rad, area, chord_depth)``.
+    """
+
+def disk_segment_area(x: float, r: float) -> float:
+    r"""
+    Area under 2*sqrt(r²-x²) from x to r.
+    
+    Equivalent to the area of the circular segment to the right of
+    the vertical line at ``x`` for a disk of radius ``r`` centred
+    at the origin.
+    
+    :param x: Left boundary of the segment.
+    :param r: Disk radius.
+    :returns: Area of the circular segment.
     """
 
 def point_engagement(center: tuple[float, float], radius: float, fragments: list[list[tuple[float, float]]]) -> tuple[float, float, float]:

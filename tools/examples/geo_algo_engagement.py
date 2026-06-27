@@ -9,6 +9,7 @@ from matplotlib.patches import Circle
 from raygeo.geo.algo.engagement import (
     angular_engagement,
     compute_engagement,
+    disk_segment_area,
     point_engagement,
 )
 
@@ -230,6 +231,85 @@ def generate_angular_engagement_comparison():
     return fig
 
 
+# ── disk_segment_area ──────────────────────────────────────────────
+
+
+def generate_disk_segment_area():
+    """Disk segment area: geometry and curve."""
+    radius = 5.0
+
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 5.5))
+
+    # ── Left: disk with shaded segment at x = 1.5 ──
+    x_shade = 1.5
+    theta = np.linspace(0, 2 * math.pi, 200)
+    circle_x = radius * np.cos(theta)
+    circle_y = radius * np.sin(theta)
+
+    ax1.plot(circle_x, circle_y, "k-", linewidth=1.5)
+    ax1.axvline(x_shade, color="red", linewidth=2, label=f"x = {x_shade}")
+    ax1.plot(0, 0, "k.", markersize=4)
+    ax1.set_aspect("equal")
+
+    # Shade the segment area (portion to the right of x_shade).
+    a_half = math.acos(max(-1.0, min(1.0, x_shade / radius)))
+    seg_theta = np.linspace(-a_half, a_half, 80)
+    seg_x = radius * np.cos(seg_theta)
+    seg_y = radius * np.sin(seg_theta)
+    verts = np.column_stack(
+        [
+            np.concatenate([[x_shade], seg_x, [x_shade]]),
+            np.concatenate([[seg_y[0]], seg_y, [seg_y[-1]]]),
+        ]
+    )
+    ax1.fill(
+        verts[:, 0],
+        verts[:, 1],
+        alpha=0.35,
+        color="tomato",
+        label="Segment area",
+    )
+
+    seg_area = disk_segment_area(x_shade, radius)
+    ax1.set_title(f"Disk: r = {radius}, x = {x_shade}, area = {seg_area:.2f}")
+    ax1.set_xlim(-radius * 1.3, radius * 1.3)
+    ax1.set_ylim(-radius * 1.3, radius * 1.3)
+    ax1.legend(fontsize=8)
+    ax1.grid(True, alpha=0.3)
+
+    # ── Right: segment area vs x from −r to r ──
+    xs = np.linspace(-radius, radius, 300)
+    areas = [disk_segment_area(x, radius) for x in xs]
+
+    ax2.plot(xs, areas, "b-", linewidth=2)
+    ax2.axvline(0, color="gray", linestyle="--", alpha=0.5)
+    ax2.axhline(
+        math.pi * radius**2 / 2,
+        color="gray",
+        linestyle=":",
+        alpha=0.3,
+    )
+    ax2.axhline(0, color="gray", linestyle=":", alpha=0.3)
+    ax2.set_xlabel("x (mm)")
+    ax2.set_ylabel("Segment area (mm²)")
+    ax2.set_title("disk_segment_area(x, r)")
+    ax2.grid(True, alpha=0.3)
+
+    # Mark the specific value from the left panel.
+    ax2.plot(
+        x_shade,
+        seg_area,
+        "ro",
+        markersize=6,
+        zorder=5,
+        label=f"({x_shade}, {seg_area:.2f})",
+    )
+    ax2.legend(fontsize=8)
+
+    fig.tight_layout()
+    return fig
+
+
 __docs_target__ = ["raygeo.geo.algo.engagement.md"]
 __images__ = [
     {
@@ -272,5 +352,14 @@ __images__ = [
             " scan line crossing the boundary."
         ),
         "function": generate_angular_engagement_comparison,
+    },
+    {
+        "heading": "disk_segment_area",
+        "caption": (
+            "Left: a disk of radius 5 mm with the circular segment to the"
+            " right of the vertical line ``x = 1.5`` shaded. Right: the"
+            " segment area as a function of ``x``, from ``-r`` to ``+r``."
+        ),
+        "function": generate_disk_segment_area,
     },
 ]

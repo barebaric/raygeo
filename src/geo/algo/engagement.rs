@@ -97,6 +97,34 @@ pub fn point_engagement(
     compute_engagement(d, radius)
 }
 
+/// Area under `2·sqrt(r² − x²)` from `x` to `r` (the right-hand portion
+/// of a disk of radius `r` centred at the origin, to the right of the
+/// vertical line at `x`).
+///
+/// Using the antiderivative
+/// `F(x) = x·sqrt(r²−x²) + r²·asin(x/r)`, the integral evaluates to
+/// `F(r) − F(x) = r²·π/2 − x·sqrt(r²−x²) − r²·asin(x/r)`.
+///
+/// * `x ≥ r` → 0 (line is at or past the right edge)
+/// * `x ≤ −r` → `π·r²` (full disk)
+/// * `x = 0` → `π·r² / 2` (half disk)
+pub fn disk_segment_area(x: f64, r: f64) -> f64 {
+    if r <= 0.0 {
+        return 0.0;
+    }
+    if x >= r {
+        return 0.0;
+    }
+    if x <= -r {
+        return std::f64::consts::PI * r * r;
+    }
+    let clamped = x.clamp(-r, r);
+    let sqrt_term = (r * r - clamped * clamped).max(0.0).sqrt();
+    r * r * std::f64::consts::FRAC_PI_2
+        - clamped * sqrt_term
+        - r * r * (clamped / r).clamp(-1.0, 1.0).asin()
+}
+
 /// Angular engagement by exact circle–polygon intersection.
 ///
 /// Creates an N‑gon disk at `center` with `radius`, intersects it against

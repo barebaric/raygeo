@@ -62,6 +62,28 @@ Compute engagement angle, area, and chord depth.
 
 *Engagement heatmap around a circular cleared area. Green = low, red = high engagement.*
 
+### `disk_segment_area()`
+
+```python
+disk_segment_area(x: float, r: float) -> float
+```
+
+Area under 2\*sqrt(r²-x²) from x to r.
+
+Equivalent to the area of the circular segment to the right of the vertical line at `x` for a disk
+of radius `r` centred at the origin.
+
+| Parameter | Type    | Description                   |
+| --------- | ------- | ----------------------------- |
+| `x`       | `float` | Left boundary of the segment. |
+| `r`       | `float` | Disk radius.                  |
+| _Returns_ | `float` | Area of the circular segment. |
+
+![Left: a disk of radius 5 mm with the circular segment to the right of the vertical line  shaded. Right: the segment area as a function of , from  to .](images/geo-algo-engagement-disk-segment-area.png)
+
+*Left: a disk of radius 5 mm with the circular segment to the right of the vertical line `x = 1.5`
+shaded. Right: the segment area as a function of `x`, from `-r` to `+r`.*
+
 ### `point_engagement()`
 
 ```python

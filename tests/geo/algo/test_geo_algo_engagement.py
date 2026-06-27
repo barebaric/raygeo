@@ -5,6 +5,7 @@ import math
 from raygeo.geo.algo.engagement import (
     angular_engagement,
     compute_engagement,
+    disk_segment_area,
     point_engagement,
 )
 
@@ -105,3 +106,57 @@ def test_angular_engagement_outside_cleared():
     square = _square(0, 0, 10, 10)
     e = angular_engagement((50, 50), 5.0, [square])
     assert abs(e - 2.0 * math.pi) < 0.5  # approximation tolerance
+
+
+# ── disk_segment_area ──────────────────────────────────────────────
+
+
+def test_disk_segment_area_half_disk():
+    """disk_segment_area(0, R) = half-disk area πR²/2."""
+    for R in [1.0, 2.5, 5.0, 10.0]:
+        area = disk_segment_area(0.0, R)
+        expected = math.pi * R * R / 2.0
+        assert abs(area - expected) < 1e-9, (
+            f"R={R}: area={area:.6f}, expected={expected:.6f}"
+        )
+
+
+def test_disk_segment_area_zero_at_edge():
+    """disk_segment_area(R, R) = 0."""
+    for R in [1.0, 5.0, 10.0]:
+        assert abs(disk_segment_area(R, R)) < 1e-12
+
+
+def test_disk_segment_area_full_disk():
+    """disk_segment_area(-R, R) = πR²."""
+    for R in [1.0, 5.0, 10.0]:
+        area = disk_segment_area(-R, R)
+        expected = math.pi * R * R
+        assert abs(area - expected) < 1e-9
+
+
+def test_disk_segment_area_clamps():
+    """x > R → 0, x < -R → πR²."""
+    R = 5.0
+    assert disk_segment_area(R + 1.0, R) == 0.0
+    assert abs(disk_segment_area(-R - 1.0, R) - math.pi * R * R) < 1e-9
+
+
+def test_disk_segment_area_complementary():
+    """disk_segment_area(x, R) + disk_segment_area(-x, R) = πR²."""
+    R = 5.0
+    for x in [0.5, 1.0, 2.0, 3.0, 4.0, 4.9]:
+        left = disk_segment_area(-x, R)
+        right = disk_segment_area(x, R)
+        assert abs(left + right - math.pi * R * R) < 1e-9
+
+
+def test_disk_segment_area_monotonic():
+    """Area decreases as x increases."""
+    R = 5.0
+    prev = math.pi * R * R + 1.0
+    for i in range(-10, 11):
+        x = i * 0.5
+        area = disk_segment_area(x, R)
+        assert area <= prev + 1e-12
+        prev = area

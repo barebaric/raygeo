@@ -18,6 +18,7 @@ pub fn register(algo_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     register_functions!(
         m,
         compute_engagement_py,
+        disk_segment_area_py,
         point_engagement_py,
         angular_engagement_py,
     );
@@ -45,6 +46,30 @@ pub fn register(algo_mod: &Bound<'_, PyModule>) -> PyResult<()> {
 fn compute_engagement_py(d_to_boundary: f64, radius: f64) -> (f64, f64, f64) {
     let e = engagement::compute_engagement(d_to_boundary, radius);
     (e.angle, e.area, e.chord_depth)
+}
+
+#[gen_stub_pyfunction(
+    python = r#"
+    def disk_segment_area(
+        x: float,
+        r: float,
+    ) -> float:
+        """Area under 2*sqrt(r²-x²) from x to r.
+
+        Equivalent to the area of the circular segment to the right of
+        the vertical line at ``x`` for a disk of radius ``r`` centred
+        at the origin.
+
+        :param x: Left boundary of the segment.
+        :param r: Disk radius.
+        :returns: Area of the circular segment.
+        """
+    "#,
+    module = "raygeo.geo.algo.engagement"
+)]
+#[pyfunction(name = "disk_segment_area")]
+fn disk_segment_area_py(x: f64, r: f64) -> f64 {
+    engagement::disk_segment_area(x, r)
 }
 
 #[gen_stub_pyfunction(
