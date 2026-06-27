@@ -909,11 +909,12 @@ pub fn is_point_inside_polygon(point: Point, polygon: &Polygon) -> bool {
 
 /// Returns `true` if `polygon` fully encloses a circle of `radius` at `center`.
 ///
-/// Uses a conservative fast check: the polygon's axis-aligned bounding box
-/// must contain the circle's bounding box, **and** the circle center must lie
-/// inside the polygon.  This is sufficient for most practical cases; false
-/// positives may occur for polygons with very concave holes that swallow the
-/// center but not the whole disk.
+/// Three checks are applied in increasing cost:
+/// 1. The polygon's AABB must contain the circle's bounding box.
+/// 2. The circle centre must lie inside the polygon.
+/// 3. Every edge of the polygon must be at least `radius` away from the
+///    centre (handles concave shapes whose AABB and centroid satisfy
+///    checks 1–2 but whose notch cuts through the disk).
 pub fn does_polygon_enclose_circle(
     center: Point,
     radius: f64,
@@ -929,8 +930,22 @@ pub fn does_polygon_enclose_circle(
         center.y + radius,
     );
     let bounds = get_polygon_bounds(polygon);
-    crate::geo::shape::rect::does_rect_contain_rect(bounds, circle_rect)
-        && is_point_in_polygon(center, polygon)
+    if !crate::geo::shape::rect::does_rect_contain_rect(bounds, circle_rect) {
+        return false;
+    }
+    if !is_point_in_polygon(center, polygon) {
+        return false;
+    }
+    let n = polygon.len();
+    for i in 0..n {
+        let a = polygon[i];
+        let b = polygon[(i + 1) % n];
+        let dist = super::line::get_point_line_distance(center, a, b);
+        if dist < radius {
+            return false;
+        }
+    }
+    true
 }
 
 /// Check if a point is inside a polygon using clipper2.

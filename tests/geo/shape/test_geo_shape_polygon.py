@@ -1889,3 +1889,24 @@ def test_enclose_circle_empty_polygon():
 def test_enclose_circle_short_polygon():
     """Polygon with fewer than 3 vertices cannot enclose."""
     assert not does_polygon_enclose_circle((0, 0), 1.0, [(0, 0), (1, 0)])
+
+
+def test_enclose_circle_concave_not_enclosing():
+    """An L-shaped polygon whose AABB and centroid satisfy the fast
+    checks but whose notch cuts through the disk must NOT be reported
+    as enclosing.
+
+    L-shape: (0,0)→(20,0)→(20,10)→(10,10)→(10,20)→(0,20)
+    Disk centre (8,8) r=4 is inside the L, and the disk's AABB fits
+    inside the L's AABB, but the top-right corner of the disk protrudes
+    into the notch (x>10 and y>10 is exterior).
+    """
+    l_shape = [
+        (0.0, 0.0),
+        (20.0, 0.0),
+        (20.0, 10.0),
+        (10.0, 10.0),
+        (10.0, 20.0),
+        (0.0, 20.0),
+    ]
+    assert not does_polygon_enclose_circle((8, 8), 4.0, l_shape)
