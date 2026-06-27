@@ -33,6 +33,21 @@ impl SpatialGrid {
         }
     }
 
+    /// Remove `index` from all cells its `bbox` touches.
+    pub fn remove(&mut self, index: usize, bbox: Rect) {
+        let cell_min_x = (bbox.min.x / self.cell_size).floor() as i32;
+        let cell_max_x = (bbox.max.x / self.cell_size).floor() as i32;
+        let cell_min_y = (bbox.min.y / self.cell_size).floor() as i32;
+        let cell_max_y = (bbox.max.y / self.cell_size).floor() as i32;
+        for cx in cell_min_x..=cell_max_x {
+            for cy in cell_min_y..=cell_max_y {
+                if let Some(indices) = self.cells.get_mut(&(cx, cy)) {
+                    indices.retain(|&i| i != index);
+                }
+            }
+        }
+    }
+
     /// Collect matching indices into a pre-allocated `Vec`.
     /// The caller is responsible for clearing the vec before passing it.
     pub fn query_into(&self, bbox: Rect, out: &mut Vec<usize>) {

@@ -63,6 +63,16 @@ impl SpatialGrid {
         vec
     }
 
+    /// Remove an item from the grid by its bounding box.
+    ///
+    /// :param index: Unique identifier for the item.
+    /// :param bbox: ``[x_min, y_min, x_max, y_max]`` bounding box.
+    /// :complexity: O(cells) where cells = number of grid cells the bbox touches
+    pub fn remove(&mut self, index: usize, bbox: Vec<f64>) {
+        let b = Rect::new(bbox[0], bbox[1], bbox[2], bbox[3]);
+        self.inner.remove(index, b);
+    }
+
     /// Remove all items from the grid.
     ///
     /// :complexity: O(n) where n = number of items

@@ -43,6 +43,14 @@ class SpatialGrid:
         :returns: Sorted list of matching item indices.
         :complexity: O(cells + k) where k = number of matching items
         """
+    def remove(self, index: builtins.int, bbox: typing.Sequence[builtins.float]) -> None:
+        r"""
+        Remove an item from the grid by its bounding box.
+        
+        :param index: Unique identifier for the item.
+        :param bbox: ``[x_min, y_min, x_max, y_max]`` bounding box.
+        :complexity: O(cells) where cells = number of grid cells the bbox touches
+        """
     def clear(self) -> None:
         r"""
         Remove all items from the grid.
