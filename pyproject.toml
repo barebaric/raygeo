@@ -47,6 +47,7 @@ raygeo-docs = "tools.cli:main"
 [tool.maturin]
 module-name = "raygeo"
 python-source = "python"
+manylinux = "manylinux_2_28"
 
 [tool.pyo3-stub-gen]
 module-name = "raygeo"
