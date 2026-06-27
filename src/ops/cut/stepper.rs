@@ -4,6 +4,17 @@ use crate::ops::cut::interp::{point_in_valid_area, rotate, Interpolation};
 use crate::ops::cut::ClearedArea;
 use crate::types::{Point, Polygon};
 
+/// Which engagement metric the solver targets.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum EngagementMetric {
+    /// Use `Engagement.angle` (radians). Default.
+    #[default]
+    Angle,
+    /// Use `Engagement.area` (mm²). `target_engagement` is still the
+    /// equivalent angle in radians; the target area is derived from it.
+    Area,
+}
+
 /// Options controlling the stepping solver.
 #[derive(Clone, Debug)]
 pub struct StepperOptions {
@@ -24,6 +35,8 @@ pub struct StepperOptions {
     pub max_solver_iters: usize,
     /// Optional set of polygons defining the valid tool-centre region.
     pub valid_area: Option<Vec<Polygon>>,
+    /// Which engagement metric the solver targets.
+    pub metric: EngagementMetric,
 }
 
 impl Default for StepperOptions {
@@ -36,6 +49,7 @@ impl Default for StepperOptions {
             max_deflection: std::f64::consts::FRAC_PI_6,
             max_solver_iters: 6,
             valid_area: None,
+            metric: EngagementMetric::Angle,
         }
     }
 }
@@ -87,12 +101,12 @@ pub fn target_engagement_from_advance(advance: f64, radius: f64) -> f64 {
 /// Try to find a steering angle via 7-sample grid with interpolation.
 pub(crate) fn try_bracket(
     heading: f64,
-    opts: &StepperOptions,
+    max_deflection: f64,
+    target: f64,
     engagement_at: &dyn Fn(f64) -> f64,
 ) -> (f64, StepStatus, usize) {
-    let target = opts.target_engagement;
     let (root, status, iters) =
-        rootfind::bracket_grid(heading, opts.max_deflection, |phi| {
+        rootfind::bracket_grid(heading, max_deflection, |phi| {
             engagement_at(phi) - target
         });
     let step_status = match status {
@@ -123,6 +137,15 @@ pub fn step(
         point_in_valid_area(pt, area)
     };
 
+    let (target_val, use_area): (f64, bool) = match opts.metric {
+        EngagementMetric::Angle => (opts.target_engagement, false),
+        EngagementMetric::Area => {
+            let ta = opts.target_engagement;
+            let target = opts.radius * opts.radius * 0.5 * (ta - ta.sin());
+            (target, true)
+        }
+    };
+
     let engagement_at = |phi: f64| -> f64 {
         let dir = Point::new(phi.cos(), phi.sin());
         let candidate = pos + dir * opts.step_length;
@@ -130,22 +153,18 @@ pub fn step(
             return 0.01;
         }
         let eng = cleared.point_engagement(candidate, opts.radius);
-        eng.angle
+        if use_area { eng.area } else { eng.angle }
     };
 
     let (best_phi, step_status, iters) =
-        try_bracket(heading, opts, &engagement_at);
+        try_bracket(heading, opts.max_deflection, target_val, &engagement_at);
 
-    let best_eng = engagement_at(best_phi);
-    if best_eng < opts.target_engagement * 0.05 {
+    let best_val = engagement_at(best_phi);
+    if best_val < target_val * 0.05 {
         return StepResult {
             next: pos,
             heading,
-            engagement: Engagement {
-                angle: best_eng,
-                area: 0.0,
-                chord_depth: 0.0,
-            },
+            engagement: cleared.point_engagement(pos, opts.radius),
             iters,
             iteration_angle: 0.0,
             status: StepStatus::LostEngagement,
@@ -154,18 +173,17 @@ pub fn step(
 
     let mut step_len = opts.step_length;
     if step_status == StepStatus::Ok {
-        let eng_at_best = best_eng;
         let cur_eng = cleared.point_engagement(pos, opts.radius);
-        let cur_err = cur_eng.angle - opts.target_engagement;
-        let best_err = eng_at_best - opts.target_engagement;
+        let cur_val = if use_area { cur_eng.area } else { cur_eng.angle };
+        let cur_err = cur_val - target_val;
+        let best_err = best_val - target_val;
         if cur_err * best_err < 0.0 && cur_err.abs() > opts.engagement_tol {
             let t = cur_err / (cur_err - best_err);
             step_len *= t.clamp(0.25, 1.0);
         } else if best_err > opts.engagement_tol
             && cur_err.abs() <= opts.engagement_tol
         {
-            let t = (opts.target_engagement - cur_eng.angle)
-                / (eng_at_best - cur_eng.angle);
+            let t = (target_val - cur_val) / (best_val - cur_val);
             step_len *= t.clamp(0.25, 0.5);
         }
     }

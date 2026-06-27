@@ -3,10 +3,6 @@ title: raygeo.ops.cut.stepper
 sidebar_label: raygeo.ops.cut.stepper
 ---
 
-![Tool stepping parallel to a straight wall. Path colour = engagement (green = on target).](images/ops-cut-stepper-wall-following.png)
-
-*Tool stepping parallel to a straight wall. Path colour = engagement (green = on target).*
-
 ## StepResult
 
 Result of a single forward step.
@@ -131,6 +127,14 @@ max_solver_iters: int
 
 Maximum solver iterations per step.
 
+### `metric`
+
+```python
+metric: str
+```
+
+Engagement metric: `"angle"` (default) or `"area"`.
+
 ### `radius`
 
 ```python
@@ -181,6 +185,14 @@ Does **not** modify the ClearedArea — the caller is responsible for committing
 | `opts`            | `StepperOptions`                        | `StepperOptions` controlling the solver. |
 | `max_steps`       | `int`                                   | Maximum number of steps.                 |
 | _Returns_         | `tuple[list[tuple[float, float]], str]` | `(path, status_string)`.                 |
+
+![Wall following along four boundary shapes: curved, square wave, zig zag, and circle.](images/ops-cut-stepper-wall-following.png)
+
+*Wall following along four boundary shapes: curved, square wave, zig zag, and circle.*
+
+![Wall following using area engagement (same shapes as angular version).](images/ops-cut-stepper-wall-following-area.png)
+
+*Wall following using area engagement (same shapes as angular version).*
 
 ### `step()`
 

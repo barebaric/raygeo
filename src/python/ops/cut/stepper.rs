@@ -5,6 +5,7 @@ use pyo3_stub_gen::derive::{
 };
 
 use crate::ops::cut;
+use crate::ops::cut::stepper::EngagementMetric;
 use crate::python::ops::cut::cleared_area::PyClearedArea;
 use crate::types::Point;
 
@@ -60,6 +61,7 @@ impl PyStepperOptions {
                 max_deflection: max_def,
                 max_solver_iters,
                 valid_area: None,
+                metric: EngagementMetric::Angle,
             },
         }
     }
@@ -118,16 +120,32 @@ impl PyStepperOptions {
     pub fn set_max_solver_iters(&mut self, v: usize) {
         self.inner.max_solver_iters = v;
     }
+    /// Engagement metric: ``"angle"`` (default) or ``"area"``.
+    #[getter]
+    pub fn get_metric(&self) -> String {
+        match self.inner.metric {
+            EngagementMetric::Angle => "angle".to_string(),
+            EngagementMetric::Area => "area".to_string(),
+        }
+    }
+    #[setter]
+    pub fn set_metric(&mut self, v: &str) {
+        self.inner.metric = match v {
+            "area" => EngagementMetric::Area,
+            _ => EngagementMetric::Angle,
+        };
+    }
 
     fn __repr__(&self) -> String {
         format!(
             "StepperOptions(R={}, step={}, target={:.3}, \
-             max_def={:.3}, iters={})",
+             max_def={:.3}, iters={}, metric={})",
             self.inner.radius,
             self.inner.step_length,
             self.inner.target_engagement,
             self.inner.max_deflection,
             self.inner.max_solver_iters,
+            self.get_metric(),
         )
     }
 }

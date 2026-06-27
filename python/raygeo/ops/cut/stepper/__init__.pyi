@@ -128,6 +128,13 @@ class StepperOptions:
         """
     @max_solver_iters.setter
     def max_solver_iters(self, value: builtins.int) -> None: ...
+    @property
+    def metric(self) -> builtins.str:
+        r"""
+        Engagement metric: ``"angle"`` (default) or ``"area"``.
+        """
+    @metric.setter
+    def metric(self, value: builtins.str) -> None: ...
     def __new__(cls, radius: builtins.float = 3.0, step_length: builtins.float = 0.6, target_engagement: typing.Optional[builtins.float] = None, engagement_tol: builtins.float = 0.01, max_deflection: typing.Optional[builtins.float] = None, max_solver_iters: builtins.int = 6) -> StepperOptions:
         r"""
         :param radius: Disk radius in mm (default 3.0).
