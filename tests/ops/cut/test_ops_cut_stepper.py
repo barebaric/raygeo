@@ -17,7 +17,6 @@ from raygeo.ops.cut.stepper import (
     target_engagement_from_advance,
 )
 
-
 # ── Geometry helpers ────────────────────────────────────────────────
 
 
@@ -475,11 +474,17 @@ def test_step_adaptive_converges_from_correct_depth():
 
     ca = ClearedArea(boundary=[])
     n = 32
-    ca.cut([[
-        (cx + cr * math.cos(2 * math.pi * i / n),
-         cy + cr * math.sin(2 * math.pi * i / n))
-        for i in range(n)
-    ]])
+    ca.cut(
+        [
+            [
+                (
+                    cx + cr * math.cos(2 * math.pi * i / n),
+                    cy + cr * math.sin(2 * math.pi * i / n),
+                )
+                for i in range(n)
+            ]
+        ]
+    )
 
     valid = _huge_valid_area()
 

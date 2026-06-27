@@ -13,7 +13,6 @@ from raygeo.ops.cut.search import (
 )
 
 
-
 def _circle(cx, cy, r, n=32):
     return [
         (
@@ -438,7 +437,9 @@ def test_reengagement_first_step_has_correct_engagement():
     R = 5.0
     advance = 2.0
     step_length = 1.0
-    min_cut_area = target_area_per_distance(R, advance, step_length) * step_length
+    min_cut_area = (
+        target_area_per_distance(R, advance, step_length) * step_length
+    )
 
     ca = ClearedArea(boundary=[])
     n = 32

@@ -77,8 +77,8 @@ pub struct AdaptiveClearingOptions {
     pub start_heading: Option<f64>,
     /// How many steps to accumulate before committing cleared-area
     /// expansions.  Larger values reduce per‑step overhead at the cost
-    /// of slightly stale engagement queries.  Leave at 1 (default) for
-    /// best path quality; increase to 5+ for faster roughing passes.
+    /// of slightly stale engagement queries.  Default 20 is a good
+    /// balance; reduce to 1 for best path quality.
     pub expansion_batch_size: usize,
 }
 
@@ -97,7 +97,7 @@ impl Default for AdaptiveClearingOptions {
             area_tolerance: 1.0,
             start_pos: None,
             start_heading: None,
-            expansion_batch_size: 1,
+            expansion_batch_size: 20,
         }
     }
 }

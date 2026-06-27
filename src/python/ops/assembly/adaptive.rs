@@ -43,7 +43,7 @@ pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
         cut_power: float = 1.0,
         start_pos: tuple[float, float] | None = None,
         start_heading: float | None = None,
-        expansion_batch_size: int = 1,
+        expansion_batch_size: int = 20,
         profile: bool = False,
     ) -> raygeo.ops.Ops:
         """Run forward-stepping adaptive clearing.
@@ -76,7 +76,7 @@ pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
         :param start_heading: Initial tool heading in radians.  When None,
                               auto-detected as the CCW tangent at start_pos.
         :param expansion_batch_size: Batch cleared-area expansions every
-                                     N steps (default 1).  Larger values
+                                     N steps (default 20).  Larger values
                                      improve performance but may slightly
                                      reduce path quality.
         :param profile: Print a profiling report to stdout (default False).
@@ -102,7 +102,7 @@ pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     cut_power = 1.0,
     start_pos = None,
     start_heading = None,
-    expansion_batch_size = 1,
+    expansion_batch_size = 20,
     profile = false,
 ))]
 #[allow(clippy::too_many_arguments)]
