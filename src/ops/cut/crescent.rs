@@ -171,36 +171,53 @@ fn build_xcoords(cx: &SweepContext) -> Vec<f64> {
 /// upper/lower arc.
 type Crossing = (f64, usize, usize);
 
+/// A single polygon edge extracted into a flat list for iteration.
+#[derive(Clone, Copy)]
+struct SweepEdge {
+    p0: Point,
+    p1: Point,
+    min_x: f64,
+    max_x: f64,
+    poly_idx: usize,
+    edge_idx: usize,
+}
+
 /// Collect every boundary crossing at `xtest`, tagged by shape and part.
 /// Shapes are indexed as: fragments + valid polys (`0..total_polys`),
 /// then `c2`, then `c1`.
 ///
 /// Results are appended into `ys` (cleared first) so the allocation can
 /// be reused across slabs.
+///
+/// `circle_active` is a 2-element array: `[c2_active, c1_active]` where
+/// `true` means the circle's x-range contains `xtest`.
 #[prof]
-fn slab_crossings(cx: &SweepContext, xtest: f64, ys: &mut Vec<Crossing>) {
-    let c1 = cx.c1;
-    let c2 = cx.c2;
-    let radius = cx.radius;
-    let polygons = &cx.polygons;
-    let total_polys = polygons.len();
+#[allow(clippy::too_many_arguments)]
+fn slab_crossings(
+    edges: &[SweepEdge],
+    c1: Point,
+    c2: Point,
+    radius: f64,
+    total_polys: usize,
+    xtest: f64,
+    circle_active: [bool; 2],
+    ys: &mut Vec<Crossing>,
+) {
     let circles = [c2, c1];
 
     ys.clear();
-    for (ip, poly) in polygons.iter().enumerate() {
-        let n = poly.len();
-        for ie in 0..n {
-            let p0 = poly[ie];
-            let p1 = poly[(ie + 1) % n];
-            if p0.x.min(p1.x) < xtest && p0.x.max(p1.x) > xtest {
-                let t = (xtest - p0.x) / (p1.x - p0.x);
-                let y = p0.y + t * (p1.y - p0.y);
-                ys.push((y, ip, ie));
-            }
+    for e in edges {
+        if e.min_x < xtest && e.max_x > xtest {
+            let t = (xtest - e.p0.x) / (e.p1.x - e.p0.x);
+            let y = e.p0.y + t * (e.p1.y - e.p0.y);
+            ys.push((y, e.poly_idx, e.edge_idx));
         }
     }
 
     for (ic, &c) in circles.iter().enumerate() {
+        if !circle_active[ic] {
+            continue;
+        }
         let dx = (xtest - c.x).abs();
         if dx < radius {
             let dy = (radius * radius - dx * dx).sqrt();
@@ -263,9 +280,44 @@ fn sweep_area(cx: &SweepContext, xs: &[f64]) -> (f64, f64) {
     let mut total = 0.0f64;
     let mut left = 0.0f64;
 
+    // Extract all polygon edges into a flat list so the slab loop can
+    // iterate a single contiguous slice instead of nested polygon loops.
+    let mut edges: Vec<SweepEdge> = Vec::new();
+    for (ip, poly) in polygons.iter().enumerate() {
+        let n = poly.len();
+        for ie in 0..n {
+            let p0 = poly[ie];
+            let p1 = poly[(ie + 1) % n];
+            edges.push(SweepEdge {
+                min_x: p0.x.min(p1.x),
+                max_x: p0.x.max(p1.x),
+                p0,
+                p1,
+                poly_idx: ip,
+                edge_idx: ie,
+            });
+        }
+    }
+    edges.sort_by(|a, b| {
+        a.min_x
+            .partial_cmp(&b.min_x)
+            .unwrap_or(std::cmp::Ordering::Equal)
+    });
+
+    // Pre-compute circle x-ranges so the slab loop can skip the sqrt
+    // when xtest is outside a circle's extent.
+    let circle_xmin = [cx.c2.x - radius, cx.c1.x - radius];
+    let circle_xmax = [cx.c2.x + radius, cx.c1.x + radius];
+
     // Reuse the crossings buffer across all slabs to avoid per-slab
     // heap allocation.
     let mut ys: Vec<Crossing> = Vec::new();
+
+    // Active-edge set: only edges whose x-range contains xtest.
+    // New edges are pushed from the sorted list as xtest advances;
+    // expired edges (max_x < xtest) are pruned each slab.
+    let mut active: Vec<SweepEdge> = Vec::new();
+    let mut next_edge: usize = 0;
 
     for ix in 0..xs.len() - 1 {
         let x0 = xs[ix];
@@ -275,7 +327,29 @@ fn sweep_area(cx: &SweepContext, xs: &[f64]) -> (f64, f64) {
         }
         let xtest = (x0 + x1) * 0.5;
 
-        slab_crossings(cx, xtest, &mut ys);
+        // Add edges whose min_x is at or below xtest.
+        while next_edge < edges.len() && edges[next_edge].min_x <= xtest {
+            active.push(edges[next_edge]);
+            next_edge += 1;
+        }
+        // Prune edges that no longer reach xtest.
+        active.retain(|e| e.max_x > xtest);
+
+        let circle_active = [
+            xtest >= circle_xmin[0] && xtest <= circle_xmax[0],
+            xtest >= circle_xmin[1] && xtest <= circle_xmax[1],
+        ];
+
+        slab_crossings(
+            &active,
+            cx.c1,
+            cx.c2,
+            radius,
+            total_polys,
+            xtest,
+            circle_active,
+            &mut ys,
+        );
         ys.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap());
 
         // All shapes start outside at y→−∞.  Outside-positive shapes:
