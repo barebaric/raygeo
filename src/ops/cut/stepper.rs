@@ -292,6 +292,7 @@ pub fn step_adaptive(
     let mut best_dir = base_dir;
     let mut best_pos = pos;
     let mut best_error: f64 = f64::MAX;
+    let mut best_area: f64 = 0.0;
     let mut last_angle = 0.0_f64;
     let mut iters = 0;
     let mut skip_count = 0;
@@ -350,7 +351,8 @@ pub fn step_adaptive(
         if !point_in_valid_area(candidate, valid_area) {
             dbg_log!(
                 "  iter {}  SKIP  angle={:+.4}  reason=outside_valid",
-                iter, angle,
+                iter,
+                angle,
             );
             continue;
         }
@@ -359,7 +361,8 @@ pub fn step_adaptive(
             skip_count += 1;
             dbg_log!(
                 "  iter {}  SKIP  angle={:+.4}  reason=dup_pos",
-                iter, angle,
+                iter,
+                angle,
             );
             continue;
         }
@@ -393,6 +396,7 @@ pub fn step_adaptive(
         last_angle = angle;
         if error.abs() < best_error {
             best_error = error.abs();
+            best_area = total;
             best_angle = angle;
             best_dir = dir;
             best_pos = candidate;
@@ -402,14 +406,15 @@ pub fn step_adaptive(
             exit_reason = "converged";
             dbg_log!(
                 "  → ACCEPTED  angle={:+.4}  err={:+.4} < max_err={:.4}",
-                angle, error, max_err,
+                angle,
+                error,
+                max_err,
             );
             break;
         }
     }
 
-    let final_area = cleared.cut_area(pos, best_pos, radius);
-    let status = if final_area < step_length * target_area_pd * 0.01 {
+    let status = if best_area < step_length * target_area_pd * 0.01 {
         StepStatus::LostEngagement
     } else {
         StepStatus::Ok

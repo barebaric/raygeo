@@ -2,8 +2,6 @@
 
 import math
 
-import pytest
-
 from raygeo.geo.shape.polygon import (
     JoinStyle,
     get_polygon_area,
@@ -294,14 +292,7 @@ def test_adaptive_clearing_degenerate_pocket():
 
 
 def test_adaptive_clearing_fully_clears_rect():
-    """After clearing a plain rectangle, remaining area is below tolerance.
-
-    Known failure — the current single-attempt recovery in adaptive_clearing
-    (lines 393-482) gives up on any stall (BoundaryHit / LostEngagement) and
-    breaks, even when cleared.total_area() ≪ valid_total.  The Phase 4 full
-    recovery loop (resume + connected-components) will fix this.
-    """
-    pytest.xfail("Phase 4 required — current recovery breaks on any stall")
+    """After clearing a plain rectangle, remaining area is below tolerance."""
 
     boundary = _rect(0, 0, 60, 60)
     tol = 1.0
@@ -335,13 +326,7 @@ def test_adaptive_clearing_fully_clears_rect():
 def test_adaptive_clearing_fully_clears_with_island():
     """After clearing a pocket with an island, remaining
     area is below tolerance.
-
-    Known failure — same stall-break issue as the plain-rect case, compounded
-    by the asymmetric island blocking the spiral.  The Phase 4 full recovery
-    loop (resume + connected-components) will fix this.
     """
-    pytest.xfail("Phase 4 required — current recovery breaks on any stall")
-
     boundary = _rect(0, 0, 60, 60)
     islands = [_rect(5, 0, 10, 10)]
     tol = 1.0

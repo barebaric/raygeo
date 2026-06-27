@@ -298,7 +298,9 @@ fn try_resume(
     ) {
         dbg_log!(
             "  RESUME  path=search_frontier  → ({:.3},{:.3})  heading={:.4}",
-            rp.pos.x, rp.pos.y, rp.heading,
+            rp.pos.x,
+            rp.pos.y,
+            rp.heading,
         );
         ops.move_to(rp.pos.x, rp.pos.y, opts.cut_z, None);
         tool.pos = rp.pos;

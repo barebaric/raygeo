@@ -371,28 +371,34 @@ impl ClearedArea {
             return;
         }
         let buf = std::mem::take(&mut self.batch_buffer);
-        let polys: Vec<Polygon> = if buf.len() <= 1 {
-            buf
-        } else {
-            get_polygons_union(&buf)
-        };
-        for poly in polys {
-            self.apply_local_merge(&poly);
-        }
+        self.apply_local_merge(&buf);
         self.batch_active = false;
     }
 
-    /// Local union: merge `swept` only with fragments whose bbox overlaps it.
+    /// Local union: merge `swept` polygons only with fragments whose bbox
+    /// overlaps them.
     #[prof]
-    fn apply_local_merge(&mut self, swept: &Polygon) {
-        if swept.len() < 3 {
+    fn apply_local_merge(&mut self, swept: &[Polygon]) {
+        if swept.is_empty() || swept.iter().all(|p| p.len() < 3) {
             return;
         }
-        let mut to_merge: Vec<Polygon> = vec![swept.clone()];
+        let mut to_merge: Vec<Polygon> =
+            swept.iter().filter(|p| p.len() >= 3).cloned().collect();
         let mut removed: HashSet<usize> = HashSet::new();
 
         for _cascade in 0..2 {
-            let bbox = get_polygon_bounds(to_merge.last().unwrap());
+            let bbox = to_merge
+                .iter()
+                .map(get_polygon_bounds)
+                .reduce(|a, b| {
+                    Rect::new(
+                        a.min.x.min(b.min.x),
+                        a.min.y.min(b.min.y),
+                        a.max.x.max(b.max.x),
+                        a.max.y.max(b.max.y),
+                    )
+                })
+                .unwrap();
             let margin = self.cell_size;
             let qbox = Rect::new(
                 bbox.min.x - margin,

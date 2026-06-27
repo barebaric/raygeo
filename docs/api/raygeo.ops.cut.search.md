@@ -27,6 +27,7 @@ search_frontier_engagement(
     start: ToolPose,
     radius: float,
     step_length: float,
+    advance: float,
     min_cut_area: float,
     max_cut_area: float,
 ) -> Optional[ToolPose]
@@ -35,12 +36,16 @@ search_frontier_engagement(
 Walk the frontier forward from `start_pos`, skipping the closest vertex. Returns the first vertex
 whose outward cut-area probe falls in `[min, max]`.
 
+The returned position is offset inward (into the cleared area) by `radius - advance` so the tool
+starts at the correct engagement depth.
+
 | Parameter      | Type                       | Description                                  |
 | -------------- | -------------------------- | -------------------------------------------- |
 | `cleared`      | `cleared_area.ClearedArea` | `ClearedArea` instance.                      |
-| `start`        | `ToolPose`                 |                                              |
+| `start`        | `ToolPose`                 | `ToolPose` seed.                             |
 | `radius`       | `float`                    | Disk radius (mm).                            |
 | `step_length`  | `float`                    | Forward step distance (mm) for the probe.    |
+| `advance`      | `float`                    | Stepover distance (mm) for inward offset.    |
 | `min_cut_area` | `float`                    | Minimum cut area (mm²).                      |
 | `max_cut_area` | `float`                    | Maximum cut area (mm²), e.g. `float("inf")`. |
 | _Returns_      | `Optional[ToolPose]`       | `ToolPose` or `None`.                        |
@@ -62,6 +67,7 @@ search_reengagement(
     start: ToolPose,
     radius: float,
     step_length: float,
+    advance: float,
     min_cut_area: float,
 ) -> Optional[ToolPose]
 ```
@@ -69,14 +75,17 @@ search_reengagement(
 Walk the frontier backward from `start_pos`, skipping the closest vertex. Returns the first vertex
 (going backward) whose outward cut-area probe is at least `min_cut_area`.
 
-| Parameter      | Type                       | Description                 |
-| -------------- | -------------------------- | --------------------------- |
-| `cleared`      | `cleared_area.ClearedArea` | `ClearedArea` instance.     |
-| `start`        | `ToolPose`                 |                             |
-| `radius`       | `float`                    | Disk radius (mm).           |
-| `step_length`  | `float`                    | Forward step distance (mm). |
-| `min_cut_area` | `float`                    | Minimum cut area (mm²).     |
-| _Returns_      | `Optional[ToolPose]`       | `ToolPose` or `None`.       |
+The returned position is offset inward by `radius - advance`.
+
+| Parameter      | Type                       | Description                               |
+| -------------- | -------------------------- | ----------------------------------------- |
+| `cleared`      | `cleared_area.ClearedArea` | `ClearedArea` instance.                   |
+| `start`        | `ToolPose`                 | `ToolPose` seed.                          |
+| `radius`       | `float`                    | Disk radius (mm).                         |
+| `step_length`  | `float`                    | Forward step distance (mm).               |
+| `advance`      | `float`                    | Stepover distance (mm) for inward offset. |
+| `min_cut_area` | `float`                    | Minimum cut area (mm²).                   |
+| _Returns_      | `Optional[ToolPose]`       | `ToolPose` or `None`.                     |
 
 ![Full backward wall-hugging search (both phases).](images/ops-cut-search-search-reengagement.png)
 

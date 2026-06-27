@@ -174,8 +174,11 @@ type Crossing = (f64, usize, usize);
 /// Collect every boundary crossing at `xtest`, tagged by shape and part.
 /// Shapes are indexed as: fragments + valid polys (`0..total_polys`),
 /// then `c2`, then `c1`.
+///
+/// Results are appended into `ys` (cleared first) so the allocation can
+/// be reused across slabs.
 #[prof]
-fn slab_crossings(cx: &SweepContext, xtest: f64) -> Vec<Crossing> {
+fn slab_crossings(cx: &SweepContext, xtest: f64, ys: &mut Vec<Crossing>) {
     let c1 = cx.c1;
     let c2 = cx.c2;
     let radius = cx.radius;
@@ -183,7 +186,7 @@ fn slab_crossings(cx: &SweepContext, xtest: f64) -> Vec<Crossing> {
     let total_polys = polygons.len();
     let circles = [c2, c1];
 
-    let mut ys: Vec<Crossing> = Vec::new();
+    ys.clear();
     for (ip, poly) in polygons.iter().enumerate() {
         let n = poly.len();
         for ie in 0..n {
@@ -206,7 +209,6 @@ fn slab_crossings(cx: &SweepContext, xtest: f64) -> Vec<Crossing> {
             ys.push((c.y - dy, sh, 1));
         }
     }
-    ys
 }
 
 /// Trapezoid area under a straight edge between `x0..x1` (linear
@@ -261,6 +263,10 @@ fn sweep_area(cx: &SweepContext, xs: &[f64]) -> (f64, f64) {
     let mut total = 0.0f64;
     let mut left = 0.0f64;
 
+    // Reuse the crossings buffer across all slabs to avoid per-slab
+    // heap allocation.
+    let mut ys: Vec<Crossing> = Vec::new();
+
     for ix in 0..xs.len() - 1 {
         let x0 = xs[ix];
         let x1 = xs[ix + 1];
@@ -269,7 +275,7 @@ fn sweep_area(cx: &SweepContext, xs: &[f64]) -> (f64, f64) {
         }
         let xtest = (x0 + x1) * 0.5;
 
-        let mut ys = slab_crossings(cx, xtest);
+        slab_crossings(cx, xtest, &mut ys);
         ys.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap());
 
         // All shapes start outside at y→−∞.  Outside-positive shapes:
