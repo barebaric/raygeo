@@ -1,3 +1,14 @@
+//! Python wrappers for the adaptive-clearing orchestrator.
+//!
+//! Mirrors the Rust [`crate::ops::assembly::adaptive`] module split:
+//! * `adaptive_clearing` / `target_area_per_distance` live here (the
+//!   orchestrator entry points),
+//! * [`super::tool`] exposes the [`Tool`] state as a Python class,
+//! * [`super::resume`] exposes the resume / re-engagement helpers.
+
+pub(crate) mod resume;
+pub(crate) mod tool;
+
 use crate::ops::assembly::adaptive;
 use crate::ops::state::State;
 use crate::prof::prof_report;
@@ -15,6 +26,10 @@ pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
         adaptive_clearing_py,
         target_area_per_distance_py,
     );
+
+    tool::register(&adaptive_mod)?;
+    resume::register(&adaptive_mod)?;
+
     assembly_mod.add_submodule(&adaptive_mod)?;
 
     let sys_modules = assembly_mod.py().import("sys")?.getattr("modules")?;

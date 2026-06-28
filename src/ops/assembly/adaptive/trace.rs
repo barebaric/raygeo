@@ -2,9 +2,8 @@
 //!
 //! Defines the record layout consumed by ``tools/adaptive_inspector.py``:
 //! a 127-byte payload with fixed-offset fields, plus a companion ``.tp``
-//! toolpath file.  The generic [`crate::trace::Tracer`] and
-//! [`crate::trace::DebugTracer`] handle the actual file I/O and release-
-//! mode no-op behaviour.
+//! toolpath file.  The generic [`crate::trace::Tracer`] handles the
+//! actual file I/O and release-mode no-op behaviour.
 
 use std::io::Write;
 
@@ -17,7 +16,7 @@ use crate::types::Point;
 /// Record kind byte values.
 #[repr(u8)]
 #[derive(Clone, Copy)]
-pub(crate) enum TraceKind {
+pub(super) enum TraceKind {
     Init = 0,
     Cut = 1,
     ResumeStall = 2,
@@ -31,7 +30,7 @@ pub(crate) enum TraceKind {
 ///
 /// Offsets match the binary format expected by the Python inspector.
 /// Fields not explicitly set remain zero.
-pub(crate) struct RecordBuf([u8; crate::trace::PAYLOAD_SIZE]);
+pub(super) struct RecordBuf([u8; crate::trace::PAYLOAD_SIZE]);
 
 impl Default for RecordBuf {
     fn default() -> Self {
@@ -140,7 +139,7 @@ impl RecordBuf {
 ///
 /// Format: count (u32 LE) followed by count records of 20 bytes each:
 ///   x (f64 LE), y (f64 LE), is_travel (u8), 3 zero pad bytes.
-pub(crate) fn write_toolpath(trace_path: &std::path::Path, ops: &Ops) {
+pub(super) fn write_toolpath(trace_path: &std::path::Path, ops: &Ops) {
     let tp_path = trace_path.with_extension("tp");
     let mut f = match std::fs::File::create(&tp_path) {
         Ok(f) => f,
