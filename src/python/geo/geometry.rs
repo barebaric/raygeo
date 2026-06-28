@@ -925,42 +925,13 @@ impl Geometry {
                                     }
                                 }
                             }
-                            "B" => {
-                                if let (
-                                    Some(c1x),
-                                    Some(c1y),
-                                    Some(c1z),
-                                    Some(c2x),
-                                    Some(c2y),
-                                    Some(c2z),
-                                ) =
-                                    (
-                                        cmd_list.get_item(4).ok().and_then(
-                                            |v| v.extract::<f64>().ok(),
-                                        ),
-                                        cmd_list.get_item(5).ok().and_then(
-                                            |v| v.extract::<f64>().ok(),
-                                        ),
-                                        cmd_list.get_item(6).ok().and_then(
-                                            |v| v.extract::<f64>().ok(),
-                                        ),
-                                        cmd_list.get_item(7).ok().and_then(
-                                            |v| v.extract::<f64>().ok(),
-                                        ),
-                                        cmd_list.get_item(8).ok().and_then(
-                                            |v| v.extract::<f64>().ok(),
-                                        ),
-                                        cmd_list.get_item(9).ok().and_then(
-                                            |v| v.extract::<f64>().ok(),
-                                        ),
-                                    )
-                                {
-                                    geo.inner.bezier_to(
-                                        Point3D::new(c1x, c1y, c1z),
-                                        Point3D::new(c2x, c2y, c2z),
-                                        Point3D::new(x, y, z),
-                                    );
-                                }
+                            "B" if !Self::try_parse_bezier_current(
+                                cmd_list, x, y, z, &mut geo,
+                            ) =>
+                            {
+                                Self::try_parse_bezier_legacy(
+                                    cmd_list, x, y, z, &mut geo,
+                                );
                             }
                             _ => {}
                         }
@@ -1745,5 +1716,130 @@ impl Geometry {
         let len = self.inner.len();
         let closed = self.inner.is_closed(1e-6);
         format!("<Geometry commands={} closed={}>", len, closed)
+    }
+}
+
+impl Geometry {
+    /// Parse a bezier from the current 10-element list format.
+    ///
+    /// Format: ``[B, end_x, end_y, end_z, c1x, c1y, c1z, c2x, c2y, c2z]``
+    fn try_parse_bezier_current(
+        cmd_list: &Bound<'_, PyList>,
+        x: f64,
+        y: f64,
+        z: f64,
+        geo: &mut Geometry,
+    ) -> bool {
+        if cmd_list.len() < 10 {
+            return false;
+        }
+        let c1x: f64 = match cmd_list
+            .get_item(4)
+            .ok()
+            .and_then(|v| v.extract::<f64>().ok())
+        {
+            Some(v) => v,
+            None => return false,
+        };
+        let c1y: f64 = match cmd_list
+            .get_item(5)
+            .ok()
+            .and_then(|v| v.extract::<f64>().ok())
+        {
+            Some(v) => v,
+            None => return false,
+        };
+        let c1z: f64 = match cmd_list
+            .get_item(6)
+            .ok()
+            .and_then(|v| v.extract::<f64>().ok())
+        {
+            Some(v) => v,
+            None => return false,
+        };
+        let c2x: f64 = match cmd_list
+            .get_item(7)
+            .ok()
+            .and_then(|v| v.extract::<f64>().ok())
+        {
+            Some(v) => v,
+            None => return false,
+        };
+        let c2y: f64 = match cmd_list
+            .get_item(8)
+            .ok()
+            .and_then(|v| v.extract::<f64>().ok())
+        {
+            Some(v) => v,
+            None => return false,
+        };
+        let c2z: f64 = match cmd_list
+            .get_item(9)
+            .ok()
+            .and_then(|v| v.extract::<f64>().ok())
+        {
+            Some(v) => v,
+            None => return false,
+        };
+        geo.inner.bezier_to(
+            Point3D::new(c1x, c1y, c1z),
+            Point3D::new(c2x, c2y, c2z),
+            Point3D::new(x, y, z),
+        );
+        true
+    }
+
+    /// Parse a bezier from the legacy 8-element list format.
+    ///
+    /// Format: ``[B, end_x, end_y, end_z, c1x, c1y, c2x, c2y]``
+    /// (``c1z`` and ``c2z`` are implied 0.0).
+    fn try_parse_bezier_legacy(
+        cmd_list: &Bound<'_, PyList>,
+        x: f64,
+        y: f64,
+        z: f64,
+        geo: &mut Geometry,
+    ) -> bool {
+        if cmd_list.len() < 8 {
+            return false;
+        }
+        let c1x: f64 = match cmd_list
+            .get_item(4)
+            .ok()
+            .and_then(|v| v.extract::<f64>().ok())
+        {
+            Some(v) => v,
+            None => return false,
+        };
+        let c1y: f64 = match cmd_list
+            .get_item(5)
+            .ok()
+            .and_then(|v| v.extract::<f64>().ok())
+        {
+            Some(v) => v,
+            None => return false,
+        };
+        let c2x: f64 = match cmd_list
+            .get_item(6)
+            .ok()
+            .and_then(|v| v.extract::<f64>().ok())
+        {
+            Some(v) => v,
+            None => return false,
+        };
+        let c2y: f64 = match cmd_list
+            .get_item(7)
+            .ok()
+            .and_then(|v| v.extract::<f64>().ok())
+        {
+            Some(v) => v,
+            None => return false,
+        };
+        geo.inner.bezier_to(
+            Point3D::new(c1x, c1y, 0.0),
+            Point3D::new(c2x, c2y, 0.0),
+            Point3D::new(x, y, z),
+        );
+        true
     }
 }
