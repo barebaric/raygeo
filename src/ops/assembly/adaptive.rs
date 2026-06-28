@@ -12,7 +12,9 @@
 use crate::dbg_log;
 use crate::geo::algo::medial_axis::MedialAxis;
 use crate::geo::algo::offset::compute_inset_region;
+use crate::geo::algo::smooth::build_smoothed_path;
 use crate::geo::shape::arc::normalize_angle_signed;
+use crate::geo::shape::polygon::compute_polygon_bounds;
 use crate::geo::shape::polygon::get_polygon_area;
 use crate::geo::shape::polygon::get_polygon_centroid;
 use crate::ops::container::Ops;
@@ -287,15 +289,65 @@ pub fn target_area_per_distance(
 
 // ── Resume helper ────────────────────────────────────────────────────
 
+/// Smooth and shorten a cleared-territory travel path.
+///
+/// `raw` is a waypoint list (e.g. from the MAT) that is known to stay
+/// inside cleared territory.  It is fed through [`build_smoothed_path`]
+/// against the uncleared obstacles (`islands` ∪ `remaining`) so that
+/// redundant intermediate waypoints are shortcut away and any sharp
+/// turns are rounded — keeping the tool disk clear of fresh stock while
+/// minimising rapid travel length.
+///
+/// `from` is the tool's current position and is preserved verbatim as
+/// the path's first point so the smoothing kernel never moves it.
+fn smooth_travel_path(
+    from: Point,
+    raw: &[Point],
+    islands: &[Polygon],
+    remaining: &[Polygon],
+    clearance: f64,
+) -> Vec<Point> {
+    if raw.is_empty() {
+        return vec![from];
+    }
+    let last = raw[raw.len() - 1];
+    // build_smoothed_path prepends `from` and appends `last`; the
+    // intermediate waypoints are the MAT path minus its (already
+    // supplied) endpoints to avoid duplicating them.
+    let waypoints: Vec<Point> = if raw.len() > 2 {
+        raw[1..raw.len() - 1].to_vec()
+    } else {
+        Vec::new()
+    };
+    let mut obstacles: Vec<Polygon> = islands.to_vec();
+    obstacles.extend_from_slice(remaining);
+    let obs_bounds = compute_polygon_bounds(&obstacles);
+    let smoothed = build_smoothed_path(
+        from,
+        last,
+        &waypoints,
+        &obstacles,
+        &obs_bounds,
+        clearance,
+        120,
+    );
+    if smoothed.is_empty() {
+        vec![from, last]
+    } else {
+        smoothed
+    }
+}
+
 /// Emit a safe resume travel from `from` to `to`.
 ///
 /// When a Medial Axis is available, route the travel through cleared
 /// territory by walking the MAT tree between the two endpoints' nearest
-/// cleared nodes.  This produces a multi-waypoint rapid path that goes
-/// *around* obstacles (islands, uncleared stock) instead of a single
-/// straight-line `move_to` that could cross them.  When no MAT is
-/// available (or no cleared path exists), fall back to a single
-/// `move_to` — preserving the previous behaviour.
+/// cleared nodes, then shorten and smooth the resulting waypoint list
+/// via [`smooth_travel_path`] / [`build_smoothed_path`] so redundant
+/// hops are shortcut away and sharp turns are rounded — producing the
+/// shortest collision-free rapid path instead of the raw tree walk.
+/// When no MAT is available (or no cleared path exists), fall back to a
+/// single `move_to` — preserving the previous behaviour.
 fn emit_resume_travel(
     ops: &mut Ops,
     cleared: &ClearedArea,
@@ -310,7 +362,15 @@ fn emit_resume_travel(
         if !fragments.is_empty() {
             if let Some(path) = axis.path_between_cleared(from, to, fragments) {
                 if path.len() >= 2 {
-                    for wp in &path {
+                    let remaining = cleared.remaining();
+                    let smoothed = smooth_travel_path(
+                        from,
+                        &path,
+                        &opts.islands,
+                        &remaining,
+                        opts.radius,
+                    );
+                    for wp in &smoothed {
                         ops.move_to(wp.x, wp.y, z, None);
                     }
                     return;
@@ -418,9 +478,10 @@ fn try_resume(
     // ── Fallback: Medial Axis walk ─────────────────────────────────
     // Route from the stuck tool position along the medial axis of the
     // pocket (through cleared territory) to the nearest uncleared MAT
-    // node, then resume cutting there.  The full MAT path is emitted as
-    // travel moves so the tool traces the route through already-cut
-    // material rather than teleporting across uncleared stock.
+    // node, then resume cutting there.  The MAT path is shortened and
+    // smoothed via [`smooth_travel_path`] so the tool traces the
+    // shortest collision-free route through already-cut material rather
+    // than following every tree node.
     if let Some(axis) = mat {
         if let Some((path, heading)) =
             mat_resume_target(axis, cleared, tool.pos, valid_tool_area)
@@ -435,11 +496,20 @@ fn try_resume(
             );
             // Travel to the MAT target through cleared territory.
             // `mat_resume_target` already returned a path restricted to
-            // cleared MAT nodes, so emit every waypoint so the tool
-            // follows the route around obstacles (e.g. islands) instead
-            // of a straight-line jump that would cross uncleared stock.
-            let dest = path[path.len() - 1];
-            for wp in &path {
+            // cleared MAT nodes; `smooth_travel_path` shortcuts redundant
+            // waypoints (collision-checked against the islands and
+            // remaining stock) and rounds sharp turns so the tool follows
+            // the shortest safe route instead of the raw tree walk.
+            let remaining = cleared.remaining();
+            let smoothed = smooth_travel_path(
+                tool.pos,
+                &path,
+                &opts.islands,
+                &remaining,
+                opts.radius,
+            );
+            let dest = smoothed[smoothed.len() - 1];
+            for wp in &smoothed {
                 ops.move_to(wp.x, wp.y, opts.cut_z + 0.5, None);
             }
             tool.pos = dest;
