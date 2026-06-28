@@ -1,5 +1,7 @@
 """Generate visualisations of entry motion assembly."""
 
+import math
+
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -16,30 +18,8 @@ def _ops_to_points(ops):
     return pts
 
 
-def _plot_3d_toolpath(
-    ops, ax, title, boundary=None, islands=None, z_plane=None
-):
-    """Plot 3D toolpath from Ops with boundary/island overlay."""
-    pts_list = _ops_to_points(ops)
-    if not pts_list:
-        fig = ax.figure
-        fig.tight_layout()
-        return fig
-    pts = np.array([(p[0], p[1], p[2]) for p in pts_list])
-    ax.plot(pts[:, 0], pts[:, 1], pts[:, 2], "b-", linewidth=0.8, alpha=0.8)
-
-    n = len(pts)
-    skip = max(1, n // 200)
-    ax.scatter(
-        pts[::skip, 0],
-        pts[::skip, 1],
-        pts[::skip, 2],
-        c=pts[::skip, 2],
-        cmap="viridis",
-        s=4,
-        alpha=0.6,
-    )
-
+def _draw_3d_boundary(ax, boundary, islands, z_plane):
+    """Draw boundary and islands on the 3D z-plane."""
     if boundary is not None and z_plane is not None:
         bnd = np.array(list(boundary) + [boundary[0]])
         ax.plot(
@@ -51,7 +31,6 @@ def _plot_3d_toolpath(
             linewidth=2,
             alpha=0.5,
         )
-
     if islands and z_plane is not None:
         for isl in islands:
             isl_arr = np.array(list(isl) + [isl[0]])
@@ -65,11 +44,99 @@ def _plot_3d_toolpath(
                 alpha=0.4,
             )
 
+
+def _plot_3d_toolpath(
+    ops,
+    ax,
+    title,
+    boundary=None,
+    islands=None,
+    z_plane=None,
+):
+    """Plot 3D toolpath: travel=dotted gray, cutting=rainbow by arc-length."""
+    pts_list = _ops_to_points(ops)
+    if not pts_list:
+        fig = ax.figure
+        fig.tight_layout()
+        return fig
+
+    segments = []
+    cur = []
+    for p in pts_list:
+        x, y, z, is_travel = p
+        if is_travel:
+            if len(cur) > 1:
+                segments.append(cur)
+            cur = []
+        else:
+            cur.append((x, y, z))
+    if len(cur) > 1:
+        segments.append(cur)
+
+    segs_3d = []
+    cum_dists = []
+    cum = 0.0
+    prev = None
+    for seg in segments:
+        for p in seg:
+            if prev is not None:
+                segs_3d.append([prev, p])
+                cum += math.sqrt(
+                    (p[0] - prev[0]) ** 2
+                    + (p[1] - prev[1]) ** 2
+                    + (p[2] - prev[2]) ** 2
+                )
+                cum_dists.append(cum)
+            prev = p
+    total = cum if cum > 0 else 1.0
+    if segs_3d:
+        from mpl_toolkits.mplot3d.art3d import Line3DCollection
+
+        lc3d = Line3DCollection(
+            segs_3d,
+            colors=plt.cm.turbo([d / total for d in cum_dists]),
+            linewidth=0.8,
+            alpha=1.0,
+        )
+        ax.add_collection3d(lc3d)
+
+    prev = None
+    for p in pts_list:
+        x, y, z, is_travel = p
+        if is_travel:
+            if prev is not None:
+                ax.plot(
+                    [prev[0], x],
+                    [prev[1], y],
+                    [prev[2], z],
+                    linestyle="--",
+                    linewidth=1.0,
+                    color="dimgray",
+                    alpha=0.8,
+                )
+            prev = (x, y, z)
+        else:
+            prev = (x, y, z)
+
+    _draw_3d_boundary(ax, boundary, islands, z_plane)
+
     ax.set_title(title)
     ax.set_xlabel("X")
     ax.set_ylabel("Y")
     ax.set_zlabel("Z")
     ax.view_init(elev=30, azim=-45)
+
+    xl, xr = ax.get_xlim()
+    yl, yr = ax.get_ylim()
+    zl, zr = ax.get_zlim()
+    half = max(xr - xl, yr - yl, zr - zl) * 0.5
+    xm = (xl + xr) * 0.5
+    ym = (yl + yr) * 0.5
+    zm = (zl + zr) * 0.5
+    ax.set_xlim(xm - half, xm + half)
+    ax.set_ylim(ym - half, ym + half)
+    ax.set_zlim(zm - half, zm + half)
+    ax.set_box_aspect(None)
 
     fig = ax.figure
     fig.tight_layout()
@@ -168,6 +235,16 @@ def generate_entry_tight():
         z_plane=target_z4,
     )
     return fig4
+
+
+def _rect(cx, cy, w, h):
+    """CCW rectangle centred at (cx, cy)."""
+    return [
+        (cx - w / 2, cy - h / 2),
+        (cx + w / 2, cy - h / 2),
+        (cx + w / 2, cy + h / 2),
+        (cx - w / 2, cy + h / 2),
+    ]
 
 
 __docs_target__ = ["raygeo.ops.assembly.entry.md"]

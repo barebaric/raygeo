@@ -9,6 +9,7 @@ from matplotlib.colors import Normalize
 
 from raygeo.geo.shape.polygon import (
     get_circle_polygon,
+    get_polygon_area,
     get_polygons_group_difference,
     get_polygons_group_intersection,
 )
@@ -345,6 +346,401 @@ def generate_target_area_geometry():
 
 
 __docs_target__ = ["raygeo.ops.assembly.adaptive.md"]
+
+
+def _plot_2d_toolpath(ops, ax):
+    """Plot a 2D top-down toolpath.
+
+    Travel moves (``move_to`` / G0) → dashed dimgray lines.
+    Cutting moves (``line_to`` / G1) → ``LineCollection`` coloured by
+    cumulative arc-length through the turbo gradient (full opacity).
+    """
+    pts = _ops_to_points(ops)
+    if not pts:
+        return
+
+    segments = []
+    cur = []
+    for p in pts:
+        x, y, z, is_travel = p
+        if is_travel:
+            if len(cur) > 1:
+                segments.append(cur)
+            cur = []
+        else:
+            cur.append((x, y))
+    if len(cur) > 1:
+        segments.append(cur)
+
+    segs_list = []
+    cum_dists = []
+    cum = 0.0
+    prev = None
+    for seg in segments:
+        for p in seg:
+            if prev is not None:
+                segs_list.append([prev, p])
+                cum += math.hypot(p[0] - prev[0], p[1] - prev[1])
+                cum_dists.append(cum)
+            prev = p
+    total = cum if cum > 0 else 1.0
+    if segs_list:
+        ax.add_collection(
+            LineCollection(
+                segs_list,
+                colors=plt.cm.turbo([d / total for d in cum_dists]),
+                linewidth=0.8,
+                alpha=1.0,
+            )
+        )
+
+    prev = None
+    for p in pts:
+        x, y, z, is_travel = p
+        if is_travel:
+            if prev is not None:
+                ax.plot(
+                    [prev[0], x],
+                    [prev[1], y],
+                    linestyle="--",
+                    linewidth=1.0,
+                    color="dimgray",
+                    alpha=0.8,
+                )
+            prev = (x, y)
+        else:
+            prev = (x, y)
+
+
+def _draw_3d_boundary(ax, boundary, islands, z_plane):
+    """Draw boundary and islands on the 3D z-plane."""
+    if boundary is not None and z_plane is not None:
+        bnd = np.array(list(boundary) + [boundary[0]])
+        ax.plot(
+            bnd[:, 0],
+            bnd[:, 1],
+            zs=z_plane,
+            zdir="z",
+            color="k",
+            linewidth=2,
+            alpha=0.5,
+        )
+    if islands and z_plane is not None:
+        for isl in islands:
+            isl_arr = np.array(list(isl) + [isl[0]])
+            ax.plot(
+                isl_arr[:, 0],
+                isl_arr[:, 1],
+                zs=z_plane,
+                zdir="z",
+                color="gray",
+                linewidth=1.5,
+                alpha=0.4,
+            )
+
+
+def _plot_3d_toolpath(
+    ops,
+    ax,
+    title,
+    boundary=None,
+    islands=None,
+    z_plane=None,
+):
+    """Plot 3D toolpath: travel=dashed dimgray, cutting=rainbow by path."""
+    pts_list = _ops_to_points(ops)
+    if not pts_list:
+        fig = ax.figure
+        fig.tight_layout()
+        return fig
+
+    segments = []
+    cur = []
+    for p in pts_list:
+        x, y, z, is_travel = p
+        if is_travel:
+            if len(cur) > 1:
+                segments.append(cur)
+            cur = []
+        else:
+            cur.append((x, y, z))
+    if len(cur) > 1:
+        segments.append(cur)
+
+    segs_3d = []
+    cum_dists = []
+    cum = 0.0
+    prev = None
+    for seg in segments:
+        for p in seg:
+            if prev is not None:
+                segs_3d.append([prev, p])
+                d = math.sqrt(
+                    (p[0] - prev[0]) ** 2
+                    + (p[1] - prev[1]) ** 2
+                    + (p[2] - prev[2]) ** 2
+                )
+                cum += d
+                cum_dists.append(cum)
+            prev = p
+    total = cum if cum > 0 else 1.0
+    if segs_3d:
+        from mpl_toolkits.mplot3d.art3d import Line3DCollection
+
+        lc3d = Line3DCollection(
+            segs_3d,
+            colors=plt.cm.turbo([d / total for d in cum_dists]),
+            linewidth=0.8,
+            alpha=1.0,
+        )
+        ax.add_collection3d(lc3d)
+
+    prev = None
+    for p in pts_list:
+        x, y, z, is_travel = p
+        if is_travel:
+            if prev is not None:
+                ax.plot(
+                    [prev[0], x],
+                    [prev[1], y],
+                    [prev[2], z],
+                    linestyle="--",
+                    linewidth=1.0,
+                    color="dimgray",
+                    alpha=0.8,
+                )
+            prev = (x, y, z)
+        else:
+            prev = (x, y, z)
+
+    _draw_3d_boundary(ax, boundary, islands, z_plane)
+    ax.set_title(title)
+    ax.set_xlabel("X")
+    ax.set_ylabel("Y")
+    ax.set_zlabel("Z")
+    ax.view_init(elev=30, azim=-45)
+
+    xl, xr = ax.get_xlim()
+    yl, yr = ax.get_ylim()
+    zl, zr = ax.get_zlim()
+    half = max(xr - xl, yr - yl, zr - zl) * 0.5
+    xm = (xl + xr) * 0.5
+    ym = (yl + yr) * 0.5
+    zm = (zl + zr) * 0.5
+    ax.set_xlim(xm - half, xm + half)
+    ax.set_ylim(ym - half, ym + half)
+    ax.set_zlim(zm - half, zm + half)
+
+
+# ── Centre-island pocket (circle seed + clearing) ────────────────────
+
+
+def generate_adaptive_clearing_centre_island():
+    """60×60 pocket with a 10×10 island on centre — circle seed + clearing."""
+    target_z = -5.0
+    boundary = _rect(0, 0, 60, 60)
+    islands = [_rect(5, 0, 10, 10)]
+
+    # Hardcoded seed circle (largest inscribed circle minus tool + margin)
+    cx, cy, r = -13.7, 13.7, 12.2
+    print(
+        f"  Seed circle: centre=({cx:.1f}, {cy:.1f})"
+        f"  radius={r:.1f}  diameter={2 * r:.1f}"
+    )
+    cleared_polys = [get_circle_polygon((cx, cy), r, 64)]
+
+    ca = ClearedArea(boundary=boundary, islands=islands, initial=cleared_polys)
+    clear_ops = adaptive_clearing(
+        cleared=ca,
+        pocket_boundary=boundary,
+        islands=islands,
+        radius=3.0,
+        advance=1.5,
+        cut_z=target_z,
+        safe_z=2.0,
+        area_tolerance=1.0,
+    )
+    remaining = sum(get_polygon_area(p) for p in ca.remaining())
+    combined_ops = clear_ops
+
+    fig = plt.figure(figsize=(14, 6))
+    ax3d = fig.add_subplot(1, 2, 1, projection="3d")
+    _plot_3d_toolpath(
+        combined_ops,
+        ax3d,
+        "Entry + Clearing Toolpath (3D)",
+        boundary=boundary,
+        islands=islands,
+        z_plane=target_z,
+    )
+    ax = fig.add_subplot(1, 2, 2)
+    ax.set_aspect("equal")
+    bx = [p[0] for p in boundary] + [boundary[0][0]]
+    by = [p[1] for p in boundary] + [boundary[0][1]]
+    ax.plot(bx, by, "k-", linewidth=1.5, label="Pocket boundary")
+    for isl in islands:
+        ix = [p[0] for p in isl] + [isl[0][0]]
+        iy = [p[1] for p in isl] + [isl[0][1]]
+        ax.fill(ix, iy, color="gray", alpha=0.4)
+        ax.plot(ix, iy, color="dimgray", linewidth=1.2, label="Island")
+    seed_area = 0.0
+    for poly in cleared_polys:
+        if len(poly) < 3:
+            continue
+        px = [p[0] for p in poly] + [poly[0][0]]
+        py = [p[1] for p in poly] + [poly[0][1]]
+        ax.fill(px, py, color="steelblue", alpha=0.3)
+        ax.plot(
+            px,
+            py,
+            color="steelblue",
+            linewidth=1.2,
+            linestyle="--",
+            label="Seed clearing",
+        )
+        seed_area += abs(get_polygon_area([(p[0], p[1]) for p in poly]))
+    _plot_2d_toolpath(combined_ops, ax)
+    for poly in ca.remaining():
+        if len(poly) < 3:
+            continue
+        a = get_polygon_area([(p[0], p[1]) for p in poly])
+        if abs(a) < 0.3:
+            continue
+        rx = [p[0] for p in poly] + [poly[0][0]]
+        ry = [p[1] for p in poly] + [poly[0][1]]
+        ax.fill(rx, ry, color="crimson", alpha=0.15)
+        ax.plot(
+            rx,
+            ry,
+            color="crimson",
+            linewidth=0.6,
+            alpha=0.5,
+            label="Remaining",
+        )
+    ax.set_title(
+        f"Seed = {seed_area:.0f} mm²  |  remaining = {remaining:.0f} mm²\n"
+        f"(circle seed — no entry strategy)",
+        fontsize=10,
+    )
+    ax.set_xlabel("X")
+    ax.set_ylabel("Y")
+    handles, labels = ax.get_legend_handles_labels()
+    seen = set()
+    unique = []
+    for h, lbl in zip(handles, labels):
+        if lbl not in seen:
+            unique.append((h, lbl))
+            seen.add(lbl)
+    ax.legend(*zip(*unique), loc="upper right", fontsize=8)
+    fig.tight_layout()
+    return fig
+
+
+# ── Narrow pocket 3D (circle seed + clearing) ────────────────────────
+
+
+def _narrow_shared():
+    """Run circle-seed + clearing for the 80×14 narrow pocket.
+
+    Returns ``(combined_ops, ca, boundary, target_z, cleared_polys)``.
+    """
+    target_z = -5.0
+    tool_radius = 3.0
+    boundary = _rect(0, 0, 80, 14)
+
+    # Hardcoded seed circle
+    cx, cy, r = -11.1, 0.0, 3.0
+    print(
+        f"  Seed circle: centre=({cx:.1f}, {cy:.1f})"
+        f"  radius={r:.1f}  diameter={2 * r:.1f}"
+    )
+    cleared_polys = [get_circle_polygon((cx, cy), r, 64)]
+
+    ca = ClearedArea(boundary=boundary, initial=cleared_polys)
+    clear_ops = adaptive_clearing(
+        cleared=ca,
+        pocket_boundary=boundary,
+        radius=tool_radius,
+        advance=1.5,
+        cut_z=target_z,
+        safe_z=2.0,
+        area_tolerance=1.0,
+    )
+    combined_ops = clear_ops
+    return combined_ops, ca, boundary, target_z, cleared_polys
+
+
+def generate_adaptive_clearing_narrow_3d():
+    """Narrow pocket — 3D toolpath view (circle seed + clearing)."""
+    combined_ops, ca, boundary, target_z, _ = _narrow_shared()
+    fig = plt.figure(figsize=(7, 5))
+    ax = fig.add_subplot(111, projection="3d")
+    _plot_3d_toolpath(
+        combined_ops,
+        ax,
+        "Narrow Pocket — Circle Seed + Clearing (3D)",
+        boundary=boundary,
+        z_plane=target_z,
+    )
+    fig.tight_layout()
+    _ = ca
+    return fig
+
+
+def generate_adaptive_clearing_narrow_2d():
+    """Narrow pocket — 2D top-down with seed and remaining overlay."""
+    combined_ops, ca, boundary, target_z, cleared_polys = _narrow_shared()
+    remaining = sum(get_polygon_area(p) for p in ca.remaining())
+    fig = plt.figure(figsize=(7, 5))
+    ax = fig.add_subplot(111)
+    ax.set_aspect("equal")
+    bx = [p[0] for p in boundary] + [boundary[0][0]]
+    by = [p[1] for p in boundary] + [boundary[0][1]]
+    ax.plot(bx, by, "k-", linewidth=1.5, label="Pocket boundary")
+    seed_area = 0.0
+    for poly in cleared_polys:
+        if len(poly) < 3:
+            continue
+        px = [p[0] for p in poly] + [poly[0][0]]
+        py = [p[1] for p in poly] + [poly[0][1]]
+        ax.fill(px, py, color="steelblue", alpha=0.2)
+        seed_area += abs(get_polygon_area([(p[0], p[1]) for p in poly]))
+    _plot_2d_toolpath(combined_ops, ax)
+    for poly in ca.remaining():
+        if len(poly) < 3:
+            continue
+        a = get_polygon_area([(p[0], p[1]) for p in poly])
+        if abs(a) < 0.3:
+            continue
+        rx = [p[0] for p in poly] + [poly[0][0]]
+        ry = [p[1] for p in poly] + [poly[0][1]]
+        ax.fill(rx, ry, color="crimson", alpha=0.15)
+        ax.plot(
+            rx,
+            ry,
+            color="crimson",
+            linewidth=0.6,
+            alpha=0.5,
+            label="Remaining",
+        )
+    ax.set_title(
+        f"Seed = {seed_area:.0f} mm²  |  remaining = {remaining:.0f} mm²",
+        fontsize=10,
+    )
+    ax.set_xlabel("X")
+    ax.set_ylabel("Y")
+    handles, labels = ax.get_legend_handles_labels()
+    seen = set()
+    unique = []
+    for h, lbl in zip(handles, labels):
+        if lbl not in seen:
+            unique.append((h, lbl))
+            seen.add(lbl)
+    ax.legend(*zip(*unique), loc="upper right", fontsize=8)
+    fig.tight_layout()
+    return fig
+
+
 __images__ = [
     {
         "heading": "adaptive_clearing",
@@ -376,5 +772,29 @@ __images__ = [
             " lies to the right of the wall."
         ),
         "function": generate_target_area_geometry,
+    },
+    {
+        "heading": "adaptive_clearing",
+        "caption": (
+            "Circle-seed clearing in a 60×60 pocket with a 10×10 island at"
+            " the centre — 2D top-down shows seed clearing (blue), toolpath"
+            " gradient, and remaining bands (red)."
+        ),
+        "function": generate_adaptive_clearing_centre_island,
+    },
+    {
+        "heading": "adaptive_clearing",
+        "caption": (
+            "Narrow pocket (80×14) 3D view of circle-seed adaptive clearing."
+        ),
+        "function": generate_adaptive_clearing_narrow_3d,
+    },
+    {
+        "heading": "adaptive_clearing",
+        "caption": (
+            "Narrow pocket (80×14) 2D top-down view showing seed clearing,"
+            " toolpath gradient, and remaining uncut bands."
+        ),
+        "function": generate_adaptive_clearing_narrow_2d,
     },
 ]

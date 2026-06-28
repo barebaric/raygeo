@@ -58,6 +58,20 @@ and prepending the entry Ops to the result.
 | `profile`              | `bool = False`                                 | Print a profiling report to stdout (default False).                                                                               |
 | _Returns_              | `ops.Ops`                                      | Ops with cutting commands (entry not included).                                                                                   |
 
+![Circle-seed clearing in a 60×60 pocket with a 10×10 island at the centre — 2D top-down shows seed clearing (blue), toolpath gradient, and remaining bands (red).](images/ops-assembly-adaptive-adaptive-clearing-centre-island.png)
+
+*Circle-seed clearing in a 60×60 pocket with a 10×10 island at the centre — 2D top-down shows seed
+clearing (blue), toolpath gradient, and remaining bands (red).*
+
+![Narrow pocket (80×14) 3D view of circle-seed adaptive clearing.](images/ops-assembly-adaptive-adaptive-clearing-narrow-3d.png)
+
+*Narrow pocket (80×14) 3D view of circle-seed adaptive clearing.*
+
+![Narrow pocket (80×14) 2D top-down view showing seed clearing, toolpath gradient, and remaining uncut bands.](images/ops-assembly-adaptive-adaptive-clearing-narrow-2d.png)
+
+*Narrow pocket (80×14) 2D top-down view showing seed clearing, toolpath gradient, and remaining
+uncut bands.*
+
 ![Forward-stepping constant-engagement clearing cuts (coloured by progress via the full-spectrum turbo gradient) from a central seed clearing (green), with MAT-routed travel links (red dashed) between segments.](images/ops-assembly-adaptive-adaptive-clearing-demo.png)
 
 *Forward-stepping constant-engagement clearing cuts (coloured by progress via the full-spectrum
