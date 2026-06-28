@@ -9,6 +9,7 @@ import pytest
 from raygeo.geo.shape.polyline import (
     get_polyline_bounds,
     get_polyline_closest_point,
+    split_polyline_at_v_junctions,
     trim_polyline_angular_ends,
     trim_polyline_at,
 )
@@ -333,3 +334,73 @@ class TestResamplePolyline:
         points = [(0.0, 0.0), (5.0, 0.0), (5.0, 5.0)]
         result = resample_polyline_2d(points, 2.0)
         assert len(result) > 3
+
+
+# --- split_polyline_at_v_junctions ---
+
+
+class TestSplitPolylineAtVJunctions:
+    def test_no_split_on_smooth_arc(self):
+        pts = [
+            (
+                50.0 + 30.0 * math.cos(math.pi / 2 * i / 19),
+                50.0 + 30.0 * math.sin(math.pi / 2 * i / 19),
+            )
+            for i in range(20)
+        ]
+        result = split_polyline_at_v_junctions(pts, 0.436)
+        assert len(result) == 1
+        assert len(result[0]) == len(pts)
+
+    def test_no_split_on_line(self):
+        pts = [(0.0, 0.0), (10.0, 0.0), (20.0, 0.0), (30.0, 0.0)]
+        result = split_polyline_at_v_junctions(pts, 0.436)
+        assert len(result) == 1
+
+    def test_split_at_sharp_v(self):
+        pts = [
+            (0.0, 0.0),
+            (5.0, 0.0),
+            (10.0, 0.0),
+            (10.0, 5.0),
+            (10.0, 10.0),
+        ]
+        result = split_polyline_at_v_junctions(pts, 0.1)
+        assert len(result) >= 2
+
+    def test_small_input(self):
+        pts = [(0.0, 0.0), (1.0, 0.0), (1.0, 1.0)]
+        result = split_polyline_at_v_junctions(pts, 0.1)
+        assert len(result) == 1
+        assert len(result[0]) == 3
+
+    def test_empty_input(self):
+        result = split_polyline_at_v_junctions([], 0.1)
+        assert len(result) == 1
+        assert len(result[0]) == 0
+
+    def test_high_threshold_no_split(self):
+        pts = [
+            (0.0, 0.0),
+            (5.0, 0.0),
+            (10.0, 0.0),
+            (10.0, 5.0),
+            (10.0, 10.0),
+        ]
+        result = split_polyline_at_v_junctions(pts, 100.0)
+        assert len(result) == 1
+
+    def test_multiple_splits(self):
+        pts = [
+            (0.0, 0.0),
+            (5.0, 0.0),
+            (10.0, 0.0),
+            (10.0, 5.0),
+            (10.0, 10.0),
+            (5.0, 10.0),
+            (0.0, 10.0),
+            (0.0, 5.0),
+            (0.0, 0.0),
+        ]
+        result = split_polyline_at_v_junctions(pts, 0.1)
+        assert len(result) >= 3
