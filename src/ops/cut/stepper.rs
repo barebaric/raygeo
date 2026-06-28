@@ -1,21 +1,11 @@
 use prof_macros::prof;
 
+use crate::dbg_log;
 use crate::geo::algo::engagement::Engagement;
 use crate::geo::algo::rootfind::{self, RootStatus};
 use crate::ops::cut::interp::{point_in_valid_area, rotate, Interpolation};
 use crate::ops::cut::ClearedArea;
 use crate::types::{Point, Polygon};
-
-/// Set to `true` to enable verbose per-step debug logging.
-const ADAPTIVE_DEBUG: bool = false;
-
-macro_rules! dbg_log {
-    ($($arg:tt)*) => {
-        if ADAPTIVE_DEBUG {
-            eprintln!($($arg)*);
-        }
-    };
-}
 
 /// Which engagement metric the solver targets.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]

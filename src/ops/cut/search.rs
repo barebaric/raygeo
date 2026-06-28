@@ -1,5 +1,6 @@
 use prof_macros::prof;
 
+use crate::dbg_log;
 use crate::geo::shape::polygon::{
     get_polygon_heading_at, get_polygon_signed_area,
     get_polygons_closest_point, get_polygons_group_intersection,
@@ -8,17 +9,6 @@ use crate::geo::shape::polygon::{
 use crate::ops::cut::ClearedArea;
 use crate::ops::cut::ToolPose;
 use crate::types::Point;
-
-/// Set to `true` to enable verbose search debug logging.
-const SEARCH_DEBUG: bool = false;
-
-macro_rules! dbg_log {
-    ($($arg:tt)*) => {
-        if SEARCH_DEBUG {
-            eprintln!($($arg)*);
-        }
-    };
-}
 
 /// Compute the inward offset position from a frontier vertex.
 ///

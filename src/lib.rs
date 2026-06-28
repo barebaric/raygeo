@@ -67,6 +67,7 @@ pub mod constants;
 pub mod error;
 pub mod geo;
 pub mod image;
+pub(crate) mod log;
 pub mod mesh;
 pub mod ops;
 pub mod prof;
