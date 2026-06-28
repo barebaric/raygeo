@@ -261,6 +261,11 @@ fn walk_envelope_boundary(
 ) -> Option<ToolPose> {
     let accept = |a: f64| a >= min_cut_area && a <= max_cut_area;
 
+    // Score: prefer the *nearest* candidate with the *lowest* engagement
+    // (just above `min_cut_area`).  Maximising engagement picks corners
+    // with large uncleared quadrants — far from the stall point and
+    // over-engaged — whereas a LostEngagement resume only needs *some*
+    // material to bite into, ideally close to where the tool stalled.
     let mut best: Option<(f64, ToolPose)> = None;
     for poly in envelope {
         let n = poly.len();
@@ -307,13 +312,18 @@ fn walk_envelope_boundary(
                     if accept(area) {
                         let dist2 = (pt.x - start.pos.x).powi(2)
                             + (pt.y - start.pos.y).powi(2);
-                        let score = area - dist2 * 0.001;
+                        // Lower score is better: a large engagement
+                        // penalty keeps the tool out of over-engaged
+                        // corners, and the distance penalty keeps the
+                        // resume near the stall point.
+                        let score =
+                            area * area + dist2 * 0.001;
                         let probe_heading = if *sign > 0.0 {
                             heading
                         } else {
                             heading + std::f64::consts::PI
                         };
-                        if best.is_none_or(|(bs, _)| score > bs) {
+                        if best.is_none_or(|(bs, _)| score < bs) {
                             best = Some((
                                 score,
                                 ToolPose {
