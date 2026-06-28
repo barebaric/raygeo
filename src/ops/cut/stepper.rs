@@ -319,18 +319,8 @@ pub fn step_adaptive(
             }
             _ if !found_area => {
                 dbg_log!("  iter {}  LOST  (no area found)", iter);
-                return StepResult {
-                    next: pos,
-                    heading,
-                    engagement: Engagement {
-                        angle: 0.0,
-                        area: 0.0,
-                        chord_depth: 0.0,
-                    },
-                    iters,
-                    iteration_angle: 0.0,
-                    status: StepStatus::LostEngagement,
-                };
+                exit_reason = "lost_engagement";
+                break;
             }
             _ => (interp.interpolate(), false),
         };
@@ -404,11 +394,86 @@ pub fn step_adaptive(
         }
     }
 
-    let status = if best_area < step_length * target_area_pd * 0.01 {
+    // ── Lookahead / persistence ───────────────────────────────────
+    //
+    // The solver is single-step: it picks the angle whose *immediate*
+    // cut_area is closest to target.  When the nearest uncleared
+    // material is more than one step_length away (e.g. the tool is at
+    // the top of a sweep and the remaining band is at the bottom wall,
+    // 2+ steps below), the immediate cut_area toward the material is
+    // zero.  The solver then either declares LostEngagement or
+    // reverses toward higher-engagement interior material — abandoning
+    // the sweep before it reaches the envelope edge.
+    //
+    // The lookahead probes one step beyond the candidate.  If
+    // continuing in the heading direction finds engagement within 2
+    // steps, the tool persists in that direction instead of reversing.
+    // This keeps sweeps going to the envelope edge, preventing the
+    // progressive shortening that leaves wall-band chunks uncleared.
+    let floor = step_length * target_area_pd * 0.01;
+    let mut status = if best_area < floor {
         StepStatus::LostEngagement
     } else {
         StepStatus::Ok
     };
+
+    // Lookahead probes: for a spread of deflection angles relative to
+    // the heading, compute the 2-step cut_area (candidate →
+    // candidate+dir*step).  If the solver reversed or lost engagement
+    // but a forward 2-step probe finds material, override to continue
+    // toward it.
+    let reversed = best_angle.abs() > std::f64::consts::FRAC_PI_2;
+    if status == StepStatus::LostEngagement || reversed {
+        let lookahead_angles = [
+            0.0_f64,
+            max_deflection * 0.5,
+            -max_deflection * 0.5,
+            max_deflection,
+            -max_deflection,
+        ];
+        let mut best_la_angle = 0.0_f64;
+        let mut best_la_dir = base_dir;
+        let mut best_la_pos = pos;
+        let mut best_la_area: f64 = 0.0;
+        for la_angle in &lookahead_angles {
+            let la_angle = interp.clamp_angle(*la_angle, max_deflection);
+            let la_dir = rotate(base_dir, la_angle);
+            let la_cand = pos + la_dir * step_length;
+            if !point_in_valid_area(la_cand, valid_area) {
+                continue;
+            }
+            let la_next = la_cand + la_dir * step_length;
+            if !point_in_valid_area(la_next, valid_area) {
+                continue;
+            }
+            let la_area = cleared.cut_area(la_cand, la_next, radius);
+            if la_area > best_la_area {
+                best_la_area = la_area;
+                best_la_angle = la_angle;
+                best_la_dir = la_dir;
+                best_la_pos = la_cand;
+            }
+        }
+        if best_la_area > floor {
+            dbg_log!(
+                "  LOOKAHEAD  recovered: angle={:+.4}  \
+                 la_area={:.4}  → ({:.3},{:.3})  reason={}",
+                best_la_angle,
+                best_la_area,
+                best_la_pos.x,
+                best_la_pos.y,
+                if status == StepStatus::LostEngagement {
+                    "lost"
+                } else {
+                    "reversed"
+                },
+            );
+            best_angle = best_la_angle;
+            best_dir = best_la_dir;
+            best_pos = best_la_pos;
+            status = StepStatus::Ok;
+        }
+    }
 
     dbg_log!(
         "  RESULT  best_angle={:+.4}  last_angle={:+.4}  iters={}  \

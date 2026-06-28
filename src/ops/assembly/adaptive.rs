@@ -9,6 +9,8 @@
 //! The caller is responsible for pre-populating the `ClearedArea` with
 //! entry polygons (e.g. via `adaptive_entry`).
 
+use crate::dbg_log;
+use crate::geo::algo::medial_axis::MedialAxis;
 use crate::geo::algo::offset::compute_inset_region;
 use crate::geo::shape::arc::normalize_angle_signed;
 use crate::geo::shape::polygon::get_polygon_area;
@@ -24,16 +26,11 @@ use crate::prof::prof_report;
 use crate::types::{Point, Polygon};
 use prof_macros::prof;
 
-/// Set to `true` to enable verbose adaptive clearing debug logging.
-const ADAPTIVE_DEBUG: bool = false;
+use std::path::PathBuf;
 
-macro_rules! dbg_log {
-    ($($arg:tt)*) => {
-        if ADAPTIVE_DEBUG {
-            eprintln!($($arg)*);
-        }
-    };
-}
+use super::trace::{write_toolpath, RecordBuf, TraceKind};
+#[cfg(debug_assertions)]
+use crate::trace::Tracer;
 
 // ── Named constants ────────────────────────────────────────────────
 
@@ -80,6 +77,9 @@ pub struct AdaptiveClearingOptions {
     /// of slightly stale engagement queries.  Default 20 is a good
     /// balance; reduce to 1 for best path quality.
     pub expansion_batch_size: usize,
+    /// When set, write per-step trace records to this file for the
+    /// Python inspector.
+    pub trace_path: Option<PathBuf>,
 }
 
 impl Default for AdaptiveClearingOptions {
@@ -98,6 +98,7 @@ impl Default for AdaptiveClearingOptions {
             start_pos: None,
             start_heading: None,
             expansion_batch_size: 20,
+            trace_path: None,
         }
     }
 }
@@ -252,6 +253,40 @@ pub fn target_area_per_distance(
 
 // ── Resume helper ────────────────────────────────────────────────────
 
+/// Emit a safe resume travel from `from` to `to`.
+///
+/// When a Medial Axis is available, route the travel through cleared
+/// territory by walking the MAT tree between the two endpoints' nearest
+/// cleared nodes.  This produces a multi-waypoint rapid path that goes
+/// *around* obstacles (islands, uncleared stock) instead of a single
+/// straight-line `move_to` that could cross them.  When no MAT is
+/// available (or no cleared path exists), fall back to a single
+/// `move_to` — preserving the previous behaviour.
+fn emit_resume_travel(
+    ops: &mut Ops,
+    cleared: &ClearedArea,
+    mat: Option<&MedialAxis>,
+    from: Point,
+    to: Point,
+    opts: &AdaptiveClearingOptions,
+) {
+    let z = opts.cut_z + 0.5;
+    if let Some(axis) = mat {
+        let fragments = cleared.fragments();
+        if !fragments.is_empty() {
+            if let Some(path) = axis.path_between_cleared(from, to, fragments) {
+                if path.len() >= 2 {
+                    for wp in &path {
+                        ops.move_to(wp.x, wp.y, z, None);
+                    }
+                    return;
+                }
+            }
+        }
+    }
+    ops.move_to(to.x, to.y, z, None);
+}
+
 /// Try to recover after the tool stalls or is detected as stuck.
 ///
 /// 1. Backward wall-hugging resume via [`search_frontier_engagement`].
@@ -271,11 +306,15 @@ fn try_resume(
     _max_def: f64,
     _target_eng: f64,
     min_cut_area: f64,
+    mat: Option<&MedialAxis>,
+    last_resume_area: f64,
+    _segment_start: Point,
 ) -> bool {
     let max_cut_area = opts.step_length * target_area_pd * 1.5;
     dbg_log!(
         "RESUME  from=({:.3},{:.3})  heading={:.4}  R={:.1}  \
-         advance={:.3}  step_len={:.3}  max_cut_area={:.4}",
+         advance={:.3}  step_len={:.3}  max_cut_area={:.4}  \
+         last_area={:.3}  cur_area={:.3}",
         tool.pos.x,
         tool.pos.y,
         tool.heading,
@@ -283,36 +322,103 @@ fn try_resume(
         opts.advance,
         opts.step_length,
         max_cut_area,
+        last_resume_area,
+        cleared.total_area(),
     );
-    if let Some(rp) = search_frontier_engagement(
-        cleared,
-        ToolPose {
-            pos: tool.pos,
-            heading: tool.heading,
-        },
-        opts.radius,
-        opts.step_length,
-        opts.advance,
-        min_cut_area,
-        max_cut_area,
-    ) {
+
+    // ── Primary: frontier engagement search ──────────────────────
+    // Skip the frontier search when the previous resume produced no
+    // cleared-area growth (the tool stalled again immediately).  This
+    // breaks the degenerate bounce between nearby frontier vertices
+    // against an island wall: instead of re-trying the same local
+    // frontier, fall straight through to the MAT walk that routes
+    // around the island to fresh material.
+    let area_grew = cleared.total_area() > last_resume_area + 1e-9;
+    if area_grew {
+        if let Some(rp) = search_frontier_engagement(
+            cleared,
+            ToolPose {
+                pos: tool.pos,
+                heading: tool.heading,
+            },
+            opts.radius,
+            opts.step_length,
+            opts.advance,
+            min_cut_area,
+            max_cut_area,
+        ) {
+            let moved = (rp.pos.x - tool.pos.x).powi(2)
+                + (rp.pos.y - tool.pos.y).powi(2);
+            if moved > (opts.step_length * 0.25).powi(2) {
+                dbg_log!(
+                    "  RESUME  path=search_frontier  → ({:.3},{:.3})  \
+                     heading={:.4}",
+                    rp.pos.x,
+                    rp.pos.y,
+                    rp.heading,
+                );
+                // The frontier search returns only the destination pose;
+                // emit a *safe* travel that routes through cleared
+                // territory (via the MAT when available) rather than a
+                // straight-line jump that could cross an island.
+                emit_resume_travel(ops, cleared, mat, tool.pos, rp.pos, opts);
+                tool.pos = rp.pos;
+                tool.heading = rp.heading;
+                tool.reset_gyro();
+                return true;
+            }
+            dbg_log!(
+                "  RESUME  frontier_search returned no-progress \
+                 ({:.3},{:.3}) ≈ current; skipping to fallback",
+                rp.pos.x,
+                rp.pos.y,
+            );
+        }
+    } else {
         dbg_log!(
-            "  RESUME  path=search_frontier  → ({:.3},{:.3})  heading={:.4}",
-            rp.pos.x,
-            rp.pos.y,
-            rp.heading,
+            "  RESUME  skipping frontier_search (no area growth since \
+             last resume)"
         );
-        ops.move_to(rp.pos.x, rp.pos.y, opts.cut_z, None);
-        tool.pos = rp.pos;
-        tool.heading = rp.heading;
-        tool.reset_gyro();
-        return true;
+    }
+
+    // ── Fallback: Medial Axis walk ─────────────────────────────────
+    // Route from the stuck tool position along the medial axis of the
+    // pocket (through cleared territory) to the nearest uncleared MAT
+    // node, then resume cutting there.  The full MAT path is emitted as
+    // travel moves so the tool traces the route through already-cut
+    // material rather than teleporting across uncleared stock.
+    if let Some(axis) = mat {
+        if let Some((path, heading)) =
+            mat_resume_target(axis, cleared, tool.pos, valid_tool_area)
+        {
+            dbg_log!(
+                "  RESUME  path=mat_walk  {} waypoints  → ({:.3},{:.3})  \
+                 heading={:.4}",
+                path.len(),
+                path[path.len() - 1].x,
+                path[path.len() - 1].y,
+                heading,
+            );
+            // Travel to the MAT target through cleared territory.
+            // `mat_resume_target` already returned a path restricted to
+            // cleared MAT nodes, so emit every waypoint so the tool
+            // follows the route around obstacles (e.g. islands) instead
+            // of a straight-line jump that would cross uncleared stock.
+            let dest = path[path.len() - 1];
+            for wp in &path {
+                ops.move_to(wp.x, wp.y, opts.cut_z + 0.5, None);
+            }
+            tool.pos = dest;
+            tool.heading = heading;
+            tool.reset_gyro();
+            return true;
+        }
     }
 
     dbg_log!("  RESUME  path=centroid_fallback");
 
-    // Fallback: jump to the centroid of the nearest remaining
-    // (uncut) region.
+    // ── Last-resort: nearest valid-area centroid of a remaining region
+    // (legacy behaviour, retained for when MAT is unavailable).
     let remaining = cleared.remaining();
     let mut best_centroid: Option<(f64, Point)> = None;
     for poly in &remaining {
@@ -335,7 +441,7 @@ fn try_resume(
     }
 
     if let Some((_, centroid)) = best_centroid {
-        ops.move_to(centroid.x, centroid.y, opts.cut_z, None);
+        emit_resume_travel(ops, cleared, mat, tool.pos, centroid, opts);
         tool.pos = centroid;
         tool.heading = 0.0;
         tool.reset_gyro();
@@ -343,6 +449,111 @@ fn try_resume(
     }
 
     false
+}
+
+/// Pick a resume target by walking the Medial Axis Transform of the
+/// pocket from the tool's current position to the nearest uncleared MAT
+/// node.
+///
+/// The MAT is a tree of maximally-inscribed-circle centres.  Each node
+/// carries a clearance radius.  A node is "cleared" when it lies inside
+/// one of the cleared fragments; "uncleared" nodes mark pockets of fresh
+/// material still to be cut.
+///
+/// The strategy:
+///  1. Build a cleared/uncleared mask over the MAT nodes.
+///  2. Find the nearest *uncleared* node to the tool whose clearance
+///     circle fits inside the valid tool-centre region (so the tool can
+///     actually sit there).
+///  3. Route from the tool's nearest cleared node to that target along
+///     the MAT tree, staying within cleared nodes (the tool travels
+///     through already-cut material at cut depth).
+///  4. Return the full travel path (MAT nodes through cleared territory,
+///     plus the final step into the uncleared target) and a heading that
+///     faces fresh material so the solver immediately engages.
+fn mat_resume_target(
+    axis: &MedialAxis,
+    cleared: &ClearedArea,
+    tool_pos: Point,
+    valid_tool_area: &[Polygon],
+) -> Option<(Vec<Point>, f64)> {
+    let fragments = cleared.fragments();
+    if fragments.is_empty() {
+        return None;
+    }
+    let is_cleared = axis.build_cleared_mask(fragments);
+
+    // Nearest MAT node to the tool (the routing start).
+    let from_idx = axis.nearest_node(tool_pos)?;
+    // If the tool is already on an uncleared node there is nothing to
+    // route to — engagement should have been available.
+    if !is_cleared[from_idx] {
+        return None;
+    }
+
+    // Search for the nearest uncleared node (BFS over the MAT tree) that
+    // lies inside the valid tool-centre region.  BFS over the tree from
+    // `from_idx` visits nodes in order of tree-distance, which is a good
+    // proxy for travel distance through cleared territory.
+    let target_idx = nearest_uncleared_node(axis, from_idx, &is_cleared)
+        .filter(|&idx| {
+            point_in_valid_area(axis.nodes[idx].point, valid_tool_area)
+        })?;
+
+    // Route through cleared nodes only.  The path ends at the cleared
+    // ancestor of the (uncleared) target — the last cleared position
+    // adjacent to fresh material.
+    let mut path =
+        axis.path_between_indices_cleared(from_idx, target_idx, &is_cleared)?;
+    if path.len() < 2 {
+        return None;
+    }
+    let last_cleared = path[path.len() - 1];
+    // Append the uncleared target node as the final waypoint — the tool
+    // travels the cleared path, then takes one final step into fresh
+    // material.  Heading faces from the last cleared node toward the
+    // target so the solver immediately engages.
+    let target_pt = axis.nodes[target_idx].point;
+    path.push(target_pt);
+    let heading =
+        (target_pt.y - last_cleared.y).atan2(target_pt.x - last_cleared.x);
+    Some((path, heading))
+}
+
+/// BFS over the Medial Axis tree from `start`, returning the index of the
+/// nearest (fewest hops) node that is **not** cleared.
+fn nearest_uncleared_node(
+    axis: &MedialAxis,
+    start: usize,
+    is_cleared: &[bool],
+) -> Option<usize> {
+    use std::collections::VecDeque;
+    let n = axis.nodes.len();
+    if n == 0 {
+        return None;
+    }
+    let mut visited = vec![false; n];
+    let mut queue: VecDeque<usize> = VecDeque::new();
+    visited[start] = true;
+    queue.push_back(start);
+    // Build adjacency from the edge list.
+    let mut adj: Vec<Vec<usize>> = vec![Vec::new(); n];
+    for &(a, b) in &axis.edges {
+        adj[a].push(b);
+        adj[b].push(a);
+    }
+    while let Some(idx) = queue.pop_front() {
+        if idx != start && !is_cleared[idx] {
+            return Some(idx);
+        }
+        for &nb in &adj[idx] {
+            if !visited[nb] {
+                visited[nb] = true;
+                queue.push_back(nb);
+            }
+        }
+    }
+    None
 }
 
 // ── Main entry point ─────────────────────────────────────────────────
@@ -367,6 +578,18 @@ pub fn adaptive_clearing(
     let target_area_pd =
         target_area_per_distance(opts.radius, opts.advance, opts.step_length);
 
+    // Medial Axis Transform of the pocket, used by the resume fallback
+    // to route through cleared territory to the nearest uncleared region
+    // (e.g. around an island).  Computed once; failures fall back to the
+    // legacy centroid jump.
+    let mat = MedialAxis::compute(
+        &opts.pocket_boundary,
+        &opts.islands,
+        opts.radius * 0.5,
+        opts.radius.max(2.0),
+    )
+    .ok();
+
     // ── 2. Initialise the tool ───────────────────────────────────
     let centre = cleared
         .fragments()
@@ -389,14 +612,76 @@ pub fn adaptive_clearing(
 
     let mut tool = Tool::new(start_pos, start_heading, opts.radius);
 
+    dbg_log!(
+        "INIT  frag_count={}  frag_total={:.3}  valid_total={:.3}  \
+         start=({:.3},{:.3})  heading={:.4}  target_apd={:.4}",
+        cleared.len(),
+        cleared.total_area(),
+        valid_total,
+        start_pos.x,
+        start_pos.y,
+        start_heading,
+        target_area_pd,
+    );
+
     // ── 3. Continuous spiral: step → expand → repeat ─────────────
 
     let mut ops = Ops::new();
     ops.apply_state(cut_state);
     ops.move_to(tool.pos.x, tool.pos.y, opts.cut_z, None);
 
+    // Counter for moving commands (move_to + line_to) only — matches
+    // the toolpath file written by the tracer.
+    let mut tp_len: u32 = 1; // the initial move_to above
+
+    // Helper: recount moving commands from ops (used after try_resume
+    // which may emit multiple move_to calls).
+    fn moving_count(ops: &Ops) -> u32 {
+        (0..ops.len())
+            .filter(|&i| ops.is_travel(i) || ops.is_cutting(i))
+            .count() as u32
+    }
+
+    #[cfg(debug_assertions)]
+    let mut tracer: Option<Tracer> = match &opts.trace_path {
+        Some(path) => match Tracer::open(path) {
+            Ok(t) => Some(t),
+            Err(e) => {
+                eprintln!("trace: failed to open {:?}: {}", path, e);
+                None
+            }
+        },
+        None => None,
+    };
+    let mut trace_step_idx: u32 = 1;
+    #[cfg(debug_assertions)]
+    {
+        if let Some(ref mut tr) = tracer {
+            let mut buf = RecordBuf::default();
+            buf.status(StepStatus::Ok);
+            buf.step_idx(0);
+            buf.pos(tool.pos);
+            buf.heading(tool.heading);
+            buf.smoothed_heading(tool.smoothed_heading());
+            buf.predicted_angle(tool.predicted_angle());
+            buf.total_area(cleared.total_area());
+            buf.remaining_area(
+                cleared.remaining().iter().map(get_polygon_area).sum(),
+            );
+            buf.prev_pos(tool.pos);
+            buf.ops_len(tp_len);
+            tr.write(TraceKind::Init as u8, buf.pack());
+        }
+    }
+
     let mut prev_pos = tool.pos;
     let mut steps_since_batch: usize = 0;
+
+    // Track the start of the current cutting segment.  Used by the
+    // D-shape resume: on stall, travel back to segment_start, then
+    // search for reengagement in the direction normal to the segment.
+    let mut segment_start = tool.pos;
+    let mut in_segment = false;
 
     // Stuck detection: every STUCK_CHECK_INTERVAL steps, verify the
     // cleared area has grown by at least the expected amount.  If not,
@@ -406,13 +691,19 @@ pub fn adaptive_clearing(
     let mut step_count: usize = 0;
     let mut last_check_area: f64 = cleared.total_area();
     let mut resume_count: usize = 0;
+    // Cleared area recorded at the last resume; used to detect a
+    // stall-bounce where the frontier search returns a new (but
+    // immediately-stalling) position without any actual cutting.
+    let mut last_resume_area: f64 = -1.0;
 
     let target_eng =
         2.0 * std::f64::consts::PI - 2.0 * (opts.advance / opts.radius).acos();
     let min_cut_area =
         opts.step_length * target_area_pd * ENGAGEMENT_FLOOR_FRAC;
 
+    let mut iter: usize = 0;
     for _ in 0..MAX_TOTAL_STEPS {
+        iter += 1;
         // Convergence: check that remaining uncut area is below
         // tolerance.  Use an inexpensive fragment-sum check first
         // and only pay for the full union+diff when it looks close.
@@ -422,6 +713,34 @@ pub fn adaptive_clearing(
                 cleared.remaining().iter().map(get_polygon_area).sum();
             rem < opts.area_tolerance
         } {
+            dbg_log!(
+                "EXIT  reason=converged  step_count={}  resume_count={}  \
+                 iter={}  frag_total={:.3}  valid_total={:.3}",
+                step_count,
+                resume_count,
+                iter,
+                frag_total,
+                valid_total,
+            );
+            #[cfg(debug_assertions)]
+            {
+                if let Some(ref mut tr) = tracer {
+                    let mut buf = RecordBuf::default();
+                    buf.status(StepStatus::Ok);
+                    buf.step_idx(trace_step_idx);
+                    buf.pos(tool.pos);
+                    buf.heading(tool.heading);
+                    buf.smoothed_heading(tool.smoothed_heading());
+                    buf.predicted_angle(tool.predicted_angle());
+                    buf.total_area(cleared.total_area());
+                    buf.remaining_area(
+                        cleared.remaining().iter().map(get_polygon_area).sum(),
+                    );
+                    buf.prev_pos(prev_pos);
+                    buf.ops_len(tp_len);
+                    tr.write(TraceKind::Exit as u8, buf.pack());
+                }
+            }
             break;
         }
 
@@ -473,6 +792,40 @@ pub fn adaptive_clearing(
                     }
                     resume_count += 1;
                     if resume_count > MAX_RESUMES {
+                        dbg_log!(
+                            "EXIT  reason=max_resumes(stuck)  step_count={}  \
+                             resume_count={}  growth={:.3}  expected={:.3}  \
+                             frag_total={:.3}  valid_total={:.3}",
+                            step_count,
+                            resume_count,
+                            growth,
+                            expected,
+                            cleared.total_area(),
+                            valid_total,
+                        );
+                        #[cfg(debug_assertions)]
+                        {
+                            if let Some(ref mut tr) = tracer {
+                                let mut buf = RecordBuf::default();
+                                buf.status(StepStatus::Ok);
+                                buf.step_idx(trace_step_idx);
+                                buf.pos(tool.pos);
+                                buf.heading(tool.heading);
+                                buf.smoothed_heading(tool.smoothed_heading());
+                                buf.predicted_angle(tool.predicted_angle());
+                                buf.total_area(cleared.total_area());
+                                buf.remaining_area(
+                                    cleared
+                                        .remaining()
+                                        .iter()
+                                        .map(get_polygon_area)
+                                        .sum(),
+                                );
+                                buf.prev_pos(prev_pos);
+                                buf.ops_len(tp_len);
+                                tr.write(TraceKind::Exit as u8, buf.pack());
+                            }
+                        }
                         break;
                     }
                     if try_resume(
@@ -485,11 +838,78 @@ pub fn adaptive_clearing(
                         max_def,
                         target_eng,
                         min_cut_area,
+                        mat.as_ref(),
+                        last_resume_area,
+                        segment_start,
                     ) {
+                        tp_len = moving_count(&ops);
+                        #[cfg(debug_assertions)]
+                        {
+                            if let Some(ref mut tr) = tracer {
+                                let mut buf = RecordBuf::default();
+                                buf.status(StepStatus::Ok);
+                                buf.step_idx(trace_step_idx);
+                                buf.pos(tool.pos);
+                                buf.heading(tool.heading);
+                                buf.smoothed_heading(tool.smoothed_heading());
+                                buf.predicted_angle(tool.predicted_angle());
+                                buf.total_area(cleared.total_area());
+                                buf.remaining_area(
+                                    cleared
+                                        .remaining()
+                                        .iter()
+                                        .map(get_polygon_area)
+                                        .sum(),
+                                );
+                                buf.prev_pos(prev_pos);
+                                buf.ops_len(tp_len);
+                                tr.write(
+                                    TraceKind::ResumeStuck as u8,
+                                    buf.pack(),
+                                );
+                            }
+                        }
+                        trace_step_idx += 1;
                         prev_pos = tool.pos;
                         last_check_area = cleared.total_area();
+                        last_resume_area = cleared.total_area();
                         step_count = 0;
+                        in_segment = false;
                         continue;
+                    }
+                    dbg_log!(
+                        "EXIT  reason=resume_failed(stuck)  step_count={}  \
+                         resume_count={}  growth={:.3}  expected={:.3}  \
+                         frag_total={:.3}  valid_total={:.3}",
+                        step_count,
+                        resume_count,
+                        growth,
+                        expected,
+                        cleared.total_area(),
+                        valid_total,
+                    );
+                    #[cfg(debug_assertions)]
+                    {
+                        if let Some(ref mut tr) = tracer {
+                            let mut buf = RecordBuf::default();
+                            buf.status(StepStatus::Ok);
+                            buf.step_idx(trace_step_idx);
+                            buf.pos(tool.pos);
+                            buf.heading(tool.heading);
+                            buf.smoothed_heading(tool.smoothed_heading());
+                            buf.predicted_angle(tool.predicted_angle());
+                            buf.total_area(cleared.total_area());
+                            buf.remaining_area(
+                                cleared
+                                    .remaining()
+                                    .iter()
+                                    .map(get_polygon_area)
+                                    .sum(),
+                            );
+                            buf.prev_pos(prev_pos);
+                            buf.ops_len(tp_len);
+                            tr.write(TraceKind::Exit as u8, buf.pack());
+                        }
                     }
                     break;
                 }
@@ -504,7 +924,37 @@ pub fn adaptive_clearing(
 
             resume_count += 1;
             if resume_count > MAX_RESUMES {
-                dbg_log!("max resumes reached");
+                dbg_log!(
+                    "EXIT  reason=max_resumes(stall)  step_count={}  \
+                     resume_count={}  frag_total={:.3}  valid_total={:.3}",
+                    step_count,
+                    resume_count,
+                    cleared.total_area(),
+                    valid_total,
+                );
+                #[cfg(debug_assertions)]
+                {
+                    if let Some(ref mut tr) = tracer {
+                        let mut buf = RecordBuf::default();
+                        buf.status(StepStatus::Ok);
+                        buf.step_idx(trace_step_idx);
+                        buf.pos(tool.pos);
+                        buf.heading(tool.heading);
+                        buf.smoothed_heading(tool.smoothed_heading());
+                        buf.predicted_angle(tool.predicted_angle());
+                        buf.total_area(cleared.total_area());
+                        buf.remaining_area(
+                            cleared
+                                .remaining()
+                                .iter()
+                                .map(get_polygon_area)
+                                .sum(),
+                        );
+                        buf.prev_pos(prev_pos);
+                        buf.ops_len(tp_len);
+                        tr.write(TraceKind::Exit as u8, buf.pack());
+                    }
+                }
                 break;
             }
 
@@ -518,18 +968,80 @@ pub fn adaptive_clearing(
                 max_def,
                 target_eng,
                 min_cut_area,
+                mat.as_ref(),
+                last_resume_area,
+                segment_start,
             ) {
+                tp_len = moving_count(&ops);
+                #[cfg(debug_assertions)]
+                {
+                    if let Some(ref mut tr) = tracer {
+                        let mut buf = RecordBuf::default();
+                        buf.status(status);
+                        buf.step_idx(trace_step_idx);
+                        buf.pos(tool.pos);
+                        buf.heading(tool.heading);
+                        buf.smoothed_heading(tool.smoothed_heading());
+                        buf.predicted_angle(tool.predicted_angle());
+                        buf.total_area(cleared.total_area());
+                        buf.remaining_area(
+                            cleared
+                                .remaining()
+                                .iter()
+                                .map(get_polygon_area)
+                                .sum(),
+                        );
+                        buf.prev_pos(prev_pos);
+                        buf.ops_len(tp_len);
+                        tr.write(TraceKind::ResumeStall as u8, buf.pack());
+                    }
+                }
+                trace_step_idx += 1;
                 prev_pos = tool.pos;
                 last_check_area = cleared.total_area();
+                last_resume_area = cleared.total_area();
                 step_count = 0;
+                in_segment = false;
                 continue;
             }
 
+            dbg_log!(
+                "EXIT  reason=resume_failed(stall)  step_count={}  \
+                 resume_count={}  frag_total={:.3}  valid_total={:.3}",
+                step_count,
+                resume_count,
+                cleared.total_area(),
+                valid_total,
+            );
+            #[cfg(debug_assertions)]
+            {
+                if let Some(ref mut tr) = tracer {
+                    let mut buf = RecordBuf::default();
+                    buf.status(status);
+                    buf.step_idx(trace_step_idx);
+                    buf.pos(tool.pos);
+                    buf.heading(tool.heading);
+                    buf.smoothed_heading(tool.smoothed_heading());
+                    buf.predicted_angle(tool.predicted_angle());
+                    buf.total_area(cleared.total_area());
+                    buf.remaining_area(
+                        cleared.remaining().iter().map(get_polygon_area).sum(),
+                    );
+                    buf.prev_pos(prev_pos);
+                    buf.ops_len(tp_len);
+                    tr.write(TraceKind::Exit as u8, buf.pack());
+                }
+            }
             break;
         }
 
         // Emit cutting move.
+        if !in_segment {
+            segment_start = prev_pos;
+            in_segment = true;
+        }
         ops.line_to(tool.pos.x, tool.pos.y, opts.cut_z, None);
+        tp_len += 1;
 
         // Expand cleared area.
         if steps_since_batch == 0 {
@@ -544,12 +1056,50 @@ pub fn adaptive_clearing(
             cleared.compact_if_needed(0.5);
         }
 
+        // Trace this cut step.
+        #[cfg(debug_assertions)]
+        {
+            let eng = cleared.point_engagement(tool.pos, opts.radius);
+            let ca = cleared.cut_area(prev_pos, tool.pos, opts.radius);
+            if let Some(ref mut tr) = tracer {
+                let mut buf = RecordBuf::default();
+                buf.status(status);
+                buf.step_idx(trace_step_idx);
+                buf.iters(result.iters as u32);
+                buf.pos(tool.pos);
+                buf.heading(tool.heading);
+                buf.smoothed_heading(tool.smoothed_heading());
+                buf.predicted_angle(tool.predicted_angle());
+                buf.iteration_angle(result.iteration_angle);
+                buf.eng_angle(eng.angle);
+                buf.eng_area(eng.area);
+                buf.eng_chord(eng.chord_depth);
+                buf.cut_area(ca);
+                buf.total_area(cleared.total_area());
+                buf.remaining_area(
+                    cleared.remaining().iter().map(get_polygon_area).sum(),
+                );
+                buf.prev_pos(prev_pos);
+                buf.ops_len(tp_len);
+                tr.write(TraceKind::Cut as u8, buf.pack());
+            }
+        }
+        trace_step_idx += 1;
+
         prev_pos = tool.pos;
     }
 
     // Flush any remaining batch.
     if steps_since_batch > 0 {
         cleared.commit_batch_local();
+    }
+
+    #[cfg(debug_assertions)]
+    {
+        if let Some(mut t) = tracer.take() {
+            let _ = t.finish();
+            write_toolpath(t.path(), &ops);
+        }
     }
 
     ops

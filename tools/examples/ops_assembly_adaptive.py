@@ -122,6 +122,7 @@ def generate_adaptive_clearing_demo():
                 cum += math.hypot(p[0] - prev[0], p[1] - prev[1])
                 cum_dists.append(cum)
             prev = p
+        prev = None
     total = cum if cum > 0 else 1.0
 
     lc = LineCollection(
@@ -383,6 +384,7 @@ def _plot_2d_toolpath(ops, ax):
                 cum += math.hypot(p[0] - prev[0], p[1] - prev[1])
                 cum_dists.append(cum)
             prev = p
+        prev = None
     total = cum if cum > 0 else 1.0
     if segs_list:
         ax.add_collection(
@@ -483,6 +485,7 @@ def _plot_3d_toolpath(
                 cum += d
                 cum_dists.append(cum)
             prev = p
+        prev = None
     total = cum if cum > 0 else 1.0
     if segs_3d:
         from mpl_toolkits.mplot3d.art3d import Line3DCollection

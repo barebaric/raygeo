@@ -8,7 +8,7 @@ use crate::geo::shape::polygon::{
 };
 use crate::ops::cut::ClearedArea;
 use crate::ops::cut::ToolPose;
-use crate::types::Point;
+use crate::types::{Point, Polygon};
 
 /// Compute the inward offset position from a frontier vertex.
 ///
@@ -161,51 +161,182 @@ pub fn search_frontier_engagement(
         return None;
     }
 
-    let polys = {
-        let envelope = cleared.envelope(radius);
-        if envelope.is_empty() {
-            frontier
-        } else {
-            get_polygons_group_intersection(&frontier, &envelope)
-        }
+    let envelope = cleared.envelope(radius);
+
+    // ── Cleared-frontier search (primary: continue the spiral) ────
+    // Walk the cleared-area frontier clipped to the envelope.  This is
+    // the normal resume path: the tool continues cutting along the
+    // existing frontier where engagement is in the target range.
+    let polys = if envelope.is_empty() {
+        frontier
+    } else {
+        get_polygons_group_intersection(&frontier, &envelope)
     };
-    if polys.is_empty() {
-        return None;
+    if !polys.is_empty() {
+        if let Some((closest_poly_idx, _t, _closest_pt, _d2)) =
+            get_polygons_closest_point(&polys, start.pos)
+        {
+            let poly = &polys[closest_poly_idx];
+            let n = poly.len();
+            if n >= 3 {
+                let start_idx = poly
+                    .iter()
+                    .enumerate()
+                    .min_by(|(_, a), (_, b)| {
+                        a.distance_squared(start.pos)
+                            .partial_cmp(&b.distance_squared(start.pos))
+                            .unwrap_or(std::cmp::Ordering::Equal)
+                    })
+                    .map(|(i, _)| i);
+
+                if let Some(si) = start_idx {
+                    let heading_vec =
+                        Point::new(start.heading.cos(), start.heading.sin());
+                    let tangent = poly[(si + 1) % n] - poly[si];
+                    let forward = heading_vec.x * tangent.x
+                        + heading_vec.y * tangent.y
+                        >= 0.0;
+
+                    if let Some(rp) = walk_frontier(
+                        cleared,
+                        start.pos,
+                        radius,
+                        step_length,
+                        advance,
+                        forward,
+                        true,
+                        |a| a >= min_cut_area && a <= max_cut_area,
+                    ) {
+                        return Some(rp);
+                    }
+                }
+            }
+        }
     }
 
-    let (closest_poly_idx, _t, _closest_pt, _d2) =
-        get_polygons_closest_point(&polys, start.pos)?;
-    let poly = &polys[closest_poly_idx];
-    let n = poly.len();
-    if n < 3 {
-        return None;
+    // ── Envelope-boundary search (rescue: finish wall bands) ──────
+    // The frontier search failed — either because the frontier is empty
+    // within the envelope, or because no frontier vertex has engagement
+    // in the target range (the frontier has retreated from the envelope
+    // edge and the remaining material is only in the wall band).  Walk
+    // the tool-centre envelope boundary itself, sampling along each
+    // edge for a point where probing along the tangent cuts material.
+    // This places the tool *on* the envelope edge so the disk overhang
+    // reaches the wall band.
+    if !envelope.is_empty() {
+        if let Some(rp) = walk_envelope_boundary(
+            cleared,
+            &envelope,
+            start,
+            radius,
+            step_length,
+            min_cut_area,
+            max_cut_area,
+        ) {
+            return Some(rp);
+        }
     }
-    let start_idx = poly
-        .iter()
-        .enumerate()
-        .min_by(|(_, a), (_, b)| {
-            a.distance_squared(start.pos)
-                .partial_cmp(&b.distance_squared(start.pos))
-                .unwrap_or(std::cmp::Ordering::Equal)
-        })
-        .map(|(i, _)| i)?;
 
-    // Determine direction from the heading: compare with the
-    // polygon-order tangent at the nearest vertex.
-    let heading_vec = Point::new(start.heading.cos(), start.heading.sin());
-    let tangent = poly[(start_idx + 1) % n] - poly[start_idx];
-    let forward = heading_vec.x * tangent.x + heading_vec.y * tangent.y >= 0.0;
+    None
+}
 
-    walk_frontier(
-        cleared,
-        start.pos,
-        radius,
-        step_length,
-        advance,
-        forward,
-        true,
-        |a| a >= min_cut_area && a <= max_cut_area,
-    )
+/// Walk the tool-centre envelope boundary, finding the vertex with the
+/// best tangent-direction cut-area probe that satisfies `accept`.
+///
+/// Unlike [`walk_frontier`], the tool is placed *on* the envelope edge
+/// (zero inward offset) so the disk overhang reaches into the wall
+/// band.  Rather than walking from the nearest vertex (which may be on
+/// the opposite side of the pocket from the uncleared material), this
+/// scans all envelope vertices and picks the one with the best
+/// engagement — finding wall-band material wherever it is.  The score
+/// is weighted toward nearer vertices to avoid gratuitous travel.
+fn walk_envelope_boundary(
+    cleared: &ClearedArea,
+    envelope: &[Polygon],
+    start: ToolPose,
+    radius: f64,
+    step_length: f64,
+    min_cut_area: f64,
+    max_cut_area: f64,
+) -> Option<ToolPose> {
+    let accept = |a: f64| a >= min_cut_area && a <= max_cut_area;
+
+    let mut best: Option<(f64, ToolPose)> = None;
+    for poly in envelope {
+        let n = poly.len();
+        if n < 3 {
+            continue;
+        }
+
+        // Sample along each edge, not just vertices.  The envelope may
+        // be a coarse polygon (e.g. a rectangle with 4 vertices), but
+        // the engagement varies along the edge — corners often have
+        // very high engagement (large uncleared quadrants), while
+        // mid-edge points have moderate engagement closer to target.
+        let sample_spacing = step_length * 2.0;
+        for idx in 0..n {
+            let next_idx = (idx + 1) % n;
+            let p0 = poly[idx];
+            let p1 = poly[next_idx];
+            let edge_len = (p1.x - p0.x).hypot(p1.y - p0.y);
+            let n_samples = (edge_len / sample_spacing).ceil() as usize;
+            if n_samples == 0 {
+                continue;
+            }
+            for s in 0..=n_samples {
+                let t = s as f64 / n_samples as f64;
+                let pt = Point::new(
+                    p0.x + t * (p1.x - p0.x),
+                    p0.y + t * (p1.y - p0.y),
+                );
+
+                // Tangent along the edge (p0→p1 direction).
+                let dx = p1.x - p0.x;
+                let dy = p1.y - p0.y;
+                let len = dx.hypot(dy);
+                if len < 1e-9 {
+                    continue;
+                }
+                let heading = dy.atan2(dx);
+                let tangent = Point::new(dx / len, dy / len);
+
+                // Probe both directions along the edge.
+                for sign in &[1.0, -1.0] {
+                    let probe = pt + tangent * sign * step_length;
+                    let area = cleared.cut_area(pt, probe, radius);
+                    if accept(area) {
+                        let dist2 = (pt.x - start.pos.x).powi(2)
+                            + (pt.y - start.pos.y).powi(2);
+                        let score = area - dist2 * 0.001;
+                        let probe_heading = if *sign > 0.0 {
+                            heading
+                        } else {
+                            heading + std::f64::consts::PI
+                        };
+                        if best.is_none_or(|(bs, _)| score > bs) {
+                            best = Some((
+                                score,
+                                ToolPose {
+                                    pos: pt,
+                                    heading: probe_heading,
+                                },
+                            ));
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    if let Some((_, tp)) = best {
+        dbg_log!(
+            "  ENVELOPE_SEARCH  → ({:.3},{:.3})  heading={:.4}",
+            tp.pos.x,
+            tp.pos.y,
+            tp.heading,
+        );
+    }
+    best.map(|(_, tp)| tp)
 }
 
 /// Walk backward from `start` (opposite to the heading direction)

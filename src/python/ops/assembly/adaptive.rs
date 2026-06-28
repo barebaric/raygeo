@@ -6,6 +6,7 @@ use crate::python::ops::PyOps;
 use crate::types::Point;
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::gen_stub_pyfunction;
+use std::path::PathBuf;
 
 pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     let adaptive_mod = PyModule::new(assembly_mod.py(), "adaptive")?;
@@ -104,6 +105,7 @@ pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     start_heading = None,
     expansion_batch_size = 20,
     profile = false,
+    trace_path = None,
 ))]
 #[allow(clippy::too_many_arguments)]
 fn adaptive_clearing_py(
@@ -124,6 +126,7 @@ fn adaptive_clearing_py(
     start_heading: Option<f64>,
     expansion_batch_size: usize,
     profile: bool,
+    trace_path: Option<String>,
 ) -> PyOps {
     let boundary: Vec<Point> = pocket_boundary
         .into_iter()
@@ -149,6 +152,7 @@ fn adaptive_clearing_py(
         start_pos: start_pos.map(|(x, y)| Point::new(x, y)),
         start_heading,
         expansion_batch_size,
+        trace_path: trace_path.map(PathBuf::from),
     };
 
     let cut_state = State {

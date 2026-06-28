@@ -10,4 +10,5 @@ pub mod adaptive;
 pub mod entry;
 pub mod polyline;
 pub mod raster;
+pub(crate) mod trace;
 pub mod wavefront;

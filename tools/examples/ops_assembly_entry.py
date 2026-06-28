@@ -88,6 +88,7 @@ def _plot_3d_toolpath(
                 )
                 cum_dists.append(cum)
             prev = p
+        prev = None
     total = cum if cum > 0 else 1.0
     if segs_3d:
         from mpl_toolkits.mplot3d.art3d import Line3DCollection

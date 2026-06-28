@@ -72,6 +72,7 @@ pub mod mesh;
 pub mod ops;
 pub mod prof;
 pub mod svg;
+pub(crate) mod trace;
 pub mod types;
 
 pub use constants::{
