@@ -5,10 +5,12 @@ use prof_macros::prof;
 use crate::ops::cut::ClearedArea;
 
 use crate::geo::algo::offset::compute_inset_region;
-use crate::geo::shape::polygon::get_polygon_area;
+use crate::geo::shape::polygon::{
+    get_polygon_area, resample_polygon,
+};
 use crate::ops::container::Ops;
 use crate::ops::state::State;
-use crate::types::Polygon;
+use crate::types::{Point, Polygon};
 
 const MAX_WAVEFRONT_ITERATIONS: usize = 1000;
 
@@ -21,6 +23,7 @@ pub struct AdaptiveWavefrontOptions {
     pub step_over: f64,
     pub z: f64,
     pub area_tolerance: f64,
+    pub precision: f64,
 }
 
 /// Inside-out adaptive wavefronts.
@@ -47,7 +50,11 @@ pub fn adaptive_wavefronts(
     let mut state_applied = false;
 
     for _ in 0..MAX_WAVEFRONT_ITERATIONS {
-        let bounded = cleared.bites(opts.step_over, opts.tool_radius, 0.01);
+        let bounded = cleared.bites(
+            opts.step_over,
+            opts.tool_radius,
+            if opts.precision > 0.0 { opts.precision } else { 0.01 },
+        );
         if bounded.is_empty() {
             break;
         }
@@ -63,12 +70,20 @@ pub fn adaptive_wavefronts(
             if frag_area < opts.area_tolerance {
                 continue;
             }
+            let points: Vec<Point> = if opts.precision > 0.0 {
+                resample_polygon(frag, opts.precision)
+            } else {
+                frag.clone()
+            };
+            if points.len() < 3 {
+                continue;
+            }
             if !state_applied {
                 ops.apply_state(cut_state);
                 state_applied = true;
             }
-            ops.move_to(frag[0].x, frag[0].y, opts.z, None);
-            for p in &frag[1..] {
+            ops.move_to(points[0].x, points[0].y, opts.z, None);
+            for p in &points[1..] {
                 ops.line_to(p.x, p.y, opts.z, None);
             }
             // Close the fragment ring so the rendering has no visible

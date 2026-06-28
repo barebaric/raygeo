@@ -31,6 +31,7 @@ pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
         step_over: float = 2.0,
         z: float = 0.0,
         area_tolerance: float = 1.0,
+        precision: float = 0.0,
         cut_feed_rate: int = 1200,
         cut_power: float = 1.0,
     ) -> raygeo.ops.Ops:
@@ -53,6 +54,9 @@ pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
         :param step_over: Radial expansion per iteration (default 2.0).
         :param z: Z height for generated commands (default 0.0).
         :param area_tolerance: Minimum area increase to continue (default 1.0).
+        :param precision: Edge tolerance for frontier simplification and vertex
+                          resampling; smaller values produce denser edges
+                          (default 0.0 = use internal default).
         :param cut_feed_rate: Feed rate for cutting moves (default 1200).
         :param cut_power: Laser power for cutting moves (0.0-1.0, default 1.0).
         :returns: Ops with wavefront cutting commands.
@@ -69,6 +73,7 @@ pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     step_over = 2.0,
     z = 0.0,
     area_tolerance = 1.0,
+    precision = 0.0,
     cut_feed_rate = 1200,
     cut_power = 1.0,
 ))]
@@ -81,6 +86,7 @@ fn adaptive_wavefronts_py(
     step_over: f64,
     z: f64,
     area_tolerance: f64,
+    precision: f64,
     cut_feed_rate: i32,
     cut_power: f64,
 ) -> PyOps {
@@ -101,6 +107,7 @@ fn adaptive_wavefronts_py(
         step_over,
         z,
         area_tolerance,
+        precision,
     };
 
     let cut_state = State {

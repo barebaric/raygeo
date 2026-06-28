@@ -91,3 +91,60 @@ def test_adaptive_wavefronts_cut_power_applied():
             found_power = True
             break
     assert found_power
+
+
+def test_adaptive_wavefronts_precision_resamples():
+    """precision > 0 enables frontier simplification and vertex resampling."""
+    boundary = [(0, 0), (160, 0), (160, 100), (0, 100)]
+    _, cp = adaptive_entry(
+        pocket_boundary=boundary,
+        tool_radius=3.0,
+        step_over=2.0,
+        safe_z=2.0,
+        target_z=-8.0,
+    )
+    ca = ClearedArea(boundary=boundary, initial=cp)
+    ops_default = adaptive_wavefronts(
+        ca,
+        boundary,
+        step_over=2.0,
+        z=-8.0,
+        area_tolerance=1.0,
+    )
+    ca2 = ClearedArea(boundary=boundary, initial=cp)
+    ops_resampled = adaptive_wavefronts(
+        ca2,
+        boundary,
+        step_over=2.0,
+        z=-8.0,
+        area_tolerance=1.0,
+        precision=5.0,
+    )
+    assert ops_resampled.len() > ops_default.len()
+
+
+def test_adaptive_wavefronts_precision_with_islands():
+    """precision > 0 with islands produces valid ops."""
+    boundary = [(0, 0), (160, 0), (160, 100), (0, 100)]
+    islands = [[(60, 35), (100, 35), (100, 65), (60, 65)]]
+    _, cp = adaptive_entry(
+        pocket_boundary=boundary,
+        islands=islands,
+        tool_radius=3.0,
+        step_over=2.0,
+        safe_z=2.0,
+        target_z=-8.0,
+    )
+    ca = ClearedArea(boundary=boundary, islands=islands, initial=cp)
+    ops = adaptive_wavefronts(
+        ca,
+        boundary,
+        islands=islands,
+        tool_radius=3.0,
+        step_over=2.0,
+        z=-8.0,
+        area_tolerance=1.0,
+        precision=5.0,
+    )
+    assert ops.len() > 0
+    assert ca.total_area() > 5000
