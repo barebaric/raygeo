@@ -39,6 +39,17 @@ use crate::trace::Tracer;
 const ENGAGEMENT_FLOOR_FRAC: f64 = 0.01;
 /// Maximum total steps before giving up (safety valve).
 const MAX_TOTAL_STEPS: usize = 100_000;
+/// Per-step decay applied to the persisted predictor.  A converged
+/// deflection feeds `decay · prev + (1-decay) · new` back in, so a
+/// steady curvature is tracked while a one-off correction decays to
+/// zero within ~3 steps instead of seeding the next solver trial.
+const PREDICTOR_DECAY: f64 = 0.5;
+/// The predictor is only allowed to seed the solver with a deflection
+/// up to this fraction of `max_deflection`.  Larger corrections must
+/// come from the solver's own bracket search, not from feedforward —
+/// this prevents a stale large predicted angle from dominating the
+/// first trial and pinning `best_error` on an overshoot.
+const PREDICTOR_CLAMP_FRAC: f64 = 0.5;
 /// Number of recent direction vectors to average for heading smoothing.
 const GYRO_BUFFER_LEN: usize = 5;
 /// Number of recent iteration-angle deltas stored for the predictor.
@@ -126,6 +137,11 @@ pub struct Tool {
     angle_history: [f64; ANGLE_HISTORY_LEN],
     /// Number of valid entries in `angle_history`.
     angle_hist_count: usize,
+    /// Decayed predictor value.  Updated only on converged steps and
+    /// multiplied by [`PREDICTOR_DECAY`] each step, so a single
+    /// transient over-correction does not seed the next step's solver
+    /// trial and create a multi-step steering oscillation.
+    predictor: f64,
 }
 
 impl Tool {
@@ -141,6 +157,7 @@ impl Tool {
             gyro_count: GYRO_BUFFER_LEN,
             angle_history: [0.0; ANGLE_HISTORY_LEN],
             angle_hist_count: 0,
+            predictor: 0.0,
         }
     }
 
@@ -179,6 +196,7 @@ impl Tool {
         self.gyro_count = 1;
         self.angle_history = [0.0; ANGLE_HISTORY_LEN];
         self.angle_hist_count = 0;
+        self.predictor = 0.0;
     }
 
     fn push_angle(&mut self, delta: f64) {
@@ -191,13 +209,29 @@ impl Tool {
         }
     }
 
-    fn predicted_angle(&self) -> f64 {
-        if self.angle_hist_count == 0 {
-            return 0.0;
-        }
-        let sum: f64 =
-            self.angle_history.iter().take(self.angle_hist_count).sum();
-        sum / self.angle_hist_count as f64
+    /// Update the decayed predictor.  Called only when a step
+    /// converged (the deflection is trustworthy signal of real
+    /// curvature, not a transient correction).  The new estimate is
+    /// a low-pass blend of the previous predictor and the latest
+    /// deflection, so steady curvature is tracked while one-off
+    /// corrections decay away within a few steps.
+    fn update_predictor(&mut self, delta: f64) {
+        self.predictor =
+            PREDICTOR_DECAY * self.predictor + (1.0 - PREDICTOR_DECAY) * delta;
+    }
+
+    /// Predictor seed for [`step_adaptive`].  Clamped to a fraction of
+    /// `max_deflection` so a stale large estimate can never dominate
+    /// the first solver trial and pin `best_error` on an overshoot.
+    fn predicted_angle(&self, max_deflection: f64) -> f64 {
+        let clamp = max_deflection * PREDICTOR_CLAMP_FRAC;
+        self.predictor.clamp(-clamp, clamp)
+    }
+
+    /// Raw (un-clamped) predictor value, exposed for trace records so
+    /// the inspector can show the true internal state.
+    fn raw_predictor(&self) -> f64 {
+        self.predictor
     }
 }
 
@@ -663,7 +697,7 @@ pub fn adaptive_clearing(
             buf.pos(tool.pos);
             buf.heading(tool.heading);
             buf.smoothed_heading(tool.smoothed_heading());
-            buf.predicted_angle(tool.predicted_angle());
+            buf.predicted_angle(tool.raw_predictor());
             buf.total_area(cleared.total_area());
             buf.remaining_area(
                 cleared.remaining().iter().map(get_polygon_area).sum(),
@@ -731,7 +765,7 @@ pub fn adaptive_clearing(
                     buf.pos(tool.pos);
                     buf.heading(tool.heading);
                     buf.smoothed_heading(tool.smoothed_heading());
-                    buf.predicted_angle(tool.predicted_angle());
+                    buf.predicted_angle(tool.raw_predictor());
                     buf.total_area(cleared.total_area());
                     buf.remaining_area(
                         cleared.remaining().iter().map(get_polygon_area).sum(),
@@ -745,7 +779,7 @@ pub fn adaptive_clearing(
         }
 
         let heading = tool.smoothed_heading();
-        let predicted = tool.predicted_angle();
+        let predicted = tool.predicted_angle(max_def);
         let result = step_adaptive(
             cleared,
             tool.pos,
@@ -764,6 +798,16 @@ pub fn adaptive_clearing(
             tool.heading = result.heading;
             tool.push_gyro(dir);
             tool.push_angle(result.iteration_angle);
+            // Only feed the deflection back into the predictor when the
+            // solver converged quickly (iters < MAX_IT).  A step that
+            // exhausted all 20 iterations almost certainly picked an
+            // overshoot `best_angle` to escape a stall — propagating
+            // that as the next step's seed is what causes the
+            // over-correct / snap-back oscillation (e.g. +39° then
+            // +74°) that leaves scalloped leftover material.
+            if result.iters < 20 {
+                tool.update_predictor(result.iteration_angle);
+            }
         }
 
         let stalled = status != StepStatus::Ok;
@@ -812,7 +856,7 @@ pub fn adaptive_clearing(
                                 buf.pos(tool.pos);
                                 buf.heading(tool.heading);
                                 buf.smoothed_heading(tool.smoothed_heading());
-                                buf.predicted_angle(tool.predicted_angle());
+                                buf.predicted_angle(tool.raw_predictor());
                                 buf.total_area(cleared.total_area());
                                 buf.remaining_area(
                                     cleared
@@ -852,7 +896,7 @@ pub fn adaptive_clearing(
                                 buf.pos(tool.pos);
                                 buf.heading(tool.heading);
                                 buf.smoothed_heading(tool.smoothed_heading());
-                                buf.predicted_angle(tool.predicted_angle());
+                                buf.predicted_angle(tool.raw_predictor());
                                 buf.total_area(cleared.total_area());
                                 buf.remaining_area(
                                     cleared
@@ -897,7 +941,7 @@ pub fn adaptive_clearing(
                             buf.pos(tool.pos);
                             buf.heading(tool.heading);
                             buf.smoothed_heading(tool.smoothed_heading());
-                            buf.predicted_angle(tool.predicted_angle());
+                            buf.predicted_angle(tool.raw_predictor());
                             buf.total_area(cleared.total_area());
                             buf.remaining_area(
                                 cleared
@@ -941,7 +985,7 @@ pub fn adaptive_clearing(
                         buf.pos(tool.pos);
                         buf.heading(tool.heading);
                         buf.smoothed_heading(tool.smoothed_heading());
-                        buf.predicted_angle(tool.predicted_angle());
+                        buf.predicted_angle(tool.raw_predictor());
                         buf.total_area(cleared.total_area());
                         buf.remaining_area(
                             cleared
@@ -982,7 +1026,7 @@ pub fn adaptive_clearing(
                         buf.pos(tool.pos);
                         buf.heading(tool.heading);
                         buf.smoothed_heading(tool.smoothed_heading());
-                        buf.predicted_angle(tool.predicted_angle());
+                        buf.predicted_angle(tool.raw_predictor());
                         buf.total_area(cleared.total_area());
                         buf.remaining_area(
                             cleared
@@ -1022,7 +1066,7 @@ pub fn adaptive_clearing(
                     buf.pos(tool.pos);
                     buf.heading(tool.heading);
                     buf.smoothed_heading(tool.smoothed_heading());
-                    buf.predicted_angle(tool.predicted_angle());
+                    buf.predicted_angle(tool.raw_predictor());
                     buf.total_area(cleared.total_area());
                     buf.remaining_area(
                         cleared.remaining().iter().map(get_polygon_area).sum(),
@@ -1069,7 +1113,7 @@ pub fn adaptive_clearing(
                 buf.pos(tool.pos);
                 buf.heading(tool.heading);
                 buf.smoothed_heading(tool.smoothed_heading());
-                buf.predicted_angle(tool.predicted_angle());
+                buf.predicted_angle(tool.raw_predictor());
                 buf.iteration_angle(result.iteration_angle);
                 buf.eng_angle(eng.angle);
                 buf.eng_area(eng.area);
