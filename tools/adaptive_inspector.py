@@ -233,6 +233,10 @@ def rebuild_cleared(
     for i in range(len(tp)):
         x, y, is_travel = tp[i]
         if is_travel:
+            # Update prev to the travel destination so the next cutting
+            # move expands from there — not from the pre-travel position,
+            # which would sweep the entire travel path through obstacles.
+            prev = (x, y)
             continue
         if prev is not None and cut_count >= start_cut:
             if batch == 0:
