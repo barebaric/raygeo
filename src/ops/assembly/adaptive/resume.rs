@@ -13,6 +13,8 @@ use crate::geo::algo::smooth::build_smoothed_path;
 use crate::geo::shape::polygon::compute_polygon_bounds;
 use crate::geo::shape::polygon::get_polygon_area;
 use crate::geo::shape::polygon::get_polygon_centroid;
+use crate::geo::shape::polygon::get_polygon_signed_area;
+use crate::geo::shape::polygon::get_polygons_group_difference;
 use crate::ops::container::Ops;
 use crate::ops::cut::interp::point_in_valid_area;
 use crate::ops::cut::search_frontier_engagement;
@@ -52,16 +54,35 @@ pub fn smooth_travel_path(
         return vec![from];
     }
     let last = raw[raw.len() - 1];
-    // build_smoothed_path prepends `from` and appends `last`; the
-    // intermediate waypoints are the MAT path minus its (already
-    // supplied) endpoints to avoid duplicating them.
     let waypoints: Vec<Point> = if raw.len() > 2 {
         raw[1..raw.len() - 1].to_vec()
     } else {
         Vec::new()
     };
+    // Decompose `remaining` (polygon-with-holes: CCW outer + CW holes)
+    // into CCW-only solid obstacle polygons.  The raw CCW stock polygon
+    // covers the entire pocket and would block every collision check,
+    // preventing shortcut_path from removing any waypoints.
     let mut obstacles: Vec<Polygon> = islands.to_vec();
-    obstacles.extend_from_slice(remaining);
+    let mut ccw_subjects: Vec<Polygon> = Vec::new();
+    let mut cw_clips: Vec<Polygon> = Vec::new();
+    for poly in remaining {
+        if poly.len() < 3 {
+            continue;
+        }
+        if get_polygon_signed_area(poly) > 0.0 {
+            ccw_subjects.push(poly.clone());
+        } else {
+            cw_clips.push(poly.clone());
+        }
+    }
+    if !ccw_subjects.is_empty() && !cw_clips.is_empty() {
+        let solid_remaining =
+            get_polygons_group_difference(&ccw_subjects, &cw_clips);
+        obstacles.extend(solid_remaining);
+    } else {
+        obstacles.extend(ccw_subjects);
+    }
     let obs_bounds = compute_polygon_bounds(&obstacles);
     let smoothed = build_smoothed_path(
         from,

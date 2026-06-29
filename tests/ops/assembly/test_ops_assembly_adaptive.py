@@ -2,12 +2,11 @@
 
 import math
 
-import pytest
-
 from raygeo.geo.shape.polygon import (
     JoinStyle,
     get_polygon_area,
     get_polygons_group_difference,
+    get_polygons_group_intersection,
     offset_polygon,
 )
 from raygeo.ops import Ops
@@ -55,7 +54,10 @@ def _valid_tool_area(boundary, islands, radius):
 def _remaining_area(ca, valid_polys):
     """Sum of remaining (uncut) area within the valid tool-centre region."""
     remaining = ca.remaining()
-    return sum(get_polygon_area(p) for p in remaining)
+    if not valid_polys:
+        return sum(get_polygon_area(p) for p in remaining)
+    clipped = get_polygons_group_intersection(remaining, valid_polys)
+    return sum(get_polygon_area(p) for p in clipped)
 
 
 def test_adaptive_clearing_returns_ops():
@@ -293,7 +295,6 @@ def test_adaptive_clearing_degenerate_pocket():
     assert isinstance(ops, Ops)
 
 
-@pytest.mark.xfail(reason="does not yet fully clear a plain rectangle")
 def test_adaptive_clearing_fully_clears_rect():
     """After clearing a plain rectangle, remaining area is below tolerance."""
 
@@ -326,7 +327,6 @@ def test_adaptive_clearing_fully_clears_rect():
     )
 
 
-@pytest.mark.xfail(reason="does not yet fully clear a pocket with island")
 def test_adaptive_clearing_fully_clears_with_island():
     """After clearing a pocket with an island, remaining
     area is below tolerance.
@@ -345,7 +345,7 @@ def test_adaptive_clearing_fully_clears_with_island():
         safe_z=2.0,
         target_z=-5.0,
     )
-    ca = ClearedArea(boundary=boundary, initial=cp)
+    ca = ClearedArea(boundary=boundary, islands=islands, initial=cp)
     adaptive_clearing(
         cleared=ca,
         pocket_boundary=boundary,

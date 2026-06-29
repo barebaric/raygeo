@@ -181,7 +181,7 @@ pub fn adaptive_clearing(
     let mat = MedialAxis::compute(
         &opts.pocket_boundary,
         &opts.islands,
-        opts.radius * 0.5,
+        opts.radius,
         opts.radius.max(2.0),
     )
     .ok();
