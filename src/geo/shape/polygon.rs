@@ -334,6 +334,14 @@ pub fn compute_polygon_bounds(polygons: &[Polygon]) -> Vec<Rect> {
 /// Uses pre-computed bounding boxes for the obstacles. When calling this
 /// function many times with the same obstacle set, precompute bounds
 /// once via [`compute_polygon_bounds`] and pass them here.
+///
+/// The obstacle list may contain both CCW (positive-area) outer
+/// boundaries and CW (negative-area) holes — a polygon-with-holes
+/// representation as produced by Clipper2.  Point-in-polygon tests use
+/// the NonZero winding rule: a point is "inside" the solid material
+/// only when the signed coverage (CCW outers count +1, CW holes count
+/// −1) is positive.  This prevents holes from being
+/// treated as solid obstacles.
 #[prof]
 pub fn does_path_sweep_intersect_polygon(
     path: &[Point],
@@ -344,6 +352,41 @@ pub fn does_path_sweep_intersect_polygon(
     if path.len() < 2 {
         return false;
     }
+
+    // Precompute winding sign for each obstacle (+1 CCW, −1 CW).
+    let signs: Vec<i8> = obstacles
+        .iter()
+        .map(|obs| {
+            if get_polygon_signed_area(obs) > 0.0 {
+                1
+            } else {
+                -1
+            }
+        })
+        .collect();
+
+    // Winding-number point-in-region test using NonZero rule.
+    let point_in_region = |p: Point| -> bool {
+        let mut winding = 0i32;
+        for ((obs, bounds), &sign) in
+            obstacles.iter().zip(obstacle_bounds).zip(&signs)
+        {
+            if obs.len() < 3 {
+                continue;
+            }
+            if p.x < bounds.min.x
+                || p.x > bounds.max.x
+                || p.y < bounds.min.y
+                || p.y > bounds.max.y
+            {
+                continue;
+            }
+            if is_point_in_polygon(p, obs) {
+                winding += sign as i32;
+            }
+        }
+        winding > 0
+    };
 
     for (obstacle, obs_bounds) in obstacles.iter().zip(obstacle_bounds) {
         if obstacle.len() < 3 {
@@ -366,9 +409,7 @@ pub fn does_path_sweep_intersect_polygon(
                 continue;
             }
 
-            if is_point_in_polygon(a, obstacle)
-                || is_point_in_polygon(b, obstacle)
-            {
+            if point_in_region(a) || point_in_region(b) {
                 return true;
             }
 

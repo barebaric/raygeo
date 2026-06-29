@@ -1592,6 +1592,79 @@ class TestDoesPathSweepIntersectPolygon:
         obstacle = P((5, 1), (5, 5), (10, 5), (10, 1))
         assert not does_path_sweep_intersect_polygon(path, 0.0, [obstacle])
 
+    # --- Tests with holes (CW inner rings) ---
+
+    def test_sweep_inside_hole_not_intersecting(self):
+        """Path entirely inside the hole with a small radius — no
+        intersection because the hole is empty space."""
+        outer = P((0, 0), (20, 0), (20, 20), (0, 20))  # CCW
+        hole = P((5, 5), (5, 15), (15, 15), (15, 5))  # CW
+        path = [(10.0, 7.0), (10.0, 13.0)]  # inside hole
+        assert not does_path_sweep_intersect_polygon(path, 0.5, [outer, hole])
+
+    def test_sweep_through_hole_near_wall(self):
+        """Path through the hole but the sweep disk clips a hole wall
+        (which is still a material boundary)."""
+        outer = P((0, 0), (20, 0), (20, 20), (0, 20))
+        hole = P((5, 5), (5, 15), (15, 15), (15, 5))
+        path = [(7.0, -5.0), (7.0, 25.0)]  # 2.0 from left wall
+        assert does_path_sweep_intersect_polygon(path, 2.5, [outer, hole])
+
+    def test_sweep_through_solid_region_with_hole(self):
+        """Path goes through the solid material between outer and hole."""
+        outer = P((0, 0), (20, 0), (20, 20), (0, 20))
+        hole = P((5, 5), (5, 15), (15, 15), (15, 5))
+        path = [(2.0, -5.0), (2.0, 25.0)]
+        assert does_path_sweep_intersect_polygon(path, 1.0, [outer, hole])
+
+    def test_path_endpoint_inside_hole(self):
+        """Both path endpoints lie inside the (empty) hole — no solid
+        material touched."""
+        outer = P((0, 0), (20, 0), (20, 20), (0, 20))
+        hole = P((5, 5), (5, 15), (15, 15), (15, 5))
+        path = [(10.0, 10.0), (12.0, 10.0)]
+        assert not does_path_sweep_intersect_polygon(path, 0.5, [outer, hole])
+
+    def test_path_endpoint_in_solid_near_hole(self):
+        """One path endpoint lies in the solid material (not the hole)."""
+        outer = P((0, 0), (20, 0), (20, 20), (0, 20))
+        hole = P((5, 5), (5, 15), (15, 15), (15, 5))
+        path = [(2.0, 10.0), (10.0, 10.0)]  # first point in solid
+        assert does_path_sweep_intersect_polygon(path, 0.5, [outer, hole])
+
+    def test_sweep_through_multiple_holes(self):
+        """Path passes through one of two holes — no intersection."""
+        outer = P((0, 0), (30, 0), (30, 30), (0, 30))
+        hole_a = P((5, 5), (5, 12), (12, 12), (12, 5))
+        hole_b = P((18, 18), (18, 25), (25, 25), (25, 18))
+        path = [(8.5, 6.5), (8.5, 10.5)]  # inside hole_a
+        assert not does_path_sweep_intersect_polygon(
+            path,
+            1.0,
+            [outer, hole_a, hole_b],
+        )
+
+    def test_sweep_through_solid_between_holes(self):
+        """Path passes through the solid bridge between two holes."""
+        outer = P((0, 0), (30, 0), (30, 30), (0, 30))
+        hole_a = P((5, 5), (5, 12), (12, 12), (12, 5))
+        hole_b = P((18, 18), (18, 25), (25, 25), (25, 18))
+        path = [(15.0, -5.0), (15.0, 35.0)]  # solid bridge
+        assert does_path_sweep_intersect_polygon(
+            path,
+            1.0,
+            [outer, hole_a, hole_b],
+        )
+
+    def test_sweep_large_radius_through_hole(self):
+        """Radius large enough that the sweep overlaps the solid region
+        on both sides of the hole — should intersect."""
+        outer = P((0, 0), (20, 0), (20, 20), (0, 20))
+        hole = P((5, 5), (5, 15), (15, 15), (15, 5))
+        path = [(10.0, -5.0), (10.0, 25.0)]
+        # radius 6 → sweep extends from x=4 to x=16, past hole walls at 5/15
+        assert does_path_sweep_intersect_polygon(path, 6.0, [outer, hole])
+
 
 class TestResamplePolygon:
     def test_empty(self):
