@@ -1,11 +1,9 @@
 //! Adaptive-clearing trace format.
 //!
 //! Defines the record layout consumed by ``tools/adaptive_inspector.py``:
-//! a 127-byte payload with fixed-offset fields, plus a companion ``.tp``
-//! toolpath file.  The generic [`crate::trace::Tracer`] handles the
-//! actual file I/O and release-mode no-op behaviour.
-
-use std::io::Write;
+//! a 127-byte payload with fixed-offset fields, embedded in the
+//! self-contained trace file (geometry + toolpath + records) written by
+//! the generic [`crate::trace::Tracer`].
 
 use crate::ops::container::Ops;
 use crate::ops::cut::StepStatus;
@@ -133,29 +131,17 @@ impl RecordBuf {
     }
 }
 
-// ── Toolpath companion file ─────────────────────────────────────────
+// ── Toolpath extraction ─────────────────────────────────────────────
 
-/// Write the companion ``.tp`` toolpath next to the trace file.
+use crate::trace::TracePoint;
+
+/// Extract the moving commands (travel + cut) from `ops` as a
+/// [`TracePoint`] list suitable for [`Tracer::write_toolpath`].
 ///
-/// Format: count (u32 LE) followed by count records of 20 bytes each:
-///   x (f64 LE), y (f64 LE), is_travel (u8), 3 zero pad bytes.
-pub(super) fn write_toolpath(trace_path: &std::path::Path, ops: &Ops) {
-    let tp_path = trace_path.with_extension("tp");
-    let mut f = match std::fs::File::create(&tp_path) {
-        Ok(f) => f,
-        Err(e) => {
-            eprintln!("trace: failed to write toolpath: {}", e);
-            return;
-        }
-    };
-    let mut count: u32 = 0;
-    for i in 0..ops.len() {
-        if ops.is_travel(i) || ops.is_cutting(i) {
-            count += 1;
-        }
-    }
-    let _ = f.write_all(&count.to_le_bytes());
-    let mut buf = [0u8; 20];
+/// Order matches the record stream so the inspector can index toolpath
+/// points by `ops_len` stored in each trace record.
+pub(super) fn extract_toolpath(ops: &Ops) -> Vec<TracePoint> {
+    let mut out = Vec::new();
     for i in 0..ops.len() {
         let is_travel = ops.is_travel(i);
         let is_cutting = ops.is_cutting(i);
@@ -163,12 +149,11 @@ pub(super) fn write_toolpath(trace_path: &std::path::Path, ops: &Ops) {
             continue;
         }
         let ep = ops.endpoint(i);
-        buf[0..8].copy_from_slice(&ep.x.to_le_bytes());
-        buf[8..16].copy_from_slice(&ep.y.to_le_bytes());
-        buf[16] = if is_travel { 1 } else { 0 };
-        buf[17] = 0;
-        buf[18] = 0;
-        buf[19] = 0;
-        let _ = f.write_all(&buf);
+        out.push(TracePoint {
+            x: ep.x,
+            y: ep.y,
+            is_travel,
+        });
     }
+    out
 }

@@ -34,7 +34,8 @@ use std::path::PathBuf;
 use crate::trace::Tracer;
 use resume::{try_resume, MAX_RESUMES};
 use tool::Tool;
-use trace::{write_toolpath, RecordBuf, TraceKind};
+#[cfg(debug_assertions)]
+use trace::{RecordBuf, TraceKind};
 
 // ── Named constants ────────────────────────────────────────────────────
 
@@ -239,7 +240,14 @@ pub fn adaptive_clearing(
 
     #[cfg(debug_assertions)]
     let mut tracer: Option<Tracer> = match &opts.trace_path {
-        Some(path) => match Tracer::open(path) {
+        Some(path) => match Tracer::open(
+            path,
+            &crate::trace::TraceContext {
+                tool_radius: opts.radius,
+                boundary: opts.pocket_boundary.clone(),
+                islands: opts.islands.clone(),
+            },
+        ) {
             Ok(t) => Some(t),
             Err(e) => {
                 eprintln!("trace: failed to open {:?}: {}", path, e);
@@ -702,8 +710,8 @@ pub fn adaptive_clearing(
     #[cfg(debug_assertions)]
     {
         if let Some(mut t) = tracer.take() {
+            t.write_toolpath(&trace::extract_toolpath(&ops));
             let _ = t.finish();
-            write_toolpath(t.path(), &ops);
         }
     }
 

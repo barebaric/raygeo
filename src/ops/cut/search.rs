@@ -316,8 +316,7 @@ fn walk_envelope_boundary(
                         // penalty keeps the tool out of over-engaged
                         // corners, and the distance penalty keeps the
                         // resume near the stall point.
-                        let score =
-                            area * area + dist2 * 0.001;
+                        let score = area * area + dist2 * 0.001;
                         let probe_heading = if *sign > 0.0 {
                             heading
                         } else {

@@ -150,8 +150,25 @@ class TraceRecord:
         self.ops_len = struct.unpack_from("<I", buf, 122)[0]
 
 
+class TraceGeometry:
+    """Pocket geometry embedded in a v2 trace file."""
+
+    __slots__ = ("tool_radius", "boundary", "islands")
+
+    def __init__(self, tool_radius, boundary, islands):
+        self.tool_radius = tool_radius
+        self.boundary = boundary
+        self.islands = islands
+
+
 class TraceFile:
-    """Binary trace reader with random access to records."""
+    """Binary trace reader with random access to records.
+
+    For version 2 files the geometry and toolpath are embedded in the
+    file and exposed via :attr:`geometry` and :attr:`toolpath`.  For
+    version 1 files both are ``None`` and the caller must supply a
+    companion ``.tp`` toolpath and fall back to the built-in geometry.
+    """
 
     def __init__(self, path):
         with open(path, "rb") as f:
@@ -160,7 +177,47 @@ class TraceFile:
                 raise ValueError(f"bad magic: {magic}")
             self.version = struct.unpack("<I", f.read(4))[0]
             self.count = struct.unpack("<I", f.read(4))[0]
+            if self.version >= 2:
+                self.geometry, self.toolpath = self._read_v2_blocks(f)
+            else:
+                self.geometry = None
+                self.toolpath = None
+            # Remaining bytes (after the variable-length v2 blocks, or
+            # immediately after the header for v1) are the 128-byte records.
             self.data = f.read()
+
+    def _read_v2_blocks(self, f):
+        geo = self._read_geometry(f)
+        tp = self._read_toolpath(f)
+        return geo, tp
+
+    def _read_geometry(self, f):
+        tool_radius = struct.unpack("<d", f.read(8))[0]
+        boundary = self._read_polygon(f)
+        n_islands = struct.unpack("<I", f.read(4))[0]
+        islands = [self._read_polygon(f) for _ in range(n_islands)]
+        return TraceGeometry(tool_radius, boundary, islands)
+
+    @staticmethod
+    def _read_polygon(f):
+        n = struct.unpack("<I", f.read(4))[0]
+        pts = []
+        for _ in range(n):
+            x = struct.unpack("<d", f.read(8))[0]
+            y = struct.unpack("<d", f.read(8))[0]
+            pts.append((x, y))
+        return pts
+
+    @staticmethod
+    def _read_toolpath(f):
+        n = struct.unpack("<I", f.read(4))[0]
+        pts = []
+        for _ in range(n):
+            x = struct.unpack("<d", f.read(8))[0]
+            y = struct.unpack("<d", f.read(8))[0]
+            is_travel = f.read(1) != b"\x00"
+            pts.append((x, y, bool(is_travel)))
+        return pts
 
     def __len__(self):
         return self.count
@@ -172,13 +229,17 @@ class TraceFile:
         return TraceRecord(self.data[offset : offset + TRACE_RECORD_SIZE])
 
 
-# ── Toolpath file format ─────────────────────────────────────────
+# ── Toolpath file format (v1 companion) ───────────────────────────
 
 TP_RECORD_SIZE = 20  # x(f64) + y(f64) + is_travel(u8) + 3 pad
 
 
 class ToolpathFile:
-    """Binary toolpath reader: list of (x, y, is_travel)."""
+    """Binary toolpath reader: list of (x, y, is_travel).
+
+    Only used for version 1 trace files that ship a companion ``.tp``
+    file.  Version 2 files embed the toolpath in the trace itself.
+    """
 
     def __init__(self, path):
         with open(path, "rb") as f:
@@ -205,6 +266,7 @@ def rebuild_cleared(
     n_cuts,
     tp,
     seed_polys,
+    geometry,
     existing_fragments=None,
     start_cut=0,
 ):
@@ -216,14 +278,14 @@ def rebuild_cleared(
     """
     if existing_fragments is None:
         ca = ClearedArea(
-            boundary=list(BOUNDARY),
-            islands=[list(isl) for isl in ISLANDS],
+            boundary=list(geometry.boundary),
+            islands=[list(isl) for isl in geometry.islands],
             initial=seed_polys,
         )
     else:
         ca = ClearedArea(
-            boundary=list(BOUNDARY),
-            islands=[list(isl) for isl in ISLANDS],
+            boundary=list(geometry.boundary),
+            islands=[list(isl) for isl in geometry.islands],
             initial=existing_fragments,
         )
 
@@ -241,7 +303,7 @@ def rebuild_cleared(
         if prev is not None and cut_count >= start_cut:
             if batch == 0:
                 ca.begin_batch()
-            ca.expand_batched(prev, (x, y), TOOL_RADIUS)
+            ca.expand_batched(prev, (x, y), geometry.tool_radius)
             batch += 1
             if batch >= 20:
                 ca.commit_batch_local()
@@ -260,11 +322,12 @@ def rebuild_cleared(
 
 
 class Inspector:
-    def __init__(self, trace, tp, seed_polys):
+    def __init__(self, trace, tp, seed_polys, geometry):
         self.trace = trace
         self.tp = tp
         self.n_steps = len(trace)
         self.seed_polys = seed_polys
+        self.geometry = geometry
         self.current = 0
         self._ca_cache = {}
         self._precompute_toolpath()
@@ -381,11 +444,14 @@ class Inspector:
                 n_cuts,
                 self.tp,
                 self.seed_polys,
+                self.geometry,
                 existing_fragments=self._ca_cache[smaller].fragments(),
                 start_cut=smaller,
             )
         else:
-            ca = rebuild_cleared(n_cuts, self.tp, self.seed_polys)
+            ca = rebuild_cleared(
+                n_cuts, self.tp, self.seed_polys, self.geometry
+            )
 
         self._ca_cache[n_cuts] = ca
         if len(self._ca_cache) > 20:
@@ -402,13 +468,18 @@ class Inspector:
 
         rec = self.trace[step_idx]
 
+        geo = self.geometry
+        boundary = geo.boundary
+        islands = geo.islands
+        tool_radius = geo.tool_radius
+
         # ── Boundary ──
-        bx = [p[0] for p in BOUNDARY] + [BOUNDARY[0][0]]
-        by = [p[1] for p in BOUNDARY] + [BOUNDARY[0][1]]
+        bx = [p[0] for p in boundary] + [boundary[0][0]]
+        by = [p[1] for p in boundary] + [boundary[0][1]]
         self.ax.plot(bx, by, "k-", linewidth=1.5)
 
         # ── Islands ──
-        for isl in ISLANDS:
+        for isl in islands:
             ix = [p[0] for p in isl] + [isl[0][0]]
             iy = [p[1] for p in isl] + [isl[0][1]]
             self.ax.fill(ix, iy, color="gray", alpha=0.4)
@@ -416,7 +487,7 @@ class Inspector:
 
         # ── Envelope (static) ──
         ca0 = self._get_cleared(0)
-        envelope = ca0.envelope(TOOL_RADIUS)
+        envelope = ca0.envelope(tool_radius)
         for env in envelope:
             if len(env) < 3:
                 continue
@@ -471,8 +542,13 @@ class Inspector:
         )
         self.ax.set_xlabel("X")
         self.ax.set_ylabel("Y")
-        self.ax.set_xlim(-10, 190)
-        self.ax.set_ylim(-10, 130)
+        # Auto-fit axis limits to the boundary with a small margin.
+        bx_min, bx_max = min(bx), max(bx)
+        by_min, by_max = min(by), max(by)
+        mx = (bx_max - bx_min) * 0.05 + tool_radius
+        my = (by_max - by_min) * 0.05 + tool_radius
+        self.ax.set_xlim(bx_min - mx, bx_max + mx)
+        self.ax.set_ylim(by_min - my, by_max + my)
         self.ax.grid(True, alpha=0.2)
 
         # ── Info panel ──
@@ -523,7 +599,7 @@ class Inspector:
     def _draw_tool(self, rec):
         """Draw tool circle, position dot, and heading arrow."""
         x, y = rec.pos_x, rec.pos_y
-        r = TOOL_RADIUS
+        r = self.geometry.tool_radius
 
         circle = Circle(
             (x, y), r, fill=False, edgecolor="red", linewidth=1.5, alpha=0.8
@@ -617,9 +693,7 @@ def cmd_trace(args: argparse.Namespace) -> None:
         f"{ca.total_area():.1f} mm² cleared, "
         f"{remaining:.1f} mm² remaining"
     )
-    tp_path = trace_path.replace(".bin", ".tp")
-    print(f"  Trace written: {trace_path}")
-    print(f"  Toolpath written: {tp_path}")
+    print(f"  Trace written: {trace_path}  (self-contained v2 format)")
 
 
 def cmd_inspect(args: argparse.Namespace) -> None:
@@ -628,27 +702,50 @@ def cmd_inspect(args: argparse.Namespace) -> None:
     initial_step = args.step or 0
 
     print(f"Loading trace from {trace_path}")
-    # Seed polygons are needed for ClearedArea rebuild.
-    # Re-run just the entry (fast) to get them.
-    _, seed_polys = adaptive_entry(
-        pocket_boundary=list(BOUNDARY),
-        islands=[list(isl) for isl in ISLANDS],
-        tool_radius=TOOL_RADIUS,
-        step_over=STEP_OVER,
-        safe_z=SAFE_Z,
-        target_z=CUT_Z,
-        plunge_pitch=1.0,
-    )
-
-    tp_path = trace_path.replace(".bin", ".tp")
     print(f"Reading trace: {trace_path}")
     trace = TraceFile(trace_path)
-    print(f"  {len(trace)} trace records")
-    print(f"Reading toolpath: {tp_path}")
-    tp = ToolpathFile(tp_path)
-    print(f"  {len(tp)} toolpath moves")
+    print(f"  version={trace.version}  {len(trace)} trace records")
 
-    inspector = Inspector(trace, tp, seed_polys)
+    if trace.geometry is not None:
+        # Version 2: self-contained file.
+        geo = trace.geometry
+        tp = trace.toolpath
+        assert tp is not None  # v2 always embeds the toolpath
+        print(
+            f"  embedded geometry: tool_radius={geo.tool_radius}  "
+            f"boundary={len(geo.boundary)} verts  "
+            f"islands={len(geo.islands)}"
+        )
+        print(f"  embedded toolpath: {len(tp)} moves")
+        # Seed polygons: re-run entry with the trace's geometry so the
+        # ClearedArea rebuild starts from the same initial cleared disk.
+        _, seed_polys = adaptive_entry(
+            pocket_boundary=list(geo.boundary),
+            islands=[list(isl) for isl in geo.islands],
+            tool_radius=geo.tool_radius,
+            step_over=STEP_OVER,
+            safe_z=SAFE_Z,
+            target_z=CUT_Z,
+            plunge_pitch=1.0,
+        )
+    else:
+        # Version 1: fall back to companion .tp + built-in geometry.
+        geo = TraceGeometry(TOOL_RADIUS, BOUNDARY, ISLANDS)
+        tp_path = trace_path.replace(".bin", ".tp")
+        print(f"Reading toolpath: {tp_path}")
+        tp = ToolpathFile(tp_path)
+        print(f"  {len(tp)} toolpath moves")
+        _, seed_polys = adaptive_entry(
+            pocket_boundary=list(BOUNDARY),
+            islands=[list(isl) for isl in ISLANDS],
+            tool_radius=TOOL_RADIUS,
+            step_over=STEP_OVER,
+            safe_z=SAFE_Z,
+            target_z=CUT_Z,
+            plunge_pitch=1.0,
+        )
+
+    inspector = Inspector(trace, tp, seed_polys, geo)
     if initial_step > 0:
         inspector._draw(initial_step)
     plt.show()

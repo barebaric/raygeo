@@ -5,9 +5,7 @@ use prof_macros::prof;
 use crate::ops::cut::ClearedArea;
 
 use crate::geo::algo::offset::compute_inset_region;
-use crate::geo::shape::polygon::{
-    get_polygon_area, resample_polygon,
-};
+use crate::geo::shape::polygon::{get_polygon_area, resample_polygon};
 use crate::ops::container::Ops;
 use crate::ops::state::State;
 use crate::types::{Point, Polygon};
@@ -53,7 +51,11 @@ pub fn adaptive_wavefronts(
         let bounded = cleared.bites(
             opts.step_over,
             opts.tool_radius,
-            if opts.precision > 0.0 { opts.precision } else { 0.01 },
+            if opts.precision > 0.0 {
+                opts.precision
+            } else {
+                0.01
+            },
         );
         if bounded.is_empty() {
             break;
