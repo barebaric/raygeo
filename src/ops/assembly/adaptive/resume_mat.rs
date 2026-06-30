@@ -9,24 +9,10 @@ use crate::ops::assembly::adaptive::resume::{
     probe_step, ResumeCtx, ResumeStrategy, WALL_PROXIMITY,
 };
 use crate::ops::assembly::adaptive::tool::Tool;
-use crate::ops::cut::interp::point_in_valid_area;
 use crate::ops::cut::ClearedArea;
 use crate::ops::cut::CutDirection;
 use crate::ops::cut::ToolPose;
 use crate::types::{Point, Polygon};
-
-#[prof]
-fn can_step(
-    rp: ToolPose,
-    step_length: f64,
-    valid_tool_area: &[Polygon],
-) -> bool {
-    let next = Point::new(
-        rp.pos.x + rp.heading.cos() * step_length,
-        rp.pos.y + rp.heading.sin() * step_length,
-    );
-    point_in_valid_area(next, valid_tool_area)
-}
 
 pub struct ResumeMat;
 
@@ -70,63 +56,6 @@ impl ResumeStrategy for ResumeMat {
         }
         None
     }
-}
-
-/// Pick a resume target by trying every MAT crossing in turn.
-///
-/// For each crossing, walks the cleared-area frontier backward until
-/// hitting the pocket boundary, then offsets inward by `radius`.
-/// Returns the first crossing whose resume position passes the
-/// `can_step` valid-area check.
-#[allow(clippy::too_many_arguments)]
-#[prof]
-pub fn mat_resume_target(
-    axis: &MedialAxis,
-    cleared: &ClearedArea,
-    tool: &Tool,
-    cut_direction: CutDirection,
-    step_length: f64,
-    advance: f64,
-    pocket_boundary: &[Point],
-    islands: &[Polygon],
-    valid_tool_area: &[Polygon],
-) -> Option<ToolPose> {
-    let fragments = cleared.fragments();
-    if fragments.is_empty() {
-        return None;
-    }
-    let is_cleared = axis.build_cleared_mask(fragments);
-
-    let from_idx = axis.nearest_node(tool.pos)?;
-    if !is_cleared[from_idx] {
-        return None;
-    }
-
-    let crossings = find_all_mat_crossings(axis, from_idx, &is_cleared);
-    dbg_log!(
-        "  MAT_RESUME  crossings={}  from_idx={}",
-        crossings.len(),
-        from_idx,
-    );
-
-    for crossing_idx in crossings {
-        if let Some(rp) = mat_resume_from_crossing(
-            axis,
-            cleared,
-            crossing_idx,
-            cut_direction,
-            tool.radius,
-            advance,
-            pocket_boundary,
-            islands,
-        ) {
-            if can_step(rp, step_length, valid_tool_area) {
-                return Some(rp);
-            }
-        }
-    }
-
-    None
 }
 
 /// Try to find a resume point from a single MAT crossing.

@@ -14,14 +14,11 @@ from raygeo.geo.shape.polygon import (
 from raygeo.ops import Ops
 from raygeo.ops.assembly.adaptive.resume import (
     emit_resume_travel,
-    mat_resume_target,
-    search_reengagement,
     smooth_travel_path,
     try_resume,
 )
 from raygeo.ops.assembly.adaptive.tool import Tool
 from raygeo.ops.cut.cleared_area import ClearedArea
-from raygeo.ops.cut.search import ToolPose, search_frontier_engagement
 
 
 def _rect(cx, cy, w, h):
@@ -117,80 +114,6 @@ def _valid_tool_area(boundary, islands, radius):
         region = inset
     total = sum(get_polygon_area(p) for p in region)
     return region, total
-
-
-class TestMatResumeTarget:
-    def test_empty_cleared_returns_none(self):
-        """No cleared fragments ⇒ nothing to route from."""
-        outer = _rect(30.0, 30.0, 60, 60)
-        axis = MedialAxis.compute(outer, [], 1.0, 6.0)
-        ca = ClearedArea(boundary=outer)  # no initial polygons
-        vta, _ = _valid_tool_area(outer, [], 3.0)
-        assert (
-            mat_resume_target(
-                axis,
-                ca,
-                Tool((30.0, 30.0), 0.0, 3.0),
-                "ccw",
-                0.6,
-                1.5,
-                outer,
-                [],
-                vta,
-            )
-            is None
-        )
-
-    def test_returns_tool_pose(self):
-        """Partially-cleared pocket yields a ToolPose target."""
-        outer = _rect(30.0, 30.0, 60, 60)
-        island = _rect(30, 30, 10, 10)
-        axis = MedialAxis.compute(outer, [island], 1.0, 6.0)
-        # Seed a small cleared region in the centre.
-        seed = _rect(30, 30, 6, 6)
-        ca = ClearedArea(boundary=outer, islands=[island], initial=[seed])
-        vta, _ = _valid_tool_area(outer, [island], 3.0)
-        result = mat_resume_target(
-            axis,
-            ca,
-            Tool((30.0, 30.0), 0.0, 3.0),
-            "ccw",
-            0.6,
-            1.5,
-            outer,
-            [island],
-            vta,
-        )
-        if result is not None:
-            assert isinstance(result, ToolPose)
-            assert isinstance(result.heading, float)
-
-    def test_tool_on_uncleared_node_returns_none(self):
-        """If the tool sits on an uncleared MAT node, there's nothing
-        to route to (engagement should be available)."""
-        outer = _rect(30.0, 30.0, 60, 60)
-        axis = MedialAxis.compute(outer, [], 1.0, 6.0)
-        # Tool positioned far from any cleared fragment.
-        seed = _rect(5, 5, 4, 4)
-        ca = ClearedArea(boundary=outer, initial=[seed])
-        vta, _ = _valid_tool_area(outer, [], 3.0)
-        # Pick a node far from the seed as tool position.
-        far = max(axis.nodes, key=lambda p: _dist(p, (5, 5)))
-        result = mat_resume_target(
-            axis,
-            ca,
-            Tool(far, 0.0, 3.0),
-            "ccw",
-            0.6,
-            1.5,
-            outer,
-            [],
-            vta,
-        )
-        # May or may not return a result depending on the cleared mask,
-        # but should not raise.
-        if result is not None:
-            assert isinstance(result, ToolPose)
 
 
 # ── emit_resume_travel ───────────────────────────────────────────────
@@ -374,58 +297,3 @@ def _big_vta():
     return [
         [(-200, -200), (200, -200), (200, 200), (-200, 200)],
     ]
-
-
-class TestSegmentResume:
-    def test_returns_tool_pose(self):
-        ca = ClearedArea(boundary=[])
-        ca.cut([_circle(50, 40, 15)])
-        result = search_reengagement(
-            ca,
-            (55.0, 55.0),
-            (1.0, 0.0),
-            3.0,
-            0.6,
-            1.5,
-            0.1,
-            _big_vta(),
-        )
-        assert isinstance(result, ToolPose)
-
-    def test_none_for_empty(self):
-        ca = ClearedArea(boundary=[])
-        result = search_reengagement(
-            ca,
-            (55.0, 55.0),
-            (1.0, 0.0),
-            3.0,
-            0.6,
-            1.5,
-            0.1,
-            _big_vta(),
-        )
-        assert result is None
-
-    def test_forward_and_backward_return_valid(self):
-        ca = ClearedArea(boundary=[])
-        ca.cut([_circle(50, 40, 15)])
-        fwd = search_frontier_engagement(
-            ca,
-            ToolPose(pos=(50.0, 55.0), heading=0.0),
-            3.0,
-            0.6,
-            1.5,
-            0.1,
-            float("inf"),
-        )
-        bwd = search_reengagement(
-            ca,
-            (55.0, 55.0),
-            (1.0, 0.0),
-            3.0,
-            0.6,
-            1.5,
-            0.1,
-            _big_vta(),
-        )
-        assert fwd is not None and bwd is not None

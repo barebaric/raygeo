@@ -22,10 +22,9 @@ use super::AdaptiveClearingOptions;
 
 pub use super::resume_boundary::ResumeBoundary;
 pub use super::resume_mat::{
-    find_all_mat_crossings, mat_resume_from_crossing, mat_resume_target,
-    ResumeMat,
+    find_all_mat_crossings, mat_resume_from_crossing, ResumeMat,
 };
-pub use super::resume_segment::{search_reengagement, ResumeSegment};
+pub use super::resume_segment::ResumeSegment;
 pub use super::resume_wall_hug::ResumeWallHug;
 
 // ── Resume constants ─────────────────────────────────────────────────
@@ -178,8 +177,6 @@ fn probe_step_impl(
     dir_sign: f64,
     mode: &str,
 ) -> Option<ToolPose> {
-    let max_deflection = ctx.opts.max_deflection_deg.to_radians();
-    let _ = max_deflection;
     let result = step_adaptive(
         ctx.cleared,
         pos,

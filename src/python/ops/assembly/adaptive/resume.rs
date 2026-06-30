@@ -1,8 +1,7 @@
 //! Python wrappers for the adaptive-clearing resume / re-engagement helpers.
 //!
 //! Mirrors [`crate::ops::assembly::adaptive::resume`].  Exposes the
-//! pure-geometry path shortener ([`smooth_travel_path`]), the
-//! Medial-Axis helpers ([`mat_resume_target`]),
+//! pure-geometry path shortener ([`smooth_travel_path`]),
 //! and the two resume drivers ([`emit_resume_travel`], [`try_resume`])
 //! so they can be exercised directly from Python tests.
 
@@ -12,7 +11,6 @@ use crate::ops::cut::CutDirection;
 use crate::ops::cut::ToolPose;
 use crate::python::geo::algo::medial_axis::PyMedialAxis;
 use crate::python::ops::cut::cleared_area::PyClearedArea;
-use crate::python::ops::cut::search::PyToolPose;
 use crate::python::ops::PyOps;
 use crate::types::{Point, Polygon};
 use pyo3::prelude::*;
@@ -23,8 +21,6 @@ pub(crate) fn register(adaptive_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     register_functions!(
         resume_mod,
         smooth_travel_path_py,
-        mat_resume_target_py,
-        search_reengagement_py,
         emit_resume_travel_py,
         try_resume_py,
     );
@@ -82,129 +78,6 @@ fn smooth_travel_path_py(
         .into_iter()
         .map(|p| (p.x, p.y))
         .collect()
-}
-
-/// Pick a resume target via MAT-guided frontier walk.
-#[gen_stub_pyfunction(
-    python = r#"
-    import collections.abc
-    import raygeo
-
-    def mat_resume_target(
-        axis: raygeo.geo.algo.medial_axis.MedialAxis,
-        cleared: raygeo.ops.cut.cleared_area.ClearedArea,
-        tool: raygeo.ops.assembly.adaptive.tool.Tool,
-        cut_direction: str,
-        step_length: float,
-        advance: float,
-        pocket_boundary: collections.abc.Sequence[tuple[float, float]],
-        islands: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]],
-        valid_tool_area: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]],
-    ) -> raygeo.ops.cut.search.ToolPose | None:
-        """Pick a resume target via MAT-guided frontier walk.
-
-        :param cut_direction: ``"cw"`` or ``"ccw"``.
-        """
-    "#,
-    module = "raygeo.ops.assembly.adaptive.resume"
-)]
-#[pyfunction(name = "mat_resume_target")]
-#[allow(clippy::too_many_arguments)]
-fn mat_resume_target_py(
-    axis: &PyMedialAxis,
-    cleared: &PyClearedArea,
-    tool: &crate::python::ops::assembly::adaptive::tool::PyTool,
-    cut_direction: &str,
-    step_length: f64,
-    advance: f64,
-    pocket_boundary: Vec<(f64, f64)>,
-    islands: Vec<Vec<(f64, f64)>>,
-    valid_tool_area: Vec<Vec<(f64, f64)>>,
-) -> Option<PyToolPose> {
-    let pb: Polygon = pocket_boundary
-        .into_iter()
-        .map(|(x, y)| Point::new(x, y))
-        .collect();
-    let isls: Vec<Polygon> = islands
-        .into_iter()
-        .map(|p| p.into_iter().map(|(x, y)| Point::new(x, y)).collect())
-        .collect();
-    let valid: Vec<Polygon> = valid_tool_area
-        .into_iter()
-        .map(|p| p.into_iter().map(|(x, y)| Point::new(x, y)).collect())
-        .collect();
-    let cd = match cut_direction.to_ascii_lowercase().as_str() {
-        "cw" => CutDirection::Cw,
-        _ => CutDirection::Ccw,
-    };
-    let r = resume::mat_resume_target(
-        &axis.inner,
-        &cleared.inner,
-        &tool.inner,
-        cd,
-        step_length,
-        advance,
-        &pb,
-        &isls,
-        &valid,
-    )?;
-    Some(PyToolPose {
-        pos: (r.pos.x, r.pos.y),
-        heading: r.heading,
-    })
-}
-
-/// SegmentResume: walk forward from segment_start along cut_direction
-/// until probing finds engagement.
-#[gen_stub_pyfunction(
-    python = r#"
-    import collections.abc
-    import raygeo
-
-    def search_reengagement(
-        cleared: raygeo.ops.cut.cleared_area.ClearedArea,
-        segment_start: tuple[float, float],
-        cut_direction: tuple[float, float],
-        radius: float,
-        step_length: float,
-        advance: float,
-        min_cut_area: float,
-        valid_tool_area: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]],
-    ) -> raygeo.ops.cut.search.ToolPose | None:
-        """SegmentResume: walk forward from segment_start along cut_direction."""
-    "#,
-    module = "raygeo.ops.assembly.adaptive.resume"
-)]
-#[pyfunction(name = "search_reengagement")]
-#[allow(clippy::too_many_arguments)]
-fn search_reengagement_py(
-    cleared: &PyClearedArea,
-    segment_start: (f64, f64),
-    cut_direction: (f64, f64),
-    radius: f64,
-    step_length: f64,
-    advance: f64,
-    min_cut_area: f64,
-    valid_tool_area: Vec<Vec<(f64, f64)>>,
-) -> Option<PyToolPose> {
-    let vta: Vec<Polygon> = valid_tool_area
-        .into_iter()
-        .map(|p| p.into_iter().map(|(x, y)| Point::new(x, y)).collect())
-        .collect();
-    let r = resume::search_reengagement(
-        &cleared.inner,
-        Point::new(segment_start.0, segment_start.1),
-        Point::new(cut_direction.0, cut_direction.1),
-        radius,
-        step_length,
-        advance,
-        min_cut_area,
-        &vta,
-    )?;
-    Some(PyToolPose {
-        pos: (r.pos.x, r.pos.y),
-        heading: r.heading,
-    })
 }
 
 /// Emit a safe resume travel from *from_pt* to *to_pt* into *ops*.

@@ -15,7 +15,7 @@ class Tool:
     Holds the tool centre position, heading, and the steering
     predictor / gyroscope buffers used to smooth the walking path.
     Construct with ``Tool(pos, heading, radius)`` and feed direction
-    vectors via ``push_gyro`` / ``push_angle`` between solver steps.
+    vectors via ``push_gyro`` between solver steps.
     """
     @property
     def pos(self) -> tuple[builtins.float, builtins.float]:
@@ -59,11 +59,6 @@ class Tool:
     def reset_gyro(self) -> None:
         r"""
         Reset the gyroscope and predictor history to the current heading.
-        """
-    def push_angle(self, delta: builtins.float) -> None:
-        r"""
-        Push a solver iteration-angle delta (radians) into the predictor
-        ring buffer.
         """
     def update_predictor(self, delta: builtins.float) -> None:
         r"""

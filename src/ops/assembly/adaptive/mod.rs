@@ -47,9 +47,6 @@ use trace::{RecordBuf, TraceKind};
 
 // ── Named constants ────────────────────────────────────────────────────
 
-/// Floor fraction of target cut-area-per-distance below which we treat
-/// engagement as lost.
-const ENGAGEMENT_FLOOR_FRAC: f64 = 0.01;
 /// Maximum total steps before giving up (safety valve).
 const MAX_TOTAL_STEPS: usize = 100_000;
 /// Check progress every N successful steps.
@@ -348,11 +345,6 @@ pub fn adaptive_clearing(
     let mut last_resume_area: f64 = -1.0;
     let mut last_resume_pos = tool.pos;
 
-    let _target_eng =
-        2.0 * std::f64::consts::PI - 2.0 * (opts.advance / opts.radius).acos();
-    let _min_cut_area =
-        opts.step_length * target_area_pd * ENGAGEMENT_FLOOR_FRAC;
-
     let mut iter: usize = 0;
     for _ in 0..MAX_TOTAL_STEPS {
         iter += 1;
@@ -415,7 +407,6 @@ pub fn adaptive_clearing(
             tool.pos = result.next;
             tool.heading = result.heading;
             tool.push_gyro(dir);
-            tool.push_angle(result.iteration_angle);
             // Only feed the deflection back into the predictor when the
             // solver converged quickly (iters < MAX_IT).  A step that
             // exhausted all 20 iterations almost certainly picked an

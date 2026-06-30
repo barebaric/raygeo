@@ -36,66 +36,6 @@ Emit a safe resume travel from *from_pt* to *to_pt* into *ops*.
 | `cut_z`           | `float = -5`                                   |             |
 | _Returns_         | `None`                                         |             |
 
-### `mat_resume_target()`
-
-```python
-mat_resume_target(
-    axis: geo.algo.medial_axis.MedialAxis,
-    cleared: ops.cut.cleared_area.ClearedArea,
-    tool: ops.assembly.adaptive.tool.Tool,
-    cut_direction: str,
-    step_length: float,
-    advance: float,
-    pocket_boundary: Sequence[tuple[float, float]],
-    islands: Sequence[Sequence[tuple[float, float]]],
-    valid_tool_area: Sequence[Sequence[tuple[float, float]]],
-) -> ops.cut.search.ToolPose | None
-```
-
-Pick a resume target via MAT-guided frontier walk.
-
-| Parameter         | Type                                      | Description        |
-| ----------------- | ----------------------------------------- | ------------------ |
-| `axis`            | `geo.algo.medial_axis.MedialAxis`         |                    |
-| `cleared`         | `ops.cut.cleared_area.ClearedArea`        |                    |
-| `tool`            | `ops.assembly.adaptive.tool.Tool`         |                    |
-| `cut_direction`   | `str`                                     | `"cw"` or `"ccw"`. |
-| `step_length`     | `float`                                   |                    |
-| `advance`         | `float`                                   |                    |
-| `pocket_boundary` | `Sequence[tuple[float, float]]`           |                    |
-| `islands`         | `Sequence[Sequence[tuple[float, float]]]` |                    |
-| `valid_tool_area` | `Sequence[Sequence[tuple[float, float]]]` |                    |
-| _Returns_         | `ops.cut.search.ToolPose &#124; None`     |                    |
-
-### `search_reengagement()`
-
-```python
-search_reengagement(
-    cleared: ops.cut.cleared_area.ClearedArea,
-    segment_start: tuple[float, float],
-    cut_direction: tuple[float, float],
-    radius: float,
-    step_length: float,
-    advance: float,
-    min_cut_area: float,
-    valid_tool_area: Sequence[Sequence[tuple[float, float]]],
-) -> ops.cut.search.ToolPose | None
-```
-
-SegmentResume: walk forward from segment_start along cut_direction.
-
-| Parameter         | Type                                      | Description |
-| ----------------- | ----------------------------------------- | ----------- |
-| `cleared`         | `ops.cut.cleared_area.ClearedArea`        |             |
-| `segment_start`   | `tuple[float, float]`                     |             |
-| `cut_direction`   | `tuple[float, float]`                     |             |
-| `radius`          | `float`                                   |             |
-| `step_length`     | `float`                                   |             |
-| `advance`         | `float`                                   |             |
-| `min_cut_area`    | `float`                                   |             |
-| `valid_tool_area` | `Sequence[Sequence[tuple[float, float]]]` |             |
-| _Returns_         | `ops.cut.search.ToolPose &#124; None`     |             |
-
 ### `smooth_travel_path()`
 
 ```python

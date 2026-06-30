@@ -12,7 +12,6 @@ from matplotlib.legend_handler import HandlerPatch
 from matplotlib.patches import FancyArrow
 
 from raygeo.geo.algo.offset import compute_inset_region
-from raygeo.ops.assembly.adaptive.resume import search_reengagement
 from raygeo.ops.cut.cleared_area import ClearedArea
 from raygeo.ops.cut.search import (
     ToolPose,
@@ -83,119 +82,6 @@ def _setup():
 
 
 # ── Generators ───────────────────────────────────────────────────────
-
-
-def generate_search_reengagement():
-    """search_reengagement — backward frontier walk.
-
-    Walks backward (CW) along the frontier from the tool position to
-    find the vertex where the tool re-engages with uncut material.
-    """
-
-    half = 25.0
-    square = [(-half, -half), (half, -half), (half, half), (-half, half)]
-
-    tool_radius = 3.0
-    step_length = 1.0
-    advance = 1.5
-    min_cut_area = 0.1
-
-    r_seed = 26.0
-    seed_raw = _circle(0.0, 0.0, r_seed, 256)
-
-    va, _ = compute_inset_region(square, tool_radius, [])
-
-    ca = ClearedArea(boundary=square, initial=[seed_raw])
-
-    va_right = half - tool_radius
-    y_int = math.sqrt(r_seed**2 - va_right**2)
-    tool_pos = (va_right, -y_int)
-    heading = math.pi / 4
-
-    eng_rp = search_reengagement(
-        ca,
-        segment_start=tool_pos,
-        cut_direction=(
-            math.cos(heading),
-            math.sin(heading),
-        ),
-        radius=tool_radius,
-        step_length=step_length,
-        advance=advance,
-        min_cut_area=min_cut_area,
-        valid_tool_area=va,
-    )
-
-    fig, ax = _make_axes(square, va, ca, frontier_tol=0.001)
-    _plot_tool(ax, tool_pos, heading)
-
-    if not eng_rp:
-        ax.text(
-            0,
-            0,
-            "No re-engagement found",
-            fontsize=12,
-            ha="center",
-            va="center",
-            color="red",
-        )
-        ax.set_title("search_reengagement — no engagement found")
-        ax.legend(
-            loc="upper right",
-            fontsize=7,
-            ncol=2,
-            handler_map={FancyArrow: _ARROW_HANDLER},
-        )
-        fig.tight_layout()
-        return fig
-
-    engage_pos = eng_rp.pos
-    engage_h = eng_rp.heading
-
-    seg_xs = [tool_pos[0], engage_pos[0]]
-    seg_ys = [tool_pos[1], engage_pos[1]]
-    ax.plot(
-        seg_xs,
-        seg_ys,
-        "--",
-        color="magenta",
-        linewidth=2.5,
-        label="Backtrack path",
-    )
-
-    ax.plot(
-        engage_pos[0],
-        engage_pos[1],
-        "o",
-        color="lime",
-        markersize=12,
-        zorder=12,
-        label="Engagement",
-    )
-    dx = math.cos(engage_h) * 6
-    dy = math.sin(engage_h) * 6
-    ax.arrow(
-        engage_pos[0],
-        engage_pos[1],
-        dx,
-        dy,
-        head_width=1.5,
-        head_length=1.5,
-        fc="lime",
-        ec="lime",
-        zorder=13,
-        label="Engagement dir",
-    )
-
-    ax.set_title("search_reengagement — backward frontier walk")
-    ax.legend(
-        loc="upper right",
-        fontsize=7,
-        ncol=2,
-        handler_map={FancyArrow: _ARROW_HANDLER},
-    )
-    fig.tight_layout()
-    return fig
 
 
 def generate_search_frontier_engagement():

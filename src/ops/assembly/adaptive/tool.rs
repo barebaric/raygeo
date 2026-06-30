@@ -23,16 +23,15 @@ pub(super) const PREDICTOR_DECAY: f64 = 0.5;
 pub(super) const PREDICTOR_CLAMP_FRAC: f64 = 0.5;
 /// Number of recent direction vectors to average for heading smoothing.
 pub(super) const GYRO_BUFFER_LEN: usize = 5;
-/// Number of recent iteration-angle deltas stored for the predictor.
-pub(super) const ANGLE_HISTORY_LEN: usize = 4;
 
 // ── Tool ─────────────────────────────────────────────────────────────
 
 /// A cutting tool with persistent position and heading.
 ///
 /// A short gyroscope buffer averages recent direction vectors so that
-/// small engagement wiggles do not jerk the tool path.  A separate
-/// history of recent solver deltas serves as a predictor.
+/// small engagement wiggles do not jerk the tool path.  A decayed
+/// predictor feeds the last converged deflection back into the next
+/// step's solver trial for steady curvature tracking.
 #[derive(Clone, Copy, Debug)]
 pub struct Tool {
     /// Tool centre position.
@@ -45,10 +44,6 @@ pub struct Tool {
     gyro: [Point; GYRO_BUFFER_LEN],
     /// Number of valid entries in `gyro` (0..GYRO_BUFFER_LEN).
     gyro_count: usize,
-    /// Recent solver-angle deltas for the predictor (ring buffer).
-    angle_history: [f64; ANGLE_HISTORY_LEN],
-    /// Number of valid entries in `angle_history`.
-    angle_hist_count: usize,
     /// Decayed predictor value.  Updated only on converged steps and
     /// multiplied by [`PREDICTOR_DECAY`] each step, so a single
     /// transient over-correction does not seed the next step's solver
@@ -68,8 +63,6 @@ impl Tool {
             radius,
             gyro: [dir; GYRO_BUFFER_LEN],
             gyro_count: GYRO_BUFFER_LEN,
-            angle_history: [0.0; ANGLE_HISTORY_LEN],
-            angle_hist_count: 0,
             predictor: 0.0,
         }
     }
@@ -110,20 +103,7 @@ impl Tool {
         let dir = Point::new(self.heading.cos(), self.heading.sin());
         self.gyro = [dir; GYRO_BUFFER_LEN];
         self.gyro_count = 1;
-        self.angle_history = [0.0; ANGLE_HISTORY_LEN];
-        self.angle_hist_count = 0;
         self.predictor = 0.0;
-    }
-
-    #[prof]
-    pub fn push_angle(&mut self, delta: f64) {
-        for i in (1..ANGLE_HISTORY_LEN).rev() {
-            self.angle_history[i] = self.angle_history[i - 1];
-        }
-        self.angle_history[0] = delta;
-        if self.angle_hist_count < ANGLE_HISTORY_LEN {
-            self.angle_hist_count += 1;
-        }
     }
 
     /// Update the decayed predictor.  Called only when a step

@@ -5,7 +5,6 @@ import math
 import pytest
 
 from raygeo.ops.assembly.adaptive import target_area_per_distance
-from raygeo.ops.assembly.adaptive.resume import search_reengagement
 from raygeo.ops.cut.cleared_area import ClearedArea
 from raygeo.ops.cut.search import (
     ToolPose,
@@ -383,49 +382,4 @@ def test_reengagement_position_offset_inward():
     assert abs(dist - expected) < 1.0, (
         f"Tool centre at dist {dist:.3f} from circle centre, "
         f"expected ~{expected:.3f}"
-    )
-
-
-def test_reengagement_first_step_has_correct_engagement():
-    """``search_reengagement`` walks forward from the tool position
-    along ``cut_direction`` and returns a position whose cut area
-    is at least ``min_cut_area``.
-    """
-    R = 5.0
-    advance = 2.0
-    step_length = 1.0
-    min_cut_area = (
-        target_area_per_distance(R, advance, step_length) * step_length
-    )
-
-    ca = ClearedArea(boundary=[])
-    n = 32
-    circle = [
-        (
-            50.0 + 15.0 * math.cos(2 * math.pi * i / n),
-            40.0 + 15.0 * math.sin(2 * math.pi * i / n),
-        )
-        for i in range(n)
-    ]
-    ca.cut([circle])
-
-    result = search_reengagement(
-        ca,
-        (55.0, 55.0),
-        (1.0, 0.0),
-        R,
-        step_length,
-        advance,
-        min_cut_area,
-        _big_vta(),
-    )
-    assert result is not None
-
-    probe = (
-        result.pos[0] + math.cos(result.heading) * step_length,
-        result.pos[1] + math.sin(result.heading) * step_length,
-    )
-    actual_area = ca.cut_area(result.pos, probe, R)
-    assert actual_area >= min_cut_area, (
-        f"actual_area={actual_area:.4f} < min_cut_area={min_cut_area:.4f}"
     )

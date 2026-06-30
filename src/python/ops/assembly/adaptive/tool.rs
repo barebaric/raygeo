@@ -10,7 +10,7 @@ use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 /// Holds the tool centre position, heading, and the steering
 /// predictor / gyroscope buffers used to smooth the walking path.
 /// Construct with ``Tool(pos, heading, radius)`` and feed direction
-/// vectors via ``push_gyro`` / ``push_angle`` between solver steps.
+/// vectors via ``push_gyro`` between solver steps.
 #[gen_stub_pyclass(module = "raygeo.ops.assembly.adaptive.tool")]
 #[pyclass(name = "Tool", skip_from_py_object)]
 #[derive(Clone, Copy)]
@@ -75,12 +75,6 @@ impl PyTool {
     /// Reset the gyroscope and predictor history to the current heading.
     fn reset_gyro(&mut self) {
         self.inner.reset_gyro();
-    }
-
-    /// Push a solver iteration-angle delta (radians) into the predictor
-    /// ring buffer.
-    fn push_angle(&mut self, delta: f64) {
-        self.inner.push_angle(delta);
     }
 
     /// Update the decayed steering predictor with a converged deflection.

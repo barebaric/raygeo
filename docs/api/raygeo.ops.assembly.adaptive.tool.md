@@ -9,7 +9,7 @@ Cutting-tool state for adaptive clearing.
 
 Holds the tool centre position, heading, and the steering predictor / gyroscope buffers used to
 smooth the walking path. Construct with `Tool(pos, heading, radius)` and feed direction vectors via
-`push_gyro` / `push_angle` between solver steps.
+`push_gyro` between solver steps.
 
 ### `heading`
 
@@ -47,19 +47,6 @@ Predictor seed for the engagement solver, clamped to a fraction of *max_deflecti
 | ---------------- | ------- | ----------- |
 | `max_deflection` | `float` |             |
 | _Returns_        | `float` |             |
-
-### `push_angle()`
-
-```python
-push_angle(delta: float) -> None
-```
-
-Push a solver iteration-angle delta (radians) into the predictor ring buffer.
-
-| Parameter | Type    | Description |
-| --------- | ------- | ----------- |
-| `delta`   | `float` |             |
-| _Returns_ | `None`  |             |
 
 ### `push_gyro()`
 

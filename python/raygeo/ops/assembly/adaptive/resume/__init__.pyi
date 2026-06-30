@@ -5,8 +5,6 @@ import collections.abc
 import raygeo
 __all__ = [
     "emit_resume_travel",
-    "mat_resume_target",
-    "search_reengagement",
     "smooth_travel_path",
     "try_resume",
 ]
@@ -14,18 +12,6 @@ __all__ = [
 def emit_resume_travel(ops: raygeo.ops.Ops, cleared: raygeo.ops.cut.cleared_area.ClearedArea, axis: raygeo.geo.algo.medial_axis.MedialAxis | None, from_pt: tuple[float, float], to_pt: tuple[float, float], pocket_boundary: collections.abc.Sequence[tuple[float, float]], islands: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]] = [], radius: float = 3, cut_z: float = -5) -> None:
     r"""
     Emit a safe resume travel from *from_pt* to *to_pt* into *ops*.
-    """
-
-def mat_resume_target(axis: raygeo.geo.algo.medial_axis.MedialAxis, cleared: raygeo.ops.cut.cleared_area.ClearedArea, tool: raygeo.ops.assembly.adaptive.tool.Tool, cut_direction: str, step_length: float, advance: float, pocket_boundary: collections.abc.Sequence[tuple[float, float]], islands: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]], valid_tool_area: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]]) -> raygeo.ops.cut.search.ToolPose | None:
-    r"""
-    Pick a resume target via MAT-guided frontier walk.
-    
-    :param cut_direction: ``"cw"`` or ``"ccw"``.
-    """
-
-def search_reengagement(cleared: raygeo.ops.cut.cleared_area.ClearedArea, segment_start: tuple[float, float], cut_direction: tuple[float, float], radius: float, step_length: float, advance: float, min_cut_area: float, valid_tool_area: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]]) -> raygeo.ops.cut.search.ToolPose | None:
-    r"""
-    SegmentResume: walk forward from segment_start along cut_direction.
     """
 
 def smooth_travel_path(from_pt: tuple[float, float], raw: collections.abc.Sequence[tuple[float, float]], obstacles: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]] = [], clearance: float = 1) -> list[tuple[float, float]]:
