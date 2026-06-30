@@ -3,13 +3,19 @@
 //! Writes a single self-contained binary trace file with the layout:
 //!
 //! ```text
-//!   header:   magic[4] "ADPT" + version(u32) + record_count(u32) = 12 bytes
+//!   header:   magic[4] "ADPT" + reserved(u32) + record_count(u32) = 12 bytes
 //!   geometry: tool_radius(f64)
 //!             + boundary_vert_count(u32) + boundary verts (x,y f64 each)
 //!             + island_count(u32)
 //!               + per island: vert_count(u32) + verts (x,y f64 each)
 //!             + seed_count(u32)
 //!               + per seed: vert_count(u32) + verts (x,y f64 each)
+//!   mat:      present(u8) — 0 = no MAT, 1 = MAT follows
+//!               + node_count(u32)
+//!                 + per node: x(f64) y(f64) clearance(f64)
+//!               + edge_count(u32)
+//!                 + per edge: from(u32) to(u32)
+//!               + root(u32)
 //!   toolpath: tp_count(u32) + per point: x(f64) y(f64) is_travel(u8) + 3 pad
 //!   records:  record_count × 128 bytes (1 kind byte + 127 payload bytes)
 //! ```
@@ -21,16 +27,42 @@
 use std::io::{Seek, SeekFrom, Write};
 use std::path::PathBuf;
 
+use crate::geo::algo::medial_axis::MedialAxis;
 use crate::types::Polygon;
 
 /// Magic header bytes: ``b"ADPT"``.
 const TRACE_MAGIC: [u8; 4] = *b"ADPT";
-/// Trace format version.
-const TRACE_VERSION: u32 = 3;
 /// Fixed size of each record (including the 1-byte kind).
 const TRACE_RECORD_SIZE: usize = 128;
 /// Number of payload bytes per record (everything after the kind byte).
 pub(crate) const PAYLOAD_SIZE: usize = TRACE_RECORD_SIZE - 1;
+
+/// Lightweight serializable snapshot of the Medial Axis Transform.
+///
+/// Only the data needed for visualisation (nodes, clearances, edges, root)
+/// — no LCA cache, no branches.
+#[derive(Clone, Debug)]
+pub(crate) struct MatTrace {
+    pub nodes: Vec<(f64, f64)>,
+    pub clearances: Vec<f64>,
+    pub edges: Vec<(u32, u32)>,
+    pub root: u32,
+}
+
+impl From<&MedialAxis> for MatTrace {
+    fn from(ma: &MedialAxis) -> Self {
+        Self {
+            nodes: ma.nodes.iter().map(|n| (n.point.x, n.point.y)).collect(),
+            clearances: ma.nodes.iter().map(|n| n.clearance).collect(),
+            edges: ma
+                .edges
+                .iter()
+                .map(|&(i, j)| (i as u32, j as u32))
+                .collect(),
+            root: ma.root as u32,
+        }
+    }
+}
 
 /// Geometry + toolpath block written between the header and the records.
 #[derive(Clone, Debug)]
@@ -66,7 +98,7 @@ impl Tracer {
     ) -> std::io::Result<Self> {
         let mut file = std::fs::File::create(path)?;
         file.write_all(&TRACE_MAGIC)?;
-        file.write_all(&TRACE_VERSION.to_le_bytes())?;
+        file.write_all(&0u32.to_le_bytes())?; // reserved
         file.write_all(&0u32.to_le_bytes())?; // record count placeholder
         write_geometry(&mut file, ctx)?;
         Ok(Self {
@@ -74,6 +106,31 @@ impl Tracer {
             count: 0,
             records: Vec::new(),
         })
+    }
+
+    /// Write the MAT block.  Must be called after [`open`] and before
+    /// [`write_toolpath`].  When `mat` is `None` a zero flag is written
+    /// so the Python reader always knows where the MAT block ends.
+    pub(crate) fn write_mat(&mut self, mat: Option<MatTrace>) {
+        if let Some(m) = mat {
+            let _ = self.file.write_all(&[1u8]);
+            let _ = self.file.write_all(&(m.nodes.len() as u32).to_le_bytes());
+            for i in 0..m.nodes.len() {
+                let (x, y) = m.nodes[i];
+                let c = m.clearances[i];
+                let _ = self.file.write_all(&x.to_le_bytes());
+                let _ = self.file.write_all(&y.to_le_bytes());
+                let _ = self.file.write_all(&c.to_le_bytes());
+            }
+            let _ = self.file.write_all(&(m.edges.len() as u32).to_le_bytes());
+            for &(i, j) in &m.edges {
+                let _ = self.file.write_all(&i.to_le_bytes());
+                let _ = self.file.write_all(&j.to_le_bytes());
+            }
+            let _ = self.file.write_all(&m.root.to_le_bytes());
+        } else {
+            let _ = self.file.write_all(&[0u8]);
+        }
     }
 
     /// Write the toolpath block.  Must be called exactly once, after the

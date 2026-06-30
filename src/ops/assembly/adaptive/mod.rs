@@ -296,6 +296,7 @@ pub fn adaptive_clearing(
     #[cfg(debug_assertions)]
     {
         if let Some(ref mut tr) = tracer {
+            tr.write_mat(mat.as_ref().map(|m| m.into()));
             let mut buf = RecordBuf::default();
             buf.status(StepStatus::Ok);
             buf.step_idx(0);

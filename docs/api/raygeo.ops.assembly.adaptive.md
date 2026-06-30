@@ -27,6 +27,7 @@ adaptive_clearing(
     expansion_batch_size: int = 20,
     profile: bool = False,
     cut_direction: str = 'ccw',
+    trace_path: str | None = None,
 ) -> ops.Ops
 ```
 
@@ -58,6 +59,7 @@ and prepending the entry Ops to the result.
 | `expansion_batch_size` | `int = 20`                                     | Batch cleared-area expansions every N steps (default 20). Larger values improve performance but may slightly reduce path quality. |
 | `profile`              | `bool = False`                                 | Print a profiling report to stdout (default False).                                                                               |
 | `cut_direction`        | `str = 'ccw'`                                  | Rotational direction of all cutting moves. `"cw"` or `"ccw"` (default `"ccw"`).                                                   |
+| `trace_path`           | `str &#124; None = None`                       | When set, write a per-step binary trace file for the Python inspector (debug builds only).                                        |
 | _Returns_              | `ops.Ops`                                      | Ops with cutting commands (entry not included).                                                                                   |
 
 ![Circle-seed clearing in a 60×60 pocket with a 10×10 island at the centre — 2D top-down shows seed clearing (blue), toolpath gradient, and remaining bands (red).](images/ops-assembly-adaptive-adaptive-clearing-centre-island.png)

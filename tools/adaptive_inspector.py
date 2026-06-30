@@ -182,14 +182,10 @@ class TraceFile:
             magic = f.read(4)
             if magic != TRACE_MAGIC:
                 raise ValueError(f"bad magic: {magic}")
-            self.version = struct.unpack("<I", f.read(4))[0]
-            if self.version < 3:
-                raise ValueError(
-                    f"trace version {self.version} is no longer supported; "
-                    f"re-generate with the current inspector"
-                )
+            f.read(4)  # reserved
             self.count = struct.unpack("<I", f.read(4))[0]
             self.geometry = self._read_geometry(f)
+            self._read_mat(f)
             self.toolpath = self._read_toolpath(f)
             self.data = f.read()
 
@@ -222,6 +218,31 @@ class TraceFile:
             is_travel = f.read(1) != b"\x00"
             pts.append((x, y, bool(is_travel)))
         return pts
+
+    def _read_mat(self, f):
+        present = struct.unpack("<B", f.read(1))[0]
+        if present:
+            n_nodes = struct.unpack("<I", f.read(4))[0]
+            self.mat_nodes = []
+            self.mat_clearances = []
+            for _ in range(n_nodes):
+                x = struct.unpack("<d", f.read(8))[0]
+                y = struct.unpack("<d", f.read(8))[0]
+                c = struct.unpack("<d", f.read(8))[0]
+                self.mat_nodes.append((x, y))
+                self.mat_clearances.append(c)
+            n_edges = struct.unpack("<I", f.read(4))[0]
+            self.mat_edges = []
+            for _ in range(n_edges):
+                i = struct.unpack("<I", f.read(4))[0]
+                j = struct.unpack("<I", f.read(4))[0]
+                self.mat_edges.append((i, j))
+            self.mat_root = struct.unpack("<I", f.read(4))[0]
+        else:
+            self.mat_nodes = []
+            self.mat_clearances = []
+            self.mat_edges = []
+            self.mat_root = 0
 
     def __len__(self):
         return self.count
@@ -541,6 +562,7 @@ class Inspector:
         self.geometry = geometry
         self.current = 0
         self._ca_cache = {}
+        self.show_mat = False
         self._precompute_toolpath()
         self._build_segment_steps()
 
@@ -554,6 +576,7 @@ class Inspector:
         ax_next = self.fig.add_axes((0.48, 0.06, 0.05, 0.04))
         ax_prev_seg = self.fig.add_axes((0.55, 0.06, 0.07, 0.04))
         ax_next_seg = self.fig.add_axes((0.63, 0.06, 0.07, 0.04))
+        ax_mat = self.fig.add_axes((0.72, 0.06, 0.08, 0.04))
 
         self.textbox = TextBox(ax_text, "Step:", initial="0")
         self.textbox.on_submit(self._on_submit)
@@ -567,6 +590,8 @@ class Inspector:
         self.btn_prev_seg.on_clicked(lambda e: self._step_segment(-1))
         self.btn_next_seg = Button(ax_next_seg, "Seg ▶▶")
         self.btn_next_seg.on_clicked(lambda e: self._step_segment(1))
+        self.btn_mat = Button(ax_mat, "MAT: Off")
+        self.btn_mat.on_clicked(self._toggle_mat)
 
         self.ax_info = self.fig.add_axes(
             (0.01, 0.11, 0.98, 0.05), frameon=False
@@ -626,6 +651,11 @@ class Inspector:
     def _step(self, delta):
         self._draw(self.current + delta)
 
+    def _toggle_mat(self, _event=None):
+        self.show_mat = not self.show_mat
+        self.btn_mat.label.set_text("MAT: On" if self.show_mat else "MAT: Off")
+        self._draw(self.current)
+
     def _on_key(self, event):
         if event.key == "left":
             self._step(-1)
@@ -639,6 +669,8 @@ class Inspector:
             self._draw(0)
         elif event.key == "end":
             self._draw(self.n_steps - 1)
+        elif event.key == "m":
+            self._toggle_mat()
 
     def _precompute_toolpath(self):
         """Precompute cutting edges, travel edges, and cumulative distances
@@ -815,6 +847,9 @@ class Inspector:
         # ── Tool position ──
         self._draw_tool(rec)
 
+        # ── MAT overlay ──
+        self._draw_mat()
+
         # ── Title ──
         kind_name = KIND_NAMES.get(rec.kind, str(rec.kind))
         status_name = STATUS_NAMES.get(rec.status, str(rec.status))
@@ -847,6 +882,36 @@ class Inspector:
         self.info_text.set_text(info)
 
         self.fig.canvas.draw_idle()
+
+    def _draw_mat(self):
+        nodes = self.trace.mat_nodes
+        edges = self.trace.mat_edges
+        clearances = self.trace.mat_clearances
+        root = self.trace.mat_root
+        if not nodes or not self.show_mat:
+            return
+
+        for i, j in edges:
+            self.ax.plot(
+                [nodes[i][0], nodes[j][0]],
+                [nodes[i][1], nodes[j][1]],
+                color="#4a90d9",
+                linewidth=0.6,
+                alpha=0.5,
+                zorder=6,
+            )
+        xs = [n[0] for n in nodes]
+        ys = [n[1] for n in nodes]
+        self.ax.scatter(
+            xs, ys, c=clearances, cmap="viridis", s=4, alpha=0.6, zorder=6
+        )
+        self.ax.plot(
+            nodes[root][0],
+            nodes[root][1],
+            "r*",
+            markersize=8,
+            zorder=6,
+        )
 
     def _draw_toolpath(self, rec):
         """Draw toolpath up to the moving-command count in this record."""
@@ -1022,7 +1087,7 @@ def cmd_inspect(args: argparse.Namespace) -> None:
 
     print(f"Loading trace from {trace_path}")
     trace = TraceFile(trace_path)
-    print(f"  version={trace.version}  {len(trace)} trace records")
+    print(f"  {len(trace)} trace records")
 
     geo = trace.geometry
     tp = trace.toolpath
