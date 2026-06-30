@@ -13,10 +13,12 @@ Usage::
     python tools/adaptive_inspector.py inspect /tmp/adaptive_trace.bin 500
 
 Controls:
-    TextBox + Go button  — jump to any step number
-    ◀ / ▶ buttons        — previous / next step
-    Left / Right arrows   — previous / next step
-    Home / End            — first / last step
+     TextBox + Go button  — jump to any step number
+     ◀ / ▶ buttons        — previous / next step
+     ◀◀ / ▶▶ buttons      — previous / next segment
+     Left / Right arrows   — previous / next step
+     Shift+Left / Right    — previous / next segment
+     Home / End            — first / last step
 """
 
 import argparse
@@ -107,6 +109,7 @@ RESUME_SOURCE_NAMES = {
     1: "segment_resume",
     2: "mat_resume",
     3: "boundary_walk",
+    4: "wall_hug",
 }
 
 
@@ -340,6 +343,7 @@ class Inspector:
         self.current = 0
         self._ca_cache = {}
         self._precompute_toolpath()
+        self._build_segment_steps()
 
         self.fig, self.ax = plt.subplots(1, 1, figsize=(14, 9))
         self.fig.subplots_adjust(bottom=0.18, top=0.92)
@@ -349,6 +353,8 @@ class Inspector:
         ax_btn = self.fig.add_axes((0.32, 0.06, 0.08, 0.04))
         ax_prev = self.fig.add_axes((0.42, 0.06, 0.05, 0.04))
         ax_next = self.fig.add_axes((0.48, 0.06, 0.05, 0.04))
+        ax_prev_seg = self.fig.add_axes((0.55, 0.06, 0.07, 0.04))
+        ax_next_seg = self.fig.add_axes((0.63, 0.06, 0.07, 0.04))
 
         self.textbox = TextBox(ax_text, "Step:", initial="0")
         self.textbox.on_submit(self._on_submit)
@@ -358,6 +364,10 @@ class Inspector:
         self.btn_prev.on_clicked(lambda e: self._step(-1))
         self.btn_next = Button(ax_next, "\u25b6")
         self.btn_next.on_clicked(lambda e: self._step(1))
+        self.btn_prev_seg = Button(ax_prev_seg, "\u25c0\u25c0 Seg")
+        self.btn_prev_seg.on_clicked(lambda e: self._step_segment(-1))
+        self.btn_next_seg = Button(ax_next_seg, "Seg \u25b6\u25b6")
+        self.btn_next_seg.on_clicked(lambda e: self._step_segment(1))
 
         self.ax_info = self.fig.add_axes(
             (0.01, 0.11, 0.98, 0.05), frameon=False
@@ -385,6 +395,37 @@ class Inspector:
         except ValueError:
             pass
 
+    def _step_segment(self, delta):
+        cur_seg = self._current_segment_idx()
+        seg_idx = cur_seg + delta
+        seg_idx = max(0, min(seg_idx, len(self._seg_start_steps) - 1))
+        if seg_idx != cur_seg:
+            self._draw(self._seg_start_steps[seg_idx])
+
+    def _current_segment_idx(self):
+        for i in range(len(self._seg_start_steps) - 1, -1, -1):
+            if self._seg_start_steps[i] <= self.current:
+                return i
+        return 0
+
+    def _build_segment_steps(self):
+        n_seg = len(self._segment_starts)
+        seg_steps = [0] * n_seg
+        seg_steps[0] = 0
+        si = 1
+        for step_idx in range(1, self.n_steps):
+            n_moves = min(
+                self.trace[step_idx].ops_len, len(self.tp)
+            )
+            while si < n_seg and n_moves > self._segment_starts[si][2]:
+                seg_steps[si] = step_idx
+                si += 1
+            if si >= n_seg:
+                break
+        for j in range(si, n_seg):
+            seg_steps[j] = self.n_steps - 1
+        self._seg_start_steps = seg_steps
+
     def _step(self, delta):
         self._draw(self.current + delta)
 
@@ -393,6 +434,10 @@ class Inspector:
             self._step(-1)
         elif event.key == "right":
             self._step(1)
+        elif event.key == "shift+left":
+            self._step_segment(-1)
+        elif event.key == "shift+right":
+            self._step_segment(1)
         elif event.key == "home":
             self._draw(0)
         elif event.key == "end":

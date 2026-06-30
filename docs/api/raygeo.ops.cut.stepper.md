@@ -9,6 +9,14 @@ Result of a single forward step.
 
 Contains the next centre position, updated heading, solver iteration count, and the final status.
 
+### `cut_area`
+
+```python
+cut_area: float
+```
+
+The incremental cut area (crescent) for this step.
+
 ### `heading`
 
 ```python

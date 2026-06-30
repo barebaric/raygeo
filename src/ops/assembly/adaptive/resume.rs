@@ -24,6 +24,7 @@ pub use super::resume_mat::{
     ResumeMat,
 };
 pub use super::resume_segment::{search_reengagement, ResumeSegment};
+pub use super::resume_wall_hug::ResumeWallHug;
 
 // ── Resume constants ─────────────────────────────────────────────────
 
@@ -68,8 +69,35 @@ pub fn probe_step(
     heading: f64,
 ) -> Option<ToolPose> {
     let max_deflection = ctx.opts.max_deflection_deg.to_radians();
+    let dir_sign = ctx.opts.cut_direction.sign();
     let (angle_min, angle_max) =
         ctx.opts.cut_direction.angle_bounds(max_deflection);
+    probe_step_impl(
+        ctx,
+        radius,
+        pos,
+        heading,
+        angle_min,
+        angle_max,
+        dir_sign,
+        "one-sided",
+    )
+}
+
+/// Like [`probe_step`] but only checks that engagement exists (cut_area
+/// above floor), without enforcing the engagement ceiling.  Used for
+/// stepover-targeted resume positions where the first step naturally
+/// has high engagement (the tool plunges into material at the correct
+/// lateral offset) but subsequent steps will have normal engagement.
+pub fn probe_step_sym(
+    ctx: &ResumeCtx,
+    radius: f64,
+    pos: Point,
+    heading: f64,
+) -> Option<ToolPose> {
+    let max_deflection = std::f64::consts::FRAC_PI_4;
+    let max_def = max_deflection;
+    let dir_sign = ctx.opts.cut_direction.sign();
     let result = step_adaptive(
         ctx.cleared,
         pos,
@@ -78,15 +106,85 @@ pub fn probe_step(
         ctx.target_area_pd,
         ctx.opts.step_length,
         radius,
-        max_deflection,
+        max_def,
+        ctx.valid_tool_area,
+        -max_def,
+        max_def,
+        dir_sign,
+    );
+    // Accept the position if the solver found ANY engagement (not
+    // LostEngagement due to under-engagement).  Over-engagement on the
+    // first step is expected at the stepover offset — the main loop
+    // will handle it on subsequent steps.
+    let accept = result.status == StepStatus::Ok
+        || (result.cut_area > 0.0
+            && result.status == StepStatus::LostEngagement
+            && result.engagement.angle > std::f64::consts::FRAC_PI_4);
+    if accept {
+        dbg_log!(
+            "  PROBE[stepover]  pos=({:.3},{:.3})  heading_in={:.4}  \
+             heading_out={:.4}  iters={}  cut_area={:.4}  eng_angle={:.4}  \
+             status={:?}",
+            pos.x,
+            pos.y,
+            heading,
+            result.heading,
+            result.iters,
+            result.cut_area,
+            result.engagement.angle,
+            result.status,
+        );
+        Some(ToolPose {
+            pos,
+            heading: result.heading,
+        })
+    } else {
+        dbg_log!(
+            "  PROBE[stepover]  MISS  pos=({:.3},{:.3})  heading={:.4}  \
+             status={:?}  cut_area={:.4}  eng_angle={:.4}",
+            pos.x,
+            pos.y,
+            heading,
+            result.status,
+            result.cut_area,
+            result.engagement.angle,
+        );
+        None
+    }
+}
+
+#[allow(clippy::too_many_arguments)]
+fn probe_step_impl(
+    ctx: &ResumeCtx,
+    radius: f64,
+    pos: Point,
+    heading: f64,
+    angle_min: f64,
+    angle_max: f64,
+    dir_sign: f64,
+    mode: &str,
+) -> Option<ToolPose> {
+    let max_deflection = ctx.opts.max_deflection_deg.to_radians();
+    let _ = max_deflection;
+    let result = step_adaptive(
+        ctx.cleared,
+        pos,
+        heading,
+        0.0,
+        ctx.target_area_pd,
+        ctx.opts.step_length,
+        radius,
+        angle_max.max(angle_min.abs()),
         ctx.valid_tool_area,
         angle_min,
         angle_max,
+        dir_sign,
     );
     if result.status == StepStatus::Ok {
         dbg_log!(
-            "  PROBE  pos=({:.3},{:.3})  heading_in={:.4}  heading_out={:.4}  \
-             iters={}  bounds=({:.4},{:.4})",
+            "  PROBE[{}]  pos=({:.3},{:.3})  heading_in={:.4}  \
+             heading_out={:.4}  iters={}  bounds=({:.4},{:.4})",
+            mode,
             pos.x,
             pos.y,
             heading,
@@ -101,8 +199,9 @@ pub fn probe_step(
         })
     } else {
         dbg_log!(
-            "  PROBE  MISS  pos=({:.3},{:.3})  heading={:.4}  status={:?}  \
-             bounds=({:.4},{:.4})",
+            "  PROBE[{}]  MISS  pos=({:.3},{:.3})  heading={:.4}  \
+             status={:?}  bounds=({:.4},{:.4})",
+            mode,
             pos.x,
             pos.y,
             heading,
@@ -182,6 +281,8 @@ pub enum ResumeSource {
     ResumeMat = 2,
     /// Find engagement on the cleared-area frontier.
     ResumeBoundary = 3,
+    /// Resume from the envelope-departure point (wall-hug).
+    ResumeWallHug = 4,
 }
 
 // ── ResumeContext ───────────────────────────────────────────────────
@@ -200,6 +301,11 @@ pub struct ResumeCtx<'a> {
     pub segment_start: ToolPose,
     pub last_resume_area: f64,
     pub last_resume_pos: Point,
+    /// Last pose where the tool was on the envelope before departing
+    /// into the interior.  Populated by the main loop while
+    /// `near_envelope` tracking is active; consumed by
+    /// [`ResumeWallHug`].
+    pub last_wall_hug: Option<ToolPose>,
 }
 
 // ── ResumeStrategy trait ────────────────────────────────────────────
@@ -241,6 +347,23 @@ pub fn try_resume(
     if !area_grew && !tool_moved {
         dbg_log!("  RESUME  no change since last resume — giving up");
         return None;
+    }
+
+    // ── Strategy 0: WallHug (preferred) ──────────────────────────
+    // Resume from the point where the tool last departed the envelope
+    // wall.  Tried first so the tool continues from the departure point
+    // rather than re-cutting from the original boundary resume position.
+    if ctx.last_wall_hug.is_some() {
+        let s = ResumeWallHug;
+        if let Some(rp) = s.find_next(ctx, tool) {
+            dbg_log!(
+                "  RESUME  0=wall_hug  → ({:.3},{:.3})  heading={:.4}",
+                rp.pos.x,
+                rp.pos.y,
+                rp.heading,
+            );
+            return Some((ResumeSource::ResumeWallHug, rp));
+        }
     }
 
     // ── Strategy A: SegmentResume ─────────────────────────────────

@@ -33,6 +33,11 @@ class StepResult:
         Updated heading angle in radians.
         """
     @property
+    def cut_area(self) -> builtins.float:
+        r"""
+        The incremental cut area (crescent) for this step.
+        """
+    @property
     def iters(self) -> builtins.int:
         r"""
         Number of solver iterations used.

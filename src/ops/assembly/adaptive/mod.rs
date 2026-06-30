@@ -13,7 +13,9 @@ pub mod resume;
 mod resume_boundary;
 mod resume_mat;
 mod resume_segment;
+mod resume_wall_hug;
 pub mod tool;
+#[cfg(debug_assertions)]
 mod trace;
 
 use crate::dbg_log;
@@ -22,6 +24,7 @@ use crate::geo::algo::offset::compute_inset_region;
 use crate::geo::shape::arc::normalize_angle_signed;
 use crate::geo::shape::polygon::get_polygon_area;
 use crate::geo::shape::polygon::get_polygon_centroid;
+use crate::geo::shape::polygon::get_polygons_closest_point;
 use crate::ops::container::Ops;
 use crate::ops::cut::step_adaptive;
 use crate::ops::cut::ClearedArea;
@@ -54,6 +57,21 @@ const STUCK_CHECK_INTERVAL: usize = 100;
 /// Minimum fraction of theoretical target cut-area throughput that the
 /// cleared area must grow by during a progress window.
 const STUCK_MIN_GROWTH_FACTOR: f64 = 0.15;
+
+/// Fraction of tool radius used as the departure threshold for wall-hug
+/// tracking.  When the tool's distance to the nearest envelope boundary
+/// exceeds `radius × WALL_HUG_DEPARTURE_FRAC`, the tool is considered
+/// to have left the wall.
+const WALL_HUG_DEPARTURE_FRAC: f64 = 0.1;
+
+/// Minimum distance from `point` to the nearest boundary edge of any
+/// polygon in `area`.  Used to detect whether the tool is "on" the
+/// envelope (distance ≈ 0) or has departed into the interior.
+fn envelope_distance(point: Point, area: &[Polygon]) -> f64 {
+    get_polygons_closest_point(area, point)
+        .map(|(_, _, _, d2)| d2.sqrt())
+        .unwrap_or(f64::MAX)
+}
 
 // ── Options ──────────────────────────────────────────────────────────
 
@@ -165,6 +183,7 @@ pub fn target_area_per_distance(
 // ── Main entry point ─────────────────────────────────────────────────
 
 #[prof]
+#[allow(unused_assignments, unused_variables)]
 pub fn adaptive_clearing(
     cleared: &mut ClearedArea,
     opts: &AdaptiveClearingOptions,
@@ -181,6 +200,7 @@ pub fn adaptive_clearing(
     }
 
     let max_def = opts.max_deflection_deg.to_radians();
+    let dir_sign = opts.cut_direction.sign();
     let target_area_pd =
         target_area_per_distance(opts.radius, opts.advance, opts.step_length);
 
@@ -237,7 +257,9 @@ pub fn adaptive_clearing(
     ops.move_to(tool.pos.x, tool.pos.y, opts.cut_z, None);
 
     // Counter for moving commands (move_to + line_to) only — matches
-    // the toolpath file written by the tracer.
+    // the toolpath file written by the tracer.  Only read inside the
+    // `#[cfg(debug_assertions)]` trace-record blocks; the assignments
+    // are kept unconditional for code-layout simplicity.
     let mut tp_len: u32 = 1; // the initial move_to above
 
     // Helper: recount moving commands from ops (used after try_resume
@@ -266,6 +288,9 @@ pub fn adaptive_clearing(
         },
         None => None,
     };
+    // Trace-record step index.  Only read inside the
+    // `#[cfg(debug_assertions)]` trace-record blocks; kept
+    // unconditional so the surrounding code layout is identical.
     let mut trace_step_idx: u32 = 1;
     #[cfg(debug_assertions)]
     {
@@ -298,6 +323,14 @@ pub fn adaptive_clearing(
         pos: tool.pos,
         heading: tool.heading,
     };
+
+    // Wall-hug tracking: after a boundary resume the tool sits on the
+    // envelope edge.  We track when it departs so ResumeWallHug can
+    // resume from the departure point instead of re-cutting from the
+    // original envelope position.
+    let mut near_envelope = false;
+    let mut left_envelope = false;
+    let mut last_wall_hug: Option<ToolPose> = None;
 
     // Stuck detection: every STUCK_CHECK_INTERVAL steps, verify the
     // cleared area has grown by at least the expected amount.  If not,
@@ -375,6 +408,7 @@ pub fn adaptive_clearing(
             &valid_tool_area,
             -std::f64::consts::FRAC_PI_4,
             std::f64::consts::FRAC_PI_4,
+            dir_sign,
         );
         let status = result.status;
         if result.status == StepStatus::Ok {
@@ -392,6 +426,41 @@ pub fn adaptive_clearing(
             // +74°) that leaves scalloped leftover material.
             if result.iters < 20 {
                 tool.update_predictor(result.iteration_angle);
+            }
+        }
+
+        // Wall-hug tracking: continuously monitor the tool's proximity
+        // to the envelope edge.  When the tool departs the wall, record
+        // the last on-wall pose so ResumeWallHug can resume from there
+        // — regardless of how or when the tool reached the wall (not
+        // only after a boundary resume).
+        if status == StepStatus::Ok {
+            let dist = envelope_distance(tool.pos, &valid_tool_area);
+            let on_envelope = dist <= opts.radius * WALL_HUG_DEPARTURE_FRAC;
+            if on_envelope {
+                if left_envelope {
+                    // Tool returned to the wall — reset so a new
+                    // departure can be recorded.
+                    left_envelope = false;
+                    last_wall_hug = None;
+                }
+                near_envelope = true;
+            } else if near_envelope && !left_envelope {
+                left_envelope = true;
+                last_wall_hug = Some(ToolPose {
+                    pos: prev_pos,
+                    heading: tool.heading,
+                });
+                dbg_log!(
+                    "  WALL_HUG  departed at ({:.3},{:.3})  \
+                     last_hug=({:.3},{:.3})  dist={:.4}  heading={:.4}",
+                    tool.pos.x,
+                    tool.pos.y,
+                    prev_pos.x,
+                    prev_pos.y,
+                    dist,
+                    tool.heading,
+                );
             }
         }
 
@@ -467,10 +536,11 @@ pub fn adaptive_clearing(
                             segment_start,
                             last_resume_area,
                             last_resume_pos,
+                            last_wall_hug,
                         };
                         try_resume(&ctx, &tool)
                     };
-                    if let Some((source, rp)) = result {
+                    if let Some((_source, rp)) = result {
                         resume::emit_resume_travel(
                             &mut ops,
                             cleared,
@@ -503,7 +573,7 @@ pub fn adaptive_clearing(
                                 );
                                 buf.prev_pos(prev_pos);
                                 buf.ops_len(tp_len);
-                                buf.resume_source(source as u8);
+                                buf.resume_source(_source as u8);
                                 tr.write(
                                     TraceKind::ResumeStuck as u8,
                                     buf.pack(),
@@ -519,6 +589,11 @@ pub fn adaptive_clearing(
                             pos: tool.pos,
                             heading: tool.heading,
                         };
+                        let ed = envelope_distance(tool.pos, &valid_tool_area);
+                        near_envelope =
+                            ed < opts.radius * WALL_HUG_DEPARTURE_FRAC;
+                        left_envelope = false;
+                        last_wall_hug = None;
                         step_count = 0;
                         continue;
                     }
@@ -613,10 +688,11 @@ pub fn adaptive_clearing(
                     segment_start,
                     last_resume_area,
                     last_resume_pos,
+                    last_wall_hug,
                 };
                 try_resume(&ctx, &tool)
             };
-            if let Some((source, rp)) = result {
+            if let Some((_source, rp)) = result {
                 resume::emit_resume_travel(
                     &mut ops,
                     cleared,
@@ -649,7 +725,7 @@ pub fn adaptive_clearing(
                         );
                         buf.prev_pos(prev_pos);
                         buf.ops_len(tp_len);
-                        buf.resume_source(source as u8);
+                        buf.resume_source(_source as u8);
                         tr.write(TraceKind::ResumeStall as u8, buf.pack());
                     }
                 }
@@ -662,6 +738,10 @@ pub fn adaptive_clearing(
                     pos: tool.pos,
                     heading: tool.heading,
                 };
+                let ed = envelope_distance(tool.pos, &valid_tool_area);
+                near_envelope = ed < opts.radius * WALL_HUG_DEPARTURE_FRAC;
+                left_envelope = false;
+                last_wall_hug = None;
                 step_count = 0;
                 continue;
             }

@@ -7,6 +7,20 @@ use crate::ops::cut::interp::{point_in_valid_area, rotate, Interpolation};
 use crate::ops::cut::ClearedArea;
 use crate::types::{Point, Polygon};
 
+/// Penalty weight applied to fresh material on the wrong side of the
+/// tool (relative to `dir_sign`) when ranking candidate deflections.
+///
+/// When the tool breaks through a web between two cleared regions,
+/// material exists on both sides and the raw `cut_area` is nearly
+/// identical for left/right deflections.  Adding `DIR_BIAS_WEIGHT ×
+/// wrong_side_area / step_length` to the effective error makes the
+/// solver prefer the side that respects `cut_direction`.
+///
+/// `1.0` means a fully-wrong-side step is penalised by one full target
+/// area-per-distance — strong enough to flip a tie but vanishes
+/// naturally in normal one-sided cutting (where `wrong_side ≈ 0`).
+const DIR_BIAS_WEIGHT: f64 = 1.0;
+
 /// Which engagement metric the solver targets.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum EngagementMetric {
@@ -66,6 +80,8 @@ pub struct StepResult {
     pub heading: f64,
     /// Measured overlap angle at `next`.
     pub engagement: Engagement,
+    /// The incremental cut area (crescent) for this step.
+    pub cut_area: f64,
     /// Solver iterations consumed.
     pub iters: usize,
     /// Iteration angle.
@@ -174,6 +190,7 @@ pub fn step(
             next: pos,
             heading,
             engagement: cleared.point_engagement(pos, opts.radius),
+            cut_area: 0.0,
             iters,
             iteration_angle: 0.0,
             status: StepStatus::LostEngagement,
@@ -216,6 +233,7 @@ pub fn step(
         next: next_pos,
         heading: best_phi,
         engagement: eng,
+        cut_area: 0.0,
         iters,
         iteration_angle: 0.0,
         status,
@@ -260,6 +278,12 @@ pub fn run_segment(
 }
 
 /// Iterative bracketing step with cut-area engagement.
+///
+/// `dir_sign` is the directional bias applied when material exists on
+/// both sides of the tool (a "breakthrough" between two cleared
+/// regions).  Pass `+1.0` to prefer positive angles (CW), `−1.0` for
+/// negative angles (CCW), or `0.0` for no bias.  On normal one-sided
+/// cuts the bias has no effect (the wrong-side area is ~0).
 #[allow(clippy::too_many_arguments)]
 #[prof]
 pub fn step_adaptive(
@@ -274,6 +298,75 @@ pub fn step_adaptive(
     valid_area: &[Polygon],
     angle_min: f64,
     angle_max: f64,
+    dir_sign: f64,
+) -> StepResult {
+    let target_area = target_area_pd * step_length;
+    // Hard ceiling: when the cut_area approaches the full crescent
+    // (disk(c2) − disk(c1)), the tool is cutting on both sides — a
+    // slot.  This corresponds to ~100° of new-material contact.  The
+    // full crescent area = π·R² − lens(step, R); 95 % of it is the
+    // slot-detection threshold.
+    let full_crescent = std::f64::consts::PI * radius * radius
+        - 2.0
+            * radius
+            * radius
+            * ((step_length / (2.0 * radius)).clamp(-1.0, 1.0).acos())
+        + (step_length * 0.5)
+            * (4.0 * radius * radius - step_length * step_length)
+                .max(0.0)
+                .sqrt();
+    let slot_ceiling = full_crescent * 0.95;
+    // Max engagement: the cut_area above which the tool is taking too
+    // heavy a bite.  85 % of the full crescent — above corner-wrap
+    // transients (~60 %) but below the slot ceiling (95 %).
+    let max_engagement = full_crescent * 0.85;
+    let floor = target_area * 0.01;
+
+    step_adaptive_inner(
+        cleared,
+        pos,
+        heading,
+        predicted_angle,
+        target_area_pd,
+        step_length,
+        radius,
+        max_deflection,
+        valid_area,
+        angle_min,
+        angle_max,
+        floor,
+        max_engagement,
+        slot_ceiling,
+        dir_sign,
+    )
+}
+
+/// Inner solver loop: evaluates candidate deflection angles and picks
+/// the one whose cut_area is closest to `target_area_pd · step_length`.
+///
+/// Status logic:
+/// * `Ok` — a candidate achieved target engagement (or close enough).
+/// * `LostEngagement` — best candidate is below `floor` (under-engaged)
+///   or above `slot_ceiling` (slot / overload — hard ceiling).
+/// * `NoConvergence` — unused (reserved for future step-size adaptation).
+#[prof]
+#[allow(clippy::too_many_arguments)]
+fn step_adaptive_inner(
+    cleared: &ClearedArea,
+    pos: Point,
+    heading: f64,
+    predicted_angle: f64,
+    target_area_pd: f64,
+    step_length: f64,
+    radius: f64,
+    max_deflection: f64,
+    valid_area: &[Polygon],
+    angle_min: f64,
+    angle_max: f64,
+    floor: f64,
+    max_engagement: f64,
+    slot_ceiling: f64,
+    dir_sign: f64,
 ) -> StepResult {
     let base_dir = Point::new(heading.cos(), heading.sin());
     let max_err = target_area_pd * 0.01;
@@ -293,7 +386,8 @@ pub fn step_adaptive(
     const MAX_IT: usize = 20;
     dbg_log!(
         "SA  pos=({:.3},{:.3})  heading={:.4}  pred={:.4}  \
-         target_apd={:.4}  step_len={:.3}  R={:.1}  max_def={:.2}",
+         target_apd={:.4}  step_len={:.3}  R={:.1}  max_def={:.2}  \
+         dir_sign={:+.1}",
         pos.x,
         pos.y,
         heading,
@@ -302,6 +396,7 @@ pub fn step_adaptive(
         step_length,
         radius,
         max_deflection,
+        dir_sign,
     );
     for iter in 0..MAX_IT {
         iters = iter + 1;
@@ -350,15 +445,35 @@ pub fn step_adaptive(
         }
         skip_count = 0;
 
-        let total = cleared.cut_area(pos, candidate, radius);
+        let (total, left) = cleared.cut_area_split(pos, candidate, radius);
+        let right = total - left;
         let area_pd = total / step_length;
         let error = area_pd - target_area_pd;
         let is_conv = total > 0.0 && angle > 0.03;
 
+        // Directional bias: when material is on both sides (breakthrough),
+        // penalise the side that contradicts `dir_sign`.  The penalty is
+        // proportional to the wrong-side area and is added to the raw
+        // error *only for ranking* — convergence is still judged by the
+        // raw error below.  In normal one-sided cutting the wrong-side
+        // area is ~0, so the penalty vanishes and behaviour is unchanged.
+        let (effective_err, bias) = if dir_sign == 0.0 {
+            (error, 0.0)
+        } else {
+            // dir_sign < 0 (CCW): material should be on the right; the
+            //   wrong side is `left`.
+            // dir_sign > 0 (CW):  material should be on the left; the
+            //   wrong side is `right`.
+            let wrong = if dir_sign < 0.0 { left } else { right };
+            let penalty = DIR_BIAS_WEIGHT * wrong / step_length;
+            (error + penalty, penalty)
+        };
+
         let iter_kind = if is_not_interp { "SMPL" } else { "INTR" };
         dbg_log!(
             "  iter {:2} {}  angle={:+.4}  apd={:.4}  err={:+.4}  \
-             conv={}  |err|={:.4}  best|err|={:.4}",
+             conv={}  |err|={:.4}  best|err|={:.4}  L={:.4}  R={:.4}  \
+             bias={:+.4}",
             iter,
             iter_kind,
             angle,
@@ -367,6 +482,9 @@ pub fn step_adaptive(
             is_conv as u8,
             error.abs(),
             best_error,
+            left,
+            right,
+            bias,
         );
 
         if total > 0.0 {
@@ -376,8 +494,8 @@ pub fn step_adaptive(
         interp.add(error, angle, candidate, is_not_interp, is_conv);
 
         last_angle = angle;
-        if error.abs() < best_error {
-            best_error = error.abs();
+        if effective_err.abs() < best_error {
+            best_error = effective_err.abs();
             best_area = total;
             best_angle = angle;
             best_dir = dir;
@@ -396,24 +514,29 @@ pub fn step_adaptive(
         }
     }
 
-    // ── Lookahead / persistence ───────────────────────────────────
+    // ── Status decision ──────────────────────────────────────────
     //
-    // The solver is single-step: it picks the angle whose *immediate*
-    // cut_area is closest to target.  When the nearest uncleared
-    // material is more than one step_length away (e.g. the tool is at
-    // the top of a sweep and the remaining band is at the bottom wall,
-    // 2+ steps below), the immediate cut_area toward the material is
-    // zero.  The solver then either declares LostEngagement or
-    // reverses toward higher-engagement interior material — abandoning
-    // the sweep before it reaches the envelope edge.
+    // Three rules govern engagement:
     //
-    // The lookahead probes one step beyond the candidate.  If
-    // continuing in the heading direction finds engagement within 2
-    // steps, the tool persists in that direction instead of reversing.
-    // This keeps sweeps going to the envelope edge, preventing the
-    // progressive shortening that leaves wall-band chunks uncleared.
-    let floor = step_length * target_area_pd * 0.01;
-    let mut status = if best_area < floor {
+    // 1. **Under-engaged** (`best_area < floor`): the tool is in open
+    //    space or the nearest material is more than one step away.
+    //    → `LostEngagement` (let the resume machinery reposition).
+    //
+    // 2. **Slot / overload** (`best_area > slot_ceiling`): the
+    //    cut_area approaches the full crescent — the tool is cutting
+    //    on both sides (a slot).  ~100° of the perimeter is in contact
+    //    with new material.  → `LostEngagement` (hard ceiling).
+    //
+    // 3. **Over-engaged but not a slot** (`best_area > max_engagement`
+    //    and no candidate converged on target): the tool is taking too
+    //    heavy a bite.  → `LostEngagement` (reposition via resume).
+    //
+    // Only under-engagement triggers the lookahead override; slot
+    // overload is a hard stop.
+    let mut status = if best_area < floor
+        || best_area > slot_ceiling
+        || (best_area > max_engagement && exit_reason != "converged")
+    {
         StepStatus::LostEngagement
     } else {
         StepStatus::Ok
@@ -422,10 +545,11 @@ pub fn step_adaptive(
     // Lookahead probes: for a spread of deflection angles relative to
     // the heading, compute the 2-step cut_area (candidate →
     // candidate+dir*step).  If the solver reversed or lost engagement
-    // but a forward 2-step probe finds material, override to continue
+    // (but NOT from slot overload) and a forward 2-step probe finds
+    // material within the valid engagement band, override to continue
     // toward it.
     let reversed = best_angle.abs() > std::f64::consts::FRAC_PI_2;
-    if status == StepStatus::LostEngagement || reversed {
+    if status == StepStatus::LostEngagement && best_area < floor || reversed {
         let lookahead_angles = [
             0.0_f64,
             max_deflection * 0.5,
@@ -437,6 +561,10 @@ pub fn step_adaptive(
         let mut best_la_dir = base_dir;
         let mut best_la_pos = pos;
         let mut best_la_area: f64 = 0.0;
+        // Effective score = raw area − bias penalty, so the lookahead
+        // prefers directions that respect `dir_sign` when material is
+        // on both sides.
+        let mut best_la_score: f64 = f64::MIN;
         for la_angle in &lookahead_angles {
             let la_angle = interp.clamp_angle(*la_angle, max_deflection);
             let la_dir = rotate(base_dir, la_angle);
@@ -448,15 +576,29 @@ pub fn step_adaptive(
             if !point_in_valid_area(la_next, valid_area) {
                 continue;
             }
-            let la_area = cleared.cut_area(la_cand, la_next, radius);
-            if la_area > best_la_area {
-                best_la_area = la_area;
+            let (la_area, la_left) =
+                cleared.cut_area_split(la_cand, la_next, radius);
+            let la_right = la_area - la_left;
+            let wrong = if dir_sign < 0.0 {
+                la_left
+            } else if dir_sign > 0.0 {
+                la_right
+            } else {
+                0.0
+            };
+            let penalty = DIR_BIAS_WEIGHT * wrong / step_length;
+            let score = la_area - penalty * step_length;
+            if score > best_la_score {
+                best_la_score = score;
                 best_la_angle = la_angle;
                 best_la_dir = la_dir;
                 best_la_pos = la_cand;
+                // Keep `best_la_area` as the raw area for the floor /
+                // slot-ceiling check below.
+                best_la_area = la_area;
             }
         }
-        if best_la_area > floor {
+        if best_la_area > floor && best_la_area <= slot_ceiling {
             dbg_log!(
                 "  LOOKAHEAD  recovered: angle={:+.4}  \
                  la_area={:.4}  → ({:.3},{:.3})  reason={}",
@@ -497,6 +639,7 @@ pub fn step_adaptive(
         next: best_pos,
         heading: best_dir.y.atan2(best_dir.x),
         engagement: eng,
+        cut_area: best_area,
         iters,
         iteration_angle: best_angle,
         status,

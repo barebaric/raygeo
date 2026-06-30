@@ -443,7 +443,7 @@ pub fn compute_inset_region(
     if !region.is_empty() && !obstacles.is_empty() {
         let obstacle_bufs: Vec<Polygon> = obstacles
             .iter()
-            .flat_map(|obs| offset_polygon(obs, radius, JoinStyle::Miter))
+            .flat_map(|obs| offset_polygon(obs, radius, JoinStyle::Round))
             .collect();
         if !obstacle_bufs.is_empty() {
             region = get_polygons_group_difference(&region, &obstacle_bufs);

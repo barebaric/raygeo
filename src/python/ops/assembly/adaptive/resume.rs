@@ -96,6 +96,7 @@ fn smooth_travel_path_py(
         tool: raygeo.ops.assembly.adaptive.tool.Tool,
         cut_direction: str,
         step_length: float,
+        advance: float,
         pocket_boundary: collections.abc.Sequence[tuple[float, float]],
         islands: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]],
         valid_tool_area: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]],
@@ -115,6 +116,7 @@ fn mat_resume_target_py(
     tool: &crate::python::ops::assembly::adaptive::tool::PyTool,
     cut_direction: &str,
     step_length: f64,
+    advance: f64,
     pocket_boundary: Vec<(f64, f64)>,
     islands: Vec<Vec<(f64, f64)>>,
     valid_tool_area: Vec<Vec<(f64, f64)>>,
@@ -141,6 +143,7 @@ fn mat_resume_target_py(
         &tool.inner,
         cd,
         step_length,
+        advance,
         &pb,
         &isls,
         &valid,
@@ -428,6 +431,7 @@ fn try_resume_py(
         },
         last_resume_area,
         last_resume_pos: tool.inner.pos,
+        last_wall_hug: None,
     };
     let result = resume::try_resume(&ctx, &tool.inner);
     if let Some((_source, rp)) = result {

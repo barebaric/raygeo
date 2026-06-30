@@ -523,21 +523,31 @@ impl ClearedArea {
     /// length.
     #[prof]
     pub fn cut_area(&self, c1: Point, c2: Point, radius: f64) -> f64 {
-        let bb = Rect::new(
-            c2.x - radius,
-            c2.y - radius,
-            c2.x + radius,
-            c2.y + radius,
-        );
-        let nearby: Vec<Polygon> =
-            self.query_window(bb).into_iter().cloned().collect();
-        crescent::cut_area(c1, c2, radius, &nearby, &[]).0
+        self.cut_area_split(c1, c2, radius).0
     }
 
     /// Compute the incremental cut area and split it into climb /
     /// conventional components.
     #[prof]
     pub fn cut_area_milling(
+        &self,
+        c1: Point,
+        c2: Point,
+        radius: f64,
+    ) -> (f64, f64) {
+        self.cut_area_split(c1, c2, radius)
+    }
+
+    /// Like [`cut_area`](Self::cut_area) but also returns the **left**
+    /// portion — the area of the increment lying to the left of the
+    /// step vector `c1 → c2` in the rotated frame.
+    ///
+    /// `right = total − left`.  This directional split lets the
+    /// adaptive stepper detect when fresh material exists on both
+    /// sides of the tool (a "breakthrough" between two cleared
+    /// regions) and prefer the side matching `cut_direction`.
+    #[prof]
+    pub fn cut_area_split(
         &self,
         c1: Point,
         c2: Point,

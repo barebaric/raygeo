@@ -54,6 +54,7 @@ impl ResumeStrategy for ResumeMat {
                 crossing_idx,
                 ctx.opts.cut_direction,
                 tool.radius,
+                ctx.opts.advance,
                 &ctx.opts.pocket_boundary,
                 &ctx.opts.islands,
             ) {
@@ -81,6 +82,7 @@ pub fn mat_resume_target(
     tool: &Tool,
     cut_direction: CutDirection,
     step_length: f64,
+    advance: f64,
     pocket_boundary: &[Point],
     islands: &[Polygon],
     valid_tool_area: &[Polygon],
@@ -110,6 +112,7 @@ pub fn mat_resume_target(
             crossing_idx,
             cut_direction,
             tool.radius,
+            advance,
             pocket_boundary,
             islands,
         ) {
@@ -133,12 +136,14 @@ pub fn mat_resume_target(
 /// 3. Place the tool centre at `radius` from the nearest wall point,
 ///    along the wall→cleared direction.  The heading is the frontier
 ///    tangent in the cutting direction.
+#[allow(clippy::too_many_arguments)]
 pub fn mat_resume_from_crossing(
     axis: &MedialAxis,
     cleared: &ClearedArea,
     crossing_idx: usize,
     cut_direction: CutDirection,
     radius: f64,
+    _advance: f64,
     pocket_boundary: &[Point],
     islands: &[Polygon],
 ) -> Option<ToolPose> {

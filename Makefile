@@ -4,7 +4,7 @@ build:
 	maturin build --release --out dist
 
 dev: install-test-deps
-	maturin develop
+	maturin develop --profile dev
 
 install-test-deps:
 	pip install -e ".[test]" --quiet

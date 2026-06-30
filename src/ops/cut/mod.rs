@@ -47,4 +47,21 @@ impl CutDirection {
             CutDirection::Ccw => (-max_deflection, 0.0),
         }
     }
+
+    /// Sign of the steering angle the tool should prefer to honour
+    /// this rotational direction.
+    ///
+    /// * `Cw`  → `+1.0` (deflect left / positive angle)
+    /// * `Ccw` → `−1.0` (deflect right / negative angle)
+    ///
+    /// Used by the adaptive stepper as a soft directional bias when
+    /// material is present on both sides of the tool (a "breakthrough"
+    /// between two cleared regions).  `0.0` would mean "no bias"; pass
+    /// [`CutDirection::sign`] to opt into the bias.
+    pub fn sign(&self) -> f64 {
+        match self {
+            CutDirection::Cw => 1.0,
+            CutDirection::Ccw => -1.0,
+        }
+    }
 }

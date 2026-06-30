@@ -218,6 +218,9 @@ pub struct PyStepResult {
     /// Updated heading angle in radians.
     #[pyo3(get)]
     pub heading: f64,
+    /// The incremental cut area (crescent) for this step.
+    #[pyo3(get)]
+    pub cut_area: f64,
     /// Number of solver iterations used.
     #[pyo3(get)]
     pub iters: usize,
@@ -270,6 +273,7 @@ fn step_py(
     PyStepResult {
         next: (r.next.x, r.next.y),
         heading: r.heading,
+        cut_area: r.cut_area,
         iters: r.iters,
         iteration_angle: r.iteration_angle,
         status: PyStepStatus { inner: r.status },
@@ -293,6 +297,11 @@ fn step_py(
 /// :param valid_area: Valid tool-centre region polygons.
 /// :param angle_min: Minimum trial deflection angle in radians (default -π/4).
 /// :param angle_max: Maximum trial deflection angle in radians (default +π/4).
+/// :param dir_sign: Directional bias sign (default ``0.0``).  ``+1.0``
+///    to prefer positive angles (CW), ``−1.0`` to prefer negative
+///    angles (CCW).  The bias penalises fresh material on the wrong
+///    side when the tool breaks through a web between two cleared
+///    regions.  Has no effect during normal one-sided cutting.
 /// :returns: ``StepResult`` with the next position and updated heading.
 #[gen_stub_pyfunction(module = "raygeo.ops.cut.stepper")]
 #[pyfunction(name = "step_adaptive")]
@@ -308,6 +317,7 @@ fn step_py(
     valid_area,
     angle_min = -std::f64::consts::FRAC_PI_4,
     angle_max = std::f64::consts::FRAC_PI_4,
+    dir_sign = 0.0,
 ))]
 #[allow(clippy::too_many_arguments)]
 fn step_adaptive_py(
@@ -322,6 +332,7 @@ fn step_adaptive_py(
     valid_area: Vec<Vec<(f64, f64)>>,
     angle_min: f64,
     angle_max: f64,
+    dir_sign: f64,
 ) -> PyStepResult {
     let valid = polygons_from_tuples(valid_area);
     let r = cut::stepper::step_adaptive(
@@ -336,10 +347,12 @@ fn step_adaptive_py(
         &valid,
         angle_min,
         angle_max,
+        dir_sign,
     );
     PyStepResult {
         next: (r.next.x, r.next.y),
         heading: r.heading,
+        cut_area: r.cut_area,
         iters: r.iters,
         iteration_angle: r.iteration_angle,
         status: PyStepStatus { inner: r.status },

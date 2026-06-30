@@ -72,6 +72,7 @@ pub mod mesh;
 pub mod ops;
 pub mod prof;
 pub mod svg;
+#[cfg(debug_assertions)]
 pub(crate) mod trace;
 pub mod types;
 

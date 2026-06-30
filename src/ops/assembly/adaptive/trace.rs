@@ -127,7 +127,7 @@ impl RecordBuf {
     }
 
     /// Resume mechanism that succeeded (0 = none, 1 = segment_resume,
-    /// 2 = mat_resume, 3 = boundary_walk).
+    /// 2 = mat_resume, 3 = boundary_walk, 4 = wall_hug).
     pub fn resume_source(&mut self, v: u8) {
         self.u8(125, v);
     }
