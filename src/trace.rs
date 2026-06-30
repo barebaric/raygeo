@@ -3,19 +3,16 @@
 //! Writes a single self-contained binary trace file with the layout:
 //!
 //! ```text
-//!   header:   magic[4] "ADPT" + version[4] + record_count[4]   = 12 bytes
+//!   header:   magic[4] "ADPT" + version(u32) + record_count(u32) = 12 bytes
 //!   geometry: tool_radius(f64)
 //!             + boundary_vert_count(u32) + boundary verts (x,y f64 each)
 //!             + island_count(u32)
 //!               + per island: vert_count(u32) + verts (x,y f64 each)
+//!             + seed_count(u32)
+//!               + per seed: vert_count(u32) + verts (x,y f64 each)
 //!   toolpath: tp_count(u32) + per point: x(f64) y(f64) is_travel(u8) + 3 pad
 //!   records:  record_count × 128 bytes (1 kind byte + 127 payload bytes)
 //! ```
-//!
-//! Version 1 wrote only the header + records and relied on a companion
-//! ``.tp`` file for the toolpath; geometry was supplied out-of-band by the
-//! caller.  Version 2 embeds the geometry and toolpath so the file is fully
-//! self-contained.
 //!
 //! Gated by ``cfg(debug_assertions)`` so tracing has zero cost in release
 //! builds.  Callers should guard all [`Tracer`] usage with the same cfg or
@@ -29,7 +26,7 @@ use crate::types::Polygon;
 /// Magic header bytes: ``b"ADPT"``.
 const TRACE_MAGIC: [u8; 4] = *b"ADPT";
 /// Trace format version.
-const TRACE_VERSION: u32 = 2;
+const TRACE_VERSION: u32 = 3;
 /// Fixed size of each record (including the 1-byte kind).
 const TRACE_RECORD_SIZE: usize = 128;
 /// Number of payload bytes per record (everything after the kind byte).
@@ -41,6 +38,8 @@ pub(crate) struct TraceContext {
     pub tool_radius: f64,
     pub boundary: Polygon,
     pub islands: Vec<Polygon>,
+    /// Initial cleared polygons (seeds).
+    pub seeds: Vec<Polygon>,
 }
 
 /// Opaque binary trace file writer.
@@ -124,6 +123,10 @@ fn write_geometry(
     file.write_all(&(ctx.islands.len() as u32).to_le_bytes())?;
     for isl in &ctx.islands {
         write_polygon(file, isl)?;
+    }
+    file.write_all(&(ctx.seeds.len() as u32).to_le_bytes())?;
+    for seed in &ctx.seeds {
+        write_polygon(file, seed)?;
     }
     Ok(())
 }

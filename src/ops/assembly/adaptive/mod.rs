@@ -278,6 +278,7 @@ pub fn adaptive_clearing(
                 tool_radius: opts.radius,
                 boundary: opts.pocket_boundary.clone(),
                 islands: opts.islands.clone(),
+                seeds: cleared.fragments().to_vec(),
             },
         ) {
             Ok(t) => Some(t),

@@ -8,21 +8,28 @@ Two subcommands:
 
 Usage::
 
-    python tools/adaptive_inspector.py trace /tmp/adaptive_trace.bin
-    python tools/adaptive_inspector.py inspect /tmp/adaptive_trace.bin
-    python tools/adaptive_inspector.py inspect /tmp/adaptive_trace.bin 500
+    python tools/adaptive_inspector.py trace /tmp/trace.bin
+    python tools/adaptive_inspector.py trace /tmp/tr.bin
+    python tools/adaptive_inspector.py trace /tmp/tr.bin \\
+        --scenario centre-island
+    python tools/adaptive_inspector.py trace /tmp/tr.bin \\
+        --svg logo.svg --tool-radius 2.5
+    python tools/adaptive_inspector.py inspect /tmp/trace.bin
+    python tools/adaptive_inspector.py inspect /tmp/trace.bin 500
 
 Controls:
      TextBox + Go button  — jump to any step number
      ◀ / ▶ buttons        — previous / next step
-     ◀◀ / ▶▶ buttons      — previous / next segment
+     ◀◀ Seg / Seg ▶▶  — previous / next segment
      Left / Right arrows   — previous / next step
      Shift+Left / Right    — previous / next segment
      Home / End            — first / last step
 """
 
 import argparse
+import dataclasses
 import math
+import pathlib
 import struct
 
 import matplotlib.pyplot as plt
@@ -64,25 +71,14 @@ def _patch_widget_events() -> None:
 
 _patch_widget_events()
 
-from raygeo.geo.shape.polygon import get_polygon_area  # noqa: E402
+from raygeo.geo.shape.polygon import (  # noqa: E402
+    get_polygon_area,
+    get_polygon_signed_area,
+    is_point_inside_polygon,
+)
 from raygeo.ops.assembly.adaptive import adaptive_clearing  # noqa: E402
 from raygeo.ops.assembly.entry import adaptive_entry  # noqa: E402
 from raygeo.ops.cut.cleared_area import ClearedArea  # noqa: E402
-
-# ── Geometry (from generate_wavefront_multi) ─────────────────────
-
-BOUNDARY = [(0, 0), (180, 0), (180, 120), (0, 120)]
-ISLANDS = [
-    [(15, 15), (35, 15), (35, 35), (15, 35)],
-    [(70, 40), (90, 40), (90, 60), (70, 60)],
-    [(130, 80), (160, 80), (160, 105), (130, 105)],
-]
-TOOL_RADIUS = 3.0
-STEP_OVER = 2.0
-STEP_LENGTH = 0.6
-ADVANCE = STEP_OVER
-CUT_Z = -5.0
-SAFE_Z = 2.0
 
 # ── Trace file format ────────────────────────────────────────────
 
@@ -163,23 +159,22 @@ class TraceRecord:
 
 
 class TraceGeometry:
-    """Pocket geometry embedded in a v2 trace file."""
+    """Pocket geometry embedded in a trace file."""
 
-    __slots__ = ("tool_radius", "boundary", "islands")
+    __slots__ = ("tool_radius", "boundary", "islands", "seeds")
 
-    def __init__(self, tool_radius, boundary, islands):
+    def __init__(self, tool_radius, boundary, islands, seeds):
         self.tool_radius = tool_radius
         self.boundary = boundary
         self.islands = islands
+        self.seeds = seeds
 
 
 class TraceFile:
     """Binary trace reader with random access to records.
 
-    For version 2 files the geometry and toolpath are embedded in the
-    file and exposed via :attr:`geometry` and :attr:`toolpath`.  For
-    version 1 files both are ``None`` and the caller must supply a
-    companion ``.tp`` toolpath and fall back to the built-in geometry.
+    Geometry, seeds, toolpath, and per-step records are all embedded in
+    a single self-contained file.
     """
 
     def __init__(self, path):
@@ -188,27 +183,24 @@ class TraceFile:
             if magic != TRACE_MAGIC:
                 raise ValueError(f"bad magic: {magic}")
             self.version = struct.unpack("<I", f.read(4))[0]
+            if self.version < 3:
+                raise ValueError(
+                    f"trace version {self.version} is no longer supported; "
+                    f"re-generate with the current inspector"
+                )
             self.count = struct.unpack("<I", f.read(4))[0]
-            if self.version >= 2:
-                self.geometry, self.toolpath = self._read_v2_blocks(f)
-            else:
-                self.geometry = None
-                self.toolpath = None
-            # Remaining bytes (after the variable-length v2 blocks, or
-            # immediately after the header for v1) are the 128-byte records.
+            self.geometry = self._read_geometry(f)
+            self.toolpath = self._read_toolpath(f)
             self.data = f.read()
-
-    def _read_v2_blocks(self, f):
-        geo = self._read_geometry(f)
-        tp = self._read_toolpath(f)
-        return geo, tp
 
     def _read_geometry(self, f):
         tool_radius = struct.unpack("<d", f.read(8))[0]
         boundary = self._read_polygon(f)
         n_islands = struct.unpack("<I", f.read(4))[0]
         islands = [self._read_polygon(f) for _ in range(n_islands)]
-        return TraceGeometry(tool_radius, boundary, islands)
+        n_seeds = struct.unpack("<I", f.read(4))[0]
+        seeds = [self._read_polygon(f) for _ in range(n_seeds)]
+        return TraceGeometry(tool_radius, boundary, islands, seeds)
 
     @staticmethod
     def _read_polygon(f):
@@ -239,36 +231,6 @@ class TraceFile:
             raise IndexError(idx)
         offset = idx * TRACE_RECORD_SIZE
         return TraceRecord(self.data[offset : offset + TRACE_RECORD_SIZE])
-
-
-# ── Toolpath file format (v1 companion) ───────────────────────────
-
-TP_RECORD_SIZE = 20  # x(f64) + y(f64) + is_travel(u8) + 3 pad
-
-
-class ToolpathFile:
-    """Binary toolpath reader: list of (x, y, is_travel).
-
-    Only used for version 1 trace files that ship a companion ``.tp``
-    file.  Version 2 files embed the toolpath in the trace itself.
-    """
-
-    def __init__(self, path):
-        with open(path, "rb") as f:
-            self.count = struct.unpack("<I", f.read(4))[0]
-            self.data = f.read()
-
-    def __len__(self):
-        return self.count
-
-    def __getitem__(self, idx):
-        if idx < 0 or idx >= self.count:
-            raise IndexError(idx)
-        offset = idx * TP_RECORD_SIZE
-        x = struct.unpack_from("<d", self.data, offset)[0]
-        y = struct.unpack_from("<d", self.data, offset + 8)[0]
-        is_travel = self.data[offset + 16] != 0
-        return (x, y, is_travel)
 
 
 # ── ClearedArea rebuild ──────────────────────────────────────────
@@ -307,9 +269,6 @@ def rebuild_cleared(
     for i in range(len(tp)):
         x, y, is_travel = tp[i]
         if is_travel:
-            # Update prev to the travel destination so the next cutting
-            # move expands from there — not from the pre-travel position,
-            # which would sweep the entire travel path through obstacles.
             prev = (x, y)
             continue
         if prev is not None and cut_count >= start_cut:
@@ -328,6 +287,246 @@ def rebuild_cleared(
     if batch > 0:
         ca.commit_batch_local()
     return ca
+
+
+# ── Scenario infrastructure ──────────────────────────────────────
+
+
+@dataclasses.dataclass
+class Scenario:
+    """Pocket geometry, cutting parameters, and seed polygons."""
+
+    name: str
+    boundary: list
+    islands: list
+    tool_radius: float
+    advance: float
+    step_over: float
+    cut_z: float
+    safe_z: float
+    area_tolerance: float
+
+
+SCENARIOS: dict[str, Scenario] = {}
+
+
+def register_scenario(scenario: Scenario) -> None:
+    SCENARIOS[scenario.name] = scenario
+
+
+# ── Helper geometry functions ────────────────────────────────────
+
+
+def _rect(cx, cy, w, h):
+    return [
+        (cx - w / 2, cy - h / 2),
+        (cx + w / 2, cy - h / 2),
+        (cx + w / 2, cy + h / 2),
+        (cx - w / 2, cy + h / 2),
+    ]
+
+
+def _circle_polygon(cx, cy, r, n=64):
+    pts = []
+    for i in range(n):
+        a = 2.0 * math.pi * i / n
+        pts.append((cx + r * math.cos(a), cy + r * math.sin(a)))
+    return pts
+
+
+# ── Built-in scenarios ───────────────────────────────────────────
+
+register_scenario(
+    Scenario(
+        name="default",
+        boundary=[(0, 0), (180, 0), (180, 120), (0, 120)],
+        islands=[
+            [(15, 15), (35, 15), (35, 35), (15, 35)],
+            [(70, 40), (90, 40), (90, 60), (70, 60)],
+            [(130, 80), (160, 80), (160, 105), (130, 105)],
+        ],
+        tool_radius=3.0,
+        advance=2.0,
+        step_over=2.0,
+        cut_z=-5.0,
+        safe_z=2.0,
+        area_tolerance=1.0,
+    )
+)
+
+register_scenario(
+    Scenario(
+        name="centre-island",
+        boundary=_rect(0, 0, 60, 60),
+        islands=[_rect(5, 0, 10, 10)],
+        tool_radius=3.0,
+        advance=1.5,
+        step_over=2.0,
+        cut_z=-5.0,
+        safe_z=2.0,
+        area_tolerance=1.0,
+    )
+)
+
+
+# ── SVG scenario loader ──────────────────────────────────────────
+
+
+def scenario_from_svg(
+    svg_source,
+    tool_radius=3.0,
+    advance=1.5,
+    step_over=2.0,
+    cut_z=-5.0,
+    safe_z=2.0,
+    area_tolerance=1.0,
+):
+    """Build a Scenario from an SVG document.
+
+    For SVG with multiple contours, the **first** outer contour is used
+    as the pocket boundary; its holes become islands.
+    """
+    import raygeo.svg as _svg
+
+    p = pathlib.Path(svg_source)
+    if p.exists():
+        svg_str = p.read_text()
+    else:
+        svg_str = svg_source
+
+    geoms = _svg.svg_string_to_geometries(svg_str)
+
+    all_polys = []
+    for g in geoms:
+        polys = g.to_polygons(tolerance=0.1)
+        all_polys.extend(polys)
+
+    if not all_polys:
+        raise ValueError("No polygons found in SVG")
+
+    # Flip Y: SVG Y-down * math Y-up
+    all_y = [y for p in all_polys for _, y in p]
+    y_min, y_max = min(all_y), max(all_y)
+    flipped = []
+    for p in all_polys:
+        flipped.append([(x, y_min + y_max - y) for x, y in p])
+
+    # Separate outer (CW after flip = negative signed area) and inner
+    outer = [p for p in flipped if get_polygon_signed_area(p) < -0.01]
+    inner = [p for p in flipped if get_polygon_signed_area(p) >= 0.01]
+
+    if not outer:
+        raise ValueError("No outer contour found in SVG")
+
+    boundary = outer[0]
+
+    # Find holes inside the first boundary
+    islands = [h for h in inner if is_point_inside_polygon(h[0], boundary)]
+
+    return Scenario(
+        name="svg",
+        boundary=boundary,
+        islands=islands,
+        tool_radius=tool_radius,
+        advance=advance,
+        step_over=step_over,
+        cut_z=cut_z,
+        safe_z=safe_z,
+        area_tolerance=area_tolerance,
+    )
+
+
+# ── Seed / entry helpers ─────────────────────────────────────────
+
+
+def run_entry(scenario):
+    """Run adaptive_entry and return (entry_ops, seed_polys)."""
+    entry_ops, cp = adaptive_entry(
+        pocket_boundary=list(scenario.boundary),
+        islands=[list(isl) for isl in scenario.islands],
+        tool_radius=scenario.tool_radius,
+        step_over=scenario.step_over,
+        safe_z=scenario.safe_z,
+        target_z=scenario.cut_z,
+        plunge_pitch=1.0,
+    )
+    return entry_ops, cp
+
+
+def build_scenario(args):
+    """Build (scenario, seed_polys, entry_ops) from parsed CLI args."""
+    if args.svg:
+        scenario = scenario_from_svg(
+            args.svg,
+            tool_radius=args.tool_radius,
+            advance=args.advance,
+            step_over=args.step_over,
+            cut_z=args.cut_z,
+            safe_z=args.safe_z,
+            area_tolerance=args.area_tolerance,
+        )
+        entry_ops, seed_polys = run_entry(scenario)
+        print(
+            f"  SVG scenario: boundary={len(scenario.boundary)} verts, "
+            f"{len(scenario.islands)} islands"
+        )
+
+    elif args.scenario == "centre-island":
+        scenario = SCENARIOS["centre-island"]
+        # Apply any overrides
+        if args.tool_radius is not None:
+            scenario = dataclasses.replace(
+                scenario, tool_radius=args.tool_radius
+            )
+        if args.advance is not None:
+            scenario = dataclasses.replace(scenario, advance=args.advance)
+        if args.step_over is not None:
+            scenario = dataclasses.replace(scenario, step_over=args.step_over)
+        if args.cut_z is not None:
+            scenario = dataclasses.replace(scenario, cut_z=args.cut_z)
+        if args.safe_z is not None:
+            scenario = dataclasses.replace(scenario, safe_z=args.safe_z)
+        if args.area_tolerance is not None:
+            scenario = dataclasses.replace(
+                scenario, area_tolerance=args.area_tolerance
+            )
+
+        seed_polys = [_circle_polygon(-13.7, 13.7, 12.2, 64)]
+        entry_ops = None
+        print(
+            "  Centre-island scenario: circle seed "
+            "centre=(-13.7,13.7) radius=12.2"
+        )
+
+    else:
+        # Default scenario (or any other registered name)
+        scenario = SCENARIOS.get(args.scenario)
+        if scenario is None:
+            raise ValueError(
+                f"Unknown scenario: {args.scenario}. "
+                f"Available: {', '.join(SCENARIOS)}"
+            )
+        # Apply overrides
+        if args.tool_radius is not None:
+            scenario = dataclasses.replace(
+                scenario, tool_radius=args.tool_radius
+            )
+        if args.advance is not None:
+            scenario = dataclasses.replace(scenario, advance=args.advance)
+        if args.step_over is not None:
+            scenario = dataclasses.replace(scenario, step_over=args.step_over)
+        if args.cut_z is not None:
+            scenario = dataclasses.replace(scenario, cut_z=args.cut_z)
+        if args.safe_z is not None:
+            scenario = dataclasses.replace(scenario, safe_z=args.safe_z)
+        if args.area_tolerance is not None:
+            scenario = dataclasses.replace(
+                scenario, area_tolerance=args.area_tolerance
+            )
+
+        entry_ops, seed_polys = run_entry(scenario)
+
+    return scenario, seed_polys, entry_ops
 
 
 # ── Inspector ─────────────────────────────────────────────────────
@@ -360,13 +559,13 @@ class Inspector:
         self.textbox.on_submit(self._on_submit)
         self.btn_go = Button(ax_btn, "Go")
         self.btn_go.on_clicked(self._on_go)
-        self.btn_prev = Button(ax_prev, "\u25c0")
+        self.btn_prev = Button(ax_prev, "◀")
         self.btn_prev.on_clicked(lambda e: self._step(-1))
-        self.btn_next = Button(ax_next, "\u25b6")
+        self.btn_next = Button(ax_next, "▶")
         self.btn_next.on_clicked(lambda e: self._step(1))
-        self.btn_prev_seg = Button(ax_prev_seg, "\u25c0\u25c0 Seg")
+        self.btn_prev_seg = Button(ax_prev_seg, "◀◀ Seg")
         self.btn_prev_seg.on_clicked(lambda e: self._step_segment(-1))
-        self.btn_next_seg = Button(ax_next_seg, "Seg \u25b6\u25b6")
+        self.btn_next_seg = Button(ax_next_seg, "Seg ▶▶")
         self.btn_next_seg.on_clicked(lambda e: self._step_segment(1))
 
         self.ax_info = self.fig.add_axes(
@@ -557,6 +756,21 @@ class Inspector:
             self.ax.fill(ix, iy, color="gray", alpha=0.4)
             self.ax.plot(ix, iy, color="dimgray", linewidth=1.0)
 
+        # ── Seed outline ──
+        for poly in self.seed_polys:
+            if len(poly) < 3:
+                continue
+            sx = [p[0] for p in poly] + [poly[0][0]]
+            sy = [p[1] for p in poly] + [poly[0][1]]
+            self.ax.plot(
+                sx,
+                sy,
+                color="steelblue",
+                linewidth=1.5,
+                linestyle="--",
+                alpha=0.6,
+            )
+
         # ── Envelope (static) ──
         ca0 = self._get_cleared(0)
         envelope = ca0.envelope(tool_radius)
@@ -574,8 +788,7 @@ class Inspector:
         n_cuts = sum(1 for i in range(n_tp_moves) if not self.tp[i][2])
         ca = self._get_cleared(n_cuts)
 
-        # Remaining (only exterior rings — skip hole rings that
-        # would paint the cleared area with crimson)
+        # Remaining (only exterior rings)
         remaining = ca.remaining()
         for poly in remaining:
             if len(poly) < 3:
@@ -739,11 +952,11 @@ class Inspector:
             f"step={rec.step_idx}  kind={kind_name}  status={status_name}"
             f"{resume_src}  "
             f"pos=({rec.pos_x:.1f},{rec.pos_y:.1f})  "
-            f"hdg={h_deg:.1f}\u00b0  smooth={sh_deg:.1f}\u00b0  "
-            f"pred={pa_deg:.1f}\u00b0  iter={ia_deg:.1f}\u00b0  "
+            f"hdg={h_deg:.1f}°  smooth={sh_deg:.1f}°  "
+            f"pred={pa_deg:.1f}°  iter={ia_deg:.1f}°  "
             f"iters={rec.iters}\n"
             f"step_dist={step_dist:.2f}  cut_area={rec.cut_area:.3f}  "
-            f"eng: angle={eng_deg:.1f}\u00b0  area={rec.eng_area:.3f}  "
+            f"eng: angle={eng_deg:.1f}°  area={rec.eng_area:.3f}  "
             f"chord={rec.eng_chord:.3f}  "
             f"cleared={rec.total_area:.1f}  "
             f"remaining={rec.remaining_area:.1f}"
@@ -757,40 +970,49 @@ def cmd_trace(args: argparse.Namespace) -> None:
     """Run adaptive entry + clearing with tracing, write trace file."""
     trace_path = args.tracefile
 
-    print("Running adaptive entry + clearing (Rust) with tracing…")
-    entry_ops, cp = adaptive_entry(
-        pocket_boundary=list(BOUNDARY),
-        islands=[list(isl) for isl in ISLANDS],
-        tool_radius=TOOL_RADIUS,
-        step_over=STEP_OVER,
-        safe_z=SAFE_Z,
-        target_z=CUT_Z,
-        plunge_pitch=1.0,
+    scenario, seed_polys, entry_ops = build_scenario(args)
+
+    print(f"Running {scenario.name} scenario with tracing...")
+    print(
+        f"  tool_radius={scenario.tool_radius}  advance={scenario.advance}  "
+        f"step_over={scenario.step_over}"
     )
-    print(f"  Entry: {entry_ops.len()} ops, {len(cp)} seed polys")
+    print(
+        f"  boundary: {len(scenario.boundary)} verts  "
+        f"islands: {len(scenario.islands)}"
+    )
+    print(
+        f"  seeds: {len(seed_polys)} polygons "
+        f"({sum(len(p) for p in seed_polys)} verts)"
+    )
 
     ca = ClearedArea(
-        boundary=list(BOUNDARY),
-        islands=[list(isl) for isl in ISLANDS],
-        initial=cp,
+        boundary=list(scenario.boundary),
+        islands=[list(isl) for isl in scenario.islands],
+        initial=seed_polys,
     )
+
+    if entry_ops is not None:
+        print(f"  Entry: {entry_ops.len()} ops")
+
     clear_ops = adaptive_clearing(
         cleared=ca,
-        pocket_boundary=list(BOUNDARY),
-        islands=[list(isl) for isl in ISLANDS],
-        radius=TOOL_RADIUS,
-        advance=ADVANCE,
-        cut_z=CUT_Z,
-        safe_z=SAFE_Z,
-        area_tolerance=1.0,
-        trace_path=trace_path,  # type: ignore[call-issue]
+        pocket_boundary=list(scenario.boundary),
+        islands=[list(isl) for isl in scenario.islands],
+        radius=scenario.tool_radius,
+        advance=scenario.advance,
+        cut_z=scenario.cut_z,
+        safe_z=scenario.safe_z,
+        area_tolerance=scenario.area_tolerance,
+        trace_path=trace_path,
     )
+
     print(
         f"  Clearing: {clear_ops.len()} ops, "
         f"{ca.total_area():.1f} mm² cleared, "
         f"{ca.remaining_area():.1f} mm² remaining"
     )
-    print(f"  Trace written: {trace_path}  (self-contained v2 format)")
+    print(f"  Trace written: {trace_path}")
 
 
 def cmd_inspect(args: argparse.Namespace) -> None:
@@ -799,48 +1021,21 @@ def cmd_inspect(args: argparse.Namespace) -> None:
     initial_step = args.step or 0
 
     print(f"Loading trace from {trace_path}")
-    print(f"Reading trace: {trace_path}")
     trace = TraceFile(trace_path)
     print(f"  version={trace.version}  {len(trace)} trace records")
 
-    if trace.geometry is not None:
-        # Version 2: self-contained file.
-        geo = trace.geometry
-        tp = trace.toolpath
-        assert tp is not None  # v2 always embeds the toolpath
-        print(
-            f"  embedded geometry: tool_radius={geo.tool_radius}  "
-            f"boundary={len(geo.boundary)} verts  "
-            f"islands={len(geo.islands)}"
-        )
-        print(f"  embedded toolpath: {len(tp)} moves")
-        # Seed polygons: re-run entry with the trace's geometry so the
-        # ClearedArea rebuild starts from the same initial cleared disk.
-        _, seed_polys = adaptive_entry(
-            pocket_boundary=list(geo.boundary),
-            islands=[list(isl) for isl in geo.islands],
-            tool_radius=geo.tool_radius,
-            step_over=STEP_OVER,
-            safe_z=SAFE_Z,
-            target_z=CUT_Z,
-            plunge_pitch=1.0,
-        )
-    else:
-        # Version 1: fall back to companion .tp + built-in geometry.
-        geo = TraceGeometry(TOOL_RADIUS, BOUNDARY, ISLANDS)
-        tp_path = trace_path.replace(".bin", ".tp")
-        print(f"Reading toolpath: {tp_path}")
-        tp = ToolpathFile(tp_path)
-        print(f"  {len(tp)} toolpath moves")
-        _, seed_polys = adaptive_entry(
-            pocket_boundary=list(BOUNDARY),
-            islands=[list(isl) for isl in ISLANDS],
-            tool_radius=TOOL_RADIUS,
-            step_over=STEP_OVER,
-            safe_z=SAFE_Z,
-            target_z=CUT_Z,
-            plunge_pitch=1.0,
-        )
+    geo = trace.geometry
+    tp = trace.toolpath
+    print(
+        f"  geometry: tool_radius={geo.tool_radius}  "
+        f"boundary={len(geo.boundary)} verts  "
+        f"islands={len(geo.islands)}  "
+        f"seeds={len(geo.seeds)}"
+    )
+    print(f"  toolpath: {len(tp)} moves")
+
+    # Seeds are embedded in the trace -- no re-derivation needed.
+    seed_polys = geo.seeds
 
     inspector = Inspector(trace, tp, seed_polys, geo)
     if initial_step > 0:
@@ -860,6 +1055,25 @@ def main() -> None:
     p_trace.add_argument(
         "tracefile", help="Output path for the .bin trace file."
     )
+    p_trace.add_argument(
+        "--scenario",
+        default="default",
+        choices=list(SCENARIOS),
+        help="Pocket scenario to use (default: default).",
+    )
+    p_trace.add_argument(
+        "--svg",
+        type=str,
+        default=None,
+        help="Path to SVG file. Overrides --scenario. "
+        "First outer contour becomes pocket boundary; holes become islands.",
+    )
+    p_trace.add_argument("--tool-radius", type=float, default=None)
+    p_trace.add_argument("--advance", type=float, default=None)
+    p_trace.add_argument("--step-over", type=float, default=None)
+    p_trace.add_argument("--cut-z", type=float, default=None)
+    p_trace.add_argument("--safe-z", type=float, default=None)
+    p_trace.add_argument("--area-tolerance", type=float, default=None)
     p_trace.set_defaults(func=cmd_trace)
 
     p_inspect = sub.add_parser(

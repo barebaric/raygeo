@@ -140,7 +140,7 @@ def generate_link_passes():
         ax.set_xlim(0, 135)
         ax.set_ylim(40, 85)
         ax.set_zlim(-6, 7)
-        ax.set_title(f"link_passes \u2014 {label}")
+        ax.set_title(f"link_passes — {label}")
         ax.set_xlabel("X")
         ax.set_ylabel("Y")
         ax.set_zlabel("Z")

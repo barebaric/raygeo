@@ -63,6 +63,7 @@ pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
         expansion_batch_size: int = 20,
         profile: bool = False,
         cut_direction: str = "ccw",
+        trace_path: str | None = None,
     ) -> raygeo.ops.Ops:
         """Run forward-stepping adaptive clearing.
 
@@ -100,6 +101,8 @@ pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
         :param profile: Print a profiling report to stdout (default False).
         :param cut_direction: Rotational direction of all cutting moves.
                               ``"cw"`` or ``"ccw"`` (default ``"ccw"``).
+        :param trace_path: When set, write a per-step binary trace file for
+                           the Python inspector (debug builds only).
         :returns: Ops with cutting commands (entry not included).
         """
     "#,

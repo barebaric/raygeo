@@ -58,7 +58,7 @@ def generate_raster():
     ax.grid(True, alpha=0.3)
     ax.legend(fontsize=9)
     ax.set_title(
-        f"ClearedArea: {ca.total_area():.0f} mm\u00b2 cleared, "
+        f"ClearedArea: {ca.total_area():.0f} mm² cleared, "
         f"{len(all_frags)} fragments"
     )
 
@@ -104,7 +104,7 @@ def generate_bulk():
     ax2.set_ylim(-5, 105)
     ax2.grid(True, alpha=0.3)
     ax2.legend(fontsize=9)
-    ax2.set_title(f"ClearedArea.cut: {ca2.total_area():.0f} mm\u00b2 cleared")
+    ax2.set_title(f"ClearedArea.cut: {ca2.total_area():.0f} mm² cleared")
 
     fig2.tight_layout()
     return fig2

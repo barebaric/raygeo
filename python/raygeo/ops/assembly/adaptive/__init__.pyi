@@ -13,7 +13,7 @@ __all__ = [
     "tool",
 ]
 
-def adaptive_clearing(cleared: raygeo.ops.cut.cleared_area.ClearedArea, pocket_boundary: collections.abc.Sequence[tuple[float, float]], islands: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]] = [], radius: float = 3, advance: float = 1.5, cut_z: float = -5, safe_z: float = 2, step_length: float = 0.6, max_deflection_deg: float = 30, wall_margin: float = 0, area_tolerance: float = 1, cut_feed_rate: int = 1200, cut_power: float = 1, start_pos: tuple[float, float] | None = None, start_heading: float | None = None, expansion_batch_size: int = 20, profile: bool = False, cut_direction: str = 'ccw') -> raygeo.ops.Ops:
+def adaptive_clearing(cleared: raygeo.ops.cut.cleared_area.ClearedArea, pocket_boundary: collections.abc.Sequence[tuple[float, float]], islands: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]] = [], radius: float = 3, advance: float = 1.5, cut_z: float = -5, safe_z: float = 2, step_length: float = 0.6, max_deflection_deg: float = 30, wall_margin: float = 0, area_tolerance: float = 1, cut_feed_rate: int = 1200, cut_power: float = 1, start_pos: tuple[float, float] | None = None, start_heading: float | None = None, expansion_batch_size: int = 20, profile: bool = False, cut_direction: str = 'ccw', trace_path: str | None = None) -> raygeo.ops.Ops:
     r"""
     Run forward-stepping adaptive clearing.
     
@@ -51,6 +51,8 @@ def adaptive_clearing(cleared: raygeo.ops.cut.cleared_area.ClearedArea, pocket_b
     :param profile: Print a profiling report to stdout (default False).
     :param cut_direction: Rotational direction of all cutting moves.
                           ``"cw"`` or ``"ccw"`` (default ``"ccw"``).
+    :param trace_path: When set, write a per-step binary trace file for
+                       the Python inspector (debug builds only).
     :returns: Ops with cutting commands (entry not included).
     """
 

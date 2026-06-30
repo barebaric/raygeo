@@ -209,7 +209,7 @@ def page_rasterization():
     axes[1].set_aspect("equal")
     axes[1].grid(True, alpha=0.3)
     axes[1].legend(fontsize=9)
-    axes[1].set_title(f"{scan_mode} | {mode} ({angle}\u00b0)")
+    axes[1].set_title(f"{scan_mode} | {mode} ({angle}°)")
     fig.tight_layout()
     st.pyplot(fig)
 
