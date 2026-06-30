@@ -141,6 +141,7 @@ fn envelope_resume(ctx: &ResumeCtx, tool: &Tool) -> Option<ToolPose> {
     // Sub-sample long edges so the walk does not skip over a productive
     // band between two far-apart vertices.
     let sample_spacing = ctx.opts.step_length;
+    let dir_sign = ctx.opts.cut_direction.sign();
 
     // Walk starting at the true closest point (vertex `start_idx` plus
     // `start_frac` along the edge to the next vertex).
@@ -221,8 +222,6 @@ fn envelope_resume(ctx: &ResumeCtx, tool: &Tool) -> Option<ToolPose> {
         };
         let right = area - left;
         // CCW cutting keeps material on the right; CW on the left.
-        // `dir_sign` mirrors `CutDirection::sign`.
-        let dir_sign = ctx.opts.cut_direction.sign();
         let correct_side = if dir_sign < 0.0 { right } else { left };
         let wrong_side = if dir_sign < 0.0 { left } else { right };
         let direction_ok = area <= 0.0 || correct_side >= wrong_side;
