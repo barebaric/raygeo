@@ -414,9 +414,7 @@ class Inspector:
         seg_steps[0] = 0
         si = 1
         for step_idx in range(1, self.n_steps):
-            n_moves = min(
-                self.trace[step_idx].ops_len, len(self.tp)
-            )
+            n_moves = min(self.trace[step_idx].ops_len, len(self.tp))
             while si < n_seg and n_moves > self._segment_starts[si][2]:
                 seg_steps[si] = step_idx
                 si += 1
@@ -787,11 +785,10 @@ def cmd_trace(args: argparse.Namespace) -> None:
         area_tolerance=1.0,
         trace_path=trace_path,  # type: ignore[call-issue]
     )
-    remaining = sum(abs(get_polygon_area(p)) for p in ca.remaining())
     print(
         f"  Clearing: {clear_ops.len()} ops, "
         f"{ca.total_area():.1f} mm² cleared, "
-        f"{remaining:.1f} mm² remaining"
+        f"{ca.remaining_area():.1f} mm² remaining"
     )
     print(f"  Trace written: {trace_path}  (self-contained v2 format)")
 

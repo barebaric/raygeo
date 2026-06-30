@@ -45,6 +45,7 @@ mat_resume_target(
     tool: ops.assembly.adaptive.tool.Tool,
     cut_direction: str,
     step_length: float,
+    advance: float,
     pocket_boundary: Sequence[tuple[float, float]],
     islands: Sequence[Sequence[tuple[float, float]]],
     valid_tool_area: Sequence[Sequence[tuple[float, float]]],
@@ -60,6 +61,7 @@ Pick a resume target via MAT-guided frontier walk.
 | `tool`            | `ops.assembly.adaptive.tool.Tool`         |                    |
 | `cut_direction`   | `str`                                     | `"cw"` or `"ccw"`. |
 | `step_length`     | `float`                                   |                    |
+| `advance`         | `float`                                   |                    |
 | `pocket_boundary` | `Sequence[tuple[float, float]]`           |                    |
 | `islands`         | `Sequence[Sequence[tuple[float, float]]]` |                    |
 | `valid_tool_area` | `Sequence[Sequence[tuple[float, float]]]` |                    |

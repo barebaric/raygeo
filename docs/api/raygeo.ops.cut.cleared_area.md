@@ -412,6 +412,19 @@ Subtract cleared fragments from the stock, returning the uncut portion.
 *`remaining` subtracts cleared fragments from the boundary polygon, returning the uncut region
 (red).*
 
+### `remaining_area()`
+
+```python
+remaining_area() -> float
+```
+
+Remaining uncut area (boundary minus islands minus cleared fragments). Only positive-area (CCW)
+polygons are counted, so island holes do not inflate the result.
+
+| Parameter | Type    | Description                  |
+| --------- | ------- | ---------------------------- |
+| _Returns_ | `float` | Remaining uncut area in mm². |
+
 ### `signed_boundary_distance()`
 
 ```python

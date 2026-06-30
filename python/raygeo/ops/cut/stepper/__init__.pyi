@@ -192,7 +192,7 @@ def step(cleared: cleared_area.ClearedArea, pos: tuple[builtins.float, builtins.
     :returns: ``StepResult`` with the next position and updated heading.
     """
 
-def step_adaptive(cleared: cleared_area.ClearedArea, pos: tuple[builtins.float, builtins.float], heading: builtins.float, predicted_angle: builtins.float, target_area_pd: builtins.float, step_length: builtins.float, radius: builtins.float, max_deflection: builtins.float, valid_area: typing.Sequence[typing.Sequence[tuple[builtins.float, builtins.float]]], angle_min: builtins.float = -0.7853981633974483, angle_max: builtins.float = 0.7853981633974483) -> StepResult:
+def step_adaptive(cleared: cleared_area.ClearedArea, pos: tuple[builtins.float, builtins.float], heading: builtins.float, predicted_angle: builtins.float, target_area_pd: builtins.float, step_length: builtins.float, radius: builtins.float, max_deflection: builtins.float, valid_area: typing.Sequence[typing.Sequence[tuple[builtins.float, builtins.float]]], angle_min: builtins.float = -0.7853981633974483, angle_max: builtins.float = 0.7853981633974483, dir_sign: builtins.float = 0.0) -> StepResult:
     r"""
     Perform one forward step using the area-based adaptive solver.
     
@@ -211,6 +211,11 @@ def step_adaptive(cleared: cleared_area.ClearedArea, pos: tuple[builtins.float, 
     :param valid_area: Valid tool-centre region polygons.
     :param angle_min: Minimum trial deflection angle in radians (default -π/4).
     :param angle_max: Maximum trial deflection angle in radians (default +π/4).
+    :param dir_sign: Directional bias sign (default ``0.0``).  ``+1.0``
+       to prefer positive angles (CW), ``−1.0`` to prefer negative
+       angles (CCW).  The bias penalises fresh material on the wrong
+       side when the tool breaks through a web between two cleared
+       regions.  Has no effect during normal one-sided cutting.
     :returns: ``StepResult`` with the next position and updated heading.
     """
 

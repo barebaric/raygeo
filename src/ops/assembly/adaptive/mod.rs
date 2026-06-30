@@ -303,9 +303,7 @@ pub fn adaptive_clearing(
             buf.smoothed_heading(tool.smoothed_heading());
             buf.predicted_angle(tool.raw_predictor());
             buf.total_area(cleared.total_area());
-            buf.remaining_area(
-                cleared.remaining().iter().map(get_polygon_area).sum(),
-            );
+            buf.remaining_area(cleared.remaining_area());
             buf.prev_pos(tool.pos);
             buf.ops_len(tp_len);
             tr.write(TraceKind::Init as u8, buf.pack());
@@ -359,8 +357,7 @@ pub fn adaptive_clearing(
         // and only pay for the full union+diff when it looks close.
         let frag_total = cleared.total_area();
         if frag_total >= valid_total - opts.area_tolerance && {
-            let rem: f64 =
-                cleared.remaining().iter().map(get_polygon_area).sum();
+            let rem = cleared.remaining_area();
             rem < opts.area_tolerance
         } {
             dbg_log!(
@@ -383,9 +380,7 @@ pub fn adaptive_clearing(
                     buf.smoothed_heading(tool.smoothed_heading());
                     buf.predicted_angle(tool.raw_predictor());
                     buf.total_area(cleared.total_area());
-                    buf.remaining_area(
-                        cleared.remaining().iter().map(get_polygon_area).sum(),
-                    );
+                    buf.remaining_area(cleared.remaining_area());
                     buf.prev_pos(prev_pos);
                     buf.ops_len(tp_len);
                     tr.write(TraceKind::Exit as u8, buf.pack());
@@ -512,13 +507,7 @@ pub fn adaptive_clearing(
                                 buf.smoothed_heading(tool.smoothed_heading());
                                 buf.predicted_angle(tool.raw_predictor());
                                 buf.total_area(cleared.total_area());
-                                buf.remaining_area(
-                                    cleared
-                                        .remaining()
-                                        .iter()
-                                        .map(get_polygon_area)
-                                        .sum(),
-                                );
+                                buf.remaining_area(cleared.remaining_area());
                                 buf.prev_pos(prev_pos);
                                 buf.ops_len(tp_len);
                                 tr.write(TraceKind::Exit as u8, buf.pack());
@@ -564,13 +553,7 @@ pub fn adaptive_clearing(
                                 buf.smoothed_heading(tool.smoothed_heading());
                                 buf.predicted_angle(tool.raw_predictor());
                                 buf.total_area(cleared.total_area());
-                                buf.remaining_area(
-                                    cleared
-                                        .remaining()
-                                        .iter()
-                                        .map(get_polygon_area)
-                                        .sum(),
-                                );
+                                buf.remaining_area(cleared.remaining_area());
                                 buf.prev_pos(prev_pos);
                                 buf.ops_len(tp_len);
                                 buf.resume_source(_source as u8);
@@ -619,13 +602,7 @@ pub fn adaptive_clearing(
                             buf.smoothed_heading(tool.smoothed_heading());
                             buf.predicted_angle(tool.raw_predictor());
                             buf.total_area(cleared.total_area());
-                            buf.remaining_area(
-                                cleared
-                                    .remaining()
-                                    .iter()
-                                    .map(get_polygon_area)
-                                    .sum(),
-                            );
+                            buf.remaining_area(cleared.remaining_area());
                             buf.prev_pos(prev_pos);
                             buf.ops_len(tp_len);
                             tr.write(TraceKind::Exit as u8, buf.pack());
@@ -663,13 +640,7 @@ pub fn adaptive_clearing(
                         buf.smoothed_heading(tool.smoothed_heading());
                         buf.predicted_angle(tool.raw_predictor());
                         buf.total_area(cleared.total_area());
-                        buf.remaining_area(
-                            cleared
-                                .remaining()
-                                .iter()
-                                .map(get_polygon_area)
-                                .sum(),
-                        );
+                        buf.remaining_area(cleared.remaining_area());
                         buf.prev_pos(prev_pos);
                         buf.ops_len(tp_len);
                         tr.write(TraceKind::Exit as u8, buf.pack());
@@ -716,13 +687,7 @@ pub fn adaptive_clearing(
                         buf.smoothed_heading(tool.smoothed_heading());
                         buf.predicted_angle(tool.raw_predictor());
                         buf.total_area(cleared.total_area());
-                        buf.remaining_area(
-                            cleared
-                                .remaining()
-                                .iter()
-                                .map(get_polygon_area)
-                                .sum(),
-                        );
+                        buf.remaining_area(cleared.remaining_area());
                         buf.prev_pos(prev_pos);
                         buf.ops_len(tp_len);
                         buf.resume_source(_source as u8);
@@ -765,9 +730,7 @@ pub fn adaptive_clearing(
                     buf.smoothed_heading(tool.smoothed_heading());
                     buf.predicted_angle(tool.raw_predictor());
                     buf.total_area(cleared.total_area());
-                    buf.remaining_area(
-                        cleared.remaining().iter().map(get_polygon_area).sum(),
-                    );
+                    buf.remaining_area(cleared.remaining_area());
                     buf.prev_pos(prev_pos);
                     buf.ops_len(tp_len);
                     tr.write(TraceKind::Exit as u8, buf.pack());
@@ -813,9 +776,7 @@ pub fn adaptive_clearing(
                 buf.eng_chord(eng.chord_depth);
                 buf.cut_area(ca);
                 buf.total_area(cleared.total_area());
-                buf.remaining_area(
-                    cleared.remaining().iter().map(get_polygon_area).sum(),
-                );
+                buf.remaining_area(cleared.remaining_area());
                 buf.prev_pos(prev_pos);
                 buf.ops_len(tp_len);
                 tr.write(TraceKind::Cut as u8, buf.pack());

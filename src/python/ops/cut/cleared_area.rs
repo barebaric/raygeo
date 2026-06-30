@@ -337,6 +337,15 @@ impl PyClearedArea {
         self.inner.total_area()
     }
 
+    /// Remaining uncut area (boundary minus islands minus cleared
+    /// fragments).  Only positive-area (CCW) polygons are counted,
+    /// so island holes do not inflate the result.
+    ///
+    /// :returns: Remaining uncut area in mm².
+    pub fn remaining_area(&self) -> f64 {
+        self.inner.remaining_area()
+    }
+
     /// Return the union of all polygons currently tracked as cleared.
     ///
     /// Each fragment is a closed polygon (list of ``(x, y)`` vertices)

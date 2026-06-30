@@ -7,9 +7,9 @@ use crate::geo::algo::offset::compute_inset_region;
 use crate::geo::algo::simplify::simplify_polyline;
 use crate::geo::algo::spatial_grid2d::SpatialGrid;
 use crate::geo::shape::polygon::{
-    get_polygon_area, get_polygon_bounds, get_polygons_group_difference,
-    get_polygons_group_intersection, get_polygons_union,
-    get_segment_swept_polygon, offset_polygon, JoinStyle,
+    get_polygon_area, get_polygon_bounds, get_polygon_signed_area,
+    get_polygons_group_difference, get_polygons_group_intersection,
+    get_polygons_union, get_segment_swept_polygon, offset_polygon, JoinStyle,
 };
 use crate::ops::cut::crescent;
 use crate::types::{Point, Polygon, Rect};
@@ -191,6 +191,20 @@ impl ClearedArea {
             return vec![];
         }
         get_polygons_group_difference(&stock, &self.fragments)
+    }
+
+    /// Area of uncut material remaining in the pocket.
+    ///
+    /// Clipper2 returns holes (islands or cleared regions) as separate
+    /// CW polygons with negative signed area.  Summing signed areas
+    /// correctly accounts for material (CCW → positive) and voids
+    /// (CW → negative) without inflating the total.
+    #[prof]
+    pub fn remaining_area(&self) -> f64 {
+        self.remaining()
+            .iter()
+            .map(|p| get_polygon_signed_area(p))
+            .sum()
     }
 
     #[prof]

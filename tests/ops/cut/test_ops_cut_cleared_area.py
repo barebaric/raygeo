@@ -332,6 +332,61 @@ def test_remaining_partial():
     assert len(r) >= 1
 
 
+# ── remaining_area ──
+
+
+def test_remaining_area_empty():
+    """No cleared fragments — remaining equals stock area."""
+    pocket = P((0, 0), (100, 0), (100, 100), (0, 100))
+    ca = ClearedArea(boundary=pocket)
+    stock_area = 10000.0
+    assert abs(ca.remaining_area() - stock_area) < 0.01
+
+
+def test_remaining_area_no_boundary():
+    ca = ClearedArea(boundary=[])
+    assert ca.remaining_area() == 0.0
+
+
+def test_remaining_area_partial():
+    """Partial clearing reduces remaining area."""
+    pocket = P((0, 0), (100, 0), (100, 100), (0, 100))
+    ca = ClearedArea(boundary=pocket)
+    stock_area = 10000.0
+    cleared_poly = P((10, 10), (90, 10), (90, 90), (10, 90))
+    ca.cut([cleared_poly])
+    assert 0.0 < ca.remaining_area() < stock_area
+
+
+def test_remaining_area_plus_total_area():
+    """remaining + total approximates stock area for a simple pocket."""
+    pocket = P((0, 0), (100, 0), (100, 100), (0, 100))
+    ca = ClearedArea(boundary=pocket)
+    stock_area = 10000.0
+    ca.cut([P((10, 10), (90, 10), (90, 90), (10, 90))])
+    assert abs(ca.total_area() + ca.remaining_area() - stock_area) < 0.1
+
+
+def test_remaining_area_with_islands():
+    """Islands are excluded from remaining area."""
+    pocket = P((0, 0), (100, 0), (100, 100), (0, 100))
+    island = P((40, 40), (60, 40), (60, 60), (40, 60))  # 400 mm² island
+    ca = ClearedArea(boundary=pocket, islands=[island])
+    # Stock area = 10000 - 400 = 9600 mm²
+    # With nothing cleared, remaining_area should be ~9600
+    assert abs(ca.remaining_area() - 9600.0) < 0.1
+
+
+def test_remaining_area_with_islands_partial():
+    """Island area stays excluded even after clearing."""
+    pocket = P((0, 0), (100, 0), (100, 100), (0, 100))
+    island = P((40, 40), (60, 40), (60, 60), (40, 60))
+    ca = ClearedArea(boundary=pocket, islands=[island])
+    # Clear the top-left quadrant, outside the island
+    ca.cut([P((0, 0), (50, 0), (50, 50), (0, 50))])  # ~2500 mm² cleared
+    assert 0.0 < ca.remaining_area() < 9600.0
+
+
 # ── expand ──
 
 

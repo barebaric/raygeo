@@ -16,7 +16,7 @@ def emit_resume_travel(ops: raygeo.ops.Ops, cleared: raygeo.ops.cut.cleared_area
     Emit a safe resume travel from *from_pt* to *to_pt* into *ops*.
     """
 
-def mat_resume_target(axis: raygeo.geo.algo.medial_axis.MedialAxis, cleared: raygeo.ops.cut.cleared_area.ClearedArea, tool: raygeo.ops.assembly.adaptive.tool.Tool, cut_direction: str, step_length: float, pocket_boundary: collections.abc.Sequence[tuple[float, float]], islands: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]], valid_tool_area: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]]) -> raygeo.ops.cut.search.ToolPose | None:
+def mat_resume_target(axis: raygeo.geo.algo.medial_axis.MedialAxis, cleared: raygeo.ops.cut.cleared_area.ClearedArea, tool: raygeo.ops.assembly.adaptive.tool.Tool, cut_direction: str, step_length: float, advance: float, pocket_boundary: collections.abc.Sequence[tuple[float, float]], islands: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]], valid_tool_area: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]]) -> raygeo.ops.cut.search.ToolPose | None:
     r"""
     Pick a resume target via MAT-guided frontier walk.
     

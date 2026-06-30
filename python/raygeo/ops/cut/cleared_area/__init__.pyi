@@ -200,6 +200,14 @@ class ClearedArea:
         :returns: Total cleared area in mm².
         :complexity: O(1)
         """
+    def remaining_area(self) -> builtins.float:
+        r"""
+        Remaining uncut area (boundary minus islands minus cleared
+        fragments).  Only positive-area (CCW) polygons are counted,
+        so island holes do not inflate the result.
+        
+        :returns: Remaining uncut area in mm².
+        """
     def fragments(self) -> builtins.list[builtins.list[tuple[builtins.float, builtins.float]]]:
         r"""
         Return the union of all polygons currently tracked as cleared.
