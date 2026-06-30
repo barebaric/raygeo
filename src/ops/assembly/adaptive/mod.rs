@@ -515,7 +515,14 @@ pub fn adaptive_clearing(
                         try_resume(&ctx, &tool)
                     };
                     if let Some((_source, rp)) = result {
-                        resume::emit_resume_travel(&mut ops, rp.pos, opts);
+                        resume::emit_resume_travel(
+                            &mut ops,
+                            &*cleared,
+                            mat.as_ref(),
+                            tool.pos,
+                            rp.pos,
+                            opts,
+                        );
                         tool.pos = rp.pos;
                         tool.heading = rp.heading;
                         tool.reset_gyro();
@@ -627,7 +634,14 @@ pub fn adaptive_clearing(
                 try_resume(&ctx, &tool)
             };
             if let Some((_source, rp)) = result {
-                resume::emit_resume_travel(&mut ops, rp.pos, opts);
+                resume::emit_resume_travel(
+                    &mut ops,
+                    &*cleared,
+                    mat.as_ref(),
+                    tool.pos,
+                    rp.pos,
+                    opts,
+                );
                 tool.pos = rp.pos;
                 tool.heading = rp.heading;
                 tool.reset_gyro();

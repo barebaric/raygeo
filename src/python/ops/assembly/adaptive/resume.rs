@@ -7,6 +7,7 @@
 
 use crate::ops::assembly::adaptive::resume::{self, ResumeCtx};
 use crate::ops::assembly::adaptive::AdaptiveClearingOptions;
+use crate::ops::cut::ClearedArea;
 use crate::ops::cut::CutDirection;
 use crate::ops::cut::ToolPose;
 use crate::python::geo::algo::medial_axis::PyMedialAxis;
@@ -113,6 +114,9 @@ fn smooth_travel_path_py(
     islands = None,
     radius = 3.0,
     cut_z = -5.0,
+    cleared = None,
+    from_pt = (0.0, 0.0),
+    axis = None,
 ))]
 #[allow(clippy::too_many_arguments)]
 fn emit_resume_travel_py(
@@ -122,6 +126,9 @@ fn emit_resume_travel_py(
     islands: Option<Vec<Vec<(f64, f64)>>>,
     radius: f64,
     cut_z: f64,
+    cleared: Option<&PyClearedArea>,
+    from_pt: (f64, f64),
+    axis: Option<&PyMedialAxis>,
 ) {
     let pb: Polygon = pocket_boundary
         .into_iter()
@@ -133,14 +140,25 @@ fn emit_resume_travel_py(
         .map(|p| p.into_iter().map(|(x, y)| Point::new(x, y)).collect())
         .collect();
     let opts = AdaptiveClearingOptions {
-        pocket_boundary: pb,
-        islands: islands_pts,
+        pocket_boundary: pb.clone(),
+        islands: islands_pts.clone(),
         radius,
         cut_z,
         ..Default::default()
     };
+    let fallback_ca;
+    let ca: &ClearedArea = if let Some(c) = cleared {
+        &c.inner
+    } else {
+        fallback_ca = ClearedArea::new(&pb, &islands_pts);
+        &fallback_ca
+    };
+    let mat = axis.map(|a| &a.inner);
     resume::emit_resume_travel(
         &mut ops.inner,
+        ca,
+        mat,
+        Point::new(from_pt.0, from_pt.1),
         Point::new(to_pt.0, to_pt.1),
         &opts,
     );
@@ -288,7 +306,14 @@ fn try_resume_py(
     };
     let result = resume::try_resume(&ctx, &tool.inner);
     if let Some((_source, rp)) = result {
-        resume::emit_resume_travel(&mut ops.inner, rp.pos, &opts);
+        resume::emit_resume_travel(
+            &mut ops.inner,
+            &cleared.inner,
+            mat,
+            tool.inner.pos,
+            rp.pos,
+            &opts,
+        );
         tool.inner.pos = rp.pos;
         tool.inner.heading = rp.heading;
         tool.inner.reset_gyro();

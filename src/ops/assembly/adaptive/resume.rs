@@ -10,6 +10,9 @@ use crate::dbg_log;
 use crate::geo::algo::medial_axis::MedialAxis;
 use crate::geo::algo::smooth::build_smoothed_path;
 use crate::geo::shape::compute_polygon_bounds;
+use crate::geo::shape::does_line_cross_polygon;
+use crate::geo::shape::get_polygon_signed_area;
+use crate::geo::shape::is_point_in_polygon;
 use crate::ops::container::Ops;
 use crate::ops::cut::step_adaptive;
 use crate::ops::cut::ClearedArea;
@@ -46,14 +49,61 @@ pub(super) const WALL_PROXIMITY: f64 = 0.3;
 
 // ── Helpers ───────────────────────────────────────────────────────────
 
-/// Build the obstacle list for travel-path collision checking.
-#[allow(dead_code)]
-#[prof]
-fn build_travel_obstacles(
-    cleared: &ClearedArea,
-    _opts: &AdaptiveClearingOptions,
-) -> Vec<Polygon> {
-    cleared.remaining()
+/// Check whether a straight-line travel from `from` to `to` avoids
+/// crossing uncleared obstacles.
+///
+/// Returns `true` when the segment centreline does not cross any
+/// obstacle polygon boundary (remaining-stock frontier or pocket
+/// envelope).  Endpoint touches (the resume position at the cutting
+/// edge) are *not* counted as crossings, so paths that merely
+/// approach the frontier are accepted.
+fn direct_path_safe(from: Point, to: Point, obstacles: &[Polygon]) -> bool {
+    if obstacles.is_empty() {
+        return true;
+    }
+    let bounds = compute_polygon_bounds(obstacles);
+
+    // Precompute winding sign for each obstacle (+1 CCW, −1 CW).
+    let signs: Vec<i8> = obstacles
+        .iter()
+        .map(|obs| {
+            if get_polygon_signed_area(obs) > 0.0 {
+                1
+            } else {
+                -1
+            }
+        })
+        .collect();
+
+    // Winding-number point-in-region test using NonZero rule.
+    let in_remaining = |p: Point| -> bool {
+        let mut winding = 0i32;
+        for ((obs, b), &sign) in obstacles.iter().zip(&bounds).zip(&signs) {
+            if obs.len() < 3 {
+                continue;
+            }
+            if p.x < b.min.x || p.x > b.max.x || p.y < b.min.y || p.y > b.max.y
+            {
+                continue;
+            }
+            if is_point_in_polygon(p, obs) {
+                winding += sign as i32;
+            }
+        }
+        winding > 0
+    };
+
+    // Start point MUST be in cleared territory.
+    if in_remaining(from) {
+        return false;
+    }
+
+    // Check that the segment does not properly cross any obstacle
+    // polygon boundary (does_line_cross_polygon uses an interior-point
+    // test — t in (0, 1) — so endpoint touches are not flagged).
+    obstacles
+        .iter()
+        .all(|obs| !does_line_cross_polygon(from, to, obs))
 }
 
 /// Ground-truth engagement check: run `step_adaptive` at a candidate
@@ -268,13 +318,41 @@ pub fn smooth_travel_path(
     }
 }
 
-/// Emit a resume travel to `to` as a single straight-line `move_to`.
+/// Emit a resume travel from `from` to `to`, avoiding uncleared obstacles
+/// when possible via the medial axis.
 #[prof]
 pub fn emit_resume_travel(
     ops: &mut Ops,
+    cleared: &ClearedArea,
+    mat: Option<&MedialAxis>,
+    from: Point,
     to: Point,
     opts: &AdaptiveClearingOptions,
 ) {
+    let obstacles = cleared.remaining();
+
+    // Fast path: direct move when no obstacles or the straight line is safe.
+    if obstacles.is_empty() || direct_path_safe(from, to, &obstacles) {
+        ops.move_to(to.x, to.y, opts.cut_z + 0.5, None);
+        return;
+    }
+
+    // Medial-axis guided path through cleared territory.
+    if let Some(axis) = mat {
+        let raw = axis
+            .path_between_cleared(from, to, cleared.fragments())
+            .or_else(|| axis.path_between(from, to));
+        if let Some(ref path) = raw {
+            let smoothed =
+                smooth_travel_path(from, path, &obstacles, opts.radius);
+            for pt in &smoothed {
+                ops.move_to(pt.x, pt.y, opts.cut_z + 0.5, None);
+            }
+            return;
+        }
+    }
+
+    // Fallback: direct move.
     ops.move_to(to.x, to.y, opts.cut_z + 0.5, None);
 }
 
