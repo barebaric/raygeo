@@ -21,6 +21,29 @@ use crate::types::{Point, Polygon};
 /// naturally in normal one-sided cutting (where `wrong_side ≈ 0`).
 const DIR_BIAS_WEIGHT: f64 = 1.0;
 
+/// Deflection tiebreaker weight for path smoothing.
+///
+/// Added to `effective_err` as `DAMPING × |angle| × target_area_pd`.
+/// Near the pocket boundary many candidate directions fall outside the
+/// valid area and get skipped, leaving the solver with few samples and
+/// causing wild heading oscillations (e.g. +30° one step, −30° the
+/// next).  This linear penalty on |angle| biases the solver toward
+/// smaller corrections when cut areas are similar — it acts as a
+/// tiebreaker that prefers the gentler turn.
+///
+/// The penalty is always well below the convergence threshold
+/// (`target_area_pd × 0.01`), so it never prevents legitimate
+/// convergence; it only shifts the ranking when errors are close.
+///
+///   | deflection | penalty fraction of max_err |
+///   |------------|----------------------------|
+///   | 1°         |          0.9 %             |
+///   | 5°         |          4.4 %             |
+///   | 10°        |          8.8 %             |
+///   | 20°        |         17.5 %             |
+///   | 30°        |         26.2 %             |
+const DEFLECTION_DAMPING: f64 = 0.005;
+
 /// Which engagement metric the solver targets.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum EngagementMetric {
@@ -454,11 +477,12 @@ fn step_adaptive_inner(
         // Directional bias: when material is on both sides (breakthrough),
         // penalise the side that contradicts `dir_sign`.  The penalty is
         // proportional to the wrong-side area and is added to the raw
-        // error *only for ranking* — convergence is still judged by the
-        // raw error below.  In normal one-sided cutting the wrong-side
-        // area is ~0, so the penalty vanishes and behaviour is unchanged.
-        let (effective_err, bias) = if dir_sign == 0.0 {
-            (error, 0.0)
+        // error for ranking — so `best_error` prefers the correct side.
+        // Convergence below still checks raw error, but also rejects
+        // candidates where wrong-side cutting dominates (>50 % of total),
+        // preventing the solver from locking into a wrong-direction drift.
+        let (effective_err, bias, wrong) = if dir_sign == 0.0 {
+            (error, 0.0, 0.0)
         } else {
             // dir_sign < 0 (CCW): material should be on the right; the
             //   wrong side is `left`.
@@ -466,14 +490,22 @@ fn step_adaptive_inner(
             //   wrong side is `right`.
             let wrong = if dir_sign < 0.0 { left } else { right };
             let penalty = DIR_BIAS_WEIGHT * wrong / step_length;
-            (error + penalty, penalty)
+            (error + penalty, penalty, wrong)
         };
+
+        // Deflection damping: a gentle |angle| penalty that acts as a
+        // tiebreaker in the `best_error` ranking.  When two candidates
+        // have similar cut areas, the solver prefers the smaller
+        // deflection — this smooths the path near the boundary.
+        let deflection_penalty =
+            DEFLECTION_DAMPING * angle.abs() * target_area_pd;
+        let effective_err = effective_err + deflection_penalty;
 
         let iter_kind = if is_not_interp { "SMPL" } else { "INTR" };
         dbg_log!(
             "  iter {:2} {}  angle={:+.4}  apd={:.4}  err={:+.4}  \
              conv={}  |err|={:.4}  best|err|={:.4}  L={:.4}  R={:.4}  \
-             bias={:+.4}",
+             bias={:+.4}  damp={:.4}",
             iter,
             iter_kind,
             angle,
@@ -485,6 +517,7 @@ fn step_adaptive_inner(
             left,
             right,
             bias,
+            deflection_penalty,
         );
 
         if total > 0.0 {
@@ -502,13 +535,26 @@ fn step_adaptive_inner(
             best_pos = candidate;
         }
 
-        if error.abs() < max_err {
+        // Convergence requires raw cut-area error within tolerance
+        // AND that wrong-side cutting does not dominate.  The wrong-side
+        // check prevents the solver from locking into a wrong-direction
+        // drift after a breakthrough where the tool cuts primarily on
+        // the wrong side.  An absolute threshold on wrong-side area is
+        // used (relative to target) so that normal side cutting near
+        // islands or corners is not penalised.
+        let wrong_dominated = dir_sign != 0.0
+            && wrong > target_area_pd * step_length * 0.5
+            && wrong > right;
+        if error.abs() < max_err && !wrong_dominated {
             exit_reason = "converged";
             dbg_log!(
-                "  → ACCEPTED  angle={:+.4}  err={:+.4} < max_err={:.4}",
+                "  → ACCEPTED  angle={:+.4}  err={:+.4} < max_err={:.4}  \
+                 wrong={:.4}  right={:.4}",
                 angle,
                 error,
                 max_err,
+                wrong,
+                right,
             );
             break;
         }
