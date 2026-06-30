@@ -13,6 +13,13 @@
 - `make check` — lint + test
 - `make docs` — re-generate the API docs
 
+# Adaptive clearing tracing
+
+- `python tools/adaptive_inspector.py trace <path>` — run adaptive clearing with tracing, write `.bin` file
+- `python tools/adaptive_inspector.py print <path>` — dump all trace records as grep-friendly lines
+- `python tools/adaptive_inspector.py inspect <path>` — interactive matplotlib viewer
+- Optional flags: `--scenario`, `--svg`, `--tool-radius`, `--advance`, `--step-over`
+
 # Rules
 
 - You are strictly forbidden from editing stubs manually. They are only to be edited using "make stubs".

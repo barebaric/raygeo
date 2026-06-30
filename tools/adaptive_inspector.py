@@ -1,23 +1,25 @@
 #!/usr/bin/env python
 """Interactive adaptive clearing inspector.
 
-Two subcommands:
+Three subcommands:
 
     trace   — run adaptive clearing and write a trace file.
     inspect — open the interactive viewer for a trace file.
+    print   — dump all trace records as an event log.
 
 Usage::
 
     python tools/adaptive_inspector.py trace /tmp/trace.bin
     python tools/adaptive_inspector.py trace /tmp/tr.bin
-    python tools/adaptive_inspector.py trace /tmp/tr.bin \\
+    python tools/adaptive_inspector.py trace /tmp/tr.bin \
         --scenario centre-island
-    python tools/adaptive_inspector.py trace /tmp/tr.bin \\
+    python tools/adaptive_inspector.py trace /tmp/tr.bin \
         --svg logo.svg --tool-radius 2.5
     python tools/adaptive_inspector.py inspect /tmp/trace.bin
     python tools/adaptive_inspector.py inspect /tmp/trace.bin 500
+    python tools/adaptive_inspector.py print /tmp/trace.bin
 
-Controls:
+Controls (inspect):
      TextBox + Go button  — jump to any step number
      ◀ / ▶ buttons        — previous / next step
      ◀◀ Seg / Seg ▶▶  — previous / next segment
@@ -1031,6 +1033,65 @@ class Inspector:
 # ── Subcommands ──────────────────────────────────────────────────
 
 
+def cmd_print(args: argparse.Namespace) -> None:
+    """Dump all trace records as a human-readable event log."""
+    trace_path = args.tracefile
+    print(f"Trace file: {trace_path}")
+
+    trace = TraceFile(trace_path)
+    n = len(trace)
+    print(f"Records: {n}")
+    print()
+
+    geo = trace.geometry
+    tp = trace.toolpath
+    print("Geometry:")
+    print(f"  tool_radius={geo.tool_radius}")
+    print(f"  boundary: {len(geo.boundary)} verts")
+    print(f"  islands: {len(geo.islands)}")
+    print(f"  seeds: {len(geo.seeds)} polygon(s)")
+    print(f"  toolpath: {len(tp)} moves")
+    print()
+
+    for i in range(n):
+        rec = trace[i]
+        kind_name = KIND_NAMES.get(rec.kind, str(rec.kind))
+        status_name = STATUS_NAMES.get(rec.status, str(rec.status))
+
+        h_deg = math.degrees(rec.heading)
+        sh_deg = math.degrees(rec.smoothed_heading)
+        pa_deg = math.degrees(rec.predicted_angle)
+        ia_deg = math.degrees(rec.iteration_angle)
+        eng_deg = math.degrees(rec.eng_angle)
+        step_dist = math.hypot(rec.pos_x - rec.prev_x, rec.pos_y - rec.prev_y)
+
+        resume_src = ""
+        if rec.kind in (2, 3) and rec.resume_source:
+            rs = RESUME_SOURCE_NAMES.get(
+                rec.resume_source, str(rec.resume_source)
+            )
+            resume_src = f" resume_via={rs}"
+
+        print(
+            f"{i}\t{kind_name}\t{status_name}{resume_src}"
+            f"\tpos=({rec.pos_x:.4f},{rec.pos_y:.4f})"
+            f"\tprev=({rec.prev_x:.4f},{rec.prev_y:.4f})"
+            f"\tdist={step_dist:.4f}"
+            f"\thdg={h_deg:.4f}"
+            f"\tsmooth={sh_deg:.4f}"
+            f"\tpred={pa_deg:.4f}"
+            f"\titer={ia_deg:.4f}"
+            f"\teng_angle={eng_deg:.4f}"
+            f"\teng_area={rec.eng_area:.4f}"
+            f"\teng_chord={rec.eng_chord:.4f}"
+            f"\tcut_area={rec.cut_area:.4f}"
+            f"\ttotal_area={rec.total_area:.4f}"
+            f"\trem_area={rec.remaining_area:.4f}"
+            f"\titers={rec.iters}"
+            f"\tops_len={rec.ops_len}"
+        )
+
+
 def cmd_trace(args: argparse.Namespace) -> None:
     """Run adaptive entry + clearing with tracing, write trace file."""
     trace_path = args.tracefile
@@ -1155,6 +1216,14 @@ def main() -> None:
         help="Initial step to display (default: 0).",
     )
     p_inspect.set_defaults(func=cmd_inspect)
+
+    p_print = sub.add_parser(
+        "print", help="Dump all trace records as an event log."
+    )
+    p_print.add_argument(
+        "tracefile", help="Input path for the .bin trace file."
+    )
+    p_print.set_defaults(func=cmd_print)
 
     args = parser.parse_args()
     args.func(args)
