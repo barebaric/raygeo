@@ -31,9 +31,17 @@ pub use super::resume_wall_hug::ResumeWallHug;
 /// Maximum number of resume / re-engagement attempts before giving up.
 pub(super) const MAX_RESUMES: usize = 500;
 
-/// Frontier vertex this close to the pocket boundary counts as a wall
-/// collision (mm).
-pub(super) const WALL_PROXIMITY: f64 = 0.01;
+/// Frontier vertex this close to the pocket boundary (outer wall or any
+/// island) counts as a wall collision (mm).
+///
+/// The frontier is the unioned boundary of the cleared region, built from
+/// tool-disk sweeps.  Its vertices sit a small epsilon off the true wall
+/// — a typical polygon-union offset of ~0.05 mm that comfortably exceeds
+/// the naive "on the wall" threshold of 0.01 mm.  The threshold must be
+/// loose enough to reliably catch wall-adjacent frontier vertices (so the
+/// `mat_resume_from_crossing` backward walk finds a wall hit) without
+/// matching interior frontier points.
+pub(super) const WALL_PROXIMITY: f64 = 0.3;
 
 // ── Helpers ───────────────────────────────────────────────────────────
 
