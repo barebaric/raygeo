@@ -4,6 +4,8 @@
 //! small engagement wiggles do not jerk the tool path.  A separate
 //! history of recent solver deltas serves as a steering predictor.
 
+use prof_macros::prof;
+
 use crate::types::Point;
 
 // ── Tool constants ───────────────────────────────────────────────────
@@ -57,6 +59,7 @@ pub struct Tool {
 impl Tool {
     /// Create a new tool, initializing the gyroscope with the initial
     /// heading.
+    #[prof]
     pub fn new(pos: Point, heading: f64, radius: f64) -> Self {
         let dir = Point::new(heading.cos(), heading.sin());
         Self {
@@ -71,6 +74,7 @@ impl Tool {
         }
     }
 
+    #[prof]
     pub fn smoothed_heading(&self) -> f64 {
         if self.gyro_count == 0 {
             return self.heading;
@@ -87,6 +91,7 @@ impl Tool {
         avg.y.atan2(avg.x)
     }
 
+    #[prof]
     pub fn push_gyro(&mut self, dir: Point) {
         if GYRO_BUFFER_LEN == 0 {
             return;
@@ -100,6 +105,7 @@ impl Tool {
         }
     }
 
+    #[prof]
     pub fn reset_gyro(&mut self) {
         let dir = Point::new(self.heading.cos(), self.heading.sin());
         self.gyro = [dir; GYRO_BUFFER_LEN];
@@ -109,6 +115,7 @@ impl Tool {
         self.predictor = 0.0;
     }
 
+    #[prof]
     pub fn push_angle(&mut self, delta: f64) {
         for i in (1..ANGLE_HISTORY_LEN).rev() {
             self.angle_history[i] = self.angle_history[i - 1];
@@ -125,6 +132,7 @@ impl Tool {
     /// a low-pass blend of the previous predictor and the latest
     /// deflection, so steady curvature is tracked while one-off
     /// corrections decay away within a few steps.
+    #[prof]
     pub fn update_predictor(&mut self, delta: f64) {
         self.predictor =
             PREDICTOR_DECAY * self.predictor + (1.0 - PREDICTOR_DECAY) * delta;

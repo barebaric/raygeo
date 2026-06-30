@@ -139,6 +139,8 @@ impl RecordBuf {
 
 // ── Toolpath extraction ─────────────────────────────────────────────
 
+use prof_macros::prof;
+
 use crate::trace::TracePoint;
 
 /// Extract the moving commands (travel + cut) from `ops` as a
@@ -146,6 +148,7 @@ use crate::trace::TracePoint;
 ///
 /// Order matches the record stream so the inspector can index toolpath
 /// points by `ops_len` stored in each trace record.
+#[prof]
 pub(super) fn extract_toolpath(ops: &Ops) -> Vec<TracePoint> {
     let mut out = Vec::new();
     for i in 0..ops.len() {

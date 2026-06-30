@@ -50,6 +50,7 @@ pub struct AdaptiveEntryResult {
 ///
 /// The result includes the Ops (with `cut_state` applied) and the swept
 /// polygons that should be added to the [`ClearedArea`].
+#[prof]
 pub fn adaptive_entry(
     opts: &AdaptiveEntryOptions,
     cut_state: &State,

@@ -132,6 +132,7 @@ pub enum StepStatus {
 /// When `advance >= radius` the angle saturates at `2π` (full
 /// overlap).  A typical advance is 10–40 % of radius,
 /// giving engagement angles roughly 145°–205°.
+#[prof]
 pub fn target_engagement_from_advance(advance: f64, radius: f64) -> f64 {
     if advance <= 0.0 || radius <= 0.0 {
         return std::f64::consts::PI;

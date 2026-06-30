@@ -67,6 +67,7 @@ const WALL_HUG_DEPARTURE_FRAC: f64 = 0.1;
 /// Minimum distance from `point` to the nearest boundary edge of any
 /// polygon in `area`.  Used to detect whether the tool is "on" the
 /// envelope (distance ≈ 0) or has departed into the interior.
+#[prof]
 fn envelope_distance(point: Point, area: &[Polygon]) -> f64 {
     get_polygons_closest_point(area, point)
         .map(|(_, _, _, d2)| d2.sqrt())
@@ -146,6 +147,7 @@ impl Default for AdaptiveClearingOptions {
 ///
 /// Three cases arise depending on where `wall_x` sits relative to
 /// `±x_trans`; each is evaluated via [`disk_segment_area`].
+#[prof]
 pub fn target_area_per_distance(
     radius: f64,
     advance: f64,
@@ -807,6 +809,7 @@ pub fn adaptive_clearing(
 
 /// Wrapper around [`adaptive_clearing`] that prints a profiling report
 /// to stderr when the `RAYGEO_PROFILE` environment variable is set.
+#[prof]
 pub fn adaptive_clearing_with_profile(
     cleared: &mut ClearedArea,
     opts: &AdaptiveClearingOptions,

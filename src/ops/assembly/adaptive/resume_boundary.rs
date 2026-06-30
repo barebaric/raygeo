@@ -1,3 +1,5 @@
+use prof_macros::prof;
+
 use crate::dbg_log;
 use crate::geo::shape::polygon::{
     get_polygon_signed_area, get_polygons_closest_point,
@@ -42,6 +44,7 @@ impl ResumeStrategy for ResumeBoundary {
 ///
 /// Long edges are sub-sampled at `step_length` spacing so the walk does
 /// not skip over a productive band between two far-apart vertices.
+#[prof]
 fn envelope_resume(ctx: &ResumeCtx, tool: &Tool) -> Option<ToolPose> {
     let envelope = ctx.cleared.envelope(tool.radius);
     if envelope.is_empty() {

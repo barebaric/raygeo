@@ -1,3 +1,5 @@
+use prof_macros::prof;
+
 use crate::dbg_log;
 use crate::ops::assembly::adaptive::resume::{
     probe_step, ResumeCtx, ResumeStrategy,
@@ -40,6 +42,7 @@ impl ResumeStrategy for ResumeSegment {
 /// Positions outside `valid_tool_area` are skipped — the tool can
 /// never operate there.
 #[allow(clippy::too_many_arguments)]
+#[prof]
 pub fn search_reengagement(
     cleared: &ClearedArea,
     segment_start: Point,

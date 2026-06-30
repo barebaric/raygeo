@@ -1,3 +1,5 @@
+use prof_macros::prof;
+
 use crate::ops::assembly::adaptive::resume::{
     probe_step, ResumeCtx, ResumeStrategy,
 };
@@ -28,6 +30,7 @@ pub struct ResumeWallHug;
 impl ResumeStrategy for ResumeWallHug {
     const NAME: &'static str = "ResumeWallHug";
 
+    #[prof]
     fn find_next(&self, ctx: &ResumeCtx, _tool: &Tool) -> Option<ToolPose> {
         if ctx.cleared.fragments().is_empty() {
             return None;

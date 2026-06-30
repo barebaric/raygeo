@@ -1,5 +1,7 @@
 use std::collections::HashMap;
 
+use prof_macros::prof;
+
 const NUM_GRAY_LEVELS: usize = 256;
 
 fn otsu_threshold(hist: &[u32; NUM_GRAY_LEVELS], total: usize) -> u8 {
@@ -193,6 +195,7 @@ pub fn get_component_areas(
     areas
 }
 
+#[prof]
 pub fn compute_adaptive_threshold(areas: &[u32]) -> usize {
     if areas.is_empty() {
         return 0;

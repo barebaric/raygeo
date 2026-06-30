@@ -4,6 +4,8 @@
 //! hit, or stuck oscillation), the strategies in this module reposition
 //! the tool.
 
+use prof_macros::prof;
+
 use crate::dbg_log;
 use crate::geo::algo::medial_axis::MedialAxis;
 use crate::geo::algo::smooth::build_smoothed_path;
@@ -47,6 +49,7 @@ pub(super) const WALL_PROXIMITY: f64 = 0.3;
 
 /// Build the obstacle list for travel-path collision checking.
 #[allow(dead_code)]
+#[prof]
 fn build_travel_obstacles(
     cleared: &ClearedArea,
     _opts: &AdaptiveClearingOptions,
@@ -70,6 +73,7 @@ fn build_travel_obstacles(
 /// The returned position is the original `pos` — the caller places the
 /// tool there and then the main loop calls `step_adaptive` again on the
 /// next iteration to move forward.
+#[prof]
 pub fn probe_step(
     ctx: &ResumeCtx,
     radius: f64,
@@ -97,6 +101,7 @@ pub fn probe_step(
 /// stepover-targeted resume positions where the first step naturally
 /// has high engagement (the tool plunges into material at the correct
 /// lateral offset) but subsequent steps will have normal engagement.
+#[prof]
 pub fn probe_step_sym(
     ctx: &ResumeCtx,
     radius: f64,
@@ -162,6 +167,7 @@ pub fn probe_step_sym(
 }
 
 #[allow(clippy::too_many_arguments)]
+#[prof]
 fn probe_step_impl(
     ctx: &ResumeCtx,
     radius: f64,
@@ -232,6 +238,7 @@ fn probe_step_impl(
 ///
 /// `from` is the tool's current position and is preserved verbatim as
 /// the path's first point so the smoothing kernel never moves it.
+#[prof]
 pub fn smooth_travel_path(
     from: Point,
     raw: &[Point],
@@ -266,6 +273,7 @@ pub fn smooth_travel_path(
 
 /// Emit a resume travel from `from` to `to` as a single straight-line
 /// `move_to`.
+#[prof]
 pub fn emit_resume_travel(
     ops: &mut Ops,
     _cleared: &ClearedArea,
@@ -329,6 +337,7 @@ pub trait ResumeStrategy {
 /// Try each strategy in priority order.  Returns the winning strategy
 /// and the tool pose to apply.  Pure query — the caller handles all
 /// mutation (emit travel, set tool, update resume state).
+#[prof]
 pub fn try_resume(
     ctx: &ResumeCtx,
     tool: &Tool,

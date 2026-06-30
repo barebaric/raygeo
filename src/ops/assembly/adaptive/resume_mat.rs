@@ -1,3 +1,5 @@
+use prof_macros::prof;
+
 use crate::dbg_log;
 use crate::geo::algo::medial_axis::MedialAxis;
 use crate::geo::shape::polygon::{
@@ -13,6 +15,7 @@ use crate::ops::cut::CutDirection;
 use crate::ops::cut::ToolPose;
 use crate::types::{Point, Polygon};
 
+#[prof]
 fn can_step(
     rp: ToolPose,
     step_length: f64,
@@ -76,6 +79,7 @@ impl ResumeStrategy for ResumeMat {
 /// Returns the first crossing whose resume position passes the
 /// `can_step` valid-area check.
 #[allow(clippy::too_many_arguments)]
+#[prof]
 pub fn mat_resume_target(
     axis: &MedialAxis,
     cleared: &ClearedArea,
@@ -134,9 +138,10 @@ pub fn mat_resume_target(
 ///    until hitting the pocket boundary (within `WALL_PROXIMITY`) or
 ///    completing a full loop (→ fail, try next crossing).
 /// 3. Place the tool centre at `radius` from the nearest wall point,
-///    along the wall→cleared direction.  The heading is the frontier
-///    tangent in the cutting direction.
+/// along the wall→cleared direction.  The heading is the frontier
+/// tangent in the cutting direction.
 #[allow(clippy::too_many_arguments)]
+#[prof]
 pub fn mat_resume_from_crossing(
     axis: &MedialAxis,
     cleared: &ClearedArea,
@@ -255,6 +260,7 @@ pub fn mat_resume_from_crossing(
 /// BFS through cleared MAT nodes from `start`, returning **all** cleared
 /// nodes that have at least one uncleared neighbour, in BFS (nearest
 /// first) order.
+#[prof]
 pub fn find_all_mat_crossings(
     axis: &MedialAxis,
     start: usize,
