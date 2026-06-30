@@ -345,6 +345,26 @@ pub fn adaptive_clearing(
     let mut last_resume_area: f64 = -1.0;
     let mut last_resume_pos = tool.pos;
 
+    #[cfg(debug_assertions)]
+    macro_rules! write_exit_trace {
+        ($status:expr) => {
+            if let Some(ref mut tr) = tracer {
+                let mut buf = RecordBuf::default();
+                buf.status($status);
+                buf.step_idx(trace_step_idx);
+                buf.pos(tool.pos);
+                buf.heading(tool.heading);
+                buf.smoothed_heading(tool.smoothed_heading());
+                buf.predicted_angle(tool.raw_predictor());
+                buf.total_area(cleared.total_area());
+                buf.remaining_area(cleared.remaining_area());
+                buf.prev_pos(prev_pos);
+                buf.ops_len(tp_len);
+                tr.write(TraceKind::Exit as u8, buf.pack());
+            }
+        };
+    }
+
     let mut iter: usize = 0;
     for _ in 0..MAX_TOTAL_STEPS {
         iter += 1;
@@ -366,22 +386,7 @@ pub fn adaptive_clearing(
                 valid_total,
             );
             #[cfg(debug_assertions)]
-            {
-                if let Some(ref mut tr) = tracer {
-                    let mut buf = RecordBuf::default();
-                    buf.status(StepStatus::Ok);
-                    buf.step_idx(trace_step_idx);
-                    buf.pos(tool.pos);
-                    buf.heading(tool.heading);
-                    buf.smoothed_heading(tool.smoothed_heading());
-                    buf.predicted_angle(tool.raw_predictor());
-                    buf.total_area(cleared.total_area());
-                    buf.remaining_area(cleared.remaining_area());
-                    buf.prev_pos(prev_pos);
-                    buf.ops_len(tp_len);
-                    tr.write(TraceKind::Exit as u8, buf.pack());
-                }
-            }
+            write_exit_trace!(StepStatus::Ok);
             break;
         }
 
@@ -492,22 +497,7 @@ pub fn adaptive_clearing(
                             valid_total,
                         );
                         #[cfg(debug_assertions)]
-                        {
-                            if let Some(ref mut tr) = tracer {
-                                let mut buf = RecordBuf::default();
-                                buf.status(StepStatus::Ok);
-                                buf.step_idx(trace_step_idx);
-                                buf.pos(tool.pos);
-                                buf.heading(tool.heading);
-                                buf.smoothed_heading(tool.smoothed_heading());
-                                buf.predicted_angle(tool.raw_predictor());
-                                buf.total_area(cleared.total_area());
-                                buf.remaining_area(cleared.remaining_area());
-                                buf.prev_pos(prev_pos);
-                                buf.ops_len(tp_len);
-                                tr.write(TraceKind::Exit as u8, buf.pack());
-                            }
-                        }
+                        write_exit_trace!(StepStatus::Ok);
                         break;
                     }
                     let result = {
@@ -525,14 +515,7 @@ pub fn adaptive_clearing(
                         try_resume(&ctx, &tool)
                     };
                     if let Some((_source, rp)) = result {
-                        resume::emit_resume_travel(
-                            &mut ops,
-                            cleared,
-                            mat.as_ref(),
-                            tool.pos,
-                            rp.pos,
-                            opts,
-                        );
+                        resume::emit_resume_travel(&mut ops, rp.pos, opts);
                         tool.pos = rp.pos;
                         tool.heading = rp.heading;
                         tool.reset_gyro();
@@ -587,22 +570,7 @@ pub fn adaptive_clearing(
                         valid_total,
                     );
                     #[cfg(debug_assertions)]
-                    {
-                        if let Some(ref mut tr) = tracer {
-                            let mut buf = RecordBuf::default();
-                            buf.status(StepStatus::Ok);
-                            buf.step_idx(trace_step_idx);
-                            buf.pos(tool.pos);
-                            buf.heading(tool.heading);
-                            buf.smoothed_heading(tool.smoothed_heading());
-                            buf.predicted_angle(tool.raw_predictor());
-                            buf.total_area(cleared.total_area());
-                            buf.remaining_area(cleared.remaining_area());
-                            buf.prev_pos(prev_pos);
-                            buf.ops_len(tp_len);
-                            tr.write(TraceKind::Exit as u8, buf.pack());
-                        }
-                    }
+                    write_exit_trace!(StepStatus::Ok);
                     break;
                 }
             }
@@ -659,14 +627,7 @@ pub fn adaptive_clearing(
                 try_resume(&ctx, &tool)
             };
             if let Some((_source, rp)) = result {
-                resume::emit_resume_travel(
-                    &mut ops,
-                    cleared,
-                    mat.as_ref(),
-                    tool.pos,
-                    rp.pos,
-                    opts,
-                );
+                resume::emit_resume_travel(&mut ops, rp.pos, opts);
                 tool.pos = rp.pos;
                 tool.heading = rp.heading;
                 tool.reset_gyro();
@@ -715,22 +676,7 @@ pub fn adaptive_clearing(
                 valid_total,
             );
             #[cfg(debug_assertions)]
-            {
-                if let Some(ref mut tr) = tracer {
-                    let mut buf = RecordBuf::default();
-                    buf.status(status);
-                    buf.step_idx(trace_step_idx);
-                    buf.pos(tool.pos);
-                    buf.heading(tool.heading);
-                    buf.smoothed_heading(tool.smoothed_heading());
-                    buf.predicted_angle(tool.raw_predictor());
-                    buf.total_area(cleared.total_area());
-                    buf.remaining_area(cleared.remaining_area());
-                    buf.prev_pos(prev_pos);
-                    buf.ops_len(tp_len);
-                    tr.write(TraceKind::Exit as u8, buf.pack());
-                }
-            }
+            write_exit_trace!(status);
             break;
         }
 

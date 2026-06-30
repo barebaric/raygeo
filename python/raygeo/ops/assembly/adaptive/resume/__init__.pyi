@@ -9,9 +9,9 @@ __all__ = [
     "try_resume",
 ]
 
-def emit_resume_travel(ops: raygeo.ops.Ops, cleared: raygeo.ops.cut.cleared_area.ClearedArea, axis: raygeo.geo.algo.medial_axis.MedialAxis | None, from_pt: tuple[float, float], to_pt: tuple[float, float], pocket_boundary: collections.abc.Sequence[tuple[float, float]], islands: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]] = [], radius: float = 3, cut_z: float = -5) -> None:
+def emit_resume_travel(ops: raygeo.ops.Ops, to_pt: tuple[float, float], pocket_boundary: collections.abc.Sequence[tuple[float, float]], islands: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]] = [], radius: float = 3, cut_z: float = -5) -> None:
     r"""
-    Emit a safe resume travel from *from_pt* to *to_pt* into *ops*.
+    Emit a resume travel to *to_pt* as a single straight-line ``move_to``.
     """
 
 def smooth_travel_path(from_pt: tuple[float, float], raw: collections.abc.Sequence[tuple[float, float]], obstacles: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]] = [], clearance: float = 1) -> list[tuple[float, float]]:

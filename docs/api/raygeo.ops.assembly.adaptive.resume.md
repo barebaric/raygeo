@@ -10,9 +10,6 @@ sidebar_label: raygeo.ops.assembly.adaptive.resume
 ```python
 emit_resume_travel(
     ops: ops.Ops,
-    cleared: ops.cut.cleared_area.ClearedArea,
-    axis: geo.algo.medial_axis.MedialAxis | None,
-    from_pt: tuple[float, float],
     to_pt: tuple[float, float],
     pocket_boundary: Sequence[tuple[float, float]],
     islands: Sequence[Sequence[tuple[float, float]]] = [],
@@ -21,14 +18,11 @@ emit_resume_travel(
 ) -> None
 ```
 
-Emit a safe resume travel from *from_pt* to *to_pt* into *ops*.
+Emit a resume travel to *to_pt* as a single straight-line `move_to`.
 
 | Parameter         | Type                                           | Description |
 | ----------------- | ---------------------------------------------- | ----------- |
 | `ops`             | `ops.Ops`                                      |             |
-| `cleared`         | `ops.cut.cleared_area.ClearedArea`             |             |
-| `axis`            | `geo.algo.medial_axis.MedialAxis &#124; None`  |             |
-| `from_pt`         | `tuple[float, float]`                          |             |
 | `to_pt`           | `tuple[float, float]`                          |             |
 | `pocket_boundary` | `Sequence[tuple[float, float]]`                |             |
 | `islands`         | `Sequence[Sequence[tuple[float, float]]] = []` |             |

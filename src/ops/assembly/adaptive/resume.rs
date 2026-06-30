@@ -268,14 +268,10 @@ pub fn smooth_travel_path(
     }
 }
 
-/// Emit a resume travel from `from` to `to` as a single straight-line
-/// `move_to`.
+/// Emit a resume travel to `to` as a single straight-line `move_to`.
 #[prof]
 pub fn emit_resume_travel(
     ops: &mut Ops,
-    _cleared: &ClearedArea,
-    _mat: Option<&MedialAxis>,
-    _from: Point,
     to: Point,
     opts: &AdaptiveClearingOptions,
 ) {

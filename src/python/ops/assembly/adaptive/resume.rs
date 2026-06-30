@@ -80,16 +80,9 @@ fn smooth_travel_path_py(
         .collect()
 }
 
-/// Emit a safe resume travel from *from_pt* to *to_pt* into *ops*.
+/// Emit a resume travel to *to_pt* as a single straight-line ``move_to``.
 ///
-/// When a Medial Axis is available, the travel is routed through cleared
-/// territory (MAT tree walk, shortened via ``smooth_travel_path``).
-/// Otherwise a single straight ``move_to`` is emitted.
-///
-/// :param ops: ``Ops`` instance to append travel moves to (mutated).
-/// :param cleared: ``ClearedArea`` instance.
-/// :param axis: ``MedialAxis`` instance or ``None``.
-/// :param from_pt: Travel start ``(x, y)``.
+/// :param ops: ``Ops`` instance to append travel move to (mutated).
 /// :param to_pt: Travel destination ``(x, y)``.
 /// :param pocket_boundary: Pocket boundary polygon.
 /// :param islands: Island (hole) polygons.
@@ -102,25 +95,19 @@ fn smooth_travel_path_py(
 
     def emit_resume_travel(
         ops: raygeo.ops.Ops,
-        cleared: raygeo.ops.cut.cleared_area.ClearedArea,
-        axis: raygeo.geo.algo.medial_axis.MedialAxis | None,
-        from_pt: tuple[float, float],
         to_pt: tuple[float, float],
         pocket_boundary: collections.abc.Sequence[tuple[float, float]],
         islands: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]] = [],
         radius: float = 3.0,
         cut_z: float = -5.0,
     ) -> None:
-        """Emit a safe resume travel from *from_pt* to *to_pt* into *ops*."""
+        """Emit a resume travel to *to_pt* as a single straight-line ``move_to``."""
     "#,
     module = "raygeo.ops.assembly.adaptive.resume"
 )]
 #[pyfunction(name = "emit_resume_travel")]
 #[pyo3(signature = (
     ops,
-    cleared,
-    axis,
-    from_pt,
     to_pt,
     pocket_boundary,
     islands = None,
@@ -130,16 +117,12 @@ fn smooth_travel_path_py(
 #[allow(clippy::too_many_arguments)]
 fn emit_resume_travel_py(
     ops: &mut PyOps,
-    cleared: &PyClearedArea,
-    axis: Option<&PyMedialAxis>,
-    from_pt: (f64, f64),
     to_pt: (f64, f64),
     pocket_boundary: Vec<(f64, f64)>,
     islands: Option<Vec<Vec<(f64, f64)>>>,
     radius: f64,
     cut_z: f64,
 ) {
-    let mat = axis.map(|a| &a.inner);
     let pb: Polygon = pocket_boundary
         .into_iter()
         .map(|(x, y)| Point::new(x, y))
@@ -158,9 +141,6 @@ fn emit_resume_travel_py(
     };
     resume::emit_resume_travel(
         &mut ops.inner,
-        &cleared.inner,
-        mat,
-        Point::new(from_pt.0, from_pt.1),
         Point::new(to_pt.0, to_pt.1),
         &opts,
     );
@@ -308,14 +288,7 @@ fn try_resume_py(
     };
     let result = resume::try_resume(&ctx, &tool.inner);
     if let Some((_source, rp)) = result {
-        resume::emit_resume_travel(
-            &mut ops.inner,
-            &cleared.inner,
-            mat,
-            tool.inner.pos,
-            rp.pos,
-            &opts,
-        );
+        resume::emit_resume_travel(&mut ops.inner, rp.pos, &opts);
         tool.inner.pos = rp.pos;
         tool.inner.heading = rp.heading;
         tool.inner.reset_gyro();

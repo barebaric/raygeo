@@ -120,79 +120,52 @@ def _valid_tool_area(boundary, islands, radius):
 
 
 class TestEmitResumeTravel:
-    def test_no_mat_emits_single_move(self):
-        """Without a Medial Axis, a single move_to is emitted."""
+    def test_emits_single_move(self):
+        """A single move_to is emitted to the target position."""
         outer = _rect(30.0, 30.0, 60, 60)
-        ca = ClearedArea(boundary=outer, initial=[_rect(30, 30, 10, 10)])
         ops = Ops()
         before = ops.len()
-        emit_resume_travel(
-            ops,
-            ca,
-            None,  # no MAT
-            (0.0, 0.0),
-            (20.0, 20.0),
-            outer,
-        )
+        emit_resume_travel(ops, (20.0, 20.0), outer)
         assert ops.len() == before + 1
 
-    def test_with_mat_emits_at_least_one_move(self):
-        """With a MAT the travel is routed (and shortened)."""
+    def test_emits_travel_commands(self):
+        """Emitted command is a travel move at cut_z + 0.5."""
         outer = _rect(40.0, 40.0, 80, 80)
-        axis = MedialAxis.compute(outer, [], 1.0, 6.0)
-        ca = ClearedArea(boundary=outer, initial=[_rect(40, 40, 12, 12)])
         ops = Ops()
-        emit_resume_travel(
-            ops,
-            ca,
-            axis,
-            (40.0, 40.0),
-            (70.0, 40.0),
-            outer,
-        )
+        emit_resume_travel(ops, (70.0, 40.0), outer)
         assert ops.len() >= 1
-        # Every emitted command should be a travel move at cut_z + 0.5.
         for i in range(ops.len()):
             assert ops.is_travel(i)
 
     def test_mutates_ops_in_place(self):
         outer = _rect(30.0, 30.0, 60, 60)
-        ca = ClearedArea(boundary=outer, initial=[_rect(30, 30, 10, 10)])
         ops = Ops()
         n0 = ops.len()
-        emit_resume_travel(ops, ca, None, (0.0, 0.0), (10.0, 10.0), outer)
+        emit_resume_travel(ops, (10.0, 10.0), outer)
         assert ops.len() == n0 + 1
 
     def test_travel_ends_at_target(self):
-        """The last emitted travel point must match `to` (the target),
-        not a distant MAT node."""
+        """The emitted travel point must match `to`."""
         outer = _rect(40.0, 40.0, 80, 80)
-        axis = MedialAxis.compute(outer, [], 1.0, 6.0)
-        ca = ClearedArea(boundary=outer, initial=[_rect(40, 40, 12, 12)])
         ops = Ops()
         to = (70.0, 40.0)
-        emit_resume_travel(ops, ca, axis, (40.0, 40.0), to, outer)
+        emit_resume_travel(ops, to, outer)
         assert ops.len() >= 1
         ex, ey, _ = ops.endpoint(ops.len() - 1)
         assert (ex, ey) == pytest.approx(to, abs=0.01)
 
     def test_no_extreme_final_segment(self):
-        """No single travel segment should be dramatically longer than
-        the direct from→to distance.  This catches the V-shaped detour
-        where the MAT path overshoots and then jumps back to `to`."""
+        """The single travel segment should not be longer than the direct
+        from→to distance."""
         outer = _rect(40.0, 40.0, 80, 80)
-        axis = MedialAxis.compute(outer, [], 1.0, 6.0)
-        ca = ClearedArea(boundary=outer, initial=[_rect(40, 40, 12, 12)])
         ops = Ops()
-        from_pt = (40.0, 40.0)
         to_pt = (70.0, 40.0)
-        emit_resume_travel(ops, ca, axis, from_pt, to_pt, outer)
-        direct = _dist(from_pt, to_pt)
+        emit_resume_travel(ops, to_pt, outer)
+        direct = math.sqrt(to_pt[0] ** 2 + to_pt[1] ** 2)
         for i in range(1, ops.len()):
             x0, y0, _ = ops.endpoint(i - 1)
             x1, y1, _ = ops.endpoint(i)
-            seg = _dist((x0, y0), (x1, y1))
-            # No segment should be more than 2× the direct distance.
+            seg = math.sqrt((x1 - x0) ** 2 + (y1 - y0) ** 2)
             assert seg <= 2.0 * direct + 1.0, (
                 f"Segment {i}: {seg:.1f}mm > 2×direct ({direct:.1f}mm)"
             )
