@@ -204,6 +204,8 @@ def test_step_adaptive_returns_step_result():
         radius=R,
         max_deflection=math.radians(30),
         valid_area=valid,
+        angle_min=-math.pi / 4,
+        angle_max=math.pi / 4,
     )
     assert len(r.next) == 2
     assert isinstance(r.heading, float)
@@ -230,6 +232,8 @@ def test_step_adaptive_flat_wall_ok_status():
         radius=R,
         max_deflection=math.radians(30),
         valid_area=valid,
+        angle_min=-math.pi / 4,
+        angle_max=math.pi / 4,
     )
     assert "Ok" in repr(r.status), f"Expected Ok, got {r.status}"
 
@@ -252,6 +256,8 @@ def test_step_adaptive_lost_engagement_in_open_space():
         radius=R,
         max_deflection=math.radians(30),
         valid_area=valid,
+        angle_min=-math.pi / 4,
+        angle_max=math.pi / 4,
     )
     assert "Lost" in repr(r.status), f"Expected Lost, got {r.status}"
 
@@ -284,6 +290,8 @@ def test_step_adaptive_returns_best_angle_not_last():
         radius=R,
         max_deflection=math.radians(30),
         valid_area=valid,
+        angle_min=-math.pi / 4,
+        angle_max=math.pi / 4,
     )
     # If the solver used all 20 iterations, the best angle must not
     # equal zero (the trivial drift target).  If it converged early,
@@ -321,6 +329,8 @@ def test_step_adaptive_converges_for_nonzero_optimal_angle():
         radius=R,
         max_deflection=math.radians(30),
         valid_area=valid,
+        angle_min=-math.pi / 4,
+        angle_max=math.pi / 4,
     )
     # MAX_IT = 20 in the Rust source.  A healthy solver should converge
     # in 3-6 iterations on a flat wall.
@@ -354,6 +364,8 @@ def test_step_adaptive_accepts_small_nonconventional_angle():
         radius=R,
         max_deflection=math.radians(30),
         valid_area=valid,
+        angle_min=-math.pi / 4,
+        angle_max=math.pi / 4,
     )
     # The optimal angle for this geometry is ~0.14 rad (~8°), well
     # above the 0.03 conventional threshold.  The solver MUST accept
@@ -447,6 +459,8 @@ def test_step_adaptive_determinism():
         R,
         math.radians(30),
         valid,
+        -math.pi / 4,
+        math.pi / 4,
     )
     r1 = step_adaptive(*args)
     r2 = step_adaptive(*args)
@@ -498,6 +512,8 @@ def test_step_adaptive_converges_from_correct_depth():
         radius=R,
         max_deflection=math.radians(30),
         valid_area=valid,
+        angle_min=-math.pi / 4,
+        angle_max=math.pi / 4,
     )
     assert result.iters < 20, (
         f"Solver exhausted iterations at correct depth — "

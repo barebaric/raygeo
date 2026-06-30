@@ -126,6 +126,12 @@ impl RecordBuf {
         self.u32(121, v);
     }
 
+    /// Resume mechanism that succeeded (0 = none, 1 = segment_resume,
+    /// 2 = mat_resume, 3 = boundary_walk).
+    pub fn resume_source(&mut self, v: u8) {
+        self.u8(125, v);
+    }
+
     pub fn pack(&self) -> &[u8; crate::trace::PAYLOAD_SIZE] {
         &self.0
     }

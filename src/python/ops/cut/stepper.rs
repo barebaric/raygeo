@@ -291,9 +291,24 @@ fn step_py(
 /// :param radius: Disk radius in mm.
 /// :param max_deflection: Max steering deflection in radians.
 /// :param valid_area: Valid tool-centre region polygons.
+/// :param angle_min: Minimum trial deflection angle in radians (default -π/4).
+/// :param angle_max: Maximum trial deflection angle in radians (default +π/4).
 /// :returns: ``StepResult`` with the next position and updated heading.
 #[gen_stub_pyfunction(module = "raygeo.ops.cut.stepper")]
 #[pyfunction(name = "step_adaptive")]
+#[pyo3(signature = (
+    cleared,
+    pos,
+    heading,
+    predicted_angle,
+    target_area_pd,
+    step_length,
+    radius,
+    max_deflection,
+    valid_area,
+    angle_min = -std::f64::consts::FRAC_PI_4,
+    angle_max = std::f64::consts::FRAC_PI_4,
+))]
 #[allow(clippy::too_many_arguments)]
 fn step_adaptive_py(
     cleared: &PyClearedArea,
@@ -305,6 +320,8 @@ fn step_adaptive_py(
     radius: f64,
     max_deflection: f64,
     valid_area: Vec<Vec<(f64, f64)>>,
+    angle_min: f64,
+    angle_max: f64,
 ) -> PyStepResult {
     let valid = polygons_from_tuples(valid_area);
     let r = cut::stepper::step_adaptive(
@@ -317,6 +334,8 @@ fn step_adaptive_py(
         radius,
         max_deflection,
         &valid,
+        angle_min,
+        angle_max,
     );
     PyStepResult {
         next: (r.next.x, r.next.y),

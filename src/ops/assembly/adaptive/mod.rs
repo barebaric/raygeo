@@ -10,6 +10,9 @@
 //! entry polygons (e.g. via `adaptive_entry`).
 
 pub mod resume;
+mod resume_boundary;
+mod resume_mat;
+mod resume_segment;
 pub mod tool;
 mod trace;
 
@@ -22,7 +25,9 @@ use crate::geo::shape::polygon::get_polygon_centroid;
 use crate::ops::container::Ops;
 use crate::ops::cut::step_adaptive;
 use crate::ops::cut::ClearedArea;
+use crate::ops::cut::CutDirection;
 use crate::ops::cut::StepStatus;
+use crate::ops::cut::ToolPose;
 use crate::ops::state::State;
 use crate::prof::prof_report;
 use crate::types::{Point, Polygon};
@@ -32,7 +37,7 @@ use std::path::PathBuf;
 
 #[cfg(debug_assertions)]
 use crate::trace::Tracer;
-use resume::{try_resume, MAX_RESUMES};
+use resume::{try_resume, ResumeCtx, MAX_RESUMES};
 use tool::Tool;
 #[cfg(debug_assertions)]
 use trace::{RecordBuf, TraceKind};
@@ -65,6 +70,10 @@ pub struct AdaptiveClearingOptions {
     pub max_deflection_deg: f64,
     pub wall_margin: f64,
     pub area_tolerance: f64,
+    /// Rotational direction of all cutting moves for the run.
+    /// Constrains the stepper's deflection range and tells resume
+    /// strategies which way the frontier winds.
+    pub cut_direction: CutDirection,
     /// Initial tool position.  When `None`, the starting position is
     /// auto-detected from the cleared-area frontier.
     pub start_pos: Option<Point>,
@@ -94,6 +103,7 @@ impl Default for AdaptiveClearingOptions {
             max_deflection_deg: 30.0,
             wall_margin: 0.0,
             area_tolerance: 1.0,
+            cut_direction: CutDirection::Ccw,
             start_pos: None,
             start_heading: None,
             expansion_batch_size: 20,
@@ -280,11 +290,14 @@ pub fn adaptive_clearing(
     let mut prev_pos = tool.pos;
     let mut steps_since_batch: usize = 0;
 
-    // Track the start of the current cutting segment.  Used by the
-    // D-shape resume: on stall, travel back to segment_start, then
-    // search for reengagement in the direction normal to the segment.
-    let mut segment_start = tool.pos;
-    let mut in_segment = false;
+    // Position and heading where the current cutting segment began.
+    // Set on init and after each resume.  NOT updated on successful
+    // steps — SegmentResume jumps here and probes using the original
+    // heading, not the drifted per-step heading.
+    let mut segment_start = ToolPose {
+        pos: tool.pos,
+        heading: tool.heading,
+    };
 
     // Stuck detection: every STUCK_CHECK_INTERVAL steps, verify the
     // cleared area has grown by at least the expected amount.  If not,
@@ -298,10 +311,11 @@ pub fn adaptive_clearing(
     // stall-bounce where the frontier search returns a new (but
     // immediately-stalling) position without any actual cutting.
     let mut last_resume_area: f64 = -1.0;
+    let mut last_resume_pos = tool.pos;
 
-    let target_eng =
+    let _target_eng =
         2.0 * std::f64::consts::PI - 2.0 * (opts.advance / opts.radius).acos();
-    let min_cut_area =
+    let _min_cut_area =
         opts.step_length * target_area_pd * ENGAGEMENT_FLOOR_FRAC;
 
     let mut iter: usize = 0;
@@ -359,6 +373,8 @@ pub fn adaptive_clearing(
             opts.radius,
             max_def,
             &valid_tool_area,
+            -std::f64::consts::FRAC_PI_4,
+            std::f64::consts::FRAC_PI_4,
         );
         let status = result.status;
         if result.status == StepStatus::Ok {
@@ -441,20 +457,31 @@ pub fn adaptive_clearing(
                         }
                         break;
                     }
-                    if try_resume(
-                        cleared,
-                        &mut ops,
-                        &mut tool,
-                        opts,
-                        &valid_tool_area,
-                        target_area_pd,
-                        max_def,
-                        target_eng,
-                        min_cut_area,
-                        mat.as_ref(),
-                        last_resume_area,
-                        segment_start,
-                    ) {
+                    let result = {
+                        let ctx = ResumeCtx {
+                            cleared: &*cleared,
+                            opts,
+                            valid_tool_area: &valid_tool_area,
+                            mat: mat.as_ref(),
+                            target_area_pd,
+                            segment_start,
+                            last_resume_area,
+                            last_resume_pos,
+                        };
+                        try_resume(&ctx, &tool)
+                    };
+                    if let Some((source, rp)) = result {
+                        resume::emit_resume_travel(
+                            &mut ops,
+                            cleared,
+                            mat.as_ref(),
+                            tool.pos,
+                            rp.pos,
+                            opts,
+                        );
+                        tool.pos = rp.pos;
+                        tool.heading = rp.heading;
+                        tool.reset_gyro();
                         tp_len = moving_count(&ops);
                         #[cfg(debug_assertions)]
                         {
@@ -476,6 +503,7 @@ pub fn adaptive_clearing(
                                 );
                                 buf.prev_pos(prev_pos);
                                 buf.ops_len(tp_len);
+                                buf.resume_source(source as u8);
                                 tr.write(
                                     TraceKind::ResumeStuck as u8,
                                     buf.pack(),
@@ -486,8 +514,12 @@ pub fn adaptive_clearing(
                         prev_pos = tool.pos;
                         last_check_area = cleared.total_area();
                         last_resume_area = cleared.total_area();
+                        last_resume_pos = tool.pos;
+                        segment_start = ToolPose {
+                            pos: tool.pos,
+                            heading: tool.heading,
+                        };
                         step_count = 0;
-                        in_segment = false;
                         continue;
                     }
                     dbg_log!(
@@ -571,20 +603,31 @@ pub fn adaptive_clearing(
                 break;
             }
 
-            if try_resume(
-                cleared,
-                &mut ops,
-                &mut tool,
-                opts,
-                &valid_tool_area,
-                target_area_pd,
-                max_def,
-                target_eng,
-                min_cut_area,
-                mat.as_ref(),
-                last_resume_area,
-                segment_start,
-            ) {
+            let result = {
+                let ctx = ResumeCtx {
+                    cleared: &*cleared,
+                    opts,
+                    valid_tool_area: &valid_tool_area,
+                    mat: mat.as_ref(),
+                    target_area_pd,
+                    segment_start,
+                    last_resume_area,
+                    last_resume_pos,
+                };
+                try_resume(&ctx, &tool)
+            };
+            if let Some((source, rp)) = result {
+                resume::emit_resume_travel(
+                    &mut ops,
+                    cleared,
+                    mat.as_ref(),
+                    tool.pos,
+                    rp.pos,
+                    opts,
+                );
+                tool.pos = rp.pos;
+                tool.heading = rp.heading;
+                tool.reset_gyro();
                 tp_len = moving_count(&ops);
                 #[cfg(debug_assertions)]
                 {
@@ -606,6 +649,7 @@ pub fn adaptive_clearing(
                         );
                         buf.prev_pos(prev_pos);
                         buf.ops_len(tp_len);
+                        buf.resume_source(source as u8);
                         tr.write(TraceKind::ResumeStall as u8, buf.pack());
                     }
                 }
@@ -613,8 +657,12 @@ pub fn adaptive_clearing(
                 prev_pos = tool.pos;
                 last_check_area = cleared.total_area();
                 last_resume_area = cleared.total_area();
+                last_resume_pos = tool.pos;
+                segment_start = ToolPose {
+                    pos: tool.pos,
+                    heading: tool.heading,
+                };
                 step_count = 0;
-                in_segment = false;
                 continue;
             }
 
@@ -649,10 +697,6 @@ pub fn adaptive_clearing(
         }
 
         // Emit cutting move.
-        if !in_segment {
-            segment_start = prev_pos;
-            in_segment = true;
-        }
         ops.line_to(tool.pos.x, tool.pos.y, opts.cut_z, None);
         tp_len += 1;
 

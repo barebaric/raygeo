@@ -450,7 +450,7 @@ pub fn build_smoothed_path(
     smoothing_amount: i32,
 ) -> Vec<Point> {
     // 1. Full path — prepend last / append first.
-    let link: Vec<Point> = if waypoints.len() < 2 {
+    let original: Vec<Point> = if waypoints.len() < 2 {
         vec![last, first]
     } else {
         let mut full = Vec::with_capacity(waypoints.len() + 2);
@@ -459,20 +459,30 @@ pub fn build_smoothed_path(
         full.push(first);
         full
     };
-    if link.len() < 3 {
-        return link;
+    if original.len() < 3 {
+        return original;
     }
 
-    // 2. Resample, shortcut, re-resample.
+    // 2. Shortcut the ORIGINAL path first (no resample).  If the
+    //    shortcut can't remove any points, the path is fully
+    //    constrained by obstacles and further processing (resample,
+    //    Gaussian smooth) would only add redundant points without
+    //    improving the path.  Return the simplified original.
+    let shortcutted =
+        shortcut_path(&original, uncleared, obstacle_bounds, clearance);
+    if shortcutted.len() >= original.len() {
+        return shortcutted;
+    }
+
+    // 3. Resample the shortened path for smoothing.
     let max_seg = clearance.max(0.5) * 0.5;
-    let mut link = resample_polyline_2d(&link, max_seg);
-    link = shortcut_path(&link, uncleared, obstacle_bounds, clearance);
+    let mut link = resample_polyline_2d(&shortcutted, max_seg);
     link = resample_polyline_2d(&link, max_seg);
     if link.len() < 3 {
-        return link;
+        return shortcutted;
     }
 
-    // 3. Aggressive Gaussian smoothing with PER-POINT collision
+    // 4. Aggressive Gaussian smoothing with PER-POINT collision
     //    checking.  Each point is individually tested: if its smoothed
     //    position maintains clearance, it is accepted; otherwise it
     //    stays put.  This allows V-shapes in open areas to be fully

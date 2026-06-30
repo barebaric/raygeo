@@ -12,11 +12,11 @@ from matplotlib.legend_handler import HandlerPatch
 from matplotlib.patches import FancyArrow
 
 from raygeo.geo.algo.offset import compute_inset_region
+from raygeo.ops.assembly.adaptive.resume import search_reengagement
 from raygeo.ops.cut.cleared_area import ClearedArea
 from raygeo.ops.cut.search import (
     ToolPose,
     search_frontier_engagement,
-    search_reengagement,
 )
 
 _ARROW_HANDLER = HandlerPatch(
@@ -114,11 +114,16 @@ def generate_search_reengagement():
 
     eng_rp = search_reengagement(
         ca,
-        start=ToolPose(pos=tool_pos, heading=heading),
+        segment_start=tool_pos,
+        cut_direction=(
+            math.cos(heading),
+            math.sin(heading),
+        ),
         radius=tool_radius,
         step_length=step_length,
         advance=advance,
         min_cut_area=min_cut_area,
+        valid_tool_area=va,
     )
 
     fig, ax = _make_axes(square, va, ca, frontier_tol=0.001)
@@ -578,11 +583,6 @@ def generate_search_frontier_engagement_multi():
 
 __docs_target__ = ["raygeo.ops.cut.search.md"]
 __images__ = [
-    {
-        "heading": "search_reengagement",
-        "caption": "Full backward wall-hugging search (both phases).",
-        "function": generate_search_reengagement,
-    },
     {
         "heading": "search_frontier_engagement",
         "caption": (

@@ -272,11 +272,13 @@ pub fn step_adaptive(
     radius: f64,
     max_deflection: f64,
     valid_area: &[Polygon],
+    angle_min: f64,
+    angle_max: f64,
 ) -> StepResult {
     let base_dir = Point::new(heading.cos(), heading.sin());
     let max_err = target_area_pd * 0.01;
 
-    let mut interp = Interpolation::new();
+    let mut interp = Interpolation::new(angle_min, angle_max);
     let mut found_area = false;
     let mut best_angle = 0.0;
     let mut best_dir = base_dir;

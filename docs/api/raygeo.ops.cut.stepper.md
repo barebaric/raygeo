@@ -248,6 +248,8 @@ step_adaptive(
     radius: float,
     max_deflection: float,
     valid_area: Sequence[Sequence[tuple[float, float]]],
+    angle_min: float = -0.7853981633974483,
+    angle_max: float = 0.7853981633974483,
 ) -> StepResult
 ```
 
@@ -256,18 +258,20 @@ Perform one forward step using the area-based adaptive solver.
 Like **step**, but targets **cut-area per unit distance** rather than an engagement angle. Used
 internally by `adaptive_clearing`.
 
-| Parameter         | Type                                      | Description                                              |
-| ----------------- | ----------------------------------------- | -------------------------------------------------------- |
-| `cleared`         | `cleared_area.ClearedArea`                | `ClearedArea` instance.                                  |
-| `pos`             | `tuple[float, float]`                     | Current centre position `(x, y)`.                        |
-| `heading`         | `float`                                   | Smoothed heading angle (radians).                        |
-| `predicted_angle` | `float`                                   | Predicted steering angle from history.                   |
-| `target_area_pd`  | `float`                                   | Target cut-area per unit distance.                       |
-| `step_length`     | `float`                                   | Forward step length in mm.                               |
-| `radius`          | `float`                                   | Disk radius in mm.                                       |
-| `max_deflection`  | `float`                                   | Max steering deflection in radians.                      |
-| `valid_area`      | `Sequence[Sequence[tuple[float, float]]]` | Valid tool-centre region polygons.                       |
-| _Returns_         | `StepResult`                              | `StepResult` with the next position and updated heading. |
+| Parameter         | Type                                      | Description                                               |
+| ----------------- | ----------------------------------------- | --------------------------------------------------------- |
+| `cleared`         | `cleared_area.ClearedArea`                | `ClearedArea` instance.                                   |
+| `pos`             | `tuple[float, float]`                     | Current centre position `(x, y)`.                         |
+| `heading`         | `float`                                   | Smoothed heading angle (radians).                         |
+| `predicted_angle` | `float`                                   | Predicted steering angle from history.                    |
+| `target_area_pd`  | `float`                                   | Target cut-area per unit distance.                        |
+| `step_length`     | `float`                                   | Forward step length in mm.                                |
+| `radius`          | `float`                                   | Disk radius in mm.                                        |
+| `max_deflection`  | `float`                                   | Max steering deflection in radians.                       |
+| `valid_area`      | `Sequence[Sequence[tuple[float, float]]]` | Valid tool-centre region polygons.                        |
+| `angle_min`       | `float = -0.7853981633974483`             | Minimum trial deflection angle in radians (default -π/4). |
+| `angle_max`       | `float = 0.7853981633974483`              | Maximum trial deflection angle in radians (default +π/4). |
+| _Returns_         | `StepResult`                              | `StepResult` with the next position and updated heading.  |
 
 ### `target_engagement_from_advance()`
 

@@ -102,6 +102,13 @@ STATUS_NAMES = {
     3: "NoConvergence",
 }
 
+RESUME_SOURCE_NAMES = {
+    0: "none",
+    1: "segment_resume",
+    2: "mat_resume",
+    3: "boundary_walk",
+}
+
 
 class TraceRecord:
     """One per-step record from the trace file (128 bytes)."""
@@ -126,6 +133,7 @@ class TraceRecord:
         "prev_x",
         "prev_y",
         "ops_len",
+        "resume_source",
     )
 
     def __init__(self, buf):
@@ -148,6 +156,7 @@ class TraceRecord:
         self.prev_x = struct.unpack_from("<d", buf, 106)[0]
         self.prev_y = struct.unpack_from("<d", buf, 114)[0]
         self.ops_len = struct.unpack_from("<I", buf, 122)[0]
+        self.resume_source = buf[126]
 
 
 class TraceGeometry:
@@ -397,6 +406,7 @@ class Inspector:
         self._all_cut_segs = []  # [[(x1,y1),(x2,y2)], ...]
         self._all_cut_cum = []  # cumulative distance at each cut edge
         self._all_travel_segs = []  # [[(x1,y1),(x2,y2)], ...]
+        self._segment_starts = []  # [(x, y, tp_idx), ...]
         self._move_to_edge_count = []
         self._move_to_travel_count = []
 
@@ -405,6 +415,7 @@ class Inspector:
         cum = 0.0
         edge_count = 0
         travel_count = 0
+        prev_was_travel = None
 
         for i in range(n_total):
             x, y, is_travel = self.tp[i]
@@ -416,13 +427,31 @@ class Inspector:
                 prev_any = (x, y)
                 cut_prev = None
             else:
-                if cut_prev is not None:
+                if cut_prev is None and prev_any is not None:
+                    # First cut after travel: draw edge from the
+                    # travel destination to this first cut endpoint.
+                    self._all_cut_segs.append([prev_any, (x, y)])
+                    cum += math.hypot(x - prev_any[0], y - prev_any[1])
+                    self._all_cut_cum.append(cum)
+                    edge_count += 1
+                elif cut_prev is not None:
                     self._all_cut_segs.append([cut_prev, (x, y)])
                     cum += math.hypot(x - cut_prev[0], y - cut_prev[1])
                     self._all_cut_cum.append(cum)
                     edge_count += 1
                 cut_prev = (x, y)
                 prev_any = (x, y)
+
+            # Mark a segment start only at the travel destination
+            # (cut→travel transition) and at the initial point.
+            # A travel→cut transition would mark the first cut
+            # endpoint, which is one step into the segment, not its
+            # start.
+            if prev_was_travel is None or (
+                prev_was_travel is False and is_travel
+            ):
+                self._segment_starts.append((x, y, i))
+            prev_was_travel = is_travel
 
             self._move_to_edge_count.append(edge_count)
             self._move_to_travel_count.append(travel_count)
@@ -533,9 +562,15 @@ class Inspector:
         # ── Title ──
         kind_name = KIND_NAMES.get(rec.kind, str(rec.kind))
         status_name = STATUS_NAMES.get(rec.status, str(rec.status))
+        resume_src = ""
+        if rec.kind in (2, 3) and rec.resume_source:
+            rs = RESUME_SOURCE_NAMES.get(
+                rec.resume_source, str(rec.resume_source)
+            )
+            resume_src = f"  via={rs}"
         self.ax.set_title(
             f"Step {step_idx}/{self.n_steps - 1}  "
-            f"kind={kind_name}  status={status_name}  "
+            f"kind={kind_name}  status={status_name}{resume_src}  "
             f"cleared={rec.total_area:.0f}  "
             f"remaining={rec.remaining_area:.0f}",
             fontsize=10,
@@ -596,6 +631,19 @@ class Inspector:
                     zorder=3,
                 )
 
+        # Blue dot at the start of each new segment (up to current move)
+        for sx, sy, idx in self._segment_starts:
+            if idx < n_moves:
+                self.ax.plot(
+                    sx,
+                    sy,
+                    "o",
+                    color="blue",
+                    markersize=2.5,
+                    zorder=4,
+                    alpha=0.8,
+                )
+
     def _draw_tool(self, rec):
         """Draw tool circle, position dot, and heading arrow."""
         x, y = rec.pos_x, rec.pos_y
@@ -638,8 +686,15 @@ class Inspector:
         ia_deg = math.degrees(rec.iteration_angle)
         eng_deg = math.degrees(rec.eng_angle)
         step_dist = math.hypot(rec.pos_x - rec.prev_x, rec.pos_y - rec.prev_y)
+        resume_src = ""
+        if rec.kind in (2, 3) and rec.resume_source:
+            rs = RESUME_SOURCE_NAMES.get(
+                rec.resume_source, str(rec.resume_source)
+            )
+            resume_src = f"  resume_via={rs}"
         return (
-            f"step={rec.step_idx}  kind={kind_name}  status={status_name}  "
+            f"step={rec.step_idx}  kind={kind_name}  status={status_name}"
+            f"{resume_src}  "
             f"pos=({rec.pos_x:.1f},{rec.pos_y:.1f})  "
             f"hdg={h_deg:.1f}\u00b0  smooth={sh_deg:.1f}\u00b0  "
             f"pred={pa_deg:.1f}\u00b0  iter={ia_deg:.1f}\u00b0  "

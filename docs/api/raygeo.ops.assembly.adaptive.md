@@ -26,6 +26,7 @@ adaptive_clearing(
     start_heading: float | None = None,
     expansion_batch_size: int = 20,
     profile: bool = False,
+    cut_direction: str = 'ccw',
 ) -> ops.Ops
 ```
 
@@ -56,6 +57,7 @@ and prepending the entry Ops to the result.
 | `start_heading`        | `float &#124; None = None`                     | Initial tool heading in radians. When None, auto-detected as the CCW tangent at start_pos.                                        |
 | `expansion_batch_size` | `int = 20`                                     | Batch cleared-area expansions every N steps (default 20). Larger values improve performance but may slightly reduce path quality. |
 | `profile`              | `bool = False`                                 | Print a profiling report to stdout (default False).                                                                               |
+| `cut_direction`        | `str = 'ccw'`                                  | Rotational direction of all cutting moves. `"cw"` or `"ccw"` (default `"ccw"`).                                                   |
 | _Returns_              | `ops.Ops`                                      | Ops with cutting commands (entry not included).                                                                                   |
 
 ![Circle-seed clearing in a 60×60 pocket with a 10×10 island at the centre — 2D top-down shows seed clearing (blue), toolpath gradient, and remaining bands (red).](images/ops-assembly-adaptive-adaptive-clearing-centre-island.png)

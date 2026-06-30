@@ -4,8 +4,8 @@ use crate::dbg_log;
 use crate::geo::shape::polygon::{
     get_polygon_heading_at, get_polygon_signed_area,
     get_polygons_closest_point, get_polygons_group_intersection,
-    is_point_in_polygon,
 };
+use crate::ops::cut::interp::point_in_valid_area;
 use crate::ops::cut::ClearedArea;
 use crate::ops::cut::ToolPose;
 use crate::types::{Point, Polygon};
@@ -337,140 +337,95 @@ fn walk_envelope_boundary(
         }
     }
 
-    if let Some((_, tp)) = best {
+    if let Some((_, _tp)) = &best {
         dbg_log!(
             "  ENVELOPE_SEARCH  → ({:.3},{:.3})  heading={:.4}",
-            tp.pos.x,
-            tp.pos.y,
-            tp.heading,
+            _tp.pos.x,
+            _tp.pos.y,
+            _tp.heading,
         );
     }
     best.map(|(_, tp)| tp)
 }
 
-/// Walk backward from `start` (opposite to the heading direction)
-/// along the cleared-area frontier (clipped to the tool-centre
-/// envelope) until engagement **drops**.
+/// SegmentResume: walk forward from `segment_start` along
+/// `cut_direction` until probing finds a position where the tool can
+/// re-engage uncut material.
 ///
-/// 1. Walk opposite to `start.heading` along the envelope-clipped
-///    frontier.
-/// 2. Skip vertices without engagement.
-/// 3. When a vertex *with* engagement is found, remember it but
-///    **keep walking** in the same direction.
-/// 4. When engagement **drops below threshold** again, that vertex
-///    is the disengagement point — return it with the heading
-///    *flipped* (the forward/travel direction at the previous
-///    engaged vertex plus π).
+/// The tool was cutting a segment that started at `segment_start`.
+/// When it stalls, we jump back to the segment start and walk
+/// forward.  At each position, probe straight ahead and at several
+/// outward angles.  The first position where any probe finds
+/// engagement above `min_cut_area` becomes the resume target.
 ///
-/// The returned position is offset inward by `radius - advance`.
+/// Positions outside `valid_tool_area` are skipped — the tool can
+/// never operate there.
 #[prof]
+#[allow(clippy::too_many_arguments)]
 pub fn search_reengagement(
     cleared: &ClearedArea,
-    start: ToolPose,
+    segment_start: Point,
+    cut_direction: Point,
     radius: f64,
     step_length: f64,
-    advance: f64,
+    _advance: f64,
     min_cut_area: f64,
+    valid_tool_area: &[Polygon],
 ) -> Option<ToolPose> {
-    let frontier = cleared.frontier(0.1);
-    if frontier.is_empty() {
-        return None;
-    }
-    let polys = {
-        let envelope = cleared.envelope(radius);
-        if envelope.is_empty() {
-            frontier
-        } else {
-            get_polygons_group_intersection(&frontier, &envelope)
-        }
-    };
-    if polys.is_empty() {
-        return None;
-    }
-    let (closest_poly_idx, _t, _closest_pt, _d2) =
-        get_polygons_closest_point(&polys, start.pos)?;
-    let poly = &polys[closest_poly_idx];
-    let n = poly.len();
-    if n < 3 {
+    if cleared.fragments().is_empty() {
         return None;
     }
 
-    let start_idx = poly
-        .iter()
-        .enumerate()
-        .min_by(|(_, a), (_, b)| {
-            a.distance_squared(start.pos)
-                .partial_cmp(&b.distance_squared(start.pos))
-                .unwrap_or(std::cmp::Ordering::Equal)
-        })
-        .map(|(i, _)| i)?;
+    let tangent = cut_direction;
 
-    // Walk opposite to the heading direction.
-    let backward_vec = Point::new(-start.heading.cos(), -start.heading.sin());
-    let ccw_tangent = poly[(start_idx + 1) % n] - poly[start_idx];
-    let cw_tangent = poly[(start_idx + n - 1) % n] - poly[start_idx];
-    let dot_ccw =
-        backward_vec.x * ccw_tangent.x + backward_vec.y * ccw_tangent.y;
-    let dot_cw = backward_vec.x * cw_tangent.x + backward_vec.y * cw_tangent.y;
-    let walk_ccw = dot_ccw >= dot_cw;
+    // Probe directions relative to the cutting tangent.
+    const PROBE_ANGLES: [f64; 7] = [
+        0.0,                          // straight
+        std::f64::consts::FRAC_PI_6,  // +30°
+        -std::f64::consts::FRAC_PI_6, // -30°
+        std::f64::consts::FRAC_PI_3,  // +60°
+        -std::f64::consts::FRAC_PI_3, // -60°
+        std::f64::consts::FRAC_PI_2,  // +90°
+        -std::f64::consts::FRAC_PI_2, // -90°
+    ];
 
-    let envelope = cleared.envelope(radius);
+    // Walk FORWARD from the segment start along cut_direction.
+    // At each position, probe 7 angles for engagement.
+    let max_steps = 2000;
+    let mut pos = segment_start;
 
-    let mut last_engaged: Option<(Point, f64)> = None;
-
-    for offset in 1..n {
-        let idx = if walk_ccw {
-            (start_idx + offset) % n
-        } else {
-            (start_idx + n - offset) % n
-        };
-        let pt = poly[idx];
-
-        let normal_heading = get_polygon_heading_at(poly, pt);
-        let normal = Point::new(normal_heading.cos(), normal_heading.sin());
-        let probe = pt + normal * step_length;
-
-        // Probes outside the tool-centre envelope cut zero material.
-        let in_bounds = envelope.is_empty()
-            || envelope.iter().any(|env| is_point_in_polygon(probe, env));
-        let area = if in_bounds {
-            cleared.cut_area(pt, probe, radius)
-        } else {
-            0.0
-        };
-
-        if area >= min_cut_area {
-            let prev_idx = if walk_ccw {
-                (idx + n - 1) % n
-            } else {
-                (idx + 1) % n
-            };
-            let prev_pt = poly[prev_idx];
-            let travel_heading = (pt.y - prev_pt.y).atan2(pt.x - prev_pt.x);
-            last_engaged = Some((pt, travel_heading));
-        } else if let Some((last_pt, travel_heading)) = last_engaged {
-            // We passed through an engaged region and now engagement
-            // dropped — return the disengagement point with flipped
-            // heading (the forward direction, opposite to travel).
-            let flipped = travel_heading + std::f64::consts::PI;
-            let normal_h = get_polygon_heading_at(poly, last_pt);
-            let n_vec = Point::new(normal_h.cos(), normal_h.sin());
-            let offset_pos = offset_inward(last_pt, n_vec, radius, advance);
-            return Some(ToolPose {
-                pos: offset_pos,
-                heading: flipped,
-            });
+    for step in 0..max_steps {
+        // Skip positions outside valid_tool_area.
+        if !point_in_valid_area(pos, valid_tool_area) {
+            pos += tangent * step_length;
+            continue;
         }
+
+        for &angle in &PROBE_ANGLES {
+            let dir = Point::new(
+                tangent.x * angle.cos() - tangent.y * angle.sin(),
+                tangent.x * angle.sin() + tangent.y * angle.cos(),
+            );
+            let probe = pos + dir * step_length;
+            let area = cleared.cut_area(pos, probe, radius);
+            if area >= min_cut_area {
+                let heading = dir.y.atan2(dir.x);
+                dbg_log!(
+                    "  REENGAGE  step={}  pos=({:.3},{:.3})  \
+                     area={:.4}  angle={:.1}°  heading={:.4}",
+                    step,
+                    pos.x,
+                    pos.y,
+                    area,
+                    angle.to_degrees(),
+                    heading,
+                );
+                return Some(ToolPose { pos, heading });
+            }
+        }
+        pos += tangent * step_length;
     }
 
-    // Entered engaged region but never left — return last engaged vertex.
-    last_engaged.map(|(pos, _)| {
-        let normal_h = get_polygon_heading_at(poly, pos);
-        let n_vec = Point::new(normal_h.cos(), normal_h.sin());
-        let offset_pos = offset_inward(pos, n_vec, radius, advance);
-        ToolPose {
-            pos: offset_pos,
-            heading: 0.0,
-        }
-    })
+    dbg_log!("  REENGAGE  no engagement within {} steps", max_steps);
+    None
 }

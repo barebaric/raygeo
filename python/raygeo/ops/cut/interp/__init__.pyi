@@ -19,7 +19,7 @@ class Interpolation:
     """
     def __new__(cls) -> Interpolation:
         r"""
-        Create a new empty bracket.
+        Create a new empty bracket with default angle bounds (-π/4, +π/4).
         """
     def min_angle(self) -> builtins.float:
         r"""

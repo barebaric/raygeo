@@ -149,7 +149,7 @@ def generate_adaptive_clearing_demo():
                 ys,
                 color="#888888",
                 linestyle=":",
-                linewidth=1.2,
+                linewidth=0.6,
                 alpha=0.8,
                 dashes=(1, 2),
             )
@@ -173,7 +173,7 @@ def generate_adaptive_clearing_demo():
         [],
         color="#888888",
         linestyle=":",
-        linewidth=1.2,
+        linewidth=0.6,
         alpha=0.8,
         dashes=(1, 2),
         label="Travel",
@@ -405,7 +405,7 @@ def _plot_2d_toolpath(ops, ax):
                     [prev[0], x],
                     [prev[1], y],
                     linestyle="--",
-                    linewidth=1.0,
+                    linewidth=0.5,
                     color="dimgray",
                     alpha=0.8,
                 )
@@ -508,7 +508,7 @@ def _plot_3d_toolpath(
                     [prev[1], y],
                     [prev[2], z],
                     linestyle="--",
-                    linewidth=1.0,
+                    linewidth=0.5,
                     color="dimgray",
                     alpha=0.8,
                 )

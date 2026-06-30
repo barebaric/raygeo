@@ -10,6 +10,7 @@ pub(crate) mod resume;
 pub(crate) mod tool;
 
 use crate::ops::assembly::adaptive;
+use crate::ops::cut::CutDirection;
 use crate::ops::state::State;
 use crate::prof::prof_report;
 use crate::python::ops::cut::cleared_area::PyClearedArea;
@@ -61,6 +62,7 @@ pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
         start_heading: float | None = None,
         expansion_batch_size: int = 20,
         profile: bool = False,
+        cut_direction: str = "ccw",
     ) -> raygeo.ops.Ops:
         """Run forward-stepping adaptive clearing.
 
@@ -96,6 +98,8 @@ pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
                                      improve performance but may slightly
                                      reduce path quality.
         :param profile: Print a profiling report to stdout (default False).
+        :param cut_direction: Rotational direction of all cutting moves.
+                              ``"cw"`` or ``"ccw"`` (default ``"ccw"``).
         :returns: Ops with cutting commands (entry not included).
         """
     "#,
@@ -121,6 +125,7 @@ pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     expansion_batch_size = 20,
     profile = false,
     trace_path = None,
+    cut_direction = "ccw",
 ))]
 #[allow(clippy::too_many_arguments)]
 fn adaptive_clearing_py(
@@ -142,6 +147,7 @@ fn adaptive_clearing_py(
     expansion_batch_size: usize,
     profile: bool,
     trace_path: Option<String>,
+    cut_direction: &str,
 ) -> PyOps {
     let boundary: Vec<Point> = pocket_boundary
         .into_iter()
@@ -152,6 +158,10 @@ fn adaptive_clearing_py(
         .into_iter()
         .map(|h| h.into_iter().map(|(x, y)| Point::new(x, y)).collect())
         .collect();
+    let cd = match cut_direction.to_ascii_lowercase().as_str() {
+        "cw" => CutDirection::Cw,
+        _ => CutDirection::Ccw,
+    };
 
     let opts = adaptive::AdaptiveClearingOptions {
         pocket_boundary: boundary,
@@ -168,6 +178,7 @@ fn adaptive_clearing_py(
         start_heading,
         expansion_batch_size,
         trace_path: trace_path.map(PathBuf::from),
+        cut_direction: cd,
     };
 
     let cut_state = State {

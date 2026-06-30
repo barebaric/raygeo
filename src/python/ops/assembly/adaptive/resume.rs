@@ -2,14 +2,17 @@
 //!
 //! Mirrors [`crate::ops::assembly::adaptive::resume`].  Exposes the
 //! pure-geometry path shortener ([`smooth_travel_path`]), the
-//! Medial-Axis helpers ([`mat_resume_target`], [`nearest_uncleared_node`]),
+//! Medial-Axis helpers ([`mat_resume_target`]),
 //! and the two resume drivers ([`emit_resume_travel`], [`try_resume`])
 //! so they can be exercised directly from Python tests.
 
-use crate::ops::assembly::adaptive::resume;
+use crate::ops::assembly::adaptive::resume::{self, ResumeCtx};
 use crate::ops::assembly::adaptive::AdaptiveClearingOptions;
+use crate::ops::cut::CutDirection;
+use crate::ops::cut::ToolPose;
 use crate::python::geo::algo::medial_axis::PyMedialAxis;
 use crate::python::ops::cut::cleared_area::PyClearedArea;
+use crate::python::ops::cut::search::PyToolPose;
 use crate::python::ops::PyOps;
 use crate::types::{Point, Polygon};
 use pyo3::prelude::*;
@@ -20,8 +23,8 @@ pub(crate) fn register(adaptive_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     register_functions!(
         resume_mod,
         smooth_travel_path_py,
-        nearest_uncleared_node_py,
         mat_resume_target_py,
+        search_reengagement_py,
         emit_resume_travel_py,
         try_resume_py,
     );
@@ -36,15 +39,13 @@ pub(crate) fn register(adaptive_mod: &Bound<'_, PyModule>) -> PyResult<()> {
 /// Smooth and shorten a cleared-territory travel path.
 ///
 /// Feeds *raw* (a waypoint list known to stay inside cleared territory)
-/// through ``build_smoothed_path`` against the uncleared obstacles
-/// (*islands* ∪ *remaining*) so redundant intermediate waypoints are
-/// shortcut away and sharp turns are rounded.
+/// through ``build_smoothed_path`` against the *obstacles* so redundant
+/// intermediate waypoints are shortcut away and sharp turns are rounded.
 ///
 /// :param from_pt: Tool's current position ``(x, y)`` (preserved as the
 ///                 first point of the result).
 /// :param raw: Waypoint list (e.g. from the MAT).
-/// :param islands: Island (hole) polygons to avoid.
-/// :param remaining: Remaining (uncut) stock polygons to avoid.
+/// :param obstacles: Obstacle polygons (islands + remaining stock).
 /// :param clearance: Minimum distance from obstacles (tool radius).
 /// :returns: Shortened, smoothed path as a list of ``(x, y)`` points.
 #[gen_stub_pyfunction(
@@ -54,8 +55,7 @@ pub(crate) fn register(adaptive_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     def smooth_travel_path(
         from_pt: tuple[float, float],
         raw: collections.abc.Sequence[tuple[float, float]],
-        islands: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]] = [],
-        remaining: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]] = [],
+        obstacles: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]] = [],
         clearance: float = 1.0,
     ) -> list[tuple[float, float]]:
         """Smooth and shorten a cleared-territory travel path."""
@@ -63,65 +63,28 @@ pub(crate) fn register(adaptive_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     module = "raygeo.ops.assembly.adaptive.resume"
 )]
 #[pyfunction(name = "smooth_travel_path")]
-#[pyo3(signature = (from_pt, raw, islands = None, remaining = None, clearance = 1.0))]
+#[pyo3(signature = (from_pt, raw, obstacles = None, clearance = 1.0))]
 fn smooth_travel_path_py(
     from_pt: (f64, f64),
     raw: Vec<(f64, f64)>,
-    islands: Option<Vec<Vec<(f64, f64)>>>,
-    remaining: Option<Vec<Vec<(f64, f64)>>>,
+    obstacles: Option<Vec<Vec<(f64, f64)>>>,
     clearance: f64,
 ) -> Vec<(f64, f64)> {
     let from = Point::new(from_pt.0, from_pt.1);
     let raw_pts: Vec<Point> =
         raw.into_iter().map(|(x, y)| Point::new(x, y)).collect();
-    let islands_pts: Vec<Polygon> = islands
+    let obstacles_pts: Vec<Polygon> = obstacles
         .unwrap_or_default()
         .into_iter()
         .map(|p| p.into_iter().map(|(x, y)| Point::new(x, y)).collect())
         .collect();
-    let remaining_pts: Vec<Polygon> = remaining
-        .unwrap_or_default()
+    resume::smooth_travel_path(from, &raw_pts, &obstacles_pts, clearance)
         .into_iter()
-        .map(|p| p.into_iter().map(|(x, y)| Point::new(x, y)).collect())
-        .collect();
-    resume::smooth_travel_path(
-        from,
-        &raw_pts,
-        &islands_pts,
-        &remaining_pts,
-        clearance,
-    )
-    .into_iter()
-    .map(|p| (p.x, p.y))
-    .collect()
+        .map(|p| (p.x, p.y))
+        .collect()
 }
 
-/// BFS over the Medial Axis tree from a start node, returning the index
-/// of the nearest (fewest hops) node that is **not** cleared.
-///
-/// :param axis: ``MedialAxis`` instance.
-/// :param start: Starting node index.
-/// :param is_cleared: Cleared/uncleared mask (one bool per node).
-/// :returns: Index of the nearest uncleared node, or ``None``.
-#[gen_stub_pyfunction(module = "raygeo.ops.assembly.adaptive.resume")]
-#[pyfunction(name = "nearest_uncleared_node")]
-fn nearest_uncleared_node_py(
-    axis: &PyMedialAxis,
-    start: usize,
-    is_cleared: Vec<bool>,
-) -> Option<usize> {
-    resume::nearest_uncleared_node(&axis.inner, start, &is_cleared)
-}
-
-/// Pick a resume target by walking the Medial Axis Transform from the
-/// tool's current position to the nearest uncleared MAT node.
-///
-/// :param axis: ``MedialAxis`` instance.
-/// :param cleared: ``ClearedArea`` instance.
-/// :param tool_pos: Tool position ``(x, y)``.
-/// :param valid_tool_area: Valid tool-centre polygons.
-/// :returns: ``(path, heading)`` where *path* is a list of ``(x, y)``
-///           waypoints and *heading* is in radians, or ``None``.
+/// Pick a resume target via MAT-guided frontier walk.
 #[gen_stub_pyfunction(
     python = r#"
     import collections.abc
@@ -130,32 +93,114 @@ fn nearest_uncleared_node_py(
     def mat_resume_target(
         axis: raygeo.geo.algo.medial_axis.MedialAxis,
         cleared: raygeo.ops.cut.cleared_area.ClearedArea,
-        tool_pos: tuple[float, float],
+        tool: raygeo.ops.assembly.adaptive.tool.Tool,
+        cut_direction: str,
+        step_length: float,
+        pocket_boundary: collections.abc.Sequence[tuple[float, float]],
+        islands: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]],
         valid_tool_area: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]],
-    ) -> tuple[list[tuple[float, float]], float] | None:
-        """Pick a resume target by walking the MAT to the nearest uncleared node."""
+    ) -> raygeo.ops.cut.search.ToolPose | None:
+        """Pick a resume target via MAT-guided frontier walk.
+
+        :param cut_direction: ``"cw"`` or ``"ccw"``.
+        """
     "#,
     module = "raygeo.ops.assembly.adaptive.resume"
 )]
 #[pyfunction(name = "mat_resume_target")]
+#[allow(clippy::too_many_arguments)]
 fn mat_resume_target_py(
     axis: &PyMedialAxis,
     cleared: &PyClearedArea,
-    tool_pos: (f64, f64),
+    tool: &crate::python::ops::assembly::adaptive::tool::PyTool,
+    cut_direction: &str,
+    step_length: f64,
+    pocket_boundary: Vec<(f64, f64)>,
+    islands: Vec<Vec<(f64, f64)>>,
     valid_tool_area: Vec<Vec<(f64, f64)>>,
-) -> Option<(Vec<(f64, f64)>, f64)> {
+) -> Option<PyToolPose> {
+    let pb: Polygon = pocket_boundary
+        .into_iter()
+        .map(|(x, y)| Point::new(x, y))
+        .collect();
+    let isls: Vec<Polygon> = islands
+        .into_iter()
+        .map(|p| p.into_iter().map(|(x, y)| Point::new(x, y)).collect())
+        .collect();
     let valid: Vec<Polygon> = valid_tool_area
         .into_iter()
         .map(|p| p.into_iter().map(|(x, y)| Point::new(x, y)).collect())
         .collect();
-    resume::mat_resume_target(
+    let cd = match cut_direction.to_ascii_lowercase().as_str() {
+        "cw" => CutDirection::Cw,
+        _ => CutDirection::Ccw,
+    };
+    let r = resume::mat_resume_target(
         &axis.inner,
         &cleared.inner,
-        Point::new(tool_pos.0, tool_pos.1),
+        &tool.inner,
+        cd,
+        step_length,
+        &pb,
+        &isls,
         &valid,
-    )
-    .map(|(path, heading)| {
-        (path.into_iter().map(|p| (p.x, p.y)).collect(), heading)
+    )?;
+    Some(PyToolPose {
+        pos: (r.pos.x, r.pos.y),
+        heading: r.heading,
+    })
+}
+
+/// SegmentResume: walk forward from segment_start along cut_direction
+/// until probing finds engagement.
+#[gen_stub_pyfunction(
+    python = r#"
+    import collections.abc
+    import raygeo
+
+    def search_reengagement(
+        cleared: raygeo.ops.cut.cleared_area.ClearedArea,
+        segment_start: tuple[float, float],
+        cut_direction: tuple[float, float],
+        radius: float,
+        step_length: float,
+        advance: float,
+        min_cut_area: float,
+        valid_tool_area: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]],
+    ) -> raygeo.ops.cut.search.ToolPose | None:
+        """SegmentResume: walk forward from segment_start along cut_direction."""
+    "#,
+    module = "raygeo.ops.assembly.adaptive.resume"
+)]
+#[pyfunction(name = "search_reengagement")]
+#[allow(clippy::too_many_arguments)]
+fn search_reengagement_py(
+    cleared: &PyClearedArea,
+    segment_start: (f64, f64),
+    cut_direction: (f64, f64),
+    radius: f64,
+    step_length: f64,
+    advance: f64,
+    min_cut_area: f64,
+    valid_tool_area: Vec<Vec<(f64, f64)>>,
+) -> Option<PyToolPose> {
+    let vta: Vec<Polygon> = valid_tool_area
+        .into_iter()
+        .map(|p| p.into_iter().map(|(x, y)| Point::new(x, y)).collect())
+        .collect();
+    let r = resume::search_reengagement(
+        &cleared.inner,
+        Point::new(segment_start.0, segment_start.1),
+        Point::new(cut_direction.0, cut_direction.1),
+        radius,
+        step_length,
+        advance,
+        min_cut_area,
+        &vta,
+    )?;
+    Some(PyToolPose {
+        pos: (r.pos.x, r.pos.y),
+        heading: r.heading,
     })
 }
 
@@ -256,9 +301,15 @@ fn emit_resume_travel_py(
 /// :param step_length: Forward step length (mm).
 /// :param advance: Step-over distance (mm).
 /// :param cut_z: Cutting Z height.
+/// :param max_deflection_deg: Maximum steering deflection per step
+///                             in degrees (default 30).
 /// :param valid_tool_area: Valid tool-centre polygons.
 /// :param axis: ``MedialAxis`` instance or ``None``.
 /// :param last_resume_area: Cleared area at the last resume (mm²).
+/// :param cut_direction: ``"cw"`` or ``"ccw"`` (default ``"ccw"``).
+/// :param segment_start: ``(x, y)`` position where the current
+///                        cutting segment began.
+/// :param segment_heading: Tool heading (radians) at segment start.
 /// :returns: ``True`` if the tool was repositioned, ``False`` otherwise.
 #[gen_stub_pyfunction(
     python = r#"
@@ -275,11 +326,18 @@ fn emit_resume_travel_py(
         step_length: float = 0.6,
         advance: float = 1.5,
         cut_z: float = -5.0,
+        max_deflection_deg: float = 30.0,
         valid_tool_area: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]] = [],
         axis: raygeo.geo.algo.medial_axis.MedialAxis | None = None,
         last_resume_area: float = -1.0,
+        cut_direction: str = "ccw",
+        segment_start: tuple[float, float] = (0.0, 0.0),
+        segment_heading: float = 0.0,
     ) -> bool:
-        """Try to recover after the tool stalls or is detected as stuck."""
+        """Try to recover after the tool stalls or is detected as stuck.
+
+        :param cut_direction: ``"cw"`` or ``"ccw"``.
+        """
     "#,
     module = "raygeo.ops.assembly.adaptive.resume"
 )]
@@ -294,9 +352,13 @@ fn emit_resume_travel_py(
     step_length = 0.6,
     advance = 1.5,
     cut_z = -5.0,
+    max_deflection_deg = 30.0,
     valid_tool_area = None,
     axis = None,
     last_resume_area = -1.0,
+    cut_direction = "ccw",
+    segment_start = (0.0, 0.0),
+    segment_heading = 0.0,
 ))]
 #[allow(clippy::too_many_arguments)]
 fn try_resume_py(
@@ -309,9 +371,13 @@ fn try_resume_py(
     step_length: f64,
     advance: f64,
     cut_z: f64,
+    max_deflection_deg: f64,
     valid_tool_area: Option<Vec<Vec<(f64, f64)>>>,
     axis: Option<&PyMedialAxis>,
     last_resume_area: f64,
+    cut_direction: &str,
+    segment_start: (f64, f64),
+    segment_heading: f64,
 ) -> bool {
     let mat = axis.map(|a| &a.inner);
     let pb: Polygon = pocket_boundary
@@ -328,6 +394,10 @@ fn try_resume_py(
         .into_iter()
         .map(|p| p.into_iter().map(|(x, y)| Point::new(x, y)).collect())
         .collect();
+    let cd = match cut_direction.to_ascii_lowercase().as_str() {
+        "cw" => CutDirection::Cw,
+        _ => CutDirection::Ccw,
+    };
     let opts = AdaptiveClearingOptions {
         pocket_boundary: pb,
         islands: islands_pts,
@@ -335,6 +405,8 @@ fn try_resume_py(
         step_length,
         advance,
         cut_z,
+        max_deflection_deg,
+        cut_direction: cd,
         ..Default::default()
     };
     let target_area_pd =
@@ -343,23 +415,35 @@ fn try_resume_py(
             advance,
             step_length,
         );
-    let max_def = opts.max_deflection_deg.to_radians();
-    let target_eng =
-        2.0 * std::f64::consts::PI - 2.0 * (advance / radius).acos();
-    let min_cut_area = step_length * target_area_pd * 0.01;
-    let segment_start = tool.inner.pos;
-    resume::try_resume(
-        &mut cleared.inner,
-        &mut ops.inner,
-        &mut tool.inner,
-        &opts,
-        &vta,
-        target_area_pd,
-        max_def,
-        target_eng,
-        min_cut_area,
+
+    let ctx = ResumeCtx {
+        cleared: &cleared.inner,
+        opts: &opts,
+        valid_tool_area: &vta,
         mat,
+        target_area_pd,
+        segment_start: ToolPose {
+            pos: Point::new(segment_start.0, segment_start.1),
+            heading: segment_heading,
+        },
         last_resume_area,
-        segment_start,
-    )
+        last_resume_pos: tool.inner.pos,
+    };
+    let result = resume::try_resume(&ctx, &tool.inner);
+    if let Some((_source, rp)) = result {
+        resume::emit_resume_travel(
+            &mut ops.inner,
+            &cleared.inner,
+            mat,
+            tool.inner.pos,
+            rp.pos,
+            &opts,
+        );
+        tool.inner.pos = rp.pos;
+        tool.inner.heading = rp.heading;
+        tool.inner.reset_gyro();
+        true
+    } else {
+        false
+    }
 }

@@ -5,11 +5,11 @@ import math
 import pytest
 
 from raygeo.ops.assembly.adaptive import target_area_per_distance
+from raygeo.ops.assembly.adaptive.resume import search_reengagement
 from raygeo.ops.cut.cleared_area import ClearedArea
 from raygeo.ops.cut.search import (
     ToolPose,
     search_frontier_engagement,
-    search_reengagement,
 )
 
 
@@ -20,6 +20,13 @@ def _circle(cx, cy, r, n=32):
             cy + r * math.sin(2 * math.pi * i / n),
         )
         for i in range(n)
+    ]
+
+
+def _big_vta():
+    """Large CCW rectangle as valid_tool_area for tests."""
+    return [
+        [(-100.0, -100.0), (200.0, -100.0), (200.0, 200.0), (-100.0, 200.0)]
     ]
 
 
@@ -111,56 +118,6 @@ class TestSearchFrontierEngagement:
             f"Tool centre at dist {dist:.3f} from circle centre, "
             f"expected ~{expected:.3f} (frontier_radius - inward_offset)"
         )
-
-
-class TestSearchReengagement:
-    def test_returns_tool_pose(self):
-        ca = ClearedArea(boundary=[])
-        ca.cut([_circle(50, 40, 15)])
-        result = search_reengagement(
-            ca,
-            ToolPose(pos=(50.0, 55.0), heading=0.0),
-            3.0,
-            0.6,
-            1.5,
-            0.1,
-        )
-        assert isinstance(result, ToolPose)
-
-    def test_none_for_empty(self):
-        ca = ClearedArea(boundary=[])
-        result = search_reengagement(
-            ca,
-            ToolPose(pos=(50.0, 55.0), heading=0.0),
-            3.0,
-            0.6,
-            1.5,
-            0.1,
-        )
-        assert result is None
-
-    def test_forward_and_backward_return_valid(self):
-        """Both forward and backward return valid results."""
-        ca = ClearedArea(boundary=[])
-        ca.cut([_circle(50, 40, 15)])
-        fwd = search_frontier_engagement(
-            ca,
-            ToolPose(pos=(50.0, 55.0), heading=0.0),
-            3.0,
-            0.6,
-            1.5,
-            0.1,
-            float("inf"),
-        )
-        bwd = search_reengagement(
-            ca,
-            ToolPose(pos=(50.0, 55.0), heading=0.0),
-            3.0,
-            0.6,
-            1.5,
-            0.1,
-        )
-        assert fwd is not None and bwd is not None
 
 
 class TestToolPose:
@@ -430,9 +387,9 @@ def test_reengagement_position_offset_inward():
 
 
 def test_reengagement_first_step_has_correct_engagement():
-    """``search_reengagement`` returns a position offset inward from
-    the frontier by ``R - advance``, and the cut area at that
-    position is at least ``min_cut_area``.
+    """``search_reengagement`` walks forward from the tool position
+    along ``cut_direction`` and returns a position whose cut area
+    is at least ``min_cut_area``.
     """
     R = 5.0
     advance = 2.0
@@ -454,20 +411,15 @@ def test_reengagement_first_step_has_correct_engagement():
 
     result = search_reengagement(
         ca,
-        ToolPose(pos=(50.0, 55.0), heading=0.0),
+        (55.0, 55.0),
+        (1.0, 0.0),
         R,
         step_length,
         advance,
         min_cut_area,
+        _big_vta(),
     )
     assert result is not None
-
-    dist = math.hypot(result.pos[0] - 50.0, result.pos[1] - 40.0)
-    expected_dist = 15.0 - (R - advance)
-    assert abs(dist - expected_dist) < 1.0, (
-        f"Tool centre at dist {dist:.3f} from circle centre, "
-        f"expected ~{expected_dist:.3f}"
-    )
 
     probe = (
         result.pos[0] + math.cos(result.heading) * step_length,

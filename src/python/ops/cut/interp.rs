@@ -21,11 +21,14 @@ pub struct PyInterpolation {
 #[gen_stub_pymethods]
 #[pymethods]
 impl PyInterpolation {
-    /// Create a new empty bracket.
+    /// Create a new empty bracket with default angle bounds (-π/4, +π/4).
     #[new]
     pub fn new() -> Self {
         PyInterpolation {
-            inner: cut::interp::Interpolation::new(),
+            inner: cut::interp::Interpolation::new(
+                -std::f64::consts::FRAC_PI_4,
+                std::f64::consts::FRAC_PI_4,
+            ),
         }
     }
 

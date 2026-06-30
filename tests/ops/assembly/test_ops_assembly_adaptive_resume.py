@@ -15,12 +15,13 @@ from raygeo.ops import Ops
 from raygeo.ops.assembly.adaptive.resume import (
     emit_resume_travel,
     mat_resume_target,
-    nearest_uncleared_node,
+    search_reengagement,
     smooth_travel_path,
     try_resume,
 )
 from raygeo.ops.assembly.adaptive.tool import Tool
 from raygeo.ops.cut.cleared_area import ClearedArea
+from raygeo.ops.cut.search import ToolPose, search_frontier_engagement
 
 
 def _rect(cx, cy, w, h):
@@ -41,12 +42,12 @@ def _dist(a, b):
 
 class TestSmoothTravelPath:
     def test_empty_raw_returns_from(self):
-        out = smooth_travel_path((1.0, 2.0), [], [], [], 3.0)
+        out = smooth_travel_path((1.0, 2.0), [], [], 3.0)
         assert out == [(1.0, 2.0)]
 
     def test_single_waypoint_appended(self):
         """A single raw waypoint is kept as the destination."""
-        out = smooth_travel_path((0.0, 0.0), [(10.0, 0.0)], [], [], 3.0)
+        out = smooth_travel_path((0.0, 0.0), [(10.0, 0.0)], [], 3.0)
         assert len(out) >= 2
         assert out[0] == (0.0, 0.0)
         assert out[-1] == (10.0, 0.0)
@@ -54,7 +55,7 @@ class TestSmoothTravelPath:
     def test_preserves_endpoints(self):
         """from_pt is the first point, last raw point the final point."""
         raw = [(5, 0), (10, 0), (10, 10), (10, 20)]
-        out = smooth_travel_path((0.0, 0.0), raw, [], [], 3.0)
+        out = smooth_travel_path((0.0, 0.0), raw, [], 3.0)
         assert out[0] == pytest.approx((0.0, 0.0))
         assert out[-1] == pytest.approx((10.0, 20.0))
 
@@ -63,7 +64,7 @@ class TestSmoothTravelPath:
         from start to end (shortcut phase removes intermediate hops;
         resampling adds density but the total arc length stays short)."""
         raw = [(5, 0), (10, 0), (15, 0), (20, 0)]
-        out = smooth_travel_path((0.0, 0.0), raw, [], [], 3.0)
+        out = smooth_travel_path((0.0, 0.0), raw, [], 3.0)
         assert out[0] == pytest.approx((0.0, 0.0))
         assert out[-1] == pytest.approx((20.0, 0.0))
         # Arc length ≈ straight-line distance (20) within tolerance.
@@ -76,7 +77,7 @@ class TestSmoothTravelPath:
         island = _rect(15, 10, 8, 8)  # island centred at (15,10)
         # Raw waypoints route *around* the top of the island.
         raw = [(5, 10), (15, 20), (25, 10)]
-        out = smooth_travel_path((0.0, 10.0), raw, [island], [], clearance=2.0)
+        out = smooth_travel_path((0.0, 10.0), raw, [island], clearance=2.0)
         for x, y in out:
             # tool disk centre must be outside the island box
             inside = (11 < x < 19) and (6 < y < 14)
@@ -87,9 +88,7 @@ class TestSmoothTravelPath:
         pulled back into it by smoothing."""
         remaining = _rect(15, 5, 8, 8)
         raw = [(5, 5), (15, 15), (25, 5)]
-        out = smooth_travel_path(
-            (0.0, 5.0), raw, [], [remaining], clearance=2.0
-        )
+        out = smooth_travel_path((0.0, 5.0), raw, [remaining], clearance=2.0)
         for x, y in out:
             inside = (11 < x < 19) and (1 < y < 9)
             assert not inside, f"point ({x:.2f},{y:.2f}) inside remaining"
@@ -97,49 +96,9 @@ class TestSmoothTravelPath:
     def test_path_is_continuous(self):
         """Successive output points are within a reasonable hop distance."""
         raw = [(0, 0), (10, 0), (10, 10), (0, 10)]
-        out = smooth_travel_path((-5.0, -5.0), raw, [], [], 3.0)
+        out = smooth_travel_path((-5.0, -5.0), raw, [], 3.0)
         for a, b in zip(out, out[1:]):
             assert _dist(a, b) < 50.0
-
-
-# ── nearest_uncleared_node ───────────────────────────────────────────
-
-
-class TestNearestUnclearedNode:
-    def test_all_cleared_returns_none(self):
-        outer = _rect(25.0, 25.0, 50, 50)
-        axis = MedialAxis.compute(outer, [], 1.0, 6.0)
-        mask = [True] * len(axis.nodes)
-        assert nearest_uncleared_node(axis, 0, mask) is None
-
-    def test_all_uncleared_returns_first_hop(self):
-        """When nothing is cleared, the nearest uncleared node is a
-        direct neighbour of the start (not the start itself)."""
-        outer = _rect(25.0, 25.0, 50, 50)
-        axis = MedialAxis.compute(outer, [], 1.0, 6.0)
-        mask = [False] * len(axis.nodes)
-        result = nearest_uncleared_node(axis, axis.root, mask)
-        assert result is not None
-        assert result != axis.root
-
-    def test_finds_nearest(self):
-        """The returned node is uncleared and reachable."""
-        outer = _rect(30.0, 30.0, 60, 60)
-        axis = MedialAxis.compute(outer, [], 1.0, 6.0)
-        n = len(axis.nodes)
-        # Clear the root half of the tree, leave the rest uncleared.
-        mask = [i < n // 2 for i in range(n)]
-        result = nearest_uncleared_node(axis, 0, mask)
-        if result is not None:
-            assert mask[result] is False
-
-    def test_start_uncleared_still_searches_others(self):
-        """Even if start is uncleared, BFS does not return start itself."""
-        outer = _rect(25.0, 25.0, 50, 50)
-        axis = MedialAxis.compute(outer, [], 1.0, 6.0)
-        mask = [False] * len(axis.nodes)
-        result = nearest_uncleared_node(axis, 0, mask)
-        assert result != 0
 
 
 # ── mat_resume_target ────────────────────────────────────────────────
@@ -167,10 +126,22 @@ class TestMatResumeTarget:
         axis = MedialAxis.compute(outer, [], 1.0, 6.0)
         ca = ClearedArea(boundary=outer)  # no initial polygons
         vta, _ = _valid_tool_area(outer, [], 3.0)
-        assert mat_resume_target(axis, ca, (30.0, 30.0), vta) is None
+        assert (
+            mat_resume_target(
+                axis,
+                ca,
+                Tool((30.0, 30.0), 0.0, 3.0),
+                "ccw",
+                0.6,
+                outer,
+                [],
+                vta,
+            )
+            is None
+        )
 
-    def test_returns_path_and_heading(self):
-        """Partially-cleared pocket yields a (path, heading) target."""
+    def test_returns_tool_pose(self):
+        """Partially-cleared pocket yields a ToolPose target."""
         outer = _rect(30.0, 30.0, 60, 60)
         island = _rect(30, 30, 10, 10)
         axis = MedialAxis.compute(outer, [island], 1.0, 6.0)
@@ -178,11 +149,19 @@ class TestMatResumeTarget:
         seed = _rect(30, 30, 6, 6)
         ca = ClearedArea(boundary=outer, islands=[island], initial=[seed])
         vta, _ = _valid_tool_area(outer, [island], 3.0)
-        result = mat_resume_target(axis, ca, (30.0, 30.0), vta)
+        result = mat_resume_target(
+            axis,
+            ca,
+            Tool((30.0, 30.0), 0.0, 3.0),
+            "ccw",
+            0.6,
+            outer,
+            [island],
+            vta,
+        )
         if result is not None:
-            path, heading = result
-            assert len(path) >= 2
-            assert isinstance(heading, float)
+            assert isinstance(result, ToolPose)
+            assert isinstance(result.heading, float)
 
     def test_tool_on_uncleared_node_returns_none(self):
         """If the tool sits on an uncleared MAT node, there's nothing
@@ -195,12 +174,20 @@ class TestMatResumeTarget:
         vta, _ = _valid_tool_area(outer, [], 3.0)
         # Pick a node far from the seed as tool position.
         far = max(axis.nodes, key=lambda p: _dist(p, (5, 5)))
-        result = mat_resume_target(axis, ca, far, vta)
-        # May or may not return a path depending on the cleared mask,
+        result = mat_resume_target(
+            axis,
+            ca,
+            Tool(far, 0.0, 3.0),
+            "ccw",
+            0.6,
+            outer,
+            [],
+            vta,
+        )
+        # May or may not return a result depending on the cleared mask,
         # but should not raise.
         if result is not None:
-            path, _ = result
-            assert len(path) >= 2
+            assert isinstance(result, ToolPose)
 
 
 # ── emit_resume_travel ───────────────────────────────────────────────
@@ -250,6 +237,40 @@ class TestEmitResumeTravel:
         emit_resume_travel(ops, ca, None, (0.0, 0.0), (10.0, 10.0), outer)
         assert ops.len() == n0 + 1
 
+    def test_travel_ends_at_target(self):
+        """The last emitted travel point must match `to` (the target),
+        not a distant MAT node."""
+        outer = _rect(40.0, 40.0, 80, 80)
+        axis = MedialAxis.compute(outer, [], 1.0, 6.0)
+        ca = ClearedArea(boundary=outer, initial=[_rect(40, 40, 12, 12)])
+        ops = Ops()
+        to = (70.0, 40.0)
+        emit_resume_travel(ops, ca, axis, (40.0, 40.0), to, outer)
+        assert ops.len() >= 1
+        ex, ey, _ = ops.endpoint(ops.len() - 1)
+        assert (ex, ey) == pytest.approx(to, abs=0.01)
+
+    def test_no_extreme_final_segment(self):
+        """No single travel segment should be dramatically longer than
+        the direct from→to distance.  This catches the V-shaped detour
+        where the MAT path overshoots and then jumps back to `to`."""
+        outer = _rect(40.0, 40.0, 80, 80)
+        axis = MedialAxis.compute(outer, [], 1.0, 6.0)
+        ca = ClearedArea(boundary=outer, initial=[_rect(40, 40, 12, 12)])
+        ops = Ops()
+        from_pt = (40.0, 40.0)
+        to_pt = (70.0, 40.0)
+        emit_resume_travel(ops, ca, axis, from_pt, to_pt, outer)
+        direct = _dist(from_pt, to_pt)
+        for i in range(1, ops.len()):
+            x0, y0, _ = ops.endpoint(i - 1)
+            x1, y1, _ = ops.endpoint(i)
+            seg = _dist((x0, y0), (x1, y1))
+            # No segment should be more than 2× the direct distance.
+            assert seg <= 2.0 * direct + 1.0, (
+                f"Segment {i}: {seg:.1f}mm > 2×direct ({direct:.1f}mm)"
+            )
+
 
 # ── try_resume ───────────────────────────────────────────────────────
 
@@ -280,6 +301,7 @@ class TestTryResume:
             valid_tool_area=vta,
             axis=axis,
             last_resume_area=ca.total_area(),  # no growth
+            cut_direction="ccw",
         )
         assert isinstance(result, bool)
 
@@ -303,6 +325,7 @@ class TestTryResume:
             cut_z=-5.0,
             valid_tool_area=vta,
             axis=axis,
+            cut_direction="ccw",
         )
         assert isinstance(result, bool)
         if result:
@@ -329,5 +352,77 @@ class TestTryResume:
             cut_z=-5.0,
             valid_tool_area=vta,
             axis=axis,
+            cut_direction="ccw",
         )
         assert isinstance(result, bool)
+
+
+def _circle(cx, cy, r, n=32):
+    return [
+        (
+            cx + r * math.cos(2 * math.pi * i / n),
+            cy + r * math.sin(2 * math.pi * i / n),
+        )
+        for i in range(n)
+    ]
+
+
+def _big_vta():
+    return [
+        [(-200, -200), (200, -200), (200, 200), (-200, 200)],
+    ]
+
+
+class TestSegmentResume:
+    def test_returns_tool_pose(self):
+        ca = ClearedArea(boundary=[])
+        ca.cut([_circle(50, 40, 15)])
+        result = search_reengagement(
+            ca,
+            (55.0, 55.0),
+            (1.0, 0.0),
+            3.0,
+            0.6,
+            1.5,
+            0.1,
+            _big_vta(),
+        )
+        assert isinstance(result, ToolPose)
+
+    def test_none_for_empty(self):
+        ca = ClearedArea(boundary=[])
+        result = search_reengagement(
+            ca,
+            (55.0, 55.0),
+            (1.0, 0.0),
+            3.0,
+            0.6,
+            1.5,
+            0.1,
+            _big_vta(),
+        )
+        assert result is None
+
+    def test_forward_and_backward_return_valid(self):
+        ca = ClearedArea(boundary=[])
+        ca.cut([_circle(50, 40, 15)])
+        fwd = search_frontier_engagement(
+            ca,
+            ToolPose(pos=(50.0, 55.0), heading=0.0),
+            3.0,
+            0.6,
+            1.5,
+            0.1,
+            float("inf"),
+        )
+        bwd = search_reengagement(
+            ca,
+            (55.0, 55.0),
+            (1.0, 0.0),
+            3.0,
+            0.6,
+            1.5,
+            0.1,
+            _big_vta(),
+        )
+        assert fwd is not None and bwd is not None

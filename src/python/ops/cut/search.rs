@@ -79,53 +79,12 @@ fn search_frontier_engagement_py(
     })
 }
 
-/// Walk the frontier backward from ``start_pos``, skipping the closest
-/// vertex.  Returns the first vertex (going backward) whose outward
-/// cut-area probe is at least ``min_cut_area``.
-///
-/// The returned position is offset inward by ``radius - advance``.
-///
-/// :param cleared: ``ClearedArea`` instance.
-/// :param start: ``ToolPose`` seed.
-/// :param radius: Disk radius (mm).
-/// :param step_length: Forward step distance (mm).
-/// :param advance: Stepover distance (mm) for inward offset.
-/// :param min_cut_area: Minimum cut area (mm²).
-/// :returns: ``ToolPose`` or ``None``.
-#[gen_stub_pyfunction(module = "raygeo.ops.cut.search")]
-#[pyfunction(name = "search_reengagement")]
-fn search_reengagement_py(
-    cleared: &PyClearedArea,
-    start: &PyToolPose,
-    radius: f64,
-    step_length: f64,
-    advance: f64,
-    min_cut_area: f64,
-) -> Option<PyToolPose> {
-    let r = cut::search_reengagement(
-        &cleared.inner,
-        ToolPose {
-            pos: Point::new(start.pos.0, start.pos.1),
-            heading: start.heading,
-        },
-        radius,
-        step_length,
-        advance,
-        min_cut_area,
-    )?;
-    Some(PyToolPose {
-        pos: (r.pos.x, r.pos.y),
-        heading: r.heading,
-    })
-}
-
 pub fn register(cut_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     let py = cut_mod.py();
     let m = PyModule::new(py, "search")?;
 
     m.add_class::<PyToolPose>()?;
     m.add_function(wrap_pyfunction!(search_frontier_engagement_py, &m)?)?;
-    m.add_function(wrap_pyfunction!(search_reengagement_py, &m)?)?;
 
     cut_mod.add_submodule(&m)?;
 

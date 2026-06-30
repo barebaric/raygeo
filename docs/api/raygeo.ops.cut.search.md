@@ -58,35 +58,3 @@ starts at the correct engagement depth.
 
 *Multi-island pocket — end positions (triangles) yield resume positions (stars) with outward
 headings.*
-
-### `search_reengagement()`
-
-```python
-search_reengagement(
-    cleared: cleared_area.ClearedArea,
-    start: ToolPose,
-    radius: float,
-    step_length: float,
-    advance: float,
-    min_cut_area: float,
-) -> Optional[ToolPose]
-```
-
-Walk the frontier backward from `start_pos`, skipping the closest vertex. Returns the first vertex
-(going backward) whose outward cut-area probe is at least `min_cut_area`.
-
-The returned position is offset inward by `radius - advance`.
-
-| Parameter      | Type                       | Description                               |
-| -------------- | -------------------------- | ----------------------------------------- |
-| `cleared`      | `cleared_area.ClearedArea` | `ClearedArea` instance.                   |
-| `start`        | `ToolPose`                 | `ToolPose` seed.                          |
-| `radius`       | `float`                    | Disk radius (mm).                         |
-| `step_length`  | `float`                    | Forward step distance (mm).               |
-| `advance`      | `float`                    | Stepover distance (mm) for inward offset. |
-| `min_cut_area` | `float`                    | Minimum cut area (mm²).                   |
-| _Returns_      | `Optional[ToolPose]`       | `ToolPose` or `None`.                     |
-
-![Full backward wall-hugging search (both phases).](images/ops-cut-search-search-reengagement.png)
-
-*Full backward wall-hugging search (both phases).*

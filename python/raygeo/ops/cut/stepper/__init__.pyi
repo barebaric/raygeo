@@ -187,7 +187,7 @@ def step(cleared: cleared_area.ClearedArea, pos: tuple[builtins.float, builtins.
     :returns: ``StepResult`` with the next position and updated heading.
     """
 
-def step_adaptive(cleared: cleared_area.ClearedArea, pos: tuple[builtins.float, builtins.float], heading: builtins.float, predicted_angle: builtins.float, target_area_pd: builtins.float, step_length: builtins.float, radius: builtins.float, max_deflection: builtins.float, valid_area: typing.Sequence[typing.Sequence[tuple[builtins.float, builtins.float]]]) -> StepResult:
+def step_adaptive(cleared: cleared_area.ClearedArea, pos: tuple[builtins.float, builtins.float], heading: builtins.float, predicted_angle: builtins.float, target_area_pd: builtins.float, step_length: builtins.float, radius: builtins.float, max_deflection: builtins.float, valid_area: typing.Sequence[typing.Sequence[tuple[builtins.float, builtins.float]]], angle_min: builtins.float = -0.7853981633974483, angle_max: builtins.float = 0.7853981633974483) -> StepResult:
     r"""
     Perform one forward step using the area-based adaptive solver.
     
@@ -204,6 +204,8 @@ def step_adaptive(cleared: cleared_area.ClearedArea, pos: tuple[builtins.float, 
     :param radius: Disk radius in mm.
     :param max_deflection: Max steering deflection in radians.
     :param valid_area: Valid tool-centre region polygons.
+    :param angle_min: Minimum trial deflection angle in radians (default -π/4).
+    :param angle_max: Maximum trial deflection angle in radians (default +π/4).
     :returns: ``StepResult`` with the next position and updated heading.
     """
 

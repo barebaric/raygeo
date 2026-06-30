@@ -51,28 +51,32 @@ pub struct InterpItem {
 pub struct Interpolation {
     min: Option<InterpItem>,
     max: Option<InterpItem>,
+    min_bound: f64,
+    max_bound: f64,
 }
 
 impl Default for Interpolation {
     fn default() -> Self {
-        Self::new()
+        Self::new(-std::f64::consts::FRAC_PI_4, std::f64::consts::FRAC_PI_4)
     }
 }
 
 impl Interpolation {
-    pub fn new() -> Self {
+    pub fn new(min_bound: f64, max_bound: f64) -> Self {
         Self {
             min: None,
             max: None,
+            min_bound,
+            max_bound,
         }
     }
 
     pub fn min_angle(&self) -> f64 {
-        -std::f64::consts::PI / 4.0
+        self.min_bound
     }
 
     pub fn max_angle(&self) -> f64 {
-        std::f64::consts::PI / 4.0
+        self.max_bound
     }
 
     pub fn joint_is_valid(&self) -> bool {

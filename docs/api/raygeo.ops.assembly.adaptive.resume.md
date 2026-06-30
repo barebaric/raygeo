@@ -42,40 +42,57 @@ Emit a safe resume travel from *from_pt* to *to_pt* into *ops*.
 mat_resume_target(
     axis: geo.algo.medial_axis.MedialAxis,
     cleared: ops.cut.cleared_area.ClearedArea,
-    tool_pos: tuple[float, float],
+    tool: ops.assembly.adaptive.tool.Tool,
+    cut_direction: str,
+    step_length: float,
+    pocket_boundary: Sequence[tuple[float, float]],
+    islands: Sequence[Sequence[tuple[float, float]]],
     valid_tool_area: Sequence[Sequence[tuple[float, float]]],
-) -> tuple[list[tuple[float, float]], float] | None
+) -> ops.cut.search.ToolPose | None
 ```
 
-Pick a resume target by walking the MAT to the nearest uncleared node.
+Pick a resume target via MAT-guided frontier walk.
 
-| Parameter         | Type                                                  | Description |
-| ----------------- | ----------------------------------------------------- | ----------- |
-| `axis`            | `geo.algo.medial_axis.MedialAxis`                     |             |
-| `cleared`         | `ops.cut.cleared_area.ClearedArea`                    |             |
-| `tool_pos`        | `tuple[float, float]`                                 |             |
-| `valid_tool_area` | `Sequence[Sequence[tuple[float, float]]]`             |             |
-| _Returns_         | `tuple[list[tuple[float, float]], float] &#124; None` |             |
+| Parameter         | Type                                      | Description        |
+| ----------------- | ----------------------------------------- | ------------------ |
+| `axis`            | `geo.algo.medial_axis.MedialAxis`         |                    |
+| `cleared`         | `ops.cut.cleared_area.ClearedArea`        |                    |
+| `tool`            | `ops.assembly.adaptive.tool.Tool`         |                    |
+| `cut_direction`   | `str`                                     | `"cw"` or `"ccw"`. |
+| `step_length`     | `float`                                   |                    |
+| `pocket_boundary` | `Sequence[tuple[float, float]]`           |                    |
+| `islands`         | `Sequence[Sequence[tuple[float, float]]]` |                    |
+| `valid_tool_area` | `Sequence[Sequence[tuple[float, float]]]` |                    |
+| _Returns_         | `ops.cut.search.ToolPose &#124; None`     |                    |
 
-### `nearest_uncleared_node()`
+### `search_reengagement()`
 
 ```python
-nearest_uncleared_node(
-    axis: medial_axis.MedialAxis,
-    start: int,
-    is_cleared: Sequence[bool],
-) -> Optional[int]
+search_reengagement(
+    cleared: ops.cut.cleared_area.ClearedArea,
+    segment_start: tuple[float, float],
+    cut_direction: tuple[float, float],
+    radius: float,
+    step_length: float,
+    advance: float,
+    min_cut_area: float,
+    valid_tool_area: Sequence[Sequence[tuple[float, float]]],
+) -> ops.cut.search.ToolPose | None
 ```
 
-BFS over the Medial Axis tree from a start node, returning the index of the nearest (fewest hops)
-node that is **not** cleared.
+SegmentResume: walk forward from segment_start along cut_direction.
 
-| Parameter    | Type                     | Description                                     |
-| ------------ | ------------------------ | ----------------------------------------------- |
-| `axis`       | `medial_axis.MedialAxis` | `MedialAxis` instance.                          |
-| `start`      | `int`                    | Starting node index.                            |
-| `is_cleared` | `Sequence[bool]`         | Cleared/uncleared mask (one bool per node).     |
-| _Returns_    | `Optional[int]`          | Index of the nearest uncleared node, or `None`. |
+| Parameter         | Type                                      | Description |
+| ----------------- | ----------------------------------------- | ----------- |
+| `cleared`         | `ops.cut.cleared_area.ClearedArea`        |             |
+| `segment_start`   | `tuple[float, float]`                     |             |
+| `cut_direction`   | `tuple[float, float]`                     |             |
+| `radius`          | `float`                                   |             |
+| `step_length`     | `float`                                   |             |
+| `advance`         | `float`                                   |             |
+| `min_cut_area`    | `float`                                   |             |
+| `valid_tool_area` | `Sequence[Sequence[tuple[float, float]]]` |             |
+| _Returns_         | `ops.cut.search.ToolPose &#124; None`     |             |
 
 ### `smooth_travel_path()`
 
@@ -83,8 +100,7 @@ node that is **not** cleared.
 smooth_travel_path(
     from_pt: tuple[float, float],
     raw: Sequence[tuple[float, float]],
-    islands: Sequence[Sequence[tuple[float, float]]] = [],
-    remaining: Sequence[Sequence[tuple[float, float]]] = [],
+    obstacles: Sequence[Sequence[tuple[float, float]]] = [],
     clearance: float = 1,
 ) -> list[tuple[float, float]]
 ```
@@ -95,8 +111,7 @@ Smooth and shorten a cleared-territory travel path.
 | ----------- | ---------------------------------------------- | ----------- |
 | `from_pt`   | `tuple[float, float]`                          |             |
 | `raw`       | `Sequence[tuple[float, float]]`                |             |
-| `islands`   | `Sequence[Sequence[tuple[float, float]]] = []` |             |
-| `remaining` | `Sequence[Sequence[tuple[float, float]]] = []` |             |
+| `obstacles` | `Sequence[Sequence[tuple[float, float]]] = []` |             |
 | `clearance` | `float = 1`                                    |             |
 | _Returns_   | `list[tuple[float, float]]`                    |             |
 
@@ -113,26 +128,34 @@ try_resume(
     step_length: float = 0.6,
     advance: float = 1.5,
     cut_z: float = -5,
+    max_deflection_deg: float = 30,
     valid_tool_area: Sequence[Sequence[tuple[float, float]]] = [],
     axis: geo.algo.medial_axis.MedialAxis | None = None,
     last_resume_area: float = -1,
+    cut_direction: str = 'ccw',
+    segment_start: tuple[float, float] = (0, 0),
+    segment_heading: float = 0,
 ) -> bool
 ```
 
 Try to recover after the tool stalls or is detected as stuck.
 
-| Parameter          | Type                                                 | Description |
-| ------------------ | ---------------------------------------------------- | ----------- |
-| `cleared`          | `ops.cut.cleared_area.ClearedArea`                   |             |
-| `ops`              | `ops.Ops`                                            |             |
-| `tool`             | `ops.assembly.adaptive.tool.Tool`                    |             |
-| `pocket_boundary`  | `Sequence[tuple[float, float]]`                      |             |
-| `islands`          | `Sequence[Sequence[tuple[float, float]]] = []`       |             |
-| `radius`           | `float = 3`                                          |             |
-| `step_length`      | `float = 0.6`                                        |             |
-| `advance`          | `float = 1.5`                                        |             |
-| `cut_z`            | `float = -5`                                         |             |
-| `valid_tool_area`  | `Sequence[Sequence[tuple[float, float]]] = []`       |             |
-| `axis`             | `geo.algo.medial_axis.MedialAxis &#124; None = None` |             |
-| `last_resume_area` | `float = -1`                                         |             |
-| _Returns_          | `bool`                                               |             |
+| Parameter            | Type                                                 | Description        |
+| -------------------- | ---------------------------------------------------- | ------------------ |
+| `cleared`            | `ops.cut.cleared_area.ClearedArea`                   |                    |
+| `ops`                | `ops.Ops`                                            |                    |
+| `tool`               | `ops.assembly.adaptive.tool.Tool`                    |                    |
+| `pocket_boundary`    | `Sequence[tuple[float, float]]`                      |                    |
+| `islands`            | `Sequence[Sequence[tuple[float, float]]] = []`       |                    |
+| `radius`             | `float = 3`                                          |                    |
+| `step_length`        | `float = 0.6`                                        |                    |
+| `advance`            | `float = 1.5`                                        |                    |
+| `cut_z`              | `float = -5`                                         |                    |
+| `max_deflection_deg` | `float = 30`                                         |                    |
+| `valid_tool_area`    | `Sequence[Sequence[tuple[float, float]]] = []`       |                    |
+| `axis`               | `geo.algo.medial_axis.MedialAxis &#124; None = None` |                    |
+| `last_resume_area`   | `float = -1`                                         |                    |
+| `cut_direction`      | `str = 'ccw'`                                        | `"cw"` or `"ccw"`. |
+| `segment_start`      | `tuple[float, float] = (0, 0)`                       |                    |
+| `segment_heading`    | `float = 0`                                          |                    |
+| _Returns_            | `bool`                                               |                    |
