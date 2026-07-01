@@ -138,8 +138,7 @@ fn build_xcoords(cx: &SweepContext) -> Vec<f64> {
             let p0 = poly[i];
             let p1 = poly[(i + 1) % n];
             // Edges overlapping c2's disk are guaranteed by prepare_sweep.
-            for &pt in
-                get_line_circle_intersections(p0, p1, c2, radius).iter()
+            for &pt in get_line_circle_intersections(p0, p1, c2, radius).iter()
             {
                 xs.push(pt.x);
             }
@@ -256,6 +255,7 @@ fn edge_slab_area(p0: Point, p1: Point, x0: f64, x1: f64) -> f64 {
 
 /// Coefficients of the minimax polynomial P(t) ≈ asin(√t)/√t on t ∈ [0, 0.25].
 /// Degree 11 (12 coefficients), max residual 2.2e-16.
+#[allow(clippy::excessive_precision)]
 const ACOS_POLY: [f64; 12] = [
     1.0000000000000000e+00,
     1.6666666666689003e-01,

@@ -33,7 +33,7 @@ def _seed_circle(cx, cy, r, n=64):
 _POCKET_SIZE = 200
 _TOOL_RADIUS = 5.0
 _ADVANCE = 3.0
-_STEP_LENGTH = 1.0
+_STEP_LENGTH = 0.1
 _AREA_TOLERANCE = 50.0
 
 

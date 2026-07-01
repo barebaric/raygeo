@@ -35,6 +35,7 @@ __all__ = [
     "get_polygons_group_intersection",
     "get_polygons_intersection",
     "get_polygons_union",
+    "get_polyline_swept_polygon",
     "get_segment_swept_polygon",
     "get_signed_boundary_distance",
     "is_almost_equal",
@@ -357,6 +358,20 @@ def get_polygons_union(polygons: collections.abc.Sequence[types.Polygon]) -> lis
     :param polygons: List of polygons to union.
     :returns: Union polygon(s).
     :complexity: O(n log n)
+    """
+
+def get_polyline_swept_polygon(path: collections.abc.Sequence[types.Point], radius: float) -> list[types.Polygon]:
+    r"""
+    Compute the Minkowski sum of a polyline path with a disk.
+    
+    Returns a single polygon covering the swept area — the union of
+    segment-wide rectangular strips capped with half-circles at the
+    first and last endpoints.
+    
+    :param path: Open polyline as (x, y) points.
+    :param radius: Offset radius.
+    :returns: A single swept polygon.
+    :complexity: O(n)
     """
 
 def get_segment_swept_polygon(a: types.Point, b: types.Point, radius: float) -> list[types.Polygon]:

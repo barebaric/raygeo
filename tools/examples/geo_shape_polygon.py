@@ -21,6 +21,7 @@ from raygeo.geo.shape.polygon import (
     get_polygons_difference,
     get_polygons_intersection,
     get_polygons_union,
+    get_polyline_swept_polygon,
     get_segment_swept_polygon,
     get_signed_boundary_distance,
     offset_polygon,
@@ -134,6 +135,60 @@ def generate_segment_swept():
     ax2.grid(True, alpha=0.3)
     fig2.tight_layout()
     return fig2
+
+
+def generate_polyline_swept():
+    """Polyline swept."""
+    path = [(10, 20), (30, 70), (60, 50), (80, 70), (90, 30), (50, 10)]
+    radius = 10.0
+    swept = get_polyline_swept_polygon(path, radius)
+
+    fig, ax = plt.subplots(figsize=(7, 6))
+
+    if swept:
+        arr = np.array(swept[0])
+        ax.fill(*np.vstack([arr, arr[0:1]]).T, alpha=0.35, color="#4ecdc4")
+        ax.plot(
+            *np.vstack([arr, arr[0:1]]).T,
+            "-",
+            linewidth=2,
+            color="#4ecdc4",
+            label="Swept area",
+        )
+
+    path_arr = np.array(path)
+    ax.plot(
+        path_arr[:, 0],
+        path_arr[:, 1],
+        "-o",
+        color="k",
+        lw=2,
+        ms=6,
+        label="Polyline path",
+    )
+
+    for pt in path:
+        circle = CirclePatch(
+            pt,
+            radius,
+            fill=False,
+            edgecolor="gray",
+            linestyle="--",
+            linewidth=0.8,
+            alpha=0.5,
+        )
+        ax.add_patch(circle)
+
+    ax.set_xlim(0, 100)
+    ax.set_ylim(0, 100)
+    ax.set_aspect("equal")
+    ax.set_title("get_polyline_swept_polygon — swept area")
+    ax.set_xlabel("X")
+    ax.set_ylabel("Y")
+    ax.legend(fontsize=9)
+    ax.grid(True, alpha=0.3)
+    fig.tight_layout()
+    return fig
 
 
 def generate_path_sweep_intersect():
@@ -744,6 +799,14 @@ __images__ = [
             "segment with a given radius"
         ),
         "function": generate_segment_swept,
+    },
+    {
+        "heading": "get_polyline_swept_polygon",
+        "caption": (
+            "``get_polyline_swept_polygon`` computes the Minkowski sum of a "
+            "polyline path with a disk"
+        ),
+        "function": generate_polyline_swept,
     },
     {
         "heading": "does_path_sweep_intersect_polygon",

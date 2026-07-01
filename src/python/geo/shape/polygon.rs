@@ -15,12 +15,13 @@ use crate::geo::shape::polygon::{
     get_polygon_signed_area, get_polygon_vertex_centroid,
     get_polygons_closest_point, get_polygons_difference,
     get_polygons_group_difference, get_polygons_group_intersection,
-    get_polygons_intersection, get_polygons_union, get_segment_swept_polygon,
-    get_signed_boundary_distance, is_almost_equal, is_point_inside_polygon,
-    is_polygon_clockwise, is_polygon_convex, normalize_polygons,
-    offset_polygon, point_line_distance, polygons_intersect, resample_polygon,
-    rotate_polygon, rotate_polygons, scale_polygon, translate_bounds,
-    translate_polygon, translate_polygons, JoinStyle,
+    get_polygons_intersection, get_polygons_union, get_polyline_swept_polygon,
+    get_segment_swept_polygon, get_signed_boundary_distance, is_almost_equal,
+    is_point_inside_polygon, is_polygon_clockwise, is_polygon_convex,
+    normalize_polygons, offset_polygon, point_line_distance,
+    polygons_intersect, resample_polygon, rotate_polygon, rotate_polygons,
+    scale_polygon, translate_bounds, translate_polygon, translate_polygons,
+    JoinStyle,
 };
 use crate::types::{Point, Rect};
 use numpy::{PyArray2, PyArrayMethods};
@@ -130,6 +131,7 @@ pub fn register(shape_mod: &Bound<'_, PyModule>) -> PyResult<()> {
         get_polygon_vertex_centroid_py,
         get_polygon_closest_point_py,
         get_polygons_closest_point_py,
+        get_polyline_swept_polygon_py,
         get_segment_swept_polygon_py,
         get_polygon_convex_hull_py,
         get_polygon_edges_py,
@@ -652,6 +654,39 @@ fn get_segment_swept_polygon_py(
         Point::new(b.0, b.1),
         radius,
     ))
+}
+
+#[gen_stub_pyfunction(
+    python = r#"
+    import collections.abc
+    import raygeo.geo.types
+
+    def get_polyline_swept_polygon(
+        path: collections.abc.Sequence[types.Point],
+        radius: float,
+    ) -> list[types.Polygon]:
+        """Compute the Minkowski sum of a polyline path with a disk.
+
+        Returns a single polygon covering the swept area — the union of
+        segment-wide rectangular strips capped with half-circles at the
+        first and last endpoints.
+
+        :param path: Open polyline as (x, y) points.
+        :param radius: Offset radius.
+        :returns: A single swept polygon.
+        :complexity: O(n)
+        """
+"#,
+    module = "raygeo.geo.shape.polygon"
+)]
+#[pyfunction(name = "get_polyline_swept_polygon")]
+fn get_polyline_swept_polygon_py(
+    path: Vec<(f64, f64)>,
+    radius: f64,
+) -> Vec<Vec<(f64, f64)>> {
+    let path_pts: Vec<Point> =
+        path.iter().map(|&(x, y)| Point::new(x, y)).collect();
+    polygons_to_tuples(get_polyline_swept_polygon(&path_pts, radius))
 }
 
 #[gen_stub_pyfunction(

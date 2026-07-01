@@ -33,6 +33,7 @@ import dataclasses
 import math
 import pathlib
 import struct
+import sys
 
 import matplotlib.pyplot as plt
 
@@ -324,10 +325,15 @@ class Scenario:
     islands: list
     tool_radius: float
     advance: float
-    step_over: float
     cut_z: float
     safe_z: float
     area_tolerance: float
+    step_over: float = 2.0
+    step_length: float = 0.6
+    max_deflection_deg: float = 30.0
+    wall_margin: float = 0.0
+    expansion_batch_size: int = 20
+    cut_direction: str = "ccw"
 
 
 SCENARIOS: dict[str, Scenario] = {}
@@ -384,10 +390,12 @@ register_scenario(
         islands=[_rect(5, 0, 10, 10)],
         tool_radius=3.0,
         advance=1.5,
-        step_over=2.0,
         cut_z=-5.0,
         safe_z=2.0,
         area_tolerance=1.0,
+        step_length=0.6,
+        max_deflection_deg=30.0,
+        wall_margin=0.0,
     )
 )
 
@@ -512,6 +520,18 @@ def build_scenario(args):
         if args.area_tolerance is not None:
             scenario = dataclasses.replace(
                 scenario, area_tolerance=args.area_tolerance
+            )
+        if args.step_length is not None:
+            scenario = dataclasses.replace(
+                scenario, step_length=args.step_length
+            )
+        if args.max_deflection_deg is not None:
+            scenario = dataclasses.replace(
+                scenario, max_deflection_deg=args.max_deflection_deg
+            )
+        if args.wall_margin is not None:
+            scenario = dataclasses.replace(
+                scenario, wall_margin=args.wall_margin
             )
 
         seed_polys = [_circle_polygon(-13.7, 13.7, 12.2, 64)]
@@ -1101,7 +1121,7 @@ def cmd_trace(args: argparse.Namespace) -> None:
     print(f"Running {scenario.name} scenario with tracing...")
     print(
         f"  tool_radius={scenario.tool_radius}  advance={scenario.advance}  "
-        f"step_over={scenario.step_over}"
+        f"step_length={scenario.step_length}"
     )
     print(
         f"  boundary: {len(scenario.boundary)} verts  "
@@ -1121,6 +1141,11 @@ def cmd_trace(args: argparse.Namespace) -> None:
     if entry_ops is not None:
         print(f"  Entry: {entry_ops.len()} ops")
 
+    # Snapshot trace-file mtime before the call to detect whether
+    # tracing actually wrote data (requires a debug build).
+    tp = pathlib.Path(trace_path)
+    mtime_before = tp.stat().st_mtime_ns if tp.exists() else 0
+
     clear_ops = adaptive_clearing(
         cleared=ca,
         pocket_boundary=list(scenario.boundary),
@@ -1129,7 +1154,12 @@ def cmd_trace(args: argparse.Namespace) -> None:
         advance=scenario.advance,
         cut_z=scenario.cut_z,
         safe_z=scenario.safe_z,
+        step_length=scenario.step_length,
+        max_deflection_deg=scenario.max_deflection_deg,
+        wall_margin=scenario.wall_margin,
         area_tolerance=scenario.area_tolerance,
+        expansion_batch_size=scenario.expansion_batch_size,
+        cut_direction=scenario.cut_direction,
         trace_path=trace_path,
     )
 
@@ -1138,6 +1168,15 @@ def cmd_trace(args: argparse.Namespace) -> None:
         f"{ca.total_area():.1f} mm² cleared, "
         f"{ca.remaining_area():.1f} mm² remaining"
     )
+
+    mtime_after = tp.stat().st_mtime_ns if tp.exists() else 0
+    if mtime_after == mtime_before:
+        print(
+            f"  ERROR: Trace file '{trace_path}' was not written.\n"
+            f"  Tracing requires a debug build. Run:\n"
+            f"    make dev  # install debug build (use the dev venv)"
+        )
+        sys.exit(1)
     print(f"  Trace written: {trace_path}")
 
 
@@ -1197,6 +1236,9 @@ def main() -> None:
     p_trace.add_argument("--tool-radius", type=float, default=None)
     p_trace.add_argument("--advance", type=float, default=None)
     p_trace.add_argument("--step-over", type=float, default=None)
+    p_trace.add_argument("--step-length", type=float, default=None)
+    p_trace.add_argument("--max-deflection-deg", type=float, default=None)
+    p_trace.add_argument("--wall-margin", type=float, default=None)
     p_trace.add_argument("--cut-z", type=float, default=None)
     p_trace.add_argument("--safe-z", type=float, default=None)
     p_trace.add_argument("--area-tolerance", type=float, default=None)

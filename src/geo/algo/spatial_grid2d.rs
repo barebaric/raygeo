@@ -64,16 +64,21 @@ impl SpatialGrid {
         }
     }
 
-    pub fn query(&self, bbox: Rect) -> HashSet<usize> {
+    pub fn query(&self, bbox: Rect) -> Vec<usize> {
         let cell_min_x = (bbox.min.x / self.cell_size).floor() as i32;
         let cell_max_x = (bbox.max.x / self.cell_size).floor() as i32;
         let cell_min_y = (bbox.min.y / self.cell_size).floor() as i32;
         let cell_max_y = (bbox.max.y / self.cell_size).floor() as i32;
-        let mut result = HashSet::new();
+        let mut seen = HashSet::new();
+        let mut result = Vec::new();
         for cx in cell_min_x..=cell_max_x {
             for cy in cell_min_y..=cell_max_y {
                 if let Some(indices) = self.cells.get(&(cx, cy)) {
-                    result.extend(indices);
+                    for &idx in indices {
+                        if seen.insert(idx) {
+                            result.push(idx);
+                        }
+                    }
                 }
             }
         }

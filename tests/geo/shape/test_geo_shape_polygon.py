@@ -34,6 +34,7 @@ from raygeo.geo.shape.polygon import (
     get_polygons_group_intersection,
     get_polygons_intersection,
     get_polygons_union,
+    get_polyline_swept_polygon,
     get_signed_boundary_distance,
     is_almost_equal,
     is_point_inside_polygon,
@@ -1505,6 +1506,101 @@ class TestPolygonsClosestPoint:
         result = get_polygons_closest_point(polys, 5.0, 15.0)
         assert result is not None
         assert result[0] == 1
+
+
+# --- get_polyline_swept_polygon ---
+
+
+class TestGetPolylineSweptPolygon:
+    def test_empty_path(self):
+        """Empty path returns empty list."""
+        assert get_polyline_swept_polygon([], 5.0) == []
+
+    def test_single_point(self):
+        """Single point path returns empty list."""
+        assert get_polyline_swept_polygon([(0.0, 0.0)], 5.0) == []
+
+    def test_single_segment(self):
+        """Two-point path (single segment) produces a single polygon."""
+        result = get_polyline_swept_polygon([(0.0, 0.0), (10.0, 0.0)], 5.0)
+        assert len(result) == 1
+        assert len(result[0]) >= 4
+        # bounding box should roughly be [-5, 15] x [-5, 5]
+        xs = [p[0] for p in result[0]]
+        ys = [p[1] for p in result[0]]
+        assert min(xs) >= -5.1
+        assert max(xs) <= 15.1
+        assert min(ys) >= -5.1
+        assert max(ys) <= 5.1
+
+    def test_three_point_path(self):
+        """Three-point L-shaped path produces a single polygon."""
+        path = [(0.0, 0.0), (10.0, 0.0), (10.0, 10.0)]
+        result = get_polyline_swept_polygon(path, 3.0)
+        assert len(result) == 1
+        assert len(result[0]) >= 4
+
+    def test_swept_area_non_zero(self):
+        """Swept polygon should have positive area."""
+        result = get_polyline_swept_polygon(
+            [(0.0, 0.0), (20.0, 0.0), (20.0, 20.0)], 5.0
+        )
+        assert len(result) == 1
+        # compute polygon area via shoelace formula
+        pts = result[0]
+        n = len(pts)
+        area = 0.0
+        for i in range(n):
+            x1, y1 = pts[i]
+            x2, y2 = pts[(i + 1) % n]
+            area += x1 * y2 - x2 * y1
+        area = abs(area) / 2.0
+        assert area > 0.0
+
+    def test_zero_radius(self):
+        """Zero radius returns a degenerate polygon tracing the path."""
+        result = get_polyline_swept_polygon(
+            [(0.0, 0.0), (10.0, 0.0), (10.0, 10.0)], 0.0
+        )
+        assert len(result) == 1
+        assert len(result[0]) >= 2
+
+    def test_larger_radius(self):
+        """Larger radius produces a larger swept area."""
+        r_small = get_polyline_swept_polygon(
+            [(0.0, 0.0), (10.0, 0.0), (10.0, 10.0)], 2.0
+        )
+        r_large = get_polyline_swept_polygon(
+            [(0.0, 0.0), (10.0, 0.0), (10.0, 10.0)], 5.0
+        )
+        xs_small = [p[0] for p in r_small[0]]
+        xs_large = [p[0] for p in r_large[0]]
+        ys_small = [p[1] for p in r_small[0]]
+        ys_large = [p[1] for p in r_large[0]]
+        assert min(xs_large) < min(xs_small)
+        assert max(xs_large) > max(xs_small)
+        assert min(ys_large) < min(ys_small)
+        assert max(ys_large) > max(ys_small)
+
+    def test_sharp_turn(self):
+        """Sharp turn (>90°) still produces a valid polygon."""
+        path = [(0.0, 0.0), (10.0, 0.0), (0.0, 10.0)]
+        result = get_polyline_swept_polygon(path, 4.0)
+        assert len(result) == 1
+        assert len(result[0]) >= 4
+
+    def test_spiral_path(self):
+        """A winding path produces a valid polygon."""
+        path = [
+            (0.0, 0.0),
+            (10.0, 0.0),
+            (10.0, 10.0),
+            (0.0, 10.0),
+            (0.0, -5.0),
+        ]
+        result = get_polyline_swept_polygon(path, 3.0)
+        assert len(result) == 1
+        assert len(result[0]) >= 4
 
 
 # --- does_path_sweep_intersect_polygon ---

@@ -539,6 +539,31 @@ Get the union of multiple polygons.
 
 *Polygon union*
 
+### `get_polyline_swept_polygon()`
+
+```python
+get_polyline_swept_polygon(
+    path: Sequence[types.Point],
+    radius: float,
+) -> list[types.Polygon]
+```
+
+Compute the Minkowski sum of a polyline path with a disk.
+
+Returns a single polygon covering the swept area — the union of segment-wide rectangular strips
+capped with half-circles at the first and last endpoints.
+
+| Parameter    | Type                    | Description                     |
+| ------------ | ----------------------- | ------------------------------- |
+| `path`       | `Sequence[types.Point]` | Open polyline as (x, y) points. |
+| `radius`     | `float`                 | Offset radius.                  |
+| _Returns_    | `list[types.Polygon]`   | A single swept polygon.         |
+| _Complexity_ |                         | O(n)                            |
+
+![ computes the Minkowski sum of a polyline path with a disk](images/geo-shape-polygon-polyline-swept.png)
+
+*`get_polyline_swept_polygon` computes the Minkowski sum of a polyline path with a disk*
+
 ### `get_segment_swept_polygon()`
 
 ```python

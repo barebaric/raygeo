@@ -315,6 +315,210 @@ pub fn get_segment_swept_polygon(
     ]
 }
 
+/// Minkowski sum of a polyline path with a disk of `radius`.
+///
+/// Produces a single polygon covering the swept area — the union of
+/// segment-wide rectangular strips capped with half-circles at the
+/// first (rear cap) and last (front cap) endpoints.
+///
+/// At each interior vertex the two offset lines on the **concave** side
+/// diverge, exposing the disk → a circular arc fills the gap.  On the
+/// **convex** side the offset lines converge and cross; the disk is
+/// fully shadowed by the strips, so a sharp Miter intersection replaces
+/// the arc.
+#[prof]
+pub fn get_polyline_swept_polygon(path: &[Point], radius: f64) -> Vec<Polygon> {
+    let n = path.len();
+    if n < 2 {
+        return vec![];
+    }
+
+    let mut pts: Vec<Point> = Vec::new();
+
+    // Pre-compute per-segment data.
+    struct Seg {
+        dir: Point, // unit direction
+        rp: Point,  // right-perp * radius = -perp * radius
+        lp: Point,  // left-perp  * radius = +perp * radius
+    }
+    let mut segs: Vec<Seg> = Vec::with_capacity(n - 1);
+    for i in 0..n - 1 {
+        let d = (path[i + 1] - path[i]).normalize();
+        let p = Point::new(-d.y, d.x);
+        segs.push(Seg {
+            dir: d,
+            rp: -p * radius,
+            lp: p * radius,
+        });
+    }
+
+    const N_ARC: usize = 32;
+
+    // Push interior arc points from `a0` to `a0 + span` (excluding endpoints).
+    let push_arc_interior =
+        |pts: &mut Vec<Point>, center: Point, a0: f64, span: f64, r: f64| {
+            if span.abs() < 1e-6 {
+                return;
+            }
+            let n = ((N_ARC as f64 * span.abs() / std::f64::consts::PI).ceil()
+                as usize)
+                .max(4);
+            for i in 1..n {
+                let a = a0 + span * i as f64 / n as f64;
+                pts.push(center + Point::new(a.cos() * r, a.sin() * r));
+            }
+        };
+
+    // Miter intersection of two offset lines through vertex `v`:
+    //   line A:  v + off_a  + t * dir_a
+    //   line B:  v + off_b  + s * dir_b
+    // Returns the intersection point.
+    let miter = |v: Point,
+                 off_a: Point,
+                 dir_a: Point,
+                 off_b: Point,
+                 dir_b: Point|
+     -> Point {
+        let p0 = v + off_a;
+        let p1 = v + off_b;
+        let d = p1 - p0;
+        let denom = dir_a.x * (-dir_b.y) - dir_a.y * (-dir_b.x);
+        if denom.abs() < 1e-9 {
+            return p0; // parallel — fall back
+        }
+        let t = (d.x * (-dir_b.y) - d.y * (-dir_b.x)) / denom;
+        p0 + dir_a * t
+    };
+
+    // Cross product of consecutive segment directions.
+    //   cross > 0  →  LEFT turn  (CCW)
+    //   cross < 0  →  RIGHT turn (CW)
+    let cross_at = |i: usize| -> f64 {
+        segs[i].dir.x * segs[i + 1].dir.y - segs[i].dir.y * segs[i + 1].dir.x
+    };
+
+    // 1. Outer side:  follow the right-perp offset, walking forward.
+    //    LEFT  turn → concave side → circular arc (gap exposes disk).
+    //    RIGHT turn → convex side → Miter intersection (disk shadowed).
+    for i in 0..n - 1 {
+        let rp_i = &segs[i].rp;
+        if i == 0 {
+            pts.push(path[0] + *rp_i);
+        }
+
+        if i + 1 < n - 1 {
+            let rp_nxt = &segs[i + 1].rp;
+            let cross = cross_at(i);
+            if cross > 1e-6 {
+                // Concave → arc.
+                pts.push(path[i + 1] + *rp_i);
+                let a0 = rp_i.y.atan2(rp_i.x);
+                let a1 = rp_nxt.y.atan2(rp_nxt.x);
+                let mut span = a1 - a0;
+                while span <= -std::f64::consts::PI {
+                    span += 2.0 * std::f64::consts::PI;
+                }
+                while span > std::f64::consts::PI {
+                    span -= 2.0 * std::f64::consts::PI;
+                }
+                if span.abs() > 0.02 {
+                    push_arc_interior(&mut pts, path[i + 1], a0, span, radius);
+                }
+                // Push start of next segment's rp offset — unless the next
+                // turn (at path[i+2]) is a Miter, which replaces this
+                // endpoint (it sits at dist=radius on the vertex disk).
+                let next_is_miter = i + 2 < n - 1 && cross_at(i + 1) <= 1e-6;
+                if !next_is_miter {
+                    pts.push(path[i + 1] + *rp_nxt);
+                }
+            } else {
+                // Convex (or straight) → Miter.
+                pts.push(miter(
+                    path[i + 1],
+                    *rp_i,
+                    segs[i].dir,
+                    *rp_nxt,
+                    segs[i + 1].dir,
+                ));
+            }
+        } else {
+            pts.push(path[i + 1] + *rp_i);
+        }
+    }
+
+    // 2. End cap: front half-circle at path[n-1] (outer → inner, +π).
+    let s_last = &segs[n - 2];
+    let a_last = s_last.rp.y.atan2(s_last.rp.x);
+    push_arc_interior(
+        &mut pts,
+        path[n - 1],
+        a_last,
+        std::f64::consts::PI,
+        radius,
+    );
+    pts.push(path[n - 1] + s_last.lp);
+
+    // 3. Inner side: follow the left-perp offset, walking backward.
+    //    RIGHT turn → concave side → circular arc (gap exposes disk).
+    //    LEFT  turn → convex side → Miter intersection (disk shadowed).
+    for i in (0..n - 1).rev() {
+        if i == n - 2 {
+            // Already pushed by the end‑cap endpoint above.
+        } else {
+            let lp_nxt = &segs[i + 1].lp;
+            let lp_cur = &segs[i].lp;
+            let cross = cross_at(i);
+            if cross < -1e-6 {
+                // Concave → arc.  (Directions reversed for backward walk.)
+                pts.push(path[i + 1] + *lp_nxt);
+                let a0 = lp_nxt.y.atan2(lp_nxt.x);
+                let a1 = lp_cur.y.atan2(lp_cur.x);
+                let mut span = a1 - a0;
+                while span <= -std::f64::consts::PI {
+                    span += 2.0 * std::f64::consts::PI;
+                }
+                while span > std::f64::consts::PI {
+                    span -= 2.0 * std::f64::consts::PI;
+                }
+                if span.abs() > 0.02 {
+                    push_arc_interior(&mut pts, path[i + 1], a0, span, radius);
+                }
+                pts.push(path[i + 1] + *lp_cur);
+            } else {
+                // Convex (or straight) → Miter.
+                pts.push(miter(
+                    path[i + 1],
+                    *lp_nxt,
+                    -segs[i + 1].dir,
+                    *lp_cur,
+                    -segs[i].dir,
+                ));
+            }
+        }
+        // Push the start of this segment's lp offset — unless the next
+        // iteration (i-1) will use a Miter at this vertex, in which case
+        // the Miter replaces this endpoint (which sits at dist=radius on
+        // the vertex disk).
+        let next_is_miter = i > 0 && cross_at(i - 1) > -1e-6;
+        if !next_is_miter {
+            pts.push(path[i] + segs[i].lp);
+        }
+    }
+
+    // 4. Start cap: rear half-circle at path[0] (inner → outer, +π).
+    let s_first = &segs[0];
+    let a_first = s_first.rp.y.atan2(s_first.rp.x);
+    push_arc_interior(
+        &mut pts,
+        path[0],
+        a_first + std::f64::consts::PI,
+        std::f64::consts::PI,
+        radius,
+    );
+
+    vec![pts]
+}
+
 /// Pre-compute bounding boxes for a slice of polygons.
 ///
 /// Returns a `Vec<Rect>` in the same order as `polygons`.

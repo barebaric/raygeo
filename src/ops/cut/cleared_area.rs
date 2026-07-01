@@ -9,7 +9,8 @@ use crate::geo::algo::spatial_grid2d::SpatialGrid;
 use crate::geo::shape::polygon::{
     get_polygon_area, get_polygon_bounds, get_polygon_signed_area,
     get_polygons_group_difference, get_polygons_group_intersection,
-    get_polygons_union, get_segment_swept_polygon, offset_polygon, JoinStyle,
+    get_polygons_union, get_polyline_swept_polygon, get_segment_swept_polygon,
+    offset_polygon, JoinStyle,
 };
 use crate::ops::cut::crescent;
 use crate::types::{Point, Polygon, Rect};
@@ -23,8 +24,12 @@ pub struct ClearedArea {
     pub(crate) grid: SpatialGrid,
     pub(crate) cell_size: f64,
     // ── Batched step expansion ──
-    /// Buffer of swept polygons accumulated while a batch is open.
-    pub(crate) batch_buffer: Vec<Polygon>,
+    /// Path points accumulated while a batch is open.
+    /// At commit time these are turned into a single swept polygon
+    /// via [`get_polyline_swept_polygon`].
+    pub(crate) batch_path: Vec<Point>,
+    /// Tool radius for the current batch (set by the first expand call).
+    pub(crate) batch_radius: f64,
     /// True when `begin_batch()` has been called.
     pub(crate) batch_active: bool,
 }
@@ -42,7 +47,8 @@ impl ClearedArea {
             fragments: Vec::new(),
             grid: SpatialGrid::new(cell_size),
             cell_size,
-            batch_buffer: Vec::new(),
+            batch_path: Vec::new(),
+            batch_radius: 0.0,
             batch_active: false,
         }
     }
@@ -62,7 +68,8 @@ impl ClearedArea {
             fragments: Vec::new(),
             grid: SpatialGrid::new(cell_size),
             cell_size,
-            batch_buffer: Vec::new(),
+            batch_path: Vec::new(),
+            batch_radius: 0.0,
             batch_active: false,
         };
         for poly in initial {
@@ -337,8 +344,8 @@ impl ClearedArea {
 
     /// Queue a segment `(prev → next)` with a disk of `radius`.
     ///
-    /// The swept polygon is stored in an internal buffer.  Does **not**
-    /// perform a union until [`commit_batch`](Self::commit_batch)
+    /// The segment endpoint is stored in an internal path buffer.
+    /// Does **not** perform a union until [`commit_batch`](Self::commit_batch)
     /// is called.
     ///
     /// # Panics
@@ -352,40 +359,47 @@ impl ClearedArea {
         if radius < 1e-12 {
             return;
         }
-        let swept = get_segment_swept_polygon(prev, next, radius);
-        self.batch_buffer.extend(swept);
+        if self.batch_path.is_empty() {
+            self.batch_path.push(prev);
+            self.batch_radius = radius;
+        }
+        self.batch_path.push(next);
     }
 
-    /// Union all buffered sweeps with the stored fragments in a single pass,
-    /// then rebuild the spatial grid once.
+    /// Build a single swept polygon from the accumulated path and union it
+    /// with the stored fragments, then rebuild the spatial grid once.
     ///
     /// After this call the batch is closed (the caller may start a new one).
     #[prof]
     pub fn commit_batch(&mut self) {
-        if !self.batch_active || self.batch_buffer.is_empty() {
+        if !self.batch_active || self.batch_path.is_empty() {
             self.batch_active = false;
             return;
         }
-        let buf = std::mem::take(&mut self.batch_buffer);
+        let radius = self.batch_radius;
+        let path = std::mem::take(&mut self.batch_path);
+        let swept = get_polyline_swept_polygon(&path, radius);
         let mut all_polys = self.fragments.clone();
-        all_polys.extend(buf);
+        all_polys.extend(swept);
         self.fragments = get_polygons_union(&all_polys);
         self.rebuild_grid();
         self.batch_active = false;
     }
 
-    /// Union only the buffered sweeps with nearby overlapping fragments,
-    /// using the spatial grid to avoid touching distant fragments.
+    /// Build a single swept polygon from the accumulated path and merge it
+    /// only with nearby overlapping fragments (local union).
     ///
     /// After this call the batch is closed (the caller may start a new one).
     #[prof]
     pub fn commit_batch_local(&mut self) {
-        if !self.batch_active || self.batch_buffer.is_empty() {
+        if !self.batch_active || self.batch_path.is_empty() {
             self.batch_active = false;
             return;
         }
-        let buf = std::mem::take(&mut self.batch_buffer);
-        self.apply_local_merge(&buf);
+        let radius = self.batch_radius;
+        let path = std::mem::take(&mut self.batch_path);
+        let swept = get_polyline_swept_polygon(&path, radius);
+        self.apply_local_merge(&swept);
         self.batch_active = false;
     }
 
