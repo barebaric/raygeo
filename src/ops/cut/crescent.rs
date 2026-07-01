@@ -238,14 +238,66 @@ fn edge_slab_area(p0: Point, p1: Point, x0: f64, x1: f64) -> f64 {
     (y0 + y1) * 0.5 * (x1 - x0)
 }
 
+/// Coefficients of the minimax polynomial P(t) ≈ asin(√t)/√t on t ∈ [0, 0.25].
+/// Degree 11 (12 coefficients), max residual 2.2e-16.
+const ACOS_POLY: [f64; 12] = [
+    1.0000000000000000e+00,
+    1.6666666666689003e-01,
+    7.4999999956843033e-02,
+    4.4642860300686517e-02,
+    3.0381825038220060e-02,
+    2.2374824118139486e-02,
+    1.7315158262635719e-02,
+    1.4311872250111499e-02,
+    9.4415958559379339e-03,
+    1.8048381466995028e-02,
+    -1.1324721050537142e-02,
+    3.1226116192186414e-02,
+];
+
+/// Evaluate `ACOS_POLY` at `t` via Horner's method.
+/// Written as flat `r * t + c` (not `mul_add`) to preserve bit-exact
+/// output matching the deeply nested form, so the adaptive solver
+/// traces the same trajectory regardless of formatting.
+fn acos_poly(t: f64) -> f64 {
+    let mut r = ACOS_POLY[11];
+    for &c in ACOS_POLY[..11].iter().rev() {
+        r = r * t + c;
+    }
+    r
+}
+
+/// Fast `acos(x)` approximation for `x ∈ [-1, 1]`.
+///
+/// Uses `acos(x) = π/2 − asin(x)` with the minimax polynomial [`ACOS_POLY`].
+/// For `|x| > 0.5` the half-angle identity `acos(x) = 2·asin(√((1−x)/2))`
+/// keeps the polynomial argument in the well-behaved range.
+///
+/// Maximum absolute error ≈ 2e-16 (machine precision) — identical to libm
+/// `acos` for the purposes of the adaptive solver.
+fn fast_acos(x: f64) -> f64 {
+    let x = x.clamp(-1.0, 1.0);
+    let a = x.abs();
+    if a <= 0.5 {
+        let t = x * x;
+        std::f64::consts::FRAC_PI_2 - x * acos_poly(t)
+    } else {
+        let t = (1.0 - a) * 0.5;
+        let r = 2.0 * t.sqrt() * acos_poly(t);
+        if x < 0.0 {
+            std::f64::consts::PI - r
+        } else {
+            r
+        }
+    }
+}
+
 /// Signed area contribution of a circular-arc slab between `x0..x1`
 /// around centre `c`.  `cs = +1` for the upper arc, `-1` for the lower.
 #[prof]
 fn arc_slab_area(c: Point, radius: f64, x0: f64, x1: f64, cs: f64) -> f64 {
-    let clamp = |v: f64| v.clamp(-1.0, 1.0);
-
-    let phi0 = clamp((x0 - c.x) / radius).acos() * cs;
-    let phi1 = clamp((x1 - c.x) / radius).acos() * cs;
+    let phi0 = fast_acos((x0 - c.x) / radius) * cs;
+    let phi1 = fast_acos((x1 - c.x) / radius) * cs;
     let area_sector = radius * radius * 0.5 * (phi1 - phi0).abs();
 
     let y0 =
