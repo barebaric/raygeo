@@ -457,7 +457,7 @@ impl ClearedArea {
     /// replacing them with the simplified frontier.
     #[prof]
     pub fn compact_if_needed(&mut self, tol: f64) {
-        self.compact_if_needed_threshold(tol, 50_000)
+        self.compact_if_needed_threshold(tol, 75)
     }
 
     /// Like [`compact_if_needed`](Self::compact_if_needed) but with an
