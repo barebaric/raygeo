@@ -137,13 +137,24 @@ fn build_xcoords(cx: &SweepContext) -> Vec<f64> {
         for i in 0..n {
             let p0 = poly[i];
             let p1 = poly[(i + 1) % n];
-            for &pt in get_line_circle_intersections(p0, p1, c1, radius).iter()
+            // Edges overlapping c2's disk are guaranteed by prepare_sweep.
+            for &pt in
+                get_line_circle_intersections(p0, p1, c2, radius).iter()
             {
                 xs.push(pt.x);
             }
-            for &pt in get_line_circle_intersections(p0, p1, c2, radius).iter()
+            // Only check c1 (previous-pose circle) if the edge bbox
+            // could touch it — avoids the quadratic solve for far edges.
+            if p0.x.max(p1.x) >= c1.x - radius
+                && p0.x.min(p1.x) <= c1.x + radius
+                && p0.y.max(p1.y) >= c1.y - radius
+                && p0.y.min(p1.y) <= c1.y + radius
             {
-                xs.push(pt.x);
+                for &pt in
+                    get_line_circle_intersections(p0, p1, c1, radius).iter()
+                {
+                    xs.push(pt.x);
+                }
             }
         }
     }
@@ -172,6 +183,9 @@ fn build_xcoords(cx: &SweepContext) -> Vec<f64> {
 type Crossing = (f64, usize, usize);
 
 /// A single polygon edge extracted into a flat list for iteration.
+///
+/// `dy = p1.y − p0.y` is pre-computed at construction so the hot sweep
+/// loop avoids re-computing it every slab-crossing test.
 #[derive(Clone, Copy)]
 struct SweepEdge {
     p0: Point,
@@ -180,6 +194,7 @@ struct SweepEdge {
     max_x: f64,
     poly_idx: usize,
     edge_idx: usize,
+    dy: f64,
 }
 
 /// Collect every boundary crossing at `xtest`, tagged by shape and part.
@@ -209,7 +224,7 @@ fn slab_crossings(
     for e in edges {
         if e.min_x < xtest && e.max_x > xtest {
             let t = (xtest - e.p0.x) / (e.p1.x - e.p0.x);
-            let y = e.p0.y + t * (e.p1.y - e.p0.y);
+            let y = e.p0.y + t * e.dy;
             ys.push((y, e.poly_idx, e.edge_idx));
         }
     }
@@ -231,10 +246,11 @@ fn slab_crossings(
 /// Trapezoid area under a straight edge between `x0..x1` (linear
 /// interpolation of the edge's `y`).
 fn edge_slab_area(p0: Point, p1: Point, x0: f64, x1: f64) -> f64 {
+    let dy = p1.y - p0.y;
     let t0 = (x0 - p0.x) / (p1.x - p0.x);
     let t1 = (x1 - p0.x) / (p1.x - p0.x);
-    let y0 = p0.y + t0 * (p1.y - p0.y);
-    let y1 = p0.y + t1 * (p1.y - p0.y);
+    let y0 = p0.y + t0 * dy;
+    let y1 = p0.y + t1 * dy;
     (y0 + y1) * 0.5 * (x1 - x0)
 }
 
@@ -347,6 +363,7 @@ fn sweep_area(cx: &SweepContext, xs: &[f64]) -> (f64, f64) {
                 p1,
                 poly_idx: ip,
                 edge_idx: ie,
+                dy: p1.y - p0.y,
             });
         }
     }
