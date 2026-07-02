@@ -8,11 +8,7 @@ use prof_macros::prof;
 
 use crate::dbg_log;
 use crate::geo::algo::medial_axis::MedialAxis;
-use crate::geo::algo::smooth::build_smoothed_path;
 use crate::geo::shape::compute_polygon_bounds;
-use crate::geo::shape::does_line_cross_polygon;
-use crate::geo::shape::get_polygon_signed_area;
-use crate::geo::shape::is_point_in_polygon;
 use crate::ops::container::Ops;
 use crate::ops::cut::step;
 use crate::ops::cut::ClearedArea;
@@ -21,6 +17,7 @@ use crate::ops::cut::StepperOptions;
 use crate::ops::cut::ToolPose;
 use crate::types::{Point, Polygon};
 
+use super::routing;
 use super::tool::Tool;
 use super::AdaptiveClearingOptions;
 
@@ -50,63 +47,6 @@ pub(super) const MAX_RESUMES: usize = 500;
 pub(super) const WALL_PROXIMITY: f64 = 0.3;
 
 // ── Helpers ───────────────────────────────────────────────────────────
-
-/// Check whether a straight-line travel from `from` to `to` avoids
-/// crossing uncleared obstacles.
-///
-/// Returns `true` when the segment centreline does not cross any
-/// obstacle polygon boundary (remaining-stock frontier or pocket
-/// envelope).  Endpoint touches (the resume position at the cutting
-/// edge) are *not* counted as crossings, so paths that merely
-/// approach the frontier are accepted.
-fn direct_path_safe(from: Point, to: Point, obstacles: &[Polygon]) -> bool {
-    if obstacles.is_empty() {
-        return true;
-    }
-    let bounds = compute_polygon_bounds(obstacles);
-
-    // Precompute winding sign for each obstacle (+1 CCW, −1 CW).
-    let signs: Vec<i8> = obstacles
-        .iter()
-        .map(|obs| {
-            if get_polygon_signed_area(obs) > 0.0 {
-                1
-            } else {
-                -1
-            }
-        })
-        .collect();
-
-    // Winding-number point-in-region test using NonZero rule.
-    let in_remaining = |p: Point| -> bool {
-        let mut winding = 0i32;
-        for ((obs, b), &sign) in obstacles.iter().zip(&bounds).zip(&signs) {
-            if obs.len() < 3 {
-                continue;
-            }
-            if p.x < b.min.x || p.x > b.max.x || p.y < b.min.y || p.y > b.max.y
-            {
-                continue;
-            }
-            if is_point_in_polygon(p, obs) {
-                winding += sign as i32;
-            }
-        }
-        winding > 0
-    };
-
-    // Start point MUST be in cleared territory.
-    if in_remaining(from) {
-        return false;
-    }
-
-    // Check that the segment does not properly cross any obstacle
-    // polygon boundary (does_line_cross_polygon uses an interior-point
-    // test — t in (0, 1) — so endpoint touches are not flagged).
-    obstacles
-        .iter()
-        .all(|obs| !does_line_cross_polygon(from, to, obs))
-}
 
 /// Ground-truth engagement check: run [`step`] at a candidate
 /// position with **one-sided deflection bounds** derived from
@@ -177,52 +117,7 @@ pub fn probe_step(
     }
 }
 
-/// Smooth and shorten a cleared-territory travel path.
-///
-/// `raw` is a waypoint list (e.g. from the MAT) that is known to stay
-/// inside cleared territory.  It is fed through [`build_smoothed_path`]
-/// against the uncleared obstacles (`islands` ∪ `remaining`) so that
-/// redundant intermediate waypoints are shortcut away and any sharp
-/// turns are rounded — keeping the tool disk clear of fresh stock while
-/// minimising rapid travel length.
-///
-/// `from` is the tool's current position and is preserved verbatim as
-/// the path's first point so the smoothing kernel never moves it.
-#[prof]
-pub fn smooth_travel_path(
-    from: Point,
-    raw: &[Point],
-    obstacles: &[Polygon],
-    clearance: f64,
-) -> Vec<Point> {
-    if raw.is_empty() {
-        return vec![from];
-    }
-    let last = raw[raw.len() - 1];
-    let waypoints: Vec<Point> = if raw.len() > 2 {
-        raw[1..raw.len() - 1].to_vec()
-    } else {
-        Vec::new()
-    };
-    let obs_bounds = compute_polygon_bounds(obstacles);
-    let smoothed = build_smoothed_path(
-        from,
-        last,
-        &waypoints,
-        obstacles,
-        &obs_bounds,
-        clearance,
-        120,
-    );
-    if smoothed.is_empty() {
-        vec![from, last]
-    } else {
-        smoothed
-    }
-}
-
-/// Emit a resume travel from `from` to `to`, avoiding uncleared obstacles
-/// when possible via the medial axis.
+/// Emit a resume travel from `from` to `to` using the routing strategies.
 #[prof]
 pub fn emit_resume_travel(
     ops: &mut Ops,
@@ -233,26 +128,27 @@ pub fn emit_resume_travel(
     opts: &AdaptiveClearingOptions,
 ) {
     let obstacles = cleared.remaining();
+    let obs_bounds = compute_polygon_bounds(&obstacles);
 
-    // Fast path: direct move when no obstacles or the straight line is safe.
-    if obstacles.is_empty() || direct_path_safe(from, to, &obstacles) {
-        ops.move_to(to.x, to.y, opts.cut_z + 0.5, None);
-        return;
-    }
+    let ctx = routing::RouteCtx {
+        cleared,
+        opts,
+        mat,
+        obstacles: &obstacles,
+        obstacle_bounds: &obs_bounds,
+    };
 
-    // Medial-axis guided path through cleared territory.
-    if let Some(axis) = mat {
-        let raw = axis
-            .path_between_cleared(from, to, cleared.fragments())
-            .or_else(|| axis.path_between(from, to));
-        if let Some(ref path) = raw {
-            let smoothed =
-                smooth_travel_path(from, path, &obstacles, opts.radius);
-            for pt in &smoothed {
-                ops.move_to(pt.x, pt.y, opts.cut_z + 0.5, None);
-            }
-            return;
+    if let Some((source, path)) = routing::optimize_route(&ctx, from, to) {
+        dbg_log!(
+            "  EMIT  route={}:{}  n={}",
+            source as u8,
+            routing::source_label(source),
+            path.len(),
+        );
+        for pt in &path {
+            ops.move_to(pt.x, pt.y, opts.cut_z + 0.5, None);
         }
+        return;
     }
 
     // Fallback: direct move.

@@ -15,6 +15,9 @@ mod resume_island;
 mod resume_mat;
 mod resume_segment;
 mod resume_wall_hug;
+pub mod routing;
+mod routing_direct;
+mod routing_mat;
 pub mod tool;
 #[cfg(debug_assertions)]
 mod trace;

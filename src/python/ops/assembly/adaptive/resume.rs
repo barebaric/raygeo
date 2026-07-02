@@ -75,20 +75,28 @@ fn smooth_travel_path_py(
         .into_iter()
         .map(|p| p.into_iter().map(|(x, y)| Point::new(x, y)).collect())
         .collect();
-    resume::smooth_travel_path(from, &raw_pts, &obstacles_pts, clearance)
-        .into_iter()
-        .map(|p| (p.x, p.y))
-        .collect()
+    crate::ops::assembly::adaptive::routing::smooth_route(
+        from,
+        &raw_pts,
+        &obstacles_pts,
+        clearance,
+    )
+    .into_iter()
+    .map(|p| (p.x, p.y))
+    .collect()
 }
 
-/// Emit a resume travel to *to_pt* as a single straight-line ``move_to``.
+/// Emit a resume travel to *to_pt* using the routing strategies.
 ///
-/// :param ops: ``Ops`` instance to append travel move to (mutated).
+/// :param ops: ``Ops`` instance to append travel moves to (mutated).
 /// :param to_pt: Travel destination ``(x, y)``.
 /// :param pocket_boundary: Pocket boundary polygon.
 /// :param islands: Island (hole) polygons.
 /// :param radius: Tool radius (mm).
 /// :param cut_z: Cutting Z height.
+/// :param cleared: ``ClearedArea`` instance (defaults to empty).
+/// :param from_pt: Tool's current position ``(x, y)``.
+/// :param axis: ``MedialAxis`` instance or ``None``.
 #[gen_stub_pyfunction(
     python = r#"
     import collections.abc
@@ -102,7 +110,7 @@ fn smooth_travel_path_py(
         radius: float = 3.0,
         cut_z: float = -5.0,
     ) -> None:
-        """Emit a resume travel to *to_pt* as a single straight-line ``move_to``."""
+        """Emit a resume travel to *to_pt* using the routing strategies."""
     "#,
     module = "raygeo.ops.assembly.adaptive.resume"
 )]
