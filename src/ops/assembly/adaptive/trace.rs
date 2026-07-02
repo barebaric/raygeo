@@ -6,8 +6,11 @@
 //! the generic [`crate::trace::Tracer`].
 
 use crate::ops::container::Ops;
+use crate::ops::cut::ClearedArea;
 use crate::ops::cut::StepStatus;
 use crate::types::Point;
+
+use super::tool::Tool;
 
 // ── TraceKind ───────────────────────────────────────────────────────
 
@@ -130,6 +133,30 @@ impl RecordBuf {
     /// 2 = mat_resume, 3 = boundary_walk, 4 = wall_hug).
     pub fn resume_source(&mut self, v: u8) {
         self.u8(125, v);
+    }
+
+    /// Fill the common tool-state fields — the 10 fields that appear in
+    /// every trace record — from their source objects.
+    pub fn from_tool_state(
+        status: StepStatus,
+        step_idx: u32,
+        tool: &Tool,
+        cleared: &ClearedArea,
+        prev_pos: Point,
+        ops_len: u32,
+    ) -> Self {
+        let mut buf = Self::default();
+        buf.status(status);
+        buf.step_idx(step_idx);
+        buf.pos(tool.pos);
+        buf.heading(tool.heading);
+        buf.smoothed_heading(tool.smoothed_heading());
+        buf.predicted_angle(tool.raw_predictor());
+        buf.total_area(cleared.total_area());
+        buf.remaining_area(cleared.remaining_area());
+        buf.prev_pos(prev_pos);
+        buf.ops_len(ops_len);
+        buf
     }
 
     pub fn pack(&self) -> &[u8; crate::trace::PAYLOAD_SIZE] {

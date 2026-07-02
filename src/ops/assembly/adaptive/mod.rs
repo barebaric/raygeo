@@ -300,17 +300,14 @@ pub fn adaptive_clearing(
     {
         if let Some(ref mut tr) = tracer {
             tr.write_mat(mat.as_ref().map(|m| m.into()));
-            let mut buf = RecordBuf::default();
-            buf.status(StepStatus::Ok);
-            buf.step_idx(0);
-            buf.pos(tool.pos);
-            buf.heading(tool.heading);
-            buf.smoothed_heading(tool.smoothed_heading());
-            buf.predicted_angle(tool.raw_predictor());
-            buf.total_area(cleared.total_area());
-            buf.remaining_area(cleared.remaining_area());
-            buf.prev_pos(tool.pos);
-            buf.ops_len(tp_len);
+            let buf = RecordBuf::from_tool_state(
+                StepStatus::Ok,
+                0,
+                &tool,
+                cleared,
+                tool.pos,
+                tp_len,
+            );
             tr.write(TraceKind::Init as u8, buf.pack());
         }
     }
@@ -354,17 +351,14 @@ pub fn adaptive_clearing(
     macro_rules! write_exit_trace {
         ($status:expr) => {
             if let Some(ref mut tr) = tracer {
-                let mut buf = RecordBuf::default();
-                buf.status($status);
-                buf.step_idx(trace_step_idx);
-                buf.pos(tool.pos);
-                buf.heading(tool.heading);
-                buf.smoothed_heading(tool.smoothed_heading());
-                buf.predicted_angle(tool.raw_predictor());
-                buf.total_area(cleared.total_area());
-                buf.remaining_area(cleared.remaining_area());
-                buf.prev_pos(prev_pos);
-                buf.ops_len(tp_len);
+                let buf = RecordBuf::from_tool_state(
+                    $status,
+                    trace_step_idx,
+                    &tool,
+                    cleared,
+                    prev_pos,
+                    tp_len,
+                );
                 tr.write(TraceKind::Exit as u8, buf.pack());
             }
         };
@@ -455,7 +449,6 @@ pub fn adaptive_clearing(
                 });
             }
         }
-
         let stalled = status != StepStatus::Ok;
 
         // Stuck detection: check every STUCK_CHECK_INTERVAL steps
@@ -463,14 +456,17 @@ pub fn adaptive_clearing(
         // growth is more robust than displacement: a contracting
         // inner spiral still removes material and should not be
         // confused with wall oscillation.
+        let mut stuck_triggered = false;
+        let mut growth = 0.0;
+        let mut expected = 0.0;
         if !stalled {
             step_count += 1;
             if step_count.is_multiple_of(STUCK_CHECK_INTERVAL) {
                 let current_area = cleared.total_area();
-                let growth = current_area - last_check_area;
+                growth = current_area - last_check_area;
                 last_check_area = current_area;
                 // Theoretical throughput: step_length * target_area_pd per step.
-                let expected = STUCK_CHECK_INTERVAL as f64
+                expected = STUCK_CHECK_INTERVAL as f64
                     * opts.step_length
                     * target_area_pd
                     * STUCK_MIN_GROWTH_FACTOR;
@@ -483,92 +479,34 @@ pub fn adaptive_clearing(
                     if cleared.total_area() - last_resume_area > 0.0 {
                         resume_blacklist.clear();
                     }
-                    resume_count += 1;
-                    if resume_count > MAX_RESUMES {
-                        dbg_log!(
-                            "EXIT  reason=max_resumes(stuck)  step_count={}  \
-                             resume_count={}  growth={:.3}  expected={:.3}  \
-                             frag_total={:.3}  valid_total={:.3}",
-                            step_count,
-                            resume_count,
-                            growth,
-                            expected,
-                            cleared.total_area(),
-                            valid_total,
-                        );
-                        #[cfg(debug_assertions)]
-                        write_exit_trace!(StepStatus::Ok);
-                        break;
-                    }
-                    let result = {
-                        let ctx = ResumeCtx {
-                            cleared: &*cleared,
-                            opts,
-                            valid_tool_area: &valid_tool_area,
-                            mat: mat.as_ref(),
-                            target_area_pd,
-                            segment_start,
-                            last_resume_area,
-                            last_resume_pos,
-                            last_wall_hug,
-                            blacklist: &resume_blacklist,
-                        };
-                        try_resume(&ctx, &tool)
-                    };
-                    if let Some((source, rp)) = result {
-                        resume_blacklist.push(rp.pos);
-                        resume::emit_resume_travel(
-                            &mut ops,
-                            &*cleared,
-                            mat.as_ref(),
-                            tool.pos,
-                            rp.pos,
-                            opts,
-                        );
-                        tool.pos = rp.pos;
-                        tool.heading = rp.heading;
-                        tool.reset_gyro();
-                        tp_len = moving_count(&ops);
-                        #[cfg(debug_assertions)]
-                        {
-                            if let Some(ref mut tr) = tracer {
-                                let mut buf = RecordBuf::default();
-                                buf.status(StepStatus::Ok);
-                                buf.step_idx(trace_step_idx);
-                                buf.pos(tool.pos);
-                                buf.heading(tool.heading);
-                                buf.smoothed_heading(tool.smoothed_heading());
-                                buf.predicted_angle(tool.raw_predictor());
-                                buf.total_area(cleared.total_area());
-                                buf.remaining_area(cleared.remaining_area());
-                                buf.prev_pos(prev_pos);
-                                buf.ops_len(tp_len);
-                                buf.resume_source(source as u8);
-                                tr.write(
-                                    TraceKind::ResumeStuck as u8,
-                                    buf.pack(),
-                                );
-                            }
-                        }
-                        trace_step_idx += 1;
-                        prev_pos = tool.pos;
-                        last_check_area = cleared.total_area();
-                        last_resume_area = cleared.total_area();
-                        last_resume_pos = tool.pos;
-                        segment_start = ToolPose {
-                            pos: tool.pos,
-                            heading: tool.heading,
-                        };
-                        let ed = envelope_distance(tool.pos, &valid_tool_area);
-                        near_envelope =
-                            ed < opts.radius * WALL_HUG_DEPARTURE_FRAC;
-                        left_envelope = false;
-                        last_wall_hug = None;
-                        step_count = 0;
-                        continue;
-                    }
+                    stuck_triggered = true;
+                }
+            }
+        }
+
+        if stalled || stuck_triggered {
+            // Stall path: commit batch + clear blacklist (stuck already did).
+            if stalled {
+                if steps_since_batch > 0 {
+                    cleared.commit_batch_local();
+                    steps_since_batch = 0;
+                }
+                if cleared.total_area() - last_resume_area > 0.0 {
+                    resume_blacklist.clear();
+                }
+            }
+
+            let resume_trace_status = if stuck_triggered {
+                StepStatus::Ok
+            } else {
+                status
+            };
+
+            resume_count += 1;
+            if resume_count > MAX_RESUMES {
+                if stuck_triggered {
                     dbg_log!(
-                        "EXIT  reason=resume_failed(stuck)  step_count={}  \
+                        "EXIT  reason=max_resumes(stuck)  step_count={}  \
                          resume_count={}  growth={:.3}  expected={:.3}  \
                          frag_total={:.3}  valid_total={:.3}",
                         step_count,
@@ -578,49 +516,18 @@ pub fn adaptive_clearing(
                         cleared.total_area(),
                         valid_total,
                     );
-                    #[cfg(debug_assertions)]
-                    write_exit_trace!(StepStatus::Ok);
-                    break;
+                } else {
+                    dbg_log!(
+                        "EXIT  reason=max_resumes(stall)  step_count={}  \
+                         resume_count={}  frag_total={:.3}  valid_total={:.3}",
+                        step_count,
+                        resume_count,
+                        cleared.total_area(),
+                        valid_total,
+                    );
                 }
-            }
-        }
-
-        if stalled {
-            if steps_since_batch > 0 {
-                cleared.commit_batch_local();
-                steps_since_batch = 0;
-            }
-            if cleared.total_area() - last_resume_area > 0.0 {
-                resume_blacklist.clear();
-            }
-
-            resume_count += 1;
-            if resume_count > MAX_RESUMES {
-                dbg_log!(
-                    "EXIT  reason=max_resumes(stall)  step_count={}  \
-                     resume_count={}  frag_total={:.3}  valid_total={:.3}",
-                    step_count,
-                    resume_count,
-                    cleared.total_area(),
-                    valid_total,
-                );
                 #[cfg(debug_assertions)]
-                {
-                    if let Some(ref mut tr) = tracer {
-                        let mut buf = RecordBuf::default();
-                        buf.status(StepStatus::Ok);
-                        buf.step_idx(trace_step_idx);
-                        buf.pos(tool.pos);
-                        buf.heading(tool.heading);
-                        buf.smoothed_heading(tool.smoothed_heading());
-                        buf.predicted_angle(tool.raw_predictor());
-                        buf.total_area(cleared.total_area());
-                        buf.remaining_area(cleared.remaining_area());
-                        buf.prev_pos(prev_pos);
-                        buf.ops_len(tp_len);
-                        tr.write(TraceKind::Exit as u8, buf.pack());
-                    }
-                }
+                write_exit_trace!(StepStatus::Ok);
                 break;
             }
 
@@ -656,19 +563,21 @@ pub fn adaptive_clearing(
                 #[cfg(debug_assertions)]
                 {
                     if let Some(ref mut tr) = tracer {
-                        let mut buf = RecordBuf::default();
-                        buf.status(status);
-                        buf.step_idx(trace_step_idx);
-                        buf.pos(tool.pos);
-                        buf.heading(tool.heading);
-                        buf.smoothed_heading(tool.smoothed_heading());
-                        buf.predicted_angle(tool.raw_predictor());
-                        buf.total_area(cleared.total_area());
-                        buf.remaining_area(cleared.remaining_area());
-                        buf.prev_pos(prev_pos);
-                        buf.ops_len(tp_len);
+                        let mut buf = RecordBuf::from_tool_state(
+                            resume_trace_status,
+                            trace_step_idx,
+                            &tool,
+                            cleared,
+                            prev_pos,
+                            tp_len,
+                        );
                         buf.resume_source(source as u8);
-                        tr.write(TraceKind::ResumeStall as u8, buf.pack());
+                        let kind = if stuck_triggered {
+                            TraceKind::ResumeStuck
+                        } else {
+                            TraceKind::ResumeStall
+                        };
+                        tr.write(kind as u8, buf.pack());
                     }
                 }
                 trace_step_idx += 1;
@@ -688,16 +597,30 @@ pub fn adaptive_clearing(
                 continue;
             }
 
-            dbg_log!(
-                "EXIT  reason=resume_failed(stall)  step_count={}  \
-                 resume_count={}  frag_total={:.3}  valid_total={:.3}",
-                step_count,
-                resume_count,
-                cleared.total_area(),
-                valid_total,
-            );
+            if stuck_triggered {
+                dbg_log!(
+                    "EXIT  reason=resume_failed(stuck)  step_count={}  \
+                     resume_count={}  growth={:.3}  expected={:.3}  \
+                     frag_total={:.3}  valid_total={:.3}",
+                    step_count,
+                    resume_count,
+                    growth,
+                    expected,
+                    cleared.total_area(),
+                    valid_total,
+                );
+            } else {
+                dbg_log!(
+                    "EXIT  reason=resume_failed(stall)  step_count={}  \
+                     resume_count={}  frag_total={:.3}  valid_total={:.3}",
+                    step_count,
+                    resume_count,
+                    cleared.total_area(),
+                    valid_total,
+                );
+            }
             #[cfg(debug_assertions)]
-            write_exit_trace!(status);
+            write_exit_trace!(resume_trace_status);
             break;
         }
 
@@ -724,23 +647,20 @@ pub fn adaptive_clearing(
             let eng = cleared.point_engagement(tool.pos, opts.radius);
             let ca = cleared.cut_area(prev_pos, tool.pos, opts.radius);
             if let Some(ref mut tr) = tracer {
-                let mut buf = RecordBuf::default();
-                buf.status(status);
-                buf.step_idx(trace_step_idx);
+                let mut buf = RecordBuf::from_tool_state(
+                    status,
+                    trace_step_idx,
+                    &tool,
+                    cleared,
+                    prev_pos,
+                    tp_len,
+                );
                 buf.iters(result.iters as u32);
-                buf.pos(tool.pos);
-                buf.heading(tool.heading);
-                buf.smoothed_heading(tool.smoothed_heading());
-                buf.predicted_angle(tool.raw_predictor());
                 buf.iteration_angle(result.iteration_angle);
                 buf.eng_angle(eng.angle);
                 buf.eng_area(eng.area);
                 buf.eng_chord(eng.chord_depth);
                 buf.cut_area(ca);
-                buf.total_area(cleared.total_area());
-                buf.remaining_area(cleared.remaining_area());
-                buf.prev_pos(prev_pos);
-                buf.ops_len(tp_len);
                 tr.write(TraceKind::Cut as u8, buf.pack());
             }
         }
