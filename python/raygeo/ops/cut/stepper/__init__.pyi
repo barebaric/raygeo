@@ -7,11 +7,7 @@ import typing
 __all__ = [
     "StepResult",
     "StepStatus",
-    "StepperOptions",
-    "run_segment",
-    "step",
     "step_adaptive",
-    "target_engagement_from_advance",
 ]
 
 @typing.final
@@ -45,8 +41,8 @@ class StepResult:
     @property
     def iteration_angle(self) -> builtins.float:
         r"""
-        Solver steering angle (radians). Non-zero for ``step_adaptive``;
-        always 0 for ``step``.
+        Solver steering angle (radians). Only non-zero for
+        ``step_adaptive``.
         """
     @property
     def status(self) -> StepStatus:
@@ -90,108 +86,6 @@ class StepStatus:
         """
     def __repr__(self) -> builtins.str: ...
 
-@typing.final
-class StepperOptions:
-    r"""
-    Options for the stepping solver.
-    
-    Controls disk radius, step length, target engagement angle,
-    solver tolerance, max steering deflection, and iteration budget.
-    """
-    @property
-    def radius(self) -> builtins.float:
-        r"""
-        Disk radius in mm.
-        """
-    @radius.setter
-    def radius(self, value: builtins.float) -> None: ...
-    @property
-    def step_length(self) -> builtins.float:
-        r"""
-        Forward step length in mm.
-        """
-    @step_length.setter
-    def step_length(self, value: builtins.float) -> None: ...
-    @property
-    def target_engagement(self) -> builtins.float:
-        r"""
-        Target engagement angle in radians.
-        """
-    @target_engagement.setter
-    def target_engagement(self, value: builtins.float) -> None: ...
-    @property
-    def engagement_tol(self) -> builtins.float:
-        r"""
-        Engagement tolerance in radians.
-        """
-    @engagement_tol.setter
-    def engagement_tol(self, value: builtins.float) -> None: ...
-    @property
-    def max_deflection(self) -> builtins.float:
-        r"""
-        Maximum steering deflection per step in radians.
-        """
-    @max_deflection.setter
-    def max_deflection(self, value: builtins.float) -> None: ...
-    @property
-    def max_solver_iters(self) -> builtins.int:
-        r"""
-        Maximum solver iterations per step.
-        """
-    @max_solver_iters.setter
-    def max_solver_iters(self, value: builtins.int) -> None: ...
-    @property
-    def metric(self) -> builtins.str:
-        r"""
-        Engagement metric: ``"angle"`` (default) or ``"area"``.
-        """
-    @metric.setter
-    def metric(self, value: builtins.str) -> None: ...
-    def __new__(cls, radius: builtins.float = 3.0, step_length: builtins.float = 0.6, target_engagement: typing.Optional[builtins.float] = None, engagement_tol: builtins.float = 0.01, max_deflection: typing.Optional[builtins.float] = None, max_solver_iters: builtins.int = 6) -> StepperOptions:
-        r"""
-        :param radius: Disk radius in mm (default 3.0).
-        :param step_length: Forward step length in mm (default 0.6).
-        :param target_engagement: Target engagement angle in radians
-            (default π).
-        :param engagement_tol: Engagement tolerance in radians
-            (default 0.01).
-        :param max_deflection: Maximum steering deflection per step in
-            radians (default π/6).
-        :param max_solver_iters: Maximum solver iterations per step
-            (default 6).
-        """
-    def __repr__(self) -> builtins.str: ...
-
-def run_segment(cleared: cleared_area.ClearedArea, start: tuple[builtins.float, builtins.float], initial_heading: builtins.float, opts: StepperOptions, max_steps: builtins.int) -> tuple[builtins.list[tuple[builtins.float, builtins.float]], builtins.str]:
-    r"""
-    Drive the disk forward until a non-Ok status or *max_steps*.
-    
-    Does **not** modify the ClearedArea — the caller is responsible for
-    committing swept polygons.
-    
-    :param cleared: ``ClearedArea`` instance.
-    :param start: Starting position ``(x, y)``.
-    :param initial_heading: Initial heading angle (radians).
-    :param opts: ``StepperOptions`` controlling the solver.
-    :param max_steps: Maximum number of steps.
-    :returns: ``(path, status_string)``.
-    """
-
-def step(cleared: cleared_area.ClearedArea, pos: tuple[builtins.float, builtins.float], heading: builtins.float, opts: StepperOptions) -> StepResult:
-    r"""
-    Perform one forward step.
-    
-    Starting from *pos* with the given *heading* (radians), proposes
-    candidate positions and solves for the heading that maintains the
-    target engagement.
-    
-    :param cleared: ``ClearedArea`` instance.
-    :param pos: Current centre position ``(x, y)``.
-    :param heading: Current heading angle in radians.
-    :param opts: ``StepperOptions`` controlling the solver.
-    :returns: ``StepResult`` with the next position and updated heading.
-    """
-
 def step_adaptive(cleared: cleared_area.ClearedArea, pos: tuple[builtins.float, builtins.float], heading: builtins.float, predicted_angle: builtins.float, target_area_pd: builtins.float, step_length: builtins.float, radius: builtins.float, max_deflection: builtins.float, valid_area: typing.Sequence[typing.Sequence[tuple[builtins.float, builtins.float]]], angle_min: builtins.float = -0.7853981633974483, angle_max: builtins.float = 0.7853981633974483, dir_sign: builtins.float = 0.0) -> StepResult:
     r"""
     Perform one forward step using the area-based adaptive solver.
@@ -217,14 +111,5 @@ def step_adaptive(cleared: cleared_area.ClearedArea, pos: tuple[builtins.float, 
        side when the tool breaks through a web between two cleared
        regions.  Has no effect during normal one-sided cutting.
     :returns: ``StepResult`` with the next position and updated heading.
-    """
-
-def target_engagement_from_advance(advance: builtins.float, radius: builtins.float) -> builtins.float:
-    r"""
-    Derive the target engagement angle from the advance ratio.
-    
-    :param advance: Per-step forward distance (mm).
-    :param radius: Disk radius (mm).
-    :returns: Engagement angle in radians.
     """
 

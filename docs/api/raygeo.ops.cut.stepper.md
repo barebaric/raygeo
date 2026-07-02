@@ -31,7 +31,7 @@ Updated heading angle in radians.
 iteration_angle: float
 ```
 
-Solver steering angle (radians). Non-zero for `step_adaptive`; always 0 for `step`.
+Solver steering angle (radians). Only non-zero for `step_adaptive`.
 
 ### `iters`
 
@@ -112,136 +112,7 @@ Normal step completion.
 | --------- | ------------ | --------------- |
 | _Returns_ | `StepStatus` | `StepStatus.ok` |
 
-## StepperOptions
-
-Options for the stepping solver.
-
-Controls disk radius, step length, target engagement angle, solver tolerance, max steering
-deflection, and iteration budget.
-
-### `engagement_tol`
-
-```python
-engagement_tol: float
-```
-
-Engagement tolerance in radians.
-
-### `max_deflection`
-
-```python
-max_deflection: float
-```
-
-Maximum steering deflection per step in radians.
-
-### `max_solver_iters`
-
-```python
-max_solver_iters: int
-```
-
-Maximum solver iterations per step.
-
-### `metric`
-
-```python
-metric: str
-```
-
-Engagement metric: `"angle"` (default) or `"area"`.
-
-### `radius`
-
-```python
-radius: float
-```
-
-Disk radius in mm.
-
-### `step_length`
-
-```python
-step_length: float
-```
-
-Forward step length in mm.
-
-### `target_engagement`
-
-```python
-target_engagement: float
-```
-
-Target engagement angle in radians.
-
 ## Functions
-
-### `run_segment()`
-
-```python
-run_segment(
-    cleared: cleared_area.ClearedArea,
-    start: tuple[float, float],
-    initial_heading: float,
-    opts: StepperOptions,
-    max_steps: int,
-) -> tuple[list[tuple[float, float]], str]
-```
-
-Drive the disk forward until a non-Ok status or *max_steps*.
-
-Does **not** modify the ClearedArea — the caller is responsible for committing swept polygons.
-
-| Parameter         | Type                                    | Description                              |
-| ----------------- | --------------------------------------- | ---------------------------------------- |
-| `cleared`         | `cleared_area.ClearedArea`              | `ClearedArea` instance.                  |
-| `start`           | `tuple[float, float]`                   | Starting position `(x, y)`.              |
-| `initial_heading` | `float`                                 | Initial heading angle (radians).         |
-| `opts`            | `StepperOptions`                        | `StepperOptions` controlling the solver. |
-| `max_steps`       | `int`                                   | Maximum number of steps.                 |
-| _Returns_         | `tuple[list[tuple[float, float]], str]` | `(path, status_string)`.                 |
-
-![Wall following along four boundary shapes: curved, square wave, zig zag, and circle.](images/ops-cut-stepper-wall-following.png)
-
-*Wall following along four boundary shapes: curved, square wave, zig zag, and circle.*
-
-![Wall following using area engagement (same shapes as angular version).](images/ops-cut-stepper-wall-following-area.png)
-
-*Wall following using area engagement (same shapes as angular version).*
-
-### `step()`
-
-```python
-step(
-    cleared: cleared_area.ClearedArea,
-    pos: tuple[float, float],
-    heading: float,
-    opts: StepperOptions,
-) -> StepResult
-```
-
-Perform one forward step.
-
-Starting from *pos* with the given *heading* (radians), proposes candidate positions and solves for
-the heading that maintains the target engagement.
-
-| Parameter | Type                       | Description                                              |
-| --------- | -------------------------- | -------------------------------------------------------- |
-| `cleared` | `cleared_area.ClearedArea` | `ClearedArea` instance.                                  |
-| `pos`     | `tuple[float, float]`      | Current centre position `(x, y)`.                        |
-| `heading` | `float`                    | Current heading angle in radians.                        |
-| `opts`    | `StepperOptions`           | `StepperOptions` controlling the solver.                 |
-| _Returns_ | `StepResult`               | `StepResult` with the next position and updated heading. |
-
-![90° corner: the solver deflects the heading to keep engagement constant around the turn.](images/ops-cut-stepper-pocket-corner.png)
-
-*90° corner: the solver deflects the heading to keep engagement constant around the turn.*
-
-![Engagement histogram for 200 steps along a straight wall. Tight peak near target indicates stable behaviour.](images/ops-cut-stepper-engagement-histogram.png)
-
-*Engagement histogram for 200 steps along a straight wall. Tight peak near target indicates stable
-behaviour.*
 
 ### `step_adaptive()`
 
@@ -283,16 +154,15 @@ internally by `adaptive_clearing`.
 | `dir_sign`        | `float = 0.0`                             | Directional bias sign (default `0.0`). `+1.0` to prefer positive angles (CW), `−1.0` to prefer negative angles (CCW). The bias penalises fresh material on the wrong side when the tool breaks through a web between two cleared regions. Has no effect during normal one-sided cutting. |
 | _Returns_         | `StepResult`                              | `StepResult` with the next position and updated heading.                                                                                                                                                                                                                                 |
 
-### `target_engagement_from_advance()`
+![Wall following along four boundary shapes: curved, square wave, zig zag, and circle.](images/ops-cut-stepper-wall-following.png)
 
-```python
-target_engagement_from_advance(advance: float, radius: float) -> float
-```
+*Wall following along four boundary shapes: curved, square wave, zig zag, and circle.*
 
-Derive the target engagement angle from the advance ratio.
+![90° corner: the solver deflects the heading to keep engagement constant around the turn.](images/ops-cut-stepper-pocket-corner.png)
 
-| Parameter | Type    | Description                     |
-| --------- | ------- | ------------------------------- |
-| `advance` | `float` | Per-step forward distance (mm). |
-| `radius`  | `float` | Disk radius (mm).               |
-| _Returns_ | `float` | Engagement angle in radians.    |
+*90° corner: the solver deflects the heading to keep engagement constant around the turn.*
+
+![Engagement histogram for 200 steps along a straight wall. Tight peak near target indicates stable behaviour.](images/ops-cut-stepper-engagement-histogram.png)
+
+*Engagement histogram for 200 steps along a straight wall. Tight peak near target indicates stable
+behaviour.*

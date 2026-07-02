@@ -8,10 +8,7 @@ mod types;
 pub use cleared_area::ClearedArea;
 pub use crescent::cut_area;
 pub use search::search_frontier_engagement;
-pub use stepper::{
-    run_segment, step, step_adaptive, target_engagement_from_advance,
-    StepResult, StepStatus, StepperOptions,
-};
+pub use stepper::{step_adaptive, StepResult, StepStatus};
 pub use types::ToolPose;
 
 /// Milling rotational direction. All cutting moves respect this
