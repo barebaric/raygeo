@@ -43,6 +43,12 @@ const DIR_BIAS_WEIGHT: f64 = 1.0;
 ///   | 30°        |         26.2 %             |
 const DEFLECTION_DAMPING: f64 = 0.005;
 
+/// Symmetric angle bound for step search (±π/4).
+///
+/// Used as the default `angle_min` / `angle_max` in [`StepperOptions`] and
+/// [`Interpolation`], and by the adaptive clearing main loop.
+pub(crate) const STEP_ANGLE_BOUND: f64 = std::f64::consts::FRAC_PI_4;
+
 /// Configuration options for [`step`].
 ///
 /// Holds all parameters that stay constant across multiple step calls.
@@ -76,8 +82,8 @@ impl Default for StepperOptions<'_> {
             radius: 5.0,
             max_deflection: std::f64::consts::FRAC_PI_6,
             valid_area: &[],
-            angle_min: -std::f64::consts::FRAC_PI_4,
-            angle_max: std::f64::consts::FRAC_PI_4,
+            angle_min: -STEP_ANGLE_BOUND,
+            angle_max: STEP_ANGLE_BOUND,
             dir_sign: 0.0,
         }
     }

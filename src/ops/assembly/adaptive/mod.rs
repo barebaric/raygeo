@@ -373,9 +373,8 @@ pub fn adaptive_clearing(
         radius: opts.radius,
         max_deflection: max_def,
         valid_area: &valid_tool_area,
-        angle_min: -std::f64::consts::FRAC_PI_4,
-        angle_max: std::f64::consts::FRAC_PI_4,
         dir_sign,
+        ..Default::default()
     };
 
     let mut iter: usize = 0;

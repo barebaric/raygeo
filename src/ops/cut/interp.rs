@@ -9,6 +9,7 @@ use prof_macros::prof;
 
 use crate::geo::shape::polygon::get_polygon_signed_area;
 use crate::geo::shape::polygon::is_point_in_polygon;
+use crate::ops::cut::stepper::STEP_ANGLE_BOUND;
 use crate::types::{Point, Polygon};
 
 /// Check whether `pt` lies in a valid tool area defined by polygon
@@ -57,7 +58,7 @@ pub struct Interpolation {
 
 impl Default for Interpolation {
     fn default() -> Self {
-        Self::new(-std::f64::consts::FRAC_PI_4, std::f64::consts::FRAC_PI_4)
+        Self::new(-STEP_ANGLE_BOUND, STEP_ANGLE_BOUND)
     }
 }
 

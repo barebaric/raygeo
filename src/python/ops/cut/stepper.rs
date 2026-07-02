@@ -148,8 +148,8 @@ impl PyStepperOptions {
         radius,
         max_deflection,
         valid_area,
-        angle_min = -std::f64::consts::FRAC_PI_4,
-        angle_max = std::f64::consts::FRAC_PI_4,
+        angle_min = -cut::stepper::STEP_ANGLE_BOUND,
+        angle_max = cut::stepper::STEP_ANGLE_BOUND,
         dir_sign = 0.0,
     ))]
     fn new(

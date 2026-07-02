@@ -26,8 +26,8 @@ impl PyInterpolation {
     pub fn new() -> Self {
         PyInterpolation {
             inner: cut::interp::Interpolation::new(
-                -std::f64::consts::FRAC_PI_4,
-                std::f64::consts::FRAC_PI_4,
+                -cut::stepper::STEP_ANGLE_BOUND,
+                cut::stepper::STEP_ANGLE_BOUND,
             ),
         }
     }
