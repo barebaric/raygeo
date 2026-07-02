@@ -163,7 +163,7 @@ pub fn step(
     // heavy a bite.  85 % of the full crescent — above corner-wrap
     // transients (~60 %) but below the slot ceiling (95 %).
     let max_engagement = full_crescent * 0.85;
-    let floor = target_area * 0.01;
+    let floor = target_area * 0.1;
 
     step_inner(
         cleared,
