@@ -207,6 +207,7 @@ fn step_inner(
     let mut best_pos = pos;
     let mut best_error: f64 = f64::MAX;
     let mut best_area: f64 = 0.0;
+    let mut best_left: f64 = 0.0;
     let mut last_angle = 0.0_f64;
     let mut iters = 0;
     let mut skip_count = 0;
@@ -335,6 +336,7 @@ fn step_inner(
         if effective_err.abs() < best_error {
             best_error = effective_err.abs();
             best_area = total;
+            best_left = left;
             best_angle = angle;
             best_dir = dir;
             best_pos = candidate;
@@ -365,6 +367,23 @@ fn step_inner(
         }
     }
 
+    // ── Wrong-side rejection ────────────────────────────────────
+    // Even when no single candidate converged, reject the best
+    // candidate if wrong-side cutting dominates (>50 % of target
+    // per-step area and more than the correct side).  The convergence
+    // check inside the loop already prevents *converging* on a
+    // wrong-dominated angle; this post-loop guard prevents
+    // *accepting* one when every candidate was wrong-dominated.
+    let best_right = best_area - best_left;
+    let best_wrong = if opts.dir_sign < 0.0 {
+        best_left
+    } else {
+        best_right
+    };
+    let best_wrong_dominated = opts.dir_sign != 0.0
+        && best_wrong > opts.target_area_pd * opts.step_length * 0.5
+        && best_wrong > best_right;
+
     // ── Status decision ──────────────────────────────────────────
     //
     // Three rules govern engagement:
@@ -382,11 +401,17 @@ fn step_inner(
     //    and no candidate converged on target): the tool is taking too
     //    heavy a bite.  → `LostEngagement` (reposition via resume).
     //
+    // 4. **Wrong-dominated** (`best_wrong_dominated`): the best
+    //    candidate has most material on the wrong side.  The solver
+    //    already prevented convergence; now also block acceptance.
+    //    → `LostEngagement` (reposition via resume).
+    //
     // Only under-engagement triggers the lookahead override; slot
-    // overload is a hard stop.
+    // overload and wrong-dominated are hard stops.
     let mut status = if best_area < floor
         || best_area > slot_ceiling
         || (best_area > max_engagement && exit_reason != "converged")
+        || best_wrong_dominated
     {
         StepStatus::LostEngagement
     } else {

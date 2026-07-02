@@ -423,6 +423,35 @@ pub fn adaptive_clearing(
             }
         }
 
+        // ── Wrong-side safehold ──────────────────────────────────
+        // After each successful step, verify the tool is not cutting
+        // predominantly on the wrong side.  The solver's inner loop
+        // already rejects wrong-dominated candidates; this safehold
+        // is a secondary check that catches any that somehow slip
+        // through (e.g. via the lookahead override).
+        if result.status == StepStatus::Ok {
+            let (total, left) =
+                cleared.cut_area_split(prev_pos, tool.pos, opts.radius);
+            let right = total - left;
+            let wrong = if dir_sign < 0.0 { left } else { right };
+            let correct = total - wrong;
+            let per_step_target = target_area_pd * opts.step_length;
+            if wrong > correct && wrong > per_step_target * 0.5 {
+                panic!(
+                    "adaptive_clearing: wrong-side safehold  \
+                     dir_sign={:+.1}  total={:.6}  left={:.6}  \
+                     right={:.6}  pos=({:.3},{:.3})  heading={:.4}",
+                    dir_sign,
+                    total,
+                    left,
+                    right,
+                    tool.pos.x,
+                    tool.pos.y,
+                    tool.heading,
+                );
+            }
+        }
+
         // Wall-hug tracking: continuously monitor the tool's proximity
         // to the envelope edge.  When the tool departs the wall, record
         // the last on-wall pose so ResumeWallHug can resume from there
