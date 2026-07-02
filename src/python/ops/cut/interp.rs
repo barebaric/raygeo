@@ -68,21 +68,8 @@ impl PyInterpolation {
     ///
     /// Maintains the invariant ``min.error <= max.error`` and keeps
     /// samples closest to zero on each side of the root.
-    pub fn add(
-        &mut self,
-        error: f64,
-        angle: f64,
-        pos: (f64, f64),
-        allow_skip: bool,
-        is_conventional: bool,
-    ) {
-        self.inner.add(
-            error,
-            angle,
-            Point::new(pos.0, pos.1),
-            allow_skip,
-            is_conventional,
-        );
+    pub fn add(&mut self, error: f64, angle: f64, pos: (f64, f64)) {
+        self.inner.add(error, angle, Point::new(pos.0, pos.1));
     }
 
     fn __repr__(&self) -> String {

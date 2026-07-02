@@ -13,10 +13,6 @@ use crate::types::{Point, Polygon};
 
 pub struct ResumeIsland;
 
-impl ResumeIsland {
-    pub const NAME: &'static str = "ResumeIsland";
-}
-
 impl ResumeStrategy for ResumeIsland {
     fn label(&self) -> &'static str {
         "island"

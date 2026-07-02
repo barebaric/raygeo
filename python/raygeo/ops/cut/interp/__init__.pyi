@@ -47,7 +47,7 @@ class Interpolation:
         Linearly interpolate between min and max to find the angle
         where error = 0, clamped to [0.2, 0.8] in parameter space.
         """
-    def add(self, error: builtins.float, angle: builtins.float, pos: tuple[builtins.float, builtins.float], allow_skip: builtins.bool, is_conventional: builtins.bool) -> None:
+    def add(self, error: builtins.float, angle: builtins.float, pos: tuple[builtins.float, builtins.float]) -> None:
         r"""
         Add a new sample to the bracket.
         

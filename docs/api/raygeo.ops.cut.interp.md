@@ -13,13 +13,7 @@ find the steering angle that achieves it.
 ### `add()`
 
 ```python
-add(
-    error: float,
-    angle: float,
-    pos: tuple[float, float],
-    allow_skip: bool,
-    is_conventional: bool,
-) -> None
+add(error: float, angle: float, pos: tuple[float, float]) -> None
 ```
 
 Add a new sample to the bracket.
@@ -27,14 +21,12 @@ Add a new sample to the bracket.
 Maintains the invariant `min.error <= max.error` and keeps samples closest to zero on each side of
 the root.
 
-| Parameter         | Type                  | Description |
-| ----------------- | --------------------- | ----------- |
-| `error`           | `float`               |             |
-| `angle`           | `float`               |             |
-| `pos`             | `tuple[float, float]` |             |
-| `allow_skip`      | `bool`                |             |
-| `is_conventional` | `bool`                |             |
-| _Returns_         | `None`                |             |
+| Parameter | Type                  | Description |
+| --------- | --------------------- | ----------- |
+| `error`   | `float`               |             |
+| `angle`   | `float`               |             |
+| `pos`     | `tuple[float, float]` |             |
+| _Returns_ | `None`                |             |
 
 ### `clamp_angle()`
 

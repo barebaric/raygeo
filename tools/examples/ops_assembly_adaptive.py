@@ -547,10 +547,6 @@ def generate_adaptive_clearing_centre_island():
 
     # Hardcoded seed circle (largest inscribed circle minus tool + margin)
     cx, cy, r = -13.7, 13.7, 12.2
-    print(
-        f"  Seed circle: centre=({cx:.1f}, {cy:.1f})"
-        f"  radius={r:.1f}  diameter={2 * r:.1f}"
-    )
     cleared_polys = [get_circle_polygon((cx, cy), r, 64)]
 
     ca = ClearedArea(boundary=boundary, islands=islands, initial=cleared_polys)
@@ -658,10 +654,6 @@ def _narrow_shared():
 
     # Hardcoded seed circle
     cx, cy, r = -11.1, 0.0, 3.0
-    print(
-        f"  Seed circle: centre=({cx:.1f}, {cy:.1f})"
-        f"  radius={r:.1f}  diameter={2 * r:.1f}"
-    )
     cleared_polys = [get_circle_polygon((cx, cy), r, 64)]
 
     ca = ClearedArea(boundary=boundary, initial=cleared_polys)

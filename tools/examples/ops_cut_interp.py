@@ -19,20 +19,8 @@ def generate_interpolation_bracket():
     max_a = 0.40
     min_e = error_fn(min_a)
     max_e = error_fn(max_a)
-    interp.add(
-        error=min_e,
-        angle=min_a,
-        pos=(0.0, 0.0),
-        allow_skip=False,
-        is_conventional=False,
-    )
-    interp.add(
-        error=max_e,
-        angle=max_a,
-        pos=(1.0, 0.0),
-        allow_skip=False,
-        is_conventional=False,
-    )
+    interp.add(error=min_e, angle=min_a, pos=(0.0, 0.0))
+    interp.add(error=max_e, angle=max_a, pos=(1.0, 0.0))
 
     fine_angles = np.linspace(-0.7, 0.7, 200)
     curve = error_fn(fine_angles)

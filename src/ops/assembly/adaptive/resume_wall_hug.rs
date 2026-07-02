@@ -27,10 +27,6 @@ use crate::ops::cut::ToolPose;
 /// original envelope position.
 pub struct ResumeWallHug;
 
-impl ResumeWallHug {
-    pub const NAME: &'static str = "ResumeWallHug";
-}
-
 impl ResumeStrategy for ResumeWallHug {
     fn label(&self) -> &'static str {
         "wall_hug"

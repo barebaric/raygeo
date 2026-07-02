@@ -16,10 +16,6 @@ use crate::types::{Point, Polygon};
 
 pub struct ResumeBoundary;
 
-impl ResumeBoundary {
-    pub const NAME: &'static str = "ResumeBoundary";
-}
-
 impl ResumeStrategy for ResumeBoundary {
     fn label(&self) -> &'static str {
         "boundary"

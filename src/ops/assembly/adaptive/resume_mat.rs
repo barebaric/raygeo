@@ -16,10 +16,6 @@ use crate::types::{Point, Polygon};
 
 pub struct ResumeMat;
 
-impl ResumeMat {
-    pub const NAME: &'static str = "ResumeMat";
-}
-
 impl ResumeStrategy for ResumeMat {
     fn label(&self) -> &'static str {
         "mat"

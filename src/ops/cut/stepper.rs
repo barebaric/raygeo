@@ -323,7 +323,7 @@ fn step_inner(
             found_area = true;
         }
 
-        interp.add(error, angle, candidate, is_not_interp, is_conv);
+        interp.add(error, angle, candidate);
 
         last_angle = angle;
         if effective_err.abs() < best_error {

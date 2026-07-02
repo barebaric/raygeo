@@ -120,14 +120,7 @@ impl Interpolation {
     /// - If all samples share the same sign, keep the two closest to
     ///   zero (discard the worst).
     #[prof]
-    pub fn add(
-        &mut self,
-        error: f64,
-        angle: f64,
-        pos: Point,
-        _allow_skip: bool,
-        _is_conventional: bool,
-    ) {
+    pub fn add(&mut self, error: f64, angle: f64, pos: Point) {
         let item = InterpItem { angle, error, pos };
         if self.min.is_none() {
             self.min = Some(item);

@@ -7,10 +7,6 @@ use crate::ops::cut::ToolPose;
 
 pub struct ResumeSegment;
 
-impl ResumeSegment {
-    pub const NAME: &'static str = "ResumeSegment";
-}
-
 impl ResumeStrategy for ResumeSegment {
     fn label(&self) -> &'static str {
         "segment"

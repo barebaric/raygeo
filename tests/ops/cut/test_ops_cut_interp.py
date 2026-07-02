@@ -35,8 +35,6 @@ class TestInterpolationAdd:
             error=-1.0,
             angle=0.0,
             pos=(0.0, 0.0),
-            allow_skip=False,
-            is_conventional=False,
         )
         assert not interp.joint_is_valid()
 
@@ -46,15 +44,11 @@ class TestInterpolationAdd:
             error=-2.0,
             angle=-0.3,
             pos=(0.0, 0.0),
-            allow_skip=False,
-            is_conventional=False,
         )
         interp.add(
             error=-1.0,
             angle=-0.1,
             pos=(1.0, 0.0),
-            allow_skip=False,
-            is_conventional=False,
         )
         assert not interp.joint_is_valid()
 
@@ -64,15 +58,11 @@ class TestInterpolationAdd:
             error=-2.0,
             angle=-0.3,
             pos=(0.0, 0.0),
-            allow_skip=False,
-            is_conventional=False,
         )
         interp.add(
             error=1.0,
             angle=0.2,
             pos=(1.0, 0.0),
-            allow_skip=False,
-            is_conventional=False,
         )
         assert interp.joint_is_valid()
 
@@ -82,15 +72,11 @@ class TestInterpolationAdd:
             error=-0.5,
             angle=-0.2,
             pos=(0.0, 0.0),
-            allow_skip=False,
-            is_conventional=False,
         )
         interp.add(
             error=0.0,
             angle=0.1,
             pos=(1.0, 0.0),
-            allow_skip=False,
-            is_conventional=False,
         )
         assert interp.joint_is_valid()
 
@@ -100,22 +86,16 @@ class TestInterpolationAdd:
             error=-5.0,
             angle=-0.4,
             pos=(0.0, 0.0),
-            allow_skip=False,
-            is_conventional=False,
         )
         interp.add(
             error=3.0,
             angle=0.3,
             pos=(1.0, 0.0),
-            allow_skip=False,
-            is_conventional=False,
         )
         interp.add(
             error=-1.0,
             angle=-0.1,
             pos=(2.0, 0.0),
-            allow_skip=False,
-            is_conventional=False,
         )
         # min should now be -1.0 (closer to zero than -5.0)
         assert interp.joint_is_valid()
@@ -129,22 +109,16 @@ class TestInterpolationAdd:
             error=-3.0,
             angle=-0.3,
             pos=(0.0, 0.0),
-            allow_skip=False,
-            is_conventional=False,
         )
         interp.add(
             error=5.0,
             angle=0.4,
             pos=(1.0, 0.0),
-            allow_skip=False,
-            is_conventional=False,
         )
         interp.add(
             error=1.0,
             angle=0.1,
             pos=(2.0, 0.0),
-            allow_skip=False,
-            is_conventional=False,
         )
         assert interp.joint_is_valid()
         angle = interp.interpolate()
@@ -156,23 +130,17 @@ class TestInterpolationAdd:
             error=-10.0,
             angle=-0.5,
             pos=(0.0, 0.0),
-            allow_skip=False,
-            is_conventional=False,
         )
         interp.add(
             error=-5.0,
             angle=-0.3,
             pos=(1.0, 0.0),
-            allow_skip=False,
-            is_conventional=False,
         )
         # add a third negative sample
         interp.add(
             error=-20.0,
             angle=-0.7,
             pos=(2.0, 0.0),
-            allow_skip=False,
-            is_conventional=False,
         )
         # should have kept -10.0 and -5.0 (closest to zero)
         assert interp.has_pos((0.0, 0.0))
@@ -189,15 +157,11 @@ class TestInterpolationQuery:
             error=-1.0,
             angle=-0.2,
             pos=(3.0, 4.0),
-            allow_skip=False,
-            is_conventional=False,
         )
         interp.add(
             error=1.0,
             angle=0.2,
             pos=(5.0, 6.0),
-            allow_skip=False,
-            is_conventional=False,
         )
         assert interp.has_pos((3.0, 4.0))
         assert interp.has_pos((5.0, 6.0))
@@ -229,8 +193,6 @@ class TestInterpolationQuery:
             error=-1.0,
             angle=-0.2,
             pos=(0.0, 0.0),
-            allow_skip=False,
-            is_conventional=False,
         )
         assert interp.interpolate() == interp.max_angle()
 
@@ -240,15 +202,11 @@ class TestInterpolationQuery:
             error=-1.0,
             angle=-0.3,
             pos=(0.0, 0.0),
-            allow_skip=False,
-            is_conventional=False,
         )
         interp.add(
             error=1.0,
             angle=0.3,
             pos=(1.0, 0.0),
-            allow_skip=False,
-            is_conventional=False,
         )
         # error = 0 at angle = 0.0
         assert interp.interpolate() == pytest.approx(0.0)
@@ -259,15 +217,11 @@ class TestInterpolationQuery:
             error=-2.0,
             angle=-0.4,
             pos=(0.0, 0.0),
-            allow_skip=False,
-            is_conventional=False,
         )
         interp.add(
             error=1.0,
             angle=0.2,
             pos=(1.0, 0.0),
-            allow_skip=False,
-            is_conventional=False,
         )
         # zero crossing at angle where error = 0:
         # p = (0 - (-2)) / (1 - (-2)) = 2/3
