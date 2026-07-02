@@ -567,18 +567,6 @@ impl ClearedArea {
         self.cut_area_split(c1, c2, radius).0
     }
 
-    /// Compute the incremental cut area and split it into climb /
-    /// conventional components.
-    #[prof]
-    pub fn cut_area_milling(
-        &self,
-        c1: Point,
-        c2: Point,
-        radius: f64,
-    ) -> (f64, f64) {
-        self.cut_area_split(c1, c2, radius)
-    }
-
     /// Like [`cut_area`](Self::cut_area) but also returns the **left**
     /// portion — the area of the increment lying to the left of the
     /// step vector `c1 → c2` in the rotated frame.

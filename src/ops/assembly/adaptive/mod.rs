@@ -33,7 +33,6 @@ use crate::ops::cut::CutDirection;
 use crate::ops::cut::StepStatus;
 use crate::ops::cut::ToolPose;
 use crate::ops::state::State;
-use crate::prof::prof_report;
 use crate::types::{Point, Polygon};
 use prof_macros::prof;
 
@@ -774,24 +773,6 @@ pub fn adaptive_clearing(
     }
 
     ops
-}
-
-/// Wrapper around [`adaptive_clearing`] that prints a profiling report
-/// to stderr when the `RAYGEO_PROFILE` environment variable is set.
-#[prof]
-pub fn adaptive_clearing_with_profile(
-    cleared: &mut ClearedArea,
-    opts: &AdaptiveClearingOptions,
-    cut_state: &State,
-    travel_state: &State,
-) -> Ops {
-    let result = adaptive_clearing(cleared, opts, cut_state);
-    if std::env::var("RAYGEO_PROFILE").is_ok() {
-        prof_report();
-    }
-    // travel_state is accepted for API compatibility but unused.
-    let _ = travel_state;
-    result
 }
 
 // ── Initial pose ─────────────────────────────────────────────────────
