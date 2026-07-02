@@ -22,6 +22,7 @@ use clipper2::{
     PointInPolygonResult, PointScaler,
 };
 
+use crate::geo::shape::arc::normalize_angle_signed;
 use crate::geo::shape::line::get_line_segment_closest_point;
 use crate::geo::shape::line::get_segment_segment_distance;
 use crate::types::{Edge, Point, Polygon, Rect};
@@ -315,6 +316,63 @@ pub fn get_segment_swept_polygon(
     ]
 }
 
+/// The number of linear segments used to approximate a full-circle arc when
+/// constructing swept‑polygon vertex arcs.  The actual subdivision count for
+/// a given arc is `max(4, ceil(N_ARC * |span| / π))`.
+pub const SWEPT_N_ARC: usize = 32;
+
+/// Push interior points of a circular arc (excluding endpoints) into `pts`.
+///
+/// The arc is centred at `center`, starts at angle `a0` (radians), and
+/// sweeps `span` radians counter-clockwise (positive) or clockwise
+/// (negative).  Points are densely sampled so the chord error is
+/// acceptably small for tool‑radius values.
+///
+/// When `|span| < 1e-6` nothing is pushed (the arc is degenerate).
+pub fn push_arc_interior(
+    pts: &mut Vec<Point>,
+    center: Point,
+    a0: f64,
+    span: f64,
+    r: f64,
+) {
+    if span.abs() < 1e-6 {
+        return;
+    }
+    let n = ((SWEPT_N_ARC as f64 * span.abs() / std::f64::consts::PI).ceil()
+        as usize)
+        .max(4);
+    for i in 1..n {
+        let a = a0 + span * i as f64 / n as f64;
+        pts.push(center + Point::new(a.cos() * r, a.sin() * r));
+    }
+}
+
+/// Miter intersection of two offset lines through vertex `v`.
+///
+/// Line A:  `v + off_a  + t * dir_a`
+/// Line B:  `v + off_b  + s * dir_b`
+///
+/// Returns the intersection point.  When the lines are (nearly) parallel
+/// falls back to `v + off_a`.
+pub fn miter_offset_intersection(
+    v: Point,
+    off_a: Point,
+    dir_a: Point,
+    off_b: Point,
+    dir_b: Point,
+) -> Point {
+    let p0 = v + off_a;
+    let p1 = v + off_b;
+    let d = p1 - p0;
+    let denom = dir_a.x * (-dir_b.y) - dir_a.y * (-dir_b.x);
+    if denom.abs() < 1e-9 {
+        return p0; // parallel — fall back
+    }
+    let t = (d.x * (-dir_b.y) - d.y * (-dir_b.x)) / denom;
+    p0 + dir_a * t
+}
+
 /// Minkowski sum of a polyline path with a disk of `radius`.
 ///
 /// Produces a single polygon covering the swept area — the union of
@@ -352,44 +410,6 @@ pub fn get_polyline_swept_polygon(path: &[Point], radius: f64) -> Vec<Polygon> {
         });
     }
 
-    const N_ARC: usize = 32;
-
-    // Push interior arc points from `a0` to `a0 + span` (excluding endpoints).
-    let push_arc_interior =
-        |pts: &mut Vec<Point>, center: Point, a0: f64, span: f64, r: f64| {
-            if span.abs() < 1e-6 {
-                return;
-            }
-            let n = ((N_ARC as f64 * span.abs() / std::f64::consts::PI).ceil()
-                as usize)
-                .max(4);
-            for i in 1..n {
-                let a = a0 + span * i as f64 / n as f64;
-                pts.push(center + Point::new(a.cos() * r, a.sin() * r));
-            }
-        };
-
-    // Miter intersection of two offset lines through vertex `v`:
-    //   line A:  v + off_a  + t * dir_a
-    //   line B:  v + off_b  + s * dir_b
-    // Returns the intersection point.
-    let miter = |v: Point,
-                 off_a: Point,
-                 dir_a: Point,
-                 off_b: Point,
-                 dir_b: Point|
-     -> Point {
-        let p0 = v + off_a;
-        let p1 = v + off_b;
-        let d = p1 - p0;
-        let denom = dir_a.x * (-dir_b.y) - dir_a.y * (-dir_b.x);
-        if denom.abs() < 1e-9 {
-            return p0; // parallel — fall back
-        }
-        let t = (d.x * (-dir_b.y) - d.y * (-dir_b.x)) / denom;
-        p0 + dir_a * t
-    };
-
     // Cross product of consecutive segment directions.
     //   cross > 0  →  LEFT turn  (CCW)
     //   cross < 0  →  RIGHT turn (CW)
@@ -414,13 +434,7 @@ pub fn get_polyline_swept_polygon(path: &[Point], radius: f64) -> Vec<Polygon> {
                 pts.push(path[i + 1] + *rp_i);
                 let a0 = rp_i.y.atan2(rp_i.x);
                 let a1 = rp_nxt.y.atan2(rp_nxt.x);
-                let mut span = a1 - a0;
-                while span <= -std::f64::consts::PI {
-                    span += 2.0 * std::f64::consts::PI;
-                }
-                while span > std::f64::consts::PI {
-                    span -= 2.0 * std::f64::consts::PI;
-                }
+                let span = normalize_angle_signed(a1 - a0);
                 if span.abs() > 0.02 {
                     push_arc_interior(&mut pts, path[i + 1], a0, span, radius);
                 }
@@ -433,7 +447,7 @@ pub fn get_polyline_swept_polygon(path: &[Point], radius: f64) -> Vec<Polygon> {
                 }
             } else {
                 // Convex (or straight) → Miter.
-                pts.push(miter(
+                pts.push(miter_offset_intersection(
                     path[i + 1],
                     *rp_i,
                     segs[i].dir,
@@ -473,20 +487,14 @@ pub fn get_polyline_swept_polygon(path: &[Point], radius: f64) -> Vec<Polygon> {
                 pts.push(path[i + 1] + *lp_nxt);
                 let a0 = lp_nxt.y.atan2(lp_nxt.x);
                 let a1 = lp_cur.y.atan2(lp_cur.x);
-                let mut span = a1 - a0;
-                while span <= -std::f64::consts::PI {
-                    span += 2.0 * std::f64::consts::PI;
-                }
-                while span > std::f64::consts::PI {
-                    span -= 2.0 * std::f64::consts::PI;
-                }
+                let span = normalize_angle_signed(a1 - a0);
                 if span.abs() > 0.02 {
                     push_arc_interior(&mut pts, path[i + 1], a0, span, radius);
                 }
                 pts.push(path[i + 1] + *lp_cur);
             } else {
                 // Convex (or straight) → Miter.
-                pts.push(miter(
+                pts.push(miter_offset_intersection(
                     path[i + 1],
                     *lp_nxt,
                     -segs[i + 1].dir,

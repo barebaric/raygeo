@@ -18,10 +18,10 @@ use crate::geo::shape::polygon::{
     get_polygons_intersection, get_polygons_union, get_polyline_swept_polygon,
     get_segment_swept_polygon, get_signed_boundary_distance, is_almost_equal,
     is_point_inside_polygon, is_polygon_clockwise, is_polygon_convex,
-    normalize_polygons, offset_polygon, point_line_distance,
-    polygons_intersect, resample_polygon, rotate_polygon, rotate_polygons,
-    scale_polygon, translate_bounds, translate_polygon, translate_polygons,
-    JoinStyle,
+    miter_offset_intersection, normalize_polygons, offset_polygon,
+    point_line_distance, polygons_intersect, resample_polygon, rotate_polygon,
+    rotate_polygons, scale_polygon, translate_bounds, translate_polygon,
+    translate_polygons, JoinStyle,
 };
 use crate::types::{Point, Rect};
 use numpy::{PyArray2, PyArrayMethods};
@@ -148,6 +148,7 @@ pub fn register(shape_mod: &Bound<'_, PyModule>) -> PyResult<()> {
         is_point_inside_polygon_py,
         is_polygon_clockwise_py,
         is_polygon_convex_py,
+        miter_offset_intersection_py,
         normalize_polygons_numpy_py,
         normalize_polygons_py,
         offset_polygon_py,
@@ -687,6 +688,52 @@ fn get_polyline_swept_polygon_py(
     let path_pts: Vec<Point> =
         path.iter().map(|&(x, y)| Point::new(x, y)).collect();
     polygons_to_tuples(get_polyline_swept_polygon(&path_pts, radius))
+}
+
+#[gen_stub_pyfunction(
+    python = r#"
+    import raygeo.geo.types
+
+    def miter_offset_intersection(
+        v: types.Point,
+        off_a: types.Point,
+        dir_a: types.Point,
+        off_b: types.Point,
+        dir_b: types.Point,
+    ) -> types.Point:
+        """Intersect two offset lines at a vertex for miter join.
+
+        Line A: ``v + off_a + t * dir_a``
+        Line B: ``v + off_b + s * dir_b``
+
+        Returns the intersection point.  When the lines are nearly parallel
+        falls back to ``v + off_a``.
+
+        :param v: Vertex point (x, y).
+        :param off_a: Offset from *v* along line A.
+        :param dir_a: Unit direction vector of line A.
+        :param off_b: Offset from *v* along line B.
+        :param dir_b: Unit direction vector of line B.
+        :returns: Intersection point (x, y).
+        """
+    "#,
+    module = "raygeo.geo.shape.polygon"
+)]
+#[pyfunction(name = "miter_offset_intersection")]
+fn miter_offset_intersection_py(
+    v: (f64, f64),
+    off_a: (f64, f64),
+    dir_a: (f64, f64),
+    off_b: (f64, f64),
+    dir_b: (f64, f64),
+) -> (f64, f64) {
+    point_to_tuple(miter_offset_intersection(
+        Point::new(v.0, v.1),
+        Point::new(off_a.0, off_a.1),
+        Point::new(dir_a.0, dir_a.1),
+        Point::new(off_b.0, off_b.1),
+        Point::new(dir_b.0, dir_b.1),
+    ))
 }
 
 #[gen_stub_pyfunction(

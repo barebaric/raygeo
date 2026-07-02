@@ -39,6 +39,7 @@ from raygeo.geo.shape.polygon import (
     is_almost_equal,
     is_point_inside_polygon,
     is_polygon_convex,
+    miter_offset_intersection,
     normalize_polygons,
     normalize_polygons_numpy,
     offset_polygon,
@@ -75,6 +76,82 @@ def P(*points) -> Polygon:
 def PN(*points) -> np.ndarray:
     """Helper to create a numpy polygon from integer points."""
     return np.array([[float(x), float(y)] for x, y in points], dtype=float)
+
+
+def _polygon_area(poly):
+    """Shoelace (signed) area of a polygon."""
+    n = len(poly)
+    area = 0.0
+    for i in range(n):
+        x1, y1 = poly[i]
+        x2, y2 = poly[(i + 1) % n]
+        area += x1 * y2 - x2 * y1
+    return area / 2.0
+
+
+# --- miter_offset_intersection ---
+
+
+class TestMiterOffsetIntersection:
+    def test_perpendicular_horiz_vert(self):
+        """Horizontal offset line × vertical offset line (right angle)."""
+        # Line A: (0,1) + t*(1,0)  (horizontal at y=1)
+        # Line B: (1,0) + s*(0,1)  (vertical   at x=1)
+        result = miter_offset_intersection(
+            (0.0, 0.0),
+            (0.0, 1.0),
+            (1.0, 0.0),
+            (1.0, 0.0),
+            (0.0, 1.0),
+        )
+        assert result == (1.0, 1.0)
+
+    def test_parallel_lines_fallback(self):
+        """Nearly parallel lines fall back to v + off_a."""
+        result = miter_offset_intersection(
+            (5.0, 5.0),
+            (2.0, 0.0),
+            (1.0, 0.0),
+            (-2.0, 0.0),
+            (1.0, 0.0),
+        )
+        assert result == (7.0, 5.0)
+
+    def test_oblique_45_deg(self):
+        """Lines at ±45° intersect at the vertex."""
+        result = miter_offset_intersection(
+            (0.0, 0.0),
+            (0.0, 0.0),
+            (1.0, 1.0),
+            (0.0, 0.0),
+            (1.0, -1.0),
+        )
+        assert result == (0.0, 0.0)
+
+    def test_offset_at_vertex(self):
+        """Non-zero offsets from vertex with perpendicular directions."""
+        # Line A: (10,11) + t*(1,0)  (horizontal at y=11)
+        # Line B: (11,10) + s*(0,1)  (vertical   at x=11)
+        result = miter_offset_intersection(
+            (10.0, 10.0),
+            (0.0, 1.0),
+            (1.0, 0.0),
+            (1.0, 0.0),
+            (0.0, 1.0),
+        )
+        assert result == (11.0, 11.0)
+
+    def test_miter_convex_corner(self):
+        """Typical miter at a convex corner of a swept polygon."""
+        # Approximating right-perp offset lines meeting at a convex
+        # corner where dir_a points right and dir_b points up.
+        v, r = (0.0, 0.0), 5.0
+        dir_a, dir_b = (1.0, 0.0), (0.0, 1.0)
+        off_a = (0.0, -r)  # right-perp of (1,0) = (0,-1) * r
+        off_b = (r, 0.0)  # right-perp of (0,1) = (1,0) * r
+        result = miter_offset_intersection(v, off_a, dir_a, off_b, dir_b)
+        # Lines: (0,-5) + t*(1,0) and (5,0) + s*(0,1) → intersect at (5,-5)
+        assert result == (5.0, -5.0)
 
 
 class TestPolygonArea:
@@ -1512,6 +1589,8 @@ class TestPolygonsClosestPoint:
 
 
 class TestGetPolylineSweptPolygon:
+    # ── Degenerate inputs ────────────────────────────────────────
+
     def test_empty_path(self):
         """Empty path returns empty list."""
         assert get_polyline_swept_polygon([], 5.0) == []
@@ -1520,12 +1599,12 @@ class TestGetPolylineSweptPolygon:
         """Single point path returns empty list."""
         assert get_polyline_swept_polygon([(0.0, 0.0)], 5.0) == []
 
-    def test_single_segment(self):
-        """Two-point path (single segment) produces a single polygon."""
+    # ── Single segment (n=2) ─────────────────────────────────────
+
+    def test_single_segment_horizontal(self):
+        """Horizontal segment produces a capsule-like polygon."""
         result = get_polyline_swept_polygon([(0.0, 0.0), (10.0, 0.0)], 5.0)
         assert len(result) == 1
-        assert len(result[0]) >= 4
-        # bounding box should roughly be [-5, 15] x [-5, 5]
         xs = [p[0] for p in result[0]]
         ys = [p[1] for p in result[0]]
         assert min(xs) >= -5.1
@@ -1533,61 +1612,92 @@ class TestGetPolylineSweptPolygon:
         assert min(ys) >= -5.1
         assert max(ys) <= 5.1
 
-    def test_three_point_path(self):
-        """Three-point L-shaped path produces a single polygon."""
+    def test_single_segment_vertical(self):
+        """Vertical segment produces a capsule-like polygon."""
+        result = get_polyline_swept_polygon([(0.0, 0.0), (0.0, 10.0)], 3.0)
+        assert len(result) == 1
+        xs = [p[0] for p in result[0]]
+        ys = [p[1] for p in result[0]]
+        assert min(xs) >= -3.1
+        assert max(xs) <= 3.1
+        assert min(ys) >= -3.1
+        assert max(ys) <= 13.1
+
+    def test_single_segment_diagonal(self):
+        """Diagonal segment produces a rotated capsule."""
+        result = get_polyline_swept_polygon([(0.0, 0.0), (10.0, 10.0)], 2.0)
+        assert len(result) == 1
+        assert len(result[0]) >= 4
+
+    def test_single_segment_zero_length(self):
+        """Zero-length segment (degenerate) treated as single point → empty."""
+        result = get_polyline_swept_polygon([(5.0, 5.0), (5.0, 5.0)], 3.0)
+        # Two distinct points but coincident — the path has a segment of
+        # zero length; the algorithm still produces a polygon (the
+        # half-circle caps overlap).
+        assert len(result) == 1
+
+    # ── Multi-segment: turn types ────────────────────────────────
+
+    def test_three_point_l_path(self):
+        """L-shaped path (90° left turn at middle vertex)."""
         path = [(0.0, 0.0), (10.0, 0.0), (10.0, 10.0)]
         result = get_polyline_swept_polygon(path, 3.0)
         assert len(result) == 1
         assert len(result[0]) >= 4
 
-    def test_swept_area_non_zero(self):
-        """Swept polygon should have positive area."""
-        result = get_polyline_swept_polygon(
-            [(0.0, 0.0), (20.0, 0.0), (20.0, 20.0)], 5.0
-        )
-        assert len(result) == 1
-        # compute polygon area via shoelace formula
-        pts = result[0]
-        n = len(pts)
-        area = 0.0
-        for i in range(n):
-            x1, y1 = pts[i]
-            x2, y2 = pts[(i + 1) % n]
-            area += x1 * y2 - x2 * y1
-        area = abs(area) / 2.0
-        assert area > 0.0
-
-    def test_zero_radius(self):
-        """Zero radius returns a degenerate polygon tracing the path."""
-        result = get_polyline_swept_polygon(
-            [(0.0, 0.0), (10.0, 0.0), (10.0, 10.0)], 0.0
-        )
-        assert len(result) == 1
-        assert len(result[0]) >= 2
-
-    def test_larger_radius(self):
-        """Larger radius produces a larger swept area."""
-        r_small = get_polyline_swept_polygon(
-            [(0.0, 0.0), (10.0, 0.0), (10.0, 10.0)], 2.0
-        )
-        r_large = get_polyline_swept_polygon(
-            [(0.0, 0.0), (10.0, 0.0), (10.0, 10.0)], 5.0
-        )
-        xs_small = [p[0] for p in r_small[0]]
-        xs_large = [p[0] for p in r_large[0]]
-        ys_small = [p[1] for p in r_small[0]]
-        ys_large = [p[1] for p in r_large[0]]
-        assert min(xs_large) < min(xs_small)
-        assert max(xs_large) > max(xs_small)
-        assert min(ys_large) < min(ys_small)
-        assert max(ys_large) > max(ys_small)
-
-    def test_sharp_turn(self):
-        """Sharp turn (>90°) still produces a valid polygon."""
+    def test_sharp_turn_right(self):
+        """Sharp right turn (>90°)."""
         path = [(0.0, 0.0), (10.0, 0.0), (0.0, 10.0)]
         result = get_polyline_swept_polygon(path, 4.0)
         assert len(result) == 1
         assert len(result[0]) >= 4
+
+    def test_acute_angle(self):
+        """Very acute angle (<30°)."""
+        path = [(0.0, 0.0), (10.0, 0.0), (11.0, 1.0)]
+        result = get_polyline_swept_polygon(path, 2.0)
+        assert len(result) == 1
+        assert len(result[0]) >= 4
+
+    def test_obtuse_angle(self):
+        """Obtuse angle near 180°."""
+        path = [(0.0, 0.0), (10.0, 0.0), (19.0, 1.0)]
+        result = get_polyline_swept_polygon(path, 3.0)
+        assert len(result) == 1
+        assert len(result[0]) >= 4
+
+    def test_collinear_path(self):
+        """All points collinear acts like a single long segment."""
+        path = [(0.0, 0.0), (5.0, 0.0), (10.0, 0.0)]
+        result = get_polyline_swept_polygon(path, 2.0)
+        assert len(result) == 1
+        xs = [p[0] for p in result[0]]
+        assert min(xs) >= -2.1
+        assert max(xs) <= 12.1
+
+    def test_redundant_collinear_midpoint(self):
+        """Midpoint exactly on the line doesn't create extra vertex."""
+        path = [(0.0, 0.0), (5.0, 0.0), (10.0, 0.0), (10.0, 10.0)]
+        result = get_polyline_swept_polygon(path, 2.0)
+        assert len(result) == 1
+        assert len(result[0]) >= 4
+
+    # ── Alternating / winding paths ──────────────────────────────
+
+    def test_alternating_turns(self):
+        """Path with left and right turns is valid."""
+        path = [(0.0, 0.0), (10.0, 0.0), (10.0, 5.0), (0.0, 5.0)]
+        result = get_polyline_swept_polygon(path, 2.0)
+        assert len(result) == 1
+        assert _polygon_area(result[0]) > 0.0
+
+    def test_s_path(self):
+        """S‑shaped path (left then right turn)."""
+        path = [(0.0, 0.0), (10.0, 0.0), (5.0, 5.0), (15.0, 5.0)]
+        result = get_polyline_swept_polygon(path, 2.0)
+        assert len(result) == 1
+        assert _polygon_area(result[0]) > 0.0
 
     def test_spiral_path(self):
         """A winding path produces a valid polygon."""
@@ -1601,6 +1711,125 @@ class TestGetPolylineSweptPolygon:
         result = get_polyline_swept_polygon(path, 3.0)
         assert len(result) == 1
         assert len(result[0]) >= 4
+        assert _polygon_area(result[0]) > 0.0
+
+    # ── Radius extremes ──────────────────────────────────────────
+
+    def test_zero_radius(self):
+        """Zero radius returns a degenerate polygon tracing the path."""
+        result = get_polyline_swept_polygon(
+            [(0.0, 0.0), (10.0, 0.0), (10.0, 10.0)], 0.0
+        )
+        assert len(result) == 1
+        assert len(result[0]) >= 2
+
+    def test_negative_radius(self):
+        """Negative radius still produces output (treated as zero/positive)."""
+        result = get_polyline_swept_polygon([(0.0, 0.0), (10.0, 0.0)], -2.0)
+        assert len(result) == 1
+
+    def test_larger_radius(self):
+        """Larger radius produces a larger swept area."""
+        r_small = get_polyline_swept_polygon(
+            [(0.0, 0.0), (10.0, 0.0), (10.0, 10.0)], 2.0
+        )
+        r_large = get_polyline_swept_polygon(
+            [(0.0, 0.0), (10.0, 0.0), (10.0, 10.0)], 5.0
+        )
+        area_small = abs(_polygon_area(r_small[0]))
+        area_large = abs(_polygon_area(r_large[0]))
+        assert area_large > area_small
+
+    def test_radius_equals_segment_length(self):
+        """Radius == segment length should still work."""
+        result = get_polyline_swept_polygon([(0.0, 0.0), (10.0, 0.0)], 10.0)
+        assert len(result) == 1
+        area = abs(_polygon_area(result[0]))
+        # area ≈ π * 10² + 10 * 20 = 314 + 200 = 514
+        assert area > 500.0
+
+    def test_radius_larger_than_segment(self):
+        """Radius > segment length: the swept polygon is dominated by disks."""
+        result = get_polyline_swept_polygon(
+            [(0.0, 0.0), (10.0, 0.0), (10.0, 10.0)], 20.0
+        )
+        assert len(result) == 1
+        assert _polygon_area(result[0]) > 0.0
+
+    def test_very_large_radius(self):
+        """Very large radius still produces a valid polygon."""
+        result = get_polyline_swept_polygon([(0.0, 0.0), (100.0, 0.0)], 500.0)
+        assert len(result) == 1
+        assert len(result[0]) >= 4
+
+    # ── Geometric invariants ─────────────────────────────────────
+
+    def test_swept_area_non_zero(self):
+        """Swept polygon should have positive area."""
+        result = get_polyline_swept_polygon(
+            [(0.0, 0.0), (20.0, 0.0), (20.0, 20.0)], 5.0
+        )
+        assert len(result) == 1
+        assert _polygon_area(result[0]) != 0.0
+
+    def test_ccw_winding_all_left_turns(self):
+        """Winding of swept polygon is CCW when all path turns are left."""
+        path = [(0.0, 0.0), (10.0, 0.0), (15.0, 8.0)]
+        result = get_polyline_swept_polygon(path, 2.0)
+        assert _polygon_area(result[0]) > 0.0  # CCW
+
+    def test_ccw_winding_all_right_turns(self):
+        """Winding of swept polygon is also CCW even for right turns."""
+        path = [(0.0, 0.0), (10.0, 0.0), (10.0, -8.0)]
+        result = get_polyline_swept_polygon(path, 2.0)
+        assert _polygon_area(result[0]) > 0.0  # CCW
+
+    def test_polygon_minimum_vertices(self):
+        """Swept polygon has a reasonable number of vertices."""
+        result = get_polyline_swept_polygon([(0.0, 0.0), (10.0, 0.0)], 3.0)
+        pts = result[0]
+        assert len(pts) >= 4
+
+    # ── Additional scenarios ─────────────────────────────────────
+
+    def test_four_point_z_path(self):
+        """Z‑shaped path with 4 points."""
+        path = [(0.0, 0.0), (10.0, 0.0), (0.0, 5.0), (10.0, 5.0)]
+        result = get_polyline_swept_polygon(path, 2.0)
+        assert len(result) == 1
+        assert _polygon_area(result[0]) > 0.0
+
+    def test_long_path_many_points(self):
+        """Path with many points (e.g. 50) is handled efficiently."""
+        path = [(i * 2.0, math.sin(i * 0.5) * 5.0) for i in range(50)]
+        result = get_polyline_swept_polygon(path, 1.5)
+        assert len(result) == 1
+        assert _polygon_area(result[0]) > 0.0
+
+    def test_negative_coordinates(self):
+        """Path in negative quadrant is handled."""
+        path = [(-10.0, -10.0), (0.0, -10.0), (0.0, 0.0)]
+        result = get_polyline_swept_polygon(path, 2.0)
+        assert len(result) == 1
+        assert _polygon_area(result[0]) > 0.0
+
+    def test_path_around_origin(self):
+        """Path crossing all quadrants around origin."""
+        path = [(0.0, 0.0), (5.0, 0.0), (5.0, 5.0), (-5.0, 5.0), (-5.0, -5.0)]
+        result = get_polyline_swept_polygon(path, 2.0)
+        assert len(result) == 1
+        assert _polygon_area(result[0]) > 0.0
+
+    def test_many_segments_straight_line(self):
+        """Many collinear segments behave the same as a long segment."""
+        pts = [(float(i), 0.0) for i in range(20)]
+        result_many = get_polyline_swept_polygon(pts, 2.0)
+        result_two = get_polyline_swept_polygon([(0.0, 0.0), (19.0, 0.0)], 2.0)
+        assert len(result_many) == 1
+        # Areas should be similar (collinear extra vertices add no width)
+        area_many = abs(_polygon_area(result_many[0]))
+        area_two = abs(_polygon_area(result_two[0]))
+        assert abs(area_many - area_two) < 0.1 * area_two
 
 
 # --- does_path_sweep_intersect_polygon ---

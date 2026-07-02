@@ -677,6 +677,33 @@ Check if a polygon is convex.
 | _Returns_    | `bool`                  | True if the polygon is convex. |
 | _Complexity_ |                         | O(n)                           |
 
+### `miter_offset_intersection()`
+
+```python
+miter_offset_intersection(
+    v: types.Point,
+    off_a: types.Point,
+    dir_a: types.Point,
+    off_b: types.Point,
+    dir_b: types.Point,
+) -> types.Point
+```
+
+Intersect two offset lines at a vertex for miter join.
+
+Line A: `v + off_a + t * dir_a` Line B: `v + off_b + s * dir_b`
+
+Returns the intersection point. When the lines are nearly parallel falls back to `v + off_a`.
+
+| Parameter | Type          | Description                      |
+| --------- | ------------- | -------------------------------- |
+| `v`       | `types.Point` | Vertex point (x, y).             |
+| `off_a`   | `types.Point` | Offset from *v* along line A.    |
+| `dir_a`   | `types.Point` | Unit direction vector of line A. |
+| `off_b`   | `types.Point` | Offset from *v* along line B.    |
+| `dir_b`   | `types.Point` | Unit direction vector of line B. |
+| _Returns_ | `types.Point` | Intersection point (x, y).       |
+
 ### `normalize_polygons()`
 
 ```python

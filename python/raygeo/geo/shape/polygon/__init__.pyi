@@ -42,6 +42,7 @@ __all__ = [
     "is_point_inside_polygon",
     "is_polygon_clockwise",
     "is_polygon_convex",
+    "miter_offset_intersection",
     "normalize_polygons",
     "normalize_polygons_numpy",
     "offset_polygon",
@@ -438,6 +439,24 @@ def is_polygon_convex(polygon: collections.abc.Sequence[types.Point]) -> bool:
     :param polygon: Polygon as (x, y) points.
     :returns: True if the polygon is convex.
     :complexity: O(n)
+    """
+
+def miter_offset_intersection(v: types.Point, off_a: types.Point, dir_a: types.Point, off_b: types.Point, dir_b: types.Point) -> types.Point:
+    r"""
+    Intersect two offset lines at a vertex for miter join.
+    
+    Line A: ``v + off_a + t * dir_a``
+    Line B: ``v + off_b + s * dir_b``
+    
+    Returns the intersection point.  When the lines are nearly parallel
+    falls back to ``v + off_a``.
+    
+    :param v: Vertex point (x, y).
+    :param off_a: Offset from *v* along line A.
+    :param dir_a: Unit direction vector of line A.
+    :param off_b: Offset from *v* along line B.
+    :param dir_b: Unit direction vector of line B.
+    :returns: Intersection point (x, y).
     """
 
 def normalize_polygons(polygons: collections.abc.Sequence[types.Polygon]) -> tuple[list[types.Polygon], float, float]:
