@@ -11,6 +11,7 @@
 
 pub mod resume;
 mod resume_boundary;
+mod resume_island;
 mod resume_mat;
 mod resume_segment;
 mod resume_wall_hug;
@@ -104,6 +105,9 @@ pub struct AdaptiveClearingOptions {
     /// When set, write per-step trace records to this file for the
     /// Python inspector.
     pub trace_path: Option<PathBuf>,
+    /// Tolerance for vertex simplification and clean-up (mm).
+    /// Default 0.1.
+    pub tolerance: f64,
 }
 
 impl Default for AdaptiveClearingOptions {
@@ -124,6 +128,7 @@ impl Default for AdaptiveClearingOptions {
             start_heading: None,
             expansion_batch_size: 20,
             trace_path: None,
+            tolerance: 0.1,
         }
     }
 }
@@ -344,6 +349,7 @@ pub fn adaptive_clearing(
     // immediately-stalling) position without any actual cutting.
     let mut last_resume_area: f64 = -1.0;
     let mut last_resume_pos = tool.pos;
+    let mut resume_blacklist: Vec<Point> = Vec::new();
 
     #[cfg(debug_assertions)]
     macro_rules! write_exit_trace {
@@ -441,21 +447,13 @@ pub fn adaptive_clearing(
                 }
                 near_envelope = true;
             } else if near_envelope && !left_envelope {
+                let prev_env_dist =
+                    envelope_distance(prev_pos, &valid_tool_area);
                 left_envelope = true;
                 last_wall_hug = Some(ToolPose {
                     pos: prev_pos,
                     heading: tool.heading,
                 });
-                dbg_log!(
-                    "  WALL_HUG  departed at ({:.3},{:.3})  \
-                     last_hug=({:.3},{:.3})  dist={:.4}  heading={:.4}",
-                    tool.pos.x,
-                    tool.pos.y,
-                    prev_pos.x,
-                    prev_pos.y,
-                    dist,
-                    tool.heading,
-                );
             }
         }
 
@@ -482,6 +480,9 @@ pub fn adaptive_clearing(
                     if steps_since_batch > 0 {
                         cleared.commit_batch_local();
                         steps_since_batch = 0;
+                    }
+                    if cleared.total_area() - last_resume_area > 0.0 {
+                        resume_blacklist.clear();
                     }
                     resume_count += 1;
                     if resume_count > MAX_RESUMES {
@@ -511,10 +512,12 @@ pub fn adaptive_clearing(
                             last_resume_area,
                             last_resume_pos,
                             last_wall_hug,
+                            blacklist: &resume_blacklist,
                         };
                         try_resume(&ctx, &tool)
                     };
-                    if let Some((_source, rp)) = result {
+                    if let Some((source, rp)) = result {
+                        resume_blacklist.push(rp.pos);
                         resume::emit_resume_travel(
                             &mut ops,
                             &*cleared,
@@ -541,7 +544,7 @@ pub fn adaptive_clearing(
                                 buf.remaining_area(cleared.remaining_area());
                                 buf.prev_pos(prev_pos);
                                 buf.ops_len(tp_len);
-                                buf.resume_source(_source as u8);
+                                buf.resume_source(source as u8);
                                 tr.write(
                                     TraceKind::ResumeStuck as u8,
                                     buf.pack(),
@@ -588,6 +591,9 @@ pub fn adaptive_clearing(
                 cleared.commit_batch_local();
                 steps_since_batch = 0;
             }
+            if cleared.total_area() - last_resume_area > 0.0 {
+                resume_blacklist.clear();
+            }
 
             resume_count += 1;
             if resume_count > MAX_RESUMES {
@@ -630,10 +636,12 @@ pub fn adaptive_clearing(
                     last_resume_area,
                     last_resume_pos,
                     last_wall_hug,
+                    blacklist: &resume_blacklist,
                 };
                 try_resume(&ctx, &tool)
             };
-            if let Some((_source, rp)) = result {
+            if let Some((source, rp)) = result {
+                resume_blacklist.push(rp.pos);
                 resume::emit_resume_travel(
                     &mut ops,
                     &*cleared,
@@ -660,7 +668,7 @@ pub fn adaptive_clearing(
                         buf.remaining_area(cleared.remaining_area());
                         buf.prev_pos(prev_pos);
                         buf.ops_len(tp_len);
-                        buf.resume_source(_source as u8);
+                        buf.resume_source(source as u8);
                         tr.write(TraceKind::ResumeStall as u8, buf.pack());
                     }
                 }
@@ -708,7 +716,7 @@ pub fn adaptive_clearing(
         if steps_since_batch >= opts.expansion_batch_size {
             cleared.commit_batch_local();
             steps_since_batch = 0;
-            cleared.compact_if_needed(0.5);
+            cleared.compact_if_needed(opts.tolerance);
         }
 
         // Trace this cut step.
@@ -740,6 +748,16 @@ pub fn adaptive_clearing(
         trace_step_idx += 1;
 
         prev_pos = tool.pos;
+        // Clear blacklist only when area growth since the last resume
+        // exceeds the engagement at the current tool position.  Tiny
+        // engagement-noise growth (a fraction of the tool disk overlapping
+        // the boundary) will not clear it, preventing repeated same-point
+        // resumes.
+        let area_growth = cleared.total_area() - last_resume_area;
+        let eng = cleared.point_engagement(tool.pos, opts.radius);
+        if area_growth >= eng.area {
+            resume_blacklist.clear();
+        }
     }
 
     // Flush any remaining batch.

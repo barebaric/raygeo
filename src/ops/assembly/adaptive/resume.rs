@@ -24,6 +24,7 @@ use super::tool::Tool;
 use super::AdaptiveClearingOptions;
 
 pub use super::resume_boundary::ResumeBoundary;
+pub use super::resume_island::ResumeIsland;
 pub use super::resume_mat::{
     find_all_mat_crossings, mat_resume_from_crossing, ResumeMat,
 };
@@ -358,18 +359,20 @@ pub fn emit_resume_travel(
 
 // ── ResumeSource enum (renamed) ─────────────────────────────────────
 
-/// Which resume mechanism succeeded.
+/// Which resume mechanism succeeded, in priority order.
 #[derive(Clone, Copy, PartialEq, Eq)]
 #[repr(u8)]
 pub enum ResumeSource {
-    /// Walk forward from segment_start probing for engagement.
-    ResumeSegment = 1,
-    /// MAT-guided walk to pocket-wall meeting point.
-    ResumeMat = 2,
-    /// Find engagement on the cleared-area frontier.
-    ResumeBoundary = 3,
     /// Resume from the envelope-departure point (wall-hug).
-    ResumeWallHug = 4,
+    ResumeWallHug = 1,
+    /// Walk forward from segment_start probing for engagement.
+    ResumeSegment = 2,
+    /// MAT-guided walk to pocket-wall meeting point.
+    ResumeMat = 3,
+    /// Find engagement on the cleared-area frontier.
+    ResumeBoundary = 4,
+    /// Walk the island perimeter looking for productive engagement.
+    ResumeIsland = 5,
 }
 
 // ── ResumeContext ───────────────────────────────────────────────────
@@ -393,14 +396,18 @@ pub struct ResumeCtx<'a> {
     /// `near_envelope` tracking is active; consumed by
     /// [`ResumeWallHug`].
     pub last_wall_hug: Option<ToolPose>,
+    /// Positions that have already been tried and led to immediate stalls.
+    /// Any strategy that produces a position too close to one of these is
+    /// rejected.
+    pub blacklist: &'a [Point],
 }
 
 // ── ResumeStrategy trait ────────────────────────────────────────────
 
 /// A strategy that finds a new tool position when the stepper stalls.
 pub trait ResumeStrategy {
-    const NAME: &'static str;
     fn find_next(&self, ctx: &ResumeCtx, tool: &Tool) -> Option<ToolPose>;
+    fn label(&self) -> &'static str;
 }
 
 // ── try_resume orchestrator ──────────────────────────────────────────
@@ -437,61 +444,45 @@ pub fn try_resume(
         return None;
     }
 
-    // ── Strategy 0: WallHug (preferred) ──────────────────────────
-    // Resume from the point where the tool last departed the envelope
-    // wall.  Tried first so the tool continues from the departure point
-    // rather than re-cutting from the original boundary resume position.
-    if ctx.last_wall_hug.is_some() {
-        let s = ResumeWallHug;
+    // Try each strategy in priority order.  Each strategy decides for
+    // itself whether it is responsible (e.g. WallHug returns None when
+    // there is no stored wall-hug pose).
+    let strategies: [(&dyn ResumeStrategy, ResumeSource); 5] = [
+        (&ResumeWallHug, ResumeSource::ResumeWallHug),
+        (&ResumeSegment, ResumeSource::ResumeSegment),
+        (&ResumeMat, ResumeSource::ResumeMat),
+        (&ResumeBoundary, ResumeSource::ResumeBoundary),
+        (&ResumeIsland, ResumeSource::ResumeIsland),
+    ];
+    let sq_tol = (ctx.opts.step_length * 0.25).powi(2);
+    'strategy: for (s, source) in &strategies {
         if let Some(rp) = s.find_next(ctx, tool) {
+            // Reject any position that has already been tried and led to
+            // an immediate stall, regardless of which strategy produced it.
+            for bl_pos in ctx.blacklist {
+                let dx = bl_pos.x - rp.pos.x;
+                let dy = bl_pos.y - rp.pos.y;
+                if dx * dx + dy * dy < sq_tol {
+                    dbg_log!(
+                        "  RESUME  {}={}  → ({:.3},{:.3})  BLACKLISTED",
+                        *source as u8,
+                        s.label(),
+                        rp.pos.x,
+                        rp.pos.y,
+                    );
+                    continue 'strategy;
+                }
+            }
             dbg_log!(
-                "  RESUME  0=wall_hug  → ({:.3},{:.3})  heading={:.4}",
+                "  RESUME  {}={}  → ({:.3},{:.3})  heading={:.4}",
+                *source as u8,
+                s.label(),
                 rp.pos.x,
                 rp.pos.y,
                 rp.heading,
             );
-            return Some((ResumeSource::ResumeWallHug, rp));
+            return Some((*source, rp));
         }
-    }
-
-    // ── Strategy A: SegmentResume ─────────────────────────────────
-    if area_grew {
-        let s = ResumeSegment;
-        if let Some(rp) = s.find_next(ctx, tool) {
-            dbg_log!(
-                "  RESUME  A=segment  → ({:.3},{:.3})  heading={:.4}",
-                rp.pos.x,
-                rp.pos.y,
-                rp.heading,
-            );
-            return Some((ResumeSource::ResumeSegment, rp));
-        }
-    }
-
-    // ── Strategy B/C: MatResume ───────────────────────────────────
-    if ctx.mat.is_some() {
-        let s = ResumeMat;
-        if let Some(rp) = s.find_next(ctx, tool) {
-            dbg_log!(
-                "  RESUME  B/C=mat  → ({:.3},{:.3})  heading={:.4}",
-                rp.pos.x,
-                rp.pos.y,
-                rp.heading,
-            );
-            return Some((ResumeSource::ResumeMat, rp));
-        }
-    }
-
-    // ── Strategy D: BoundaryWalk ──────────────────────────────────
-    let s = ResumeBoundary;
-    if let Some(rp) = s.find_next(ctx, tool) {
-        dbg_log!(
-            "  RESUME  D=boundary  → ({:.3},{:.3})  heading={:.4}",
-            rp.pos.x,
-            rp.pos.y,
-            rp.heading,
-        );
-        return Some((ResumeSource::ResumeBoundary, rp));
     }
 
     None

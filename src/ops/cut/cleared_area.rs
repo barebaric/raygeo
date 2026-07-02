@@ -7,10 +7,10 @@ use crate::geo::algo::offset::compute_inset_region;
 use crate::geo::algo::simplify::simplify_polyline;
 use crate::geo::algo::spatial_grid2d::SpatialGrid;
 use crate::geo::shape::polygon::{
-    get_polygon_area, get_polygon_bounds, get_polygon_signed_area,
-    get_polygons_group_difference, get_polygons_group_intersection,
-    get_polygons_union, get_polyline_swept_polygon, get_segment_swept_polygon,
-    offset_polygon, JoinStyle,
+    get_polygon_bounds, get_polygon_signed_area, get_polygons_group_difference,
+    get_polygons_group_intersection, get_polygons_union,
+    get_polyline_swept_polygon, get_segment_swept_polygon, offset_polygon,
+    JoinStyle,
 };
 use crate::ops::cut::crescent;
 use crate::types::{Point, Polygon, Rect};
@@ -74,9 +74,10 @@ impl ClearedArea {
         };
         for poly in initial {
             if poly.len() >= 3 {
+                let p = poly.clone();
                 let idx = ca.fragments.len();
-                ca.fragments.push(poly.clone());
-                ca.grid.insert(idx, get_polygon_bounds(poly));
+                ca.grid.insert(idx, get_polygon_bounds(&p));
+                ca.fragments.push(p);
             }
         }
         ca
@@ -188,6 +189,8 @@ impl ClearedArea {
     }
 
     /// Return the uncut stock: stock ∖ fragments.
+    ///
+    /// Polygons below 0.5 mm² are dropped as Clipper2 numerical artifacts.
     #[prof]
     pub fn remaining(&self) -> Vec<Polygon> {
         let stock = self.stock();
@@ -197,7 +200,11 @@ impl ClearedArea {
         if stock.is_empty() {
             return vec![];
         }
-        get_polygons_group_difference(&stock, &self.fragments)
+        let result = get_polygons_group_difference(&stock, &self.fragments);
+        result
+            .into_iter()
+            .filter(|p| p.len() >= 3 && get_polygon_signed_area(p).abs() >= 0.5)
+            .collect()
     }
 
     /// Area of uncut material remaining in the pocket.
@@ -216,7 +223,12 @@ impl ClearedArea {
 
     #[prof]
     pub fn total_area(&self) -> f64 {
-        self.fragments.iter().map(get_polygon_area).sum()
+        let total: f64 = self
+            .fragments
+            .iter()
+            .map(|p| get_polygon_signed_area(p))
+            .sum();
+        total.max(0.0)
     }
 
     #[prof]
@@ -297,6 +309,7 @@ impl ClearedArea {
                     Some(simplified)
                 }
             })
+            .filter(|p| get_polygon_signed_area(p).abs() >= 0.5)
             .collect()
     }
 

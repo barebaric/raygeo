@@ -9,7 +9,8 @@ use crate::geo::shape::circle::{
     get_circle_circle_intersections, get_line_circle_intersections,
 };
 use crate::geo::shape::polygon::{
-    does_polygon_enclose_circle, get_polygon_bounds, rotate_polygon,
+    does_polygon_enclose_circle, get_polygon_bounds, get_polygon_signed_area,
+    rotate_polygon,
 };
 use crate::geo::shape::rect::do_rects_intersect;
 use crate::types::{Point, Polygon, Rect};
@@ -41,6 +42,19 @@ struct SweepContext {
     num_frags: usize,
     /// Number of valid-area polygons after the fragments.
     num_valid: usize,
+    /// `frag_is_hole[i] = true` means fragment *i* is a CW hole —
+    /// uncleared material *inside* the cleared region.  Hole
+    /// fragments are treated as **positive** (add-back) shapes in the
+    /// sweep, not subtracted.
+    frag_is_hole: Vec<bool>,
+    /// Initial winding contribution from fragments that fully enclose
+    /// the c2 disc (their edges are too far away to produce slab
+    /// crossings, so the scanline would otherwise miss them).
+    /// CCW enclosure: +1, CW enclosure: −1.
+    initial_frag_winding: i32,
+    /// `frag_encloses[i] = true` means fragment *i* fully encloses the
+    /// disc — its `outside` flag starts `false` (inside).
+    frag_encloses: Vec<bool>,
 }
 
 /// Rotate `c1`/`c2` so the step is vertical, then collect the fragments
@@ -69,6 +83,25 @@ fn prepare_sweep(
         Rect::new(c2.x - radius, c2.y - radius, c2.x + radius, c2.y + radius);
 
     let mut polygons: Vec<Vec<Point>> = Vec::new();
+    let mut frag_is_hole: Vec<bool> = Vec::new();
+    let mut frag_encloses: Vec<bool> = Vec::new();
+    let mut initial_frag_winding: i32 = 0;
+
+    // First pass: detect whether any CW hole fragment overlaps the
+    // c2 disk bbox.  If so, the disc may extend into uncleared
+    // material even when a large CCW fragment encloses it, and the
+    // enclosure short-circuit must be suppressed.
+    let has_nearby_hole = fragments.iter().any(|frag| {
+        if frag.len() < 3 {
+            return false;
+        }
+        if get_polygon_signed_area(frag) >= 0.0 {
+            return false;
+        }
+        let rot = rotate_polygon(frag, angle_deg);
+        let bounds = get_polygon_bounds(&rot);
+        do_rects_intersect(bounds, c2_bb)
+    });
 
     for frag in fragments {
         if frag.len() < 3 {
@@ -79,8 +112,20 @@ fn prepare_sweep(
         if !do_rects_intersect(bounds, c2_bb) {
             continue;
         }
-        if does_polygon_enclose_circle(c2, radius, &rotated) {
+        let is_hole = get_polygon_signed_area(&rotated) < 0.0;
+        frag_is_hole.push(is_hole);
+        let encloses = does_polygon_enclose_circle(c2, radius, &rotated);
+        frag_encloses.push(encloses);
+        // Only short-circuit for CCW fragments when no CW hole
+        // overlaps the disc.  A nearby hole means the disc reaches
+        // into uncleared material.
+        if encloses && !is_hole && !has_nearby_hole {
             return None;
+        }
+        // Accumulate initial winding for enclosing fragments whose
+        // edges are too far from the disc to produce slab crossings.
+        if encloses {
+            initial_frag_winding += if is_hole { -1 } else { 1 };
         }
         polygons.push(rotated);
     }
@@ -115,6 +160,9 @@ fn prepare_sweep(
         polygons,
         num_frags,
         num_valid,
+        frag_is_hole,
+        initial_frag_winding,
+        frag_encloses,
     })
 }
 
@@ -350,8 +398,15 @@ fn sweep_area(cx: &SweepContext, xs: &[f64]) -> (f64, f64) {
 
     // Extract all polygon edges into a flat list so the slab loop can
     // iterate a single contiguous slice instead of nested polygon loops.
+    // Skip edges for fragments that enclose the disc — their initial
+    // winding contribution is already accounted for by
+    // `initial_frag_winding`, and their edges are outside the disc so
+    // they would incorrectly toggle the `outside` state.
     let mut edges: Vec<SweepEdge> = Vec::new();
     for (ip, poly) in polygons.iter().enumerate() {
+        if ip < num_frags && cx.frag_encloses[ip] {
+            continue;
+        }
         let n = poly.len();
         for ie in 0..n {
             let p0 = poly[ie];
@@ -421,38 +476,73 @@ fn sweep_area(cx: &SweepContext, xs: &[f64]) -> (f64, f64) {
         );
         ys.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap());
 
-        // All shapes start outside at y→−∞.  Outside-positive shapes:
-        // c2 (+1) and each non-enclosing valid_area (+1 each).
-        // Negative shapes (fragments, c1) contribute 0 when outside.
+        // All shapes start outside at y→−∞.
+        //
+        // Two independent counters track the result region:
+        //   outside_count — c2 (+1), valid_area (+1 each), c1 (−1).
+        //     Result requires outside_count == 0 (inside c2, outside c1,
+        //     inside all valid_area).
+        //   frag_winding — net winding number over all fragments.
+        //     CCW fragment enter: +1, CW hole enter: −1.
+        //     Result requires frag_winding <= 0 (outside the cleared
+        //     union — a point inside a CW hole has winding 0 and IS
+        //     uncleared material the crescent should include).
         let mut outside = vec![true; nshapes];
+        // Enclosing fragments start as "inside" — their edges don't
+        // produce slab crossings but they contribute to the winding.
+        for (i, &enc) in cx.frag_encloses.iter().enumerate() {
+            if enc {
+                outside[i] = false;
+            }
+        }
         let mut outside_count: i32 = 1 + num_valid as i32;
+        let mut frag_winding: i32 = cx.initial_frag_winding;
 
         for &(_y, ishape, ipart) in &ys {
             let prev_outside = outside[ishape];
             let prev_count = outside_count;
+            let prev_winding = frag_winding;
             outside[ishape] = !outside[ishape];
 
-            // Negative shapes (fragments, c1) invert the count delta so
-            // entering them moves AWAY from the result (count ↑).
-            let is_negative = ishape < num_frags || ishape == total_polys + 1;
-            outside_count += if is_negative {
-                if prev_outside {
-                    1
+            let is_frag = ishape < num_frags;
+            let is_c1 = ishape == total_polys + 1;
+
+            if is_frag {
+                // Fragments affect frag_winding, not outside_count.
+                if cx.frag_is_hole[ishape] {
+                    // CW hole: entering → −1, exiting → +1
+                    frag_winding += if prev_outside { -1 } else { 1 };
                 } else {
-                    -1
+                    // CCW outer: entering → +1, exiting → −1
+                    frag_winding += if prev_outside { 1 } else { -1 };
                 }
-            } else if prev_outside {
-                -1
             } else {
-                1
-            };
+                // c2, c1, valid_area affect outside_count.
+                let is_negative = is_c1;
+                outside_count += if is_negative {
+                    if prev_outside {
+                        1
+                    } else {
+                        -1
+                    }
+                } else if prev_outside {
+                    -1
+                } else {
+                    1
+                };
+            }
 
-            let sign: f64 = if prev_outside { -1.0 } else { 1.0 };
-            // Negative shapes contribute with opposite sign — their
-            // boundary is traversed CW (holes) in the result.
-            let sign = if is_negative { -sign } else { sign };
+            // Result = inside c2 AND outside c1 AND inside valid AND
+            // outside cleared union (frag_winding <= 0).
+            let in_result = outside_count == 0 && frag_winding == 0;
+            let was_in_result = prev_count == 0 && prev_winding == 0;
 
-            if outside_count == 0 || prev_count == 0 {
+            if in_result || was_in_result {
+                let sign: f64 = if prev_outside { -1.0 } else { 1.0 };
+                let is_negative_shape =
+                    (is_frag && !cx.frag_is_hole[ishape]) || is_c1;
+                let sign = if is_negative_shape { -sign } else { sign };
+
                 let da = if ishape < total_polys {
                     let poly = &polygons[ishape];
                     let n = poly.len();

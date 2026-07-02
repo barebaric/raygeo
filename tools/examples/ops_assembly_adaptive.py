@@ -10,6 +10,7 @@ from matplotlib.colors import Normalize
 from raygeo.geo.shape.polygon import (
     get_circle_polygon,
     get_polygon_area,
+    get_polygon_signed_area,
     get_polygons_group_difference,
     get_polygons_group_intersection,
 )
@@ -606,20 +607,23 @@ def generate_adaptive_clearing_centre_island():
     for poly in ca.remaining():
         if len(poly) < 3:
             continue
-        a = get_polygon_area([(p[0], p[1]) for p in poly])
-        if abs(a) < 0.3:
+        a_s = get_polygon_signed_area([(p[0], p[1]) for p in poly])
+        if abs(a_s) < 0.3:
             continue
         rx = [p[0] for p in poly] + [poly[0][0]]
         ry = [p[1] for p in poly] + [poly[0][1]]
-        ax.fill(rx, ry, color="crimson", alpha=0.15)
-        ax.plot(
-            rx,
-            ry,
-            color="crimson",
-            linewidth=0.6,
-            alpha=0.5,
-            label="Remaining",
-        )
+        if a_s > 0:
+            ax.fill(rx, ry, color="crimson", alpha=0.15)
+            ax.plot(
+                rx,
+                ry,
+                color="crimson",
+                linewidth=0.6,
+                alpha=0.5,
+                label="Remaining",
+            )
+        else:
+            ax.fill(rx, ry, color="white")
     ax.set_title(
         f"Seed = {seed_area:.0f} mm²  |  remaining = {remaining:.0f} mm²\n"
         f"(circle seed — no entry strategy)",
@@ -645,7 +649,8 @@ def generate_adaptive_clearing_centre_island():
 def _narrow_shared():
     """Run circle-seed + clearing for the 80×14 narrow pocket.
 
-    Returns ``(combined_ops, ca, boundary, target_z, cleared_polys)``.
+    Returns
+    ``(combined_ops, ca, boundary, target_z, cleared_polys, tool_radius)``.
     """
     target_z = -5.0
     tool_radius = 3.0
@@ -670,12 +675,12 @@ def _narrow_shared():
         area_tolerance=1.0,
     )
     combined_ops = clear_ops
-    return combined_ops, ca, boundary, target_z, cleared_polys
+    return combined_ops, ca, boundary, target_z, cleared_polys, tool_radius
 
 
 def generate_adaptive_clearing_narrow_3d():
     """Narrow pocket — 3D toolpath view (circle seed + clearing)."""
-    combined_ops, ca, boundary, target_z, _ = _narrow_shared()
+    combined_ops, ca, boundary, target_z, _, _ = _narrow_shared()
     fig = plt.figure(figsize=(7, 5))
     ax = fig.add_subplot(111, projection="3d")
     _plot_3d_toolpath(
@@ -692,7 +697,9 @@ def generate_adaptive_clearing_narrow_3d():
 
 def generate_adaptive_clearing_narrow_2d():
     """Narrow pocket — 2D top-down with seed and remaining overlay."""
-    combined_ops, ca, boundary, target_z, cleared_polys = _narrow_shared()
+    (combined_ops, ca, boundary, target_z, cleared_polys, tool_radius) = (
+        _narrow_shared()
+    )
     remaining = sum(get_polygon_area(p) for p in ca.remaining())
     fig = plt.figure(figsize=(7, 5))
     ax = fig.add_subplot(111)
@@ -700,6 +707,13 @@ def generate_adaptive_clearing_narrow_2d():
     bx = [p[0] for p in boundary] + [boundary[0][0]]
     by = [p[1] for p in boundary] + [boundary[0][1]]
     ax.plot(bx, by, "k-", linewidth=1.5, label="Pocket boundary")
+    envelope = ca.envelope(tool_radius)
+    for poly in envelope:
+        if len(poly) < 3:
+            continue
+        ex = [p[0] for p in poly] + [poly[0][0]]
+        ey = [p[1] for p in poly] + [poly[0][1]]
+        ax.plot(ex, ey, "--", color="gray", linewidth=1.0, label="Envelope")
     seed_area = 0.0
     for poly in cleared_polys:
         if len(poly) < 3:
@@ -712,20 +726,23 @@ def generate_adaptive_clearing_narrow_2d():
     for poly in ca.remaining():
         if len(poly) < 3:
             continue
-        a = get_polygon_area([(p[0], p[1]) for p in poly])
-        if abs(a) < 0.3:
+        a_s = get_polygon_signed_area([(p[0], p[1]) for p in poly])
+        if abs(a_s) < 0.3:
             continue
         rx = [p[0] for p in poly] + [poly[0][0]]
         ry = [p[1] for p in poly] + [poly[0][1]]
-        ax.fill(rx, ry, color="crimson", alpha=0.15)
-        ax.plot(
-            rx,
-            ry,
-            color="crimson",
-            linewidth=0.6,
-            alpha=0.5,
-            label="Remaining",
-        )
+        if a_s > 0:
+            ax.fill(rx, ry, color="crimson", alpha=0.15)
+            ax.plot(
+                rx,
+                ry,
+                color="crimson",
+                linewidth=0.6,
+                alpha=0.5,
+                label="Remaining",
+            )
+        else:
+            ax.fill(rx, ry, color="white")
     ax.set_title(
         f"Seed = {seed_area:.0f} mm²  |  remaining = {remaining:.0f} mm²",
         fontsize=10,

@@ -15,8 +15,14 @@ use crate::types::{Point, Polygon};
 
 pub struct ResumeBoundary;
 
+impl ResumeBoundary {
+    pub const NAME: &'static str = "ResumeBoundary";
+}
+
 impl ResumeStrategy for ResumeBoundary {
-    const NAME: &'static str = "ResumeBoundary";
+    fn label(&self) -> &'static str {
+        "boundary"
+    }
 
     fn find_next(&self, ctx: &ResumeCtx, tool: &Tool) -> Option<ToolPose> {
         envelope_resume(ctx, tool)
@@ -225,6 +231,18 @@ fn envelope_resume(ctx: &ResumeCtx, tool: &Tool) -> Option<ToolPose> {
         let correct_side = if dir_sign < 0.0 { right } else { left };
         let wrong_side = if dir_sign < 0.0 { left } else { right };
         let direction_ok = area <= 0.0 || correct_side >= wrong_side;
+        // Reject positions whose forward step leaves the tool
+        // over-engaged.  The resume point sits ON the frontier, so
+        // the disc is already half-buried; a step that stays on or
+        // near the frontier produces >155° engagement — the stepper
+        // would accept it (cut area is small) but the tool would be
+        // dragging through stock on a wide arc.
+        let dest_eng = if valid_probe && area >= min_cut_area {
+            ctx.cleared.point_engagement(probe, tool.radius).angle
+        } else {
+            0.0
+        };
+        let eng_ok = dest_eng <= 2.7;
         if offset <= 5 || (offset <= 20 && frac == 0.0) {
             dbg_log!(
                 "  ENV_DBG  off={} frac={:.2} v{} s=({:.2},{:.2}) \
@@ -252,7 +270,7 @@ fn envelope_resume(ctx: &ResumeCtx, tool: &Tool) -> Option<ToolPose> {
                 elen,
             );
         }
-        if valid_probe && area >= min_cut_area && direction_ok {
+        if valid_probe && area >= min_cut_area && direction_ok && eng_ok {
             dbg_log!(
                 "  ENVELOPE  resume=({:.3},{:.3})  heading={:.4}  \
                  pt=({:.3},{:.3})  offset={}  frac={:.2}  \

@@ -16,8 +16,14 @@ use crate::types::{Point, Polygon};
 
 pub struct ResumeMat;
 
+impl ResumeMat {
+    pub const NAME: &'static str = "ResumeMat";
+}
+
 impl ResumeStrategy for ResumeMat {
-    const NAME: &'static str = "ResumeMat";
+    fn label(&self) -> &'static str {
+        "mat"
+    }
 
     fn find_next(&self, ctx: &ResumeCtx, tool: &Tool) -> Option<ToolPose> {
         let axis = ctx.mat?;

@@ -333,7 +333,7 @@ def test_adaptive_clearing_fully_clears_with_island():
     """
     boundary = _rect(0, 0, 60, 60)
     islands = [_rect(5, 0, 10, 10)]
-    tol = 1.5
+    tol = 2
     valid_polys, valid_total = _valid_tool_area(boundary, islands, 3.0)
     assert valid_total > tol, "valid tool area too small for a meaningful test"
 

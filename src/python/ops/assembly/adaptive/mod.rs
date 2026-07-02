@@ -182,6 +182,7 @@ fn adaptive_clearing_py(
         expansion_batch_size,
         trace_path: trace_path.map(PathBuf::from),
         cut_direction: cd,
+        tolerance: 0.1,
     };
 
     let cut_state = State {

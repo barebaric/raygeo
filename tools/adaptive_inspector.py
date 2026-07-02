@@ -36,17 +36,25 @@ import struct
 import sys
 
 import matplotlib.pyplot as plt
-
-# ── Workaround for matplotlib 3.11 bug ────────────────────────────
-# ResizeEvent lacks the 'inaxes' attribute, causing AttributeError
-# in the widget event decorator (_call_with_reparented_event).
-# Patch every decorated event handler to add 'inaxes' if missing.
 import matplotlib.widgets as _mw
 from matplotlib.collections import LineCollection
 from matplotlib.patches import Circle
 from matplotlib.widgets import Button, TextBox
 
+from raygeo.geo.shape.polygon import (
+    get_polygon_signed_area,
+    is_point_inside_polygon,
+)
+from raygeo.ops.assembly.adaptive import adaptive_clearing
+from raygeo.ops.assembly.entry import adaptive_entry
+from raygeo.ops.cut.cleared_area import ClearedArea
 
+
+# ── Workaround for matplotlib 3.11 bug ────────────────────────────
+# https://github.com/matplotlib/matplotlib/issues/22409
+# ResizeEvent lacks the 'inaxes' attribute, causing AttributeError
+# in the widget event decorator (_call_with_reparented_event).
+# Patch every decorated event handler to add 'inaxes' if missing.
 def _patch_widget_events() -> None:
     for _cls in (_mw.Button, _mw.TextBox):
         for _name in (
@@ -74,15 +82,6 @@ def _patch_widget_events() -> None:
 
 _patch_widget_events()
 
-from raygeo.geo.shape.polygon import (  # noqa: E402
-    get_polygon_area,
-    get_polygon_signed_area,
-    is_point_inside_polygon,
-)
-from raygeo.ops.assembly.adaptive import adaptive_clearing  # noqa: E402
-from raygeo.ops.assembly.entry import adaptive_entry  # noqa: E402
-from raygeo.ops.cut.cleared_area import ClearedArea  # noqa: E402
-
 # ── Trace file format ────────────────────────────────────────────
 
 TRACE_HEADER_SIZE = 12  # magic(4) + version(4) + count(4)
@@ -105,10 +104,11 @@ STATUS_NAMES = {
 
 RESUME_SOURCE_NAMES = {
     0: "none",
-    1: "segment_resume",
-    2: "mat_resume",
-    3: "boundary_walk",
-    4: "wall_hug",
+    1: "wall_hug",
+    2: "segment_resume",
+    3: "mat_resume",
+    4: "boundary_walk",
+    5: "island_walk",
 }
 
 
@@ -288,7 +288,6 @@ def rebuild_cleared(
         )
 
     prev = None
-    batch = 0
     cut_count = 0
     for i in range(len(tp)):
         x, y, is_travel = tp[i]
@@ -296,20 +295,12 @@ def rebuild_cleared(
             prev = (x, y)
             continue
         if prev is not None and cut_count >= start_cut:
-            if batch == 0:
-                ca.begin_batch()
-            ca.expand_batched(prev, (x, y), geometry.tool_radius)
-            batch += 1
-            if batch >= 20:
-                ca.commit_batch_local()
-                batch = 0
-                ca.compact_if_needed(0.5)
+            ca.expand_step(prev, (x, y), geometry.tool_radius)
+            ca.compact_if_needed(0.1)
         prev = (x, y)
         cut_count += 1
         if cut_count >= n_cuts:
             break
-    if batch > 0:
-        ca.commit_batch_local()
     return ca
 
 
@@ -671,7 +662,10 @@ class Inspector:
         self._seg_start_steps = seg_steps
 
     def _step(self, delta):
-        self._draw(self.current + delta)
+        if delta < 0 and self.current == 0:
+            self._draw(self.n_steps - 1)
+        else:
+            self._draw(self.current + delta)
 
     def _toggle_mat(self, _event=None):
         self.show_mat = not self.show_mat
@@ -725,11 +719,11 @@ class Inspector:
             else:
                 if cut_prev is None and prev_any is not None:
                     # First cut after travel: draw edge from the
-                    # travel destination to this first cut endpoint.
-                    self._all_cut_segs.append([prev_any, (x, y)])
-                    cum += math.hypot(x - prev_any[0], y - prev_any[1])
-                    self._all_cut_cum.append(cum)
-                    edge_count += 1
+                    # travel destination to this first cut endpoint
+                    # as a travel segment (it's a positioning/plunge
+                    # move, not an actual cutting edge).
+                    self._all_travel_segs.append([prev_any, (x, y)])
+                    travel_count += 1
                 elif cut_prev is not None:
                     self._all_cut_segs.append([cut_prev, (x, y)])
                     cum += math.hypot(x - cut_prev[0], y - cut_prev[1])
@@ -803,13 +797,6 @@ class Inspector:
         by = [p[1] for p in boundary] + [boundary[0][1]]
         self.ax.plot(bx, by, "k-", linewidth=1.5)
 
-        # ── Islands ──
-        for isl in islands:
-            ix = [p[0] for p in isl] + [isl[0][0]]
-            iy = [p[1] for p in isl] + [isl[0][1]]
-            self.ax.fill(ix, iy, color="gray", alpha=0.4)
-            self.ax.plot(ix, iy, color="dimgray", linewidth=1.0)
-
         # ── Seed outline ──
         for poly in self.seed_polys:
             if len(poly) < 3:
@@ -842,26 +829,63 @@ class Inspector:
         n_cuts = sum(1 for i in range(n_tp_moves) if not self.tp[i][2])
         ca = self._get_cleared(n_cuts)
 
-        # Remaining (only exterior rings)
-        remaining = ca.remaining()
-        for poly in remaining:
+        # Background — entire boundary in white (all "cleared" by
+        # default).  Islands are handled separately below.
+        bx = [p[0] for p in boundary] + [boundary[0][0]]
+        by = [p[1] for p in boundary] + [boundary[0][1]]
+        self.ax.fill(bx, by, color="white")
+
+        # Remaining (uncut) — CCW rings fill the uncut area in red;
+        # CW rings "punch holes" through it, revealing the white
+        # background that represents cleared area.
+        _remaining = ca.remaining()
+        _frontier = ca.frontier(0.05)
+        _r_signed = [get_polygon_signed_area(p) for p in _remaining]
+        _f_signed = [get_polygon_signed_area(p) for p in _frontier]
+        _r_verts = [len(p) for p in _remaining]
+        _f_verts = [len(p) for p in _frontier]
+        _r_pos = sum(a for a in _r_signed if a > 0)
+        _r_neg = sum(a for a in _r_signed if a < 0)
+        print(
+            f"step={step_idx}  n_cuts={n_cuts}  "
+            f"remaining: {len(_remaining)} poly  "
+            f"r+={_r_pos:.1f} r-={_r_neg:.1f}  "
+            f"signed={[f'{a:.4f}' for a in _r_signed]}  "
+            f"verts={_r_verts}  "
+            f"frontier: {len(_frontier)} poly  "
+            f"signed={[f'{a:.4f}' for a in _f_signed]}  "
+            f"verts={_f_verts}  "
+            f"fragments: {len(ca.fragments())}",
+            flush=True,
+        )
+        for poly in _remaining:
             if len(poly) < 3:
                 continue
-            a = get_polygon_area(poly)
-            if a <= 0 or a < 0.1:
-                continue
+            a = get_polygon_signed_area(poly)
             rx = [p[0] for p in poly] + [poly[0][0]]
             ry = [p[1] for p in poly] + [poly[0][1]]
-            self.ax.fill(rx, ry, color="crimson", alpha=0.08)
-            self.ax.plot(rx, ry, color="crimson", linewidth=0.3, alpha=0.3)
+            if a > 0:
+                self.ax.fill(rx, ry, color="#ffcccc")
+                self.ax.plot(rx, ry, color="#cc5555", linewidth=0.3)
+            else:
+                self.ax.fill(rx, ry, color="white")
 
-        # Cleared (white fill)
-        for poly in ca.fragments():
+        # Frontier overlay — draw ALL rings (CCW outer + CW holes) in
+        # light green to prove frontier() matches the cleared-area
+        # boundary, including hole boundaries around islands/bulges.
+        for poly in _frontier:
             if len(poly) < 3:
                 continue
-            cx = [p[0] for p in poly] + [poly[0][0]]
-            cy = [p[1] for p in poly] + [poly[0][1]]
-            self.ax.fill(cx, cy, color="white")
+            fx = [p[0] for p in poly] + [poly[0][0]]
+            fy = [p[1] for p in poly] + [poly[0][1]]
+            self.ax.plot(fx, fy, color="#88dd88", linewidth=0.6, alpha=0.7)
+
+        # ── Islands (drawn after white fill so they stay visible) ──
+        for isl in islands:
+            ix = [p[0] for p in isl] + [isl[0][0]]
+            iy = [p[1] for p in isl] + [isl[0][1]]
+            self.ax.fill(ix, iy, color="gray")
+            self.ax.plot(ix, iy, color="dimgray", linewidth=1.0)
 
         # ── Toolpath ──
         self._draw_toolpath(rec)
@@ -986,6 +1010,24 @@ class Inspector:
                     zorder=4,
                     alpha=0.8,
                 )
+
+        # If the tool position differs from the last toolpath point, draw
+        # a travel segment to bridge the gap.  This handles cases where
+        # emit_resume_travel's path doesn't quite reach the MAT or
+        # wall_hug destination recorded in the trace record.
+        last_x, last_y, _ = self.tp[n_moves - 1]
+        dx = rec.pos_x - last_x
+        dy = rec.pos_y - last_y
+        if math.hypot(dx, dy) > 0.01:
+            self.ax.plot(
+                [last_x, rec.pos_x],
+                [last_y, rec.pos_y],
+                linestyle="--",
+                linewidth=0.8,
+                color="dimgray",
+                alpha=0.7,
+                zorder=3,
+            )
 
     def _draw_tool(self, rec):
         """Draw tool circle, position dot, and heading arrow."""

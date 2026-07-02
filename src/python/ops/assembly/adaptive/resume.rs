@@ -303,6 +303,7 @@ fn try_resume_py(
         last_resume_area,
         last_resume_pos: tool.inner.pos,
         last_wall_hug: None,
+        blacklist: &[],
     };
     let result = resume::try_resume(&ctx, &tool.inner);
     if let Some((_source, rp)) = result {

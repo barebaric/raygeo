@@ -716,12 +716,31 @@ pub fn get_polygons_closest_point(
 
 /// Signed perpendicular distance from a point to the nearest polygon boundary.
 ///
-/// Positive means the point is *outside* all polygons, negative means *inside*
-/// any polygon, and zero means exactly on a boundary.
+/// Positive means the point is *outside* the polygon group, negative means *inside*
+/// the polygon group, and zero means exactly on a boundary.
+///
+/// **Important:** The polygon list may contain holes (CW polygons with negative
+/// signed area). A point is considered inside the group only when it is inside
+/// at least one CCW (positive‑area) polygon **and** not inside any CW (negative‑area)
+/// hole polygon.
 pub fn get_signed_boundary_distance(point: Point, polygons: &[Polygon]) -> f64 {
-    let inside = polygons
-        .iter()
-        .any(|poly| poly.len() >= 3 && is_point_in_polygon(point, poly));
+    let mut inside_ccw = false;
+    let mut inside_cw = false;
+
+    for poly in polygons {
+        if poly.len() < 3 {
+            continue;
+        }
+        if is_point_in_polygon(point, poly) {
+            if get_polygon_signed_area(poly) > 0.0 {
+                inside_ccw = true;
+            } else {
+                inside_cw = true;
+            }
+        }
+    }
+
+    let inside = inside_ccw && !inside_cw;
 
     let d = get_polygons_closest_point(polygons, point)
         .map(|(_, _, _, d2)| d2.sqrt())
@@ -959,7 +978,11 @@ pub fn get_polygons_union(polygons: &[Polygon]) -> Vec<Polygon> {
         return vec![];
     }
     if polygons.len() == 1 && polygons[0].len() >= 3 {
-        return vec![polygons[0].clone()];
+        let mut poly = polygons[0].clone();
+        if get_polygon_signed_area(&poly) < 0.0 {
+            poly.reverse();
+        }
+        return vec![poly];
     }
     let clipper_paths = polygons_to_paths(polygons);
     if clipper_paths.is_empty() {

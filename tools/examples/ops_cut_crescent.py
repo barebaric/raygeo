@@ -219,14 +219,14 @@ def generate_crescent_fragment_sweep():
     areas = []
     lefts = []
     for wx in wall_positions:
-        frag = [[(wx, -20.0), (wx, 20.0), (20.0, 20.0), (20.0, -20.0)]]
+        frag = [[(wx, -20.0), (20.0, -20.0), (20.0, 20.0), (wx, 20.0)]]
         total, left = cut_area(c1, c2, R, frag, [])
         areas.append(total)
         lefts.append(left)
 
     # Pick a wall position mid-sweep for the geometry panel.
     mid_wx = wall_positions[len(wall_positions) // 2]
-    mid_frag = [[(mid_wx, -20.0), (mid_wx, 20.0), (20.0, 20.0), (20.0, -20.0)]]
+    mid_frag = [[(mid_wx, -20.0), (20.0, -20.0), (20.0, 20.0), (mid_wx, 20.0)]]
     mid_total, _ = cut_area(c1, c2, R, mid_frag, [])
 
     # Crescent polygon (no fragments) for geometry.
@@ -246,9 +246,9 @@ def generate_crescent_fragment_sweep():
     f_arr = np.array(
         [
             (mid_wx, -20.0),
-            (mid_wx, 20.0),
-            (20.0, 20.0),
             (20.0, -20.0),
+            (20.0, 20.0),
+            (mid_wx, 20.0),
             (mid_wx, -20.0),
         ]
     )

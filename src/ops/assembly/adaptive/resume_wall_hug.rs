@@ -27,8 +27,14 @@ use crate::ops::cut::ToolPose;
 /// original envelope position.
 pub struct ResumeWallHug;
 
+impl ResumeWallHug {
+    pub const NAME: &'static str = "ResumeWallHug";
+}
+
 impl ResumeStrategy for ResumeWallHug {
-    const NAME: &'static str = "ResumeWallHug";
+    fn label(&self) -> &'static str {
+        "wall_hug"
+    }
 
     #[prof]
     fn find_next(&self, ctx: &ResumeCtx, _tool: &Tool) -> Option<ToolPose> {
