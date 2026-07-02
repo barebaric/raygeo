@@ -1,4 +1,4 @@
-"""Tests for the adaptive stepper (step_adaptive)."""
+"""Tests for the adaptive stepper (step)."""
 
 import math
 
@@ -7,8 +7,9 @@ import pytest
 from raygeo.ops.assembly.adaptive import target_area_per_distance
 from raygeo.ops.cut.cleared_area import ClearedArea
 from raygeo.ops.cut.stepper import (
+    StepperOptions,
     StepStatus,
-    step_adaptive,
+    step,
 )
 
 # ── Geometry helpers ────────────────────────────────────────────────
@@ -47,26 +48,27 @@ def test_step_status_repr():
 # ── Basic API (adaptive) ────────────────────────────────────────────
 
 
-def test_step_adaptive_returns_step_result():
-    """step_adaptive returns a StepResult with the expected fields."""
+def test_step_returns_step_result():
+    """step returns a StepResult with the expected fields."""
     R = 5.0
     advance = 2.0
     step_length = 1.0
     target_apd = target_area_per_distance(R, advance, step_length)
     ca = _vertical_wall_cleared()
     valid = _huge_valid_area()
-    r = step_adaptive(
-        cleared=ca,
-        pos=(-advance, 0.0),
-        heading=math.pi / 2,
-        predicted_angle=0.0,
+    opts = StepperOptions(
         target_area_pd=target_apd,
         step_length=step_length,
         radius=R,
         max_deflection=math.radians(30),
         valid_area=valid,
-        angle_min=-math.pi / 4,
-        angle_max=math.pi / 4,
+    )
+    r = step(
+        ca,
+        (-advance, 0.0),
+        math.pi / 2,
+        0.0,
+        opts,
     )
     assert len(r.next) == 2
     assert isinstance(r.heading, float)
@@ -75,7 +77,7 @@ def test_step_adaptive_returns_step_result():
     assert isinstance(r.status, StepStatus)
 
 
-def test_step_adaptive_flat_wall_ok_status():
+def test_step_flat_wall_ok_status():
     """A single step along a flat wall should return Ok (not Lost)."""
     R = 5.0
     advance = 2.0
@@ -83,23 +85,18 @@ def test_step_adaptive_flat_wall_ok_status():
     target_apd = target_area_per_distance(R, advance, step_length)
     ca = _vertical_wall_cleared()
     valid = _huge_valid_area()
-    r = step_adaptive(
-        cleared=ca,
-        pos=(-advance, 0.0),
-        heading=math.pi / 2,
-        predicted_angle=0.0,
+    opts = StepperOptions(
         target_area_pd=target_apd,
         step_length=step_length,
         radius=R,
         max_deflection=math.radians(30),
         valid_area=valid,
-        angle_min=-math.pi / 4,
-        angle_max=math.pi / 4,
     )
+    r = step(ca, (-advance, 0.0), math.pi / 2, 0.0, opts)
     assert "Ok" in repr(r.status), f"Expected Ok, got {r.status}"
 
 
-def test_step_adaptive_lost_engagement_in_open_space():
+def test_step_lost_engagement_in_open_space():
     """When the disk is fully inside the cleared area, the step is Lost."""
     R = 5.0
     step_length = 1.0
@@ -107,26 +104,21 @@ def test_step_adaptive_lost_engagement_in_open_space():
     # Huge cleared area, tool deep inside — no wall nearby.
     ca.cut([[(-1000, -1000), (1000, -1000), (1000, 1000), (-1000, 1000)]])
     valid = _huge_valid_area()
-    r = step_adaptive(
-        cleared=ca,
-        pos=(0.0, 0.0),
-        heading=0.0,
-        predicted_angle=0.0,
+    opts = StepperOptions(
         target_area_pd=2.0,
         step_length=step_length,
         radius=R,
         max_deflection=math.radians(30),
         valid_area=valid,
-        angle_min=-math.pi / 4,
-        angle_max=math.pi / 4,
     )
+    r = step(ca, (0.0, 0.0), 0.0, 0.0, opts)
     assert "Lost" in repr(r.status), f"Expected Lost, got {r.status}"
 
 
 # ── Best-angle selection (Bug A regression) ─────────────────────────
 
 
-def test_step_adaptive_returns_best_angle_not_last():
+def test_step_returns_best_angle_not_last():
     """The returned ``iteration_angle`` must be the one with the smallest
     ``|error|`` across all iterations, not the last one tried.
 
@@ -141,19 +133,14 @@ def test_step_adaptive_returns_best_angle_not_last():
     target_apd = target_area_per_distance(R, advance, step_length)
     ca = _vertical_wall_cleared()
     valid = _huge_valid_area()
-    r = step_adaptive(
-        cleared=ca,
-        pos=(-advance, 0.0),
-        heading=math.pi / 2,
-        predicted_angle=0.0,
+    opts = StepperOptions(
         target_area_pd=target_apd,
         step_length=step_length,
         radius=R,
         max_deflection=math.radians(30),
         valid_area=valid,
-        angle_min=-math.pi / 4,
-        angle_max=math.pi / 4,
     )
+    r = step(ca, (-advance, 0.0), math.pi / 2, 0.0, opts)
     # If the solver used all 20 iterations, the best angle must not
     # equal zero (the trivial drift target).  If it converged early,
     # the angle is whatever was accepted — also non-zero here.
@@ -166,7 +153,7 @@ def test_step_adaptive_returns_best_angle_not_last():
 # ── Convergence for non-zero angles (Bug B regression) ──────────────
 
 
-def test_step_adaptive_converges_for_nonzero_optimal_angle():
+def test_step_converges_for_nonzero_optimal_angle():
     """The solver must converge (use < MAX_IT iterations) when the
     optimal steering angle is non-zero but small.
 
@@ -180,19 +167,14 @@ def test_step_adaptive_converges_for_nonzero_optimal_angle():
     target_apd = target_area_per_distance(R, advance, step_length)
     ca = _vertical_wall_cleared()
     valid = _huge_valid_area()
-    r = step_adaptive(
-        cleared=ca,
-        pos=(-advance, 0.0),
-        heading=math.pi / 2,
-        predicted_angle=0.0,
+    opts = StepperOptions(
         target_area_pd=target_apd,
         step_length=step_length,
         radius=R,
         max_deflection=math.radians(30),
         valid_area=valid,
-        angle_min=-math.pi / 4,
-        angle_max=math.pi / 4,
     )
+    r = step(ca, (-advance, 0.0), math.pi / 2, 0.0, opts)
     # MAX_IT = 20 in the Rust source.  A healthy solver should converge
     # in 3-6 iterations on a flat wall.
     assert r.iters < 20, (
@@ -202,7 +184,7 @@ def test_step_adaptive_converges_for_nonzero_optimal_angle():
     )
 
 
-def test_step_adaptive_accepts_small_nonconventional_angle():
+def test_step_accepts_small_nonconventional_angle():
     """When the error is within ``max_err`` but the angle is > 0.03 rad,
     the solver should accept it rather than exhausting iterations.
 
@@ -215,19 +197,14 @@ def test_step_adaptive_accepts_small_nonconventional_angle():
     target_apd = target_area_per_distance(R, advance, step_length)
     ca = _vertical_wall_cleared()
     valid = _huge_valid_area()
-    r = step_adaptive(
-        cleared=ca,
-        pos=(-advance, 0.0),
-        heading=math.pi / 2,
-        predicted_angle=0.0,
+    opts = StepperOptions(
         target_area_pd=target_apd,
         step_length=step_length,
         radius=R,
         max_deflection=math.radians(30),
         valid_area=valid,
-        angle_min=-math.pi / 4,
-        angle_max=math.pi / 4,
     )
+    r = step(ca, (-advance, 0.0), math.pi / 2, 0.0, opts)
     # The optimal angle for this geometry is ~0.14 rad (~8°), well
     # above the 0.03 conventional threshold.  The solver MUST accept
     # it and converge.
@@ -240,7 +217,7 @@ def test_step_adaptive_accepts_small_nonconventional_angle():
 # ── Sequential stability ────────────────────────────────────────────
 
 
-def test_step_adaptive_sequential_flat_wall_no_deflection_accumulation():
+def test_step_sequential_flat_wall_no_deflection_accumulation():
     """Run 30 steps along a flat wall.  The heading should stay close
     to the initial heading (π/2) and the path should not curl.
 
@@ -256,6 +233,14 @@ def test_step_adaptive_sequential_flat_wall_no_deflection_accumulation():
     ca = _vertical_wall_cleared()
     valid = _huge_valid_area()
 
+    opts = StepperOptions(
+        target_area_pd=target_apd,
+        step_length=step_length,
+        radius=R,
+        max_deflection=max_def,
+        valid_area=valid,
+    )
+
     pos = (-advance, 0.0)
     heading = math.pi / 2
     predicted = 0.0
@@ -264,17 +249,7 @@ def test_step_adaptive_sequential_flat_wall_no_deflection_accumulation():
     angles = []
     headings = []
     for i in range(30):
-        r = step_adaptive(
-            cleared=ca,
-            pos=pos,
-            heading=heading,
-            predicted_angle=predicted,
-            target_area_pd=target_apd,
-            step_length=step_length,
-            radius=R,
-            max_deflection=max_def,
-            valid_area=valid,
-        )
+        r = step(ca, pos, heading, predicted, opts)
         if "Lost" in repr(r.status):
             pytest.fail(f"Step {i} lost engagement at pos={pos}")
         angles.append(r.iteration_angle)
@@ -301,7 +276,7 @@ def test_step_adaptive_sequential_flat_wall_no_deflection_accumulation():
 # ── Determinism ─────────────────────────────────────────────────────
 
 
-def test_step_adaptive_determinism():
+def test_step_determinism():
     """Same inputs produce identical output."""
     R = 5.0
     advance = 2.0
@@ -310,30 +285,25 @@ def test_step_adaptive_determinism():
     ca = _vertical_wall_cleared()
     valid = _huge_valid_area()
 
-    args = (
-        ca,
-        (-advance, 0.0),
-        math.pi / 2,
-        0.0,
-        target_apd,
-        step_length,
-        R,
-        math.radians(30),
-        valid,
-        -math.pi / 4,
-        math.pi / 4,
+    opts = StepperOptions(
+        target_area_pd=target_apd,
+        step_length=step_length,
+        radius=R,
+        max_deflection=math.radians(30),
+        valid_area=valid,
     )
-    r1 = step_adaptive(*args)
-    r2 = step_adaptive(*args)
+    args = (ca, (-advance, 0.0), math.pi / 2, 0.0, opts)
+    r1 = step(*args)
+    r2 = step(*args)
     assert r1.next == r2.next
     assert r1.heading == r2.heading
     assert r1.iteration_angle == r2.iteration_angle
     assert r1.iters == r2.iters
 
 
-def test_step_adaptive_converges_from_correct_depth():
+def test_step_converges_from_correct_depth():
     """Starting from a properly-offset position against a circular
-    frontier, step_adaptive should converge quickly (not exhaust
+    frontier, step should converge quickly (not exhaust
     iterations) because the tool is already at the correct depth.
     """
     R = 5.0
@@ -363,19 +333,14 @@ def test_step_adaptive_converges_from_correct_depth():
 
     valid = _huge_valid_area()
 
-    result = step_adaptive(
-        cleared=ca,
-        pos=start_pos,
-        heading=0.0,
-        predicted_angle=0.0,
+    opts = StepperOptions(
         target_area_pd=target_apd,
         step_length=step_length,
         radius=R,
         max_deflection=math.radians(30),
         valid_area=valid,
-        angle_min=-math.pi / 4,
-        angle_max=math.pi / 4,
     )
+    result = step(ca, start_pos, 0.0, 0.0, opts)
     assert result.iters < 20, (
         f"Solver exhausted iterations at correct depth — "
         f"iters={result.iters}, angle={result.iteration_angle:.4f}"

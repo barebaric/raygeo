@@ -8,7 +8,7 @@ mod types;
 pub use cleared_area::ClearedArea;
 pub use crescent::cut_area;
 pub use search::search_frontier_engagement;
-pub use stepper::{step_adaptive, StepResult, StepStatus};
+pub use stepper::{step, StepResult, StepStatus, StepperOptions};
 pub use types::ToolPose;
 
 /// Milling rotational direction. All cutting moves respect this
@@ -27,7 +27,7 @@ pub enum CutDirection {
 }
 
 impl CutDirection {
-    /// One-sided angle bounds for `step_adaptive`, relative to the
+    /// One-sided angle bounds for [`step`], relative to the
     /// heading.  `max_deflection` is the magnitude of the allowed
     /// turn.  Returns `(angle_min, angle_max)` in radians.
     ///

@@ -27,10 +27,11 @@ use crate::geo::shape::polygon::get_polygon_area;
 use crate::geo::shape::polygon::get_polygon_centroid;
 use crate::geo::shape::polygon::get_polygons_closest_point;
 use crate::ops::container::Ops;
-use crate::ops::cut::step_adaptive;
+use crate::ops::cut::step;
 use crate::ops::cut::ClearedArea;
 use crate::ops::cut::CutDirection;
 use crate::ops::cut::StepStatus;
+use crate::ops::cut::StepperOptions;
 use crate::ops::cut::ToolPose;
 use crate::ops::state::State;
 use crate::types::{Point, Polygon};
@@ -364,6 +365,18 @@ pub fn adaptive_clearing(
         };
     }
 
+    // Options constructed once and reused for all step calls in the loop.
+    let step_opts = StepperOptions {
+        target_area_pd,
+        step_length: opts.step_length,
+        radius: opts.radius,
+        max_deflection: max_def,
+        valid_area: &valid_tool_area,
+        angle_min: -std::f64::consts::FRAC_PI_4,
+        angle_max: std::f64::consts::FRAC_PI_4,
+        dir_sign,
+    };
+
     let mut iter: usize = 0;
     for _ in 0..MAX_TOTAL_STEPS {
         iter += 1;
@@ -391,20 +404,7 @@ pub fn adaptive_clearing(
 
         let heading = tool.smoothed_heading();
         let predicted = tool.predicted_angle(max_def);
-        let result = step_adaptive(
-            cleared,
-            tool.pos,
-            heading,
-            predicted,
-            target_area_pd,
-            opts.step_length,
-            opts.radius,
-            max_def,
-            &valid_tool_area,
-            -std::f64::consts::FRAC_PI_4,
-            std::f64::consts::FRAC_PI_4,
-            dir_sign,
-        );
+        let result = step(cleared, tool.pos, heading, predicted, &step_opts);
         let status = result.status;
         if result.status == StepStatus::Ok {
             let dir = Point::new(result.heading.cos(), result.heading.sin());

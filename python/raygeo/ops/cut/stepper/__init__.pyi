@@ -7,7 +7,8 @@ import typing
 __all__ = [
     "StepResult",
     "StepStatus",
-    "step_adaptive",
+    "StepperOptions",
+    "step",
 ]
 
 @typing.final
@@ -42,7 +43,7 @@ class StepResult:
     def iteration_angle(self) -> builtins.float:
         r"""
         Solver steering angle (radians). Only non-zero for
-        ``step_adaptive``.
+        ``step``.
         """
     @property
     def status(self) -> StepStatus:
@@ -86,30 +87,107 @@ class StepStatus:
         """
     def __repr__(self) -> builtins.str: ...
 
-def step_adaptive(cleared: cleared_area.ClearedArea, pos: tuple[builtins.float, builtins.float], heading: builtins.float, predicted_angle: builtins.float, target_area_pd: builtins.float, step_length: builtins.float, radius: builtins.float, max_deflection: builtins.float, valid_area: typing.Sequence[typing.Sequence[tuple[builtins.float, builtins.float]]], angle_min: builtins.float = -0.7853981633974483, angle_max: builtins.float = 0.7853981633974483, dir_sign: builtins.float = 0.0) -> StepResult:
+@typing.final
+class StepperOptions:
+    r"""
+    Configuration options for :func:`step`.
+    
+    Holds the constant parameters for the adaptive stepper.
+    """
+    @property
+    def target_area_pd(self) -> builtins.float:
+        r"""
+        Target cut-area per unit distance.
+        """
+    @target_area_pd.setter
+    def target_area_pd(self, value: builtins.float) -> None:
+        r"""
+        Target cut-area per unit distance.
+        """
+    @property
+    def step_length(self) -> builtins.float:
+        r"""
+        Forward step length in mm.
+        """
+    @step_length.setter
+    def step_length(self, value: builtins.float) -> None:
+        r"""
+        Forward step length in mm.
+        """
+    @property
+    def radius(self) -> builtins.float:
+        r"""
+        Disk radius in mm.
+        """
+    @radius.setter
+    def radius(self, value: builtins.float) -> None:
+        r"""
+        Disk radius in mm.
+        """
+    @property
+    def max_deflection(self) -> builtins.float:
+        r"""
+        Maximum steering deflection in radians.
+        """
+    @max_deflection.setter
+    def max_deflection(self, value: builtins.float) -> None:
+        r"""
+        Maximum steering deflection in radians.
+        """
+    @property
+    def valid_area(self) -> builtins.list[builtins.list[tuple[builtins.float, builtins.float]]]:
+        r"""
+        Valid tool-centre region polygons.
+        """
+    @valid_area.setter
+    def valid_area(self, value: typing.Sequence[typing.Sequence[tuple[builtins.float, builtins.float]]]) -> None:
+        r"""
+        Valid tool-centre region polygons.
+        """
+    @property
+    def angle_min(self) -> builtins.float:
+        r"""
+        Minimum trial deflection angle in radians.
+        """
+    @angle_min.setter
+    def angle_min(self, value: builtins.float) -> None:
+        r"""
+        Minimum trial deflection angle in radians.
+        """
+    @property
+    def angle_max(self) -> builtins.float:
+        r"""
+        Maximum trial deflection angle in radians.
+        """
+    @angle_max.setter
+    def angle_max(self, value: builtins.float) -> None:
+        r"""
+        Maximum trial deflection angle in radians.
+        """
+    @property
+    def dir_sign(self) -> builtins.float:
+        r"""
+        Directional bias sign: ``+1.0`` for CW, ``-1.0`` for CCW,
+        ``0.0`` for no bias.
+        """
+    @dir_sign.setter
+    def dir_sign(self, value: builtins.float) -> None:
+        r"""
+        Directional bias sign: ``+1.0`` for CW, ``-1.0`` for CCW,
+        ``0.0`` for no bias.
+        """
+    def __new__(cls, target_area_pd: builtins.float, step_length: builtins.float, radius: builtins.float, max_deflection: builtins.float, valid_area: typing.Sequence[typing.Sequence[tuple[builtins.float, builtins.float]]], angle_min: builtins.float = -0.7853981633974483, angle_max: builtins.float = 0.7853981633974483, dir_sign: builtins.float = 0.0) -> StepperOptions: ...
+    def __repr__(self) -> builtins.str: ...
+
+def step(cleared: cleared_area.ClearedArea, pos: tuple[builtins.float, builtins.float], heading: builtins.float, predicted_angle: builtins.float, opts: StepperOptions) -> StepResult:
     r"""
     Perform one forward step using the area-based adaptive solver.
-    
-    Like :func:`step`, but targets **cut-area per unit distance**
-    rather than an engagement angle.  Used internally by
-    ``adaptive_clearing``.
     
     :param cleared: ``ClearedArea`` instance.
     :param pos: Current centre position ``(x, y)``.
     :param heading: Smoothed heading angle (radians).
     :param predicted_angle: Predicted steering angle from history.
-    :param target_area_pd: Target cut-area per unit distance.
-    :param step_length: Forward step length in mm.
-    :param radius: Disk radius in mm.
-    :param max_deflection: Max steering deflection in radians.
-    :param valid_area: Valid tool-centre region polygons.
-    :param angle_min: Minimum trial deflection angle in radians (default -π/4).
-    :param angle_max: Maximum trial deflection angle in radians (default +π/4).
-    :param dir_sign: Directional bias sign (default ``0.0``).  ``+1.0``
-       to prefer positive angles (CW), ``−1.0`` to prefer negative
-       angles (CCW).  The bias penalises fresh material on the wrong
-       side when the tool breaks through a web between two cleared
-       regions.  Has no effect during normal one-sided cutting.
+    :param opts: ``StepperOptions`` instance with fixed parameters.
     :returns: ``StepResult`` with the next position and updated heading.
     """
 

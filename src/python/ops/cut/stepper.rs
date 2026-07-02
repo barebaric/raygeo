@@ -83,7 +83,7 @@ pub struct PyStepResult {
     #[pyo3(get)]
     pub iters: usize,
     /// Solver steering angle (radians). Only non-zero for
-    /// ``step_adaptive``.
+    /// ``step``.
     #[pyo3(get)]
     pub iteration_angle: f64,
     /// Step completion status.
@@ -103,74 +103,126 @@ impl PyStepResult {
     }
 }
 
-/// Perform one forward step using the area-based adaptive solver.
+/// Configuration options for :func:`step`.
 ///
-/// Like :func:`step`, but targets **cut-area per unit distance**
-/// rather than an engagement angle.  Used internally by
-/// ``adaptive_clearing``.
+/// Holds the constant parameters for the adaptive stepper.
+#[gen_stub_pyclass(module = "raygeo.ops.cut.stepper")]
+#[pyclass(name = "StepperOptions", skip_from_py_object)]
+#[derive(Clone, Debug)]
+pub struct PyStepperOptions {
+    /// Target cut-area per unit distance.
+    #[pyo3(get, set)]
+    pub target_area_pd: f64,
+    /// Forward step length in mm.
+    #[pyo3(get, set)]
+    pub step_length: f64,
+    /// Disk radius in mm.
+    #[pyo3(get, set)]
+    pub radius: f64,
+    /// Maximum steering deflection in radians.
+    #[pyo3(get, set)]
+    pub max_deflection: f64,
+    /// Valid tool-centre region polygons.
+    #[pyo3(get, set)]
+    pub valid_area: Vec<Vec<(f64, f64)>>,
+    /// Minimum trial deflection angle in radians.
+    #[pyo3(get, set)]
+    pub angle_min: f64,
+    /// Maximum trial deflection angle in radians.
+    #[pyo3(get, set)]
+    pub angle_max: f64,
+    /// Directional bias sign: ``+1.0`` for CW, ``-1.0`` for CCW,
+    /// ``0.0`` for no bias.
+    #[pyo3(get, set)]
+    pub dir_sign: f64,
+}
+
+#[gen_stub_pymethods]
+#[pymethods]
+impl PyStepperOptions {
+    #[new]
+    #[allow(clippy::too_many_arguments)]
+    #[pyo3(signature = (
+        target_area_pd,
+        step_length,
+        radius,
+        max_deflection,
+        valid_area,
+        angle_min = -std::f64::consts::FRAC_PI_4,
+        angle_max = std::f64::consts::FRAC_PI_4,
+        dir_sign = 0.0,
+    ))]
+    fn new(
+        target_area_pd: f64,
+        step_length: f64,
+        radius: f64,
+        max_deflection: f64,
+        valid_area: Vec<Vec<(f64, f64)>>,
+        angle_min: f64,
+        angle_max: f64,
+        dir_sign: f64,
+    ) -> Self {
+        Self {
+            target_area_pd,
+            step_length,
+            radius,
+            max_deflection,
+            valid_area,
+            angle_min,
+            angle_max,
+            dir_sign,
+        }
+    }
+
+    fn __repr__(&self) -> String {
+        format!(
+            "StepperOptions(target_apd={:.4}, step_len={:.3}, R={:.1}, \
+             max_def={:.2}, angle_min={:.3}, angle_max={:.3}, dir_sign={:+.1})",
+            self.target_area_pd,
+            self.step_length,
+            self.radius,
+            self.max_deflection,
+            self.angle_min,
+            self.angle_max,
+            self.dir_sign,
+        )
+    }
+}
+
+/// Perform one forward step using the area-based adaptive solver.
 ///
 /// :param cleared: ``ClearedArea`` instance.
 /// :param pos: Current centre position ``(x, y)``.
 /// :param heading: Smoothed heading angle (radians).
 /// :param predicted_angle: Predicted steering angle from history.
-/// :param target_area_pd: Target cut-area per unit distance.
-/// :param step_length: Forward step length in mm.
-/// :param radius: Disk radius in mm.
-/// :param max_deflection: Max steering deflection in radians.
-/// :param valid_area: Valid tool-centre region polygons.
-/// :param angle_min: Minimum trial deflection angle in radians (default -π/4).
-/// :param angle_max: Maximum trial deflection angle in radians (default +π/4).
-/// :param dir_sign: Directional bias sign (default ``0.0``).  ``+1.0``
-///    to prefer positive angles (CW), ``−1.0`` to prefer negative
-///    angles (CCW).  The bias penalises fresh material on the wrong
-///    side when the tool breaks through a web between two cleared
-///    regions.  Has no effect during normal one-sided cutting.
+/// :param opts: ``StepperOptions`` instance with fixed parameters.
 /// :returns: ``StepResult`` with the next position and updated heading.
 #[gen_stub_pyfunction(module = "raygeo.ops.cut.stepper")]
-#[pyfunction(name = "step_adaptive")]
-#[pyo3(signature = (
-    cleared,
-    pos,
-    heading,
-    predicted_angle,
-    target_area_pd,
-    step_length,
-    radius,
-    max_deflection,
-    valid_area,
-    angle_min = -std::f64::consts::FRAC_PI_4,
-    angle_max = std::f64::consts::FRAC_PI_4,
-    dir_sign = 0.0,
-))]
-#[allow(clippy::too_many_arguments)]
-fn step_adaptive_py(
+#[pyfunction(name = "step")]
+fn step_py(
     cleared: &PyClearedArea,
     pos: (f64, f64),
     heading: f64,
     predicted_angle: f64,
-    target_area_pd: f64,
-    step_length: f64,
-    radius: f64,
-    max_deflection: f64,
-    valid_area: Vec<Vec<(f64, f64)>>,
-    angle_min: f64,
-    angle_max: f64,
-    dir_sign: f64,
+    opts: &PyStepperOptions,
 ) -> PyStepResult {
-    let valid = polygons_from_tuples(valid_area);
-    let r = cut::stepper::step_adaptive(
+    let valid = polygons_from_tuples(opts.valid_area.clone());
+    let rust_opts = cut::StepperOptions {
+        target_area_pd: opts.target_area_pd,
+        step_length: opts.step_length,
+        radius: opts.radius,
+        max_deflection: opts.max_deflection,
+        valid_area: &valid,
+        angle_min: opts.angle_min,
+        angle_max: opts.angle_max,
+        dir_sign: opts.dir_sign,
+    };
+    let r = cut::stepper::step(
         &cleared.inner,
         Point::new(pos.0, pos.1),
         heading,
         predicted_angle,
-        target_area_pd,
-        step_length,
-        radius,
-        max_deflection,
-        &valid,
-        angle_min,
-        angle_max,
-        dir_sign,
+        &rust_opts,
     );
     PyStepResult {
         next: (r.next.x, r.next.y),
@@ -188,7 +240,8 @@ pub fn register(cut_mod: &Bound<'_, PyModule>) -> PyResult<()> {
 
     m.add_class::<PyStepStatus>()?;
     m.add_class::<PyStepResult>()?;
-    m.add_function(wrap_pyfunction!(step_adaptive_py, &m)?)?;
+    m.add_class::<PyStepperOptions>()?;
+    m.add_function(wrap_pyfunction!(step_py, &m)?)?;
 
     cut_mod.add_submodule(&m)?;
 

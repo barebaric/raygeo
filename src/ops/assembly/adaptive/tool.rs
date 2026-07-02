@@ -118,7 +118,7 @@ impl Tool {
             PREDICTOR_DECAY * self.predictor + (1.0 - PREDICTOR_DECAY) * delta;
     }
 
-    /// Predictor seed for [`step_adaptive`].  Clamped to a fraction of
+    /// Predictor seed for [`step`].  Clamped to a fraction of
     /// `max_deflection` so a stale large estimate can never dominate
     /// the first solver trial and pin `best_error` on an overshoot.
     pub fn predicted_angle(&self, max_deflection: f64) -> f64 {

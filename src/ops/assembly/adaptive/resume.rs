@@ -14,9 +14,10 @@ use crate::geo::shape::does_line_cross_polygon;
 use crate::geo::shape::get_polygon_signed_area;
 use crate::geo::shape::is_point_in_polygon;
 use crate::ops::container::Ops;
-use crate::ops::cut::step_adaptive;
+use crate::ops::cut::step;
 use crate::ops::cut::ClearedArea;
 use crate::ops::cut::StepStatus;
+use crate::ops::cut::StepperOptions;
 use crate::ops::cut::ToolPose;
 use crate::types::{Point, Polygon};
 
@@ -107,7 +108,7 @@ fn direct_path_safe(from: Point, to: Point, obstacles: &[Polygon]) -> bool {
         .all(|obs| !does_line_cross_polygon(from, to, obs))
 }
 
-/// Ground-truth engagement check: run `step_adaptive` at a candidate
+/// Ground-truth engagement check: run [`step`] at a candidate
 /// position with **one-sided deflection bounds** derived from
 /// `opts.cut_direction`.  This vets that the stepper can cut in the
 /// chosen rotational direction from `pos` — a position that only
@@ -121,7 +122,7 @@ fn direct_path_safe(from: Point, to: Point, obstacles: &[Polygon]) -> bool {
 /// `StepStatus::Ok`, `None` otherwise.
 ///
 /// The returned position is the original `pos` — the caller places the
-/// tool there and then the main loop calls `step_adaptive` again on the
+/// tool there and then the main loop calls [`step`] again on the
 /// next iteration to move forward.
 #[prof]
 pub fn probe_step(
@@ -158,20 +159,17 @@ fn probe_step_impl(
     dir_sign: f64,
     mode: &str,
 ) -> Option<ToolPose> {
-    let result = step_adaptive(
-        ctx.cleared,
-        pos,
-        heading,
-        0.0,
-        ctx.target_area_pd,
-        ctx.opts.step_length,
+    let probe_opts = StepperOptions {
+        target_area_pd: ctx.target_area_pd,
+        step_length: ctx.opts.step_length,
         radius,
-        angle_max.max(angle_min.abs()),
-        ctx.valid_tool_area,
+        max_deflection: angle_max.max(angle_min.abs()),
+        valid_area: ctx.valid_tool_area,
         angle_min,
         angle_max,
         dir_sign,
-    );
+    };
+    let result = step(ctx.cleared, pos, heading, 0.0, &probe_opts);
     if result.status == StepStatus::Ok {
         dbg_log!(
             "  PROBE[{}]  pos=({:.3},{:.3})  heading_in={:.4}  \

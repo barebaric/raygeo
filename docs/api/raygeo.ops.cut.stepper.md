@@ -31,7 +31,7 @@ Updated heading angle in radians.
 iteration_angle: float
 ```
 
-Solver steering angle (radians). Only non-zero for `step_adaptive`.
+Solver steering angle (radians). Only non-zero for `step`.
 
 ### `iters`
 
@@ -112,47 +112,100 @@ Normal step completion.
 | --------- | ------------ | --------------- |
 | _Returns_ | `StepStatus` | `StepStatus.ok` |
 
-## Functions
+## StepperOptions
 
-### `step_adaptive()`
+Configuration options for **step**.
+
+Holds the constant parameters for the adaptive stepper.
+
+### `angle_max`
 
 ```python
-step_adaptive(
+angle_max: float
+```
+
+Maximum trial deflection angle in radians.
+
+### `angle_min`
+
+```python
+angle_min: float
+```
+
+Minimum trial deflection angle in radians.
+
+### `dir_sign`
+
+```python
+dir_sign: float
+```
+
+Directional bias sign: `+1.0` for CW, `-1.0` for CCW, `0.0` for no bias.
+
+### `max_deflection`
+
+```python
+max_deflection: float
+```
+
+Maximum steering deflection in radians.
+
+### `radius`
+
+```python
+radius: float
+```
+
+Disk radius in mm.
+
+### `step_length`
+
+```python
+step_length: float
+```
+
+Forward step length in mm.
+
+### `target_area_pd`
+
+```python
+target_area_pd: float
+```
+
+Target cut-area per unit distance.
+
+### `valid_area`
+
+```python
+valid_area: list[list[tuple[float, float]]]
+```
+
+Valid tool-centre region polygons.
+
+## Functions
+
+### `step()`
+
+```python
+step(
     cleared: cleared_area.ClearedArea,
     pos: tuple[float, float],
     heading: float,
     predicted_angle: float,
-    target_area_pd: float,
-    step_length: float,
-    radius: float,
-    max_deflection: float,
-    valid_area: Sequence[Sequence[tuple[float, float]]],
-    angle_min: float = -0.7853981633974483,
-    angle_max: float = 0.7853981633974483,
-    dir_sign: float = 0.0,
+    opts: StepperOptions,
 ) -> StepResult
 ```
 
 Perform one forward step using the area-based adaptive solver.
 
-Like **step**, but targets **cut-area per unit distance** rather than an engagement angle. Used
-internally by `adaptive_clearing`.
-
-| Parameter         | Type                                      | Description                                                                                                                                                                                                                                                                              |
-| ----------------- | ----------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `cleared`         | `cleared_area.ClearedArea`                | `ClearedArea` instance.                                                                                                                                                                                                                                                                  |
-| `pos`             | `tuple[float, float]`                     | Current centre position `(x, y)`.                                                                                                                                                                                                                                                        |
-| `heading`         | `float`                                   | Smoothed heading angle (radians).                                                                                                                                                                                                                                                        |
-| `predicted_angle` | `float`                                   | Predicted steering angle from history.                                                                                                                                                                                                                                                   |
-| `target_area_pd`  | `float`                                   | Target cut-area per unit distance.                                                                                                                                                                                                                                                       |
-| `step_length`     | `float`                                   | Forward step length in mm.                                                                                                                                                                                                                                                               |
-| `radius`          | `float`                                   | Disk radius in mm.                                                                                                                                                                                                                                                                       |
-| `max_deflection`  | `float`                                   | Max steering deflection in radians.                                                                                                                                                                                                                                                      |
-| `valid_area`      | `Sequence[Sequence[tuple[float, float]]]` | Valid tool-centre region polygons.                                                                                                                                                                                                                                                       |
-| `angle_min`       | `float = -0.7853981633974483`             | Minimum trial deflection angle in radians (default -π/4).                                                                                                                                                                                                                                |
-| `angle_max`       | `float = 0.7853981633974483`              | Maximum trial deflection angle in radians (default +π/4).                                                                                                                                                                                                                                |
-| `dir_sign`        | `float = 0.0`                             | Directional bias sign (default `0.0`). `+1.0` to prefer positive angles (CW), `−1.0` to prefer negative angles (CCW). The bias penalises fresh material on the wrong side when the tool breaks through a web between two cleared regions. Has no effect during normal one-sided cutting. |
-| _Returns_         | `StepResult`                              | `StepResult` with the next position and updated heading.                                                                                                                                                                                                                                 |
+| Parameter         | Type                       | Description                                              |
+| ----------------- | -------------------------- | -------------------------------------------------------- |
+| `cleared`         | `cleared_area.ClearedArea` | `ClearedArea` instance.                                  |
+| `pos`             | `tuple[float, float]`      | Current centre position `(x, y)`.                        |
+| `heading`         | `float`                    | Smoothed heading angle (radians).                        |
+| `predicted_angle` | `float`                    | Predicted steering angle from history.                   |
+| `opts`            | `StepperOptions`           | `StepperOptions` instance with fixed parameters.         |
+| _Returns_         | `StepResult`               | `StepResult` with the next position and updated heading. |
 
 ![Wall following along four boundary shapes: curved, square wave, zig zag, and circle.](images/ops-cut-stepper-wall-following.png)
 

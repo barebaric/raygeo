@@ -1,4 +1,4 @@
-"""Generate stepper example images using step_adaptive."""
+"""Generate stepper example images using step."""
 
 import math
 
@@ -9,7 +9,7 @@ from matplotlib.patches import Circle
 from raygeo.geo.algo.engagement import compute_engagement
 from raygeo.ops.assembly.adaptive import target_area_per_distance
 from raygeo.ops.cut.cleared_area import ClearedArea
-from raygeo.ops.cut.stepper import step_adaptive
+from raygeo.ops.cut.stepper import StepperOptions, step
 
 
 def _engagement_at(pt, ca, tool_radius):
@@ -34,27 +34,21 @@ def _run_segment(
     max_deflection,
     max_steps,
 ):
-    """Drive step_adaptive in a loop, returning the path of positions."""
+    """Drive step in a loop, returning the path of positions."""
     valid = _huge_valid_area()
+    opts = StepperOptions(
+        target_area_pd=target_apd,
+        step_length=step_len,
+        radius=tool_radius,
+        max_deflection=max_deflection,
+        valid_area=valid,
+    )
     path = [start]
     pos = start
     hdg = heading
     predicted = 0.0
     for _ in range(max_steps):
-        r = step_adaptive(
-            ca,
-            pos,
-            hdg,
-            predicted,
-            target_apd,
-            step_len,
-            tool_radius,
-            max_deflection,
-            valid,
-            -max_deflection,
-            max_deflection,
-            0.0,
-        )
+        r = step(ca, pos, hdg, predicted, opts)
         if "Ok" not in repr(r.status):
             # Brief loss at a sharp corner is OK — continue to recover.
             if "Lost" in repr(r.status) and len(path) < 5:
@@ -335,7 +329,7 @@ def generate_engagement_histogram():
 __docs_target__ = ["raygeo.ops.cut.stepper.md"]
 __images__ = [
     {
-        "heading": "step_adaptive",
+        "heading": "step",
         "caption": (
             "Wall following along four boundary shapes: "
             "curved, square wave, zig zag, and circle."
@@ -343,7 +337,7 @@ __images__ = [
         "function": generate_wall_following,
     },
     {
-        "heading": "step_adaptive",
+        "heading": "step",
         "caption": (
             "90° corner: the solver deflects the heading to keep "
             "engagement constant around the turn."
@@ -351,7 +345,7 @@ __images__ = [
         "function": generate_pocket_corner,
     },
     {
-        "heading": "step_adaptive",
+        "heading": "step",
         "caption": (
             "Engagement histogram for 200 steps along a straight "
             "wall. Tight peak near target indicates stable behaviour."
