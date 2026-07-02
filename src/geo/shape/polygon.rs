@@ -1439,6 +1439,35 @@ pub fn get_polygon_heading_at(polygon: &[Point], vertex: Point) -> f64 {
     avg.y.atan2(avg.x)
 }
 
+/// Walk polygon vertices in order, calling `visit(idx, &point)` for each.
+/// Returns the first `Some` from visit, or `None` if all return `None`.
+///
+/// * `start_idx` — vertex index to start from.
+/// * `forward` — `true` for increasing index, `false` for decreasing.
+/// * `visit` — called for each vertex; short-circuit on `Some`.
+pub(crate) fn walk_polygon_vertices<T>(
+    polygon: &[Point],
+    start_idx: usize,
+    forward: bool,
+    mut visit: impl FnMut(usize, &Point) -> Option<T>,
+) -> Option<T> {
+    let n = polygon.len();
+    if n < 3 {
+        return None;
+    }
+    for offset in 0..n {
+        let idx = if forward {
+            (start_idx + offset) % n
+        } else {
+            (start_idx + n - offset) % n
+        };
+        if let result @ Some(_) = visit(idx, &polygon[idx]) {
+            return result;
+        }
+    }
+    None
+}
+
 /// Walk polygon vertices forward (in storage order, wrapping around),
 /// starting from the vertex closest to `start`.
 ///
@@ -1462,13 +1491,8 @@ pub fn get_polygon_heading_at(polygon: &[Point], vertex: Point) -> f64 {
 pub fn walk_polygon_from_point<T>(
     polygon: &[Point],
     start: Point,
-    mut visit: impl FnMut(usize, &Point) -> Option<T>,
+    visit: impl FnMut(usize, &Point) -> Option<T>,
 ) -> Option<T> {
-    let n = polygon.len();
-    if n < 3 {
-        return None;
-    }
-
     let start_idx = polygon
         .iter()
         .enumerate()
@@ -1478,12 +1502,5 @@ pub fn walk_polygon_from_point<T>(
                 .unwrap_or(std::cmp::Ordering::Equal)
         })
         .map(|(i, _)| i)?;
-
-    for offset in 0..n {
-        let idx = (start_idx + offset) % n;
-        if let result @ Some(_) = visit(idx, &polygon[idx]) {
-            return result;
-        }
-    }
-    None
+    walk_polygon_vertices(polygon, start_idx, true, visit)
 }

@@ -138,6 +138,19 @@ impl ClearedArea {
         )
     }
 
+    /// Merge swept polygons into `self.fragments` via
+    /// `get_polygons_union` and rebuild the spatial grid.
+    #[prof]
+    fn union_swept(&mut self, swept: Vec<Polygon>) {
+        if swept.is_empty() || swept.iter().all(|p| p.len() < 3) {
+            return;
+        }
+        let mut all_polys = self.fragments.clone();
+        all_polys.extend(swept);
+        self.fragments = get_polygons_union(&all_polys);
+        self.rebuild_grid();
+    }
+
     #[prof]
     pub fn expand(&mut self, path: &[Point], radius: f64) {
         if path.len() < 2 || radius < 1e-12 {
@@ -149,23 +162,13 @@ impl ClearedArea {
                 window[0], window[1], radius,
             ));
         }
-
-        let mut all_polys: Vec<Polygon> = self.fragments.clone();
-        all_polys.extend(swept_polys);
-        let merged = get_polygons_union(&all_polys);
-
-        self.fragments = merged;
-        self.rebuild_grid();
+        self.union_swept(swept_polys);
     }
 
     #[prof]
     pub fn expand_step(&mut self, prev: Point, next: Point, radius: f64) {
         let swept = get_segment_swept_polygon(prev, next, radius);
-        let mut all_polys = self.fragments.clone();
-        all_polys.extend(swept);
-        let merged = get_polygons_union(&all_polys);
-        self.fragments = merged;
-        self.rebuild_grid();
+        self.union_swept(swept);
     }
 
     #[prof]
@@ -392,10 +395,7 @@ impl ClearedArea {
         let radius = self.batch_radius;
         let path = std::mem::take(&mut self.batch_path);
         let swept = get_polyline_swept_polygon(&path, radius);
-        let mut all_polys = self.fragments.clone();
-        all_polys.extend(swept);
-        self.fragments = get_polygons_union(&all_polys);
-        self.rebuild_grid();
+        self.union_swept(swept);
         self.batch_active = false;
     }
 

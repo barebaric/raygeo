@@ -63,6 +63,7 @@ from raygeo.geo.shape.polygon import (
     translate_polygons,
     translate_polygons_numpy,
     walk_polygon_from_point,
+    walk_polygon_vertices,
 )
 from raygeo.geo.shape.polygon3d import resample_polyline_3d
 from raygeo.geo.types import Polygon
@@ -2234,6 +2235,77 @@ def test_walk_coordinates_match_input():
     walk = walk_polygon_from_point(poly, (3, 4))
     for idx, x, y in walk:
         assert (x, y) == poly[idx]
+
+
+# ── walk_polygon_vertices ────────────────────────────────────────────
+
+
+def test_walk_polygon_vertices_forward_from_zero():
+    """Forward walk from index 0 visits vertices in storage order."""
+    walk = walk_polygon_vertices(_ccw_square(), 0, True)
+    assert [
+        (0, 0.0, 0.0),
+        (1, 10.0, 0.0),
+        (2, 10.0, 10.0),
+        (3, 0.0, 10.0),
+    ] == walk
+
+
+def test_walk_polygon_vertices_forward_from_index():
+    """Forward walk wraps around from a non-zero start index."""
+    walk = walk_polygon_vertices(_ccw_square(), 2, True)
+    assert [
+        (2, 10.0, 10.0),
+        (3, 0.0, 10.0),
+        (0, 0.0, 0.0),
+        (1, 10.0, 0.0),
+    ] == walk
+
+
+def test_walk_polygon_vertices_backward_from_zero():
+    """Backward walk from index 0 visits vertices in reverse order."""
+    walk = walk_polygon_vertices(_ccw_square(), 0, False)
+    assert [
+        (0, 0.0, 0.0),
+        (3, 0.0, 10.0),
+        (2, 10.0, 10.0),
+        (1, 10.0, 0.0),
+    ] == walk
+
+
+def test_walk_polygon_vertices_backward_from_index():
+    """Backward walk wraps around from a non-zero start index."""
+    walk = walk_polygon_vertices(_ccw_square(), 1, False)
+    assert [
+        (1, 10.0, 0.0),
+        (0, 0.0, 0.0),
+        (3, 0.0, 10.0),
+        (2, 10.0, 10.0),
+    ] == walk
+
+
+def test_walk_polygon_vertices_cw_polygon_forward():
+    """Forward walk on a CW polygon visits vertices in CW storage order."""
+    walk = walk_polygon_vertices(_cw_square(), 0, True)
+    assert [
+        (0, 0.0, 0.0),
+        (1, 0.0, 10.0),
+        (2, 10.0, 10.0),
+        (3, 10.0, 0.0),
+    ] == walk
+
+
+def test_walk_polygon_vertices_triangle():
+    """Triangle with 3 vertices walks correctly."""
+    tri = [(1.0, 1.0), (4.0, 1.0), (2.5, 5.0)]
+    walk = walk_polygon_vertices(tri, 2, True)
+    assert walk == [(2, 2.5, 5.0), (0, 1.0, 1.0), (1, 4.0, 1.0)]
+
+
+def test_walk_polygon_vertices_degenerate():
+    """Fewer than 3 vertices returns an empty list."""
+    assert walk_polygon_vertices([], 0, True) == []
+    assert walk_polygon_vertices([(0.0, 0.0), (1.0, 0.0)], 0, True) == []
 
 
 # ── does_polygon_enclose_circle ─────────────────────────────────────

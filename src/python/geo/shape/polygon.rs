@@ -163,6 +163,7 @@ pub fn register(shape_mod: &Bound<'_, PyModule>) -> PyResult<()> {
         resample_polygon_py,
         get_polygon_heading_at_py,
         walk_polygon_from_point_py,
+        walk_polygon_vertices_py,
         rotate_polygon_numpy_py,
         rotate_polygon_py,
         rotate_polygons_numpy_py,
@@ -1936,5 +1937,48 @@ fn walk_polygon_from_point_py(
         let pt = &poly[idx];
         result.push((idx, pt.x, pt.y));
     }
+    result
+}
+
+/// Walk polygon vertices in order from a given start index.
+///
+/// Unlike :func:`walk_polygon_from_point`, this function takes a
+/// starting vertex index directly and supports walking forward or
+/// backward.  Returns all visited vertices as ``(index, x, y)``
+/// tuples.
+///
+/// :param polygon: Closed polygon as a list of ``(x, y)`` vertices.
+/// :param start_idx: Starting vertex index.
+/// :param forward: ``True`` to walk forward (increasing index),
+///    ``False`` to walk backward (decreasing index).
+/// :returns: List of ``(index, x, y)`` tuples in walk order.
+#[gen_stub_pyfunction(
+    python = r#"
+    def walk_polygon_vertices(
+        polygon: list[tuple[float, float]],
+        start_idx: int,
+        forward: bool,
+    ) -> list[tuple[int, float, float]]:
+        ...
+    "#,
+    module = "raygeo.geo.shape.polygon"
+)]
+#[pyfunction(name = "walk_polygon_vertices")]
+fn walk_polygon_vertices_py(
+    polygon: Vec<PyPoint2D>,
+    start_idx: usize,
+    forward: bool,
+) -> Vec<(usize, f64, f64)> {
+    let poly = poly_to_points(polygon);
+    let mut result = Vec::with_capacity(poly.len());
+    let _ = crate::geo::shape::polygon::walk_polygon_vertices(
+        &poly,
+        start_idx,
+        forward,
+        |idx, pt| {
+            result.push((idx, pt.x, pt.y));
+            None::<()>
+        },
+    );
     result
 }

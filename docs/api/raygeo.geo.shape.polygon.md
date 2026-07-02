@@ -1128,3 +1128,20 @@ walk_polygon_from_point(
 
 *`walk_polygon_from_point` returns vertices in walk order starting from the vertex closest to a
 marker.*
+
+### `walk_polygon_vertices()`
+
+```python
+walk_polygon_vertices(
+    polygon: list[tuple[float, float]],
+    start_idx: int,
+    forward: bool,
+) -> list[tuple[int, float, float]]
+```
+
+| Parameter   | Type                             | Description |
+| ----------- | -------------------------------- | ----------- |
+| `polygon`   | `list[tuple[float, float]]`      |             |
+| `start_idx` | `int`                            |             |
+| `forward`   | `bool`                           |             |
+| _Returns_   | `list[tuple[int, float, float]]` |             |

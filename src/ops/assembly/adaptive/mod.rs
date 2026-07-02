@@ -28,6 +28,7 @@ use crate::geo::shape::polygon::get_polygon_centroid;
 use crate::geo::shape::polygon::get_polygons_closest_point;
 use crate::ops::container::Ops;
 use crate::ops::cut::step;
+use crate::ops::cut::stepper::MAX_IT;
 use crate::ops::cut::ClearedArea;
 use crate::ops::cut::CutDirection;
 use crate::ops::cut::StepStatus;
@@ -418,7 +419,7 @@ pub fn adaptive_clearing(
             // that as the next step's seed is what causes the
             // over-correct / snap-back oscillation (e.g. +39° then
             // +74°) that leaves scalloped leftover material.
-            if result.iters < 20 {
+            if result.iters < MAX_IT {
                 tool.update_predictor(result.iteration_angle);
             }
         }

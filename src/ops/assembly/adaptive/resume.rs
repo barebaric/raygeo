@@ -135,30 +135,6 @@ pub fn probe_step(
     let dir_sign = ctx.opts.cut_direction.sign();
     let (angle_min, angle_max) =
         ctx.opts.cut_direction.angle_bounds(max_deflection);
-    probe_step_impl(
-        ctx,
-        radius,
-        pos,
-        heading,
-        angle_min,
-        angle_max,
-        dir_sign,
-        "one-sided",
-    )
-}
-
-#[allow(clippy::too_many_arguments)]
-#[prof]
-fn probe_step_impl(
-    ctx: &ResumeCtx,
-    radius: f64,
-    pos: Point,
-    heading: f64,
-    angle_min: f64,
-    angle_max: f64,
-    dir_sign: f64,
-    mode: &str,
-) -> Option<ToolPose> {
     let probe_opts = StepperOptions {
         target_area_pd: ctx.target_area_pd,
         step_length: ctx.opts.step_length,
@@ -172,9 +148,8 @@ fn probe_step_impl(
     let result = step(ctx.cleared, pos, heading, 0.0, &probe_opts);
     if result.status == StepStatus::Ok {
         dbg_log!(
-            "  PROBE[{}]  pos=({:.3},{:.3})  heading_in={:.4}  \
+            "  PROBE[one-sided]  pos=({:.3},{:.3})  heading_in={:.4}  \
              heading_out={:.4}  iters={}  bounds=({:.4},{:.4})",
-            mode,
             pos.x,
             pos.y,
             heading,
@@ -189,9 +164,8 @@ fn probe_step_impl(
         })
     } else {
         dbg_log!(
-            "  PROBE[{}]  MISS  pos=({:.3},{:.3})  heading={:.4}  \
+            "  PROBE[one-sided]  MISS  pos=({:.3},{:.3})  heading={:.4}  \
              status={:?}  bounds=({:.4},{:.4})",
-            mode,
             pos.x,
             pos.y,
             heading,

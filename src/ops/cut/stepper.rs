@@ -83,6 +83,9 @@ impl Default for StepperOptions<'_> {
     }
 }
 
+/// Maximum solver iterations before giving up on a single step.
+pub(crate) const MAX_IT: usize = 20;
+
 /// Result of a single step.
 #[derive(Debug, Clone)]
 pub struct StepResult {
@@ -203,7 +206,6 @@ fn step_inner(
     let mut skip_count = 0;
     let mut exit_reason = "max_iters";
 
-    const MAX_IT: usize = 20;
     dbg_log!(
         "SA  pos=({:.3},{:.3})  heading={:.4}  pred={:.4}  \
          target_apd={:.4}  step_len={:.3}  R={:.1}  max_def={:.2}  \

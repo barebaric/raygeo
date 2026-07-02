@@ -67,6 +67,7 @@ __all__ = [
     "translate_polygons",
     "translate_polygons_numpy",
     "walk_polygon_from_point",
+    "walk_polygon_vertices",
 ]
 
 @typing.final
@@ -697,4 +698,6 @@ def translate_polygons_numpy(polygons: collections.abc.Sequence[numpy.typing.NDA
     """
 
 def walk_polygon_from_point(polygon: list[tuple[float, float]], start: tuple[float, float]) -> list[tuple[int, float, float]]: ...
+
+def walk_polygon_vertices(polygon: list[tuple[float, float]], start_idx: int, forward: bool) -> list[tuple[int, float, float]]: ...
 

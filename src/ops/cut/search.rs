@@ -4,6 +4,7 @@ use crate::dbg_log;
 use crate::geo::shape::polygon::{
     get_polygon_heading_at, get_polygon_signed_area,
     get_polygons_closest_point, get_polygons_group_intersection,
+    walk_polygon_vertices,
 };
 use crate::ops::cut::ClearedArea;
 use crate::ops::cut::ToolPose;
@@ -21,120 +22,106 @@ fn offset_inward(pt: Point, normal: Point, radius: f64, advance: f64) -> Point {
     pt - normal * offset
 }
 
-/// Walk along the cleared-area frontier, clipped to the tool-centre
-/// envelope, returning the first vertex whose outward cut-area probe
-/// satisfies `accept`.
+/// Iterate over sample points along a single polygon, calling `accept`
+/// at each sample point.  Returns the first `Some` result from `accept`,
+/// or `None` if no sample is accepted.
 ///
-/// `forward` is relative to the polygon's natural storage order (not
-/// to a global CCW/CW convention).  Use
-/// [`search_frontier_engagement`] which chooses the direction from the
-/// start heading.
+/// At each vertex (and optionally at sub-sampled positions along edges),
+/// `accept(pos, heading)` is called where `pos` is the frontier point
+/// and `heading` is the tangent direction of travel (in the walk
+/// direction) at that point.
 ///
-/// The returned position is offset inward (into the cleared area)
-/// by `radius - advance` so the tool starts at the correct
-/// engagement depth rather than directly on the boundary.
-#[allow(clippy::too_many_arguments)]
-#[prof]
-fn walk_frontier(
-    cleared: &ClearedArea,
-    start_pos: Point,
-    radius: f64,
-    step_length: f64,
-    advance: f64,
+/// * `forward` — walk direction relative to the polygon's storage order
+///   (the caller normalises winding externally).
+/// * `sample_spacing` — sub-sample edges at this interval (mm).
+///   Pass `0.0` to visit vertices only.
+/// * `skip_closest` — if `true`, skip the first vertex (used when the
+///   start position is the tool's current stall point whose own vertex
+///   would trivially fail).
+/// * `start_frac` — fractional offset along the edge starting at
+///   `start_idx` (0.0 = at the vertex, 0.5 = mid-edge).  Used for
+///   fractional-start walks; pass `0.0` to start at the vertex.
+pub(crate) fn walk_polygon_samples<F>(
+    poly: &Polygon,
+    start_idx: usize,
     forward: bool,
+    sample_spacing: f64,
     skip_closest: bool,
-    mut accept: impl FnMut(f64) -> bool,
-) -> Option<ToolPose> {
-    let frontier = cleared.frontier(0.001);
-    if frontier.is_empty() {
-        return None;
-    }
-
-    let polys = {
-        let envelope = cleared.envelope(radius);
-        if envelope.is_empty() {
-            frontier
-        } else {
-            get_polygons_group_intersection(&frontier, &envelope)
-        }
-    };
-    if polys.is_empty() {
-        return None;
-    }
-
-    let (closest_poly_idx, _t, _closest_pt, _d2) =
-        get_polygons_closest_point(&polys, start_pos)?;
-    let poly = &polys[closest_poly_idx];
+    start_frac: f64,
+    mut accept: F,
+) -> Option<ToolPose>
+where
+    F: FnMut(Point, f64) -> Option<ToolPose>,
+{
     let n = poly.len();
     if n < 3 {
         return None;
     }
 
-    // Normalise to CCW so "forward" always means increasing index.
-    let is_ccw = get_polygon_signed_area(poly) > 0.0;
-    let actual_forward = if is_ccw { forward } else { !forward };
-
-    let start_idx = poly
-        .iter()
-        .enumerate()
-        .min_by(|(_, a), (_, b)| {
-            a.distance_squared(start_pos)
-                .partial_cmp(&b.distance_squared(start_pos))
-                .unwrap_or(std::cmp::Ordering::Equal)
-        })
-        .map(|(i, _)| i)?;
-
-    let first = if skip_closest { 1 } else { 0 };
-    for offset in first..n {
-        let idx = if actual_forward {
-            (start_idx + offset) % n
+    // Handle fractional-start sample on the first edge before the
+    // vertex walk (walk_polygon_vertices visits vertices only).
+    if !skip_closest && start_frac > 0.0 {
+        let next_idx = if forward {
+            (start_idx + 1) % n
         } else {
-            (start_idx + n - offset) % n
+            (start_idx + n - 1) % n
         };
-        let pt = poly[idx];
+        let edge = poly[next_idx] - poly[start_idx];
+        if edge.length() >= 1e-9 {
+            let s = poly[start_idx] + edge * start_frac;
+            let heading = edge.y.atan2(edge.x);
+            if let Some(r) = accept(s, heading) {
+                return Some(r);
+            }
+        }
+    }
 
-        let normal_heading = get_polygon_heading_at(poly, pt);
-        let normal = Point::new(normal_heading.cos(), normal_heading.sin());
+    let mut is_first = true;
+    walk_polygon_vertices(poly, start_idx, forward, |idx, _pt| {
+        if skip_closest && is_first {
+            is_first = false;
+            return None;
+        }
+        is_first = false;
 
-        // Compute the travel direction (tangent) at this vertex.
-        let prev_idx = if actual_forward {
+        let next_idx = if forward {
+            (idx + 1) % n
+        } else {
+            (idx + n - 1) % n
+        };
+        let prev_idx = if forward {
             (idx + n - 1) % n
         } else {
             (idx + 1) % n
         };
-        let prev_pt = poly[prev_idx];
-        let heading = (pt.y - prev_pt.y).atan2(pt.x - prev_pt.x);
-        let tangent = Point::new(heading.cos(), heading.sin());
+        let pt = poly[idx];
+        let nxt = poly[next_idx];
+        let edge = nxt - pt;
+        let elen = edge.length();
 
-        // Probe from the offset position along the travel direction,
-        // measuring the actual cut area the tool would experience on
-        // its first step.  This ensures the reengagement point has
-        // approximately the target engagement, not just "any" material.
-        let offset_pos = offset_inward(pt, normal, radius, advance);
-        let probe = offset_pos + tangent * step_length;
-        let area = cleared.cut_area(offset_pos, probe, radius);
-        if accept(area) {
-            dbg_log!(
-                "  RESUME_SEARCH  frontier_pt=({:.3},{:.3})  \
-                 normal=({:.3},{:.3})  offset_pos=({:.3},{:.3})  \
-                 inward={:.3}  probe_area={:.4}  heading={:.4}",
-                pt.x,
-                pt.y,
-                normal.x,
-                normal.y,
-                offset_pos.x,
-                offset_pos.y,
-                (radius - advance).max(0.0),
-                area,
-                heading,
-            );
-            return Some(ToolPose {
-                pos: offset_pos,
-                heading,
-            });
+        // Heading: frontier tangent in the walk direction. Use the
+        // outgoing edge direction; fall back to the incoming edge
+        // for degenerate edges.
+        let heading = if elen < 1e-9 {
+            (pt.y - poly[prev_idx].y).atan2(pt.x - poly[prev_idx].x)
+        } else {
+            edge.y.atan2(edge.x)
+        };
+
+        // Sub-sample outgoing edge at sample_spacing intervals.
+        if sample_spacing > 0.0 && elen > sample_spacing {
+            let n_edge = (elen / sample_spacing).ceil() as usize;
+            for si in 1..n_edge {
+                let f = si as f64 / n_edge as f64;
+                let s = pt + edge * f;
+                if let Some(r) = accept(s, heading) {
+                    return Some(r);
+                }
+            }
         }
-    }
-    None
+
+        accept(pt, heading)
+    })
 }
 
 /// Walk the frontier from `start`, using the heading direction to
@@ -178,6 +165,7 @@ pub fn search_frontier_engagement(
             let poly = &polys[closest_poly_idx];
             let n = poly.len();
             if n >= 3 {
+                let is_ccw = get_polygon_signed_area(poly) > 0.0;
                 let start_idx = poly
                     .iter()
                     .enumerate()
@@ -186,28 +174,61 @@ pub fn search_frontier_engagement(
                             .partial_cmp(&b.distance_squared(start.pos))
                             .unwrap_or(std::cmp::Ordering::Equal)
                     })
-                    .map(|(i, _)| i);
+                    .map(|(i, _)| i)?;
 
-                if let Some(si) = start_idx {
-                    let heading_vec =
-                        Point::new(start.heading.cos(), start.heading.sin());
-                    let tangent = poly[(si + 1) % n] - poly[si];
-                    let forward = heading_vec.x * tangent.x
-                        + heading_vec.y * tangent.y
-                        >= 0.0;
+                let tangent = poly[(start_idx + 1) % n] - poly[start_idx];
+                let heading_vec =
+                    Point::new(start.heading.cos(), start.heading.sin());
+                let forward = heading_vec.x * tangent.x
+                    + heading_vec.y * tangent.y
+                    >= 0.0;
+                let actual_forward = if is_ccw { forward } else { !forward };
 
-                    if let Some(rp) = walk_frontier(
-                        cleared,
-                        start.pos,
-                        radius,
-                        step_length,
-                        advance,
-                        forward,
-                        true,
-                        |a| a >= min_cut_area && a <= max_cut_area,
-                    ) {
-                        return Some(rp);
-                    }
+                let accept = |a: f64| a >= min_cut_area && a <= max_cut_area;
+                if let Some(rp) = walk_polygon_samples(
+                    poly,
+                    start_idx,
+                    actual_forward,
+                    0.0,
+                    true,
+                    0.0,
+                    |pt, heading| {
+                        let normal_heading = get_polygon_heading_at(poly, pt);
+                        let normal = Point::new(
+                            normal_heading.cos(),
+                            normal_heading.sin(),
+                        );
+                        let tangent = Point::new(heading.cos(), heading.sin());
+                        let offset_pos =
+                            offset_inward(pt, normal, radius, advance);
+                        let probe = offset_pos + tangent * step_length;
+                        let area = cleared.cut_area(offset_pos, probe, radius);
+                        if accept(area) {
+                            dbg_log!(
+                                "  RESUME_SEARCH  frontier_pt=({:.3},{:.3})  \
+                                 normal=({:.3},{:.3})  \
+                                 offset_pos=({:.3},{:.3})  inward={:.3}  \
+                                 probe_area={:.4}  heading={:.4}",
+                                pt.x,
+                                pt.y,
+                                normal.x,
+                                normal.y,
+                                offset_pos.x,
+                                offset_pos.y,
+                                (radius - advance).max(0.0),
+                                area,
+                                heading,
+                            );
+                            Some(ToolPose {
+                                pos: offset_pos,
+                                heading,
+                            })
+                        } else {
+                            None
+                        }
+                    },
+                ) {
+                    return Some(rp);
                 }
             }
         }
@@ -242,7 +263,7 @@ pub fn search_frontier_engagement(
 /// Walk the tool-centre envelope boundary, finding the vertex with the
 /// best tangent-direction cut-area probe that satisfies `accept`.
 ///
-/// Unlike [`walk_frontier`], the tool is placed *on* the envelope edge
+/// Unlike [`search_frontier_engagement`], the tool is placed *on* the envelope edge
 /// (zero inward offset) so the disk overhang reaches into the wall
 /// band.  Rather than walking from the nearest vertex (which may be on
 /// the opposite side of the pocket from the uncleared material), this

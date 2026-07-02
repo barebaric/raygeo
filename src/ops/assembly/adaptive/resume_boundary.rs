@@ -9,6 +9,7 @@ use crate::ops::assembly::adaptive::resume::ResumeCtx;
 use crate::ops::assembly::adaptive::resume::ResumeStrategy;
 use crate::ops::assembly::adaptive::tool::Tool;
 use crate::ops::cut::interp::point_in_valid_area;
+use crate::ops::cut::search::walk_polygon_samples;
 use crate::ops::cut::CutDirection;
 use crate::ops::cut::ToolPose;
 use crate::types::{Point, Polygon};
@@ -121,10 +122,10 @@ fn envelope_resume(ctx: &ResumeCtx, tool: &Tool) -> Option<ToolPose> {
     }
 
     // Determine the walk direction from `cut_direction` and the
-    // polygon winding — the same approach as `resume_mat.rs` and
-    // `search.rs:walk_frontier`.  Clipper output winding is not
-    // guaranteed, so the signed area fixes the mapping from "increasing
-    // index" to a geometric rotational sense.
+    // polygon winding — the same approach as `resume_mat.rs`.
+    // Clipper output winding is not guaranteed, so the signed area
+    // fixes the mapping from "increasing index" to a geometric
+    // rotational sense.
     //   * CCW polygon + CCW cut → increasing index = forward
     //   * CW  polygon + CW  cut → increasing index = forward
     //   * mismatched sense      → decreasing index = forward
@@ -150,164 +151,56 @@ fn envelope_resume(ctx: &ResumeCtx, tool: &Tool) -> Option<ToolPose> {
     let dir_sign = ctx.opts.cut_direction.sign();
 
     // Walk starting at the true closest point (vertex `start_idx` plus
-    // `start_frac` along the edge to the next vertex).
-    let mut offset = 0u32;
-    let mut frac = start_frac;
-    loop {
-        if offset as usize >= n && frac == 0.0 {
-            break;
-        }
-        let idx = if actual_forward {
-            (start_idx + offset as usize) % n
-        } else {
-            (start_idx + n - offset as usize) % n
-        };
-        let next_idx = if actual_forward {
-            (idx + 1) % n
-        } else {
-            (idx + n - 1) % n
-        };
-        let prev_idx = if actual_forward {
-            (idx + n - 1) % n
-        } else {
-            (idx + 1) % n
-        };
-        let pt = poly[idx];
-        let nxt = poly[next_idx];
-        let prev_pt = poly[prev_idx];
-        let edge = nxt - pt;
-        let elen = edge.length();
-
-        // Sampled point along the edge.
-        let s = pt + edge * frac;
-        // Heading: frontier tangent in the walk direction.  Use the
-        // direction from the previous vertex to current (stable across
-        // degenerate / zero-length edges) — this is the travel tangent
-        // at the vertex, matching `search.rs:walk_frontier`.
-        let heading = if elen < 1e-9 {
-            (pt.y - prev_pt.y).atan2(pt.x - prev_pt.x)
-        } else {
-            edge.y.atan2(edge.x)
-        };
-
-        // Resume point is the boundary sample point itself — the tool
-        // centre is placed directly on the `frontier ∩ envelope` shape
-        // so the disk overhang reaches into uncleared stock at the
-        // correct engagement depth.  No inward offset is applied: the
-        // boundary is the line this strategy walks, and a tool centred
-        // on it naturally engages fresh stock.  The inward
-        // `radius − advance` offset previously applied here moved the
-        // resume point off the boundary into the cleared region,
-        // leaving the tool under-engaged on arrival and forcing the
-        // stepper to steer back out to the frontier.
-        let resume_pos = s;
-
-        // Probe one step forward along the tangent; this is the cut the
-        // stepper would make on its first step from the resume point.
-        //
-        // Use `cut_area_split` so we can verify the engagement is on the
-        // side of the tool that matches `cut_direction`.  A point whose
-        // only material lies on the wrong side (e.g. the tool broke
-        // through a web and the frontier wraps around to the other
-        // side) would pass a direction-blind `cut_area` check but
-        // produce a step that cuts the wrong way.  Reject those by
-        // requiring the correct-side portion to carry at least half
-        // the measured area.
-        let dir = Point::new(heading.cos(), heading.sin());
-        let probe = resume_pos + dir * ctx.opts.step_length;
-        // Skip points whose forward step leaves the valid tool area.
-        // Without the inward offset the resume point sits on the
-        // boundary, and near a corner the tangent step can exit the
-        // valid region — the stepper would then reject every candidate
-        // angle as `outside_valid` and stall immediately.
-        let valid_probe = point_in_valid_area(probe, ctx.valid_tool_area);
-        let (area, left) = if valid_probe {
-            ctx.cleared.cut_area_split(resume_pos, probe, tool.radius)
-        } else {
-            (0.0, 0.0)
-        };
-        let right = area - left;
-        // CCW cutting keeps material on the right; CW on the left.
-        let correct_side = if dir_sign < 0.0 { right } else { left };
-        let wrong_side = if dir_sign < 0.0 { left } else { right };
-        let direction_ok = area <= 0.0 || correct_side >= wrong_side;
-        // Reject positions whose forward step leaves the tool
-        // over-engaged.  The resume point sits ON the frontier, so
-        // the disc is already half-buried; a step that stays on or
-        // near the frontier produces >155° engagement — the stepper
-        // would accept it (cut area is small) but the tool would be
-        // dragging through stock on a wide arc.
-        let dest_eng = if valid_probe && area >= min_cut_area {
-            ctx.cleared.point_engagement(probe, tool.radius).angle
-        } else {
-            0.0
-        };
-        let eng_ok = dest_eng <= 2.7;
-        if offset <= 5 || (offset <= 20 && frac == 0.0) {
-            dbg_log!(
-                "  ENV_DBG  off={} frac={:.2} v{} s=({:.2},{:.2}) \
-                 resume=({:.2},{:.2}) hdg={:.1} area={:.3} min={:.3} \
-                 L={:.3} R={:.3} dir_ok={} valid_p={}  \
-                 pt=({:.2},{:.2}) nxt=({:.2},{:.2}) elen={:.2}",
-                offset,
-                frac,
-                idx,
-                s.x,
-                s.y,
-                resume_pos.x,
-                resume_pos.y,
-                heading.to_degrees(),
-                area,
-                min_cut_area,
-                left,
-                right,
-                direction_ok,
-                valid_probe,
-                pt.x,
-                pt.y,
-                nxt.x,
-                nxt.y,
-                elen,
-            );
-        }
-        if valid_probe && area >= min_cut_area && direction_ok && eng_ok {
-            dbg_log!(
-                "  ENVELOPE  resume=({:.3},{:.3})  heading={:.4}  \
-                 pt=({:.3},{:.3})  offset={}  frac={:.2}  \
-                 probe_area={:.4}  min_cut_area={:.5}  L={:.4}  R={:.4}",
-                resume_pos.x,
-                resume_pos.y,
-                heading,
-                pt.x,
-                pt.y,
-                offset,
-                frac,
-                area,
-                min_cut_area,
-                left,
-                right,
-            );
-            return Some(ToolPose {
-                pos: resume_pos,
-                heading,
-            });
-        }
-
-        // Advance to next sample point along this edge, or next vertex.
-        if elen < 1e-9 || frac >= 1.0 - 1e-9 {
-            offset += 1;
-            frac = 0.0;
-        } else {
-            let step = sample_spacing / elen;
-            if frac + step >= 1.0 - 1e-9 {
-                offset += 1;
-                frac = 0.0;
+    // `start_frac` along the edge to the next vertex), using the shared
+    // walk engine from `search.rs`.
+    let step_length = ctx.opts.step_length;
+    let radius = tool.radius;
+    walk_polygon_samples(
+        poly,
+        start_idx,
+        actual_forward,
+        sample_spacing,
+        false,
+        start_frac,
+        |pos, heading| {
+            let dir = Point::new(heading.cos(), heading.sin());
+            let probe = pos + dir * step_length;
+            let valid_probe = point_in_valid_area(probe, ctx.valid_tool_area);
+            let (area, left) = if valid_probe {
+                ctx.cleared.cut_area_split(pos, probe, radius)
             } else {
-                frac += step;
+                (0.0, 0.0)
+            };
+            let right = area - left;
+            let correct_side = if dir_sign < 0.0 { right } else { left };
+            let wrong_side = if dir_sign < 0.0 { left } else { right };
+            let direction_ok = area <= 0.0 || correct_side >= wrong_side;
+            let dest_eng = if valid_probe && area >= min_cut_area {
+                ctx.cleared.point_engagement(probe, radius).angle
+            } else {
+                0.0
+            };
+            let eng_ok = dest_eng <= 2.7;
+            if valid_probe && area >= min_cut_area && direction_ok && eng_ok {
+                dbg_log!(
+                    "  ENVELOPE  resume=({:.3},{:.3})  heading={:.4}  \
+                 probe_area={:.4}  min_cut_area={:.5}  L={:.4}  R={:.4}",
+                    pos.x,
+                    pos.y,
+                    heading,
+                    area,
+                    min_cut_area,
+                    left,
+                    right,
+                );
+                Some(ToolPose { pos, heading })
+            } else {
+                None
             }
-        }
-    }
-
-    dbg_log!("  ENVELOPE  no suitable point found");
-    None
+        },
+    )
+    .or_else(|| {
+        dbg_log!("  ENVELOPE  no suitable point found");
+        None
+    })
 }
