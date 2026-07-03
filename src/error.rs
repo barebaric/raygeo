@@ -86,6 +86,11 @@ pub enum RaygeoError {
     #[error("resume point not found: {0}")]
     ResumePointNotFound(String),
 
+    /// A travel-path routing strategy could not find a collision-free
+    /// path between two points.
+    #[error("routing error: {0}")]
+    RoutingError(String),
+
     // ── Internal ─────────────────────────────────────────────────
     /// An internal invariant was violated (should not happen).
     #[error("internal error: {0}")]
@@ -132,6 +137,7 @@ impl From<RaygeoError> for pyo3::PyErr {
                 PyValueError::new_err(err.to_string())
             }
             RaygeoError::ResumePointNotFound(_)
+            | RaygeoError::RoutingError(_)
             | RaygeoError::NestingError(_)
             | RaygeoError::ImageError(_)
             | RaygeoError::ClippingError(_)

@@ -7,6 +7,7 @@
 use prof_macros::prof;
 
 use crate::dbg_log;
+use crate::error::{RaygeoError, RaygeoResult};
 use crate::geo::algo::medial_axis::MedialAxis;
 use crate::geo::shape::compute_polygon_bounds;
 use crate::geo::shape::polygon::{
@@ -178,6 +179,7 @@ pub(super) fn boundary_probe(
 /// centre and whether the position engages.  This is where the
 /// frontier/envelope offset policy differs — see [`ResumeFrontier`] and
 /// [`ResumeEnvelope`].
+#[prof]
 pub(super) fn walk_and_probe(
     ctx: &ResumeCtx,
     radius: f64,
@@ -267,7 +269,8 @@ pub(super) fn walk_and_probe(
 
 /// Emit a resume travel from `from` to `to` using the routing strategies.
 ///
-/// Returns the [`RouteSource`] that was used for the travel path.
+/// Returns `Ok(RouteSource)` on success, `Err(RaygeoError::RoutingError)`
+/// when no collision-free path could be found.
 #[prof]
 pub fn emit_resume_travel(
     ops: &mut Ops,
@@ -276,8 +279,10 @@ pub fn emit_resume_travel(
     from: Point,
     to: Point,
     opts: &AdaptiveClearingOptions,
-) -> routing::RouteSource {
-    let obstacles = cleared.remaining();
+) -> RaygeoResult<routing::RouteSource> {
+    // Obstacles = remaining (uncut) material + islands (permanent no-go zones).
+    let mut obstacles = cleared.remaining();
+    obstacles.extend(opts.islands.iter().cloned());
     let obs_bounds = compute_polygon_bounds(&obstacles);
 
     let ctx = routing::RouteCtx {
@@ -298,12 +303,13 @@ pub fn emit_resume_travel(
         for pt in &path {
             ops.move_to(pt.x, pt.y, opts.cut_z + 0.5, None);
         }
-        return source;
+        Ok(source)
+    } else {
+        Err(RaygeoError::RoutingError(format!(
+            "cannot route from ({:.3},{:.3}) to ({:.3},{:.3})",
+            from.x, from.y, to.x, to.y,
+        )))
     }
-
-    // Fallback: direct move.
-    ops.move_to(to.x, to.y, opts.cut_z + 0.5, None);
-    routing::RouteSource::RoutingDirect
 }
 
 // ── ResumeSource enum (renamed) ─────────────────────────────────────

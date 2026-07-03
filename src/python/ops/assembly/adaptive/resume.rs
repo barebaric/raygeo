@@ -137,7 +137,7 @@ fn emit_resume_travel_py(
     cleared: Option<&PyClearedArea>,
     from_pt: (f64, f64),
     axis: Option<&PyMedialAxis>,
-) {
+) -> PyResult<()> {
     let pb: Polygon = pocket_boundary
         .into_iter()
         .map(|(x, y)| Point::new(x, y))
@@ -169,7 +169,8 @@ fn emit_resume_travel_py(
         Point::new(from_pt.0, from_pt.1),
         Point::new(to_pt.0, to_pt.1),
         &opts,
-    );
+    )?;
+    Ok(())
 }
 
 /// Try to recover after the tool stalls or is detected as stuck.
@@ -260,7 +261,7 @@ fn try_resume_py(
     cut_direction: &str,
     segment_start: (f64, f64),
     segment_heading: f64,
-) -> bool {
+) -> PyResult<bool> {
     let mat = axis.map(|a| &a.inner);
     let pb: Polygon = pocket_boundary
         .into_iter()
@@ -322,12 +323,12 @@ fn try_resume_py(
             tool.inner.pos,
             rp.pos,
             &opts,
-        );
+        )?;
         tool.inner.pos = rp.pos;
         tool.inner.heading = rp.heading;
         tool.inner.reset_gyro();
-        true
+        Ok(true)
     } else {
-        false
+        Ok(false)
     }
 }

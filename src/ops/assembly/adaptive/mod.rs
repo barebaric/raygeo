@@ -590,7 +590,7 @@ pub fn adaptive_clearing(
                     tool.pos,
                     rp.pos,
                     opts,
-                );
+                )?;
                 tool.pos = rp.pos;
                 tool.heading = rp.heading;
                 tool.reset_gyro();
