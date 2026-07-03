@@ -151,7 +151,7 @@ fn adaptive_clearing_py(
     profile: bool,
     trace_path: Option<String>,
     cut_direction: &str,
-) -> PyOps {
+) -> PyResult<PyOps> {
     let boundary: Vec<Point> = pocket_boundary
         .into_iter()
         .map(|(x, y)| Point::new(x, y))
@@ -192,11 +192,11 @@ fn adaptive_clearing_py(
     };
 
     let ops =
-        adaptive::adaptive_clearing(&mut cleared.inner, &opts, &cut_state);
+        adaptive::adaptive_clearing(&mut cleared.inner, &opts, &cut_state)?;
     if profile {
         prof_report();
     }
-    PyOps { inner: ops }
+    Ok(PyOps { inner: ops })
 }
 
 /// Target cut-area per unit distance for the engagement solver.

@@ -24,12 +24,14 @@ pub mod tool;
 mod trace;
 
 use crate::dbg_log;
+use crate::error::{RaygeoError, RaygeoResult};
 use crate::geo::algo::medial_axis::MedialAxis;
 use crate::geo::algo::offset::compute_inset_region;
 use crate::geo::shape::arc::normalize_angle_signed;
-use crate::geo::shape::polygon::get_polygon_area;
-use crate::geo::shape::polygon::get_polygon_centroid;
-use crate::geo::shape::polygon::get_polygons_closest_point;
+use crate::geo::shape::polygon::{
+    get_polygon_area, get_polygon_centroid, get_polygon_signed_area,
+    get_polygons_closest_point, get_polygons_group_intersection,
+};
 use crate::ops::container::Ops;
 use crate::ops::cut::step;
 use crate::ops::cut::stepper::MAX_IT;
@@ -197,15 +199,15 @@ pub fn adaptive_clearing(
     cleared: &mut ClearedArea,
     opts: &AdaptiveClearingOptions,
     cut_state: &State,
-) -> Ops {
+) -> RaygeoResult<Ops> {
     // ── 1. Pre-process ────────────────────────────────────────────
     let (valid_tool_area, valid_total) =
         compute_inset_region(&opts.pocket_boundary, opts.radius, &opts.islands);
     if valid_tool_area.is_empty() || valid_total <= opts.area_tolerance {
-        return Ops::new();
+        return Ok(Ops::new());
     }
     if cleared.is_empty() {
-        return Ops::new();
+        return Ok(Ops::new());
     }
 
     let max_def = opts.max_deflection_deg.to_radians();
@@ -631,6 +633,43 @@ pub fn adaptive_clearing(
                 continue;
             }
 
+            // Commit any remaining batch so convergence check is accurate.
+            if steps_since_batch > 0 {
+                cleared.commit_batch_local();
+            }
+
+            // If the pocket is effectively converged, exit normally.
+            // The raw remaining may overcount area outside the valid
+            // tool region, so clip against the inset boundary.
+            let clipped_remaining: f64 = {
+                let rem = cleared.remaining();
+                if rem.is_empty() {
+                    0.0
+                } else {
+                    let clipped =
+                        get_polygons_group_intersection(&rem, &valid_tool_area);
+                    clipped
+                        .iter()
+                        .map(|p| get_polygon_signed_area(p).max(0.0))
+                        .sum::<f64>()
+                }
+            };
+            if clipped_remaining < opts.area_tolerance {
+                dbg_log!(
+                    "EXIT  reason=converged(close-enough)  step_count={}  \
+                     resume_count={}  iter={}  frag_total={:.3}  \
+                     valid_total={:.3}",
+                    step_count,
+                    resume_count,
+                    iter,
+                    cleared.total_area(),
+                    valid_total,
+                );
+                #[cfg(debug_assertions)]
+                write_exit_trace!(StepStatus::Ok);
+                break;
+            }
+
             if stuck_triggered {
                 dbg_log!(
                     "EXIT  reason=resume_failed(stuck)  step_count={}  \
@@ -655,7 +694,9 @@ pub fn adaptive_clearing(
             }
             #[cfg(debug_assertions)]
             write_exit_trace!(resume_trace_status);
-            break;
+            return Err(RaygeoError::ResumePointNotFound(
+                "all resume strategies failed".into(),
+            ));
         }
 
         // Emit cutting move.
@@ -726,7 +767,7 @@ pub fn adaptive_clearing(
         }
     }
 
-    ops
+    Ok(ops)
 }
 
 // ── Initial pose ─────────────────────────────────────────────────────

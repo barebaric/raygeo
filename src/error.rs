@@ -80,6 +80,12 @@ pub enum RaygeoError {
     #[error("fitting error: {0}")]
     FittingError(String),
 
+    // ── Adaptive Clearing ────────────────────────────────────────
+    /// All resume strategies were exhausted and the pocket has not
+    /// converged (uncut material remains).
+    #[error("resume point not found: {0}")]
+    ResumePointNotFound(String),
+
     // ── Internal ─────────────────────────────────────────────────
     /// An internal invariant was violated (should not happen).
     #[error("internal error: {0}")]
@@ -125,7 +131,8 @@ impl From<RaygeoError> for pyo3::PyErr {
             RaygeoError::MultiAxis(_) | RaygeoError::NotSingleAxis(_) => {
                 PyValueError::new_err(err.to_string())
             }
-            RaygeoError::NestingError(_)
+            RaygeoError::ResumePointNotFound(_)
+            | RaygeoError::NestingError(_)
             | RaygeoError::ImageError(_)
             | RaygeoError::ClippingError(_)
             | RaygeoError::FittingError(_)
