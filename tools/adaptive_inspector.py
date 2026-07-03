@@ -578,13 +578,13 @@ def build_scenario(args):
 class Inspector:
     def __init__(self, trace, tp, seed_polys, geometry):
         self.trace = trace
-        self.tp = tp
         self.n_steps = len(trace)
         self.seed_polys = seed_polys
         self.geometry = geometry
         self.current = 0
         self._ca_cache = {}
         self.show_mat = False
+        self.tp = self._ensure_toolpath(tp)
         self._precompute_toolpath()
         self._build_segment_steps()
 
@@ -642,6 +642,8 @@ class Inspector:
             pass
 
     def _step_segment(self, delta):
+        if not self._seg_start_steps:
+            return
         cur_seg = self._current_segment_idx()
         seg_idx = cur_seg + delta
         seg_idx = max(0, min(seg_idx, len(self._seg_start_steps) - 1))
@@ -655,19 +657,28 @@ class Inspector:
         return 0
 
     def _build_segment_steps(self):
-        n_seg = len(self._segment_starts)
-        seg_steps = [0] * n_seg
-        seg_steps[0] = 0
-        si = 1
-        for step_idx in range(1, self.n_steps):
-            n_moves = min(self.trace[step_idx].ops_len, len(self.tp))
-            while si < n_seg and n_moves > self._segment_starts[si][2]:
-                seg_steps[si] = step_idx
-                si += 1
-            if si >= n_seg:
-                break
-        for j in range(si, n_seg):
-            seg_steps[j] = self.n_steps - 1
+        if self._segment_starts:
+            n_seg = len(self._segment_starts)
+            seg_steps = [0] * n_seg
+            si = 1
+            for step_idx in range(1, self.n_steps):
+                n_moves = min(self.trace[step_idx].ops_len, len(self.tp))
+                while si < n_seg and n_moves > self._segment_starts[si][2]:
+                    seg_steps[si] = step_idx
+                    si += 1
+                if si >= n_seg:
+                    break
+            for j in range(si, n_seg):
+                seg_steps[j] = self.n_steps - 1
+            self._seg_start_steps = seg_steps
+            return
+
+        # Fallback: roughly equal-sized chunks.
+        n_seg = max(1, min(20, self.n_steps // 50))
+        seg_size = max(1, self.n_steps // n_seg)
+        seg_steps = list(range(0, self.n_steps, seg_size))
+        if len(seg_steps) > 1 and seg_steps[-1] < self.n_steps - 1:
+            seg_steps[-1] = self.n_steps - 1
         self._seg_start_steps = seg_steps
 
     def _step(self, delta):
@@ -696,6 +707,25 @@ class Inspector:
             self._draw(self.n_steps - 1)
         elif event.key == "m":
             self._toggle_mat()
+
+    def _ensure_toolpath(self, tp):
+        """Return a usable toolpath.
+
+        When the real toolpath from the trace file is empty (e.g. a
+        partial trace saved on an error path), build a synthetic one
+        from trace-record positions.  Each record becomes one toolpath
+        point; only Cut records (kind=1) represent cutting moves.
+        """
+        if tp:
+            return tp
+        if self.n_steps == 0:
+            return tp
+        synthetic = []
+        for i in range(self.n_steps):
+            rec = self.trace[i]
+            is_travel = rec.kind != 1  # Only Cut records are non-travel
+            synthetic.append((rec.pos_x, rec.pos_y, is_travel))
+        return synthetic
 
     def _precompute_toolpath(self):
         """Precompute cutting edges, travel edges, and cumulative distances
@@ -1203,28 +1233,31 @@ def cmd_trace(args: argparse.Namespace) -> None:
     tp = pathlib.Path(trace_path)
     mtime_before = tp.stat().st_mtime_ns if tp.exists() else 0
 
-    clear_ops = adaptive_clearing(
-        cleared=ca,
-        pocket_boundary=list(scenario.boundary),
-        islands=[list(isl) for isl in scenario.islands],
-        radius=scenario.tool_radius,
-        advance=scenario.advance,
-        cut_z=scenario.cut_z,
-        safe_z=scenario.safe_z,
-        step_length=scenario.step_length,
-        max_deflection_deg=scenario.max_deflection_deg,
-        wall_margin=scenario.wall_margin,
-        area_tolerance=scenario.area_tolerance,
-        expansion_batch_size=scenario.expansion_batch_size,
-        cut_direction=scenario.cut_direction,
-        trace_path=trace_path,
-    )
-
-    print(
-        f"  Clearing: {clear_ops.len()} ops, "
-        f"{ca.total_area():.1f} mm² cleared, "
-        f"{ca.remaining_area():.1f} mm² remaining"
-    )
+    try:
+        clear_ops = adaptive_clearing(
+            cleared=ca,
+            pocket_boundary=list(scenario.boundary),
+            islands=[list(isl) for isl in scenario.islands],
+            radius=scenario.tool_radius,
+            advance=scenario.advance,
+            cut_z=scenario.cut_z,
+            safe_z=scenario.safe_z,
+            step_length=scenario.step_length,
+            max_deflection_deg=scenario.max_deflection_deg,
+            wall_margin=scenario.wall_margin,
+            area_tolerance=scenario.area_tolerance,
+            expansion_batch_size=scenario.expansion_batch_size,
+            cut_direction=scenario.cut_direction,
+            trace_path=trace_path,
+        )
+        print(
+            f"  Clearing: {clear_ops.len()} ops, "
+            f"{ca.total_area():.1f} mm² cleared, "
+            f"{ca.remaining_area():.1f} mm² remaining"
+        )
+    except RuntimeError as e:
+        print(f"  ERROR: {e}", file=sys.stderr)
+        print("  Partial trace data was written to disk.")
 
     mtime_after = tp.stat().st_mtime_ns if tp.exists() else 0
     if mtime_after == mtime_before:

@@ -80,11 +80,20 @@ pub(crate) struct TraceContext {
 /// the toolpath block is written.  This lets the toolpath (only known
 /// once the run is complete) appear before the records in the file while
 /// still allowing records to be appended incrementally during the run.
+///
+/// A [`Drop`] implementation ensures that buffered records are always
+/// flushed — even when the caller returns early with an error or when a
+/// panic unwinds — so the trace file can be inspected for debugging
+/// purposes.  On these partial paths an empty toolpath block is written
+/// so the file remains structurally valid for the Python reader.
 pub(crate) struct Tracer {
     file: std::fs::File,
     count: u32,
-    /// Buffered 128-byte records, flushed in [`finish`].
+    /// Buffered 128-byte records, flushed in [`finish`] (or [`Drop`]).
     records: Vec<u8>,
+    /// Set by [`finish`]; when `false` the [`Drop`] impl writes an empty
+    /// toolpath block + buffered records and patches the record count.
+    finalized: bool,
 }
 
 impl Tracer {
@@ -105,6 +114,7 @@ impl Tracer {
             file,
             count: 0,
             records: Vec::new(),
+            finalized: false,
         })
     }
 
@@ -159,7 +169,24 @@ impl Tracer {
         self.file.write_all(&self.records)?;
         self.file.seek(SeekFrom::Start(8))?;
         self.file.write_all(&self.count.to_le_bytes())?;
+        self.finalized = true;
         Ok(())
+    }
+}
+
+impl Drop for Tracer {
+    fn drop(&mut self) {
+        if self.finalized {
+            return;
+        }
+        // On early-exit or panic paths the toolpath block was never
+        // written.  Write an empty one so the file stays valid.
+        write_toolpath_block(&mut self.file, &[]);
+        // Flush any buffered records that were accumulated.
+        let _ = self.file.write_all(&self.records);
+        // Patch the record count into the header.
+        let _ = self.file.seek(SeekFrom::Start(8));
+        let _ = self.file.write_all(&self.count.to_le_bytes());
     }
 }
 
