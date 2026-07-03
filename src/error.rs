@@ -3,7 +3,9 @@ use std::fmt;
 use thiserror::Error;
 
 #[cfg(feature = "python")]
-use pyo3::exceptions::{PyRuntimeError, PyTypeError, PyValueError};
+use pyo3::exceptions::{
+    PyKeyboardInterrupt, PyRuntimeError, PyTypeError, PyValueError,
+};
 
 /// Error type for all RayGeo operations.
 #[derive(Error, Debug)]
@@ -86,6 +88,10 @@ pub enum RaygeoError {
     #[error("resume point not found: {0}")]
     ResumePointNotFound(String),
 
+    /// The operation was cancelled by the user (e.g. Ctrl+C).
+    #[error("cancelled")]
+    Cancelled,
+
     /// A travel-path routing strategy could not find a collision-free
     /// path between two points.
     #[error("routing error: {0}")]
@@ -135,6 +141,9 @@ impl From<RaygeoError> for pyo3::PyErr {
             }
             RaygeoError::MultiAxis(_) | RaygeoError::NotSingleAxis(_) => {
                 PyValueError::new_err(err.to_string())
+            }
+            RaygeoError::Cancelled => {
+                PyKeyboardInterrupt::new_err(err.to_string())
             }
             RaygeoError::ResumePointNotFound(_)
             | RaygeoError::RoutingError(_)

@@ -115,6 +115,10 @@ pub struct AdaptiveClearingOptions {
     /// Tolerance for vertex simplification and clean-up (mm).
     /// Default 0.1.
     pub tolerance: f64,
+    /// Optional callback checked periodically in the main loop.
+    /// When it returns `true`, the operation is cancelled and a
+    /// `RaygeoError::Cancelled` error is returned.
+    pub cancel_check: Option<fn() -> bool>,
 }
 
 impl Default for AdaptiveClearingOptions {
@@ -136,6 +140,7 @@ impl Default for AdaptiveClearingOptions {
             expansion_batch_size: 20,
             trace_path: None,
             tolerance: 0.1,
+            cancel_check: None,
         }
     }
 }
@@ -386,6 +391,17 @@ pub fn adaptive_clearing(
     let mut iter: usize = 0;
     for _ in 0..MAX_TOTAL_STEPS {
         iter += 1;
+
+        // Cancellation check — called every iteration so Ctrl+C is
+        // responsive even in release builds.
+        if let Some(check) = opts.cancel_check {
+            if check() {
+                #[cfg(debug_assertions)]
+                write_exit_trace!(StepStatus::Ok);
+                return Err(RaygeoError::Cancelled);
+            }
+        }
+
         // Convergence: check that remaining uncut area is below
         // tolerance.  Use an inexpensive fragment-sum check first
         // and only pay for the full union+diff when it looks close.

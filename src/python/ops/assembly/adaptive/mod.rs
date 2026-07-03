@@ -20,6 +20,29 @@ use pyo3::prelude::*;
 use pyo3_stub_gen::derive::gen_stub_pyfunction;
 use std::path::PathBuf;
 
+/// Callback passed to the core algorithm as `cancel_check`.
+/// Called periodically from the main loop.  Returns `true` when the
+/// user has pressed Ctrl+C.
+///
+/// Uses `PyErr_CheckSignals` so signal delivery works even though Rust
+/// holds the GIL.  After detecting the signal we clear the pending
+/// `KeyboardInterrupt` exception so the core algorithm can return
+/// `RaygeoError::Cancelled`, which the `From` impl maps back to a clean
+/// `KeyboardInterrupt`.
+fn check_cancel() -> bool {
+    // Safety: called from the Python thread while holding the GIL.
+    let rc = unsafe { pyo3::ffi::PyErr_CheckSignals() };
+    if rc == -1 {
+        // A signal was delivered — clear the exception so the core
+        // algorithm returns normally (with Cancelled error) rather than
+        // leaving a dangling KeyboardInterrupt in the thread state.
+        unsafe { pyo3::ffi::PyErr_Clear() };
+        true
+    } else {
+        false
+    }
+}
+
 pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     let adaptive_mod = PyModule::new(assembly_mod.py(), "adaptive")?;
     register_functions!(
@@ -183,6 +206,7 @@ fn adaptive_clearing_py(
         trace_path: trace_path.map(PathBuf::from),
         cut_direction: cd,
         tolerance: 0.1,
+        cancel_check: Some(check_cancel),
     };
 
     let cut_state = State {
