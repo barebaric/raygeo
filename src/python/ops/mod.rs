@@ -12,7 +12,8 @@ dict or numpy arrays for persistence.
 
 The module also provides command-type enumerations (CommandType,
 CommandCategory, SectionType), machine State tracking (power, feed,
-coolant, frequency), and an Axis bitflag for multi-axis machines.
+coolant, air_assist, head_coolant, frequency), and an Axis bitflag
+for multi-axis machines.
 ";
 
 use pyo3::prelude::*;

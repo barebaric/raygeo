@@ -12,8 +12,8 @@ to rectangles or regions, linearizing curves, estimating processing time, and se
 numpy arrays for persistence.
 
 The module also provides command-type enumerations (CommandType, CommandCategory, SectionType),
-machine State tracking (power, feed, coolant, frequency), and an Axis bitflag for multi-axis
-machines.
+machine State tracking (power, feed, coolant, air_assist, head_coolant, frequency), and an Axis
+bitflag for multi-axis machines.
 
 ## CommandInfo
 
@@ -21,6 +21,14 @@ Detailed information about a single command in an Ops sequence.
 
 Returned by **Ops.inspect** and provides the full set of parameters for any command type in a
 structured form.
+
+### `air_assist`
+
+```python
+air_assist: Optional[str]
+```
+
+Air assist mode string, if a SetAirAssist command.
 
 ### `center_offset`
 
@@ -109,6 +117,14 @@ frequency: Optional[int]
 ```
 
 Laser frequency (Hz), if a frequency-setting command.
+
+### `head_coolant`
+
+```python
+head_coolant: Optional[str]
+```
+
+Head coolant mode string, if a SetHeadCoolant command.
 
 ### `head_uid`
 
@@ -223,6 +239,22 @@ scanline_count: int
 ```
 
 Return the number of scanline commands in the sequence.
+
+### `air_assist()`
+
+```python
+air_assist(idx: int) -> str
+```
+
+Get the air assist mode from a SetAirAssist command.
+
+**Raises:** `TypeError` — If the command is not a SetAirAssist.
+
+| Parameter    | Type  | Description                                |
+| ------------ | ----- | ------------------------------------------ |
+| `idx`        | `int` | Command index.                             |
+| _Returns_    | `str` | Air assist mode string (e.g. "Off", "On"). |
+| _Complexity_ |       | O(1) time, O(1) space                      |
 
 ### `apply_lead_in_out()`
 
@@ -546,11 +578,11 @@ Get the coolant mode from a SetCoolant command.
 
 **Raises:** `TypeError` — If the command is not a SetCoolant.
 
-| Parameter    | Type  | Description                                               |
-| ------------ | ----- | --------------------------------------------------------- |
-| `idx`        | `int` | Command index.                                            |
-| _Returns_    | `str` | Coolant mode string (e.g. "Off", "Flood", "Mist", "Air"). |
-| _Complexity_ |       | O(1) time, O(1) space                                     |
+| Parameter    | Type  | Description                                        |
+| ------------ | ----- | -------------------------------------------------- |
+| `idx`        | `int` | Command index.                                     |
+| _Returns_    | `str` | Coolant mode string (e.g. "Off", "Flood", "Mist"). |
+| _Complexity_ |       | O(1) time, O(1) space                              |
 
 ### `copy()`
 
@@ -853,6 +885,22 @@ Group contiguous commands with the same state into separate Ops sequences.
 | ------------ | ----------- | ---------------------------------------------------- |
 | _Returns_    | `list[Ops]` | A list of Ops sequences grouped by state continuity. |
 | _Complexity_ |             | O(n) time, O(n) space                                |
+
+### `head_coolant()`
+
+```python
+head_coolant(idx: int) -> str
+```
+
+Get the head coolant mode from a SetHeadCoolant command.
+
+**Raises:** `TypeError` — If the command is not a SetHeadCoolant.
+
+| Parameter    | Type  | Description                                  |
+| ------------ | ----- | -------------------------------------------- |
+| `idx`        | `int` | Command index.                               |
+| _Returns_    | `str` | Head coolant mode string (e.g. "Off", "On"). |
+| _Complexity_ |       | O(1) time, O(1) space                        |
 
 ### `head_uid()`
 
@@ -1512,6 +1560,20 @@ Return index ranges for each contiguous cutting segment.
 | _Returns_    | `list[list[int]]` | A list of index lists, one per segment. |
 | _Complexity_ |                   | O(n) time, O(n) space                   |
 
+### `set_air_assist()`
+
+```python
+set_air_assist(mode: state.AirAssistMode) -> None
+```
+
+Set the air assist mode for subsequent commands.
+
+| Parameter    | Type                  | Description           |
+| ------------ | --------------------- | --------------------- |
+| `mode`       | `state.AirAssistMode` | Air assist mode.      |
+| _Returns_    | `None`                |                       |
+| _Complexity_ |                       | O(1) time, O(1) space |
+
 ### `set_coolant()`
 
 ```python
@@ -1567,6 +1629,20 @@ Switch to a specific head by UID.
 | `head_uid`   | `str`  | The head identifier.  |
 | _Returns_    | `None` |                       |
 | _Complexity_ |        | O(1) time, O(1) space |
+
+### `set_head_coolant()`
+
+```python
+set_head_coolant(mode: state.HeadCoolantMode) -> None
+```
+
+Set the head coolant mode for subsequent commands.
+
+| Parameter    | Type                    | Description           |
+| ------------ | ----------------------- | --------------------- |
+| `mode`       | `state.HeadCoolantMode` | Head coolant mode.    |
+| _Returns_    | `None`                  |                       |
+| _Complexity_ |                         | O(1) time, O(1) space |
 
 ### `set_power()`
 

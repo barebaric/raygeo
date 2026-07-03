@@ -1,4 +1,4 @@
-from raygeo.ops.state import CoolantMode
+from raygeo.ops.state import AirAssistMode, CoolantMode, HeadCoolantMode
 from raygeo.ops.types import (
     CommandCategory,
     CommandType,
@@ -23,6 +23,8 @@ def test_command_type_values():
     assert CommandType.SET_PULSE_WIDTH.value == 17
     assert CommandType.SET_SPINDLE_RPM.value == 18
     assert CommandType.SET_COOLANT.value == 20
+    assert CommandType.SET_AIR_ASSIST.value == 21
+    assert CommandType.SET_HEAD_COOLANT.value == 22
     assert CommandType.JOB_START.value == 100
     assert CommandType.JOB_END.value == 101
     assert CommandType.LAYER_START.value == 102
@@ -56,6 +58,8 @@ def test_category_state():
         CommandType.SET_HEAD,
         CommandType.SET_SPINDLE_RPM,
         CommandType.SET_COOLANT,
+        CommandType.SET_AIR_ASSIST,
+        CommandType.SET_HEAD_COOLANT,
     ]:
         assert category(ct) == CommandCategory.STATE
 
@@ -99,13 +103,35 @@ def test_coolant_mode_constants():
     assert CoolantMode.OFF.name == "OFF"
     assert CoolantMode.FLOOD.name == "FLOOD"
     assert CoolantMode.MIST.name == "MIST"
-    assert CoolantMode.AIR.name == "AIR"
     assert CoolantMode.OFF.value == 0
     assert CoolantMode.FLOOD.value == 1
     assert CoolantMode.MIST.value == 2
-    assert CoolantMode.AIR.value == 3
 
 
 def test_coolant_mode_repr():
     assert repr(CoolantMode.OFF) == "CoolantMode.OFF"
     assert repr(CoolantMode.FLOOD) == "CoolantMode.FLOOD"
+
+
+def test_air_assist_mode_constants():
+    assert AirAssistMode.OFF.name == "OFF"
+    assert AirAssistMode.ON.name == "ON"
+    assert AirAssistMode.OFF.value == 0
+    assert AirAssistMode.ON.value == 1
+
+
+def test_air_assist_mode_repr():
+    assert repr(AirAssistMode.OFF) == "AirAssistMode.OFF"
+    assert repr(AirAssistMode.ON) == "AirAssistMode.ON"
+
+
+def test_head_coolant_mode_constants():
+    assert HeadCoolantMode.OFF.name == "OFF"
+    assert HeadCoolantMode.ON.name == "ON"
+    assert HeadCoolantMode.OFF.value == 0
+    assert HeadCoolantMode.ON.value == 1
+
+
+def test_head_coolant_mode_repr():
+    assert repr(HeadCoolantMode.OFF) == "HeadCoolantMode.OFF"
+    assert repr(HeadCoolantMode.ON) == "HeadCoolantMode.ON"

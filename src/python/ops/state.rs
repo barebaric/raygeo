@@ -1,4 +1,4 @@
-use crate::ops::state::{CoolantMode, State};
+use crate::ops::state::{AirAssistMode, CoolantMode, HeadCoolantMode, State};
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 
@@ -8,23 +8,27 @@ pub(crate) const MODULE_DOC: &str = "\
 Machine state tracking for CNC milling.
 
 Tracks the current or intended machine state at any point in a command
-sequence, including power level (0.0–1.0), coolant mode, feed rate
-and rapid rate, active head UID, pulse frequency, and pulse
-width. State objects are used by Ops to associate machine parameters
-with moving commands and to detect rapid (non-power) state changes.
+sequence, including power level (0.0–1.0), coolant mode, air assist,
+head coolant, feed rate and rapid rate, active head UID, pulse
+frequency, and pulse width. State objects are used by Ops to associate
+machine parameters with moving commands and to detect rapid (non-power)
+state changes.
 ";
 
-/// Register the State and CoolantMode classes with the Python module.
+/// Register the State, CoolantMode, AirAssistMode, and HeadCoolantMode
+/// classes with the Python module.
 pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.setattr("__doc__", MODULE_DOC)?;
     m.add_class::<PyState>()?;
     m.add_class::<PyCoolantMode>()?;
+    m.add_class::<PyAirAssistMode>()?;
+    m.add_class::<PyHeadCoolantMode>()?;
     Ok(())
 }
 
 /// Coolant mode for CNC milling operations.
 ///
-/// Controls the coolant state: ``Off``, ``Flood``, ``Mist``, or ``Air``.
+/// Controls the coolant state: ``Off``, ``Flood``, or ``Mist``.
 #[gen_stub_pyclass]
 #[pyclass(
     frozen,
@@ -46,8 +50,6 @@ impl PyCoolantMode {
     pub const FLOOD: PyCoolantMode = PyCoolantMode(CoolantMode::Flood);
     #[classattr]
     pub const MIST: PyCoolantMode = PyCoolantMode(CoolantMode::Mist);
-    #[classattr]
-    pub const AIR: PyCoolantMode = PyCoolantMode(CoolantMode::Air);
 
     fn __repr__(&self) -> String {
         format!("CoolantMode.{}", self.name())
@@ -59,7 +61,6 @@ impl PyCoolantMode {
             CoolantMode::Off => 0,
             CoolantMode::Flood => 1,
             CoolantMode::Mist => 2,
-            CoolantMode::Air => 3,
         }
     }
 
@@ -69,7 +70,96 @@ impl PyCoolantMode {
             CoolantMode::Off => "OFF",
             CoolantMode::Flood => "FLOOD",
             CoolantMode::Mist => "MIST",
-            CoolantMode::Air => "AIR",
+        }
+        .to_string()
+    }
+}
+
+/// Air assist mode for laser or CNC operations.
+///
+/// Controls the air assist state: ``Off`` or ``On``.
+#[gen_stub_pyclass]
+#[pyclass(
+    frozen,
+    eq,
+    hash,
+    skip_from_py_object,
+    module = "raygeo.ops.state",
+    name = "AirAssistMode"
+)]
+#[derive(Clone, PartialEq, Eq, Hash)]
+pub struct PyAirAssistMode(pub AirAssistMode);
+
+#[gen_stub_pymethods]
+#[pymethods]
+impl PyAirAssistMode {
+    #[classattr]
+    pub const OFF: PyAirAssistMode = PyAirAssistMode(AirAssistMode::Off);
+    #[classattr]
+    pub const ON: PyAirAssistMode = PyAirAssistMode(AirAssistMode::On);
+
+    fn __repr__(&self) -> String {
+        format!("AirAssistMode.{}", self.name())
+    }
+
+    #[getter]
+    fn value(&self) -> u8 {
+        match self.0 {
+            AirAssistMode::Off => 0,
+            AirAssistMode::On => 1,
+        }
+    }
+
+    #[getter]
+    fn name(&self) -> String {
+        match self.0 {
+            AirAssistMode::Off => "OFF",
+            AirAssistMode::On => "ON",
+        }
+        .to_string()
+    }
+}
+
+/// Head coolant mode for laser or CNC operations.
+///
+/// Controls the head coolant state: ``Off`` or ``On``.
+#[gen_stub_pyclass]
+#[pyclass(
+    frozen,
+    eq,
+    hash,
+    skip_from_py_object,
+    module = "raygeo.ops.state",
+    name = "HeadCoolantMode"
+)]
+#[derive(Clone, PartialEq, Eq, Hash)]
+pub struct PyHeadCoolantMode(pub HeadCoolantMode);
+
+#[gen_stub_pymethods]
+#[pymethods]
+impl PyHeadCoolantMode {
+    #[classattr]
+    pub const OFF: PyHeadCoolantMode = PyHeadCoolantMode(HeadCoolantMode::Off);
+    #[classattr]
+    pub const ON: PyHeadCoolantMode = PyHeadCoolantMode(HeadCoolantMode::On);
+
+    fn __repr__(&self) -> String {
+        format!("HeadCoolantMode.{}", self.name())
+    }
+
+    #[getter]
+    fn value(&self) -> u8 {
+        match self.0 {
+            HeadCoolantMode::Off => 0,
+            HeadCoolantMode::On => 1,
+        }
+    }
+
+    #[getter]
+    fn name(&self) -> String {
+        match self.0 {
+            HeadCoolantMode::Off => "OFF",
+            HeadCoolantMode::On => "ON",
         }
         .to_string()
     }
@@ -77,9 +167,9 @@ impl PyCoolantMode {
 
 /// The current state of a CNC machine.
 ///
-/// Tracks power level, coolant mode, feed/rapid rates,
-/// active head UID, frequency, pulse width, spindle RPM,
-/// and coolant mode.
+/// Tracks power level, coolant mode, air assist, head coolant,
+/// feed/rapid rates, active head UID, frequency, pulse width,
+/// spindle RPM, and coolant mode.
 #[gen_stub_pyclass]
 #[pyclass(skip_from_py_object, module = "raygeo.ops.state", name = "State")]
 #[derive(Clone)]
@@ -90,7 +180,7 @@ pub struct PyState(pub State);
 impl PyState {
     #[allow(clippy::too_many_arguments)]
     #[new]
-    #[pyo3(signature = (power=0.0, feed_rate=None, rapid_rate=None, active_head_uid=None, frequency=None, pulse_width=None, dwell_ms=None, spindle_rpm=None, coolant=None))]
+    #[pyo3(signature = (power=0.0, feed_rate=None, rapid_rate=None, active_head_uid=None, frequency=None, pulse_width=None, dwell_ms=None, spindle_rpm=None, coolant=None, air_assist=None, head_coolant=None))]
     fn new(
         power: f64,
         feed_rate: Option<i32>,
@@ -101,6 +191,8 @@ impl PyState {
         dwell_ms: Option<f64>,
         spindle_rpm: Option<u32>,
         coolant: Option<Bound<'_, PyCoolantMode>>,
+        air_assist: Option<Bound<'_, PyAirAssistMode>>,
+        head_coolant: Option<Bound<'_, PyHeadCoolantMode>>,
     ) -> Self {
         PyState(State {
             power,
@@ -112,6 +204,8 @@ impl PyState {
             dwell_ms,
             spindle_rpm,
             coolant: coolant.map(|c| c.borrow().0),
+            air_assist: air_assist.map(|a| a.borrow().0),
+            head_coolant: head_coolant.map(|h| h.borrow().0),
         })
     }
 
@@ -227,5 +321,30 @@ impl PyState {
     #[setter]
     fn set_coolant(&mut self, value: Option<Bound<'_, PyCoolantMode>>) {
         self.0.coolant = value.map(|c| c.borrow().0);
+    }
+
+    /// Air assist mode (if set).
+    #[getter]
+    fn air_assist(&self) -> Option<PyAirAssistMode> {
+        self.0.air_assist.map(PyAirAssistMode)
+    }
+
+    #[setter]
+    fn set_air_assist(&mut self, value: Option<Bound<'_, PyAirAssistMode>>) {
+        self.0.air_assist = value.map(|a| a.borrow().0);
+    }
+
+    /// Head coolant mode (if set).
+    #[getter]
+    fn head_coolant(&self) -> Option<PyHeadCoolantMode> {
+        self.0.head_coolant.map(PyHeadCoolantMode)
+    }
+
+    #[setter]
+    fn set_head_coolant(
+        &mut self,
+        value: Option<Bound<'_, PyHeadCoolantMode>>,
+    ) {
+        self.0.head_coolant = value.map(|h| h.borrow().0);
     }
 }

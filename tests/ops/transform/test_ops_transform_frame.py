@@ -1,7 +1,7 @@
 import pytest
 
 from raygeo.ops import Ops
-from raygeo.ops.state import CoolantMode
+from raygeo.ops.state import AirAssistMode
 from raygeo.ops.types import CommandCategory, CommandType
 
 
@@ -11,7 +11,7 @@ def sample_ops():
     ops.move_to(0, 0)
     ops.line_to(10, 10)
     ops.set_power(0.5)
-    ops.set_coolant(CoolantMode.AIR)
+    ops.set_air_assist(AirAssistMode.ON)
     return ops
 
 

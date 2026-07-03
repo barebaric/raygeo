@@ -79,6 +79,8 @@ class CommandType:
     SET_PULSE_WIDTH: CommandType = CommandType.SET_PULSE_WIDTH
     SET_SPINDLE_RPM: CommandType = CommandType.SET_SPINDLE_RPM
     SET_COOLANT: CommandType = CommandType.SET_COOLANT
+    SET_AIR_ASSIST: CommandType = CommandType.SET_AIR_ASSIST
+    SET_HEAD_COOLANT: CommandType = CommandType.SET_HEAD_COOLANT
     JOB_START: CommandType = CommandType.JOB_START
     JOB_END: CommandType = CommandType.JOB_END
     LAYER_START: CommandType = CommandType.LAYER_START

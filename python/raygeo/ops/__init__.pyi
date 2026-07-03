@@ -12,7 +12,8 @@ dict or numpy arrays for persistence.
 
 The module also provides command-type enumerations (CommandType,
 CommandCategory, SectionType), machine State tracking (power, feed,
-coolant, frequency), and an Axis bitflag for multi-axis machines.
+coolant, air_assist, head_coolant, frequency), and an Axis bitflag
+for multi-axis machines.
 """
 
 import builtins
@@ -137,6 +138,16 @@ class CommandInfo:
     def coolant(self) -> typing.Optional[builtins.str]:
         r"""
         Coolant mode string, if a SetCoolant command.
+        """
+    @property
+    def air_assist(self) -> typing.Optional[builtins.str]:
+        r"""
+        Air assist mode string, if a SetAirAssist command.
+        """
+    @property
+    def head_coolant(self) -> typing.Optional[builtins.str]:
+        r"""
+        Head coolant mode string, if a SetHeadCoolant command.
         """
     @property
     def duration_ms(self) -> typing.Optional[builtins.float]:
@@ -429,8 +440,26 @@ class Ops:
         Get the coolant mode from a SetCoolant command.
         
         :param idx: Command index.
-        :returns: Coolant mode string (e.g. "Off", "Flood", "Mist", "Air").
+        :returns: Coolant mode string (e.g. "Off", "Flood", "Mist").
         :raises TypeError: If the command is not a SetCoolant.
+        :complexity: O(1) time, O(1) space
+        """
+    def air_assist(self, idx: builtins.int) -> builtins.str:
+        r"""
+        Get the air assist mode from a SetAirAssist command.
+        
+        :param idx: Command index.
+        :returns: Air assist mode string (e.g. "Off", "On").
+        :raises TypeError: If the command is not a SetAirAssist.
+        :complexity: O(1) time, O(1) space
+        """
+    def head_coolant(self, idx: builtins.int) -> builtins.str:
+        r"""
+        Get the head coolant mode from a SetHeadCoolant command.
+        
+        :param idx: Command index.
+        :returns: Head coolant mode string (e.g. "Off", "On").
+        :raises TypeError: If the command is not a SetHeadCoolant.
         :complexity: O(1) time, O(1) space
         """
     def head_uid(self, idx: builtins.int) -> builtins.str:
@@ -604,6 +633,20 @@ class Ops:
         Set the coolant mode for subsequent commands.
         
         :param mode: Coolant mode.
+        :complexity: O(1) time, O(1) space
+        """
+    def set_air_assist(self, mode: state.AirAssistMode) -> None:
+        r"""
+        Set the air assist mode for subsequent commands.
+        
+        :param mode: Air assist mode.
+        :complexity: O(1) time, O(1) space
+        """
+    def set_head_coolant(self, mode: state.HeadCoolantMode) -> None:
+        r"""
+        Set the head coolant mode for subsequent commands.
+        
+        :param mode: Head coolant mode.
         :complexity: O(1) time, O(1) space
         """
     def apply_state(self, state: state.State) -> None:

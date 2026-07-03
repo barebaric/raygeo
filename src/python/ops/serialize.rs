@@ -2,8 +2,8 @@ use pyo3::prelude::*;
 use pyo3::types::{PyByteArray, PyBytes, PyDict, PyList, PySlice, PyString};
 
 use crate::ops::{
-    Axis, CommandCategory, CommandType, CoolantMode, MarkerCmd, MoveCmd,
-    OpCategory, StateCmd,
+    AirAssistMode, Axis, CommandCategory, CommandType, CoolantMode,
+    HeadCoolantMode, MarkerCmd, MoveCmd, OpCategory, StateCmd,
 };
 
 use super::axis::PyAxis;
@@ -130,6 +130,12 @@ fn cmd_to_dict<'a>(
             }
             StateCmd::SetCoolant(mode) => {
                 d.set_item("coolant", format!("{:?}", mode))?;
+            }
+            StateCmd::SetAirAssist(mode) => {
+                d.set_item("air_assist", format!("{:?}", mode))?;
+            }
+            StateCmd::SetHeadCoolant(mode) => {
+                d.set_item("head_coolant", format!("{:?}", mode))?;
             }
             StateCmd::SetHead(uid) => {
                 d.set_item("head_uid", uid.to_string())?;
@@ -348,10 +354,33 @@ fn create_and_append_command(
         let mode = match mode_str.as_str() {
             "Flood" => CoolantMode::Flood,
             "Mist" => CoolantMode::Mist,
-            "Air" => CoolantMode::Air,
             _ => CoolantMode::Off,
         };
         ops.set_coolant(mode);
+    } else if ct == CommandType::SetAirAssist {
+        let mode_str: String = cmd_data
+            .get_item("air_assist")?
+            .ok_or_else(|| {
+                pyo3::exceptions::PyKeyError::new_err("missing 'air_assist'")
+            })?
+            .extract()?;
+        let mode = match mode_str.as_str() {
+            "On" => AirAssistMode::On,
+            _ => AirAssistMode::Off,
+        };
+        ops.set_air_assist(mode);
+    } else if ct == CommandType::SetHeadCoolant {
+        let mode_str: String = cmd_data
+            .get_item("head_coolant")?
+            .ok_or_else(|| {
+                pyo3::exceptions::PyKeyError::new_err("missing 'head_coolant'")
+            })?
+            .extract()?;
+        let mode = match mode_str.as_str() {
+            "On" => HeadCoolantMode::On,
+            _ => HeadCoolantMode::Off,
+        };
+        ops.set_head_coolant(mode);
     } else if ct == CommandType::SetHead {
         let uid: String = cmd_data
             .get_item("head_uid")?

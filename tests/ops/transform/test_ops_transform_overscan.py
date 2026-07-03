@@ -3,7 +3,7 @@ import math
 import pytest
 
 from raygeo.ops import Ops
-from raygeo.ops.state import CoolantMode
+from raygeo.ops.state import AirAssistMode
 from raygeo.ops.types import CommandType, SectionType
 
 DIST = 5.0
@@ -56,7 +56,7 @@ class TestConstantPower:
     def test_preserves_state_with_intermediate_power(self):
         ops = Ops()
         ops.set_power(0.8)
-        ops.set_coolant(CoolantMode.AIR)
+        ops.set_air_assist(AirAssistMode.ON)
         ops.ops_section_start(SectionType.RASTER_FILL, "wp1")
         ops.move_to(10, 20, 0)
         ops.line_to(20, 20, 0)
@@ -68,7 +68,7 @@ class TestConstantPower:
 
         assert ops.command_type(0) == CommandType.SET_POWER
         assert ops.power(0) == 0.8
-        assert ops.command_type(1) == CommandType.SET_COOLANT
+        assert ops.command_type(1) == CommandType.SET_AIR_ASSIST
         assert ops.command_type(2) == CommandType.OPS_SECTION_START
         assert ops.command_type(17) == CommandType.OPS_SECTION_END
         assert ops.len() == 18

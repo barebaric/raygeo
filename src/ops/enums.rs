@@ -36,6 +36,10 @@ pub enum CommandType {
     SetSpindleRpm = 18,
     #[strum(serialize = "SET_COOLANT")]
     SetCoolant = 20,
+    #[strum(serialize = "SET_AIR_ASSIST")]
+    SetAirAssist = 21,
+    #[strum(serialize = "SET_HEAD_COOLANT")]
+    SetHeadCoolant = 22,
     #[strum(serialize = "JOB_START")]
     JobStart = 100,
     #[strum(serialize = "JOB_END")]
@@ -75,7 +79,9 @@ impl CommandType {
             | CommandType::SetPulseWidth
             | CommandType::SetHead
             | CommandType::SetSpindleRpm
-            | CommandType::SetCoolant => CommandCategory::State,
+            | CommandType::SetCoolant
+            | CommandType::SetAirAssist
+            | CommandType::SetHeadCoolant => CommandCategory::State,
             CommandType::JobStart
             | CommandType::JobEnd
             | CommandType::LayerStart
