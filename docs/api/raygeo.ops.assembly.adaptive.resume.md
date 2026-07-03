@@ -18,7 +18,7 @@ emit_resume_travel(
 ) -> None
 ```
 
-Emit a resume travel to *to_pt* as a single straight-line `move_to`.
+Emit a resume travel to *to_pt* using the routing strategies.
 
 | Parameter         | Type                                           | Description |
 | ----------------- | ---------------------------------------------- | ----------- |

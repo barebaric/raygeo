@@ -129,10 +129,16 @@ impl RecordBuf {
         self.u32(121, v);
     }
 
-    /// Resume mechanism that succeeded (0 = none, 1 = segment_resume,
-    /// 2 = mat_resume, 3 = boundary_walk, 4 = wall_hug).
+    /// Resume mechanism that succeeded (1 = wall_hug, 2 = segment,
+    /// 3 = mat, 4 = frontier, 5 = island, 6 = envelope).
     pub fn resume_source(&mut self, v: u8) {
         self.u8(125, v);
+    }
+
+    /// Routing strategy that produced the travel path
+    /// (1 = direct, 2 = mat).
+    pub fn route_source(&mut self, v: u8) {
+        self.u8(126, v);
     }
 
     /// Fill the common tool-state fields — the 10 fields that appear in

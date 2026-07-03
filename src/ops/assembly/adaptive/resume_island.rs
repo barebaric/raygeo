@@ -46,7 +46,7 @@ fn frontier_hole_resume(ctx: &ResumeCtx, tool: &Tool) -> Option<ToolPose> {
 
     // Only CW holes represent island-adjacent uncleared material
     // inside the cleared region.  CCW outer polygons are handled by
-    // ResumeBoundary / search_frontier_engagement.
+    // ResumeFrontier.
     let holes: Vec<&Polygon> = frontier
         .iter()
         .filter(|p| p.len() >= 3 && get_polygon_signed_area(p) < -0.5)
@@ -132,15 +132,15 @@ fn frontier_hole_resume(ctx: &ResumeCtx, tool: &Tool) -> Option<ToolPose> {
                 // cleared boundary can be closer to the island than
                 // the tool centre is allowed to go).  Ray-march from
                 // the frontier point into the cleared area until the
-                // centre is both inside the valid tool envelope AND
-                // inside the cleared area (not buried in uncleared
-                // material).
+                // whole tool disk is inside the cleared area (signed
+                // distance ≤ −radius, so no overlap with uncut stock)
+                // AND the centre is inside the valid tool envelope.
                 let dist_to_cleared =
                     |p: Point| ctx.cleared.signed_boundary_distance(p.x, p.y);
 
                 let mut centre = on_frontier + into_cleared * offset;
                 let mut ok = point_in_valid_area(centre, ctx.valid_tool_area)
-                    && dist_to_cleared(centre) <= 0.0;
+                    && dist_to_cleared(centre) <= -radius;
 
                 if !ok {
                     let step = ctx.opts.step_length * 0.25;
@@ -152,7 +152,7 @@ fn frontier_hole_resume(ctx: &ResumeCtx, tool: &Tool) -> Option<ToolPose> {
                         {
                             continue;
                         }
-                        if dist_to_cleared(candidate) > 0.0 {
+                        if dist_to_cleared(candidate) > -radius {
                             continue;
                         }
                         centre = candidate;

@@ -11,7 +11,7 @@ __all__ = [
 
 def emit_resume_travel(ops: raygeo.ops.Ops, to_pt: tuple[float, float], pocket_boundary: collections.abc.Sequence[tuple[float, float]], islands: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]] = [], radius: float = 3, cut_z: float = -5) -> None:
     r"""
-    Emit a resume travel to *to_pt* as a single straight-line ``move_to``.
+    Emit a resume travel to *to_pt* using the routing strategies.
     """
 
 def smooth_travel_path(from_pt: tuple[float, float], raw: collections.abc.Sequence[tuple[float, float]], obstacles: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]] = [], clearance: float = 1) -> list[tuple[float, float]]:

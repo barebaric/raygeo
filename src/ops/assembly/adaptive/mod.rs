@@ -10,7 +10,8 @@
 //! entry polygons (e.g. via `adaptive_entry`).
 
 pub mod resume;
-mod resume_boundary;
+mod resume_envelope;
+mod resume_frontier;
 mod resume_island;
 mod resume_mat;
 mod resume_segment;
@@ -580,7 +581,7 @@ pub fn adaptive_clearing(
             };
             if let Some((source, rp)) = result {
                 resume_blacklist.push(rp.pos);
-                resume::emit_resume_travel(
+                let route_source = resume::emit_resume_travel(
                     &mut ops,
                     &*cleared,
                     mat.as_ref(),
@@ -604,6 +605,7 @@ pub fn adaptive_clearing(
                             tp_len,
                         );
                         buf.resume_source(source as u8);
+                        buf.route_source(route_source as u8);
                         let kind = if stuck_triggered {
                             TraceKind::ResumeStuck
                         } else {

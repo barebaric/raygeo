@@ -105,10 +105,17 @@ STATUS_NAMES = {
 RESUME_SOURCE_NAMES = {
     0: "none",
     1: "wall_hug",
-    2: "segment_resume",
-    3: "mat_resume",
-    4: "boundary_walk",
-    5: "island_walk",
+    2: "segment",
+    3: "mat",
+    4: "frontier",
+    5: "island",
+    6: "envelope",
+}
+
+ROUTE_SOURCE_NAMES = {
+    0: "none",
+    1: "direct",
+    2: "mat",
 }
 
 
@@ -136,6 +143,7 @@ class TraceRecord:
         "prev_y",
         "ops_len",
         "resume_source",
+        "route_source",
     )
 
     def __init__(self, buf):
@@ -159,6 +167,7 @@ class TraceRecord:
         self.prev_y = struct.unpack_from("<d", buf, 114)[0]
         self.ops_len = struct.unpack_from("<I", buf, 122)[0]
         self.resume_source = buf[126]
+        self.route_source = buf[127]
 
 
 class TraceGeometry:
@@ -899,15 +908,21 @@ class Inspector:
         # ── Title ──
         kind_name = KIND_NAMES.get(rec.kind, str(rec.kind))
         status_name = STATUS_NAMES.get(rec.status, str(rec.status))
-        resume_src = ""
+        src_parts = []
         if rec.kind in (2, 3) and rec.resume_source:
             rs = RESUME_SOURCE_NAMES.get(
                 rec.resume_source, str(rec.resume_source)
             )
-            resume_src = f"  via={rs}"
+            src_parts.append(f"via={rs}")
+        if rec.kind in (2, 3) and rec.route_source:
+            rs2 = ROUTE_SOURCE_NAMES.get(
+                rec.route_source, str(rec.route_source)
+            )
+            src_parts.append(f"route={rs2}")
+        src_str = f"  {' '.join(src_parts)}" if src_parts else ""
         self.ax.set_title(
             f"Step {step_idx}/{self.n_steps - 1}  "
-            f"kind={kind_name}  status={status_name}{resume_src}  "
+            f"kind={kind_name}  status={status_name}{src_str}  "
             f"cleared={rec.total_area:.0f}  "
             f"remaining={rec.remaining_area:.0f}",
             fontsize=10,

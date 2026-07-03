@@ -9,9 +9,15 @@ use prof_macros::prof;
 use crate::dbg_log;
 use crate::geo::algo::medial_axis::MedialAxis;
 use crate::geo::shape::compute_polygon_bounds;
+use crate::geo::shape::polygon::{
+    get_polygon_signed_area, get_polygons_closest_point,
+};
 use crate::ops::container::Ops;
+use crate::ops::cut::interp::point_in_valid_area;
+use crate::ops::cut::search::walk_polygon_samples;
 use crate::ops::cut::step;
 use crate::ops::cut::ClearedArea;
+use crate::ops::cut::CutDirection;
 use crate::ops::cut::StepStatus;
 use crate::ops::cut::StepperOptions;
 use crate::ops::cut::ToolPose;
@@ -21,7 +27,8 @@ use super::routing;
 use super::tool::Tool;
 use super::AdaptiveClearingOptions;
 
-pub use super::resume_boundary::ResumeBoundary;
+pub use super::resume_envelope::ResumeEnvelope;
+pub use super::resume_frontier::ResumeFrontier;
 pub use super::resume_island::ResumeIsland;
 pub use super::resume_mat::{
     find_all_mat_crossings, mat_resume_from_crossing, ResumeMat,
@@ -117,7 +124,150 @@ pub fn probe_step(
     }
 }
 
+// ── Shared probe function ──────────────────────────────────────────
+
+/// Lightweight forward-step engagement check used by both
+/// [`ResumeFrontier`] and [`ResumeEnvelope`].
+///
+/// Projects `pos` forward by `step_length` along `heading`, then
+/// checks cut-area split, rotational direction (correct side ≥ wrong
+/// side), and destination engagement angle (≤ 2.7 rad).  Returns
+/// `Some(ToolPose)` when all conditions pass — same logic as the
+/// original boundary-walk probe.
+#[prof]
+pub(super) fn boundary_probe(
+    ctx: &ResumeCtx,
+    radius: f64,
+    pos: Point,
+    heading: f64,
+) -> Option<ToolPose> {
+    let step_length = ctx.opts.step_length;
+    let dir_sign = ctx.opts.cut_direction.sign();
+    let min_cut_area = step_length * ctx.target_area_pd * 0.5;
+    let dir = Point::new(heading.cos(), heading.sin());
+
+    let probe = pos + dir * step_length;
+    if !point_in_valid_area(probe, ctx.valid_tool_area) {
+        return None;
+    }
+    let (area, left) = ctx.cleared.cut_area_split(pos, probe, radius);
+    if area < min_cut_area {
+        return None;
+    }
+    let right = area - left;
+    let correct_side = if dir_sign < 0.0 { right } else { left };
+    let wrong_side = if dir_sign < 0.0 { left } else { right };
+    if correct_side < wrong_side {
+        return None;
+    }
+    let dest_eng = ctx.cleared.point_engagement(probe, radius).angle;
+    if dest_eng > 2.7 {
+        return None;
+    }
+    Some(ToolPose { pos, heading })
+}
+
+// ── Shared walk engine ──────────────────────────────────────────────
+
+/// Walk a group of boundary polygons starting from the one nearest
+/// `segment_start`, in the cutting rotational direction, calling
+/// `probe` at each sample.  Returns the first engaging `ToolPose`.
+///
+/// `probe` receives the sample point (on the boundary polygon) and the
+/// walk-direction tangent (`heading`); it decides how to place the tool
+/// centre and whether the position engages.  This is where the
+/// frontier/envelope offset policy differs — see [`ResumeFrontier`] and
+/// [`ResumeEnvelope`].
+pub(super) fn walk_and_probe(
+    ctx: &ResumeCtx,
+    radius: f64,
+    polys: &[Polygon],
+    log_tag: &str,
+    mut probe: impl FnMut(&ResumeCtx, f64, Point, f64) -> Option<ToolPose>,
+) -> Option<ToolPose> {
+    let ref_pos = ctx.segment_start.pos;
+
+    let (closest_poly_idx, _t, _closest_pt, _d2) =
+        get_polygons_closest_point(polys, ref_pos)?;
+    let poly = &polys[closest_poly_idx];
+    let n = poly.len();
+    if n < 3 {
+        return None;
+    }
+
+    let mut start_idx = 0usize;
+    let mut start_frac = 0.0f64;
+    {
+        let mut best_d2 = f64::MAX;
+        for i in 0..n {
+            let j = (i + 1) % n;
+            let edge = poly[j] - poly[i];
+            let elen2 = edge.length_squared();
+            if elen2 < 1e-18 {
+                continue;
+            }
+            let tt = ((ref_pos.x - poly[i].x) * edge.x
+                + (ref_pos.y - poly[i].y) * edge.y)
+                / elen2;
+            let tt = tt.clamp(0.0, 1.0);
+            let cp = poly[i] + edge * tt;
+            let d2 = cp.distance_squared(ref_pos);
+            if d2 < best_d2 {
+                best_d2 = d2;
+                start_idx = i;
+                start_frac = tt;
+            }
+        }
+    }
+
+    let is_ccw = get_polygon_signed_area(poly) > 0.0;
+    let actual_forward =
+        (ctx.opts.cut_direction == CutDirection::Ccw) == is_ccw;
+
+    let sample_spacing = ctx.opts.step_length;
+    let bl_sq_tol = (ctx.opts.step_length * 0.25).powi(2);
+
+    walk_polygon_samples(
+        poly,
+        start_idx,
+        actual_forward,
+        sample_spacing,
+        false,
+        start_frac,
+        |pt, heading| {
+            for bl_pos in ctx.blacklist {
+                let dx = bl_pos.x - pt.x;
+                let dy = bl_pos.y - pt.y;
+                if dx * dx + dy * dy < bl_sq_tol {
+                    return None;
+                }
+            }
+            if let Some(probed) = probe(ctx, radius, pt, heading) {
+                dbg_log!(
+                    "  {}  resume=({:.3},{:.3})  heading={:.4}  \
+                     sample=({:.3},{:.3})",
+                    log_tag,
+                    probed.pos.x,
+                    probed.pos.y,
+                    probed.heading,
+                    pt.x,
+                    pt.y,
+                );
+                Some(probed)
+            } else {
+                None
+            }
+        },
+    )
+    .or_else(|| {
+        dbg_log!("  {}  no suitable point found", log_tag);
+        None
+    })
+}
+
 /// Emit a resume travel from `from` to `to` using the routing strategies.
+///
+/// Returns the [`RouteSource`] that was used for the travel path.
 #[prof]
 pub fn emit_resume_travel(
     ops: &mut Ops,
@@ -126,7 +276,7 @@ pub fn emit_resume_travel(
     from: Point,
     to: Point,
     opts: &AdaptiveClearingOptions,
-) {
+) -> routing::RouteSource {
     let obstacles = cleared.remaining();
     let obs_bounds = compute_polygon_bounds(&obstacles);
 
@@ -148,11 +298,12 @@ pub fn emit_resume_travel(
         for pt in &path {
             ops.move_to(pt.x, pt.y, opts.cut_z + 0.5, None);
         }
-        return;
+        return source;
     }
 
     // Fallback: direct move.
     ops.move_to(to.x, to.y, opts.cut_z + 0.5, None);
+    routing::RouteSource::RoutingDirect
 }
 
 // ── ResumeSource enum (renamed) ─────────────────────────────────────
@@ -167,10 +318,13 @@ pub enum ResumeSource {
     ResumeSegment = 2,
     /// MAT-guided walk to pocket-wall meeting point.
     ResumeMat = 3,
-    /// Find engagement on the cleared-area frontier.
-    ResumeBoundary = 4,
+    /// Walk the cleared-area frontier (material boundary), probing for engagement.
+    ResumeFrontier = 4,
     /// Walk the island perimeter looking for productive engagement.
     ResumeIsland = 5,
+    /// Walk the tool-centre envelope (pocket-wall boundary), tool centre
+    /// on the edge, probing for engagement.
+    ResumeEnvelope = 6,
 }
 
 // ── ResumeContext ───────────────────────────────────────────────────
@@ -245,11 +399,12 @@ pub fn try_resume(
     // Try each strategy in priority order.  Each strategy decides for
     // itself whether it is responsible (e.g. WallHug returns None when
     // there is no stored wall-hug pose).
-    let strategies: [(&dyn ResumeStrategy, ResumeSource); 5] = [
+    let strategies: [(&dyn ResumeStrategy, ResumeSource); 6] = [
         (&ResumeWallHug, ResumeSource::ResumeWallHug),
         (&ResumeSegment, ResumeSource::ResumeSegment),
         (&ResumeMat, ResumeSource::ResumeMat),
-        (&ResumeBoundary, ResumeSource::ResumeBoundary),
+        (&ResumeFrontier, ResumeSource::ResumeFrontier),
+        (&ResumeEnvelope, ResumeSource::ResumeEnvelope),
         (&ResumeIsland, ResumeSource::ResumeIsland),
     ];
     let sq_tol = (ctx.opts.step_length * 0.25).powi(2);

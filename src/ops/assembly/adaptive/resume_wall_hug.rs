@@ -10,7 +10,7 @@ use crate::ops::cut::ToolPose;
 /// Resume from the point where the tool last departed the envelope
 /// wall.
 ///
-/// After a [`ResumeBoundary`] places the tool on the envelope edge, the
+/// After a [`ResumeEnvelope`] places the tool on the envelope edge, the
 /// main loop tracks the tool's distance to the envelope.  As soon as a
 /// step carries the tool off the envelope, the pre-step pose is recorded
 /// as `last_wall_hug` in [`ResumeCtx`].
