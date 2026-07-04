@@ -25,6 +25,9 @@ jobs:
       - name: Lint Python
         run: pip install ruff && ruff check tests/
 
+      - name: Install viewer dependencies for type checking
+        run: pip install matplotlib
+
       - name: Run pyright
         run: npx --yes pyright --pythonpath $(which python) python/raygeo
 

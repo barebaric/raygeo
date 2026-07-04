@@ -18,12 +18,12 @@ classifiers = [
     "Programming Language :: Python :: Implementation :: PyPy",
 ]
 dependencies = [
-    "numpy>=1.20.0"
+    "msgpack",
+    "numpy>=1.20.0",
 ]
 
 [project.optional-dependencies]
 test = [
-    "matplotlib",
     "pycairo",
     "pytest",
     "pytest-mock",
@@ -43,7 +43,6 @@ docs = [
 
 cli = [
     "matplotlib",
-    "msgpack",
 ]
 
 [project.scripts]

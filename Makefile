@@ -7,7 +7,7 @@ dev: install-test-deps
 	maturin develop --profile dev
 
 install-test-deps:
-	pip install -e ".[test]" --quiet
+	pip install -e ".[test,cli]" --quiet
 
 install-visual-deps:
 	pip install -e ".[visual]" --quiet

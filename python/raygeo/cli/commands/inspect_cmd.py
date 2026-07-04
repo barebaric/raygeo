@@ -1,6 +1,5 @@
-import matplotlib.pyplot as plt
+import sys
 
-from raygeo.cli.inspector import Inspector
 from raygeo.cli.trace import TraceFile
 
 
@@ -21,6 +20,19 @@ def register(subparsers):
 
 def run(args):
     """Open the interactive viewer for a trace file."""
+    try:
+        import matplotlib.pyplot as plt
+    except ImportError:
+        print(
+            "The 'inspect' command requires matplotlib.\n"
+            "Install it with: pip install raygeo[cli]",
+            file=sys.stderr,
+            flush=True,
+        )
+        return
+
+    from raygeo.cli.inspector import Inspector
+
     trace_path = args.tracefile
     initial_step = args.step or 0
 
