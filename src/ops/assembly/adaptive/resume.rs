@@ -742,6 +742,22 @@ pub const DETAIL_NO_ENGAGEMENT: u8 = 11;
 pub const DETAIL_BLACKLISTED: u8 = 12;
 pub const DETAIL_NO_WALL_HIT: u8 = 13;
 
+/// Check that the cleared area has at least one fragment polygon.
+/// Returns `Some(fragments)` when non-empty, or `None` with
+/// `*detail = DETAIL_NO_FRAGMENTS` when empty.
+pub(super) fn require_fragments<'a>(
+    ctx: &'a ResumeCtx<'a>,
+    detail: &mut u8,
+) -> Option<&'a [Polygon]> {
+    let f = ctx.cleared.fragments();
+    if f.is_empty() {
+        *detail = DETAIL_NO_FRAGMENTS;
+        None
+    } else {
+        Some(f)
+    }
+}
+
 /// Per-strategy candidate positions emitted via [`try_resume`].
 /// Index 0-5 match the strategy priority order (WallHug, Segment,
 /// Mat, Frontier, Envelope, Island).  `None` if the strategy did not

@@ -9,6 +9,7 @@ use prof_macros::prof;
 use crate::geo::algo::medial_axis::MedialAxis;
 use crate::geo::algo::smooth::build_smoothed_path;
 use crate::geo::shape::compute_polygon_bounds;
+use crate::geo::shape::does_path_sweep_intersect_polygon;
 use crate::ops::assembly::adaptive::AdaptiveClearingOptions;
 use crate::ops::cut::ClearedArea;
 use crate::types::{Point, Polygon, Rect};
@@ -125,6 +126,23 @@ pub(crate) fn source_label(source: RouteSource) -> &'static str {
         RouteSource::RoutingMat => "mat",
         RouteSource::RoutingAStar => "astar",
     }
+}
+
+// ── Sweep-clearance helper ──────────────────────────────────────────
+
+/// True when the tool-disc sweep along `path` does NOT intersect any
+/// obstacle polygon.  When there are no obstacles the path is always
+/// considered clear.
+pub(super) fn sweep_clear(path: &[Point], ctx: &RouteCtx) -> bool {
+    if ctx.obstacles.is_empty() {
+        return true;
+    }
+    !does_path_sweep_intersect_polygon(
+        path,
+        ctx.opts.radius,
+        ctx.obstacles,
+        ctx.obstacle_bounds,
+    )
 }
 
 // ── Smoothing ──────────────────────────────────────────────────────

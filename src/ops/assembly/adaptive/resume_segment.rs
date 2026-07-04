@@ -1,8 +1,8 @@
 use prof_macros::prof;
 
 use crate::ops::assembly::adaptive::resume::{
-    probe_step, ResumeCtx, ResumeStrategy, DETAIL_NO_ENGAGEMENT,
-    DETAIL_NO_FRAGMENTS, DETAIL_NO_GROWTH, DETAIL_OUTSIDE_VALID,
+    probe_step, require_fragments, ResumeCtx, ResumeStrategy,
+    DETAIL_NO_ENGAGEMENT, DETAIL_NO_GROWTH, DETAIL_OUTSIDE_VALID,
 };
 use crate::ops::assembly::adaptive::tool::Tool;
 use crate::ops::cut::interp::point_in_valid_area;
@@ -22,10 +22,7 @@ impl ResumeStrategy for ResumeSegment {
         _tool: &Tool,
         detail: &mut u8,
     ) -> Option<ToolPose> {
-        if ctx.cleared.fragments().is_empty() {
-            *detail = DETAIL_NO_FRAGMENTS;
-            return None;
-        }
+        require_fragments(ctx, detail)?;
 
         let area_grew = ctx.cleared.total_area() > ctx.last_resume_area + 1e-9;
         if !area_grew {

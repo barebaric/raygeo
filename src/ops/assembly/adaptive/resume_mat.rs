@@ -6,8 +6,8 @@ use crate::geo::shape::polygon::{
     get_polygon_signed_area, get_polygons_closest_point,
 };
 use crate::ops::assembly::adaptive::resume::{
-    offset_and_probe, ResumeCtx, ResumeStrategy, DETAIL_NODE_NOT_CLEARED,
-    DETAIL_NO_CROSSING, DETAIL_NO_FRAGMENTS, DETAIL_NO_FRONTIER,
+    offset_and_probe, require_fragments, ResumeCtx, ResumeStrategy,
+    DETAIL_NODE_NOT_CLEARED, DETAIL_NO_CROSSING, DETAIL_NO_FRONTIER,
     DETAIL_NO_WALL_HIT, WALL_PROXIMITY,
 };
 use crate::ops::assembly::adaptive::tool::Tool;
@@ -36,11 +36,7 @@ impl ResumeStrategy for ResumeMat {
                 return None;
             }
         };
-        let fragments = ctx.cleared.fragments();
-        if fragments.is_empty() {
-            *detail = DETAIL_NO_FRAGMENTS;
-            return None;
-        }
+        let fragments = require_fragments(ctx, detail)?;
         let is_cleared = axis.build_cleared_mask(fragments);
         let from_idx = match axis.nearest_node(tool.pos) {
             Some(i) => i,

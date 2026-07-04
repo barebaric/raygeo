@@ -1,7 +1,6 @@
-use crate::geo::shape::does_path_sweep_intersect_polygon;
 use crate::ops::assembly::adaptive::routing::{
-    RouteCtx, RoutingStrategy, ROUTE_MAT_NO_AXIS, ROUTE_MAT_NO_CLEARED,
-    ROUTE_MAT_NO_PATH, ROUTE_MAT_SWEEP_COLLIDE,
+    sweep_clear, RouteCtx, RoutingStrategy, ROUTE_MAT_NO_AXIS,
+    ROUTE_MAT_NO_CLEARED, ROUTE_MAT_NO_PATH, ROUTE_MAT_SWEEP_COLLIDE,
 };
 use crate::types::Point;
 
@@ -46,9 +45,8 @@ impl RoutingStrategy for RoutingMat {
                 return None;
             }
         };
-        let obstacles = ctx.obstacles;
 
-        if !path.is_empty() && !obstacles.is_empty() {
+        if !path.is_empty() {
             // Build the full travel polyline: from → waypoints → to.
             let mut travel = Vec::with_capacity(path.len() + 2);
             travel.push(from);
@@ -56,12 +54,7 @@ impl RoutingStrategy for RoutingMat {
             travel.push(to);
 
             // Tool-disc sweep must not intersect any obstacle.
-            if does_path_sweep_intersect_polygon(
-                &travel,
-                ctx.opts.radius,
-                obstacles,
-                ctx.obstacle_bounds,
-            ) {
+            if !sweep_clear(&travel, ctx) {
                 *detail = ROUTE_MAT_SWEEP_COLLIDE;
                 return None;
             }

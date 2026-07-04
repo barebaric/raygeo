@@ -1,11 +1,9 @@
-use crate::geo::shape::compute_polygon_bounds;
-use crate::geo::shape::does_path_sweep_intersect_polygon;
 use crate::geo::shape::polygon::get_polygons_closest_point;
 use crate::geo::shape::polygon::offset_polygon;
 use crate::geo::shape::polygon::resample_polygon;
 use crate::geo::shape::polygon::JoinStyle;
 use crate::ops::assembly::adaptive::routing::{
-    RouteCtx, RoutingStrategy, ROUTE_FRONTIER_DIFFERENT_POLYGONS,
+    sweep_clear, RouteCtx, RoutingStrategy, ROUTE_FRONTIER_DIFFERENT_POLYGONS,
     ROUTE_FRONTIER_NO_FRONTIER, ROUTE_FRONTIER_NO_OBSTACLES,
     ROUTE_FRONTIER_OFFSET_EMPTY, ROUTE_FRONTIER_SAME_VERTEX,
     ROUTE_FRONTIER_SWEEP_COLLIDE, ROUTE_FRONTIER_TOO_FEW_VERTS,
@@ -31,8 +29,7 @@ impl RoutingStrategy for RoutingFrontier {
         to: Point,
         detail: &mut u8,
     ) -> Option<Vec<Point>> {
-        let obstacles = ctx.obstacles;
-        if obstacles.is_empty() {
+        if ctx.obstacles.is_empty() {
             *detail = ROUTE_FRONTIER_NO_OBSTACLES;
             return None;
         }
@@ -147,13 +144,7 @@ impl RoutingStrategy for RoutingFrontier {
         crate::dbg_log!("  FRONTIER  seg_len={}", seg.len());
 
         // Sweep check.
-        let obs_bounds = compute_polygon_bounds(obstacles);
-        if does_path_sweep_intersect_polygon(
-            &seg,
-            ctx.opts.radius,
-            obstacles,
-            &obs_bounds,
-        ) {
+        if !sweep_clear(&seg, ctx) {
             crate::dbg_log!("  FRONTIER  sweep collide");
             *detail = ROUTE_FRONTIER_SWEEP_COLLIDE;
             return None;

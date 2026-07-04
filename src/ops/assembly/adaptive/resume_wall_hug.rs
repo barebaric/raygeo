@@ -1,7 +1,7 @@
 use prof_macros::prof;
 
 use crate::ops::assembly::adaptive::resume::{
-    probe_step, ResumeCtx, ResumeStrategy, DETAIL_NO_FRAGMENTS,
+    probe_step, require_fragments, ResumeCtx, ResumeStrategy,
     DETAIL_NO_WALL_HUG_POINT,
 };
 use crate::ops::assembly::adaptive::tool::Tool;
@@ -40,10 +40,7 @@ impl ResumeStrategy for ResumeWallHug {
         _tool: &Tool,
         detail: &mut u8,
     ) -> Option<ToolPose> {
-        if ctx.cleared.fragments().is_empty() {
-            *detail = DETAIL_NO_FRAGMENTS;
-            return None;
-        }
+        require_fragments(ctx, detail)?;
 
         for pose in ctx.wall_hug_points {
             if !point_in_valid_area(pose.pos, ctx.valid_tool_area) {
