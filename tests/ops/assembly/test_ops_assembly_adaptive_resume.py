@@ -120,19 +120,28 @@ def _valid_tool_area(boundary, islands, radius):
 
 
 class TestEmitResumeTravel:
+    def _cleared_area(self, outer):
+        """Create a ClearedArea with the entire pocket as initial seed
+        so routing has free space."""
+        return ClearedArea(boundary=outer, initial=[outer])
+
     def test_emits_single_move(self):
         """A single move_to is emitted to the target position."""
         outer = _rect(30.0, 30.0, 60, 60)
         ops = Ops()
         before = ops.len()
-        emit_resume_travel(ops, (20.0, 20.0), outer)
+        emit_resume_travel(
+            ops, (20.0, 20.0), outer, cleared=self._cleared_area(outer)
+        )
         assert ops.len() == before + 1
 
     def test_emits_travel_commands(self):
         """Emitted command is a travel move at cut_z + 0.5."""
         outer = _rect(40.0, 40.0, 80, 80)
         ops = Ops()
-        emit_resume_travel(ops, (70.0, 40.0), outer)
+        emit_resume_travel(
+            ops, (70.0, 40.0), outer, cleared=self._cleared_area(outer)
+        )
         assert ops.len() >= 1
         for i in range(ops.len()):
             assert ops.is_travel(i)
@@ -141,7 +150,9 @@ class TestEmitResumeTravel:
         outer = _rect(30.0, 30.0, 60, 60)
         ops = Ops()
         n0 = ops.len()
-        emit_resume_travel(ops, (10.0, 10.0), outer)
+        emit_resume_travel(
+            ops, (10.0, 10.0), outer, cleared=self._cleared_area(outer)
+        )
         assert ops.len() == n0 + 1
 
     def test_travel_ends_at_target(self):
@@ -149,7 +160,7 @@ class TestEmitResumeTravel:
         outer = _rect(40.0, 40.0, 80, 80)
         ops = Ops()
         to = (70.0, 40.0)
-        emit_resume_travel(ops, to, outer)
+        emit_resume_travel(ops, to, outer, cleared=self._cleared_area(outer))
         assert ops.len() >= 1
         ex, ey, _ = ops.endpoint(ops.len() - 1)
         assert (ex, ey) == pytest.approx(to, abs=0.01)
@@ -160,7 +171,9 @@ class TestEmitResumeTravel:
         outer = _rect(40.0, 40.0, 80, 80)
         ops = Ops()
         to_pt = (70.0, 40.0)
-        emit_resume_travel(ops, to_pt, outer)
+        emit_resume_travel(
+            ops, to_pt, outer, cleared=self._cleared_area(outer)
+        )
         direct = math.sqrt(to_pt[0] ** 2 + to_pt[1] ** 2)
         for i in range(1, ops.len()):
             x0, y0, _ = ops.endpoint(i - 1)

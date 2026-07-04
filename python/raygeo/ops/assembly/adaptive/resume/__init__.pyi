@@ -9,7 +9,7 @@ __all__ = [
     "try_resume",
 ]
 
-def emit_resume_travel(ops: raygeo.ops.Ops, to_pt: tuple[float, float], pocket_boundary: collections.abc.Sequence[tuple[float, float]], islands: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]] = [], radius: float = 3, cut_z: float = -5) -> None:
+def emit_resume_travel(ops: raygeo.ops.Ops, to_pt: tuple[float, float], pocket_boundary: collections.abc.Sequence[tuple[float, float]], islands: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]] = [], radius: float = 3, cut_z: float = -5, cleared: raygeo.ops.cut.cleared_area.ClearedArea | None = None) -> None:
     r"""
     Emit a resume travel to *to_pt* using the routing strategies.
     """

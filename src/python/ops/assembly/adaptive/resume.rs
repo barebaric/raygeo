@@ -109,6 +109,7 @@ fn smooth_travel_path_py(
         islands: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]] = [],
         radius: float = 3.0,
         cut_z: float = -5.0,
+        cleared: raygeo.ops.cut.cleared_area.ClearedArea | None = None,
     ) -> None:
         """Emit a resume travel to *to_pt* using the routing strategies."""
     "#,
@@ -169,6 +170,7 @@ fn emit_resume_travel_py(
         Point::new(from_pt.0, from_pt.1),
         Point::new(to_pt.0, to_pt.1),
         &opts,
+        None,
     )?;
     Ok(())
 }
@@ -311,10 +313,19 @@ fn try_resume_py(
         },
         last_resume_area,
         last_resume_pos: tool.inner.pos,
-        last_wall_hug: None,
+        wall_hug_points: &[],
         blacklist: &[],
     };
-    let result = resume::try_resume(&ctx, &tool.inner);
+    let mut _py_reasons = resume::ResumeReasons::default();
+    let mut _py_details = resume::ResumeReasons::default();
+    let mut _py_candidate_pts = resume::ResumeCandidatePoints::default();
+    let result = resume::try_resume(
+        &ctx,
+        &tool.inner,
+        &mut _py_reasons,
+        &mut _py_details,
+        &mut _py_candidate_pts,
+    );
     if let Some((_source, rp)) = result {
         resume::emit_resume_travel(
             &mut ops.inner,
@@ -323,6 +334,7 @@ fn try_resume_py(
             tool.inner.pos,
             rp.pos,
             &opts,
+            None,
         )?;
         tool.inner.pos = rp.pos;
         tool.inner.heading = rp.heading;

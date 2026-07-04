@@ -6,7 +6,9 @@ use crate::geo::shape::polygon::{
     get_polygon_signed_area, get_polygons_closest_point,
 };
 use crate::ops::assembly::adaptive::resume::{
-    probe_step, ResumeCtx, ResumeStrategy, WALL_PROXIMITY,
+    offset_and_probe, ResumeCtx, ResumeStrategy, DETAIL_NODE_NOT_CLEARED,
+    DETAIL_NO_CROSSING, DETAIL_NO_FRAGMENTS, DETAIL_NO_FRONTIER,
+    DETAIL_NO_WALL_HIT, WALL_PROXIMITY,
 };
 use crate::ops::assembly::adaptive::tool::Tool;
 use crate::ops::cut::ClearedArea;
@@ -21,15 +23,34 @@ impl ResumeStrategy for ResumeMat {
         "mat"
     }
 
-    fn find_next(&self, ctx: &ResumeCtx, tool: &Tool) -> Option<ToolPose> {
-        let axis = ctx.mat?;
+    fn find_next(
+        &self,
+        ctx: &ResumeCtx,
+        tool: &Tool,
+        detail: &mut u8,
+    ) -> Option<ToolPose> {
+        let axis = match ctx.mat {
+            Some(m) => m,
+            None => {
+                *detail = DETAIL_NO_CROSSING;
+                return None;
+            }
+        };
         let fragments = ctx.cleared.fragments();
         if fragments.is_empty() {
+            *detail = DETAIL_NO_FRAGMENTS;
             return None;
         }
         let is_cleared = axis.build_cleared_mask(fragments);
-        let from_idx = axis.nearest_node(tool.pos)?;
+        let from_idx = match axis.nearest_node(tool.pos) {
+            Some(i) => i,
+            None => {
+                *detail = DETAIL_NODE_NOT_CLEARED;
+                return None;
+            }
+        };
         if !is_cleared[from_idx] {
+            *detail = DETAIL_NODE_NOT_CLEARED;
             return None;
         }
         let crossings = find_all_mat_crossings(axis, from_idx, &is_cleared);
@@ -39,6 +60,7 @@ impl ResumeStrategy for ResumeMat {
             from_idx,
         );
         for crossing_idx in crossings {
+            let mut cross_detail = 0u8;
             if let Some(rp) = mat_resume_from_crossing(
                 axis,
                 ctx.cleared,
@@ -48,13 +70,19 @@ impl ResumeStrategy for ResumeMat {
                 ctx.opts.advance,
                 &ctx.opts.pocket_boundary,
                 &ctx.opts.islands,
+                &mut cross_detail,
             ) {
                 if let Some(probed) =
-                    probe_step(ctx, tool.radius, rp.pos, rp.heading)
+                    offset_and_probe(ctx, tool.radius, rp.pos, rp.heading)
                 {
                     return Some(probed);
                 }
+            } else if cross_detail != 0 {
+                *detail = cross_detail;
             }
+        }
+        if *detail == 0 {
+            *detail = DETAIL_NO_CROSSING;
         }
         None
     }
@@ -64,11 +92,15 @@ impl ResumeStrategy for ResumeMat {
 ///
 /// 1. `P_CROSS` = crossing node position (marks where fresh material
 ///    begins on the MAT).
-/// 2. Walk the cleared-area frontier **backward** (opposite to the
-///    cutting rotational direction) from the vertex nearest `P_CROSS`
-///    until hitting the pocket boundary (within `WALL_PROXIMITY`) or
+/// 2. Pick the **largest** frontier polygon by area (typically the outer
+///    cleared-area boundary that touches the pocket wall) rather than
+///    the one geometrically nearest to `P_CROSS` — which may be an
+///    interior hole ring with no wall-adjacent vertices.
+/// 3. Walk the chosen polygon **backward** (opposite to the cutting
+///    rotational direction) from the vertex nearest `P_CROSS` until
+///    hitting the pocket boundary (within `WALL_PROXIMITY`) or
 ///    completing a full loop (→ fail, try next crossing).
-/// 3. Place the tool centre at `radius` from the nearest wall point,
+/// 4. Place the tool centre at `radius` from the nearest wall point,
 /// along the wall→cleared direction.  The heading is the frontier
 /// tangent in the cutting direction.
 #[allow(clippy::too_many_arguments)]
@@ -82,15 +114,30 @@ pub fn mat_resume_from_crossing(
     _advance: f64,
     pocket_boundary: &[Point],
     islands: &[Polygon],
+    detail: &mut u8,
 ) -> Option<ToolPose> {
     let p_cross = axis.nodes[crossing_idx].point;
 
     let polys = cleared.frontier(0.001);
     if polys.is_empty() {
+        *detail = DETAIL_NO_FRONTIER;
         return None;
     }
 
-    let (poly_idx, _, _, _) = get_polygons_closest_point(&polys, p_cross)?;
+    // Pick the frontier polygon with the largest absolute area — this
+    // is the outer cleared-area boundary that touches the pocket wall,
+    // not an interior hole ring around remaining material.
+    let poly_idx = polys
+        .iter()
+        .enumerate()
+        .max_by(|(_, a), (_, b)| {
+            get_polygon_signed_area(a)
+                .abs()
+                .partial_cmp(&get_polygon_signed_area(b).abs())
+                .unwrap_or(std::cmp::Ordering::Equal)
+        })
+        .map(|(i, _)| i)
+        .unwrap_or(0);
     let poly = &polys[poly_idx];
     let n = poly.len();
     if n < 3 {
@@ -105,7 +152,8 @@ pub fn mat_resume_from_crossing(
                 .partial_cmp(&b.distance_squared(p_cross))
                 .unwrap_or(std::cmp::Ordering::Equal)
         })
-        .map(|(i, _)| i)?;
+        .map(|(i, _)| i)
+        .unwrap_or(0);
 
     let wall_polys: Vec<Polygon> = std::iter::once(pocket_boundary.to_vec())
         .chain(islands.iter().cloned())
@@ -139,10 +187,23 @@ pub fn mat_resume_from_crossing(
         }
     }
 
-    let hit_idx = hit_idx?;
+    let hit_idx = match hit_idx {
+        Some(i) => i,
+        None => {
+            *detail = DETAIL_NO_WALL_HIT;
+            return None;
+        }
+    };
     let p_hit = poly[hit_idx];
 
-    let (_, _, wall_pt, _) = get_polygons_closest_point(&wall_polys, p_hit)?;
+    let (_, _, wall_pt, _) =
+        match get_polygons_closest_point(&wall_polys, p_hit) {
+            Some(r) => r,
+            None => {
+                *detail = DETAIL_NO_WALL_HIT;
+                return None;
+            }
+        };
     let wall_to_hit = p_hit - wall_pt;
     let wall_dist = wall_to_hit.length();
     let inward = if wall_dist > 1e-9 {

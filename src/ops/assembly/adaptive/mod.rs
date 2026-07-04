@@ -17,7 +17,9 @@ mod resume_mat;
 mod resume_segment;
 mod resume_wall_hug;
 pub mod routing;
+mod routing_astar;
 mod routing_direct;
+mod routing_frontier;
 mod routing_mat;
 pub mod tool;
 #[cfg(debug_assertions)]
@@ -51,7 +53,7 @@ use crate::trace::Tracer;
 use resume::{try_resume, ResumeCtx, MAX_RESUMES};
 use tool::Tool;
 #[cfg(debug_assertions)]
-use trace::{RecordBuf, TraceKind};
+use trace::{TraceKind, TraceRecord};
 
 // ── Named constants ────────────────────────────────────────────────────
 
@@ -63,12 +65,6 @@ const STUCK_CHECK_INTERVAL: usize = 100;
 /// cleared area must grow by during a progress window.
 const STUCK_MIN_GROWTH_FACTOR: f64 = 0.15;
 
-/// Fraction of tool radius used as the departure threshold for wall-hug
-/// tracking.  When the tool's distance to the nearest envelope boundary
-/// exceeds `radius × WALL_HUG_DEPARTURE_FRAC`, the tool is considered
-/// to have left the wall.
-const WALL_HUG_DEPARTURE_FRAC: f64 = 0.1;
-
 /// Minimum distance from `point` to the nearest boundary edge of any
 /// polygon in `area`.  Used to detect whether the tool is "on" the
 /// envelope (distance ≈ 0) or has departed into the interior.
@@ -77,6 +73,62 @@ fn envelope_distance(point: Point, area: &[Polygon]) -> f64 {
     get_polygons_closest_point(area, point)
         .map(|(_, _, _, d2)| d2.sqrt())
         .unwrap_or(f64::MAX)
+}
+
+struct WallHugSegments {
+    current: Vec<ToolPose>,
+    previous: Vec<Vec<ToolPose>>,
+}
+
+impl WallHugSegments {
+    fn new() -> Self {
+        Self {
+            current: Vec::new(),
+            previous: Vec::new(),
+        }
+    }
+
+    fn push(&mut self, pose: ToolPose) {
+        self.current.push(pose);
+    }
+
+    fn finalize_segment(&mut self) {
+        if !self.current.is_empty() {
+            self.previous.push(std::mem::take(&mut self.current));
+        }
+    }
+
+    fn prune(&mut self, pos: Point, radius: f64) {
+        let r2 = radius * radius;
+        for segment in &mut self.previous {
+            segment.retain(|p| {
+                let dx = p.pos.x - pos.x;
+                let dy = p.pos.y - pos.y;
+                dx * dx + dy * dy > r2
+            });
+        }
+        self.previous.retain(|s| !s.is_empty());
+    }
+
+    fn ordered_points(&self) -> Vec<ToolPose> {
+        let total: usize = self.current.len()
+            + self.previous.iter().map(|s| s.len()).sum::<usize>();
+        let mut out = Vec::with_capacity(total);
+        out.extend_from_slice(&self.current);
+        for segment in &self.previous {
+            out.extend_from_slice(segment);
+        }
+        out
+    }
+
+    fn segment_counts(&self) -> Vec<u32> {
+        let mut counts = Vec::with_capacity(1 + self.previous.len());
+        counts.push(self.current.len() as u32);
+        for segment in &self.previous {
+            counts.push(segment.len() as u32);
+        }
+        counts
+    }
 }
 
 // ── Options ──────────────────────────────────────────────────────────
@@ -309,21 +361,6 @@ pub fn adaptive_clearing(
     // `#[cfg(debug_assertions)]` trace-record blocks; kept
     // unconditional so the surrounding code layout is identical.
     let mut trace_step_idx: u32 = 1;
-    #[cfg(debug_assertions)]
-    {
-        if let Some(ref mut tr) = tracer {
-            tr.write_mat(mat.as_ref().map(|m| m.into()));
-            let buf = RecordBuf::from_tool_state(
-                StepStatus::Ok,
-                0,
-                &tool,
-                cleared,
-                tool.pos,
-                tp_len,
-            );
-            tr.write(TraceKind::Init as u8, buf.pack());
-        }
-    }
 
     let mut prev_pos = tool.pos;
     let mut steps_since_batch: usize = 0;
@@ -337,13 +374,39 @@ pub fn adaptive_clearing(
         heading: tool.heading,
     };
 
-    // Wall-hug tracking: after a boundary resume the tool sits on the
-    // envelope edge.  We track when it departs so ResumeWallHug can
-    // resume from the departure point instead of re-cutting from the
-    // original envelope position.
-    let mut near_envelope = false;
-    let mut left_envelope = false;
-    let mut last_wall_hug: Option<ToolPose> = None;
+    // Wall-hug tracking: enter when the tool cutting edge reaches
+    // the pocket boundary (centre < radius from the envelope).
+    // Track the minimum-distance pose per envelope visit, and
+    // accumulate across all visits in the current cut segment so
+    // the resume strategy can try earlier wall-hug points first.
+    // Points from previous segments are preserved for fallback
+    // resume attempts and pruned when the tool sweeps near them.
+    let mut in_envelope = false;
+    let mut wall_hug_tracking: Option<(ToolPose, f64)> = None;
+    let mut wall_hug_segments = WallHugSegments::new();
+
+    #[cfg(debug_assertions)]
+    {
+        if let Some(ref mut tr) = tracer {
+            tr.write_mat(mat.as_ref().map(|m| m.into()));
+            let mut rec = TraceRecord::from_tool_state(
+                TraceKind::Init as u8,
+                StepStatus::Ok,
+                0,
+                &tool,
+                cleared,
+                tool.pos,
+                tp_len,
+            );
+            rec.wall_hug_points = wall_hug_segments
+                .ordered_points()
+                .iter()
+                .map(|p| (p.pos.x, p.pos.y))
+                .collect();
+            rec.wall_hug_segment_counts = wall_hug_segments.segment_counts();
+            tr.write(&rec);
+        }
+    }
 
     // Stuck detection: every STUCK_CHECK_INTERVAL steps, verify the
     // cleared area has grown by at least the expected amount.  If not,
@@ -360,23 +423,6 @@ pub fn adaptive_clearing(
     let mut last_resume_pos = tool.pos;
     let mut resume_blacklist: Vec<Point> = Vec::new();
 
-    #[cfg(debug_assertions)]
-    macro_rules! write_exit_trace {
-        ($status:expr) => {
-            if let Some(ref mut tr) = tracer {
-                let buf = RecordBuf::from_tool_state(
-                    $status,
-                    trace_step_idx,
-                    &tool,
-                    cleared,
-                    prev_pos,
-                    tp_len,
-                );
-                tr.write(TraceKind::Exit as u8, buf.pack());
-            }
-        };
-    }
-
     // Options constructed once and reused for all step calls in the loop.
     let step_opts = StepperOptions {
         target_area_pd,
@@ -388,6 +434,45 @@ pub fn adaptive_clearing(
         ..Default::default()
     };
 
+    let mut resume_reasons = resume::ResumeReasons::default();
+    let mut resume_details = resume::ResumeReasons::default();
+    let mut route_details = [0u8; 4];
+    let mut last_resume_point = Point::ZERO;
+    let mut resume_candidate_pts = resume::ResumeCandidatePoints::default();
+
+    #[cfg(debug_assertions)]
+    macro_rules! write_exit_trace {
+        ($status:expr, $reasons:expr, $details:expr, $route:expr, $rp:expr) => {
+            if let Some(ref mut tr) = tracer {
+                let mut rec = TraceRecord::from_tool_state(
+                    TraceKind::Exit as u8,
+                    $status,
+                    trace_step_idx,
+                    &tool,
+                    cleared,
+                    prev_pos,
+                    tp_len,
+                );
+                rec.resume_strategy_reasons = *$reasons;
+                rec.resume_strategy_details = *$details;
+                rec.route_strategy_details = *$route;
+                rec.resume_point_x = ($rp).x;
+                rec.resume_point_y = ($rp).y;
+                rec.resume_candidate_points =
+                    resume_candidate_pts.map(|p| match p {
+                        Some(pt) => (pt.x, pt.y),
+                        None => (f64::NAN, f64::NAN),
+                    });
+                rec.wall_hug_points = wall_hug_segments
+                    .ordered_points()
+                    .iter()
+                    .map(|p| (p.pos.x, p.pos.y))
+                    .collect();
+                tr.write(&rec);
+            }
+        };
+    }
+
     let mut iter: usize = 0;
     for _ in 0..MAX_TOTAL_STEPS {
         iter += 1;
@@ -397,7 +482,13 @@ pub fn adaptive_clearing(
         if let Some(check) = opts.cancel_check {
             if check() {
                 #[cfg(debug_assertions)]
-                write_exit_trace!(StepStatus::Ok);
+                write_exit_trace!(
+                    StepStatus::Ok,
+                    &resume_reasons,
+                    &resume_details,
+                    &route_details,
+                    &last_resume_point
+                );
                 return Err(RaygeoError::Cancelled);
             }
         }
@@ -420,7 +511,13 @@ pub fn adaptive_clearing(
                 valid_total,
             );
             #[cfg(debug_assertions)]
-            write_exit_trace!(StepStatus::Ok);
+            write_exit_trace!(
+                StepStatus::Ok,
+                &resume_reasons,
+                &resume_details,
+                &route_details,
+                &last_resume_point
+            );
             break;
         }
 
@@ -473,33 +570,58 @@ pub fn adaptive_clearing(
                 );
             }
         }
-
-        // Wall-hug tracking: continuously monitor the tool's proximity
-        // to the envelope edge.  When the tool departs the wall, record
-        // the last on-wall pose so ResumeWallHug can resume from there
-        // — regardless of how or when the tool reached the wall (not
-        // only after a boundary resume).
+        // Wall-hug tracking: enter when the tool cutting edge
+        // reaches the pocket boundary (centre < radius from
+        // envelope).  Track the minimum-distance pose while the
+        // distance is decreasing, then record it the first time the
+        // distance starts increasing (departure).
         if status == StepStatus::Ok {
             let dist = envelope_distance(tool.pos, &valid_tool_area);
-            let on_envelope = dist <= opts.radius * WALL_HUG_DEPARTURE_FRAC;
-            if on_envelope {
-                if left_envelope {
-                    // Tool returned to the wall — reset so a new
-                    // departure can be recorded.
-                    left_envelope = false;
-                    last_wall_hug = None;
+            let inside = dist < opts.radius + 1e-9;
+
+            if !in_envelope && inside {
+                // ENTER
+                in_envelope = true;
+                wall_hug_tracking = Some((
+                    ToolPose {
+                        pos: tool.pos,
+                        heading: tool.heading,
+                    },
+                    dist,
+                ));
+            } else if in_envelope && !inside {
+                // Fully exited — record if not already recorded on
+                // departure.
+                if let Some((candidate, _)) = wall_hug_tracking.take() {
+                    wall_hug_segments.push(candidate);
                 }
-                near_envelope = true;
-            } else if near_envelope && !left_envelope {
-                let prev_env_dist =
-                    envelope_distance(prev_pos, &valid_tool_area);
-                left_envelope = true;
-                last_wall_hug = Some(ToolPose {
-                    pos: prev_pos,
-                    heading: tool.heading,
-                });
+                in_envelope = false;
+            } else if in_envelope && inside {
+                // STAY — track minimum distance while approaching.
+                // Record on first distance increase (departure).
+                if let Some((candidate, min_dist)) = wall_hug_tracking.take() {
+                    if dist < min_dist {
+                        wall_hug_tracking = Some((
+                            ToolPose {
+                                pos: tool.pos,
+                                heading: tool.heading,
+                            },
+                            dist,
+                        ));
+                    } else if dist > min_dist + 1e-9 {
+                        // Distance increased — we're departing the
+                        // wall.  Push the minimum-distance pose.
+                        wall_hug_segments.push(candidate);
+                        wall_hug_tracking = None;
+                        in_envelope = false;
+                    } else {
+                        wall_hug_tracking = Some((candidate, min_dist));
+                    }
+                }
             }
         }
+        // Prune older-segment hug points that the tool has now swept.
+        wall_hug_segments.prune(tool.pos, opts.radius);
         let stalled = status != StepStatus::Ok;
 
         // Stuck detection: check every STUCK_CHECK_INTERVAL steps
@@ -578,74 +700,124 @@ pub fn adaptive_clearing(
                     );
                 }
                 #[cfg(debug_assertions)]
-                write_exit_trace!(StepStatus::Ok);
+                write_exit_trace!(
+                    StepStatus::Ok,
+                    &resume_reasons,
+                    &resume_details,
+                    &route_details,
+                    &last_resume_point
+                );
                 break;
             }
 
-            let result = {
-                let ctx = ResumeCtx {
-                    cleared: &*cleared,
-                    opts,
-                    valid_tool_area: &valid_tool_area,
-                    mat: mat.as_ref(),
-                    target_area_pd,
-                    segment_start,
-                    last_resume_area,
-                    last_resume_pos,
-                    last_wall_hug,
-                    blacklist: &resume_blacklist,
+            resume_reasons = resume::ResumeReasons::default();
+            let mut resume_done = false;
+            'resume: loop {
+                let wall_hug_flat = wall_hug_segments.ordered_points();
+                let result = {
+                    let ctx = ResumeCtx {
+                        cleared: &*cleared,
+                        opts,
+                        valid_tool_area: &valid_tool_area,
+                        mat: mat.as_ref(),
+                        target_area_pd,
+                        segment_start,
+                        last_resume_area,
+                        last_resume_pos,
+                        wall_hug_points: &wall_hug_flat,
+                        blacklist: &resume_blacklist,
+                    };
+                    try_resume(
+                        &ctx,
+                        &tool,
+                        &mut resume_reasons,
+                        &mut resume_details,
+                        &mut resume_candidate_pts,
+                    )
                 };
-                try_resume(&ctx, &tool)
-            };
-            if let Some((source, rp)) = result {
+                let (source, rp) = match result {
+                    Some(r) => r,
+                    None => break 'resume,
+                };
+                last_resume_point = rp.pos;
                 resume_blacklist.push(rp.pos);
-                let route_source = resume::emit_resume_travel(
+                match resume::emit_resume_travel(
                     &mut ops,
                     &*cleared,
                     mat.as_ref(),
                     tool.pos,
                     rp.pos,
                     opts,
-                )?;
-                tool.pos = rp.pos;
-                tool.heading = rp.heading;
-                tool.reset_gyro();
-                tp_len = moving_count(&ops);
-                #[cfg(debug_assertions)]
-                {
-                    if let Some(ref mut tr) = tracer {
-                        let mut buf = RecordBuf::from_tool_state(
-                            resume_trace_status,
-                            trace_step_idx,
-                            &tool,
-                            cleared,
-                            prev_pos,
-                            tp_len,
-                        );
-                        buf.resume_source(source as u8);
-                        buf.route_source(route_source as u8);
-                        let kind = if stuck_triggered {
-                            TraceKind::ResumeStuck
-                        } else {
-                            TraceKind::ResumeStall
+                    Some(&mut route_details),
+                ) {
+                    Ok(route_source) => {
+                        tool.pos = rp.pos;
+                        tool.heading = rp.heading;
+                        tool.reset_gyro();
+                        tp_len = moving_count(&ops);
+                        #[cfg(debug_assertions)]
+                        {
+                            if let Some(ref mut tr) = tracer {
+                                let kind = if stuck_triggered {
+                                    TraceKind::ResumeStuck
+                                } else {
+                                    TraceKind::ResumeStall
+                                };
+                                let mut rec = TraceRecord::from_tool_state(
+                                    kind as u8,
+                                    resume_trace_status,
+                                    trace_step_idx,
+                                    &tool,
+                                    cleared,
+                                    prev_pos,
+                                    tp_len,
+                                );
+                                rec.resume_source = source as u8;
+                                rec.route_source = route_source as u8;
+                                rec.resume_strategy_reasons = resume_reasons;
+                                rec.resume_strategy_details = resume_details;
+                                rec.route_strategy_details = route_details;
+                                rec.resume_point_x = rp.pos.x;
+                                rec.resume_point_y = rp.pos.y;
+                                rec.resume_candidate_points =
+                                    resume_candidate_pts.map(|p| match p {
+                                        Some(pt) => (pt.x, pt.y),
+                                        None => (f64::NAN, f64::NAN),
+                                    });
+                                rec.wall_hug_points = wall_hug_segments
+                                    .ordered_points()
+                                    .iter()
+                                    .map(|p| (p.pos.x, p.pos.y))
+                                    .collect();
+                                rec.wall_hug_segment_counts =
+                                    wall_hug_segments.segment_counts();
+                                tr.write(&rec);
+                            }
+                        }
+                        trace_step_idx += 1;
+                        prev_pos = tool.pos;
+                        last_check_area = cleared.total_area();
+                        last_resume_area = cleared.total_area();
+                        last_resume_pos = tool.pos;
+                        segment_start = ToolPose {
+                            pos: tool.pos,
+                            heading: tool.heading,
                         };
-                        tr.write(kind as u8, buf.pack());
+                        in_envelope = false;
+                        wall_hug_tracking = None;
+                        wall_hug_segments.finalize_segment();
+                        step_count = 0;
+                        resume_done = true;
+                        break 'resume;
                     }
+                    Err(RaygeoError::RoutingError(_)) => {
+                        // Candidate blacklisted — inner retry loop will
+                        // try the next resume candidate.
+                    }
+                    Err(other) => return Err(other),
                 }
-                trace_step_idx += 1;
-                prev_pos = tool.pos;
-                last_check_area = cleared.total_area();
-                last_resume_area = cleared.total_area();
-                last_resume_pos = tool.pos;
-                segment_start = ToolPose {
-                    pos: tool.pos,
-                    heading: tool.heading,
-                };
-                let ed = envelope_distance(tool.pos, &valid_tool_area);
-                near_envelope = ed < opts.radius * WALL_HUG_DEPARTURE_FRAC;
-                left_envelope = false;
-                last_wall_hug = None;
-                step_count = 0;
+            }
+            if resume_done {
                 continue;
             }
 
@@ -682,7 +854,13 @@ pub fn adaptive_clearing(
                     valid_total,
                 );
                 #[cfg(debug_assertions)]
-                write_exit_trace!(StepStatus::Ok);
+                write_exit_trace!(
+                    StepStatus::Ok,
+                    &resume_reasons,
+                    &resume_details,
+                    &route_details,
+                    &last_resume_point
+                );
                 break;
             }
 
@@ -709,7 +887,20 @@ pub fn adaptive_clearing(
                 );
             }
             #[cfg(debug_assertions)]
-            write_exit_trace!(resume_trace_status);
+            write_exit_trace!(
+                resume_trace_status,
+                &resume_reasons,
+                &resume_details,
+                &route_details,
+                &last_resume_point
+            );
+            let all_blacklisted =
+                resume_reasons.contains(&resume::REASON_BLACKLISTED);
+            if all_blacklisted {
+                return Err(RaygeoError::RoutingError(
+                    "all resume candidates failed routing".into(),
+                ));
+            }
             return Err(RaygeoError::ResumePointNotFound(
                 "all resume strategies failed".into(),
             ));
@@ -738,7 +929,8 @@ pub fn adaptive_clearing(
             let eng = cleared.point_engagement(tool.pos, opts.radius);
             let ca = cleared.cut_area(prev_pos, tool.pos, opts.radius);
             if let Some(ref mut tr) = tracer {
-                let mut buf = RecordBuf::from_tool_state(
+                let mut rec = TraceRecord::from_tool_state(
+                    TraceKind::Cut as u8,
                     status,
                     trace_step_idx,
                     &tool,
@@ -746,13 +938,20 @@ pub fn adaptive_clearing(
                     prev_pos,
                     tp_len,
                 );
-                buf.iters(result.iters as u32);
-                buf.iteration_angle(result.iteration_angle);
-                buf.eng_angle(eng.angle);
-                buf.eng_area(eng.area);
-                buf.eng_chord(eng.chord_depth);
-                buf.cut_area(ca);
-                tr.write(TraceKind::Cut as u8, buf.pack());
+                rec.iters = result.iters as u32;
+                rec.iteration_angle = result.iteration_angle;
+                rec.eng_angle = eng.angle;
+                rec.eng_area = eng.area;
+                rec.eng_chord = eng.chord_depth;
+                rec.cut_area = ca;
+                rec.wall_hug_points = wall_hug_segments
+                    .ordered_points()
+                    .iter()
+                    .map(|p| (p.pos.x, p.pos.y))
+                    .collect();
+                rec.wall_hug_segment_counts =
+                    wall_hug_segments.segment_counts();
+                tr.write(&rec);
             }
         }
         trace_step_idx += 1;

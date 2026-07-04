@@ -3,7 +3,8 @@ use prof_macros::prof;
 use crate::dbg_log;
 use crate::geo::shape::polygon::get_polygon_signed_area;
 use crate::ops::assembly::adaptive::resume::{
-    probe_step, ResumeCtx, ResumeStrategy,
+    probe_step, ResumeCtx, ResumeStrategy, DETAIL_NO_ENGAGEMENT,
+    DETAIL_NO_HOLES,
 };
 use crate::ops::assembly::adaptive::tool::Tool;
 use crate::ops::cut::interp::point_in_valid_area;
@@ -18,8 +19,13 @@ impl ResumeStrategy for ResumeIsland {
         "island"
     }
 
-    fn find_next(&self, ctx: &ResumeCtx, tool: &Tool) -> Option<ToolPose> {
-        frontier_hole_resume(ctx, tool)
+    fn find_next(
+        &self,
+        ctx: &ResumeCtx,
+        tool: &Tool,
+        detail: &mut u8,
+    ) -> Option<ToolPose> {
+        frontier_hole_resume(ctx, tool, detail)
     }
 }
 
@@ -41,7 +47,11 @@ impl ResumeStrategy for ResumeIsland {
 /// tool walks CW around holes (storage order), keeping uncut material
 /// on the right — matching the stepper's one-sided deflection bounds.
 #[prof]
-fn frontier_hole_resume(ctx: &ResumeCtx, tool: &Tool) -> Option<ToolPose> {
+fn frontier_hole_resume(
+    ctx: &ResumeCtx,
+    tool: &Tool,
+    detail: &mut u8,
+) -> Option<ToolPose> {
     let frontier = ctx.cleared.frontier(0.001);
 
     // Only CW holes represent island-adjacent uncleared material
@@ -53,6 +63,7 @@ fn frontier_hole_resume(ctx: &ResumeCtx, tool: &Tool) -> Option<ToolPose> {
         .collect();
 
     if holes.is_empty() {
+        *detail = DETAIL_NO_HOLES;
         return None;
     }
 
@@ -62,11 +73,17 @@ fn frontier_hole_resume(ctx: &ResumeCtx, tool: &Tool) -> Option<ToolPose> {
         frontier.len(),
     );
 
-    // Sort holes by distance from the tool position (nearest first).
+    // Sort holes by distance from tool position — closest first.
     let mut order: Vec<usize> = (0..holes.len()).collect();
     order.sort_by(|&a, &b| {
-        let da = min_dist2(holes[a], tool.pos);
-        let db = min_dist2(holes[b], tool.pos);
+        let da = holes[a]
+            .iter()
+            .map(|p| p.distance_squared(tool.pos))
+            .fold(f64::MAX, f64::min);
+        let db = holes[b]
+            .iter()
+            .map(|p| p.distance_squared(tool.pos))
+            .fold(f64::MAX, f64::min);
         da.partial_cmp(&db).unwrap_or(std::cmp::Ordering::Equal)
     });
 
@@ -189,12 +206,6 @@ fn frontier_hole_resume(ctx: &ResumeCtx, tool: &Tool) -> Option<ToolPose> {
     }
 
     dbg_log!("  ISLAND  no engagement found on any frontier hole");
+    *detail = DETAIL_NO_ENGAGEMENT;
     None
-}
-
-/// Squared distance from `pt` to the nearest vertex of `poly`.
-fn min_dist2(poly: &Polygon, pt: Point) -> f64 {
-    poly.iter()
-        .map(|p| p.distance_squared(pt))
-        .fold(f64::MAX, f64::min)
 }

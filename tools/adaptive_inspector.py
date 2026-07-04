@@ -37,6 +37,7 @@ import sys
 
 import matplotlib.pyplot as plt
 import matplotlib.widgets as _mw
+import msgpack
 from matplotlib.collections import LineCollection
 from matplotlib.patches import Circle
 from matplotlib.widgets import Button, TextBox
@@ -85,7 +86,6 @@ _patch_widget_events()
 # ── Trace file format ────────────────────────────────────────────
 
 TRACE_HEADER_SIZE = 12  # magic(4) + version(4) + count(4)
-TRACE_RECORD_SIZE = 128
 TRACE_MAGIC = b"ADPT"
 
 KIND_NAMES = {
@@ -115,12 +115,34 @@ RESUME_SOURCE_NAMES = {
 ROUTE_SOURCE_NAMES = {
     0: "none",
     1: "direct",
-    2: "mat",
+    2: "frontier",
+    3: "mat",
+    4: "astar",
+}
+
+ROUTE_DETAIL_LABELS = {
+    0: ".",
+    1: "sweep_collide",
+    2: "no_obstacles",
+    3: "no_frontier",
+    4: "offset_empty",
+    5: "diff_polygons",
+    6: "too_few_verts",
+    7: "same_vertex",
+    8: "sweep_collide",
+    9: "no_axis",
+    10: "no_cleared",
+    11: "no_path",
+    12: "sweep_collide",
+    13: "no_obstacles",
+    14: "no_free_space",
+    15: "astar_failed",
+    16: "too_few_waypoints",
 }
 
 
 class TraceRecord:
-    """One per-step record from the trace file (128 bytes)."""
+    """One per-step record from the trace file (msgpack dict wrapper)."""
 
     __slots__ = (
         "kind",
@@ -144,30 +166,31 @@ class TraceRecord:
         "ops_len",
         "resume_source",
         "route_source",
+        "wall_hug_points",
+        "wall_hug_segment_counts",
+        "resume_strategy_reasons",
+        "resume_strategy_details",
+        "route_strategy_details",
+        "resume_point_x",
+        "resume_point_y",
+        "resume_candidate_points",
     )
 
-    def __init__(self, buf):
-        self.kind = buf[0]
-        self.status = buf[1]
-        self.step_idx = struct.unpack_from("<I", buf, 2)[0]
-        self.iters = struct.unpack_from("<I", buf, 6)[0]
-        self.pos_x = struct.unpack_from("<d", buf, 10)[0]
-        self.pos_y = struct.unpack_from("<d", buf, 18)[0]
-        self.heading = struct.unpack_from("<d", buf, 26)[0]
-        self.smoothed_heading = struct.unpack_from("<d", buf, 34)[0]
-        self.predicted_angle = struct.unpack_from("<d", buf, 42)[0]
-        self.iteration_angle = struct.unpack_from("<d", buf, 50)[0]
-        self.eng_angle = struct.unpack_from("<d", buf, 58)[0]
-        self.eng_area = struct.unpack_from("<d", buf, 66)[0]
-        self.eng_chord = struct.unpack_from("<d", buf, 74)[0]
-        self.cut_area = struct.unpack_from("<d", buf, 82)[0]
-        self.total_area = struct.unpack_from("<d", buf, 90)[0]
-        self.remaining_area = struct.unpack_from("<d", buf, 98)[0]
-        self.prev_x = struct.unpack_from("<d", buf, 106)[0]
-        self.prev_y = struct.unpack_from("<d", buf, 114)[0]
-        self.ops_len = struct.unpack_from("<I", buf, 122)[0]
-        self.resume_source = buf[126]
-        self.route_source = buf[127]
+    def __init__(self, d):
+        for k, v in d.items():
+            if k in self.__slots__:
+                setattr(self, k, v)
+        if not hasattr(self, "resume_strategy_details"):
+            self.resume_strategy_details = [0] * 6
+        if not hasattr(self, "route_strategy_details"):
+            self.route_strategy_details = [0] * 4
+        if not hasattr(self, "resume_point_x"):
+            self.resume_point_x = 0.0
+            self.resume_point_y = 0.0
+
+    @property
+    def wall_hug_count(self):
+        return len(self.wall_hug_points)
 
 
 class TraceGeometry:
@@ -186,7 +209,8 @@ class TraceFile:
     """Binary trace reader with random access to records.
 
     Geometry, seeds, toolpath, and per-step records are all embedded in
-    a single self-contained file.
+    a single self-contained file.  Records are length-prefixed MessagePack
+    blobs.
     """
 
     def __init__(self, path):
@@ -199,7 +223,12 @@ class TraceFile:
             self.geometry = self._read_geometry(f)
             self._read_mat(f)
             self.toolpath = self._read_toolpath(f)
-            self.data = f.read()
+            self._records = []
+            for _ in range(self.count):
+                rec_len = struct.unpack("<I", f.read(4))[0]
+                rec_bytes = f.read(rec_len)
+                rec_dict = msgpack.unpackb(rec_bytes)
+                self._records.append(TraceRecord(rec_dict))
 
     def _read_geometry(self, f):
         tool_radius = struct.unpack("<d", f.read(8))[0]
@@ -257,13 +286,12 @@ class TraceFile:
             self.mat_root = 0
 
     def __len__(self):
-        return self.count
+        return len(self._records)
 
     def __getitem__(self, idx):
-        if idx < 0 or idx >= self.count:
+        if idx < 0 or idx >= len(self._records):
             raise IndexError(idx)
-        offset = idx * TRACE_RECORD_SIZE
-        return TraceRecord(self.data[offset : offset + TRACE_RECORD_SIZE])
+        return self._records[idx]
 
 
 # ── ClearedArea rebuild ──────────────────────────────────────────
@@ -390,6 +418,39 @@ register_scenario(
         islands=[_rect(5, 0, 10, 10)],
         tool_radius=3.0,
         advance=1.5,
+        cut_z=-5.0,
+        safe_z=2.0,
+        area_tolerance=1.0,
+        step_length=0.6,
+        max_deflection_deg=30.0,
+        wall_margin=0.0,
+    )
+)
+
+register_scenario(
+    Scenario(
+        name="entry-island",
+        boundary=_rect(0, 0, 60, 60),
+        islands=[_rect(5, 0, 10, 10)],
+        tool_radius=3.0,
+        advance=1.5,
+        cut_z=-5.0,
+        safe_z=2.0,
+        area_tolerance=2.0,
+        step_length=0.6,
+        max_deflection_deg=30.0,
+        wall_margin=0.0,
+    )
+)
+
+register_scenario(
+    Scenario(
+        name="island-routing",
+        boundary=_rect(25, 25, 50, 50),
+        islands=[_rect(25, 25, 10, 10)],
+        tool_radius=3.0,
+        advance=1.5,
+        step_over=1.5,
         cut_z=-5.0,
         safe_z=2.0,
         area_tolerance=1.0,
@@ -584,21 +645,31 @@ class Inspector:
         self.current = 0
         self._ca_cache = {}
         self.show_mat = False
-        self.tp = self._ensure_toolpath(tp)
+        self.tp, tp_was_synthetic = self._ensure_toolpath(tp)
+        self.tp_was_synthetic = tp_was_synthetic
         self._precompute_toolpath()
+        self._precompute_bridge_segments(tp_was_synthetic)
         self._build_segment_steps()
 
-        self.fig, self.ax = plt.subplots(1, 1, figsize=(14, 9))
-        self.fig.subplots_adjust(bottom=0.18, top=0.92)
+        self.fig, (self.ax, self.ax_panel) = plt.subplots(
+            1,
+            2,
+            figsize=(16, 9),
+            gridspec_kw={"width_ratios": [3, 1]},
+        )
+        self.fig.subplots_adjust(
+            bottom=0.18, top=0.95, left=0.05, right=0.95, wspace=0.05
+        )
         self.ax.set_aspect("equal")
+        self.ax_panel.axis("off")
 
-        ax_text = self.fig.add_axes((0.12, 0.06, 0.18, 0.04))
-        ax_btn = self.fig.add_axes((0.32, 0.06, 0.08, 0.04))
-        ax_prev = self.fig.add_axes((0.42, 0.06, 0.05, 0.04))
-        ax_next = self.fig.add_axes((0.48, 0.06, 0.05, 0.04))
-        ax_prev_seg = self.fig.add_axes((0.55, 0.06, 0.07, 0.04))
-        ax_next_seg = self.fig.add_axes((0.63, 0.06, 0.07, 0.04))
-        ax_mat = self.fig.add_axes((0.72, 0.06, 0.08, 0.04))
+        ax_text = self.fig.add_axes((0.06, 0.06, 0.16, 0.04))
+        ax_btn = self.fig.add_axes((0.23, 0.06, 0.07, 0.04))
+        ax_prev = self.fig.add_axes((0.31, 0.06, 0.04, 0.04))
+        ax_next = self.fig.add_axes((0.36, 0.06, 0.04, 0.04))
+        ax_prev_seg = self.fig.add_axes((0.41, 0.06, 0.07, 0.04))
+        ax_next_seg = self.fig.add_axes((0.49, 0.06, 0.07, 0.04))
+        ax_mat = self.fig.add_axes((0.58, 0.06, 0.07, 0.04))
 
         self.textbox = TextBox(ax_text, "Step:", initial="0")
         self.textbox.on_submit(self._on_submit)
@@ -614,16 +685,6 @@ class Inspector:
         self.btn_next_seg.on_clicked(lambda e: self._step_segment(1))
         self.btn_mat = Button(ax_mat, "MAT: Off")
         self.btn_mat.on_clicked(self._toggle_mat)
-
-        self.ax_info = self.fig.add_axes(
-            (0.01, 0.11, 0.98, 0.05), frameon=False
-        )
-        self.ax_info.set_xlim(0, 1)
-        self.ax_info.set_ylim(0, 1)
-        self.ax_info.axis("off")
-        self.info_text = self.ax_info.text(
-            0.01, 0.5, "", fontsize=8, family="monospace", va="center"
-        )
 
         self.fig.canvas.mpl_connect("key_press_event", self._on_key)
 
@@ -709,23 +770,33 @@ class Inspector:
             self._toggle_mat()
 
     def _ensure_toolpath(self, tp):
-        """Return a usable toolpath.
+        """Return (toolpath, was_synthetic).
 
         When the real toolpath from the trace file is empty (e.g. a
         partial trace saved on an error path), build a synthetic one
-        from trace-record positions.  Each record becomes one toolpath
-        point; only Cut records (kind=1) represent cutting moves.
+        from trace-record positions.  Each record contributes
+        `rec.ops_len - prev_ops_len` copies of its position so that
+        the synthetic toolpath has exactly `max_ops_len` entries and
+        `ops_len` can be used directly as a toolpath index.  Resume
+        records (which add multiple travel commands in one go) are
+        correctly padded with extra travel points.
         """
         if tp:
-            return tp
+            return tp, False
         if self.n_steps == 0:
-            return tp
+            return tp, False
         synthetic = []
+        prev_ops_len = 0
         for i in range(self.n_steps):
             rec = self.trace[i]
             is_travel = rec.kind != 1  # Only Cut records are non-travel
-            synthetic.append((rec.pos_x, rec.pos_y, is_travel))
-        return synthetic
+            delta = rec.ops_len - prev_ops_len
+            if delta < 1:
+                delta = 1
+            for _ in range(delta):
+                synthetic.append((rec.pos_x, rec.pos_y, is_travel))
+            prev_ops_len = rec.ops_len
+        return synthetic, True
 
     def _precompute_toolpath(self):
         """Precompute cutting edges, travel edges, and cumulative distances
@@ -786,6 +857,40 @@ class Inspector:
             self._move_to_travel_count.append(travel_count)
 
         self._all_cut_total = cum if cum > 0 else 1.0
+
+    def _precompute_bridge_segments(self, tp_was_synthetic: bool = False):
+        """Precompute the bridge segment for each trace record — the
+        dashed line from the last toolpath point to the recorded tool
+        centre position when they differ (e.g. after a resume travel
+        that doesn't exactly reach the recorded pose).  Stored per
+        record so they accumulate visually across steps.
+
+        When *tp_was_synthetic* is true the real toolpath was empty
+        (error/partial trace), so no bridges are computed — the
+        synthetic toolpath already includes all record positions and
+        the gap would always be to the last synthetic point (exit
+        position), creating a visually distracting moving line.
+        """
+        self._all_bridge_segs: list[list[tuple[float, float]] | None] = [
+            None
+        ] * self.n_steps
+        if tp_was_synthetic:
+            return
+
+        tp = self.tp
+        for i in range(self.n_steps):
+            rec = self.trace[i]
+            n_moves = min(rec.ops_len, len(tp))
+            if n_moves == 0:
+                continue
+            last = tp[n_moves - 1]
+            dx = rec.pos_x - last[0]
+            dy = rec.pos_y - last[1]
+            if math.hypot(dx, dy) > 0.01:
+                self._all_bridge_segs[i] = [
+                    (last[0], last[1]),
+                    (rec.pos_x, rec.pos_y),
+                ]
 
     def _get_cleared(self, n_cuts):
         """Rebuild ClearedArea up to n_cuts cutting moves.
@@ -932,31 +1037,15 @@ class Inspector:
         # ── Tool position ──
         self._draw_tool(rec)
 
+        # ── Wall hug point ──
+        self._draw_wall_hug(rec)
+
         # ── MAT overlay ──
         self._draw_mat()
 
-        # ── Title ──
+        # ── Title (minimal — details in right panel) ──
         kind_name = KIND_NAMES.get(rec.kind, str(rec.kind))
         status_name = STATUS_NAMES.get(rec.status, str(rec.status))
-        src_parts = []
-        if rec.kind in (2, 3) and rec.resume_source:
-            rs = RESUME_SOURCE_NAMES.get(
-                rec.resume_source, str(rec.resume_source)
-            )
-            src_parts.append(f"via={rs}")
-        if rec.kind in (2, 3) and rec.route_source:
-            rs2 = ROUTE_SOURCE_NAMES.get(
-                rec.route_source, str(rec.route_source)
-            )
-            src_parts.append(f"route={rs2}")
-        src_str = f"  {' '.join(src_parts)}" if src_parts else ""
-        self.ax.set_title(
-            f"Step {step_idx}/{self.n_steps - 1}  "
-            f"kind={kind_name}  status={status_name}{src_str}  "
-            f"cleared={rec.total_area:.0f}  "
-            f"remaining={rec.remaining_area:.0f}",
-            fontsize=10,
-        )
         self.ax.set_xlabel("X")
         self.ax.set_ylabel("Y")
         # Auto-fit axis limits to the boundary with a small margin.
@@ -968,9 +1057,25 @@ class Inspector:
         self.ax.set_ylim(by_min - my, by_max + my)
         self.ax.grid(True, alpha=0.2)
 
-        # ── Info panel ──
-        info = self._format_info(rec, kind_name, status_name)
-        self.info_text.set_text(info)
+        # ── Right panel: parameter table ──
+        self.ax_panel.clear()
+        self.ax_panel.axis("off")
+        cell_text, cell_colors, fmt = self._format_panel_data(
+            rec, kind_name, status_name
+        )
+        tbl = self.ax_panel.table(
+            cellText=cell_text,
+            cellColours=cell_colors,
+            cellLoc="left",
+            loc="upper left",
+            colWidths=[0.35, 0.65],
+            edges="closed",
+        )
+        tbl.auto_set_font_size(False)
+        tbl.set_fontsize(7)
+        tbl.scale(1, 1.3)
+        for r, c, kw in fmt:
+            tbl[r, c].get_text().set(**kw)
 
         self.fig.canvas.draw_idle()
 
@@ -1056,23 +1161,21 @@ class Inspector:
                     alpha=0.8,
                 )
 
-        # If the tool position differs from the last toolpath point, draw
-        # a travel segment to bridge the gap.  This handles cases where
-        # emit_resume_travel's path doesn't quite reach the MAT or
-        # wall_hug destination recorded in the trace record.
-        last_x, last_y, _ = self.tp[n_moves - 1]
-        dx = rec.pos_x - last_x
-        dy = rec.pos_y - last_y
-        if math.hypot(dx, dy) > 0.01:
-            self.ax.plot(
-                [last_x, rec.pos_x],
-                [last_y, rec.pos_y],
-                linestyle="--",
-                linewidth=0.8,
-                color="dimgray",
-                alpha=0.7,
-                zorder=3,
-            )
+        # Bridge segments: draw all gaps between the toolpath endpoint
+        # and the recorded tool position from all records up to the
+        # current step, accumulating so previously-drawn bridges persist.
+        for i in range(self.current + 1):
+            seg = self._all_bridge_segs[i]
+            if seg is not None:
+                self.ax.plot(
+                    [seg[0][0], seg[1][0]],
+                    [seg[0][1], seg[1][1]],
+                    linestyle="--",
+                    linewidth=0.8,
+                    color="dimgray",
+                    alpha=0.7,
+                    zorder=3,
+                )
 
     def _draw_tool(self, rec):
         """Draw tool circle, position dot, and heading arrow."""
@@ -1109,32 +1212,186 @@ class Inspector:
             ),
         )
 
-    def _format_info(self, rec, kind_name, status_name):
+    def _draw_wall_hug(self, rec):
+        counts = getattr(rec, "wall_hug_segment_counts", None) or []
+        if not counts:
+            counts = [len(rec.wall_hug_points)]
+        idx = 0
+        for seg_i, count in enumerate(counts):
+            current = seg_i == 0
+            alpha = 0.9 if current else 0.4
+            ms = 3 if current else 2
+            for _ in range(count):
+                wx, wy = rec.wall_hug_points[idx]
+                idx += 1
+                if math.isnan(wx) or math.isnan(wy):
+                    continue
+                self.ax.plot(
+                    wx,
+                    wy,
+                    "o",
+                    color="gold",
+                    markersize=ms,
+                    zorder=7,
+                    alpha=alpha,
+                )
+
+    def _format_panel_data(self, rec, kind_name, status_name):
+        """Build a 2-column table for the right-hand info panel.
+
+        Returns (cell_text, cell_colours, extra_styles):
+          cell_text  — list of [label, value] row strings
+           cell_colours — parallel list of [label_bg, value_bg] RGBA tuples
+           extra_styles — list of (row, col, props) applied via .set(**props)
+        """
         h_deg = math.degrees(rec.heading)
         sh_deg = math.degrees(rec.smoothed_heading)
         pa_deg = math.degrees(rec.predicted_angle)
         ia_deg = math.degrees(rec.iteration_angle)
         eng_deg = math.degrees(rec.eng_angle)
         step_dist = math.hypot(rec.pos_x - rec.prev_x, rec.pos_y - rec.prev_y)
-        resume_src = ""
-        if rec.kind in (2, 3) and rec.resume_source:
-            rs = RESUME_SOURCE_NAMES.get(
-                rec.resume_source, str(rec.resume_source)
-            )
-            resume_src = f"  resume_via={rs}"
-        return (
-            f"step={rec.step_idx}  kind={kind_name}  status={status_name}"
-            f"{resume_src}  "
-            f"pos=({rec.pos_x:.1f},{rec.pos_y:.1f})  "
-            f"hdg={h_deg:.1f}°  smooth={sh_deg:.1f}°  "
-            f"pred={pa_deg:.1f}°  iter={ia_deg:.1f}°  "
-            f"iters={rec.iters}\n"
-            f"step_dist={step_dist:.2f}  cut_area={rec.cut_area:.3f}  "
-            f"eng: angle={eng_deg:.1f}°  area={rec.eng_area:.3f}  "
-            f"chord={rec.eng_chord:.3f}  "
-            f"cleared={rec.total_area:.1f}  "
-            f"remaining={rec.remaining_area:.1f}"
+
+        HDR = (0.15, 0.35, 0.55, 1.0)
+        SEC = (0.92, 0.92, 0.92, 1.0)
+        WHT = (1.0, 1.0, 1.0, 1.0)
+        FAIL = (1.0, 0.85, 0.85, 1.0)
+        WIN = (0.85, 1.0, 0.85, 1.0)
+
+        cells = []
+        colors = []
+        styles = []
+
+        def _cell(label, value, bg=WHT, **kw):
+            cells.append([label, value])
+            colors.append([bg, bg])
+            if kw:
+                r = len(cells) - 1
+                styles.append((r, 0, kw))
+                styles.append((r, 1, kw))
+
+        # ── Header ──
+        cells.append(
+            [
+                f"Step {rec.step_idx}/{self.n_steps - 1}",
+                f"{kind_name}  {status_name}",
+            ]
         )
+        colors.append([HDR, HDR])
+        styles.append((0, 0, {"color": "white", "weight": "bold"}))
+        styles.append((0, 1, {"color": "white", "weight": "bold"}))
+
+        # ── Position ──
+        _cell("Position", "", bg=SEC, weight="bold")
+        _cell("pos", f"({rec.pos_x:.1f}, {rec.pos_y:.1f})")
+        _cell("prev", f"({rec.prev_x:.1f}, {rec.prev_y:.1f})")
+        _cell("step_dist", f"{step_dist:.2f}")
+
+        # ── Heading ──
+        _cell("Heading", "", bg=SEC, weight="bold")
+        _cell("raw", f"{h_deg:.1f}°")
+        _cell("smoothed", f"{sh_deg:.1f}°")
+
+        # ── Angles ──
+        _cell("Angles", "", bg=SEC, weight="bold")
+        _cell("predicted", f"{pa_deg:.1f}°")
+        _cell("iteration", f"{ia_deg:.1f}°")
+        _cell("eng_angle", f"{eng_deg:.1f}°")
+
+        # ── Engagement ──
+        _cell("Engagement", "", bg=SEC, weight="bold")
+        _cell("eng_area", f"{rec.eng_area:.3f}")
+        _cell("eng_chord", f"{rec.eng_chord:.3f}")
+
+        # ── Area (mm²) ──
+        _cell("Area (mm²)", "", bg=SEC, weight="bold")
+        _cell("cut_area", f"{rec.cut_area:.1f}")
+        _cell("cleared", f"{rec.total_area:.1f}")
+        _cell("remaining", f"{rec.remaining_area:.1f}")
+
+        # ── Misc ──
+        _cell("Misc", "", bg=SEC, weight="bold")
+        _cell("iters", str(rec.iters))
+        _cell("ops_len", str(rec.ops_len))
+
+        # ── Strategy (only for resume stall / stuck / exit) ──
+        if rec.kind in (2, 3, 4):
+            _cell("Resume Strategy", "", bg=SEC, weight="bold")
+
+            # Priority order (index 0-5) maps to ResumeSource values as:
+            #   0→1(WallHug), 1→2(Segment), 2→3(Mat),
+            #   3→4(Frontier), 4→6(Envelope), 5→5(Island)
+            src_to_idx = {1: 0, 2: 1, 3: 2, 4: 3, 6: 4, 5: 5}
+            win_idx = src_to_idx.get(rec.resume_source, -1)
+            strat_names = [
+                "wall_hug",
+                "segment",
+                "mat",
+                "frontier",
+                "envelope",
+                "island",
+            ]
+            detail_labels = {
+                0: "",
+                1: "no_fragments",
+                2: "no_growth",
+                3: "outside_valid",
+                4: "no_wall_hug_pt",
+                5: "node_not_cleared",
+                6: "no_crossing",
+                7: "no_envelope",
+                8: "no_frontier",
+                9: "no_polygons",
+                10: "no_holes",
+                11: "no_engagement",
+                12: "blacklisted",
+                13: "no_wall_hit",
+            }
+
+            for i, name in enumerate(strat_names):
+                val = rec.resume_strategy_reasons[i]
+                det = rec.resume_strategy_details[i]
+                cpx, cpy = rec.resume_candidate_points[i]
+                if math.isnan(cpx) or math.isnan(cpy):
+                    if i == win_idx:
+                        _cell(name, "ok", bg=WIN, color="darkgreen")
+                    elif val == 0:
+                        _cell(name, "not_tried", color="gray")
+                    else:
+                        label = "no_candidate"
+                        if det:
+                            label += f" ({detail_labels.get(det, '?')})"
+                        _cell(
+                            name,
+                            label,
+                            bg=FAIL,
+                            color="darkred",
+                        )
+                else:
+                    _cell(
+                        name,
+                        f"({cpx:.3f}, {cpy:.3f})",
+                        bg=WIN,
+                        color="darkgreen",
+                    )
+
+            route_names = ["direct", "frontier", "mat", "astar"]
+            win_route = rec.route_source - 1 if rec.route_source > 0 else -1
+            _cell("Routing", "", bg=SEC, weight="bold")
+            for i, name in enumerate(route_names):
+                det = rec.route_strategy_details[i]
+                if i == win_route:
+                    _cell(name, "ok", bg=WIN, color="darkgreen")
+                elif det == 0:
+                    _cell(name, "not_tried", color="gray")
+                else:
+                    _cell(
+                        name,
+                        ROUTE_DETAIL_LABELS.get(det, f"?:{det}"),
+                        bg=FAIL,
+                        color="darkred",
+                    )
+
+        return cells, colors, styles
 
 
 # ── Subcommands ──────────────────────────────────────────────────
@@ -1172,15 +1429,22 @@ def cmd_print(args: argparse.Namespace) -> None:
         eng_deg = math.degrees(rec.eng_angle)
         step_dist = math.hypot(rec.pos_x - rec.prev_x, rec.pos_y - rec.prev_y)
 
+        route_src = ""
+        if rec.route_source:
+            rs = ROUTE_SOURCE_NAMES.get(
+                rec.route_source, str(rec.route_source)
+            )
+            route_src = f" route={rs}"
+
         resume_src = ""
-        if rec.kind in (2, 3) and rec.resume_source:
+        if rec.kind in (2, 3, 4) and rec.resume_source:
             rs = RESUME_SOURCE_NAMES.get(
                 rec.resume_source, str(rec.resume_source)
             )
             resume_src = f" resume_via={rs}"
 
         print(
-            f"{i}\t{kind_name}\t{status_name}{resume_src}"
+            f"{i}\t{kind_name}\t{status_name}{route_src}{resume_src}"
             f"\tpos=({rec.pos_x:.4f},{rec.pos_y:.4f})"
             f"\tprev=({rec.prev_x:.4f},{rec.prev_y:.4f})"
             f"\tdist={step_dist:.4f}"
@@ -1196,6 +1460,27 @@ def cmd_print(args: argparse.Namespace) -> None:
             f"\trem_area={rec.remaining_area:.4f}"
             f"\titers={rec.iters}"
             f"\tops_len={rec.ops_len}"
+            f"\tstrat="
+            + "|".join(
+                "WSMFEI"[i]
+                + (":" + [".", "X", "B"][v] if v <= 2 else ":?")
+                + (
+                    f"[{rec.resume_strategy_details[i]}]"
+                    if rec.resume_strategy_details[i]
+                    else ""
+                )
+                for i, v in enumerate(rec.resume_strategy_reasons)
+            )
+            + "\trout="
+            + "|".join(
+                "DFMA"[i]
+                + ":"
+                + ROUTE_DETAIL_LABELS.get(
+                    rec.route_strategy_details[i],
+                    str(rec.route_strategy_details[i]),
+                )
+                for i in range(4)
+            )
         )
 
 

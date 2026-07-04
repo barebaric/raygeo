@@ -17,7 +17,8 @@
 //!                 + per edge: from(u32) to(u32)
 //!               + root(u32)
 //!   toolpath: tp_count(u32) + per point: x(f64) y(f64) is_travel(u8) + 3 pad
-//!   records:  record_count × 128 bytes (1 kind byte + 127 payload bytes)
+//!   records:  record_count × length-prefixed msgpack blobs
+//!             (4-byte LE length + msgpack-serialized record struct)
 //! ```
 //!
 //! Gated by ``cfg(debug_assertions)`` so tracing has zero cost in release
@@ -27,15 +28,13 @@
 use std::io::{Seek, SeekFrom, Write};
 use std::path::PathBuf;
 
+use serde::Serialize;
+
 use crate::geo::algo::medial_axis::MedialAxis;
 use crate::types::Polygon;
 
 /// Magic header bytes: ``b"ADPT"``.
 const TRACE_MAGIC: [u8; 4] = *b"ADPT";
-/// Fixed size of each record (including the 1-byte kind).
-const TRACE_RECORD_SIZE: usize = 128;
-/// Number of payload bytes per record (everything after the kind byte).
-pub(crate) const PAYLOAD_SIZE: usize = TRACE_RECORD_SIZE - 1;
 
 /// Lightweight serializable snapshot of the Medial Axis Transform.
 ///
@@ -76,10 +75,11 @@ pub(crate) struct TraceContext {
 
 /// Opaque binary trace file writer.
 ///
-/// Records are buffered in memory and flushed at [`finish`] time, after
-/// the toolpath block is written.  This lets the toolpath (only known
-/// once the run is complete) appear before the records in the file while
-/// still allowing records to be appended incrementally during the run.
+/// Records are length-prefixed msgpack blobs buffered in memory and
+/// flushed at [`finish`] time, after the toolpath block is written.
+/// This lets the toolpath (only known once the run is complete) appear
+/// before the records in the file while still allowing records to be
+/// appended incrementally during the run.
 ///
 /// A [`Drop`] implementation ensures that buffered records are always
 /// flushed — even when the caller returns early with an error or when a
@@ -89,7 +89,7 @@ pub(crate) struct TraceContext {
 pub(crate) struct Tracer {
     file: std::fs::File,
     count: u32,
-    /// Buffered 128-byte records, flushed in [`finish`] (or [`Drop`]).
+    /// Buffered length-prefixed msgpack blobs, flushed in [`finish`] (or [`Drop`]).
     records: Vec<u8>,
     /// Set by [`finish`]; when `false` the [`Drop`] impl writes an empty
     /// toolpath block + buffered records and patches the record count.
@@ -150,15 +150,17 @@ impl Tracer {
         write_toolpath_block(&mut self.file, tp);
     }
 
-    /// Buffer one 128-byte record.  *kind* occupies byte 0; *payload*
-    /// fills bytes 1..128.  The caller is responsible for packing fields
-    /// into the payload at the correct offsets.  Records are written to
-    /// disk in [`finish`], after the toolpath block.
-    pub(crate) fn write(&mut self, kind: u8, payload: &[u8; PAYLOAD_SIZE]) {
-        let off = self.records.len();
-        self.records.resize(off + TRACE_RECORD_SIZE, 0);
-        self.records[off] = kind;
-        self.records[off + 1..off + TRACE_RECORD_SIZE].copy_from_slice(payload);
+    /// Buffer one msgpack-serialized record.  The record is serialized
+    /// with `rmp_serde` and stored as a 4-byte length prefix followed by
+    /// the msgpack bytes.  Records are written to disk in [`finish`],
+    /// after the toolpath block.
+    pub(crate) fn write<T: Serialize>(&mut self, record: &T) {
+        let bytes = rmp_serde::to_vec_named(record).unwrap_or_else(|e| {
+            panic!("failed to serialize trace record: {e}")
+        });
+        self.records
+            .extend_from_slice(&(bytes.len() as u32).to_le_bytes());
+        self.records.extend_from_slice(&bytes);
         self.count += 1;
     }
 

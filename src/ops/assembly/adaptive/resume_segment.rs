@@ -1,9 +1,13 @@
+use prof_macros::prof;
+
 use crate::ops::assembly::adaptive::resume::{
-    probe_step, ResumeCtx, ResumeStrategy,
+    probe_step, ResumeCtx, ResumeStrategy, DETAIL_NO_ENGAGEMENT,
+    DETAIL_NO_FRAGMENTS, DETAIL_NO_GROWTH, DETAIL_OUTSIDE_VALID,
 };
 use crate::ops::assembly::adaptive::tool::Tool;
 use crate::ops::cut::interp::point_in_valid_area;
 use crate::ops::cut::ToolPose;
+use crate::types::Point;
 
 pub struct ResumeSegment;
 
@@ -12,21 +16,79 @@ impl ResumeStrategy for ResumeSegment {
         "segment"
     }
 
-    fn find_next(&self, ctx: &ResumeCtx, _tool: &Tool) -> Option<ToolPose> {
+    fn find_next(
+        &self,
+        ctx: &ResumeCtx,
+        _tool: &Tool,
+        detail: &mut u8,
+    ) -> Option<ToolPose> {
         if ctx.cleared.fragments().is_empty() {
+            *detail = DETAIL_NO_FRAGMENTS;
             return None;
         }
 
         let area_grew = ctx.cleared.total_area() > ctx.last_resume_area + 1e-9;
         if !area_grew {
+            *detail = DETAIL_NO_GROWTH;
             return None;
         }
 
         let pos = ctx.segment_start.pos;
         if !point_in_valid_area(pos, ctx.valid_tool_area) {
+            *detail = DETAIL_OUTSIDE_VALID;
             return None;
         }
 
-        probe_step(ctx, ctx.opts.radius, pos, ctx.segment_start.heading)
+        if let Some(tp) =
+            probe_step(ctx, ctx.opts.radius, pos, ctx.segment_start.heading)
+        {
+            return Some(tp);
+        }
+
+        nudge_to_frontier(ctx, detail)
     }
+}
+
+/// Engagement angle above which the disc is considered tangent to the
+/// frontier — the disc edge is touching uncleared material.
+const TANGENCY_ANGLE: f64 = 0.1;
+
+/// March from `segment_start` along its heading in small steps until
+/// the tool disc becomes tangent to the frontier (engagement angle
+/// exceeds [`TANGENCY_ANGLE`]), then probe from that position.
+///
+/// This handles the case where the tool stalled well inside the
+/// cleared area and `probe_step` at `segment_start` finds no
+/// engagement — nudging forward brings the disc edge back into
+/// contact with the material boundary.
+#[prof]
+fn nudge_to_frontier(ctx: &ResumeCtx, detail: &mut u8) -> Option<ToolPose> {
+    let radius = ctx.opts.radius;
+    let step = ctx.opts.step_length * 0.25;
+    let max_steps = (radius * 3.0 / step).ceil() as usize;
+    let dir = Point::new(
+        ctx.segment_start.heading.cos(),
+        ctx.segment_start.heading.sin(),
+    );
+
+    let mut tangent_pos: Option<Point> = None;
+    for s in 1..=max_steps {
+        let pos = ctx.segment_start.pos + dir * (s as f64 * step);
+        if !point_in_valid_area(pos, ctx.valid_tool_area) {
+            break;
+        }
+        let eng = ctx.cleared.point_engagement(pos, radius);
+        if eng.angle >= TANGENCY_ANGLE {
+            tangent_pos = Some(pos);
+            break;
+        }
+    }
+
+    let pos = tangent_pos?;
+    if let Some(tp) = probe_step(ctx, radius, pos, ctx.segment_start.heading) {
+        return Some(tp);
+    }
+
+    *detail = DETAIL_NO_ENGAGEMENT;
+    None
 }

@@ -6,6 +6,11 @@ use thiserror::Error;
 use pyo3::exceptions::{
     PyKeyboardInterrupt, PyRuntimeError, PyTypeError, PyValueError,
 };
+#[cfg(feature = "python")]
+use pyo3::PyErr;
+
+#[cfg(feature = "python")]
+use crate::python::errors::{ResumePointNotFoundError, RoutingError};
 
 /// Error type for all RayGeo operations.
 #[derive(Error, Debug)]
@@ -145,9 +150,13 @@ impl From<RaygeoError> for pyo3::PyErr {
             RaygeoError::Cancelled => {
                 PyKeyboardInterrupt::new_err(err.to_string())
             }
-            RaygeoError::ResumePointNotFound(_)
-            | RaygeoError::RoutingError(_)
-            | RaygeoError::NestingError(_)
+            RaygeoError::RoutingError(_) => {
+                PyErr::new::<RoutingError, _>(err.to_string())
+            }
+            RaygeoError::ResumePointNotFound(_) => {
+                PyErr::new::<ResumePointNotFoundError, _>(err.to_string())
+            }
+            RaygeoError::NestingError(_)
             | RaygeoError::ImageError(_)
             | RaygeoError::ClippingError(_)
             | RaygeoError::FittingError(_)

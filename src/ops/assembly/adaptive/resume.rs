@@ -10,9 +10,7 @@ use crate::dbg_log;
 use crate::error::{RaygeoError, RaygeoResult};
 use crate::geo::algo::medial_axis::MedialAxis;
 use crate::geo::shape::compute_polygon_bounds;
-use crate::geo::shape::polygon::{
-    get_polygon_signed_area, get_polygons_closest_point,
-};
+use crate::geo::shape::polygon::get_polygons_closest_point;
 use crate::ops::container::Ops;
 use crate::ops::cut::interp::point_in_valid_area;
 use crate::ops::cut::search::walk_polygon_samples;
@@ -62,12 +60,19 @@ pub(super) const WALL_PROXIMITY: f64 = 0.3;
 /// chosen rotational direction from `pos` — a position that only
 /// finds engagement on the wrong side is rejected.
 ///
-/// The main loop uses symmetric bounds for stability; `probe_step`
-/// is the gatekeeper that prevents resume from placing the tool
-/// where it would immediately cut the wrong way.
+/// Additionally verifies with **symmetric bounds** matching the main
+/// loop's stepper options.  A candidate that passes the one-sided
+/// check but fails symmetric probing would immediately stall in the
+/// main loop (e.g. the `wrong_dominated` guard rejects the best
+/// symmetric candidate), so it is rejected here to avoid wasted
+/// blacklist entries.
 ///
-/// Returns `Some(ToolPose)` if the stepper would produce
-/// `StepStatus::Ok`, `None` otherwise.
+/// Both checks also require `cut_area > 0` to reject candidates
+/// where the lookahead override produces `Ok` but the step would
+/// cut no material (immediate re-stall).
+///
+/// Returns `Some(ToolPose)` if both probes produce `StepStatus::Ok`
+/// with positive `cut_area`, `None` otherwise.
 ///
 /// The returned position is the original `pos` — the caller places the
 /// tool there and then the main loop calls [`step`] again on the
@@ -83,7 +88,8 @@ pub fn probe_step(
     let dir_sign = ctx.opts.cut_direction.sign();
     let (angle_min, angle_max) =
         ctx.opts.cut_direction.angle_bounds(max_deflection);
-    let probe_opts = StepperOptions {
+
+    let one_sided_opts = StepperOptions {
         target_area_pd: ctx.target_area_pd,
         step_length: ctx.opts.step_length,
         radius,
@@ -93,36 +99,60 @@ pub fn probe_step(
         angle_max,
         dir_sign,
     };
-    let result = step(ctx.cleared, pos, heading, 0.0, &probe_opts);
-    if result.status == StepStatus::Ok {
-        dbg_log!(
-            "  PROBE[one-sided]  pos=({:.3},{:.3})  heading_in={:.4}  \
-             heading_out={:.4}  iters={}  bounds=({:.4},{:.4})",
-            pos.x,
-            pos.y,
-            heading,
-            result.heading,
-            result.iters,
-            angle_min,
-            angle_max,
-        );
-        Some(ToolPose {
-            pos,
-            heading: result.heading,
-        })
-    } else {
+    let one_sided = step(ctx.cleared, pos, heading, 0.0, &one_sided_opts);
+    if one_sided.status != StepStatus::Ok || one_sided.cut_area <= 0.0 {
         dbg_log!(
             "  PROBE[one-sided]  MISS  pos=({:.3},{:.3})  heading={:.4}  \
-             status={:?}  bounds=({:.4},{:.4})",
+             status={:?}  cut_area={:.4}  bounds=({:.4},{:.4})",
             pos.x,
             pos.y,
             heading,
-            result.status,
+            one_sided.status,
+            one_sided.cut_area,
             angle_min,
             angle_max,
         );
-        None
+        return None;
     }
+
+    let symmetric_opts = StepperOptions {
+        target_area_pd: ctx.target_area_pd,
+        step_length: ctx.opts.step_length,
+        radius,
+        max_deflection,
+        valid_area: ctx.valid_tool_area,
+        dir_sign,
+        ..Default::default()
+    };
+    let symmetric = step(ctx.cleared, pos, heading, 0.0, &symmetric_opts);
+    if symmetric.status != StepStatus::Ok || symmetric.cut_area <= 0.0 {
+        dbg_log!(
+            "  PROBE[symmetric]  MISS  pos=({:.3},{:.3})  heading={:.4}  \
+             status={:?}  cut_area={:.4}  (one-sided passed)",
+            pos.x,
+            pos.y,
+            heading,
+            symmetric.status,
+            symmetric.cut_area,
+        );
+        return None;
+    }
+
+    dbg_log!(
+        "  PROBE  pos=({:.3},{:.3})  heading_in={:.4}  \
+         heading_out={:.4}  iters={}  bounds=({:.4},{:.4})",
+        pos.x,
+        pos.y,
+        heading,
+        one_sided.heading,
+        one_sided.iters,
+        angle_min,
+        angle_max,
+    );
+    Some(ToolPose {
+        pos,
+        heading: one_sided.heading,
+    })
 }
 
 // ── Shared probe function ──────────────────────────────────────────
@@ -166,6 +196,117 @@ pub(super) fn boundary_probe(
         return None;
     }
     Some(ToolPose { pos, heading })
+}
+
+// ── Frontier offset helpers ──────────────────────────────────────────
+
+/// Engagement-angle tolerance below which a candidate's disk is treated
+/// as fully inside the cleared area.
+const CLEARANCE_ANGLE_EPS: f64 = 1e-9;
+
+/// Derive the unit direction deeper into the cleared area from the
+/// nearest cleared-boundary point.
+///
+/// Returns `None` when the candidate sits essentially on the boundary
+/// (the offset vector is degenerate).
+#[prof]
+fn inward_from_boundary(
+    cleared: &ClearedArea,
+    candidate: Point,
+) -> Option<Point> {
+    let fragments = cleared.fragments();
+    let (_, _, cp, _) = get_polygons_closest_point(fragments, candidate)?;
+    let to_cand = candidate - cp;
+    let dist = to_cand.length();
+    if dist < 1e-6 {
+        return None;
+    }
+    let outward = to_cand / dist;
+    let signed = cleared.signed_boundary_distance(candidate.x, candidate.y);
+    Some(if signed < 0.0 {
+        outward
+    } else {
+        Point::new(-outward.x, -outward.y)
+    })
+}
+
+/// March from `candidate` along unit `dir` until the disk is fully
+/// inside the cleared area, without leaving the valid tool area.
+///
+/// Returns the first position where the disc is clear, or `None` if the
+/// march exits the envelope or exceeds the step bound.
+#[prof]
+fn march_to_clear(
+    ctx: &ResumeCtx,
+    cleared: &ClearedArea,
+    radius: f64,
+    candidate: Point,
+    dir: Point,
+    step: f64,
+    max_steps: usize,
+) -> Option<Point> {
+    for s in 1..=max_steps {
+        let pos = candidate + dir * (s as f64 * step);
+        if !point_in_valid_area(pos, ctx.valid_tool_area) {
+            return None;
+        }
+        if cleared.point_engagement(pos, radius).angle <= CLEARANCE_ANGLE_EPS {
+            return Some(pos);
+        }
+    }
+    None
+}
+
+/// Frontier probe: ensure the disc sits fully in cleared material,
+/// then verify engagement with the full stepper solver.
+///
+/// The sample point lies on the boundary of the `frontier ∩ envelope`
+/// polygon.  When the disc overlaps stock there, the candidate is
+/// offset inward until the disc is clear.  The original tangent heading
+/// is preserved — the stepper probes ±max_deflection from the tangent
+/// and finds stock at the extreme deflection angle.
+///
+/// When no cleared offset exists (narrow band), the candidate is
+/// rejected.
+#[prof]
+pub(super) fn offset_and_probe(
+    ctx: &ResumeCtx,
+    radius: f64,
+    candidate: Point,
+    heading: f64,
+) -> Option<ToolPose> {
+    let cleared = ctx.cleared;
+
+    if cleared.point_engagement(candidate, radius).angle <= CLEARANCE_ANGLE_EPS
+    {
+        return probe_step(ctx, radius, candidate, heading);
+    }
+
+    let step = ctx.opts.step_length * 0.25;
+    let max_steps = (radius / step).ceil() as usize;
+
+    if let Some(dir) = inward_from_boundary(cleared, candidate) {
+        if let Some(pos) = march_to_clear(
+            ctx, cleared, radius, candidate, dir, step, max_steps,
+        ) {
+            if let Some(probed) = probe_step(ctx, radius, pos, heading) {
+                return Some(probed);
+            }
+        }
+    }
+
+    let h = Point::new(heading.cos(), heading.sin());
+    for dir in [Point::new(-h.y, h.x), Point::new(h.y, -h.x)] {
+        if let Some(pos) = march_to_clear(
+            ctx, cleared, radius, candidate, dir, step, max_steps,
+        ) {
+            if let Some(probed) = probe_step(ctx, radius, pos, heading) {
+                return Some(probed);
+            }
+        }
+    }
+
+    None
 }
 
 // ── Shared walk engine ──────────────────────────────────────────────
@@ -222,9 +363,7 @@ pub(super) fn walk_and_probe(
         }
     }
 
-    let is_ccw = get_polygon_signed_area(poly) > 0.0;
-    let actual_forward =
-        (ctx.opts.cut_direction == CutDirection::Ccw) == is_ccw;
+    let actual_forward = ctx.opts.cut_direction == CutDirection::Ccw;
 
     let sample_spacing = ctx.opts.step_length;
     let bl_sq_tol = (ctx.opts.step_length * 0.25).powi(2);
@@ -279,6 +418,7 @@ pub fn emit_resume_travel(
     from: Point,
     to: Point,
     opts: &AdaptiveClearingOptions,
+    out_route_details: Option<&mut [u8; 4]>,
 ) -> RaygeoResult<routing::RouteSource> {
     // Obstacles = remaining (uncut) material + islands (permanent no-go zones).
     let mut obstacles = cleared.remaining();
@@ -293,21 +433,43 @@ pub fn emit_resume_travel(
         obstacle_bounds: &obs_bounds,
     };
 
-    if let Some((source, path)) = routing::optimize_route(&ctx, from, to) {
+    let mut route_details = [0u8; 4];
+    if let Some((source, path)) =
+        routing::optimize_route(&ctx, from, to, &mut route_details)
+    {
         dbg_log!(
             "  EMIT  route={}:{}  n={}",
             source as u8,
             routing::source_label(source),
             path.len(),
         );
-        for pt in &path {
+        for pt in &path[1..] {
             ops.move_to(pt.x, pt.y, opts.cut_z + 0.5, None);
+        }
+        if let Some(out) = out_route_details {
+            *out = route_details;
         }
         Ok(source)
     } else {
+        if let Some(out) = out_route_details {
+            *out = route_details;
+        }
+        let detail_str = route_details
+            .iter()
+            .enumerate()
+            .map(|(i, &d)| {
+                format!(
+                    "{}({})",
+                    ["direct", "frontier", "mat", "astar"][i],
+                    routing::route_detail_label(d),
+                )
+            })
+            .collect::<Vec<_>>()
+            .join(" ");
         Err(RaygeoError::RoutingError(format!(
-            "cannot route from ({:.3},{:.3}) to ({:.3},{:.3})",
-            from.x, from.y, to.x, to.y,
+            "cannot route from ({:.3},{:.3}) to ({:.3},{:.3})  \
+             ({})",
+            from.x, from.y, to.x, to.y, detail_str,
         )))
     }
 }
@@ -349,11 +511,11 @@ pub struct ResumeCtx<'a> {
     pub segment_start: ToolPose,
     pub last_resume_area: f64,
     pub last_resume_pos: Point,
-    /// Last pose where the tool was on the envelope before departing
-    /// into the interior.  Populated by the main loop while
-    /// `near_envelope` tracking is active; consumed by
-    /// [`ResumeWallHug`].
-    pub last_wall_hug: Option<ToolPose>,
+    /// Wall-hug points accumulated across envelope visits in the
+    /// current cut segment.  Each entry is the minimum-distance pose
+    /// recorded during one envelope visit.  Consumed by
+    /// [`ResumeWallHug`] which tries them in order (FIFO).
+    pub wall_hug_points: &'a [ToolPose],
     /// Positions that have already been tried and led to immediate stalls.
     /// Any strategy that produces a position too close to one of these is
     /// rejected.
@@ -364,19 +526,71 @@ pub struct ResumeCtx<'a> {
 
 /// A strategy that finds a new tool position when the stepper stalls.
 pub trait ResumeStrategy {
-    fn find_next(&self, ctx: &ResumeCtx, tool: &Tool) -> Option<ToolPose>;
+    fn find_next(
+        &self,
+        ctx: &ResumeCtx,
+        tool: &Tool,
+        detail: &mut u8,
+    ) -> Option<ToolPose>;
     fn label(&self) -> &'static str;
 }
 
 // ── try_resume orchestrator ──────────────────────────────────────────
 
+/// Per-strategy outcome codes emitted via [`try_resume`].
+/// Index 0-5 match the priority order (WallHug, Segment, Mat,
+/// Frontier, Envelope, Island).
+pub type ResumeReasons = [u8; 6];
+
+/// Reason codes for resume-strategy outcomes stored in trace records.
+/// 0 = not tried, 1 = find_next returned None (no candidate),
+/// 2 = candidate was blacklisted (already stalled this position).
+pub const REASON_NOT_TRIED: u8 = 0;
+pub const REASON_NO_CANDIDATE: u8 = 1;
+pub const REASON_BLACKLISTED: u8 = 2;
+
+/// Detail codes for resume-strategy failure, stored in a parallel
+/// `[u8; 6]` next to the reason codes.  Each byte gives context for
+/// *why* the strategy returned `None`.
+///
+/// Values are shared across strategies — meaning depends on which
+/// strategy index they appear in.
+pub const DETAIL_NOT_TRIED: u8 = 0;
+pub const DETAIL_NO_FRAGMENTS: u8 = 1;
+pub const DETAIL_NO_GROWTH: u8 = 2;
+pub const DETAIL_OUTSIDE_VALID: u8 = 3;
+pub const DETAIL_NO_WALL_HUG_POINT: u8 = 4;
+pub const DETAIL_NODE_NOT_CLEARED: u8 = 5;
+pub const DETAIL_NO_CROSSING: u8 = 6;
+pub const DETAIL_NO_ENVELOPE: u8 = 7;
+pub const DETAIL_NO_FRONTIER: u8 = 8;
+pub const DETAIL_NO_POLYGONS: u8 = 9;
+pub const DETAIL_NO_HOLES: u8 = 10;
+pub const DETAIL_NO_ENGAGEMENT: u8 = 11;
+pub const DETAIL_BLACKLISTED: u8 = 12;
+pub const DETAIL_NO_WALL_HIT: u8 = 13;
+
+/// Per-strategy candidate positions emitted via [`try_resume`].
+/// Index 0-5 match the strategy priority order (WallHug, Segment,
+/// Mat, Frontier, Envelope, Island).  `None` if the strategy did not
+/// produce a candidate.
+pub type ResumeCandidatePoints = [Option<Point>; 6];
+
 /// Try each strategy in priority order.  Returns the winning strategy
-/// and the tool pose to apply.  Pure query — the caller handles all
-/// mutation (emit travel, set tool, update resume state).
+/// and the tool pose to apply.  When no strategy succeeds, `reasons`
+/// is filled with one byte per strategy
+/// (0 = not tried, 1 = no candidate, 2 = blacklisted) and `details`
+/// is filled with a per-strategy detail code.
+/// `candidate_pts` is filled with the position each strategy
+/// produced (if any).
+/// Pure query — the caller handles all mutation.
 #[prof]
 pub fn try_resume(
     ctx: &ResumeCtx,
     tool: &Tool,
+    reasons: &mut ResumeReasons,
+    details: &mut ResumeReasons,
+    candidate_pts: &mut ResumeCandidatePoints,
 ) -> Option<(ResumeSource, ToolPose)> {
     let area_grew = ctx.cleared.total_area() > ctx.last_resume_area + 1e-9;
     let tool_dx = tool.pos.x - ctx.last_resume_pos.x;
@@ -414,14 +628,24 @@ pub fn try_resume(
         (&ResumeIsland, ResumeSource::ResumeIsland),
     ];
     let sq_tol = (ctx.opts.step_length * 0.25).powi(2);
-    'strategy: for (s, source) in &strategies {
-        if let Some(rp) = s.find_next(ctx, tool) {
+    *candidate_pts = [None; 6];
+    'strategy: for (idx, (s, source)) in strategies.iter().enumerate() {
+        let mut detail = DETAIL_NOT_TRIED;
+        let outcome = s.find_next(ctx, tool, &mut detail);
+        if outcome.is_none() {
+            reasons[idx] = REASON_NO_CANDIDATE;
+            details[idx] = detail;
+        }
+        if let Some(rp) = outcome {
+            candidate_pts[idx] = Some(rp.pos);
             // Reject any position that has already been tried and led to
             // an immediate stall, regardless of which strategy produced it.
             for bl_pos in ctx.blacklist {
                 let dx = bl_pos.x - rp.pos.x;
                 let dy = bl_pos.y - rp.pos.y;
                 if dx * dx + dy * dy < sq_tol {
+                    reasons[idx] = REASON_BLACKLISTED;
+                    details[idx] = DETAIL_BLACKLISTED;
                     dbg_log!(
                         "  RESUME  {}={}  → ({:.3},{:.3})  BLACKLISTED",
                         *source as u8,

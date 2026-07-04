@@ -13,6 +13,7 @@ use crate::ops::assembly::adaptive;
 use crate::ops::cut::CutDirection;
 use crate::ops::state::State;
 use crate::prof::prof_report;
+use crate::python::errors::{ResumePointNotFoundError, RoutingError};
 use crate::python::ops::cut::cleared_area::PyClearedArea;
 use crate::python::ops::PyOps;
 use crate::types::Point;
@@ -45,6 +46,15 @@ fn check_cancel() -> bool {
 
 pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     let adaptive_mod = PyModule::new(assembly_mod.py(), "adaptive")?;
+
+    // Register exception types so they are importable from Python.
+    let py = assembly_mod.py();
+    adaptive_mod.add("RoutingError", py.get_type::<RoutingError>())?;
+    adaptive_mod.add(
+        "ResumePointNotFoundError",
+        py.get_type::<ResumePointNotFoundError>(),
+    )?;
+
     register_functions!(
         adaptive_mod,
         adaptive_clearing_py,
@@ -56,7 +66,7 @@ pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
 
     assembly_mod.add_submodule(&adaptive_mod)?;
 
-    let sys_modules = assembly_mod.py().import("sys")?.getattr("modules")?;
+    let sys_modules = py.import("sys")?.getattr("modules")?;
     sys_modules.set_item("raygeo.ops.assembly.adaptive", &adaptive_mod)?;
 
     Ok(())

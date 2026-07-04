@@ -27,6 +27,8 @@ spade = "2"
 nalgebra = "0.35"
 nalgebra-sparse = "0.12"
 rayon = "1"
+serde = { version = "1", features = ["derive"] }
+rmp-serde = "1"
 
 [dev-dependencies]
 approx = "0.5"

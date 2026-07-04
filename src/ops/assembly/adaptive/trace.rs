@@ -1,9 +1,10 @@
-//! Adaptive-clearing trace format.
+//! Adaptive-clearing trace record format.
 //!
-//! Defines the record layout consumed by ``tools/adaptive_inspector.py``:
-//! a 127-byte payload with fixed-offset fields, embedded in the
-//! self-contained trace file (geometry + toolpath + records) written by
-//! the generic [`crate::trace::Tracer`].
+//! Defines the per-step record serialised as MessagePack via rmp-serde.
+//! The generic [`crate::trace::Tracer`] writes these records to the
+//! self-contained trace file (geometry + toolpath + records).
+
+use serde::{Deserialize, Serialize};
 
 use crate::ops::container::Ops;
 use crate::ops::cut::ClearedArea;
@@ -25,125 +26,70 @@ pub(super) enum TraceKind {
     Exit = 4,
 }
 
-// ── RecordBuf ───────────────────────────────────────────────────────
+// ── TraceRecord ─────────────────────────────────────────────────────
 
-/// 127-byte payload buffer with typed setters at the correct offsets.
+/// Per-step trace record, serialised as MessagePack.
 ///
-/// Offsets match the binary format expected by the Python inspector.
-/// Fields not explicitly set remain zero.
-pub(super) struct RecordBuf([u8; crate::trace::PAYLOAD_SIZE]);
-
-impl Default for RecordBuf {
-    fn default() -> Self {
-        Self([0u8; crate::trace::PAYLOAD_SIZE])
-    }
+/// All fields that appear in every record are included; Cut-specific
+/// fields (iters, iteration_angle, eng_*, cut_area) are set to 0 / 0.0
+/// for non-Cut records.
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub(super) struct TraceRecord {
+    pub kind: u8,
+    pub status: u8,
+    pub step_idx: u32,
+    pub iters: u32,
+    pub pos_x: f64,
+    pub pos_y: f64,
+    pub heading: f64,
+    pub smoothed_heading: f64,
+    pub predicted_angle: f64,
+    pub iteration_angle: f64,
+    pub eng_angle: f64,
+    pub eng_area: f64,
+    pub eng_chord: f64,
+    pub cut_area: f64,
+    pub total_area: f64,
+    pub remaining_area: f64,
+    pub prev_x: f64,
+    pub prev_y: f64,
+    pub ops_len: u32,
+    pub resume_source: u8,
+    pub route_source: u8,
+    /// Wall-hug points in resume order: current segment first, then
+    /// previous segments from oldest to newest.
+    pub wall_hug_points: Vec<(f64, f64)>,
+    /// Per-segment point counts corresponding to `wall_hug_points`.
+    /// First entry = current segment, remaining = previous segments
+    /// from oldest to newest.
+    pub wall_hug_segment_counts: Vec<u32>,
+    /// Per-strategy outcome for the current resume attempt.
+    /// Index 0-5 correspond to the strategy priority order:
+    ///   WallHug, Segment, Mat, Frontier, Envelope, Island.
+    /// Each byte: 0 = not tried, 1 = no candidate, 2 = blacklisted.
+    pub resume_strategy_reasons: [u8; 6],
+    /// Per-strategy detail code giving context for *why* the strategy
+    /// returned None.  Parallel to `resume_strategy_reasons`.
+    /// See `resume::DETAIL_*` constants for values.
+    pub resume_strategy_details: [u8; 6],
+    /// Per-strategy detail code for the last routing failure.
+    /// Index 0-3 = Direct, Frontier, Mat, AStar.
+    /// 0 = success / not tried.  See `routing::ROUTE_*` constants.
+    pub route_strategy_details: [u8; 4],
+    /// Position of the last resume point candidate (routing target).
+    pub resume_point_x: f64,
+    pub resume_point_y: f64,
+    /// Per-strategy candidate positions (x, y).  None entries are stored
+    /// as (NaN, NaN).
+    pub resume_candidate_points: [(f64, f64); 6],
 }
 
-impl RecordBuf {
-    // ── private helpers ──────────────────────────────────────────
-
-    fn u8(&mut self, o: usize, v: u8) {
-        self.0[o] = v;
-    }
-    fn u32(&mut self, o: usize, v: u32) {
-        self.0[o..o + 4].copy_from_slice(&v.to_le_bytes());
-    }
-    fn f64(&mut self, o: usize, v: f64) {
-        self.0[o..o + 8].copy_from_slice(&v.to_le_bytes());
-    }
-    fn point(&mut self, o: usize, v: Point) {
-        self.f64(o, v.x);
-        self.f64(o + 8, v.y);
-    }
-
-    // ── field setters ────────────────────────────────────────────
-    // Offsets are payload-relative (byte 1 in the full record).
-
-    pub fn status(&mut self, v: StepStatus) {
-        let b: u8 = match v {
-            StepStatus::Ok => 0,
-            StepStatus::BoundaryHit => 1,
-            StepStatus::LostEngagement => 2,
-            StepStatus::NoConvergence => 3,
-        };
-        self.u8(0, b);
-    }
-
-    pub fn step_idx(&mut self, v: u32) {
-        self.u32(1, v);
-    }
-
-    pub fn iters(&mut self, v: u32) {
-        self.u32(5, v);
-    }
-
-    pub fn pos(&mut self, v: Point) {
-        self.point(9, v);
-    }
-
-    pub fn heading(&mut self, v: f64) {
-        self.f64(25, v);
-    }
-
-    pub fn smoothed_heading(&mut self, v: f64) {
-        self.f64(33, v);
-    }
-
-    pub fn predicted_angle(&mut self, v: f64) {
-        self.f64(41, v);
-    }
-
-    pub fn iteration_angle(&mut self, v: f64) {
-        self.f64(49, v);
-    }
-
-    pub fn eng_angle(&mut self, v: f64) {
-        self.f64(57, v);
-    }
-
-    pub fn eng_area(&mut self, v: f64) {
-        self.f64(65, v);
-    }
-
-    pub fn eng_chord(&mut self, v: f64) {
-        self.f64(73, v);
-    }
-
-    pub fn cut_area(&mut self, v: f64) {
-        self.f64(81, v);
-    }
-
-    pub fn total_area(&mut self, v: f64) {
-        self.f64(89, v);
-    }
-
-    pub fn remaining_area(&mut self, v: f64) {
-        self.f64(97, v);
-    }
-
-    pub fn prev_pos(&mut self, v: Point) {
-        self.point(105, v);
-    }
-
-    pub fn ops_len(&mut self, v: u32) {
-        self.u32(121, v);
-    }
-
-    /// Resume mechanism that succeeded (1 = wall_hug, 2 = segment,
-    /// 3 = mat, 4 = frontier, 5 = island, 6 = envelope).
-    pub fn resume_source(&mut self, v: u8) {
-        self.u8(125, v);
-    }
-
-    /// Routing strategy that produced the travel path
-    /// (1 = direct, 2 = mat).
-    pub fn route_source(&mut self, v: u8) {
-        self.u8(126, v);
-    }
-
-    /// Fill the common tool-state fields — the 10 fields that appear in
-    /// every trace record — from their source objects.
+impl TraceRecord {
+    /// Build a record with the common tool-state fields filled in from
+    /// their source objects.  Kind-specific fields (iters, eng_*, etc.)
+    /// default to 0 / 0.0.
     pub fn from_tool_state(
+        kind: u8,
         status: StepStatus,
         step_idx: u32,
         tool: &Tool,
@@ -151,22 +97,43 @@ impl RecordBuf {
         prev_pos: Point,
         ops_len: u32,
     ) -> Self {
-        let mut buf = Self::default();
-        buf.status(status);
-        buf.step_idx(step_idx);
-        buf.pos(tool.pos);
-        buf.heading(tool.heading);
-        buf.smoothed_heading(tool.smoothed_heading());
-        buf.predicted_angle(tool.raw_predictor());
-        buf.total_area(cleared.total_area());
-        buf.remaining_area(cleared.remaining_area());
-        buf.prev_pos(prev_pos);
-        buf.ops_len(ops_len);
-        buf
-    }
-
-    pub fn pack(&self) -> &[u8; crate::trace::PAYLOAD_SIZE] {
-        &self.0
+        let status: u8 = match status {
+            StepStatus::Ok => 0,
+            StepStatus::BoundaryHit => 1,
+            StepStatus::LostEngagement => 2,
+            StepStatus::NoConvergence => 3,
+        };
+        Self {
+            kind,
+            status,
+            step_idx,
+            iters: 0,
+            pos_x: tool.pos.x,
+            pos_y: tool.pos.y,
+            heading: tool.heading,
+            smoothed_heading: tool.smoothed_heading(),
+            predicted_angle: tool.raw_predictor(),
+            iteration_angle: 0.0,
+            eng_angle: 0.0,
+            eng_area: 0.0,
+            eng_chord: 0.0,
+            cut_area: 0.0,
+            total_area: cleared.total_area(),
+            remaining_area: cleared.remaining_area(),
+            prev_x: prev_pos.x,
+            prev_y: prev_pos.y,
+            ops_len,
+            resume_source: 0,
+            route_source: 0,
+            wall_hug_points: Vec::new(),
+            wall_hug_segment_counts: Vec::new(),
+            resume_strategy_reasons: [0u8; 6],
+            resume_strategy_details: [0u8; 6],
+            route_strategy_details: [0u8; 4],
+            resume_point_x: 0.0,
+            resume_point_y: 0.0,
+            resume_candidate_points: [(f64::NAN, f64::NAN); 6],
+        }
     }
 }
 

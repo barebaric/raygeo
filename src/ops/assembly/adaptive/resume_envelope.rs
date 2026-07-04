@@ -2,6 +2,7 @@ use prof_macros::prof;
 
 use crate::ops::assembly::adaptive::resume::{
     boundary_probe, walk_and_probe, ResumeCtx, ResumeStrategy,
+    DETAIL_NO_ENGAGEMENT, DETAIL_NO_ENVELOPE,
 };
 use crate::ops::assembly::adaptive::tool::Tool;
 use crate::ops::cut::ToolPose;
@@ -13,8 +14,13 @@ impl ResumeStrategy for ResumeEnvelope {
         "envelope"
     }
 
-    fn find_next(&self, ctx: &ResumeCtx, tool: &Tool) -> Option<ToolPose> {
-        envelope_resume(ctx, tool)
+    fn find_next(
+        &self,
+        ctx: &ResumeCtx,
+        tool: &Tool,
+        detail: &mut u8,
+    ) -> Option<ToolPose> {
+        envelope_resume(ctx, tool, detail)
     }
 }
 
@@ -26,10 +32,20 @@ impl ResumeStrategy for ResumeEnvelope {
 /// envelope edge — no inward offset is applied.  Each sample is checked
 /// with [`boundary_probe`].
 #[prof]
-fn envelope_resume(ctx: &ResumeCtx, tool: &Tool) -> Option<ToolPose> {
+fn envelope_resume(
+    ctx: &ResumeCtx,
+    tool: &Tool,
+    detail: &mut u8,
+) -> Option<ToolPose> {
     let envelope = ctx.cleared.envelope(tool.radius);
     if envelope.is_empty() {
+        *detail = DETAIL_NO_ENVELOPE;
         return None;
     }
-    walk_and_probe(ctx, tool.radius, &envelope, "ENVELOPE", boundary_probe)
+    let result =
+        walk_and_probe(ctx, tool.radius, &envelope, "ENVELOPE", boundary_probe);
+    if result.is_none() {
+        *detail = DETAIL_NO_ENGAGEMENT;
+    }
+    result
 }

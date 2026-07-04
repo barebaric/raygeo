@@ -163,7 +163,7 @@ pub fn step(
     // heavy a bite.  85 % of the full crescent — above corner-wrap
     // transients (~60 %) but below the slot ceiling (95 %).
     let max_engagement = full_crescent * 0.85;
-    let floor = target_area * 0.1;
+    let floor = target_area * 0.3;
 
     step_inner(
         cleared,
@@ -408,7 +408,8 @@ fn step_inner(
     //
     // Only under-engagement triggers the lookahead override; slot
     // overload and wrong-dominated are hard stops.
-    let mut status = if best_area < floor
+    let under_engaged = best_area < floor;
+    let mut status = if under_engaged
         || best_area > slot_ceiling
         || (best_area > max_engagement && exit_reason != "converged")
         || best_wrong_dominated
@@ -417,6 +418,30 @@ fn step_inner(
     } else {
         StepStatus::Ok
     };
+
+    // Floor-suppression lookahead: if the only reason for
+    // LostEngagement is under-engagement (below floor), probe one step
+    // forward from the solver's best position.  If that next step would
+    // re-enter the valid engagement band (area >= floor), suppress the
+    // floor and keep the step.  This allows the tool to cross brief gaps
+    // or thin regions without falling into the resume machinery.
+    if status == StepStatus::LostEngagement && under_engaged {
+        let probe_next = best_pos + best_dir * opts.step_length;
+        if point_in_valid_area(probe_next, opts.valid_area) {
+            let (probe_area, _) =
+                cleared.cut_area_split(best_pos, probe_next, opts.radius);
+            if probe_area >= floor && probe_area <= slot_ceiling {
+                dbg_log!(
+                    "  FLOOR_SUPPRESS  best_area={:.4} < floor={:.4}  \
+                     but next_step area={:.4} >= floor  → Ok",
+                    best_area,
+                    floor,
+                    probe_area,
+                );
+                status = StepStatus::Ok;
+            }
+        }
+    }
 
     // Lookahead probes: for a spread of deflection angles relative to
     // the heading, compute the 2-step cut_area (candidate →
@@ -442,7 +467,9 @@ fn step_inner(
         // on both sides.
         let mut best_la_score: f64 = f64::MIN;
         for la_angle in &lookahead_angles {
-            let la_angle = interp.clamp_angle(*la_angle, opts.max_deflection);
+            let la_angle = interp
+                .clamp_angle(*la_angle, opts.max_deflection)
+                .clamp(opts.angle_min, opts.angle_max);
             let la_dir = rotate(base_dir, la_angle);
             let la_cand = pos + la_dir * opts.step_length;
             if !point_in_valid_area(la_cand, opts.valid_area) {

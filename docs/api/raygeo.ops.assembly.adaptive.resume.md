@@ -15,20 +15,22 @@ emit_resume_travel(
     islands: Sequence[Sequence[tuple[float, float]]] = [],
     radius: float = 3,
     cut_z: float = -5,
+    cleared: ops.cut.cleared_area.ClearedArea | None = None,
 ) -> None
 ```
 
 Emit a resume travel to *to_pt* using the routing strategies.
 
-| Parameter         | Type                                           | Description |
-| ----------------- | ---------------------------------------------- | ----------- |
-| `ops`             | `ops.Ops`                                      |             |
-| `to_pt`           | `tuple[float, float]`                          |             |
-| `pocket_boundary` | `Sequence[tuple[float, float]]`                |             |
-| `islands`         | `Sequence[Sequence[tuple[float, float]]] = []` |             |
-| `radius`          | `float = 3`                                    |             |
-| `cut_z`           | `float = -5`                                   |             |
-| _Returns_         | `None`                                         |             |
+| Parameter         | Type                                                  | Description |
+| ----------------- | ----------------------------------------------------- | ----------- |
+| `ops`             | `ops.Ops`                                             |             |
+| `to_pt`           | `tuple[float, float]`                                 |             |
+| `pocket_boundary` | `Sequence[tuple[float, float]]`                       |             |
+| `islands`         | `Sequence[Sequence[tuple[float, float]]] = []`        |             |
+| `radius`          | `float = 3`                                           |             |
+| `cut_z`           | `float = -5`                                          |             |
+| `cleared`         | `ops.cut.cleared_area.ClearedArea &#124; None = None` |             |
+| _Returns_         | `None`                                                |             |
 
 ### `smooth_travel_path()`
 
