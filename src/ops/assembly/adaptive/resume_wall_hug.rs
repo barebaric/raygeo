@@ -1,7 +1,7 @@
 use prof_macros::prof;
 
 use crate::ops::assembly::adaptive::resume::{
-    probe_step, require_fragments, ResumeCtx, ResumeStrategy,
+    probe, require_fragments, ResumeCtx, ResumeStrategy,
     DETAIL_NO_WALL_HUG_POINT,
 };
 use crate::ops::assembly::adaptive::tool::Tool;
@@ -21,7 +21,7 @@ use crate::ops::cut::ToolPose;
 /// current segment points first (FIFO, most conservative), then previous
 /// segments from oldest to newest.  This strategy probes at each point in
 /// that order; the first that passes [`point_in_valid_area`] and
-/// [`probe_step`] is returned.
+/// [`probe`] is returned.
 ///
 /// Tried before [`ResumeSegment`] so that, when available, the tool
 /// resumes from a wall-departure point rather than re-cutting from
@@ -43,11 +43,11 @@ impl ResumeStrategy for ResumeWallHug {
         require_fragments(ctx, detail)?;
 
         for pose in ctx.wall_hug_points {
-            if !point_in_valid_area(pose.pos, ctx.valid_tool_area) {
+            if !point_in_valid_area(pose.pos, ctx.step_opts.valid_area) {
                 continue;
             }
             if let Some(rp) =
-                probe_step(ctx, ctx.opts.radius, pose.pos, pose.heading)
+                probe(ctx, ctx.opts.radius, pose.pos, pose.heading)
             {
                 return Some(rp);
             }

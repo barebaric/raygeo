@@ -9,6 +9,7 @@ use crate::ops::assembly::adaptive::resume::{self, ResumeCtx};
 use crate::ops::assembly::adaptive::AdaptiveClearingOptions;
 use crate::ops::cut::ClearedArea;
 use crate::ops::cut::CutDirection;
+use crate::ops::cut::StepperOptions;
 use crate::ops::cut::ToolPose;
 use crate::python::geo::algo::medial_axis::PyMedialAxis;
 use crate::python::ops::cut::cleared_area::PyClearedArea;
@@ -301,12 +302,21 @@ fn try_resume_py(
             step_length,
         );
 
+    let step_opts = StepperOptions {
+        target_area_pd,
+        step_length,
+        radius,
+        max_deflection: max_deflection_deg.to_radians(),
+        valid_area: &vta,
+        dir_sign: cd.sign(),
+        ..Default::default()
+    };
+
     let ctx = ResumeCtx {
         cleared: &cleared.inner,
         opts: &opts,
-        valid_tool_area: &vta,
+        step_opts: &step_opts,
         mat,
-        target_area_pd,
         segment_start: ToolPose {
             pos: Point::new(segment_start.0, segment_start.1),
             heading: segment_heading,

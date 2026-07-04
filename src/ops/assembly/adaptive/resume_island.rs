@@ -3,7 +3,7 @@ use prof_macros::prof;
 use crate::dbg_log;
 use crate::geo::shape::polygon::get_polygon_signed_area;
 use crate::ops::assembly::adaptive::resume::{
-    probe_step, walk_and_probe, ResumeCtx, ResumeStrategy, WalkProbeOptions,
+    probe, walk_and_probe, ResumeCtx, ResumeStrategy, WalkProbeOptions,
     DETAIL_NO_ENGAGEMENT, DETAIL_NO_HOLES,
 };
 use crate::ops::assembly::adaptive::tool::Tool;
@@ -45,7 +45,7 @@ fn island_ray_march(
         |p: Point| ctx.cleared.signed_boundary_distance(p.x, p.y);
 
     let centre = on_boundary + into_cleared * offset;
-    if point_in_valid_area(centre, ctx.valid_tool_area)
+    if point_in_valid_area(centre, ctx.step_opts.valid_area)
         && dist_to_cleared(centre) <= -radius
     {
         return Some(centre);
@@ -55,7 +55,7 @@ fn island_ray_march(
     let max_steps = (radius * 4.0 / step).ceil() as usize;
     for s in 1..=max_steps {
         let candidate = on_boundary + into_cleared * (offset + s as f64 * step);
-        if !point_in_valid_area(candidate, ctx.valid_tool_area) {
+        if !point_in_valid_area(candidate, ctx.step_opts.valid_area) {
             continue;
         }
         if dist_to_cleared(candidate) > -radius {
@@ -125,7 +125,7 @@ fn frontier_hole_resume(
             ray_march: Some(island_ray_march),
             centered_samples: true,
         },
-        probe_step,
+        probe,
     );
 
     if result.is_none() {

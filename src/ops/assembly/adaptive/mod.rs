@@ -232,9 +232,8 @@ fn handle_stall(
     expected: f64,
     iter: usize,
     opts: &AdaptiveClearingOptions,
-    valid_tool_area: &[Polygon],
+    step_opts: &StepperOptions,
     mat: Option<&MedialAxis>,
-    target_area_pd: f64,
     valid_total: f64,
 ) -> RaygeoResult<StallResult> {
     // Stall path: commit batch + clear blacklist (stuck already did).
@@ -303,9 +302,8 @@ fn handle_stall(
             let ctx = ResumeCtx {
                 cleared: &*s.cleared,
                 opts,
-                valid_tool_area,
+                step_opts,
                 mat,
-                target_area_pd,
                 segment_start: *s.segment_start,
                 last_resume_area: *s.last_resume_area,
                 last_resume_pos: *s.last_resume_pos,
@@ -399,7 +397,7 @@ fn handle_stall(
             0.0
         } else {
             let clipped =
-                get_polygons_group_intersection(&rem, valid_tool_area);
+                get_polygons_group_intersection(&rem, step_opts.valid_area);
             clipped
                 .iter()
                 .map(|p| get_polygon_signed_area(p).max(0.0))
@@ -789,9 +787,8 @@ pub fn adaptive_clearing(
                 expected,
                 iter,
                 opts,
-                &valid_tool_area,
+                &step_opts,
                 mat.as_ref(),
-                target_area_pd,
                 valid_total,
             )? {
                 StallResult::Applied => continue,

@@ -1,8 +1,8 @@
 use prof_macros::prof;
 
 use crate::ops::assembly::adaptive::resume::{
-    boundary_probe, walk_and_probe, ResumeCtx, ResumeStrategy,
-    WalkProbeOptions, DETAIL_NO_ENGAGEMENT, DETAIL_NO_ENVELOPE,
+    probe, walk_and_probe, ResumeCtx, ResumeStrategy, WalkProbeOptions,
+    DETAIL_NO_ENGAGEMENT, DETAIL_NO_ENVELOPE,
 };
 use crate::ops::assembly::adaptive::tool::Tool;
 use crate::ops::cut::ToolPose;
@@ -30,7 +30,7 @@ impl ResumeStrategy for ResumeEnvelope {
 /// The envelope is a *tool-centre* boundary: it is the locus of legal
 /// tool-centre positions, so the tool centre sits directly on the
 /// envelope edge — no inward offset is applied.  Each sample is checked
-/// with [`boundary_probe`].
+/// with [`probe`].
 #[prof]
 fn envelope_resume(
     ctx: &ResumeCtx,
@@ -48,7 +48,7 @@ fn envelope_resume(
         &envelope,
         "ENVELOPE",
         WalkProbeOptions::default(),
-        boundary_probe,
+        probe,
     );
     if result.is_none() {
         *detail = DETAIL_NO_ENGAGEMENT;

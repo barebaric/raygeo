@@ -1,8 +1,8 @@
 use prof_macros::prof;
 
 use crate::ops::assembly::adaptive::resume::{
-    probe_step, require_fragments, ResumeCtx, ResumeStrategy,
-    DETAIL_NO_ENGAGEMENT, DETAIL_NO_GROWTH, DETAIL_OUTSIDE_VALID,
+    probe, require_fragments, ResumeCtx, ResumeStrategy, DETAIL_NO_ENGAGEMENT,
+    DETAIL_NO_GROWTH, DETAIL_OUTSIDE_VALID,
 };
 use crate::ops::assembly::adaptive::tool::Tool;
 use crate::ops::cut::interp::point_in_valid_area;
@@ -31,13 +31,13 @@ impl ResumeStrategy for ResumeSegment {
         }
 
         let pos = ctx.segment_start.pos;
-        if !point_in_valid_area(pos, ctx.valid_tool_area) {
+        if !point_in_valid_area(pos, ctx.step_opts.valid_area) {
             *detail = DETAIL_OUTSIDE_VALID;
             return None;
         }
 
         if let Some(tp) =
-            probe_step(ctx, ctx.opts.radius, pos, ctx.segment_start.heading)
+            probe(ctx, ctx.opts.radius, pos, ctx.segment_start.heading)
         {
             return Some(tp);
         }
@@ -55,7 +55,7 @@ const TANGENCY_ANGLE: f64 = 0.1;
 /// exceeds [`TANGENCY_ANGLE`]), then probe from that position.
 ///
 /// This handles the case where the tool stalled well inside the
-/// cleared area and `probe_step` at `segment_start` finds no
+/// cleared area and `probe` at `segment_start` finds no
 /// engagement — nudging forward brings the disc edge back into
 /// contact with the material boundary.
 #[prof]
@@ -71,7 +71,7 @@ fn nudge_to_frontier(ctx: &ResumeCtx, detail: &mut u8) -> Option<ToolPose> {
     let mut tangent_pos: Option<Point> = None;
     for s in 1..=max_steps {
         let pos = ctx.segment_start.pos + dir * (s as f64 * step);
-        if !point_in_valid_area(pos, ctx.valid_tool_area) {
+        if !point_in_valid_area(pos, ctx.step_opts.valid_area) {
             break;
         }
         let eng = ctx.cleared.point_engagement(pos, radius);
@@ -82,7 +82,7 @@ fn nudge_to_frontier(ctx: &ResumeCtx, detail: &mut u8) -> Option<ToolPose> {
     }
 
     let pos = tangent_pos?;
-    if let Some(tp) = probe_step(ctx, radius, pos, ctx.segment_start.heading) {
+    if let Some(tp) = probe(ctx, radius, pos, ctx.segment_start.heading) {
         return Some(tp);
     }
 

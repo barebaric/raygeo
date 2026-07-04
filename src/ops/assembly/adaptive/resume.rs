@@ -57,148 +57,32 @@ pub(super) const WALL_PROXIMITY: f64 = 0.3;
 
 // ── Helpers ───────────────────────────────────────────────────────────
 
-/// Ground-truth engagement check: run [`step`] at a candidate
-/// position with **one-sided deflection bounds** derived from
-/// `opts.cut_direction`.  This vets that the stepper can cut in the
-/// chosen rotational direction from `pos` — a position that only
-/// finds engagement on the wrong side is rejected.
+/// Canonical probing function — single source of truth for "can the
+/// tool move forward from `pos` with `heading`?"
 ///
-/// Additionally verifies with **symmetric bounds** matching the main
-/// loop's stepper options.  A candidate that passes the one-sided
-/// check but fails symmetric probing would immediately stall in the
-/// main loop (e.g. the `wrong_dominated` guard rejects the best
-/// symmetric candidate), so it is rejected here to avoid wasted
-/// blacklist entries.
+/// Calls [`step`] with the exact same [`StepperOptions`] the main loop
+/// uses (passed via [`ResumeCtx::step_opts`]), so the probing decision
+/// is architecturally guaranteed to match what the main loop would
+/// decide.  `predicted_angle` is 0.0 because the tool has no heading
+/// momentum when placed at a resume point (gyro is reset).
 ///
-/// Both checks also require `cut_area > 0` to reject candidates
-/// where the lookahead override produces `Ok` but the step would
-/// cut no material (immediate re-stall).
-///
-/// Returns `Some(ToolPose)` if both probes produce `StepStatus::Ok`
-/// with positive `cut_area`, `None` otherwise.
-///
-/// The returned position is the original `pos` — the caller places the
-/// tool there and then the main loop calls [`step`] again on the
-/// next iteration to move forward.
+/// Returns `Some(ToolPose)` when the stepper finds valid engagement
+/// with positive cut area, `None` otherwise.
 #[prof]
-pub fn probe_step(
+pub fn probe(
     ctx: &ResumeCtx,
-    radius: f64,
+    _radius: f64,
     pos: Point,
     heading: f64,
 ) -> Option<ToolPose> {
-    let max_deflection = ctx.opts.max_deflection_deg.to_radians();
-    let dir_sign = ctx.opts.cut_direction.sign();
-    let (angle_min, angle_max) =
-        ctx.opts.cut_direction.angle_bounds(max_deflection);
-
-    let one_sided_opts = StepperOptions {
-        target_area_pd: ctx.target_area_pd,
-        step_length: ctx.opts.step_length,
-        radius,
-        max_deflection: angle_max.max(angle_min.abs()),
-        valid_area: ctx.valid_tool_area,
-        angle_min,
-        angle_max,
-        dir_sign,
-    };
-    let one_sided = step(ctx.cleared, pos, heading, 0.0, &one_sided_opts);
-    if one_sided.status != StepStatus::Ok || one_sided.cut_area <= 0.0 {
-        dbg_log!(
-            "  PROBE[one-sided]  MISS  pos=({:.3},{:.3})  heading={:.4}  \
-             status={:?}  cut_area={:.4}  bounds=({:.4},{:.4})",
-            pos.x,
-            pos.y,
-            heading,
-            one_sided.status,
-            one_sided.cut_area,
-            angle_min,
-            angle_max,
-        );
+    let result = step(ctx.cleared, pos, heading, 0.0, ctx.step_opts);
+    if result.status != StepStatus::Ok || result.cut_area <= 0.0 {
         return None;
     }
-
-    let symmetric_opts = StepperOptions {
-        target_area_pd: ctx.target_area_pd,
-        step_length: ctx.opts.step_length,
-        radius,
-        max_deflection,
-        valid_area: ctx.valid_tool_area,
-        dir_sign,
-        ..Default::default()
-    };
-    let symmetric = step(ctx.cleared, pos, heading, 0.0, &symmetric_opts);
-    if symmetric.status != StepStatus::Ok || symmetric.cut_area <= 0.0 {
-        dbg_log!(
-            "  PROBE[symmetric]  MISS  pos=({:.3},{:.3})  heading={:.4}  \
-             status={:?}  cut_area={:.4}  (one-sided passed)",
-            pos.x,
-            pos.y,
-            heading,
-            symmetric.status,
-            symmetric.cut_area,
-        );
-        return None;
-    }
-
-    dbg_log!(
-        "  PROBE  pos=({:.3},{:.3})  heading_in={:.4}  \
-         heading_out={:.4}  iters={}  bounds=({:.4},{:.4})",
-        pos.x,
-        pos.y,
-        heading,
-        one_sided.heading,
-        one_sided.iters,
-        angle_min,
-        angle_max,
-    );
     Some(ToolPose {
         pos,
-        heading: one_sided.heading,
+        heading: result.heading,
     })
-}
-
-// ── Shared probe function ──────────────────────────────────────────
-
-/// Lightweight forward-step engagement check used by both
-/// [`ResumeFrontier`] and [`ResumeEnvelope`].
-///
-/// Projects `pos` forward by `step_length` along `heading`, then
-/// checks cut-area split, rotational direction (correct side ≥ wrong
-/// side), and destination engagement angle (≤ 2.7 rad).  Returns
-/// `Some(ToolPose)` when all conditions pass — same logic as the
-/// original boundary-walk probe.
-#[prof]
-pub(super) fn boundary_probe(
-    ctx: &ResumeCtx,
-    radius: f64,
-    pos: Point,
-    heading: f64,
-) -> Option<ToolPose> {
-    let step_length = ctx.opts.step_length;
-    let dir_sign = ctx.opts.cut_direction.sign();
-    let min_cut_area = step_length * ctx.target_area_pd * 0.5;
-    let dir = Point::new(heading.cos(), heading.sin());
-
-    let probe = pos + dir * step_length;
-    if !point_in_valid_area(probe, ctx.valid_tool_area) {
-        return None;
-    }
-    let (area, left) = ctx.cleared.cut_area_split(pos, probe, radius);
-    if area < min_cut_area {
-        return None;
-    }
-    let right = area - left;
-    let correct_side = if dir_sign < 0.0 { right } else { left };
-    let wrong_side = if dir_sign < 0.0 { left } else { right };
-    if correct_side < wrong_side {
-        return None;
-    }
-    let dest_eng = ctx.cleared.point_engagement(probe, radius).angle;
-    if dest_eng > 2.7 {
-        return None;
-    }
-    Some(ToolPose { pos, heading })
 }
 
 // ── Frontier offset helpers ──────────────────────────────────────────
@@ -250,7 +134,7 @@ fn march_to_clear(
 ) -> Option<Point> {
     for s in 1..=max_steps {
         let pos = candidate + dir * (s as f64 * step);
-        if !point_in_valid_area(pos, ctx.valid_tool_area) {
+        if !point_in_valid_area(pos, ctx.step_opts.valid_area) {
             return None;
         }
         if cleared.point_engagement(pos, radius).angle <= CLEARANCE_ANGLE_EPS {
@@ -282,7 +166,7 @@ pub(super) fn offset_and_probe(
 
     if cleared.point_engagement(candidate, radius).angle <= CLEARANCE_ANGLE_EPS
     {
-        return probe_step(ctx, radius, candidate, heading);
+        return probe(ctx, radius, candidate, heading);
     }
 
     let step = ctx.opts.step_length * 0.25;
@@ -292,7 +176,7 @@ pub(super) fn offset_and_probe(
         if let Some(pos) = march_to_clear(
             ctx, cleared, radius, candidate, dir, step, max_steps,
         ) {
-            if let Some(probed) = probe_step(ctx, radius, pos, heading) {
+            if let Some(probed) = probe(ctx, radius, pos, heading) {
                 return Some(probed);
             }
         }
@@ -303,7 +187,7 @@ pub(super) fn offset_and_probe(
         if let Some(pos) = march_to_clear(
             ctx, cleared, radius, candidate, dir, step, max_steps,
         ) {
-            if let Some(probed) = probe_step(ctx, radius, pos, heading) {
+            if let Some(probed) = probe(ctx, radius, pos, heading) {
                 return Some(probed);
             }
         }
@@ -675,9 +559,8 @@ pub enum ResumeSource {
 pub struct ResumeCtx<'a> {
     pub cleared: &'a ClearedArea,
     pub opts: &'a AdaptiveClearingOptions,
-    pub valid_tool_area: &'a [Polygon],
+    pub step_opts: &'a StepperOptions<'a>,
     pub mat: Option<&'a MedialAxis>,
-    pub target_area_pd: f64,
     /// Position and heading where the current cutting segment began.
     /// ResumeSegment probes forward from here using the stored heading.
     pub segment_start: ToolPose,
