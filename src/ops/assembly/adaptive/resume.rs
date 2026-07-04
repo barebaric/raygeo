@@ -10,7 +10,9 @@ use crate::dbg_log;
 use crate::error::{RaygeoError, RaygeoResult};
 use crate::geo::algo::medial_axis::MedialAxis;
 use crate::geo::shape::compute_polygon_bounds;
-use crate::geo::shape::polygon::get_polygons_closest_point;
+use crate::geo::shape::polygon::{
+    get_polygons_closest_point, walk_polygon_vertices,
+};
 use crate::ops::container::Ops;
 use crate::ops::cut::interp::point_in_valid_area;
 use crate::ops::cut::search::walk_polygon_samples;
@@ -311,99 +313,268 @@ pub(super) fn offset_and_probe(
 
 // ── Shared walk engine ──────────────────────────────────────────────
 
-/// Walk a group of boundary polygons starting from the one nearest
-/// `segment_start`, in the cutting rotational direction, calling
-/// `probe` at each sample.  Returns the first engaging `ToolPose`.
+/// Ray-march fallback type: when the offset position fails validity,
+/// called as `(ctx, radius, on_boundary, into_cleared, offset)`.
+/// Must return `Some(centre)` or `None` to skip the sample.
+pub(super) type RayMarchFn =
+    fn(&ResumeCtx, f64, Point, Point, f64) -> Option<Point>;
+
+/// Configuration for [`walk_and_probe`].
+pub(super) struct WalkProbeOptions {
+    /// Walk **all** polygons (sorted by distance from `ref_pos`) instead
+    /// of only the closest polygon. When `true`, `centered_samples` should
+    /// typically also be `true`.
+    pub walk_all: bool,
+    /// Reference position for polygon distance sorting and start-point
+    /// selection. `None` → use `ctx.segment_start.pos`.
+    pub ref_pos: Option<Point>,
+    /// Perpendicular offset distance from the sample point into cleared
+    /// area. When `Some(d)`, each sample is offset by `d` along the
+    /// perpendicular direction before being passed to `probe`.
+    pub offset: Option<f64>,
+    /// When `offset` is `Some`, which side of the walk tangent is "into
+    /// cleared material".  `true` → left perpendicular (CW holes);
+    /// `false` → right perpendicular (CCW outer polygons).
+    pub cleared_on_left: bool,
+    /// Ray-march fallback: when the offset position fails validity,
+    /// the function is called to find a valid centre position.
+    pub ray_march: Option<RayMarchFn>,
+    /// Use centered edge-only samples (no vertex visits) instead of the
+    /// default vertex + sub-edge sampling via [`walk_polygon_samples`].
+    pub centered_samples: bool,
+}
+
+impl Default for WalkProbeOptions {
+    fn default() -> Self {
+        Self {
+            walk_all: false,
+            ref_pos: None,
+            offset: None,
+            cleared_on_left: true,
+            ray_march: None,
+            centered_samples: false,
+        }
+    }
+}
+
+/// Walk a group of boundary polygons, calling `probe` at each sample,
+/// and return the first engaging `ToolPose`.
 ///
-/// `probe` receives the sample point (on the boundary polygon) and the
-/// walk-direction tangent (`heading`); it decides how to place the tool
-/// centre and whether the position engages.  This is where the
-/// frontier/envelope offset policy differs — see [`ResumeFrontier`] and
-/// [`ResumeEnvelope`].
+/// `probe` receives the sample point (on the boundary polygon, or the
+/// offset position when `WalkProbeOptions::offset` is set) and the
+/// walk-direction tangent (`heading`); it decides whether the position
+/// engages.  This is where the frontier/envelope/island offset policy
+/// differs — see [`ResumeFrontier`], [`ResumeEnvelope`], and
+/// [`ResumeIsland`].
 #[prof]
 pub(super) fn walk_and_probe(
     ctx: &ResumeCtx,
     radius: f64,
     polys: &[Polygon],
     log_tag: &str,
+    opts: WalkProbeOptions,
     mut probe: impl FnMut(&ResumeCtx, f64, Point, f64) -> Option<ToolPose>,
 ) -> Option<ToolPose> {
-    let ref_pos = ctx.segment_start.pos;
+    let ref_pos = opts.ref_pos.unwrap_or(ctx.segment_start.pos);
+    let actual_forward = ctx.opts.cut_direction == CutDirection::Ccw;
+    let sample_spacing = ctx.opts.step_length;
+    let bl_sq_tol = (ctx.opts.step_length * 0.25).powi(2);
+    let has_offset = opts.offset.is_some();
 
-    let (closest_poly_idx, _t, _closest_pt, _d2) =
-        get_polygons_closest_point(polys, ref_pos)?;
-    let poly = &polys[closest_poly_idx];
-    let n = poly.len();
-    if n < 3 {
-        return None;
-    }
+    let poly_indices: Vec<usize> = if opts.walk_all {
+        let mut indexed: Vec<(usize, f64)> = polys
+            .iter()
+            .enumerate()
+            .map(|(i, p)| {
+                let min_d = p
+                    .iter()
+                    .map(|pt| pt.distance_squared(ref_pos))
+                    .fold(f64::MAX, f64::min);
+                (i, min_d)
+            })
+            .collect();
+        indexed.sort_by(|a, b| {
+            a.1.partial_cmp(&b.1).unwrap_or(std::cmp::Ordering::Equal)
+        });
+        indexed.into_iter().map(|(i, _)| i).collect()
+    } else {
+        match get_polygons_closest_point(polys, ref_pos) {
+            Some((idx, _, _, _)) => vec![idx],
+            None => {
+                dbg_log!("  {}  no suitable point found", log_tag);
+                return None;
+            }
+        }
+    };
 
-    let mut start_idx = 0usize;
-    let mut start_frac = 0.0f64;
-    {
-        let mut best_d2 = f64::MAX;
-        for i in 0..n {
-            let j = (i + 1) % n;
-            let edge = poly[j] - poly[i];
-            let elen2 = edge.length_squared();
-            if elen2 < 1e-18 {
-                continue;
-            }
-            let tt = ((ref_pos.x - poly[i].x) * edge.x
-                + (ref_pos.y - poly[i].y) * edge.y)
-                / elen2;
-            let tt = tt.clamp(0.0, 1.0);
-            let cp = poly[i] + edge * tt;
-            let d2 = cp.distance_squared(ref_pos);
-            if d2 < best_d2 {
-                best_d2 = d2;
-                start_idx = i;
-                start_frac = tt;
-            }
+    for poly_idx in poly_indices {
+        let poly = &polys[poly_idx];
+        let n = poly.len();
+        if n < 3 {
+            continue;
+        }
+
+        let result = if opts.centered_samples {
+            walk_centered(
+                poly,
+                ref_pos,
+                actual_forward,
+                sample_spacing,
+                opts.cleared_on_left,
+                |on_boundary, heading, into_cleared| {
+                    let probe_pt = apply_offset(
+                        ctx,
+                        radius,
+                        on_boundary,
+                        into_cleared,
+                        &opts,
+                    )?;
+                    probe(ctx, radius, probe_pt, heading)
+                },
+            )
+        } else {
+            let (start_idx, start_frac) = closest_edge_point(poly, ref_pos);
+            walk_polygon_samples(
+                poly,
+                start_idx,
+                actual_forward,
+                sample_spacing,
+                false,
+                start_frac,
+                |pt, heading| {
+                    if !has_offset {
+                        for bl_pos in ctx.blacklist {
+                            let dx = bl_pos.x - pt.x;
+                            let dy = bl_pos.y - pt.y;
+                            if dx * dx + dy * dy < bl_sq_tol {
+                                return None;
+                            }
+                        }
+                    }
+                    probe(ctx, radius, pt, heading)
+                },
+            )
+        };
+
+        if let Some(probed) = result {
+            dbg_log!(
+                "  {}  resume=({:.3},{:.3})  heading={:.4}",
+                log_tag,
+                probed.pos.x,
+                probed.pos.y,
+                probed.heading,
+            );
+            return Some(probed);
         }
     }
 
-    let actual_forward = ctx.opts.cut_direction == CutDirection::Ccw;
+    dbg_log!("  {}  no suitable point found", log_tag);
+    None
+}
 
-    let sample_spacing = ctx.opts.step_length;
-    let bl_sq_tol = (ctx.opts.step_length * 0.25).powi(2);
+/// Find the closest edge point on `poly` to `ref_pos`, returning the
+/// vertex index and fractional position along that edge.
+fn closest_edge_point(poly: &Polygon, ref_pos: Point) -> (usize, f64) {
+    let n = poly.len();
+    let mut start_idx = 0usize;
+    let mut start_frac = 0.0f64;
+    let mut best_d2 = f64::MAX;
+    for i in 0..n {
+        let j = (i + 1) % n;
+        let edge = poly[j] - poly[i];
+        let elen2 = edge.length_squared();
+        if elen2 < 1e-18 {
+            continue;
+        }
+        let tt = ((ref_pos.x - poly[i].x) * edge.x
+            + (ref_pos.y - poly[i].y) * edge.y)
+            / elen2;
+        let tt = tt.clamp(0.0, 1.0);
+        let cp = poly[i] + edge * tt;
+        let d2 = cp.distance_squared(ref_pos);
+        if d2 < best_d2 {
+            best_d2 = d2;
+            start_idx = i;
+            start_frac = tt;
+        }
+    }
+    (start_idx, start_frac)
+}
 
-    walk_polygon_samples(
-        poly,
-        start_idx,
-        actual_forward,
-        sample_spacing,
-        false,
-        start_frac,
-        |pt, heading| {
-            for bl_pos in ctx.blacklist {
-                let dx = bl_pos.x - pt.x;
-                let dy = bl_pos.y - pt.y;
-                if dx * dx + dy * dy < bl_sq_tol {
-                    return None;
-                }
+/// Walk a polygon starting from the vertex closest to `ref_pos`,
+/// sampling each edge at **centred** sub-intervals (no vertex visits).
+///
+/// `accept` receives `(on_boundary, heading, into_cleared)` where
+/// `into_cleared` is the unit perpendicular pointing into cleared
+/// material according to `cleared_on_left`.
+fn walk_centered<F>(
+    poly: &Polygon,
+    ref_pos: Point,
+    forward: bool,
+    sample_spacing: f64,
+    cleared_on_left: bool,
+    mut accept: F,
+) -> Option<ToolPose>
+where
+    F: FnMut(Point, f64, Point) -> Option<ToolPose>,
+{
+    let n = poly.len();
+    let start_idx = poly
+        .iter()
+        .enumerate()
+        .min_by(|(_, a), (_, b)| {
+            a.distance_squared(ref_pos)
+                .partial_cmp(&b.distance_squared(ref_pos))
+                .unwrap_or(std::cmp::Ordering::Equal)
+        })
+        .map(|(i, _)| i)
+        .unwrap_or(0);
+
+    walk_polygon_vertices(poly, start_idx, forward, |idx, _pt| {
+        let next = (idx + 1) % n;
+        let edge = poly[next] - poly[idx];
+        let elen = edge.length();
+        if elen < 1e-12 {
+            return None;
+        }
+        let into_cleared = if cleared_on_left {
+            Point::new(-edge.y, edge.x) / elen
+        } else {
+            Point::new(edge.y, -edge.x) / elen
+        };
+        let heading = if forward {
+            edge.y.atan2(edge.x)
+        } else {
+            (-edge.y).atan2(-edge.x)
+        };
+        let n_samples = ((elen / sample_spacing).ceil() as usize).max(1);
+        for si in 0..n_samples {
+            let frac = (si as f64 + 0.5) / n_samples as f64;
+            let on_boundary = poly[idx] + edge * frac;
+            if let Some(r) = accept(on_boundary, heading, into_cleared) {
+                return Some(r);
             }
-            if let Some(probed) = probe(ctx, radius, pt, heading) {
-                dbg_log!(
-                    "  {}  resume=({:.3},{:.3})  heading={:.4}  \
-                     sample=({:.3},{:.3})",
-                    log_tag,
-                    probed.pos.x,
-                    probed.pos.y,
-                    probed.heading,
-                    pt.x,
-                    pt.y,
-                );
-                Some(probed)
-            } else {
-                None
-            }
-        },
-    )
-    .or_else(|| {
-        dbg_log!("  {}  no suitable point found", log_tag);
+        }
         None
     })
+}
+
+/// Apply the perpendicular offset from `on_boundary` into cleared area,
+/// using the `ray_march` fallback when configured.
+#[prof]
+fn apply_offset(
+    ctx: &ResumeCtx,
+    radius: f64,
+    on_boundary: Point,
+    into_cleared: Point,
+    opts: &WalkProbeOptions,
+) -> Option<Point> {
+    let offset_dist = opts.offset?;
+    if let Some(ray_march) = opts.ray_march {
+        ray_march(ctx, radius, on_boundary, into_cleared, offset_dist)
+    } else {
+        Some(on_boundary + into_cleared * offset_dist)
+    }
 }
 
 /// Emit a resume travel from `from` to `to` using the routing strategies.

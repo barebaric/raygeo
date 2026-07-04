@@ -5,7 +5,8 @@ use crate::geo::shape::polygon::{
 };
 use crate::ops::assembly::adaptive::resume::{
     offset_and_probe, walk_and_probe, ResumeCtx, ResumeStrategy,
-    DETAIL_NO_ENVELOPE, DETAIL_NO_FRONTIER, DETAIL_NO_POLYGONS,
+    WalkProbeOptions, DETAIL_NO_ENVELOPE, DETAIL_NO_FRONTIER,
+    DETAIL_NO_POLYGONS,
 };
 use crate::ops::assembly::adaptive::tool::Tool;
 use crate::ops::cut::ToolPose;
@@ -87,5 +88,12 @@ fn frontier_resume(
         return None;
     }
 
-    walk_and_probe(ctx, tool.radius, &polys, "FRONTIER", offset_and_probe)
+    walk_and_probe(
+        ctx,
+        tool.radius,
+        &polys,
+        "FRONTIER",
+        WalkProbeOptions::default(),
+        offset_and_probe,
+    )
 }

@@ -2,7 +2,7 @@ use prof_macros::prof;
 
 use crate::ops::assembly::adaptive::resume::{
     boundary_probe, walk_and_probe, ResumeCtx, ResumeStrategy,
-    DETAIL_NO_ENGAGEMENT, DETAIL_NO_ENVELOPE,
+    WalkProbeOptions, DETAIL_NO_ENGAGEMENT, DETAIL_NO_ENVELOPE,
 };
 use crate::ops::assembly::adaptive::tool::Tool;
 use crate::ops::cut::ToolPose;
@@ -42,8 +42,14 @@ fn envelope_resume(
         *detail = DETAIL_NO_ENVELOPE;
         return None;
     }
-    let result =
-        walk_and_probe(ctx, tool.radius, &envelope, "ENVELOPE", boundary_probe);
+    let result = walk_and_probe(
+        ctx,
+        tool.radius,
+        &envelope,
+        "ENVELOPE",
+        WalkProbeOptions::default(),
+        boundary_probe,
+    );
     if result.is_none() {
         *detail = DETAIL_NO_ENGAGEMENT;
     }
