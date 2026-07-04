@@ -23,7 +23,6 @@ mod routing_direct;
 mod routing_frontier;
 mod routing_mat;
 pub mod tool;
-#[cfg(debug_assertions)]
 mod trace;
 
 use crate::dbg_log;
@@ -49,12 +48,10 @@ use prof_macros::prof;
 
 use std::path::PathBuf;
 
-#[cfg(debug_assertions)]
-use crate::trace::Tracer;
 use resume::{try_resume, ResumeCtx, MAX_RESUMES};
 use tool::Tool;
-#[cfg(debug_assertions)]
-use trace::{TraceKind, TraceRecord};
+use trace::TraceKind;
+use trace::TraceRecorder;
 
 // ── Named constants ────────────────────────────────────────────────────
 
@@ -129,6 +126,16 @@ impl WallHugSegments {
             counts.push(segment.len() as u32);
         }
         counts
+    }
+
+    pub fn wall_hug_ref(&self) -> Vec<(f64, f64)> {
+        self.ordered_points()
+            .iter()
+            .map(|p| (p.pos.x, p.pos.y))
+            .collect()
+    }
+    pub fn segment_counts_ref(&self) -> Vec<u32> {
+        self.segment_counts()
     }
 }
 
@@ -325,10 +332,8 @@ pub fn adaptive_clearing(
     ops.apply_state(cut_state);
     ops.move_to(tool.pos.x, tool.pos.y, opts.cut_z, None);
 
-    // Counter for moving commands (move_to + line_to) only — matches
-    // the toolpath file written by the tracer.  Only read inside the
-    // `#[cfg(debug_assertions)]` trace-record blocks; the assignments
-    // are kept unconditional for code-layout simplicity.
+    // Counter for moving commands (move_to + line_to) only — tracked
+    // for the trace recorder's ops_len field.
     let mut tp_len: u32 = 1; // the initial move_to above
 
     // Helper: recount moving commands from ops (used after try_resume
@@ -339,29 +344,16 @@ pub fn adaptive_clearing(
             .count() as u32
     }
 
-    #[cfg(debug_assertions)]
-    let mut tracer: Option<Tracer> = match &opts.trace_path {
-        Some(path) => match Tracer::open(
-            path,
-            &crate::trace::TraceContext {
-                tool_radius: opts.radius,
-                boundary: opts.pocket_boundary.clone(),
-                islands: opts.islands.clone(),
-                seeds: cleared.fragments().to_vec(),
-            },
-        ) {
-            Ok(t) => Some(t),
-            Err(e) => {
-                eprintln!("trace: failed to open {:?}: {}", path, e);
-                None
-            }
-        },
-        None => None,
-    };
-    // Trace-record step index.  Only read inside the
-    // `#[cfg(debug_assertions)]` trace-record blocks; kept
-    // unconditional so the surrounding code layout is identical.
-    let mut trace_step_idx: u32 = 1;
+    // Helper: convert resume candidate points to flat array for the
+    // trace recorder.
+    fn candidate_pts_as_flat(
+        pts: &resume::ResumeCandidatePoints,
+    ) -> [(f64, f64); 6] {
+        std::array::from_fn(|i| match &pts[i] {
+            Some(pt) => (pt.x, pt.y),
+            None => (f64::NAN, f64::NAN),
+        })
+    }
 
     let mut prev_pos = tool.pos;
     let mut steps_since_batch: usize = 0;
@@ -386,28 +378,17 @@ pub fn adaptive_clearing(
     let mut wall_hug_tracking: Option<(ToolPose, f64)> = None;
     let mut wall_hug_segments = WallHugSegments::new();
 
+    let mut recorder = TraceRecorder::new(opts, cleared);
     #[cfg(debug_assertions)]
-    {
-        if let Some(ref mut tr) = tracer {
-            tr.write_mat(mat.as_ref().map(|m| m.into()));
-            let mut rec = TraceRecord::from_tool_state(
-                TraceKind::Init as u8,
-                StepStatus::Ok,
-                0,
-                &tool,
-                cleared,
-                tool.pos,
-                tp_len,
-            );
-            rec.wall_hug_points = wall_hug_segments
-                .ordered_points()
-                .iter()
-                .map(|p| (p.pos.x, p.pos.y))
-                .collect();
-            rec.wall_hug_segment_counts = wall_hug_segments.segment_counts();
-            tr.write(&rec);
-        }
-    }
+    recorder.write_mat(mat.as_ref());
+    recorder.record_init(
+        &tool,
+        cleared,
+        tool.pos,
+        tp_len,
+        &wall_hug_segments.wall_hug_ref(),
+        &wall_hug_segments.segment_counts_ref(),
+    );
 
     // Stuck detection: every STUCK_CHECK_INTERVAL steps, verify the
     // cleared area has grown by at least the expected amount.  If not,
@@ -441,39 +422,6 @@ pub fn adaptive_clearing(
     let mut last_resume_point = Point::ZERO;
     let mut resume_candidate_pts = resume::ResumeCandidatePoints::default();
 
-    #[cfg(debug_assertions)]
-    macro_rules! write_exit_trace {
-        ($status:expr, $reasons:expr, $details:expr, $route:expr, $rp:expr) => {
-            if let Some(ref mut tr) = tracer {
-                let mut rec = TraceRecord::from_tool_state(
-                    TraceKind::Exit as u8,
-                    $status,
-                    trace_step_idx,
-                    &tool,
-                    cleared,
-                    prev_pos,
-                    tp_len,
-                );
-                rec.resume_strategy_reasons = *$reasons;
-                rec.resume_strategy_details = *$details;
-                rec.route_strategy_details = *$route;
-                rec.resume_point_x = ($rp).x;
-                rec.resume_point_y = ($rp).y;
-                rec.resume_candidate_points =
-                    resume_candidate_pts.map(|p| match p {
-                        Some(pt) => (pt.x, pt.y),
-                        None => (f64::NAN, f64::NAN),
-                    });
-                rec.wall_hug_points = wall_hug_segments
-                    .ordered_points()
-                    .iter()
-                    .map(|p| (p.pos.x, p.pos.y))
-                    .collect();
-                tr.write(&rec);
-            }
-        };
-    }
-
     let mut iter: usize = 0;
     for _ in 0..MAX_TOTAL_STEPS {
         iter += 1;
@@ -482,13 +430,19 @@ pub fn adaptive_clearing(
         // responsive even in release builds.
         if let Some(check) = opts.cancel_check {
             if check() {
-                #[cfg(debug_assertions)]
-                write_exit_trace!(
+                recorder.record_exit(
                     StepStatus::Ok,
+                    &tool,
+                    cleared,
+                    prev_pos,
+                    tp_len,
                     &resume_reasons,
                     &resume_details,
                     &route_details,
-                    &last_resume_point
+                    last_resume_point,
+                    &candidate_pts_as_flat(&resume_candidate_pts),
+                    &wall_hug_segments.wall_hug_ref(),
+                    &wall_hug_segments.segment_counts_ref(),
                 );
                 return Err(RaygeoError::Cancelled);
             }
@@ -511,13 +465,19 @@ pub fn adaptive_clearing(
                 frag_total,
                 valid_total,
             );
-            #[cfg(debug_assertions)]
-            write_exit_trace!(
+            recorder.record_exit(
                 StepStatus::Ok,
+                &tool,
+                cleared,
+                prev_pos,
+                tp_len,
                 &resume_reasons,
                 &resume_details,
                 &route_details,
-                &last_resume_point
+                last_resume_point,
+                &candidate_pts_as_flat(&resume_candidate_pts),
+                &wall_hug_segments.wall_hug_ref(),
+                &wall_hug_segments.segment_counts_ref(),
             );
             break;
         }
@@ -573,7 +533,7 @@ pub fn adaptive_clearing(
         }
         // Wall-hug tracking: enter when the tool cutting edge
         // reaches the pocket boundary (centre < radius from
-        // envelope).  Track the minimum-distance pose while the
+        // envelope).  Track the minimum distance while the
         // distance is decreasing, then record it the first time the
         // distance starts increasing (departure).
         if status == StepStatus::Ok {
@@ -700,13 +660,19 @@ pub fn adaptive_clearing(
                         valid_total,
                     );
                 }
-                #[cfg(debug_assertions)]
-                write_exit_trace!(
+                recorder.record_exit(
                     StepStatus::Ok,
+                    &tool,
+                    cleared,
+                    prev_pos,
+                    tp_len,
                     &resume_reasons,
                     &resume_details,
                     &route_details,
-                    &last_resume_point
+                    last_resume_point,
+                    &candidate_pts_as_flat(&resume_candidate_pts),
+                    &wall_hug_segments.wall_hug_ref(),
+                    &wall_hug_segments.segment_counts_ref(),
                 );
                 break;
             }
@@ -756,46 +722,28 @@ pub fn adaptive_clearing(
                         tool.heading = rp.heading;
                         tool.reset_gyro();
                         tp_len = moving_count(&ops);
-                        #[cfg(debug_assertions)]
-                        {
-                            if let Some(ref mut tr) = tracer {
-                                let kind = if stuck_triggered {
-                                    TraceKind::ResumeStuck
-                                } else {
-                                    TraceKind::ResumeStall
-                                };
-                                let mut rec = TraceRecord::from_tool_state(
-                                    kind as u8,
-                                    resume_trace_status,
-                                    trace_step_idx,
-                                    &tool,
-                                    cleared,
-                                    prev_pos,
-                                    tp_len,
-                                );
-                                rec.resume_source = source as u8;
-                                rec.route_source = route_source as u8;
-                                rec.resume_strategy_reasons = resume_reasons;
-                                rec.resume_strategy_details = resume_details;
-                                rec.route_strategy_details = route_details;
-                                rec.resume_point_x = rp.pos.x;
-                                rec.resume_point_y = rp.pos.y;
-                                rec.resume_candidate_points =
-                                    resume_candidate_pts.map(|p| match p {
-                                        Some(pt) => (pt.x, pt.y),
-                                        None => (f64::NAN, f64::NAN),
-                                    });
-                                rec.wall_hug_points = wall_hug_segments
-                                    .ordered_points()
-                                    .iter()
-                                    .map(|p| (p.pos.x, p.pos.y))
-                                    .collect();
-                                rec.wall_hug_segment_counts =
-                                    wall_hug_segments.segment_counts();
-                                tr.write(&rec);
-                            }
-                        }
-                        trace_step_idx += 1;
+                        let kind = if stuck_triggered {
+                            TraceKind::ResumeStuck
+                        } else {
+                            TraceKind::ResumeStall
+                        };
+                        recorder.record_resume(
+                            kind,
+                            resume_trace_status,
+                            source as u8,
+                            route_source as u8,
+                            &tool,
+                            cleared,
+                            prev_pos,
+                            tp_len,
+                            &resume_reasons,
+                            &resume_details,
+                            &route_details,
+                            rp.pos,
+                            &candidate_pts_as_flat(&resume_candidate_pts),
+                            &wall_hug_segments.wall_hug_ref(),
+                            &wall_hug_segments.segment_counts_ref(),
+                        );
                         prev_pos = tool.pos;
                         last_check_area = cleared.total_area();
                         last_resume_area = cleared.total_area();
@@ -854,13 +802,19 @@ pub fn adaptive_clearing(
                     cleared.total_area(),
                     valid_total,
                 );
-                #[cfg(debug_assertions)]
-                write_exit_trace!(
+                recorder.record_exit(
                     StepStatus::Ok,
+                    &tool,
+                    cleared,
+                    prev_pos,
+                    tp_len,
                     &resume_reasons,
                     &resume_details,
                     &route_details,
-                    &last_resume_point
+                    last_resume_point,
+                    &candidate_pts_as_flat(&resume_candidate_pts),
+                    &wall_hug_segments.wall_hug_ref(),
+                    &wall_hug_segments.segment_counts_ref(),
                 );
                 break;
             }
@@ -887,13 +841,19 @@ pub fn adaptive_clearing(
                     valid_total,
                 );
             }
-            #[cfg(debug_assertions)]
-            write_exit_trace!(
+            recorder.record_exit(
                 resume_trace_status,
+                &tool,
+                cleared,
+                prev_pos,
+                tp_len,
                 &resume_reasons,
                 &resume_details,
                 &route_details,
-                &last_resume_point
+                last_resume_point,
+                &candidate_pts_as_flat(&resume_candidate_pts),
+                &wall_hug_segments.wall_hug_ref(),
+                &wall_hug_segments.segment_counts_ref(),
             );
             let all_blacklisted =
                 resume_reasons.contains(&resume::REASON_BLACKLISTED);
@@ -924,38 +884,23 @@ pub fn adaptive_clearing(
             cleared.compact_if_needed(opts.tolerance);
         }
 
-        // Trace this cut step.
-        #[cfg(debug_assertions)]
-        {
-            let eng = cleared.point_engagement(tool.pos, opts.radius);
-            let ca = cleared.cut_area(prev_pos, tool.pos, opts.radius);
-            if let Some(ref mut tr) = tracer {
-                let mut rec = TraceRecord::from_tool_state(
-                    TraceKind::Cut as u8,
-                    status,
-                    trace_step_idx,
-                    &tool,
-                    cleared,
-                    prev_pos,
-                    tp_len,
-                );
-                rec.iters = result.iters as u32;
-                rec.iteration_angle = result.iteration_angle;
-                rec.eng_angle = eng.angle;
-                rec.eng_area = eng.area;
-                rec.eng_chord = eng.chord_depth;
-                rec.cut_area = ca;
-                rec.wall_hug_points = wall_hug_segments
-                    .ordered_points()
-                    .iter()
-                    .map(|p| (p.pos.x, p.pos.y))
-                    .collect();
-                rec.wall_hug_segment_counts =
-                    wall_hug_segments.segment_counts();
-                tr.write(&rec);
-            }
-        }
-        trace_step_idx += 1;
+        let eng = cleared.point_engagement(tool.pos, opts.radius);
+        let ca = cleared.cut_area(prev_pos, tool.pos, opts.radius);
+        recorder.record_cut(
+            status,
+            &tool,
+            cleared,
+            prev_pos,
+            tp_len,
+            result.iters as u32,
+            result.iteration_angle,
+            eng.angle,
+            eng.area,
+            eng.chord_depth,
+            ca,
+            &wall_hug_segments.wall_hug_ref(),
+            &wall_hug_segments.segment_counts_ref(),
+        );
 
         prev_pos = tool.pos;
         // Clear blacklist only when area growth since the last resume
@@ -964,7 +909,6 @@ pub fn adaptive_clearing(
         // the boundary) will not clear it, preventing repeated same-point
         // resumes.
         let area_growth = cleared.total_area() - last_resume_area;
-        let eng = cleared.point_engagement(tool.pos, opts.radius);
         if area_growth >= eng.area {
             resume_blacklist.clear();
         }
@@ -975,13 +919,7 @@ pub fn adaptive_clearing(
         cleared.commit_batch_local();
     }
 
-    #[cfg(debug_assertions)]
-    {
-        if let Some(mut t) = tracer.take() {
-            t.write_toolpath(&trace::extract_toolpath(&ops));
-            let _ = t.finish();
-        }
-    }
+    recorder.finish(&ops);
 
     Ok(ops)
 }

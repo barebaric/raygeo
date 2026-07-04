@@ -1,14 +1,23 @@
-//! Adaptive-clearing trace record format.
+//! Adaptive-clearing trace record format and recorder adapter.
 //!
 //! Defines the per-step record serialised as MessagePack via rmp-serde.
 //! The generic [`crate::trace::Tracer`] writes these records to the
 //! self-contained trace file (geometry + toolpath + records).
+//!
+//! [`TraceRecorder`] wraps the tracer and exposes one-line methods for
+//! each record type.  All `#[cfg(debug_assertions)]` gating lives
+//! inside the adapter — call sites in the orchestrator are unconditional.
+
+use prof_macros::prof;
 
 use serde::{Deserialize, Serialize};
 
+use crate::ops::assembly::adaptive::AdaptiveClearingOptions;
 use crate::ops::container::Ops;
 use crate::ops::cut::ClearedArea;
 use crate::ops::cut::StepStatus;
+#[cfg(debug_assertions)]
+use crate::trace::{TracePoint, Tracer};
 use crate::types::Point;
 
 use super::tool::Tool;
@@ -139,15 +148,14 @@ impl TraceRecord {
 
 // ── Toolpath extraction ─────────────────────────────────────────────
 
-use prof_macros::prof;
-
-use crate::trace::TracePoint;
+use crate::geo::algo::medial_axis::MedialAxis;
 
 /// Extract the moving commands (travel + cut) from `ops` as a
 /// [`TracePoint`] list suitable for [`Tracer::write_toolpath`].
 ///
 /// Order matches the record stream so the inspector can index toolpath
 /// points by `ops_len` stored in each trace record.
+#[cfg(debug_assertions)]
 #[prof]
 pub(super) fn extract_toolpath(ops: &Ops) -> Vec<TracePoint> {
     let mut out = Vec::new();
@@ -166,3 +174,223 @@ pub(super) fn extract_toolpath(ops: &Ops) -> Vec<TracePoint> {
     }
     out
 }
+
+// ── TraceRecorder ───────────────────────────────────────────────────
+
+/// Adapter that owns an optional [`Tracer`] and exposes one-line methods
+/// for each record type.  All `#[cfg(debug_assertions)]` gating is
+/// internal — call sites in the orchestrator are unconditional.
+pub(super) struct TraceRecorder {
+    #[cfg(debug_assertions)]
+    tracer: Option<Tracer>,
+    step_idx: u32,
+}
+
+#[cfg_attr(not(debug_assertions), allow(unused_variables))]
+impl TraceRecorder {
+    /// Create a recorder, opening the trace file when
+    /// `opts.trace_path` is `Some`.
+    pub fn new(opts: &AdaptiveClearingOptions, cleared: &ClearedArea) -> Self {
+        #[cfg(debug_assertions)]
+        let tracer = match &opts.trace_path {
+            Some(path) => match Tracer::open(
+                path,
+                &crate::trace::TraceContext {
+                    tool_radius: opts.radius,
+                    boundary: opts.pocket_boundary.clone(),
+                    islands: opts.islands.clone(),
+                    seeds: cleared.fragments().to_vec(),
+                },
+            ) {
+                Ok(t) => Some(t),
+                Err(e) => {
+                    eprintln!("trace: failed to open {:?}: {}", path, e);
+                    None
+                }
+            },
+            None => None,
+        };
+
+        Self {
+            #[cfg(debug_assertions)]
+            tracer,
+            step_idx: 1,
+        }
+    }
+
+    /// Write the optional MAT block.  Must be called once after
+    /// creation and before any record methods.
+    #[cfg(debug_assertions)]
+    pub fn write_mat(&mut self, mat: Option<&MedialAxis>) {
+        if let Some(ref mut tr) = self.tracer {
+            tr.write_mat(mat.map(|m| m.into()));
+        }
+    }
+
+    /// Record the initial tool state.
+    pub fn record_init(
+        &mut self,
+        tool: &Tool,
+        cleared: &ClearedArea,
+        prev_pos: Point,
+        ops_len: u32,
+        wall_hug_points: &[(f64, f64)],
+        wall_hug_segment_counts: &[u32],
+    ) {
+        #[cfg(debug_assertions)]
+        if let Some(ref mut tr) = self.tracer {
+            let mut rec = TraceRecord::from_tool_state(
+                TraceKind::Init as u8,
+                StepStatus::Ok,
+                0,
+                tool,
+                cleared,
+                prev_pos,
+                ops_len,
+            );
+            rec.wall_hug_points = wall_hug_points.to_vec();
+            rec.wall_hug_segment_counts = wall_hug_segment_counts.to_vec();
+            tr.write(&rec);
+        }
+    }
+
+    /// Record a cut step.  Increments the internal step index.
+    #[allow(clippy::too_many_arguments)]
+    pub fn record_cut(
+        &mut self,
+        status: StepStatus,
+        tool: &Tool,
+        cleared: &ClearedArea,
+        prev_pos: Point,
+        ops_len: u32,
+        iters: u32,
+        iteration_angle: f64,
+        eng_angle: f64,
+        eng_area: f64,
+        eng_chord: f64,
+        cut_area: f64,
+        wall_hug_points: &[(f64, f64)],
+        wall_hug_segment_counts: &[u32],
+    ) {
+        #[cfg(debug_assertions)]
+        if let Some(ref mut tr) = self.tracer {
+            let mut rec = TraceRecord::from_tool_state(
+                TraceKind::Cut as u8,
+                status,
+                self.step_idx,
+                tool,
+                cleared,
+                prev_pos,
+                ops_len,
+            );
+            rec.iters = iters;
+            rec.iteration_angle = iteration_angle;
+            rec.eng_angle = eng_angle;
+            rec.eng_area = eng_area;
+            rec.eng_chord = eng_chord;
+            rec.cut_area = cut_area;
+            rec.wall_hug_points = wall_hug_points.to_vec();
+            rec.wall_hug_segment_counts = wall_hug_segment_counts.to_vec();
+            tr.write(&rec);
+        }
+        self.step_idx += 1;
+    }
+
+    /// Record a resume event (stall or stuck).  Increments the
+    /// internal step index.
+    #[allow(clippy::too_many_arguments)]
+    pub fn record_resume(
+        &mut self,
+        kind: TraceKind,
+        status: StepStatus,
+        resume_source: u8,
+        route_source: u8,
+        tool: &Tool,
+        cleared: &ClearedArea,
+        prev_pos: Point,
+        ops_len: u32,
+        reasons: &[u8; 6],
+        details: &[u8; 6],
+        route_details: &[u8; 4],
+        rp: Point,
+        candidate_pts: &[(f64, f64); 6],
+        wall_hug_points: &[(f64, f64)],
+        wall_hug_segment_counts: &[u32],
+    ) {
+        #[cfg(debug_assertions)]
+        if let Some(ref mut tr) = self.tracer {
+            let mut rec = TraceRecord::from_tool_state(
+                kind as u8,
+                status,
+                self.step_idx,
+                tool,
+                cleared,
+                prev_pos,
+                ops_len,
+            );
+            rec.resume_source = resume_source;
+            rec.route_source = route_source;
+            rec.resume_strategy_reasons = *reasons;
+            rec.resume_strategy_details = *details;
+            rec.route_strategy_details = *route_details;
+            rec.resume_point_x = rp.x;
+            rec.resume_point_y = rp.y;
+            rec.resume_candidate_points = *candidate_pts;
+            rec.wall_hug_points = wall_hug_points.to_vec();
+            rec.wall_hug_segment_counts = wall_hug_segment_counts.to_vec();
+            tr.write(&rec);
+        }
+        self.step_idx += 1;
+    }
+
+    /// Record an exit event.
+    #[allow(clippy::too_many_arguments)]
+    pub fn record_exit(
+        &mut self,
+        status: StepStatus,
+        tool: &Tool,
+        cleared: &ClearedArea,
+        prev_pos: Point,
+        ops_len: u32,
+        reasons: &[u8; 6],
+        details: &[u8; 6],
+        route_details: &[u8; 4],
+        rp: Point,
+        candidate_pts: &[(f64, f64); 6],
+        wall_hug_points: &[(f64, f64)],
+        wall_hug_segment_counts: &[u32],
+    ) {
+        #[cfg(debug_assertions)]
+        if let Some(ref mut tr) = self.tracer {
+            let mut rec = TraceRecord::from_tool_state(
+                TraceKind::Exit as u8,
+                status,
+                self.step_idx,
+                tool,
+                cleared,
+                prev_pos,
+                ops_len,
+            );
+            rec.resume_strategy_reasons = *reasons;
+            rec.resume_strategy_details = *details;
+            rec.route_strategy_details = *route_details;
+            rec.resume_point_x = rp.x;
+            rec.resume_point_y = rp.y;
+            rec.resume_candidate_points = *candidate_pts;
+            rec.wall_hug_points = wall_hug_points.to_vec();
+            rec.wall_hug_segment_counts = wall_hug_segment_counts.to_vec();
+            tr.write(&rec);
+        }
+    }
+
+    /// Write the toolpath block and finalise the trace file.
+    pub fn finish(self, ops: &Ops) {
+        #[cfg(debug_assertions)]
+        if let Some(mut t) = self.tracer {
+            t.write_toolpath(&extract_toolpath(ops));
+            let _ = t.finish();
+        }
+    }
+}
+
+// ── Helpers (called from the recorder) ──────────────────────────────
