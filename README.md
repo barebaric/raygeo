@@ -313,6 +313,19 @@ make visual
 See [Visual Testing](visual-testing.md) for a full walkthrough of every
 page and its controls.
 
+### CLI Tools
+
+The `raygeo` command provides subcommands for tracing, inspecting, and
+profiling adaptive clearing runs.
+
+```bash
+pip install -e ".[cli]"
+raygeo trace /tmp/trace.bin --scenario centre-island
+raygeo inspect /tmp/trace.bin
+```
+
+See [CLI Tools](cli.md) for full usage documentation.
+
 ## License
 
 MIT

@@ -6,9 +6,9 @@ from matplotlib.collections import LineCollection
 from matplotlib.patches import Circle
 from matplotlib.widgets import Button, TextBox
 
+from raygeo.cli.cleared import rebuild_cleared
+from raygeo.cli.trace import KIND_NAMES, ROUTE_DETAIL_LABELS, STATUS_NAMES
 from raygeo.geo.shape.polygon import get_polygon_signed_area
-from tools.cli.cleared import rebuild_cleared
-from tools.cli.trace import KIND_NAMES, ROUTE_DETAIL_LABELS, STATUS_NAMES
 
 
 # ── Workaround for matplotlib 3.11 bug ────────────────────────────

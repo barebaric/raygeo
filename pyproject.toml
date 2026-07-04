@@ -41,7 +41,13 @@ docs = [
     "Pillow",
 ]
 
+cli = [
+    "matplotlib",
+    "msgpack",
+]
+
 [project.scripts]
+raygeo = "raygeo.cli.main:main"
 raygeo-docs = "tools.cli:main"
 
 [tool.maturin]

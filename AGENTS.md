@@ -16,9 +16,10 @@
 
 # Adaptive clearing tracing
 
-- `python tools/adaptive_inspector.py trace <path>` — run adaptive clearing with tracing, write `.bin` file
-- `python tools/adaptive_inspector.py print <path>` — dump all trace records as grep-friendly lines
-- `python tools/adaptive_inspector.py inspect <path>` — interactive matplotlib viewer
+- `raygeo trace <path>` — run adaptive clearing with tracing, write `.bin` file
+- `raygeo print <path>` — dump all trace records as grep-friendly lines
+- `raygeo inspect <path>` — interactive matplotlib viewer
+- `raygeo profile` — profile adaptive clearing performance
 - Optional flags: `--scenario`, `--svg`, `--tool-radius`, `--advance`, `--step-over`
 
 # Rules
