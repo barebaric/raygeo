@@ -25,6 +25,7 @@ mod routing_mat;
 mod stuck;
 pub mod tool;
 mod trace;
+mod wallhug;
 
 use crate::dbg_log;
 use crate::error::{RaygeoError, RaygeoResult};
@@ -33,7 +34,7 @@ use crate::geo::algo::offset::compute_inset_region;
 use crate::geo::shape::arc::normalize_angle_signed;
 use crate::geo::shape::polygon::{
     get_polygon_area, get_polygon_centroid, get_polygon_signed_area,
-    get_polygons_closest_point, get_polygons_group_intersection,
+    get_polygons_group_intersection,
 };
 use crate::ops::container::Ops;
 use crate::ops::cut::step;
@@ -58,82 +59,6 @@ use trace::TraceRecorder;
 
 /// Maximum total steps before giving up (safety valve).
 const MAX_TOTAL_STEPS: usize = 100_000;
-
-/// Minimum distance from `point` to the nearest boundary edge of any
-/// polygon in `area`.  Used to detect whether the tool is "on" the
-/// envelope (distance ≈ 0) or has departed into the interior.
-#[prof]
-fn envelope_distance(point: Point, area: &[Polygon]) -> f64 {
-    get_polygons_closest_point(area, point)
-        .map(|(_, _, _, d2)| d2.sqrt())
-        .unwrap_or(f64::MAX)
-}
-
-struct WallHugSegments {
-    current: Vec<ToolPose>,
-    previous: Vec<Vec<ToolPose>>,
-}
-
-impl WallHugSegments {
-    fn new() -> Self {
-        Self {
-            current: Vec::new(),
-            previous: Vec::new(),
-        }
-    }
-
-    fn push(&mut self, pose: ToolPose) {
-        self.current.push(pose);
-    }
-
-    fn finalize_segment(&mut self) {
-        if !self.current.is_empty() {
-            self.previous.push(std::mem::take(&mut self.current));
-        }
-    }
-
-    fn prune(&mut self, pos: Point, radius: f64) {
-        let r2 = radius * radius;
-        for segment in &mut self.previous {
-            segment.retain(|p| {
-                let dx = p.pos.x - pos.x;
-                let dy = p.pos.y - pos.y;
-                dx * dx + dy * dy > r2
-            });
-        }
-        self.previous.retain(|s| !s.is_empty());
-    }
-
-    fn ordered_points(&self) -> Vec<ToolPose> {
-        let total: usize = self.current.len()
-            + self.previous.iter().map(|s| s.len()).sum::<usize>();
-        let mut out = Vec::with_capacity(total);
-        out.extend_from_slice(&self.current);
-        for segment in &self.previous {
-            out.extend_from_slice(segment);
-        }
-        out
-    }
-
-    fn segment_counts(&self) -> Vec<u32> {
-        let mut counts = Vec::with_capacity(1 + self.previous.len());
-        counts.push(self.current.len() as u32);
-        for segment in &self.previous {
-            counts.push(segment.len() as u32);
-        }
-        counts
-    }
-
-    pub fn wall_hug_ref(&self) -> Vec<(f64, f64)> {
-        self.ordered_points()
-            .iter()
-            .map(|p| (p.pos.x, p.pos.y))
-            .collect()
-    }
-    pub fn segment_counts_ref(&self) -> Vec<u32> {
-        self.segment_counts()
-    }
-}
 
 // ── Options ──────────────────────────────────────────────────────────
 
@@ -370,9 +295,7 @@ pub fn adaptive_clearing(
     // the resume strategy can try earlier wall-hug points first.
     // Points from previous segments are preserved for fallback
     // resume attempts and pruned when the tool sweeps near them.
-    let mut in_envelope = false;
-    let mut wall_hug_tracking: Option<(ToolPose, f64)> = None;
-    let mut wall_hug_segments = WallHugSegments::new();
+    let mut hug_tracker = wallhug::WallHugTracker::new();
 
     let mut recorder = TraceRecorder::new(opts, cleared);
     #[cfg(debug_assertions)]
@@ -382,8 +305,8 @@ pub fn adaptive_clearing(
         cleared,
         tool.pos,
         tp_len,
-        &wall_hug_segments.wall_hug_ref(),
-        &wall_hug_segments.segment_counts_ref(),
+        &hug_tracker.wall_hug_ref(),
+        &hug_tracker.segment_counts_ref(),
     );
 
     // Stuck detection: every STUCK_CHECK_INTERVAL steps, verify the
@@ -440,8 +363,8 @@ pub fn adaptive_clearing(
                     &route_details,
                     last_resume_point,
                     &candidate_pts_as_flat(&resume_candidate_pts),
-                    &wall_hug_segments.wall_hug_ref(),
-                    &wall_hug_segments.segment_counts_ref(),
+                    &hug_tracker.wall_hug_ref(),
+                    &hug_tracker.segment_counts_ref(),
                 );
                 return Err(RaygeoError::Cancelled);
             }
@@ -475,8 +398,8 @@ pub fn adaptive_clearing(
                 &route_details,
                 last_resume_point,
                 &candidate_pts_as_flat(&resume_candidate_pts),
-                &wall_hug_segments.wall_hug_ref(),
-                &wall_hug_segments.segment_counts_ref(),
+                &hug_tracker.wall_hug_ref(),
+                &hug_tracker.segment_counts_ref(),
             );
             break;
         }
@@ -520,52 +443,14 @@ pub fn adaptive_clearing(
         // distance is decreasing, then record it the first time the
         // distance starts increasing (departure).
         if status == StepStatus::Ok {
-            let dist = envelope_distance(tool.pos, &valid_tool_area);
-            let inside = dist < opts.radius + 1e-9;
-
-            if !in_envelope && inside {
-                // ENTER
-                in_envelope = true;
-                wall_hug_tracking = Some((
-                    ToolPose {
-                        pos: tool.pos,
-                        heading: tool.heading,
-                    },
-                    dist,
-                ));
-            } else if in_envelope && !inside {
-                // Fully exited — record if not already recorded on
-                // departure.
-                if let Some((candidate, _)) = wall_hug_tracking.take() {
-                    wall_hug_segments.push(candidate);
-                }
-                in_envelope = false;
-            } else if in_envelope && inside {
-                // STAY — track minimum distance while approaching.
-                // Record on first distance increase (departure).
-                if let Some((candidate, min_dist)) = wall_hug_tracking.take() {
-                    if dist < min_dist {
-                        wall_hug_tracking = Some((
-                            ToolPose {
-                                pos: tool.pos,
-                                heading: tool.heading,
-                            },
-                            dist,
-                        ));
-                    } else if dist > min_dist + 1e-9 {
-                        // Distance increased — we're departing the
-                        // wall.  Push the minimum-distance pose.
-                        wall_hug_segments.push(candidate);
-                        wall_hug_tracking = None;
-                        in_envelope = false;
-                    } else {
-                        wall_hug_tracking = Some((candidate, min_dist));
-                    }
-                }
-            }
+            hug_tracker.on_step(
+                tool.pos,
+                tool.heading,
+                opts.radius,
+                &valid_tool_area,
+            );
         }
-        // Prune older-segment hug points that the tool has now swept.
-        wall_hug_segments.prune(tool.pos, opts.radius);
+        hug_tracker.prune(tool.pos, opts.radius);
         let stalled = status != StepStatus::Ok;
 
         // Stuck detection: check every STUCK_CHECK_INTERVAL steps
@@ -648,8 +533,8 @@ pub fn adaptive_clearing(
                     &route_details,
                     last_resume_point,
                     &candidate_pts_as_flat(&resume_candidate_pts),
-                    &wall_hug_segments.wall_hug_ref(),
-                    &wall_hug_segments.segment_counts_ref(),
+                    &hug_tracker.wall_hug_ref(),
+                    &hug_tracker.segment_counts_ref(),
                 );
                 break;
             }
@@ -657,7 +542,7 @@ pub fn adaptive_clearing(
             resume_reasons = resume::ResumeReasons::default();
             let mut resume_done = false;
             'resume: loop {
-                let wall_hug_flat = wall_hug_segments.ordered_points();
+                let wall_hug_flat = hug_tracker.ordered_points();
                 let result = {
                     let ctx = ResumeCtx {
                         cleared: &*cleared,
@@ -718,8 +603,8 @@ pub fn adaptive_clearing(
                             &route_details,
                             rp.pos,
                             &candidate_pts_as_flat(&resume_candidate_pts),
-                            &wall_hug_segments.wall_hug_ref(),
-                            &wall_hug_segments.segment_counts_ref(),
+                            &hug_tracker.wall_hug_ref(),
+                            &hug_tracker.segment_counts_ref(),
                         );
                         prev_pos = tool.pos;
                         stuck_detector.reset(cleared.total_area());
@@ -729,9 +614,7 @@ pub fn adaptive_clearing(
                             pos: tool.pos,
                             heading: tool.heading,
                         };
-                        in_envelope = false;
-                        wall_hug_tracking = None;
-                        wall_hug_segments.finalize_segment();
+                        hug_tracker.reset();
                         stuck_detector.reset(cleared.total_area());
                         resume_done = true;
                         break 'resume;
@@ -790,8 +673,8 @@ pub fn adaptive_clearing(
                     &route_details,
                     last_resume_point,
                     &candidate_pts_as_flat(&resume_candidate_pts),
-                    &wall_hug_segments.wall_hug_ref(),
-                    &wall_hug_segments.segment_counts_ref(),
+                    &hug_tracker.wall_hug_ref(),
+                    &hug_tracker.segment_counts_ref(),
                 );
                 break;
             }
@@ -829,8 +712,8 @@ pub fn adaptive_clearing(
                 &route_details,
                 last_resume_point,
                 &candidate_pts_as_flat(&resume_candidate_pts),
-                &wall_hug_segments.wall_hug_ref(),
-                &wall_hug_segments.segment_counts_ref(),
+                &hug_tracker.wall_hug_ref(),
+                &hug_tracker.segment_counts_ref(),
             );
             let all_blacklisted =
                 resume_reasons.contains(&resume::REASON_BLACKLISTED);
@@ -875,8 +758,8 @@ pub fn adaptive_clearing(
             eng.area,
             eng.chord_depth,
             ca,
-            &wall_hug_segments.wall_hug_ref(),
-            &wall_hug_segments.segment_counts_ref(),
+            &hug_tracker.wall_hug_ref(),
+            &hug_tracker.segment_counts_ref(),
         );
 
         prev_pos = tool.pos;
