@@ -6,6 +6,7 @@
 
 use prof_macros::prof;
 
+use super::chain::StrategyChain;
 use crate::dbg_log;
 use crate::error::{RaygeoError, RaygeoResult};
 use crate::geo::algo::medial_axis::MedialAxis;
@@ -787,27 +788,29 @@ pub fn try_resume(
         return None;
     }
 
+    let sq_tol = (ctx.opts.step_length * 0.25).powi(2);
+    *candidate_pts = [None; 6];
+
     // Try each strategy in priority order.  Each strategy decides for
     // itself whether it is responsible (e.g. WallHug returns None when
     // there is no stored wall-hug pose).
-    let strategies: [(&dyn ResumeStrategy, ResumeSource); 6] = [
-        (&ResumeWallHug, ResumeSource::ResumeWallHug),
-        (&ResumeSegment, ResumeSource::ResumeSegment),
-        (&ResumeMat, ResumeSource::ResumeMat),
-        (&ResumeFrontier, ResumeSource::ResumeFrontier),
-        (&ResumeEnvelope, ResumeSource::ResumeEnvelope),
-        (&ResumeIsland, ResumeSource::ResumeIsland),
-    ];
-    let sq_tol = (ctx.opts.step_length * 0.25).powi(2);
-    *candidate_pts = [None; 6];
-    'strategy: for (idx, (s, source)) in strategies.iter().enumerate() {
-        let mut detail = DETAIL_NOT_TRIED;
-        let outcome = s.find_next(ctx, tool, &mut detail);
-        if outcome.is_none() {
-            reasons[idx] = REASON_NO_CANDIDATE;
-            details[idx] = detail;
-        }
-        if let Some(rp) = outcome {
+    let mut chain: StrategyChain<&dyn ResumeStrategy, ResumeSource, 6> =
+        StrategyChain::new([
+            (&ResumeWallHug, ResumeSource::ResumeWallHug),
+            (&ResumeSegment, ResumeSource::ResumeSegment),
+            (&ResumeMat, ResumeSource::ResumeMat),
+            (&ResumeFrontier, ResumeSource::ResumeFrontier),
+            (&ResumeEnvelope, ResumeSource::ResumeEnvelope),
+            (&ResumeIsland, ResumeSource::ResumeIsland),
+        ]);
+
+    let result = chain.run(
+        |idx, s, source, detail| {
+            let outcome = s.find_next(ctx, tool, detail);
+            let Some(rp) = outcome else {
+                reasons[idx] = REASON_NO_CANDIDATE;
+                return None;
+            };
             candidate_pts[idx] = Some(rp.pos);
             // Reject any position that has already been tried and led to
             // an immediate stall, regardless of which strategy produced it.
@@ -816,28 +819,38 @@ pub fn try_resume(
                 let dy = bl_pos.y - rp.pos.y;
                 if dx * dx + dy * dy < sq_tol {
                     reasons[idx] = REASON_BLACKLISTED;
-                    details[idx] = DETAIL_BLACKLISTED;
+                    *detail = DETAIL_BLACKLISTED;
                     dbg_log!(
                         "  RESUME  {}={}  → ({:.3},{:.3})  BLACKLISTED",
-                        *source as u8,
+                        source as u8,
                         s.label(),
                         rp.pos.x,
                         rp.pos.y,
                     );
-                    continue 'strategy;
+                    return None;
                 }
             }
             dbg_log!(
                 "  RESUME  {}={}  → ({:.3},{:.3})  heading={:.4}",
-                *source as u8,
+                source as u8,
                 s.label(),
                 rp.pos.x,
                 rp.pos.y,
                 rp.heading,
             );
-            return Some((*source, rp));
-        }
-    }
+            Some(rp)
+        },
+        None::<
+            fn(
+                usize,
+                &dyn ResumeStrategy,
+                ResumeSource,
+                &mut u8,
+                ToolPose,
+            ) -> Option<ToolPose>,
+        >,
+    );
 
-    None
+    *details = *chain.details();
+    result
 }

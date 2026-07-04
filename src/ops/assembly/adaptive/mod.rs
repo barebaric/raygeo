@@ -9,6 +9,7 @@
 //! The caller is responsible for pre-populating the `ClearedArea` with
 //! entry polygons (e.g. via `adaptive_entry`).
 
+mod chain;
 pub mod resume;
 mod resume_envelope;
 mod resume_frontier;

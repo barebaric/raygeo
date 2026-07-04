@@ -13,6 +13,8 @@ use crate::ops::assembly::adaptive::AdaptiveClearingOptions;
 use crate::ops::cut::ClearedArea;
 use crate::types::{Point, Polygon, Rect};
 
+use super::chain::StrategyChain;
+
 pub use super::routing_astar::RoutingAStar;
 pub use super::routing_direct::RoutingDirect;
 pub use super::routing_frontier::RoutingFrontier;
@@ -181,37 +183,46 @@ pub fn optimize_route<'a>(
     to: Point,
     details: &mut [u8; 4],
 ) -> Option<(RouteSource, Vec<Point>)> {
-    let strategies: [(&dyn RoutingStrategy, RouteSource); 4] = [
-        (&RoutingDirect, RouteSource::RoutingDirect),
-        (&RoutingFrontier, RouteSource::RoutingFrontier),
-        (&RoutingMat, RouteSource::RoutingMat),
-        (&RoutingAStar, RouteSource::RoutingAStar),
-    ];
+    let mut chain: StrategyChain<&dyn RoutingStrategy, RouteSource, 4> =
+        StrategyChain::new([
+            (&RoutingDirect, RouteSource::RoutingDirect),
+            (&RoutingFrontier, RouteSource::RoutingFrontier),
+            (&RoutingMat, RouteSource::RoutingMat),
+            (&RoutingAStar, RouteSource::RoutingAStar),
+        ]);
 
-    for (idx, (s, source)) in strategies.iter().enumerate() {
-        let mut detail = 0u8;
-        let outcome = s.find_route(ctx, from, to, &mut detail);
-        details[idx] = detail;
-        if let Some(path) = outcome {
-            let smoothed =
-                smooth_route(from, &path, ctx.obstacles, ctx.opts.radius);
-            if smoothed.len() >= 2 {
-                details[idx] = 0; // success
-                crate::dbg_log!(
-                    "  ROUTE  {}={}  from=({:.3},{:.3})  \
+    let result = chain.run(
+        |_idx, s, _source, detail| s.find_route(ctx, from, to, detail),
+        Some(
+            |_: usize,
+             s: &dyn RoutingStrategy,
+             source: RouteSource,
+             detail: &mut u8,
+             path: Vec<Point>|
+             -> Option<Vec<Point>> {
+                let smoothed =
+                    smooth_route(from, &path, ctx.obstacles, ctx.opts.radius);
+                if smoothed.len() >= 2 {
+                    *detail = ROUTE_OK; // success
+                    crate::dbg_log!(
+                        "  ROUTE  {}={}  from=({:.3},{:.3})  \
                      to=({:.3},{:.3})  n={}",
-                    *source as u8,
-                    s.label(),
-                    from.x,
-                    from.y,
-                    to.x,
-                    to.y,
-                    smoothed.len(),
-                );
-                return Some((*source, smoothed));
-            }
-        }
-    }
+                        source as u8,
+                        s.label(),
+                        from.x,
+                        from.y,
+                        to.x,
+                        to.y,
+                        smoothed.len(),
+                    );
+                    Some(smoothed)
+                } else {
+                    None
+                }
+            },
+        ),
+    );
 
-    None
+    *details = *chain.details();
+    result
 }
