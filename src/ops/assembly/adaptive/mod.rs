@@ -179,6 +179,302 @@ pub fn target_area_per_distance(
 
 // ── Main entry point ─────────────────────────────────────────────────
 
+fn moving_count(ops: &Ops) -> u32 {
+    (0..ops.len())
+        .filter(|&i| ops.is_travel(i) || ops.is_cutting(i))
+        .count() as u32
+}
+
+fn candidate_pts_as_flat(
+    pts: &resume::ResumeCandidatePoints,
+) -> [(f64, f64); 6] {
+    std::array::from_fn(|i| match &pts[i] {
+        Some(pt) => (pt.x, pt.y),
+        None => (f64::NAN, f64::NAN),
+    })
+}
+
+enum StallResult {
+    Applied,
+    Exit,
+    Failed { all_blacklisted: bool },
+}
+
+struct StallState<'a> {
+    cleared: &'a mut ClearedArea,
+    ops: &'a mut Ops,
+    tool: &'a mut Tool,
+    hug_tracker: &'a mut wallhug::WallHugTracker,
+    stuck_detector: &'a mut stuck::StuckDetector,
+    recorder: &'a mut trace::TraceRecorder,
+    prev_pos: &'a mut Point,
+    tp_len: &'a mut u32,
+    steps_since_batch: &'a mut usize,
+    segment_start: &'a mut ToolPose,
+    last_resume_area: &'a mut f64,
+    last_resume_pos: &'a mut Point,
+    resume_blacklist: &'a mut Vec<Point>,
+    resume_count: &'a mut usize,
+    resume_reasons: &'a mut resume::ResumeReasons,
+    resume_details: &'a mut resume::ResumeReasons,
+    route_details: &'a mut [u8; 4],
+    last_resume_point: &'a mut Point,
+    resume_candidate_pts: &'a mut resume::ResumeCandidatePoints,
+}
+
+#[allow(clippy::too_many_arguments)]
+fn handle_stall(
+    s: &mut StallState,
+    stalled: bool,
+    stuck_triggered: bool,
+    status: StepStatus,
+    growth: f64,
+    expected: f64,
+    iter: usize,
+    opts: &AdaptiveClearingOptions,
+    valid_tool_area: &[Polygon],
+    mat: Option<&MedialAxis>,
+    target_area_pd: f64,
+    valid_total: f64,
+) -> RaygeoResult<StallResult> {
+    // Stall path: commit batch + clear blacklist (stuck already did).
+    if stalled {
+        if *s.steps_since_batch > 0 {
+            s.cleared.commit_batch_local();
+            *s.steps_since_batch = 0;
+        }
+        if s.cleared.total_area() - *s.last_resume_area > 0.0 {
+            s.resume_blacklist.clear();
+        }
+    }
+
+    let stall_status = if stuck_triggered {
+        StepStatus::Ok
+    } else {
+        status
+    };
+
+    *s.resume_count += 1;
+    if *s.resume_count > MAX_RESUMES {
+        if stuck_triggered {
+            dbg_log!(
+                "EXIT  reason=max_resumes(stuck)  step_count={}  \
+                 resume_count={}  growth={:.3}  expected={:.3}  \
+                 frag_total={:.3}  valid_total={:.3}",
+                s.stuck_detector.step_count(),
+                *s.resume_count,
+                growth,
+                expected,
+                s.cleared.total_area(),
+                valid_total,
+            );
+        } else {
+            dbg_log!(
+                "EXIT  reason=max_resumes(stall)  step_count={}  \
+                 resume_count={}  frag_total={:.3}  valid_total={:.3}",
+                s.stuck_detector.step_count(),
+                *s.resume_count,
+                s.cleared.total_area(),
+                valid_total,
+            );
+        }
+        s.recorder.record_exit(
+            StepStatus::Ok,
+            s.tool,
+            s.cleared,
+            *s.prev_pos,
+            *s.tp_len,
+            s.resume_reasons,
+            s.resume_details,
+            s.route_details,
+            *s.last_resume_point,
+            &candidate_pts_as_flat(s.resume_candidate_pts),
+            &s.hug_tracker.wall_hug_ref(),
+            &s.hug_tracker.segment_counts_ref(),
+        );
+        return Ok(StallResult::Exit);
+    }
+
+    *s.resume_reasons = resume::ResumeReasons::default();
+    let mut resume_done = false;
+    'resume: loop {
+        let wall_hug_flat = s.hug_tracker.ordered_points();
+        let result = {
+            let ctx = ResumeCtx {
+                cleared: &*s.cleared,
+                opts,
+                valid_tool_area,
+                mat,
+                target_area_pd,
+                segment_start: *s.segment_start,
+                last_resume_area: *s.last_resume_area,
+                last_resume_pos: *s.last_resume_pos,
+                wall_hug_points: &wall_hug_flat,
+                blacklist: s.resume_blacklist,
+            };
+            try_resume(
+                &ctx,
+                s.tool,
+                s.resume_reasons,
+                s.resume_details,
+                s.resume_candidate_pts,
+            )
+        };
+        let (source, rp) = match result {
+            Some(r) => r,
+            None => break 'resume,
+        };
+        *s.last_resume_point = rp.pos;
+        s.resume_blacklist.push(rp.pos);
+        match resume::emit_resume_travel(
+            s.ops,
+            &*s.cleared,
+            mat,
+            s.tool.pos,
+            rp.pos,
+            opts,
+            Some(s.route_details),
+        ) {
+            Ok(route_source) => {
+                s.tool.pos = rp.pos;
+                s.tool.heading = rp.heading;
+                s.tool.reset_gyro();
+                *s.tp_len = moving_count(s.ops);
+                let kind = if stuck_triggered {
+                    TraceKind::ResumeStuck
+                } else {
+                    TraceKind::ResumeStall
+                };
+                s.recorder.record_resume(
+                    kind,
+                    stall_status,
+                    source as u8,
+                    route_source as u8,
+                    s.tool,
+                    s.cleared,
+                    *s.prev_pos,
+                    *s.tp_len,
+                    s.resume_reasons,
+                    s.resume_details,
+                    s.route_details,
+                    rp.pos,
+                    &candidate_pts_as_flat(s.resume_candidate_pts),
+                    &s.hug_tracker.wall_hug_ref(),
+                    &s.hug_tracker.segment_counts_ref(),
+                );
+                *s.prev_pos = s.tool.pos;
+                s.stuck_detector.reset(s.cleared.total_area());
+                *s.last_resume_area = s.cleared.total_area();
+                *s.last_resume_pos = s.tool.pos;
+                *s.segment_start = ToolPose {
+                    pos: s.tool.pos,
+                    heading: s.tool.heading,
+                };
+                s.hug_tracker.reset();
+                resume_done = true;
+                break 'resume;
+            }
+            Err(RaygeoError::RoutingError(_)) => {
+                // Candidate blacklisted — inner retry loop will
+                // try the next resume candidate.
+            }
+            Err(other) => return Err(other),
+        }
+    }
+    if resume_done {
+        return Ok(StallResult::Applied);
+    }
+
+    // Commit any remaining batch so convergence check is accurate.
+    if *s.steps_since_batch > 0 {
+        s.cleared.commit_batch_local();
+    }
+
+    // If the pocket is effectively converged, exit normally.
+    // The raw remaining may overcount area outside the valid
+    // tool region, so clip against the inset boundary.
+    let clipped_remaining: f64 = {
+        let rem = s.cleared.remaining();
+        if rem.is_empty() {
+            0.0
+        } else {
+            let clipped =
+                get_polygons_group_intersection(&rem, valid_tool_area);
+            clipped
+                .iter()
+                .map(|p| get_polygon_signed_area(p).max(0.0))
+                .sum::<f64>()
+        }
+    };
+    if clipped_remaining < opts.area_tolerance {
+        dbg_log!(
+            "EXIT  reason=converged(close-enough)  step_count={}  \
+             resume_count={}  iter={}  frag_total={:.3}  \
+             valid_total={:.3}",
+            s.stuck_detector.step_count(),
+            *s.resume_count,
+            iter,
+            s.cleared.total_area(),
+            valid_total,
+        );
+        s.recorder.record_exit(
+            StepStatus::Ok,
+            s.tool,
+            s.cleared,
+            *s.prev_pos,
+            *s.tp_len,
+            s.resume_reasons,
+            s.resume_details,
+            s.route_details,
+            *s.last_resume_point,
+            &candidate_pts_as_flat(s.resume_candidate_pts),
+            &s.hug_tracker.wall_hug_ref(),
+            &s.hug_tracker.segment_counts_ref(),
+        );
+        return Ok(StallResult::Exit);
+    }
+
+    if stuck_triggered {
+        dbg_log!(
+            "EXIT  reason=resume_failed(stuck)  step_count={}  \
+             resume_count={}  growth={:.3}  expected={:.3}  \
+             frag_total={:.3}  valid_total={:.3}",
+            s.stuck_detector.step_count(),
+            *s.resume_count,
+            growth,
+            expected,
+            s.cleared.total_area(),
+            valid_total,
+        );
+    } else {
+        dbg_log!(
+            "EXIT  reason=resume_failed(stall)  step_count={}  \
+             resume_count={}  frag_total={:.3}  valid_total={:.3}",
+            s.stuck_detector.step_count(),
+            *s.resume_count,
+            s.cleared.total_area(),
+            valid_total,
+        );
+    }
+    s.recorder.record_exit(
+        stall_status,
+        s.tool,
+        s.cleared,
+        *s.prev_pos,
+        *s.tp_len,
+        s.resume_reasons,
+        s.resume_details,
+        s.route_details,
+        *s.last_resume_point,
+        &candidate_pts_as_flat(s.resume_candidate_pts),
+        &s.hug_tracker.wall_hug_ref(),
+        &s.hug_tracker.segment_counts_ref(),
+    );
+    let all_blacklisted =
+        s.resume_reasons.contains(&resume::REASON_BLACKLISTED);
+    Ok(StallResult::Failed { all_blacklisted })
+}
+
 #[prof]
 #[allow(unused_assignments, unused_variables)]
 pub fn adaptive_clearing(
@@ -256,25 +552,6 @@ pub fn adaptive_clearing(
     // Counter for moving commands (move_to + line_to) only — tracked
     // for the trace recorder's ops_len field.
     let mut tp_len: u32 = 1; // the initial move_to above
-
-    // Helper: recount moving commands from ops (used after try_resume
-    // which may emit multiple move_to calls).
-    fn moving_count(ops: &Ops) -> u32 {
-        (0..ops.len())
-            .filter(|&i| ops.is_travel(i) || ops.is_cutting(i))
-            .count() as u32
-    }
-
-    // Helper: convert resume candidate points to flat array for the
-    // trace recorder.
-    fn candidate_pts_as_flat(
-        pts: &resume::ResumeCandidatePoints,
-    ) -> [(f64, f64); 6] {
-        std::array::from_fn(|i| match &pts[i] {
-            Some(pt) => (pt.x, pt.y),
-            None => (f64::NAN, f64::NAN),
-        })
-    }
 
     let mut prev_pos = tool.pos;
     let mut steps_since_batch: usize = 0;
@@ -481,250 +758,55 @@ pub fn adaptive_clearing(
         }
 
         if stalled || stuck_triggered {
-            // Stall path: commit batch + clear blacklist (stuck already did).
-            if stalled {
-                if steps_since_batch > 0 {
-                    cleared.commit_batch_local();
-                    steps_since_batch = 0;
-                }
-                if cleared.total_area() - last_resume_area > 0.0 {
-                    resume_blacklist.clear();
-                }
-            }
-
-            let resume_trace_status = if stuck_triggered {
-                StepStatus::Ok
-            } else {
-                status
-            };
-
-            resume_count += 1;
-            if resume_count > MAX_RESUMES {
-                if stuck_triggered {
-                    dbg_log!(
-                        "EXIT  reason=max_resumes(stuck)  step_count={}  \
-                         resume_count={}  growth={:.3}  expected={:.3}  \
-                         frag_total={:.3}  valid_total={:.3}",
-                        stuck_detector.step_count(),
-                        resume_count,
-                        growth,
-                        expected,
-                        cleared.total_area(),
-                        valid_total,
-                    );
-                } else {
-                    dbg_log!(
-                        "EXIT  reason=max_resumes(stall)  step_count={}  \
-                         resume_count={}  frag_total={:.3}  valid_total={:.3}",
-                        stuck_detector.step_count(),
-                        resume_count,
-                        cleared.total_area(),
-                        valid_total,
-                    );
-                }
-                recorder.record_exit(
-                    StepStatus::Ok,
-                    &tool,
-                    cleared,
-                    prev_pos,
-                    tp_len,
-                    &resume_reasons,
-                    &resume_details,
-                    &route_details,
-                    last_resume_point,
-                    &candidate_pts_as_flat(&resume_candidate_pts),
-                    &hug_tracker.wall_hug_ref(),
-                    &hug_tracker.segment_counts_ref(),
-                );
-                break;
-            }
-
-            resume_reasons = resume::ResumeReasons::default();
-            let mut resume_done = false;
-            'resume: loop {
-                let wall_hug_flat = hug_tracker.ordered_points();
-                let result = {
-                    let ctx = ResumeCtx {
-                        cleared: &*cleared,
-                        opts,
-                        valid_tool_area: &valid_tool_area,
-                        mat: mat.as_ref(),
-                        target_area_pd,
-                        segment_start,
-                        last_resume_area,
-                        last_resume_pos,
-                        wall_hug_points: &wall_hug_flat,
-                        blacklist: &resume_blacklist,
-                    };
-                    try_resume(
-                        &ctx,
-                        &tool,
-                        &mut resume_reasons,
-                        &mut resume_details,
-                        &mut resume_candidate_pts,
-                    )
-                };
-                let (source, rp) = match result {
-                    Some(r) => r,
-                    None => break 'resume,
-                };
-                last_resume_point = rp.pos;
-                resume_blacklist.push(rp.pos);
-                match resume::emit_resume_travel(
-                    &mut ops,
-                    &*cleared,
-                    mat.as_ref(),
-                    tool.pos,
-                    rp.pos,
-                    opts,
-                    Some(&mut route_details),
-                ) {
-                    Ok(route_source) => {
-                        tool.pos = rp.pos;
-                        tool.heading = rp.heading;
-                        tool.reset_gyro();
-                        tp_len = moving_count(&ops);
-                        let kind = if stuck_triggered {
-                            TraceKind::ResumeStuck
-                        } else {
-                            TraceKind::ResumeStall
-                        };
-                        recorder.record_resume(
-                            kind,
-                            resume_trace_status,
-                            source as u8,
-                            route_source as u8,
-                            &tool,
-                            cleared,
-                            prev_pos,
-                            tp_len,
-                            &resume_reasons,
-                            &resume_details,
-                            &route_details,
-                            rp.pos,
-                            &candidate_pts_as_flat(&resume_candidate_pts),
-                            &hug_tracker.wall_hug_ref(),
-                            &hug_tracker.segment_counts_ref(),
-                        );
-                        prev_pos = tool.pos;
-                        stuck_detector.reset(cleared.total_area());
-                        last_resume_area = cleared.total_area();
-                        last_resume_pos = tool.pos;
-                        segment_start = ToolPose {
-                            pos: tool.pos,
-                            heading: tool.heading,
-                        };
-                        hug_tracker.reset();
-                        stuck_detector.reset(cleared.total_area());
-                        resume_done = true;
-                        break 'resume;
-                    }
-                    Err(RaygeoError::RoutingError(_)) => {
-                        // Candidate blacklisted — inner retry loop will
-                        // try the next resume candidate.
-                    }
-                    Err(other) => return Err(other),
-                }
-            }
-            if resume_done {
-                continue;
-            }
-
-            // Commit any remaining batch so convergence check is accurate.
-            if steps_since_batch > 0 {
-                cleared.commit_batch_local();
-            }
-
-            // If the pocket is effectively converged, exit normally.
-            // The raw remaining may overcount area outside the valid
-            // tool region, so clip against the inset boundary.
-            let clipped_remaining: f64 = {
-                let rem = cleared.remaining();
-                if rem.is_empty() {
-                    0.0
-                } else {
-                    let clipped =
-                        get_polygons_group_intersection(&rem, &valid_tool_area);
-                    clipped
-                        .iter()
-                        .map(|p| get_polygon_signed_area(p).max(0.0))
-                        .sum::<f64>()
-                }
-            };
-            if clipped_remaining < opts.area_tolerance {
-                dbg_log!(
-                    "EXIT  reason=converged(close-enough)  step_count={}  \
-                     resume_count={}  iter={}  frag_total={:.3}  \
-                     valid_total={:.3}",
-                    stuck_detector.step_count(),
-                    resume_count,
-                    iter,
-                    cleared.total_area(),
-                    valid_total,
-                );
-                recorder.record_exit(
-                    StepStatus::Ok,
-                    &tool,
-                    cleared,
-                    prev_pos,
-                    tp_len,
-                    &resume_reasons,
-                    &resume_details,
-                    &route_details,
-                    last_resume_point,
-                    &candidate_pts_as_flat(&resume_candidate_pts),
-                    &hug_tracker.wall_hug_ref(),
-                    &hug_tracker.segment_counts_ref(),
-                );
-                break;
-            }
-
-            if stuck_triggered {
-                dbg_log!(
-                    "EXIT  reason=resume_failed(stuck)  step_count={}  \
-                     resume_count={}  growth={:.3}  expected={:.3}  \
-                     frag_total={:.3}  valid_total={:.3}",
-                    stuck_detector.step_count(),
-                    resume_count,
-                    growth,
-                    expected,
-                    cleared.total_area(),
-                    valid_total,
-                );
-            } else {
-                dbg_log!(
-                    "EXIT  reason=resume_failed(stall)  step_count={}  \
-                     resume_count={}  frag_total={:.3}  valid_total={:.3}",
-                    stuck_detector.step_count(),
-                    resume_count,
-                    cleared.total_area(),
-                    valid_total,
-                );
-            }
-            recorder.record_exit(
-                resume_trace_status,
-                &tool,
+            #[allow(clippy::redundant_field_names)]
+            let mut stall = StallState {
                 cleared,
-                prev_pos,
-                tp_len,
-                &resume_reasons,
-                &resume_details,
-                &route_details,
-                last_resume_point,
-                &candidate_pts_as_flat(&resume_candidate_pts),
-                &hug_tracker.wall_hug_ref(),
-                &hug_tracker.segment_counts_ref(),
-            );
-            let all_blacklisted =
-                resume_reasons.contains(&resume::REASON_BLACKLISTED);
-            if all_blacklisted {
-                return Err(RaygeoError::RoutingError(
-                    "all resume candidates failed routing".into(),
-                ));
+                ops: &mut ops,
+                tool: &mut tool,
+                hug_tracker: &mut hug_tracker,
+                stuck_detector: &mut stuck_detector,
+                recorder: &mut recorder,
+                prev_pos: &mut prev_pos,
+                tp_len: &mut tp_len,
+                steps_since_batch: &mut steps_since_batch,
+                segment_start: &mut segment_start,
+                last_resume_area: &mut last_resume_area,
+                last_resume_pos: &mut last_resume_pos,
+                resume_blacklist: &mut resume_blacklist,
+                resume_count: &mut resume_count,
+                resume_reasons: &mut resume_reasons,
+                resume_details: &mut resume_details,
+                route_details: &mut route_details,
+                last_resume_point: &mut last_resume_point,
+                resume_candidate_pts: &mut resume_candidate_pts,
+            };
+            match handle_stall(
+                &mut stall,
+                stalled,
+                stuck_triggered,
+                status,
+                growth,
+                expected,
+                iter,
+                opts,
+                &valid_tool_area,
+                mat.as_ref(),
+                target_area_pd,
+                valid_total,
+            )? {
+                StallResult::Applied => continue,
+                StallResult::Exit => break,
+                StallResult::Failed { all_blacklisted } => {
+                    if all_blacklisted {
+                        return Err(RaygeoError::RoutingError(
+                            "all resume candidates failed routing".into(),
+                        ));
+                    }
+                    return Err(RaygeoError::ResumePointNotFound(
+                        "all resume strategies failed".into(),
+                    ));
+                }
             }
-            return Err(RaygeoError::ResumePointNotFound(
-                "all resume strategies failed".into(),
-            ));
         }
 
         // Emit cutting move.
