@@ -22,6 +22,7 @@ mod routing_astar;
 mod routing_direct;
 mod routing_frontier;
 mod routing_mat;
+mod stuck;
 pub mod tool;
 mod trace;
 
@@ -57,11 +58,6 @@ use trace::TraceRecorder;
 
 /// Maximum total steps before giving up (safety valve).
 const MAX_TOTAL_STEPS: usize = 100_000;
-/// Check progress every N successful steps.
-const STUCK_CHECK_INTERVAL: usize = 100;
-/// Minimum fraction of theoretical target cut-area throughput that the
-/// cleared area must grow by during a progress window.
-const STUCK_MIN_GROWTH_FACTOR: f64 = 0.15;
 
 /// Minimum distance from `point` to the nearest boundary edge of any
 /// polygon in `area`.  Used to detect whether the tool is "on" the
@@ -395,8 +391,11 @@ pub fn adaptive_clearing(
     // the solver is oscillating in a corner and we trigger resume /
     // re-engagement.  Using area growth (rather than displacement)
     // allows the initial inner contraction spiral to keep cutting.
-    let mut step_count: usize = 0;
-    let mut last_check_area: f64 = cleared.total_area();
+    let mut stuck_detector = stuck::StuckDetector::new(
+        target_area_pd,
+        opts.step_length,
+        cleared.total_area(),
+    );
     let mut resume_count: usize = 0;
     // Cleared area recorded at the last resume; used to detect a
     // stall-bounce where the frontier search returns a new (but
@@ -458,8 +457,8 @@ pub fn adaptive_clearing(
         } {
             dbg_log!(
                 "EXIT  reason=converged  step_count={}  resume_count={}  \
-                 iter={}  frag_total={:.3}  valid_total={:.3}",
-                step_count,
+                  iter={}  frag_total={:.3}  valid_total={:.3}",
+                stuck_detector.step_count(),
                 resume_count,
                 iter,
                 frag_total,
@@ -504,32 +503,16 @@ pub fn adaptive_clearing(
         }
 
         // ── Wrong-side safehold ──────────────────────────────────
-        // After each successful step, verify the tool is not cutting
-        // predominantly on the wrong side.  The solver's inner loop
-        // already rejects wrong-dominated candidates; this safehold
-        // is a secondary check that catches any that somehow slip
-        // through (e.g. via the lookahead override).
         if result.status == StepStatus::Ok {
-            let (total, left) =
-                cleared.cut_area_split(prev_pos, tool.pos, opts.radius);
-            let right = total - left;
-            let wrong = if dir_sign < 0.0 { left } else { right };
-            let correct = total - wrong;
-            let per_step_target = target_area_pd * opts.step_length;
-            if wrong > correct && wrong > per_step_target * 0.5 {
-                panic!(
-                    "adaptive_clearing: wrong-side safehold  \
-                     dir_sign={:+.1}  total={:.6}  left={:.6}  \
-                     right={:.6}  pos=({:.3},{:.3})  heading={:.4}",
-                    dir_sign,
-                    total,
-                    left,
-                    right,
-                    tool.pos.x,
-                    tool.pos.y,
-                    tool.heading,
-                );
-            }
+            stuck::wrong_side_safehold(
+                cleared,
+                dir_sign,
+                prev_pos,
+                tool.pos,
+                opts.radius,
+                target_area_pd,
+                opts.step_length,
+            );
         }
         // Wall-hug tracking: enter when the tool cutting edge
         // reaches the pocket boundary (centre < radius from
@@ -593,28 +576,22 @@ pub fn adaptive_clearing(
         let mut stuck_triggered = false;
         let mut growth = 0.0;
         let mut expected = 0.0;
-        if !stalled {
-            step_count += 1;
-            if step_count.is_multiple_of(STUCK_CHECK_INTERVAL) {
-                let current_area = cleared.total_area();
-                growth = current_area - last_check_area;
-                last_check_area = current_area;
-                // Theoretical throughput: step_length * target_area_pd per step.
-                expected = STUCK_CHECK_INTERVAL as f64
-                    * opts.step_length
-                    * target_area_pd
-                    * STUCK_MIN_GROWTH_FACTOR;
-                if growth < expected {
-                    // Tool is oscillating — force resume.
-                    if steps_since_batch > 0 {
-                        cleared.commit_batch_local();
-                        steps_since_batch = 0;
-                    }
-                    if cleared.total_area() - last_resume_area > 0.0 {
-                        resume_blacklist.clear();
-                    }
-                    stuck_triggered = true;
+        match stuck_detector.tick(cleared.total_area(), stalled) {
+            stuck::StuckOutcome::Ok => {}
+            stuck::StuckOutcome::Oscillating {
+                growth: g,
+                expected: e,
+            } => {
+                growth = g;
+                expected = e;
+                if steps_since_batch > 0 {
+                    cleared.commit_batch_local();
+                    steps_since_batch = 0;
                 }
+                if cleared.total_area() - last_resume_area > 0.0 {
+                    resume_blacklist.clear();
+                }
+                stuck_triggered = true;
             }
         }
 
@@ -643,7 +620,7 @@ pub fn adaptive_clearing(
                         "EXIT  reason=max_resumes(stuck)  step_count={}  \
                          resume_count={}  growth={:.3}  expected={:.3}  \
                          frag_total={:.3}  valid_total={:.3}",
-                        step_count,
+                        stuck_detector.step_count(),
                         resume_count,
                         growth,
                         expected,
@@ -654,7 +631,7 @@ pub fn adaptive_clearing(
                     dbg_log!(
                         "EXIT  reason=max_resumes(stall)  step_count={}  \
                          resume_count={}  frag_total={:.3}  valid_total={:.3}",
-                        step_count,
+                        stuck_detector.step_count(),
                         resume_count,
                         cleared.total_area(),
                         valid_total,
@@ -745,7 +722,7 @@ pub fn adaptive_clearing(
                             &wall_hug_segments.segment_counts_ref(),
                         );
                         prev_pos = tool.pos;
-                        last_check_area = cleared.total_area();
+                        stuck_detector.reset(cleared.total_area());
                         last_resume_area = cleared.total_area();
                         last_resume_pos = tool.pos;
                         segment_start = ToolPose {
@@ -755,7 +732,7 @@ pub fn adaptive_clearing(
                         in_envelope = false;
                         wall_hug_tracking = None;
                         wall_hug_segments.finalize_segment();
-                        step_count = 0;
+                        stuck_detector.reset(cleared.total_area());
                         resume_done = true;
                         break 'resume;
                     }
@@ -796,7 +773,7 @@ pub fn adaptive_clearing(
                     "EXIT  reason=converged(close-enough)  step_count={}  \
                      resume_count={}  iter={}  frag_total={:.3}  \
                      valid_total={:.3}",
-                    step_count,
+                    stuck_detector.step_count(),
                     resume_count,
                     iter,
                     cleared.total_area(),
@@ -824,7 +801,7 @@ pub fn adaptive_clearing(
                     "EXIT  reason=resume_failed(stuck)  step_count={}  \
                      resume_count={}  growth={:.3}  expected={:.3}  \
                      frag_total={:.3}  valid_total={:.3}",
-                    step_count,
+                    stuck_detector.step_count(),
                     resume_count,
                     growth,
                     expected,
@@ -835,7 +812,7 @@ pub fn adaptive_clearing(
                 dbg_log!(
                     "EXIT  reason=resume_failed(stall)  step_count={}  \
                      resume_count={}  frag_total={:.3}  valid_total={:.3}",
-                    step_count,
+                    stuck_detector.step_count(),
                     resume_count,
                     cleared.total_area(),
                     valid_total,
