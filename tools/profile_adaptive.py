@@ -1,34 +1,15 @@
 #!/usr/bin/env python3
 """Profile `adaptive_clearing` — measure per-function CPU time."""
 
-import math
 import sys
 import time
+from pathlib import Path as _Path
 
-sys.path.insert(0, "tools/examples")
+sys.path.insert(0, str(_Path(__file__).resolve().parent.parent))
 
 from raygeo.ops.assembly.adaptive import adaptive_clearing
 from raygeo.ops.cut.cleared_area import ClearedArea
-
-
-def _rect(cx, cy, w, h):
-    return [
-        (cx - w / 2, cy - h / 2),
-        (cx + w / 2, cy - h / 2),
-        (cx + w / 2, cy + h / 2),
-        (cx - w / 2, cy + h / 2),
-    ]
-
-
-def _seed_circle(cx, cy, r, n=64):
-    return [
-        (
-            cx + r * math.cos(2 * math.pi * i / n),
-            cy + r * math.sin(2 * math.pi * i / n),
-        )
-        for i in range(n)
-    ]
-
+from tools.cli.scenarios import circle_polygon, rect
 
 _TOOL_RADIUS = 1.0
 _ADVANCE = 0.1
@@ -36,9 +17,9 @@ _STEP_LENGTH = 0.1
 
 
 def main():
-    boundary = _rect(0, 0, 60, 60)
-    islands = [_rect(5, 0, 10, 10)]
-    seed = [_seed_circle(-13.7, 13.7, 12.2)]
+    boundary = rect(0, 0, 60, 60)
+    islands = [rect(5, 0, 10, 10)]
+    seed = [circle_polygon(-13.7, 13.7, 12.2)]
     ca = ClearedArea(
         boundary=boundary,
         islands=islands,
