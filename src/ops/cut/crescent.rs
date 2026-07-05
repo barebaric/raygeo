@@ -9,8 +9,8 @@ use crate::geo::shape::circle::{
     get_circle_circle_intersections, get_line_circle_intersections,
 };
 use crate::geo::shape::polygon::{
-    does_polygon_enclose_circle, get_polygon_bounds, get_polygon_signed_area,
-    rotate_polygon,
+    does_polygon_enclose_circle_with_bounds, get_polygon_bounds,
+    get_polygon_signed_area, rotate_polygon,
 };
 use crate::geo::shape::rect::do_rects_intersect;
 use crate::types::{Point, Polygon, Rect};
@@ -63,7 +63,6 @@ struct SweepContext {
 /// Returns `None` for any of the short-circuit cases that yield zero
 /// area (coincident centres, a fragment fully enclosing the disk, or a
 /// non-empty `valid_area` that misses the disk entirely).
-#[prof]
 fn prepare_sweep(
     c1: Point,
     c2: Point,
@@ -114,7 +113,8 @@ fn prepare_sweep(
         }
         let is_hole = get_polygon_signed_area(&rotated) < 0.0;
         frag_is_hole.push(is_hole);
-        let encloses = does_polygon_enclose_circle(c2, radius, &rotated);
+        let encloses =
+            does_polygon_enclose_circle_with_bounds(c2, radius, &rotated, &bounds);
         frag_encloses.push(encloses);
         // Only short-circuit for CCW fragments when no CW hole
         // overlaps the disc.  A nearby hole means the disc reaches
@@ -169,7 +169,6 @@ fn prepare_sweep(
 /// Build the sorted, de-duplicated set of x-coordinates at which the
 /// sweep topology can change: polygon vertices, every edge×circle and
 /// circle×circle intersection, and the `c2` disk extents.
-#[prof]
 fn build_xcoords(cx: &SweepContext) -> Vec<f64> {
     let c1 = cx.c1;
     let c2 = cx.c2;
@@ -253,7 +252,6 @@ struct SweepEdge {
 ///
 /// `circle_active` is a 2-element array: `[c2_active, c1_active]` where
 /// `true` means the circle's x-range contains `xtest`.
-#[prof]
 #[allow(clippy::too_many_arguments)]
 fn slab_crossings(
     edges: &[SweepEdge],
@@ -358,7 +356,6 @@ fn fast_acos(x: f64) -> f64 {
 
 /// Signed area contribution of a circular-arc slab between `x0..x1`
 /// around centre `c`.  `cs = +1` for the upper arc, `-1` for the lower.
-#[prof]
 fn arc_slab_area(c: Point, radius: f64, x0: f64, x1: f64, cs: f64) -> f64 {
     let phi0 = fast_acos((x0 - c.x) / radius) * cs;
     let phi1 = fast_acos((x1 - c.x) / radius) * cs;
@@ -574,7 +571,6 @@ fn sweep_area(cx: &SweepContext, xs: &[f64]) -> (f64, f64) {
 /// `fragments` are closed polygons subtracted from the increment.
 /// `valid_area` constrains the result to its interior (intersection).
 /// Pass `&[]` for either argument to skip that constraint.
-#[prof]
 pub fn cut_area(
     c1: Point,
     c2: Point,

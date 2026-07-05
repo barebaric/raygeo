@@ -18,7 +18,6 @@ mod resume_mat;
 mod resume_segment;
 mod resume_wall_hug;
 pub mod routing;
-mod routing_astar;
 mod routing_direct;
 mod routing_frontier;
 mod routing_mat;
@@ -224,7 +223,7 @@ struct StallState<'a> {
     resume_count: &'a mut usize,
     resume_reasons: &'a mut resume::ResumeReasons,
     resume_details: &'a mut resume::ResumeReasons,
-    route_details: &'a mut [u8; 5],
+    route_details: &'a mut [u8; 4],
     last_resume_point: &'a mut Point3D,
     resume_candidate_pts: &'a mut resume::ResumeCandidatePoints,
 }
@@ -643,7 +642,7 @@ pub fn adaptive_clearing(
 
     let mut resume_reasons = resume::ResumeReasons::default();
     let mut resume_details = resume::ResumeReasons::default();
-    let mut route_details = [0u8; 5];
+    let mut route_details = [0u8; 4];
     let mut last_resume_point = Point3D::ZERO;
     let mut resume_candidate_pts = resume::ResumeCandidatePoints::default();
 

@@ -41,6 +41,7 @@ fn offset_inward(pt: Point, normal: Point, radius: f64, advance: f64) -> Point {
 /// * `start_frac` — fractional offset along the edge starting at
 ///   `start_idx` (0.0 = at the vertex, 0.5 = mid-edge).  Used for
 ///   fractional-start walks; pass `0.0` to start at the vertex.
+#[prof]
 pub(crate) fn walk_polygon_samples<F>(
     poly: &Polygon,
     start_idx: usize,
@@ -77,7 +78,7 @@ where
     }
 
     let mut is_first = true;
-    walk_polygon_vertices(poly, start_idx, forward, |idx, _pt| {
+    walk_polygon_vertices(poly, start_idx, forward, 1, |idx, _pt| {
         if skip_closest && is_first {
             is_first = false;
             return None;

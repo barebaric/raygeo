@@ -6,6 +6,8 @@
 
 use std::collections::BinaryHeap;
 
+use prof_macros::prof;
+
 use crate::geo::shape::polygon::{
     get_polygon_group_bounds, is_point_inside_polygon, offset_polygon,
     JoinStyle,
@@ -48,6 +50,7 @@ pub struct AStarPath {
 /// * `obstacles` — forbidden zones to avoid.
 /// * `obstacle_margin` — radius by which obstacles are expanded.
 /// * `cell_size` — raster grid resolution (smaller = finer but slower).
+#[prof]
 #[allow(clippy::too_many_arguments)]
 pub fn find_path(
     from: Point,

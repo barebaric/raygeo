@@ -1,3 +1,5 @@
+use prof_macros::prof;
+
 use crate::geo::shape::polygon::get_polygons_closest_point;
 use crate::geo::shape::polygon::offset_polygon;
 use crate::geo::shape::polygon::resample_polygon;
@@ -22,6 +24,7 @@ impl RoutingStrategy for RoutingFrontier {
         "frontier"
     }
 
+    #[prof]
     fn find_route(
         &self,
         ctx: &RouteCtx,

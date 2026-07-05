@@ -16,7 +16,6 @@ use crate::types::{Point, Point3D, Polygon, Rect};
 
 use super::chain::StrategyChain;
 
-pub use super::routing_astar::RoutingAStar;
 pub use super::routing_direct::RoutingDirect;
 pub use super::routing_frontier::RoutingFrontier;
 pub use super::routing_mat::RoutingMat;
@@ -55,12 +54,6 @@ pub const ROUTE_MAT_NO_CLEARED: u8 = 10;
 pub const ROUTE_MAT_NO_PATH: u8 = 11;
 pub const ROUTE_MAT_SWEEP_COLLIDE: u8 = 12;
 
-// AStar
-pub const ROUTE_ASTAR_NO_OBSTACLES: u8 = 13;
-pub const ROUTE_ASTAR_NO_FREE_SPACE: u8 = 14;
-pub const ROUTE_ASTAR_FAILED: u8 = 15;
-pub const ROUTE_ASTAR_TOO_FEW_WAYPOINTS: u8 = 16;
-
 // ZHop
 pub const ROUTE_ZHOP_OK: u8 = 17;
 
@@ -79,10 +72,6 @@ pub fn route_detail_label(code: u8) -> &'static str {
         ROUTE_MAT_NO_CLEARED => "no_cleared",
         ROUTE_MAT_NO_PATH => "no_path",
         ROUTE_MAT_SWEEP_COLLIDE => "sweep_collide",
-        ROUTE_ASTAR_NO_OBSTACLES => "no_obstacles",
-        ROUTE_ASTAR_NO_FREE_SPACE => "no_free_space",
-        ROUTE_ASTAR_FAILED => "astar_failed",
-        ROUTE_ASTAR_TOO_FEW_WAYPOINTS => "too_few_waypoints",
         ROUTE_ZHOP_OK => "zhop_ok",
         _ => "unknown",
     }
@@ -121,10 +110,8 @@ pub enum RouteSource {
     RoutingFrontier = 2,
     /// MAT-guided travel through the cleared fragments.
     RoutingMat = 3,
-    /// Grid-based A* path through cleared fragments.
-    RoutingAStar = 4,
     /// Safe-Z direct travel (retract → direct move → plunge).
-    RoutingZHop = 5,
+    RoutingZHop = 4,
 }
 
 /// Source label for a given strategy.
@@ -134,7 +121,6 @@ pub(crate) fn source_label(source: RouteSource) -> &'static str {
         RouteSource::RoutingDirect => "direct",
         RouteSource::RoutingFrontier => "frontier",
         RouteSource::RoutingMat => "mat",
-        RouteSource::RoutingAStar => "astar",
         RouteSource::RoutingZHop => "zhop",
     }
 }
@@ -219,14 +205,13 @@ pub fn optimize_route<'a>(
     ctx: &RouteCtx<'a>,
     from: Point3D,
     to: Point3D,
-    details: &mut [u8; 5],
+    details: &mut [u8; 4],
 ) -> Option<(RouteSource, Vec<Point3D>)> {
-    let mut chain: StrategyChain<&dyn RoutingStrategy, RouteSource, 5> =
+    let mut chain: StrategyChain<&dyn RoutingStrategy, RouteSource, 4> =
         StrategyChain::new([
             (&RoutingDirect, RouteSource::RoutingDirect),
             (&RoutingFrontier, RouteSource::RoutingFrontier),
             (&RoutingMat, RouteSource::RoutingMat),
-            (&RoutingAStar, RouteSource::RoutingAStar),
             (&RoutingZHop, RouteSource::RoutingZHop),
         ]);
 

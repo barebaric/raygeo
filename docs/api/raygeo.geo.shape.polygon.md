@@ -1136,6 +1136,7 @@ walk_polygon_vertices(
     polygon: list[tuple[float, float]],
     start_idx: int,
     forward: bool,
+    stride: int = 1,
 ) -> list[tuple[int, float, float]]
 ```
 
@@ -1144,4 +1145,5 @@ walk_polygon_vertices(
 | `polygon`   | `list[tuple[float, float]]`      |             |
 | `start_idx` | `int`                            |             |
 | `forward`   | `bool`                           |             |
+| `stride`    | `int = 1`                        |             |
 | _Returns_   | `list[tuple[int, float, float]]` |             |

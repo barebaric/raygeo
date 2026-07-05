@@ -93,7 +93,10 @@ fn frontier_resume(
         tool.radius,
         &polys,
         "FRONTIER",
-        WalkProbeOptions::default(),
+        WalkProbeOptions {
+            sample_spacing_mult: 1.75,
+            ..Default::default()
+        },
         offset_and_probe,
     )
 }

@@ -124,6 +124,7 @@ fn frontier_hole_resume(
             cleared_on_left: true,
             ray_march: Some(island_ray_march),
             centered_samples: true,
+            sample_spacing_mult: 1.0,
         },
         probe,
     );

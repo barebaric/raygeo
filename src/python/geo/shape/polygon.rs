@@ -1951,6 +1951,7 @@ fn walk_polygon_from_point_py(
 /// :param start_idx: Starting vertex index.
 /// :param forward: ``True`` to walk forward (increasing index),
 ///    ``False`` to walk backward (decreasing index).
+/// :param stride: Visit every `stride`-th vertex (default ``1`` = all).
 /// :returns: List of ``(index, x, y)`` tuples in walk order.
 #[gen_stub_pyfunction(
     python = r#"
@@ -1958,23 +1959,28 @@ fn walk_polygon_from_point_py(
         polygon: list[tuple[float, float]],
         start_idx: int,
         forward: bool,
+        stride: int = 1,
     ) -> list[tuple[int, float, float]]:
         ...
     "#,
     module = "raygeo.geo.shape.polygon"
 )]
 #[pyfunction(name = "walk_polygon_vertices")]
+#[pyo3(signature = (polygon, start_idx, forward, stride = None))]
 fn walk_polygon_vertices_py(
     polygon: Vec<PyPoint2D>,
     start_idx: usize,
     forward: bool,
+    stride: Option<usize>,
 ) -> Vec<(usize, f64, f64)> {
+    let stride = stride.unwrap_or(1);
     let poly = poly_to_points(polygon);
     let mut result = Vec::with_capacity(poly.len());
     let _ = crate::geo::shape::polygon::walk_polygon_vertices(
         &poly,
         start_idx,
         forward,
+        stride,
         |idx, pt| {
             result.push((idx, pt.x, pt.y));
             None::<()>

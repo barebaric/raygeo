@@ -16,7 +16,6 @@ use crate::types::{Point, Polygon};
 /// shells and holes.  CCW-wound polygons are outer shells; CW-wound
 /// polygons are holes.  A point is valid iff it is inside at least one
 /// CCW polygon AND outside all CW polygons.
-#[prof]
 pub fn point_in_valid_area(pt: Point, area: &[Polygon]) -> bool {
     let mut inside_outer = false;
     let mut inside_hole = false;

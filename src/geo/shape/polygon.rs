@@ -149,7 +149,6 @@ pub fn get_polygon_edges(polygon: &Polygon) -> Vec<Edge> {
 }
 
 /// Get the bounding box of a polygon as (min_x, min_y, max_x, max_y).
-#[prof]
 pub fn get_polygon_bounds(polygon: &Polygon) -> Rect {
     if polygon.is_empty() {
         return Rect::default();
@@ -554,7 +553,6 @@ pub fn compute_polygon_bounds(polygons: &[Polygon]) -> Vec<Rect> {
 /// only when the signed coverage (CCW outers count +1, CW holes count
 /// −1) is positive.  This prevents holes from being
 /// treated as solid obstacles.
-#[prof]
 pub fn does_path_sweep_intersect_polygon(
     path: &[Point],
     radius: f64,
@@ -675,7 +673,6 @@ pub fn get_polygon_centroid(polygon: &Polygon) -> Point {
 /// squared Euclidean distance from `(x, y)` to that point.
 ///
 /// Returns `None` when the polygon has fewer than 2 vertices.
-#[prof]
 pub fn get_polygon_closest_point(
     polygon: &Polygon,
     x: f64,
@@ -1191,10 +1188,33 @@ pub fn is_point_inside_polygon(point: Point, polygon: &Polygon) -> bool {
 /// 3. Every edge of the polygon must be at least `radius` away from the
 ///    centre (handles concave shapes whose AABB and centroid satisfy
 ///    checks 1–2 but whose notch cuts through the disk).
+///
+/// When `bounds` is `Some`, the AABB check uses the provided rect instead of
+/// recomputing it (the caller already has the bounds from a prior call).
 pub fn does_polygon_enclose_circle(
     center: Point,
     radius: f64,
     polygon: &Polygon,
+) -> bool {
+    does_polygon_enclose_circle_impl(center, radius, polygon, None)
+}
+
+/// Like [`does_polygon_enclose_circle`] but accepts pre-computed AABB bounds
+/// to avoid redundant recomputation when the caller already has them.
+pub fn does_polygon_enclose_circle_with_bounds(
+    center: Point,
+    radius: f64,
+    polygon: &Polygon,
+    bounds: &Rect,
+) -> bool {
+    does_polygon_enclose_circle_impl(center, radius, polygon, Some(bounds))
+}
+
+fn does_polygon_enclose_circle_impl(
+    center: Point,
+    radius: f64,
+    polygon: &Polygon,
+    bounds: Option<&Rect>,
 ) -> bool {
     if polygon.len() < 3 {
         return false;
@@ -1205,8 +1225,8 @@ pub fn does_polygon_enclose_circle(
         center.x + radius,
         center.y + radius,
     );
-    let bounds = get_polygon_bounds(polygon);
-    if !crate::geo::shape::rect::does_rect_contain_rect(bounds, circle_rect) {
+    let b = bounds.copied().unwrap_or_else(|| get_polygon_bounds(polygon));
+    if !crate::geo::shape::rect::does_rect_contain_rect(b, circle_rect) {
         return false;
     }
     if !is_point_in_polygon(center, polygon) {
@@ -1444,18 +1464,21 @@ pub fn get_polygon_heading_at(polygon: &[Point], vertex: Point) -> f64 {
 ///
 /// * `start_idx` — vertex index to start from.
 /// * `forward` — `true` for increasing index, `false` for decreasing.
-/// * `visit` — called for each vertex; short-circuit on `Some`.
+/// * `stride` — visit every `stride`-th vertex (1 = all vertices).
+/// * `visit` — called for each visited vertex; short-circuit on `Some`.
 pub(crate) fn walk_polygon_vertices<T>(
     polygon: &[Point],
     start_idx: usize,
     forward: bool,
+    stride: usize,
     mut visit: impl FnMut(usize, &Point) -> Option<T>,
 ) -> Option<T> {
     let n = polygon.len();
-    if n < 3 {
+    if n < 3 || stride == 0 {
         return None;
     }
-    for offset in 0..n {
+    let mut offset = 0usize;
+    while offset < n {
         let idx = if forward {
             (start_idx + offset) % n
         } else {
@@ -1464,6 +1487,7 @@ pub(crate) fn walk_polygon_vertices<T>(
         if let result @ Some(_) = visit(idx, &polygon[idx]) {
             return result;
         }
+        offset += stride;
     }
     None
 }
@@ -1502,5 +1526,5 @@ pub fn walk_polygon_from_point<T>(
                 .unwrap_or(std::cmp::Ordering::Equal)
         })
         .map(|(i, _)| i)?;
-    walk_polygon_vertices(polygon, start_idx, true, visit)
+    walk_polygon_vertices(polygon, start_idx, true, 1, visit)
 }

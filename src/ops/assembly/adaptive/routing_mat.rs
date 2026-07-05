@@ -1,3 +1,5 @@
+use prof_macros::prof;
+
 use crate::ops::assembly::adaptive::routing::{
     sweep_clear, RouteCtx, RoutingStrategy, ROUTE_MAT_NO_AXIS,
     ROUTE_MAT_NO_CLEARED, ROUTE_MAT_NO_PATH, ROUTE_MAT_SWEEP_COLLIDE,
@@ -18,6 +20,7 @@ impl RoutingStrategy for RoutingMat {
         "mat"
     }
 
+    #[prof]
     fn find_route(
         &self,
         ctx: &RouteCtx,

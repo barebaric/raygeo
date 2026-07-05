@@ -1,3 +1,5 @@
+use prof_macros::prof;
+
 use crate::ops::assembly::adaptive::routing::{RouteCtx, RoutingStrategy};
 use crate::types::Point3D;
 
@@ -11,6 +13,7 @@ impl RoutingStrategy for RoutingZHop {
         "zhop"
     }
 
+    #[prof]
     fn find_route(
         &self,
         ctx: &RouteCtx,

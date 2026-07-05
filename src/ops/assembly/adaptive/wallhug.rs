@@ -98,12 +98,21 @@ impl WallHugSegments {
 
 // ── WallHugTracker ──────────────────────────────────────────────────
 
+/// Minimum consecutive steps inside the envelope before we force-record
+/// a wall-hug point even when distance hasn't changed.  Prevents the
+/// track-and-never-record scenario when the tool scrapes along the wall.
+const ENVELOPE_VISIT_RECORD_INTERVAL: u32 = 4;
+
 /// Tracks envelope proximity to record wall-hug poses for the
 /// [`ResumeWallHug`](super::resume_wall_hug) strategy.
 pub(super) struct WallHugTracker {
     segments: WallHugSegments,
     in_envelope: bool,
     tracking: Option<(ToolPose, f64)>,
+    /// Steps since the last wall-hug point was recorded during the
+    /// current envelope visit.  Reset on entry, distance change, or
+    /// departure.
+    steps_since_record: u32,
 }
 
 impl WallHugTracker {
@@ -112,6 +121,7 @@ impl WallHugTracker {
             segments: WallHugSegments::new(),
             in_envelope: false,
             tracking: None,
+            steps_since_record: 0,
         }
     }
 
@@ -133,21 +143,35 @@ impl WallHugTracker {
 
         if !self.in_envelope && inside {
             self.in_envelope = true;
+            self.steps_since_record = 0;
             self.tracking = Some((ToolPose { pos, heading }, dist));
         } else if self.in_envelope && !inside {
             if let Some((candidate, _)) = self.tracking.take() {
+                // Record the minimum-distance pose at departure.
                 self.segments.push(candidate);
             }
             self.in_envelope = false;
+            self.steps_since_record = 0;
         } else if self.in_envelope && inside {
             if let Some((candidate, min_dist)) = self.tracking.take() {
                 if dist < min_dist {
+                    // Getting closer — track the new minimum.
+                    self.steps_since_record = 0;
                     self.tracking = Some((ToolPose { pos, heading }, dist));
                 } else if dist > min_dist + 1e-9 {
+                    // Moving away from the wall — record departure.
                     self.segments.push(candidate);
                     self.tracking = None;
                     self.in_envelope = false;
+                    self.steps_since_record = 0;
                 } else {
+                    // Same distance — possibly scraping along the wall.
+                    // Record periodically even without formal departure.
+                    self.steps_since_record += 1;
+                    if self.steps_since_record >= ENVELOPE_VISIT_RECORD_INTERVAL {
+                        self.segments.push(candidate);
+                        self.steps_since_record = 0;
+                    }
                     self.tracking = Some((candidate, min_dist));
                 }
             }

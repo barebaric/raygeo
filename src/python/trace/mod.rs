@@ -301,8 +301,6 @@ impl PyRouteSource {
     #[classattr]
     pub const MAT: PyRouteSource = PyRouteSource(RRouteSource::RoutingMat);
     #[classattr]
-    pub const ASTAR: PyRouteSource = PyRouteSource(RRouteSource::RoutingAStar);
-    #[classattr]
     pub const ZHOP: PyRouteSource = PyRouteSource(RRouteSource::RoutingZHop);
 
     fn __repr__(&self) -> &'static str {
@@ -319,7 +317,6 @@ impl PyRouteSource {
             RRouteSource::RoutingDirect => "direct",
             RRouteSource::RoutingFrontier => "frontier",
             RRouteSource::RoutingMat => "mat",
-            RRouteSource::RoutingAStar => "astar",
             RRouteSource::RoutingZHop => "zhop",
         }
     }
@@ -419,15 +416,17 @@ impl PyTraceRecord {
 
 /// Binary trace file with random access to records.
 ///
-/// Usage::
+/// Usage:
 ///
-///     >>> from raygeo.trace import TraceFile
-///     >>> t = TraceFile("path/to/trace.bin")
-///     >>> len(t)          # number of records
-///     >>> t[0]            # first record (TraceRecord with dot access)
-///     >>> t.toolpath      # list of (x, y, move_kind) tuples
-///     >>> t.geometry      # dict with tool_radius, boundary, islands, seeds
-///     >>> t.mat_nodes     # MAT nodes or empty list
+/// ```python
+/// >>> from raygeo.trace import TraceFile
+/// >>> t = TraceFile("path/to/trace.bin")
+/// >>> len(t)          # number of records
+/// >>> t[0]            # first record (TraceRecord with dot access)
+/// >>> t.toolpath      # list of (x, y, move_kind) tuples
+/// >>> t.geometry      # dict with tool_radius, boundary, islands, seeds
+/// >>> t.mat_nodes     # MAT nodes or empty list
+/// ```
 #[gen_stub_pyclass]
 #[pyclass(skip_from_py_object, module = "raygeo.trace", name = "TraceFile")]
 pub struct PyTraceFile {

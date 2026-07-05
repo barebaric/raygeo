@@ -78,6 +78,7 @@ pub fn prof_report() {
 
         println!("\n=== PROFILING SUMMARY ===");
         for (name, dur) in &entries {
+            let display = name.strip_prefix("raygeo::").unwrap_or(name);
             let count = data.counts.get(*name).unwrap_or(&0);
             let pct = if wall_ms > 0.0 {
                 dur.as_secs_f64() * 100.0 / wall.as_secs_f64()
@@ -86,15 +87,15 @@ pub fn prof_report() {
             };
             let avg_ms = dur.as_secs_f64() * 1000.0 / *count as f64;
             println!(
-                "{:>30}: {:>8.1}ms ({:>5.1}%) {:>6} calls, avg {:.3}ms",
-                name,
+                "{:>60}: {:>8.1}ms ({:>5.1}%) {:>6} calls, avg {:.3}ms",
+                display,
                 dur.as_secs_f64() * 1000.0,
                 pct,
                 count,
                 avg_ms
             );
         }
-        println!("{:>30}: {:>8.1}ms", "WALL", wall_ms);
+        println!("{:>60}: {:>8.1}ms", "WALL", wall_ms);
         println!("===========================\n");
     });
 }

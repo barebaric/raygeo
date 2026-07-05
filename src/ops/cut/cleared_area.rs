@@ -1,4 +1,5 @@
 use std::collections::HashSet;
+use std::sync::Mutex;
 
 use prof_macros::prof;
 
@@ -14,6 +15,20 @@ use crate::geo::shape::polygon::{
 };
 use crate::ops::cut::crescent;
 use crate::types::{Point, Polygon, Rect};
+
+/// Single-entry cache for [`ClearedArea::cut_area_split`].
+///
+/// During a step evaluation the same `(c1, c2, radius)` triple is
+/// queried many times (once the angle converges).  Because fragments
+/// are immutable between commits, a single-entry cache avoids
+/// redundant `prepare_sweep` + `sweep_area` calls.
+struct SweepCache {
+    c1: Point,
+    c2: Point,
+    radius: f64,
+    total: f64,
+    left: f64,
+}
 
 pub struct ClearedArea {
     /// Stock pocket outline (CCW).
@@ -32,6 +47,11 @@ pub struct ClearedArea {
     pub(crate) batch_radius: f64,
     /// True when `begin_batch()` has been called.
     pub(crate) batch_active: bool,
+    // ── Sweep cache ──
+    /// Single-entry result cache for [`Self::cut_area_split`].
+    /// Cleared whenever fragments are mutated (see
+    /// [`Self::clear_sweep_cache`]).
+    sweep_cache: Mutex<Option<SweepCache>>,
 }
 
 impl ClearedArea {
@@ -50,6 +70,7 @@ impl ClearedArea {
             batch_path: Vec::new(),
             batch_radius: 0.0,
             batch_active: false,
+            sweep_cache: Mutex::new(None),
         }
     }
 
@@ -71,6 +92,7 @@ impl ClearedArea {
             batch_path: Vec::new(),
             batch_radius: 0.0,
             batch_active: false,
+            sweep_cache: Mutex::new(None),
         };
         for poly in initial {
             if poly.len() >= 3 {
@@ -110,6 +132,13 @@ impl ClearedArea {
 
     // ── Mutation ───────────────────────────────────────────────────
 
+    /// Clear the single-entry sweep cache (called whenever fragments
+    /// are modified).
+    #[inline]
+    fn clear_sweep_cache(&self) {
+        *self.sweep_cache.lock().unwrap() = None;
+    }
+
     /// Replace all stored fragments with a new set (e.g., the new frontier
     /// after a wavefront advance).  This is O(m) in the new fragment count
     /// and avoids the O(n·m) accumulation of
@@ -117,6 +146,7 @@ impl ClearedArea {
     #[prof]
     pub fn replace_fragments(&mut self, fragments: Vec<Polygon>) {
         self.fragments = fragments;
+        self.clear_sweep_cache();
         self.rebuild_grid();
     }
 
@@ -148,6 +178,7 @@ impl ClearedArea {
         let mut all_polys = self.fragments.clone();
         all_polys.extend(swept);
         self.fragments = get_polygons_union(&all_polys);
+        self.clear_sweep_cache();
         self.rebuild_grid();
     }
 
@@ -477,6 +508,7 @@ impl ClearedArea {
                 self.fragments.push(poly);
             }
         }
+        self.clear_sweep_cache();
         self.rebuild_grid();
     }
 
@@ -586,6 +618,19 @@ impl ClearedArea {
         c2: Point,
         radius: f64,
     ) -> (f64, f64) {
+        // Single-entry cache: when the stepper converges on the same
+        // angle, repeated iterations (e.g. 8-19 of 20) query the same
+        // (c1, c2, radius) triple.  Fragments are immutable between
+        // commits, so the cached result is valid.
+        {
+            let cache = self.sweep_cache.lock().unwrap();
+            if let Some(ref c) = *cache {
+                if c.c1 == c1 && c.c2 == c2 && c.radius == radius {
+                    return (c.total, c.left);
+                }
+            }
+        }
+
         let bb = Rect::new(
             c2.x - radius,
             c2.y - radius,
@@ -594,7 +639,17 @@ impl ClearedArea {
         );
         let nearby: Vec<Polygon> =
             self.query_window(bb).into_iter().cloned().collect();
-        crescent::cut_area(c1, c2, radius, &nearby, &[])
+        let (total, left) = crescent::cut_area(c1, c2, radius, &nearby, &[]);
+
+        *self.sweep_cache.lock().unwrap() = Some(SweepCache {
+            c1,
+            c2,
+            radius,
+            total,
+            left,
+        });
+
+        (total, left)
     }
 
     /// Evaluate engagement along a polyline for post-hoc analysis.

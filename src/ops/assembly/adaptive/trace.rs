@@ -119,7 +119,7 @@ pub(super) struct AdaptivePayload {
     /// Per-strategy detail code for the last routing failure.
     /// Index 0-4 = Direct, Frontier, Mat, AStar, ZHop.
     /// 0 = success / not tried.  See `routing::ROUTE_*` constants.
-    pub route_strategy_details: [u8; 5],
+    pub route_strategy_details: [u8; 4],
     /// Position of the last resume point candidate (routing target).
     pub resume_point_x: f64,
     pub resume_point_y: f64,
@@ -191,7 +191,7 @@ impl TraceRecord {
                 wall_hug_segment_counts: Vec::new(),
                 resume_strategy_reasons: [0u8; 6],
                 resume_strategy_details: [0u8; 6],
-                route_strategy_details: [0u8; 5],
+                route_strategy_details: [0u8; 4],
                 resume_point_x: 0.0,
                 resume_point_y: 0.0,
                 resume_point_z: 0.0,
@@ -348,7 +348,7 @@ impl TraceRecorder {
         ops_len: u32,
         reasons: &[u8; 6],
         details: &[u8; 6],
-        route_details: &[u8; 5],
+        route_details: &[u8; 4],
         rp: Point3D,
         candidate_pts: &[(f64, f64, f64); 6],
         wall_hug_points: &[(f64, f64)],
@@ -397,7 +397,7 @@ impl TraceRecorder {
         ops_len: u32,
         reasons: &[u8; 6],
         details: &[u8; 6],
-        route_details: &[u8; 5],
+        route_details: &[u8; 4],
         rp: Point3D,
         candidate_pts: &[(f64, f64, f64); 6],
         wall_hug_points: &[(f64, f64)],

@@ -789,7 +789,7 @@ class Inspector:
                         color="darkgreen",
                     )
 
-            route_names = ["direct", "frontier", "mat", "astar", "zhop"]
+            route_names = ["direct", "frontier", "mat", "zhop"]
             win_route = (
                 rec.route_source.value - 1
                 if rec.route_source.value > 0

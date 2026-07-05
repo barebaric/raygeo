@@ -228,6 +228,9 @@ fn step_inner(
         opts.max_deflection,
         opts.dir_sign,
     );
+
+    let mut found_correct_side = false;
+
     for iter in 0..MAX_IT {
         iters = iter + 1;
         if skip_count > 3 {
@@ -279,7 +282,7 @@ fn step_inner(
         let right = total - left;
         let area_pd = total / opts.step_length;
         let error = area_pd - opts.target_area_pd;
-        let is_conv = total > 0.0 && angle > 0.03;
+        let is_conv = total > 1e-9 && angle > 0.03;
 
         // Directional bias: when material is on both sides (breakthrough),
         // penalise the side that contradicts `dir_sign`.  The penalty is
@@ -296,6 +299,9 @@ fn step_inner(
             // opts.dir_sign > 0 (CW):  material should be on the left; the
             //   wrong side is `right`.
             let wrong = if opts.dir_sign < 0.0 { left } else { right };
+            if total > 1e-9 && wrong < 0.5 * total {
+                found_correct_side = true;
+            }
             let penalty = DIR_BIAS_WEIGHT * wrong / opts.step_length;
             (error + penalty, penalty, wrong)
         };
@@ -327,7 +333,7 @@ fn step_inner(
             deflection_penalty,
         );
 
-        if total > 0.0 {
+        if total > 1e-12 {
             found_area = true;
         }
 
@@ -341,6 +347,28 @@ fn step_inner(
             best_angle = angle;
             best_dir = dir;
             best_pos = candidate;
+        }
+
+        // Interpolation stuck: same angle as last iteration — the
+        // bracket cannot refine further.  This is placed AFTER the
+        // full evaluation (cut_area + best tracking) so the repeated
+        // angle still gets a chance to improve `best_pos`.
+        if !is_not_interp && iter >= 3 && (angle - last_angle).abs() < 1e-9 {
+            exit_reason = "interp_stuck";
+            break;
+        }
+
+        // Early exit: once we've sampled 0°, min°, max° (iter 0-2)
+        // with no correct-side engagement, the solver is chasing
+        // wrong-side slivers — bail.
+        if opts.dir_sign != 0.0 && found_area && !found_correct_side && iter >= 2 {
+            exit_reason = "wrong_side_only";
+            dbg_log!(
+                "  iter {}  WRONG_SIDE  correct side has no engagement → \
+                 LostEngagement",
+                iter,
+            );
+            break;
         }
 
         // Convergence requires raw cut-area error within tolerance

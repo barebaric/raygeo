@@ -2309,6 +2309,61 @@ def test_walk_polygon_vertices_degenerate():
     assert walk_polygon_vertices([(0.0, 0.0), (1.0, 0.0)], 0, True) == []
 
 
+def test_walk_polygon_vertices_stride2():
+    """Stride=2 visits every second vertex forward from index 0."""
+    sq = _ccw_square()
+    walk = walk_polygon_vertices(sq, 0, True, 2)
+    assert walk == [
+        (0, 0.0, 0.0),
+        (2, 10.0, 10.0),
+    ]
+
+
+def test_walk_polygon_vertices_stride3():
+    """Stride=3 visits every third vertex on a 5-gon."""
+    pentagon = [(0.0, 0.0), (2.0, 0.0), (3.0, 2.0), (1.0, 4.0), (-1.0, 2.0)]
+    walk = walk_polygon_vertices(pentagon, 1, True, 3)
+    assert walk == [
+        (1, 2.0, 0.0),
+        (4, -1.0, 2.0),
+    ]
+
+
+def test_walk_polygon_vertices_stride_skips_vertex0():
+    """Stride with start_idx != 0 skips different vertices."""
+    sq = _ccw_square()
+    walk = walk_polygon_vertices(sq, 1, True, 2)
+    assert walk == [
+        (1, 10.0, 0.0),
+        (3, 0.0, 10.0),
+    ]
+
+
+def test_walk_polygon_vertices_stride_backward():
+    """Stride works with backward direction."""
+    sq = _ccw_square()
+    walk = walk_polygon_vertices(sq, 3, False, 2)
+    assert walk == [
+        (3, 0.0, 10.0),
+        (1, 10.0, 0.0),
+    ]
+
+
+def test_walk_polygon_vertices_stride1_matches_default():
+    """stride=1 produces the same result as the default (no stride)."""
+    sq = _ccw_square()
+    default = walk_polygon_vertices(sq, 0, True)
+    explicit = walk_polygon_vertices(sq, 0, True, 1)
+    assert default == explicit
+
+
+def test_walk_polygon_vertices_stride_larger_than_poly():
+    """Stride larger than vertex count visits only start vertex."""
+    tri = [(1.0, 1.0), (4.0, 1.0), (2.5, 5.0)]
+    walk = walk_polygon_vertices(tri, 0, True, 10)
+    assert walk == [(0, 1.0, 1.0)]
+
+
 # ── does_polygon_enclose_circle ─────────────────────────────────────
 
 

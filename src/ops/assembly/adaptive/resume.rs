@@ -60,7 +60,7 @@ pub(super) const WALL_PROXIMITY: f64 = 0.3;
 /// Canonical probing function — single source of truth for "can the
 /// tool move forward from `pos` with `heading`?"
 ///
-/// Calls [`step`] with the exact same [`StepperOptions`] the main loop
+/// Calls `step` with the exact same [`StepperOptions`] the main loop
 /// uses (passed via [`ResumeCtx::step_opts`]), so the probing decision
 /// is architecturally guaranteed to match what the main loop would
 /// decide.  `predicted_angle` is 0.0 because the tool has no heading
@@ -253,6 +253,9 @@ pub(super) struct WalkProbeOptions {
     /// Use centered edge-only samples (no vertex visits) instead of the
     /// default vertex + sub-edge sampling via [`walk_polygon_samples`].
     pub centered_samples: bool,
+    /// Sample spacing multiplier (>1 = fewer samples, <1 = more samples).
+    /// Default 1.0 uses `ctx.opts.step_length` directly.
+    pub sample_spacing_mult: f64,
 }
 
 impl Default for WalkProbeOptions {
@@ -264,6 +267,7 @@ impl Default for WalkProbeOptions {
             cleared_on_left: true,
             ray_march: None,
             centered_samples: false,
+            sample_spacing_mult: 1.0,
         }
     }
 }
@@ -289,7 +293,7 @@ pub(super) fn walk_and_probe(
     let ref_pos = opts.ref_pos.unwrap_or(ctx.segment_start.pos);
     let ref_pos_2d = Point::new(ref_pos.x, ref_pos.y);
     let actual_forward = ctx.opts.cut_direction == CutDirection::Ccw;
-    let sample_spacing = ctx.opts.step_length;
+    let sample_spacing = ctx.opts.step_length * opts.sample_spacing_mult;
     let bl_sq_tol = (ctx.opts.step_length * 0.25).powi(2);
     let has_offset = opts.offset.is_some();
 
@@ -449,7 +453,7 @@ where
         .map(|(i, _)| i)
         .unwrap_or(0);
 
-    walk_polygon_vertices(poly, start_idx, forward, |idx, _pt| {
+    walk_polygon_vertices(poly, start_idx, forward, 1, |idx, _pt| {
         let next = (idx + 1) % n;
         let edge = poly[next] - poly[idx];
         let elen = edge.length();
@@ -508,7 +512,7 @@ pub fn emit_resume_travel(
     from: Point3D,
     to: Point3D,
     opts: &AdaptiveClearingOptions,
-    out_route_details: Option<&mut [u8; 5]>,
+    out_route_details: Option<&mut [u8; 4]>,
 ) -> RaygeoResult<routing::RouteSource> {
     // Obstacles = remaining (uncut) material + islands (permanent no-go zones).
     let mut obstacles = cleared.remaining();
@@ -523,7 +527,7 @@ pub fn emit_resume_travel(
         obstacle_bounds: &obs_bounds,
     };
 
-    let mut route_details = [0u8; 5];
+    let mut route_details = [0u8; 4];
     if let Some((source, path)) =
         routing::optimize_route(&ctx, from, to, &mut route_details)
     {

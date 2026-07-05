@@ -14,7 +14,7 @@ pub fn prof(_attr: TokenStream, item: TokenStream) -> TokenStream {
     let expanded = quote! {
         #(#attrs)*
         #vis #sig {
-            let _guard = crate::prof::prof_guard(#fn_name);
+            let _guard = crate::prof::prof_guard(concat!(module_path!(), "::", #fn_name));
             #block
         }
     };
