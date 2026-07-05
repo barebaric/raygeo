@@ -72,6 +72,8 @@ pub mod mesh;
 pub mod ops;
 pub mod prof;
 pub mod svg;
+pub(crate) mod trace_types;
+
 #[cfg(debug_assertions)]
 pub(crate) mod trace;
 pub mod types;
@@ -212,7 +214,7 @@ fn raygeo(m: &Bound<'_, PyModule>) -> PyResult<()> {
     python::mesh::register(m)?;
     python::ops::register(m)?;
     python::svg::register(m)?;
-    python::svg::register(m)?;
+    python::trace::register(m)?;
 
     Ok(())
 }

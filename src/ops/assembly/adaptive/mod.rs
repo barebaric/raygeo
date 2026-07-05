@@ -52,8 +52,9 @@ use std::path::PathBuf;
 
 use resume::{try_resume, ResumeCtx, MAX_RESUMES};
 use tool::Tool;
-use trace::TraceKind;
 use trace::TraceRecorder;
+
+use crate::trace_types::TraceKind;
 
 // ── Named constants ────────────────────────────────────────────────────
 
@@ -572,9 +573,7 @@ pub fn adaptive_clearing(
     // resume attempts and pruned when the tool sweeps near them.
     let mut hug_tracker = wallhug::WallHugTracker::new();
 
-    let mut recorder = TraceRecorder::new(opts, cleared);
-    #[cfg(debug_assertions)]
-    recorder.write_mat(mat.as_ref());
+    let mut recorder = TraceRecorder::new(opts, cleared, mat.as_ref());
     recorder.record_init(
         &tool,
         cleared,

@@ -533,9 +533,11 @@ pub fn emit_resume_travel(
 // ── ResumeSource enum (renamed) ─────────────────────────────────────
 
 /// Which resume mechanism succeeded, in priority order.
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, PartialEq, Eq, num_enum::TryFromPrimitive)]
 #[repr(u8)]
 pub enum ResumeSource {
+    /// No strategy was tried / applicable (trace-record sentinel).
+    None = 0,
     /// Resume from the envelope-departure point (wall-hug).
     ResumeWallHug = 1,
     /// Walk forward from segment_start probing for engagement.

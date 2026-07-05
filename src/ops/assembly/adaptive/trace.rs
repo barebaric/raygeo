@@ -2,22 +2,21 @@
 //!
 //! Defines the per-step record serialised as MessagePack via rmp-serde.
 //! The generic [`crate::trace::Tracer`] writes these records to the
-//! self-contained trace file (geometry + toolpath + records).
+//! self-contained trace file.
 //!
 //! [`TraceRecorder`] wraps the tracer and exposes one-line methods for
 //! each record type.  All `#[cfg(debug_assertions)]` gating lives
 //! inside the adapter — call sites in the orchestrator are unconditional.
 
-use prof_macros::prof;
+use serde::Serialize;
 
-use serde::{Deserialize, Serialize};
-
+use crate::geo::algo::medial_axis::MedialAxis;
 use crate::ops::assembly::adaptive::AdaptiveClearingOptions;
 use crate::ops::container::Ops;
 use crate::ops::cut::ClearedArea;
 use crate::ops::cut::StepStatus;
 #[cfg(debug_assertions)]
-use crate::trace::{TracePoint, Tracer};
+use crate::trace::Tracer;
 use crate::types::Point;
 
 use super::tool::Tool;
@@ -25,32 +24,69 @@ use super::tool::Tool;
 // ── TraceKind ───────────────────────────────────────────────────────
 
 /// Record kind byte values.
-#[repr(u8)]
-#[derive(Clone, Copy)]
-pub(super) enum TraceKind {
-    Init = 0,
-    Cut = 1,
-    ResumeStall = 2,
-    ResumeStuck = 3,
-    Exit = 4,
+pub(crate) use crate::trace_types::TraceKind;
+
+// ── Geometry / MAT records (emitted once at the start) ─────────────
+
+/// Geometry parameters embedded in the trace file.
+#[derive(Serialize)]
+struct GeometryRecord {
+    pub kind: &'static str,
+    pub tool_radius: f64,
+    pub boundary: Vec<(f64, f64)>,
+    pub islands: Vec<Vec<(f64, f64)>>,
+    pub seeds: Vec<Vec<(f64, f64)>>,
+}
+
+/// Lightweight serializable snapshot of the Medial Axis Transform.
+///
+/// Only the data needed for visualisation (nodes, clearances, edges, root)
+/// — no LCA cache, no branches.
+#[derive(Serialize)]
+struct MatRecord {
+    pub kind: &'static str,
+    pub nodes: Vec<(f64, f64)>,
+    pub clearances: Vec<f64>,
+    pub edges: Vec<(u32, u32)>,
+    pub root: u32,
+}
+
+impl From<&MedialAxis> for MatRecord {
+    fn from(ma: &MedialAxis) -> Self {
+        Self {
+            kind: "mat",
+            nodes: ma.nodes.iter().map(|n| (n.point.x, n.point.y)).collect(),
+            clearances: ma.nodes.iter().map(|n| n.clearance).collect(),
+            edges: ma
+                .edges
+                .iter()
+                .map(|&(i, j)| (i as u32, j as u32))
+                .collect(),
+            root: ma.root as u32,
+        }
+    }
 }
 
 // ── TraceRecord ─────────────────────────────────────────────────────
 
-/// Per-step trace record, serialised as MessagePack.
-///
-/// All fields that appear in every record are included; Cut-specific
-/// fields (iters, iteration_angle, eng_*, cut_area) are set to 0 / 0.0
-/// for non-Cut records.
-#[derive(Serialize, Deserialize, Clone, Debug)]
-pub(super) struct TraceRecord {
-    pub kind: u8,
+/// Generic record header (same across all operations).
+#[derive(Serialize, Clone, Debug)]
+pub(super) struct TraceRecordHeader {
+    pub kind: &'static str,
     pub status: u8,
     pub step_idx: u32,
-    pub iters: u32,
     pub pos_x: f64,
     pub pos_y: f64,
     pub heading: f64,
+    pub prev_x: f64,
+    pub prev_y: f64,
+    pub ops_len: u32,
+}
+
+/// Adaptive-clearing-specific payload nested inside every trace record.
+#[derive(Serialize, Clone, Debug)]
+pub(super) struct AdaptivePayload {
+    pub iters: u32,
     pub smoothed_heading: f64,
     pub predicted_angle: f64,
     pub iteration_angle: f64,
@@ -60,9 +96,6 @@ pub(super) struct TraceRecord {
     pub cut_area: f64,
     pub total_area: f64,
     pub remaining_area: f64,
-    pub prev_x: f64,
-    pub prev_y: f64,
-    pub ops_len: u32,
     pub resume_source: u8,
     pub route_source: u8,
     /// Wall-hug points in resume order: current segment first, then
@@ -93,12 +126,24 @@ pub(super) struct TraceRecord {
     pub resume_candidate_points: [(f64, f64); 6],
 }
 
+/// Per-step trace record, serialised as MessagePack.
+///
+/// Generic fields live at the top level; operation-specific data is in
+/// the nested `payload` map so that a non-adaptive reader never sees
+/// keys like ``eng_angle`` or ``wall_hug_points``.
+#[derive(Serialize, Clone, Debug)]
+pub(super) struct TraceRecord {
+    #[serde(flatten)]
+    pub header: TraceRecordHeader,
+    pub payload: AdaptivePayload,
+}
+
 impl TraceRecord {
     /// Build a record with the common tool-state fields filled in from
     /// their source objects.  Kind-specific fields (iters, eng_*, etc.)
     /// default to 0 / 0.0.
     pub fn from_tool_state(
-        kind: u8,
+        kind: &'static str,
         status: StepStatus,
         step_idx: u32,
         tool: &Tool,
@@ -113,66 +158,41 @@ impl TraceRecord {
             StepStatus::NoConvergence => 3,
         };
         Self {
-            kind,
-            status,
-            step_idx,
-            iters: 0,
-            pos_x: tool.pos.x,
-            pos_y: tool.pos.y,
-            heading: tool.heading,
-            smoothed_heading: tool.smoothed_heading(),
-            predicted_angle: tool.raw_predictor(),
-            iteration_angle: 0.0,
-            eng_angle: 0.0,
-            eng_area: 0.0,
-            eng_chord: 0.0,
-            cut_area: 0.0,
-            total_area: cleared.total_area(),
-            remaining_area: cleared.remaining_area(),
-            prev_x: prev_pos.x,
-            prev_y: prev_pos.y,
-            ops_len,
-            resume_source: 0,
-            route_source: 0,
-            wall_hug_points: Vec::new(),
-            wall_hug_segment_counts: Vec::new(),
-            resume_strategy_reasons: [0u8; 6],
-            resume_strategy_details: [0u8; 6],
-            route_strategy_details: [0u8; 4],
-            resume_point_x: 0.0,
-            resume_point_y: 0.0,
-            resume_candidate_points: [(f64::NAN, f64::NAN); 6],
+            header: TraceRecordHeader {
+                kind,
+                status,
+                step_idx,
+                pos_x: tool.pos.x,
+                pos_y: tool.pos.y,
+                heading: tool.heading,
+                prev_x: prev_pos.x,
+                prev_y: prev_pos.y,
+                ops_len,
+            },
+            payload: AdaptivePayload {
+                iters: 0,
+                smoothed_heading: tool.smoothed_heading(),
+                predicted_angle: tool.raw_predictor(),
+                iteration_angle: 0.0,
+                eng_angle: 0.0,
+                eng_area: 0.0,
+                eng_chord: 0.0,
+                cut_area: 0.0,
+                total_area: cleared.total_area(),
+                remaining_area: cleared.remaining_area(),
+                resume_source: 0,
+                route_source: 0,
+                wall_hug_points: Vec::new(),
+                wall_hug_segment_counts: Vec::new(),
+                resume_strategy_reasons: [0u8; 6],
+                resume_strategy_details: [0u8; 6],
+                route_strategy_details: [0u8; 4],
+                resume_point_x: 0.0,
+                resume_point_y: 0.0,
+                resume_candidate_points: [(f64::NAN, f64::NAN); 6],
+            },
         }
     }
-}
-
-// ── Toolpath extraction ─────────────────────────────────────────────
-
-use crate::geo::algo::medial_axis::MedialAxis;
-
-/// Extract the moving commands (travel + cut) from `ops` as a
-/// [`TracePoint`] list suitable for [`Tracer::write_toolpath`].
-///
-/// Order matches the record stream so the inspector can index toolpath
-/// points by `ops_len` stored in each trace record.
-#[cfg(debug_assertions)]
-#[prof]
-pub(super) fn extract_toolpath(ops: &Ops) -> Vec<TracePoint> {
-    let mut out = Vec::new();
-    for i in 0..ops.len() {
-        let is_travel = ops.is_travel(i);
-        let is_cutting = ops.is_cutting(i);
-        if !is_travel && !is_cutting {
-            continue;
-        }
-        let ep = ops.endpoint(i);
-        out.push(TracePoint {
-            x: ep.x,
-            y: ep.y,
-            is_travel,
-        });
-    }
-    out
 }
 
 // ── TraceRecorder ───────────────────────────────────────────────────
@@ -189,20 +209,44 @@ pub(super) struct TraceRecorder {
 #[cfg_attr(not(debug_assertions), allow(unused_variables))]
 impl TraceRecorder {
     /// Create a recorder, opening the trace file when
-    /// `opts.trace_path` is `Some`.
-    pub fn new(opts: &AdaptiveClearingOptions, cleared: &ClearedArea) -> Self {
+    /// `opts.trace_path` is `Some`.  Emits geometry and MAT records
+    /// immediately after the header.
+    pub fn new(
+        opts: &AdaptiveClearingOptions,
+        cleared: &ClearedArea,
+        mat: Option<&MedialAxis>,
+    ) -> Self {
         #[cfg(debug_assertions)]
         let tracer = match &opts.trace_path {
-            Some(path) => match Tracer::open(
-                path,
-                &crate::trace::TraceContext {
-                    tool_radius: opts.radius,
-                    boundary: opts.pocket_boundary.clone(),
-                    islands: opts.islands.clone(),
-                    seeds: cleared.fragments().to_vec(),
-                },
-            ) {
-                Ok(t) => Some(t),
+            Some(path) => match Tracer::open(path) {
+                Ok(mut t) => {
+                    let boundary: Vec<(f64, f64)> = opts
+                        .pocket_boundary
+                        .iter()
+                        .map(|p| (p.x, p.y))
+                        .collect();
+                    let islands: Vec<Vec<(f64, f64)>> = opts
+                        .islands
+                        .iter()
+                        .map(|poly| poly.iter().map(|p| (p.x, p.y)).collect())
+                        .collect();
+                    let seeds: Vec<Vec<(f64, f64)>> = cleared
+                        .fragments()
+                        .iter()
+                        .map(|poly| poly.iter().map(|p| (p.x, p.y)).collect())
+                        .collect();
+                    t.write(&GeometryRecord {
+                        kind: "geometry",
+                        tool_radius: opts.radius,
+                        boundary,
+                        islands,
+                        seeds,
+                    });
+                    if let Some(ma) = mat {
+                        t.write(&MatRecord::from(ma));
+                    }
+                    Some(t)
+                }
                 Err(e) => {
                     eprintln!("trace: failed to open {:?}: {}", path, e);
                     None
@@ -215,15 +259,6 @@ impl TraceRecorder {
             #[cfg(debug_assertions)]
             tracer,
             step_idx: 1,
-        }
-    }
-
-    /// Write the optional MAT block.  Must be called once after
-    /// creation and before any record methods.
-    #[cfg(debug_assertions)]
-    pub fn write_mat(&mut self, mat: Option<&MedialAxis>) {
-        if let Some(ref mut tr) = self.tracer {
-            tr.write_mat(mat.map(|m| m.into()));
         }
     }
 
@@ -240,7 +275,7 @@ impl TraceRecorder {
         #[cfg(debug_assertions)]
         if let Some(ref mut tr) = self.tracer {
             let mut rec = TraceRecord::from_tool_state(
-                TraceKind::Init as u8,
+                "init",
                 StepStatus::Ok,
                 0,
                 tool,
@@ -248,8 +283,9 @@ impl TraceRecorder {
                 prev_pos,
                 ops_len,
             );
-            rec.wall_hug_points = wall_hug_points.to_vec();
-            rec.wall_hug_segment_counts = wall_hug_segment_counts.to_vec();
+            rec.payload.wall_hug_points = wall_hug_points.to_vec();
+            rec.payload.wall_hug_segment_counts =
+                wall_hug_segment_counts.to_vec();
             tr.write(&rec);
         }
     }
@@ -275,7 +311,7 @@ impl TraceRecorder {
         #[cfg(debug_assertions)]
         if let Some(ref mut tr) = self.tracer {
             let mut rec = TraceRecord::from_tool_state(
-                TraceKind::Cut as u8,
+                "cut",
                 status,
                 self.step_idx,
                 tool,
@@ -283,14 +319,15 @@ impl TraceRecorder {
                 prev_pos,
                 ops_len,
             );
-            rec.iters = iters;
-            rec.iteration_angle = iteration_angle;
-            rec.eng_angle = eng_angle;
-            rec.eng_area = eng_area;
-            rec.eng_chord = eng_chord;
-            rec.cut_area = cut_area;
-            rec.wall_hug_points = wall_hug_points.to_vec();
-            rec.wall_hug_segment_counts = wall_hug_segment_counts.to_vec();
+            rec.payload.iters = iters;
+            rec.payload.iteration_angle = iteration_angle;
+            rec.payload.eng_angle = eng_angle;
+            rec.payload.eng_area = eng_area;
+            rec.payload.eng_chord = eng_chord;
+            rec.payload.cut_area = cut_area;
+            rec.payload.wall_hug_points = wall_hug_points.to_vec();
+            rec.payload.wall_hug_segment_counts =
+                wall_hug_segment_counts.to_vec();
             tr.write(&rec);
         }
         self.step_idx += 1;
@@ -319,8 +356,13 @@ impl TraceRecorder {
     ) {
         #[cfg(debug_assertions)]
         if let Some(ref mut tr) = self.tracer {
+            let kind_str = match kind {
+                TraceKind::ResumeStall => "resume_stall",
+                TraceKind::ResumeStuck => "resume_stuck",
+                _ => "resume",
+            };
             let mut rec = TraceRecord::from_tool_state(
-                kind as u8,
+                kind_str,
                 status,
                 self.step_idx,
                 tool,
@@ -328,16 +370,17 @@ impl TraceRecorder {
                 prev_pos,
                 ops_len,
             );
-            rec.resume_source = resume_source;
-            rec.route_source = route_source;
-            rec.resume_strategy_reasons = *reasons;
-            rec.resume_strategy_details = *details;
-            rec.route_strategy_details = *route_details;
-            rec.resume_point_x = rp.x;
-            rec.resume_point_y = rp.y;
-            rec.resume_candidate_points = *candidate_pts;
-            rec.wall_hug_points = wall_hug_points.to_vec();
-            rec.wall_hug_segment_counts = wall_hug_segment_counts.to_vec();
+            rec.payload.resume_source = resume_source;
+            rec.payload.route_source = route_source;
+            rec.payload.resume_strategy_reasons = *reasons;
+            rec.payload.resume_strategy_details = *details;
+            rec.payload.route_strategy_details = *route_details;
+            rec.payload.resume_point_x = rp.x;
+            rec.payload.resume_point_y = rp.y;
+            rec.payload.resume_candidate_points = *candidate_pts;
+            rec.payload.wall_hug_points = wall_hug_points.to_vec();
+            rec.payload.wall_hug_segment_counts =
+                wall_hug_segment_counts.to_vec();
             tr.write(&rec);
         }
         self.step_idx += 1;
@@ -363,7 +406,7 @@ impl TraceRecorder {
         #[cfg(debug_assertions)]
         if let Some(ref mut tr) = self.tracer {
             let mut rec = TraceRecord::from_tool_state(
-                TraceKind::Exit as u8,
+                "exit",
                 status,
                 self.step_idx,
                 tool,
@@ -371,23 +414,24 @@ impl TraceRecorder {
                 prev_pos,
                 ops_len,
             );
-            rec.resume_strategy_reasons = *reasons;
-            rec.resume_strategy_details = *details;
-            rec.route_strategy_details = *route_details;
-            rec.resume_point_x = rp.x;
-            rec.resume_point_y = rp.y;
-            rec.resume_candidate_points = *candidate_pts;
-            rec.wall_hug_points = wall_hug_points.to_vec();
-            rec.wall_hug_segment_counts = wall_hug_segment_counts.to_vec();
+            rec.payload.resume_strategy_reasons = *reasons;
+            rec.payload.resume_strategy_details = *details;
+            rec.payload.route_strategy_details = *route_details;
+            rec.payload.resume_point_x = rp.x;
+            rec.payload.resume_point_y = rp.y;
+            rec.payload.resume_candidate_points = *candidate_pts;
+            rec.payload.wall_hug_points = wall_hug_points.to_vec();
+            rec.payload.wall_hug_segment_counts =
+                wall_hug_segment_counts.to_vec();
             tr.write(&rec);
         }
     }
 
+    /// Finalise the trace file.
     /// Write the toolpath block and finalise the trace file.
-    pub fn finish(self, ops: &Ops) {
+    pub fn finish(self, _ops: &Ops) {
         #[cfg(debug_assertions)]
         if let Some(mut t) = self.tracer {
-            t.write_toolpath(&extract_toolpath(ops));
             let _ = t.finish();
         }
     }

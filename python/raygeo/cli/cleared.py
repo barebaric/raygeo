@@ -1,4 +1,5 @@
 from raygeo.ops.cut.cleared_area import ClearedArea
+from raygeo.trace import MoveKind
 
 # ── ClearedArea rebuild ──────────────────────────────────────────
 
@@ -17,28 +18,31 @@ def rebuild_cleared(
     initial cleared state (from a previously cached CA at *start_cut*
     cuts) and only expand cutting moves from *start_cut* onward.
     """
+    boundary_pts = [tuple(p) for p in geometry["boundary"]]
+    islands_pts = [[tuple(p) for p in isl] for isl in geometry["islands"]]
+    seed_pts = [[tuple(p) for p in poly] for poly in seed_polys]
     if existing_fragments is None:
         ca = ClearedArea(
-            boundary=list(geometry.boundary),
-            islands=[list(isl) for isl in geometry.islands],
-            initial=seed_polys,
+            boundary=boundary_pts,
+            islands=islands_pts,
+            initial=seed_pts,
         )
     else:
         ca = ClearedArea(
-            boundary=list(geometry.boundary),
-            islands=[list(isl) for isl in geometry.islands],
+            boundary=boundary_pts,
+            islands=islands_pts,
             initial=existing_fragments,
         )
 
     prev = None
     cut_count = 0
     for i in range(len(tp)):
-        x, y, is_travel = tp[i]
-        if is_travel:
+        x, y, move_kind = tp[i]
+        if move_kind != MoveKind.CUT.value:
             prev = (x, y)
             continue
         if prev is not None and cut_count >= start_cut:
-            ca.expand_step(prev, (x, y), geometry.tool_radius)
+            ca.expand_step(prev, (x, y), geometry["tool_radius"])
             ca.compact_if_needed(0.1)
         prev = (x, y)
         cut_count += 1

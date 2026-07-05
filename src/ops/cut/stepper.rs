@@ -112,7 +112,8 @@ pub struct StepResult {
 }
 
 /// Status returned by a single step or a full segment.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, num_enum::TryFromPrimitive)]
+#[repr(u8)]
 pub enum StepStatus {
     /// The step converged normally.
     Ok,

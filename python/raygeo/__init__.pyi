@@ -73,6 +73,7 @@ from . import image
 from . import mesh
 from . import ops
 from . import svg
+from . import trace
 __all__ = [
     "Geometry",
     "Ops",
@@ -81,5 +82,6 @@ __all__ = [
     "mesh",
     "ops",
     "svg",
+    "trace",
 ]
 

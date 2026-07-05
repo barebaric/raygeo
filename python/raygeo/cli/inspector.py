@@ -7,8 +7,8 @@ from matplotlib.patches import Circle
 from matplotlib.widgets import Button, TextBox
 
 from raygeo.cli.cleared import rebuild_cleared
-from raygeo.cli.trace import KIND_NAMES, ROUTE_DETAIL_LABELS, STATUS_NAMES
 from raygeo.geo.shape.polygon import get_polygon_signed_area
+from raygeo.trace import MoveKind, get_route_detail_name
 
 
 # ── Workaround for matplotlib 3.11 bug ────────────────────────────
@@ -50,7 +50,13 @@ patch_widget_events()
 class Inspector:
     def __init__(self, trace, tp, seed_polys, geometry):
         self.trace = trace
-        self.n_steps = len(trace)
+        # Map step_idx → trace index, skipping geometry/mat records.
+        self._motion_indices = [
+            i
+            for i in range(len(trace))
+            if trace[i].kind not in ("geometry", "mat")
+        ]
+        self.n_steps = len(self._motion_indices)
         self.seed_polys = seed_polys
         self.geometry = geometry
         self.current = 0
@@ -101,6 +107,10 @@ class Inspector:
 
         self._draw(0)
 
+    def _rec(self, step_idx: int):
+        """Return the trace record for a motion step index."""
+        return self.trace[self._motion_indices[step_idx]]
+
     def _on_submit(self, text):
         try:
             self._draw(int(text.strip()))
@@ -134,7 +144,7 @@ class Inspector:
             seg_steps = [0] * n_seg
             si = 1
             for step_idx in range(1, self.n_steps):
-                n_moves = min(self.trace[step_idx].ops_len, len(self.tp))
+                n_moves = step_idx + 1
                 while si < n_seg and n_moves > self._segment_starts[si][2]:
                     seg_steps[si] = step_idx
                     si += 1
@@ -199,13 +209,17 @@ class Inspector:
         synthetic = []
         prev_ops_len = 0
         for i in range(self.n_steps):
-            rec = self.trace[i]
-            is_travel = rec.kind != 1  # Only Cut records are non-travel
+            rec = self._rec(i)
+            move_kind = (
+                MoveKind.TRAVEL.value
+                if rec.kind != "cut"
+                else MoveKind.CUT.value
+            )
             delta = rec.ops_len - prev_ops_len
             if delta < 1:
                 delta = 1
             for _ in range(delta):
-                synthetic.append((rec.pos_x, rec.pos_y, is_travel))
+                synthetic.append((rec.pos_x, rec.pos_y, move_kind))
             prev_ops_len = rec.ops_len
         return synthetic, True
 
@@ -229,14 +243,19 @@ class Inspector:
         prev_was_travel = None
 
         for i in range(n_total):
-            x, y, is_travel = self.tp[i]
+            x, y, move_kind = self.tp[i]
+            # MoveKind.CUT.value == 0, anything else is travel/plunge/etc.
+            is_travel = move_kind != MoveKind.CUT.value
 
             if is_travel:
                 if prev_any is not None:
                     self._all_travel_segs.append([prev_any, (x, y)])
                     travel_count += 1
                 prev_any = (x, y)
-                cut_prev = None
+                # A Resume entry's position IS where the next cut resumes,
+                # not a travel destination that needs a positioning move.
+                # Set cut_prev so the following Cut creates a cut edge.
+                cut_prev = (x, y)
             else:
                 if cut_prev is None and prev_any is not None:
                     # First cut after travel: draw edge from the
@@ -290,10 +309,8 @@ class Inspector:
 
         tp = self.tp
         for i in range(self.n_steps):
-            rec = self.trace[i]
-            n_moves = min(rec.ops_len, len(tp))
-            if n_moves == 0:
-                continue
+            rec = self._rec(i)
+            n_moves = i + 1
             last = tp[n_moves - 1]
             dx = rec.pos_x - last[0]
             dy = rec.pos_y - last[1]
@@ -340,12 +357,12 @@ class Inspector:
         self.ax.clear()
         self.ax.set_aspect("equal")
 
-        rec = self.trace[step_idx]
+        rec = self._rec(step_idx)
 
         geo = self.geometry
-        boundary = geo.boundary
-        islands = geo.islands
-        tool_radius = geo.tool_radius
+        boundary = geo["boundary"]
+        islands = geo["islands"]
+        tool_radius = geo["tool_radius"]
 
         # ── Boundary ──
         bx = [p[0] for p in boundary] + [boundary[0][0]]
@@ -378,9 +395,9 @@ class Inspector:
             self.ax.plot(ex, ey, "b--", linewidth=0.7, alpha=0.5)
 
         # ── Cleared area at this step ──
-        # ops_len in the trace record is the moving-command count
-        # (toolpath index), not the raw ops command count.
-        n_tp_moves = min(rec.ops_len, len(self.tp))
+        # Toolpath now has one point per motion record, so the number
+        # of toolpath entries up to the current step is step_idx + 1.
+        n_tp_moves = step_idx + 1
         n_cuts = sum(1 for i in range(n_tp_moves) if not self.tp[i][2])
         ca = self._get_cleared(n_cuts)
 
@@ -443,7 +460,7 @@ class Inspector:
             self.ax.plot(ix, iy, color="dimgray", linewidth=1.0)
 
         # ── Toolpath ──
-        self._draw_toolpath(rec)
+        self._draw_toolpath(rec, n_tp_moves)
 
         # ── Tool position ──
         self._draw_tool(rec)
@@ -455,8 +472,8 @@ class Inspector:
         self._draw_mat()
 
         # ── Title (minimal — details in right panel) ──
-        kind_name = KIND_NAMES.get(rec.kind, str(rec.kind))
-        status_name = STATUS_NAMES.get(rec.status, str(rec.status))
+        kind_name = rec.kind
+        status_name = rec.status.name
         self.ax.set_xlabel("X")
         self.ax.set_ylabel("Y")
         # Auto-fit axis limits to the boundary with a small margin.
@@ -520,9 +537,8 @@ class Inspector:
             zorder=6,
         )
 
-    def _draw_toolpath(self, rec):
+    def _draw_toolpath(self, rec, n_moves):
         """Draw toolpath up to the moving-command count in this record."""
-        n_moves = min(rec.ops_len, len(self.tp))
         if n_moves == 0:
             return
 
@@ -591,7 +607,7 @@ class Inspector:
     def _draw_tool(self, rec):
         """Draw tool circle, position dot, and heading arrow."""
         x, y = rec.pos_x, rec.pos_y
-        r = self.geometry.tool_radius
+        r = self.geometry["tool_radius"]
 
         circle = Circle(
             (x, y), r, fill=False, edgecolor="red", linewidth=1.5, alpha=0.8
@@ -725,14 +741,14 @@ class Inspector:
         _cell("ops_len", str(rec.ops_len))
 
         # ── Strategy (only for resume stall / stuck / exit) ──
-        if rec.kind in (2, 3, 4):
+        if rec.kind in ("resume_stall", "resume_stuck", "exit"):
             _cell("Resume Strategy", "", bg=SEC, weight="bold")
 
             # Priority order (index 0-5) maps to ResumeSource values as:
             #   0→1(WallHug), 1→2(Segment), 2→3(Mat),
             #   3→4(Frontier), 4→6(Envelope), 5→5(Island)
             src_to_idx = {1: 0, 2: 1, 3: 2, 4: 3, 6: 4, 5: 5}
-            win_idx = src_to_idx.get(rec.resume_source, -1)
+            win_idx = src_to_idx.get(rec.resume_source.value, -1)
             strat_names = [
                 "wall_hug",
                 "segment",
@@ -786,7 +802,11 @@ class Inspector:
                     )
 
             route_names = ["direct", "frontier", "mat", "astar"]
-            win_route = rec.route_source - 1 if rec.route_source > 0 else -1
+            win_route = (
+                rec.route_source.value - 1
+                if rec.route_source.value > 0
+                else -1
+            )
             _cell("Routing", "", bg=SEC, weight="bold")
             for i, name in enumerate(route_names):
                 det = rec.route_strategy_details[i]
@@ -797,7 +817,7 @@ class Inspector:
                 else:
                     _cell(
                         name,
-                        ROUTE_DETAIL_LABELS.get(det, f"?:{det}"),
+                        get_route_detail_name(det),
                         bg=FAIL,
                         color="darkred",
                     )

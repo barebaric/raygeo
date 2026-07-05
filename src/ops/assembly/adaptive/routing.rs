@@ -105,9 +105,11 @@ pub trait RoutingStrategy {
 // ── Strategy enum ─────────────────────────────────────────────────
 
 /// Which routing strategy produced the winning path, in priority order.
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, PartialEq, Eq, num_enum::TryFromPrimitive)]
 #[repr(u8)]
 pub enum RouteSource {
+    /// No strategy was tried / applicable (trace-record sentinel).
+    None = 0,
     /// Direct straight-line travel (centreline does not cross obstacles).
     RoutingDirect = 1,
     /// Frontier-walking travel along the cleared-area boundary.
@@ -121,6 +123,7 @@ pub enum RouteSource {
 /// Source label for a given strategy.
 pub(crate) fn source_label(source: RouteSource) -> &'static str {
     match source {
+        RouteSource::None => "none",
         RouteSource::RoutingDirect => "direct",
         RouteSource::RoutingFrontier => "frontier",
         RouteSource::RoutingMat => "mat",

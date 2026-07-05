@@ -1,13 +1,6 @@
 import math
 
-from raygeo.cli.trace import (
-    KIND_NAMES,
-    RESUME_SOURCE_NAMES,
-    ROUTE_DETAIL_LABELS,
-    ROUTE_SOURCE_NAMES,
-    STATUS_NAMES,
-    TraceFile,
-)
+from raygeo.trace import TraceFile, get_route_detail_name
 
 
 def register(subparsers):
@@ -31,17 +24,21 @@ def run(args):
     geo = trace.geometry
     tp = trace.toolpath
     print("Geometry:")
-    print(f"  tool_radius={geo.tool_radius}")
-    print(f"  boundary: {len(geo.boundary)} verts")
-    print(f"  islands: {len(geo.islands)}")
-    print(f"  seeds: {len(geo.seeds)} polygon(s)")
+    print(f"  tool_radius={geo['tool_radius']}")
+    print(f"  boundary: {len(geo['boundary'])} verts")
+    print(f"  islands: {len(geo['islands'])}")
+    print(f"  seeds: {len(geo['seeds'])} polygon(s)")
     print(f"  toolpath: {len(tp)} moves")
     print()
 
+    RESUME_KINDS = {"resume_stall", "resume_stuck", "exit"}
+
     for i in range(n):
         rec = trace[i]
-        kind_name = KIND_NAMES.get(rec.kind, str(rec.kind))
-        status_name = STATUS_NAMES.get(rec.status, str(rec.status))
+        if rec.kind in ("geometry", "mat"):
+            continue
+        kind_name = rec.kind
+        status_name = rec.status.name
 
         h_deg = math.degrees(rec.heading)
         sh_deg = math.degrees(rec.smoothed_heading)
@@ -51,18 +48,12 @@ def run(args):
         step_dist = math.hypot(rec.pos_x - rec.prev_x, rec.pos_y - rec.prev_y)
 
         route_src = ""
-        if rec.route_source:
-            rs = ROUTE_SOURCE_NAMES.get(
-                rec.route_source, str(rec.route_source)
-            )
-            route_src = f" route={rs}"
+        if rec.route_source.value:
+            route_src = f" route={rec.route_source.name}"
 
         resume_src = ""
-        if rec.kind in (2, 3, 4) and rec.resume_source:
-            rs = RESUME_SOURCE_NAMES.get(
-                rec.resume_source, str(rec.resume_source)
-            )
-            resume_src = f" resume_via={rs}"
+        if rec.kind in RESUME_KINDS and rec.resume_source.value:
+            resume_src = f" resume_via={rec.resume_source.name}"
 
         print(
             f"{i}\t{kind_name}\t{status_name}{route_src}{resume_src}"
@@ -96,10 +87,7 @@ def run(args):
             + "|".join(
                 "DFMA"[i]
                 + ":"
-                + ROUTE_DETAIL_LABELS.get(
-                    rec.route_strategy_details[i],
-                    str(rec.route_strategy_details[i]),
-                )
+                + get_route_detail_name(rec.route_strategy_details[i])
                 for i in range(4)
             )
         )
