@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use super::axis::Axis;
 use super::enums::{CommandType, SectionType};
-use super::state::{CoolantMode, State};
+use super::state::{AirAssistMode, CoolantMode, HeadCoolantMode, State};
 use crate::types::{Point, Point3D};
 
 #[derive(Clone, Debug)]
@@ -36,6 +36,8 @@ pub enum StateCmd {
     SetPulseWidth(f64),
     SetSpindleRpm(u32),
     SetCoolant(CoolantMode),
+    SetAirAssist(AirAssistMode),
+    SetHeadCoolant(HeadCoolantMode),
 }
 
 #[derive(Clone, Debug)]
@@ -258,6 +260,22 @@ impl OpNode {
         }
     }
 
+    pub fn set_air_assist(mode: AirAssistMode) -> Self {
+        OpNode {
+            category: OpCategory::State(StateCmd::SetAirAssist(mode)),
+            state: None,
+            extra_axes: None,
+        }
+    }
+
+    pub fn set_head_coolant(mode: HeadCoolantMode) -> Self {
+        OpNode {
+            category: OpCategory::State(StateCmd::SetHeadCoolant(mode)),
+            state: None,
+            extra_axes: None,
+        }
+    }
+
     pub fn job_start() -> Self {
         OpNode {
             category: OpCategory::Marker(MarkerCmd::JobStart),
@@ -361,6 +379,8 @@ impl OpNode {
                 StateCmd::SetPulseWidth(_) => CommandType::SetPulseWidth,
                 StateCmd::SetSpindleRpm(_) => CommandType::SetSpindleRpm,
                 StateCmd::SetCoolant(_) => CommandType::SetCoolant,
+                StateCmd::SetAirAssist(_) => CommandType::SetAirAssist,
+                StateCmd::SetHeadCoolant(_) => CommandType::SetHeadCoolant,
             },
             OpCategory::Marker(cmd) => match cmd {
                 MarkerCmd::JobStart => CommandType::JobStart,

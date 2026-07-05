@@ -4,30 +4,66 @@ r"""
 Machine state tracking for CNC milling.
 
 Tracks the current or intended machine state at any point in a command
-sequence, including power level (0.0–1.0), coolant mode, feed rate
-and rapid rate, active head UID, pulse frequency, and pulse
-width. State objects are used by Ops to associate machine parameters
-with moving commands and to detect rapid (non-power) state changes.
+sequence, including power level (0.0–1.0), coolant mode, air assist,
+head coolant, feed rate and rapid rate, active head UID, pulse
+frequency, and pulse width. State objects are used by Ops to associate
+machine parameters with moving commands and to detect rapid (non-power)
+state changes.
 """
 
 import builtins
 import typing
 __all__ = [
+    "AirAssistMode",
     "CoolantMode",
+    "HeadCoolantMode",
     "State",
 ]
+
+@typing.final
+class AirAssistMode:
+    r"""
+    Air assist mode for laser or CNC operations.
+    
+    Controls the air assist state: ``Off`` or ``On``.
+    """
+    OFF: AirAssistMode = AirAssistMode.OFF
+    ON: AirAssistMode = AirAssistMode.ON
+    @property
+    def value(self) -> builtins.int: ...
+    @property
+    def name(self) -> builtins.str: ...
+    def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
+    def __hash__(self) -> builtins.int: ...
+    def __repr__(self) -> builtins.str: ...
 
 @typing.final
 class CoolantMode:
     r"""
     Coolant mode for CNC milling operations.
     
-    Controls the coolant state: ``Off``, ``Flood``, ``Mist``, or ``Air``.
+    Controls the coolant state: ``Off``, ``Flood``, or ``Mist``.
     """
     OFF: CoolantMode = CoolantMode.OFF
     FLOOD: CoolantMode = CoolantMode.FLOOD
     MIST: CoolantMode = CoolantMode.MIST
-    AIR: CoolantMode = CoolantMode.AIR
+    @property
+    def value(self) -> builtins.int: ...
+    @property
+    def name(self) -> builtins.str: ...
+    def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
+    def __hash__(self) -> builtins.int: ...
+    def __repr__(self) -> builtins.str: ...
+
+@typing.final
+class HeadCoolantMode:
+    r"""
+    Head coolant mode for laser or CNC operations.
+    
+    Controls the head coolant state: ``Off`` or ``On``.
+    """
+    OFF: HeadCoolantMode = HeadCoolantMode.OFF
+    ON: HeadCoolantMode = HeadCoolantMode.ON
     @property
     def value(self) -> builtins.int: ...
     @property
@@ -41,9 +77,9 @@ class State:
     r"""
     The current state of a CNC machine.
     
-    Tracks power level, coolant mode, feed/rapid rates,
-    active head UID, frequency, pulse width, spindle RPM,
-    and coolant mode.
+    Tracks power level, coolant mode, air assist, head coolant,
+    feed/rapid rates, active head UID, frequency, pulse width,
+    spindle RPM, and coolant mode.
     """
     @property
     def power(self) -> builtins.float:
@@ -108,7 +144,21 @@ class State:
         """
     @coolant.setter
     def coolant(self, value: typing.Optional[CoolantMode]) -> None: ...
-    def __new__(cls, power: builtins.float = 0.0, feed_rate: typing.Optional[builtins.int] = None, rapid_rate: typing.Optional[builtins.int] = None, active_head_uid: typing.Optional[builtins.str] = None, frequency: typing.Optional[builtins.int] = None, pulse_width: typing.Optional[builtins.float] = None, dwell_ms: typing.Optional[builtins.float] = None, spindle_rpm: typing.Optional[builtins.int] = None, coolant: typing.Optional[CoolantMode] = None) -> State: ...
+    @property
+    def air_assist(self) -> typing.Optional[AirAssistMode]:
+        r"""
+        Air assist mode (if set).
+        """
+    @air_assist.setter
+    def air_assist(self, value: typing.Optional[AirAssistMode]) -> None: ...
+    @property
+    def head_coolant(self) -> typing.Optional[HeadCoolantMode]:
+        r"""
+        Head coolant mode (if set).
+        """
+    @head_coolant.setter
+    def head_coolant(self, value: typing.Optional[HeadCoolantMode]) -> None: ...
+    def __new__(cls, power: builtins.float = 0.0, feed_rate: typing.Optional[builtins.int] = None, rapid_rate: typing.Optional[builtins.int] = None, active_head_uid: typing.Optional[builtins.str] = None, frequency: typing.Optional[builtins.int] = None, pulse_width: typing.Optional[builtins.float] = None, dwell_ms: typing.Optional[builtins.float] = None, spindle_rpm: typing.Optional[builtins.int] = None, coolant: typing.Optional[CoolantMode] = None, air_assist: typing.Optional[AirAssistMode] = None, head_coolant: typing.Optional[HeadCoolantMode] = None) -> State: ...
     def __repr__(self) -> builtins.str:
         r"""
         String representation like ``State(power=...)``.

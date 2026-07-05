@@ -37,7 +37,10 @@ pub fn group_by_state_continuity(ops: &Ops) -> Vec<Ops> {
         let last_state = ops.commands[current[current.len() - 1]].state();
         let op_state = node.state();
         if let (Some(ls), Some(os)) = (last_state, op_state) {
-            if ls.coolant == os.coolant {
+            if ls.coolant == os.coolant
+                && ls.air_assist == os.air_assist
+                && ls.head_coolant == os.head_coolant
+            {
                 current.push(i);
             } else {
                 seg_indices.push(current);

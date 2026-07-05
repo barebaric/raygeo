@@ -7,7 +7,7 @@ use crate::constants::EPSILON_COLLINEAR;
 
 use super::axis::Axis;
 use super::enums::{CommandCategory, CommandType, SectionType};
-use super::state::{CoolantMode, State};
+use super::state::{AirAssistMode, CoolantMode, HeadCoolantMode, State};
 use super::types::{MarkerCmd, MoveCmd, OpCategory, OpNode, StateCmd};
 use crate::types::{Point, Point3D, Rect};
 
@@ -309,6 +309,16 @@ impl Ops {
         self.invalidate_time_cache();
     }
 
+    pub fn set_air_assist(&mut self, mode: AirAssistMode) {
+        self.commands.push(OpNode::set_air_assist(mode));
+        self.invalidate_time_cache();
+    }
+
+    pub fn set_head_coolant(&mut self, mode: HeadCoolantMode) {
+        self.commands.push(OpNode::set_head_coolant(mode));
+        self.invalidate_time_cache();
+    }
+
     /// Emit the state commands needed to reach *state*.
     ///
     /// Power is always emitted (default 0.0). All other fields are
@@ -328,6 +338,12 @@ impl Ops {
         }
         if let Some(c) = state.coolant {
             self.set_coolant(c);
+        }
+        if let Some(a) = state.air_assist {
+            self.set_air_assist(a);
+        }
+        if let Some(h) = state.head_coolant {
+            self.set_head_coolant(h);
         }
         if let Some(f) = state.frequency {
             self.set_frequency(f);
@@ -482,6 +498,10 @@ impl Ops {
                 StateCmd::SetPulseWidth(pw) => state.pulse_width = Some(*pw),
                 StateCmd::SetSpindleRpm(s) => state.spindle_rpm = Some(*s),
                 StateCmd::SetCoolant(mode) => state.coolant = Some(*mode),
+                StateCmd::SetAirAssist(mode) => state.air_assist = Some(*mode),
+                StateCmd::SetHeadCoolant(mode) => {
+                    state.head_coolant = Some(*mode)
+                }
                 StateCmd::Dwell(d) => state.dwell_ms = Some(*d),
             }
         }

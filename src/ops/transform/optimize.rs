@@ -579,6 +579,18 @@ fn sync_state_commands(ops: &mut Ops, state: &State, prev: &State) -> State {
         }
         prev.coolant = state.coolant;
     }
+    if state.air_assist != prev.air_assist {
+        if let Some(mode) = state.air_assist {
+            ops.set_air_assist(mode);
+        }
+        prev.air_assist = state.air_assist;
+    }
+    if state.head_coolant != prev.head_coolant {
+        if let Some(mode) = state.head_coolant {
+            ops.set_head_coolant(mode);
+        }
+        prev.head_coolant = state.head_coolant;
+    }
     if let Some(ref uid) = state.active_head_uid {
         if prev.active_head_uid.as_deref() != Some(uid.as_str()) {
             ops.set_head(uid);

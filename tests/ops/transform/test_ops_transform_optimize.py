@@ -3,7 +3,7 @@ import importlib
 import pytest
 
 from raygeo.ops import Ops
-from raygeo.ops.state import CoolantMode
+from raygeo.ops.state import AirAssistMode, CoolantMode
 from raygeo.ops.types import CommandCategory, CommandType
 
 
@@ -304,23 +304,23 @@ class TestOptimizeStateBoundaries:
         ops.line_to(10, 0)
         ops.move_to(0, 10)
         ops.line_to(10, 10)
-        ops.set_coolant(CoolantMode.AIR)
+        ops.set_coolant(CoolantMode.FLOOD)
         ops.move_to(100, 100)
         ops.line_to(110, 100)
         ops.move_to(100, 110)
         ops.line_to(110, 110)
         ops.optimize_travel()
         ops.preload_state()
-        air_on_idx = -1
+        flood_on_idx = -1
         for i in range(ops.len()):
             if ops.category(i) == CommandCategory.MOVING:
                 state = ops.state(i)
                 assert state is not None
-                if state.coolant == CoolantMode.AIR:
-                    air_on_idx = i
+                if state.coolant == CoolantMode.FLOOD:
+                    flood_on_idx = i
                     break
-        assert air_on_idx != -1
-        for i in range(air_on_idx):
+        assert flood_on_idx != -1
+        for i in range(flood_on_idx):
             if ops.category(i) == CommandCategory.MOVING:
                 state = ops.state(i)
                 assert state is not None
@@ -511,7 +511,7 @@ class TestOptimizeScanline:
         ops = Ops()
         ops.set_power(0.85)
         ops.set_feed_rate(1234)
-        ops.set_coolant(CoolantMode.AIR)
+        ops.set_air_assist(AirAssistMode.ON)
         ops.move_to(0, 0)
         ops.line_to(10, 0)
         ops.move_to(20, 0)
@@ -530,18 +530,18 @@ class TestOptimizeScanline:
         assert move_state is not None
         assert move_state.power == pytest.approx(0.85)
         assert move_state.feed_rate == pytest.approx(1234)
-        assert move_state.coolant == CoolantMode.AIR
+        assert move_state.air_assist == AirAssistMode.ON
         scan_state = ops.state(scan_idx)
         assert scan_state is not None
         assert scan_state.power == pytest.approx(0.85)
         assert scan_state.feed_rate == pytest.approx(1234)
-        assert scan_state.coolant == CoolantMode.AIR
+        assert scan_state.air_assist == AirAssistMode.ON
 
     def test_scanline_split_preserves_state(self):
         ops = Ops()
         ops.set_power(0.77)
         ops.set_rapid_rate(5678)
-        ops.set_coolant(CoolantMode.OFF)
+        ops.set_air_assist(AirAssistMode.OFF)
         ops.move_to(0, 0)
         ops.scan_to(10, 0, power_values=bytearray([50, 50, 0, 0, 60, 60]))
         ops.move_to(100, 100)
@@ -561,12 +561,12 @@ class TestOptimizeScanline:
             assert move_state is not None
             assert move_state.power == pytest.approx(0.77)
             assert move_state.rapid_rate == pytest.approx(5678)
-            assert move_state.coolant == CoolantMode.OFF
+            assert move_state.air_assist == AirAssistMode.OFF
             scan_state = ops.state(scan_idx)
             assert scan_state is not None
             assert scan_state.power == pytest.approx(0.77)
-            assert scan_state.rapid_rate == pytest.approx(5678)
-            assert scan_state.coolant == CoolantMode.OFF
+            assert move_state.rapid_rate == pytest.approx(5678)
+            assert scan_state.air_assist == AirAssistMode.OFF
 
     def test_overscan_flip_preserves_state(self):
         ops = Ops()
@@ -834,19 +834,19 @@ class TestOptimizeStateSynchronization:
         ops.set_coolant(CoolantMode.OFF)
         ops.move_to(0, 0)
         ops.line_to(10, 0)
-        ops.set_coolant(CoolantMode.AIR)
+        ops.set_coolant(CoolantMode.FLOOD)
         ops.move_to(100, 100)
         ops.line_to(110, 100)
         ops.optimize_travel()
         ops.preload_state()
-        air_states = set()
+        coolant_states = set()
         for i in range(ops.len()):
             if ops.category(i) == CommandCategory.MOVING:
                 state = ops.state(i)
                 assert state is not None
-                air_states.add(state.coolant)
-        assert CoolantMode.AIR in air_states
-        assert CoolantMode.OFF in air_states
+                coolant_states.add(state.coolant)
+        assert CoolantMode.FLOOD in coolant_states
+        assert CoolantMode.OFF in coolant_states
 
     def test_travel_speed_sync_after_reorder(self):
         ops = Ops()
@@ -1071,7 +1071,7 @@ class TestOptimizeComplexScenarios:
         ops.move_to(0, 0)
         ops.line_to(10, 0)
         ops.workpiece_end("wp-a")
-        ops.set_coolant(CoolantMode.AIR)
+        ops.set_air_assist(AirAssistMode.ON)
         ops.workpiece_start("wp-b")
         ops.move_to(100, 100)
         ops.line_to(110, 100)

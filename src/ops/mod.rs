@@ -17,7 +17,7 @@ pub use axis::Axis;
 pub use container::structure::{OpsSection, OpsSectionRange};
 pub use container::Ops;
 pub use enums::{CommandCategory, CommandType, SectionType};
-pub use state::{CoolantMode, State};
+pub use state::{AirAssistMode, CoolantMode, HeadCoolantMode, State};
 pub use transform::{
     apply_lead_in_out, apply_overscan, apply_tab_gaps, apply_tab_power,
     flip_ops, group_by_state_continuity, link_passes, merge_overlapping_lines,

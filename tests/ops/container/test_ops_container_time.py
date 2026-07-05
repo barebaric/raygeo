@@ -7,7 +7,7 @@ import math
 import pytest
 
 from raygeo.ops import Ops
-from raygeo.ops.state import CoolantMode
+from raygeo.ops.state import AirAssistMode
 from raygeo.ops.types import CommandCategory
 
 # --- estimate_time: basic / edge cases ---
@@ -426,7 +426,7 @@ def test_estimate_time_ignores_state_commands():
     ops.move_to(0, 0)
     ops.set_power(0.5)
     ops.set_feed_rate(1000)
-    ops.set_coolant(CoolantMode.AIR)
+    ops.set_air_assist(AirAssistMode.ON)
     ops.line_to(60, 0)
     time_est = ops.estimate_time(acceleration=0)
     expected_time = 60.0 / 1000 * 60
