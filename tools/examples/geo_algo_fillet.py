@@ -7,9 +7,9 @@ import matplotlib.pyplot as plt
 from raygeo.geo.algo.fillet import (
     append_end_fillets,
     create_fillet_polyline,
-    descending_radius_fillet,
     fillet_arc_ends,
     find_safe_sweep_end,
+    get_descending_radius_fillet,
     trim_to_safe_fillet_span,
     try_fillet_one_end,
 )
@@ -471,7 +471,9 @@ def generate_descending_radius_fillet():
     radius = 16.0
     margin = 4.0
 
-    result = descending_radius_fillet(arc, outer, obstacles, radius, margin)
+    result = get_descending_radius_fillet(
+        arc, outer, obstacles, radius, margin
+    )
 
     # Ghost: what the full-radius fillet would have been (both ends)
     _, ghost_start = create_fillet_polyline(
@@ -566,7 +568,7 @@ def generate_descending_radius_fillet():
     ax.set_ylim(-5, 75)
     ax.set_aspect("equal")
     ax.set_title(
-        "descending_radius_fillet — radius shrinks, safety distance\n"
+        "get_descending_radius_fillet — radius shrinks, safety distance\n"
         f"(r + margin = {radius} + {margin} = {radius + margin}) stays fixed"
     )
     ax.legend(fontsize=8, loc="upper right")
@@ -634,9 +636,9 @@ __images__ = [
         "function": generate_try_fillet_one_end,
     },
     {
-        "heading": "descending_radius_fillet",
+        "heading": "get_descending_radius_fillet",
         "caption": (
-            "``descending_radius_fillet`` halves the fillet radius until"
+            "``get_descending_radius_fillet`` halves the fillet radius until"
             " both ends fit, while keeping the safety distance"
             " (``radius + margin``) fixed"
         ),

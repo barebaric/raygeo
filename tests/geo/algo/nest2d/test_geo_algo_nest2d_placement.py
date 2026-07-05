@@ -4,7 +4,7 @@ import math
 
 import numpy as np
 
-from raygeo.geo.algo.nest2d.collision import any_overlap, is_contained
+from raygeo.geo.algo.nest2d.collision import does_any_overlap, is_contained
 from raygeo.geo.algo.nest2d.placement import (
     calculate_fitness,
     filter_candidates_multi_resolution,
@@ -52,20 +52,20 @@ class TestAnyOverlap:
     def test_no_overlap(self):
         placed = [_square(50.0, 50.0, 60.0, 60.0)]
         candidate = _square(0.0, 0.0, 10.0, 10.0)
-        assert any_overlap(candidate, placed, 0.0) is False
+        assert does_any_overlap(candidate, placed, 0.0) is False
 
     def test_overlap(self):
         placed = [_square(5.0, 5.0, 15.0, 15.0)]
         candidate = _square(0.0, 0.0, 10.0, 10.0)
-        assert any_overlap(candidate, placed, 0.0) is True
+        assert does_any_overlap(candidate, placed, 0.0) is True
 
     def test_empty_candidate(self):
         placed = [_square(0.0, 0.0, 10.0, 10.0)]
-        assert any_overlap([], placed, 0.0) is False
+        assert does_any_overlap([], placed, 0.0) is False
 
     def test_empty_placed(self):
         candidate = _square(0.0, 0.0, 10.0, 10.0)
-        assert any_overlap(candidate, [], 0.0) is False
+        assert does_any_overlap(candidate, [], 0.0) is False
 
 
 class TestGenerateBottomLeftCandidates:

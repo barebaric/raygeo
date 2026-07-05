@@ -7,10 +7,10 @@ import numpy as np
 from matplotlib.patches import Circle
 
 from raygeo.geo.algo.engagement import (
-    angular_engagement,
     compute_engagement,
-    disk_segment_area,
-    point_engagement,
+    get_angular_engagement,
+    get_disk_segment_area,
+    get_point_engagement,
 )
 
 
@@ -143,7 +143,7 @@ def generate_engagement_heatmap():
     return fig
 
 
-# ── point_engagement ──────────────────────────────────────────────
+# ── get_point_engagement ──────────────────────────────────────────────
 
 
 def generate_point_engagement_field():
@@ -157,7 +157,7 @@ def generate_point_engagement_field():
     field = np.zeros((n, n))
     for i, x in enumerate(xs):
         for j, y in enumerate(ys):
-            angle, _, _ = point_engagement((x, y), tool_r, [square])
+            angle, _, _ = get_point_engagement((x, y), tool_r, [square])
             field[j, i] = angle
 
     fig, ax = plt.subplots(figsize=(7, 6))
@@ -182,17 +182,17 @@ def generate_point_engagement_field():
     ax.set_aspect("equal")
     ax.set_xlabel("X (mm)")
     ax.set_ylabel("Y (mm)")
-    ax.set_title(f"point_engagement — Tool R = {tool_r} mm")
+    ax.set_title(f"get_point_engagement — Tool R = {tool_r} mm")
     ax.legend(fontsize=8)
     fig.tight_layout()
     return fig
 
 
-# ── angular_engagement ────────────────────────────────────────────
+# ── get_angular_engagement ────────────────────────────────────────────
 
 
 def generate_angular_engagement_comparison():
-    """Compare angular_engagement (exact) vs analytical along a scan."""
+    """Compare get_angular_engagement (exact) vs analytical along a scan."""
     square = [(0.0, 0.0), (10.0, 0.0), (10.0, 10.0), (0.0, 10.0)]
     tool_r = 3.0
     xs = np.linspace(-4, 14, 120)
@@ -200,9 +200,9 @@ def generate_angular_engagement_comparison():
     exact = []
     for x in xs:
         center = (x, 5.0)
-        angle, _, _ = point_engagement(center, tool_r, [square])
+        angle, _, _ = get_point_engagement(center, tool_r, [square])
         analytical.append(angle)
-        exact.append(angular_engagement(center, tool_r, [square]))
+        exact.append(get_angular_engagement(center, tool_r, [square]))
 
     fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(9, 6), sharex=True)
 
@@ -226,12 +226,12 @@ def generate_angular_engagement_comparison():
     ax2.set_ylabel("Difference (rad)")
     ax2.grid(True, alpha=0.3)
 
-    fig.suptitle("angular_engagement vs. Analytical Engagement")
+    fig.suptitle("get_angular_engagement vs. Analytical Engagement")
     fig.tight_layout()
     return fig
 
 
-# ── disk_segment_area ──────────────────────────────────────────────
+# ── get_disk_segment_area ──────────────────────────────────────────────
 
 
 def generate_disk_segment_area():
@@ -270,7 +270,7 @@ def generate_disk_segment_area():
         label="Segment area",
     )
 
-    seg_area = disk_segment_area(x_shade, radius)
+    seg_area = get_disk_segment_area(x_shade, radius)
     ax1.set_title(f"Disk: r = {radius}, x = {x_shade}, area = {seg_area:.2f}")
     ax1.set_xlim(-radius * 1.3, radius * 1.3)
     ax1.set_ylim(-radius * 1.3, radius * 1.3)
@@ -279,7 +279,7 @@ def generate_disk_segment_area():
 
     # ── Right: segment area vs x from −r to r ──
     xs = np.linspace(-radius, radius, 300)
-    areas = [disk_segment_area(x, radius) for x in xs]
+    areas = [get_disk_segment_area(x, radius) for x in xs]
 
     ax2.plot(xs, areas, "b-", linewidth=2)
     ax2.axvline(0, color="gray", linestyle="--", alpha=0.5)
@@ -292,7 +292,7 @@ def generate_disk_segment_area():
     ax2.axhline(0, color="gray", linestyle=":", alpha=0.3)
     ax2.set_xlabel("x (mm)")
     ax2.set_ylabel("Segment area (mm²)")
-    ax2.set_title("disk_segment_area(x, r)")
+    ax2.set_title("get_disk_segment_area(x, r)")
     ax2.grid(True, alpha=0.3)
 
     # Mark the specific value from the left panel.
@@ -337,7 +337,7 @@ __images__ = [
         "function": generate_engagement_heatmap,
     },
     {
-        "heading": "point_engagement",
+        "heading": "get_point_engagement",
         "caption": (
             "Engagement angle field around a square cleared area for"
             " a disk of radius 3 mm."
@@ -345,7 +345,7 @@ __images__ = [
         "function": generate_point_engagement_field,
     },
     {
-        "heading": "angular_engagement",
+        "heading": "get_angular_engagement",
         "caption": (
             "Comparison of exact polygon-intersection angular engagement"
             " with the analytical signed-distance estimate along a"
@@ -354,7 +354,7 @@ __images__ = [
         "function": generate_angular_engagement_comparison,
     },
     {
-        "heading": "disk_segment_area",
+        "heading": "get_disk_segment_area",
         "caption": (
             "Left: a disk of radius 5 mm with the circular segment to the"
             " right of the vertical line ``x = 1.5`` shaded. Right: the"

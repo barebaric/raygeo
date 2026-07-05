@@ -6,7 +6,7 @@ import pytest
 
 from raygeo.geo.algo.interp import (
     barycentric_interpolate,
-    barycentric_weights,
+    get_barycentric_weights,
 )
 from raygeo.mesh.build import build_triangle_mesh
 from raygeo.mesh.laplace import solve_laplace
@@ -49,7 +49,7 @@ def _circle_approx(cx, cy, r, n=8):
 def _interpolate_u(x, y, mesh, u_field):
     for a, b, c in mesh.triangles:
         va, vb, vc = mesh.vertices[a], mesh.vertices[b], mesh.vertices[c]
-        r, s, t = barycentric_weights((x, y), va, vb, vc)
+        r, s, t = get_barycentric_weights((x, y), va, vb, vc)
         if (
             -1e-9 <= r <= 1.0 + 1e-9
             and -1e-9 <= s <= 1.0 + 1e-9

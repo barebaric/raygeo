@@ -5,7 +5,6 @@ import pytest
 
 from raygeo.geo import Geometry
 from raygeo.geo.shape.arc import (
-    arc_through_point,
     does_arc_intersect_circle,
     does_arc_intersect_rect,
     get_arc_angles,
@@ -14,6 +13,7 @@ from raygeo.geo.shape.arc import (
     get_arc_direction,
     get_arc_midpoint,
     get_arc_sweep,
+    get_arc_through_point,
     get_polyline_turn_sign,
     is_angle_between,
     is_arc_inside_polygons,
@@ -723,7 +723,7 @@ class TestArcThroughPoint:
     def test_quarter_arc_ccw(self):
         """90° CCW arc from (r,0) to (0,r), centre at (0,0)."""
         r = 5.0
-        arc = arc_through_point(
+        arc = get_arc_through_point(
             (r, 0.0), (0.0, r), (r * 0.7071, r * 0.7071), (0.0, 0.0), r
         )
         assert len(arc) >= 4
@@ -736,7 +736,9 @@ class TestArcThroughPoint:
     def test_half_arc_ccw(self):
         """180° CCW arc from (r,0) to (-r,0) through (0,r)."""
         r = 5.0
-        arc = arc_through_point((r, 0.0), (-r, 0.0), (0.0, r), (0.0, 0.0), r)
+        arc = get_arc_through_point(
+            (r, 0.0), (-r, 0.0), (0.0, r), (0.0, 0.0), r
+        )
         assert arc[0] == pytest.approx((r, 0.0))
         assert arc[-1] == pytest.approx((-r, 0.0))
         for pt in arc:
@@ -748,7 +750,7 @@ class TestArcThroughPoint:
         """270° CW arc from (r,0) to (0,-r) through (0,-r) — shorter path."""
         r = 5.0
         # Start at (5,0), end at (0,-5), through (-r*0.7, -r*0.7) in QIII
-        arc = arc_through_point(
+        arc = get_arc_through_point(
             (r, 0.0), (0.0, -r), (-r * 0.7071, -r * 0.7071), (0.0, 0.0), r
         )
         assert arc[0] == pytest.approx((r, 0.0))
@@ -759,7 +761,9 @@ class TestArcThroughPoint:
     def test_start_end_mid_coincident(self):
         """Start and mid are the same point → minimal arc (sweep=0)."""
         r = 5.0
-        arc = arc_through_point((r, 0.0), (0.0, r), (r, 0.0), (0.0, 0.0), r)
+        arc = get_arc_through_point(
+            (r, 0.0), (0.0, r), (r, 0.0), (0.0, 0.0), r
+        )
         # Should produce at least start and end point
         assert len(arc) >= 2
         assert arc[0] == pytest.approx((r, 0.0))
@@ -769,7 +773,7 @@ class TestArcThroughPoint:
         """Arc with centre not at the origin."""
         r = 3.0
         cx, cy = 10.0, 5.0
-        arc = arc_through_point(
+        arc = get_arc_through_point(
             (cx + r, cy),
             (cx, cy + r),
             (cx + r * 0.7071, cy + r * 0.7071),

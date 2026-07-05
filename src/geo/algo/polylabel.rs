@@ -8,7 +8,7 @@
 use std::collections::BinaryHeap;
 
 use crate::geo::shape::polygon::{
-    get_polygon_closest_point, is_point_in_polygon, point_line_distance,
+    get_point_line_distance, get_polygon_closest_point, is_point_in_polygon,
 };
 use crate::types::{Point, Polygon};
 
@@ -53,7 +53,7 @@ impl Ord for Cell {
 fn signed_distance(pt: Point, shell: &Polygon, holes: &[Polygon]) -> f64 {
     // Must be inside the shell.
     if !is_point_in_polygon(pt, shell) {
-        return -point_line_distance(pt, shell[0], shell[1]).max(1.0);
+        return -get_point_line_distance(pt, shell[0], shell[1]).max(1.0);
     }
     // Must be outside every hole.
     for hole in holes {
@@ -63,7 +63,7 @@ fn signed_distance(pt: Point, shell: &Polygon, holes: &[Polygon]) -> f64 {
             let mut min_d = f64::MAX;
             for i in 0..n {
                 let j = (i + 1) % n;
-                let d = point_line_distance(pt, hole[i], hole[j]);
+                let d = get_point_line_distance(pt, hole[i], hole[j]);
                 if d < min_d {
                     min_d = d;
                 }
@@ -79,7 +79,7 @@ fn signed_distance(pt: Point, shell: &Polygon, holes: &[Polygon]) -> f64 {
         let n = poly.len();
         for i in 0..n {
             let j = (i + 1) % n;
-            let d = point_line_distance(pt, poly[i], poly[j]);
+            let d = get_point_line_distance(pt, poly[i], poly[j]);
             if d < *md {
                 *md = d;
             }
@@ -106,7 +106,7 @@ fn signed_distance(pt: Point, shell: &Polygon, holes: &[Polygon]) -> f64 {
 ///
 /// `shell` is the outer boundary; `holes` are interior exclusions
 /// (e.g. islands).  When there are no holes pass `&[]`.
-pub fn polylabel(
+pub fn get_polylabel(
     shell: &Polygon,
     holes: &[Polygon],
     precision: f64,
@@ -203,7 +203,7 @@ pub fn find_largest_circle(
     holes: &[Polygon],
     precision: f64,
 ) -> Option<(Point, f64)> {
-    let centre = polylabel(shell, holes, precision)?;
+    let centre = get_polylabel(shell, holes, precision)?;
 
     let mut radius = f64::MAX;
     let consider = |poly: &Polygon, r: &mut f64| {

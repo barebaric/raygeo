@@ -10,32 +10,6 @@ boundary.* Circle-boundary overlap (engagement) metrics.
 
 ## Functions
 
-### `angular_engagement()`
-
-```python
-angular_engagement(
-    center: tuple[float, float],
-    radius: float,
-    fragments: list[list[tuple[float, float]]],
-) -> float
-```
-
-Angular engagement (exact circle–polygon intersection).
-
-Returns uncleared angular extent in `[0, 2π]`.
-
-| Parameter   | Type                              | Description                           |
-| ----------- | --------------------------------- | ------------------------------------- |
-| `center`    | `tuple[float, float]`             | Disk centre `(x, y)`.                 |
-| `radius`    | `float`                           | Disk radius (mm).                     |
-| `fragments` | `list[list[tuple[float, float]]]` | List of polygons (cleared fragments). |
-| _Returns_   | `float`                           | Angular engagement in radians.        |
-
-![Comparison of exact polygon-intersection angular engagement with the analytical signed-distance estimate along a scan line crossing the boundary.](images/geo-algo-engagement-angular-engagement-comparison.png)
-
-*Comparison of exact polygon-intersection angular engagement with the analytical signed-distance
-estimate along a scan line crossing the boundary.*
-
 ### `compute_engagement()`
 
 ```python
@@ -62,10 +36,36 @@ Compute engagement angle, area, and chord depth.
 
 *Engagement heatmap around a circular cleared area. Green = low, red = high engagement.*
 
-### `disk_segment_area()`
+### `get_angular_engagement()`
 
 ```python
-disk_segment_area(x: float, r: float) -> float
+get_angular_engagement(
+    center: tuple[float, float],
+    radius: float,
+    fragments: list[list[tuple[float, float]]],
+) -> float
+```
+
+Angular engagement (exact circle–polygon intersection).
+
+Returns uncleared angular extent in `[0, 2π]`.
+
+| Parameter   | Type                              | Description                           |
+| ----------- | --------------------------------- | ------------------------------------- |
+| `center`    | `tuple[float, float]`             | Disk centre `(x, y)`.                 |
+| `radius`    | `float`                           | Disk radius (mm).                     |
+| `fragments` | `list[list[tuple[float, float]]]` | List of polygons (cleared fragments). |
+| _Returns_   | `float`                           | Angular engagement in radians.        |
+
+![Comparison of exact polygon-intersection angular engagement with the analytical signed-distance estimate along a scan line crossing the boundary.](images/geo-algo-engagement-angular-engagement-comparison.png)
+
+*Comparison of exact polygon-intersection angular engagement with the analytical signed-distance
+estimate along a scan line crossing the boundary.*
+
+### `get_disk_segment_area()`
+
+```python
+get_disk_segment_area(x: float, r: float) -> float
 ```
 
 Area under 2\*sqrt(r²-x²) from x to r.
@@ -84,10 +84,10 @@ of radius `r` centred at the origin.
 *Left: a disk of radius 5 mm with the circular segment to the right of the vertical line `x = 1.5`
 shaded. Right: the segment area as a function of `x`, from `-r` to `+r`.*
 
-### `point_engagement()`
+### `get_point_engagement()`
 
 ```python
-point_engagement(
+get_point_engagement(
     center: tuple[float, float],
     radius: float,
     fragments: list[list[tuple[float, float]]],

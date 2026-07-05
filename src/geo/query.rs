@@ -8,7 +8,9 @@
 //! - Path segment extraction
 
 use crate::constants::EPSILON_COLLINEAR;
-use crate::geo::algo::analysis::{get_point_at_from_array, segment_length};
+use crate::geo::algo::analysis::{
+    get_point_at_from_array, get_segment_length_3d,
+};
 use crate::geo::shape::arc::get_arc_bounds;
 use crate::geo::shape::bezier::compute_cubic_bezier_bounds_1d;
 use crate::types::{Command, Point, Point3D, Rect};
@@ -195,7 +197,7 @@ pub fn extract_overcut_rows(
     let mut collected: Vec<Command> = Vec::new();
 
     for cmd in data.iter().skip(1) {
-        let seg_length = segment_length(cmd, last_point);
+        let seg_length = get_segment_length_3d(cmd, last_point);
         if seg_length < EPSILON_COLLINEAR {
             last_point = cmd.end_point();
             continue;
@@ -258,7 +260,7 @@ pub fn get_positions_at_distances_from_array(
             continue;
         }
 
-        let seg_len = segment_length(cmd, last_point);
+        let seg_len = get_segment_length_3d(cmd, last_point);
         if seg_len < EPSILON_COLLINEAR {
             last_point = end;
             continue;

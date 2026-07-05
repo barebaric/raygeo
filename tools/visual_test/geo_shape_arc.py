@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import streamlit as st
 
 from raygeo.geo import Arc, Geometry
-from raygeo.geo.shape.arc import arc_through_point, linearize_arc
+from raygeo.geo.shape.arc import get_arc_through_point, linearize_arc
 from tools.plot import plot_geometry
 
 
@@ -91,7 +91,7 @@ def page_arc_linearize():
         mx = c1.number_input("X", -50.0, 50.0, 3.5355, key="atp_mx")
         my = c2.number_input("Y", -50.0, 50.0, 3.5355, key="atp_my")
 
-        arc = arc_through_point((sx, sy), (ex, ey), (mx, my), (cx, cy), r)
+        arc = get_arc_through_point((sx, sy), (ex, ey), (mx, my), (cx, cy), r)
 
         fig, ax = plt.subplots(figsize=(8, 8))
         xs = [p[0] for p in arc]

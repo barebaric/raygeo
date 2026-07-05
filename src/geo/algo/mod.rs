@@ -35,10 +35,10 @@ pub mod trochoid;
 
 pub use analysis::{
     does_enclose, get_area_from_array, get_outward_normal_at_from_array,
-    get_path_winding_order_from_array, get_point_at_from_array,
+    get_partial_segment, get_path_winding_order_from_array,
+    get_point_at_from_array, get_segment_length_3d,
     get_subpath_area_from_array, get_subpath_vertices_from_array,
-    get_tangent_at_from_array, is_closed, partial_segment, remove_duplicates,
-    segment_length,
+    get_tangent_at_from_array, is_closed, remove_duplicates,
 };
 pub use cleanup::{
     are_segments_equal, close_geometry_gaps_from_array, get_segment_key,
@@ -51,17 +51,17 @@ pub use clipping::{
     subtract_polygons_from_line_segment_2d,
 };
 pub use engagement::{
-    circle_polygon_intersection_area, compute_engagement, disk_segment_area,
-    Engagement,
+    compute_engagement, get_circle_polygon_intersection_area,
+    get_disk_segment_area, Engagement,
 };
 pub use fillet::{
     append_end_fillets, create_fillet_polyline, trim_to_safe_fillet_span,
     try_fillet_one_end,
 };
 pub use fitting::{
-    arc_between_two_points, are_points_collinear,
+    arc_between_two_points, are_points_collinear_3d,
     convert_arc_to_beziers_from_array, convert_arcs_to_beziers, fit_arcs,
-    fit_circle_to_3_points, fit_circle_to_points, fit_curves,
+    fit_circle_to_3_points, fit_circle_to_points_3d, fit_curves,
     fit_points_recursive, fit_points_with_primitives, flatten_to_points_3d,
     generate_linking_arc, get_polyline_arc_deviation,
     get_polyline_line_deviation, linearize_data, linearize_geometry,
@@ -73,8 +73,8 @@ pub use hull::{
     get_hulls_from_image,
 };
 pub use interp::{
-    barycentric_interpolate, barycentric_weights, compute_segment_delta,
-    compute_t_range, project_t_along_segment, slice_scanline_data,
+    barycentric_interpolate, compute_segment_delta_3d, compute_t_range,
+    get_barycentric_weights, project_t_along_segment, slice_scanline_data,
     solve_quadratic, SegmentDelta,
 };
 pub use intersect::{
@@ -93,15 +93,15 @@ pub use offset::{
 };
 pub use ordering::order_nearest_neighbor;
 pub use overcut::apply_overcut;
-pub use polylabel::{find_largest_circle, polylabel};
+pub use polylabel::{find_largest_circle, get_polylabel};
 pub use project::{
     is_planar_in_z, lift_points_to_xy_plane, project_point_to_xy,
     project_points_to_xy,
 };
 pub use ramp::{generate_ramp_3d, RampOptions, RampStyle};
 pub use rootfind::{
-    bisect, bisect_tracked, bracket_grid, illinois, illinois_tracked, secant,
-    secant_tracked, RootStatus,
+    bisect, bisect_tracked, bracket_grid, solve_illinois,
+    solve_illinois_tracked, solve_secant, solve_secant_tracked, RootStatus,
 };
 pub use simplify::{simplify_data, simplify_polyline, simplify_polyline_3d};
 pub use smooth::{
@@ -116,4 +116,4 @@ pub use topology::{
     remove_inner_edges, reverse_contour, split_inner_and_outer_contours,
     split_into_components, split_into_contours, ContourHierarchy, ContourInfo,
 };
-pub use trochoid::{trochoid_along_3d, TrochoidOptions};
+pub use trochoid::{get_trochoid_along_3d, TrochoidOptions};

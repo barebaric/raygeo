@@ -50,7 +50,7 @@ fn compute_engagement_py(d_to_boundary: f64, radius: f64) -> (f64, f64, f64) {
 
 #[gen_stub_pyfunction(
     python = r#"
-    def disk_segment_area(
+    def get_disk_segment_area(
         x: float,
         r: float,
     ) -> float:
@@ -67,14 +67,14 @@ fn compute_engagement_py(d_to_boundary: f64, radius: f64) -> (f64, f64, f64) {
     "#,
     module = "raygeo.geo.algo.engagement"
 )]
-#[pyfunction(name = "disk_segment_area")]
+#[pyfunction(name = "get_disk_segment_area")]
 fn disk_segment_area_py(x: f64, r: f64) -> f64 {
-    engagement::disk_segment_area(x, r)
+    engagement::get_disk_segment_area(x, r)
 }
 
 #[gen_stub_pyfunction(
     python = r#"
-    def point_engagement(
+    def get_point_engagement(
         center: tuple[float, float],
         radius: float,
         fragments: list[list[tuple[float, float]]],
@@ -89,14 +89,14 @@ fn disk_segment_area_py(x: f64, r: f64) -> f64 {
     "#,
     module = "raygeo.geo.algo.engagement"
 )]
-#[pyfunction(name = "point_engagement")]
+#[pyfunction(name = "get_point_engagement")]
 fn point_engagement_py(
     center: (f64, f64),
     radius: f64,
     fragments: Vec<Vec<(f64, f64)>>,
 ) -> (f64, f64, f64) {
     let frags = polygons_from_tuples(fragments);
-    let e = engagement::point_engagement(
+    let e = engagement::get_point_engagement(
         Point::new(center.0, center.1),
         radius,
         &frags,
@@ -106,7 +106,7 @@ fn point_engagement_py(
 
 #[gen_stub_pyfunction(
     python = r#"
-    def angular_engagement(
+    def get_angular_engagement(
         center: tuple[float, float],
         radius: float,
         fragments: list[list[tuple[float, float]]],
@@ -123,14 +123,14 @@ fn point_engagement_py(
     "#,
     module = "raygeo.geo.algo.engagement"
 )]
-#[pyfunction(name = "angular_engagement")]
+#[pyfunction(name = "get_angular_engagement")]
 fn angular_engagement_py(
     center: (f64, f64),
     radius: f64,
     fragments: Vec<Vec<(f64, f64)>>,
 ) -> f64 {
     let frags = polygons_from_tuples(fragments);
-    engagement::angular_engagement(
+    engagement::get_angular_engagement(
         Point::new(center.0, center.1),
         radius,
         &frags,

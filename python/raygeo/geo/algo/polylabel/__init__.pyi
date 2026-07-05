@@ -4,7 +4,7 @@
 import collections.abc
 __all__ = [
     "find_largest_circle",
-    "polylabel",
+    "get_polylabel",
 ]
 
 def find_largest_circle(shell: collections.abc.Sequence[tuple[float, float]], holes: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]] = [], precision: float = 0.5) -> tuple[tuple[float, float], float] | None:
@@ -17,7 +17,7 @@ def find_largest_circle(shell: collections.abc.Sequence[tuple[float, float]], ho
     :returns: ((x, y), radius) or None for degenerate polygons.
     """
 
-def polylabel(shell: collections.abc.Sequence[tuple[float, float]], holes: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]] = [], precision: float = 0.5) -> tuple[float, float] | None:
+def get_polylabel(shell: collections.abc.Sequence[tuple[float, float]], holes: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]] = [], precision: float = 0.5) -> tuple[float, float] | None:
     r"""
     Find the pole of inaccessibility of a polygon (with optional holes).
     

@@ -39,35 +39,10 @@ interpolated value at point p using barycentric coordinates.
 | _Returns_    | `float`               | Interpolated scalar value. Outside the triangle, the barycentric coordinates are clamped to [0, 1]. |
 | _Complexity_ |                       | O(1) time, O(1) space                                                                               |
 
-### `barycentric_weights()`
+### `compute_segment_delta_3d()`
 
 ```python
-barycentric_weights(
-    p: tuple[float, float],
-    va: tuple[float, float],
-    vb: tuple[float, float],
-    vc: tuple[float, float],
-) -> tuple[float, float, float]
-```
-
-Compute raw barycentric coordinates for a point in a triangle.
-
-Returns (r, s, t) where r is the weight for va, s for vb, t for vc. Weights are unclamped — the
-point is strictly inside (or on the boundary of) the triangle iff all three are in [0, 1].
-
-| Parameter    | Type                         | Description                                     |
-| ------------ | ---------------------------- | ----------------------------------------------- |
-| `p`          | `tuple[float, float]`        | Query point (x, y).                             |
-| `va`         | `tuple[float, float]`        | First triangle vertex (x, y).                   |
-| `vb`         | `tuple[float, float]`        | Second triangle vertex (x, y).                  |
-| `vc`         | `tuple[float, float]`        | Third triangle vertex (x, y).                   |
-| _Returns_    | `tuple[float, float, float]` | Tuple (r, s, t) of raw barycentric coordinates. |
-| _Complexity_ |                              | O(1) time, O(1) space                           |
-
-### `compute_segment_delta()`
-
-```python
-compute_segment_delta(
+compute_segment_delta_3d(
     start: tuple[float, float, float],
     end: tuple[float, float, float],
 ) -> tuple[float, float, float, float]
@@ -95,14 +70,39 @@ compute_t_range(
 
 Compute parameter range (t_start, t_end) for a clipped sub-segment.
 
-| Parameter    | Type                                | Description                               |
-| ------------ | ----------------------------------- | ----------------------------------------- |
-| `origin`     | `tuple[float, float, float]`        | Start of original segment (x, y, z).      |
-| `new_start`  | `tuple[float, float, float]`        | Start of clipped sub-segment (x, y, z).   |
-| `new_end`    | `tuple[float, float, float]`        | End of clipped sub-segment (x, y, z).     |
-| `delta`      | `tuple[float, float, float, float]` | Segment delta from compute_segment_delta. |
-| _Returns_    | `tuple[float, float]`               | (t_start, t_end) in [0, 1].               |
-| _Complexity_ |                                     | O(1) time, O(1) space                     |
+| Parameter    | Type                                | Description                                  |
+| ------------ | ----------------------------------- | -------------------------------------------- |
+| `origin`     | `tuple[float, float, float]`        | Start of original segment (x, y, z).         |
+| `new_start`  | `tuple[float, float, float]`        | Start of clipped sub-segment (x, y, z).      |
+| `new_end`    | `tuple[float, float, float]`        | End of clipped sub-segment (x, y, z).        |
+| `delta`      | `tuple[float, float, float, float]` | Segment delta from compute_segment_delta_3d. |
+| _Returns_    | `tuple[float, float]`               | (t_start, t_end) in [0, 1].                  |
+| _Complexity_ |                                     | O(1) time, O(1) space                        |
+
+### `get_barycentric_weights()`
+
+```python
+get_barycentric_weights(
+    p: tuple[float, float],
+    va: tuple[float, float],
+    vb: tuple[float, float],
+    vc: tuple[float, float],
+) -> tuple[float, float, float]
+```
+
+Compute raw barycentric coordinates for a point in a triangle.
+
+Returns (r, s, t) where r is the weight for va, s for vb, t for vc. Weights are unclamped — the
+point is strictly inside (or on the boundary of) the triangle iff all three are in [0, 1].
+
+| Parameter    | Type                         | Description                                     |
+| ------------ | ---------------------------- | ----------------------------------------------- |
+| `p`          | `tuple[float, float]`        | Query point (x, y).                             |
+| `va`         | `tuple[float, float]`        | First triangle vertex (x, y).                   |
+| `vb`         | `tuple[float, float]`        | Second triangle vertex (x, y).                  |
+| `vc`         | `tuple[float, float]`        | Third triangle vertex (x, y).                   |
+| _Returns_    | `tuple[float, float, float]` | Tuple (r, s, t) of raw barycentric coordinates. |
+| _Complexity_ |                              | O(1) time, O(1) space                           |
 
 ### `project_t_along_segment()`
 
@@ -116,13 +116,13 @@ project_t_along_segment(
 
 Project a point onto a line segment, returning t in [0, 1].
 
-| Parameter    | Type                                | Description                               |
-| ------------ | ----------------------------------- | ----------------------------------------- |
-| `origin`     | `tuple[float, float, float]`        | Start of segment (x, y, z).               |
-| `point`      | `tuple[float, float, float]`        | Point to project (x, y, z).               |
-| `delta`      | `tuple[float, float, float, float]` | Segment delta from compute_segment_delta. |
-| _Returns_    | `float`                             | Parameter t clamped to [0, 1].            |
-| _Complexity_ |                                     | O(1) time, O(1) space                     |
+| Parameter    | Type                                | Description                                  |
+| ------------ | ----------------------------------- | -------------------------------------------- |
+| `origin`     | `tuple[float, float, float]`        | Start of segment (x, y, z).                  |
+| `point`      | `tuple[float, float, float]`        | Point to project (x, y, z).                  |
+| `delta`      | `tuple[float, float, float, float]` | Segment delta from compute_segment_delta_3d. |
+| _Returns_    | `float`                             | Parameter t clamped to [0, 1].               |
+| _Complexity_ |                                     | O(1) time, O(1) space                        |
 
 ### `slice_scanline_data()`
 

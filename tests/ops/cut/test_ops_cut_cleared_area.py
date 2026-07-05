@@ -426,20 +426,20 @@ def test_query_window_outside_bbox():
     assert len(frags) == 0
 
 
-# ── point_engagement ──
+# ── get_point_engagement ──
 
 
 def test_point_engagement_inside_cleared():
     ca = ClearedArea(boundary=[])
     ca.cut([[(0, 0), (10, 0), (10, 10), (0, 10)]])
-    angle, _, _ = ca.point_engagement((5, 5), 5.0)
+    angle, _, _ = ca.get_point_engagement((5, 5), 5.0)
     assert angle < math.pi  # inside cleared → low engagement
 
 
 def test_point_engagement_outside_cleared():
     ca = ClearedArea(boundary=[])
     ca.cut([[(0, 0), (10, 0), (10, 10), (0, 10)]])
-    angle, _, _ = ca.point_engagement((50, 50), 5.0)
+    angle, _, _ = ca.get_point_engagement((50, 50), 5.0)
     assert angle > math.pi  # far outside → high engagement
 
 

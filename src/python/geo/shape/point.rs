@@ -4,7 +4,7 @@ pub(crate) const MODULE_DOC_POINT: &str = "\
 Individual point operations.
 
 Provides equality testing within a configurable tolerance, midpoint
-computation between two points, 2D/3D circumcenter of three points, and
+computation between two points, 2D/3D get_circumcenter of three points, and
 applying a 4x4 affine transformation matrix to a single point.
 ";
 
@@ -13,10 +13,10 @@ use glam::{DMat4, DVec4};
 use super::super::flex_point::{
     point3d_to_tuple, point_to_tuple, PyPoint2D, PyPoint3D,
 };
-use crate::geo::shape::point::are_points_equal;
-use crate::geo::shape::point::circumcenter;
-use crate::geo::shape::point::circumcenter_3d;
-use crate::geo::shape::point::midpoint_3d;
+use crate::geo::shape::point::are_points_equal_3d;
+use crate::geo::shape::point::get_circumcenter;
+use crate::geo::shape::point::get_circumcenter_3d;
+use crate::geo::shape::point::get_midpoint_3d;
 use crate::geo::shape::point::rotate_point;
 use crate::geo::shape::point::transform_point_3d;
 use crate::types::{Point, Point3D};
@@ -46,7 +46,7 @@ pub fn register(shape_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     python = r#"
     import raygeo.geo.types
 
-    def are_points_equal(
+    def are_points_equal_3d(
         p1: types.Point3D,
         p2: types.Point3D,
         tolerance: float,
@@ -62,7 +62,7 @@ pub fn register(shape_mod: &Bound<'_, PyModule>) -> PyResult<()> {
 "#,
     module = "raygeo.geo.shape.point"
 )]
-#[pyfunction(name = "are_points_equal")]
+#[pyfunction(name = "are_points_equal_3d")]
 fn are_points_equal_py(
     p1: (f64, f64, f64),
     p2: (f64, f64, f64),
@@ -70,7 +70,7 @@ fn are_points_equal_py(
 ) -> bool {
     let arr1 = [p1.0, p1.1, p1.2];
     let arr2 = [p2.0, p2.1, p2.2];
-    are_points_equal(&arr1, &arr2, tolerance)
+    are_points_equal_3d(&arr1, &arr2, tolerance)
 }
 
 #[gen_stub_pyfunction(
@@ -117,12 +117,12 @@ fn transform_point_py(
     import typing
     import raygeo.geo.types
 
-    def circumcenter_3d(
+    def get_circumcenter_3d(
         a: types.Point3D,
         b: types.Point3D,
         c: types.Point3D,
     ) -> typing.Optional[types.Point3D]:
-        """Compute the circumcenter of three 3D points.
+        """Compute the get_circumcenter of three 3D points.
 
         Returns the center of the unique circle passing through all three
         points.  Returns ``None`` when the points are collinear.
@@ -136,7 +136,7 @@ fn transform_point_py(
 "#,
     module = "raygeo.geo.shape.point"
 )]
-#[pyfunction(name = "circumcenter_3d")]
+#[pyfunction(name = "get_circumcenter_3d")]
 fn circumcenter_3d_py(
     a: PyPoint3D,
     b: PyPoint3D,
@@ -145,7 +145,7 @@ fn circumcenter_3d_py(
     let a3 = Point3D::new(a.0, a.1, a.2);
     let b3 = Point3D::new(b.0, b.1, b.2);
     let c3 = Point3D::new(c.0, c.1, c.2);
-    circumcenter_3d(a3, b3, c3).map(point3d_to_tuple)
+    get_circumcenter_3d(a3, b3, c3).map(point3d_to_tuple)
 }
 
 #[gen_stub_pyfunction(
@@ -153,12 +153,12 @@ fn circumcenter_3d_py(
     import typing
     import raygeo.geo.types
 
-    def circumcenter(
+    def get_circumcenter(
         a: types.Point,
         b: types.Point,
         c: types.Point,
     ) -> tuple[types.Point, float]:
-        """Compute the circumcenter and radius of three 2D points.
+        """Compute the get_circumcenter and radius of three 2D points.
 
         Returns the center of the unique circle passing through all three
         points along with its radius. Returns ``((0.0, 0.0), -1.0)`` when
@@ -173,7 +173,7 @@ fn circumcenter_3d_py(
 "#,
     module = "raygeo.geo.shape.point"
 )]
-#[pyfunction(name = "circumcenter")]
+#[pyfunction(name = "get_circumcenter")]
 fn circumcenter_py(
     a: PyPoint2D,
     b: PyPoint2D,
@@ -182,7 +182,7 @@ fn circumcenter_py(
     let pa = Point::new(a.0, a.1);
     let pb = Point::new(b.0, b.1);
     let pc = Point::new(c.0, c.1);
-    let (center, radius) = circumcenter(pa, pb, pc);
+    let (center, radius) = get_circumcenter(pa, pb, pc);
     (point_to_tuple(center), radius)
 }
 
@@ -213,7 +213,7 @@ fn rotate_point_py(point: PyPoint2D, angle: f64) -> (f64, f64) {
     python = r#"
     import raygeo.geo.types
 
-    def midpoint_3d(
+    def get_midpoint_3d(
         p1: types.Point3D,
         p2: types.Point3D,
     ) -> types.Point3D:
@@ -227,9 +227,9 @@ fn rotate_point_py(point: PyPoint2D, angle: f64) -> (f64, f64) {
 "#,
     module = "raygeo.geo.shape.point"
 )]
-#[pyfunction(name = "midpoint_3d")]
+#[pyfunction(name = "get_midpoint_3d")]
 fn midpoint_py(p1: PyPoint3D, p2: PyPoint3D) -> (f64, f64, f64) {
     let p1_3d = Point3D::new(p1.0, p1.1, p1.2);
     let p2_3d = Point3D::new(p2.0, p2.1, p2.2);
-    point3d_to_tuple(midpoint_3d(p1_3d, p2_3d))
+    point3d_to_tuple(get_midpoint_3d(p1_3d, p2_3d))
 }

@@ -12,10 +12,13 @@ from raygeo.geo.shape.polygon import (
     JoinStyle,
     apply_minimum_curvature,
     clean_polygon,
+    do_polygons_intersect,
     does_path_sweep_intersect_polygon,
     does_polygon_enclose_circle,
     flip_polygon_numpy,
     flip_polygons_numpy,
+    get_miter_offset_intersection,
+    get_point_line_distance,
     get_polygon_area,
     get_polygon_boundary_distance,
     get_polygon_bounds,
@@ -39,17 +42,14 @@ from raygeo.geo.shape.polygon import (
     is_almost_equal,
     is_point_inside_polygon,
     is_polygon_convex,
-    miter_offset_intersection,
     normalize_polygons,
     normalize_polygons_numpy,
     offset_polygon,
     point_in_polygon_numpy,
-    point_line_distance,
     polygon_area_numpy,
     polygon_bounds_numpy,
     polygon_group_bounds_numpy,
     polygon_perimeter_numpy,
-    polygons_intersect,
     polygons_intersect_numpy,
     resample_polygon,
     rotate_polygon,
@@ -90,7 +90,7 @@ def _polygon_area(poly):
     return area / 2.0
 
 
-# --- miter_offset_intersection ---
+# --- get_miter_offset_intersection ---
 
 
 class TestMiterOffsetIntersection:
@@ -98,7 +98,7 @@ class TestMiterOffsetIntersection:
         """Horizontal offset line × vertical offset line (right angle)."""
         # Line A: (0,1) + t*(1,0)  (horizontal at y=1)
         # Line B: (1,0) + s*(0,1)  (vertical   at x=1)
-        result = miter_offset_intersection(
+        result = get_miter_offset_intersection(
             (0.0, 0.0),
             (0.0, 1.0),
             (1.0, 0.0),
@@ -109,7 +109,7 @@ class TestMiterOffsetIntersection:
 
     def test_parallel_lines_fallback(self):
         """Nearly parallel lines fall back to v + off_a."""
-        result = miter_offset_intersection(
+        result = get_miter_offset_intersection(
             (5.0, 5.0),
             (2.0, 0.0),
             (1.0, 0.0),
@@ -120,7 +120,7 @@ class TestMiterOffsetIntersection:
 
     def test_oblique_45_deg(self):
         """Lines at ±45° intersect at the vertex."""
-        result = miter_offset_intersection(
+        result = get_miter_offset_intersection(
             (0.0, 0.0),
             (0.0, 0.0),
             (1.0, 1.0),
@@ -133,7 +133,7 @@ class TestMiterOffsetIntersection:
         """Non-zero offsets from vertex with perpendicular directions."""
         # Line A: (10,11) + t*(1,0)  (horizontal at y=11)
         # Line B: (11,10) + s*(0,1)  (vertical   at x=11)
-        result = miter_offset_intersection(
+        result = get_miter_offset_intersection(
             (10.0, 10.0),
             (0.0, 1.0),
             (1.0, 0.0),
@@ -150,7 +150,7 @@ class TestMiterOffsetIntersection:
         dir_a, dir_b = (1.0, 0.0), (0.0, 1.0)
         off_a = (0.0, -r)  # right-perp of (1,0) = (0,-1) * r
         off_b = (r, 0.0)  # right-perp of (0,1) = (1,0) * r
-        result = miter_offset_intersection(v, off_a, dir_a, off_b, dir_b)
+        result = get_miter_offset_intersection(v, off_a, dir_a, off_b, dir_b)
         # Lines: (0,-5) + t*(1,0) and (5,0) + s*(0,1) → intersect at (5,-5)
         assert result == (5.0, -5.0)
 
@@ -1003,22 +1003,22 @@ class TestPolygonsIntersect:
     def test_overlapping(self):
         poly1 = P((0, 0), (10, 0), (10, 10), (0, 10))
         poly2 = P((5, 5), (15, 5), (15, 15), (5, 15))
-        assert polygons_intersect(poly1, poly2) is True
+        assert do_polygons_intersect(poly1, poly2) is True
 
     def test_non_overlapping(self):
         poly1 = P((0, 0), (10, 0), (10, 10), (0, 10))
         poly2 = P((20, 20), (30, 20), (30, 30), (20, 30))
-        assert polygons_intersect(poly1, poly2) is False
+        assert do_polygons_intersect(poly1, poly2) is False
 
     def test_touching(self):
         poly1 = P((0, 0), (10, 0), (10, 10), (0, 10))
         poly2 = P((10, 0), (20, 0), (20, 10), (10, 10))
-        result = polygons_intersect(poly1, poly2)
+        result = do_polygons_intersect(poly1, poly2)
         assert result is False
 
     def test_empty(self):
         assert (
-            polygons_intersect(cast(Polygon, []), P((0, 0), (1, 0), (1, 1)))
+            do_polygons_intersect(cast(Polygon, []), P((0, 0), (1, 0), (1, 1)))
             is False
         )
 
@@ -1027,40 +1027,41 @@ class TestPolygonsIntersect:
         poly2 = P(
             (9.999, 9.999), (10.001, 9.999), (10.001, 10.001), (9.999, 10.001)
         )
-        assert polygons_intersect(poly1, poly2, min_area=1e10) is False
+        assert do_polygons_intersect(poly1, poly2, min_area=1e10) is False
 
     def test_min_area_above_threshold(self):
         poly1 = P((0, 0), (10, 0), (10, 10), (0, 10))
         poly2 = P((5, 5), (15, 5), (15, 15), (5, 15))
-        assert polygons_intersect(poly1, poly2, min_area=100) is True
+        assert do_polygons_intersect(poly1, poly2, min_area=100) is True
 
     def test_min_area_zero(self):
         poly1 = P((0, 0), (10, 0), (10, 10), (0, 10))
         poly2 = P((5, 5), (15, 5), (15, 15), (5, 15))
-        assert polygons_intersect(poly1, poly2, min_area=0) is True
+        assert do_polygons_intersect(poly1, poly2, min_area=0) is True
 
     def test_min_area_negative(self):
         poly1 = P((0, 0), (10, 0), (10, 10), (0, 10))
         poly2 = P((5, 5), (15, 5), (15, 15), (5, 15))
-        assert polygons_intersect(poly1, poly2, min_area=-10) is True
+        assert do_polygons_intersect(poly1, poly2, min_area=-10) is True
 
     def test_min_area_touching_polygons(self):
         poly1 = P((0, 0), (10, 0), (10, 10), (0, 10))
         poly2 = P((10, 0), (20, 0), (20, 10), (10, 10))
-        assert polygons_intersect(poly1, poly2, min_area=10) is False
+        assert do_polygons_intersect(poly1, poly2, min_area=10) is False
 
     def test_min_area_small_intersection_filtered(self):
         poly1 = P((0, 0), (10, 0), (10, 10), (0, 10))
         poly2 = P((9.9, 9.9), (10.1, 9.9), (10.1, 10.1), (9.9, 10.1))
-        assert polygons_intersect(poly1, poly2, min_area=1e15) is False
+        assert do_polygons_intersect(poly1, poly2, min_area=1e15) is False
 
     def test_insufficient_vertices(self):
         assert (
-            polygons_intersect(P((0, 0), (1, 0)), P((0, 0), (1, 0), (1, 1)))
+            do_polygons_intersect(P((0, 0), (1, 0)), P((0, 0), (1, 0), (1, 1)))
             is False
         )
         assert (
-            polygons_intersect(P((0, 0), (1, 0), (1, 1)), P((0, 0))) is False
+            do_polygons_intersect(P((0, 0), (1, 0), (1, 1)), P((0, 0)))
+            is False
         )
 
 
@@ -1321,31 +1322,31 @@ class TestPolygonPerimeterNumpy:
 
 class TestPointLineDistance:
     def test_point_on_line(self):
-        distance = point_line_distance((5, 5), (0, 5), (10, 5))
+        distance = get_point_line_distance((5, 5), (0, 5), (10, 5))
         assert abs(distance - 0.0) < 0.001
 
     def test_point_off_line_perpendicular(self):
-        distance = point_line_distance((5, 10), (0, 5), (10, 5))
+        distance = get_point_line_distance((5, 10), (0, 5), (10, 5))
         assert abs(distance - 5.0) < 0.001
 
     def test_point_at_line_start(self):
-        distance = point_line_distance((0, 5), (0, 5), (10, 5))
+        distance = get_point_line_distance((0, 5), (0, 5), (10, 5))
         assert abs(distance - 0.0) < 0.001
 
     def test_point_at_line_end(self):
-        distance = point_line_distance((10, 5), (0, 5), (10, 5))
+        distance = get_point_line_distance((10, 5), (0, 5), (10, 5))
         assert abs(distance - 0.0) < 0.001
 
     def test_point_beyond_segment(self):
-        distance = point_line_distance((-5, 5), (0, 5), (10, 5))
+        distance = get_point_line_distance((-5, 5), (0, 5), (10, 5))
         assert abs(distance - 5.0) < 0.001
 
     def test_point_beyond_segment_end(self):
-        distance = point_line_distance((15, 5), (0, 5), (10, 5))
+        distance = get_point_line_distance((15, 5), (0, 5), (10, 5))
         assert abs(distance - 5.0) < 0.001
 
     def test_zero_length_segment(self):
-        distance = point_line_distance((5, 5), (0, 0), (0, 0))
+        distance = get_point_line_distance((5, 5), (0, 0), (0, 0))
         assert abs(distance - 5 * 2**0.5) < 0.001
 
 

@@ -400,7 +400,7 @@ pub fn try_fillet_one_end(
 const MIN_RADIUS: f64 = 0.1;
 
 #[prof]
-pub fn descending_radius_fillet(
+pub fn get_descending_radius_fillet(
     arc: &[Point],
     outer_boundary: &[Point],
     inner_obstacles: &[Polygon],

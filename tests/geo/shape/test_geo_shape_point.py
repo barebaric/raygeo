@@ -3,8 +3,8 @@ import math
 import pytest
 
 from raygeo.geo.shape.point import (
-    circumcenter,
-    midpoint_3d,
+    get_circumcenter,
+    get_midpoint_3d,
     rotate_point,
     transform_point_3d,
 )
@@ -13,11 +13,11 @@ from raygeo.geo.shape.point import (
 def test_midpoint_3d():
     a = (1.0, 2.0, 3.0)
     b = (5.0, 6.0, 7.0)
-    assert midpoint_3d(a, b) == (3.0, 4.0, 5.0)
+    assert get_midpoint_3d(a, b) == (3.0, 4.0, 5.0)
 
 
 def test_midpoint_3d_negative():
-    assert midpoint_3d((-2.0, 0.0, 4.0), (2.0, 0.0, -4.0)) == (
+    assert get_midpoint_3d((-2.0, 0.0, 4.0), (2.0, 0.0, -4.0)) == (
         0.0,
         0.0,
         0.0,
@@ -36,24 +36,24 @@ def test_transform_point_3d():
 
 class TestCircumcenter2D:
     def test_right_triangle(self):
-        # 3-4-5 right triangle: circumcenter is midpoint of hypotenuse
-        center, radius = circumcenter((0, 0), (4, 0), (0, 3))
+        # 3-4-5 right triangle: get_circumcenter is midpoint of hypotenuse
+        center, radius = get_circumcenter((0, 0), (4, 0), (0, 3))
         assert center == pytest.approx((2.0, 1.5))
         assert radius == pytest.approx(2.5)
 
     def test_equilateral_triangle(self):
-        center, radius = circumcenter((0, 0), (2, 0), (1, 3**0.5))
+        center, radius = get_circumcenter((0, 0), (2, 0), (1, 3**0.5))
         assert center == pytest.approx((1.0, 3**0.5 / 3))
         assert radius == pytest.approx(2 * 3**0.5 / 3)
 
     def test_collinear_returns_negative_radius(self):
-        center, radius = circumcenter((0, 0), (1, 1), (2, 2))
+        center, radius = get_circumcenter((0, 0), (1, 1), (2, 2))
         assert center == (0.0, 0.0)
         assert radius == -1.0
 
     def test_center_is_equidistant(self):
         a, b, c = (1, 7), (-3, 2), (5, -1)
-        center, radius = circumcenter(a, b, c)
+        center, radius = get_circumcenter(a, b, c)
         d1 = ((center[0] - a[0]) ** 2 + (center[1] - a[1]) ** 2) ** 0.5
         d2 = ((center[0] - b[0]) ** 2 + (center[1] - b[1]) ** 2) ** 0.5
         d3 = ((center[0] - c[0]) ** 2 + (center[1] - c[1]) ** 2) ** 0.5

@@ -4,7 +4,7 @@ use pyo3_stub_gen::derive::gen_stub_pyfunction;
 
 use crate::geo::algo::nest2d::collision;
 use crate::geo::shape::polygon::{
-    get_polygon_group_bounds, polygons_intersect,
+    do_polygons_intersect, get_polygon_group_bounds,
 };
 use crate::python::geo::algo::spatial_grid2d::SpatialGrid as PySpatialGrid;
 use crate::python::geo::flex_point::{poly_to_points, PyPoint2D};
@@ -127,7 +127,7 @@ fn is_contained_py(inner: Vec<Vec<PyPoint2D>>, outer: Vec<PyPoint2D>) -> bool {
 }
 
 // ---------------------------------------------------------------------------
-// any_overlap
+// does_any_overlap
 // ---------------------------------------------------------------------------
 
 #[gen_stub_pyfunction(
@@ -135,7 +135,7 @@ fn is_contained_py(inner: Vec<Vec<PyPoint2D>>, outer: Vec<PyPoint2D>) -> bool {
     import collections.abc
     import raygeo.geo.types
 
-    def any_overlap(
+    def does_any_overlap(
         candidate: types.Polygon,
         placed: collections.abc.Sequence[types.Polygon],
         min_area: float = 1.0,
@@ -151,7 +151,7 @@ fn is_contained_py(inner: Vec<Vec<PyPoint2D>>, outer: Vec<PyPoint2D>) -> bool {
 "#,
     module = "raygeo.geo.algo.nest2d.collision"
 )]
-#[pyfunction(name = "any_overlap")]
+#[pyfunction(name = "does_any_overlap")]
 fn any_overlap_py(
     candidate: Vec<PyPoint2D>,
     placed: Vec<Vec<PyPoint2D>>,
@@ -160,11 +160,11 @@ fn any_overlap_py(
     let cand_poly = poly_to_points(candidate);
     let placed_polys: Vec<Polygon> =
         placed.into_iter().map(poly_to_points).collect();
-    collision::any_overlap(&cand_poly, &placed_polys, min_area)
+    collision::does_any_overlap(&cand_poly, &placed_polys, min_area)
 }
 
 // ---------------------------------------------------------------------------
-// any_overlap_hierarchical
+// does_any_overlap_hierarchical
 // ---------------------------------------------------------------------------
 
 #[gen_stub_pyfunction(
@@ -172,7 +172,7 @@ fn any_overlap_py(
     import collections.abc
     import numpy
 
-    def any_overlap_hierarchical(
+    def does_any_overlap_hierarchical(
         candidate_polys: collections.abc.Sequence[numpy.ndarray],
         candidate_hulls: collections.abc.Sequence[numpy.ndarray],
         placed_polys_groups: collections.abc.Sequence[collections.abc.Sequence[numpy.ndarray]],
@@ -192,7 +192,7 @@ fn any_overlap_py(
 "#,
     module = "raygeo.geo.algo.nest2d.collision"
 )]
-#[pyfunction(name = "any_overlap_hierarchical")]
+#[pyfunction(name = "does_any_overlap_hierarchical")]
 fn any_overlap_hierarchical_py(
     candidate_polys: Vec<Bound<'_, PyArray2<f64>>>,
     candidate_hulls: Vec<Bound<'_, PyArray2<f64>>>,
@@ -233,7 +233,7 @@ fn any_overlap_hierarchical_py(
             'hull: for cand_hull in &cand_hulls {
                 for placed_hull_arr in placed_hulls {
                     let placed_hull = polygon_from_numpy(placed_hull_arr);
-                    if polygons_intersect(cand_hull, &placed_hull, 0.0) {
+                    if do_polygons_intersect(cand_hull, &placed_hull, 0.0) {
                         hulls_meet = true;
                         break 'hull;
                     }
@@ -248,7 +248,7 @@ fn any_overlap_hierarchical_py(
         for cand_poly in &cand_polys {
             for placed_poly_arr in placed_group {
                 let placed_poly = polygon_from_numpy(placed_poly_arr);
-                if polygons_intersect(cand_poly, &placed_poly, min_area) {
+                if do_polygons_intersect(cand_poly, &placed_poly, min_area) {
                     return true;
                 }
             }
@@ -258,7 +258,7 @@ fn any_overlap_hierarchical_py(
 }
 
 // ---------------------------------------------------------------------------
-// any_overlap_hierarchical_grid
+// does_any_overlap_hierarchical_grid
 // ---------------------------------------------------------------------------
 
 /// Hierarchical overlap with spatial grid: bbox -> hull -> detailed polygon.
@@ -276,7 +276,7 @@ fn any_overlap_hierarchical_py(
     import numpy
     import raygeo.geo.algo.spatial_grid2d
 
-    def any_overlap_hierarchical_grid(
+    def does_any_overlap_hierarchical_grid(
         candidate_polys: collections.abc.Sequence[numpy.ndarray],
         candidate_hulls: collections.abc.Sequence[numpy.ndarray],
         placed_polys_groups: collections.abc.Sequence[collections.abc.Sequence[numpy.ndarray]],
@@ -300,7 +300,7 @@ fn any_overlap_hierarchical_py(
     "#,
     module = "raygeo.geo.algo.nest2d.collision"
 )]
-#[pyfunction(name = "any_overlap_hierarchical_grid")]
+#[pyfunction(name = "does_any_overlap_hierarchical_grid")]
 fn any_overlap_hierarchical_grid_py(
     candidate_polys: Vec<Bound<'_, PyArray2<f64>>>,
     candidate_hulls: Vec<Bound<'_, PyArray2<f64>>>,
@@ -361,7 +361,7 @@ fn any_overlap_hierarchical_grid_py(
             'hull: for cand_hull in &cand_hulls {
                 for placed_hull_arr in placed_hulls {
                     let placed_hull = polygon_from_numpy(placed_hull_arr);
-                    if polygons_intersect(cand_hull, &placed_hull, 0.0) {
+                    if do_polygons_intersect(cand_hull, &placed_hull, 0.0) {
                         hulls_meet = true;
                         break 'hull;
                     }
@@ -376,7 +376,7 @@ fn any_overlap_hierarchical_grid_py(
         for cand_poly in &cand_polys {
             for placed_poly_arr in placed_polys {
                 let placed_poly = polygon_from_numpy(placed_poly_arr);
-                if polygons_intersect(cand_poly, &placed_poly, min_area) {
+                if do_polygons_intersect(cand_poly, &placed_poly, min_area) {
                     return true;
                 }
             }

@@ -1,33 +1,33 @@
 from raygeo.geo import Geometry, Line, Move
-from raygeo.geo.shape.point import are_points_equal
+from raygeo.geo.shape.point import are_points_equal_3d
 
 
 def test_are_points_equal_exact():
     """Tests exact point equality."""
     p1 = (1.0, 2.0, 3.0)
     p2 = (1.0, 2.0, 3.0)
-    assert are_points_equal(p1, p2, 1e-6)
+    assert are_points_equal_3d(p1, p2, 1e-6)
 
 
 def test_are_points_equal_within_tolerance():
     """Tests point equality within tolerance."""
     p1 = (1.0, 2.0, 3.0)
     p2 = (1.000001, 2.000001, 3.000001)
-    assert are_points_equal(p1, p2, 1e-5)
+    assert are_points_equal_3d(p1, p2, 1e-5)
 
 
 def test_are_points_equal_outside_tolerance():
     """Tests point inequality outside tolerance."""
     p1 = (1.0, 2.0, 3.0)
     p2 = (1.1, 2.1, 3.1)
-    assert not are_points_equal(p1, p2, 1e-6)
+    assert not are_points_equal_3d(p1, p2, 1e-6)
 
 
 def test_are_points_equal_partial_difference():
     """Tests point equality with only some coordinates differing."""
     p1 = (1.0, 2.0, 3.0)
     p2 = (1.0, 2.0, 3.1)
-    assert not are_points_equal(p1, p2, 1e-6)
+    assert not are_points_equal_3d(p1, p2, 1e-6)
 
 
 def test_cleanup_empty():

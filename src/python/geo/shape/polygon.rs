@@ -7,8 +7,9 @@ use super::super::flex_point::{
 use super::super::types::NormalizePolygonsResult;
 use crate::geo::shape::polygon::{
     apply_minimum_curvature, clean_polygon, compute_polygon_bounds,
-    does_path_sweep_intersect_polygon, does_polygon_enclose_circle,
-    flip_polygon, flip_polygons, get_circle_polygon,
+    do_polygons_intersect, does_path_sweep_intersect_polygon,
+    does_polygon_enclose_circle, flip_polygon, flip_polygons,
+    get_circle_polygon, get_miter_offset_intersection, get_point_line_distance,
     get_polygon_boundary_distance, get_polygon_bounds, get_polygon_centroid,
     get_polygon_closest_point, get_polygon_convex_hull, get_polygon_edges,
     get_polygon_group_bounds, get_polygon_heading_at, get_polygon_perimeter,
@@ -18,8 +19,7 @@ use crate::geo::shape::polygon::{
     get_polygons_intersection, get_polygons_union, get_polyline_swept_polygon,
     get_segment_swept_polygon, get_signed_boundary_distance, is_almost_equal,
     is_point_inside_polygon, is_polygon_clockwise, is_polygon_convex,
-    miter_offset_intersection, normalize_polygons, offset_polygon,
-    point_line_distance, polygons_intersect, resample_polygon, rotate_polygon,
+    normalize_polygons, offset_polygon, resample_polygon, rotate_polygon,
     rotate_polygons, scale_polygon, translate_bounds, translate_polygon,
     translate_polygons, JoinStyle,
 };
@@ -326,7 +326,7 @@ fn translate_polygons_py(
     python = r#"
     import raygeo.geo.types
 
-    def point_line_distance(
+    def get_point_line_distance(
         point: types.Point,
         line_start: types.Point,
         line_end: types.Point,
@@ -342,13 +342,13 @@ fn translate_polygons_py(
 "#,
     module = "raygeo.geo.shape.polygon"
 )]
-#[pyfunction(name = "point_line_distance")]
+#[pyfunction(name = "get_point_line_distance")]
 fn point_line_distance_py(
     point: (f64, f64),
     line_start: (f64, f64),
     line_end: (f64, f64),
 ) -> f64 {
-    point_line_distance(
+    get_point_line_distance(
         Point::new(point.0, point.1),
         Point::new(line_start.0, line_start.1),
         Point::new(line_end.0, line_end.1),
@@ -695,7 +695,7 @@ fn get_polyline_swept_polygon_py(
     python = r#"
     import raygeo.geo.types
 
-    def miter_offset_intersection(
+    def get_miter_offset_intersection(
         v: types.Point,
         off_a: types.Point,
         dir_a: types.Point,
@@ -720,7 +720,7 @@ fn get_polyline_swept_polygon_py(
     "#,
     module = "raygeo.geo.shape.polygon"
 )]
-#[pyfunction(name = "miter_offset_intersection")]
+#[pyfunction(name = "get_miter_offset_intersection")]
 fn miter_offset_intersection_py(
     v: (f64, f64),
     off_a: (f64, f64),
@@ -728,7 +728,7 @@ fn miter_offset_intersection_py(
     off_b: (f64, f64),
     dir_b: (f64, f64),
 ) -> (f64, f64) {
-    point_to_tuple(miter_offset_intersection(
+    point_to_tuple(get_miter_offset_intersection(
         Point::new(v.0, v.1),
         Point::new(off_a.0, off_a.1),
         Point::new(dir_a.0, dir_a.1),
@@ -1133,7 +1133,7 @@ fn get_polygons_group_difference_py(
     import collections.abc
     import raygeo.geo.types
 
-    def polygons_intersect(
+    def do_polygons_intersect(
         p1: collections.abc.Sequence[types.Point],
         p2: collections.abc.Sequence[types.Point],
         min_area: float = 0.0,
@@ -1149,14 +1149,14 @@ fn get_polygons_group_difference_py(
 "#,
     module = "raygeo.geo.shape.polygon"
 )]
-#[pyfunction(name = "polygons_intersect")]
+#[pyfunction(name = "do_polygons_intersect")]
 #[pyo3(signature = (p1, p2, min_area=0.0))]
 fn polygons_intersect_py(
     p1: Vec<PyPoint2D>,
     p2: Vec<PyPoint2D>,
     min_area: f64,
 ) -> bool {
-    polygons_intersect(&poly_to_points(p1), &poly_to_points(p2), min_area)
+    do_polygons_intersect(&poly_to_points(p1), &poly_to_points(p2), min_area)
 }
 
 #[gen_stub_pyfunction(
@@ -1580,7 +1580,7 @@ fn polygons_intersect_numpy_py(
 ) -> bool {
     let p1 = _polygon_from_numpy(&poly1);
     let p2 = _polygon_from_numpy(&poly2);
-    polygons_intersect(&p1, &p2, min_area)
+    do_polygons_intersect(&p1, &p2, min_area)
 }
 
 #[gen_stub_pyfunction(

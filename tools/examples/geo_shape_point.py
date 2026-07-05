@@ -4,7 +4,7 @@ import math
 
 import matplotlib.pyplot as plt
 
-from raygeo.geo.shape.point import circumcenter_3d, midpoint_3d
+from raygeo.geo.shape.point import get_circumcenter_3d, get_midpoint_3d
 
 
 def _setup_3d_ax(title, elev=25, azim=-65):
@@ -61,7 +61,7 @@ def generate_circumcenter_3d():
     a = (0.0, 0.0, 0.0)
     b = (6.0, 0.0, 1.0)
     c = (2.0, 5.0, 3.0)
-    center = circumcenter_3d(a, b, c)
+    center = get_circumcenter_3d(a, b, c)
     assert center is not None
 
     r = math.sqrt(
@@ -126,7 +126,7 @@ def generate_midpoint_3d():
     """Midpoint between two 3D points."""
     a = (0.0, 0.0, 0.0)
     b = (8.0, 6.0, 4.0)
-    m = midpoint_3d(a, b)
+    m = get_midpoint_3d(a, b)
     fig, ax = _setup_3d_ax(f"3D Midpoint ({m[0]:.1f}, {m[1]:.1f}, {m[2]:.1f})")
     ax.plot(
         [a[0], b[0]],
@@ -154,12 +154,12 @@ def generate_midpoint_3d():
 __docs_target__ = ["raygeo.geo.shape.point.md"]
 __images__ = [
     {
-        "heading": "circumcenter_3d",
+        "heading": "get_circumcenter_3d",
         "caption": "Circumcenter of three 3D points with circumcircle",
         "function": generate_circumcenter_3d,
     },
     {
-        "heading": "midpoint_3d",
+        "heading": "get_midpoint_3d",
         "caption": "Midpoint of a 3D segment",
         "function": generate_midpoint_3d,
     },

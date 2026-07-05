@@ -199,7 +199,7 @@ pub fn linearize_geometry(data: &[Command], tolerance: f64) -> Vec<Command> {
 }
 
 /// Tests whether a sequence of points lies on a straight line within the given tolerance.
-pub fn are_points_collinear(points: &[Point3D], tolerance: f64) -> bool {
+pub fn are_points_collinear_3d(points: &[Point3D], tolerance: f64) -> bool {
     if points.len() < 3 {
         return true;
     }
@@ -272,8 +272,10 @@ fn solve_3x3(ata: DMat3, atb: DVec3) -> Option<DVec3> {
 }
 
 /// Fits a circle to a set of points using Kasa's least-squares method.
-pub fn fit_circle_to_points(points: &[Point3D]) -> Option<(Point, f64, f64)> {
-    if points.len() < 3 || are_points_collinear(points, 0.01) {
+pub fn fit_circle_to_points_3d(
+    points: &[Point3D],
+) -> Option<(Point, f64, f64)> {
+    if points.len() < 3 || are_points_collinear_3d(points, 0.01) {
         return None;
     }
 
@@ -639,7 +641,7 @@ pub fn fit_points_recursive(
 
     if !is_sharp && !is_closed_range {
         let subset: Vec<Point3D> = points[start..=end].to_vec();
-        if let Some((center, _, _)) = fit_circle_to_points(&subset) {
+        if let Some((center, _, _)) = fit_circle_to_points_3d(&subset) {
             let center = project_circle_center_to_bisector(
                 points[start],
                 points[end],

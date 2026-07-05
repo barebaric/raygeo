@@ -6,8 +6,8 @@ clipping, and scanline data slicing along 3D line segments.
 ";
 
 use crate::geo::algo::interp::{
-    barycentric_interpolate, barycentric_weights, compute_segment_delta,
-    compute_t_range, project_t_along_segment, slice_scanline_data,
+    barycentric_interpolate, compute_segment_delta_3d, compute_t_range,
+    get_barycentric_weights, project_t_along_segment, slice_scanline_data,
     solve_quadratic,
 };
 use crate::python::geo::flex_point::tuple_to_point3d;
@@ -35,7 +35,7 @@ pub fn register(algo_mod: &Bound<'_, PyModule>) -> PyResult<()> {
 
 #[gen_stub_pyfunction(
     python = r#"
-    def compute_segment_delta(
+    def compute_segment_delta_3d(
         start: tuple[float, float, float],
         end: tuple[float, float, float],
     ) -> tuple[float, float, float, float]:
@@ -49,13 +49,15 @@ pub fn register(algo_mod: &Bound<'_, PyModule>) -> PyResult<()> {
 "#,
     module = "raygeo.geo.algo.interp"
 )]
-#[pyfunction(name = "compute_segment_delta")]
+#[pyfunction(name = "compute_segment_delta_3d")]
 fn compute_segment_delta_py(
     start: (f64, f64, f64),
     end: (f64, f64, f64),
 ) -> (f64, f64, f64, f64) {
-    let d =
-        compute_segment_delta(tuple_to_point3d(start), tuple_to_point3d(end));
+    let d = compute_segment_delta_3d(
+        tuple_to_point3d(start),
+        tuple_to_point3d(end),
+    );
     (d.dx, d.dy, d.dz, d.len_sq)
 }
 
@@ -70,7 +72,7 @@ fn compute_segment_delta_py(
 
         :param origin: Start of segment (x, y, z).
         :param point: Point to project (x, y, z).
-        :param delta: Segment delta from compute_segment_delta.
+        :param delta: Segment delta from compute_segment_delta_3d.
         :returns: Parameter t clamped to [0, 1].
         :complexity: O(1) time, O(1) space
         """
@@ -109,7 +111,7 @@ fn project_t_along_segment_py(
         :param origin: Start of original segment (x, y, z).
         :param new_start: Start of clipped sub-segment (x, y, z).
         :param new_end: End of clipped sub-segment (x, y, z).
-        :param delta: Segment delta from compute_segment_delta.
+        :param delta: Segment delta from compute_segment_delta_3d.
         :returns: (t_start, t_end) in [0, 1].
         :complexity: O(1) time, O(1) space
         """
@@ -241,7 +243,7 @@ fn barycentric_interpolate_py(
 
 #[gen_stub_pyfunction(
     python = r#"
-    def barycentric_weights(
+    def get_barycentric_weights(
         p: tuple[float, float],
         va: tuple[float, float],
         vb: tuple[float, float],
@@ -263,7 +265,7 @@ fn barycentric_interpolate_py(
 "#,
     module = "raygeo.geo.algo.interp"
 )]
-#[pyfunction(name = "barycentric_weights")]
+#[pyfunction(name = "get_barycentric_weights")]
 #[pyo3(signature = (p, va, vb, vc))]
 fn barycentric_weights_py(
     p: (f64, f64),
@@ -271,7 +273,7 @@ fn barycentric_weights_py(
     vb: (f64, f64),
     vc: (f64, f64),
 ) -> (f64, f64, f64) {
-    barycentric_weights(
+    get_barycentric_weights(
         crate::types::Point::new(p.0, p.1),
         crate::types::Point::new(va.0, va.1),
         crate::types::Point::new(vb.0, vb.1),

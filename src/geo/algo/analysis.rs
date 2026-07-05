@@ -281,13 +281,13 @@ pub fn does_enclose(container: &Geometry, content: &Geometry) -> bool {
     winding_number > 0
 }
 
-pub fn segment_length(cmd: &Command, start_point: Point3D) -> f64 {
+pub fn get_segment_length_3d(cmd: &Command, start_point: Point3D) -> f64 {
     cmd.length(start_point)
 }
 
 /// Computes a partial command from a command by interpolating at
 /// parameter t along the segment. Returns None for MOVE commands.
-pub fn partial_segment(
+pub fn get_partial_segment(
     cmd: &Command,
     start_point: Point3D,
     t: f64,

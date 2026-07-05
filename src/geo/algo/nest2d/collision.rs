@@ -1,6 +1,6 @@
 use crate::geo::shape::polygon::{
-    get_polygon_bounds, get_polygon_group_bounds, get_polygons_difference,
-    polygons_intersect,
+    do_polygons_intersect, get_polygon_bounds, get_polygon_group_bounds,
+    get_polygons_difference,
 };
 use crate::types::{Polygon, Rect};
 
@@ -37,7 +37,7 @@ pub fn is_contained(inner: &[Polygon], outer: &Polygon) -> bool {
 /// Check if `candidate` polygon overlaps any polygon in `placed`.
 ///
 /// Uses bounding-box pre-filter before the full Clipper intersection test.
-pub fn any_overlap(
+pub fn does_any_overlap(
     candidate: &Polygon,
     placed: &[Polygon],
     min_area: f64,
@@ -58,7 +58,7 @@ pub fn any_overlap(
         {
             continue;
         }
-        if polygons_intersect(candidate, p, min_area) {
+        if do_polygons_intersect(candidate, p, min_area) {
             return true;
         }
     }
@@ -67,7 +67,7 @@ pub fn any_overlap(
 
 /// Overlap check accelerated by a [`SpatialGrid`] for large numbers of placed
 /// parts.
-pub fn any_overlap_with_grid(
+pub fn does_any_overlap_with_grid(
     candidate: &Polygon,
     placed: &[Polygon],
     grid: &SpatialGrid,
@@ -94,7 +94,7 @@ pub fn any_overlap_with_grid(
         {
             continue;
         }
-        if polygons_intersect(candidate, p, min_area) {
+        if do_polygons_intersect(candidate, p, min_area) {
             return true;
         }
     }
@@ -110,7 +110,7 @@ pub fn any_overlap_with_grid(
 ///
 /// This avoids expensive concave-polygon intersection when convex hulls
 /// don't touch.
-pub fn any_overlap_hierarchical(
+pub fn does_any_overlap_hierarchical(
     candidate_polys: &[Polygon],
     candidate_hulls: &[Polygon],
     placed_polys_groups: &[Vec<Polygon>],
@@ -143,7 +143,7 @@ pub fn any_overlap_hierarchical(
             let mut hulls_intersect = false;
             'hull: for cand_hull in candidate_hulls {
                 for placed_hull in placed_hulls {
-                    if polygons_intersect(cand_hull, placed_hull, 0.0) {
+                    if do_polygons_intersect(cand_hull, placed_hull, 0.0) {
                         hulls_intersect = true;
                         break 'hull;
                     }
@@ -157,7 +157,7 @@ pub fn any_overlap_hierarchical(
         // 3. Detailed polygon check
         for cand_poly in candidate_polys {
             for placed_poly in placed_polys {
-                if polygons_intersect(cand_poly, placed_poly, min_area) {
+                if do_polygons_intersect(cand_poly, placed_poly, min_area) {
                     return true;
                 }
             }
@@ -168,9 +168,9 @@ pub fn any_overlap_hierarchical(
 
 /// Hierarchical overlap check accelerated by a [`SpatialGrid`].
 ///
-/// Same 3-tier logic as [`any_overlap_hierarchical`] but limits candidate
+/// Same 3-tier logic as [`does_any_overlap_hierarchical`] but limits candidate
 /// pairs to those in nearby grid cells.
-pub fn any_overlap_hierarchical_grid(
+pub fn does_any_overlap_hierarchical_grid(
     candidate_polys: &[Polygon],
     candidate_hulls: &[Polygon],
     placed_polys_groups: &[Vec<Polygon>],
@@ -215,7 +215,7 @@ pub fn any_overlap_hierarchical_grid(
             let mut hulls_intersect = false;
             'hull: for cand_hull in candidate_hulls {
                 for placed_hull in placed_hulls {
-                    if polygons_intersect(cand_hull, placed_hull, 0.0) {
+                    if do_polygons_intersect(cand_hull, placed_hull, 0.0) {
                         hulls_intersect = true;
                         break 'hull;
                     }
@@ -229,7 +229,7 @@ pub fn any_overlap_hierarchical_grid(
         // 3. Detailed polygon check
         for cand_poly in candidate_polys {
             for placed_poly in placed_polys {
-                if polygons_intersect(cand_poly, placed_poly, min_area) {
+                if do_polygons_intersect(cand_poly, placed_poly, min_area) {
                     return true;
                 }
             }

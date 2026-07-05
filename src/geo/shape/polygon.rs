@@ -117,7 +117,7 @@ pub fn get_polygon_perimeter(polygon: &Polygon) -> f64 {
 }
 
 /// Perpendicular distance from a point to a line segment.
-pub fn point_line_distance(
+pub fn get_point_line_distance(
     point: Point,
     line_start: Point,
     line_end: Point,
@@ -355,7 +355,7 @@ pub fn push_arc_interior(
 ///
 /// Returns the intersection point.  When the lines are (nearly) parallel
 /// falls back to `v + off_a`.
-pub fn miter_offset_intersection(
+pub fn get_miter_offset_intersection(
     v: Point,
     off_a: Point,
     dir_a: Point,
@@ -447,7 +447,7 @@ pub fn get_polyline_swept_polygon(path: &[Point], radius: f64) -> Vec<Polygon> {
                 }
             } else {
                 // Convex (or straight) → Miter.
-                pts.push(miter_offset_intersection(
+                pts.push(get_miter_offset_intersection(
                     path[i + 1],
                     *rp_i,
                     segs[i].dir,
@@ -494,7 +494,7 @@ pub fn get_polyline_swept_polygon(path: &[Point], radius: f64) -> Vec<Polygon> {
                 pts.push(path[i + 1] + *lp_cur);
             } else {
                 // Convex (or straight) → Miter.
-                pts.push(miter_offset_intersection(
+                pts.push(get_miter_offset_intersection(
                     path[i + 1],
                     *lp_nxt,
                     -segs[i + 1].dir,
@@ -1225,7 +1225,7 @@ pub fn does_polygon_enclose_circle(
 }
 
 /// Check if a point is inside a polygon using clipper2.
-pub fn point_in_polygon_clipper(point: Point, polygon: &Polygon) -> bool {
+pub fn clip_point_in_polygon(point: Point, polygon: &Polygon) -> bool {
     if polygon.len() < 3 {
         return false;
     }
@@ -1338,7 +1338,7 @@ pub fn get_polygon_boundary_distance(a: &[Point], b: &[Point]) -> f64 {
     min_d.sqrt()
 }
 
-pub fn polygons_intersect(
+pub fn do_polygons_intersect(
     poly1: &Polygon,
     poly2: &Polygon,
     min_area: f64,

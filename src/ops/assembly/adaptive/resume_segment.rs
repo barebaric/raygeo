@@ -74,7 +74,7 @@ fn nudge_to_frontier(ctx: &ResumeCtx, detail: &mut u8) -> Option<ToolPose> {
         if !point_in_valid_area(pos, ctx.step_opts.valid_area) {
             break;
         }
-        let eng = ctx.cleared.point_engagement(pos, radius);
+        let eng = ctx.cleared.get_point_engagement(pos, radius);
         if eng.angle >= TANGENCY_ANGLE {
             tangent_pos = Some(pos);
             break;

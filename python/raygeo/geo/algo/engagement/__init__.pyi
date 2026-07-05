@@ -5,23 +5,11 @@ Circle-boundary overlap (engagement) metrics.
 """
 
 __all__ = [
-    "angular_engagement",
     "compute_engagement",
-    "disk_segment_area",
-    "point_engagement",
+    "get_angular_engagement",
+    "get_disk_segment_area",
+    "get_point_engagement",
 ]
-
-def angular_engagement(center: tuple[float, float], radius: float, fragments: list[list[tuple[float, float]]]) -> float:
-    r"""
-    Angular engagement (exact circle–polygon intersection).
-    
-    Returns uncleared angular extent in ``[0, 2π]``.
-    
-    :param center: Disk centre ``(x, y)``.
-    :param radius: Disk radius (mm).
-    :param fragments: List of polygons (cleared fragments).
-    :returns: Angular engagement in radians.
-    """
 
 def compute_engagement(d_to_boundary: float, radius: float) -> tuple[float, float, float]:
     r"""
@@ -33,7 +21,19 @@ def compute_engagement(d_to_boundary: float, radius: float) -> tuple[float, floa
     :returns: ``(angle_rad, area, chord_depth)``.
     """
 
-def disk_segment_area(x: float, r: float) -> float:
+def get_angular_engagement(center: tuple[float, float], radius: float, fragments: list[list[tuple[float, float]]]) -> float:
+    r"""
+    Angular engagement (exact circle–polygon intersection).
+    
+    Returns uncleared angular extent in ``[0, 2π]``.
+    
+    :param center: Disk centre ``(x, y)``.
+    :param radius: Disk radius (mm).
+    :param fragments: List of polygons (cleared fragments).
+    :returns: Angular engagement in radians.
+    """
+
+def get_disk_segment_area(x: float, r: float) -> float:
     r"""
     Area under 2*sqrt(r²-x²) from x to r.
     
@@ -46,7 +46,7 @@ def disk_segment_area(x: float, r: float) -> float:
     :returns: Area of the circular segment.
     """
 
-def point_engagement(center: tuple[float, float], radius: float, fragments: list[list[tuple[float, float]]]) -> tuple[float, float, float]:
+def get_point_engagement(center: tuple[float, float], radius: float, fragments: list[list[tuple[float, float]]]) -> tuple[float, float, float]:
     r"""
     Engagement angle, area, and chord depth at a disk centre.
     

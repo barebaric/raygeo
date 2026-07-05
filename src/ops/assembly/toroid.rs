@@ -4,7 +4,7 @@ use prof_macros::prof;
 
 use crate::error::RaygeoResult;
 use crate::geo::algo::helix::HelixDirection;
-use crate::geo::algo::trochoid::{trochoid_along_3d, TrochoidOptions};
+use crate::geo::algo::trochoid::{get_trochoid_along_3d, TrochoidOptions};
 use crate::ops::assembly::result::AssemblyResult;
 use crate::ops::container::Ops;
 use crate::ops::cut::ToolPose;
@@ -32,7 +32,7 @@ pub fn generate_toroid(
     opts: &ToroidOptions,
     cut_state: &State,
 ) -> RaygeoResult<AssemblyResult> {
-    let path = trochoid_along_3d(
+    let path = get_trochoid_along_3d(
         &opts.carrier,
         &TrochoidOptions {
             diameter: opts.tool_radius * 2.0,

@@ -5,7 +5,7 @@ use crate::geo::algo::clipping::{
 };
 use crate::geo::algo::fitting::fit_points_with_primitives;
 use crate::geo::algo::interp::{
-    compute_segment_delta, compute_t_range, slice_scanline_data,
+    compute_segment_delta_3d, compute_t_range, slice_scanline_data,
 };
 use crate::geo::shape::arc::is_arc_inside_polygons;
 use crate::geo::shape::bezier::is_bezier_inside_polygons;
@@ -689,7 +689,7 @@ fn append_clipped_scanline(
     kept_segments: &[(Point3D, Point3D)],
     pen_pos: Option<Point3D>,
 ) -> Option<Point3D> {
-    let delta = compute_segment_delta(last_point, end);
+    let delta = compute_segment_delta_3d(last_point, end);
     let mut pen_pos = pen_pos;
 
     for (new_start, new_end) in kept_segments {

@@ -3,7 +3,7 @@ use crate::geo::shape::polygon::{
 };
 use crate::types::{Polygon, Rect};
 
-use super::collision::{any_overlap, is_contained};
+use super::collision::{does_any_overlap, is_contained};
 
 const MIN_SLIDE: f64 = 0.01;
 const MIN_STEP: f64 = 0.1;
@@ -67,7 +67,7 @@ pub fn find_max_slide(
         // Check overlap with other parts
         let overlaps = test_polys
             .iter()
-            .any(|tp| any_overlap(tp, &other_flat, 1.0));
+            .any(|tp| does_any_overlap(tp, &other_flat, 1.0));
 
         if overlaps {
             step /= 2.0;

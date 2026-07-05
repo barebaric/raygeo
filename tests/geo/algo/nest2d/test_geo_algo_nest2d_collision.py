@@ -3,9 +3,9 @@
 import numpy as np
 
 from raygeo.geo.algo.nest2d.collision import (
-    any_overlap,
-    any_overlap_hierarchical,
-    any_overlap_hierarchical_grid,
+    does_any_overlap,
+    does_any_overlap_hierarchical,
+    does_any_overlap_hierarchical_grid,
     is_contained,
 )
 from raygeo.geo.algo.spatial_grid2d import SpatialGrid
@@ -43,20 +43,20 @@ class TestAnyOverlap:
     def test_no_overlap(self):
         placed = [[(50.0, 50.0), (60.0, 50.0), (60.0, 60.0), (50.0, 60.0)]]
         candidate = [(0.0, 0.0), (10.0, 0.0), (10.0, 10.0), (0.0, 10.0)]
-        assert any_overlap(candidate, placed, 0.0) is False
+        assert does_any_overlap(candidate, placed, 0.0) is False
 
     def test_overlap(self):
         placed = [[(5.0, 5.0), (15.0, 5.0), (15.0, 15.0), (5.0, 15.0)]]
         candidate = [(0.0, 0.0), (10.0, 0.0), (10.0, 10.0), (0.0, 10.0)]
-        assert any_overlap(candidate, placed, 0.0) is True
+        assert does_any_overlap(candidate, placed, 0.0) is True
 
     def test_empty_candidate(self):
         placed = [[(0.0, 0.0), (10.0, 0.0), (10.0, 10.0)]]
-        assert any_overlap([], placed, 0.0) is False
+        assert does_any_overlap([], placed, 0.0) is False
 
     def test_empty_placed(self):
         candidate = [(0.0, 0.0), (10.0, 0.0), (10.0, 10.0)]
-        assert any_overlap(candidate, [], 0.0) is False
+        assert does_any_overlap(candidate, [], 0.0) is False
 
 
 class TestAnyOverlapHierarchical:
@@ -72,7 +72,7 @@ class TestAnyOverlapHierarchical:
             [PN([(50.0, 50.0), (60.0, 50.0), (60.0, 60.0), (50.0, 60.0)])]
         ]
         assert (
-            any_overlap_hierarchical(
+            does_any_overlap_hierarchical(
                 cand_polys, cand_hulls, placed, placed_hulls, 0.0
             )
             is False
@@ -86,7 +86,7 @@ class TestAnyOverlapHierarchical:
             [PN([(5.0, 5.0), (15.0, 5.0), (15.0, 15.0), (5.0, 15.0)])]
         ]
         assert (
-            any_overlap_hierarchical(
+            does_any_overlap_hierarchical(
                 cand_polys, cand_hulls, placed, placed_hulls, 0.0
             )
             is True
@@ -124,7 +124,7 @@ class TestAnyOverlapHierarchical:
             [PN([(20.0, 20.0), (30.0, 20.0), (30.0, 30.0), (20.0, 30.0)])]
         ]
         assert (
-            any_overlap_hierarchical(
+            does_any_overlap_hierarchical(
                 cand_polys, cand_hulls, placed, placed_hulls, 0.0
             )
             is False
@@ -132,7 +132,7 @@ class TestAnyOverlapHierarchical:
 
     def test_empty_candidate_polys(self):
         assert (
-            any_overlap_hierarchical(
+            does_any_overlap_hierarchical(
                 [],
                 [],
                 [[PN([(0.0, 0.0), (10.0, 0.0), (10.0, 10.0)])]],
@@ -156,7 +156,7 @@ class TestAnyOverlapHierarchicalGrid:
         grid = SpatialGrid(50.0)
         grid.insert(0, [50.0, 50.0, 60.0, 60.0])
         assert (
-            any_overlap_hierarchical_grid(
+            does_any_overlap_hierarchical_grid(
                 cand_polys,
                 cand_hulls,
                 placed,
@@ -178,7 +178,7 @@ class TestAnyOverlapHierarchicalGrid:
         grid = SpatialGrid(50.0)
         grid.insert(0, [5.0, 5.0, 15.0, 15.0])
         assert (
-            any_overlap_hierarchical_grid(
+            does_any_overlap_hierarchical_grid(
                 cand_polys,
                 cand_hulls,
                 placed,

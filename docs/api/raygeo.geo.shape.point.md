@@ -6,15 +6,15 @@ sidebar_label: raygeo.geo.shape.point
 Individual point operations.
 
 Provides equality testing within a configurable tolerance, midpoint computation between two points,
-2D/3D circumcenter of three points, and applying a 4x4 affine transformation matrix to a single
+2D/3D get_circumcenter of three points, and applying a 4x4 affine transformation matrix to a single
 point.
 
 ## Functions
 
-### `are_points_equal()`
+### `are_points_equal_3d()`
 
 ```python
-are_points_equal(
+are_points_equal_3d(
     p1: types.Point3D,
     p2: types.Point3D,
     tolerance: float,
@@ -31,17 +31,17 @@ Check if two 3D points are equal within tolerance.
 | _Returns_    | `bool`          | True if points are equal within tolerance. |
 | _Complexity_ |                 | O(1) time, O(1) space                      |
 
-### `circumcenter()`
+### `get_circumcenter()`
 
 ```python
-circumcenter(
+get_circumcenter(
     a: types.Point,
     b: types.Point,
     c: types.Point,
 ) -> tuple[types.Point, float]
 ```
 
-Compute the circumcenter and radius of three 2D points.
+Compute the get_circumcenter and radius of three 2D points.
 
 Returns the center of the unique circle passing through all three points along with its radius.
 Returns `((0.0, 0.0), -1.0)` when the points are collinear.
@@ -54,17 +54,17 @@ Returns `((0.0, 0.0), -1.0)` when the points are collinear.
 | _Returns_    | `tuple[types.Point, float]` | `(center, radius)` where center is `(x, y)`. |
 | _Complexity_ |                             | O(1) time, O(1) space                        |
 
-### `circumcenter_3d()`
+### `get_circumcenter_3d()`
 
 ```python
-circumcenter_3d(
+get_circumcenter_3d(
     a: types.Point3D,
     b: types.Point3D,
     c: types.Point3D,
 ) -> Optional[types.Point3D]
 ```
 
-Compute the circumcenter of three 3D points.
+Compute the get_circumcenter of three 3D points.
 
 Returns the center of the unique circle passing through all three points. Returns `None` when the
 points are collinear.
@@ -81,10 +81,10 @@ points are collinear.
 
 *Circumcenter of three 3D points with circumcircle*
 
-### `midpoint_3d()`
+### `get_midpoint_3d()`
 
 ```python
-midpoint_3d(p1: types.Point3D, p2: types.Point3D) -> types.Point3D
+get_midpoint_3d(p1: types.Point3D, p2: types.Point3D) -> types.Point3D
 ```
 
 Get the midpoint between two 3D points.

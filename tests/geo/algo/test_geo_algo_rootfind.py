@@ -2,7 +2,12 @@
 
 import math
 
-from raygeo.geo.algo.rootfind import bisect, bracket_grid, illinois, secant
+from raygeo.geo.algo.rootfind import (
+    bisect,
+    bracket_grid,
+    solve_illinois,
+    solve_secant,
+)
 
 
 def _sq_err(x):
@@ -30,29 +35,29 @@ def test_bisect_no_bracket():
 
 
 def test_secant_sqrt_2():
-    root, status, iters = secant(_sq_err, 1.0, 2.0, 1e-10, 100)
+    root, status, iters = solve_secant(_sq_err, 1.0, 2.0, 1e-10, 100)
     assert status == "Converged"
     assert abs(root - math.sqrt(2)) < 1e-8
     assert iters > 0
 
 
 def test_illinois_sqrt_2():
-    root, status, iters = illinois(_sq_err, 0.0, 2.0, 1e-10, 100)
+    root, status, iters = solve_illinois(_sq_err, 0.0, 2.0, 1e-10, 100)
     assert status == "Converged"
     assert abs(root - math.sqrt(2)) < 1e-8
     assert iters > 0
 
 
 def test_illinois_linear():
-    root, status, _ = illinois(_lin, 0.0, 10.0, 1e-10, 100)
+    root, status, _ = solve_illinois(_lin, 0.0, 10.0, 1e-10, 100)
     assert status == "Converged"
     assert abs(root - 2.5) < 1e-8
 
 
 def test_all_methods_agree():
     rb, sb, _ = bisect(_sq_err, 0.0, 2.0, 1e-8, 200)
-    rs, ss, _ = secant(_sq_err, 1.0, 2.0, 1e-8, 200)
-    ri, si, _ = illinois(_sq_err, 0.0, 2.0, 1e-8, 200)
+    rs, ss, _ = solve_secant(_sq_err, 1.0, 2.0, 1e-8, 200)
+    ri, si, _ = solve_illinois(_sq_err, 0.0, 2.0, 1e-8, 200)
     assert sb == "Converged"
     assert ss == "Converged"
     assert si == "Converged"
@@ -62,8 +67,8 @@ def test_all_methods_agree():
 
 def test_secant_fewer_iters():
     _, _, ib = bisect(_sq_err, 0.0, 2.0, 1e-8, 200)
-    _, _, isec = secant(_sq_err, 1.0, 2.0, 1e-8, 200)
-    assert isec <= ib, "secant should converge in fewer iters"
+    _, _, isec = solve_secant(_sq_err, 1.0, 2.0, 1e-8, 200)
+    assert isec <= ib, "solve_secant should converge in fewer iters"
 
 
 # ── bracket_grid ──────────────────────────────────────────────────────

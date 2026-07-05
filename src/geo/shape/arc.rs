@@ -26,7 +26,7 @@ pub const XY_NORMAL_CCW: Point3D = Point3D::new(0.0, 0.0, 1.0);
 ///
 /// `clockwise = false` (CCW in XY) → `(0, 0, +1)`.
 /// `clockwise = true`  (CW  in XY) → `(0, 0, -1)`.
-pub fn normal_from_clockwise_3d(clockwise: bool) -> Point3D {
+pub fn get_normal_from_clockwise_3d(clockwise: bool) -> Point3D {
     if clockwise {
         Point3D::new(0.0, 0.0, -1.0)
     } else {
@@ -498,7 +498,7 @@ pub fn does_arc_intersect_rect(
     // Linearize and test each segment
     let offset_3d =
         Point3D::new(center.x - start_pos.x, center.y - start_pos.y, 0.0);
-    let normal = normal_from_clockwise_3d(clockwise);
+    let normal = get_normal_from_clockwise_3d(clockwise);
     let radius = start_pos.distance(center);
     let start_3d: Point3D = Point3D::new(start_pos.x, start_pos.y, 0.0);
     let end_3d: Point3D = Point3D::new(end_pos.x, end_pos.y, 0.0);
@@ -617,7 +617,7 @@ pub fn is_arc_inside_polygons(
 
 /// Build a circular arc from `t_start` to `t_end` around `center` (radius
 /// `r`), choosing the sweep direction so the arc passes through `t_mid`.
-pub fn arc_through_point(
+pub fn get_arc_through_point(
     t_start: Point,
     t_end: Point,
     t_mid: Point,

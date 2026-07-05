@@ -9,7 +9,7 @@ appending them to polylines, and trimming to safe spans.
 * ``create_fillet_polyline`` — circular arc tangent to a direction.
 * ``append_end_fillets`` — fillet both ends of an open polyline.
 * ``trim_to_safe_fillet_span`` — longest sub-span whose end fillets avoid obstacles.
-* ``descending_radius_fillet`` — try fillets at descending radii until one fits.
+* ``get_descending_radius_fillet`` — try fillets at descending radii until one fits.
 ";
 
 use crate::geo::algo::fillet;
@@ -137,7 +137,7 @@ fn append_end_fillets_py(
     python = r#"
     import collections.abc
 
-    def descending_radius_fillet(
+    def get_descending_radius_fillet(
         arc: collections.abc.Sequence[tuple[float, float]],
         outer_boundary: collections.abc.Sequence[tuple[float, float]],
         inner_obstacles: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]] = [],
@@ -163,7 +163,7 @@ fn append_end_fillets_py(
 "#,
     module = "raygeo.geo.algo.fillet"
 )]
-#[pyfunction(name = "descending_radius_fillet")]
+#[pyfunction(name = "get_descending_radius_fillet")]
 #[pyo3(signature = (arc, outer_boundary, inner_obstacles = None, radius = 3.0, margin = 0.0))]
 fn descending_radius_fillet_py(
     arc: Vec<(f64, f64)>,
@@ -184,7 +184,7 @@ fn descending_radius_fillet_py(
         .map(|h| h.into_iter().map(|(x, y)| Point::new(x, y)).collect())
         .collect();
     let side = get_polyline_turn_sign(&arc_pts);
-    fillet::descending_radius_fillet(
+    fillet::get_descending_radius_fillet(
         &arc_pts, &boundary, &obstacles, radius, margin, side, side,
     )
     .into_iter()

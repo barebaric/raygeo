@@ -13,9 +13,9 @@ from raygeo import geo
 from raygeo.geo import types
 import typing
 __all__ = [
-    "are_points_collinear",
+    "are_points_collinear_3d",
     "fit_circle_to_3_points",
-    "fit_circle_to_points",
+    "fit_circle_to_points_3d",
     "fit_points_recursive",
     "fit_points_with_primitives",
     "flatten_to_points_3d",
@@ -27,7 +27,7 @@ __all__ = [
     "project_circle_center_to_bisector",
 ]
 
-def are_points_collinear(points: collections.abc.Sequence[types.Point3D], tolerance: float = 0.000001) -> bool:
+def are_points_collinear_3d(points: collections.abc.Sequence[types.Point3D], tolerance: float = 0.000001) -> bool:
     r"""
     Check if three or more points are collinear within tolerance.
     
@@ -48,7 +48,7 @@ def fit_circle_to_3_points(p1: types.Point2DOr3D, p2: types.Point2DOr3D, p3: typ
     :complexity: O(1) time, O(1) space
     """
 
-def fit_circle_to_points(points: collections.abc.Sequence[types.Point3D]) -> typing.Optional[tuple[types.Point, float, float]]:
+def fit_circle_to_points_3d(points: collections.abc.Sequence[types.Point3D]) -> typing.Optional[tuple[types.Point, float, float]]:
     r"""
     Fit a circle to a set of points.
     

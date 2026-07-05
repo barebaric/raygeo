@@ -10,6 +10,7 @@ __all__ = [
     "JoinStyle",
     "apply_minimum_curvature",
     "clean_polygon",
+    "do_polygons_intersect",
     "does_path_sweep_intersect_polygon",
     "does_polygon_enclose_circle",
     "flip_polygon",
@@ -17,6 +18,8 @@ __all__ = [
     "flip_polygons",
     "flip_polygons_numpy",
     "get_circle_polygon",
+    "get_miter_offset_intersection",
+    "get_point_line_distance",
     "get_polygon_area",
     "get_polygon_boundary_distance",
     "get_polygon_bounds",
@@ -42,17 +45,14 @@ __all__ = [
     "is_point_inside_polygon",
     "is_polygon_clockwise",
     "is_polygon_convex",
-    "miter_offset_intersection",
     "normalize_polygons",
     "normalize_polygons_numpy",
     "offset_polygon",
     "point_in_polygon_numpy",
-    "point_line_distance",
     "polygon_area_numpy",
     "polygon_bounds_numpy",
     "polygon_group_bounds_numpy",
     "polygon_perimeter_numpy",
-    "polygons_intersect",
     "polygons_intersect_numpy",
     "resample_polygon",
     "rotate_polygon",
@@ -106,6 +106,17 @@ def clean_polygon(polygon: collections.abc.Sequence[types.Point], tolerance: typ
     :param tolerance: Distance tolerance for deduplication.
     :returns: Cleaned polygon or None.
     :complexity: O(n)
+    """
+
+def do_polygons_intersect(p1: collections.abc.Sequence[types.Point], p2: collections.abc.Sequence[types.Point], min_area: float = 0) -> bool:
+    r"""
+    Check if two polygons intersect.
+    
+    :param p1: First polygon as (x, y) points.
+    :param p2: Second polygon as (x, y) points.
+    :param min_area: Minimum intersection area threshold.
+    :returns: True if polygons intersect.
+    :complexity: O(n * m)
     """
 
 def does_path_sweep_intersect_polygon(path: collections.abc.Sequence[types.Point], radius: float, obstacles: collections.abc.Sequence[types.Polygon]) -> bool:
@@ -189,6 +200,35 @@ def get_circle_polygon(center: types.Point, radius: float, n: int = 64) -> types
     :param n: Number of sides (default 64).
     :returns: Polygon as list of (x, y) points.
     :complexity: O(n)
+    """
+
+def get_miter_offset_intersection(v: types.Point, off_a: types.Point, dir_a: types.Point, off_b: types.Point, dir_b: types.Point) -> types.Point:
+    r"""
+    Intersect two offset lines at a vertex for miter join.
+    
+    Line A: ``v + off_a + t * dir_a``
+    Line B: ``v + off_b + s * dir_b``
+    
+    Returns the intersection point.  When the lines are nearly parallel
+    falls back to ``v + off_a``.
+    
+    :param v: Vertex point (x, y).
+    :param off_a: Offset from *v* along line A.
+    :param dir_a: Unit direction vector of line A.
+    :param off_b: Offset from *v* along line B.
+    :param dir_b: Unit direction vector of line B.
+    :returns: Intersection point (x, y).
+    """
+
+def get_point_line_distance(point: types.Point, line_start: types.Point, line_end: types.Point) -> float:
+    r"""
+    Compute the distance from a point to a line.
+    
+    :param point: Point (x, y).
+    :param line_start: Line start point (x, y).
+    :param line_end: Line end point (x, y).
+    :returns: Perpendicular distance.
+    :complexity: O(1)
     """
 
 def get_polygon_area(polygon: collections.abc.Sequence[types.Point]) -> float:
@@ -442,24 +482,6 @@ def is_polygon_convex(polygon: collections.abc.Sequence[types.Point]) -> bool:
     :complexity: O(n)
     """
 
-def miter_offset_intersection(v: types.Point, off_a: types.Point, dir_a: types.Point, off_b: types.Point, dir_b: types.Point) -> types.Point:
-    r"""
-    Intersect two offset lines at a vertex for miter join.
-    
-    Line A: ``v + off_a + t * dir_a``
-    Line B: ``v + off_b + s * dir_b``
-    
-    Returns the intersection point.  When the lines are nearly parallel
-    falls back to ``v + off_a``.
-    
-    :param v: Vertex point (x, y).
-    :param off_a: Offset from *v* along line A.
-    :param dir_a: Unit direction vector of line A.
-    :param off_b: Offset from *v* along line B.
-    :param dir_b: Unit direction vector of line B.
-    :returns: Intersection point (x, y).
-    """
-
 def normalize_polygons(polygons: collections.abc.Sequence[types.Polygon]) -> tuple[list[types.Polygon], float, float]:
     r"""
     Normalize polygons (outer CCW, inner CW).
@@ -499,17 +521,6 @@ def point_in_polygon_numpy(point: types.Point, polygon: numpy.typing.NDArray) ->
     :complexity: O(n)
     """
 
-def point_line_distance(point: types.Point, line_start: types.Point, line_end: types.Point) -> float:
-    r"""
-    Compute the distance from a point to a line.
-    
-    :param point: Point (x, y).
-    :param line_start: Line start point (x, y).
-    :param line_end: Line end point (x, y).
-    :returns: Perpendicular distance.
-    :complexity: O(1)
-    """
-
 def polygon_area_numpy(polygon: numpy.typing.NDArray) -> float:
     r"""
     Get the area of a polygon from numpy array.
@@ -544,17 +555,6 @@ def polygon_perimeter_numpy(polygon: numpy.typing.NDArray) -> float:
     :param polygon: Polygon as a 2D numpy array.
     :returns: Perimeter length.
     :complexity: O(n)
-    """
-
-def polygons_intersect(p1: collections.abc.Sequence[types.Point], p2: collections.abc.Sequence[types.Point], min_area: float = 0) -> bool:
-    r"""
-    Check if two polygons intersect.
-    
-    :param p1: First polygon as (x, y) points.
-    :param p2: Second polygon as (x, y) points.
-    :param min_area: Minimum intersection area threshold.
-    :returns: True if polygons intersect.
-    :complexity: O(n * m)
     """
 
 def polygons_intersect_numpy(poly1: numpy.typing.NDArray, poly2: numpy.typing.NDArray, min_area: float = 0) -> bool:

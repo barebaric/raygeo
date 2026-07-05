@@ -11,10 +11,10 @@ arc deviation).
 
 ## Functions
 
-### `are_points_collinear()`
+### `are_points_collinear_3d()`
 
 ```python
-are_points_collinear(
+are_points_collinear_3d(
     points: Sequence[types.Point3D],
     tolerance: float = 1e-06,
 ) -> bool
@@ -53,10 +53,10 @@ Fit a circle to three points.
 
 *Circle fitted to three points*
 
-### `fit_circle_to_points()`
+### `fit_circle_to_points_3d()`
 
 ```python
-fit_circle_to_points(
+fit_circle_to_points_3d(
     points: Sequence[types.Point3D],
 ) -> Optional[tuple[types.Point, float, float]]
 ```

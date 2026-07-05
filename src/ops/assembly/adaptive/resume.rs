@@ -137,7 +137,9 @@ fn march_to_clear(
         if !point_in_valid_area(pos, ctx.step_opts.valid_area) {
             return None;
         }
-        if cleared.point_engagement(pos, radius).angle <= CLEARANCE_ANGLE_EPS {
+        if cleared.get_point_engagement(pos, radius).angle
+            <= CLEARANCE_ANGLE_EPS
+        {
             return Some(pos);
         }
     }
@@ -164,7 +166,8 @@ pub(super) fn offset_and_probe(
 ) -> Option<ToolPose> {
     let cleared = ctx.cleared;
 
-    if cleared.point_engagement(candidate, radius).angle <= CLEARANCE_ANGLE_EPS
+    if cleared.get_point_engagement(candidate, radius).angle
+        <= CLEARANCE_ANGLE_EPS
     {
         return probe(ctx, radius, candidate, heading);
     }

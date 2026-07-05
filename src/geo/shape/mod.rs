@@ -13,10 +13,11 @@ pub mod polyline;
 pub mod rect;
 
 pub use arc::{
-    arc_through_point, does_arc_intersect_circle, does_arc_intersect_rect,
-    get_arc_angles, get_arc_bounds, get_arc_closest_point, get_arc_direction,
-    get_arc_length, get_arc_midpoint, get_polyline_turn_sign, is_angle_between,
-    is_arc_clockwise, is_arc_inside_polygons, linearize_arc, normalize_angle,
+    does_arc_intersect_circle, does_arc_intersect_rect, get_arc_angles,
+    get_arc_bounds, get_arc_closest_point, get_arc_direction, get_arc_length,
+    get_arc_midpoint, get_arc_through_point, get_polyline_turn_sign,
+    is_angle_between, is_arc_clockwise, is_arc_inside_polygons, linearize_arc,
+    normalize_angle,
 };
 pub use bezier::{
     clip_bezier_with_rect, compute_cubic_bezier_bounds_1d,
@@ -45,8 +46,8 @@ pub use line::{
     is_point_inside_rect, is_point_on_segment, longest_line_through_point,
 };
 pub use point::{
-    are_points_equal, circumcenter, circumcenter_3d, midpoint_3d,
-    transform_point_3d,
+    are_points_equal_3d, get_circumcenter, get_circumcenter_3d,
+    get_midpoint_3d, transform_point_3d,
 };
 pub use polygon::{
     apply_minimum_curvature, clean_polygon, compute_polygon_bounds,
@@ -61,10 +62,9 @@ pub use polygon::{
     get_polygons_union, get_segment_swept_polygon, is_almost_equal,
     is_point_in_polygon, is_polygon_clockwise, is_polygon_convex,
     normalize_polygons, offset_polygon, path_to_polygon, paths_to_polygons,
-    point_line_distance, polygon_to_path, polygons_to_paths, resample_polygon,
-    rotate_polygon, rotate_polygons, scale_polygon, translate_bounds,
-    translate_polygon, translate_polygons, ClipperPath, ClipperPaths, GeoScale,
-    JoinStyle,
+    polygon_to_path, polygons_to_paths, resample_polygon, rotate_polygon,
+    rotate_polygons, scale_polygon, translate_bounds, translate_polygon,
+    translate_polygons, ClipperPath, ClipperPaths, GeoScale, JoinStyle,
 };
 pub use polygon3d::{
     deduplicate_polyline_3d, fillet_polyline_3d, flip_polygon_3d,

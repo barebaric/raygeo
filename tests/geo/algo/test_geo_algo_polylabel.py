@@ -1,13 +1,13 @@
 """Tests for the Polylabel (pole of inaccessibility) algorithm."""
 
 from raygeo.geo.algo.offset import offset_contour_group
-from raygeo.geo.algo.polylabel import polylabel
+from raygeo.geo.algo.polylabel import get_polylabel
 from raygeo.geo.shape.polygon import JoinStyle, get_polygon_signed_area
 
 
 def test_rectangle_centre():
     """Pole of a rectangle is its centre."""
-    p = polylabel(
+    p = get_polylabel(
         [(0, 0), (100, 0), (100, 80), (0, 80)],
         holes=[],
         precision=0.1,
@@ -20,7 +20,7 @@ def test_rectangle_centre():
 
 def test_l_shape():
     """Pole of an L-shape lies in the overlap region."""
-    p = polylabel(
+    p = get_polylabel(
         [(0, 0), (100, 0), (100, 40), (40, 40), (40, 80), (0, 80)],
         holes=[],
         precision=0.5,
@@ -33,7 +33,7 @@ def test_l_shape():
 
 def test_triangle():
     """Pole of a triangle is near its incenter."""
-    p = polylabel(
+    p = get_polylabel(
         [(0, 0), (100, 0), (50, 100)],
         holes=[],
         precision=0.5,
@@ -46,19 +46,19 @@ def test_triangle():
 
 def test_empty_polygon():
     """Empty polygon → None."""
-    assert polylabel([], holes=[], precision=0.1) is None
+    assert get_polylabel([], holes=[], precision=0.1) is None
 
 
 def test_degenerate_polygon():
     """Degenerate polygon (single point) → None."""
-    assert polylabel([(0, 0)], holes=[], precision=0.1) is None
+    assert get_polylabel([(0, 0)], holes=[], precision=0.1) is None
 
 
 def test_precision_improves_accuracy():
     """Higher precision (smaller value) gives a more accurate result."""
     poly = [(0, 0), (100, 0), (100, 100), (0, 100)]
-    coarse = polylabel(poly, holes=[], precision=10.0)
-    fine = polylabel(poly, holes=[], precision=0.1)
+    coarse = get_polylabel(poly, holes=[], precision=10.0)
+    fine = get_polylabel(poly, holes=[], precision=0.1)
     assert coarse is not None and fine is not None
     err_coarse = max(abs(coarse[0] - 50.0), abs(coarse[1] - 50.0))
     err_fine = max(abs(fine[0] - 50.0), abs(fine[1] - 50.0))
@@ -82,7 +82,7 @@ def test_central_island():
             holes.append(p)
 
     assert shell is not None
-    pole = polylabel(shell, holes=holes, precision=0.5)
+    pole = get_polylabel(shell, holes=holes, precision=0.5)
     assert pole is not None
     cx, cy = pole
     assert not (35.0 < cx < 65.0 and 35.0 < cy < 65.0), (
@@ -101,7 +101,7 @@ def test_multi_island_pocket():
 
     assert area
     largest = max(area, key=get_polygon_signed_area)
-    p = polylabel(largest, holes=[], precision=0.5)
+    p = get_polylabel(largest, holes=[], precision=0.5)
     assert p is not None
     cx, cy = p
     assert 55.0 < cx < 105.0

@@ -4,7 +4,7 @@ r"""
 Medial Axis Transform (MAT) computation.
 
 The MAT is the skeleton of a 2D domain — the set of points equidistant
-to two or more boundary features.  It is computed via Delaunay-circumcenter
+to two or more boundary features.  It is computed via Delaunay-get_circumcenter
 extraction from a constrained triangulation of the domain boundary.
 
 * ``MedialAxis.compute`` — compute the MAT of a domain (with optional holes).

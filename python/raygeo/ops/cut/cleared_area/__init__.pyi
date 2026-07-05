@@ -137,7 +137,7 @@ class ClearedArea:
         After this call the batch is closed (the caller may start a new
         one).
         """
-    def point_engagement(self, center: tuple[builtins.float, builtins.float], radius: builtins.float) -> tuple[builtins.float, builtins.float, builtins.float]:
+    def get_point_engagement(self, center: tuple[builtins.float, builtins.float], radius: builtins.float) -> tuple[builtins.float, builtins.float, builtins.float]:
         r"""
         Evaluate engagement at a point using the signed distance to this
         cleared area's boundary.
@@ -146,7 +146,7 @@ class ClearedArea:
         :param radius: Disk radius (mm).
         :returns: ``(angle_rad, area, chord_depth)``.
         """
-    def angular_engagement(self, center: tuple[builtins.float, builtins.float], radius: builtins.float) -> builtins.float:
+    def get_angular_engagement(self, center: tuple[builtins.float, builtins.float], radius: builtins.float) -> builtins.float:
         r"""
         Compute angular engagement by exact circle–polygon intersection.
         

@@ -12,13 +12,13 @@ import numpy
 from raygeo.geo.algo import spatial_grid2d
 from raygeo.geo import types
 __all__ = [
-    "any_overlap",
-    "any_overlap_hierarchical",
-    "any_overlap_hierarchical_grid",
+    "does_any_overlap",
+    "does_any_overlap_hierarchical",
+    "does_any_overlap_hierarchical_grid",
     "is_contained",
 ]
 
-def any_overlap(candidate: types.Polygon, placed: collections.abc.Sequence[types.Polygon], min_area: float = 1) -> bool:
+def does_any_overlap(candidate: types.Polygon, placed: collections.abc.Sequence[types.Polygon], min_area: float = 1) -> bool:
     r"""
     Check if a candidate polygon overlaps any placed polygon.
     
@@ -29,7 +29,7 @@ def any_overlap(candidate: types.Polygon, placed: collections.abc.Sequence[types
     :complexity: O(n * m) where n = candidate vertices, m = placed polygon vertices.
     """
 
-def any_overlap_hierarchical(candidate_polys: collections.abc.Sequence[numpy.ndarray], candidate_hulls: collections.abc.Sequence[numpy.ndarray], placed_polys_groups: collections.abc.Sequence[collections.abc.Sequence[numpy.ndarray]], placed_hulls_groups: collections.abc.Sequence[collections.abc.Sequence[numpy.ndarray]], min_area: float = 1) -> bool:
+def does_any_overlap_hierarchical(candidate_polys: collections.abc.Sequence[numpy.ndarray], candidate_hulls: collections.abc.Sequence[numpy.ndarray], placed_polys_groups: collections.abc.Sequence[collections.abc.Sequence[numpy.ndarray]], placed_hulls_groups: collections.abc.Sequence[collections.abc.Sequence[numpy.ndarray]], min_area: float = 1) -> bool:
     r"""
     Hierarchical overlap: bbox -> hull -> detailed polygon.
     
@@ -42,7 +42,7 @@ def any_overlap_hierarchical(candidate_polys: collections.abc.Sequence[numpy.nda
     :complexity: O(n * m) with bbox/hull early-exit acceleration.
     """
 
-def any_overlap_hierarchical_grid(candidate_polys: collections.abc.Sequence[numpy.ndarray], candidate_hulls: collections.abc.Sequence[numpy.ndarray], placed_polys_groups: collections.abc.Sequence[collections.abc.Sequence[numpy.ndarray]], placed_hulls_groups: collections.abc.Sequence[collections.abc.Sequence[numpy.ndarray]], spatial_grid: spatial_grid2d.SpatialGrid, candidate_bbox: tuple[float, float, float, float], min_area: float = 1) -> bool:
+def does_any_overlap_hierarchical_grid(candidate_polys: collections.abc.Sequence[numpy.ndarray], candidate_hulls: collections.abc.Sequence[numpy.ndarray], placed_polys_groups: collections.abc.Sequence[collections.abc.Sequence[numpy.ndarray]], placed_hulls_groups: collections.abc.Sequence[collections.abc.Sequence[numpy.ndarray]], spatial_grid: spatial_grid2d.SpatialGrid, candidate_bbox: tuple[float, float, float, float], min_area: float = 1) -> bool:
     r"""
     Hierarchical overlap with spatial grid: bbox -> hull -> detailed polygon.
     

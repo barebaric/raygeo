@@ -4,7 +4,7 @@ r"""
 Individual point operations.
 
 Provides equality testing within a configurable tolerance, midpoint
-computation between two points, 2D/3D circumcenter of three points, and
+computation between two points, 2D/3D get_circumcenter of three points, and
 applying a 4x4 affine transformation matrix to a single point.
 """
 
@@ -12,15 +12,15 @@ import collections.abc
 from raygeo.geo import types
 import typing
 __all__ = [
-    "are_points_equal",
-    "circumcenter",
-    "circumcenter_3d",
-    "midpoint_3d",
+    "are_points_equal_3d",
+    "get_circumcenter",
+    "get_circumcenter_3d",
+    "get_midpoint_3d",
     "rotate_point",
     "transform_point_3d",
 ]
 
-def are_points_equal(p1: types.Point3D, p2: types.Point3D, tolerance: float) -> bool:
+def are_points_equal_3d(p1: types.Point3D, p2: types.Point3D, tolerance: float) -> bool:
     r"""
     Check if two 3D points are equal within tolerance.
     
@@ -31,9 +31,9 @@ def are_points_equal(p1: types.Point3D, p2: types.Point3D, tolerance: float) -> 
     :complexity: O(1) time, O(1) space
     """
 
-def circumcenter(a: types.Point, b: types.Point, c: types.Point) -> tuple[types.Point, float]:
+def get_circumcenter(a: types.Point, b: types.Point, c: types.Point) -> tuple[types.Point, float]:
     r"""
-    Compute the circumcenter and radius of three 2D points.
+    Compute the get_circumcenter and radius of three 2D points.
     
     Returns the center of the unique circle passing through all three
     points along with its radius. Returns ``((0.0, 0.0), -1.0)`` when
@@ -46,9 +46,9 @@ def circumcenter(a: types.Point, b: types.Point, c: types.Point) -> tuple[types.
     :complexity: O(1) time, O(1) space
     """
 
-def circumcenter_3d(a: types.Point3D, b: types.Point3D, c: types.Point3D) -> typing.Optional[types.Point3D]:
+def get_circumcenter_3d(a: types.Point3D, b: types.Point3D, c: types.Point3D) -> typing.Optional[types.Point3D]:
     r"""
-    Compute the circumcenter of three 3D points.
+    Compute the get_circumcenter of three 3D points.
     
     Returns the center of the unique circle passing through all three
     points.  Returns ``None`` when the points are collinear.
@@ -60,7 +60,7 @@ def circumcenter_3d(a: types.Point3D, b: types.Point3D, c: types.Point3D) -> typ
     :complexity: O(1) time, O(1) space
     """
 
-def midpoint_3d(p1: types.Point3D, p2: types.Point3D) -> types.Point3D:
+def get_midpoint_3d(p1: types.Point3D, p2: types.Point3D) -> types.Point3D:
     r"""
     Get the midpoint between two 3D points.
     

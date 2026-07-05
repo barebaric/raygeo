@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 
 from raygeo.geo import Arc, Geometry
 from raygeo.geo.shape.arc import (
-    arc_through_point,
+    get_arc_through_point,
     get_polyline_turn_sign,
     linearize_arc,
 )
@@ -77,7 +77,7 @@ def generate_arc_through_point():
     t_end = (0.0, r)
     t_mid = (r * 0.7071, r * 0.7071)
     center = (0.0, 0.0)
-    arc = arc_through_point(t_start, t_end, t_mid, center, r)
+    arc = get_arc_through_point(t_start, t_end, t_mid, center, r)
 
     fig, ax = plt.subplots(figsize=(7, 7))
     xs = [p[0] for p in arc]
@@ -155,7 +155,7 @@ def generate_polyline_turn_sign():
 __docs_target__ = ["raygeo.geo.shape.arc.md"]
 __images__ = [
     {
-        "heading": "arc_through_point",
+        "heading": "get_arc_through_point",
         "caption": "Construct a circular arc through a given point",
         "function": generate_arc_through_point,
     },

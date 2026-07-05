@@ -143,7 +143,7 @@ impl Default for AdaptiveClearingOptions {
 /// where `x_trans = sqrt(r² − step_length²/4)`.
 ///
 /// Three cases arise depending on where `wall_x` sits relative to
-/// `±x_trans`; each is evaluated via [`disk_segment_area`].
+/// `±x_trans`; each is evaluated via [`get_disk_segment_area`].
 #[prof]
 pub fn target_area_per_distance(
     radius: f64,
@@ -161,18 +161,22 @@ pub fn target_area_per_distance(
     let area = if wall_x >= x_trans {
         // Wall is past the overlap cap: only the right circular edge
         // contributes.
-        crate::geo::algo::engagement::disk_segment_area(wall_x, r)
+        crate::geo::algo::engagement::get_disk_segment_area(wall_x, r)
     } else if wall_x >= -x_trans {
         // Wall cuts through the overlap cap: constant-height middle
         // plus right circular edge.
         s * (x_trans - wall_x)
-            + crate::geo::algo::engagement::disk_segment_area(x_trans, r)
+            + crate::geo::algo::engagement::get_disk_segment_area(x_trans, r)
     } else {
         // Wall is in the left circular edge: left edge + middle + right.
-        let left = crate::geo::algo::engagement::disk_segment_area(wall_x, r)
-            - crate::geo::algo::engagement::disk_segment_area(-x_trans, r);
+        let left =
+            crate::geo::algo::engagement::get_disk_segment_area(wall_x, r)
+                - crate::geo::algo::engagement::get_disk_segment_area(
+                    -x_trans, r,
+                );
         let middle = 2.0 * s * x_trans;
-        let right = crate::geo::algo::engagement::disk_segment_area(x_trans, r);
+        let right =
+            crate::geo::algo::engagement::get_disk_segment_area(x_trans, r);
         left + middle + right
     };
 
@@ -845,7 +849,7 @@ pub fn adaptive_clearing(
             cleared.compact_if_needed(opts.tolerance);
         }
 
-        let eng = cleared.point_engagement(tool.pos, opts.radius);
+        let eng = cleared.get_point_engagement(tool.pos, opts.radius);
         let ca = cleared.cut_area(prev_pos, tool.pos, opts.radius);
         recorder.record_cut(
             status,

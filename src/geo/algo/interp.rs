@@ -19,7 +19,7 @@ pub struct SegmentDelta {
 /// - `start`: Starting point.
 /// - `end`: Ending point.
 /// - Returns: A `SegmentDelta` containing the component deltas and squared length.
-pub fn compute_segment_delta(start: Point3D, end: Point3D) -> SegmentDelta {
+pub fn compute_segment_delta_3d(start: Point3D, end: Point3D) -> SegmentDelta {
     let dx = end.x - start.x;
     let dy = end.y - start.y;
     let dz = end.z - start.z;
@@ -31,7 +31,7 @@ pub fn compute_segment_delta(start: Point3D, end: Point3D) -> SegmentDelta {
 ///
 /// - `origin`: Start of the segment.
 /// - `point`: The point to project.
-/// - `delta`: Pre-computed segment delta (from `compute_segment_delta`).
+/// - `delta`: Pre-computed segment delta (from `compute_segment_delta_3d`).
 /// - Returns: The parameter `t` clamped to [0, 1].
 pub fn project_t_along_segment(
     origin: Point3D,
@@ -51,7 +51,7 @@ pub fn project_t_along_segment(
 /// - `origin`: Start of the original segment.
 /// - `new_start`: Start of the clipped sub-segment.
 /// - `new_end`: End of the clipped sub-segment.
-/// - `delta`: Pre-computed segment delta (from `compute_segment_delta`).
+/// - `delta`: Pre-computed segment delta (from `compute_segment_delta_3d`).
 /// - Returns: A tuple `(t_start, t_end)` in [0, 1].
 pub fn compute_t_range(
     origin: Point3D,
@@ -91,7 +91,7 @@ pub fn slice_scanline_data(data: &[u8], t_start: f64, t_end: f64) -> Vec<u8> {
 /// The weights are unclamped — a point outside the triangle will have
 /// one or more negative weights. The point is inside (or on the boundary
 /// of) the triangle iff all three weights are in `[-ε, 1+ε]`.
-pub fn barycentric_weights(
+pub fn get_barycentric_weights(
     p: Point,
     va: Point,
     vb: Point,
@@ -134,7 +134,7 @@ pub fn barycentric_interpolate(
     ub: f64,
     uc: f64,
 ) -> f64 {
-    let (mut r, mut s, mut t) = barycentric_weights(p, va, vb, vc);
+    let (mut r, mut s, mut t) = get_barycentric_weights(p, va, vb, vc);
     let sum = r + s + t;
     if sum.abs() < 1e-24 {
         return (ua + ub + uc) / 3.0;

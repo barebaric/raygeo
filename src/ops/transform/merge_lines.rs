@@ -379,7 +379,7 @@ fn are_parallel(seg1: &LineSegment, seg2: &LineSegment) -> bool {
     dot > 0.9999
 }
 
-fn point_line_distance(point: Point3D, seg: &LineSegment) -> f64 {
+fn get_point_line_distance(point: Point3D, seg: &LineSegment) -> f64 {
     let (x0, y0) = (point.x, point.y);
     let (x1, y1) = (seg.start.x, seg.start.y);
     let (x2, y2) = (seg.end.x, seg.end.y);
@@ -401,11 +401,11 @@ fn are_collinear(seg1: &LineSegment, seg2: &LineSegment, tol: f64) -> bool {
     if !are_parallel(seg1, seg2) {
         return false;
     }
-    let dist1 = point_line_distance(seg2.start, seg1);
+    let dist1 = get_point_line_distance(seg2.start, seg1);
     if dist1 > tol {
         return false;
     }
-    let dist2 = point_line_distance(seg2.end, seg1);
+    let dist2 = get_point_line_distance(seg2.end, seg1);
     dist2 <= tol
 }
 

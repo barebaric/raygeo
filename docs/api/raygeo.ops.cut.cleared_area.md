@@ -10,23 +10,6 @@ in red*
 
 ## ClearedArea
 
-### `angular_engagement()`
-
-```python
-angular_engagement(center: tuple[float, float], radius: float) -> float
-```
-
-Compute angular engagement by exact circle–polygon intersection.
-
-Creates a disk polygon at *center* with *radius*, intersects it with all nearby cleared fragments,
-and returns the uncleared angular extent in `[0, 2π]`.
-
-| Parameter | Type                  | Description                         |
-| --------- | --------------------- | ----------------------------------- |
-| `center`  | `tuple[float, float]` | Query point `(x, y)`.               |
-| `radius`  | `float`               | Disk radius (mm).                   |
-| _Returns_ | `float`               | Uncleared angular extent (radians). |
-
 ### `begin_batch()`
 
 ```python
@@ -323,6 +306,40 @@ Return a unioned, simplified snapshot of the current outer boundary, clipped to 
 *`frontier` returns the outer boundary of the cleared area after merging overlapping fragments —
 shown in crimson.*
 
+### `get_angular_engagement()`
+
+```python
+get_angular_engagement(center: tuple[float, float], radius: float) -> float
+```
+
+Compute angular engagement by exact circle–polygon intersection.
+
+Creates a disk polygon at *center* with *radius*, intersects it with all nearby cleared fragments,
+and returns the uncleared angular extent in `[0, 2π]`.
+
+| Parameter | Type                  | Description                         |
+| --------- | --------------------- | ----------------------------------- |
+| `center`  | `tuple[float, float]` | Query point `(x, y)`.               |
+| `radius`  | `float`               | Disk radius (mm).                   |
+| _Returns_ | `float`               | Uncleared angular extent (radians). |
+
+### `get_point_engagement()`
+
+```python
+get_point_engagement(
+    center: tuple[float, float],
+    radius: float,
+) -> tuple[float, float, float]
+```
+
+Evaluate engagement at a point using the signed distance to this cleared area's boundary.
+
+| Parameter | Type                         | Description                       |
+| --------- | ---------------------------- | --------------------------------- |
+| `center`  | `tuple[float, float]`        | Query point `(x, y)`.             |
+| `radius`  | `float`                      | Disk radius (mm).                 |
+| _Returns_ | `tuple[float, float, float]` | `(angle_rad, area, chord_depth)`. |
+
 ### `is_empty()`
 
 ```python
@@ -351,23 +368,6 @@ Evaluate engagement along a polyline.
 | `path`    | `Sequence[tuple[float, float]]`    | List of `(x, y)` points.                     |
 | `radius`  | `float`                            | Disk radius (mm).                            |
 | _Returns_ | `list[tuple[float, float, float]]` | List of `(angle, area, chord_depth)` tuples. |
-
-### `point_engagement()`
-
-```python
-point_engagement(
-    center: tuple[float, float],
-    radius: float,
-) -> tuple[float, float, float]
-```
-
-Evaluate engagement at a point using the signed distance to this cleared area's boundary.
-
-| Parameter | Type                         | Description                       |
-| --------- | ---------------------------- | --------------------------------- |
-| `center`  | `tuple[float, float]`        | Query point `(x, y)`.             |
-| `radius`  | `float`                      | Disk radius (mm).                 |
-| _Returns_ | `tuple[float, float, float]` | `(angle_rad, area, chord_depth)`. |
 
 ### `query_window()`
 

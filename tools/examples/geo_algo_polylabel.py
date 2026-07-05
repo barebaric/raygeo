@@ -6,12 +6,12 @@ import matplotlib.pyplot as plt
 from matplotlib.patches import Circle, Rectangle
 
 from raygeo.geo.algo.offset import offset_contour_group
-from raygeo.geo.algo.polylabel import find_largest_circle, polylabel
+from raygeo.geo.algo.polylabel import find_largest_circle, get_polylabel
 from raygeo.geo.shape.polygon import (
     JoinStyle,
+    get_point_line_distance,
     get_polygon_signed_area,
     is_point_inside_polygon,
-    point_line_distance,
 )
 
 
@@ -20,7 +20,7 @@ def _signed_dist(pt, poly):
     n = len(poly)
     md = float("inf")
     for i in range(n):
-        d = point_line_distance(pt, poly[i], poly[(i + 1) % n])
+        d = get_point_line_distance(pt, poly[i], poly[(i + 1) % n])
         md = min(md, d)
     return md if inside else -md
 
@@ -69,8 +69,8 @@ def generate_rect_lshape():
     rect = [(0, 0), (100, 0), (100, 80), (0, 80)]
     l_shape = [(0, 0), (100, 0), (100, 40), (40, 40), (40, 80), (0, 80)]
 
-    r_pole = polylabel(rect, holes=[], precision=0.1)
-    l_pole = polylabel(l_shape, holes=[], precision=0.5)
+    r_pole = get_polylabel(rect, holes=[], precision=0.1)
+    l_pole = get_polylabel(l_shape, holes=[], precision=0.5)
 
     fig1, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 6))
 
@@ -145,7 +145,9 @@ def generate_multi_island():
         else None
     )
     m_pole = (
-        polylabel(m_largest, holes=[], precision=0.5) if m_largest else None
+        get_polylabel(m_largest, holes=[], precision=0.5)
+        if m_largest
+        else None
     )
 
     fig2, ax = plt.subplots(figsize=(7, 6))
@@ -188,7 +190,7 @@ def generate_central_island():
     """Polylabel central island."""
     cb = [(0, 0), (100, 0), (100, 100), (0, 100)]
     cisl = [(35, 35), (65, 35), (65, 65), (35, 65)]
-    c_pole = polylabel(cb, holes=[cisl], precision=0.5)
+    c_pole = get_polylabel(cb, holes=[cisl], precision=0.5)
 
     fig3, ax = plt.subplots(figsize=(7, 6))
 
@@ -293,10 +295,10 @@ def generate_largest_circle():
     return fig4
 
 
-__docs_target__ = ["raygeo.geo.algo.polylabel.md"]
+__docs_target__ = ["raygeo.geo.algo.get_polylabel.md"]
 __images__ = [
     {
-        "heading": "polylabel",
+        "heading": "get_polylabel",
         "caption": (
             "Polylabel: priority-queue cell refinement finds the point"
             " farthest from the boundary — the pole of inaccessibility"
@@ -304,7 +306,7 @@ __images__ = [
         "function": generate_rect_lshape,
     },
     {
-        "heading": "polylabel",
+        "heading": "get_polylabel",
         "caption": (
             "Multi-island pocket: the pole of inaccessibility sits in"
             " the largest valid region, farthest from all boundaries"
@@ -312,7 +314,7 @@ __images__ = [
         "function": generate_multi_island,
     },
     {
-        "heading": "polylabel",
+        "heading": "get_polylabel",
         "caption": (
             "Central-island pocket (annular): the pole of inaccessibility"
             " sits at the centre of the ring"

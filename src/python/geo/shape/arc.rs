@@ -15,11 +15,12 @@ use super::super::flex_point::{
 };
 use super::super::types::{ArcClosestResult, Edge3D};
 use crate::geo::shape::arc::{
-    arc_through_point, does_arc_intersect_circle, does_arc_intersect_rect,
-    get_arc_angles, get_arc_bounds, get_arc_closest_point, get_arc_direction,
-    get_arc_length, get_arc_midpoint, get_arc_sweep, get_polyline_turn_sign,
-    is_angle_between, is_arc_clockwise, is_arc_inside_polygons, linearize_arc,
-    normalize_angle, normalize_angle_signed,
+    does_arc_intersect_circle, does_arc_intersect_rect, get_arc_angles,
+    get_arc_bounds, get_arc_closest_point, get_arc_direction, get_arc_length,
+    get_arc_midpoint, get_arc_sweep, get_arc_through_point,
+    get_polyline_turn_sign, is_angle_between, is_arc_clockwise,
+    is_arc_inside_polygons, linearize_arc, normalize_angle,
+    normalize_angle_signed,
 };
 use crate::types::{Point, Point3D, Rect};
 use pyo3::prelude::*;
@@ -29,7 +30,7 @@ use pyo3_stub_gen::derive::gen_stub_pyfunction;
     python = r#"
     import raygeo.geo.types
 
-    def arc_through_point(
+    def get_arc_through_point(
         t_start: types.Point,
         t_end: types.Point,
         t_mid: types.Point,
@@ -52,7 +53,7 @@ use pyo3_stub_gen::derive::gen_stub_pyfunction;
 "#,
     module = "raygeo.geo.shape.arc"
 )]
-#[pyfunction(name = "arc_through_point")]
+#[pyfunction(name = "get_arc_through_point")]
 fn arc_through_point_py(
     t_start: (f64, f64),
     t_end: (f64, f64),
@@ -60,7 +61,7 @@ fn arc_through_point_py(
     center: (f64, f64),
     radius: f64,
 ) -> Vec<(f64, f64)> {
-    arc_through_point(
+    get_arc_through_point(
         Point::new(t_start.0, t_start.1),
         Point::new(t_end.0, t_end.1),
         Point::new(t_mid.0, t_mid.1),

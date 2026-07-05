@@ -60,6 +60,26 @@ Clean a polygon by removing near-duplicate points.
 
 *`clean_polygon` removes near-duplicate vertices*
 
+### `do_polygons_intersect()`
+
+```python
+do_polygons_intersect(
+    p1: Sequence[types.Point],
+    p2: Sequence[types.Point],
+    min_area: float = 0,
+) -> bool
+```
+
+Check if two polygons intersect.
+
+| Parameter    | Type                    | Description                          |
+| ------------ | ----------------------- | ------------------------------------ |
+| `p1`         | `Sequence[types.Point]` | First polygon as (x, y) points.      |
+| `p2`         | `Sequence[types.Point]` | Second polygon as (x, y) points.     |
+| `min_area`   | `float = 0`             | Minimum intersection area threshold. |
+| _Returns_    | `bool`                  | True if polygons intersect.          |
+| _Complexity_ |                         | O(n * m)                             |
+
 ### `does_path_sweep_intersect_polygon()`
 
 ```python
@@ -213,6 +233,53 @@ Approximate a circle as an n-gon polygon.
 ![ approximates a circle as an n-sided polygon](images/geo-shape-polygon-circle-polygon.png)
 
 *`get_circle_polygon` approximates a circle as an n-sided polygon*
+
+### `get_miter_offset_intersection()`
+
+```python
+get_miter_offset_intersection(
+    v: types.Point,
+    off_a: types.Point,
+    dir_a: types.Point,
+    off_b: types.Point,
+    dir_b: types.Point,
+) -> types.Point
+```
+
+Intersect two offset lines at a vertex for miter join.
+
+Line A: `v + off_a + t * dir_a` Line B: `v + off_b + s * dir_b`
+
+Returns the intersection point. When the lines are nearly parallel falls back to `v + off_a`.
+
+| Parameter | Type          | Description                      |
+| --------- | ------------- | -------------------------------- |
+| `v`       | `types.Point` | Vertex point (x, y).             |
+| `off_a`   | `types.Point` | Offset from *v* along line A.    |
+| `dir_a`   | `types.Point` | Unit direction vector of line A. |
+| `off_b`   | `types.Point` | Offset from *v* along line B.    |
+| `dir_b`   | `types.Point` | Unit direction vector of line B. |
+| _Returns_ | `types.Point` | Intersection point (x, y).       |
+
+### `get_point_line_distance()`
+
+```python
+get_point_line_distance(
+    point: types.Point,
+    line_start: types.Point,
+    line_end: types.Point,
+) -> float
+```
+
+Compute the distance from a point to a line.
+
+| Parameter    | Type          | Description              |
+| ------------ | ------------- | ------------------------ |
+| `point`      | `types.Point` | Point (x, y).            |
+| `line_start` | `types.Point` | Line start point (x, y). |
+| `line_end`   | `types.Point` | Line end point (x, y).   |
+| _Returns_    | `float`       | Perpendicular distance.  |
+| _Complexity_ |               | O(1)                     |
 
 ### `get_polygon_area()`
 
@@ -677,33 +744,6 @@ Check if a polygon is convex.
 | _Returns_    | `bool`                  | True if the polygon is convex. |
 | _Complexity_ |                         | O(n)                           |
 
-### `miter_offset_intersection()`
-
-```python
-miter_offset_intersection(
-    v: types.Point,
-    off_a: types.Point,
-    dir_a: types.Point,
-    off_b: types.Point,
-    dir_b: types.Point,
-) -> types.Point
-```
-
-Intersect two offset lines at a vertex for miter join.
-
-Line A: `v + off_a + t * dir_a` Line B: `v + off_b + s * dir_b`
-
-Returns the intersection point. When the lines are nearly parallel falls back to `v + off_a`.
-
-| Parameter | Type          | Description                      |
-| --------- | ------------- | -------------------------------- |
-| `v`       | `types.Point` | Vertex point (x, y).             |
-| `off_a`   | `types.Point` | Offset from *v* along line A.    |
-| `dir_a`   | `types.Point` | Unit direction vector of line A. |
-| `off_b`   | `types.Point` | Offset from *v* along line B.    |
-| `dir_b`   | `types.Point` | Unit direction vector of line B. |
-| _Returns_ | `types.Point` | Intersection point (x, y).       |
-
 ### `normalize_polygons()`
 
 ```python
@@ -775,26 +815,6 @@ Check if point is in polygon from numpy array.
 | _Returns_    | `bool`          | True if point is inside the polygon. |
 | _Complexity_ |                 | O(n)                                 |
 
-### `point_line_distance()`
-
-```python
-point_line_distance(
-    point: types.Point,
-    line_start: types.Point,
-    line_end: types.Point,
-) -> float
-```
-
-Compute the distance from a point to a line.
-
-| Parameter    | Type          | Description              |
-| ------------ | ------------- | ------------------------ |
-| `point`      | `types.Point` | Point (x, y).            |
-| `line_start` | `types.Point` | Line start point (x, y). |
-| `line_end`   | `types.Point` | Line end point (x, y).   |
-| _Returns_    | `float`       | Perpendicular distance.  |
-| _Complexity_ |               | O(1)                     |
-
 ### `polygon_area_numpy()`
 
 ```python
@@ -850,26 +870,6 @@ Get the perimeter of a polygon from numpy array.
 | `polygon`    | `numpy.NDArray` | Polygon as a 2D numpy array. |
 | _Returns_    | `float`         | Perimeter length.            |
 | _Complexity_ |                 | O(n)                         |
-
-### `polygons_intersect()`
-
-```python
-polygons_intersect(
-    p1: Sequence[types.Point],
-    p2: Sequence[types.Point],
-    min_area: float = 0,
-) -> bool
-```
-
-Check if two polygons intersect.
-
-| Parameter    | Type                    | Description                          |
-| ------------ | ----------------------- | ------------------------------------ |
-| `p1`         | `Sequence[types.Point]` | First polygon as (x, y) points.      |
-| `p2`         | `Sequence[types.Point]` | Second polygon as (x, y) points.     |
-| `min_area`   | `float = 0`             | Minimum intersection area threshold. |
-| _Returns_    | `bool`                  | True if polygons intersect.          |
-| _Complexity_ |                         | O(n * m)                             |
 
 ### `polygons_intersect_numpy()`
 

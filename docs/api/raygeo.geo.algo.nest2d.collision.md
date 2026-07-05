@@ -10,10 +10,10 @@ hierarchical variants for performance.
 
 ## Functions
 
-### `any_overlap()`
+### `does_any_overlap()`
 
 ```python
-any_overlap(
+does_any_overlap(
     candidate: types.Polygon,
     placed: Sequence[types.Polygon],
     min_area: float = 1,
@@ -30,10 +30,10 @@ Check if a candidate polygon overlaps any placed polygon.
 | _Returns_    | `bool`                    | True if any overlap detected.                                       |
 | _Complexity_ |                           | O(n * m) where n = candidate vertices, m = placed polygon vertices. |
 
-### `any_overlap_hierarchical()`
+### `does_any_overlap_hierarchical()`
 
 ```python
-any_overlap_hierarchical(
+does_any_overlap_hierarchical(
     candidate_polys: Sequence[numpy.ndarray],
     candidate_hulls: Sequence[numpy.ndarray],
     placed_polys_groups: Sequence[Sequence[numpy.ndarray]],
@@ -54,10 +54,10 @@ Hierarchical overlap: bbox -> hull -> detailed polygon.
 | _Returns_             | `bool`                              | True if any overlap detected.                    |
 | _Complexity_          |                                     | O(n * m) with bbox/hull early-exit acceleration. |
 
-### `any_overlap_hierarchical_grid()`
+### `does_any_overlap_hierarchical_grid()`
 
 ```python
-any_overlap_hierarchical_grid(
+does_any_overlap_hierarchical_grid(
     candidate_polys: Sequence[numpy.ndarray],
     candidate_hulls: Sequence[numpy.ndarray],
     placed_polys_groups: Sequence[Sequence[numpy.ndarray]],

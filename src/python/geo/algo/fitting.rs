@@ -13,8 +13,8 @@ use super::super::flex_point::{
 };
 use super::super::Geometry;
 use crate::geo::algo::fitting::{
-    arc_between_two_points, are_points_collinear, fit_circle_to_3_points,
-    fit_circle_to_points, fit_points_recursive, fit_points_with_primitives,
+    arc_between_two_points, are_points_collinear_3d, fit_circle_to_3_points,
+    fit_circle_to_points_3d, fit_points_recursive, fit_points_with_primitives,
     flatten_to_points_3d, generate_linking_arc, get_polyline_arc_deviation,
     get_polyline_line_deviation, linearize_geometry,
     project_circle_center_to_bisector,
@@ -54,7 +54,7 @@ pub fn register(algo_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     from collections.abc import Sequence
     import raygeo.geo.types
 
-    def are_points_collinear(
+    def are_points_collinear_3d(
         points: collections.abc.Sequence[types.Point3D],
         tolerance: float = 1e-6,
     ) -> bool:
@@ -68,12 +68,12 @@ pub fn register(algo_mod: &Bound<'_, PyModule>) -> PyResult<()> {
 "#,
     module = "raygeo.geo.algo.fitting"
 )]
-#[pyfunction(name = "are_points_collinear")]
+#[pyfunction(name = "are_points_collinear_3d")]
 #[pyo3(signature = (points, tolerance=1e-6))]
 fn are_points_collinear_py(points: Vec<PyPoint3D>, tolerance: f64) -> bool {
     let pts: Vec<Point3D> =
         points.iter().map(|p| Point3D::new(p.0, p.1, p.2)).collect();
-    are_points_collinear(&pts, tolerance)
+    are_points_collinear_3d(&pts, tolerance)
 }
 
 #[gen_stub_pyfunction(
@@ -118,7 +118,7 @@ fn fit_circle_to_3_points_py(
     import typing
     import raygeo.geo.types
 
-    def fit_circle_to_points(
+    def fit_circle_to_points_3d(
         points: collections.abc.Sequence[types.Point3D],
     ) -> typing.Optional[tuple[types.Point, float, float]]:
         """Fit a circle to a set of points.
@@ -130,13 +130,13 @@ fn fit_circle_to_3_points_py(
 "#,
     module = "raygeo.geo.algo.fitting"
 )]
-#[pyfunction(name = "fit_circle_to_points")]
+#[pyfunction(name = "fit_circle_to_points_3d")]
 fn fit_circle_to_points_py(
     points: Vec<PyPoint3D>,
 ) -> Option<((f64, f64), f64, f64)> {
     let pts: Vec<Point3D> =
         points.iter().map(|p| Point3D::new(p.0, p.1, p.2)).collect();
-    fit_circle_to_points(&pts)
+    fit_circle_to_points_3d(&pts)
         .map(|(center, radius, error)| ((center.x, center.y), radius, error))
 }
 

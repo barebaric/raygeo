@@ -71,7 +71,7 @@ pub fn compute_engagement(d_to_boundary: f64, radius: f64) -> Engagement {
 /// Intersects the circle (approximated as an `n`‑gon) with `polys`,
 /// then computes the area of the result.  Useful for commit‑time validation.
 #[prof]
-pub fn circle_polygon_intersection_area(
+pub fn get_circle_polygon_intersection_area(
     center: Point,
     radius: f64,
     n: usize,
@@ -88,7 +88,7 @@ pub fn circle_polygon_intersection_area(
 /// Engagement at a disk centre given the cleared fragments.
 ///
 /// Uses [`get_signed_boundary_distance`] + [`compute_engagement`] internally.
-pub fn point_engagement(
+pub fn get_point_engagement(
     center: Point,
     radius: f64,
     fragments: &[Polygon],
@@ -108,7 +108,7 @@ pub fn point_engagement(
 /// * `x ≥ r` → 0 (line is at or past the right edge)
 /// * `x ≤ −r` → `π·r²` (full disk)
 /// * `x = 0` → `π·r² / 2` (half disk)
-pub fn disk_segment_area(x: f64, r: f64) -> f64 {
+pub fn get_disk_segment_area(x: f64, r: f64) -> f64 {
     if r <= 0.0 {
         return 0.0;
     }
@@ -130,7 +130,7 @@ pub fn disk_segment_area(x: f64, r: f64) -> f64 {
 /// Creates an N‑gon disk at `center` with `radius`, intersects it against
 /// `fragments`, and returns the uncleared angular extent in `[0, 2π]`.
 /// When `fragments` is empty the result is `2π` (no overlap).
-pub fn angular_engagement(
+pub fn get_angular_engagement(
     center: Point,
     radius: f64,
     fragments: &[Polygon],
@@ -139,7 +139,7 @@ pub fn angular_engagement(
         return std::f64::consts::TAU;
     }
     let cleared_area =
-        circle_polygon_intersection_area(center, radius, 32, fragments);
+        get_circle_polygon_intersection_area(center, radius, 32, fragments);
     let disk_area = std::f64::consts::PI * radius * radius;
     let uncleared_area = (disk_area - cleared_area).max(0.0);
     2.0 * uncleared_area / (radius * radius)

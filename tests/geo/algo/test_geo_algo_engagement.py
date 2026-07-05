@@ -3,10 +3,10 @@
 import math
 
 from raygeo.geo.algo.engagement import (
-    angular_engagement,
     compute_engagement,
-    disk_segment_area,
-    point_engagement,
+    get_angular_engagement,
+    get_disk_segment_area,
+    get_point_engagement,
 )
 
 
@@ -61,60 +61,60 @@ def test_monotonic():
         prev = angle
 
 
-# ── point_engagement ──────────────────────────────────────────────
+# ── get_point_engagement ──────────────────────────────────────────────
 
 
 def test_point_engagement_inside_cleared():
     """Inside cleared material yields engagement < π."""
     square = _square(0, 0, 10, 10)
-    angle, _, _ = point_engagement((5, 5), 5.0, [square])
+    angle, _, _ = get_point_engagement((5, 5), 5.0, [square])
     assert angle < math.pi
 
 
 def test_point_engagement_outside_cleared():
     """Far from cleared material yields engagement ≈ 2π."""
     square = _square(0, 0, 10, 10)
-    angle, _, _ = point_engagement((50, 50), 5.0, [square])
+    angle, _, _ = get_point_engagement((50, 50), 5.0, [square])
     assert angle > math.pi
 
 
 def test_point_engagement_on_boundary():
     """On the boundary engagement ≈ π."""
     square = _square(0, 0, 10, 10)
-    angle, _, _ = point_engagement((0, 5), 5.0, [square])
+    angle, _, _ = get_point_engagement((0, 5), 5.0, [square])
     assert abs(angle - math.pi) < 0.1
 
 
-# ── angular_engagement ────────────────────────────────────────────
+# ── get_angular_engagement ────────────────────────────────────────────
 
 
 def test_angular_engagement_empty():
     """No fragments returns 2π (full engagement)."""
-    e = angular_engagement((0, 0), 5.0, [])
+    e = get_angular_engagement((0, 0), 5.0, [])
     assert abs(e - 2.0 * math.pi) < 1e-12
 
 
 def test_angular_engagement_inside_cleared():
     """Disk inside cleared area returns near-zero engagement."""
     square = _square(0, 0, 100, 100)
-    e = angular_engagement((50, 50), 5.0, [square])
+    e = get_angular_engagement((50, 50), 5.0, [square])
     assert e < 0.1
 
 
 def test_angular_engagement_outside_cleared():
     """Disk far from cleared returns ≈ 2π."""
     square = _square(0, 0, 10, 10)
-    e = angular_engagement((50, 50), 5.0, [square])
+    e = get_angular_engagement((50, 50), 5.0, [square])
     assert abs(e - 2.0 * math.pi) < 0.5  # approximation tolerance
 
 
-# ── disk_segment_area ──────────────────────────────────────────────
+# ── get_disk_segment_area ──────────────────────────────────────────────
 
 
 def test_disk_segment_area_half_disk():
-    """disk_segment_area(0, R) = half-disk area πR²/2."""
+    """get_disk_segment_area(0, R) = half-disk area πR²/2."""
     for R in [1.0, 2.5, 5.0, 10.0]:
-        area = disk_segment_area(0.0, R)
+        area = get_disk_segment_area(0.0, R)
         expected = math.pi * R * R / 2.0
         assert abs(area - expected) < 1e-9, (
             f"R={R}: area={area:.6f}, expected={expected:.6f}"
@@ -122,15 +122,15 @@ def test_disk_segment_area_half_disk():
 
 
 def test_disk_segment_area_zero_at_edge():
-    """disk_segment_area(R, R) = 0."""
+    """get_disk_segment_area(R, R) = 0."""
     for R in [1.0, 5.0, 10.0]:
-        assert abs(disk_segment_area(R, R)) < 1e-12
+        assert abs(get_disk_segment_area(R, R)) < 1e-12
 
 
 def test_disk_segment_area_full_disk():
-    """disk_segment_area(-R, R) = πR²."""
+    """get_disk_segment_area(-R, R) = πR²."""
     for R in [1.0, 5.0, 10.0]:
-        area = disk_segment_area(-R, R)
+        area = get_disk_segment_area(-R, R)
         expected = math.pi * R * R
         assert abs(area - expected) < 1e-9
 
@@ -138,16 +138,16 @@ def test_disk_segment_area_full_disk():
 def test_disk_segment_area_clamps():
     """x > R → 0, x < -R → πR²."""
     R = 5.0
-    assert disk_segment_area(R + 1.0, R) == 0.0
-    assert abs(disk_segment_area(-R - 1.0, R) - math.pi * R * R) < 1e-9
+    assert get_disk_segment_area(R + 1.0, R) == 0.0
+    assert abs(get_disk_segment_area(-R - 1.0, R) - math.pi * R * R) < 1e-9
 
 
 def test_disk_segment_area_complementary():
-    """disk_segment_area(x, R) + disk_segment_area(-x, R) = πR²."""
+    """get_disk_segment_area(x, R) + get_disk_segment_area(-x, R) = πR²."""
     R = 5.0
     for x in [0.5, 1.0, 2.0, 3.0, 4.0, 4.9]:
-        left = disk_segment_area(-x, R)
-        right = disk_segment_area(x, R)
+        left = get_disk_segment_area(-x, R)
+        right = get_disk_segment_area(x, R)
         assert abs(left + right - math.pi * R * R) < 1e-9
 
 
@@ -157,6 +157,6 @@ def test_disk_segment_area_monotonic():
     prev = math.pi * R * R + 1.0
     for i in range(-10, 11):
         x = i * 0.5
-        area = disk_segment_area(x, R)
+        area = get_disk_segment_area(x, R)
         assert area <= prev + 1e-12
         prev = area

@@ -7,7 +7,7 @@ use glam::DMat4;
 use crate::types::{Point, Point3D};
 
 /// Computes the midpoint between two 3D points.
-pub fn midpoint_3d(a: Point3D, b: Point3D) -> Point3D {
+pub fn get_midpoint_3d(a: Point3D, b: Point3D) -> Point3D {
     (a + b) / 2.0
 }
 
@@ -18,7 +18,11 @@ pub fn transform_point_3d(matrix: DMat4, p: Point3D) -> Point3D {
 }
 
 /// Check if two points (as 3-element arrays) are equal within a tolerance.
-pub fn are_points_equal(p1: &[f64; 3], p2: &[f64; 3], tolerance: f64) -> bool {
+pub fn are_points_equal_3d(
+    p1: &[f64; 3],
+    p2: &[f64; 3],
+    tolerance: f64,
+) -> bool {
     for i in 0..3 {
         if (p1[i] - p2[i]).abs() > tolerance {
             return false;
@@ -27,11 +31,15 @@ pub fn are_points_equal(p1: &[f64; 3], p2: &[f64; 3], tolerance: f64) -> bool {
     true
 }
 
-/// Compute the circumcenter of three 3D points.
+/// Compute the get_circumcenter of three 3D points.
 ///
 /// Returns the center of the unique circle passing through all three points.
 /// Returns `None` if the points are collinear (degenerate).
-pub fn circumcenter_3d(a: Point3D, b: Point3D, c: Point3D) -> Option<Point3D> {
+pub fn get_circumcenter_3d(
+    a: Point3D,
+    b: Point3D,
+    c: Point3D,
+) -> Option<Point3D> {
     let ab = b - a;
     let ac = c - a;
     let ab2 = ab.length_squared();
@@ -53,11 +61,11 @@ pub fn rotate_point(point: Point, angle: f64) -> Point {
     Point::new(c * point.x - s * point.y, s * point.x + c * point.y)
 }
 
-/// Compute the circumcenter and radius of three 2D points.
+/// Compute the get_circumcenter and radius of three 2D points.
 ///
 /// Returns `(center, radius)`. Returns a zero center and negative radius
 /// if the points are collinear (degenerate).
-pub fn circumcenter(a: Point, b: Point, c: Point) -> (Point, f64) {
+pub fn get_circumcenter(a: Point, b: Point, c: Point) -> (Point, f64) {
     let d = 2.0 * (a.x * (b.y - c.y) + b.x * (c.y - a.y) + c.x * (a.y - b.y));
     if d.abs() < 1e-30 {
         return (Point::new(0.0, 0.0), -1.0);

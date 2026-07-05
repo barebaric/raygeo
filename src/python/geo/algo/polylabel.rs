@@ -21,7 +21,7 @@ pub fn register(algo_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     python = r#"
     import collections.abc
 
-    def polylabel(
+    def get_polylabel(
         shell: collections.abc.Sequence[tuple[float, float]],
         holes: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]] = [],
         precision: float = 0.5,
@@ -42,7 +42,7 @@ pub fn register(algo_mod: &Bound<'_, PyModule>) -> PyResult<()> {
 "#,
     module = "raygeo.geo.algo.polylabel"
 )]
-#[pyfunction(name = "polylabel")]
+#[pyfunction(name = "get_polylabel")]
 #[pyo3(signature = (shell, holes = None, precision = 0.5))]
 fn polylabel_py(
     shell: Vec<(f64, f64)>,
@@ -62,7 +62,8 @@ fn polylabel_py(
                 .collect()
         })
         .collect();
-    polylabel::polylabel(&shell_pts, &holes_pts, precision).map(|p| (p.x, p.y))
+    polylabel::get_polylabel(&shell_pts, &holes_pts, precision)
+        .map(|p| (p.x, p.y))
 }
 
 #[gen_stub_pyfunction(

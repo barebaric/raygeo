@@ -273,7 +273,7 @@ impl ClearedArea {
         if new.is_empty() {
             return new;
         }
-        if self.any_overlap(&new) {
+        if self.does_any_overlap(&new) {
             let mut all = self.fragments.clone();
             all.extend(new.iter().cloned());
             self.fragments = get_polygons_union(&all);
@@ -501,7 +501,7 @@ impl ClearedArea {
 
     /// True when any polygon in `polys` overlaps an existing fragment.
     #[prof]
-    fn any_overlap(&self, polys: &[Polygon]) -> bool {
+    fn does_any_overlap(&self, polys: &[Polygon]) -> bool {
         for poly in polys {
             if poly.len() < 3 {
                 continue;
@@ -524,8 +524,12 @@ impl ClearedArea {
 
     /// Evaluate engagement at `center` using the signed distance to this
     /// cleared area's boundary.
-    pub fn point_engagement(&self, center: Point, radius: f64) -> Engagement {
-        crate::geo::algo::engagement::point_engagement(
+    pub fn get_point_engagement(
+        &self,
+        center: Point,
+        radius: f64,
+    ) -> Engagement {
+        crate::geo::algo::engagement::get_point_engagement(
             center,
             radius,
             &self.fragments,
@@ -538,7 +542,7 @@ impl ClearedArea {
     /// with all nearby cleared fragments, and returns the uncleared
     /// angular extent in `[0, 2π]`.
     #[prof]
-    pub fn angular_engagement(&self, center: Point, radius: f64) -> f64 {
+    pub fn get_angular_engagement(&self, center: Point, radius: f64) -> f64 {
         let bb = Rect::new(
             center.x - radius,
             center.y - radius,
@@ -547,7 +551,7 @@ impl ClearedArea {
         );
         let nearby: Vec<Polygon> =
             self.query_window(bb).into_iter().cloned().collect();
-        crate::geo::algo::engagement::angular_engagement(
+        crate::geo::algo::engagement::get_angular_engagement(
             center, radius, &nearby,
         )
     }
@@ -558,7 +562,7 @@ impl ClearedArea {
     ///
     /// This is the amount of *fresh* material the tool encounters by
     /// stepping forward — the metric used for engagement calculation.
-    /// Unlike [`angular_engagement`](Self::angular_engagement) (which
+    /// Unlike [`get_angular_engagement`](Self::get_angular_engagement) (which
     /// measures total overlap), this naturally prevents runaway
     /// outward drift because the crescent area is bounded by the step
     /// length.
@@ -600,7 +604,7 @@ impl ClearedArea {
         radius: f64,
     ) -> Vec<Engagement> {
         path.iter()
-            .map(|&p| self.point_engagement(p, radius))
+            .map(|&p| self.get_point_engagement(p, radius))
             .collect()
     }
 }

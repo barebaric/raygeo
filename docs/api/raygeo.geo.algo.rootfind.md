@@ -3,10 +3,10 @@ title: raygeo.geo.algo.rootfind
 sidebar_label: raygeo.geo.algo.rootfind
 ---
 
-![Bisection, secant, and Illinois on $x^3 - 2x - 5$.](images/geo-algo-rootfind-rootfind.png)
+![Bisection, solve_secant, and Illinois on $x^3 - 2x - 5$.](images/geo-algo-rootfind-rootfind.png)
 
-*Bisection, secant, and Illinois on $x^3 - 2x - 5$.* 1D root-finding methods: bisection, secant,
-Illinois.
+*Bisection, solve_secant, and Illinois on $x^3 - 2x - 5$.* 1D root-finding methods: bisection,
+solve_secant, Illinois.
 
 ## Functions
 
@@ -33,13 +33,13 @@ Bisection root-finding.
 | `max_iter` | `int = 100`                | Maximum iterations (default 100).                          |
 | _Returns_  | `tuple[float, str, int]`   | `(root, status_string, iteration_count)`.                  |
 
-![Error vs iteration count: secant fastest, bisection slowest.](images/geo-algo-rootfind-convergence.png)
+![Error vs iteration count: solve_secant fastest, bisection slowest.](images/geo-algo-rootfind-convergence.png)
 
-*Error vs iteration count: secant fastest, bisection slowest.*
+*Error vs iteration count: solve_secant fastest, bisection slowest.*
 
-![Iterations to reach a given tolerance for sqrt(2): secant needs far fewer than bisection.](images/geo-algo-rootfind-precision.png)
+![Iterations to reach a given tolerance for sqrt(2): solve_secant needs far fewer than bisection.](images/geo-algo-rootfind-precision.png)
 
-*Iterations to reach a given tolerance for sqrt(2): secant needs far fewer than bisection.*
+*Iterations to reach a given tolerance for sqrt(2): solve_secant needs far fewer than bisection.*
 
 ### `bisect_tracked()`
 
@@ -92,10 +92,10 @@ is linearly interpolated. Falls back to the sample with smallest absolute error.
 *7-sample angular grid search with linear interpolation: samples f(x) on a fan around *heading* and
 interpolates across adjacent sign changes.*
 
-### `illinois()`
+### `solve_illinois()`
 
 ```python
-illinois(
+solve_illinois(
     f: Callable[[float], float],
     lo: float,
     hi: float,
@@ -115,10 +115,10 @@ Illinois (safeguarded false-position) root-finding.
 | `max_iter` | `int = 100`                | Maximum iterations (default 100).                          |
 | _Returns_  | `tuple[float, str, int]`   | `(root, status_string, iteration_count)`.                  |
 
-### `illinois_tracked()`
+### `solve_illinois_tracked()`
 
 ```python
-illinois_tracked(
+solve_illinois_tracked(
     f: Any,
     lo: float,
     hi: float,
@@ -138,10 +138,10 @@ Tracked Illinois method root-finding.
 | `max_iter` | `int = 100`                           | Maximum number of iterations.                      |
 | _Returns_  | `tuple[float, str, int, list[float]]` | `(root, status_string, iteration_count, history)`. |
 
-### `secant()`
+### `solve_secant()`
 
 ```python
-secant(
+solve_secant(
     f: Callable[[float], float],
     x0: float,
     x1: float,
@@ -161,10 +161,10 @@ Secant root-finding.
 | `max_iter` | `int = 100`                | Maximum iterations (default 100).                          |
 | _Returns_  | `tuple[float, str, int]`   | `(root, status_string, iteration_count)`.                  |
 
-### `secant_tracked()`
+### `solve_secant_tracked()`
 
 ```python
-secant_tracked(
+solve_secant_tracked(
     f: Any,
     x0: float,
     x1: float,
@@ -173,7 +173,7 @@ secant_tracked(
 ) -> tuple[float, str, int, list[float]]
 ```
 
-Tracked secant method root-finding.
+Tracked solve_secant method root-finding.
 
 | Parameter  | Type                                  | Description                                        |
 | ---------- | ------------------------------------- | -------------------------------------------------- |

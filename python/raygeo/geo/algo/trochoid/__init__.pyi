@@ -10,10 +10,10 @@ engagement angle, and step-over ratio.
 import collections.abc
 from raygeo.geo import types
 __all__ = [
-    "trochoid_along_3d",
+    "get_trochoid_along_3d",
 ]
 
-def trochoid_along_3d(carrier: collections.abc.Sequence[tuple[float, float]], diameter: float, engagement_angle_deg: float = 90, step_over_ratio: float = 0.2, min_loop_radius: float = 0.5, z: float = 0) -> list[tuple[float, float, float]]:
+def get_trochoid_along_3d(carrier: collections.abc.Sequence[tuple[float, float]], diameter: float, engagement_angle_deg: float = 90, step_over_ratio: float = 0.2, min_loop_radius: float = 0.5, z: float = 0) -> list[tuple[float, float, float]]:
     r"""
     Generate a trochoidal path along a carrier polyline.
     

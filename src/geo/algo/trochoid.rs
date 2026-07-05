@@ -17,7 +17,7 @@ pub struct TrochoidOptions {
 /// direction in each cycle.
 ///
 /// Returns the path as a sequence of 3D points at the given Z.
-pub fn trochoid_along_3d(
+pub fn get_trochoid_along_3d(
     carrier: &[Point],
     opts: &TrochoidOptions,
 ) -> Vec<Point3D> {

@@ -7,9 +7,9 @@ clipping, and scanline data slicing along 3D line segments.
 
 __all__ = [
     "barycentric_interpolate",
-    "barycentric_weights",
-    "compute_segment_delta",
+    "compute_segment_delta_3d",
     "compute_t_range",
+    "get_barycentric_weights",
     "project_t_along_segment",
     "slice_scanline_data",
     "solve_quadratic",
@@ -35,23 +35,7 @@ def barycentric_interpolate(p: tuple[float, float], va: tuple[float, float], vb:
     :complexity: O(1) time, O(1) space
     """
 
-def barycentric_weights(p: tuple[float, float], va: tuple[float, float], vb: tuple[float, float], vc: tuple[float, float]) -> tuple[float, float, float]:
-    r"""
-    Compute raw barycentric coordinates for a point in a triangle.
-    
-    Returns (r, s, t) where r is the weight for va, s for vb, t for vc.
-    Weights are unclamped — the point is strictly inside (or on the
-    boundary of) the triangle iff all three are in [0, 1].
-    
-    :param p: Query point (x, y).
-    :param va: First triangle vertex (x, y).
-    :param vb: Second triangle vertex (x, y).
-    :param vc: Third triangle vertex (x, y).
-    :returns: Tuple (r, s, t) of raw barycentric coordinates.
-    :complexity: O(1) time, O(1) space
-    """
-
-def compute_segment_delta(start: tuple[float, float, float], end: tuple[float, float, float]) -> tuple[float, float, float, float]:
+def compute_segment_delta_3d(start: tuple[float, float, float], end: tuple[float, float, float]) -> tuple[float, float, float, float]:
     r"""
     Compute delta vector and squared length between two 3D points.
     
@@ -68,8 +52,24 @@ def compute_t_range(origin: tuple[float, float, float], new_start: tuple[float, 
     :param origin: Start of original segment (x, y, z).
     :param new_start: Start of clipped sub-segment (x, y, z).
     :param new_end: End of clipped sub-segment (x, y, z).
-    :param delta: Segment delta from compute_segment_delta.
+    :param delta: Segment delta from compute_segment_delta_3d.
     :returns: (t_start, t_end) in [0, 1].
+    :complexity: O(1) time, O(1) space
+    """
+
+def get_barycentric_weights(p: tuple[float, float], va: tuple[float, float], vb: tuple[float, float], vc: tuple[float, float]) -> tuple[float, float, float]:
+    r"""
+    Compute raw barycentric coordinates for a point in a triangle.
+    
+    Returns (r, s, t) where r is the weight for va, s for vb, t for vc.
+    Weights are unclamped — the point is strictly inside (or on the
+    boundary of) the triangle iff all three are in [0, 1].
+    
+    :param p: Query point (x, y).
+    :param va: First triangle vertex (x, y).
+    :param vb: Second triangle vertex (x, y).
+    :param vc: Third triangle vertex (x, y).
+    :returns: Tuple (r, s, t) of raw barycentric coordinates.
     :complexity: O(1) time, O(1) space
     """
 
@@ -79,7 +79,7 @@ def project_t_along_segment(origin: tuple[float, float, float], point: tuple[flo
     
     :param origin: Start of segment (x, y, z).
     :param point: Point to project (x, y, z).
-    :param delta: Segment delta from compute_segment_delta.
+    :param delta: Segment delta from compute_segment_delta_3d.
     :returns: Parameter t clamped to [0, 1].
     :complexity: O(1) time, O(1) space
     """

@@ -1,4 +1,4 @@
-"""Visualise 1D root-finding methods: bisection, secant, Illinois."""
+"""Visualise 1D root-finding methods: bisection, solve_secant, Illinois."""
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -7,10 +7,10 @@ from raygeo.geo.algo.rootfind import (
     bisect,
     bisect_tracked,
     bracket_grid,
-    illinois,
-    illinois_tracked,
-    secant,
-    secant_tracked,
+    solve_illinois,
+    solve_illinois_tracked,
+    solve_secant,
+    solve_secant_tracked,
 )
 
 
@@ -23,7 +23,7 @@ def _f_quad(x):
 
 
 def generate_rootfind():
-    """3-panel: bisection, secant, Illinois on x^3 - 2x - 5."""
+    """3-panel: bisection, solve_secant, Illinois on x^3 - 2x - 5."""
     f = _f_cubic
     a, b = 2.0, 3.0
     true_root = 2.0945514815423265
@@ -34,8 +34,8 @@ def generate_rootfind():
 
     panels = [
         ("Bisection", bisect_tracked(f, a, b, 1e-8, 50), "o"),
-        ("Secant", secant_tracked(f, a, b, 1e-8, 50), "s"),
-        ("Illinois", illinois_tracked(f, a, b, 1e-8, 50), "^"),
+        ("Secant", solve_secant_tracked(f, a, b, 1e-8, 50), "s"),
+        ("Illinois", solve_illinois_tracked(f, a, b, 1e-8, 50), "^"),
     ]
 
     for ax, (name, (root, status, iters, estimates), marker) in zip(
@@ -86,8 +86,8 @@ def generate_convergence():
 
     for name, solver_fn in [
         ("Bisection", lambda: bisect(f, 2.0, 3.0, 1e-12, 50)),
-        ("Secant", lambda: secant(f, 2.0, 3.0, 1e-12, 50)),
-        ("Illinois", lambda: illinois(f, 2.0, 3.0, 1e-12, 50)),
+        ("Secant", lambda: solve_secant(f, 2.0, 3.0, 1e-12, 50)),
+        ("Illinois", lambda: solve_illinois(f, 2.0, 3.0, 1e-12, 50)),
     ]:
         root, status, iters = solver_fn()
         errors = []
@@ -96,9 +96,9 @@ def generate_convergence():
             if name == "Bisection":
                 r, _, _ = bisect(f, x0, x1, 1e-12, i + 1)
             elif name == "Secant":
-                r, _, _ = secant(f, x0, x1, 1e-12, i + 1)
+                r, _, _ = solve_secant(f, x0, x1, 1e-12, i + 1)
             else:
-                r, _, _ = illinois(f, x0, x1, 1e-12, i + 1)
+                r, _, _ = solve_illinois(f, x0, x1, 1e-12, i + 1)
             errors.append(abs(r - true_root))
         ax.semilogy(
             range(1, len(errors) + 1),
@@ -126,7 +126,7 @@ def generate_precision():
 
     for name, solver_fn in [
         ("Bisection", lambda tol: bisect(f, 0.0, 2.0, tol, 200)),
-        ("Secant", lambda tol: secant(f, 1.0, 2.0, tol, 200)),
+        ("Secant", lambda tol: solve_secant(f, 1.0, 2.0, tol, 200)),
     ]:
         tols = [10 ** (-k) for k in range(1, 13)]
         iters_list = []
@@ -213,13 +213,15 @@ __docs_target__ = ["raygeo.geo.algo.rootfind.md"]
 __images__ = [
     {
         "heading": None,
-        "caption": ("Bisection, secant, and Illinois on $x^3 - 2x - 5$."),
+        "caption": (
+            "Bisection, solve_secant, and Illinois on $x^3 - 2x - 5$."
+        ),
         "function": generate_rootfind,
     },
     {
         "heading": "bisect",
         "caption": (
-            "Error vs iteration count: secant fastest, bisection slowest."
+            "Error vs iteration count: solve_secant fastest, bisection slowest."
         ),
         "function": generate_convergence,
     },
@@ -227,7 +229,7 @@ __images__ = [
         "heading": "bisect",
         "caption": (
             "Iterations to reach a given tolerance for sqrt(2):"
-            " secant needs far fewer than bisection."
+            " solve_secant needs far fewer than bisection."
         ),
         "function": generate_precision,
     },

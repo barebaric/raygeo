@@ -1,4 +1,4 @@
-//! 1D root-finding methods: bisection, secant, Illinois.
+//! 1D root-finding methods: bisection, solve_secant, Illinois.
 //!
 //! Each solver returns (root, status, iteration_count).  The status tells
 //! the caller whether convergence was achieved, the bracket was invalid,
@@ -64,7 +64,7 @@ pub fn bisect<F: Fn(f64) -> f64>(
 /// Secant: superlinear convergence when it works, may diverge.
 ///
 /// Uses `x0` and `x1` as initial guesses (they need NOT bracket the root).
-pub fn secant<F: Fn(f64) -> f64>(
+pub fn solve_secant<F: Fn(f64) -> f64>(
     f: F,
     mut x0: f64,
     mut x1: f64,
@@ -105,11 +105,11 @@ pub fn secant<F: Fn(f64) -> f64>(
     (x1, RootStatus::MaxIter, max_iter)
 }
 
-/// Illinois (safeguarded false-position): like secant but maintains a
+/// Illinois (safeguarded false-position): like solve_secant but maintains a
 /// bracket and uses the modified regula falsi trick to avoid stagnation.
 ///
 /// Requires `f(lo)·f(hi) < 0`.
-pub fn illinois<F: Fn(f64) -> f64>(
+pub fn solve_illinois<F: Fn(f64) -> f64>(
     f: F,
     mut lo: f64,
     mut hi: f64,
@@ -245,7 +245,7 @@ pub fn bisect_tracked<F: Fn(f64) -> f64>(
 
 /// Secant with iteration history.  Returns `(root, status, iters, estimates)`
 /// where `estimates` contains each iterate.
-pub fn secant_tracked<F: Fn(f64) -> f64>(
+pub fn solve_secant_tracked<F: Fn(f64) -> f64>(
     f: F,
     mut x0: f64,
     mut x1: f64,
@@ -289,7 +289,7 @@ pub fn secant_tracked<F: Fn(f64) -> f64>(
 
 /// Illinois with iteration history.  Returns `(root, status, iters, estimates)`
 /// where `estimates` contains the estimate of each iteration.
-pub fn illinois_tracked<F: Fn(f64) -> f64>(
+pub fn solve_illinois_tracked<F: Fn(f64) -> f64>(
     f: F,
     mut lo: f64,
     mut hi: f64,

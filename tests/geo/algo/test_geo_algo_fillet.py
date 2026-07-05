@@ -5,7 +5,7 @@ import math
 from raygeo.geo.algo.fillet import (
     append_end_fillets,
     create_fillet_polyline,
-    descending_radius_fillet,
+    get_descending_radius_fillet,
     trim_to_safe_fillet_span,
     try_fillet_one_end,
 )
@@ -282,13 +282,13 @@ class TestTryFilletOneEnd:
 
 
 class TestDescendingRadiusFillet:
-    """Tests for descending_radius_fillet."""
+    """Tests for get_descending_radius_fillet."""
 
     def test_full_radius_fits(self):
         """Without obstacles the full-radius fillet is returned."""
         arc = [(0.0, 0.0), (50.0, 0.0), (100.0, 0.0)]
         outer = [(-30.0, -30.0), (130.0, -30.0), (130.0, 30.0), (-30.0, 30.0)]
-        result = descending_radius_fillet(arc, outer, [], 10.0, 0.0)
+        result = get_descending_radius_fillet(arc, outer, [], 10.0, 0.0)
         # Should be longer than original (fillets at both ends)
         assert len(result) > len(arc)
         # Start should extend leftward
@@ -301,7 +301,7 @@ class TestDescendingRadiusFillet:
         arc = [(0.0, 0.0), (50.0, 0.0), (100.0, 0.0)]
         outer = [(-5.0, -30.0), (120.0, -30.0), (120.0, 30.0), (-5.0, 30.0)]
         obstacles = [[(-4.0, -5.0), (0.0, -5.0), (0.0, 5.0), (-4.0, 5.0)]]
-        result = descending_radius_fillet(arc, outer, obstacles, 20.0, 0.0)
+        result = get_descending_radius_fillet(arc, outer, obstacles, 20.0, 0.0)
         # A fillet should still be found (at reduced radius)
         assert len(result) > 0
         # The result should avoid the obstacle at (0,0) start — the
@@ -322,7 +322,7 @@ class TestDescendingRadiusFillet:
             (120.0, 30.0),
             (-24.0, 30.0),
         ]
-        result = descending_radius_fillet(arc, outer, [], 20.0, 5.0)
+        result = get_descending_radius_fillet(arc, outer, [], 20.0, 5.0)
         assert len(result) > 0
         # The first point of the result should maintain the full
         # safety distance (20 + 5 = 25) from the boundary at x = -24.
@@ -334,12 +334,12 @@ class TestDescendingRadiusFillet:
         arc = [(0.0, 0.0), (50.0, 0.0), (100.0, 0.0)]
         # Tiny boundary that blocks everything
         outer = [(5.0, -2.0), (95.0, -2.0), (95.0, 2.0), (5.0, 2.0)]
-        result = descending_radius_fillet(arc, outer, [], 10.0, 0.0)
+        result = get_descending_radius_fillet(arc, outer, [], 10.0, 0.0)
         assert len(result) == 0
 
     def test_short_arc_returns_fillet(self):
         """Arc with 2 points is still valid and gets filleted."""
-        result = descending_radius_fillet(
+        result = get_descending_radius_fillet(
             [(0.0, 0.0), (10.0, 0.0)], [], [], 5.0, 0.0
         )
         assert len(result) > 2

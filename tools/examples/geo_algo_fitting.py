@@ -9,7 +9,7 @@ from matplotlib.patches import Circle
 from raygeo.geo import Geometry
 from raygeo.geo.algo.fitting import (
     fit_circle_to_3_points,
-    fit_circle_to_points,
+    fit_circle_to_points_3d,
     flatten_to_points_3d,
     generate_arc_between_two_points,
     generate_linking_arc,
@@ -33,7 +33,7 @@ def generate_circle():
         for a in angles
     ]
 
-    result = fit_circle_to_points([(x, y, 0.0) for x, y in pts])
+    result = fit_circle_to_points_3d([(x, y, 0.0) for x, y in pts])
     fc, fr, ferr = result if result else ((0.0, 0.0), 0.0, 0.0)
 
     fig, ax = plt.subplots(figsize=(7, 7))
@@ -687,7 +687,7 @@ def generate_linking():
 __docs_target__ = ["raygeo.geo.algo.fitting.md"]
 __images__ = [
     {
-        "heading": "fit_circle_to_points",
+        "heading": "fit_circle_to_points_3d",
         "caption": "Circle fitted to points",
         "function": generate_circle,
     },

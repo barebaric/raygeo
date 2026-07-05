@@ -10,10 +10,10 @@ ratio.
 
 ## Functions
 
-### `trochoid_along_3d()`
+### `get_trochoid_along_3d()`
 
 ```python
-trochoid_along_3d(
+get_trochoid_along_3d(
     carrier: Sequence[tuple[float, float]],
     diameter: float,
     engagement_angle_deg: float = 90,

@@ -2,7 +2,7 @@ import pytest
 
 from raygeo.geo.algo.interp import (
     barycentric_interpolate,
-    compute_segment_delta,
+    compute_segment_delta_3d,
     compute_t_range,
     project_t_along_segment,
     slice_scanline_data,
@@ -12,64 +12,64 @@ from raygeo.geo.algo.interp import (
 
 class TestComputeSegmentDelta:
     def test_basic(self):
-        dx, dy, dz, len_sq = compute_segment_delta((0, 0, 0), (3, 4, 0))
+        dx, dy, dz, len_sq = compute_segment_delta_3d((0, 0, 0), (3, 4, 0))
         assert dx == pytest.approx(3.0)
         assert dy == pytest.approx(4.0)
         assert dz == pytest.approx(0.0)
         assert len_sq == pytest.approx(25.0)
 
     def test_zero_length(self):
-        dx, dy, dz, len_sq = compute_segment_delta((1, 2, 3), (1, 2, 3))
+        dx, dy, dz, len_sq = compute_segment_delta_3d((1, 2, 3), (1, 2, 3))
         assert len_sq == pytest.approx(0.0)
 
 
 class TestProjectTAlongSegment:
     def test_midpoint(self):
-        d = compute_segment_delta((0, 0, 0), (10, 0, 0))
+        d = compute_segment_delta_3d((0, 0, 0), (10, 0, 0))
         t = project_t_along_segment((0, 0, 0), (5, 0, 0), d)
         assert t == pytest.approx(0.5)
 
     def test_start(self):
-        d = compute_segment_delta((0, 0, 0), (10, 0, 0))
+        d = compute_segment_delta_3d((0, 0, 0), (10, 0, 0))
         t = project_t_along_segment((0, 0, 0), (0, 0, 0), d)
         assert t == pytest.approx(0.0)
 
     def test_end(self):
-        d = compute_segment_delta((0, 0, 0), (10, 0, 0))
+        d = compute_segment_delta_3d((0, 0, 0), (10, 0, 0))
         t = project_t_along_segment((0, 0, 0), (10, 0, 0), d)
         assert t == pytest.approx(1.0)
 
     def test_beyond_start(self):
-        d = compute_segment_delta((5, 0, 0), (10, 0, 0))
+        d = compute_segment_delta_3d((5, 0, 0), (10, 0, 0))
         t = project_t_along_segment((5, 0, 0), (0, 0, 0), d)
         assert t == pytest.approx(0.0)
 
     def test_beyond_end(self):
-        d = compute_segment_delta((0, 0, 0), (10, 0, 0))
+        d = compute_segment_delta_3d((0, 0, 0), (10, 0, 0))
         t = project_t_along_segment((0, 0, 0), (20, 0, 0), d)
         assert t == pytest.approx(1.0)
 
     def test_degenerate_segment(self):
-        d = compute_segment_delta((5, 5, 5), (5, 5, 5))
+        d = compute_segment_delta_3d((5, 5, 5), (5, 5, 5))
         t = project_t_along_segment((5, 5, 5), (10, 10, 10), d)
         assert t == pytest.approx(0.0)
 
 
 class TestComputeTRange:
     def test_basic(self):
-        d = compute_segment_delta((0, 0, 0), (10, 0, 0))
+        d = compute_segment_delta_3d((0, 0, 0), (10, 0, 0))
         t_s, t_e = compute_t_range((0, 0, 0), (2, 0, 0), (8, 0, 0), d)
         assert t_s == pytest.approx(0.2)
         assert t_e == pytest.approx(0.8)
 
     def test_full_range(self):
-        d = compute_segment_delta((0, 0, 0), (10, 0, 0))
+        d = compute_segment_delta_3d((0, 0, 0), (10, 0, 0))
         t_s, t_e = compute_t_range((0, 0, 0), (0, 0, 0), (10, 0, 0), d)
         assert t_s == pytest.approx(0.0)
         assert t_e == pytest.approx(1.0)
 
     def test_degenerate_segment(self):
-        d = compute_segment_delta((5, 5, 5), (5, 5, 5))
+        d = compute_segment_delta_3d((5, 5, 5), (5, 5, 5))
         t_s, t_e = compute_t_range((5, 5, 5), (2, 0, 0), (8, 0, 0), d)
         assert t_s == pytest.approx(0.0)
         assert t_e == pytest.approx(1.0)

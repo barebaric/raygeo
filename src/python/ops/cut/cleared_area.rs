@@ -251,14 +251,14 @@ impl PyClearedArea {
     /// :param center: Query point ``(x, y)``.
     /// :param radius: Disk radius (mm).
     /// :returns: ``(angle_rad, area, chord_depth)``.
-    pub fn point_engagement(
+    pub fn get_point_engagement(
         &self,
         center: (f64, f64),
         radius: f64,
     ) -> (f64, f64, f64) {
         let e = self
             .inner
-            .point_engagement(Point::new(center.0, center.1), radius);
+            .get_point_engagement(Point::new(center.0, center.1), radius);
         (e.angle, e.area, e.chord_depth)
     }
 
@@ -271,9 +271,13 @@ impl PyClearedArea {
     /// :param center: Query point ``(x, y)``.
     /// :param radius: Disk radius (mm).
     /// :returns: Uncleared angular extent (radians).
-    pub fn angular_engagement(&self, center: (f64, f64), radius: f64) -> f64 {
+    pub fn get_angular_engagement(
+        &self,
+        center: (f64, f64),
+        radius: f64,
+    ) -> f64 {
         self.inner
-            .angular_engagement(Point::new(center.0, center.1), radius)
+            .get_angular_engagement(Point::new(center.0, center.1), radius)
     }
 
     /// Incremental cut area when the tool moves from *c1* to *c2*.

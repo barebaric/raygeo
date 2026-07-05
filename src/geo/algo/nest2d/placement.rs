@@ -5,7 +5,7 @@ use crate::geo::shape::polygon::{
 };
 use crate::types::{Point, Polygon, Rect};
 
-use super::collision::any_overlap_hierarchical_grid;
+use super::collision::does_any_overlap_hierarchical_grid;
 use super::gravity::apply_gravity;
 use super::ifp::inner_fit_polygon;
 use super::nfp::no_fit_polygon;
@@ -354,7 +354,7 @@ fn evaluate_candidates(
             y + part_bounds.max.y,
         );
 
-        if any_overlap_hierarchical_grid(
+        if does_any_overlap_hierarchical_grid(
             &test_polys,
             &test_hulls,
             placed_polys_list,

@@ -538,7 +538,7 @@ fn step_inner(
         },
     );
 
-    let eng = cleared.point_engagement(best_pos, opts.radius);
+    let eng = cleared.get_point_engagement(best_pos, opts.radius);
     StepResult {
         next: best_pos,
         heading: best_dir.y.atan2(best_dir.x),

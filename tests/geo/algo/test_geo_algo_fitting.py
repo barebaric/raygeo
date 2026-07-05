@@ -5,9 +5,9 @@ import pytest
 
 from raygeo.geo import Arc, Bezier, Geometry, Line, Move
 from raygeo.geo.algo.fitting import (
-    are_points_collinear,
+    are_points_collinear_3d,
     fit_circle_to_3_points,
-    fit_circle_to_points,
+    fit_circle_to_points_3d,
     fit_points_recursive,
     fit_points_with_primitives,
     generate_arc_between_two_points,
@@ -21,15 +21,15 @@ from raygeo.geo.algo.fitting import (
 def test_are_collinear():
     # Collinear points (horizontal)
     points = [(0.0, 0.0, 0.0), (5.0, 0.0, 0.0), (10.0, 0.0, 0.0)]
-    assert are_points_collinear(points) is True
+    assert are_points_collinear_3d(points) is True
 
     # Collinear points (vertical)
     points = [(0.0, 0.0, 0.0), (0.0, 5.0, 0.0), (0.0, 10.0, 0.0)]
-    assert are_points_collinear(points) is True
+    assert are_points_collinear_3d(points) is True
 
     # Non-collinear points
     points = [(0.0, 0.0, 0.0), (1.0, 1.0, 0.0), (2.0, 2.1, 0.0)]
-    assert are_points_collinear(points) is False
+    assert are_points_collinear_3d(points) is False
 
 
 def test_fit_circle_3_points_perfect_circle():
@@ -145,7 +145,7 @@ def test_fit_circle_3_points_offset_center():
 def test_fit_circle_to_points_collinear_returns_none():
     """Test collinear points return None."""
     points = [(0.0, 0.0, 0.0), (2.0, 2.0, 0.0), (5.0, 5.0, 0.0)]
-    assert fit_circle_to_points(points) is None
+    assert fit_circle_to_points_3d(points) is None
 
 
 def test_fit_circle_to_points_perfect_circle():
@@ -161,7 +161,7 @@ def test_fit_circle_to_points_perfect_circle():
         )
         for theta in angles
     ]
-    result = fit_circle_to_points(points)
+    result = fit_circle_to_points_3d(points)
     assert result is not None
 
     (xc, yc), r, error = result
@@ -187,7 +187,7 @@ def test_fit_circle_to_points_noisy_circle():
         )
         for (theta, (dx, dy)) in zip(angles, noise)
     ]
-    result = fit_circle_to_points(points)
+    result = fit_circle_to_points_3d(points)
     assert result is not None
 
     (xc, yc), r, error = result
@@ -199,10 +199,10 @@ def test_fit_circle_to_points_noisy_circle():
 
 def test_fit_circle_to_points_insufficient_points():
     """Test 1-2 points or duplicates return None."""
-    assert fit_circle_to_points([(0.0, 0.0, 0.0)]) is None
-    assert fit_circle_to_points([(1.0, 2.0, 0.0), (3.0, 4.0, 0.0)]) is None
+    assert fit_circle_to_points_3d([(0.0, 0.0, 0.0)]) is None
+    assert fit_circle_to_points_3d([(1.0, 2.0, 0.0), (3.0, 4.0, 0.0)]) is None
     assert (
-        fit_circle_to_points(
+        fit_circle_to_points_3d(
             [(5.0, 5.0, 0.0), (5.0, 5.0, 0.0), (5.0, 5.0, 0.0)]
         )
         is None
@@ -222,7 +222,7 @@ def test_fit_circle_to_points_small_radius():
         )
         for theta in angles
     ]
-    result = fit_circle_to_points(points)
+    result = fit_circle_to_points_3d(points)
     assert result is not None
     (xc, yc), r, error = result
     assert r == pytest.approx(radius, rel=0.01)
@@ -243,7 +243,7 @@ def test_fit_circle_to_points_semicircle_accuracy():
         )
         for theta in angles
     ]
-    result = fit_circle_to_points(points)
+    result = fit_circle_to_points_3d(points)
     assert result is not None
     (xc, yc), r, error = result
     assert np.isclose(xc, 5.0, atol=0.001)
