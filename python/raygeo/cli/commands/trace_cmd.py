@@ -101,9 +101,8 @@ def run(args):
     mtime_after = tp.stat().st_mtime_ns if tp.exists() else 0
     if mtime_after == mtime_before:
         print(
-            f"  ERROR: Trace file '{trace_path}' was not written.\n"
-            f"  Tracing requires a debug build. Run:\n"
-            f"    make dev  # install debug build (use the dev venv)"
+            f"  ERROR: Trace file '{trace_path}' was not written.",
+            file=sys.stderr,
         )
         sys.exit(1)
     print(f"  Trace written: {trace_path}")

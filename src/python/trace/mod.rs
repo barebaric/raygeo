@@ -542,9 +542,14 @@ impl PyTraceFile {
     fn mat_nodes(&self, py: Python<'_>) -> PyResult<Vec<(f64, f64)>> {
         if let Some(mat) = find_mat_record(&self.data.records, py)? {
             let d = mat.bind(py);
-            let raw: Option<Vec<Vec<f64>>> = d.get_item("nodes").ok().flatten()
+            let raw: Option<Vec<Vec<f64>>> = d
+                .get_item("nodes")
+                .ok()
+                .flatten()
                 .and_then(|v| v.extract::<Vec<Vec<f64>>>().ok());
-            Ok(raw.map_or_else(Vec::new, |v| v.into_iter().map(|p| (p[0], p[1])).collect()))
+            Ok(raw.map_or_else(Vec::new, |v| {
+                v.into_iter().map(|p| (p[0], p[1])).collect()
+            }))
         } else {
             Ok(Vec::new())
         }
@@ -570,9 +575,14 @@ impl PyTraceFile {
     fn mat_edges(&self, py: Python<'_>) -> PyResult<Vec<(u32, u32)>> {
         if let Some(mat) = find_mat_record(&self.data.records, py)? {
             let d = mat.bind(py);
-            let raw: Option<Vec<Vec<u32>>> = d.get_item("edges").ok().flatten()
+            let raw: Option<Vec<Vec<u32>>> = d
+                .get_item("edges")
+                .ok()
+                .flatten()
                 .and_then(|v| v.extract::<Vec<Vec<u32>>>().ok());
-            Ok(raw.map_or_else(Vec::new, |v| v.into_iter().map(|p| (p[0], p[1])).collect()))
+            Ok(raw.map_or_else(Vec::new, |v| {
+                v.into_iter().map(|p| (p[0], p[1])).collect()
+            }))
         } else {
             Ok(Vec::new())
         }

@@ -4,9 +4,10 @@
 //! The generic [`crate::trace::Tracer`] writes these records to the
 //! self-contained trace file.
 //!
-//! [`TraceRecorder`] wraps the tracer and exposes one-line methods for
-//! each record type.  All `#[cfg(debug_assertions)]` gating lives
-//! inside the adapter — call sites in the orchestrator are unconditional.
+//! [`TraceRecorder`] wraps an optional [`Tracer`] and exposes one-line
+//! methods for each record type.  Runtime gating (via
+//! [`AdaptiveClearingOptions::trace_path`]) means call sites in the
+//! orchestrator are unconditional.
 
 use serde::Serialize;
 
@@ -15,7 +16,6 @@ use crate::ops::assembly::adaptive::AdaptiveClearingOptions;
 use crate::ops::container::Ops;
 use crate::ops::cut::ClearedArea;
 use crate::ops::cut::StepStatus;
-#[cfg(debug_assertions)]
 use crate::trace::Tracer;
 use crate::types::Point;
 
@@ -198,15 +198,13 @@ impl TraceRecord {
 // ── TraceRecorder ───────────────────────────────────────────────────
 
 /// Adapter that owns an optional [`Tracer`] and exposes one-line methods
-/// for each record type.  All `#[cfg(debug_assertions)]` gating is
-/// internal — call sites in the orchestrator are unconditional.
+/// for each record type.  When `tracer` is `None` all methods are
+/// no-ops — call sites in the orchestrator are unconditional.
 pub(super) struct TraceRecorder {
-    #[cfg(debug_assertions)]
     tracer: Option<Tracer>,
     step_idx: u32,
 }
 
-#[cfg_attr(not(debug_assertions), allow(unused_variables))]
 impl TraceRecorder {
     /// Create a recorder, opening the trace file when
     /// `opts.trace_path` is `Some`.  Emits geometry and MAT records
@@ -216,7 +214,6 @@ impl TraceRecorder {
         cleared: &ClearedArea,
         mat: Option<&MedialAxis>,
     ) -> Self {
-        #[cfg(debug_assertions)]
         let tracer = match &opts.trace_path {
             Some(path) => match Tracer::open(path) {
                 Ok(mut t) => {
@@ -256,7 +253,6 @@ impl TraceRecorder {
         };
 
         Self {
-            #[cfg(debug_assertions)]
             tracer,
             step_idx: 1,
         }
@@ -272,7 +268,6 @@ impl TraceRecorder {
         wall_hug_points: &[(f64, f64)],
         wall_hug_segment_counts: &[u32],
     ) {
-        #[cfg(debug_assertions)]
         if let Some(ref mut tr) = self.tracer {
             let mut rec = TraceRecord::from_tool_state(
                 "init",
@@ -308,7 +303,6 @@ impl TraceRecorder {
         wall_hug_points: &[(f64, f64)],
         wall_hug_segment_counts: &[u32],
     ) {
-        #[cfg(debug_assertions)]
         if let Some(ref mut tr) = self.tracer {
             let mut rec = TraceRecord::from_tool_state(
                 "cut",
@@ -354,7 +348,6 @@ impl TraceRecorder {
         wall_hug_points: &[(f64, f64)],
         wall_hug_segment_counts: &[u32],
     ) {
-        #[cfg(debug_assertions)]
         if let Some(ref mut tr) = self.tracer {
             let kind_str = match kind {
                 TraceKind::ResumeStall => "resume_stall",
@@ -403,7 +396,6 @@ impl TraceRecorder {
         wall_hug_points: &[(f64, f64)],
         wall_hug_segment_counts: &[u32],
     ) {
-        #[cfg(debug_assertions)]
         if let Some(ref mut tr) = self.tracer {
             let mut rec = TraceRecord::from_tool_state(
                 "exit",
@@ -430,7 +422,6 @@ impl TraceRecorder {
     /// Finalise the trace file.
     /// Write the toolpath block and finalise the trace file.
     pub fn finish(self, _ops: &Ops) {
-        #[cfg(debug_assertions)]
         if let Some(mut t) = self.tracer {
             let _ = t.finish();
         }

@@ -74,7 +74,6 @@ pub mod prof;
 pub mod svg;
 pub(crate) mod trace_types;
 
-#[cfg(debug_assertions)]
 pub(crate) mod trace;
 pub mod types;
 
