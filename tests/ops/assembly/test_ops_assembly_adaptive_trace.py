@@ -3,11 +3,19 @@
 import math
 import struct
 
-from raygeo.cnc.machining.entry import adaptive_entry
-from raygeo.ops import Ops
 from raygeo.ops.assembly.adaptive import adaptive_clearing
 from raygeo.ops.cut.cleared_area import ClearedArea
 from raygeo.trace import TraceFile
+
+
+def _circle(cx, cy, r, n=32):
+    return [
+        (
+            cx + r * math.cos(2 * math.pi * i / n),
+            cy + r * math.sin(2 * math.pi * i / n),
+        )
+        for i in range(n)
+    ]
 
 
 def _rect(cx, cy, w, h):
@@ -20,18 +28,11 @@ def _rect(cx, cy, w, h):
 
 
 def _run_adaptive(boundary, islands=None, trace_path=None):
-    """Run adaptive entry + clearing and return the combined Ops."""
+    """Run adaptive clearing from a circle seed and return the Ops."""
     islands = islands or []
-    result = adaptive_entry(
-        pocket_boundary=boundary,
-        islands=islands,
-        tool_radius=3.0,
-        step_over=1.5,
-        safe_z=2.0,
-        target_z=-5.0,
-    )
+    seed = [_circle(0, 0, 5)]
     ca = ClearedArea(
-        boundary=boundary, islands=islands, initial=result.cleared_polygons
+        boundary=boundary, islands=islands, initial=seed
     )
     clear_result = adaptive_clearing(
         cleared=ca,
@@ -44,10 +45,7 @@ def _run_adaptive(boundary, islands=None, trace_path=None):
         area_tolerance=4.0,
         trace_path=trace_path,
     )
-    combined = Ops()
-    combined.extend(result.ops)
-    combined.extend(clear_result.ops)
-    return combined
+    return clear_result.ops
 
 
 def test_trace_disabled(tmp_path):
