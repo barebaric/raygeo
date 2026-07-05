@@ -5,6 +5,7 @@
 
 use prof_macros::prof;
 
+use crate::error::RaygeoResult;
 use crate::geo::algo::helix::HelixDirection;
 use crate::geo::algo::polylabel::find_largest_circle;
 use crate::geo::shape::line::longest_line_through_point;
@@ -69,7 +70,7 @@ pub fn detect_entry_method(
 pub fn adaptive_entry(
     opts: &AdaptiveEntryOptions,
     cut_state: &State,
-) -> AssemblyResult {
+) -> RaygeoResult<AssemblyResult> {
     let (entry_pt, r_max) =
         find_largest_circle(&opts.pocket_boundary, &opts.islands, 0.1)
             .unwrap_or_else(|| {
@@ -79,12 +80,12 @@ pub fn adaptive_entry(
 
     match detect_entry_method(r_max, opts.tool_radius, opts.safe_margin) {
         EntryMethod::HelixSpiral => {
-            generate_helix_spiral(entry_pt, r_max, opts, cut_state)
+            Ok(generate_helix_spiral(entry_pt, r_max, opts, cut_state)?)
         }
         EntryMethod::Toroid => {
             let bbox = get_polygon_bounds(&opts.pocket_boundary);
             let (start, end) = longest_line_through_point(entry_pt, bbox);
-            toroid::generate_toroid(
+            Ok(toroid::generate_toroid(
                 &ToroidOptions {
                     carrier: vec![start, end],
                     tool_radius: opts.tool_radius,
@@ -94,12 +95,12 @@ pub fn adaptive_entry(
                     angular_step: opts.angular_step,
                 },
                 cut_state,
-            )
+            )?)
         }
         EntryMethod::Ramp => {
             let bbox = get_polygon_bounds(&opts.pocket_boundary);
             let (start, end) = longest_line_through_point(entry_pt, bbox);
-            ramp::generate_ramp(
+            Ok(ramp::generate_ramp(
                 &RampOptions {
                     start,
                     end,
@@ -110,9 +111,9 @@ pub fn adaptive_entry(
                     lateral_amplitude: opts.tool_radius * 0.8,
                 },
                 cut_state,
-            )
+            )?)
         }
-        EntryMethod::None => AssemblyResult {
+        EntryMethod::None => Ok(AssemblyResult {
             ops: crate::ops::container::Ops::new(),
             cleared_polygons: vec![],
             start: crate::ops::cut::ToolPose {
@@ -123,7 +124,7 @@ pub fn adaptive_entry(
                 pos: entry_pt,
                 heading: 0.0,
             },
-        },
+        }),
     }
 }
 
@@ -138,7 +139,7 @@ pub fn generate_helix_spiral(
     r_max: f64,
     opts: &AdaptiveEntryOptions,
     cut_state: &State,
-) -> AssemblyResult {
+) -> RaygeoResult<AssemblyResult> {
     let helix_r = (opts.tool_radius * 0.8).min(r_max * 0.5);
 
     let helix_result = if opts.target_z < opts.safe_z {
@@ -153,7 +154,7 @@ pub fn generate_helix_spiral(
                 angular_step: opts.angular_step,
             },
             cut_state,
-        )
+        )?
     } else {
         AssemblyResult {
             ops: crate::ops::container::Ops::new(),
@@ -190,10 +191,10 @@ pub fn generate_helix_spiral(
                 start_angle,
             },
             cut_state,
-        );
+        )?;
 
-        chain(helix_result, spiral_result)
+        Ok(chain(helix_result, spiral_result))
     } else {
-        helix_result
+        Ok(helix_result)
     }
 }

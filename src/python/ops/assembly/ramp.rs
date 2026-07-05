@@ -72,7 +72,7 @@ fn generate_ramp_py(
     style: &str,
     lateral_amplitude: f64,
     state: Option<Bound<'_, PyState>>,
-) -> PyAssemblyResult {
+) -> PyResult<PyAssemblyResult> {
     let ramp_style = match style.to_lowercase().as_str() {
         "linear" => RampStyle::Linear,
         _ => RampStyle::ZigZag,
@@ -93,6 +93,6 @@ fn generate_ramp_py(
         lateral_amplitude,
     };
 
-    let result = ramp::generate_ramp(&opts, &cut_state);
-    PyAssemblyResult::from_inner(result)
+    let result = ramp::generate_ramp(&opts, &cut_state)?;
+    Ok(PyAssemblyResult::from_inner(result))
 }

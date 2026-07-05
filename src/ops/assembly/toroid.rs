@@ -2,6 +2,7 @@
 
 use prof_macros::prof;
 
+use crate::error::RaygeoResult;
 use crate::geo::algo::helix::HelixDirection;
 use crate::geo::algo::trochoid::{trochoid_along_3d, TrochoidOptions};
 use crate::ops::assembly::result::AssemblyResult;
@@ -30,7 +31,7 @@ pub struct ToroidOptions {
 pub fn generate_toroid(
     opts: &ToroidOptions,
     cut_state: &State,
-) -> AssemblyResult {
+) -> RaygeoResult<AssemblyResult> {
     let path = trochoid_along_3d(
         &opts.carrier,
         &TrochoidOptions {
@@ -79,12 +80,12 @@ pub fn generate_toroid(
         vec![]
     };
 
-    AssemblyResult {
+    Ok(AssemblyResult {
         ops: Ops::from_polyline(&path, true, Some(cut_state)),
         cleared_polygons,
         start,
         end,
-    }
+    })
 }
 
 /// Build a swept polygon around a carrier polyline at tool radius.

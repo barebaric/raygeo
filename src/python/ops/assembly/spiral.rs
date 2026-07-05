@@ -77,7 +77,7 @@ fn generate_spiral_py(
     angular_step: f64,
     start_angle: f64,
     state: Option<Bound<'_, PyState>>,
-) -> PyAssemblyResult {
+) -> PyResult<PyAssemblyResult> {
     let dir = match direction {
         "CW" => HelixDirection::Cw,
         "CCW" => HelixDirection::Ccw,
@@ -100,6 +100,6 @@ fn generate_spiral_py(
         start_angle,
     };
 
-    let result = spiral::generate_spiral(&opts, &cut_state);
-    PyAssemblyResult::from_inner(result)
+    let result = spiral::generate_spiral(&opts, &cut_state)?;
+    Ok(PyAssemblyResult::from_inner(result))
 }

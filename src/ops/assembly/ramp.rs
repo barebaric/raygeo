@@ -2,6 +2,7 @@
 
 use prof_macros::prof;
 
+use crate::error::RaygeoResult;
 use crate::geo::algo::ramp::{
     generate_ramp_3d, RampOptions as GeoRampOptions, RampStyle,
 };
@@ -29,7 +30,10 @@ pub struct RampOptions {
 /// Calls the geo-layer ramp generator and wraps the result into an
 /// [`AssemblyResult`] with a segment-swept cleared polygon.
 #[prof]
-pub fn generate_ramp(opts: &RampOptions, cut_state: &State) -> AssemblyResult {
+pub fn generate_ramp(
+    opts: &RampOptions,
+    cut_state: &State,
+) -> RaygeoResult<AssemblyResult> {
     let path = generate_ramp_3d(&GeoRampOptions {
         start: opts.start,
         end: opts.end,
@@ -68,12 +72,12 @@ pub fn generate_ramp(opts: &RampOptions, cut_state: &State) -> AssemblyResult {
     let cleared_polygons =
         get_segment_swept_polygon(opts.start, opts.end, opts.lateral_amplitude);
 
-    AssemblyResult {
+    Ok(AssemblyResult {
         ops: Ops::from_polyline(&path, true, Some(cut_state)),
         cleared_polygons,
         start,
         end,
-    }
+    })
 }
 
 /// Compute the tangent heading at index `i` in the ramp path.

@@ -89,7 +89,7 @@ fn adaptive_wavefronts_py(
     precision: f64,
     cut_feed_rate: i32,
     cut_power: f64,
-) -> PyAssemblyResult {
+) -> PyResult<PyAssemblyResult> {
     let boundary: Vec<Point> = pocket_boundary
         .into_iter()
         .map(|(x, y)| Point::new(x, y))
@@ -117,7 +117,7 @@ fn adaptive_wavefronts_py(
     };
 
     let result =
-        wavefront::adaptive_wavefronts(&mut cleared.inner, &opts, &cut_state);
+        wavefront::adaptive_wavefronts(&mut cleared.inner, &opts, &cut_state)?;
 
-    PyAssemblyResult::from_inner(result)
+    Ok(PyAssemblyResult::from_inner(result))
 }

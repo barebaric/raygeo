@@ -4,6 +4,7 @@ use prof_macros::prof;
 
 use crate::ops::cut::ClearedArea;
 
+use crate::error::RaygeoResult;
 use crate::geo::algo::offset::compute_inset_region;
 use crate::geo::shape::polygon::{get_polygon_area, resample_polygon};
 use crate::ops::assembly::result::AssemblyResult;
@@ -39,7 +40,7 @@ pub fn adaptive_wavefronts(
     cleared: &mut ClearedArea,
     opts: &AdaptiveWavefrontOptions,
     cut_state: &State,
-) -> AssemblyResult {
+) -> RaygeoResult<AssemblyResult> {
     let (_, valid_total_area) = compute_inset_region(
         &opts.pocket_boundary,
         opts.tool_radius,
@@ -113,7 +114,7 @@ pub fn adaptive_wavefronts(
     let start_pos = first_point.unwrap_or(Point::ZERO);
     let end_pos = last_point.unwrap_or(Point::ZERO);
 
-    AssemblyResult {
+    Ok(AssemblyResult {
         cleared_polygons: cleared.fragments().to_vec(),
         start: ToolPose {
             pos: start_pos,
@@ -124,5 +125,5 @@ pub fn adaptive_wavefronts(
             heading: 0.0,
         },
         ops,
-    }
+    })
 }

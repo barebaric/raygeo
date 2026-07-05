@@ -69,7 +69,7 @@ fn generate_toroid_py(
     direction: &str,
     angular_step: f64,
     state: Option<Bound<'_, PyState>>,
-) -> PyAssemblyResult {
+) -> PyResult<PyAssemblyResult> {
     let dir = match direction {
         "CW" => HelixDirection::Cw,
         "CCW" => HelixDirection::Ccw,
@@ -93,6 +93,6 @@ fn generate_toroid_py(
         angular_step,
     };
 
-    let result = toroid::generate_toroid(&opts, &cut_state);
-    PyAssemblyResult::from_inner(result)
+    let result = toroid::generate_toroid(&opts, &cut_state)?;
+    Ok(PyAssemblyResult::from_inner(result))
 }

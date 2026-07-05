@@ -73,7 +73,7 @@ fn generate_helix_py(
     direction: &str,
     angular_step: f64,
     state: Option<Bound<'_, PyState>>,
-) -> PyAssemblyResult {
+) -> PyResult<PyAssemblyResult> {
     let dir = match direction {
         "CW" => HelixDirection::Cw,
         "CCW" => HelixDirection::Ccw,
@@ -95,6 +95,6 @@ fn generate_helix_py(
         angular_step,
     };
 
-    let result = helix::generate_helix(&opts, &cut_state);
-    PyAssemblyResult::from_inner(result)
+    let result = helix::generate_helix(&opts, &cut_state)?;
+    Ok(PyAssemblyResult::from_inner(result))
 }

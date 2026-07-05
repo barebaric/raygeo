@@ -2,6 +2,7 @@
 
 use prof_macros::prof;
 
+use crate::error::RaygeoResult;
 use crate::geo::algo::helix::{
     generate_helix_3d, HelixDirection, HelixOptions as GeoHelixOptions,
 };
@@ -36,7 +37,7 @@ pub struct HelixOptions {
 pub fn generate_helix(
     opts: &HelixOptions,
     cut_state: &State,
-) -> AssemblyResult {
+) -> RaygeoResult<AssemblyResult> {
     let path = generate_helix_3d(&GeoHelixOptions {
         center: opts.center,
         start_radius: opts.start_radius,
@@ -85,12 +86,12 @@ pub fn generate_helix(
         vec![get_circle_polygon(opts.center, opts.start_radius, 64)]
     };
 
-    AssemblyResult {
+    Ok(AssemblyResult {
         ops: Ops::from_polyline(&path, true, Some(cut_state)),
         cleared_polygons,
         start,
         end,
-    }
+    })
 }
 
 /// Compute the tangent heading at index `i` in the helix path.

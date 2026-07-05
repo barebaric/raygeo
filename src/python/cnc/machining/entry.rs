@@ -90,7 +90,7 @@ fn adaptive_entry_py(
     angular_step: f64,
     cut_feed_rate: i32,
     cut_power: f64,
-) -> PyAssemblyResult {
+) -> PyResult<PyAssemblyResult> {
     let boundary: Vec<Point> = pocket_boundary
         .into_iter()
         .map(|(x, y)| Point::new(x, y))
@@ -119,8 +119,8 @@ fn adaptive_entry_py(
         ..Default::default()
     };
 
-    let result = entry::adaptive_entry(&opts, &cut_state);
-    PyAssemblyResult::from_inner(result)
+    let result = entry::adaptive_entry(&opts, &cut_state)?;
+    Ok(PyAssemblyResult::from_inner(result))
 }
 
 #[gen_stub_pyfunction(
@@ -218,7 +218,7 @@ fn generate_helix_spiral_py(
     safe_margin: f64,
     angular_step: f64,
     state: Option<Bound<'_, PyState>>,
-) -> PyAssemblyResult {
+) -> PyResult<PyAssemblyResult> {
     let cut_state = match state {
         Some(ref s) => s.borrow().0.clone(),
         None => State::default(),
@@ -241,6 +241,6 @@ fn generate_helix_spiral_py(
         r_max,
         &opts,
         &cut_state,
-    );
-    PyAssemblyResult::from_inner(result)
+    )?;
+    Ok(PyAssemblyResult::from_inner(result))
 }

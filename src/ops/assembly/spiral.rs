@@ -2,6 +2,7 @@
 
 use prof_macros::prof;
 
+use crate::error::RaygeoResult;
 use crate::geo::algo::helix::HelixDirection;
 use crate::geo::algo::spiral::{
     generate_spiral_3d, SpiralOptions as GeoSpiralOptions,
@@ -35,7 +36,7 @@ pub struct SpiralOptions {
 pub fn generate_spiral(
     opts: &SpiralOptions,
     cut_state: &State,
-) -> AssemblyResult {
+) -> RaygeoResult<AssemblyResult> {
     let mut path = generate_spiral_3d(&GeoSpiralOptions {
         center: opts.center,
         z: opts.z,
@@ -102,12 +103,12 @@ pub fn generate_spiral(
         vec![get_circle_polygon(opts.center, opts.end_radius, 64)]
     };
 
-    AssemblyResult {
+    Ok(AssemblyResult {
         ops: Ops::from_polyline(&path, true, Some(cut_state)),
         cleared_polygons,
         start,
         end,
-    }
+    })
 }
 
 /// Compute the tangent heading at index `i` in the spiral path.
