@@ -6,6 +6,7 @@ from raygeo.geo.shape.polygon import (
     get_polygon_signed_area,
     is_point_inside_polygon,
 )
+from raygeo.ops.assembly.entry import adaptive_entry
 
 # ── Helper geometry functions ────────────────────────────────────
 
@@ -196,9 +197,8 @@ def scenario_from_svg(
 
 def run_entry(scenario):
     """Run adaptive_entry and return (entry_ops, seed_polys)."""
-    from raygeo.ops.assembly.entry import adaptive_entry
 
-    entry_ops, cp = adaptive_entry(
+    result = adaptive_entry(
         pocket_boundary=list(scenario.boundary),
         islands=[list(isl) for isl in scenario.islands],
         tool_radius=scenario.tool_radius,
@@ -207,7 +207,7 @@ def run_entry(scenario):
         target_z=scenario.cut_z,
         plunge_pitch=1.0,
     )
-    return entry_ops, cp
+    return result.ops, result.cleared_polygons
 
 
 def build_scenario(args):

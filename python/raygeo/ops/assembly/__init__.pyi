@@ -3,12 +3,20 @@
 
 from . import adaptive
 from . import entry
-from . import polyline
+from . import helix
+from . import ramp
+from . import result
+from . import spiral
+from . import toroid
 from . import wavefront
 __all__ = [
     "adaptive",
     "entry",
-    "polyline",
+    "helix",
+    "ramp",
+    "result",
+    "spiral",
+    "toroid",
     "wavefront",
 ]
 

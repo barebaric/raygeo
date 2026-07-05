@@ -3,7 +3,7 @@
 import matplotlib.pyplot as plt
 
 import raygeo.ops as ops_mod
-from raygeo.ops.assembly.polyline import polyline_to_ops
+from raygeo.ops import Ops
 from raygeo.ops.transform.link import (
     LinkStrategy,
     find_pass_entry,
@@ -86,7 +86,7 @@ def _rect_pass(x0, y0, w, h, z):
         (float(x0), float(y0 + h), float(z)),
         (float(x0), float(y0), float(z)),
     ]
-    return polyline_to_ops(pts, move_first=True)
+    return Ops.from_polyline(pts, move_first=True)
 
 
 def generate_link_passes():

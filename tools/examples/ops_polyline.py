@@ -2,7 +2,7 @@
 
 import matplotlib.pyplot as plt
 
-from raygeo.ops.assembly.polyline import polyline_to_ops
+from raygeo.ops import Ops
 from raygeo.ops.types import CommandType
 
 
@@ -51,7 +51,7 @@ def generate_to_ops():
 
     # Left: move_first=True
     ax = axes[0]
-    ops_move = polyline_to_ops(pts, move_first=True)
+    ops_move = Ops.from_polyline(pts, move_first=True)
     _plot_ops_2d(ax, ops_move, linewidth=2)
     ax.scatter(
         [p[0] for p in pts],
@@ -73,7 +73,7 @@ def generate_to_ops():
     ax.set_aspect("equal")
     ax.set_xlim(0, 65)
     ax.set_ylim(0, 55)
-    ax.set_title("polyline_to_ops(move_first=True)")
+    ax.set_title("Ops.from_polyline(move_first=True)")
     ax.set_xlabel("X")
     ax.set_ylabel("Y")
     ax.grid(True, alpha=0.3)
@@ -81,7 +81,7 @@ def generate_to_ops():
 
     # Right: move_first=False
     ax = axes[1]
-    ops_no_move = polyline_to_ops(pts, move_first=False)
+    ops_no_move = Ops.from_polyline(pts, move_first=False)
     _plot_ops_2d(ax, ops_no_move, linewidth=2)
     ax.scatter(
         [p[0] for p in pts],
@@ -95,7 +95,7 @@ def generate_to_ops():
     ax.set_aspect("equal")
     ax.set_xlim(0, 65)
     ax.set_ylim(0, 55)
-    ax.set_title("polyline_to_ops(move_first=False)")
+    ax.set_title("Ops.from_polyline(move_first=False)")
     ax.set_xlabel("X")
     ax.set_ylabel("Y")
     ax.grid(True, alpha=0.3)
@@ -105,11 +105,12 @@ def generate_to_ops():
     return fig
 
 
-__docs_target__ = ["raygeo.ops.assembly.polyline.md"]
+__docs_target__ = ["raygeo.ops.md"]
 __images__ = [
     {
-        "heading": "polyline_to_ops",
-        "caption": "polyline_to_ops with move_first=True vs move_first=False",
+        "heading": "from_polyline",
+        "caption": "Ops.from_polyline with move_first=True"
+        " vs move_first=False",
         "function": generate_to_ops,
     },
 ]

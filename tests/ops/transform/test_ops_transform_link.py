@@ -1,7 +1,7 @@
 import pytest
 
 import raygeo.ops as ops_mod
-from raygeo.ops.assembly.polyline import polyline_to_ops
+from raygeo.ops import Ops
 from raygeo.ops.transform.link import (
     LinkStrategy,
     find_pass_entry,
@@ -169,8 +169,8 @@ def test_find_pass_entry_ignores_non_moving():
 
 
 def test_assembly_link_passes():
-    p1 = polyline_to_ops([(0.0, 0.0, 0.0), (5.0, 0.0, 0.0)], move_first=True)
-    p2 = polyline_to_ops(
+    p1 = Ops.from_polyline([(0.0, 0.0, 0.0), (5.0, 0.0, 0.0)], move_first=True)
+    p2 = Ops.from_polyline(
         [(10.0, 5.0, 0.0), (10.0, 10.0, 0.0)], move_first=True
     )
     linked = link_passes(

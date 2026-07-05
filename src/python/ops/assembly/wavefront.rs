@@ -1,7 +1,7 @@
 use crate::ops::assembly::wavefront;
 use crate::ops::state::State;
+use crate::python::ops::assembly::result::PyAssemblyResult;
 use crate::python::ops::cut::cleared_area::PyClearedArea;
-use crate::python::ops::PyOps;
 use crate::types::Point;
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::gen_stub_pyfunction;
@@ -34,7 +34,7 @@ pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
         precision: float = 0.0,
         cut_feed_rate: int = 1200,
         cut_power: float = 1.0,
-    ) -> raygeo.ops.Ops:
+    ) -> raygeo.ops.assembly.result.AssemblyResult:
         """Inside-out adaptive wavefronts.
 
         Starting from the *cleared* state, each iteration expands the
@@ -59,7 +59,7 @@ pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
                           (default 0.0 = use internal default).
         :param cut_feed_rate: Feed rate for cutting moves (default 1200).
         :param cut_power: Laser power for cutting moves (0.0-1.0, default 1.0).
-        :returns: Ops with wavefront cutting commands.
+        :returns: An :class:`AssemblyResult` with wavefront cutting commands.
         """
     "#,
     module = "raygeo.ops.assembly.wavefront"
@@ -89,7 +89,7 @@ fn adaptive_wavefronts_py(
     precision: f64,
     cut_feed_rate: i32,
     cut_power: f64,
-) -> PyOps {
+) -> PyAssemblyResult {
     let boundary: Vec<Point> = pocket_boundary
         .into_iter()
         .map(|(x, y)| Point::new(x, y))
@@ -116,8 +116,8 @@ fn adaptive_wavefronts_py(
         ..Default::default()
     };
 
-    let ops =
+    let result =
         wavefront::adaptive_wavefronts(&mut cleared.inner, &opts, &cut_state);
 
-    PyOps { inner: ops }
+    PyAssemblyResult::from_inner(result)
 }

@@ -857,6 +857,25 @@ class Ops:
         :returns: A new ``Ops`` instance.
         :complexity: O(n) time, O(n) space
         """
+    @staticmethod
+    def from_polyline(points: typing.Sequence[tuple[builtins.float, builtins.float, builtins.float]], move_first: builtins.bool = True, state: typing.Optional[state.State] = None) -> Ops:
+        r"""
+        Build an Ops sequence from a 3-D polyline.
+        
+        When *move_first* is ``True`` the first point is emitted as a
+        MoveTo and subsequent points as LineTo.  When *move_first* is
+        ``False`` every point is emitted as a LineTo (useful for
+        appending a polyline to an in-progress cut).
+        
+        When *state* is provided, its commands (power, feed rate, etc.)
+        are applied before the polyline points.
+        
+        :param points: List of ``(x, y, z)`` tuples.
+        :param move_first: Whether to emit the first point as a MoveTo.
+        :param state: Optional machine state to apply before the path.
+        :returns: A new ``Ops`` instance.
+        :complexity: O(n) where n = number of points
+        """
     def to_geometry(self) -> geo.Geometry:
         r"""
         Convert this Ops sequence back into a Geometry.

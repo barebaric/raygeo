@@ -64,7 +64,7 @@ def generate_adaptive_clearing_demo():
     """Toolpath demo with seed, cuts, and travel."""
     boundary = _rect(0, 0, 200, 200)
     ca = ClearedArea(boundary=boundary, initial=[_seed_circle(0, 0, 20)])
-    ops = adaptive_clearing(
+    result = adaptive_clearing(
         cleared=ca,
         pocket_boundary=boundary,
         radius=5.0,
@@ -100,7 +100,7 @@ def generate_adaptive_clearing_demo():
     )
 
     # Split into cut and travel segments
-    segs = _ops_to_segments(ops)
+    segs = _ops_to_segments(result.ops)
 
     # Collect cut segments in order for gradient colouring
     cut_segs = [
@@ -180,12 +180,12 @@ def generate_adaptive_clearing_demo():
         label="Travel",
     )
     ax.set_aspect("equal")
-    cd = ops.cut_distance()
+    cd = result.ops.cut_distance()
     title = (
         f"Adaptive Clearing — constant engagement\nCut distance: {cd:.1f} mm"
     )
-    if ops.len() > 0:
-        title += f"  |  {len(_ops_to_points(ops))} path points"
+    if result.ops.len() > 0:
+        title += f"  |  {len(_ops_to_points(result.ops))} path points"
     ax.set_title(title)
     ax.legend(loc="upper right", fontsize=8)
     ax.set_xlabel("X (mm)")
@@ -550,7 +550,7 @@ def generate_adaptive_clearing_centre_island():
     cleared_polys = [get_circle_polygon((cx, cy), r, 64)]
 
     ca = ClearedArea(boundary=boundary, islands=islands, initial=cleared_polys)
-    clear_ops = adaptive_clearing(
+    result = adaptive_clearing(
         cleared=ca,
         pocket_boundary=boundary,
         islands=islands,
@@ -561,7 +561,7 @@ def generate_adaptive_clearing_centre_island():
         area_tolerance=1.0,
     )
     remaining = sum(get_polygon_area(p) for p in ca.remaining())
-    combined_ops = clear_ops
+    combined_ops = result.ops
 
     fig = plt.figure(figsize=(14, 6))
     ax3d = fig.add_subplot(1, 2, 1, projection="3d")
@@ -657,7 +657,7 @@ def _narrow_shared():
     cleared_polys = [get_circle_polygon((cx, cy), r, 64)]
 
     ca = ClearedArea(boundary=boundary, initial=cleared_polys)
-    clear_ops = adaptive_clearing(
+    result = adaptive_clearing(
         cleared=ca,
         pocket_boundary=boundary,
         radius=tool_radius,
@@ -666,7 +666,7 @@ def _narrow_shared():
         safe_z=2.0,
         area_tolerance=1.0,
     )
-    combined_ops = clear_ops
+    combined_ops = result.ops
     return combined_ops, ca, boundary, target_z, cleared_polys, tool_radius
 
 

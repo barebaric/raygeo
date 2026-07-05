@@ -855,6 +855,37 @@ Create an Ops sequence from numpy arrays.
 | _Returns_    | `Ops`  | A new `Ops` instance.                      |
 | _Complexity_ |        | O(n) time, O(n) space                      |
 
+### `from_polyline()`
+
+```python
+from_polyline(
+    points: Sequence[tuple[float, float, float]],
+    move_first: bool = True,
+    state: Optional[state.State] = None,
+) -> Ops
+```
+
+Build an Ops sequence from a 3-D polyline.
+
+When *move_first* is `True` the first point is emitted as a MoveTo and subsequent points as LineTo.
+When *move_first* is `False` every point is emitted as a LineTo (useful for appending a polyline to
+an in-progress cut).
+
+When *state* is provided, its commands (power, feed rate, etc.) are applied before the polyline
+points.
+
+| Parameter    | Type                                   | Description                                      |
+| ------------ | -------------------------------------- | ------------------------------------------------ |
+| `points`     | `Sequence[tuple[float, float, float]]` | List of `(x, y, z)` tuples.                      |
+| `move_first` | `bool = True`                          | Whether to emit the first point as a MoveTo.     |
+| `state`      | `Optional[state.State] = None`         | Optional machine state to apply before the path. |
+| _Returns_    | `Ops`                                  | A new `Ops` instance.                            |
+| _Complexity_ |                                        | O(n) where n = number of points                  |
+
+![Ops.from_polyline with move_first=True vs move_first=False](images/ops-polyline-to-ops.png)
+
+*Ops.from_polyline with move_first=True vs move_first=False*
+
 ### `get_frame()`
 
 ```python

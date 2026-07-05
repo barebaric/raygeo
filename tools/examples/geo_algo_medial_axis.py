@@ -210,7 +210,7 @@ def generate_mat_trimming():
     tool_radius = 3.0
     step_over = 2.0
 
-    _, cp = adaptive_entry(
+    result = adaptive_entry(
         pocket_boundary=boundary,
         islands=islands,
         tool_radius=tool_radius,
@@ -219,7 +219,9 @@ def generate_mat_trimming():
         target_z=-5.0,
         plunge_pitch=1.0,
     )
-    ca = ClearedArea(boundary=boundary, islands=islands, initial=cp)
+    ca = ClearedArea(
+        boundary=boundary, islands=islands, initial=result.cleared_polygons
+    )
     for _ in range(10):
         bites = ca.bites(step_over, tool_radius, 0.01)
         if not bites:

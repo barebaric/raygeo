@@ -154,7 +154,7 @@ def generate_entry_multi():
         [(130, 80), (160, 80), (160, 105), (130, 105)],
     ]
 
-    ops, _ = adaptive_entry(
+    result = adaptive_entry(
         pocket_boundary=boundary,
         islands=islands,
         tool_radius=3.0,
@@ -167,7 +167,7 @@ def generate_entry_multi():
     fig1 = plt.figure(figsize=(10, 8))
     ax1 = fig1.add_subplot(111, projection="3d")
     _plot_3d_toolpath(
-        ops,
+        result.ops,
         ax1,
         "Adaptive Entry — Multi-Island Pocket",
         boundary=boundary,
@@ -189,7 +189,7 @@ def generate_entry_lshape():
         (0, 80),
     ]
 
-    ops, _ = adaptive_entry(
+    result = adaptive_entry(
         pocket_boundary=lshape,
         islands=[],
         tool_radius=3.0,
@@ -202,7 +202,7 @@ def generate_entry_lshape():
     fig3 = plt.figure(figsize=(10, 8))
     ax3 = fig3.add_subplot(111, projection="3d")
     _plot_3d_toolpath(
-        ops,
+        result.ops,
         ax3,
         "Adaptive Entry — L-Shaped Pocket",
         boundary=lshape,
@@ -216,7 +216,7 @@ def generate_entry_tight():
     target_z4 = -6.0
     tight_boundary = [(0, 0), (100, 0), (100, 16), (0, 16)]
 
-    ops, _ = adaptive_entry(
+    result = adaptive_entry(
         pocket_boundary=tight_boundary,
         islands=[],
         tool_radius=4.0,
@@ -229,7 +229,7 @@ def generate_entry_tight():
     fig4 = plt.figure(figsize=(10, 6))
     ax4 = fig4.add_subplot(111, projection="3d")
     _plot_3d_toolpath(
-        ops,
+        result.ops,
         ax4,
         "Adaptive Entry — Tight Slot (ZigZag Ramp)",
         boundary=tight_boundary,

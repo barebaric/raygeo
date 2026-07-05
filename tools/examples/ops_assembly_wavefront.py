@@ -88,7 +88,7 @@ def _plot_wavefront_2d(ops, boundary, islands, title):
 def generate_wavefront_rect():
     """Wavefront rectangular."""
     wf_boundary = [(0, 0), (160, 0), (160, 100), (0, 100)]
-    _, wf_cp = adaptive_entry(
+    wf_result = adaptive_entry(
         pocket_boundary=wf_boundary,
         tool_radius=3.0,
         step_over=2.0,
@@ -96,8 +96,10 @@ def generate_wavefront_rect():
         target_z=-5.0,
         plunge_pitch=1.0,
     )
-    wf_ca = ClearedArea(boundary=wf_boundary, initial=wf_cp)
-    wf_ops = adaptive_wavefronts(
+    wf_ca = ClearedArea(
+        boundary=wf_boundary, initial=wf_result.cleared_polygons
+    )
+    wf_result_wf = adaptive_wavefronts(
         wf_ca,
         wf_boundary,
         step_over=2.0,
@@ -105,7 +107,7 @@ def generate_wavefront_rect():
         area_tolerance=1.0,
     )
     return _plot_wavefront_2d(
-        wf_ops,
+        wf_result_wf.ops,
         wf_boundary,
         None,
         "Adaptive Wavefronts — Rectangular Pocket",
@@ -120,7 +122,7 @@ def generate_wavefront_multi():
         [(70, 40), (90, 40), (90, 60), (70, 60)],
         [(130, 80), (160, 80), (160, 105), (130, 105)],
     ]
-    _, mi_cp = adaptive_entry(
+    mi_result = adaptive_entry(
         pocket_boundary=mi_boundary,
         islands=mi_islands,
         tool_radius=3.0,
@@ -130,9 +132,11 @@ def generate_wavefront_multi():
         plunge_pitch=1.0,
     )
     mi_ca = ClearedArea(
-        boundary=mi_boundary, islands=mi_islands, initial=mi_cp
+        boundary=mi_boundary,
+        islands=mi_islands,
+        initial=mi_result.cleared_polygons,
     )
-    mi_ops = adaptive_wavefronts(
+    mi_result_wf = adaptive_wavefronts(
         mi_ca,
         mi_boundary,
         islands=mi_islands,
@@ -142,7 +146,7 @@ def generate_wavefront_multi():
         area_tolerance=1.0,
     )
     return _plot_wavefront_2d(
-        mi_ops,
+        mi_result_wf.ops,
         mi_boundary,
         mi_islands,
         "Adaptive Wavefronts — Multi-Island Pocket",
@@ -162,7 +166,7 @@ def generate_wavefront_yshape():
         (10, 110),
         (45, 40),
     ]
-    _, ys_cp = adaptive_entry(
+    ys_result = adaptive_entry(
         pocket_boundary=yshape,
         tool_radius=3.0,
         step_over=2.0,
@@ -170,8 +174,8 @@ def generate_wavefront_yshape():
         target_z=-5.0,
         plunge_pitch=1.0,
     )
-    ys_ca = ClearedArea(boundary=yshape, initial=ys_cp)
-    ys_ops = adaptive_wavefronts(
+    ys_ca = ClearedArea(boundary=yshape, initial=ys_result.cleared_polygons)
+    ys_result_wf = adaptive_wavefronts(
         ys_ca,
         yshape,
         tool_radius=3.0,
@@ -180,7 +184,7 @@ def generate_wavefront_yshape():
         area_tolerance=1.0,
     )
     return _plot_wavefront_2d(
-        ys_ops,
+        ys_result_wf.ops,
         yshape,
         None,
         "Adaptive Wavefronts — Y-Shaped Channel",
@@ -231,7 +235,7 @@ def generate_wavefront_svg():
     results = []
     max_subpaths = 0
     for boundary, islands in components:
-        _, cp = adaptive_entry(
+        result_entry = adaptive_entry(
             pocket_boundary=boundary,
             islands=islands,
             tool_radius=1.5,
@@ -240,8 +244,12 @@ def generate_wavefront_svg():
             target_z=-5.0,
             plunge_pitch=1.0,
         )
-        ca = ClearedArea(boundary=boundary, islands=islands, initial=cp)
-        ops = adaptive_wavefronts(
+        ca = ClearedArea(
+            boundary=boundary,
+            islands=islands,
+            initial=result_entry.cleared_polygons,
+        )
+        result_wf = adaptive_wavefronts(
             ca,
             boundary,
             islands=islands,
@@ -250,9 +258,9 @@ def generate_wavefront_svg():
             z=-5.0,
             area_tolerance=0.2,
         )
-        n_sub = len(ops.split_into_subpaths())
+        n_sub = len(result_wf.ops.split_into_subpaths())
         max_subpaths = max(max_subpaths, n_sub)
-        results.append((ops, boundary, islands))
+        results.append((result_wf.ops, boundary, islands))
 
     # Plot everything
     fig, ax = plt.subplots(figsize=(12, 6))

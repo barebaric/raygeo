@@ -5,14 +5,20 @@ use pyo3_stub_gen::derive::{
 };
 
 use crate::ops::transform::link::{
-    find_pass_entry, find_pass_exit, link_passes, LinkStrategy,
+    find_pass_entry, find_pass_exit, link_assembly_passes, link_passes,
+    LinkStrategy,
 };
+use crate::python::ops::assembly::result::PyAssemblyResult;
 use crate::python::ops::PyOps;
 
 pub(crate) fn register(transform_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     let link_mod = PyModule::new(transform_mod.py(), "link")?;
     link_mod
         .add_function(wrap_pyfunction!(link_passes_py, link_mod.clone())?)?;
+    link_mod.add_function(wrap_pyfunction!(
+        link_assembly_passes_py,
+        link_mod.clone()
+    )?)?;
     link_mod.add_function(wrap_pyfunction!(
         find_pass_entry_py,
         link_mod.clone()
@@ -85,6 +91,64 @@ fn link_passes_py(
 
     let ops = link_passes(&opss, safe_z, strategy_enum);
     Ok(PyOps { inner: ops })
+}
+
+#[gen_stub_pyfunction(
+    python = r#"
+    import raygeo
+
+    def link_assembly_passes(
+        passes: list[raygeo.ops.assembly.result.AssemblyResult],
+        safe_z: float,
+        strategy: str | LinkStrategy,
+    ) -> raygeo.ops.assembly.result.AssemblyResult:
+        """Join ordered AssemblyResults into a single result.
+
+        Uses each result's ``.end`` and ``.start`` poses to connect
+        passes according to *strategy*.
+
+        * ``"retract"`` / ``LinkStrategy.RETRACT`` — retract to
+          *safe_z*, move XY at that height, then descend to the next
+          pass start Z.
+        * ``"stay_down"`` / ``LinkStrategy.STAY_DOWN`` — move directly
+          from the previous pass end to the next pass start without
+          retracting.
+
+        :param passes: Ordered list of AssemblyResults.
+        :param safe_z: Z height for retract moves (mm).
+        :param strategy: Linking strategy.
+        :returns: A single :class:`AssemblyResult`.
+        """
+    "#,
+    module = "raygeo.ops.transform.link"
+)]
+#[pyfunction(name = "link_assembly_passes")]
+#[pyo3(signature = (passes, safe_z, strategy))]
+fn link_assembly_passes_py(
+    passes: &Bound<'_, PyList>,
+    safe_z: f64,
+    strategy: &str,
+) -> PyResult<PyAssemblyResult> {
+    let strategy_enum = match strategy {
+        "retract" | "Retract" => LinkStrategy::Retract,
+        "stay_down" | "StayDown" => LinkStrategy::StayDown,
+        _ => {
+            return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(
+                format!(
+                    "unknown LinkStrategy: '{strategy}'; expected 'retract' or 'stay_down'"
+                ),
+            ));
+        }
+    };
+
+    let mut results = Vec::with_capacity(passes.len());
+    for item in passes.iter() {
+        let py_result: PyRef<'_, PyAssemblyResult> = item.extract()?;
+        results.push(py_result.inner.clone());
+    }
+
+    let result = link_assembly_passes(&results, safe_z, strategy_enum);
+    Ok(PyAssemblyResult::from_inner(result))
 }
 
 #[gen_stub_pyfunction(

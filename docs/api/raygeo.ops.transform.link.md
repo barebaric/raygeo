@@ -43,6 +43,32 @@ Scans backwards for the last moving command endpoint.
 | _Returns_    | `tuple[float, float, float] &#124; None` | `(x, y, z)` or `None` if no moving commands exist. |
 | _Complexity_ |                                          | O(n) where n = number of commands                  |
 
+### `link_assembly_passes()`
+
+```python
+link_assembly_passes(
+    passes: list[ops.assembly.result.AssemblyResult],
+    safe_z: float,
+    strategy: str | LinkStrategy,
+) -> ops.assembly.result.AssemblyResult
+```
+
+Join ordered AssemblyResults into a single result.
+
+Uses each result's `.end` and `.start` poses to connect passes according to *strategy*.
+
+- `"retract"` / `LinkStrategy.RETRACT` — retract to *safe_z*, move XY at that height, then descend
+  to the next pass start Z.
+- `"stay_down"` / `LinkStrategy.STAY_DOWN` — move directly from the previous pass end to the next
+  pass start without retracting.
+
+| Parameter  | Type                                       | Description                      |
+| ---------- | ------------------------------------------ | -------------------------------- |
+| `passes`   | `list[ops.assembly.result.AssemblyResult]` | Ordered list of AssemblyResults. |
+| `safe_z`   | `float`                                    | Z height for retract moves (mm). |
+| `strategy` | `str &#124; LinkStrategy`                  | Linking strategy.                |
+| _Returns_  | `ops.assembly.result.AssemblyResult`       | A single **AssemblyResult**.     |
+
 ### `link_passes()`
 
 ```python

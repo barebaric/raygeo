@@ -14,8 +14,8 @@ use crate::ops::cut::CutDirection;
 use crate::ops::state::State;
 use crate::prof::prof_report;
 use crate::python::errors::{ResumePointNotFoundError, RoutingError};
+use crate::python::ops::assembly::result::PyAssemblyResult;
 use crate::python::ops::cut::cleared_area::PyClearedArea;
-use crate::python::ops::PyOps;
 use crate::types::Point;
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::gen_stub_pyfunction;
@@ -97,7 +97,7 @@ pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
         profile: bool = False,
         cut_direction: str = "ccw",
         trace_path: str | None = None,
-    ) -> raygeo.ops.Ops:
+    ) -> raygeo.ops.assembly.result.AssemblyResult:
         """Run forward-stepping adaptive clearing.
 
         Starting from the pre-populated *cleared* area, uses a
@@ -184,7 +184,7 @@ fn adaptive_clearing_py(
     profile: bool,
     trace_path: Option<String>,
     cut_direction: &str,
-) -> PyResult<PyOps> {
+) -> PyResult<PyAssemblyResult> {
     let boundary: Vec<Point> = pocket_boundary
         .into_iter()
         .map(|(x, y)| Point::new(x, y))
@@ -225,12 +225,12 @@ fn adaptive_clearing_py(
         ..Default::default()
     };
 
-    let ops =
+    let result =
         adaptive::adaptive_clearing(&mut cleared.inner, &opts, &cut_state)?;
     if profile {
         prof_report();
     }
-    Ok(PyOps { inner: ops })
+    Ok(PyAssemblyResult::from_inner(result))
 }
 
 /// Target cut-area per unit distance for the engagement solver.

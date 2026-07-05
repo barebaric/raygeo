@@ -3,9 +3,11 @@
 //! Joins ordered machining passes into a single Ops sequence with travel
 //! moves between them, and provides helpers for finding pass boundaries.
 
+use crate::ops::assembly::result::AssemblyResult;
 use crate::ops::container::Ops;
+use crate::ops::cut::ToolPose;
 use crate::ops::enums::CommandCategory;
-use crate::types::Point3D;
+use crate::types::{Point3D, Polygon};
 
 /// Strategy for linking consecutive machining passes.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -92,4 +94,80 @@ pub fn link_passes(passes: &[Ops], safe_z: f64, strategy: LinkStrategy) -> Ops {
     }
 
     result
+}
+
+/// Join ordered `AssemblyResult`s into a single result with travel moves.
+///
+/// Uses each result's `.end` and `.start` poses to connect passes
+/// according to `strategy`.  Cleared polygons are merged across passes.
+///
+/// Returns an empty `AssemblyResult` when `passes` is empty.
+pub fn link_assembly_passes(
+    passes: &[AssemblyResult],
+    safe_z: f64,
+    strategy: LinkStrategy,
+) -> AssemblyResult {
+    if passes.is_empty() {
+        return AssemblyResult {
+            ops: Ops::new(),
+            cleared_polygons: vec![],
+            start: ToolPose {
+                pos: crate::types::Point::ZERO,
+                heading: 0.0,
+            },
+            end: ToolPose {
+                pos: crate::types::Point::ZERO,
+                heading: 0.0,
+            },
+        };
+    }
+
+    let mut ops = Ops::new();
+    let mut cleared_polygons: Vec<Polygon> = Vec::new();
+    let mut prev_end = passes[0].end;
+
+    ops.extend(&passes[0].ops);
+    cleared_polygons.extend(passes[0].cleared_polygons.iter().cloned());
+
+    for pass in &passes[1..] {
+        let entry = pass.start.pos;
+        let entry_z = pass_start_z(pass);
+
+        match strategy {
+            LinkStrategy::Retract => {
+                ops.move_to(prev_end.pos.x, prev_end.pos.y, safe_z, None);
+                if (entry.x - prev_end.pos.x).abs() > 1e-12
+                    || (entry.y - prev_end.pos.y).abs() > 1e-12
+                {
+                    ops.move_to(entry.x, entry.y, safe_z, None);
+                }
+                if (entry_z - safe_z).abs() > 1e-12 {
+                    ops.move_to(entry.x, entry.y, entry_z, None);
+                }
+            }
+            LinkStrategy::StayDown => {
+                ops.move_to(entry.x, entry.y, entry_z, None);
+            }
+        }
+
+        ops.extend(&pass.ops);
+        cleared_polygons.extend(pass.cleared_polygons.iter().cloned());
+        prev_end = pass.end;
+    }
+
+    AssemblyResult {
+        ops,
+        cleared_polygons,
+        start: passes[0].start,
+        end: passes[passes.len() - 1].end,
+    }
+}
+
+fn pass_start_z(result: &AssemblyResult) -> f64 {
+    for i in 0..result.ops.len() {
+        if result.ops.is_cutting(i) || result.ops.is_travel(i) {
+            return result.ops.endpoint(i).z;
+        }
+    }
+    0.0
 }

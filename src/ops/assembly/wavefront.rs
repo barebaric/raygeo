@@ -6,7 +6,9 @@ use crate::ops::cut::ClearedArea;
 
 use crate::geo::algo::offset::compute_inset_region;
 use crate::geo::shape::polygon::{get_polygon_area, resample_polygon};
+use crate::ops::assembly::result::AssemblyResult;
 use crate::ops::container::Ops;
+use crate::ops::cut::ToolPose;
 use crate::ops::state::State;
 use crate::types::{Point, Polygon};
 
@@ -37,7 +39,7 @@ pub fn adaptive_wavefronts(
     cleared: &mut ClearedArea,
     opts: &AdaptiveWavefrontOptions,
     cut_state: &State,
-) -> Ops {
+) -> AssemblyResult {
     let (_, valid_total_area) = compute_inset_region(
         &opts.pocket_boundary,
         opts.tool_radius,
@@ -46,6 +48,9 @@ pub fn adaptive_wavefronts(
 
     let mut ops = Ops::new();
     let mut state_applied = false;
+
+    let mut first_point: Option<Point> = None;
+    let mut last_point: Option<Point> = None;
 
     for _ in 0..MAX_WAVEFRONT_ITERATIONS {
         let bounded = cleared.bites(
@@ -84,6 +89,10 @@ pub fn adaptive_wavefronts(
                 ops.apply_state(cut_state);
                 state_applied = true;
             }
+            if first_point.is_none() {
+                first_point = Some(points[0]);
+            }
+            last_point = Some(points[points.len() - 1]);
             ops.move_to(points[0].x, points[0].y, opts.z, None);
             for p in &points[1..] {
                 ops.line_to(p.x, p.y, opts.z, None);
@@ -101,5 +110,19 @@ pub fn adaptive_wavefronts(
         }
     }
 
-    ops
+    let start_pos = first_point.unwrap_or(Point::ZERO);
+    let end_pos = last_point.unwrap_or(Point::ZERO);
+
+    AssemblyResult {
+        cleared_polygons: cleared.fragments().to_vec(),
+        start: ToolPose {
+            pos: start_pos,
+            heading: 0.0,
+        },
+        end: ToolPose {
+            pos: end_pos,
+            heading: 0.0,
+        },
+        ops,
+    }
 }

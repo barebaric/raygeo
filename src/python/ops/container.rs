@@ -1595,6 +1595,44 @@ impl PyOps {
         })
     }
 
+    /// Build an Ops sequence from a 3-D polyline.
+    ///
+    /// When *move_first* is ``True`` the first point is emitted as a
+    /// MoveTo and subsequent points as LineTo.  When *move_first* is
+    /// ``False`` every point is emitted as a LineTo (useful for
+    /// appending a polyline to an in-progress cut).
+    ///
+    /// When *state* is provided, its commands (power, feed rate, etc.)
+    /// are applied before the polyline points.
+    ///
+    /// :param points: List of ``(x, y, z)`` tuples.
+    /// :param move_first: Whether to emit the first point as a MoveTo.
+    /// :param state: Optional machine state to apply before the path.
+    /// :returns: A new ``Ops`` instance.
+    /// :complexity: O(n) where n = number of points
+    #[staticmethod]
+    #[pyo3(signature = (points, move_first=true, state=None))]
+    fn from_polyline(
+        points: Vec<(f64, f64, f64)>,
+        move_first: bool,
+        state: Option<Bound<'_, PyState>>,
+    ) -> Self {
+        let pts: Vec<Point3D> = points
+            .into_iter()
+            .map(|(x, y, z)| Point3D::new(x, y, z))
+            .collect();
+        let ops = if let Some(ref s) = state {
+            crate::ops::Ops::from_polyline(
+                &pts,
+                move_first,
+                Some(&s.borrow().0),
+            )
+        } else {
+            crate::ops::Ops::from_polyline(&pts, move_first, None)
+        };
+        PyOps { inner: ops }
+    }
+
     /// Convert this Ops sequence back into a Geometry.
     ///
     /// :returns: A Geometry representing the same paths.

@@ -507,7 +507,7 @@ def _plot_adaptive_wavefronts(ax):
         ],
         [(130, 80), (160, 80), (160, 105), (130, 105)],
     ]
-    _, cp = adaptive_entry(
+    result = adaptive_entry(
         pocket_boundary=boundary,
         islands=islands,
         tool_radius=3.0,
@@ -516,8 +516,10 @@ def _plot_adaptive_wavefronts(ax):
         target_z=-5.0,
         plunge_pitch=1.0,
     )
-    ca = ClearedArea(boundary=boundary, islands=islands, initial=cp)
-    ops = adaptive_wavefronts(
+    ca = ClearedArea(
+        boundary=boundary, islands=islands, initial=result.cleared_polygons
+    )
+    result_wf = adaptive_wavefronts(
         ca,
         boundary,
         islands=islands,
@@ -543,13 +545,13 @@ def _plot_adaptive_wavefronts(ax):
             linewidth=1,
         )
 
-    for poly in cp:
+    for poly in result.cleared_polygons:
         px = [p[0] for p in poly] + [poly[0][0]]
         py = [p[1] for p in poly] + [poly[0][1]]
         ax.fill(px, py, "white", zorder=2)
         ax.plot(px, py, "steelblue", linewidth=1, alpha=0.4, zorder=2)
 
-    subpaths = ops.split_into_subpaths()
+    subpaths = result_wf.ops.split_into_subpaths()
     n_wf = len(subpaths)
     for i, sub in enumerate(subpaths):
         t = i / max(n_wf - 1, 1)

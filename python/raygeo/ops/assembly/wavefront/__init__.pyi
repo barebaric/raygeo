@@ -7,7 +7,7 @@ __all__ = [
     "adaptive_wavefronts",
 ]
 
-def adaptive_wavefronts(cleared: raygeo.ops.cut.cleared_area.ClearedArea, pocket_boundary: collections.abc.Sequence[tuple[float, float]], islands: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]] = [], tool_radius: float = 3, step_over: float = 2, z: float = 0, area_tolerance: float = 1, precision: float = 0, cut_feed_rate: int = 1200, cut_power: float = 1) -> raygeo.ops.Ops:
+def adaptive_wavefronts(cleared: raygeo.ops.cut.cleared_area.ClearedArea, pocket_boundary: collections.abc.Sequence[tuple[float, float]], islands: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]] = [], tool_radius: float = 3, step_over: float = 2, z: float = 0, area_tolerance: float = 1, precision: float = 0, cut_feed_rate: int = 1200, cut_power: float = 1) -> raygeo.ops.assembly.result.AssemblyResult:
     r"""
     Inside-out adaptive wavefronts.
     
@@ -33,6 +33,6 @@ def adaptive_wavefronts(cleared: raygeo.ops.cut.cleared_area.ClearedArea, pocket
                       (default 0.0 = use internal default).
     :param cut_feed_rate: Feed rate for cutting moves (default 1200).
     :param cut_power: Laser power for cutting moves (0.0-1.0, default 1.0).
-    :returns: Ops with wavefront cutting commands.
+    :returns: An :class:`AssemblyResult` with wavefront cutting commands.
     """
 

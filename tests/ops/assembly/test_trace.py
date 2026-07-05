@@ -22,7 +22,7 @@ def _rect(cx, cy, w, h):
 def _run_adaptive(boundary, islands=None, trace_path=None):
     """Run adaptive entry + clearing and return the combined Ops."""
     islands = islands or []
-    entry_ops, cp = adaptive_entry(
+    result = adaptive_entry(
         pocket_boundary=boundary,
         islands=islands,
         tool_radius=3.0,
@@ -30,8 +30,10 @@ def _run_adaptive(boundary, islands=None, trace_path=None):
         safe_z=2.0,
         target_z=-5.0,
     )
-    ca = ClearedArea(boundary=boundary, islands=islands, initial=cp)
-    clear_ops = adaptive_clearing(
+    ca = ClearedArea(
+        boundary=boundary, islands=islands, initial=result.cleared_polygons
+    )
+    clear_result = adaptive_clearing(
         cleared=ca,
         pocket_boundary=boundary,
         islands=islands,
@@ -43,8 +45,8 @@ def _run_adaptive(boundary, islands=None, trace_path=None):
         trace_path=trace_path,
     )
     combined = Ops()
-    combined.extend(entry_ops)
-    combined.extend(clear_ops)
+    combined.extend(result.ops)
+    combined.extend(clear_result.ops)
     return combined
 
 
@@ -129,8 +131,8 @@ def test_trace_cut_records_have_positions(tmp_path):
             assert not math.isnan(pos_x)
             assert not math.isnan(pos_y)
             # Should be within pocket bounds (with margin for tool radius)
-            assert -2 <= pos_x <= 32
-            assert -2 <= pos_y <= 32
+            assert -18 <= pos_x <= 18
+            assert -18 <= pos_y <= 18
 
 
 def test_trace_no_file_without_path(tmp_path):
@@ -161,7 +163,7 @@ def test_trace_with_islands(tmp_path):
     """Trace with islands succeeds and records reflect it."""
     tp = str(tmp_path / "trace.bin")
     boundary = _rect(0, 0, 30, 30)
-    islands = [_rect(0, 0, 6, 6)]
+    islands = [_rect(8, 0, 6, 6)]
     _run_adaptive(boundary, islands=islands, trace_path=tp)
     trace = TraceFile(tp)
     geo = trace.geometry
@@ -172,7 +174,7 @@ def test_trace_with_islands(tmp_path):
         if rec.kind == "cut":
             x = rec["pos_x"]
             y = rec["pos_y"]
-            in_island = -3 <= x <= 3 and -3 <= y <= 3
+            in_island = 5 <= x <= 11 and -3 <= y <= 3
             assert not in_island, (
                 f"cut position ({x:.1f}, {y:.1f}) inside island"
             )

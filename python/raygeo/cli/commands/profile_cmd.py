@@ -70,7 +70,7 @@ def run(args):
     )
 
     t0 = time.perf_counter()
-    ops = adaptive_clearing(
+    result = adaptive_clearing(
         cleared=ca,
         pocket_boundary=boundary,
         islands=islands,
@@ -83,8 +83,8 @@ def run(args):
     )
     t1 = time.perf_counter()
 
-    cut = sum(1 for i in range(ops.len()) if ops.is_cutting(i))
-    travel = sum(1 for i in range(ops.len()) if ops.is_travel(i))
+    cut = sum(1 for i in range(result.ops.len()) if result.ops.is_cutting(i))
+    travel = sum(1 for i in range(result.ops.len()) if result.ops.is_travel(i))
 
     print(f"\n--- adaptive_clearing profile ({scenario.name}) ---")
     print(f"Wall clock:  {t1 - t0:.2f}s")

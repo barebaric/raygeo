@@ -73,7 +73,7 @@ def run(args):
     mtime_before = tp.stat().st_mtime_ns if tp.exists() else 0
 
     try:
-        clear_ops = adaptive_clearing(
+        clear_result = adaptive_clearing(
             cleared=ca,
             pocket_boundary=list(scenario.boundary),
             islands=[list(isl) for isl in scenario.islands],
@@ -90,7 +90,7 @@ def run(args):
             trace_path=trace_path,
         )
         print(
-            f"  Clearing: {clear_ops.len()} ops, "
+            f"  Clearing: {clear_result.ops.len()} ops, "
             f"{ca.total_area():.1f} mm² cleared, "
             f"{ca.remaining_area():.1f} mm² remaining"
         )

@@ -8,6 +8,10 @@
 
 pub mod adaptive;
 pub mod entry;
-pub mod polyline;
+pub mod helix;
+pub mod ramp;
 pub mod raster;
+pub mod result;
+pub mod spiral;
+pub mod toroid;
 pub mod wavefront;

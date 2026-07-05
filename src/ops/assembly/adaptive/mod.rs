@@ -36,6 +36,7 @@ use crate::geo::shape::polygon::{
     get_polygon_area, get_polygon_centroid, get_polygon_signed_area,
     get_polygons_group_intersection,
 };
+use crate::ops::assembly::result::AssemblyResult;
 use crate::ops::container::Ops;
 use crate::ops::cut::step;
 use crate::ops::cut::stepper::MAX_IT;
@@ -480,15 +481,37 @@ pub fn adaptive_clearing(
     cleared: &mut ClearedArea,
     opts: &AdaptiveClearingOptions,
     cut_state: &State,
-) -> RaygeoResult<Ops> {
+) -> RaygeoResult<AssemblyResult> {
     // ── 1. Pre-process ────────────────────────────────────────────
     let (valid_tool_area, valid_total) =
         compute_inset_region(&opts.pocket_boundary, opts.radius, &opts.islands);
     if valid_tool_area.is_empty() || valid_total <= opts.area_tolerance {
-        return Ok(Ops::new());
+        return Ok(AssemblyResult {
+            ops: Ops::new(),
+            cleared_polygons: cleared.fragments().to_vec(),
+            start: ToolPose {
+                pos: Point::ZERO,
+                heading: 0.0,
+            },
+            end: ToolPose {
+                pos: Point::ZERO,
+                heading: 0.0,
+            },
+        });
     }
     if cleared.is_empty() {
-        return Ok(Ops::new());
+        return Ok(AssemblyResult {
+            ops: Ops::new(),
+            cleared_polygons: cleared.fragments().to_vec(),
+            start: ToolPose {
+                pos: Point::ZERO,
+                heading: 0.0,
+            },
+            end: ToolPose {
+                pos: Point::ZERO,
+                heading: 0.0,
+            },
+        });
     }
 
     let max_def = opts.max_deflection_deg.to_radians();
@@ -859,7 +882,20 @@ pub fn adaptive_clearing(
 
     recorder.finish(&ops);
 
-    Ok(ops)
+    let cleared_polygons = cleared.fragments().to_vec();
+
+    Ok(AssemblyResult {
+        ops,
+        cleared_polygons,
+        start: ToolPose {
+            pos: start_pos,
+            heading: start_heading,
+        },
+        end: ToolPose {
+            pos: tool.pos,
+            heading: tool.heading,
+        },
+    })
 }
 
 // ── Initial pose ─────────────────────────────────────────────────────

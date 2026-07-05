@@ -19,7 +19,7 @@ adaptive_wavefronts(
     precision: float = 0,
     cut_feed_rate: int = 1200,
     cut_power: float = 1,
-) -> ops.Ops
+) -> ops.assembly.result.AssemblyResult
 ```
 
 Inside-out adaptive wavefronts.
@@ -43,7 +43,7 @@ Each ring fragment is emitted as `MoveTo` + `LineTo` at height *z* with *cut_fee
 | `precision`       | `float = 0`                                    | Edge tolerance for frontier simplification and vertex resampling; smaller values produce denser edges (default 0.0 = use internal default). |
 | `cut_feed_rate`   | `int = 1200`                                   | Feed rate for cutting moves (default 1200).                                                                                                 |
 | `cut_power`       | `float = 1`                                    | Laser power for cutting moves (0.0-1.0, default 1.0).                                                                                       |
-| _Returns_         | `ops.Ops`                                      | Ops with wavefront cutting commands.                                                                                                        |
+| _Returns_         | `ops.assembly.result.AssemblyResult`           | An **AssemblyResult** with wavefront cutting commands.                                                                                      |
 
 ![Adaptive wavefronts expanding outward from the initial cleared disk (blue) to fill the pocket boundary (black)](images/ops-assembly-wavefront-wavefront-rect.png)
 

@@ -28,7 +28,7 @@ adaptive_clearing(
     profile: bool = False,
     cut_direction: str = 'ccw',
     trace_path: str | None = None,
-) -> ops.Ops
+) -> ops.assembly.result.AssemblyResult
 ```
 
 Run forward-stepping adaptive clearing.
@@ -60,7 +60,7 @@ and prepending the entry Ops to the result.
 | `profile`              | `bool = False`                                 | Print a profiling report to stdout (default False).                                                                               |
 | `cut_direction`        | `str = 'ccw'`                                  | Rotational direction of all cutting moves. `"cw"` or `"ccw"` (default `"ccw"`).                                                   |
 | `trace_path`           | `str &#124; None = None`                       | When set, write a per-step binary trace file for the Python inspector (debug builds only).                                        |
-| _Returns_              | `ops.Ops`                                      | Ops with cutting commands (entry not included).                                                                                   |
+| _Returns_              | `ops.assembly.result.AssemblyResult`           | Ops with cutting commands (entry not included).                                                                                   |
 
 ![Circle-seed clearing in a 60×60 pocket with a 10×10 island at the centre — 2D top-down shows seed clearing (blue), toolpath gradient, and remaining bands (red).](images/ops-assembly-adaptive-adaptive-clearing-centre-island.png)
 
