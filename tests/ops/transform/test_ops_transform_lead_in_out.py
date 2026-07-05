@@ -234,3 +234,50 @@ def test_assembly_lead_in_out_empty_no_op():
     ops = Ops()
     ops.apply_lead_in_out(5.0, 5.0)
     assert ops.is_empty()
+
+
+def test_lead_in_out_applied_to_arc_contour():
+    """Arc-only contour gets lead-in/out (first_cut_idx must match ArcTo)."""
+    ops = Ops()
+    ops.set_power(0.8)
+    ops.ops_section_start(SectionType.VECTOR_OUTLINE, "wp1")
+    ops.move_to(10, 0, 0)
+    for _ in range(4):
+        ops.arc_to(0, 10, -10, 0, False, 0)
+        ops.arc_to(-10, 0, 0, -10, False, 0)
+        ops.arc_to(0, -10, 10, 0, False, 0)
+        ops.arc_to(10, 0, 0, 10, False, 0)
+    ops.ops_section_end(SectionType.VECTOR_OUTLINE)
+
+    before = ops.len()
+    ops.apply_lead_in_out(2.0, 2.0)
+    assert ops.len() > before
+    arc_count = sum(
+        1 for i in range(ops.len())
+        if ops.command_type(i) == CommandType.ARC_TO
+    )
+    assert arc_count == 16, (
+        f'Arcs were lost: expected 16 ARC_TO, found {arc_count}'
+    )
+
+
+def test_lead_in_out_applied_to_bezier_contour():
+    """Bezier-only contour gets lead-in/out (first_cut_idx must match
+    BezierTo)."""
+    ops = Ops()
+    ops.set_power(0.8)
+    ops.ops_section_start(SectionType.VECTOR_OUTLINE, "wp1")
+    ops.move_to(0, 0, 0)
+    ops.bezier_to((5, 10, 0), (5, 10, 0), (10, 0, 0))
+    ops.ops_section_end(SectionType.VECTOR_OUTLINE)
+
+    before = ops.len()
+    ops.apply_lead_in_out(3.0, 3.0)
+    assert ops.len() > before
+    bezier_count = sum(
+        1 for i in range(ops.len())
+        if ops.command_type(i) == CommandType.BEZIER_TO
+    )
+    assert bezier_count == 1, (
+        f'Bezier was lost: expected 1 BEZIER_TO, found {bezier_count}'
+    )
