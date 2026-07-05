@@ -444,14 +444,15 @@ fn step_inner(
         }
     }
 
-    // Lookahead probes: for a spread of deflection angles relative to
-    // the heading, compute the 2-step cut_area (candidate →
-    // candidate+dir*step).  If the solver reversed or lost engagement
-    // (but NOT from slot overload) and a forward 2-step probe finds
-    // material within the valid engagement band, override to continue
-    // toward it.
+    // Multi-step lookahead probes: for a spread of deflection angles
+    // relative to the heading, walk forward up to 5 steps from the
+    // candidate along each direction.  If any of those probe steps finds
+    // engagement within the valid band, override to continue toward it.
+    // This allows the tool to steer toward material when the solver
+    // reversed or lost engagement (but NOT from slot overload).
     let reversed = best_angle.abs() > std::f64::consts::FRAC_PI_2;
     if status == StepStatus::LostEngagement && best_area < floor || reversed {
+        const LOOKAHEAD_STEPS: usize = 5;
         let lookahead_angles = [
             0.0_f64,
             opts.max_deflection * 0.5,
@@ -476,12 +477,28 @@ fn step_inner(
             if !point_in_valid_area(la_cand, opts.valid_area) {
                 continue;
             }
-            let la_next = la_cand + la_dir * opts.step_length;
-            if !point_in_valid_area(la_next, opts.valid_area) {
+            let mut probe_pos = la_cand;
+            let mut la_area = 0.0;
+            let mut la_left = 0.0;
+            let mut found = false;
+            for _ in 0..LOOKAHEAD_STEPS {
+                let probe_next = probe_pos + la_dir * opts.step_length;
+                if !point_in_valid_area(probe_next, opts.valid_area) {
+                    break;
+                }
+                let (step_area, step_left) =
+                    cleared.cut_area_split(probe_pos, probe_next, opts.radius);
+                if step_area >= floor && step_area <= slot_ceiling {
+                    la_area = step_area;
+                    la_left = step_left;
+                    found = true;
+                    break;
+                }
+                probe_pos = probe_next;
+            }
+            if !found {
                 continue;
             }
-            let (la_area, la_left) =
-                cleared.cut_area_split(la_cand, la_next, opts.radius);
             let la_right = la_area - la_left;
             let wrong = if opts.dir_sign < 0.0 {
                 la_left

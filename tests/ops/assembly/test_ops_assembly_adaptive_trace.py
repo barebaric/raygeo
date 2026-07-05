@@ -31,9 +31,7 @@ def _run_adaptive(boundary, islands=None, trace_path=None):
     """Run adaptive clearing from a circle seed and return the Ops."""
     islands = islands or []
     seed = [_circle(0, 0, 5)]
-    ca = ClearedArea(
-        boundary=boundary, islands=islands, initial=seed
-    )
+    ca = ClearedArea(boundary=boundary, islands=islands, initial=seed)
     clear_result = adaptive_clearing(
         cleared=ca,
         pocket_boundary=boundary,

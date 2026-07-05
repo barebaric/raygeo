@@ -22,10 +22,10 @@ Current heading angle in radians.
 ### `pos`
 
 ```python
-pos: tuple[float, float]
+pos: tuple[float, float, float]
 ```
 
-Tool centre position `(x, y)`.
+Tool centre position `(x, y, z)`.
 
 ### `radius`
 

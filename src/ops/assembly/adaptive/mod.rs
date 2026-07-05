@@ -22,6 +22,7 @@ mod routing_astar;
 mod routing_direct;
 mod routing_frontier;
 mod routing_mat;
+mod routing_zhop;
 mod stuck;
 pub mod tool;
 mod trace;
@@ -46,7 +47,7 @@ use crate::ops::cut::StepStatus;
 use crate::ops::cut::StepperOptions;
 use crate::ops::cut::ToolPose;
 use crate::ops::state::State;
-use crate::types::{Point, Polygon};
+use crate::types::{Point3D, Polygon};
 use prof_macros::prof;
 
 use std::path::PathBuf;
@@ -83,7 +84,7 @@ pub struct AdaptiveClearingOptions {
     pub cut_direction: CutDirection,
     /// Initial tool position.  When `None`, the starting position is
     /// auto-detected from the cleared-area frontier.
-    pub start_pos: Option<Point>,
+    pub start_pos: Option<Point3D>,
     /// Initial tool heading in radians.  When `None`, the heading is
     /// auto-detected as the CCW tangent at the starting position.
     pub start_heading: Option<f64>,
@@ -193,10 +194,10 @@ fn moving_count(ops: &Ops) -> u32 {
 
 fn candidate_pts_as_flat(
     pts: &resume::ResumeCandidatePoints,
-) -> [(f64, f64); 6] {
+) -> [(f64, f64, f64); 6] {
     std::array::from_fn(|i| match &pts[i] {
-        Some(pt) => (pt.x, pt.y),
-        None => (f64::NAN, f64::NAN),
+        Some(pt) => (pt.x, pt.y, pt.z),
+        None => (f64::NAN, f64::NAN, f64::NAN),
     })
 }
 
@@ -213,18 +214,18 @@ struct StallState<'a> {
     hug_tracker: &'a mut wallhug::WallHugTracker,
     stuck_detector: &'a mut stuck::StuckDetector,
     recorder: &'a mut trace::TraceRecorder,
-    prev_pos: &'a mut Point,
+    prev_pos: &'a mut Point3D,
     tp_len: &'a mut u32,
     steps_since_batch: &'a mut usize,
     segment_start: &'a mut ToolPose,
     last_resume_area: &'a mut f64,
-    last_resume_pos: &'a mut Point,
-    resume_blacklist: &'a mut Vec<Point>,
+    last_resume_pos: &'a mut Point3D,
+    resume_blacklist: &'a mut Vec<Point3D>,
     resume_count: &'a mut usize,
     resume_reasons: &'a mut resume::ResumeReasons,
     resume_details: &'a mut resume::ResumeReasons,
-    route_details: &'a mut [u8; 4],
-    last_resume_point: &'a mut Point,
+    route_details: &'a mut [u8; 5],
+    last_resume_point: &'a mut Point3D,
     resume_candidate_pts: &'a mut resume::ResumeCandidatePoints,
 }
 
@@ -494,11 +495,11 @@ pub fn adaptive_clearing(
             ops: Ops::new(),
             cleared_polygons: cleared.fragments().to_vec(),
             start: ToolPose {
-                pos: Point::ZERO,
+                pos: Point3D::ZERO,
                 heading: 0.0,
             },
             end: ToolPose {
-                pos: Point::ZERO,
+                pos: Point3D::ZERO,
                 heading: 0.0,
             },
         });
@@ -508,11 +509,11 @@ pub fn adaptive_clearing(
             ops: Ops::new(),
             cleared_polygons: cleared.fragments().to_vec(),
             start: ToolPose {
-                pos: Point::ZERO,
+                pos: Point3D::ZERO,
                 heading: 0.0,
             },
             end: ToolPose {
-                pos: Point::ZERO,
+                pos: Point3D::ZERO,
                 heading: 0.0,
             },
         });
@@ -545,13 +546,14 @@ pub fn adaptive_clearing(
             ab.partial_cmp(&aa).unwrap_or(std::cmp::Ordering::Equal)
         })
         .map(get_polygon_centroid)
-        .unwrap_or(Point::ZERO);
+        .unwrap_or(crate::types::Point::ZERO);
 
     // Use caller-provided position/heading when available (e.g. the
     // tool is already in motion after an entry strategy).  Otherwise
     // auto-detect from the cleared-area frontier.
     let frontier = cleared.frontier(0.5);
-    let (default_pos, default_heading) = initial_pose(&frontier, centre);
+    let (default_pos, default_heading) =
+        initial_pose(&frontier, centre, opts.cut_z);
     let start_pos = opts.start_pos.unwrap_or(default_pos);
     let start_heading = opts.start_heading.unwrap_or(default_heading);
 
@@ -626,7 +628,7 @@ pub fn adaptive_clearing(
     // immediately-stalling) position without any actual cutting.
     let mut last_resume_area: f64 = -1.0;
     let mut last_resume_pos = tool.pos;
-    let mut resume_blacklist: Vec<Point> = Vec::new();
+    let mut resume_blacklist: Vec<Point3D> = Vec::new();
 
     // Options constructed once and reused for all step calls in the loop.
     let step_opts = StepperOptions {
@@ -641,8 +643,8 @@ pub fn adaptive_clearing(
 
     let mut resume_reasons = resume::ResumeReasons::default();
     let mut resume_details = resume::ResumeReasons::default();
-    let mut route_details = [0u8; 4];
-    let mut last_resume_point = Point::ZERO;
+    let mut route_details = [0u8; 5];
+    let mut last_resume_point = Point3D::ZERO;
     let mut resume_candidate_pts = resume::ResumeCandidatePoints::default();
 
     let mut iter: usize = 0;
@@ -707,11 +709,20 @@ pub fn adaptive_clearing(
 
         let heading = tool.smoothed_heading();
         let predicted = tool.predicted_angle(max_def);
-        let result = step(cleared, tool.pos, heading, predicted, &step_opts);
+        let result = step(
+            cleared,
+            crate::types::Point::new(tool.pos.x, tool.pos.y),
+            heading,
+            predicted,
+            &step_opts,
+        );
         let status = result.status;
         if result.status == StepStatus::Ok {
-            let dir = Point::new(result.heading.cos(), result.heading.sin());
-            tool.pos = result.next;
+            let dir = crate::types::Point::new(
+                result.heading.cos(),
+                result.heading.sin(),
+            );
+            tool.pos = Point3D::new(result.next.x, result.next.y, opts.cut_z);
             tool.heading = result.heading;
             tool.push_gyro(dir);
             // Only feed the deflection back into the predictor when the
@@ -731,8 +742,8 @@ pub fn adaptive_clearing(
             stuck::wrong_side_safehold(
                 cleared,
                 dir_sign,
-                prev_pos,
-                tool.pos,
+                crate::types::Point::new(prev_pos.x, prev_pos.y),
+                crate::types::Point::new(tool.pos.x, tool.pos.y),
                 opts.radius,
                 target_area_pd,
                 opts.step_length,
@@ -840,7 +851,11 @@ pub fn adaptive_clearing(
         if steps_since_batch == 0 {
             cleared.begin_batch();
         }
-        cleared.expand_batched(prev_pos, tool.pos, opts.radius);
+        cleared.expand_batched(
+            crate::types::Point::new(prev_pos.x, prev_pos.y),
+            crate::types::Point::new(tool.pos.x, tool.pos.y),
+            opts.radius,
+        );
         steps_since_batch += 1;
 
         if steps_since_batch >= opts.expansion_batch_size {
@@ -849,8 +864,15 @@ pub fn adaptive_clearing(
             cleared.compact_if_needed(opts.tolerance);
         }
 
-        let eng = cleared.get_point_engagement(tool.pos, opts.radius);
-        let ca = cleared.cut_area(prev_pos, tool.pos, opts.radius);
+        let eng = cleared.get_point_engagement(
+            crate::types::Point::new(tool.pos.x, tool.pos.y),
+            opts.radius,
+        );
+        let ca = cleared.cut_area(
+            crate::types::Point::new(prev_pos.x, prev_pos.y),
+            crate::types::Point::new(tool.pos.x, tool.pos.y),
+            opts.radius,
+        );
         recorder.record_cut(
             status,
             &tool,
@@ -905,7 +927,11 @@ pub fn adaptive_clearing(
 // ── Initial pose ─────────────────────────────────────────────────────
 
 #[prof]
-fn initial_pose(frontier: &[Polygon], centre: Point) -> (Point, f64) {
+fn initial_pose(
+    frontier: &[Polygon],
+    centre: crate::types::Point,
+    z: f64,
+) -> (Point3D, f64) {
     let mut best_poly: Option<&Polygon> = None;
     let mut best_area = 0.0f64;
     for poly in frontier {
@@ -921,7 +947,7 @@ fn initial_pose(frontier: &[Polygon], centre: Point) -> (Point, f64) {
 
     let poly = match best_poly {
         Some(p) => p,
-        None => return (centre, 0.0),
+        None => return (Point3D::new(centre.x, centre.y, z), 0.0),
     };
 
     let pos = poly[0];
@@ -930,5 +956,5 @@ fn initial_pose(frontier: &[Polygon], centre: Point) -> (Point, f64) {
     let tangent_angle =
         normalize_angle_signed(radial_angle + std::f64::consts::FRAC_PI_2);
 
-    (pos, tangent_angle)
+    (Point3D::new(pos.x, pos.y, z), tangent_angle)
 }

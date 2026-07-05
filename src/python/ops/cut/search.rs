@@ -6,14 +6,14 @@ use pyo3_stub_gen::derive::{
 use crate::ops::cut;
 use crate::ops::cut::ToolPose;
 use crate::python::ops::cut::cleared_area::PyClearedArea;
-use crate::types::Point;
+use crate::types::Point3D;
 
 #[gen_stub_pyclass(module = "raygeo.ops.cut.search")]
 #[pyclass(name = "ToolPose", skip_from_py_object)]
 #[derive(Clone, Debug)]
 pub struct PyToolPose {
     #[pyo3(get)]
-    pub pos: (f64, f64),
+    pub pos: (f64, f64, f64),
     #[pyo3(get)]
     pub heading: f64,
 }
@@ -22,14 +22,14 @@ pub struct PyToolPose {
 #[pymethods]
 impl PyToolPose {
     #[new]
-    pub fn new(pos: (f64, f64), heading: f64) -> Self {
+    pub fn new(pos: (f64, f64, f64), heading: f64) -> Self {
         PyToolPose { pos, heading }
     }
 
     pub fn __repr__(&self) -> String {
         format!(
-            "ToolPose(pos=({:.3},{:.3}), heading={:.3})",
-            self.pos.0, self.pos.1, self.heading,
+            "ToolPose(pos=({:.3},{:.3},{:.3}), heading={:.3})",
+            self.pos.0, self.pos.1, self.pos.2, self.heading,
         )
     }
 }
@@ -64,7 +64,7 @@ fn search_frontier_engagement_py(
     let r = cut::search_frontier_engagement(
         &cleared.inner,
         ToolPose {
-            pos: Point::new(start.pos.0, start.pos.1),
+            pos: Point3D::new(start.pos.0, start.pos.1, start.pos.2),
             heading: start.heading,
         },
         radius,
@@ -74,7 +74,7 @@ fn search_frontier_engagement_py(
         max_cut_area,
     )?;
     Some(PyToolPose {
-        pos: (r.pos.x, r.pos.y),
+        pos: (r.pos.x, r.pos.y, r.pos.z),
         heading: r.heading,
     })
 }

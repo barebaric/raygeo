@@ -221,7 +221,7 @@ __images__ = [
     {
         "heading": "bisect",
         "caption": (
-            "Error vs iteration count: solve_secant fastest, bisection slowest."
+            "Error vs iteration count: solve_secant fastest, bisection slowest"
         ),
         "function": generate_convergence,
     },

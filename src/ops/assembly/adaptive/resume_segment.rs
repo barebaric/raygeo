@@ -7,7 +7,7 @@ use crate::ops::assembly::adaptive::resume::{
 use crate::ops::assembly::adaptive::tool::Tool;
 use crate::ops::cut::interp::point_in_valid_area;
 use crate::ops::cut::ToolPose;
-use crate::types::Point;
+use crate::types::{Point, Point3D};
 
 pub struct ResumeSegment;
 
@@ -30,15 +30,21 @@ impl ResumeStrategy for ResumeSegment {
             return None;
         }
 
-        let pos = ctx.segment_start.pos;
-        if !point_in_valid_area(pos, ctx.step_opts.valid_area) {
+        let pos_2d = crate::types::Point::new(
+            ctx.segment_start.pos.x,
+            ctx.segment_start.pos.y,
+        );
+        if !point_in_valid_area(pos_2d, ctx.step_opts.valid_area) {
             *detail = DETAIL_OUTSIDE_VALID;
             return None;
         }
 
-        if let Some(tp) =
-            probe(ctx, ctx.opts.radius, pos, ctx.segment_start.heading)
-        {
+        if let Some(tp) = probe(
+            ctx,
+            ctx.opts.radius,
+            ctx.segment_start.pos,
+            ctx.segment_start.heading,
+        ) {
             return Some(tp);
         }
 
@@ -67,10 +73,15 @@ fn nudge_to_frontier(ctx: &ResumeCtx, detail: &mut u8) -> Option<ToolPose> {
         ctx.segment_start.heading.cos(),
         ctx.segment_start.heading.sin(),
     );
+    let start_2d = crate::types::Point::new(
+        ctx.segment_start.pos.x,
+        ctx.segment_start.pos.y,
+    );
+    let cut_z = ctx.opts.cut_z;
 
     let mut tangent_pos: Option<Point> = None;
     for s in 1..=max_steps {
-        let pos = ctx.segment_start.pos + dir * (s as f64 * step);
+        let pos = start_2d + dir * (s as f64 * step);
         if !point_in_valid_area(pos, ctx.step_opts.valid_area) {
             break;
         }
@@ -82,7 +93,12 @@ fn nudge_to_frontier(ctx: &ResumeCtx, detail: &mut u8) -> Option<ToolPose> {
     }
 
     let pos = tangent_pos?;
-    if let Some(tp) = probe(ctx, radius, pos, ctx.segment_start.heading) {
+    if let Some(tp) = probe(
+        ctx,
+        radius,
+        Point3D::new(pos.x, pos.y, cut_z),
+        ctx.segment_start.heading,
+    ) {
         return Some(tp);
     }
 

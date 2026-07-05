@@ -1,7 +1,7 @@
 use crate::ops::assembly::adaptive::routing::{
     sweep_clear, RouteCtx, RoutingStrategy, ROUTE_DIRECT_SWEEP_COLLIDE,
 };
-use crate::types::Point;
+use crate::types::Point3D;
 
 /// Direct-line routing: accept the straight segment from `from` to `to`
 /// only when the tool-disc sweep along it does not intersect any
@@ -16,10 +16,10 @@ impl RoutingStrategy for RoutingDirect {
     fn find_route(
         &self,
         ctx: &RouteCtx,
-        from: Point,
-        to: Point,
+        from: Point3D,
+        to: Point3D,
         detail: &mut u8,
-    ) -> Option<Vec<Point>> {
+    ) -> Option<Vec<Point3D>> {
         if ctx.obstacles.is_empty() {
             return Some(vec![to]);
         }
@@ -43,6 +43,7 @@ impl RoutingStrategy for RoutingDirect {
             return None;
         }
 
-        Some(vec![to])
+        let route_z = from.z.max(to.z) + 0.1;
+        Some(vec![Point3D::new(to.x, to.y, route_z)])
     }
 }

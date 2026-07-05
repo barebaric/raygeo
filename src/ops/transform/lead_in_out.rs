@@ -232,7 +232,9 @@ fn rewrite_buffered_contour(
             let ct = old_ops.command_type(j);
             matches!(
                 ct,
-                CommandType::LineTo | CommandType::ArcTo | CommandType::BezierTo
+                CommandType::LineTo
+                    | CommandType::ArcTo
+                    | CommandType::BezierTo
             ) && old_ops.state(j).is_some()
         })
         .copied();

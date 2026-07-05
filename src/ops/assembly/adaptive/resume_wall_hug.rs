@@ -43,7 +43,10 @@ impl ResumeStrategy for ResumeWallHug {
         require_fragments(ctx, detail)?;
 
         for pose in ctx.wall_hug_points {
-            if !point_in_valid_area(pose.pos, ctx.step_opts.valid_area) {
+            if !point_in_valid_area(
+                crate::types::Point::new(pose.pos.x, pose.pos.y),
+                ctx.step_opts.valid_area,
+            ) {
                 continue;
             }
             if let Some(rp) =

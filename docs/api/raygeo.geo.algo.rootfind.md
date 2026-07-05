@@ -33,9 +33,9 @@ Bisection root-finding.
 | `max_iter` | `int = 100`                | Maximum iterations (default 100).                          |
 | _Returns_  | `tuple[float, str, int]`   | `(root, status_string, iteration_count)`.                  |
 
-![Error vs iteration count: solve_secant fastest, bisection slowest.](images/geo-algo-rootfind-convergence.png)
+![Error vs iteration count: solve_secant fastest, bisection slowest](images/geo-algo-rootfind-convergence.png)
 
-*Error vs iteration count: solve_secant fastest, bisection slowest.*
+*Error vs iteration count: solve_secant fastest, bisection slowest*
 
 ![Iterations to reach a given tolerance for sqrt(2): solve_secant needs far fewer than bisection.](images/geo-algo-rootfind-precision.png)
 

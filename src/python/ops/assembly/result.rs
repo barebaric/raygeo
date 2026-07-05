@@ -43,11 +43,11 @@ impl PyAssemblyResult {
             ops: crate::ops::Ops::new(),
             cleared_polygons: vec![],
             start: crate::ops::cut::ToolPose {
-                pos: crate::types::Point::ZERO,
+                pos: crate::types::Point3D::ZERO,
                 heading: 0.0,
             },
             end: crate::ops::cut::ToolPose {
-                pos: crate::types::Point::ZERO,
+                pos: crate::types::Point3D::ZERO,
                 heading: 0.0,
             },
         };
@@ -59,11 +59,13 @@ impl PyAssemblyResult {
         let n_polys = self.cleared_polygons.len();
         format!(
             "AssemblyResult(ops={n_ops} commands, cleared_polygons={n_polys}, \
-             start=({sx:.3},{sy:.3}), end=({ex:.3},{ey:.3}))",
+             start=({sx:.3},{sy:.3},{sz:.3}), end=({ex:.3},{ey:.3},{ez:.3}))",
             sx = self.start.pos.0,
             sy = self.start.pos.1,
+            sz = self.start.pos.2,
             ex = self.end.pos.0,
             ey = self.end.pos.1,
+            ez = self.end.pos.2,
         )
     }
 }
@@ -84,11 +86,11 @@ impl PyAssemblyResult {
             },
             cleared_polygons: cleared_polys,
             start: PyToolPose {
-                pos: (inner.start.pos.x, inner.start.pos.y),
+                pos: (inner.start.pos.x, inner.start.pos.y, inner.start.pos.z),
                 heading: inner.start.heading,
             },
             end: PyToolPose {
-                pos: (inner.end.pos.x, inner.end.pos.y),
+                pos: (inner.end.pos.x, inner.end.pos.y, inner.end.pos.z),
                 heading: inner.end.heading,
             },
             inner,

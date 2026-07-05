@@ -1,7 +1,7 @@
 //! Python wrapper for the adaptive-clearing [`Tool`] state.
 
 use crate::ops::assembly::adaptive::tool::Tool;
-use crate::types::Point;
+use crate::types::{Point, Point3D};
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 
@@ -21,26 +21,30 @@ pub struct PyTool {
 #[gen_stub_pymethods]
 #[pymethods]
 impl PyTool {
-    /// Create a new tool at *pos* with the given *heading* (radians)
-    /// and *radius*.
+    /// Create a new tool at *pos* ``(x, y, z)`` with the given *heading*
+    /// (radians) and *radius*.
     #[new]
     #[pyo3(signature = (pos, heading, radius))]
-    fn new(pos: (f64, f64), heading: f64, radius: f64) -> Self {
+    fn new(pos: (f64, f64, f64), heading: f64, radius: f64) -> Self {
         PyTool {
-            inner: Tool::new(Point::new(pos.0, pos.1), heading, radius),
+            inner: Tool::new(
+                Point3D::new(pos.0, pos.1, pos.2),
+                heading,
+                radius,
+            ),
         }
     }
 
-    /// Tool centre position ``(x, y)``.
+    /// Tool centre position ``(x, y, z)``.
     #[getter]
-    fn pos(&self) -> (f64, f64) {
-        (self.inner.pos.x, self.inner.pos.y)
+    fn pos(&self) -> (f64, f64, f64) {
+        (self.inner.pos.x, self.inner.pos.y, self.inner.pos.z)
     }
 
-    /// Set the tool centre position ``(x, y)``.
+    /// Set the tool centre position ``(x, y, z)``.
     #[setter]
-    fn set_pos(&mut self, value: (f64, f64)) {
-        self.inner.pos = Point::new(value.0, value.1);
+    fn set_pos(&mut self, value: (f64, f64, f64)) {
+        self.inner.pos = Point3D::new(value.0, value.1, value.2);
     }
 
     /// Current heading angle in radians.
@@ -95,9 +99,10 @@ impl PyTool {
 
     fn __repr__(&self) -> String {
         format!(
-            "Tool(pos=({:.3},{:.3}), heading={:.3}, radius={:.3})",
+            "Tool(pos=({:.3},{:.3},{:.3}), heading={:.3}, radius={:.3})",
             self.inner.pos.x,
             self.inner.pos.y,
+            self.inner.pos.z,
             self.inner.heading,
             self.inner.radius,
         )

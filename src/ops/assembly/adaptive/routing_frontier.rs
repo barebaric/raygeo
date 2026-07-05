@@ -8,7 +8,7 @@ use crate::ops::assembly::adaptive::routing::{
     ROUTE_FRONTIER_OFFSET_EMPTY, ROUTE_FRONTIER_SAME_VERTEX,
     ROUTE_FRONTIER_SWEEP_COLLIDE, ROUTE_FRONTIER_TOO_FEW_VERTS,
 };
-use crate::types::Point;
+use crate::types::{Point, Point3D};
 
 /// Frontier-walking routing: find the shortest path along the cleared-area
 /// frontier between `from` and `to`, then offset the segment inward by
@@ -25,10 +25,10 @@ impl RoutingStrategy for RoutingFrontier {
     fn find_route(
         &self,
         ctx: &RouteCtx,
-        from: Point,
-        to: Point,
+        from: Point3D,
+        to: Point3D,
         detail: &mut u8,
-    ) -> Option<Vec<Point>> {
+    ) -> Option<Vec<Point3D>> {
         if ctx.obstacles.is_empty() {
             *detail = ROUTE_FRONTIER_NO_OBSTACLES;
             return None;
@@ -74,12 +74,14 @@ impl RoutingStrategy for RoutingFrontier {
             return None;
         }
 
-        // Find the offset polygon closest to `from`.
-        let (pi, _ft, fp, _fd2) = get_polygons_closest_point(&inner, from)?;
+        // Find the offset polygon closest to `from` (projected to XY).
+        let from_2d = Point::new(from.x, from.y);
+        let to_2d = Point::new(to.x, to.y);
+        let (pi, _ft, fp, _fd2) = get_polygons_closest_point(&inner, from_2d)?;
         let poly = &inner[pi];
 
         // `to` must be closest to the same offset polygon.
-        let (tj, _tt, tp, _td2) = get_polygons_closest_point(&inner, to)?;
+        let (tj, _tt, tp, _td2) = get_polygons_closest_point(&inner, to_2d)?;
         if tj != pi {
             crate::dbg_log!("  FRONTIER  different polygons {} {}", pi, tj);
             *detail = ROUTE_FRONTIER_DIFFERENT_POLYGONS;
@@ -141,15 +143,22 @@ impl RoutingStrategy for RoutingFrontier {
             *seg.last_mut().unwrap() = tp;
         }
 
-        crate::dbg_log!("  FRONTIER  seg_len={}", seg.len());
+        // Lift to 3D for sweep check and return.
+        let route_z = from.z.max(to.z) + 0.1;
+        let seg_3d: Vec<Point3D> = seg
+            .into_iter()
+            .map(|p| Point3D::new(p.x, p.y, route_z))
+            .collect();
+
+        crate::dbg_log!("  FRONTIER  seg_len={}", seg_3d.len());
 
         // Sweep check.
-        if !sweep_clear(&seg, ctx) {
+        if !sweep_clear(&seg_3d, ctx) {
             crate::dbg_log!("  FRONTIER  sweep collide");
             *detail = ROUTE_FRONTIER_SWEEP_COLLIDE;
             return None;
         }
 
-        Some(seg)
+        Some(seg_3d)
     }
 }

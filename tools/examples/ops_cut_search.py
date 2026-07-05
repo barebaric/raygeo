@@ -64,7 +64,7 @@ def _setup():
 
     va_right = half - tool_radius
     y_int = math.sqrt(r_seed**2 - va_right**2)
-    tool_pos = (va_right, -y_int)
+    tool_pos = (va_right, -y_int, 0.0)
     heading = math.pi / 4
 
     return (
@@ -178,7 +178,7 @@ def generate_search_frontier_engagement():
         )
 
     # ── Left side: walk CW from the left envelope edge ──
-    left_pos = (-22.0, 0.0)
+    left_pos = (-22.0, 0.0, 0.0)
     left_h = math.pi / 2
     left_rp = search_frontier_engagement(
         ca,
@@ -369,6 +369,7 @@ def generate_search_frontier_engagement_multi():
             ep = (
                 fv[0] + (centre[0] - fv[0]) * 0.4,
                 fv[1] + (centre[1] - fv[1]) * 0.4,
+                0.0,
             )
             end_positions.append(ep)
         break
@@ -428,7 +429,7 @@ def generate_search_frontier_engagement_multi():
         ax.plot(ep[0], ep[1], "v", color=colors[j], markersize=10, zorder=5)
         ax.annotate(
             f"End {j + 1}",
-            ep,
+            ep[:2],
             xytext=(3, 6),
             textcoords="offset points",
             fontsize=7,

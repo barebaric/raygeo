@@ -1,8 +1,7 @@
 //! Python wrappers for the adaptive-clearing resume / re-engagement helpers.
 //!
 //! Mirrors [`crate::ops::assembly::adaptive::resume`].  Exposes the
-//! pure-geometry path shortener ([`smooth_travel_path`]),
-//! and the two resume drivers ([`emit_resume_travel`], [`try_resume`])
+//! two resume drivers ([`emit_resume_travel`], [`try_resume`])
 //! so they can be exercised directly from Python tests.
 
 use crate::ops::assembly::adaptive::resume::{self, ResumeCtx};
@@ -14,18 +13,13 @@ use crate::ops::cut::ToolPose;
 use crate::python::geo::algo::medial_axis::PyMedialAxis;
 use crate::python::ops::cut::cleared_area::PyClearedArea;
 use crate::python::ops::PyOps;
-use crate::types::{Point, Polygon};
+use crate::types::{Point, Point3D, Polygon};
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::gen_stub_pyfunction;
 
 pub(crate) fn register(adaptive_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     let resume_mod = PyModule::new(adaptive_mod.py(), "resume")?;
-    register_functions!(
-        resume_mod,
-        smooth_travel_path_py,
-        emit_resume_travel_py,
-        try_resume_py,
-    );
+    register_functions!(resume_mod, emit_resume_travel_py, try_resume_py,);
     adaptive_mod.add_submodule(&resume_mod)?;
 
     let sys_modules = adaptive_mod.py().import("sys")?.getattr("modules")?;
@@ -34,69 +28,16 @@ pub(crate) fn register(adaptive_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     Ok(())
 }
 
-/// Smooth and shorten a cleared-territory travel path.
-///
-/// Feeds *raw* (a waypoint list known to stay inside cleared territory)
-/// through ``build_smoothed_path`` against the *obstacles* so redundant
-/// intermediate waypoints are shortcut away and sharp turns are rounded.
-///
-/// :param from_pt: Tool's current position ``(x, y)`` (preserved as the
-///                 first point of the result).
-/// :param raw: Waypoint list (e.g. from the MAT).
-/// :param obstacles: Obstacle polygons (islands + remaining stock).
-/// :param clearance: Minimum distance from obstacles (tool radius).
-/// :returns: Shortened, smoothed path as a list of ``(x, y)`` points.
-#[gen_stub_pyfunction(
-    python = r#"
-    import collections.abc
-
-    def smooth_travel_path(
-        from_pt: tuple[float, float],
-        raw: collections.abc.Sequence[tuple[float, float]],
-        obstacles: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]] = [],
-        clearance: float = 1.0,
-    ) -> list[tuple[float, float]]:
-        """Smooth and shorten a cleared-territory travel path."""
-    "#,
-    module = "raygeo.ops.assembly.adaptive.resume"
-)]
-#[pyfunction(name = "smooth_travel_path")]
-#[pyo3(signature = (from_pt, raw, obstacles = None, clearance = 1.0))]
-fn smooth_travel_path_py(
-    from_pt: (f64, f64),
-    raw: Vec<(f64, f64)>,
-    obstacles: Option<Vec<Vec<(f64, f64)>>>,
-    clearance: f64,
-) -> Vec<(f64, f64)> {
-    let from = Point::new(from_pt.0, from_pt.1);
-    let raw_pts: Vec<Point> =
-        raw.into_iter().map(|(x, y)| Point::new(x, y)).collect();
-    let obstacles_pts: Vec<Polygon> = obstacles
-        .unwrap_or_default()
-        .into_iter()
-        .map(|p| p.into_iter().map(|(x, y)| Point::new(x, y)).collect())
-        .collect();
-    crate::ops::assembly::adaptive::routing::smooth_route(
-        from,
-        &raw_pts,
-        &obstacles_pts,
-        clearance,
-    )
-    .into_iter()
-    .map(|p| (p.x, p.y))
-    .collect()
-}
-
 /// Emit a resume travel to *to_pt* using the routing strategies.
 ///
 /// :param ops: ``Ops`` instance to append travel moves to (mutated).
-/// :param to_pt: Travel destination ``(x, y)``.
+/// :param to_pt: Travel destination ``(x, y, z)``.
 /// :param pocket_boundary: Pocket boundary polygon.
 /// :param islands: Island (hole) polygons.
 /// :param radius: Tool radius (mm).
 /// :param cut_z: Cutting Z height.
 /// :param cleared: ``ClearedArea`` instance (defaults to empty).
-/// :param from_pt: Tool's current position ``(x, y)``.
+/// :param from_pt: Tool's current position ``(x, y, z)``.
 /// :param axis: ``MedialAxis`` instance or ``None``.
 #[gen_stub_pyfunction(
     python = r#"
@@ -105,12 +46,14 @@ fn smooth_travel_path_py(
 
     def emit_resume_travel(
         ops: raygeo.ops.Ops,
-        to_pt: tuple[float, float],
+        to_pt: tuple[float, float, float],
         pocket_boundary: collections.abc.Sequence[tuple[float, float]],
         islands: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]] = [],
         radius: float = 3.0,
         cut_z: float = -5.0,
         cleared: raygeo.ops.cut.cleared_area.ClearedArea | None = None,
+        from_pt: tuple[float, float, float] = (0.0, 0.0, 0.0),
+        axis: raygeo.geo.algo.medial_axis.MedialAxis | None = None,
     ) -> None:
         """Emit a resume travel to *to_pt* using the routing strategies."""
     "#,
@@ -125,19 +68,19 @@ fn smooth_travel_path_py(
     radius = 3.0,
     cut_z = -5.0,
     cleared = None,
-    from_pt = (0.0, 0.0),
+    from_pt = (0.0, 0.0, 0.0),
     axis = None,
 ))]
 #[allow(clippy::too_many_arguments)]
 fn emit_resume_travel_py(
     ops: &mut PyOps,
-    to_pt: (f64, f64),
+    to_pt: (f64, f64, f64),
     pocket_boundary: Vec<(f64, f64)>,
     islands: Option<Vec<Vec<(f64, f64)>>>,
     radius: f64,
     cut_z: f64,
     cleared: Option<&PyClearedArea>,
-    from_pt: (f64, f64),
+    from_pt: (f64, f64, f64),
     axis: Option<&PyMedialAxis>,
 ) -> PyResult<()> {
     let pb: Polygon = pocket_boundary
@@ -168,8 +111,8 @@ fn emit_resume_travel_py(
         &mut ops.inner,
         ca,
         mat,
-        Point::new(from_pt.0, from_pt.1),
-        Point::new(to_pt.0, to_pt.1),
+        Point3D::new(from_pt.0, from_pt.1, from_pt.2),
+        Point3D::new(to_pt.0, to_pt.1, to_pt.2),
         &opts,
         None,
     )?;
@@ -193,7 +136,7 @@ fn emit_resume_travel_py(
 /// :param axis: ``MedialAxis`` instance or ``None``.
 /// :param last_resume_area: Cleared area at the last resume (mm²).
 /// :param cut_direction: ``"cw"`` or ``"ccw"`` (default ``"ccw"``).
-/// :param segment_start: ``(x, y)`` position where the current
+/// :param segment_start: ``(x, y, z)`` position where the current
 ///                        cutting segment began.
 /// :param segment_heading: Tool heading (radians) at segment start.
 /// :returns: ``True`` if the tool was repositioned, ``False`` otherwise.
@@ -217,7 +160,7 @@ fn emit_resume_travel_py(
         axis: raygeo.geo.algo.medial_axis.MedialAxis | None = None,
         last_resume_area: float = -1.0,
         cut_direction: str = "ccw",
-        segment_start: tuple[float, float] = (0.0, 0.0),
+        segment_start: tuple[float, float, float] = (0.0, 0.0, 0.0),
         segment_heading: float = 0.0,
     ) -> bool:
         """Try to recover after the tool stalls or is detected as stuck.
@@ -243,7 +186,7 @@ fn emit_resume_travel_py(
     axis = None,
     last_resume_area = -1.0,
     cut_direction = "ccw",
-    segment_start = (0.0, 0.0),
+    segment_start = (0.0, 0.0, 0.0),
     segment_heading = 0.0,
 ))]
 #[allow(clippy::too_many_arguments)]
@@ -262,7 +205,7 @@ fn try_resume_py(
     axis: Option<&PyMedialAxis>,
     last_resume_area: f64,
     cut_direction: &str,
-    segment_start: (f64, f64),
+    segment_start: (f64, f64, f64),
     segment_heading: f64,
 ) -> PyResult<bool> {
     let mat = axis.map(|a| &a.inner);
@@ -318,7 +261,11 @@ fn try_resume_py(
         step_opts: &step_opts,
         mat,
         segment_start: ToolPose {
-            pos: Point::new(segment_start.0, segment_start.1),
+            pos: Point3D::new(
+                segment_start.0,
+                segment_start.1,
+                segment_start.2,
+            ),
             heading: segment_heading,
         },
         last_resume_area,

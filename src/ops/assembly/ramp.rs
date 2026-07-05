@@ -11,7 +11,7 @@ use crate::ops::assembly::result::AssemblyResult;
 use crate::ops::container::Ops;
 use crate::ops::cut::ToolPose;
 use crate::ops::state::State;
-use crate::types::Point;
+use crate::types::{Point, Point3D};
 
 /// Options for generating a ramp entry path.
 #[derive(Clone, Debug)]
@@ -46,25 +46,25 @@ pub fn generate_ramp(
 
     let start = if path.is_empty() {
         ToolPose {
-            pos: opts.start,
+            pos: Point3D::new(opts.start.x, opts.start.y, opts.z_start),
             heading: 0.0,
         }
     } else {
         ToolPose {
-            pos: Point::new(path[0].x, path[0].y),
+            pos: path[0],
             heading: ramp_heading(&path, 0),
         }
     };
 
     let end = if path.is_empty() {
         ToolPose {
-            pos: opts.end,
+            pos: Point3D::new(opts.end.x, opts.end.y, opts.z_end),
             heading: 0.0,
         }
     } else {
         let n = path.len();
         ToolPose {
-            pos: Point::new(path[n - 1].x, path[n - 1].y),
+            pos: path[n - 1],
             heading: ramp_heading(&path, n - 1),
         }
     };

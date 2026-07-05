@@ -2,8 +2,6 @@
 
 import math
 
-import pytest
-
 from raygeo.geo.shape.polygon import (
     JoinStyle,
     get_polygon_area,
@@ -102,7 +100,9 @@ def test_adaptive_clearing_has_move_and_line():
         cut_z=-5.0,
         safe_z=2.0,
     )
-    types = [result_clear.ops.command_type(i) for i in range(result_clear.ops.len())]
+    types = [
+        result_clear.ops.command_type(i) for i in range(result_clear.ops.len())
+    ]
     assert CommandType.MOVE_TO in types
     assert CommandType.LINE_TO in types
 
@@ -127,18 +127,12 @@ def test_adaptive_clearing_endpoints_inside_pocket():
             assert -2 <= ep[1] <= 52, f"endpoint y={ep[1]} outside pocket"
 
 
-@pytest.mark.xfail(
-    reason="routing to resume candidates fails with islands",
-    raises=Exception,
-)
 def test_adaptive_clearing_with_islands():
     """No cut endpoint inside an island polygon."""
     boundary = _rect(25, 25, 50, 50)
     islands = [_rect(25, 25, 10, 10)]
     seed = [_circle(10, 25, 3)]
-    ca = ClearedArea(
-        boundary=boundary, islands=islands, initial=seed
-    )
+    ca = ClearedArea(boundary=boundary, islands=islands, initial=seed)
     result_clear = adaptive_clearing(
         cleared=ca,
         pocket_boundary=boundary,
@@ -282,9 +276,7 @@ def test_adaptive_clearing_fully_clears_with_island():
     assert valid_total > tol, "valid tool area too small for a meaningful test"
 
     seed = [_circle(-10, 0, 5)]
-    ca = ClearedArea(
-        boundary=boundary, islands=islands, initial=seed
-    )
+    ca = ClearedArea(boundary=boundary, islands=islands, initial=seed)
     adaptive_clearing(
         cleared=ca,
         pocket_boundary=boundary,

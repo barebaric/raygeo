@@ -302,6 +302,8 @@ impl PyRouteSource {
     pub const MAT: PyRouteSource = PyRouteSource(RRouteSource::RoutingMat);
     #[classattr]
     pub const ASTAR: PyRouteSource = PyRouteSource(RRouteSource::RoutingAStar);
+    #[classattr]
+    pub const ZHOP: PyRouteSource = PyRouteSource(RRouteSource::RoutingZHop);
 
     fn __repr__(&self) -> &'static str {
         self.name()
@@ -318,6 +320,7 @@ impl PyRouteSource {
             RRouteSource::RoutingFrontier => "frontier",
             RRouteSource::RoutingMat => "mat",
             RRouteSource::RoutingAStar => "astar",
+            RRouteSource::RoutingZHop => "zhop",
         }
     }
 }

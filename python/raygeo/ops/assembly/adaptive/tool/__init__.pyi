@@ -18,14 +18,14 @@ class Tool:
     vectors via ``push_gyro`` between solver steps.
     """
     @property
-    def pos(self) -> tuple[builtins.float, builtins.float]:
+    def pos(self) -> tuple[builtins.float, builtins.float, builtins.float]:
         r"""
-        Tool centre position ``(x, y)``.
+        Tool centre position ``(x, y, z)``.
         """
     @pos.setter
-    def pos(self, value: tuple[builtins.float, builtins.float]) -> None:
+    def pos(self, value: tuple[builtins.float, builtins.float, builtins.float]) -> None:
         r"""
-        Set the tool centre position ``(x, y)``.
+        Set the tool centre position ``(x, y, z)``.
         """
     @property
     def heading(self) -> builtins.float:
@@ -42,10 +42,10 @@ class Tool:
         r"""
         Tool radius in mm.
         """
-    def __new__(cls, pos: tuple[builtins.float, builtins.float], heading: builtins.float, radius: builtins.float) -> Tool:
+    def __new__(cls, pos: tuple[builtins.float, builtins.float, builtins.float], heading: builtins.float, radius: builtins.float) -> Tool:
         r"""
-        Create a new tool at *pos* with the given *heading* (radians)
-        and *radius*.
+        Create a new tool at *pos* ``(x, y, z)`` with the given *heading*
+        (radians) and *radius*.
         """
     def smoothed_heading(self) -> builtins.float:
         r"""

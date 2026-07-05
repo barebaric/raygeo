@@ -23,7 +23,7 @@ use crate::ops::cut::CutDirection;
 use crate::ops::cut::StepStatus;
 use crate::ops::cut::StepperOptions;
 use crate::ops::cut::ToolPose;
-use crate::types::{Point, Polygon};
+use crate::types::{Point, Point3D, Polygon};
 
 use super::routing;
 use super::tool::Tool;
@@ -72,10 +72,16 @@ pub(super) const WALL_PROXIMITY: f64 = 0.3;
 pub fn probe(
     ctx: &ResumeCtx,
     _radius: f64,
-    pos: Point,
+    pos: Point3D,
     heading: f64,
 ) -> Option<ToolPose> {
-    let result = step(ctx.cleared, pos, heading, 0.0, ctx.step_opts);
+    let result = step(
+        ctx.cleared,
+        Point::new(pos.x, pos.y),
+        heading,
+        0.0,
+        ctx.step_opts,
+    );
     if result.status != StepStatus::Ok || result.cut_area <= 0.0 {
         return None;
     }
@@ -161,12 +167,13 @@ fn march_to_clear(
 pub(super) fn offset_and_probe(
     ctx: &ResumeCtx,
     radius: f64,
-    candidate: Point,
+    candidate: Point3D,
     heading: f64,
 ) -> Option<ToolPose> {
     let cleared = ctx.cleared;
+    let candidate_2d = Point::new(candidate.x, candidate.y);
 
-    if cleared.get_point_engagement(candidate, radius).angle
+    if cleared.get_point_engagement(candidate_2d, radius).angle
         <= CLEARANCE_ANGLE_EPS
     {
         return probe(ctx, radius, candidate, heading);
@@ -175,11 +182,19 @@ pub(super) fn offset_and_probe(
     let step = ctx.opts.step_length * 0.25;
     let max_steps = (radius / step).ceil() as usize;
 
-    if let Some(dir) = inward_from_boundary(cleared, candidate) {
+    if let Some(dir) = inward_from_boundary(cleared, candidate_2d) {
         if let Some(pos) = march_to_clear(
-            ctx, cleared, radius, candidate, dir, step, max_steps,
+            ctx,
+            cleared,
+            radius,
+            candidate_2d,
+            dir,
+            step,
+            max_steps,
         ) {
-            if let Some(probed) = probe(ctx, radius, pos, heading) {
+            if let Some(probed) =
+                probe(ctx, radius, Point3D::new(pos.x, pos.y, 0.0), heading)
+            {
                 return Some(probed);
             }
         }
@@ -188,9 +203,17 @@ pub(super) fn offset_and_probe(
     let h = Point::new(heading.cos(), heading.sin());
     for dir in [Point::new(-h.y, h.x), Point::new(h.y, -h.x)] {
         if let Some(pos) = march_to_clear(
-            ctx, cleared, radius, candidate, dir, step, max_steps,
+            ctx,
+            cleared,
+            radius,
+            candidate_2d,
+            dir,
+            step,
+            max_steps,
         ) {
-            if let Some(probed) = probe(ctx, radius, pos, heading) {
+            if let Some(probed) =
+                probe(ctx, radius, Point3D::new(pos.x, pos.y, 0.0), heading)
+            {
                 return Some(probed);
             }
         }
@@ -215,7 +238,7 @@ pub(super) struct WalkProbeOptions {
     pub walk_all: bool,
     /// Reference position for polygon distance sorting and start-point
     /// selection. `None` → use `ctx.segment_start.pos`.
-    pub ref_pos: Option<Point>,
+    pub ref_pos: Option<Point3D>,
     /// Perpendicular offset distance from the sample point into cleared
     /// area. When `Some(d)`, each sample is offset by `d` along the
     /// perpendicular direction before being passed to `probe`.
@@ -261,9 +284,10 @@ pub(super) fn walk_and_probe(
     polys: &[Polygon],
     log_tag: &str,
     opts: WalkProbeOptions,
-    mut probe: impl FnMut(&ResumeCtx, f64, Point, f64) -> Option<ToolPose>,
+    mut probe: impl FnMut(&ResumeCtx, f64, Point3D, f64) -> Option<ToolPose>,
 ) -> Option<ToolPose> {
     let ref_pos = opts.ref_pos.unwrap_or(ctx.segment_start.pos);
+    let ref_pos_2d = Point::new(ref_pos.x, ref_pos.y);
     let actual_forward = ctx.opts.cut_direction == CutDirection::Ccw;
     let sample_spacing = ctx.opts.step_length;
     let bl_sq_tol = (ctx.opts.step_length * 0.25).powi(2);
@@ -276,7 +300,9 @@ pub(super) fn walk_and_probe(
             .map(|(i, p)| {
                 let min_d = p
                     .iter()
-                    .map(|pt| pt.distance_squared(ref_pos))
+                    .map(|pt| {
+                        (pt.x - ref_pos.x).powi(2) + (pt.y - ref_pos.y).powi(2)
+                    })
                     .fold(f64::MAX, f64::min);
                 (i, min_d)
             })
@@ -286,7 +312,7 @@ pub(super) fn walk_and_probe(
         });
         indexed.into_iter().map(|(i, _)| i).collect()
     } else {
-        match get_polygons_closest_point(polys, ref_pos) {
+        match get_polygons_closest_point(polys, ref_pos_2d) {
             Some((idx, _, _, _)) => vec![idx],
             None => {
                 dbg_log!("  {}  no suitable point found", log_tag);
@@ -305,7 +331,7 @@ pub(super) fn walk_and_probe(
         let result = if opts.centered_samples {
             walk_centered(
                 poly,
-                ref_pos,
+                ref_pos_2d,
                 actual_forward,
                 sample_spacing,
                 opts.cleared_on_left,
@@ -317,11 +343,16 @@ pub(super) fn walk_and_probe(
                         into_cleared,
                         &opts,
                     )?;
-                    probe(ctx, radius, probe_pt, heading)
+                    probe(
+                        ctx,
+                        radius,
+                        Point3D::new(probe_pt.x, probe_pt.y, 0.0),
+                        heading,
+                    )
                 },
             )
         } else {
-            let (start_idx, start_frac) = closest_edge_point(poly, ref_pos);
+            let (start_idx, start_frac) = closest_edge_point(poly, ref_pos_2d);
             walk_polygon_samples(
                 poly,
                 start_idx,
@@ -339,7 +370,7 @@ pub(super) fn walk_and_probe(
                             }
                         }
                     }
-                    probe(ctx, radius, pt, heading)
+                    probe(ctx, radius, Point3D::new(pt.x, pt.y, 0.0), heading)
                 },
             )
         };
@@ -474,10 +505,10 @@ pub fn emit_resume_travel(
     ops: &mut Ops,
     cleared: &ClearedArea,
     mat: Option<&MedialAxis>,
-    from: Point,
-    to: Point,
+    from: Point3D,
+    to: Point3D,
     opts: &AdaptiveClearingOptions,
-    out_route_details: Option<&mut [u8; 4]>,
+    out_route_details: Option<&mut [u8; 5]>,
 ) -> RaygeoResult<routing::RouteSource> {
     // Obstacles = remaining (uncut) material + islands (permanent no-go zones).
     let mut obstacles = cleared.remaining();
@@ -492,7 +523,7 @@ pub fn emit_resume_travel(
         obstacle_bounds: &obs_bounds,
     };
 
-    let mut route_details = [0u8; 4];
+    let mut route_details = [0u8; 5];
     if let Some((source, path)) =
         routing::optimize_route(&ctx, from, to, &mut route_details)
     {
@@ -503,7 +534,7 @@ pub fn emit_resume_travel(
             path.len(),
         );
         for pt in &path[1..] {
-            ops.move_to(pt.x, pt.y, opts.cut_z + 0.5, None);
+            ops.move_to(pt.x, pt.y, pt.z, None);
         }
         if let Some(out) = out_route_details {
             *out = route_details;
@@ -519,7 +550,7 @@ pub fn emit_resume_travel(
             .map(|(i, &d)| {
                 format!(
                     "{}({})",
-                    ["direct", "frontier", "mat", "astar"][i],
+                    ["direct", "frontier", "mat", "astar", "zhop"][i],
                     routing::route_detail_label(d),
                 )
             })
@@ -570,7 +601,7 @@ pub struct ResumeCtx<'a> {
     /// ResumeSegment probes forward from here using the stored heading.
     pub segment_start: ToolPose,
     pub last_resume_area: f64,
-    pub last_resume_pos: Point,
+    pub last_resume_pos: Point3D,
     /// Wall-hug points accumulated across envelope visits in the
     /// current cut segment.  Each entry is the minimum-distance pose
     /// recorded during one envelope visit.  Consumed by
@@ -579,7 +610,7 @@ pub struct ResumeCtx<'a> {
     /// Positions that have already been tried and led to immediate stalls.
     /// Any strategy that produces a position too close to one of these is
     /// rejected.
-    pub blacklist: &'a [Point],
+    pub blacklist: &'a [Point3D],
 }
 
 // ── ResumeStrategy trait ────────────────────────────────────────────
@@ -650,7 +681,7 @@ pub(super) fn require_fragments<'a>(
 /// Index 0-5 match the strategy priority order (WallHug, Segment,
 /// Mat, Frontier, Envelope, Island).  `None` if the strategy did not
 /// produce a candidate.
-pub type ResumeCandidatePoints = [Option<Point>; 6];
+pub type ResumeCandidatePoints = [Option<Point3D>; 6];
 
 /// Try each strategy in priority order.  Returns the winning strategy
 /// and the tool pose to apply.  When no strategy succeeds, `reasons`

@@ -14,7 +14,7 @@ use crate::ops::assembly::adaptive::tool::Tool;
 use crate::ops::cut::ClearedArea;
 use crate::ops::cut::CutDirection;
 use crate::ops::cut::ToolPose;
-use crate::types::{Point, Polygon};
+use crate::types::{Point, Point3D, Polygon};
 
 pub struct ResumeMat;
 
@@ -38,7 +38,9 @@ impl ResumeStrategy for ResumeMat {
         };
         let fragments = require_fragments(ctx, detail)?;
         let is_cleared = axis.build_cleared_mask(fragments);
-        let from_idx = match axis.nearest_node(tool.pos) {
+        let from_idx = match axis
+            .nearest_node(crate::types::Point::new(tool.pos.x, tool.pos.y))
+        {
             Some(i) => i,
             None => {
                 *detail = DETAIL_NODE_NOT_CLEARED;
@@ -64,6 +66,7 @@ impl ResumeStrategy for ResumeMat {
                 ctx.opts.cut_direction,
                 tool.radius,
                 ctx.opts.advance,
+                ctx.opts.cut_z,
                 &ctx.opts.pocket_boundary,
                 &ctx.opts.islands,
                 &mut cross_detail,
@@ -108,6 +111,7 @@ pub fn mat_resume_from_crossing(
     cut_direction: CutDirection,
     radius: f64,
     _advance: f64,
+    cut_z: f64,
     pocket_boundary: &[Point],
     islands: &[Polygon],
     detail: &mut u8,
@@ -240,7 +244,7 @@ pub fn mat_resume_from_crossing(
     );
 
     Some(ToolPose {
-        pos: p_resume,
+        pos: Point3D::new(p_resume.x, p_resume.y, cut_z),
         heading,
     })
 }

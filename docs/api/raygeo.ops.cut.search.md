@@ -14,7 +14,7 @@ heading: float
 ### `pos`
 
 ```python
-pos: tuple[float, float]
+pos: tuple[float, float, float]
 ```
 
 ## Functions

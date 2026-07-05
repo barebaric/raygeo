@@ -35,7 +35,7 @@ class TestSearchFrontierEngagement:
         ca.cut([_circle(50, 40, 15)])
         result = search_frontier_engagement(
             ca,
-            ToolPose(pos=(50.0, 55.0), heading=0.0),
+            ToolPose(pos=(50.0, 55.0, 0.0), heading=0.0),
             3.0,
             0.6,
             1.5,
@@ -48,7 +48,7 @@ class TestSearchFrontierEngagement:
         ca = ClearedArea(boundary=[])
         result = search_frontier_engagement(
             ca,
-            ToolPose(pos=(50.0, 55.0), heading=0.0),
+            ToolPose(pos=(50.0, 55.0, 0.0), heading=0.0),
             3.0,
             0.6,
             1.5,
@@ -62,7 +62,7 @@ class TestSearchFrontierEngagement:
         ca.cut([_circle(50, 40, 15)])
         result = search_frontier_engagement(
             ca,
-            ToolPose(pos=(50.0, 55.0), heading=0.0),
+            ToolPose(pos=(50.0, 55.0, 0.0), heading=0.0),
             3.0,
             0.6,
             1.5,
@@ -77,7 +77,7 @@ class TestSearchFrontierEngagement:
         ca.cut([_circle(50, 40, 15)])
         result = search_frontier_engagement(
             ca,
-            ToolPose(pos=(50.0, 55.0), heading=0.0),
+            ToolPose(pos=(50.0, 55.0, 0.0), heading=0.0),
             3.0,
             0.6,
             1.5,
@@ -100,7 +100,7 @@ class TestSearchFrontierEngagement:
         advance = 1.5
         result = search_frontier_engagement(
             ca,
-            ToolPose(pos=(50.0, 55.0), heading=0.0),
+            ToolPose(pos=(50.0, 55.0, 0.0), heading=0.0),
             R,
             0.6,
             advance,
@@ -121,7 +121,7 @@ class TestSearchFrontierEngagement:
 
 class TestToolPose:
     def test_repr(self):
-        rp = ToolPose(pos=(10.0, 20.0), heading=1.5)
+        rp = ToolPose(pos=(10.0, 20.0, 0.0), heading=1.5)
         s = repr(rp)
         assert "ToolPose" in s
         assert "10" in s
@@ -139,7 +139,7 @@ class TestSearchFrontierEngagementMaxBound:
             pos[0] + math.cos(heading) * step_length,
             pos[1] + math.sin(heading) * step_length,
         )
-        return ca.cut_area(pos, probe, R)
+        return ca.cut_area((pos[0], pos[1]), probe, R)
 
     def test_square_corner_does_not_exceed_max(self):
         """A 90° corner has ~5× the target engagement.  The search
@@ -174,7 +174,7 @@ class TestSearchFrontierEngagementMaxBound:
 
         result = search_frontier_engagement(
             ca,
-            ToolPose(pos=(45.0, -49.0), heading=0.0),
+            ToolPose(pos=(45.0, -49.0, 0.0), heading=0.0),
             R,
             step_length,
             advance,
@@ -215,7 +215,7 @@ class TestSearchFrontierEngagementMaxBound:
         # Start near the tip, heading up (along the top edge).
         result = search_frontier_engagement(
             ca,
-            ToolPose(pos=(55.0, 1.0), heading=math.pi / 2),
+            ToolPose(pos=(55.0, 1.0, 0.0), heading=math.pi / 2),
             R,
             step_length,
             advance,
@@ -248,7 +248,7 @@ class TestSearchFrontierEngagementMaxBound:
         # Try several start positions around the circle.
         for angle_deg in [0, 45, 90, 135, 180, 270]:
             angle = math.radians(angle_deg)
-            start = (50 + 15 * math.cos(angle), 40 + 15 * math.sin(angle))
+            start = (50 + 15 * math.cos(angle), 40 + 15 * math.sin(angle), 0.0)
             heading = angle + math.pi / 2  # tangent
             result = search_frontier_engagement(
                 ca,
@@ -310,7 +310,7 @@ class TestSearchFrontierEngagementMaxBound:
         # Start near the tip, heading up.
         result = search_frontier_engagement(
             ca,
-            ToolPose(pos=(45.0, 1.0), heading=math.pi / 2),
+            ToolPose(pos=(45.0, 1.0, 0.0), heading=math.pi / 2),
             R,
             step_length,
             advance,
@@ -321,7 +321,7 @@ class TestSearchFrontierEngagementMaxBound:
             # Try heading down (opposite direction along the frontier).
             result = search_frontier_engagement(
                 ca,
-                ToolPose(pos=(45.0, -1.0), heading=-math.pi / 2),
+                ToolPose(pos=(45.0, -1.0, 0.0), heading=-math.pi / 2),
                 R,
                 step_length,
                 advance,
@@ -369,7 +369,7 @@ def test_reengagement_position_offset_inward():
 
     result = search_frontier_engagement(
         ca,
-        ToolPose(pos=(50.0, 55.0), heading=0.0),
+        ToolPose(pos=(50.0, 55.0, 0.0), heading=0.0),
         R,
         step_length,
         advance,

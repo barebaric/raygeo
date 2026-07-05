@@ -16,7 +16,7 @@ use crate::ops::assembly::result::{chain, AssemblyResult};
 use crate::ops::assembly::spiral::{self, SpiralOptions};
 use crate::ops::assembly::toroid::{self, ToroidOptions};
 use crate::ops::state::State;
-use crate::types::Polygon;
+use crate::types::{Point3D, Polygon};
 
 /// Options for [`adaptive_entry`].
 #[derive(Clone, Debug)]
@@ -117,11 +117,11 @@ pub fn adaptive_entry(
             ops: crate::ops::container::Ops::new(),
             cleared_polygons: vec![],
             start: crate::ops::cut::ToolPose {
-                pos: entry_pt,
+                pos: Point3D::new(entry_pt.x, entry_pt.y, opts.target_z),
                 heading: 0.0,
             },
             end: crate::ops::cut::ToolPose {
-                pos: entry_pt,
+                pos: Point3D::new(entry_pt.x, entry_pt.y, opts.target_z),
                 heading: 0.0,
             },
         }),
@@ -160,11 +160,11 @@ pub fn generate_helix_spiral(
             ops: crate::ops::container::Ops::new(),
             cleared_polygons: vec![],
             start: crate::ops::cut::ToolPose {
-                pos: entry_pt,
+                pos: Point3D::new(entry_pt.x, entry_pt.y, opts.target_z),
                 heading: 0.0,
             },
             end: crate::ops::cut::ToolPose {
-                pos: entry_pt,
+                pos: Point3D::new(entry_pt.x, entry_pt.y, opts.target_z),
                 heading: 0.0,
             },
         }

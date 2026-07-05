@@ -11,7 +11,7 @@ use crate::ops::assembly::result::AssemblyResult;
 use crate::ops::container::Ops;
 use crate::ops::cut::ToolPose;
 use crate::ops::state::State;
-use crate::types::{Point, Polygon};
+use crate::types::{Point, Point3D, Polygon};
 
 const MAX_WAVEFRONT_ITERATIONS: usize = 1000;
 
@@ -117,11 +117,11 @@ pub fn adaptive_wavefronts(
     Ok(AssemblyResult {
         cleared_polygons: cleared.fragments().to_vec(),
         start: ToolPose {
-            pos: start_pos,
+            pos: Point3D::new(start_pos.x, start_pos.y, opts.z),
             heading: 0.0,
         },
         end: ToolPose {
-            pos: end_pos,
+            pos: Point3D::new(end_pos.x, end_pos.y, opts.z),
             heading: 0.0,
         },
         ops,

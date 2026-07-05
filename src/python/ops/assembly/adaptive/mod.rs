@@ -7,6 +7,7 @@
 //! * [`super::resume`] exposes the resume / re-engagement helpers.
 
 pub(crate) mod resume;
+pub(crate) mod routing;
 pub(crate) mod tool;
 
 use crate::ops::assembly::adaptive;
@@ -16,7 +17,7 @@ use crate::prof::prof_report;
 use crate::python::errors::{ResumePointNotFoundError, RoutingError};
 use crate::python::ops::assembly::result::PyAssemblyResult;
 use crate::python::ops::cut::cleared_area::PyClearedArea;
-use crate::types::Point;
+use crate::types::{Point, Point3D};
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::gen_stub_pyfunction;
 use std::path::PathBuf;
@@ -63,6 +64,7 @@ pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
 
     tool::register(&adaptive_mod)?;
     resume::register(&adaptive_mod)?;
+    routing::register(&adaptive_mod)?;
 
     assembly_mod.add_submodule(&adaptive_mod)?;
 
@@ -210,7 +212,7 @@ fn adaptive_clearing_py(
         max_deflection_deg,
         wall_margin,
         area_tolerance,
-        start_pos: start_pos.map(|(x, y)| Point::new(x, y)),
+        start_pos: start_pos.map(|(x, y)| Point3D::new(x, y, cut_z)),
         start_heading,
         expansion_batch_size,
         trace_path: trace_path.map(PathBuf::from),

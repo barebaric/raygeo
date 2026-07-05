@@ -112,11 +112,11 @@ pub fn link_assembly_passes(
             ops: Ops::new(),
             cleared_polygons: vec![],
             start: ToolPose {
-                pos: crate::types::Point::ZERO,
+                pos: crate::types::Point3D::ZERO,
                 heading: 0.0,
             },
             end: ToolPose {
-                pos: crate::types::Point::ZERO,
+                pos: crate::types::Point3D::ZERO,
                 heading: 0.0,
             },
         };

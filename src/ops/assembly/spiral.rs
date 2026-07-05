@@ -74,25 +74,25 @@ pub fn generate_spiral(
 
     let start = if path.is_empty() {
         ToolPose {
-            pos: opts.center,
+            pos: Point3D::new(opts.center.x, opts.center.y, opts.z),
             heading: 0.0,
         }
     } else {
         ToolPose {
-            pos: Point::new(path[0].x, path[0].y),
+            pos: path[0],
             heading: spiral_heading(&path, 0),
         }
     };
 
     let end = if path.is_empty() {
         ToolPose {
-            pos: opts.center,
+            pos: Point3D::new(opts.center.x, opts.center.y, opts.z),
             heading: 0.0,
         }
     } else {
         let n = path.len();
         ToolPose {
-            pos: Point::new(path[n - 1].x, path[n - 1].y),
+            pos: path[n - 1],
             heading: spiral_heading(&path, n - 1),
         }
     };

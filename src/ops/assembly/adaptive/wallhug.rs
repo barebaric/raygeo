@@ -10,7 +10,7 @@ use prof_macros::prof;
 
 use crate::geo::shape::polygon::get_polygons_closest_point;
 use crate::ops::cut::ToolPose;
-use crate::types::{Point, Polygon};
+use crate::types::{Point, Point3D, Polygon};
 
 // ── envelope_distance ────────────────────────────────────────────────
 
@@ -52,7 +52,7 @@ impl WallHugSegments {
         }
     }
 
-    fn prune(&mut self, pos: Point, radius: f64) {
+    fn prune(&mut self, pos: Point3D, radius: f64) {
         let r2 = radius * radius;
         for segment in &mut self.previous {
             segment.retain(|p| {
@@ -120,12 +120,15 @@ impl WallHugTracker {
     /// pose.
     pub fn on_step(
         &mut self,
-        pos: Point,
+        pos: Point3D,
         heading: f64,
         radius: f64,
         valid_tool_area: &[Polygon],
     ) {
-        let dist = envelope_distance(pos, valid_tool_area);
+        let dist = envelope_distance(
+            crate::types::Point::new(pos.x, pos.y),
+            valid_tool_area,
+        );
         let inside = dist < radius + 1e-9;
 
         if !self.in_envelope && inside {
@@ -153,7 +156,7 @@ impl WallHugTracker {
 
     /// Prune older-segment hug points that the tool has now swept.
     /// Call every iteration (not just on successful steps).
-    pub fn prune(&mut self, pos: Point, radius: f64) {
+    pub fn prune(&mut self, pos: Point3D, radius: f64) {
         self.segments.prune(pos, radius);
     }
 

@@ -45,25 +45,33 @@ pub fn generate_toroid(
 
     let start = if path.is_empty() {
         ToolPose {
-            pos: opts.carrier.first().copied().unwrap_or(Point::ZERO),
+            pos: opts
+                .carrier
+                .first()
+                .map(|p| Point3D::new(p.x, p.y, opts.z))
+                .unwrap_or(Point3D::ZERO),
             heading: 0.0,
         }
     } else {
         ToolPose {
-            pos: Point::new(path[0].x, path[0].y),
+            pos: path[0],
             heading: toroid_heading(&path, 0, opts.direction),
         }
     };
 
     let end = if path.is_empty() {
         ToolPose {
-            pos: opts.carrier.last().copied().unwrap_or(Point::ZERO),
+            pos: opts
+                .carrier
+                .last()
+                .map(|p| Point3D::new(p.x, p.y, opts.z))
+                .unwrap_or(Point3D::ZERO),
             heading: 0.0,
         }
     } else {
         let n = path.len();
         ToolPose {
-            pos: Point::new(path[n - 1].x, path[n - 1].y),
+            pos: path[n - 1],
             heading: toroid_heading(&path, n - 1, opts.direction),
         }
     };

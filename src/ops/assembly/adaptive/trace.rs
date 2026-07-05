@@ -17,7 +17,7 @@ use crate::ops::container::Ops;
 use crate::ops::cut::ClearedArea;
 use crate::ops::cut::StepStatus;
 use crate::trace::Tracer;
-use crate::types::Point;
+use crate::types::Point3D;
 
 use super::tool::Tool;
 
@@ -77,9 +77,11 @@ pub(super) struct TraceRecordHeader {
     pub step_idx: u32,
     pub pos_x: f64,
     pub pos_y: f64,
+    pub pos_z: f64,
     pub heading: f64,
     pub prev_x: f64,
     pub prev_y: f64,
+    pub prev_z: f64,
     pub ops_len: u32,
 }
 
@@ -115,15 +117,16 @@ pub(super) struct AdaptivePayload {
     /// See `resume::DETAIL_*` constants for values.
     pub resume_strategy_details: [u8; 6],
     /// Per-strategy detail code for the last routing failure.
-    /// Index 0-3 = Direct, Frontier, Mat, AStar.
+    /// Index 0-4 = Direct, Frontier, Mat, AStar, ZHop.
     /// 0 = success / not tried.  See `routing::ROUTE_*` constants.
-    pub route_strategy_details: [u8; 4],
+    pub route_strategy_details: [u8; 5],
     /// Position of the last resume point candidate (routing target).
     pub resume_point_x: f64,
     pub resume_point_y: f64,
-    /// Per-strategy candidate positions (x, y).  None entries are stored
-    /// as (NaN, NaN).
-    pub resume_candidate_points: [(f64, f64); 6],
+    pub resume_point_z: f64,
+    /// Per-strategy candidate positions (x, y, z).  None entries are stored
+    /// as (NaN, NaN, NaN).
+    pub resume_candidate_points: [(f64, f64, f64); 6],
 }
 
 /// Per-step trace record, serialised as MessagePack.
@@ -148,7 +151,7 @@ impl TraceRecord {
         step_idx: u32,
         tool: &Tool,
         cleared: &ClearedArea,
-        prev_pos: Point,
+        prev_pos: Point3D,
         ops_len: u32,
     ) -> Self {
         let status: u8 = match status {
@@ -164,9 +167,11 @@ impl TraceRecord {
                 step_idx,
                 pos_x: tool.pos.x,
                 pos_y: tool.pos.y,
+                pos_z: tool.pos.z,
                 heading: tool.heading,
                 prev_x: prev_pos.x,
                 prev_y: prev_pos.y,
+                prev_z: prev_pos.z,
                 ops_len,
             },
             payload: AdaptivePayload {
@@ -186,10 +191,11 @@ impl TraceRecord {
                 wall_hug_segment_counts: Vec::new(),
                 resume_strategy_reasons: [0u8; 6],
                 resume_strategy_details: [0u8; 6],
-                route_strategy_details: [0u8; 4],
+                route_strategy_details: [0u8; 5],
                 resume_point_x: 0.0,
                 resume_point_y: 0.0,
-                resume_candidate_points: [(f64::NAN, f64::NAN); 6],
+                resume_point_z: 0.0,
+                resume_candidate_points: [(f64::NAN, f64::NAN, f64::NAN); 6],
             },
         }
     }
@@ -263,7 +269,7 @@ impl TraceRecorder {
         &mut self,
         tool: &Tool,
         cleared: &ClearedArea,
-        prev_pos: Point,
+        prev_pos: Point3D,
         ops_len: u32,
         wall_hug_points: &[(f64, f64)],
         wall_hug_segment_counts: &[u32],
@@ -292,7 +298,7 @@ impl TraceRecorder {
         status: StepStatus,
         tool: &Tool,
         cleared: &ClearedArea,
-        prev_pos: Point,
+        prev_pos: Point3D,
         ops_len: u32,
         iters: u32,
         iteration_angle: f64,
@@ -338,13 +344,13 @@ impl TraceRecorder {
         route_source: u8,
         tool: &Tool,
         cleared: &ClearedArea,
-        prev_pos: Point,
+        prev_pos: Point3D,
         ops_len: u32,
         reasons: &[u8; 6],
         details: &[u8; 6],
-        route_details: &[u8; 4],
-        rp: Point,
-        candidate_pts: &[(f64, f64); 6],
+        route_details: &[u8; 5],
+        rp: Point3D,
+        candidate_pts: &[(f64, f64, f64); 6],
         wall_hug_points: &[(f64, f64)],
         wall_hug_segment_counts: &[u32],
     ) {
@@ -370,6 +376,7 @@ impl TraceRecorder {
             rec.payload.route_strategy_details = *route_details;
             rec.payload.resume_point_x = rp.x;
             rec.payload.resume_point_y = rp.y;
+            rec.payload.resume_point_z = rp.z;
             rec.payload.resume_candidate_points = *candidate_pts;
             rec.payload.wall_hug_points = wall_hug_points.to_vec();
             rec.payload.wall_hug_segment_counts =
@@ -386,13 +393,13 @@ impl TraceRecorder {
         status: StepStatus,
         tool: &Tool,
         cleared: &ClearedArea,
-        prev_pos: Point,
+        prev_pos: Point3D,
         ops_len: u32,
         reasons: &[u8; 6],
         details: &[u8; 6],
-        route_details: &[u8; 4],
-        rp: Point,
-        candidate_pts: &[(f64, f64); 6],
+        route_details: &[u8; 5],
+        rp: Point3D,
+        candidate_pts: &[(f64, f64, f64); 6],
         wall_hug_points: &[(f64, f64)],
         wall_hug_segment_counts: &[u32],
     ) {
@@ -411,6 +418,7 @@ impl TraceRecorder {
             rec.payload.route_strategy_details = *route_details;
             rec.payload.resume_point_x = rp.x;
             rec.payload.resume_point_y = rp.y;
+            rec.payload.resume_point_z = rp.z;
             rec.payload.resume_candidate_points = *candidate_pts;
             rec.payload.wall_hug_points = wall_hug_points.to_vec();
             rec.payload.wall_hug_segment_counts =

@@ -253,11 +253,12 @@ def test_lead_in_out_applied_to_arc_contour():
     ops.apply_lead_in_out(2.0, 2.0)
     assert ops.len() > before
     arc_count = sum(
-        1 for i in range(ops.len())
+        1
+        for i in range(ops.len())
         if ops.command_type(i) == CommandType.ARC_TO
     )
     assert arc_count == 16, (
-        f'Arcs were lost: expected 16 ARC_TO, found {arc_count}'
+        f"Arcs were lost: expected 16 ARC_TO, found {arc_count}"
     )
 
 
@@ -275,9 +276,10 @@ def test_lead_in_out_applied_to_bezier_contour():
     ops.apply_lead_in_out(3.0, 3.0)
     assert ops.len() > before
     bezier_count = sum(
-        1 for i in range(ops.len())
+        1
+        for i in range(ops.len())
         if ops.command_type(i) == CommandType.BEZIER_TO
     )
     assert bezier_count == 1, (
-        f'Bezier was lost: expected 1 BEZIER_TO, found {bezier_count}'
+        f"Bezier was lost: expected 1 BEZIER_TO, found {bezier_count}"
     )

@@ -6,7 +6,7 @@
 
 use prof_macros::prof;
 
-use crate::types::Point;
+use crate::types::{Point, Point3D};
 
 // ── Tool constants ───────────────────────────────────────────────────
 
@@ -35,7 +35,7 @@ pub(super) const GYRO_BUFFER_LEN: usize = 5;
 #[derive(Clone, Copy, Debug)]
 pub struct Tool {
     /// Tool centre position.
-    pub pos: Point,
+    pub pos: Point3D,
     /// Current heading angle (radians).
     pub heading: f64,
     /// Tool radius.
@@ -55,7 +55,7 @@ impl Tool {
     /// Create a new tool, initializing the gyroscope with the initial
     /// heading.
     #[prof]
-    pub fn new(pos: Point, heading: f64, radius: f64) -> Self {
+    pub fn new(pos: Point3D, heading: f64, radius: f64) -> Self {
         let dir = Point::new(heading.cos(), heading.sin());
         Self {
             pos,

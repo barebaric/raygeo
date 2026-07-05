@@ -8,7 +8,7 @@ use crate::geo::shape::polygon::{
 };
 use crate::ops::cut::ClearedArea;
 use crate::ops::cut::ToolPose;
-use crate::types::{Point, Polygon};
+use crate::types::{Point, Point3D, Polygon};
 
 /// Compute the inward offset position from a frontier vertex.
 ///
@@ -159,8 +159,9 @@ pub fn search_frontier_engagement(
         get_polygons_group_intersection(&frontier, &envelope)
     };
     if !polys.is_empty() {
+        let start_2d = crate::types::Point::new(start.pos.x, start.pos.y);
         if let Some((closest_poly_idx, _t, _closest_pt, _d2)) =
-            get_polygons_closest_point(&polys, start.pos)
+            get_polygons_closest_point(&polys, start_2d)
         {
             let poly = &polys[closest_poly_idx];
             let n = poly.len();
@@ -170,8 +171,8 @@ pub fn search_frontier_engagement(
                     .iter()
                     .enumerate()
                     .min_by(|(_, a), (_, b)| {
-                        a.distance_squared(start.pos)
-                            .partial_cmp(&b.distance_squared(start.pos))
+                        a.distance_squared(start_2d)
+                            .partial_cmp(&b.distance_squared(start_2d))
                             .unwrap_or(std::cmp::Ordering::Equal)
                     })
                     .map(|(i, _)| i)?;
@@ -220,7 +221,11 @@ pub fn search_frontier_engagement(
                                 heading,
                             );
                             Some(ToolPose {
-                                pos: offset_pos,
+                                pos: Point3D::new(
+                                    offset_pos.x,
+                                    offset_pos.y,
+                                    start.pos.z,
+                                ),
                                 heading,
                             })
                         } else {
@@ -346,7 +351,7 @@ fn walk_envelope_boundary(
                             best = Some((
                                 score,
                                 ToolPose {
-                                    pos: pt,
+                                    pos: Point3D::new(pt.x, pt.y, start.pos.z),
                                     heading: probe_heading,
                                 },
                             ));

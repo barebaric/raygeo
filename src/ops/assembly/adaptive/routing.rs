@@ -12,7 +12,7 @@ use crate::geo::shape::compute_polygon_bounds;
 use crate::geo::shape::does_path_sweep_intersect_polygon;
 use crate::ops::assembly::adaptive::AdaptiveClearingOptions;
 use crate::ops::cut::ClearedArea;
-use crate::types::{Point, Polygon, Rect};
+use crate::types::{Point, Point3D, Polygon, Rect};
 
 use super::chain::StrategyChain;
 
@@ -20,6 +20,7 @@ pub use super::routing_astar::RoutingAStar;
 pub use super::routing_direct::RoutingDirect;
 pub use super::routing_frontier::RoutingFrontier;
 pub use super::routing_mat::RoutingMat;
+pub use super::routing_zhop::RoutingZHop;
 
 // ── RoutingContext ─────────────────────────────────────────────────
 
@@ -60,6 +61,9 @@ pub const ROUTE_ASTAR_NO_FREE_SPACE: u8 = 14;
 pub const ROUTE_ASTAR_FAILED: u8 = 15;
 pub const ROUTE_ASTAR_TOO_FEW_WAYPOINTS: u8 = 16;
 
+// ZHop
+pub const ROUTE_ZHOP_OK: u8 = 17;
+
 /// Per-strategy detail label (for logging / error messages).
 pub fn route_detail_label(code: u8) -> &'static str {
     match code {
@@ -79,6 +83,7 @@ pub fn route_detail_label(code: u8) -> &'static str {
         ROUTE_ASTAR_NO_FREE_SPACE => "no_free_space",
         ROUTE_ASTAR_FAILED => "astar_failed",
         ROUTE_ASTAR_TOO_FEW_WAYPOINTS => "too_few_waypoints",
+        ROUTE_ZHOP_OK => "zhop_ok",
         _ => "unknown",
     }
 }
@@ -96,10 +101,10 @@ pub trait RoutingStrategy {
     fn find_route(
         &self,
         ctx: &RouteCtx,
-        from: Point,
-        to: Point,
+        from: Point3D,
+        to: Point3D,
         detail: &mut u8,
-    ) -> Option<Vec<Point>>;
+    ) -> Option<Vec<Point3D>>;
 }
 
 // ── Strategy enum ─────────────────────────────────────────────────
@@ -118,6 +123,8 @@ pub enum RouteSource {
     RoutingMat = 3,
     /// Grid-based A* path through cleared fragments.
     RoutingAStar = 4,
+    /// Safe-Z direct travel (retract → direct move → plunge).
+    RoutingZHop = 5,
 }
 
 /// Source label for a given strategy.
@@ -128,6 +135,7 @@ pub(crate) fn source_label(source: RouteSource) -> &'static str {
         RouteSource::RoutingFrontier => "frontier",
         RouteSource::RoutingMat => "mat",
         RouteSource::RoutingAStar => "astar",
+        RouteSource::RoutingZHop => "zhop",
     }
 }
 
@@ -136,12 +144,14 @@ pub(crate) fn source_label(source: RouteSource) -> &'static str {
 /// True when the tool-disc sweep along `path` does NOT intersect any
 /// obstacle polygon.  When there are no obstacles the path is always
 /// considered clear.
-pub(super) fn sweep_clear(path: &[Point], ctx: &RouteCtx) -> bool {
+pub(super) fn sweep_clear(path: &[Point3D], ctx: &RouteCtx) -> bool {
     if ctx.obstacles.is_empty() {
         return true;
     }
+    let path_2d: Vec<Point> =
+        path.iter().map(|p| Point::new(p.x, p.y)).collect();
     !does_path_sweep_intersect_polygon(
-        path,
+        &path_2d,
         ctx.opts.radius,
         ctx.obstacles,
         ctx.obstacle_bounds,
@@ -156,34 +166,41 @@ pub(super) fn sweep_clear(path: &[Point], ctx: &RouteCtx) -> bool {
 /// `raw` is the waypoint list returned by a routing strategy.
 #[prof]
 pub(crate) fn smooth_route(
-    from: Point,
-    raw: &[Point],
+    from: Point3D,
+    raw: &[Point3D],
     obstacles: &[Polygon],
     clearance: f64,
-) -> Vec<Point> {
+) -> Vec<Point3D> {
     if raw.is_empty() {
         return vec![from];
     }
     let last = raw[raw.len() - 1];
-    // Fast path: just [from, to] — nothing to smooth.
     if raw.len() == 1 {
         return vec![from, last];
     }
-    let waypoints: Vec<Point> = raw[..raw.len() - 1].to_vec();
+    let waypoints_3d: Vec<Point3D> = raw[..raw.len() - 1].to_vec();
     let obs_bounds = compute_polygon_bounds(obstacles);
-    let smoothed = build_smoothed_path(
-        from,
-        last,
-        &waypoints,
+    let from_2d = Point::new(from.x, from.y);
+    let last_2d = Point::new(last.x, last.y);
+    let waypoints_2d: Vec<Point> =
+        waypoints_3d.iter().map(|p| Point::new(p.x, p.y)).collect();
+    let smoothed_2d = build_smoothed_path(
+        from_2d,
+        last_2d,
+        &waypoints_2d,
         obstacles,
         &obs_bounds,
         clearance,
         120,
     );
-    if smoothed.is_empty() {
+    if smoothed_2d.is_empty() {
         vec![from, last]
     } else {
-        smoothed
+        let z = from.z.max(last.z);
+        smoothed_2d
+            .iter()
+            .map(|p| Point3D::new(p.x, p.y, z))
+            .collect()
     }
 }
 
@@ -200,16 +217,17 @@ pub(crate) fn smooth_route(
 #[prof]
 pub fn optimize_route<'a>(
     ctx: &RouteCtx<'a>,
-    from: Point,
-    to: Point,
-    details: &mut [u8; 4],
-) -> Option<(RouteSource, Vec<Point>)> {
-    let mut chain: StrategyChain<&dyn RoutingStrategy, RouteSource, 4> =
+    from: Point3D,
+    to: Point3D,
+    details: &mut [u8; 5],
+) -> Option<(RouteSource, Vec<Point3D>)> {
+    let mut chain: StrategyChain<&dyn RoutingStrategy, RouteSource, 5> =
         StrategyChain::new([
             (&RoutingDirect, RouteSource::RoutingDirect),
             (&RoutingFrontier, RouteSource::RoutingFrontier),
             (&RoutingMat, RouteSource::RoutingMat),
             (&RoutingAStar, RouteSource::RoutingAStar),
+            (&RoutingZHop, RouteSource::RoutingZHop),
         ]);
 
     let result = chain.run(
@@ -219,8 +237,8 @@ pub fn optimize_route<'a>(
              s: &dyn RoutingStrategy,
              source: RouteSource,
              detail: &mut u8,
-             path: Vec<Point>|
-             -> Option<Vec<Point>> {
+             path: Vec<Point3D>|
+             -> Option<Vec<Point3D>> {
                 let smoothed =
                     smooth_route(from, &path, ctx.obstacles, ctx.opts.radius);
                 if smoothed.len() >= 2 {

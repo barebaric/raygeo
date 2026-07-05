@@ -692,8 +692,13 @@ class Inspector:
 
         # ── Position ──
         _cell("Position", "", bg=SEC, weight="bold")
-        _cell("pos", f"({rec.pos_x:.1f}, {rec.pos_y:.1f})")
-        _cell("prev", f"({rec.prev_x:.1f}, {rec.prev_y:.1f})")
+        pos_z = rec.pos_z if rec.pos_z is not None else 0.0
+        prev_z = rec.prev_z if rec.prev_z is not None else 0.0
+        _cell("pos", f"({rec.pos_x:.1f}, {rec.pos_y:.1f}, {pos_z:.1f})")
+        _cell(
+            "prev",
+            f"({rec.prev_x:.1f}, {rec.prev_y:.1f}, {prev_z:.1f})",
+        )
         _cell("step_dist", f"{step_dist:.2f}")
 
         # ── Heading ──
@@ -760,8 +765,8 @@ class Inspector:
             for i, name in enumerate(strat_names):
                 val = rec.resume_strategy_reasons[i]
                 det = rec.resume_strategy_details[i]
-                cpx, cpy = rec.resume_candidate_points[i]
-                if math.isnan(cpx) or math.isnan(cpy):
+                cpx, cpy, cpz = rec.resume_candidate_points[i]
+                if math.isnan(cpx) or math.isnan(cpy) or math.isnan(cpz):
                     if i == win_idx:
                         _cell(name, "ok", bg=WIN, color="darkgreen")
                     elif val == 0:
@@ -779,12 +784,12 @@ class Inspector:
                 else:
                     _cell(
                         name,
-                        f"({cpx:.3f}, {cpy:.3f})",
+                        f"({cpx:.3f}, {cpy:.3f}, {cpz:.3f})",
                         bg=WIN,
                         color="darkgreen",
                     )
 
-            route_names = ["direct", "frontier", "mat", "astar"]
+            route_names = ["direct", "frontier", "mat", "astar", "zhop"]
             win_route = (
                 rec.route_source.value - 1
                 if rec.route_source.value > 0

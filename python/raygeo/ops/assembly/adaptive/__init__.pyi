@@ -5,10 +5,12 @@ import builtins
 import collections.abc
 import raygeo
 from . import resume
+from . import routing
 from . import tool
 __all__ = [
     "adaptive_clearing",
     "resume",
+    "routing",
     "target_area_per_distance",
     "tool",
 ]
