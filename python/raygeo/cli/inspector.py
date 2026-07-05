@@ -412,24 +412,7 @@ class Inspector:
         # background that represents cleared area.
         _remaining = ca.remaining()
         _frontier = ca.frontier(0.05)
-        _r_signed = [get_polygon_signed_area(p) for p in _remaining]
-        _f_signed = [get_polygon_signed_area(p) for p in _frontier]
-        _r_verts = [len(p) for p in _remaining]
-        _f_verts = [len(p) for p in _frontier]
-        _r_pos = sum(a for a in _r_signed if a > 0)
-        _r_neg = sum(a for a in _r_signed if a < 0)
-        print(
-            f"step={step_idx}  n_cuts={n_cuts}  "
-            f"remaining: {len(_remaining)} poly  "
-            f"r+={_r_pos:.1f} r-={_r_neg:.1f}  "
-            f"signed={[f'{a:.4f}' for a in _r_signed]}  "
-            f"verts={_r_verts}  "
-            f"frontier: {len(_frontier)} poly  "
-            f"signed={[f'{a:.4f}' for a in _f_signed]}  "
-            f"verts={_f_verts}  "
-            f"fragments: {len(ca.fragments())}",
-            flush=True,
-        )
+
         for poly in _remaining:
             if len(poly) < 3:
                 continue
