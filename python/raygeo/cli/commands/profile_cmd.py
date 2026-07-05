@@ -1,8 +1,6 @@
-import dataclasses
-import sys
 import time
 
-from raygeo.cli.scenarios import SCENARIOS, build_scenario, circle_polygon
+from raygeo.cli.scenarios import SCENARIOS, build_scenario
 from raygeo.ops.assembly.adaptive import adaptive_clearing
 from raygeo.ops.cut.cleared_area import ClearedArea
 
@@ -24,6 +22,11 @@ def _add_scenario_args(p):
     p.add_argument("--advance", type=float, default=None)
     p.add_argument("--step-over", type=float, default=None)
     p.add_argument("--step-length", type=float, default=None)
+    p.add_argument("--max-deflection-deg", type=float, default=None)
+    p.add_argument("--wall-margin", type=float, default=None)
+    p.add_argument("--cut-z", type=float, default=None)
+    p.add_argument("--safe-z", type=float, default=None)
+    p.add_argument("--area-tolerance", type=float, default=None)
 
 
 def register(subparsers):
@@ -35,30 +38,7 @@ def register(subparsers):
 
 
 def run(args):
-    if args.svg:
-        scenario, seed_polys, _ = build_scenario(args)
-    else:
-        scenario = SCENARIOS.get(args.scenario)
-        if scenario is None:
-            print(
-                f"Unknown scenario: {args.scenario}. "
-                f"Available: {', '.join(SCENARIOS)}",
-                file=sys.stderr,
-            )
-            sys.exit(1)
-        if args.tool_radius is not None:
-            scenario = dataclasses.replace(
-                scenario, tool_radius=args.tool_radius
-            )
-        if args.advance is not None:
-            scenario = dataclasses.replace(scenario, advance=args.advance)
-        if args.step_over is not None:
-            scenario = dataclasses.replace(scenario, step_over=args.step_over)
-        if args.step_length is not None:
-            scenario = dataclasses.replace(
-                scenario, step_length=args.step_length
-            )
-        seed_polys = [circle_polygon(-13.7, 13.7, 12.2)]
+    scenario, seed_polys, _ = build_scenario(args)
 
     boundary = list(scenario.boundary)
     islands = [list(isl) for isl in scenario.islands]
@@ -79,6 +59,11 @@ def run(args):
         cut_z=scenario.cut_z,
         safe_z=scenario.safe_z,
         step_length=scenario.step_length,
+        max_deflection_deg=scenario.max_deflection_deg,
+        wall_margin=scenario.wall_margin,
+        area_tolerance=scenario.area_tolerance,
+        expansion_batch_size=scenario.expansion_batch_size,
+        cut_direction=scenario.cut_direction,
         profile=True,
     )
     t1 = time.perf_counter()
