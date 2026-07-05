@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.colors import to_hex
 
+from raygeo.cnc.machining.entry import adaptive_entry
 from raygeo.geo import Geometry
 from raygeo.geo.algo import hull
 from raygeo.geo.algo.cylindrical import transform_to_cylinder
@@ -15,7 +16,6 @@ from raygeo.geo.algo.smooth import smooth_polyline_3d
 from raygeo.geo.shape.bezier import linearize_bezier_adaptive
 from raygeo.geo.shape.polygon import get_polygon_convex_hull
 from raygeo.geo.shape.polygon3d import fillet_polyline_3d, offset_polyline_3d
-from raygeo.ops.assembly.entry import adaptive_entry
 from raygeo.ops.assembly.wavefront import adaptive_wavefronts
 from raygeo.ops.cut.cleared_area import ClearedArea
 from raygeo.ops.raster import ScanMode, rasterize_power_modulation

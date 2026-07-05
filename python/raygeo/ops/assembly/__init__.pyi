@@ -2,7 +2,6 @@
 # ruff: noqa: E501, F401, F403, F405
 
 from . import adaptive
-from . import entry
 from . import helix
 from . import ramp
 from . import result
@@ -11,7 +10,6 @@ from . import toroid
 from . import wavefront
 __all__ = [
     "adaptive",
-    "entry",
     "helix",
     "ramp",
     "result",

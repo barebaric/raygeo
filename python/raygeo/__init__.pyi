@@ -68,6 +68,7 @@ Examples
 
 from raygeo.geo import Geometry
 from raygeo.ops import Ops
+from . import cnc
 from . import geo
 from . import image
 from . import mesh
@@ -77,6 +78,7 @@ from . import trace
 __all__ = [
     "Geometry",
     "Ops",
+    "cnc",
     "geo",
     "image",
     "mesh",

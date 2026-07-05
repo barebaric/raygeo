@@ -13,7 +13,6 @@
 - `make docs` — re-generate the API docs
 - `make build` — build the wheel (release)
 
-
 # Adaptive clearing tracing
 
 - `raygeo trace <path>` — run adaptive clearing with tracing, write `.bin` file
@@ -33,16 +32,11 @@
 The crate is split into three layers that depend only downward:
 `geo` → `ops` → `cnc`. Never import upward.
 
-- `src/geo/` — pure geometry. Points, paths, offsets, algorithms. Knows
-  nothing about machining, motion commands, or tools.
-- `src/ops/` — the `Ops` command container and domain-neutral motion assembly
-  (raster, lead-in/out, polyline, …). Holds the generic `State` representation
-  (`feed_rate`, `spindle_rpm`, `coolant`, … as optional fields) so `Ops` can
-  carry any machine's state, but contains no domain logic that fills those
-  fields.
-- `src/cnc/` — the CNC domain: Operation orchestration: sequences operations
-  (e.g. entry + clear + finish), resolves tool-aware `State` via `StateStrategy`,
-  drives `geo`/`ops` primitives.
+| Layer | Owns                                                                                                                       | Does NOT know                   |
+| ----- | -------------------------------------------------------------------------------------------------------------------------- | ------------------------------- |
+| `geo` | Primitives & pure geometric algorithms. No "what-to-cut" decisions, no motion verbs, no machining terminology, no `Ops`.   | machining, motion, tools, `Ops` |
+| `ops` | Motion assembly: clearing strategies, linking, classification, and Ops emission. All assemblers produce and consume `Ops`. | tools, spindle, feed values     |
+| `cnc` | Operation orchestration: sequences entry + clear + finish.                                                                 | geometry algorithms             |
 
 # Adaptive clearing: resume and routing
 
@@ -51,7 +45,7 @@ recovery:
 
 ## Phase 1 — Resume strategies (`resume.rs`)
 
-Find *where* to resume cutting (a target point on the uncleared boundary).
+Find _where_ to resume cutting (a target point on the uncleared boundary).
 
 Each strategy returns `(source, resume_point)` or `None`. They are tried in
 priority order: WallHug → Segment → MAT → Frontier → Envelope → Island.
@@ -60,7 +54,7 @@ Per-strategy outcomes are recorded in `resume_strategy_reasons[0..5]` and
 
 ## Phase 2 — Routing strategies (`routing.rs`)
 
-Find *how* to travel from the tool's current position to the resume point
+Find _how_ to travel from the tool's current position to the resume point
 without colliding with uncleared material or islands.
 
 Each strategy returns `(source, smoothed_waypoints)` or `None`. Tried in
@@ -72,10 +66,10 @@ priority order: Direct → Frontier → MAT → AStar. Per-strategy outcomes are
 - Resume strategies must NOT perform routing. They only select a target.
 - The resume point returned by a resume strategy MUST lie in fully cleared
   area, and probing from it MUST yield a successful result (non-zero
-  engagement). Routing will reject candidates that violate this.
+  engagement).
 - Routing strategies must NOT select the target. They only find a safe path
   between two given points.
 - On routing failure, the candidate is blacklisted and phase 1 retries with
   the next strategy.
 - Phase 1 and phase 2 failures are independent and independently observable in
-  the trace (`strat=` vs `rout=` fields).
+  traces (`strat=` vs `rout=` fields).

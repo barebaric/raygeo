@@ -63,6 +63,7 @@
 //! let rect = geo.rect();
 //! ```
 
+pub mod cnc;
 pub mod constants;
 pub mod error;
 pub mod geo;
@@ -208,6 +209,7 @@ pub(crate) const MODULE_DOC: &str = concat!(
 #[cfg(feature = "python")]
 #[pymodule(gil_used = false)]
 fn raygeo(m: &Bound<'_, PyModule>) -> PyResult<()> {
+    python::cnc::register(m)?;
     python::geo::register(m)?;
     python::image::register(m)?;
     python::mesh::register(m)?;

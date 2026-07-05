@@ -1,3 +1,4 @@
+pub(crate) mod cnc;
 pub(crate) mod errors;
 pub(crate) mod geo;
 pub(crate) mod image;

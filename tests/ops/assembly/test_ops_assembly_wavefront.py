@@ -1,7 +1,7 @@
 """Tests for wavefront assembly module."""
 
+from raygeo.cnc.machining.entry import adaptive_entry
 from raygeo.ops import Ops
-from raygeo.ops.assembly.entry import adaptive_entry
 from raygeo.ops.assembly.wavefront import adaptive_wavefronts
 from raygeo.ops.cut.cleared_area import ClearedArea
 

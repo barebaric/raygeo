@@ -5,8 +5,8 @@ import math
 import matplotlib.pyplot as plt
 import numpy as np
 
+from raygeo.cnc.machining.entry import adaptive_entry
 from raygeo.geo.algo.medial_axis import MedialAxis
-from raygeo.ops.assembly.entry import adaptive_entry
 from raygeo.ops.cut.cleared_area import ClearedArea
 
 

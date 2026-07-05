@@ -6,11 +6,11 @@ import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.colors import Normalize
 
+from raygeo.cnc.machining.entry import adaptive_entry
 from raygeo.geo.shape.polygon import (
     get_polygon_signed_area,
     is_point_inside_polygon,
 )
-from raygeo.ops.assembly.entry import adaptive_entry
 from raygeo.ops.assembly.wavefront import adaptive_wavefronts
 from raygeo.ops.cut.cleared_area import ClearedArea
 from raygeo.svg import svg_string_to_geometries

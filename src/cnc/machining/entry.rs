@@ -1,7 +1,7 @@
-//! Central clearing entry dispatcher.
+//! CNC entry strategy orchestration.
 //!
-//! Determines the best entry method for a pocket and delegates to the
-//! appropriate generator module (helix, spiral, ramp, or toroid).
+//! Determines the best entry method for a pocket and dispatches to the
+//! appropriate ops-layer generator (helix, spiral, ramp, or toroid).
 
 use prof_macros::prof;
 

@@ -3,9 +3,9 @@
 import math
 import struct
 
+from raygeo.cnc.machining.entry import adaptive_entry
 from raygeo.ops import Ops
 from raygeo.ops.assembly.adaptive import adaptive_clearing
-from raygeo.ops.assembly.entry import adaptive_entry
 from raygeo.ops.cut.cleared_area import ClearedArea
 from raygeo.trace import TraceFile
 

@@ -4,6 +4,7 @@ import math
 
 import pytest
 
+from raygeo.cnc.machining.entry import adaptive_entry
 from raygeo.geo.shape.polygon import (
     JoinStyle,
     get_polygon_area,
@@ -16,7 +17,6 @@ from raygeo.ops.assembly.adaptive import (
     adaptive_clearing,
     target_area_per_distance,
 )
-from raygeo.ops.assembly.entry import adaptive_entry
 from raygeo.ops.cut.cleared_area import ClearedArea
 from raygeo.ops.cut.crescent import cut_area
 from raygeo.ops.types import CommandType

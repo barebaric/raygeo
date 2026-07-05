@@ -1,7 +1,6 @@
 use pyo3::prelude::*;
 
 pub(crate) mod adaptive;
-pub(crate) mod entry;
 pub(crate) mod helix;
 pub(crate) mod ramp;
 pub(crate) mod result;
@@ -14,7 +13,6 @@ pub(crate) fn register(ops_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     let assembly_mod = PyModule::new(py, "assembly")?;
 
     adaptive::register(&assembly_mod)?;
-    entry::register(&assembly_mod)?;
     helix::register(&assembly_mod)?;
     ramp::register(&assembly_mod)?;
     result::register(&assembly_mod)?;

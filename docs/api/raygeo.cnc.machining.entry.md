@@ -1,6 +1,6 @@
 ---
-title: raygeo.ops.assembly.entry
-sidebar_label: raygeo.ops.assembly.entry
+title: raygeo.cnc.machining.entry
+sidebar_label: raygeo.cnc.machining.entry
 ---
 
 ## Functions
@@ -43,15 +43,15 @@ Finds the optimal entry pole using `find_largest_circle`, then generates either 
 | `cut_power`       | `float = 1`                                    | Laser power for the entry path (0.0-1.0, default 1.0).   |
 | _Returns_         | `ops.assembly.result.AssemblyResult`           | An **AssemblyResult** with the entry toolpath.           |
 
-![Adaptive clearing — Helix → Spiral in a pocket with three islands](images/ops-assembly-entry-entry-multi.png)
+![Adaptive clearing — Helix → Spiral in a pocket with three islands](images/cnc-machining-entry-entry-multi.png)
 
 *Adaptive clearing — Helix → Spiral in a pocket with three islands*
 
-![Adaptive clearing — Helix → Spiral in an L-shaped pocket](images/ops-assembly-entry-entry-lshape.png)
+![Adaptive clearing — Helix → Spiral in an L-shaped pocket](images/cnc-machining-entry-entry-lshape.png)
 
 *Adaptive clearing — Helix → Spiral in an L-shaped pocket*
 
-![Adaptive clearing — ZigZag Ramp in a tight slot](images/ops-assembly-entry-entry-tight.png)
+![Adaptive clearing — ZigZag Ramp in a tight slot](images/cnc-machining-entry-entry-tight.png)
 
 *Adaptive clearing — ZigZag Ramp in a tight slot*
 
@@ -112,6 +112,6 @@ already know the entry point and max radius (e.g. from `find_largest_circle`).
 | `state`        | `ops.state.State &#124; None = None` | Optional machine state to apply before the path.       |
 | _Returns_      | `ops.assembly.result.AssemblyResult` | An **AssemblyResult**.                                 |
 
-![Helix → Spiral: helical plunge followed by Archimedean spiral](images/ops-assembly-helix-spiral-helix-spiral-example.png)
+![Helix → Spiral: helical plunge then Archimedean spiral](images/cnc-machining-entry-helix-spiral-example.png)
 
-*Helix → Spiral: helical plunge followed by Archimedean spiral*
+*Helix → Spiral: helical plunge then Archimedean spiral*

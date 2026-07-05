@@ -2,11 +2,11 @@ import dataclasses
 import math
 import pathlib
 
+from raygeo.cnc.machining.entry import adaptive_entry
 from raygeo.geo.shape.polygon import (
     get_polygon_signed_area,
     is_point_inside_polygon,
 )
-from raygeo.ops.assembly.entry import adaptive_entry
 
 # ── Helper geometry functions ────────────────────────────────────
 

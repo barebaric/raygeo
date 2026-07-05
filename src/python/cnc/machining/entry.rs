@@ -1,4 +1,4 @@
-use crate::ops::assembly::entry;
+use crate::cnc::machining::entry;
 use crate::ops::state::State;
 use crate::python::ops::assembly::result::PyAssemblyResult;
 use crate::python::ops::state::PyState;
@@ -6,8 +6,8 @@ use crate::types::Point;
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::gen_stub_pyfunction;
 
-pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
-    let py = assembly_mod.py();
+pub(crate) fn register(machining_mod: &Bound<'_, PyModule>) -> PyResult<()> {
+    let py = machining_mod.py();
     let m = PyModule::new(py, "entry")?;
     register_functions!(
         m,
@@ -15,10 +15,10 @@ pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
         detect_entry_method_py,
         generate_helix_spiral_py,
     );
-    assembly_mod.add_submodule(&m)?;
+    machining_mod.add_submodule(&m)?;
 
     let sys_modules = py.import("sys")?.getattr("modules")?;
-    sys_modules.set_item("raygeo.ops.assembly.entry", &m)?;
+    sys_modules.set_item("raygeo.cnc.machining.entry", &m)?;
 
     Ok(())
 }
@@ -61,7 +61,7 @@ pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
         :returns: An :class:`AssemblyResult` with the entry toolpath.
         """
     "#,
-    module = "raygeo.ops.assembly.entry"
+    module = "raygeo.cnc.machining.entry"
 )]
 #[pyfunction(name = "adaptive_entry")]
 #[pyo3(signature = (
@@ -140,7 +140,7 @@ fn adaptive_entry_py(
         :returns: Entry method name.
         """
     "#,
-    module = "raygeo.ops.assembly.entry"
+    module = "raygeo.cnc.machining.entry"
 )]
 #[pyfunction(name = "detect_entry_method")]
 fn detect_entry_method_py(
@@ -191,7 +191,7 @@ fn detect_entry_method_py(
         :returns: An :class:`AssemblyResult`.
         """
     "#,
-    module = "raygeo.ops.assembly.entry"
+    module = "raygeo.cnc.machining.entry"
 )]
 #[pyfunction(name = "generate_helix_spiral")]
 #[pyo3(signature = (

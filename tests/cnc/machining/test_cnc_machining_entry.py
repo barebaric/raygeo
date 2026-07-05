@@ -1,11 +1,11 @@
 """Tests for entry assembly module."""
 
-from raygeo.ops import Ops
-from raygeo.ops.assembly.entry import (
+from raygeo.cnc.machining.entry import (
     adaptive_entry,
     detect_entry_method,
     generate_helix_spiral,
 )
+from raygeo.ops import Ops
 from raygeo.ops.state import State
 
 
@@ -68,7 +68,7 @@ def test_adaptive_entry_start_end_toolpose():
 
 def test_adaptive_entry_tight_slot_ramp_has_cleared_polygons():
     """Tight slot: ramp path should return a cleared polygon."""
-    boundary = [(0, 0), (100, 0), (100, 16), (0, 16)]
+    boundary = [(0, 0), (100, 0), (100, 10), (0, 10)]
     result = adaptive_entry(
         pocket_boundary=boundary,
         tool_radius=4.0,
@@ -139,7 +139,7 @@ def test_adaptive_entry_wide_returns_cleared_polygons():
 
 
 def test_adaptive_entry_tight_slot_returns_path():
-    boundary = [(0, 0), (100, 0), (100, 16), (0, 16)]
+    boundary = [(0, 0), (100, 0), (100, 10), (0, 10)]
     result = adaptive_entry(
         pocket_boundary=boundary,
         tool_radius=4.0,
