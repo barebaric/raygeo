@@ -32,10 +32,7 @@ use crate::error::{RaygeoError, RaygeoResult};
 use crate::geo::algo::medial_axis::MedialAxis;
 use crate::geo::algo::offset::compute_inset_region;
 use crate::geo::shape::arc::normalize_angle_signed;
-use crate::geo::shape::polygon::{
-    get_polygon_area, get_polygon_centroid, get_polygon_signed_area,
-    get_polygons_group_intersection,
-};
+use crate::geo::shape::polygon::{get_polygon_area, get_polygon_centroid};
 use crate::ops::assembly::result::AssemblyResult;
 use crate::ops::container::Ops;
 use crate::ops::cut::step;
@@ -395,21 +392,11 @@ fn handle_stall(
     }
 
     // If the pocket is effectively converged, exit normally.
-    // The raw remaining may overcount area outside the valid
-    // tool region, so clip against the inset boundary.
-    let clipped_remaining: f64 = {
-        let rem = s.cleared.remaining();
-        if rem.is_empty() {
-            0.0
-        } else {
-            let clipped =
-                get_polygons_group_intersection(&rem, step_opts.valid_area);
-            clipped
-                .iter()
-                .map(|p| get_polygon_signed_area(p).max(0.0))
-                .sum::<f64>()
-        }
-    };
+    // `actionable_remaining` is the residual inside the actionable
+    // zone (boundary inset by step_length), excluding slivers the
+    // stepper cannot productively engage with.
+    let clipped_remaining: f64 =
+        s.cleared.actionable_remaining(opts.step_length * 1.5);
     if clipped_remaining < opts.area_tolerance {
         dbg_log!(
             "EXIT  reason=converged(close-enough)  step_count={}  \
@@ -672,12 +659,20 @@ pub fn adaptive_clearing(
             }
         }
 
-        // Convergence: check that remaining uncut area is below
-        // tolerance.  Use an inexpensive fragment-sum check first
-        // and only pay for the full union+diff when it looks close.
+        // Convergence: check that actionable uncut area (inside the
+        // tool-centre envelope) is below tolerance.  An inexpensive
+        // fragment-sum check gates the more expensive
+        // envelope-vs-fragments intersection.
+        //
+        // `actionable_remaining` excludes the wall band (the strip
+        // between the stock outline and the tool-centre envelope):
+        // the tool cannot reach that material with its centre, so it
+        // should never block convergence even if `remaining_area`
+        // is non-zero.  Wall-band slivers are the residual the
+        // stepper chases without making progress.
         let frag_total = cleared.total_area();
         if frag_total >= valid_total - opts.area_tolerance && {
-            let rem = cleared.remaining_area();
+            let rem = cleared.actionable_remaining(opts.step_length * 1.5);
             rem < opts.area_tolerance
         } {
             dbg_log!(

@@ -101,15 +101,17 @@ class TraceFile:
     r"""
     Binary trace file with random access to records.
     
-    Usage::
+    Usage:
     
-        >>> from raygeo.trace import TraceFile
-        >>> t = TraceFile("path/to/trace.bin")
-        >>> len(t)          # number of records
-        >>> t[0]            # first record (TraceRecord with dot access)
-        >>> t.toolpath      # list of (x, y, move_kind) tuples
-        >>> t.geometry      # dict with tool_radius, boundary, islands, seeds
-        >>> t.mat_nodes     # MAT nodes or empty list
+    ```python
+    >>> from raygeo.trace import TraceFile
+    >>> t = TraceFile("path/to/trace.bin")
+    >>> len(t)          # number of records
+    >>> t[0]            # first record (TraceRecord with dot access)
+    >>> t.toolpath      # list of (x, y, move_kind) tuples
+    >>> t.geometry      # dict with tool_radius, boundary, islands, seeds
+    >>> t.mat_nodes     # MAT nodes or empty list
+    ```
     """
     @property
     def ver(self) -> builtins.int: ...

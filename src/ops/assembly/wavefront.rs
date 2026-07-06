@@ -5,7 +5,6 @@ use prof_macros::prof;
 use crate::ops::cut::ClearedArea;
 
 use crate::error::RaygeoResult;
-use crate::geo::algo::offset::compute_inset_region;
 use crate::geo::shape::polygon::{get_polygon_area, resample_polygon};
 use crate::ops::assembly::result::AssemblyResult;
 use crate::ops::container::Ops;
@@ -41,12 +40,6 @@ pub fn adaptive_wavefronts(
     opts: &AdaptiveWavefrontOptions,
     cut_state: &State,
 ) -> RaygeoResult<AssemblyResult> {
-    let (_, valid_total_area) = compute_inset_region(
-        &opts.pocket_boundary,
-        opts.tool_radius,
-        &opts.islands,
-    );
-
     let mut ops = Ops::new();
     let mut state_applied = false;
 
@@ -104,8 +97,22 @@ pub fn adaptive_wavefronts(
         }
 
         let ring_area: f64 = new_ring.iter().map(get_polygon_area).sum();
+        // Convergence: stop when the actionable residual (uncleared
+        // material inside the tool-centre envelope) drops below the
+        // area tolerance, or when this iteration added almost nothing.
+        // Using `actionable_remaining` here (instead of comparing
+        // `cleared.total_area()` to a precomputed `valid_total_area`)
+        // keeps the metric consistent with the polygon convention used
+        // by `compute_inset_region` (signed areas: outer CCW
+        // positive, island-buffer holes CW negative).  The old
+        // comparison broke when `compute_inset_region` switched from
+        // `get_polygon_area` (absolute) to `get_polygon_signed_area`
+        // because it made `valid_total_area` smaller than
+        // `cleared.total_area()` could ever reach, triggering early
+        // exit before the wavefront reached the walls.
         if ring_area < opts.area_tolerance
-            || cleared.total_area() >= valid_total_area - 0.1
+            || cleared.actionable_remaining(opts.tool_radius)
+                < opts.area_tolerance
         {
             break;
         }

@@ -350,6 +350,26 @@ impl PyClearedArea {
         self.inner.remaining_area()
     }
 
+    /// Uncleared area **inside the actionable zone** of the pocket.
+    ///
+    /// The actionable zone is the boundary inset by
+    /// ``inset_distance``, with islands buffered by the same amount.
+    /// Material outside this zone — wall-band slivers thinner than
+    /// ``inset_distance`` — is excluded, so this metric can gate
+    /// convergence on whether any *actionable* material remains.
+    ///
+    /// ``inset_distance`` is typically ``step_length``: slivers
+    /// thinner than the per-step advance get skipped by the
+    /// stepper, so they should not gate convergence.
+    ///
+    /// :param inset_distance: Inset distance (mm) defining the
+    ///                        actionable zone (boundary inset,
+    ///                        islands buffered).
+    /// :returns: Actionable remaining area in mm².
+    pub fn actionable_remaining(&self, inset_distance: f64) -> f64 {
+        self.inner.actionable_remaining(inset_distance)
+    }
+
     /// Return the union of all polygons currently tracked as cleared.
     ///
     /// Each fragment is a closed polygon (list of ``(x, y)`` vertices)

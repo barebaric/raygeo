@@ -168,7 +168,8 @@ impl WallHugTracker {
                     // Same distance — possibly scraping along the wall.
                     // Record periodically even without formal departure.
                     self.steps_since_record += 1;
-                    if self.steps_since_record >= ENVELOPE_VISIT_RECORD_INTERVAL {
+                    if self.steps_since_record >= ENVELOPE_VISIT_RECORD_INTERVAL
+                    {
                         self.segments.push(candidate);
                         self.steps_since_record = 0;
                     }

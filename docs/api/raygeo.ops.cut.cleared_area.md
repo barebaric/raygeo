@@ -10,6 +10,26 @@ in red*
 
 ## ClearedArea
 
+### `actionable_remaining()`
+
+```python
+actionable_remaining(inset_distance: float) -> float
+```
+
+Uncleared area **inside the actionable zone** of the pocket.
+
+The actionable zone is the boundary inset by `inset_distance`, with islands buffered by the same
+amount. Material outside this zone — wall-band slivers thinner than `inset_distance` — is excluded,
+so this metric can gate convergence on whether any *actionable* material remains.
+
+`inset_distance` is typically `step_length`: slivers thinner than the per-step advance get skipped
+by the stepper, so they should not gate convergence.
+
+| Parameter        | Type    | Description                                                                          |
+| ---------------- | ------- | ------------------------------------------------------------------------------------ |
+| `inset_distance` | `float` | Inset distance (mm) defining the actionable zone (boundary inset, islands buffered). |
+| _Returns_        | `float` | Actionable remaining area in mm².                                                    |
+
 ### `begin_batch()`
 
 ```python

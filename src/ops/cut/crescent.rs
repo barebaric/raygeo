@@ -113,8 +113,9 @@ fn prepare_sweep(
         }
         let is_hole = get_polygon_signed_area(&rotated) < 0.0;
         frag_is_hole.push(is_hole);
-        let encloses =
-            does_polygon_enclose_circle_with_bounds(c2, radius, &rotated, &bounds);
+        let encloses = does_polygon_enclose_circle_with_bounds(
+            c2, radius, &rotated, &bounds,
+        );
         frag_encloses.push(encloses);
         // Only short-circuit for CCW fragments when no CW hole
         // overlaps the disc.  A nearby hole means the disc reaches

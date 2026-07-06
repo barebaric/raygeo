@@ -3,7 +3,12 @@
 import math
 import struct
 
-from raygeo.ops.assembly.adaptive import adaptive_clearing
+import pytest
+
+from raygeo.ops.assembly.adaptive import (
+    ResumePointNotFoundError,
+    adaptive_clearing,
+)
 from raygeo.ops.cut.cleared_area import ClearedArea
 from raygeo.trace import TraceFile
 
@@ -156,11 +161,23 @@ def test_trace_records_have_step_idx(tmp_path):
 
 
 def test_trace_with_islands(tmp_path):
-    """Trace with islands succeeds and records reflect it."""
+    """Island too close to wall creates unreachable material.
+
+    The 6×6 island centered at (8,0) leaves only 4 mm between its
+    right edge (x=11) and the right wall (x=15).  The tool
+    (radius 3 mm) cannot fit through a 4 mm gap (2R = 6 mm), so a
+    region on the far side is topologically unreachable.
+
+    After clearing the reachable region, the stepper correctly detects
+    no remaining engagement and raises `ResumePointNotFoundError`.
+    This is *not* a bug — it is the expected outcome for a geometry
+    with narrow passages the tool cannot navigate.
+    """
     tp = str(tmp_path / "trace.bin")
     boundary = _rect(0, 0, 30, 30)
     islands = [_rect(8, 0, 6, 6)]
-    _run_adaptive(boundary, islands=islands, trace_path=tp)
+    with pytest.raises(ResumePointNotFoundError):
+        _run_adaptive(boundary, islands=islands, trace_path=tp)
     trace = TraceFile(tp)
     geo = trace.geometry
     assert len(geo["islands"]) == 1

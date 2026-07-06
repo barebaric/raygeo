@@ -12,7 +12,8 @@ use crate::error::{RaygeoError, RaygeoResult};
 use crate::geo::algo::medial_axis::MedialAxis;
 use crate::geo::shape::compute_polygon_bounds;
 use crate::geo::shape::polygon::{
-    get_polygons_closest_point, walk_polygon_vertices,
+    get_polygons_closest_point, get_polygons_group_intersection,
+    walk_polygon_vertices,
 };
 use crate::ops::container::Ops;
 use crate::ops::cut::interp::point_in_valid_area;
@@ -515,7 +516,16 @@ pub fn emit_resume_travel(
     out_route_details: Option<&mut [u8; 4]>,
 ) -> RaygeoResult<routing::RouteSource> {
     // Obstacles = remaining (uncut) material + islands (permanent no-go zones).
-    let mut obstacles = cleared.remaining();
+    // Clip remaining to the tool-centre envelope so that thin wall slivers
+    // (which are unreachable by the tool centre and too narrow to matter)
+    // are not treated as routing obstacles.  Interior uncut islands are
+    // kept and correctly avoided.
+    let envelope = cleared.envelope(opts.radius);
+    let mut obstacles = if envelope.is_empty() {
+        cleared.remaining()
+    } else {
+        get_polygons_group_intersection(&cleared.remaining(), &envelope)
+    };
     obstacles.extend(opts.islands.iter().cloned());
     let obs_bounds = compute_polygon_bounds(&obstacles);
 

@@ -361,7 +361,11 @@ fn step_inner(
         // Early exit: once we've sampled 0°, min°, max° (iter 0-2)
         // with no correct-side engagement, the solver is chasing
         // wrong-side slivers — bail.
-        if opts.dir_sign != 0.0 && found_area && !found_correct_side && iter >= 2 {
+        if opts.dir_sign != 0.0
+            && found_area
+            && !found_correct_side
+            && iter >= 2
+        {
             exit_reason = "wrong_side_only";
             dbg_log!(
                 "  iter {}  WRONG_SIDE  correct side has no engagement → \
@@ -479,7 +483,7 @@ fn step_inner(
     // This allows the tool to steer toward material when the solver
     // reversed or lost engagement (but NOT from slot overload).
     let reversed = best_angle.abs() > std::f64::consts::FRAC_PI_2;
-    if status == StepStatus::LostEngagement && best_area < floor || reversed {
+    if best_area < floor && (status == StepStatus::LostEngagement || reversed) {
         const LOOKAHEAD_STEPS: usize = 5;
         let lookahead_angles = [
             0.0_f64,

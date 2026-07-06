@@ -1225,7 +1225,9 @@ fn does_polygon_enclose_circle_impl(
         center.x + radius,
         center.y + radius,
     );
-    let b = bounds.copied().unwrap_or_else(|| get_polygon_bounds(polygon));
+    let b = bounds
+        .copied()
+        .unwrap_or_else(|| get_polygon_bounds(polygon));
     if !crate::geo::shape::rect::does_rect_contain_rect(b, circle_rect) {
         return false;
     }

@@ -84,7 +84,7 @@ def run(args):
                 for i, v in enumerate(rec.resume_strategy_reasons)
             )
             + "\trout="
-                + "|".join(
+            + "|".join(
                 "DFMZ"[i]
                 + ":"
                 + get_route_detail_name(rec.route_strategy_details[i])

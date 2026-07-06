@@ -3,6 +3,14 @@ title: raygeo.ops.assembly.adaptive
 sidebar_label: raygeo.ops.assembly.adaptive
 ---
 
+## ResumePointNotFoundError
+
+Raised when all resume strategies fail to find an engagement point.
+
+## RoutingError
+
+Raised when all route strategies fail to find a path.
+
 ## Functions
 
 ### `adaptive_clearing()`

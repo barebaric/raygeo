@@ -52,6 +52,9 @@ pub struct ClearedArea {
     /// Cleared whenever fragments are mutated (see
     /// [`Self::clear_sweep_cache`]).
     sweep_cache: Mutex<Option<SweepCache>>,
+    /// Cached `get_polygons_union(&self.fragments)` for
+    /// [`Self::actionable_remaining`].  Cleared when fragments change.
+    fragments_union_cache: Mutex<Option<Vec<Polygon>>>,
 }
 
 impl ClearedArea {
@@ -71,6 +74,7 @@ impl ClearedArea {
             batch_radius: 0.0,
             batch_active: false,
             sweep_cache: Mutex::new(None),
+            fragments_union_cache: Mutex::new(None),
         }
     }
 
@@ -93,6 +97,7 @@ impl ClearedArea {
             batch_radius: 0.0,
             batch_active: false,
             sweep_cache: Mutex::new(None),
+            fragments_union_cache: Mutex::new(None),
         };
         for poly in initial {
             if poly.len() >= 3 {
@@ -137,6 +142,7 @@ impl ClearedArea {
     #[inline]
     fn clear_sweep_cache(&self) {
         *self.sweep_cache.lock().unwrap() = None;
+        *self.fragments_union_cache.lock().unwrap() = None;
     }
 
     /// Replace all stored fragments with a new set (e.g., the new frontier
@@ -205,21 +211,10 @@ impl ClearedArea {
     #[prof]
     pub fn query_window(&self, bbox: Rect) -> Vec<&Polygon> {
         let indices = self.grid.query(bbox);
-        let mut result: Vec<&Polygon> = indices
+        indices
             .iter()
             .filter_map(|&idx| self.fragments.get(idx))
-            .collect();
-        result.sort_by(|a, b| {
-            a.first()
-                .and_then(|pa| {
-                    b.first().map(|pb| {
-                        pa.x.partial_cmp(&pb.x)
-                            .unwrap_or(std::cmp::Ordering::Equal)
-                    })
-                })
-                .unwrap_or(std::cmp::Ordering::Equal)
-        });
-        result
+            .collect()
     }
 
     /// Return the uncut stock: stock ∖ fragments.
@@ -243,16 +238,25 @@ impl ClearedArea {
 
     /// Area of uncut material remaining in the pocket.
     ///
-    /// Clipper2 returns holes (islands or cleared regions) as separate
-    /// CW polygons with negative signed area.  Summing signed areas
-    /// correctly accounts for material (CCW → positive) and voids
-    /// (CW → negative) without inflating the total.
+    /// Computed as stock area minus the signed area of fragments
+    /// intersected with the stock.  This avoids depending on the
+    /// flat-path output of the difference operation (which can
+    /// produce orphan CCW outers around islands).
     #[prof]
     pub fn remaining_area(&self) -> f64 {
-        self.remaining()
-            .iter()
-            .map(|p| get_polygon_signed_area(p))
-            .sum()
+        let stock = self.stock();
+        if stock.is_empty() {
+            return 0.0;
+        }
+        if self.fragments.is_empty() {
+            return stock.iter().map(|p| get_polygon_signed_area(p)).sum();
+        }
+        let stock_area: f64 =
+            stock.iter().map(|p| get_polygon_signed_area(p)).sum();
+        let in_stock = get_polygons_group_intersection(&stock, &self.fragments);
+        let cleared: f64 =
+            in_stock.iter().map(|p| get_polygon_signed_area(p)).sum();
+        (stock_area - cleared).max(0.0)
     }
 
     #[prof]
@@ -261,6 +265,56 @@ impl ClearedArea {
             .fragments
             .iter()
             .map(|p| get_polygon_signed_area(p))
+            .sum();
+        total.max(0.0)
+    }
+    /// Area of uncleared material **inside the actionable zone**.
+    ///
+    /// The actionable zone is the pocket boundary inset by
+    /// `inset_distance` (with islands buffered by the same amount).
+    /// Any material outside this zone — wall-band slivers thinner
+    /// than `inset_distance` — is excluded from the residual because
+    /// the stepper cannot productively engage with it.
+    ///
+    /// For convergence gating, `inset_distance` is typically
+    /// `step_length`: slivers thinner than the per-step advance get
+    /// skipped by the stepper, so they should not block convergence.
+    ///
+    /// Computed lazily on each call as
+    /// `area(inset_region − fragments_union)`.
+    #[prof]
+    pub fn actionable_remaining(&self, inset_distance: f64) -> f64 {
+        let region =
+            compute_inset_region(&self.boundary, inset_distance, &self.islands)
+                .0;
+        if region.is_empty() {
+            return 0.0;
+        }
+        if self.fragments.is_empty() {
+            // Region is already clipped to islands; outer rings
+            // (CCW positive) and hole rings (CW negative) sum to the
+            // net enclosed area.
+            return region
+                .iter()
+                .map(|p| get_polygon_signed_area(p))
+                .sum::<f64>()
+                .max(0.0);
+        }
+        let unclipped = {
+            let mut cache = self.fragments_union_cache.lock().unwrap();
+            let unioned = cache
+                .get_or_insert_with(|| get_polygons_union(&self.fragments));
+            get_polygons_group_difference(&region, unioned)
+        };
+        // Clipper2 returns the difference as a bundle: outer rings
+        // (positive signed area) and holes (negative signed area).
+        // Summing signed areas gives correct net enclosed area.
+        // Filter sub-resolution artefacts (< 0.5 mm²) the same way
+        // `remaining()` does so the two metrics are comparable.
+        let total: f64 = unclipped
+            .into_iter()
+            .filter(|p| p.len() >= 3 && get_polygon_signed_area(p).abs() >= 0.5)
+            .map(|p| get_polygon_signed_area(&p))
             .sum();
         total.max(0.0)
     }
@@ -288,6 +342,7 @@ impl ClearedArea {
         let mut all_polys = self.fragments.clone();
         all_polys.extend(polygons.iter().cloned());
         self.fragments = get_polygons_union(&all_polys);
+        self.clear_sweep_cache();
         self.rebuild_grid();
     }
 
@@ -319,6 +374,7 @@ impl ClearedArea {
                 }
             }
         }
+        self.clear_sweep_cache();
         new
     }
 

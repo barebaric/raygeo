@@ -124,6 +124,20 @@ register_scenario(
     )
 )
 
+register_scenario(
+    Scenario(
+        name="trace-with-islands",
+        boundary=rect(0, 0, 30, 30),
+        islands=[rect(8, 0, 6, 6)],
+        tool_radius=3.0,
+        advance=1.5,
+        step_over=2.0,
+        cut_z=-5.0,
+        safe_z=2.0,
+        area_tolerance=4.0,
+    )
+)
+
 
 # ── SVG scenario loader ──────────────────────────────────────────
 
@@ -264,6 +278,31 @@ def build_scenario(args):
         print(
             "  Centre-island scenario: circle seed "
             "centre=(-13.7,13.7) radius=12.2"
+        )
+
+    elif args.scenario == "trace-with-islands":
+        scenario = SCENARIOS["trace-with-islands"]
+        if args.tool_radius is not None:
+            scenario = dataclasses.replace(
+                scenario, tool_radius=args.tool_radius
+            )
+        if args.advance is not None:
+            scenario = dataclasses.replace(scenario, advance=args.advance)
+        if args.step_over is not None:
+            scenario = dataclasses.replace(scenario, step_over=args.step_over)
+        if args.cut_z is not None:
+            scenario = dataclasses.replace(scenario, cut_z=args.cut_z)
+        if args.safe_z is not None:
+            scenario = dataclasses.replace(scenario, safe_z=args.safe_z)
+        if args.area_tolerance is not None:
+            scenario = dataclasses.replace(
+                scenario, area_tolerance=args.area_tolerance
+            )
+
+        seed_polys = [circle_polygon(0, 0, 5, 32)]
+        entry_ops = None
+        print(
+            "  Trace-with-islands scenario: circle seed centre=(0,0) radius=5"
         )
 
     else:

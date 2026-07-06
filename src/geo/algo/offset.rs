@@ -24,8 +24,9 @@ use crate::geo::algo::topology::{
 };
 use crate::geo::geometry::Geometry;
 use crate::geo::shape::polygon::{
-    get_polygon_area, get_polygon_centroid, get_polygons_group_difference,
-    is_point_in_polygon, offset_polygon, JoinStyle,
+    get_polygon_area, get_polygon_centroid, get_polygon_signed_area,
+    get_polygons_group_difference, is_point_in_polygon, offset_polygon,
+    JoinStyle,
 };
 use crate::types::{Point, Point3D, Polygon};
 
@@ -449,6 +450,9 @@ pub fn compute_inset_region(
             region = get_polygons_group_difference(&region, &obstacle_bufs);
         }
     }
-    let total_area: f64 = region.iter().map(get_polygon_area).sum();
+    let total_area: f64 = region
+        .iter()
+        .map(|p| get_polygon_signed_area(p.as_slice()))
+        .sum();
     (region, total_area)
 }

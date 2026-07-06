@@ -79,9 +79,9 @@ value: int
 
 Binary trace file with random access to records.
 
-Usage::
+Usage:
 
-```
+```python
 >>> from raygeo.trace import TraceFile
 >>> t = TraceFile("path/to/trace.bin")
 >>> len(t)          # number of records
