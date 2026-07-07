@@ -20,11 +20,11 @@ adaptive_clearing(
     cleared: ops.cut.cleared_area.ClearedArea,
     pocket_boundary: Sequence[tuple[float, float]],
     islands: Sequence[Sequence[tuple[float, float]]] = [],
-    radius: float = 3,
-    advance: float = 1.5,
-    cut_z: float = -5,
-    safe_z: float = 2,
+    tool_radius: float = 3,
+    step_over: float = 1.5,
     step_length: float = 0.6,
+    target_z: float = -5,
+    safe_z: float = 2,
     max_deflection_deg: float = 30,
     wall_margin: float = 0,
     area_tolerance: float = 1,
@@ -52,11 +52,11 @@ and prepending the entry Ops to the result.
 | `cleared`              | `ops.cut.cleared_area.ClearedArea`             | `ClearedArea` instance (mutated in place).                                                                                        |
 | `pocket_boundary`      | `Sequence[tuple[float, float]]`                | Outer boundary of the pocket.                                                                                                     |
 | `islands`              | `Sequence[Sequence[tuple[float, float]]] = []` | List of island (hole) polygons (default []).                                                                                      |
-| `radius`               | `float = 3`                                    | Tool radius in mm (default 3.0).                                                                                                  |
-| `advance`              | `float = 1.5`                                  | Forward advance per step (default 1.5).                                                                                           |
-| `cut_z`                | `float = -5`                                   | Cutting Z height (default -5.0).                                                                                                  |
+| `tool_radius`          | `float = 3`                                    | Tool radius in mm (default 3.0).                                                                                                  |
+| `step_over`            | `float = 1.5`                                  | Step-over distance (default 1.5).                                                                                                 |
+| `step_length`          | `float = 0.6`                                  | Forward step length in mm (default 0.6).                                                                                          |
+| `target_z`             | `float = -5`                                   | Cutting Z height (default -5.0).                                                                                                  |
 | `safe_z`               | `float = 2`                                    | Retract Z height for travel (default 2.0).                                                                                        |
-| `step_length`          | `float = 0.6`                                  | Forward distance per solver step (default 0.6).                                                                                   |
 | `max_deflection_deg`   | `float = 30`                                   | Maximum steering deflection per step in degrees (default 30).                                                                     |
 | `wall_margin`          | `float = 0`                                    | Extra clearance between tool and boundary (default 0.0).                                                                          |
 | `area_tolerance`       | `float = 1`                                    | Stop when remaining uncut area drops below this threshold (default 1.0).                                                          |

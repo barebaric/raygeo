@@ -77,9 +77,9 @@ def test_adaptive_clearing_returns_ops():
     result_clear = adaptive_clearing(
         cleared=ca,
         pocket_boundary=boundary,
-        radius=3.0,
-        advance=1.5,
-        cut_z=-5.0,
+        tool_radius=3.0,
+        step_over=1.5,
+        target_z=-5.0,
         safe_z=2.0,
     )
     assert isinstance(result_clear.ops, Ops)
@@ -95,9 +95,9 @@ def test_adaptive_clearing_has_move_and_line():
     result_clear = adaptive_clearing(
         cleared=ca,
         pocket_boundary=boundary,
-        radius=3.0,
-        advance=1.5,
-        cut_z=-5.0,
+        tool_radius=3.0,
+        step_over=1.5,
+        target_z=-5.0,
         safe_z=2.0,
     )
     types = [
@@ -115,9 +115,9 @@ def test_adaptive_clearing_endpoints_inside_pocket():
     result_clear = adaptive_clearing(
         cleared=ca,
         pocket_boundary=boundary,
-        radius=3.0,
-        advance=1.5,
-        cut_z=-5.0,
+        tool_radius=3.0,
+        step_over=1.5,
+        target_z=-5.0,
         safe_z=2.0,
     )
     for i in range(result_clear.ops.len()):
@@ -137,9 +137,9 @@ def test_adaptive_clearing_with_islands():
         cleared=ca,
         pocket_boundary=boundary,
         islands=islands,
-        radius=3.0,
-        advance=1.5,
-        cut_z=-5.0,
+        tool_radius=3.0,
+        step_over=1.5,
+        target_z=-5.0,
         safe_z=2.0,
     )
     for i in range(result_clear.ops.len()):
@@ -160,17 +160,17 @@ def test_adaptive_clearing_determinism():
     result1_clear = adaptive_clearing(
         cleared=ca1,
         pocket_boundary=boundary,
-        radius=3.0,
-        advance=1.5,
-        cut_z=-5.0,
+        tool_radius=3.0,
+        step_over=1.5,
+        target_z=-5.0,
         safe_z=2.0,
     )
     result2_clear = adaptive_clearing(
         cleared=ca2,
         pocket_boundary=boundary,
-        radius=3.0,
-        advance=1.5,
-        cut_z=-5.0,
+        tool_radius=3.0,
+        step_over=1.5,
+        target_z=-5.0,
         safe_z=2.0,
     )
     assert result1_clear.ops.dump() == result2_clear.ops.dump()
@@ -184,9 +184,9 @@ def test_adaptive_clearing_feed_rate_applied():
     result_clear = adaptive_clearing(
         cleared=ca,
         pocket_boundary=boundary,
-        radius=3.0,
-        advance=1.5,
-        cut_z=-5.0,
+        tool_radius=3.0,
+        step_over=1.5,
+        target_z=-5.0,
         safe_z=2.0,
         cut_feed_rate=1800,
     )
@@ -207,9 +207,9 @@ def test_adaptive_clearing_cut_power_applied():
     result_clear = adaptive_clearing(
         cleared=ca,
         pocket_boundary=boundary,
-        radius=3.0,
-        advance=1.5,
-        cut_z=-5.0,
+        tool_radius=3.0,
+        step_over=1.5,
+        target_z=-5.0,
         safe_z=2.0,
         cut_feed_rate=1200,
         cut_power=0.75,
@@ -231,9 +231,9 @@ def test_adaptive_clearing_degenerate_pocket():
     result_clear = adaptive_clearing(
         cleared=ca,
         pocket_boundary=boundary,
-        radius=5.0,
-        advance=1.5,
-        cut_z=-5.0,
+        tool_radius=5.0,
+        step_over=1.5,
+        target_z=-5.0,
         safe_z=2.0,
     )
     assert isinstance(result_clear.ops, Ops)
@@ -252,9 +252,9 @@ def test_adaptive_clearing_fully_clears_rect():
     adaptive_clearing(
         cleared=ca,
         pocket_boundary=boundary,
-        radius=3.0,
-        advance=1.5,
-        cut_z=-5.0,
+        tool_radius=3.0,
+        step_over=1.5,
+        target_z=-5.0,
         safe_z=2.0,
         area_tolerance=tol,
     )
@@ -281,9 +281,9 @@ def test_adaptive_clearing_fully_clears_with_island():
         cleared=ca,
         pocket_boundary=boundary,
         islands=islands,
-        radius=3.0,
-        advance=1.5,
-        cut_z=-5.0,
+        tool_radius=3.0,
+        step_over=1.5,
+        target_z=-5.0,
         safe_z=2.0,
         area_tolerance=tol,
     )
@@ -383,3 +383,37 @@ def test_target_area_pd_monotonic_in_advance():
             f"val={val:.4f}, prev={prev:.4f}"
         )
         prev = val
+
+
+def test_adaptive_clearing_uses_step_over():
+    """adaptive_clearing accepts step_over and produces cut moves."""
+    boundary = _rect(0, 0, 80, 80)
+    seed = [_rect(35, 35, 10, 10)]
+    ca = ClearedArea(boundary=boundary, initial=seed)
+    result = adaptive_clearing(
+        cleared=ca,
+        pocket_boundary=boundary,
+        islands=[],
+        tool_radius=3.0,
+        step_over=2.0,
+        target_z=-5.0,
+        safe_z=2.0,
+    )
+    assert result.ops.len() > 0
+
+
+def test_adaptive_clearing_renamed_fields():
+    """adaptive_clearing accepts the renamed fields without error."""
+    boundary = _rect(0, 0, 80, 80)
+    seed = [_rect(35, 35, 10, 10)]
+    ca = ClearedArea(boundary=boundary, initial=seed)
+    result = adaptive_clearing(
+        cleared=ca,
+        pocket_boundary=boundary,
+        islands=[],
+        tool_radius=3.0,
+        step_over=1.5,
+        target_z=-5.0,
+        safe_z=2.0,
+    )
+    assert hasattr(result, "ops")

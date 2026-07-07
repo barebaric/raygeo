@@ -25,8 +25,9 @@ def _kwargs(
     """Build a kwargs dict for profile_outer/profile_inner."""
     kw = dict(
         boundary=boundary,
-        radius=3.0,
-        cut_z=-5.0,
+        tool_radius=3.0,
+        step_over=1.5,
+        target_z=-5.0,
         safe_z=2.0,
         step_length=0.6,
         wall_margin=0.0,

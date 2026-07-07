@@ -138,7 +138,7 @@ pub(super) fn sweep_clear(path: &[Point3D], ctx: &RouteCtx) -> bool {
         path.iter().map(|p| Point::new(p.x, p.y)).collect();
     !does_path_sweep_intersect_polygon(
         &path_2d,
-        ctx.opts.radius,
+        ctx.opts.tool_radius,
         ctx.obstacles,
         ctx.obstacle_bounds,
     )
@@ -224,8 +224,12 @@ pub fn optimize_route<'a>(
              detail: &mut u8,
              path: Vec<Point3D>|
              -> Option<Vec<Point3D>> {
-                let smoothed =
-                    smooth_route(from, &path, ctx.obstacles, ctx.opts.radius);
+                let smoothed = smooth_route(
+                    from,
+                    &path,
+                    ctx.obstacles,
+                    ctx.opts.tool_radius,
+                );
                 if smoothed.len() >= 2 {
                     *detail = ROUTE_OK; // success
                     crate::dbg_log!(

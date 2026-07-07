@@ -29,7 +29,7 @@ class RoutingError(builtins.RuntimeError):
     """
     ...
 
-def adaptive_clearing(cleared: raygeo.ops.cut.cleared_area.ClearedArea, pocket_boundary: collections.abc.Sequence[tuple[float, float]], islands: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]] = [], radius: float = 3, advance: float = 1.5, cut_z: float = -5, safe_z: float = 2, step_length: float = 0.6, max_deflection_deg: float = 30, wall_margin: float = 0, area_tolerance: float = 1, cut_feed_rate: int = 1200, cut_power: float = 1, start_pos: tuple[float, float] | None = None, start_heading: float | None = None, expansion_batch_size: int = 20, profile: bool = False, cut_direction: str = 'ccw', trace_path: str | None = None) -> raygeo.ops.assembly.result.AssemblyResult:
+def adaptive_clearing(cleared: raygeo.ops.cut.cleared_area.ClearedArea, pocket_boundary: collections.abc.Sequence[tuple[float, float]], islands: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]] = [], tool_radius: float = 3, step_over: float = 1.5, step_length: float = 0.6, target_z: float = -5, safe_z: float = 2, max_deflection_deg: float = 30, wall_margin: float = 0, area_tolerance: float = 1, cut_feed_rate: int = 1200, cut_power: float = 1, start_pos: tuple[float, float] | None = None, start_heading: float | None = None, expansion_batch_size: int = 20, profile: bool = False, cut_direction: str = 'ccw', trace_path: str | None = None) -> raygeo.ops.assembly.result.AssemblyResult:
     r"""
     Run forward-stepping adaptive clearing.
     
@@ -44,11 +44,11 @@ def adaptive_clearing(cleared: raygeo.ops.cut.cleared_area.ClearedArea, pocket_b
     :param cleared: ``ClearedArea`` instance (mutated in place).
     :param pocket_boundary: Outer boundary of the pocket.
     :param islands: List of island (hole) polygons (default []).
-    :param radius: Tool radius in mm (default 3.0).
-    :param advance: Forward advance per step (default 1.5).
-    :param cut_z: Cutting Z height (default -5.0).
+    :param tool_radius: Tool radius in mm (default 3.0).
+    :param step_over: Step-over distance (default 1.5).
+    :param step_length: Forward step length in mm (default 0.6).
+    :param target_z: Cutting Z height (default -5.0).
     :param safe_z: Retract Z height for travel (default 2.0).
-    :param step_length: Forward distance per solver step (default 0.6).
     :param max_deflection_deg: Maximum steering deflection per step
                                in degrees (default 30).
     :param wall_margin: Extra clearance between tool and boundary (default 0.0).

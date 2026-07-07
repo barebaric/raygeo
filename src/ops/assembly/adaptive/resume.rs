@@ -180,7 +180,7 @@ pub(super) fn offset_and_probe(
         return probe(ctx, radius, candidate, heading);
     }
 
-    let step = ctx.opts.step_length * 0.25;
+    let step = ctx.step_length * 0.25;
     let max_steps = (radius / step).ceil() as usize;
 
     if let Some(dir) = inward_from_boundary(cleared, candidate_2d) {
@@ -255,7 +255,7 @@ pub(super) struct WalkProbeOptions {
     /// default vertex + sub-edge sampling via [`walk_polygon_samples`].
     pub centered_samples: bool,
     /// Sample spacing multiplier (>1 = fewer samples, <1 = more samples).
-    /// Default 1.0 uses `ctx.opts.step_length` directly.
+    /// Default 1.0 uses `ctx.step_length` directly.
     pub sample_spacing_mult: f64,
 }
 
@@ -294,8 +294,8 @@ pub(super) fn walk_and_probe(
     let ref_pos = opts.ref_pos.unwrap_or(ctx.segment_start.pos);
     let ref_pos_2d = Point::new(ref_pos.x, ref_pos.y);
     let actual_forward = ctx.opts.cut_direction == CutDirection::Ccw;
-    let sample_spacing = ctx.opts.step_length * opts.sample_spacing_mult;
-    let bl_sq_tol = (ctx.opts.step_length * 0.25).powi(2);
+    let sample_spacing = ctx.step_length * opts.sample_spacing_mult;
+    let bl_sq_tol = (ctx.step_length * 0.25).powi(2);
     let has_offset = opts.offset.is_some();
 
     let poly_indices: Vec<usize> = if opts.walk_all {
@@ -520,7 +520,7 @@ pub fn emit_resume_travel(
     // (which are unreachable by the tool centre and too narrow to matter)
     // are not treated as routing obstacles.  Interior uncut islands are
     // kept and correctly avoided.
-    let envelope = cleared.envelope(opts.radius);
+    let envelope = cleared.envelope(opts.tool_radius);
     let mut obstacles = if envelope.is_empty() {
         cleared.remaining()
     } else {
@@ -610,6 +610,10 @@ pub struct ResumeCtx<'a> {
     pub cleared: &'a ClearedArea,
     pub opts: &'a AdaptiveClearingOptions,
     pub step_opts: &'a StepperOptions<'a>,
+    /// Radial step into material (derived from `step_over`).
+    pub advance: f64,
+    /// Forward step length (derived from `step_over`).
+    pub step_length: f64,
     pub mat: Option<&'a MedialAxis>,
     /// Position and heading where the current cutting segment began.
     /// ResumeSegment probes forward from here using the stored heading.
@@ -717,7 +721,7 @@ pub fn try_resume(
     let tool_dx = tool.pos.x - ctx.last_resume_pos.x;
     let tool_dy = tool.pos.y - ctx.last_resume_pos.y;
     let tool_moved = (tool_dx * tool_dx + tool_dy * tool_dy)
-        > (ctx.opts.step_length * 0.25).powi(2);
+        > (ctx.step_length * 0.25).powi(2);
 
     dbg_log!(
         "RESUME  from=({:.3},{:.3})  heading={:.4}  R={:.1}  \
@@ -725,9 +729,9 @@ pub fn try_resume(
         tool.pos.x,
         tool.pos.y,
         tool.heading,
-        ctx.opts.radius,
-        ctx.opts.advance,
-        ctx.opts.step_length,
+        ctx.opts.tool_radius,
+        ctx.advance,
+        ctx.step_length,
         ctx.last_resume_area,
         ctx.cleared.total_area(),
     );
@@ -737,7 +741,7 @@ pub fn try_resume(
         return None;
     }
 
-    let sq_tol = (ctx.opts.step_length * 0.25).powi(2);
+    let sq_tol = (ctx.step_length * 0.25).powi(2);
     *candidate_pts = [None; 6];
 
     // Try each strategy in priority order.  Each strategy decides for

@@ -46,8 +46,7 @@ try_resume(
     pocket_boundary: Sequence[tuple[float, float]],
     islands: Sequence[Sequence[tuple[float, float]]] = [],
     radius: float = 3,
-    step_length: float = 0.6,
-    advance: float = 1.5,
+    step_over: float = 1.5,
     cut_z: float = -5,
     max_deflection_deg: float = 30,
     valid_tool_area: Sequence[Sequence[tuple[float, float]]] = [],
@@ -69,8 +68,7 @@ Try to recover after the tool stalls or is detected as stuck.
 | `pocket_boundary`    | `Sequence[tuple[float, float]]`                      |                    |
 | `islands`            | `Sequence[Sequence[tuple[float, float]]] = []`       |                    |
 | `radius`             | `float = 3`                                          |                    |
-| `step_length`        | `float = 0.6`                                        |                    |
-| `advance`            | `float = 1.5`                                        |                    |
+| `step_over`          | `float = 1.5`                                        |                    |
 | `cut_z`              | `float = -5`                                         |                    |
 | `max_deflection_deg` | `float = 30`                                         |                    |
 | `valid_tool_area`    | `Sequence[Sequence[tuple[float, float]]] = []`       |                    |

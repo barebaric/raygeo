@@ -51,7 +51,7 @@ fn island_ray_march(
         return Some(centre);
     }
 
-    let step = ctx.opts.step_length * 0.25;
+    let step = ctx.step_length * 0.25;
     let max_steps = (radius * 4.0 / step).ceil() as usize;
     for s in 1..=max_steps {
         let candidate = on_boundary + into_cleared * (offset + s as f64 * step);
@@ -109,7 +109,7 @@ fn frontier_hole_resume(
     );
 
     let radius = tool.radius;
-    let advance = ctx.opts.advance;
+    let advance = ctx.advance;
     let offset = (radius - advance).max(0.0);
 
     let result = walk_and_probe(

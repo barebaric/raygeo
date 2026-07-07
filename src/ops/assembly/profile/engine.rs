@@ -100,10 +100,10 @@ fn intermediate_vertices(
 #[allow(dead_code)]
 pub(crate) struct ProfileCommon {
     pub step_length: f64,
-    pub cut_z: f64,
+    pub target_z: f64,
     pub safe_z: f64,
     pub tolerance: f64,
-    pub radius: f64,
+    pub tool_radius: f64,
     pub cut_direction: CutDirection,
     pub expansion_batch_size: usize,
     pub cancel_check: Option<fn() -> bool>,
@@ -128,7 +128,7 @@ pub(crate) fn run_profile(
 
     let poly3d: Vec<Point3D> = offset_poly
         .iter()
-        .map(|p| Point3D::new(p.x, p.y, common.cut_z))
+        .map(|p| Point3D::new(p.x, p.y, common.target_z))
         .collect();
 
     let n = poly3d.len();
@@ -149,7 +149,7 @@ pub(crate) fn run_profile(
     let start_pos = poly3d[0];
 
     ops.move_to(start_pos.x, start_pos.y, common.safe_z, None);
-    ops.move_to(start_pos.x, start_pos.y, common.cut_z, None);
+    ops.move_to(start_pos.x, start_pos.y, common.target_z, None);
     ops.apply_state(cut_state);
     recorder.record_polygon_start(
         start_pos,
@@ -160,18 +160,19 @@ pub(crate) fn run_profile(
     );
 
     // Effective area threshold
-    let full_crescent = std::f64::consts::PI * common.radius * common.radius
-        - 2.0
-            * common.radius
-            * common.radius
-            * ((common.step_length / (2.0 * common.radius))
-                .clamp(-1.0, 1.0)
-                .acos())
-        + (common.step_length * 0.5)
-            * (4.0 * common.radius * common.radius
-                - common.step_length * common.step_length)
-                .max(0.0)
-                .sqrt();
+    let full_crescent =
+        std::f64::consts::PI * common.tool_radius * common.tool_radius
+            - 2.0
+                * common.tool_radius
+                * common.tool_radius
+                * ((common.step_length / (2.0 * common.tool_radius))
+                    .clamp(-1.0, 1.0)
+                    .acos())
+            + (common.step_length * 0.5)
+                * (4.0 * common.tool_radius * common.tool_radius
+                    - common.step_length * common.step_length)
+                    .max(0.0)
+                    .sqrt();
     let area_threshold = if common.engagement_area_threshold > 0.0 {
         common.engagement_area_threshold
     } else {
@@ -249,7 +250,7 @@ pub(crate) fn run_profile(
             loop {
                 let eng = cleared.get_point_engagement(
                     Point::new(next.x, next.y),
-                    common.radius,
+                    common.tool_radius,
                 );
                 if eng.area > area_threshold || eng.angle > angle_threshold {
                     reductions += 1;
@@ -257,7 +258,7 @@ pub(crate) fn run_profile(
                         // Travel-skip: lift, move, re-plunge, restore feed.
                         last_eng = eng;
                         ops.move_to(next.x, next.y, common.safe_z, None);
-                        ops.move_to(next.x, next.y, common.cut_z, None);
+                        ops.move_to(next.x, next.y, common.target_z, None);
                         if let Some(fr) = original_feed_rate {
                             ops.set_feed_rate(fr);
                             current_feed_rate = original_feed_rate;
@@ -309,7 +310,7 @@ pub(crate) fn run_profile(
                     closest.x + dx * (1.0 - nudge),
                     closest.y + dy * (1.0 - nudge),
                 );
-                next = Point3D::new(corrected.x, corrected.y, common.cut_z);
+                next = Point3D::new(corrected.x, corrected.y, common.target_z);
             }
         }
         dist_traveled += effective_step;
@@ -320,7 +321,7 @@ pub(crate) fn run_profile(
         cleared.expand_batched(
             crate::types::Point::new(current_3d.x, current_3d.y),
             crate::types::Point::new(next.x, next.y),
-            common.radius,
+            common.tool_radius,
         );
         cleared.commit_batch_local();
         cleared.compact_if_needed(common.tolerance);
@@ -346,9 +347,9 @@ pub(crate) fn run_profile(
                 let verts =
                     intermediate_vertices(&poly3d, &current_3d, &start_pos);
                 for v in &verts {
-                    ops.line_to(v.x, v.y, common.cut_z, None);
+                    ops.line_to(v.x, v.y, common.target_z, None);
                 }
-                ops.line_to(start_pos.x, start_pos.y, common.cut_z, None);
+                ops.line_to(start_pos.x, start_pos.y, common.target_z, None);
             }
             break;
         }
@@ -371,9 +372,9 @@ pub(crate) fn run_profile(
         if !travel_skipped {
             let verts = intermediate_vertices(&poly3d, &current_3d, &next);
             for v in &verts {
-                ops.line_to(v.x, v.y, common.cut_z, None);
+                ops.line_to(v.x, v.y, common.target_z, None);
             }
-            ops.line_to(next.x, next.y, common.cut_z, None);
+            ops.line_to(next.x, next.y, common.target_z, None);
         }
         current_3d = next;
     }

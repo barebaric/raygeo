@@ -61,9 +61,9 @@ impl ResumeStrategy for ResumeWallHug {
             {
                 let d = d2.sqrt();
                 if d > 1e-9 {
-                    let offset_mag = ((d * 0.75) - ctx.opts.step_length * 0.05)
+                    let offset_mag = ((d * 0.75) - ctx.step_length * 0.05)
                         .max(0.0)
-                        .min(ctx.opts.step_length * 1.5);
+                        .min(ctx.step_length * 1.5);
                     let toward_x = (closest.x - pt.x) / d;
                     let toward_y = (closest.y - pt.y) / d;
                     let offset_x = pose.pos.x + offset_mag * toward_x;
@@ -77,7 +77,7 @@ impl ResumeStrategy for ResumeWallHug {
                     ) {
                         if let Some(rp) = probe(
                             ctx,
-                            ctx.opts.radius,
+                            ctx.opts.tool_radius,
                             offset_pos,
                             pose.heading,
                         ) {
@@ -92,7 +92,7 @@ impl ResumeStrategy for ResumeWallHug {
                 continue;
             }
             if let Some(rp) =
-                probe(ctx, ctx.opts.radius, pose.pos, pose.heading)
+                probe(ctx, ctx.opts.tool_radius, pose.pos, pose.heading)
             {
                 return Some(rp);
             }

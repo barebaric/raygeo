@@ -45,8 +45,8 @@ impl RoutingStrategy for RoutingFrontier {
             to.y,
         );
 
-        let spacing = ctx.opts.radius * 0.3;
-        let offset_dist = ctx.opts.radius + spacing;
+        let spacing = ctx.opts.tool_radius * 0.3;
+        let offset_dist = ctx.opts.tool_radius + spacing;
 
         // Walk the frontier: offset each polygon inward by offset_dist,
         // then find the shortest segment between the closest points.

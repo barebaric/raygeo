@@ -40,10 +40,11 @@ pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     def profile_outer(
         cleared: raygeo.ops.cut.cleared_area.ClearedArea,
         boundary: list[tuple[float, float]],
-        radius: float,
-        cut_z: float,
-        safe_z: float,
+        tool_radius: float,
+        step_over: float,
         step_length: float,
+        target_z: float,
+        safe_z: float,
         wall_margin: float,
         cut_feed_rate: int,
         cut_power: float,
@@ -64,10 +65,11 @@ pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
 
         :param cleared: Cleared area tracker.
         :param boundary: Outer boundary polygon as ``(x, y)`` pairs.
-        :param radius: Tool radius in mm.
-        :param cut_z: Cutting depth (Z).
-        :param safe_z: Safe (rapid) Z height.
+        :param tool_radius: Tool radius in mm.
+        :param step_over: Radial step-over between passes (mm).
         :param step_length: Forward step length in mm.
+        :param target_z: Cutting depth (Z).
+        :param safe_z: Safe (rapid) Z height.
         :param wall_margin: Extra distance to keep from the wall (mm).
         :param cut_feed_rate: Feed rate in mm/min.
         :param cut_power: Spindle power (0.0–1.0).
@@ -86,10 +88,11 @@ pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
 #[pyo3(signature = (
     cleared,
     boundary,
-    radius,
-    cut_z,
-    safe_z,
+    tool_radius,
+    step_over,
     step_length,
+    target_z,
+    safe_z,
     wall_margin,
     cut_feed_rate,
     cut_power,
@@ -104,10 +107,11 @@ pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
 fn profile_outer_py(
     cleared: &mut PyClearedArea,
     boundary: Vec<(f64, f64)>,
-    radius: f64,
-    cut_z: f64,
-    safe_z: f64,
+    tool_radius: f64,
+    step_over: f64,
     step_length: f64,
+    target_z: f64,
+    safe_z: f64,
     wall_margin: f64,
     cut_feed_rate: i32,
     cut_power: f64,
@@ -131,14 +135,15 @@ fn profile_outer_py(
 
     let opts = ProfileOuterOptions {
         boundary: boundary_pts,
-        radius,
-        cut_z,
-        safe_z,
+        tool_radius,
+        step_over,
         step_length,
+        target_z,
+        safe_z,
         wall_margin,
         stock_to_leave,
         cut_direction: cd,
-        start_pos: start_pos.map(|(x, y)| Point3D::new(x, y, cut_z)),
+        start_pos: start_pos.map(|(x, y)| Point3D::new(x, y, target_z)),
         tolerance: 0.1,
         expansion_batch_size: 20,
         cancel_check: Some(check_cancel),
@@ -165,10 +170,11 @@ fn profile_outer_py(
         cleared: raygeo.ops.cut.cleared_area.ClearedArea,
         boundary: list[tuple[float, float]],
         islands: list[list[tuple[float, float]]] = [],
-        radius: float = 3.0,
-        cut_z: float = -5.0,
-        safe_z: float = 2.0,
+        tool_radius: float = 3.0,
+        step_over: float = 1.5,
         step_length: float = 0.6,
+        target_z: float = -5.0,
+        safe_z: float = 2.0,
         wall_margin: float = 0.0,
         stock_to_leave: float = 0.0,
         cut_feed_rate: int = 1000,
@@ -190,10 +196,11 @@ fn profile_outer_py(
         :param cleared: Cleared area tracker.
         :param boundary: Outer boundary polygon as ``(x, y)`` pairs.
         :param islands: List of island (hole) polygons (default []).
-        :param radius: Tool radius in mm.
-        :param cut_z: Cutting depth (Z).
-        :param safe_z: Safe (rapid) Z height.
+        :param tool_radius: Tool radius in mm.
+        :param step_over: Radial step-over between passes (mm).
         :param step_length: Forward step length in mm.
+        :param target_z: Cutting depth (Z).
+        :param safe_z: Safe (rapid) Z height.
         :param wall_margin: Extra distance to keep from the wall (mm).
         :param stock_to_leave: Stock left on wall for rough pass (mm, default 0.0).
         :param cut_feed_rate: Feed rate in mm/min.
@@ -213,10 +220,11 @@ fn profile_outer_py(
     cleared,
     boundary,
     islands = None,
-    radius = 3.0,
-    cut_z = -5.0,
-    safe_z = 2.0,
+    tool_radius = 3.0,
+    step_over = 1.5,
     step_length = 0.6,
+    target_z = -5.0,
+    safe_z = 2.0,
     wall_margin = 0.0,
     stock_to_leave = 0.0,
     cut_feed_rate = 1000,
@@ -232,10 +240,11 @@ fn profile_inner_py(
     cleared: &mut PyClearedArea,
     boundary: Vec<(f64, f64)>,
     islands: Option<Vec<Vec<(f64, f64)>>>,
-    radius: f64,
-    cut_z: f64,
-    safe_z: f64,
+    tool_radius: f64,
+    step_over: f64,
     step_length: f64,
+    target_z: f64,
+    safe_z: f64,
     wall_margin: f64,
     stock_to_leave: f64,
     cut_feed_rate: i32,
@@ -266,14 +275,15 @@ fn profile_inner_py(
     let opts = ProfileInnerOptions {
         boundary: boundary_pts,
         islands: islands_pts,
-        radius,
-        cut_z,
-        safe_z,
+        tool_radius,
+        step_over,
         step_length,
+        target_z,
+        safe_z,
         wall_margin,
         stock_to_leave,
         cut_direction: cd,
-        start_pos: start_pos.map(|(x, y)| Point3D::new(x, y, cut_z)),
+        start_pos: start_pos.map(|(x, y)| Point3D::new(x, y, target_z)),
         tolerance: 0.1,
         expansion_batch_size: 20,
         cancel_check: Some(check_cancel),

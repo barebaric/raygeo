@@ -7,7 +7,7 @@ __all__ = [
     "profile_outer",
 ]
 
-def profile_inner(cleared: raygeo.ops.cut.cleared_area.ClearedArea, boundary: list[tuple[float, float]], islands: list[list[tuple[float, float]]] = [], radius: float = 3, cut_z: float = -5, safe_z: float = 2, step_length: float = 0.6, wall_margin: float = 0, stock_to_leave: float = 0, cut_feed_rate: int = 1000, cut_power: float = 0, start_pos: tuple[float, float] | None = None, cut_direction: str = 'ccw', engagement_area_threshold: float = 0, engagement_angle_threshold: float = 3.141592653589793, trace_path: str | None = None) -> raygeo.ops.assembly.result.AssemblyResult:
+def profile_inner(cleared: raygeo.ops.cut.cleared_area.ClearedArea, boundary: list[tuple[float, float]], islands: list[list[tuple[float, float]]] = [], tool_radius: float = 3, step_over: float = 1.5, step_length: float = 0.6, target_z: float = -5, safe_z: float = 2, wall_margin: float = 0, stock_to_leave: float = 0, cut_feed_rate: int = 1000, cut_power: float = 0, start_pos: tuple[float, float] | None = None, cut_direction: str = 'ccw', engagement_area_threshold: float = 0, engagement_angle_threshold: float = 3.141592653589793, trace_path: str | None = None) -> raygeo.ops.assembly.result.AssemblyResult:
     r"""
     Profile the inner boundary of a pocket, around islands.
     
@@ -20,10 +20,11 @@ def profile_inner(cleared: raygeo.ops.cut.cleared_area.ClearedArea, boundary: li
     :param cleared: Cleared area tracker.
     :param boundary: Outer boundary polygon as ``(x, y)`` pairs.
     :param islands: List of island (hole) polygons (default []).
-    :param radius: Tool radius in mm.
-    :param cut_z: Cutting depth (Z).
-    :param safe_z: Safe (rapid) Z height.
+    :param tool_radius: Tool radius in mm.
+    :param step_over: Radial step-over between passes (mm).
     :param step_length: Forward step length in mm.
+    :param target_z: Cutting depth (Z).
+    :param safe_z: Safe (rapid) Z height.
     :param wall_margin: Extra distance to keep from the wall (mm).
     :param stock_to_leave: Stock left on wall for rough pass (mm, default 0.0).
     :param cut_feed_rate: Feed rate in mm/min.
@@ -36,7 +37,7 @@ def profile_inner(cleared: raygeo.ops.cut.cleared_area.ClearedArea, boundary: li
     :returns: An :class:`AssemblyResult` with the profiling path.
     """
 
-def profile_outer(cleared: raygeo.ops.cut.cleared_area.ClearedArea, boundary: list[tuple[float, float]], radius: float, cut_z: float, safe_z: float, step_length: float, wall_margin: float, cut_feed_rate: int, cut_power: float, start_pos: tuple[float, float] | None = None, cut_direction: str = 'ccw', stock_to_leave: float = 0, engagement_area_threshold: float = 0, engagement_angle_threshold: float = 3.141592653589793, trace_path: str | None = None) -> raygeo.ops.assembly.result.AssemblyResult:
+def profile_outer(cleared: raygeo.ops.cut.cleared_area.ClearedArea, boundary: list[tuple[float, float]], tool_radius: float, step_over: float, step_length: float, target_z: float, safe_z: float, wall_margin: float, cut_feed_rate: int, cut_power: float, start_pos: tuple[float, float] | None = None, cut_direction: str = 'ccw', stock_to_leave: float = 0, engagement_area_threshold: float = 0, engagement_angle_threshold: float = 3.141592653589793, trace_path: str | None = None) -> raygeo.ops.assembly.result.AssemblyResult:
     r"""
     Profile the outer boundary of a pocket.
     
@@ -48,10 +49,11 @@ def profile_outer(cleared: raygeo.ops.cut.cleared_area.ClearedArea, boundary: li
     
     :param cleared: Cleared area tracker.
     :param boundary: Outer boundary polygon as ``(x, y)`` pairs.
-    :param radius: Tool radius in mm.
-    :param cut_z: Cutting depth (Z).
-    :param safe_z: Safe (rapid) Z height.
+    :param tool_radius: Tool radius in mm.
+    :param step_over: Radial step-over between passes (mm).
     :param step_length: Forward step length in mm.
+    :param target_z: Cutting depth (Z).
+    :param safe_z: Safe (rapid) Z height.
     :param wall_margin: Extra distance to keep from the wall (mm).
     :param cut_feed_rate: Feed rate in mm/min.
     :param cut_power: Spindle power (0.0–1.0).

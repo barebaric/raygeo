@@ -95,8 +95,9 @@ fn emit_resume_travel_py(
     let opts = AdaptiveClearingOptions {
         pocket_boundary: pb.clone(),
         islands: islands_pts.clone(),
-        radius,
-        cut_z,
+        tool_radius: radius,
+        step_over: 1.5,
+        target_z: cut_z,
         ..Default::default()
     };
     let fallback_ca;
@@ -152,8 +153,7 @@ fn emit_resume_travel_py(
         pocket_boundary: collections.abc.Sequence[tuple[float, float]],
         islands: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]] = [],
         radius: float = 3.0,
-        step_length: float = 0.6,
-        advance: float = 1.5,
+        step_over: float = 1.5,
         cut_z: float = -5.0,
         max_deflection_deg: float = 30.0,
         valid_tool_area: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]] = [],
@@ -178,8 +178,7 @@ fn emit_resume_travel_py(
     pocket_boundary,
     islands = None,
     radius = 3.0,
-    step_length = 0.6,
-    advance = 1.5,
+    step_over = 1.5,
     cut_z = -5.0,
     max_deflection_deg = 30.0,
     valid_tool_area = None,
@@ -197,8 +196,7 @@ fn try_resume_py(
     pocket_boundary: Vec<(f64, f64)>,
     islands: Option<Vec<Vec<(f64, f64)>>>,
     radius: f64,
-    step_length: f64,
-    advance: f64,
+    step_over: f64,
     cut_z: f64,
     max_deflection_deg: f64,
     valid_tool_area: Option<Vec<Vec<(f64, f64)>>>,
@@ -230,14 +228,15 @@ fn try_resume_py(
     let opts = AdaptiveClearingOptions {
         pocket_boundary: pb,
         islands: islands_pts,
-        radius,
-        step_length,
-        advance,
-        cut_z,
+        tool_radius: radius,
+        step_over,
+        target_z: cut_z,
         max_deflection_deg,
         cut_direction: cd,
         ..Default::default()
     };
+    let advance = step_over;
+    let step_length = (step_over * 0.4).max(0.1);
     let target_area_pd =
         crate::ops::assembly::adaptive::target_area_per_distance(
             radius,
@@ -259,6 +258,8 @@ fn try_resume_py(
         cleared: &cleared.inner,
         opts: &opts,
         step_opts: &step_opts,
+        advance,
+        step_length,
         mat,
         segment_start: ToolPose {
             pos: Point3D::new(

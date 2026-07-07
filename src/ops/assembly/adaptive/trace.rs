@@ -240,7 +240,7 @@ impl TraceRecorder {
                         .collect();
                     t.write(&GeometryRecord {
                         kind: "geometry",
-                        tool_radius: opts.radius,
+                        tool_radius: opts.tool_radius,
                         boundary,
                         islands,
                         seeds,

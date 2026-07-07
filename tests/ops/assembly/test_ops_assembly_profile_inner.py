@@ -27,8 +27,9 @@ def _kwargs(ca, boundary, **over: Any) -> dict[str, Any]:
         cleared=ca,
         boundary=boundary,
         islands=[],
-        radius=3.0,
-        cut_z=-5.0,
+        tool_radius=3.0,
+        step_over=1.5,
+        target_z=-5.0,
         safe_z=2.0,
         step_length=0.6,
         wall_margin=0.0,
@@ -180,8 +181,9 @@ def test_profile_inner_then_outer_chained():
     result_outer = profile_outer(
         cleared=ca,
         boundary=boundary,
-        radius=3.0,
-        cut_z=-5.0,
+        tool_radius=3.0,
+        step_over=1.5,
+        target_z=-5.0,
         safe_z=2.0,
         step_length=0.6,
         wall_margin=0.0,
@@ -236,3 +238,26 @@ def test_profile_inner_walks_accessible_island():
         f"added cut distance {added:.1f}mm should be substantial "
         f"(grown perimeter ~{grown_perimeter_est}mm)"
     )
+
+
+def test_profile_inner_renamed_fields():
+    """profile_inner accepts the renamed tool_radius/target_z fields."""
+    boundary = _rect(0, 0, 80, 80)
+    cleared = ClearedArea(
+        boundary=boundary,
+        initial=[[(35, 35), (45, 35), (45, 45), (35, 45)]],
+    )
+    result = profile_inner(
+        cleared=cleared,
+        boundary=boundary,
+        tool_radius=3.0,
+        step_over=1.5,
+        target_z=-5.0,
+        safe_z=2.0,
+        step_length=0.6,
+        wall_margin=0.0,
+        stock_to_leave=0.0,
+        cut_feed_rate=1000,
+        cut_power=0.0,
+    )
+    assert result.ops.len() > 0

@@ -83,11 +83,11 @@ pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
         cleared: raygeo.ops.cut.cleared_area.ClearedArea,
         pocket_boundary: collections.abc.Sequence[tuple[float, float]],
         islands: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]] = [],
-        radius: float = 3.0,
-        advance: float = 1.5,
-        cut_z: float = -5.0,
-        safe_z: float = 2.0,
+        tool_radius: float = 3.0,
+        step_over: float = 1.5,
         step_length: float = 0.6,
+        target_z: float = -5.0,
+        safe_z: float = 2.0,
         max_deflection_deg: float = 30.0,
         wall_margin: float = 0.0,
         area_tolerance: float = 1.0,
@@ -113,11 +113,11 @@ pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
         :param cleared: ``ClearedArea`` instance (mutated in place).
         :param pocket_boundary: Outer boundary of the pocket.
         :param islands: List of island (hole) polygons (default []).
-        :param radius: Tool radius in mm (default 3.0).
-        :param advance: Forward advance per step (default 1.5).
-        :param cut_z: Cutting Z height (default -5.0).
+        :param tool_radius: Tool radius in mm (default 3.0).
+        :param step_over: Step-over distance (default 1.5).
+        :param step_length: Forward step length in mm (default 0.6).
+        :param target_z: Cutting Z height (default -5.0).
         :param safe_z: Retract Z height for travel (default 2.0).
-        :param step_length: Forward distance per solver step (default 0.6).
         :param max_deflection_deg: Maximum steering deflection per step
                                    in degrees (default 30).
         :param wall_margin: Extra clearance between tool and boundary (default 0.0).
@@ -148,11 +148,11 @@ pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     cleared,
     pocket_boundary,
     islands = None,
-    radius = 3.0,
-    advance = 1.5,
-    cut_z = -5.0,
-    safe_z = 2.0,
+    tool_radius = 3.0,
+    step_over = 1.5,
     step_length = 0.6,
+    target_z = -5.0,
+    safe_z = 2.0,
     max_deflection_deg = 30.0,
     wall_margin = 0.0,
     area_tolerance = 1.0,
@@ -170,11 +170,11 @@ fn adaptive_clearing_py(
     cleared: &mut PyClearedArea,
     pocket_boundary: Vec<(f64, f64)>,
     islands: Option<Vec<Vec<(f64, f64)>>>,
-    radius: f64,
-    advance: f64,
-    cut_z: f64,
-    safe_z: f64,
+    tool_radius: f64,
+    step_over: f64,
     step_length: f64,
+    target_z: f64,
+    safe_z: f64,
     max_deflection_deg: f64,
     wall_margin: f64,
     area_tolerance: f64,
@@ -204,15 +204,15 @@ fn adaptive_clearing_py(
     let opts = adaptive::AdaptiveClearingOptions {
         pocket_boundary: boundary,
         islands: islands_pts,
-        radius,
-        advance,
-        cut_z,
-        safe_z,
+        tool_radius,
+        step_over,
         step_length,
+        target_z,
+        safe_z,
         max_deflection_deg,
         wall_margin,
         area_tolerance,
-        start_pos: start_pos.map(|(x, y)| Point3D::new(x, y, cut_z)),
+        start_pos: start_pos.map(|(x, y)| Point3D::new(x, y, target_z)),
         start_heading,
         expansion_batch_size,
         trace_path: trace_path.map(PathBuf::from),

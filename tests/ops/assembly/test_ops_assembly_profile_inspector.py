@@ -29,8 +29,9 @@ def _profile_trace(tmp_path, profile_fn, **kwargs):
     profile_fn(
         cleared=ca,
         boundary=boundary,
-        radius=3.0,
-        cut_z=-5.0,
+        tool_radius=3.0,
+        step_over=1.5,
+        target_z=-5.0,
         safe_z=2.0,
         step_length=0.6,
         wall_margin=0.0,

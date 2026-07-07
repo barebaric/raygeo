@@ -12,10 +12,11 @@ profile_inner(
     cleared: ops.cut.cleared_area.ClearedArea,
     boundary: list[tuple[float, float]],
     islands: list[list[tuple[float, float]]] = [],
-    radius: float = 3,
-    cut_z: float = -5,
-    safe_z: float = 2,
+    tool_radius: float = 3,
+    step_over: float = 1.5,
     step_length: float = 0.6,
+    target_z: float = -5,
+    safe_z: float = 2,
     wall_margin: float = 0,
     stock_to_leave: float = 0,
     cut_feed_rate: int = 1000,
@@ -39,10 +40,11 @@ so that the tool clears the material along the pocket walls and around each isla
 | `cleared`                    | `ops.cut.cleared_area.ClearedArea`       | Cleared area tracker.                                              |
 | `boundary`                   | `list[tuple[float, float]]`              | Outer boundary polygon as `(x, y)` pairs.                          |
 | `islands`                    | `list[list[tuple[float, float]]] = []`   | List of island (hole) polygons (default []).                       |
-| `radius`                     | `float = 3`                              | Tool radius in mm.                                                 |
-| `cut_z`                      | `float = -5`                             | Cutting depth (Z).                                                 |
-| `safe_z`                     | `float = 2`                              | Safe (rapid) Z height.                                             |
+| `tool_radius`                | `float = 3`                              | Tool radius in mm.                                                 |
+| `step_over`                  | `float = 1.5`                            | Radial step-over between passes (mm).                              |
 | `step_length`                | `float = 0.6`                            | Forward step length in mm.                                         |
+| `target_z`                   | `float = -5`                             | Cutting depth (Z).                                                 |
+| `safe_z`                     | `float = 2`                              | Safe (rapid) Z height.                                             |
 | `wall_margin`                | `float = 0`                              | Extra distance to keep from the wall (mm).                         |
 | `stock_to_leave`             | `float = 0`                              | Stock left on wall for rough pass (mm, default 0.0).               |
 | `cut_feed_rate`              | `int = 1000`                             | Feed rate in mm/min.                                               |
@@ -85,10 +87,11 @@ at safe_z.*
 profile_outer(
     cleared: ops.cut.cleared_area.ClearedArea,
     boundary: list[tuple[float, float]],
-    radius: float,
-    cut_z: float,
-    safe_z: float,
+    tool_radius: float,
+    step_over: float,
     step_length: float,
+    target_z: float,
+    safe_z: float,
     wall_margin: float,
     cut_feed_rate: int,
     cut_power: float,
@@ -111,10 +114,11 @@ an **AssemblyResult** with the profiling move sequence.
 | ---------------------------- | ---------------------------------------- | ------------------------------------------------------------------ |
 | `cleared`                    | `ops.cut.cleared_area.ClearedArea`       | Cleared area tracker.                                              |
 | `boundary`                   | `list[tuple[float, float]]`              | Outer boundary polygon as `(x, y)` pairs.                          |
-| `radius`                     | `float`                                  | Tool radius in mm.                                                 |
-| `cut_z`                      | `float`                                  | Cutting depth (Z).                                                 |
-| `safe_z`                     | `float`                                  | Safe (rapid) Z height.                                             |
+| `tool_radius`                | `float`                                  | Tool radius in mm.                                                 |
+| `step_over`                  | `float`                                  | Radial step-over between passes (mm).                              |
 | `step_length`                | `float`                                  | Forward step length in mm.                                         |
+| `target_z`                   | `float`                                  | Cutting depth (Z).                                                 |
+| `safe_z`                     | `float`                                  | Safe (rapid) Z height.                                             |
 | `wall_margin`                | `float`                                  | Extra distance to keep from the wall (mm).                         |
 | `cut_feed_rate`              | `int`                                    | Feed rate in mm/min.                                               |
 | `cut_power`                  | `float`                                  | Spindle power (0.0–1.0).                                           |

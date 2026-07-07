@@ -20,7 +20,7 @@ pub fn profile_outer(
             "boundary polygon is empty".into(),
         ));
     }
-    let offset_dist = opts.radius + opts.wall_margin + opts.stock_to_leave;
+    let offset_dist = opts.tool_radius + opts.wall_margin + opts.stock_to_leave;
     let offset_polys =
         offset_polygon(&opts.boundary, offset_dist, JoinStyle::Round);
     if offset_polys.is_empty() {
@@ -30,10 +30,10 @@ pub fn profile_outer(
     }
     let common = ProfileCommon {
         step_length: opts.step_length,
-        cut_z: opts.cut_z,
+        target_z: opts.target_z,
         safe_z: opts.safe_z,
         tolerance: opts.tolerance,
-        radius: opts.radius,
+        tool_radius: opts.tool_radius,
         cut_direction: opts.cut_direction,
         expansion_batch_size: opts.expansion_batch_size,
         cancel_check: opts.cancel_check,
@@ -43,7 +43,7 @@ pub fn profile_outer(
     };
     let mut recorder = TraceRecorder::new(
         opts.trace_path.as_ref(),
-        opts.radius,
+        opts.tool_radius,
         &opts.boundary,
         &[],
         &offset_polys,
@@ -52,7 +52,7 @@ pub fn profile_outer(
     let heading = get_polygon_heading_at(&offset_polys[0], offset_polys[0][0])
         + std::f64::consts::FRAC_PI_2;
     let init_pos =
-        Point3D::new(offset_polys[0][0].x, offset_polys[0][0].y, opts.cut_z);
+        Point3D::new(offset_polys[0][0].x, offset_polys[0][0].y, opts.target_z);
     recorder.record_init(init_pos, heading, 0);
     let result = run_profile(
         cleared,

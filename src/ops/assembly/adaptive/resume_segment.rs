@@ -41,7 +41,7 @@ impl ResumeStrategy for ResumeSegment {
 
         if let Some(tp) = probe(
             ctx,
-            ctx.opts.radius,
+            ctx.opts.tool_radius,
             ctx.segment_start.pos,
             ctx.segment_start.heading,
         ) {
@@ -66,8 +66,8 @@ const TANGENCY_ANGLE: f64 = 0.1;
 /// contact with the material boundary.
 #[prof]
 fn nudge_to_frontier(ctx: &ResumeCtx, detail: &mut u8) -> Option<ToolPose> {
-    let radius = ctx.opts.radius;
-    let step = ctx.opts.step_length * 0.25;
+    let radius = ctx.opts.tool_radius;
+    let step = ctx.step_length * 0.25;
     let max_steps = (radius * 3.0 / step).ceil() as usize;
     let dir = Point::new(
         ctx.segment_start.heading.cos(),
@@ -77,7 +77,7 @@ fn nudge_to_frontier(ctx: &ResumeCtx, detail: &mut u8) -> Option<ToolPose> {
         ctx.segment_start.pos.x,
         ctx.segment_start.pos.y,
     );
-    let cut_z = ctx.opts.cut_z;
+    let cut_z = ctx.opts.target_z;
 
     let mut tangent_pos: Option<Point> = None;
     for s in 1..=max_steps {

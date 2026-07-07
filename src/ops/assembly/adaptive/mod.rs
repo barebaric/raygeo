@@ -66,11 +66,11 @@ const MAX_TOTAL_STEPS: usize = 100_000;
 pub struct AdaptiveClearingOptions {
     pub pocket_boundary: Polygon,
     pub islands: Vec<Polygon>,
-    pub radius: f64,
-    pub advance: f64,
-    pub cut_z: f64,
-    pub safe_z: f64,
+    pub tool_radius: f64,
+    pub step_over: f64,
     pub step_length: f64,
+    pub target_z: f64,
+    pub safe_z: f64,
     pub max_deflection_deg: f64,
     pub wall_margin: f64,
     pub area_tolerance: f64,
@@ -106,11 +106,11 @@ impl Default for AdaptiveClearingOptions {
         Self {
             pocket_boundary: Vec::new(),
             islands: Vec::new(),
-            radius: 3.0,
-            advance: 1.5,
-            cut_z: -5.0,
-            safe_z: 2.0,
+            tool_radius: 3.0,
+            step_over: 1.5,
             step_length: 0.6,
+            target_z: -5.0,
+            safe_z: 2.0,
             max_deflection_deg: 30.0,
             wall_margin: 0.0,
             area_tolerance: 1.0,
@@ -236,6 +236,8 @@ fn handle_stall(
     iter: usize,
     opts: &AdaptiveClearingOptions,
     step_opts: &StepperOptions,
+    advance: f64,
+    step_length: f64,
     mat: Option<&MedialAxis>,
     valid_total: f64,
 ) -> RaygeoResult<StallResult> {
@@ -306,6 +308,8 @@ fn handle_stall(
                 cleared: &*s.cleared,
                 opts,
                 step_opts,
+                advance,
+                step_length,
                 mat,
                 segment_start: *s.segment_start,
                 last_resume_area: *s.last_resume_area,
@@ -396,7 +400,7 @@ fn handle_stall(
     // zone (boundary inset by step_length), excluding slivers the
     // stepper cannot productively engage with.
     let clipped_remaining: f64 =
-        s.cleared.actionable_remaining(opts.step_length * 1.5);
+        s.cleared.actionable_remaining(step_length * 1.5);
     if clipped_remaining < opts.area_tolerance {
         dbg_log!(
             "EXIT  reason=converged(close-enough)  step_count={}  \
@@ -474,8 +478,11 @@ pub fn adaptive_clearing(
     cut_state: &State,
 ) -> RaygeoResult<AssemblyResult> {
     // ── 1. Pre-process ────────────────────────────────────────────
-    let (valid_tool_area, valid_total) =
-        compute_inset_region(&opts.pocket_boundary, opts.radius, &opts.islands);
+    let (valid_tool_area, valid_total) = compute_inset_region(
+        &opts.pocket_boundary,
+        opts.tool_radius,
+        &opts.islands,
+    );
     if valid_tool_area.is_empty() || valid_total <= opts.area_tolerance {
         return Ok(AssemblyResult {
             ops: Ops::new(),
@@ -505,10 +512,13 @@ pub fn adaptive_clearing(
         });
     }
 
+    let advance = opts.step_over;
+    let step_length = opts.step_length;
+
     let max_def = opts.max_deflection_deg.to_radians();
     let dir_sign = opts.cut_direction.sign();
     let target_area_pd =
-        target_area_per_distance(opts.radius, opts.advance, opts.step_length);
+        target_area_per_distance(opts.tool_radius, advance, step_length);
 
     // Medial Axis Transform of the pocket, used by the resume fallback
     // to route through cleared territory to the nearest uncleared region
@@ -517,8 +527,8 @@ pub fn adaptive_clearing(
     let mat = MedialAxis::compute(
         &opts.pocket_boundary,
         &opts.islands,
-        opts.radius,
-        opts.radius.max(2.0),
+        opts.tool_radius,
+        opts.tool_radius.max(2.0),
     )
     .ok();
 
@@ -539,11 +549,11 @@ pub fn adaptive_clearing(
     // auto-detect from the cleared-area frontier.
     let frontier = cleared.frontier(0.5);
     let (default_pos, default_heading) =
-        initial_pose(&frontier, centre, opts.cut_z);
+        initial_pose(&frontier, centre, opts.target_z);
     let start_pos = opts.start_pos.unwrap_or(default_pos);
     let start_heading = opts.start_heading.unwrap_or(default_heading);
 
-    let mut tool = Tool::new(start_pos, start_heading, opts.radius);
+    let mut tool = Tool::new(start_pos, start_heading, opts.tool_radius);
 
     dbg_log!(
         "INIT  frag_count={}  frag_total={:.3}  valid_total={:.3}  \
@@ -561,7 +571,7 @@ pub fn adaptive_clearing(
 
     let mut ops = Ops::new();
     ops.apply_state(cut_state);
-    ops.move_to(tool.pos.x, tool.pos.y, opts.cut_z, None);
+    ops.move_to(tool.pos.x, tool.pos.y, opts.target_z, None);
 
     // Counter for moving commands (move_to + line_to) only — tracked
     // for the trace recorder's ops_len field.
@@ -605,7 +615,7 @@ pub fn adaptive_clearing(
     // allows the initial inner contraction spiral to keep cutting.
     let mut stuck_detector = stuck::StuckDetector::new(
         target_area_pd,
-        opts.step_length,
+        step_length,
         cleared.total_area(),
     );
     let mut resume_count: usize = 0;
@@ -619,8 +629,8 @@ pub fn adaptive_clearing(
     // Options constructed once and reused for all step calls in the loop.
     let step_opts = StepperOptions {
         target_area_pd,
-        step_length: opts.step_length,
-        radius: opts.radius,
+        step_length,
+        radius: opts.tool_radius,
         max_deflection: max_def,
         valid_area: &valid_tool_area,
         dir_sign,
@@ -672,7 +682,7 @@ pub fn adaptive_clearing(
         // stepper chases without making progress.
         let frag_total = cleared.total_area();
         if frag_total >= valid_total - opts.area_tolerance && {
-            let rem = cleared.actionable_remaining(opts.step_length * 1.5);
+            let rem = cleared.actionable_remaining(step_length * 1.5);
             rem < opts.area_tolerance
         } {
             dbg_log!(
@@ -716,7 +726,8 @@ pub fn adaptive_clearing(
                 result.heading.cos(),
                 result.heading.sin(),
             );
-            tool.pos = Point3D::new(result.next.x, result.next.y, opts.cut_z);
+            tool.pos =
+                Point3D::new(result.next.x, result.next.y, opts.target_z);
             tool.heading = result.heading;
             tool.push_gyro(dir);
             // Only feed the deflection back into the predictor when the
@@ -738,9 +749,9 @@ pub fn adaptive_clearing(
                 dir_sign,
                 crate::types::Point::new(prev_pos.x, prev_pos.y),
                 crate::types::Point::new(tool.pos.x, tool.pos.y),
-                opts.radius,
+                opts.tool_radius,
                 target_area_pd,
-                opts.step_length,
+                step_length,
             );
         }
         // Wall-hug tracking: enter when the tool cutting edge
@@ -752,11 +763,11 @@ pub fn adaptive_clearing(
             hug_tracker.on_step(
                 tool.pos,
                 tool.heading,
-                opts.radius,
+                opts.tool_radius,
                 &valid_tool_area,
             );
         }
-        hug_tracker.prune(tool.pos, opts.radius);
+        hug_tracker.prune(tool.pos, opts.tool_radius);
         let stalled = status != StepStatus::Ok;
 
         // Stuck detection: check every STUCK_CHECK_INTERVAL steps
@@ -819,6 +830,8 @@ pub fn adaptive_clearing(
                 iter,
                 opts,
                 &step_opts,
+                advance,
+                step_length,
                 mat.as_ref(),
                 valid_total,
             )? {
@@ -838,7 +851,7 @@ pub fn adaptive_clearing(
         }
 
         // Emit cutting move.
-        ops.line_to(tool.pos.x, tool.pos.y, opts.cut_z, None);
+        ops.line_to(tool.pos.x, tool.pos.y, opts.target_z, None);
         tp_len += 1;
 
         // Expand cleared area.
@@ -848,7 +861,7 @@ pub fn adaptive_clearing(
         cleared.expand_batched(
             crate::types::Point::new(prev_pos.x, prev_pos.y),
             crate::types::Point::new(tool.pos.x, tool.pos.y),
-            opts.radius,
+            opts.tool_radius,
         );
         steps_since_batch += 1;
 
@@ -860,12 +873,12 @@ pub fn adaptive_clearing(
 
         let eng = cleared.get_point_engagement(
             crate::types::Point::new(tool.pos.x, tool.pos.y),
-            opts.radius,
+            opts.tool_radius,
         );
         let ca = cleared.cut_area(
             crate::types::Point::new(prev_pos.x, prev_pos.y),
             crate::types::Point::new(tool.pos.x, tool.pos.y),
-            opts.radius,
+            opts.tool_radius,
         );
         recorder.record_cut(
             status,
