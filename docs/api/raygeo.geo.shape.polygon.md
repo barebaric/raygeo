@@ -137,6 +137,28 @@ center must be inside the polygon.
 | _Returns_    | `bool`                  | True if the polygon fully encloses the circle. |
 | _Complexity_ |                         | O(n)                                           |
 
+### `find_entry_edges()`
+
+```python
+find_entry_edges(
+    polygon: Sequence[tuple[float, float]],
+    boundaries: Sequence[Sequence[tuple[float, float]]],
+    dist_tol: float = 1,
+) -> list[int]
+```
+
+| Parameter    | Type                                      | Description |
+| ------------ | ----------------------------------------- | ----------- |
+| `polygon`    | `Sequence[tuple[float, float]]`           |             |
+| `boundaries` | `Sequence[Sequence[tuple[float, float]]]` |             |
+| `dist_tol`   | `float = 1`                               |             |
+| _Returns_    | `list[int]`                               |             |
+
+![ identifies edges of a narrow-passage polygon that are not collinear with the pocket boundary (entry edges, marked red).](images/geo-shape-polygon-find-entry-edges.png)
+
+*`find_entry_edges` identifies edges of a narrow-passage polygon that are not collinear with the
+pocket boundary (entry edges, marked red).*
+
 ### `find_polygon_corners()`
 
 ```python

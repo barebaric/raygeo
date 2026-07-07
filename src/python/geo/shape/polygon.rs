@@ -8,21 +8,21 @@ use super::super::types::NormalizePolygonsResult;
 use crate::geo::shape::polygon::{
     apply_minimum_curvature, clean_polygon, compute_polygon_bounds,
     do_polygons_intersect, does_path_sweep_intersect_polygon,
-    does_polygon_enclose_circle, find_polygon_corners, flip_polygon,
-    flip_polygons, get_circle_polygon, get_miter_offset_intersection,
-    get_point_line_distance, get_polygon_boundary_distance, get_polygon_bounds,
-    get_polygon_centroid, get_polygon_closest_point, get_polygon_convex_hull,
-    get_polygon_edges, get_polygon_group_bounds, get_polygon_heading_at,
-    get_polygon_perimeter, get_polygon_signed_area,
-    get_polygon_vertex_centroid, get_polygons_closest_point,
-    get_polygons_difference, get_polygons_group_difference,
-    get_polygons_group_intersection, get_polygons_intersection,
-    get_polygons_union, get_polyline_swept_polygon, get_segment_swept_polygon,
-    get_signed_boundary_distance, is_almost_equal, is_point_inside_polygon,
-    is_polygon_clockwise, is_polygon_convex, normalize_polygons,
-    offset_polygon, resample_polygon, rotate_polygon, rotate_polygons,
-    scale_polygon, translate_bounds, translate_polygon, translate_polygons,
-    CornerType, JoinStyle,
+    does_polygon_enclose_circle, find_entry_edges, find_polygon_corners,
+    flip_polygon, flip_polygons, get_circle_polygon,
+    get_miter_offset_intersection, get_point_line_distance,
+    get_polygon_boundary_distance, get_polygon_bounds, get_polygon_centroid,
+    get_polygon_closest_point, get_polygon_convex_hull, get_polygon_edges,
+    get_polygon_group_bounds, get_polygon_heading_at, get_polygon_perimeter,
+    get_polygon_signed_area, get_polygon_vertex_centroid,
+    get_polygons_closest_point, get_polygons_difference,
+    get_polygons_group_difference, get_polygons_group_intersection,
+    get_polygons_intersection, get_polygons_union, get_polyline_swept_polygon,
+    get_segment_swept_polygon, get_signed_boundary_distance, is_almost_equal,
+    is_point_inside_polygon, is_polygon_clockwise, is_polygon_convex,
+    normalize_polygons, offset_polygon, resample_polygon, rotate_polygon,
+    rotate_polygons, scale_polygon, translate_bounds, translate_polygon,
+    translate_polygons, CornerType, JoinStyle,
 };
 use crate::types::{Point, Rect};
 use numpy::{PyArray2, PyArrayMethods};
@@ -159,6 +159,7 @@ pub fn register(shape_mod: &Bound<'_, PyModule>) -> PyResult<()> {
         m,
         apply_minimum_curvature_py,
         clean_polygon_py,
+        find_entry_edges_py,
         find_polygon_corners_py,
         does_path_sweep_intersect_polygon_py,
         does_polygon_enclose_circle_py,
@@ -2067,4 +2068,41 @@ fn walk_polygon_vertices_py(
         },
     );
     result
+}
+
+/// Find edges of *polygon* that are not collinear with any edge of
+/// the given *boundaries*.
+///
+/// An edge is considered collinear when its midpoint lies within
+/// *dist_tol* of any boundary edge.  Returns the starting vertex indices
+/// of all non-collinear (entry) edges.
+///
+/// :param polygon:   Input polygon as a list of ``(x, y)`` vertices.
+/// :param boundaries: List of boundary polygons (pocket + islands).
+/// :param dist_tol:   Distance tolerance in mm.
+/// :returns: List of vertex indices (0-based) of entry edges.
+#[gen_stub_pyfunction(
+    python = r#"
+    import collections.abc
+
+    def find_entry_edges(
+        polygon: collections.abc.Sequence[tuple[float, float]],
+        boundaries: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]],
+        dist_tol: float = 1.0,
+    ) -> list[int]:
+        ...
+    "#,
+    module = "raygeo.geo.shape.polygon"
+)]
+#[pyfunction(name = "find_entry_edges")]
+#[pyo3(signature = (polygon, boundaries, dist_tol = 1.0))]
+fn find_entry_edges_py(
+    polygon: Vec<PyPoint2D>,
+    boundaries: Vec<Vec<PyPoint2D>>,
+    dist_tol: f64,
+) -> Vec<usize> {
+    let poly = poly_to_points(polygon);
+    let bds: Vec<Vec<Point>> =
+        boundaries.into_iter().map(poly_to_points).collect();
+    find_entry_edges(&poly, &bds, dist_tol)
 }

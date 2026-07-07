@@ -6,12 +6,14 @@ import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.patches import Circle as CirclePatch
 
+from raygeo.geo.algo.narrow import find_narrow_passages
 from raygeo.geo.shape.polygon import (
     CornerType,
     JoinStyle,
     apply_minimum_curvature,
     clean_polygon,
     does_path_sweep_intersect_polygon,
+    find_entry_edges,
     find_polygon_corners,
     get_circle_polygon,
     get_polygon_centroid,
@@ -842,6 +844,60 @@ def generate_find_polygon_corners():
     return fig
 
 
+def generate_find_entry_edges():
+    """Entry edges of narrow passages between two triangular islands."""
+    # Two triangular islands pointing at each other with a 4 mm tip gap.
+    pocket = [(0.0, 0.0), (80.0, 0.0), (80.0, 50.0), (0.0, 50.0)]
+    islands = [
+        [(5.0, 5.0), (5.0, 45.0), (37.0, 25.0)],
+        [(75.0, 5.0), (75.0, 45.0), (41.0, 25.0)],
+    ]
+    passages = find_narrow_passages(pocket, holes=islands, max_width=6.0)
+    if not passages:
+        return plt.figure()
+
+    dist_tol = 2.0
+
+    fig, ax = plt.subplots(figsize=(7, 5))
+    plot_polygon(ax, pocket, "grey", "Pocket boundary", linewidth=1.5)
+    for isl in islands:
+        plot_polygon(ax, isl, "dimgray", None, linewidth=1.2)
+
+    total_entry = 0
+    for passage in passages:
+        entry = find_entry_edges(passage, [pocket] + islands, dist_tol)
+        entry_set = set(entry)
+        total_entry += len(entry)
+
+        n = len(passage)
+        for i in range(n):
+            j = (i + 1) % n
+            x = [passage[i][0], passage[j][0]]
+            y = [passage[i][1], passage[j][1]]
+            if i in entry_set:
+                ax.plot(x, y, "tomato", linewidth=3, solid_capstyle="round")
+            else:
+                ax.plot(x, y, "steelblue", linewidth=2, solid_capstyle="round")
+
+        for i in entry:
+            j = (i + 1) % n
+            mid = (
+                (passage[i][0] + passage[j][0]) / 2,
+                (passage[i][1] + passage[j][1]) / 2,
+            )
+            ax.plot(mid[0], mid[1], "ro", markersize=6)
+
+    ax.set_aspect("equal")
+    ax.grid(True, alpha=0.3)
+    ax.set_title(
+        "find_entry_edges — entry edges (red) vs wall edges (blue)\n"
+        f"dist_tol={dist_tol}, {total_entry} entry edges"
+        f" across {len(passages)} passages"
+    )
+    fig.tight_layout()
+    return fig
+
+
 __docs_target__ = ["raygeo.geo.shape.polygon.md"]
 __images__ = [
     {
@@ -962,5 +1018,14 @@ __images__ = [
             " angles."
         ),
         "function": generate_find_polygon_corners,
+    },
+    {
+        "heading": "find_entry_edges",
+        "caption": (
+            "``find_entry_edges`` identifies edges of a narrow-passage"
+            " polygon that are not collinear with the pocket boundary"
+            " (entry edges, marked red)."
+        ),
+        "function": generate_find_entry_edges,
     },
 ]

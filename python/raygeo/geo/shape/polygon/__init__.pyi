@@ -14,6 +14,7 @@ __all__ = [
     "do_polygons_intersect",
     "does_path_sweep_intersect_polygon",
     "does_polygon_enclose_circle",
+    "find_entry_edges",
     "find_polygon_corners",
     "flip_polygon",
     "flip_polygon_numpy",
@@ -159,6 +160,8 @@ def does_polygon_enclose_circle(center: types.Point, radius: float, polygon: col
     :returns: True if the polygon fully encloses the circle.
     :complexity: O(n)
     """
+
+def find_entry_edges(polygon: collections.abc.Sequence[tuple[float, float]], boundaries: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]], dist_tol: float = 1) -> list[int]: ...
 
 def find_polygon_corners(polygon: collections.abc.Sequence[tuple[float, float]], corner_type: CornerType = CornerType.Concave, threshold_deg: float = 90) -> list[tuple[int, float]]:
     r"""

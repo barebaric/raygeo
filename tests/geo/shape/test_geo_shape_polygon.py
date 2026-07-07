@@ -16,6 +16,7 @@ from raygeo.geo.shape.polygon import (
     do_polygons_intersect,
     does_path_sweep_intersect_polygon,
     does_polygon_enclose_circle,
+    find_entry_edges,
     find_polygon_corners,
     flip_polygon_numpy,
     flip_polygons_numpy,
@@ -2490,3 +2491,58 @@ class TestFindPolygonCorners:
     def test_default_threshold_is_90(self):
         l_shape = P((0, 0), (10, 0), (10, 5), (5, 5), (5, 10), (0, 10))
         assert len(find_polygon_corners(l_shape, CornerType.Concave)) == 1
+
+
+class TestFindEntryEdges:
+    def test_no_boundaries_returns_all(self):
+        poly = P((0, 0), (10, 0), (10, 10), (0, 10))
+        assert find_entry_edges(poly, [], 1.0) == [0, 1, 2, 3]
+
+    def test_square_inside_matching_boundary(self):
+        poly = P((0, 0), (10, 0), (10, 10), (0, 10))
+        assert find_entry_edges(poly, [poly], 0.1) == []
+
+    def test_wall_edges_excluded(self):
+        """Edges on the pocket boundary are wall edges, not entry edges."""
+        pocket = P((0, 0), (50, 0), (50, 20), (0, 20))
+        # Narrow passage where two edges are ON the pocket boundary
+        # (the vertical end caps), and the others are ridge edges.
+        passage = P(
+            (0, 5),
+            (0, 15),  # vertical, on pocket boundary x=0 → wall
+            (25, 15),  # top ridge
+            (50, 15),
+            (50, 5),  # vertical, on pocket boundary x=50 → wall
+            (25, 5),  # bottom ridge
+        )
+        entry = find_entry_edges(passage, [pocket], 0.5)
+        # Only the vertical edges on the pocket boundary are wall edges
+        # Edges 1, 2, 4, 5 are ridge edges inside the pocket
+        assert len(entry) == 4, f"expected 4, got {entry}"
+        assert 0 not in entry, "edge 0 is on pocket boundary"
+        assert 3 not in entry, "edge 3 is on pocket boundary"
+
+    def test_degenerate_polygon(self):
+        assert find_entry_edges([], [P((0, 0), (10, 0), (10, 10))], 1.0) == []
+        assert (
+            find_entry_edges(
+                P((0, 0), (1, 1)), [P((0, 0), (10, 0), (10, 10))], 1.0
+            )
+            == []
+        )
+
+    def test_large_distance_tolerance_all_walls(self):
+        pocket = P((0, 0), (50, 0), (50, 20), (0, 20))
+        corridor = P(
+            (0, 5),
+            (0, 15),
+            (20, 15),
+            (40, 15),
+            (50, 15),
+            (50, 5),
+            (40, 5),
+            (20, 5),
+        )
+        # Very large tolerance makes everything collinear
+        entry = find_entry_edges(corridor, [pocket], 50.0)
+        assert entry == []

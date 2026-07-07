@@ -1526,6 +1526,46 @@ pub fn get_polygon_heading_at(polygon: &[Point], vertex: Point) -> f64 {
     avg.y.atan2(avg.x)
 }
 
+/// Find edges of `polygon` that are not collinear with any edge of
+/// `boundaries`.
+///
+/// An edge is considered collinear when its midpoint lies within
+/// `dist_tol` of any boundary edge. Returns the starting vertex indices
+/// of all non-collinear (entry) edges.
+///
+/// This is useful for identifying which edges of a narrow-passage
+/// polygon face into the wider pocket area (as opposed to being
+/// wall edges adjacent to the pocket boundary).
+pub fn find_entry_edges(
+    polygon: &Polygon,
+    boundaries: &[Polygon],
+    dist_tol: f64,
+) -> Vec<usize> {
+    if polygon.len() < 3 {
+        return vec![];
+    }
+    let mut entry_indices = Vec::new();
+    for i in 0..polygon.len() {
+        let j = (i + 1) % polygon.len();
+        let mid = (polygon[i] + polygon[j]) * 0.5;
+        let mut is_collinear = false;
+        for boundary in boundaries {
+            if let Some((_, _, d2)) =
+                get_polygon_closest_point(boundary, mid.x, mid.y)
+            {
+                if d2.sqrt() <= dist_tol {
+                    is_collinear = true;
+                    break;
+                }
+            }
+        }
+        if !is_collinear {
+            entry_indices.push(i);
+        }
+    }
+    entry_indices
+}
+
 /// Walk polygon vertices in order, calling `visit(idx, &point)` for each.
 /// Returns the first `Some` from visit, or `None` if all return `None`.
 ///
