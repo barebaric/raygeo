@@ -46,6 +46,9 @@ class Scenario:
     wall_margin: float = 0.0
     expansion_batch_size: int = 20
     cut_direction: str = "ccw"
+    stock_to_leave: float = 0.0
+    cut_feed_rate: int = 1000
+    cut_power: float = 0.0
 
 
 SCENARIOS: dict[str, Scenario] = {}

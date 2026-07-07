@@ -8,6 +8,7 @@
 
 pub mod adaptive;
 pub mod helix;
+pub mod profile;
 pub mod ramp;
 pub mod raster;
 pub mod result;

@@ -496,7 +496,7 @@ pub fn walk_along_polygon_3d(
         let edge_len = edge_lens[seg_idx];
         let dist_to_end = edge_len * (1.0 - t);
 
-        if remaining <= dist_to_end {
+        if remaining <= dist_to_end + 1e-12 {
             let a = polygon[seg_idx];
             let b = polygon[(seg_idx + 1) % n];
             return a.lerp(b, t + remaining / edge_len);
@@ -522,7 +522,7 @@ pub fn walk_along_polygon_3d(
         let edge_len = edge_lens[seg_idx];
         let dist_to_start = t * edge_len;
 
-        if remaining <= dist_to_start {
+        if remaining <= dist_to_start + 1e-12 {
             let a = polygon[seg_idx];
             let b = polygon[(seg_idx + 1) % n];
             return a.lerp(b, t - remaining / edge_len);

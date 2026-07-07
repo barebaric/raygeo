@@ -2,6 +2,7 @@ use pyo3::prelude::*;
 
 pub(crate) mod adaptive;
 pub(crate) mod helix;
+pub(crate) mod profile;
 pub(crate) mod ramp;
 pub(crate) mod result;
 pub(crate) mod spiral;
@@ -14,6 +15,7 @@ pub(crate) fn register(ops_mod: &Bound<'_, PyModule>) -> PyResult<()> {
 
     adaptive::register(&assembly_mod)?;
     helix::register(&assembly_mod)?;
+    profile::register(&assembly_mod)?;
     ramp::register(&assembly_mod)?;
     result::register(&assembly_mod)?;
     spiral::register(&assembly_mod)?;

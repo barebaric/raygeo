@@ -515,6 +515,9 @@ impl ClearedArea {
         let mut removed: HashSet<usize> = HashSet::new();
 
         for _cascade in 0..2 {
+            if to_merge.is_empty() {
+                break;
+            }
             let bbox = to_merge
                 .iter()
                 .map(get_polygon_bounds)

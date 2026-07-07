@@ -42,15 +42,22 @@ def run(args):
 
     geo = trace.geometry
     tp = trace.toolpath
+    has_offset = "offset_polys" in geo
     print(
         f"  geometry: tool_radius={geo['tool_radius']}  "
         f"boundary={len(geo['boundary'])} verts  "
         f"islands={len(geo['islands'])}  "
-        f"seeds={len(geo['seeds'])}"
+        + (
+            f"offset_polys={len(geo['offset_polys'])}"
+            if has_offset
+            else f"seeds={len(geo['seeds'])}"
+        )
     )
     print(f"  toolpath: {len(tp)} moves")
 
-    seed_polys = [[tuple(p) for p in poly] for poly in geo["seeds"]]
+    seed_polys = []
+    if "seeds" in geo:
+        seed_polys = [[tuple(p) for p in poly] for poly in geo["seeds"]]
 
     inspector = Inspector(trace, tp, seed_polys, geo)
     if initial_step > 0:

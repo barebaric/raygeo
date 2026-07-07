@@ -369,7 +369,7 @@ class Inspector:
         by = [p[1] for p in boundary] + [boundary[0][1]]
         self.ax.plot(bx, by, "k-", linewidth=1.5)
 
-        # ── Seed outline ──
+        # ── Seed / initial outline ──
         for poly in self.seed_polys:
             if len(poly) < 3:
                 continue
@@ -384,58 +384,65 @@ class Inspector:
                 alpha=0.6,
             )
 
-        # ── Envelope (static) ──
-        ca0 = self._get_cleared(0)
-        envelope = ca0.envelope(tool_radius)
-        for env in envelope:
-            if len(env) < 3:
-                continue
-            ex = [p[0] for p in env] + [env[0][0]]
-            ey = [p[1] for p in env] + [env[0][1]]
-            self.ax.plot(ex, ey, "b--", linewidth=0.7, alpha=0.5)
-
-        # ── Cleared area at this step ──
-        # Toolpath now has one point per motion record, so the number
-        # of toolpath entries up to the current step is step_idx + 1.
+        # ── Cleared-area rendering (adaptive traces) ──
+        has_seeds = bool(self.seed_polys) or "seeds" in geo
         n_tp_moves = step_idx + 1
-        n_cuts = sum(1 for i in range(n_tp_moves) if not self.tp[i][2])
-        ca = self._get_cleared(n_cuts)
+        if has_seeds:
+            ca0 = self._get_cleared(0)
+            envelope = ca0.envelope(tool_radius)
+            for env in envelope:
+                if len(env) < 3:
+                    continue
+                ex = [p[0] for p in env] + [env[0][0]]
+                ey = [p[1] for p in env] + [env[0][1]]
+                self.ax.plot(ex, ey, "b--", linewidth=0.7, alpha=0.5)
 
-        # Background — entire boundary in white (all "cleared" by
-        # default).  Islands are handled separately below.
-        bx = [p[0] for p in boundary] + [boundary[0][0]]
-        by = [p[1] for p in boundary] + [boundary[0][1]]
-        self.ax.fill(bx, by, color="white")
+            n_cuts = sum(1 for i in range(n_tp_moves) if not self.tp[i][2])
+            ca = self._get_cleared(n_cuts)
 
-        # Remaining (uncut) — CCW rings fill the uncut area in red;
-        # CW rings "punch holes" through it, revealing the white
-        # background that represents cleared area.
-        _remaining = ca.remaining()
-        _frontier = ca.frontier(0.05)
+            bx = [p[0] for p in boundary] + [boundary[0][0]]
+            by = [p[1] for p in boundary] + [boundary[0][1]]
+            self.ax.fill(bx, by, color="white")
 
-        for poly in _remaining:
-            if len(poly) < 3:
-                continue
-            a = get_polygon_signed_area(poly)
-            rx = [p[0] for p in poly] + [poly[0][0]]
-            ry = [p[1] for p in poly] + [poly[0][1]]
-            if a > 0:
-                self.ax.fill(rx, ry, color="#ffcccc")
-                self.ax.plot(rx, ry, color="#cc5555", linewidth=0.3)
-            else:
-                self.ax.fill(rx, ry, color="white")
+            _remaining = ca.remaining()
+            _frontier = ca.frontier(0.05)
+            for poly in _remaining:
+                if len(poly) < 3:
+                    continue
+                a = get_polygon_signed_area(poly)
+                rx = [p[0] for p in poly] + [poly[0][0]]
+                ry = [p[1] for p in poly] + [poly[0][1]]
+                if a > 0:
+                    self.ax.fill(rx, ry, color="#ffcccc")
+                    self.ax.plot(rx, ry, color="#cc5555", linewidth=0.3)
+                else:
+                    self.ax.fill(rx, ry, color="white")
 
-        # Frontier overlay — draw ALL rings (CCW outer + CW holes) in
-        # light green to prove frontier() matches the cleared-area
-        # boundary, including hole boundaries around islands/bulges.
-        for poly in _frontier:
-            if len(poly) < 3:
-                continue
-            fx = [p[0] for p in poly] + [poly[0][0]]
-            fy = [p[1] for p in poly] + [poly[0][1]]
-            self.ax.plot(fx, fy, color="#88dd88", linewidth=0.6, alpha=0.7)
+            for poly in _frontier:
+                if len(poly) < 3:
+                    continue
+                fx = [p[0] for p in poly] + [poly[0][0]]
+                fy = [p[1] for p in poly] + [poly[0][1]]
+                self.ax.plot(fx, fy, color="#88dd88", linewidth=0.6, alpha=0.7)
 
-        # ── Islands (drawn after white fill so they stay visible) ──
+        # ── Offset polygons (profile traces) ──
+        offset_polys = geo.get("offset_polys", [])
+        if offset_polys:
+            palette = ["#3498db", "#e67e22", "#2ecc71", "#e74c3c", "#9b59b6"]
+            for pi, op in enumerate(offset_polys):
+                ox = [p[0] for p in op] + [op[0][0]]
+                oy = [p[1] for p in op] + [op[0][1]]
+                self.ax.plot(
+                    ox,
+                    oy,
+                    linestyle="--",
+                    linewidth=1.0,
+                    color=palette[pi % len(palette)],
+                    alpha=0.6,
+                    label=f"offset poly {pi}" if pi == 0 else None,
+                )
+
+        # ── Islands ──
         for isl in islands:
             ix = [p[0] for p in isl] + [isl[0][0]]
             iy = [p[1] for p in isl] + [isl[0][1]]
@@ -448,11 +455,23 @@ class Inspector:
         # ── Tool position ──
         self._draw_tool(rec)
 
-        # ── Wall hug point ──
-        self._draw_wall_hug(rec)
+        # ── Wall hug points (if the record carries them) ──
+        if getattr(rec, "wall_hug_points", None):
+            self._draw_wall_hug(rec)
 
-        # ── MAT overlay ──
-        self._draw_mat()
+        # ── MAT overlay (if MAT data exists) ──
+        if self.trace.mat_nodes:
+            self._draw_mat()
+
+        # ── Polygon start marker (if this record is one) ──
+        if rec.kind == "polygon_start":
+            self.ax.axvline(
+                x=rec.pos_x,
+                linestyle=":",
+                color="#555555",
+                linewidth=0.8,
+                alpha=0.7,
+            )
 
         # ── Title (minimal — details in right panel) ──
         kind_name = rec.kind
@@ -719,17 +738,43 @@ class Inspector:
 
         # ── Area (mm²) ──
         _cell("Area (mm²)", "", bg=SEC, weight="bold")
-        _cell("cut_area", f"{rec.cut_area:.1f}")
-        _cell("cleared", f"{rec.total_area:.1f}")
-        _cell("remaining", f"{rec.remaining_area:.1f}")
+        _cell(
+            "cut_area",
+            f"{rec.cut_area:.1f}" if rec.cut_area is not None else "—",
+        )
+        _cell(
+            "cleared",
+            f"{rec.total_area:.1f}" if rec.total_area is not None else "—",
+        )
+        _cell(
+            "remaining",
+            f"{rec.remaining_area:.1f}"
+            if rec.remaining_area is not None
+            else "—",
+        )
 
         # ── Misc ──
         _cell("Misc", "", bg=SEC, weight="bold")
         _cell("iters", str(rec.iters))
         _cell("ops_len", str(rec.ops_len))
 
-        # ── Strategy (only for resume stall / stuck / exit) ──
-        if rec.kind in ("resume_stall", "resume_stuck", "exit"):
+        # ── Polygon tracking (if the record carries it) ──
+        if rec.target_polygon_idx is not None:
+            _cell("Polygon", "", bg=SEC, weight="bold")
+            _cell("target_idx", str(int(rec.target_polygon_idx or 0)))
+            _cell("perimeter", f"{rec.polygon_perimeter:.2f}")
+            _cell("cum_dist", f"{rec.cumulative_distance:.2f}")
+            cp = rec.polygon_perimeter
+            cum = rec.cumulative_distance or 0.0
+            progress = (cum / cp * 100) if cp and cp > 0 else 0.0
+            _cell("progress", f"{progress:.1f}%")
+            _cell("wall_dist", f"{rec.wall_distance:.3f}")
+            _cell("feed_rate", f"{rec.current_feed_rate} mm/min")
+            _cell("step_len", f"{rec.step_length_used:.3f}")
+            _cell("reductions", str(int(rec.engagement_reductions or 0)))
+
+        # ── Strategy (only if the record carries resume/routing data) ──
+        if rec.resume_source is not None and rec.resume_source.value:
             _cell("Resume Strategy", "", bg=SEC, weight="bold")
 
             # Priority order (index 0-5) maps to ResumeSource values as:

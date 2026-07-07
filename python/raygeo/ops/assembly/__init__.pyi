@@ -3,6 +3,7 @@
 
 from . import adaptive
 from . import helix
+from . import profile
 from . import ramp
 from . import result
 from . import spiral
@@ -11,6 +12,7 @@ from . import wavefront
 __all__ = [
     "adaptive",
     "helix",
+    "profile",
     "ramp",
     "result",
     "spiral",

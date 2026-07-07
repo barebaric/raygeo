@@ -23,11 +23,16 @@ def run(args):
 
     geo = trace.geometry
     tp = trace.toolpath
+
     print("Geometry:")
     print(f"  tool_radius={geo['tool_radius']}")
     print(f"  boundary: {len(geo['boundary'])} verts")
     print(f"  islands: {len(geo['islands'])}")
-    print(f"  seeds: {len(geo['seeds'])} polygon(s)")
+    if "offset_polys" in geo:
+        print(f"  offset_polys: {len(geo['offset_polys'])}")
+        print(f"  walk_order: {geo.get('walk_order', [])}")
+    elif "seeds" in geo:
+        print(f"  seeds: {len(geo['seeds'])} polygon(s)")
     print(f"  toolpath: {len(tp)} moves")
     print()
 
@@ -48,14 +53,18 @@ def run(args):
         step_dist = math.hypot(rec.pos_x - rec.prev_x, rec.pos_y - rec.prev_y)
 
         route_src = ""
-        if rec.route_source.value:
+        if rec.route_source and rec.route_source.value:
             route_src = f" route={rec.route_source.name}"
 
         resume_src = ""
-        if rec.kind in RESUME_KINDS and rec.resume_source.value:
+        if (
+            rec.kind in RESUME_KINDS
+            and rec.resume_source
+            and rec.resume_source.value
+        ):
             resume_src = f" resume_via={rec.resume_source.name}"
 
-        print(
+        base = (
             f"{i}\t{kind_name}\t{status_name}{route_src}{resume_src}"
             f"\tpos=({rec.pos_x:.4f},{rec.pos_y:.4f})"
             f"\tprev=({rec.prev_x:.4f},{rec.prev_y:.4f})"
@@ -68,26 +77,47 @@ def run(args):
             f"\teng_area={rec.eng_area:.4f}"
             f"\teng_chord={rec.eng_chord:.4f}"
             f"\tcut_area={rec.cut_area:.4f}"
-            f"\ttotal_area={rec.total_area:.4f}"
-            f"\trem_area={rec.remaining_area:.4f}"
             f"\titers={rec.iters}"
             f"\tops_len={rec.ops_len}"
-            f"\tstrat="
-            + "|".join(
-                "WSMFEI"[i]
-                + (":" + [".", "X", "B"][v] if v <= 2 else ":?")
-                + (
-                    f"[{rec.resume_strategy_details[i]}]"
-                    if rec.resume_strategy_details[i]
-                    else ""
-                )
-                for i, v in enumerate(rec.resume_strategy_reasons)
-            )
-            + "\trout="
-            + "|".join(
-                "DFMZ"[i]
-                + ":"
-                + get_route_detail_name(rec.route_strategy_details[i])
-                for i in range(4)
-            )
         )
+
+        if rec.target_polygon_idx is not None:
+            tpi = int(rec.target_polygon_idx)
+            cp = rec.cumulative_distance or 0.0
+            pp = rec.polygon_perimeter or 0.0
+            prog = (cp / pp * 100) if pp > 0 else 0.0
+            print(
+                base
+                + f"\ttarget={tpi}"
+                + f"\tperim={pp:.2f}"
+                + f"\tcum={cp:.2f}"
+                + f"\tprog={prog:.1f}%"
+                + f"\twall={rec.wall_distance:.3f}"
+                + f"\tfeed={rec.current_feed_rate}"
+                + f"\tstep={rec.step_length_used:.3f}"
+                + f"\tred={int(rec.engagement_reductions or 0)}"
+            )
+        else:
+            print(
+                base
+                + f"\ttotal_area={rec.total_area:.4f}"
+                + f"\trem_area={rec.remaining_area:.4f}"
+                + "\tstrat="
+                + "|".join(
+                    "WSMFEI"[i]
+                    + (":" + [".", "X", "B"][v] if v <= 2 else ":?")
+                    + (
+                        f"[{rec.resume_strategy_details[i]}]"
+                        if rec.resume_strategy_details[i]
+                        else ""
+                    )
+                    for i, v in enumerate(rec.resume_strategy_reasons)
+                )
+                + "\trout="
+                + "|".join(
+                    "DFMZ"[i]
+                    + ":"
+                    + get_route_detail_name(rec.route_strategy_details[i])
+                    for i in range(4)
+                )
+            )
