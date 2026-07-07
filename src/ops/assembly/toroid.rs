@@ -16,8 +16,8 @@ use crate::types::{Point, Point3D, Polygon};
 pub struct ToroidOptions {
     pub carrier: Vec<Point>,
     pub tool_radius: f64,
-    pub step_distance: f64,
-    pub z: f64,
+    pub step_over: f64,
+    pub target_z: f64,
     pub direction: HelixDirection,
     pub angular_step: f64,
 }
@@ -37,9 +37,9 @@ pub fn generate_toroid(
         &TrochoidOptions {
             diameter: opts.tool_radius * 2.0,
             engagement_angle_deg: 30.0,
-            step_over_ratio: opts.step_distance / (opts.tool_radius * 2.0),
+            step_over_ratio: opts.step_over / (opts.tool_radius * 2.0),
             min_loop_radius: opts.tool_radius * 0.3,
-            z: opts.z,
+            z: opts.target_z,
         },
     );
 
@@ -48,7 +48,7 @@ pub fn generate_toroid(
             pos: opts
                 .carrier
                 .first()
-                .map(|p| Point3D::new(p.x, p.y, opts.z))
+                .map(|p| Point3D::new(p.x, p.y, opts.target_z))
                 .unwrap_or(Point3D::ZERO),
             heading: 0.0,
         }
@@ -64,7 +64,7 @@ pub fn generate_toroid(
             pos: opts
                 .carrier
                 .last()
-                .map(|p| Point3D::new(p.x, p.y, opts.z))
+                .map(|p| Point3D::new(p.x, p.y, opts.target_z))
                 .unwrap_or(Point3D::ZERO),
             heading: 0.0,
         }

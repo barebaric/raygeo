@@ -20,8 +20,8 @@ def generate_toroid_example():
     result = generate_toroid(
         carrier=carrier,
         tool_radius=3.0,
-        step_distance=2.0,
-        z=-5.0,
+        step_over=2.0,
+        target_z=-5.0,
     )
 
     pts = _all_moving_pts(result)

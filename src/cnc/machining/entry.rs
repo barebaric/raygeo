@@ -89,8 +89,8 @@ pub fn adaptive_entry(
                 &ToroidOptions {
                     carrier: vec![start, end],
                     tool_radius: opts.tool_radius,
-                    step_distance: opts.step_over,
-                    z: opts.target_z,
+                    step_over: opts.step_over,
+                    target_z: opts.target_z,
                     direction: HelixDirection::Cw,
                     angular_step: opts.angular_step,
                 },

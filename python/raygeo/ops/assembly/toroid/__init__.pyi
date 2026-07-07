@@ -7,7 +7,7 @@ __all__ = [
     "generate_toroid",
 ]
 
-def generate_toroid(carrier: collections.abc.Sequence[tuple[float, float]], tool_radius: float, step_distance: float, z: float, direction: str = 'CW', angular_step: float = 0.1, state: raygeo.ops.state.State | None = None) -> raygeo.ops.assembly.result.AssemblyResult:
+def generate_toroid(carrier: collections.abc.Sequence[tuple[float, float]], tool_radius: float, step_over: float, target_z: float, direction: str = 'CW', angular_step: float = 0.1, state: raygeo.ops.state.State | None = None) -> raygeo.ops.assembly.result.AssemblyResult:
     r"""
     Generate a toroidal (trochoidal) path along a carrier.
     
@@ -16,8 +16,8 @@ def generate_toroid(carrier: collections.abc.Sequence[tuple[float, float]], tool
     
     :param carrier: List of ``(x, y)`` waypoints defining the slot axis.
     :param tool_radius: Tool radius in mm.
-    :param step_distance: Forward advance per trochoid loop.
-    :param z: Cutting Z height.
+    :param step_over: Forward advance per trochoid loop.
+    :param target_z: Cutting Z height.
     :param direction: ``"CW"`` or ``"CCW"`` (default ``"CW"``).
     :param angular_step: Angular step in radians (default 0.1).
     :param state: Optional machine state to apply before the path.

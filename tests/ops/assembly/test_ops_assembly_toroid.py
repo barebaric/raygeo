@@ -9,8 +9,8 @@ def test_generate_toroid_basic():
     result = generate_toroid(
         carrier=carrier,
         tool_radius=3.0,
-        step_distance=2.0,
-        z=-5.0,
+        step_over=2.0,
+        target_z=-5.0,
     )
     assert result.ops.len() > 0
 
@@ -20,8 +20,8 @@ def test_generate_toroid_returns_assembly_result():
     result = generate_toroid(
         carrier=carrier,
         tool_radius=3.0,
-        step_distance=2.0,
-        z=-5.0,
+        step_over=2.0,
+        target_z=-5.0,
     )
     assert hasattr(result, "ops")
     assert hasattr(result, "cleared_polygons")
@@ -35,8 +35,8 @@ def test_generate_toroid_with_state():
     result = generate_toroid(
         carrier=carrier,
         tool_radius=3.0,
-        step_distance=2.0,
-        z=-5.0,
+        step_over=2.0,
+        target_z=-5.0,
         state=st,
     )
     assert result.ops.len() > 0
@@ -48,8 +48,21 @@ def test_generate_toroid_ccw():
     result = generate_toroid(
         carrier=carrier,
         tool_radius=3.0,
-        step_distance=2.0,
-        z=-5.0,
+        step_over=2.0,
+        target_z=-5.0,
         direction="CCW",
     )
     assert result.ops.len() > 0
+
+
+def test_toroid_renamed_fields():
+    """Verify the renamed field names work end-to-end."""
+    carrier = [(0.0, 0.0), (40.0, 0.0)]
+    result = generate_toroid(
+        carrier=carrier,
+        tool_radius=3.0,
+        step_over=2.0,
+        target_z=-5.0,
+    )
+    assert result.ops.len() > 0
+    assert len(result.cleared_polygons) > 0
