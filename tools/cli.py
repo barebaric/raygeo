@@ -3,6 +3,7 @@
 
 import argparse
 import ast
+import fnmatch
 import importlib
 import pkgutil
 import shutil
@@ -263,73 +264,112 @@ def cmd_clean(args):
         print(f"{output_dir} does not exist, nothing to clean.")
 
 
+def _resolve_module_exact(
+    module: str, all_mods: list[str], root_module: str
+) -> str | None:
+    for candidate in [module, f"{root_module}.{module}"]:
+        if candidate in all_mods:
+            return candidate
+    return None
+
+
+def _expand_modules(
+    patterns: list[str],
+    all_mods: list[str],
+    root_module: str,
+) -> list[tuple[str, str | None]]:
+    """Expand each pattern into (module_name, func_filter) pairs.
+
+    Patterns with glob characters (``*``, ``?``, ``[``) are matched against
+    known module names via ``fnmatch``.  Exact patterns are resolved as-is;
+    if no match is found the last dotted component is split off as a function
+    filter.
+    """
+    targets: list[tuple[str, str | None]] = []
+    seen: set[str] = set()
+
+    for pattern in patterns:
+        has_glob = bool(set("*?[") & set(pattern))
+
+        if has_glob:
+            # Try raw then root-prefixed
+            matches = fnmatch.filter(all_mods, pattern)
+            if not matches:
+                matches = fnmatch.filter(all_mods, f"{root_module}.{pattern}")
+            if not matches:
+                print(
+                    f"Error: pattern '{pattern}' matched no modules",
+                    file=sys.stderr,
+                )
+                sys.exit(1)
+            for m in matches:
+                if m not in seen:
+                    seen.add(m)
+                    targets.append((m, None))
+        else:
+            mod = _resolve_module_exact(pattern, all_mods, root_module)
+            func_filter = None
+            if mod is None:
+                *parts, func_filter = pattern.split(".")
+                base = ".".join(parts)
+                mod = _resolve_module_exact(base, all_mods, root_module)
+                if mod is None:
+                    print(
+                        f"Error: module '{pattern}'"
+                        " not found in stubs directory",
+                        file=sys.stderr,
+                    )
+                    sys.exit(1)
+            if mod not in seen:
+                seen.add(mod)
+                targets.append((mod, func_filter))
+
+    return targets
+
+
 def cmd_doc(args):
     output_dir = Path(args.output)
     api_dir = output_dir / "api"
     images_dir = api_dir / "images"
-    module = args.module
 
     stubs_dir = Path(args.stubs)
     files = api_docs.find_stub_files(stubs_dir)
     root_module = stubs_dir.name
 
-    # If module does not resolve, try splitting the last component as a
-    # generator function name (e.g. "ops.assembly.adaptive.target_area_curves"
-    # → module="ops.assembly.adaptive", func="target_area_curves").
-    candidates = [module, f"{root_module}.{module}"]
-    func_filter = None
+    all_mods = [
+        api_docs.module_name_from_path(rel, root_module) for rel, _ in files
+    ]
+    stub_by_mod = {}
+    for rel, fp in files:
+        mod_name = api_docs.module_name_from_path(rel, root_module)
+        stub_by_mod[mod_name] = (rel, fp)
 
-    matched_mod = None
-    matched_rel = None
-    matched_file = None
-    for rel_path, filepath in files:
-        mod = api_docs.module_name_from_path(rel_path, root_module)
-        if mod in candidates:
-            matched_mod = mod
-            matched_rel = rel_path
-            matched_file = filepath
-            break
+    targets = _expand_modules(args.modules, all_mods, root_module)
 
-    if matched_mod is None:
-        *parts, func_filter = module.split(".")
-        module_base = ".".join(parts)
-        candidates = [module_base, f"{root_module}.{module_base}"]
-        for rel_path, filepath in files:
-            mod = api_docs.module_name_from_path(rel_path, root_module)
-            if mod in candidates:
-                matched_mod = mod
-                matched_rel = rel_path
-                matched_file = filepath
-                break
+    for matched_mod, func_filter in targets:
+        matched_rel, matched_file = stub_by_mod[matched_mod]
 
-    if matched_mod is None:
-        print(
-            f"Error: module '{module}' not found in stubs directory",
-            file=sys.stderr,
+        api_dir.mkdir(parents=True, exist_ok=True)
+        out_path = api_docs.output_path_from_rel(
+            matched_rel, api_dir, root_module
         )
-        sys.exit(1)
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        page = api_docs.process_file(matched_rel, matched_file, root_module)
+        if page.strip():
+            page = _format_md(page)
+            out_path.write_text(page)
+            print(f"  {matched_mod} -> {out_path}")
 
-    assert matched_rel is not None and matched_file is not None
+        doc_target = f"{matched_mod}.md"
+        print(f"Generating visual examples for {doc_target}...")
+        inline_map, _ = _generate_images(
+            images_dir,
+            doc_filter=doc_target,
+            func_filter=func_filter,
+        )
 
-    api_dir.mkdir(parents=True, exist_ok=True)
-    out_path = api_docs.output_path_from_rel(matched_rel, api_dir, root_module)
-    out_path.parent.mkdir(parents=True, exist_ok=True)
-    page = api_docs.process_file(matched_rel, matched_file, root_module)
-    if page.strip():
-        page = _format_md(page)
-        out_path.write_text(page)
-        print(f"  {matched_mod} -> {out_path}")
-
-    doc_target = f"{matched_mod}.md"
-    print(f"Generating visual examples for {doc_target}...")
-    inline_map, _ = _generate_images(
-        images_dir,
-        doc_filter=doc_target,
-        func_filter=func_filter,
-    )
-
-    print("Injecting images into API docs...")
-    _inject_images_into_api(api_dir, images_dir, inline_map)
+        print("Injecting images into API docs...")
+        _inject_images_into_api(api_dir, images_dir, inline_map)
 
 
 def main():
@@ -373,12 +413,14 @@ def main():
 
     p_doc = subparsers.add_parser(
         "doc",
-        help="Generate API doc + images for a single module",
+        help="Generate API doc + images for one or more modules",
     )
     p_doc.add_argument(
-        "module",
+        "modules",
         type=str,
-        help="Dotted module name (e.g. raygeo.geo.shape.circle)",
+        nargs="+",
+        help="Dotted module name(s) — glob patterns like geo.algo.*"
+        " are supported",
     )
     p_doc.set_defaults(func=cmd_doc)
 
