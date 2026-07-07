@@ -21,6 +21,7 @@ pub(crate) mod assembly;
 pub(crate) mod axis;
 pub(crate) mod container;
 pub(crate) mod cut;
+pub(crate) mod feature;
 pub(crate) mod raster;
 mod serialize;
 pub(crate) mod state;
@@ -62,6 +63,9 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     // Child submodule: raygeo.ops.raster
     raster::register(&ops_mod)?;
 
+    // Child submodule: raygeo.ops.feature
+    feature::register(&ops_mod)?;
+
     // Root-level classes
     ops_mod.add_class::<PyOps>()?;
     ops_mod.add_class::<PyCommandInfo>()?;
@@ -76,6 +80,7 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     sys_modules.set_item("raygeo.ops.types", &types_mod)?;
     sys_modules.set_item("raygeo.ops.axis", &axis_mod)?;
     sys_modules.set_item("raygeo.ops.state", &state_mod)?;
+    sys_modules.set_item("raygeo.ops.feature", &ops_mod.getattr("feature")?)?;
 
     Ok(())
 }

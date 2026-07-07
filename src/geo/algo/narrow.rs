@@ -11,7 +11,7 @@
 use rstar::{PointDistance, RTree, RTreeObject, AABB};
 
 use crate::geo::shape::polygon::{
-    get_polygon_convex_hull, get_polygons_group_difference,
+    clean_polygon, get_polygon_convex_hull, get_polygons_group_difference,
     get_polygons_group_intersection, resample_polygon,
 };
 use crate::types::{Point, Polygon};
@@ -90,9 +90,13 @@ pub fn find_narrow_passages(
     let mut boundaries = vec![polygon.clone()];
     boundaries.extend_from_slice(holes);
 
-    // Resample each boundary so that even narrow gaps on long edges
-    // are detected.  Spacing = max_width/10, clamped to [0.1, 2.0].
-    let spacing = (max_width / 10.0).clamp(0.1, 2.0);
+    // Resample each boundary so that even narrow gaps on long edges are
+    // detected.  Spacing = max_width / 4 keeps segments small enough
+    // that midpoints of facing edges stay within max_width of each other
+    // (needed for gaps near the max_width limit), while coarse enough
+    // that far-wall endpoints don't contribute un-paired vertices to the
+    // convex hull.
+    let spacing = (max_width / 4.0).clamp(0.1, 5.0);
     let resampled: Vec<Vec<Point>> = boundaries
         .iter()
         .map(|p| resample_polygon(p, spacing))
@@ -283,10 +287,30 @@ pub fn find_narrow_passages(
     let npairs = pairs.len();
     let mut uf = UnionFind::new(npairs);
 
-    // Cluster pairs by adjacency on the same polygon.
+    // Pre-compute center point for each pair (average of its 4 vertices).
+    // Used for a spatial proximity guard during clustering.
+    let pair_centers: Vec<Point> = pairs
+        .iter()
+        .map(|p| {
+            let s: Point = p.pts.iter().fold(Point::new(0.0, 0.0), |acc, v| {
+                Point::new(acc.x + v.x, acc.y + v.y)
+            });
+            Point::new(s.x / 4.0, s.y / 4.0)
+        })
+        .collect();
+
+    // Cluster pairs by adjacency on the same polygon, with a spatial
+    // proximity guard: two pairs are merged only when their centres are
+    // within `max_width * 0.5` of each other.  This keeps separate
+    // narrow passages apart even when they share adjacent edges on one
+    // side (e.g. two distinct wall segments facing the same outer
+    // boundary).
+    //
     // For each polygon, sort pair-indices by edge index on that polygon,
     // then union consecutive pairs whose edge indices differ by ≤ 1
-    // (adjacent edges share a vertex).
+    // (adjacent edges share a vertex) **and** whose pair centres are
+    // close enough.
+    let proxim2 = (max_width * 0.5).powi(2);
     for (pid, edge_count) in edge_counts.iter().enumerate() {
         // Collect (edge_idx_on_this_poly, pair_index)
         let mut hits: Vec<(usize, usize)> = Vec::new();
@@ -299,14 +323,19 @@ pub fn find_narrow_passages(
             }
         }
         hits.sort_by_key(|a| a.0);
-        // Union consecutive hits that are adjacent (edge_idx diff ≤ 1).
+        // Union consecutive hits that are adjacent.
         for w in 1..hits.len() {
             let (e0, p0) = hits[w - 1];
             let (e1, p1) = hits[w];
             let n = edge_count;
             let diff = if e1 >= e0 { e1 - e0 } else { n - e0 + e1 };
             if diff <= 1 {
-                uf.union(p0, p1);
+                let c0 = pair_centers[p0];
+                let c1 = pair_centers[p1];
+                let d2 = (c0.x - c1.x).powi(2) + (c0.y - c1.y).powi(2);
+                if d2 <= proxim2 {
+                    uf.union(p0, p1);
+                }
             }
         }
         // Also check wrap-around: the last hit and the first hit may be
@@ -316,7 +345,13 @@ pub fn find_narrow_passages(
             let (e_last, p_last) = hits[hits.len() - 1];
             let wrap_diff = e_first + edge_count - e_last;
             if wrap_diff <= 1 {
-                uf.union(p_first, p_last);
+                let c_first = pair_centers[p_first];
+                let c_last = pair_centers[p_last];
+                let d2 = (c_first.x - c_last.x).powi(2)
+                    + (c_first.y - c_last.y).powi(2);
+                if d2 <= proxim2 {
+                    uf.union(p_first, p_last);
+                }
             }
         }
     }
@@ -371,7 +406,11 @@ pub fn find_narrow_passages(
         );
         for p in clipped {
             if p.len() >= 3 {
-                result.push(p);
+                // Simplify removes redundant collinear vertices from
+                // boundary-following during the intersection.
+                if let Some(cleaned) = clean_polygon(&p, 0.01) {
+                    result.push(cleaned);
+                }
             }
         }
     }

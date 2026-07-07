@@ -8,6 +8,7 @@ pub mod axis;
 pub mod container;
 pub mod cut;
 pub mod enums;
+pub mod feature;
 pub mod state;
 pub mod transform;
 pub mod types;

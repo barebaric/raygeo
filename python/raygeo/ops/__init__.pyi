@@ -23,6 +23,7 @@ import typing
 from . import assembly
 from . import axis
 from . import cut
+from . import feature
 from . import raster
 from . import state
 from . import transform
@@ -35,6 +36,7 @@ __all__ = [
     "assembly",
     "axis",
     "cut",
+    "feature",
     "raster",
     "state",
     "transform",
