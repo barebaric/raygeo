@@ -362,8 +362,8 @@ pub fn find_narrow_passages(
         *c = uf.find(*c);
     }
     // Collect vertices per cluster.
-    let mut cluster_vertices: std::collections::HashMap<usize, Vec<Point>> =
-        std::collections::HashMap::new();
+    let mut cluster_vertices: std::collections::BTreeMap<usize, Vec<Point>> =
+        std::collections::BTreeMap::new();
     for (i, p) in pairs.iter().enumerate() {
         let v = cluster_vertices.entry(clusters[i]).or_default();
         v.extend_from_slice(&p.pts);

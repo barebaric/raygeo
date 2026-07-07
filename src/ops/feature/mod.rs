@@ -5,3 +5,4 @@
 //! identify features like narrow passages, plunge points, and ramps.
 
 pub mod narrow;
+pub mod near;

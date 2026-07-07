@@ -30,14 +30,14 @@ returned list is a tuple of `(polygon, class, min_width, entry_edge_indices)`.
 
 **Raises:** `RuntimeError` — If the polygon cannot be analyzed.
 
-| Parameter        | Type                                                            | Description                                                                      |
-| ---------------- | --------------------------------------------------------------- | -------------------------------------------------------------------------------- |
-| `polygon`        | `Sequence[tuple[float, float]]`                                 | Outer boundary polygon.                                                          |
-| `holes`          | `Sequence[Sequence[tuple[float, float]]] &#124; None = None`    | List of hole (island) polygons.                                                  |
-| `tool_radius`    | `float = 3`                                                     | Tool radius in mm.                                                               |
-| `tolerance`      | `float = 0.5`                                                   | Additional clearance tolerance in mm.                                            |
-| `min_slot_width` | `float &#124; None = None`                                      | Minimum passage width for slotting in mm. Defaults to `tool_radius` when `None`. |
-| _Returns_        | `list[tuple[list[tuple[float, float]], str, float, list[int]]]` | List of `(polygon, class, min_width, entry_edge_indices)` tuples.                |
+| Parameter        | Type                                                            | Description                                                                                          |
+| ---------------- | --------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| `polygon`        | `Sequence[tuple[float, float]]`                                 | Outer boundary polygon.                                                                              |
+| `holes`          | `Sequence[Sequence[tuple[float, float]]] &#124; None = None`    | List of hole (island) polygons.                                                                      |
+| `tool_radius`    | `float = 3`                                                     | Tool radius in mm.                                                                                   |
+| `tolerance`      | `float = 0.5`                                                   | Additional clearance tolerance in mm.                                                                |
+| `min_slot_width` | `float &#124; None = None`                                      | Minimum passage width for slotting in mm. Defaults to `2 × tool_radius` (tool diameter) when `None`. |
+| _Returns_        | `list[tuple[list[tuple[float, float]], str, float, list[int]]]` | List of `(polygon, class, min_width, entry_edge_indices)` tuples.                                    |
 
 ![A single pocket with a staircase island produces narrow passages of three different widths, demonstrating all three classification levels.](images/ops-feature-narrow-classification-by-width.png)
 

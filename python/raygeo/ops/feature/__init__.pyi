@@ -5,7 +5,9 @@ Feature detection for machining analysis.
 """
 
 from . import narrow
+from . import near
 __all__ = [
     "narrow",
+    "near",
 ]
 
