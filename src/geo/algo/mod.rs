@@ -17,6 +17,7 @@ pub mod interp;
 pub mod intersect;
 pub mod medial_axis;
 pub mod minkowski2d;
+pub mod narrow;
 pub mod nest2d;
 pub mod offset;
 pub mod ordering;
@@ -87,6 +88,7 @@ pub use minkowski2d::{
     get_inner_fit_polygon, get_no_fit_polygon,
     get_polygon_minkowski_sum_convex,
 };
+pub use narrow::find_narrow_passages;
 pub use offset::{
     compute_inset_region, concentric_offsets, find_deepest_cores,
     grow_geometry, grow_geometry_on_plane, offset_contour_group,

@@ -11,6 +11,7 @@ pub(crate) mod interp;
 pub(crate) mod intersect;
 pub(crate) mod medial_axis;
 pub(crate) mod minkowski2d;
+pub(crate) mod narrow;
 pub(crate) mod nest2d;
 pub(crate) mod offset;
 pub(crate) mod ordering;
@@ -73,6 +74,7 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     interp::register(&algo_mod)?;
     intersect::register(&algo_mod)?;
     minkowski2d::register(&algo_mod)?;
+    narrow::register(&algo_mod)?;
     nest2d::register(&algo_mod)?;
     offset::register(&algo_mod)?;
     ordering::register(&algo_mod)?;
@@ -141,6 +143,8 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
         "raygeo.geo.algo.minkowski2d",
         &algo_mod.getattr("minkowski2d")?,
     )?;
+    sys_modules
+        .set_item("raygeo.geo.algo.narrow", &algo_mod.getattr("narrow")?)?;
     sys_modules.set_item(
         "raygeo.geo.algo.polylabel",
         &algo_mod.getattr("polylabel")?,
