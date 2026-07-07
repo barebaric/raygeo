@@ -3,6 +3,13 @@ title: raygeo.geo.shape.polygon
 sidebar_label: raygeo.geo.shape.polygon
 ---
 
+## CornerType
+
+Which corner type to find in \[`find_polygon_corners`\].
+
+- `CornerType.Convex`: convex corners (interior angle < 180°).
+- `CornerType.Concave`: concave / reflex corners (default).
+
 ## JoinStyle
 
 Corner join style for polygon offset operations.
@@ -129,6 +136,33 @@ center must be inside the polygon.
 | `polygon`    | `Sequence[types.Point]` | Polygon as (x, y) points.                      |
 | _Returns_    | `bool`                  | True if the polygon fully encloses the circle. |
 | _Complexity_ |                         | O(n)                                           |
+
+### `find_polygon_corners()`
+
+```python
+find_polygon_corners(
+    polygon: Sequence[tuple[float, float]],
+    corner_type: CornerType = CornerType.Concave,
+    threshold_deg: float = 90,
+) -> list[tuple[int, float]]
+```
+
+Find corners of a polygon matching *corner_type*.
+
+Returns a list of (vertex_index, interior_angle_deg) for each vertex whose interior angle is at
+least *threshold_deg*. Winding is auto-detected from the signed area.
+
+| Parameter       | Type                              | Description                                            |
+| --------------- | --------------------------------- | ------------------------------------------------------ |
+| `polygon`       | `Sequence[tuple[float, float]]`   | Polygon vertices (closed or open; treated as closed).  |
+| `corner_type`   | `CornerType = CornerType.Concave` | `CornerType.Concave` (default) or `CornerType.Convex`. |
+| `threshold_deg` | `float = 90`                      | Minimum interior angle in degrees (default 90).        |
+| _Returns_       | `list[tuple[int, float]]`         | List of (vertex_index, interior_angle_deg) tuples.     |
+
+![ labels convex (circle) and concave / reflex (square) vertices with their interior angles.](images/geo-shape-polygon-find-polygon-corners.png)
+
+*`find_polygon_corners` labels convex (circle) and concave / reflex (square) vertices with their
+interior angles.*
 
 ### `flip_polygon()`
 

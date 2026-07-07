@@ -7,12 +7,14 @@ import numpy.typing
 from raygeo.geo import types
 import typing
 __all__ = [
+    "CornerType",
     "JoinStyle",
     "apply_minimum_curvature",
     "clean_polygon",
     "do_polygons_intersect",
     "does_path_sweep_intersect_polygon",
     "does_polygon_enclose_circle",
+    "find_polygon_corners",
     "flip_polygon",
     "flip_polygon_numpy",
     "flip_polygons",
@@ -69,6 +71,17 @@ __all__ = [
     "walk_polygon_from_point",
     "walk_polygon_vertices",
 ]
+
+@typing.final
+class CornerType(enum.Enum):
+    r"""
+    Which corner type to find in [`find_polygon_corners`].
+    
+    - ``CornerType.Convex``: convex corners (interior angle < 180°).
+    - ``CornerType.Concave``: concave / reflex corners (default).
+    """
+    Convex = ...
+    Concave = ...
 
 @typing.final
 class JoinStyle(enum.Enum):
@@ -145,6 +158,20 @@ def does_polygon_enclose_circle(center: types.Point, radius: float, polygon: col
     :param polygon: Polygon as (x, y) points.
     :returns: True if the polygon fully encloses the circle.
     :complexity: O(n)
+    """
+
+def find_polygon_corners(polygon: collections.abc.Sequence[tuple[float, float]], corner_type: CornerType = CornerType.Concave, threshold_deg: float = 90) -> list[tuple[int, float]]:
+    r"""
+    Find corners of a polygon matching *corner_type*.
+    
+    Returns a list of (vertex_index, interior_angle_deg) for each
+    vertex whose interior angle is at least *threshold_deg*.
+    Winding is auto-detected from the signed area.
+    
+    :param polygon: Polygon vertices (closed or open; treated as closed).
+    :param corner_type: ``CornerType.Concave`` (default) or ``CornerType.Convex``.
+    :param threshold_deg: Minimum interior angle in degrees (default 90).
+    :returns: List of (vertex_index, interior_angle_deg) tuples.
     """
 
 def flip_polygon(polygon: collections.abc.Sequence[types.Point], flip_h: bool, flip_v: bool) -> types.Polygon:

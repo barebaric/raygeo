@@ -8,20 +8,21 @@ use super::super::types::NormalizePolygonsResult;
 use crate::geo::shape::polygon::{
     apply_minimum_curvature, clean_polygon, compute_polygon_bounds,
     do_polygons_intersect, does_path_sweep_intersect_polygon,
-    does_polygon_enclose_circle, flip_polygon, flip_polygons,
-    get_circle_polygon, get_miter_offset_intersection, get_point_line_distance,
-    get_polygon_boundary_distance, get_polygon_bounds, get_polygon_centroid,
-    get_polygon_closest_point, get_polygon_convex_hull, get_polygon_edges,
-    get_polygon_group_bounds, get_polygon_heading_at, get_polygon_perimeter,
-    get_polygon_signed_area, get_polygon_vertex_centroid,
-    get_polygons_closest_point, get_polygons_difference,
-    get_polygons_group_difference, get_polygons_group_intersection,
-    get_polygons_intersection, get_polygons_union, get_polyline_swept_polygon,
-    get_segment_swept_polygon, get_signed_boundary_distance, is_almost_equal,
-    is_point_inside_polygon, is_polygon_clockwise, is_polygon_convex,
-    normalize_polygons, offset_polygon, resample_polygon, rotate_polygon,
-    rotate_polygons, scale_polygon, translate_bounds, translate_polygon,
-    translate_polygons, JoinStyle,
+    does_polygon_enclose_circle, find_polygon_corners, flip_polygon,
+    flip_polygons, get_circle_polygon, get_miter_offset_intersection,
+    get_point_line_distance, get_polygon_boundary_distance, get_polygon_bounds,
+    get_polygon_centroid, get_polygon_closest_point, get_polygon_convex_hull,
+    get_polygon_edges, get_polygon_group_bounds, get_polygon_heading_at,
+    get_polygon_perimeter, get_polygon_signed_area,
+    get_polygon_vertex_centroid, get_polygons_closest_point,
+    get_polygons_difference, get_polygons_group_difference,
+    get_polygons_group_intersection, get_polygons_intersection,
+    get_polygons_union, get_polyline_swept_polygon, get_segment_swept_polygon,
+    get_signed_boundary_distance, is_almost_equal, is_point_inside_polygon,
+    is_polygon_clockwise, is_polygon_convex, normalize_polygons,
+    offset_polygon, resample_polygon, rotate_polygon, rotate_polygons,
+    scale_polygon, translate_bounds, translate_polygon, translate_polygons,
+    CornerType, JoinStyle,
 };
 use crate::types::{Point, Rect};
 use numpy::{PyArray2, PyArrayMethods};
@@ -107,16 +108,58 @@ impl PyJoinStyle {
     }
 }
 
+#[gen_stub_pyclass_enum]
+#[pyclass(
+    module = "raygeo.geo.shape.polygon",
+    name = "CornerType",
+    from_py_object
+)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
+/// Which corner type to find in [`find_polygon_corners`].
+///
+/// - ``CornerType.Convex``: convex corners (interior angle < 180°).
+/// - ``CornerType.Concave``: concave / reflex corners (default).
+pub enum PyCornerType {
+    Convex,
+    #[default]
+    Concave,
+}
+
+impl From<PyCornerType> for CornerType {
+    fn from(c: PyCornerType) -> Self {
+        match c {
+            PyCornerType::Convex => CornerType::Convex,
+            PyCornerType::Concave => CornerType::Concave,
+        }
+    }
+}
+
+#[pymethods]
+impl PyCornerType {
+    fn __repr__(&self) -> String {
+        match self {
+            PyCornerType::Convex => "CornerType.Convex".to_string(),
+            PyCornerType::Concave => "CornerType.Concave".to_string(),
+        }
+    }
+
+    fn __str__(&self) -> String {
+        self.__repr__()
+    }
+}
+
 pub fn register(shape_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     let py = shape_mod.py();
     let m = PyModule::new(py, "polygon")?;
 
     m.add_class::<PyJoinStyle>()?;
+    m.add_class::<PyCornerType>()?;
 
     register_functions!(
         m,
         apply_minimum_curvature_py,
         clean_polygon_py,
+        find_polygon_corners_py,
         does_path_sweep_intersect_polygon_py,
         does_polygon_enclose_circle_py,
         flip_polygon_numpy_py,
@@ -799,6 +842,43 @@ fn does_path_sweep_intersect_polygon_py(
 #[pyfunction(name = "is_polygon_convex")]
 fn is_polygon_convex_py(polygon: Vec<PyPoint2D>) -> bool {
     is_polygon_convex(&poly_to_points(polygon))
+}
+
+#[gen_stub_pyfunction(
+    python = r#"
+    import collections.abc
+
+    def find_polygon_corners(
+        polygon: collections.abc.Sequence[tuple[float, float]],
+        corner_type: CornerType = CornerType.Concave,
+        threshold_deg: float = 90.0,
+    ) -> list[tuple[int, float]]:
+        """Find corners of a polygon matching *corner_type*.
+
+        Returns a list of (vertex_index, interior_angle_deg) for each
+        vertex whose interior angle is at least *threshold_deg*.
+        Winding is auto-detected from the signed area.
+
+        :param polygon: Polygon vertices (closed or open; treated as closed).
+        :param corner_type: ``CornerType.Concave`` (default) or ``CornerType.Convex``.
+        :param threshold_deg: Minimum interior angle in degrees (default 90).
+        :returns: List of (vertex_index, interior_angle_deg) tuples.
+        """
+"#,
+    module = "raygeo.geo.shape.polygon"
+)]
+#[pyfunction(name = "find_polygon_corners")]
+#[pyo3(signature = (polygon, corner_type = PyCornerType::Concave, threshold_deg = 90.0))]
+fn find_polygon_corners_py(
+    polygon: Vec<PyPoint2D>,
+    corner_type: PyCornerType,
+    threshold_deg: f64,
+) -> Vec<(usize, f64)> {
+    find_polygon_corners(
+        &poly_to_points(polygon),
+        corner_type.into(),
+        threshold_deg,
+    )
 }
 
 #[gen_stub_pyfunction(

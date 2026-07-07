@@ -9,12 +9,14 @@ import numpy as np
 import pytest
 
 from raygeo.geo.shape.polygon import (
+    CornerType,
     JoinStyle,
     apply_minimum_curvature,
     clean_polygon,
     do_polygons_intersect,
     does_path_sweep_intersect_polygon,
     does_polygon_enclose_circle,
+    find_polygon_corners,
     flip_polygon_numpy,
     flip_polygons_numpy,
     get_miter_offset_intersection,
@@ -2436,3 +2438,55 @@ def test_enclose_circle_concave_not_enclosing():
         (0.0, 20.0),
     ]
     assert not does_polygon_enclose_circle((8, 8), 4.0, l_shape)
+
+
+class TestFindPolygonCorners:
+    def test_square_no_concave(self):
+        square = P((0, 0), (10, 0), (10, 10), (0, 10))
+        assert find_polygon_corners(square, CornerType.Concave, 90.0) == []
+
+    def test_star_concave(self):
+        star = []
+        for i in range(10):
+            angle = math.pi / 2 + i * math.pi / 5
+            r = 10.0 if i % 2 == 0 else 4.0
+            star.append((r * math.cos(angle), r * math.sin(angle)))
+        result = find_polygon_corners(star, CornerType.Concave, 90.0)
+        assert len(result) == 5
+        for _idx, angle_deg in result:
+            assert angle_deg > 90.0
+            assert angle_deg < 360.0
+
+    def test_l_shape_threshold_180(self):
+        l_shape = P((0, 0), (10, 0), (10, 5), (5, 5), (5, 10), (0, 10))
+        result = find_polygon_corners(l_shape, CornerType.Concave, 180.0)
+        assert len(result) == 1
+        idx, angle_deg = result[0]
+        assert idx == 3
+        assert abs(angle_deg - 270.0) < 1e-6
+
+    def test_empty_polygon(self):
+        assert (
+            find_polygon_corners(cast(Polygon, []), CornerType.Concave, 90.0)
+            == []
+        )
+        assert find_polygon_corners(P((0, 0)), CornerType.Concave, 90.0) == []
+        assert (
+            find_polygon_corners(P((0, 0), (1, 1)), CornerType.Concave, 90.0)
+            == []
+        )
+
+    def test_square_convex(self):
+        square = P((0, 0), (10, 0), (10, 10), (0, 10))
+        result = find_polygon_corners(square, CornerType.Convex, 0.0)
+        assert len(result) == 4
+        for _idx, angle_deg in result:
+            assert abs(angle_deg - 90.0) < 1e-9
+
+    def test_default_corner_type_is_concave(self):
+        l_shape = P((0, 0), (10, 0), (10, 5), (5, 5), (5, 10), (0, 10))
+        assert len(find_polygon_corners(l_shape, threshold_deg=180.0)) == 1
+
+    def test_default_threshold_is_90(self):
+        l_shape = P((0, 0), (10, 0), (10, 5), (5, 5), (5, 10), (0, 10))
+        assert len(find_polygon_corners(l_shape, CornerType.Concave)) == 1

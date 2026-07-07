@@ -23,6 +23,7 @@ use clipper2::{
 };
 
 use crate::geo::shape::arc::normalize_angle_signed;
+use crate::geo::shape::line::get_interior_angle;
 use crate::geo::shape::line::get_line_segment_closest_point;
 use crate::geo::shape::line::get_segment_segment_distance;
 use crate::types::{Edge, Point, Polygon, Rect};
@@ -840,6 +841,70 @@ pub fn is_polygon_convex(polygon: &Polygon) -> bool {
         }
     }
     true
+}
+
+/// Which corner type to find in [`find_polygon_corners`].
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
+pub enum CornerType {
+    /// Convex corners (interior angle < 180° for a CCW polygon).
+    Convex,
+    /// Concave / reflex corners (interior angle > 180° for a CCW polygon).
+    #[default]
+    Concave,
+}
+
+/// Find corners of a polygon matching `corner_type`.
+///
+/// Returns the indices and interior angles (in degrees) of vertices whose
+/// interior angle is at least `threshold_deg`. Winding is auto-detected from
+/// the signed area. For a CCW polygon, concave corners are right turns; for a
+/// CW polygon, concave corners are left turns.
+pub fn find_polygon_corners(
+    polygon: &Polygon,
+    corner_type: CornerType,
+    threshold_deg: f64,
+) -> Vec<(usize, f64)> {
+    let n = polygon.len();
+    if n < 3 {
+        return Vec::new();
+    }
+
+    let is_ccw = get_polygon_signed_area(polygon) > 0.0;
+    let mut result = Vec::new();
+
+    for i in 0..n {
+        let prev = polygon[(i + n - 1) % n];
+        let curr = polygon[i];
+        let next = polygon[(i + 1) % n];
+
+        let edge1 = curr - prev;
+        let edge2 = next - curr;
+        let cross = edge1.perp_dot(edge2);
+
+        if cross == 0.0 {
+            continue;
+        }
+
+        let is_concave = if is_ccw { cross < 0.0 } else { cross > 0.0 };
+        let matches = match corner_type {
+            CornerType::Concave => is_concave,
+            CornerType::Convex => !is_concave,
+        };
+
+        if matches {
+            let raw_angle = get_interior_angle(prev, curr, next).to_degrees();
+            let interior_angle = if is_concave {
+                360.0 - raw_angle
+            } else {
+                raw_angle
+            };
+            if interior_angle >= threshold_deg {
+                result.push((i, interior_angle));
+            }
+        }
+    }
+
+    result
 }
 
 /// Compute the convex hull of a polygon using Andrew's monotone chain.

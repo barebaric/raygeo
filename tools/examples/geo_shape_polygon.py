@@ -7,10 +7,12 @@ import numpy as np
 from matplotlib.patches import Circle as CirclePatch
 
 from raygeo.geo.shape.polygon import (
+    CornerType,
     JoinStyle,
     apply_minimum_curvature,
     clean_polygon,
     does_path_sweep_intersect_polygon,
+    find_polygon_corners,
     get_circle_polygon,
     get_polygon_centroid,
     get_polygon_closest_point,
@@ -782,6 +784,64 @@ def generate_walk_polygon_from_point():
     return fig
 
 
+def generate_find_polygon_corners():
+    """Concave and convex corners of an L-shaped polygon."""
+    poly = [
+        (0.0, 0.0),
+        (20.0, 0.0),
+        (20.0, 10.0),
+        (10.0, 10.0),
+        (10.0, 20.0),
+        (0.0, 20.0),
+    ]
+
+    concave = find_polygon_corners(poly, CornerType.Concave, 0.0)
+    convex = find_polygon_corners(poly, CornerType.Convex, 0.0)
+
+    fig, ax = plt.subplots(figsize=(7, 6))
+
+    arr = np.array(poly + [poly[0]])
+    ax.plot(arr[:, 0], arr[:, 1], "k-", linewidth=2, label="Polygon")
+    ax.fill(arr[:, 0], arr[:, 1], facecolor="#eef", alpha=0.3)
+
+    for idx, angle in convex:
+        p = poly[idx]
+        ax.plot(p[0], p[1], "o", color="steelblue", markersize=10, zorder=5)
+        ax.text(
+            p[0] + 0.8,
+            p[1] - 1.5,
+            f"v{idx}\n{angle:.0f}°",
+            fontsize=8,
+            color="steelblue",
+            fontweight="bold",
+        )
+
+    for idx, angle in concave:
+        p = poly[idx]
+        ax.plot(p[0], p[1], "s", color="tomato", markersize=12, zorder=5)
+        ax.text(
+            p[0] + 0.8,
+            p[1] - 1.5,
+            f"v{idx}\n{angle:.0f}°",
+            fontsize=8,
+            color="tomato",
+            fontweight="bold",
+        )
+
+    ax.plot([], [], "o", color="steelblue", label="Convex")
+    ax.plot(
+        [], [], "s", color="tomato", markersize=10, label="Concave (reflex)"
+    )
+    ax.set_title("find_polygon_corners — Convex vs Concave vertices")
+    ax.set_xlabel("X (mm)")
+    ax.set_ylabel("Y (mm)")
+    ax.set_aspect("equal")
+    ax.legend(fontsize=9)
+    ax.grid(True, alpha=0.3)
+    fig.tight_layout()
+    return fig
+
+
 __docs_target__ = ["raygeo.geo.shape.polygon.md"]
 __images__ = [
     {
@@ -893,5 +953,14 @@ __images__ = [
             " starting from the vertex closest to a marker."
         ),
         "function": generate_walk_polygon_from_point,
+    },
+    {
+        "heading": "find_polygon_corners",
+        "caption": (
+            "``find_polygon_corners`` labels convex (circle) and"
+            " concave / reflex (square) vertices with their interior"
+            " angles."
+        ),
+        "function": generate_find_polygon_corners,
     },
 ]
