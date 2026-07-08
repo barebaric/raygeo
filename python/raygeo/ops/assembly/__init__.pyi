@@ -6,6 +6,7 @@ from . import helix
 from . import profile
 from . import ramp
 from . import result
+from . import slot
 from . import spiral
 from . import toroid
 from . import wavefront
@@ -15,6 +16,7 @@ __all__ = [
     "profile",
     "ramp",
     "result",
+    "slot",
     "spiral",
     "toroid",
     "wavefront",

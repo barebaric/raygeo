@@ -12,6 +12,7 @@ pub mod profile;
 pub mod ramp;
 pub mod raster;
 pub mod result;
+pub mod slot;
 pub mod spiral;
 pub mod toroid;
 pub mod wavefront;

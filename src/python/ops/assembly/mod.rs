@@ -5,6 +5,7 @@ pub(crate) mod helix;
 pub(crate) mod profile;
 pub(crate) mod ramp;
 pub(crate) mod result;
+pub(crate) mod slot;
 pub(crate) mod spiral;
 pub(crate) mod toroid;
 pub(crate) mod wavefront;
@@ -18,6 +19,7 @@ pub(crate) fn register(ops_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     profile::register(&assembly_mod)?;
     ramp::register(&assembly_mod)?;
     result::register(&assembly_mod)?;
+    slot::register(&assembly_mod)?;
     spiral::register(&assembly_mod)?;
     toroid::register(&assembly_mod)?;
     wavefront::register(&assembly_mod)?;

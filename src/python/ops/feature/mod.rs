@@ -8,6 +8,7 @@ use pyo3::prelude::*;
 pub(crate) mod narrow;
 pub(crate) mod near;
 pub(crate) mod ramp;
+pub(crate) mod slot_path;
 
 pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     let py = m.py();
@@ -18,6 +19,7 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     narrow::register(&feature_mod)?;
     near::register(&feature_mod)?;
     ramp::register(&feature_mod)?;
+    slot_path::register(&feature_mod)?;
 
     m.add_submodule(&feature_mod)?;
 

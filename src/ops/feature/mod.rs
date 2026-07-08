@@ -7,3 +7,4 @@
 pub mod narrow;
 pub mod near;
 pub mod ramp;
+pub mod slot_path;

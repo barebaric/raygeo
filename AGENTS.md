@@ -12,6 +12,7 @@
 - `make check` — lint + test
 - `make docs` — re-generate the API docs
 - `make build` — build the wheel (release)
+- `python -m tools.cli doc ops.feature.slot` - run example plot generator
 
 # Adaptive clearing tracing
 
@@ -38,29 +39,6 @@ The crate is split into three layers that depend only downward:
 | `ops` | Motion assembly: clearing strategies, linking, classification, and Ops emission. All assemblers produce and consume `Ops`. | tools, spindle, feed values     |
 | `cnc` | Operation orchestration: sequences entry + clear + finish.                                                                 | geometry algorithms             |
 
-# Adaptive clearing: resume and routing
-
-When the stepper loses engagement, the adaptive clearing loop runs a two-phase
-recovery:
-
-## Phase 1 — Resume strategies (`resume.rs`)
-
-Find _where_ to resume cutting (a target point on the uncleared boundary).
-
-Each strategy returns `(source, resume_point)` or `None`. They are tried in
-priority order: WallHug → Segment → MAT → Frontier → Envelope → Island.
-Per-strategy outcomes are recorded in `resume_strategy_reasons[0..5]` and
-`resume_strategy_details[0..5]` in the trace record.
-
-## Phase 2 — Routing strategies (`routing.rs`)
-
-Find _how_ to travel from the tool's current position to the resume point
-without colliding with uncleared material or islands.
-
-Each strategy returns `(source, smoothed_waypoints)` or `None`. Tried in
-priority order: Direct → Frontier → MAT → AStar. Per-strategy outcomes are in
-`route_strategy_details[0..3]`.
-
 ## Contract
 
 - Resume strategies must NOT perform routing. They only select a target.
@@ -71,5 +49,3 @@ priority order: Direct → Frontier → MAT → AStar. Per-strategy outcomes are
   between two given points.
 - On routing failure, the candidate is blacklisted and phase 1 retries with
   the next strategy.
-- Phase 1 and phase 2 failures are independent and independently observable in
-  traces (`strat=` vs `rout=` fields).
