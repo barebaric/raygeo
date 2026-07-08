@@ -43,3 +43,41 @@ Generate a trochoidal path along a carrier polyline.
 ![Trochoidal toolpath around an L-shaped corner](images/geo-algo-trochoid-l-shaped.png)
 
 *Trochoidal toolpath around an L-shaped corner*
+
+### `get_trochoid_along_3d_ramped()`
+
+```python
+get_trochoid_along_3d_ramped(
+    carrier: Sequence[tuple[float, float]],
+    diameter: float,
+    z_start: float,
+    z_end: float,
+    engagement_angle_deg: float = 90,
+    step_over_ratio: float = 0.2,
+    min_loop_radius: float = 0.5,
+) -> list[tuple[float, float, float]]
+```
+
+Generate a trochoidal path with Z ramped along the carrier.
+
+The Z coordinate descends linearly from `z_start` to `z_end` as a function of cumulative arc-length
+along the carrier.
+
+| Parameter              | Type                               | Description                                                         |
+| ---------------------- | ---------------------------------- | ------------------------------------------------------------------- |
+| `carrier`              | `Sequence[tuple[float, float]]`    | Sequence of (x, y) points defining the centerline.                  |
+| `diameter`             | `float`                            | Trochoid generating circle diameter.                                |
+| `z_start`              | `float`                            | Z height at the start of the carrier.                               |
+| `z_end`                | `float`                            | Z height at the end of the carrier.                                 |
+| `engagement_angle_deg` | `float = 90`                       | Engagement angle in degrees (default 90).                           |
+| `step_over_ratio`      | `float = 0.2`                      | Forward advance per loop as fraction of diameter (default 0.2).     |
+| `min_loop_radius`      | `float = 0.5`                      | Minimum trochoid loop radius in mm (default 0.5).                   |
+| _Returns_              | `list[tuple[float, float, float]]` | List of (x, y, z) points forming the ramped trochoidal path.        |
+| _Complexity_           |                                    | O(n) time, O(n) space where n is proportional to path length / step |
+
+![3D ramped trochoid along a straight 80 mm carrier. Z descends linearly with cumulative arc-length from z_start=4 at the carrier start to z_end=-2 at the carrier end. The trochoid geometry is identical to get_trochoid_along_3d — only Z varies along the path; colour encodes arc-length from start (blue) to end (red).](images/geo-algo-trochoid-ramped-3d.png)
+
+*3D ramped trochoid along a straight 80 mm carrier. Z descends linearly with cumulative arc-length
+from z_start=4 at the carrier start to z_end=-2 at the carrier end. The trochoid geometry is
+identical to get_trochoid_along_3d — only Z varies along the path; colour encodes arc-length from
+start (blue) to end (red).*

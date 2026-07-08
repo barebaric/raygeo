@@ -5,6 +5,7 @@ import collections.abc
 import raygeo
 __all__ = [
     "generate_toroid",
+    "generate_toroidal_clear",
 ]
 
 def generate_toroid(carrier: collections.abc.Sequence[tuple[float, float]], tool_radius: float, step_over: float, target_z: float, direction: str = 'CW', angular_step: float = 0.1, state: raygeo.ops.state.State | None = None) -> raygeo.ops.assembly.result.AssemblyResult:
@@ -22,5 +23,27 @@ def generate_toroid(carrier: collections.abc.Sequence[tuple[float, float]], tool
     :param angular_step: Angular step in radians (default 0.1).
     :param state: Optional machine state to apply before the path.
     :returns: An :class:`AssemblyResult` with the toroidal path.
+    """
+
+def generate_toroidal_clear(carrier: collections.abc.Sequence[tuple[float, float]], start: tuple[float, float, float], target_z: float, tool_radius: float, step_over: float, max_ramp_angle_deg: float = 5, direction: str = 'CW', angular_step: float = 0.1, state: raygeo.ops.state.State | None = None) -> raygeo.ops.assembly.result.AssemblyResult:
+    r"""
+    Generate a ramp-down toroidal clear path along a carrier.
+    
+    Descends Z linearly along the carrier's arc-length at a slope
+    capped by ``max_ramp_angle_deg``, zig-zagging back-and-forth along
+    the carrier until ``target_z`` is reached, then emits one final
+    full forward pass at constant ``target_z``.
+    
+    :param carrier: 2D polyline ``(x, y)`` waypoints defining the slot axis.
+    :param start: ``(x, y, z)`` entry point; ``x, y`` should match ``carrier[0]``,
+        ``z`` is the entry height.
+    :param target_z: Final cutting Z height.
+    :param tool_radius: Tool radius in mm.
+    :param step_over: Forward advance per trochoid loop.
+    :param max_ramp_angle_deg: Maximum descent angle vs. the XY plane (default 5°).
+    :param direction: ``"CW"`` or ``"CCW"`` (default ``"CW"``).
+    :param angular_step: Angular step in radians (default 0.1).
+    :param state: Optional machine state.
+    :returns: An :class:`AssemblyResult` with the ramp-down + flat-final toroidal path.
     """
 

@@ -114,3 +114,119 @@ pub fn get_trochoid_along_3d(
 
     result
 }
+
+/// Options for ramped trochoidal path generation along a carrier polyline.
+#[derive(Clone, Debug)]
+pub struct TrochoidOptionsRamped {
+    pub diameter: f64,
+    pub engagement_angle_deg: f64,
+    pub step_over_ratio: f64,
+    pub min_loop_radius: f64,
+    pub z_start: f64,
+    pub z_end: f64,
+}
+
+/// Produce a trochoidal 3D polyline with linearly interpolated Z along
+/// the carrier arc-length, descending from `z_start` to `z_end`.
+///
+/// The geometry is identical to [`get_trochoid_along_3d`] — the only
+/// difference is that Z varies linearly with cumulative arc-length `s`
+/// from `z_start` (at `s = 0`) to `z_end` (at `s = total_length`).
+pub fn get_trochoid_along_3d_ramped(
+    carrier: &[Point],
+    opts: &TrochoidOptionsRamped,
+) -> Vec<Point3D> {
+    if carrier.len() < 2 {
+        return vec![];
+    }
+
+    let step_over = opts.diameter * opts.step_over_ratio;
+    if step_over < 1e-12 || opts.diameter < 1e-12 {
+        return vec![];
+    }
+
+    let engagement_rad = opts.engagement_angle_deg.to_radians();
+    let loop_radius =
+        if engagement_rad > 0.0 && engagement_rad < std::f64::consts::PI {
+            (step_over / (2.0 * (engagement_rad / 2.0).sin()))
+                .max(opts.min_loop_radius)
+        } else {
+            step_over / 2.0
+        };
+    let loop_radius = loop_radius.max(opts.min_loop_radius);
+
+    let n_segs = carrier.len() - 1;
+    let mut seg_lengths = vec![0.0; n_segs];
+    let total_length: f64 = carrier
+        .windows(2)
+        .enumerate()
+        .map(|(i, w)| {
+            let d = (w[1] - w[0]).length();
+            seg_lengths[i] = d;
+            d
+        })
+        .sum();
+
+    if total_length < 1e-12 {
+        return vec![];
+    }
+
+    let angular_resolution = 0.1;
+    let n_cycles = total_length / step_over;
+    let n_points = (n_cycles
+        * (2.0 * std::f64::consts::PI / angular_resolution))
+        .ceil()
+        .max(2.0) as usize;
+
+    let mut result = Vec::with_capacity(n_points + 1);
+    for i in 0..=n_points {
+        let s = (i as f64 / n_points as f64) * total_length;
+        let theta = 2.0 * std::f64::consts::PI * s / step_over;
+        let lateral = loop_radius * theta.cos();
+
+        let mut accum = 0.0;
+        let (seg_idx, local_t) = {
+            let mut idx = n_segs - 1;
+            let mut lt = 1.0;
+            for (j, &len) in seg_lengths.iter().enumerate() {
+                if accum + len >= s - 1e-12 {
+                    lt = if len > 1e-12 {
+                        ((s - accum) / len).min(1.0)
+                    } else {
+                        0.0
+                    };
+                    idx = j;
+                    break;
+                }
+                accum += len;
+            }
+            (idx, lt)
+        };
+
+        let p0 = carrier[seg_idx];
+        let p1 = carrier[seg_idx + 1];
+        let pos = p0.lerp(p1, local_t);
+
+        let tangent = if seg_lengths[seg_idx] > 1e-12 {
+            (p1 - p0) / seg_lengths[seg_idx]
+        } else {
+            Point::new(1.0, 0.0)
+        };
+        let normal = Point::new(-tangent.y, tangent.x);
+
+        let longitudinal = loop_radius * theta.sin();
+        let x = pos.x + lateral * normal.x + longitudinal * tangent.x;
+        let y = pos.y + lateral * normal.y + longitudinal * tangent.y;
+
+        let t_frac = if total_length > 1e-12 {
+            (s / total_length).min(1.0)
+        } else {
+            0.0
+        };
+        let z = opts.z_start + (opts.z_end - opts.z_start) * t_frac;
+
+        result.push(Point3D::new(x, y, z));
+    }
+
+    result
+}

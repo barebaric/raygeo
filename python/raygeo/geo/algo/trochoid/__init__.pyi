@@ -11,6 +11,7 @@ import collections.abc
 from raygeo.geo import types
 __all__ = [
     "get_trochoid_along_3d",
+    "get_trochoid_along_3d_ramped",
 ]
 
 def get_trochoid_along_3d(carrier: collections.abc.Sequence[tuple[float, float]], diameter: float, engagement_angle_deg: float = 90, step_over_ratio: float = 0.2, min_loop_radius: float = 0.5, z: float = 0) -> list[tuple[float, float, float]]:
@@ -24,6 +25,24 @@ def get_trochoid_along_3d(carrier: collections.abc.Sequence[tuple[float, float]]
     :param min_loop_radius: Minimum trochoid loop radius in mm (default 0.5).
     :param z: Z height for all points (default 0.0).
     :returns: List of (x, y, z) points forming the trochoidal path.
+    :complexity: O(n) time, O(n) space where n is proportional to path length / step
+    """
+
+def get_trochoid_along_3d_ramped(carrier: collections.abc.Sequence[tuple[float, float]], diameter: float, z_start: float, z_end: float, engagement_angle_deg: float = 90, step_over_ratio: float = 0.2, min_loop_radius: float = 0.5) -> list[tuple[float, float, float]]:
+    r"""
+    Generate a trochoidal path with Z ramped along the carrier.
+    
+    The Z coordinate descends linearly from ``z_start`` to ``z_end``
+    as a function of cumulative arc-length along the carrier.
+    
+    :param carrier: Sequence of (x, y) points defining the centerline.
+    :param diameter: Trochoid generating circle diameter.
+    :param z_start: Z height at the start of the carrier.
+    :param z_end: Z height at the end of the carrier.
+    :param engagement_angle_deg: Engagement angle in degrees (default 90).
+    :param step_over_ratio: Forward advance per loop as fraction of diameter (default 0.2).
+    :param min_loop_radius: Minimum trochoid loop radius in mm (default 0.5).
+    :returns: List of (x, y, z) points forming the ramped trochoidal path.
     :complexity: O(n) time, O(n) space where n is proportional to path length / step
     """
 
