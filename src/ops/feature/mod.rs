@@ -6,3 +6,4 @@
 
 pub mod narrow;
 pub mod near;
+pub mod ramp;

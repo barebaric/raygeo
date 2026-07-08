@@ -6,8 +6,10 @@ Feature detection for machining analysis.
 
 from . import narrow
 from . import near
+from . import ramp
 __all__ = [
     "narrow",
     "near",
+    "ramp",
 ]
 
