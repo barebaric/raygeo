@@ -7,11 +7,13 @@ Feature detection for machining analysis.
 from . import narrow
 from . import near
 from . import ramp
+from . import region
 from . import slot_path
 __all__ = [
     "narrow",
     "near",
     "ramp",
+    "region",
     "slot_path",
 ]
 
