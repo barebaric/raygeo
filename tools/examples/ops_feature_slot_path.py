@@ -327,19 +327,8 @@ __images__ = [
     {
         "heading": "find_slot_path",
         "caption": (
-            "The slot carrier returned by `find_slot_path` on four"
-            " scenarios (2x2 layout). Top-left: a horizontal 40x7 mm"
-            " slot, with the navy carrier centred on the eroded region"
-            " along the slot's long axis. Top-right: a vertical 7x40 mm"
-            " slot where the long axis flips to y. Bottom-left: a"
-            " too-narrow 30x5 mm slot with tool_radius=3 returns None"
-            " (the eroded region is empty). Bottom-right: a sinusoidal"
-            " S-slot (6 mm corridor, r=2) where the disk-probe snake"
-            " walk produces a carrier that follows the S-curve"
-            " smoothly from bottom to top without crossing empty space"
-            " or leaving the eroded region. The red cross marks the"
-            " requested entry_point and the red bar highlights the"
-            " slot's entry edge."
+            "find_slot_path on 4 slots: horizontal, vertical,"
+            " too-narrow (None), and sinusoidal S-slot."
         ),
         "function": generate_slot_path_scenarios,
     },

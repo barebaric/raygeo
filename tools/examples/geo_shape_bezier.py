@@ -261,8 +261,8 @@ __images__ = [
     {
         "heading": "fit_cubic_bezier",
         "caption": (
-            "Cubic Bezier curves fitted to sample point sequences"
-            " — sine, cosine hump, quarter-circle, and shallow wave"
+            "Cubic Bezier curves fitted to sample points — sine,"
+            " cosine hump, quarter-circle, and shallow wave"
         ),
         "function": generate_fit_cutline,
     },

@@ -110,9 +110,8 @@ __images__ = [
     {
         "heading": "analyze_pocket",
         "caption": (
-            "A single pocket with a staircase island produces narrow passages"
-            " of three different widths, demonstrating all three"
-            " classification levels."
+            "A pocket with staircase island produces passages of"
+            " three widths, showing all classification levels"
         ),
         "function": generate_classification_by_width,
     },

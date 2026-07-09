@@ -75,9 +75,6 @@ along the carrier.
 | _Returns_              | `list[tuple[float, float, float]]` | List of (x, y, z) points forming the ramped trochoidal path.        |
 | _Complexity_           |                                    | O(n) time, O(n) space where n is proportional to path length / step |
 
-![3D ramped trochoid along a straight 80 mm carrier. Z descends linearly with cumulative arc-length from z_start=4 at the carrier start to z_end=-2 at the carrier end. The trochoid geometry is identical to get_trochoid_along_3d — only Z varies along the path; colour encodes arc-length from start (blue) to end (red).](images/geo-algo-trochoid-ramped-3d.png)
+![3D ramped trochoid along an 80 mm carrier with Z descending from z_start=4 to z_end=-2.](images/geo-algo-trochoid-ramped-3d.png)
 
-*3D ramped trochoid along a straight 80 mm carrier. Z descends linearly with cumulative arc-length
-from z_start=4 at the carrier start to z_end=-2 at the carrier end. The trochoid geometry is
-identical to get_trochoid_along_3d — only Z varies along the path; colour encodes arc-length from
-start (blue) to end (red).*
+*3D ramped trochoid along an 80 mm carrier with Z descending from z_start=4 to z_end=-2.*

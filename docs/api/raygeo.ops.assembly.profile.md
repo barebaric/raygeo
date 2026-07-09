@@ -56,30 +56,26 @@ so that the tool clears the material along the pocket walls and around each isla
 | `trace_path`                 | `str &#124; None = None`                 | Optional path to write a binary trace file (default None).         |
 | _Returns_                    | `ops.assembly.result.AssemblyResult`     | An **AssemblyResult** with the profiling path.                     |
 
-![profile_inner on a 60×60 pocket with a square island — 2D top-down. Black: boundary. Gray: island. Blue dashed: inset outer walk. Orange dashed: grown island walk. Turbo: cuts.](images/ops-assembly-profile-profile-inner-rect-with-square-island-2d.png)
+![profile_inner on 60×60 pocket with square island — 2D: boundary, island, offset walks, cuts (turbo).](images/ops-assembly-profile-profile-inner-rect-with-square-island-2d.png)
 
-*profile_inner on a 60×60 pocket with a square island — 2D top-down. Black: boundary. Gray: island.
-Blue dashed: inset outer walk. Orange dashed: grown island walk. Turbo: cuts.*
+*profile_inner on 60×60 pocket with square island — 2D: boundary, island, offset walks, cuts
+(turbo).*
 
-![profile_inner with two accessible islands — nearest-neighbour ordering visible via the turbo gradient.](images/ops-assembly-profile-profile-inner-rect-with-two-islands-2d.png)
+![profile_inner with two accessible islands — nearest-neighbour order via turbo gradient.](images/ops-assembly-profile-profile-inner-rect-with-two-islands-2d.png)
 
-*profile_inner with two accessible islands — nearest-neighbour ordering visible via the turbo
-gradient.*
+*profile_inner with two accessible islands — nearest-neighbour order via turbo gradient.*
 
-![profile_inner on an L-shaped pocket with an island — 3D view showing cut path at cut_z and rapids at safe_z.](images/ops-assembly-profile-profile-inner-concave-with-island-3d.png)
+![profile_inner on an L-shaped pocket with island — 3D: cut path at cut_z, rapids at safe_z.](images/ops-assembly-profile-profile-inner-concave-with-island-3d.png)
 
-*profile_inner on an L-shaped pocket with an island — 3D view showing cut path at cut_z and rapids
-at safe_z.*
+*profile_inner on an L-shaped pocket with island — 3D: cut path at cut_z, rapids at safe_z.*
 
-![profile_inner skips an island when the channel between island and wall is narrower than 2×tool_radius.](images/ops-assembly-profile-profile-inner-narrow-channel-skips-island.png)
+![profile_inner skips an island when channel between island and wall is < 2×tool_radius.](images/ops-assembly-profile-profile-inner-narrow-channel-skips-island.png)
 
-*profile_inner skips an island when the channel between island and wall is narrower than
-2×tool_radius.*
+*profile_inner skips an island when channel between island and wall is < 2×tool_radius.*
 
-![Two-pass inner profiling: rough with stock_to_leave=0.5 (orange) + finish with stock_to_leave=0.0 (red) on the same ClearedArea.](images/ops-assembly-profile-profile-inner-rough-then-finish.png)
+![Two-pass inner profiling: rough (0.5, orange) + finish (0.0, red) on same ClearedArea.](images/ops-assembly-profile-profile-inner-rough-then-finish.png)
 
-*Two-pass inner profiling: rough with stock_to_leave=0.5 (orange) + finish with stock_to_leave=0.0
-(red) on the same ClearedArea.*
+*Two-pass inner profiling: rough (0.5, orange) + finish (0.0, red) on same ClearedArea.*
 
 ### `profile_outer()`
 
@@ -130,15 +126,13 @@ an **AssemblyResult** with the profiling move sequence.
 | `trace_path`                 | `str &#124; None = None`                 | Optional path to write a binary trace file (default None).         |
 | _Returns_                    | `ops.assembly.result.AssemblyResult`     | An **AssemblyResult** with the profiling path.                     |
 
-![profile_outer on a 60×60 rectangular pocket — 2D top-down view. Black: source boundary. Blue dashed: offset tool-centre polygon. Turbo gradient: cut moves. Gray dashes: travel.](images/ops-assembly-profile-profile-outer-rect-2d.png)
+![profile_outer on a 60×60 rect pocket — 2D top-down: boundary, offset, cut (turbo), travel (gray).](images/ops-assembly-profile-profile-outer-rect-2d.png)
 
-*profile_outer on a 60×60 rectangular pocket — 2D top-down view. Black: source boundary. Blue
-dashed: offset tool-centre polygon. Turbo gradient: cut moves. Gray dashes: travel.*
+*profile_outer on a 60×60 rect pocket — 2D top-down: boundary, offset, cut (turbo), travel (gray).*
 
-![profile_outer on a 60×60 rectangular pocket — 3D view showing cut path at cut_z and rapids at safe_z.](images/ops-assembly-profile-profile-outer-rect-3d.png)
+![profile_outer on a 60×60 rect pocket — 3D view showing cut path at cut_z and rapids at safe_z.](images/ops-assembly-profile-profile-outer-rect-3d.png)
 
-*profile_outer on a 60×60 rectangular pocket — 3D view showing cut path at cut_z and rapids at
-safe_z.*
+*profile_outer on a 60×60 rect pocket — 3D view showing cut path at cut_z and rapids at safe_z.*
 
 ![profile_outer on a circular boundary — smooth walk around the offset circle.](images/ops-assembly-profile-profile-outer-circle.png)
 
@@ -148,7 +142,7 @@ safe_z.*
 
 *profile_outer on an L-shaped pocket with miter join at the concave corner.*
 
-![Two-pass profiling: rough pass with stock_to_leave=0.5 (orange) followed by finish pass with stock_to_leave=0.0 (red) on the same ClearedArea.](images/ops-assembly-profile-profile-outer-rough-then-finish.png)
+![Two-pass profiling: rough (stock_to_leave=0.5, orange) + finish (0.0, red) on the same ClearedArea.](images/ops-assembly-profile-profile-outer-rough-then-finish.png)
 
-*Two-pass profiling: rough pass with stock_to_leave=0.5 (orange) followed by finish pass with
-stock_to_leave=0.0 (red) on the same ClearedArea.*
+*Two-pass profiling: rough (stock_to_leave=0.5, orange) + finish (0.0, red) on the same
+ClearedArea.*

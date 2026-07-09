@@ -34,10 +34,9 @@ Returns a new polyline with points inserted to ensure it meets the adjacent poly
 | `margin`    | `float`                         | Extension distance along the tangent direction.           |
 | _Returns_   | `list[tuple[float, float]]`     | Modified polyline with tangent extension points inserted. |
 
-![ inserts tangent extension points at both ends of a travel link to ensure G1 continuity at cut–travel junctions](images/geo-algo-smooth-blend-tangent.png)
+![ adds tangent points at travel-link ends for G1 continuity at cut–travel junctions](images/geo-algo-smooth-blend-tangent.png)
 
-*`blend_tangent` inserts tangent extension points at both ends of a travel link to ensure G1
-continuity at cut–travel junctions*
+*`blend_tangent` adds tangent points at travel-link ends for G1 continuity at cut–travel junctions*
 
 ### `build_smoothed_path()`
 
@@ -72,10 +71,9 @@ Pipeline:
 | `smoothing_amount` | `int = 120`                                    | Gaussian smoothing amount (0-200, default 120).    |
 | _Returns_          | `list[tuple[float, float]]`                    | Smoothed path as a list of (x, y) tuples.          |
 
-![ constructs a smooth path from a start point, end point, and medial-axis waypoints via resample → shortcut → Gaussian relaxation](images/geo-algo-smooth-build-smoothed-path.png)
+![ builds a smooth path via resample → shortcut → Gaussian relaxation](images/geo-algo-smooth-build-smoothed-path.png)
 
-*`build_smoothed_path` constructs a smooth path from a start point, end point, and medial-axis
-waypoints via resample → shortcut → Gaussian relaxation*
+*`build_smoothed_path` builds a smooth path via resample → shortcut → Gaussian relaxation*
 
 ### `chaikin_corner_cut()`
 
@@ -102,10 +100,9 @@ corner is preserved.
 | `iterations` | `int = 6`                                      | Number of Chaikin cutting passes (default 6).        |
 | _Returns_    | `list[tuple[float, float]]`                    | Corner-smoothed polyline as a list of (x, y) tuples. |
 
-![ rounds sharp corners (>45°) using Chaikin corner cutting, respecting obstacle clearance](images/geo-algo-smooth-chaikin-corner-cut.png)
+![ rounds sharp corners (>45°) via Chaikin cut, respecting obstacle clearance](images/geo-algo-smooth-chaikin-corner-cut.png)
 
-*`chaikin_corner_cut` rounds sharp corners (>45°) using Chaikin corner cutting, respecting obstacle
-clearance*
+*`chaikin_corner_cut` rounds sharp corners (>45°) via Chaikin cut, respecting obstacle clearance*
 
 ### `compute_gaussian_kernel()`
 

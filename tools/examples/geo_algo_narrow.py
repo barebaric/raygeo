@@ -163,27 +163,24 @@ __images__ = [
     {
         "heading": "find_narrow_passages",
         "caption": (
-            "Threshold sensitivity: at max_width=8 (left) the 8 mm channel"
-            " is at the edge of detection; at max_width=20 (right) more"
-            " of the pocket qualifies as narrow."
+            "Threshold sensitivity: at max_width=8 barely registers;"
+            " at max_width=20 more qualifies"
         ),
         "function": generate_threshold_comparison,
     },
     {
         "heading": "find_narrow_passages",
         "caption": (
-            "Pocket with a central island: two narrow passages (crimson)"
-            " form in the necks above and below the island."
+            "Pocket with a central island: narrow passages (crimson)"
+            " form in the necks around the island"
         ),
         "function": generate_with_island,
     },
     {
         "heading": "find_narrow_passages",
         "caption": (
-            "Two triangular islands pointing at each other with a"
-            " 4 mm tip gap. With max_width=6 the narrow passage"
-            " (crimson) is the area between the islands where the"
-            " morphological opening closed the gap."
+            "Two triangular islands (4 mm gap); morphological opening"
+            " creates narrow passage (crimson)"
         ),
         "function": generate_triangular_islands,
     },

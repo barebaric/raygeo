@@ -272,11 +272,8 @@ __images__ = [
     {
         "heading": "build_entry_workplan",
         "caption": (
-            "Entry workplan planning across three pocket shapes: wide"
-            " rectangle (left) selects HelixPlunge + FlatSpiral;"
-            " H-shape (centre) emits a ToroidalClear step per wide"
-            " sub-region; cup shape (right) yields a RampEntry step"
-            " when no ramp carrier can be found in the narrow region."
+            "Entry workplan for 3 shapes: rectangle (Helix+FlatSpiral),"
+            " H-shape (ToroidalClear), cup (RampEntry)."
         ),
         "function": generate_entry_workplan,
     },

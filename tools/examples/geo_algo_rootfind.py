@@ -236,9 +236,8 @@ __images__ = [
     {
         "heading": "bracket_grid",
         "caption": (
-            "7-sample angular grid search with linear interpolation:"
-            " samples f(x) on a fan around *heading* and interpolates"
-            " across adjacent sign changes."
+            "7-sample grid search (linear interp): samples f(x) around"
+            " heading and interpolates sign changes"
         ),
         "function": generate_bracket_grid,
     },

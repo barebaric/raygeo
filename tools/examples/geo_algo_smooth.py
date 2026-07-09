@@ -449,16 +449,15 @@ __images__ = [
     {
         "heading": "chaikin_corner_cut",
         "caption": (
-            "``chaikin_corner_cut`` rounds sharp corners (>45°) using"
-            " Chaikin corner cutting, respecting obstacle clearance"
+            "``chaikin_corner_cut`` rounds sharp corners (>45°) via"
+            " Chaikin cut, respecting obstacle clearance"
         ),
         "function": generate_chaikin_corner_cut,
     },
     {
         "heading": "build_smoothed_path",
         "caption": (
-            "``build_smoothed_path`` constructs a smooth path from a"
-            " start point, end point, and medial-axis waypoints via"
+            "``build_smoothed_path`` builds a smooth path via"
             " resample → shortcut → Gaussian relaxation"
         ),
         "function": generate_build_smoothed_path,
@@ -496,8 +495,8 @@ __images__ = [
     {
         "heading": "blend_tangent",
         "caption": (
-            "``blend_tangent`` inserts tangent extension points at both ends"
-            " of a travel link to ensure G1 continuity at cut–travel junctions"
+            "``blend_tangent`` adds tangent points at travel-link ends"
+            " for G1 continuity at cut–travel junctions"
         ),
         "function": generate_blend_tangent,
     },

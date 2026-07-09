@@ -481,8 +481,8 @@ __images__ = [
     {
         "heading": "search_frontier_engagement",
         "caption": (
-            "Multi-island pocket — end positions (triangles) yield "
-            "resume positions (stars) with outward headings."
+            "Multi-island pocket — end positions (triangles) yield"
+            " resume positions (stars) with outward headings"
         ),
         "function": generate_search_frontier_engagement_multi,
     },

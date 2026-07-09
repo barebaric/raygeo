@@ -64,7 +64,7 @@ endpoints), or None if the ray does not hit the polygon in the forward direction
 | _Returns_    | `tuple[float, float] &#124; None` | Closest intersection point (x, y), or None.         |
 | _Complexity_ |                                   | O(N) time, O(1) space                               |
 
-![Ray–polygon intersection: the ray from origin O hits the polygon boundary at the closest intersection point along the ray direction.](images/geo-algo-intersect-ray-polygon.png)
+![Ray–polygon intersection: ray from O hits polygon at closest intersection point along ray direction](images/geo-algo-intersect-ray-polygon.png)
 
-*Ray–polygon intersection: the ray from origin O hits the polygon boundary at the closest
-intersection point along the ray direction.*
+*Ray–polygon intersection: ray from O hits polygon at closest intersection point along ray
+direction*

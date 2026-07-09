@@ -371,9 +371,8 @@ __images__ = [
     },
     {
         "heading": "solve_laplace",
-        "caption": "Laplace solution on a multi-island domain — contour"
-        " lines morph smoothly between four inner islands and the outer"
-        " boundary",
+        "caption": "Laplace on multi-island domain — contours morph"
+        " between four inner islands and the outer boundary",
         "function": generate_multi_island,
     },
 ]

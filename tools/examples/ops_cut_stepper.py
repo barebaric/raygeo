@@ -347,8 +347,8 @@ __images__ = [
     {
         "heading": "step",
         "caption": (
-            "Engagement histogram for 200 steps along a straight "
-            "wall. Tight peak near target indicates stable behaviour."
+            "Engagement histogram (200 steps, straight wall)."
+            " Tight peak near target shows stable behaviour."
         ),
         "function": generate_engagement_histogram,
     },

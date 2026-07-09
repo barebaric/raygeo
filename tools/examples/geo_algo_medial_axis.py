@@ -325,20 +325,16 @@ __images__ = [
     {
         "heading": "path_between",
         "caption": (
-            "MAT path routing: a path between two points (green) along"
-            " the medial axis skeleton (red). The path avoids the island"
-            " by following the skeleton topology."
+            "MAT path routing: a path between two points along the medial"
+            " axis skeleton, avoiding the island"
         ),
         "function": generate_mat_path,
     },
     {
         "heading": "trim_to_polygons",
         "caption": (
-            "MAT trimming to cleared area — left: original MAT over"
-            " cleared fragments (green fill); right: trimmed MAT with"
-            " kept nodes (blue) and removed nodes (red x).  Only 10"
-            " clearing passes were run, so most MAT nodes lie outside"
-            " the cleared area and are discarded."
+            "MAT trimmed to cleared area: original MAT (gray) and"
+            " trimmed nodes (blue) after 10 clearing passes"
         ),
         "function": generate_mat_trimming,
     },

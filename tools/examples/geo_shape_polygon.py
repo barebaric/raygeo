@@ -988,9 +988,9 @@ __images__ = [
     {
         "heading": "get_signed_boundary_distance",
         "caption": (
-            "Signed distance field around a square polygon."
-            " Red = outside (positive), blue = inside (negative),"
-            " black contour marks the boundary."
+            "Signed distance around a square."
+            " Red = outside (+), blue = inside (-),"
+            " black contour = boundary."
         ),
         "function": generate_signed_boundary_distance_field,
     },
@@ -1006,7 +1006,7 @@ __images__ = [
         "heading": "walk_polygon_from_point",
         "caption": (
             "``walk_polygon_from_point`` returns vertices in walk order"
-            " starting from the vertex closest to a marker."
+            " from the vertex closest to a marker."
         ),
         "function": generate_walk_polygon_from_point,
     },
@@ -1014,17 +1014,15 @@ __images__ = [
         "heading": "find_polygon_corners",
         "caption": (
             "``find_polygon_corners`` labels convex (circle) and"
-            " concave / reflex (square) vertices with their interior"
-            " angles."
+            " concave (square) vertices with interior angles"
         ),
         "function": generate_find_polygon_corners,
     },
     {
         "heading": "find_entry_edges",
         "caption": (
-            "``find_entry_edges`` identifies edges of a narrow-passage"
-            " polygon that are not collinear with the pocket boundary"
-            " (entry edges, marked red)."
+            "``find_entry_edges`` finds narrow-passage edges not"
+            " collinear with pocket boundary (in red)"
         ),
         "function": generate_find_entry_edges,
     },

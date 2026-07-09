@@ -39,10 +39,9 @@ in [0, 1] is the parametric position along that edge.
 | `point`    | `tuple[float, float]`           | Query point (x, y).                                                |
 | _Returns_  | `tuple[int, float] &#124; None` | `(edge_index, t)` or None if the polyline has fewer than 2 points. |
 
-![ finds the closest point on an open polyline to a query point, returning the edge index and parametric position](images/geo-shape-polyline-polyline-closest-point.png)
+![ finds the closest point on an open polyline to a query point](images/geo-shape-polyline-polyline-closest-point.png)
 
-*`get_polyline_closest_point` finds the closest point on an open polyline to a query point,
-returning the edge index and parametric position*
+*`get_polyline_closest_point` finds the closest point on an open polyline to a query point*
 
 ### `resample_polyline()`
 
@@ -86,10 +85,9 @@ Each resulting sub-polyline is trimmed with `trim_polyline_angular_ends`.
 | _Returns_         | `list[list[tuple[float, float]]]` | List of sub-polylines.      |
 | _Complexity_      |                                   | O(n) time, O(n) space       |
 
-![Three semi-arcs (hills) form two V-junctions where they meet. The function splits the polyline at those points and trims each segment's angular ends.](images/geo-shape-polyline-split-v-junctions.png)
+![Three semi-arcs form two V-junctions; splits and trims each segment's angular ends](images/geo-shape-polyline-split-v-junctions.png)
 
-*Three semi-arcs (hills) form two V-junctions where they meet. The function splits the polyline at
-those points and trims each segment's angular ends.*
+*Three semi-arcs form two V-junctions; splits and trims each segment's angular ends*
 
 ### `trim_polyline_angular_ends()`
 
@@ -116,11 +114,9 @@ until no more trimming occurs or the sequence is too short.
 | `angle_threshold_rad` | `float`                         | Angle threshold in radians.                            |
 | _Returns_             | `tuple[int, int]`               | `(new_start, new_length)` within the original polygon. |
 
-![ removes transition vertices from both ends of a contiguous subsequence where the interior angle jumps sharply.  Here a 10-vertex cut (indices 1–10) with angles ranging 59°→180°→59° is trimmed to 8 vertices using a 25° threshold.](images/geo-shape-polyline-trim-polyline-angular-ends.png)
+![ removes transition vertices from subseq ends at sharp angle jumps](images/geo-shape-polyline-trim-polyline-angular-ends.png)
 
-*`trim_polyline_angular_ends` removes transition vertices from both ends of a contiguous subsequence
-where the interior angle jumps sharply. Here a 10-vertex cut (indices 1–10) with angles ranging
-59°→180°→59° is trimmed to 8 vertices using a 25° threshold.*
+*`trim_polyline_angular_ends` removes transition vertices from subseq ends at sharp angle jumps*
 
 ### `trim_polyline_at()`
 

@@ -224,9 +224,8 @@ __images__ = [
     {
         "heading": "find_path",
         "caption": (
-            "A* threading a path between multiple disconnected obstacles"
-            " — the algorithm explores the free cells and finds an"
-            " optimal route"
+            "A* threads a path between disconnected obstacles,"
+            " exploring free cells to find the optimal route"
         ),
         "function": generate_multiple_obstacles,
     },
@@ -234,7 +233,7 @@ __images__ = [
         "heading": "find_path",
         "caption": (
             "Increasing the obstacle margin (right) pushes the path"
-            " further from obstacles compared to no margin (left)"
+            " further from obstacles vs no margin (left)"
         ),
         "function": generate_obstacle_margin,
     },

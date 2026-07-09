@@ -71,25 +71,22 @@ built by **raygeo.cnc.machining.wavefront.build_wavefront_workplan** and execute
 | `trace_path`           | `str &#124; None = None`                       | When set, write a per-step binary trace file for the Python inspector (debug builds only).                                        |
 | _Returns_              | `ops.assembly.result.AssemblyResult`           | Ops with cutting commands (entry not included).                                                                                   |
 
-![Circle-seed clearing in a 60×60 pocket with a 10×10 island at the centre — 2D top-down shows seed clearing (blue), toolpath gradient, and remaining bands (red).](images/ops-assembly-adaptive-adaptive-clearing-centre-island.png)
+![Circle-seed clearing in 60×60 pocket with central island: 2D view of seed, toolpath, and remaining.](images/ops-assembly-adaptive-adaptive-clearing-centre-island.png)
 
-*Circle-seed clearing in a 60×60 pocket with a 10×10 island at the centre — 2D top-down shows seed
-clearing (blue), toolpath gradient, and remaining bands (red).*
+*Circle-seed clearing in 60×60 pocket with central island: 2D view of seed, toolpath, and
+remaining.*
 
 ![Narrow pocket (80×14) 3D view of circle-seed adaptive clearing.](images/ops-assembly-adaptive-adaptive-clearing-narrow-3d.png)
 
 *Narrow pocket (80×14) 3D view of circle-seed adaptive clearing.*
 
-![Narrow pocket (80×14) 2D top-down view showing seed clearing, toolpath gradient, and remaining uncut bands.](images/ops-assembly-adaptive-adaptive-clearing-narrow-2d.png)
+![Narrow pocket (80×14) 2D top-down: seed clearing, toolpath gradient, and remaining bands.](images/ops-assembly-adaptive-adaptive-clearing-narrow-2d.png)
 
-*Narrow pocket (80×14) 2D top-down view showing seed clearing, toolpath gradient, and remaining
-uncut bands.*
+*Narrow pocket (80×14) 2D top-down: seed clearing, toolpath gradient, and remaining bands.*
 
-![Forward-stepping constant-engagement clearing cuts (coloured by progress via the full-spectrum turbo gradient) from a central seed clearing (green), with MAT-routed travel links (red dashed) between segments.](images/ops-assembly-adaptive-adaptive-clearing-demo.png)
+![Constant-engagement clearing cuts, MAT-routed travel links, coloured by progress.](images/ops-assembly-adaptive-adaptive-clearing-demo.png)
 
-*Forward-stepping constant-engagement clearing cuts (coloured by progress via the full-spectrum
-turbo gradient) from a central seed clearing (green), with MAT-routed travel links (red dashed)
-between segments.*
+*Constant-engagement clearing cuts, MAT-routed travel links, coloured by progress.*
 
 ### `target_area_per_distance()`
 
@@ -110,13 +107,11 @@ Target cut-area per unit distance for the engagement solver.
 | `step_length` | `float` | Forward step length in mm.     |
 | _Returns_     | `float` | Target area per distance (mm). |
 
-![Left: target area per distance as a function of advance for several step lengths. Right: target area per distance as a function of step length for several advance values.](images/ops-assembly-adaptive-target-area-curves.png)
+![Left: area/distance vs advance for several step lengths. Right: vs step length for several advances.](images/ops-assembly-adaptive-target-area-curves.png)
 
-*Left: target area per distance as a function of advance for several step lengths. Right: target
-area per distance as a function of step length for several advance values.*
+*Left: area/distance vs advance for several step lengths. Right: vs step length for several
+advances.*
 
-![Geometric model underlying : two disks offset by  along the travel direction, with a vertical wall at  representing the previous pass boundary. The fresh material (dark red) is the portion of the crescent that lies to the right of the wall.](images/ops-assembly-adaptive-target-area-geometry.png)
+![Two offset disks and a wall at x=R−advance: crescent beyond wall is fresh material.](images/ops-assembly-adaptive-target-area-geometry.png)
 
-*Geometric model underlying `target_area_per_distance`: two disks offset by `step_length` along the
-travel direction, with a vertical wall at `x = R − advance` representing the previous pass boundary.
-The fresh material (dark red) is the portion of the crescent that lies to the right of the wall.*
+*Two offset disks and a wall at x=R−advance: crescent beyond wall is fresh material.*

@@ -36,11 +36,7 @@ The algorithm first checks `near` itself, then searches outward on concentric ri
 | `search_radius`    | `float = 10`                                                 | Maximum search distance from `near` in mm.               |
 | _Returns_          | `tuple[float, float] &#124; None`                            | `(x, y)` plunge point or `None` if no valid point found. |
 
-![Three plunge-point scenarios. In each panel the red ✗ marks a requested  point (which would collide with a wall or island), and the dashed navy circle shows the corrected plunge point returned by  — left: a tight slot corridor barely wide enough for the tool, centre: a wider narrow passage in the toroidal range, right: a wide pocket with a central island showing two corrections: one from a point on the island, and one from a point outside the cleared disk but fully inside the pocket.](images/ops-feature-near-plunge-point-scenarios.png)
+![Three scenarios of find_plunge_point correcting near points: slot, passage, and pocket with island.](images/ops-feature-near-plunge-point-scenarios.png)
 
-*Three plunge-point scenarios. In each panel the red ✗ marks a requested `near` point (which would
-collide with a wall or island), and the dashed navy circle shows the corrected plunge point returned
-by `find_plunge_point` — left: a tight slot corridor barely wide enough for the tool, centre: a
-wider narrow passage in the toroidal range, right: a wide pocket with a central island showing two
-corrections: one from a point on the island, and one from a point outside the cleared disk but fully
-inside the pocket.*
+*Three scenarios of find_plunge_point correcting near points: slot, passage, and pocket with
+island.*

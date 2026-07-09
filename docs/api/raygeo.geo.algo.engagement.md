@@ -57,10 +57,9 @@ Returns uncleared angular extent in `[0, 2π]`.
 | `fragments` | `list[list[tuple[float, float]]]` | List of polygons (cleared fragments). |
 | _Returns_   | `float`                           | Angular engagement in radians.        |
 
-![Comparison of exact polygon-intersection angular engagement with the analytical signed-distance estimate along a scan line crossing the boundary.](images/geo-algo-engagement-angular-engagement-comparison.png)
+![Comparison of exact polygon-intersection engagement vs analytical signed-distance estimate](images/geo-algo-engagement-angular-engagement-comparison.png)
 
-*Comparison of exact polygon-intersection angular engagement with the analytical signed-distance
-estimate along a scan line crossing the boundary.*
+*Comparison of exact polygon-intersection engagement vs analytical signed-distance estimate*
 
 ### `get_disk_segment_area()`
 
@@ -79,10 +78,9 @@ of radius `r` centred at the origin.
 | `r`       | `float` | Disk radius.                  |
 | _Returns_ | `float` | Area of the circular segment. |
 
-![Left: a disk of radius 5 mm with the circular segment to the right of the vertical line  shaded. Right: the segment area as a function of , from  to .](images/geo-algo-engagement-disk-segment-area.png)
+![Left: disk segment shaded right of ; right: segment area vs  from  to ](images/geo-algo-engagement-disk-segment-area.png)
 
-*Left: a disk of radius 5 mm with the circular segment to the right of the vertical line `x = 1.5`
-shaded. Right: the segment area as a function of `x`, from `-r` to `+r`.*
+*Left: disk segment shaded right of `x = 1.5`; right: segment area vs `x` from `-r` to `+r`*
 
 ### `get_point_engagement()`
 

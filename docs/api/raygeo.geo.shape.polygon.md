@@ -154,10 +154,9 @@ find_entry_edges(
 | `dist_tol`   | `float = 1`                               |             |
 | _Returns_    | `list[int]`                               |             |
 
-![ identifies edges of a narrow-passage polygon that are not collinear with the pocket boundary (entry edges, marked red).](images/geo-shape-polygon-find-entry-edges.png)
+![ finds narrow-passage edges not collinear with pocket boundary (in red)](images/geo-shape-polygon-find-entry-edges.png)
 
-*`find_entry_edges` identifies edges of a narrow-passage polygon that are not collinear with the
-pocket boundary (entry edges, marked red).*
+*`find_entry_edges` finds narrow-passage edges not collinear with pocket boundary (in red)*
 
 ### `find_polygon_corners()`
 
@@ -181,10 +180,9 @@ least *threshold_deg*. Winding is auto-detected from the signed area.
 | `threshold_deg` | `float = 90`                      | Minimum interior angle in degrees (default 90).        |
 | _Returns_       | `list[tuple[int, float]]`         | List of (vertex_index, interior_angle_deg) tuples.     |
 
-![ labels convex (circle) and concave / reflex (square) vertices with their interior angles.](images/geo-shape-polygon-find-polygon-corners.png)
+![ labels convex (circle) and concave (square) vertices with interior angles](images/geo-shape-polygon-find-polygon-corners.png)
 
-*`find_polygon_corners` labels convex (circle) and concave / reflex (square) vertices with their
-interior angles.*
+*`find_polygon_corners` labels convex (circle) and concave (square) vertices with interior angles*
 
 ### `flip_polygon()`
 
@@ -733,10 +731,9 @@ Positive = outside all polygons, Negative = inside any polygon, Zero = exactly o
 | `polygons` | `Sequence[Sequence[tuple[float, float]]]` | List of polygons.     |
 | _Returns_  | `float`                                   | Signed distance (mm). |
 
-![Signed distance field around a square polygon. Red = outside (positive), blue = inside (negative), black contour marks the boundary.](images/geo-shape-polygon-signed-boundary-distance-field.png)
+![Signed distance around a square. Red = outside (+), blue = inside (-), black contour = boundary.](images/geo-shape-polygon-signed-boundary-distance-field.png)
 
-*Signed distance field around a square polygon. Red = outside (positive), blue = inside (negative),
-black contour marks the boundary.*
+*Signed distance around a square. Red = outside (+), blue = inside (-), black contour = boundary.*
 
 ### `is_almost_equal()`
 
@@ -1180,10 +1177,9 @@ walk_polygon_from_point(
 | `start`   | `tuple[float, float]`            |             |
 | _Returns_ | `list[tuple[int, float, float]]` |             |
 
-![ returns vertices in walk order starting from the vertex closest to a marker.](images/geo-shape-polygon-walk-polygon-from-point.png)
+![ returns vertices in walk order from the vertex closest to a marker.](images/geo-shape-polygon-walk-polygon-from-point.png)
 
-*`walk_polygon_from_point` returns vertices in walk order starting from the vertex closest to a
-marker.*
+*`walk_polygon_from_point` returns vertices in walk order from the vertex closest to a marker.*
 
 ### `walk_polygon_vertices()`
 

@@ -214,20 +214,16 @@ __images__ = [
     {
         "heading": "interpolate",
         "caption": (
-            "Interpolation bracket showing error vs steering angle."
-            " The red and green markers are the min and max bracket"
-            " samples; the purple dashed line marks the interpolated"
-            " zero-crossing angle."
+            "Interpolation bracket: error vs steering with min/max samples"
+            " (red/green) and zero-crossing (purple)"
         ),
         "function": generate_interpolation_bracket,
     },
     {
         "heading": "point_in_valid_area",
         "caption": (
-            "Valid-area polygon with a CCW shell (blue) and CW hole"
-            " (red dashed). Points are marked green (valid) or red"
-            " (invalid) based on"
-            " :func:`~raygeo.ops.cut.interp.point_in_valid_area`."
+            "Valid-area polygon: CCW shell (blue), CW hole (red dashed);"
+            " points valid (green) or invalid (red)"
         ),
         "function": generate_point_in_valid_area,
     },

@@ -3,10 +3,9 @@ title: raygeo.ops.cut.cleared_area
 sidebar_label: raygeo.ops.cut.cleared_area
 ---
 
-![ClearedArea tracking a simulated raster toolpath — cleared fragments shown in blue, remaining area in red](images/ops-cut-cleared-area-raster.png)
+![ClearedArea tracking a simulated raster toolpath — cleared fragments in blue, remaining red](images/ops-cut-cleared-area-raster.png)
 
-*ClearedArea tracking a simulated raster toolpath — cleared fragments shown in blue, remaining area
-in red*
+*ClearedArea tracking a simulated raster toolpath — cleared fragments in blue, remaining red*
 
 ## ClearedArea
 
@@ -47,10 +46,9 @@ Calling this while a batch is already active is a no‑op.
 | --------- | ------ | ----------- |
 | _Returns_ | `None` |             |
 
-![Three segments queued via  /  then unioned in a single  pass.](images/ops-cut-cleared-area-step-batch.png)
+![Three segments via  / , unioned in a single .](images/ops-cut-cleared-area-step-batch.png)
 
-*Three segments queued via `begin_batch` / `expand_batched` then unioned in a single `commit_batch`
-pass.*
+*Three segments via `begin_batch` / `expand_batched`, unioned in a single `commit_batch`.*
 
 ### `bites()`
 
@@ -73,10 +71,9 @@ Compute the "bites" — new material reachable by expanding the current frontier
 | _Returns_      | `list[list[tuple[float, float]]]` | List of polygons representing the bite regions. |
 | _Complexity_   |                                   | O(n log n)                                      |
 
-![ computes the expansible material — the crescent-shaped regions of uncut material reachable by expanding the frontier by .](images/ops-cut-cleared-area-bites.png)
+![ computes the expansible material reachable by expanding the frontier by .](images/ops-cut-cleared-area-bites.png)
 
-*`bites` computes the expansible material — the crescent-shaped regions of uncut material reachable
-by expanding the frontier by `step_over`.*
+*`bites` computes the expansible material reachable by expanding the frontier by `step_over`.*
 
 ### `commit_batch()`
 
@@ -107,10 +104,9 @@ After this call the batch is closed (the caller may start a new one).
 | --------- | ------ | ----------- |
 | _Returns_ | `None` |             |
 
-![ (global union) vs  (grid-local merge) — identical cleared area, but Local updates only the fragments whose bbox overlaps each new swept polygon.](images/ops-cut-cleared-area-local-vs-global.png)
+![Global vs local commit — only overlapping frags updated.](images/ops-cut-cleared-area-local-vs-global.png)
 
-*`commit_batch` (global union) vs `commit_batch_local` (grid-local merge) — identical cleared area,
-but Local updates only the fragments whose bbox overlaps each new swept polygon.*
+*Global vs local commit — only overlapping frags updated.*
 
 ### `compact_if_needed()`
 
@@ -200,10 +196,9 @@ existing fragments (skips the full union).
 | _Returns_    | `list[list[tuple[float, float]]]`         | List of polygons representing the newly-added portion. |
 | _Complexity_ |                                           | O(n log n) worst case when union required,             |
 
-![ adds polygons to the cleared state while returning only the newly-covered region (shown in green).](images/ops-cut-cleared-area-cut-fast.png)
+![ adds polygons to the cleared area, returning only the newly-covered region (green).](images/ops-cut-cleared-area-cut-fast.png)
 
-*`cut_fast` adds polygons to the cleared state while returning only the newly-covered region (shown
-in green).*
+*`cut_fast` adds polygons to the cleared area, returning only the newly-covered region (green).*
 
 ### `envelope()`
 
@@ -284,10 +279,9 @@ Expand the cleared area by sweeping a disk of *radius* along a single segment fr
 | `radius`  | `float`               | Disk radius (mm).                    |
 | _Returns_ | `None`                |                                      |
 
-![: sweeping a disk (dashed circle) of radius radius from prev to next (red arrow) enlarges the cleared area (right) vs the initial state (left).](images/ops-cut-cleared-area-expand-step.png)
+![ sweeps a disk from prev to next, enlarging the cleared area vs initial state.](images/ops-cut-cleared-area-expand-step.png)
 
-*`expand_step`: sweeping a disk (dashed circle) of radius *radius* from *prev* to *next* (red arrow)
-enlarges the cleared area (right) vs the initial state (left).*
+*`expand_step` sweeps a disk from *prev* to *next*, enlarging the cleared area vs initial state.*
 
 ### `fragments()`
 
@@ -321,10 +315,9 @@ Return a unioned, simplified snapshot of the current outer boundary, clipped to 
 | _Returns_      | `list[list[tuple[float, float]]]` | List of polygons representing the outer boundary. |
 | _Complexity_   |                                   | O(n log n)                                        |
 
-![ returns the outer boundary of the cleared area after merging overlapping fragments — shown in crimson.](images/ops-cut-cleared-area-frontier.png)
+![ returns the outer boundary of the cleared area after merging overlapping fragments.](images/ops-cut-cleared-area-frontier.png)
 
-*`frontier` returns the outer boundary of the cleared area after merging overlapping fragments —
-shown in crimson.*
+*`frontier` returns the outer boundary of the cleared area after merging overlapping fragments.*
 
 ### `get_angular_engagement()`
 
@@ -409,10 +402,9 @@ Return fragments whose bounding box overlaps the query window.
 | _Returns_    | `list[list[tuple[float, float]]]`   | Fragments intersecting the bounding box.     |
 | _Complexity_ |                                     | O(m + k) where m = number of fragments,      |
 
-![ returns only the cleared fragments whose bounding box overlaps the query (green box).](images/ops-cut-cleared-area-query-window.png)
+![ returns only the cleared fragments whose bbox overlaps the query (green).](images/ops-cut-cleared-area-query-window.png)
 
-*`query_window` returns only the cleared fragments whose bounding box overlaps the query (green
-box).*
+*`query_window` returns only the cleared fragments whose bbox overlaps the query (green).*
 
 ### `remaining()`
 
@@ -427,10 +419,9 @@ Subtract cleared fragments from the stock, returning the uncut portion.
 | _Returns_    | `list[list[tuple[float, float]]]` | List of polygons representing the uncut portion. |
 | _Complexity_ |                                   | O(n * m) where n = stock vertices, m = fragments |
 
-![ subtracts cleared fragments from the boundary polygon, returning the uncut region (red).](images/ops-cut-cleared-area-remaining.png)
+![ subtracts cleared fragments from the boundary, returning the uncut region (red).](images/ops-cut-cleared-area-remaining.png)
 
-*`remaining` subtracts cleared fragments from the boundary polygon, returning the uncut region
-(red).*
+*`remaining` subtracts cleared fragments from the boundary, returning the uncut region (red).*
 
 ### `remaining_area()`
 

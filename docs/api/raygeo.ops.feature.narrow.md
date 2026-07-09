@@ -39,7 +39,7 @@ returned list is a tuple of `(polygon, class, min_width, entry_edge_indices)`.
 | `min_slot_width` | `float &#124; None = None`                                      | Minimum passage width for slotting in mm. Defaults to `2 × tool_radius` (tool diameter) when `None`. |
 | _Returns_        | `list[tuple[list[tuple[float, float]], str, float, list[int]]]` | List of `(polygon, class, min_width, entry_edge_indices)` tuples.                                    |
 
-![A single pocket with a staircase island produces narrow passages of three different widths, demonstrating all three classification levels.](images/ops-feature-narrow-classification-by-width.png)
+![A pocket with staircase island produces passages of three widths, showing all classification levels](images/ops-feature-narrow-classification-by-width.png)
 
-*A single pocket with a staircase island produces narrow passages of three different widths,
-demonstrating all three classification levels.*
+*A pocket with staircase island produces passages of three widths, showing all classification
+levels*

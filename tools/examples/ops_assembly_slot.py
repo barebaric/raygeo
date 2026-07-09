@@ -215,16 +215,8 @@ __images__ = [
     {
         "heading": "generate_slot",
         "caption": (
-            "3D back-and-forth slot path through a 40×7 mm slot. The"
-            " carrier is derived by `find_slot_path` (Step 9a) from the"
-            " slot polygon and the bottom entry edge; `generate_slot`"
-            " then emits a forward pass (entry side → far side, blue)"
-            " immediately followed by a backward pass (far side → entry"
-            " side, red) at constant target_z=-3. The dashed black line"
-            " is the carrier; the solid black outline is the slot"
-            " polygon; the navy rings are the tool-radius envelopes at"
-            " the carrier endpoints. No trochoid — slotting is a"
-            " linear constant-Z operation."
+            "3D forward+backward slot path through a 40×7 mm slot at"
+            " constant target_z=-3, no trochoid."
         ),
         "function": generate_slot_3d,
     },

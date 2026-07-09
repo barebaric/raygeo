@@ -293,15 +293,8 @@ __images__ = [
     {
         "heading": "find_plunge_point",
         "caption": (
-            "Three plunge-point scenarios. In each panel the red ✗ marks a"
-            " requested `near` point (which would collide with a wall or"
-            " island), and the dashed navy circle shows the corrected plunge"
-            " point returned by `find_plunge_point` — left: a tight slot"
-            " corridor barely wide enough for the tool, centre: a wider"
-            " narrow passage in the toroidal range, right: a wide pocket"
-            " with a central island showing two corrections: one from a"
-            " point on the island, and one from a point outside the cleared"
-            " disk but fully inside the pocket."
+            "Three scenarios of find_plunge_point correcting near points:"
+            " slot, passage, and pocket with island."
         ),
         "function": generate_plunge_point_scenarios,
     },

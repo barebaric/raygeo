@@ -347,18 +347,16 @@ __images__ = [
     {
         "heading": "get_angular_engagement",
         "caption": (
-            "Comparison of exact polygon-intersection angular engagement"
-            " with the analytical signed-distance estimate along a"
-            " scan line crossing the boundary."
+            "Comparison of exact polygon-intersection engagement vs"
+            " analytical signed-distance estimate"
         ),
         "function": generate_angular_engagement_comparison,
     },
     {
         "heading": "get_disk_segment_area",
         "caption": (
-            "Left: a disk of radius 5 mm with the circular segment to the"
-            " right of the vertical line ``x = 1.5`` shaded. Right: the"
-            " segment area as a function of ``x``, from ``-r`` to ``+r``."
+            "Left: disk segment shaded right of ``x = 1.5``; right:"
+            " segment area vs ``x`` from ``-r`` to ``+r``"
         ),
         "function": generate_disk_segment_area,
     },

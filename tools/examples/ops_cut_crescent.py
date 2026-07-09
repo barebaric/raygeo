@@ -424,51 +424,40 @@ __images__ = [
     {
         "heading": "cut_area",
         "caption": (
-            "Disk increment (in red) produced by stepping a disk from"
-            " C1 to C2."
-            " Left panel shows the full increment; right panel shows"
-            " the reduction when a cleared fragment (gray) occupies part"
-            " of the increment."
+            "Disk increment (red): stepping C1 to C2; left full, right"
+            " shows reduction with a cleared fragment"
         ),
         "function": generate_disk_increment,
     },
     {
         "heading": "cut_area",
         "caption": (
-            "Crescent area as a function of step distance ``d`` compared"
-            " with the analytical crescent formula. Right panel shows"
-            " the left-side portion (half of total for the symmetric"
-            " case)."
+            "Crescent area vs step ``d`` compared to analytical formula;"
+            " right shows left-side portion"
         ),
         "function": generate_crescent_area_vs_distance,
     },
     {
         "heading": "cut_area",
         "caption": (
-            "2D heatmap of ``cut_area`` as the ``c2`` centre is moved"
-            " across a grid around ``c1``. The dashed circle shows"
-            " ``Disk(c1)``; the area is zero when ``c2`` coincides with"
-            " ``c1`` and maximal at intermediate distances."
+            "2D heatmap of ``cut_area`` as c2 orbits c1; zero at"
+            " coincidence, maximal at mid distances"
         ),
         "function": generate_crescent_heatmap_2d,
     },
     {
         "heading": "cut_area",
         "caption": (
-            "Effect of a vertical-wall fragment sweeping across the"
-            " crescent. Left panel shows the geometry at one wall"
-            " position; the right panel plots total and left area vs"
-            " wall ``x``, demonstrating smooth continuity."
+            "Vertical-wall fragment sweeping crescent; left shows geometry,"
+            " right plots area vs wall position"
         ),
         "function": generate_crescent_fragment_sweep,
     },
     {
         "heading": "cut_area",
         "caption": (
-            "Crescent clipped to different ``valid_area`` polygons:"
-            " no clip (full), a left-half window, and a window around"
-            " the crescent tip. The faint gray shape is the unclipped"
-            " crescent reference."
+            "Crescent clipped to ``valid_area``: no clip, left-half"
+            " window, tip window; faint gray = unclipped"
         ),
         "function": generate_crescent_valid_area_clip,
     },

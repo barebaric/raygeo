@@ -582,8 +582,8 @@ __images__ = [
     {
         "heading": "create_fillet_polyline",
         "caption": (
-            "``create_fillet_polyline`` generates circular fillet arcs of"
-            " arbitrary sweep angle, tangent to a direction at a point"
+            "``create_fillet_polyline`` generates circular fillet arcs at"
+            " any sweep angle, tangent to a direction"
         ),
         "function": generate_create_fillet_polyline,
     },
@@ -599,15 +599,15 @@ __images__ = [
         "heading": "append_end_fillets",
         "caption": (
             "``append_end_fillets`` rounds both ends of an open polyline"
-            " with reversed-start / forward-end fillet arcs"
+            " with reversed/forward fillet arcs"
         ),
         "function": generate_append_end_fillets,
     },
     {
         "heading": "trim_to_safe_fillet_span",
         "caption": (
-            "``trim_to_safe_fillet_span`` finds the longest sub-span whose"
-            " end fillets do not collide with obstacles (red)"
+            "``trim_to_safe_fillet_span`` finds the longest safe sub-span"
+            " whose end fillets avoid obstacles (red)"
         ),
         "function": generate_trim_to_safe_fillet_span,
     },
@@ -615,32 +615,31 @@ __images__ = [
         "heading": "fillet_arc_ends",
         "caption": (
             "``fillet_arc_ends`` trims the arc to the longest safe sub-arc"
-            " and appends quarter-circle fillets at each end"
+            " and appends quarter-circle fillets"
         ),
         "function": generate_fillet_arc_ends,
     },
     {
         "heading": "find_safe_sweep_end",
         "caption": (
-            "``find_safe_sweep_end`` returns the ``(enter, exit)`` points"
-            " delimiting the longest sub-arc whose tool sweep avoids islands"
+            "``find_safe_sweep_end`` returns the (enter, exit) points"
+            " delimiting the longest safe sub-arc"
         ),
         "function": generate_find_safe_sweep_end,
     },
     {
         "heading": "try_fillet_one_end",
         "caption": (
-            "``try_fillet_one_end`` tests the start fillet first; when it"
-            " collides with the obstacle (red), falls back to the end fillet"
+            "``try_fillet_one_end`` tests the start fillet first; on"
+            " collision falls back to the end fillet"
         ),
         "function": generate_try_fillet_one_end,
     },
     {
         "heading": "get_descending_radius_fillet",
         "caption": (
-            "``get_descending_radius_fillet`` halves the fillet radius until"
-            " both ends fit, while keeping the safety distance"
-            " (``radius + margin``) fixed"
+            "``get_descending_radius_fillet`` halves radius until both"
+            " ends fit, keeping safety distance fixed"
         ),
         "function": generate_descending_radius_fillet,
     },

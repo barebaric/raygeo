@@ -31,10 +31,9 @@ expanded by *radius*).
 | _Returns_    | `tuple[list[list[tuple[float, float]]], float]` | `(region_polygons, total_area)`.                                           |
 | _Complexity_ |                                                 | O((n + m) log(n + m)) where n and m are boundary and obstacle point counts |
 
-![Inset region: boundary shrunk by radius, obstacles subtracted. Left: simple inset. Right: inset with a central obstacle.](images/geo-algo-offset-inset-region.png)
+![Inset region: boundary shrunk, obstacles removed. Left: simple. Right: with central obstacle.](images/geo-algo-offset-inset-region.png)
 
-*Inset region: boundary shrunk by radius, obstacles subtracted. Left: simple inset. Right: inset
-with a central obstacle.*
+*Inset region: boundary shrunk, obstacles removed. Left: simple. Right: with central obstacle.*
 
 ![Multi-obstacle inset: the region splits into multiple disconnected polygons.](images/geo-algo-offset-inset-region-multi-obstacle.png)
 
@@ -90,20 +89,18 @@ centroids of the final polygons.
 | _Returns_    | `list[geo.types.Point]`       | List of (x, y) centroid points.              |
 | _Complexity_ |                               | O(n * k) where k is the number of iterations |
 
-![Deepest-core detection: finds the point of maximum clearance inside the valid tool area — the best helical-entry point for the pocket](images/geo-algo-offset-deepest-cores.png)
+![Deepest-core detection: finds max clearance in valid tool area — best helical-entry for the pocket](images/geo-algo-offset-deepest-cores.png)
 
-*Deepest-core detection: finds the point of maximum clearance inside the valid tool area — the best
-helical-entry point for the pocket*
+*Deepest-core detection: finds max clearance in valid tool area — best helical-entry for the pocket*
 
-![Multi-island pocket: islands are detected by orientation (clockwise contours) and excluded; the core is the pole of inaccessibility of the largest valid region](images/geo-algo-offset-deepest-cores-multi.png)
+![Multi-island pocket: clockwise contours are islands; core is deepest point in largest valid region.](images/geo-algo-offset-deepest-cores-multi.png)
 
-*Multi-island pocket: islands are detected by orientation (clockwise contours) and excluded; the
-core is the pole of inaccessibility of the largest valid region*
+*Multi-island pocket: clockwise contours are islands; core is deepest point in largest valid
+region.*
 
-![Central-island pocket (annular): the island creates a ring of valid tool area; the deepest core is the point of maximum clearance in the ring — never inside the island](images/geo-algo-offset-deepest-cores-central.png)
+![Central-island (annular): ring of valid tool area; deepest core is max clearance, never in island.](images/geo-algo-offset-deepest-cores-central.png)
 
-*Central-island pocket (annular): the island creates a ring of valid tool area; the deepest core is
-the point of maximum clearance in the ring — never inside the island*
+*Central-island (annular): ring of valid tool area; deepest core is max clearance, never in island.*
 
 ### `offset_contour_group()`
 

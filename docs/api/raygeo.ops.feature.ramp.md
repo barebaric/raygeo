@@ -32,10 +32,6 @@ The returned segment is oriented so the start point has the smaller coordinate o
 | `max_ramp_angle_deg` | `float = 45`                                                  | Maximum ramp angle in degrees.                        |
 | _Returns_            | `tuple[tuple[float, float], tuple[float, float]] &#124; None` | `((x1, y1), (x2, y2))` or `None` if no carrier found. |
 
-![Three scenarios showing the ramp carrier returned by . Left: an L-shaped pocket with no island — the longest inside-segment on the dominant axis. Centre: a wide rectangle with a central blocking island; the dashed gray rectangle shows the dilated no-go band, and the navy carrier avoids it entirely. Right: a T-shaped pocket with one island in the vertical stem — the carrier occupies the wide horizontal arm while steering clear of the island.](images/ops-feature-ramp-ramp-carrier-slots.png)
+![find_ramp_carrier on L-shaped, rectangle with blocking island, and T-shaped pocket.](images/ops-feature-ramp-ramp-carrier-slots.png)
 
-*Three scenarios showing the ramp carrier returned by `find_ramp_carrier`. Left: an L-shaped pocket
-with no island — the longest inside-segment on the dominant axis. Centre: a wide rectangle with a
-central blocking island; the dashed gray rectangle shows the dilated no-go band, and the navy
-carrier avoids it entirely. Right: a T-shaped pocket with one island in the vertical stem — the
-carrier occupies the wide horizontal arm while steering clear of the island.*
+*find_ramp_carrier on L-shaped, rectangle with blocking island, and T-shaped pocket.*

@@ -301,15 +301,15 @@ __images__ = [
         "heading": "get_polylabel",
         "caption": (
             "Polylabel: priority-queue cell refinement finds the point"
-            " farthest from the boundary — the pole of inaccessibility"
+            " farthest from the boundary"
         ),
         "function": generate_rect_lshape,
     },
     {
         "heading": "get_polylabel",
         "caption": (
-            "Multi-island pocket: the pole of inaccessibility sits in"
-            " the largest valid region, farthest from all boundaries"
+            "Multi-island pocket: pole of inaccessibility sits in the"
+            " largest valid region"
         ),
         "function": generate_multi_island,
     },
@@ -324,9 +324,8 @@ __images__ = [
     {
         "heading": "find_largest_circle",
         "caption": (
-            "find_largest_circle returns the centre and radius of the"
-            " largest inscribed circle — the entry point and its"
-            " clearance for helical versus ramp decisions"
+            "find_largest_circle returns centre and radius of the largest"
+            " inscribed circle"
         ),
         "function": generate_largest_circle,
     },

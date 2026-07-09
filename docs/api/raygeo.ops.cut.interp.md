@@ -68,10 +68,10 @@ parameter space.
 | --------- | ------- | ----------- |
 | _Returns_ | `float` |             |
 
-![Interpolation bracket showing error vs steering angle. The red and green markers are the min and max bracket samples; the purple dashed line marks the interpolated zero-crossing angle.](images/ops-cut-interp-interpolation-bracket.png)
+![Interpolation bracket: error vs steering with min/max samples (red/green) and zero-crossing (purple)](images/ops-cut-interp-interpolation-bracket.png)
 
-*Interpolation bracket showing error vs steering angle. The red and green markers are the min and
-max bracket samples; the purple dashed line marks the interpolated zero-crossing angle.*
+*Interpolation bracket: error vs steering with min/max samples (red/green) and zero-crossing
+(purple)*
 
 ### `joint_is_valid()`
 
@@ -131,10 +131,9 @@ at least one CCW polygon AND outside all CW polygons.
 | `area`    | `Sequence[Sequence[tuple[float, float]]]` | List of polygon rings (each a list of `(x, y)` tuples). |
 | _Returns_ | `bool`                                    | `True` if the point is in a valid region.               |
 
-![Valid-area polygon with a CCW shell (blue) and CW hole (red dashed). Points are marked green (valid) or red (invalid) based on :func:.](images/ops-cut-interp-point-in-valid-area.png)
+![Valid-area polygon: CCW shell (blue), CW hole (red dashed); points valid (green) or invalid (red)](images/ops-cut-interp-point-in-valid-area.png)
 
-*Valid-area polygon with a CCW shell (blue) and CW hole (red dashed). Points are marked green
-(valid) or red (invalid) based on :func:`~raygeo.ops.cut.interp.point_in_valid_area`.*
+*Valid-area polygon: CCW shell (blue), CW hole (red dashed); points valid (green) or invalid (red)*
 
 ### `rotate()`
 

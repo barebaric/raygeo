@@ -317,7 +317,7 @@ __images__ = [
     {
         "heading": "adaptive_wavefronts",
         "caption": (
-            "Adaptive wavefronts expanding outward from the initial cleared"
+            "Adaptive wavefronts expand from the initial cleared"
             " disk (blue) to fill the pocket boundary (black)"
         ),
         "function": generate_wavefront_rect,
@@ -341,9 +341,8 @@ __images__ = [
     {
         "heading": "adaptive_wavefronts",
         "caption": (
-            "Adaptive wavefronts expanding within a complex shape loaded"
-            " from an SVG file — contours adapt to the irregular boundary"
-            " and wrap around internal islands"
+            "Adaptive wavefronts in a complex SVG shape — contours"
+            " adapt to the boundary and wrap around islands"
         ),
         "function": generate_wavefront_svg,
     },

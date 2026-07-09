@@ -261,14 +261,8 @@ __images__ = [
     {
         "heading": "find_ramp_carrier",
         "caption": (
-            "Three scenarios showing the ramp carrier returned by"
-            " `find_ramp_carrier`. Left: an L-shaped pocket with no island —"
-            " the longest inside-segment on the dominant axis. Centre: a wide"
-            " rectangle with a central blocking island;"
-            " the dashed gray rectangle shows the dilated no-go band, and the"
-            " navy carrier avoids it entirely. Right: a T-shaped pocket with"
-            " one island in the vertical stem — the carrier occupies the wide"
-            " horizontal arm while steering clear of the island."
+            "find_ramp_carrier on L-shaped, rectangle with blocking island,"
+            " and T-shaped pocket."
         ),
         "function": generate_ramp_carrier_slots,
     },

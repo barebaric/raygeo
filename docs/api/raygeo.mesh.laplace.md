@@ -32,10 +32,9 @@ inner boundary vertices to u=0.0.
 
 *Stiffness matrix edge weights on the mesh — line thickness ∝ |Kᵢⱼ|*
 
-![Laplace solution on a multi-island domain — contour lines morph smoothly between four inner islands and the outer boundary](images/mesh-laplace-multi-island.png)
+![Laplace on multi-island domain — contours morph between four inner islands and the outer boundary](images/mesh-laplace-multi-island.png)
 
-*Laplace solution on a multi-island domain — contour lines morph smoothly between four inner islands
-and the outer boundary*
+*Laplace on multi-island domain — contours morph between four inner islands and the outer boundary*
 
 ![Laplace solution — contours morph smoothly from hole to boundary](images/mesh-laplace-overview.png)
 

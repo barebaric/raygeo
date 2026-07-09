@@ -34,10 +34,10 @@ grazing an edge at an endpoint is **not** considered a crossing.
 | _Returns_    | `bool`              | `True` if the segment crosses the polygon interior. |
 | _Complexity_ |                     | O(n) time, O(1) space                               |
 
-![Check whether a line segment crosses the interior of a polygon. Left: crossing segment (red). Right: segment that only touches the boundary (gray, no cross).](images/geo-shape-line-line-crosses-polygon.png)
+![Check if line segment crosses polygon interior. Left: crosses (red). Right: touches boundary (gray).](images/geo-shape-line-line-crosses-polygon.png)
 
-*Check whether a line segment crosses the interior of a polygon. Left: crossing segment (red).
-Right: segment that only touches the boundary (gray, no cross).*
+*Check if line segment crosses polygon interior. Left: crosses (red). Right: touches boundary
+(gray).*
 
 ### `does_line_segment_intersect_circle()`
 
@@ -290,10 +290,9 @@ Minimum Euclidean distance between two line segments.
 | _Returns_    | `float`               | Minimum distance between the two segments. |
 | _Complexity_ |                       | O(1) time, O(1) space                      |
 
-![Minimum Euclidean distance between two line segments. Left: crossing segments (distance 0). Centre: parallel separated segments. Right: skew (non-parallel) segments.](images/geo-shape-line-segment-distance.png)
+![Minimum Euclidean distance between 2 segments. Left: crossing (0). Centre: parallel. Right: skew.](images/geo-shape-line-segment-distance.png)
 
-*Minimum Euclidean distance between two line segments. Left: crossing segments (distance 0). Centre:
-parallel separated segments. Right: skew (non-parallel) segments.*
+*Minimum Euclidean distance between 2 segments. Left: crossing (0). Centre: parallel. Right: skew.*
 
 ### `interpolated_segment_3d()`
 
@@ -369,7 +368,7 @@ vertical line.
 | _Returns_    | `tuple[tuple[float, float], tuple[float, float]]` | `((x1, y1), (x2, y2))` start and end of the line. |
 | _Complexity_ |                                                   | O(1) time, O(1) space                             |
 
-![Find the longest axis-aligned line through a point within a bounding box. Left: wider box gives a horizontal line. Right: taller box gives a vertical line.](images/geo-shape-line-longest-line.png)
+![Longest axis-aligned line through a point in a bbox. Left: wider→horizontal. Right: taller→vertical.](images/geo-shape-line-longest-line.png)
 
-*Find the longest axis-aligned line through a point within a bounding box. Left: wider box gives a
-horizontal line. Right: taller box gives a vertical line.*
+*Longest axis-aligned line through a point in a bbox. Left: wider→horizontal. Right:
+taller→vertical.*

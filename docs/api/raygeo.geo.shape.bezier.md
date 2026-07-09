@@ -73,10 +73,9 @@ Fit a cubic Bezier curve to a sequence of points (least-squares).
 | `points`  | `list[tuple[float, float]]`   | List of (x, y) points.                             |
 | _Returns_ | `Optional[types.CubicBezier]` | `(p0, c1, c2, p3)` or None if fewer than 2 points. |
 
-![Cubic Bezier curves fitted to sample point sequences — sine, cosine hump, quarter-circle, and shallow wave](images/geo-shape-bezier-fit-cutline.png)
+![Cubic Bezier curves fitted to sample points — sine, cosine hump, quarter-circle, and shallow wave](images/geo-shape-bezier-fit-cutline.png)
 
-*Cubic Bezier curves fitted to sample point sequences — sine, cosine hump, quarter-circle, and
-shallow wave*
+*Cubic Bezier curves fitted to sample points — sine, cosine hump, quarter-circle, and shallow wave*
 
 ### `flatten_bezier()`
 

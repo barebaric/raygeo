@@ -61,12 +61,10 @@ The walkable area is rasterised at *cell_size* resolution. Obstacles are dilated
 
 *A* finds a path around a central obstacle when the direct route is blocked\*
 
-![A* threading a path between multiple disconnected obstacles — the algorithm explores the free cells and finds an optimal route](images/geo-algo-astar-multiple-obstacles.png)
+![A* threads a path between disconnected obstacles, exploring free cells to find the optimal route](images/geo-algo-astar-multiple-obstacles.png)
 
-*A* threading a path between multiple disconnected obstacles — the algorithm explores the free cells
-and finds an optimal route\*
+*A* threads a path between disconnected obstacles, exploring free cells to find the optimal route\*
 
-![Increasing the obstacle margin (right) pushes the path further from obstacles compared to no margin (left)](images/geo-algo-astar-obstacle-margin.png)
+![Increasing the obstacle margin (right) pushes the path further from obstacles vs no margin (left)](images/geo-algo-astar-obstacle-margin.png)
 
-*Increasing the obstacle margin (right) pushes the path further from obstacles compared to no margin
-(left)*
+*Increasing the obstacle margin (right) pushes the path further from obstacles vs no margin (left)*

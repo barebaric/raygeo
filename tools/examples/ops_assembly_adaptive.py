@@ -756,40 +756,32 @@ __images__ = [
     {
         "heading": "adaptive_clearing",
         "caption": (
-            "Forward-stepping constant-engagement clearing cuts "
-            "(coloured by progress via the full-spectrum turbo gradient) "
-            "from a central seed clearing (green), with MAT-routed "
-            "travel links (red dashed) between segments."
+            "Constant-engagement clearing cuts, MAT-routed travel links,"
+            " coloured by progress."
         ),
         "function": generate_adaptive_clearing_demo,
     },
     {
         "heading": "target_area_per_distance",
         "caption": (
-            "Left: target area per distance as a function of advance for"
-            " several step lengths. Right: target area per distance as a"
-            " function of step length for several advance values."
+            "Left: area/distance vs advance for several step lengths."
+            " Right: vs step length for several advances."
         ),
         "function": generate_target_area_curves,
     },
     {
         "heading": "target_area_per_distance",
         "caption": (
-            "Geometric model underlying ``target_area_per_distance``:"
-            " two disks offset by ``step_length`` along the travel"
-            " direction, with a vertical wall at ``x = R − advance``"
-            " representing the previous pass boundary. The fresh"
-            " material (dark red) is the portion of the crescent that"
-            " lies to the right of the wall."
+            "Two offset disks and a wall at x=R−advance: crescent"
+            " beyond wall is fresh material."
         ),
         "function": generate_target_area_geometry,
     },
     {
         "heading": "adaptive_clearing",
         "caption": (
-            "Circle-seed clearing in a 60×60 pocket with a 10×10 island at"
-            " the centre — 2D top-down shows seed clearing (blue), toolpath"
-            " gradient, and remaining bands (red)."
+            "Circle-seed clearing in 60×60 pocket with central island:"
+            " 2D view of seed, toolpath, and remaining."
         ),
         "function": generate_adaptive_clearing_centre_island,
     },
@@ -803,8 +795,8 @@ __images__ = [
     {
         "heading": "adaptive_clearing",
         "caption": (
-            "Narrow pocket (80×14) 2D top-down view showing seed clearing,"
-            " toolpath gradient, and remaining uncut bands."
+            "Narrow pocket (80×14) 2D top-down: seed clearing, toolpath"
+            " gradient, and remaining bands."
         ),
         "function": generate_adaptive_clearing_narrow_2d,
     },

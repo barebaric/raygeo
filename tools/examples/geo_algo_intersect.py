@@ -185,9 +185,8 @@ __images__ = [
     {
         "heading": "get_ray_polygon_intersection",
         "caption": (
-            "Ray–polygon intersection: the ray from origin O"
-            " hits the polygon boundary at the closest intersection"
-            " point along the ray direction."
+            "Ray–polygon intersection: ray from O hits polygon at"
+            " closest intersection point along ray direction"
         ),
         "function": generate_ray_polygon,
     },

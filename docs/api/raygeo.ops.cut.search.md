@@ -54,7 +54,7 @@ starts at the correct engagement depth.
 
 *Walk forward from the engagement point to find the next frontier match.*
 
-![Multi-island pocket — end positions (triangles) yield resume positions (stars) with outward headings.](images/ops-cut-search-search-frontier-engagement-multi.png)
+![Multi-island pocket — end positions (triangles) yield resume positions (stars) with outward headings](images/ops-cut-search-search-frontier-engagement-multi.png)
 
 *Multi-island pocket — end positions (triangles) yield resume positions (stars) with outward
-headings.*
+headings*

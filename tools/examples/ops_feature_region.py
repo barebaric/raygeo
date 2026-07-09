@@ -186,10 +186,8 @@ __images__ = [
     {
         "heading": "find_regions",
         "caption": (
-            "Three-lobe H-shape pocket with narrow passages separating the"
-            " wide sub-regions. Each wide region is colored differently,"
-            " the largest inscribed circle (entry point) is marked, and the"
-            " narrow corridors are shaded gray."
+            "H-shape pocket: wide regions colored, entry points marked,"
+            " narrow corridors shaded gray"
         ),
         "function": generate_find_regions,
     },

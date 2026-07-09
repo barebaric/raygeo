@@ -45,10 +45,10 @@ Each ring fragment is emitted as `MoveTo` + `LineTo` at height *z* with *cut_fee
 | `cut_power`       | `float = 1`                                    | Laser power for cutting moves (0.0-1.0, default 1.0).                                                                                       |
 | _Returns_         | `ops.assembly.result.AssemblyResult`           | An **AssemblyResult** with wavefront cutting commands.                                                                                      |
 
-![Adaptive wavefronts expanding outward from the initial cleared disk (blue) to fill the pocket boundary (black)](images/ops-assembly-wavefront-wavefront-rect.png)
+![Adaptive wavefronts expand from the initial cleared disk (blue) to fill the pocket boundary (black)](images/ops-assembly-wavefront-wavefront-rect.png)
 
-*Adaptive wavefronts expanding outward from the initial cleared disk (blue) to fill the pocket
-boundary (black)*
+*Adaptive wavefronts expand from the initial cleared disk (blue) to fill the pocket boundary
+(black)*
 
 ![Adaptive wavefronts in a pocket with three islands — contours wrap around each island as they expand](images/ops-assembly-wavefront-wavefront-multi.png)
 
@@ -59,7 +59,7 @@ expand*
 
 *Adaptive wavefronts in a Y-shaped channel — contours split and propagate along each branch*
 
-![Adaptive wavefronts expanding within a complex shape loaded from an SVG file — contours adapt to the irregular boundary and wrap around internal islands](images/ops-assembly-wavefront-wavefront-svg.png)
+![Adaptive wavefronts in a complex SVG shape — contours adapt to the boundary and wrap around islands](images/ops-assembly-wavefront-wavefront-svg.png)
 
-*Adaptive wavefronts expanding within a complex shape loaded from an SVG file — contours adapt to
-the irregular boundary and wrap around internal islands*
+*Adaptive wavefronts in a complex SVG shape — contours adapt to the boundary and wrap around
+islands*

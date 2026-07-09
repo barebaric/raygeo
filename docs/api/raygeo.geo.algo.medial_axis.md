@@ -112,10 +112,9 @@ Find a path between two points along the medial axis skeleton.
 | `to_pt`   | `tuple[float, float]`                 | End point `(x, y)`.                               |
 | _Returns_ | `Optional[list[tuple[float, float]]]` | List of `(x, y)` waypoints along the medial axis. |
 
-![MAT path routing: a path between two points (green) along the medial axis skeleton (red). The path avoids the island by following the skeleton topology.](images/geo-algo-medial-axis-mat-path.png)
+![MAT path routing: a path between two points along the medial axis skeleton, avoiding the island](images/geo-algo-medial-axis-mat-path.png)
 
-*MAT path routing: a path between two points (green) along the medial axis skeleton (red). The path
-avoids the island by following the skeleton topology.*
+*MAT path routing: a path between two points along the medial axis skeleton, avoiding the island*
 
 ### `trim_to_polygons()`
 
@@ -133,8 +132,6 @@ given polygons.
 | `polygons` | `Sequence[Sequence[tuple[float, float]]]` | List of polygons to trim against. |
 | _Returns_  | `MedialAxis`                              | Trimmed `MedialAxis`.             |
 
-![MAT trimming to cleared area — left: original MAT over cleared fragments (green fill); right: trimmed MAT with kept nodes (blue) and removed nodes (red x).  Only 10 clearing passes were run, so most MAT nodes lie outside the cleared area and are discarded.](images/geo-algo-medial-axis-mat-trimming.png)
+![MAT trimmed to cleared area: original MAT (gray) and trimmed nodes (blue) after 10 clearing passes](images/geo-algo-medial-axis-mat-trimming.png)
 
-*MAT trimming to cleared area — left: original MAT over cleared fragments (green fill); right:
-trimmed MAT with kept nodes (blue) and removed nodes (red x). Only 10 clearing passes were run, so
-most MAT nodes lie outside the cleared area and are discarded.*
+*MAT trimmed to cleared area: original MAT (gray) and trimmed nodes (blue) after 10 clearing passes*

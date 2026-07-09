@@ -198,13 +198,8 @@ __images__ = [
     {
         "heading": "generate_toroidal_clear",
         "caption": (
-            "3D ramp-down toroidal clear along a 20 mm carrier. With"
-            " start.z=2, target_z=-4 and max_ramp_angle_deg ≈ 5.71°"
-            " (L_min = 60 mm), the tool zig-zags back-and-forth three"
-            " times along the carrier while descending, then makes one"
-            " final full forward pass at constant target_z=-4. Colour"
-            " encodes cumulative cutting-arc-length from start (blue) to"
-            " end (red); the dashed black line is the carrier at target_z."
+            "3D ramp-down toroidal clear zig-zagging 3x along a 20 mm"
+            " carrier descending from z=2 to z=-4."
         ),
         "function": generate_toroidal_clear_3d,
     },

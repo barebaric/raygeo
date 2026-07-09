@@ -413,8 +413,7 @@ __images__ = [
         "heading": "get_polyline_closest_point",
         "caption": (
             "``get_polyline_closest_point`` finds the closest point on an open"
-            " polyline to a query point, returning the edge index and"
-            " parametric position"
+            " polyline to a query point"
         ),
         "function": generate_polyline_closest_point,
     },
@@ -426,20 +425,16 @@ __images__ = [
     {
         "heading": "trim_polyline_angular_ends",
         "caption": (
-            "``trim_polyline_angular_ends`` removes transition vertices from"
-            " both ends of a contiguous subsequence where the interior angle"
-            " jumps sharply.  Here a 10-vertex cut (indices 1–10) with"
-            " angles ranging 59°→180°→59° is trimmed to 8 vertices"
-            " using a 25° threshold."
+            "``trim_polyline_angular_ends`` removes transition vertices"
+            " from subseq ends at sharp angle jumps"
         ),
         "function": generate_trim_polyline_angular_ends,
     },
     {
         "heading": "split_polyline_at_v_junctions",
         "caption": (
-            "Three semi-arcs (hills) form two V-junctions where they meet."
-            " The function splits the polyline at those points and trims"
-            " each segment's angular ends."
+            "Three semi-arcs form two V-junctions; splits and trims each"
+            " segment's angular ends"
         ),
         "function": generate_split_v_junctions,
     },

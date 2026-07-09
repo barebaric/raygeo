@@ -38,8 +38,6 @@ is entirely narrow/slot.
 | `tolerance`   | `float = 0.5`                                                               | Additional clearance tolerance in mm.              |
 | _Returns_     | `list[tuple[list[tuple[float, float]], float, tuple[float, float], float]]` | List of `(polygon, area, entry_pt, r_max)` tuples. |
 
-![Three-lobe H-shape pocket with narrow passages separating the wide sub-regions. Each wide region is colored differently, the largest inscribed circle (entry point) is marked, and the narrow corridors are shaded gray.](images/ops-feature-region-find-regions.png)
+![H-shape pocket: wide regions colored, entry points marked, narrow corridors shaded gray](images/ops-feature-region-find-regions.png)
 
-*Three-lobe H-shape pocket with narrow passages separating the wide sub-regions. Each wide region is
-colored differently, the largest inscribed circle (entry point) is marked, and the narrow corridors
-are shaded gray.*
+*H-shape pocket: wide regions colored, entry points marked, narrow corridors shaded gray*

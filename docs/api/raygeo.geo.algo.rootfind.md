@@ -87,10 +87,9 @@ is linearly interpolated. Falls back to the sample with smallest absolute error.
 | `max_deflection` | `float`                    | Maximum angular spread in radians.     |
 | _Returns_        | `tuple[float, str, int]`   | `(root, status_string, sample_count)`. |
 
-![7-sample angular grid search with linear interpolation: samples f(x) on a fan around heading and interpolates across adjacent sign changes.](images/geo-algo-rootfind-bracket-grid.png)
+![7-sample grid search (linear interp): samples f(x) around heading and interpolates sign changes](images/geo-algo-rootfind-bracket-grid.png)
 
-*7-sample angular grid search with linear interpolation: samples f(x) on a fan around *heading* and
-interpolates across adjacent sign changes.*
+*7-sample grid search (linear interp): samples f(x) around heading and interpolates sign changes*
 
 ### `solve_illinois()`
 

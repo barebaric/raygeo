@@ -66,6 +66,12 @@ def _generate_images(
 
         print(f"  Generating {mod.__name__}...")
         for img in images:
+            caption = img.get("caption", "")
+            if len(caption) > 100:
+                raise ValueError(
+                    f"Caption in {mod.__name__} exceeds 100 chars "
+                    f"({len(caption)}): {caption!r}"
+                )
             func = img.get("function")
             if not func:
                 continue

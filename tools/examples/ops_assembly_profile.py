@@ -819,16 +819,15 @@ __images__ = [
     {
         "heading": "profile_outer",
         "caption": (
-            "profile_outer on a 60×60 rectangular pocket — 2D top-down "
-            "view. Black: source boundary. Blue dashed: offset tool-centre "
-            "polygon. Turbo gradient: cut moves. Gray dashes: travel."
+            "profile_outer on a 60×60 rect pocket — 2D top-down: "
+            "boundary, offset, cut (turbo), travel (gray)."
         ),
         "function": generate_profile_outer_rect_2d,
     },
     {
         "heading": "profile_outer",
         "caption": (
-            "profile_outer on a 60×60 rectangular pocket — 3D view "
+            "profile_outer on a 60×60 rect pocket — 3D view "
             "showing cut path at cut_z and rapids at safe_z."
         ),
         "function": generate_profile_outer_rect_3d,
@@ -852,51 +851,48 @@ __images__ = [
     {
         "heading": "profile_outer",
         "caption": (
-            "Two-pass profiling: rough pass with stock_to_leave=0.5 "
-            "(orange) followed by finish pass with stock_to_leave=0.0 "
-            "(red) on the same ClearedArea."
+            "Two-pass profiling: rough (stock_to_leave=0.5, orange) + "
+            "finish (0.0, red) on the same ClearedArea."
         ),
         "function": generate_profile_outer_rough_then_finish,
     },
     {
         "heading": "profile_inner",
         "caption": (
-            "profile_inner on a 60×60 pocket with a square island — 2D "
-            "top-down. Black: boundary. Gray: island. Blue dashed: inset "
-            "outer walk. Orange dashed: grown island walk. Turbo: cuts."
+            "profile_inner on 60×60 pocket with square island — "
+            "2D: boundary, island, offset walks, cuts (turbo)."
         ),
         "function": generate_profile_inner_rect_with_square_island_2d,
     },
     {
         "heading": "profile_inner",
         "caption": (
-            "profile_inner with two accessible islands — nearest-neighbour "
-            "ordering visible via the turbo gradient."
+            "profile_inner with two accessible islands — "
+            "nearest-neighbour order via turbo gradient."
         ),
         "function": generate_profile_inner_rect_with_two_islands_2d,
     },
     {
         "heading": "profile_inner",
         "caption": (
-            "profile_inner on an L-shaped pocket with an island — 3D view "
-            "showing cut path at cut_z and rapids at safe_z."
+            "profile_inner on an L-shaped pocket with island — "
+            "3D: cut path at cut_z, rapids at safe_z."
         ),
         "function": generate_profile_inner_concave_with_island_3d,
     },
     {
         "heading": "profile_inner",
         "caption": (
-            "profile_inner skips an island when the channel between "
-            "island and wall is narrower than 2×tool_radius."
+            "profile_inner skips an island when channel between "
+            "island and wall is < 2×tool_radius."
         ),
         "function": generate_profile_inner_narrow_channel_skips_island,
     },
     {
         "heading": "profile_inner",
         "caption": (
-            "Two-pass inner profiling: rough with stock_to_leave=0.5 "
-            "(orange) + finish with stock_to_leave=0.0 (red) on the same "
-            "ClearedArea."
+            "Two-pass inner profiling: rough (0.5, orange) + "
+            "finish (0.0, red) on same ClearedArea."
         ),
         "function": generate_profile_inner_rough_then_finish,
     },

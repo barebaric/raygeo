@@ -40,8 +40,7 @@ resort).
 | `angular_step`    | `float = 0.1`                                                | Angular step in radians (default 0.1).        |
 | _Returns_         | `list[dict]`                                                 | List of WorkplanStep dicts with a "kind" key. |
 
-![Entry workplan planning across three pocket shapes: wide rectangle (left) selects HelixPlunge + FlatSpiral; H-shape (centre) emits a ToroidalClear step per wide sub-region; cup shape (right) yields a RampEntry step when no ramp carrier can be found in the narrow region.](images/cnc-machining-entry-entry-workplan.png)
+![Entry workplan for 3 shapes: rectangle (Helix+FlatSpiral), H-shape (ToroidalClear), cup (RampEntry).](images/cnc-machining-entry-entry-workplan.png)
 
-*Entry workplan planning across three pocket shapes: wide rectangle (left) selects HelixPlunge +
-FlatSpiral; H-shape (centre) emits a ToroidalClear step per wide sub-region; cup shape (right)
-yields a RampEntry step when no ramp carrier can be found in the narrow region.*
+*Entry workplan for 3 shapes: rectangle (Helix+FlatSpiral), H-shape (ToroidalClear), cup
+(RampEntry).*

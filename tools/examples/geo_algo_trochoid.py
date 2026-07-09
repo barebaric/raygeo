@@ -174,12 +174,8 @@ __images__ = [
     {
         "heading": "get_trochoid_along_3d_ramped",
         "caption": (
-            "3D ramped trochoid along a straight 80 mm carrier. Z descends"
-            " linearly with cumulative arc-length from z_start=4 at the"
-            " carrier start to z_end=-2 at the carrier end. The trochoid"
-            " geometry is identical to get_trochoid_along_3d — only Z varies"
-            " along the path; colour encodes arc-length from start (blue) to"
-            " end (red)."
+            "3D ramped trochoid along an 80 mm carrier with Z descending"
+            " from z_start=4 to z_end=-2."
         ),
         "function": generate_ramped_3d,
     },

@@ -618,7 +618,7 @@ __images__ = [
         "heading": None,
         "caption": (
             "ClearedArea tracking a simulated raster toolpath — "
-            "cleared fragments shown in blue, remaining area in red"
+            "cleared fragments in blue, remaining red"
         ),
         "function": generate_raster,
     },
@@ -634,8 +634,8 @@ __images__ = [
     {
         "heading": "cut_fast",
         "caption": (
-            "``cut_fast`` adds polygons to the cleared state while "
-            "returning only the newly-covered region (shown in green)."
+            "``cut_fast`` adds polygons to the cleared area, "
+            "returning only the newly-covered region (green)."
         ),
         "function": generate_cut_fast,
     },
@@ -643,7 +643,7 @@ __images__ = [
         "heading": "frontier",
         "caption": (
             "``frontier`` returns the outer boundary of the cleared area "
-            "after merging overlapping fragments — shown in crimson."
+            "after merging overlapping fragments."
         ),
         "function": generate_frontier,
     },
@@ -667,7 +667,7 @@ __images__ = [
         "heading": "remaining",
         "caption": (
             "``remaining`` subtracts cleared fragments from the "
-            "boundary polygon, returning the uncut region (red)."
+            "boundary, returning the uncut region (red)."
         ),
         "function": generate_remaining,
     },
@@ -675,43 +675,37 @@ __images__ = [
         "heading": "query_window",
         "caption": (
             "``query_window`` returns only the cleared fragments "
-            "whose bounding box overlaps the query (green box)."
+            "whose bbox overlaps the query (green)."
         ),
         "function": generate_query_window,
     },
     {
         "heading": "expand_step",
         "caption": (
-            "``expand_step``: sweeping a disk (dashed circle) of radius "
-            "*radius* from *prev* to *next* (red arrow) enlarges "
-            "the cleared area (right) vs the initial state (left)."
+            "``expand_step`` sweeps a disk from *prev* to *next*, "
+            "enlarging the cleared area vs initial state."
         ),
         "function": generate_expand_step,
     },
     {
         "heading": "begin_batch",
         "caption": (
-            "Three segments queued via ``begin_batch`` / "
-            "``expand_batched`` then unioned in a single "
-            "``commit_batch`` pass."
+            "Three segments via ``begin_batch`` / ``expand_batched``, "
+            "unioned in a single ``commit_batch``."
         ),
         "function": generate_step_batch,
     },
     {
         "heading": "bites",
         "caption": (
-            "``bites`` computes the expansible material — the crescent-shaped "
-            "regions of uncut material reachable by expanding the frontier "
-            "by ``step_over``."
+            "``bites`` computes the expansible material reachable "
+            "by expanding the frontier by ``step_over``."
         ),
         "function": generate_bites,
     },
     {
         "heading": "commit_batch_local",
-        "caption": "``commit_batch`` (global union) vs ``commit_batch_local`` "
-        "(grid-local merge) — identical cleared area, but Local "
-        "updates only the fragments whose bbox overlaps each "
-        "new swept polygon.",
+        "caption": "Global vs local commit — only overlapping frags updated.",
         "function": generate_local_vs_global,
     },
 ]

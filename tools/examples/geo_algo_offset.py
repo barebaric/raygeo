@@ -451,35 +451,32 @@ __images__ = [
     {
         "heading": "find_deepest_cores",
         "caption": (
-            "Deepest-core detection: finds the point of maximum clearance"
-            " inside the valid tool area — the best helical-entry point"
-            " for the pocket"
+            "Deepest-core detection: finds max clearance in valid tool "
+            "area — best helical-entry for the pocket"
         ),
         "function": generate_deepest_cores,
     },
     {
         "heading": "find_deepest_cores",
         "caption": (
-            "Multi-island pocket: islands are detected by orientation"
-            " (clockwise contours) and excluded; the core is the pole of"
-            " inaccessibility of the largest valid region"
+            "Multi-island pocket: clockwise contours are islands; "
+            "core is deepest point in largest valid region."
         ),
         "function": generate_deepest_cores_multi,
     },
     {
         "heading": "find_deepest_cores",
         "caption": (
-            "Central-island pocket (annular): the island creates a ring"
-            " of valid tool area; the deepest core is the point of"
-            " maximum clearance in the ring — never inside the island"
+            "Central-island (annular): ring of valid tool area; "
+            "deepest core is max clearance, never in island."
         ),
         "function": generate_deepest_cores_central,
     },
     {
         "heading": "compute_inset_region",
         "caption": (
-            "Inset region: boundary shrunk by radius, obstacles subtracted."
-            " Left: simple inset. Right: inset with a central obstacle."
+            "Inset region: boundary shrunk, obstacles removed. "
+            "Left: simple. Right: with central obstacle."
         ),
         "function": generate_inset_region,
     },

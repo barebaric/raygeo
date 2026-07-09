@@ -440,28 +440,24 @@ __images__ = [
     {
         "heading": "does_line_cross_polygon",
         "caption": (
-            "Check whether a line segment crosses the interior of a polygon."
-            " Left: crossing segment (red). Right: segment that only touches"
-            " the boundary (gray, no cross)."
+            "Check if line segment crosses polygon interior. "
+            "Left: crosses (red). Right: touches boundary (gray)."
         ),
         "function": generate_line_crosses_polygon,
     },
     {
         "heading": "longest_line_through_point",
         "caption": (
-            "Find the longest axis-aligned line through a point within a"
-            " bounding box. Left: wider box gives a horizontal line."
-            " Right: taller box gives a vertical line."
+            "Longest axis-aligned line through a point in a bbox. "
+            "Left: wider→horizontal. Right: taller→vertical."
         ),
         "function": generate_longest_line,
     },
     {
         "heading": "get_segment_segment_distance",
         "caption": (
-            "Minimum Euclidean distance between two line segments."
-            " Left: crossing segments (distance 0)."
-            " Centre: parallel separated segments."
-            " Right: skew (non-parallel) segments."
+            "Minimum Euclidean distance between 2 segments. "
+            "Left: crossing (0). Centre: parallel. Right: skew."
         ),
         "function": generate_segment_distance,
     },
