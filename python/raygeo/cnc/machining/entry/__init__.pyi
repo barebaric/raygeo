@@ -2,35 +2,9 @@
 # ruff: noqa: E501, F401, F403, F405
 
 import collections.abc
-import raygeo
 __all__ = [
-    "adaptive_entry",
     "build_entry_workplan",
-    "detect_entry_method",
-    "generate_helix_spiral",
 ]
-
-def adaptive_entry(pocket_boundary: collections.abc.Sequence[tuple[float, float]], islands: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]] = [], tool_radius: float = 3, step_over: float = 2, safe_z: float = 2, target_z: float = -5, plunge_pitch: float = 1, safe_margin: float = 1, angular_step: float = 0.1, cut_feed_rate: int = 1200, cut_power: float = 1) -> raygeo.ops.assembly.result.AssemblyResult:
-    r"""
-    Fast central clearing entry.
-    
-    Finds the optimal entry pole using ``find_largest_circle``, then
-    generates either a helix->spiral (wide area) or zigzag ramp
-    (tight slot).
-    
-    :param pocket_boundary: Outer boundary of the pocket.
-    :param islands: List of island (hole) polygons (default []).
-    :param tool_radius: Tool radius in mm (default 3.0).
-    :param step_over: Radial step-over per spiral revolution (default 2.0).
-    :param safe_z: Safe (retract) Z height (default 2.0).
-    :param target_z: Target cutting depth (default -5.0).
-    :param plunge_pitch: Vertical descent per helix revolution (default 1.0).
-    :param safe_margin: Extra margin from tool edge to boundary (default 1.0).
-    :param angular_step: Angular step in radians for path vertices (default 0.1).
-    :param cut_feed_rate: Feed rate for the entry path (default 1200).
-    :param cut_power: Laser power for the entry path (0.0-1.0, default 1.0).
-    :returns: An :class:`AssemblyResult` with the entry toolpath.
-    """
 
 def build_entry_workplan(pocket_boundary: collections.abc.Sequence[tuple[float, float]], islands: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]] | None = None, tool_radius: float = 3, step_over: float = 2, safe_z: float = 2, target_z: float = -5, plunge_pitch: float = 1, safe_margin: float = 1, angular_step: float = 0.1) -> list[dict]:
     r"""
@@ -51,37 +25,5 @@ def build_entry_workplan(pocket_boundary: collections.abc.Sequence[tuple[float, 
     :param safe_margin: Safety margin from tool edge (default 1.0).
     :param angular_step: Angular step in radians (default 0.1).
     :returns: List of WorkplanStep dicts with a "kind" key.
-    """
-
-def detect_entry_method(r_max: float, tool_radius: float, safe_margin: float = 1) -> str:
-    r"""
-    Classify a pocket by its largest inscribed circle radius.
-    
-    :param r_max: Largest inscribed circle radius (mm).
-    :param tool_radius: Tool radius in mm.
-    :param safe_margin: Safety margin (mm, default 1.0).
-    :returns: One of ``"HelixSpiral"``, ``"Toroid"``, ``"Ramp"``, or
-              ``"None"``.
-    """
-
-def generate_helix_spiral(entry_pt: tuple[float, float], r_max: float, tool_radius: float = 3, step_over: float = 2, safe_z: float = 2, target_z: float = -5, plunge_pitch: float = 1, safe_margin: float = 1, angular_step: float = 0.1, state: raygeo.ops.state.State | None = None) -> raygeo.ops.assembly.result.AssemblyResult:
-    r"""
-    Build a helix→spiral entry sequence.
-    
-    Chains a helical plunge with a flat Archimedean spiral + smoothing
-    circular pass.  Useful when you already know the entry point and
-    max radius (e.g. from ``find_largest_circle``).
-    
-    :param entry_pt: ``(x, y)`` entry point (pocket center).
-    :param r_max: Max inscribed circle radius (mm).
-    :param tool_radius: Tool radius in mm (default 3.0).
-    :param step_over: Radial step-over per spiral revolution (default 2.0).
-    :param safe_z: Safe (retract) Z height (default 2.0).
-    :param target_z: Target cutting depth (default -5.0).
-    :param plunge_pitch: Vertical descent per helix revolution (default 1.0).
-    :param safe_margin: Extra margin from tool edge to boundary (default 1.0).
-    :param angular_step: Angular step in radians (default 0.1).
-    :param state: Optional machine state to apply before the path.
-    :returns: An :class:`AssemblyResult`.
     """
 

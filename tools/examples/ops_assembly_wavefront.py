@@ -6,8 +6,10 @@ import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.colors import Normalize
 
-from raygeo.cnc.machining.entry import adaptive_entry
+from raygeo.geo.algo.polylabel import find_largest_circle
 from raygeo.geo.shape.polygon import (
+    get_circle_polygon,
+    get_polygon_centroid,
     get_polygon_signed_area,
     is_point_inside_polygon,
 )
@@ -85,29 +87,39 @@ def _plot_wavefront_2d(ops, boundary, islands, title):
     return fig
 
 
+def _seed_cleared_area(boundary, islands, tool_radius):
+    """Seed a ``ClearedArea`` with a single tool disk at the pocket's
+    largest-inscribed-circle centre.
+
+    This is a geo/ops-only seed (no entry strategy): the point of this
+    example is to demonstrate ``adaptive_wavefronts`` itself, so the
+    cleared area is initialised with a minimal disk and the wavefront
+    assembler does all the expansion.
+    """
+    result = find_largest_circle(boundary, islands or [], 0.1)
+    center = (
+        result[0] if result is not None else get_polygon_centroid(boundary)
+    )
+    seed = get_circle_polygon(center, tool_radius, 64)
+    return ClearedArea(
+        boundary=boundary, islands=islands or [], initial=[seed]
+    )
+
+
 def generate_wavefront_rect():
     """Wavefront rectangular."""
     wf_boundary = [(0, 0), (160, 0), (160, 100), (0, 100)]
-    wf_result = adaptive_entry(
-        pocket_boundary=wf_boundary,
-        tool_radius=3.0,
-        step_over=2.0,
-        safe_z=2.0,
-        target_z=-5.0,
-        plunge_pitch=1.0,
-    )
-    wf_ca = ClearedArea(
-        boundary=wf_boundary, initial=wf_result.cleared_polygons
-    )
-    wf_result_wf = adaptive_wavefronts(
+    wf_ca = _seed_cleared_area(wf_boundary, None, 3.0)
+    result = adaptive_wavefronts(
         wf_ca,
         wf_boundary,
+        tool_radius=3.0,
         step_over=2.0,
         z=-5.0,
         area_tolerance=1.0,
     )
     return _plot_wavefront_2d(
-        wf_result_wf.ops,
+        result.ops,
         wf_boundary,
         None,
         "Adaptive Wavefronts — Rectangular Pocket",
@@ -122,21 +134,8 @@ def generate_wavefront_multi():
         [(70, 40), (90, 40), (90, 60), (70, 60)],
         [(130, 80), (160, 80), (160, 105), (130, 105)],
     ]
-    mi_result = adaptive_entry(
-        pocket_boundary=mi_boundary,
-        islands=mi_islands,
-        tool_radius=3.0,
-        step_over=2.0,
-        safe_z=2.0,
-        target_z=-5.0,
-        plunge_pitch=1.0,
-    )
-    mi_ca = ClearedArea(
-        boundary=mi_boundary,
-        islands=mi_islands,
-        initial=mi_result.cleared_polygons,
-    )
-    mi_result_wf = adaptive_wavefronts(
+    mi_ca = _seed_cleared_area(mi_boundary, mi_islands, 3.0)
+    result = adaptive_wavefronts(
         mi_ca,
         mi_boundary,
         islands=mi_islands,
@@ -146,7 +145,7 @@ def generate_wavefront_multi():
         area_tolerance=1.0,
     )
     return _plot_wavefront_2d(
-        mi_result_wf.ops,
+        result.ops,
         mi_boundary,
         mi_islands,
         "Adaptive Wavefronts — Multi-Island Pocket",
@@ -166,16 +165,8 @@ def generate_wavefront_yshape():
         (10, 110),
         (45, 40),
     ]
-    ys_result = adaptive_entry(
-        pocket_boundary=yshape,
-        tool_radius=3.0,
-        step_over=2.0,
-        safe_z=2.0,
-        target_z=-5.0,
-        plunge_pitch=1.0,
-    )
-    ys_ca = ClearedArea(boundary=yshape, initial=ys_result.cleared_polygons)
-    ys_result_wf = adaptive_wavefronts(
+    ys_ca = _seed_cleared_area(yshape, None, 3.0)
+    ys_result = adaptive_wavefronts(
         ys_ca,
         yshape,
         tool_radius=3.0,
@@ -184,7 +175,7 @@ def generate_wavefront_yshape():
         area_tolerance=1.0,
     )
     return _plot_wavefront_2d(
-        ys_result_wf.ops,
+        ys_result.ops,
         yshape,
         None,
         "Adaptive Wavefronts — Y-Shaped Channel",
@@ -235,21 +226,8 @@ def generate_wavefront_svg():
     results = []
     max_subpaths = 0
     for boundary, islands in components:
-        result_entry = adaptive_entry(
-            pocket_boundary=boundary,
-            islands=islands,
-            tool_radius=1.5,
-            step_over=1.0,
-            safe_z=2.0,
-            target_z=-5.0,
-            plunge_pitch=1.0,
-        )
-        ca = ClearedArea(
-            boundary=boundary,
-            islands=islands,
-            initial=result_entry.cleared_polygons,
-        )
-        result_wf = adaptive_wavefronts(
+        ca = _seed_cleared_area(boundary, islands, 1.5)
+        result = adaptive_wavefronts(
             ca,
             boundary,
             islands=islands,
@@ -258,9 +236,9 @@ def generate_wavefront_svg():
             z=-5.0,
             area_tolerance=0.2,
         )
-        n_sub = len(result_wf.ops.split_into_subpaths())
+        n_sub = len(result.ops.split_into_subpaths())
         max_subpaths = max(max_subpaths, n_sub)
-        results.append((result_wf.ops, boundary, islands))
+        results.append((result.ops, boundary, islands))
 
     # Plot everything
     fig, ax = plt.subplots(figsize=(12, 6))

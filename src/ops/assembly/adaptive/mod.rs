@@ -7,7 +7,9 @@
 //! tool's heading momentum — steers into fresh material.
 //!
 //! The caller is responsible for pre-populating the `ClearedArea` with
-//! entry polygons (e.g. via `cnc::machining::entry::adaptive_entry`).
+//! entry polygons (e.g. via a workplan built by
+//! `cnc::machining::wavefront::build_wavefront_workplan` and executed by
+//! `cnc::machining::plan::execute_workplan`).
 
 mod chain;
 pub mod resume;

@@ -1,3 +1,15 @@
+pyo3_stub_gen::module_doc!("raygeo.ops.assembly", "{}", MODULE_DOC);
+
+pub(crate) const MODULE_DOC: &str = "\
+Motion-path assembly: turning raw geometry primitives into Ops.
+
+Functions in this module compose geo-layer primitives (polylines, arcs,
+polygons) into complete motion sequences represented as Ops objects.
+They decide traversal order, linking strategy, lead-in/out, overscan,
+and tab insertion — concerns that belong to motion assembly rather than
+pure geometry.
+";
+
 use pyo3::prelude::*;
 
 pub(crate) mod adaptive;
@@ -13,6 +25,7 @@ pub(crate) mod wavefront;
 pub(crate) fn register(ops_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     let py = ops_mod.py();
     let assembly_mod = PyModule::new(py, "assembly")?;
+    assembly_mod.setattr("__doc__", MODULE_DOC)?;
 
     adaptive::register(&assembly_mod)?;
     helix::register(&assembly_mod)?;

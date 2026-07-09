@@ -38,8 +38,10 @@ def adaptive_clearing(cleared: raygeo.ops.cut.cleared_area.ClearedArea, pocket_b
     spiral toolpath from the seed clearing to the pocket wall.
     
     The caller is responsible for populating *cleared* with
-    the entry polygons (e.g. via
-    :func:`raygeo.cnc.machining.entry.adaptive_entry`) and
+    the entry polygons (e.g. via a workplan built by
+    :func:`raygeo.cnc.machining.wavefront.build_wavefront_workplan`
+    and executed by
+    :func:`raygeo.cnc.machining.plan.execute_workplan`) and
     prepending the entry Ops to the result.
     
     :param cleared: ``ClearedArea`` instance (mutated in place).

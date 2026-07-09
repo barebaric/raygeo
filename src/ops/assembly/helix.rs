@@ -15,8 +15,9 @@ use crate::types::{Point, Point3D};
 
 /// Options for generating a helical entry path.
 ///
-/// Subset of [`AdaptiveEntryOptions`](super::entry::AdaptiveEntryOptions)
-/// relevant to helix-only generation.
+/// Carries the parameters needed by [`generate_helix`] and the workplan
+/// executor's [`WorkplanStep::HelixPlunge`](crate::cnc::machining::plan::WorkplanStep::HelixPlunge)
+/// step.
 #[derive(Clone, Debug)]
 pub struct HelixOptions {
     pub center: Point,
