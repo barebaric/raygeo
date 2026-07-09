@@ -50,6 +50,7 @@ pub fn generate_slot(
             cleared_polygons: vec![],
             start: ToolPose { pos, heading: 0.0 },
             end: ToolPose { pos, heading: 0.0 },
+            trace: None,
         });
     }
 
@@ -89,6 +90,7 @@ pub fn generate_slot(
         cleared_polygons,
         start,
         end,
+        trace: None,
     })
 }
 

@@ -6,7 +6,61 @@ sidebar_label: raygeo.trace
 Binary trace-file reader and shared move-type classification.
 
 MoveKind — standard move-type classification shared by all operations. TraceFile — read a .bin trace
-file with random access to records. TraceRecord — one per-step record with dot-accessible fields.
+file with span/event access. Span — one span record from a trace file. Event — one event record from
+a trace file. ToolSnapshot — tool position and heading snapshot. ProgressSnapshot — step progress
+snapshot.
+
+## Event
+
+One trace event (init / move / resume / exit).
+
+### `kind`
+
+```python
+kind: str
+```
+
+### `meta`
+
+```python
+meta: Any
+```
+
+### `move_kind`
+
+```python
+move_kind: Optional[str]
+```
+
+### `progress`
+
+```python
+progress: Optional[ProgressSnapshot]
+```
+
+### `seq`
+
+```python
+seq: int
+```
+
+### `source`
+
+```python
+source: str
+```
+
+### `span`
+
+```python
+span: int
+```
+
+### `tool`
+
+```python
+tool: Optional[ToolSnapshot]
+```
 
 ## MoveKind
 
@@ -27,113 +81,164 @@ name: str
 value: int
 ```
 
-## ResumeSource
+## ProgressSnapshot
 
-Resume-strategy enum for trace records.
+Snapshot of step progress during trace execution.
 
-### `name`
+### `ops_len`
 
 ```python
-name: str
+ops_len: int
 ```
 
-### `value`
+### `status`
 
 ```python
-value: int
+status: int
 ```
 
-## RouteSource
-
-Route-strategy enum for trace records.
-
-### `name`
+### `step_idx`
 
 ```python
-name: str
+step_idx: int
 ```
 
-### `value`
+## Span
+
+One span record from a trace file.
+
+### `attrs`
 
 ```python
-value: int
+attrs: Any
 ```
 
-## StepStatus
-
-Step-status enum for trace records.
-
-### `name`
+### `children`
 
 ```python
-name: str
+children: list[Span]
 ```
 
-### `value`
+### `events`
 
 ```python
-value: int
+events: list[Event]
+```
+
+### `id`
+
+```python
+id: int
+```
+
+### `label`
+
+```python
+label: str
+```
+
+### `parent`
+
+```python
+parent: int
+```
+
+### `source`
+
+```python
+source: str
+```
+
+## ToolSnapshot
+
+Snapshot of tool position and heading at a trace event.
+
+### `heading`
+
+```python
+heading: float
+```
+
+### `pos_x`
+
+```python
+pos_x: float
+```
+
+### `pos_y`
+
+```python
+pos_y: float
+```
+
+### `pos_z`
+
+```python
+pos_z: float
+```
+
+### `prev_x`
+
+```python
+prev_x: float
+```
+
+### `prev_y`
+
+```python
+prev_y: float
+```
+
+### `prev_z`
+
+```python
+prev_z: float
 ```
 
 ## TraceFile
 
-Binary trace file with random access to records.
+Binary trace file with span/event access.
 
-Usage:
+Usage::
 
-```python
+```
 >>> from raygeo.trace import TraceFile
 >>> t = TraceFile("path/to/trace.bin")
->>> len(t)          # number of records
->>> t[0]            # first record (TraceRecord with dot access)
->>> t.toolpath      # list of (x, y, move_kind) tuples
->>> t.geometry      # dict with tool_radius, boundary, islands, seeds
->>> t.mat_nodes     # MAT nodes or empty list
+>>> t.ver
+3
+>>> t.root
+Span(id=1, parent=0, source='workplan', label='Workplan')
+>>> len(t.events)
+42
 ```
 
-### `geometry`
+### `events`
 
 ```python
-geometry: dict
+events: list[Event]
 ```
 
-Decoded geometry dict (tool_radius, boundary, islands, seeds) from the first record with
-`kind == "geometry"`, or an empty dict.
-
-### `mat_clearances`
+### `root`
 
 ```python
-mat_clearances: list[float]
+root: Optional[Span]
 ```
 
-### `mat_edges`
+The root span (first span with parent == 0), or None.
+
+### `sources`
 
 ```python
-mat_edges: list[tuple[int, int]]
+sources: Any
 ```
 
-### `mat_nodes`
+Distinct source strings across all spans and events.
+
+### `spans`
 
 ```python
-mat_nodes: list[tuple[float, float]]
+spans: list[Span]
 ```
-
-MAT nodes from the first record with `kind == "mat"`, or an empty list.
-
-### `mat_root`
-
-```python
-mat_root: int
-```
-
-### `toolpath`
-
-```python
-toolpath: list[tuple[float, float, int]]
-```
-
-Toolpath points extracted from all motion records (those with `pos_x` / `pos_y`). Returns a list of
-`(x, y, move_kind)` where `move_kind` is a `MoveKind` value.
 
 ### `ver`
 
@@ -141,38 +246,21 @@ Toolpath points extracted from all motion records (those with `pos_x` / `pos_y`)
 ver: int
 ```
 
-## TraceKind
-
-Record-kind enum for trace events.
-
-### `name`
+### `toolpath()`
 
 ```python
-name: str
+toolpath(span: Optional[Any] = None) -> list[tuple[float, float, str]]
 ```
 
-### `value`
+Toolpath points from Move events.
 
-```python
-value: int
-```
+Returns a list of `(x, y, move_kind_name)` tuples. If *span* is given (an int span id or a Span
+object), restrict to events belonging to that span.
 
-## TraceRecord
-
-One per-step trace record.
-
-Wraps the decoded msgpack map and exposes fields as attributes. Supports both dot access
-(`rec.kind`) and dict access (`rec["kind"]`).
-
-### `keys()`
-
-```python
-keys() -> list[str]
-```
-
-| Parameter | Type        | Description |
-| --------- | ----------- | ----------- |
-| _Returns_ | `list[str]` |             |
+| Parameter | Type                             | Description |
+| --------- | -------------------------------- | ----------- |
+| `span`    | `Optional[Any] = None`           |             |
+| _Returns_ | `list[tuple[float, float, str]]` |             |
 
 ## Functions
 

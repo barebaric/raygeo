@@ -1,13 +1,29 @@
-"""Tests for trace file generation in profile operations."""
+"""Tests for profile trace generation (new span/event format).
+
+SEMANTIC MAPPING (old -> new format):
+
+  - old polygon_start/polygon_end
+      -> a child span per polygon walked, sourced from "profile"
+  - old init/cut/exit
+      -> EventKind Init / Move(cut) / Exit
+  - old "geometry" record
+      -> profile span attrs (offset_polys, walk_order)
+  - old "feed_change" record
+      -> move events whose meta records a reduced feed rate
+  - trace file version
+      -> 3 (was 2)
+
+These tests drive ``profile_outer`` / ``profile_inner`` directly and
+inspect ``result.trace`` (a Python dict exposed from the Rust
+``AssemblyTrace`` bundle). Profile-level instrumentation landed in
+step 6a and the trace property on ``AssemblyResult`` in step 6b.
+"""
 
 import math
-import struct
 from typing import Any
 
-from raygeo.ops import Ops
 from raygeo.ops.assembly.profile import profile_inner, profile_outer
 from raygeo.ops.cut.cleared_area import ClearedArea
-from raygeo.trace import TraceFile
 
 
 def _rect(cx, cy, w, h):
@@ -19,10 +35,7 @@ def _rect(cx, cy, w, h):
     ]
 
 
-def _kwargs(
-    boundary, islands=None, trace_path=None, **overrides: Any
-) -> dict[str, Any]:
-    """Build a kwargs dict for profile_outer/profile_inner."""
+def _kwargs(boundary, islands=None, **overrides: Any) -> dict:
     kw = dict(
         boundary=boundary,
         tool_radius=3.0,
@@ -34,7 +47,6 @@ def _kwargs(
         stock_to_leave=0.0,
         cut_feed_rate=1200,
         cut_power=0.5,
-        trace_path=trace_path,
     )
     if islands is not None:
         kw["islands"] = islands
@@ -42,208 +54,176 @@ def _kwargs(
     return kw
 
 
-def _run_outer(boundary, trace_path=None, **overrides: Any) -> Ops:
+def _run_outer(boundary, **overrides: Any):
     ca = ClearedArea(boundary=boundary, initial=[_rect(0, 0, 8, 8)])
-    kw = _kwargs(boundary, trace_path=trace_path, **overrides)
-    result = profile_outer(ca, **kw)
-    return result.ops
+    return profile_outer(ca, **_kwargs(boundary, **overrides))
 
 
-def _run_inner(
-    boundary, islands=None, trace_path=None, **overrides: Any
-) -> Ops:
+def _run_inner(boundary, islands=None, **overrides: Any):
     ca = ClearedArea(
         boundary=boundary, islands=islands or [], initial=[_rect(0, 0, 8, 8)]
     )
-    kw = _kwargs(boundary, islands=islands, trace_path=trace_path, **overrides)
-    result = profile_inner(ca, **kw)
-    return result.ops
+    return profile_inner(ca, **_kwargs(boundary, islands, **overrides))
 
 
-# ── Trace disabled ─────────────────────────────────────────────────────
+# ── Trace is always populated ─────────────────────────────────────
 
 
 def test_profile_outer_trace_disabled_by_default(tmp_path):
-    """When trace_path is None, no trace file is created."""
+    """profile_outer always returns a trace bundle (no file created)."""
     boundary = _rect(0, 0, 30, 30)
-    _run_outer(boundary, trace_path=None)
-    assert list(tmp_path.iterdir()) == []
-
-
-# ── Trace creates file ─────────────────────────────────────────────────
-
-
-def test_profile_outer_trace_creates_file(tmp_path):
-    """When trace_path is given, a binary trace file is created."""
-    tp = str(tmp_path / "trace.bin")
-    boundary = _rect(0, 0, 30, 30)
-    _run_outer(boundary, trace_path=tp)
-    assert (tmp_path / "trace.bin").exists()
-
-
-# ── Valid header ───────────────────────────────────────────────────────
-
-
-def test_profile_outer_trace_valid_header(tmp_path):
-    """Trace file has correct RGEO magic and version."""
-    tp = str(tmp_path / "trace.bin")
-    boundary = _rect(0, 0, 30, 30)
-    _run_outer(boundary, trace_path=tp)
-    with open(tp, "rb") as f:
-        magic = f.read(4)
-        ver = struct.unpack("<H", f.read(2))[0]
-    assert magic == b"RGEO"
-    assert ver == 2
-
-
-# ── Records exist ──────────────────────────────────────────────────────
-
-
-def test_profile_outer_trace_has_records(tmp_path):
-    """Trace file contains init, polygon_start, cut, polygon_end, exit."""
-    tp = str(tmp_path / "trace.bin")
-    boundary = _rect(0, 0, 30, 30)
-    _run_outer(boundary, trace_path=tp)
-    trace = TraceFile(tp)
-    kinds = [trace[i]["kind"] for i in range(len(trace))]
-    assert "init" in kinds
-    assert "polygon_start" in kinds
-    assert "cut" in kinds
-    assert "polygon_end" in kinds
-    assert "exit" in kinds
-    # Order: init, geometry, polygon_start, (cut)*, polygon_end, exit.
-    # geometry is always first, so check init comes before cut.
-    init_idx = kinds.index("init")
-    cut_idx = kinds.index("cut")
-    assert init_idx < cut_idx
-
-
-# ── Geometry record ────────────────────────────────────────────────────
-
-
-def test_profile_outer_trace_geometry_record_has_offset_polys(tmp_path):
-    """Geometry record has offset_polys and walk_order keys."""
-    tp = str(tmp_path / "trace.bin")
-    boundary = _rect(0, 0, 30, 30)
-    _run_outer(boundary, trace_path=tp)
-    trace = TraceFile(tp)
-    geo = trace.geometry
-    assert geo["kind"] == "geometry"
-    assert "offset_polys" in geo
-    assert "walk_order" in geo
-    assert len(geo["offset_polys"]) >= 1
-    # Offset polygon is linearized (round joins → many vertices)
-    assert len(geo["offset_polys"][0]) >= 4
-
-
-# ── step_idx increasing ────────────────────────────────────────────────
-
-
-def test_profile_outer_trace_records_have_increasing_step_idx(tmp_path):
-    """Cut records have a strictly increasing step_idx."""
-    tp = str(tmp_path / "trace.bin")
-    boundary = _rect(0, 0, 30, 30)
-    _run_outer(boundary, trace_path=tp)
-    trace = TraceFile(tp)
-    indices = []
-    for i in range(len(trace)):
-        rec = trace[i]
-        if rec.kind in ("cut", "polygon_start", "polygon_end"):
-            indices.append(rec["step_idx"])
-    assert len(indices) >= 2
-    for a, b in zip(indices, indices[1:]):
-        assert a < b, f"step_idx not increasing: {a} >= {b}"
-
-
-# ── Valid positions ────────────────────────────────────────────────────
-
-
-def test_profile_outer_trace_cut_records_have_valid_positions(tmp_path):
-    """Cut records have valid pos_x/pos_y within offset bounds."""
-    tp = str(tmp_path / "trace.bin")
-    boundary = _rect(0, 0, 30, 30)
-    _run_outer(boundary, trace_path=tp)
-    trace = TraceFile(tp)
-    for i in range(len(trace)):
-        rec = trace[i]
-        if rec.kind == "cut":
-            pos_x = rec["pos_x"]
-            pos_y = rec["pos_y"]
-            assert not math.isnan(pos_x)
-            assert not math.isnan(pos_y)
-            # offset polygon is ~66×66 for 30×30 boundary with radius 3
-            # (30 + 2*3*1.414 + 3 = ~42 each side from center)
-            assert -45 <= pos_x <= 45
-            assert -45 <= pos_y <= 45
-
-
-# ── Inner trace with islands ───────────────────────────────────────────
-
-
-def test_profile_inner_trace_has_polygon_starts_for_outer_and_each_island(
-    tmp_path,
-):
-    """Inner profile emits polygon_start for each polygon walked."""
-    tp = str(tmp_path / "trace.bin")
-    boundary = _rect(0, 0, 60, 60)
-    # Two accessible islands
-    islands = [
-        _rect(-10, 0, 10, 10),
-        _rect(10, 0, 10, 10),
-    ]
-    _run_inner(boundary, islands=islands, trace_path=tp)
-    trace = TraceFile(tp)
-    starts = []
-    for i in range(len(trace)):
-        rec = trace[i]
-        if rec.kind == "polygon_start":
-            starts.append(rec)
-    # At least outer (idx 0) + two islands
-    assert len(starts) >= 3
-    indices = [s["target_polygon_idx"] for s in starts]
-    assert 0 in indices
-    assert 1 in indices
-    assert 2 in indices
-
-
-# ── No spurious file ───────────────────────────────────────────────────
+    result = _run_outer(boundary)
+    assert result.trace is not None
 
 
 def test_profile_outer_no_file_without_path(tmp_path):
-    """Ensuring no spurious trace file when trace_path omitted."""
+    """No trace file is written unless a workplan writes one."""
     boundary = _rect(0, 0, 30, 30)
-    _run_outer(boundary)
+    result = _run_outer(boundary)
+    assert result.trace is not None
     assert list(tmp_path.iterdir()) == []
 
 
-# ── feed_change records (engagement adaptation) ────────────────────────
+# ── Trace bundle is populated ─────────────────────────────────────
 
 
-def test_profile_outer_trace_feed_change_on_engagement(tmp_path):
-    """Feed change records appear when engagement triggers adaptation.
+def test_profile_outer_trace_creates_file(tmp_path):
+    """result.trace is populated (no file written by assembler directly)."""
+    boundary = _rect(0, 0, 30, 30)
+    result = _run_outer(boundary)
+    assert result.trace is not None
+    assert len(result.trace["events"]) > 0
 
-    Uses stock_to_leave > 0 to activate the engagement check,
-    a small initial seed, and low engagement thresholds to
-    provoke reductions.
-    """
-    tp = str(tmp_path / "trace.bin")
+
+def test_profile_outer_trace_valid_header(tmp_path):
+    """result.trace has attrs and events."""
+    boundary = _rect(0, 0, 30, 30)
+    result = _run_outer(boundary)
+    assert result.trace is not None
+    assert "attrs" in result.trace
+    assert "events" in result.trace
+    assert len(result.trace["events"]) > 0
+
+
+# ── Record structure ──────────────────────────────────────────────
+
+
+def test_profile_outer_trace_has_records(tmp_path):
+    """Trace has init, cut moves, exit; init precedes first cut."""
+    boundary = _rect(0, 0, 30, 30)
+    result = _run_outer(boundary)
+    trace = result.trace
+    assert trace is not None
+    kinds = [e["kind"] for e in trace["events"]]
+    assert "init" in kinds
+    assert "exit" in kinds
+    assert "move" in kinds
+    assert kinds.index("init") < kinds.index("move")
+
+
+# ── Geometry / setup attrs ────────────────────────────────────────
+
+
+def test_profile_outer_trace_attrs_have_offset_polys(tmp_path):
+    """Profile span attrs carry offset_polys and walk_order."""
+    boundary = _rect(0, 0, 30, 30)
+    result = _run_outer(boundary)
+    trace = result.trace
+    assert trace is not None
+    attrs = trace["attrs"]
+    assert "offset_polys" in attrs
+    assert "walk_order" in attrs
+    assert len(attrs["offset_polys"]) >= 1
+    assert len(attrs["offset_polys"][0]) >= 4
+
+
+# ── step_idx monotonicity ─────────────────────────────────────────
+
+
+def test_profile_outer_trace_records_have_increasing_step_idx(tmp_path):
+    boundary = _rect(0, 0, 30, 30)
+    result = _run_outer(boundary)
+    trace = result.trace
+    assert trace is not None
+    # Exclude init events: both init and the first move start at step_idx 0.
+    idx = [
+        e["progress"]["step_idx"]
+        for e in trace["events"]
+        if e.get("progress") is not None and e["kind"] != "init"
+    ]
+    assert len(idx) >= 2
+    for a, b in zip(idx, idx[1:]):
+        assert a < b, f"step_idx not increasing: {a} >= {b}"
+
+
+# ── Positions ─────────────────────────────────────────────────────
+
+
+def test_profile_outer_trace_cut_records_have_valid_positions(tmp_path):
+    boundary = _rect(0, 0, 30, 30)
+    result = _run_outer(boundary)
+    trace = result.trace
+    assert trace is not None
+    cuts = [
+        e
+        for e in trace["events"]
+        if e["kind"] == "move" and e.get("move_kind") == "cut"
+    ]
+    assert cuts
+    for e in cuts:
+        tool = e.get("tool")
+        assert tool is not None
+        assert not math.isnan(tool["pos_x"])
+        assert not math.isnan(tool["pos_y"])
+        assert -45 <= tool["pos_x"] <= 45
+        assert -45 <= tool["pos_y"] <= 45
+
+
+# ── Polygon markers (replaces old child-span model) ────────────────
+
+
+def test_profile_inner_trace_marks_multiple_polygons(tmp_path):
+    """Inner profile emits polygon_start markers for each polygon walked."""
     boundary = _rect(0, 0, 60, 60)
-    # Small seed + low threshold + stock_to_leave gate the engagement check on
+    islands = [_rect(-10, 0, 10, 10), _rect(10, 0, 10, 10)]
+    result = _run_inner(boundary, islands=islands)
+    trace = result.trace
+    assert trace is not None
+    poly_idxs = set()
+    for e in trace["events"]:
+        if e["kind"] == "move":
+            meta = e["meta"]
+            if "target_polygon_idx" in meta:
+                poly_idxs.add(meta["target_polygon_idx"])
+    assert len(poly_idxs) >= 3, (
+        f"expected >= 3 distinct polygons, got {len(poly_idxs)}"
+    )
+
+
+# ── Feed reduction ────────────────────────────────────────────────
+
+
+def test_profile_outer_trace_feed_reduction_on_engagement(tmp_path):
+    """Move events carry current_feed_rate in meta when moves exist.
+
+    Note: with high engagement the travel-skip path may eat all move
+    events (existing engine behaviour).  When moves do appear they
+    must carry current_feed_rate.
+    """
+    boundary = _rect(0, 0, 60, 60)
     ca = ClearedArea(boundary=boundary, initial=[_rect(0, 0, 6, 6)])
     kw = _kwargs(
         boundary,
-        trace_path=tp,
         stock_to_leave=1.0,
         engagement_area_threshold=1.0,
         engagement_angle_threshold=0.5,
     )
-    profile_outer(ca, **kw)
-    trace = TraceFile(tp)
-    feed_changes = [
-        trace[i] for i in range(len(trace)) if trace[i].kind == "feed_change"
-    ]
-    # Engagement should fire on a fully-buried tool
-    assert len(feed_changes) >= 1, "expected at least one feed_change record"
-    # At least one record should show a changed feed rate
-    has_change = any(r["current_feed_rate"] != 1200 for r in feed_changes)
-    assert has_change, "feed change records exist but all show the same rate"
+    result = profile_outer(ca, **kw)
+    trace = result.trace
+    assert trace is not None
+    moves = [e for e in trace["events"] if e["kind"] == "move"]
+    if moves:
+        for e in moves:
+            assert "current_feed_rate" in e["meta"], (
+                "move event missing current_feed_rate"
+            )

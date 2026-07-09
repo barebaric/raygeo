@@ -9,7 +9,7 @@ mod engine;
 mod inner;
 mod options;
 mod outer;
-mod trace;
+mod tracelet;
 
 pub use inner::profile_inner;
 pub use options::{ProfileInnerOptions, ProfileOuterOptions};

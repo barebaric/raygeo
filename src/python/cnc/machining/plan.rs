@@ -2,6 +2,8 @@ use pyo3::prelude::*;
 use pyo3::types::PyDict;
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 
+use std::path::PathBuf;
+
 use crate::cnc::machining::plan::{self, WorkplanStep};
 use crate::geo::algo::helix::HelixDirection;
 use crate::ops::state::State;
@@ -457,13 +459,15 @@ impl PyWorkplan {
     /// :param cut_power: Laser power for cutting moves (default 1.0).
     /// :param rapid_feed_rate: Feed rate for travel/retract moves, or
     ///     ``None`` to leave them unmodified (default None).
+    /// :param trace: Optional file path for a trace file (``.bin``).
     /// :returns: The combined :class:`AssemblyResult`.
-    #[pyo3(signature = (cut_feed_rate = 1200, cut_power = 1.0, rapid_feed_rate = None))]
+    #[pyo3(signature = (cut_feed_rate = 1200, cut_power = 1.0, rapid_feed_rate = None, trace = None))]
     fn execute(
         &self,
         cut_feed_rate: i32,
         cut_power: f64,
         rapid_feed_rate: Option<i32>,
+        trace: Option<String>,
     ) -> PyResult<PyAssemblyResult> {
         let cut_state = State {
             power: cut_power,
@@ -475,7 +479,9 @@ impl PyWorkplan {
             feed_rate: rapid_feed_rate,
             ..Default::default()
         };
-        let result = self.inner.execute(&cut_state, &travel_state)?;
+        let trace_path = trace.map(PathBuf::from);
+        let result =
+            self.inner.execute(&cut_state, &travel_state, trace_path)?;
         Ok(PyAssemblyResult::from_inner(result))
     }
 

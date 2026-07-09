@@ -28,6 +28,16 @@ class AssemblyResult:
     def start(self) -> search.ToolPose: ...
     @property
     def end(self) -> search.ToolPose: ...
+    @property
+    def trace(self) -> typing.Optional[typing.Any]: ...
     def __new__(cls) -> AssemblyResult: ...
+    def write_trace(self, path: builtins.str, source: builtins.str, label: builtins.str) -> None:
+        r"""
+        Write this result's AssemblyTrace bundle to a trace file.
+        
+        Emits a root "workplan" span with one child assembler span
+        containing either the self-traced events or a minimal
+        init/exit pair.
+        """
     def __repr__(self) -> builtins.str: ...
 

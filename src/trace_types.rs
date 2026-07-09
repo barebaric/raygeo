@@ -3,7 +3,10 @@
 //! Both the writer (`trace.rs`, debug-only) and the Python reader
 //! (`python/trace/`) depend on the types defined here.
 
-use num_enum::TryFromPrimitive;
+use std::collections::BTreeMap;
+
+use num_enum::FromPrimitive;
+use serde::{Deserialize, Serialize};
 
 /// Operation-agnostic move-type classification shared across all trace
 /// producers.  Every toolpath point is tagged with one of these so the
@@ -11,7 +14,7 @@ use num_enum::TryFromPrimitive;
 /// about the originating operation.
 #[repr(u8)]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub(crate) enum MoveKind {
+pub enum MoveKind {
     /// Material-removing feed move.
     Cut = 0,
     /// Rapid reposition (usually in the safe / cleared area).
@@ -30,15 +33,125 @@ pub(crate) enum MoveKind {
     Route = 7,
 }
 
-#[expect(dead_code)]
-impl MoveKind {
-    pub fn is_travel(self) -> bool {
-        self as u8 >= MoveKind::Travel as u8
-    }
+/// Record-kind byte values. Replaces the old TraceKind. Motion is unified
+/// into a single `Move` kind tagged with a MoveKind; resume/exit keep
+/// their own kinds for fast filtering by the inspector.
+#[repr(u8)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, FromPrimitive)]
+pub enum EventKind {
+    SpanStart = 10,
+    SpanEnd = 11,
+    Init = 12,
+    Move = 13,
+    Resume = 14,
+    #[num_enum(default)]
+    Exit = 15,
+}
 
-    pub fn is_cut(self) -> bool {
-        self as u8 == MoveKind::Cut as u8
+/// Generic tool-state snapshot embedded in motion/init events. Always
+/// present for events that carry position info.
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+pub struct ToolSnapshot {
+    pub pos_x: f64,
+    pub pos_y: f64,
+    pub pos_z: f64,
+    pub heading: f64,
+    pub prev_x: f64,
+    pub prev_y: f64,
+    pub prev_z: f64,
+}
+
+/// Generic progress snapshot.
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+pub struct ProgressSnapshot {
+    pub step_idx: u32,
+    pub ops_len: u32,
+    pub status: u8,
+}
+
+/// Self-describing value used in the opaque `meta` map. This lets the
+/// Python reader render arbitrary assembler metadata as a key/value table
+/// without knowing the assembler. NO new dependencies — define our own.
+#[derive(Serialize, Deserialize, Clone, Debug)]
+#[allow(dead_code)]
+pub enum MetaValue {
+    F64(f64),
+    I64(i64),
+    U32(u32),
+    Bool(bool),
+    Str(String),
+    List(Vec<MetaValue>),
+    Map(BTreeMap<String, MetaValue>),
+}
+
+impl From<f64> for MetaValue {
+    fn from(v: f64) -> Self {
+        MetaValue::F64(v)
     }
+}
+impl From<u32> for MetaValue {
+    fn from(v: u32) -> Self {
+        MetaValue::U32(v)
+    }
+}
+impl From<i64> for MetaValue {
+    fn from(v: i64) -> Self {
+        MetaValue::I64(v)
+    }
+}
+impl From<bool> for MetaValue {
+    fn from(v: bool) -> Self {
+        MetaValue::Bool(v)
+    }
+}
+impl From<String> for MetaValue {
+    fn from(v: String) -> Self {
+        MetaValue::Str(v)
+    }
+}
+impl From<&str> for MetaValue {
+    fn from(v: &str) -> Self {
+        MetaValue::Str(v.to_string())
+    }
+}
+impl From<Vec<MetaValue>> for MetaValue {
+    fn from(v: Vec<MetaValue>) -> Self {
+        MetaValue::List(v)
+    }
+}
+
+/// Convenience alias for the meta map.
+pub type Meta = BTreeMap<String, MetaValue>;
+
+/// One traceable event. This is the universal record every assembler
+/// emits. Assembler-specific data lives in `meta`, NOT in core fields.
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub(crate) struct TraceEvent {
+    pub kind: u8,       // EventKind
+    pub seq: u32,       // monotonic event sequence number
+    pub span: u32,      // owning span id (0 = root/file-level)
+    pub source: String, // assembler name: "adaptive","helix","workplan",...
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub move_kind: Option<u8>, // MoveKind, only meaningful for EventKind::Move
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tool: Option<ToolSnapshot>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub progress: Option<ProgressSnapshot>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub meta: Option<Meta>,
+}
+
+/// Span open/close record. Spans form a tree (parent points to enclosing
+/// span; 0 = root). Setup snapshots (geometry, options) go in `attrs`.
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub(crate) struct SpanRecord {
+    pub kind: u8, // EventKind::SpanStart or EventKind::SpanEnd
+    pub id: u32,
+    pub parent: u32,
+    pub source: String,
+    pub label: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub attrs: Option<Meta>,
 }
 
 /// In-memory representation of a complete trace file.
@@ -48,6 +161,7 @@ impl MoveKind {
 #[derive(Clone, Debug)]
 pub(crate) struct TraceFileData {
     pub ver: u16,
+    #[expect(dead_code)]
     pub record_count: u32,
     pub records: Vec<Vec<u8>>,
 }
@@ -105,15 +219,4 @@ impl TraceFileData {
             records,
         })
     }
-}
-
-/// Record-kind byte values stored in every trace record.
-#[repr(u8)]
-#[derive(Clone, Copy, Debug, PartialEq, Eq, TryFromPrimitive)]
-pub(crate) enum TraceKind {
-    Init = 0,
-    Cut = 1,
-    ResumeStall = 2,
-    ResumeStuck = 3,
-    Exit = 4,
 }

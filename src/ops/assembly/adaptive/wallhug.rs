@@ -191,12 +191,10 @@ impl WallHugTracker {
         self.segments.ordered_points()
     }
 
-    /// Flat `(x, y)` pairs for the trace recorder.
     pub fn wall_hug_ref(&self) -> Vec<(f64, f64)> {
         self.segments.wall_hug_ref()
     }
 
-    /// Per-segment point counts for the trace recorder.
     pub fn segment_counts_ref(&self) -> Vec<u32> {
         self.segments.segment_counts_ref()
     }

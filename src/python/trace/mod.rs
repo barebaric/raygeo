@@ -1,17 +1,18 @@
-//! PyO3 bindings for trace-file reading and the `MoveKind` enum.
+//! PyO3 bindings for the span/event trace file reader.
 //!
-//! Exposes `MoveKind`, `TraceFile`, and per-record dict access to Python.
+//! Exposes `MoveKind`, `TraceFile`, `Span`, `Event`, `ToolSnapshot`,
+//! and `ProgressSnapshot` to Python.
 
+use std::collections::HashMap;
 use std::path::Path;
 
+use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
-use pyo3::types::PyDict;
+use pyo3::types::{PyDict, PyList, PySet};
 use pyo3::IntoPyObjectExt;
-use pyo3_stub_gen::derive::{
-    gen_stub_pyclass, gen_stub_pyfunction, gen_stub_pymethods,
-};
+use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 
-use crate::trace_types::{MoveKind as RMoveKind, TraceFileData};
+use crate::trace_types::{MetaValue, MoveKind as RMoveKind, TraceFileData};
 
 // ── Python module registration ─────────────────────────────────────
 
@@ -21,8 +22,11 @@ pub(crate) const MODULE_DOC: &str = "\
 Binary trace-file reader and shared move-type classification.
 
 MoveKind — standard move-type classification shared by all operations.
-TraceFile — read a .bin trace file with random access to records.
-TraceRecord — one per-step record with dot-accessible fields.
+TraceFile — read a .bin trace file with span/event access.
+Span — one span record from a trace file.
+Event — one event record from a trace file.
+ToolSnapshot — tool position and heading snapshot.
+ProgressSnapshot — step progress snapshot.
 ";
 
 pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
@@ -31,23 +35,33 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     trace_mod.setattr("__doc__", MODULE_DOC)?;
     trace_mod.add_class::<PyMoveKind>()?;
     trace_mod.add_class::<PyTraceFile>()?;
-    trace_mod.add_class::<PyTraceRecord>()?;
-
-    trace_mod.add_class::<PyTraceKind>()?;
-    trace_mod.add_class::<PyStepStatus>()?;
-    trace_mod.add_class::<PyResumeSource>()?;
-    trace_mod.add_class::<PyRouteSource>()?;
+    trace_mod.add_class::<PySpan>()?;
+    trace_mod.add_class::<PyEvent>()?;
+    trace_mod.add_class::<PyToolSnapshot>()?;
+    trace_mod.add_class::<PyProgressSnapshot>()?;
     trace_mod
         .add_function(wrap_pyfunction!(get_route_detail_name, &trace_mod)?)?;
-
     m.add_submodule(&trace_mod)?;
     let sys_modules = py.import("sys")?.getattr("modules")?;
     sys_modules.set_item("raygeo.trace", &trace_mod)?;
     Ok(())
 }
 
-// ── MoveKind ───────────────────────────────────────────────────────
+/// Map a routing-strategy detail code to a human-readable label.
+#[pyo3_stub_gen::derive::gen_stub_pyfunction(
+    python = r#"
+    def get_route_detail_name(detail: int) -> str:
+        """Return a human-readable label for a route-strategy detail code."""
+        ...
+    "#,
+    module = "raygeo.trace"
+)]
+#[pyfunction]
+pub(crate) fn get_route_detail_name(detail: u8) -> &'static str {
+    crate::ops::assembly::adaptive::routing::route_detail_label(detail)
+}
 
+// ── MoveKind ───────────────────────────────────────────────────────
 /// Standard move-type classification shared by all operations.
 ///
 /// Every toolpath point is tagged with one of these so that renderers
@@ -116,532 +130,469 @@ impl PyMoveKind {
     }
 }
 
-// ── Import canonical Rust enums for PyO3 wrappers ────────────────
+// ── Enum → string mappings ────────────────────────────────────────
 
-use crate::ops::assembly::adaptive::resume::ResumeSource as RResumeSource;
-use crate::ops::assembly::adaptive::routing::RouteSource as RRouteSource;
-use crate::ops::cut::stepper::StepStatus as RStepStatus;
-use crate::trace_types::TraceKind as RTraceKind;
-
-/// Record-kind enum for trace events.
-#[gen_stub_pyclass]
-#[pyclass(
-    frozen,
-    eq,
-    skip_from_py_object,
-    module = "raygeo.trace",
-    name = "TraceKind"
-)]
-#[derive(Clone, PartialEq)]
-pub(crate) struct PyTraceKind(pub(crate) RTraceKind);
-
-#[gen_stub_pymethods]
-#[pymethods]
-impl PyTraceKind {
-    #[classattr]
-    pub const INIT: PyTraceKind = PyTraceKind(RTraceKind::Init);
-    #[classattr]
-    pub const CUT: PyTraceKind = PyTraceKind(RTraceKind::Cut);
-    #[classattr]
-    pub const RESUME_STALL: PyTraceKind = PyTraceKind(RTraceKind::ResumeStall);
-    #[classattr]
-    pub const RESUME_STUCK: PyTraceKind = PyTraceKind(RTraceKind::ResumeStuck);
-    #[classattr]
-    pub const EXIT: PyTraceKind = PyTraceKind(RTraceKind::Exit);
-
-    fn __repr__(&self) -> &'static str {
-        self.name()
-    }
-    #[getter]
-    fn value(&self) -> u8 {
-        self.0 as u8
-    }
-    #[getter]
-    fn name(&self) -> &'static str {
-        match self.0 {
-            RTraceKind::Init => "init",
-            RTraceKind::Cut => "cut",
-            RTraceKind::ResumeStall => "resume_stall",
-            RTraceKind::ResumeStuck => "resume_stuck",
-            RTraceKind::Exit => "exit",
-        }
+pub(crate) fn event_kind_str(kind: u8) -> &'static str {
+    match kind {
+        12 => "init",
+        13 => "move",
+        14 => "resume",
+        15 => "exit",
+        _ => "unknown",
     }
 }
 
-// ── StepStatus (wraps ops/cut/stepper.rs StepStatus) ──────────────
-
-/// Step-status enum for trace records.
-#[gen_stub_pyclass]
-#[pyclass(
-    frozen,
-    eq,
-    skip_from_py_object,
-    module = "raygeo.trace",
-    name = "StepStatus"
-)]
-#[derive(Clone, PartialEq)]
-pub(crate) struct PyStepStatus(pub(crate) RStepStatus);
-
-#[gen_stub_pymethods]
-#[pymethods]
-impl PyStepStatus {
-    #[classattr]
-    pub const OK: PyStepStatus = PyStepStatus(RStepStatus::Ok);
-    #[classattr]
-    pub const BOUNDARY_HIT: PyStepStatus =
-        PyStepStatus(RStepStatus::BoundaryHit);
-    #[classattr]
-    pub const LOST_ENGAGEMENT: PyStepStatus =
-        PyStepStatus(RStepStatus::LostEngagement);
-    #[classattr]
-    pub const NO_CONVERGENCE: PyStepStatus =
-        PyStepStatus(RStepStatus::NoConvergence);
-
-    fn __repr__(&self) -> &'static str {
-        self.name()
-    }
-    #[getter]
-    fn value(&self) -> u8 {
-        self.0 as u8
-    }
-    #[getter]
-    fn name(&self) -> &'static str {
-        match self.0 {
-            RStepStatus::Ok => "Ok",
-            RStepStatus::BoundaryHit => "BoundaryHit",
-            RStepStatus::LostEngagement => "LostEngagement",
-            RStepStatus::NoConvergence => "NoConvergence",
-        }
+pub(crate) fn move_kind_str(kind: u8) -> &'static str {
+    match kind {
+        0 => "cut",
+        1 => "travel",
+        2 => "plunge",
+        3 => "lead_in",
+        4 => "lead_out",
+        5 => "link",
+        6 => "resume",
+        7 => "route",
+        _ => "unknown",
     }
 }
 
-// ── ResumeSource (wraps ops/assembly/adaptive/resume.rs ResumeSource)
+// ── MetaValue → Python object ─────────────────────────────────────
 
-/// Resume-strategy enum for trace records.
-#[gen_stub_pyclass]
-#[pyclass(
-    frozen,
-    eq,
-    skip_from_py_object,
-    module = "raygeo.trace",
-    name = "ResumeSource"
-)]
-#[derive(Clone, PartialEq)]
-pub(crate) struct PyResumeSource(pub(crate) RResumeSource);
-
-#[gen_stub_pymethods]
-#[pymethods]
-impl PyResumeSource {
-    #[classattr]
-    pub const NONE: PyResumeSource = PyResumeSource(RResumeSource::None);
-    #[classattr]
-    pub const WALL_HUG: PyResumeSource =
-        PyResumeSource(RResumeSource::ResumeWallHug);
-    #[classattr]
-    pub const SEGMENT: PyResumeSource =
-        PyResumeSource(RResumeSource::ResumeSegment);
-    #[classattr]
-    pub const MAT: PyResumeSource = PyResumeSource(RResumeSource::ResumeMat);
-    #[classattr]
-    pub const FRONTIER: PyResumeSource =
-        PyResumeSource(RResumeSource::ResumeFrontier);
-    #[classattr]
-    pub const ENVELOPE: PyResumeSource =
-        PyResumeSource(RResumeSource::ResumeEnvelope);
-    #[classattr]
-    pub const ISLAND: PyResumeSource =
-        PyResumeSource(RResumeSource::ResumeIsland);
-
-    fn __repr__(&self) -> &'static str {
-        self.name()
-    }
-    #[getter]
-    fn value(&self) -> u8 {
-        self.0 as u8
-    }
-    #[getter]
-    fn name(&self) -> &'static str {
-        match self.0 {
-            RResumeSource::None => "none",
-            RResumeSource::ResumeWallHug => "wall_hug",
-            RResumeSource::ResumeSegment => "segment",
-            RResumeSource::ResumeMat => "mat",
-            RResumeSource::ResumeFrontier => "frontier",
-            RResumeSource::ResumeEnvelope => "envelope",
-            RResumeSource::ResumeIsland => "island",
-        }
-    }
-}
-
-// ── RouteSource (wraps ops/assembly/adaptive/routing.rs RouteSource)
-
-/// Route-strategy enum for trace records.
-#[gen_stub_pyclass]
-#[pyclass(
-    frozen,
-    eq,
-    skip_from_py_object,
-    module = "raygeo.trace",
-    name = "RouteSource"
-)]
-#[derive(Clone, PartialEq)]
-pub(crate) struct PyRouteSource(pub(crate) RRouteSource);
-
-#[gen_stub_pymethods]
-#[pymethods]
-impl PyRouteSource {
-    #[classattr]
-    pub const NONE: PyRouteSource = PyRouteSource(RRouteSource::None);
-    #[classattr]
-    pub const DIRECT: PyRouteSource =
-        PyRouteSource(RRouteSource::RoutingDirect);
-    #[classattr]
-    pub const FRONTIER: PyRouteSource =
-        PyRouteSource(RRouteSource::RoutingFrontier);
-    #[classattr]
-    pub const MAT: PyRouteSource = PyRouteSource(RRouteSource::RoutingMat);
-    #[classattr]
-    pub const ZHOP: PyRouteSource = PyRouteSource(RRouteSource::RoutingZHop);
-
-    fn __repr__(&self) -> &'static str {
-        self.name()
-    }
-    #[getter]
-    fn value(&self) -> u8 {
-        self.0 as u8
-    }
-    #[getter]
-    fn name(&self) -> &'static str {
-        match self.0 {
-            RRouteSource::None => "none",
-            RRouteSource::RoutingDirect => "direct",
-            RRouteSource::RoutingFrontier => "frontier",
-            RRouteSource::RoutingMat => "mat",
-            RRouteSource::RoutingZHop => "zhop",
-        }
-    }
-}
-
-// ── TraceRecord ────────────────────────────────────────────────────
-
-/// One per-step trace record.
-///
-/// Wraps the decoded msgpack map and exposes fields as attributes.
-/// Supports both dot access (``rec.kind``) and dict access (``rec["kind"]``).
-#[gen_stub_pyclass]
-#[pyclass(skip_from_py_object, module = "raygeo.trace", name = "TraceRecord")]
-pub struct PyTraceRecord {
-    inner: Py<PyDict>,
-}
-
-#[gen_stub_pymethods]
-#[pymethods]
-impl PyTraceRecord {
-    #[new]
-    fn new(d: Py<PyDict>) -> Self {
-        Self { inner: d }
-    }
-
-    fn __getattr__(&self, name: &str, py: Python<'_>) -> PyResult<Py<PyAny>> {
-        let d = self.inner.bind(py);
-        // Look up the value: root dict first, then the payload sub-dict.
-        let val: Option<Bound<'_, PyAny>> = match d.get_item(name) {
-            Ok(Some(v)) => Some(v),
-            _ => None,
-        };
-        let val = val.or_else(|| {
-            if let Ok(Some(p)) = d.get_item("payload") {
-                if let Ok(pd) = p.cast::<PyDict>() {
-                    return pd.get_item(name).ok().flatten();
-                }
+pub(crate) fn metavalue_to_py(
+    py: Python<'_>,
+    v: &MetaValue,
+) -> PyResult<Py<PyAny>> {
+    match v {
+        MetaValue::F64(f) => Ok((*f).into_py_any(py)?),
+        MetaValue::I64(i) => Ok((*i).into_py_any(py)?),
+        MetaValue::U32(u) => Ok((*u).into_py_any(py)?),
+        MetaValue::Bool(b) => Ok((*b).into_py_any(py)?),
+        MetaValue::Str(s) => Ok(s.clone().into_py_any(py)?),
+        MetaValue::List(items) => {
+            let list = PyList::empty(py);
+            for item in items {
+                list.append(metavalue_to_py(py, item)?)?;
             }
-            None
-        });
-        match val {
-            Some(v) => {
-                let obj: Py<PyAny> = match name {
-                    "status" => {
-                        let val: u8 = v.extract().unwrap_or(0);
-                        let r =
-                            num_enum::TryFromPrimitive::try_from_primitive(val)
-                                .unwrap_or(RStepStatus::Ok);
-                        PyStepStatus(r).into_pyobject(py)?.unbind().into()
-                    }
-                    "resume_source" => {
-                        let val: u8 = v.extract().unwrap_or(0);
-                        let r =
-                            num_enum::TryFromPrimitive::try_from_primitive(val)
-                                .unwrap_or(RResumeSource::None);
-                        PyResumeSource(r).into_pyobject(py)?.unbind().into()
-                    }
-                    "route_source" => {
-                        let val: u8 = v.extract().unwrap_or(0);
-                        let r =
-                            num_enum::TryFromPrimitive::try_from_primitive(val)
-                                .unwrap_or(RRouteSource::None);
-                        PyRouteSource(r).into_pyobject(py)?.unbind().into()
-                    }
-                    _ => v.unbind(),
-                };
-                Ok(obj)
+            Ok(list.into_py_any(py)?)
+        }
+        MetaValue::Map(m) => {
+            let dict = PyDict::new(py);
+            for (k, v) in m {
+                dict.set_item(k.as_str(), metavalue_to_py(py, v)?)?;
             }
-            None => Ok(py.None().into_py_any(py)?),
+            Ok(dict.into_py_any(py)?)
         }
-    }
-
-    fn __getitem__(&self, name: &str, py: Python<'_>) -> PyResult<Py<PyAny>> {
-        self.__getattr__(name, py)
-    }
-
-    fn __repr__(&self, py: Python<'_>) -> PyResult<String> {
-        let d = self.inner.bind(py);
-        Ok(format!("TraceRecord({})", d.repr()?))
-    }
-
-    fn __contains__(&self, name: &str, py: Python<'_>) -> bool {
-        self.inner.bind(py).contains(name).unwrap_or(false)
-    }
-
-    fn keys(&self, py: Python<'_>) -> PyResult<Vec<String>> {
-        let d = self.inner.bind(py);
-        let mut keys = Vec::new();
-        for k in d.keys() {
-            keys.push(k.extract::<String>()?);
-        }
-        Ok(keys)
     }
 }
 
-// ── TraceFile ──────────────────────────────────────────────────────
+pub(crate) fn meta_to_py_dict(
+    py: Python<'_>,
+    meta: &Option<crate::trace_types::Meta>,
+) -> PyResult<Py<PyAny>> {
+    match meta {
+        None => Ok(PyDict::new(py).into_py_any(py)?),
+        Some(map) => {
+            let dict = PyDict::new(py);
+            for (k, v) in map {
+                dict.set_item(k.as_str(), metavalue_to_py(py, v)?)?;
+            }
+            Ok(dict.into_py_any(py)?)
+        }
+    }
+}
 
-/// Binary trace file with random access to records.
-///
-/// Usage:
-///
-/// ```python
-/// >>> from raygeo.trace import TraceFile
-/// >>> t = TraceFile("path/to/trace.bin")
-/// >>> len(t)          # number of records
-/// >>> t[0]            # first record (TraceRecord with dot access)
-/// >>> t.toolpath      # list of (x, y, move_kind) tuples
-/// >>> t.geometry      # dict with tool_radius, boundary, islands, seeds
-/// >>> t.mat_nodes     # MAT nodes or empty list
-/// ```
+// ── KindPeek for partial msgpack decode ─────────────────────────────
+
+#[derive(serde::Deserialize)]
+struct KindPeek {
+    kind: u8,
+}
+
+// ── ToolSnapshot ──────────────────────────────────────────────────
+
+/// Snapshot of tool position and heading at a trace event.
 #[gen_stub_pyclass]
-#[pyclass(skip_from_py_object, module = "raygeo.trace", name = "TraceFile")]
-pub struct PyTraceFile {
-    data: TraceFileData,
+#[pyclass(
+    frozen,
+    module = "raygeo.trace",
+    name = "ToolSnapshot",
+    skip_from_py_object
+)]
+pub(crate) struct PyToolSnapshot {
+    #[pyo3(get)]
+    pos_x: f64,
+    #[pyo3(get)]
+    pos_y: f64,
+    #[pyo3(get)]
+    pos_z: f64,
+    #[pyo3(get)]
+    heading: f64,
+    #[pyo3(get)]
+    prev_x: f64,
+    #[pyo3(get)]
+    prev_y: f64,
+    #[pyo3(get)]
+    prev_z: f64,
+}
+
+impl PyToolSnapshot {
+    fn from_rust(t: &crate::trace_types::ToolSnapshot) -> Self {
+        Self {
+            pos_x: t.pos_x,
+            pos_y: t.pos_y,
+            pos_z: t.pos_z,
+            heading: t.heading,
+            prev_x: t.prev_x,
+            prev_y: t.prev_y,
+            prev_z: t.prev_z,
+        }
+    }
+}
+
+// ── ProgressSnapshot ──────────────────────────────────────────────
+
+/// Snapshot of step progress during trace execution.
+#[gen_stub_pyclass]
+#[pyclass(
+    frozen,
+    module = "raygeo.trace",
+    name = "ProgressSnapshot",
+    skip_from_py_object
+)]
+pub(crate) struct PyProgressSnapshot {
+    #[pyo3(get)]
+    step_idx: u32,
+    #[pyo3(get)]
+    ops_len: u32,
+    #[pyo3(get)]
+    status: u8,
+}
+
+impl PyProgressSnapshot {
+    fn from_rust(p: &crate::trace_types::ProgressSnapshot) -> Self {
+        Self {
+            step_idx: p.step_idx,
+            ops_len: p.ops_len,
+            status: p.status,
+        }
+    }
+}
+
+// ── Event ──────────────────────────────────────────────────────────
+
+/// One trace event (init / move / resume / exit).
+#[gen_stub_pyclass]
+#[pyclass(module = "raygeo.trace", name = "Event", skip_from_py_object)]
+pub(crate) struct PyEvent {
+    #[pyo3(get)]
+    kind: String,
+    #[pyo3(get)]
+    seq: u32,
+    #[pyo3(get)]
+    span: u32,
+    #[pyo3(get)]
+    source: String,
+    #[pyo3(get)]
+    move_kind: Option<String>,
+    #[pyo3(get)]
+    tool: Option<Py<PyToolSnapshot>>,
+    #[pyo3(get)]
+    progress: Option<Py<PyProgressSnapshot>>,
+    #[pyo3(get)]
+    meta: Py<PyAny>,
+}
+
+// ── Span ──────────────────────────────────────────────────────────
+
+/// One span record from a trace file.
+#[gen_stub_pyclass]
+#[pyclass(module = "raygeo.trace", name = "Span", skip_from_py_object)]
+pub(crate) struct PySpan {
+    #[pyo3(get)]
+    id: u32,
+    #[pyo3(get)]
+    parent: u32,
+    #[pyo3(get)]
+    source: String,
+    #[pyo3(get)]
+    label: String,
+    #[pyo3(get)]
+    attrs: Py<PyAny>,
+    children: Vec<Py<PySpan>>,
+    events: Vec<Py<PyEvent>>,
+}
+
+#[gen_stub_pymethods]
+#[pymethods]
+impl PySpan {
+    #[getter]
+    fn children(&self, py: Python<'_>) -> Vec<Py<PySpan>> {
+        self.children.iter().map(|c| c.clone_ref(py)).collect()
+    }
+
+    #[getter]
+    fn events(&self, py: Python<'_>) -> Vec<Py<PyEvent>> {
+        self.events.iter().map(|e| e.clone_ref(py)).collect()
+    }
+
+    fn __repr__(&self) -> String {
+        format!(
+            "Span(id={}, parent={}, source={:?}, label={:?})",
+            self.id, self.parent, self.source, self.label,
+        )
+    }
+}
+
+// ── TraceFile ─────────────────────────────────────────────────────
+
+/// Binary trace file with span/event access.
+///
+/// Usage::
+///
+///     >>> from raygeo.trace import TraceFile
+///     >>> t = TraceFile("path/to/trace.bin")
+///     >>> t.ver
+///     3
+///     >>> t.root
+///     Span(id=1, parent=0, source='workplan', label='Workplan')
+///     >>> len(t.events)
+///     42
+#[gen_stub_pyclass]
+#[pyclass(module = "raygeo.trace", name = "TraceFile")]
+pub(crate) struct PyTraceFile {
+    ver: u16,
+    spans: Vec<Py<PySpan>>,
+    events: Vec<Py<PyEvent>>,
 }
 
 #[gen_stub_pymethods]
 #[pymethods]
 impl PyTraceFile {
     #[new]
-    fn new(path: &str) -> PyResult<Self> {
+    fn new(path: &str, py: Python<'_>) -> PyResult<Self> {
         let data = TraceFileData::open(Path::new(path)).map_err(|e| {
             pyo3::exceptions::PyIOError::new_err(format!("{e}"))
         })?;
-        Ok(Self { data })
-    }
 
-    fn __len__(&self) -> usize {
-        self.data.record_count as usize
-    }
+        let mut span_starts: Vec<crate::trace_types::SpanRecord> = Vec::new();
+        let mut trace_events: Vec<crate::trace_types::TraceEvent> = Vec::new();
 
-    fn __getitem__(
-        &self,
-        idx: usize,
-        py: Python<'_>,
-    ) -> PyResult<PyTraceRecord> {
-        if idx >= self.data.records.len() {
-            return Err(pyo3::exceptions::PyIndexError::new_err(
-                "record index out of range",
-            ));
+        for blob in &data.records {
+            let peek: KindPeek = rmp_serde::from_slice(blob).map_err(|e| {
+                PyValueError::new_err(format!("msgpack decode failed: {e}"))
+            })?;
+            if peek.kind == 10 {
+                let rec: crate::trace_types::SpanRecord =
+                    rmp_serde::from_slice(blob).map_err(|e| {
+                        PyValueError::new_err(format!(
+                            "msgpack decode failed: {e}"
+                        ))
+                    })?;
+                span_starts.push(rec);
+            } else if peek.kind >= 12 && peek.kind <= 15 {
+                let rec: crate::trace_types::TraceEvent =
+                    rmp_serde::from_slice(blob).map_err(|e| {
+                        PyValueError::new_err(format!(
+                            "msgpack decode failed: {e}"
+                        ))
+                    })?;
+                trace_events.push(rec);
+            }
         }
-        let bytes = &self.data.records[idx];
-        let msgpack_mod = py.import("msgpack")?;
-        let d: Py<PyDict> = msgpack_mod
-            .call_method1("unpackb", (bytes.to_vec(),))?
-            .extract()?;
-        Ok(PyTraceRecord { inner: d })
+
+        // Build PySpan objects (no children/events yet)
+        let mut id_to_idx: HashMap<u32, usize> = HashMap::new();
+        let mut spans: Vec<Py<PySpan>> = Vec::with_capacity(span_starts.len());
+        for rec in &span_starts {
+            let attrs = meta_to_py_dict(py, &rec.attrs)?;
+            let span = PySpan {
+                id: rec.id,
+                parent: rec.parent,
+                source: rec.source.clone(),
+                label: rec.label.clone(),
+                attrs,
+                children: Vec::new(),
+                events: Vec::new(),
+            };
+            let idx = spans.len();
+            id_to_idx.insert(rec.id, idx);
+            spans.push(Py::new(py, span)?);
+        }
+
+        // Build PyEvent objects and assign to spans
+        let mut events: Vec<Py<PyEvent>> =
+            Vec::with_capacity(trace_events.len());
+        let mut event_assignments: Vec<(usize, Py<PyEvent>)> = Vec::new();
+
+        for rec in &trace_events {
+            let kind_str = event_kind_str(rec.kind).to_string();
+            let move_kind_str =
+                rec.move_kind.map(|k| move_kind_str(k).to_string());
+            let tool = match &rec.tool {
+                Some(t) => Some(Py::new(py, PyToolSnapshot::from_rust(t))?),
+                None => None,
+            };
+            let progress = match &rec.progress {
+                Some(p) => Some(Py::new(py, PyProgressSnapshot::from_rust(p))?),
+                None => None,
+            };
+            let meta = meta_to_py_dict(py, &rec.meta)?;
+
+            let evt = PyEvent {
+                kind: kind_str,
+                seq: rec.seq,
+                span: rec.span,
+                source: rec.source.clone(),
+                move_kind: move_kind_str,
+                tool,
+                progress,
+                meta,
+            };
+            let py_evt = Py::new(py, evt)?;
+
+            if let Some(&span_idx) = id_to_idx.get(&rec.span) {
+                event_assignments.push((span_idx, py_evt.clone_ref(py)));
+            }
+            events.push(py_evt);
+        }
+
+        for (span_idx, evt) in &event_assignments {
+            spans[*span_idx]
+                .borrow_mut(py)
+                .events
+                .push(evt.clone_ref(py));
+        }
+
+        // Build children
+        let mut child_assignments: Vec<(usize, usize)> = Vec::new();
+        for (i, span) in spans.iter().enumerate() {
+            let parent_id = span.borrow(py).parent;
+            if parent_id != 0 {
+                if let Some(&parent_idx) = id_to_idx.get(&parent_id) {
+                    child_assignments.push((parent_idx, i));
+                }
+            }
+        }
+        for (parent_idx, child_idx) in &child_assignments {
+            let child = spans[*child_idx].clone_ref(py);
+            spans[*parent_idx].borrow_mut(py).children.push(child);
+        }
+
+        Ok(PyTraceFile {
+            ver: data.ver,
+            spans,
+            events,
+        })
     }
 
     #[getter]
     fn ver(&self) -> u16 {
-        self.data.ver
+        self.ver
     }
 
-    /// Decoded geometry dict (tool_radius, boundary, islands, seeds) from the
-    /// first record with ``kind == "geometry"``, or an empty dict.
     #[getter]
-    fn geometry(&self, py: Python<'_>) -> PyResult<Py<PyDict>> {
-        for bytes in &self.data.records {
-            let msgpack_mod = py.import("msgpack")?;
-            let d: Py<PyDict> = msgpack_mod
-                .call_method1("unpackb", (bytes.to_vec(),))?
-                .extract()?;
-            let d_ref = d.bind(py);
-            if let Ok(Some(kind)) = d_ref.get_item("kind") {
-                if let Ok(s) = kind.extract::<String>() {
-                    if s == "geometry" {
-                        return Ok(d);
-                    }
-                }
+    fn spans(&self, py: Python<'_>) -> Vec<Py<PySpan>> {
+        self.spans.iter().map(|s| s.clone_ref(py)).collect()
+    }
+
+    #[getter]
+    fn events(&self, py: Python<'_>) -> Vec<Py<PyEvent>> {
+        self.events.iter().map(|e| e.clone_ref(py)).collect()
+    }
+
+    /// The root span (first span with parent == 0), or None.
+    #[getter]
+    fn root(&self, py: Python<'_>) -> Option<Py<PySpan>> {
+        for span in &self.spans {
+            if span.borrow(py).parent == 0 {
+                return Some(span.clone_ref(py));
             }
         }
-        Ok(PyDict::new(py).unbind())
+        None
     }
 
-    /// Toolpath points extracted from all motion records (those with
-    /// ``pos_x`` / ``pos_y``).  Returns a list of ``(x, y, move_kind)``
-    /// where ``move_kind`` is a ``MoveKind`` value.
+    /// Distinct source strings across all spans and events.
     #[getter]
-    fn toolpath(&self, py: Python<'_>) -> PyResult<Vec<(f64, f64, u8)>> {
+    fn sources(&self, py: Python<'_>) -> PyResult<Py<PyAny>> {
+        let s = PySet::empty(py)?;
+        for span in &self.spans {
+            let b = span.borrow(py);
+            s.add(b.source.clone())?;
+        }
+        for evt in &self.events {
+            let b = evt.borrow(py);
+            s.add(b.source.clone())?;
+        }
+        s.into_py_any(py)
+    }
+
+    /// Toolpath points from Move events.
+    ///
+    /// Returns a list of ``(x, y, move_kind_name)`` tuples.
+    /// If *span* is given (an int span id or a Span object), restrict
+    /// to events belonging to that span.
+    #[pyo3(signature = (span = None))]
+    fn toolpath(
+        &self,
+        span: Option<&Bound<'_, PyAny>>,
+        py: Python<'_>,
+    ) -> PyResult<Vec<(f64, f64, String)>> {
+        let span_id: Option<u32> = match span {
+            None => None,
+            Some(obj) => {
+                if let Ok(id) = obj.extract::<u32>() {
+                    Some(id)
+                } else if let Ok(id) =
+                    obj.getattr("id").and_then(|a| a.extract::<u32>())
+                {
+                    Some(id)
+                } else {
+                    return Err(pyo3::exceptions::PyTypeError::new_err(
+                        "span must be an int or Span object",
+                    ));
+                }
+            }
+        };
+
         let mut out = Vec::new();
-        for bytes in &self.data.records {
-            let msgpack_mod = py.import("msgpack")?;
-            let d: Py<PyDict> = msgpack_mod
-                .call_method1("unpackb", (bytes.to_vec(),))?
-                .extract()?;
-            let d_ref = d.bind(py);
-            let kind: String = d_ref
-                .get_item("kind")
-                .ok()
-                .flatten()
-                .and_then(|v| v.extract::<String>().ok())
-                .unwrap_or_default();
-            if kind == "geometry" || kind == "mat" {
+        for evt in &self.events {
+            let b = evt.borrow(py);
+            if b.kind != "move" {
                 continue;
             }
-            let x = d_ref
-                .get_item("pos_x")
-                .ok()
-                .flatten()
-                .and_then(|v| v.extract::<f64>().ok())
-                .unwrap_or(0.0);
-            let y = d_ref
-                .get_item("pos_y")
-                .ok()
-                .flatten()
-                .and_then(|v| v.extract::<f64>().ok())
-                .unwrap_or(0.0);
-            let move_kind = match kind.as_str() {
-                "cut" | "init" => RMoveKind::Cut as u8,
-                "exit" => RMoveKind::Travel as u8,
-                "resume_stall" | "resume_stuck" | "resume" => {
-                    RMoveKind::Resume as u8
+            if let Some(sid) = span_id {
+                if b.span != sid {
+                    continue;
                 }
-                _ => RMoveKind::Travel as u8,
-            };
-            out.push((x, y, move_kind));
+            }
+            if let Some(ref tool) = b.tool {
+                let tool = tool.borrow(py);
+                let mk = b.move_kind.as_deref().unwrap_or("travel").to_string();
+                out.push((tool.pos_x, tool.pos_y, mk));
+            }
         }
         Ok(out)
     }
 
-    /// MAT nodes from the first record with ``kind == "mat"``, or an
-    /// empty list.
-    #[getter]
-    fn mat_nodes(&self, py: Python<'_>) -> PyResult<Vec<(f64, f64)>> {
-        if let Some(mat) = find_mat_record(&self.data.records, py)? {
-            let d = mat.bind(py);
-            let raw: Option<Vec<Vec<f64>>> = d
-                .get_item("nodes")
-                .ok()
-                .flatten()
-                .and_then(|v| v.extract::<Vec<Vec<f64>>>().ok());
-            Ok(raw.map_or_else(Vec::new, |v| {
-                v.into_iter().map(|p| (p[0], p[1])).collect()
-            }))
-        } else {
-            Ok(Vec::new())
-        }
+    fn __len__(&self) -> usize {
+        self.events.len()
     }
 
-    #[getter]
-    fn mat_clearances(&self, py: Python<'_>) -> PyResult<Vec<f64>> {
-        if let Some(mat) = find_mat_record(&self.data.records, py)? {
-            let d = mat.bind(py);
-            let vals: Vec<f64> = d
-                .get_item("clearances")
-                .ok()
-                .flatten()
-                .and_then(|v| v.extract::<Vec<f64>>().ok())
-                .unwrap_or_default();
-            Ok(vals)
-        } else {
-            Ok(Vec::new())
+    fn __getitem__(&self, idx: usize, py: Python<'_>) -> PyResult<Py<PyEvent>> {
+        if idx >= self.events.len() {
+            return Err(pyo3::exceptions::PyIndexError::new_err(
+                "event index out of range",
+            ));
         }
+        Ok(self.events[idx].clone_ref(py))
     }
 
-    #[getter]
-    fn mat_edges(&self, py: Python<'_>) -> PyResult<Vec<(u32, u32)>> {
-        if let Some(mat) = find_mat_record(&self.data.records, py)? {
-            let d = mat.bind(py);
-            let raw: Option<Vec<Vec<u32>>> = d
-                .get_item("edges")
-                .ok()
-                .flatten()
-                .and_then(|v| v.extract::<Vec<Vec<u32>>>().ok());
-            Ok(raw.map_or_else(Vec::new, |v| {
-                v.into_iter().map(|p| (p[0], p[1])).collect()
-            }))
-        } else {
-            Ok(Vec::new())
-        }
-    }
-
-    #[getter]
-    fn mat_root(&self, py: Python<'_>) -> PyResult<u32> {
-        if let Some(mat) = find_mat_record(&self.data.records, py)? {
-            let d = mat.bind(py);
-            let root: u32 = d
-                .get_item("root")
-                .ok()
-                .flatten()
-                .and_then(|v| v.extract::<u32>().ok())
-                .unwrap_or(0);
-            Ok(root)
-        } else {
-            Ok(0)
-        }
+    fn __repr__(&self) -> String {
+        format!(
+            "TraceFile(ver={}, spans={}, events={})",
+            self.ver,
+            self.spans.len(),
+            self.events.len(),
+        )
     }
 }
-
-fn find_mat_record<'a>(
-    records: &[Vec<u8>],
-    py: Python<'a>,
-) -> PyResult<Option<Py<PyDict>>> {
-    for bytes in records {
-        let msgpack_mod = py.import("msgpack")?;
-        let d: Py<PyDict> = msgpack_mod
-            .call_method1("unpackb", (bytes.to_vec(),))?
-            .extract()?;
-        let d_ref = d.bind(py);
-        if let Ok(Some(kind)) = d_ref.get_item("kind") {
-            if let Ok(s) = kind.extract::<String>() {
-                if s == "mat" {
-                    return Ok(Some(d));
-                }
-            }
-        }
-    }
-    Ok(None)
-}
-
-// ── Route detail label function ───────────────────────────────────
-
-/// Return a human-readable label for a route-strategy detail code.
-#[gen_stub_pyfunction(
-    python = r#"
-    def get_route_detail_name(detail: int) -> str:
-        """Return a human-readable label for a route-strategy detail code."""
-        ...
-    "#,
-    module = "raygeo.trace"
-)]
-#[pyfunction]
-fn get_route_detail_name(detail: u8) -> &'static str {
-    crate::ops::assembly::adaptive::routing::route_detail_label(detail)
-}
-
-// ── Helpers ────────────────────────────────────────────────────────

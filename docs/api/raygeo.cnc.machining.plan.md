@@ -19,6 +19,7 @@ execute(
     cut_feed_rate: int = 1200,
     cut_power: float = 1.0,
     rapid_feed_rate: Optional[int] = None,
+    trace: Optional[str] = None,
 ) -> result.AssemblyResult
 ```
 
@@ -29,6 +30,7 @@ Execute all steps and return the combined **AssemblyResult**.
 | `cut_feed_rate`   | `int = 1200`            | Feed rate for cutting moves (default 1200).                                            |
 | `cut_power`       | `float = 1.0`           | Laser power for cutting moves (default 1.0).                                           |
 | `rapid_feed_rate` | `Optional[int] = None`  | Feed rate for travel/retract moves, or `None` to leave them unmodified (default None). |
+| `trace`           | `Optional[str] = None`  | Optional file path for a trace file (`.bin`).                                          |
 | _Returns_         | `result.AssemblyResult` | The combined **AssemblyResult**.                                                       |
 
 ### `extend()`

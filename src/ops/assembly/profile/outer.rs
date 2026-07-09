@@ -3,12 +3,12 @@ use crate::geo::shape::polygon::{
     get_polygon_heading_at, offset_polygon, JoinStyle,
 };
 use crate::ops::assembly::profile::engine::{run_profile, ProfileCommon};
-use crate::ops::assembly::profile::trace::TraceRecorder;
 use crate::ops::assembly::profile::ProfileOuterOptions;
 use crate::ops::assembly::result::AssemblyResult;
 use crate::ops::cut::ClearedArea;
 use crate::ops::state::State;
-use crate::types::Point3D;
+
+use super::tracelet::ProfileTracelet;
 
 pub fn profile_outer(
     cleared: &mut ClearedArea,
@@ -41,32 +41,21 @@ pub fn profile_outer(
         engagement_angle_threshold: opts.engagement_angle_threshold,
         stock_to_leave: opts.stock_to_leave,
     };
-    let mut recorder = TraceRecorder::new(
-        opts.trace_path.as_ref(),
-        opts.tool_radius,
-        &opts.boundary,
-        &[],
-        &offset_polys,
-        &[0u32],
-    );
-    let heading = get_polygon_heading_at(&offset_polys[0], offset_polys[0][0])
+    let _heading = get_polygon_heading_at(&offset_polys[0], offset_polys[0][0])
         + std::f64::consts::FRAC_PI_2;
-    let init_pos =
-        Point3D::new(offset_polys[0][0].x, offset_polys[0][0].y, opts.target_z);
-    recorder.record_init(init_pos, heading, 0);
-    let result = run_profile(
+
+    let mut tracelet = ProfileTracelet::new();
+    let walk_order: Vec<u32> = (0..offset_polys.len() as u32).collect();
+    tracelet.set_attrs(&offset_polys, &walk_order);
+
+    let mut result = run_profile(
         cleared,
         &offset_polys[0],
         &common,
         cut_state,
         0,
-        &mut recorder,
+        &mut tracelet,
     )?;
-    recorder.record_exit(
-        result.end.pos,
-        result.end.heading,
-        result.ops.len() as u32,
-    );
-    recorder.finish(&result.ops);
+    result.trace = Some(tracelet.finish());
     Ok(result)
 }

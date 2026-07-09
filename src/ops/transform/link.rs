@@ -119,6 +119,7 @@ pub fn link_assembly_passes(
                 pos: crate::types::Point3D::ZERO,
                 heading: 0.0,
             },
+            trace: None,
         };
     }
 
@@ -160,6 +161,7 @@ pub fn link_assembly_passes(
         cleared_polygons,
         start: passes[0].start,
         end: passes[passes.len() - 1].end,
+        trace: None,
     }
 }
 

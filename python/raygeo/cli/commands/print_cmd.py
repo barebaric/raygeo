@@ -1,6 +1,4 @@
-import math
-
-from raygeo.trace import TraceFile, get_route_detail_name
+from raygeo.trace import TraceFile
 
 
 def register(subparsers):
@@ -11,113 +9,93 @@ def register(subparsers):
     p.set_defaults(func=run)
 
 
+def _fmt_attrs(attrs):
+    if not attrs:
+        return ""
+    parts = []
+    for k, v in attrs.items():
+        if isinstance(v, (list, tuple)):
+            if len(v) > 3:
+                parts.append(f"{k}=[{len(v)} items]")
+            else:
+                parts.append(f"{k}={v!r}")
+        elif isinstance(v, dict):
+            if len(v) > 3:
+                parts.append(f"{k}={{{len(v)} keys}}")
+            else:
+                parts.append(f"{k}={v!r}")
+        else:
+            parts.append(f"{k}={v!r}")
+    return "; ".join(parts)
+
+
+def _fmt_meta(meta):
+    if not meta:
+        return ""
+    parts = []
+    for k, v in meta.items():
+        if isinstance(v, (list, tuple)):
+            parts.append(f"{k}=[{len(v)} items]")
+        elif isinstance(v, dict):
+            parts.append(f"{k}={{{len(v)} keys}}")
+        else:
+            parts.append(f"{k}={v!r}")
+    return "; ".join(parts)
+
+
+def _print_span(span, depth=0):
+    indent = "  " * depth
+    attrs_str = _fmt_attrs(span.attrs)
+    attrs_part = f"  attrs: {attrs_str}" if attrs_str else ""
+    print(
+        f'{indent}[#{span.id}] {span.source} "{span.label}"'
+        f"{attrs_part}  ({len(span.events)} events)"
+    )
+    for child in span.children:
+        _print_span(child, depth + 1)
+
+
 def run(args):
-    """Dump all trace records as a human-readable event log."""
     trace_path = args.tracefile
-    print(f"Trace file: {trace_path}")
-
     trace = TraceFile(trace_path)
-    n = len(trace)
-    print(f"Records: {n}")
+
+    sources = sorted(trace.sources)
+    print(
+        f"trace: {trace_path}  "
+        f"ver={trace.ver}  "
+        f"spans={len(trace.spans)}  "
+        f"events={len(trace.events)}  "
+        f"sources={','.join(sources)}"
+    )
+
+    print("SPAN TREE:")
+    if trace.root is not None:
+        _print_span(trace.root)
+    else:
+        print("  (no root span)")
+
     print()
-
-    geo = trace.geometry
-    tp = trace.toolpath
-
-    print("Geometry:")
-    print(f"  tool_radius={geo['tool_radius']}")
-    print(f"  boundary: {len(geo['boundary'])} verts")
-    print(f"  islands: {len(geo['islands'])}")
-    if "offset_polys" in geo:
-        print(f"  offset_polys: {len(geo['offset_polys'])}")
-        print(f"  walk_order: {geo.get('walk_order', [])}")
-    elif "seeds" in geo:
-        print(f"  seeds: {len(geo['seeds'])} polygon(s)")
-    print(f"  toolpath: {len(tp)} moves")
-    print()
-
-    RESUME_KINDS = {"resume_stall", "resume_stuck", "exit"}
-
-    for i in range(n):
-        rec = trace[i]
-        if rec.kind in ("geometry", "mat"):
-            continue
-        kind_name = rec.kind
-        status_name = rec.status.name
-
-        h_deg = math.degrees(rec.heading)
-        sh_deg = math.degrees(rec.smoothed_heading)
-        pa_deg = math.degrees(rec.predicted_angle)
-        ia_deg = math.degrees(rec.iteration_angle)
-        eng_deg = math.degrees(rec.eng_angle)
-        step_dist = math.hypot(rec.pos_x - rec.prev_x, rec.pos_y - rec.prev_y)
-
-        route_src = ""
-        if rec.route_source and rec.route_source.value:
-            route_src = f" route={rec.route_source.name}"
-
-        resume_src = ""
-        if (
-            rec.kind in RESUME_KINDS
-            and rec.resume_source
-            and rec.resume_source.value
-        ):
-            resume_src = f" resume_via={rec.resume_source.name}"
-
-        base = (
-            f"{i}\t{kind_name}\t{status_name}{route_src}{resume_src}"
-            f"\tpos=({rec.pos_x:.4f},{rec.pos_y:.4f})"
-            f"\tprev=({rec.prev_x:.4f},{rec.prev_y:.4f})"
-            f"\tdist={step_dist:.4f}"
-            f"\thdg={h_deg:.4f}"
-            f"\tsmooth={sh_deg:.4f}"
-            f"\tpred={pa_deg:.4f}"
-            f"\titer={ia_deg:.4f}"
-            f"\teng_angle={eng_deg:.4f}"
-            f"\teng_area={rec.eng_area:.4f}"
-            f"\teng_chord={rec.eng_chord:.4f}"
-            f"\tcut_area={rec.cut_area:.4f}"
-            f"\titers={rec.iters}"
-            f"\tops_len={rec.ops_len}"
-        )
-
-        if rec.target_polygon_idx is not None:
-            tpi = int(rec.target_polygon_idx)
-            cp = rec.cumulative_distance or 0.0
-            pp = rec.polygon_perimeter or 0.0
-            prog = (cp / pp * 100) if pp > 0 else 0.0
-            print(
-                base
-                + f"\ttarget={tpi}"
-                + f"\tperim={pp:.2f}"
-                + f"\tcum={cp:.2f}"
-                + f"\tprog={prog:.1f}%"
-                + f"\twall={rec.wall_distance:.3f}"
-                + f"\tfeed={rec.current_feed_rate}"
-                + f"\tstep={rec.step_length_used:.3f}"
-                + f"\tred={int(rec.engagement_reductions or 0)}"
+    print("EVENTS:")
+    for ev in trace.events:
+        seq = f"seq={ev.seq:>5}"
+        sp = f"span={ev.span}"
+        kind = f"{ev.kind.upper():>6}"
+        src = f"source={ev.source}"
+        mk = ev.move_kind or "-"
+        move = f"move={mk}"
+        if ev.tool is not None:
+            pos = (
+                f"pos=({ev.tool.pos_x:.2f},{ev.tool.pos_y:.2f},"
+                f"{ev.tool.pos_z:.2f})"
             )
         else:
-            print(
-                base
-                + f"\ttotal_area={rec.total_area:.4f}"
-                + f"\trem_area={rec.remaining_area:.4f}"
-                + "\tstrat="
-                + "|".join(
-                    "WSMFEI"[i]
-                    + (":" + [".", "X", "B"][v] if v <= 2 else ":?")
-                    + (
-                        f"[{rec.resume_strategy_details[i]}]"
-                        if rec.resume_strategy_details[i]
-                        else ""
-                    )
-                    for i, v in enumerate(rec.resume_strategy_reasons)
-                )
-                + "\trout="
-                + "|".join(
-                    "DFMZ"[i]
-                    + ":"
-                    + get_route_detail_name(rec.route_strategy_details[i])
-                    for i in range(4)
-                )
-            )
+            pos = "pos=-"
+        if ev.progress is not None:
+            step = f"step={ev.progress.step_idx}"
+        else:
+            step = "step=-"
+        meta_str = _fmt_meta(ev.meta)
+        meta_part = f"  meta: {meta_str}" if meta_str else ""
+        print(
+            f"  {seq}  {sp}  {kind}  {src}  {move}  {pos}  {step}{meta_part}"
+        )

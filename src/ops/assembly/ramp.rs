@@ -77,6 +77,7 @@ pub fn generate_ramp(
         cleared_polygons,
         start,
         end,
+        trace: None,
     })
 }
 

@@ -108,6 +108,7 @@ pub fn generate_spiral(
         cleared_polygons,
         start,
         end,
+        trace: None,
     })
 }
 

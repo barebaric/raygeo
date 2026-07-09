@@ -92,6 +92,7 @@ pub fn generate_helix(
         cleared_polygons,
         start,
         end,
+        trace: None,
     })
 }
 

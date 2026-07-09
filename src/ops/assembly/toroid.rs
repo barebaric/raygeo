@@ -96,6 +96,7 @@ pub fn generate_toroid(
         cleared_polygons,
         start,
         end,
+        trace: None,
     })
 }
 
@@ -132,6 +133,7 @@ pub fn generate_toroidal_clear(
             cleared_polygons: vec![],
             start: ToolPose { pos, heading: 0.0 },
             end: ToolPose { pos, heading: 0.0 },
+            trace: None,
         });
     }
 
@@ -151,6 +153,7 @@ pub fn generate_toroidal_clear(
             cleared_polygons: vec![],
             start: ToolPose { pos, heading: 0.0 },
             end: ToolPose { pos, heading: 0.0 },
+            trace: None,
         });
     }
 
@@ -286,6 +289,7 @@ fn build_toroidal_result(
         cleared_polygons,
         start,
         end,
+        trace: None,
     })
 }
 

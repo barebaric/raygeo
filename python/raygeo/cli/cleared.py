@@ -1,5 +1,4 @@
 from raygeo.ops.cut.cleared_area import ClearedArea
-from raygeo.trace import MoveKind
 
 # ── ClearedArea rebuild ──────────────────────────────────────────
 
@@ -14,9 +13,11 @@ def rebuild_cleared(
 ):
     """Build a ClearedArea expanded up to the Nth cutting move.
 
-    When *existing_fragments* is provided, begin with those as the
-    initial cleared state (from a previously cached CA at *start_cut*
-    cuts) and only expand cutting moves from *start_cut* onward.
+    *tp* is a list of ``(x, y, move_kind)`` where ``move_kind`` is a
+    string (``"cut"`` for material-removing moves).  When
+    *existing_fragments* is provided, begin with those as the initial
+    cleared state (from a previously cached CA at *start_cut* cuts) and
+    only expand cutting moves from *start_cut* onward.
     """
     boundary_pts = [tuple(p) for p in geometry["boundary"]]
     islands_pts = [[tuple(p) for p in isl] for isl in geometry["islands"]]
@@ -38,7 +39,7 @@ def rebuild_cleared(
     cut_count = 0
     for i in range(len(tp)):
         x, y, move_kind = tp[i]
-        if move_kind != MoveKind.CUT.value:
+        if move_kind != "cut":
             prev = (x, y)
             continue
         if prev is not None and cut_count >= start_cut:

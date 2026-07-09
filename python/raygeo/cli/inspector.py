@@ -1,4 +1,5 @@
 import math
+from typing import Any
 
 import matplotlib.pyplot as plt
 import matplotlib.widgets as _mw
@@ -8,7 +9,7 @@ from matplotlib.widgets import Button, TextBox
 
 from raygeo.cli.cleared import rebuild_cleared
 from raygeo.geo.shape.polygon import get_polygon_signed_area
-from raygeo.trace import MoveKind, get_route_detail_name
+from raygeo.trace import TraceFile, get_route_detail_name
 
 
 # ── Workaround for matplotlib 3.11 bug ────────────────────────────
@@ -44,28 +45,66 @@ def patch_widget_events() -> None:
 patch_widget_events()
 
 
+# ── Event field accessors ─────────────────────────────────────────
+# Thin read-helpers over the span/event reader API.  The trace stores
+# per-step data in `event.tool` (position/heading), `event.progress`
+# (step_idx/ops_len/status) and `event.meta` (a dict of assembler-
+# specific scalars/lists).  These helpers read with sensible defaults.
+
+_STATUS = {0: "Ok", 1: "BoundaryHit", 2: "LostEngagement", 3: "NoConvergence"}
+
+
+def _meta(event, key, default: Any = 0.0) -> Any:
+    m = event.meta
+    return m[key] if m and key in m else default
+
+
+def _has(event, key):
+    m = event.meta
+    return bool(m and key in m)
+
+
+def _kind_name(event) -> str:
+    if event.kind == "move":
+        return event.move_kind or "move"
+    return event.kind
+
+
+def _status_name(event) -> str:
+    if event.progress is not None:
+        return _STATUS.get(event.progress.status, "?")
+    return ""
+
+
 # ── Inspector ─────────────────────────────────────────────────────
 
 
 class Inspector:
-    def __init__(self, trace, tp, seed_polys, geometry):
+    def __init__(self, trace: TraceFile):
         self.trace = trace
-        # Map step_idx → trace index, skipping geometry/mat records.
-        self._motion_indices = [
-            i
-            for i in range(len(trace))
-            if trace[i].kind not in ("geometry", "mat")
+        # The assembler span (adaptive/profile) carries the geometry &
+        # MAT setup in its attrs.  Fall back to the root span.
+        self.assembler_span = next(
+            (s for s in trace.spans if s.source in ("adaptive", "profile")),
+            trace.root,
+        )
+        geo = self.assembler_span.attrs if self.assembler_span else {}
+        self.geometry = geo
+        self._mat = geo  # mat_nodes / mat_edges / ... live in attrs
+        self.seed_polys = [
+            [(p[0], p[1]) for p in poly] for poly in geo.get("seeds", [])
         ]
-        self.n_steps = len(self._motion_indices)
-        self.seed_polys = seed_polys
-        self.geometry = geometry
+        self.n_steps = len(trace.events)
         self.current = 0
         self._ca_cache = {}
         self.show_mat = False
-        self.tp, tp_was_synthetic = self._ensure_toolpath(tp)
-        self.tp_was_synthetic = tp_was_synthetic
+        # The toolpath has one entry per event (init/move/resume/exit) so
+        # that step index maps 1:1 to toolpath index — matching the
+        # original per-record toolpath semantics.
+        self.tp = self._event_toolpath()
+        self.tp_was_synthetic = True
         self._precompute_toolpath()
-        self._precompute_bridge_segments(tp_was_synthetic)
+        self._precompute_bridge_segments(self.tp_was_synthetic)
         self._build_segment_steps()
 
         self.fig, (self.ax, self.ax_panel) = plt.subplots(
@@ -108,8 +147,8 @@ class Inspector:
         self._draw(0)
 
     def _rec(self, step_idx: int):
-        """Return the trace record for a motion step index."""
-        return self.trace[self._motion_indices[step_idx]]
+        """Return the event for a motion step index."""
+        return self.trace.events[step_idx]
 
     def _on_submit(self, text):
         try:
@@ -190,38 +229,25 @@ class Inspector:
         elif event.key == "m":
             self._toggle_mat()
 
-    def _ensure_toolpath(self, tp):
-        """Return (toolpath, was_synthetic).
+    def _event_toolpath(self):
+        """One (x, y, move_kind) entry per event, in order.
 
-        When the real toolpath from the trace file is empty (e.g. a
-        partial trace saved on an error path), build a synthetic one
-        from trace-record positions.  Each record contributes
-        `rec.ops_len - prev_ops_len` copies of its position so that
-        the synthetic toolpath has exactly `max_ops_len` entries and
-        `ops_len` can be used directly as a toolpath index.  Resume
-        records (which add multiple travel commands in one go) are
-        correctly padded with extra travel points.
+        The inspector steps through events one at a time and needs each
+        event's tool position classified as cutting or not for toolpath
+        rendering, segment detection and cleared-area rebuild.  A move
+        event keeps its own move_kind; init/resume/exit are positioning
+        (non-cutting) points so the toolpath length equals the event
+        count and step index maps 1:1 to a position.
         """
-        if tp:
-            return tp, False
-        if self.n_steps == 0:
-            return tp, False
-        synthetic = []
-        prev_ops_len = 0
-        for i in range(self.n_steps):
-            rec = self._rec(i)
-            move_kind = (
-                MoveKind.TRAVEL.value
-                if rec.kind != "cut"
-                else MoveKind.CUT.value
-            )
-            delta = rec.ops_len - prev_ops_len
-            if delta < 1:
-                delta = 1
-            for _ in range(delta):
-                synthetic.append((rec.pos_x, rec.pos_y, move_kind))
-            prev_ops_len = rec.ops_len
-        return synthetic, True
+        tp = []
+        for ev in self.trace.events:
+            if ev.kind == "move":
+                mk = ev.move_kind or "travel"
+            else:
+                mk = "travel"
+            t = ev.tool
+            tp.append((t.pos_x if t else 0.0, t.pos_y if t else 0.0, mk))
+        return tp
 
     def _precompute_toolpath(self):
         """Precompute cutting edges, travel edges, and cumulative distances
@@ -244,8 +270,7 @@ class Inspector:
 
         for i in range(n_total):
             x, y, move_kind = self.tp[i]
-            # MoveKind.CUT.value == 0, anything else is travel/plunge/etc.
-            is_travel = move_kind != MoveKind.CUT.value
+            is_travel = move_kind != "cut"
 
             if is_travel:
                 if prev_any is not None:
@@ -289,17 +314,14 @@ class Inspector:
         self._all_cut_total = cum if cum > 0 else 1.0
 
     def _precompute_bridge_segments(self, tp_was_synthetic: bool = False):
-        """Precompute the bridge segment for each trace record — the
-        dashed line from the last toolpath point to the recorded tool
-        centre position when they differ (e.g. after a resume travel
-        that doesn't exactly reach the recorded pose).  Stored per
-        record so they accumulate visually across steps.
+        """Precompute the bridge segment for each event — the dashed line
+        from the last toolpath point to the recorded tool centre position
+        when they differ (e.g. after a resume travel that doesn't exactly
+        reach the recorded pose).  Stored per event so they accumulate
+        visually across steps.
 
         When *tp_was_synthetic* is true the real toolpath was empty
-        (error/partial trace), so no bridges are computed — the
-        synthetic toolpath already includes all record positions and
-        the gap would always be to the last synthetic point (exit
-        position), creating a visually distracting moving line.
+        (error/partial trace), so no bridges are computed.
         """
         self._all_bridge_segs: list[list[tuple[float, float]] | None] = [
             None
@@ -309,15 +331,19 @@ class Inspector:
 
         tp = self.tp
         for i in range(self.n_steps):
-            rec = self._rec(i)
+            ev = self._rec(i)
+            if ev.tool is None:
+                continue
             n_moves = i + 1
+            if n_moves > len(tp):
+                break
             last = tp[n_moves - 1]
-            dx = rec.pos_x - last[0]
-            dy = rec.pos_y - last[1]
+            dx = ev.tool.pos_x - last[0]
+            dy = ev.tool.pos_y - last[1]
             if math.hypot(dx, dy) > 0.01:
                 self._all_bridge_segs[i] = [
                     (last[0], last[1]),
-                    (rec.pos_x, rec.pos_y),
+                    (ev.tool.pos_x, ev.tool.pos_y),
                 ]
 
     def _get_cleared(self, n_cuts):
@@ -357,17 +383,20 @@ class Inspector:
         self.ax.clear()
         self.ax.set_aspect("equal")
 
-        rec = self._rec(step_idx)
+        ev = self._rec(step_idx)
 
         geo = self.geometry
-        boundary = geo["boundary"]
-        islands = geo["islands"]
-        tool_radius = geo["tool_radius"]
+        boundary = geo.get("boundary", [])
+        islands = geo.get("islands", [])
+        tool_radius = geo.get("tool_radius", 0.0)
 
         # ── Boundary ──
-        bx = [p[0] for p in boundary] + [boundary[0][0]]
-        by = [p[1] for p in boundary] + [boundary[0][1]]
-        self.ax.plot(bx, by, "k-", linewidth=1.5)
+        if boundary:
+            bx = [p[0] for p in boundary] + [boundary[0][0]]
+            by = [p[1] for p in boundary] + [boundary[0][1]]
+            self.ax.plot(bx, by, "k-", linewidth=1.5)
+        else:
+            bx, by = [], []
 
         # ── Seed / initial outline ──
         for poly in self.seed_polys:
@@ -387,7 +416,7 @@ class Inspector:
         # ── Cleared-area rendering (adaptive traces) ──
         has_seeds = bool(self.seed_polys) or "seeds" in geo
         n_tp_moves = step_idx + 1
-        if has_seeds:
+        if has_seeds and tool_radius:
             ca0 = self._get_cleared(0)
             envelope = ca0.envelope(tool_radius)
             for env in envelope:
@@ -397,12 +426,15 @@ class Inspector:
                 ey = [p[1] for p in env] + [env[0][1]]
                 self.ax.plot(ex, ey, "b--", linewidth=0.7, alpha=0.5)
 
-            n_cuts = sum(1 for i in range(n_tp_moves) if not self.tp[i][2])
+            n_cuts = sum(
+                1 for i in range(n_tp_moves) if self.tp[i][2] == "cut"
+            )
             ca = self._get_cleared(n_cuts)
 
-            bx = [p[0] for p in boundary] + [boundary[0][0]]
-            by = [p[1] for p in boundary] + [boundary[0][1]]
-            self.ax.fill(bx, by, color="white")
+            if boundary:
+                bxf = [p[0] for p in boundary] + [boundary[0][0]]
+                byf = [p[1] for p in boundary] + [boundary[0][1]]
+                self.ax.fill(bxf, byf, color="white")
 
             _remaining = ca.remaining()
             _frontier = ca.frontier(0.05)
@@ -450,23 +482,24 @@ class Inspector:
             self.ax.plot(ix, iy, color="dimgray", linewidth=1.0)
 
         # ── Toolpath ──
-        self._draw_toolpath(rec, n_tp_moves)
+        self._draw_toolpath(n_tp_moves)
 
         # ── Tool position ──
-        self._draw_tool(rec)
+        if ev.tool is not None:
+            self._draw_tool(ev)
 
-        # ── Wall hug points (if the record carries them) ──
-        if getattr(rec, "wall_hug_points", None):
-            self._draw_wall_hug(rec)
+        # ── Wall hug points (if the event carries them) ──
+        if _has(ev, "wall_hug_points"):
+            self._draw_wall_hug(ev)
 
         # ── MAT overlay (if MAT data exists) ──
-        if self.trace.mat_nodes:
+        if self._mat.get("mat_nodes"):
             self._draw_mat()
 
-        # ── Polygon start marker (if this record is one) ──
-        if rec.kind == "polygon_start":
+        # ── Polygon start marker (profile: first cut of a polygon) ──
+        if _meta(ev, "polygon_start", False) and ev.tool is not None:
             self.ax.axvline(
-                x=rec.pos_x,
+                x=ev.tool.pos_x,
                 linestyle=":",
                 color="#555555",
                 linewidth=0.8,
@@ -474,24 +507,26 @@ class Inspector:
             )
 
         # ── Title (minimal — details in right panel) ──
-        kind_name = rec.kind
-        status_name = rec.status.name
+        kind_name = _kind_name(ev)
+        status_name = _status_name(ev)
+        src = ev.source or ""
         self.ax.set_xlabel("X")
         self.ax.set_ylabel("Y")
         # Auto-fit axis limits to the boundary with a small margin.
-        bx_min, bx_max = min(bx), max(bx)
-        by_min, by_max = min(by), max(by)
-        mx = (bx_max - bx_min) * 0.05 + tool_radius
-        my = (by_max - by_min) * 0.05 + tool_radius
-        self.ax.set_xlim(bx_min - mx, bx_max + mx)
-        self.ax.set_ylim(by_min - my, by_max + my)
+        if bx:
+            bx_min, bx_max = min(bx), max(bx)
+            by_min, by_max = min(by), max(by)
+            mx = (bx_max - bx_min) * 0.05 + tool_radius
+            my = (by_max - by_min) * 0.05 + tool_radius
+            self.ax.set_xlim(bx_min - mx, bx_max + mx)
+            self.ax.set_ylim(by_min - my, by_max + my)
         self.ax.grid(True, alpha=0.2)
 
         # ── Right panel: parameter table ──
         self.ax_panel.clear()
         self.ax_panel.axis("off")
         cell_text, cell_colors, fmt = self._format_panel_data(
-            rec, kind_name, status_name
+            ev, kind_name, status_name, src
         )
         tbl = self.ax_panel.table(
             cellText=cell_text,
@@ -510,11 +545,11 @@ class Inspector:
         self.fig.canvas.draw_idle()
 
     def _draw_mat(self):
-        nodes = self.trace.mat_nodes
-        edges = self.trace.mat_edges
-        clearances = self.trace.mat_clearances
-        root = self.trace.mat_root
-        if not nodes or not self.show_mat:
+        nodes = self._mat.get("mat_nodes")
+        edges = self._mat.get("mat_edges") or []
+        clearances = self._mat.get("mat_clearances")
+        root = self._mat.get("mat_root")
+        if not nodes or not edges or not self.show_mat:
             return
 
         for i, j in edges:
@@ -539,9 +574,9 @@ class Inspector:
             zorder=6,
         )
 
-    def _draw_toolpath(self, rec, n_moves):
-        """Draw toolpath up to the moving-command count in this record."""
-        if n_moves == 0:
+    def _draw_toolpath(self, n_moves):
+        """Draw toolpath up to the moving-command count in this event."""
+        if n_moves == 0 or n_moves > len(self._move_to_edge_count):
             return
 
         n_edges = self._move_to_edge_count[n_moves - 1]
@@ -591,7 +626,7 @@ class Inspector:
                 )
 
         # Bridge segments: draw all gaps between the toolpath endpoint
-        # and the recorded tool position from all records up to the
+        # and the recorded tool position from all events up to the
         # current step, accumulating so previously-drawn bridges persist.
         for i in range(self.current + 1):
             seg = self._all_bridge_segs[i]
@@ -606,10 +641,11 @@ class Inspector:
                     zorder=3,
                 )
 
-    def _draw_tool(self, rec):
+    def _draw_tool(self, ev):
         """Draw tool circle, position dot, and heading arrow."""
-        x, y = rec.pos_x, rec.pos_y
-        r = self.geometry["tool_radius"]
+        t = ev.tool
+        x, y = t.pos_x, t.pos_y
+        r = self.geometry.get("tool_radius", 0.0)
 
         circle = Circle(
             (x, y), r, fill=False, edgecolor="red", linewidth=1.5, alpha=0.8
@@ -618,7 +654,7 @@ class Inspector:
         self.ax.plot(x, y, "ro", markersize=4)
 
         # Heading arrow (red)
-        h = rec.heading
+        h = t.heading
         dx = math.cos(h) * r * 2
         dy = math.sin(h) * r * 2
         self.ax.annotate(
@@ -629,7 +665,7 @@ class Inspector:
         )
 
         # Smoothed heading (orange, shorter)
-        sh = rec.smoothed_heading
+        sh = _meta(ev, "smoothed_heading", h)
         dx2 = math.cos(sh) * r * 1.5
         dy2 = math.sin(sh) * r * 1.5
         self.ax.annotate(
@@ -641,17 +677,20 @@ class Inspector:
             ),
         )
 
-    def _draw_wall_hug(self, rec):
-        counts = getattr(rec, "wall_hug_segment_counts", None) or []
+    def _draw_wall_hug(self, ev):
+        counts = _meta(ev, "wall_hug_segment_counts", [])
+        pts = _meta(ev, "wall_hug_points", [])
         if not counts:
-            counts = [len(rec.wall_hug_points)]
+            counts = [len(pts)]
         idx = 0
         for seg_i, count in enumerate(counts):
             current = seg_i == 0
             alpha = 0.9 if current else 0.4
             ms = 3 if current else 2
             for _ in range(count):
-                wx, wy = rec.wall_hug_points[idx]
+                if idx >= len(pts):
+                    break
+                wx, wy = pts[idx][0], pts[idx][1]
                 idx += 1
                 if math.isnan(wx) or math.isnan(wy):
                     continue
@@ -665,20 +704,29 @@ class Inspector:
                     alpha=alpha,
                 )
 
-    def _format_panel_data(self, rec, kind_name, status_name):
+    def _format_panel_data(self, ev, kind_name, status_name, source):
         """Build a 2-column table for the right-hand info panel.
 
         Returns (cell_text, cell_colours, extra_styles):
           cell_text  — list of [label, value] row strings
-           cell_colours — parallel list of [label_bg, value_bg] RGBA tuples
-           extra_styles — list of (row, col, props) applied via .set(**props)
+          cell_colours — parallel list of [label_bg, value_bg] RGBA tuples
+          extra_styles — list of (row, col, props) applied via .set(**props)
         """
-        h_deg = math.degrees(rec.heading)
-        sh_deg = math.degrees(rec.smoothed_heading)
-        pa_deg = math.degrees(rec.predicted_angle)
-        ia_deg = math.degrees(rec.iteration_angle)
-        eng_deg = math.degrees(rec.eng_angle)
-        step_dist = math.hypot(rec.pos_x - rec.prev_x, rec.pos_y - rec.prev_y)
+        t = ev.tool
+        pos_x = t.pos_x if t else 0.0
+        pos_y = t.pos_y if t else 0.0
+        pos_z = t.pos_z if t else 0.0
+        prev_x = t.prev_x if t else 0.0
+        prev_y = t.prev_y if t else 0.0
+        prev_z = t.prev_z if t else 0.0
+        heading = t.heading if t else 0.0
+
+        h_deg = math.degrees(heading)
+        sh_deg = math.degrees(_meta(ev, "smoothed_heading", heading))
+        pa_deg = math.degrees(_meta(ev, "predicted_angle", 0.0))
+        ia_deg = math.degrees(_meta(ev, "iteration_angle", 0.0))
+        eng_deg = math.degrees(_meta(ev, "eng_angle", 0.0))
+        step_dist = math.hypot(pos_x - prev_x, pos_y - prev_y)
 
         HDR = (0.15, 0.35, 0.55, 1.0)
         SEC = (0.92, 0.92, 0.92, 1.0)
@@ -698,26 +746,25 @@ class Inspector:
                 styles.append((r, 0, kw))
                 styles.append((r, 1, kw))
 
+        step_idx = ev.progress.step_idx if ev.progress else 0
+
         # ── Header ──
         cells.append(
             [
-                f"Step {rec.step_idx}/{self.n_steps - 1}",
-                f"{kind_name}  {status_name}",
+                f"Step {step_idx}/{self.n_steps - 1}",
+                f"{kind_name}  {status_name}".strip(),
             ]
         )
         colors.append([HDR, HDR])
         styles.append((0, 0, {"color": "white", "weight": "bold"}))
         styles.append((0, 1, {"color": "white", "weight": "bold"}))
+        if source:
+            _cell("source", source)
 
         # ── Position ──
         _cell("Position", "", bg=SEC, weight="bold")
-        pos_z = rec.pos_z if rec.pos_z is not None else 0.0
-        prev_z = rec.prev_z if rec.prev_z is not None else 0.0
-        _cell("pos", f"({rec.pos_x:.1f}, {rec.pos_y:.1f}, {pos_z:.1f})")
-        _cell(
-            "prev",
-            f"({rec.prev_x:.1f}, {rec.prev_y:.1f}, {prev_z:.1f})",
-        )
+        _cell("pos", f"({pos_x:.1f}, {pos_y:.1f}, {pos_z:.1f})")
+        _cell("prev", f"({prev_x:.1f}, {prev_y:.1f}, {prev_z:.1f})")
         _cell("step_dist", f"{step_dist:.2f}")
 
         # ── Heading ──
@@ -733,55 +780,55 @@ class Inspector:
 
         # ── Engagement ──
         _cell("Engagement", "", bg=SEC, weight="bold")
-        _cell("eng_area", f"{rec.eng_area:.3f}")
-        _cell("eng_chord", f"{rec.eng_chord:.3f}")
+        _cell("eng_area", f"{_meta(ev, 'eng_area', 0.0):.3f}")
+        _cell("eng_chord", f"{_meta(ev, 'eng_chord', 0.0):.3f}")
 
         # ── Area (mm²) ──
         _cell("Area (mm²)", "", bg=SEC, weight="bold")
+        cut_area = _meta(ev, "cut_area", None)
+        total_area = _meta(ev, "total_area", None)
+        remaining = _meta(ev, "remaining_area", None)
+        _cell("cut_area", f"{cut_area:.1f}" if cut_area is not None else "—")
         _cell(
-            "cut_area",
-            f"{rec.cut_area:.1f}" if rec.cut_area is not None else "—",
-        )
-        _cell(
-            "cleared",
-            f"{rec.total_area:.1f}" if rec.total_area is not None else "—",
+            "cleared", f"{total_area:.1f}" if total_area is not None else "—"
         )
         _cell(
             "remaining",
-            f"{rec.remaining_area:.1f}"
-            if rec.remaining_area is not None
-            else "—",
+            f"{remaining:.1f}" if remaining is not None else "—",
         )
 
         # ── Misc ──
         _cell("Misc", "", bg=SEC, weight="bold")
-        _cell("iters", str(rec.iters))
-        _cell("ops_len", str(rec.ops_len))
+        _cell("iters", str(_meta(ev, "iters", 0)))
+        _cell("ops_len", str(ev.progress.ops_len if ev.progress else 0))
 
-        # ── Polygon tracking (if the record carries it) ──
-        if rec.target_polygon_idx is not None:
+        # ── Polygon tracking (profile events) ──
+        if _has(ev, "target_polygon_idx"):
             _cell("Polygon", "", bg=SEC, weight="bold")
-            _cell("target_idx", str(int(rec.target_polygon_idx or 0)))
-            _cell("perimeter", f"{rec.polygon_perimeter:.2f}")
-            _cell("cum_dist", f"{rec.cumulative_distance:.2f}")
-            cp = rec.polygon_perimeter
-            cum = rec.cumulative_distance or 0.0
+            cp = _meta(ev, "polygon_perimeter", 0.0)
+            cum = _meta(ev, "cumulative_distance", 0.0)
+            _cell("target_idx", str(int(_meta(ev, "target_polygon_idx", 0))))
+            _cell("perimeter", f"{cp:.2f}")
+            _cell("cum_dist", f"{cum:.2f}")
             progress = (cum / cp * 100) if cp and cp > 0 else 0.0
             _cell("progress", f"{progress:.1f}%")
-            _cell("wall_dist", f"{rec.wall_distance:.3f}")
-            _cell("feed_rate", f"{rec.current_feed_rate} mm/min")
-            _cell("step_len", f"{rec.step_length_used:.3f}")
-            _cell("reductions", str(int(rec.engagement_reductions or 0)))
+            _cell("wall_dist", f"{_meta(ev, 'wall_distance', 0.0):.3f}")
+            _cell("feed_rate", f"{_meta(ev, 'current_feed_rate', 0)} mm/min")
+            _cell("step_len", f"{_meta(ev, 'step_length', 0.0):.3f}")
+            _cell(
+                "reductions", str(int(_meta(ev, "engagement_reductions", 0)))
+            )
 
-        # ── Strategy (only if the record carries resume/routing data) ──
-        if rec.resume_source is not None and rec.resume_source.value:
+        # ── Strategy (adaptive resume events) ──
+        rs = _meta(ev, "resume_source", 0)
+        if rs:
             _cell("Resume Strategy", "", bg=SEC, weight="bold")
 
             # Priority order (index 0-5) maps to ResumeSource values as:
             #   0→1(WallHug), 1→2(Segment), 2→3(Mat),
             #   3→4(Frontier), 4→6(Envelope), 5→5(Island)
             src_to_idx = {1: 0, 2: 1, 3: 2, 4: 3, 6: 4, 5: 5}
-            win_idx = src_to_idx.get(rec.resume_source.value, -1)
+            win_idx = src_to_idx.get(rs, -1)
             strat_names = [
                 "wall_hug",
                 "segment",
@@ -807,10 +854,17 @@ class Inspector:
                 13: "no_wall_hit",
             }
 
+            reasons = _meta(ev, "resume_reasons", [])
+            details = _meta(ev, "resume_details", [])
+            candidates = _meta(ev, "candidates", [])
             for i, name in enumerate(strat_names):
-                val = rec.resume_strategy_reasons[i]
-                det = rec.resume_strategy_details[i]
-                cpx, cpy, cpz = rec.resume_candidate_points[i]
+                val = reasons[i] if i < len(reasons) else 0
+                det = details[i] if i < len(details) else 0
+                if i < len(candidates):
+                    c = candidates[i]
+                    cpx, cpy, cpz = c[0], c[1], c[2]
+                else:
+                    cpx = cpy = cpz = float("nan")
                 if math.isnan(cpx) or math.isnan(cpy) or math.isnan(cpz):
                     if i == win_idx:
                         _cell(name, "ok", bg=WIN, color="darkgreen")
@@ -834,15 +888,13 @@ class Inspector:
                         color="darkgreen",
                     )
 
+            rsrc = _meta(ev, "route_source", 0)
             route_names = ["direct", "frontier", "mat", "zhop"]
-            win_route = (
-                rec.route_source.value - 1
-                if rec.route_source.value > 0
-                else -1
-            )
+            win_route = rsrc - 1 if rsrc > 0 else -1
             _cell("Routing", "", bg=SEC, weight="bold")
+            route_details = _meta(ev, "route_details", [])
             for i, name in enumerate(route_names):
-                det = rec.route_strategy_details[i]
+                det = route_details[i] if i < len(route_details) else 0
                 if i == win_route:
                     _cell(name, "ok", bg=WIN, color="darkgreen")
                 elif det == 0:

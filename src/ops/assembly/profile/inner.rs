@@ -5,9 +5,10 @@ use crate::geo::shape::polygon::{
     JoinStyle,
 };
 use crate::ops::assembly::profile::engine::{run_profile, ProfileCommon};
-use crate::ops::assembly::profile::trace::TraceRecorder;
 use crate::ops::assembly::profile::ProfileInnerOptions;
 use crate::ops::assembly::result::{self, AssemblyResult};
+
+use super::tracelet::ProfileTracelet;
 use crate::ops::container::Ops;
 use crate::ops::cut::ClearedArea;
 use crate::ops::cut::ToolPose;
@@ -66,6 +67,7 @@ pub fn profile_inner(
                     pos: zero,
                     heading: 0.0,
                 },
+                trace: None,
             });
         }
     };
@@ -94,20 +96,8 @@ pub fn profile_inner(
         polys
     };
 
-    let mut recorder = TraceRecorder::new(
-        opts.trace_path.as_ref(),
-        opts.tool_radius,
-        &opts.boundary,
-        &opts.islands,
-        &all_offset_polys,
-        &walk_order,
-    );
-
     let heading = get_polygon_heading_at(outer_poly, outer_poly[0])
         + std::f64::consts::FRAC_PI_2;
-    let init_pos =
-        Point3D::new(outer_poly[0].x, outer_poly[0].y, opts.target_z);
-    recorder.record_init(init_pos, heading, 0);
 
     let common = ProfileCommon {
         step_length: opts.step_length,
@@ -123,8 +113,11 @@ pub fn profile_inner(
         stock_to_leave: opts.stock_to_leave,
     };
 
+    let mut tracelet = ProfileTracelet::new();
+    tracelet.set_attrs(&all_offset_polys, &walk_order);
+
     let mut result =
-        run_profile(cleared, outer_poly, &common, cut_state, 0, &mut recorder)?;
+        run_profile(cleared, outer_poly, &common, cut_state, 0, &mut tracelet)?;
 
     if !accessible_indices.is_empty() {
         let mut remaining: Vec<usize> = accessible_indices;
@@ -152,18 +145,13 @@ pub fn profile_inner(
                 &common,
                 cut_state,
                 island_idx,
-                &mut recorder,
+                &mut tracelet,
             )?;
             last_end = island_result.end.pos;
             result = result::chain(result, island_result);
         }
     }
 
-    recorder.record_exit(
-        result.end.pos,
-        result.end.heading,
-        result.ops.len() as u32,
-    );
-    recorder.finish(&result.ops);
+    result.trace = Some(tracelet.finish());
     Ok(result)
 }

@@ -26,7 +26,7 @@ mod routing_mat;
 mod routing_zhop;
 mod stuck;
 pub mod tool;
-mod trace;
+mod tracelet;
 mod wallhug;
 
 use crate::dbg_log;
@@ -52,10 +52,7 @@ use std::path::PathBuf;
 
 use resume::{try_resume, ResumeCtx, MAX_RESUMES};
 use tool::Tool;
-use trace::TraceRecorder;
-
-use crate::trace_types::TraceKind;
-
+use tracelet::AdaptiveTracelet;
 // ── Named constants ────────────────────────────────────────────────────
 
 /// Maximum total steps before giving up (safety valve).
@@ -190,15 +187,6 @@ fn moving_count(ops: &Ops) -> u32 {
         .count() as u32
 }
 
-fn candidate_pts_as_flat(
-    pts: &resume::ResumeCandidatePoints,
-) -> [(f64, f64, f64); 6] {
-    std::array::from_fn(|i| match &pts[i] {
-        Some(pt) => (pt.x, pt.y, pt.z),
-        None => (f64::NAN, f64::NAN, f64::NAN),
-    })
-}
-
 enum StallResult {
     Applied,
     Exit,
@@ -211,7 +199,6 @@ struct StallState<'a> {
     tool: &'a mut Tool,
     hug_tracker: &'a mut wallhug::WallHugTracker,
     stuck_detector: &'a mut stuck::StuckDetector,
-    recorder: &'a mut trace::TraceRecorder,
     prev_pos: &'a mut Point3D,
     tp_len: &'a mut u32,
     steps_since_batch: &'a mut usize,
@@ -225,6 +212,7 @@ struct StallState<'a> {
     route_details: &'a mut [u8; 4],
     last_resume_point: &'a mut Point3D,
     resume_candidate_pts: &'a mut resume::ResumeCandidatePoints,
+    tracelet: &'a mut AdaptiveTracelet,
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -232,7 +220,7 @@ fn handle_stall(
     s: &mut StallState,
     stalled: bool,
     stuck_triggered: bool,
-    status: StepStatus,
+    _status: StepStatus,
     growth: f64,
     expected: f64,
     iter: usize,
@@ -253,12 +241,6 @@ fn handle_stall(
             s.resume_blacklist.clear();
         }
     }
-
-    let stall_status = if stuck_triggered {
-        StepStatus::Ok
-    } else {
-        status
-    };
 
     *s.resume_count += 1;
     if *s.resume_count > MAX_RESUMES {
@@ -284,8 +266,9 @@ fn handle_stall(
                 valid_total,
             );
         }
-        s.recorder.record_exit(
-            StepStatus::Ok,
+        let whp_exit = s.hug_tracker.wall_hug_ref();
+        let wsc_exit = s.hug_tracker.segment_counts_ref();
+        s.tracelet.record_exit(
             s.tool,
             s.cleared,
             *s.prev_pos,
@@ -294,9 +277,9 @@ fn handle_stall(
             s.resume_details,
             s.route_details,
             *s.last_resume_point,
-            &candidate_pts_as_flat(s.resume_candidate_pts),
-            &s.hug_tracker.wall_hug_ref(),
-            &s.hug_tracker.segment_counts_ref(),
+            s.resume_candidate_pts,
+            &whp_exit,
+            &wsc_exit,
         );
         return Ok(StallResult::Exit);
     }
@@ -343,32 +326,15 @@ fn handle_stall(
             Some(s.route_details),
         ) {
             Ok(route_source) => {
+                let resume_source_u8 = source as u8;
+                let route_source_u8 = route_source as u8;
                 s.tool.pos = rp.pos;
                 s.tool.heading = rp.heading;
                 s.tool.reset_gyro();
                 *s.tp_len = moving_count(s.ops);
-                let kind = if stuck_triggered {
-                    TraceKind::ResumeStuck
-                } else {
-                    TraceKind::ResumeStall
-                };
-                s.recorder.record_resume(
-                    kind,
-                    stall_status,
-                    source as u8,
-                    route_source as u8,
-                    s.tool,
-                    s.cleared,
-                    *s.prev_pos,
-                    *s.tp_len,
-                    s.resume_reasons,
-                    s.resume_details,
-                    s.route_details,
-                    rp.pos,
-                    &candidate_pts_as_flat(s.resume_candidate_pts),
-                    &s.hug_tracker.wall_hug_ref(),
-                    &s.hug_tracker.segment_counts_ref(),
-                );
+
+                let whp = s.hug_tracker.wall_hug_ref();
+                let wsc = s.hug_tracker.segment_counts_ref();
                 *s.prev_pos = s.tool.pos;
                 s.stuck_detector.reset(s.cleared.total_area());
                 *s.last_resume_area = s.cleared.total_area();
@@ -378,6 +344,22 @@ fn handle_stall(
                     heading: s.tool.heading,
                 };
                 s.hug_tracker.reset();
+                s.tracelet.record_resume(
+                    crate::trace_types::EventKind::Resume,
+                    s.tool,
+                    s.cleared,
+                    *s.prev_pos,
+                    *s.tp_len,
+                    resume_source_u8,
+                    route_source_u8,
+                    s.resume_reasons,
+                    s.resume_details,
+                    s.route_details,
+                    *s.last_resume_point,
+                    s.resume_candidate_pts,
+                    &whp,
+                    &wsc,
+                );
                 resume_done = true;
                 break 'resume;
             }
@@ -414,8 +396,9 @@ fn handle_stall(
             s.cleared.total_area(),
             valid_total,
         );
-        s.recorder.record_exit(
-            StepStatus::Ok,
+        let whp_exit = s.hug_tracker.wall_hug_ref();
+        let wsc_exit = s.hug_tracker.segment_counts_ref();
+        s.tracelet.record_exit(
             s.tool,
             s.cleared,
             *s.prev_pos,
@@ -424,9 +407,9 @@ fn handle_stall(
             s.resume_details,
             s.route_details,
             *s.last_resume_point,
-            &candidate_pts_as_flat(s.resume_candidate_pts),
-            &s.hug_tracker.wall_hug_ref(),
-            &s.hug_tracker.segment_counts_ref(),
+            s.resume_candidate_pts,
+            &whp_exit,
+            &wsc_exit,
         );
         return Ok(StallResult::Exit);
     }
@@ -453,8 +436,9 @@ fn handle_stall(
             valid_total,
         );
     }
-    s.recorder.record_exit(
-        stall_status,
+    let whp_exit = s.hug_tracker.wall_hug_ref();
+    let wsc_exit = s.hug_tracker.segment_counts_ref();
+    s.tracelet.record_exit(
         s.tool,
         s.cleared,
         *s.prev_pos,
@@ -463,9 +447,9 @@ fn handle_stall(
         s.resume_details,
         s.route_details,
         *s.last_resume_point,
-        &candidate_pts_as_flat(s.resume_candidate_pts),
-        &s.hug_tracker.wall_hug_ref(),
-        &s.hug_tracker.segment_counts_ref(),
+        s.resume_candidate_pts,
+        &whp_exit,
+        &wsc_exit,
     );
     let all_blacklisted =
         s.resume_reasons.contains(&resume::REASON_BLACKLISTED);
@@ -497,6 +481,7 @@ pub fn adaptive_clearing(
                 pos: Point3D::ZERO,
                 heading: 0.0,
             },
+            trace: None,
         });
     }
     if cleared.is_empty() {
@@ -511,6 +496,7 @@ pub fn adaptive_clearing(
                 pos: Point3D::ZERO,
                 heading: 0.0,
             },
+            trace: None,
         });
     }
 
@@ -569,7 +555,16 @@ pub fn adaptive_clearing(
         target_area_pd,
     );
 
-    // ── 3. Continuous spiral: step → expand → repeat ─────────────
+    // ── 3. Tracelet — always-on event collector ────────────────────
+
+    let mut tracelet = AdaptiveTracelet::new(opts);
+    tracelet.set_seeds(cleared.fragments());
+    if let Some(ref ma) = mat {
+        tracelet.set_mat(ma);
+    }
+    tracelet.record_init(&tool, cleared);
+
+    // ── 4. Continuous spiral: step → expand → repeat ─────────────
 
     let mut ops = Ops::new();
     ops.apply_state(cut_state);
@@ -599,16 +594,6 @@ pub fn adaptive_clearing(
     // Points from previous segments are preserved for fallback
     // resume attempts and pruned when the tool sweeps near them.
     let mut hug_tracker = wallhug::WallHugTracker::new();
-
-    let mut recorder = TraceRecorder::new(opts, cleared, mat.as_ref());
-    recorder.record_init(
-        &tool,
-        cleared,
-        tool.pos,
-        tp_len,
-        &hug_tracker.wall_hug_ref(),
-        &hug_tracker.segment_counts_ref(),
-    );
 
     // Stuck detection: every STUCK_CHECK_INTERVAL steps, verify the
     // cleared area has grown by at least the expected amount.  If not,
@@ -653,8 +638,7 @@ pub fn adaptive_clearing(
         // responsive even in release builds.
         if let Some(check) = opts.cancel_check {
             if check() {
-                recorder.record_exit(
-                    StepStatus::Ok,
+                tracelet.record_exit(
                     &tool,
                     cleared,
                     prev_pos,
@@ -663,7 +647,7 @@ pub fn adaptive_clearing(
                     &resume_details,
                     &route_details,
                     last_resume_point,
-                    &candidate_pts_as_flat(&resume_candidate_pts),
+                    &resume_candidate_pts,
                     &hug_tracker.wall_hug_ref(),
                     &hug_tracker.segment_counts_ref(),
                 );
@@ -695,20 +679,6 @@ pub fn adaptive_clearing(
                 iter,
                 frag_total,
                 valid_total,
-            );
-            recorder.record_exit(
-                StepStatus::Ok,
-                &tool,
-                cleared,
-                prev_pos,
-                tp_len,
-                &resume_reasons,
-                &resume_details,
-                &route_details,
-                last_resume_point,
-                &candidate_pts_as_flat(&resume_candidate_pts),
-                &hug_tracker.wall_hug_ref(),
-                &hug_tracker.segment_counts_ref(),
             );
             break;
         }
@@ -807,7 +777,6 @@ pub fn adaptive_clearing(
                 tool: &mut tool,
                 hug_tracker: &mut hug_tracker,
                 stuck_detector: &mut stuck_detector,
-                recorder: &mut recorder,
                 prev_pos: &mut prev_pos,
                 tp_len: &mut tp_len,
                 steps_since_batch: &mut steps_since_batch,
@@ -821,6 +790,7 @@ pub fn adaptive_clearing(
                 route_details: &mut route_details,
                 last_resume_point: &mut last_resume_point,
                 resume_candidate_pts: &mut resume_candidate_pts,
+                tracelet: &mut tracelet,
             };
             match handle_stall(
                 &mut stall,
@@ -882,22 +852,18 @@ pub fn adaptive_clearing(
             crate::types::Point::new(tool.pos.x, tool.pos.y),
             opts.tool_radius,
         );
-        recorder.record_cut(
-            status,
+        tracelet.record_cut(
             &tool,
             cleared,
-            prev_pos,
-            tp_len,
             result.iters as u32,
-            result.iteration_angle,
             eng.angle,
             eng.area,
             eng.chord_depth,
+            result.iteration_angle,
             ca,
-            &hug_tracker.wall_hug_ref(),
-            &hug_tracker.segment_counts_ref(),
+            prev_pos,
+            tp_len,
         );
-
         prev_pos = tool.pos;
         // Clear blacklist only when area growth since the last resume
         // exceeds the engagement at the current tool position.  Tiny
@@ -915,7 +881,19 @@ pub fn adaptive_clearing(
         cleared.commit_batch_local();
     }
 
-    recorder.finish(&ops);
+    tracelet.record_exit(
+        &tool,
+        cleared,
+        prev_pos,
+        tp_len,
+        &resume_reasons,
+        &resume_details,
+        &route_details,
+        last_resume_point,
+        &resume_candidate_pts,
+        &hug_tracker.wall_hug_ref(),
+        &hug_tracker.segment_counts_ref(),
+    );
 
     let cleared_polygons = cleared.fragments().to_vec();
 
@@ -930,6 +908,7 @@ pub fn adaptive_clearing(
             pos: tool.pos,
             heading: tool.heading,
         },
+        trace: Some(tracelet.finish()),
     })
 }
 

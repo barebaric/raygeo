@@ -1,4 +1,4 @@
-//! Generic binary trace file writer.
+//! Generic binary trace file writer with span-aware facade.
 //!
 //! Writes a single self-contained binary trace file with the layout:
 //!
@@ -7,6 +7,9 @@
 //!   records:  record_count × length-prefixed msgpack blobs
 //!            (4-byte LE length + msgpack-serialized record struct)
 //! ```
+//!
+//! When no path is given, the tracer becomes a no-op handle — all
+//! methods do nothing.
 //!
 //! Gated by ``cfg(debug_assertions)`` so tracing has zero cost in release
 //! builds.  Callers should guard all [`Tracer`] usage with the same cfg or
@@ -17,32 +20,27 @@ use std::path::PathBuf;
 
 use serde::Serialize;
 
-/// Opaque binary trace file writer.
-///
-/// Records are length-prefixed msgpack blobs buffered in memory and
-/// flushed at [`finish`] time.
-///
-/// A [`Drop`] implementation ensures that buffered records are always
-/// flushed — even when the caller returns early with an error or when a
-/// panic unwinds — so the trace file can be inspected for debugging
-/// purposes.
-pub(crate) struct Tracer {
+use crate::trace_types::{
+    EventKind, Meta, MoveKind, ProgressSnapshot, SpanRecord, ToolSnapshot,
+    TraceEvent,
+};
+
+/// Internal state for an active trace file.
+struct TracerInner {
     file: std::fs::File,
     count: u32,
     /// Buffered length-prefixed msgpack blobs, flushed in [`finish`] (or [`Drop`]).
     records: Vec<u8>,
-    /// Set by [`finish`]; when `false` the [`Drop`] impl writes buffered
+    /// Set by [`flush`]; when `false` the [`Drop`] impl writes buffered
     /// records and patches the record count.
     finalized: bool,
 }
 
-impl Tracer {
-    /// Open a new trace file, write the 12-byte header (magic + version +
-    /// reserved + record-count placeholder).
-    pub(crate) fn open(path: &PathBuf) -> std::io::Result<Self> {
+impl TracerInner {
+    fn new(path: &PathBuf) -> std::io::Result<Self> {
         let mut file = std::fs::File::create(path)?;
         file.write_all(b"RGEO")?;
-        file.write_all(&2u16.to_le_bytes())?; // format version = 2
+        file.write_all(&3u16.to_le_bytes())?; // format version = 3
         file.write_all(&0u16.to_le_bytes())?; // reserved
         file.write_all(&0u32.to_le_bytes())?; // record count placeholder
         Ok(Self {
@@ -53,10 +51,7 @@ impl Tracer {
         })
     }
 
-    /// Buffer one msgpack-serialized record.  The record is serialized
-    /// with `rmp_serde` and stored as a 4-byte length prefix followed by
-    /// the msgpack bytes.  Records are written to disk in [`finish`].
-    pub(crate) fn write<T: Serialize>(&mut self, record: &T) {
+    fn write<T: Serialize>(&mut self, record: &T) {
         let bytes = rmp_serde::to_vec_named(record).unwrap_or_else(|e| {
             panic!("failed to serialize trace record: {e}")
         });
@@ -66,9 +61,10 @@ impl Tracer {
         self.count += 1;
     }
 
-    /// Finalise the file: flush buffered records, then patch the
-    /// record count into the header.
-    pub(crate) fn finish(&mut self) -> std::io::Result<()> {
+    fn flush(&mut self) -> std::io::Result<()> {
+        if self.finalized {
+            return Ok(());
+        }
         self.file.write_all(&self.records)?;
         self.file.seek(SeekFrom::Start(8))?;
         self.file.write_all(&self.count.to_le_bytes())?;
@@ -77,7 +73,7 @@ impl Tracer {
     }
 }
 
-impl Drop for Tracer {
+impl Drop for TracerInner {
     fn drop(&mut self) {
         if self.finalized {
             return;
@@ -85,5 +81,154 @@ impl Drop for Tracer {
         let _ = self.file.write_all(&self.records);
         let _ = self.file.seek(SeekFrom::Start(8));
         let _ = self.file.write_all(&self.count.to_le_bytes());
+    }
+}
+
+/// Span-aware trace file writer.
+///
+/// All methods are no-ops when the tracer was opened with `None`.
+pub(crate) struct Tracer {
+    inner: Option<TracerInner>,
+    next_span_id: u32,
+    next_seq: u32,
+}
+
+impl Tracer {
+    /// Open a tracer. `None` path => a no-op handle (all methods do nothing).
+    pub(crate) fn open(path: Option<PathBuf>) -> Self {
+        let inner = match path {
+            Some(p) => TracerInner::new(&p).ok(),
+            None => None,
+        };
+        Self {
+            inner,
+            next_span_id: 1,
+            next_seq: 0,
+        }
+    }
+
+    /// Begin a span. Returns the span id; caller must pair with [`exit`].
+    pub(crate) fn enter(
+        &mut self,
+        parent: u32,
+        source: &str,
+        label: &str,
+        attrs: Option<Meta>,
+    ) -> u32 {
+        let Some(ref mut inner) = self.inner else {
+            return 0;
+        };
+        let id = self.next_span_id;
+        self.next_span_id += 1;
+        inner.write(&SpanRecord {
+            kind: EventKind::SpanStart as u8,
+            id,
+            parent,
+            source: source.to_string(),
+            label: label.to_string(),
+            attrs,
+        });
+        id
+    }
+
+    /// Close a span previously opened with [`enter`].
+    pub(crate) fn exit(&mut self, span: u32, source: &str) {
+        let Some(ref mut inner) = self.inner else {
+            return;
+        };
+        inner.write(&SpanRecord {
+            kind: EventKind::SpanEnd as u8,
+            id: span,
+            parent: 0,
+            source: source.to_string(),
+            label: String::new(),
+            attrs: None,
+        });
+    }
+
+    /// Emit an Init event (initial tool state of a span).
+    pub(crate) fn init(
+        &mut self,
+        span: u32,
+        source: &str,
+        tool: ToolSnapshot,
+        progress: ProgressSnapshot,
+        meta: Option<Meta>,
+    ) {
+        let Some(ref mut inner) = self.inner else {
+            return;
+        };
+        let seq = self.next_seq;
+        self.next_seq += 1;
+        inner.write(&TraceEvent {
+            kind: EventKind::Init as u8,
+            seq,
+            span,
+            source: source.to_string(),
+            move_kind: None,
+            tool: Some(tool),
+            progress: Some(progress),
+            meta,
+        });
+    }
+
+    /// Emit a Move event (one toolpath point).
+    pub(crate) fn move_point(
+        &mut self,
+        span: u32,
+        source: &str,
+        kind: MoveKind,
+        tool: ToolSnapshot,
+        progress: Option<ProgressSnapshot>,
+        meta: Option<Meta>,
+    ) {
+        let Some(ref mut inner) = self.inner else {
+            return;
+        };
+        let seq = self.next_seq;
+        self.next_seq += 1;
+        inner.write(&TraceEvent {
+            kind: EventKind::Move as u8,
+            seq,
+            span,
+            source: source.to_string(),
+            move_kind: Some(kind as u8),
+            tool: Some(tool),
+            progress,
+            meta,
+        });
+    }
+
+    /// Emit a generic event (Resume, Exit, etc.).
+    pub(crate) fn event(
+        &mut self,
+        span: u32,
+        source: &str,
+        kind: EventKind,
+        tool: Option<ToolSnapshot>,
+        meta: Option<Meta>,
+    ) {
+        let Some(ref mut inner) = self.inner else {
+            return;
+        };
+        let seq = self.next_seq;
+        self.next_seq += 1;
+        inner.write(&TraceEvent {
+            kind: kind as u8,
+            seq,
+            span,
+            source: source.to_string(),
+            move_kind: None,
+            tool,
+            progress: None,
+            meta,
+        });
+    }
+
+    /// Flush buffered records to disk and patch the count. Idempotent.
+    pub(crate) fn finish(&mut self) {
+        if let Some(ref mut inner) = self.inner {
+            let _ = inner.flush();
+        }
     }
 }

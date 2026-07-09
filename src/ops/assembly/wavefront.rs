@@ -132,5 +132,6 @@ pub fn adaptive_wavefronts(
             heading: 0.0,
         },
         ops,
+        trace: None,
     })
 }
