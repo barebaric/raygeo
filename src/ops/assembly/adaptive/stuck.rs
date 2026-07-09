@@ -88,7 +88,8 @@ impl StuckDetector {
 /// After each successful step, verify the tool is not cutting
 /// predominantly on the wrong side of the step direction.  Panics if
 /// the wrong-side cut area exceeds the correct side and the per-step
-/// target.
+/// target — this signals a stepper bug (the solver should never yield
+/// an incorrect angle).
 pub(super) fn wrong_side_safehold(
     cleared: &ClearedArea,
     dir_sign: f64,

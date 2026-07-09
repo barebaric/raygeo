@@ -509,6 +509,20 @@ fn step_inner(
             if !point_in_valid_area(la_cand, opts.valid_area) {
                 continue;
             }
+            // Reject directions whose first step cuts predominantly on
+            // the wrong side — the lookahead probes future engagement,
+            // but the actual step taken (pos → la_cand) must not send
+            // the tool in a wrong-cutside direction.
+            if opts.dir_sign != 0.0 {
+                let (fa, fl) =
+                    cleared.cut_area_split(pos, la_cand, opts.radius);
+                let fr = fa - fl;
+                let fw = if opts.dir_sign < 0.0 { fl } else { fr };
+                if fw > opts.target_area_pd * opts.step_length * 0.5 && fw > fr
+                {
+                    continue;
+                }
+            }
             let mut probe_pos = la_cand;
             let mut la_area = 0.0;
             let mut la_left = 0.0;
