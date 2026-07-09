@@ -163,8 +163,8 @@ __images__ = [
     {
         "heading": "find_narrow_passages",
         "caption": (
-            "Threshold sensitivity: at max_width=8 barely registers;"
-            " at max_width=20 more qualifies"
+            "Threshold sensitivity: narrow width barely registers;"
+            " wider width qualifies more"
         ),
         "function": generate_threshold_comparison,
     },
@@ -179,7 +179,7 @@ __images__ = [
     {
         "heading": "find_narrow_passages",
         "caption": (
-            "Two triangular islands (4 mm gap); morphological opening"
+            "Two triangular islands with a narrow gap; morphological opening"
             " creates narrow passage (crimson)"
         ),
         "function": generate_triangular_islands,

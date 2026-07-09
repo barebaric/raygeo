@@ -272,7 +272,7 @@ __images__ = [
     {
         "heading": "build_entry_workplan",
         "caption": (
-            "Entry workplan for 3 shapes: rectangle (Helix+FlatSpiral),"
+            "Entry workplan: rectangle (Helix+FlatSpiral),"
             " H-shape (ToroidalClear), cup (RampEntry)."
         ),
         "function": generate_entry_workplan,

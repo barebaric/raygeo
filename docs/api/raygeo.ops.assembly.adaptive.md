@@ -71,18 +71,13 @@ built by **raygeo.cnc.machining.wavefront.build_wavefront_workplan** and execute
 | `trace_path`           | `str &#124; None = None`                       | When set, write a per-step binary trace file for the Python inspector (debug builds only).                                        |
 | _Returns_              | `ops.assembly.result.AssemblyResult`           | Ops with cutting commands (entry not included).                                                                                   |
 
-![Circle-seed clearing in 60×60 pocket with central island: 2D view of seed, toolpath, and remaining.](images/ops-assembly-adaptive-adaptive-clearing-centre-island.png)
+![Circle-seed clearing in a square pocket with central island: seed, toolpath, and remaining.](images/ops-assembly-adaptive-adaptive-clearing-centre-island.png)
 
-*Circle-seed clearing in 60×60 pocket with central island: 2D view of seed, toolpath, and
-remaining.*
+*Circle-seed clearing in a square pocket with central island: seed, toolpath, and remaining.*
 
-![Narrow pocket (80×14) 3D view of circle-seed adaptive clearing.](images/ops-assembly-adaptive-adaptive-clearing-narrow-3d.png)
+![Narrow pocket — 3D toolpath view (left) and 2D top-down with seed/remaining overlay (right).](images/ops-assembly-adaptive-adaptive-clearing-narrow.png)
 
-*Narrow pocket (80×14) 3D view of circle-seed adaptive clearing.*
-
-![Narrow pocket (80×14) 2D top-down: seed clearing, toolpath gradient, and remaining bands.](images/ops-assembly-adaptive-adaptive-clearing-narrow-2d.png)
-
-*Narrow pocket (80×14) 2D top-down: seed clearing, toolpath gradient, and remaining bands.*
+*Narrow pocket — 3D toolpath view (left) and 2D top-down with seed/remaining overlay (right).*
 
 ![Constant-engagement clearing cuts, MAT-routed travel links, coloured by progress.](images/ops-assembly-adaptive-adaptive-clearing-demo.png)
 

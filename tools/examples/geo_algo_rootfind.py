@@ -214,7 +214,7 @@ __images__ = [
     {
         "heading": None,
         "caption": (
-            "Bisection, solve_secant, and Illinois on $x^3 - 2x - 5$."
+            "Bisection, solve_secant, and Illinois on a cubic polynomial."
         ),
         "function": generate_rootfind,
     },
@@ -228,7 +228,7 @@ __images__ = [
     {
         "heading": "bisect",
         "caption": (
-            "Iterations to reach a given tolerance for sqrt(2):"
+            "Iterations to reach a given tolerance:"
             " solve_secant needs far fewer than bisection."
         ),
         "function": generate_precision,

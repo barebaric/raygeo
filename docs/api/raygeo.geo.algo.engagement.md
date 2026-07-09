@@ -78,9 +78,9 @@ of radius `r` centred at the origin.
 | `r`       | `float` | Disk radius.                  |
 | _Returns_ | `float` | Area of the circular segment. |
 
-![Left: disk segment shaded right of ; right: segment area vs  from  to ](images/geo-algo-engagement-disk-segment-area.png)
+![Left: shaded disk segment right of an offset; right: segment area vs offset from  to ](images/geo-algo-engagement-disk-segment-area.png)
 
-*Left: disk segment shaded right of `x = 1.5`; right: segment area vs `x` from `-r` to `+r`*
+*Left: shaded disk segment right of an offset; right: segment area vs offset from `-r` to `+r`*
 
 ### `get_point_engagement()`
 
@@ -101,6 +101,6 @@ Engagement angle, area, and chord depth at a disk centre.
 | `fragments` | `list[list[tuple[float, float]]]` | List of polygons (cleared fragments). |
 | _Returns_   | `tuple[float, float, float]`      | `(angle_rad, area, chord_depth)`.     |
 
-![Engagement angle field around a square cleared area for a disk of radius 3 mm.](images/geo-algo-engagement-point-engagement-field.png)
+![Engagement angle field around a square cleared area for a disk of given radius.](images/geo-algo-engagement-point-engagement-field.png)
 
-*Engagement angle field around a square cleared area for a disk of radius 3 mm.*
+*Engagement angle field around a square cleared area for a disk of given radius.*

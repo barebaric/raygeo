@@ -100,9 +100,9 @@ corner is preserved.
 | `iterations` | `int = 6`                                      | Number of Chaikin cutting passes (default 6).        |
 | _Returns_    | `list[tuple[float, float]]`                    | Corner-smoothed polyline as a list of (x, y) tuples. |
 
-![ rounds sharp corners (>45°) via Chaikin cut, respecting obstacle clearance](images/geo-algo-smooth-chaikin-corner-cut.png)
+![ rounds sharp corners via Chaikin cut, respecting obstacle clearance](images/geo-algo-smooth-chaikin-corner-cut.png)
 
-*`chaikin_corner_cut` rounds sharp corners (>45°) via Chaikin cut, respecting obstacle clearance*
+*`chaikin_corner_cut` rounds sharp corners via Chaikin cut, respecting obstacle clearance*
 
 ### `compute_gaussian_kernel()`
 

@@ -333,8 +333,8 @@ __images__ = [
     {
         "heading": "trim_to_polygons",
         "caption": (
-            "MAT trimmed to cleared area: original MAT (gray) and"
-            " trimmed nodes (blue) after 10 clearing passes"
+            "MAT trimmed to cleared area: original (gray) and"
+            " trimmed nodes (blue) after multiple clearing passes"
         ),
         "function": generate_mat_trimming,
     },

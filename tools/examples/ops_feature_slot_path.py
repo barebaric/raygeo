@@ -327,7 +327,7 @@ __images__ = [
     {
         "heading": "find_slot_path",
         "caption": (
-            "find_slot_path on 4 slots: horizontal, vertical,"
+            "find_slot_path on multiple slots: horizontal, vertical,"
             " too-narrow (None), and sinusoidal S-slot."
         ),
         "function": generate_slot_path_scenarios,

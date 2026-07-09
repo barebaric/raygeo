@@ -449,7 +449,7 @@ __images__ = [
     {
         "heading": "chaikin_corner_cut",
         "caption": (
-            "``chaikin_corner_cut`` rounds sharp corners (>45°) via"
+            "``chaikin_corner_cut`` rounds sharp corners via"
             " Chaikin cut, respecting obstacle clearance"
         ),
         "function": generate_chaikin_corner_cut,

@@ -215,6 +215,6 @@ Perform one forward step using the area-based adaptive solver.
 
 *90° corner: the solver deflects the heading to keep engagement constant around the turn.*
 
-![Engagement histogram (200 steps, straight wall). Tight peak near target shows stable behaviour.](images/ops-cut-stepper-engagement-histogram.png)
+![Engagement histogram on a straight wall. Tight peak near target shows stable behaviour.](images/ops-cut-stepper-engagement-histogram.png)
 
-*Engagement histogram (200 steps, straight wall). Tight peak near target shows stable behaviour.*
+*Engagement histogram on a straight wall. Tight peak near target shows stable behaviour.*

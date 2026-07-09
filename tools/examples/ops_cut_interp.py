@@ -230,7 +230,7 @@ __images__ = [
     {
         "heading": "rotate",
         "caption": (
-            "Rotation of a unit vector ``(1, 0)`` by various angles"
+            "Rotation of a unit vector by various angles"
             " using :func:`~raygeo.ops.cut.interp.rotate`."
         ),
         "function": generate_rotate_demo,

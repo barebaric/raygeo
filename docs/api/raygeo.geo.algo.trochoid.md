@@ -36,9 +36,9 @@ Generate a trochoidal path along a carrier polyline.
 | _Returns_              | `list[tuple[float, float, float]]` | List of (x, y, z) points forming the trochoidal path.               |
 | _Complexity_           |                                    | O(n) time, O(n) space where n is proportional to path length / step |
 
-![Trochoidal toolpath along a straight carrier — 60° vs 120°](images/geo-algo-trochoid-straight.png)
+![Trochoidal toolpath along a straight carrier — shallow vs steep engagement](images/geo-algo-trochoid-straight.png)
 
-*Trochoidal toolpath along a straight carrier — 60° vs 120°*
+*Trochoidal toolpath along a straight carrier — shallow vs steep engagement*
 
 ![Trochoidal toolpath around an L-shaped corner](images/geo-algo-trochoid-l-shaped.png)
 
@@ -75,6 +75,6 @@ along the carrier.
 | _Returns_              | `list[tuple[float, float, float]]` | List of (x, y, z) points forming the ramped trochoidal path.        |
 | _Complexity_           |                                    | O(n) time, O(n) space where n is proportional to path length / step |
 
-![3D ramped trochoid along an 80 mm carrier with Z descending from z_start=4 to z_end=-2.](images/geo-algo-trochoid-ramped-3d.png)
+![3D ramped trochoid along a long carrier with Z descending from start to end.](images/geo-algo-trochoid-ramped-3d.png)
 
-*3D ramped trochoid along an 80 mm carrier with Z descending from z_start=4 to z_end=-2.*
+*3D ramped trochoid along a long carrier with Z descending from start to end.*

@@ -3,9 +3,9 @@ title: raygeo.geo.algo.rootfind
 sidebar_label: raygeo.geo.algo.rootfind
 ---
 
-![Bisection, solve_secant, and Illinois on $x^3 - 2x - 5$.](images/geo-algo-rootfind-rootfind.png)
+![Bisection, solve_secant, and Illinois on a cubic polynomial.](images/geo-algo-rootfind-rootfind.png)
 
-*Bisection, solve_secant, and Illinois on $x^3 - 2x - 5$.* 1D root-finding methods: bisection,
+*Bisection, solve_secant, and Illinois on a cubic polynomial.* 1D root-finding methods: bisection,
 solve_secant, Illinois.
 
 ## Functions
@@ -37,9 +37,9 @@ Bisection root-finding.
 
 *Error vs iteration count: solve_secant fastest, bisection slowest*
 
-![Iterations to reach a given tolerance for sqrt(2): solve_secant needs far fewer than bisection.](images/geo-algo-rootfind-precision.png)
+![Iterations to reach a given tolerance: solve_secant needs far fewer than bisection.](images/geo-algo-rootfind-precision.png)
 
-*Iterations to reach a given tolerance for sqrt(2): solve_secant needs far fewer than bisection.*
+*Iterations to reach a given tolerance: solve_secant needs far fewer than bisection.*
 
 ### `bisect_tracked()`
 

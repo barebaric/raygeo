@@ -162,7 +162,8 @@ __images__ = [
     {
         "heading": "get_trochoid_along_3d",
         "caption": (
-            "Trochoidal toolpath along a straight carrier — 60° vs 120°"
+            "Trochoidal toolpath along a straight carrier —"
+            " shallow vs steep engagement"
         ),
         "function": generate_straight,
     },
@@ -174,8 +175,8 @@ __images__ = [
     {
         "heading": "get_trochoid_along_3d_ramped",
         "caption": (
-            "3D ramped trochoid along an 80 mm carrier with Z descending"
-            " from z_start=4 to z_end=-2."
+            "3D ramped trochoid along a long carrier with Z descending"
+            " from start to end."
         ),
         "function": generate_ramped_3d,
     },

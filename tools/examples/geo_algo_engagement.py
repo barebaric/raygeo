@@ -340,7 +340,7 @@ __images__ = [
         "heading": "get_point_engagement",
         "caption": (
             "Engagement angle field around a square cleared area for"
-            " a disk of radius 3 mm."
+            " a disk of given radius."
         ),
         "function": generate_point_engagement_field,
     },
@@ -355,8 +355,8 @@ __images__ = [
     {
         "heading": "get_disk_segment_area",
         "caption": (
-            "Left: disk segment shaded right of ``x = 1.5``; right:"
-            " segment area vs ``x`` from ``-r`` to ``+r``"
+            "Left: shaded disk segment right of an offset;"
+            " right: segment area vs offset from ``-r`` to ``+r``"
         ),
         "function": generate_disk_segment_area,
     },

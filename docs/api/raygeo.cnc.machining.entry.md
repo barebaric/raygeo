@@ -40,7 +40,6 @@ resort).
 | `angular_step`    | `float = 0.1`                                                | Angular step in radians (default 0.1).        |
 | _Returns_         | `list[dict]`                                                 | List of WorkplanStep dicts with a "kind" key. |
 
-![Entry workplan for 3 shapes: rectangle (Helix+FlatSpiral), H-shape (ToroidalClear), cup (RampEntry).](images/cnc-machining-entry-entry-workplan.png)
+![Entry workplan: rectangle (Helix+FlatSpiral), H-shape (ToroidalClear), cup (RampEntry).](images/cnc-machining-entry-entry-workplan.png)
 
-*Entry workplan for 3 shapes: rectangle (Helix+FlatSpiral), H-shape (ToroidalClear), cup
-(RampEntry).*
+*Entry workplan: rectangle (Helix+FlatSpiral), H-shape (ToroidalClear), cup (RampEntry).*

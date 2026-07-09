@@ -6,7 +6,7 @@ import streamlit as st
 
 from raygeo.ops import Ops
 from raygeo.ops.types import SectionType
-from tools.plot import plot_ops
+from tools.plot import plot_ops_2d
 
 
 def page_tabs():
@@ -126,7 +126,7 @@ def page_tabs():
 
     fig, axes = plt.subplots(1, 2, figsize=(14, 6))
     axes[0].set_title("Original")
-    plot_ops(axes[0], orig_ops, color="steelblue")
+    plot_ops_2d(axes[0], orig_ops)
     for cx_, cy_, tw_ in clips:
         axes[0].plot(cx_, cy_, "rx", markersize=10, markeredgewidth=2)
         axes[0].add_patch(
@@ -139,17 +139,10 @@ def page_tabs():
                 linewidth=1,
             )
         )
-    axes[0].set_aspect("equal")
     axes[0].grid(True, alpha=0.3)
 
     axes[1].set_title(f"After {mode} Tabs")
-    show_pwr = mode == "Power"
-    plot_ops(
-        axes[1],
-        result_ops,
-        color="steelblue",
-        show_power=show_pwr,
-    )
+    plot_ops_2d(axes[1], result_ops)
     for cx_, cy_, tw_ in clips:
         axes[1].plot(cx_, cy_, "rx", markersize=10, markeredgewidth=2)
     axes[1].set_aspect("equal")

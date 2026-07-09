@@ -29,6 +29,6 @@ cleared polygon is the carrier swept by *tool_radius* (Minkowski sum).
 | `state`       | `ops.state.State &#124; None = None` | Optional machine state to apply before the path. |
 | _Returns_     | `ops.assembly.result.AssemblyResult` | An **AssemblyResult** with the slot path.        |
 
-![3D forward+backward slot path through a 40×7 mm slot at constant target_z=-3, no trochoid.](images/ops-assembly-slot-slot-3d.png)
+![3D forward+backward slot path through a rectangular slot at constant depth, no trochoid.](images/ops-assembly-slot-slot-3d.png)
 
-*3D forward+backward slot path through a 40×7 mm slot at constant target_z=-3, no trochoid.*
+*3D forward+backward slot path through a rectangular slot at constant depth, no trochoid.*

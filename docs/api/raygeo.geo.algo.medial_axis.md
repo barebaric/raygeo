@@ -132,6 +132,7 @@ given polygons.
 | `polygons` | `Sequence[Sequence[tuple[float, float]]]` | List of polygons to trim against. |
 | _Returns_  | `MedialAxis`                              | Trimmed `MedialAxis`.             |
 
-![MAT trimmed to cleared area: original MAT (gray) and trimmed nodes (blue) after 10 clearing passes](images/geo-algo-medial-axis-mat-trimming.png)
+![MAT trimmed to cleared area: original (gray) and trimmed nodes (blue) after multiple clearing passes](images/geo-algo-medial-axis-mat-trimming.png)
 
-*MAT trimmed to cleared area: original MAT (gray) and trimmed nodes (blue) after 10 clearing passes*
+*MAT trimmed to cleared area: original (gray) and trimmed nodes (blue) after multiple clearing
+passes*

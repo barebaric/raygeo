@@ -29,6 +29,6 @@ point on the entry side. Both points are valid tool centres that fit within the 
 | `tool_radius`  | `float = 3`                             | Tool radius in mm (default 3.0).                            |
 | _Returns_      | `list[tuple[float, float]] &#124; None` | `[(x1, y1), (x2, y2)]` or `None` if the slot is too narrow. |
 
-![find_slot_path on 4 slots: horizontal, vertical, too-narrow (None), and sinusoidal S-slot.](images/ops-feature-slot-path-slot-path-scenarios.png)
+![find_slot_path on multiple slots: horizontal, vertical, too-narrow (None), and sinusoidal S-slot.](images/ops-feature-slot-path-slot-path-scenarios.png)
 
-*find_slot_path on 4 slots: horizontal, vertical, too-narrow (None), and sinusoidal S-slot.*
+*find_slot_path on multiple slots: horizontal, vertical, too-narrow (None), and sinusoidal S-slot.*

@@ -149,6 +149,6 @@ Rotate a 2D vector by *angle* radians.
 | `angle`   | `float`               | Rotation angle in radians. |
 | _Returns_ | `tuple[float, float]` | Rotated vector `(x', y')`. |
 
-![Rotation of a unit vector  by various angles using :func:.](images/ops-cut-interp-rotate-demo.png)
+![Rotation of a unit vector by various angles using :func:.](images/ops-cut-interp-rotate-demo.png)
 
-*Rotation of a unit vector `(1, 0)` by various angles using :func:`~raygeo.ops.cut.interp.rotate`.*
+*Rotation of a unit vector by various angles using :func:`~raygeo.ops.cut.interp.rotate`.*

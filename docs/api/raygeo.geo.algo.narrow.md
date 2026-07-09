@@ -32,14 +32,14 @@ clipped to the pocket.
 | `max_width` | `float = 10`                                                 | Passage-width threshold in mm.                       |
 | _Returns_   | `list[Sequence[tuple[float, float]]]`                        | List of polygons (each a list of `(x, y)` vertices). |
 
-![Threshold sensitivity: at max_width=8 barely registers; at max_width=20 more qualifies](images/geo-algo-narrow-threshold-comparison.png)
+![Threshold sensitivity: narrow width barely registers; wider width qualifies more](images/geo-algo-narrow-threshold-comparison.png)
 
-*Threshold sensitivity: at max_width=8 barely registers; at max_width=20 more qualifies*
+*Threshold sensitivity: narrow width barely registers; wider width qualifies more*
 
 ![Pocket with a central island: narrow passages (crimson) form in the necks around the island](images/geo-algo-narrow-with-island.png)
 
 *Pocket with a central island: narrow passages (crimson) form in the necks around the island*
 
-![Two triangular islands (4 mm gap); morphological opening creates narrow passage (crimson)](images/geo-algo-narrow-triangular-islands.png)
+![Two triangular islands with a narrow gap; morphological opening creates narrow passage (crimson)](images/geo-algo-narrow-triangular-islands.png)
 
-*Two triangular islands (4 mm gap); morphological opening creates narrow passage (crimson)*
+*Two triangular islands with a narrow gap; morphological opening creates narrow passage (crimson)*

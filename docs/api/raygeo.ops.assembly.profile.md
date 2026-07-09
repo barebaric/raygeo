@@ -56,10 +56,9 @@ so that the tool clears the material along the pocket walls and around each isla
 | `trace_path`                 | `str &#124; None = None`                 | Optional path to write a binary trace file (default None).         |
 | _Returns_                    | `ops.assembly.result.AssemblyResult`     | An **AssemblyResult** with the profiling path.                     |
 
-![profile_inner on 60×60 pocket with square island — 2D: boundary, island, offset walks, cuts (turbo).](images/ops-assembly-profile-profile-inner-rect-with-square-island-2d.png)
+![profile_inner on a square pocket with island — 2D: boundary, island, offset walks, cuts (turbo).](images/ops-assembly-profile-profile-inner-rect-with-square-island-2d.png)
 
-*profile_inner on 60×60 pocket with square island — 2D: boundary, island, offset walks, cuts
-(turbo).*
+*profile_inner on a square pocket with island — 2D: boundary, island, offset walks, cuts (turbo).*
 
 ![profile_inner with two accessible islands — nearest-neighbour order via turbo gradient.](images/ops-assembly-profile-profile-inner-rect-with-two-islands-2d.png)
 
@@ -69,13 +68,13 @@ so that the tool clears the material along the pocket walls and around each isla
 
 *profile_inner on an L-shaped pocket with island — 3D: cut path at cut_z, rapids at safe_z.*
 
-![profile_inner skips an island when channel between island and wall is < 2×tool_radius.](images/ops-assembly-profile-profile-inner-narrow-channel-skips-island.png)
+![profile_inner skips an island when the channel between island and wall is too narrow.](images/ops-assembly-profile-profile-inner-narrow-channel-skips-island.png)
 
-*profile_inner skips an island when channel between island and wall is < 2×tool_radius.*
+*profile_inner skips an island when the channel between island and wall is too narrow.*
 
-![Two-pass inner profiling: rough (0.5, orange) + finish (0.0, red) on same ClearedArea.](images/ops-assembly-profile-profile-inner-rough-then-finish.png)
+![Two-pass inner profiling: rough (orange) + finish (red) on same ClearedArea.](images/ops-assembly-profile-profile-inner-rough-then-finish.png)
 
-*Two-pass inner profiling: rough (0.5, orange) + finish (0.0, red) on same ClearedArea.*
+*Two-pass inner profiling: rough (orange) + finish (red) on same ClearedArea.*
 
 ### `profile_outer()`
 
@@ -126,13 +125,10 @@ an **AssemblyResult** with the profiling move sequence.
 | `trace_path`                 | `str &#124; None = None`                 | Optional path to write a binary trace file (default None).         |
 | _Returns_                    | `ops.assembly.result.AssemblyResult`     | An **AssemblyResult** with the profiling path.                     |
 
-![profile_outer on a 60×60 rect pocket — 2D top-down: boundary, offset, cut (turbo), travel (gray).](images/ops-assembly-profile-profile-outer-rect-2d.png)
+![profile_outer on a rect pocket — 3D (left) and 2D top-down with offset tool-centre polygon (right).](images/ops-assembly-profile-profile-outer-rect.png)
 
-*profile_outer on a 60×60 rect pocket — 2D top-down: boundary, offset, cut (turbo), travel (gray).*
-
-![profile_outer on a 60×60 rect pocket — 3D view showing cut path at cut_z and rapids at safe_z.](images/ops-assembly-profile-profile-outer-rect-3d.png)
-
-*profile_outer on a 60×60 rect pocket — 3D view showing cut path at cut_z and rapids at safe_z.*
+*profile_outer on a rect pocket — 3D (left) and 2D top-down with offset tool-centre polygon
+(right).*
 
 ![profile_outer on a circular boundary — smooth walk around the offset circle.](images/ops-assembly-profile-profile-outer-circle.png)
 
@@ -142,7 +138,6 @@ an **AssemblyResult** with the profiling move sequence.
 
 *profile_outer on an L-shaped pocket with miter join at the concave corner.*
 
-![Two-pass profiling: rough (stock_to_leave=0.5, orange) + finish (0.0, red) on the same ClearedArea.](images/ops-assembly-profile-profile-outer-rough-then-finish.png)
+![Two-pass profiling: rough (with stock, orange) + finish (red) on the same ClearedArea.](images/ops-assembly-profile-profile-outer-rough-then-finish.png)
 
-*Two-pass profiling: rough (stock_to_leave=0.5, orange) + finish (0.0, red) on the same
-ClearedArea.*
+*Two-pass profiling: rough (with stock, orange) + finish (red) on the same ClearedArea.*

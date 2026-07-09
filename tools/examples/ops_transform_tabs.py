@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 
 from raygeo.ops import Ops
 from raygeo.ops.types import SectionType
-from tools.plot import plot_ops
+from tools.plot import plot_ops_2d
 
 
 def generate_tab_operations():
@@ -61,7 +61,7 @@ def generate_tab_operations():
 
     fig6, axes6 = plt.subplots(1, 2, figsize=(14, 6))
     axes6[0].set_title("Original")
-    plot_ops(axes6[0], ops6, color="steelblue")
+    plot_ops_2d(axes6[0], ops6)
     for cx_, cy_, tw_ in clips:
         axes6[0].plot(cx_, cy_, "rx", markersize=10, markeredgewidth=2)
         axes6[0].add_patch(
@@ -78,7 +78,7 @@ def generate_tab_operations():
     axes6[0].grid(True, alpha=0.3)
 
     axes6[1].set_title("After Gap Tabs")
-    plot_ops(axes6[1], result_ops, color="steelblue")
+    plot_ops_2d(axes6[1], result_ops)
     for cx_, cy_, tw_ in clips:
         axes6[1].plot(cx_, cy_, "rx", markersize=10, markeredgewidth=2)
     axes6[1].set_aspect("equal")

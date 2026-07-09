@@ -74,6 +74,6 @@ forward pass at constant `target_z`.
 | `state`              | `ops.state.State &#124; None = None` | Optional machine state.                                                             |
 | _Returns_            | `ops.assembly.result.AssemblyResult` | An **AssemblyResult** with the ramp-down + flat-final toroidal path.                |
 
-![3D ramp-down toroidal clear zig-zagging 3x along a 20 mm carrier descending from z=2 to z=-4.](images/ops-assembly-toroid-clear-toroidal-clear-3d.png)
+![3D ramp-down toroidal clear zig-zagging along a short carrier with full ramp descent.](images/ops-assembly-toroid-clear-toroidal-clear-3d.png)
 
-*3D ramp-down toroidal clear zig-zagging 3x along a 20 mm carrier descending from z=2 to z=-4.*
+*3D ramp-down toroidal clear zig-zagging along a short carrier with full ramp descent.*
