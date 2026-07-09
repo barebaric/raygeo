@@ -1,6 +1,6 @@
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
-use pyo3_stub_gen::derive::gen_stub_pyfunction;
+use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 
 use crate::cnc::machining::plan::{self, WorkplanStep};
 use crate::geo::algo::helix::HelixDirection;
@@ -388,7 +388,7 @@ pub(crate) fn dict_to_step(d: &Bound<'_, PyDict>) -> PyResult<WorkplanStep> {
 pub(crate) fn register(machining_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     let py = machining_mod.py();
     let m = PyModule::new(py, "plan")?;
-    register_functions!(m, execute_workplan_py,);
+    m.add_class::<PyWorkplan>()?;
     machining_mod.add_submodule(&m)?;
 
     let sys_modules = py.import("sys")?.getattr("modules")?;
@@ -397,92 +397,93 @@ pub(crate) fn register(machining_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     Ok(())
 }
 
-#[gen_stub_pyfunction(
-    python = r#"
-    import collections.abc
-    import raygeo
-
-    def execute_workplan(
-        steps: list[dict],
-        pocket_boundary: collections.abc.Sequence[tuple[float, float]],
-        islands: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]] | None = None,
-        cut_feed_rate: int = 1200,
-        cut_power: float = 1.0,
-        rapid_feed_rate: int | None = None,
-    ) -> raygeo.ops.assembly.result.AssemblyResult:
-        """Execute a workplan: dispatch each step to its assembler.
-
-        Each entry in *steps* is a ``WorkplanStep`` dict as produced by a
-        builder such as :func:`raygeo.cnc.machining.wavefront.build_wavefront_workplan`
-        or :func:`raygeo.cnc.machining.entry.build_entry_workplan`. The
-        executor owns a shared cleared area, asks each step to invoke its
-        own assembler, and chains the results into a single
-        :class:`AssemblyResult`.
-
-        :param steps: List of WorkplanStep dicts (with a ``"kind"`` key).
-        :param pocket_boundary: Outer boundary of the pocket.
-        :param islands: List of island polygons (default None).
-        :param cut_feed_rate: Feed rate for cutting moves (default 1200).
-        :param cut_power: Laser power for cutting moves (default 1.0).
-        :param rapid_feed_rate: Feed rate for travel/retract moves, or
-            ``None`` to leave them unmodified (default None).
-        :returns: The combined :class:`AssemblyResult`.
-        """
-    "#,
-    module = "raygeo.cnc.machining.plan"
+/// Plan-time context and executor for a sequence of WorkplanSteps.
+///
+/// Captures the pocket boundary, islands, and safe-Z at construction
+/// time.  After extending with steps from a builder (e.g.
+/// :func:`raygeo.cnc.machining.wavefront.build_wavefront_workplan`
+/// or :func:`raygeo.cnc.machining.entry.build_entry_workplan`),
+/// call :meth:`execute` to produce a combined :class:`AssemblyResult`.
+#[gen_stub_pyclass(module = "raygeo.cnc.machining.plan")]
+#[pyclass(
+    name = "Workplan",
+    module = "raygeo.cnc.machining.plan",
+    skip_from_py_object
 )]
-#[pyfunction(name = "execute_workplan")]
-#[pyo3(signature = (
-    steps,
-    pocket_boundary,
-    islands = None,
-    cut_feed_rate = 1200,
-    cut_power = 1.0,
-    rapid_feed_rate = None,
-))]
-#[allow(clippy::too_many_arguments)]
-fn execute_workplan_py(
-    steps: &Bound<'_, PyAny>,
-    pocket_boundary: Vec<(f64, f64)>,
-    islands: Option<Vec<Vec<(f64, f64)>>>,
-    cut_feed_rate: i32,
-    cut_power: f64,
-    rapid_feed_rate: Option<i32>,
-) -> PyResult<PyAssemblyResult> {
-    let mut parsed: Vec<WorkplanStep> = Vec::new();
-    for item in steps.try_iter()? {
-        let item = item?;
-        let d = item.cast::<PyDict>()?;
-        parsed.push(dict_to_step(d)?);
+#[derive(Clone, Debug)]
+pub struct PyWorkplan {
+    inner: plan::Workplan,
+}
+
+#[gen_stub_pymethods]
+#[pymethods]
+impl PyWorkplan {
+    #[new]
+    #[pyo3(signature = (pocket_boundary, islands = None, safe_z = 2.0))]
+    fn __new__(
+        pocket_boundary: Vec<(f64, f64)>,
+        islands: Option<Vec<Vec<(f64, f64)>>>,
+        safe_z: f64,
+    ) -> Self {
+        let boundary: Polygon = pocket_boundary
+            .into_iter()
+            .map(|(x, y)| Point::new(x, y))
+            .collect();
+        let islands_vec: Vec<Polygon> = islands
+            .unwrap_or_default()
+            .into_iter()
+            .map(|h| h.into_iter().map(|(x, y)| Point::new(x, y)).collect())
+            .collect();
+        PyWorkplan {
+            inner: plan::Workplan::new(boundary, islands_vec, safe_z),
+        }
     }
 
-    let boundary: Polygon = pocket_boundary
-        .into_iter()
-        .map(|(x, y)| Point::new(x, y))
-        .collect();
-    let islands_vec: Vec<Polygon> = islands
-        .unwrap_or_default()
-        .into_iter()
-        .map(|h| h.into_iter().map(|(x, y)| Point::new(x, y)).collect())
-        .collect();
+    /// Append builder output steps (list of WorkplanStep dicts).
+    fn extend(&mut self, steps: &Bound<'_, PyAny>) -> PyResult<()> {
+        let mut parsed: Vec<WorkplanStep> = Vec::new();
+        for item in steps.try_iter()? {
+            let item = item?;
+            let d = item.cast::<PyDict>()?;
+            parsed.push(dict_to_step(d)?);
+        }
+        self.inner.extend(&parsed);
+        Ok(())
+    }
 
-    let cut_state = State {
-        power: cut_power,
-        feed_rate: Some(cut_feed_rate),
-        ..Default::default()
-    };
-    let travel_state = State {
-        power: 0.0,
-        feed_rate: rapid_feed_rate,
-        ..Default::default()
-    };
+    /// Execute all steps and return the combined :class:`AssemblyResult`.
+    ///
+    /// :param cut_feed_rate: Feed rate for cutting moves (default 1200).
+    /// :param cut_power: Laser power for cutting moves (default 1.0).
+    /// :param rapid_feed_rate: Feed rate for travel/retract moves, or
+    ///     ``None`` to leave them unmodified (default None).
+    /// :returns: The combined :class:`AssemblyResult`.
+    #[pyo3(signature = (cut_feed_rate = 1200, cut_power = 1.0, rapid_feed_rate = None))]
+    fn execute(
+        &self,
+        cut_feed_rate: i32,
+        cut_power: f64,
+        rapid_feed_rate: Option<i32>,
+    ) -> PyResult<PyAssemblyResult> {
+        let cut_state = State {
+            power: cut_power,
+            feed_rate: Some(cut_feed_rate),
+            ..Default::default()
+        };
+        let travel_state = State {
+            power: 0.0,
+            feed_rate: rapid_feed_rate,
+            ..Default::default()
+        };
+        let result = self.inner.execute(&cut_state, &travel_state)?;
+        Ok(PyAssemblyResult::from_inner(result))
+    }
 
-    let result = plan::execute_workplan(
-        &parsed,
-        &boundary,
-        &islands_vec,
-        &cut_state,
-        &travel_state,
-    )?;
-    Ok(PyAssemblyResult::from_inner(result))
+    fn __repr__(&self) -> String {
+        format!(
+            "Workplan(steps={}, safe_z={})",
+            self.inner.steps.len(),
+            self.inner.safe_z,
+        )
+    }
 }

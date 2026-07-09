@@ -17,7 +17,7 @@ def build_wavefront_workplan(pocket_boundary: collections.abc.Sequence[tuple[flo
     to, so the wavefront seed is identical to the legacy
     ``adaptive_entry`` path.
     
-    Combine with :func:`raygeo.cnc.machining.plan.execute_workplan`
+    Combine with :class:`raygeo.cnc.machining.plan.Workplan`
     to turn the steps into a toolpath.
     
     :param pocket_boundary: Outer boundary as [(x, y), ...].

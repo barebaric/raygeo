@@ -41,7 +41,7 @@ def adaptive_clearing(cleared: raygeo.ops.cut.cleared_area.ClearedArea, pocket_b
     the entry polygons (e.g. via a workplan built by
     :func:`raygeo.cnc.machining.wavefront.build_wavefront_workplan`
     and executed by
-    :func:`raygeo.cnc.machining.plan.execute_workplan`) and
+    :class:`raygeo.cnc.machining.plan.Workplan`) and
     prepending the entry Ops to the result.
     
     :param cleared: ``ClearedArea`` instance (mutated in place).

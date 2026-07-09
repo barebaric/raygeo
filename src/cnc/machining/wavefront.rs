@@ -10,7 +10,7 @@
 //! seed is identical).
 //!
 //! Combining the steps into a single toolpath is the job of the
-//! workplan executor ([`crate::cnc::machining::plan::execute_workplan`]),
+//! workplan executor ([`Workplan`](crate::cnc::machining::plan::Workplan)),
 //! not this builder.
 //!
 //! [`adaptive_wavefronts`]: crate::ops::assembly::wavefront::adaptive_wavefronts

@@ -46,7 +46,7 @@ generate a continuous spiral toolpath from the seed clearing to the pocket wall.
 
 The caller is responsible for populating *cleared* with the entry polygons (e.g. via a workplan
 built by **raygeo.cnc.machining.wavefront.build_wavefront_workplan** and executed by
-**raygeo.cnc.machining.plan.execute_workplan**) and prepending the entry Ops to the result.
+**raygeo.cnc.machining.plan.Workplan**) and prepending the entry Ops to the result.
 
 | Parameter              | Type                                           | Description                                                                                                                       |
 | ---------------------- | ---------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |

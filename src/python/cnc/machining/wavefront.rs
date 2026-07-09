@@ -41,7 +41,7 @@ pub(crate) fn register(machining_mod: &Bound<'_, PyModule>) -> PyResult<()> {
         to, so the wavefront seed is identical to the legacy
         ``adaptive_entry`` path.
 
-        Combine with :func:`raygeo.cnc.machining.plan.execute_workplan`
+        Combine with :class:`raygeo.cnc.machining.plan.Workplan`
         to turn the steps into a toolpath.
 
         :param pocket_boundary: Outer boundary as [(x, y), ...].

@@ -2,9 +2,13 @@
 //!
 //! [`WorkplanStep`] is the shared, serialisable description of one
 //! operation in a CNC workplan. Each variant owns the knowledge of how
-//! to invoke its underlying ops-layer assembler via [`execute`], so the
-//! executor ([`execute_workplan`]) stays a dumb loop that only manages
-//! the shared [`ClearedArea`] and chains results.
+//! to invoke its underlying ops-layer assembler via [`execute`].
+//!
+//! [`Workplan`] is the explicit executor struct that captures plan-time
+//! context (`pocket_boundary`, `islands`, `safe_z`) and provides an
+//! [`execute`](Workplan::execute) method that manages the shared
+//! [`ClearedArea`], runs each step, and links passes with safe-Z travel
+//! moves.
 //!
 //! [`execute`]: WorkplanStep::execute
 
@@ -17,7 +21,7 @@ use crate::ops::assembly::adaptive::{self, AdaptiveClearingOptions};
 use crate::ops::assembly::helix::{self, HelixOptions};
 use crate::ops::assembly::profile::{self, ProfileInnerOptions};
 use crate::ops::assembly::ramp::{self, RampOptions};
-use crate::ops::assembly::result::{chain, AssemblyResult};
+use crate::ops::assembly::result::AssemblyResult;
 use crate::ops::assembly::slot::{self, SlotOptions};
 use crate::ops::assembly::spiral::{self, SpiralOptions};
 use crate::ops::assembly::toroid::{self, ToroidalClearOptions};
@@ -27,6 +31,7 @@ use crate::ops::cut::{ClearedArea, ToolPose};
 use crate::ops::state::State;
 use crate::types::{Point, Point3D, Polygon};
 
+#[derive(Clone, Debug)]
 pub enum WorkplanStep {
     HelixPlunge {
         center: Point,
@@ -332,47 +337,125 @@ impl WorkplanStep {
     }
 }
 
-/// Execute a workplan: dispatch each step to its assembler and chain the
-/// results into one [`AssemblyResult`].
+/// Plan-time context and executor for a sequence of [`WorkplanStep`]s.
 ///
-/// `pocket_boundary` and `islands` describe the stock and seed the
-/// shared [`ClearedArea`]. `cut_state` is applied to cutting moves;
-/// `travel_state` is applied to retract/travel moves (e.g.
-/// [`WorkplanStep::Retract`]).
-#[prof]
-pub fn execute_workplan(
-    steps: &[WorkplanStep],
-    pocket_boundary: &Polygon,
-    islands: &[Polygon],
-    cut_state: &State,
-    travel_state: &State,
-) -> RaygeoResult<AssemblyResult> {
-    let mut cleared = ClearedArea::new(pocket_boundary, islands);
-    let mut acc: Option<AssemblyResult> = None;
+/// Captures `pocket_boundary`, `islands`, and `safe_z` at plan time;
+/// [`execute`](Workplan::execute) takes only the runtime tool states.
+#[derive(Clone, Debug)]
+pub struct Workplan {
+    pub steps: Vec<WorkplanStep>,
+    pub pocket_boundary: Polygon,
+    pub islands: Vec<Polygon>,
+    pub safe_z: f64,
+}
 
-    for step in steps {
-        let step_result =
-            step.execute(&mut cleared, cut_state, travel_state)?;
-        acc = Some(match acc.take() {
-            Some(a) => chain(a, step_result),
-            None => step_result,
-        });
+impl Workplan {
+    /// Create a new empty workplan.
+    pub fn new(
+        pocket_boundary: Polygon,
+        islands: Vec<Polygon>,
+        safe_z: f64,
+    ) -> Self {
+        Workplan {
+            steps: Vec::new(),
+            pocket_boundary,
+            islands,
+            safe_z,
+        }
     }
 
-    let mut result = acc.unwrap_or_else(|| AssemblyResult {
-        ops: Ops::new(),
-        cleared_polygons: vec![],
-        start: ToolPose {
-            pos: Point3D::ZERO,
-            heading: 0.0,
-        },
-        end: ToolPose {
-            pos: Point3D::ZERO,
-            heading: 0.0,
-        },
-    });
-    // The shared cleared area is the authoritative record of what was
-    // removed; prefer it over the per-step polygon concatenation.
-    result.cleared_polygons = cleared.fragments().to_vec();
-    Ok(result)
+    /// Append builder output steps.
+    pub fn extend(&mut self, steps: &[WorkplanStep]) {
+        self.steps.extend(steps.iter().cloned());
+    }
+
+    /// Execute all steps, linking passes with safe-Z travel moves.
+    ///
+    /// Each step's assembler is dispatched in order with the shared
+    /// [`ClearedArea`]. Between passes the tool retracts to `safe_z`,
+    /// travels XY, and plunges — all under `travel_state`. A final
+    /// lift to `safe_z` is appended if the last pass ends below it.
+    #[prof]
+    pub fn execute(
+        &self,
+        cut_state: &State,
+        travel_state: &State,
+    ) -> RaygeoResult<AssemblyResult> {
+        let mut cleared =
+            ClearedArea::new(&self.pocket_boundary, &self.islands);
+        let mut passes: Vec<AssemblyResult> = Vec::new();
+
+        for step in &self.steps {
+            let r = step.execute(&mut cleared, cut_state, travel_state)?;
+            passes.push(r);
+        }
+
+        if passes.is_empty() {
+            return Ok(AssemblyResult {
+                ops: Ops::new(),
+                cleared_polygons: cleared.fragments().to_vec(),
+                start: ToolPose {
+                    pos: Point3D::ZERO,
+                    heading: 0.0,
+                },
+                end: ToolPose {
+                    pos: Point3D::ZERO,
+                    heading: 0.0,
+                },
+            });
+        }
+
+        // ── Link passes with travel moves ──────────────────────────
+        let mut ops = Ops::new();
+        let mut prev_end = passes[0].end;
+
+        ops.extend(&passes[0].ops);
+
+        for pass in &passes[1..] {
+            let entry = pass.start.pos;
+            let entry_z = pass_start_z(pass);
+
+            ops.apply_state(travel_state);
+            ops.move_to(prev_end.pos.x, prev_end.pos.y, self.safe_z, None);
+            if (entry.x - prev_end.pos.x).abs() > 1e-12
+                || (entry.y - prev_end.pos.y).abs() > 1e-12
+            {
+                ops.move_to(entry.x, entry.y, self.safe_z, None);
+            }
+            if (entry_z - self.safe_z).abs() > 1e-12 {
+                ops.move_to(entry.x, entry.y, entry_z, None);
+            }
+
+            ops.extend(&pass.ops);
+            prev_end = pass.end;
+        }
+
+        // ── Final lift ─────────────────────────────────────────────
+        if prev_end.pos.z < self.safe_z - 1e-12 {
+            ops.apply_state(travel_state);
+            ops.move_to(prev_end.pos.x, prev_end.pos.y, self.safe_z, None);
+            prev_end.pos.z = self.safe_z;
+        }
+
+        let mut result = AssemblyResult {
+            ops,
+            cleared_polygons: passes
+                .iter()
+                .flat_map(|p| p.cleared_polygons.iter().cloned())
+                .collect(),
+            start: passes[0].start,
+            end: prev_end,
+        };
+        result.cleared_polygons = cleared.fragments().to_vec();
+        Ok(result)
+    }
+}
+
+fn pass_start_z(result: &AssemblyResult) -> f64 {
+    for i in 0..result.ops.len() {
+        if result.ops.is_cutting(i) || result.ops.is_travel(i) {
+            return result.ops.endpoint(i).z;
+        }
+    }
+    0.0
 }

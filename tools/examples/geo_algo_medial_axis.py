@@ -5,7 +5,7 @@ import math
 import matplotlib.pyplot as plt
 import numpy as np
 
-from raygeo.cnc.machining.plan import execute_workplan
+from raygeo.cnc.machining.plan import Workplan
 from raygeo.cnc.machining.wavefront import build_wavefront_workplan
 from raygeo.geo.algo.medial_axis import MedialAxis
 from raygeo.ops.cut.cleared_area import ClearedArea
@@ -222,7 +222,9 @@ def generate_mat_trimming():
     # Seed the cleared area from the FlatSpiral step only; the manual
     # bites/cut_fast loop below takes the place of the Wavefront step.
     seed_steps = [s for s in steps if s["kind"] == "FlatSpiral"]
-    seed_result = execute_workplan(seed_steps, boundary, islands=islands)
+    wp_seed = Workplan(boundary, islands=islands, safe_z=2.0)
+    wp_seed.extend(seed_steps)
+    seed_result = wp_seed.execute()
     ca = ClearedArea(
         boundary=boundary,
         islands=islands,

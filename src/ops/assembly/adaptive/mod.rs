@@ -9,7 +9,7 @@
 //! The caller is responsible for pre-populating the `ClearedArea` with
 //! entry polygons (e.g. via a workplan built by
 //! `cnc::machining::wavefront::build_wavefront_workplan` and executed by
-//! `cnc::machining::plan::execute_workplan`).
+//! `cnc::machining::plan::Workplan::execute`).
 
 mod chain;
 pub mod resume;

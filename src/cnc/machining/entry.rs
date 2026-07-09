@@ -2,7 +2,7 @@
 //!
 //! [`build_entry_workplan`] uses feature detection to produce a
 //! `Vec<WorkplanStep>` without executing. Execution is the job of the
-//! workplan executor ([`crate::cnc::machining::plan::execute_workplan`]).
+//! workplan executor ([`Workplan`](crate::cnc::machining::plan::Workplan)).
 
 use prof_macros::prof;
 

@@ -28,7 +28,7 @@ cleared disk, then a `Wavefront` step that expands outward. No helical plunge is
 spiral disk already covers the area the helix used to, so the wavefront seed is identical to the
 legacy `adaptive_entry` path.
 
-Combine with **raygeo.cnc.machining.plan.execute_workplan** to turn the steps into a toolpath.
+Combine with **raygeo.cnc.machining.plan.Workplan** to turn the steps into a toolpath.
 
 | Parameter         | Type                                                         | Description                                                 |
 | ----------------- | ------------------------------------------------------------ | ----------------------------------------------------------- |
