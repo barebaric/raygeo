@@ -350,10 +350,31 @@ def cmd_doc(args):
         mod_name = api_docs.module_name_from_path(rel, root_module)
         stub_by_mod[mod_name] = (rel, fp)
 
-    targets = _expand_modules(args.modules, all_mods, root_module)
+    for pattern in args.modules:
+        has_glob = bool(set("*?[") & set(pattern))
+        if has_glob:
+            _expand_modules(args.modules, all_mods, root_module)
+            continue
 
-    for matched_mod, func_filter in targets:
-        matched_rel, matched_file = stub_by_mod[matched_mod]
+        mod = _resolve_module_exact(pattern, all_mods, root_module)
+        func_filter = None
+        if mod is None:
+            *parts, func_filter = pattern.split(".")
+            base = ".".join(parts)
+            mod = _resolve_module_exact(base, all_mods, root_module)
+        if mod is None:
+            doc_targets = [f"{root_module}.{pattern}.md", f"{pattern}.md"]
+            print(f"  {pattern} -> no stub found, generating images only...")
+            images_dir.mkdir(parents=True, exist_ok=True)
+            inline_map, _ = _generate_images(
+                images_dir,
+                doc_filter=doc_targets[0],
+                func_filter=func_filter,
+            )
+            _inject_images_into_api(api_dir, images_dir, inline_map)
+            continue
+
+        matched_rel, matched_file = stub_by_mod[mod]
 
         api_dir.mkdir(parents=True, exist_ok=True)
         out_path = api_docs.output_path_from_rel(
@@ -364,9 +385,9 @@ def cmd_doc(args):
         if page.strip():
             page = _format_md(page)
             out_path.write_text(page)
-            print(f"  {matched_mod} -> {out_path}")
+            print(f"  {mod} -> {out_path}")
 
-        doc_target = f"{matched_mod}.md"
+        doc_target = f"{mod}.md"
         print(f"Generating visual examples for {doc_target}...")
         inline_map, _ = _generate_images(
             images_dir,

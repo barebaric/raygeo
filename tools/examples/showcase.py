@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.colors import to_hex
 
-from raygeo.cnc.machining.plan import execute_workplan
+from raygeo.cnc.machining.plan import Workplan
 from raygeo.cnc.machining.wavefront import build_wavefront_workplan
 from raygeo.geo import Geometry
 from raygeo.geo.algo import hull
@@ -15,11 +15,16 @@ from raygeo.geo.algo.helix import HelixDirection, generate_helix_3d
 from raygeo.geo.algo.nest2d.placement import place_parts
 from raygeo.geo.algo.smooth import smooth_polyline_3d
 from raygeo.geo.shape.bezier import linearize_bezier_adaptive
-from raygeo.geo.shape.polygon import get_polygon_convex_hull
+from raygeo.geo.shape.polygon import (
+    get_circle_polygon,
+    get_polygon_convex_hull,
+)
 from raygeo.geo.shape.polygon3d import fillet_polyline_3d, offset_polyline_3d
+from raygeo.ops.assembly.adaptive import adaptive_clearing
+from raygeo.ops.cut.cleared_area import ClearedArea
 from raygeo.ops.raster import ScanMode, rasterize_power_modulation
 from raygeo.ops.types import CommandType
-from tools.plot import make_pattern, plot_geometry
+from tools.plot import make_pattern, plot_geometry, plot_ops_2d
 
 
 def _make_two_squares(h, w):
@@ -435,17 +440,45 @@ def _plot_3d_offset(ax):
     ax.legend(fontsize=8)
 
 
-def _plot_peeling_multi(ax):
-    ax.text(
-        0.5,
-        0.5,
-        "(removed)",
-        ha="center",
-        va="center",
-        transform=ax.transAxes,
-        fontsize=10,
-        color="gray",
+def _plot_adaptive_2d(ax):
+    target_z = -5.0
+    boundary = [(0, 0), (80, 0), (80, 80), (0, 80)]
+    islands = [
+        [(20, 20), (35, 20), (35, 35), (20, 35)],
+        [(50, 50), (65, 50), (65, 65), (50, 65)],
+    ]
+    seed = get_circle_polygon((15, 65), 10, 48)
+    ca = ClearedArea(boundary=boundary, islands=islands, initial=[seed])
+    result = adaptive_clearing(
+        cleared=ca,
+        pocket_boundary=boundary,
+        islands=islands,
+        tool_radius=3.0,
+        step_over=1.8,
+        target_z=target_z,
+        safe_z=2.0,
+        area_tolerance=5.0,
     )
+    bx = [p[0] for p in boundary] + [boundary[0][0]]
+    by = [p[1] for p in boundary] + [boundary[0][1]]
+    ax.plot(bx, by, "k-", linewidth=1.5, alpha=0.4)
+    for island in islands:
+        ix = [p[0] for p in island] + [island[0][0]]
+        iy = [p[1] for p in island] + [island[0][1]]
+        ax.fill(ix, iy, color="lightgray", alpha=0.5, linewidth=0)
+        ax.plot(ix, iy, "k-", linewidth=1.2)
+    sx = [p[0] for p in seed] + [seed[0][0]]
+    sy = [p[1] for p in seed] + [seed[0][1]]
+    ax.fill(sx, sy, color="steelblue", alpha=0.2, linewidth=0)
+    ax.plot(sx, sy, color="steelblue", linewidth=1.2, linestyle="--")
+    plot_ops_2d(
+        ax,
+        result.ops,
+        boundary=boundary,
+        islands=islands,
+        mark_cut_start=False,
+    )
+    ax.set_title("Adaptive Clearing", fontsize=10)
 
 
 def _plot_fillet_polyline_3d(ax):
@@ -514,7 +547,9 @@ def _plot_adaptive_wavefronts(ax):
         target_z=-5.0,
         area_tolerance=1.0,
     )
-    result = execute_workplan(steps, boundary, islands=islands)
+    wp = Workplan(boundary, islands=islands, safe_z=2.0)
+    wp.extend(steps)
+    result = wp.execute()
 
     bx = [p[0] for p in boundary] + [boundary[0][0]]
     by = [p[1] for p in boundary] + [boundary[0][1]]
@@ -604,7 +639,7 @@ def generate_showcase():
     _plot_raster_power_modulation(axs[1][0])
     _plot_smooth(axs[1][1])
     _plot_linearization(axs[1][2])
-    _plot_peeling_multi(axs[1][3])
+    _plot_adaptive_2d(axs[1][3])
     _plot_cylindrical(axs[2][0])
     _plot_conical_helix(axs[2][1])
     _plot_3d_offset(axs[2][2])
