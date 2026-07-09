@@ -11,10 +11,11 @@ pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
 
 /// Universal return type for every assembly-level generator.
 ///
-/// Returned by ``generate_helix``, ``adaptive_entry``, and all other
-/// assemblers.  Contains the generated ``Ops`` sequence, the set of
-/// polygons that this operation clears, and the tool pose at the
-/// start and end of the path.
+/// Returned by assemblers such as ``generate_helix``,
+/// ``generate_toroidal_clear``, ``generate_slot``, and all other
+/// assembly-level motion functions.  Contains the generated ``Ops``
+/// sequence, the set of polygons that this operation clears, and the
+/// tool pose at the start and end of the path.
 #[gen_stub_pyclass(module = "raygeo.ops.assembly.result")]
 #[pyclass(
     name = "AssemblyResult",

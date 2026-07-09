@@ -4,3 +4,4 @@
 //! with tool-aware state resolution.
 
 pub mod entry;
+pub mod plan;

@@ -44,8 +44,8 @@ Run forward-stepping adaptive clearing.
 Starting from the pre-populated *cleared* area, uses a constant-engagement stepping solver to
 generate a continuous spiral toolpath from the seed clearing to the pocket wall.
 
-The caller is responsible for populating *cleared* with entry polygons (e.g. from `adaptive_entry`)
-and prepending the entry Ops to the result.
+The caller is responsible for populating *cleared* with the entry polygons (e.g. via
+**raygeo.cnc.machining.entry.adaptive_entry**) and prepending the entry Ops to the result.
 
 | Parameter              | Type                                           | Description                                                                                                                       |
 | ---------------------- | ---------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |

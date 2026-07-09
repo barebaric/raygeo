@@ -37,9 +37,10 @@ def adaptive_clearing(cleared: raygeo.ops.cut.cleared_area.ClearedArea, pocket_b
     constant-engagement stepping solver to generate a continuous
     spiral toolpath from the seed clearing to the pocket wall.
     
-    The caller is responsible for populating *cleared* with entry
-    polygons (e.g. from ``adaptive_entry``) and prepending the
-    entry Ops to the result.
+    The caller is responsible for populating *cleared* with
+    the entry polygons (e.g. via
+    :func:`raygeo.cnc.machining.entry.adaptive_entry`) and
+    prepending the entry Ops to the result.
     
     :param cleared: ``ClearedArea`` instance (mutated in place).
     :param pocket_boundary: Outer boundary of the pocket.

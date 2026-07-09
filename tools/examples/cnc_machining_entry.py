@@ -1,300 +1,267 @@
-"""Generate visualisations of entry motion assembly."""
-
-import math
+"""Generate visualisations of entry workplan planning."""
 
 import matplotlib.pyplot as plt
-import numpy as np
+from matplotlib.patches import Circle as CirclePatch
+from matplotlib.patches import Polygon as PolygonPatch
 
-from raygeo.cnc.machining.entry import adaptive_entry, generate_helix_spiral
+from raygeo.cnc.machining.entry import build_entry_workplan
+from raygeo.ops.feature import region as _region
 
-
-def _ops_to_points(ops):
-    """Extract (x, y, z, is_travel) for every moving command in *ops*."""
-    pts = []
-    for i in range(ops.len()):
-        if ops.is_travel(i) or ops.is_cutting(i):
-            ep = ops.endpoint(i)
-            pts.append((ep[0], ep[1], ep[2], ops.is_travel(i)))
-    return pts
+find_regions = _region.find_regions
 
 
-def _draw_3d_boundary(ax, boundary, islands, z_plane):
-    """Draw boundary and islands on the 3D z-plane."""
-    if boundary is not None and z_plane is not None:
-        bnd = np.array(list(boundary) + [boundary[0]])
-        ax.plot(
-            bnd[:, 0],
-            bnd[:, 1],
-            zs=z_plane,
-            zdir="z",
-            color="k",
-            linewidth=2,
-            alpha=0.5,
-        )
-    if islands and z_plane is not None:
-        for isl in islands:
-            isl_arr = np.array(list(isl) + [isl[0]])
-            ax.plot(
-                isl_arr[:, 0],
-                isl_arr[:, 1],
-                zs=z_plane,
-                zdir="z",
-                color="gray",
-                linewidth=1.5,
-                alpha=0.4,
-            )
+def _rect(x0, y0, w, h):
+    return [(x0, y0), (x0 + w, y0), (x0 + w, y0 + h), (x0, y0 + h)]
 
 
-def _plot_3d_toolpath(
-    ops,
-    ax,
-    title,
-    boundary=None,
-    islands=None,
-    z_plane=None,
-):
-    """Plot 3D toolpath: travel=dotted gray, cutting=rainbow by arc-length."""
-    pts_list = _ops_to_points(ops)
-    if not pts_list:
-        fig = ax.figure
-        fig.tight_layout()
-        return fig
-
-    segments = []
-    cur = []
-    for p in pts_list:
-        x, y, z, is_travel = p
-        if is_travel:
-            if len(cur) > 1:
-                segments.append(cur)
-            cur = []
-        else:
-            cur.append((x, y, z))
-    if len(cur) > 1:
-        segments.append(cur)
-
-    segs_3d = []
-    cum_dists = []
-    cum = 0.0
-    prev = None
-    for seg in segments:
-        for p in seg:
-            if prev is not None:
-                segs_3d.append([prev, p])
-                cum += math.sqrt(
-                    (p[0] - prev[0]) ** 2
-                    + (p[1] - prev[1]) ** 2
-                    + (p[2] - prev[2]) ** 2
-                )
-                cum_dists.append(cum)
-            prev = p
-        prev = None
-    total = cum if cum > 0 else 1.0
-    if segs_3d:
-        from mpl_toolkits.mplot3d.art3d import Line3DCollection
-
-        lc3d = Line3DCollection(
-            segs_3d,
-            colors=plt.cm.turbo([d / total for d in cum_dists]),
-            linewidth=0.8,
-            alpha=1.0,
-        )
-        ax.add_collection3d(lc3d)
-
-    prev = None
-    for p in pts_list:
-        x, y, z, is_travel = p
-        if is_travel:
-            if prev is not None:
-                ax.plot(
-                    [prev[0], x],
-                    [prev[1], y],
-                    [prev[2], z],
-                    linestyle="--",
-                    linewidth=1.0,
-                    color="dimgray",
-                    alpha=0.8,
-                )
-            prev = (x, y, z)
-        else:
-            prev = (x, y, z)
-
-    _draw_3d_boundary(ax, boundary, islands, z_plane)
-
-    ax.set_title(title)
-    ax.set_xlabel("X")
-    ax.set_ylabel("Y")
-    ax.set_zlabel("Z")
-    ax.view_init(elev=30, azim=-45)
-
-    xl, xr = ax.get_xlim()
-    yl, yr = ax.get_ylim()
-    zl, zr = ax.get_zlim()
-    half = max(xr - xl, yr - yl, zr - zl) * 0.5
-    xm = (xl + xr) * 0.5
-    ym = (yl + yr) * 0.5
-    zm = (zl + zr) * 0.5
-    ax.set_xlim(xm - half, xm + half)
-    ax.set_ylim(ym - half, ym + half)
-    ax.set_zlim(zm - half, zm + half)
-    ax.set_box_aspect(None)
-
-    fig = ax.figure
-    fig.tight_layout()
-    return fig
-
-
-def generate_entry_multi():
-    """Entry multi-island."""
-    target_z = -8.0
-    boundary = [(0, 0), (180, 0), (180, 120), (0, 120)]
-    islands = [
-        [(15, 15), (35, 15), (35, 35), (15, 35)],
-        [(70, 40), (90, 40), (90, 60), (70, 60)],
-        [(130, 80), (160, 80), (160, 105), (130, 105)],
-    ]
-
-    result = adaptive_entry(
-        pocket_boundary=boundary,
-        islands=islands,
-        tool_radius=3.0,
-        step_over=2.0,
-        safe_z=2.0,
-        target_z=target_z,
-        plunge_pitch=1.0,
-    )
-
-    fig1 = plt.figure(figsize=(10, 8))
-    ax1 = fig1.add_subplot(111, projection="3d")
-    _plot_3d_toolpath(
-        result.ops,
-        ax1,
-        "Adaptive Entry — Multi-Island Pocket",
-        boundary=boundary,
-        islands=islands,
-        z_plane=target_z,
-    )
-    return fig1
-
-
-def generate_entry_lshape():
-    """Entry L-shape."""
-    target_z3 = -8.0
-    lshape = [
-        (0, 0),
-        (120, 0),
-        (120, 40),
-        (40, 40),
-        (40, 80),
-        (0, 80),
-    ]
-
-    result = adaptive_entry(
-        pocket_boundary=lshape,
-        islands=[],
-        tool_radius=3.0,
-        step_over=2.0,
-        safe_z=2.0,
-        target_z=target_z3,
-        plunge_pitch=1.0,
-    )
-
-    fig3 = plt.figure(figsize=(10, 8))
-    ax3 = fig3.add_subplot(111, projection="3d")
-    _plot_3d_toolpath(
-        result.ops,
-        ax3,
-        "Adaptive Entry — L-Shaped Pocket",
-        boundary=lshape,
-        z_plane=target_z3,
-    )
-    return fig3
-
-
-def generate_entry_tight():
-    """Entry tight slot."""
-    target_z4 = -6.0
-    # 100×10 slot: largest inscribed circle r_max = 5,
-    # which is < 4*1.5 = 6, so detect_entry_method returns Ramp.
-    tight_boundary = [(0, 0), (100, 0), (100, 10), (0, 10)]
-
-    result = adaptive_entry(
-        pocket_boundary=tight_boundary,
-        islands=[],
-        tool_radius=4.0,
-        step_over=3.0,
-        safe_z=2.0,
-        target_z=target_z4,
-        plunge_pitch=1.0,
-    )
-
-    fig4 = plt.figure(figsize=(10, 6))
-    ax4 = fig4.add_subplot(111, projection="3d")
-    _plot_3d_toolpath(
-        result.ops,
-        ax4,
-        "Adaptive Entry — Tight Slot (ZigZag Ramp)",
-        boundary=tight_boundary,
-        z_plane=target_z4,
-    )
-    return fig4
-
-
-def _rect(cx, cy, w, h):
-    """CCW rectangle centred at (cx, cy)."""
+def _hshape():
     return [
-        (cx - w / 2, cy - h / 2),
-        (cx + w / 2, cy - h / 2),
-        (cx + w / 2, cy + h / 2),
-        (cx - w / 2, cy + h / 2),
+        (0.0, 0.0),
+        (15.0, 0.0),
+        (15.0, 30.0),
+        (30.0, 30.0),
+        (30.0, 0.0),
+        (45.0, 0.0),
+        (45.0, 45.0),
+        (30.0, 45.0),
+        (30.0, 16.0),
+        (15.0, 16.0),
+        (15.0, 45.0),
+        (0.0, 45.0),
     ]
 
 
-def _all_moving_pts(result):
-    pts = []
-    for i in range(result.ops.len()):
-        if result.ops.is_travel(i) or result.ops.is_cutting(i):
-            ep = result.ops.endpoint(i)
-            pts.append((ep[0], ep[1], ep[2]))
-    return pts
+def _cup():
+    """Inverted-U: 40x8 bottom bar + 8-wide vertical post (x=16..24)."""
+    return [
+        (0.0, 0.0),
+        (40.0, 0.0),
+        (40.0, 8.0),
+        (24.0, 8.0),
+        (24.0, 30.0),
+        (16.0, 30.0),
+        (16.0, 8.0),
+        (0.0, 8.0),
+    ]
 
 
-def generate_helix_spiral_example():
-    """Helix spiral demo."""
-    result = generate_helix_spiral(
-        entry_pt=(80.0, 50.0),
-        r_max=50.0,
-        tool_radius=3.0,
-        step_over=2.0,
-        safe_z=2.0,
-        target_z=-8.0,
-    )
+def _draw_polygon(ax, poly, face, edge, **kwargs):
+    xs = [p[0] for p in poly] + [poly[0][0]]
+    ys = [p[1] for p in poly] + [poly[0][1]]
+    ax.fill(xs, ys, facecolor=face, alpha=kwargs.get("alpha", 0.25))
+    ax.plot(xs, ys, "-", color=edge, linewidth=kwargs.get("lw", 1.5))
 
-    pts = _all_moving_pts(result)
-    xs = [p[0] for p in pts]
-    ys = [p[1] for p in pts]
-    zs = [p[2] for p in pts]
 
-    fig = plt.figure(figsize=(10, 8))
-    ax = fig.add_subplot(111, projection="3d")
-    colors = plt.cm.viridis(np.linspace(0, 1, len(pts)))
-    for i in range(len(pts) - 1):
-        ax.plot(
-            xs[i : i + 2],
-            ys[i : i + 2],
-            zs[i : i + 2],
-            color=colors[i],
+def _draw_regions(ax, regions, colors):
+    for i, r in enumerate(regions):
+        poly, _area, entry_pt, r_max = r
+        color = colors[i % len(colors)]
+        patch = PolygonPatch(
+            poly,
+            facecolor=color,
+            edgecolor=color,
+            alpha=0.35,
             linewidth=1.5,
+            zorder=3,
+        )
+        ax.add_patch(patch)
+        cx, cy = entry_pt
+        ax.plot(cx, cy, "o", color=color, ms=6, zorder=5)
+        ax.add_patch(
+            CirclePatch(
+                (cx, cy),
+                r_max,
+                fill=False,
+                edgecolor=color,
+                linestyle="--",
+                linewidth=1.5,
+                alpha=0.8,
+                zorder=4,
+            )
         )
 
-    ax.scatter(xs[0], ys[0], zs[0], c="forestgreen", s=80, label="Start")
-    ax.scatter(xs[-1], ys[-1], zs[-1], c="crimson", s=80, label="End")
 
-    ax.set_title("Helix → Spiral Entry")
-    ax.set_xlabel("X")
-    ax.set_ylabel("Y")
-    ax.set_zlabel("Z")
-    ax.legend()
+def _draw_carrier(ax, carrier, color):
+    cx = [p[0] for p in carrier]
+    cy = [p[1] for p in carrier]
+    ax.plot(cx, cy, "-", color=color, linewidth=2.5, zorder=5)
+    ax.plot(cx, cy, "o", color=color, ms=7, zorder=6)
+
+
+def _annotate_workplan(ax, workplan, palette):
+    """Annotate each step kind and draw geometric primitives."""
+    for step in workplan:
+        kind = step["kind"]
+        color = palette[0]
+        if kind in ("HelixPlunge", "FlatSpiral"):
+            cx, cy = step["center"]
+            if kind == "HelixPlunge":
+                ax.add_patch(
+                    CirclePatch(
+                        (cx, cy),
+                        step["helix_r"],
+                        fill=False,
+                        edgecolor=color,
+                        linestyle=":",
+                        linewidth=2.0,
+                        alpha=0.9,
+                        zorder=4,
+                    )
+                )
+            else:
+                spir_r = step["end_radius"]
+                ax.add_patch(
+                    CirclePatch(
+                        (cx, cy),
+                        spir_r,
+                        fill=False,
+                        edgecolor=color,
+                        linestyle="--",
+                        linewidth=1.5,
+                        alpha=0.7,
+                        zorder=4,
+                    )
+                )
+            label_xy = (cx, cy)
+            label = (
+                "HelixPlunge"
+                if kind == "HelixPlunge"
+                else f"FlatSpiral (r={step['end_radius']:.1f})"
+            )
+        elif kind == "RampEntry":
+            sx, sy = step["start"]
+            ex, ey = step["end"]
+            ax.plot(
+                [sx, ex],
+                [sy, ey],
+                "-",
+                color=color,
+                linewidth=2.5,
+                zorder=5,
+            )
+            ax.plot([sx, ex], [sy, ey], "o", color=color, ms=7, zorder=6)
+            label_xy = ((sx + ex) / 2, (sy + ey) / 2)
+            label = "RampEntry"
+        elif kind == "ToroidalClear":
+            carrier = step["carrier"]
+            _draw_carrier(ax, carrier, color)
+            label_xy = (
+                (carrier[0][0] + carrier[-1][0]) / 2,
+                (carrier[0][1] + carrier[-1][1]) / 2,
+            )
+            label = "ToroidalClear"
+        else:
+            continue
+
+        ax.annotate(
+            label,
+            label_xy,
+            xytext=(0, 18),
+            textcoords="offset points",
+            ha="center",
+            va="bottom",
+            fontsize=8,
+            bbox=dict(
+                boxstyle="round,pad=0.3",
+                fc="lightyellow",
+                ec="gray",
+                alpha=0.85,
+            ),
+            arrowprops=dict(
+                arrowstyle="->",
+                color="gray",
+                lw=0.8,
+            ),
+        )
+
+
+def generate_entry_workplan():
+    """3-panel: Helix+Spiral, ToroidalClear, RampEntry."""
+    tool_radius = 3.0
+    step_over = 2.0
+    safe_z = 2.0
+    target_z = -5.0
+
+    colors = ["#4C72B0", "#DD8452", "#55A868", "#C44E52", "#8172B3"]
+
+    # --- Panel 1: wide rectangle -> HelixPlunge + FlatSpiral ---
+    rect_boundary = _rect(0, 0, 40, 40)
+    rect_regions = find_regions(
+        boundary=rect_boundary,
+        tool_radius=tool_radius,
+        tolerance=0.5,
+    )
+    rect_workplan = build_entry_workplan(
+        pocket_boundary=rect_boundary,
+        tool_radius=tool_radius,
+        step_over=step_over,
+        safe_z=safe_z,
+        target_z=target_z,
+    )
+
+    # --- Panel 2: H-shape -> 2x ToroidalClear (regions) ---
+    h_boundary = _hshape()
+    h_regions = find_regions(
+        boundary=h_boundary,
+        tool_radius=tool_radius,
+        tolerance=0.5,
+    )
+    h_workplan = build_entry_workplan(
+        pocket_boundary=h_boundary,
+        tool_radius=tool_radius,
+        step_over=step_over,
+        safe_z=safe_z,
+        target_z=target_z,
+    )
+
+    # --- Panel 3: cup -> RampEntry (region-based, no carrier) ---
+    cup_boundary = _cup()
+    cup_regions = find_regions(
+        boundary=cup_boundary,
+        tool_radius=tool_radius,
+        tolerance=0.5,
+    )
+    cup_workplan = build_entry_workplan(
+        pocket_boundary=cup_boundary,
+        tool_radius=tool_radius,
+        step_over=step_over,
+        safe_z=safe_z,
+        target_z=target_z,
+    )
+
+    fig, axes = plt.subplots(1, 3, figsize=(18, 6))
+    ax1, ax2, ax3 = axes
+
+    # -- Panel 1: wide rectangle --
+    _draw_polygon(ax1, rect_boundary, "none", "k", lw=2)
+    _draw_regions(ax1, rect_regions, colors)
+    _annotate_workplan(ax1, rect_workplan, ["#4C72B0"])
+    ax1.set_title("Wide Rectangle\nHelixPlunge + FlatSpiral", fontsize=10)
+    ax1.set_xlabel("X (mm)")
+    ax1.set_ylabel("Y (mm)")
+    ax1.set_aspect("equal")
+    ax1.grid(True, alpha=0.25)
+
+    # -- Panel 2: H-shape --
+    _draw_polygon(ax2, h_boundary, "none", "k", lw=2)
+    _draw_regions(ax2, h_regions, colors)
+    _annotate_workplan(ax2, h_workplan, ["#DD8452"])
+    ax2.set_title("H-Shape\n2x ToroidalClear (per region)", fontsize=10)
+    ax2.set_xlabel("X (mm)")
+    ax2.set_ylabel("Y (mm)")
+    ax2.set_aspect("equal")
+    ax2.grid(True, alpha=0.25)
+
+    # -- Panel 3: cup -> RampEntry --
+    _draw_polygon(ax3, cup_boundary, "none", "k", lw=2)
+    _draw_regions(ax3, cup_regions, colors)
+    _annotate_workplan(ax3, cup_workplan, ["#55A868"])
+    ax3.set_title("Cup Shape\nRampEntry (no carrier)", fontsize=10)
+    ax3.set_xlabel("X (mm)")
+    ax3.set_ylabel("Y (mm)")
+    ax3.set_aspect("equal")
+    ax3.grid(True, alpha=0.25)
+
     fig.tight_layout()
     return fig
 
@@ -303,27 +270,19 @@ __docs_target__ = ["raygeo.cnc.machining.entry.md"]
 
 __images__ = [
     {
-        "heading": "adaptive_entry",
+        "heading": "build_entry_workplan",
         "caption": (
-            "Adaptive clearing — Helix → Spiral in a pocket with three islands"
+            "Entry workplan planning across three pocket shapes: wide"
+            " rectangle (left) selects HelixPlunge + FlatSpiral;"
+            " H-shape (centre) emits a ToroidalClear step per wide"
+            " sub-region; cup shape (right) yields a RampEntry step"
+            " when no ramp carrier can be found in the narrow region."
         ),
-        "function": generate_entry_multi,
-    },
-    {
-        "heading": "adaptive_entry",
-        "caption": (
-            "Adaptive clearing — Helix → Spiral in an L-shaped pocket"
-        ),
-        "function": generate_entry_lshape,
-    },
-    {
-        "heading": "adaptive_entry",
-        "caption": "Adaptive clearing — ZigZag Ramp in a tight slot",
-        "function": generate_entry_tight,
-    },
-    {
-        "heading": "generate_helix_spiral",
-        "caption": ("Helix → Spiral: helical plunge then Archimedean spiral"),
-        "function": generate_helix_spiral_example,
+        "function": generate_entry_workplan,
     },
 ]
+
+if __name__ == "__main__":
+    fig = generate_entry_workplan()
+    fig.savefig("/tmp/cnc_machining_entry.png", dpi=150, bbox_inches="tight")
+    print("Saved /tmp/cnc_machining_entry.png")

@@ -5,7 +5,6 @@ import collections.abc
 import raygeo
 __all__ = [
     "adaptive_entry",
-    "build_entry_workplan",
     "detect_entry_method",
     "generate_helix_spiral",
 ]
@@ -30,27 +29,6 @@ def adaptive_entry(pocket_boundary: collections.abc.Sequence[tuple[float, float]
     :param cut_feed_rate: Feed rate for the entry path (default 1200).
     :param cut_power: Laser power for the entry path (0.0-1.0, default 1.0).
     :returns: An :class:`AssemblyResult` with the entry toolpath.
-    """
-
-def build_entry_workplan(pocket_boundary: collections.abc.Sequence[tuple[float, float]], islands: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]] | None = None, tool_radius: float = 3, step_over: float = 2, safe_z: float = 2, target_z: float = -5, plunge_pitch: float = 1, safe_margin: float = 1, angular_step: float = 0.1) -> list[dict]:
-    r"""
-    Build an entry workplan for a pocket.
-    
-    Uses feature detection to determine the best entry strategy per
-    disconnected wide sub-region: helix+spiral (if r_max >= 2xD),
-    toroidal ramp (if find_ramp_carrier succeeds), or zigzag ramp
-    (last resort).
-    
-    :param pocket_boundary: Outer boundary as [(x, y), ...].
-    :param islands: List of island polygons (default None).
-    :param tool_radius: Tool radius in mm (default 3.0).
-    :param step_over: Radial step-over (default 2.0).
-    :param safe_z: Safe Z height (default 2.0).
-    :param target_z: Target cutting depth (default -5.0).
-    :param plunge_pitch: Helix pitch per revolution (default 1.0).
-    :param safe_margin: Safety margin from tool edge (default 1.0).
-    :param angular_step: Angular step in radians (default 0.1).
-    :returns: List of WorkplanStep dicts with a "kind" key.
     """
 
 def detect_entry_method(r_max: float, tool_radius: float, safe_margin: float = 1) -> str:

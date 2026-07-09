@@ -70,6 +70,7 @@ pub fn find_regions(
                 r_max,
             }
         })
+        .filter(|r| r.r_max >= tool_radius)
         .collect();
 
     regions.sort_by(|a, b| {

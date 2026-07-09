@@ -1,6 +1,6 @@
 ---
-title: raygeo.cnc.machining.entry
-sidebar_label: raygeo.cnc.machining.entry
+title: raygeo.ops.assembly.entry
+sidebar_label: raygeo.ops.assembly.entry
 ---
 
 ## Functions
@@ -42,47 +42,6 @@ Finds the optimal entry pole using `find_largest_circle`, then generates either 
 | `cut_feed_rate`   | `int = 1200`                                   | Feed rate for the entry path (default 1200).             |
 | `cut_power`       | `float = 1`                                    | Laser power for the entry path (0.0-1.0, default 1.0).   |
 | _Returns_         | `ops.assembly.result.AssemblyResult`           | An **AssemblyResult** with the entry toolpath.           |
-
-### `build_entry_workplan()`
-
-```python
-build_entry_workplan(
-    pocket_boundary: Sequence[tuple[float, float]],
-    islands: Sequence[Sequence[tuple[float, float]]] | None = None,
-    tool_radius: float = 3,
-    step_over: float = 2,
-    safe_z: float = 2,
-    target_z: float = -5,
-    plunge_pitch: float = 1,
-    safe_margin: float = 1,
-    angular_step: float = 0.1,
-) -> list[dict]
-```
-
-Build an entry workplan for a pocket.
-
-Uses feature detection to determine the best entry strategy per disconnected wide sub-region:
-helix+spiral (if r_max >= 2xD), toroidal ramp (if find_ramp_carrier succeeds), or zigzag ramp (last
-resort).
-
-| Parameter         | Type                                                         | Description                                   |
-| ----------------- | ------------------------------------------------------------ | --------------------------------------------- |
-| `pocket_boundary` | `Sequence[tuple[float, float]]`                              | Outer boundary as [(x, y), ...].              |
-| `islands`         | `Sequence[Sequence[tuple[float, float]]] &#124; None = None` | List of island polygons (default None).       |
-| `tool_radius`     | `float = 3`                                                  | Tool radius in mm (default 3.0).              |
-| `step_over`       | `float = 2`                                                  | Radial step-over (default 2.0).               |
-| `safe_z`          | `float = 2`                                                  | Safe Z height (default 2.0).                  |
-| `target_z`        | `float = -5`                                                 | Target cutting depth (default -5.0).          |
-| `plunge_pitch`    | `float = 1`                                                  | Helix pitch per revolution (default 1.0).     |
-| `safe_margin`     | `float = 1`                                                  | Safety margin from tool edge (default 1.0).   |
-| `angular_step`    | `float = 0.1`                                                | Angular step in radians (default 0.1).        |
-| _Returns_         | `list[dict]`                                                 | List of WorkplanStep dicts with a "kind" key. |
-
-![Entry workplan planning across three pocket shapes: wide rectangle (left) selects HelixPlunge + FlatSpiral; H-shape (centre) emits a ToroidalClear step per wide sub-region; cup shape (right) yields a RampEntry step when no ramp carrier can be found in the narrow region.](images/cnc-machining-entry-entry-workplan.png)
-
-*Entry workplan planning across three pocket shapes: wide rectangle (left) selects HelixPlunge +
-FlatSpiral; H-shape (centre) emits a ToroidalClear step per wide sub-region; cup shape (right)
-yields a RampEntry step when no ramp carrier can be found in the narrow region.*
 
 ### `detect_entry_method()`
 

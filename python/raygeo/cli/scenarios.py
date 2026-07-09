@@ -2,10 +2,10 @@ import dataclasses
 import math
 import pathlib
 
-from raygeo.cnc.machining.entry import adaptive_entry
 from raygeo.geo.shape.polygon import (
     get_polygon_signed_area,
     is_point_inside_polygon,
+    offset_polygon,
 )
 
 # ── Helper geometry functions ────────────────────────────────────
@@ -213,18 +213,17 @@ def scenario_from_svg(
 
 
 def run_entry(scenario):
-    """Run adaptive_entry and return (entry_ops, seed_polys)."""
+    """Return (None, seed_polys) where seed_polys is the eroded boundary.
 
-    result = adaptive_entry(
-        pocket_boundary=list(scenario.boundary),
-        islands=[list(isl) for isl in scenario.islands],
-        tool_radius=scenario.tool_radius,
-        step_over=scenario.step_over,
-        safe_z=scenario.safe_z,
-        target_z=scenario.cut_z,
-        plunge_pitch=1.0,
-    )
-    return result.ops, result.cleared_polygons
+    Uses polygon offset to compute the initial cleared area.  Entry ops
+    are None — Steps 12+ will build and execute the workplan.
+    """
+    eroded = offset_polygon(list(scenario.boundary), -scenario.tool_radius)
+    if eroded:
+        seed_polys = eroded
+    else:
+        seed_polys = [list(scenario.boundary)]
+    return None, seed_polys
 
 
 def build_scenario(args):

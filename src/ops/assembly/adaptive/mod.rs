@@ -7,7 +7,7 @@
 //! tool's heading momentum — steers into fresh material.
 //!
 //! The caller is responsible for pre-populating the `ClearedArea` with
-//! entry polygons (e.g. via `adaptive_entry`).
+//! entry polygons (e.g. via `cnc::machining::entry::adaptive_entry`).
 
 mod chain;
 pub mod resume;
