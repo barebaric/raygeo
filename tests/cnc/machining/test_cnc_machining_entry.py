@@ -4,6 +4,26 @@ import math
 
 from raygeo.cnc.machining.entry import build_entry_workplan
 from raygeo.geo.shape.polygon import is_point_inside_polygon
+from raygeo.ops.feature.region import find_regions
+
+
+def _build_entry(boundary, islands=None, **kwargs):
+    tool_radius = kwargs.get("tool_radius", 3.0)
+    regions = find_regions(
+        boundary=boundary,
+        islands=islands or [],
+        tool_radius=tool_radius,
+    )
+    if not regions:
+        return []
+    poly, _area, entry_pt, r_max = regions[0]
+    return build_entry_workplan(
+        poly,
+        entry_pt,
+        r_max,
+        islands=islands or [],
+        **kwargs,
+    )
 
 
 def _rect(x0, y0, w, h):
@@ -37,8 +57,8 @@ def _dumbbell():
 def test_entry_workplan_wide_rectangle():
     """40x40 rect -> HelixPlunge + FlatSpiral (no RampEntry)."""
     boundary = _rect(-20, -20, 40, 40)
-    workplan = build_entry_workplan(
-        pocket_boundary=boundary,
+    workplan = _build_entry(
+        boundary,
         tool_radius=3.0,
         step_over=2.0,
         safe_z=2.0,
@@ -54,10 +74,10 @@ def test_entry_workplan_wide_rectangle():
 
 
 def test_entry_workplan_tight_slot():
-    """40x8 slot -> RampEntry or ToroidalClear, no HelixPlunge."""
+    """40x8 slot -> no wide regions, no HelixPlunge."""
     boundary = _rect(0, 0, 40, 8)
-    workplan = build_entry_workplan(
-        pocket_boundary=boundary,
+    workplan = _build_entry(
+        boundary,
         tool_radius=3.0,
         step_over=2.0,
         safe_z=2.0,
@@ -67,20 +87,17 @@ def test_entry_workplan_tight_slot():
     assert "HelixPlunge" not in kinds, (
         f"unexpected HelixPlunge in tight slot: {kinds}"
     )
-    # Must have at least one step
-    assert len(workplan) >= 1, "expected at least 1 step for tight slot"
-    # Kind should be RampEntry or ToroidalClear
-    has_ramp_or_toroid = ("RampEntry" in kinds) or ("ToroidalClear" in kinds)
-    assert has_ramp_or_toroid, (
-        f"expected RampEntry or ToroidalClear, got {kinds}"
-    )
 
 
 def test_entry_workplan_dumbbell():
-    """Dumbbell -> 2x HelixPlunge + 2x FlatSpiral (one per lobe)."""
+    """Dumbbell -> 1x HelixPlunge + 1x FlatSpiral (first region only).
+
+    The entry builder enters only the largest wide region; the second
+    lobe is reached via the passage (opened by ToroidalClear/Slot).
+    """
     boundary = _dumbbell()
-    workplan = build_entry_workplan(
-        pocket_boundary=boundary,
+    workplan = _build_entry(
+        boundary,
         tool_radius=3.0,
         step_over=2.0,
         safe_z=2.0,
@@ -88,15 +105,15 @@ def test_entry_workplan_dumbbell():
     )
     plunge_count = sum(1 for s in workplan if s["kind"] == "HelixPlunge")
     spiral_count = sum(1 for s in workplan if s["kind"] == "FlatSpiral")
-    assert plunge_count == 2, f"expected 2 HelixPlunge, got {plunge_count}"
-    assert spiral_count == 2, f"expected 2 FlatSpiral, got {spiral_count}"
+    assert plunge_count == 1, f"expected 1 HelixPlunge, got {plunge_count}"
+    assert spiral_count == 1, f"expected 1 FlatSpiral, got {spiral_count}"
 
 
 def test_entry_workplan_no_toroid_variant():
     """No step should have the name 'Toroid' (old EntryMethod)."""
     boundary = _rect(-20, -20, 40, 40)
-    workplan = build_entry_workplan(
-        pocket_boundary=boundary,
+    workplan = _build_entry(
+        boundary,
         tool_radius=3.0,
         step_over=2.0,
         safe_z=2.0,
@@ -109,12 +126,12 @@ def test_entry_workplan_no_toroid_variant():
 
 
 def test_entry_workplan_island_avoids_entry():
-    """Tight pocket + large island -> no HelixPlunge (r_max too small)."""
+    """Tight pocket + large island -> no wide regions, no HelixPlunge."""
     # 10x10 outer with 5x5 island at center; tool_radius=4 -> r_max tiny
     outer = _rect(-5, -5, 10, 10)
     island = _rect(-2.5, -2.5, 5, 5)
-    workplan = build_entry_workplan(
-        pocket_boundary=outer,
+    workplan = _build_entry(
+        outer,
         islands=[island],
         tool_radius=4.0,
         step_over=2.0,
@@ -125,13 +142,12 @@ def test_entry_workplan_island_avoids_entry():
     assert "HelixPlunge" not in kinds, (
         f"unexpected HelixPlunge in tight pocket with island: {kinds}"
     )
-    assert len(workplan) >= 1, "expected at least 1 step"
 
 
 def test_entry_workplan_degenerate_boundary():
     """Empty boundary -> empty workplan."""
-    workplan = build_entry_workplan(
-        pocket_boundary=[],
+    workplan = _build_entry(
+        [],
         tool_radius=3.0,
     )
     assert isinstance(workplan, list)
@@ -141,8 +157,8 @@ def test_entry_workplan_degenerate_boundary():
 def test_entry_workplan_steps_have_kind():
     """Every step dict has a 'kind' key."""
     boundary = _rect(-20, -20, 40, 40)
-    workplan = build_entry_workplan(
-        pocket_boundary=boundary,
+    workplan = _build_entry(
+        boundary,
         tool_radius=3.0,
     )
     for step in workplan:
@@ -152,8 +168,8 @@ def test_entry_workplan_steps_have_kind():
 def test_entry_workplan_islands_optional():
     """Omitting islands -> boundary with no holes."""
     boundary = _rect(-20, -20, 40, 40)
-    workplan = build_entry_workplan(
-        pocket_boundary=boundary,
+    workplan = _build_entry(
+        boundary,
         tool_radius=3.0,
     )
     assert len(workplan) >= 1
@@ -162,8 +178,8 @@ def test_entry_workplan_islands_optional():
 def test_entry_workplan_step_over_zero():
     """step_over=0 should not emit FlatSpiral (no radial progress)."""
     boundary = _rect(-20, -20, 40, 40)
-    workplan = build_entry_workplan(
-        pocket_boundary=boundary,
+    workplan = _build_entry(
+        boundary,
         tool_radius=3.0,
         step_over=0.0,
         safe_z=2.0,
@@ -179,8 +195,8 @@ def test_entry_workplan_step_over_zero():
 def test_entry_workplan_helix_plunge_params():
     """HelixPlunge step has expected fields."""
     boundary = _rect(-20, -20, 40, 40)
-    workplan = build_entry_workplan(
-        pocket_boundary=boundary,
+    workplan = _build_entry(
+        boundary,
         tool_radius=3.0,
         step_over=2.0,
         safe_z=2.0,
@@ -206,8 +222,8 @@ def test_entry_workplan_helix_plunge_params():
 def test_entry_workplan_flat_spiral_params():
     """FlatSpiral step has expected fields."""
     boundary = _rect(-20, -20, 40, 40)
-    workplan = build_entry_workplan(
-        pocket_boundary=boundary,
+    workplan = _build_entry(
+        boundary,
         tool_radius=3.0,
         step_over=2.0,
         safe_z=2.0,
@@ -228,12 +244,12 @@ def test_entry_workplan_flat_spiral_params():
 def test_entry_workplan_empty_islands_list():
     """Empty islands list (not None) should work same as None."""
     boundary = _rect(-20, -20, 40, 40)
-    wp1 = build_entry_workplan(
-        pocket_boundary=boundary,
+    wp1 = _build_entry(
+        boundary,
         tool_radius=3.0,
     )
-    wp2 = build_entry_workplan(
-        pocket_boundary=boundary,
+    wp2 = _build_entry(
+        boundary,
         islands=[],
         tool_radius=3.0,
     )
@@ -281,39 +297,20 @@ def _assert_tool_disc_fits_boundary(start, end, boundary, tool_radius):
             )
 
 
-def test_entry_workplan_ramp_stays_inside_boundary():
-    """RampEntry carrier must not poke outside the pocket boundary."""
-    boundary = _cup()
-    workplan = build_entry_workplan(
-        pocket_boundary=boundary,
+def test_entry_workplan_toroidal_carrier_stays_inside_boundary():
+    """ToroidalClear carrier must not poke outside the pocket boundary."""
+    boundary = _rect(0, 0, 20, 12)
+    workplan = _build_entry(
+        boundary,
         tool_radius=3.0,
         step_over=2.0,
         safe_z=2.0,
         target_z=-5.0,
     )
-    ramp_steps = [s for s in workplan if s["kind"] == "RampEntry"]
-    assert len(ramp_steps) == 1, f"expected 1 RampEntry, got {len(ramp_steps)}"
-    step = ramp_steps[0]
-    _assert_tool_disc_fits_boundary(
-        step["start"], step["end"], boundary, tool_radius=3.0
-    )
-
-
-def test_entry_workplan_ramp_uses_eroded_region():
-    """RampEntry carrier must keep the tool disc inside the boundary.
-
-    Previously the carrier was generated by spanning the AABB of
-    the (non-eroded) region polygon, so a triangular leftover
-    region produced a carrier whose tool disc stuck out past the
-    sliver's edges.  The fix clips the candidate axes against the
-    *eroded* region (boundary eroded by tool_radius) so the tool
-    disc always fits.
-    """
-    boundary = _cup()
-    workplan = build_entry_workplan(pocket_boundary=boundary, tool_radius=3.0)
-    for step in workplan:
-        if step["kind"] != "RampEntry":
-            continue
+    toroid_steps = [s for s in workplan if s["kind"] == "ToroidalClear"]
+    assert len(toroid_steps) >= 1
+    for step in toroid_steps:
+        carrier = step["carrier"]
         _assert_tool_disc_fits_boundary(
-            step["start"], step["end"], boundary, tool_radius=3.0
+            carrier[0], carrier[-1], boundary, tool_radius=3.0
         )

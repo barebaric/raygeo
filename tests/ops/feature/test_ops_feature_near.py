@@ -3,9 +3,7 @@
 import math
 
 from raygeo.geo.shape.polygon import get_signed_boundary_distance
-from raygeo.ops.feature import near as _near
-
-find_plunge_point = _near.find_plunge_point
+from raygeo.ops.feature.near import find_plunge_point
 
 
 def _circle(cx, cy, r, n=32):

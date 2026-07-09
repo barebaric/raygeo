@@ -4,12 +4,32 @@ from raygeo.cnc.machining.entry import build_entry_workplan
 from raygeo.cnc.machining.plan import Workplan
 from raygeo.cnc.machining.wavefront import build_wavefront_workplan
 from raygeo.geo.shape.polygon import get_polygon_signed_area
+from raygeo.ops.feature.region import find_regions
 from raygeo.ops.types import CommandType
 
 
 def _rect(x0, y0, w, h):
     """CCW rectangle starting at (x0, y0)."""
     return [(x0, y0), (x0 + w, y0), (x0 + w, y0 + h), (x0, y0 + h)]
+
+
+def _build_entry(boundary, islands=None, **kwargs):
+    tool_radius = kwargs.get("tool_radius", 3.0)
+    regions = find_regions(
+        boundary=boundary,
+        islands=islands or [],
+        tool_radius=tool_radius,
+    )
+    if not regions:
+        return []
+    poly, _area, entry_pt, r_max = regions[0]
+    return build_entry_workplan(
+        poly,
+        entry_pt,
+        r_max,
+        islands=islands or [],
+        **kwargs,
+    )
 
 
 def _area(polygons):
@@ -108,8 +128,8 @@ def test_execute_workplan_unknown_kind_raises():
 def test_workplan_rectangle_produces_cuts():
     """Execute entry workplan for 40x40 rect — ops non-empty."""
     boundary = _rect(-20, -20, 40, 40)
-    steps = build_entry_workplan(
-        pocket_boundary=boundary,
+    steps = _build_entry(
+        boundary,
         tool_radius=3.0,
         step_over=2.0,
         safe_z=2.0,
@@ -149,8 +169,8 @@ def test_workplan_dumbbell_safe_z_between_lobes():
     """Dumbbell entry workplan — travel between lobes is at safe_z."""
     SAFE_Z = 2.0
     boundary = _dumbbell()
-    steps = build_entry_workplan(
-        pocket_boundary=boundary,
+    steps = _build_entry(
+        boundary,
         tool_radius=3.0,
         step_over=2.0,
         safe_z=SAFE_Z,

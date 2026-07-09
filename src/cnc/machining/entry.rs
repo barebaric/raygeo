@@ -1,23 +1,25 @@
 //! CNC entry strategy orchestration.
 //!
-//! [`build_entry_workplan`] uses feature detection to produce a
-//! `Vec<WorkplanStep>` without executing. Execution is the job of the
-//! workplan executor ([`Workplan`](crate::cnc::machining::plan::Workplan)).
+//! [`build_entry_workplan`] takes a single [`Region`] (wide sub-region
+//! with an entry point and max inscribed radius) and produces the
+//! appropriate entry [`WorkplanStep`]s.  Region detection is the
+//! caller's responsibility — use [`find_regions`] to obtain regions.
+//!
+//! Execution is the job of the workplan executor
+//! ([`Workplan`](crate::cnc::machining::plan::Workplan)).
 
 use prof_macros::prof;
 
 use crate::cnc::machining::plan::WorkplanStep;
 use crate::error::RaygeoResult;
 use crate::geo::algo::helix::HelixDirection;
-use crate::geo::algo::polylabel::find_largest_circle;
 use crate::geo::shape::line::longest_line_through_point;
-use crate::geo::shape::polygon::{get_polygon_bounds, get_polygon_centroid};
+use crate::geo::shape::polygon::get_polygon_bounds;
 use crate::ops::feature::ramp::find_ramp_carrier;
-use crate::ops::feature::region::find_regions;
+use crate::ops::feature::region::Region;
 use crate::types::{Point3D, Polygon};
 
 pub struct EntryWorkplanOptions {
-    pub pocket_boundary: Polygon,
     pub islands: Vec<Polygon>,
     pub tool_radius: f64,
     pub step_over: f64,
@@ -28,104 +30,58 @@ pub struct EntryWorkplanOptions {
     pub angular_step: f64,
 }
 
+/// Build an entry workplan for a single wide [`Region`].
+///
+/// Strategy is chosen based on `region.r_max`:
+/// - **Helix + spiral** when `r_max >= 2 × tool_diameter` (room for a
+///   helix that clears on descent then spirals out).
+/// - **Toroidal ramp** when [`find_ramp_carrier`] finds a usable
+///   carrier line inside the region polygon.
+/// - **Zigzag ramp** as a last-resort fallback.
 #[prof]
 pub fn build_entry_workplan(
+    region: &Region,
     opts: &EntryWorkplanOptions,
 ) -> RaygeoResult<Vec<WorkplanStep>> {
-    let regions = find_regions(
-        &opts.pocket_boundary,
-        &opts.islands,
-        opts.tool_radius,
-        0.5,
-    );
-
-    if regions.is_empty() {
-        return Ok(fallback_entry(&opts.pocket_boundary, &opts.islands, opts));
-    }
-
-    let mut steps: Vec<WorkplanStep> = Vec::new();
+    let mut steps = Vec::new();
     let tool_diameter = 2.0 * opts.tool_radius;
 
-    for region in &regions {
-        if region.r_max >= 2.0 * tool_diameter {
-            let helix_r = (opts.tool_radius * 0.8).min(region.r_max * 0.5);
+    if region.r_max >= 2.0 * tool_diameter {
+        let helix_r = (opts.tool_radius * 0.8).min(region.r_max * 0.5);
 
-            steps.push(WorkplanStep::HelixPlunge {
+        steps.push(WorkplanStep::HelixPlunge {
+            center: region.entry_pt,
+            helix_r,
+            z_start: opts.safe_z,
+            z_end: opts.target_z,
+            pitch: opts.plunge_pitch,
+            direction: HelixDirection::Cw,
+            angular_step: opts.angular_step,
+        });
+
+        let spiral_max_r = (region.r_max - opts.tool_radius - opts.safe_margin)
+            .max(helix_r + 0.01);
+        let radial_dist = spiral_max_r - helix_r;
+        if radial_dist > 0.0 && opts.step_over > 0.0 {
+            let revolutions = radial_dist / opts.step_over;
+            steps.push(WorkplanStep::FlatSpiral {
                 center: region.entry_pt,
-                helix_r,
-                z_start: opts.safe_z,
-                z_end: opts.target_z,
-                pitch: opts.plunge_pitch,
+                z: opts.target_z,
+                start_radius: helix_r,
+                end_radius: spiral_max_r,
+                revolutions,
                 direction: HelixDirection::Cw,
                 angular_step: opts.angular_step,
-            });
-
-            let spiral_max_r =
-                (region.r_max - opts.tool_radius - opts.safe_margin)
-                    .max(helix_r + 0.01);
-            let radial_dist = spiral_max_r - helix_r;
-            if radial_dist > 0.0 && opts.step_over > 0.0 {
-                let revolutions = radial_dist / opts.step_over;
-                steps.push(WorkplanStep::FlatSpiral {
-                    center: region.entry_pt,
-                    z: opts.target_z,
-                    start_radius: helix_r,
-                    end_radius: spiral_max_r,
-                    revolutions,
-                    direction: HelixDirection::Cw,
-                    angular_step: opts.angular_step,
-                    start_angle: 0.0,
-                });
-            }
-        } else if let Some((start, end)) = find_ramp_carrier(
-            &region.polygon,
-            &opts.islands,
-            opts.tool_radius,
-            45.0,
-        ) {
-            steps.push(WorkplanStep::ToroidalClear {
-                carrier: vec![start, end],
-                start: Point3D::new(start.x, start.y, opts.safe_z),
-                target_z: opts.target_z,
-                tool_radius: opts.tool_radius,
-                step_over: opts.step_over,
-                max_ramp_angle_deg: 45.0,
-                direction: HelixDirection::Cw,
-                angular_step: opts.angular_step,
-            });
-        } else {
-            let (start, end) = ramp_segment_in_region(
-                region.entry_pt,
-                &region.polygon,
-                opts.tool_radius,
-            );
-            steps.push(WorkplanStep::RampEntry {
-                start,
-                end,
-                z_start: opts.safe_z,
-                z_end: opts.target_z,
-                max_ramp_angle_deg: 45.0,
-                lateral_amplitude: opts.tool_radius * 0.8,
+                start_angle: 0.0,
             });
         }
-    }
-
-    Ok(steps)
-}
-
-fn fallback_entry(
-    boundary: &Polygon,
-    islands: &[Polygon],
-    opts: &EntryWorkplanOptions,
-) -> Vec<WorkplanStep> {
-    if boundary.is_empty() {
-        return Vec::new();
-    }
-
-    if let Some((start, end)) =
-        find_ramp_carrier(boundary, islands, opts.tool_radius, 45.0)
-    {
-        vec![WorkplanStep::ToroidalClear {
+    } else if let Some((start, end)) = find_ramp_carrier(
+        &region.polygon,
+        &opts.islands,
+        opts.tool_radius,
+        45.0,
+    ) {
+        steps.push(WorkplanStep::ToroidalClear {
             carrier: vec![start, end],
             start: Point3D::new(start.x, start.y, opts.safe_z),
             target_z: opts.target_z,
@@ -134,21 +90,24 @@ fn fallback_entry(
             max_ramp_angle_deg: 45.0,
             direction: HelixDirection::Cw,
             angular_step: opts.angular_step,
-        }]
+        });
     } else {
-        let (entry_pt, _) = find_largest_circle(boundary, islands, 0.1)
-            .unwrap_or_else(|| (get_polygon_centroid(boundary), 0.0));
-        let (start, end) =
-            ramp_segment_in_region(entry_pt, boundary, opts.tool_radius);
-        vec![WorkplanStep::RampEntry {
+        let (start, end) = ramp_segment_in_region(
+            region.entry_pt,
+            &region.polygon,
+            opts.tool_radius,
+        );
+        steps.push(WorkplanStep::RampEntry {
             start,
             end,
             z_start: opts.safe_z,
             z_end: opts.target_z,
             max_ramp_angle_deg: 45.0,
             lateral_amplitude: opts.tool_radius * 0.8,
-        }]
+        });
     }
+
+    Ok(steps)
 }
 
 /// Pick the longest axis-aligned line segment through `entry_pt` whose

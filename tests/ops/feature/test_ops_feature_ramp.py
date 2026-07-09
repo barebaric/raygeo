@@ -3,9 +3,7 @@
 import math
 
 from raygeo.geo.shape.polygon import is_point_inside_polygon
-from raygeo.ops.feature import ramp as _ramp
-
-find_ramp_carrier = _ramp.find_ramp_carrier
+from raygeo.ops.feature.ramp import find_ramp_carrier
 
 
 def _rect(x0, y0, w, h):

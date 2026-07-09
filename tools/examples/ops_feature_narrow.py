@@ -2,7 +2,7 @@
 
 import matplotlib.pyplot as plt
 
-from raygeo.ops.feature import narrow as _narrow
+from raygeo.ops.feature.narrow import analyze_pocket
 
 CLASS_COLORS = {
     "slot": "mediumblue",
@@ -61,7 +61,7 @@ def generate_classification_by_width():
         (25, 53),
     ]
 
-    regions = _narrow.analyze_pocket(
+    regions = analyze_pocket(
         pocket,
         holes=[island],
         tool_radius=tool_radius,

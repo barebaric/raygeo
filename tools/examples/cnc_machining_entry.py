@@ -5,9 +5,26 @@ from matplotlib.patches import Circle as CirclePatch
 from matplotlib.patches import Polygon as PolygonPatch
 
 from raygeo.cnc.machining.entry import build_entry_workplan
-from raygeo.ops.feature import region as _region
+from raygeo.ops.feature.region import find_regions
 
-find_regions = _region.find_regions
+
+def _build_entry(boundary, islands=None, **kwargs):
+    tool_radius = kwargs.get("tool_radius", 3.0)
+    regions = find_regions(
+        boundary=boundary,
+        islands=islands or [],
+        tool_radius=tool_radius,
+    )
+    if not regions:
+        return []
+    poly, _area, entry_pt, r_max = regions[0]
+    return build_entry_workplan(
+        poly,
+        entry_pt,
+        r_max,
+        islands=islands or [],
+        **kwargs,
+    )
 
 
 def _rect(x0, y0, w, h):
@@ -191,8 +208,8 @@ def generate_entry_workplan():
         tool_radius=tool_radius,
         tolerance=0.5,
     )
-    rect_workplan = build_entry_workplan(
-        pocket_boundary=rect_boundary,
+    rect_workplan = _build_entry(
+        rect_boundary,
         tool_radius=tool_radius,
         step_over=step_over,
         safe_z=safe_z,
@@ -206,8 +223,8 @@ def generate_entry_workplan():
         tool_radius=tool_radius,
         tolerance=0.5,
     )
-    h_workplan = build_entry_workplan(
-        pocket_boundary=h_boundary,
+    h_workplan = _build_entry(
+        h_boundary,
         tool_radius=tool_radius,
         step_over=step_over,
         safe_z=safe_z,
@@ -221,8 +238,8 @@ def generate_entry_workplan():
         tool_radius=tool_radius,
         tolerance=0.5,
     )
-    cup_workplan = build_entry_workplan(
-        pocket_boundary=cup_boundary,
+    cup_workplan = _build_entry(
+        cup_boundary,
         tool_radius=tool_radius,
         step_over=step_over,
         safe_z=safe_z,

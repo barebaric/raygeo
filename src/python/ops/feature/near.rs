@@ -84,5 +84,9 @@ pub fn register(feature_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(pyo3::wrap_pyfunction!(find_plunge_point_py, m.clone())?)?;
 
     feature_mod.add_submodule(&m)?;
+
+    let sys_modules = py.import("sys")?.getattr("modules")?;
+    sys_modules.set_item("raygeo.ops.feature.near", &m)?;
+
     Ok(())
 }

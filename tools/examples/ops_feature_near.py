@@ -6,9 +6,7 @@ import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
 from matplotlib.patches import Circle as CirclePatch
 
-from raygeo.ops.feature import near as _near
-
-find_plunge_point = _near.find_plunge_point
+from raygeo.ops.feature.near import find_plunge_point
 
 
 def _rect(x0, y0, w, h):

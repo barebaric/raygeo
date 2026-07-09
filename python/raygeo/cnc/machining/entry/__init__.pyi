@@ -6,16 +6,20 @@ __all__ = [
     "build_entry_workplan",
 ]
 
-def build_entry_workplan(pocket_boundary: collections.abc.Sequence[tuple[float, float]], islands: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]] | None = None, tool_radius: float = 3, step_over: float = 2, safe_z: float = 2, target_z: float = -5, plunge_pitch: float = 1, safe_margin: float = 1, angular_step: float = 0.1) -> list[dict]:
+def build_entry_workplan(region_polygon: collections.abc.Sequence[tuple[float, float]], entry_point: tuple[float, float], r_max: float, islands: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]] | None = None, tool_radius: float = 3, step_over: float = 2, safe_z: float = 2, target_z: float = -5, plunge_pitch: float = 1, safe_margin: float = 1, angular_step: float = 0.1) -> list[dict]:
     r"""
-    Build an entry workplan for a pocket.
+    Build an entry workplan for a single wide region.
     
-    Uses feature detection to determine the best entry strategy per
-    disconnected wide sub-region: helix+spiral (if r_max >= 2xD),
-    toroidal ramp (if find_ramp_carrier succeeds), or zigzag ramp
-    (last resort).
+    Strategy is chosen based on ``r_max``: helix+spiral when
+    ``r_max >= 2 × tool_diameter``, toroidal ramp if a carrier is
+    found, or zigzag ramp as fallback.
     
-    :param pocket_boundary: Outer boundary as [(x, y), ...].
+    Use :func:`raygeo.ops.feature.region.find_regions` to obtain
+    region data first.
+    
+    :param region_polygon: Region boundary as [(x, y), ...].
+    :param entry_point: Inscribed-circle centre (x, y).
+    :param r_max: Largest inscribed circle radius in mm.
     :param islands: List of island polygons (default None).
     :param tool_radius: Tool radius in mm (default 3.0).
     :param step_over: Radial step-over (default 2.0).

@@ -1,8 +1,6 @@
 """Tests for ops/feature/narrow — narrow-passage machining analysis."""
 
-from raygeo.ops.feature import narrow as _narrow
-
-analyze_pocket = _narrow.analyze_pocket
+from raygeo.ops.feature.narrow import analyze_pocket
 
 
 def _rect(x0, y0, w, h):

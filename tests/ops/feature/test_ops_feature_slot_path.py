@@ -12,9 +12,7 @@ the previous AABB-slice approach could not.
 import math
 
 from raygeo.geo.shape.polygon import is_point_inside_polygon
-from raygeo.ops.feature import slot_path as _sp
-
-find_slot_path = _sp.find_slot_path
+from raygeo.ops.feature.slot_path import find_slot_path
 
 
 def _rect(x0, y0, w, h):

@@ -4,6 +4,7 @@ use pyo3_stub_gen::derive::gen_stub_pyfunction;
 
 use crate::cnc::machining::entry::{self, EntryWorkplanOptions};
 use crate::cnc::machining::plan::WorkplanStep;
+use crate::ops::feature::region::Region;
 use crate::types::Point;
 
 pub(crate) fn register(machining_mod: &Bound<'_, PyModule>) -> PyResult<()> {
@@ -18,12 +19,16 @@ pub(crate) fn register(machining_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     Ok(())
 }
 
+// ── build_entry_workplan ───────────────────────────────────────────
+
 #[gen_stub_pyfunction(
     python = r#"
     import collections.abc
 
     def build_entry_workplan(
-        pocket_boundary: collections.abc.Sequence[tuple[float, float]],
+        region_polygon: collections.abc.Sequence[tuple[float, float]],
+        entry_point: tuple[float, float],
+        r_max: float,
         islands: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]] | None = None,
         tool_radius: float = 3.0,
         step_over: float = 2.0,
@@ -33,14 +38,18 @@ pub(crate) fn register(machining_mod: &Bound<'_, PyModule>) -> PyResult<()> {
         safe_margin: float = 1.0,
         angular_step: float = 0.1,
     ) -> list[dict]:
-        """Build an entry workplan for a pocket.
+        """Build an entry workplan for a single wide region.
 
-        Uses feature detection to determine the best entry strategy per
-        disconnected wide sub-region: helix+spiral (if r_max >= 2xD),
-        toroidal ramp (if find_ramp_carrier succeeds), or zigzag ramp
-        (last resort).
+        Strategy is chosen based on ``r_max``: helix+spiral when
+        ``r_max >= 2 × tool_diameter``, toroidal ramp if a carrier is
+        found, or zigzag ramp as fallback.
 
-        :param pocket_boundary: Outer boundary as [(x, y), ...].
+        Use :func:`raygeo.ops.feature.region.find_regions` to obtain
+        region data first.
+
+        :param region_polygon: Region boundary as [(x, y), ...].
+        :param entry_point: Inscribed-circle centre (x, y).
+        :param r_max: Largest inscribed circle radius in mm.
         :param islands: List of island polygons (default None).
         :param tool_radius: Tool radius in mm (default 3.0).
         :param step_over: Radial step-over (default 2.0).
@@ -56,7 +65,9 @@ pub(crate) fn register(machining_mod: &Bound<'_, PyModule>) -> PyResult<()> {
 )]
 #[pyfunction(name = "build_entry_workplan")]
 #[pyo3(signature = (
-    pocket_boundary,
+    region_polygon,
+    entry_point,
+    r_max,
     islands = None,
     tool_radius = 3.0,
     step_over = 2.0,
@@ -69,7 +80,9 @@ pub(crate) fn register(machining_mod: &Bound<'_, PyModule>) -> PyResult<()> {
 #[allow(clippy::too_many_arguments)]
 fn build_entry_workplan_py(
     py: Python<'_>,
-    pocket_boundary: Vec<(f64, f64)>,
+    region_polygon: Vec<(f64, f64)>,
+    entry_point: (f64, f64),
+    r_max: f64,
     islands: Option<Vec<Vec<(f64, f64)>>>,
     tool_radius: f64,
     step_over: f64,
@@ -79,7 +92,7 @@ fn build_entry_workplan_py(
     safe_margin: f64,
     angular_step: f64,
 ) -> PyResult<Vec<Bound<'_, PyDict>>> {
-    let boundary: Vec<Point> = pocket_boundary
+    let polygon: Vec<Point> = region_polygon
         .into_iter()
         .map(|(x, y)| Point::new(x, y))
         .collect();
@@ -89,8 +102,14 @@ fn build_entry_workplan_py(
         .map(|h| h.into_iter().map(|(x, y)| Point::new(x, y)).collect())
         .collect();
 
+    let region = Region {
+        polygon,
+        area: 0.0,
+        entry_pt: Point::new(entry_point.0, entry_point.1),
+        r_max,
+    };
+
     let opts = EntryWorkplanOptions {
-        pocket_boundary: boundary,
         islands: islands_vec,
         tool_radius,
         step_over,
@@ -101,7 +120,7 @@ fn build_entry_workplan_py(
         angular_step,
     };
 
-    let steps: Vec<WorkplanStep> = entry::build_entry_workplan(&opts)?;
+    let steps: Vec<WorkplanStep> = entry::build_entry_workplan(&region, &opts)?;
     let mut result: Vec<Bound<'_, PyDict>> = Vec::with_capacity(steps.len());
     for step in &steps {
         result.push(super::plan::step_to_dict(py, step)?);

@@ -5,10 +5,8 @@ import numpy as np
 from matplotlib.lines import Line2D
 
 from raygeo.ops.assembly.slot import generate_slot
-from raygeo.ops.feature import slot_path as _sp
+from raygeo.ops.feature.slot_path import find_slot_path
 from tools.plot import plot_ops_3d
-
-find_slot_path = _sp.find_slot_path
 
 
 def _rect(x0, y0, w, h):
