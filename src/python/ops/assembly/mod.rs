@@ -11,6 +11,9 @@ pure geometry.
 ";
 
 use pyo3::prelude::*;
+use pyo3::types::PyDict;
+
+use crate::ops::assembly::ProgressEvent;
 
 pub(crate) mod adaptive;
 pub(crate) mod helix;
@@ -21,6 +24,38 @@ pub(crate) mod slot;
 pub(crate) mod spiral;
 pub(crate) mod toroid;
 pub(crate) mod wavefront;
+
+/// Convert a Rust ProgressEvent into a Python dict.
+pub(crate) fn progress_event_to_py(
+    py: Python<'_>,
+    event: ProgressEvent,
+) -> Py<PyAny> {
+    match event {
+        ProgressEvent::StepStart { step_index, label } => {
+            let d = PyDict::new(py);
+            d.set_item("kind", "step_start").unwrap();
+            d.set_item("step_index", step_index).unwrap();
+            d.set_item("label", label).unwrap();
+            d.into_any().unbind()
+        }
+        ProgressEvent::Ops {
+            commands,
+            ops_total,
+        } => {
+            let d = PyDict::new(py);
+            d.set_item("kind", "ops").unwrap();
+            d.set_item("ops_count", commands.len()).unwrap();
+            d.set_item("ops_total", ops_total).unwrap();
+            d.into_any().unbind()
+        }
+        ProgressEvent::StepEnd { step_index } => {
+            let d = PyDict::new(py);
+            d.set_item("kind", "step_end").unwrap();
+            d.set_item("step_index", step_index).unwrap();
+            d.into_any().unbind()
+        }
+    }
+}
 
 pub(crate) fn register(ops_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     let py = ops_mod.py();

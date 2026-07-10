@@ -135,6 +135,42 @@ impl ClearedArea {
         compute_inset_region(&self.boundary, tool_radius, &self.islands).0
     }
 
+    /// Temporarily replace islands, returning the old islands.
+    /// Invalidates caches so subsequent queries use the new islands.
+    pub fn swap_islands(&mut self, islands: &[Polygon]) -> Vec<Polygon> {
+        let old = std::mem::replace(&mut self.islands, islands.to_vec());
+        self.clear_sweep_cache();
+        old
+    }
+
+    /// Temporarily replace the boundary polygon, returning the old one.
+    /// Invalidates caches so subsequent queries use the new boundary.
+    pub fn swap_boundary(&mut self, boundary: &Polygon) -> Polygon {
+        let old = std::mem::replace(&mut self.boundary, boundary.clone());
+        self.clear_sweep_cache();
+        old
+    }
+
+    /// Find a safe plunge point in the cleared area near `near`.
+    ///
+    /// Wraps [`find_plunge_point`](crate::ops::feature::near::find_plunge_point)
+    /// using this area's fragments, boundary, and islands.
+    pub fn find_plunge_point(
+        &self,
+        near: Point,
+        tool_radius: f64,
+        search_radius: f64,
+    ) -> Option<Point> {
+        crate::ops::feature::near::find_plunge_point(
+            near,
+            &self.fragments,
+            &self.boundary,
+            &self.islands,
+            tool_radius,
+            search_radius,
+        )
+    }
+
     // ── Mutation ───────────────────────────────────────────────────
 
     /// Clear the single-entry sweep cache (called whenever fragments

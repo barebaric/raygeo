@@ -43,7 +43,7 @@ pub fn generate_toroid(
             diameter: opts.tool_radius * 2.0,
             engagement_angle_deg: 30.0,
             step_over_ratio: opts.step_over / (opts.tool_radius * 2.0),
-            min_loop_radius: opts.tool_radius * 0.3,
+            min_loop_radius: (opts.step_over * 0.3).max(0.05),
             z: opts.target_z,
         },
     );
@@ -168,7 +168,7 @@ pub fn generate_toroidal_clear(
                 diameter: opts.tool_radius * 2.0,
                 engagement_angle_deg: 30.0,
                 step_over_ratio: opts.step_over / (opts.tool_radius * 2.0),
-                min_loop_radius: opts.tool_radius * 0.3,
+                min_loop_radius: (opts.step_over * 0.3).max(0.05),
                 z: opts.target_z,
             },
         );
@@ -205,7 +205,7 @@ pub fn generate_toroidal_clear(
                 diameter: opts.tool_radius * 2.0,
                 engagement_angle_deg: 30.0,
                 step_over_ratio: opts.step_over / (opts.tool_radius * 2.0),
-                min_loop_radius: opts.tool_radius * 0.3,
+                min_loop_radius: (opts.step_over * 0.3).max(0.05),
                 z_start: z_pass_start,
                 z_end: z_pass_end,
             },
@@ -228,7 +228,7 @@ pub fn generate_toroidal_clear(
             diameter: opts.tool_radius * 2.0,
             engagement_angle_deg: 30.0,
             step_over_ratio: opts.step_over / (opts.tool_radius * 2.0),
-            min_loop_radius: opts.tool_radius * 0.3,
+            min_loop_radius: (opts.step_over * 0.3).max(0.05),
             z: opts.target_z,
         },
     );

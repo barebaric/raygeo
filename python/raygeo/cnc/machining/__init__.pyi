@@ -7,10 +7,12 @@ Entry, clearing, and finish operations that combine geometry
 with tool-aware state resolution.
 """
 
+from . import adaptive
 from . import entry
 from . import plan
 from . import wavefront
 __all__ = [
+    "adaptive",
     "entry",
     "plan",
     "wavefront",

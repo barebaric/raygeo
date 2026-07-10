@@ -20,6 +20,8 @@ execute(
     cut_power: float = 1.0,
     rapid_feed_rate: Optional[int] = None,
     trace: Optional[str] = None,
+    on_progress: Optional[Any] = None,
+    batch_size: int = 128,
 ) -> result.AssemblyResult
 ```
 
@@ -31,6 +33,8 @@ Execute all steps and return the combined **AssemblyResult**.
 | `cut_power`       | `float = 1.0`           | Laser power for cutting moves (default 1.0).                                           |
 | `rapid_feed_rate` | `Optional[int] = None`  | Feed rate for travel/retract moves, or `None` to leave them unmodified (default None). |
 | `trace`           | `Optional[str] = None`  | Optional file path for a trace file (`.bin`).                                          |
+| `on_progress`     | `Optional[Any] = None`  | Optional callback receiving progress dicts.                                            |
+| `batch_size`      | `int = 128`             | Ops batch size for on_progress (default 128).                                          |
 | _Returns_         | `result.AssemblyResult` | The combined **AssemblyResult**.                                                       |
 
 ### `extend()`

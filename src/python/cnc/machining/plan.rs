@@ -8,6 +8,7 @@ use crate::cnc::machining::plan::{self, WorkplanStep};
 use crate::geo::algo::helix::HelixDirection;
 use crate::ops::assembly::Tracelet;
 use crate::ops::state::State;
+use crate::python::ops::assembly::progress_event_to_py;
 use crate::python::ops::assembly::result::PyAssemblyResult;
 use crate::types::{Point, Point3D, Polygon};
 
@@ -231,6 +232,8 @@ pub(crate) fn step_to_dict<'a>(
             wall_margin,
             area_tolerance,
             angular_step,
+            start_pos,
+            start_heading,
         } => {
             d.set_item("kind", "AdaptiveClear")?;
             d.set_item("pocket_boundary", polygon_to_py(pocket_boundary))?;
@@ -244,6 +247,8 @@ pub(crate) fn step_to_dict<'a>(
             d.set_item("wall_margin", *wall_margin)?;
             d.set_item("area_tolerance", *area_tolerance)?;
             d.set_item("angular_step", *angular_step)?;
+            d.set_item("start_pos", start_pos.map(|p| (p.x, p.y, p.z)))?;
+            d.set_item("start_heading", *start_heading)?;
         }
         WorkplanStep::ProfileInner {
             boundary,
@@ -345,19 +350,34 @@ pub(crate) fn dict_to_step(d: &Bound<'_, PyDict>) -> PyResult<WorkplanStep> {
             tool_radius: get_f64(d, "tool_radius")?,
             target_z: get_f64(d, "target_z")?,
         }),
-        "AdaptiveClear" => Ok(WorkplanStep::AdaptiveClear {
-            pocket_boundary: get_polygon(d, "pocket_boundary")?,
-            islands: get_islands(d, "islands")?,
-            tool_radius: get_f64(d, "tool_radius")?,
-            step_over: get_f64(d, "step_over")?,
-            step_length: get_f64(d, "step_length")?,
-            target_z: get_f64(d, "target_z")?,
-            safe_z: get_f64(d, "safe_z")?,
-            max_deflection_deg: get_f64(d, "max_deflection_deg")?,
-            wall_margin: get_f64(d, "wall_margin")?,
-            area_tolerance: get_f64(d, "area_tolerance")?,
-            angular_step: get_f64(d, "angular_step")?,
-        }),
+        "AdaptiveClear" => {
+            let start_pos = match d.get_item("start_pos")? {
+                Some(v) if !v.is_none() => {
+                    let (x, y, z): (f64, f64, f64) = v.extract()?;
+                    Some(Point3D::new(x, y, z))
+                }
+                _ => None,
+            };
+            let start_heading = match d.get_item("start_heading")? {
+                Some(v) if !v.is_none() => Some(v.extract::<f64>()?),
+                _ => None,
+            };
+            Ok(WorkplanStep::AdaptiveClear {
+                pocket_boundary: get_polygon(d, "pocket_boundary")?,
+                islands: get_islands(d, "islands")?,
+                tool_radius: get_f64(d, "tool_radius")?,
+                step_over: get_f64(d, "step_over")?,
+                step_length: get_f64(d, "step_length")?,
+                target_z: get_f64(d, "target_z")?,
+                safe_z: get_f64(d, "safe_z")?,
+                max_deflection_deg: get_f64(d, "max_deflection_deg")?,
+                wall_margin: get_f64(d, "wall_margin")?,
+                area_tolerance: get_f64(d, "area_tolerance")?,
+                angular_step: get_f64(d, "angular_step")?,
+                start_pos,
+                start_heading,
+            })
+        }
         "ProfileInner" => Ok(WorkplanStep::ProfileInner {
             boundary: get_polygon(d, "boundary")?,
             islands: get_islands(d, "islands")?,
@@ -461,14 +481,18 @@ impl PyWorkplan {
     /// :param rapid_feed_rate: Feed rate for travel/retract moves, or
     ///     ``None`` to leave them unmodified (default None).
     /// :param trace: Optional file path for a trace file (``.bin``).
+    /// :param on_progress: Optional callback receiving progress dicts.
+    /// :param batch_size: Ops batch size for on_progress (default 128).
     /// :returns: The combined :class:`AssemblyResult`.
-    #[pyo3(signature = (cut_feed_rate = 1200, cut_power = 1.0, rapid_feed_rate = None, trace = None))]
+    #[pyo3(signature = (cut_feed_rate = 1200, cut_power = 1.0, rapid_feed_rate = None, trace = None, on_progress = None, batch_size = 128))]
     fn execute(
         &self,
         cut_feed_rate: i32,
         cut_power: f64,
         rapid_feed_rate: Option<i32>,
         trace: Option<String>,
+        on_progress: Option<Py<PyAny>>,
+        batch_size: usize,
     ) -> PyResult<PyAssemblyResult> {
         let cut_state = State {
             power: cut_power,
@@ -482,7 +506,19 @@ impl PyWorkplan {
         };
         let trace_path = trace.map(PathBuf::from);
 
-        let mut tl = Tracelet::new();
+        let mut tl = if let Some(cb) = on_progress {
+            Tracelet::with_callback(
+                Box::new(move |event| {
+                    Python::attach(|py| {
+                        let py_event = progress_event_to_py(py, event);
+                        let _ = cb.call1(py, (py_event,));
+                    });
+                }),
+                batch_size,
+            )
+        } else {
+            Tracelet::new()
+        };
         let meta = self.inner.execute(
             &mut tl,
             &cut_state,

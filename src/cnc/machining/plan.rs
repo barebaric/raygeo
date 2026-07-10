@@ -93,6 +93,8 @@ pub enum WorkplanStep {
         wall_margin: f64,
         area_tolerance: f64,
         angular_step: f64,
+        start_pos: Option<Point3D>,
+        start_heading: Option<f64>,
     },
     ProfileInner {
         boundary: Polygon,
@@ -214,8 +216,18 @@ impl WorkplanStep {
                 direction,
                 angular_step,
             } => {
+                let mut full_carrier = carrier.clone();
+                if let Some(&first) = carrier.first() {
+                    if let Some(plunge) = cleared.find_plunge_point(
+                        first,
+                        *tool_radius,
+                        *tool_radius * 3.0,
+                    ) {
+                        full_carrier.insert(0, plunge);
+                    }
+                }
                 let opts = ToroidalClearOptions {
-                    carrier: carrier.clone(),
+                    carrier: full_carrier,
                     start: *start,
                     target_z: *target_z,
                     tool_radius: *tool_radius,
@@ -234,8 +246,18 @@ impl WorkplanStep {
                 tool_radius,
                 target_z,
             } => {
+                let mut full_carrier = carrier.clone();
+                if let Some(&first) = carrier.first() {
+                    if let Some(plunge) = cleared.find_plunge_point(
+                        first,
+                        *tool_radius,
+                        *tool_radius * 3.0,
+                    ) {
+                        full_carrier.insert(0, plunge);
+                    }
+                }
                 let opts = SlotOptions {
-                    carrier: carrier.clone(),
+                    carrier: full_carrier,
                     tool_radius: *tool_radius,
                     target_z: *target_z,
                 };
@@ -254,6 +276,8 @@ impl WorkplanStep {
                 max_deflection_deg,
                 wall_margin,
                 area_tolerance,
+                start_pos,
+                start_heading,
                 ..
             } => {
                 let opts = AdaptiveClearingOptions {
@@ -267,9 +291,18 @@ impl WorkplanStep {
                     max_deflection_deg: *max_deflection_deg,
                     wall_margin: *wall_margin,
                     area_tolerance: *area_tolerance,
+                    start_pos: *start_pos,
+                    start_heading: *start_heading,
                     ..Default::default()
                 };
-                adaptive::adaptive_clearing(trace, cleared, &opts, cut_state)
+                let saved_b = cleared.swap_boundary(pocket_boundary);
+                let saved_i = cleared.swap_islands(islands);
+                let result = adaptive::adaptive_clearing(
+                    trace, cleared, &opts, cut_state,
+                );
+                cleared.swap_islands(&saved_i);
+                cleared.swap_boundary(&saved_b);
+                result
             }
             WorkplanStep::ProfileInner {
                 boundary,

@@ -36,6 +36,8 @@ adaptive_clearing(
     profile: bool = False,
     cut_direction: str = 'ccw',
     trace_path: str | None = None,
+    on_progress: Callable[[dict], None] | None = None,
+    batch_size: int = 128,
 ) -> ops.assembly.result.AssemblyResult
 ```
 
@@ -69,6 +71,8 @@ built by **raygeo.cnc.machining.wavefront.build_wavefront_workplan** and execute
 | `profile`              | `bool = False`                                 | Print a profiling report to stdout (default False).                                                                               |
 | `cut_direction`        | `str = 'ccw'`                                  | Rotational direction of all cutting moves. `"cw"` or `"ccw"` (default `"ccw"`).                                                   |
 | `trace_path`           | `str &#124; None = None`                       | When set, write a per-step binary trace file for the Python inspector (debug builds only).                                        |
+| `on_progress`          | `Callable[[dict], None] &#124; None = None`    | Optional callback receiving progress dicts.                                                                                       |
+| `batch_size`           | `int = 128`                                    | Ops batch size for on_progress (default 128).                                                                                     |
 | _Returns_              | `ops.assembly.result.AssemblyResult`           | Ops with cutting commands (entry not included).                                                                                   |
 
 ![Circle-seed clearing in a square pocket with central island: seed, toolpath, and remaining.](images/ops-assembly-adaptive-adaptive-clearing-centre-island.png)

@@ -15,6 +15,7 @@ use crate::ops::cut::CutDirection;
 use crate::ops::state::State;
 use crate::prof::prof_report;
 use crate::python::errors::{ResumePointNotFoundError, RoutingError};
+use crate::python::ops::assembly::progress_event_to_py;
 use crate::python::ops::assembly::result::PyAssemblyResult;
 use crate::python::ops::cut::cleared_area::PyClearedArea;
 use crate::types::{Point, Point3D};
@@ -99,6 +100,8 @@ pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
         profile: bool = False,
         cut_direction: str = "ccw",
         trace_path: str | None = None,
+        on_progress: collections.abc.Callable[[dict], None] | None = None,
+        batch_size: int = 128,
     ) -> raygeo.ops.assembly.result.AssemblyResult:
         """Run forward-stepping adaptive clearing.
 
@@ -141,6 +144,8 @@ pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
                               ``"cw"`` or ``"ccw"`` (default ``"ccw"``).
         :param trace_path: When set, write a per-step binary trace file for
                            the Python inspector (debug builds only).
+        :param on_progress: Optional callback receiving progress dicts.
+        :param batch_size: Ops batch size for on_progress (default 128).
         :returns: Ops with cutting commands (entry not included).
         """
     "#,
@@ -167,6 +172,8 @@ pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     profile = false,
     trace_path = None,
     cut_direction = "ccw",
+    on_progress = None,
+    batch_size = 128,
 ))]
 #[allow(clippy::too_many_arguments)]
 fn adaptive_clearing_py(
@@ -189,6 +196,8 @@ fn adaptive_clearing_py(
     profile: bool,
     trace_path: Option<String>,
     cut_direction: &str,
+    on_progress: Option<Py<PyAny>>,
+    batch_size: usize,
 ) -> PyResult<PyAssemblyResult> {
     let boundary: Vec<Point> = pocket_boundary
         .into_iter()
@@ -231,7 +240,19 @@ fn adaptive_clearing_py(
     };
 
     use crate::ops::assembly::Tracelet;
-    let mut trace = Tracelet::new();
+    let mut trace = if let Some(cb) = on_progress {
+        Tracelet::with_callback(
+            Box::new(move |event| {
+                Python::attach(|py| {
+                    let py_event = progress_event_to_py(py, event);
+                    let _ = cb.call1(py, (py_event,));
+                });
+            }),
+            batch_size,
+        )
+    } else {
+        Tracelet::new()
+    };
     let meta = adaptive::adaptive_clearing(
         &mut trace,
         &mut cleared.inner,

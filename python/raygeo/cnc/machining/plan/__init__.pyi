@@ -24,7 +24,7 @@ class Workplan:
         r"""
         Append builder output steps (list of WorkplanStep dicts).
         """
-    def execute(self, cut_feed_rate: builtins.int = 1200, cut_power: builtins.float = 1.0, rapid_feed_rate: typing.Optional[builtins.int] = None, trace: typing.Optional[builtins.str] = None) -> result.AssemblyResult:
+    def execute(self, cut_feed_rate: builtins.int = 1200, cut_power: builtins.float = 1.0, rapid_feed_rate: typing.Optional[builtins.int] = None, trace: typing.Optional[builtins.str] = None, on_progress: typing.Optional[typing.Any] = None, batch_size: builtins.int = 128) -> result.AssemblyResult:
         r"""
         Execute all steps and return the combined :class:`AssemblyResult`.
         
@@ -33,6 +33,8 @@ class Workplan:
         :param rapid_feed_rate: Feed rate for travel/retract moves, or
             ``None`` to leave them unmodified (default None).
         :param trace: Optional file path for a trace file (``.bin``).
+        :param on_progress: Optional callback receiving progress dicts.
+        :param batch_size: Ops batch size for on_progress (default 128).
         :returns: The combined :class:`AssemblyResult`.
         """
     def __repr__(self) -> builtins.str: ...

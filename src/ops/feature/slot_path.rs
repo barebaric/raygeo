@@ -32,6 +32,7 @@
 /// 7. Stop on no-forward-progress, loop-back (quantized visited set),
 ///    or after `MAX_STEPS` iterations.
 /// 8. If fewer than 2 carrier points survive → `None`.
+use crate::geo::algo::clipping::clip_line_segment_with_polygons_2d;
 use crate::geo::shape::polygon::{
     get_circle_polygon, get_polygon_area, get_polygon_centroid,
     get_polygon_group_bounds, get_polygons_group_intersection, offset_polygon,
@@ -318,4 +319,80 @@ pub fn find_slot_path(
     }
 
     Some(carrier)
+}
+
+/// Measure the passage width perpendicular to `direction` at `point`.
+///
+/// Casts a line through `point` perpendicular to `direction`, clips it
+/// to `passage`, and returns the longest resulting sub-segment length.
+/// Works for arbitrary passage shapes (not just rectangles).
+pub fn measure_passage_width_at(
+    passage: &Polygon,
+    point: Point,
+    direction: Point,
+) -> f64 {
+    let len = (direction.x * direction.x + direction.y * direction.y).sqrt();
+    if len < 1e-12 {
+        return 0.0;
+    }
+    let nx = -direction.y / len;
+    let ny = direction.x / len;
+    let far = 10000.0;
+    let p1 = Point::new(point.x + nx * far, point.y + ny * far);
+    let p2 = Point::new(point.x - nx * far, point.y - ny * far);
+    let clipped = clip_line_segment_with_polygons_2d(
+        p1,
+        p2,
+        std::slice::from_ref(passage),
+    );
+    let mut best = 0.0;
+    for (s, e) in &clipped {
+        let dx = e.x - s.x;
+        let dy = e.y - s.y;
+        let seg_len = (dx * dx + dy * dy).sqrt();
+        if seg_len > best {
+            best = seg_len;
+        }
+    }
+    best
+}
+
+/// Measure the minimum passage width along a carrier polyline.
+///
+/// Samples [`measure_passage_width_at`] at regular intervals (every
+/// ~2 mm) along the carrier and returns the minimum.  For a 2-point
+/// carrier (typical of [`find_ramp_carrier`]) the samples lie on the
+/// straight line between the endpoints.
+pub fn measure_passage_min_width(passage: &Polygon, carrier: &[Point]) -> f64 {
+    if carrier.len() < 2 {
+        return 0.0;
+    }
+    let mut min_width = f64::MAX;
+    for window in carrier.windows(2) {
+        let dx = window[1].x - window[0].x;
+        let dy = window[1].y - window[0].y;
+        let seg_len = (dx * dx + dy * dy).sqrt();
+        if seg_len < 1e-12 {
+            continue;
+        }
+        let dir = Point::new(dx / seg_len, dy / seg_len);
+        let n_samples = (seg_len / 2.0).ceil() as usize;
+        for i in 0..=n_samples {
+            let t = if n_samples == 0 {
+                0.0
+            } else {
+                i as f64 / n_samples as f64
+            };
+            let pos = Point::new(window[0].x + dx * t, window[0].y + dy * t);
+            let w = measure_passage_width_at(passage, pos, dir);
+            if w < min_width {
+                min_width = w;
+            }
+        }
+    }
+    if min_width == f64::MAX {
+        0.0
+    } else {
+        min_width
+    }
 }
