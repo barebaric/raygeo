@@ -1,6 +1,7 @@
 pub(crate) mod algo;
 pub(crate) mod flex_point;
 pub(crate) mod geometry;
+pub(crate) mod matrix;
 pub(crate) mod shape;
 pub(crate) mod types;
 
@@ -27,6 +28,7 @@ sums for toolpath generation.
 use pyo3::prelude::*;
 
 use self::geometry::{Geometry, PyArc, PyBezier, PyLine, PyMove};
+use self::matrix::Matrix;
 
 pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     let py = m.py();
@@ -35,7 +37,9 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     geo_mod.setattr("__doc__", MODULE_DOC)?;
     geo_mod.add(
         "__all__",
-        vec!["Geometry", "Move", "Line", "Arc", "Bezier", "types"],
+        vec![
+            "Geometry", "Matrix", "Move", "Line", "Arc", "Bezier", "types",
+        ],
     )?;
 
     add_functions(&geo_mod)?;
@@ -64,6 +68,7 @@ fn add_submodules(m: &Bound<'_, PyModule>) -> PyResult<()> {
 
 fn add_functions(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<Geometry>()?;
+    m.add_class::<Matrix>()?;
     m.add_class::<PyMove>()?;
     m.add_class::<PyLine>()?;
     m.add_class::<PyArc>()?;

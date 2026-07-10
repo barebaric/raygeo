@@ -19,6 +19,8 @@ sums for toolpath generation.
 """
 
 import builtins
+import numpy
+import numpy.typing
 import typing
 from . import algo
 from . import shape
@@ -28,6 +30,7 @@ __all__ = [
     "Bezier",
     "Geometry",
     "Line",
+    "Matrix",
     "Move",
     "algo",
     "shape",
@@ -137,13 +140,12 @@ class Geometry:
         
         :complexity: O(n) time, O(1) space
         """
-    def transform(self, matrix: types.TransformMatrix) -> Geometry:
+    def transform(self, matrix: Matrix | types.TransformMatrix) -> Geometry:
         r"""
-        Apply a 4x4 affine transformation matrix.
+        Apply an affine transformation matrix.
         
-        See ``raygeo.geo.types.TransformMatrix`` for the matrix layout.
-        
-        :param matrix: A 4x4 affine transformation matrix.
+        :param matrix: A :class:`~raygeo.geo.Matrix` or a 4x4 matrix
+            as list of lists.
         :returns: A new transformed Geometry.
         :complexity: O(n) time, O(n) space
         """
@@ -652,6 +654,286 @@ class Line:
     def end(self) -> tuple[builtins.float, builtins.float, builtins.float]:
         r"""
         Endpoint of the line in 3D space.
+        """
+
+@typing.final
+class Matrix:
+    r"""
+    A 3x3 affine transformation matrix for 2D graphics.
+    
+    Provides an object-oriented interface for matrix operations, including
+    translations, rotations, and scaling.
+    """
+    def __matmul__(self, other: Matrix) -> Matrix:
+        r"""
+        Multiply two matrices (self @ other).
+        """
+    def __eq__(self, other: object) -> bool:
+        r"""
+        Check equality with another Matrix.
+        """
+    def transform_point(self, *args: float | tuple[float, float]) -> tuple[float, float]:
+        r"""
+        Apply the affine transformation to a 2D point.
+        """
+    def transform_vector(self, *args: float | tuple[float, float]) -> tuple[float, float]:
+        r"""
+        Apply the transformation to a 2D vector, ignoring translation.
+        """
+    def transform_rectangle(self, *args: float | tuple[float, float, float, float]) -> tuple[float, float, float, float]:
+        r"""
+        Transform a rectangle and return the new axis-aligned bounding box.
+        """
+    def to_numpy(self) -> numpy.typing.NDArray[numpy.float64]:
+        r"""
+        Return the matrix as a 3x3 numpy array.
+        """
+    def to_4x4_numpy(self) -> numpy.typing.NDArray[numpy.float64]:
+        r"""
+        Return the matrix as a 4x4 numpy array (affine, Z-preserving).
+        """
+    def get(self, row: int, col: int) -> float:
+        r"""
+        Get a single element from the 3x3 matrix (row-major indexing).
+        """
+    def __copy__(self) -> Matrix:
+        r"""
+        Return a copy of this matrix.
+        """
+    def __deepcopy__(self, memo: dict) -> Matrix:
+        r"""
+        Return a deep copy of this matrix.
+        """
+    def __new__(cls, data: typing.Optional[typing.Any] = None) -> Matrix:
+        r"""
+        Create a new Matrix.
+        
+        :param data: Optional 3x3 or 4x4 sequence (list of lists) to initialize
+            from. If None, creates an identity matrix.
+        """
+    @classmethod
+    def identity(cls) -> Matrix:
+        r"""
+        Create an identity matrix.
+        """
+    @classmethod
+    def translation(cls, tx: builtins.float, ty: builtins.float) -> Matrix:
+        r"""
+        Create a translation matrix.
+        
+        :param tx: Translation in x.
+        :param ty: Translation in y.
+        """
+    @classmethod
+    def scale(cls, sx: builtins.float, sy: builtins.float, center: typing.Optional[tuple[builtins.float, builtins.float]] = None) -> Matrix:
+        r"""
+        Create a scaling matrix.
+        
+        :param sx: Scale factor for x-axis.
+        :param sy: Scale factor for y-axis.
+        :param center: Optional (x, y) center point to scale around.
+        """
+    @classmethod
+    def rotation(cls, angle_deg: builtins.float, center: typing.Optional[tuple[builtins.float, builtins.float]] = None) -> Matrix:
+        r"""
+        Create a rotation matrix.
+        
+        :param angle_deg: Rotation angle in degrees.
+        :param center: Optional (x, y) center point to rotate around.
+        """
+    @classmethod
+    def shear(cls, shx: builtins.float, shy: builtins.float, center: typing.Optional[tuple[builtins.float, builtins.float]] = None) -> Matrix:
+        r"""
+        Create a shearing matrix.
+        
+        :param shx: Shear factor for x-axis.
+        :param shy: Shear factor for y-axis.
+        :param center: Optional (x, y) center point to shear around.
+        """
+    @classmethod
+    def compose(cls, tx: builtins.float, ty: builtins.float, angle_deg: builtins.float, sx: builtins.float, sy: builtins.float, skew_angle_deg: builtins.float) -> Matrix:
+        r"""
+        Compose a matrix from translation, rotation, scale, and skew.
+        
+        :param tx: Translation x.
+        :param ty: Translation y.
+        :param angle_deg: Rotation angle in degrees.
+        :param sx: Scale x.
+        :param sy: Scale y.
+        :param skew_angle_deg: Skew angle in degrees.
+        :returns: A new Matrix.
+        """
+    @classmethod
+    def flip_horizontal(cls, center: typing.Optional[tuple[builtins.float, builtins.float]] = None) -> Matrix:
+        r"""
+        Create a horizontal flip matrix.
+        """
+    @classmethod
+    def flip_vertical(cls, center: typing.Optional[tuple[builtins.float, builtins.float]] = None) -> Matrix:
+        r"""
+        Create a vertical flip matrix.
+        """
+    def copy(self) -> Matrix:
+        r"""
+        Return a deep copy of this matrix.
+        """
+    def __repr__(self) -> builtins.str:
+        r"""
+        String representation for developers.
+        """
+    def __str__(self) -> builtins.str:
+        r"""
+        Human-readable string representation.
+        """
+    def to_list(self) -> builtins.list[builtins.list[builtins.float]]:
+        r"""
+        Returns a copy of the matrix data as a list of lists.
+        """
+    def to_4x4_list(self) -> builtins.list[builtins.list[builtins.float]]:
+        r"""
+        Converts the matrix to a 4x4 list of lists (row-major).
+        The 3x3 Matrix is placed in the top-left 2x2 of the 4x4,
+        with translation in the last column, and Z preserved.
+        """
+    def for_cairo(self) -> tuple[builtins.float, builtins.float, builtins.float, builtins.float, builtins.float, builtins.float]:
+        r"""
+        Returns the matrix components in Cairo order (xx, yx, xy, yy, x0, y0).
+        """
+    def to_graphene(self) -> tuple[builtins.float, builtins.float, builtins.float, builtins.float, builtins.float, builtins.float]:
+        r"""
+        Returns (xx, yx, xy, yy, x0, y0) for GTK/Graphene.
+        """
+    def get_translation(self) -> tuple[builtins.float, builtins.float]:
+        r"""
+        Extract the translation component (tx, ty).
+        """
+    def set_translation(self, tx: builtins.float, ty: builtins.float) -> Matrix:
+        r"""
+        Returns a new matrix with the same rotation/scale/shear but new
+        translation.
+        
+        :param tx: New translation x.
+        :param ty: New translation y.
+        """
+    def without_translation(self) -> Matrix:
+        r"""
+        Returns a new matrix with translation set to zero.
+        """
+    def get_scale(self) -> tuple[builtins.float, builtins.float]:
+        r"""
+        Extract the signed scale components (sx, sy).
+        """
+    def get_abs_scale(self) -> tuple[builtins.float, builtins.float]:
+        r"""
+        Extract the absolute scale components (|sx|, |sy|).
+        """
+    def get_rotation(self) -> builtins.float:
+        r"""
+        Extract the rotation angle in degrees.
+        """
+    def get_x_axis_angle(self) -> builtins.float:
+        r"""
+        Calculate the angle of the transformed X-axis in degrees.
+        """
+    def get_y_axis_angle(self) -> builtins.float:
+        r"""
+        Calculate the angle of the transformed Y-axis in degrees.
+        """
+    def get_determinant_2x2(self) -> builtins.float:
+        r"""
+        Calculate the determinant of the top-left 2x2 sub-matrix.
+        """
+    def is_identity(self) -> builtins.bool:
+        r"""
+        Check if the matrix is an identity matrix.
+        """
+    def is_flipped(self) -> builtins.bool:
+        r"""
+        Check if the matrix includes a reflection (flip).
+        """
+    def has_zero_scale(self, tolerance: builtins.float = 1e-06) -> builtins.bool:
+        r"""
+        Check if the matrix has zero scale on any axis.
+        
+        :param tolerance: Threshold below which a scale is considered zero.
+        """
+    def is_close(self, other: Matrix, tol: builtins.float = 1e-06) -> builtins.bool:
+        r"""
+        Check if two matrices are effectively equal within tolerance.
+        
+        :param other: The matrix to compare against.
+        :param tol: The absolute tolerance parameter.
+        """
+    def pre_translate(self, tx: builtins.float, ty: builtins.float) -> Matrix:
+        r"""
+        Apply a translation before this matrix's transformation.
+        """
+    def post_translate(self, tx: builtins.float, ty: builtins.float) -> Matrix:
+        r"""
+        Apply a translation after this matrix's transformation.
+        """
+    def pre_scale(self, sx: builtins.float, sy: builtins.float, center: typing.Optional[tuple[builtins.float, builtins.float]] = None) -> Matrix:
+        r"""
+        Apply a scale before this matrix's transformation.
+        
+        :param sx: Scale factor for x-axis.
+        :param sy: Scale factor for y-axis.
+        :param center: Optional center point to scale around.
+        """
+    def post_scale(self, sx: builtins.float, sy: builtins.float, center: typing.Optional[tuple[builtins.float, builtins.float]] = None) -> Matrix:
+        r"""
+        Apply a scale after this matrix's transformation.
+        
+        :param sx: Scale factor for x-axis.
+        :param sy: Scale factor for y-axis.
+        :param center: Optional center point to scale around.
+        """
+    def pre_rotate(self, angle_deg: builtins.float, center: typing.Optional[tuple[builtins.float, builtins.float]] = None) -> Matrix:
+        r"""
+        Apply a rotation before this matrix's transformation.
+        
+        :param angle_deg: Rotation angle in degrees.
+        :param center: Optional center point to rotate around.
+        """
+    def post_rotate(self, angle_deg: builtins.float, center: typing.Optional[tuple[builtins.float, builtins.float]] = None) -> Matrix:
+        r"""
+        Apply a rotation after this matrix's transformation.
+        
+        :param angle_deg: Rotation angle in degrees.
+        :param center: Optional center point to rotate around.
+        """
+    def pre_shear(self, shx: builtins.float, shy: builtins.float, center: typing.Optional[tuple[builtins.float, builtins.float]] = None) -> Matrix:
+        r"""
+        Apply a shear before this matrix's transformation.
+        
+        :param shx: Shear factor for x-axis.
+        :param shy: Shear factor for y-axis.
+        :param center: Optional center point to shear around.
+        """
+    def post_shear(self, shx: builtins.float, shy: builtins.float, center: typing.Optional[tuple[builtins.float, builtins.float]] = None) -> Matrix:
+        r"""
+        Apply a shear after this matrix's transformation.
+        
+        :param shx: Shear factor for x-axis.
+        :param shy: Shear factor for y-axis.
+        :param center: Optional center point to shear around.
+        """
+    def invert(self) -> Matrix:
+        r"""
+        Compute the inverse of the matrix.
+        
+        Will raise an error if the matrix is singular.
+        """
+    def decompose(self) -> tuple[builtins.float, builtins.float, builtins.float, builtins.float, builtins.float, builtins.float]:
+        r"""
+        Decompose the matrix into translation, rotation, scale, and skew.
+        
+        :returns: (tx, ty, angle_deg, sx, sy, skew_angle_deg).
+        """
+    @classmethod
+    def from_list(cls, data: typing.Sequence[typing.Sequence[builtins.float]]) -> Matrix:
+        r"""
+        Create a Matrix from a list of lists.
         """
 
 @typing.final

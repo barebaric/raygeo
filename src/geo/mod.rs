@@ -7,5 +7,7 @@ pub mod algo;
 pub mod geometry;
 pub use geometry::Geometry;
 pub mod math;
+pub mod matrix;
+pub use matrix::Matrix;
 pub mod query;
 pub mod shape;

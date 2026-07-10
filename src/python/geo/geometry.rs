@@ -8,6 +8,8 @@ use pyo3_stub_gen::{PyStubType, TypeInfo};
 
 use glam::{DMat4, DVec4};
 
+use crate::python::geo::matrix::Matrix as PyMatrix;
+
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 
@@ -219,12 +221,11 @@ submit! {
                 :complexity: O(n) time, O(1) space
                 """
                 ...
-            def transform(self, matrix: types.TransformMatrix) -> Geometry:
-                """Apply a 4x4 affine transformation matrix.
+            def transform(self, matrix: Matrix | types.TransformMatrix) -> Geometry:
+                """Apply an affine transformation matrix.
 
-                See ``raygeo.geo.types.TransformMatrix`` for the matrix layout.
-
-                :param matrix: A 4x4 affine transformation matrix.
+                :param matrix: A :class:`~raygeo.geo.Matrix` or a 4x4 matrix
+                    as list of lists.
                 :returns: A new transformed Geometry.
                 :complexity: O(n) time, O(n) space
                 """
@@ -502,46 +503,37 @@ impl Geometry {
         (0.0, 0.0, 0.0)
     }
 
-    /// Apply a 4x4 affine transformation matrix.
+    /// Apply an affine transformation matrix.
     ///
-    /// :param matrix: A 4x4 transformation matrix as list of lists.
+    /// :param matrix: A :class:`~raygeo.geo.Matrix` or a 4x4 matrix as list
+    ///     of lists.
     /// :complexity: O(n) time, O(1) space
     #[gen_stub(skip)]
-    fn transform(
-        slf: Bound<'_, Self>,
-        matrix: Vec<Vec<f64>>,
-    ) -> Bound<'_, Self> {
-        {
-            let mut geo = slf.borrow_mut();
-            let mat = DMat4::from_cols(
-                DVec4::new(
-                    matrix[0][0],
-                    matrix[1][0],
-                    matrix[2][0],
-                    matrix[3][0],
-                ),
-                DVec4::new(
-                    matrix[0][1],
-                    matrix[1][1],
-                    matrix[2][1],
-                    matrix[3][1],
-                ),
-                DVec4::new(
-                    matrix[0][2],
-                    matrix[1][2],
-                    matrix[2][2],
-                    matrix[3][2],
-                ),
-                DVec4::new(
-                    matrix[0][3],
-                    matrix[1][3],
-                    matrix[2][3],
-                    matrix[3][3],
-                ),
-            );
-            geo.inner.transform(&mat);
-        }
-        slf
+    fn transform<'py>(
+        slf: Bound<'py, Self>,
+        matrix: &Bound<'py, PyAny>,
+    ) -> PyResult<Bound<'py, Self>> {
+        let mat = if let Ok(py_m) = matrix.extract::<PyMatrix>() {
+            py_m.inner.to_4x4()
+        } else if let Ok(rows) = matrix.extract::<Vec<Vec<f64>>>() {
+            if rows.len() != 4 || rows.iter().any(|r| r.len() != 4) {
+                return Err(pyo3::exceptions::PyValueError::new_err(
+                    "expected a 4x4 matrix",
+                ));
+            }
+            DMat4::from_cols(
+                DVec4::new(rows[0][0], rows[1][0], rows[2][0], rows[3][0]),
+                DVec4::new(rows[0][1], rows[1][1], rows[2][1], rows[3][1]),
+                DVec4::new(rows[0][2], rows[1][2], rows[2][2], rows[3][2]),
+                DVec4::new(rows[0][3], rows[1][3], rows[2][3], rows[3][3]),
+            )
+        } else {
+            return Err(pyo3::exceptions::PyTypeError::new_err(
+                "expected a Matrix or a 4x4 list of lists",
+            ));
+        };
+        slf.borrow_mut().inner.transform(&mat);
+        Ok(slf)
     }
 
     /// Append another geometry's commands to this one.

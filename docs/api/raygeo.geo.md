@@ -962,18 +962,16 @@ Convert the geometry to a list of polygons.
 ### `transform()`
 
 ```python
-transform(matrix: types.TransformMatrix) -> Geometry
+transform(matrix: Matrix | types.TransformMatrix) -> Geometry
 ```
 
-Apply a 4x4 affine transformation matrix.
+Apply an affine transformation matrix.
 
-See `raygeo.geo.types.TransformMatrix` for the matrix layout.
-
-| Parameter    | Type                    | Description                         |
-| ------------ | ----------------------- | ----------------------------------- |
-| `matrix`     | `types.TransformMatrix` | A 4x4 affine transformation matrix. |
-| _Returns_    | `Geometry`              | A new transformed Geometry.         |
-| _Complexity_ |                         | O(n) time, O(n) space               |
+| Parameter    | Type                                  | Description                                                |
+| ------------ | ------------------------------------- | ---------------------------------------------------------- |
+| `matrix`     | `Matrix &#124; types.TransformMatrix` | A **~raygeo.geo.Matrix** or a 4x4 matrix as list of lists. |
+| _Returns_    | `Geometry`                            | A new transformed Geometry.                                |
+| _Complexity_ |                                       | O(n) time, O(n) space                                      |
 
 ### `upgrade_to_scalable()`
 
@@ -999,6 +997,633 @@ end: tuple[float, float, float]
 ```
 
 Endpoint of the line in 3D space.
+
+## Matrix
+
+A 3x3 affine transformation matrix for 2D graphics.
+
+Provides an object-oriented interface for matrix operations, including translations, rotations, and
+scaling.
+
+### `compose()`
+
+```python
+@classmethod
+compose(
+    tx: float,
+    ty: float,
+    angle_deg: float,
+    sx: float,
+    sy: float,
+    skew_angle_deg: float,
+) -> Matrix
+```
+
+Compose a matrix from translation, rotation, scale, and skew.
+
+| Parameter        | Type     | Description                |
+| ---------------- | -------- | -------------------------- |
+| `tx`             | `float`  | Translation x.             |
+| `ty`             | `float`  | Translation y.             |
+| `angle_deg`      | `float`  | Rotation angle in degrees. |
+| `sx`             | `float`  | Scale x.                   |
+| `sy`             | `float`  | Scale y.                   |
+| `skew_angle_deg` | `float`  | Skew angle in degrees.     |
+| _Returns_        | `Matrix` | A new Matrix.              |
+
+### `copy()`
+
+```python
+copy() -> Matrix
+```
+
+Return a deep copy of this matrix.
+
+| Parameter | Type     | Description |
+| --------- | -------- | ----------- |
+| _Returns_ | `Matrix` |             |
+
+### `decompose()`
+
+```python
+decompose() -> tuple[float, float, float, float, float, float]
+```
+
+Decompose the matrix into translation, rotation, scale, and skew.
+
+| Parameter | Type                                              | Description                                  |
+| --------- | ------------------------------------------------- | -------------------------------------------- |
+| _Returns_ | `tuple[float, float, float, float, float, float]` | (tx, ty, angle_deg, sx, sy, skew_angle_deg). |
+
+### `flip_horizontal()`
+
+```python
+@classmethod
+flip_horizontal(
+    center: Optional[tuple[float, float]] = None,
+) -> Matrix
+```
+
+Create a horizontal flip matrix.
+
+| Parameter | Type                                   | Description |
+| --------- | -------------------------------------- | ----------- |
+| `center`  | `Optional[tuple[float, float]] = None` |             |
+| _Returns_ | `Matrix`                               |             |
+
+### `flip_vertical()`
+
+```python
+@classmethod
+flip_vertical(
+    center: Optional[tuple[float, float]] = None,
+) -> Matrix
+```
+
+Create a vertical flip matrix.
+
+| Parameter | Type                                   | Description |
+| --------- | -------------------------------------- | ----------- |
+| `center`  | `Optional[tuple[float, float]] = None` |             |
+| _Returns_ | `Matrix`                               |             |
+
+### `for_cairo()`
+
+```python
+for_cairo() -> tuple[float, float, float, float, float, float]
+```
+
+Returns the matrix components in Cairo order (xx, yx, xy, yy, x0, y0).
+
+| Parameter | Type                                              | Description |
+| --------- | ------------------------------------------------- | ----------- |
+| _Returns_ | `tuple[float, float, float, float, float, float]` |             |
+
+### `from_list()`
+
+```python
+@classmethod from_list(data: Sequence[Sequence[float]]) -> Matrix
+```
+
+Create a Matrix from a list of lists.
+
+| Parameter | Type                        | Description |
+| --------- | --------------------------- | ----------- |
+| `data`    | `Sequence[Sequence[float]]` |             |
+| _Returns_ | `Matrix`                    |             |
+
+### `get()`
+
+```python
+get(row: int, col: int) -> float
+```
+
+Get a single element from the 3x3 matrix (row-major indexing).
+
+| Parameter | Type    | Description |
+| --------- | ------- | ----------- |
+| `row`     | `int`   |             |
+| `col`     | `int`   |             |
+| _Returns_ | `float` |             |
+
+### `get_abs_scale()`
+
+```python
+get_abs_scale() -> tuple[float, float]
+```
+
+Extract the absolute scale components (|sx|, |sy|).
+
+| Parameter | Type                  | Description |
+| --------- | --------------------- | ----------- |
+| _Returns_ | `tuple[float, float]` |             |
+
+### `get_determinant_2x2()`
+
+```python
+get_determinant_2x2() -> float
+```
+
+Calculate the determinant of the top-left 2x2 sub-matrix.
+
+| Parameter | Type    | Description |
+| --------- | ------- | ----------- |
+| _Returns_ | `float` |             |
+
+### `get_rotation()`
+
+```python
+get_rotation() -> float
+```
+
+Extract the rotation angle in degrees.
+
+| Parameter | Type    | Description |
+| --------- | ------- | ----------- |
+| _Returns_ | `float` |             |
+
+### `get_scale()`
+
+```python
+get_scale() -> tuple[float, float]
+```
+
+Extract the signed scale components (sx, sy).
+
+| Parameter | Type                  | Description |
+| --------- | --------------------- | ----------- |
+| _Returns_ | `tuple[float, float]` |             |
+
+### `get_translation()`
+
+```python
+get_translation() -> tuple[float, float]
+```
+
+Extract the translation component (tx, ty).
+
+| Parameter | Type                  | Description |
+| --------- | --------------------- | ----------- |
+| _Returns_ | `tuple[float, float]` |             |
+
+### `get_x_axis_angle()`
+
+```python
+get_x_axis_angle() -> float
+```
+
+Calculate the angle of the transformed X-axis in degrees.
+
+| Parameter | Type    | Description |
+| --------- | ------- | ----------- |
+| _Returns_ | `float` |             |
+
+### `get_y_axis_angle()`
+
+```python
+get_y_axis_angle() -> float
+```
+
+Calculate the angle of the transformed Y-axis in degrees.
+
+| Parameter | Type    | Description |
+| --------- | ------- | ----------- |
+| _Returns_ | `float` |             |
+
+### `has_zero_scale()`
+
+```python
+has_zero_scale(tolerance: float = 1e-06) -> bool
+```
+
+Check if the matrix has zero scale on any axis.
+
+| Parameter   | Type            | Description                                       |
+| ----------- | --------------- | ------------------------------------------------- |
+| `tolerance` | `float = 1e-06` | Threshold below which a scale is considered zero. |
+| _Returns_   | `bool`          |                                                   |
+
+### `identity()`
+
+```python
+@classmethod identity() -> Matrix
+```
+
+Create an identity matrix.
+
+| Parameter | Type     | Description |
+| --------- | -------- | ----------- |
+| _Returns_ | `Matrix` |             |
+
+### `invert()`
+
+```python
+invert() -> Matrix
+```
+
+Compute the inverse of the matrix.
+
+Will raise an error if the matrix is singular.
+
+| Parameter | Type     | Description |
+| --------- | -------- | ----------- |
+| _Returns_ | `Matrix` |             |
+
+### `is_close()`
+
+```python
+is_close(other: Matrix, tol: float = 1e-06) -> bool
+```
+
+Check if two matrices are effectively equal within tolerance.
+
+| Parameter | Type            | Description                       |
+| --------- | --------------- | --------------------------------- |
+| `other`   | `Matrix`        | The matrix to compare against.    |
+| `tol`     | `float = 1e-06` | The absolute tolerance parameter. |
+| _Returns_ | `bool`          |                                   |
+
+### `is_flipped()`
+
+```python
+is_flipped() -> bool
+```
+
+Check if the matrix includes a reflection (flip).
+
+| Parameter | Type   | Description |
+| --------- | ------ | ----------- |
+| _Returns_ | `bool` |             |
+
+### `is_identity()`
+
+```python
+is_identity() -> bool
+```
+
+Check if the matrix is an identity matrix.
+
+| Parameter | Type   | Description |
+| --------- | ------ | ----------- |
+| _Returns_ | `bool` |             |
+
+### `post_rotate()`
+
+```python
+post_rotate(
+    angle_deg: float,
+    center: Optional[tuple[float, float]] = None,
+) -> Matrix
+```
+
+Apply a rotation after this matrix's transformation.
+
+| Parameter   | Type                                   | Description                             |
+| ----------- | -------------------------------------- | --------------------------------------- |
+| `angle_deg` | `float`                                | Rotation angle in degrees.              |
+| `center`    | `Optional[tuple[float, float]] = None` | Optional center point to rotate around. |
+| _Returns_   | `Matrix`                               |                                         |
+
+### `post_scale()`
+
+```python
+post_scale(
+    sx: float,
+    sy: float,
+    center: Optional[tuple[float, float]] = None,
+) -> Matrix
+```
+
+Apply a scale after this matrix's transformation.
+
+| Parameter | Type                                   | Description                            |
+| --------- | -------------------------------------- | -------------------------------------- |
+| `sx`      | `float`                                | Scale factor for x-axis.               |
+| `sy`      | `float`                                | Scale factor for y-axis.               |
+| `center`  | `Optional[tuple[float, float]] = None` | Optional center point to scale around. |
+| _Returns_ | `Matrix`                               |                                        |
+
+### `post_shear()`
+
+```python
+post_shear(
+    shx: float,
+    shy: float,
+    center: Optional[tuple[float, float]] = None,
+) -> Matrix
+```
+
+Apply a shear after this matrix's transformation.
+
+| Parameter | Type                                   | Description                            |
+| --------- | -------------------------------------- | -------------------------------------- |
+| `shx`     | `float`                                | Shear factor for x-axis.               |
+| `shy`     | `float`                                | Shear factor for y-axis.               |
+| `center`  | `Optional[tuple[float, float]] = None` | Optional center point to shear around. |
+| _Returns_ | `Matrix`                               |                                        |
+
+### `post_translate()`
+
+```python
+post_translate(tx: float, ty: float) -> Matrix
+```
+
+Apply a translation after this matrix's transformation.
+
+| Parameter | Type     | Description |
+| --------- | -------- | ----------- |
+| `tx`      | `float`  |             |
+| `ty`      | `float`  |             |
+| _Returns_ | `Matrix` |             |
+
+### `pre_rotate()`
+
+```python
+pre_rotate(
+    angle_deg: float,
+    center: Optional[tuple[float, float]] = None,
+) -> Matrix
+```
+
+Apply a rotation before this matrix's transformation.
+
+| Parameter   | Type                                   | Description                             |
+| ----------- | -------------------------------------- | --------------------------------------- |
+| `angle_deg` | `float`                                | Rotation angle in degrees.              |
+| `center`    | `Optional[tuple[float, float]] = None` | Optional center point to rotate around. |
+| _Returns_   | `Matrix`                               |                                         |
+
+### `pre_scale()`
+
+```python
+pre_scale(
+    sx: float,
+    sy: float,
+    center: Optional[tuple[float, float]] = None,
+) -> Matrix
+```
+
+Apply a scale before this matrix's transformation.
+
+| Parameter | Type                                   | Description                            |
+| --------- | -------------------------------------- | -------------------------------------- |
+| `sx`      | `float`                                | Scale factor for x-axis.               |
+| `sy`      | `float`                                | Scale factor for y-axis.               |
+| `center`  | `Optional[tuple[float, float]] = None` | Optional center point to scale around. |
+| _Returns_ | `Matrix`                               |                                        |
+
+### `pre_shear()`
+
+```python
+pre_shear(
+    shx: float,
+    shy: float,
+    center: Optional[tuple[float, float]] = None,
+) -> Matrix
+```
+
+Apply a shear before this matrix's transformation.
+
+| Parameter | Type                                   | Description                            |
+| --------- | -------------------------------------- | -------------------------------------- |
+| `shx`     | `float`                                | Shear factor for x-axis.               |
+| `shy`     | `float`                                | Shear factor for y-axis.               |
+| `center`  | `Optional[tuple[float, float]] = None` | Optional center point to shear around. |
+| _Returns_ | `Matrix`                               |                                        |
+
+### `pre_translate()`
+
+```python
+pre_translate(tx: float, ty: float) -> Matrix
+```
+
+Apply a translation before this matrix's transformation.
+
+| Parameter | Type     | Description |
+| --------- | -------- | ----------- |
+| `tx`      | `float`  |             |
+| `ty`      | `float`  |             |
+| _Returns_ | `Matrix` |             |
+
+### `rotation()`
+
+```python
+@classmethod
+rotation(
+    angle_deg: float,
+    center: Optional[tuple[float, float]] = None,
+) -> Matrix
+```
+
+Create a rotation matrix.
+
+| Parameter   | Type                                   | Description                                    |
+| ----------- | -------------------------------------- | ---------------------------------------------- |
+| `angle_deg` | `float`                                | Rotation angle in degrees.                     |
+| `center`    | `Optional[tuple[float, float]] = None` | Optional (x, y) center point to rotate around. |
+| _Returns_   | `Matrix`                               |                                                |
+
+### `scale()`
+
+```python
+@classmethod
+scale(
+    sx: float,
+    sy: float,
+    center: Optional[tuple[float, float]] = None,
+) -> Matrix
+```
+
+Create a scaling matrix.
+
+| Parameter | Type                                   | Description                                   |
+| --------- | -------------------------------------- | --------------------------------------------- |
+| `sx`      | `float`                                | Scale factor for x-axis.                      |
+| `sy`      | `float`                                | Scale factor for y-axis.                      |
+| `center`  | `Optional[tuple[float, float]] = None` | Optional (x, y) center point to scale around. |
+| _Returns_ | `Matrix`                               |                                               |
+
+### `set_translation()`
+
+```python
+set_translation(tx: float, ty: float) -> Matrix
+```
+
+Returns a new matrix with the same rotation/scale/shear but new translation.
+
+| Parameter | Type     | Description        |
+| --------- | -------- | ------------------ |
+| `tx`      | `float`  | New translation x. |
+| `ty`      | `float`  | New translation y. |
+| _Returns_ | `Matrix` |                    |
+
+### `shear()`
+
+```python
+@classmethod
+shear(
+    shx: float,
+    shy: float,
+    center: Optional[tuple[float, float]] = None,
+) -> Matrix
+```
+
+Create a shearing matrix.
+
+| Parameter | Type                                   | Description                                   |
+| --------- | -------------------------------------- | --------------------------------------------- |
+| `shx`     | `float`                                | Shear factor for x-axis.                      |
+| `shy`     | `float`                                | Shear factor for y-axis.                      |
+| `center`  | `Optional[tuple[float, float]] = None` | Optional (x, y) center point to shear around. |
+| _Returns_ | `Matrix`                               |                                               |
+
+### `to_4x4_list()`
+
+```python
+to_4x4_list() -> list[list[float]]
+```
+
+Converts the matrix to a 4x4 list of lists (row-major). The 3x3 Matrix is placed in the top-left 2x2
+of the 4x4, with translation in the last column, and Z preserved.
+
+| Parameter | Type                | Description |
+| --------- | ------------------- | ----------- |
+| _Returns_ | `list[list[float]]` |             |
+
+### `to_4x4_numpy()`
+
+```python
+to_4x4_numpy() -> numpy.NDArray[numpy.float64]
+```
+
+Return the matrix as a 4x4 numpy array (affine, Z-preserving).
+
+| Parameter | Type                           | Description |
+| --------- | ------------------------------ | ----------- |
+| _Returns_ | `numpy.NDArray[numpy.float64]` |             |
+
+### `to_graphene()`
+
+```python
+to_graphene() -> tuple[float, float, float, float, float, float]
+```
+
+Returns (xx, yx, xy, yy, x0, y0) for GTK/Graphene.
+
+| Parameter | Type                                              | Description |
+| --------- | ------------------------------------------------- | ----------- |
+| _Returns_ | `tuple[float, float, float, float, float, float]` |             |
+
+### `to_list()`
+
+```python
+to_list() -> list[list[float]]
+```
+
+Returns a copy of the matrix data as a list of lists.
+
+| Parameter | Type                | Description |
+| --------- | ------------------- | ----------- |
+| _Returns_ | `list[list[float]]` |             |
+
+### `to_numpy()`
+
+```python
+to_numpy() -> numpy.NDArray[numpy.float64]
+```
+
+Return the matrix as a 3x3 numpy array.
+
+| Parameter | Type                           | Description |
+| --------- | ------------------------------ | ----------- |
+| _Returns_ | `numpy.NDArray[numpy.float64]` |             |
+
+### `transform_point()`
+
+```python
+transform_point(*args: float | tuple[float, float]) -> tuple[float, float]
+```
+
+Apply the affine transformation to a 2D point.
+
+| Parameter | Type                               | Description |
+| --------- | ---------------------------------- | ----------- |
+| `*args`   | `float &#124; tuple[float, float]` |             |
+| _Returns_ | `tuple[float, float]`              |             |
+
+### `transform_rectangle()`
+
+```python
+transform_rectangle(
+    *args: float | tuple[float, float, float, float],
+) -> tuple[float, float, float, float]
+```
+
+Transform a rectangle and return the new axis-aligned bounding box.
+
+| Parameter | Type                                             | Description |
+| --------- | ------------------------------------------------ | ----------- |
+| `*args`   | `float &#124; tuple[float, float, float, float]` |             |
+| _Returns_ | `tuple[float, float, float, float]`              |             |
+
+### `transform_vector()`
+
+```python
+transform_vector(*args: float | tuple[float, float]) -> tuple[float, float]
+```
+
+Apply the transformation to a 2D vector, ignoring translation.
+
+| Parameter | Type                               | Description |
+| --------- | ---------------------------------- | ----------- |
+| `*args`   | `float &#124; tuple[float, float]` |             |
+| _Returns_ | `tuple[float, float]`              |             |
+
+### `translation()`
+
+```python
+@classmethod translation(tx: float, ty: float) -> Matrix
+```
+
+Create a translation matrix.
+
+| Parameter | Type     | Description       |
+| --------- | -------- | ----------------- |
+| `tx`      | `float`  | Translation in x. |
+| `ty`      | `float`  | Translation in y. |
+| _Returns_ | `Matrix` |                   |
+
+### `without_translation()`
+
+```python
+without_translation() -> Matrix
+```
+
+Returns a new matrix with translation set to zero.
+
+| Parameter | Type     | Description |
+| --------- | -------- | ----------- |
+| _Returns_ | `Matrix` |             |
 
 ## Move
 

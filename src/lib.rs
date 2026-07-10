@@ -129,7 +129,7 @@ use pyo3_stub_gen::define_stub_info_gatherer;
 define_stub_info_gatherer!(stub_info);
 
 #[cfg(feature = "python")]
-pyo3_stub_gen::reexport_module_members!("raygeo" from "raygeo.geo"; "Geometry");
+pyo3_stub_gen::reexport_module_members!("raygeo" from "raygeo.geo"; "Geometry", "Matrix");
 
 #[cfg(feature = "python")]
 pyo3_stub_gen::reexport_module_members!("raygeo" from "raygeo.ops"; "Ops");

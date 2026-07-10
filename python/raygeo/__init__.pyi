@@ -66,7 +66,7 @@ Examples
     100.0
 """
 
-from raygeo.geo import Geometry
+from raygeo.geo import Geometry, Matrix
 from raygeo.ops import Ops
 from . import cnc
 from . import geo
@@ -77,6 +77,7 @@ from . import svg
 from . import trace
 __all__ = [
     "Geometry",
+    "Matrix",
     "Ops",
     "cnc",
     "geo",

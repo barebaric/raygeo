@@ -51,4 +51,4 @@ Type: `tuple[float, float, float, float, float, float]`
 
 ### TransformMatrix
 
-Type: `list[list[float]] | numpy.ndarray[tuple[int, ...], Any]`
+Type: `geo.Matrix | list[list[float]] | numpy.ndarray[tuple[int, ...], Any]`

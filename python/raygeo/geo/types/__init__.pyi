@@ -14,6 +14,7 @@ CubicBezier — four control points ``(p0, p1, p2, p3)``.
 """
 
 import numpy
+from raygeo import geo
 import typing
 from typing import TypeAlias
 __all__ = [
@@ -38,4 +39,4 @@ Polygon: TypeAlias = list[Point]
 Polygon3D: TypeAlias = list[tuple[float, float, float]]
 Rect: TypeAlias = tuple[float, float, float, float]
 Rect3D: TypeAlias = tuple[float, float, float, float, float, float]
-TransformMatrix: TypeAlias = list[list[float]] | numpy.ndarray[tuple[int, ...], typing.Any]
+TransformMatrix: TypeAlias = geo.Matrix | list[list[float]] | numpy.ndarray[tuple[int, ...], typing.Any]

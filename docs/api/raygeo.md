@@ -67,6 +67,6 @@ Manipulating command sequences:
 
 ## Re-exports
 
-This module re-exports from `raygeo.geo`: Geometry.
+This module re-exports from `raygeo.geo`: Geometry, Matrix.
 
 This module re-exports from `raygeo.ops`: Ops.
