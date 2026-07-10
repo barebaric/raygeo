@@ -206,6 +206,7 @@ impl Tracer {
         source: &str,
         kind: EventKind,
         tool: Option<ToolSnapshot>,
+        progress: Option<ProgressSnapshot>,
         meta: Option<Meta>,
     ) {
         let Some(ref mut inner) = self.inner else {
@@ -220,7 +221,7 @@ impl Tracer {
             source: source.to_string(),
             move_kind: None,
             tool,
-            progress: None,
+            progress,
             meta,
         });
     }

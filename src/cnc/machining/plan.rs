@@ -586,6 +586,7 @@ impl Workplan {
                     prev_z: pe.pos.z,
                 }),
                 None,
+                None,
             );
             tracer.exit(lift_span, "workplan");
             pe.pos.z = self.safe_z;

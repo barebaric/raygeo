@@ -163,6 +163,7 @@ impl PyAssemblyResult {
                     prev_z: self.end.pos.2,
                 }),
                 None,
+                None,
             );
         }
 

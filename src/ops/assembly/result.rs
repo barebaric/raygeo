@@ -75,6 +75,7 @@ pub(crate) fn emit_trace_events(
                 source,
                 ev.kind,
                 ev.tool.clone(),
+                ev.progress.clone(),
                 ev.meta.clone(),
             ),
         }

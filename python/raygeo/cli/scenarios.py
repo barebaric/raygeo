@@ -7,6 +7,7 @@ from raygeo.geo.shape.polygon import (
     is_point_inside_polygon,
     offset_polygon,
 )
+from raygeo.ops.feature.region import find_regions
 
 # ── Helper geometry functions ────────────────────────────────────
 
@@ -331,6 +332,27 @@ def build_scenario(args):
                 scenario, area_tolerance=args.area_tolerance
             )
 
-        entry_ops, seed_polys = run_entry(scenario)
+        # Use a small interior seed so adaptive clearing has room to
+        # spiral outward.  The envelope seed from run_entry would
+        # already cover the entire tool-accessible area, leaving
+        # nothing for the engagement solver to engage with.
+        if scenario.islands:
+            regions = find_regions(
+                list(scenario.boundary),
+                [list(isl) for isl in scenario.islands],
+                scenario.tool_radius,
+            )
+            if regions:
+                _poly, _area, entry_pt, r_max = regions[0]
+                seed_radius = min(r_max * 0.6, 15.0)
+                seed_radius = max(seed_radius, scenario.tool_radius * 2)
+                seed_polys = [
+                    circle_polygon(entry_pt[0], entry_pt[1], seed_radius, 32)
+                ]
+            else:
+                seed_polys = [list(scenario.boundary)]
+            entry_ops = None
+        else:
+            entry_ops, seed_polys = run_entry(scenario)
 
     return scenario, seed_polys, entry_ops

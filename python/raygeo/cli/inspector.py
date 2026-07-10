@@ -379,6 +379,7 @@ class Inspector:
     def _draw(self, step_idx):
         step_idx = max(0, min(step_idx, self.n_steps - 1))
         self.current = step_idx
+        self.textbox.set_val(str(step_idx))
 
         self.ax.clear()
         self.ax.set_aspect("equal")

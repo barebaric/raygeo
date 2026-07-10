@@ -212,10 +212,12 @@ def test_trace_cut_records_have_positions(tmp_path):
 
 
 def test_trace_records_have_step_idx(tmp_path):
-    """Move/resume events carry a strictly increasing step_idx.
+    """Move/resume events carry a non-decreasing step_idx.
 
-    Events from the adaptive span only — other steps (e.g. the FlatSpiral
-    seed) have their own step_idx starting from 0.
+    A resume event shares the step_idx of the preceding cut (the counter
+    advances with each cut, not with metadata events).  Events from the
+    adaptive span only — other steps (e.g. the FlatSpiral seed) have
+    their own step_idx starting from 0.
     """
     tp = str(tmp_path / "trace.bin")
     boundary = _rect(0, 0, 30, 30)
@@ -229,7 +231,7 @@ def test_trace_records_have_step_idx(tmp_path):
     ]
     assert len(idx) >= 1
     for a, b in zip(idx, idx[1:]):
-        assert a < b, f"step_idx not increasing: {a} >= {b}"
+        assert a <= b, f"step_idx decreased: {a} > {b}"
 
 
 # ── Islands ────────────────────────────────────────────────────────────
