@@ -4,12 +4,14 @@ use pyo3::prelude::*;
 use pyo3::types::{PyDict, PyList};
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 
-use crate::ops::assembly::result::emit_trace_events;
+use crate::ops::assembly::result::{
+    emit_trace_events, AssemblyMeta, TraceEventData,
+};
 use crate::python::ops::cut::search::PyToolPose;
 use crate::python::ops::PyOps;
 use crate::python::trace::{event_kind_str, meta_to_py_dict, move_kind_str};
 use crate::trace::Tracer;
-use crate::trace_types::{EventKind, ProgressSnapshot, ToolSnapshot};
+use crate::trace_types::{EventKind, Meta, ProgressSnapshot, ToolSnapshot};
 
 pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     assembly_mod.add_class::<PyAssemblyResult>()?;
@@ -31,7 +33,6 @@ pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
 )]
 #[derive(Clone, Debug)]
 pub struct PyAssemblyResult {
-    pub inner: crate::ops::assembly::result::AssemblyResult,
     #[pyo3(get)]
     pub ops: PyOps,
     #[pyo3(get)]
@@ -40,6 +41,8 @@ pub struct PyAssemblyResult {
     pub start: PyToolPose,
     #[pyo3(get)]
     pub end: PyToolPose,
+    pub(crate) trace_attrs: Option<Meta>,
+    pub(crate) trace_events: Vec<TraceEventData>,
 }
 
 #[gen_stub_pymethods]
@@ -47,34 +50,36 @@ pub struct PyAssemblyResult {
 impl PyAssemblyResult {
     #[new]
     fn __new__() -> Self {
-        let inner = crate::ops::assembly::result::AssemblyResult {
-            ops: crate::ops::Ops::new(),
+        PyAssemblyResult {
+            ops: PyOps {
+                inner: crate::ops::Ops::new(),
+            },
             cleared_polygons: vec![],
-            start: crate::ops::cut::ToolPose {
-                pos: crate::types::Point3D::ZERO,
+            start: PyToolPose {
+                pos: (0.0, 0.0, 0.0),
                 heading: 0.0,
             },
-            end: crate::ops::cut::ToolPose {
-                pos: crate::types::Point3D::ZERO,
+            end: PyToolPose {
+                pos: (0.0, 0.0, 0.0),
                 heading: 0.0,
             },
-            trace: None,
-        };
-        PyAssemblyResult::from_inner(inner)
+            trace_attrs: None,
+            trace_events: vec![],
+        }
     }
 
     #[getter]
     fn trace(&self, py: Python<'_>) -> PyResult<Option<Py<PyAny>>> {
-        let trace = match &self.inner.trace {
-            Some(t) => t,
-            None => return Ok(None),
-        };
+        if self.trace_events.is_empty() && self.trace_attrs.is_none() {
+            return Ok(None);
+        }
 
         let trace_dict = PyDict::new(py);
-        trace_dict.set_item("attrs", meta_to_py_dict(py, &trace.attrs)?)?;
+        trace_dict
+            .set_item("attrs", meta_to_py_dict(py, &self.trace_attrs)?)?;
 
         let events_list = PyList::empty(py);
-        for ev in &trace.events {
+        for ev in &self.trace_events {
             let d = PyDict::new(py);
             d.set_item("kind", event_kind_str(ev.kind as u8))?;
 
@@ -110,7 +115,7 @@ impl PyAssemblyResult {
         Ok(Some(trace_dict.into()))
     }
 
-    /// Write this result's AssemblyTrace bundle to a trace file.
+    /// Write this result's trace events to a trace file.
     ///
     /// Emits a root "workplan" span with one child assembler span
     /// containing either the self-traced events or a minimal
@@ -123,48 +128,42 @@ impl PyAssemblyResult {
         label: &str,
     ) -> PyResult<()> {
         let mut tracer = Tracer::open(Some(PathBuf::from(path)));
-
         let root = tracer.enter(0, "workplan", "Standalone", None);
-        let step_attrs =
-            self.inner.trace.as_ref().and_then(|t| t.attrs.clone());
-        let span = tracer.enter(root, source, label, step_attrs);
+        let span = tracer.enter(root, source, label, self.trace_attrs.clone());
 
-        match &self.inner.trace {
-            Some(t) => {
-                emit_trace_events(&mut tracer, span, source, &t.events);
-            }
-            None => {
-                tracer.init(
-                    span,
-                    source,
-                    ToolSnapshot {
-                        pos_x: self.inner.start.pos.x,
-                        pos_y: self.inner.start.pos.y,
-                        pos_z: self.inner.start.pos.z,
-                        heading: self.inner.start.heading,
-                        prev_x: self.inner.start.pos.x,
-                        prev_y: self.inner.start.pos.y,
-                        prev_z: self.inner.start.pos.z,
-                    },
-                    ProgressSnapshot::default(),
-                    None,
-                );
-                tracer.event(
-                    span,
-                    source,
-                    EventKind::Exit,
-                    Some(ToolSnapshot {
-                        pos_x: self.inner.end.pos.x,
-                        pos_y: self.inner.end.pos.y,
-                        pos_z: self.inner.end.pos.z,
-                        heading: self.inner.end.heading,
-                        prev_x: self.inner.end.pos.x,
-                        prev_y: self.inner.end.pos.y,
-                        prev_z: self.inner.end.pos.z,
-                    }),
-                    None,
-                );
-            }
+        if !self.trace_events.is_empty() {
+            emit_trace_events(&mut tracer, span, source, &self.trace_events);
+        } else {
+            tracer.init(
+                span,
+                source,
+                ToolSnapshot {
+                    pos_x: self.start.pos.0,
+                    pos_y: self.start.pos.1,
+                    pos_z: self.start.pos.2,
+                    heading: self.start.heading,
+                    prev_x: self.start.pos.0,
+                    prev_y: self.start.pos.1,
+                    prev_z: self.start.pos.2,
+                },
+                ProgressSnapshot::default(),
+                None,
+            );
+            tracer.event(
+                span,
+                source,
+                EventKind::Exit,
+                Some(ToolSnapshot {
+                    pos_x: self.end.pos.0,
+                    pos_y: self.end.pos.1,
+                    pos_z: self.end.pos.2,
+                    heading: self.end.heading,
+                    prev_x: self.end.pos.0,
+                    prev_y: self.end.pos.1,
+                    prev_z: self.end.pos.2,
+                }),
+                None,
+            );
         }
 
         tracer.exit(span, source);
@@ -190,29 +189,30 @@ impl PyAssemblyResult {
 }
 
 impl PyAssemblyResult {
-    pub fn from_inner(
-        inner: crate::ops::assembly::result::AssemblyResult,
+    pub fn from_parts(
+        ops: crate::ops::Ops,
+        meta: AssemblyMeta,
+        trace_attrs: Option<Meta>,
+        trace_events: Vec<TraceEventData>,
     ) -> Self {
-        let cleared_polys: Vec<Vec<(f64, f64)>> = inner
+        let cleared_polys: Vec<Vec<(f64, f64)>> = meta
             .cleared_polygons
             .iter()
             .map(|poly| poly.iter().map(|p| (p.x, p.y)).collect())
             .collect();
-
         PyAssemblyResult {
-            ops: PyOps {
-                inner: inner.ops.clone(),
-            },
+            ops: PyOps { inner: ops },
             cleared_polygons: cleared_polys,
             start: PyToolPose {
-                pos: (inner.start.pos.x, inner.start.pos.y, inner.start.pos.z),
-                heading: inner.start.heading,
+                pos: (meta.start.pos.x, meta.start.pos.y, meta.start.pos.z),
+                heading: meta.start.heading,
             },
             end: PyToolPose {
-                pos: (inner.end.pos.x, inner.end.pos.y, inner.end.pos.z),
-                heading: inner.end.heading,
+                pos: (meta.end.pos.x, meta.end.pos.y, meta.end.pos.z),
+                heading: meta.end.heading,
             },
-            inner,
+            trace_attrs,
+            trace_events,
         }
     }
 }

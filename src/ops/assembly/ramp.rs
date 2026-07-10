@@ -7,8 +7,9 @@ use crate::geo::algo::ramp::{
     generate_ramp_3d, RampOptions as GeoRampOptions, RampStyle,
 };
 use crate::geo::shape::polygon::get_segment_swept_polygon;
-use crate::ops::assembly::result::AssemblyResult;
-use crate::ops::container::Ops;
+use crate::ops::assembly::result::AssemblyMeta;
+use crate::ops::assembly::write_polyline;
+use crate::ops::assembly::Tracelet;
 use crate::ops::cut::ToolPose;
 use crate::ops::state::State;
 use crate::types::{Point, Point3D};
@@ -31,9 +32,10 @@ pub struct RampOptions {
 /// [`AssemblyResult`] with a segment-swept cleared polygon.
 #[prof]
 pub fn generate_ramp(
+    trace: &mut Tracelet,
     opts: &RampOptions,
     cut_state: &State,
-) -> RaygeoResult<AssemblyResult> {
+) -> RaygeoResult<AssemblyMeta> {
     let path = generate_ramp_3d(&GeoRampOptions {
         start: opts.start,
         end: opts.end,
@@ -72,12 +74,11 @@ pub fn generate_ramp(
     let cleared_polygons =
         get_segment_swept_polygon(opts.start, opts.end, opts.lateral_amplitude);
 
-    Ok(AssemblyResult {
-        ops: Ops::from_polyline(&path, true, Some(cut_state)),
+    write_polyline(trace, &path, true, Some(cut_state));
+    Ok(AssemblyMeta {
         cleared_polygons,
         start,
         end,
-        trace: None,
     })
 }
 

@@ -6,6 +6,7 @@ use std::path::PathBuf;
 
 use crate::cnc::machining::plan::{self, WorkplanStep};
 use crate::geo::algo::helix::HelixDirection;
+use crate::ops::assembly::Tracelet;
 use crate::ops::state::State;
 use crate::python::ops::assembly::result::PyAssemblyResult;
 use crate::types::{Point, Point3D, Polygon};
@@ -480,9 +481,18 @@ impl PyWorkplan {
             ..Default::default()
         };
         let trace_path = trace.map(PathBuf::from);
-        let result =
-            self.inner.execute(&cut_state, &travel_state, trace_path)?;
-        Ok(PyAssemblyResult::from_inner(result))
+
+        let mut tl = Tracelet::new();
+        let meta = self.inner.execute(
+            &mut tl,
+            &cut_state,
+            &travel_state,
+            trace_path,
+        )?;
+        let ops = tl.into_ops();
+
+        // Workplan results have no trace events in the result (they went to the file)
+        Ok(PyAssemblyResult::from_parts(ops, meta, None, vec![]))
     }
 
     fn __repr__(&self) -> String {

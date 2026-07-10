@@ -1,6 +1,5 @@
-//! Universal return type for assembly-level generators.
+//! Result types and trace infrastructure for assembly-level generators.
 
-use crate::ops::container::Ops;
 use crate::ops::cut::ToolPose;
 use crate::trace::Tracer;
 use crate::trace_types::{
@@ -12,7 +11,7 @@ use crate::types::Polygon;
 /// assigns seq/span when emitting; the assembler only describes WHAT
 /// happened (kind, tool state, progress, move classification, meta).
 #[derive(Clone, Debug)]
-pub(crate) struct TraceEventData {
+pub struct TraceEventData {
     pub(crate) kind: EventKind,
     pub(crate) move_kind: Option<MoveKind>,
     pub(crate) tool: Option<ToolSnapshot>,
@@ -20,52 +19,21 @@ pub(crate) struct TraceEventData {
     pub(crate) meta: Option<Meta>,
 }
 
-/// Assembler-produced trace bundle: setup attrs for the span, plus an
-/// ordered list of events. `None` on `AssemblyResult` means the assembler
-/// did not self-trace and the workplan falls back to Ops replay.
+/// Trace bundle: span attrs + ordered events.
+/// Constructed by the caller from Tracelet data, not returned by assemblers.
 #[derive(Clone, Debug, Default)]
+#[allow(dead_code)]
 pub(crate) struct AssemblyTrace {
     pub(crate) attrs: Option<Meta>,
     pub(crate) events: Vec<TraceEventData>,
 }
 
-/// Universal return type for every assembly-level generator.
-///
-/// Every `generate_*()` and every existing assembler (`adaptive_clearing`,
-/// `adaptive_wavefronts`, etc.) returns this, so any two can be chained by
-/// linking `end` → `start` and merging `ops` + `cleared_polygons`.
+/// What an assembler returns alongside the ops/events written to the Tracelet.
 #[derive(Clone, Debug)]
-pub struct AssemblyResult {
-    pub ops: Ops,
+pub struct AssemblyMeta {
     pub cleared_polygons: Vec<Polygon>,
     pub start: ToolPose,
     pub end: ToolPose,
-    pub(crate) trace: Option<AssemblyTrace>,
-}
-
-/// Chain two `AssemblyResult`s by concatenating ops and cleared polygons.
-///
-/// `second` is expected to begin where `first` left off; no extra travel
-/// move is inserted (the caller is responsible for alignment).
-pub fn chain(first: AssemblyResult, second: AssemblyResult) -> AssemblyResult {
-    let mut ops = first.ops;
-    ops.extend(&second.ops);
-    let mut cleared_polygons = first.cleared_polygons;
-    cleared_polygons.extend(second.cleared_polygons);
-    let trace = match (first.trace, second.trace) {
-        (Some(mut t1), Some(t2)) => {
-            t1.events.extend(t2.events);
-            Some(t1)
-        }
-        (t1, t2) => t1.or(t2),
-    };
-    AssemblyResult {
-        ops,
-        cleared_polygons,
-        start: first.start,
-        end: second.end,
-        trace,
-    }
 }
 
 /// Emit trace events from an [`AssemblyTrace`] via the given [`Tracer`].

@@ -1,5 +1,6 @@
 use crate::geo::algo::helix::HelixDirection;
 use crate::ops::assembly::spiral::{self, SpiralOptions};
+use crate::ops::assembly::Tracelet;
 use crate::ops::state::State;
 use crate::python::ops::assembly::result::PyAssemblyResult;
 use crate::python::ops::state::PyState;
@@ -100,6 +101,10 @@ fn generate_spiral_py(
         start_angle,
     };
 
-    let result = spiral::generate_spiral(&opts, &cut_state)?;
-    Ok(PyAssemblyResult::from_inner(result))
+    let mut trace = Tracelet::new();
+    let meta = spiral::generate_spiral(&mut trace, &opts, &cut_state)?;
+    let events = trace.drain();
+    let attrs = trace.attrs().cloned();
+    let ops = trace.into_ops();
+    Ok(PyAssemblyResult::from_parts(ops, meta, attrs, events))
 }

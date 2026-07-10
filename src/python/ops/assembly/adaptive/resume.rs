@@ -6,6 +6,7 @@
 
 use crate::ops::assembly::adaptive::resume::{self, ResumeCtx};
 use crate::ops::assembly::adaptive::AdaptiveClearingOptions;
+use crate::ops::assembly::Tracelet;
 use crate::ops::cut::ClearedArea;
 use crate::ops::cut::CutDirection;
 use crate::ops::cut::StepperOptions;
@@ -108,8 +109,9 @@ fn emit_resume_travel_py(
         &fallback_ca
     };
     let mat = axis.map(|a| &a.inner);
+    let mut trace = Tracelet::new();
     resume::emit_resume_travel(
-        &mut ops.inner,
+        &mut trace,
         ca,
         mat,
         Point3D::new(from_pt.0, from_pt.1, from_pt.2),
@@ -117,6 +119,7 @@ fn emit_resume_travel_py(
         &opts,
         None,
     )?;
+    ops.inner = trace.into_ops();
     Ok(())
 }
 
@@ -285,8 +288,9 @@ fn try_resume_py(
         &mut _py_candidate_pts,
     );
     if let Some((_source, rp)) = result {
+        let mut trace = Tracelet::new();
         resume::emit_resume_travel(
-            &mut ops.inner,
+            &mut trace,
             &cleared.inner,
             mat,
             tool.inner.pos,
@@ -294,6 +298,7 @@ fn try_resume_py(
             &opts,
             None,
         )?;
+        ops.inner = trace.into_ops();
         tool.inner.pos = rp.pos;
         tool.inner.heading = rp.heading;
         tool.inner.reset_gyro();

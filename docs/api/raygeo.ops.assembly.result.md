@@ -47,7 +47,7 @@ trace: Optional[Any]
 write_trace(path: str, source: str, label: str) -> None
 ```
 
-Write this result's AssemblyTrace bundle to a trace file.
+Write this result's trace events to a trace file.
 
 Emits a root "workplan" span with one child assembler span containing either the self-traced events
 or a minimal init/exit pair.

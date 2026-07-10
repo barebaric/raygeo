@@ -1,4 +1,5 @@
 use crate::ops::assembly::slot::{self, SlotOptions};
+use crate::ops::assembly::Tracelet;
 use crate::ops::state::State;
 use crate::python::ops::assembly::result::PyAssemblyResult;
 use crate::python::ops::state::PyState;
@@ -66,6 +67,10 @@ fn generate_slot_py(
         target_z,
     };
 
-    let result = slot::generate_slot(&opts, &cut_state)?;
-    Ok(PyAssemblyResult::from_inner(result))
+    let mut trace = Tracelet::new();
+    let meta = slot::generate_slot(&mut trace, &opts, &cut_state)?;
+    let events = trace.drain();
+    let attrs = trace.attrs().cloned();
+    let ops = trace.into_ops();
+    Ok(PyAssemblyResult::from_parts(ops, meta, attrs, events))
 }

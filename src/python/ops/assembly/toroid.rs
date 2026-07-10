@@ -1,5 +1,6 @@
 use crate::geo::algo::helix::HelixDirection;
 use crate::ops::assembly::toroid::{self, ToroidOptions, ToroidalClearOptions};
+use crate::ops::assembly::Tracelet;
 use crate::ops::state::State;
 use crate::python::ops::assembly::result::PyAssemblyResult;
 use crate::python::ops::state::PyState;
@@ -97,8 +98,12 @@ fn generate_toroid_py(
         angular_step,
     };
 
-    let result = toroid::generate_toroid(&opts, &cut_state)?;
-    Ok(PyAssemblyResult::from_inner(result))
+    let mut trace = Tracelet::new();
+    let meta = toroid::generate_toroid(&mut trace, &opts, &cut_state)?;
+    let events = trace.drain();
+    let attrs = trace.attrs().cloned();
+    let ops = trace.into_ops();
+    Ok(PyAssemblyResult::from_parts(ops, meta, attrs, events))
 }
 
 #[gen_stub_pyfunction(
@@ -188,6 +193,10 @@ fn generate_toroidal_clear_py(
         angular_step,
     };
 
-    let result = toroid::generate_toroidal_clear(&opts, &cut_state)?;
-    Ok(PyAssemblyResult::from_inner(result))
+    let mut trace = Tracelet::new();
+    let meta = toroid::generate_toroidal_clear(&mut trace, &opts, &cut_state)?;
+    let events = trace.drain();
+    let attrs = trace.attrs().cloned();
+    let ops = trace.into_ops();
+    Ok(PyAssemblyResult::from_parts(ops, meta, attrs, events))
 }

@@ -33,7 +33,7 @@ class AssemblyResult:
     def __new__(cls) -> AssemblyResult: ...
     def write_trace(self, path: builtins.str, source: builtins.str, label: builtins.str) -> None:
         r"""
-        Write this result's AssemblyTrace bundle to a trace file.
+        Write this result's trace events to a trace file.
         
         Emits a root "workplan" span with one child assembler span
         containing either the self-traced events or a minimal

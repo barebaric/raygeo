@@ -15,8 +15,9 @@
 use prof_macros::prof;
 
 use crate::error::RaygeoResult;
-use crate::ops::assembly::result::AssemblyResult;
-use crate::ops::container::Ops;
+use crate::ops::assembly::result::AssemblyMeta;
+use crate::ops::assembly::write_polyline;
+use crate::ops::assembly::Tracelet;
 use crate::ops::cut::ToolPose;
 use crate::ops::state::State;
 use crate::types::{Point, Point3D, Polygon};
@@ -36,21 +37,20 @@ pub struct SlotOptions {
 /// `tool_radius`.
 #[prof]
 pub fn generate_slot(
+    trace: &mut Tracelet,
     opts: &SlotOptions,
     cut_state: &State,
-) -> RaygeoResult<AssemblyResult> {
+) -> RaygeoResult<AssemblyMeta> {
     if opts.carrier.len() < 2 {
         let pos = opts
             .carrier
             .first()
             .map(|p| Point3D::new(p.x, p.y, opts.target_z))
             .unwrap_or(Point3D::ZERO);
-        return Ok(AssemblyResult {
-            ops: Ops::new(),
+        return Ok(AssemblyMeta {
             cleared_polygons: vec![],
             start: ToolPose { pos, heading: 0.0 },
             end: ToolPose { pos, heading: 0.0 },
-            trace: None,
         });
     }
 
@@ -85,12 +85,11 @@ pub fn generate_slot(
         vec![]
     };
 
-    Ok(AssemblyResult {
-        ops: Ops::from_polyline(&path, true, Some(cut_state)),
+    write_polyline(trace, &path, true, Some(cut_state));
+    Ok(AssemblyMeta {
         cleared_polygons,
         start,
         end,
-        trace: None,
     })
 }
 

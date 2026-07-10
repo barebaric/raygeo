@@ -4,6 +4,7 @@ use pyo3_stub_gen::derive::gen_stub_pyfunction;
 use crate::ops::assembly::profile::{
     self, ProfileInnerOptions, ProfileOuterOptions,
 };
+use crate::ops::assembly::Tracelet;
 use crate::ops::cut::CutDirection;
 use crate::ops::state::State;
 use crate::python::ops::assembly::result::PyAssemblyResult;
@@ -158,8 +159,17 @@ fn profile_outer_py(
         ..Default::default()
     };
 
-    let result = profile::profile_outer(&mut cleared.inner, &opts, &cut_state)?;
-    Ok(PyAssemblyResult::from_inner(result))
+    let mut trace = Tracelet::new();
+    let meta = profile::profile_outer(
+        &mut trace,
+        &mut cleared.inner,
+        &opts,
+        &cut_state,
+    )?;
+    let events = trace.drain();
+    let attrs = trace.attrs().cloned();
+    let ops = trace.into_ops();
+    Ok(PyAssemblyResult::from_parts(ops, meta, attrs, events))
 }
 
 #[gen_stub_pyfunction(
@@ -298,6 +308,15 @@ fn profile_inner_py(
         ..Default::default()
     };
 
-    let result = profile::profile_inner(&mut cleared.inner, &opts, &cut_state)?;
-    Ok(PyAssemblyResult::from_inner(result))
+    let mut trace = Tracelet::new();
+    let meta = profile::profile_inner(
+        &mut trace,
+        &mut cleared.inner,
+        &opts,
+        &cut_state,
+    )?;
+    let events = trace.drain();
+    let attrs = trace.attrs().cloned();
+    let ops = trace.into_ops();
+    Ok(PyAssemblyResult::from_parts(ops, meta, attrs, events))
 }

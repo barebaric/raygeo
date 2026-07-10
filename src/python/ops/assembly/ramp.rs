@@ -1,5 +1,6 @@
 use crate::geo::algo::ramp::RampStyle;
 use crate::ops::assembly::ramp::{self, RampOptions};
+use crate::ops::assembly::Tracelet;
 use crate::ops::state::State;
 use crate::python::ops::assembly::result::PyAssemblyResult;
 use crate::python::ops::state::PyState;
@@ -93,6 +94,10 @@ fn generate_ramp_py(
         lateral_amplitude,
     };
 
-    let result = ramp::generate_ramp(&opts, &cut_state)?;
-    Ok(PyAssemblyResult::from_inner(result))
+    let mut trace = Tracelet::new();
+    let meta = ramp::generate_ramp(&mut trace, &opts, &cut_state)?;
+    let events = trace.drain();
+    let attrs = trace.attrs().cloned();
+    let ops = trace.into_ops();
+    Ok(PyAssemblyResult::from_parts(ops, meta, attrs, events))
 }

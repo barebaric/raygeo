@@ -230,12 +230,21 @@ fn adaptive_clearing_py(
         ..Default::default()
     };
 
-    let result =
-        adaptive::adaptive_clearing(&mut cleared.inner, &opts, &cut_state)?;
+    use crate::ops::assembly::Tracelet;
+    let mut trace = Tracelet::new();
+    let meta = adaptive::adaptive_clearing(
+        &mut trace,
+        &mut cleared.inner,
+        &opts,
+        &cut_state,
+    )?;
     if profile {
         prof_report();
     }
-    Ok(PyAssemblyResult::from_inner(result))
+    let events = trace.drain();
+    let attrs = trace.attrs().cloned();
+    let ops = trace.into_ops();
+    Ok(PyAssemblyResult::from_parts(ops, meta, attrs, events))
 }
 
 /// Target cut-area per unit distance for the engagement solver.

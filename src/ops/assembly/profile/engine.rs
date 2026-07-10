@@ -4,14 +4,15 @@ use crate::geo::shape::polygon::{
     get_polygon_heading_at, get_polygons_closest_point,
 };
 use crate::geo::shape::polygon3d::walk_along_polygon_3d;
-use crate::ops::assembly::result::AssemblyResult;
-use crate::ops::container::Ops;
+use crate::ops::assembly::result::AssemblyMeta;
+use crate::ops::assembly::Tracelet;
 use crate::ops::cut::CutDirection;
 use crate::ops::cut::ToolPose;
 use crate::ops::state::State;
+use crate::trace_types::MoveKind;
 use crate::types::{Point, Point3D, Polygon};
 
-use super::tracelet::ProfileTracelet;
+use super::trace_helpers as th;
 
 /// Find polygon vertices that lie strictly between `from` and `to` along
 /// the forward (CCW) direction of `poly3d`.  Returns them in walk order.
@@ -115,13 +116,13 @@ pub(crate) struct ProfileCommon {
 }
 
 pub(crate) fn run_profile(
+    trace: &mut Tracelet,
     cleared: &mut crate::ops::cut::ClearedArea,
     offset_poly: &Polygon,
     common: &ProfileCommon,
     cut_state: &State,
     target_polygon_idx: u32,
-    tracelet: &mut ProfileTracelet,
-) -> RaygeoResult<AssemblyResult> {
+) -> RaygeoResult<AssemblyMeta> {
     if offset_poly.len() < 3 {
         return Err(RaygeoError::DegenerateGeometry(
             "offset polygon too small".into(),
@@ -147,12 +148,11 @@ pub(crate) fn run_profile(
         normal_angle + std::f64::consts::FRAC_PI_2
     };
 
-    let mut ops = Ops::new();
     let start_pos = poly3d[0];
 
-    ops.move_to(start_pos.x, start_pos.y, common.safe_z, None);
-    ops.move_to(start_pos.x, start_pos.y, common.target_z, None);
-    ops.apply_state(cut_state);
+    trace.move_to(start_pos.x, start_pos.y, common.safe_z, None);
+    trace.move_to(start_pos.x, start_pos.y, common.target_z, None);
+    trace.apply_state(cut_state);
     // Effective area threshold
     let full_crescent =
         std::f64::consts::PI * common.tool_radius * common.tool_radius
@@ -186,27 +186,31 @@ pub(crate) fn run_profile(
     let mut _last_eng: Engagement = unsafe { std::mem::zeroed() };
     let mut first_step = true;
 
-    tracelet.record_init(start_pos, heading, target_polygon_idx);
+    trace.init(
+        th::tool_snapshot(start_pos, heading, start_pos),
+        Some(th::init_meta(target_polygon_idx)),
+    );
 
     for _ in 0..max_steps {
         // Cancellation check
         if let Some(check) = common.cancel_check {
             if check() {
-                ops.move_to(current_3d.x, current_3d.y, common.safe_z, None);
-                tracelet.record_exit(current_3d, heading);
+                trace.move_to(current_3d.x, current_3d.y, common.safe_z, None);
+                trace.exit(
+                    th::tool_snapshot(current_3d, heading, current_3d),
+                    None,
+                );
                 let end_pose = ToolPose {
                     pos: current_3d,
                     heading,
                 };
-                return Ok(AssemblyResult {
-                    ops,
+                return Ok(AssemblyMeta {
                     cleared_polygons: vec![],
                     start: ToolPose {
                         pos: start_pos,
                         heading,
                     },
                     end: end_pose,
-                    trace: None,
                 });
             }
         }
@@ -214,13 +218,14 @@ pub(crate) fn run_profile(
         // Restore feed after reduction
         if feed_reduced {
             if let Some(fr) = original_feed_rate {
-                ops.set_feed_rate(fr);
-                tracelet.record_feed_change(
-                    current_3d,
-                    heading,
-                    ops.len() as u32,
-                    current_feed_rate.unwrap_or(0),
-                    fr,
+                trace.set_feed_rate(fr);
+                trace.move_event(
+                    MoveKind::Travel,
+                    th::tool_snapshot(current_3d, heading, current_3d),
+                    Some(th::feed_change_meta(
+                        current_feed_rate.unwrap_or(0),
+                        fr,
+                    )),
                 );
                 current_feed_rate = original_feed_rate;
             }
@@ -257,10 +262,10 @@ pub(crate) fn run_profile(
                     if reductions >= 3 {
                         // Travel-skip: lift, move, re-plunge, restore feed.
                         _last_eng = eng;
-                        ops.move_to(next.x, next.y, common.safe_z, None);
-                        ops.move_to(next.x, next.y, common.target_z, None);
+                        trace.move_to(next.x, next.y, common.safe_z, None);
+                        trace.move_to(next.x, next.y, common.target_z, None);
                         if let Some(fr) = original_feed_rate {
-                            ops.set_feed_rate(fr);
+                            trace.set_feed_rate(fr);
                             current_feed_rate = original_feed_rate;
                         }
                         effective_step = common.step_length;
@@ -276,13 +281,11 @@ pub(crate) fn run_profile(
                     );
                     if let Some(fr) = current_feed_rate {
                         let reduced = (fr as f64 * 0.5).max(1.0) as i32;
-                        ops.set_feed_rate(reduced);
-                        tracelet.record_feed_change(
-                            next,
-                            heading,
-                            ops.len() as u32,
-                            fr,
-                            reduced,
+                        trace.set_feed_rate(reduced);
+                        trace.move_event(
+                            MoveKind::Travel,
+                            th::tool_snapshot(next, heading, next),
+                            Some(th::feed_change_meta(fr, reduced)),
                         );
                         current_feed_rate = Some(reduced);
                         feed_reduced = true;
@@ -333,13 +336,34 @@ pub(crate) fn run_profile(
                 let verts =
                     intermediate_vertices(&poly3d, &current_3d, &start_pos);
                 for v in &verts {
-                    ops.line_to(v.x, v.y, common.target_z, None);
+                    trace.line_to(v.x, v.y, common.target_z, None);
                 }
-                ops.line_to(start_pos.x, start_pos.y, common.target_z, None);
-                tracelet.record_cut(
-                    start_pos,
-                    current_3d,
-                    heading,
+                trace.line_to(start_pos.x, start_pos.y, common.target_z, None);
+                trace.cut(
+                    th::tool_snapshot(start_pos, heading, current_3d),
+                    Some(th::cut_meta(
+                        target_polygon_idx,
+                        dist_traveled,
+                        perimeter,
+                        wall_distance,
+                        current_feed_rate.unwrap_or(0),
+                        effective_step,
+                        reductions,
+                        first_step,
+                    )),
+                );
+            }
+            break;
+        }
+        if !travel_skipped {
+            let verts = intermediate_vertices(&poly3d, &current_3d, &next);
+            for v in &verts {
+                trace.line_to(v.x, v.y, common.target_z, None);
+            }
+            trace.line_to(next.x, next.y, common.target_z, None);
+            trace.cut(
+                th::tool_snapshot(next, heading, current_3d),
+                Some(th::cut_meta(
                     target_polygon_idx,
                     dist_traveled,
                     perimeter,
@@ -348,46 +372,23 @@ pub(crate) fn run_profile(
                     effective_step,
                     reductions,
                     first_step,
-                );
-            }
-            break;
-        }
-        if !travel_skipped {
-            let verts = intermediate_vertices(&poly3d, &current_3d, &next);
-            for v in &verts {
-                ops.line_to(v.x, v.y, common.target_z, None);
-            }
-            ops.line_to(next.x, next.y, common.target_z, None);
-            tracelet.record_cut(
-                next,
-                current_3d,
-                heading,
-                target_polygon_idx,
-                dist_traveled,
-                perimeter,
-                wall_distance,
-                current_feed_rate.unwrap_or(0),
-                effective_step,
-                reductions,
-                first_step,
+                )),
             );
             first_step = false;
         }
         current_3d = next;
     }
 
-    ops.move_to(start_pos.x, start_pos.y, common.safe_z, None);
-    tracelet.record_exit(start_pos, heading);
+    trace.move_to(start_pos.x, start_pos.y, common.safe_z, None);
+    trace.exit(th::tool_snapshot(start_pos, heading, start_pos), None);
 
     let end_pose = ToolPose {
         pos: start_pos,
         heading,
     };
-    Ok(AssemblyResult {
-        ops,
+    Ok(AssemblyMeta {
         cleared_polygons: vec![],
         start: end_pose,
         end: end_pose,
-        trace: None,
     })
 }

@@ -15,4 +15,7 @@ pub mod result;
 pub mod slot;
 pub mod spiral;
 pub mod toroid;
+pub mod tracelet;
 pub mod wavefront;
+
+pub use tracelet::{write_polyline, ProgressEvent, Tracelet};

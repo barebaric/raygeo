@@ -15,7 +15,7 @@ use crate::geo::shape::polygon::{
     get_polygons_closest_point, get_polygons_group_intersection,
     walk_polygon_vertices,
 };
-use crate::ops::container::Ops;
+use crate::ops::assembly::Tracelet;
 use crate::ops::cut::interp::point_in_valid_area;
 use crate::ops::cut::search::walk_polygon_samples;
 use crate::ops::cut::step;
@@ -507,7 +507,7 @@ fn apply_offset(
 /// when no collision-free path could be found.
 #[prof]
 pub fn emit_resume_travel(
-    ops: &mut Ops,
+    trace: &mut Tracelet,
     cleared: &ClearedArea,
     mat: Option<&MedialAxis>,
     from: Point3D,
@@ -548,7 +548,7 @@ pub fn emit_resume_travel(
             path.len(),
         );
         for pt in &path[1..] {
-            ops.move_to(pt.x, pt.y, pt.z, None);
+            trace.move_to(pt.x, pt.y, pt.z, None);
         }
         if let Some(out) = out_route_details {
             *out = route_details;

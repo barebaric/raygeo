@@ -23,17 +23,17 @@ use crate::ops::assembly::adaptive::{self, AdaptiveClearingOptions};
 use crate::ops::assembly::helix::{self, HelixOptions};
 use crate::ops::assembly::profile::{self, ProfileInnerOptions};
 use crate::ops::assembly::ramp::{self, RampOptions};
-use crate::ops::assembly::result::{emit_trace_events, AssemblyResult};
+use crate::ops::assembly::result::{emit_trace_events, AssemblyMeta};
 use crate::ops::assembly::slot::{self, SlotOptions};
 use crate::ops::assembly::spiral::{self, SpiralOptions};
 use crate::ops::assembly::toroid::{self, ToroidalClearOptions};
 use crate::ops::assembly::wavefront::{self, AdaptiveWavefrontOptions};
-use crate::ops::container::Ops;
+use crate::ops::assembly::Tracelet;
 use crate::ops::cut::{ClearedArea, ToolPose};
 use crate::ops::state::State;
 use crate::trace::Tracer;
 use crate::trace_types::{
-    EventKind, Meta, MetaValue, MoveKind, ProgressSnapshot, ToolSnapshot,
+    EventKind, Meta, MetaValue, ProgressSnapshot, ToolSnapshot,
 };
 use crate::types::{Point, Point3D, Polygon};
 
@@ -131,10 +131,11 @@ impl WorkplanStep {
     /// from within the assembler.
     pub fn execute(
         &self,
+        trace: &mut Tracelet,
         cleared: &mut ClearedArea,
         cut_state: &State,
         travel_state: &State,
-    ) -> RaygeoResult<AssemblyResult> {
+    ) -> RaygeoResult<AssemblyMeta> {
         match self {
             WorkplanStep::HelixPlunge {
                 center,
@@ -145,20 +146,18 @@ impl WorkplanStep {
                 direction,
                 angular_step,
             } => {
-                let r = helix::generate_helix(
-                    &HelixOptions {
-                        center: *center,
-                        start_radius: *helix_r,
-                        z_start: *z_start,
-                        z_end: *z_end,
-                        pitch: *pitch,
-                        direction: *direction,
-                        angular_step: *angular_step,
-                    },
-                    cut_state,
-                )?;
-                cleared.cut(&r.cleared_polygons);
-                Ok(r)
+                let opts = HelixOptions {
+                    center: *center,
+                    start_radius: *helix_r,
+                    z_start: *z_start,
+                    z_end: *z_end,
+                    pitch: *pitch,
+                    direction: *direction,
+                    angular_step: *angular_step,
+                };
+                let meta = helix::generate_helix(trace, &opts, cut_state)?;
+                cleared.cut(&meta.cleared_polygons);
+                Ok(meta)
             }
             WorkplanStep::FlatSpiral {
                 center,
@@ -170,21 +169,19 @@ impl WorkplanStep {
                 angular_step,
                 start_angle,
             } => {
-                let r = spiral::generate_spiral(
-                    &SpiralOptions {
-                        center: *center,
-                        z: *z,
-                        start_radius: *start_radius,
-                        end_radius: *end_radius,
-                        revolutions: *revolutions,
-                        direction: *direction,
-                        angular_step: *angular_step,
-                        start_angle: *start_angle,
-                    },
-                    cut_state,
-                )?;
-                cleared.cut(&r.cleared_polygons);
-                Ok(r)
+                let opts = SpiralOptions {
+                    center: *center,
+                    z: *z,
+                    start_radius: *start_radius,
+                    end_radius: *end_radius,
+                    revolutions: *revolutions,
+                    direction: *direction,
+                    angular_step: *angular_step,
+                    start_angle: *start_angle,
+                };
+                let meta = spiral::generate_spiral(trace, &opts, cut_state)?;
+                cleared.cut(&meta.cleared_polygons);
+                Ok(meta)
             }
             WorkplanStep::RampEntry {
                 start,
@@ -194,20 +191,18 @@ impl WorkplanStep {
                 max_ramp_angle_deg,
                 lateral_amplitude,
             } => {
-                let r = ramp::generate_ramp(
-                    &RampOptions {
-                        start: *start,
-                        end: *end,
-                        z_start: *z_start,
-                        z_end: *z_end,
-                        max_ramp_angle_deg: *max_ramp_angle_deg,
-                        style: RampStyle::ZigZag,
-                        lateral_amplitude: *lateral_amplitude,
-                    },
-                    cut_state,
-                )?;
-                cleared.cut(&r.cleared_polygons);
-                Ok(r)
+                let opts = RampOptions {
+                    start: *start,
+                    end: *end,
+                    z_start: *z_start,
+                    z_end: *z_end,
+                    max_ramp_angle_deg: *max_ramp_angle_deg,
+                    style: RampStyle::ZigZag,
+                    lateral_amplitude: *lateral_amplitude,
+                };
+                let meta = ramp::generate_ramp(trace, &opts, cut_state)?;
+                cleared.cut(&meta.cleared_polygons);
+                Ok(meta)
             }
             WorkplanStep::ToroidalClear {
                 carrier,
@@ -219,37 +214,34 @@ impl WorkplanStep {
                 direction,
                 angular_step,
             } => {
-                let r = toroid::generate_toroidal_clear(
-                    &ToroidalClearOptions {
-                        carrier: carrier.clone(),
-                        start: *start,
-                        target_z: *target_z,
-                        tool_radius: *tool_radius,
-                        step_over: *step_over,
-                        max_ramp_angle_deg: *max_ramp_angle_deg,
-                        direction: *direction,
-                        angular_step: *angular_step,
-                    },
-                    cut_state,
-                )?;
-                cleared.cut(&r.cleared_polygons);
-                Ok(r)
+                let opts = ToroidalClearOptions {
+                    carrier: carrier.clone(),
+                    start: *start,
+                    target_z: *target_z,
+                    tool_radius: *tool_radius,
+                    step_over: *step_over,
+                    max_ramp_angle_deg: *max_ramp_angle_deg,
+                    direction: *direction,
+                    angular_step: *angular_step,
+                };
+                let meta =
+                    toroid::generate_toroidal_clear(trace, &opts, cut_state)?;
+                cleared.cut(&meta.cleared_polygons);
+                Ok(meta)
             }
             WorkplanStep::Slot {
                 carrier,
                 tool_radius,
                 target_z,
             } => {
-                let r = slot::generate_slot(
-                    &SlotOptions {
-                        carrier: carrier.clone(),
-                        tool_radius: *tool_radius,
-                        target_z: *target_z,
-                    },
-                    cut_state,
-                )?;
-                cleared.cut(&r.cleared_polygons);
-                Ok(r)
+                let opts = SlotOptions {
+                    carrier: carrier.clone(),
+                    tool_radius: *tool_radius,
+                    target_z: *target_z,
+                };
+                let meta = slot::generate_slot(trace, &opts, cut_state)?;
+                cleared.cut(&meta.cleared_polygons);
+                Ok(meta)
             }
             WorkplanStep::AdaptiveClear {
                 pocket_boundary,
@@ -263,9 +255,8 @@ impl WorkplanStep {
                 wall_margin,
                 area_tolerance,
                 ..
-            } => adaptive::adaptive_clearing(
-                cleared,
-                &AdaptiveClearingOptions {
+            } => {
+                let opts = AdaptiveClearingOptions {
                     pocket_boundary: pocket_boundary.clone(),
                     islands: islands.clone(),
                     tool_radius: *tool_radius,
@@ -277,9 +268,9 @@ impl WorkplanStep {
                     wall_margin: *wall_margin,
                     area_tolerance: *area_tolerance,
                     ..Default::default()
-                },
-                cut_state,
-            ),
+                };
+                adaptive::adaptive_clearing(trace, cleared, &opts, cut_state)
+            }
             WorkplanStep::ProfileInner {
                 boundary,
                 islands,
@@ -290,9 +281,8 @@ impl WorkplanStep {
                 safe_z,
                 wall_margin,
                 stock_to_leave,
-            } => profile::profile_inner(
-                cleared,
-                &ProfileInnerOptions {
+            } => {
+                let opts = ProfileInnerOptions {
                     boundary: boundary.clone(),
                     islands: islands.clone(),
                     tool_radius: *tool_radius,
@@ -303,9 +293,9 @@ impl WorkplanStep {
                     wall_margin: *wall_margin,
                     stock_to_leave: *stock_to_leave,
                     ..Default::default()
-                },
-                cut_state,
-            ),
+                };
+                profile::profile_inner(trace, cleared, &opts, cut_state)
+            }
             WorkplanStep::Wavefront {
                 pocket_boundary,
                 islands,
@@ -314,9 +304,8 @@ impl WorkplanStep {
                 z,
                 area_tolerance,
                 precision,
-            } => wavefront::adaptive_wavefronts(
-                cleared,
-                &AdaptiveWavefrontOptions {
+            } => {
+                let opts = AdaptiveWavefrontOptions {
                     pocket_boundary: pocket_boundary.clone(),
                     islands: islands.clone(),
                     tool_radius: *tool_radius,
@@ -324,20 +313,17 @@ impl WorkplanStep {
                     z: *z,
                     area_tolerance: *area_tolerance,
                     precision: *precision,
-                },
-                cut_state,
-            ),
+                };
+                wavefront::adaptive_wavefronts(trace, cleared, &opts, cut_state)
+            }
             WorkplanStep::Retract { safe_z } => {
                 let pos = Point3D::new(0.0, 0.0, *safe_z);
-                let mut ops = Ops::new();
-                ops.apply_state(travel_state);
-                ops.move_to(pos.x, pos.y, *safe_z, None);
-                Ok(AssemblyResult {
-                    ops,
+                trace.apply_state(travel_state);
+                trace.move_to(pos.x, pos.y, *safe_z, None);
+                Ok(AssemblyMeta {
                     cleared_polygons: vec![],
                     start: ToolPose { pos, heading: 0.0 },
                     end: ToolPose { pos, heading: 0.0 },
-                    trace: None,
                 })
             }
         }
@@ -418,11 +404,12 @@ impl Workplan {
     #[prof]
     pub fn execute(
         &self,
+        trace: &mut Tracelet,
         cut_state: &State,
         travel_state: &State,
-        trace: Option<PathBuf>,
-    ) -> RaygeoResult<AssemblyResult> {
-        let mut tracer = Tracer::open(trace);
+        trace_path: Option<PathBuf>,
+    ) -> RaygeoResult<AssemblyMeta> {
+        let mut tracer = Tracer::open(trace_path);
 
         // ── Root span ──────────────────────────────────────────────
         let mut steps_meta = Vec::new();
@@ -442,120 +429,100 @@ impl Workplan {
         // ── Execute steps with interleaved links ───────────────────
         let mut cleared =
             ClearedArea::new(&self.pocket_boundary, &self.islands);
-        let mut ops = Ops::new();
         let mut prev_end: Option<ToolPose> = None;
         let mut first_start: Option<ToolPose> = None;
 
         for (i, step) in self.steps.iter().enumerate() {
-            let r = step.execute(&mut cleared, cut_state, travel_state)?;
+            trace.emit_step_start(i, &step.label());
+
+            // Run step in temp tracelet
+            let mut temp = Tracelet::new();
+            temp.begin_section(step.assembler(), &step.label());
+            let meta =
+                step.execute(&mut temp, &mut cleared, cut_state, travel_state)?;
+            let step_events = temp.drain();
+            let step_attrs = temp.attrs().cloned();
+            let step_ops = temp.into_ops();
 
             if first_start.is_none() {
-                first_start = Some(r.start);
+                first_start = Some(meta.start);
             }
 
+            // Emit link BEFORE step ops (link goes to main trace, step ops follow)
             if let Some(pe) = prev_end {
+                let entry_z = pass_start_z_ops(&step_ops);
+                trace.begin_section("workplan", "link");
                 emit_link(
-                    &mut ops,
-                    &mut tracer,
-                    root,
+                    trace,
                     travel_state,
                     pe,
-                    r.start.pos,
+                    meta.start.pos,
                     self.safe_z,
-                    pass_start_z(&r),
+                    entry_z,
                 );
+                let link_events = trace.drain();
+                let link_span = tracer.enter(root, "workplan", "link", None);
+                emit_trace_events(
+                    &mut tracer,
+                    link_span,
+                    "workplan",
+                    &link_events,
+                );
+                tracer.exit(link_span, "workplan");
             }
 
-            let step_attrs = r.trace.as_ref().and_then(|t| t.attrs.clone());
+            // Push step's ops into main trace (in correct order, after link)
+            for node in step_ops.commands {
+                trace.push_raw(node);
+            }
+
+            // Feed step's events to Tracer
             let step_span = tracer.enter(
                 root,
                 step.assembler(),
                 &format!("#{} {}", i, step.label()),
                 step_attrs,
             );
-
-            match &r.trace {
-                Some(t) => {
-                    emit_trace_events(
-                        &mut tracer,
-                        step_span,
-                        step.assembler(),
-                        &t.events,
-                    );
-                }
-                None => {
-                    tracer.init(
-                        step_span,
-                        step.assembler(),
-                        ToolSnapshot {
-                            pos_x: r.start.pos.x,
-                            pos_y: r.start.pos.y,
-                            pos_z: r.start.pos.z,
-                            heading: r.start.heading,
-                            prev_x: r.start.pos.x,
-                            prev_y: r.start.pos.y,
-                            prev_z: r.start.pos.z,
-                        },
-                        ProgressSnapshot {
-                            step_idx: 0,
-                            ops_len: 0,
-                            status: 0,
-                        },
-                        None,
-                    );
-                    replay_ops(
-                        &mut tracer,
-                        step_span,
-                        step.assembler(),
-                        &r.ops,
-                        r.start,
-                    );
-                    tracer.event(
-                        step_span,
-                        step.assembler(),
-                        EventKind::Exit,
-                        Some(ToolSnapshot {
-                            pos_x: r.end.pos.x,
-                            pos_y: r.end.pos.y,
-                            pos_z: r.end.pos.z,
-                            heading: r.end.heading,
-                            prev_x: r.end.pos.x,
-                            prev_y: r.end.pos.y,
-                            prev_z: r.end.pos.z,
-                        }),
-                        None,
-                    );
-                }
-            }
+            emit_trace_events(
+                &mut tracer,
+                step_span,
+                step.assembler(),
+                &step_events,
+            );
             tracer.exit(step_span, step.assembler());
 
-            ops.extend(&r.ops);
-            prev_end = Some(r.end);
+            trace.emit_step_end(i);
+            prev_end = Some(meta.end);
         }
 
-        if first_start.is_none() {
-            tracer.exit(root, "workplan");
-            tracer.finish();
-            return Ok(AssemblyResult {
-                ops: Ops::new(),
-                cleared_polygons: cleared.fragments().to_vec(),
-                start: ToolPose {
-                    pos: Point3D::ZERO,
-                    heading: 0.0,
-                },
-                end: ToolPose {
-                    pos: Point3D::ZERO,
-                    heading: 0.0,
-                },
-                trace: None,
-            });
-        }
+        // Final lift
+        let mut pe = match prev_end {
+            Some(e) => e,
+            None => {
+                tracer.exit(root, "workplan");
+                tracer.finish();
+                trace.finish();
+                return Ok(AssemblyMeta {
+                    cleared_polygons: cleared.fragments().to_vec(),
+                    start: ToolPose {
+                        pos: Point3D::ZERO,
+                        heading: 0.0,
+                    },
+                    end: ToolPose {
+                        pos: Point3D::ZERO,
+                        heading: 0.0,
+                    },
+                });
+            }
+        };
 
-        let mut pe = prev_end.unwrap();
-
-        // ── Final lift ─────────────────────────────────────────────
         if pe.pos.z < self.safe_z - 1e-12 {
             let lift_span = tracer.enter(root, "workplan", "final_lift", None);
+            trace.begin_section("workplan", "final_lift");
+            trace.apply_state(travel_state);
+            trace.move_to(pe.pos.x, pe.pos.y, self.safe_z, None);
+            let lift_events = trace.drain();
+            // Emit minimal init/move/exit for the lift
             tracer.init(
                 lift_span,
                 "workplan",
@@ -568,42 +535,18 @@ impl Workplan {
                     prev_y: pe.pos.y,
                     prev_z: pe.pos.z,
                 },
-                ProgressSnapshot {
-                    step_idx: 0,
-                    ops_len: 0,
-                    status: 0,
-                },
+                ProgressSnapshot::default(),
                 None,
             );
-
-            ops.apply_state(travel_state);
-            ops.move_to(pe.pos.x, pe.pos.y, self.safe_z, None);
-            let lift_pos = Point3D::new(pe.pos.x, pe.pos.y, self.safe_z);
-            tracer.move_point(
-                lift_span,
-                "workplan",
-                MoveKind::Travel,
-                ToolSnapshot {
-                    pos_x: lift_pos.x,
-                    pos_y: lift_pos.y,
-                    pos_z: lift_pos.z,
-                    heading: pe.heading,
-                    prev_x: pe.pos.x,
-                    prev_y: pe.pos.y,
-                    prev_z: pe.pos.z,
-                },
-                None,
-                None,
-            );
-
+            emit_trace_events(&mut tracer, lift_span, "workplan", &lift_events);
             tracer.event(
                 lift_span,
                 "workplan",
                 EventKind::Exit,
                 Some(ToolSnapshot {
-                    pos_x: lift_pos.x,
-                    pos_y: lift_pos.y,
-                    pos_z: lift_pos.z,
+                    pos_x: pe.pos.x,
+                    pos_y: pe.pos.y,
+                    pos_z: self.safe_z,
                     heading: pe.heading,
                     prev_x: pe.pos.x,
                     prev_y: pe.pos.y,
@@ -612,21 +555,18 @@ impl Workplan {
                 None,
             );
             tracer.exit(lift_span, "workplan");
-
             pe.pos.z = self.safe_z;
         }
 
-        let result = AssemblyResult {
-            ops,
+        trace.finish();
+        tracer.exit(root, "workplan");
+        tracer.finish();
+
+        Ok(AssemblyMeta {
             cleared_polygons: cleared.fragments().to_vec(),
             start: first_start.unwrap(),
             end: pe,
-            trace: None,
-        };
-
-        tracer.exit(root, "workplan");
-        tracer.finish();
-        Ok(result)
+        })
     }
 }
 
@@ -641,202 +581,33 @@ fn polygon_to_meta(poly: &Polygon) -> MetaValue {
     )
 }
 
-/// Walk the Ops commands and emit trace move events.
-///
-/// Each move event records the destination endpoint as `pos` and the
-/// origin as `prev`, with heading recomputed from the vector connecting
-/// them.
-fn replay_ops(
-    tracer: &mut Tracer,
-    span: u32,
-    source: &str,
-    ops: &Ops,
-    start: ToolPose,
-) {
-    let mut pos = start.pos;
-    let mut heading = start.heading;
-    let mut step_idx: u32 = 0;
-
-    for node in &ops.commands {
-        if !node.is_moving() {
-            continue;
-        }
-        let endpoint = node.end_point();
-        let kind = match &node.category {
-            crate::ops::types::OpCategory::Moving { cmd, .. } => match cmd {
-                crate::ops::types::MoveCmd::MoveTo => MoveKind::Travel,
-                crate::ops::types::MoveCmd::LineTo
-                | crate::ops::types::MoveCmd::ArcTo { .. }
-                | crate::ops::types::MoveCmd::BezierTo { .. }
-                | crate::ops::types::MoveCmd::QuadraticBezierTo { .. }
-                | crate::ops::types::MoveCmd::ScanLine { .. } => MoveKind::Cut,
-            },
-            _ => MoveKind::Cut,
-        };
-
-        let dx = endpoint.x - pos.x;
-        let dy = endpoint.y - pos.y;
-        if dx.abs() > 1e-12 || dy.abs() > 1e-12 {
-            heading = dy.atan2(dx);
-        }
-
-        tracer.move_point(
-            span,
-            source,
-            kind,
-            ToolSnapshot {
-                pos_x: endpoint.x,
-                pos_y: endpoint.y,
-                pos_z: endpoint.z,
-                heading,
-                prev_x: pos.x,
-                prev_y: pos.y,
-                prev_z: pos.z,
-            },
-            Some(ProgressSnapshot {
-                step_idx,
-                ops_len: ops.len() as u32,
-                status: 0,
-            }),
-            None,
-        );
-
-        pos = endpoint;
-        step_idx += 1;
-    }
-}
-
-fn pass_start_z(result: &AssemblyResult) -> f64 {
-    for i in 0..result.ops.len() {
-        if result.ops.is_cutting(i) || result.ops.is_travel(i) {
-            return result.ops.endpoint(i).z;
+fn pass_start_z_ops(ops: &crate::ops::container::Ops) -> f64 {
+    for i in 0..ops.len() {
+        if ops.is_cutting(i) || ops.is_travel(i) {
+            return ops.endpoint(i).z;
         }
     }
     0.0
 }
 
-/// Emit a link span with retract/XY-travel/plunge moves between two passes.
+/// Emit travel moves for a link between two passes.
 ///
-/// The tool moves from `from` to `(to.x, to.y, entry_z)` via safe-Z
-/// retract, optional XY travel, and optional plunge.
-#[allow(clippy::too_many_arguments)]
+/// Writes retract/XY-travel/plunge moves to the Tracelet. The caller
+/// is responsible for tracing (begin_section/drain/emit_trace_events).
 fn emit_link(
-    ops: &mut Ops,
-    tracer: &mut Tracer,
-    parent_span: u32,
+    trace: &mut Tracelet,
     travel_state: &State,
     from: ToolPose,
     to: Point3D,
     safe_z: f64,
     entry_z: f64,
 ) {
-    let link_span = tracer.enter(parent_span, "workplan", "link", None);
-    tracer.init(
-        link_span,
-        "workplan",
-        ToolSnapshot {
-            pos_x: from.pos.x,
-            pos_y: from.pos.y,
-            pos_z: from.pos.z,
-            heading: from.heading,
-            prev_x: from.pos.x,
-            prev_y: from.pos.y,
-            prev_z: from.pos.z,
-        },
-        ProgressSnapshot {
-            step_idx: 0,
-            ops_len: 0,
-            status: 0,
-        },
-        None,
-    );
-
-    let mut cur_pos = from.pos;
-    let mut cur_heading = from.heading;
-
-    ops.apply_state(travel_state);
-    ops.move_to(from.pos.x, from.pos.y, safe_z, None);
-    let retract_pos = Point3D::new(from.pos.x, from.pos.y, safe_z);
-    tracer.move_point(
-        link_span,
-        "workplan",
-        MoveKind::Travel,
-        ToolSnapshot {
-            pos_x: retract_pos.x,
-            pos_y: retract_pos.y,
-            pos_z: retract_pos.z,
-            heading: cur_heading,
-            prev_x: cur_pos.x,
-            prev_y: cur_pos.y,
-            prev_z: cur_pos.z,
-        },
-        None,
-        None,
-    );
-    cur_pos = retract_pos;
-
+    trace.apply_state(travel_state);
+    trace.move_to(from.pos.x, from.pos.y, safe_z, None);
     if (to.x - from.pos.x).abs() > 1e-12 || (to.y - from.pos.y).abs() > 1e-12 {
-        ops.move_to(to.x, to.y, safe_z, None);
-        let travel_pos = Point3D::new(to.x, to.y, safe_z);
-        let dx = travel_pos.x - cur_pos.x;
-        let dy = travel_pos.y - cur_pos.y;
-        let heading = dy.atan2(dx);
-        tracer.move_point(
-            link_span,
-            "workplan",
-            MoveKind::Travel,
-            ToolSnapshot {
-                pos_x: travel_pos.x,
-                pos_y: travel_pos.y,
-                pos_z: travel_pos.z,
-                heading,
-                prev_x: cur_pos.x,
-                prev_y: cur_pos.y,
-                prev_z: cur_pos.z,
-            },
-            None,
-            None,
-        );
-        cur_pos = travel_pos;
-        cur_heading = heading;
+        trace.move_to(to.x, to.y, safe_z, None);
     }
-
     if (entry_z - safe_z).abs() > 1e-12 {
-        ops.move_to(to.x, to.y, entry_z, None);
-        let plunge_pos = Point3D::new(to.x, to.y, entry_z);
-        tracer.move_point(
-            link_span,
-            "workplan",
-            MoveKind::Plunge,
-            ToolSnapshot {
-                pos_x: plunge_pos.x,
-                pos_y: plunge_pos.y,
-                pos_z: plunge_pos.z,
-                heading: cur_heading,
-                prev_x: cur_pos.x,
-                prev_y: cur_pos.y,
-                prev_z: cur_pos.z,
-            },
-            None,
-            None,
-        );
-        cur_pos = plunge_pos;
+        trace.move_to(to.x, to.y, entry_z, None);
     }
-
-    tracer.event(
-        link_span,
-        "workplan",
-        EventKind::Exit,
-        Some(ToolSnapshot {
-            pos_x: cur_pos.x,
-            pos_y: cur_pos.y,
-            pos_z: cur_pos.z,
-            heading: cur_heading,
-            prev_x: cur_pos.x,
-            prev_y: cur_pos.y,
-            prev_z: cur_pos.z,
-        }),
-        None,
-    );
-    tracer.exit(link_span, "workplan");
 }

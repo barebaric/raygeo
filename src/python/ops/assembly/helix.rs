@@ -1,5 +1,6 @@
 use crate::geo::algo::helix::HelixDirection;
 use crate::ops::assembly::helix::{self, HelixOptions};
+use crate::ops::assembly::Tracelet;
 use crate::ops::state::State;
 use crate::python::ops::assembly::result::PyAssemblyResult;
 use crate::python::ops::state::PyState;
@@ -95,6 +96,10 @@ fn generate_helix_py(
         angular_step,
     };
 
-    let result = helix::generate_helix(&opts, &cut_state)?;
-    Ok(PyAssemblyResult::from_inner(result))
+    let mut trace = Tracelet::new();
+    let meta = helix::generate_helix(&mut trace, &opts, &cut_state)?;
+    let events = trace.drain();
+    let attrs = trace.attrs().cloned();
+    let ops = trace.into_ops();
+    Ok(PyAssemblyResult::from_parts(ops, meta, attrs, events))
 }

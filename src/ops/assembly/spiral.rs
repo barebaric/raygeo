@@ -8,8 +8,9 @@ use crate::geo::algo::spiral::{
     generate_spiral_3d, SpiralOptions as GeoSpiralOptions,
 };
 use crate::geo::shape::polygon::get_circle_polygon;
-use crate::ops::assembly::result::AssemblyResult;
-use crate::ops::container::Ops;
+use crate::ops::assembly::result::AssemblyMeta;
+use crate::ops::assembly::write_polyline;
+use crate::ops::assembly::Tracelet;
 use crate::ops::cut::ToolPose;
 use crate::ops::state::State;
 use crate::types::{Point, Point3D};
@@ -34,9 +35,10 @@ pub struct SpiralOptions {
 /// into an [`AssemblyResult`].
 #[prof]
 pub fn generate_spiral(
+    trace: &mut Tracelet,
     opts: &SpiralOptions,
     cut_state: &State,
-) -> RaygeoResult<AssemblyResult> {
+) -> RaygeoResult<AssemblyMeta> {
     let mut path = generate_spiral_3d(&GeoSpiralOptions {
         center: opts.center,
         z: opts.z,
@@ -103,12 +105,11 @@ pub fn generate_spiral(
         vec![get_circle_polygon(opts.center, opts.end_radius, 64)]
     };
 
-    Ok(AssemblyResult {
-        ops: Ops::from_polyline(&path, true, Some(cut_state)),
+    write_polyline(trace, &path, true, Some(cut_state));
+    Ok(AssemblyMeta {
         cleared_polygons,
         start,
         end,
-        trace: None,
     })
 }
 

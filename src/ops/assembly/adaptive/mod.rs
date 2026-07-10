@@ -26,7 +26,7 @@ mod routing_mat;
 mod routing_zhop;
 mod stuck;
 pub mod tool;
-mod tracelet;
+mod trace_helpers;
 mod wallhug;
 
 use crate::dbg_log;
@@ -35,8 +35,8 @@ use crate::geo::algo::medial_axis::MedialAxis;
 use crate::geo::algo::offset::compute_inset_region;
 use crate::geo::shape::arc::normalize_angle_signed;
 use crate::geo::shape::polygon::{get_polygon_area, get_polygon_centroid};
-use crate::ops::assembly::result::AssemblyResult;
-use crate::ops::container::Ops;
+use crate::ops::assembly::result::AssemblyMeta;
+use crate::ops::assembly::Tracelet;
 use crate::ops::cut::step;
 use crate::ops::cut::stepper::MAX_IT;
 use crate::ops::cut::ClearedArea;
@@ -52,7 +52,7 @@ use std::path::PathBuf;
 
 use resume::{try_resume, ResumeCtx, MAX_RESUMES};
 use tool::Tool;
-use tracelet::AdaptiveTracelet;
+use trace_helpers as th;
 // ── Named constants ────────────────────────────────────────────────────
 
 /// Maximum total steps before giving up (safety valve).
@@ -181,12 +181,6 @@ pub fn target_area_per_distance(
 
 // ── Main entry point ─────────────────────────────────────────────────
 
-fn moving_count(ops: &Ops) -> u32 {
-    (0..ops.len())
-        .filter(|&i| ops.is_travel(i) || ops.is_cutting(i))
-        .count() as u32
-}
-
 enum StallResult {
     Applied,
     Exit,
@@ -195,12 +189,11 @@ enum StallResult {
 
 struct StallState<'a> {
     cleared: &'a mut ClearedArea,
-    ops: &'a mut Ops,
+    trace: &'a mut Tracelet,
     tool: &'a mut Tool,
     hug_tracker: &'a mut wallhug::WallHugTracker,
     stuck_detector: &'a mut stuck::StuckDetector,
     prev_pos: &'a mut Point3D,
-    tp_len: &'a mut u32,
     steps_since_batch: &'a mut usize,
     segment_start: &'a mut ToolPose,
     last_resume_area: &'a mut f64,
@@ -212,7 +205,6 @@ struct StallState<'a> {
     route_details: &'a mut [u8; 4],
     last_resume_point: &'a mut Point3D,
     resume_candidate_pts: &'a mut resume::ResumeCandidatePoints,
-    tracelet: &'a mut AdaptiveTracelet,
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -268,18 +260,18 @@ fn handle_stall(
         }
         let whp_exit = s.hug_tracker.wall_hug_ref();
         let wsc_exit = s.hug_tracker.segment_counts_ref();
-        s.tracelet.record_exit(
-            s.tool,
-            s.cleared,
-            *s.prev_pos,
-            *s.tp_len,
-            s.resume_reasons,
-            s.resume_details,
-            s.route_details,
-            *s.last_resume_point,
-            s.resume_candidate_pts,
-            &whp_exit,
-            &wsc_exit,
+        s.trace.exit(
+            th::make_tool_snapshot(s.tool, *s.prev_pos),
+            Some(th::exit_meta(
+                s.cleared,
+                s.resume_reasons,
+                s.resume_details,
+                s.route_details,
+                *s.last_resume_point,
+                s.resume_candidate_pts,
+                &whp_exit,
+                &wsc_exit,
+            )),
         );
         return Ok(StallResult::Exit);
     }
@@ -317,7 +309,7 @@ fn handle_stall(
         *s.last_resume_point = rp.pos;
         s.resume_blacklist.push(rp.pos);
         match resume::emit_resume_travel(
-            s.ops,
+            s.trace,
             &*s.cleared,
             mat,
             s.tool.pos,
@@ -331,7 +323,6 @@ fn handle_stall(
                 s.tool.pos = rp.pos;
                 s.tool.heading = rp.heading;
                 s.tool.reset_gyro();
-                *s.tp_len = moving_count(s.ops);
 
                 let whp = s.hug_tracker.wall_hug_ref();
                 let wsc = s.hug_tracker.segment_counts_ref();
@@ -344,21 +335,20 @@ fn handle_stall(
                     heading: s.tool.heading,
                 };
                 s.hug_tracker.reset();
-                s.tracelet.record_resume(
-                    crate::trace_types::EventKind::Resume,
-                    s.tool,
-                    s.cleared,
-                    *s.prev_pos,
-                    *s.tp_len,
-                    resume_source_u8,
-                    route_source_u8,
-                    s.resume_reasons,
-                    s.resume_details,
-                    s.route_details,
-                    *s.last_resume_point,
-                    s.resume_candidate_pts,
-                    &whp,
-                    &wsc,
+                s.trace.resume(
+                    th::make_tool_snapshot(s.tool, *s.prev_pos),
+                    Some(th::resume_meta(
+                        s.cleared,
+                        resume_source_u8,
+                        route_source_u8,
+                        s.resume_reasons,
+                        s.resume_details,
+                        s.route_details,
+                        *s.last_resume_point,
+                        s.resume_candidate_pts,
+                        &whp,
+                        &wsc,
+                    )),
                 );
                 resume_done = true;
                 break 'resume;
@@ -398,18 +388,18 @@ fn handle_stall(
         );
         let whp_exit = s.hug_tracker.wall_hug_ref();
         let wsc_exit = s.hug_tracker.segment_counts_ref();
-        s.tracelet.record_exit(
-            s.tool,
-            s.cleared,
-            *s.prev_pos,
-            *s.tp_len,
-            s.resume_reasons,
-            s.resume_details,
-            s.route_details,
-            *s.last_resume_point,
-            s.resume_candidate_pts,
-            &whp_exit,
-            &wsc_exit,
+        s.trace.exit(
+            th::make_tool_snapshot(s.tool, *s.prev_pos),
+            Some(th::exit_meta(
+                s.cleared,
+                s.resume_reasons,
+                s.resume_details,
+                s.route_details,
+                *s.last_resume_point,
+                s.resume_candidate_pts,
+                &whp_exit,
+                &wsc_exit,
+            )),
         );
         return Ok(StallResult::Exit);
     }
@@ -438,18 +428,18 @@ fn handle_stall(
     }
     let whp_exit = s.hug_tracker.wall_hug_ref();
     let wsc_exit = s.hug_tracker.segment_counts_ref();
-    s.tracelet.record_exit(
-        s.tool,
-        s.cleared,
-        *s.prev_pos,
-        *s.tp_len,
-        s.resume_reasons,
-        s.resume_details,
-        s.route_details,
-        *s.last_resume_point,
-        s.resume_candidate_pts,
-        &whp_exit,
-        &wsc_exit,
+    s.trace.exit(
+        th::make_tool_snapshot(s.tool, *s.prev_pos),
+        Some(th::exit_meta(
+            s.cleared,
+            s.resume_reasons,
+            s.resume_details,
+            s.route_details,
+            *s.last_resume_point,
+            s.resume_candidate_pts,
+            &whp_exit,
+            &wsc_exit,
+        )),
     );
     let all_blacklisted =
         s.resume_reasons.contains(&resume::REASON_BLACKLISTED);
@@ -459,10 +449,11 @@ fn handle_stall(
 #[prof]
 #[allow(unused_assignments, unused_variables)]
 pub fn adaptive_clearing(
+    trace: &mut Tracelet,
     cleared: &mut ClearedArea,
     opts: &AdaptiveClearingOptions,
     cut_state: &State,
-) -> RaygeoResult<AssemblyResult> {
+) -> RaygeoResult<AssemblyMeta> {
     // ── 1. Pre-process ────────────────────────────────────────────
     let (valid_tool_area, valid_total) = compute_inset_region(
         &opts.pocket_boundary,
@@ -470,8 +461,7 @@ pub fn adaptive_clearing(
         &opts.islands,
     );
     if valid_tool_area.is_empty() || valid_total <= opts.area_tolerance {
-        return Ok(AssemblyResult {
-            ops: Ops::new(),
+        return Ok(AssemblyMeta {
             cleared_polygons: cleared.fragments().to_vec(),
             start: ToolPose {
                 pos: Point3D::ZERO,
@@ -481,12 +471,10 @@ pub fn adaptive_clearing(
                 pos: Point3D::ZERO,
                 heading: 0.0,
             },
-            trace: None,
         });
     }
     if cleared.is_empty() {
-        return Ok(AssemblyResult {
-            ops: Ops::new(),
+        return Ok(AssemblyMeta {
             cleared_polygons: cleared.fragments().to_vec(),
             start: ToolPose {
                 pos: Point3D::ZERO,
@@ -496,7 +484,6 @@ pub fn adaptive_clearing(
                 pos: Point3D::ZERO,
                 heading: 0.0,
             },
-            trace: None,
         });
     }
 
@@ -555,24 +542,18 @@ pub fn adaptive_clearing(
         target_area_pd,
     );
 
-    // ── 3. Tracelet — always-on event collector ────────────────────
+    // ── 3. Tracelet — span attrs + init event ─────────────────────
 
-    let mut tracelet = AdaptiveTracelet::new(opts);
-    tracelet.set_seeds(cleared.fragments());
-    if let Some(ref ma) = mat {
-        tracelet.set_mat(ma);
-    }
-    tracelet.record_init(&tool, cleared);
+    trace.set_attrs(th::build_attrs(opts, cleared.fragments(), mat.as_ref()));
+    trace.init(
+        th::make_tool_snapshot(&tool, tool.pos),
+        Some(th::init_meta(cleared)),
+    );
 
     // ── 4. Continuous spiral: step → expand → repeat ─────────────
 
-    let mut ops = Ops::new();
-    ops.apply_state(cut_state);
-    ops.move_to(tool.pos.x, tool.pos.y, opts.target_z, None);
-
-    // Counter for moving commands (move_to + line_to) only — tracked
-    // for the trace recorder's ops_len field.
-    let mut tp_len: u32 = 1; // the initial move_to above
+    trace.apply_state(cut_state);
+    trace.move_to(tool.pos.x, tool.pos.y, opts.target_z, None);
 
     let mut prev_pos = tool.pos;
     let mut steps_since_batch: usize = 0;
@@ -638,18 +619,18 @@ pub fn adaptive_clearing(
         // responsive even in release builds.
         if let Some(check) = opts.cancel_check {
             if check() {
-                tracelet.record_exit(
-                    &tool,
-                    cleared,
-                    prev_pos,
-                    tp_len,
-                    &resume_reasons,
-                    &resume_details,
-                    &route_details,
-                    last_resume_point,
-                    &resume_candidate_pts,
-                    &hug_tracker.wall_hug_ref(),
-                    &hug_tracker.segment_counts_ref(),
+                trace.exit(
+                    th::make_tool_snapshot(&tool, prev_pos),
+                    Some(th::exit_meta(
+                        cleared,
+                        &resume_reasons,
+                        &resume_details,
+                        &route_details,
+                        last_resume_point,
+                        &resume_candidate_pts,
+                        &hug_tracker.wall_hug_ref(),
+                        &hug_tracker.segment_counts_ref(),
+                    )),
                 );
                 return Err(RaygeoError::Cancelled);
             }
@@ -770,15 +751,13 @@ pub fn adaptive_clearing(
         }
 
         if stalled || stuck_triggered {
-            #[allow(clippy::redundant_field_names)]
             let mut stall = StallState {
                 cleared,
-                ops: &mut ops,
+                trace,
                 tool: &mut tool,
                 hug_tracker: &mut hug_tracker,
                 stuck_detector: &mut stuck_detector,
                 prev_pos: &mut prev_pos,
-                tp_len: &mut tp_len,
                 steps_since_batch: &mut steps_since_batch,
                 segment_start: &mut segment_start,
                 last_resume_area: &mut last_resume_area,
@@ -790,7 +769,6 @@ pub fn adaptive_clearing(
                 route_details: &mut route_details,
                 last_resume_point: &mut last_resume_point,
                 resume_candidate_pts: &mut resume_candidate_pts,
-                tracelet: &mut tracelet,
             };
             match handle_stall(
                 &mut stall,
@@ -823,8 +801,7 @@ pub fn adaptive_clearing(
         }
 
         // Emit cutting move.
-        ops.line_to(tool.pos.x, tool.pos.y, opts.target_z, None);
-        tp_len += 1;
+        trace.line_to(tool.pos.x, tool.pos.y, opts.target_z, None);
 
         // Expand cleared area.
         if steps_since_batch == 0 {
@@ -852,17 +829,18 @@ pub fn adaptive_clearing(
             crate::types::Point::new(tool.pos.x, tool.pos.y),
             opts.tool_radius,
         );
-        tracelet.record_cut(
-            &tool,
-            cleared,
-            result.iters as u32,
-            eng.angle,
-            eng.area,
-            eng.chord_depth,
-            result.iteration_angle,
-            ca,
-            prev_pos,
-            tp_len,
+        trace.cut(
+            th::make_tool_snapshot(&tool, prev_pos),
+            Some(th::cut_meta(
+                &tool,
+                cleared,
+                result.iters as u32,
+                eng.angle,
+                eng.area,
+                eng.chord_depth,
+                ca,
+                result.iteration_angle,
+            )),
         );
         prev_pos = tool.pos;
         // Clear blacklist only when area growth since the last resume
@@ -881,24 +859,23 @@ pub fn adaptive_clearing(
         cleared.commit_batch_local();
     }
 
-    tracelet.record_exit(
-        &tool,
-        cleared,
-        prev_pos,
-        tp_len,
-        &resume_reasons,
-        &resume_details,
-        &route_details,
-        last_resume_point,
-        &resume_candidate_pts,
-        &hug_tracker.wall_hug_ref(),
-        &hug_tracker.segment_counts_ref(),
+    trace.exit(
+        th::make_tool_snapshot(&tool, prev_pos),
+        Some(th::exit_meta(
+            cleared,
+            &resume_reasons,
+            &resume_details,
+            &route_details,
+            last_resume_point,
+            &resume_candidate_pts,
+            &hug_tracker.wall_hug_ref(),
+            &hug_tracker.segment_counts_ref(),
+        )),
     );
 
     let cleared_polygons = cleared.fragments().to_vec();
 
-    Ok(AssemblyResult {
-        ops,
+    Ok(AssemblyMeta {
         cleared_polygons,
         start: ToolPose {
             pos: start_pos,
@@ -908,7 +885,6 @@ pub fn adaptive_clearing(
             pos: tool.pos,
             heading: tool.heading,
         },
-        trace: Some(tracelet.finish()),
     })
 }
 

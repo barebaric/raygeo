@@ -6,10 +6,10 @@ use crate::geo::shape::polygon::{
 };
 use crate::ops::assembly::profile::engine::{run_profile, ProfileCommon};
 use crate::ops::assembly::profile::ProfileInnerOptions;
-use crate::ops::assembly::result::{self, AssemblyResult};
+use crate::ops::assembly::result::AssemblyMeta;
+use crate::ops::assembly::Tracelet;
 
-use super::tracelet::ProfileTracelet;
-use crate::ops::container::Ops;
+use super::trace_helpers as th;
 use crate::ops::cut::ClearedArea;
 use crate::ops::cut::ToolPose;
 use crate::ops::state::State;
@@ -18,10 +18,11 @@ use glam::Vec3Swizzles;
 
 #[allow(unused_variables, dead_code)]
 pub fn profile_inner(
+    trace: &mut Tracelet,
     cleared: &mut ClearedArea,
     opts: &ProfileInnerOptions,
     cut_state: &State,
-) -> RaygeoResult<AssemblyResult> {
+) -> RaygeoResult<AssemblyMeta> {
     if opts.boundary.is_empty() {
         return Err(RaygeoError::DegenerateGeometry(
             "boundary polygon is empty".into(),
@@ -56,8 +57,7 @@ pub fn profile_inner(
         Some(p) if p.len() >= 3 => p,
         _ => {
             let zero = Point3D::ZERO;
-            return Ok(AssemblyResult {
-                ops: Ops::new(),
+            return Ok(AssemblyMeta {
                 cleared_polygons: vec![],
                 start: ToolPose {
                     pos: zero,
@@ -67,7 +67,6 @@ pub fn profile_inner(
                     pos: zero,
                     heading: 0.0,
                 },
-                trace: None,
             });
         }
     };
@@ -113,15 +112,16 @@ pub fn profile_inner(
         stock_to_leave: opts.stock_to_leave,
     };
 
-    let mut tracelet = ProfileTracelet::new();
-    tracelet.set_attrs(&all_offset_polys, &walk_order);
+    trace.set_attrs(th::build_attrs(&all_offset_polys, &walk_order));
 
-    let mut result =
-        run_profile(cleared, outer_poly, &common, cut_state, 0, &mut tracelet)?;
+    let outer_meta =
+        run_profile(trace, cleared, outer_poly, &common, cut_state, 0)?;
+    let start_pose = outer_meta.start;
+    let mut end_pose = outer_meta.end;
 
     if !accessible_indices.is_empty() {
         let mut remaining: Vec<usize> = accessible_indices;
-        let mut last_end = result.end.pos;
+        let mut last_end = end_pose.pos;
 
         while !remaining.is_empty() {
             let nearest_idx = remaining
@@ -139,19 +139,22 @@ pub fn profile_inner(
 
             let idx = remaining.remove(nearest_idx);
             let island_idx = 1 + idx as u32;
-            let island_result = run_profile(
+            let island_meta = run_profile(
+                trace,
                 cleared,
                 &grown_islands[idx],
                 &common,
                 cut_state,
                 island_idx,
-                &mut tracelet,
             )?;
-            last_end = island_result.end.pos;
-            result = result::chain(result, island_result);
+            last_end = island_meta.end.pos;
+            end_pose = island_meta.end;
         }
     }
 
-    result.trace = Some(tracelet.finish());
-    Ok(result)
+    Ok(AssemblyMeta {
+        cleared_polygons: vec![],
+        start: start_pose,
+        end: end_pose,
+    })
 }

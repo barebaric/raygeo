@@ -7,8 +7,9 @@ use crate::geo::algo::helix::{
     generate_helix_3d, HelixDirection, HelixOptions as GeoHelixOptions,
 };
 use crate::geo::shape::polygon::get_circle_polygon;
-use crate::ops::assembly::result::AssemblyResult;
-use crate::ops::container::Ops;
+use crate::ops::assembly::result::AssemblyMeta;
+use crate::ops::assembly::write_polyline;
+use crate::ops::assembly::Tracelet;
 use crate::ops::cut::ToolPose;
 use crate::ops::state::State;
 use crate::types::{Point, Point3D};
@@ -36,9 +37,10 @@ pub struct HelixOptions {
 /// and a disk-shaped cleared polygon at the helix radius.
 #[prof]
 pub fn generate_helix(
+    trace: &mut Tracelet,
     opts: &HelixOptions,
     cut_state: &State,
-) -> RaygeoResult<AssemblyResult> {
+) -> RaygeoResult<AssemblyMeta> {
     let path = generate_helix_3d(&GeoHelixOptions {
         center: opts.center,
         start_radius: opts.start_radius,
@@ -87,12 +89,11 @@ pub fn generate_helix(
         vec![get_circle_polygon(opts.center, opts.start_radius, 64)]
     };
 
-    Ok(AssemblyResult {
-        ops: Ops::from_polyline(&path, true, Some(cut_state)),
+    write_polyline(trace, &path, true, Some(cut_state));
+    Ok(AssemblyMeta {
         cleared_polygons,
         start,
         end,
-        trace: None,
     })
 }
 

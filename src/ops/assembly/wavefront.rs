@@ -6,8 +6,8 @@ use crate::ops::cut::ClearedArea;
 
 use crate::error::RaygeoResult;
 use crate::geo::shape::polygon::{get_polygon_area, resample_polygon};
-use crate::ops::assembly::result::AssemblyResult;
-use crate::ops::container::Ops;
+use crate::ops::assembly::result::AssemblyMeta;
+use crate::ops::assembly::Tracelet;
 use crate::ops::cut::ToolPose;
 use crate::ops::state::State;
 use crate::types::{Point, Point3D, Polygon};
@@ -36,11 +36,11 @@ pub struct AdaptiveWavefrontOptions {
 /// (rest), all at height `z`, with `cut_state` applied.
 #[prof]
 pub fn adaptive_wavefronts(
+    trace: &mut Tracelet,
     cleared: &mut ClearedArea,
     opts: &AdaptiveWavefrontOptions,
     cut_state: &State,
-) -> RaygeoResult<AssemblyResult> {
-    let mut ops = Ops::new();
+) -> RaygeoResult<AssemblyMeta> {
     let mut state_applied = false;
 
     let mut first_point: Option<Point> = None;
@@ -80,20 +80,20 @@ pub fn adaptive_wavefronts(
                 continue;
             }
             if !state_applied {
-                ops.apply_state(cut_state);
+                trace.apply_state(cut_state);
                 state_applied = true;
             }
             if first_point.is_none() {
                 first_point = Some(points[0]);
             }
             last_point = Some(points[points.len() - 1]);
-            ops.move_to(points[0].x, points[0].y, opts.z, None);
+            let ring_start = points[0];
+            trace.move_to(ring_start.x, ring_start.y, opts.z, None);
             for p in &points[1..] {
-                ops.line_to(p.x, p.y, opts.z, None);
+                trace.line_to(p.x, p.y, opts.z, None);
             }
-            // Close the fragment ring so the rendering has no visible
-            // gap between the last point and the first.
-            ops.close_path();
+            // Close the fragment ring by moving back to the first point.
+            trace.line_to(ring_start.x, ring_start.y, opts.z, None);
         }
 
         let ring_area: f64 = new_ring.iter().map(get_polygon_area).sum();
@@ -121,7 +121,7 @@ pub fn adaptive_wavefronts(
     let start_pos = first_point.unwrap_or(Point::ZERO);
     let end_pos = last_point.unwrap_or(Point::ZERO);
 
-    Ok(AssemblyResult {
+    Ok(AssemblyMeta {
         cleared_polygons: cleared.fragments().to_vec(),
         start: ToolPose {
             pos: Point3D::new(start_pos.x, start_pos.y, opts.z),
@@ -131,7 +131,5 @@ pub fn adaptive_wavefronts(
             pos: Point3D::new(end_pos.x, end_pos.y, opts.z),
             heading: 0.0,
         },
-        ops,
-        trace: None,
     })
 }

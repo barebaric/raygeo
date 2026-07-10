@@ -1,4 +1,5 @@
 use crate::ops::assembly::wavefront;
+use crate::ops::assembly::Tracelet;
 use crate::ops::state::State;
 use crate::python::ops::assembly::result::PyAssemblyResult;
 use crate::python::ops::cut::cleared_area::PyClearedArea;
@@ -116,8 +117,15 @@ fn adaptive_wavefronts_py(
         ..Default::default()
     };
 
-    let result =
-        wavefront::adaptive_wavefronts(&mut cleared.inner, &opts, &cut_state)?;
-
-    Ok(PyAssemblyResult::from_inner(result))
+    let mut trace = Tracelet::new();
+    let meta = wavefront::adaptive_wavefronts(
+        &mut trace,
+        &mut cleared.inner,
+        &opts,
+        &cut_state,
+    )?;
+    let events = trace.drain();
+    let attrs = trace.attrs().cloned();
+    let ops = trace.into_ops();
+    Ok(PyAssemblyResult::from_parts(ops, meta, attrs, events))
 }

@@ -8,8 +8,9 @@ use crate::geo::algo::trochoid::{
     get_trochoid_along_3d, get_trochoid_along_3d_ramped, TrochoidOptions,
     TrochoidOptionsRamped,
 };
-use crate::ops::assembly::result::AssemblyResult;
-use crate::ops::container::Ops;
+use crate::ops::assembly::result::AssemblyMeta;
+use crate::ops::assembly::write_polyline;
+use crate::ops::assembly::Tracelet;
 use crate::ops::cut::ToolPose;
 use crate::ops::state::State;
 use crate::types::{Point, Point3D, Polygon};
@@ -32,9 +33,10 @@ pub struct ToroidOptions {
 /// carrier with a disk of `tool_radius`.
 #[prof]
 pub fn generate_toroid(
+    trace: &mut Tracelet,
     opts: &ToroidOptions,
     cut_state: &State,
-) -> RaygeoResult<AssemblyResult> {
+) -> RaygeoResult<AssemblyMeta> {
     let path = get_trochoid_along_3d(
         &opts.carrier,
         &TrochoidOptions {
@@ -91,12 +93,11 @@ pub fn generate_toroid(
         vec![]
     };
 
-    Ok(AssemblyResult {
-        ops: Ops::from_polyline(&path, true, Some(cut_state)),
+    write_polyline(trace, &path, true, Some(cut_state));
+    Ok(AssemblyMeta {
         cleared_polygons,
         start,
         end,
-        trace: None,
     })
 }
 
@@ -119,21 +120,20 @@ pub struct ToroidalClearOptions {
 /// pass at constant `target_z`.
 #[prof]
 pub fn generate_toroidal_clear(
+    trace: &mut Tracelet,
     opts: &ToroidalClearOptions,
     cut_state: &State,
-) -> RaygeoResult<AssemblyResult> {
+) -> RaygeoResult<AssemblyMeta> {
     if opts.carrier.len() < 2 {
         let pos = opts
             .carrier
             .first()
             .map(|p| Point3D::new(p.x, p.y, opts.target_z))
             .unwrap_or(Point3D::ZERO);
-        return Ok(AssemblyResult {
-            ops: Ops::new(),
+        return Ok(AssemblyMeta {
             cleared_polygons: vec![],
             start: ToolPose { pos, heading: 0.0 },
             end: ToolPose { pos, heading: 0.0 },
-            trace: None,
         });
     }
 
@@ -148,12 +148,10 @@ pub fn generate_toroidal_clear(
     if l_pass < 1e-12 {
         let pos =
             Point3D::new(opts.carrier[0].x, opts.carrier[0].y, opts.target_z);
-        return Ok(AssemblyResult {
-            ops: Ops::new(),
+        return Ok(AssemblyMeta {
             cleared_polygons: vec![],
             start: ToolPose { pos, heading: 0.0 },
             end: ToolPose { pos, heading: 0.0 },
-            trace: None,
         });
     }
 
@@ -174,7 +172,7 @@ pub fn generate_toroidal_clear(
                 z: opts.target_z,
             },
         );
-        return build_toroidal_result(&path, opts, cut_state);
+        return build_toroidal_result(trace, &path, opts, cut_state);
     }
 
     let mut current_z = opts.start.z;
@@ -236,15 +234,16 @@ pub fn generate_toroidal_clear(
     );
 
     full_path.extend(final_path);
-    build_toroidal_result(&full_path, opts, cut_state)
+    build_toroidal_result(trace, &full_path, opts, cut_state)
 }
 
-/// Build an [`AssemblyResult`] from a full 3D trochoid path.
+/// Build an [`AssemblyMeta`] from a full 3D trochoid path.
 fn build_toroidal_result(
+    trace: &mut Tracelet,
     path: &[Point3D],
     opts: &ToroidalClearOptions,
     cut_state: &State,
-) -> RaygeoResult<AssemblyResult> {
+) -> RaygeoResult<AssemblyMeta> {
     let start = if path.is_empty() {
         ToolPose {
             pos: opts
@@ -284,12 +283,11 @@ fn build_toroidal_result(
         vec![]
     };
 
-    Ok(AssemblyResult {
-        ops: Ops::from_polyline(path, true, Some(cut_state)),
+    write_polyline(trace, path, true, Some(cut_state));
+    Ok(AssemblyMeta {
         cleared_polygons,
         start,
         end,
-        trace: None,
     })
 }
 
