@@ -39,6 +39,10 @@ expanded by *radius*).
 
 *Multi-obstacle inset: the region splits into multiple disconnected polygons.*
 
+![Mixed convex/concave boundary + L-shaped island: verifies Round inset arcs at all joint types.](images/geo-algo-offset-inset-region-joints.png)
+
+*Mixed convex/concave boundary + L-shaped island: verifies Round inset arcs at all joint types.*
+
 ### `concentric_offsets()`
 
 ```python

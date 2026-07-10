@@ -11,7 +11,7 @@ from raygeo.geo.algo.offset import (
     find_deepest_cores,
     offset_contour_group,
 )
-from raygeo.geo.shape.polygon import JoinStyle
+from raygeo.geo.shape.polygon import JoinStyle, offset_polygon
 from tools.plot import plot_geometry
 
 
@@ -439,6 +439,143 @@ def generate_inset_region_multi_obstacle():
     return fig
 
 
+# ── Mixed convex/concave joints + L-shaped island ─────────────────
+
+
+def generate_inset_region_joints():
+    """Boundary with mixed convex/concave joints + L-shaped island — show
+    how ``compute_inset_region`` (Round for boundary, Round for islands)
+    handles each corner type.
+
+    Convex boundary corners → Round produces a smooth arc.
+    Concave boundary corners → offset edges diverge → Round arcs bridge
+    the gap correctly (was a bevel under the old Miter join).
+    """
+
+    r = 6.0
+
+    # Notched 120×120 rectangle (CCW).  5 convex + 3 concave corners.
+    boundary = [
+        (0, 0),
+        (120, 0),
+        (120, 40),
+        (80, 40),
+        (80, 80),
+        (120, 80),
+        (120, 120),
+        (0, 120),
+    ]
+    convex = [(0, 0), (120, 0), (120, 80), (120, 120), (0, 120)]
+    concave = [(120, 40), (80, 40), (80, 80)]
+
+    island = [(20, 20), (45, 20), (45, 45), (70, 45), (70, 70), (20, 70)]
+
+    # Actual Rust output
+    region, area = compute_inset_region(boundary, r, [island])
+    island_buffed = offset_polygon(island, r, JoinStyle.Round)
+
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 7))
+
+    bnd_arr = list(boundary) + [boundary[0]]
+    isl_arr = list(island) + [island[0]]
+
+    # ── LEFT: Round inset behaviour ──
+    ax1.plot(*zip(*bnd_arr), "k-", linewidth=2, label="Boundary")
+    ax1.plot(
+        *zip(*convex),
+        "o",
+        color="green",
+        markersize=9,
+        zorder=5,
+        label="Convex corner",
+    )
+    ax1.plot(
+        *zip(*concave),
+        "o",
+        color="red",
+        markersize=9,
+        zorder=5,
+        label="Concave corner",
+    )
+    ax1.fill(
+        *zip(*isl_arr),
+        facecolor="#ddd",
+        edgecolor="#999",
+        linewidth=1.5,
+        alpha=0.5,
+        label="L-shaped island",
+    )
+    for i, poly in enumerate(region):
+        arr = list(poly) + [poly[0]]
+        lbl = "Inset region (Round)" if i == 0 else None
+        ax1.plot(*zip(*arr), color="steelblue", linewidth=2.5, label=lbl)
+        ax1.fill(*zip(*arr), color="steelblue", alpha=0.08)
+    for pt in convex:
+        ax1.annotate(
+            "Arc (Round)",
+            pt,
+            xytext=(0, 10),
+            textcoords="offset points",
+            ha="center",
+            fontsize=7,
+            color="green",
+            fontweight="bold",
+        )
+    for pt in concave:
+        ax1.annotate(
+            "Arc bridges\ndiverging edges",
+            pt,
+            xytext=(0, -16),
+            textcoords="offset points",
+            ha="center",
+            fontsize=7,
+            color="red",
+            fontweight="bold",
+        )
+
+    ax1.set_title("compute_inset_region  (JoinStyle.Round)", fontsize=12)
+    ax1.set_aspect("equal")
+    ax1.legend(fontsize=8, loc="upper right")
+    ax1.grid(True, alpha=0.3)
+    ax1.set_xlim(-10, 130)
+    ax1.set_ylim(-10, 130)
+    ax1.set_xlabel("X (mm)")
+    ax1.set_ylabel("Y (mm)")
+
+    # ── RIGHT: Full result ──
+    ax2.plot(*zip(*bnd_arr), "k-", linewidth=2, label="Boundary")
+    ax2.fill(
+        *zip(*isl_arr),
+        facecolor="#ddd",
+        edgecolor="#999",
+        linewidth=1.5,
+        label="L-shaped island",
+    )
+    for i, poly in enumerate(island_buffed):
+        arr = list(poly) + [poly[0]]
+        lbl = "Island +r (Round)" if i == 0 else None
+        ax2.plot(*zip(*arr), "--", color="darkorange", linewidth=2, label=lbl)
+    for i, poly in enumerate(region):
+        arr = list(poly) + [poly[0]]
+        lbl = f"Inset region  (area={area:.0f})" if i == 0 else None
+        ax2.plot(*zip(*arr), color="crimson", linewidth=3, label=lbl)
+        ax2.fill(*zip(*arr), color="crimson", alpha=0.07)
+    ax2.set_title(
+        f"L-shaped island + inset region  (r={r}, area={area:.0f})",
+        fontsize=12,
+    )
+    ax2.set_aspect("equal")
+    ax2.legend(fontsize=8, loc="upper right")
+    ax2.grid(True, alpha=0.3)
+    ax2.set_xlim(-10, 130)
+    ax2.set_ylim(-10, 130)
+    ax2.set_xlabel("X (mm)")
+    ax2.set_ylabel("Y (mm)")
+
+    fig.tight_layout()
+    return fig
+
+
 __docs_target__ = ["raygeo.geo.algo.offset.md"]
 __images__ = [
     {
@@ -487,5 +624,13 @@ __images__ = [
             " disconnected polygons."
         ),
         "function": generate_inset_region_multi_obstacle,
+    },
+    {
+        "heading": "compute_inset_region",
+        "caption": (
+            "Mixed convex/concave boundary + L-shaped island:"
+            " verifies Round inset arcs at all joint types."
+        ),
+        "function": generate_inset_region_joints,
     },
 ]

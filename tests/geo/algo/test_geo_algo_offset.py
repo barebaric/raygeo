@@ -295,3 +295,82 @@ def test_compute_inset_region_rejects_collapsed():
     boundary = [(0, 0), (100, 0), (100, 80), (0, 80)]
     region, area = compute_inset_region(boundary, 200.0, [])
     assert area == 0.0
+
+
+def _rect(cx, cy, w, h):
+    return [
+        (cx - w / 2, cy - h / 2),
+        (cx + w / 2, cy - h / 2),
+        (cx + w / 2, cy + h / 2),
+        (cx - w / 2, cy + h / 2),
+    ]
+
+
+def _rect_hole(cx, cy, w, h):
+    return [
+        (cx - w / 2, cy - h / 2),
+        (cx - w / 2, cy + h / 2),
+        (cx + w / 2, cy + h / 2),
+        (cx + w / 2, cy - h / 2),
+    ]
+
+
+def _bbox(poly):
+    xs = [p[0] for p in poly]
+    ys = [p[1] for p in poly]
+    return min(xs), min(ys), max(xs), max(ys)
+
+
+def _assert_bbox_close(poly, expected_w, expected_h, tol=0.05, cx=0.0, cy=0.0):
+    x0, y0, x1, y1 = _bbox(poly)
+    dw = abs((x1 - x0) - expected_w)
+    dh = abs((y1 - y0) - expected_h)
+    cx_actual = (x0 + x1) / 2
+    cy_actual = (y0 + y1) / 2
+    assert dw <= tol, f"width {x1 - x0} \u2260 {expected_w}"
+    assert dh <= tol, f"height {y1 - y0} \u2260 {expected_h}"
+    assert abs(cx_actual - cx) <= tol, f"center x {cx_actual} \u2260 {cx}"
+    assert abs(cy_actual - cy) <= tol, f"center y {cy_actual} \u2260 {cy}"
+
+
+def test_inset_rect_by_radius():
+    """Inset a rectangle by radius 3 gives a 54×54 rect."""
+    boundary = _rect(0, 0, 60, 60)
+    region, _ = compute_inset_region(boundary, 3, [])
+    assert len(region) == 1
+    _assert_bbox_close(region[0], 54, 54, tol=0.01)
+
+
+def test_inset_rect_with_square_island():
+    """Islands are grown and subtracted from the inset."""
+    boundary = _rect(0, 0, 60, 60)
+    island = _rect_hole(0, 0, 10, 10)
+    region_with, area_with = compute_inset_region(boundary, 3, [island])
+    _, area_without = compute_inset_region(boundary, 3, [])
+    assert len(region_with) >= 2
+    assert area_with < area_without
+
+
+def test_inset_with_large_radius_returns_empty():
+    """Inset larger than half the extent produces no valid region."""
+    region, area = compute_inset_region(_rect(0, 0, 10, 10), 10, [])
+    assert len(region) == 0 or area == 0.0
+
+
+def test_inset_join_style_round_corners():
+    """Inset now uses Round — expect arc vertices at concave corners."""
+    # Notched rectangle has 3 concave (270°) corners
+    boundary = [
+        (0, 0),
+        (60, 0),
+        (60, 20),
+        (40, 20),
+        (40, 40),
+        (60, 40),
+        (60, 60),
+        (0, 60),
+    ]
+    region, _ = compute_inset_region(boundary, 3, [])
+    poly = region[0]
+    n = len(poly)
+    assert n > 20, f"expected Round >20 vertices for notched rect, got {n}"

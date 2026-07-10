@@ -440,7 +440,7 @@ pub fn compute_inset_region(
     radius: f64,
     obstacles: &[Polygon],
 ) -> (Vec<Polygon>, f64) {
-    let mut region = offset_polygon(boundary, -radius, JoinStyle::Miter);
+    let mut region = offset_polygon(boundary, -radius, JoinStyle::Round);
     if !region.is_empty() && !obstacles.is_empty() {
         let obstacle_bufs: Vec<Polygon> = obstacles
             .iter()

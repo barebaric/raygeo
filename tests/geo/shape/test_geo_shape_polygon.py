@@ -751,6 +751,20 @@ class TestPolygonOffset:
         result = offset_polygon(polygon, 1.0, join_style=JoinStyle.Square)
         assert len(result) >= 1
 
+    def test_grow_rect_by_radius(self):
+        """Growing a rect by radius 3 gives a 66×66 rect."""
+        rect = [
+            (x - 30, y - 30) for x, y in [(0, 0), (60, 0), (60, 60), (0, 60)]
+        ]
+        polys = offset_polygon(rect, 3, JoinStyle.Round)
+        assert len(polys) == 1
+        xs = [p[0] for p in polys[0]]
+        ys = [p[1] for p in polys[0]]
+        assert abs(max(xs) - min(xs) - 66) < 0.05
+        assert abs(max(ys) - min(ys) - 66) < 0.05
+        assert abs((max(xs) + min(xs)) / 2) < 0.05
+        assert abs((max(ys) + min(ys)) / 2) < 0.05
+
 
 class TestApplyMinimumCurvature:
     def test_basic_fillet(self):
