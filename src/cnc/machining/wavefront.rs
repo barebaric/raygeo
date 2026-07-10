@@ -58,11 +58,11 @@ pub fn build_wavefront_workplan(
             });
 
     let helix_r = (opts.tool_radius * 0.8).min(r_max * 0.5);
-    // Same bound as the legacy `generate_helix_spiral`: the spiral always
-    // reaches at least `helix_r + 0.01`, so `radial_dist` is always > 0
-    // and a seed disk is always produced.
+    // Ensure the spiral disk is large enough to seed the wavefront
+    // even for tiny pockets where safe_margin dwarfs the pocket size.
+    let min_seed_r = helix_r.max(opts.tool_radius * 2.0).max(0.05);
     let spiral_max_r =
-        (r_max - opts.tool_radius - opts.safe_margin).max(helix_r + 0.01);
+        (r_max - opts.tool_radius - opts.safe_margin).max(min_seed_r);
     let radial_dist = spiral_max_r - helix_r;
 
     let mut steps: Vec<WorkplanStep> = Vec::new();

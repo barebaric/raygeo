@@ -255,7 +255,7 @@ impl ClearedArea {
 
     /// Return the uncut stock: stock ∖ fragments.
     ///
-    /// Polygons below 0.5 mm² are dropped as Clipper2 numerical artifacts.
+    /// Polygons below 0.01 mm² are dropped as Clipper2 numerical artifacts.
     #[prof]
     pub fn remaining(&self) -> Vec<Polygon> {
         let stock = self.stock();
@@ -268,7 +268,9 @@ impl ClearedArea {
         let result = get_polygons_group_difference(&stock, &self.fragments);
         result
             .into_iter()
-            .filter(|p| p.len() >= 3 && get_polygon_signed_area(p).abs() >= 0.5)
+            .filter(|p| {
+                p.len() >= 3 && get_polygon_signed_area(p).abs() >= 0.01
+            })
             .collect()
     }
 
@@ -345,11 +347,15 @@ impl ClearedArea {
         // Clipper2 returns the difference as a bundle: outer rings
         // (positive signed area) and holes (negative signed area).
         // Summing signed areas gives correct net enclosed area.
-        // Filter sub-resolution artefacts (< 0.5 mm²) the same way
+        // Filter sub-resolution artefacts (< 0.01 mm²) the same way
         // `remaining()` does so the two metrics are comparable.
+        // build_wavefront_workplan ensures the seed disk exceeds this
+        // threshold so wavefront can always start.
         let total: f64 = unclipped
             .into_iter()
-            .filter(|p| p.len() >= 3 && get_polygon_signed_area(p).abs() >= 0.5)
+            .filter(|p| {
+                p.len() >= 3 && get_polygon_signed_area(p).abs() >= 0.01
+            })
             .map(|p| get_polygon_signed_area(&p))
             .sum();
         total.max(0.0)
@@ -435,7 +441,7 @@ impl ClearedArea {
                     Some(simplified)
                 }
             })
-            .filter(|p| get_polygon_signed_area(p).abs() >= 0.5)
+            .filter(|p| get_polygon_signed_area(p).abs() >= 0.01)
             .collect()
     }
 
