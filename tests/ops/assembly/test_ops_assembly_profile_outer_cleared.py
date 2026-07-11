@@ -2,8 +2,8 @@
 
 from typing import Any
 
-from raygeo import Part
 from raygeo.ops.assembly.profile import profile_inner, profile_outer
+from raygeo.ops.cut import Part
 from raygeo.ops.cut.cleared_area import ClearedArea
 
 

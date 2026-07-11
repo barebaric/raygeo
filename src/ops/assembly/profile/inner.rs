@@ -11,9 +11,9 @@ use crate::ops::assembly::Tracelet;
 
 use super::trace_helpers as th;
 use crate::ops::cut::ClearedArea;
+use crate::ops::cut::Part;
 use crate::ops::cut::ToolPose;
 use crate::ops::state::State;
-use crate::part::Part;
 use crate::types::{Point3D, Polygon};
 use glam::Vec3Swizzles;
 

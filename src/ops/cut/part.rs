@@ -1,11 +1,12 @@
-//! The `Part` type — unified input for motion assembly.
+//! The `Part` type — unified workpiece + accumulated state for motion assembly.
 //!
 //! A `Part` describes the item being worked on.  It carries the
-//! geometry (vector outlines) and/or metadata needed by assemblers.
-//! No machine parameters, no step metadata — just the workpiece data.
+//! geometry (vector outlines) and/or metadata needed by assemblers,
+//! plus a [`ClearedArea`] tracking what has already been cut.
+//! No machine parameters, no step metadata — just the workpiece data
+//! and its accumulated machining state.
 //!
-//! Assemblers accept `&Part` and internally extract what they need
-//! (boundary polygons, islands, size, pixel density).
+//! Assemblers accept `&mut Part` and mutate `part.cleared` as they work.
 
 use crate::constants::EPSILON_MERGE;
 use crate::geo::algo::fitting::linearize_data;
@@ -16,12 +17,12 @@ use crate::geo::shape::polygon::clean_polygon;
 use crate::geo::Geometry;
 use crate::types::{Point, Polygon};
 
+use super::cleared_area::ClearedArea;
+
 /// Unified workpiece description shared by all assemblers.
 ///
-/// Every assembler that currently accepts raw polygon data
-/// (`boundary`, `islands`, …) will grow an overload that accepts
-/// `&Part` instead.  The assembler internally converts from `Part`
-/// to whatever it needs.
+/// Carries geometry, physical metadata, and a [`ClearedArea`] that
+/// accumulates the cleared fragments as assemblers work the part.
 #[derive(Clone, Debug)]
 pub struct Part {
     /// Vector geometry — the outline(s) of the part.
@@ -36,15 +37,36 @@ pub struct Part {
     ///
     /// Required for raster operations; `None` for purely vector work.
     pub pixels_per_mm: Option<(f64, f64)>,
+
+    /// Accumulated cleared-area state — what has been cut so far.
+    ///
+    /// Initialized from the part's boundary/islands at construction
+    /// time; assemblers mutate this as they work.
+    pub cleared: ClearedArea,
 }
 
 impl Part {
     /// Create a new `Part` from geometry and size.
+    ///
+    /// The `ClearedArea` is initialized from the boundary/islands
+    /// extracted from `geometry` (empty if geometry is `None`).
     pub fn new(geometry: Option<Geometry>, size_mm: (f64, f64)) -> Self {
+        let cleared = match &geometry {
+            Some(_) => {
+                let (boundary, islands) =
+                    Part::extract_boundary_from_geometry(geometry.as_ref());
+                ClearedArea::new(
+                    boundary.as_ref().unwrap_or(&Polygon::new()),
+                    &islands,
+                )
+            }
+            None => ClearedArea::default(),
+        };
         Part {
             geometry,
             size_mm,
             pixels_per_mm: None,
+            cleared,
         }
     }
 
@@ -53,6 +75,7 @@ impl Part {
     /// Constructs a `Geometry` containing the boundary as the first
     /// closed contour and each island as an additional contour, then
     /// wraps it in a `Part` with the given `size_mm`.
+    /// The `ClearedArea` is initialized from `boundary`/`islands`.
     pub fn from_polygons(
         boundary: &Polygon,
         islands: &[Polygon],
@@ -75,10 +98,12 @@ impl Part {
                 geo.close_path();
             }
         }
+        let cleared = ClearedArea::new(boundary, islands);
         Part {
             geometry: Some(geo),
             size_mm,
             pixels_per_mm: None,
+            cleared,
         }
     }
 
@@ -88,7 +113,14 @@ impl Part {
     /// - `boundary` is the largest outer (CCW) contour, or `None`.
     /// - `islands` are all inner (CW) contours.
     pub fn extract_boundary(&self) -> (Option<Polygon>, Vec<Polygon>) {
-        let geo = match &self.geometry {
+        Self::extract_boundary_from_geometry(self.geometry.as_ref())
+    }
+
+    /// Standalone boundary extraction from a geometry reference.
+    fn extract_boundary_from_geometry(
+        geo: Option<&Geometry>,
+    ) -> (Option<Polygon>, Vec<Polygon>) {
+        let geo = match geo {
             Some(g) => g,
             None => return (None, vec![]),
         };

@@ -2,8 +2,8 @@
 
 import math
 
-from raygeo import Part
 from raygeo.ops.assembly.toroid import generate_toroid, generate_toroidal_clear
+from raygeo.ops.cut import Part
 
 
 def _path_points(ops):

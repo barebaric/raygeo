@@ -7,8 +7,8 @@ use std::path::PathBuf;
 use crate::cnc::machining::plan::{self, WorkplanStep};
 use crate::geo::algo::helix::HelixDirection;
 use crate::ops::assembly::Tracelet;
+use crate::ops::cut::Part;
 use crate::ops::state::State;
-use crate::part::Part;
 use crate::python::ops::assembly::progress_event_to_py;
 use crate::python::ops::assembly::result::PyAssemblyResult;
 use crate::types::{Point, Point3D, Polygon};
@@ -473,14 +473,14 @@ impl PyWorkplan {
         }
     }
 
-    /// Create a Workplan from a :class:`raygeo.Part`, extracting boundary
+    /// Create a Workplan from a :class:`raygeo.ops.cut.Part`, extracting boundary
     /// and islands from ``part.geometry``.
     ///
     /// Raises ``ValueError`` if the part has no extractable boundary geometry.
     #[staticmethod]
     #[pyo3(signature = (part, safe_z = 2.0))]
     fn from_part(
-        part: &crate::python::part::PyPart,
+        part: &crate::python::ops::cut::part::PyPart,
         safe_z: f64,
     ) -> PyResult<Self> {
         match plan::Workplan::from_part(&part.inner, safe_z) {

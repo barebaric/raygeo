@@ -1,7 +1,7 @@
 """Tests for ramp assembly module."""
 
-from raygeo import Part
 from raygeo.ops.assembly.ramp import generate_ramp
+from raygeo.ops.cut import Part
 from raygeo.ops.state import State
 
 

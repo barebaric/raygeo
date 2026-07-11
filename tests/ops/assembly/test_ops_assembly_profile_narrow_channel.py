@@ -4,8 +4,8 @@ from typing import Any
 
 import pytest
 
-from raygeo import Part
 from raygeo.ops.assembly.profile import profile_inner
+from raygeo.ops.cut import Part
 from raygeo.ops.cut.cleared_area import ClearedArea
 
 

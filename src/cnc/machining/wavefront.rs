@@ -22,7 +22,7 @@ use crate::error::RaygeoResult;
 use crate::geo::algo::helix::HelixDirection;
 use crate::geo::algo::polylabel::find_largest_circle;
 use crate::geo::shape::polygon::get_polygon_centroid;
-use crate::part::Part;
+use crate::ops::cut::Part;
 use crate::types::Polygon;
 
 /// Options for [`build_wavefront_workplan`].

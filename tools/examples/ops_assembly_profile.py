@@ -2,13 +2,13 @@
 
 import matplotlib.pyplot as plt
 
-from raygeo import Part
 from raygeo.geo.shape.polygon import (
     JoinStyle,
     get_circle_polygon,
     offset_polygon,
 )
 from raygeo.ops.assembly.profile import profile_inner, profile_outer
+from raygeo.ops.cut import Part
 from raygeo.ops.cut.cleared_area import ClearedArea
 from tools.plot import plot_ops, plot_ops_2d, plot_ops_3d
 

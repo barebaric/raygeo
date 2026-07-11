@@ -7,7 +7,7 @@ use crate::ops::container::Ops;
 use crate::ops::convert::image::ScanMode;
 use crate::ops::cut::ToolPose;
 use crate::python::ops::assembly::result::PyAssemblyResult;
-use crate::python::part::PyPart;
+use crate::python::ops::cut::part::PyPart;
 use crate::types::Point3D;
 
 /// Extract a flat u8 buffer from a numpy array.
@@ -44,7 +44,7 @@ pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     import raygeo
 
     def raster(
-        part: raygeo.Part,
+        part: raygeo.ops.cut.Part,
         image: numpy.ndarray,
         alpha: numpy.ndarray | None = None,
         mode: str = "power_modulated",

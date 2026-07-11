@@ -9,7 +9,7 @@ use crate::ops::cut::CutDirection;
 use crate::ops::state::State;
 use crate::python::ops::assembly::result::PyAssemblyResult;
 use crate::python::ops::cut::cleared_area::PyClearedArea;
-use crate::python::part::PyPart;
+use crate::python::ops::cut::part::PyPart;
 use crate::types::Point3D;
 
 fn check_cancel() -> bool {
@@ -40,7 +40,7 @@ pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     import raygeo
 
     def profile_outer(
-        part: raygeo.Part,
+        part: raygeo.ops.cut.Part,
         cleared: raygeo.ops.cut.cleared_area.ClearedArea,
         tool_radius: float,
         step_over: float,
@@ -174,7 +174,7 @@ fn profile_outer_py(
     import raygeo
 
     def profile_inner(
-        part: raygeo.Part,
+        part: raygeo.ops.cut.Part,
         cleared: raygeo.ops.cut.cleared_area.ClearedArea,
         tool_radius: float = 3.0,
         step_over: float = 1.5,

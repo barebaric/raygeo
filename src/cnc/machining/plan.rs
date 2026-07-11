@@ -29,9 +29,9 @@ use crate::ops::assembly::spiral::{self, SpiralOptions};
 use crate::ops::assembly::toroid::{self, ToroidalClearOptions};
 use crate::ops::assembly::wavefront::{self, AdaptiveWavefrontOptions};
 use crate::ops::assembly::Tracelet;
+use crate::ops::cut::Part;
 use crate::ops::cut::{ClearedArea, ToolPose};
 use crate::ops::state::State;
-use crate::part::Part;
 use crate::trace::Tracer;
 use crate::trace_types::{
     EventKind, Meta, MetaValue, ProgressSnapshot, ToolSnapshot,
@@ -434,11 +434,14 @@ impl Workplan {
         }
     }
 
-    /// Create a new empty workplan from a [`Part`](crate::part::Part).
+    /// Create a new empty workplan from a [`Part`](crate::ops::cut::Part).
     ///
     /// Extracts the boundary polygon and islands from `part.geometry`.
     /// Returns `None` if the part has no extractable boundary geometry.
-    pub fn from_part(part: &crate::part::Part, safe_z: f64) -> Option<Self> {
+    pub fn from_part(
+        part: &crate::ops::cut::Part,
+        safe_z: f64,
+    ) -> Option<Self> {
         let (boundary, islands) = part.extract_boundary();
         Some(Workplan {
             steps: Vec::new(),

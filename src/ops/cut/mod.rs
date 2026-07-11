@@ -1,12 +1,14 @@
 pub mod cleared_area;
 pub(crate) mod crescent;
 pub mod interp;
+pub mod part;
 pub mod search;
 pub mod stepper;
 mod types;
 
 pub use cleared_area::ClearedArea;
 pub use crescent::cut_area;
+pub use part::Part;
 pub use search::search_frontier_engagement;
 pub use stepper::{step, StepResult, StepStatus, StepperOptions};
 pub use types::ToolPose;

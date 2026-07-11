@@ -1,8 +1,8 @@
 import time
 
-from raygeo import Part
 from raygeo.cli.scenarios import SCENARIOS, build_scenario
 from raygeo.ops.assembly.adaptive import adaptive_clearing
+from raygeo.ops.cut import Part
 from raygeo.ops.cut.cleared_area import ClearedArea
 
 

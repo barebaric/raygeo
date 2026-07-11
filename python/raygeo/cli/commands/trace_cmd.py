@@ -1,12 +1,12 @@
 import pathlib
 import sys
 
-from raygeo import Part
 from raygeo.cli.scenarios import SCENARIOS, build_scenario
 from raygeo.cnc.machining.entry import build_entry_workplan
 from raygeo.cnc.machining.plan import Workplan
 from raygeo.ops.assembly.adaptive import adaptive_clearing
 from raygeo.ops.assembly.profile import profile_inner, profile_outer
+from raygeo.ops.cut import Part
 from raygeo.ops.cut.cleared_area import ClearedArea
 from raygeo.ops.feature.region import find_regions
 

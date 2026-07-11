@@ -2,7 +2,6 @@
 
 import math
 
-from raygeo import Part
 from raygeo.geo.shape.polygon import (
     JoinStyle,
     get_polygon_area,
@@ -15,6 +14,7 @@ from raygeo.ops.assembly.adaptive import (
     adaptive_clearing,
     target_area_per_distance,
 )
+from raygeo.ops.cut import Part
 from raygeo.ops.cut.cleared_area import ClearedArea
 from raygeo.ops.cut.crescent import cut_area
 from raygeo.ops.types import CommandType

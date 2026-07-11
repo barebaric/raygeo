@@ -1,7 +1,7 @@
 """Tests for toroid assembly module."""
 
-from raygeo import Part
 from raygeo.ops.assembly.toroid import generate_toroid
+from raygeo.ops.cut import Part
 from raygeo.ops.state import State
 
 

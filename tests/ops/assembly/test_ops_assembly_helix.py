@@ -2,8 +2,8 @@
 
 import math
 
-from raygeo import Part
 from raygeo.ops.assembly.helix import generate_helix
+from raygeo.ops.cut import Part
 from raygeo.ops.state import State
 
 

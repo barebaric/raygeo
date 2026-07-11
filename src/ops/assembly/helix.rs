@@ -10,9 +10,9 @@ use crate::geo::shape::polygon::get_circle_polygon;
 use crate::ops::assembly::result::AssemblyMeta;
 use crate::ops::assembly::write_polyline;
 use crate::ops::assembly::Tracelet;
+use crate::ops::cut::Part;
 use crate::ops::cut::ToolPose;
 use crate::ops::state::State;
-use crate::part::Part;
 use crate::types::{Point, Point3D};
 
 /// Options for generating a helical entry path.

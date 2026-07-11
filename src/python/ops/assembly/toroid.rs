@@ -30,7 +30,7 @@ pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     import raygeo
 
     def generate_toroid(
-        part: raygeo.Part,
+        part: raygeo.ops.cut.Part,
         carrier: collections.abc.Sequence[tuple[float, float]],
         tool_radius: float,
         step_over: float,
@@ -69,7 +69,7 @@ pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
 ))]
 #[allow(clippy::too_many_arguments)]
 fn generate_toroid_py(
-    part: &crate::python::part::PyPart,
+    part: &crate::python::ops::cut::part::PyPart,
     carrier: Vec<(f64, f64)>,
     tool_radius: f64,
     step_over: f64,
@@ -116,7 +116,7 @@ fn generate_toroid_py(
     import raygeo
 
     def generate_toroidal_clear(
-        part: raygeo.Part,
+        part: raygeo.ops.cut.Part,
         carrier: collections.abc.Sequence[tuple[float, float]],
         start: tuple[float, float, float],
         target_z: float,
@@ -164,7 +164,7 @@ fn generate_toroid_py(
 ))]
 #[allow(clippy::too_many_arguments)]
 fn generate_toroidal_clear_py(
-    part: &crate::python::part::PyPart,
+    part: &crate::python::ops::cut::part::PyPart,
     carrier: Vec<(f64, f64)>,
     start: (f64, f64, f64),
     target_z: f64,

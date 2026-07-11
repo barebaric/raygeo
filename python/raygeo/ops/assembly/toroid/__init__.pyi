@@ -8,7 +8,7 @@ __all__ = [
     "generate_toroidal_clear",
 ]
 
-def generate_toroid(part: raygeo.Part, carrier: collections.abc.Sequence[tuple[float, float]], tool_radius: float, step_over: float, target_z: float, direction: str = 'CW', angular_step: float = 0.1, state: raygeo.ops.state.State | None = None) -> raygeo.ops.assembly.result.AssemblyResult:
+def generate_toroid(part: raygeo.ops.cut.Part, carrier: collections.abc.Sequence[tuple[float, float]], tool_radius: float, step_over: float, target_z: float, direction: str = 'CW', angular_step: float = 0.1, state: raygeo.ops.state.State | None = None) -> raygeo.ops.assembly.result.AssemblyResult:
     r"""
     Generate a toroidal (trochoidal) path along a carrier.
     
@@ -25,7 +25,7 @@ def generate_toroid(part: raygeo.Part, carrier: collections.abc.Sequence[tuple[f
     :returns: An :class:`AssemblyResult` with the toroidal path.
     """
 
-def generate_toroidal_clear(part: raygeo.Part, carrier: collections.abc.Sequence[tuple[float, float]], start: tuple[float, float, float], target_z: float, tool_radius: float, step_over: float, max_ramp_angle_deg: float = 5, direction: str = 'CW', angular_step: float = 0.1, state: raygeo.ops.state.State | None = None) -> raygeo.ops.assembly.result.AssemblyResult:
+def generate_toroidal_clear(part: raygeo.ops.cut.Part, carrier: collections.abc.Sequence[tuple[float, float]], start: tuple[float, float, float], target_z: float, tool_radius: float, step_over: float, max_ramp_angle_deg: float = 5, direction: str = 'CW', angular_step: float = 0.1, state: raygeo.ops.state.State | None = None) -> raygeo.ops.assembly.result.AssemblyResult:
     r"""
     Generate a ramp-down toroidal clear path along a carrier.
     

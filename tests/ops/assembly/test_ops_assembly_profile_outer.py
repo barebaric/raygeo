@@ -1,6 +1,5 @@
 """Tests for raygeo.ops.assembly.profile module (outer profiling)."""
 
-from raygeo import Part
 from raygeo.geo.shape.polygon import (
     JoinStyle,
     get_polygons_closest_point,
@@ -8,6 +7,7 @@ from raygeo.geo.shape.polygon import (
 )
 from raygeo.ops import Ops
 from raygeo.ops.assembly.profile import profile_outer
+from raygeo.ops.cut import Part
 from raygeo.ops.cut.cleared_area import ClearedArea
 
 

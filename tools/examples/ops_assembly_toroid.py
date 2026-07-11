@@ -2,8 +2,8 @@
 
 import matplotlib.pyplot as plt
 
-from raygeo import Part
 from raygeo.ops.assembly.toroid import generate_toroid
+from raygeo.ops.cut import Part
 from tools.plot import plot_ops_2d
 
 

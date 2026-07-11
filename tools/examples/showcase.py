@@ -6,7 +6,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.colors import to_hex
 
-from raygeo import Part
 from raygeo.cnc.machining.plan import Workplan
 from raygeo.cnc.machining.wavefront import build_wavefront_workplan
 from raygeo.geo import Geometry
@@ -24,6 +23,7 @@ from raygeo.geo.shape.polygon3d import fillet_polyline_3d, offset_polyline_3d
 from raygeo.image.scan import ScanMode
 from raygeo.ops import Ops
 from raygeo.ops.assembly.adaptive import adaptive_clearing
+from raygeo.ops.cut import Part
 from raygeo.ops.cut.cleared_area import ClearedArea
 from raygeo.ops.types import CommandType
 from tools.plot import make_pattern, plot_geometry, plot_ops_2d

@@ -5,7 +5,7 @@ use crate::types::Point3D;
 
 /// Options for inner-boundary adaptive profiling.
 ///
-/// Geometry is supplied via a [`Part`](crate::part::Part) — the
+/// Geometry is supplied via a [`Part`](crate::ops::cut::Part) — the
 /// assembler extracts boundary and islands from it internally.
 #[derive(Clone, Debug)]
 pub struct ProfileInnerOptions {
@@ -50,7 +50,7 @@ impl Default for ProfileInnerOptions {
 
 /// Options for outer-boundary adaptive profiling.
 ///
-/// Geometry is supplied via a [`Part`](crate::part::Part) — the
+/// Geometry is supplied via a [`Part`](crate::ops::cut::Part) — the
 /// assembler extracts the boundary from it internally.
 #[derive(Clone, Debug)]
 pub struct ProfileOuterOptions {

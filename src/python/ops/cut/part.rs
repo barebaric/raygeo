@@ -1,20 +1,17 @@
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 
-use crate::part::Part;
+use crate::ops::cut::part::Part;
 use crate::python::geo::geometry::Geometry as PyGeometry;
 use crate::types::{Point, Polygon};
 
 /// Unified workpiece description for motion assembly.
 ///
-/// Carries geometry and/or metadata needed by assemblers.
-/// No machine parameters or step configuration — just the
-/// workpiece data.
-///
-/// Every assembler accepts a ``Part`` and internally extracts
-/// what it needs (boundary polygons, islands, size, …).
-#[gen_stub_pyclass(module = "raygeo")]
-#[pyclass(name = "Part", module = "raygeo", from_py_object)]
+/// Carries geometry, physical metadata, and a ``ClearedArea``
+/// tracking what has already been cut.  Assemblers mutate the
+/// cleared area as they work.
+#[gen_stub_pyclass(module = "raygeo.ops.cut")]
+#[pyclass(name = "Part", from_py_object)]
 #[derive(Clone, Debug)]
 pub struct PyPart {
     pub inner: Part,
@@ -37,13 +34,9 @@ impl PyPart {
         pixels_per_mm: Option<(f64, f64)>,
     ) -> Self {
         let inner_geo = geometry.map(|py_geo| py_geo.borrow(py).inner.clone());
-        PyPart {
-            inner: Part {
-                geometry: inner_geo,
-                size_mm,
-                pixels_per_mm,
-            },
-        }
+        let mut inner = Part::new(inner_geo, size_mm);
+        inner.pixels_per_mm = pixels_per_mm;
+        PyPart { inner }
     }
 
     /// Physical size ``(width, height)`` in millimetres.
@@ -113,4 +106,9 @@ impl PyPart {
             },
         )
     }
+}
+
+pub fn register(cut_mod: &Bound<'_, PyModule>) -> PyResult<()> {
+    cut_mod.add_class::<PyPart>()?;
+    Ok(())
 }

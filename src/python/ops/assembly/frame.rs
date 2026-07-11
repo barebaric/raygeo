@@ -8,7 +8,7 @@ use crate::ops::container::Ops;
 use crate::ops::cut::ToolPose;
 use crate::python::ops::assembly::contour::compute_total_offset;
 use crate::python::ops::assembly::result::PyAssemblyResult;
-use crate::python::part::PyPart;
+use crate::python::ops::cut::part::PyPart;
 use crate::types::Point3D;
 
 pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
@@ -28,7 +28,7 @@ pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     import raygeo
 
     def frame(
-        part: raygeo.Part,
+        part: raygeo.ops.cut.Part,
         kerf_mm: float = 0.0,
         path_offset_mm: float = 0.0,
         cut_side: str = "centerline",

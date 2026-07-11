@@ -66,8 +66,6 @@ Examples
     100.0
 """
 
-import builtins
-import typing
 from raygeo.geo import Geometry, Matrix
 from raygeo.ops import Ops
 from . import cnc
@@ -81,7 +79,6 @@ __all__ = [
     "Geometry",
     "Matrix",
     "Ops",
-    "Part",
     "cnc",
     "geo",
     "image",
@@ -90,60 +87,4 @@ __all__ = [
     "svg",
     "trace",
 ]
-
-@typing.final
-class Part:
-    r"""
-    Unified workpiece description for motion assembly.
-    
-    Carries geometry and/or metadata needed by assemblers.
-    No machine parameters or step configuration — just the
-    workpiece data.
-    
-    Every assembler accepts a ``Part`` and internally extracts
-    what it needs (boundary polygons, islands, size, …).
-    """
-    @property
-    def size_mm(self) -> tuple[builtins.float, builtins.float]:
-        r"""
-        Physical size ``(width, height)`` in millimetres.
-        """
-    @property
-    def pixels_per_mm(self) -> typing.Optional[tuple[builtins.float, builtins.float]]:
-        r"""
-        Pixel density ``(x, y)`` in px/mm, if set.
-        """
-    @property
-    def geometry(self) -> typing.Optional[geo.Geometry]:
-        r"""
-        Vector geometry (the outline(s) of the part), if any.
-        
-        Returns ``None`` if no geometry was provided at construction time.
-        """
-    def __new__(cls, geometry: typing.Optional[geo.Geometry] = None, size_mm: tuple[builtins.float, builtins.float] = (0.0, 0.0), pixels_per_mm: typing.Optional[tuple[builtins.float, builtins.float]] = None) -> Part:
-        r"""
-        Create a new Part.
-        
-        :param geometry: Optional vector geometry (outlines of the part).
-        :param size_mm: Physical size ``(width, height)`` in millimetres.
-        :param pixels_per_mm: Optional pixel density ``(x, y)`` in px/mm.
-        """
-    @staticmethod
-    def from_polygons(boundary: typing.Sequence[tuple[builtins.float, builtins.float]], islands: typing.Optional[typing.Sequence[typing.Sequence[tuple[builtins.float, builtins.float]]]] = None, size_mm: tuple[builtins.float, builtins.float] = (0.0, 0.0)) -> Part:
-        r"""
-        Build a Part from a boundary polygon and optional islands.
-        
-        :param boundary: Outer boundary as ``[(x, y), ...]``.
-        :param islands: List of island polygons, each ``[(x, y), ...]``
-            (default ``[]``).
-        :param size_mm: Physical size ``(width, height)`` in mm
-            (default ``(0, 0)``).
-        :returns: A new ``Part`` with the geometry constructed from the
-            given polygons.
-        """
-    def has_geometry(self) -> builtins.bool:
-        r"""
-        True if this Part has geometry.
-        """
-    def __repr__(self) -> builtins.str: ...
 

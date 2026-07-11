@@ -7,7 +7,7 @@ __all__ = [
     "generate_helix",
 ]
 
-def generate_helix(part: raygeo.Part, center: tuple[float, float], start_radius: float, z_start: float, z_end: float, pitch: float, direction: str = 'CW', angular_step: float = 0.1, state: raygeo.ops.state.State | None = None) -> raygeo.ops.assembly.result.AssemblyResult:
+def generate_helix(part: raygeo.ops.cut.Part, center: tuple[float, float], start_radius: float, z_start: float, z_end: float, pitch: float, direction: str = 'CW', angular_step: float = 0.1, state: raygeo.ops.state.State | None = None) -> raygeo.ops.assembly.result.AssemblyResult:
     r"""
     Generate a helical entry path.
     

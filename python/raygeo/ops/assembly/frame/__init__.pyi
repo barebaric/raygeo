@@ -6,7 +6,7 @@ __all__ = [
     "frame",
 ]
 
-def frame(part: raygeo.Part, kerf_mm: float = 0, path_offset_mm: float = 0, cut_side: str = 'centerline') -> raygeo.ops.assembly.result.AssemblyResult:
+def frame(part: raygeo.ops.cut.Part, kerf_mm: float = 0, path_offset_mm: float = 0, cut_side: str = 'centerline') -> raygeo.ops.assembly.result.AssemblyResult:
     r"""
     Generate a rectangular frame around the part boundary.
     

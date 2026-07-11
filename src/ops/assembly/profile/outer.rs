@@ -7,8 +7,8 @@ use crate::ops::assembly::profile::ProfileOuterOptions;
 use crate::ops::assembly::result::AssemblyMeta;
 use crate::ops::assembly::Tracelet;
 use crate::ops::cut::ClearedArea;
+use crate::ops::cut::Part;
 use crate::ops::state::State;
-use crate::part::Part;
 
 use super::trace_helpers as th;
 

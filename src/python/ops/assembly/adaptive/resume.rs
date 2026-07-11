@@ -13,8 +13,8 @@ use crate::ops::cut::StepperOptions;
 use crate::ops::cut::ToolPose;
 use crate::python::geo::algo::medial_axis::PyMedialAxis;
 use crate::python::ops::cut::cleared_area::PyClearedArea;
+use crate::python::ops::cut::part::PyPart;
 use crate::python::ops::PyOps;
-use crate::python::part::PyPart;
 use crate::types::{Point, Point3D, Polygon};
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::gen_stub_pyfunction;
@@ -47,7 +47,7 @@ pub(crate) fn register(adaptive_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     import raygeo
 
     def emit_resume_travel(
-        part: raygeo.Part,
+        part: raygeo.ops.cut.Part,
         ops: raygeo.ops.Ops,
         to_pt: tuple[float, float, float],
         radius: float = 3.0,
@@ -140,7 +140,7 @@ fn emit_resume_travel_py(
     import raygeo
 
     def try_resume(
-        part: raygeo.Part,
+        part: raygeo.ops.cut.Part,
         cleared: raygeo.ops.cut.cleared_area.ClearedArea,
         ops: raygeo.ops.Ops,
         tool: raygeo.ops.assembly.adaptive.tool.Tool,

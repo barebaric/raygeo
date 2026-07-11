@@ -812,6 +812,43 @@ impl ClearedArea {
     }
 }
 
+impl Clone for ClearedArea {
+    fn clone(&self) -> Self {
+        let mut ca = ClearedArea {
+            boundary: self.boundary.clone(),
+            islands: self.islands.clone(),
+            fragments: self.fragments.clone(),
+            grid: SpatialGrid::new(self.cell_size),
+            cell_size: self.cell_size,
+            batch_path: self.batch_path.clone(),
+            batch_radius: self.batch_radius,
+            batch_active: self.batch_active,
+            sweep_cache: Mutex::new(None),
+            fragments_union_cache: Mutex::new(None),
+            stock_cache: Mutex::new(None),
+            remaining_area_cache: Mutex::new(None),
+            actionable_cache: Mutex::new(None),
+            frag_version: AtomicUsize::new(
+                self.frag_version.load(Ordering::Relaxed),
+            ),
+        };
+        ca.rebuild_grid();
+        ca
+    }
+}
+
+impl std::fmt::Debug for ClearedArea {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ClearedArea")
+            .field("boundary", &self.boundary)
+            .field("islands", &self.islands)
+            .field("fragments", &self.fragments.len())
+            .field("cell_size", &self.cell_size)
+            .field("batch_active", &self.batch_active)
+            .finish()
+    }
+}
+
 impl Default for ClearedArea {
     fn default() -> Self {
         Self::new(&Polygon::new(), &[])

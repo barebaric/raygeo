@@ -4,8 +4,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.lines import Line2D
 
-from raygeo import Part
 from raygeo.ops.assembly.slot import generate_slot
+from raygeo.ops.cut import Part
 from raygeo.ops.feature.slot_path import find_slot_path
 from tools.plot import plot_ops_3d
 

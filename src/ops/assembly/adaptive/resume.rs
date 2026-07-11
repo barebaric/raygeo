@@ -21,10 +21,10 @@ use crate::ops::cut::search::walk_polygon_samples;
 use crate::ops::cut::step;
 use crate::ops::cut::ClearedArea;
 use crate::ops::cut::CutDirection;
+use crate::ops::cut::Part;
 use crate::ops::cut::StepStatus;
 use crate::ops::cut::StepperOptions;
 use crate::ops::cut::ToolPose;
-use crate::part::Part;
 use crate::types::{Point, Point3D, Polygon};
 
 use super::routing;

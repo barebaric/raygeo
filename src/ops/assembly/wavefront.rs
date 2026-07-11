@@ -8,9 +8,9 @@ use crate::error::RaygeoResult;
 use crate::geo::shape::polygon::{get_polygon_area, resample_polygon};
 use crate::ops::assembly::result::AssemblyMeta;
 use crate::ops::assembly::Tracelet;
+use crate::ops::cut::Part;
 use crate::ops::cut::ToolPose;
 use crate::ops::state::State;
-use crate::part::Part;
 use crate::types::{Point, Point3D};
 
 const MAX_WAVEFRONT_ITERATIONS: usize = 1000;

@@ -7,7 +7,7 @@ __all__ = [
     "adaptive_wavefronts",
 ]
 
-def adaptive_wavefronts(part: raygeo.Part, cleared: raygeo.ops.cut.cleared_area.ClearedArea, tool_radius: float = 3, step_over: float = 2, z: float = 0, area_tolerance: float = 1, precision: float = 0, cut_feed_rate: int = 1200, cut_power: float = 1) -> raygeo.ops.assembly.result.AssemblyResult:
+def adaptive_wavefronts(part: raygeo.ops.cut.Part, cleared: raygeo.ops.cut.cleared_area.ClearedArea, tool_radius: float = 3, step_over: float = 2, z: float = 0, area_tolerance: float = 1, precision: float = 0, cut_feed_rate: int = 1200, cut_power: float = 1) -> raygeo.ops.assembly.result.AssemblyResult:
     r"""
     Inside-out adaptive wavefronts.
     

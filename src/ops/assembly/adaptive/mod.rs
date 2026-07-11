@@ -41,11 +41,11 @@ use crate::ops::cut::step;
 use crate::ops::cut::stepper::MAX_IT;
 use crate::ops::cut::ClearedArea;
 use crate::ops::cut::CutDirection;
+use crate::ops::cut::Part;
 use crate::ops::cut::StepStatus;
 use crate::ops::cut::StepperOptions;
 use crate::ops::cut::ToolPose;
 use crate::ops::state::State;
-use crate::part::Part;
 use crate::types::{Point3D, Polygon};
 use prof_macros::prof;
 

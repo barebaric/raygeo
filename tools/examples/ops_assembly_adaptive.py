@@ -5,7 +5,6 @@ import math
 import matplotlib.pyplot as plt
 import numpy as np
 
-from raygeo import Part
 from raygeo.geo.shape.polygon import (
     get_circle_polygon,
     get_polygon_area,
@@ -17,6 +16,7 @@ from raygeo.ops.assembly.adaptive import (
     adaptive_clearing,
     target_area_per_distance,
 )
+from raygeo.ops.cut import Part
 from raygeo.ops.cut.cleared_area import ClearedArea
 from tools.plot import plot_ops_2d, plot_ops_3d
 

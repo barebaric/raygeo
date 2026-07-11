@@ -22,8 +22,8 @@ step 6a and the trace property on ``AssemblyResult`` in step 6b.
 import math
 from typing import Any
 
-from raygeo import Part
 from raygeo.ops.assembly.profile import profile_inner, profile_outer
+from raygeo.ops.cut import Part
 from raygeo.ops.cut.cleared_area import ClearedArea
 
 

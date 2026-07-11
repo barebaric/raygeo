@@ -10,7 +10,7 @@ use crate::ops::container::Ops;
 use crate::ops::cut::ToolPose;
 use crate::python::ops::assembly::contour::compute_total_offset;
 use crate::python::ops::assembly::result::PyAssemblyResult;
-use crate::python::part::PyPart;
+use crate::python::ops::cut::part::PyPart;
 use crate::types::Point3D;
 
 pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
@@ -73,7 +73,7 @@ fn hull_to_mm(
     import raygeo
 
     def shrinkwrap(
-        part: raygeo.Part,
+        part: raygeo.ops.cut.Part,
         image: numpy.ndarray,
         gravity: float = 0.1,
         kerf_mm: float = 0.0,

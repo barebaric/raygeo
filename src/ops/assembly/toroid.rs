@@ -11,9 +11,9 @@ use crate::geo::algo::trochoid::{
 use crate::ops::assembly::result::AssemblyMeta;
 use crate::ops::assembly::write_polyline;
 use crate::ops::assembly::Tracelet;
+use crate::ops::cut::Part;
 use crate::ops::cut::ToolPose;
 use crate::ops::state::State;
-use crate::part::Part;
 use crate::types::{Point, Point3D, Polygon};
 
 /// Options for generating a toroidal (trochoidal) path along a carrier.

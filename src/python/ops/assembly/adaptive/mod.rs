@@ -81,7 +81,7 @@ pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     import raygeo
 
     def adaptive_clearing(
-        part: raygeo.Part,
+        part: raygeo.ops.cut.Part,
         cleared: raygeo.ops.cut.cleared_area.ClearedArea,
         tool_radius: float = 3.0,
         step_over: float = 1.5,
@@ -174,7 +174,7 @@ pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
 ))]
 #[allow(clippy::too_many_arguments)]
 fn adaptive_clearing_py(
-    part: &crate::python::part::PyPart,
+    part: &crate::python::ops::cut::part::PyPart,
     cleared: &mut PyClearedArea,
     tool_radius: f64,
     step_over: f64,

@@ -2,8 +2,8 @@
 # ruff: noqa: E501, F401, F403, F405
 
 import builtins
-import raygeo
 from raygeo.ops.assembly import result
+from raygeo.ops import cut
 import typing
 __all__ = [
     "Workplan",
@@ -22,9 +22,9 @@ class Workplan:
     """
     def __new__(cls, pocket_boundary: typing.Sequence[tuple[builtins.float, builtins.float]], islands: typing.Optional[typing.Sequence[typing.Sequence[tuple[builtins.float, builtins.float]]]] = None, safe_z: builtins.float = 2.0) -> Workplan: ...
     @staticmethod
-    def from_part(part: raygeo.Part, safe_z: builtins.float = 2.0) -> Workplan:
+    def from_part(part: cut.Part, safe_z: builtins.float = 2.0) -> Workplan:
         r"""
-        Create a Workplan from a :class:`raygeo.Part`, extracting boundary
+        Create a Workplan from a :class:`raygeo.ops.cut.Part`, extracting boundary
         and islands from ``part.geometry``.
         
         Raises ``ValueError`` if the part has no extractable boundary geometry.

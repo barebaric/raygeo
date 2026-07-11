@@ -2,9 +2,9 @@
 
 import math
 
-from raygeo import Part
 from raygeo.ops import Ops
 from raygeo.ops.assembly.wavefront import adaptive_wavefronts
+from raygeo.ops.cut import Part
 from raygeo.ops.cut.cleared_area import ClearedArea
 
 

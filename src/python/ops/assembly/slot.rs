@@ -25,7 +25,7 @@ pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     import raygeo
 
     def generate_slot(
-        part: raygeo.Part,
+        part: raygeo.ops.cut.Part,
         carrier: collections.abc.Sequence[tuple[float, float]],
         tool_radius: float,
         target_z: float,
@@ -49,7 +49,7 @@ pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
 #[pyfunction(name = "generate_slot")]
 #[pyo3(signature = (part, carrier, tool_radius, target_z, state = None))]
 fn generate_slot_py(
-    part: &crate::python::part::PyPart,
+    part: &crate::python::ops::cut::part::PyPart,
     carrier: Vec<(f64, f64)>,
     tool_radius: f64,
     target_z: f64,

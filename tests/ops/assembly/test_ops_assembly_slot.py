@@ -1,7 +1,7 @@
 """Tests for slot assembly module."""
 
-from raygeo import Part
 from raygeo.ops.assembly.slot import generate_slot
+from raygeo.ops.cut import Part
 
 
 def _path_points(ops):
