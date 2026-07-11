@@ -36,8 +36,6 @@ pub struct PyAssemblyResult {
     #[pyo3(get)]
     pub ops: PyOps,
     #[pyo3(get)]
-    pub cleared_polygons: Vec<Vec<(f64, f64)>>,
-    #[pyo3(get)]
     pub start: PyToolPose,
     #[pyo3(get)]
     pub end: PyToolPose,
@@ -54,7 +52,6 @@ impl PyAssemblyResult {
             ops: PyOps {
                 inner: crate::ops::Ops::new(),
             },
-            cleared_polygons: vec![],
             start: PyToolPose {
                 pos: (0.0, 0.0, 0.0),
                 heading: 0.0,
@@ -175,9 +172,8 @@ impl PyAssemblyResult {
 
     fn __repr__(&self) -> String {
         let n_ops = self.ops.inner.len();
-        let n_polys = self.cleared_polygons.len();
         format!(
-            "AssemblyResult(ops={n_ops} commands, cleared_polygons={n_polys}, \
+            "AssemblyResult(ops={n_ops} commands, \
              start=({sx:.3},{sy:.3},{sz:.3}), end=({ex:.3},{ey:.3},{ez:.3}))",
             sx = self.start.pos.0,
             sy = self.start.pos.1,
@@ -196,14 +192,8 @@ impl PyAssemblyResult {
         trace_attrs: Option<Meta>,
         trace_events: Vec<TraceEventData>,
     ) -> Self {
-        let cleared_polys: Vec<Vec<(f64, f64)>> = meta
-            .cleared_polygons
-            .iter()
-            .map(|poly| poly.iter().map(|p| (p.x, p.y)).collect())
-            .collect();
         PyAssemblyResult {
             ops: PyOps { inner: ops },
-            cleared_polygons: cleared_polys,
             start: PyToolPose {
                 pos: (meta.start.pos.x, meta.start.pos.y, meta.start.pos.z),
                 heading: meta.start.heading,

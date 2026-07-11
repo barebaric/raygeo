@@ -186,7 +186,6 @@ fn contour_py(
             geo = result;
         }
         let meta = AssemblyMeta {
-            cleared_polygons: vec![],
             start: ToolPose {
                 pos: Point3D::ZERO,
                 heading: 0.0,
@@ -206,7 +205,6 @@ fn contour_py(
 
     if geo.is_empty() {
         let meta = AssemblyMeta {
-            cleared_polygons: vec![],
             start: ToolPose {
                 pos: Point3D::ZERO,
                 heading: 0.0,
@@ -261,7 +259,6 @@ fn contour_py(
     }
 
     let meta = AssemblyMeta {
-        cleared_polygons: vec![],
         start: ToolPose {
             pos: Point3D::ZERO,
             heading: 0.0,

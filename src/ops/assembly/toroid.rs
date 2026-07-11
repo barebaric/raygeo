@@ -97,11 +97,7 @@ pub fn generate_toroid(
 
     write_polyline(trace, &path, true, Some(cut_state));
     part.cleared.cut(&cleared_polygons);
-    Ok(AssemblyMeta {
-        cleared_polygons,
-        start,
-        end,
-    })
+    Ok(AssemblyMeta { start, end })
 }
 
 /// Options for generating a ramp-down toroidal clear path along a carrier.
@@ -135,7 +131,6 @@ pub fn generate_toroidal_clear(
             .map(|p| Point3D::new(p.x, p.y, opts.target_z))
             .unwrap_or(Point3D::ZERO);
         return Ok(AssemblyMeta {
-            cleared_polygons: vec![],
             start: ToolPose { pos, heading: 0.0 },
             end: ToolPose { pos, heading: 0.0 },
         });
@@ -153,7 +148,6 @@ pub fn generate_toroidal_clear(
         let pos =
             Point3D::new(opts.carrier[0].x, opts.carrier[0].y, opts.target_z);
         return Ok(AssemblyMeta {
-            cleared_polygons: vec![],
             start: ToolPose { pos, heading: 0.0 },
             end: ToolPose { pos, heading: 0.0 },
         });
@@ -290,11 +284,7 @@ fn build_toroidal_result(
 
     write_polyline(trace, path, true, Some(cut_state));
     part.cleared.cut(&cleared_polygons);
-    Ok(AssemblyMeta {
-        cleared_polygons,
-        start,
-        end,
-    })
+    Ok(AssemblyMeta { start, end })
 }
 
 /// Build a swept polygon around a carrier polyline at tool radius.

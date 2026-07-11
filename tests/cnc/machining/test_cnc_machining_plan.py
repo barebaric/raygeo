@@ -3,7 +3,6 @@
 from raygeo.cnc.machining.entry import build_entry_workplan
 from raygeo.cnc.machining.plan import Workplan
 from raygeo.cnc.machining.wavefront import build_wavefront_workplan
-from raygeo.geo.shape.polygon import get_polygon_signed_area
 from raygeo.ops.feature.region import find_regions
 from raygeo.ops.types import CommandType
 
@@ -32,10 +31,6 @@ def _build_entry(boundary, islands=None, **kwargs):
     )
 
 
-def _area(polygons):
-    return sum(abs(get_polygon_signed_area(p)) for p in polygons)
-
-
 def test_execute_wavefront_workplan_runs():
     """build + execute yields a non-empty toolpath and cleared area."""
     boundary = _rect(-20, -20, 40, 40)
@@ -50,7 +45,6 @@ def test_execute_wavefront_workplan_runs():
     wp.extend(steps)
     result = wp.execute()
     assert result.ops.len() > 0
-    assert len(result.cleared_polygons) >= 1
 
 
 def test_execute_workplan_empty_steps():
@@ -76,7 +70,6 @@ def test_execute_workplan_seed_only():
     wp.extend(seed_steps)
     result = wp.execute()
     assert result.ops.len() > 0
-    assert len(result.cleared_polygons) >= 1
 
 
 def test_execute_workplan_wavefront_grows_cleared_area():
@@ -97,7 +90,7 @@ def test_execute_workplan_wavefront_grows_cleared_area():
     wp_full = Workplan(boundary, safe_z=2.0)
     wp_full.extend(steps)
     full = wp_full.execute()
-    assert _area(full.cleared_polygons) > _area(seed.cleared_polygons) * 1.2
+    assert full.ops.cut_distance() > seed.ops.cut_distance() * 1.2
 
 
 def test_execute_workplan_dict_round_trip():

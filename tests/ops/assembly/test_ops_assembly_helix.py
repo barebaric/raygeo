@@ -9,8 +9,9 @@ from raygeo.ops.state import State
 
 def test_generate_helix_basic():
     """Basic helix produces ops with at least some commands."""
+    part = Part.from_polygons([])
     result = generate_helix(
-        Part.from_polygons([]),
+        part,
         center=(0.0, 0.0),
         start_radius=5.0,
         z_start=2.0,
@@ -20,7 +21,7 @@ def test_generate_helix_basic():
         angular_step=0.1,
     )
     assert result.ops.len() > 0
-    assert len(result.cleared_polygons) >= 1
+    assert part.cleared.total_area() > 0
 
 
 def test_generate_helix_returns_assembly_result():
@@ -33,7 +34,6 @@ def test_generate_helix_returns_assembly_result():
         pitch=1.5,
     )
     assert hasattr(result, "ops")
-    assert hasattr(result, "cleared_polygons")
     assert hasattr(result, "start")
     assert hasattr(result, "end")
 
@@ -97,4 +97,3 @@ def test_generate_helix_zero_descent():
     )
     # Should still return a valid AssemblyResult, possibly with empty ops
     assert hasattr(result, "ops")
-    assert hasattr(result, "cleared_polygons")

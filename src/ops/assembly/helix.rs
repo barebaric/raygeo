@@ -93,11 +93,7 @@ pub fn generate_helix(
 
     write_polyline(trace, &path, true, Some(cut_state));
     part.cleared.cut(&cleared_polygons);
-    Ok(AssemblyMeta {
-        cleared_polygons,
-        start,
-        end,
-    })
+    Ok(AssemblyMeta { start, end })
 }
 
 /// Compute the tangent heading at index `i` in the helix path.

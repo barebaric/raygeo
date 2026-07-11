@@ -6,15 +6,16 @@ from raygeo.ops.state import State
 
 
 def test_generate_ramp_basic():
+    part = Part.from_polygons([])
     result = generate_ramp(
-        Part.from_polygons([]),
+        part,
         start=(0.0, 0.0),
         end=(100.0, 0.0),
         z_start=2.0,
         z_end=-6.0,
     )
     assert result.ops.len() > 0
-    assert len(result.cleared_polygons) >= 1
+    assert part.cleared.total_area() > 0
 
 
 def test_generate_ramp_returns_assembly_result():
@@ -26,7 +27,6 @@ def test_generate_ramp_returns_assembly_result():
         z_end=-5.0,
     )
     assert hasattr(result, "ops")
-    assert hasattr(result, "cleared_polygons")
     assert hasattr(result, "start")
     assert hasattr(result, "end")
 

@@ -134,15 +134,16 @@ def test_toroidal_clear_no_descent_matches_toroid():
 def test_toroidal_clear_clears_corridor():
     """Carrier swept by tool_radius covers the corridor interior."""
     carrier = [(0.0, 4.0), (40.0, 4.0)]
-    result = generate_toroidal_clear(
-        Part.from_polygons([]),
+    part = Part.from_polygons([])
+    generate_toroidal_clear(
+        part,
         carrier=carrier,
         start=(0.0, 4.0, 2.0),
         target_z=-4.0,
         tool_radius=3.0,
         step_over=2.0,
     )
-    cleared_polygons = result.cleared_polygons
+    cleared_polygons = part.cleared.fragments()
     assert len(cleared_polygons) > 0, "should have cleared polygons"
 
     for poly in cleared_polygons:

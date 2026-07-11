@@ -187,7 +187,6 @@ fn shrinkwrap_py(
     Ok(PyAssemblyResult::from_parts(
         ops,
         AssemblyMeta {
-            cleared_polygons: vec![],
             start: ToolPose {
                 pos: Point3D::ZERO,
                 heading: 0.0,

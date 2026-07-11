@@ -6,8 +6,9 @@ from raygeo.ops.state import State
 
 
 def test_generate_spiral_basic():
+    part = Part.from_polygons([])
     result = generate_spiral(
-        Part.from_polygons([]),
+        part,
         center=(0.0, 0.0),
         z=-5.0,
         start_radius=3.0,
@@ -17,7 +18,7 @@ def test_generate_spiral_basic():
         angular_step=0.1,
     )
     assert result.ops.len() > 0
-    assert len(result.cleared_polygons) >= 1
+    assert part.cleared.total_area() > 0
 
 
 def test_generate_spiral_returns_assembly_result():
@@ -30,7 +31,6 @@ def test_generate_spiral_returns_assembly_result():
         revolutions=2.0,
     )
     assert hasattr(result, "ops")
-    assert hasattr(result, "cleared_polygons")
     assert hasattr(result, "start")
     assert hasattr(result, "end")
 

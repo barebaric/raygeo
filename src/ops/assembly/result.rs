@@ -5,7 +5,6 @@ use crate::trace::Tracer;
 use crate::trace_types::{
     EventKind, Meta, MoveKind, ProgressSnapshot, ToolSnapshot,
 };
-use crate::types::Polygon;
 
 /// One self-contained trace event produced by an assembler. The workplan
 /// assigns seq/span when emitting; the assembler only describes WHAT
@@ -31,7 +30,6 @@ pub(crate) struct AssemblyTrace {
 /// What an assembler returns alongside the ops/events written to the Tracelet.
 #[derive(Clone, Debug)]
 pub struct AssemblyMeta {
-    pub cleared_polygons: Vec<Polygon>,
     pub start: ToolPose,
     pub end: ToolPose,
 }

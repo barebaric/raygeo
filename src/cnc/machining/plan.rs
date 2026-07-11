@@ -347,7 +347,6 @@ impl WorkplanStep {
                 trace.apply_state(travel_state);
                 trace.move_to(pos.x, pos.y, *safe_z, None);
                 Ok(AssemblyMeta {
-                    cleared_polygons: vec![],
                     start: ToolPose { pos, heading: 0.0 },
                     end: ToolPose { pos, heading: 0.0 },
                 })
@@ -549,7 +548,6 @@ impl Workplan {
                 tracer.finish();
                 trace.finish();
                 return Ok(AssemblyMeta {
-                    cleared_polygons: part.cleared.fragments().to_vec(),
                     start: ToolPose {
                         pos: Point3D::ZERO,
                         heading: 0.0,
@@ -610,7 +608,6 @@ impl Workplan {
         tracer.finish();
 
         Ok(AssemblyMeta {
-            cleared_polygons: part.cleared.fragments().to_vec(),
             start: first_start.unwrap(),
             end: pe,
         })

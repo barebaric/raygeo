@@ -206,7 +206,6 @@ pub(crate) fn run_profile(
                     heading,
                 };
                 return Ok(AssemblyMeta {
-                    cleared_polygons: vec![],
                     start: ToolPose {
                         pos: start_pos,
                         heading,
@@ -388,7 +387,6 @@ pub(crate) fn run_profile(
         heading,
     };
     Ok(AssemblyMeta {
-        cleared_polygons: vec![],
         start: end_pose,
         end: end_pose,
     })

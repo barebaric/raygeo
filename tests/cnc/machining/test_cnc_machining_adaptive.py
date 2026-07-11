@@ -90,7 +90,6 @@ def test_clearing_workplan_executes():
     wp.extend(steps)
     result = wp.execute()
     assert result.ops.len() > 0
-    assert len(result.cleared_polygons) >= 1
 
 
 def test_clearing_workplan_dumbbell():

@@ -257,7 +257,6 @@ fn raster_py(
     Ok(PyAssemblyResult::from_parts(
         combined,
         AssemblyMeta {
-            cleared_polygons: vec![],
             start: ToolPose {
                 pos: Point3D::ZERO,
                 heading: 0.0,

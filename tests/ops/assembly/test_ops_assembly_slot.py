@@ -43,13 +43,14 @@ def test_slot_single_pass():
 def test_slot_clears_thin_corridor():
     """Carrier swept by tool_radius covers the corridor interior."""
     carrier = [(0.0, 3.0), (40.0, 3.0)]
-    result = generate_slot(
-        Part.from_polygons([]),
+    part = Part.from_polygons([])
+    generate_slot(
+        part,
         carrier=carrier,
         tool_radius=3.0,
         target_z=-3.0,
     )
-    cleared_polygons = result.cleared_polygons
+    cleared_polygons = part.cleared.fragments()
     assert len(cleared_polygons) > 0, "should have cleared polygons"
 
     for poly in cleared_polygons:
@@ -69,9 +70,10 @@ def test_slot_clears_thin_corridor():
 
 def test_slot_multi_point_carrier():
     """Multi-point carrier produces forward+backward through all points."""
+    part = Part.from_polygons([])
     carrier = [(0.0, 0.0), (20.0, 2.0), (40.0, 0.0)]
     result = generate_slot(
-        Part.from_polygons([]),
+        part,
         carrier=carrier,
         tool_radius=3.0,
         target_z=-3.0,
@@ -111,7 +113,7 @@ def test_slot_multi_point_carrier():
     assert abs(pts[-1][1] - carrier[0][1]) < 0.05
 
     # Swept polygon covers the corridor including caps.
-    cleared_polygons = result.cleared_polygons
+    cleared_polygons = part.cleared.fragments()
     assert len(cleared_polygons) > 0
     for poly in cleared_polygons:
         ys = [p[1] for p in poly]

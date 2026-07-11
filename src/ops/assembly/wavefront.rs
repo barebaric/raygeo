@@ -119,7 +119,6 @@ pub fn adaptive_wavefronts(
     let end_pos = last_point.unwrap_or(Point::ZERO);
 
     Ok(AssemblyMeta {
-        cleared_polygons: part.cleared.fragments().to_vec(),
         start: ToolPose {
             pos: Point3D::new(start_pos.x, start_pos.y, opts.z),
             heading: 0.0,

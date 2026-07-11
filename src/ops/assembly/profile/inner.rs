@@ -55,7 +55,6 @@ pub fn profile_inner(
         _ => {
             let zero = Point3D::ZERO;
             return Ok(AssemblyMeta {
-                cleared_polygons: vec![],
                 start: ToolPose {
                     pos: zero,
                     heading: 0.0,
@@ -150,7 +149,6 @@ pub fn profile_inner(
     }
 
     Ok(AssemblyMeta {
-        cleared_polygons: vec![],
         start: start_pose,
         end: end_pose,
     })

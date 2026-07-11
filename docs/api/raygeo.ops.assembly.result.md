@@ -11,12 +11,6 @@ Returned by assemblers such as `generate_helix`, `generate_toroidal_clear`, `gen
 other assembly-level motion functions. Contains the generated `Ops` sequence, the set of polygons
 that this operation clears, and the tool pose at the start and end of the path.
 
-### `cleared_polygons`
-
-```python
-cleared_polygons: list[list[tuple[float, float]]]
-```
-
 ### `end`
 
 ```python

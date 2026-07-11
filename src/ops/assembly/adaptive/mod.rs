@@ -463,7 +463,6 @@ pub fn adaptive_clearing(
         compute_inset_region(&pocket_boundary, opts.tool_radius, &islands);
     if valid_tool_area.is_empty() || valid_total <= opts.area_tolerance {
         return Ok(AssemblyMeta {
-            cleared_polygons: part.cleared.fragments().to_vec(),
             start: ToolPose {
                 pos: Point3D::ZERO,
                 heading: 0.0,
@@ -476,7 +475,6 @@ pub fn adaptive_clearing(
     }
     if part.cleared.is_empty() {
         return Ok(AssemblyMeta {
-            cleared_polygons: part.cleared.fragments().to_vec(),
             start: ToolPose {
                 pos: Point3D::ZERO,
                 heading: 0.0,
@@ -881,10 +879,7 @@ pub fn adaptive_clearing(
         )),
     );
 
-    let cleared_polygons = part.cleared.fragments().to_vec();
-
     Ok(AssemblyMeta {
-        cleared_polygons,
         start: ToolPose {
             pos: start_pos,
             heading: start_heading,

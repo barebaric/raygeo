@@ -96,11 +96,7 @@ fn frame_py(
 
     Ok(PyAssemblyResult::from_parts(
         ops,
-        AssemblyMeta {
-            cleared_polygons: vec![],
-            start,
-            end,
-        },
+        AssemblyMeta { start, end },
         None,
         vec![],
     ))
