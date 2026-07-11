@@ -14,6 +14,7 @@ use crate::ops::cut::ToolPose;
 use crate::python::geo::algo::medial_axis::PyMedialAxis;
 use crate::python::ops::cut::cleared_area::PyClearedArea;
 use crate::python::ops::PyOps;
+use crate::python::part::PyPart;
 use crate::types::{Point, Point3D, Polygon};
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::gen_stub_pyfunction;
@@ -46,10 +47,9 @@ pub(crate) fn register(adaptive_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     import raygeo
 
     def emit_resume_travel(
+        part: raygeo.Part,
         ops: raygeo.ops.Ops,
         to_pt: tuple[float, float, float],
-        pocket_boundary: collections.abc.Sequence[tuple[float, float]],
-        islands: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]] = [],
         radius: float = 3.0,
         cut_z: float = -5.0,
         cleared: raygeo.ops.cut.cleared_area.ClearedArea | None = None,
@@ -62,10 +62,9 @@ pub(crate) fn register(adaptive_mod: &Bound<'_, PyModule>) -> PyResult<()> {
 )]
 #[pyfunction(name = "emit_resume_travel")]
 #[pyo3(signature = (
+    part,
     ops,
     to_pt,
-    pocket_boundary,
-    islands = None,
     radius = 3.0,
     cut_z = -5.0,
     cleared = None,
@@ -74,28 +73,18 @@ pub(crate) fn register(adaptive_mod: &Bound<'_, PyModule>) -> PyResult<()> {
 ))]
 #[allow(clippy::too_many_arguments)]
 fn emit_resume_travel_py(
+    part: &PyPart,
     ops: &mut PyOps,
     to_pt: (f64, f64, f64),
-    pocket_boundary: Vec<(f64, f64)>,
-    islands: Option<Vec<Vec<(f64, f64)>>>,
     radius: f64,
     cut_z: f64,
     cleared: Option<&PyClearedArea>,
     from_pt: (f64, f64, f64),
     axis: Option<&PyMedialAxis>,
 ) -> PyResult<()> {
-    let pb: Polygon = pocket_boundary
-        .into_iter()
-        .map(|(x, y)| Point::new(x, y))
-        .collect();
-    let islands_pts: Vec<Polygon> = islands
-        .unwrap_or_default()
-        .into_iter()
-        .map(|p| p.into_iter().map(|(x, y)| Point::new(x, y)).collect())
-        .collect();
+    let (pb_opt, islands_pts) = part.inner.extract_boundary();
+    let pb = pb_opt.unwrap_or_default();
     let opts = AdaptiveClearingOptions {
-        pocket_boundary: pb.clone(),
-        islands: islands_pts.clone(),
         tool_radius: radius,
         step_over: 1.5,
         target_z: cut_z,
@@ -116,6 +105,7 @@ fn emit_resume_travel_py(
         mat,
         Point3D::new(from_pt.0, from_pt.1, from_pt.2),
         Point3D::new(to_pt.0, to_pt.1, to_pt.2),
+        &part.inner,
         &opts,
         None,
     )?;
@@ -150,11 +140,10 @@ fn emit_resume_travel_py(
     import raygeo
 
     def try_resume(
+        part: raygeo.Part,
         cleared: raygeo.ops.cut.cleared_area.ClearedArea,
         ops: raygeo.ops.Ops,
         tool: raygeo.ops.assembly.adaptive.tool.Tool,
-        pocket_boundary: collections.abc.Sequence[tuple[float, float]],
-        islands: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]] = [],
         radius: float = 3.0,
         step_over: float = 1.5,
         cut_z: float = -5.0,
@@ -175,11 +164,10 @@ fn emit_resume_travel_py(
 )]
 #[pyfunction(name = "try_resume")]
 #[pyo3(signature = (
+    part,
     cleared,
     ops,
     tool,
-    pocket_boundary,
-    islands = None,
     radius = 3.0,
     step_over = 1.5,
     cut_z = -5.0,
@@ -193,11 +181,10 @@ fn emit_resume_travel_py(
 ))]
 #[allow(clippy::too_many_arguments)]
 fn try_resume_py(
+    part: &PyPart,
     cleared: &mut PyClearedArea,
     ops: &mut PyOps,
     tool: &mut crate::python::ops::assembly::adaptive::tool::PyTool,
-    pocket_boundary: Vec<(f64, f64)>,
-    islands: Option<Vec<Vec<(f64, f64)>>>,
     radius: f64,
     step_over: f64,
     cut_z: f64,
@@ -210,15 +197,8 @@ fn try_resume_py(
     segment_heading: f64,
 ) -> PyResult<bool> {
     let mat = axis.map(|a| &a.inner);
-    let pb: Polygon = pocket_boundary
-        .into_iter()
-        .map(|(x, y)| Point::new(x, y))
-        .collect();
-    let islands_pts: Vec<Polygon> = islands
-        .unwrap_or_default()
-        .into_iter()
-        .map(|p| p.into_iter().map(|(x, y)| Point::new(x, y)).collect())
-        .collect();
+    let (pb_opt, _islands_pts) = part.inner.extract_boundary();
+    let _pb = pb_opt.unwrap_or_default();
     let vta: Vec<Polygon> = valid_tool_area
         .unwrap_or_default()
         .into_iter()
@@ -229,8 +209,6 @@ fn try_resume_py(
         _ => CutDirection::Ccw,
     };
     let opts = AdaptiveClearingOptions {
-        pocket_boundary: pb,
-        islands: islands_pts,
         tool_radius: radius,
         step_over,
         target_z: cut_z,
@@ -261,6 +239,7 @@ fn try_resume_py(
         cleared: &cleared.inner,
         opts: &opts,
         step_opts: &step_opts,
+        part: &part.inner,
         advance,
         step_length,
         mat,
@@ -295,6 +274,7 @@ fn try_resume_py(
             mat,
             tool.inner.pos,
             rp.pos,
+            &part.inner,
             &opts,
             None,
         )?;

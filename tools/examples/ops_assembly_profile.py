@@ -2,6 +2,7 @@
 
 import matplotlib.pyplot as plt
 
+from raygeo import Part
 from raygeo.geo.shape.polygon import (
     JoinStyle,
     get_circle_polygon,
@@ -28,8 +29,8 @@ def generate_profile_outer_rect():
     boundary = _rect(0, 0, 60, 60)
     ca = ClearedArea(boundary=boundary, initial=[])
     result = profile_outer(
+        Part.from_polygons(boundary),
         cleared=ca,
-        boundary=boundary,
         tool_radius=3.0,
         step_over=1.5,
         target_z=-5.0,
@@ -54,8 +55,8 @@ def generate_profile_outer_circle():
     boundary = get_circle_polygon((0, 0), 30, 64)
     ca = ClearedArea(boundary=boundary, initial=[])
     result = profile_outer(
+        Part.from_polygons(boundary),
         cleared=ca,
-        boundary=boundary,
         tool_radius=3.0,
         step_over=1.5,
         target_z=-5.0,
@@ -92,8 +93,8 @@ def generate_profile_outer_concave_pocket():
     ]
     ca = ClearedArea(boundary=boundary, initial=[])
     result = profile_outer(
+        Part.from_polygons(boundary),
         cleared=ca,
-        boundary=boundary,
         tool_radius=3.0,
         step_over=1.5,
         target_z=-5.0,
@@ -124,8 +125,8 @@ def generate_profile_outer_rough_then_finish():
     ca = ClearedArea(boundary=boundary, initial=[])
 
     result_rough = profile_outer(
+        Part.from_polygons(boundary),
         cleared=ca,
-        boundary=boundary,
         tool_radius=3.0,
         step_over=1.5,
         target_z=-5.0,
@@ -138,8 +139,8 @@ def generate_profile_outer_rough_then_finish():
     )
 
     result_finish = profile_outer(
+        Part.from_polygons(boundary),
         cleared=ca,
-        boundary=boundary,
         tool_radius=3.0,
         step_over=1.5,
         target_z=-5.0,
@@ -177,9 +178,8 @@ def generate_profile_inner_rect_with_square_island_2d():
     island = _rect(15, 0, 10, 10)
     ca = ClearedArea(boundary=boundary, initial=[])
     result = profile_inner(
+        Part.from_polygons(boundary, [island]),
         cleared=ca,
-        boundary=boundary,
-        islands=[island],
         tool_radius=3.0,
         step_over=1.5,
         target_z=-5.0,
@@ -219,9 +219,8 @@ def generate_profile_inner_rect_with_two_islands_2d():
     island2 = _rect(15, -5, 8, 8)
     ca = ClearedArea(boundary=boundary, initial=[])
     result = profile_inner(
+        Part.from_polygons(boundary, [island1, island2]),
         cleared=ca,
-        boundary=boundary,
-        islands=[island1, island2],
         tool_radius=3.0,
         step_over=1.5,
         target_z=-5.0,
@@ -267,9 +266,8 @@ def generate_profile_inner_concave_with_island_3d():
     island = _rect(30, 65, 12, 12)
     ca = ClearedArea(boundary=pocket, initial=[])
     result = profile_inner(
+        Part.from_polygons(pocket, [island]),
         cleared=ca,
-        boundary=pocket,
-        islands=[island],
         tool_radius=3.0,
         step_over=1.5,
         target_z=-5.0,
@@ -293,9 +291,8 @@ def generate_profile_inner_narrow_channel_skips_island():
     blocked = _rect(24, 0, 10, 10)
     ca = ClearedArea(boundary=boundary, initial=[])
     result = profile_inner(
+        Part.from_polygons(boundary, [accessible, blocked]),
         cleared=ca,
-        boundary=boundary,
-        islands=[accessible, blocked],
         tool_radius=3.0,
         step_over=1.5,
         target_z=-5.0,
@@ -354,9 +351,8 @@ def generate_profile_inner_rough_then_finish():
     ca = ClearedArea(boundary=boundary, initial=[])
 
     result_rough = profile_inner(
+        Part.from_polygons(boundary, [island]),
         cleared=ca,
-        boundary=boundary,
-        islands=[island],
         tool_radius=3.0,
         step_over=1.5,
         target_z=-5.0,
@@ -369,9 +365,8 @@ def generate_profile_inner_rough_then_finish():
     )
 
     result_finish = profile_inner(
+        Part.from_polygons(boundary, [island]),
         cleared=ca,
-        boundary=boundary,
-        islands=[island],
         tool_radius=3.0,
         step_over=1.5,
         target_z=-5.0,

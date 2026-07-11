@@ -1,5 +1,6 @@
 """Tests for toroid assembly module."""
 
+from raygeo import Part
 from raygeo.ops.assembly.toroid import generate_toroid
 from raygeo.ops.state import State
 
@@ -7,6 +8,7 @@ from raygeo.ops.state import State
 def test_generate_toroid_basic():
     carrier = [(0.0, 0.0), (80.0, 0.0)]
     result = generate_toroid(
+        Part.from_polygons([]),
         carrier=carrier,
         tool_radius=3.0,
         step_over=2.0,
@@ -18,6 +20,7 @@ def test_generate_toroid_basic():
 def test_generate_toroid_returns_assembly_result():
     carrier = [(0.0, 0.0), (50.0, 0.0)]
     result = generate_toroid(
+        Part.from_polygons([]),
         carrier=carrier,
         tool_radius=3.0,
         step_over=2.0,
@@ -33,6 +36,7 @@ def test_generate_toroid_with_state():
     carrier = [(0.0, 0.0), (60.0, 0.0)]
     st = State(power=0.5, feed_rate=1200)
     result = generate_toroid(
+        Part.from_polygons([]),
         carrier=carrier,
         tool_radius=3.0,
         step_over=2.0,
@@ -46,6 +50,7 @@ def test_generate_toroid_with_state():
 def test_generate_toroid_ccw():
     carrier = [(0.0, 0.0), (60.0, 0.0)]
     result = generate_toroid(
+        Part.from_polygons([]),
         carrier=carrier,
         tool_radius=3.0,
         step_over=2.0,
@@ -59,6 +64,7 @@ def test_toroid_renamed_fields():
     """Verify the renamed field names work end-to-end."""
     carrier = [(0.0, 0.0), (40.0, 0.0)]
     result = generate_toroid(
+        Part.from_polygons([]),
         carrier=carrier,
         tool_radius=3.0,
         step_over=2.0,

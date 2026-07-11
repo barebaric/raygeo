@@ -9,9 +9,8 @@ sidebar_label: raygeo.ops.assembly.profile
 
 ```python
 profile_inner(
+    part: Part,
     cleared: ops.cut.cleared_area.ClearedArea,
-    boundary: list[tuple[float, float]],
-    islands: list[list[tuple[float, float]]] = [],
     tool_radius: float = 3,
     step_over: float = 1.5,
     step_length: float = 0.6,
@@ -37,9 +36,8 @@ so that the tool clears the material along the pocket walls and around each isla
 
 | Parameter                    | Type                                     | Description                                                        |
 | ---------------------------- | ---------------------------------------- | ------------------------------------------------------------------ |
+| `part`                       | `Part`                                   | The part whose geometry defines the pocket boundary and islands.   |
 | `cleared`                    | `ops.cut.cleared_area.ClearedArea`       | Cleared area tracker.                                              |
-| `boundary`                   | `list[tuple[float, float]]`              | Outer boundary polygon as `(x, y)` pairs.                          |
-| `islands`                    | `list[list[tuple[float, float]]] = []`   | List of island (hole) polygons (default []).                       |
 | `tool_radius`                | `float = 3`                              | Tool radius in mm.                                                 |
 | `step_over`                  | `float = 1.5`                            | Radial step-over between passes (mm).                              |
 | `step_length`                | `float = 0.6`                            | Forward step length in mm.                                         |
@@ -80,8 +78,8 @@ so that the tool clears the material along the pocket walls and around each isla
 
 ```python
 profile_outer(
+    part: Part,
     cleared: ops.cut.cleared_area.ClearedArea,
-    boundary: list[tuple[float, float]],
     tool_radius: float,
     step_over: float,
     step_length: float,
@@ -107,8 +105,8 @@ an **AssemblyResult** with the profiling move sequence.
 
 | Parameter                    | Type                                     | Description                                                        |
 | ---------------------------- | ---------------------------------------- | ------------------------------------------------------------------ |
+| `part`                       | `Part`                                   | The part whose geometry defines the pocket boundary.               |
 | `cleared`                    | `ops.cut.cleared_area.ClearedArea`       | Cleared area tracker.                                              |
-| `boundary`                   | `list[tuple[float, float]]`              | Outer boundary polygon as `(x, y)` pairs.                          |
 | `tool_radius`                | `float`                                  | Tool radius in mm.                                                 |
 | `step_over`                  | `float`                                  | Radial step-over between passes (mm).                              |
 | `step_length`                | `float`                                  | Forward step length in mm.                                         |

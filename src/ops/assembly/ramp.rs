@@ -12,6 +12,7 @@ use crate::ops::assembly::write_polyline;
 use crate::ops::assembly::Tracelet;
 use crate::ops::cut::ToolPose;
 use crate::ops::state::State;
+use crate::part::Part;
 use crate::types::{Point, Point3D};
 
 /// Options for generating a ramp entry path.
@@ -32,6 +33,7 @@ pub struct RampOptions {
 /// [`AssemblyResult`] with a segment-swept cleared polygon.
 #[prof]
 pub fn generate_ramp(
+    _part: &Part,
     trace: &mut Tracelet,
     opts: &RampOptions,
     cut_state: &State,

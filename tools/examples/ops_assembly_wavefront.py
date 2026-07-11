@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.colors import Normalize
 
+from raygeo import Part
 from raygeo.geo.algo.polylabel import find_largest_circle
 from raygeo.geo.shape.polygon import (
     get_circle_polygon,
@@ -111,8 +112,8 @@ def generate_wavefront_rect():
     wf_boundary = [(0, 0), (160, 0), (160, 100), (0, 100)]
     wf_ca = _seed_cleared_area(wf_boundary, None, 3.0)
     result = adaptive_wavefronts(
+        Part.from_polygons(wf_boundary),
         wf_ca,
-        wf_boundary,
         tool_radius=3.0,
         step_over=2.0,
         z=-5.0,
@@ -136,9 +137,8 @@ def generate_wavefront_multi():
     ]
     mi_ca = _seed_cleared_area(mi_boundary, mi_islands, 3.0)
     result = adaptive_wavefronts(
+        Part.from_polygons(mi_boundary, mi_islands),
         mi_ca,
-        mi_boundary,
-        islands=mi_islands,
         tool_radius=3.0,
         step_over=2.0,
         z=-5.0,
@@ -167,8 +167,8 @@ def generate_wavefront_yshape():
     ]
     ys_ca = _seed_cleared_area(yshape, None, 3.0)
     ys_result = adaptive_wavefronts(
+        Part.from_polygons(yshape),
         ys_ca,
-        yshape,
         tool_radius=3.0,
         step_over=2.0,
         z=-5.0,
@@ -228,9 +228,8 @@ def generate_wavefront_svg():
     for boundary, islands in components:
         ca = _seed_cleared_area(boundary, islands, 1.5)
         result = adaptive_wavefronts(
+            Part.from_polygons(boundary, islands),
             ca,
-            boundary,
-            islands=islands,
             tool_radius=1.5,
             step_over=0.5,
             z=-5.0,

@@ -2,6 +2,7 @@
 
 import math
 
+from raygeo import Part
 from raygeo.ops.assembly.toroid import generate_toroid, generate_toroidal_clear
 
 
@@ -19,6 +20,7 @@ def test_toroidal_clear_descends_in_one_pass():
     carrier = [(0.0, 0.0), (60.0, 0.0)]  # L_pass = 60
     angle = math.degrees(math.atan(6.0 / 60.0))  # L_min = 60
     result = generate_toroidal_clear(
+        Part.from_polygons([]),
         carrier=carrier,
         start=(0.0, 0.0, 2.0),
         target_z=-4.0,
@@ -50,6 +52,7 @@ def test_toroidal_clear_zigzags_when_carrier_too_short():
     carrier_length = 20.0
     angle = math.degrees(math.atan(6.0 / 60.0))  # L_min = 60
     result = generate_toroidal_clear(
+        Part.from_polygons([]),
         carrier=carrier,
         start=(0.0, 0.0, 2.0),
         target_z=-4.0,
@@ -103,6 +106,7 @@ def test_toroidal_clear_no_descent_matches_toroid():
     carrier = [(0.0, 0.0), (60.0, 0.0)]
     target_z = -5.0
     result_clear = generate_toroidal_clear(
+        Part.from_polygons([]),
         carrier=carrier,
         start=(0.0, 0.0, -5.0),
         target_z=target_z,
@@ -110,6 +114,7 @@ def test_toroidal_clear_no_descent_matches_toroid():
         step_over=2.0,
     )
     result_toroid = generate_toroid(
+        Part.from_polygons([]),
         carrier=carrier,
         tool_radius=3.0,
         step_over=2.0,
@@ -130,6 +135,7 @@ def test_toroidal_clear_clears_corridor():
     """Carrier swept by tool_radius covers the corridor interior."""
     carrier = [(0.0, 4.0), (40.0, 4.0)]
     result = generate_toroidal_clear(
+        Part.from_polygons([]),
         carrier=carrier,
         start=(0.0, 4.0, 2.0),
         target_z=-4.0,

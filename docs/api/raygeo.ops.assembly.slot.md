@@ -9,6 +9,7 @@ sidebar_label: raygeo.ops.assembly.slot
 
 ```python
 generate_slot(
+    part: Part,
     carrier: Sequence[tuple[float, float]],
     tool_radius: float,
     target_z: float,
@@ -23,6 +24,7 @@ cleared polygon is the carrier swept by *tool_radius* (Minkowski sum).
 
 | Parameter     | Type                                 | Description                                      |
 | ------------- | ------------------------------------ | ------------------------------------------------ |
+| `part`        | `Part`                               |                                                  |
 | `carrier`     | `Sequence[tuple[float, float]]`      | `(x, y)` waypoints (currently 2-point segment).  |
 | `tool_radius` | `float`                              | Tool radius in mm.                               |
 | `target_z`    | `float`                              | Cutting Z height.                                |

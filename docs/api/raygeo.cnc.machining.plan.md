@@ -49,3 +49,19 @@ Append builder output steps (list of WorkplanStep dicts).
 | --------- | ------ | ----------- |
 | `steps`   | `Any`  |             |
 | _Returns_ | `None` |             |
+
+### `from_part()`
+
+```python
+from_part(part: Part, safe_z: float = 2.0) -> Workplan
+```
+
+Create a Workplan from a **raygeo.Part**, extracting boundary and islands from `part.geometry`.
+
+Raises `ValueError` if the part has no extractable boundary geometry.
+
+| Parameter | Type          | Description |
+| --------- | ------------- | ----------- |
+| `part`    | `Part`        |             |
+| `safe_z`  | `float = 2.0` |             |
+| _Returns_ | `Workplan`    |             |

@@ -26,6 +26,7 @@ pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     import raygeo
 
     def generate_helix(
+        part: raygeo.Part,
         center: tuple[float, float],
         start_radius: float,
         z_start: float,
@@ -55,6 +56,7 @@ pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
 )]
 #[pyfunction(name = "generate_helix")]
 #[pyo3(signature = (
+    part,
     center,
     start_radius,
     z_start,
@@ -66,6 +68,7 @@ pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
 ))]
 #[allow(clippy::too_many_arguments)]
 fn generate_helix_py(
+    part: &crate::python::part::PyPart,
     center: (f64, f64),
     start_radius: f64,
     z_start: f64,
@@ -97,7 +100,8 @@ fn generate_helix_py(
     };
 
     let mut trace = Tracelet::new();
-    let meta = helix::generate_helix(&mut trace, &opts, &cut_state)?;
+    let meta =
+        helix::generate_helix(&part.inner, &mut trace, &opts, &cut_state)?;
     let events = trace.drain();
     let attrs = trace.attrs().cloned();
     let ops = trace.into_ops();

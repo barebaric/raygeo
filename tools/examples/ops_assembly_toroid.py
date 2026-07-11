@@ -2,6 +2,7 @@
 
 import matplotlib.pyplot as plt
 
+from raygeo import Part
 from raygeo.ops.assembly.toroid import generate_toroid
 from tools.plot import plot_ops_2d
 
@@ -10,6 +11,7 @@ def generate_toroid_example():
     """Toroid to ops."""
     carrier = [(0.0, 0.0), (80.0, 0.0)]
     result = generate_toroid(
+        Part.from_polygons([]),
         carrier=carrier,
         tool_radius=3.0,
         step_over=2.0,

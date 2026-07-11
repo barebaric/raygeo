@@ -22,6 +22,7 @@ step 6a and the trace property on ``AssemblyResult`` in step 6b.
 import math
 from typing import Any
 
+from raygeo import Part
 from raygeo.ops.assembly.profile import profile_inner, profile_outer
 from raygeo.ops.cut.cleared_area import ClearedArea
 
@@ -37,7 +38,7 @@ def _rect(cx, cy, w, h):
 
 def _kwargs(boundary, islands=None, **overrides: Any) -> dict:
     kw = dict(
-        boundary=boundary,
+        part=Part.from_polygons(boundary, islands or []),
         tool_radius=3.0,
         step_over=1.5,
         target_z=-5.0,
@@ -48,22 +49,20 @@ def _kwargs(boundary, islands=None, **overrides: Any) -> dict:
         cut_feed_rate=1200,
         cut_power=0.5,
     )
-    if islands is not None:
-        kw["islands"] = islands
     kw.update(overrides)
     return kw
 
 
 def _run_outer(boundary, **overrides: Any):
     ca = ClearedArea(boundary=boundary, initial=[_rect(0, 0, 8, 8)])
-    return profile_outer(ca, **_kwargs(boundary, **overrides))
+    return profile_outer(**_kwargs(boundary, **overrides), cleared=ca)
 
 
 def _run_inner(boundary, islands=None, **overrides: Any):
     ca = ClearedArea(
         boundary=boundary, islands=islands or [], initial=[_rect(0, 0, 8, 8)]
     )
-    return profile_inner(ca, **_kwargs(boundary, islands, **overrides))
+    return profile_inner(**_kwargs(boundary, islands, **overrides), cleared=ca)
 
 
 # ── Trace is always populated ─────────────────────────────────────
@@ -218,7 +217,7 @@ def test_profile_outer_trace_feed_reduction_on_engagement(tmp_path):
         engagement_area_threshold=1.0,
         engagement_angle_threshold=0.5,
     )
-    result = profile_outer(ca, **kw)
+    result = profile_outer(**kw, cleared=ca)
     trace = result.trace
     assert trace is not None
     moves = [e for e in trace["events"] if e["kind"] == "move"]

@@ -1,11 +1,13 @@
 """Tests for spiral assembly module."""
 
+from raygeo import Part
 from raygeo.ops.assembly.spiral import generate_spiral
 from raygeo.ops.state import State
 
 
 def test_generate_spiral_basic():
     result = generate_spiral(
+        Part.from_polygons([]),
         center=(0.0, 0.0),
         z=-5.0,
         start_radius=3.0,
@@ -20,6 +22,7 @@ def test_generate_spiral_basic():
 
 def test_generate_spiral_returns_assembly_result():
     result = generate_spiral(
+        Part.from_polygons([]),
         center=(10.0, 20.0),
         z=-5.0,
         start_radius=3.0,
@@ -34,6 +37,7 @@ def test_generate_spiral_returns_assembly_result():
 
 def test_generate_spiral_start_end_poses():
     result = generate_spiral(
+        Part.from_polygons([]),
         center=(0.0, 0.0),
         z=-5.0,
         start_radius=4.0,
@@ -47,6 +51,7 @@ def test_generate_spiral_start_end_poses():
 def test_generate_spiral_with_state():
     st = State(power=0.5, feed_rate=1200)
     result = generate_spiral(
+        Part.from_polygons([]),
         center=(0.0, 0.0),
         z=-5.0,
         start_radius=3.0,
@@ -60,6 +65,7 @@ def test_generate_spiral_with_state():
 
 def test_generate_spiral_ccw():
     result = generate_spiral(
+        Part.from_polygons([]),
         center=(0.0, 0.0),
         z=-5.0,
         start_radius=3.0,

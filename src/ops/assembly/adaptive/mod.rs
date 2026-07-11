@@ -45,6 +45,7 @@ use crate::ops::cut::StepStatus;
 use crate::ops::cut::StepperOptions;
 use crate::ops::cut::ToolPose;
 use crate::ops::state::State;
+use crate::part::Part;
 use crate::types::{Point3D, Polygon};
 use prof_macros::prof;
 
@@ -216,6 +217,7 @@ fn handle_stall(
     growth: f64,
     expected: f64,
     iter: usize,
+    part: &Part,
     opts: &AdaptiveClearingOptions,
     step_opts: &StepperOptions,
     advance: f64,
@@ -285,6 +287,7 @@ fn handle_stall(
                 cleared: &*s.cleared,
                 opts,
                 step_opts,
+                part,
                 advance,
                 step_length,
                 mat,
@@ -314,6 +317,7 @@ fn handle_stall(
             mat,
             s.tool.pos,
             rp.pos,
+            part,
             opts,
             Some(s.route_details),
         ) {
@@ -449,17 +453,18 @@ fn handle_stall(
 #[prof]
 #[allow(unused_assignments, unused_variables)]
 pub fn adaptive_clearing(
+    part: &Part,
     trace: &mut Tracelet,
     cleared: &mut ClearedArea,
     opts: &AdaptiveClearingOptions,
     cut_state: &State,
 ) -> RaygeoResult<AssemblyMeta> {
+    let (pocket_boundary, islands) = part.extract_boundary();
+    let pocket_boundary = pocket_boundary.unwrap_or_default();
+
     // ── 1. Pre-process ────────────────────────────────────────────
-    let (valid_tool_area, valid_total) = compute_inset_region(
-        &opts.pocket_boundary,
-        opts.tool_radius,
-        &opts.islands,
-    );
+    let (valid_tool_area, valid_total) =
+        compute_inset_region(&pocket_boundary, opts.tool_radius, &islands);
     if valid_tool_area.is_empty() || valid_total <= opts.area_tolerance {
         return Ok(AssemblyMeta {
             cleared_polygons: cleared.fragments().to_vec(),
@@ -500,8 +505,8 @@ pub fn adaptive_clearing(
     // (e.g. around an island).  Computed once; failures fall back to the
     // legacy centroid jump.
     let mat = MedialAxis::compute(
-        &opts.pocket_boundary,
-        &opts.islands,
+        &pocket_boundary,
+        &islands,
         opts.tool_radius,
         opts.tool_radius.max(2.0),
     )
@@ -544,7 +549,13 @@ pub fn adaptive_clearing(
 
     // ── 3. Tracelet — span attrs + init event ─────────────────────
 
-    trace.set_attrs(th::build_attrs(opts, cleared.fragments(), mat.as_ref()));
+    trace.set_attrs(th::build_attrs(
+        opts,
+        &pocket_boundary,
+        &islands,
+        cleared.fragments(),
+        mat.as_ref(),
+    ));
     trace.init(
         th::make_tool_snapshot(&tool, tool.pos),
         Some(th::init_meta(cleared)),
@@ -778,6 +789,7 @@ pub fn adaptive_clearing(
                 growth,
                 expected,
                 iter,
+                part,
                 opts,
                 &step_opts,
                 advance,

@@ -2,6 +2,7 @@
 
 import math
 
+from raygeo import Part
 from raygeo.ops.assembly.adaptive import adaptive_clearing
 from raygeo.ops.cut.cleared_area import ClearedArea
 
@@ -39,8 +40,8 @@ def test_adaptive_clearing_streams_ops():
             total[0] = event["ops_total"]
 
     result = adaptive_clearing(
+        Part.from_polygons(boundary),
         cleared=ca,
-        pocket_boundary=boundary,
         tool_radius=3.0,
         step_over=2.0,
         step_length=0.6,
@@ -60,15 +61,15 @@ def test_streaming_does_not_change_result():
 
     ca1 = ClearedArea(boundary=boundary, initial=seed)
     r1 = adaptive_clearing(
+        Part.from_polygons(boundary),
         cleared=ca1,
-        pocket_boundary=boundary,
         tool_radius=3.0,
     )
 
     ca2 = ClearedArea(boundary=boundary, initial=seed)
     r2 = adaptive_clearing(
+        Part.from_polygons(boundary),
         cleared=ca2,
-        pocket_boundary=boundary,
         tool_radius=3.0,
         on_progress=lambda e: None,
         batch_size=50,

@@ -2,6 +2,7 @@
 
 import math
 
+from raygeo import Part
 from raygeo.ops.assembly.helix import generate_helix
 from raygeo.ops.state import State
 
@@ -9,6 +10,7 @@ from raygeo.ops.state import State
 def test_generate_helix_basic():
     """Basic helix produces ops with at least some commands."""
     result = generate_helix(
+        Part.from_polygons([]),
         center=(0.0, 0.0),
         start_radius=5.0,
         z_start=2.0,
@@ -23,6 +25,7 @@ def test_generate_helix_basic():
 
 def test_generate_helix_returns_assembly_result():
     result = generate_helix(
+        Part.from_polygons([]),
         center=(10.0, 20.0),
         start_radius=3.0,
         z_start=1.0,
@@ -37,6 +40,7 @@ def test_generate_helix_returns_assembly_result():
 
 def test_generate_helix_start_end_poses():
     result = generate_helix(
+        Part.from_polygons([]),
         center=(0.0, 0.0),
         start_radius=4.0,
         z_start=2.0,
@@ -55,6 +59,7 @@ def test_generate_helix_start_end_poses():
 
 def test_generate_helix_ccw():
     result = generate_helix(
+        Part.from_polygons([]),
         center=(0.0, 0.0),
         start_radius=5.0,
         z_start=2.0,
@@ -68,6 +73,7 @@ def test_generate_helix_ccw():
 def test_generate_helix_with_state():
     st = State(power=0.5, feed_rate=1200)
     result = generate_helix(
+        Part.from_polygons([]),
         center=(0.0, 0.0),
         start_radius=5.0,
         z_start=2.0,
@@ -82,6 +88,7 @@ def test_generate_helix_with_state():
 def test_generate_helix_zero_descent():
     """No descent (z_start <= z_end) returns empty ops?"""
     result = generate_helix(
+        Part.from_polygons([]),
         center=(0.0, 0.0),
         start_radius=5.0,
         z_start=2.0,

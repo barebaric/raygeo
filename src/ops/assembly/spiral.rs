@@ -13,6 +13,7 @@ use crate::ops::assembly::write_polyline;
 use crate::ops::assembly::Tracelet;
 use crate::ops::cut::ToolPose;
 use crate::ops::state::State;
+use crate::part::Part;
 use crate::types::{Point, Point3D};
 
 /// Options for generating a flat spiral entry path.
@@ -35,6 +36,7 @@ pub struct SpiralOptions {
 /// into an [`AssemblyResult`].
 #[prof]
 pub fn generate_spiral(
+    _part: &Part,
     trace: &mut Tracelet,
     opts: &SpiralOptions,
     cut_state: &State,

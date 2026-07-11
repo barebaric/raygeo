@@ -1,5 +1,6 @@
 """Tests for raygeo.ops.assembly.profile module (outer profiling)."""
 
+from raygeo import Part
 from raygeo.geo.shape.polygon import (
     JoinStyle,
     get_polygons_closest_point,
@@ -24,8 +25,8 @@ def test_profile_outer_smoke_and_returns_ops():
     boundary = _rect(0, 0, 60, 60)
     ca = ClearedArea(boundary=boundary, initial=[])
     result = profile_outer(
+        Part.from_polygons(boundary),
         cleared=ca,
-        boundary=boundary,
         tool_radius=3.0,
         step_over=1.5,
         target_z=-5.0,
@@ -45,9 +46,10 @@ def test_profile_outer_walks_and_returns_to_start():
     """profile_outer walks the offset boundary and returns to start."""
     boundary = _rect(0, 0, 60, 60)
     ca = ClearedArea(boundary=boundary, initial=[])
+    part = Part.from_polygons(boundary)
     result = profile_outer(
+        part,
         cleared=ca,
-        boundary=boundary,
         tool_radius=3.0,
         step_over=1.5,
         target_z=-5.0,
@@ -90,9 +92,10 @@ def test_profile_outer_stays_close_to_offset():
     """profile_outer path stays within tolerance of the offset polygon."""
     boundary = _rect(0, 0, 60, 60)
     ca = ClearedArea(boundary=boundary, initial=[])
+    part = Part.from_polygons(boundary)
     result = profile_outer(
+        part,
         cleared=ca,
-        boundary=boundary,
         tool_radius=3.0,
         step_over=1.5,
         target_z=-5.0,

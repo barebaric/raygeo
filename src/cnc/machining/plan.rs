@@ -31,6 +31,7 @@ use crate::ops::assembly::wavefront::{self, AdaptiveWavefrontOptions};
 use crate::ops::assembly::Tracelet;
 use crate::ops::cut::{ClearedArea, ToolPose};
 use crate::ops::state::State;
+use crate::part::Part;
 use crate::trace::Tracer;
 use crate::trace_types::{
     EventKind, Meta, MetaValue, ProgressSnapshot, ToolSnapshot,
@@ -82,8 +83,7 @@ pub enum WorkplanStep {
         target_z: f64,
     },
     AdaptiveClear {
-        pocket_boundary: Polygon,
-        islands: Vec<Polygon>,
+        part: Part,
         tool_radius: f64,
         step_over: f64,
         step_length: f64,
@@ -97,8 +97,7 @@ pub enum WorkplanStep {
         start_heading: Option<f64>,
     },
     ProfileInner {
-        boundary: Polygon,
-        islands: Vec<Polygon>,
+        part: Part,
         tool_radius: f64,
         step_over: f64,
         step_length: f64,
@@ -109,8 +108,7 @@ pub enum WorkplanStep {
     },
     /// Inside-out wavefront expansion from the current cleared area.
     Wavefront {
-        pocket_boundary: Polygon,
-        islands: Vec<Polygon>,
+        part: Part,
         tool_radius: f64,
         step_over: f64,
         z: f64,
@@ -138,6 +136,7 @@ impl WorkplanStep {
         cut_state: &State,
         travel_state: &State,
     ) -> RaygeoResult<AssemblyMeta> {
+        let _dummy_part = Part::new(None, (0.0, 0.0));
         match self {
             WorkplanStep::HelixPlunge {
                 center,
@@ -157,7 +156,12 @@ impl WorkplanStep {
                     direction: *direction,
                     angular_step: *angular_step,
                 };
-                let meta = helix::generate_helix(trace, &opts, cut_state)?;
+                let meta = helix::generate_helix(
+                    &_dummy_part,
+                    trace,
+                    &opts,
+                    cut_state,
+                )?;
                 cleared.cut(&meta.cleared_polygons);
                 Ok(meta)
             }
@@ -181,7 +185,12 @@ impl WorkplanStep {
                     angular_step: *angular_step,
                     start_angle: *start_angle,
                 };
-                let meta = spiral::generate_spiral(trace, &opts, cut_state)?;
+                let meta = spiral::generate_spiral(
+                    &_dummy_part,
+                    trace,
+                    &opts,
+                    cut_state,
+                )?;
                 cleared.cut(&meta.cleared_polygons);
                 Ok(meta)
             }
@@ -202,7 +211,8 @@ impl WorkplanStep {
                     style: RampStyle::ZigZag,
                     lateral_amplitude: *lateral_amplitude,
                 };
-                let meta = ramp::generate_ramp(trace, &opts, cut_state)?;
+                let meta =
+                    ramp::generate_ramp(&_dummy_part, trace, &opts, cut_state)?;
                 cleared.cut(&meta.cleared_polygons);
                 Ok(meta)
             }
@@ -236,8 +246,12 @@ impl WorkplanStep {
                     direction: *direction,
                     angular_step: *angular_step,
                 };
-                let meta =
-                    toroid::generate_toroidal_clear(trace, &opts, cut_state)?;
+                let meta = toroid::generate_toroidal_clear(
+                    &_dummy_part,
+                    trace,
+                    &opts,
+                    cut_state,
+                )?;
                 cleared.cut(&meta.cleared_polygons);
                 Ok(meta)
             }
@@ -261,13 +275,13 @@ impl WorkplanStep {
                     tool_radius: *tool_radius,
                     target_z: *target_z,
                 };
-                let meta = slot::generate_slot(trace, &opts, cut_state)?;
+                let meta =
+                    slot::generate_slot(&_dummy_part, trace, &opts, cut_state)?;
                 cleared.cut(&meta.cleared_polygons);
                 Ok(meta)
             }
             WorkplanStep::AdaptiveClear {
-                pocket_boundary,
-                islands,
+                part,
                 tool_radius,
                 step_over,
                 step_length,
@@ -280,9 +294,9 @@ impl WorkplanStep {
                 start_heading,
                 ..
             } => {
+                let (boundary, islands) = part.extract_boundary();
+                let boundary = boundary.unwrap_or_default();
                 let opts = AdaptiveClearingOptions {
-                    pocket_boundary: pocket_boundary.clone(),
-                    islands: islands.clone(),
                     tool_radius: *tool_radius,
                     step_over: *step_over,
                     step_length: *step_length,
@@ -295,18 +309,17 @@ impl WorkplanStep {
                     start_heading: *start_heading,
                     ..Default::default()
                 };
-                let saved_b = cleared.swap_boundary(pocket_boundary);
-                let saved_i = cleared.swap_islands(islands);
+                let saved_b = cleared.swap_boundary(&boundary);
+                let saved_i = cleared.swap_islands(&islands);
                 let result = adaptive::adaptive_clearing(
-                    trace, cleared, &opts, cut_state,
+                    part, trace, cleared, &opts, cut_state,
                 );
                 cleared.swap_islands(&saved_i);
                 cleared.swap_boundary(&saved_b);
                 result
             }
             WorkplanStep::ProfileInner {
-                boundary,
-                islands,
+                part,
                 tool_radius,
                 step_over,
                 step_length,
@@ -316,8 +329,6 @@ impl WorkplanStep {
                 stock_to_leave,
             } => {
                 let opts = ProfileInnerOptions {
-                    boundary: boundary.clone(),
-                    islands: islands.clone(),
                     tool_radius: *tool_radius,
                     step_over: *step_over,
                     step_length: *step_length,
@@ -327,11 +338,10 @@ impl WorkplanStep {
                     stock_to_leave: *stock_to_leave,
                     ..Default::default()
                 };
-                profile::profile_inner(trace, cleared, &opts, cut_state)
+                profile::profile_inner(part, trace, cleared, &opts, cut_state)
             }
             WorkplanStep::Wavefront {
-                pocket_boundary,
-                islands,
+                part: _part,
                 tool_radius,
                 step_over,
                 z,
@@ -339,15 +349,19 @@ impl WorkplanStep {
                 precision,
             } => {
                 let opts = AdaptiveWavefrontOptions {
-                    pocket_boundary: pocket_boundary.clone(),
-                    islands: islands.clone(),
                     tool_radius: *tool_radius,
                     step_over: *step_over,
                     z: *z,
                     area_tolerance: *area_tolerance,
                     precision: *precision,
                 };
-                wavefront::adaptive_wavefronts(trace, cleared, &opts, cut_state)
+                wavefront::adaptive_wavefronts(
+                    &_dummy_part,
+                    trace,
+                    cleared,
+                    &opts,
+                    cut_state,
+                )
             }
             WorkplanStep::Retract { safe_z } => {
                 let pos = Point3D::new(0.0, 0.0, *safe_z);
@@ -418,6 +432,20 @@ impl Workplan {
             islands,
             safe_z,
         }
+    }
+
+    /// Create a new empty workplan from a [`Part`](crate::part::Part).
+    ///
+    /// Extracts the boundary polygon and islands from `part.geometry`.
+    /// Returns `None` if the part has no extractable boundary geometry.
+    pub fn from_part(part: &crate::part::Part, safe_z: f64) -> Option<Self> {
+        let (boundary, islands) = part.extract_boundary();
+        Some(Workplan {
+            steps: Vec::new(),
+            pocket_boundary: boundary?,
+            islands,
+            safe_z,
+        })
     }
 
     /// Append builder output steps.

@@ -13,34 +13,33 @@ use super::trace_helpers as th;
 use crate::ops::cut::ClearedArea;
 use crate::ops::cut::ToolPose;
 use crate::ops::state::State;
+use crate::part::Part;
 use crate::types::{Point3D, Polygon};
 use glam::Vec3Swizzles;
 
-#[allow(unused_variables, dead_code)]
+/// Profile the inner boundary of a pocket, extracting geometry from
+/// `part`.
 pub fn profile_inner(
+    part: &Part,
     trace: &mut Tracelet,
     cleared: &mut ClearedArea,
     opts: &ProfileInnerOptions,
     cut_state: &State,
 ) -> RaygeoResult<AssemblyMeta> {
-    if opts.boundary.is_empty() {
-        return Err(RaygeoError::DegenerateGeometry(
-            "boundary polygon is empty".into(),
-        ));
-    }
+    let (boundary_opt, islands) = part.extract_boundary();
+    let boundary = boundary_opt.ok_or_else(|| {
+        RaygeoError::DegenerateGeometry(
+            "Part has no extractable boundary geometry".into(),
+        )
+    })?;
 
     let offset_dist = opts.tool_radius + opts.wall_margin + opts.stock_to_leave;
 
-    // Round joins at convex corners of the inset boundary produce arcs that
-    // the tool tip follows; concave corners stay sharp (clipper2 only adds
-    // vertices where a convex offset would need to bridge a gap).
-    let grown_islands: Vec<Polygon> = opts
-        .islands
+    let grown_islands: Vec<Polygon> = islands
         .iter()
         .flat_map(|isl| offset_polygon(isl, offset_dist, JoinStyle::Round))
         .collect();
-    let inset_polys =
-        offset_polygon(&opts.boundary, -offset_dist, JoinStyle::Round);
+    let inset_polys = offset_polygon(&boundary, -offset_dist, JoinStyle::Round);
     let valid_region: Vec<Polygon> = if grown_islands.is_empty() {
         inset_polys
     } else {
@@ -95,7 +94,7 @@ pub fn profile_inner(
         polys
     };
 
-    let heading = get_polygon_heading_at(outer_poly, outer_poly[0])
+    let _heading = get_polygon_heading_at(outer_poly, outer_poly[0])
         + std::f64::consts::FRAC_PI_2;
 
     let common = ProfileCommon {

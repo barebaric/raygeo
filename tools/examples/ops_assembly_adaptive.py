@@ -5,6 +5,7 @@ import math
 import matplotlib.pyplot as plt
 import numpy as np
 
+from raygeo import Part
 from raygeo.geo.shape.polygon import (
     get_circle_polygon,
     get_polygon_area,
@@ -44,8 +45,8 @@ def generate_adaptive_clearing_demo():
     boundary = _rect(0, 0, 200, 200)
     ca = ClearedArea(boundary=boundary, initial=[_seed_circle(0, 0, 20)])
     result = adaptive_clearing(
+        Part.from_polygons(boundary),
         cleared=ca,
-        pocket_boundary=boundary,
         tool_radius=5.0,
         step_over=3.0,
         target_z=-5.0,
@@ -261,9 +262,8 @@ def generate_adaptive_clearing_centre_island():
 
     ca = ClearedArea(boundary=boundary, islands=islands, initial=cleared_polys)
     result = adaptive_clearing(
+        Part.from_polygons(boundary, islands),
         cleared=ca,
-        pocket_boundary=boundary,
-        islands=islands,
         tool_radius=3.0,
         step_over=1.5,
         target_z=target_z,
@@ -340,8 +340,8 @@ def _narrow_shared():
 
     ca = ClearedArea(boundary=boundary, initial=cleared_polys)
     result = adaptive_clearing(
+        Part.from_polygons(boundary),
         cleared=ca,
-        pocket_boundary=boundary,
         tool_radius=tool_radius,
         step_over=1.5,
         target_z=target_z,

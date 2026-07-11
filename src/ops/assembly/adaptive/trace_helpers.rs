@@ -62,15 +62,17 @@ pub(super) fn make_tool_snapshot(
 
 pub(super) fn build_attrs(
     opts: &AdaptiveClearingOptions,
+    boundary: &Polygon,
+    islands: &[Polygon],
     seeds: &[Polygon],
     mat: Option<&MedialAxis>,
 ) -> Meta {
     let mut attrs: Meta = BTreeMap::new();
     meta_insert_f64(&mut attrs, "tool_radius", opts.tool_radius);
-    attrs.insert("boundary".into(), polygon_to_meta(&opts.pocket_boundary));
+    attrs.insert("boundary".into(), polygon_to_meta(boundary));
     attrs.insert(
         "islands".into(),
-        MetaValue::List(opts.islands.iter().map(polygon_to_meta).collect()),
+        MetaValue::List(islands.iter().map(polygon_to_meta).collect()),
     );
     attrs.insert(
         "seeds".into(),

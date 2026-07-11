@@ -30,6 +30,7 @@ use crate::ops::feature::region::{self, Region};
 use crate::ops::feature::slot_path::{
     find_slot_path, measure_passage_min_width,
 };
+use crate::part::Part;
 use crate::types::{Point, Point3D, Polygon};
 
 /// Options for [`build_clearing_workplan`].
@@ -155,9 +156,9 @@ pub fn build_clearing_workplan(
             _ => None,
         };
 
+        let part = Part::from_polygons(&boundary, &opts.islands, (0.0, 0.0));
         steps.push(WorkplanStep::AdaptiveClear {
-            pocket_boundary: boundary,
-            islands: opts.islands.clone(),
+            part,
             tool_radius: opts.tool_radius,
             step_over: opts.step_over,
             step_length: opts.step_length,
@@ -253,9 +254,13 @@ pub fn build_clearing_workplan(
 
         if has_unreachable {
             for region in &regions {
+                let part = Part::from_polygons(
+                    &region.polygon,
+                    &opts.islands,
+                    (0.0, 0.0),
+                );
                 steps.push(WorkplanStep::ProfileInner {
-                    boundary: region.polygon.clone(),
-                    islands: opts.islands.clone(),
+                    part,
                     tool_radius: opts.tool_radius,
                     step_over: opts.step_over,
                     step_length: opts.step_length,
@@ -266,9 +271,13 @@ pub fn build_clearing_workplan(
                 });
             }
         } else {
+            let part = Part::from_polygons(
+                &opts.pocket_boundary,
+                &opts.islands,
+                (0.0, 0.0),
+            );
             steps.push(WorkplanStep::ProfileInner {
-                boundary: opts.pocket_boundary.clone(),
-                islands: opts.islands.clone(),
+                part,
                 tool_radius: opts.tool_radius,
                 step_over: opts.step_over,
                 step_length: opts.step_length,

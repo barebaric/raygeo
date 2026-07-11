@@ -1,5 +1,6 @@
 """Generate visualisations of spiral entry motion assembly."""
 
+from raygeo import Part
 from raygeo.ops.assembly.spiral import generate_spiral
 from tools.plot import plot_ops
 
@@ -7,6 +8,7 @@ from tools.plot import plot_ops
 def generate_spiral_example():
     """Spiral to ops."""
     result = generate_spiral(
+        Part.from_polygons([]),
         center=(0.0, 0.0),
         z=-5.0,
         start_radius=3.0,

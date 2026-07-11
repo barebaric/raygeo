@@ -2,6 +2,7 @@
 
 import matplotlib.pyplot as plt
 
+from raygeo import Part
 from raygeo.ops.assembly.helix import generate_helix
 from tools.plot import plot_ops_3d
 
@@ -9,6 +10,7 @@ from tools.plot import plot_ops_3d
 def generate_helix_example():
     """Helix to ops."""
     result = generate_helix(
+        Part.from_polygons([]),
         center=(0.0, 0.0),
         start_radius=8.0,
         z_start=2.0,

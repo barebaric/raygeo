@@ -10,15 +10,14 @@ use crate::ops::assembly::result::AssemblyMeta;
 use crate::ops::assembly::Tracelet;
 use crate::ops::cut::ToolPose;
 use crate::ops::state::State;
-use crate::types::{Point, Point3D, Polygon};
+use crate::part::Part;
+use crate::types::{Point, Point3D};
 
 const MAX_WAVEFRONT_ITERATIONS: usize = 1000;
 
 /// Options for [`adaptive_wavefronts`].
 #[derive(Clone, Debug)]
 pub struct AdaptiveWavefrontOptions {
-    pub pocket_boundary: Polygon,
-    pub islands: Vec<Polygon>,
     pub tool_radius: f64,
     pub step_over: f64,
     pub z: f64,
@@ -36,6 +35,7 @@ pub struct AdaptiveWavefrontOptions {
 /// (rest), all at height `z`, with `cut_state` applied.
 #[prof]
 pub fn adaptive_wavefronts(
+    _part: &Part,
     trace: &mut Tracelet,
     cleared: &mut ClearedArea,
     opts: &AdaptiveWavefrontOptions,

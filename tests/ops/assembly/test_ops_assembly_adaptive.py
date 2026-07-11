@@ -2,6 +2,7 @@
 
 import math
 
+from raygeo import Part
 from raygeo.geo.shape.polygon import (
     JoinStyle,
     get_polygon_area,
@@ -75,8 +76,8 @@ def test_adaptive_clearing_returns_ops():
     seed = [_circle(0, 0, 5)]
     ca = ClearedArea(boundary=boundary, initial=seed)
     result_clear = adaptive_clearing(
+        Part.from_polygons(boundary),
         cleared=ca,
-        pocket_boundary=boundary,
         tool_radius=3.0,
         step_over=1.5,
         target_z=-5.0,
@@ -93,8 +94,8 @@ def test_adaptive_clearing_has_move_and_line():
     seed = [_circle(0, 0, 5)]
     ca = ClearedArea(boundary=boundary, initial=seed)
     result_clear = adaptive_clearing(
+        Part.from_polygons(boundary),
         cleared=ca,
-        pocket_boundary=boundary,
         tool_radius=3.0,
         step_over=1.5,
         target_z=-5.0,
@@ -113,8 +114,8 @@ def test_adaptive_clearing_endpoints_inside_pocket():
     seed = [_circle(25, 25, 5)]
     ca = ClearedArea(boundary=boundary, initial=seed)
     result_clear = adaptive_clearing(
+        Part.from_polygons(boundary),
         cleared=ca,
-        pocket_boundary=boundary,
         tool_radius=3.0,
         step_over=1.5,
         target_z=-5.0,
@@ -134,9 +135,8 @@ def test_adaptive_clearing_with_islands():
     seed = [_circle(10, 25, 3)]
     ca = ClearedArea(boundary=boundary, islands=islands, initial=seed)
     result_clear = adaptive_clearing(
+        Part.from_polygons(boundary, islands),
         cleared=ca,
-        pocket_boundary=boundary,
-        islands=islands,
         tool_radius=3.0,
         step_over=1.5,
         target_z=-5.0,
@@ -158,16 +158,16 @@ def test_adaptive_clearing_determinism():
     ca1 = ClearedArea(boundary=boundary, initial=seed)
     ca2 = ClearedArea(boundary=boundary, initial=seed)
     result1_clear = adaptive_clearing(
+        Part.from_polygons(boundary),
         cleared=ca1,
-        pocket_boundary=boundary,
         tool_radius=3.0,
         step_over=1.5,
         target_z=-5.0,
         safe_z=2.0,
     )
     result2_clear = adaptive_clearing(
+        Part.from_polygons(boundary),
         cleared=ca2,
-        pocket_boundary=boundary,
         tool_radius=3.0,
         step_over=1.5,
         target_z=-5.0,
@@ -182,8 +182,8 @@ def test_adaptive_clearing_feed_rate_applied():
     seed = [_circle(0, 0, 5)]
     ca = ClearedArea(boundary=boundary, initial=seed)
     result_clear = adaptive_clearing(
+        Part.from_polygons(boundary),
         cleared=ca,
-        pocket_boundary=boundary,
         tool_radius=3.0,
         step_over=1.5,
         target_z=-5.0,
@@ -205,8 +205,8 @@ def test_adaptive_clearing_cut_power_applied():
     seed = [_circle(0, 0, 5)]
     ca = ClearedArea(boundary=boundary, initial=seed)
     result_clear = adaptive_clearing(
+        Part.from_polygons(boundary),
         cleared=ca,
-        pocket_boundary=boundary,
         tool_radius=3.0,
         step_over=1.5,
         target_z=-5.0,
@@ -229,8 +229,8 @@ def test_adaptive_clearing_degenerate_pocket():
     seed = [_circle(0.5, 0.5, 0.1)]
     ca = ClearedArea(boundary=boundary, initial=seed)
     result_clear = adaptive_clearing(
+        Part.from_polygons(boundary),
         cleared=ca,
-        pocket_boundary=boundary,
         tool_radius=5.0,
         step_over=1.5,
         target_z=-5.0,
@@ -250,8 +250,8 @@ def test_adaptive_clearing_fully_clears_rect():
     seed = [_circle(0, 0, 5)]
     ca = ClearedArea(boundary=boundary, initial=seed)
     adaptive_clearing(
+        Part.from_polygons(boundary),
         cleared=ca,
-        pocket_boundary=boundary,
         tool_radius=3.0,
         step_over=1.5,
         target_z=-5.0,
@@ -278,9 +278,8 @@ def test_adaptive_clearing_fully_clears_with_island():
     seed = [_circle(-10, 0, 5)]
     ca = ClearedArea(boundary=boundary, islands=islands, initial=seed)
     adaptive_clearing(
+        Part.from_polygons(boundary, islands),
         cleared=ca,
-        pocket_boundary=boundary,
-        islands=islands,
         tool_radius=3.0,
         step_over=1.5,
         target_z=-5.0,
@@ -391,9 +390,8 @@ def test_adaptive_clearing_uses_step_over():
     seed = [_rect(35, 35, 10, 10)]
     ca = ClearedArea(boundary=boundary, initial=seed)
     result = adaptive_clearing(
+        Part.from_polygons(boundary),
         cleared=ca,
-        pocket_boundary=boundary,
-        islands=[],
         tool_radius=3.0,
         step_over=2.0,
         target_z=-5.0,
@@ -408,9 +406,8 @@ def test_adaptive_clearing_renamed_fields():
     seed = [_rect(35, 35, 10, 10)]
     ca = ClearedArea(boundary=boundary, initial=seed)
     result = adaptive_clearing(
+        Part.from_polygons(boundary),
         cleared=ca,
-        pocket_boundary=boundary,
-        islands=[],
         tool_radius=3.0,
         step_over=1.5,
         target_z=-5.0,

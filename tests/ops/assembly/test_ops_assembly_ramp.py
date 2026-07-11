@@ -1,11 +1,13 @@
 """Tests for ramp assembly module."""
 
+from raygeo import Part
 from raygeo.ops.assembly.ramp import generate_ramp
 from raygeo.ops.state import State
 
 
 def test_generate_ramp_basic():
     result = generate_ramp(
+        Part.from_polygons([]),
         start=(0.0, 0.0),
         end=(100.0, 0.0),
         z_start=2.0,
@@ -17,6 +19,7 @@ def test_generate_ramp_basic():
 
 def test_generate_ramp_returns_assembly_result():
     result = generate_ramp(
+        Part.from_polygons([]),
         start=(0.0, 0.0),
         end=(50.0, 0.0),
         z_start=2.0,
@@ -30,6 +33,7 @@ def test_generate_ramp_returns_assembly_result():
 
 def test_generate_ramp_start_end_poses():
     result = generate_ramp(
+        Part.from_polygons([]),
         start=(10.0, 10.0),
         end=(90.0, 10.0),
         z_start=2.0,
@@ -42,6 +46,7 @@ def test_generate_ramp_start_end_poses():
 def test_generate_ramp_with_state():
     st = State(power=0.5, feed_rate=1200)
     result = generate_ramp(
+        Part.from_polygons([]),
         start=(0.0, 0.0),
         end=(100.0, 0.0),
         z_start=2.0,
@@ -54,6 +59,7 @@ def test_generate_ramp_with_state():
 
 def test_generate_ramp_linear():
     result = generate_ramp(
+        Part.from_polygons([]),
         start=(0.0, 0.0),
         end=(100.0, 0.0),
         z_start=2.0,

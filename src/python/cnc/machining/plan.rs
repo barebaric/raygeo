@@ -8,6 +8,7 @@ use crate::cnc::machining::plan::{self, WorkplanStep};
 use crate::geo::algo::helix::HelixDirection;
 use crate::ops::assembly::Tracelet;
 use crate::ops::state::State;
+use crate::part::Part;
 use crate::python::ops::assembly::progress_event_to_py;
 use crate::python::ops::assembly::result::PyAssemblyResult;
 use crate::types::{Point, Point3D, Polygon};
@@ -221,8 +222,7 @@ pub(crate) fn step_to_dict<'a>(
             d.set_item("target_z", *target_z)?;
         }
         WorkplanStep::AdaptiveClear {
-            pocket_boundary,
-            islands,
+            part,
             tool_radius,
             step_over,
             step_length,
@@ -235,9 +235,11 @@ pub(crate) fn step_to_dict<'a>(
             start_pos,
             start_heading,
         } => {
+            let (boundary, islands) = part.extract_boundary();
+            let boundary = boundary.unwrap_or_default();
             d.set_item("kind", "AdaptiveClear")?;
-            d.set_item("pocket_boundary", polygon_to_py(pocket_boundary))?;
-            d.set_item("islands", islands_to_py(islands))?;
+            d.set_item("pocket_boundary", polygon_to_py(&boundary))?;
+            d.set_item("islands", islands_to_py(&islands))?;
             d.set_item("tool_radius", *tool_radius)?;
             d.set_item("step_over", *step_over)?;
             d.set_item("step_length", *step_length)?;
@@ -251,8 +253,7 @@ pub(crate) fn step_to_dict<'a>(
             d.set_item("start_heading", *start_heading)?;
         }
         WorkplanStep::ProfileInner {
-            boundary,
-            islands,
+            part,
             tool_radius,
             step_over,
             step_length,
@@ -261,9 +262,11 @@ pub(crate) fn step_to_dict<'a>(
             wall_margin,
             stock_to_leave,
         } => {
+            let (boundary, islands) = part.extract_boundary();
+            let boundary = boundary.unwrap_or_default();
             d.set_item("kind", "ProfileInner")?;
-            d.set_item("boundary", polygon_to_py(boundary))?;
-            d.set_item("islands", islands_to_py(islands))?;
+            d.set_item("boundary", polygon_to_py(&boundary))?;
+            d.set_item("islands", islands_to_py(&islands))?;
             d.set_item("tool_radius", *tool_radius)?;
             d.set_item("step_over", *step_over)?;
             d.set_item("step_length", *step_length)?;
@@ -273,17 +276,18 @@ pub(crate) fn step_to_dict<'a>(
             d.set_item("stock_to_leave", *stock_to_leave)?;
         }
         WorkplanStep::Wavefront {
-            pocket_boundary,
-            islands,
+            part,
             tool_radius,
             step_over,
             z,
             area_tolerance,
             precision,
         } => {
+            let (boundary, islands) = part.extract_boundary();
+            let boundary = boundary.unwrap_or_default();
             d.set_item("kind", "Wavefront")?;
-            d.set_item("pocket_boundary", polygon_to_py(pocket_boundary))?;
-            d.set_item("islands", islands_to_py(islands))?;
+            d.set_item("pocket_boundary", polygon_to_py(&boundary))?;
+            d.set_item("islands", islands_to_py(&islands))?;
             d.set_item("tool_radius", *tool_radius)?;
             d.set_item("step_over", *step_over)?;
             d.set_item("z", *z)?;
@@ -362,9 +366,10 @@ pub(crate) fn dict_to_step(d: &Bound<'_, PyDict>) -> PyResult<WorkplanStep> {
                 Some(v) if !v.is_none() => Some(v.extract::<f64>()?),
                 _ => None,
             };
+            let boundary = get_polygon(d, "pocket_boundary")?;
+            let islands = get_islands(d, "islands")?;
             Ok(WorkplanStep::AdaptiveClear {
-                pocket_boundary: get_polygon(d, "pocket_boundary")?,
-                islands: get_islands(d, "islands")?,
+                part: Part::from_polygons(&boundary, &islands, (0.0, 0.0)),
                 tool_radius: get_f64(d, "tool_radius")?,
                 step_over: get_f64(d, "step_over")?,
                 step_length: get_f64(d, "step_length")?,
@@ -378,26 +383,32 @@ pub(crate) fn dict_to_step(d: &Bound<'_, PyDict>) -> PyResult<WorkplanStep> {
                 start_heading,
             })
         }
-        "ProfileInner" => Ok(WorkplanStep::ProfileInner {
-            boundary: get_polygon(d, "boundary")?,
-            islands: get_islands(d, "islands")?,
-            tool_radius: get_f64(d, "tool_radius")?,
-            step_over: get_f64(d, "step_over")?,
-            step_length: get_f64(d, "step_length")?,
-            target_z: get_f64(d, "target_z")?,
-            safe_z: get_f64(d, "safe_z")?,
-            wall_margin: get_f64(d, "wall_margin")?,
-            stock_to_leave: get_f64(d, "stock_to_leave")?,
-        }),
-        "Wavefront" => Ok(WorkplanStep::Wavefront {
-            pocket_boundary: get_polygon(d, "pocket_boundary")?,
-            islands: get_islands(d, "islands")?,
-            tool_radius: get_f64(d, "tool_radius")?,
-            step_over: get_f64(d, "step_over")?,
-            z: get_f64(d, "z")?,
-            area_tolerance: get_f64(d, "area_tolerance")?,
-            precision: get_f64(d, "precision")?,
-        }),
+        "ProfileInner" => {
+            let boundary = get_polygon(d, "boundary")?;
+            let islands = get_islands(d, "islands")?;
+            Ok(WorkplanStep::ProfileInner {
+                part: Part::from_polygons(&boundary, &islands, (0.0, 0.0)),
+                tool_radius: get_f64(d, "tool_radius")?,
+                step_over: get_f64(d, "step_over")?,
+                step_length: get_f64(d, "step_length")?,
+                target_z: get_f64(d, "target_z")?,
+                safe_z: get_f64(d, "safe_z")?,
+                wall_margin: get_f64(d, "wall_margin")?,
+                stock_to_leave: get_f64(d, "stock_to_leave")?,
+            })
+        }
+        "Wavefront" => {
+            let boundary = get_polygon(d, "pocket_boundary")?;
+            let islands = get_islands(d, "islands")?;
+            Ok(WorkplanStep::Wavefront {
+                part: Part::from_polygons(&boundary, &islands, (0.0, 0.0)),
+                tool_radius: get_f64(d, "tool_radius")?,
+                step_over: get_f64(d, "step_over")?,
+                z: get_f64(d, "z")?,
+                area_tolerance: get_f64(d, "area_tolerance")?,
+                precision: get_f64(d, "precision")?,
+            })
+        }
         "Retract" => Ok(WorkplanStep::Retract {
             safe_z: get_f64(d, "safe_z")?,
         }),
@@ -459,6 +470,24 @@ impl PyWorkplan {
             .collect();
         PyWorkplan {
             inner: plan::Workplan::new(boundary, islands_vec, safe_z),
+        }
+    }
+
+    /// Create a Workplan from a :class:`raygeo.Part`, extracting boundary
+    /// and islands from ``part.geometry``.
+    ///
+    /// Raises ``ValueError`` if the part has no extractable boundary geometry.
+    #[staticmethod]
+    #[pyo3(signature = (part, safe_z = 2.0))]
+    fn from_part(
+        part: &crate::python::part::PyPart,
+        safe_z: f64,
+    ) -> PyResult<Self> {
+        match plan::Workplan::from_part(&part.inner, safe_z) {
+            Some(wp) => Ok(PyWorkplan { inner: wp }),
+            None => Err(pyo3::exceptions::PyValueError::new_err(
+                "Part has no extractable boundary geometry",
+            )),
         }
     }
 

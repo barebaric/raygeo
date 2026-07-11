@@ -7,7 +7,7 @@ __all__ = [
     "profile_outer",
 ]
 
-def profile_inner(cleared: raygeo.ops.cut.cleared_area.ClearedArea, boundary: list[tuple[float, float]], islands: list[list[tuple[float, float]]] = [], tool_radius: float = 3, step_over: float = 1.5, step_length: float = 0.6, target_z: float = -5, safe_z: float = 2, wall_margin: float = 0, stock_to_leave: float = 0, cut_feed_rate: int = 1000, cut_power: float = 0, start_pos: tuple[float, float] | None = None, cut_direction: str = 'ccw', engagement_area_threshold: float = 0, engagement_angle_threshold: float = 3.141592653589793, trace_path: str | None = None) -> raygeo.ops.assembly.result.AssemblyResult:
+def profile_inner(part: raygeo.Part, cleared: raygeo.ops.cut.cleared_area.ClearedArea, tool_radius: float = 3, step_over: float = 1.5, step_length: float = 0.6, target_z: float = -5, safe_z: float = 2, wall_margin: float = 0, stock_to_leave: float = 0, cut_feed_rate: int = 1000, cut_power: float = 0, start_pos: tuple[float, float] | None = None, cut_direction: str = 'ccw', engagement_area_threshold: float = 0, engagement_angle_threshold: float = 3.141592653589793, trace_path: str | None = None) -> raygeo.ops.assembly.result.AssemblyResult:
     r"""
     Profile the inner boundary of a pocket, around islands.
     
@@ -17,9 +17,9 @@ def profile_inner(cleared: raygeo.ops.cut.cleared_area.ClearedArea, boundary: li
     Returns an :class:`AssemblyResult` with the profiling move
     sequence.
     
+    :param part: The part whose geometry defines the pocket boundary
+        and islands.
     :param cleared: Cleared area tracker.
-    :param boundary: Outer boundary polygon as ``(x, y)`` pairs.
-    :param islands: List of island (hole) polygons (default []).
     :param tool_radius: Tool radius in mm.
     :param step_over: Radial step-over between passes (mm).
     :param step_length: Forward step length in mm.
@@ -37,7 +37,7 @@ def profile_inner(cleared: raygeo.ops.cut.cleared_area.ClearedArea, boundary: li
     :returns: An :class:`AssemblyResult` with the profiling path.
     """
 
-def profile_outer(cleared: raygeo.ops.cut.cleared_area.ClearedArea, boundary: list[tuple[float, float]], tool_radius: float, step_over: float, step_length: float, target_z: float, safe_z: float, wall_margin: float, cut_feed_rate: int, cut_power: float, start_pos: tuple[float, float] | None = None, cut_direction: str = 'ccw', stock_to_leave: float = 0, engagement_area_threshold: float = 0, engagement_angle_threshold: float = 3.141592653589793, trace_path: str | None = None) -> raygeo.ops.assembly.result.AssemblyResult:
+def profile_outer(part: raygeo.Part, cleared: raygeo.ops.cut.cleared_area.ClearedArea, tool_radius: float, step_over: float, step_length: float, target_z: float, safe_z: float, wall_margin: float, cut_feed_rate: int, cut_power: float, start_pos: tuple[float, float] | None = None, cut_direction: str = 'ccw', stock_to_leave: float = 0, engagement_area_threshold: float = 0, engagement_angle_threshold: float = 3.141592653589793, trace_path: str | None = None) -> raygeo.ops.assembly.result.AssemblyResult:
     r"""
     Profile the outer boundary of a pocket.
     
@@ -47,8 +47,8 @@ def profile_outer(cleared: raygeo.ops.cut.cleared_area.ClearedArea, boundary: li
     side.  Returns an :class:`AssemblyResult` with the profiling
     move sequence.
     
+    :param part: The part whose geometry defines the pocket boundary.
     :param cleared: Cleared area tracker.
-    :param boundary: Outer boundary polygon as ``(x, y)`` pairs.
     :param tool_radius: Tool radius in mm.
     :param step_over: Radial step-over between passes (mm).
     :param step_length: Forward step length in mm.

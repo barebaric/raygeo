@@ -213,8 +213,10 @@ impl ClearedArea {
         *self.stock_cache.lock().unwrap() = None;
         *self.remaining_area_cache.lock().unwrap() = None;
         *self.actionable_cache.lock().unwrap() = None;
-        self.frag_version
-            .store(self.frag_version.load(Ordering::Relaxed) + 1, Ordering::Relaxed);
+        self.frag_version.store(
+            self.frag_version.load(Ordering::Relaxed) + 1,
+            Ordering::Relaxed,
+        );
     }
 
     /// Replace all stored fragments with a new set (e.g., the new frontier

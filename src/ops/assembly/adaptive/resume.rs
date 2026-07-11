@@ -24,6 +24,7 @@ use crate::ops::cut::CutDirection;
 use crate::ops::cut::StepStatus;
 use crate::ops::cut::StepperOptions;
 use crate::ops::cut::ToolPose;
+use crate::part::Part;
 use crate::types::{Point, Point3D, Polygon};
 
 use super::routing;
@@ -505,6 +506,7 @@ fn apply_offset(
 ///
 /// Returns `Ok(RouteSource)` on success, `Err(RaygeoError::RoutingError)`
 /// when no collision-free path could be found.
+#[allow(clippy::too_many_arguments)]
 #[prof]
 pub fn emit_resume_travel(
     trace: &mut Tracelet,
@@ -512,9 +514,12 @@ pub fn emit_resume_travel(
     mat: Option<&MedialAxis>,
     from: Point3D,
     to: Point3D,
+    part: &Part,
     opts: &AdaptiveClearingOptions,
     out_route_details: Option<&mut [u8; 4]>,
 ) -> RaygeoResult<routing::RouteSource> {
+    let (_boundary, islands) = part.extract_boundary();
+
     // Obstacles = remaining (uncut) material + islands (permanent no-go zones).
     // Clip remaining to the tool-centre envelope so that thin wall slivers
     // (which are unreachable by the tool centre and too narrow to matter)
@@ -526,7 +531,7 @@ pub fn emit_resume_travel(
     } else {
         get_polygons_group_intersection(&cleared.remaining(), &envelope)
     };
-    obstacles.extend(opts.islands.iter().cloned());
+    obstacles.extend(islands.iter().cloned());
     let obs_bounds = compute_polygon_bounds(&obstacles);
 
     let ctx = routing::RouteCtx {
@@ -535,6 +540,7 @@ pub fn emit_resume_travel(
         mat,
         obstacles: &obstacles,
         obstacle_bounds: &obs_bounds,
+        part,
     };
 
     let mut route_details = [0u8; 4];
@@ -610,6 +616,7 @@ pub struct ResumeCtx<'a> {
     pub cleared: &'a ClearedArea,
     pub opts: &'a AdaptiveClearingOptions,
     pub step_opts: &'a StepperOptions<'a>,
+    pub part: &'a Part,
     /// Radial step into material (derived from `step_over`).
     pub advance: f64,
     /// Forward step length (derived from `step_over`).

@@ -13,6 +13,7 @@ use crate::ops::assembly::write_polyline;
 use crate::ops::assembly::Tracelet;
 use crate::ops::cut::ToolPose;
 use crate::ops::state::State;
+use crate::part::Part;
 use crate::types::{Point, Point3D, Polygon};
 
 /// Options for generating a toroidal (trochoidal) path along a carrier.
@@ -33,6 +34,7 @@ pub struct ToroidOptions {
 /// carrier with a disk of `tool_radius`.
 #[prof]
 pub fn generate_toroid(
+    _part: &Part,
     trace: &mut Tracelet,
     opts: &ToroidOptions,
     cut_state: &State,
@@ -120,6 +122,7 @@ pub struct ToroidalClearOptions {
 /// pass at constant `target_z`.
 #[prof]
 pub fn generate_toroidal_clear(
+    _part: &Part,
     trace: &mut Tracelet,
     opts: &ToroidalClearOptions,
     cut_state: &State,

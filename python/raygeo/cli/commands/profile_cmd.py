@@ -1,5 +1,6 @@
 import time
 
+from raygeo import Part
 from raygeo.cli.scenarios import SCENARIOS, build_scenario
 from raygeo.ops.assembly.adaptive import adaptive_clearing
 from raygeo.ops.cut.cleared_area import ClearedArea
@@ -51,9 +52,8 @@ def run(args):
 
     t0 = time.perf_counter()
     result = adaptive_clearing(
+        Part.from_polygons(boundary, islands),
         cleared=ca,
-        pocket_boundary=boundary,
-        islands=islands,
         tool_radius=scenario.tool_radius,
         step_over=scenario.step_over,
         target_z=scenario.cut_z,

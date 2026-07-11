@@ -5,6 +5,7 @@ import math
 import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
 
+from raygeo import Part
 from raygeo.ops.assembly.toroid import generate_toroidal_clear
 from tools.plot import plot_ops_3d
 
@@ -26,6 +27,7 @@ def generate_toroidal_clear_3d():
     angle = math.degrees(math.atan(delta_z / l_min))
 
     result = generate_toroidal_clear(
+        Part.from_polygons([]),
         carrier=carrier,
         start=(carrier[0][0], carrier[0][1], start_z),
         target_z=target_z,

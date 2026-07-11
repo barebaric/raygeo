@@ -3,7 +3,6 @@ use crate::ops::assembly::Tracelet;
 use crate::ops::state::State;
 use crate::python::ops::assembly::result::PyAssemblyResult;
 use crate::python::ops::cut::cleared_area::PyClearedArea;
-use crate::types::Point;
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::gen_stub_pyfunction;
 
@@ -25,9 +24,8 @@ pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     import raygeo
 
     def adaptive_wavefronts(
+        part: raygeo.Part,
         cleared: raygeo.ops.cut.cleared_area.ClearedArea,
-        pocket_boundary: collections.abc.Sequence[tuple[float, float]],
-        islands: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]] = [],
         tool_radius: float = 3.0,
         step_over: float = 2.0,
         z: float = 0.0,
@@ -49,8 +47,6 @@ pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
         height *z* with *cut_feed_rate* applied.
 
         :param cleared: ``ClearedArea`` instance (mutated in place).
-        :param pocket_boundary: Outer boundary of the pocket.
-        :param islands: List of island (hole) polygons (default []).
         :param tool_radius: Tool radius in mm (default 3.0).
         :param step_over: Radial expansion per iteration (default 2.0).
         :param z: Z height for generated commands (default 0.0).
@@ -67,9 +63,8 @@ pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
 )]
 #[pyfunction(name = "adaptive_wavefronts")]
 #[pyo3(signature = (
+    part,
     cleared,
-    pocket_boundary,
-    islands = None,
     tool_radius = 3.0,
     step_over = 2.0,
     z = 0.0,
@@ -80,9 +75,8 @@ pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
 ))]
 #[allow(clippy::too_many_arguments)]
 fn adaptive_wavefronts_py(
+    part: &crate::python::part::PyPart,
     cleared: &mut PyClearedArea,
-    pocket_boundary: Vec<(f64, f64)>,
-    islands: Option<Vec<Vec<(f64, f64)>>>,
     tool_radius: f64,
     step_over: f64,
     z: f64,
@@ -91,19 +85,7 @@ fn adaptive_wavefronts_py(
     cut_feed_rate: i32,
     cut_power: f64,
 ) -> PyResult<PyAssemblyResult> {
-    let boundary: Vec<Point> = pocket_boundary
-        .into_iter()
-        .map(|(x, y)| Point::new(x, y))
-        .collect();
-    let islands_pts: Vec<Vec<Point>> = islands
-        .unwrap_or_default()
-        .into_iter()
-        .map(|h| h.into_iter().map(|(x, y)| Point::new(x, y)).collect())
-        .collect();
-
     let opts = wavefront::AdaptiveWavefrontOptions {
-        pocket_boundary: boundary,
-        islands: islands_pts,
         tool_radius,
         step_over,
         z,
@@ -119,6 +101,7 @@ fn adaptive_wavefronts_py(
 
     let mut trace = Tracelet::new();
     let meta = wavefront::adaptive_wavefronts(
+        &part.inner,
         &mut trace,
         &mut cleared.inner,
         &opts,

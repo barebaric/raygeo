@@ -8,12 +8,12 @@ __all__ = [
     "try_resume",
 ]
 
-def emit_resume_travel(ops: raygeo.ops.Ops, to_pt: tuple[float, float, float], pocket_boundary: collections.abc.Sequence[tuple[float, float]], islands: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]] = [], radius: float = 3, cut_z: float = -5, cleared: raygeo.ops.cut.cleared_area.ClearedArea | None = None, from_pt: tuple[float, float, float] = (0, 0, 0), axis: raygeo.geo.algo.medial_axis.MedialAxis | None = None) -> None:
+def emit_resume_travel(part: raygeo.Part, ops: raygeo.ops.Ops, to_pt: tuple[float, float, float], radius: float = 3, cut_z: float = -5, cleared: raygeo.ops.cut.cleared_area.ClearedArea | None = None, from_pt: tuple[float, float, float] = (0, 0, 0), axis: raygeo.geo.algo.medial_axis.MedialAxis | None = None) -> None:
     r"""
     Emit a resume travel to *to_pt* using the routing strategies.
     """
 
-def try_resume(cleared: raygeo.ops.cut.cleared_area.ClearedArea, ops: raygeo.ops.Ops, tool: raygeo.ops.assembly.adaptive.tool.Tool, pocket_boundary: collections.abc.Sequence[tuple[float, float]], islands: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]] = [], radius: float = 3, step_over: float = 1.5, cut_z: float = -5, max_deflection_deg: float = 30, valid_tool_area: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]] = [], axis: raygeo.geo.algo.medial_axis.MedialAxis | None = None, last_resume_area: float = -1, cut_direction: str = 'ccw', segment_start: tuple[float, float, float] = (0, 0, 0), segment_heading: float = 0) -> bool:
+def try_resume(part: raygeo.Part, cleared: raygeo.ops.cut.cleared_area.ClearedArea, ops: raygeo.ops.Ops, tool: raygeo.ops.assembly.adaptive.tool.Tool, radius: float = 3, step_over: float = 1.5, cut_z: float = -5, max_deflection_deg: float = 30, valid_tool_area: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]] = [], axis: raygeo.geo.algo.medial_axis.MedialAxis | None = None, last_resume_area: float = -1, cut_direction: str = 'ccw', segment_start: tuple[float, float, float] = (0, 0, 0), segment_heading: float = 0) -> bool:
     r"""
     Try to recover after the tool stalls or is detected as stuck.
     

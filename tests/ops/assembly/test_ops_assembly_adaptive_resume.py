@@ -4,6 +4,7 @@ import math
 
 import pytest
 
+from raygeo import Part
 from raygeo.geo.algo.medial_axis import MedialAxis
 from raygeo.geo.shape.polygon import (
     JoinStyle,
@@ -59,7 +60,10 @@ class TestEmitResumeTravel:
         ops = Ops()
         before = ops.len()
         emit_resume_travel(
-            ops, (20.0, 20.0, 0.0), outer, cleared=self._cleared_area(outer)
+            Part.from_polygons(outer),
+            ops,
+            (20.0, 20.0, 0.0),
+            cleared=self._cleared_area(outer),
         )
         assert ops.len() == before + 1
 
@@ -68,7 +72,10 @@ class TestEmitResumeTravel:
         outer = _rect(40.0, 40.0, 80, 80)
         ops = Ops()
         emit_resume_travel(
-            ops, (70.0, 40.0, 0.0), outer, cleared=self._cleared_area(outer)
+            Part.from_polygons(outer),
+            ops,
+            (70.0, 40.0, 0.0),
+            cleared=self._cleared_area(outer),
         )
         assert ops.len() >= 1
         for i in range(ops.len()):
@@ -79,7 +86,10 @@ class TestEmitResumeTravel:
         ops = Ops()
         n0 = ops.len()
         emit_resume_travel(
-            ops, (10.0, 10.0, 0.0), outer, cleared=self._cleared_area(outer)
+            Part.from_polygons(outer),
+            ops,
+            (10.0, 10.0, 0.0),
+            cleared=self._cleared_area(outer),
         )
         assert ops.len() == n0 + 1
 
@@ -88,7 +98,12 @@ class TestEmitResumeTravel:
         outer = _rect(40.0, 40.0, 80, 80)
         ops = Ops()
         to = (70.0, 40.0, 0.0)
-        emit_resume_travel(ops, to, outer, cleared=self._cleared_area(outer))
+        emit_resume_travel(
+            Part.from_polygons(outer),
+            ops,
+            to,
+            cleared=self._cleared_area(outer),
+        )
         assert ops.len() >= 1
         ep = ops.endpoint(ops.len() - 1)
         assert ep == pytest.approx(to, abs=0.01)
@@ -100,7 +115,10 @@ class TestEmitResumeTravel:
         ops = Ops()
         to_pt = (70.0, 40.0, 0.0)
         emit_resume_travel(
-            ops, to_pt, outer, cleared=self._cleared_area(outer)
+            Part.from_polygons(outer),
+            ops,
+            to_pt,
+            cleared=self._cleared_area(outer),
         )
         direct = math.sqrt(to_pt[0] ** 2 + to_pt[1] ** 2)
         for i in range(1, ops.len()):
@@ -130,10 +148,10 @@ class TestTryResume:
         tool = Tool((30.0, 30.0, 0.0), 0.0, 3.0)
         ops = Ops()
         result = try_resume(
+            Part.from_polygons(outer),
             ca,
             ops,
             tool,
-            outer,
             radius=3.0,
             step_over=1.5,
             cut_z=-5.0,
@@ -154,10 +172,10 @@ class TestTryResume:
         tool = Tool((40.0, 40.0, 0.0), 0.0, 3.0)
         ops = Ops()
         result = try_resume(
+            Part.from_polygons(outer),
             ca,
             ops,
             tool,
-            outer,
             radius=3.0,
             step_over=1.5,
             cut_z=-5.0,
@@ -180,10 +198,10 @@ class TestTryResume:
         tool = Tool((20.0, 20.0, 0.0), 0.0, 3.0)
         ops = Ops()
         result = try_resume(
+            Part.from_polygons(outer),
             ca,
             ops,
             tool,
-            outer,
             radius=3.0,
             step_over=1.5,
             cut_z=-5.0,

@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.colors import to_hex
 
+from raygeo import Part
 from raygeo.cnc.machining.plan import Workplan
 from raygeo.cnc.machining.wavefront import build_wavefront_workplan
 from raygeo.geo import Geometry
@@ -451,9 +452,8 @@ def _plot_adaptive_2d(ax):
     seed = get_circle_polygon((15, 65), 10, 48)
     ca = ClearedArea(boundary=boundary, islands=islands, initial=[seed])
     result = adaptive_clearing(
+        Part.from_polygons(boundary, islands),
         cleared=ca,
-        pocket_boundary=boundary,
-        islands=islands,
         tool_radius=3.0,
         step_over=1.8,
         target_z=target_z,

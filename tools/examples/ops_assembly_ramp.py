@@ -2,6 +2,7 @@
 
 import matplotlib.pyplot as plt
 
+from raygeo import Part
 from raygeo.ops.assembly.ramp import generate_ramp
 from tools.plot import plot_ops_3d
 
@@ -9,6 +10,7 @@ from tools.plot import plot_ops_3d
 def generate_ramp_example():
     """Ramp to ops."""
     result = generate_ramp(
+        Part.from_polygons([]),
         start=(0.0, 0.0),
         end=(120.0, 0.0),
         z_start=2.0,

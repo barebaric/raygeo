@@ -2,6 +2,7 @@
 
 from typing import Any
 
+from raygeo import Part
 from raygeo.ops.assembly.profile import profile_outer
 from raygeo.ops.cut.cleared_area import ClearedArea
 
@@ -18,7 +19,7 @@ def _rect(cx, cy, w, h):
 def _kwargs(ca, boundary, **over: Any) -> dict[str, Any]:
     kw = dict(
         cleared=ca,
-        boundary=boundary,
+        part=Part.from_polygons(boundary),
         tool_radius=3.0,
         step_over=1.5,
         target_z=-5.0,

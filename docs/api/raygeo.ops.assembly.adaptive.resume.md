@@ -9,10 +9,9 @@ sidebar_label: raygeo.ops.assembly.adaptive.resume
 
 ```python
 emit_resume_travel(
+    part: Part,
     ops: ops.Ops,
     to_pt: tuple[float, float, float],
-    pocket_boundary: Sequence[tuple[float, float]],
-    islands: Sequence[Sequence[tuple[float, float]]] = [],
     radius: float = 3,
     cut_z: float = -5,
     cleared: ops.cut.cleared_area.ClearedArea | None = None,
@@ -23,28 +22,26 @@ emit_resume_travel(
 
 Emit a resume travel to *to_pt* using the routing strategies.
 
-| Parameter         | Type                                                  | Description |
-| ----------------- | ----------------------------------------------------- | ----------- |
-| `ops`             | `ops.Ops`                                             |             |
-| `to_pt`           | `tuple[float, float, float]`                          |             |
-| `pocket_boundary` | `Sequence[tuple[float, float]]`                       |             |
-| `islands`         | `Sequence[Sequence[tuple[float, float]]] = []`        |             |
-| `radius`          | `float = 3`                                           |             |
-| `cut_z`           | `float = -5`                                          |             |
-| `cleared`         | `ops.cut.cleared_area.ClearedArea &#124; None = None` |             |
-| `from_pt`         | `tuple[float, float, float] = (0, 0, 0)`              |             |
-| `axis`            | `geo.algo.medial_axis.MedialAxis &#124; None = None`  |             |
-| _Returns_         | `None`                                                |             |
+| Parameter | Type                                                  | Description |
+| --------- | ----------------------------------------------------- | ----------- |
+| `part`    | `Part`                                                |             |
+| `ops`     | `ops.Ops`                                             |             |
+| `to_pt`   | `tuple[float, float, float]`                          |             |
+| `radius`  | `float = 3`                                           |             |
+| `cut_z`   | `float = -5`                                          |             |
+| `cleared` | `ops.cut.cleared_area.ClearedArea &#124; None = None` |             |
+| `from_pt` | `tuple[float, float, float] = (0, 0, 0)`              |             |
+| `axis`    | `geo.algo.medial_axis.MedialAxis &#124; None = None`  |             |
+| _Returns_ | `None`                                                |             |
 
 ### `try_resume()`
 
 ```python
 try_resume(
+    part: Part,
     cleared: ops.cut.cleared_area.ClearedArea,
     ops: ops.Ops,
     tool: ops.assembly.adaptive.tool.Tool,
-    pocket_boundary: Sequence[tuple[float, float]],
-    islands: Sequence[Sequence[tuple[float, float]]] = [],
     radius: float = 3,
     step_over: float = 1.5,
     cut_z: float = -5,
@@ -62,11 +59,10 @@ Try to recover after the tool stalls or is detected as stuck.
 
 | Parameter            | Type                                                 | Description        |
 | -------------------- | ---------------------------------------------------- | ------------------ |
+| `part`               | `Part`                                               |                    |
 | `cleared`            | `ops.cut.cleared_area.ClearedArea`                   |                    |
 | `ops`                | `ops.Ops`                                            |                    |
 | `tool`               | `ops.assembly.adaptive.tool.Tool`                    |                    |
-| `pocket_boundary`    | `Sequence[tuple[float, float]]`                      |                    |
-| `islands`            | `Sequence[Sequence[tuple[float, float]]] = []`       |                    |
 | `radius`             | `float = 3`                                          |                    |
 | `step_over`          | `float = 1.5`                                        |                    |
 | `cut_z`              | `float = -5`                                         |                    |

@@ -65,8 +65,69 @@ Manipulating command sequences:
 100.0
 ```
 
-## Re-exports
+## Part
 
-This module re-exports from `raygeo.geo`: Geometry, Matrix.
+Unified workpiece description for motion assembly.
 
-This module re-exports from `raygeo.ops`: Ops.
+Carries geometry and/or metadata needed by assemblers. No machine parameters or step configuration —
+just the workpiece data.
+
+Every assembler accepts a `Part` and internally extracts what it needs (boundary polygons, islands,
+size, …).
+
+### `geometry`
+
+```python
+geometry: Optional[geo.Geometry]
+```
+
+Vector geometry (the outline(s) of the part), if any.
+
+Returns `None` if no geometry was provided at construction time.
+
+### `pixels_per_mm`
+
+```python
+pixels_per_mm: Optional[tuple[float, float]]
+```
+
+Pixel density `(x, y)` in px/mm, if set.
+
+### `size_mm`
+
+```python
+size_mm: tuple[float, float]
+```
+
+Physical size `(width, height)` in millimetres.
+
+### `from_polygons()`
+
+```python
+from_polygons(
+    boundary: Sequence[tuple[float, float]],
+    islands: Optional[Sequence[Sequence[tuple[float, float]]]] = None,
+    size_mm: tuple[float, float] = (0.0, 0.0),
+) -> Part
+```
+
+Build a Part from a boundary polygon and optional islands.
+
+| Parameter  | Type                                                       | Description                                                         |
+| ---------- | ---------------------------------------------------------- | ------------------------------------------------------------------- |
+| `boundary` | `Sequence[tuple[float, float]]`                            | Outer boundary as `[(x, y), ...]`.                                  |
+| `islands`  | `Optional[Sequence[Sequence[tuple[float, float]]]] = None` | List of island polygons, each `[(x, y), ...]` (default `[]`).       |
+| `size_mm`  | `tuple[float, float] = (0.0, 0.0)`                         | Physical size `(width, height)` in mm (default `(0, 0)`).           |
+| _Returns_  | `Part`                                                     | A new `Part` with the geometry constructed from the given polygons. |
+
+### `has_geometry()`
+
+```python
+has_geometry() -> bool
+```
+
+True if this Part has geometry.
+
+| Parameter | Type   | Description |
+| --------- | ------ | ----------- |
+| _Returns_ | `bool` |             |

@@ -8,23 +8,28 @@ use crate::ops::assembly::result::AssemblyMeta;
 use crate::ops::assembly::Tracelet;
 use crate::ops::cut::ClearedArea;
 use crate::ops::state::State;
+use crate::part::Part;
 
 use super::trace_helpers as th;
 
+/// Profile the outer boundary of a pocket, extracting geometry from
+/// `part`.
 pub fn profile_outer(
+    part: &Part,
     trace: &mut Tracelet,
     cleared: &mut ClearedArea,
     opts: &ProfileOuterOptions,
     cut_state: &State,
 ) -> RaygeoResult<AssemblyMeta> {
-    if opts.boundary.is_empty() {
-        return Err(RaygeoError::DegenerateGeometry(
-            "boundary polygon is empty".into(),
-        ));
-    }
+    let (boundary_opt, _islands) = part.extract_boundary();
+    let boundary = boundary_opt.ok_or_else(|| {
+        RaygeoError::DegenerateGeometry(
+            "Part has no extractable boundary geometry".into(),
+        )
+    })?;
+
     let offset_dist = opts.tool_radius + opts.wall_margin + opts.stock_to_leave;
-    let offset_polys =
-        offset_polygon(&opts.boundary, offset_dist, JoinStyle::Round);
+    let offset_polys = offset_polygon(&boundary, offset_dist, JoinStyle::Round);
     if offset_polys.is_empty() {
         return Err(RaygeoError::DegenerateGeometry(
             "offset produced no polygons".into(),

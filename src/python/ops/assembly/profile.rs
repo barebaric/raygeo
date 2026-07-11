@@ -9,7 +9,8 @@ use crate::ops::cut::CutDirection;
 use crate::ops::state::State;
 use crate::python::ops::assembly::result::PyAssemblyResult;
 use crate::python::ops::cut::cleared_area::PyClearedArea;
-use crate::types::{Point, Point3D, Polygon};
+use crate::python::part::PyPart;
+use crate::types::Point3D;
 
 fn check_cancel() -> bool {
     let rc = unsafe { pyo3::ffi::PyErr_CheckSignals() };
@@ -39,8 +40,8 @@ pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     import raygeo
 
     def profile_outer(
+        part: raygeo.Part,
         cleared: raygeo.ops.cut.cleared_area.ClearedArea,
-        boundary: list[tuple[float, float]],
         tool_radius: float,
         step_over: float,
         step_length: float,
@@ -64,8 +65,8 @@ pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
         side.  Returns an :class:`AssemblyResult` with the profiling
         move sequence.
 
+        :param part: The part whose geometry defines the pocket boundary.
         :param cleared: Cleared area tracker.
-        :param boundary: Outer boundary polygon as ``(x, y)`` pairs.
         :param tool_radius: Tool radius in mm.
         :param step_over: Radial step-over between passes (mm).
         :param step_length: Forward step length in mm.
@@ -87,8 +88,8 @@ pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
 )]
 #[pyfunction(name = "profile_outer")]
 #[pyo3(signature = (
+    part,
     cleared,
-    boundary,
     tool_radius,
     step_over,
     step_length,
@@ -106,8 +107,8 @@ pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
 ))]
 #[allow(clippy::too_many_arguments)]
 fn profile_outer_py(
+    part: &PyPart,
     cleared: &mut PyClearedArea,
-    boundary: Vec<(f64, f64)>,
     tool_radius: f64,
     step_over: f64,
     step_length: f64,
@@ -124,10 +125,6 @@ fn profile_outer_py(
     trace_path: Option<String>,
 ) -> PyResult<PyAssemblyResult> {
     use std::path::PathBuf;
-    let boundary_pts: crate::types::Polygon = boundary
-        .into_iter()
-        .map(|(x, y)| crate::types::Point::new(x, y))
-        .collect();
 
     let cd = match cut_direction.to_ascii_lowercase().as_str() {
         "cw" => CutDirection::Cw,
@@ -135,7 +132,6 @@ fn profile_outer_py(
     };
 
     let opts = ProfileOuterOptions {
-        boundary: boundary_pts,
         tool_radius,
         step_over,
         step_length,
@@ -161,6 +157,7 @@ fn profile_outer_py(
 
     let mut trace = Tracelet::new();
     let meta = profile::profile_outer(
+        &part.inner,
         &mut trace,
         &mut cleared.inner,
         &opts,
@@ -177,9 +174,8 @@ fn profile_outer_py(
     import raygeo
 
     def profile_inner(
+        part: raygeo.Part,
         cleared: raygeo.ops.cut.cleared_area.ClearedArea,
-        boundary: list[tuple[float, float]],
-        islands: list[list[tuple[float, float]]] = [],
         tool_radius: float = 3.0,
         step_over: float = 1.5,
         step_length: float = 0.6,
@@ -203,9 +199,9 @@ fn profile_outer_py(
         Returns an :class:`AssemblyResult` with the profiling move
         sequence.
 
+        :param part: The part whose geometry defines the pocket boundary
+            and islands.
         :param cleared: Cleared area tracker.
-        :param boundary: Outer boundary polygon as ``(x, y)`` pairs.
-        :param islands: List of island (hole) polygons (default []).
         :param tool_radius: Tool radius in mm.
         :param step_over: Radial step-over between passes (mm).
         :param step_length: Forward step length in mm.
@@ -227,9 +223,8 @@ fn profile_outer_py(
 )]
 #[pyfunction(name = "profile_inner")]
 #[pyo3(signature = (
+    part,
     cleared,
-    boundary,
-    islands = None,
     tool_radius = 3.0,
     step_over = 1.5,
     step_length = 0.6,
@@ -247,9 +242,8 @@ fn profile_outer_py(
 ))]
 #[allow(clippy::too_many_arguments)]
 fn profile_inner_py(
+    part: &PyPart,
     cleared: &mut PyClearedArea,
-    boundary: Vec<(f64, f64)>,
-    islands: Option<Vec<Vec<(f64, f64)>>>,
     tool_radius: f64,
     step_over: f64,
     step_length: f64,
@@ -266,16 +260,6 @@ fn profile_inner_py(
     trace_path: Option<String>,
 ) -> PyResult<PyAssemblyResult> {
     use std::path::PathBuf;
-    let boundary_pts: Polygon = boundary
-        .into_iter()
-        .map(|(x, y)| Point::new(x, y))
-        .collect();
-
-    let islands_pts: Vec<Polygon> = islands
-        .unwrap_or_default()
-        .into_iter()
-        .map(|h| h.into_iter().map(|(x, y)| Point::new(x, y)).collect())
-        .collect();
 
     let cd = match cut_direction.to_ascii_lowercase().as_str() {
         "cw" => CutDirection::Cw,
@@ -283,8 +267,6 @@ fn profile_inner_py(
     };
 
     let opts = ProfileInnerOptions {
-        boundary: boundary_pts,
-        islands: islands_pts,
         tool_radius,
         step_over,
         step_length,
@@ -310,6 +292,7 @@ fn profile_inner_py(
 
     let mut trace = Tracelet::new();
     let meta = profile::profile_inner(
+        &part.inner,
         &mut trace,
         &mut cleared.inner,
         &opts,

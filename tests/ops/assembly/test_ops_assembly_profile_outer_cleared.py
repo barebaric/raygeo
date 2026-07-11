@@ -2,6 +2,7 @@
 
 from typing import Any
 
+from raygeo import Part
 from raygeo.ops.assembly.profile import profile_inner, profile_outer
 from raygeo.ops.cut.cleared_area import ClearedArea
 
@@ -18,7 +19,7 @@ def _rect(cx, cy, w, h):
 def _kwargs(ca, boundary, **over: Any) -> dict[str, Any]:
     kw = dict(
         cleared=ca,
-        boundary=boundary,
+        part=Part.from_polygons(boundary),
         tool_radius=3.0,
         step_over=1.5,
         target_z=-5.0,
@@ -73,10 +74,10 @@ def test_profile_inner_then_outer_with_shared_cleared():
     """profile_inner then profile_outer on the same ClearedArea succeeds."""
     boundary = _rect(0, 0, 60, 60)
     ca = ClearedArea(boundary=boundary, initial=[])
+    part = Part.from_polygons(boundary)
     result_inner = profile_inner(
+        part,
         cleared=ca,
-        boundary=boundary,
-        islands=[],
         tool_radius=3.0,
         target_z=-5.0,
         safe_z=2.0,
@@ -92,8 +93,8 @@ def test_profile_inner_then_outer_with_shared_cleared():
     )
     assert result_inner.ops.len() > 0
     result_outer = profile_outer(
+        part,
         cleared=ca,
-        boundary=boundary,
         tool_radius=3.0,
         step_over=1.5,
         target_z=-5.0,

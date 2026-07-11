@@ -20,6 +20,7 @@ use crate::ops::assembly::write_polyline;
 use crate::ops::assembly::Tracelet;
 use crate::ops::cut::ToolPose;
 use crate::ops::state::State;
+use crate::part::Part;
 use crate::types::{Point, Point3D, Polygon};
 
 /// Options for generating a back-and-forth slot pass.
@@ -37,6 +38,7 @@ pub struct SlotOptions {
 /// `tool_radius`.
 #[prof]
 pub fn generate_slot(
+    _part: &Part,
     trace: &mut Tracelet,
     opts: &SlotOptions,
     cut_state: &State,

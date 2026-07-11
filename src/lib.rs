@@ -71,6 +71,7 @@ pub mod image;
 pub(crate) mod log;
 pub mod mesh;
 pub mod ops;
+pub mod part;
 pub mod prof;
 pub mod svg;
 pub(crate) mod trace_types;
@@ -118,6 +119,9 @@ macro_rules! register_functions {
 
 #[cfg(feature = "python")]
 mod python;
+
+#[cfg(feature = "python")]
+use python::part::PyPart;
 
 #[cfg(feature = "python")]
 use pyo3::prelude::*;
@@ -216,6 +220,9 @@ fn raygeo(m: &Bound<'_, PyModule>) -> PyResult<()> {
     python::ops::register(m)?;
     python::svg::register(m)?;
     python::trace::register(m)?;
+
+    // ── Part (top-level type) ───────────────────────────────────────
+    m.add_class::<PyPart>()?;
 
     Ok(())
 }

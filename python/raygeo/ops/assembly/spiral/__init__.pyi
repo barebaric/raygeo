@@ -6,7 +6,7 @@ __all__ = [
     "generate_spiral",
 ]
 
-def generate_spiral(center: tuple[float, float], z: float, start_radius: float, end_radius: float, revolutions: float, direction: str = 'CW', angular_step: float = 0.1, start_angle: float = 0, state: raygeo.ops.state.State | None = None) -> raygeo.ops.assembly.result.AssemblyResult:
+def generate_spiral(part: raygeo.Part, center: tuple[float, float], z: float, start_radius: float, end_radius: float, revolutions: float, direction: str = 'CW', angular_step: float = 0.1, start_angle: float = 0, state: raygeo.ops.state.State | None = None) -> raygeo.ops.assembly.result.AssemblyResult:
     r"""
     Generate a flat spiral entry path.
     

@@ -2,6 +2,7 @@
 
 from typing import Any
 
+from raygeo import Part
 from raygeo.geo.shape.polygon import (
     JoinStyle,
     get_polygon_area,
@@ -23,10 +24,10 @@ def _rect(cx, cy, w, h):
 
 
 def _kwargs(ca, boundary, **over: Any) -> dict[str, Any]:
+    islands = over.pop("islands", None)
     kw = dict(
+        part=Part.from_polygons(boundary, islands or []),
         cleared=ca,
-        boundary=boundary,
-        islands=[],
         tool_radius=3.0,
         step_over=1.5,
         target_z=-5.0,
@@ -178,9 +179,10 @@ def test_profile_inner_then_outer_chained():
     result_inner = profile_inner(**_kwargs(ca, boundary))
     assert result_inner.ops.cut_distance() > 0
 
+    part = Part.from_polygons(boundary)
     result_outer = profile_outer(
+        part,
         cleared=ca,
-        boundary=boundary,
         tool_radius=3.0,
         step_over=1.5,
         target_z=-5.0,
@@ -247,9 +249,10 @@ def test_profile_inner_renamed_fields():
         boundary=boundary,
         initial=[[(35, 35), (45, 35), (45, 45), (35, 45)]],
     )
+    part = Part.from_polygons(boundary)
     result = profile_inner(
+        part,
         cleared=cleared,
-        boundary=boundary,
         tool_radius=3.0,
         step_over=1.5,
         target_z=-5.0,

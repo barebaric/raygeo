@@ -12,6 +12,7 @@ use crate::ops::assembly::write_polyline;
 use crate::ops::assembly::Tracelet;
 use crate::ops::cut::ToolPose;
 use crate::ops::state::State;
+use crate::part::Part;
 use crate::types::{Point, Point3D};
 
 /// Options for generating a helical entry path.
@@ -37,6 +38,7 @@ pub struct HelixOptions {
 /// and a disk-shaped cleared polygon at the helix radius.
 #[prof]
 pub fn generate_helix(
+    _part: &Part,
     trace: &mut Tracelet,
     opts: &HelixOptions,
     cut_state: &State,

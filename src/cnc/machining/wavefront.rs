@@ -22,6 +22,7 @@ use crate::error::RaygeoResult;
 use crate::geo::algo::helix::HelixDirection;
 use crate::geo::algo::polylabel::find_largest_circle;
 use crate::geo::shape::polygon::get_polygon_centroid;
+use crate::part::Part;
 use crate::types::Polygon;
 
 /// Options for [`build_wavefront_workplan`].
@@ -80,9 +81,10 @@ pub fn build_wavefront_workplan(
         });
     }
 
+    let part =
+        Part::from_polygons(&opts.pocket_boundary, &opts.islands, (0.0, 0.0));
     steps.push(WorkplanStep::Wavefront {
-        pocket_boundary: opts.pocket_boundary.clone(),
-        islands: opts.islands.clone(),
+        part,
         tool_radius: opts.tool_radius,
         step_over: opts.step_over,
         z: opts.target_z,

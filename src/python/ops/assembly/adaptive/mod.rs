@@ -18,7 +18,7 @@ use crate::python::errors::{ResumePointNotFoundError, RoutingError};
 use crate::python::ops::assembly::progress_event_to_py;
 use crate::python::ops::assembly::result::PyAssemblyResult;
 use crate::python::ops::cut::cleared_area::PyClearedArea;
-use crate::types::{Point, Point3D};
+use crate::types::Point3D;
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::gen_stub_pyfunction;
 use std::path::PathBuf;
@@ -81,9 +81,8 @@ pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     import raygeo
 
     def adaptive_clearing(
+        part: raygeo.Part,
         cleared: raygeo.ops.cut.cleared_area.ClearedArea,
-        pocket_boundary: collections.abc.Sequence[tuple[float, float]],
-        islands: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]] = [],
         tool_radius: float = 3.0,
         step_over: float = 1.5,
         step_length: float = 0.6,
@@ -116,9 +115,8 @@ pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
         :class:`raygeo.cnc.machining.plan.Workplan`) and
         prepending the entry Ops to the result.
 
+        :param part: The part with boundary and island geometry.
         :param cleared: ``ClearedArea`` instance (mutated in place).
-        :param pocket_boundary: Outer boundary of the pocket.
-        :param islands: List of island (hole) polygons (default []).
         :param tool_radius: Tool radius in mm (default 3.0).
         :param step_over: Step-over distance (default 1.5).
         :param step_length: Forward step length in mm (default 0.6).
@@ -153,9 +151,8 @@ pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
 )]
 #[pyfunction(name = "adaptive_clearing")]
 #[pyo3(signature = (
+    part,
     cleared,
-    pocket_boundary,
-    islands = None,
     tool_radius = 3.0,
     step_over = 1.5,
     step_length = 0.6,
@@ -177,9 +174,8 @@ pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
 ))]
 #[allow(clippy::too_many_arguments)]
 fn adaptive_clearing_py(
+    part: &crate::python::part::PyPart,
     cleared: &mut PyClearedArea,
-    pocket_boundary: Vec<(f64, f64)>,
-    islands: Option<Vec<Vec<(f64, f64)>>>,
     tool_radius: f64,
     step_over: f64,
     step_length: f64,
@@ -199,23 +195,17 @@ fn adaptive_clearing_py(
     on_progress: Option<Py<PyAny>>,
     batch_size: usize,
 ) -> PyResult<PyAssemblyResult> {
-    let boundary: Vec<Point> = pocket_boundary
-        .into_iter()
-        .map(|(x, y)| Point::new(x, y))
-        .collect();
-    let islands_pts: Vec<Vec<Point>> = islands
-        .unwrap_or_default()
-        .into_iter()
-        .map(|h| h.into_iter().map(|(x, y)| Point::new(x, y)).collect())
-        .collect();
     let cd = match cut_direction.to_ascii_lowercase().as_str() {
         "cw" => CutDirection::Cw,
         _ => CutDirection::Ccw,
     };
 
+    let (pocket_boundary, islands) = part.inner.extract_boundary();
+    let pocket_boundary = pocket_boundary.unwrap_or_default();
+
     let opts = adaptive::AdaptiveClearingOptions {
-        pocket_boundary: boundary,
-        islands: islands_pts,
+        pocket_boundary,
+        islands,
         tool_radius,
         step_over,
         step_length,
@@ -254,6 +244,7 @@ fn adaptive_clearing_py(
         Tracelet::new()
     };
     let meta = adaptive::adaptive_clearing(
+        &part.inner,
         &mut trace,
         &mut cleared.inner,
         &opts,

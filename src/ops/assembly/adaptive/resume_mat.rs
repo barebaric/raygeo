@@ -52,11 +52,13 @@ impl ResumeStrategy for ResumeMat {
             return None;
         }
         let crossings = find_all_mat_crossings(axis, from_idx, &is_cleared);
+        let (ref mat_bnd, ref mat_isl) = ctx.part.extract_boundary();
         dbg_log!(
             "  MAT_RESUME  crossings={}  from_idx={}",
             crossings.len(),
             from_idx,
         );
+        let mat_boundary: Polygon = mat_bnd.clone().unwrap_or_default();
         for crossing_idx in crossings {
             let mut cross_detail = 0u8;
             if let Some(rp) = mat_resume_from_crossing(
@@ -67,8 +69,8 @@ impl ResumeStrategy for ResumeMat {
                 tool.radius,
                 ctx.advance,
                 ctx.opts.target_z,
-                &ctx.opts.pocket_boundary,
-                &ctx.opts.islands,
+                &mat_boundary,
+                mat_isl,
                 &mut cross_detail,
             ) {
                 if let Some(probed) =

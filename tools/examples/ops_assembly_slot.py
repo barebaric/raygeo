@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.lines import Line2D
 
+from raygeo import Part
 from raygeo.ops.assembly.slot import generate_slot
 from raygeo.ops.feature.slot_path import find_slot_path
 from tools.plot import plot_ops_3d
@@ -40,6 +41,7 @@ def generate_slot_3d():
     assert carrier is not None, "expected a carrier"
 
     result = generate_slot(
+        Part.from_polygons([]),
         carrier=carrier,
         tool_radius=tool_radius,
         target_z=target_z,

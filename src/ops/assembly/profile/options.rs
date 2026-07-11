@@ -1,16 +1,14 @@
 use std::path::PathBuf;
 
 use crate::ops::cut::CutDirection;
-use crate::types::{Point3D, Polygon};
+use crate::types::Point3D;
 
 /// Options for inner-boundary adaptive profiling.
 ///
-/// Walks the **inset** boundary (pocket wall offset inward by tool
-/// radius), material-aware around islands.
+/// Geometry is supplied via a [`Part`](crate::part::Part) — the
+/// assembler extracts boundary and islands from it internally.
 #[derive(Clone, Debug)]
 pub struct ProfileInnerOptions {
-    pub boundary: Polygon,
-    pub islands: Vec<Polygon>,
     pub tool_radius: f64,
     pub step_over: f64,
     pub step_length: f64,
@@ -31,8 +29,6 @@ pub struct ProfileInnerOptions {
 impl Default for ProfileInnerOptions {
     fn default() -> Self {
         Self {
-            boundary: Vec::new(),
-            islands: Vec::new(),
             tool_radius: 3.0,
             step_over: 1.5,
             step_length: 0.6,
@@ -54,12 +50,10 @@ impl Default for ProfileInnerOptions {
 
 /// Options for outer-boundary adaptive profiling.
 ///
-/// Walks the **grown** boundary (stock outline offset outward by tool
-/// radius).  Islands are ignored — they are geometrically on the other
-/// side of the wall.
+/// Geometry is supplied via a [`Part`](crate::part::Part) — the
+/// assembler extracts the boundary from it internally.
 #[derive(Clone, Debug)]
 pub struct ProfileOuterOptions {
-    pub boundary: Polygon,
     pub tool_radius: f64,
     pub step_over: f64,
     pub step_length: f64,
@@ -80,7 +74,6 @@ pub struct ProfileOuterOptions {
 impl Default for ProfileOuterOptions {
     fn default() -> Self {
         Self {
-            boundary: Vec::new(),
             tool_radius: 3.0,
             step_over: 1.5,
             step_length: 0.6,

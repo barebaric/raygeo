@@ -1,5 +1,6 @@
 """Tests for slot assembly module."""
 
+from raygeo import Part
 from raygeo.ops.assembly.slot import generate_slot
 
 
@@ -16,6 +17,7 @@ def test_slot_single_pass():
     """Flat carrier produces forward+backward path at constant target_z."""
     carrier = [(0.0, 0.0), (40.0, 0.0)]
     result = generate_slot(
+        Part.from_polygons([]),
         carrier=carrier,
         tool_radius=3.0,
         target_z=-3.0,
@@ -42,6 +44,7 @@ def test_slot_clears_thin_corridor():
     """Carrier swept by tool_radius covers the corridor interior."""
     carrier = [(0.0, 3.0), (40.0, 3.0)]
     result = generate_slot(
+        Part.from_polygons([]),
         carrier=carrier,
         tool_radius=3.0,
         target_z=-3.0,
@@ -68,6 +71,7 @@ def test_slot_multi_point_carrier():
     """Multi-point carrier produces forward+backward through all points."""
     carrier = [(0.0, 0.0), (20.0, 2.0), (40.0, 0.0)]
     result = generate_slot(
+        Part.from_polygons([]),
         carrier=carrier,
         tool_radius=3.0,
         target_z=-3.0,

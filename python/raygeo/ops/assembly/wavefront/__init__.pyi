@@ -7,7 +7,7 @@ __all__ = [
     "adaptive_wavefronts",
 ]
 
-def adaptive_wavefronts(cleared: raygeo.ops.cut.cleared_area.ClearedArea, pocket_boundary: collections.abc.Sequence[tuple[float, float]], islands: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]] = [], tool_radius: float = 3, step_over: float = 2, z: float = 0, area_tolerance: float = 1, precision: float = 0, cut_feed_rate: int = 1200, cut_power: float = 1) -> raygeo.ops.assembly.result.AssemblyResult:
+def adaptive_wavefronts(part: raygeo.Part, cleared: raygeo.ops.cut.cleared_area.ClearedArea, tool_radius: float = 3, step_over: float = 2, z: float = 0, area_tolerance: float = 1, precision: float = 0, cut_feed_rate: int = 1200, cut_power: float = 1) -> raygeo.ops.assembly.result.AssemblyResult:
     r"""
     Inside-out adaptive wavefronts.
     
@@ -22,8 +22,6 @@ def adaptive_wavefronts(cleared: raygeo.ops.cut.cleared_area.ClearedArea, pocket
     height *z* with *cut_feed_rate* applied.
     
     :param cleared: ``ClearedArea`` instance (mutated in place).
-    :param pocket_boundary: Outer boundary of the pocket.
-    :param islands: List of island (hole) polygons (default []).
     :param tool_radius: Tool radius in mm (default 3.0).
     :param step_over: Radial expansion per iteration (default 2.0).
     :param z: Z height for generated commands (default 0.0).
