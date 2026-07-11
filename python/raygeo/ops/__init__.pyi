@@ -1190,6 +1190,18 @@ class Ops:
         :param tolerance: Maximum distance for considering lines collinear.
         :complexity: O(n log n) average time, O(n) space
         """
+    def smooth(self, amount: builtins.int, corner_angle_threshold: builtins.float) -> None:
+        r"""
+        Smooth all line-only segments using a Gaussian filter.
+        
+        Arcs are linearized first.  Segments containing curves are
+        transferred unchanged.  The smoothing operates in place.
+        
+        :param amount: Smoothing strength (0-100).  0 is a no-op.
+        :param corner_angle_threshold: Corners with an internal angle
+            (in degrees) smaller than this are preserved.
+        :complexity: O(n * k) time, O(n) space where k is the kernel size
+        """
     def apply_overscan(self, distance_mm: builtins.float) -> None:
         r"""
         Apply overscan to raster lines.

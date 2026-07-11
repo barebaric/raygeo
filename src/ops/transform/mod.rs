@@ -17,6 +17,7 @@ pub mod link;
 pub mod merge_lines;
 pub mod optimize;
 pub mod overscan;
+pub mod smooth;
 pub mod split;
 pub mod tabs;
 

@@ -2439,6 +2439,19 @@ impl PyOps {
         );
     }
 
+    /// Smooth all line-only segments using a Gaussian filter.
+    ///
+    /// Arcs are linearized first.  Segments containing curves are
+    /// transferred unchanged.  The smoothing operates in place.
+    ///
+    /// :param amount: Smoothing strength (0-100).  0 is a no-op.
+    /// :param corner_angle_threshold: Corners with an internal angle
+    ///     (in degrees) smaller than this are preserved.
+    /// :complexity: O(n * k) time, O(n) space where k is the kernel size
+    fn smooth(&mut self, amount: u32, corner_angle_threshold: f64) {
+        self.inner.smooth(amount, corner_angle_threshold);
+    }
+
     /// Apply overscan to raster lines.
     ///
     /// Extends raster line start/end points by ``distance_mm`` along

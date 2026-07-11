@@ -1760,6 +1760,24 @@ Apply a state to all moving commands without an explicit state.
 | _Returns_    | `None`        |                       |
 | _Complexity_ |               | O(n) time, O(1) space |
 
+### `smooth()`
+
+```python
+smooth(amount: int, corner_angle_threshold: float) -> None
+```
+
+Smooth all line-only segments using a Gaussian filter.
+
+Arcs are linearized first. Segments containing curves are transferred unchanged. The smoothing
+operates in place.
+
+| Parameter                | Type    | Description                                                                  |
+| ------------------------ | ------- | ---------------------------------------------------------------------------- |
+| `amount`                 | `int`   | Smoothing strength (0-100). 0 is a no-op.                                    |
+| `corner_angle_threshold` | `float` | Corners with an internal angle (in degrees) smaller than this are preserved. |
+| _Returns_                | `None`  |                                                                              |
+| _Complexity_             |         | O(n * k) time, O(n) space where k is the kernel size                         |
+
 ### `spindle_rpm()`
 
 ```python
