@@ -1,4 +1,6 @@
 use std::collections::HashSet;
+use std::sync::atomic::AtomicUsize;
+use std::sync::atomic::Ordering;
 use std::sync::Mutex;
 
 use prof_macros::prof;
@@ -55,6 +57,21 @@ pub struct ClearedArea {
     /// Cached `get_polygons_union(&self.fragments)` for
     /// [`Self::actionable_remaining`].  Cleared when fragments change.
     fragments_union_cache: Mutex<Option<Vec<Polygon>>>,
+    /// Cached stock shape (boundary ∖ islands).  Never changes after
+    /// construction (boundary/islands are swapped via `swap_*` which
+    /// clears this cache).
+    stock_cache: Mutex<Option<Vec<Polygon>>>,
+    /// Cached result of [`Self::remaining_area`].  Invalidated when
+    /// fragments change.
+    remaining_area_cache: Mutex<Option<f64>>,
+    /// Cached result of [`Self::actionable_remaining`] keyed by
+    /// `(inset_distance, fragment_version)`.  Avoids recomputing the
+    /// inset-region difference when fragments haven't changed.
+    actionable_cache: Mutex<Option<(f64, usize, f64)>>,
+    /// Version counter bumped on every fragment mutation.  Used by
+    /// [`Self::actionable_remaining`] to detect staleness without
+    /// locking the union cache.
+    frag_version: AtomicUsize,
 }
 
 impl ClearedArea {
@@ -75,6 +92,10 @@ impl ClearedArea {
             batch_active: false,
             sweep_cache: Mutex::new(None),
             fragments_union_cache: Mutex::new(None),
+            stock_cache: Mutex::new(None),
+            remaining_area_cache: Mutex::new(None),
+            actionable_cache: Mutex::new(None),
+            frag_version: AtomicUsize::new(0),
         }
     }
 
@@ -98,6 +119,10 @@ impl ClearedArea {
             batch_active: false,
             sweep_cache: Mutex::new(None),
             fragments_union_cache: Mutex::new(None),
+            stock_cache: Mutex::new(None),
+            remaining_area_cache: Mutex::new(None),
+            actionable_cache: Mutex::new(None),
+            frag_version: AtomicUsize::new(0),
         };
         for poly in initial {
             if poly.len() >= 3 {
@@ -118,14 +143,20 @@ impl ClearedArea {
         if self.boundary.len() < 3 {
             return vec![];
         }
-        if self.islands.is_empty() {
+        let mut cache = self.stock_cache.lock().unwrap();
+        if let Some(ref cached) = *cache {
+            return cached.clone();
+        }
+        let result = if self.islands.is_empty() {
             vec![self.boundary.clone()]
         } else {
             get_polygons_group_difference(
                 std::slice::from_ref(&self.boundary),
                 &self.islands,
             )
-        }
+        };
+        *cache = Some(result.clone());
+        result
     }
 
     /// The tool-centre envelope (inset of boundary by `tool_radius`,
@@ -179,6 +210,11 @@ impl ClearedArea {
     fn clear_sweep_cache(&self) {
         *self.sweep_cache.lock().unwrap() = None;
         *self.fragments_union_cache.lock().unwrap() = None;
+        *self.stock_cache.lock().unwrap() = None;
+        *self.remaining_area_cache.lock().unwrap() = None;
+        *self.actionable_cache.lock().unwrap() = None;
+        self.frag_version
+            .store(self.frag_version.load(Ordering::Relaxed) + 1, Ordering::Relaxed);
     }
 
     /// Replace all stored fragments with a new set (e.g., the new frontier
@@ -282,19 +318,26 @@ impl ClearedArea {
     /// produce orphan CCW outers around islands).
     #[prof]
     pub fn remaining_area(&self) -> f64 {
+        let mut cache = self.remaining_area_cache.lock().unwrap();
+        if let Some(cached) = *cache {
+            return cached;
+        }
         let stock = self.stock();
-        if stock.is_empty() {
-            return 0.0;
-        }
-        if self.fragments.is_empty() {
-            return stock.iter().map(|p| get_polygon_signed_area(p)).sum();
-        }
-        let stock_area: f64 =
-            stock.iter().map(|p| get_polygon_signed_area(p)).sum();
-        let in_stock = get_polygons_group_intersection(&stock, &self.fragments);
-        let cleared: f64 =
-            in_stock.iter().map(|p| get_polygon_signed_area(p)).sum();
-        (stock_area - cleared).max(0.0)
+        let result = if stock.is_empty() {
+            0.0
+        } else if self.fragments.is_empty() {
+            stock.iter().map(|p| get_polygon_signed_area(p)).sum()
+        } else {
+            let stock_area: f64 =
+                stock.iter().map(|p| get_polygon_signed_area(p)).sum();
+            let in_stock =
+                get_polygons_group_intersection(&stock, &self.fragments);
+            let cleared: f64 =
+                in_stock.iter().map(|p| get_polygon_signed_area(p)).sum();
+            (stock_area - cleared).max(0.0)
+        };
+        *cache = Some(result);
+        result
     }
 
     #[prof]
@@ -322,43 +365,45 @@ impl ClearedArea {
     /// `area(inset_region − fragments_union)`.
     #[prof]
     pub fn actionable_remaining(&self, inset_distance: f64) -> f64 {
+        let version = self.frag_version.load(Ordering::Relaxed);
+        {
+            let cache = self.actionable_cache.lock().unwrap();
+            if let Some((d, v, result)) = *cache {
+                if (d - inset_distance).abs() < 1e-9 && v == version {
+                    return result;
+                }
+            }
+        }
         let region =
             compute_inset_region(&self.boundary, inset_distance, &self.islands)
                 .0;
-        if region.is_empty() {
-            return 0.0;
-        }
-        if self.fragments.is_empty() {
-            // Region is already clipped to islands; outer rings
-            // (CCW positive) and hole rings (CW negative) sum to the
-            // net enclosed area.
-            return region
+        let result = if region.is_empty() {
+            0.0
+        } else if self.fragments.is_empty() {
+            region
                 .iter()
                 .map(|p| get_polygon_signed_area(p))
                 .sum::<f64>()
-                .max(0.0);
-        }
-        let unclipped = {
-            let mut cache = self.fragments_union_cache.lock().unwrap();
-            let unioned = cache
-                .get_or_insert_with(|| get_polygons_union(&self.fragments));
-            get_polygons_group_difference(&region, unioned)
+                .max(0.0)
+        } else {
+            let unclipped = {
+                let mut cache = self.fragments_union_cache.lock().unwrap();
+                let unioned = cache
+                    .get_or_insert_with(|| get_polygons_union(&self.fragments));
+                get_polygons_group_difference(&region, unioned)
+            };
+            let total: f64 = unclipped
+                .into_iter()
+                .filter(|p| {
+                    p.len() >= 3 && get_polygon_signed_area(p).abs() >= 0.01
+                })
+                .map(|p| get_polygon_signed_area(&p))
+                .sum();
+            total.max(0.0)
         };
-        // Clipper2 returns the difference as a bundle: outer rings
-        // (positive signed area) and holes (negative signed area).
-        // Summing signed areas gives correct net enclosed area.
-        // Filter sub-resolution artefacts (< 0.01 mm²) the same way
-        // `remaining()` does so the two metrics are comparable.
-        // build_wavefront_workplan ensures the seed disk exceeds this
-        // threshold so wavefront can always start.
-        let total: f64 = unclipped
-            .into_iter()
-            .filter(|p| {
-                p.len() >= 3 && get_polygon_signed_area(p).abs() >= 0.01
-            })
-            .map(|p| get_polygon_signed_area(&p))
-            .sum();
-        total.max(0.0)
+        *self.actionable_cache.lock().unwrap() =
+            Some((inset_distance, version, result));
+        result
     }
 
     #[prof]
