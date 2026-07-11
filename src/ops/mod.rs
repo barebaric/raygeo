@@ -6,6 +6,7 @@
 pub mod assembly;
 pub mod axis;
 pub mod container;
+pub mod convert;
 pub mod cut;
 pub mod enums;
 pub mod feature;

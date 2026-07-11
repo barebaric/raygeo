@@ -9,6 +9,7 @@ Provides sRGB/linear color space conversions, RGBA-to-grayscale/binary conversio
 import numpy
 import numpy.typing
 from raygeo import ops
+from . import scan
 __all__ = [
     "apply_bayer_dither",
     "apply_floyd_steinberg_dither",
@@ -27,6 +28,7 @@ __all__ = [
     "rgba_to_binary",
     "rgba_to_grayscale",
     "rgba_to_grayscale_inplace",
+    "scan",
     "srgb_to_linear",
 ]
 

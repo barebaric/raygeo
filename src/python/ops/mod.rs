@@ -20,10 +20,9 @@ use pyo3::prelude::*;
 pub(crate) mod assembly;
 pub(crate) mod axis;
 pub(crate) mod container;
+pub(crate) mod convert;
 pub(crate) mod cut;
 pub(crate) mod feature;
-pub(crate) mod raster;
-mod serialize;
 pub(crate) mod state;
 pub(crate) mod transform;
 pub(crate) mod types;
@@ -60,8 +59,8 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     // Child submodule: raygeo.ops.assembly
     assembly::register(&ops_mod)?;
 
-    // Child submodule: raygeo.ops.raster
-    raster::register(&ops_mod)?;
+    // Child submodule: raygeo.ops.convert
+    convert::register(&ops_mod)?;
 
     // Child submodule: raygeo.ops.feature
     feature::register(&ops_mod)?;

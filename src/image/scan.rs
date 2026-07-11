@@ -499,3 +499,70 @@ pub fn downsample_power_values(
         y_mm: resampled_y,
     }
 }
+
+pub fn sample_image(
+    image: &[u8],
+    height: usize,
+    width: usize,
+    x: i32,
+    y: i32,
+) -> u8 {
+    if x >= 0 && (x as usize) < width && y >= 0 && (y as usize) < height {
+        image[y as usize * width + x as usize]
+    } else {
+        0
+    }
+}
+
+pub fn sample_mask_along_line(
+    mask: &[u8],
+    height: usize,
+    width: usize,
+    scan_line: &ScanLine,
+) -> Vec<u8> {
+    let mut values = Vec::with_capacity(scan_line.pixels.len());
+    for &(px, py) in &scan_line.pixels {
+        values.push(sample_image(mask, height, width, px, py));
+    }
+    values
+}
+
+#[allow(clippy::too_many_arguments)]
+pub fn compute_power_values(
+    gray_image: &[u8],
+    alpha: &[u8],
+    height: usize,
+    width: usize,
+    pixels: &[(i32, i32)],
+    min_power: f64,
+    max_power: f64,
+    step_power: f64,
+    num_power_levels: usize,
+) -> Vec<u8> {
+    let power_range = max_power - min_power;
+    let mut result = Vec::with_capacity(pixels.len());
+
+    for &(px, py) in pixels {
+        let gray = sample_image(gray_image, height, width, px, py);
+        let a = sample_image(alpha, height, width, px, py);
+
+        let mut fraction =
+            min_power + (1.0 - gray as f64 / 255.0) * power_range;
+        fraction *= step_power;
+        let mut pv = (fraction * 255.0).round() as u8;
+        if a == 0 {
+            pv = 0;
+        }
+
+        if num_power_levels < 256 {
+            let levels = 2.max(num_power_levels).min(256);
+            let quantized = (pv as f64 * (levels - 1) as f64 / 255.0).round()
+                * 255.0
+                / (levels - 1) as f64;
+            pv = quantized.round() as u8;
+        }
+
+        result.push(pv);
+    }
+    result
+}

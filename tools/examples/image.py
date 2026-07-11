@@ -7,7 +7,8 @@ import numpy as np
 
 import raygeo.image as img
 from raygeo.image import rasterize_scanlines
-from raygeo.ops.raster import ScanMode, rasterize_power_modulation
+from raygeo.image.scan import ScanMode
+from raygeo.ops import Ops
 from raygeo.ops.types import CommandType
 from tools.plot import fill_rounded_rect, make_pattern
 
@@ -258,7 +259,7 @@ def generate_rasterize_scanlines():
     gray3 = make_pattern(img_size, img_size, "Radial")
     alpha = np.full((img_size, img_size), 255, dtype=np.uint8)
 
-    ops = rasterize_power_modulation(
+    ops = Ops.from_power_modulated_image(
         gray3,
         alpha,
         (ppm, ppm),

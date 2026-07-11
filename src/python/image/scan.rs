@@ -5,23 +5,19 @@ use pyo3_stub_gen::derive::{
     gen_stub_pymethods,
 };
 
-use crate::ops::assembly::raster::rasterize::{
-    rasterize_mask_lines, rasterize_mask_scan, rasterize_multi_pass,
-    rasterize_power_modulation, ScanMode as RustScanMode,
-};
-use crate::ops::assembly::raster::scan::{
+use crate::image::scan::{
     self, downsample_power_values, find_mask_bounding_box,
     generate_horizontal_scan_positions, generate_scan_lines, line_pixels,
     resample_rows,
 };
-use crate::python::ops::container::PyOps;
+use crate::ops::convert::image::ScanMode as RustScanMode;
 
 /// Scan mode for raster operations.
 ///
 /// ``SEGMENTED`` skips zero-power gaps within a scan line.
 /// ``FULL_SWEEP`` emits the full line with power values (zeros included).
 #[gen_stub_pyclass_enum]
-#[pyclass(module = "raygeo.ops.raster", name = "ScanMode", from_py_object)]
+#[pyclass(module = "raygeo.image.scan", name = "ScanMode", from_py_object)]
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum PyScanMode {
     #[pyo3(name = "SEGMENTED")]
@@ -67,7 +63,7 @@ impl PyScanMode {
 /// index, start/end positions in mm, and the set of pixels it
 /// intersects in the image.
 #[gen_stub_pyclass]
-#[pyclass(module = "raygeo.ops.raster", name = "ScanLine", skip_from_py_object)]
+#[pyclass(module = "raygeo.image.scan", name = "ScanLine", skip_from_py_object)]
 #[derive(Clone, Debug)]
 pub struct PyScanLine {
     pub index: i64,
@@ -80,7 +76,6 @@ pub struct PyScanLine {
 #[gen_stub_pymethods]
 #[pymethods]
 impl PyScanLine {
-    /// Create a new ScanLine.
     #[new]
     fn new(
         index: i64,
@@ -98,50 +93,37 @@ impl PyScanLine {
         }
     }
 
-    /// The index of this scan line (used to determine alternating direction).
     #[getter]
     fn index(&self) -> i64 {
         self.index
     }
 
-    /// Start position of the scan line in mm space.
     #[getter]
     fn start_mm(&self) -> (f64, f64) {
         self.start_mm
     }
 
-    /// End position of the scan line in mm space.
     #[getter]
     fn end_mm(&self) -> (f64, f64) {
         self.end_mm
     }
 
-    /// Pixel coordinates covered by this scan line.
     #[getter]
     fn pixels(&self) -> Vec<(i32, i32)> {
         self.pixels.clone()
     }
 
-    /// Spacing between scan lines in mm.
     #[getter]
     fn line_interval_mm(&self) -> f64 {
         self.line_interval_mm
     }
 
-    /// Compute the length of this scan line in mm.
-    ///
-    /// :returns: Total path length in mm.
-    /// :complexity: O(1)
     fn length_mm(&self) -> f64 {
         let dx = self.end_mm.0 - self.start_mm.0;
         let dy = self.end_mm.1 - self.start_mm.1;
         (dx * dx + dy * dy).sqrt()
     }
 
-    /// Normalised direction vector from start to end in mm space.
-    ///
-    /// :returns: ``(dx, dy)`` unit vector.
-    /// :complexity: O(1)
     fn direction(&self) -> (f64, f64) {
         let length = self.length_mm();
         if length < 1e-9 {
@@ -153,13 +135,6 @@ impl PyScanLine {
         )
     }
 
-    /// Convert pixel coordinates to mm space, projected onto this scan line.
-    ///
-    /// :param px: X pixel coordinate.
-    /// :param py: Y pixel coordinate.
-    /// :param pixels_per_mm: ``(x, y)`` pixel density in px/mm.
-    /// :returns: ``(x, y)`` position in mm, projected onto the scan line.
-    /// :complexity: O(1)
     fn pixel_to_mm(
         &self,
         px: i32,
@@ -195,7 +170,7 @@ impl PyScanLine {
         :complexity: O(h*w)
         """
 "#,
-    module = "raygeo.ops.raster"
+    module = "raygeo.image.scan"
 )]
 #[pyfunction(name = "find_mask_bounding_box")]
 fn py_find_mask_bounding_box(
@@ -233,7 +208,7 @@ fn py_find_mask_bounding_box(
         :complexity: O(n)
         """
 "#,
-    module = "raygeo.ops.raster"
+    module = "raygeo.image.scan"
 )]
 #[pyfunction(name = "find_segments")]
 fn py_find_segments(
@@ -265,7 +240,7 @@ fn py_find_segments(
         :complexity: O(n) where n = number of pixels on the line
         """
 "#,
-    module = "raygeo.ops.raster"
+    module = "raygeo.image.scan"
 )]
 #[pyfunction(name = "line_pixels")]
 fn py_line_pixels(
@@ -279,7 +254,7 @@ fn py_line_pixels(
 
 #[gen_stub_pyfunction(
     python = r#"
-    from raygeo.ops.raster import ScanLine
+    from raygeo.image.scan import ScanLine
 
     def generate_scan_lines(
         bbox: tuple[int, int, int, int],
@@ -310,7 +285,7 @@ fn py_line_pixels(
         :complexity: O(n * p) where n = number of lines, p = pixels per line
         """
 "#,
-    module = "raygeo.ops.raster"
+    module = "raygeo.image.scan"
 )]
 #[pyfunction(name = "generate_scan_lines")]
 #[pyo3(signature = (bbox, image_size, pixels_per_mm, line_interval_mm, direction_degrees=0.0, offset_x_mm=0.0, offset_y_mm=0.0, global_center_mm=None))]
@@ -373,7 +348,7 @@ fn py_generate_scan_lines(
         :complexity: O(n) where n = number of scan lines
         """
 "#,
-    module = "raygeo.ops.raster"
+    module = "raygeo.image.scan"
 )]
 #[pyfunction(name = "generate_horizontal_scan_positions")]
 fn py_generate_horizontal_scan_positions(
@@ -414,7 +389,7 @@ fn py_generate_horizontal_scan_positions(
         :complexity: O(m * w) where m = output rows, w = image width
         """
 "#,
-    module = "raygeo.ops.raster"
+    module = "raygeo.image.scan"
 )]
 #[pyfunction(name = "resample_rows")]
 fn py_resample_rows(
@@ -443,20 +418,6 @@ fn py_resample_rows(
     Ok(reshaped.unbind())
 }
 
-fn extract_flat_u8(
-    py: Python<'_>,
-    arr: &Bound<'_, PyAny>,
-) -> PyResult<(Vec<u8>, usize, usize)> {
-    let numpy = py.import("numpy")?;
-    let a = numpy.call_method1("asarray", (arr,))?;
-    let shape: (usize, usize) = a.getattr("shape")?.extract()?;
-    let flat: Vec<u8> = a
-        .call_method0("flatten")?
-        .call_method0("tolist")?
-        .extract()?;
-    Ok((flat, shape.0, shape.1))
-}
-
 #[gen_stub_pyfunction(
     python = r#"
     import numpy
@@ -482,7 +443,7 @@ fn extract_flat_u8(
         :complexity: O(n) where n = number of power values
         """
 "#,
-    module = "raygeo.ops.raster"
+    module = "raygeo.image.scan"
 )]
 #[pyfunction(name = "downsample_power_values")]
 fn py_downsample_power_values(
@@ -515,8 +476,8 @@ fn py_downsample_power_values(
         :returns: Flat list of ``[sx, sy, sz, ex, ey, ez, ...]`` segments.
         :complexity: O(n) where n = number of steps
         """
-    "#,
-    module = "raygeo.ops.raster"
+"#,
+    module = "raygeo.image.scan"
 )]
 #[pyfunction(name = "extract_zero_power_segments")]
 fn py_extract_zero_power_segments(
@@ -532,361 +493,42 @@ fn py_extract_zero_power_segments(
     Ok(scan::extract_zero_power_segments(start, end, &pv))
 }
 
-#[gen_stub_pyfunction(
-    python = r#"
-    import numpy
-    import numpy.typing
-    from raygeo.ops import Ops
-    from raygeo.ops.raster import ScanMode
-
-    def rasterize_power_modulation(
-        gray_image: numpy.typing.NDArray[numpy.uint8],
-        alpha: numpy.typing.NDArray[numpy.uint8],
-        pixels_per_mm: tuple[float, float],
-        offset_x_mm: float,
-        offset_y_mm: float,
-        line_interval_mm: float,
-        sample_interval_mm: float,
-        min_power: float = 0.0,
-        max_power: float = 1.0,
-        step_power: float = 1.0,
-        num_power_levels: int = 256,
-        angle: float = 0.0,
-        scan_mode: ScanMode = ScanMode.SEGMENTED,
-    ) -> ops.Ops:
-        """Rasterise a grayscale image with power-modulated scans.
-
-        Samples the image along scan lines and computes per-pixel power
-        values from the grayscale intensity and alpha channel, then
-        emits move-to/scan-to commands with the modulated power.
-
-        :param gray_image: 2-D grayscale image (0 = black, 255 = white).
-        :param alpha: 2-D alpha mask (0 = transparent/no emission).
-        :param pixels_per_mm: ``(x, y)`` pixel density in px/mm.
-        :param offset_x_mm: Global X offset in mm.
-        :param offset_y_mm: Global Y offset in mm.
-        :param line_interval_mm: Spacing between scan lines in mm.
-        :param sample_interval_mm: Output sample spacing in mm.
-        :param min_power: Minimum power fraction (for white pixels).
-        :param max_power: Maximum power fraction (for black pixels).
-        :param step_power: Global power multiplier.
-        :param num_power_levels: Number of quantised power levels.
-        :param angle: Scan angle in degrees.
-        :param scan_mode: ``ScanMode.SEGMENTED`` or ``ScanMode.FULL_SWEEP``.
-        :returns: An :class:`~raygeo.ops.Ops` container.
-        :complexity: O(h * w + n * p) where h, w = image dimensions, n = scan lines, p = pixels per line
-        """
-"#,
-    module = "raygeo.ops.raster"
-)]
-#[pyfunction(name = "rasterize_power_modulation")]
-#[pyo3(signature = (gray_image, alpha, pixels_per_mm, offset_x_mm, offset_y_mm, line_interval_mm, sample_interval_mm, min_power=0.0, max_power=1.0, step_power=1.0, num_power_levels=256, angle=0.0, scan_mode=PyScanMode::Segmented))]
-#[allow(clippy::too_many_arguments)]
-fn py_rasterize_power_modulation(
-    py: Python<'_>,
-    gray_image: &Bound<'_, PyAny>,
-    alpha: &Bound<'_, PyAny>,
-    pixels_per_mm: (f64, f64),
-    offset_x_mm: f64,
-    offset_y_mm: f64,
-    line_interval_mm: f64,
-    sample_interval_mm: f64,
-    min_power: f64,
-    max_power: f64,
-    step_power: f64,
-    num_power_levels: usize,
-    angle: f64,
-    scan_mode: PyScanMode,
-) -> PyResult<PyOps> {
-    let (gray, h, w) = extract_flat_u8(py, gray_image)?;
-    let (alp, h2, w2) = extract_flat_u8(py, alpha)?;
-    debug_assert_eq!(h, h2);
-    debug_assert_eq!(w, w2);
-    let ops = rasterize_power_modulation(
-        &gray,
-        &alp,
-        h,
-        w,
-        pixels_per_mm,
-        offset_x_mm,
-        offset_y_mm,
-        line_interval_mm,
-        sample_interval_mm,
-        min_power,
-        max_power,
-        step_power,
-        num_power_levels,
-        angle,
-        scan_mode.into(),
-    );
-    Ok(PyOps { inner: ops })
-}
-
-#[gen_stub_pyfunction(
-    python = r#"
-    import numpy
-    import numpy.typing
-    from raygeo.ops import Ops
-    from raygeo.ops.raster import ScanMode
-
-    def rasterize_mask_scan(
-        mask: numpy.typing.NDArray[numpy.uint8],
-        pixels_per_mm: tuple[float, float],
-        offset_x_mm: float,
-        offset_y_mm: float,
-        line_interval_mm: float,
-        step_power: float = 1.0,
-        angle: float = 0.0,
-        scan_mode: ScanMode = ScanMode.SEGMENTED,
-    ) -> ops.Ops:
-        """Rasterise a binary mask into scan-to commands.
-
-        Generates scan lines covering the mask's bounding box, samples
-        the mask along each line, and emits move-to/scan-to commands
-        for each non-zero segment (or the full sweep).
-
-        :param mask: 2-D binary mask array.
-        :param pixels_per_mm: ``(x, y)`` pixel density in px/mm.
-        :param offset_x_mm: Global X offset in mm.
-        :param offset_y_mm: Global Y offset in mm.
-        :param line_interval_mm: Spacing between scan lines in mm.
-        :param step_power: Power value (0-1) for exposed pixels.
-        :param angle: Scan angle in degrees.
-        :param scan_mode: ``ScanMode.SEGMENTED`` or ``ScanMode.FULL_SWEEP``.
-        :returns: An :class:`~raygeo.ops.Ops` container.
-        :complexity: O(h * w + n * p) where h, w = image dimensions, n = scan lines, p = pixels per line
-        """
-"#,
-    module = "raygeo.ops.raster"
-)]
-#[pyfunction(name = "rasterize_mask_scan")]
-#[pyo3(signature = (mask, pixels_per_mm, offset_x_mm, offset_y_mm, line_interval_mm, step_power=1.0, angle=0.0, scan_mode=PyScanMode::Segmented))]
-#[allow(clippy::too_many_arguments)]
-fn py_rasterize_mask_scan(
-    py: Python<'_>,
-    mask: &Bound<'_, PyAny>,
-    pixels_per_mm: (f64, f64),
-    offset_x_mm: f64,
-    offset_y_mm: f64,
-    line_interval_mm: f64,
-    step_power: f64,
-    angle: f64,
-    scan_mode: PyScanMode,
-) -> PyResult<PyOps> {
-    let (m, h, w) = extract_flat_u8(py, mask)?;
-    let ops = rasterize_mask_scan(
-        &m,
-        h,
-        w,
-        pixels_per_mm,
-        offset_x_mm,
-        offset_y_mm,
-        line_interval_mm,
-        step_power,
-        angle,
-        scan_mode.into(),
-    );
-    Ok(PyOps { inner: ops })
-}
-
-#[gen_stub_pyfunction(
-    python = r#"
-    import numpy
-    import numpy.typing
-    from raygeo.ops import Ops
-    from raygeo.ops.raster import ScanMode
-
-    def rasterize_mask_lines(
-        mask: numpy.typing.NDArray[numpy.uint8],
-        pixels_per_mm: tuple[float, float],
-        offset_x_mm: float,
-        offset_y_mm: float,
-        line_interval_mm: float,
-        z: float = 0.0,
-        angle: float = 0.0,
-        scan_mode: ScanMode = ScanMode.SEGMENTED,
-    ) -> ops.Ops:
-        """Rasterise a binary mask into line-to commands (no power).
-
-        Similar to :func:`rasterize_mask_scan` but emits move-to/line-to
-        commands with a Z offset instead of scan-to with power values.
-        Useful for simple contour or hatch patterns.
-
-        :param mask: 2-D binary mask array.
-        :param pixels_per_mm: ``(x, y)`` pixel density in px/mm.
-        :param offset_x_mm: Global X offset in mm.
-        :param offset_y_mm: Global Y offset in mm.
-        :param line_interval_mm: Spacing between scan lines in mm.
-        :param z: Z offset for the lines in mm.
-        :param angle: Scan angle in degrees.
-        :param scan_mode: ``ScanMode.SEGMENTED`` or ``ScanMode.FULL_SWEEP``.
-        :returns: An :class:`~raygeo.ops.Ops` container.
-        :complexity: O(h * w + n * p) where h, w = image dimensions, n = scan lines, p = pixels per line
-        """
-"#,
-    module = "raygeo.ops.raster"
-)]
-#[pyfunction(name = "rasterize_mask_lines")]
-#[pyo3(signature = (mask, pixels_per_mm, offset_x_mm, offset_y_mm, line_interval_mm, z=0.0, angle=0.0, scan_mode=PyScanMode::Segmented))]
-#[allow(clippy::too_many_arguments)]
-fn py_rasterize_mask_lines(
-    py: Python<'_>,
-    mask: &Bound<'_, PyAny>,
-    pixels_per_mm: (f64, f64),
-    offset_x_mm: f64,
-    offset_y_mm: f64,
-    line_interval_mm: f64,
-    z: f64,
-    angle: f64,
-    scan_mode: PyScanMode,
-) -> PyResult<PyOps> {
-    let (m, h, w) = extract_flat_u8(py, mask)?;
-    let ops = rasterize_mask_lines(
-        &m,
-        h,
-        w,
-        pixels_per_mm,
-        offset_x_mm,
-        offset_y_mm,
-        line_interval_mm,
-        z,
-        angle,
-        scan_mode.into(),
-    );
-    Ok(PyOps { inner: ops })
-}
-
-#[gen_stub_pyfunction(
-    python = r#"
-    import numpy
-    import numpy.typing
-    from raygeo.ops import Ops
-    from raygeo.ops.raster import ScanMode
-
-    def rasterize_multi_pass(
-        gray_image: numpy.typing.NDArray[numpy.uint8],
-        pixels_per_mm: tuple[float, float],
-        offset_x_mm: float,
-        offset_y_mm: float,
-        line_interval_mm: float,
-        num_depth_levels: int,
-        z_step_down: float,
-        angle: float = 0.0,
-        angle_increment: float = 0.0,
-        scan_mode: ScanMode = ScanMode.SEGMENTED,
-    ) -> ops.Ops:
-        """Rasterise a grayscale image as multiple Z-depth passes.
-
-        Decomposes the grayscale image into *num_depth_levels* layers
-        by depth-slicing, then rasterises each layer with a progressive
-        Z offset and optional per-pass angle increment.
-
-        :param gray_image: 2-D grayscale image (0 = black, 255 = white).
-        :param pixels_per_mm: ``(x, y)`` pixel density in px/mm.
-        :param offset_x_mm: Global X offset in mm.
-        :param offset_y_mm: Global Y offset in mm.
-        :param line_interval_mm: Spacing between scan lines in mm.
-        :param num_depth_levels: Number of depth layers to produce.
-        :param z_step_down: Z decrement per depth layer in mm.
-        :param angle: Initial scan angle in degrees.
-        :param angle_increment: Angle added per depth layer in degrees.
-        :param scan_mode: ``ScanMode.SEGMENTED`` or ``ScanMode.FULL_SWEEP``.
-        :returns: An :class:`~raygeo.ops.Ops` container.
-        :complexity: O(d * (h * w + n * p)) where d = depth levels, h, w = image dims, n = scan lines, p = pixels per line
-        """
-"#,
-    module = "raygeo.ops.raster"
-)]
-#[pyfunction(name = "rasterize_multi_pass")]
-#[pyo3(signature = (gray_image, pixels_per_mm, offset_x_mm, offset_y_mm, line_interval_mm, num_depth_levels, z_step_down, angle=0.0, angle_increment=0.0, scan_mode=PyScanMode::Segmented))]
-#[allow(clippy::too_many_arguments)]
-fn py_rasterize_multi_pass(
-    py: Python<'_>,
-    gray_image: &Bound<'_, PyAny>,
-    pixels_per_mm: (f64, f64),
-    offset_x_mm: f64,
-    offset_y_mm: f64,
-    line_interval_mm: f64,
-    num_depth_levels: usize,
-    z_step_down: f64,
-    angle: f64,
-    angle_increment: f64,
-    scan_mode: PyScanMode,
-) -> PyResult<PyOps> {
-    let (gray, h, w) = extract_flat_u8(py, gray_image)?;
-    let ops = rasterize_multi_pass(
-        &gray,
-        h,
-        w,
-        pixels_per_mm,
-        offset_x_mm,
-        offset_y_mm,
-        line_interval_mm,
-        num_depth_levels,
-        z_step_down,
-        angle,
-        angle_increment,
-        scan_mode.into(),
-    );
-    Ok(PyOps { inner: ops })
-}
-
 pub(crate) fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
-    let raster_mod = PyModule::new(m.py(), "raster")?;
+    let scan_mod = PyModule::new(m.py(), "scan")?;
 
-    raster_mod.add_class::<PyScanMode>()?;
-    raster_mod.add_class::<PyScanLine>()?;
-    raster_mod.add_function(wrap_pyfunction!(
+    scan_mod.add_class::<PyScanMode>()?;
+    scan_mod.add_class::<PyScanLine>()?;
+    scan_mod.add_function(wrap_pyfunction!(
         py_find_mask_bounding_box,
-        raster_mod.clone()
+        scan_mod.clone()
     )?)?;
-    raster_mod.add_function(wrap_pyfunction!(
-        py_find_segments,
-        raster_mod.clone()
-    )?)?;
-    raster_mod
-        .add_function(wrap_pyfunction!(py_line_pixels, raster_mod.clone())?)?;
-    raster_mod.add_function(wrap_pyfunction!(
+    scan_mod
+        .add_function(wrap_pyfunction!(py_find_segments, scan_mod.clone())?)?;
+    scan_mod
+        .add_function(wrap_pyfunction!(py_line_pixels, scan_mod.clone())?)?;
+    scan_mod.add_function(wrap_pyfunction!(
         py_generate_scan_lines,
-        raster_mod.clone()
+        scan_mod.clone()
     )?)?;
-    raster_mod.add_function(wrap_pyfunction!(
+    scan_mod.add_function(wrap_pyfunction!(
         py_generate_horizontal_scan_positions,
-        raster_mod.clone()
+        scan_mod.clone()
     )?)?;
-    raster_mod.add_function(wrap_pyfunction!(
-        py_resample_rows,
-        raster_mod.clone()
-    )?)?;
-    raster_mod.add_function(wrap_pyfunction!(
+    scan_mod
+        .add_function(wrap_pyfunction!(py_resample_rows, scan_mod.clone())?)?;
+    scan_mod.add_function(wrap_pyfunction!(
         py_downsample_power_values,
-        raster_mod.clone()
+        scan_mod.clone()
     )?)?;
-    raster_mod.add_function(wrap_pyfunction!(
+    scan_mod.add_function(wrap_pyfunction!(
         py_extract_zero_power_segments,
-        raster_mod.clone()
-    )?)?;
-    raster_mod.add_function(wrap_pyfunction!(
-        py_rasterize_power_modulation,
-        raster_mod.clone()
-    )?)?;
-    raster_mod.add_function(wrap_pyfunction!(
-        py_rasterize_mask_scan,
-        raster_mod.clone()
-    )?)?;
-    raster_mod.add_function(wrap_pyfunction!(
-        py_rasterize_mask_lines,
-        raster_mod.clone()
-    )?)?;
-    raster_mod.add_function(wrap_pyfunction!(
-        py_rasterize_multi_pass,
-        raster_mod.clone()
+        scan_mod.clone()
     )?)?;
 
-    m.add_submodule(&raster_mod)?;
+    m.add_submodule(&scan_mod)?;
 
     let sys_modules = m.py().import("sys")?.getattr("modules")?;
-    sys_modules.set_item("raygeo.ops.raster", &raster_mod)?;
+    sys_modules.set_item("raygeo.image.scan", &scan_mod)?;
 
     Ok(())
 }

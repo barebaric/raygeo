@@ -20,9 +20,10 @@ from raygeo.geo.shape.polygon import (
     get_polygon_convex_hull,
 )
 from raygeo.geo.shape.polygon3d import fillet_polyline_3d, offset_polyline_3d
+from raygeo.image.scan import ScanMode
+from raygeo.ops import Ops
 from raygeo.ops.assembly.adaptive import adaptive_clearing
 from raygeo.ops.cut.cleared_area import ClearedArea
-from raygeo.ops.raster import ScanMode, rasterize_power_modulation
 from raygeo.ops.types import CommandType
 from tools.plot import make_pattern, plot_geometry, plot_ops_2d
 
@@ -182,7 +183,7 @@ def _plot_raster_power_modulation(ax):
     line_interval = 0.1
 
     alpha = np.full((img_size, img_size), 255, dtype=np.uint8)
-    ops = rasterize_power_modulation(
+    ops = Ops.from_power_modulated_image(
         gray,
         alpha,
         (ppm, ppm),

@@ -1,8 +1,6 @@
 pub(crate) mod structure;
 pub(crate) mod time;
 
-use std::fmt::Write;
-
 use crate::constants::EPSILON_COLLINEAR;
 
 use super::axis::Axis;
@@ -542,43 +540,6 @@ impl std::ops::Mul<usize> for &Ops {
 impl Ops {
     // --- Utility ---
 
-    pub fn dump(&self) {
-        print!("{}", self.format_dump());
-    }
-
-    pub fn format_dump(&self) -> String {
-        let mut out = format!("Ops {{ len: {} }}\n", self.commands.len());
-        for (i, node) in self.commands.iter().enumerate() {
-            let ct = node.command_type();
-            write!(out, "  [{}] {}", i, ct).unwrap();
-            if let OpCategory::Moving { end, cmd } = &node.category {
-                write!(out, " end=({:.3},{:.3},{:.3})", end.x, end.y, end.z)
-                    .unwrap();
-                match cmd {
-                    MoveCmd::ArcTo { center, cw } => {
-                        write!(
-                            out,
-                            " arc=(i={:.3},j={:.3},cw={})",
-                            center.x, center.y, cw
-                        )
-                        .unwrap();
-                    }
-                    MoveCmd::BezierTo { control1, control2 } => {
-                        write!(
-                            out,
-                            " bezier=(control1=({:.3},{:.3}),control2=({:.3},{:.3}))",
-                            control1.x, control1.y, control2.x, control2.y
-                        )
-                        .unwrap();
-                    }
-                    _ => {}
-                }
-            }
-            writeln!(out).unwrap();
-        }
-        out
-    }
-
     pub fn rect(&self, include_travel: bool) -> Option<Rect> {
         let mut min_x = f64::INFINITY;
         let mut min_y = f64::INFINITY;
@@ -707,118 +668,6 @@ impl Ops {
 
     pub fn group_by_state_continuity(&self) -> Vec<Ops> {
         super::transform::group::group_by_state_continuity(self)
-    }
-
-    /// Build Ops from a 3-D polyline.
-    ///
-    /// When `move_first` is `true` the first point is emitted as a
-    /// `MoveTo` and subsequent points as `LineTo`.  When `move_first`
-    /// is `false` every point is emitted as a `LineTo` (for appending
-    /// to an in-progress cut).  When `state` is `Some`, the state
-    /// commands are applied before the polyline points.
-    pub fn from_polyline(
-        polyline: &[Point3D],
-        move_first: bool,
-        state: Option<&State>,
-    ) -> Self {
-        let mut ops = Ops::new();
-
-        if polyline.is_empty() {
-            if let Some(s) = state {
-                ops.apply_state(s);
-            }
-            return ops;
-        }
-
-        if let Some(s) = state {
-            ops.apply_state(s);
-        }
-
-        if move_first {
-            let first = polyline[0];
-            ops.move_to(first.x, first.y, first.z, None);
-            for pt in &polyline[1..] {
-                ops.line_to(pt.x, pt.y, pt.z, None);
-            }
-        } else {
-            for pt in polyline {
-                ops.line_to(pt.x, pt.y, pt.z, None);
-            }
-        }
-
-        ops
-    }
-
-    pub fn from_geometry(
-        geometry: &crate::geo::geometry::Geometry,
-    ) -> Result<Self, crate::RaygeoError> {
-        let mut ops = Ops::new();
-        if geometry.data.is_empty() {
-            ops.last_move_to = geometry.last_move_to;
-            return Ok(ops);
-        }
-
-        for cmd in &geometry.data {
-            match cmd {
-                crate::Command::Move { end } => {
-                    ops.move_to(end.x, end.y, end.z, None);
-                }
-                crate::Command::Line { end } => {
-                    ops.line_to(end.x, end.y, end.z, None);
-                }
-                crate::Command::Arc {
-                    end,
-                    center_offset,
-                    normal,
-                } => {
-                    let clockwise = normal.z < 0.0;
-                    ops.arc_to(
-                        end.x,
-                        end.y,
-                        center_offset.x,
-                        center_offset.y,
-                        clockwise,
-                        end.z,
-                        None,
-                    );
-                }
-                crate::Command::Bezier {
-                    end,
-                    control1,
-                    control2,
-                } => {
-                    ops.bezier_to(*control1, *control2, *end, None);
-                }
-            }
-        }
-        ops.last_move_to = geometry.last_move_to;
-        Ok(ops)
-    }
-
-    pub fn to_geometry(&self) -> crate::geo::geometry::Geometry {
-        let mut geo = crate::geo::geometry::Geometry::new();
-        for node in &self.commands {
-            if let OpCategory::Moving { end, cmd } = &node.category {
-                match cmd {
-                    MoveCmd::MoveTo => {
-                        geo.move_to(end.x, end.y, end.z);
-                    }
-                    MoveCmd::LineTo => {
-                        geo.line_to(end.x, end.y, end.z);
-                    }
-                    MoveCmd::ArcTo { center, cw } => {
-                        geo.arc_to(
-                            end.x, end.y, center.x, center.y, *cw, end.z,
-                        );
-                    }
-                    MoveCmd::BezierTo { control1, control2 } => {
-                        geo.bezier_to(*control1, *control2, *end);
-                    }
-                    _ => {}
-                }
-            }
-        }
-        geo
     }
 }
 

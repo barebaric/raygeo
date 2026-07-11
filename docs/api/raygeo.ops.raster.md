@@ -154,10 +154,6 @@ linear interpolation along the scanline segment from *start* to *end*.
 | _Returns_      | `list[float]`                | Flat list of `[sx, sy, sz, ex, ey, ez, ...]` segments. |
 | _Complexity_   |                              | O(n) where n = number of steps                         |
 
-![Zero-power segment extraction](images/ops-assembly-raster-zero-power-segments.png)
-
-*Zero-power segment extraction*
-
 ### `find_mask_bounding_box()`
 
 ```python
@@ -311,10 +307,6 @@ scan-to with power values. Useful for simple contour or hatch patterns.
 | _Returns_          | `ops.Ops`                       | An **~raygeo.ops.Ops** container.                                                   |
 | _Complexity_       |                                 | O(h * w + n * p) where h, w = image dimensions, n = scan lines, p = pixels per line |
 
-![Rasterization: Mask Lines](images/ops-assembly-raster-mask-lines.png)
-
-*Rasterization: Mask Lines*
-
 ### `rasterize_mask_scan()`
 
 ```python
@@ -347,10 +339,6 @@ move-to/scan-to commands for each non-zero segment (or the full sweep).
 | `scan_mode`        | `ScanMode = ScanMode.SEGMENTED` | `ScanMode.SEGMENTED` or `ScanMode.FULL_SWEEP`.                                      |
 | _Returns_          | `ops.Ops`                       | An **~raygeo.ops.Ops** container.                                                   |
 | _Complexity_       |                                 | O(h * w + n * p) where h, w = image dimensions, n = scan lines, p = pixels per line |
-
-![Rasterization: Mask Scan](images/ops-assembly-raster-mask-scan.png)
-
-*Rasterization: Mask Scan*
 
 ### `rasterize_multi_pass()`
 
@@ -388,10 +376,6 @@ layer with a progressive Z offset and optional per-pass angle increment.
 | `scan_mode`        | `ScanMode = ScanMode.SEGMENTED` | `ScanMode.SEGMENTED` or `ScanMode.FULL_SWEEP`.                                                        |
 | _Returns_          | `ops.Ops`                       | An **~raygeo.ops.Ops** container.                                                                     |
 | _Complexity_       |                                 | O(d * (h * w + n * p)) where d = depth levels, h, w = image dims, n = scan lines, p = pixels per line |
-
-![Rasterization: Multi-Pass](images/ops-assembly-raster-multi-pass.png)
-
-*Rasterization: Multi-Pass*
 
 ### `rasterize_power_modulation()`
 
@@ -435,10 +419,6 @@ and alpha channel, then emits move-to/scan-to commands with the modulated power.
 | `scan_mode`          | `ScanMode = ScanMode.SEGMENTED` | `ScanMode.SEGMENTED` or `ScanMode.FULL_SWEEP`.                                      |
 | _Returns_            | `ops.Ops`                       | An **~raygeo.ops.Ops** container.                                                   |
 | _Complexity_         |                                 | O(h * w + n * p) where h, w = image dimensions, n = scan lines, p = pixels per line |
-
-![Rasterization: Power Modulation](images/ops-assembly-raster-power-modulation.png)
-
-*Rasterization: Power Modulation*
 
 ### `resample_rows()`
 

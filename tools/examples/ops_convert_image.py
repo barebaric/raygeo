@@ -4,14 +4,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.colors import Normalize
 
-from raygeo.ops.raster import (
-    ScanMode,
-    extract_zero_power_segments,
-    rasterize_mask_lines,
-    rasterize_mask_scan,
-    rasterize_multi_pass,
-    rasterize_power_modulation,
-)
+from raygeo.image.scan import ScanMode, extract_zero_power_segments
+from raygeo.ops import Ops
 from raygeo.ops.types import CommandType
 from tools.plot import make_pattern
 
@@ -140,7 +134,7 @@ def generate_power_modulation():
     line_interval = 0.1
 
     alpha = np.full((img_size, img_size), 255, dtype=np.uint8)
-    ops = rasterize_power_modulation(
+    ops = Ops.from_power_modulated_image(
         gray,
         alpha,
         (ppm, ppm),
@@ -166,7 +160,7 @@ def generate_mask_scan():
     line_interval = 0.1
 
     mask = (gray > 128).astype(np.uint8)
-    ops = rasterize_mask_scan(
+    ops = Ops.from_mask_scan(
         mask,
         (ppm, ppm),
         0.0,
@@ -186,7 +180,7 @@ def generate_mask_lines():
     line_interval = 0.1
 
     mask = (gray > 128).astype(np.uint8)
-    ops = rasterize_mask_lines(
+    ops = Ops.from_mask_lines(
         mask,
         (ppm, ppm),
         0.0,
@@ -205,7 +199,7 @@ def generate_multi_pass():
     ppm = 10.0
     line_interval = 0.1
 
-    ops = rasterize_multi_pass(
+    ops = Ops.from_multi_pass_image(
         gray,
         (ppm, ppm),
         0.0,
@@ -285,25 +279,25 @@ def generate_zero_power_segments():
     return fig2
 
 
-__docs_target__ = ["raygeo.ops.raster.md"]
+__docs_target__ = ["raygeo.ops.convert.image.md"]
 __images__ = [
     {
-        "heading": "rasterize_power_modulation",
+        "heading": "from_power_modulated_image",
         "caption": "Rasterization: Power Modulation",
         "function": generate_power_modulation,
     },
     {
-        "heading": "rasterize_mask_scan",
+        "heading": "from_mask_scan",
         "caption": "Rasterization: Mask Scan",
         "function": generate_mask_scan,
     },
     {
-        "heading": "rasterize_mask_lines",
+        "heading": "from_mask_lines",
         "caption": "Rasterization: Mask Lines",
         "function": generate_mask_lines,
     },
     {
-        "heading": "rasterize_multi_pass",
+        "heading": "from_multi_pass_image",
         "caption": "Rasterization: Multi-Pass",
         "function": generate_multi_pass,
     },

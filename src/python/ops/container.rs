@@ -24,6 +24,7 @@ use super::state::{
 use super::types::{PyCommandCategory, PyCommandType, PySectionType};
 use crate::python::geo::geometry::Geometry as PyGeometry;
 use crate::python::geo::matrix::Matrix as PyMatrix;
+use crate::python::image::scan::PyScanMode;
 
 /// Normalize a Python-style index (negative = from end) to a usize.
 fn normalize_index(idx: isize, len: usize) -> PyResult<usize> {
@@ -39,17 +40,17 @@ fn normalize_index(idx: isize, len: usize) -> PyResult<usize> {
     }
 }
 
-/// Thin wrapper around :func:`serialize::py_to_axis_map_helper`.
+/// Thin wrapper around :func:`convert::dict::py_to_axis_map_helper`.
 fn py_to_axis_map(dict: &Bound<'_, PyDict>) -> PyResult<Vec<(Axis, f64)>> {
-    super::serialize::py_to_axis_map_helper(dict)
+    super::convert::dict::py_to_axis_map_helper(dict)
 }
 
-/// Thin wrapper around :func:`serialize::axis_map_to_py_helper`.
+/// Thin wrapper around :func:`convert::dict::axis_map_to_py_helper`.
 fn axis_map_to_py<'a>(
     py: Python<'a>,
     axes: &[(Axis, f64)],
 ) -> PyResult<Bound<'a, PyDict>> {
-    super::serialize::axis_map_to_py_helper(py, axes)
+    super::convert::dict::axis_map_to_py_helper(py, axes)
 }
 
 /// A section of operations parsed into marker and content index groups.
@@ -2309,7 +2310,7 @@ impl PyOps {
     /// :returns: A Python dict representation.
     /// :complexity: O(n) time, O(n) space
     fn to_dict(&self, py: Python<'_>) -> PyResult<Py<PyDict>> {
-        super::serialize::ops_to_dict(py, &self.inner)
+        super::convert::dict::ops_to_dict(py, &self.inner)
     }
 
     /// Create an Ops sequence from a dictionary.
@@ -2322,7 +2323,7 @@ impl PyOps {
         _cls: &Bound<'_, PyType>,
         data: &Bound<'_, PyDict>,
     ) -> PyResult<Self> {
-        let inner = super::serialize::ops_from_dict(data)?;
+        let inner = super::convert::dict::ops_from_dict(data)?;
         Ok(PyOps { inner })
     }
 
@@ -2331,7 +2332,7 @@ impl PyOps {
     /// :returns: A Python dict of numpy arrays.
     /// :complexity: O(n) time, O(n) space
     fn to_numpy_arrays(&self, py: Python<'_>) -> PyResult<Py<PyDict>> {
-        super::serialize::ops_to_numpy_arrays(py, &self.inner)
+        super::convert::numpy::ops_to_numpy_arrays(py, &self.inner)
     }
 
     /// Create an Ops sequence from numpy arrays.
@@ -2344,7 +2345,7 @@ impl PyOps {
         _cls: &Bound<'_, PyType>,
         arrays: &Bound<'_, PyDict>,
     ) -> PyResult<Self> {
-        let inner = super::serialize::ops_from_numpy_arrays(arrays)?;
+        let inner = super::convert::numpy::ops_from_numpy_arrays(arrays)?;
         Ok(PyOps { inner })
     }
 
@@ -2536,4 +2537,267 @@ impl PyOps {
         );
         Ok(())
     }
+
+    /// Encode all commands into GPU-friendly vertex arrays.
+    ///
+    /// Returns four flat numpy arrays:
+    /// ``(powered_vertices, powered_colors, travel_vertices,
+    /// zero_power_vertices)``.
+    ///
+    /// Powered vertices and colors are paired (2 vertices + 2 colors
+    /// per segment).  Travel and zero-power vertices are also paired
+    /// (2 vertices per segment).  All vertex data is 3-component
+    /// (x, y, z); colors are 4-component (r, g, b, a).
+    ///
+    /// :returns: Tuple of ``(powered_vertices[N,3], powered_colors[N,4],
+    ///     travel_vertices[M,3], zero_power_vertices[K,3])`` as float32
+    ///     arrays.
+    /// :complexity: O(n) time, O(n) space
+    fn to_vertex_arrays(&self, py: Python<'_>) -> PyResult<Py<PyAny>> {
+        let va = self.inner.to_vertex_arrays();
+        let numpy = py.import("numpy")?;
+
+        let powered_v = numpy
+            .call_method1("asarray", (va.powered_vertices,))?
+            .call_method1("reshape", (-1i32, 3i32))?;
+        let powered_c = numpy
+            .call_method1("asarray", (va.powered_colors,))?
+            .call_method1("reshape", (-1i32, 4i32))?;
+        let travel_v = numpy
+            .call_method1("asarray", (va.travel_vertices,))?
+            .call_method1("reshape", (-1i32, 3i32))?;
+        let zero_power_v = numpy
+            .call_method1("asarray", (va.zero_power_vertices,))?
+            .call_method1("reshape", (-1i32, 3i32))?;
+
+        let tuple = pyo3::types::PyTuple::new(
+            py,
+            [powered_v, powered_c, travel_v, zero_power_v]
+                .into_iter()
+                .map(|v| v.into_any()),
+        )?;
+        Ok(tuple.unbind().into())
+    }
+
+    /// Rasterise a grayscale image with power-modulated scans.
+    ///
+    /// Samples the image along scan lines and computes per-pixel power
+    /// values from the grayscale intensity and alpha channel, then
+    /// emits move-to/scan-to commands with the modulated power.
+    ///
+    /// :param gray_image: 2-D grayscale image (0 = black, 255 = white).
+    /// :param alpha: 2-D alpha mask (0 = transparent/no emission).
+    /// :param pixels_per_mm: ``(x, y)`` pixel density in px/mm.
+    /// :param offset_x_mm: Global X offset in mm.
+    /// :param offset_y_mm: Global Y offset in mm.
+    /// :param line_interval_mm: Spacing between scan lines in mm.
+    /// :param sample_interval_mm: Output sample spacing in mm.
+    /// :param min_power: Minimum power fraction (for white pixels).
+    /// :param max_power: Maximum power fraction (for black pixels).
+    /// :param step_power: Global power multiplier.
+    /// :param num_power_levels: Number of quantised power levels.
+    /// :param angle: Scan angle in degrees.
+    /// :param scan_mode: ``ScanMode.SEGMENTED`` or ``ScanMode.FULL_SWEEP``.
+    /// :returns: A new :class:`Ops` container.
+    /// :complexity: O(h * w + n * p) where h, w = image dimensions, n = scan lines, p = pixels per line
+    #[staticmethod]
+    #[pyo3(signature = (gray_image, alpha, pixels_per_mm, offset_x_mm, offset_y_mm, line_interval_mm, sample_interval_mm, min_power=0.0, max_power=1.0, step_power=1.0, num_power_levels=256, angle=0.0, scan_mode=PyScanMode::Segmented))]
+    #[allow(clippy::too_many_arguments)]
+    fn from_power_modulated_image(
+        py: Python<'_>,
+        gray_image: &Bound<'_, PyAny>,
+        alpha: &Bound<'_, PyAny>,
+        pixels_per_mm: (f64, f64),
+        offset_x_mm: f64,
+        offset_y_mm: f64,
+        line_interval_mm: f64,
+        sample_interval_mm: f64,
+        min_power: f64,
+        max_power: f64,
+        step_power: f64,
+        num_power_levels: usize,
+        angle: f64,
+        scan_mode: PyScanMode,
+    ) -> PyResult<Self> {
+        let (gray, h, w) = extract_flat_u8(py, gray_image)?;
+        let (alp, h2, w2) = extract_flat_u8(py, alpha)?;
+        debug_assert_eq!(h, h2);
+        debug_assert_eq!(w, w2);
+        let ops = crate::ops::Ops::from_power_modulated_image(
+            &gray,
+            &alp,
+            h,
+            w,
+            pixels_per_mm,
+            offset_x_mm,
+            offset_y_mm,
+            line_interval_mm,
+            sample_interval_mm,
+            min_power,
+            max_power,
+            step_power,
+            num_power_levels,
+            angle,
+            scan_mode.into(),
+        );
+        Ok(PyOps { inner: ops })
+    }
+
+    /// Rasterise a binary mask into scan-to commands.
+    ///
+    /// Generates scan lines covering the mask's bounding box, samples
+    /// the mask along each line, and emits move-to/scan-to commands
+    /// for each non-zero segment (or the full sweep).
+    ///
+    /// :param mask: 2-D binary mask array.
+    /// :param pixels_per_mm: ``(x, y)`` pixel density in px/mm.
+    /// :param offset_x_mm: Global X offset in mm.
+    /// :param offset_y_mm: Global Y offset in mm.
+    /// :param line_interval_mm: Spacing between scan lines in mm.
+    /// :param step_power: Power value (0-1) for exposed pixels.
+    /// :param angle: Scan angle in degrees.
+    /// :param scan_mode: ``ScanMode.SEGMENTED`` or ``ScanMode.FULL_SWEEP``.
+    /// :returns: A new :class:`Ops` container.
+    /// :complexity: O(h * w + n * p) where h, w = image dimensions, n = scan lines, p = pixels per line
+    #[staticmethod]
+    #[pyo3(signature = (mask, pixels_per_mm, offset_x_mm, offset_y_mm, line_interval_mm, step_power=1.0, angle=0.0, scan_mode=PyScanMode::Segmented))]
+    #[allow(clippy::too_many_arguments)]
+    fn from_mask_scan(
+        py: Python<'_>,
+        mask: &Bound<'_, PyAny>,
+        pixels_per_mm: (f64, f64),
+        offset_x_mm: f64,
+        offset_y_mm: f64,
+        line_interval_mm: f64,
+        step_power: f64,
+        angle: f64,
+        scan_mode: PyScanMode,
+    ) -> PyResult<Self> {
+        let (m, h, w) = extract_flat_u8(py, mask)?;
+        let ops = crate::ops::Ops::from_mask_scan(
+            &m,
+            h,
+            w,
+            pixels_per_mm,
+            offset_x_mm,
+            offset_y_mm,
+            line_interval_mm,
+            step_power,
+            angle,
+            scan_mode.into(),
+        );
+        Ok(PyOps { inner: ops })
+    }
+
+    /// Rasterise a binary mask into line-to commands (no power).
+    ///
+    /// Similar to :meth:`from_mask_scan` but emits move-to/line-to
+    /// commands with a Z offset instead of scan-to with power values.
+    /// Useful for simple contour or hatch patterns.
+    ///
+    /// :param mask: 2-D binary mask array.
+    /// :param pixels_per_mm: ``(x, y)`` pixel density in px/mm.
+    /// :param offset_x_mm: Global X offset in mm.
+    /// :param offset_y_mm: Global Y offset in mm.
+    /// :param line_interval_mm: Spacing between scan lines in mm.
+    /// :param z: Z offset for the lines in mm.
+    /// :param angle: Scan angle in degrees.
+    /// :param scan_mode: ``ScanMode.SEGMENTED`` or ``ScanMode.FULL_SWEEP``.
+    /// :returns: A new :class:`Ops` container.
+    /// :complexity: O(h * w + n * p) where h, w = image dimensions, n = scan lines, p = pixels per line
+    #[staticmethod]
+    #[pyo3(signature = (mask, pixels_per_mm, offset_x_mm, offset_y_mm, line_interval_mm, z=0.0, angle=0.0, scan_mode=PyScanMode::Segmented))]
+    #[allow(clippy::too_many_arguments)]
+    fn from_mask_lines(
+        py: Python<'_>,
+        mask: &Bound<'_, PyAny>,
+        pixels_per_mm: (f64, f64),
+        offset_x_mm: f64,
+        offset_y_mm: f64,
+        line_interval_mm: f64,
+        z: f64,
+        angle: f64,
+        scan_mode: PyScanMode,
+    ) -> PyResult<Self> {
+        let (m, h, w) = extract_flat_u8(py, mask)?;
+        let ops = crate::ops::Ops::from_mask_lines(
+            &m,
+            h,
+            w,
+            pixels_per_mm,
+            offset_x_mm,
+            offset_y_mm,
+            line_interval_mm,
+            z,
+            angle,
+            scan_mode.into(),
+        );
+        Ok(PyOps { inner: ops })
+    }
+
+    /// Rasterise a grayscale image as multiple Z-depth passes.
+    ///
+    /// Decomposes the grayscale image into *num_depth_levels* layers
+    /// by depth-slicing, then rasterises each layer with a progressive
+    /// Z offset and optional per-pass angle increment.
+    ///
+    /// :param gray_image: 2-D grayscale image (0 = black, 255 = white).
+    /// :param pixels_per_mm: ``(x, y)`` pixel density in px/mm.
+    /// :param offset_x_mm: Global X offset in mm.
+    /// :param offset_y_mm: Global Y offset in mm.
+    /// :param line_interval_mm: Spacing between scan lines in mm.
+    /// :param num_depth_levels: Number of depth layers to produce.
+    /// :param z_step_down: Z decrement per depth layer in mm.
+    /// :param angle: Initial scan angle in degrees.
+    /// :param angle_increment: Angle added per depth layer in degrees.
+    /// :param scan_mode: ``ScanMode.SEGMENTED`` or ``ScanMode.FULL_SWEEP``.
+    /// :returns: A new :class:`Ops` container.
+    /// :complexity: O(d * (h * w + n * p)) where d = depth levels, h, w = image dims, n = scan lines, p = pixels per line
+    #[staticmethod]
+    #[pyo3(signature = (gray_image, pixels_per_mm, offset_x_mm, offset_y_mm, line_interval_mm, num_depth_levels, z_step_down, angle=0.0, angle_increment=0.0, scan_mode=PyScanMode::Segmented))]
+    #[allow(clippy::too_many_arguments)]
+    fn from_multi_pass_image(
+        py: Python<'_>,
+        gray_image: &Bound<'_, PyAny>,
+        pixels_per_mm: (f64, f64),
+        offset_x_mm: f64,
+        offset_y_mm: f64,
+        line_interval_mm: f64,
+        num_depth_levels: usize,
+        z_step_down: f64,
+        angle: f64,
+        angle_increment: f64,
+        scan_mode: PyScanMode,
+    ) -> PyResult<Self> {
+        let (gray, h, w) = extract_flat_u8(py, gray_image)?;
+        let ops = crate::ops::Ops::from_multi_pass_image(
+            &gray,
+            h,
+            w,
+            pixels_per_mm,
+            offset_x_mm,
+            offset_y_mm,
+            line_interval_mm,
+            num_depth_levels,
+            z_step_down,
+            angle,
+            angle_increment,
+            scan_mode.into(),
+        );
+        Ok(PyOps { inner: ops })
+    }
+}
+
+fn extract_flat_u8(
+    py: Python<'_>,
+    arr: &Bound<'_, PyAny>,
+) -> PyResult<(Vec<u8>, usize, usize)> {
+    let numpy = py.import("numpy")?;
+    let a = numpy.call_method1("asarray", (arr,))?;
+    let shape: (usize, usize) = a.getattr("shape")?.extract()?;
+    let flat: Vec<u8> = a
+        .call_method0("flatten")?
+        .call_method0("tolist")?
+        .extract()?;
+    Ok((flat, shape.0, shape.1))
 }

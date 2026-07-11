@@ -5,6 +5,7 @@ mod dither;
 mod grayscale;
 mod preprocess;
 mod rasterize_scanlines;
+pub(crate) mod scan;
 mod srgb;
 mod transparency;
 
@@ -54,6 +55,7 @@ pub(crate) fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     dither::register(&image_mod)?;
     preprocess::register(&image_mod)?;
     rasterize_scanlines::register(&image_mod)?;
+    scan::register(&image_mod)?;
     transparency::register(&image_mod)?;
 
     m.add_submodule(&image_mod)?;

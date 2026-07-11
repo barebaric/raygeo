@@ -19,12 +19,12 @@ for multi-axis machines.
 import builtins
 import raygeo
 from raygeo import geo
+from raygeo.image import scan
 import typing
 from . import assembly
 from . import axis
 from . import cut
 from . import feature
-from . import raster
 from . import state
 from . import transform
 from . import types
@@ -37,7 +37,6 @@ __all__ = [
     "axis",
     "cut",
     "feature",
-    "raster",
     "state",
     "transform",
     "types",
@@ -1238,6 +1237,111 @@ class Ops:
         :param preserve_order: Workpiece UIDs whose order to preserve.
         :param progress_cb: Optional callable(progress, message).
         :complexity: O(n²) average time, O(n) space
+        """
+    def to_vertex_arrays(self) -> typing.Any:
+        r"""
+        Encode all commands into GPU-friendly vertex arrays.
+        
+        Returns four flat numpy arrays:
+        ``(powered_vertices, powered_colors, travel_vertices,
+        zero_power_vertices)``.
+        
+        Powered vertices and colors are paired (2 vertices + 2 colors
+        per segment).  Travel and zero-power vertices are also paired
+        (2 vertices per segment).  All vertex data is 3-component
+        (x, y, z); colors are 4-component (r, g, b, a).
+        
+        :returns: Tuple of ``(powered_vertices[N,3], powered_colors[N,4],
+            travel_vertices[M,3], zero_power_vertices[K,3])`` as float32
+            arrays.
+        :complexity: O(n) time, O(n) space
+        """
+    @staticmethod
+    def from_power_modulated_image(gray_image: typing.Any, alpha: typing.Any, pixels_per_mm: tuple[builtins.float, builtins.float], offset_x_mm: builtins.float, offset_y_mm: builtins.float, line_interval_mm: builtins.float, sample_interval_mm: builtins.float, min_power: builtins.float = 0.0, max_power: builtins.float = 1.0, step_power: builtins.float = 1.0, num_power_levels: builtins.int = 256, angle: builtins.float = 0.0, scan_mode: scan.ScanMode = scan.ScanMode.SEGMENTED) -> Ops:
+        r"""
+        Rasterise a grayscale image with power-modulated scans.
+        
+        Samples the image along scan lines and computes per-pixel power
+        values from the grayscale intensity and alpha channel, then
+        emits move-to/scan-to commands with the modulated power.
+        
+        :param gray_image: 2-D grayscale image (0 = black, 255 = white).
+        :param alpha: 2-D alpha mask (0 = transparent/no emission).
+        :param pixels_per_mm: ``(x, y)`` pixel density in px/mm.
+        :param offset_x_mm: Global X offset in mm.
+        :param offset_y_mm: Global Y offset in mm.
+        :param line_interval_mm: Spacing between scan lines in mm.
+        :param sample_interval_mm: Output sample spacing in mm.
+        :param min_power: Minimum power fraction (for white pixels).
+        :param max_power: Maximum power fraction (for black pixels).
+        :param step_power: Global power multiplier.
+        :param num_power_levels: Number of quantised power levels.
+        :param angle: Scan angle in degrees.
+        :param scan_mode: ``ScanMode.SEGMENTED`` or ``ScanMode.FULL_SWEEP``.
+        :returns: A new :class:`Ops` container.
+        :complexity: O(h * w + n * p) where h, w = image dimensions, n = scan lines, p = pixels per line
+        """
+    @staticmethod
+    def from_mask_scan(mask: typing.Any, pixels_per_mm: tuple[builtins.float, builtins.float], offset_x_mm: builtins.float, offset_y_mm: builtins.float, line_interval_mm: builtins.float, step_power: builtins.float = 1.0, angle: builtins.float = 0.0, scan_mode: scan.ScanMode = scan.ScanMode.SEGMENTED) -> Ops:
+        r"""
+        Rasterise a binary mask into scan-to commands.
+        
+        Generates scan lines covering the mask's bounding box, samples
+        the mask along each line, and emits move-to/scan-to commands
+        for each non-zero segment (or the full sweep).
+        
+        :param mask: 2-D binary mask array.
+        :param pixels_per_mm: ``(x, y)`` pixel density in px/mm.
+        :param offset_x_mm: Global X offset in mm.
+        :param offset_y_mm: Global Y offset in mm.
+        :param line_interval_mm: Spacing between scan lines in mm.
+        :param step_power: Power value (0-1) for exposed pixels.
+        :param angle: Scan angle in degrees.
+        :param scan_mode: ``ScanMode.SEGMENTED`` or ``ScanMode.FULL_SWEEP``.
+        :returns: A new :class:`Ops` container.
+        :complexity: O(h * w + n * p) where h, w = image dimensions, n = scan lines, p = pixels per line
+        """
+    @staticmethod
+    def from_mask_lines(mask: typing.Any, pixels_per_mm: tuple[builtins.float, builtins.float], offset_x_mm: builtins.float, offset_y_mm: builtins.float, line_interval_mm: builtins.float, z: builtins.float = 0.0, angle: builtins.float = 0.0, scan_mode: scan.ScanMode = scan.ScanMode.SEGMENTED) -> Ops:
+        r"""
+        Rasterise a binary mask into line-to commands (no power).
+        
+        Similar to :meth:`from_mask_scan` but emits move-to/line-to
+        commands with a Z offset instead of scan-to with power values.
+        Useful for simple contour or hatch patterns.
+        
+        :param mask: 2-D binary mask array.
+        :param pixels_per_mm: ``(x, y)`` pixel density in px/mm.
+        :param offset_x_mm: Global X offset in mm.
+        :param offset_y_mm: Global Y offset in mm.
+        :param line_interval_mm: Spacing between scan lines in mm.
+        :param z: Z offset for the lines in mm.
+        :param angle: Scan angle in degrees.
+        :param scan_mode: ``ScanMode.SEGMENTED`` or ``ScanMode.FULL_SWEEP``.
+        :returns: A new :class:`Ops` container.
+        :complexity: O(h * w + n * p) where h, w = image dimensions, n = scan lines, p = pixels per line
+        """
+    @staticmethod
+    def from_multi_pass_image(gray_image: typing.Any, pixels_per_mm: tuple[builtins.float, builtins.float], offset_x_mm: builtins.float, offset_y_mm: builtins.float, line_interval_mm: builtins.float, num_depth_levels: builtins.int, z_step_down: builtins.float, angle: builtins.float = 0.0, angle_increment: builtins.float = 0.0, scan_mode: scan.ScanMode = scan.ScanMode.SEGMENTED) -> Ops:
+        r"""
+        Rasterise a grayscale image as multiple Z-depth passes.
+        
+        Decomposes the grayscale image into *num_depth_levels* layers
+        by depth-slicing, then rasterises each layer with a progressive
+        Z offset and optional per-pass angle increment.
+        
+        :param gray_image: 2-D grayscale image (0 = black, 255 = white).
+        :param pixels_per_mm: ``(x, y)`` pixel density in px/mm.
+        :param offset_x_mm: Global X offset in mm.
+        :param offset_y_mm: Global Y offset in mm.
+        :param line_interval_mm: Spacing between scan lines in mm.
+        :param num_depth_levels: Number of depth layers to produce.
+        :param z_step_down: Z decrement per depth layer in mm.
+        :param angle: Initial scan angle in degrees.
+        :param angle_increment: Angle added per depth layer in degrees.
+        :param scan_mode: ``ScanMode.SEGMENTED`` or ``ScanMode.FULL_SWEEP``.
+        :returns: A new :class:`Ops` container.
+        :complexity: O(d * (h * w + n * p)) where d = depth levels, h, w = image dims, n = scan lines, p = pixels per line
         """
 
 @typing.final

@@ -1,3 +1,8 @@
+//! Convert Ops ScanLine commands into a 2D pixel power-map.
+//!
+//! Reads ScanLine commands from [`Ops`] and rasterizes them into a
+//! `Vec<u8>` pixel buffer using Bresenham line drawing.
+
 use crate::ops::container::Ops;
 use crate::ops::enums::CommandType;
 
@@ -127,80 +132,87 @@ fn rasterize_diagonal(
     has_content
 }
 
-pub fn rasterize_scanlines(
-    ops: &Ops,
-    width_px: u32,
-    height_px: u32,
-    px_per_mm: (f64, f64),
-    origin_mm: (f64, f64),
-) -> Vec<u8> {
-    let w = width_px as i32;
-    let h = height_px as i32;
-    let size = (w * h) as usize;
-    if size == 0 {
-        return Vec::new();
-    }
+impl Ops {
+    /// Rasterize ScanLine commands into a 2D pixel power-map buffer.
+    ///
+    /// Iterates all scanline commands, converts their mm coordinates
+    /// to pixel space, and returns a `Vec<u8>` where each pixel holds
+    /// the maximum power value written to it.
+    pub fn to_texture(
+        &self,
+        width_px: u32,
+        height_px: u32,
+        px_per_mm: (f64, f64),
+        origin_mm: (f64, f64),
+    ) -> Vec<u8> {
+        let w = width_px as i32;
+        let h = height_px as i32;
+        let size = (w * h) as usize;
+        if size == 0 {
+            return Vec::new();
+        }
 
-    let (ox, oy) = origin_mm;
-    let (px_mm_x, px_mm_y) = px_per_mm;
+        let (ox, oy) = origin_mm;
+        let (px_mm_x, px_mm_y) = px_per_mm;
 
-    let mut buffer = vec![0u8; size];
-    let mut current_pos = (0.0f64, 0.0f64, 0.0f64);
+        let mut buffer = vec![0u8; size];
+        let mut current_pos = (0.0f64, 0.0f64, 0.0f64);
 
-    for i in 0..ops.len() {
-        let ct = ops.command_type(i);
+        for i in 0..self.len() {
+            let ct = self.command_type(i);
 
-        if ct == CommandType::MoveTo {
-            let end = ops.endpoint(i);
+            if ct == CommandType::MoveTo {
+                let end = self.endpoint(i);
+                current_pos = (end.x, end.y, end.z);
+                continue;
+            }
+
+            if ct != CommandType::ScanLine {
+                continue;
+            }
+
+            let end = self.endpoint(i);
+            let power_values = self.scanline_data(i);
+            let num_steps = power_values.len();
+            if num_steps == 0 {
+                current_pos = (end.x, end.y, end.z);
+                continue;
+            }
+
+            let sx = (current_pos.0 - ox) * px_mm_x;
+            let sy = h as f64 - (current_pos.1 - oy) * px_mm_y;
+            let ex = (end.x - ox) * px_mm_x;
+            let ey = h as f64 - (end.y - oy) * px_mm_y;
+
+            let dx = (ex - sx) / num_steps as f64;
+            let dy = (ey - sy) / num_steps as f64;
+
+            if dy == 0.0 && dx != 0.0 {
+                rasterize_horizontal(
+                    &mut buffer,
+                    sy.round() as i32,
+                    h,
+                    w,
+                    sx,
+                    dx,
+                    &power_values,
+                );
+            } else if dx != 0.0 || dy != 0.0 {
+                rasterize_diagonal(
+                    &mut buffer,
+                    w,
+                    h,
+                    sx,
+                    sy,
+                    dx,
+                    dy,
+                    &power_values,
+                );
+            }
+
             current_pos = (end.x, end.y, end.z);
-            continue;
         }
 
-        if ct != CommandType::ScanLine {
-            continue;
-        }
-
-        let end = ops.endpoint(i);
-        let power_values = ops.scanline_data(i);
-        let num_steps = power_values.len();
-        if num_steps == 0 {
-            current_pos = (end.x, end.y, end.z);
-            continue;
-        }
-
-        let sx = (current_pos.0 - ox) * px_mm_x;
-        let sy = h as f64 - (current_pos.1 - oy) * px_mm_y;
-        let ex = (end.x - ox) * px_mm_x;
-        let ey = h as f64 - (end.y - oy) * px_mm_y;
-
-        let dx = (ex - sx) / num_steps as f64;
-        let dy = (ey - sy) / num_steps as f64;
-
-        if dy == 0.0 && dx != 0.0 {
-            rasterize_horizontal(
-                &mut buffer,
-                sy.round() as i32,
-                h,
-                w,
-                sx,
-                dx,
-                &power_values,
-            );
-        } else if dx != 0.0 || dy != 0.0 {
-            rasterize_diagonal(
-                &mut buffer,
-                w,
-                h,
-                sx,
-                sy,
-                dx,
-                dy,
-                &power_values,
-            );
-        }
-
-        current_pos = (end.x, end.y, end.z);
+        buffer
     }
-
-    buffer
 }

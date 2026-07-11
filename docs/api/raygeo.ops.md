@@ -841,6 +841,109 @@ Create an Ops sequence from a Geometry.
 | _Returns_    | `Ops`          | A new `Ops` instance.    |
 | _Complexity_ |                | O(n) time, O(n) space    |
 
+### `from_mask_lines()`
+
+```python
+from_mask_lines(
+    mask: Any,
+    pixels_per_mm: tuple[float, float],
+    offset_x_mm: float,
+    offset_y_mm: float,
+    line_interval_mm: float,
+    z: float = 0.0,
+    angle: float = 0.0,
+    scan_mode: scan.ScanMode = scan.ScanMode.SEGMENTED,
+) -> Ops
+```
+
+Rasterise a binary mask into line-to commands (no power).
+
+Similar to **from_mask_scan** but emits move-to/line-to commands with a Z offset instead of scan-to
+with power values. Useful for simple contour or hatch patterns.
+
+| Parameter          | Type                                      | Description                                                                         |
+| ------------------ | ----------------------------------------- | ----------------------------------------------------------------------------------- |
+| `mask`             | `Any`                                     | 2-D binary mask array.                                                              |
+| `pixels_per_mm`    | `tuple[float, float]`                     | `(x, y)` pixel density in px/mm.                                                    |
+| `offset_x_mm`      | `float`                                   | Global X offset in mm.                                                              |
+| `offset_y_mm`      | `float`                                   | Global Y offset in mm.                                                              |
+| `line_interval_mm` | `float`                                   | Spacing between scan lines in mm.                                                   |
+| `z`                | `float = 0.0`                             | Z offset for the lines in mm.                                                       |
+| `angle`            | `float = 0.0`                             | Scan angle in degrees.                                                              |
+| `scan_mode`        | `scan.ScanMode = scan.ScanMode.SEGMENTED` | `ScanMode.SEGMENTED` or `ScanMode.FULL_SWEEP`.                                      |
+| _Returns_          | `Ops`                                     | A new **Ops** container.                                                            |
+| _Complexity_       |                                           | O(h * w + n * p) where h, w = image dimensions, n = scan lines, p = pixels per line |
+
+### `from_mask_scan()`
+
+```python
+from_mask_scan(
+    mask: Any,
+    pixels_per_mm: tuple[float, float],
+    offset_x_mm: float,
+    offset_y_mm: float,
+    line_interval_mm: float,
+    step_power: float = 1.0,
+    angle: float = 0.0,
+    scan_mode: scan.ScanMode = scan.ScanMode.SEGMENTED,
+) -> Ops
+```
+
+Rasterise a binary mask into scan-to commands.
+
+Generates scan lines covering the mask's bounding box, samples the mask along each line, and emits
+move-to/scan-to commands for each non-zero segment (or the full sweep).
+
+| Parameter          | Type                                      | Description                                                                         |
+| ------------------ | ----------------------------------------- | ----------------------------------------------------------------------------------- |
+| `mask`             | `Any`                                     | 2-D binary mask array.                                                              |
+| `pixels_per_mm`    | `tuple[float, float]`                     | `(x, y)` pixel density in px/mm.                                                    |
+| `offset_x_mm`      | `float`                                   | Global X offset in mm.                                                              |
+| `offset_y_mm`      | `float`                                   | Global Y offset in mm.                                                              |
+| `line_interval_mm` | `float`                                   | Spacing between scan lines in mm.                                                   |
+| `step_power`       | `float = 1.0`                             | Power value (0-1) for exposed pixels.                                               |
+| `angle`            | `float = 0.0`                             | Scan angle in degrees.                                                              |
+| `scan_mode`        | `scan.ScanMode = scan.ScanMode.SEGMENTED` | `ScanMode.SEGMENTED` or `ScanMode.FULL_SWEEP`.                                      |
+| _Returns_          | `Ops`                                     | A new **Ops** container.                                                            |
+| _Complexity_       |                                           | O(h * w + n * p) where h, w = image dimensions, n = scan lines, p = pixels per line |
+
+### `from_multi_pass_image()`
+
+```python
+from_multi_pass_image(
+    gray_image: Any,
+    pixels_per_mm: tuple[float, float],
+    offset_x_mm: float,
+    offset_y_mm: float,
+    line_interval_mm: float,
+    num_depth_levels: int,
+    z_step_down: float,
+    angle: float = 0.0,
+    angle_increment: float = 0.0,
+    scan_mode: scan.ScanMode = scan.ScanMode.SEGMENTED,
+) -> Ops
+```
+
+Rasterise a grayscale image as multiple Z-depth passes.
+
+Decomposes the grayscale image into *num_depth_levels* layers by depth-slicing, then rasterises each
+layer with a progressive Z offset and optional per-pass angle increment.
+
+| Parameter          | Type                                      | Description                                                                                           |
+| ------------------ | ----------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `gray_image`       | `Any`                                     | 2-D grayscale image (0 = black, 255 = white).                                                         |
+| `pixels_per_mm`    | `tuple[float, float]`                     | `(x, y)` pixel density in px/mm.                                                                      |
+| `offset_x_mm`      | `float`                                   | Global X offset in mm.                                                                                |
+| `offset_y_mm`      | `float`                                   | Global Y offset in mm.                                                                                |
+| `line_interval_mm` | `float`                                   | Spacing between scan lines in mm.                                                                     |
+| `num_depth_levels` | `int`                                     | Number of depth layers to produce.                                                                    |
+| `z_step_down`      | `float`                                   | Z decrement per depth layer in mm.                                                                    |
+| `angle`            | `float = 0.0`                             | Initial scan angle in degrees.                                                                        |
+| `angle_increment`  | `float = 0.0`                             | Angle added per depth layer in degrees.                                                               |
+| `scan_mode`        | `scan.ScanMode = scan.ScanMode.SEGMENTED` | `ScanMode.SEGMENTED` or `ScanMode.FULL_SWEEP`.                                                        |
+| _Returns_          | `Ops`                                     | A new **Ops** container.                                                                              |
+| _Complexity_       |                                           | O(d * (h * w + n * p)) where d = depth levels, h, w = image dims, n = scan lines, p = pixels per line |
+
 ### `from_numpy_arrays()`
 
 ```python
@@ -885,6 +988,49 @@ points.
 ![Ops.from_polyline with move_first=True vs move_first=False](images/ops-polyline-to-ops.png)
 
 *Ops.from_polyline with move_first=True vs move_first=False*
+
+### `from_power_modulated_image()`
+
+```python
+from_power_modulated_image(
+    gray_image: Any,
+    alpha: Any,
+    pixels_per_mm: tuple[float, float],
+    offset_x_mm: float,
+    offset_y_mm: float,
+    line_interval_mm: float,
+    sample_interval_mm: float,
+    min_power: float = 0.0,
+    max_power: float = 1.0,
+    step_power: float = 1.0,
+    num_power_levels: int = 256,
+    angle: float = 0.0,
+    scan_mode: scan.ScanMode = scan.ScanMode.SEGMENTED,
+) -> Ops
+```
+
+Rasterise a grayscale image with power-modulated scans.
+
+Samples the image along scan lines and computes per-pixel power values from the grayscale intensity
+and alpha channel, then emits move-to/scan-to commands with the modulated power.
+
+| Parameter            | Type                                      | Description                                                                         |
+| -------------------- | ----------------------------------------- | ----------------------------------------------------------------------------------- |
+| `gray_image`         | `Any`                                     | 2-D grayscale image (0 = black, 255 = white).                                       |
+| `alpha`              | `Any`                                     | 2-D alpha mask (0 = transparent/no emission).                                       |
+| `pixels_per_mm`      | `tuple[float, float]`                     | `(x, y)` pixel density in px/mm.                                                    |
+| `offset_x_mm`        | `float`                                   | Global X offset in mm.                                                              |
+| `offset_y_mm`        | `float`                                   | Global Y offset in mm.                                                              |
+| `line_interval_mm`   | `float`                                   | Spacing between scan lines in mm.                                                   |
+| `sample_interval_mm` | `float`                                   | Output sample spacing in mm.                                                        |
+| `min_power`          | `float = 0.0`                             | Minimum power fraction (for white pixels).                                          |
+| `max_power`          | `float = 1.0`                             | Maximum power fraction (for black pixels).                                          |
+| `step_power`         | `float = 1.0`                             | Global power multiplier.                                                            |
+| `num_power_levels`   | `int = 256`                               | Number of quantised power levels.                                                   |
+| `angle`              | `float = 0.0`                             | Scan angle in degrees.                                                              |
+| `scan_mode`          | `scan.ScanMode = scan.ScanMode.SEGMENTED` | `ScanMode.SEGMENTED` or `ScanMode.FULL_SWEEP`.                                      |
+| _Returns_            | `Ops`                                     | A new **Ops** container.                                                            |
+| _Complexity_         |                                           | O(h * w + n * p) where h, w = image dimensions, n = scan lines, p = pixels per line |
 
 ### `get_frame()`
 
@@ -1936,6 +2082,26 @@ Serialize this Ops sequence to numpy arrays.
 | ------------ | ------ | ------------------------------ |
 | _Returns_    | `dict` | A Python dict of numpy arrays. |
 | _Complexity_ |        | O(n) time, O(n) space          |
+
+### `to_vertex_arrays()`
+
+```python
+to_vertex_arrays() -> Any
+```
+
+Encode all commands into GPU-friendly vertex arrays.
+
+Returns four flat numpy arrays:
+`(powered_vertices, powered_colors, travel_vertices, zero_power_vertices)`.
+
+Powered vertices and colors are paired (2 vertices + 2 colors per segment). Travel and zero-power
+vertices are also paired (2 vertices per segment). All vertex data is 3-component (x, y, z); colors
+are 4-component (r, g, b, a).
+
+| Parameter    | Type  | Description                                                                                                                |
+| ------------ | ----- | -------------------------------------------------------------------------------------------------------------------------- |
+| _Returns_    | `Any` | Tuple of `(powered_vertices[N,3], powered_colors[N,4], travel_vertices[M,3], zero_power_vertices[K,3])` as float32 arrays. |
+| _Complexity_ |       | O(n) time, O(n) space                                                                                                      |
 
 ### `transfer_command_from()`
 
