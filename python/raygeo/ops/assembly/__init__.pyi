@@ -11,20 +11,28 @@ pure geometry.
 """
 
 from . import adaptive
+from . import contour
+from . import frame
 from . import helix
 from . import profile
 from . import ramp
+from . import raster
 from . import result
+from . import shrinkwrap
 from . import slot
 from . import spiral
 from . import toroid
 from . import wavefront
 __all__ = [
     "adaptive",
+    "contour",
+    "frame",
     "helix",
     "profile",
     "ramp",
+    "raster",
     "result",
+    "shrinkwrap",
     "slot",
     "spiral",
     "toroid",

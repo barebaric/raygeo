@@ -16,10 +16,14 @@ use pyo3::types::PyDict;
 use crate::ops::assembly::ProgressEvent;
 
 pub(crate) mod adaptive;
+pub(crate) mod contour;
+pub(crate) mod frame;
 pub(crate) mod helix;
 pub(crate) mod profile;
 pub(crate) mod ramp;
+pub(crate) mod raster;
 pub(crate) mod result;
+pub(crate) mod shrinkwrap;
 pub(crate) mod slot;
 pub(crate) mod spiral;
 pub(crate) mod toroid;
@@ -63,7 +67,11 @@ pub(crate) fn register(ops_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     assembly_mod.setattr("__doc__", MODULE_DOC)?;
 
     adaptive::register(&assembly_mod)?;
+    contour::register(&assembly_mod)?;
+    frame::register(&assembly_mod)?;
     helix::register(&assembly_mod)?;
+    raster::register(&assembly_mod)?;
+    shrinkwrap::register(&assembly_mod)?;
     profile::register(&assembly_mod)?;
     ramp::register(&assembly_mod)?;
     result::register(&assembly_mod)?;
