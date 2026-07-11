@@ -4,3 +4,4 @@ pub mod grayscale;
 pub mod preprocess;
 pub mod rasterize;
 pub mod srgb;
+pub mod transparency;

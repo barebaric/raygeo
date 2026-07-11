@@ -20,6 +20,8 @@ __all__ = [
     "get_component_areas",
     "grayscale_to_binary",
     "linear_to_srgb",
+    "make_transparent_by_brightness",
+    "make_transparent_except_color",
     "normalize_grayscale",
     "rasterize_scanlines",
     "rgba_to_binary",
@@ -143,6 +145,38 @@ def linear_to_srgb(array: numpy.typing.NDArray[numpy.float32], dither: bool = Fa
     :param dither: Apply dithering to reduce banding artifacts.
     :returns: Array of sRGB uint8 values with the same shape.
     :complexity: O(n) where n = number of pixels
+    """
+
+def make_transparent_by_brightness(rgba: numpy.typing.NDArray[numpy.uint8], width: int, height: int, stride: int, threshold: int = 250) -> None:
+    r"""
+    Clear alpha for bright pixels in an ARGB32 buffer (in-place).
+    
+    Pixels with BT.601-weighted brightness >= threshold have their
+    alpha channel set to 0.
+    
+    :param rgba: Flattened uint8 buffer of shape (stride * height * 4,).
+    :param width: Image width in pixels.
+    :param height: Image height in pixels.
+    :param stride: Row stride in pixels (may be larger than width).
+    :param threshold: Brightness threshold (0-255).
+    :complexity: O(w*h)
+    """
+
+def make_transparent_except_color(rgba: numpy.typing.NDArray[numpy.uint8], width: int, height: int, stride: int, target_r: int, target_g: int, target_b: int) -> None:
+    r"""
+    Clear alpha for non-matching pixels in an ARGB32 buffer (in-place).
+    
+    Pixels that do not match the target RGB color have their alpha
+    channel set to 0.
+    
+    :param rgba: Flattened uint8 buffer of shape (stride * height * 4,).
+    :param width: Image width in pixels.
+    :param height: Image height in pixels.
+    :param stride: Row stride in pixels.
+    :param target_r: Target red channel value (0-255).
+    :param target_g: Target green channel value (0-255).
+    :param target_b: Target blue channel value (0-255).
+    :complexity: O(w*h)
     """
 
 def normalize_grayscale(gray_image: numpy.typing.NDArray[numpy.uint8], black_point: int = 0, white_point: int = 255) -> numpy.typing.NDArray[numpy.uint8]:

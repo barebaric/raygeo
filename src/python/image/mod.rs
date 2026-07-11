@@ -6,6 +6,7 @@ mod grayscale;
 mod preprocess;
 mod rasterize_scanlines;
 mod srgb;
+mod transparency;
 
 pyo3_stub_gen::module_doc!("raygeo.image", "{}", MODULE_DOC);
 
@@ -42,6 +43,8 @@ pub(crate) fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
             "denoise_binary",
             "compute_adaptive_threshold",
             "rasterize_scanlines",
+            "make_transparent_by_brightness",
+            "make_transparent_except_color",
         ],
     )?;
 
@@ -51,6 +54,7 @@ pub(crate) fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     dither::register(&image_mod)?;
     preprocess::register(&image_mod)?;
     rasterize_scanlines::register(&image_mod)?;
+    transparency::register(&image_mod)?;
 
     m.add_submodule(&image_mod)?;
 
