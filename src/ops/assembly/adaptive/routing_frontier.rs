@@ -50,7 +50,7 @@ impl RoutingStrategy for RoutingFrontier {
 
         // Walk the frontier: offset each polygon inward by offset_dist,
         // then find the shortest segment between the closest points.
-        let frontier = ctx.cleared.frontier(0.5);
+        let frontier = ctx.part.cleared.frontier(0.5);
         if frontier.is_empty() {
             crate::dbg_log!("  FRONTIER  no frontier");
             *detail = ROUTE_FRONTIER_NO_FRONTIER;

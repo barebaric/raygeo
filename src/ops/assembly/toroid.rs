@@ -34,7 +34,7 @@ pub struct ToroidOptions {
 /// carrier with a disk of `tool_radius`.
 #[prof]
 pub fn generate_toroid(
-    _part: &Part,
+    part: &mut Part,
     trace: &mut Tracelet,
     opts: &ToroidOptions,
     cut_state: &State,
@@ -96,6 +96,7 @@ pub fn generate_toroid(
     };
 
     write_polyline(trace, &path, true, Some(cut_state));
+    part.cleared.cut(&cleared_polygons);
     Ok(AssemblyMeta {
         cleared_polygons,
         start,
@@ -122,7 +123,7 @@ pub struct ToroidalClearOptions {
 /// pass at constant `target_z`.
 #[prof]
 pub fn generate_toroidal_clear(
-    _part: &Part,
+    part: &mut Part,
     trace: &mut Tracelet,
     opts: &ToroidalClearOptions,
     cut_state: &State,
@@ -175,7 +176,7 @@ pub fn generate_toroidal_clear(
                 z: opts.target_z,
             },
         );
-        return build_toroidal_result(trace, &path, opts, cut_state);
+        return build_toroidal_result(part, trace, &path, opts, cut_state);
     }
 
     let mut current_z = opts.start.z;
@@ -237,11 +238,12 @@ pub fn generate_toroidal_clear(
     );
 
     full_path.extend(final_path);
-    build_toroidal_result(trace, &full_path, opts, cut_state)
+    build_toroidal_result(part, trace, &full_path, opts, cut_state)
 }
 
 /// Build an [`AssemblyMeta`] from a full 3D trochoid path.
 fn build_toroidal_result(
+    part: &mut Part,
     trace: &mut Tracelet,
     path: &[Point3D],
     opts: &ToroidalClearOptions,
@@ -287,6 +289,7 @@ fn build_toroidal_result(
     };
 
     write_polyline(trace, path, true, Some(cut_state));
+    part.cleared.cut(&cleared_polygons);
     Ok(AssemblyMeta {
         cleared_polygons,
         start,

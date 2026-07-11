@@ -49,21 +49,16 @@ def _valid_tool_area(boundary, islands, radius):
 
 
 class TestEmitResumeTravel:
-    def _cleared_area(self, outer):
-        """Create a ClearedArea with the entire pocket as initial seed
-        so routing has free space."""
-        return ClearedArea(boundary=outer, initial=[outer])
-
     def test_emits_single_move(self):
         """A single move_to is emitted to the target position."""
         outer = _rect(30.0, 30.0, 60, 60)
         ops = Ops()
         before = ops.len()
+        part = Part.from_polygons(outer, initial=[outer])
         emit_resume_travel(
-            Part.from_polygons(outer),
+            part,
             ops,
             (20.0, 20.0, 0.0),
-            cleared=self._cleared_area(outer),
         )
         assert ops.len() == before + 1
 
@@ -71,11 +66,11 @@ class TestEmitResumeTravel:
         """Emitted command is a travel move at cut_z + 0.5."""
         outer = _rect(40.0, 40.0, 80, 80)
         ops = Ops()
+        part = Part.from_polygons(outer, initial=[outer])
         emit_resume_travel(
-            Part.from_polygons(outer),
+            part,
             ops,
             (70.0, 40.0, 0.0),
-            cleared=self._cleared_area(outer),
         )
         assert ops.len() >= 1
         for i in range(ops.len()):
@@ -85,11 +80,11 @@ class TestEmitResumeTravel:
         outer = _rect(30.0, 30.0, 60, 60)
         ops = Ops()
         n0 = ops.len()
+        part = Part.from_polygons(outer, initial=[outer])
         emit_resume_travel(
-            Part.from_polygons(outer),
+            part,
             ops,
             (10.0, 10.0, 0.0),
-            cleared=self._cleared_area(outer),
         )
         assert ops.len() == n0 + 1
 
@@ -98,11 +93,11 @@ class TestEmitResumeTravel:
         outer = _rect(40.0, 40.0, 80, 80)
         ops = Ops()
         to = (70.0, 40.0, 0.0)
+        part = Part.from_polygons(outer, initial=[outer])
         emit_resume_travel(
-            Part.from_polygons(outer),
+            part,
             ops,
             to,
-            cleared=self._cleared_area(outer),
         )
         assert ops.len() >= 1
         ep = ops.endpoint(ops.len() - 1)
@@ -114,11 +109,11 @@ class TestEmitResumeTravel:
         outer = _rect(40.0, 40.0, 80, 80)
         ops = Ops()
         to_pt = (70.0, 40.0, 0.0)
+        part = Part.from_polygons(outer, initial=[outer])
         emit_resume_travel(
-            Part.from_polygons(outer),
+            part,
             ops,
             to_pt,
-            cleared=self._cleared_area(outer),
         )
         direct = math.sqrt(to_pt[0] ** 2 + to_pt[1] ** 2)
         for i in range(1, ops.len()):

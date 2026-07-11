@@ -24,7 +24,6 @@ from raygeo.image.scan import ScanMode
 from raygeo.ops import Ops
 from raygeo.ops.assembly.adaptive import adaptive_clearing
 from raygeo.ops.cut import Part
-from raygeo.ops.cut.cleared_area import ClearedArea
 from raygeo.ops.types import CommandType
 from tools.plot import make_pattern, plot_geometry, plot_ops_2d
 
@@ -450,10 +449,9 @@ def _plot_adaptive_2d(ax):
         [(50, 50), (65, 50), (65, 65), (50, 65)],
     ]
     seed = get_circle_polygon((15, 65), 10, 48)
-    ca = ClearedArea(boundary=boundary, islands=islands, initial=[seed])
+    part = Part.from_polygons(boundary, islands, initial=[seed])
     result = adaptive_clearing(
-        Part.from_polygons(boundary, islands),
-        cleared=ca,
+        part,
         tool_radius=3.0,
         step_over=1.8,
         target_z=target_z,

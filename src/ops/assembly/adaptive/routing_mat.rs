@@ -35,7 +35,7 @@ impl RoutingStrategy for RoutingMat {
                 return None;
             }
         };
-        let cleared = ctx.cleared.fragments();
+        let cleared = ctx.part.cleared.fragments();
         if cleared.is_empty() {
             *detail = ROUTE_MAT_NO_CLEARED;
             return None;

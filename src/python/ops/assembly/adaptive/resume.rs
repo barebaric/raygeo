@@ -82,20 +82,16 @@ fn emit_resume_travel_py(
     from_pt: (f64, f64, f64),
     axis: Option<&PyMedialAxis>,
 ) -> PyResult<()> {
-    let (pb_opt, islands_pts) = part.inner.extract_boundary();
-    let pb = pb_opt.unwrap_or_default();
     let opts = AdaptiveClearingOptions {
         tool_radius: radius,
         step_over: 1.5,
         target_z: cut_z,
         ..Default::default()
     };
-    let fallback_ca;
     let ca: &ClearedArea = if let Some(c) = cleared {
         &c.inner
     } else {
-        fallback_ca = ClearedArea::new(&pb, &islands_pts);
-        &fallback_ca
+        &part.inner.cleared
     };
     let mat = axis.map(|a| &a.inner);
     let mut trace = Tracelet::new();
@@ -236,7 +232,6 @@ fn try_resume_py(
     };
 
     let ctx = ResumeCtx {
-        cleared: &cleared.inner,
         opts: &opts,
         step_opts: &step_opts,
         part: &part.inner,

@@ -24,7 +24,8 @@ impl ResumeStrategy for ResumeSegment {
     ) -> Option<ToolPose> {
         require_fragments(ctx, detail)?;
 
-        let area_grew = ctx.cleared.total_area() > ctx.last_resume_area + 1e-9;
+        let area_grew =
+            ctx.part.cleared.total_area() > ctx.last_resume_area + 1e-9;
         if !area_grew {
             *detail = DETAIL_NO_GROWTH;
             return None;
@@ -85,7 +86,7 @@ fn nudge_to_frontier(ctx: &ResumeCtx, detail: &mut u8) -> Option<ToolPose> {
         if !point_in_valid_area(pos, ctx.step_opts.valid_area) {
             break;
         }
-        let eng = ctx.cleared.get_point_engagement(pos, radius);
+        let eng = ctx.part.cleared.get_point_engagement(pos, radius);
         if eng.angle >= TANGENCY_ANGLE {
             tangent_pos = Some(pos);
             break;

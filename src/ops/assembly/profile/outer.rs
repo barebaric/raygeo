@@ -6,7 +6,6 @@ use crate::ops::assembly::profile::engine::{run_profile, ProfileCommon};
 use crate::ops::assembly::profile::ProfileOuterOptions;
 use crate::ops::assembly::result::AssemblyMeta;
 use crate::ops::assembly::Tracelet;
-use crate::ops::cut::ClearedArea;
 use crate::ops::cut::Part;
 use crate::ops::state::State;
 
@@ -15,9 +14,8 @@ use super::trace_helpers as th;
 /// Profile the outer boundary of a pocket, extracting geometry from
 /// `part`.
 pub fn profile_outer(
-    part: &Part,
+    part: &mut Part,
     trace: &mut Tracelet,
-    cleared: &mut ClearedArea,
     opts: &ProfileOuterOptions,
     cut_state: &State,
 ) -> RaygeoResult<AssemblyMeta> {
@@ -54,5 +52,5 @@ pub fn profile_outer(
     let walk_order: Vec<u32> = (0..offset_polys.len() as u32).collect();
     trace.set_attrs(th::build_attrs(&offset_polys, &walk_order));
 
-    run_profile(trace, cleared, &offset_polys[0], &common, cut_state, 0)
+    run_profile(part, trace, &offset_polys[0], &common, cut_state, 0)
 }

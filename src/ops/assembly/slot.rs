@@ -38,7 +38,7 @@ pub struct SlotOptions {
 /// `tool_radius`.
 #[prof]
 pub fn generate_slot(
-    _part: &Part,
+    part: &mut Part,
     trace: &mut Tracelet,
     opts: &SlotOptions,
     cut_state: &State,
@@ -88,6 +88,7 @@ pub fn generate_slot(
     };
 
     write_polyline(trace, &path, true, Some(cut_state));
+    part.cleared.cut(&cleared_polygons);
     Ok(AssemblyMeta {
         cleared_polygons,
         start,

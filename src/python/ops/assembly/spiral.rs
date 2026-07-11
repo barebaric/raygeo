@@ -71,7 +71,7 @@ pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
 ))]
 #[allow(clippy::too_many_arguments)]
 fn generate_spiral_py(
-    part: &crate::python::ops::cut::part::PyPart,
+    part: &mut crate::python::ops::cut::part::PyPart,
     center: (f64, f64),
     z: f64,
     start_radius: f64,
@@ -105,8 +105,12 @@ fn generate_spiral_py(
     };
 
     let mut trace = Tracelet::new();
-    let meta =
-        spiral::generate_spiral(&part.inner, &mut trace, &opts, &cut_state)?;
+    let meta = spiral::generate_spiral(
+        &mut part.inner,
+        &mut trace,
+        &opts,
+        &cut_state,
+    )?;
     let events = trace.drain();
     let attrs = trace.attrs().cloned();
     let ops = trace.into_ops();

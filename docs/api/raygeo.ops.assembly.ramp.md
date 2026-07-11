@@ -9,7 +9,7 @@ sidebar_label: raygeo.ops.assembly.ramp
 
 ```python
 generate_ramp(
-    part: Part,
+    part: ops.cut.Part,
     start: tuple[float, float],
     end: tuple[float, float],
     z_start: float,
@@ -27,7 +27,7 @@ Produces a ramp (linear or zigzag) from *start* to *end* while descending from *
 
 | Parameter            | Type                                 | Description                                             |
 | -------------------- | ------------------------------------ | ------------------------------------------------------- |
-| `part`               | `Part`                               |                                                         |
+| `part`               | `ops.cut.Part`                       |                                                         |
 | `start`              | `tuple[float, float]`                | `(x, y)` start point.                                   |
 | `end`                | `tuple[float, float]`                | `(x, y)` end point.                                     |
 | `z_start`            | `float`                              | Starting Z height.                                      |

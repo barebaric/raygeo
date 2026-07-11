@@ -6,9 +6,17 @@ use crate::types::Point;
 use crate::types::Rect;
 
 #[gen_stub_pyclass(module = "raygeo.ops.cut.cleared_area")]
-#[pyclass(name = "ClearedArea")]
+#[pyclass(name = "ClearedArea", from_py_object)]
 pub struct PyClearedArea {
     pub(crate) inner: ClearedArea,
+}
+
+impl Clone for PyClearedArea {
+    fn clone(&self) -> Self {
+        Self {
+            inner: self.inner.clone(),
+        }
+    }
 }
 
 #[gen_stub_pymethods]

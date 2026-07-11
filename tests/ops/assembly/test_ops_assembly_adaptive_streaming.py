@@ -4,7 +4,6 @@ import math
 
 from raygeo.ops.assembly.adaptive import adaptive_clearing
 from raygeo.ops.cut import Part
-from raygeo.ops.cut.cleared_area import ClearedArea
 
 
 def _rect(cx, cy, w, h):
@@ -30,7 +29,6 @@ def test_adaptive_clearing_streams_ops():
     """on_progress receives ops batches during adaptive clearing."""
     boundary = _rect(0, 0, 60, 60)
     seed = [_circle(0, 0, 5)]
-    ca = ClearedArea(boundary=boundary, initial=seed)
     received = []
     total = [0]
 
@@ -39,9 +37,9 @@ def test_adaptive_clearing_streams_ops():
             received.append(event["ops_count"])
             total[0] = event["ops_total"]
 
+    part = Part.from_polygons(boundary, initial=seed)
     result = adaptive_clearing(
-        Part.from_polygons(boundary),
-        cleared=ca,
+        part,
         tool_radius=3.0,
         step_over=2.0,
         step_length=0.6,
@@ -59,17 +57,15 @@ def test_streaming_does_not_change_result():
     boundary = _rect(0, 0, 60, 60)
     seed = [_circle(0, 0, 5)]
 
-    ca1 = ClearedArea(boundary=boundary, initial=seed)
+    part1 = Part.from_polygons(boundary, initial=seed)
     r1 = adaptive_clearing(
-        Part.from_polygons(boundary),
-        cleared=ca1,
+        part1,
         tool_radius=3.0,
     )
 
-    ca2 = ClearedArea(boundary=boundary, initial=seed)
+    part2 = Part.from_polygons(boundary, initial=seed)
     r2 = adaptive_clearing(
-        Part.from_polygons(boundary),
-        cleared=ca2,
+        part2,
         tool_radius=3.0,
         on_progress=lambda e: None,
         batch_size=50,

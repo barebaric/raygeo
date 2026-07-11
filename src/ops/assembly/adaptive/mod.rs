@@ -39,7 +39,6 @@ use crate::ops::assembly::result::AssemblyMeta;
 use crate::ops::assembly::Tracelet;
 use crate::ops::cut::step;
 use crate::ops::cut::stepper::MAX_IT;
-use crate::ops::cut::ClearedArea;
 use crate::ops::cut::CutDirection;
 use crate::ops::cut::Part;
 use crate::ops::cut::StepStatus;
@@ -189,7 +188,7 @@ enum StallResult {
 }
 
 struct StallState<'a> {
-    cleared: &'a mut ClearedArea,
+    part: &'a mut Part,
     trace: &'a mut Tracelet,
     tool: &'a mut Tool,
     hug_tracker: &'a mut wallhug::WallHugTracker,
@@ -217,7 +216,6 @@ fn handle_stall(
     growth: f64,
     expected: f64,
     iter: usize,
-    part: &Part,
     opts: &AdaptiveClearingOptions,
     step_opts: &StepperOptions,
     advance: f64,
@@ -228,10 +226,10 @@ fn handle_stall(
     // Stall path: commit batch + clear blacklist (stuck already did).
     if stalled {
         if *s.steps_since_batch > 0 {
-            s.cleared.commit_batch_local();
+            s.part.cleared.commit_batch_local();
             *s.steps_since_batch = 0;
         }
-        if s.cleared.total_area() - *s.last_resume_area > 0.0 {
+        if s.part.cleared.total_area() - *s.last_resume_area > 0.0 {
             s.resume_blacklist.clear();
         }
     }
@@ -247,7 +245,7 @@ fn handle_stall(
                 *s.resume_count,
                 growth,
                 expected,
-                s.cleared.total_area(),
+                s.part.cleared.total_area(),
                 valid_total,
             );
         } else {
@@ -256,7 +254,7 @@ fn handle_stall(
                  resume_count={}  frag_total={:.3}  valid_total={:.3}",
                 s.stuck_detector.step_count(),
                 *s.resume_count,
-                s.cleared.total_area(),
+                s.part.cleared.total_area(),
                 valid_total,
             );
         }
@@ -265,7 +263,7 @@ fn handle_stall(
         s.trace.exit(
             th::make_tool_snapshot(s.tool, *s.prev_pos),
             Some(th::exit_meta(
-                s.cleared,
+                &s.part.cleared,
                 s.resume_reasons,
                 s.resume_details,
                 s.route_details,
@@ -284,10 +282,9 @@ fn handle_stall(
         let wall_hug_flat = s.hug_tracker.ordered_points();
         let result = {
             let ctx = ResumeCtx {
-                cleared: &*s.cleared,
                 opts,
                 step_opts,
-                part,
+                part: &*s.part,
                 advance,
                 step_length,
                 mat,
@@ -313,11 +310,11 @@ fn handle_stall(
         s.resume_blacklist.push(rp.pos);
         match resume::emit_resume_travel(
             s.trace,
-            &*s.cleared,
+            &s.part.cleared,
             mat,
             s.tool.pos,
             rp.pos,
-            part,
+            &*s.part,
             opts,
             Some(s.route_details),
         ) {
@@ -331,8 +328,8 @@ fn handle_stall(
                 let whp = s.hug_tracker.wall_hug_ref();
                 let wsc = s.hug_tracker.segment_counts_ref();
                 *s.prev_pos = s.tool.pos;
-                s.stuck_detector.reset(s.cleared.total_area());
-                *s.last_resume_area = s.cleared.total_area();
+                s.stuck_detector.reset(s.part.cleared.total_area());
+                *s.last_resume_area = s.part.cleared.total_area();
                 *s.last_resume_pos = s.tool.pos;
                 *s.segment_start = ToolPose {
                     pos: s.tool.pos,
@@ -342,7 +339,7 @@ fn handle_stall(
                 s.trace.resume(
                     th::make_tool_snapshot(s.tool, *s.prev_pos),
                     Some(th::resume_meta(
-                        s.cleared,
+                        &s.part.cleared,
                         resume_source_u8,
                         route_source_u8,
                         s.resume_reasons,
@@ -370,7 +367,7 @@ fn handle_stall(
 
     // Commit any remaining batch so convergence check is accurate.
     if *s.steps_since_batch > 0 {
-        s.cleared.commit_batch_local();
+        s.part.cleared.commit_batch_local();
     }
 
     // If the pocket is effectively converged, exit normally.
@@ -378,7 +375,7 @@ fn handle_stall(
     // zone (boundary inset by step_length), excluding slivers the
     // stepper cannot productively engage with.
     let clipped_remaining: f64 =
-        s.cleared.actionable_remaining(step_length * 1.5);
+        s.part.cleared.actionable_remaining(step_length * 1.5);
     if clipped_remaining < opts.area_tolerance {
         dbg_log!(
             "EXIT  reason=converged(close-enough)  step_count={}  \
@@ -387,7 +384,7 @@ fn handle_stall(
             s.stuck_detector.step_count(),
             *s.resume_count,
             iter,
-            s.cleared.total_area(),
+            s.part.cleared.total_area(),
             valid_total,
         );
         let whp_exit = s.hug_tracker.wall_hug_ref();
@@ -395,7 +392,7 @@ fn handle_stall(
         s.trace.exit(
             th::make_tool_snapshot(s.tool, *s.prev_pos),
             Some(th::exit_meta(
-                s.cleared,
+                &s.part.cleared,
                 s.resume_reasons,
                 s.resume_details,
                 s.route_details,
@@ -417,7 +414,7 @@ fn handle_stall(
             *s.resume_count,
             growth,
             expected,
-            s.cleared.total_area(),
+            s.part.cleared.total_area(),
             valid_total,
         );
     } else {
@@ -426,7 +423,7 @@ fn handle_stall(
              resume_count={}  frag_total={:.3}  valid_total={:.3}",
             s.stuck_detector.step_count(),
             *s.resume_count,
-            s.cleared.total_area(),
+            s.part.cleared.total_area(),
             valid_total,
         );
     }
@@ -435,7 +432,7 @@ fn handle_stall(
     s.trace.exit(
         th::make_tool_snapshot(s.tool, *s.prev_pos),
         Some(th::exit_meta(
-            s.cleared,
+            &s.part.cleared,
             s.resume_reasons,
             s.resume_details,
             s.route_details,
@@ -453,21 +450,20 @@ fn handle_stall(
 #[prof]
 #[allow(unused_assignments, unused_variables)]
 pub fn adaptive_clearing(
-    part: &Part,
+    part: &mut Part,
     trace: &mut Tracelet,
-    cleared: &mut ClearedArea,
     opts: &AdaptiveClearingOptions,
     cut_state: &State,
 ) -> RaygeoResult<AssemblyMeta> {
-    let (pocket_boundary, islands) = part.extract_boundary();
-    let pocket_boundary = pocket_boundary.unwrap_or_default();
+    let pocket_boundary = part.cleared.boundary.clone();
+    let islands = part.cleared.islands.clone();
 
     // ── 1. Pre-process ────────────────────────────────────────────
     let (valid_tool_area, valid_total) =
         compute_inset_region(&pocket_boundary, opts.tool_radius, &islands);
     if valid_tool_area.is_empty() || valid_total <= opts.area_tolerance {
         return Ok(AssemblyMeta {
-            cleared_polygons: cleared.fragments().to_vec(),
+            cleared_polygons: part.cleared.fragments().to_vec(),
             start: ToolPose {
                 pos: Point3D::ZERO,
                 heading: 0.0,
@@ -478,9 +474,9 @@ pub fn adaptive_clearing(
             },
         });
     }
-    if cleared.is_empty() {
+    if part.cleared.is_empty() {
         return Ok(AssemblyMeta {
-            cleared_polygons: cleared.fragments().to_vec(),
+            cleared_polygons: part.cleared.fragments().to_vec(),
             start: ToolPose {
                 pos: Point3D::ZERO,
                 heading: 0.0,
@@ -513,7 +509,8 @@ pub fn adaptive_clearing(
     .ok();
 
     // ── 2. Initialise the tool ───────────────────────────────────
-    let centre = cleared
+    let centre = part
+        .cleared
         .fragments()
         .iter()
         .max_by(|a, b| {
@@ -527,7 +524,7 @@ pub fn adaptive_clearing(
     // Use caller-provided position/heading when available (e.g. the
     // tool is already in motion after an entry strategy).  Otherwise
     // auto-detect from the cleared-area frontier.
-    let frontier = cleared.frontier(0.5);
+    let frontier = part.cleared.frontier(0.5);
     let (default_pos, default_heading) =
         initial_pose(&frontier, centre, opts.target_z);
     let start_pos = opts.start_pos.unwrap_or(default_pos);
@@ -538,8 +535,8 @@ pub fn adaptive_clearing(
     dbg_log!(
         "INIT  frag_count={}  frag_total={:.3}  valid_total={:.3}  \
          start=({:.3},{:.3})  heading={:.4}  target_apd={:.4}",
-        cleared.len(),
-        cleared.total_area(),
+        part.cleared.len(),
+        part.cleared.total_area(),
         valid_total,
         start_pos.x,
         start_pos.y,
@@ -553,12 +550,12 @@ pub fn adaptive_clearing(
         opts,
         &pocket_boundary,
         &islands,
-        cleared.fragments(),
+        part.cleared.fragments(),
         mat.as_ref(),
     ));
     trace.init(
         th::make_tool_snapshot(&tool, tool.pos),
-        Some(th::init_meta(cleared)),
+        Some(th::init_meta(&part.cleared)),
     );
 
     // ── 4. Continuous spiral: step → expand → repeat ─────────────
@@ -595,7 +592,7 @@ pub fn adaptive_clearing(
     let mut stuck_detector = stuck::StuckDetector::new(
         target_area_pd,
         step_length,
-        cleared.total_area(),
+        part.cleared.total_area(),
     );
     let mut resume_count: usize = 0;
     // Cleared area recorded at the last resume; used to detect a
@@ -633,7 +630,7 @@ pub fn adaptive_clearing(
                 trace.exit(
                     th::make_tool_snapshot(&tool, prev_pos),
                     Some(th::exit_meta(
-                        cleared,
+                        &part.cleared,
                         &resume_reasons,
                         &resume_details,
                         &route_details,
@@ -658,9 +655,9 @@ pub fn adaptive_clearing(
         // should never block convergence even if `remaining_area`
         // is non-zero.  Wall-band slivers are the residual the
         // stepper chases without making progress.
-        let frag_total = cleared.total_area();
+        let frag_total = part.cleared.total_area();
         if frag_total >= valid_total - opts.area_tolerance && {
-            let rem = cleared.actionable_remaining(step_length * 1.5);
+            let rem = part.cleared.actionable_remaining(step_length * 1.5);
             rem < opts.area_tolerance
         } {
             dbg_log!(
@@ -678,7 +675,7 @@ pub fn adaptive_clearing(
         let heading = tool.smoothed_heading();
         let predicted = tool.predicted_angle(max_def);
         let result = step(
-            cleared,
+            &part.cleared,
             crate::types::Point::new(tool.pos.x, tool.pos.y),
             heading,
             predicted,
@@ -709,7 +706,7 @@ pub fn adaptive_clearing(
         // ── Wrong-side safehold ──────────────────────────────────
         if result.status == StepStatus::Ok {
             stuck::wrong_side_safehold(
-                cleared,
+                &part.cleared,
                 dir_sign,
                 crate::types::Point::new(prev_pos.x, prev_pos.y),
                 crate::types::Point::new(tool.pos.x, tool.pos.y),
@@ -742,7 +739,7 @@ pub fn adaptive_clearing(
         let mut stuck_triggered = false;
         let mut growth = 0.0;
         let mut expected = 0.0;
-        match stuck_detector.tick(cleared.total_area(), stalled) {
+        match stuck_detector.tick(part.cleared.total_area(), stalled) {
             stuck::StuckOutcome::Ok => {}
             stuck::StuckOutcome::Oscillating {
                 growth: g,
@@ -751,10 +748,10 @@ pub fn adaptive_clearing(
                 growth = g;
                 expected = e;
                 if steps_since_batch > 0 {
-                    cleared.commit_batch_local();
+                    part.cleared.commit_batch_local();
                     steps_since_batch = 0;
                 }
-                if cleared.total_area() - last_resume_area > 0.0 {
+                if part.cleared.total_area() - last_resume_area > 0.0 {
                     resume_blacklist.clear();
                 }
                 stuck_triggered = true;
@@ -763,7 +760,7 @@ pub fn adaptive_clearing(
 
         if stalled || stuck_triggered {
             let mut stall = StallState {
-                cleared,
+                part,
                 trace,
                 tool: &mut tool,
                 hug_tracker: &mut hug_tracker,
@@ -789,7 +786,6 @@ pub fn adaptive_clearing(
                 growth,
                 expected,
                 iter,
-                part,
                 opts,
                 &step_opts,
                 advance,
@@ -817,9 +813,9 @@ pub fn adaptive_clearing(
 
         // Expand cleared area.
         if steps_since_batch == 0 {
-            cleared.begin_batch();
+            part.cleared.begin_batch();
         }
-        cleared.expand_batched(
+        part.cleared.expand_batched(
             crate::types::Point::new(prev_pos.x, prev_pos.y),
             crate::types::Point::new(tool.pos.x, tool.pos.y),
             opts.tool_radius,
@@ -827,16 +823,16 @@ pub fn adaptive_clearing(
         steps_since_batch += 1;
 
         if steps_since_batch >= opts.expansion_batch_size {
-            cleared.commit_batch_local();
+            part.cleared.commit_batch_local();
             steps_since_batch = 0;
-            cleared.compact_if_needed(opts.tolerance);
+            part.cleared.compact_if_needed(opts.tolerance);
         }
 
-        let eng = cleared.get_point_engagement(
+        let eng = part.cleared.get_point_engagement(
             crate::types::Point::new(tool.pos.x, tool.pos.y),
             opts.tool_radius,
         );
-        let ca = cleared.cut_area(
+        let ca = part.cleared.cut_area(
             crate::types::Point::new(prev_pos.x, prev_pos.y),
             crate::types::Point::new(tool.pos.x, tool.pos.y),
             opts.tool_radius,
@@ -845,7 +841,7 @@ pub fn adaptive_clearing(
             th::make_tool_snapshot(&tool, prev_pos),
             Some(th::cut_meta(
                 &tool,
-                cleared,
+                &part.cleared,
                 result.iters as u32,
                 eng.angle,
                 eng.area,
@@ -860,7 +856,7 @@ pub fn adaptive_clearing(
         // engagement-noise growth (a fraction of the tool disk overlapping
         // the boundary) will not clear it, preventing repeated same-point
         // resumes.
-        let area_growth = cleared.total_area() - last_resume_area;
+        let area_growth = part.cleared.total_area() - last_resume_area;
         if area_growth >= eng.area {
             resume_blacklist.clear();
         }
@@ -868,13 +864,13 @@ pub fn adaptive_clearing(
 
     // Flush any remaining batch.
     if steps_since_batch > 0 {
-        cleared.commit_batch_local();
+        part.cleared.commit_batch_local();
     }
 
     trace.exit(
         th::make_tool_snapshot(&tool, prev_pos),
         Some(th::exit_meta(
-            cleared,
+            &part.cleared,
             &resume_reasons,
             &resume_details,
             &route_details,
@@ -885,7 +881,7 @@ pub fn adaptive_clearing(
         )),
     );
 
-    let cleared_polygons = cleared.fragments().to_vec();
+    let cleared_polygons = part.cleared.fragments().to_vec();
 
     Ok(AssemblyMeta {
         cleared_polygons,

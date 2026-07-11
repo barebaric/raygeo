@@ -146,12 +146,13 @@ def _run_adaptive(args, trace_path):
     mtime_before = tp.stat().st_mtime_ns if tp.exists() else 0
 
     try:
+        part = Part.from_polygons(
+            list(scenario.boundary),
+            [list(isl) for isl in scenario.islands],
+            initial=seed_polys,
+        )
         clear_result = adaptive_clearing(
-            Part.from_polygons(
-                list(scenario.boundary),
-                [list(isl) for isl in scenario.islands],
-            ),
-            cleared=ca,
+            part,
             tool_radius=scenario.tool_radius,
             step_over=scenario.step_over,
             target_z=scenario.cut_z,
@@ -198,12 +199,13 @@ def _run_profile(args, trace_path):
 
     try:
         if args.inner:
+            part = Part.from_polygons(
+                list(scenario.boundary),
+                [list(isl) for isl in scenario.islands],
+                initial=seed_polys,
+            )
             result = profile_inner(
-                Part.from_polygons(
-                    list(scenario.boundary),
-                    [list(isl) for isl in scenario.islands],
-                ),
-                cleared=ca,
+                part,
                 tool_radius=scenario.tool_radius,
                 target_z=scenario.cut_z,
                 safe_z=scenario.safe_z,
@@ -216,9 +218,11 @@ def _run_profile(args, trace_path):
             )
             result.write_trace(str(tp), "profile", "ProfileInner")
         else:
+            part = Part.from_polygons(
+                list(scenario.boundary), initial=seed_polys
+            )
             result = profile_outer(
-                Part.from_polygons(list(scenario.boundary)),
-                cleared=ca,
+                part,
                 tool_radius=scenario.tool_radius,
                 step_over=scenario.step_over,
                 target_z=scenario.cut_z,

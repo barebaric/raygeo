@@ -78,7 +78,7 @@ pub fn probe(
     heading: f64,
 ) -> Option<ToolPose> {
     let result = step(
-        ctx.cleared,
+        &ctx.part.cleared,
         Point::new(pos.x, pos.y),
         heading,
         0.0,
@@ -172,7 +172,7 @@ pub(super) fn offset_and_probe(
     candidate: Point3D,
     heading: f64,
 ) -> Option<ToolPose> {
-    let cleared = ctx.cleared;
+    let cleared = &ctx.part.cleared;
     let candidate_2d = Point::new(candidate.x, candidate.y);
 
     if cleared.get_point_engagement(candidate_2d, radius).angle
@@ -535,7 +535,6 @@ pub fn emit_resume_travel(
     let obs_bounds = compute_polygon_bounds(&obstacles);
 
     let ctx = routing::RouteCtx {
-        cleared,
         opts,
         mat,
         obstacles: &obstacles,
@@ -613,7 +612,6 @@ pub enum ResumeSource {
 /// Mutable values (`segment_start`, `last_resume_*`) are copied in by
 /// value. The caller updates the originals after `try_resume` returns.
 pub struct ResumeCtx<'a> {
-    pub cleared: &'a ClearedArea,
     pub opts: &'a AdaptiveClearingOptions,
     pub step_opts: &'a StepperOptions<'a>,
     pub part: &'a Part,
@@ -693,7 +691,7 @@ pub(super) fn require_fragments<'a>(
     ctx: &'a ResumeCtx<'a>,
     detail: &mut u8,
 ) -> Option<&'a [Polygon]> {
-    let f = ctx.cleared.fragments();
+    let f = ctx.part.cleared.fragments();
     if f.is_empty() {
         *detail = DETAIL_NO_FRAGMENTS;
         None
@@ -724,7 +722,7 @@ pub fn try_resume(
     details: &mut ResumeReasons,
     candidate_pts: &mut ResumeCandidatePoints,
 ) -> Option<(ResumeSource, ToolPose)> {
-    let area_grew = ctx.cleared.total_area() > ctx.last_resume_area + 1e-9;
+    let area_grew = ctx.part.cleared.total_area() > ctx.last_resume_area + 1e-9;
     let tool_dx = tool.pos.x - ctx.last_resume_pos.x;
     let tool_dy = tool.pos.y - ctx.last_resume_pos.y;
     let tool_moved = (tool_dx * tool_dx + tool_dy * tool_dy)
@@ -740,7 +738,7 @@ pub fn try_resume(
         ctx.advance,
         ctx.step_length,
         ctx.last_resume_area,
-        ctx.cleared.total_area(),
+        ctx.part.cleared.total_area(),
     );
 
     if !area_grew && !tool_moved {

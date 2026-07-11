@@ -2,7 +2,6 @@ use crate::ops::assembly::wavefront;
 use crate::ops::assembly::Tracelet;
 use crate::ops::state::State;
 use crate::python::ops::assembly::result::PyAssemblyResult;
-use crate::python::ops::cut::cleared_area::PyClearedArea;
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::gen_stub_pyfunction;
 
@@ -25,7 +24,6 @@ pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
 
     def adaptive_wavefronts(
         part: raygeo.ops.cut.Part,
-        cleared: raygeo.ops.cut.cleared_area.ClearedArea,
         tool_radius: float = 3.0,
         step_over: float = 2.0,
         z: float = 0.0,
@@ -36,17 +34,19 @@ pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     ) -> raygeo.ops.assembly.result.AssemblyResult:
         """Inside-out adaptive wavefronts.
 
-        Starting from the *cleared* state, each iteration expands the
-        cleared boundary outward by *step_over*, clips to the valid tool
-        area (pocket boundary offset inward by *tool_radius*, with
-        islands excluded), and adds the result back to *cleared*.
-        The loop terminates when the newly added area drops below
-        *area_tolerance*.
+        Starting from the cleared state inside *part*, each iteration
+        expands the cleared boundary outward by *step_over*, clips to
+        the valid tool area (pocket boundary offset inward by
+        *tool_radius*, with islands excluded), and adds the result
+        back to the part's cleared state.  The loop terminates when
+        the newly added area drops below *area_tolerance*.
 
         Each ring fragment is emitted as ``MoveTo`` + ``LineTo`` at
         height *z* with *cut_feed_rate* applied.
 
-        :param cleared: ``ClearedArea`` instance (mutated in place).
+        :param part: The part whose ``cleared`` field tracks accumulated
+                     workpiece state and whose geometry defines the
+                     pocket boundary and islands.
         :param tool_radius: Tool radius in mm (default 3.0).
         :param step_over: Radial expansion per iteration (default 2.0).
         :param z: Z height for generated commands (default 0.0).
@@ -64,7 +64,6 @@ pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
 #[pyfunction(name = "adaptive_wavefronts")]
 #[pyo3(signature = (
     part,
-    cleared,
     tool_radius = 3.0,
     step_over = 2.0,
     z = 0.0,
@@ -75,8 +74,7 @@ pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
 ))]
 #[allow(clippy::too_many_arguments)]
 fn adaptive_wavefronts_py(
-    part: &crate::python::ops::cut::part::PyPart,
-    cleared: &mut PyClearedArea,
+    part: &mut crate::python::ops::cut::part::PyPart,
     tool_radius: f64,
     step_over: f64,
     z: f64,
@@ -101,9 +99,8 @@ fn adaptive_wavefronts_py(
 
     let mut trace = Tracelet::new();
     let meta = wavefront::adaptive_wavefronts(
-        &part.inner,
+        &mut part.inner,
         &mut trace,
-        &mut cleared.inner,
         &opts,
         &cut_state,
     )?;

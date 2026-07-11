@@ -9,8 +9,7 @@ sidebar_label: raygeo.ops.assembly.wavefront
 
 ```python
 adaptive_wavefronts(
-    part: Part,
-    cleared: ops.cut.cleared_area.ClearedArea,
+    part: ops.cut.Part,
     tool_radius: float = 3,
     step_over: float = 2,
     z: float = 0,
@@ -23,17 +22,16 @@ adaptive_wavefronts(
 
 Inside-out adaptive wavefronts.
 
-Starting from the *cleared* state, each iteration expands the cleared boundary outward by
-*step_over*, clips to the valid tool area (pocket boundary offset inward by *tool_radius*, with
-islands excluded), and adds the result back to *cleared*. The loop terminates when the newly added
-area drops below *area_tolerance*.
+Starting from the cleared state inside *part*, each iteration expands the cleared boundary outward
+by *step_over*, clips to the valid tool area (pocket boundary offset inward by *tool_radius*, with
+islands excluded), and adds the result back to the part's cleared state. The loop terminates when
+the newly added area drops below *area_tolerance*.
 
 Each ring fragment is emitted as `MoveTo` + `LineTo` at height *z* with *cut_feed_rate* applied.
 
 | Parameter        | Type                                 | Description                                                                                                                                 |
 | ---------------- | ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| `part`           | `Part`                               |                                                                                                                                             |
-| `cleared`        | `ops.cut.cleared_area.ClearedArea`   | `ClearedArea` instance (mutated in place).                                                                                                  |
+| `part`           | `ops.cut.Part`                       | The part whose `cleared` field tracks accumulated workpiece state and whose geometry defines the pocket boundary and islands.               |
 | `tool_radius`    | `float = 3`                          | Tool radius in mm (default 3.0).                                                                                                            |
 | `step_over`      | `float = 2`                          | Radial expansion per iteration (default 2.0).                                                                                               |
 | `z`              | `float = 0`                          | Z height for generated commands (default 0.0).                                                                                              |

@@ -8,8 +8,6 @@ use crate::ops::assembly::Tracelet;
 use crate::ops::cut::CutDirection;
 use crate::ops::state::State;
 use crate::python::ops::assembly::result::PyAssemblyResult;
-use crate::python::ops::cut::cleared_area::PyClearedArea;
-use crate::python::ops::cut::part::PyPart;
 use crate::types::Point3D;
 
 fn check_cancel() -> bool {
@@ -41,7 +39,6 @@ pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
 
     def profile_outer(
         part: raygeo.ops.cut.Part,
-        cleared: raygeo.ops.cut.cleared_area.ClearedArea,
         tool_radius: float,
         step_over: float,
         step_length: float,
@@ -65,8 +62,9 @@ pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
         side.  Returns an :class:`AssemblyResult` with the profiling
         move sequence.
 
-        :param part: The part whose geometry defines the pocket boundary.
-        :param cleared: Cleared area tracker.
+        :param part: The part whose ``cleared`` field tracks accumulated
+                     workpiece state and whose geometry defines the
+                     pocket boundary.
         :param tool_radius: Tool radius in mm.
         :param step_over: Radial step-over between passes (mm).
         :param step_length: Forward step length in mm.
@@ -89,7 +87,6 @@ pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
 #[pyfunction(name = "profile_outer")]
 #[pyo3(signature = (
     part,
-    cleared,
     tool_radius,
     step_over,
     step_length,
@@ -107,8 +104,7 @@ pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
 ))]
 #[allow(clippy::too_many_arguments)]
 fn profile_outer_py(
-    part: &PyPart,
-    cleared: &mut PyClearedArea,
+    part: &mut crate::python::ops::cut::part::PyPart,
     tool_radius: f64,
     step_over: f64,
     step_length: f64,
@@ -156,13 +152,8 @@ fn profile_outer_py(
     };
 
     let mut trace = Tracelet::new();
-    let meta = profile::profile_outer(
-        &part.inner,
-        &mut trace,
-        &mut cleared.inner,
-        &opts,
-        &cut_state,
-    )?;
+    let meta =
+        profile::profile_outer(&mut part.inner, &mut trace, &opts, &cut_state)?;
     let events = trace.drain();
     let attrs = trace.attrs().cloned();
     let ops = trace.into_ops();
@@ -175,7 +166,6 @@ fn profile_outer_py(
 
     def profile_inner(
         part: raygeo.ops.cut.Part,
-        cleared: raygeo.ops.cut.cleared_area.ClearedArea,
         tool_radius: float = 3.0,
         step_over: float = 1.5,
         step_length: float = 0.6,
@@ -199,9 +189,9 @@ fn profile_outer_py(
         Returns an :class:`AssemblyResult` with the profiling move
         sequence.
 
-        :param part: The part whose geometry defines the pocket boundary
-            and islands.
-        :param cleared: Cleared area tracker.
+        :param part: The part whose ``cleared`` field tracks accumulated
+                     workpiece state and whose geometry defines the
+                     pocket boundary and islands.
         :param tool_radius: Tool radius in mm.
         :param step_over: Radial step-over between passes (mm).
         :param step_length: Forward step length in mm.
@@ -224,7 +214,6 @@ fn profile_outer_py(
 #[pyfunction(name = "profile_inner")]
 #[pyo3(signature = (
     part,
-    cleared,
     tool_radius = 3.0,
     step_over = 1.5,
     step_length = 0.6,
@@ -242,8 +231,7 @@ fn profile_outer_py(
 ))]
 #[allow(clippy::too_many_arguments)]
 fn profile_inner_py(
-    part: &PyPart,
-    cleared: &mut PyClearedArea,
+    part: &mut crate::python::ops::cut::part::PyPart,
     tool_radius: f64,
     step_over: f64,
     step_length: f64,
@@ -291,13 +279,8 @@ fn profile_inner_py(
     };
 
     let mut trace = Tracelet::new();
-    let meta = profile::profile_inner(
-        &part.inner,
-        &mut trace,
-        &mut cleared.inner,
-        &opts,
-        &cut_state,
-    )?;
+    let meta =
+        profile::profile_inner(&mut part.inner, &mut trace, &opts, &cut_state)?;
     let events = trace.drain();
     let attrs = trace.attrs().cloned();
     let ops = trace.into_ops();

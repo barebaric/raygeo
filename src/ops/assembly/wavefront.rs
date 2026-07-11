@@ -2,8 +2,6 @@
 
 use prof_macros::prof;
 
-use crate::ops::cut::ClearedArea;
-
 use crate::error::RaygeoResult;
 use crate::geo::shape::polygon::{get_polygon_area, resample_polygon};
 use crate::ops::assembly::result::AssemblyMeta;
@@ -35,9 +33,8 @@ pub struct AdaptiveWavefrontOptions {
 /// (rest), all at height `z`, with `cut_state` applied.
 #[prof]
 pub fn adaptive_wavefronts(
-    _part: &Part,
+    part: &mut Part,
     trace: &mut Tracelet,
-    cleared: &mut ClearedArea,
     opts: &AdaptiveWavefrontOptions,
     cut_state: &State,
 ) -> RaygeoResult<AssemblyMeta> {
@@ -47,7 +44,7 @@ pub fn adaptive_wavefronts(
     let mut last_point: Option<Point> = None;
 
     for _ in 0..MAX_WAVEFRONT_ITERATIONS {
-        let bounded = cleared.bites(
+        let bounded = part.cleared.bites(
             opts.step_over,
             opts.tool_radius,
             if opts.precision > 0.0 {
@@ -60,7 +57,7 @@ pub fn adaptive_wavefronts(
             break;
         }
 
-        let new_ring = cleared.cut_fast(&bounded);
+        let new_ring = part.cleared.cut_fast(&bounded);
         if new_ring.is_empty() {
             continue;
         }
@@ -111,7 +108,7 @@ pub fn adaptive_wavefronts(
         // `cleared.total_area()` could ever reach, triggering early
         // exit before the wavefront reached the walls.
         if ring_area < opts.area_tolerance
-            || cleared.actionable_remaining(opts.tool_radius)
+            || part.cleared.actionable_remaining(opts.tool_radius)
                 < opts.area_tolerance
         {
             break;
@@ -122,7 +119,7 @@ pub fn adaptive_wavefronts(
     let end_pos = last_point.unwrap_or(Point::ZERO);
 
     Ok(AssemblyMeta {
-        cleared_polygons: cleared.fragments().to_vec(),
+        cleared_polygons: part.cleared.fragments().to_vec(),
         start: ToolPose {
             pos: Point3D::new(start_pos.x, start_pos.y, opts.z),
             heading: 0.0,

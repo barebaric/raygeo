@@ -29,8 +29,7 @@ use crate::ops::assembly::spiral::{self, SpiralOptions};
 use crate::ops::assembly::toroid::{self, ToroidalClearOptions};
 use crate::ops::assembly::wavefront::{self, AdaptiveWavefrontOptions};
 use crate::ops::assembly::Tracelet;
-use crate::ops::cut::Part;
-use crate::ops::cut::{ClearedArea, ToolPose};
+use crate::ops::cut::{Part, ToolPose};
 use crate::ops::state::State;
 use crate::trace::Tracer;
 use crate::trace_types::{
@@ -123,20 +122,17 @@ pub enum WorkplanStep {
 impl WorkplanStep {
     /// Invoke this step's assembler.
     ///
-    /// Each variant knows how to call its own minimal ops-layer
-    /// assembler. Entry-style steps (helix, spiral, ramp, toroid, slot)
-    /// deposit their swept polygons into `cleared` via
-    /// [`ClearedArea::cut`]; the stateful strategies (adaptive clearing,
-    /// profiling, wavefront) borrow `cleared` directly and mutate it
-    /// from within the assembler.
+    /// Entry-style steps (helix, spiral, ramp, toroid, slot) deposit their
+    /// swept polygons into `part.cleared` internally.  The stateful
+    /// strategies (adaptive clearing, profiling, wavefront) borrow
+    /// `part.cleared` directly and mutate it from within the assembler.
     pub fn execute(
         &self,
         trace: &mut Tracelet,
-        cleared: &mut ClearedArea,
+        part: &mut Part,
         cut_state: &State,
         travel_state: &State,
     ) -> RaygeoResult<AssemblyMeta> {
-        let _dummy_part = Part::new(None, (0.0, 0.0));
         match self {
             WorkplanStep::HelixPlunge {
                 center,
@@ -156,14 +152,7 @@ impl WorkplanStep {
                     direction: *direction,
                     angular_step: *angular_step,
                 };
-                let meta = helix::generate_helix(
-                    &_dummy_part,
-                    trace,
-                    &opts,
-                    cut_state,
-                )?;
-                cleared.cut(&meta.cleared_polygons);
-                Ok(meta)
+                helix::generate_helix(part, trace, &opts, cut_state)
             }
             WorkplanStep::FlatSpiral {
                 center,
@@ -185,14 +174,7 @@ impl WorkplanStep {
                     angular_step: *angular_step,
                     start_angle: *start_angle,
                 };
-                let meta = spiral::generate_spiral(
-                    &_dummy_part,
-                    trace,
-                    &opts,
-                    cut_state,
-                )?;
-                cleared.cut(&meta.cleared_polygons);
-                Ok(meta)
+                spiral::generate_spiral(part, trace, &opts, cut_state)
             }
             WorkplanStep::RampEntry {
                 start,
@@ -211,10 +193,7 @@ impl WorkplanStep {
                     style: RampStyle::ZigZag,
                     lateral_amplitude: *lateral_amplitude,
                 };
-                let meta =
-                    ramp::generate_ramp(&_dummy_part, trace, &opts, cut_state)?;
-                cleared.cut(&meta.cleared_polygons);
-                Ok(meta)
+                ramp::generate_ramp(part, trace, &opts, cut_state)
             }
             WorkplanStep::ToroidalClear {
                 carrier,
@@ -228,7 +207,7 @@ impl WorkplanStep {
             } => {
                 let mut full_carrier = carrier.clone();
                 if let Some(&first) = carrier.first() {
-                    if let Some(plunge) = cleared.find_plunge_point(
+                    if let Some(plunge) = part.cleared.find_plunge_point(
                         first,
                         *tool_radius,
                         *tool_radius * 3.0,
@@ -246,14 +225,7 @@ impl WorkplanStep {
                     direction: *direction,
                     angular_step: *angular_step,
                 };
-                let meta = toroid::generate_toroidal_clear(
-                    &_dummy_part,
-                    trace,
-                    &opts,
-                    cut_state,
-                )?;
-                cleared.cut(&meta.cleared_polygons);
-                Ok(meta)
+                toroid::generate_toroidal_clear(part, trace, &opts, cut_state)
             }
             WorkplanStep::Slot {
                 carrier,
@@ -262,7 +234,7 @@ impl WorkplanStep {
             } => {
                 let mut full_carrier = carrier.clone();
                 if let Some(&first) = carrier.first() {
-                    if let Some(plunge) = cleared.find_plunge_point(
+                    if let Some(plunge) = part.cleared.find_plunge_point(
                         first,
                         *tool_radius,
                         *tool_radius * 3.0,
@@ -275,13 +247,10 @@ impl WorkplanStep {
                     tool_radius: *tool_radius,
                     target_z: *target_z,
                 };
-                let meta =
-                    slot::generate_slot(&_dummy_part, trace, &opts, cut_state)?;
-                cleared.cut(&meta.cleared_polygons);
-                Ok(meta)
+                slot::generate_slot(part, trace, &opts, cut_state)
             }
             WorkplanStep::AdaptiveClear {
-                part,
+                part: step_part,
                 tool_radius,
                 step_over,
                 step_length,
@@ -294,7 +263,7 @@ impl WorkplanStep {
                 start_heading,
                 ..
             } => {
-                let (boundary, islands) = part.extract_boundary();
+                let (boundary, islands) = step_part.extract_boundary();
                 let boundary = boundary.unwrap_or_default();
                 let opts = AdaptiveClearingOptions {
                     tool_radius: *tool_radius,
@@ -309,17 +278,16 @@ impl WorkplanStep {
                     start_heading: *start_heading,
                     ..Default::default()
                 };
-                let saved_b = cleared.swap_boundary(&boundary);
-                let saved_i = cleared.swap_islands(&islands);
-                let result = adaptive::adaptive_clearing(
-                    part, trace, cleared, &opts, cut_state,
-                );
-                cleared.swap_islands(&saved_i);
-                cleared.swap_boundary(&saved_b);
+                let saved_b = part.cleared.swap_boundary(&boundary);
+                let saved_i = part.cleared.swap_islands(&islands);
+                let result =
+                    adaptive::adaptive_clearing(part, trace, &opts, cut_state);
+                part.cleared.swap_islands(&saved_i);
+                part.cleared.swap_boundary(&saved_b);
                 result
             }
             WorkplanStep::ProfileInner {
-                part,
+                part: step_part,
                 tool_radius,
                 step_over,
                 step_length,
@@ -328,6 +296,8 @@ impl WorkplanStep {
                 wall_margin,
                 stock_to_leave,
             } => {
+                let (boundary, islands) = step_part.extract_boundary();
+                let boundary = boundary.unwrap_or_default();
                 let opts = ProfileInnerOptions {
                     tool_radius: *tool_radius,
                     step_over: *step_over,
@@ -338,16 +308,24 @@ impl WorkplanStep {
                     stock_to_leave: *stock_to_leave,
                     ..Default::default()
                 };
-                profile::profile_inner(part, trace, cleared, &opts, cut_state)
+                let saved_b = part.cleared.swap_boundary(&boundary);
+                let saved_i = part.cleared.swap_islands(&islands);
+                let result =
+                    profile::profile_inner(part, trace, &opts, cut_state);
+                part.cleared.swap_islands(&saved_i);
+                part.cleared.swap_boundary(&saved_b);
+                result
             }
             WorkplanStep::Wavefront {
-                part: _part,
+                part: step_part,
                 tool_radius,
                 step_over,
                 z,
                 area_tolerance,
                 precision,
             } => {
+                let (boundary, islands) = step_part.extract_boundary();
+                let boundary = boundary.unwrap_or_default();
                 let opts = AdaptiveWavefrontOptions {
                     tool_radius: *tool_radius,
                     step_over: *step_over,
@@ -355,13 +333,14 @@ impl WorkplanStep {
                     area_tolerance: *area_tolerance,
                     precision: *precision,
                 };
-                wavefront::adaptive_wavefronts(
-                    &_dummy_part,
-                    trace,
-                    cleared,
-                    &opts,
-                    cut_state,
-                )
+                let saved_b = part.cleared.swap_boundary(&boundary);
+                let saved_i = part.cleared.swap_islands(&islands);
+                let result = wavefront::adaptive_wavefronts(
+                    part, trace, &opts, cut_state,
+                );
+                part.cleared.swap_islands(&saved_i);
+                part.cleared.swap_boundary(&saved_b);
+                result
             }
             WorkplanStep::Retract { safe_z } => {
                 let pos = Point3D::new(0.0, 0.0, *safe_z);
@@ -491,8 +470,11 @@ impl Workplan {
         let root = tracer.enter(0, "workplan", "Workplan", Some(attrs));
 
         // ── Execute steps with interleaved links ───────────────────
-        let mut cleared =
-            ClearedArea::new(&self.pocket_boundary, &self.islands);
+        let mut part = Part::from_polygons(
+            &self.pocket_boundary,
+            &self.islands,
+            (0.0, 0.0),
+        );
         let mut prev_end: Option<ToolPose> = None;
         let mut first_start: Option<ToolPose> = None;
 
@@ -503,7 +485,7 @@ impl Workplan {
             let mut temp = Tracelet::new();
             temp.begin_section(step.assembler(), &step.label());
             let meta =
-                step.execute(&mut temp, &mut cleared, cut_state, travel_state)?;
+                step.execute(&mut temp, &mut part, cut_state, travel_state)?;
             let step_events = temp.drain();
             let step_attrs = temp.attrs().cloned();
             let step_ops = temp.into_ops();
@@ -567,7 +549,7 @@ impl Workplan {
                 tracer.finish();
                 trace.finish();
                 return Ok(AssemblyMeta {
-                    cleared_polygons: cleared.fragments().to_vec(),
+                    cleared_polygons: part.cleared.fragments().to_vec(),
                     start: ToolPose {
                         pos: Point3D::ZERO,
                         heading: 0.0,
@@ -628,7 +610,7 @@ impl Workplan {
         tracer.finish();
 
         Ok(AssemblyMeta {
-            cleared_polygons: cleared.fragments().to_vec(),
+            cleared_polygons: part.cleared.fragments().to_vec(),
             start: first_start.unwrap(),
             end: pe,
         })

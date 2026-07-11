@@ -24,7 +24,6 @@ from typing import Any
 
 from raygeo.ops.assembly.profile import profile_inner, profile_outer
 from raygeo.ops.cut import Part
-from raygeo.ops.cut.cleared_area import ClearedArea
 
 
 def _rect(cx, cy, w, h):
@@ -36,9 +35,10 @@ def _rect(cx, cy, w, h):
     ]
 
 
-def _kwargs(boundary, islands=None, **overrides: Any) -> dict:
+def _kwargs(initial, boundary, islands=None, **overrides: Any) -> dict:
+    part = Part.from_polygons(boundary, islands or [], initial=initial)
     kw = dict(
-        part=Part.from_polygons(boundary, islands or []),
+        part=part,
         tool_radius=3.0,
         step_over=1.5,
         target_z=-5.0,
@@ -54,15 +54,13 @@ def _kwargs(boundary, islands=None, **overrides: Any) -> dict:
 
 
 def _run_outer(boundary, **overrides: Any):
-    ca = ClearedArea(boundary=boundary, initial=[_rect(0, 0, 8, 8)])
-    return profile_outer(**_kwargs(boundary, **overrides), cleared=ca)
+    return profile_outer(**_kwargs([_rect(0, 0, 8, 8)], boundary, **overrides))
 
 
 def _run_inner(boundary, islands=None, **overrides: Any):
-    ca = ClearedArea(
-        boundary=boundary, islands=islands or [], initial=[_rect(0, 0, 8, 8)]
+    return profile_inner(
+        **_kwargs([_rect(0, 0, 8, 8)], boundary, islands, **overrides)
     )
-    return profile_inner(**_kwargs(boundary, islands, **overrides), cleared=ca)
 
 
 # ── Trace is always populated ─────────────────────────────────────
@@ -210,14 +208,14 @@ def test_profile_outer_trace_feed_reduction_on_engagement(tmp_path):
     must carry current_feed_rate.
     """
     boundary = _rect(0, 0, 60, 60)
-    ca = ClearedArea(boundary=boundary, initial=[_rect(0, 0, 6, 6)])
     kw = _kwargs(
+        [_rect(0, 0, 6, 6)],
         boundary,
         stock_to_leave=1.0,
         engagement_area_threshold=1.0,
         engagement_angle_threshold=0.5,
     )
-    result = profile_outer(**kw, cleared=ca)
+    result = profile_outer(**kw)
     trace = result.trace
     assert trace is not None
     moves = [e for e in trace["events"] if e["kind"] == "move"]

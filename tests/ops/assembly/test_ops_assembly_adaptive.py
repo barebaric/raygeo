@@ -15,7 +15,6 @@ from raygeo.ops.assembly.adaptive import (
     target_area_per_distance,
 )
 from raygeo.ops.cut import Part
-from raygeo.ops.cut.cleared_area import ClearedArea
 from raygeo.ops.cut.crescent import cut_area
 from raygeo.ops.types import CommandType
 
@@ -74,10 +73,9 @@ def test_adaptive_clearing_returns_ops():
     """Non-empty pocket returns a valid Ops object."""
     boundary = _rect(0, 0, 60, 60)
     seed = [_circle(0, 0, 5)]
-    ca = ClearedArea(boundary=boundary, initial=seed)
+    part = Part.from_polygons(boundary, initial=seed)
     result_clear = adaptive_clearing(
-        Part.from_polygons(boundary),
-        cleared=ca,
+        part,
         tool_radius=3.0,
         step_over=1.5,
         target_z=-5.0,
@@ -92,10 +90,9 @@ def test_adaptive_clearing_has_move_and_line():
     """Ops contains both travel and cutting commands."""
     boundary = _rect(0, 0, 60, 60)
     seed = [_circle(0, 0, 5)]
-    ca = ClearedArea(boundary=boundary, initial=seed)
+    part = Part.from_polygons(boundary, initial=seed)
     result_clear = adaptive_clearing(
-        Part.from_polygons(boundary),
-        cleared=ca,
+        part,
         tool_radius=3.0,
         step_over=1.5,
         target_z=-5.0,
@@ -112,10 +109,9 @@ def test_adaptive_clearing_endpoints_inside_pocket():
     """All cut endpoints lie within the pocket boundary."""
     boundary = _rect(25, 25, 50, 50)
     seed = [_circle(25, 25, 5)]
-    ca = ClearedArea(boundary=boundary, initial=seed)
+    part = Part.from_polygons(boundary, initial=seed)
     result_clear = adaptive_clearing(
-        Part.from_polygons(boundary),
-        cleared=ca,
+        part,
         tool_radius=3.0,
         step_over=1.5,
         target_z=-5.0,
@@ -133,10 +129,9 @@ def test_adaptive_clearing_with_islands():
     boundary = _rect(25, 25, 50, 50)
     islands = [_rect(25, 25, 10, 10)]
     seed = [_circle(10, 25, 3)]
-    ca = ClearedArea(boundary=boundary, islands=islands, initial=seed)
+    part = Part.from_polygons(boundary, islands, initial=seed)
     result_clear = adaptive_clearing(
-        Part.from_polygons(boundary, islands),
-        cleared=ca,
+        part,
         tool_radius=3.0,
         step_over=1.5,
         target_z=-5.0,
@@ -155,19 +150,17 @@ def test_adaptive_clearing_determinism():
     """Same inputs produce identical output."""
     boundary = _rect(0, 0, 60, 60)
     seed = [_circle(0, 0, 5)]
-    ca1 = ClearedArea(boundary=boundary, initial=seed)
-    ca2 = ClearedArea(boundary=boundary, initial=seed)
+    part = Part.from_polygons(boundary, initial=seed)
     result1_clear = adaptive_clearing(
-        Part.from_polygons(boundary),
-        cleared=ca1,
+        part,
         tool_radius=3.0,
         step_over=1.5,
         target_z=-5.0,
         safe_z=2.0,
     )
+    part2 = Part.from_polygons(boundary, initial=seed)
     result2_clear = adaptive_clearing(
-        Part.from_polygons(boundary),
-        cleared=ca2,
+        part2,
         tool_radius=3.0,
         step_over=1.5,
         target_z=-5.0,
@@ -180,10 +173,9 @@ def test_adaptive_clearing_feed_rate_applied():
     """Cut feed_rate appears on cutting moves from the clearing pass."""
     boundary = _rect(0, 0, 60, 60)
     seed = [_circle(0, 0, 5)]
-    ca = ClearedArea(boundary=boundary, initial=seed)
+    part = Part.from_polygons(boundary, initial=seed)
     result_clear = adaptive_clearing(
-        Part.from_polygons(boundary),
-        cleared=ca,
+        part,
         tool_radius=3.0,
         step_over=1.5,
         target_z=-5.0,
@@ -203,10 +195,9 @@ def test_adaptive_clearing_cut_power_applied():
     """Cut power appears on cutting moves from the clearing pass."""
     boundary = _rect(0, 0, 60, 60)
     seed = [_circle(0, 0, 5)]
-    ca = ClearedArea(boundary=boundary, initial=seed)
+    part = Part.from_polygons(boundary, initial=seed)
     result_clear = adaptive_clearing(
-        Part.from_polygons(boundary),
-        cleared=ca,
+        part,
         tool_radius=3.0,
         step_over=1.5,
         target_z=-5.0,
@@ -227,10 +218,9 @@ def test_adaptive_clearing_degenerate_pocket():
     """Degenerate (zero-area) pocket returns empty Ops."""
     boundary = [(0, 0), (1, 0), (1, 1), (0, 1)]
     seed = [_circle(0.5, 0.5, 0.1)]
-    ca = ClearedArea(boundary=boundary, initial=seed)
+    part = Part.from_polygons(boundary, initial=seed)
     result_clear = adaptive_clearing(
-        Part.from_polygons(boundary),
-        cleared=ca,
+        part,
         tool_radius=5.0,
         step_over=1.5,
         target_z=-5.0,
@@ -248,10 +238,9 @@ def test_adaptive_clearing_fully_clears_rect():
     assert valid_total > tol, "valid tool area too small for a meaningful test"
 
     seed = [_circle(0, 0, 5)]
-    ca = ClearedArea(boundary=boundary, initial=seed)
+    part = Part.from_polygons(boundary, initial=seed)
     adaptive_clearing(
-        Part.from_polygons(boundary),
-        cleared=ca,
+        part,
         tool_radius=3.0,
         step_over=1.5,
         target_z=-5.0,
@@ -259,7 +248,7 @@ def test_adaptive_clearing_fully_clears_rect():
         area_tolerance=tol,
     )
 
-    remaining = _remaining_area(ca, valid_polys)
+    remaining = _remaining_area(part.cleared, valid_polys)
     assert remaining < tol, (
         f"expected remaining < {tol}, got {remaining:.2f} mm²"
     )
@@ -276,10 +265,9 @@ def test_adaptive_clearing_fully_clears_with_island():
     assert valid_total > tol, "valid tool area too small for a meaningful test"
 
     seed = [_circle(-10, 0, 5)]
-    ca = ClearedArea(boundary=boundary, islands=islands, initial=seed)
+    part = Part.from_polygons(boundary, islands, initial=seed)
     adaptive_clearing(
-        Part.from_polygons(boundary, islands),
-        cleared=ca,
+        part,
         tool_radius=3.0,
         step_over=1.5,
         target_z=-5.0,
@@ -287,7 +275,7 @@ def test_adaptive_clearing_fully_clears_with_island():
         area_tolerance=tol,
     )
 
-    remaining = _remaining_area(ca, valid_polys)
+    remaining = _remaining_area(part.cleared, valid_polys)
     assert remaining < tol, (
         f"expected remaining < {tol}, got {remaining:.2f} mm²"
     )
@@ -388,10 +376,9 @@ def test_adaptive_clearing_uses_step_over():
     """adaptive_clearing accepts step_over and produces cut moves."""
     boundary = _rect(0, 0, 80, 80)
     seed = [_rect(35, 35, 10, 10)]
-    ca = ClearedArea(boundary=boundary, initial=seed)
+    part = Part.from_polygons(boundary, initial=seed)
     result = adaptive_clearing(
-        Part.from_polygons(boundary),
-        cleared=ca,
+        part,
         tool_radius=3.0,
         step_over=2.0,
         target_z=-5.0,
@@ -404,10 +391,9 @@ def test_adaptive_clearing_renamed_fields():
     """adaptive_clearing accepts the renamed fields without error."""
     boundary = _rect(0, 0, 80, 80)
     seed = [_rect(35, 35, 10, 10)]
-    ca = ClearedArea(boundary=boundary, initial=seed)
+    part = Part.from_polygons(boundary, initial=seed)
     result = adaptive_clearing(
-        Part.from_polygons(boundary),
-        cleared=ca,
+        part,
         tool_radius=3.0,
         step_over=1.5,
         target_z=-5.0,

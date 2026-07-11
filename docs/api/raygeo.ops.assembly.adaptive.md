@@ -17,8 +17,7 @@ Raised when all route strategies fail to find a path.
 
 ```python
 adaptive_clearing(
-    part: Part,
-    cleared: ops.cut.cleared_area.ClearedArea,
+    part: ops.cut.Part,
     tool_radius: float = 3,
     step_over: float = 1.5,
     step_length: float = 0.6,
@@ -42,17 +41,16 @@ adaptive_clearing(
 
 Run forward-stepping adaptive clearing.
 
-Starting from the pre-populated *cleared* area, uses a constant-engagement stepping solver to
-generate a continuous spiral toolpath from the seed clearing to the pocket wall.
+Starting from the pre-populated cleared area inside *part*, uses a constant-engagement stepping
+solver to generate a continuous spiral toolpath from the seed clearing to the pocket wall.
 
-The caller is responsible for populating *cleared* with the entry polygons (e.g. via a workplan
-built by **raygeo.cnc.machining.wavefront.build_wavefront_workplan** and executed by
+The caller is responsible for populating the part's cleared area with the entry polygons (e.g. via a
+workplan built by **raygeo.cnc.machining.wavefront.build_wavefront_workplan** and executed by
 **raygeo.cnc.machining.plan.Workplan**) and prepending the entry Ops to the result.
 
 | Parameter              | Type                                        | Description                                                                                                                       |
 | ---------------------- | ------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| `part`                 | `Part`                                      | The part with boundary and island geometry.                                                                                       |
-| `cleared`              | `ops.cut.cleared_area.ClearedArea`          | `ClearedArea` instance (mutated in place).                                                                                        |
+| `part`                 | `ops.cut.Part`                              | The part whose `cleared` field tracks accumulated workpiece state and whose geometry defines the pocket boundary and islands.     |
 | `tool_radius`          | `float = 3`                                 | Tool radius in mm (default 3.0).                                                                                                  |
 | `step_over`            | `float = 1.5`                               | Step-over distance (default 1.5).                                                                                                 |
 | `step_length`          | `float = 0.6`                               | Forward step length in mm (default 0.6).                                                                                          |

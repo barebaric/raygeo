@@ -63,7 +63,7 @@ impl ResumeStrategy for ResumeMat {
             let mut cross_detail = 0u8;
             if let Some(rp) = mat_resume_from_crossing(
                 axis,
-                ctx.cleared,
+                &ctx.part.cleared,
                 crossing_idx,
                 ctx.opts.cut_direction,
                 tool.radius,

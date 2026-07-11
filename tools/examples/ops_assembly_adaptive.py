@@ -17,7 +17,6 @@ from raygeo.ops.assembly.adaptive import (
     target_area_per_distance,
 )
 from raygeo.ops.cut import Part
-from raygeo.ops.cut.cleared_area import ClearedArea
 from tools.plot import plot_ops_2d, plot_ops_3d
 
 
@@ -43,10 +42,9 @@ def _seed_circle(cx, cy, r, n=64):
 def generate_adaptive_clearing_demo():
     """Toolpath demo with seed, cuts, and travel."""
     boundary = _rect(0, 0, 200, 200)
-    ca = ClearedArea(boundary=boundary, initial=[_seed_circle(0, 0, 20)])
+    part = Part.from_polygons(boundary, initial=[_seed_circle(0, 0, 20)])
     result = adaptive_clearing(
-        Part.from_polygons(boundary),
-        cleared=ca,
+        part,
         tool_radius=5.0,
         step_over=3.0,
         target_z=-5.0,
@@ -260,17 +258,16 @@ def generate_adaptive_clearing_centre_island():
     cx, cy, r = -13.7, 13.7, 12.2
     cleared_polys = [get_circle_polygon((cx, cy), r, 64)]
 
-    ca = ClearedArea(boundary=boundary, islands=islands, initial=cleared_polys)
+    part = Part.from_polygons(boundary, islands, initial=cleared_polys)
     result = adaptive_clearing(
-        Part.from_polygons(boundary, islands),
-        cleared=ca,
+        part,
         tool_radius=3.0,
         step_over=1.5,
         target_z=target_z,
         safe_z=2.0,
         area_tolerance=1.0,
     )
-    remaining = sum(get_polygon_area(p) for p in ca.remaining())
+    remaining = sum(get_polygon_area(p) for p in part.cleared.remaining())
     combined_ops = result.ops
 
     fig = plt.figure(figsize=(14, 6))
@@ -292,7 +289,7 @@ def generate_adaptive_clearing_centre_island():
             linestyle="--",
         )
         seed_area += abs(get_polygon_area([(p[0], p[1]) for p in poly]))
-    for poly in ca.remaining():
+    for poly in part.cleared.remaining():
         if len(poly) < 3:
             continue
         a_s = get_polygon_signed_area([(p[0], p[1]) for p in poly])
@@ -338,10 +335,9 @@ def _narrow_shared():
     cx, cy, r = -11.1, 0.0, 3.0
     cleared_polys = [get_circle_polygon((cx, cy), r, 64)]
 
-    ca = ClearedArea(boundary=boundary, initial=cleared_polys)
+    part = Part.from_polygons(boundary, initial=cleared_polys)
     result = adaptive_clearing(
-        Part.from_polygons(boundary),
-        cleared=ca,
+        part,
         tool_radius=tool_radius,
         step_over=1.5,
         target_z=target_z,
@@ -349,20 +345,20 @@ def _narrow_shared():
         area_tolerance=1.0,
     )
     combined_ops = result.ops
-    return combined_ops, ca, boundary, target_z, cleared_polys, tool_radius
+    return combined_ops, part, boundary, target_z, cleared_polys, tool_radius
 
 
 def generate_adaptive_clearing_narrow():
     """Narrow pocket (80×14) — 3D + 2D combined view."""
-    (combined_ops, ca, boundary, target_z, cleared_polys, tool_radius) = (
+    (combined_ops, part, boundary, target_z, cleared_polys, tool_radius) = (
         _narrow_shared()
     )
-    remaining = sum(get_polygon_area(p) for p in ca.remaining())
+    remaining = sum(get_polygon_area(p) for p in part.cleared.remaining())
     fig = plt.figure(figsize=(14, 6))
     ax3d = fig.add_subplot(1, 2, 1, projection="3d")
     plot_ops_3d(ax3d, combined_ops, boundary=boundary)
     ax = fig.add_subplot(1, 2, 2)
-    envelope = ca.envelope(tool_radius)
+    envelope = part.cleared.envelope(tool_radius)
     for poly in envelope:
         if len(poly) < 3:
             continue
@@ -377,7 +373,7 @@ def generate_adaptive_clearing_narrow():
         py = [p[1] for p in poly] + [poly[0][1]]
         ax.fill(px, py, color="steelblue", alpha=0.2)
         seed_area += abs(get_polygon_area([(p[0], p[1]) for p in poly]))
-    for poly in ca.remaining():
+    for poly in part.cleared.remaining():
         if len(poly) < 3:
             continue
         a_s = get_polygon_signed_area([(p[0], p[1]) for p in poly])

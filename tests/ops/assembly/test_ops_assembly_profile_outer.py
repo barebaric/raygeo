@@ -8,7 +8,6 @@ from raygeo.geo.shape.polygon import (
 from raygeo.ops import Ops
 from raygeo.ops.assembly.profile import profile_outer
 from raygeo.ops.cut import Part
-from raygeo.ops.cut.cleared_area import ClearedArea
 
 
 def _rect(cx, cy, w, h):
@@ -23,10 +22,9 @@ def _rect(cx, cy, w, h):
 def test_profile_outer_smoke_and_returns_ops():
     """Binding returns an AssemblyResult with an Ops object."""
     boundary = _rect(0, 0, 60, 60)
-    ca = ClearedArea(boundary=boundary, initial=[])
+    part = Part.from_polygons(boundary, initial=[])
     result = profile_outer(
-        Part.from_polygons(boundary),
-        cleared=ca,
+        part,
         tool_radius=3.0,
         step_over=1.5,
         target_z=-5.0,
@@ -45,11 +43,9 @@ def test_profile_outer_smoke_and_returns_ops():
 def test_profile_outer_walks_and_returns_to_start():
     """profile_outer walks the offset boundary and returns to start."""
     boundary = _rect(0, 0, 60, 60)
-    ca = ClearedArea(boundary=boundary, initial=[])
-    part = Part.from_polygons(boundary)
+    part = Part.from_polygons(boundary, initial=[])
     result = profile_outer(
         part,
-        cleared=ca,
         tool_radius=3.0,
         step_over=1.5,
         target_z=-5.0,
@@ -91,11 +87,9 @@ def test_profile_outer_walks_and_returns_to_start():
 def test_profile_outer_stays_close_to_offset():
     """profile_outer path stays within tolerance of the offset polygon."""
     boundary = _rect(0, 0, 60, 60)
-    ca = ClearedArea(boundary=boundary, initial=[])
-    part = Part.from_polygons(boundary)
+    part = Part.from_polygons(boundary, initial=[])
     result = profile_outer(
         part,
-        cleared=ca,
         tool_radius=3.0,
         step_over=1.5,
         target_z=-5.0,

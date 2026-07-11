@@ -50,6 +50,15 @@ class Part:
         
         Returns ``None`` if no geometry was provided at construction time.
         """
+    @property
+    def cleared(self) -> cleared_area.ClearedArea:
+        r"""
+        Accumulated cleared-area state — what has been cut so far.
+        
+        Read-only snapshot.  Assemblers mutate this internally;
+        use it after an assembler returns to inspect remaining
+        material, fragments, etc.
+        """
     def __new__(cls, geometry: typing.Optional[geo.Geometry] = None, size_mm: tuple[builtins.float, builtins.float] = (0.0, 0.0), pixels_per_mm: typing.Optional[tuple[builtins.float, builtins.float]] = None) -> Part:
         r"""
         Create a new Part.
@@ -59,7 +68,7 @@ class Part:
         :param pixels_per_mm: Optional pixel density ``(x, y)`` in px/mm.
         """
     @staticmethod
-    def from_polygons(boundary: typing.Sequence[tuple[builtins.float, builtins.float]], islands: typing.Optional[typing.Sequence[typing.Sequence[tuple[builtins.float, builtins.float]]]] = None, size_mm: tuple[builtins.float, builtins.float] = (0.0, 0.0)) -> Part:
+    def from_polygons(boundary: typing.Sequence[tuple[builtins.float, builtins.float]], islands: typing.Optional[typing.Sequence[typing.Sequence[tuple[builtins.float, builtins.float]]]] = None, size_mm: tuple[builtins.float, builtins.float] = (0.0, 0.0), initial: typing.Optional[typing.Sequence[typing.Sequence[tuple[builtins.float, builtins.float]]]] = None) -> Part:
         r"""
         Build a Part from a boundary polygon and optional islands.
         
@@ -68,6 +77,10 @@ class Part:
             (default ``[]``).
         :param size_mm: Physical size ``(width, height)`` in mm
             (default ``(0, 0)``).
+        :param initial: Optional pre-seeded cleared polygons (e.g. a
+            seed circle for adaptive clearing).  When provided, the
+            part's cleared area starts with these fragments instead of
+            being empty.
         :returns: A new ``Part`` with the geometry constructed from the
             given polygons.
         """

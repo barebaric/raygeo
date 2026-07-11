@@ -33,7 +33,7 @@ pub struct RampOptions {
 /// [`AssemblyResult`] with a segment-swept cleared polygon.
 #[prof]
 pub fn generate_ramp(
-    _part: &Part,
+    part: &mut Part,
     trace: &mut Tracelet,
     opts: &RampOptions,
     cut_state: &State,
@@ -77,6 +77,7 @@ pub fn generate_ramp(
         get_segment_swept_polygon(opts.start, opts.end, opts.lateral_amplitude);
 
     write_polyline(trace, &path, true, Some(cut_state));
+    part.cleared.cut(&cleared_polygons);
     Ok(AssemblyMeta {
         cleared_polygons,
         start,

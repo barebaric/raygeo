@@ -17,7 +17,6 @@ use crate::prof::prof_report;
 use crate::python::errors::{ResumePointNotFoundError, RoutingError};
 use crate::python::ops::assembly::progress_event_to_py;
 use crate::python::ops::assembly::result::PyAssemblyResult;
-use crate::python::ops::cut::cleared_area::PyClearedArea;
 use crate::types::Point3D;
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::gen_stub_pyfunction;
@@ -82,7 +81,6 @@ pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
 
     def adaptive_clearing(
         part: raygeo.ops.cut.Part,
-        cleared: raygeo.ops.cut.cleared_area.ClearedArea,
         tool_radius: float = 3.0,
         step_over: float = 1.5,
         step_length: float = 0.6,
@@ -104,19 +102,21 @@ pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     ) -> raygeo.ops.assembly.result.AssemblyResult:
         """Run forward-stepping adaptive clearing.
 
-        Starting from the pre-populated *cleared* area, uses a
-        constant-engagement stepping solver to generate a continuous
-        spiral toolpath from the seed clearing to the pocket wall.
+        Starting from the pre-populated cleared area inside *part*,
+        uses a constant-engagement stepping solver to generate a
+        continuous spiral toolpath from the seed clearing to the
+        pocket wall.
 
-        The caller is responsible for populating *cleared* with
-        the entry polygons (e.g. via a workplan built by
+        The caller is responsible for populating the part's cleared
+        area with the entry polygons (e.g. via a workplan built by
         :func:`raygeo.cnc.machining.wavefront.build_wavefront_workplan`
         and executed by
         :class:`raygeo.cnc.machining.plan.Workplan`) and
         prepending the entry Ops to the result.
 
-        :param part: The part with boundary and island geometry.
-        :param cleared: ``ClearedArea`` instance (mutated in place).
+        :param part: The part whose ``cleared`` field tracks accumulated
+                     workpiece state and whose geometry defines the
+                     pocket boundary and islands.
         :param tool_radius: Tool radius in mm (default 3.0).
         :param step_over: Step-over distance (default 1.5).
         :param step_length: Forward step length in mm (default 0.6).
@@ -152,7 +152,6 @@ pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
 #[pyfunction(name = "adaptive_clearing")]
 #[pyo3(signature = (
     part,
-    cleared,
     tool_radius = 3.0,
     step_over = 1.5,
     step_length = 0.6,
@@ -174,8 +173,7 @@ pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
 ))]
 #[allow(clippy::too_many_arguments)]
 fn adaptive_clearing_py(
-    part: &crate::python::ops::cut::part::PyPart,
-    cleared: &mut PyClearedArea,
+    part: &mut crate::python::ops::cut::part::PyPart,
     tool_radius: f64,
     step_over: f64,
     step_length: f64,
@@ -244,9 +242,8 @@ fn adaptive_clearing_py(
         Tracelet::new()
     };
     let meta = adaptive::adaptive_clearing(
-        &part.inner,
+        &mut part.inner,
         &mut trace,
-        &mut cleared.inner,
         &opts,
         &cut_state,
     )?;

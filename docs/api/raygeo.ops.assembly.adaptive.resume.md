@@ -9,7 +9,7 @@ sidebar_label: raygeo.ops.assembly.adaptive.resume
 
 ```python
 emit_resume_travel(
-    part: Part,
+    part: ops.cut.Part,
     ops: ops.Ops,
     to_pt: tuple[float, float, float],
     radius: float = 3,
@@ -24,7 +24,7 @@ Emit a resume travel to *to_pt* using the routing strategies.
 
 | Parameter | Type                                                  | Description |
 | --------- | ----------------------------------------------------- | ----------- |
-| `part`    | `Part`                                                |             |
+| `part`    | `ops.cut.Part`                                        |             |
 | `ops`     | `ops.Ops`                                             |             |
 | `to_pt`   | `tuple[float, float, float]`                          |             |
 | `radius`  | `float = 3`                                           |             |
@@ -38,7 +38,7 @@ Emit a resume travel to *to_pt* using the routing strategies.
 
 ```python
 try_resume(
-    part: Part,
+    part: ops.cut.Part,
     cleared: ops.cut.cleared_area.ClearedArea,
     ops: ops.Ops,
     tool: ops.assembly.adaptive.tool.Tool,
@@ -59,7 +59,7 @@ Try to recover after the tool stalls or is detected as stuck.
 
 | Parameter            | Type                                                 | Description        |
 | -------------------- | ---------------------------------------------------- | ------------------ |
-| `part`               | `Part`                                               |                    |
+| `part`               | `ops.cut.Part`                                       |                    |
 | `cleared`            | `ops.cut.cleared_area.ClearedArea`                   |                    |
 | `ops`                | `ops.Ops`                                            |                    |
 | `tool`               | `ops.assembly.adaptive.tool.Tool`                    |                    |

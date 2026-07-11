@@ -4,7 +4,6 @@ from typing import Any
 
 from raygeo.ops.assembly.profile import profile_inner, profile_outer
 from raygeo.ops.cut import Part
-from raygeo.ops.cut.cleared_area import ClearedArea
 
 
 def _rect(cx, cy, w, h):
@@ -16,10 +15,10 @@ def _rect(cx, cy, w, h):
     ]
 
 
-def _kwargs(ca, boundary, **over: Any) -> dict[str, Any]:
+def _kwargs(initial, boundary, **over: Any) -> dict[str, Any]:
+    part = Part.from_polygons(boundary, initial=initial)
     kw = dict(
-        cleared=ca,
-        part=Part.from_polygons(boundary),
+        part=part,
         tool_radius=3.0,
         step_over=1.5,
         target_z=-5.0,
@@ -44,11 +43,12 @@ def test_profile_outer_mutates_cleared_area():
     wall, not inside).  Instead, verify that fragments are added.
     """
     boundary = _rect(0, 0, 60, 60)
-    ca = ClearedArea(boundary=boundary, initial=[])
-    assert ca.is_empty()
+    part = Part.from_polygons(boundary, initial=[])
+    assert part.cleared.is_empty()
 
-    profile_outer(**_kwargs(ca, boundary))
+    profile_outer(**dict(_kwargs([], boundary), part=part))
 
+    ca = part.cleared
     assert not ca.is_empty(), "no fragments added"
     assert ca.total_area() > 0, f"total_area={ca.total_area()}"
 
@@ -56,13 +56,13 @@ def test_profile_outer_mutates_cleared_area():
 def test_profile_outer_idempotent_under_repeated_calls():
     """Running profile_outer twice on the same ClearedArea works."""
     boundary = _rect(0, 0, 60, 60)
-    ca = ClearedArea(boundary=boundary, initial=[])
+    part = Part.from_polygons(boundary, initial=[])
 
-    result1 = profile_outer(**_kwargs(ca, boundary))
+    result1 = profile_outer(**dict(_kwargs([], boundary), part=part))
     assert result1.ops.len() > 0
     assert result1.ops.cut_distance() > 0
 
-    result2 = profile_outer(**_kwargs(ca, boundary))
+    result2 = profile_outer(**dict(_kwargs([], boundary), part=part))
     assert result2.ops.len() > 0
     cut_count = sum(
         1 for i in range(result2.ops.len()) if result2.ops.is_cutting(i)
@@ -73,11 +73,9 @@ def test_profile_outer_idempotent_under_repeated_calls():
 def test_profile_inner_then_outer_with_shared_cleared():
     """profile_inner then profile_outer on the same ClearedArea succeeds."""
     boundary = _rect(0, 0, 60, 60)
-    ca = ClearedArea(boundary=boundary, initial=[])
-    part = Part.from_polygons(boundary)
+    part = Part.from_polygons(boundary, initial=[])
     result_inner = profile_inner(
         part,
-        cleared=ca,
         tool_radius=3.0,
         target_z=-5.0,
         safe_z=2.0,
@@ -94,7 +92,6 @@ def test_profile_inner_then_outer_with_shared_cleared():
     assert result_inner.ops.len() > 0
     result_outer = profile_outer(
         part,
-        cleared=ca,
         tool_radius=3.0,
         step_over=1.5,
         target_z=-5.0,

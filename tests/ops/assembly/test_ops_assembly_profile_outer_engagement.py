@@ -4,7 +4,6 @@ from typing import Any
 
 from raygeo.ops.assembly.profile import profile_outer
 from raygeo.ops.cut import Part
-from raygeo.ops.cut.cleared_area import ClearedArea
 
 
 def _rect(cx, cy, w, h):
@@ -16,10 +15,10 @@ def _rect(cx, cy, w, h):
     ]
 
 
-def _kwargs(ca, boundary, **over: Any) -> dict[str, Any]:
+def _kwargs(initial, boundary, **over: Any) -> dict[str, Any]:
+    part = Part.from_polygons(boundary, initial=initial)
     kw = dict(
-        cleared=ca,
-        part=Part.from_polygons(boundary),
+        part=part,
         tool_radius=3.0,
         step_over=1.5,
         target_z=-5.0,
@@ -41,26 +40,23 @@ def _kwargs(ca, boundary, **over: Any) -> dict[str, Any]:
 def test_profile_outer_finish_pass_runs():
     """Finish pass (empty pocket, stock_to_leave=0) runs without error."""
     boundary = _rect(0, 0, 60, 60)
-    ca = ClearedArea(boundary=boundary, initial=[])
-    result = profile_outer(**_kwargs(ca, boundary, stock_to_leave=0.0))
+    result = profile_outer(**_kwargs([], boundary, stock_to_leave=0.0))
     assert result.ops.len() > 0
 
 
 def test_profile_outer_rough_pass_runs():
     """Rough pass (stock_to_leave=0.5) runs without error."""
     boundary = _rect(0, 0, 60, 60)
-    ca = ClearedArea(boundary=boundary, initial=[])
-    result = profile_outer(**_kwargs(ca, boundary, stock_to_leave=0.5))
+    result = profile_outer(**_kwargs([], boundary, stock_to_leave=0.5))
     assert result.ops.len() > 0
 
 
 def test_profile_outer_high_threshold_runs():
     """Huge engagement thresholds do not prevent operation from completing."""
     boundary = _rect(0, 0, 60, 60)
-    ca = ClearedArea(boundary=boundary, initial=[])
     result = profile_outer(
         **_kwargs(
-            ca,
+            [],
             boundary,
             engagement_area_threshold=1e9,
             engagement_angle_threshold=1e9,
@@ -73,10 +69,9 @@ def test_profile_outer_travel_skip_on_heavy_stock():
     """Low threshold may trigger travel-skips; op must still complete."""
     boundary = _rect(0, 0, 60, 60)
     seed = _rect(0, 0, 6, 6)
-    ca = ClearedArea(boundary=boundary, initial=[seed])
     result = profile_outer(
         **_kwargs(
-            ca,
+            [seed],
             boundary,
             engagement_area_threshold=1.0,
             engagement_angle_threshold=0.5,

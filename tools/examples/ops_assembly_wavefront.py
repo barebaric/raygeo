@@ -15,7 +15,6 @@ from raygeo.geo.shape.polygon import (
 )
 from raygeo.ops.assembly.wavefront import adaptive_wavefronts
 from raygeo.ops.cut import Part
-from raygeo.ops.cut.cleared_area import ClearedArea
 from raygeo.svg import svg_string_to_geometries
 
 
@@ -88,32 +87,25 @@ def _plot_wavefront_2d(ops, boundary, islands, title):
     return fig
 
 
-def _seed_cleared_area(boundary, islands, tool_radius):
-    """Seed a ``ClearedArea`` with a single tool disk at the pocket's
-    largest-inscribed-circle centre.
+def _seed_polygon(boundary, islands, tool_radius):
+    """Compute a seed polygon at the pocket's largest-inscribed-circle centre.
 
-    This is a geo/ops-only seed (no entry strategy): the point of this
-    example is to demonstrate ``adaptive_wavefronts`` itself, so the
-    cleared area is initialised with a minimal disk and the wavefront
-    assembler does all the expansion.
+    Returns a list containing a single seed disk polygon suitable for
+    passing as ``initial`` to ``Part.from_polygons``.
     """
     result = find_largest_circle(boundary, islands or [], 0.1)
     center = (
         result[0] if result is not None else get_polygon_centroid(boundary)
     )
-    seed = get_circle_polygon(center, tool_radius, 64)
-    return ClearedArea(
-        boundary=boundary, islands=islands or [], initial=[seed]
-    )
+    return [get_circle_polygon(center, tool_radius, 64)]
 
 
 def generate_wavefront_rect():
     """Wavefront rectangular."""
     wf_boundary = [(0, 0), (160, 0), (160, 100), (0, 100)]
-    wf_ca = _seed_cleared_area(wf_boundary, None, 3.0)
+    wf_seed = _seed_polygon(wf_boundary, None, 3.0)
     result = adaptive_wavefronts(
-        Part.from_polygons(wf_boundary),
-        wf_ca,
+        Part.from_polygons(wf_boundary, initial=wf_seed),
         tool_radius=3.0,
         step_over=2.0,
         z=-5.0,
@@ -135,10 +127,9 @@ def generate_wavefront_multi():
         [(70, 40), (90, 40), (90, 60), (70, 60)],
         [(130, 80), (160, 80), (160, 105), (130, 105)],
     ]
-    mi_ca = _seed_cleared_area(mi_boundary, mi_islands, 3.0)
+    mi_seed = _seed_polygon(mi_boundary, mi_islands, 3.0)
     result = adaptive_wavefronts(
-        Part.from_polygons(mi_boundary, mi_islands),
-        mi_ca,
+        Part.from_polygons(mi_boundary, mi_islands, initial=mi_seed),
         tool_radius=3.0,
         step_over=2.0,
         z=-5.0,
@@ -165,10 +156,9 @@ def generate_wavefront_yshape():
         (10, 110),
         (45, 40),
     ]
-    ys_ca = _seed_cleared_area(yshape, None, 3.0)
+    ys_seed = _seed_polygon(yshape, None, 3.0)
     ys_result = adaptive_wavefronts(
-        Part.from_polygons(yshape),
-        ys_ca,
+        Part.from_polygons(yshape, initial=ys_seed),
         tool_radius=3.0,
         step_over=2.0,
         z=-5.0,
@@ -226,10 +216,9 @@ def generate_wavefront_svg():
     results = []
     max_subpaths = 0
     for boundary, islands in components:
-        ca = _seed_cleared_area(boundary, islands, 1.5)
+        ca_seed = _seed_polygon(boundary, islands, 1.5)
         result = adaptive_wavefronts(
-            Part.from_polygons(boundary, islands),
-            ca,
+            Part.from_polygons(boundary, islands, initial=ca_seed),
             tool_radius=1.5,
             step_over=0.5,
             z=-5.0,

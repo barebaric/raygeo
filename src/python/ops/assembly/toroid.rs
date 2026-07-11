@@ -69,7 +69,7 @@ pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
 ))]
 #[allow(clippy::too_many_arguments)]
 fn generate_toroid_py(
-    part: &crate::python::ops::cut::part::PyPart,
+    part: &mut crate::python::ops::cut::part::PyPart,
     carrier: Vec<(f64, f64)>,
     tool_radius: f64,
     step_over: f64,
@@ -102,8 +102,12 @@ fn generate_toroid_py(
     };
 
     let mut trace = Tracelet::new();
-    let meta =
-        toroid::generate_toroid(&part.inner, &mut trace, &opts, &cut_state)?;
+    let meta = toroid::generate_toroid(
+        &mut part.inner,
+        &mut trace,
+        &opts,
+        &cut_state,
+    )?;
     let events = trace.drain();
     let attrs = trace.attrs().cloned();
     let ops = trace.into_ops();
@@ -164,7 +168,7 @@ fn generate_toroid_py(
 ))]
 #[allow(clippy::too_many_arguments)]
 fn generate_toroidal_clear_py(
-    part: &crate::python::ops::cut::part::PyPart,
+    part: &mut crate::python::ops::cut::part::PyPart,
     carrier: Vec<(f64, f64)>,
     start: (f64, f64, f64),
     target_z: f64,
@@ -202,7 +206,7 @@ fn generate_toroidal_clear_py(
 
     let mut trace = Tracelet::new();
     let meta = toroid::generate_toroidal_clear(
-        &part.inner,
+        &mut part.inner,
         &mut trace,
         &opts,
         &cut_state,

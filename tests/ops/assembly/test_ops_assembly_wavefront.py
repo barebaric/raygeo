@@ -5,7 +5,6 @@ import math
 from raygeo.ops import Ops
 from raygeo.ops.assembly.wavefront import adaptive_wavefronts
 from raygeo.ops.cut import Part
-from raygeo.ops.cut.cleared_area import ClearedArea
 
 
 def _seed_polygon(cx, cy, r, n=32):
@@ -22,41 +21,38 @@ def _seed_polygon(cx, cy, r, n=32):
 def test_adaptive_wavefronts_simple():
     boundary = [(0, 0), (160, 0), (160, 100), (0, 100)]
     initial = [_seed_polygon(80.0, 50.0, 15.0)]
-    ca = ClearedArea(boundary=boundary, initial=initial)
+    part = Part.from_polygons(boundary, initial=initial)
     result_wf = adaptive_wavefronts(
-        Part.from_polygons(boundary),
-        ca,
+        part,
         step_over=2.0,
         z=-8.0,
         area_tolerance=1.0,
     )
     assert result_wf.ops.len() > 0
-    assert ca.total_area() > 10000
+    assert part.cleared.total_area() > 10000
 
 
 def test_adaptive_wavefronts_with_islands():
     boundary = [(0, 0), (160, 0), (160, 100), (0, 100)]
     islands = [[(60, 35), (100, 35), (100, 65), (60, 65)]]
-    initial = [_seed_polygon(80.0, 50.0, 15.0)]
-    ca = ClearedArea(boundary=boundary, initial=initial)
+    initial = [_seed_polygon(20.0, 50.0, 15.0)]
+    part = Part.from_polygons(boundary, islands, initial=initial)
     result_wf = adaptive_wavefronts(
-        Part.from_polygons(boundary, islands),
-        ca,
+        part,
         tool_radius=3.0,
         step_over=2.0,
         z=-8.0,
         area_tolerance=1.0,
     )
     assert result_wf.ops.len() > 0
-    assert ca.total_area() > 5000
+    assert part.cleared.total_area() > 5000
 
 
 def test_adaptive_wavefronts_empty_cleared():
-    ca = ClearedArea(boundary=[])
     boundary = [(0, 0), (160, 0), (160, 100), (0, 100)]
+    part = Part.from_polygons(boundary)
     result_wf = adaptive_wavefronts(
-        Part.from_polygons(boundary),
-        ca,
+        part,
         step_over=2.0,
         z=-8.0,
         area_tolerance=1.0,
@@ -67,10 +63,9 @@ def test_adaptive_wavefronts_empty_cleared():
 def test_adaptive_wavefronts_cut_power_applied():
     boundary = [(0, 0), (160, 0), (160, 100), (0, 100)]
     initial = [_seed_polygon(80.0, 50.0, 15.0)]
-    ca = ClearedArea(boundary=boundary, initial=initial)
+    part = Part.from_polygons(boundary, initial=initial)
     result_wf = adaptive_wavefronts(
-        Part.from_polygons(boundary),
-        ca,
+        part,
         step_over=2.0,
         z=-8.0,
         area_tolerance=1.0,
@@ -90,10 +85,9 @@ def test_adaptive_wavefronts_precision_resamples():
     """precision > 0 with a seed polygon produces ops (count may vary)."""
     boundary = [(0, 0), (160, 0), (160, 100), (0, 100)]
     initial = [_seed_polygon(80.0, 50.0, 15.0)]
-    ca = ClearedArea(boundary=boundary, initial=initial)
+    part = Part.from_polygons(boundary, initial=initial)
     result_wf = adaptive_wavefronts(
-        Part.from_polygons(boundary),
-        ca,
+        part,
         step_over=2.0,
         z=-8.0,
         area_tolerance=1.0,
@@ -106,11 +100,10 @@ def test_adaptive_wavefronts_precision_with_islands():
     """precision > 0 with islands may or may not produce ops."""
     boundary = [(0, 0), (160, 0), (160, 100), (0, 100)]
     islands = [[(60, 35), (100, 35), (100, 65), (60, 65)]]
-    initial = [_seed_polygon(80.0, 50.0, 15.0)]
-    ca = ClearedArea(boundary=boundary, islands=islands, initial=initial)
+    initial = [_seed_polygon(20.0, 50.0, 15.0)]
+    part = Part.from_polygons(boundary, islands, initial=initial)
     result_wf = adaptive_wavefronts(
-        Part.from_polygons(boundary, islands),
-        ca,
+        part,
         tool_radius=3.0,
         step_over=2.0,
         z=-8.0,
@@ -119,4 +112,4 @@ def test_adaptive_wavefronts_precision_with_islands():
     )
     assert isinstance(result_wf.ops, Ops)
     # Area should be tracked regardless of ops count
-    assert ca.total_area() >= 0
+    assert part.cleared.total_area() >= 0

@@ -6,7 +6,6 @@ import pytest
 
 from raygeo.ops.assembly.profile import profile_inner
 from raygeo.ops.cut import Part
-from raygeo.ops.cut.cleared_area import ClearedArea
 
 
 def _rect(cx, cy, w, h):
@@ -18,11 +17,11 @@ def _rect(cx, cy, w, h):
     ]
 
 
-def _kwargs(ca, boundary, **over: Any) -> dict[str, Any]:
+def _kwargs(initial, boundary, **over: Any) -> dict[str, Any]:
     islands = over.pop("islands", None)
+    part = Part.from_polygons(boundary, islands or [], initial=initial)
     kw = dict(
-        cleared=ca,
-        part=Part.from_polygons(boundary, islands or []),
+        part=part,
         tool_radius=3.0,
         step_over=1.5,
         target_z=-5.0,
@@ -78,14 +77,10 @@ def test_profile_inner_skips_island_when_channel_too_narrow():
     island_far = _rect(-15, 0, 8, 8)
     island_close = _rect(24, 0, 8, 8)
 
-    ca_far = ClearedArea(boundary=boundary, initial=[])
-    result_far = profile_inner(
-        **_kwargs(ca_far, boundary, islands=[island_far])
-    )
+    result_far = profile_inner(**_kwargs([], boundary, islands=[island_far]))
 
-    ca_both = ClearedArea(boundary=boundary, initial=[])
     result_both = profile_inner(
-        **_kwargs(ca_both, boundary, islands=[island_far, island_close])
+        **_kwargs([], boundary, islands=[island_far, island_close])
     )
 
     diff = abs(result_both.ops.cut_distance() - result_far.ops.cut_distance())
@@ -102,12 +97,10 @@ def test_profile_inner_walks_both_islands_when_both_accessible():
     island1 = _rect(-15, -10, 8, 8)
     island2 = _rect(15, 10, 8, 8)
 
-    ca_one = ClearedArea(boundary=boundary, initial=[])
-    result_one = profile_inner(**_kwargs(ca_one, boundary, islands=[island1]))
+    result_one = profile_inner(**_kwargs([], boundary, islands=[island1]))
 
-    ca_two = ClearedArea(boundary=boundary, initial=[])
     result_two = profile_inner(
-        **_kwargs(ca_two, boundary, islands=[island1, island2])
+        **_kwargs([], boundary, islands=[island1, island2])
     )
 
     extra = result_two.ops.cut_distance() - result_one.ops.cut_distance()

@@ -107,6 +107,40 @@ impl Part {
         }
     }
 
+    /// Build a Part from polygons, pre-seeding the cleared area with
+    /// `initial` fragments (e.g. a seed circle for adaptive clearing).
+    pub fn from_polygons_initial(
+        boundary: &Polygon,
+        islands: &[Polygon],
+        initial: &[Polygon],
+        size_mm: (f64, f64),
+    ) -> Self {
+        let mut geo = Geometry::new();
+        if let Some(first) = boundary.first() {
+            geo.move_to(first.x, first.y, 0.0);
+            for p in boundary.iter().skip(1) {
+                geo.line_to(p.x, p.y, 0.0);
+            }
+            geo.close_path();
+        }
+        for island in islands {
+            if let Some(first) = island.first() {
+                geo.move_to(first.x, first.y, 0.0);
+                for p in island.iter().skip(1) {
+                    geo.line_to(p.x, p.y, 0.0);
+                }
+                geo.close_path();
+            }
+        }
+        let cleared = ClearedArea::from_polygons(initial, boundary, islands);
+        Part {
+            geometry: Some(geo),
+            size_mm,
+            pixels_per_mm: None,
+            cleared,
+        }
+    }
+
     /// Extract the outer boundary and island polygons from `self.geometry`.
     ///
     /// Returns `(boundary, islands)`.

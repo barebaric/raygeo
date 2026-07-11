@@ -38,7 +38,7 @@ pub struct HelixOptions {
 /// and a disk-shaped cleared polygon at the helix radius.
 #[prof]
 pub fn generate_helix(
-    _part: &Part,
+    part: &mut Part,
     trace: &mut Tracelet,
     opts: &HelixOptions,
     cut_state: &State,
@@ -92,6 +92,7 @@ pub fn generate_helix(
     };
 
     write_polyline(trace, &path, true, Some(cut_state));
+    part.cleared.cut(&cleared_polygons);
     Ok(AssemblyMeta {
         cleared_polygons,
         start,

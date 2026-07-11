@@ -9,7 +9,7 @@ sidebar_label: raygeo.ops.assembly.spiral
 
 ```python
 generate_spiral(
-    part: Part,
+    part: ops.cut.Part,
     center: tuple[float, float],
     z: float,
     start_radius: float,
@@ -29,7 +29,7 @@ smoothing full-circle pass at *end_radius*.
 
 | Parameter      | Type                                 | Description                                      |
 | -------------- | ------------------------------------ | ------------------------------------------------ |
-| `part`         | `Part`                               |                                                  |
+| `part`         | `ops.cut.Part`                       |                                                  |
 | `center`       | `tuple[float, float]`                | `(x, y)` center of the spiral.                   |
 | `z`            | `float`                              | Cutting Z height.                                |
 | `start_radius` | `float`                              | Starting radius in mm.                           |

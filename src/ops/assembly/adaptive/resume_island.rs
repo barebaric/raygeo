@@ -42,7 +42,7 @@ fn island_ray_march(
     offset: f64,
 ) -> Option<Point> {
     let dist_to_cleared =
-        |p: Point| ctx.cleared.signed_boundary_distance(p.x, p.y);
+        |p: Point| ctx.part.cleared.signed_boundary_distance(p.x, p.y);
 
     let centre = on_boundary + into_cleared * offset;
     if point_in_valid_area(centre, ctx.step_opts.valid_area)
@@ -89,7 +89,7 @@ fn frontier_hole_resume(
     tool: &Tool,
     detail: &mut u8,
 ) -> Option<ToolPose> {
-    let frontier = ctx.cleared.frontier(0.001);
+    let frontier = ctx.part.cleared.frontier(0.001);
 
     let holes: Vec<Polygon> = frontier
         .iter()

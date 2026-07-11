@@ -11,7 +11,6 @@ from raygeo.geo.shape.polygon import (
 from raygeo.ops import Ops
 from raygeo.ops.assembly.profile import profile_inner, profile_outer
 from raygeo.ops.cut import Part
-from raygeo.ops.cut.cleared_area import ClearedArea
 
 
 def _rect(cx, cy, w, h):
@@ -23,11 +22,11 @@ def _rect(cx, cy, w, h):
     ]
 
 
-def _kwargs(ca, boundary, **over: Any) -> dict[str, Any]:
+def _kwargs(initial, boundary, **over: Any) -> dict[str, Any]:
     islands = over.pop("islands", None)
+    part = Part.from_polygons(boundary, islands or [], initial=initial)
     kw = dict(
-        part=Part.from_polygons(boundary, islands or []),
-        cleared=ca,
+        part=part,
         tool_radius=3.0,
         step_over=1.5,
         target_z=-5.0,
@@ -49,8 +48,7 @@ def _kwargs(ca, boundary, **over: Any) -> dict[str, Any]:
 def test_profile_inner_smoke_returns_ops():
     """profile_inner returns an AssemblyResult with Ops."""
     boundary = _rect(0, 0, 60, 60)
-    ca = ClearedArea(boundary=boundary, initial=[])
-    result = profile_inner(**_kwargs(ca, boundary))
+    result = profile_inner(**_kwargs([], boundary))
     assert isinstance(result.ops, Ops)
     assert result.ops.len() > 0
 
@@ -60,12 +58,10 @@ def test_profile_inner_adds_cut_distance_for_island():
     boundary = _rect(0, 0, 60, 60)
     island = _rect(15, 0, 10, 10)
 
-    ca0 = ClearedArea(boundary=boundary, initial=[])
-    result_no_island = profile_inner(**_kwargs(ca0, boundary))
+    result_no_island = profile_inner(**_kwargs([], boundary))
 
-    ca1 = ClearedArea(boundary=boundary, initial=[])
     result_with_island = profile_inner(
-        **_kwargs(ca1, boundary, islands=[island])
+        **_kwargs([], boundary, islands=[island])
     )
 
     cd_no = result_no_island.ops.cut_distance()
@@ -81,12 +77,10 @@ def test_profile_inner_adds_more_distance_for_two_islands():
     island1 = _rect(15, 0, 8, 8)
     island2 = _rect(-15, 0, 8, 8)
 
-    ca1 = ClearedArea(boundary=boundary, initial=[])
-    result_one = profile_inner(**_kwargs(ca1, boundary, islands=[island1]))
+    result_one = profile_inner(**_kwargs([], boundary, islands=[island1]))
 
-    ca2 = ClearedArea(boundary=boundary, initial=[])
     result_two = profile_inner(
-        **_kwargs(ca2, boundary, islands=[island1, island2])
+        **_kwargs([], boundary, islands=[island1, island2])
     )
 
     cd1 = result_one.ops.cut_distance()
@@ -100,8 +94,7 @@ def test_profile_inner_island_paths_on_grown_polygon():
     """Island-walk cut vertices lie on the grown island polygon."""
     boundary = _rect(0, 0, 60, 60)
     island = _rect(15, 0, 10, 10)
-    ca = ClearedArea(boundary=boundary, initial=[])
-    result = profile_inner(**_kwargs(ca, boundary, islands=[island]))
+    result = profile_inner(**_kwargs([], boundary, islands=[island]))
     ops = result.ops
     radius = 3.0
     offset_dist = radius
@@ -135,8 +128,7 @@ def test_profile_inner_island_paths_on_grown_polygon():
 def test_profile_inner_outer_walk_on_inset_polygon():
     """Outer-walk cut vertices are within the inset polygon bounds."""
     boundary = _rect(0, 0, 60, 60)
-    ca = ClearedArea(boundary=boundary, initial=[])
-    result = profile_inner(**_kwargs(ca, boundary))
+    result = profile_inner(**_kwargs([], boundary))
     ops = result.ops
     radius = 3.0
     inset_half = 30.0 - radius
@@ -157,32 +149,60 @@ def test_profile_inner_outer_walk_on_inset_polygon():
 def test_profile_inner_mutates_cleared_area():
     """profile_inner adds swept area to ClearedArea."""
     boundary = _rect(0, 0, 60, 60)
-    ca = ClearedArea(boundary=boundary, initial=[])
-    remaining_before = ca.remaining()
+    part = Part.from_polygons(boundary, initial=[])
+    remaining_before = part.cleared.remaining()
     before_area = sum(get_polygon_area(p) for p in remaining_before)
 
-    profile_inner(**_kwargs(ca, boundary))
+    profile_inner(
+        part=part,
+        tool_radius=3.0,
+        step_over=1.5,
+        target_z=-5.0,
+        safe_z=2.0,
+        step_length=0.6,
+        wall_margin=0.0,
+        stock_to_leave=0.0,
+        cut_feed_rate=1000,
+        cut_power=0.0,
+        start_pos=None,
+        cut_direction="ccw",
+        engagement_area_threshold=0.0,
+        engagement_angle_threshold=3.141592653589793,
+    )
 
-    remaining_after = ca.remaining()
+    remaining_after = part.cleared.remaining()
     after_area = sum(get_polygon_area(p) for p in remaining_after)
     assert after_area < before_area, (
         f"remaining area did not decrease: {before_area} -> {after_area}"
     )
-    assert ca.total_area() > 0
+    assert part.cleared.total_area() > 0
 
 
 def test_profile_inner_then_outer_chained():
     """profile_inner then profile_outer on same ClearedArea produces cuts."""
     boundary = _rect(0, 0, 60, 60)
-    ca = ClearedArea(boundary=boundary, initial=[])
+    part = Part.from_polygons(boundary, initial=[])
 
-    result_inner = profile_inner(**_kwargs(ca, boundary))
+    result_inner = profile_inner(
+        part=part,
+        tool_radius=3.0,
+        step_over=1.5,
+        target_z=-5.0,
+        safe_z=2.0,
+        step_length=0.6,
+        wall_margin=0.0,
+        stock_to_leave=0.0,
+        cut_feed_rate=1000,
+        cut_power=0.0,
+        start_pos=None,
+        cut_direction="ccw",
+        engagement_area_threshold=0.0,
+        engagement_angle_threshold=3.141592653589793,
+    )
     assert result_inner.ops.cut_distance() > 0
 
-    part = Part.from_polygons(boundary)
     result_outer = profile_outer(
         part,
-        cleared=ca,
         tool_radius=3.0,
         step_over=1.5,
         target_z=-5.0,
@@ -204,14 +224,10 @@ def test_profile_inner_skips_blocked_island():
     island_far = _rect(-15, 0, 8, 8)
     island_close = _rect(24, 0, 8, 8)
 
-    ca_far = ClearedArea(boundary=boundary, initial=[])
-    result_far = profile_inner(
-        **_kwargs(ca_far, boundary, islands=[island_far])
-    )
+    result_far = profile_inner(**_kwargs([], boundary, islands=[island_far]))
 
-    ca_both = ClearedArea(boundary=boundary, initial=[])
     result_both = profile_inner(
-        **_kwargs(ca_both, boundary, islands=[island_far, island_close])
+        **_kwargs([], boundary, islands=[island_far, island_close])
     )
 
     # If close island is blocked, cut distance should be similar.
@@ -228,11 +244,9 @@ def test_profile_inner_walks_accessible_island():
     boundary = _rect(0, 0, 60, 60)
     island = _rect(-15, 0, 8, 8)
 
-    ca_no = ClearedArea(boundary=boundary, initial=[])
-    result_no = profile_inner(**_kwargs(ca_no, boundary))
+    result_no = profile_inner(**_kwargs([], boundary))
 
-    ca_yes = ClearedArea(boundary=boundary, initial=[])
-    result_yes = profile_inner(**_kwargs(ca_yes, boundary, islands=[island]))
+    result_yes = profile_inner(**_kwargs([], boundary, islands=[island]))
 
     grown_perimeter_est = 4 * (8 + 2 * 3.0)
     added = result_yes.ops.cut_distance() - result_no.ops.cut_distance()
@@ -245,14 +259,12 @@ def test_profile_inner_walks_accessible_island():
 def test_profile_inner_renamed_fields():
     """profile_inner accepts the renamed tool_radius/target_z fields."""
     boundary = _rect(0, 0, 80, 80)
-    cleared = ClearedArea(
-        boundary=boundary,
+    part = Part.from_polygons(
+        boundary,
         initial=[[(35, 35), (45, 35), (45, 45), (35, 45)]],
     )
-    part = Part.from_polygons(boundary)
     result = profile_inner(
         part,
-        cleared=cleared,
         tool_radius=3.0,
         step_over=1.5,
         target_z=-5.0,

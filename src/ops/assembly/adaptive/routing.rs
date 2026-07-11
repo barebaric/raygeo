@@ -11,7 +11,6 @@ use crate::geo::algo::smooth::build_smoothed_path;
 use crate::geo::shape::compute_polygon_bounds;
 use crate::geo::shape::does_path_sweep_intersect_polygon;
 use crate::ops::assembly::adaptive::AdaptiveClearingOptions;
-use crate::ops::cut::ClearedArea;
 use crate::ops::cut::Part;
 use crate::types::{Point, Point3D, Polygon, Rect};
 
@@ -26,7 +25,6 @@ pub use super::routing_zhop::RoutingZHop;
 
 /// Read-only snapshot of everything a routing strategy may need.
 pub struct RouteCtx<'a> {
-    pub cleared: &'a ClearedArea,
     pub opts: &'a AdaptiveClearingOptions,
     pub mat: Option<&'a MedialAxis>,
     pub obstacles: &'a [Polygon],

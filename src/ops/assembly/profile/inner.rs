@@ -10,7 +10,6 @@ use crate::ops::assembly::result::AssemblyMeta;
 use crate::ops::assembly::Tracelet;
 
 use super::trace_helpers as th;
-use crate::ops::cut::ClearedArea;
 use crate::ops::cut::Part;
 use crate::ops::cut::ToolPose;
 use crate::ops::state::State;
@@ -20,9 +19,8 @@ use glam::Vec3Swizzles;
 /// Profile the inner boundary of a pocket, extracting geometry from
 /// `part`.
 pub fn profile_inner(
-    part: &Part,
+    part: &mut Part,
     trace: &mut Tracelet,
-    cleared: &mut ClearedArea,
     opts: &ProfileInnerOptions,
     cut_state: &State,
 ) -> RaygeoResult<AssemblyMeta> {
@@ -114,7 +112,7 @@ pub fn profile_inner(
     trace.set_attrs(th::build_attrs(&all_offset_polys, &walk_order));
 
     let outer_meta =
-        run_profile(trace, cleared, outer_poly, &common, cut_state, 0)?;
+        run_profile(part, trace, outer_poly, &common, cut_state, 0)?;
     let start_pose = outer_meta.start;
     let mut end_pose = outer_meta.end;
 
@@ -139,8 +137,8 @@ pub fn profile_inner(
             let idx = remaining.remove(nearest_idx);
             let island_idx = 1 + idx as u32;
             let island_meta = run_profile(
+                part,
                 trace,
-                cleared,
                 &grown_islands[idx],
                 &common,
                 cut_state,

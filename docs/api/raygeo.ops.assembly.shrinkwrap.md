@@ -9,7 +9,7 @@ sidebar_label: raygeo.ops.assembly.shrinkwrap
 
 ```python
 shrinkwrap(
-    part: Part,
+    part: ops.cut.Part,
     image: numpy.ndarray,
     gravity: float = 0.1,
     kerf_mm: float = 0,
@@ -32,7 +32,7 @@ offset from kerf / path-offset / cut-side, applies it, optionally fits arcs/curv
 
 | Parameter         | Type                                 | Description                                                          |
 | ----------------- | ------------------------------------ | -------------------------------------------------------------------- |
-| `part`            | `Part`                               | Part providing physical size metadata.                               |
+| `part`            | `ops.cut.Part`                       | Part providing physical size metadata.                               |
 | `image`           | `numpy.ndarray`                      | 2D boolean or binary numpy array.                                    |
 | `gravity`         | `float = 0.1`                        | Shrink-wrap factor 0.0–1.0 (0 = convex hull, default 0.1).           |
 | `kerf_mm`         | `float = 0`                          | Tool kerf width in mm (default 0.0).                                 |

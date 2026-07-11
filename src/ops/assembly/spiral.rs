@@ -36,7 +36,7 @@ pub struct SpiralOptions {
 /// into an [`AssemblyResult`].
 #[prof]
 pub fn generate_spiral(
-    _part: &Part,
+    part: &mut Part,
     trace: &mut Tracelet,
     opts: &SpiralOptions,
     cut_state: &State,
@@ -108,6 +108,7 @@ pub fn generate_spiral(
     };
 
     write_polyline(trace, &path, true, Some(cut_state));
+    part.cleared.cut(&cleared_polygons);
     Ok(AssemblyMeta {
         cleared_polygons,
         start,

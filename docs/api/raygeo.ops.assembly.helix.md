@@ -9,7 +9,7 @@ sidebar_label: raygeo.ops.assembly.helix
 
 ```python
 generate_helix(
-    part: Part,
+    part: ops.cut.Part,
     center: tuple[float, float],
     start_radius: float,
     z_start: float,
@@ -27,7 +27,7 @@ Produces a helical toolpath from *z_start* to *z_end* at the given *center* and 
 
 | Parameter      | Type                                 | Description                                      |
 | -------------- | ------------------------------------ | ------------------------------------------------ |
-| `part`         | `Part`                               |                                                  |
+| `part`         | `ops.cut.Part`                       |                                                  |
 | `center`       | `tuple[float, float]`                | `(x, y)` center of the helix.                    |
 | `start_radius` | `float`                              | Radius of the helix in mm.                       |
 | `z_start`      | `float`                              | Starting Z height.                               |

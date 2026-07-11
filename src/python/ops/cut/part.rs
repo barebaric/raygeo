@@ -3,6 +3,7 @@ use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 
 use crate::ops::cut::part::Part;
 use crate::python::geo::geometry::Geometry as PyGeometry;
+use crate::python::ops::cut::cleared_area::PyClearedArea;
 use crate::types::{Point, Polygon};
 
 /// Unified workpiece description for motion assembly.
@@ -66,14 +67,19 @@ impl PyPart {
     ///     (default ``[]``).
     /// :param size_mm: Physical size ``(width, height)`` in mm
     ///     (default ``(0, 0)``).
+    /// :param initial: Optional pre-seeded cleared polygons (e.g. a
+    ///     seed circle for adaptive clearing).  When provided, the
+    ///     part's cleared area starts with these fragments instead of
+    ///     being empty.
     /// :returns: A new ``Part`` with the geometry constructed from the
     ///     given polygons.
     #[staticmethod]
-    #[pyo3(signature = (boundary, islands=None, size_mm=(0.0, 0.0)))]
+    #[pyo3(signature = (boundary, islands=None, size_mm=(0.0, 0.0), initial=None))]
     fn from_polygons(
         boundary: Vec<(f64, f64)>,
         islands: Option<Vec<Vec<(f64, f64)>>>,
         size_mm: (f64, f64),
+        initial: Option<Vec<Vec<(f64, f64)>>>,
     ) -> Self {
         let bnd: Polygon = boundary
             .into_iter()
@@ -84,8 +90,29 @@ impl PyPart {
             .into_iter()
             .map(|isl| isl.into_iter().map(|(x, y)| Point::new(x, y)).collect())
             .collect();
+        let init: Vec<Polygon> = initial
+            .unwrap_or_default()
+            .into_iter()
+            .map(|p| p.into_iter().map(|(x, y)| Point::new(x, y)).collect())
+            .collect();
         PyPart {
-            inner: Part::from_polygons(&bnd, &isls, size_mm),
+            inner: if init.is_empty() {
+                Part::from_polygons(&bnd, &isls, size_mm)
+            } else {
+                Part::from_polygons_initial(&bnd, &isls, &init, size_mm)
+            },
+        }
+    }
+
+    /// Accumulated cleared-area state — what has been cut so far.
+    ///
+    /// Read-only snapshot.  Assemblers mutate this internally;
+    /// use it after an assembler returns to inspect remaining
+    /// material, fragments, etc.
+    #[getter]
+    fn cleared(&self) -> PyClearedArea {
+        PyClearedArea {
+            inner: self.inner.cleared.clone(),
         }
     }
 

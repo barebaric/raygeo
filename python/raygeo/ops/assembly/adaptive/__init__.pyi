@@ -29,23 +29,25 @@ class RoutingError(builtins.RuntimeError):
     """
     ...
 
-def adaptive_clearing(part: raygeo.ops.cut.Part, cleared: raygeo.ops.cut.cleared_area.ClearedArea, tool_radius: float = 3, step_over: float = 1.5, step_length: float = 0.6, target_z: float = -5, safe_z: float = 2, max_deflection_deg: float = 30, wall_margin: float = 0, area_tolerance: float = 1, cut_feed_rate: int = 1200, cut_power: float = 1, start_pos: tuple[float, float] | None = None, start_heading: float | None = None, expansion_batch_size: int = 20, profile: bool = False, cut_direction: str = 'ccw', trace_path: str | None = None, on_progress: collections.abc.Callable[[dict], None] | None = None, batch_size: int = 128) -> raygeo.ops.assembly.result.AssemblyResult:
+def adaptive_clearing(part: raygeo.ops.cut.Part, tool_radius: float = 3, step_over: float = 1.5, step_length: float = 0.6, target_z: float = -5, safe_z: float = 2, max_deflection_deg: float = 30, wall_margin: float = 0, area_tolerance: float = 1, cut_feed_rate: int = 1200, cut_power: float = 1, start_pos: tuple[float, float] | None = None, start_heading: float | None = None, expansion_batch_size: int = 20, profile: bool = False, cut_direction: str = 'ccw', trace_path: str | None = None, on_progress: collections.abc.Callable[[dict], None] | None = None, batch_size: int = 128) -> raygeo.ops.assembly.result.AssemblyResult:
     r"""
     Run forward-stepping adaptive clearing.
     
-    Starting from the pre-populated *cleared* area, uses a
-    constant-engagement stepping solver to generate a continuous
-    spiral toolpath from the seed clearing to the pocket wall.
+    Starting from the pre-populated cleared area inside *part*,
+    uses a constant-engagement stepping solver to generate a
+    continuous spiral toolpath from the seed clearing to the
+    pocket wall.
     
-    The caller is responsible for populating *cleared* with
-    the entry polygons (e.g. via a workplan built by
+    The caller is responsible for populating the part's cleared
+    area with the entry polygons (e.g. via a workplan built by
     :func:`raygeo.cnc.machining.wavefront.build_wavefront_workplan`
     and executed by
     :class:`raygeo.cnc.machining.plan.Workplan`) and
     prepending the entry Ops to the result.
     
-    :param part: The part with boundary and island geometry.
-    :param cleared: ``ClearedArea`` instance (mutated in place).
+    :param part: The part whose ``cleared`` field tracks accumulated
+                 workpiece state and whose geometry defines the
+                 pocket boundary and islands.
     :param tool_radius: Tool radius in mm (default 3.0).
     :param step_over: Step-over distance (default 1.5).
     :param step_length: Forward step length in mm (default 0.6).

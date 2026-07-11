@@ -49,7 +49,7 @@ pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
 #[pyfunction(name = "generate_slot")]
 #[pyo3(signature = (part, carrier, tool_radius, target_z, state = None))]
 fn generate_slot_py(
-    part: &crate::python::ops::cut::part::PyPart,
+    part: &mut crate::python::ops::cut::part::PyPart,
     carrier: Vec<(f64, f64)>,
     tool_radius: f64,
     target_z: f64,
@@ -70,7 +70,8 @@ fn generate_slot_py(
     };
 
     let mut trace = Tracelet::new();
-    let meta = slot::generate_slot(&part.inner, &mut trace, &opts, &cut_state)?;
+    let meta =
+        slot::generate_slot(&mut part.inner, &mut trace, &opts, &cut_state)?;
     let events = trace.drain();
     let attrs = trace.attrs().cloned();
     let ops = trace.into_ops();
