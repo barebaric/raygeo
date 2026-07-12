@@ -8,7 +8,7 @@
 //!
 //! Assemblers accept `&mut Part` and mutate `part.cleared` as they work.
 
-use crate::constants::EPSILON_MERGE;
+use crate::constants::{EPSILON_BOUNDARY, EPSILON_MERGE};
 use crate::geo::algo::fitting::linearize_data;
 use crate::geo::algo::topology::{
     split_inner_and_outer_contours, split_into_contours,
@@ -182,7 +182,8 @@ impl Part {
         // Linearize once, then split.
         let mut linearized = geo.copy();
         if !linearized.data.is_empty() {
-            linearized.data = linearize_data(&linearized.data, EPSILON_MERGE);
+            linearized.data =
+                linearize_data(&linearized.data, EPSILON_BOUNDARY);
         }
         let contours = split_into_contours(&linearized);
         if contours.is_empty() {

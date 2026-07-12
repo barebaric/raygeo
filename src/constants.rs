@@ -23,3 +23,17 @@ pub const EPSILON_MEDIUM: f64 = 1e-5;
 
 /// Tolerance used when comparing against zero in line merging.
 pub const EPSILON_MERGE: f64 = 1e-5;
+
+/// Tolerance for boundary/island extraction from geometry (mm).
+///
+/// This controls how finely bezier curves are linearised when
+/// extracting outer/inner contour topology for stock region
+/// computation.  A coarse tolerance is intentional — the result
+/// only needs to distinguish solid contours from holes, which
+/// does not require millimeter precision.
+///
+/// Using a tight tolerance (e.g. `EPSILON_MERGE`) on large
+/// geometry with many bezier curves (e.g. text glyphs scaled
+/// to a 600 mm workpiece) would generate millions of line
+/// segments per curve and cause OOM.
+pub const EPSILON_BOUNDARY: f64 = 0.1;
