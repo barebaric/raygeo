@@ -9,7 +9,7 @@ sidebar_label: raygeo.ops.assembly.contour
 
 ```python
 contour(
-    part: ops.cut.Part,
+    part: ops.part.Part,
     kerf_mm: float = 0,
     path_offset_mm: float = 0,
     cut_side: str = 'centerline',
@@ -33,7 +33,7 @@ contours, applies overcut, optionally fits arcs and curves, and returns the resu
 
 | Parameter         | Type                                 | Description                                                                    |
 | ----------------- | ------------------------------------ | ------------------------------------------------------------------------------ |
-| `part`            | `ops.cut.Part`                       | The part whose geometry defines the contours.                                  |
+| `part`            | `ops.part.Part`                      | The part whose geometry defines the contours.                                  |
 | `kerf_mm`         | `float = 0`                          | Tool kerf width in mm (default 0.0).                                           |
 | `path_offset_mm`  | `float = 0`                          | Additional offset distance in mm (default 0.0).                                |
 | `cut_side`        | `str = 'centerline'`                 | `"centerline"`, `"outside"`, or `"inside"` (default `"centerline"`).           |

@@ -1,5 +1,5 @@
-from raygeo.ops.cut import StockRegion
-from raygeo.ops.cut.cleared_area import ClearedArea
+from raygeo.ops.part import StockRegion
+from raygeo.ops.part.cleared_area import ClearedArea
 
 # ── ClearedArea rebuild ──────────────────────────────────────────
 

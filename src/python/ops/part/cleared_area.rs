@@ -1,13 +1,13 @@
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 
-use crate::ops::cut::ClearedArea;
+use crate::ops::part::ClearedArea;
 use crate::types::Point;
 use crate::types::Rect;
 
 use super::stock_region::PyStockRegion;
 
-#[gen_stub_pyclass(module = "raygeo.ops.cut.cleared_area")]
+#[gen_stub_pyclass(module = "raygeo.ops.part.cleared_area")]
 #[pyclass(name = "ClearedArea", from_py_object)]
 pub struct PyClearedArea {
     pub(crate) inner: ClearedArea,
@@ -463,7 +463,7 @@ pub fn register(cut_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     cut_mod.add_submodule(&m)?;
 
     let sys_modules = py.import("sys")?.getattr("modules")?;
-    sys_modules.set_item("raygeo.ops.cut.cleared_area", &m)?;
+    sys_modules.set_item("raygeo.ops.part.cleared_area", &m)?;
 
     Ok(())
 }

@@ -16,7 +16,7 @@ from raygeo.ops.assembly.adaptive import (
     adaptive_clearing,
     target_area_per_distance,
 )
-from raygeo.ops.cut import Part, StockRegion
+from raygeo.ops.part import Part, StockRegion
 from tools.plot import plot_ops_2d, plot_ops_3d
 
 

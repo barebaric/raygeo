@@ -4,7 +4,7 @@ import math
 
 from raygeo.ops import Ops
 from raygeo.ops.assembly.wavefront import adaptive_wavefronts
-from raygeo.ops.cut import Part
+from raygeo.ops.part import Part
 
 
 def _seed_polygon(cx, cy, r, n=32):

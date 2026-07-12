@@ -5,12 +5,12 @@ import math
 import pytest
 
 from raygeo.ops.assembly.adaptive import target_area_per_distance
-from raygeo.ops.cut.cleared_area import ClearedArea
 from raygeo.ops.cut.stepper import (
     StepperOptions,
     StepStatus,
     step,
 )
+from raygeo.ops.part.cleared_area import ClearedArea
 
 # ── Geometry helpers ────────────────────────────────────────────────
 

@@ -17,7 +17,7 @@ Raised when all route strategies fail to find a path.
 
 ```python
 adaptive_clearing(
-    part: ops.cut.Part,
+    part: ops.part.Part,
     tool_radius: float = 3,
     step_over: float = 1.5,
     step_length: float = 0.6,
@@ -50,7 +50,7 @@ workplan built by **raygeo.cnc.machining.wavefront.build_wavefront_workplan** an
 
 | Parameter              | Type                                        | Description                                                                                                                       |
 | ---------------------- | ------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| `part`                 | `ops.cut.Part`                              | The part whose `cleared` field tracks accumulated workpiece state and whose geometry defines the pocket boundary and islands.     |
+| `part`                 | `ops.part.Part`                             | The part whose `cleared` field tracks accumulated workpiece state and whose geometry defines the pocket boundary and islands.     |
 | `tool_radius`          | `float = 3`                                 | Tool radius in mm (default 3.0).                                                                                                  |
 | `step_over`            | `float = 1.5`                               | Step-over distance (default 1.5).                                                                                                 |
 | `step_length`          | `float = 0.6`                               | Forward step length in mm (default 0.6).                                                                                          |

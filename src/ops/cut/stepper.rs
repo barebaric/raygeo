@@ -3,7 +3,7 @@ use prof_macros::prof;
 use crate::dbg_log;
 use crate::geo::algo::engagement::Engagement;
 use crate::ops::cut::interp::{point_in_valid_area, rotate, Interpolation};
-use crate::ops::cut::ClearedArea;
+use crate::ops::part::ClearedArea;
 use crate::types::{Point, Polygon};
 
 /// Penalty weight applied to fresh material on the wrong side of the

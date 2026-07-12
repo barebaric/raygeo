@@ -1,8 +1,8 @@
 use std::collections::BTreeMap;
 
 use crate::geo::algo::medial_axis::MedialAxis;
-use crate::ops::cut::stock_region::StockRegion;
-use crate::ops::cut::ClearedArea;
+use crate::ops::part::ClearedArea;
+use crate::ops::part::StockRegion;
 use crate::trace_types::{Meta, MetaValue, ToolSnapshot};
 use crate::types::{Point3D, Polygon};
 

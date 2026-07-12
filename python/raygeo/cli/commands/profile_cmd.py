@@ -2,7 +2,7 @@ import time
 
 from raygeo.cli.scenarios import SCENARIOS, build_scenario
 from raygeo.ops.assembly.adaptive import adaptive_clearing
-from raygeo.ops.cut import Part
+from raygeo.ops.part import Part
 
 
 def _add_scenario_args(p):

@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
 
 from raygeo.ops.assembly.toroid import generate_toroidal_clear
-from raygeo.ops.cut import Part
+from raygeo.ops.part import Part
 from tools.plot import plot_ops_3d
 
 

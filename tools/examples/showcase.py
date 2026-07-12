@@ -23,7 +23,7 @@ from raygeo.geo.shape.polygon3d import fillet_polyline_3d, offset_polyline_3d
 from raygeo.image.scan import ScanMode
 from raygeo.ops import Ops
 from raygeo.ops.assembly.adaptive import adaptive_clearing
-from raygeo.ops.cut import Part
+from raygeo.ops.part import Part
 from raygeo.ops.types import CommandType
 from tools.plot import make_pattern, plot_geometry, plot_ops_2d
 

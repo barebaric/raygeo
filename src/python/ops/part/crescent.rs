@@ -1,7 +1,7 @@
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::gen_stub_pyfunction;
 
-use crate::ops::cut::cut_area;
+use crate::ops::part::cut_area;
 use crate::python::geo::flex_point::polygons_from_tuples;
 use crate::types::Point;
 
@@ -17,7 +17,7 @@ use crate::types::Point;
 /// :param fragments: List of polygons (cleared fragments).
 /// :param valid_area: Valid region polygons (intersection).
 /// :returns: ``(total_area, left_area)`` (mm²).
-#[gen_stub_pyfunction(module = "raygeo.ops.cut.crescent")]
+#[gen_stub_pyfunction(module = "raygeo.ops.part.crescent")]
 #[pyfunction(name = "cut_area")]
 fn cut_area_py(
     c1: (f64, f64),
@@ -46,7 +46,7 @@ pub fn register(cut_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     cut_mod.add_submodule(&m)?;
 
     let sys_modules = py.import("sys")?.getattr("modules")?;
-    sys_modules.set_item("raygeo.ops.cut.crescent", &m)?;
+    sys_modules.set_item("raygeo.ops.part.crescent", &m)?;
 
     Ok(())
 }

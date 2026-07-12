@@ -3,7 +3,7 @@
 import math
 
 from raygeo.ops.assembly.adaptive import adaptive_clearing
-from raygeo.ops.cut import Part
+from raygeo.ops.part import Part
 
 
 def _rect(cx, cy, w, h):

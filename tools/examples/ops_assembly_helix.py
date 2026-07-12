@@ -3,7 +3,7 @@
 import matplotlib.pyplot as plt
 
 from raygeo.ops.assembly.helix import generate_helix
-from raygeo.ops.cut import Part
+from raygeo.ops.part import Part
 from tools.plot import plot_ops_3d
 
 

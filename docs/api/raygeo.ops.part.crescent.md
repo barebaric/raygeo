@@ -1,6 +1,6 @@
 ---
-title: raygeo.ops.cut.crescent
-sidebar_label: raygeo.ops.cut.crescent
+title: raygeo.ops.part.crescent
+sidebar_label: raygeo.ops.part.crescent
 ---
 
 ## Functions

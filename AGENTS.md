@@ -33,11 +33,11 @@
 The crate is split into three layers that depend only downward:
 `geo` → `ops` → `cnc`. Never import upward.
 
-| Layer | Owns                                                                                                                       | Does NOT know                   |
-| ----- | -------------------------------------------------------------------------------------------------------------------------- | ------------------------------- |
-| `geo` | Primitives & pure geometric algorithms. No "what-to-cut" decisions, no motion verbs, no machining terminology, no `Ops`.   | machining, motion, tools, `Ops` |
-| `ops` | Motion assembly: clearing strategies, linking, classification, and Ops emission. All assemblers produce and consume `Ops`. | tools, spindle, feed values     |
-| `cnc` | Operation orchestration: sequences entry + clear + finish.                                                                 | geometry algorithms             |
+| Layer | Owns                                                                                                                                     | Does NOT know                   |
+| ----- | ---------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------- |
+| `geo` | Primitives & pure geometric algorithms. No "what-to-cut" decisions, no motion verbs, no machining terminology, no `Ops`.                 | machining, motion, tools, `Ops` |
+| `ops` | CNC and laser building blocks: clearing strategies, linking, classification, and Ops emission. All assemblers produce and consume `Ops`. | workplans, composite assemblers |
+| `cnc` | Plan-time orchestration: Build workplans with sequences of assemblers (e.g. entry + clear + finish).                                     | geometry algorithms             |
 
 ## Contract
 

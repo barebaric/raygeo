@@ -6,10 +6,10 @@ use crate::geo::shape::polygon::{
 use crate::geo::shape::polygon3d::walk_along_polygon_3d;
 use crate::ops::assembly::result::AssemblyMeta;
 use crate::ops::assembly::Tracelet;
-use crate::ops::cut::CutDirection;
-use crate::ops::cut::Part;
-use crate::ops::cut::ToolPose;
+use crate::ops::part::Part;
 use crate::ops::state::State;
+use crate::ops::types::CutDirection;
+use crate::ops::types::ToolPose;
 use crate::trace_types::MoveKind;
 use crate::types::{Point, Point3D, Polygon};
 

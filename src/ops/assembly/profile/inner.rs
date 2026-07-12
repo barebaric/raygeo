@@ -10,9 +10,9 @@ use crate::ops::assembly::result::AssemblyMeta;
 use crate::ops::assembly::Tracelet;
 
 use super::trace_helpers as th;
-use crate::ops::cut::Part;
-use crate::ops::cut::ToolPose;
+use crate::ops::part::Part;
 use crate::ops::state::State;
+use crate::ops::types::ToolPose;
 use crate::types::{Point3D, Polygon};
 use glam::Vec3Swizzles;
 

@@ -5,7 +5,7 @@ from typing import Any
 import pytest
 
 from raygeo.ops.assembly.profile import profile_inner
-from raygeo.ops.cut import Part
+from raygeo.ops.part import Part
 
 
 def _rect(cx, cy, w, h):

@@ -9,7 +9,7 @@ from matplotlib.widgets import Button, TextBox
 
 from raygeo.cli.cleared import rebuild_cleared
 from raygeo.geo.shape.polygon import get_polygon_signed_area
-from raygeo.ops.cut import StockRegion
+from raygeo.ops.part import StockRegion
 from raygeo.trace import TraceFile, get_route_detail_name
 
 

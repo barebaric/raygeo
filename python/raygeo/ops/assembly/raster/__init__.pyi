@@ -7,7 +7,7 @@ __all__ = [
     "raster",
 ]
 
-def raster(part: raygeo.ops.cut.Part, image: numpy.ndarray, alpha: numpy.ndarray | None = None, mode: str = 'power_modulated', line_interval_mm: float = 0.1, sample_interval_mm: float = 0.05, min_power: float = 0, max_power: float = 1, step_power: float = 0.1, num_power_levels: int = 10, angle: float = 0, offset_x_mm: float = 0, offset_y_mm: float = 0, scan_mode: str = 'segmented', cross_hatch: bool = False, num_depth_levels: int = 5, z_step_down: float = 0, angle_increment: float = 0) -> raygeo.ops.assembly.result.AssemblyResult:
+def raster(part: raygeo.ops.part.Part, image: numpy.ndarray, alpha: numpy.ndarray | None = None, mode: str = 'power_modulated', line_interval_mm: float = 0.1, sample_interval_mm: float = 0.05, min_power: float = 0, max_power: float = 1, step_power: float = 0.1, num_power_levels: int = 10, angle: float = 0, offset_x_mm: float = 0, offset_y_mm: float = 0, scan_mode: str = 'segmented', cross_hatch: bool = False, num_depth_levels: int = 5, z_step_down: float = 0, angle_increment: float = 0) -> raygeo.ops.assembly.result.AssemblyResult:
     r"""
     Rasterise a part image into scan paths.
     

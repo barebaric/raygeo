@@ -1,7 +1,7 @@
 //! Stuck-detection and per-step safety invariants for
 //! [`super::adaptive_clearing`].
 
-use crate::ops::cut::ClearedArea;
+use crate::ops::part::ClearedArea;
 use crate::types::Point;
 
 // ── Constants ──────────────────────────────────────────────────────────

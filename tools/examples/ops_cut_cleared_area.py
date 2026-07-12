@@ -6,8 +6,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.patches import Circle
 
-from raygeo.ops.cut import StockRegion
-from raygeo.ops.cut.cleared_area import ClearedArea
+from raygeo.ops.part import StockRegion
+from raygeo.ops.part.cleared_area import ClearedArea
 
 
 def generate_raster():
@@ -618,7 +618,7 @@ def generate_local_vs_global():
     return fig
 
 
-__docs_target__ = ["raygeo.ops.cut.cleared_area.md"]
+__docs_target__ = ["raygeo.ops.part.cleared_area.md"]
 __images__ = [
     {
         "heading": None,

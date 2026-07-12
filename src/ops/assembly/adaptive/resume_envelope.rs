@@ -5,7 +5,7 @@ use crate::ops::assembly::adaptive::resume::{
     DETAIL_NO_ENGAGEMENT, DETAIL_NO_ENVELOPE,
 };
 use crate::ops::assembly::adaptive::tool::Tool;
-use crate::ops::cut::ToolPose;
+use crate::ops::types::ToolPose;
 
 pub struct ResumeEnvelope;
 

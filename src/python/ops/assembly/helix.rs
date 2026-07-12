@@ -26,7 +26,7 @@ pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     import raygeo
 
     def generate_helix(
-        part: raygeo.ops.cut.Part,
+        part: raygeo.ops.part.Part,
         center: tuple[float, float],
         start_radius: float,
         z_start: float,
@@ -68,7 +68,7 @@ pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
 ))]
 #[allow(clippy::too_many_arguments)]
 fn generate_helix_py(
-    part: &mut crate::python::ops::cut::part::PyPart,
+    part: &mut crate::python::ops::part::part::PyPart,
     center: (f64, f64),
     start_radius: f64,
     z_start: f64,

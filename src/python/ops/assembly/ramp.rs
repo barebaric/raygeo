@@ -25,7 +25,7 @@ pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     import raygeo
 
     def generate_ramp(
-        part: raygeo.ops.cut.Part,
+        part: raygeo.ops.part.Part,
         start: tuple[float, float],
         end: tuple[float, float],
         z_start: float,
@@ -67,7 +67,7 @@ pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
 ))]
 #[allow(clippy::too_many_arguments)]
 fn generate_ramp_py(
-    part: &mut crate::python::ops::cut::part::PyPart,
+    part: &mut crate::python::ops::part::part::PyPart,
     start: (f64, f64),
     end: (f64, f64),
     z_start: f64,

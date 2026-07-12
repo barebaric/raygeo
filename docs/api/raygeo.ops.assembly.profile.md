@@ -9,7 +9,7 @@ sidebar_label: raygeo.ops.assembly.profile
 
 ```python
 profile_inner(
-    part: ops.cut.Part,
+    part: ops.part.Part,
     tool_radius: float = 3,
     step_over: float = 1.5,
     step_length: float = 0.6,
@@ -35,7 +35,7 @@ so that the tool clears the material along the pocket walls and around each isla
 
 | Parameter                    | Type                                     | Description                                                                                                                   |
 | ---------------------------- | ---------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| `part`                       | `ops.cut.Part`                           | The part whose `cleared` field tracks accumulated workpiece state and whose geometry defines the pocket boundary and islands. |
+| `part`                       | `ops.part.Part`                          | The part whose `cleared` field tracks accumulated workpiece state and whose geometry defines the pocket boundary and islands. |
 | `tool_radius`                | `float = 3`                              | Tool radius in mm.                                                                                                            |
 | `step_over`                  | `float = 1.5`                            | Radial step-over between passes (mm).                                                                                         |
 | `step_length`                | `float = 0.6`                            | Forward step length in mm.                                                                                                    |
@@ -76,7 +76,7 @@ so that the tool clears the material along the pocket walls and around each isla
 
 ```python
 profile_outer(
-    part: ops.cut.Part,
+    part: ops.part.Part,
     tool_radius: float,
     step_over: float,
     step_length: float,
@@ -102,7 +102,7 @@ an **AssemblyResult** with the profiling move sequence.
 
 | Parameter                    | Type                                     | Description                                                                                                       |
 | ---------------------------- | ---------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| `part`                       | `ops.cut.Part`                           | The part whose `cleared` field tracks accumulated workpiece state and whose geometry defines the pocket boundary. |
+| `part`                       | `ops.part.Part`                          | The part whose `cleared` field tracks accumulated workpiece state and whose geometry defines the pocket boundary. |
 | `tool_radius`                | `float`                                  | Tool radius in mm.                                                                                                |
 | `step_over`                  | `float`                                  | Radial step-over between passes (mm).                                                                             |
 | `step_length`                | `float`                                  | Forward step length in mm.                                                                                        |

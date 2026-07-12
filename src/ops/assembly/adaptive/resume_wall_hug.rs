@@ -7,7 +7,7 @@ use crate::ops::assembly::adaptive::resume::{
 };
 use crate::ops::assembly::adaptive::tool::Tool;
 use crate::ops::cut::interp::point_in_valid_area;
-use crate::ops::cut::ToolPose;
+use crate::ops::types::ToolPose;
 use crate::types::{Point, Point3D};
 
 /// Resume from wall-hug points recorded during the current and

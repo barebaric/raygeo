@@ -9,7 +9,7 @@ sidebar_label: raygeo.ops.assembly.frame
 
 ```python
 frame(
-    part: ops.cut.Part,
+    part: ops.part.Part,
     kerf_mm: float = 0,
     path_offset_mm: float = 0,
     cut_side: str = 'centerline',
@@ -25,7 +25,7 @@ cut-side, applies it, and returns the frame as an **AssemblyResult**.
 
 | Parameter        | Type                                 | Description                                                          |
 | ---------------- | ------------------------------------ | -------------------------------------------------------------------- |
-| `part`           | `ops.cut.Part`                       | The part whose size defines the frame.                               |
+| `part`           | `ops.part.Part`                      | The part whose size defines the frame.                               |
 | `kerf_mm`        | `float = 0`                          | Tool kerf width in mm (default 0.0).                                 |
 | `path_offset_mm` | `float = 0`                          | Additional offset distance in mm (default 0.0).                      |
 | `cut_side`       | `str = 'centerline'`                 | `"centerline"`, `"outside"`, or `"inside"` (default `"centerline"`). |

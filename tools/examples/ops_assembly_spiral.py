@@ -1,7 +1,7 @@
 """Generate visualisations of spiral entry motion assembly."""
 
 from raygeo.ops.assembly.spiral import generate_spiral
-from raygeo.ops.cut import Part
+from raygeo.ops.part import Part
 from tools.plot import plot_ops
 
 

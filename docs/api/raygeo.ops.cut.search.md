@@ -24,7 +24,7 @@ pos: tuple[float, float, float]
 ```python
 search_frontier_engagement(
     cleared: cleared_area.ClearedArea,
-    region: cut.StockRegion,
+    region: part.StockRegion,
     start: ToolPose,
     radius: float,
     step_length: float,
@@ -43,7 +43,7 @@ starts at the correct engagement depth.
 | Parameter      | Type                       | Description                                      |
 | -------------- | -------------------------- | ------------------------------------------------ |
 | `cleared`      | `cleared_area.ClearedArea` | `ClearedArea` instance.                          |
-| `region`       | `cut.StockRegion`          | `StockRegion` defining the boundary and islands. |
+| `region`       | `part.StockRegion`         | `StockRegion` defining the boundary and islands. |
 | `start`        | `ToolPose`                 | `ToolPose` seed.                                 |
 | `radius`       | `float`                    | Disk radius (mm).                                |
 | `step_length`  | `float`                    | Forward step distance (mm) for the probe.        |

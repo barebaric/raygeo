@@ -25,7 +25,7 @@ pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     import raygeo
 
     def generate_spiral(
-        part: raygeo.ops.cut.Part,
+        part: raygeo.ops.part.Part,
         center: tuple[float, float],
         z: float,
         start_radius: float,
@@ -71,7 +71,7 @@ pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
 ))]
 #[allow(clippy::too_many_arguments)]
 fn generate_spiral_py(
-    part: &mut crate::python::ops::cut::part::PyPart,
+    part: &mut crate::python::ops::part::part::PyPart,
     center: (f64, f64),
     z: f64,
     start_radius: f64,

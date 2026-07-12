@@ -1,7 +1,7 @@
 """Tests for spiral assembly module."""
 
 from raygeo.ops.assembly.spiral import generate_spiral
-from raygeo.ops.cut import Part
+from raygeo.ops.part import Part
 from raygeo.ops.state import State
 
 

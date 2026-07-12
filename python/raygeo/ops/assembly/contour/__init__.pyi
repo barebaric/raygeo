@@ -6,7 +6,7 @@ __all__ = [
     "contour",
 ]
 
-def contour(part: raygeo.ops.cut.Part, kerf_mm: float = 0, path_offset_mm: float = 0, cut_side: str = 'centerline', overcut: float = 0, cut_order: str = 'inside_outside', remove_inner: bool = False, arc_tolerance: float = 0, allow_arcs: bool = True, supports_curves: bool = False) -> raygeo.ops.assembly.result.AssemblyResult:
+def contour(part: raygeo.ops.part.Part, kerf_mm: float = 0, path_offset_mm: float = 0, cut_side: str = 'centerline', overcut: float = 0, cut_order: str = 'inside_outside', remove_inner: bool = False, arc_tolerance: float = 0, allow_arcs: bool = True, supports_curves: bool = False) -> raygeo.ops.assembly.result.AssemblyResult:
     r"""
     Trace contours from the part geometry.
     

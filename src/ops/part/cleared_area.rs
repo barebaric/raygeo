@@ -5,6 +5,8 @@ use std::sync::Mutex;
 
 use prof_macros::prof;
 
+use super::crescent;
+use super::stock_region::StockRegion;
 use crate::geo::algo::engagement::Engagement;
 use crate::geo::algo::offset::compute_inset_region;
 use crate::geo::algo::simplify::simplify_polyline;
@@ -15,8 +17,6 @@ use crate::geo::shape::polygon::{
     get_polyline_swept_polygon, get_segment_swept_polygon, offset_polygon,
     JoinStyle,
 };
-use crate::ops::cut::crescent;
-use crate::ops::cut::stock_region::StockRegion;
 use crate::types::{Point, Polygon, Rect};
 
 /// Single-entry cache for [`ClearedArea::cut_area_split`].

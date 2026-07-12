@@ -2,7 +2,7 @@
 # ruff: noqa: E501, F401, F403, F405
 
 import builtins
-from raygeo.ops.cut import cleared_area
+from raygeo.ops.part import cleared_area
 import typing
 __all__ = [
     "StepResult",

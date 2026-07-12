@@ -8,7 +8,7 @@ from raygeo.geo.shape.polygon import (
     offset_polygon,
 )
 from raygeo.ops.assembly.profile import profile_inner, profile_outer
-from raygeo.ops.cut import Part
+from raygeo.ops.part import Part
 from tools.plot import plot_ops, plot_ops_2d, plot_ops_3d
 
 __docs_target__ = ["raygeo.ops.assembly.profile.md"]

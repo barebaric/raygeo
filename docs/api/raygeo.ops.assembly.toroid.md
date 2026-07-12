@@ -9,7 +9,7 @@ sidebar_label: raygeo.ops.assembly.toroid
 
 ```python
 generate_toroid(
-    part: ops.cut.Part,
+    part: ops.part.Part,
     carrier: Sequence[tuple[float, float]],
     tool_radius: float,
     step_over: float,
@@ -27,7 +27,7 @@ Produces a trochoidal looping path that follows the *carrier* polyline, clearing
 
 | Parameter      | Type                                 | Description                                        |
 | -------------- | ------------------------------------ | -------------------------------------------------- |
-| `part`         | `ops.cut.Part`                       |                                                    |
+| `part`         | `ops.part.Part`                      |                                                    |
 | `carrier`      | `Sequence[tuple[float, float]]`      | List of `(x, y)` waypoints defining the slot axis. |
 | `tool_radius`  | `float`                              | Tool radius in mm.                                 |
 | `step_over`    | `float`                              | Forward advance per trochoid loop.                 |
@@ -45,7 +45,7 @@ Produces a trochoidal looping path that follows the *carrier* polyline, clearing
 
 ```python
 generate_toroidal_clear(
-    part: ops.cut.Part,
+    part: ops.part.Part,
     carrier: Sequence[tuple[float, float]],
     start: tuple[float, float, float],
     target_z: float,
@@ -66,7 +66,7 @@ forward pass at constant `target_z`.
 
 | Parameter            | Type                                 | Description                                                                         |
 | -------------------- | ------------------------------------ | ----------------------------------------------------------------------------------- |
-| `part`               | `ops.cut.Part`                       |                                                                                     |
+| `part`               | `ops.part.Part`                      |                                                                                     |
 | `carrier`            | `Sequence[tuple[float, float]]`      | 2D polyline `(x, y)` waypoints defining the slot axis.                              |
 | `start`              | `tuple[float, float, float]`         | `(x, y, z)` entry point; `x, y` should match `carrier[0]`, `z` is the entry height. |
 | `target_z`           | `float`                              | Final cutting Z height.                                                             |

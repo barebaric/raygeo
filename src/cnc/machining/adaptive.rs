@@ -24,13 +24,13 @@ use crate::cnc::machining::plan::WorkplanStep;
 use crate::error::RaygeoResult;
 use crate::geo::algo::helix::HelixDirection;
 use crate::geo::shape::polygon::{get_polygon_bounds, get_polygon_centroid};
-use crate::ops::cut::Part;
 use crate::ops::feature::narrow::{self, NarrowAnalysisOptions, PassageClass};
 use crate::ops::feature::ramp::find_ramp_carrier;
 use crate::ops::feature::region::{self, Region};
 use crate::ops::feature::slot_path::{
     find_slot_path, measure_passage_min_width,
 };
+use crate::ops::part::Part;
 use crate::types::{Point, Point3D, Polygon};
 
 /// Options for [`build_clearing_workplan`].

@@ -9,7 +9,7 @@ sidebar_label: raygeo.ops.assembly.wavefront
 
 ```python
 adaptive_wavefronts(
-    part: ops.cut.Part,
+    part: ops.part.Part,
     tool_radius: float = 3,
     step_over: float = 2,
     z: float = 0,
@@ -31,7 +31,7 @@ Each ring fragment is emitted as `MoveTo` + `LineTo` at height *z* with *cut_fee
 
 | Parameter        | Type                                 | Description                                                                                                                                 |
 | ---------------- | ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| `part`           | `ops.cut.Part`                       | The part whose `cleared` field tracks accumulated workpiece state and whose geometry defines the pocket boundary and islands.               |
+| `part`           | `ops.part.Part`                      | The part whose `cleared` field tracks accumulated workpiece state and whose geometry defines the pocket boundary and islands.               |
 | `tool_radius`    | `float = 3`                          | Tool radius in mm (default 3.0).                                                                                                            |
 | `step_over`      | `float = 2`                          | Radial expansion per iteration (default 2.0).                                                                                               |
 | `z`              | `float = 0`                          | Z height for generated commands (default 0.0).                                                                                              |

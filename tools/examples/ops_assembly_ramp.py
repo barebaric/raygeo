@@ -3,7 +3,7 @@
 import matplotlib.pyplot as plt
 
 from raygeo.ops.assembly.ramp import generate_ramp
-from raygeo.ops.cut import Part
+from raygeo.ops.part import Part
 from tools.plot import plot_ops_3d
 
 

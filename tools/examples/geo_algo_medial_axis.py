@@ -8,8 +8,8 @@ import numpy as np
 from raygeo.cnc.machining.wavefront import build_wavefront_workplan
 from raygeo.geo.algo.medial_axis import MedialAxis
 from raygeo.ops.assembly.spiral import generate_spiral
-from raygeo.ops.cut import Part, StockRegion
-from raygeo.ops.cut.cleared_area import ClearedArea
+from raygeo.ops.part import Part, StockRegion
+from raygeo.ops.part.cleared_area import ClearedArea
 
 
 def _plot_ma_2d(nodes, edges, root, boundary, islands, ax, title):

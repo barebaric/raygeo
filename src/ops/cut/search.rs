@@ -6,9 +6,9 @@ use crate::geo::shape::polygon::{
     get_polygons_closest_point, get_polygons_group_intersection,
     walk_polygon_vertices,
 };
-use crate::ops::cut::stock_region::StockRegion;
-use crate::ops::cut::ClearedArea;
-use crate::ops::cut::ToolPose;
+use crate::ops::part::ClearedArea;
+use crate::ops::part::StockRegion;
+use crate::ops::types::ToolPose;
 use crate::types::{Point, Point3D, Polygon};
 
 /// Compute the inward offset position from a frontier vertex.

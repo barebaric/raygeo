@@ -7,7 +7,7 @@ from raygeo.geo.shape.polygon import (
 )
 from raygeo.ops import Ops
 from raygeo.ops.assembly.profile import profile_outer
-from raygeo.ops.cut import Part
+from raygeo.ops.part import Part
 
 
 def _rect(cx, cy, w, h):

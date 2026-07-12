@@ -6,7 +6,7 @@ __all__ = [
     "generate_ramp",
 ]
 
-def generate_ramp(part: raygeo.ops.cut.Part, start: tuple[float, float], end: tuple[float, float], z_start: float, z_end: float, max_ramp_angle_deg: float = 45, style: str = 'zigzag', lateral_amplitude: float = 2, state: raygeo.ops.state.State | None = None) -> raygeo.ops.assembly.result.AssemblyResult:
+def generate_ramp(part: raygeo.ops.part.Part, start: tuple[float, float], end: tuple[float, float], z_start: float, z_end: float, max_ramp_angle_deg: float = 45, style: str = 'zigzag', lateral_amplitude: float = 2, state: raygeo.ops.state.State | None = None) -> raygeo.ops.assembly.result.AssemblyResult:
     r"""
     Generate a ramp entry path.
     

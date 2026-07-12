@@ -7,13 +7,13 @@
 use crate::ops::assembly::adaptive::resume::{self, ResumeCtx};
 use crate::ops::assembly::adaptive::AdaptiveClearingOptions;
 use crate::ops::assembly::Tracelet;
-use crate::ops::cut::ClearedArea;
-use crate::ops::cut::CutDirection;
 use crate::ops::cut::StepperOptions;
-use crate::ops::cut::ToolPose;
+use crate::ops::part::ClearedArea;
+use crate::ops::types::CutDirection;
+use crate::ops::types::ToolPose;
 use crate::python::geo::algo::medial_axis::PyMedialAxis;
-use crate::python::ops::cut::cleared_area::PyClearedArea;
-use crate::python::ops::cut::part::PyPart;
+use crate::python::ops::part::cleared_area::PyClearedArea;
+use crate::python::ops::part::part::PyPart;
 use crate::python::ops::PyOps;
 use crate::types::{Point, Point3D, Polygon};
 use pyo3::prelude::*;
@@ -47,12 +47,12 @@ pub(crate) fn register(adaptive_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     import raygeo
 
     def emit_resume_travel(
-        part: raygeo.ops.cut.Part,
+        part: raygeo.ops.part.Part,
         ops: raygeo.ops.Ops,
         to_pt: tuple[float, float, float],
         radius: float = 3.0,
         cut_z: float = -5.0,
-        cleared: raygeo.ops.cut.cleared_area.ClearedArea | None = None,
+        cleared: raygeo.ops.part.cleared_area.ClearedArea | None = None,
         from_pt: tuple[float, float, float] = (0.0, 0.0, 0.0),
         axis: raygeo.geo.algo.medial_axis.MedialAxis | None = None,
     ) -> None:
@@ -136,8 +136,8 @@ fn emit_resume_travel_py(
     import raygeo
 
     def try_resume(
-        part: raygeo.ops.cut.Part,
-        cleared: raygeo.ops.cut.cleared_area.ClearedArea,
+        part: raygeo.ops.part.Part,
+        cleared: raygeo.ops.part.cleared_area.ClearedArea,
         ops: raygeo.ops.Ops,
         tool: raygeo.ops.assembly.adaptive.tool.Tool,
         radius: float = 3.0,

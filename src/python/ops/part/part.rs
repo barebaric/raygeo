@@ -1,10 +1,10 @@
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 
-use crate::ops::cut::part::Part;
+use crate::ops::part::Part;
 use crate::python::geo::geometry::Geometry as PyGeometry;
-use crate::python::ops::cut::cleared_area::PyClearedArea;
-use crate::python::ops::cut::stock_region::PyStockRegion;
+use crate::python::ops::part::cleared_area::PyClearedArea;
+use crate::python::ops::part::stock_region::PyStockRegion;
 use crate::types::{Point, Polygon};
 
 /// Unified workpiece description for motion assembly.
@@ -12,7 +12,7 @@ use crate::types::{Point, Polygon};
 /// Carries geometry, physical metadata, and a ``ClearedArea``
 /// tracking what has already been cut.  Assemblers mutate the
 /// cleared area as they work.
-#[gen_stub_pyclass(module = "raygeo.ops.cut")]
+#[gen_stub_pyclass(module = "raygeo.ops.part")]
 #[pyclass(name = "Part", from_py_object)]
 #[derive(Clone, Debug)]
 pub struct PyPart {

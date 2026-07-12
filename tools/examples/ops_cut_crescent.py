@@ -10,7 +10,7 @@ from raygeo.geo.shape.polygon import (
     get_polygons_group_difference,
     get_polygons_group_intersection,
 )
-from raygeo.ops.cut.crescent import cut_area
+from raygeo.ops.part.crescent import cut_area
 
 
 def generate_disk_increment():
@@ -419,7 +419,7 @@ def generate_crescent_valid_area_clip():
     return fig
 
 
-__docs_target__ = ["raygeo.ops.cut.crescent.md"]
+__docs_target__ = ["raygeo.ops.part.crescent.md"]
 __images__ = [
     {
         "heading": "cut_area",

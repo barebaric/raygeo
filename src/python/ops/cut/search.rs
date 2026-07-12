@@ -4,9 +4,9 @@ use pyo3_stub_gen::derive::{
 };
 
 use crate::ops::cut;
-use crate::ops::cut::ToolPose;
-use crate::python::ops::cut::cleared_area::PyClearedArea;
-use crate::python::ops::cut::stock_region::PyStockRegion;
+use crate::ops::types::ToolPose;
+use crate::python::ops::part::cleared_area::PyClearedArea;
+use crate::python::ops::part::stock_region::PyStockRegion;
 use crate::types::Point3D;
 
 #[gen_stub_pyclass(module = "raygeo.ops.cut.search")]

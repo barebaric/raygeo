@@ -14,7 +14,7 @@ from raygeo.geo.shape.polygon import (
     is_point_inside_polygon,
 )
 from raygeo.ops.assembly.wavefront import adaptive_wavefronts
-from raygeo.ops.cut import Part
+from raygeo.ops.part import Part
 from raygeo.svg import svg_string_to_geometries
 
 

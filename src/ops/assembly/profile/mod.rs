@@ -5,7 +5,7 @@
 //! by tool radius), material-aware around islands.  Outer profiling
 //! follows the grown boundary (offset outward) and ignores islands.
 //!
-//! Geometry is supplied via a [`Part`](crate::ops::cut::Part) — boundary
+//! Geometry is supplied via a [`Part`](crate::ops::part::Part) — boundary
 //! and islands are extracted internally by each function.
 
 mod engine;

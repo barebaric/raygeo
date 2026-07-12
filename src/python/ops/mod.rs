@@ -23,6 +23,7 @@ pub(crate) mod container;
 pub(crate) mod convert;
 pub(crate) mod cut;
 pub(crate) mod feature;
+pub(crate) mod part;
 pub(crate) mod state;
 pub(crate) mod transform;
 pub(crate) mod types;
@@ -53,6 +54,9 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     // Child submodule: raygeo.ops.cut
     cut::register(&ops_mod)?;
 
+    // Child submodule: raygeo.ops.part
+    part::register(&ops_mod)?;
+
     // Child submodule: raygeo.ops.transform
     transform::register(&ops_mod)?;
 
@@ -76,6 +80,7 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     let sys_modules = py.import("sys")?.getattr("modules")?;
     sys_modules.set_item("raygeo.ops", &ops_mod)?;
     sys_modules.set_item("raygeo.ops.cut", &ops_mod.getattr("cut")?)?;
+    sys_modules.set_item("raygeo.ops.part", &ops_mod.getattr("part")?)?;
     sys_modules.set_item("raygeo.ops.types", &types_mod)?;
     sys_modules.set_item("raygeo.ops.axis", &axis_mod)?;
     sys_modules.set_item("raygeo.ops.state", &state_mod)?;

@@ -6,7 +6,7 @@ use pyo3_stub_gen::derive::{
 
 use crate::ops::cut;
 use crate::python::geo::flex_point::polygons_from_tuples;
-use crate::python::ops::cut::cleared_area::PyClearedArea;
+use crate::python::ops::part::cleared_area::PyClearedArea;
 use crate::types::Point;
 
 /// Status of a single step or cut segment.

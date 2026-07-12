@@ -11,8 +11,8 @@ pub(crate) mod routing;
 pub(crate) mod tool;
 
 use crate::ops::assembly::adaptive;
-use crate::ops::cut::CutDirection;
 use crate::ops::state::State;
+use crate::ops::types::CutDirection;
 use crate::prof::prof_report;
 use crate::python::errors::{ResumePointNotFoundError, RoutingError};
 use crate::python::ops::assembly::progress_event_to_py;
@@ -80,7 +80,7 @@ pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     import raygeo
 
     def adaptive_clearing(
-        part: raygeo.ops.cut.Part,
+        part: raygeo.ops.part.Part,
         tool_radius: float = 3.0,
         step_over: float = 1.5,
         step_length: float = 0.6,
@@ -173,7 +173,7 @@ pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
 ))]
 #[allow(clippy::too_many_arguments)]
 fn adaptive_clearing_py(
-    part: &mut crate::python::ops::cut::part::PyPart,
+    part: &mut crate::python::ops::part::part::PyPart,
     tool_radius: f64,
     step_over: f64,
     step_length: f64,

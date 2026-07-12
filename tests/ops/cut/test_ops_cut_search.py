@@ -5,12 +5,12 @@ import math
 import pytest
 
 from raygeo.ops.assembly.adaptive import target_area_per_distance
-from raygeo.ops.cut import StockRegion
-from raygeo.ops.cut.cleared_area import ClearedArea
 from raygeo.ops.cut.search import (
     ToolPose,
     search_frontier_engagement,
 )
+from raygeo.ops.part import StockRegion
+from raygeo.ops.part.cleared_area import ClearedArea
 
 
 def _circle(cx, cy, r, n=32):

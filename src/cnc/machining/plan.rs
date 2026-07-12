@@ -29,8 +29,9 @@ use crate::ops::assembly::spiral::{self, SpiralOptions};
 use crate::ops::assembly::toroid::{self, ToroidalClearOptions};
 use crate::ops::assembly::wavefront::{self, AdaptiveWavefrontOptions};
 use crate::ops::assembly::Tracelet;
-use crate::ops::cut::{Part, ToolPose};
+use crate::ops::part::Part;
 use crate::ops::state::State;
+use crate::ops::types::ToolPose;
 use crate::trace::Tracer;
 use crate::trace_types::{
     EventKind, Meta, MetaValue, ProgressSnapshot, ToolSnapshot,
@@ -282,7 +283,7 @@ impl WorkplanStep {
                 };
                 let saved_region = std::mem::replace(
                     &mut part.stock_region,
-                    crate::ops::cut::StockRegion::new(
+                    crate::ops::part::StockRegion::new(
                         boundary.clone(),
                         islands.clone(),
                     ),
@@ -316,7 +317,7 @@ impl WorkplanStep {
                 };
                 let saved_region = std::mem::replace(
                     &mut part.stock_region,
-                    crate::ops::cut::StockRegion::new(
+                    crate::ops::part::StockRegion::new(
                         boundary.clone(),
                         islands.clone(),
                     ),
@@ -345,7 +346,7 @@ impl WorkplanStep {
                 };
                 let saved_region = std::mem::replace(
                     &mut part.stock_region,
-                    crate::ops::cut::StockRegion::new(
+                    crate::ops::part::StockRegion::new(
                         boundary.clone(),
                         islands.clone(),
                     ),
@@ -426,12 +427,12 @@ impl Workplan {
         }
     }
 
-    /// Create a new empty workplan from a [`Part`](crate::ops::cut::Part).
+    /// Create a new empty workplan from a [`Part`](crate::ops::part::Part).
     ///
     /// Extracts the boundary polygon and islands from `part.geometry`.
     /// Returns `None` if the part has no extractable boundary geometry.
     pub fn from_part(
-        part: &crate::ops::cut::Part,
+        part: &crate::ops::part::Part,
         safe_z: f64,
     ) -> Option<Self> {
         let (boundary, islands) = part.extract_boundary();

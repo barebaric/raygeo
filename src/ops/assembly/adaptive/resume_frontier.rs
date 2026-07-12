@@ -9,7 +9,7 @@ use crate::ops::assembly::adaptive::resume::{
     DETAIL_NO_POLYGONS,
 };
 use crate::ops::assembly::adaptive::tool::Tool;
-use crate::ops::cut::ToolPose;
+use crate::ops::types::ToolPose;
 use crate::types::Polygon;
 
 pub struct ResumeFrontier;

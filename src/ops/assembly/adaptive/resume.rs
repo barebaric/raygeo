@@ -19,12 +19,12 @@ use crate::ops::assembly::Tracelet;
 use crate::ops::cut::interp::point_in_valid_area;
 use crate::ops::cut::search::walk_polygon_samples;
 use crate::ops::cut::step;
-use crate::ops::cut::ClearedArea;
-use crate::ops::cut::CutDirection;
-use crate::ops::cut::Part;
 use crate::ops::cut::StepStatus;
 use crate::ops::cut::StepperOptions;
-use crate::ops::cut::ToolPose;
+use crate::ops::part::ClearedArea;
+use crate::ops::part::Part;
+use crate::ops::types::CutDirection;
+use crate::ops::types::ToolPose;
 use crate::types::{Point, Point3D, Polygon};
 
 use super::routing;

@@ -14,8 +14,8 @@ from raygeo.ops.assembly.adaptive import (
     adaptive_clearing,
     target_area_per_distance,
 )
-from raygeo.ops.cut import Part, StockRegion
-from raygeo.ops.cut.crescent import cut_area
+from raygeo.ops.part import Part, StockRegion
+from raygeo.ops.part.crescent import cut_area
 from raygeo.ops.types import CommandType
 
 

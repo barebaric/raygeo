@@ -14,8 +14,8 @@ from raygeo.geo.shape.polygon import (
 from raygeo.ops import Ops
 from raygeo.ops.assembly.adaptive.resume import emit_resume_travel, try_resume
 from raygeo.ops.assembly.adaptive.tool import Tool
-from raygeo.ops.cut import Part
-from raygeo.ops.cut.cleared_area import ClearedArea
+from raygeo.ops.part import Part
+from raygeo.ops.part.cleared_area import ClearedArea
 
 
 def _rect(cx, cy, w, h):

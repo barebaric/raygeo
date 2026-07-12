@@ -7,7 +7,7 @@ __all__ = [
     "generate_slot",
 ]
 
-def generate_slot(part: raygeo.ops.cut.Part, carrier: collections.abc.Sequence[tuple[float, float]], tool_radius: float, target_z: float, state: raygeo.ops.state.State | None = None) -> raygeo.ops.assembly.result.AssemblyResult:
+def generate_slot(part: raygeo.ops.part.Part, carrier: collections.abc.Sequence[tuple[float, float]], tool_radius: float, target_z: float, state: raygeo.ops.state.State | None = None) -> raygeo.ops.assembly.result.AssemblyResult:
     r"""
     Generate a back-and-forth slot clearing path along a carrier.
     

@@ -1,6 +1,6 @@
 //! Result types and trace infrastructure for assembly-level generators.
 
-use crate::ops::cut::ToolPose;
+use crate::ops::types::ToolPose;
 use crate::trace::Tracer;
 use crate::trace_types::{
     EventKind, Meta, MoveKind, ProgressSnapshot, ToolSnapshot,

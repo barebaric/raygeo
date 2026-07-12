@@ -2,7 +2,7 @@
 # ruff: noqa: E501, F401, F403, F405
 
 import builtins
-from raygeo.ops import cut
+from raygeo.ops import part
 import typing
 __all__ = [
     "ClearedArea",
@@ -63,7 +63,7 @@ class ClearedArea:
         :complexity: O(m + k) where m = number of fragments,
                      k = output vertices
         """
-    def remaining(self, region: cut.StockRegion) -> builtins.list[builtins.list[tuple[builtins.float, builtins.float]]]:
+    def remaining(self, region: part.StockRegion) -> builtins.list[builtins.list[tuple[builtins.float, builtins.float]]]:
         r"""
         Subtract cleared fragments from the stock, returning the uncut
         portion.
@@ -83,7 +83,7 @@ class ClearedArea:
         :complexity: O(n log n) worst case when union required,
                      O(n) when inputs are disjoint from existing fragments
         """
-    def frontier(self, region: cut.StockRegion, simplify_tol: builtins.float) -> builtins.list[builtins.list[tuple[builtins.float, builtins.float]]]:
+    def frontier(self, region: part.StockRegion, simplify_tol: builtins.float) -> builtins.list[builtins.list[tuple[builtins.float, builtins.float]]]:
         r"""
         Return a unioned, simplified snapshot of the current outer
         boundary, clipped to the stock.
@@ -93,7 +93,7 @@ class ClearedArea:
         :returns: List of polygons representing the outer boundary.
         :complexity: O(n log n)
         """
-    def bites(self, region: cut.StockRegion, step_over: builtins.float, tool_radius: builtins.float, simplify_tol: builtins.float) -> builtins.list[builtins.list[tuple[builtins.float, builtins.float]]]:
+    def bites(self, region: part.StockRegion, step_over: builtins.float, tool_radius: builtins.float, simplify_tol: builtins.float) -> builtins.list[builtins.list[tuple[builtins.float, builtins.float]]]:
         r"""
         Compute the "bites" — new material reachable by expanding the
         current frontier outward by *step_over*, clipping to the
@@ -187,7 +187,7 @@ class ClearedArea:
         :param radius: Disk radius (mm).
         :returns: List of ``(angle, area, chord_depth)`` tuples.
         """
-    def compact_if_needed(self, region: cut.StockRegion, tol: builtins.float) -> None:
+    def compact_if_needed(self, region: part.StockRegion, tol: builtins.float) -> None:
         r"""
         Compact fragments if total vertex count exceeds the default
         threshold.
@@ -195,7 +195,7 @@ class ClearedArea:
         :param region: StockRegion defining the boundary and islands.
         :param tol: Vertex simplification tolerance in mm.
         """
-    def compact_if_needed_threshold(self, region: cut.StockRegion, tol: builtins.float, threshold: builtins.int) -> None:
+    def compact_if_needed_threshold(self, region: part.StockRegion, tol: builtins.float, threshold: builtins.int) -> None:
         r"""
         Compact with an explicit vertex-count threshold.
         
@@ -211,7 +211,7 @@ class ClearedArea:
         :returns: Total cleared area in mm2.
         :complexity: O(1)
         """
-    def remaining_area(self, region: cut.StockRegion) -> builtins.float:
+    def remaining_area(self, region: part.StockRegion) -> builtins.float:
         r"""
         Remaining uncut area (boundary minus islands minus cleared
         fragments).  Only positive-area (CCW) polygons are counted,
@@ -220,7 +220,7 @@ class ClearedArea:
         :param region: StockRegion defining the boundary and islands.
         :returns: Remaining uncut area in mm2.
         """
-    def actionable_remaining(self, region: cut.StockRegion, inset_distance: builtins.float) -> builtins.float:
+    def actionable_remaining(self, region: part.StockRegion, inset_distance: builtins.float) -> builtins.float:
         r"""
         Uncleared area **inside the actionable zone** of the pocket.
         
@@ -259,7 +259,7 @@ class ClearedArea:
         
         :returns: Fragment count.
         """
-    def envelope(self, region: cut.StockRegion, tool_radius: builtins.float) -> builtins.list[builtins.list[tuple[builtins.float, builtins.float]]]:
+    def envelope(self, region: part.StockRegion, tool_radius: builtins.float) -> builtins.list[builtins.list[tuple[builtins.float, builtins.float]]]:
         r"""
         The tool-centre envelope (inset of boundary by ``tool_radius``,
         minus islands).

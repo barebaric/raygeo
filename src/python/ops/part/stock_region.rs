@@ -1,12 +1,12 @@
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 
-use crate::ops::cut::stock_region::StockRegion;
+use crate::ops::part::StockRegion;
 use crate::types::Point;
 
 /// Boundary and islands of a workpiece — the geometric input to
 /// clearing operations.
-#[gen_stub_pyclass(module = "raygeo.ops.cut")]
+#[gen_stub_pyclass(module = "raygeo.ops.part")]
 #[pyclass(name = "StockRegion", from_py_object)]
 #[derive(Clone, Debug)]
 pub struct PyStockRegion {

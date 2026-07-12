@@ -23,7 +23,7 @@ pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     import raygeo
 
     def adaptive_wavefronts(
-        part: raygeo.ops.cut.Part,
+        part: raygeo.ops.part.Part,
         tool_radius: float = 3.0,
         step_over: float = 2.0,
         z: float = 0.0,
@@ -74,7 +74,7 @@ pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
 ))]
 #[allow(clippy::too_many_arguments)]
 fn adaptive_wavefronts_py(
-    part: &mut crate::python::ops::cut::part::PyPart,
+    part: &mut crate::python::ops::part::part::PyPart,
     tool_radius: f64,
     step_over: f64,
     z: f64,

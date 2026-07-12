@@ -9,7 +9,7 @@ sidebar_label: raygeo.ops.assembly.raster
 
 ```python
 raster(
-    part: ops.cut.Part,
+    part: ops.part.Part,
     image: numpy.ndarray,
     alpha: numpy.ndarray | None = None,
     mode: str = 'power_modulated',
@@ -56,7 +56,7 @@ missing.
 
 | Parameter            | Type                                 | Description                                                                                            |
 | -------------------- | ------------------------------------ | ------------------------------------------------------------------------------------------------------ |
-| `part`               | `ops.cut.Part`                       | Part providing pixel density and size metadata.                                                        |
+| `part`               | `ops.part.Part`                      | Part providing pixel density and size metadata.                                                        |
 | `image`              | `numpy.ndarray`                      | 2-D grayscale (uint8) or binary numpy array.                                                           |
 | `alpha`              | `numpy.ndarray &#124; None = None`   | Optional 2-D alpha mask (uint8). Required for `power_modulated` mode when the image is not pre-masked. |
 | `mode`               | `str = 'power_modulated'`            | `"power_modulated"`, `"mask_scan"`, or `"multi_pass"`.                                                 |

@@ -5,8 +5,8 @@ use crate::ops::assembly::profile::{
     self, ProfileInnerOptions, ProfileOuterOptions,
 };
 use crate::ops::assembly::Tracelet;
-use crate::ops::cut::CutDirection;
 use crate::ops::state::State;
+use crate::ops::types::CutDirection;
 use crate::python::ops::assembly::result::PyAssemblyResult;
 use crate::types::Point3D;
 
@@ -38,7 +38,7 @@ pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     import raygeo
 
     def profile_outer(
-        part: raygeo.ops.cut.Part,
+        part: raygeo.ops.part.Part,
         tool_radius: float,
         step_over: float,
         step_length: float,
@@ -104,7 +104,7 @@ pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
 ))]
 #[allow(clippy::too_many_arguments)]
 fn profile_outer_py(
-    part: &mut crate::python::ops::cut::part::PyPart,
+    part: &mut crate::python::ops::part::part::PyPart,
     tool_radius: f64,
     step_over: f64,
     step_length: f64,
@@ -165,7 +165,7 @@ fn profile_outer_py(
     import raygeo
 
     def profile_inner(
-        part: raygeo.ops.cut.Part,
+        part: raygeo.ops.part.Part,
         tool_radius: float = 3.0,
         step_over: float = 1.5,
         step_length: float = 0.6,
@@ -231,7 +231,7 @@ fn profile_outer_py(
 ))]
 #[allow(clippy::too_many_arguments)]
 fn profile_inner_py(
-    part: &mut crate::python::ops::cut::part::PyPart,
+    part: &mut crate::python::ops::part::part::PyPart,
     tool_radius: f64,
     step_over: f64,
     step_length: f64,

@@ -9,7 +9,7 @@
 use prof_macros::prof;
 
 use crate::geo::shape::polygon::get_polygons_closest_point;
-use crate::ops::cut::ToolPose;
+use crate::ops::types::ToolPose;
 use crate::types::{Point, Point3D, Polygon};
 
 // ── envelope_distance ────────────────────────────────────────────────

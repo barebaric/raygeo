@@ -2,8 +2,8 @@
 # ruff: noqa: E501, F401, F403, F405
 
 import builtins
-from raygeo.ops import cut
-from raygeo.ops.cut import cleared_area
+from raygeo.ops import part
+from raygeo.ops.part import cleared_area
 import typing
 __all__ = [
     "ToolPose",
@@ -19,7 +19,7 @@ class ToolPose:
     def __new__(cls, pos: tuple[builtins.float, builtins.float, builtins.float], heading: builtins.float) -> ToolPose: ...
     def __repr__(self) -> builtins.str: ...
 
-def search_frontier_engagement(cleared: cleared_area.ClearedArea, region: cut.StockRegion, start: ToolPose, radius: builtins.float, step_length: builtins.float, advance: builtins.float, min_cut_area: builtins.float, max_cut_area: builtins.float) -> typing.Optional[ToolPose]:
+def search_frontier_engagement(cleared: cleared_area.ClearedArea, region: part.StockRegion, start: ToolPose, radius: builtins.float, step_length: builtins.float, advance: builtins.float, min_cut_area: builtins.float, max_cut_area: builtins.float) -> typing.Optional[ToolPose]:
     r"""
     Walk the frontier forward from ``start_pos``, skipping the closest
     vertex.  Returns the first vertex whose outward cut-area probe

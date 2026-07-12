@@ -25,6 +25,7 @@ from . import assembly
 from . import axis
 from . import cut
 from . import feature
+from . import part
 from . import state
 from . import transform
 from . import types
@@ -37,6 +38,7 @@ __all__ = [
     "axis",
     "cut",
     "feature",
+    "part",
     "state",
     "transform",
     "types",

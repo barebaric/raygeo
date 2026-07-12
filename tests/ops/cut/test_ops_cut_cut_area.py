@@ -2,8 +2,8 @@
 
 import math
 
-from raygeo.ops.cut.cleared_area import ClearedArea
-from raygeo.ops.cut.crescent import cut_area
+from raygeo.ops.part.cleared_area import ClearedArea
+from raygeo.ops.part.crescent import cut_area
 
 
 def test_cut_area_basic():

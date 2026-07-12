@@ -39,12 +39,12 @@ use crate::ops::assembly::result::AssemblyMeta;
 use crate::ops::assembly::Tracelet;
 use crate::ops::cut::step;
 use crate::ops::cut::stepper::MAX_IT;
-use crate::ops::cut::CutDirection;
-use crate::ops::cut::Part;
 use crate::ops::cut::StepStatus;
 use crate::ops::cut::StepperOptions;
-use crate::ops::cut::ToolPose;
+use crate::ops::part::Part;
 use crate::ops::state::State;
+use crate::ops::types::CutDirection;
+use crate::ops::types::ToolPose;
 use crate::types::{Point3D, Polygon};
 use prof_macros::prof;
 

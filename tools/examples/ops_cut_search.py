@@ -12,12 +12,12 @@ from matplotlib.legend_handler import HandlerPatch
 from matplotlib.patches import FancyArrow
 
 from raygeo.geo.algo.offset import compute_inset_region
-from raygeo.ops.cut import StockRegion
-from raygeo.ops.cut.cleared_area import ClearedArea
 from raygeo.ops.cut.search import (
     ToolPose,
     search_frontier_engagement,
 )
+from raygeo.ops.part import StockRegion
+from raygeo.ops.part.cleared_area import ClearedArea
 
 _ARROW_HANDLER = HandlerPatch(
     patch_func=lambda **kw: FancyArrow(
