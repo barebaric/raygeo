@@ -17,6 +17,7 @@ from . import polygon
 from . import polygon3d
 from . import polyline
 from . import rect
+from . import text
 __all__ = [
     "arc",
     "bezier",
@@ -27,5 +28,6 @@ __all__ = [
     "polygon3d",
     "polyline",
     "rect",
+    "text",
 ]
 

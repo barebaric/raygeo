@@ -20,72 +20,69 @@ def plot_geometry(
     show_points=False,
     linewidth=1.5,
 ):
-    cmds = geom.iter_typed_commands()
-    if not cmds:
-        return
-    prev_end = None
-    seg_label = label
-    for cmd in cmds:
+    """Plot geometry commands as one polyline per contour.
+
+    Merging each contour into a single :meth:`axes.plot` call avoids
+    anti-aliasing seams where segments join.
+    """
+    contours: list[list[tuple[float, float]]] = []
+    vertices: list[tuple[float, float]] = []
+    current: list[tuple[float, float]] | None = None
+    for cmd in geom.iter_typed_commands():
         end = cmd.end
         if isinstance(cmd, Move):
-            if show_points:
-                axes.plot(end[0], end[1], "o", color=color, markersize=3)
-            prev_end = end
-            continue
-        if prev_end is None:
-            prev_end = end
-            continue
-        if isinstance(cmd, Line):
-            axes.plot(
-                [prev_end[0], end[0]],
-                [prev_end[1], end[1]],
-                color=color,
-                linewidth=linewidth,
-                label=seg_label,
-            )
-            seg_label = None
+            current = [(end[0], end[1])]
+            contours.append(current)
+            vertices.append((end[0], end[1]))
+        elif isinstance(cmd, Line):
+            assert current is not None
+            current.append((end[0], end[1]))
+            vertices.append((end[0], end[1]))
         elif isinstance(cmd, Arc):
-            cx = prev_end[0] + cmd.center_offset[0]
-            cy = prev_end[1] + cmd.center_offset[1]
+            assert current is not None
+            cx = current[-1][0] + cmd.center_offset[0]
+            cy = current[-1][1] + cmd.center_offset[1]
             r = math.sqrt(
                 cmd.center_offset[0] ** 2 + cmd.center_offset[1] ** 2
             )
-            a_start = math.atan2(prev_end[1] - cy, prev_end[0] - cx)
+            a_start = math.atan2(current[-1][1] - cy, current[-1][0] - cx)
             a_end = math.atan2(end[1] - cy, end[0] - cx)
             angles = _arc_angles(a_start, a_end, cmd.clockwise)
-            ax_pts = [cx + r * math.cos(a) for a in angles]
-            ay_pts = [cy + r * math.sin(a) for a in angles]
-            axes.plot(
-                ax_pts,
-                ay_pts,
-                color=color,
-                linewidth=linewidth,
-                label=seg_label,
-            )
-            seg_label = None
+            for a in angles[1:]:
+                current.append((cx + r * math.cos(a), cy + r * math.sin(a)))
+            current[-1] = (end[0], end[1])  # ensure exact end point
+            vertices.append((end[0], end[1]))
         elif isinstance(cmd, Bezier):
+            assert current is not None
             c1 = cmd.control1
             c2 = cmd.control2
+            px0, py0 = current[-1]
             ts = np.linspace(0, 1, 64)
             bx = (
-                (1 - ts) ** 3 * prev_end[0]
+                (1 - ts) ** 3 * px0
                 + 3 * (1 - ts) ** 2 * ts * c1[0]
                 + 3 * (1 - ts) * ts**2 * c2[0]
                 + ts**3 * end[0]
             )
             by = (
-                (1 - ts) ** 3 * prev_end[1]
+                (1 - ts) ** 3 * py0
                 + 3 * (1 - ts) ** 2 * ts * c1[1]
                 + 3 * (1 - ts) * ts**2 * c2[1]
                 + ts**3 * end[1]
             )
-            axes.plot(
-                bx, by, color=color, linewidth=linewidth, label=seg_label
-            )
-            seg_label = None
-        if show_points:
-            axes.plot(end[0], end[1], "o", color=color, markersize=3)
-        prev_end = end
+            for i in range(1, len(ts)):
+                current.append((bx[i], by[i]))
+            vertices.append((end[0], end[1]))
+
+    for ci, contour in enumerate(contours):
+        xs = [p[0] for p in contour]
+        ys = [p[1] for p in contour]
+        lbl = label if ci == 0 else None
+        axes.plot(xs, ys, color=color, linewidth=linewidth, label=lbl)
+
+    if show_points:
+        for p in vertices:
+            axes.plot(p[0], p[1], "o", color=color, markersize=3)
 
 
 def _arc_angles(a_start, a_end, clockwise):

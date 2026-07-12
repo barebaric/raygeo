@@ -11,3 +11,4 @@ pub mod polygon;
 pub mod polygon3d;
 pub mod polyline;
 pub mod rect;
+pub mod text;

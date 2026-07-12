@@ -311,6 +311,28 @@ impl Geometry {
         self
     }
 
+    /// Apply a 2D affine transformation: x' = sx * x + kx * y + tx,
+    /// y' = ky * x + sy * y + ty.  This is a convenience wrapper
+    /// around the 4x4 matrix transform.
+    pub fn transform_2d(
+        &mut self,
+        sx: f64,
+        kx: f64,
+        ky: f64,
+        sy: f64,
+        tx: f64,
+        ty: f64,
+    ) -> &mut Self {
+        use glam::DMat4;
+        let matrix = DMat4::from_cols(
+            glam::DVec4::new(sx, ky, 0.0, 0.0),
+            glam::DVec4::new(kx, sy, 0.0, 0.0),
+            glam::DVec4::new(0.0, 0.0, 1.0, 0.0),
+            glam::DVec4::new(tx, ty, 0.0, 1.0),
+        );
+        self.transform(&matrix)
+    }
+
     /// Extends this geometry by appending all commands from another geometry.
     pub fn extend(&mut self, other: &Geometry) -> &mut Self {
         if !other.data.is_empty() {
