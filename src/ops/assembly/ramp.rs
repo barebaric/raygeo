@@ -8,6 +8,7 @@ use crate::geo::algo::ramp::{
 };
 use crate::geo::shape::polygon::get_segment_swept_polygon;
 use crate::ops::assembly::result::AssemblyMeta;
+use crate::ops::assembly::trace_utils as tu;
 use crate::ops::assembly::write_polyline;
 use crate::ops::assembly::Tracelet;
 use crate::ops::part::Part;
@@ -56,7 +57,7 @@ pub fn generate_ramp(
     } else {
         ToolPose {
             pos: path[0],
-            heading: ramp_heading(&path, 0),
+            heading: tu::path_heading(&path, 0),
         }
     };
 
@@ -69,7 +70,7 @@ pub fn generate_ramp(
         let n = path.len();
         ToolPose {
             pos: path[n - 1],
-            heading: ramp_heading(&path, n - 1),
+            heading: tu::path_heading(&path, n - 1),
         }
     };
 
@@ -79,16 +80,4 @@ pub fn generate_ramp(
     write_polyline(trace, &path, true, Some(cut_state));
     part.cleared.cut(&cleared_polygons);
     Ok(AssemblyMeta { start, end })
-}
-
-/// Compute the tangent heading at index `i` in the ramp path.
-fn ramp_heading(path: &[crate::types::Point3D], i: usize) -> f64 {
-    if i + 1 < path.len() {
-        let dx = path[i + 1].x - path[i].x;
-        let dy = path[i + 1].y - path[i].y;
-        if dx.abs() > 1e-12 || dy.abs() > 1e-12 {
-            return dy.atan2(dx);
-        }
-    }
-    0.0
 }

@@ -219,7 +219,7 @@ fn build_xcoords(cx: &SweepContext) -> Vec<f64> {
     xs.push(c2.x);
 
     xs.retain(|&x| x >= xmin && x <= xmax);
-    xs.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+    xs.sort_by(|a, b| crate::utils::sort_f64(*a, *b));
     xs.dedup_by(|a, b| (*a - *b).abs() < 1e-12);
     xs
 }
@@ -472,7 +472,7 @@ fn sweep_area(cx: &SweepContext, xs: &[f64]) -> (f64, f64) {
             circle_active,
             &mut ys,
         );
-        ys.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap());
+        ys.sort_by(|a, b| crate::utils::sort_f64(a.0, b.0));
 
         // All shapes start outside at y→−∞.
         //

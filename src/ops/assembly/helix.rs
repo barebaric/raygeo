@@ -8,6 +8,7 @@ use crate::geo::algo::helix::{
 };
 use crate::geo::shape::polygon::get_circle_polygon;
 use crate::ops::assembly::result::AssemblyMeta;
+use crate::ops::assembly::trace_utils as tu;
 use crate::ops::assembly::write_polyline;
 use crate::ops::assembly::Tracelet;
 use crate::ops::part::Part;
@@ -107,13 +108,9 @@ fn compute_heading(
     center: &Point,
     direction: HelixDirection,
 ) -> f64 {
-    // Forward direction: turn to the next point in the path.
-    if i + 1 < path.len() {
-        let dx = path[i + 1].x - path[i].x;
-        let dy = path[i + 1].y - path[i].y;
-        if dx.abs() > 1e-12 || dy.abs() > 1e-12 {
-            return dy.atan2(dx);
-        }
+    let fd = tu::path_heading(path, i);
+    if fd != 0.0 || i + 1 < path.len() {
+        return fd;
     }
     // Analytic tangent: perpendicular to radius vector.
     let rx = path[i].x - center.x;

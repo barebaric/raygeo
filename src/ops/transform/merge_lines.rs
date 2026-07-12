@@ -419,9 +419,7 @@ fn get_uncovered(intervals: &[(f64, f64)]) -> Vec<(f64, f64)> {
     }
 
     let mut sorted: Vec<(f64, f64)> = intervals.to_vec();
-    sorted.sort_by(|a, b| {
-        a.0.partial_cmp(&b.0).unwrap_or(std::cmp::Ordering::Equal)
-    });
+    sorted.sort_by(|a, b| crate::utils::sort_f64(a.0, b.0));
 
     let mut merged: Vec<(f64, f64)> = vec![sorted[0]];
     for current in &sorted[1..] {

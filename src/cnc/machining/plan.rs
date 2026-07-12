@@ -21,12 +21,13 @@ use crate::geo::algo::helix::HelixDirection;
 use crate::geo::algo::ramp::RampStyle;
 use crate::ops::assembly::adaptive::{self, AdaptiveClearingOptions};
 use crate::ops::assembly::helix::{self, HelixOptions};
-use crate::ops::assembly::profile::{self, ProfileInnerOptions};
+use crate::ops::assembly::profile::{self, ProfileOptions};
 use crate::ops::assembly::ramp::{self, RampOptions};
 use crate::ops::assembly::result::{emit_trace_events, AssemblyMeta};
 use crate::ops::assembly::slot::{self, SlotOptions};
 use crate::ops::assembly::spiral::{self, SpiralOptions};
 use crate::ops::assembly::toroid::{self, ToroidalClearOptions};
+use crate::ops::assembly::trace_utils as tu;
 use crate::ops::assembly::wavefront::{self, AdaptiveWavefrontOptions};
 use crate::ops::assembly::Tracelet;
 use crate::ops::part::Part;
@@ -281,13 +282,8 @@ impl WorkplanStep {
                     start_heading: *start_heading,
                     ..Default::default()
                 };
-                let saved_region = std::mem::replace(
-                    &mut part.stock_region,
-                    crate::ops::part::StockRegion::new(
-                        boundary.clone(),
-                        islands.clone(),
-                    ),
-                );
+                let saved_region = part
+                    .replace_stock_region(boundary.clone(), islands.clone());
                 let result =
                     adaptive::adaptive_clearing(part, trace, &opts, cut_state);
                 part.stock_region = saved_region;
@@ -305,7 +301,7 @@ impl WorkplanStep {
             } => {
                 let (boundary, islands) = step_part.extract_boundary();
                 let boundary = boundary.unwrap_or_default();
-                let opts = ProfileInnerOptions {
+                let opts = ProfileOptions {
                     tool_radius: *tool_radius,
                     step_over: *step_over,
                     step_length: *step_length,
@@ -315,13 +311,8 @@ impl WorkplanStep {
                     stock_to_leave: *stock_to_leave,
                     ..Default::default()
                 };
-                let saved_region = std::mem::replace(
-                    &mut part.stock_region,
-                    crate::ops::part::StockRegion::new(
-                        boundary.clone(),
-                        islands.clone(),
-                    ),
-                );
+                let saved_region = part
+                    .replace_stock_region(boundary.clone(), islands.clone());
                 let result =
                     profile::profile_inner(part, trace, &opts, cut_state);
                 part.stock_region = saved_region;
@@ -344,13 +335,8 @@ impl WorkplanStep {
                     area_tolerance: *area_tolerance,
                     precision: *precision,
                 };
-                let saved_region = std::mem::replace(
-                    &mut part.stock_region,
-                    crate::ops::part::StockRegion::new(
-                        boundary.clone(),
-                        islands.clone(),
-                    ),
-                );
+                let saved_region = part
+                    .replace_stock_region(boundary.clone(), islands.clone());
                 let result = wavefront::adaptive_wavefronts(
                     part, trace, &opts, cut_state,
                 );
@@ -476,10 +462,15 @@ impl Workplan {
         let mut attrs: Meta = Meta::new();
         attrs.insert("safe_z".into(), MetaValue::F64(self.safe_z));
         attrs.insert("steps".into(), MetaValue::List(steps_meta));
-        attrs.insert("boundary".into(), polygon_to_meta(&self.pocket_boundary));
+        attrs.insert(
+            "boundary".into(),
+            tu::polygon_to_meta(&self.pocket_boundary),
+        );
         attrs.insert(
             "islands".into(),
-            MetaValue::List(self.islands.iter().map(polygon_to_meta).collect()),
+            MetaValue::List(
+                self.islands.iter().map(tu::polygon_to_meta).collect(),
+            ),
         );
         let root = tracer.enter(0, "workplan", "Workplan", Some(attrs));
 
@@ -627,17 +618,6 @@ impl Workplan {
             end: pe,
         })
     }
-}
-
-/// Convert a polygon to a MetaValue list of [x, y] pairs.
-fn polygon_to_meta(poly: &Polygon) -> MetaValue {
-    MetaValue::List(
-        poly.iter()
-            .map(|p| {
-                MetaValue::List(vec![MetaValue::F64(p.x), MetaValue::F64(p.y)])
-            })
-            .collect(),
-    )
 }
 
 fn pass_start_z_ops(ops: &crate::ops::container::Ops) -> f64 {

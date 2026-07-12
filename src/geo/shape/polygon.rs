@@ -916,9 +916,7 @@ pub fn get_polygon_convex_hull(polygon: &Polygon) -> Polygon {
     sorted.sort_by(|a, b| {
         a.x.partial_cmp(&b.x)
             .unwrap_or(std::cmp::Ordering::Equal)
-            .then_with(|| {
-                a.y.partial_cmp(&b.y).unwrap_or(std::cmp::Ordering::Equal)
-            })
+            .then_with(|| crate::utils::sort_f64(a.y, b.y))
     });
     let mut lower: Vec<Point> = Vec::new();
     for &p in &sorted {

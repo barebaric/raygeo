@@ -1,9 +1,7 @@
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::gen_stub_pyfunction;
 
-use crate::ops::assembly::profile::{
-    self, ProfileInnerOptions, ProfileOuterOptions,
-};
+use crate::ops::assembly::profile::{self, ProfileOptions};
 use crate::ops::assembly::Tracelet;
 use crate::ops::state::State;
 use crate::ops::types::CutDirection;
@@ -127,7 +125,7 @@ fn profile_outer_py(
         _ => CutDirection::Ccw,
     };
 
-    let opts = ProfileOuterOptions {
+    let opts = ProfileOptions {
         tool_radius,
         step_over,
         step_length,
@@ -254,7 +252,7 @@ fn profile_inner_py(
         _ => CutDirection::Ccw,
     };
 
-    let opts = ProfileInnerOptions {
+    let opts = ProfileOptions {
         tool_radius,
         step_over,
         step_length,

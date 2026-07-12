@@ -77,6 +77,7 @@ pub(crate) mod trace_types;
 
 pub(crate) mod trace;
 pub mod types;
+pub mod utils;
 
 pub use constants::{
     CLIPPER_SCALE, EPSILON_COLLINEAR, EPSILON_GAP_CLOSE, EPSILON_INTERSECT,

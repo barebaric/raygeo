@@ -760,9 +760,7 @@ fn sort_part_indices_by_area(parts: &[PartDesc]) -> Vec<usize> {
             (-area, i) // negate for descending sort
         })
         .collect();
-    areas.sort_by(|a, b| {
-        a.0.partial_cmp(&b.0).unwrap_or(std::cmp::Ordering::Equal)
-    });
+    areas.sort_by(|a, b| crate::utils::sort_f64(a.0, b.0));
     areas.into_iter().map(|(_, idx)| idx).collect()
 }
 

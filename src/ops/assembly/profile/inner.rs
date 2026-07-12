@@ -5,7 +5,7 @@ use crate::geo::shape::polygon::{
     JoinStyle,
 };
 use crate::ops::assembly::profile::engine::{run_profile, ProfileCommon};
-use crate::ops::assembly::profile::ProfileInnerOptions;
+use crate::ops::assembly::profile::ProfileOptions;
 use crate::ops::assembly::result::AssemblyMeta;
 use crate::ops::assembly::Tracelet;
 
@@ -21,7 +21,7 @@ use glam::Vec3Swizzles;
 pub fn profile_inner(
     part: &mut Part,
     trace: &mut Tracelet,
-    opts: &ProfileInnerOptions,
+    opts: &ProfileOptions,
     cut_state: &State,
 ) -> RaygeoResult<AssemblyMeta> {
     let (boundary_opt, islands) = part.extract_boundary();
@@ -128,7 +128,7 @@ pub fn profile_inner(
                     let cb = get_polygon_centroid(&grown_islands[**b]);
                     let da = (ca - last_end.xy()).length_squared();
                     let db = (cb - last_end.xy()).length_squared();
-                    da.partial_cmp(&db).unwrap_or(std::cmp::Ordering::Equal)
+                    crate::utils::sort_f64(da, db)
                 })
                 .map(|(i, _)| i)
                 .unwrap();

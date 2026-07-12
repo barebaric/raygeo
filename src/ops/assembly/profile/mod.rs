@@ -15,5 +15,5 @@ mod outer;
 mod trace_helpers;
 
 pub use inner::profile_inner;
-pub use options::{ProfileInnerOptions, ProfileOuterOptions};
+pub use options::ProfileOptions;
 pub use outer::profile_outer;

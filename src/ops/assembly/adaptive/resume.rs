@@ -313,9 +313,7 @@ pub(super) fn walk_and_probe(
                 (i, min_d)
             })
             .collect();
-        indexed.sort_by(|a, b| {
-            a.1.partial_cmp(&b.1).unwrap_or(std::cmp::Ordering::Equal)
-        });
+        indexed.sort_by(|a, b| crate::utils::sort_f64(a.1, b.1));
         indexed.into_iter().map(|(i, _)| i).collect()
     } else {
         match get_polygons_closest_point(polys, ref_pos_2d) {

@@ -16,6 +16,7 @@ use prof_macros::prof;
 
 use crate::error::RaygeoResult;
 use crate::ops::assembly::result::AssemblyMeta;
+use crate::ops::assembly::trace_utils as tu;
 use crate::ops::assembly::write_polyline;
 use crate::ops::assembly::Tracelet;
 use crate::ops::part::Part;
@@ -70,13 +71,13 @@ pub fn generate_slot(
 
     let start = ToolPose {
         pos: path[0],
-        heading: slot_heading(&path, 0),
+        heading: tu::path_heading(&path, 0),
     };
     let end = {
         let n = path.len();
         ToolPose {
             pos: path[n - 1],
-            heading: slot_heading(&path, n - 1),
+            heading: tu::path_heading(&path, n - 1),
         }
     };
 
@@ -150,16 +151,4 @@ fn swept_polygon_from_carrier(carrier: &[Point], tool_radius: f64) -> Polygon {
         carrier[0].y + start_ext_y - perp_y,
     ));
     poly
-}
-
-/// Compute the tangent heading at index `i` in the slot path.
-fn slot_heading(path: &[Point3D], i: usize) -> f64 {
-    if i + 1 < path.len() {
-        let dx = path[i + 1].x - path[i].x;
-        let dy = path[i + 1].y - path[i].y;
-        if dx.abs() > 1e-12 || dy.abs() > 1e-12 {
-            return dy.atan2(dx);
-        }
-    }
-    0.0
 }

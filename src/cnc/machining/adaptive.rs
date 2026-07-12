@@ -206,7 +206,7 @@ pub fn build_clearing_workplan(
         neighbors.sort_by(|a, b| {
             let da = centroid_distance(&regions[a.0].polygon, region.entry_pt);
             let db = centroid_distance(&regions[b.0].polygon, region.entry_pt);
-            da.partial_cmp(&db).unwrap_or(std::cmp::Ordering::Equal)
+            crate::utils::sort_f64(da, db)
         });
 
         for (neighbor_idx, edge) in neighbors {

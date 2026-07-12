@@ -899,9 +899,7 @@ fn collect_events(
         events.push((enter, EventType::Enter));
         events.push((exit_, EventType::Exit));
     }
-    events.sort_by(|a, b| {
-        a.0.partial_cmp(&b.0).unwrap_or(std::cmp::Ordering::Equal)
-    });
+    events.sort_by(|a, b| crate::utils::sort_f64(a.0, b.0));
     events
 }
 

@@ -14,6 +14,7 @@ pub mod result;
 pub mod slot;
 pub mod spiral;
 pub mod toroid;
+pub(crate) mod trace_utils;
 pub mod tracelet;
 pub mod wavefront;
 

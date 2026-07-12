@@ -1,6 +1,7 @@
 use std::collections::BTreeMap;
 
 use crate::geo::algo::medial_axis::MedialAxis;
+use crate::ops::assembly::trace_utils as tu;
 use crate::ops::part::ClearedArea;
 use crate::ops::part::StockRegion;
 use crate::trace_types::{Meta, MetaValue, ToolSnapshot};
@@ -8,43 +9,6 @@ use crate::types::{Point3D, Polygon};
 
 use super::tool::Tool;
 use super::AdaptiveClearingOptions;
-
-fn polygon_to_meta(poly: &Polygon) -> MetaValue {
-    MetaValue::List(
-        poly.iter()
-            .map(|p| {
-                MetaValue::List(vec![MetaValue::F64(p.x), MetaValue::F64(p.y)])
-            })
-            .collect(),
-    )
-}
-
-fn xy_points_to_meta(points: &[(f64, f64)]) -> MetaValue {
-    MetaValue::List(
-        points
-            .iter()
-            .map(|(x, y)| {
-                MetaValue::List(vec![MetaValue::F64(*x), MetaValue::F64(*y)])
-            })
-            .collect(),
-    )
-}
-
-fn point3d_to_list(p: Point3D) -> MetaValue {
-    MetaValue::List(vec![
-        MetaValue::F64(p.x),
-        MetaValue::F64(p.y),
-        MetaValue::F64(p.z),
-    ])
-}
-
-fn meta_insert_f64(meta: &mut Meta, key: &str, value: f64) {
-    meta.insert(key.into(), MetaValue::F64(value));
-}
-
-fn meta_insert_u32(meta: &mut Meta, key: &str, value: u32) {
-    meta.insert(key.into(), MetaValue::U32(value));
-}
 
 pub(super) fn make_tool_snapshot(
     tool: &Tool,
@@ -69,15 +33,15 @@ pub(super) fn build_attrs(
     mat: Option<&MedialAxis>,
 ) -> Meta {
     let mut attrs: Meta = BTreeMap::new();
-    meta_insert_f64(&mut attrs, "tool_radius", opts.tool_radius);
-    attrs.insert("boundary".into(), polygon_to_meta(boundary));
+    tu::meta_insert_f64(&mut attrs, "tool_radius", opts.tool_radius);
+    attrs.insert("boundary".into(), tu::polygon_to_meta(boundary));
     attrs.insert(
         "islands".into(),
-        MetaValue::List(islands.iter().map(polygon_to_meta).collect()),
+        MetaValue::List(islands.iter().map(tu::polygon_to_meta).collect()),
     );
     attrs.insert(
         "seeds".into(),
-        MetaValue::List(seeds.iter().map(polygon_to_meta).collect()),
+        MetaValue::List(seeds.iter().map(tu::polygon_to_meta).collect()),
     );
     if let Some(mat) = mat {
         attrs.insert(
@@ -117,15 +81,19 @@ pub(super) fn build_attrs(
                     .collect(),
             ),
         );
-        meta_insert_u32(&mut attrs, "mat_root", mat.root as u32);
+        tu::meta_insert_u32(&mut attrs, "mat_root", mat.root as u32);
     }
     attrs
 }
 
 pub(super) fn init_meta(cleared: &ClearedArea, region: &StockRegion) -> Meta {
     let mut m: Meta = BTreeMap::new();
-    meta_insert_f64(&mut m, "total_area", cleared.total_area());
-    meta_insert_f64(&mut m, "remaining_area", cleared.remaining_area(region));
+    tu::meta_insert_f64(&mut m, "total_area", cleared.total_area());
+    tu::meta_insert_f64(
+        &mut m,
+        "remaining_area",
+        cleared.remaining_area(region),
+    );
     m
 }
 
@@ -142,25 +110,27 @@ pub(super) fn cut_meta(
     iteration_angle: f64,
 ) -> Meta {
     let mut m: Meta = BTreeMap::new();
-    meta_insert_u32(&mut m, "iters", iters);
-    meta_insert_f64(&mut m, "eng_angle", eng_angle);
-    meta_insert_f64(&mut m, "eng_area", eng_area);
-    meta_insert_f64(&mut m, "eng_chord", eng_chord);
-    meta_insert_f64(&mut m, "cut_area", cut_area);
-    meta_insert_f64(&mut m, "iteration_angle", iteration_angle);
-    meta_insert_f64(&mut m, "total_area", cleared.total_area());
-    meta_insert_f64(&mut m, "remaining_area", cleared.remaining_area(region));
-    meta_insert_f64(&mut m, "smoothed_heading", tool.smoothed_heading());
-    meta_insert_f64(&mut m, "predicted_angle", tool.raw_predictor());
+    tu::meta_insert_u32(&mut m, "iters", iters);
+    tu::meta_insert_f64(&mut m, "eng_angle", eng_angle);
+    tu::meta_insert_f64(&mut m, "eng_area", eng_area);
+    tu::meta_insert_f64(&mut m, "eng_chord", eng_chord);
+    tu::meta_insert_f64(&mut m, "cut_area", cut_area);
+    tu::meta_insert_f64(&mut m, "iteration_angle", iteration_angle);
+    tu::meta_insert_f64(&mut m, "total_area", cleared.total_area());
+    tu::meta_insert_f64(
+        &mut m,
+        "remaining_area",
+        cleared.remaining_area(region),
+    );
+    tu::meta_insert_f64(&mut m, "smoothed_heading", tool.smoothed_heading());
+    tu::meta_insert_f64(&mut m, "predicted_angle", tool.raw_predictor());
     m
 }
 
 #[allow(clippy::too_many_arguments)]
-pub(super) fn resume_meta(
+pub(super) fn resume_exit_meta(
     cleared: &ClearedArea,
     region: &StockRegion,
-    resume_source: u8,
-    route_source: u8,
     resume_reasons: &[u8; 6],
     resume_details: &[u8; 6],
     route_details: &[u8; 4],
@@ -168,12 +138,22 @@ pub(super) fn resume_meta(
     candidates: &[Option<Point3D>; 6],
     wall_hug_points: &[(f64, f64)],
     wall_hug_segment_counts: &[u32],
+    resume_source: Option<u8>,
+    route_source: Option<u8>,
 ) -> Meta {
     let mut m: Meta = BTreeMap::new();
-    meta_insert_f64(&mut m, "total_area", cleared.total_area());
-    meta_insert_f64(&mut m, "remaining_area", cleared.remaining_area(region));
-    meta_insert_u32(&mut m, "resume_source", resume_source as u32);
-    meta_insert_u32(&mut m, "route_source", route_source as u32);
+    tu::meta_insert_f64(&mut m, "total_area", cleared.total_area());
+    tu::meta_insert_f64(
+        &mut m,
+        "remaining_area",
+        cleared.remaining_area(region),
+    );
+    if let Some(src) = resume_source {
+        tu::meta_insert_u32(&mut m, "resume_source", src as u32);
+    }
+    if let Some(src) = route_source {
+        tu::meta_insert_u32(&mut m, "route_source", src as u32);
+    }
     m.insert(
         "resume_reasons".into(),
         MetaValue::List(
@@ -201,14 +181,14 @@ pub(super) fn resume_meta(
                 .collect(),
         ),
     );
-    m.insert("resume_point".into(), point3d_to_list(resume_point));
+    m.insert("resume_point".into(), tu::point3d_to_list(resume_point));
     m.insert(
         "candidates".into(),
         MetaValue::List(
             candidates
                 .iter()
                 .map(|c| match c {
-                    Some(p) => point3d_to_list(*p),
+                    Some(p) => tu::point3d_to_list(*p),
                     None => MetaValue::List(vec![
                         MetaValue::F64(f64::NAN),
                         MetaValue::F64(f64::NAN),
@@ -218,7 +198,10 @@ pub(super) fn resume_meta(
                 .collect(),
         ),
     );
-    m.insert("wall_hug_points".into(), xy_points_to_meta(wall_hug_points));
+    m.insert(
+        "wall_hug_points".into(),
+        tu::xy_points_to_meta(wall_hug_points),
+    );
     m.insert(
         "wall_hug_segment_counts".into(),
         MetaValue::List(
@@ -226,75 +209,6 @@ pub(super) fn resume_meta(
                 .iter()
                 .map(|&v| MetaValue::U32(v))
                 .collect(),
-        ),
-    );
-    m
-}
-
-#[allow(clippy::too_many_arguments)]
-pub(super) fn exit_meta(
-    cleared: &ClearedArea,
-    region: &StockRegion,
-    resume_reasons: &[u8; 6],
-    resume_details: &[u8; 6],
-    route_details: &[u8; 4],
-    last_resume_point: Point3D,
-    resume_candidate_pts: &[Option<Point3D>; 6],
-    wall_hug_points: &[(f64, f64)],
-    segment_counts: &[u32],
-) -> Meta {
-    let mut m: Meta = BTreeMap::new();
-    meta_insert_f64(&mut m, "total_area", cleared.total_area());
-    meta_insert_f64(&mut m, "remaining_area", cleared.remaining_area(region));
-    m.insert(
-        "resume_reasons".into(),
-        MetaValue::List(
-            resume_reasons
-                .iter()
-                .map(|&v| MetaValue::U32(v as u32))
-                .collect(),
-        ),
-    );
-    m.insert(
-        "resume_details".into(),
-        MetaValue::List(
-            resume_details
-                .iter()
-                .map(|&v| MetaValue::U32(v as u32))
-                .collect(),
-        ),
-    );
-    m.insert(
-        "route_details".into(),
-        MetaValue::List(
-            route_details
-                .iter()
-                .map(|&v| MetaValue::U32(v as u32))
-                .collect(),
-        ),
-    );
-    m.insert("resume_point".into(), point3d_to_list(last_resume_point));
-    m.insert(
-        "candidates".into(),
-        MetaValue::List(
-            resume_candidate_pts
-                .iter()
-                .map(|c| match c {
-                    Some(p) => point3d_to_list(*p),
-                    None => MetaValue::List(vec![
-                        MetaValue::F64(f64::NAN),
-                        MetaValue::F64(f64::NAN),
-                        MetaValue::F64(f64::NAN),
-                    ]),
-                })
-                .collect(),
-        ),
-    );
-    m.insert("wall_hug_points".into(), xy_points_to_meta(wall_hug_points));
-    m.insert(
-        "wall_hug_segment_counts".into(),
-        MetaValue::List(
-            segment_counts.iter().map(|&v| MetaValue::U32(v)).collect(),
         ),
     );
     m

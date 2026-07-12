@@ -3,7 +3,7 @@ use crate::geo::shape::polygon::{
     get_polygon_heading_at, offset_polygon, JoinStyle,
 };
 use crate::ops::assembly::profile::engine::{run_profile, ProfileCommon};
-use crate::ops::assembly::profile::ProfileOuterOptions;
+use crate::ops::assembly::profile::ProfileOptions;
 use crate::ops::assembly::result::AssemblyMeta;
 use crate::ops::assembly::Tracelet;
 use crate::ops::part::Part;
@@ -16,7 +16,7 @@ use super::trace_helpers as th;
 pub fn profile_outer(
     part: &mut Part,
     trace: &mut Tracelet,
-    opts: &ProfileOuterOptions,
+    opts: &ProfileOptions,
     cut_state: &State,
 ) -> RaygeoResult<AssemblyMeta> {
     let (boundary_opt, _islands) = part.extract_boundary();

@@ -459,7 +459,7 @@ impl MedialAxis {
             .min_by(|(_, a), (_, b)| {
                 let da = (a.point - pt).length_squared();
                 let db = (b.point - pt).length_squared();
-                da.partial_cmp(&db).unwrap_or(std::cmp::Ordering::Equal)
+                crate::utils::sort_f64(da, db)
             })
             .map(|(i, _)| i)
     }

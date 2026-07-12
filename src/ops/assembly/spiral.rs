@@ -9,11 +9,11 @@ use crate::geo::algo::spiral::{
 };
 use crate::geo::shape::polygon::get_circle_polygon;
 use crate::ops::assembly::result::AssemblyMeta;
+use crate::ops::assembly::trace_utils as tu;
 use crate::ops::assembly::write_polyline;
 use crate::ops::assembly::Tracelet;
 use crate::ops::part::Part;
 use crate::ops::state::State;
-use crate::ops::types::ToolPose;
 use crate::types::{Point, Point3D};
 
 /// Options for generating a flat spiral entry path.
@@ -76,30 +76,8 @@ pub fn generate_spiral(
         }
     }
 
-    let start = if path.is_empty() {
-        ToolPose {
-            pos: Point3D::new(opts.center.x, opts.center.y, opts.z),
-            heading: 0.0,
-        }
-    } else {
-        ToolPose {
-            pos: path[0],
-            heading: spiral_heading(&path, 0),
-        }
-    };
-
-    let end = if path.is_empty() {
-        ToolPose {
-            pos: Point3D::new(opts.center.x, opts.center.y, opts.z),
-            heading: 0.0,
-        }
-    } else {
-        let n = path.len();
-        ToolPose {
-            pos: path[n - 1],
-            heading: spiral_heading(&path, n - 1),
-        }
-    };
+    let fallback = Point3D::new(opts.center.x, opts.center.y, opts.z);
+    let (start, end) = tu::start_end_poses(&path, fallback);
 
     let cleared_polygons = if path.is_empty() {
         vec![]
@@ -110,16 +88,4 @@ pub fn generate_spiral(
     write_polyline(trace, &path, true, Some(cut_state));
     part.cleared.cut(&cleared_polygons);
     Ok(AssemblyMeta { start, end })
-}
-
-/// Compute the tangent heading at index `i` in the spiral path.
-fn spiral_heading(path: &[Point3D], i: usize) -> f64 {
-    if i + 1 < path.len() {
-        let dx = path[i + 1].x - path[i].x;
-        let dy = path[i + 1].y - path[i].y;
-        if dx.abs() > 1e-12 || dy.abs() > 1e-12 {
-            return dy.atan2(dx);
-        }
-    }
-    0.0
 }

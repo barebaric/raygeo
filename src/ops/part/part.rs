@@ -156,6 +156,20 @@ impl Part {
         Self::extract_boundary_from_geometry(self.geometry.as_ref())
     }
 
+    /// Replace `self.stock_region` with a new one built from the given
+    /// boundary and islands.  Returns the old stock region so callers
+    /// can restore it after an operation that temporarily scopes the region.
+    pub fn replace_stock_region(
+        &mut self,
+        boundary: Polygon,
+        islands: Vec<Polygon>,
+    ) -> StockRegion {
+        std::mem::replace(
+            &mut self.stock_region,
+            StockRegion::new(boundary, islands),
+        )
+    }
+
     /// Standalone boundary extraction from a geometry reference.
     fn extract_boundary_from_geometry(
         geo: Option<&Geometry>,
@@ -212,9 +226,10 @@ impl Part {
 
         // Pick the largest outer contour as the main boundary.
         let boundary = outers.into_iter().max_by(|a, b| {
-            crate::geo::shape::polygon::get_polygon_area(a)
-                .partial_cmp(&crate::geo::shape::polygon::get_polygon_area(b))
-                .unwrap_or(std::cmp::Ordering::Equal)
+            crate::utils::sort_f64(
+                crate::geo::shape::polygon::get_polygon_area(a),
+                crate::geo::shape::polygon::get_polygon_area(b),
+            )
         });
 
         (boundary, islands)

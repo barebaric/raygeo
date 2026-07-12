@@ -258,7 +258,7 @@ fn handle_stall(
         let wsc_exit = s.hug_tracker.segment_counts_ref();
         s.trace.exit(
             th::make_tool_snapshot(s.tool, *s.prev_pos),
-            Some(th::exit_meta(
+            Some(th::resume_exit_meta(
                 &s.part.cleared,
                 &s.part.stock_region,
                 s.resume_reasons,
@@ -268,6 +268,8 @@ fn handle_stall(
                 s.resume_candidate_pts,
                 &whp_exit,
                 &wsc_exit,
+                None,
+                None,
             )),
         );
         return Ok(StallResult::Exit);
@@ -335,11 +337,9 @@ fn handle_stall(
                 s.hug_tracker.reset();
                 s.trace.resume(
                     th::make_tool_snapshot(s.tool, *s.prev_pos),
-                    Some(th::resume_meta(
+                    Some(th::resume_exit_meta(
                         &s.part.cleared,
                         &s.part.stock_region,
-                        resume_source_u8,
-                        route_source_u8,
                         s.resume_reasons,
                         s.resume_details,
                         s.route_details,
@@ -347,6 +347,8 @@ fn handle_stall(
                         s.resume_candidate_pts,
                         &whp,
                         &wsc,
+                        Some(resume_source_u8),
+                        Some(route_source_u8),
                     )),
                 );
                 resume_done = true;
@@ -391,7 +393,7 @@ fn handle_stall(
         let wsc_exit = s.hug_tracker.segment_counts_ref();
         s.trace.exit(
             th::make_tool_snapshot(s.tool, *s.prev_pos),
-            Some(th::exit_meta(
+            Some(th::resume_exit_meta(
                 &s.part.cleared,
                 &s.part.stock_region,
                 s.resume_reasons,
@@ -401,6 +403,8 @@ fn handle_stall(
                 s.resume_candidate_pts,
                 &whp_exit,
                 &wsc_exit,
+                None,
+                None,
             )),
         );
         return Ok(StallResult::Exit);
@@ -432,7 +436,7 @@ fn handle_stall(
     let wsc_exit = s.hug_tracker.segment_counts_ref();
     s.trace.exit(
         th::make_tool_snapshot(s.tool, *s.prev_pos),
-        Some(th::exit_meta(
+        Some(th::resume_exit_meta(
             &s.part.cleared,
             &s.part.stock_region,
             s.resume_reasons,
@@ -442,6 +446,8 @@ fn handle_stall(
             s.resume_candidate_pts,
             &whp_exit,
             &wsc_exit,
+            None,
+            None,
         )),
     );
     let all_blacklisted =
@@ -516,7 +522,7 @@ pub fn adaptive_clearing(
         .max_by(|a, b| {
             let aa = get_polygon_area(a);
             let ab = get_polygon_area(b);
-            ab.partial_cmp(&aa).unwrap_or(std::cmp::Ordering::Equal)
+            crate::utils::sort_f64(ab, aa)
         })
         .map(get_polygon_centroid)
         .unwrap_or(crate::types::Point::ZERO);
@@ -629,7 +635,7 @@ pub fn adaptive_clearing(
             if check() {
                 trace.exit(
                     th::make_tool_snapshot(&tool, prev_pos),
-                    Some(th::exit_meta(
+                    Some(th::resume_exit_meta(
                         &part.cleared,
                         &part.stock_region,
                         &resume_reasons,
@@ -639,6 +645,8 @@ pub fn adaptive_clearing(
                         &resume_candidate_pts,
                         &hug_tracker.wall_hug_ref(),
                         &hug_tracker.segment_counts_ref(),
+                        None,
+                        None,
                     )),
                 );
                 return Err(RaygeoError::Cancelled);
@@ -874,7 +882,7 @@ pub fn adaptive_clearing(
 
     trace.exit(
         th::make_tool_snapshot(&tool, prev_pos),
-        Some(th::exit_meta(
+        Some(th::resume_exit_meta(
             &part.cleared,
             &part.stock_region,
             &resume_reasons,
@@ -884,6 +892,8 @@ pub fn adaptive_clearing(
             &resume_candidate_pts,
             &hug_tracker.wall_hug_ref(),
             &hug_tracker.segment_counts_ref(),
+            None,
+            None,
         )),
     );
 
