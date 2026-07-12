@@ -12,6 +12,7 @@ from matplotlib.legend_handler import HandlerPatch
 from matplotlib.patches import FancyArrow
 
 from raygeo.geo.algo.offset import compute_inset_region
+from raygeo.ops.cut import StockRegion
 from raygeo.ops.cut.cleared_area import ClearedArea
 from raygeo.ops.cut.search import (
     ToolPose,
@@ -60,7 +61,8 @@ def _setup():
 
     va, _ = compute_inset_region(square, tool_radius, [])
 
-    ca = ClearedArea(boundary=square, initial=[seed_raw])
+    region = StockRegion(boundary=square)
+    ca = ClearedArea(initial=[seed_raw])
 
     va_right = half - tool_radius
     y_int = math.sqrt(r_seed**2 - va_right**2)
@@ -78,6 +80,7 @@ def _setup():
         advance,
         min_cut_area,
         r_seed,
+        region,
     )
 
 
@@ -102,14 +105,16 @@ def generate_search_frontier_engagement():
         advance,
         min_cut_area,
         _,
+        region,
     ) = _setup()
 
-    fig, ax = _make_axes(square, va, ca, frontier_tol=0.001)
+    fig, ax = _make_axes(square, va, ca, region, frontier_tol=0.001)
 
     # ── Right side: walk CCW from the tool position ──
     start_h = math.pi / 2
     fwd_rp = search_frontier_engagement(
         ca,
+        region,
         start=ToolPose(pos=tool_pos, heading=start_h),
         radius=tool_radius,
         step_length=step_length,
@@ -182,6 +187,7 @@ def generate_search_frontier_engagement():
     left_h = math.pi / 2
     left_rp = search_frontier_engagement(
         ca,
+        region,
         start=ToolPose(pos=left_pos, heading=left_h),
         radius=tool_radius,
         step_length=step_length,
@@ -263,7 +269,7 @@ def generate_search_frontier_engagement():
 # ── Plot helpers ─────────────────────────────────────────────────────
 
 
-def _make_axes(square, va, ca, frontier_tol=0.5):
+def _make_axes(square, va, ca, region, frontier_tol=0.5):
     fig, ax = plt.subplots(figsize=(10, 10))
     bnd = np.array(square + [square[0]])
     ax.plot(
@@ -280,7 +286,7 @@ def _make_axes(square, va, ca, frontier_tol=0.5):
         ax.plot(p[:, 0], p[:, 1], "k--", linewidth=1, alpha=0.3)
         ax.fill(p[:, 0], p[:, 1], alpha=0.03, color="green")
 
-    frontier = ca.frontier(frontier_tol)
+    frontier = ca.frontier(region, frontier_tol)
     for poly in frontier:
         fp = np.array(poly + [poly[0]])
         ax.plot(
@@ -292,7 +298,7 @@ def _make_axes(square, va, ca, frontier_tol=0.5):
             label="Frontier" if poly is frontier[0] else "_",
         )
 
-    remaining = ca.remaining()
+    remaining = ca.remaining(region)
     for poly in remaining:
         rp = np.array(poly + [poly[0]])
         ax.fill(
@@ -355,11 +361,12 @@ def generate_search_frontier_engagement_multi():
 
     centre = (90.0, 60.0)
     seed = _circle(120, 30, 40, n=64)
-    ca = ClearedArea(boundary=boundary, islands=islands, initial=[seed])
+    region = StockRegion(boundary=boundary, islands=islands)
+    ca = ClearedArea(initial=[seed])
 
     centre = (90.0, 60.0)
 
-    frontier = ca.frontier(0.5)
+    frontier = ca.frontier(region, 0.5)
     end_positions = []
     for poly in frontier:
         if len(poly) < 4:
@@ -378,6 +385,7 @@ def generate_search_frontier_engagement_multi():
     for ep in end_positions:
         r = search_frontier_engagement(
             ca,
+            region,
             start=ToolPose(pos=ep, heading=0.0),
             radius=tool_radius,
             step_length=0.6,
@@ -392,7 +400,7 @@ def generate_search_frontier_engagement_multi():
     bnd = np.array(boundary + [boundary[0]])
     ax.plot(bnd[:, 0], bnd[:, 1], "k-", linewidth=1.5, label="Pocket")
 
-    ca_env = ca.envelope(tool_radius)
+    ca_env = ca.envelope(region, tool_radius)
     for i, env in enumerate(ca_env):
         ea = np.array(env + [env[0]])
         ax.plot(

@@ -150,7 +150,8 @@ def test_profile_inner_mutates_cleared_area():
     """profile_inner adds swept area to ClearedArea."""
     boundary = _rect(0, 0, 60, 60)
     part = Part.from_polygons(boundary, initial=[])
-    remaining_before = part.cleared.remaining()
+    region = part.stock_region
+    remaining_before = part.cleared.remaining(region)
     before_area = sum(get_polygon_area(p) for p in remaining_before)
 
     profile_inner(
@@ -170,7 +171,7 @@ def test_profile_inner_mutates_cleared_area():
         engagement_angle_threshold=3.141592653589793,
     )
 
-    remaining_after = part.cleared.remaining()
+    remaining_after = part.cleared.remaining(region)
     after_area = sum(get_polygon_area(p) for p in remaining_after)
     assert after_area < before_area, (
         f"remaining area did not decrease: {before_area} -> {after_area}"

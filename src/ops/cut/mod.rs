@@ -4,6 +4,7 @@ pub mod interp;
 pub mod part;
 pub mod search;
 pub mod stepper;
+pub mod stock_region;
 mod types;
 
 pub use cleared_area::ClearedArea;
@@ -11,6 +12,7 @@ pub use crescent::cut_area;
 pub use part::Part;
 pub use search::search_frontier_engagement;
 pub use stepper::{step, StepResult, StepStatus, StepperOptions};
+pub use stock_region::StockRegion;
 pub use types::ToolPose;
 
 /// Milling rotational direction. All cutting moves respect this

@@ -198,12 +198,7 @@ fn adaptive_clearing_py(
         _ => CutDirection::Ccw,
     };
 
-    let (pocket_boundary, islands) = part.inner.extract_boundary();
-    let pocket_boundary = pocket_boundary.unwrap_or_default();
-
     let opts = adaptive::AdaptiveClearingOptions {
-        pocket_boundary,
-        islands,
         tool_radius,
         step_over,
         step_length,

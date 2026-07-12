@@ -138,7 +138,7 @@ class TestTryResume:
         outer = _rect(30.0, 30.0, 60, 60)
         axis = MedialAxis.compute(outer, [], 1.0, 6.0)
         seed = _rect(30, 30, 10, 10)
-        ca = ClearedArea(boundary=outer, initial=[seed])
+        ca = ClearedArea(initial=[seed])
         vta, _ = _valid_tool_area(outer, [], 3.0)
         tool = Tool((30.0, 30.0, 0.0), 0.0, 3.0)
         ops = Ops()
@@ -162,7 +162,7 @@ class TestTryResume:
         outer = _rect(40.0, 40.0, 80, 80)
         axis = MedialAxis.compute(outer, [], 1.0, 6.0)
         seed = _rect(40, 40, 8, 8)
-        ca = ClearedArea(boundary=outer, initial=[seed])
+        ca = ClearedArea(initial=[seed])
         vta, _ = _valid_tool_area(outer, [], 3.0)
         tool = Tool((40.0, 40.0, 0.0), 0.0, 3.0)
         ops = Ops()
@@ -189,7 +189,7 @@ class TestTryResume:
         axis = MedialAxis.compute(outer, [], 1.0, 6.0)
         vta, _ = _valid_tool_area(outer, [], 3.0)
         # Clear the entire valid tool area.
-        ca = ClearedArea(boundary=outer, initial=vta)
+        ca = ClearedArea(initial=vta)
         tool = Tool((20.0, 20.0, 0.0), 0.0, 3.0)
         ops = Ops()
         result = try_resume(

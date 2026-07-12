@@ -2,6 +2,7 @@
 # ruff: noqa: E501, F401, F403, F405
 
 import builtins
+from raygeo.ops import cut
 import typing
 __all__ = [
     "ClearedArea",
@@ -9,7 +10,12 @@ __all__ = [
 
 @typing.final
 class ClearedArea:
-    def __new__(cls, boundary: typing.Sequence[tuple[builtins.float, builtins.float]], islands: typing.Sequence[typing.Sequence[tuple[builtins.float, builtins.float]]] = [], initial: typing.Optional[typing.Sequence[typing.Sequence[tuple[builtins.float, builtins.float]]]] = None) -> ClearedArea: ...
+    def __new__(cls, initial: typing.Optional[typing.Sequence[typing.Sequence[tuple[builtins.float, builtins.float]]]] = None) -> ClearedArea:
+        r"""
+        Create an empty ClearedArea.
+        
+        :param initial: Optional pre-seeded cleared polygons.
+        """
     def expand(self, path: typing.Sequence[tuple[builtins.float, builtins.float]], radius: builtins.float) -> None:
         r"""
         Sweep a disk along a polyline, adding the swept area to the
@@ -42,7 +48,7 @@ class ClearedArea:
         """
     def cut(self, polygons: typing.Sequence[typing.Sequence[tuple[builtins.float, builtins.float]]]) -> None:
         r"""
-        Add pre‑computed polygons to the cleared set.
+        Add pre-computed polygons to the cleared set.
         
         :param polygons: List of polygons (each a list of ``(x, y)``
                          vertices) to add.
@@ -57,11 +63,12 @@ class ClearedArea:
         :complexity: O(m + k) where m = number of fragments,
                      k = output vertices
         """
-    def remaining(self) -> builtins.list[builtins.list[tuple[builtins.float, builtins.float]]]:
+    def remaining(self, region: cut.StockRegion) -> builtins.list[builtins.list[tuple[builtins.float, builtins.float]]]:
         r"""
         Subtract cleared fragments from the stock, returning the uncut
         portion.
         
+        :param region: StockRegion defining the boundary and islands.
         :returns: List of polygons representing the uncut portion.
         :complexity: O(n * m) where n = stock vertices, m = fragments
         """
@@ -76,21 +83,23 @@ class ClearedArea:
         :complexity: O(n log n) worst case when union required,
                      O(n) when inputs are disjoint from existing fragments
         """
-    def frontier(self, simplify_tol: builtins.float) -> builtins.list[builtins.list[tuple[builtins.float, builtins.float]]]:
+    def frontier(self, region: cut.StockRegion, simplify_tol: builtins.float) -> builtins.list[builtins.list[tuple[builtins.float, builtins.float]]]:
         r"""
         Return a unioned, simplified snapshot of the current outer
         boundary, clipped to the stock.
         
+        :param region: StockRegion defining the boundary and islands.
         :param simplify_tol: Tolerance in mm for polyline simplification.
         :returns: List of polygons representing the outer boundary.
         :complexity: O(n log n)
         """
-    def bites(self, step_over: builtins.float, tool_radius: builtins.float, simplify_tol: builtins.float) -> builtins.list[builtins.list[tuple[builtins.float, builtins.float]]]:
+    def bites(self, region: cut.StockRegion, step_over: builtins.float, tool_radius: builtins.float, simplify_tol: builtins.float) -> builtins.list[builtins.list[tuple[builtins.float, builtins.float]]]:
         r"""
         Compute the "bites" — new material reachable by expanding the
         current frontier outward by *step_over*, clipping to the
         tool-centre envelope, and subtracting already-cleared portions.
         
+        :param region: StockRegion defining the boundary and islands.
         :param step_over: Lateral step-over in mm.
         :param tool_radius: Tool radius (mm) for computing the envelope.
         :param simplify_tol: Tolerance in mm for frontier simplification.
@@ -99,17 +108,17 @@ class ClearedArea:
         """
     def begin_batch(self) -> None:
         r"""
-        Begin buffering single‑segment expansions.
+        Begin buffering single-segment expansions.
         
         Subsequent calls to ``expand_batched`` are queued without a
         union.  Call ``commit_batch`` to union all queued sweeps with
         the stored fragments in a single pass.
         
-        Calling this while a batch is already active is a no‑op.
+        Calling this while a batch is already active is a no-op.
         """
     def expand_batched(self, prev: tuple[builtins.float, builtins.float], next: tuple[builtins.float, builtins.float], radius: builtins.float) -> None:
         r"""
-        Queue a single‑segment expansion into the current batch.
+        Queue a single-segment expansion into the current batch.
         
         The segment swept polygon is stored in the internal buffer.
         Does **not** perform a union until ``commit_batch`` is called.
@@ -148,11 +157,11 @@ class ClearedArea:
         """
     def get_angular_engagement(self, center: tuple[builtins.float, builtins.float], radius: builtins.float) -> builtins.float:
         r"""
-        Compute angular engagement by exact circle–polygon intersection.
+        Compute angular engagement by exact circle-polygon intersection.
         
         Creates a disk polygon at *center* with *radius*, intersects it
         with all nearby cleared fragments, and returns the uncleared
-        angular extent in ``[0, 2π]``.
+        angular extent in ``[0, 2*pi]``.
         
         :param center: Query point ``(x, y)``.
         :param radius: Disk radius (mm).
@@ -168,7 +177,7 @@ class ClearedArea:
         :param c1: Previous centre ``(x, y)``.
         :param c2: Next centre ``(x, y)``.
         :param radius: Disk radius (mm).
-        :returns: Fresh cut area (mm²).
+        :returns: Fresh cut area (mm2).
         """
     def path_engagement(self, path: typing.Sequence[tuple[builtins.float, builtins.float]], radius: builtins.float) -> builtins.list[tuple[builtins.float, builtins.float, builtins.float]]:
         r"""
@@ -178,17 +187,19 @@ class ClearedArea:
         :param radius: Disk radius (mm).
         :returns: List of ``(angle, area, chord_depth)`` tuples.
         """
-    def compact_if_needed(self, tol: builtins.float) -> None:
+    def compact_if_needed(self, region: cut.StockRegion, tol: builtins.float) -> None:
         r"""
         Compact fragments if total vertex count exceeds the default
         threshold.
         
+        :param region: StockRegion defining the boundary and islands.
         :param tol: Vertex simplification tolerance in mm.
         """
-    def compact_if_needed_threshold(self, tol: builtins.float, threshold: builtins.int) -> None:
+    def compact_if_needed_threshold(self, region: cut.StockRegion, tol: builtins.float, threshold: builtins.int) -> None:
         r"""
         Compact with an explicit vertex-count threshold.
         
+        :param region: StockRegion defining the boundary and islands.
         :param tol: Vertex simplification tolerance in mm.
         :param threshold: Vertex count threshold above which compaction
                           is triggered.
@@ -197,35 +208,37 @@ class ClearedArea:
         r"""
         Total cleared area.
         
-        :returns: Total cleared area in mm².
+        :returns: Total cleared area in mm2.
         :complexity: O(1)
         """
-    def remaining_area(self) -> builtins.float:
+    def remaining_area(self, region: cut.StockRegion) -> builtins.float:
         r"""
         Remaining uncut area (boundary minus islands minus cleared
         fragments).  Only positive-area (CCW) polygons are counted,
         so island holes do not inflate the result.
         
-        :returns: Remaining uncut area in mm².
+        :param region: StockRegion defining the boundary and islands.
+        :returns: Remaining uncut area in mm2.
         """
-    def actionable_remaining(self, inset_distance: builtins.float) -> builtins.float:
+    def actionable_remaining(self, region: cut.StockRegion, inset_distance: builtins.float) -> builtins.float:
         r"""
         Uncleared area **inside the actionable zone** of the pocket.
         
         The actionable zone is the boundary inset by
         ``inset_distance``, with islands buffered by the same amount.
-        Material outside this zone — wall-band slivers thinner than
-        ``inset_distance`` — is excluded, so this metric can gate
+        Material outside this zone -- wall-band slivers thinner than
+        ``inset_distance`` -- is excluded, so this metric can gate
         convergence on whether any *actionable* material remains.
         
         ``inset_distance`` is typically ``step_length``: slivers
         thinner than the per-step advance get skipped by the
         stepper, so they should not gate convergence.
         
+        :param region: StockRegion defining the boundary and islands.
         :param inset_distance: Inset distance (mm) defining the
                                actionable zone (boundary inset,
                                islands buffered).
-        :returns: Actionable remaining area in mm².
+        :returns: Actionable remaining area in mm2.
         """
     def fragments(self) -> builtins.list[builtins.list[tuple[builtins.float, builtins.float]]]:
         r"""
@@ -246,11 +259,12 @@ class ClearedArea:
         
         :returns: Fragment count.
         """
-    def envelope(self, tool_radius: builtins.float) -> builtins.list[builtins.list[tuple[builtins.float, builtins.float]]]:
+    def envelope(self, region: cut.StockRegion, tool_radius: builtins.float) -> builtins.list[builtins.list[tuple[builtins.float, builtins.float]]]:
         r"""
         The tool-centre envelope (inset of boundary by ``tool_radius``,
         minus islands).
         
+        :param region: StockRegion defining the boundary and islands.
         :param tool_radius: Tool radius (mm).
         :returns: List of polygons representing the tool-centre envelope.
         """

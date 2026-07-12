@@ -45,6 +45,7 @@ pub fn adaptive_wavefronts(
 
     for _ in 0..MAX_WAVEFRONT_ITERATIONS {
         let bounded = part.cleared.bites(
+            &part.stock_region,
             opts.step_over,
             opts.tool_radius,
             if opts.precision > 0.0 {
@@ -108,7 +109,9 @@ pub fn adaptive_wavefronts(
         // `cleared.total_area()` could ever reach, triggering early
         // exit before the wavefront reached the walls.
         if ring_area < opts.area_tolerance
-            || part.cleared.actionable_remaining(opts.tool_radius)
+            || part
+                .cleared
+                .actionable_remaining(&part.stock_region, opts.tool_radius)
                 < opts.area_tolerance
         {
             break;

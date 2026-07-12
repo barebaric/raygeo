@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.patches import Circle
 
+from raygeo.ops.cut import StockRegion
 from raygeo.ops.cut.cleared_area import ClearedArea
 
 
@@ -14,7 +15,8 @@ def generate_raster():
     # Square pocket 80x80
     boundary = [(5, 5), (85, 5), (85, 85), (5, 85)]
 
-    ca = ClearedArea(boundary=boundary)
+    region = StockRegion(boundary=boundary)
+    ca = ClearedArea()
     tool_radius = 3.0
     for i in range(15):
         x = 12.0 + i * 5.0
@@ -22,7 +24,7 @@ def generate_raster():
             break
         ca.expand([(x, 10), (x, 80)], tool_radius)
 
-    remaining = ca.remaining()
+    remaining = ca.remaining(region)
 
     fig, ax = plt.subplots(figsize=(7, 7))
 
@@ -70,11 +72,12 @@ def generate_bulk():
     """Bulk polygon insertion cleared area."""
     # L-shaped pocket
     pocket = [(0, 0), (100, 0), (100, 100), (60, 100), (60, 40), (0, 40)]
-    ca2 = ClearedArea(boundary=pocket)
+    region2 = StockRegion(boundary=pocket)
+    ca2 = ClearedArea()
     # Bulk cleared region (a large rectangle inside the pocket)
     cleared_bulk = [(10, 10), (90, 10), (90, 90), (10, 90)]
     ca2.cut([cleared_bulk])
-    remaining2 = ca2.remaining()
+    remaining2 = ca2.remaining(region2)
 
     fig2, ax2 = plt.subplots(figsize=(7, 7))
 
@@ -112,7 +115,7 @@ def generate_bulk():
 
 def generate_cut_fast():
     """cut_fast returns only the newly-added portion."""
-    ca = ClearedArea(boundary=[])
+    ca = ClearedArea()
     # Start with a square cleared area
     initial = [(10, 10), (90, 10), (90, 90), (10, 90)]
     ca.cut([initial])
@@ -153,13 +156,14 @@ def generate_cut_fast():
 
 def generate_frontier():
     """frontier returns a simplified outer boundary."""
-    ca = ClearedArea(boundary=[])
+    region = StockRegion(boundary=[], islands=[])
+    ca = ClearedArea()
     # Two overlapping squares that should be merged
     poly1 = [(10, 10), (60, 10), (60, 60), (10, 60)]
     poly2 = [(40, 40), (90, 40), (90, 90), (40, 90)]
     ca.cut([poly1, poly2])
 
-    f = ca.frontier(0.5)
+    f = ca.frontier(region, 0.5)
 
     fig, ax = plt.subplots(figsize=(7, 7))
 
@@ -204,10 +208,10 @@ def generate_expand_step():
     # Initial cleared area: a small square the segment does NOT fully cover.
     initial_poly = [(15, 15), (25, 15), (25, 25), (15, 25)]
 
-    ca = ClearedArea(boundary=[])
+    ca = ClearedArea()
     ca.cut([initial_poly])
 
-    ca_final = ClearedArea(boundary=[])
+    ca_final = ClearedArea()
     ca_final.cut([initial_poly])
     ca_final.expand_step(prev, nxt, tool_radius)
 
@@ -274,16 +278,17 @@ def generate_bites():
         ]
 
     tool_radius = 4.0
-    ca = ClearedArea(boundary=pocket)
+    region = StockRegion(boundary=pocket)
+    ca = ClearedArea()
     init = octagon(12.0)
     ca.cut([init])
 
     # Run 3 sequential bite steps, snapshotting after each
-    snapshots = [ca.frontier(0.5)]
+    snapshots = [ca.frontier(region, 0.5)]
     for _ in range(3):
-        b = ca.bites(step_over, tool_radius, 1.0)
+        b = ca.bites(region, step_over, tool_radius, 1.0)
         ca.cut_fast(b)
-        snapshots.append(ca.frontier(0.5))
+        snapshots.append(ca.frontier(region, 0.5))
 
     fig, axes = plt.subplots(1, 3, figsize=(18, 6))
     orange_fill = "#eb8d3b"
@@ -320,7 +325,7 @@ def generate_bites():
 
 def generate_signed_boundary_distance():
     """Heatmap of signed distance around a cleared rectangle."""
-    ca = ClearedArea(boundary=[])
+    ca = ClearedArea()
     ca.cut([[(-20, -20), (20, -20), (20, 20), (-20, 20)]])
 
     xs = np.linspace(-40, 40, 80)
@@ -350,7 +355,7 @@ def generate_signed_boundary_distance():
 
 def generate_step_batch():
     """Visualise multiple segments batched then committed at once."""
-    ca = ClearedArea(boundary=[])
+    ca = ClearedArea()
     ca.cut([[(15, 15), (25, 15), (25, 25), (15, 25)]])
     ca.begin_batch()
 
@@ -412,7 +417,7 @@ def generate_expand():
     path = [(10, 10), (20, 30), (40, 25), (55, 40)]
     r = 4.0
 
-    ca = ClearedArea(boundary=[])
+    ca = ClearedArea()
     ca.cut([[(15, 15), (25, 15), (25, 25), (15, 25)]])
     ca.expand(path, r)
 
@@ -457,9 +462,10 @@ def generate_remaining():
     pocket = [(0, 0), (100, 0), (100, 100), (0, 100)]
     cleared = [(20, 20), (80, 20), (80, 80), (20, 80)]
 
-    ca = ClearedArea(boundary=pocket)
+    region = StockRegion(boundary=pocket)
+    ca = ClearedArea()
     ca.cut([cleared])
-    remaining = ca.remaining()
+    remaining = ca.remaining(region)
 
     fig, ax = plt.subplots(figsize=(8, 7))
 
@@ -513,7 +519,7 @@ def generate_remaining():
 
 def generate_query_window():
     """Show fragments returned by query_window within a bbox."""
-    ca = ClearedArea(boundary=[])
+    ca = ClearedArea()
     ca.cut(
         [
             [(10, 10), (40, 10), (40, 40), (10, 40)],
@@ -583,7 +589,7 @@ def generate_local_vs_global():
 
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 7))
 
-    cag = ClearedArea(boundary=[])
+    cag = ClearedArea()
     for prev, nxt, r in segs:
         cag.expand_step(prev, nxt, r)
     vg = sum(len(p) for p in cag.fragments())
@@ -594,7 +600,7 @@ def generate_local_vs_global():
     ax1.set_title(f"Global — {len(cag.fragments())} frags, {vg} verts")
     ax1.set_aspect("equal")
 
-    cal = ClearedArea(boundary=[])
+    cal = ClearedArea()
     for prev, nxt, r in segs:
         cal.begin_batch()
         cal.expand_batched(prev, nxt, r)

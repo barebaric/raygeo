@@ -16,6 +16,7 @@ use crate::geo::shape::polygon::{
     JoinStyle,
 };
 use crate::ops::cut::crescent;
+use crate::ops::cut::stock_region::StockRegion;
 use crate::types::{Point, Polygon, Rect};
 
 /// Single-entry cache for [`ClearedArea::cut_area_split`].
@@ -33,10 +34,6 @@ struct SweepCache {
 }
 
 pub struct ClearedArea {
-    /// Stock pocket outline (CCW).
-    pub(crate) boundary: Polygon,
-    /// Stock islands / holes (CW).
-    pub(crate) islands: Vec<Polygon>,
     pub(crate) fragments: Vec<Polygon>,
     pub(crate) grid: SpatialGrid,
     pub(crate) cell_size: f64,
@@ -57,10 +54,6 @@ pub struct ClearedArea {
     /// Cached `get_polygons_union(&self.fragments)` for
     /// [`Self::actionable_remaining`].  Cleared when fragments change.
     fragments_union_cache: Mutex<Option<Vec<Polygon>>>,
-    /// Cached stock shape (boundary ∖ islands).  Never changes after
-    /// construction (boundary/islands are swapped via `swap_*` which
-    /// clears this cache).
-    stock_cache: Mutex<Option<Vec<Polygon>>>,
     /// Cached result of [`Self::remaining_area`].  Invalidated when
     /// fragments change.
     remaining_area_cache: Mutex<Option<f64>>,
@@ -77,13 +70,10 @@ pub struct ClearedArea {
 impl ClearedArea {
     // ── Construction ───────────────────────────────────────────────
 
-    /// Create an empty cleared area inside the given stock
-    /// (`boundary` = CCW pocket outline, `islands` = CW holes).
-    pub fn new(boundary: &Polygon, islands: &[Polygon]) -> Self {
+    /// Create an empty cleared area.
+    pub fn new() -> Self {
         let cell_size = 10.0;
         ClearedArea {
-            boundary: boundary.clone(),
-            islands: islands.to_vec(),
             fragments: Vec::new(),
             grid: SpatialGrid::new(cell_size),
             cell_size,
@@ -92,38 +82,17 @@ impl ClearedArea {
             batch_active: false,
             sweep_cache: Mutex::new(None),
             fragments_union_cache: Mutex::new(None),
-            stock_cache: Mutex::new(None),
             remaining_area_cache: Mutex::new(None),
             actionable_cache: Mutex::new(None),
             frag_version: AtomicUsize::new(0),
         }
     }
 
-    /// Create a cleared area pre-seeded with `initial` polygons inside
-    /// the given stock.  `initial` is **not** clipped.
+    /// Create a cleared area pre-seeded with `initial` polygons.
+    /// `initial` is **not** clipped.
     #[prof]
-    pub fn from_polygons(
-        initial: &[Polygon],
-        boundary: &Polygon,
-        islands: &[Polygon],
-    ) -> Self {
-        let cell_size = 10.0;
-        let mut ca = ClearedArea {
-            boundary: boundary.clone(),
-            islands: islands.to_vec(),
-            fragments: Vec::new(),
-            grid: SpatialGrid::new(cell_size),
-            cell_size,
-            batch_path: Vec::new(),
-            batch_radius: 0.0,
-            batch_active: false,
-            sweep_cache: Mutex::new(None),
-            fragments_union_cache: Mutex::new(None),
-            stock_cache: Mutex::new(None),
-            remaining_area_cache: Mutex::new(None),
-            actionable_cache: Mutex::new(None),
-            frag_version: AtomicUsize::new(0),
-        };
+    pub fn with_fragments(initial: &[Polygon]) -> Self {
+        let mut ca = Self::new();
         for poly in initial {
             if poly.len() >= 3 {
                 let p = poly.clone();
@@ -139,47 +108,29 @@ impl ClearedArea {
 
     /// The stock shape: boundary ∖ islands.
     #[prof]
-    fn stock(&self) -> Vec<Polygon> {
-        if self.boundary.len() < 3 {
+    fn stock(&self, region: &StockRegion) -> Vec<Polygon> {
+        if region.boundary.len() < 3 {
             return vec![];
         }
-        let mut cache = self.stock_cache.lock().unwrap();
-        if let Some(ref cached) = *cache {
-            return cached.clone();
-        }
-        let result = if self.islands.is_empty() {
-            vec![self.boundary.clone()]
+        if region.islands.is_empty() {
+            vec![region.boundary.clone()]
         } else {
             get_polygons_group_difference(
-                std::slice::from_ref(&self.boundary),
-                &self.islands,
+                std::slice::from_ref(&region.boundary),
+                &region.islands,
             )
-        };
-        *cache = Some(result.clone());
-        result
+        }
     }
 
     /// The tool-centre envelope (inset of boundary by `tool_radius`,
     /// minus islands).
     #[prof]
-    pub fn envelope(&self, tool_radius: f64) -> Vec<Polygon> {
-        compute_inset_region(&self.boundary, tool_radius, &self.islands).0
-    }
-
-    /// Temporarily replace islands, returning the old islands.
-    /// Invalidates caches so subsequent queries use the new islands.
-    pub fn swap_islands(&mut self, islands: &[Polygon]) -> Vec<Polygon> {
-        let old = std::mem::replace(&mut self.islands, islands.to_vec());
-        self.clear_sweep_cache();
-        old
-    }
-
-    /// Temporarily replace the boundary polygon, returning the old one.
-    /// Invalidates caches so subsequent queries use the new boundary.
-    pub fn swap_boundary(&mut self, boundary: &Polygon) -> Polygon {
-        let old = std::mem::replace(&mut self.boundary, boundary.clone());
-        self.clear_sweep_cache();
-        old
+    pub fn envelope(
+        &self,
+        region: &StockRegion,
+        tool_radius: f64,
+    ) -> Vec<Polygon> {
+        compute_inset_region(&region.boundary, tool_radius, &region.islands).0
     }
 
     /// Find a safe plunge point in the cleared area near `near`.
@@ -188,6 +139,7 @@ impl ClearedArea {
     /// using this area's fragments, boundary, and islands.
     pub fn find_plunge_point(
         &self,
+        region: &StockRegion,
         near: Point,
         tool_radius: f64,
         search_radius: f64,
@@ -195,8 +147,8 @@ impl ClearedArea {
         crate::ops::feature::near::find_plunge_point(
             near,
             &self.fragments,
-            &self.boundary,
-            &self.islands,
+            &region.boundary,
+            &region.islands,
             tool_radius,
             search_radius,
         )
@@ -210,7 +162,6 @@ impl ClearedArea {
     fn clear_sweep_cache(&self) {
         *self.sweep_cache.lock().unwrap() = None;
         *self.fragments_union_cache.lock().unwrap() = None;
-        *self.stock_cache.lock().unwrap() = None;
         *self.remaining_area_cache.lock().unwrap() = None;
         *self.actionable_cache.lock().unwrap() = None;
         self.frag_version.store(
@@ -295,8 +246,8 @@ impl ClearedArea {
     ///
     /// Polygons below 0.01 mm² are dropped as Clipper2 numerical artifacts.
     #[prof]
-    pub fn remaining(&self) -> Vec<Polygon> {
-        let stock = self.stock();
+    pub fn remaining(&self, region: &StockRegion) -> Vec<Polygon> {
+        let stock = self.stock(region);
         if self.fragments.is_empty() {
             return stock;
         }
@@ -319,12 +270,12 @@ impl ClearedArea {
     /// flat-path output of the difference operation (which can
     /// produce orphan CCW outers around islands).
     #[prof]
-    pub fn remaining_area(&self) -> f64 {
+    pub fn remaining_area(&self, region: &StockRegion) -> f64 {
         let mut cache = self.remaining_area_cache.lock().unwrap();
         if let Some(cached) = *cache {
             return cached;
         }
-        let stock = self.stock();
+        let stock = self.stock(region);
         let result = if stock.is_empty() {
             0.0
         } else if self.fragments.is_empty() {
@@ -366,7 +317,11 @@ impl ClearedArea {
     /// Computed lazily on each call as
     /// `area(inset_region − fragments_union)`.
     #[prof]
-    pub fn actionable_remaining(&self, inset_distance: f64) -> f64 {
+    pub fn actionable_remaining(
+        &self,
+        region: &StockRegion,
+        inset_distance: f64,
+    ) -> f64 {
         let version = self.frag_version.load(Ordering::Relaxed);
         {
             let cache = self.actionable_cache.lock().unwrap();
@@ -376,13 +331,16 @@ impl ClearedArea {
                 }
             }
         }
-        let region =
-            compute_inset_region(&self.boundary, inset_distance, &self.islands)
-                .0;
-        let result = if region.is_empty() {
+        let inset_region = compute_inset_region(
+            &region.boundary,
+            inset_distance,
+            &region.islands,
+        )
+        .0;
+        let result = if inset_region.is_empty() {
             0.0
         } else if self.fragments.is_empty() {
-            region
+            inset_region
                 .iter()
                 .map(|p| get_polygon_signed_area(p))
                 .sum::<f64>()
@@ -392,7 +350,7 @@ impl ClearedArea {
                 let mut cache = self.fragments_union_cache.lock().unwrap();
                 let unioned = cache
                     .get_or_insert_with(|| get_polygons_union(&self.fragments));
-                get_polygons_group_difference(&region, unioned)
+                get_polygons_group_difference(&inset_region, unioned)
             };
             let total: f64 = unclipped
                 .into_iter()
@@ -470,9 +428,13 @@ impl ClearedArea {
     /// Return a unioned, simplified snapshot of the current outer
     /// boundary, clipped to the stock.
     #[prof]
-    pub fn frontier(&self, simplify_tol: f64) -> Vec<Polygon> {
+    pub fn frontier(
+        &self,
+        region: &StockRegion,
+        simplify_tol: f64,
+    ) -> Vec<Polygon> {
         let unioned = get_polygons_union(&self.fragments);
-        let stock = self.stock();
+        let stock = self.stock(region);
         let clipped = if stock.is_empty() {
             unioned
         } else {
@@ -498,11 +460,12 @@ impl ClearedArea {
     #[prof]
     pub fn bites(
         &self,
+        region: &StockRegion,
         step_over: f64,
         tool_radius: f64,
         simplify_tol: f64,
     ) -> Vec<Polygon> {
-        let f = self.frontier(simplify_tol);
+        let f = self.frontier(region, simplify_tol);
         if f.is_empty() {
             return vec![];
         }
@@ -515,7 +478,7 @@ impl ClearedArea {
         }
         let material =
             get_polygons_group_difference(&expanded, &self.fragments);
-        let envelope = self.envelope(tool_radius);
+        let envelope = self.envelope(region, tool_radius);
         get_polygons_group_intersection(&material, &envelope)
     }
 
@@ -663,19 +626,24 @@ impl ClearedArea {
     /// When total vertex count exceeds `threshold`, compact fragments by
     /// replacing them with the simplified frontier.
     #[prof]
-    pub fn compact_if_needed(&mut self, tol: f64) {
-        self.compact_if_needed_threshold(tol, 75)
+    pub fn compact_if_needed(&mut self, region: &StockRegion, tol: f64) {
+        self.compact_if_needed_threshold(region, tol, 75)
     }
 
     /// Like [`compact_if_needed`](Self::compact_if_needed) but with an
     /// explicit vertex-count threshold.
     #[prof]
-    pub fn compact_if_needed_threshold(&mut self, tol: f64, threshold: usize) {
+    pub fn compact_if_needed_threshold(
+        &mut self,
+        region: &StockRegion,
+        tol: f64,
+        threshold: usize,
+    ) {
         let total: usize = self.fragments.iter().map(|p| p.len()).sum();
         if total < threshold {
             return;
         }
-        let frontier = self.frontier(tol);
+        let frontier = self.frontier(region, tol);
         self.replace_fragments(frontier);
     }
 
@@ -815,8 +783,6 @@ impl ClearedArea {
 impl Clone for ClearedArea {
     fn clone(&self) -> Self {
         let mut ca = ClearedArea {
-            boundary: self.boundary.clone(),
-            islands: self.islands.clone(),
             fragments: self.fragments.clone(),
             grid: SpatialGrid::new(self.cell_size),
             cell_size: self.cell_size,
@@ -825,7 +791,6 @@ impl Clone for ClearedArea {
             batch_active: self.batch_active,
             sweep_cache: Mutex::new(None),
             fragments_union_cache: Mutex::new(None),
-            stock_cache: Mutex::new(None),
             remaining_area_cache: Mutex::new(None),
             actionable_cache: Mutex::new(None),
             frag_version: AtomicUsize::new(
@@ -840,8 +805,6 @@ impl Clone for ClearedArea {
 impl std::fmt::Debug for ClearedArea {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("ClearedArea")
-            .field("boundary", &self.boundary)
-            .field("islands", &self.islands)
             .field("fragments", &self.fragments.len())
             .field("cell_size", &self.cell_size)
             .field("batch_active", &self.batch_active)
@@ -851,6 +814,6 @@ impl std::fmt::Debug for ClearedArea {
 
 impl Default for ClearedArea {
     fn default() -> Self {
-        Self::new(&Polygon::new(), &[])
+        Self::new()
     }
 }

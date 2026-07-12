@@ -14,7 +14,7 @@ from raygeo.ops.assembly.adaptive import (
     adaptive_clearing,
     target_area_per_distance,
 )
-from raygeo.ops.cut import Part
+from raygeo.ops.cut import Part, StockRegion
 from raygeo.ops.cut.crescent import cut_area
 from raygeo.ops.types import CommandType
 
@@ -60,9 +60,9 @@ def _valid_tool_area(boundary, islands, radius):
     return region, total
 
 
-def _remaining_area(ca, valid_polys):
+def _remaining_area(ca, region, valid_polys):
     """Sum of remaining (uncut) area within the valid tool-centre region."""
-    remaining = ca.remaining()
+    remaining = ca.remaining(region)
     if not valid_polys:
         return sum(get_polygon_area(p) for p in remaining)
     clipped = get_polygons_group_intersection(remaining, valid_polys)
@@ -239,6 +239,7 @@ def test_adaptive_clearing_fully_clears_rect():
 
     seed = [_circle(0, 0, 5)]
     part = Part.from_polygons(boundary, initial=seed)
+    region = StockRegion(boundary=boundary)
     adaptive_clearing(
         part,
         tool_radius=3.0,
@@ -248,7 +249,7 @@ def test_adaptive_clearing_fully_clears_rect():
         area_tolerance=tol,
     )
 
-    remaining = _remaining_area(part.cleared, valid_polys)
+    remaining = _remaining_area(part.cleared, region, valid_polys)
     assert remaining < tol, (
         f"expected remaining < {tol}, got {remaining:.2f} mm²"
     )
@@ -266,6 +267,7 @@ def test_adaptive_clearing_fully_clears_with_island():
 
     seed = [_circle(-10, 0, 5)]
     part = Part.from_polygons(boundary, islands, initial=seed)
+    region = StockRegion(boundary=boundary, islands=islands)
     adaptive_clearing(
         part,
         tool_radius=3.0,
@@ -275,7 +277,7 @@ def test_adaptive_clearing_fully_clears_with_island():
         area_tolerance=tol,
     )
 
-    remaining = _remaining_area(part.cleared, valid_polys)
+    remaining = _remaining_area(part.cleared, region, valid_polys)
     assert remaining < tol, (
         f"expected remaining < {tol}, got {remaining:.2f} mm²"
     )

@@ -52,6 +52,14 @@ size_mm: tuple[float, float]
 
 Physical size `(width, height)` in millimetres.
 
+### `stock_region`
+
+```python
+stock_region: StockRegion
+```
+
+Boundary and islands of the workpiece — cached extraction from geometry. Read-only.
+
 ### `from_polygons()`
 
 ```python
@@ -84,3 +92,23 @@ True if this Part has geometry.
 | Parameter | Type   | Description |
 | --------- | ------ | ----------- |
 | _Returns_ | `bool` |             |
+
+## StockRegion
+
+Boundary and islands of a workpiece — the geometric input to clearing operations.
+
+### `boundary`
+
+```python
+boundary: list[tuple[float, float]]
+```
+
+Outer boundary polygon as `[(x, y), ...]`.
+
+### `islands`
+
+```python
+islands: list[list[tuple[float, float]]]
+```
+
+List of island polygons, each `[(x, y), ...]`.

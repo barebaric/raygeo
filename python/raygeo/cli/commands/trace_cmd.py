@@ -133,12 +133,6 @@ def _run_adaptive(args, trace_path):
         f"({sum(len(p) for p in seed_polys)} verts)"
     )
 
-    ca = ClearedArea(
-        boundary=list(scenario.boundary),
-        islands=[list(isl) for isl in scenario.islands],
-        initial=seed_polys,
-    )
-
     if entry_ops is not None:
         print(f"  Entry: {entry_ops.len()} ops")
 
@@ -164,10 +158,11 @@ def _run_adaptive(args, trace_path):
             cut_direction=scenario.cut_direction,
         )
         clear_result.write_trace(str(tp), "adaptive", "AdaptiveClear")
+        rem = part.cleared.remaining_area(part.stock_region)
         print(
             f"  Clearing: {clear_result.ops.len()} ops, "
-            f"{ca.total_area():.1f} mm² cleared, "
-            f"{ca.remaining_area():.1f} mm² remaining"
+            f"{part.cleared.total_area():.1f} mm² cleared, "
+            f"{rem:.1f} mm² remaining"
         )
     except RuntimeError as e:
         print(f"  ERROR: {e}", file=sys.stderr)
@@ -188,11 +183,7 @@ def _run_profile(args, trace_path):
         f"islands: {len(scenario.islands)}"
     )
 
-    ca = ClearedArea(
-        boundary=list(scenario.boundary),
-        islands=[list(isl) for isl in scenario.islands],
-        initial=seed_polys,
-    )
+    ca = ClearedArea(initial=seed_polys)
 
     tp = pathlib.Path(trace_path)
     mtime_before = tp.stat().st_mtime_ns if tp.exists() else 0

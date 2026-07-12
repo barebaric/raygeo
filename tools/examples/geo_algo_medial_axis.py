@@ -8,7 +8,7 @@ import numpy as np
 from raygeo.cnc.machining.wavefront import build_wavefront_workplan
 from raygeo.geo.algo.medial_axis import MedialAxis
 from raygeo.ops.assembly.spiral import generate_spiral
-from raygeo.ops.cut import Part
+from raygeo.ops.cut import Part, StockRegion
 from raygeo.ops.cut.cleared_area import ClearedArea
 
 
@@ -235,13 +235,12 @@ def generate_mat_trimming():
         direction=seed_step["direction"],
         angular_step=seed_step["angular_step"],
     )
+    region = StockRegion(boundary=boundary, islands=islands)
     ca = ClearedArea(
-        boundary=boundary,
-        islands=islands,
         initial=part.cleared.fragments(),
     )
     for _ in range(10):
-        bites = ca.bites(step_over, tool_radius, 0.01)
+        bites = ca.bites(region, step_over, tool_radius, 0.01)
         if not bites:
             break
         ca.cut_fast(bites)

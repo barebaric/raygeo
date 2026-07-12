@@ -89,7 +89,7 @@ fn frontier_hole_resume(
     tool: &Tool,
     detail: &mut u8,
 ) -> Option<ToolPose> {
-    let frontier = ctx.part.cleared.frontier(0.001);
+    let frontier = ctx.part.cleared.frontier(&ctx.part.stock_region, 0.001);
 
     let holes: Vec<Polygon> = frontier
         .iter()

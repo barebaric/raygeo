@@ -5,6 +5,7 @@ import math
 import pytest
 
 from raygeo.ops.assembly.adaptive import target_area_per_distance
+from raygeo.ops.cut import StockRegion
 from raygeo.ops.cut.cleared_area import ClearedArea
 from raygeo.ops.cut.search import (
     ToolPose,
@@ -31,10 +32,12 @@ def _big_vta():
 
 class TestSearchFrontierEngagement:
     def test_returns_tool_pose(self):
-        ca = ClearedArea(boundary=[])
+        ca = ClearedArea()
+        region = StockRegion(boundary=[], islands=[])
         ca.cut([_circle(50, 40, 15)])
         result = search_frontier_engagement(
             ca,
+            region,
             ToolPose(pos=(50.0, 55.0, 0.0), heading=0.0),
             3.0,
             0.6,
@@ -45,9 +48,11 @@ class TestSearchFrontierEngagement:
         assert isinstance(result, ToolPose)
 
     def test_none_for_empty(self):
-        ca = ClearedArea(boundary=[])
+        ca = ClearedArea()
+        region = StockRegion(boundary=[], islands=[])
         result = search_frontier_engagement(
             ca,
+            region,
             ToolPose(pos=(50.0, 55.0, 0.0), heading=0.0),
             3.0,
             0.6,
@@ -58,10 +63,12 @@ class TestSearchFrontierEngagement:
         assert result is None
 
     def test_none_when_min_too_high(self):
-        ca = ClearedArea(boundary=[])
+        ca = ClearedArea()
+        region = StockRegion(boundary=[], islands=[])
         ca.cut([_circle(50, 40, 15)])
         result = search_frontier_engagement(
             ca,
+            region,
             ToolPose(pos=(50.0, 55.0, 0.0), heading=0.0),
             3.0,
             0.6,
@@ -73,10 +80,12 @@ class TestSearchFrontierEngagement:
 
     def test_skips_closest_vertex(self):
         """Result differs from the closest frontier vertex (not start=end)."""
-        ca = ClearedArea(boundary=[])
+        ca = ClearedArea()
+        region = StockRegion(boundary=[], islands=[])
         ca.cut([_circle(50, 40, 15)])
         result = search_frontier_engagement(
             ca,
+            region,
             ToolPose(pos=(50.0, 55.0, 0.0), heading=0.0),
             3.0,
             0.6,
@@ -94,12 +103,14 @@ class TestSearchFrontierEngagement:
         frontier by ``radius - advance``, not sitting on the
         boundary.
         """
-        ca = ClearedArea(boundary=[])
+        ca = ClearedArea()
+        region = StockRegion(boundary=[], islands=[])
         ca.cut([_circle(50, 40, 15)])
         R = 3.0
         advance = 1.5
         result = search_frontier_engagement(
             ca,
+            region,
             ToolPose(pos=(50.0, 55.0, 0.0), heading=0.0),
             R,
             0.6,
@@ -169,11 +180,13 @@ class TestSearchFrontierEngagementMaxBound:
             t = i / n
             poly.append((-s, s - 2 * s * t))  # left edge
 
-        ca = ClearedArea(boundary=[])
+        ca = ClearedArea()
+        region = StockRegion(boundary=[], islands=[])
         ca.cut([poly])
 
         result = search_frontier_engagement(
             ca,
+            region,
             ToolPose(pos=(45.0, -49.0, 0.0), heading=0.0),
             R,
             step_length,
@@ -209,12 +222,14 @@ class TestSearchFrontierEngagementMaxBound:
         bot = (0.0, -60.0 * math.tan(half_angle))
         # Wound CCW: bot → tip → top → back
         wedge = [bot, tip, top, (0.0, 0.0)]
-        ca = ClearedArea(boundary=[])
+        ca = ClearedArea()
+        region = StockRegion(boundary=[], islands=[])
         ca.cut([wedge])
 
         # Start near the tip, heading up (along the top edge).
         result = search_frontier_engagement(
             ca,
+            region,
             ToolPose(pos=(55.0, 1.0, 0.0), heading=math.pi / 2),
             R,
             step_length,
@@ -242,7 +257,8 @@ class TestSearchFrontierEngagementMaxBound:
         target_apd = target_area_per_distance(R, advance, step_length)
         max_cut_area = target_apd * step_length * 1.5
 
-        ca = ClearedArea(boundary=[])
+        ca = ClearedArea()
+        region = StockRegion(boundary=[], islands=[])
         ca.cut([_circle(50, 40, 15)])
 
         # Try several start positions around the circle.
@@ -252,6 +268,7 @@ class TestSearchFrontierEngagementMaxBound:
             heading = angle + math.pi / 2  # tangent
             result = search_frontier_engagement(
                 ca,
+                region,
                 ToolPose(pos=start, heading=heading),
                 R,
                 step_length,
@@ -304,12 +321,14 @@ class TestSearchFrontierEngagementMaxBound:
             t = i / n
             poly.append((left_x, top_y + (bot_y - top_y) * t))
 
-        ca = ClearedArea(boundary=[])
+        ca = ClearedArea()
+        region = StockRegion(boundary=[], islands=[])
         ca.cut([poly])
 
         # Start near the tip, heading up.
         result = search_frontier_engagement(
             ca,
+            region,
             ToolPose(pos=(45.0, 1.0, 0.0), heading=math.pi / 2),
             R,
             step_length,
@@ -321,6 +340,7 @@ class TestSearchFrontierEngagementMaxBound:
             # Try heading down (opposite direction along the frontier).
             result = search_frontier_engagement(
                 ca,
+                region,
                 ToolPose(pos=(45.0, -1.0, 0.0), heading=-math.pi / 2),
                 R,
                 step_length,
@@ -356,7 +376,8 @@ def test_reengagement_position_offset_inward():
     advance = 2.0
     step_length = 1.0
 
-    ca = ClearedArea(boundary=[])
+    region = StockRegion(boundary=[], islands=[])
+    ca = ClearedArea()
     n = 32
     circle = [
         (
@@ -369,6 +390,7 @@ def test_reengagement_position_offset_inward():
 
     result = search_frontier_engagement(
         ca,
+        region,
         ToolPose(pos=(50.0, 55.0, 0.0), heading=0.0),
         R,
         step_length,

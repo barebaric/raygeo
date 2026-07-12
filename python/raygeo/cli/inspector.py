@@ -9,6 +9,7 @@ from matplotlib.widgets import Button, TextBox
 
 from raygeo.cli.cleared import rebuild_cleared
 from raygeo.geo.shape.polygon import get_polygon_signed_area
+from raygeo.ops.cut import StockRegion
 from raygeo.trace import TraceFile, get_route_detail_name
 
 
@@ -418,8 +419,12 @@ class Inspector:
         has_seeds = bool(self.seed_polys) or "seeds" in geo
         n_tp_moves = step_idx + 1
         if has_seeds and tool_radius:
+            region = StockRegion(
+                boundary=[tuple(p) for p in boundary],
+                islands=[[tuple(q) for q in isl] for isl in islands],
+            )
             ca0 = self._get_cleared(0)
-            envelope = ca0.envelope(tool_radius)
+            envelope = ca0.envelope(region, tool_radius)
             for env in envelope:
                 if len(env) < 3:
                     continue
@@ -437,8 +442,8 @@ class Inspector:
                 byf = [p[1] for p in boundary] + [boundary[0][1]]
                 self.ax.fill(bxf, byf, color="white")
 
-            _remaining = ca.remaining()
-            _frontier = ca.frontier(0.05)
+            _remaining = ca.remaining(region)
+            _frontier = ca.frontier(region, 0.05)
             for poly in _remaining:
                 if len(poly) < 3:
                     continue

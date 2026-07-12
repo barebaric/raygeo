@@ -208,6 +208,7 @@ impl WorkplanStep {
                 let mut full_carrier = carrier.clone();
                 if let Some(&first) = carrier.first() {
                     if let Some(plunge) = part.cleared.find_plunge_point(
+                        &part.stock_region,
                         first,
                         *tool_radius,
                         *tool_radius * 3.0,
@@ -235,6 +236,7 @@ impl WorkplanStep {
                 let mut full_carrier = carrier.clone();
                 if let Some(&first) = carrier.first() {
                     if let Some(plunge) = part.cleared.find_plunge_point(
+                        &part.stock_region,
                         first,
                         *tool_radius,
                         *tool_radius * 3.0,
@@ -278,12 +280,16 @@ impl WorkplanStep {
                     start_heading: *start_heading,
                     ..Default::default()
                 };
-                let saved_b = part.cleared.swap_boundary(&boundary);
-                let saved_i = part.cleared.swap_islands(&islands);
+                let saved_region = std::mem::replace(
+                    &mut part.stock_region,
+                    crate::ops::cut::StockRegion::new(
+                        boundary.clone(),
+                        islands.clone(),
+                    ),
+                );
                 let result =
                     adaptive::adaptive_clearing(part, trace, &opts, cut_state);
-                part.cleared.swap_islands(&saved_i);
-                part.cleared.swap_boundary(&saved_b);
+                part.stock_region = saved_region;
                 result
             }
             WorkplanStep::ProfileInner {
@@ -308,12 +314,16 @@ impl WorkplanStep {
                     stock_to_leave: *stock_to_leave,
                     ..Default::default()
                 };
-                let saved_b = part.cleared.swap_boundary(&boundary);
-                let saved_i = part.cleared.swap_islands(&islands);
+                let saved_region = std::mem::replace(
+                    &mut part.stock_region,
+                    crate::ops::cut::StockRegion::new(
+                        boundary.clone(),
+                        islands.clone(),
+                    ),
+                );
                 let result =
                     profile::profile_inner(part, trace, &opts, cut_state);
-                part.cleared.swap_islands(&saved_i);
-                part.cleared.swap_boundary(&saved_b);
+                part.stock_region = saved_region;
                 result
             }
             WorkplanStep::Wavefront {
@@ -333,13 +343,17 @@ impl WorkplanStep {
                     area_tolerance: *area_tolerance,
                     precision: *precision,
                 };
-                let saved_b = part.cleared.swap_boundary(&boundary);
-                let saved_i = part.cleared.swap_islands(&islands);
+                let saved_region = std::mem::replace(
+                    &mut part.stock_region,
+                    crate::ops::cut::StockRegion::new(
+                        boundary.clone(),
+                        islands.clone(),
+                    ),
+                );
                 let result = wavefront::adaptive_wavefronts(
                     part, trace, &opts, cut_state,
                 );
-                part.cleared.swap_islands(&saved_i);
-                part.cleared.swap_boundary(&saved_b);
+                part.stock_region = saved_region;
                 result
             }
             WorkplanStep::Retract { safe_z } => {

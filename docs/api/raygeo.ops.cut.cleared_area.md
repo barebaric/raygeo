@@ -12,22 +12,23 @@ sidebar_label: raygeo.ops.cut.cleared_area
 ### `actionable_remaining()`
 
 ```python
-actionable_remaining(inset_distance: float) -> float
+actionable_remaining(region: cut.StockRegion, inset_distance: float) -> float
 ```
 
 Uncleared area **inside the actionable zone** of the pocket.
 
 The actionable zone is the boundary inset by `inset_distance`, with islands buffered by the same
-amount. Material outside this zone — wall-band slivers thinner than `inset_distance` — is excluded,
-so this metric can gate convergence on whether any *actionable* material remains.
+amount. Material outside this zone -- wall-band slivers thinner than `inset_distance` -- is
+excluded, so this metric can gate convergence on whether any *actionable* material remains.
 
 `inset_distance` is typically `step_length`: slivers thinner than the per-step advance get skipped
 by the stepper, so they should not gate convergence.
 
-| Parameter        | Type    | Description                                                                          |
-| ---------------- | ------- | ------------------------------------------------------------------------------------ |
-| `inset_distance` | `float` | Inset distance (mm) defining the actionable zone (boundary inset, islands buffered). |
-| _Returns_        | `float` | Actionable remaining area in mm².                                                    |
+| Parameter        | Type              | Description                                                                          |
+| ---------------- | ----------------- | ------------------------------------------------------------------------------------ |
+| `region`         | `cut.StockRegion` | StockRegion defining the boundary and islands.                                       |
+| `inset_distance` | `float`           | Inset distance (mm) defining the actionable zone (boundary inset, islands buffered). |
+| _Returns_        | `float`           | Actionable remaining area in mm2.                                                    |
 
 ### `begin_batch()`
 
@@ -35,12 +36,12 @@ by the stepper, so they should not gate convergence.
 begin_batch() -> None
 ```
 
-Begin buffering single‑segment expansions.
+Begin buffering single-segment expansions.
 
 Subsequent calls to `expand_batched` are queued without a union. Call `commit_batch` to union all
 queued sweeps with the stored fragments in a single pass.
 
-Calling this while a batch is already active is a no‑op.
+Calling this while a batch is already active is a no-op.
 
 | Parameter | Type   | Description |
 | --------- | ------ | ----------- |
@@ -54,6 +55,7 @@ Calling this while a batch is already active is a no‑op.
 
 ```python
 bites(
+    region: cut.StockRegion,
     step_over: float,
     tool_radius: float,
     simplify_tol: float,
@@ -65,6 +67,7 @@ Compute the "bites" — new material reachable by expanding the current frontier
 
 | Parameter      | Type                              | Description                                     |
 | -------------- | --------------------------------- | ----------------------------------------------- |
+| `region`       | `cut.StockRegion`                 | StockRegion defining the boundary and islands.  |
 | `step_over`    | `float`                           | Lateral step-over in mm.                        |
 | `tool_radius`  | `float`                           | Tool radius (mm) for computing the envelope.    |
 | `simplify_tol` | `float`                           | Tolerance in mm for frontier simplification.    |
@@ -111,29 +114,35 @@ After this call the batch is closed (the caller may start a new one).
 ### `compact_if_needed()`
 
 ```python
-compact_if_needed(tol: float) -> None
+compact_if_needed(region: cut.StockRegion, tol: float) -> None
 ```
 
 Compact fragments if total vertex count exceeds the default threshold.
 
-| Parameter | Type    | Description                            |
-| --------- | ------- | -------------------------------------- |
-| `tol`     | `float` | Vertex simplification tolerance in mm. |
-| _Returns_ | `None`  |                                        |
+| Parameter | Type              | Description                                    |
+| --------- | ----------------- | ---------------------------------------------- |
+| `region`  | `cut.StockRegion` | StockRegion defining the boundary and islands. |
+| `tol`     | `float`           | Vertex simplification tolerance in mm.         |
+| _Returns_ | `None`            |                                                |
 
 ### `compact_if_needed_threshold()`
 
 ```python
-compact_if_needed_threshold(tol: float, threshold: int) -> None
+compact_if_needed_threshold(
+    region: cut.StockRegion,
+    tol: float,
+    threshold: int,
+) -> None
 ```
 
 Compact with an explicit vertex-count threshold.
 
-| Parameter   | Type    | Description                                                 |
-| ----------- | ------- | ----------------------------------------------------------- |
-| `tol`       | `float` | Vertex simplification tolerance in mm.                      |
-| `threshold` | `int`   | Vertex count threshold above which compaction is triggered. |
-| _Returns_   | `None`  |                                                             |
+| Parameter   | Type              | Description                                                 |
+| ----------- | ----------------- | ----------------------------------------------------------- |
+| `region`    | `cut.StockRegion` | StockRegion defining the boundary and islands.              |
+| `tol`       | `float`           | Vertex simplification tolerance in mm.                      |
+| `threshold` | `int`             | Vertex count threshold above which compaction is triggered. |
+| _Returns_   | `None`            |                                                             |
 
 ### `cut()`
 
@@ -141,7 +150,7 @@ Compact with an explicit vertex-count threshold.
 cut(polygons: Sequence[Sequence[tuple[float, float]]]) -> None
 ```
 
-Add pre‑computed polygons to the cleared set.
+Add pre-computed polygons to the cleared set.
 
 | Parameter    | Type                                      | Description                                                 |
 | ------------ | ----------------------------------------- | ----------------------------------------------------------- |
@@ -173,7 +182,7 @@ area).
 | `c1`      | `tuple[float, float]` | Previous centre `(x, y)`. |
 | `c2`      | `tuple[float, float]` | Next centre `(x, y)`.     |
 | `radius`  | `float`               | Disk radius (mm).         |
-| _Returns_ | `float`               | Fresh cut area (mm²).     |
+| _Returns_ | `float`               | Fresh cut area (mm2).     |
 
 ### `cut_fast()`
 
@@ -203,13 +212,17 @@ existing fragments (skips the full union).
 ### `envelope()`
 
 ```python
-envelope(tool_radius: float) -> list[list[tuple[float, float]]]
+envelope(
+    region: cut.StockRegion,
+    tool_radius: float,
+) -> list[list[tuple[float, float]]]
 ```
 
 The tool-centre envelope (inset of boundary by `tool_radius`, minus islands).
 
 | Parameter     | Type                              | Description                                             |
 | ------------- | --------------------------------- | ------------------------------------------------------- |
+| `region`      | `cut.StockRegion`                 | StockRegion defining the boundary and islands.          |
 | `tool_radius` | `float`                           | Tool radius (mm).                                       |
 | _Returns_     | `list[list[tuple[float, float]]]` | List of polygons representing the tool-centre envelope. |
 
@@ -242,7 +255,7 @@ expand_batched(
 ) -> None
 ```
 
-Queue a single‑segment expansion into the current batch.
+Queue a single-segment expansion into the current batch.
 
 The segment swept polygon is stored in the internal buffer. Does **not** perform a union until
 `commit_batch` is called.
@@ -304,13 +317,17 @@ This is useful for inspecting which areas have been cleared.
 ### `frontier()`
 
 ```python
-frontier(simplify_tol: float) -> list[list[tuple[float, float]]]
+frontier(
+    region: cut.StockRegion,
+    simplify_tol: float,
+) -> list[list[tuple[float, float]]]
 ```
 
 Return a unioned, simplified snapshot of the current outer boundary, clipped to the stock.
 
 | Parameter      | Type                              | Description                                       |
 | -------------- | --------------------------------- | ------------------------------------------------- |
+| `region`       | `cut.StockRegion`                 | StockRegion defining the boundary and islands.    |
 | `simplify_tol` | `float`                           | Tolerance in mm for polyline simplification.      |
 | _Returns_      | `list[list[tuple[float, float]]]` | List of polygons representing the outer boundary. |
 | _Complexity_   |                                   | O(n log n)                                        |
@@ -325,10 +342,10 @@ Return a unioned, simplified snapshot of the current outer boundary, clipped to 
 get_angular_engagement(center: tuple[float, float], radius: float) -> float
 ```
 
-Compute angular engagement by exact circle–polygon intersection.
+Compute angular engagement by exact circle-polygon intersection.
 
 Creates a disk polygon at *center* with *radius*, intersects it with all nearby cleared fragments,
-and returns the uncleared angular extent in `[0, 2π]`.
+and returns the uncleared angular extent in `[0, 2*pi]`.
 
 | Parameter | Type                  | Description                         |
 | --------- | --------------------- | ----------------------------------- |
@@ -409,13 +426,14 @@ Return fragments whose bounding box overlaps the query window.
 ### `remaining()`
 
 ```python
-remaining() -> list[list[tuple[float, float]]]
+remaining(region: cut.StockRegion) -> list[list[tuple[float, float]]]
 ```
 
 Subtract cleared fragments from the stock, returning the uncut portion.
 
 | Parameter    | Type                              | Description                                      |
 | ------------ | --------------------------------- | ------------------------------------------------ |
+| `region`     | `cut.StockRegion`                 | StockRegion defining the boundary and islands.   |
 | _Returns_    | `list[list[tuple[float, float]]]` | List of polygons representing the uncut portion. |
 | _Complexity_ |                                   | O(n * m) where n = stock vertices, m = fragments |
 
@@ -426,15 +444,16 @@ Subtract cleared fragments from the stock, returning the uncut portion.
 ### `remaining_area()`
 
 ```python
-remaining_area() -> float
+remaining_area(region: cut.StockRegion) -> float
 ```
 
 Remaining uncut area (boundary minus islands minus cleared fragments). Only positive-area (CCW)
 polygons are counted, so island holes do not inflate the result.
 
-| Parameter | Type    | Description                  |
-| --------- | ------- | ---------------------------- |
-| _Returns_ | `float` | Remaining uncut area in mm². |
+| Parameter | Type              | Description                                    |
+| --------- | ----------------- | ---------------------------------------------- |
+| `region`  | `cut.StockRegion` | StockRegion defining the boundary and islands. |
+| _Returns_ | `float`           | Remaining uncut area in mm2.                   |
 
 ### `signed_boundary_distance()`
 
@@ -467,5 +486,5 @@ Total cleared area.
 
 | Parameter    | Type    | Description                |
 | ------------ | ------- | -------------------------- |
-| _Returns_    | `float` | Total cleared area in mm². |
+| _Returns_    | `float` | Total cleared area in mm2. |
 | _Complexity_ |         | O(1)                       |

@@ -329,7 +329,8 @@ pub(crate) fn run_profile(
             common.tool_radius,
         );
         part.cleared.commit_batch_local();
-        part.cleared.compact_if_needed(common.tolerance);
+        part.cleared
+            .compact_if_needed(&part.stock_region, common.tolerance);
 
         if dist_traveled >= perimeter - common.step_length * 0.5 {
             if !travel_skipped {

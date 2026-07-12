@@ -17,6 +17,7 @@ import math
 import random
 import time
 
+from raygeo.ops.cut import StockRegion
 from raygeo.ops.cut.cleared_area import ClearedArea
 
 
@@ -127,7 +128,8 @@ def run(args):
         (0.0, pocket_h),
     ]
 
-    ca = ClearedArea(boundary=boundary, islands=islands)
+    region = StockRegion(boundary=boundary, islands=islands)
+    ca = ClearedArea()
 
     # Deterministic walk seed.
     walk_rng = random.Random(seed)
@@ -144,7 +146,7 @@ def run(args):
     )
 
     # Warm-up a single call to JIT the envelope cache.
-    _ = ca.actionable_remaining(r)
+    _ = ca.actionable_remaining(region, r)
 
     step_total = 0.0
     actionable_total = 0.0
@@ -171,7 +173,7 @@ def run(args):
 
         if i % args.checkpoint_every == 0 or i == args.steps - 1:
             t = time.perf_counter()
-            ar = ca.actionable_remaining(r)
+            ar = ca.actionable_remaining(region, r)
             dt = time.perf_counter() - t
             actionable_total += dt
             actionable_calls += 1

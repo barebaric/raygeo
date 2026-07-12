@@ -37,7 +37,10 @@ fn envelope_resume(
     tool: &Tool,
     detail: &mut u8,
 ) -> Option<ToolPose> {
-    let envelope = ctx.part.cleared.envelope(tool.radius);
+    let envelope = ctx
+        .part
+        .cleared
+        .envelope(&ctx.part.stock_region, tool.radius);
     if envelope.is_empty() {
         *detail = DETAIL_NO_ENVELOPE;
         return None;

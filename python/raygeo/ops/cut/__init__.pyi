@@ -17,6 +17,7 @@ from . import search
 from . import stepper
 __all__ = [
     "Part",
+    "StockRegion",
     "cleared_area",
     "crescent",
     "interp",
@@ -59,6 +60,12 @@ class Part:
         use it after an assembler returns to inspect remaining
         material, fragments, etc.
         """
+    @property
+    def stock_region(self) -> StockRegion:
+        r"""
+        Boundary and islands of the workpiece — cached extraction
+        from geometry. Read-only.
+        """
     def __new__(cls, geometry: typing.Optional[geo.Geometry] = None, size_mm: tuple[builtins.float, builtins.float] = (0.0, 0.0), pixels_per_mm: typing.Optional[tuple[builtins.float, builtins.float]] = None) -> Part:
         r"""
         Create a new Part.
@@ -87,6 +94,32 @@ class Part:
     def has_geometry(self) -> builtins.bool:
         r"""
         True if this Part has geometry.
+        """
+    def __repr__(self) -> builtins.str: ...
+
+@typing.final
+class StockRegion:
+    r"""
+    Boundary and islands of a workpiece — the geometric input to
+    clearing operations.
+    """
+    @property
+    def boundary(self) -> builtins.list[tuple[builtins.float, builtins.float]]:
+        r"""
+        Outer boundary polygon as ``[(x, y), ...]``.
+        """
+    @property
+    def islands(self) -> builtins.list[builtins.list[tuple[builtins.float, builtins.float]]]:
+        r"""
+        List of island polygons, each ``[(x, y), ...]``.
+        """
+    def __new__(cls, boundary: typing.Sequence[tuple[builtins.float, builtins.float]], islands: typing.Optional[typing.Sequence[typing.Sequence[tuple[builtins.float, builtins.float]]]] = None) -> StockRegion:
+        r"""
+        Create a new StockRegion.
+        
+        :param boundary: Outer boundary polygon as ``[(x, y), ...]``.
+        :param islands: List of island polygons, each ``[(x, y), ...]``
+            (default ``[]``).
         """
     def __repr__(self) -> builtins.str: ...
 

@@ -63,8 +63,6 @@ const MAX_TOTAL_STEPS: usize = 100_000;
 /// Options for [`adaptive_clearing`].
 #[derive(Clone, Debug)]
 pub struct AdaptiveClearingOptions {
-    pub pocket_boundary: Polygon,
-    pub islands: Vec<Polygon>,
     pub tool_radius: f64,
     pub step_over: f64,
     pub step_length: f64,
@@ -103,8 +101,6 @@ pub struct AdaptiveClearingOptions {
 impl Default for AdaptiveClearingOptions {
     fn default() -> Self {
         Self {
-            pocket_boundary: Vec::new(),
-            islands: Vec::new(),
             tool_radius: 3.0,
             step_over: 1.5,
             step_length: 0.6,
@@ -264,6 +260,7 @@ fn handle_stall(
             th::make_tool_snapshot(s.tool, *s.prev_pos),
             Some(th::exit_meta(
                 &s.part.cleared,
+                &s.part.stock_region,
                 s.resume_reasons,
                 s.resume_details,
                 s.route_details,
@@ -340,6 +337,7 @@ fn handle_stall(
                     th::make_tool_snapshot(s.tool, *s.prev_pos),
                     Some(th::resume_meta(
                         &s.part.cleared,
+                        &s.part.stock_region,
                         resume_source_u8,
                         route_source_u8,
                         s.resume_reasons,
@@ -374,8 +372,10 @@ fn handle_stall(
     // `actionable_remaining` is the residual inside the actionable
     // zone (boundary inset by step_length), excluding slivers the
     // stepper cannot productively engage with.
-    let clipped_remaining: f64 =
-        s.part.cleared.actionable_remaining(step_length * 1.5);
+    let clipped_remaining: f64 = s
+        .part
+        .cleared
+        .actionable_remaining(&s.part.stock_region, step_length * 1.5);
     if clipped_remaining < opts.area_tolerance {
         dbg_log!(
             "EXIT  reason=converged(close-enough)  step_count={}  \
@@ -393,6 +393,7 @@ fn handle_stall(
             th::make_tool_snapshot(s.tool, *s.prev_pos),
             Some(th::exit_meta(
                 &s.part.cleared,
+                &s.part.stock_region,
                 s.resume_reasons,
                 s.resume_details,
                 s.route_details,
@@ -433,6 +434,7 @@ fn handle_stall(
         th::make_tool_snapshot(s.tool, *s.prev_pos),
         Some(th::exit_meta(
             &s.part.cleared,
+            &s.part.stock_region,
             s.resume_reasons,
             s.resume_details,
             s.route_details,
@@ -455,8 +457,8 @@ pub fn adaptive_clearing(
     opts: &AdaptiveClearingOptions,
     cut_state: &State,
 ) -> RaygeoResult<AssemblyMeta> {
-    let pocket_boundary = part.cleared.boundary.clone();
-    let islands = part.cleared.islands.clone();
+    let pocket_boundary = part.stock_region.boundary.clone();
+    let islands = part.stock_region.islands.clone();
 
     // ── 1. Pre-process ────────────────────────────────────────────
     let (valid_tool_area, valid_total) =
@@ -522,7 +524,7 @@ pub fn adaptive_clearing(
     // Use caller-provided position/heading when available (e.g. the
     // tool is already in motion after an entry strategy).  Otherwise
     // auto-detect from the cleared-area frontier.
-    let frontier = part.cleared.frontier(0.5);
+    let frontier = part.cleared.frontier(&part.stock_region, 0.5);
     let (default_pos, default_heading) =
         initial_pose(&frontier, centre, opts.target_z);
     let start_pos = opts.start_pos.unwrap_or(default_pos);
@@ -553,7 +555,7 @@ pub fn adaptive_clearing(
     ));
     trace.init(
         th::make_tool_snapshot(&tool, tool.pos),
-        Some(th::init_meta(&part.cleared)),
+        Some(th::init_meta(&part.cleared, &part.stock_region)),
     );
 
     // ── 4. Continuous spiral: step → expand → repeat ─────────────
@@ -629,6 +631,7 @@ pub fn adaptive_clearing(
                     th::make_tool_snapshot(&tool, prev_pos),
                     Some(th::exit_meta(
                         &part.cleared,
+                        &part.stock_region,
                         &resume_reasons,
                         &resume_details,
                         &route_details,
@@ -655,7 +658,9 @@ pub fn adaptive_clearing(
         // stepper chases without making progress.
         let frag_total = part.cleared.total_area();
         if frag_total >= valid_total - opts.area_tolerance && {
-            let rem = part.cleared.actionable_remaining(step_length * 1.5);
+            let rem = part
+                .cleared
+                .actionable_remaining(&part.stock_region, step_length * 1.5);
             rem < opts.area_tolerance
         } {
             dbg_log!(
@@ -823,7 +828,8 @@ pub fn adaptive_clearing(
         if steps_since_batch >= opts.expansion_batch_size {
             part.cleared.commit_batch_local();
             steps_since_batch = 0;
-            part.cleared.compact_if_needed(opts.tolerance);
+            part.cleared
+                .compact_if_needed(&part.stock_region, opts.tolerance);
         }
 
         let eng = part.cleared.get_point_engagement(
@@ -840,6 +846,7 @@ pub fn adaptive_clearing(
             Some(th::cut_meta(
                 &tool,
                 &part.cleared,
+                &part.stock_region,
                 result.iters as u32,
                 eng.angle,
                 eng.area,
@@ -869,6 +876,7 @@ pub fn adaptive_clearing(
         th::make_tool_snapshot(&tool, prev_pos),
         Some(th::exit_meta(
             &part.cleared,
+            &part.stock_region,
             &resume_reasons,
             &resume_details,
             &route_details,

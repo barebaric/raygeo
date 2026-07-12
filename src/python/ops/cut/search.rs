@@ -6,6 +6,7 @@ use pyo3_stub_gen::derive::{
 use crate::ops::cut;
 use crate::ops::cut::ToolPose;
 use crate::python::ops::cut::cleared_area::PyClearedArea;
+use crate::python::ops::cut::stock_region::PyStockRegion;
 use crate::types::Point3D;
 
 #[gen_stub_pyclass(module = "raygeo.ops.cut.search")]
@@ -43,17 +44,20 @@ impl PyToolPose {
 /// engagement depth.
 ///
 /// :param cleared: ``ClearedArea`` instance.
+/// :param region: ``StockRegion`` defining the boundary and islands.
 /// :param start: ``ToolPose`` seed.
 /// :param radius: Disk radius (mm).
 /// :param step_length: Forward step distance (mm) for the probe.
 /// :param advance: Stepover distance (mm) for inward offset.
-/// :param min_cut_area: Minimum cut area (mm²).
-/// :param max_cut_area: Maximum cut area (mm²), e.g. ``float("inf")``.
+/// :param min_cut_area: Minimum cut area (mm2).
+/// :param max_cut_area: Maximum cut area (mm2), e.g. ``float("inf")``.
 /// :returns: ``ToolPose`` or ``None``.
+#[allow(clippy::too_many_arguments)]
 #[gen_stub_pyfunction(module = "raygeo.ops.cut.search")]
 #[pyfunction(name = "search_frontier_engagement")]
 fn search_frontier_engagement_py(
     cleared: &PyClearedArea,
+    region: &PyStockRegion,
     start: &PyToolPose,
     radius: f64,
     step_length: f64,
@@ -63,6 +67,7 @@ fn search_frontier_engagement_py(
 ) -> Option<PyToolPose> {
     let r = cut::search_frontier_engagement(
         &cleared.inner,
+        &region.inner,
         ToolPose {
             pos: Point3D::new(start.pos.0, start.pos.1, start.pos.2),
             heading: start.heading,

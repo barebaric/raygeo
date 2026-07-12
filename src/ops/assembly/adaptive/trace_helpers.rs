@@ -1,6 +1,7 @@
 use std::collections::BTreeMap;
 
 use crate::geo::algo::medial_axis::MedialAxis;
+use crate::ops::cut::stock_region::StockRegion;
 use crate::ops::cut::ClearedArea;
 use crate::trace_types::{Meta, MetaValue, ToolSnapshot};
 use crate::types::{Point3D, Polygon};
@@ -121,10 +122,10 @@ pub(super) fn build_attrs(
     attrs
 }
 
-pub(super) fn init_meta(cleared: &ClearedArea) -> Meta {
+pub(super) fn init_meta(cleared: &ClearedArea, region: &StockRegion) -> Meta {
     let mut m: Meta = BTreeMap::new();
     meta_insert_f64(&mut m, "total_area", cleared.total_area());
-    meta_insert_f64(&mut m, "remaining_area", cleared.remaining_area());
+    meta_insert_f64(&mut m, "remaining_area", cleared.remaining_area(region));
     m
 }
 
@@ -132,6 +133,7 @@ pub(super) fn init_meta(cleared: &ClearedArea) -> Meta {
 pub(super) fn cut_meta(
     tool: &Tool,
     cleared: &ClearedArea,
+    region: &StockRegion,
     iters: u32,
     eng_angle: f64,
     eng_area: f64,
@@ -147,7 +149,7 @@ pub(super) fn cut_meta(
     meta_insert_f64(&mut m, "cut_area", cut_area);
     meta_insert_f64(&mut m, "iteration_angle", iteration_angle);
     meta_insert_f64(&mut m, "total_area", cleared.total_area());
-    meta_insert_f64(&mut m, "remaining_area", cleared.remaining_area());
+    meta_insert_f64(&mut m, "remaining_area", cleared.remaining_area(region));
     meta_insert_f64(&mut m, "smoothed_heading", tool.smoothed_heading());
     meta_insert_f64(&mut m, "predicted_angle", tool.raw_predictor());
     m
@@ -156,6 +158,7 @@ pub(super) fn cut_meta(
 #[allow(clippy::too_many_arguments)]
 pub(super) fn resume_meta(
     cleared: &ClearedArea,
+    region: &StockRegion,
     resume_source: u8,
     route_source: u8,
     resume_reasons: &[u8; 6],
@@ -168,7 +171,7 @@ pub(super) fn resume_meta(
 ) -> Meta {
     let mut m: Meta = BTreeMap::new();
     meta_insert_f64(&mut m, "total_area", cleared.total_area());
-    meta_insert_f64(&mut m, "remaining_area", cleared.remaining_area());
+    meta_insert_f64(&mut m, "remaining_area", cleared.remaining_area(region));
     meta_insert_u32(&mut m, "resume_source", resume_source as u32);
     meta_insert_u32(&mut m, "route_source", route_source as u32);
     m.insert(
@@ -231,6 +234,7 @@ pub(super) fn resume_meta(
 #[allow(clippy::too_many_arguments)]
 pub(super) fn exit_meta(
     cleared: &ClearedArea,
+    region: &StockRegion,
     resume_reasons: &[u8; 6],
     resume_details: &[u8; 6],
     route_details: &[u8; 4],
@@ -241,7 +245,7 @@ pub(super) fn exit_meta(
 ) -> Meta {
     let mut m: Meta = BTreeMap::new();
     meta_insert_f64(&mut m, "total_area", cleared.total_area());
-    meta_insert_f64(&mut m, "remaining_area", cleared.remaining_area());
+    meta_insert_f64(&mut m, "remaining_area", cleared.remaining_area(region));
     m.insert(
         "resume_reasons".into(),
         MetaValue::List(

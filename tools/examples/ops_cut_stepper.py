@@ -116,7 +116,7 @@ def _generate_wall_following():
     for i in range(n + 1):
         y = y_max - y_range * i / n
         poly.append((wall_x + 3.0 * math.sin(y * math.pi / 40.0), y))
-    ca = ClearedArea(boundary=[])
+    ca = ClearedArea()
     ca.cut([poly])
     # Cleared = inside the polygon (= left of the wall).  Tool on the
     # uncleared side at distance = advance from the wall.
@@ -148,7 +148,7 @@ def _generate_wall_following():
         if y >= sq_y_min:
             poly.append((sq_wall + amp, y))
             poly.append((sq_wall, y))
-    ca = ClearedArea(boundary=[])
+    ca = ClearedArea()
     ca.cut([poly])
     path = _run_segment(
         ca,
@@ -171,7 +171,7 @@ def _generate_wall_following():
         t = pos / period
         tri = 2.0 * t if t < 0.5 else 2.0 * (1.0 - t)
         poly.append((wall_x + amp * tri, y))
-    ca = ClearedArea(boundary=[])
+    ca = ClearedArea()
     ca.cut([poly])
     path = _run_segment(
         ca,
@@ -191,7 +191,7 @@ def _generate_wall_following():
     for i in range(n + 1):
         a = 2.0 * math.pi * (1.0 - i / n)
         poly.append((cr * math.cos(a), cr * math.sin(a)))
-    ca = ClearedArea(boundary=[])
+    ca = ClearedArea()
     ca.cut([poly])
     # Cleared = inside the circle.  Tool outside at distance = advance.
     path = _run_segment(
@@ -224,7 +224,7 @@ def generate_pocket_corner():
     target_apd = target_area_per_distance(tool_radius, advance, step_len)
     max_deflection = 0.8
 
-    ca = ClearedArea(boundary=[])
+    ca = ClearedArea()
     ca.cut([[(-10, -10), (30, -10), (30, 20), (10, 20), (10, 30), (-10, 30)]])
 
     path = _run_segment(
@@ -287,7 +287,7 @@ def generate_engagement_histogram():
         y = 20.0 + 5.0 * math.sin(x * math.pi / 50.0)
         poly.append((x, y))
 
-    ca = ClearedArea(boundary=[])
+    ca = ClearedArea()
     ca.cut([poly])
     # Cleared = inside (below the sine boundary).  Tool starts in
     # cleared, at distance = advance below the boundary at x=0.

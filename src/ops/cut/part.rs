@@ -18,6 +18,7 @@ use crate::geo::Geometry;
 use crate::types::{Point, Polygon};
 
 use super::cleared_area::ClearedArea;
+use super::stock_region::StockRegion;
 
 /// Unified workpiece description shared by all assemblers.
 ///
@@ -29,6 +30,10 @@ pub struct Part {
     ///
     /// May contain multiple closed contours (including holes).
     pub geometry: Option<Geometry>,
+
+    /// Boundary and islands — cached extraction from geometry.
+    /// Computed once at construction; never changes.
+    pub stock_region: StockRegion,
 
     /// Physical size of the part in millimetres `(width, height)`.
     pub size_mm: (f64, f64),
@@ -48,25 +53,23 @@ pub struct Part {
 impl Part {
     /// Create a new `Part` from geometry and size.
     ///
-    /// The `ClearedArea` is initialized from the boundary/islands
-    /// extracted from `geometry` (empty if geometry is `None`).
+    /// The `StockRegion` is extracted from `geometry` (empty if `None`).
+    /// The `ClearedArea` starts empty.
     pub fn new(geometry: Option<Geometry>, size_mm: (f64, f64)) -> Self {
-        let cleared = match &geometry {
+        let stock_region = match &geometry {
             Some(_) => {
                 let (boundary, islands) =
                     Part::extract_boundary_from_geometry(geometry.as_ref());
-                ClearedArea::new(
-                    boundary.as_ref().unwrap_or(&Polygon::new()),
-                    &islands,
-                )
+                StockRegion::new(boundary.unwrap_or_default(), islands)
             }
-            None => ClearedArea::default(),
+            None => StockRegion::empty(),
         };
         Part {
             geometry,
+            stock_region,
             size_mm,
             pixels_per_mm: None,
-            cleared,
+            cleared: ClearedArea::new(),
         }
     }
 
@@ -75,7 +78,7 @@ impl Part {
     /// Constructs a `Geometry` containing the boundary as the first
     /// closed contour and each island as an additional contour, then
     /// wraps it in a `Part` with the given `size_mm`.
-    /// The `ClearedArea` is initialized from `boundary`/`islands`.
+    /// The `StockRegion` is set directly from `boundary`/`islands`.
     pub fn from_polygons(
         boundary: &Polygon,
         islands: &[Polygon],
@@ -98,12 +101,13 @@ impl Part {
                 geo.close_path();
             }
         }
-        let cleared = ClearedArea::new(boundary, islands);
+        let stock_region = StockRegion::new(boundary.clone(), islands.to_vec());
         Part {
             geometry: Some(geo),
+            stock_region,
             size_mm,
             pixels_per_mm: None,
-            cleared,
+            cleared: ClearedArea::new(),
         }
     }
 
@@ -132,9 +136,11 @@ impl Part {
                 geo.close_path();
             }
         }
-        let cleared = ClearedArea::from_polygons(initial, boundary, islands);
+        let stock_region = StockRegion::new(boundary.clone(), islands.to_vec());
+        let cleared = ClearedArea::with_fragments(initial);
         Part {
             geometry: Some(geo),
+            stock_region,
             size_mm,
             pixels_per_mm: None,
             cleared,

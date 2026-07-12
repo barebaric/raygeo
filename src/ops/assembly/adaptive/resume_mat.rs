@@ -11,6 +11,7 @@ use crate::ops::assembly::adaptive::resume::{
     DETAIL_NO_WALL_HIT, WALL_PROXIMITY,
 };
 use crate::ops::assembly::adaptive::tool::Tool;
+use crate::ops::cut::stock_region::StockRegion;
 use crate::ops::cut::ClearedArea;
 use crate::ops::cut::CutDirection;
 use crate::ops::cut::ToolPose;
@@ -64,6 +65,7 @@ impl ResumeStrategy for ResumeMat {
             if let Some(rp) = mat_resume_from_crossing(
                 axis,
                 &ctx.part.cleared,
+                &ctx.part.stock_region,
                 crossing_idx,
                 ctx.opts.cut_direction,
                 tool.radius,
@@ -109,6 +111,7 @@ impl ResumeStrategy for ResumeMat {
 pub fn mat_resume_from_crossing(
     axis: &MedialAxis,
     cleared: &ClearedArea,
+    region: &StockRegion,
     crossing_idx: usize,
     cut_direction: CutDirection,
     radius: f64,
@@ -120,7 +123,7 @@ pub fn mat_resume_from_crossing(
 ) -> Option<ToolPose> {
     let p_cross = axis.nodes[crossing_idx].point;
 
-    let polys = cleared.frontier(0.001);
+    let polys = cleared.frontier(region, 0.001);
     if polys.is_empty() {
         *detail = DETAIL_NO_FRONTIER;
         return None;

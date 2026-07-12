@@ -21,7 +21,7 @@ def _vertical_wall_cleared(wall_x: float = 0.0, span: float = 1000.0):
     The wall runs vertically at ``x = wall_x``.  The tool should hug
     it from the left side.
     """
-    ca = ClearedArea(boundary=[])
+    ca = ClearedArea()
     ca.cut(
         [
             [
@@ -100,7 +100,7 @@ def test_step_lost_engagement_in_open_space():
     """When the disk is fully inside the cleared area, the step is Lost."""
     R = 5.0
     step_length = 1.0
-    ca = ClearedArea(boundary=[])
+    ca = ClearedArea()
     # Huge cleared area, tool deep inside — no wall nearby.
     ca.cut([[(-1000, -1000), (1000, -1000), (1000, 1000), (-1000, 1000)]])
     valid = _huge_valid_area()
@@ -317,7 +317,7 @@ def test_step_converges_from_correct_depth():
     offset_dist = cr - (R - advance)
     start_pos = (cx, cy + offset_dist)  # directly above centre
 
-    ca = ClearedArea(boundary=[])
+    ca = ClearedArea()
     n = 32
     ca.cut(
         [

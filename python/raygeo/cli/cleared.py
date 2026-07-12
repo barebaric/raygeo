@@ -1,3 +1,4 @@
+from raygeo.ops.cut import StockRegion
 from raygeo.ops.cut.cleared_area import ClearedArea
 
 # ── ClearedArea rebuild ──────────────────────────────────────────
@@ -21,19 +22,12 @@ def rebuild_cleared(
     """
     boundary_pts = [tuple(p) for p in geometry["boundary"]]
     islands_pts = [[tuple(p) for p in isl] for isl in geometry["islands"]]
+    region = StockRegion(boundary=boundary_pts, islands=islands_pts)
     seed_pts = [[tuple(p) for p in poly] for poly in seed_polys]
     if existing_fragments is None:
-        ca = ClearedArea(
-            boundary=boundary_pts,
-            islands=islands_pts,
-            initial=seed_pts,
-        )
+        ca = ClearedArea(initial=seed_pts)
     else:
-        ca = ClearedArea(
-            boundary=boundary_pts,
-            islands=islands_pts,
-            initial=existing_fragments,
-        )
+        ca = ClearedArea(initial=existing_fragments)
 
     prev = None
     cut_count = 0
@@ -44,7 +38,7 @@ def rebuild_cleared(
             continue
         if prev is not None and cut_count >= start_cut:
             ca.expand_step(prev, (x, y), geometry["tool_radius"])
-            ca.compact_if_needed(0.1)
+            ca.compact_if_needed(region, 0.1)
         prev = (x, y)
         cut_count += 1
         if cut_count >= n_cuts:

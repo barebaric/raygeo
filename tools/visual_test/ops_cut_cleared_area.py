@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 import streamlit as st
 
+from raygeo.ops.cut import StockRegion
 from raygeo.ops.cut.cleared_area import ClearedArea
 
 
@@ -20,7 +21,8 @@ def page_adaptive_clearing():
     tool_radius = tool_dia / 2
     boundary = [(5, 5), (85, 5), (85, 85), (5, 85)]
 
-    ca = ClearedArea(boundary=[])
+    region = StockRegion(boundary=boundary)
+    ca = ClearedArea()
     for i in range(n_steps):
         x = 10.0 + i * step
         if x > 80.0:
@@ -28,7 +30,7 @@ def page_adaptive_clearing():
         path = [(x, 10), (x, 80)]
         ca.expand(path, tool_radius)
 
-    remaining = ca.remaining()
+    remaining = ca.remaining(region)
 
     fig, ax = plt.subplots(figsize=(8, 7))
     bx, by = zip(*(boundary + [boundary[0]]))

@@ -24,6 +24,7 @@ pos: tuple[float, float, float]
 ```python
 search_frontier_engagement(
     cleared: cleared_area.ClearedArea,
+    region: cut.StockRegion,
     start: ToolPose,
     radius: float,
     step_length: float,
@@ -39,16 +40,17 @@ whose outward cut-area probe falls in `[min, max]`.
 The returned position is offset inward (into the cleared area) by `radius - advance` so the tool
 starts at the correct engagement depth.
 
-| Parameter      | Type                       | Description                                  |
-| -------------- | -------------------------- | -------------------------------------------- |
-| `cleared`      | `cleared_area.ClearedArea` | `ClearedArea` instance.                      |
-| `start`        | `ToolPose`                 | `ToolPose` seed.                             |
-| `radius`       | `float`                    | Disk radius (mm).                            |
-| `step_length`  | `float`                    | Forward step distance (mm) for the probe.    |
-| `advance`      | `float`                    | Stepover distance (mm) for inward offset.    |
-| `min_cut_area` | `float`                    | Minimum cut area (mm²).                      |
-| `max_cut_area` | `float`                    | Maximum cut area (mm²), e.g. `float("inf")`. |
-| _Returns_      | `Optional[ToolPose]`       | `ToolPose` or `None`.                        |
+| Parameter      | Type                       | Description                                      |
+| -------------- | -------------------------- | ------------------------------------------------ |
+| `cleared`      | `cleared_area.ClearedArea` | `ClearedArea` instance.                          |
+| `region`       | `cut.StockRegion`          | `StockRegion` defining the boundary and islands. |
+| `start`        | `ToolPose`                 | `ToolPose` seed.                                 |
+| `radius`       | `float`                    | Disk radius (mm).                                |
+| `step_length`  | `float`                    | Forward step distance (mm) for the probe.        |
+| `advance`      | `float`                    | Stepover distance (mm) for inward offset.        |
+| `min_cut_area` | `float`                    | Minimum cut area (mm2).                          |
+| `max_cut_area` | `float`                    | Maximum cut area (mm2), e.g. `float("inf")`.     |
+| _Returns_      | `Optional[ToolPose]`       | `ToolPose` or `None`.                            |
 
 ![Walk forward from the engagement point to find the next frontier match.](images/ops-cut-search-search-frontier-engagement.png)
 

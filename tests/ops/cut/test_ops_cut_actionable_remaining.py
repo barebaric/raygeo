@@ -15,6 +15,7 @@ breaking these tests.
 import math
 import random
 
+from raygeo.ops.cut import StockRegion
 from raygeo.ops.cut.cleared_area import ClearedArea
 
 
@@ -22,13 +23,14 @@ def P(*pts):
     return list(pts)
 
 
-def _envelope_area(ca: ClearedArea, tool_radius: float) -> float:
+def _envelope_area(ca: ClearedArea, region, tool_radius: float) -> float:
     """Net enclosed area of the envelope polygons (outer rings CCW
     positive, holes CW negative, summed as signed areas)."""
     from raygeo.geo.shape.polygon import get_polygon_signed_area
 
     return sum(
-        get_polygon_signed_area(poly) for poly in ca.envelope(tool_radius)
+        get_polygon_signed_area(poly)
+        for poly in ca.envelope(region, tool_radius)
     )
 
 
@@ -49,25 +51,28 @@ def _poly_area(poly):
 def test_actionable_remaining_empty():
     """No fragments cleared → actionable equals entire envelope area."""
     pocket = P((0, 0), (100, 0), (100, 100), (0, 100))
-    ca = ClearedArea(boundary=pocket)
-    expected = _envelope_area(ca, 5.0)
-    assert abs(ca.actionable_remaining(5.0) - expected) < 0.5
+    region = StockRegion(boundary=pocket)
+    ca = ClearedArea()
+    expected = _envelope_area(ca, region, 5.0)
+    assert abs(ca.actionable_remaining(region, 5.0) - expected) < 0.5
 
 
 def test_actionable_remaining_no_boundary():
     """Empty boundary → no envelope → 0."""
-    ca = ClearedArea(boundary=[])
-    assert ca.actionable_remaining(5.0) == 0.0
+    region = StockRegion(boundary=[], islands=[])
+    ca = ClearedArea()
+    assert ca.actionable_remaining(region, 5.0) == 0.0
 
 
 def test_actionable_remaining_with_cleared_inside_envelope():
     """Clearing inside the envelope reduces actionable area."""
     pocket = P((0, 0), (100, 0), (100, 100), (0, 100))
-    ca = ClearedArea(boundary=pocket)
-    before = ca.actionable_remaining(5.0)
+    region = StockRegion(boundary=pocket)
+    ca = ClearedArea()
+    before = ca.actionable_remaining(region, 5.0)
     # Clear an interior region well inside the wall band
     ca.cut([P((30, 30), (70, 30), (70, 70), (30, 70))])
-    after = ca.actionable_remaining(5.0)
+    after = ca.actionable_remaining(region, 5.0)
     assert after < before
     assert after > 0.0  # wall band still uncleared
 
@@ -76,7 +81,8 @@ def test_actionable_remaining_with_sliver_on_wall_only():
     """If the entire envelope is cleared but a wall band remains,
     actionable_remaining should be ~0 even though remaining_area isn't."""
     pocket = P((0, 0), (100, 0), (100, 100), (0, 100))
-    ca = ClearedArea(boundary=pocket)
+    region = StockRegion(boundary=pocket)
+    ca = ClearedArea()
     r = 5.0
     # Clear the entire envelope: everything from (r, r) to (100-r, 100-r).
     # Use a rectangle slightly bigger than the envelope inset so the disc
@@ -91,31 +97,33 @@ def test_actionable_remaining_with_sliver_on_wall_only():
     ca.cut([grow])
     # Wall band sliver (boundary minus envelope) is still uncut, but
     # should not appear in actionable_remaining.
-    actionable = ca.actionable_remaining(r)
+    actionable = ca.actionable_remaining(region, r)
     assert actionable < 0.5, (
         f"actionable_remaining={actionable:.3f} mm², expected ~0"
     )
     # And remaining_area (over the stock) should be substantially bigger.
-    assert ca.remaining_area() > 0.0
+    assert ca.remaining_area(region) > 0.0
 
 
 def test_actionable_remaining_with_islands():
     """Island inside the pocket is excluded from the envelope."""
     pocket = P((0, 0), (100, 0), (100, 100), (0, 100))
     island = P((40, 40), (60, 40), (60, 60), (40, 60))
-    ca = ClearedArea(boundary=pocket, islands=[island])
-    expected = _envelope_area(ca, 5.0)
+    region = StockRegion(boundary=pocket, islands=[island])
+    ca = ClearedArea()
+    expected = _envelope_area(ca, region, 5.0)
     # The envelope has the island removed from it; with nothing cleared,
     # actionable_remaining == envelope area.
-    assert abs(ca.actionable_remaining(5.0) - expected) < 0.5
+    assert abs(ca.actionable_remaining(region, 5.0) - expected) < 0.5
 
 
 def test_actionable_remaining_radius_change():
     """Larger tool radius → smaller envelope → smaller actionable."""
     pocket = P((0, 0), (100, 0), (100, 100), (0, 100))
-    ca = ClearedArea(boundary=pocket)
-    small = ca.actionable_remaining(2.0)
-    large = ca.actionable_remaining(10.0)
+    region = StockRegion(boundary=pocket)
+    ca = ClearedArea()
+    small = ca.actionable_remaining(region, 2.0)
+    large = ca.actionable_remaining(region, 10.0)
     # With a larger radius the envelope shrinks, so actionable is smaller.
     assert large < small
 
@@ -124,13 +132,14 @@ def test_actionable_remaining_inside_envelope_no_change_outside():
     """Adding a fragment strictly outside the envelope (in the wall band)
     must not change actionable_remaining."""
     pocket = P((0, 0), (100, 0), (100, 100), (0, 100))
-    ca = ClearedArea(boundary=pocket)
+    region = StockRegion(boundary=pocket)
+    ca = ClearedArea()
     r = 5.0
-    before = ca.actionable_remaining(r)
+    before = ca.actionable_remaining(region, r)
     # Add a fragment entirely within the wall band (the 5-mm strip along
     # the left wall).  This is material the tool centre cannot reach.
     ca.cut([P((0, 0), (2, 0), (2, 50), (0, 50))])
-    after = ca.actionable_remaining(r)
+    after = ca.actionable_remaining(region, r)
     assert abs(after - before) < 0.2, (
         f"actionable_remaining changed by {after - before:.3f} when "
         f"adding a strictly-outside fragment"
@@ -143,30 +152,33 @@ def test_actionable_remaining_inside_envelope_no_change_outside():
 def test_actionable_remaining_after_cut_fast():
     """cut_fast path also reduces actionable_remaining."""
     pocket = P((0, 0), (100, 0), (100, 100), (0, 100))
-    ca = ClearedArea(boundary=pocket)
-    before = ca.actionable_remaining(5.0)
+    region = StockRegion(boundary=pocket)
+    ca = ClearedArea()
+    before = ca.actionable_remaining(region, 5.0)
     ca.cut_fast([P((30, 30), (70, 30), (70, 70), (30, 70))])
-    after = ca.actionable_remaining(5.0)
+    after = ca.actionable_remaining(region, 5.0)
     assert after < before
 
 
 def test_actionable_remaining_after_expand_step():
     """expand_step adds swept area; actionable_remaining drops."""
     pocket = P((0, 0), (100, 0), (100, 100), (0, 100))
-    ca = ClearedArea(boundary=pocket)
+    region = StockRegion(boundary=pocket)
+    ca = ClearedArea()
     # Seed somewhere inside the envelope
     ca.cut([P((30, 30), (40, 30), (40, 40), (30, 40))])
-    before = ca.actionable_remaining(5.0)
+    before = ca.actionable_remaining(region, 5.0)
     ca.expand_step((35, 40), (35, 50), 3.0)
-    after = ca.actionable_remaining(5.0)
+    after = ca.actionable_remaining(region, 5.0)
     assert after < before
 
 
 def test_actionable_remaining_after_batched_commit():
     """commit_batch path also reduces actionable_remaining."""
     pocket = P((0, 0), (100, 0), (100, 100), (0, 100))
-    ca1 = ClearedArea(boundary=pocket)
-    ca2 = ClearedArea(boundary=pocket)
+    region = StockRegion(boundary=pocket)
+    ca1 = ClearedArea()
+    ca2 = ClearedArea()
     segs = [(30, 40), (50, 40), (50, 60)]
     # Global commit
     ca1.begin_batch()
@@ -179,8 +191,8 @@ def test_actionable_remaining_after_batched_commit():
         ca2.expand_batched(prev, nxt, 3.0)
     ca2.commit_batch_local()
     # Both paths must produce equivalent actionable_remaining
-    a1 = ca1.actionable_remaining(5.0)
-    a2 = ca2.actionable_remaining(5.0)
+    a1 = ca1.actionable_remaining(region, 5.0)
+    a2 = ca2.actionable_remaining(region, 5.0)
     assert abs(a1 - a2) < 0.5, (
         f"global={a1:.2f}, local={a2:.2f} differ by {a1 - a2:.3f}"
     )
@@ -190,7 +202,8 @@ def test_actionable_remaining_after_compact():
     """compact_if_needed shouldn't corrupt the actionable_remaining state."""
     random.seed(42)
     pocket = P((0, 0), (200, 0), (200, 200), (0, 200))
-    ca = ClearedArea(boundary=pocket)
+    region = StockRegion(boundary=pocket)
+    ca = ClearedArea()
     # Add many disjoint polys to trigger compaction
     polys = []
     for _ in range(500):
@@ -198,9 +211,9 @@ def test_actionable_remaining_after_compact():
         cy = random.uniform(20, 180)
         polys.append(P((cx, cy), (cx + 2, cy), (cx + 2, cy + 2), (cx, cy + 2)))
     ca.cut(polys)
-    before = ca.actionable_remaining(5.0)
-    ca.compact_if_needed_threshold(tol=0.5, threshold=100)
-    after = ca.actionable_remaining(5.0)
+    before = ca.actionable_remaining(region, 5.0)
+    ca.compact_if_needed_threshold(region, tol=0.5, threshold=100)
+    after = ca.actionable_remaining(region, 5.0)
     # Compaction is allowed to change area slightly (simplification)
     # but should not move actionable_remaining by more than a few %.
     if before > 0:
@@ -243,8 +256,9 @@ def test_actionable_remaining_matches_lazy_recompute_random():
     """
     pocket = P((0, 0), (100, 0), (100, 100), (0, 100))
     r = 3.0
-    ca = ClearedArea(boundary=pocket)
-    env_polys = ca.envelope(r)
+    region = StockRegion(boundary=pocket)
+    ca = ClearedArea()
+    env_polys = ca.envelope(region, r)
     env_area = sum(_poly_area(p) for p in env_polys)
 
     segs = _segments()
@@ -260,7 +274,7 @@ def test_actionable_remaining_matches_lazy_recompute_random():
         cleared_inside = _cleared_inside_envelope(frags, env_polys)
         expected = max(0.0, env_area - cleared_inside)
 
-        actual = ca.actionable_remaining(r)
+        actual = ca.actionable_remaining(region, r)
         # Raster tolerance: ±5 mm² over a ~8000 mm² envelope.
         assert abs(actual - expected) < 5.0, (
             f"step {i} {prev}->{nxt}: expected {expected:.2f}, "
@@ -327,13 +341,14 @@ def test_actionable_remaining_monotone_decreasing():
     actionable_remaining."""
     pocket = P((0, 0), (100, 0), (100, 100), (0, 100))
     r = 5.0
-    ca = ClearedArea(boundary=pocket)
-    prev = ca.actionable_remaining(r)
+    region = StockRegion(boundary=pocket)
+    ca = ClearedArea()
+    prev = ca.actionable_remaining(region, r)
     for prev_pt, nxt, _ in _segments(seed=7, n=50):
         ca.begin_batch()
         ca.expand_batched(prev_pt, nxt, 3.0)
         ca.commit_batch_local()
-        cur = ca.actionable_remaining(r)
+        cur = ca.actionable_remaining(region, r)
         # Allow tiny numerical wiggle but never a real increase.
         assert cur <= prev + 0.5, (
             f"actionable increased from {prev:.3f} to {cur:.3f} step "

@@ -525,11 +525,14 @@ pub fn emit_resume_travel(
     // (which are unreachable by the tool centre and too narrow to matter)
     // are not treated as routing obstacles.  Interior uncut islands are
     // kept and correctly avoided.
-    let envelope = cleared.envelope(opts.tool_radius);
+    let envelope = cleared.envelope(&part.stock_region, opts.tool_radius);
     let mut obstacles = if envelope.is_empty() {
-        cleared.remaining()
+        cleared.remaining(&part.stock_region)
     } else {
-        get_polygons_group_intersection(&cleared.remaining(), &envelope)
+        get_polygons_group_intersection(
+            &cleared.remaining(&part.stock_region),
+            &envelope,
+        )
     };
     obstacles.extend(islands.iter().cloned());
     let obs_bounds = compute_polygon_bounds(&obstacles);

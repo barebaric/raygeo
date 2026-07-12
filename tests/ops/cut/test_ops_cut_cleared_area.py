@@ -3,6 +3,7 @@
 import math
 import random
 
+from raygeo.ops.cut import StockRegion
 from raygeo.ops.cut.cleared_area import ClearedArea
 
 
@@ -11,20 +12,20 @@ def P(*pts):
 
 
 def test_cut_empty():
-    ca = ClearedArea(boundary=[])
+    ca = ClearedArea()
     ca.cut([])
     assert ca.total_area() == 0.0
 
 
 def test_cut_basic():
-    ca = ClearedArea(boundary=[])
+    ca = ClearedArea()
     poly = P((0, 0), (10, 0), (10, 10), (0, 10))
     ca.cut([poly])
     assert ca.total_area() > 0.0
 
 
 def test_cut_union():
-    ca = ClearedArea(boundary=[])
+    ca = ClearedArea()
     poly1 = P((0, 0), (10, 0), (10, 10), (0, 10))
     poly2 = P((5, 5), (15, 5), (15, 15), (5, 15))
     ca.cut([poly1, poly2])
@@ -37,10 +38,11 @@ def test_cut_union():
 def test_cut_remaining():
     """After registering cleared polygons, remaining subtracts them."""
     pocket = P((0, 0), (100, 0), (100, 100), (0, 100))
-    ca = ClearedArea(boundary=pocket)
+    region = StockRegion(boundary=pocket)
+    ca = ClearedArea()
     cleared = P((10, 10), (90, 10), (90, 90), (10, 90))
     ca.cut([cleared])
-    remaining = ca.remaining()
+    remaining = ca.remaining(region)
     assert len(remaining) >= 1
 
 
@@ -48,12 +50,12 @@ def test_cut_remaining():
 
 
 def test_fragments_empty():
-    ca = ClearedArea(boundary=[])
+    ca = ClearedArea()
     assert ca.fragments() == []
 
 
 def test_fragments_after_single_polygon():
-    ca = ClearedArea(boundary=[])
+    ca = ClearedArea()
     poly = P((0, 0), (10, 0), (10, 10), (0, 10))
     ca.cut([poly])
     frags = ca.fragments()
@@ -62,7 +64,7 @@ def test_fragments_after_single_polygon():
 
 
 def test_fragments_after_multiple_disjoint():
-    ca = ClearedArea(boundary=[])
+    ca = ClearedArea()
     poly1 = P((0, 0), (10, 0), (10, 10), (0, 10))
     poly2 = P((100, 100), (110, 100), (110, 110), (100, 110))
     ca.cut([poly1, poly2])
@@ -72,7 +74,7 @@ def test_fragments_after_multiple_disjoint():
 
 def test_fragments_merges_overlapping_add():
     """Overlapping polygons passed to cut are merged."""
-    ca = ClearedArea(boundary=[])
+    ca = ClearedArea()
     poly1 = P((0, 0), (10, 0), (10, 10), (0, 10))
     poly2 = P((5, 5), (15, 5), (15, 15), (5, 15))
     ca.cut([poly1, poly2])
@@ -83,7 +85,7 @@ def test_fragments_merges_overlapping_add():
 
 def test_fragments_after_incorporate_disjoint():
     """Disjoint incorporate appends without merging."""
-    ca = ClearedArea(boundary=[])
+    ca = ClearedArea()
     ca.cut_fast([P((0, 0), (10, 0), (10, 10), (0, 10))])
     ca.cut_fast([P((100, 100), (110, 100), (110, 110), (100, 110))])
     assert len(ca.fragments()) == 2
@@ -91,7 +93,7 @@ def test_fragments_after_incorporate_disjoint():
 
 def test_fragments_after_incorporate_overlapping():
     """Overlapping incorporate triggers a merge."""
-    ca = ClearedArea(boundary=[])
+    ca = ClearedArea()
     poly = P((0, 0), (10, 0), (10, 10), (0, 10))
     ca.cut_fast([poly])
     larger = P((-2, -2), (12, -2), (12, 12), (-2, 12))
@@ -102,7 +104,7 @@ def test_fragments_after_incorporate_overlapping():
 
 def test_fragments_mixed_add_and_incorporate():
     """Fragments reflect total state after both add and incorporate."""
-    ca = ClearedArea(boundary=[])
+    ca = ClearedArea()
     ca.cut([P((0, 0), (10, 0), (10, 10), (0, 10))])
     ca.cut_fast([P((100, 100), (110, 100), (110, 110), (100, 110))])
     assert len(ca.fragments()) == 2
@@ -110,7 +112,7 @@ def test_fragments_mixed_add_and_incorporate():
 
 def test_fragments_vertices_format():
     """Each fragment vertex is an (x, y) pair of floats."""
-    ca = ClearedArea(boundary=[])
+    ca = ClearedArea()
     ca.cut([P((0, 0), (10, 0), (10, 10), (0, 10))])
     frags = ca.fragments()
     for frag in frags:
@@ -122,7 +124,7 @@ def test_fragments_vertices_format():
 
 def test_fragments_min_vertex_count():
     """Each fragment polygon has at least 4 vertices."""
-    ca = ClearedArea(boundary=[])
+    ca = ClearedArea()
     ca.cut([P((0, 0), (10, 0), (10, 10), (0, 10))])
     frags = ca.fragments()
     for frag in frags:
@@ -133,14 +135,14 @@ def test_fragments_min_vertex_count():
 
 
 def test_incorporate_empty():
-    ca = ClearedArea(boundary=[])
+    ca = ClearedArea()
     result = ca.cut_fast([])
     assert result == []
     assert ca.total_area() == 0.0
 
 
 def test_incorporate_returns_new_only():
-    ca = ClearedArea(boundary=[])
+    ca = ClearedArea()
     poly = P((0, 0), (10, 0), (10, 10), (0, 10))
     result = ca.cut_fast([poly])
     assert len(result) == 1
@@ -149,7 +151,7 @@ def test_incorporate_returns_new_only():
 
 def test_incorporate_overlapping_returns_only_new():
     """Input overlapping existing cleared area returns only the new portion."""
-    ca = ClearedArea(boundary=[])
+    ca = ClearedArea()
     poly = P((0, 0), (10, 0), (10, 10), (0, 10))
     ca.cut([poly])
     # Same poly again — no new area
@@ -164,7 +166,7 @@ def test_incorporate_overlapping_returns_only_new():
 
 
 def test_incorporate_disjoint_fast_path():
-    ca = ClearedArea(boundary=[])
+    ca = ClearedArea()
     poly1 = P((0, 0), (10, 0), (10, 10), (0, 10))
     ca.cut([poly1])
     # Disjoint poly — should take the fast append path
@@ -178,27 +180,30 @@ def test_incorporate_disjoint_fast_path():
 
 
 def test_frontier_empty():
-    ca = ClearedArea(boundary=[])
-    f = ca.frontier(0.01)
+    region = StockRegion(boundary=[], islands=[])
+    ca = ClearedArea()
+    f = ca.frontier(region, 0.01)
     assert f == []
 
 
 def test_frontier_merges_overlapping():
-    ca = ClearedArea(boundary=[])
+    region = StockRegion(boundary=[], islands=[])
+    ca = ClearedArea()
     poly1 = P((0, 0), (10, 0), (10, 10), (0, 10))
     poly2 = P((5, 5), (15, 5), (15, 15), (5, 15))
     ca.cut([poly1, poly2])
-    f = ca.frontier(0.01)
+    f = ca.frontier(region, 0.01)
     # Frontier merges overlapping polygons — fewer fragments expected
     assert len(f) >= 1
 
 
 def test_frontier_simplifies():
-    ca = ClearedArea(boundary=[])
+    region = StockRegion(boundary=[], islands=[])
+    ca = ClearedArea()
     # A poly with collinear points that should be simplified
     poly = P((0, 0), (5, 0), (10, 0), (10, 10), (0, 10))
     ca.cut([poly])
-    f = ca.frontier(0.5)
+    f = ca.frontier(region, 0.5)
     assert len(f) == 1
     # Should have removed the collinear (5, 0) vertex
     assert len(f[0]) <= 4
@@ -209,22 +214,25 @@ def test_frontier_simplifies():
 
 def test_bites_empty_cleared():
     """No frontier to expand from — bites returns empty."""
-    ca = ClearedArea(boundary=[(-50, -50), (50, -50), (50, 50), (-50, 50)])
-    b = ca.bites(5.0, 5.0, 0.01)
+    region = StockRegion(boundary=[(-50, -50), (50, -50), (50, 50), (-50, 50)])
+    ca = ClearedArea()
+    b = ca.bites(region, 5.0, 5.0, 0.01)
     assert b == []
 
 
 def test_bites_returns_positive_bites():
-    ca = ClearedArea(boundary=[(-50, -50), (50, -50), (50, 50), (-50, 50)])
+    region = StockRegion(boundary=[(-50, -50), (50, -50), (50, 50), (-50, 50)])
+    ca = ClearedArea()
     ca.cut([P((0, 0), (10, 0), (10, 10), (0, 10))])
-    b = ca.bites(5.0, 5.0, 0.01)
+    b = ca.bites(region, 5.0, 5.0, 0.01)
     assert len(b) >= 1
 
 
 def test_bites_clipped_to_valid_area():
-    ca = ClearedArea(boundary=[(0, 0), (10, 0), (10, 10), (0, 10)])
+    region = StockRegion(boundary=[(0, 0), (10, 0), (10, 10), (0, 10)])
+    ca = ClearedArea()
     ca.cut([P((0, 0), (10, 0), (10, 10), (0, 10))])
-    b = ca.bites(5.0, 5.0, 0.01)
+    b = ca.bites(region, 5.0, 5.0, 0.01)
     assert b == []
 
 
@@ -232,7 +240,7 @@ def test_bites_clipped_to_valid_area():
 
 
 def test_begin_commit_batch_empty():
-    ca = ClearedArea(boundary=[])
+    ca = ClearedArea()
     ca.begin_batch()
     ca.commit_batch()
     assert ca.total_area() == 0.0
@@ -240,11 +248,11 @@ def test_begin_commit_batch_empty():
 
 def test_step_batch_single_segment():
     """A single batched step should match the unbatched expand_step."""
-    ca1 = ClearedArea(boundary=[])
+    ca1 = ClearedArea()
     ca1.cut([[(0, 0), (10, 0), (10, 10), (0, 10)]])
     ca1.expand_step((5, 10), (5, 15), 3.0)
 
-    ca2 = ClearedArea(boundary=[])
+    ca2 = ClearedArea()
     ca2.cut([[(0, 0), (10, 0), (10, 10), (0, 10)]])
     ca2.begin_batch()
     ca2.expand_batched((5, 10), (5, 15), 3.0)
@@ -254,7 +262,7 @@ def test_step_batch_single_segment():
 
 
 def test_step_batch_empty_commit_is_noop():
-    ca = ClearedArea(boundary=[])
+    ca = ClearedArea()
     ca.cut([[(0, 0), (10, 0), (10, 10), (0, 10)]])
     area_before = ca.total_area()
     ca.begin_batch()
@@ -264,7 +272,7 @@ def test_step_batch_empty_commit_is_noop():
 
 def test_step_batch_multiple_accumulates():
     """Calling expand_batched 3 times then commit should be larger."""
-    ca = ClearedArea(boundary=[])
+    ca = ClearedArea()
     ca.cut([[(0, 0), (10, 0), (10, 10), (0, 10)]])
     ca.begin_batch()
     ca.expand_batched((5, 10), (5, 12), 3.0)
@@ -278,14 +286,14 @@ def test_step_batch_multiple_accumulates():
 
 
 def test_new_cleared_area_is_empty():
-    ca = ClearedArea(boundary=[])
+    ca = ClearedArea()
     assert ca.is_empty()
     assert len(ca) == 0
     assert ca.total_area() == 0.0
 
 
 def test_after_add_is_not_empty():
-    ca = ClearedArea(boundary=[])
+    ca = ClearedArea()
     ca.cut([[(0, 0), (10, 0), (10, 10), (0, 10)]])
     assert not ca.is_empty()
     assert len(ca) >= 1
@@ -296,21 +304,21 @@ def test_after_add_is_not_empty():
 
 
 def test_signed_boundary_distance_inside():
-    ca = ClearedArea(boundary=[])
+    ca = ClearedArea()
     ca.cut([[(0, 0), (10, 0), (10, 10), (0, 10)]])
     d = ca.signed_boundary_distance(5, 5)
     assert d < 0  # inside cleared
 
 
 def test_signed_boundary_distance_outside():
-    ca = ClearedArea(boundary=[])
+    ca = ClearedArea()
     ca.cut([[(0, 0), (10, 0), (10, 10), (0, 10)]])
     d = ca.signed_boundary_distance(50, 50)
     assert d > 0  # outside cleared
 
 
 def test_signed_boundary_distance_on_boundary():
-    ca = ClearedArea(boundary=[])
+    ca = ClearedArea()
     ca.cut([[(0, 0), (10, 0), (10, 10), (0, 10)]])
     d = ca.signed_boundary_distance(0, 5)
     assert abs(d) < 1e-6
@@ -320,15 +328,17 @@ def test_signed_boundary_distance_on_boundary():
 
 
 def test_remaining_empty_cleared():
-    ca = ClearedArea(boundary=[(0, 0), (100, 0), (100, 100), (0, 100)])
-    r = ca.remaining()
+    region = StockRegion(boundary=[(0, 0), (100, 0), (100, 100), (0, 100)])
+    ca = ClearedArea()
+    r = ca.remaining(region)
     assert len(r) == 1
 
 
 def test_remaining_partial():
-    ca = ClearedArea(boundary=[(0, 0), (100, 0), (100, 100), (0, 100)])
+    region = StockRegion(boundary=[(0, 0), (100, 0), (100, 100), (0, 100)])
+    ca = ClearedArea()
     ca.cut([[(10, 10), (90, 10), (90, 90), (10, 90)]])
-    r = ca.remaining()
+    r = ca.remaining(region)
     assert len(r) >= 1
 
 
@@ -338,60 +348,66 @@ def test_remaining_partial():
 def test_remaining_area_empty():
     """No cleared fragments — remaining equals stock area."""
     pocket = P((0, 0), (100, 0), (100, 100), (0, 100))
-    ca = ClearedArea(boundary=pocket)
+    region = StockRegion(boundary=pocket)
+    ca = ClearedArea()
     stock_area = 10000.0
-    assert abs(ca.remaining_area() - stock_area) < 0.01
+    assert abs(ca.remaining_area(region) - stock_area) < 0.01
 
 
 def test_remaining_area_no_boundary():
-    ca = ClearedArea(boundary=[])
-    assert ca.remaining_area() == 0.0
+    region = StockRegion(boundary=[], islands=[])
+    ca = ClearedArea()
+    assert ca.remaining_area(region) == 0.0
 
 
 def test_remaining_area_partial():
     """Partial clearing reduces remaining area."""
     pocket = P((0, 0), (100, 0), (100, 100), (0, 100))
-    ca = ClearedArea(boundary=pocket)
+    region = StockRegion(boundary=pocket)
+    ca = ClearedArea()
     stock_area = 10000.0
     cleared_poly = P((10, 10), (90, 10), (90, 90), (10, 90))
     ca.cut([cleared_poly])
-    assert 0.0 < ca.remaining_area() < stock_area
+    assert 0.0 < ca.remaining_area(region) < stock_area
 
 
 def test_remaining_area_plus_total_area():
     """remaining + total approximates stock area for a simple pocket."""
     pocket = P((0, 0), (100, 0), (100, 100), (0, 100))
-    ca = ClearedArea(boundary=pocket)
+    region = StockRegion(boundary=pocket)
+    ca = ClearedArea()
     stock_area = 10000.0
     ca.cut([P((10, 10), (90, 10), (90, 90), (10, 90))])
-    assert abs(ca.total_area() + ca.remaining_area() - stock_area) < 0.1
+    assert abs(ca.total_area() + ca.remaining_area(region) - stock_area) < 0.1
 
 
 def test_remaining_area_with_islands():
     """Islands are excluded from remaining area."""
     pocket = P((0, 0), (100, 0), (100, 100), (0, 100))
     island = P((40, 40), (60, 40), (60, 60), (40, 60))  # 400 mm² island
-    ca = ClearedArea(boundary=pocket, islands=[island])
+    region = StockRegion(boundary=pocket, islands=[island])
+    ca = ClearedArea()
     # Stock area = 10000 - 400 = 9600 mm²
     # With nothing cleared, remaining_area should be ~9600
-    assert abs(ca.remaining_area() - 9600.0) < 0.1
+    assert abs(ca.remaining_area(region) - 9600.0) < 0.1
 
 
 def test_remaining_area_with_islands_partial():
     """Island area stays excluded even after clearing."""
     pocket = P((0, 0), (100, 0), (100, 100), (0, 100))
     island = P((40, 40), (60, 40), (60, 60), (40, 60))
-    ca = ClearedArea(boundary=pocket, islands=[island])
+    region = StockRegion(boundary=pocket, islands=[island])
+    ca = ClearedArea()
     # Clear the top-left quadrant, outside the island
     ca.cut([P((0, 0), (50, 0), (50, 50), (0, 50))])  # ~2500 mm² cleared
-    assert 0.0 < ca.remaining_area() < 9600.0
+    assert 0.0 < ca.remaining_area(region) < 9600.0
 
 
 # ── expand ──
 
 
 def test_expand_increases_area():
-    ca = ClearedArea(boundary=[])
+    ca = ClearedArea()
     ca.cut([[(0, 0), (10, 0), (10, 10), (0, 10)]])
     area_before = ca.total_area()
     ca.expand([(5, 10), (5, 20)], 2.0)
@@ -402,7 +418,7 @@ def test_expand_increases_area():
 
 
 def test_expand_step_increases_area():
-    ca = ClearedArea(boundary=[])
+    ca = ClearedArea()
     ca.cut([[(0, 0), (10, 0), (10, 10), (0, 10)]])
     area_before = ca.total_area()
     ca.expand_step((5, 10), (5, 15), 3.0)
@@ -413,14 +429,14 @@ def test_expand_step_increases_area():
 
 
 def test_query_window_returns_fragments():
-    ca = ClearedArea(boundary=[])
+    ca = ClearedArea()
     ca.cut([[(0, 0), (10, 0), (10, 10), (0, 10)]])
     frags = ca.query_window((-5, -5, 15, 15))
     assert len(frags) >= 1
 
 
 def test_query_window_outside_bbox():
-    ca = ClearedArea(boundary=[])
+    ca = ClearedArea()
     ca.cut([[(0, 0), (10, 0), (10, 10), (0, 10)]])
     frags = ca.query_window((100, 100, 200, 200))
     assert len(frags) == 0
@@ -430,14 +446,14 @@ def test_query_window_outside_bbox():
 
 
 def test_point_engagement_inside_cleared():
-    ca = ClearedArea(boundary=[])
+    ca = ClearedArea()
     ca.cut([[(0, 0), (10, 0), (10, 10), (0, 10)]])
     angle, _, _ = ca.get_point_engagement((5, 5), 5.0)
     assert angle < math.pi  # inside cleared → low engagement
 
 
 def test_point_engagement_outside_cleared():
-    ca = ClearedArea(boundary=[])
+    ca = ClearedArea()
     ca.cut([[(0, 0), (10, 0), (10, 10), (0, 10)]])
     angle, _, _ = ca.get_point_engagement((50, 50), 5.0)
     assert angle > math.pi  # far outside → high engagement
@@ -447,12 +463,12 @@ def test_point_engagement_outside_cleared():
 
 
 def test_path_engagement_empty():
-    ca = ClearedArea(boundary=[])
+    ca = ClearedArea()
     assert ca.path_engagement([], 5.0) == []
 
 
 def test_path_engagement_returns_results():
-    ca = ClearedArea(boundary=[])
+    ca = ClearedArea()
     ca.cut([[(0, 0), (10, 0), (10, 10), (0, 10)]])
     results = ca.path_engagement([(5, 5), (50, 50)], 5.0)
     assert len(results) == 2
@@ -487,13 +503,13 @@ def test_local_equivalence():
     """Local and Global strategies produce identical fragments."""
     segs = _segments()
 
-    ca_global = ClearedArea(boundary=[])
+    ca_global = ClearedArea()
     for prev, next, r in segs:
         ca_global.begin_batch()
         ca_global.expand_batched(prev, next, r)
         ca_global.commit_batch()
 
-    ca_local = ClearedArea(boundary=[])
+    ca_local = ClearedArea()
     for prev, next, r in segs:
         ca_local.begin_batch()
         ca_local.expand_batched(prev, next, r)
@@ -512,16 +528,18 @@ def test_local_equivalence():
 
 def test_envelope_empty_boundary():
     """Envelope with empty boundary returns empty."""
-    ca = ClearedArea(boundary=[])
-    e = ca.envelope(5.0)
+    region = StockRegion(boundary=[], islands=[])
+    ca = ClearedArea()
+    e = ca.envelope(region, 5.0)
     assert e == []
 
 
 def test_envelope_basic():
     """Envelope returns tool-centre region inset from boundary."""
     pocket = P((0, 0), (100, 0), (100, 100), (0, 100))
-    ca = ClearedArea(boundary=pocket)
-    e = ca.envelope(5.0)
+    region = StockRegion(boundary=pocket)
+    ca = ClearedArea()
+    e = ca.envelope(region, 5.0)
     assert len(e) >= 1
     # Each polygon should have at least 3 vertices
     for poly in e:
@@ -531,9 +549,10 @@ def test_envelope_basic():
 def test_envelope_smaller_radius_larger_area():
     """Smaller tool radius produces a larger envelope area."""
     pocket = P((0, 0), (100, 0), (100, 100), (0, 100))
-    ca = ClearedArea(boundary=pocket)
-    e_large = ca.envelope(2.0)
-    e_small = ca.envelope(10.0)
+    region = StockRegion(boundary=pocket)
+    ca = ClearedArea()
+    e_large = ca.envelope(region, 2.0)
+    e_small = ca.envelope(region, 10.0)
     # Count a rough proxy: the sum of polygon vertex counts should
     # differ (or the number of polygons should differ).
     # With a larger radius the inset is deeper, so area shrinks.
@@ -546,11 +565,12 @@ def test_envelope_with_islands():
     """Islands reduce the envelope region."""
     pocket = P((0, 0), (100, 0), (100, 100), (0, 100))
     island = P((40, 40), (60, 40), (60, 60), (40, 60))
-    ca_no_island = ClearedArea(boundary=pocket)
-    ca_island = ClearedArea(boundary=pocket, islands=[island])
+    region_no_island = StockRegion(boundary=pocket)
+    region_island = StockRegion(boundary=pocket, islands=[island])
+    ca = ClearedArea()
 
-    e_no = ca_no_island.envelope(2.0)
-    e_is = ca_island.envelope(2.0)
+    e_no = ca.envelope(region_no_island, 2.0)
+    e_is = ca.envelope(region_island, 2.0)
 
     # Without island the envelope should have fewer polygons or at
     # least be different from the one with an island.
@@ -563,8 +583,9 @@ def test_envelope_with_islands():
 def test_envelope_vertices_format():
     """Each vertex is an (x, y) pair of floats."""
     pocket = P((0, 0), (100, 0), (100, 100), (0, 100))
-    ca = ClearedArea(boundary=pocket)
-    e = ca.envelope(5.0)
+    region = StockRegion(boundary=pocket)
+    ca = ClearedArea()
+    e = ca.envelope(region, 5.0)
     for poly in e:
         for v in poly:
             assert len(v) == 2
@@ -575,15 +596,17 @@ def test_envelope_vertices_format():
 def test_envelope_zero_radius():
     """Zero tool-radius envelope should match the full boundary shape."""
     pocket = P((0, 0), (100, 0), (100, 100), (0, 100))
-    ca = ClearedArea(boundary=pocket)
-    e = ca.envelope(0.0)
+    region = StockRegion(boundary=pocket)
+    ca = ClearedArea()
+    e = ca.envelope(region, 0.0)
     assert len(e) >= 1
 
 
 def test_compact():
     """compact_if_needed reduces vertex count with minimal area change."""
     random.seed(42)
-    ca = ClearedArea(boundary=[])
+    region = StockRegion(boundary=[], islands=[])
+    ca = ClearedArea()
 
     # Add some small polygons, then compact with a low threshold
     polys = []
@@ -603,7 +626,7 @@ def test_compact():
     area_before = ca.total_area()
     v_before = sum(len(p) for p in ca.fragments())
 
-    ca.compact_if_needed_threshold(tol=0.5, threshold=100)
+    ca.compact_if_needed_threshold(region, tol=0.5, threshold=100)
 
     v_after = sum(len(p) for p in ca.fragments())
     area_after = ca.total_area()

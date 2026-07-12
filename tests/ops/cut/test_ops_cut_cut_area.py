@@ -130,7 +130,7 @@ def test_cut_area_determinism_with_fragments():
 
 def test_cut_area_determinism_via_cleared_area():
     """ClearedArea.cut_area is deterministic across repeated calls."""
-    ca = ClearedArea(boundary=[])
+    ca = ClearedArea()
     ca.cut([[(-20, -20), (20, -20), (20, 0), (-20, 0)]])
     first = ca.cut_area((0, -1), (4, -1), 5.0)
     for _ in range(50):
@@ -259,7 +259,7 @@ def test_cut_area_fragment_fully_encloses():
 
 def test_cut_area_batch_invisibility():
     """cut_area must not see uncommitted batch expansions."""
-    ca = ClearedArea(boundary=[])
+    ca = ClearedArea()
     ca.cut([[(-20, -20), (20, -20), (20, 0), (-20, 0)]])
     c1, c2, r = (0.0, -1.0), (0.0, 3.0), 5.0
 

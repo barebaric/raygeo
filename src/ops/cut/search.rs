@@ -6,6 +6,7 @@ use crate::geo::shape::polygon::{
     get_polygons_closest_point, get_polygons_group_intersection,
     walk_polygon_vertices,
 };
+use crate::ops::cut::stock_region::StockRegion;
 use crate::ops::cut::ClearedArea;
 use crate::ops::cut::ToolPose;
 use crate::types::{Point, Point3D, Polygon};
@@ -133,9 +134,11 @@ where
 /// The returned position is offset inward by `radius - advance`.
 ///
 /// Set `max_cut_area` to `f64::MAX` when only a lower bound matters.
+#[allow(clippy::too_many_arguments)]
 #[prof]
 pub fn search_frontier_engagement(
     cleared: &ClearedArea,
+    region: &StockRegion,
     start: ToolPose,
     radius: f64,
     step_length: f64,
@@ -143,12 +146,12 @@ pub fn search_frontier_engagement(
     min_cut_area: f64,
     max_cut_area: f64,
 ) -> Option<ToolPose> {
-    let frontier = cleared.frontier(0.001);
+    let frontier = cleared.frontier(region, 0.001);
     if frontier.is_empty() {
         return None;
     }
 
-    let envelope = cleared.envelope(radius);
+    let envelope = cleared.envelope(region, radius);
 
     // ── Cleared-frontier search (primary: continue the spiral) ────
     // Walk the cleared-area frontier clipped to the envelope.  This is

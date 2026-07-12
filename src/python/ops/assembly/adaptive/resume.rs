@@ -193,8 +193,6 @@ fn try_resume_py(
     segment_heading: f64,
 ) -> PyResult<bool> {
     let mat = axis.map(|a| &a.inner);
-    let (pb_opt, _islands_pts) = part.inner.extract_boundary();
-    let _pb = pb_opt.unwrap_or_default();
     let vta: Vec<Polygon> = valid_tool_area
         .unwrap_or_default()
         .into_iter()

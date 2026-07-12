@@ -4,6 +4,7 @@ use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 use crate::ops::cut::part::Part;
 use crate::python::geo::geometry::Geometry as PyGeometry;
 use crate::python::ops::cut::cleared_area::PyClearedArea;
+use crate::python::ops::cut::stock_region::PyStockRegion;
 use crate::types::{Point, Polygon};
 
 /// Unified workpiece description for motion assembly.
@@ -113,6 +114,15 @@ impl PyPart {
     fn cleared(&self) -> PyClearedArea {
         PyClearedArea {
             inner: self.inner.cleared.clone(),
+        }
+    }
+
+    /// Boundary and islands of the workpiece — cached extraction
+    /// from geometry. Read-only.
+    #[getter]
+    fn stock_region(&self) -> PyStockRegion {
+        PyStockRegion {
+            inner: self.inner.stock_region.clone(),
         }
     }
 

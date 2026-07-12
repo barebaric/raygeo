@@ -15,6 +15,7 @@ pub(crate) mod interp;
 pub(crate) mod part;
 pub(crate) mod search;
 pub(crate) mod stepper;
+pub(crate) mod stock_region;
 
 pub fn register(ops_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     let py = ops_mod.py();
@@ -27,6 +28,7 @@ pub fn register(ops_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     part::register(&m)?;
     search::register(&m)?;
     stepper::register(&m)?;
+    stock_region::register(&m)?;
 
     ops_mod.add_submodule(&m)?;
     Ok(())
