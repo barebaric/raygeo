@@ -51,7 +51,7 @@ pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
         engagement_area_threshold: float = 0.0,
         engagement_angle_threshold: float = 3.141592653589793,
         trace_path: str | None = None,
-    ) -> raygeo.ops.assembly.result.AssemblyResult:
+    ) -> raygeo.ops.assembly.AssemblyResult:
         """Profile the outer boundary of a pocket.
 
         Walks a tool around the grown boundary (offset outward by tool
@@ -178,7 +178,7 @@ fn profile_outer_py(
         engagement_area_threshold: float = 0.0,
         engagement_angle_threshold: float = 3.141592653589793,
         trace_path: str | None = None,
-    ) -> raygeo.ops.assembly.result.AssemblyResult:
+    ) -> raygeo.ops.assembly.AssemblyResult:
         """Profile the inner boundary of a pocket, around islands.
 
         Walks a tool around the inset boundary (offset inward by tool

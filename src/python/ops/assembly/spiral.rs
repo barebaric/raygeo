@@ -35,7 +35,7 @@ pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
         angular_step: float = 0.1,
         start_angle: float = 0.0,
         state: raygeo.ops.state.State | None = None,
-    ) -> raygeo.ops.assembly.result.AssemblyResult:
+    ) -> raygeo.ops.assembly.AssemblyResult:
         """Generate a flat spiral entry path.
 
         Produces an Archimedean spiral from *start_radius* to *end_radius*

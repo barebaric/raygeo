@@ -7,7 +7,7 @@ __all__ = [
     "shrinkwrap",
 ]
 
-def shrinkwrap(part: raygeo.ops.part.Part, image: numpy.ndarray, gravity: float = 0.1, kerf_mm: float = 0, path_offset_mm: float = 0, cut_side: str = 'centerline', arc_tolerance: float = 0, allow_arcs: bool = True, supports_curves: bool = False) -> raygeo.ops.assembly.result.AssemblyResult:
+def shrinkwrap(part: raygeo.ops.part.Part, image: numpy.ndarray, gravity: float = 0.1, kerf_mm: float = 0, path_offset_mm: float = 0, cut_side: str = 'centerline', arc_tolerance: float = 0, allow_arcs: bool = True, supports_curves: bool = False) -> raygeo.ops.assembly.AssemblyResult:
     r"""
     Generate a shrink-wrapped (concave hull) contour around image content.
     

@@ -25,7 +25,7 @@
 ///    and keep sub-segments whose length ≥ `L_min`.
 /// 6. Return the longest qualifying carrier, oriented so the start has
 ///    the smaller coordinate on the dominant axis.
-use crate::geo::algo::clip_line_segment_with_polygons_2d;
+use crate::geo::algo::clipping::clip_line_segment_with_polygons_2d;
 use crate::geo::shape::polygon::{
     get_polygon_group_bounds, get_polygons_group_difference, offset_polygon,
     JoinStyle,

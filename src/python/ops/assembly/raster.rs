@@ -62,7 +62,7 @@ pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
         num_depth_levels: int = 5,
         z_step_down: float = 0.0,
         angle_increment: float = 0.0,
-    ) -> raygeo.ops.assembly.result.AssemblyResult:
+    ) -> raygeo.ops.assembly.AssemblyResult:
         """Rasterise a part image into scan paths.
 
         Converts the grayscale or binary *image* into a sequence of

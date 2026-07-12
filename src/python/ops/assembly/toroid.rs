@@ -38,7 +38,7 @@ pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
         direction: str = "CW",
         angular_step: float = 0.1,
         state: raygeo.ops.state.State | None = None,
-    ) -> raygeo.ops.assembly.result.AssemblyResult:
+    ) -> raygeo.ops.assembly.AssemblyResult:
         """Generate a toroidal (trochoidal) path along a carrier.
 
         Produces a trochoidal looping path that follows the *carrier*
@@ -130,7 +130,7 @@ fn generate_toroid_py(
         direction: str = "CW",
         angular_step: float = 0.1,
         state: raygeo.ops.state.State | None = None,
-    ) -> raygeo.ops.assembly.result.AssemblyResult:
+    ) -> raygeo.ops.assembly.AssemblyResult:
         """Generate a ramp-down toroidal clear path along a carrier.
 
         Descends Z linearly along the carrier's arc-length at a slope

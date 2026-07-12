@@ -9,3 +9,53 @@ Functions in this module compose geo-layer primitives (polylines, arcs, polygons
 motion sequences represented as Ops objects. They decide traversal order, linking strategy,
 lead-in/out, overscan, and tab insertion — concerns that belong to motion assembly rather than pure
 geometry.
+
+## AssemblyResult
+
+Universal return type for every assembly-level generator.
+
+Returned by assemblers such as `generate_helix`, `generate_toroidal_clear`, `generate_slot`, and all
+other assembly-level motion functions. Contains the generated `Ops` sequence, the set of polygons
+that this operation clears, and the tool pose at the start and end of the path.
+
+### `end`
+
+```python
+end: search.ToolPose
+```
+
+### `ops`
+
+```python
+ops: ops.Ops
+```
+
+### `start`
+
+```python
+start: search.ToolPose
+```
+
+### `trace`
+
+```python
+trace: Optional[Any]
+```
+
+### `write_trace()`
+
+```python
+write_trace(path: str, source: str, label: str) -> None
+```
+
+Write this result's trace events to a trace file.
+
+Emits a root "workplan" span with one child assembler span containing either the self-traced events
+or a minimal init/exit pair.
+
+| Parameter | Type   | Description |
+| --------- | ------ | ----------- |
+| `path`    | `str`  |             |
+| `source`  | `str`  |             |
+| `label`   | `str`  |             |
+| _Returns_ | `None` |             |

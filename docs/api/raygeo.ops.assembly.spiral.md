@@ -19,7 +19,7 @@ generate_spiral(
     angular_step: float = 0.1,
     start_angle: float = 0,
     state: ops.state.State | None = None,
-) -> ops.assembly.result.AssemblyResult
+) -> ops.assembly.AssemblyResult
 ```
 
 Generate a flat spiral entry path.
@@ -39,7 +39,7 @@ smoothing full-circle pass at *end_radius*.
 | `angular_step` | `float = 0.1`                        | Angular step in radians (default 0.1).           |
 | `start_angle`  | `float = 0`                          | Starting angle in radians (default 0.0).         |
 | `state`        | `ops.state.State &#124; None = None` | Optional machine state to apply before the path. |
-| _Returns_      | `ops.assembly.result.AssemblyResult` | An **AssemblyResult** with the spiral path.      |
+| _Returns_      | `ops.assembly.AssemblyResult`        | An **AssemblyResult** with the spiral path.      |
 
 ![Flat Archimedean spiral with smoothing circular pass](images/ops-assembly-spiral-spiral-example.png)
 

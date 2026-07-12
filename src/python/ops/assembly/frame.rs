@@ -32,7 +32,7 @@ pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
         kerf_mm: float = 0.0,
         path_offset_mm: float = 0.0,
         cut_side: str = "centerline",
-    ) -> raygeo.ops.assembly.result.AssemblyResult:
+    ) -> raygeo.ops.assembly.AssemblyResult:
         """Generate a rectangular frame around the part boundary.
 
         Creates a rectangle matching ``part.size_mm``, computes the

@@ -8,8 +8,8 @@ use prof_macros::prof;
 
 use crate::geo::algo::medial_axis::MedialAxis;
 use crate::geo::algo::smooth::build_smoothed_path;
-use crate::geo::shape::compute_polygon_bounds;
-use crate::geo::shape::does_path_sweep_intersect_polygon;
+use crate::geo::shape::polygon::compute_polygon_bounds;
+use crate::geo::shape::polygon::does_path_sweep_intersect_polygon;
 use crate::ops::assembly::adaptive::AdaptiveClearingOptions;
 use crate::ops::part::Part;
 use crate::types::{Point, Point3D, Polygon, Rect};

@@ -99,7 +99,7 @@ pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
         trace_path: str | None = None,
         on_progress: collections.abc.Callable[[dict], None] | None = None,
         batch_size: int = 128,
-    ) -> raygeo.ops.assembly.result.AssemblyResult:
+    ) -> raygeo.ops.assembly.AssemblyResult:
         """Run forward-stepping adaptive clearing.
 
         Starting from the pre-populated cleared area inside *part*,

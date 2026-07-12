@@ -34,7 +34,7 @@ pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
         style: str = "zigzag",
         lateral_amplitude: float = 2.0,
         state: raygeo.ops.state.State | None = None,
-    ) -> raygeo.ops.assembly.result.AssemblyResult:
+    ) -> raygeo.ops.assembly.AssemblyResult:
         """Generate a ramp entry path.
 
         Produces a ramp (linear or zigzag) from *start* to *end* while

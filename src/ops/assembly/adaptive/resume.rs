@@ -10,7 +10,7 @@ use super::chain::StrategyChain;
 use crate::dbg_log;
 use crate::error::{RaygeoError, RaygeoResult};
 use crate::geo::algo::medial_axis::MedialAxis;
-use crate::geo::shape::compute_polygon_bounds;
+use crate::geo::shape::polygon::compute_polygon_bounds;
 use crate::geo::shape::polygon::{
     get_polygons_closest_point, get_polygons_group_intersection,
     walk_polygon_vertices,

@@ -100,7 +100,7 @@ def extract_svg_metadata(svg_str: str) -> SvgMetadata:
     :complexity: O(n) where n = size of SVG document
     """
 
-def geometry_to_svg_path(geometry: raygeo.Geometry, width: int, height: int) -> str:
+def geometry_to_svg_path(geometry: raygeo.geo.Geometry, width: int, height: int) -> str:
     r"""
     Convert a normalized Geometry to an SVG path d attribute string.
     
@@ -126,7 +126,7 @@ def parse_svg_length(length_str: str) -> tuple[float, str]:
     :complexity: O(1)
     """
 
-def parse_svg_path_data(path_data: str, transform: numpy.typing.NDArray[numpy.float64] | None = None, scale_x: float = 1, scale_y: float = 1) -> list[raygeo.Geometry]:
+def parse_svg_path_data(path_data: str, transform: numpy.typing.NDArray[numpy.float64] | None = None, scale_x: float = 1, scale_y: float = 1) -> list[raygeo.geo.Geometry]:
     r"""
     Parse an SVG path d attribute into a list of Geometry objects.
     
@@ -172,7 +172,7 @@ def svg_length_to_px(length_str: str, dpi: float = 96) -> float:
     :complexity: O(1)
     """
 
-def svg_string_to_geometries(svg_str: str, scale_x: float = 1, scale_y: float = 1) -> list[raygeo.Geometry]:
+def svg_string_to_geometries(svg_str: str, scale_x: float = 1, scale_y: float = 1) -> list[raygeo.geo.Geometry]:
     r"""
     Parse an SVG string and extract all path elements as Geometry objects.
     
@@ -186,7 +186,7 @@ def svg_string_to_geometries(svg_str: str, scale_x: float = 1, scale_y: float = 
     :complexity: O(n) where n = size of SVG document
     """
 
-def svg_string_to_geometries_by_layer(svg_str: str, scale_x: float = 1, scale_y: float = 1) -> list[tuple[str, list[raygeo.Geometry]]]:
+def svg_string_to_geometries_by_layer(svg_str: str, scale_x: float = 1, scale_y: float = 1) -> list[tuple[str, list[raygeo.geo.Geometry]]]:
     r"""
     Extract geometries grouped by top-level <g> layer.
     
@@ -200,7 +200,7 @@ def svg_string_to_geometries_by_layer(svg_str: str, scale_x: float = 1, scale_y:
     :complexity: O(n) where n = size of SVG document
     """
 
-def svg_string_to_geometry(svg_str: str, scale_x: float = 1, scale_y: float = 1) -> raygeo.Geometry:
+def svg_string_to_geometry(svg_str: str, scale_x: float = 1, scale_y: float = 1) -> raygeo.geo.Geometry:
     r"""
     Parse an SVG string and merge all subpaths into a single Geometry.
     
@@ -214,7 +214,7 @@ def svg_string_to_geometry(svg_str: str, scale_x: float = 1, scale_y: float = 1)
     :complexity: O(n) where n = size of SVG document
     """
 
-def svg_string_to_geometry_by_layer(svg_str: str, scale_x: float = 1, scale_y: float = 1) -> list[tuple[str, raygeo.Geometry]]:
+def svg_string_to_geometry_by_layer(svg_str: str, scale_x: float = 1, scale_y: float = 1) -> list[tuple[str, raygeo.geo.Geometry]]:
     r"""
     Extract geometries grouped by layer, merged into one Geometry each.
     

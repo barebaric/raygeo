@@ -82,7 +82,7 @@ fn hull_to_mm(
         arc_tolerance: float = 0.0,
         allow_arcs: bool = True,
         supports_curves: bool = False,
-    ) -> raygeo.ops.assembly.result.AssemblyResult:
+    ) -> raygeo.ops.assembly.AssemblyResult:
         """Generate a shrink-wrapped (concave hull) contour around image content.
 
         Computes a concave hull from the binary *image* using Bézier

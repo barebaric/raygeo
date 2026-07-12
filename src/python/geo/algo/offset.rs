@@ -40,11 +40,11 @@ pub fn register(algo_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     import raygeo
 
     def concentric_offsets(
-        geom: raygeo.Geometry,
+        geom: raygeo.geo.Geometry,
         step: float,
         max_passes: int = 10,
         min_area: float = 1.0,
-    ) -> list[raygeo.Geometry]:
+    ) -> list[raygeo.geo.Geometry]:
         """Generate concentric inward offsets of a geometry.
 
         Each successive offset shrinks the boundary by `step`. Stops early

@@ -18,7 +18,7 @@ use crate::svg;
         transform: numpy.typing.NDArray[numpy.float64] | None = None,
         scale_x: float = 1.0,
         scale_y: float = 1.0,
-    ) -> list[raygeo.Geometry]:
+    ) -> list[raygeo.geo.Geometry]:
         """Parse an SVG path d attribute into a list of Geometry objects.
 
         Supports M/m, L/l, H/h, V/v, C/c, Z/z commands.
@@ -120,7 +120,7 @@ fn py_parse_svg_transform(
         svg_str: str,
         scale_x: float = 1.0,
         scale_y: float = 1.0,
-    ) -> list[raygeo.Geometry]:
+    ) -> list[raygeo.geo.Geometry]:
         """Parse an SVG string and extract all path elements as Geometry objects.
 
         Recursively traverses the SVG XML tree, extracting d attributes
@@ -154,7 +154,7 @@ fn py_svg_string_to_geometries(
         svg_str: str,
         scale_x: float = 1.0,
         scale_y: float = 1.0,
-    ) -> raygeo.Geometry:
+    ) -> raygeo.geo.Geometry:
         """Parse an SVG string and merge all subpaths into a single Geometry.
 
         Like svg_string_to_geometries but returns one combined Geometry
@@ -185,7 +185,7 @@ fn py_svg_string_to_geometry(
     import raygeo
 
     def geometry_to_svg_path(
-        geometry: raygeo.Geometry,
+        geometry: raygeo.geo.Geometry,
         width: int,
         height: int,
     ) -> str:
@@ -472,7 +472,7 @@ fn py_extract_svg_metadata(svg_str: &str) -> PyResult<SvgMetadata> {
         svg_str: str,
         scale_x: float = 1.0,
         scale_y: float = 1.0,
-    ) -> list[tuple[str, list[raygeo.Geometry]]]:
+    ) -> list[tuple[str, list[raygeo.geo.Geometry]]]:
         """Extract geometries grouped by top-level <g> layer.
 
         Returns a list of (layer_id, geometries) tuples. Only top-level
@@ -517,7 +517,7 @@ fn py_svg_string_to_geometries_by_layer(
         svg_str: str,
         scale_x: float = 1.0,
         scale_y: float = 1.0,
-    ) -> list[tuple[str, raygeo.Geometry]]:
+    ) -> list[tuple[str, raygeo.geo.Geometry]]:
         """Extract geometries grouped by layer, merged into one Geometry each.
 
         Like svg_string_to_geometries_by_layer but merges each layer's

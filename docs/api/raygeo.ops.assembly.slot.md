@@ -14,7 +14,7 @@ generate_slot(
     tool_radius: float,
     target_z: float,
     state: ops.state.State | None = None,
-) -> ops.assembly.result.AssemblyResult
+) -> ops.assembly.AssemblyResult
 ```
 
 Generate a back-and-forth slot clearing path along a carrier.
@@ -29,7 +29,7 @@ cleared polygon is the carrier swept by *tool_radius* (Minkowski sum).
 | `tool_radius` | `float`                              | Tool radius in mm.                               |
 | `target_z`    | `float`                              | Cutting Z height.                                |
 | `state`       | `ops.state.State &#124; None = None` | Optional machine state to apply before the path. |
-| _Returns_     | `ops.assembly.result.AssemblyResult` | An **AssemblyResult** with the slot path.        |
+| _Returns_     | `ops.assembly.AssemblyResult`        | An **AssemblyResult** with the slot path.        |
 
 ![3D forward+backward slot path through a rectangular slot at constant depth, no trochoid.](images/ops-assembly-slot-slot-3d.png)
 

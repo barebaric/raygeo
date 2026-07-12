@@ -54,8 +54,6 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     sys_modules.set_item("raygeo.geo", &geo_mod)?;
     sys_modules.set_item("raygeo.geo.types", &types_mod)?;
 
-    add_submodules(m)?;
-
     Ok(())
 }
 

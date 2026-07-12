@@ -2,7 +2,7 @@
 # ruff: noqa: E501, F401, F403, F405
 
 import builtins
-from raygeo.ops.assembly import result
+from raygeo.ops import assembly
 from raygeo.ops import part
 import typing
 __all__ = [
@@ -33,7 +33,7 @@ class Workplan:
         r"""
         Append builder output steps (list of WorkplanStep dicts).
         """
-    def execute(self, cut_feed_rate: builtins.int = 1200, cut_power: builtins.float = 1.0, rapid_feed_rate: typing.Optional[builtins.int] = None, trace: typing.Optional[builtins.str] = None, on_progress: typing.Optional[typing.Any] = None, batch_size: builtins.int = 128) -> result.AssemblyResult:
+    def execute(self, cut_feed_rate: builtins.int = 1200, cut_power: builtins.float = 1.0, rapid_feed_rate: typing.Optional[builtins.int] = None, trace: typing.Optional[builtins.str] = None, on_progress: typing.Optional[typing.Any] = None, batch_size: builtins.int = 128) -> assembly.AssemblyResult:
         r"""
         Execute all steps and return the combined :class:`AssemblyResult`.
         

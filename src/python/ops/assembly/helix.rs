@@ -35,7 +35,7 @@ pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
         direction: str = "CW",
         angular_step: float = 0.1,
         state: raygeo.ops.state.State | None = None,
-    ) -> raygeo.ops.assembly.result.AssemblyResult:
+    ) -> raygeo.ops.assembly.AssemblyResult:
         """Generate a helical entry path.
 
         Produces a helical toolpath from *z_start* to *z_end* at the

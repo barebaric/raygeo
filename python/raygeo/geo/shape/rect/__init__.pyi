@@ -37,7 +37,7 @@ def does_rect_contain_rect(outer: types.Rect, inner: types.Rect) -> bool:
     :complexity: O(1) time, O(1) space
     """
 
-def get_combined_rect(geometries: list[raygeo.Geometry]) -> types.Rect:
+def get_combined_rect(geometries: list[raygeo.geo.Geometry]) -> types.Rect:
     r"""
     Compute the union bounding box of multiple geometries.
     

@@ -27,7 +27,7 @@ raster(
     num_depth_levels: int = 5,
     z_step_down: float = 0,
     angle_increment: float = 0,
-) -> ops.assembly.result.AssemblyResult
+) -> ops.assembly.AssemblyResult
 ```
 
 Rasterise a part image into scan paths.
@@ -54,24 +54,24 @@ the results are concatenated.
 missing.
 ```
 
-| Parameter            | Type                                 | Description                                                                                            |
-| -------------------- | ------------------------------------ | ------------------------------------------------------------------------------------------------------ |
-| `part`               | `ops.part.Part`                      | Part providing pixel density and size metadata.                                                        |
-| `image`              | `numpy.ndarray`                      | 2-D grayscale (uint8) or binary numpy array.                                                           |
-| `alpha`              | `numpy.ndarray &#124; None = None`   | Optional 2-D alpha mask (uint8). Required for `power_modulated` mode when the image is not pre-masked. |
-| `mode`               | `str = 'power_modulated'`            | `"power_modulated"`, `"mask_scan"`, or `"multi_pass"`.                                                 |
-| `line_interval_mm`   | `float = 0.1`                        | Spacing between scan lines in mm.                                                                      |
-| `sample_interval_mm` | `float = 0.05`                       | Power sampling interval along a scan line in mm (power_modulated only).                                |
-| `min_power`          | `float = 0`                          | Minimum laser power (0–1).                                                                             |
-| `max_power`          | `float = 1`                          | Maximum laser power (0–1).                                                                             |
-| `step_power`         | `float = 0.1`                        | Power step per level.                                                                                  |
-| `num_power_levels`   | `int = 10`                           | Number of discrete power levels.                                                                       |
-| `angle`              | `float = 0`                          | Scan angle in degrees.                                                                                 |
-| `offset_x_mm`        | `float = 0`                          | Global X offset in mm.                                                                                 |
-| `offset_y_mm`        | `float = 0`                          | Global Y offset in mm.                                                                                 |
-| `scan_mode`          | `str = 'segmented'`                  | `"segmented"` or `"full_sweep"`.                                                                       |
-| `cross_hatch`        | `bool = False`                       | If True, add a second pass at angle + 90° (default False).                                             |
-| `num_depth_levels`   | `int = 5`                            | Number of depth layers (multi_pass only, default 5).                                                   |
-| `z_step_down`        | `float = 0`                          | Z decrement per depth layer in mm (multi_pass only, default 0.0).                                      |
-| `angle_increment`    | `float = 0`                          | Angle added per depth layer in degrees (multi_pass only, default 0.0).                                 |
-| _Returns_            | `ops.assembly.result.AssemblyResult` | An **AssemblyResult** with the raster path.                                                            |
+| Parameter            | Type                               | Description                                                                                            |
+| -------------------- | ---------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| `part`               | `ops.part.Part`                    | Part providing pixel density and size metadata.                                                        |
+| `image`              | `numpy.ndarray`                    | 2-D grayscale (uint8) or binary numpy array.                                                           |
+| `alpha`              | `numpy.ndarray &#124; None = None` | Optional 2-D alpha mask (uint8). Required for `power_modulated` mode when the image is not pre-masked. |
+| `mode`               | `str = 'power_modulated'`          | `"power_modulated"`, `"mask_scan"`, or `"multi_pass"`.                                                 |
+| `line_interval_mm`   | `float = 0.1`                      | Spacing between scan lines in mm.                                                                      |
+| `sample_interval_mm` | `float = 0.05`                     | Power sampling interval along a scan line in mm (power_modulated only).                                |
+| `min_power`          | `float = 0`                        | Minimum laser power (0–1).                                                                             |
+| `max_power`          | `float = 1`                        | Maximum laser power (0–1).                                                                             |
+| `step_power`         | `float = 0.1`                      | Power step per level.                                                                                  |
+| `num_power_levels`   | `int = 10`                         | Number of discrete power levels.                                                                       |
+| `angle`              | `float = 0`                        | Scan angle in degrees.                                                                                 |
+| `offset_x_mm`        | `float = 0`                        | Global X offset in mm.                                                                                 |
+| `offset_y_mm`        | `float = 0`                        | Global Y offset in mm.                                                                                 |
+| `scan_mode`          | `str = 'segmented'`                | `"segmented"` or `"full_sweep"`.                                                                       |
+| `cross_hatch`        | `bool = False`                     | If True, add a second pass at angle + 90° (default False).                                             |
+| `num_depth_levels`   | `int = 5`                          | Number of depth layers (multi_pass only, default 5).                                                   |
+| `z_step_down`        | `float = 0`                        | Z decrement per depth layer in mm (multi_pass only, default 0.0).                                      |
+| `angle_increment`    | `float = 0`                        | Angle added per depth layer in degrees (multi_pass only, default 0.0).                                 |
+| _Returns_            | `ops.assembly.AssemblyResult`      | An **AssemblyResult** with the raster path.                                                            |

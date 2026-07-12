@@ -44,16 +44,16 @@ Check if one rectangle contains another.
 ### `get_combined_rect()`
 
 ```python
-get_combined_rect(geometries: list[Geometry]) -> types.Rect
+get_combined_rect(geometries: list[geo.Geometry]) -> types.Rect
 ```
 
 Compute the union bounding box of multiple geometries.
 
-| Parameter    | Type             | Description                                               |
-| ------------ | ---------------- | --------------------------------------------------------- |
-| `geometries` | `list[Geometry]` | List of Geometry objects.                                 |
-| _Returns_    | `types.Rect`     | Union bounding rectangle (x_min, y_min, x_max, y_max).    |
-| _Complexity_ |                  | O(n) time, O(1) space where n is the number of geometries |
+| Parameter    | Type                 | Description                                               |
+| ------------ | -------------------- | --------------------------------------------------------- |
+| `geometries` | `list[geo.Geometry]` | List of Geometry objects.                                 |
+| _Returns_    | `types.Rect`         | Union bounding rectangle (x_min, y_min, x_max, y_max).    |
+| _Complexity_ |                      | O(n) time, O(1) space where n is the number of geometries |
 
 ### `is_point_inside_rect()`
 

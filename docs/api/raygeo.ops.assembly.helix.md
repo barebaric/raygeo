@@ -18,7 +18,7 @@ generate_helix(
     direction: str = 'CW',
     angular_step: float = 0.1,
     state: ops.state.State | None = None,
-) -> ops.assembly.result.AssemblyResult
+) -> ops.assembly.AssemblyResult
 ```
 
 Generate a helical entry path.
@@ -36,7 +36,7 @@ Produces a helical toolpath from *z_start* to *z_end* at the given *center* and 
 | `direction`    | `str = 'CW'`                         | `"CW"` or `"CCW"` (default `"CW"`).              |
 | `angular_step` | `float = 0.1`                        | Angular step in radians (default 0.1).           |
 | `state`        | `ops.state.State &#124; None = None` | Optional machine state to apply before the path. |
-| _Returns_      | `ops.assembly.result.AssemblyResult` | An **AssemblyResult** with the helical path.     |
+| _Returns_      | `ops.assembly.AssemblyResult`        | An **AssemblyResult** with the helical path.     |
 
 ![Helical entry path from safe Z to target depth](images/ops-assembly-helix-helix-example.png)
 

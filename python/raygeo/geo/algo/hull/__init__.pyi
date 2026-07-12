@@ -14,7 +14,7 @@ __all__ = [
     "get_hulls_from_image",
 ]
 
-def get_concave_hull(boolean_image: numpy.ndarray, gravity: float = 0.1) -> raygeo.Geometry | None:
+def get_concave_hull(boolean_image: numpy.ndarray, gravity: float = 0.1) -> raygeo.geo.Geometry | None:
     r"""
     Compute a concave (shrink-wrap) hull with Bézier gravity.
     
@@ -24,7 +24,7 @@ def get_concave_hull(boolean_image: numpy.ndarray, gravity: float = 0.1) -> rayg
     :complexity: O(w*h + n log n + n * g) time, O(n) space where w*h is the image size, n the number of contour points, and g the number of gravity iterations
     """
 
-def get_enclosing_hull(boolean_image: numpy.ndarray) -> raygeo.Geometry | None:
+def get_enclosing_hull(boolean_image: numpy.ndarray) -> raygeo.geo.Geometry | None:
     r"""
     Compute a single convex hull enclosing all content.
     
@@ -33,7 +33,7 @@ def get_enclosing_hull(boolean_image: numpy.ndarray) -> raygeo.Geometry | None:
     :complexity: O(w*h + n log n) time, O(n) space where w*h is the image size and n the number of contour points
     """
 
-def get_hulls_from_image(boolean_image: numpy.ndarray) -> list[raygeo.Geometry]:
+def get_hulls_from_image(boolean_image: numpy.ndarray) -> list[raygeo.geo.Geometry]:
     r"""
     Compute a separate convex hull for each distinct component.
     

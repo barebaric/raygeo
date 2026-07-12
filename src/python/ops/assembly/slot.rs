@@ -30,7 +30,7 @@ pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
         tool_radius: float,
         target_z: float,
         state: raygeo.ops.state.State | None = None,
-    ) -> raygeo.ops.assembly.result.AssemblyResult:
+    ) -> raygeo.ops.assembly.AssemblyResult:
         """Generate a back-and-forth slot clearing path along a carrier.
 
         Produces a forward pass then a backward pass along the carrier,

@@ -24,7 +24,7 @@ profile_inner(
     engagement_area_threshold: float = 0,
     engagement_angle_threshold: float = 3.141592653589793,
     trace_path: str | None = None,
-) -> ops.assembly.result.AssemblyResult
+) -> ops.assembly.AssemblyResult
 ```
 
 Profile the inner boundary of a pocket, around islands.
@@ -50,7 +50,7 @@ so that the tool clears the material along the pocket walls and around each isla
 | `engagement_area_threshold`  | `float = 0`                              | Overengagement area threshold (mm², 0 = auto).                                                                                |
 | `engagement_angle_threshold` | `float = 3.141592653589793`              | Overengagement angle threshold (rad, default π).                                                                              |
 | `trace_path`                 | `str &#124; None = None`                 | Optional path to write a binary trace file (default None).                                                                    |
-| _Returns_                    | `ops.assembly.result.AssemblyResult`     | An **AssemblyResult** with the profiling path.                                                                                |
+| _Returns_                    | `ops.assembly.AssemblyResult`            | An **AssemblyResult** with the profiling path.                                                                                |
 
 ![profile_inner on a square pocket with island — 2D: boundary, island, offset walks, cuts (turbo).](images/ops-assembly-profile-profile-inner-rect-with-square-island-2d.png)
 
@@ -91,7 +91,7 @@ profile_outer(
     engagement_area_threshold: float = 0,
     engagement_angle_threshold: float = 3.141592653589793,
     trace_path: str | None = None,
-) -> ops.assembly.result.AssemblyResult
+) -> ops.assembly.AssemblyResult
 ```
 
 Profile the outer boundary of a pocket.
@@ -117,7 +117,7 @@ an **AssemblyResult** with the profiling move sequence.
 | `engagement_area_threshold`  | `float = 0`                              | Overengagement area threshold (mm², 0 = auto).                                                                    |
 | `engagement_angle_threshold` | `float = 3.141592653589793`              | Overengagement angle threshold (rad, default π).                                                                  |
 | `trace_path`                 | `str &#124; None = None`                 | Optional path to write a binary trace file (default None).                                                        |
-| _Returns_                    | `ops.assembly.result.AssemblyResult`     | An **AssemblyResult** with the profiling path.                                                                    |
+| _Returns_                    | `ops.assembly.AssemblyResult`            | An **AssemblyResult** with the profiling path.                                                                    |
 
 ![profile_outer on a rect pocket — 3D (left) and 2D top-down with offset tool-centre polygon (right).](images/ops-assembly-profile-profile-outer-rect.png)
 

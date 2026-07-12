@@ -29,7 +29,7 @@ def compute_inset_region(boundary: collections.abc.Sequence[tuple[float, float]]
     :complexity: O((n + m) log(n + m)) where n and m are boundary and obstacle point counts
     """
 
-def concentric_offsets(geom: raygeo.Geometry, step: float, max_passes: int = 10, min_area: float = 1) -> list[raygeo.Geometry]:
+def concentric_offsets(geom: raygeo.geo.Geometry, step: float, max_passes: int = 10, min_area: float = 1) -> list[raygeo.geo.Geometry]:
     r"""
     Generate concentric inward offsets of a geometry.
     

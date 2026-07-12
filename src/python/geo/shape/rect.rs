@@ -125,7 +125,7 @@ fn do_rects_intersect_py(
     import raygeo.geo.types
 
     def get_combined_rect(
-        geometries: list[raygeo.Geometry],
+        geometries: list[raygeo.geo.Geometry],
     ) -> types.Rect:
         """Compute the union bounding box of multiple geometries.
 

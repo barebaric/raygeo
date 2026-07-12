@@ -17,7 +17,7 @@ generate_toroid(
     direction: str = 'CW',
     angular_step: float = 0.1,
     state: ops.state.State | None = None,
-) -> ops.assembly.result.AssemblyResult
+) -> ops.assembly.AssemblyResult
 ```
 
 Generate a toroidal (trochoidal) path along a carrier.
@@ -35,7 +35,7 @@ Produces a trochoidal looping path that follows the *carrier* polyline, clearing
 | `direction`    | `str = 'CW'`                         | `"CW"` or `"CCW"` (default `"CW"`).                |
 | `angular_step` | `float = 0.1`                        | Angular step in radians (default 0.1).             |
 | `state`        | `ops.state.State &#124; None = None` | Optional machine state to apply before the path.   |
-| _Returns_      | `ops.assembly.result.AssemblyResult` | An **AssemblyResult** with the toroidal path.      |
+| _Returns_      | `ops.assembly.AssemblyResult`        | An **AssemblyResult** with the toroidal path.      |
 
 ![Trochoidal slot path along a carrier polyline](images/ops-assembly-toroid-toroid-example.png)
 
@@ -55,7 +55,7 @@ generate_toroidal_clear(
     direction: str = 'CW',
     angular_step: float = 0.1,
     state: ops.state.State | None = None,
-) -> ops.assembly.result.AssemblyResult
+) -> ops.assembly.AssemblyResult
 ```
 
 Generate a ramp-down toroidal clear path along a carrier.
@@ -76,7 +76,7 @@ forward pass at constant `target_z`.
 | `direction`          | `str = 'CW'`                         | `"CW"` or `"CCW"` (default `"CW"`).                                                 |
 | `angular_step`       | `float = 0.1`                        | Angular step in radians (default 0.1).                                              |
 | `state`              | `ops.state.State &#124; None = None` | Optional machine state.                                                             |
-| _Returns_            | `ops.assembly.result.AssemblyResult` | An **AssemblyResult** with the ramp-down + flat-final toroidal path.                |
+| _Returns_            | `ops.assembly.AssemblyResult`        | An **AssemblyResult** with the ramp-down + flat-final toroidal path.                |
 
 ![3D ramp-down toroidal clear zig-zagging along a short carrier with full ramp descent.](images/ops-assembly-toroid-clear-toroidal-clear-3d.png)
 

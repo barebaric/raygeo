@@ -7,7 +7,7 @@ __all__ = [
     "profile_outer",
 ]
 
-def profile_inner(part: raygeo.ops.part.Part, tool_radius: float = 3, step_over: float = 1.5, step_length: float = 0.6, target_z: float = -5, safe_z: float = 2, wall_margin: float = 0, stock_to_leave: float = 0, cut_feed_rate: int = 1000, cut_power: float = 0, start_pos: tuple[float, float] | None = None, cut_direction: str = 'ccw', engagement_area_threshold: float = 0, engagement_angle_threshold: float = 3.141592653589793, trace_path: str | None = None) -> raygeo.ops.assembly.result.AssemblyResult:
+def profile_inner(part: raygeo.ops.part.Part, tool_radius: float = 3, step_over: float = 1.5, step_length: float = 0.6, target_z: float = -5, safe_z: float = 2, wall_margin: float = 0, stock_to_leave: float = 0, cut_feed_rate: int = 1000, cut_power: float = 0, start_pos: tuple[float, float] | None = None, cut_direction: str = 'ccw', engagement_area_threshold: float = 0, engagement_angle_threshold: float = 3.141592653589793, trace_path: str | None = None) -> raygeo.ops.assembly.AssemblyResult:
     r"""
     Profile the inner boundary of a pocket, around islands.
     
@@ -37,7 +37,7 @@ def profile_inner(part: raygeo.ops.part.Part, tool_radius: float = 3, step_over:
     :returns: An :class:`AssemblyResult` with the profiling path.
     """
 
-def profile_outer(part: raygeo.ops.part.Part, tool_radius: float, step_over: float, step_length: float, target_z: float, safe_z: float, wall_margin: float, cut_feed_rate: int, cut_power: float, start_pos: tuple[float, float] | None = None, cut_direction: str = 'ccw', stock_to_leave: float = 0, engagement_area_threshold: float = 0, engagement_angle_threshold: float = 3.141592653589793, trace_path: str | None = None) -> raygeo.ops.assembly.result.AssemblyResult:
+def profile_outer(part: raygeo.ops.part.Part, tool_radius: float, step_over: float, step_length: float, target_z: float, safe_z: float, wall_margin: float, cut_feed_rate: int, cut_power: float, start_pos: tuple[float, float] | None = None, cut_direction: str = 'ccw', stock_to_leave: float = 0, engagement_area_threshold: float = 0, engagement_angle_threshold: float = 3.141592653589793, trace_path: str | None = None) -> raygeo.ops.assembly.AssemblyResult:
     r"""
     Profile the outer boundary of a pocket.
     

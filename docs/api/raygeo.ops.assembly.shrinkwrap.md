@@ -18,7 +18,7 @@ shrinkwrap(
     arc_tolerance: float = 0,
     allow_arcs: bool = True,
     supports_curves: bool = False,
-) -> ops.assembly.result.AssemblyResult
+) -> ops.assembly.AssemblyResult
 ```
 
 Generate a shrink-wrapped (concave hull) contour around image content.
@@ -30,15 +30,15 @@ offset from kerf / path-offset / cut-side, applies it, optionally fits arcs/curv
 
 **Raises:** `ValueError` — If the image is empty or the part has no size.
 
-| Parameter         | Type                                 | Description                                                          |
-| ----------------- | ------------------------------------ | -------------------------------------------------------------------- |
-| `part`            | `ops.part.Part`                      | Part providing physical size metadata.                               |
-| `image`           | `numpy.ndarray`                      | 2D boolean or binary numpy array.                                    |
-| `gravity`         | `float = 0.1`                        | Shrink-wrap factor 0.0–1.0 (0 = convex hull, default 0.1).           |
-| `kerf_mm`         | `float = 0`                          | Tool kerf width in mm (default 0.0).                                 |
-| `path_offset_mm`  | `float = 0`                          | Additional offset distance in mm (default 0.0).                      |
-| `cut_side`        | `str = 'centerline'`                 | `"centerline"`, `"outside"`, or `"inside"` (default `"centerline"`). |
-| `arc_tolerance`   | `float = 0`                          | Curve fitting tolerance in mm (default 0.0).                         |
-| `allow_arcs`      | `bool = True`                        | Fit arcs when arc_tolerance > 0 (default True).                      |
-| `supports_curves` | `bool = False`                       | Keep Bézier curves when arc_tolerance > 0 (default False).           |
-| _Returns_         | `ops.assembly.result.AssemblyResult` | An **AssemblyResult** with the shrinkwrap path.                      |
+| Parameter         | Type                          | Description                                                          |
+| ----------------- | ----------------------------- | -------------------------------------------------------------------- |
+| `part`            | `ops.part.Part`               | Part providing physical size metadata.                               |
+| `image`           | `numpy.ndarray`               | 2D boolean or binary numpy array.                                    |
+| `gravity`         | `float = 0.1`                 | Shrink-wrap factor 0.0–1.0 (0 = convex hull, default 0.1).           |
+| `kerf_mm`         | `float = 0`                   | Tool kerf width in mm (default 0.0).                                 |
+| `path_offset_mm`  | `float = 0`                   | Additional offset distance in mm (default 0.0).                      |
+| `cut_side`        | `str = 'centerline'`          | `"centerline"`, `"outside"`, or `"inside"` (default `"centerline"`). |
+| `arc_tolerance`   | `float = 0`                   | Curve fitting tolerance in mm (default 0.0).                         |
+| `allow_arcs`      | `bool = True`                 | Fit arcs when arc_tolerance > 0 (default True).                      |
+| `supports_curves` | `bool = False`                | Keep Bézier curves when arc_tolerance > 0 (default False).           |
+| _Returns_         | `ops.assembly.AssemblyResult` | An **AssemblyResult** with the shrinkwrap path.                      |

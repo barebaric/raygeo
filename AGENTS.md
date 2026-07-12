@@ -39,6 +39,17 @@ The crate is split into three layers that depend only downward:
 | `ops` | CNC and laser building blocks: clearing strategies, linking, classification, and Ops emission. All assemblers produce and consume `Ops`. | workplans, composite assemblers |
 | `cnc` | Plan-time orchestration: Build workplans with sequences of assemblers (e.g. entry + clear + finish).                                     | geometry algorithms             |
 
+# Export Policy: Explicit Paths
+
+Every item has exactly one canonical path — its leaf module. Parent mod.rs
+must not re-export children's items (no namespace flattening).
+
+Exceptions: Primitive types, errors, classes and constants that are
+*public* AND *shared* within a submodule, such as an AssemblyResult.
+
+Python sub-modules mirror the Rust hierarchy - no aliases or re-exports
+at higher levels.
+
 ## Contract
 
 - Resume strategies must NOT perform routing. They only select a target.

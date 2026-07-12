@@ -48,7 +48,7 @@ fn points_to_geometry(
 
     def get_enclosing_hull(
         boolean_image: numpy.ndarray,
-    ) -> raygeo.Geometry | None:
+    ) -> raygeo.geo.Geometry | None:
         """Compute a single convex hull enclosing all content.
 
         :param boolean_image: 2D boolean array.
@@ -77,7 +77,7 @@ fn get_enclosing_hull_py(
 
     def get_hulls_from_image(
         boolean_image: numpy.ndarray,
-    ) -> list[raygeo.Geometry]:
+    ) -> list[raygeo.geo.Geometry]:
         """Compute a separate convex hull for each distinct component.
 
         :param boolean_image: 2D boolean array.
@@ -111,7 +111,7 @@ fn get_hulls_from_image_py(
     def get_concave_hull(
         boolean_image: numpy.ndarray,
         gravity: float = 0.1,
-    ) -> raygeo.Geometry | None:
+    ) -> raygeo.geo.Geometry | None:
         """Compute a concave (shrink-wrap) hull with Bézier gravity.
 
         :param boolean_image: 2D boolean array.

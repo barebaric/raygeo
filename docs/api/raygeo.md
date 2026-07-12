@@ -64,9 +64,3 @@ Manipulating command sequences:
 >>> ops.distance()
 100.0
 ```
-
-## Re-exports
-
-This module re-exports from `raygeo.geo`: Geometry, Matrix.
-
-This module re-exports from `raygeo.ops`: Ops.

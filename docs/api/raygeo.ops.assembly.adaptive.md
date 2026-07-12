@@ -36,7 +36,7 @@ adaptive_clearing(
     trace_path: str | None = None,
     on_progress: Callable[[dict], None] | None = None,
     batch_size: int = 128,
-) -> ops.assembly.result.AssemblyResult
+) -> ops.assembly.AssemblyResult
 ```
 
 Run forward-stepping adaptive clearing.
@@ -69,7 +69,7 @@ workplan built by **raygeo.cnc.machining.wavefront.build_wavefront_workplan** an
 | `trace_path`           | `str &#124; None = None`                    | When set, write a per-step binary trace file for the Python inspector (debug builds only).                                        |
 | `on_progress`          | `Callable[[dict], None] &#124; None = None` | Optional callback receiving progress dicts.                                                                                       |
 | `batch_size`           | `int = 128`                                 | Ops batch size for on_progress (default 128).                                                                                     |
-| _Returns_              | `ops.assembly.result.AssemblyResult`        | Ops with cutting commands (entry not included).                                                                                   |
+| _Returns_              | `ops.assembly.AssemblyResult`               | Ops with cutting commands (entry not included).                                                                                   |
 
 ![Circle-seed clearing in a square pocket with central island: seed, toolpath, and remaining.](images/ops-assembly-adaptive-adaptive-clearing-centre-island.png)
 

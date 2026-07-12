@@ -66,7 +66,7 @@ pub(crate) fn compute_total_offset(
         arc_tolerance: float = 0.0,
         allow_arcs: bool = True,
         supports_curves: bool = False,
-    ) -> raygeo.ops.assembly.result.AssemblyResult:
+    ) -> raygeo.ops.assembly.AssemblyResult:
         """Trace contours from the part geometry.
 
         Extracts the vector geometry from *part*, computes the total

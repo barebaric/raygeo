@@ -10,6 +10,10 @@ and tab insertion — concerns that belong to motion assembly rather than
 pure geometry.
 """
 
+import builtins
+from raygeo import ops
+from raygeo.ops.cut import search
+import typing
 from . import adaptive
 from . import contour
 from . import frame
@@ -17,13 +21,13 @@ from . import helix
 from . import profile
 from . import ramp
 from . import raster
-from . import result
 from . import shrinkwrap
 from . import slot
 from . import spiral
 from . import toroid
 from . import wavefront
 __all__ = [
+    "AssemblyResult",
     "adaptive",
     "contour",
     "frame",
@@ -31,11 +35,40 @@ __all__ = [
     "profile",
     "ramp",
     "raster",
-    "result",
     "shrinkwrap",
     "slot",
     "spiral",
     "toroid",
     "wavefront",
 ]
+
+@typing.final
+class AssemblyResult:
+    r"""
+    Universal return type for every assembly-level generator.
+    
+    Returned by assemblers such as ``generate_helix``,
+    ``generate_toroidal_clear``, ``generate_slot``, and all other
+    assembly-level motion functions.  Contains the generated ``Ops``
+    sequence, the set of polygons that this operation clears, and the
+    tool pose at the start and end of the path.
+    """
+    @property
+    def ops(self) -> ops.Ops: ...
+    @property
+    def start(self) -> search.ToolPose: ...
+    @property
+    def end(self) -> search.ToolPose: ...
+    @property
+    def trace(self) -> typing.Optional[typing.Any]: ...
+    def __new__(cls) -> AssemblyResult: ...
+    def write_trace(self, path: builtins.str, source: builtins.str, label: builtins.str) -> None:
+        r"""
+        Write this result's trace events to a trace file.
+        
+        Emits a root "workplan" span with one child assembler span
+        containing either the self-traced events or a minimal
+        init/exit pair.
+        """
+    def __repr__(self) -> builtins.str: ...
 

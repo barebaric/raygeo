@@ -31,7 +31,7 @@ pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
         precision: float = 0.0,
         cut_feed_rate: int = 1200,
         cut_power: float = 1.0,
-    ) -> raygeo.ops.assembly.result.AssemblyResult:
+    ) -> raygeo.ops.assembly.AssemblyResult:
         """Inside-out adaptive wavefronts.
 
         Starting from the cleared state inside *part*, each iteration

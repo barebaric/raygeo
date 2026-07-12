@@ -25,11 +25,11 @@ pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
 /// assembly-level motion functions.  Contains the generated ``Ops``
 /// sequence, the set of polygons that this operation clears, and the
 /// tool pose at the start and end of the path.
-#[gen_stub_pyclass(module = "raygeo.ops.assembly.result")]
+#[gen_stub_pyclass(module = "raygeo.ops.assembly")]
 #[pyclass(
     name = "AssemblyResult",
     skip_from_py_object,
-    module = "raygeo.ops.assembly.result"
+    module = "raygeo.ops.assembly"
 )]
 #[derive(Clone, Debug)]
 pub struct PyAssemblyResult {

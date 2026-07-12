@@ -84,17 +84,7 @@ pub use constants::{
     EPSILON_MEDIUM, EPSILON_MERGE, EPSILON_NEST,
 };
 pub use error::{AxisRepr, RaygeoError, RaygeoResult};
-pub use ops::axis::Axis;
-pub use ops::container::structure::{OpsSection, OpsSectionRange};
-pub use ops::container::Ops;
-pub use ops::enums::{CommandCategory, CommandType, SectionType};
-pub use ops::state::State;
-pub use ops::transform::{
-    apply_lead_in_out, apply_overscan, apply_tab_gaps, apply_tab_power,
-    group_by_state_continuity, merge_overlapping_lines, without_state,
-    ClipPoint,
-};
-pub use ops::types::{MarkerCmd, MoveCmd, OpCategory, OpNode, StateCmd};
+
 pub use types::{
     BezierControls, BezierSplit, Command, ContourData, CubicBezier, Edge,
     GeometryPair, Point, Point3D, Polygon, Polygon3D, Rect, Rect3D, Segment3D,
@@ -128,12 +118,6 @@ use pyo3_stub_gen::define_stub_info_gatherer;
 
 #[cfg(feature = "python")]
 define_stub_info_gatherer!(stub_info);
-
-#[cfg(feature = "python")]
-pyo3_stub_gen::reexport_module_members!("raygeo" from "raygeo.geo"; "Geometry", "Matrix");
-
-#[cfg(feature = "python")]
-pyo3_stub_gen::reexport_module_members!("raygeo" from "raygeo.ops"; "Ops");
 
 #[cfg(feature = "python")]
 pyo3_stub_gen::module_doc!("raygeo", "{}", MODULE_DOC);

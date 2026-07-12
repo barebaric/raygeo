@@ -18,7 +18,7 @@ generate_ramp(
     style: str = 'zigzag',
     lateral_amplitude: float = 2,
     state: ops.state.State | None = None,
-) -> ops.assembly.result.AssemblyResult
+) -> ops.assembly.AssemblyResult
 ```
 
 Generate a ramp entry path.
@@ -36,7 +36,7 @@ Produces a ramp (linear or zigzag) from *start* to *end* while descending from *
 | `style`              | `str = 'zigzag'`                     | `"linear"` or `"zigzag"` (default `"zigzag"`).          |
 | `lateral_amplitude`  | `float = 2`                          | Lateral oscillation amplitude for zigzag (default 2.0). |
 | `state`              | `ops.state.State &#124; None = None` | Optional machine state to apply before the path.        |
-| _Returns_            | `ops.assembly.result.AssemblyResult` | An **AssemblyResult** with the ramp path.               |
+| _Returns_            | `ops.assembly.AssemblyResult`        | An **AssemblyResult** with the ramp path.               |
 
 ![ZigZag ramp entry path from safe Z to target depth](images/ops-assembly-ramp-ramp-example.png)
 
