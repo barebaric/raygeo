@@ -85,15 +85,42 @@ impl FontConfig {
 /// Global lazily-initialised font database.
 ///
 /// Loads system fonts once and caches the result for the lifetime of
-/// the process.  Falls back to `"DejaVu Sans"` / `"DejaVu Serif"` when
-/// the requested family is not found.
+/// the process.  When DejaVu fonts are available they are used as the
+/// preferred generic-family fallback; otherwise the database relies on
+/// its own cross-platform defaults, ensuring correct behaviour on
+/// operating systems (such as Windows) that do not ship DejaVu fonts.
 fn font_database() -> &'static fontdb::Database {
     static DB: OnceLock<fontdb::Database> = OnceLock::new();
     DB.get_or_init(|| {
         let mut db = fontdb::Database::new();
         db.load_system_fonts();
-        db.set_sans_serif_family("DejaVu Sans");
-        db.set_serif_family("DejaVu Serif");
+
+        // Prefer DejaVu fonts when they are present, but do not override
+        // generic-family resolution when they are absent – this keeps the
+        // build reproducible on Linux/macOS while not breaking on Windows.
+        if db
+            .query(&fontdb::Query {
+                families: &[fontdb::Family::Name("DejaVu Sans")],
+                weight: fontdb::Weight::NORMAL,
+                style: fontdb::Style::Normal,
+                ..Default::default()
+            })
+            .is_some()
+        {
+            db.set_sans_serif_family("DejaVu Sans");
+        }
+        if db
+            .query(&fontdb::Query {
+                families: &[fontdb::Family::Name("DejaVu Serif")],
+                weight: fontdb::Weight::NORMAL,
+                style: fontdb::Style::Normal,
+                ..Default::default()
+            })
+            .is_some()
+        {
+            db.set_serif_family("DejaVu Serif");
+        }
+
         db
     })
 }
