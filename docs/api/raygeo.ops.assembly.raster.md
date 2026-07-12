@@ -10,7 +10,6 @@ sidebar_label: raygeo.ops.assembly.raster
 ```python
 raster(
     part: ops.part.Part,
-    image: numpy.ndarray,
     alpha: numpy.ndarray | None = None,
     mode: str = 'power_modulated',
     line_interval_mm: float = 0.1,
@@ -32,32 +31,31 @@ raster(
 
 Rasterise a part image into scan paths.
 
-Converts the grayscale or binary *image* into a sequence of scan-line toolpath commands suitable for
-laser engraving or similar raster operations.
+Reads the pixel image from `part.image` (a 2-D uint8 numpy array) and converts it into scan-line
+toolpath commands.
 
 Three modes are supported:
 
 - `"power_modulated"` *(default)* — uses grayscale + alpha channels to produce power-modulated scan
   lines.
-- `"mask_scan"` — treats *image* as a binary mask and produces scan-line segments with constant
-  power. Also used for `"dither"` — the caller pre-ditheres the image and passes it as a binary
-  mask.
+- `"mask_scan"` — treats the image as a binary mask and produces scan-line segments with constant
+  power. Also used for `"dither"` — the caller pre-ditheres the image and stores it on `part.image`
+  as a binary mask.
 - `"multi_pass"` — decomposes the grayscale image into *num_depth_levels* layers, rasterising each
   at a progressive Z offset.
 
 When *cross_hatch* is True the scan is run twice — once at *angle* and once at *angle* + 90° — and
 the results are concatenated.
 
-**Raises:** `ValueError` — If the mode is unknown or required data is
+**Raises:** `ValueError` — If the mode is unknown, required data is
 
 ```
-missing.
+missing, or `part.image` is None.
 ```
 
 | Parameter            | Type                               | Description                                                                                            |
 | -------------------- | ---------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| `part`               | `ops.part.Part`                    | Part providing pixel density and size metadata.                                                        |
-| `image`              | `numpy.ndarray`                    | 2-D grayscale (uint8) or binary numpy array.                                                           |
+| `part`               | `ops.part.Part`                    | Part providing pixel density, size metadata, and the image buffer (`part.image`).                      |
 | `alpha`              | `numpy.ndarray &#124; None = None` | Optional 2-D alpha mask (uint8). Required for `power_modulated` mode when the image is not pre-masked. |
 | `mode`               | `str = 'power_modulated'`          | `"power_modulated"`, `"mask_scan"`, or `"multi_pass"`.                                                 |
 | `line_interval_mm`   | `float = 0.1`                      | Spacing between scan lines in mm.                                                                      |

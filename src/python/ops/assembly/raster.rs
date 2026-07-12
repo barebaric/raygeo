@@ -45,7 +45,6 @@ pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
 
     def raster(
         part: raygeo.ops.part.Part,
-        image: numpy.ndarray,
         alpha: numpy.ndarray | None = None,
         mode: str = "power_modulated",
         line_interval_mm: float = 0.1,
@@ -65,18 +64,17 @@ pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     ) -> raygeo.ops.assembly.AssemblyResult:
         """Rasterise a part image into scan paths.
 
-        Converts the grayscale or binary *image* into a sequence of
-        scan-line toolpath commands suitable for laser engraving or
-        similar raster operations.
+        Reads the pixel image from ``part.image`` (a 2-D uint8 numpy
+        array) and converts it into scan-line toolpath commands.
 
         Three modes are supported:
 
         * ``"power_modulated"`` *(default)* — uses grayscale + alpha
           channels to produce power-modulated scan lines.
-        * ``"mask_scan"`` — treats *image* as a binary mask and produces
-          scan-line segments with constant power.  Also used for
-          ``"dither"`` — the caller pre-ditheres the image and passes
-          it as a binary mask.
+        * ``"mask_scan"`` — treats the image as a binary mask and
+          produces scan-line segments with constant power.  Also used
+          for ``"dither"`` — the caller pre-ditheres the image and
+          stores it on ``part.image`` as a binary mask.
         * ``"multi_pass"`` — decomposes the grayscale image into
           *num_depth_levels* layers, rasterising each at a progressive
           Z offset.
@@ -85,8 +83,8 @@ pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
         *angle* and once at *angle* + 90° — and the results are
         concatenated.
 
-        :param part: Part providing pixel density and size metadata.
-        :param image: 2-D grayscale (uint8) or binary numpy array.
+        :param part: Part providing pixel density, size metadata, and
+            the image buffer (``part.image``).
         :param alpha: Optional 2-D alpha mask (uint8). Required for
             ``power_modulated`` mode when the image is not pre-masked.
         :param mode: ``"power_modulated"``, ``"mask_scan"``, or
@@ -111,8 +109,8 @@ pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
         :param angle_increment: Angle added per depth layer in degrees
             (multi_pass only, default 0.0).
         :returns: An :class:`AssemblyResult` with the raster path.
-        :raises ValueError: If the mode is unknown or required data is
-            missing.
+        :raises ValueError: If the mode is unknown, required data is
+            missing, or ``part.image`` is None.
         """
     "#,
     module = "raygeo.ops.assembly.raster"
@@ -120,7 +118,6 @@ pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
 #[pyfunction(name = "raster")]
 #[pyo3(signature = (
     part,
-    image,
     alpha = None,
     mode = "power_modulated",
     line_interval_mm = 0.1,
@@ -142,7 +139,6 @@ pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
 fn raster_py(
     py: Python<'_>,
     part: &PyPart,
-    image: &Bound<'_, PyAny>,
     alpha: Option<&Bound<'_, PyAny>>,
     mode: &str,
     line_interval_mm: f64,
@@ -176,7 +172,13 @@ fn raster_py(
         }
     };
 
-    let (gray, h, w) = extract_flat_u8(py, image)?;
+    let pixel_img = part.inner.image.as_ref().ok_or_else(|| {
+        PyValueError::new_err(
+            "Part has no image — set part.image before calling raster",
+        )
+    })?;
+    let (gray, h, w) =
+        (pixel_img.data.clone(), pixel_img.height, pixel_img.width);
 
     // Build the list of scan angles (cross-hatch adds 90°).
     let mut angles = vec![angle];

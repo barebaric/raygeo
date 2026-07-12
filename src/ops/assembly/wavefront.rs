@@ -3,13 +3,24 @@
 use prof_macros::prof;
 
 use crate::error::RaygeoResult;
-use crate::geo::shape::polygon::{get_polygon_area, resample_polygon};
+use crate::geo::algo::fitting::linearize_data;
+use crate::geo::algo::offset::grow_geometry;
+use crate::geo::algo::polylabel::find_largest_circle;
+use crate::geo::algo::topology::{
+    split_inner_and_outer_contours, split_into_contours,
+};
+use crate::geo::geometry::Geometry;
+use crate::geo::shape::polygon::{
+    clean_polygon, get_circle_polygon, get_polygon_area,
+    get_polygon_centroid, is_point_inside_polygon, resample_polygon,
+};
 use crate::ops::assembly::result::AssemblyMeta;
 use crate::ops::assembly::Tracelet;
+use crate::ops::container::Ops;
 use crate::ops::part::Part;
 use crate::ops::state::State;
 use crate::ops::types::ToolPose;
-use crate::types::{Point, Point3D};
+use crate::types::{Point, Point3D, Polygon};
 
 const MAX_WAVEFRONT_ITERATIONS: usize = 1000;
 
@@ -131,4 +142,175 @@ pub fn adaptive_wavefronts(
             heading: 0.0,
         },
     })
+}
+
+// ── Multi-pocket wrapper ───────────────────────────────────────────
+
+/// Multi-pocket adaptive wavefronts.
+///
+/// Extracts all pockets from `part.geometry`, optionally offsets the
+/// boundary inward, and runs a spiral-seed + wavefront expansion inside
+/// each pocket.  Returns the combined `Ops` for all pockets.
+#[allow(clippy::too_many_arguments)]
+pub fn adaptive_wavefronts_multi_pocket(
+    part: &Part,
+    tool_radius: f64,
+    step_over: f64,
+    offset_mm: f64,
+    area_tolerance: f64,
+    precision: f64,
+    cut_feed_rate: i32,
+    cut_power: f64,
+) -> RaygeoResult<(Ops, AssemblyMeta)> {
+    let src_geo = part.geometry.as_ref().ok_or_else(|| {
+        crate::RaygeoError::ContourError(
+            "adaptive_wavefronts_multi_pocket requires a part with geometry"
+                .to_string(),
+        )
+    })?;
+
+    // 1. Apply optional inward offset
+    let geo = if offset_mm > 0.0 {
+        grow_geometry(src_geo, -offset_mm)
+    } else {
+        src_geo.copy()
+    };
+
+    // 2. Split into contours, keep only closed ones
+    let contours = split_into_contours(&geo);
+    let closed: Vec<Geometry> =
+        contours.into_iter().filter(|c| c.is_closed(1e-6)).collect();
+    if closed.is_empty() {
+        return Err(crate::RaygeoError::ContourError(
+            "No closed contours found in workpiece geometry".to_string(),
+        ));
+    }
+
+    let closed_refs: Vec<&Geometry> = closed.iter().collect();
+
+    // 3. Split inner / outer
+    let (inner_idx, outer_idx) = split_inner_and_outer_contours(&closed_refs);
+    if outer_idx.is_empty() {
+        return Err(crate::RaygeoError::ContourError(
+            "No outer boundary contour found in workpiece geometry".to_string(),
+        ));
+    }
+
+    // 4. Convert to polygons for pocket association
+    let to_poly = |idx: &[usize]| -> Vec<(Geometry, Polygon)> {
+        idx.iter()
+            .map(|&i| {
+                let geo = closed[i].copy();
+                let poly = geometry_to_polygon(&geo, 0.01);
+                (geo, poly)
+            })
+            .collect()
+    };
+    let outer_pairs = to_poly(&outer_idx);
+    let inner_pairs = to_poly(&inner_idx);
+
+    // 5. Associate pockets
+    let mut used_inner = vec![false; inner_pairs.len()];
+    let mut pockets: Vec<(Polygon, Vec<Polygon>)> = Vec::new();
+
+    for (_, outer_poly) in &outer_pairs {
+        let mut islands: Vec<Polygon> = Vec::new();
+        for (j, (_, inner_poly)) in inner_pairs.iter().enumerate() {
+            if used_inner[j] || inner_poly.len() < 3 {
+                continue;
+            }
+            let cx = get_polygon_centroid(inner_poly);
+            if is_point_inside_polygon(cx, outer_poly) {
+                islands.push(inner_poly.clone());
+                used_inner[j] = true;
+            }
+        }
+        pockets.push((outer_poly.clone(), islands));
+    }
+
+    // 6. Process each pocket
+    let z = 0.0;
+    let cut_state = State {
+        power: cut_power,
+        feed_rate: Some(cut_feed_rate),
+        ..Default::default()
+    };
+    let mut combined_ops = Ops::new();
+    let mut trace = Tracelet::new();
+    let mut first_point: Option<Point3D> = None;
+    let mut last_point: Option<Point3D> = None;
+
+    for (boundary, islands) in &pockets {
+        // Find the largest inscribed circle to seed the cleared area
+        let (center, r_max) = find_largest_circle(boundary, islands, 0.1)
+            .unwrap_or_else(|| (get_polygon_centroid(boundary), 0.0));
+
+        // Seed with a circle at tool_radius so the wavefront expands
+        // smoothly from the pocket centre — no separate spiral path.
+        let seed_r = tool_radius.min(r_max * 0.8).max(0.01);
+        let seed =
+            vec![get_circle_polygon(center, seed_r, 64)];
+        let mut pocket_part =
+            Part::from_polygons_initial(boundary, islands, &seed, (0.0, 0.0));
+
+        // Expand with adaptive wavefronts
+        let wf_opts = AdaptiveWavefrontOptions {
+            tool_radius,
+            step_over,
+            z,
+            area_tolerance,
+            precision,
+        };
+        let meta = adaptive_wavefronts(
+            &mut pocket_part,
+            &mut trace,
+            &wf_opts,
+            &cut_state,
+        )?;
+
+        if first_point.is_none() {
+            first_point = Some(meta.start.pos);
+        }
+        last_point = Some(meta.end.pos);
+    }
+
+    combined_ops.extend(trace.ops());
+
+    let start_pos = first_point.unwrap_or(Point3D::ZERO);
+    let end_pos = last_point.unwrap_or(Point3D::ZERO);
+
+    Ok((
+        combined_ops,
+        AssemblyMeta {
+            start: ToolPose {
+                pos: start_pos,
+                heading: 0.0,
+            },
+            end: ToolPose {
+                pos: end_pos,
+                heading: 0.0,
+            },
+        },
+    ))
+}
+
+/// Convert a single Geometry contour to a 2D polygon.
+fn geometry_to_polygon(geo: &Geometry, tolerance: f64) -> Polygon {
+    let mut linearized = geo.copy();
+    if !linearized.data.is_empty() {
+        linearized.data = linearize_data(&linearized.data, tolerance);
+    }
+    let segs = linearized.segments();
+    for seg in &segs {
+        if seg.len() < 3 {
+            continue;
+        }
+        let poly: Polygon = seg.iter().map(|p| Point::new(p.x, p.y)).collect();
+        if let Some(cleaned) = clean_polygon(&poly, 0.01 * tolerance) {
+            return cleaned;
+        } else if poly.len() >= 3 {
+            return poly;
+        }
+    }
+    Polygon::new()
 }

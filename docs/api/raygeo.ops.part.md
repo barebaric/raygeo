@@ -36,6 +36,17 @@ Vector geometry (the outline(s) of the part), if any.
 
 Returns `None` if no geometry was provided at construction time.
 
+### `image`
+
+```python
+image: Optional[list[int]]
+```
+
+Optional pixel image buffer for raster/shrinkwrap operations.
+
+Set by the stage before calling an assembler. The assembler reads this internally instead of
+accepting a separate image argument. Expects a 2-D uint8 numpy array.
+
 ### `pixels_per_mm`
 
 ```python

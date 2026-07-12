@@ -43,6 +43,7 @@ lint-python:
 	npx pyright python/raygeo tests tools
 
 test:
+	cargo test
 	pytest -v
 
 check: lint test

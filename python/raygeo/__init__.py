@@ -62,7 +62,14 @@ Examples
 """
 
 import raygeo.raygeo as _raygeo  # type: ignore[import-untyped]
+from raygeo.enums import CutOrder, CutSide
 
 
 def __getattr__(name):
     return getattr(_raygeo, name)
+
+
+__all__ = [
+    "CutSide",
+    "CutOrder",
+]

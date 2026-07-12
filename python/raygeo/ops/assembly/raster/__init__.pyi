@@ -7,22 +7,21 @@ __all__ = [
     "raster",
 ]
 
-def raster(part: raygeo.ops.part.Part, image: numpy.ndarray, alpha: numpy.ndarray | None = None, mode: str = 'power_modulated', line_interval_mm: float = 0.1, sample_interval_mm: float = 0.05, min_power: float = 0, max_power: float = 1, step_power: float = 0.1, num_power_levels: int = 10, angle: float = 0, offset_x_mm: float = 0, offset_y_mm: float = 0, scan_mode: str = 'segmented', cross_hatch: bool = False, num_depth_levels: int = 5, z_step_down: float = 0, angle_increment: float = 0) -> raygeo.ops.assembly.AssemblyResult:
+def raster(part: raygeo.ops.part.Part, alpha: numpy.ndarray | None = None, mode: str = 'power_modulated', line_interval_mm: float = 0.1, sample_interval_mm: float = 0.05, min_power: float = 0, max_power: float = 1, step_power: float = 0.1, num_power_levels: int = 10, angle: float = 0, offset_x_mm: float = 0, offset_y_mm: float = 0, scan_mode: str = 'segmented', cross_hatch: bool = False, num_depth_levels: int = 5, z_step_down: float = 0, angle_increment: float = 0) -> raygeo.ops.assembly.AssemblyResult:
     r"""
     Rasterise a part image into scan paths.
     
-    Converts the grayscale or binary *image* into a sequence of
-    scan-line toolpath commands suitable for laser engraving or
-    similar raster operations.
+    Reads the pixel image from ``part.image`` (a 2-D uint8 numpy
+    array) and converts it into scan-line toolpath commands.
     
     Three modes are supported:
     
     * ``"power_modulated"`` *(default)* — uses grayscale + alpha
       channels to produce power-modulated scan lines.
-    * ``"mask_scan"`` — treats *image* as a binary mask and produces
-      scan-line segments with constant power.  Also used for
-      ``"dither"`` — the caller pre-ditheres the image and passes
-      it as a binary mask.
+    * ``"mask_scan"`` — treats the image as a binary mask and
+      produces scan-line segments with constant power.  Also used
+      for ``"dither"`` — the caller pre-ditheres the image and
+      stores it on ``part.image`` as a binary mask.
     * ``"multi_pass"`` — decomposes the grayscale image into
       *num_depth_levels* layers, rasterising each at a progressive
       Z offset.
@@ -31,8 +30,8 @@ def raster(part: raygeo.ops.part.Part, image: numpy.ndarray, alpha: numpy.ndarra
     *angle* and once at *angle* + 90° — and the results are
     concatenated.
     
-    :param part: Part providing pixel density and size metadata.
-    :param image: 2-D grayscale (uint8) or binary numpy array.
+    :param part: Part providing pixel density, size metadata, and
+        the image buffer (``part.image``).
     :param alpha: Optional 2-D alpha mask (uint8). Required for
         ``power_modulated`` mode when the image is not pre-masked.
     :param mode: ``"power_modulated"``, ``"mask_scan"``, or
@@ -57,7 +56,7 @@ def raster(part: raygeo.ops.part.Part, image: numpy.ndarray, alpha: numpy.ndarra
     :param angle_increment: Angle added per depth layer in degrees
         (multi_pass only, default 0.0).
     :returns: An :class:`AssemblyResult` with the raster path.
-    :raises ValueError: If the mode is unknown or required data is
-        missing.
+    :raises ValueError: If the mode is unknown, required data is
+        missing, or ``part.image`` is None.
     """
 

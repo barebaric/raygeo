@@ -8,6 +8,7 @@
 
 pub mod adaptive;
 pub mod helix;
+pub mod material_test_grid;
 pub mod profile;
 pub mod ramp;
 pub(crate) mod result;

@@ -42,6 +42,25 @@ start: search.ToolPose
 trace: Optional[Any]
 ```
 
+### `from_ops()`
+
+```python
+from_ops(
+    ops: ops.Ops,
+    start: tuple[float, float, float],
+    end: tuple[float, float, float],
+) -> AssemblyResult
+```
+
+Construct an AssemblyResult from ops, start, and end poses.
+
+| Parameter | Type                         | Description |
+| --------- | ---------------------------- | ----------- |
+| `ops`     | `ops.Ops`                    |             |
+| `start`   | `tuple[float, float, float]` |             |
+| `end`     | `tuple[float, float, float]` |             |
+| _Returns_ | `AssemblyResult`             |             |
+
 ### `write_trace()`
 
 ```python

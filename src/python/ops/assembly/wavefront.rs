@@ -8,7 +8,11 @@ use pyo3_stub_gen::derive::gen_stub_pyfunction;
 pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     let py = assembly_mod.py();
     let m = PyModule::new(py, "wavefront")?;
-    register_functions!(m, adaptive_wavefronts_py,);
+    register_functions!(
+        m,
+        adaptive_wavefronts_py,
+        adaptive_wavefronts_multi_pocket_py,
+    );
     assembly_mod.add_submodule(&m)?;
 
     let sys_modules = py.import("sys")?.getattr("modules")?;
@@ -108,4 +112,74 @@ fn adaptive_wavefronts_py(
     let attrs = trace.attrs().cloned();
     let ops = trace.into_ops();
     Ok(PyAssemblyResult::from_parts(ops, meta, attrs, events))
+}
+
+#[gen_stub_pyfunction(
+    python = r#"
+    import raygeo
+
+    def adaptive_wavefronts_multi_pocket(
+        part: raygeo.ops.part.Part,
+        tool_radius: float = 3.0,
+        step_over: float = 2.0,
+        offset_mm: float = 0.0,
+        area_tolerance: float = 0.01,
+        precision: float = 0.0,
+        cut_feed_rate: int = 1200,
+        cut_power: float = 1.0,
+    ) -> raygeo.ops.assembly.AssemblyResult:
+        """Multi-pocket adaptive wavefronts.
+
+        Extracts all pockets from *part.geometry*, optionally offsets
+        the boundary inward by *offset_mm*, and runs a spiral-seed +
+        wavefront expansion inside each pocket.  Returns the combined
+        result.
+
+        :param part: The part whose geometry defines the pockets.
+        :param tool_radius: Tool radius in mm (default 3.0).
+        :param step_over: Radial expansion per iteration (default 2.0).
+        :param offset_mm: Inward offset applied to all contours (default 0.0).
+        :param area_tolerance: Minimum area increase to continue (default 0.01).
+        :param precision: Edge tolerance for frontier simplification (default 0.0).
+        :param cut_feed_rate: Feed rate for cutting moves (default 1200).
+        :param cut_power: Laser power for cutting moves (0.0-1.0, default 1.0).
+        :returns: An :class:`AssemblyResult` with combined wavefront paths.
+        :raises ValueError: If the part has no geometry or no closed contours.
+        """
+    "#,
+    module = "raygeo.ops.assembly.wavefront"
+)]
+#[pyfunction(name = "adaptive_wavefronts_multi_pocket")]
+#[pyo3(signature = (
+    part,
+    tool_radius = 3.0,
+    step_over = 2.0,
+    offset_mm = 0.0,
+    area_tolerance = 0.01,
+    precision = 0.0,
+    cut_feed_rate = 1200,
+    cut_power = 1.0,
+))]
+#[allow(clippy::too_many_arguments)]
+fn adaptive_wavefronts_multi_pocket_py(
+    part: &crate::python::ops::part::part::PyPart,
+    tool_radius: f64,
+    step_over: f64,
+    offset_mm: f64,
+    area_tolerance: f64,
+    precision: f64,
+    cut_feed_rate: i32,
+    cut_power: f64,
+) -> PyResult<PyAssemblyResult> {
+    let (ops, meta) = wavefront::adaptive_wavefronts_multi_pocket(
+        &part.inner,
+        tool_radius,
+        step_over,
+        offset_mm,
+        area_tolerance,
+        precision,
+        cut_feed_rate,
+        cut_power,
+    )?;
+    Ok(PyAssemblyResult::from_parts(ops, meta, None, vec![]))
 }

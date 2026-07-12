@@ -1,11 +1,28 @@
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 
+use crate::image::types::PixelImage;
 use crate::ops::part::Part;
 use crate::python::geo::geometry::Geometry as PyGeometry;
 use crate::python::ops::part::cleared_area::PyClearedArea;
 use crate::python::ops::part::stock_region::PyStockRegion;
 use crate::types::{Point, Polygon};
+
+/// Extract a flat u8 buffer from a numpy array.
+fn extract_flat_u8(
+    py: Python<'_>,
+    obj: &Bound<'_, PyAny>,
+) -> PyResult<(Vec<u8>, usize, usize)> {
+    let numpy = py.import("numpy")?;
+    let arr = numpy.call_method1("asarray", (obj,))?;
+    let shape: (usize, usize) = arr.getattr("shape")?.extract()?;
+    let flat: Vec<u8> = arr
+        .call_method("astype", ("uint8",), None)?
+        .call_method0("flatten")?
+        .call_method0("tolist")?
+        .extract()?;
+    Ok((flat, shape.0, shape.1))
+}
 
 /// Unified workpiece description for motion assembly.
 ///
@@ -142,6 +159,38 @@ impl PyPart {
                 "None"
             },
         )
+    }
+
+    /// Optional pixel image buffer for raster/shrinkwrap operations.
+    ///
+    /// Set by the stage before calling an assembler.  The assembler
+    /// reads this internally instead of accepting a separate image
+    /// argument.  Expects a 2-D uint8 numpy array.
+    ///
+    /// :returns: ``numpy.ndarray`` or ``None``.
+    #[getter]
+    fn image(&self) -> PyResult<Option<Vec<u8>>> {
+        Ok(self.inner.image.as_ref().map(|img| img.data.clone()))
+    }
+
+    #[setter]
+    fn set_image(&mut self, image: Option<&Bound<'_, PyAny>>) -> PyResult<()> {
+        match image {
+            Some(obj) => {
+                let py = obj.py();
+                let (data, height, width) = extract_flat_u8(py, obj)?;
+                self.inner.image = Some(PixelImage {
+                    data,
+                    height,
+                    width,
+                });
+                Ok(())
+            }
+            None => {
+                self.inner.image = None;
+                Ok(())
+            }
+        }
     }
 }
 

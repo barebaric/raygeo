@@ -19,6 +19,7 @@ pub(crate) mod adaptive;
 pub(crate) mod contour;
 pub(crate) mod frame;
 pub(crate) mod helix;
+pub(crate) mod material_test_grid;
 pub(crate) mod profile;
 pub(crate) mod ramp;
 pub(crate) mod raster;
@@ -70,6 +71,7 @@ pub(crate) fn register(ops_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     contour::register(&assembly_mod)?;
     frame::register(&assembly_mod)?;
     helix::register(&assembly_mod)?;
+    material_test_grid::register(&assembly_mod)?;
     raster::register(&assembly_mod)?;
     shrinkwrap::register(&assembly_mod)?;
     profile::register(&assembly_mod)?;

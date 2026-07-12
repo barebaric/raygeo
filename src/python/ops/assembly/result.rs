@@ -65,6 +65,29 @@ impl PyAssemblyResult {
         }
     }
 
+    /// Construct an AssemblyResult from ops, start, and end poses.
+    #[staticmethod]
+    #[pyo3(signature = (ops, start, end))]
+    fn from_ops(
+        ops: &PyOps,
+        start: (f64, f64, f64),
+        end: (f64, f64, f64),
+    ) -> Self {
+        PyAssemblyResult {
+            ops: ops.clone(),
+            start: PyToolPose {
+                pos: start,
+                heading: 0.0,
+            },
+            end: PyToolPose {
+                pos: end,
+                heading: 0.0,
+            },
+            trace_attrs: None,
+            trace_events: vec![],
+        }
+    }
+
     #[getter]
     fn trace(&self, py: Python<'_>) -> PyResult<Option<Py<PyAny>>> {
         if self.trace_events.is_empty() && self.trace_attrs.is_none() {

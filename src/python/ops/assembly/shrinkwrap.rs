@@ -25,23 +25,6 @@ pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     Ok(())
 }
 
-fn extract_bool_image(
-    py: Python<'_>,
-    obj: &Bound<'_, PyAny>,
-) -> PyResult<(Vec<u8>, usize, usize)> {
-    let numpy = py.import("numpy")?;
-    let arr = numpy.call_method1("asarray", (obj,))?;
-    let shape: (usize, usize) = arr.getattr("shape")?.extract()?;
-    let flat: Vec<u8> = arr
-        .call_method("astype", ("uint8",), None)?
-        .call_method0("flatten")?
-        .call_method0("tolist")?
-        .extract()?;
-    let nonzero: Vec<u8> =
-        flat.iter().map(|&v| if v != 0 { 1 } else { 0 }).collect();
-    Ok((nonzero, shape.0, shape.1))
-}
-
 fn hull_to_mm(
     hull_pts: &[crate::types::Point],
     part_size_mm: (f64, f64),
@@ -74,7 +57,6 @@ fn hull_to_mm(
 
     def shrinkwrap(
         part: raygeo.ops.part.Part,
-        image: numpy.ndarray,
         gravity: float = 0.1,
         kerf_mm: float = 0.0,
         path_offset_mm: float = 0.0,
@@ -85,15 +67,16 @@ fn hull_to_mm(
     ) -> raygeo.ops.assembly.AssemblyResult:
         """Generate a shrink-wrapped (concave hull) contour around image content.
 
-        Computes a concave hull from the binary *image* using Bézier
-        gravity attraction, transforms pixel coordinates to millimetre
-        space via the part's *size_mm* and image dimensions, computes
-        the total offset from kerf / path-offset / cut-side, applies
-        it, optionally fits arcs/curves when *arc_tolerance* > 0, and
-        returns the result as an :class:`AssemblyResult`.
+        Reads the pixel image from ``part.image`` (a 2-D uint8 numpy
+        array), computes a concave hull using Bézier gravity attraction,
+        transforms pixel coordinates to millimetre space via the part's
+        *size_mm* and image dimensions, computes the total offset from
+        kerf / path-offset / cut-side, applies it, optionally fits
+        arcs/curves when *arc_tolerance* > 0, and returns the result
+        as an :class:`AssemblyResult`.
 
-        :param part: Part providing physical size metadata.
-        :param image: 2D boolean or binary numpy array.
+        :param part: Part providing physical size metadata and the
+            image buffer (``part.image``).
         :param gravity: Shrink-wrap factor 0.0–1.0 (0 = convex hull,
             default 0.1).
         :param kerf_mm: Tool kerf width in mm (default 0.0).
@@ -106,7 +89,8 @@ fn hull_to_mm(
         :param supports_curves: Keep Bézier curves when arc_tolerance > 0
             (default False).
         :returns: An :class:`AssemblyResult` with the shrinkwrap path.
-        :raises ValueError: If the image is empty or the part has no size.
+        :raises ValueError: If the image is empty, part has no size,
+            or ``part.image`` is None.
         """
     "#,
     module = "raygeo.ops.assembly.shrinkwrap"
@@ -115,7 +99,6 @@ fn hull_to_mm(
 #[pyfunction(name = "shrinkwrap")]
 #[pyo3(signature = (
     part,
-    image,
     gravity = 0.1,
     kerf_mm = 0.0,
     path_offset_mm = 0.0,
@@ -125,9 +108,8 @@ fn hull_to_mm(
     supports_curves = false,
 ))]
 fn shrinkwrap_py(
-    py: Python<'_>,
+    _py: Python<'_>,
     part: &PyPart,
-    image: &Bound<'_, PyAny>,
     gravity: f64,
     kerf_mm: f64,
     path_offset_mm: f64,
@@ -143,7 +125,17 @@ fn shrinkwrap_py(
         ));
     }
 
-    let (flat, h_px, w_px) = extract_bool_image(py, image)?;
+    let pixel_img = part.inner.image.as_ref().ok_or_else(|| {
+        pyo3::exceptions::PyValueError::new_err(
+            "Part has no image — set part.image before calling shrinkwrap",
+        )
+    })?;
+    let raw = &pixel_img.data;
+    let h_px = pixel_img.height;
+    let w_px = pixel_img.width;
+    // Convert grayscale to binary: non-zero → 1
+    let flat: Vec<u8> =
+        raw.iter().map(|&v| if v != 0 { 1 } else { 0 }).collect();
     if flat.iter().all(|&v| v == 0) {
         return Err(pyo3::exceptions::PyValueError::new_err(
             "Image is empty (all background)",

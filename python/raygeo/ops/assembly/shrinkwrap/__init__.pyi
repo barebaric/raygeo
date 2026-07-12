@@ -7,19 +7,20 @@ __all__ = [
     "shrinkwrap",
 ]
 
-def shrinkwrap(part: raygeo.ops.part.Part, image: numpy.ndarray, gravity: float = 0.1, kerf_mm: float = 0, path_offset_mm: float = 0, cut_side: str = 'centerline', arc_tolerance: float = 0, allow_arcs: bool = True, supports_curves: bool = False) -> raygeo.ops.assembly.AssemblyResult:
+def shrinkwrap(part: raygeo.ops.part.Part, gravity: float = 0.1, kerf_mm: float = 0, path_offset_mm: float = 0, cut_side: str = 'centerline', arc_tolerance: float = 0, allow_arcs: bool = True, supports_curves: bool = False) -> raygeo.ops.assembly.AssemblyResult:
     r"""
     Generate a shrink-wrapped (concave hull) contour around image content.
     
-    Computes a concave hull from the binary *image* using Bézier
-    gravity attraction, transforms pixel coordinates to millimetre
-    space via the part's *size_mm* and image dimensions, computes
-    the total offset from kerf / path-offset / cut-side, applies
-    it, optionally fits arcs/curves when *arc_tolerance* > 0, and
-    returns the result as an :class:`AssemblyResult`.
+    Reads the pixel image from ``part.image`` (a 2-D uint8 numpy
+    array), computes a concave hull using Bézier gravity attraction,
+    transforms pixel coordinates to millimetre space via the part's
+    *size_mm* and image dimensions, computes the total offset from
+    kerf / path-offset / cut-side, applies it, optionally fits
+    arcs/curves when *arc_tolerance* > 0, and returns the result
+    as an :class:`AssemblyResult`.
     
-    :param part: Part providing physical size metadata.
-    :param image: 2D boolean or binary numpy array.
+    :param part: Part providing physical size metadata and the
+        image buffer (``part.image``).
     :param gravity: Shrink-wrap factor 0.0–1.0 (0 = convex hull,
         default 0.1).
     :param kerf_mm: Tool kerf width in mm (default 0.0).
@@ -32,6 +33,7 @@ def shrinkwrap(part: raygeo.ops.part.Part, image: numpy.ndarray, gravity: float 
     :param supports_curves: Keep Bézier curves when arc_tolerance > 0
         (default False).
     :returns: An :class:`AssemblyResult` with the shrinkwrap path.
-    :raises ValueError: If the image is empty or the part has no size.
+    :raises ValueError: If the image is empty, part has no size,
+        or ``part.image`` is None.
     """
 

@@ -201,7 +201,7 @@ Binary trace file with span/event access.
 
 Usage::
 
-```
+```python
 >>> from raygeo.trace import TraceFile
 >>> t = TraceFile("path/to/trace.bin")
 >>> t.ver

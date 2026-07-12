@@ -60,6 +60,19 @@ class Part:
         Boundary and islands of the workpiece — cached extraction
         from geometry. Read-only.
         """
+    @property
+    def image(self) -> typing.Optional[builtins.list[builtins.int]]:
+        r"""
+        Optional pixel image buffer for raster/shrinkwrap operations.
+        
+        Set by the stage before calling an assembler.  The assembler
+        reads this internally instead of accepting a separate image
+        argument.  Expects a 2-D uint8 numpy array.
+        
+        :returns: ``numpy.ndarray`` or ``None``.
+        """
+    @image.setter
+    def image(self, value: typing.Optional[typing.Any]) -> None: ...
     def __new__(cls, geometry: typing.Optional[geo.Geometry] = None, size_mm: tuple[builtins.float, builtins.float] = (0.0, 0.0), pixels_per_mm: typing.Optional[tuple[builtins.float, builtins.float]] = None) -> Part:
         r"""
         Create a new Part.

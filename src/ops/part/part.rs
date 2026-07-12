@@ -15,6 +15,7 @@ use crate::geo::algo::topology::{
 };
 use crate::geo::shape::polygon::clean_polygon;
 use crate::geo::Geometry;
+use crate::image::types::PixelImage;
 use crate::types::{Point, Polygon};
 
 use super::cleared_area::ClearedArea;
@@ -48,6 +49,13 @@ pub struct Part {
     /// Initialized from the part's boundary/islands at construction
     /// time; assemblers mutate this as they work.
     pub cleared: ClearedArea,
+
+    /// Optional pixel image buffer for raster/shrinkwrap operations.
+    ///
+    /// Set by the stage before calling an assembler. The assembler
+    /// reads this internally instead of accepting a separate image
+    /// argument.
+    pub image: Option<PixelImage>,
 }
 
 impl Part {
@@ -70,6 +78,7 @@ impl Part {
             size_mm,
             pixels_per_mm: None,
             cleared: ClearedArea::new(),
+            image: None,
         }
     }
 
@@ -108,6 +117,7 @@ impl Part {
             size_mm,
             pixels_per_mm: None,
             cleared: ClearedArea::new(),
+            image: None,
         }
     }
 
@@ -144,6 +154,7 @@ impl Part {
             size_mm,
             pixels_per_mm: None,
             cleared,
+            image: None,
         }
     }
 

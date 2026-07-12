@@ -128,14 +128,16 @@ class TraceFile:
     
     Usage::
     
-        >>> from raygeo.trace import TraceFile
-        >>> t = TraceFile("path/to/trace.bin")
-        >>> t.ver
-        3
-        >>> t.root
-        Span(id=1, parent=0, source='workplan', label='Workplan')
-        >>> len(t.events)
-        42
+    ```python
+    >>> from raygeo.trace import TraceFile
+    >>> t = TraceFile("path/to/trace.bin")
+    >>> t.ver
+    3
+    >>> t.root
+    Span(id=1, parent=0, source='workplan', label='Workplan')
+    >>> len(t.events)
+    42
+    ```
     """
     @property
     def ver(self) -> builtins.int: ...

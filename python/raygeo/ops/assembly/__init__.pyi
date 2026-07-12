@@ -18,6 +18,7 @@ from . import adaptive
 from . import contour
 from . import frame
 from . import helix
+from . import material_test_grid
 from . import profile
 from . import ramp
 from . import raster
@@ -32,6 +33,7 @@ __all__ = [
     "contour",
     "frame",
     "helix",
+    "material_test_grid",
     "profile",
     "ramp",
     "raster",
@@ -62,6 +64,11 @@ class AssemblyResult:
     @property
     def trace(self) -> typing.Optional[typing.Any]: ...
     def __new__(cls) -> AssemblyResult: ...
+    @staticmethod
+    def from_ops(ops: ops.Ops, start: tuple[builtins.float, builtins.float, builtins.float], end: tuple[builtins.float, builtins.float, builtins.float]) -> AssemblyResult:
+        r"""
+        Construct an AssemblyResult from ops, start, and end poses.
+        """
     def write_trace(self, path: builtins.str, source: builtins.str, label: builtins.str) -> None:
         r"""
         Write this result's trace events to a trace file.

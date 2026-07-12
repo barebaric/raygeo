@@ -5,3 +5,4 @@ pub mod preprocess;
 pub mod scan;
 pub mod srgb;
 pub mod transparency;
+pub mod types;

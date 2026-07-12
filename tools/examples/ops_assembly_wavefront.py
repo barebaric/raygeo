@@ -6,14 +6,17 @@ import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.colors import Normalize
 
+from raygeo.geo import Geometry
 from raygeo.geo.algo.polylabel import find_largest_circle
 from raygeo.geo.shape.polygon import (
     get_circle_polygon,
     get_polygon_centroid,
     get_polygon_signed_area,
-    is_point_inside_polygon,
 )
-from raygeo.ops.assembly.wavefront import adaptive_wavefronts
+from raygeo.ops.assembly.wavefront import (
+    adaptive_wavefronts,
+    adaptive_wavefronts_multi_pocket,
+)
 from raygeo.ops.part import Part
 from raygeo.svg import svg_string_to_geometries
 
@@ -202,31 +205,23 @@ def generate_wavefront_svg():
     outer_polys = [p for p in all_polys if get_polygon_signed_area(p) < 0]
     inner_polys = [p for p in all_polys if get_polygon_signed_area(p) >= 0]
 
-    # For each outer contour, find its associated holes
-    components = []
-    for boundary in outer_polys:
-        holes = [
-            inner
-            for inner in inner_polys
-            if is_point_inside_polygon(inner[0], boundary)
-        ]
-        components.append((boundary, holes))
+    # Build a single geometry from all polygons so the multi-pocket
+    # assembler decomposes pockets internally.
+    geo = Geometry()
+    for poly in all_polys:
+        geo.move_to(poly[0][0], poly[0][1], 0.0)
+        for x, y in poly[1:]:
+            geo.line_to(x, y, 0.0)
+        geo.close_path()
 
-    # Run wavefront on every letter component independently
-    results = []
-    max_subpaths = 0
-    for boundary, islands in components:
-        ca_seed = _seed_polygon(boundary, islands, 1.5)
-        result = adaptive_wavefronts(
-            Part.from_polygons(boundary, islands, initial=ca_seed),
-            tool_radius=1.5,
-            step_over=0.5,
-            z=-5.0,
-            area_tolerance=0.2,
-        )
-        n_sub = len(result.ops.split_into_subpaths())
-        max_subpaths = max(max_subpaths, n_sub)
-        results.append((result.ops, boundary, islands))
+    result = adaptive_wavefronts_multi_pocket(
+        Part(geometry=geo, size_mm=(200, 100)),
+        tool_radius=1.5,
+        step_over=0.5,
+        area_tolerance=0.2,
+    )
+
+    n_sub = len(result.ops.split_into_subpaths())
 
     # Plot everything
     fig, ax = plt.subplots(figsize=(12, 6))
@@ -249,35 +244,30 @@ def generate_wavefront_svg():
         )
 
     # Plot all wavefronts with a single consistent colormap
-    for ops, _boundary, _islands in results:
-        subpaths = ops.split_into_subpaths()
-        for i, sub in enumerate(subpaths):
-            color = cmap(i / max(max_subpaths - 1, 1))
-            pts_list = _ops_to_points(sub)
-            seg_x, seg_y = [], []
-            last_x = last_y = None
-            last_was_travel = False
-            for x, y, z, is_travel in pts_list:
-                if seg_x and is_travel and not last_was_travel:
-                    if len(seg_x) >= 2:
-                        ax.plot(
-                            seg_x,
-                            seg_y,
-                            color=color,
-                            linewidth=0.9,
-                            alpha=0.85,
-                        )
-                    seg_x, seg_y = [], []
-                if not is_travel:
-                    if not seg_x and last_was_travel and last_x is not None:
-                        seg_x.append(last_x)
-                        seg_y.append(last_y)
-                    seg_x.append(x)
-                    seg_y.append(y)
-                last_x, last_y = x, y
-                last_was_travel = is_travel
-            if len(seg_x) >= 2:
-                ax.plot(seg_x, seg_y, color=color, linewidth=0.9, alpha=0.85)
+    subpaths = result.ops.split_into_subpaths()
+    for i, sub in enumerate(subpaths):
+        color = cmap(i / max(n_sub - 1, 1))
+        pts_list = _ops_to_points(sub)
+        seg_x, seg_y = [], []
+        last_x, last_y = None, None
+        last_was_travel = False
+        for x, y, z, is_travel in pts_list:
+            if seg_x and is_travel and not last_was_travel:
+                if len(seg_x) >= 2:
+                    ax.plot(
+                        seg_x, seg_y, color=color, linewidth=0.9, alpha=0.85
+                    )
+                seg_x, seg_y = [], []
+            if not is_travel:
+                if not seg_x and last_was_travel and last_x is not None:
+                    seg_x.append(last_x)
+                    seg_y.append(last_y)
+                seg_x.append(x)
+                seg_y.append(y)
+            last_x, last_y = x, y
+            last_was_travel = is_travel
+        if len(seg_x) >= 2:
+            ax.plot(seg_x, seg_y, color=color, linewidth=0.9, alpha=0.85)
 
     # Letter outlines (thin, dark)
     for poly in outer_polys:
@@ -288,10 +278,10 @@ def generate_wavefront_svg():
         ax.plot(arr[:, 0], arr[:, 1], color="#444", linewidth=0.8, zorder=2)
 
     ax.set_aspect("equal")
-    ax.set_title("Adaptive Wavefronts — Raygeo Logo")
+    ax.set_title("Adaptive Wavefronts Multi Pocket")
     ax.set_axis_off()
 
-    sm = plt.cm.ScalarMappable(cmap=cmap, norm=Normalize(0, max_subpaths - 1))
+    sm = plt.cm.ScalarMappable(cmap=cmap, norm=Normalize(0, n_sub - 1))
     sm.set_array([])
     fig.colorbar(sm, ax=ax, label="Iteration")
 
@@ -327,7 +317,7 @@ __images__ = [
         "function": generate_wavefront_yshape,
     },
     {
-        "heading": "adaptive_wavefronts",
+        "heading": "adaptive_wavefronts_multi_pocket",
         "caption": (
             "Adaptive wavefronts in a complex SVG shape — contours"
             " adapt to the boundary and wrap around islands"
