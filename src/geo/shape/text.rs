@@ -24,7 +24,8 @@
 //! }
 //! ```
 
-use std::sync::OnceLock;
+use std::collections::HashMap;
+use std::sync::{Mutex, OnceLock};
 
 use swash::scale::ScaleContext;
 use swash::zeno;
@@ -97,6 +98,46 @@ fn font_database() -> &'static fontdb::Database {
     })
 }
 
+/// Cached font data + face index keyed by fontdb face ID.
+struct FontCacheEntry {
+    data: Vec<u8>,
+    index: u32,
+}
+
+/// Cache of raw font data + face index, keyed by face ID.
+/// Avoids re-reading font files from disk on every call.
+fn cached_font_data(id: fontdb::ID) -> Option<FontCacheEntry> {
+    static CACHE: OnceLock<Mutex<HashMap<fontdb::ID, FontCacheEntry>>> =
+        OnceLock::new();
+    let mut cache = CACHE
+        .get_or_init(|| Mutex::new(HashMap::new()))
+        .lock()
+        .unwrap();
+    if let Some(entry) = cache.get(&id) {
+        return Some(FontCacheEntry {
+            data: entry.data.clone(),
+            index: entry.index,
+        });
+    }
+    let db = font_database();
+    let result = db.with_face_data(id, |data, face_index| FontCacheEntry {
+        data: data.to_vec(),
+        index: face_index,
+    });
+    if let Some(entry) = result {
+        cache.insert(
+            id,
+            FontCacheEntry {
+                data: entry.data.clone(),
+                index: entry.index,
+            },
+        );
+        Some(entry)
+    } else {
+        None
+    }
+}
+
 /// Look up a font face ID matching the given [`FontConfig`].
 ///
 /// Tries the requested family name first, then falls back to generic
@@ -159,62 +200,57 @@ fn find_face_id(config: &FontConfig) -> Option<fontdb::ID> {
 ///
 /// Returns `None` when the font face cannot be found.
 pub fn text_to_geometry(text: &str, config: &FontConfig) -> Option<Geometry> {
-    let db = font_database();
     let face_id = find_face_id(config)?;
+    let entry = cached_font_data(face_id)?;
+    let font = FontRef::from_index(&entry.data, entry.index as usize)?;
 
-    db.with_face_data(face_id, |font_data, face_index| -> Option<Geometry> {
-        let font = FontRef::from_index(font_data, face_index as usize)?;
+    // Size in points -> pixels per em (72 DPI).
+    let internal_scale = 4.0;
+    let ppem = (config.size * internal_scale) as f32;
 
-        // Size in points -> pixels per em (72 DPI).
-        let internal_scale = 4.0;
-        let ppem = (config.size * internal_scale) as f32;
+    let mut geo = Geometry::new();
+    let mut scale_ctx = ScaleContext::new();
+    let mut scaler = scale_ctx.builder(font).size(ppem).hint(false).build();
 
-        let mut geo = Geometry::new();
-        let mut scale_ctx = ScaleContext::new();
-        let mut scaler = scale_ctx.builder(font).size(ppem).hint(false).build();
+    let charmap = font.charmap();
+    let font_metrics = font.metrics(&[]);
+    let upem = font_metrics.units_per_em as f32;
+    let glyph_metrics = font.glyph_metrics(&[]);
 
-        let charmap = font.charmap();
-        let font_metrics = font.metrics(&[]);
-        let upem = font_metrics.units_per_em as f32;
-        let glyph_metrics = font.glyph_metrics(&[]);
+    // Pixel position of cursor, in the scaled pixel space (ppem).
+    let mut cursor_px: f32 = 0.0;
 
-        // Pixel position of cursor, in the scaled pixel space (ppem).
-        let mut cursor_px: f32 = 0.0;
-
-        for ch in text.chars() {
-            let gid: u16 = charmap.map(ch);
-            if gid == 0 {
-                // Unmapped glyph — still advance by its width.
-                let advance_fu = glyph_metrics.advance_width(gid);
-                cursor_px += advance_fu / upem * ppem;
-                continue;
-            }
-
-            if let Some(outline) = scaler.scale_outline(gid) {
-                let verbs = outline.verbs();
-                let pts = outline.points();
-                if !verbs.is_empty() && !pts.is_empty() {
-                    let mut builder =
-                        GeoPathBuilder::new(&mut geo, cursor_px, 0.0);
-                    (pts, verbs).copy_to(&mut builder);
-                }
-            }
-
+    for ch in text.chars() {
+        let gid: u16 = charmap.map(ch);
+        if gid == 0 {
+            // Unmapped glyph — still advance by its width.
             let advance_fu = glyph_metrics.advance_width(gid);
             cursor_px += advance_fu / upem * ppem;
+            continue;
         }
 
-        // Scale from the internal resolution back to points.
-        let inv = 1.0 / internal_scale;
-        geo.transform_2d(inv, 0.0, 0.0, inv, 0.0, 0.0);
+        if let Some(outline) = scaler.scale_outline(gid) {
+            let verbs = outline.verbs();
+            let pts = outline.points();
+            if !verbs.is_empty() && !pts.is_empty() {
+                let mut builder = GeoPathBuilder::new(&mut geo, cursor_px, 0.0);
+                (pts, verbs).copy_to(&mut builder);
+            }
+        }
 
-        // Convert from points to mm.
-        let pt_to_mm = 25.4 / 72.0;
-        geo.transform_2d(pt_to_mm, 0.0, 0.0, pt_to_mm, 0.0, 0.0);
+        let advance_fu = glyph_metrics.advance_width(gid);
+        cursor_px += advance_fu / upem * ppem;
+    }
 
-        Some(geo)
-    })
-    .and_then(std::convert::identity)
+    // Scale from the internal resolution back to points.
+    let inv = 1.0 / internal_scale;
+    geo.transform_2d(inv, 0.0, 0.0, inv, 0.0, 0.0);
+
+    // Convert from points to mm.
+    let pt_to_mm = 25.4 / 72.0;
+    geo.transform_2d(pt_to_mm, 0.0, 0.0, pt_to_mm, 0.0, 0.0);
+
+    Some(geo)
 }
 
 /// Return the advance width of `text` in mm.
@@ -227,29 +263,22 @@ pub fn text_to_geometry(text: &str, config: &FontConfig) -> Option<Geometry> {
 ///
 /// Returns `None` when the font face cannot be found.
 pub fn get_text_width(text: &str, config: &FontConfig) -> Option<f64> {
-    let db = font_database();
     let face_id = find_face_id(config)?;
+    let entry = cached_font_data(face_id)?;
+    let font = FontRef::from_index(&entry.data, entry.index as usize)?;
+    let font_metrics = font.metrics(&[]);
+    let upem = font_metrics.units_per_em as f32;
+    let glyph_metrics = font.glyph_metrics(&[]);
+    let charmap = font.charmap();
 
-    db.with_face_data(face_id, |font_data, face_index| -> Option<f64> {
-        let font = FontRef::from_index(font_data, face_index as usize)?;
-        let font_metrics = font.metrics(&[]);
-        let upem = font_metrics.units_per_em as f32;
-        let glyph_metrics = font.glyph_metrics(&[]);
-        let charmap = font.charmap();
-
-        // advance_width returns font design units.
-        // Convert to mm: font_units / upem * size_pt * 25.4 / 72.
-        let pt_to_mm = 25.4 / 72.0;
-        let mut total_mm: f32 = 0.0;
-        for ch in text.chars() {
-            let gid: u16 = charmap.map(ch);
-            let advance_fu = glyph_metrics.advance_width(gid);
-            total_mm +=
-                advance_fu / upem * config.size as f32 * pt_to_mm as f32;
-        }
-        Some(total_mm as f64)
-    })
-    .and_then(std::convert::identity)
+    let pt_to_mm = 25.4 / 72.0;
+    let mut total_mm: f32 = 0.0;
+    for ch in text.chars() {
+        let gid: u16 = charmap.map(ch);
+        let advance_fu = glyph_metrics.advance_width(gid);
+        total_mm += advance_fu / upem * config.size as f32 * pt_to_mm as f32;
+    }
+    Some(total_mm as f64)
 }
 
 /// Return font metrics as `(ascent, descent, height)` in mm.
@@ -264,28 +293,17 @@ pub fn get_text_width(text: &str, config: &FontConfig) -> Option<f64> {
 ///
 /// Returns `None` when the font face cannot be found.
 pub fn get_font_metrics(config: &FontConfig) -> Option<(f64, f64, f64)> {
-    let db = font_database();
     let face_id = find_face_id(config)?;
-
-    db.with_face_data(
-        face_id,
-        |font_data, face_index| -> Option<(f64, f64, f64)> {
-            let font = FontRef::from_index(font_data, face_index as usize)?;
-            let m = font.metrics(&[]);
-            let upem = m.units_per_em as f32;
-            // m.ascent/m.descent are in font design units.
-            // Convert to mm: fu / upem * size_pt * 25.4 / 72.
-            let pt_to_mm = 25.4 / 72.0;
-            let scale = config.size as f32 / upem * pt_to_mm as f32;
-            // swash returns both ascent and descent as positive distances
-            // from the baseline; negate descent so that it is ≤ 0 (below baseline).
-            let ascent = (m.ascent * scale) as f64;
-            let descent = -(m.descent * scale) as f64;
-            let height = ascent - descent;
-            Some((ascent, descent, height))
-        },
-    )
-    .and_then(std::convert::identity)
+    let entry = cached_font_data(face_id)?;
+    let font = FontRef::from_index(&entry.data, entry.index as usize)?;
+    let m = font.metrics(&[]);
+    let upem = m.units_per_em as f32;
+    let pt_to_mm = 25.4 / 72.0;
+    let scale = config.size as f32 / upem * pt_to_mm as f32;
+    let ascent = (m.ascent * scale) as f64;
+    let descent = -(m.descent * scale) as f64;
+    let height = ascent - descent;
+    Some((ascent, descent, height))
 }
 
 /// Return the X-position of the cursor at character `index` within `text` (mm).
@@ -304,29 +322,25 @@ pub fn get_text_position(
     if index == 0 {
         return Some(0.0);
     }
-    let db = font_database();
     let face_id = find_face_id(config)?;
+    let entry = cached_font_data(face_id)?;
+    let font = FontRef::from_index(&entry.data, entry.index as usize)?;
+    let font_metrics = font.metrics(&[]);
+    let upem = font_metrics.units_per_em as f32;
+    let glyph_metrics = font.glyph_metrics(&[]);
+    let charmap = font.charmap();
 
-    db.with_face_data(face_id, |font_data, face_index| -> Option<f64> {
-        let font = FontRef::from_index(font_data, face_index as usize)?;
-        let font_metrics = font.metrics(&[]);
-        let upem = font_metrics.units_per_em as f32;
-        let glyph_metrics = font.glyph_metrics(&[]);
-        let charmap = font.charmap();
-
-        let pt_to_mm = 25.4 / 72.0;
-        let mut pos_mm: f32 = 0.0;
-        for (i, ch) in text.chars().enumerate() {
-            if i >= index {
-                break;
-            }
-            let gid: u16 = charmap.map(ch);
-            let advance_fu = glyph_metrics.advance_width(gid);
-            pos_mm += advance_fu / upem * config.size as f32 * pt_to_mm as f32;
+    let pt_to_mm = 25.4 / 72.0;
+    let mut pos_mm: f32 = 0.0;
+    for (i, ch) in text.chars().enumerate() {
+        if i >= index {
+            break;
         }
-        Some(pos_mm as f64)
-    })
-    .and_then(std::convert::identity)
+        let gid: u16 = charmap.map(ch);
+        let advance_fu = glyph_metrics.advance_width(gid);
+        pos_mm += advance_fu / upem * config.size as f32 * pt_to_mm as f32;
+    }
+    Some(pos_mm as f64)
 }
 
 /// Bridge between [`swash::zeno::PathBuilder`] and [`Geometry`].
