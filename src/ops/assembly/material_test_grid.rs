@@ -1,6 +1,4 @@
-use crate::geo::shape::text::{
-    get_font_metrics, get_text_width, text_to_geometry, FontConfig,
-};
+use crate::geo::shape::text::{text_to_geometry, FontConfig};
 use crate::ops::assembly::result::AssemblyMeta;
 use crate::ops::container::Ops;
 use crate::ops::types::ToolPose;
@@ -225,22 +223,21 @@ pub fn generate_material_test_grid(
     Ok((ops, meta))
 }
 
-/// Format a numeric column/row value with an optional unit suffix.
-fn format_label(value: f64, unit: &str) -> String {
-    if unit == "%" {
-        format!("{:.0}%", value)
-    } else if unit == " pass" && value == 1.0 {
-        "1 pass".to_string()
-    } else if unit == " pass" {
-        format!("{:.0} passes", value)
-    } else {
-        format!("{:.0}", value)
-    }
+/// Format a numeric column label: truncate toward zero (like Python's int()).
+fn format_col_label(value: f64) -> String {
+    format!("{}", value as i64)
+}
+
+/// Format a numeric row label: round then truncate (like Python's int(round())).
+fn format_row_label(value: f64) -> String {
+    format!("{}", (value + 0.5).floor() as i64)
 }
 
 /// Position a text label at `(cx, cy)` with the given alignment and add it to `ops`.
 ///
-/// If `angle_deg` is non-zero the text is rotated around `(cx, cy)`.
+/// The label coordinate system matches the grid (Y‑up before the final flip).
+/// `text_to_geometry` returns Y‑up geometry.  We Y‑flip it here so it reads
+/// correctly after the caller applies the final Y‑flip to the combined ops.
 #[allow(clippy::too_many_arguments)]
 fn add_text_label(
     ops: &mut Ops,
@@ -249,38 +246,45 @@ fn add_text_label(
     cx: f64,
     cy: f64,
     h_align: HAlign,
-    v_align: VAlign,
     angle_deg: f64,
 ) {
-    let Some(metrics) = get_font_metrics(font) else {
-        return;
-    };
-    let (ascent, _descent, _height) = metrics;
-    let width = get_text_width(text, font).unwrap_or(0.0);
-
-    // Compute the baseline origin (text_to_geometry origin is baseline start)
-    let origin_x = match h_align {
-        HAlign::Center => cx - width / 2.0,
-        HAlign::Right => cx - width,
-    };
-    let origin_y = match v_align {
-        VAlign::Bottom => cy + ascent, // bottom of text = baseline + ascent
-        VAlign::Center => cy + ascent / 2.0, // center ≈ baseline + ascent/2
-    };
-
     let Some(mut geo) = text_to_geometry(text, font) else {
         return;
     };
 
-    // Rotate around the origin if needed
+    // Use the visual bounding box for centering, matching the original
+    // rayforge producer which calls geo.rect() and uses the total width.
+    let rect = geo.rect();
+    let width = rect.max.x - rect.min.x;
+
+    // Y-flip: Y-UP → Y-DOWN so the final collective flip makes it Y-UP again.
+    geo.transform_2d(1.0, 0.0, 0.0, -1.0, 0.0, 0.0);
+
+    // Alignment offset — matches the original _vectorize_text_to_ops
+    // which uses geo.rect() for width and applies x_offset directly
+    // to the el_x translation (no left-bearing adjustment).
+    let x_offset = match h_align {
+        HAlign::Left => 0.0,
+        HAlign::Center => -width / 2.0,
+        HAlign::Right => -width,
+    };
+
+    // 1. Alignment offset (pre-rotation)
+    geo.transform_2d(1.0, 0.0, 0.0, 1.0, x_offset, 0.0);
+
+    // 2. Rotation around origin (if needed).
+    //    Uses the same convention as DMat3::from_rotation_z (applied
+    //    via Matrix.rotation() in the Python bindings):
+    //    x' = cos*x - sin*y,   y' = sin*x + cos*y
     if angle_deg.abs() > 0.5 {
         let rad = angle_deg.to_radians();
         let cos = rad.cos();
         let sin = rad.sin();
-        geo.transform_2d(cos, sin, -sin, cos, origin_x, origin_y);
-    } else {
-        geo.transform_2d(1.0, 0.0, 0.0, 1.0, origin_x, origin_y);
+        geo.transform_2d(cos, -sin, sin, cos, 0.0, 0.0);
     }
+
+    // 3. Translate to final position
+    geo.transform_2d(1.0, 0.0, 0.0, 1.0, cx, cy);
 
     if let Ok(text_ops) = Ops::from_geometry(&geo) {
         ops.extend(&text_ops);
@@ -288,13 +292,9 @@ fn add_text_label(
 }
 
 enum HAlign {
+    Left,
     Center,
     Right,
-}
-
-enum VAlign {
-    Center,
-    Bottom,
 }
 
 /// Generate text labels for the material test grid.
@@ -314,21 +314,26 @@ fn generate_labels(
     let spacing_x = params.spacing * scale_x;
     let spacing_y = params.spacing * scale_y;
 
-    let label_font = FontConfig::new("sans-serif", 2.5);
-    let title_font = FontConfig::new("sans-serif", 3.5).bold(true);
-
-    let label_gap = 2.5;
+    // Match original producer: font size in mm proportional to margin,
+    // then converted to points (1 pt = 25.4/72 mm).
+    let pt_to_mm = 25.4 / 72.0;
+    let margin_min = margin_left.min(margin_top);
+    let axis_font_mm = margin_min * 0.25;
+    let grid_font_mm = axis_font_mm * 0.85;
+    let label_font = FontConfig::new("sans-serif", grid_font_mm / pt_to_mm);
+    let title_font =
+        FontConfig::new("sans-serif", axis_font_mm / pt_to_mm).bold(true);
 
     ops.set_power(0.3);
     ops.set_feed_rate(1000);
 
-    // Determine column/row range descriptors
-    let (col_unit, row_unit, col_title, row_title) =
-        match params.grid_mode.as_str() {
-            "Power vs Passes" => ("%", " pass", "Power", "Passes"),
-            "Speed vs Passes" => ("", " pass", "Speed", "Passes"),
-            _ => ("%", "", "Power", "Speed"),
-        };
+    // Determine column/row range descriptors (axis titles match the
+    // original rayforge producer exactly).
+    let (col_title, row_title) = match params.grid_mode.as_str() {
+        "Power vs Passes" => ("Power (%)", "Passes"),
+        "Speed vs Passes" => ("Speed (mm/min)", "Passes"),
+        _ => ("Power (%)", "Speed (mm/min)"),
+    };
 
     let (col_range, row_range): (ColRange, ColRange) =
         match params.grid_mode.as_str() {
@@ -363,46 +368,30 @@ fn generate_labels(
         0.0
     };
 
-    // Column headers: centered above each column
+    // Column headers: centered above each column (y = 75% of margin_top).
+    // Uses truncation (like Python int()) for column values.
     for c in 0..cols {
         let val = col_range.min() + c as f64 * col_step;
-        let text = format_label(val, col_unit);
+        let text = format_col_label(val);
         let cx = margin_left + c as f64 * (shape_w + spacing_x) + shape_w / 2.0;
-        let cy = margin_top - label_gap;
-        add_text_label(
-            ops,
-            &text,
-            &label_font,
-            cx,
-            cy,
-            HAlign::Center,
-            VAlign::Bottom,
-            0.0,
-        );
+        let cy = margin_top * 0.75;
+        add_text_label(ops, &text, &label_font, cx, cy, HAlign::Center, 0.0);
     }
 
-    // Row labels: right-aligned to the left of each row
+    // Row labels: right-aligned at 90% of margin_left.
+    // Uses round-then-truncate (like Python int(round())) for row values.
     for r in 0..rows {
         let val = row_range.min() + r as f64 * row_step;
-        let text = format_label(val, row_unit);
-        let rx = margin_left - label_gap;
+        let text = format_row_label(val);
+        let rx = margin_left * 0.9;
         let ry = margin_top + r as f64 * (shape_h + spacing_y) + shape_h / 2.0;
-        add_text_label(
-            ops,
-            &text,
-            &label_font,
-            rx,
-            ry,
-            HAlign::Right,
-            VAlign::Center,
-            0.0,
-        );
+        add_text_label(ops, &text, &label_font, rx, ry, HAlign::Right, 0.0);
     }
 
-    // Column axis title: centered above column headers
+    // Column axis title: centered above grid at 30% of margin_top
     let col_title_cx = margin_left + cols as f64 * (shape_w + spacing_x) / 2.0
         - spacing_x / 2.0;
-    let col_title_cy = margin_top - label_gap - 5.0;
+    let col_title_cy = margin_top * 0.3;
     add_text_label(
         ops,
         col_title,
@@ -410,12 +399,11 @@ fn generate_labels(
         col_title_cx,
         col_title_cy,
         HAlign::Center,
-        VAlign::Bottom,
         0.0,
     );
 
-    // Row axis title: rotated 90°, left of row labels
-    let row_title_x = margin_left - label_gap - 10.0;
+    // Row axis title: rotated -90°, aligned at 30% of margin_left
+    let row_title_x = margin_left * 0.3;
     let row_title_y = margin_top + rows as f64 * (shape_h + spacing_y) / 2.0
         - spacing_y / 2.0;
     add_text_label(
@@ -425,9 +413,40 @@ fn generate_labels(
         row_title_x,
         row_title_y,
         HAlign::Center,
-        VAlign::Center,
         -90.0,
     );
+
+    // Fixed-parameter labels (matching original producer)
+    let fixed_label_offset = margin_min * 0.15;
+    let fixed_font =
+        FontConfig::new("sans-serif", grid_font_mm * 0.8 / pt_to_mm);
+    match params.grid_mode.as_str() {
+        "Power vs Passes" => {
+            let text = format!("Speed: {:.0} mm/min", params.fixed_speed);
+            add_text_label(
+                ops,
+                &text,
+                &fixed_font,
+                fixed_label_offset,
+                fixed_label_offset,
+                HAlign::Left,
+                0.0,
+            );
+        }
+        "Speed vs Passes" => {
+            let text = format!("Power: {:.0}%", params.fixed_power);
+            add_text_label(
+                ops,
+                &text,
+                &fixed_font,
+                fixed_label_offset,
+                fixed_label_offset,
+                HAlign::Left,
+                0.0,
+            );
+        }
+        _ => {}
+    }
 }
 
 fn draw_rectangle(ops: &mut Ops, x: f64, y: f64, w: f64, h: f64) {
