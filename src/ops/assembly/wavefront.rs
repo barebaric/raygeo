@@ -4,7 +4,6 @@ use prof_macros::prof;
 
 use crate::error::RaygeoResult;
 use crate::geo::algo::fitting::linearize_data;
-use crate::geo::algo::helix::HelixDirection;
 use crate::geo::algo::offset::grow_geometry;
 use crate::geo::algo::polylabel::find_largest_circle;
 use crate::geo::algo::topology::{
@@ -12,11 +11,10 @@ use crate::geo::algo::topology::{
 };
 use crate::geo::geometry::Geometry;
 use crate::geo::shape::polygon::{
-    clean_polygon, get_polygon_area, get_polygon_centroid,
+    clean_polygon, get_circle_polygon, get_polygon_area, get_polygon_centroid,
     is_point_inside_polygon, resample_polygon,
 };
 use crate::ops::assembly::result::AssemblyMeta;
-use crate::ops::assembly::spiral::{generate_spiral, SpiralOptions};
 use crate::ops::assembly::Tracelet;
 use crate::ops::container::Ops;
 use crate::ops::part::Part;
@@ -50,6 +48,7 @@ pub fn adaptive_wavefronts(
     trace: &mut Tracelet,
     opts: &AdaptiveWavefrontOptions,
     cut_state: &State,
+    seed: &[Polygon],
 ) -> RaygeoResult<AssemblyMeta> {
     let mut state_applied = false;
 
@@ -63,6 +62,39 @@ pub fn adaptive_wavefronts(
     // and actionable_remaining() call.
     let envelope = part.cleared.envelope(&part.stock_region, opts.tool_radius);
     part.cleared.set_envelope_cache(envelope);
+
+    // Emit pre-seeded rings through the exact same code path as
+    // wavefront rings: one `move_to` + `line_to` per ring, sharing
+    // the same `state_applied` flag.  No section markers, no separate
+    // state application — structurally identical to wavefront output.
+    for frag in seed {
+        let frag_area = get_polygon_area(frag);
+        if frag_area < opts.area_tolerance {
+            continue;
+        }
+        let points: Vec<Point> = if opts.precision > 0.0 {
+            resample_polygon(frag, opts.precision)
+        } else {
+            frag.clone()
+        };
+        if points.len() < 3 {
+            continue;
+        }
+        if !state_applied {
+            trace.apply_state(cut_state);
+            state_applied = true;
+        }
+        if first_point.is_none() {
+            first_point = Some(points[0]);
+        }
+        last_point = Some(points[points.len() - 1]);
+        let ring_start = points[0];
+        trace.move_to(ring_start.x, ring_start.y, opts.z, None);
+        for p in &points[1..] {
+            trace.line_to(p.x, p.y, opts.z, None);
+        }
+        trace.line_to(ring_start.x, ring_start.y, opts.z, None);
+    }
 
     for _ in 0..MAX_WAVEFRONT_ITERATIONS {
         let bounded = part.cleared.bites(
@@ -146,8 +178,9 @@ pub fn adaptive_wavefronts(
 /// Multi-pocket adaptive wavefronts.
 ///
 /// Extracts all pockets from `part.geometry`, optionally offsets the
-/// boundary inward, seeds each pocket with a large circle, and runs
-/// wavefront expansion inside each.  Returns the combined `Ops`.
+/// boundary inward, seeds each pocket with concentric rings spaced
+/// `step_over` apart, and runs wavefront expansion inside each.
+/// Returns the combined `Ops`.
 #[allow(clippy::too_many_arguments)]
 #[prof]
 pub fn adaptive_wavefronts_multi_pocket(
@@ -239,40 +272,44 @@ pub fn adaptive_wavefronts_multi_pocket(
     let mut last_point: Option<Point3D> = None;
 
     for (boundary, islands) in &pockets {
-        let mut pocket_part =
-            Part::from_polygons(boundary, islands, (0.0, 0.0));
-
-        // Seed along the pocket's full extent so the wavefront has
-        // fewer rings to expand.  For elongated pockets the single
-        // circle seed leaves most of the pocket uncovered, forcing
-        // hundreds of wavefront iterations with small step_over.
+        // Find the largest inscribed circle to seed the cleared area.
         let (center, r_max) = find_largest_circle(boundary, islands, 0.1)
             .unwrap_or_else(|| (get_polygon_centroid(boundary), 0.0));
 
-        let helix_r = (tool_radius * 0.8).min(r_max * 0.5);
-        let min_seed_r = helix_r.max(tool_radius * 2.0).max(0.05);
-        let spiral_max_r = (r_max - tool_radius).max(min_seed_r);
-        let radial_dist = spiral_max_r - helix_r;
+        // Seed with concentric rings spaced `step_over` apart so the
+        // wavefront expands smoothly from the pocket centre.  The
+        // outermost ring is the frontier; the first wavefront bite
+        // expands it by exactly `step_over`, giving an equidistant,
+        // seamless transition into the wavefront phase.
+        //
+        // The rings cover the inscribed disk up to the largest radius
+        // where the tool centre can safely travel, leaving the
+        // wavefront to fill the remaining (typically irregular) rim.
+        let seed_r = tool_radius.min(r_max * 0.8).max(0.01);
+        let spiral_max_r = (r_max - tool_radius).max(seed_r);
 
-        // Seed the pocket with a flat spiral
-        if radial_dist > 0.0 && step_over > 0.0 {
-            let spiral_opts = SpiralOptions {
-                center,
-                z,
-                start_radius: helix_r,
-                end_radius: spiral_max_r,
-                revolutions: radial_dist / step_over,
-                direction: HelixDirection::Cw,
-                angular_step: 0.1,
-                start_angle: 0.0,
-            };
-            generate_spiral(
-                &mut pocket_part,
-                &mut trace,
-                &spiral_opts,
-                &cut_state,
-            )?;
+        let mut seed_polys: Vec<Polygon> = Vec::new();
+        if step_over > 0.0 {
+            let mut r = seed_r;
+            while r <= spiral_max_r {
+                seed_polys.push(get_circle_polygon(center, r, 64));
+                r += step_over;
+            }
+            // Always include the outermost ring so the frontier sits
+            // at the maximum seed radius.
+            if seed_polys.is_empty() {
+                seed_polys.push(get_circle_polygon(center, spiral_max_r, 64));
+            }
+        } else {
+            seed_polys.push(get_circle_polygon(center, seed_r, 64));
         }
+
+        let mut pocket_part = Part::from_polygons_initial(
+            boundary,
+            islands,
+            &seed_polys,
+            (0.0, 0.0),
+        );
 
         // Expand with adaptive wavefronts
         let wf_opts = AdaptiveWavefrontOptions {
@@ -287,6 +324,7 @@ pub fn adaptive_wavefronts_multi_pocket(
             &mut trace,
             &wf_opts,
             &cut_state,
+            &seed_polys,
         )?;
 
         if first_point.is_none() {

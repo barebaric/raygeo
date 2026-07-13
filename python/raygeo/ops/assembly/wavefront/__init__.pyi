@@ -42,9 +42,9 @@ def adaptive_wavefronts_multi_pocket(part: raygeo.ops.part.Part, tool_radius: fl
     Multi-pocket adaptive wavefronts.
     
     Extracts all pockets from *part.geometry*, optionally offsets
-    the boundary inward by *offset_mm*, and runs a spiral-seed +
-    wavefront expansion inside each pocket.  Returns the combined
-    result.
+    the boundary inward by *offset_mm*, seeds each pocket with
+    concentric rings spaced *step_over* apart, and runs wavefront
+    expansion inside each pocket.  Returns the combined result.
     
     :param part: The part whose geometry defines the pockets.
     :param tool_radius: Tool radius in mm (default 3.0).

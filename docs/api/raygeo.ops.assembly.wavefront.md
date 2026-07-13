@@ -67,13 +67,15 @@ adaptive_wavefronts_multi_pocket(
     precision: float = 0,
     cut_feed_rate: int = 1200,
     cut_power: float = 1,
+    profile: bool = False,
 ) -> ops.assembly.AssemblyResult
 ```
 
 Multi-pocket adaptive wavefronts.
 
 Extracts all pockets from *part.geometry*, optionally offsets the boundary inward by *offset_mm*,
-and runs a spiral-seed + wavefront expansion inside each pocket. Returns the combined result.
+seeds each pocket with concentric rings spaced *step_over* apart, and runs wavefront expansion
+inside each pocket. Returns the combined result.
 
 **Raises:** `ValueError` — If the part has no geometry or no closed contours.
 
@@ -87,6 +89,7 @@ and runs a spiral-seed + wavefront expansion inside each pocket. Returns the com
 | `precision`      | `float = 0`                   | Edge tolerance for frontier simplification (default 0.0). |
 | `cut_feed_rate`  | `int = 1200`                  | Feed rate for cutting moves (default 1200).               |
 | `cut_power`      | `float = 1`                   | Laser power for cutting moves (0.0-1.0, default 1.0).     |
+| `profile`        | `bool = False`                | Print a profiling report to stdout (default False).       |
 | _Returns_        | `ops.assembly.AssemblyResult` | An **AssemblyResult** with combined wavefront paths.      |
 
 ![Adaptive wavefronts in a complex SVG shape — contours adapt to the boundary and wrap around islands](images/ops-assembly-wavefront-wavefront-svg.png)

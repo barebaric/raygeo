@@ -108,6 +108,7 @@ fn adaptive_wavefronts_py(
         &mut trace,
         &opts,
         &cut_state,
+        &[],
     )?;
     let events = trace.drain();
     let attrs = trace.attrs().cloned();
@@ -133,9 +134,9 @@ fn adaptive_wavefronts_py(
         """Multi-pocket adaptive wavefronts.
 
         Extracts all pockets from *part.geometry*, optionally offsets
-        the boundary inward by *offset_mm*, and runs a spiral-seed +
-        wavefront expansion inside each pocket.  Returns the combined
-        result.
+        the boundary inward by *offset_mm*, seeds each pocket with
+        concentric rings spaced *step_over* apart, and runs wavefront
+        expansion inside each pocket.  Returns the combined result.
 
         :param part: The part whose geometry defines the pockets.
         :param tool_radius: Tool radius in mm (default 3.0).

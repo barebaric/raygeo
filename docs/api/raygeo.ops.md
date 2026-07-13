@@ -612,6 +612,34 @@ Copy a single command from another Ops sequence into this one.
 | _Returns_    | `None` |                               |
 | _Complexity_ |        | O(1) time, O(1) space         |
 
+### `count_cutting()`
+
+```python
+count_cutting() -> int
+```
+
+Return the number of cutting commands in this sequence.
+
+Counts all LineTo, ArcTo, BezierTo, QuadraticBezierTo, and ScanLine commands.
+
+| Parameter    | Type  | Description                 |
+| ------------ | ----- | --------------------------- |
+| _Returns_    | `int` | Number of cutting commands. |
+| _Complexity_ |       | O(n) time, O(1) space       |
+
+### `count_travel()`
+
+```python
+count_travel() -> int
+```
+
+Return the number of travel (MoveTo) commands in this sequence.
+
+| Parameter    | Type  | Description                |
+| ------------ | ----- | -------------------------- |
+| _Returns_    | `int` | Number of travel commands. |
+| _Complexity_ |       | O(n) time, O(1) space      |
+
 ### `cut_distance()`
 
 ```python
