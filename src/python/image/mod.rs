@@ -5,6 +5,7 @@ mod dither;
 mod grayscale;
 mod preprocess;
 mod rasterize_scanlines;
+mod render;
 pub(crate) mod scan;
 mod srgb;
 mod transparency;
@@ -44,6 +45,7 @@ pub(crate) fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
             "denoise_binary",
             "compute_adaptive_threshold",
             "rasterize_scanlines",
+            "render",
             "make_transparent_by_brightness",
             "make_transparent_except_color",
         ],
@@ -54,6 +56,7 @@ pub(crate) fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     grayscale::register(&image_mod)?;
     dither::register(&image_mod)?;
     preprocess::register(&image_mod)?;
+    render::register(&image_mod)?;
     rasterize_scanlines::register(&image_mod)?;
     scan::register(&image_mod)?;
     transparency::register(&image_mod)?;

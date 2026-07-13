@@ -9,6 +9,7 @@ Provides sRGB/linear color space conversions, RGBA-to-grayscale/binary conversio
 import numpy
 import numpy.typing
 from raygeo import ops
+from . import render
 from . import scan
 __all__ = [
     "apply_bayer_dither",
@@ -25,6 +26,7 @@ __all__ = [
     "make_transparent_except_color",
     "normalize_grayscale",
     "rasterize_scanlines",
+    "render",
     "rgba_to_binary",
     "rgba_to_grayscale",
     "rgba_to_grayscale_inplace",

@@ -489,7 +489,9 @@ fn draw_filled_box(
     }
 }
 
-fn get_material_test_proportional_size(params: &MaterialTestGridParams) -> f64 {
+pub fn get_material_test_proportional_size(
+    params: &MaterialTestGridParams,
+) -> f64 {
     let cols = params.cols;
     let shape_size = params.shape_size;
     let spacing = params.spacing;
@@ -499,7 +501,7 @@ fn get_material_test_proportional_size(params: &MaterialTestGridParams) -> f64 {
         + base_margin_left
 }
 
-fn get_material_test_proportional_height(
+pub fn get_material_test_proportional_height(
     params: &MaterialTestGridParams,
 ) -> f64 {
     let rows = params.rows;

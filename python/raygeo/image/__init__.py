@@ -1,5 +1,1 @@
-import raygeo.raygeo as _raygeo  # type: ignore[import-untyped]
-
-
-def __getattr__(name):
-    return getattr(_raygeo.image, name)
+import raygeo.raygeo as _raygeo  # noqa: F401  # needed for sub-module registration

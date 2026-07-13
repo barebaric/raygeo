@@ -275,8 +275,7 @@ class Ops:
         Return the number of cutting commands in this sequence.
         
         Counts all LineTo, ArcTo, BezierTo, QuadraticBezierTo, and
-        ScanLine commands.  Use this instead of iterating from Python
-        over :meth:`is_cutting` — it runs entirely in native code.
+        ScanLine commands.
         
         :returns: Number of cutting commands.
         :complexity: O(n) time, O(1) space
@@ -284,8 +283,6 @@ class Ops:
     def count_travel(self) -> builtins.int:
         r"""
         Return the number of travel (MoveTo) commands in this sequence.
-        
-        Use this instead of iterating from Python over :meth:`is_travel`.
         
         :returns: Number of travel commands.
         :complexity: O(n) time, O(1) space

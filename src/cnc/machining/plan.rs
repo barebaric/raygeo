@@ -338,7 +338,11 @@ impl WorkplanStep {
                 let saved_region = part
                     .replace_stock_region(boundary.clone(), islands.clone());
                 let result = wavefront::adaptive_wavefronts(
-                    part, trace, &opts, cut_state,
+                    part,
+                    trace,
+                    &opts,
+                    cut_state,
+                    &[],
                 );
                 part.stock_region = saved_region;
                 result

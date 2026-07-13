@@ -565,7 +565,8 @@ impl ClearedArea {
                 None => {
                     drop(cache);
                     let u = get_polygons_union(&self.fragments);
-                    *self.fragments_union_cache.lock().unwrap() = Some(u.clone());
+                    *self.fragments_union_cache.lock().unwrap() =
+                        Some(u.clone());
                     u
                 }
             }

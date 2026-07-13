@@ -1,6 +1,9 @@
 use pyo3::prelude::*;
+use pyo3::types::PyBytes;
 use pyo3_stub_gen::derive::gen_stub_pyfunction;
 
+use crate::geo::geometry::Geometry;
+use crate::image::render::{geometry_to_image, RenderOptions};
 use crate::ops::assembly::material_test_grid::{
     generate_material_test_grid, MaterialTestGridParams,
 };
@@ -11,6 +14,10 @@ pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     let m = PyModule::new(py, "material_test_grid")?;
     m.add_function(pyo3::wrap_pyfunction!(
         generate_material_test_grid_py,
+        m.clone()
+    )?)?;
+    m.add_function(pyo3::wrap_pyfunction!(
+        generate_material_test_grid_preview_py,
         m.clone()
     )?)?;
     assembly_mod.add_submodule(&m)?;
@@ -135,4 +142,97 @@ fn generate_material_test_grid_py(
 
     let (ops, meta) = generate_material_test_grid(&params, size_mm)?;
     Ok(PyAssemblyResult::from_parts(ops, meta, None, vec![]))
+}
+
+#[allow(clippy::too_many_arguments)]
+#[pyfunction(name = "generate_material_test_grid_preview")]
+#[pyo3(signature = (
+    size_mm,
+    dpi = 96.0,
+    cols = 5,
+    rows = 5,
+    min_speed = 100.0,
+    max_speed = 500.0,
+    min_power = 10.0,
+    max_power = 100.0,
+    min_passes = 1,
+    max_passes = 5,
+    fixed_speed = 1000.0,
+    fixed_power = 50.0,
+    shape_size = 10.0,
+    spacing = 2.0,
+    line_interval_mm = 0.1,
+    mode = "engrave",
+    grid_mode = "Power vs Speed",
+    include_labels = true,
+))]
+fn generate_material_test_grid_preview_py(
+    py: Python<'_>,
+    size_mm: (f64, f64),
+    dpi: f64,
+    cols: u32,
+    rows: u32,
+    min_speed: f64,
+    max_speed: f64,
+    min_power: f64,
+    max_power: f64,
+    min_passes: u32,
+    max_passes: u32,
+    fixed_speed: f64,
+    fixed_power: f64,
+    shape_size: f64,
+    spacing: f64,
+    line_interval_mm: f64,
+    mode: &str,
+    grid_mode: &str,
+    include_labels: bool,
+) -> PyResult<Py<PyAny>> {
+    let params = MaterialTestGridParams {
+        cols,
+        rows,
+        min_speed,
+        max_speed,
+        min_power,
+        max_power,
+        min_passes,
+        max_passes,
+        fixed_speed,
+        fixed_power,
+        shape_size,
+        spacing,
+        line_interval_mm,
+        mode: mode.to_string(),
+        grid_mode: grid_mode.to_string(),
+        include_labels,
+    };
+
+    // Use the SAME code path as the Ops: generate the full grid + labels,
+    // then rasterise the resulting geometry.  The Ops are already Y‑down
+    // (generate_material_test_grid applies scale(1,-1)+translate(0,height)).
+    // geometry_to_image expects Y‑up and flips to Y‑down, so we invert
+    // twice and get Y‑up output — which matches the canvas coordinate
+    // system used for ops rendering.
+    let (ops, _meta) = generate_material_test_grid(&params, size_mm)
+        .map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))?;
+    let geo = ops.to_geometry();
+    let empty = Geometry::new();
+    let opts = RenderOptions {
+        dpi,
+        ..Default::default()
+    };
+    let (buf, height, width) = geometry_to_image(&geo, &empty, size_mm, &opts);
+
+    if buf.is_empty() {
+        let numpy = py.import("numpy")?;
+        let arr = numpy.call_method1("zeros", ((0, 0, 4), "uint8"))?;
+        return Ok(arr.into_pyobject(py)?.into_any().unbind());
+    }
+
+    let py_bytes = PyBytes::new(py, &buf);
+    let numpy = py.import("numpy")?;
+    let arr = numpy
+        .call_method1("frombuffer", (py_bytes, numpy.getattr("uint8")?))?;
+    let arr =
+        arr.call_method1("reshape", (height as i64, width as i64, 4i64))?;
+    Ok(arr.into_pyobject(py)?.into_any().unbind())
 }
