@@ -1,7 +1,7 @@
 import pytest
 
 from raygeo.ops import Ops
-from raygeo.ops.types import CommandType, SectionType
+from raygeo.ops.types import CommandType, RasterMode, SectionType
 
 
 def _count(ops, ct):
@@ -71,9 +71,13 @@ def test_split_at_ops_section():
     ops.ops_section_start(SectionType.VECTOR_OUTLINE, "wp1")
     ops.move_to(0.0, 0.0, 0.0)
     ops.ops_section_end(SectionType.VECTOR_OUTLINE)
-    ops.ops_section_start(SectionType.RASTER_FILL, "wp1")
+    ops.ops_section_start(
+        SectionType.RASTER_FILL, "wp1", raster_mode=RasterMode.VARIABLE_POWER
+    )
     ops.move_to(10.0, 10.0, 0.0)
-    ops.ops_section_end(SectionType.RASTER_FILL)
+    ops.ops_section_end(
+        SectionType.RASTER_FILL, raster_mode=RasterMode.VARIABLE_POWER
+    )
 
     parts = ops.split_at(CommandType.OPS_SECTION_START)
     assert len(parts) == 2

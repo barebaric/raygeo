@@ -1510,30 +1510,19 @@ impl PyOps {
     ///
     /// :param section_type: The type of section.
     /// :param workpiece_uid: The workpiece identifier.
-    /// :complexity: O(1) time, O(1) space
-    fn ops_section_start(
-        &mut self,
-        section_type: &PySectionType,
-        workpiece_uid: &str,
-    ) {
-        self.inner.ops_section_start(section_type.0, workpiece_uid);
-    }
-
-    /// Mark the start of an ops section with a raster mode.
-    ///
-    /// :param section_type: The type of section.
-    /// :param workpiece_uid: The workpiece identifier.
     /// :param raster_mode: Optional raster mode.
+    /// :raises ValueError: If section_type is RasterFill without a raster_mode,
+    ///     or VectorOutline with a raster_mode.
     /// :complexity: O(1) time, O(1) space
     #[pyo3(signature = (section_type, workpiece_uid, *, raster_mode=None))]
-    fn ops_section_start_with_mode(
+    fn ops_section_start(
         &mut self,
         section_type: &PySectionType,
         workpiece_uid: &str,
         raster_mode: Option<&PyRasterMode>,
     ) -> PyResult<()> {
         self.inner
-            .ops_section_start_with_mode(
+            .ops_section_start(
                 section_type.0,
                 workpiece_uid,
                 raster_mode.map(|rm| rm.0),
@@ -1544,27 +1533,18 @@ impl PyOps {
     /// Mark the end of an ops section.
     ///
     /// :param section_type: The type of section.
-    /// :complexity: O(1) time, O(1) space
-    fn ops_section_end(&mut self, section_type: &PySectionType) {
-        self.inner.ops_section_end(section_type.0);
-    }
-
-    /// Mark the end of an ops section with a raster mode.
-    ///
-    /// :param section_type: The type of section.
     /// :param raster_mode: Optional raster mode.
+    /// :raises ValueError: If section_type is RasterFill without a raster_mode,
+    ///     or VectorOutline with a raster_mode.
     /// :complexity: O(1) time, O(1) space
     #[pyo3(signature = (section_type, *, raster_mode=None))]
-    fn ops_section_end_with_mode(
+    fn ops_section_end(
         &mut self,
         section_type: &PySectionType,
         raster_mode: Option<&PyRasterMode>,
     ) -> PyResult<()> {
         self.inner
-            .ops_section_end_with_mode(
-                section_type.0,
-                raster_mode.map(|rm| rm.0),
-            )
+            .ops_section_end(section_type.0, raster_mode.map(|rm| rm.0))
             .map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))
     }
 

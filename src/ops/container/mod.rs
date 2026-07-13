@@ -389,19 +389,9 @@ impl Ops {
         &mut self,
         section_type: SectionType,
         workpiece_uid: &str,
-    ) {
-        self.commands
-            .push(OpNode::ops_section_start(section_type, workpiece_uid));
-        self.invalidate_time_cache();
-    }
-
-    pub fn ops_section_start_with_mode(
-        &mut self,
-        section_type: SectionType,
-        workpiece_uid: &str,
         raster_mode: Option<RasterMode>,
     ) -> Result<(), RaygeoError> {
-        self.commands.push(OpNode::ops_section_start_with_mode(
+        self.commands.push(OpNode::ops_section_start(
             section_type,
             workpiece_uid,
             raster_mode,
@@ -410,9 +400,15 @@ impl Ops {
         Ok(())
     }
 
-    pub fn ops_section_end(&mut self, section_type: SectionType) {
-        self.commands.push(OpNode::ops_section_end(section_type));
+    pub fn ops_section_end(
+        &mut self,
+        section_type: SectionType,
+        raster_mode: Option<RasterMode>,
+    ) -> Result<(), RaygeoError> {
+        self.commands
+            .push(OpNode::ops_section_end(section_type, raster_mode)?);
         self.invalidate_time_cache();
+        Ok(())
     }
 
     pub fn state_block_start(&mut self, name: Option<&str>) {
@@ -423,19 +419,6 @@ impl Ops {
     pub fn state_block_end(&mut self) {
         self.commands.push(OpNode::state_block_end());
         self.invalidate_time_cache();
-    }
-
-    pub fn ops_section_end_with_mode(
-        &mut self,
-        section_type: SectionType,
-        raster_mode: Option<RasterMode>,
-    ) -> Result<(), RaygeoError> {
-        self.commands.push(OpNode::ops_section_end_with_mode(
-            section_type,
-            raster_mode,
-        )?);
-        self.invalidate_time_cache();
-        Ok(())
     }
 
     // --- Copy / Transfer ---

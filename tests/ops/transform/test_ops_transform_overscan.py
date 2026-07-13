@@ -4,7 +4,7 @@ import pytest
 
 from raygeo.ops import Ops
 from raygeo.ops.state import AirAssistMode
-from raygeo.ops.types import CommandType, SectionType
+from raygeo.ops.types import CommandType, RasterMode, SectionType
 
 DIST = 5.0
 
@@ -17,10 +17,16 @@ class TestBasic:
 
     def test_zero_distance_no_op(self):
         ops = Ops()
-        ops.ops_section_start(SectionType.RASTER_FILL, "wp1")
+        ops.ops_section_start(
+            SectionType.RASTER_FILL,
+            "wp1",
+            raster_mode=RasterMode.VARIABLE_POWER,
+        )
         ops.move_to(10, 10, 0)
         ops.line_to(30, 10, 0)
-        ops.ops_section_end(SectionType.RASTER_FILL)
+        ops.ops_section_end(
+            SectionType.RASTER_FILL, raster_mode=RasterMode.VARIABLE_POWER
+        )
         orig = ops.len()
         ops.apply_overscan(0.0)
         assert ops.len() == orig
@@ -39,10 +45,16 @@ class TestBasic:
 class TestConstantPower:
     def test_single_horizontal_line(self):
         ops = Ops()
-        ops.ops_section_start(SectionType.RASTER_FILL, "wp1")
+        ops.ops_section_start(
+            SectionType.RASTER_FILL,
+            "wp1",
+            raster_mode=RasterMode.VARIABLE_POWER,
+        )
         ops.move_to(10, 20, 5)
         ops.line_to(30, 20, 5)
-        ops.ops_section_end(SectionType.RASTER_FILL)
+        ops.ops_section_end(
+            SectionType.RASTER_FILL, raster_mode=RasterMode.VARIABLE_POWER
+        )
         ops.apply_overscan(DIST)
 
         assert ops.len() == 9
@@ -57,13 +69,19 @@ class TestConstantPower:
         ops = Ops()
         ops.set_power(0.8)
         ops.set_air_assist(AirAssistMode.ON)
-        ops.ops_section_start(SectionType.RASTER_FILL, "wp1")
+        ops.ops_section_start(
+            SectionType.RASTER_FILL,
+            "wp1",
+            raster_mode=RasterMode.VARIABLE_POWER,
+        )
         ops.move_to(10, 20, 0)
         ops.line_to(20, 20, 0)
         ops.move_to(30, 20, 0)
         ops.set_power(0.4)
         ops.line_to(40, 20, 0)
-        ops.ops_section_end(SectionType.RASTER_FILL)
+        ops.ops_section_end(
+            SectionType.RASTER_FILL, raster_mode=RasterMode.VARIABLE_POWER
+        )
         ops.apply_overscan(DIST)
 
         assert ops.command_type(0) == CommandType.SET_POWER
@@ -93,14 +111,20 @@ class TestConstantPower:
 
     def test_multiple_bidirectional_lines(self):
         ops = Ops()
-        ops.ops_section_start(SectionType.RASTER_FILL, "wp1")
+        ops.ops_section_start(
+            SectionType.RASTER_FILL,
+            "wp1",
+            raster_mode=RasterMode.VARIABLE_POWER,
+        )
         ops.move_to(10, 20, 0)
         ops.line_to(30, 20, 0)
         ops.move_to(30, 22, 0)
         ops.line_to(10, 22, 0)
         ops.move_to(5, 30, 0)
         ops.line_to(15, 40, 0)
-        ops.ops_section_end(SectionType.RASTER_FILL)
+        ops.ops_section_end(
+            SectionType.RASTER_FILL, raster_mode=RasterMode.VARIABLE_POWER
+        )
         ops.apply_overscan(DIST)
 
         move_indices = [
@@ -141,10 +165,16 @@ class TestConstantPower:
 
     def test_zero_length_line_unchanged(self):
         ops = Ops()
-        ops.ops_section_start(SectionType.RASTER_FILL, "wp1")
+        ops.ops_section_start(
+            SectionType.RASTER_FILL,
+            "wp1",
+            raster_mode=RasterMode.VARIABLE_POWER,
+        )
         ops.move_to(10, 10, 0)
         ops.line_to(10, 10, 0)
-        ops.ops_section_end(SectionType.RASTER_FILL)
+        ops.ops_section_end(
+            SectionType.RASTER_FILL, raster_mode=RasterMode.VARIABLE_POWER
+        )
         orig = ops.len()
         ops.apply_overscan(DIST)
         assert ops.len() == orig
@@ -154,10 +184,16 @@ class TestScanLine:
     def test_variable_power_scanline(self):
         power_vals = bytearray(range(1, 41))
         ops = Ops()
-        ops.ops_section_start(SectionType.RASTER_FILL, "wp1")
+        ops.ops_section_start(
+            SectionType.RASTER_FILL,
+            "wp1",
+            raster_mode=RasterMode.VARIABLE_POWER,
+        )
         ops.move_to(10, 20, 0)
         ops.scan_to(30, 20, 0, power_values=power_vals)
-        ops.ops_section_end(SectionType.RASTER_FILL)
+        ops.ops_section_end(
+            SectionType.RASTER_FILL, raster_mode=RasterMode.VARIABLE_POWER
+        )
         ops.apply_overscan(DIST)
 
         assert ops.len() == 4
@@ -174,10 +210,16 @@ class TestScanLine:
     def test_scanline_preserves_preceding_state(self):
         ops = Ops()
         ops.set_power(0.5)
-        ops.ops_section_start(SectionType.RASTER_FILL, "wp1")
+        ops.ops_section_start(
+            SectionType.RASTER_FILL,
+            "wp1",
+            raster_mode=RasterMode.VARIABLE_POWER,
+        )
         ops.move_to(10, 20, 0)
         ops.scan_to(20, 20, 0, power_values=bytearray([100, 200]))
-        ops.ops_section_end(SectionType.RASTER_FILL)
+        ops.ops_section_end(
+            SectionType.RASTER_FILL, raster_mode=RasterMode.VARIABLE_POWER
+        )
         ops.apply_overscan(DIST)
 
         assert ops.len() == 5
@@ -200,13 +242,17 @@ class TestScanLine:
 
 def test_assembly_apply_overscan():
     ops = Ops()
-    ops.ops_section_start(SectionType.RASTER_FILL, "wp")
+    ops.ops_section_start(
+        SectionType.RASTER_FILL, "wp", raster_mode=RasterMode.VARIABLE_POWER
+    )
     ops.set_power(1.0)
     ops.move_to(0, 0)
     ops.scan_to(10, 0, 0)
     ops.move_to(10, 1)
     ops.scan_to(0, 1, 0)
-    ops.ops_section_end(SectionType.RASTER_FILL)
+    ops.ops_section_end(
+        SectionType.RASTER_FILL, raster_mode=RasterMode.VARIABLE_POWER
+    )
     original_len = ops.len()
     ops.apply_overscan(1.0)
     assert ops.len() >= original_len

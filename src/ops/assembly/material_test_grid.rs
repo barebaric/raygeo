@@ -114,7 +114,13 @@ pub fn generate_material_test_grid(
     } else {
         crate::ops::enums::SectionType::VectorOutline
     };
-    ops.ops_section_start(section_type, "material_test_grid");
+    let raster_mode = if is_engrave {
+        Some(crate::ops::enums::RasterMode::ConstantPower)
+    } else {
+        None
+    };
+    ops.ops_section_start(section_type, "material_test_grid", raster_mode)
+        .expect("valid section params");
 
     // Wrap labels in a state block
     if params.include_labels {
@@ -219,7 +225,8 @@ pub fn generate_material_test_grid(
             Some(Point::new(cell.x + cell.width, cell.y + cell.height));
     }
 
-    ops.ops_section_end(section_type);
+    ops.ops_section_end(section_type, raster_mode)
+        .expect("valid section params");
 
     if !ops.is_empty() {
         ops.scale(1.0, -1.0, 1.0).translate(0.0, target_height, 0.0);

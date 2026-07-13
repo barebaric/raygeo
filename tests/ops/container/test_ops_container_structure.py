@@ -31,11 +31,11 @@ def test_subpath_indices_single():
 
 def test_section_raster_mode_with_mode():
     ops = Ops()
-    ops.ops_section_start_with_mode(
+    ops.ops_section_start(
         SectionType.RASTER_FILL, "wp-1", raster_mode=RasterMode.VARIABLE_POWER
     )
     ops.move_to(0, 0)
-    ops.ops_section_end_with_mode(
+    ops.ops_section_end(
         SectionType.RASTER_FILL, raster_mode=RasterMode.VARIABLE_POWER
     )
 
@@ -46,13 +46,17 @@ def test_section_raster_mode_with_mode():
 
 def test_section_raster_mode_none_with_old_api():
     ops = Ops()
-    ops.ops_section_start(SectionType.RASTER_FILL, "wp-1")
+    ops.ops_section_start(
+        SectionType.RASTER_FILL, "wp-1", raster_mode=RasterMode.VARIABLE_POWER
+    )
     ops.move_to(0, 0)
-    ops.ops_section_end(SectionType.RASTER_FILL)
+    ops.ops_section_end(
+        SectionType.RASTER_FILL, raster_mode=RasterMode.VARIABLE_POWER
+    )
 
     sections = ops.sections()
     assert len(sections) == 1
-    assert sections[0].raster_mode is None
+    assert sections[0].raster_mode == RasterMode.VARIABLE_POWER
 
 
 def test_section_raster_mode_none_for_vector():
@@ -69,11 +73,11 @@ def test_section_raster_mode_none_for_vector():
 
 def test_section_ranges_raster_mode():
     ops = Ops()
-    ops.ops_section_start_with_mode(
+    ops.ops_section_start(
         SectionType.RASTER_FILL, "wp-1", raster_mode=RasterMode.CONSTANT_POWER
     )
     ops.move_to(0, 0)
-    ops.ops_section_end_with_mode(
+    ops.ops_section_end(
         SectionType.RASTER_FILL, raster_mode=RasterMode.CONSTANT_POWER
     )
 
@@ -84,18 +88,18 @@ def test_section_ranges_raster_mode():
 
 def test_multiple_sections_with_different_raster_modes():
     ops = Ops()
-    ops.ops_section_start_with_mode(
+    ops.ops_section_start(
         SectionType.RASTER_FILL, "wp-1", raster_mode=RasterMode.VARIABLE_POWER
     )
     ops.move_to(0, 0)
-    ops.ops_section_end_with_mode(
+    ops.ops_section_end(
         SectionType.RASTER_FILL, raster_mode=RasterMode.VARIABLE_POWER
     )
-    ops.ops_section_start_with_mode(
+    ops.ops_section_start(
         SectionType.RASTER_FILL, "wp-1", raster_mode=RasterMode.CONSTANT_POWER
     )
     ops.move_to(10, 10)
-    ops.ops_section_end_with_mode(
+    ops.ops_section_end(
         SectionType.RASTER_FILL, raster_mode=RasterMode.CONSTANT_POWER
     )
 
@@ -108,7 +112,7 @@ def test_multiple_sections_with_different_raster_modes():
 def test_validation_vector_outline_with_mode_rejected():
     with pytest.raises(ValueError):
         ops = Ops()
-        ops.ops_section_start_with_mode(
+        ops.ops_section_start(
             SectionType.VECTOR_OUTLINE,
             "wp-1",
             raster_mode=RasterMode.VARIABLE_POWER,
@@ -119,7 +123,7 @@ def test_validation_vector_outline_end_with_mode_rejected():
     with pytest.raises(ValueError):
         ops = Ops()
         ops.ops_section_start(SectionType.VECTOR_OUTLINE, "wp-1")
-        ops.ops_section_end_with_mode(
+        ops.ops_section_end(
             SectionType.VECTOR_OUTLINE, raster_mode=RasterMode.VARIABLE_POWER
         )
 
@@ -127,7 +131,7 @@ def test_validation_vector_outline_end_with_mode_rejected():
 def test_validation_raster_fill_without_mode_rejected():
     with pytest.raises(ValueError):
         ops = Ops()
-        ops.ops_section_start_with_mode(
+        ops.ops_section_start(
             SectionType.RASTER_FILL, "wp-1", raster_mode=None
         )
 
@@ -135,23 +139,21 @@ def test_validation_raster_fill_without_mode_rejected():
 def test_validation_raster_fill_end_without_mode_rejected():
     with pytest.raises(ValueError):
         ops = Ops()
-        ops.ops_section_start_with_mode(
+        ops.ops_section_start(
             SectionType.RASTER_FILL,
             "wp-1",
             raster_mode=RasterMode.VARIABLE_POWER,
         )
-        ops.ops_section_end_with_mode(
-            SectionType.RASTER_FILL, raster_mode=None
-        )
+        ops.ops_section_end(SectionType.RASTER_FILL, raster_mode=None)
 
 
 def test_validation_valid_combos_accepted():
     ops = Ops()
-    ops.ops_section_start_with_mode(
+    ops.ops_section_start(
         SectionType.RASTER_FILL, "wp-1", raster_mode=RasterMode.VARIABLE_POWER
     )
     ops.move_to(0, 0)
-    ops.ops_section_end_with_mode(
+    ops.ops_section_end(
         SectionType.RASTER_FILL, raster_mode=RasterMode.VARIABLE_POWER
     )
     sections = ops.sections()
@@ -171,11 +173,11 @@ def test_validation_old_api_bypasses():
 
 def test_validation_raster_fill_with_mode_accepted():
     ops = Ops()
-    ops.ops_section_start_with_mode(
+    ops.ops_section_start(
         SectionType.RASTER_FILL, "wp-1", raster_mode=RasterMode.DEPTH_MAP
     )
     ops.move_to(0, 0)
-    ops.ops_section_end_with_mode(
+    ops.ops_section_end(
         SectionType.RASTER_FILL, raster_mode=RasterMode.DEPTH_MAP
     )
     sections = ops.sections()
@@ -194,7 +196,7 @@ def test_state_block_markers():
 
 def test_state_blocks_inside_section():
     ops = Ops()
-    ops.ops_section_start_with_mode(
+    ops.ops_section_start(
         SectionType.RASTER_FILL, "wp-1", raster_mode=RasterMode.VARIABLE_POWER
     )
     ops.state_block_start("labels")
@@ -204,7 +206,7 @@ def test_state_blocks_inside_section():
     ops.set_power(0.5)
     ops.set_feed_rate(100)
     ops.state_block_end()
-    ops.ops_section_end_with_mode(
+    ops.ops_section_end(
         SectionType.RASTER_FILL, raster_mode=RasterMode.VARIABLE_POWER
     )
 
@@ -218,7 +220,7 @@ def test_state_blocks_inside_section():
 
 def test_state_blocks_by_name_prefix():
     ops = Ops()
-    ops.ops_section_start_with_mode(
+    ops.ops_section_start(
         SectionType.RASTER_FILL, "wp-1", raster_mode=RasterMode.CONSTANT_POWER
     )
     ops.state_block_start("cell-r0-c0")
@@ -230,7 +232,7 @@ def test_state_blocks_by_name_prefix():
     ops.state_block_start("labels")
     ops.set_power(0.3)
     ops.state_block_end()
-    ops.ops_section_end_with_mode(
+    ops.ops_section_end(
         SectionType.RASTER_FILL, raster_mode=RasterMode.CONSTANT_POWER
     )
 
@@ -248,7 +250,7 @@ def test_state_blocks_by_name_prefix():
 
 def test_state_block_content():
     ops = Ops()
-    ops.ops_section_start_with_mode(
+    ops.ops_section_start(
         SectionType.RASTER_FILL, "wp-1", raster_mode=RasterMode.VARIABLE_POWER
     )
     ops.state_block_start("block1")
@@ -256,7 +258,7 @@ def test_state_block_content():
     ops.move_to(0, 0)
     ops.line_to(10, 10)
     ops.state_block_end()
-    ops.ops_section_end_with_mode(
+    ops.ops_section_end(
         SectionType.RASTER_FILL, raster_mode=RasterMode.VARIABLE_POWER
     )
 
@@ -272,7 +274,7 @@ def test_state_block_content():
 
 def test_state_blocks_all():
     ops = Ops()
-    ops.ops_section_start_with_mode(
+    ops.ops_section_start(
         SectionType.RASTER_FILL, "wp-1", raster_mode=RasterMode.VARIABLE_POWER
     )
     ops.state_block_start("a")
@@ -281,7 +283,7 @@ def test_state_blocks_all():
     ops.state_block_start("b")
     ops.set_power(0.7)
     ops.state_block_end()
-    ops.ops_section_end_with_mode(
+    ops.ops_section_end(
         SectionType.RASTER_FILL, raster_mode=RasterMode.VARIABLE_POWER
     )
 
@@ -299,18 +301,18 @@ def test_state_block_start_outside_section():
 
 def test_sections_by_mode():
     ops = Ops()
-    ops.ops_section_start_with_mode(
+    ops.ops_section_start(
         SectionType.RASTER_FILL, "wp-1", raster_mode=RasterMode.VARIABLE_POWER
     )
     ops.move_to(0, 0)
-    ops.ops_section_end_with_mode(
+    ops.ops_section_end(
         SectionType.RASTER_FILL, raster_mode=RasterMode.VARIABLE_POWER
     )
-    ops.ops_section_start_with_mode(
+    ops.ops_section_start(
         SectionType.RASTER_FILL, "wp-1", raster_mode=RasterMode.CONSTANT_POWER
     )
     ops.move_to(10, 10)
-    ops.ops_section_end_with_mode(
+    ops.ops_section_end(
         SectionType.RASTER_FILL, raster_mode=RasterMode.CONSTANT_POWER
     )
 
@@ -328,11 +330,11 @@ def test_sections_by_mode():
 
 def test_sections_by_type():
     ops = Ops()
-    ops.ops_section_start_with_mode(
+    ops.ops_section_start(
         SectionType.RASTER_FILL, "wp-1", raster_mode=RasterMode.VARIABLE_POWER
     )
     ops.move_to(0, 0)
-    ops.ops_section_end_with_mode(
+    ops.ops_section_end(
         SectionType.RASTER_FILL, raster_mode=RasterMode.VARIABLE_POWER
     )
     ops.ops_section_start(SectionType.VECTOR_OUTLINE, "wp-1")
@@ -351,12 +353,12 @@ def test_sections_by_type():
 
 def test_section_content():
     ops = Ops()
-    ops.ops_section_start_with_mode(
+    ops.ops_section_start(
         SectionType.RASTER_FILL, "wp-1", raster_mode=RasterMode.VARIABLE_POWER
     )
     ops.move_to(0, 0)
     ops.line_to(10, 10)
-    ops.ops_section_end_with_mode(
+    ops.ops_section_end(
         SectionType.RASTER_FILL, raster_mode=RasterMode.VARIABLE_POWER
     )
 
@@ -371,11 +373,11 @@ def test_section_content():
 
 def test_section_content_via_section_method():
     ops = Ops()
-    ops.ops_section_start_with_mode(
+    ops.ops_section_start(
         SectionType.RASTER_FILL, "wp-1", raster_mode=RasterMode.VARIABLE_POWER
     )
     ops.move_to(0, 0)
-    ops.ops_section_end_with_mode(
+    ops.ops_section_end(
         SectionType.RASTER_FILL, raster_mode=RasterMode.VARIABLE_POWER
     )
 
@@ -389,12 +391,12 @@ def test_section_content_via_section_method():
 
 def test_section_range_content():
     ops = Ops()
-    ops.ops_section_start_with_mode(
+    ops.ops_section_start(
         SectionType.RASTER_FILL, "wp-1", raster_mode=RasterMode.VARIABLE_POWER
     )
     ops.move_to(0, 0)
     ops.line_to(10, 10)
-    ops.ops_section_end_with_mode(
+    ops.ops_section_end(
         SectionType.RASTER_FILL, raster_mode=RasterMode.VARIABLE_POWER
     )
 

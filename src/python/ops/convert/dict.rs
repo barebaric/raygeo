@@ -422,12 +422,8 @@ pub fn create_and_append_command(
             .and_then(|v| v.extract::<String>().ok())
             .and_then(|s| RasterMode::from_name(&s));
         let wp = wp_uid.as_deref().unwrap_or("");
-        if let Some(rm) = raster_mode {
-            ops.ops_section_start_with_mode(st, wp, Some(rm))
-                .expect("valid section params");
-        } else {
-            ops.ops_section_start(st, wp);
-        }
+        ops.ops_section_start(st, wp, raster_mode)
+            .expect("valid section params");
     } else if ct == CommandType::OpsSectionEnd {
         let st_str: String = cmd_data
             .get_item("section_type")?
@@ -446,12 +442,8 @@ pub fn create_and_append_command(
             .get_item("raster_mode")?
             .and_then(|v| v.extract::<String>().ok())
             .and_then(|s| RasterMode::from_name(&s));
-        if let Some(rm) = raster_mode {
-            ops.ops_section_end_with_mode(st, Some(rm))
-                .expect("valid section params");
-        } else {
-            ops.ops_section_end(st);
-        }
+        ops.ops_section_end(st, raster_mode)
+            .expect("valid section params");
     } else if ct == CommandType::JobStart {
         ops.job_start();
     } else if ct == CommandType::JobEnd {

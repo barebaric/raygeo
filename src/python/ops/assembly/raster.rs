@@ -266,15 +266,11 @@ fn raster_py(
         if let Some(rm) = raster_mode {
             let mut wrapped = Ops::new();
             wrapped
-                .ops_section_start_with_mode(
-                    SectionType::RasterFill,
-                    "raster",
-                    Some(rm),
-                )
+                .ops_section_start(SectionType::RasterFill, "raster", Some(rm))
                 .expect("valid section params");
             wrapped.extend(&pass);
             wrapped
-                .ops_section_end_with_mode(SectionType::RasterFill, Some(rm))
+                .ops_section_end(SectionType::RasterFill, Some(rm))
                 .expect("valid section params");
             combined.extend(&wrapped);
         } else {

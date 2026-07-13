@@ -731,36 +731,25 @@ class Ops:
         :param workpiece_uid: The workpiece identifier.
         :complexity: O(1) time, O(1) space
         """
-    def ops_section_start(self, section_type: types.SectionType, workpiece_uid: builtins.str) -> None:
+    def ops_section_start(self, section_type: types.SectionType, workpiece_uid: builtins.str, *, raster_mode: typing.Optional[types.RasterMode] = None) -> None:
         r"""
         Mark the start of an ops section.
         
         :param section_type: The type of section.
         :param workpiece_uid: The workpiece identifier.
-        :complexity: O(1) time, O(1) space
-        """
-    def ops_section_start_with_mode(self, section_type: types.SectionType, workpiece_uid: builtins.str, *, raster_mode: typing.Optional[types.RasterMode] = None) -> None:
-        r"""
-        Mark the start of an ops section with a raster mode.
-        
-        :param section_type: The type of section.
-        :param workpiece_uid: The workpiece identifier.
         :param raster_mode: Optional raster mode.
+        :raises ValueError: If section_type is RasterFill without a raster_mode,
+            or VectorOutline with a raster_mode.
         :complexity: O(1) time, O(1) space
         """
-    def ops_section_end(self, section_type: types.SectionType) -> None:
+    def ops_section_end(self, section_type: types.SectionType, *, raster_mode: typing.Optional[types.RasterMode] = None) -> None:
         r"""
         Mark the end of an ops section.
         
         :param section_type: The type of section.
-        :complexity: O(1) time, O(1) space
-        """
-    def ops_section_end_with_mode(self, section_type: types.SectionType, *, raster_mode: typing.Optional[types.RasterMode] = None) -> None:
-        r"""
-        Mark the end of an ops section with a raster mode.
-        
-        :param section_type: The type of section.
         :param raster_mode: Optional raster mode.
+        :raises ValueError: If section_type is RasterFill without a raster_mode,
+            or VectorOutline with a raster_mode.
         :complexity: O(1) time, O(1) space
         """
     def state_block_start(self, name: typing.Optional[builtins.str]) -> None:

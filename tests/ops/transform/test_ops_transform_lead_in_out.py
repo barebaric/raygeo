@@ -3,7 +3,7 @@ import math
 import pytest
 
 from raygeo.ops import Ops
-from raygeo.ops.types import CommandType, SectionType
+from raygeo.ops.types import CommandType, RasterMode, SectionType
 
 
 @pytest.fixture
@@ -33,10 +33,16 @@ class TestBasic:
 
     def test_no_vector_section_no_change(self):
         ops = Ops()
-        ops.ops_section_start(SectionType.RASTER_FILL, "wp1")
+        ops.ops_section_start(
+            SectionType.RASTER_FILL,
+            "wp1",
+            raster_mode=RasterMode.VARIABLE_POWER,
+        )
         ops.move_to(10, 10, 0)
         ops.line_to(30, 10, 0)
-        ops.ops_section_end(SectionType.RASTER_FILL)
+        ops.ops_section_end(
+            SectionType.RASTER_FILL, raster_mode=RasterMode.VARIABLE_POWER
+        )
         orig = ops.len()
         ops.apply_lead_in_out(5.0, 5.0)
         assert ops.len() == orig

@@ -5,7 +5,12 @@ import pytest
 from raygeo.ops import Ops
 from raygeo.ops.axis import Axis
 from raygeo.ops.state import AirAssistMode, CoolantMode, HeadCoolantMode, State
-from raygeo.ops.types import CommandCategory, CommandType, SectionType
+from raygeo.ops.types import (
+    CommandCategory,
+    CommandType,
+    RasterMode,
+    SectionType,
+)
 
 
 @pytest.fixture
@@ -644,20 +649,24 @@ def test_head_uid_wrong_type():
 
 def test_section_params_start():
     ops = Ops()
-    ops.ops_section_start(SectionType.RASTER_FILL, "wp1")
+    ops.ops_section_start(
+        SectionType.RASTER_FILL, "wp1", raster_mode=RasterMode.VARIABLE_POWER
+    )
     st, uid, mode = ops.section_params(0)
     assert st == SectionType.RASTER_FILL
     assert uid == "wp1"
-    assert mode is None
+    assert mode == RasterMode.VARIABLE_POWER
 
 
 def test_section_params_end():
     ops = Ops()
-    ops.ops_section_end(SectionType.RASTER_FILL)
+    ops.ops_section_end(
+        SectionType.RASTER_FILL, raster_mode=RasterMode.VARIABLE_POWER
+    )
     st, uid, mode = ops.section_params(0)
     assert st == SectionType.RASTER_FILL
     assert uid is None
-    assert mode is None
+    assert mode == RasterMode.VARIABLE_POWER
 
 
 def test_section_params_wrong_type():

@@ -1445,28 +1445,20 @@ Add a rapid (non-cutting) move to the given coordinates.
 ### `ops_section_end()`
 
 ```python
-ops_section_end(section_type: types.SectionType) -> None
-```
-
-Mark the end of an ops section.
-
-| Parameter      | Type                | Description           |
-| -------------- | ------------------- | --------------------- |
-| `section_type` | `types.SectionType` | The type of section.  |
-| _Returns_      | `None`              |                       |
-| _Complexity_   |                     | O(1) time, O(1) space |
-
-### `ops_section_end_with_mode()`
-
-```python
-ops_section_end_with_mode(
+ops_section_end(
     section_type: types.SectionType,
     *,
     raster_mode: Optional[types.RasterMode] = None,
 ) -> None
 ```
 
-Mark the end of an ops section with a raster mode.
+Mark the end of an ops section.
+
+**Raises:** `ValueError` — If section_type is RasterFill without a raster_mode,
+
+```
+or VectorOutline with a raster_mode.
+```
 
 | Parameter      | Type                         | Description           |
 | -------------- | ---------------------------- | --------------------- |
@@ -1478,22 +1470,7 @@ Mark the end of an ops section with a raster mode.
 ### `ops_section_start()`
 
 ```python
-ops_section_start(section_type: types.SectionType, workpiece_uid: str) -> None
-```
-
-Mark the start of an ops section.
-
-| Parameter       | Type                | Description               |
-| --------------- | ------------------- | ------------------------- |
-| `section_type`  | `types.SectionType` | The type of section.      |
-| `workpiece_uid` | `str`               | The workpiece identifier. |
-| _Returns_       | `None`              |                           |
-| _Complexity_    |                     | O(1) time, O(1) space     |
-
-### `ops_section_start_with_mode()`
-
-```python
-ops_section_start_with_mode(
+ops_section_start(
     section_type: types.SectionType,
     workpiece_uid: str,
     *,
@@ -1501,7 +1478,13 @@ ops_section_start_with_mode(
 ) -> None
 ```
 
-Mark the start of an ops section with a raster mode.
+Mark the start of an ops section.
+
+**Raises:** `ValueError` — If section_type is RasterFill without a raster_mode,
+
+```
+or VectorOutline with a raster_mode.
+```
 
 | Parameter       | Type                         | Description               |
 | --------------- | ---------------------------- | ------------------------- |

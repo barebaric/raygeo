@@ -392,21 +392,6 @@ impl OpNode {
     pub fn ops_section_start(
         section_type: SectionType,
         workpiece_uid: &str,
-    ) -> Self {
-        OpNode {
-            category: OpCategory::Marker(MarkerCmd::OpsSectionStart {
-                section_type,
-                workpiece_uid: Some(Arc::from(workpiece_uid)),
-                raster_mode: None,
-            }),
-            state: None,
-            extra_axes: None,
-        }
-    }
-
-    pub fn ops_section_start_with_mode(
-        section_type: SectionType,
-        workpiece_uid: &str,
         raster_mode: Option<RasterMode>,
     ) -> Result<Self, RaygeoError> {
         match (section_type, raster_mode) {
@@ -433,19 +418,7 @@ impl OpNode {
         })
     }
 
-    pub fn ops_section_end(section_type: SectionType) -> Self {
-        OpNode {
-            category: OpCategory::Marker(MarkerCmd::OpsSectionEnd {
-                section_type,
-                workpiece_uid: None,
-                raster_mode: None,
-            }),
-            state: None,
-            extra_axes: None,
-        }
-    }
-
-    pub fn ops_section_end_with_mode(
+    pub fn ops_section_end(
         section_type: SectionType,
         raster_mode: Option<RasterMode>,
     ) -> Result<Self, RaygeoError> {
