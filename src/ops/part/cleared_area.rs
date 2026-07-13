@@ -394,9 +394,11 @@ impl ClearedArea {
     }
 
     /// Add polygons and return only the newly-added portion (input minus
-    /// already-cleared area).  When none of the inputs overlap any existing
-    /// fragment the union is skipped and they are appended directly for
-    /// better performance.
+    /// already-cleared area).  When bounding boxes overlap a local merge
+    /// unions only the overlapping fragments with the new geometry.
+    /// A full compaction (union of all fragments) is triggered only when
+    /// the total vertex count exceeds the threshold, preventing OOM without
+    /// paying the full union cost on every call.
     #[prof]
     pub fn cut_fast(&mut self, polys: &[Polygon]) -> Vec<Polygon> {
         if polys.is_empty() {
@@ -406,12 +408,13 @@ impl ClearedArea {
         if new.is_empty() {
             return new;
         }
+
         if self.does_any_overlap(&new) {
-            let mut all = self.fragments.clone();
-            all.extend(new.iter().cloned());
-            self.fragments = get_polygons_union(&all);
-            self.rebuild_grid();
+            // Local merge: union only the overlapping fragments with the
+            // new polygons, keeping non-overlapping fragments untouched.
+            self.apply_local_merge(&new);
         } else {
+            // Fast path: no overlap, insert individually.
             for poly in &new {
                 if poly.len() >= 3 {
                     let idx = self.fragments.len();
@@ -421,6 +424,16 @@ impl ClearedArea {
                 }
             }
         }
+
+        // Full compaction when accumulation exceeds the threshold.
+        const COMPACT_THRESHOLD: usize = 512;
+        let total_vertices: usize =
+            self.fragments.iter().map(|p| p.len()).sum();
+        if total_vertices > COMPACT_THRESHOLD {
+            self.fragments = get_polygons_union(&self.fragments);
+            self.rebuild_grid();
+        }
+
         self.clear_sweep_cache();
         new
     }

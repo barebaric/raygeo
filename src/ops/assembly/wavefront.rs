@@ -4,6 +4,7 @@ use prof_macros::prof;
 
 use crate::error::RaygeoResult;
 use crate::geo::algo::fitting::linearize_data;
+use crate::geo::algo::helix::HelixDirection;
 use crate::geo::algo::offset::grow_geometry;
 use crate::geo::algo::polylabel::find_largest_circle;
 use crate::geo::algo::topology::{
@@ -11,10 +12,11 @@ use crate::geo::algo::topology::{
 };
 use crate::geo::geometry::Geometry;
 use crate::geo::shape::polygon::{
-    clean_polygon, get_circle_polygon, get_polygon_area,
-    get_polygon_centroid, is_point_inside_polygon, resample_polygon,
+    clean_polygon, get_polygon_area, get_polygon_centroid,
+    is_point_inside_polygon, resample_polygon,
 };
 use crate::ops::assembly::result::AssemblyMeta;
+use crate::ops::assembly::spiral::{generate_spiral, SpiralOptions};
 use crate::ops::assembly::Tracelet;
 use crate::ops::container::Ops;
 use crate::ops::part::Part;
@@ -106,19 +108,6 @@ pub fn adaptive_wavefronts(
         }
 
         let ring_area: f64 = new_ring.iter().map(get_polygon_area).sum();
-        // Convergence: stop when the actionable residual (uncleared
-        // material inside the tool-centre envelope) drops below the
-        // area tolerance, or when this iteration added almost nothing.
-        // Using `actionable_remaining` here (instead of comparing
-        // `cleared.total_area()` to a precomputed `valid_total_area`)
-        // keeps the metric consistent with the polygon convention used
-        // by `compute_inset_region` (signed areas: outer CCW
-        // positive, island-buffer holes CW negative).  The old
-        // comparison broke when `compute_inset_region` switched from
-        // `get_polygon_area` (absolute) to `get_polygon_signed_area`
-        // because it made `valid_total_area` smaller than
-        // `cleared.total_area()` could ever reach, triggering early
-        // exit before the wavefront reached the walls.
         if ring_area < opts.area_tolerance
             || part
                 .cleared
@@ -149,9 +138,10 @@ pub fn adaptive_wavefronts(
 /// Multi-pocket adaptive wavefronts.
 ///
 /// Extracts all pockets from `part.geometry`, optionally offsets the
-/// boundary inward, and runs a spiral-seed + wavefront expansion inside
-/// each pocket.  Returns the combined `Ops` for all pockets.
+/// boundary inward, seeds each pocket with a large circle, and runs
+/// wavefront expansion inside each.  Returns the combined `Ops`.
 #[allow(clippy::too_many_arguments)]
+#[prof]
 pub fn adaptive_wavefronts_multi_pocket(
     part: &Part,
     tool_radius: f64,
@@ -241,17 +231,40 @@ pub fn adaptive_wavefronts_multi_pocket(
     let mut last_point: Option<Point3D> = None;
 
     for (boundary, islands) in &pockets {
-        // Find the largest inscribed circle to seed the cleared area
+        let mut pocket_part =
+            Part::from_polygons(boundary, islands, (0.0, 0.0));
+
+        // Seed along the pocket's full extent so the wavefront has
+        // fewer rings to expand.  For elongated pockets the single
+        // circle seed leaves most of the pocket uncovered, forcing
+        // hundreds of wavefront iterations with small step_over.
         let (center, r_max) = find_largest_circle(boundary, islands, 0.1)
             .unwrap_or_else(|| (get_polygon_centroid(boundary), 0.0));
 
-        // Seed with a circle at tool_radius so the wavefront expands
-        // smoothly from the pocket centre — no separate spiral path.
-        let seed_r = tool_radius.min(r_max * 0.8).max(0.01);
-        let seed =
-            vec![get_circle_polygon(center, seed_r, 64)];
-        let mut pocket_part =
-            Part::from_polygons_initial(boundary, islands, &seed, (0.0, 0.0));
+        let helix_r = (tool_radius * 0.8).min(r_max * 0.5);
+        let min_seed_r = helix_r.max(tool_radius * 2.0).max(0.05);
+        let spiral_max_r = (r_max - tool_radius).max(min_seed_r);
+        let radial_dist = spiral_max_r - helix_r;
+
+        // Seed the pocket with a flat spiral
+        if radial_dist > 0.0 && step_over > 0.0 {
+            let spiral_opts = SpiralOptions {
+                center,
+                z,
+                start_radius: helix_r,
+                end_radius: spiral_max_r,
+                revolutions: radial_dist / step_over,
+                direction: HelixDirection::Cw,
+                angular_step: 0.1,
+                start_angle: 0.0,
+            };
+            generate_spiral(
+                &mut pocket_part,
+                &mut trace,
+                &spiral_opts,
+                &cut_state,
+            )?;
+        }
 
         // Expand with adaptive wavefronts
         let wf_opts = AdaptiveWavefrontOptions {

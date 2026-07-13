@@ -1,6 +1,7 @@
 use crate::ops::assembly::wavefront;
 use crate::ops::assembly::Tracelet;
 use crate::ops::state::State;
+use crate::prof::prof_report;
 use crate::python::ops::assembly::result::PyAssemblyResult;
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::gen_stub_pyfunction;
@@ -127,6 +128,7 @@ fn adaptive_wavefronts_py(
         precision: float = 0.0,
         cut_feed_rate: int = 1200,
         cut_power: float = 1.0,
+        profile: bool = False,
     ) -> raygeo.ops.assembly.AssemblyResult:
         """Multi-pocket adaptive wavefronts.
 
@@ -143,6 +145,7 @@ fn adaptive_wavefronts_py(
         :param precision: Edge tolerance for frontier simplification (default 0.0).
         :param cut_feed_rate: Feed rate for cutting moves (default 1200).
         :param cut_power: Laser power for cutting moves (0.0-1.0, default 1.0).
+        :param profile: Print a profiling report to stdout (default False).
         :returns: An :class:`AssemblyResult` with combined wavefront paths.
         :raises ValueError: If the part has no geometry or no closed contours.
         """
@@ -159,6 +162,7 @@ fn adaptive_wavefronts_py(
     precision = 0.0,
     cut_feed_rate = 1200,
     cut_power = 1.0,
+    profile = false,
 ))]
 #[allow(clippy::too_many_arguments)]
 fn adaptive_wavefronts_multi_pocket_py(
@@ -170,6 +174,7 @@ fn adaptive_wavefronts_multi_pocket_py(
     precision: f64,
     cut_feed_rate: i32,
     cut_power: f64,
+    profile: bool,
 ) -> PyResult<PyAssemblyResult> {
     let (ops, meta) = wavefront::adaptive_wavefronts_multi_pocket(
         &part.inner,
@@ -181,5 +186,8 @@ fn adaptive_wavefronts_multi_pocket_py(
         cut_feed_rate,
         cut_power,
     )?;
+    if profile {
+        prof_report();
+    }
     Ok(PyAssemblyResult::from_parts(ops, meta, None, vec![]))
 }

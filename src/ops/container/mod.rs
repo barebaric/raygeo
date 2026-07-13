@@ -505,6 +505,42 @@ impl Ops {
         }
     }
 
+    /// Count cutting commands (LineTo, ArcTo, BezierTo, QuadraticBezierTo, ScanLine).
+    pub fn count_cutting(&self) -> usize {
+        self.commands
+            .iter()
+            .filter(|c| {
+                matches!(
+                    c.category,
+                    OpCategory::Moving {
+                        cmd: MoveCmd::LineTo { .. }
+                            | MoveCmd::ArcTo { .. }
+                            | MoveCmd::BezierTo { .. }
+                            | MoveCmd::QuadraticBezierTo { .. }
+                            | MoveCmd::ScanLine { .. },
+                        ..
+                    }
+                )
+            })
+            .count()
+    }
+
+    /// Count travel (MoveTo) commands.
+    pub fn count_travel(&self) -> usize {
+        self.commands
+            .iter()
+            .filter(|c| {
+                matches!(
+                    c.category,
+                    OpCategory::Moving {
+                        cmd: MoveCmd::MoveTo,
+                        ..
+                    }
+                )
+            })
+            .count()
+    }
+
     // --- Arithmetic ---
 }
 

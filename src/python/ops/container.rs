@@ -433,6 +433,25 @@ impl PyOps {
         ))
     }
 
+    /// Return the number of cutting commands in this sequence.
+    ///
+    /// Counts all LineTo, ArcTo, BezierTo, QuadraticBezierTo, and
+    /// ScanLine commands.
+    ///
+    /// :returns: Number of cutting commands.
+    /// :complexity: O(n) time, O(1) space
+    fn count_cutting(&self) -> usize {
+        self.inner.count_cutting()
+    }
+
+    /// Return the number of travel (MoveTo) commands in this sequence.
+    ///
+    /// :returns: Number of travel commands.
+    /// :complexity: O(n) time, O(1) space
+    fn count_travel(&self) -> usize {
+        self.inner.count_travel()
+    }
+
     /// Check whether the command at *idx* is a travel (non-cutting) move.
     ///
     /// :param idx: Command index.

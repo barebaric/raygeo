@@ -6,6 +6,9 @@ from raygeo.cli.commands.profile_cleared_area_cmd import (
     register as register_profile_cleared_area,
 )
 from raygeo.cli.commands.profile_cmd import register as register_profile
+from raygeo.cli.commands.profile_wavefront_cmd import (
+    register as register_profile_wavefront,
+)
 from raygeo.cli.commands.trace_cmd import register as register_trace
 
 
@@ -21,6 +24,7 @@ def main() -> None:
     register_print(sub)
     register_profile(sub)
     register_profile_cleared_area(sub)
+    register_profile_wavefront(sub)
 
     args = parser.parse_args()
     args.func(args)

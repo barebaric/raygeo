@@ -37,7 +37,7 @@ def adaptive_wavefronts(part: raygeo.ops.part.Part, tool_radius: float = 3, step
     :returns: An :class:`AssemblyResult` with wavefront cutting commands.
     """
 
-def adaptive_wavefronts_multi_pocket(part: raygeo.ops.part.Part, tool_radius: float = 3, step_over: float = 2, offset_mm: float = 0, area_tolerance: float = 0.01, precision: float = 0, cut_feed_rate: int = 1200, cut_power: float = 1) -> raygeo.ops.assembly.AssemblyResult:
+def adaptive_wavefronts_multi_pocket(part: raygeo.ops.part.Part, tool_radius: float = 3, step_over: float = 2, offset_mm: float = 0, area_tolerance: float = 0.01, precision: float = 0, cut_feed_rate: int = 1200, cut_power: float = 1, profile: bool = False) -> raygeo.ops.assembly.AssemblyResult:
     r"""
     Multi-pocket adaptive wavefronts.
     
@@ -54,6 +54,7 @@ def adaptive_wavefronts_multi_pocket(part: raygeo.ops.part.Part, tool_radius: fl
     :param precision: Edge tolerance for frontier simplification (default 0.0).
     :param cut_feed_rate: Feed rate for cutting moves (default 1200).
     :param cut_power: Laser power for cutting moves (0.0-1.0, default 1.0).
+    :param profile: Print a profiling report to stdout (default False).
     :returns: An :class:`AssemblyResult` with combined wavefront paths.
     :raises ValueError: If the part has no geometry or no closed contours.
     """
